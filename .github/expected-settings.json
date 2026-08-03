@@ -3,8 +3,9 @@
     "The repository settings this project has DECIDED, so a scheduled job can read the live values",
     "back and say so when they drift. See docs/decisions/0004-admin-settings-must-be-read-back.md.",
     "",
-    "Only repo-level settings live here. Pages, environments and DNS need scopes the workflow token",
-    "does not have; they are still read back by hand at RELEASE."
+    "Repo settings, protection, rulesets — and now the github-pages ENVIRONMENT, which was the one",
+    "that actually refused a release (see 0013). DNS is still the only thing read back by hand,",
+    "because it lives at Cloudflare and no GitHub token can see it."
   ],
   "settings": {
     "private": {
@@ -74,6 +75,23 @@
       }
     }
   },
+  "environments": {
+    "$comment": [
+      "THE SETTING THAT REFUSED THE FIRST RELEASE. `v0.1.0` built green and the deploy was rejected,",
+      "because enabling Pages from a branch had seeded this environment with a `main` branch rule and",
+      "a tag matches no branch rule. Word for word the predecessor's v1.4.0 incident. See 0013.",
+      "",
+      "Read with SETTINGS_READ_TOKEN. If the report says NOT CHECKED for these, the fine-grained PAT",
+      "needs *Environments: read* — a separate permission from *Administration: read*."
+    ],
+    "github-pages": {
+      "policies": {
+        "value": [{ "name": "v*", "type": "tag" }],
+        "why": "EXACTLY ONE, and a tag. A release is a tag; nothing else may reach the origin players installed from. A `main` branch rule here is not an extra permission, it is a second definition of what a release is — and while one exists, any branch deployment publishes staging to every installed app. Deleted rather than left alongside (0013)."
+      }
+    }
+  },
+
   "rulesets": {
     "$comment": [
       "A SECOND system stating overlapping policy. Rulesets and classic branch protection both",

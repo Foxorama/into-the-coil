@@ -32,7 +32,7 @@ if (!repo) throw new Error('settings-drift: no repository given (argv[2] or GITH
 if (!token) throw new Error('settings-drift: no GH_TOKEN / GITHUB_TOKEN in the environment');
 
 const expectedFile = new URL('../.github/expected-settings.json', import.meta.url);
-const { settings, protection, rulesets } = JSON.parse(readFileSync(expectedFile, 'utf8'));
+const { settings, protection, rulesets, environments } = JSON.parse(readFileSync(expectedFile, 'utf8'));
 
 const api = async (path, as = token) => {
   const res = await fetch(`https://api.github.com${path}`, {
@@ -90,6 +90,42 @@ if (protection && !adminToken) {
       continue;
     }
     if (!same(got, want)) drifted.push({ key: `protection.${key}`, want, got, why });
+  }
+}
+
+// ---- deployment environments -------------------------------------------------------------------
+//
+// THE SETTING THAT ACTUALLY REFUSED A RELEASE. `v0.1.0` built green and the deploy was rejected by
+// a `main` branch rule this environment had been seeded with when Pages was first enabled from a
+// branch — the predecessor's v1.4.0 incident, repeated exactly (0013).
+//
+// It is checked here rather than "read back by hand at RELEASE", which is what this file used to say
+// about environments, because an intention written in a document is the tier of guard the scaffold
+// plan identifies as the one that fails. The set is TOTAL, not a subset: an unexpected extra policy
+// is the whole hazard, so a check that only confirms `v*` is present would pass while `main` sat
+// beside it saying a branch may deploy to production.
+
+const envNames = Object.keys(environments ?? {}).filter((k) => !k.startsWith('$'));
+
+if (envNames.length && !adminToken) {
+  skipped.push(...envNames.map((n) => `environment[${n}].policies`));
+} else {
+  for (const name of envNames) {
+    const { value: want, why } = environments[name].policies;
+    const key = `environment[${name}].policies`;
+    let live;
+    try {
+      live = await api(`/repos/${repo}/environments/${name}/deployment-branch-policies`, adminToken);
+    } catch (e) {
+      // A 403 here means the PAT carries *Administration: read* but not *Environments: read* — a
+      // separate permission on fine-grained tokens. Reported as unreadable rather than as drift:
+      // "we could not look" and "it changed" are different facts and must not be conflated.
+      unreadable.push(`${key} (${String(e).split('\n')[0]})`);
+      continue;
+    }
+    const got = (live.branch_policies ?? []).map((p) => ({ name: p.name, type: p.type }));
+    const sort = (a) => [...a].sort((x, y) => `${x.type}${x.name}`.localeCompare(`${y.type}${y.name}`));
+    if (!same(sort(got), sort(want))) drifted.push({ key, want, got, why });
   }
 }
 
