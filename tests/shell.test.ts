@@ -35,6 +35,7 @@ function distFiles(dir = 'dist', prefix = ''): string[] {
  * value of the rule is that those two look identical until something asserts the difference.
  */
 const SIDECARS = [
+  'CNAME',
   '_headers',
   'manifest.webmanifest',
   'sw.js',

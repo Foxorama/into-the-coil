@@ -1,0 +1,113 @@
+# A RELEASE IS A TAG, and this is the only path to the origin players have installed.
+#
+# `main` is staging: Cloudflare Pages builds every push to it at
+# `next.intothecoil.vulpecula.games`, and every branch gets a preview URL. Production moves only
+# when a version tag says so. See docs/decisions/0011-three-environments-and-a-separate-origin-for-staging.md.
+#
+# ⚠️ NO `workflow_dispatch`, deliberately — this is a DEVIATION from the predecessor, which has one.
+# The environment's deployment-branch policy is supposed to be the backstop, but that policy does
+# not exist until the first deployment creates the environment, and until it is set the environment
+# allows everything. A Run button during that window publishes whatever is on `main` to every
+# installed app. The scaffold plan's own ladder puts "remove the affordance" above every other tier,
+# and re-running a failed run from the Actions UI covers the only thing dispatch was for.
+#
+# ⚠️ ITCH IS NOT HERE YET. The plan calls for one workflow with Pages and itch as SIBLING jobs, both
+# depending on build and neither on the other, so one destination failing cannot gate the other.
+# That shape is the point of consolidating, and it is preserved by `deploy` depending only on
+# `build` — an itch job drops in beside it without rewiring anything. It is absent rather than
+# broken because there is no itch project and no BUTLER_API_KEY, and a job that fails on every tag
+# teaches people to ignore a red release.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false # never cancel a half-finished deploy to a live origin
+
+jobs:
+  # A RELEASE RUNS THE SUITE BEFORE IT REACHES ANYONE.
+  #
+  # `main` is already tested at merge, but a tag is not `main` — it is a specific commit plus
+  # whatever happened to package.json on the way past, and this is the path to a device someone
+  # already installed the game on. Called, never copied: the suite is described in tests.yml alone.
+  test:
+    uses: ./.github/workflows/tests.yml
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          # Read from `.node-version`, never spelled here. Cloudflare Pages reads that same file and
+          # cannot read this one, so a literal in this workflow would be a third spelling of a fact
+          # that only has one true value — see tests/toolchain.test.ts.
+          node-version-file: '.node-version'
+          cache: npm
+
+      # THE TAG MUST BE THE VERSION IT CLAIMS TO BE.
+      #
+      # `v1.2.3` deploying a build that reports `1.2.0` is unfalsifiable from the outside: the page
+      # says one thing, the release says another, and a bug report quoting either is untraceable.
+      # This is the assertion consolidating into one workflow was supposed to buy, so it is made
+      # once, here, before anything is built.
+      - name: the tag agrees with package.json
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$pkg" ]; then
+            echo "::error::tag $GITHUB_REF_NAME says $tag but package.json says $pkg."
+            echo "::error::Bump package.json and re-tag; do not move the tag."
+            exit 1
+          fi
+          echo "releasing $pkg from $GITHUB_REF_NAME"
+
+      - run: npm ci
+      - run: npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  # A GREEN DEPLOYMENT IS NOT A WORKING ONE.
+  #
+  # The predecessor's first staging deploy went green while serving the repository root, and this
+  # project's did the same — `/src/main.ts` returning 200 with real TypeScript in it, on a URL that
+  # reported success everywhere else. Nothing upstream of here can catch that: the build was fine,
+  # the upload was fine, and the host served something else.
+  verify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: '.node-version'
+      - run: node scripts/verify-deploy.mjs "${{ needs.deploy.outputs.url }}"
