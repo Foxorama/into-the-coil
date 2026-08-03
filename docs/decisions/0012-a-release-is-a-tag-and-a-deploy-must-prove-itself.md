@@ -2,6 +2,12 @@
 
 **Accepted 2026-08-03**, landed as RELEASE.
 
+> ⚠️ **One claim below is corrected by [0013](0013-the-github-pages-environment-refuses-you-two-ways.md).**
+> The section *"No manual trigger"* argues the `github-pages` environment does not exist until the
+> first deployment creates it. That is true of a repository that has never enabled Pages, and was
+> false of this one — the first tagged release was refused by a `main` rule the environment already
+> held. The rule this file sets stands; that piece of its reasoning does not.
+
 ## The rule
 
 One `release.yml`, firing on `tags: ['v*']` and **nothing else**. It calls `tests.yml` rather than
