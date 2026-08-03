@@ -48,9 +48,19 @@ Measured on a runner, not assumed. Under `github.token`:
 No `permissions:` key fixes either; `administration` is not valid in a workflow, and a file
 declaring it fails to parse. **11 of the 14 decided settings need an admin token.**
 
-So those are opt-in on a `SETTINGS_READ_TOKEN` secret (a fine-grained PAT, *Administration: read*,
-this repo only). Without it the weekly report says **NOT CHECKED**, in those words, and lists every
-setting being taken on trust.
+So those are opt-in on a `SETTINGS_READ_TOKEN` secret. Without it the weekly report says
+**NOT CHECKED**, in those words, and lists every setting being taken on trust.
+
+⚠️ **The token needs Administration: READ AND WRITE, and the reason is not guessable.** A
+fine-grained PAT scoped to this repo with *Administration: read* reports
+`permissions: {admin: true, …}` on `GET /repos` **and still omits every merge flag**. Raising the
+same token to *read and write* returns all of them. The fields are write-gated in that response
+body even though this script only ever reads them — so the obvious diagnosis, "the token lacks
+admin", is wrong and sends you looking in the wrong place. A classic PAT with `repo` also works.
+
+This cost several rounds of confident wrong answers before the failure was made to print
+`permissions` and the field list, at which point it settled in one run. **When a guard fails for an
+unclear reason, the fix is to make the failure carry evidence — not to reason harder about it.**
 
 Failing weekly instead was considered and rejected: a job that is red for a reason nobody intends to
 fix gets switched off, and takes the three settings it *can* check down with it. A gap that

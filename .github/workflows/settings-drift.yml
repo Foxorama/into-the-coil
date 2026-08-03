@@ -80,6 +80,21 @@ jobs:
             gh issue create --title "$TITLE" --body-file drift.md
           fi
 
+      # …and go quiet again when it is fixed. Without this the issue stays open forever after one
+      # bad run, so the next real drift arrives on an issue that is already open and already
+      # ignored — the wallpaper failure, reached from the other direction.
+      - if: steps.check.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: Repository settings have drifted
+        run: |
+          num=$(gh issue list --state open --search "in:title \"$TITLE\"" --json number,title \
+                  --jq "[.[] | select(.title == \"$TITLE\")][0].number")
+          if [ -n "$num" ] && [ "$num" != "null" ]; then
+            gh issue close "$num" --comment "Settings match again — closed by the $GITHUB_WORKFLOW run that verified it."
+            echo "closed issue #$num"
+          fi
+
       # Re-fail the job. `continue-on-error` above exists to let the issue be opened first.
       - if: steps.check.outcome == 'failure'
         run: |
