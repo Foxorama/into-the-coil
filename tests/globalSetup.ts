@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
+import { chromePath } from './chromium.ts';
 
 /**
  * Build `dist/` ONCE, before any test file runs.
@@ -23,6 +24,21 @@ import { resolve } from 'node:path';
  * this process, so it needs nothing on PATH and behaves the same on every platform.
  */
 export default function setup(): void {
+  // On CI, a missing browser is a FAILURE, not a skip.
+  //
+  // The browser tests gate on `runIf(chromePath)` so a developer machine with no browser still
+  // passes. On a runner that gate is a liability: it turns "the only test that drives the built
+  // artifact never ran" into a green board, which is precisely the bug — fifty tests skipping for
+  // months — that the whole Chromium lookup exists to prevent. Asserted HERE rather than as a
+  // `runIf(CI)` test so it costs no permanent skip locally: the skip count stays 0 on any machine
+  // with a browser, which keeps a jump in it meaningful.
+  if (process.env.CI && !chromePath) {
+    throw new Error(
+      'globalSetup: no Chromium on this CI runner. The browser gate would skip silently and the ' +
+        'build tests would report green having driven nothing. Set CHROME_PATH, or install a browser.',
+    );
+  }
+
   const root = fileURLToPath(new URL('..', import.meta.url));
   execFileSync(process.execPath, [resolve(root, 'node_modules/vite/bin/vite.js'), 'build'], {
     cwd: root,

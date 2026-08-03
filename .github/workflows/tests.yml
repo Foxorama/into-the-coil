@@ -1,0 +1,50 @@
+# The check branch protection requires. The required context is the JOB KEY — `test` — not this
+# workflow's name.
+name: tests
+
+on:
+  pull_request:
+  # Dispatch matters more than it looks: the scaffold phases land directly on an unprotected
+  # `main`, so this workflow produces ZERO runs on its own, and protection cannot require a check
+  # that has never reported. The Run button only appears once this file is on the default branch.
+  workflow_dispatch:
+  # For `release.yml` to call. It has no caller until RELEASE.
+  workflow_call:
+
+# Read-only by default. A job that needs to write says so itself.
+permissions:
+  contents: read
+
+concurrency:
+  # The `github.workflow` component exists to stop TWO callers cancelling each other — the trap
+  # where a second caller kills the first and a release quietly half-ships. There is one caller
+  # today, so its cause is gone; kept as cheap insurance, and the literal `tests-` prefix stays.
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# NO `paths-ignore`, deliberately. A required check that is skipped for a docs-only PR reports
+# nothing, and a protection rule waiting on a check that will never arrive blocks the merge
+# forever. The suite takes seconds; buying nothing is cheaper than buying that.
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # No `playwright install` step: the runner image ships Google Chrome at
+      # /usr/bin/google-chrome, which `scripts/chromium.mjs` already finds. `npx playwright install`
+      # would also pull the full `playwright` package — this repo has `playwright-core`, which ships
+      # no CLI.
+      #
+      # `CI=true` is already set by Actions, which is what makes the browser-gate assertion in
+      # tests/boot.browser.test.ts hard-fail here instead of skipping. That assertion is the whole
+      # reason this job can be trusted: fifty browser tests once skipped for months on a green board.
+      - run: npm run check

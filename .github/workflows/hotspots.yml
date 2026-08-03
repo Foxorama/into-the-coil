@@ -1,0 +1,48 @@
+name: hotspots
+
+on:
+  schedule:
+    # Monday morning, UTC. Weekly is the point: a report you get daily is a report you stop reading.
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: hotspots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # ⚠️ LOAD-BEARING. The default checkout is depth 1, and `git log -n150` over one commit
+          # reports one commit — quietly, and looking exactly like a real report.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - run: node scripts/hotspots.mjs > report.md
+
+      - run: cat report.md >> "$GITHUB_STEP_SUMMARY"
+
+      # ONE rolling issue, opened once and edited thereafter. Never one issue per run: an advisory
+      # that arrives weekly becomes wallpaper, which fails the same way a relaxed gate does.
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: Weekly hotspots
+        run: |
+          num=$(gh issue list --state open --search "in:title \"$TITLE\"" --json number,title \
+                  --jq "[.[] | select(.title == \"$TITLE\")][0].number")
+          if [ -n "$num" ] && [ "$num" != "null" ]; then
+            gh issue edit "$num" --body-file report.md
+            echo "updated issue #$num"
+          else
+            gh issue create --title "$TITLE" --body-file report.md
+          fi
