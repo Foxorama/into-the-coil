@@ -12,6 +12,10 @@
          See docs/decisions/0008-the-shell-sidecars.md. -->
     <link rel="manifest" href="manifest.webmanifest" />
     <meta name="theme-color" content="#1b1b1f" />
+    <!-- iOS ignores the web manifest's icons entirely and reads this instead. Without it, adding the
+         game to a home screen on an iPhone produces a screenshot of the page rather than an icon —
+         and the plan expects most players to install from the site, not play in a tab. -->
+    <link rel="apple-touch-icon" href="icon-180.png" />
     <script>
       /*
         BOOT WATCHDOG — see docs/decisions/0007-the-boot-watchdog.md.

@@ -45,7 +45,19 @@ var CACHE = PREFIX + '%ITC_VERSION%+%ITC_BUILD%';
  * program. Precaching it means a cold offline launch works from the very next visit rather than
  * only after the player has already been offline once.
  */
-var SHELL = ['./', './index.html', './manifest.webmanifest'];
+var SHELL = [
+  './',
+  './index.html',
+  './manifest.webmanifest',
+  // The icons are precached for the SPLASH SCREEN, not for the launcher. Android draws the splash
+  // from the manifest's icon while the app starts, and an installed app launched with no network
+  // and no cached icon opens on a blank rectangle — which looks exactly like the app failing to
+  // start, on the one path this worker exists to make work.
+  './icon-192.png',
+  './icon-512.png',
+  './icon-maskable-512.png',
+  './icon-180.png',
+];
 
 self.addEventListener('install', function (e) {
   /*

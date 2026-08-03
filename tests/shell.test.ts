@@ -34,7 +34,15 @@ function distFiles(dir = 'dist', prefix = ''): string[] {
  * either a real decision was made or the bundler quietly stopped inlining something — and the whole
  * value of the rule is that those two look identical until something asserts the difference.
  */
-const SIDECARS = ['_headers', 'manifest.webmanifest', 'sw.js'];
+const SIDECARS = [
+  '_headers',
+  'manifest.webmanifest',
+  'sw.js',
+  'icon-180.png',
+  'icon-192.png',
+  'icon-512.png',
+  'icon-maskable-512.png',
+];
 
 describe('the build emits one self-contained page', () => {
   /**
@@ -136,6 +144,84 @@ describe('the install manifest', () => {
     const meta = /<meta\s+name=["']theme-color["']\s+content=["']([^"']+)["']/i.exec(read('index.html'))?.[1];
     expect(meta, 'index.html has no theme-color meta').toBeTruthy();
     expect(meta).toBe(manifest().theme_color);
+  });
+});
+
+/**
+ * Icons, and the one thing about them that fails silently.
+ *
+ * Chrome will not offer to install a PWA without an icon of at least 192px, and it does not say so
+ * anywhere the developer will see — the install prompt simply never appears. Since the plan expects
+ * most players to install from the site rather than play in a tab, a missing or mis-declared icon
+ * does not degrade the product, it closes the front door.
+ *
+ * The declared size is the part worth guarding. A manifest saying `512x512` over a file that is
+ * actually 500px is REJECTED, and every symptom of that is the absence of something.
+ */
+describe('the launcher icons', () => {
+  interface Icon {
+    src: string;
+    sizes: string;
+    type: string;
+    purpose: string;
+  }
+  const icons = (): Icon[] => (JSON.parse(read('dist/manifest.webmanifest')) as { icons: Icon[] }).icons;
+
+  /** A PNG's real dimensions, straight out of the IHDR chunk that follows the 8-byte signature. */
+  function pngSize(rel: string): [number, number] {
+    const buf = readFileSync(resolve(root, rel));
+    expect(buf.subarray(1, 4).toString('ascii'), `${rel} is not a PNG`).toBe('PNG');
+    return [buf.readUInt32BE(16), buf.readUInt32BE(20)];
+  }
+
+  it('are declared at the size they actually are', () => {
+    for (const icon of icons()) {
+      const [w, h] = pngSize(`dist/${icon.src}`);
+      expect(
+        `${w}x${h}`,
+        `the manifest declares ${icon.src} as ${icon.sizes} but the file is ${w}x${h} — Chrome ` +
+          'rejects the icon and silently stops offering to install',
+      ).toBe(icon.sizes);
+      expect(icon.type).toBe('image/png');
+    }
+  });
+
+  it('include the 192 and 512 that installability actually requires', () => {
+    const any = icons().filter((i) => i.purpose === 'any');
+    expect(any.map((i) => i.sizes).sort()).toEqual(['192x192', '512x512']);
+  });
+
+  /**
+   * A maskable icon is a DIFFERENT FILE, not a label on the same one. Android crops to whatever
+   * shape the launcher likes and only the central 80% is guaranteed to survive, so the maskable
+   * variant carries the art pulled in to fit. Declaring the ordinary icon as maskable — which is
+   * what the predecessor does — hands the launcher art it is entitled to crop the edges off.
+   */
+  it('ship a maskable variant that is not just the ordinary icon relabelled', () => {
+    const maskable = icons().filter((i) => i.purpose === 'maskable');
+    expect(maskable, 'no maskable icon — Android will crop the plain one').toHaveLength(1);
+    const plain = icons().find((i) => i.purpose === 'any' && i.sizes === maskable[0]!.sizes);
+    expect(plain, 'expected a plain icon at the same size to compare against').toBeTruthy();
+    expect(
+      readFileSync(resolve(root, `dist/${maskable[0]!.src}`)).equals(
+        readFileSync(resolve(root, `dist/${plain!.src}`)),
+      ),
+      'the maskable icon is byte-identical to the plain one, so its art is not inside the safe zone',
+    ).toBe(false);
+  });
+
+  /** iOS reads none of the above. It reads one link tag, and ignores the manifest entirely. */
+  it('include the apple-touch-icon, which the manifest cannot supply', () => {
+    const href = /<link\s+rel=["']apple-touch-icon["']\s+href=["']([^"']+)["']/i.exec(read('index.html'))?.[1];
+    expect(href, 'no apple-touch-icon — an iPhone home-screen install gets a page screenshot').toBeTruthy();
+    expect(SIDECARS).toContain(href);
+    expect(pngSize(`dist/${href}`)).toEqual([180, 180]);
+  });
+
+  /** Offline, an uncached splash icon is a blank rectangle that reads as a failure to start. */
+  it('are precached by the worker, so an offline launch still draws its splash', () => {
+    const sw = read('public/sw.js');
+    for (const icon of icons()) expect(sw, `${icon.src} is not in the worker's SHELL list`).toContain(icon.src);
   });
 });
 
