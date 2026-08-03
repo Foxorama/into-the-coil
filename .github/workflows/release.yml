@@ -11,12 +11,18 @@
 # installed app. The scaffold plan's own ladder puts "remove the affordance" above every other tier,
 # and re-running a failed run from the Actions UI covers the only thing dispatch was for.
 #
-# ⚠️ ITCH IS NOT HERE YET. The plan calls for one workflow with Pages and itch as SIBLING jobs, both
-# depending on build and neither on the other, so one destination failing cannot gate the other.
-# That shape is the point of consolidating, and it is preserved by `deploy` depending only on
-# `build` — an itch job drops in beside it without rewiring anything. It is absent rather than
-# broken because there is no itch project and no BUTLER_API_KEY, and a job that fails on every tag
-# teaches people to ignore a red release.
+# ⚠️ TWO DESTINATIONS, AS SIBLINGS. `deploy` (Pages) and `itch` both depend on `build` and neither
+# depends on the other, so one destination being down cannot gate the other. Consolidating two
+# workflows into one bought a single version assertion and half the per-tag CI; it would have COST
+# independent failure, and this job graph is what pays that back. Wiring itch behind Pages, or
+# vice-versa, silently trades the property away — `tests/release.test.ts` holds the shape.
+#
+# ONE-TIME itch SETUP, none of which is in this repository:
+#   1. itch.io → Settings → API keys → generate; store as the `BUTLER_API_KEY` repo secret.
+#   2. After the FIRST push, on the itch Edit game page: tick "This file will be played in the
+#      browser" on the html5 upload, and set Kind of project = HTML. butler keeps the flag on every
+#      later push to the same channel, so this is set once, ever — and until it is set, the upload
+#      is not playable.
 name: release
 
 on:
@@ -81,6 +87,20 @@ jobs:
         with:
           path: dist
 
+      # The SAME BYTES for itch, not merely the same build command.
+      #
+      # `upload-pages-artifact` packs a tar only Pages can consume, so itch needs its own copy —
+      # and taking it from this job rather than rebuilding is what makes "one build, both
+      # destinations" literally true. Two independent `npm ci && npm run build` runs share a command
+      # and nothing else: they resolve dependencies separately and stamp a build id separately, so
+      # the two destinations could ship different bytes under one version number and nothing would
+      # say so.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 1
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -95,6 +115,60 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # THE SECOND DESTINATION — a sibling of `deploy`, never downstream of it.
+  #
+  # ⚠️ ALWAYS THE SAME CHANNEL. An itch HTML5 game is served from a per-upload path, and
+  # `localStorage` is scoped to origin AND path — so replacing the upload by hand can hand every
+  # player a fresh, empty origin with their save still sitting in the old one, unreachable. butler
+  # PATCHES the existing upload on the named channel rather than creating a new one, which is the
+  # entire reason it is used here instead of dragging a zip into the web UI. The channel name is not
+  # cosmetic and must never be changed once anyone has played.
+  itch:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      ITCH_TARGET: vulpeculagames/into-the-coil:html5
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Install butler
+        run: |
+          curl -sL -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          unzip -q butler.zip -d "$HOME/butler"
+          chmod +x "$HOME/butler/butler"
+          echo "$HOME/butler" >> "$GITHUB_PATH"
+
+      - name: Push to itch
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          if [ -z "$BUTLER_API_KEY" ]; then
+            echo "::error::BUTLER_API_KEY is not set. See the one-time setup notes at the top of this file."
+            exit 1
+          fi
+          # Named explicitly on failure: a wrong user or slug fails here and nowhere else, and the
+          # raw butler error does not say which half was wrong.
+          if ! butler push dist "$ITCH_TARGET" --userversion "${GITHUB_REF_NAME#v}"; then
+            echo "::error::butler could not push to $ITCH_TARGET — check the itch user and game slug."
+            exit 1
+          fi
+          butler status "${ITCH_TARGET%%:*}"
+
+      - name: Summary
+        run: |
+          {
+            echo "### Pushed \`${GITHUB_REF_NAME#v}\` to \`$ITCH_TARGET\`"
+            echo ""
+            echo "If this was the FIRST push: on the itch Edit game page, tick"
+            echo "**This file will be played in the browser** on the html5 upload and set"
+            echo "**Kind of project = HTML**. Until then the upload is not playable."
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # A GREEN DEPLOYMENT IS NOT A WORKING ONE.
   #

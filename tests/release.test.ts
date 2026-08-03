@@ -71,13 +71,59 @@ describe('a release is a tag, and only a tag', () => {
   });
 
   /**
-   * Pages and itch are meant to be SIBLINGS — both depending on the build, neither on the other —
-   * so one destination being down cannot gate the other. itch is not here yet; what this holds is
-   * the shape that lets it arrive without rewiring, which is the entire reason for consolidating
-   * into one workflow rather than two.
+   * ⚠️ THE PROPERTY CONSOLIDATION COULD SILENTLY COST.
+   *
+   * Two separate workflows were buying INDEPENDENT FAILURE — if butler is down, Pages still ships.
+   * Merging them into one graph gives that back only if the two destinations are SIBLINGS: both
+   * depending on `build`, neither on the other. Chaining `itch` behind `deploy` would look tidier,
+   * pass every other test here, and quietly mean an itch outage blocks a Pages release.
    */
-  it('keeps deploy hanging off build alone, so a second destination can sit beside it', () => {
-    expect(rules('.github/workflows/release.yml')).toMatch(/deploy:\s*\n\s*needs:\s*build\b/);
+  it('ships to both destinations as siblings, so neither can gate the other', () => {
+    const yaml = rules('.github/workflows/release.yml');
+    expect(yaml, 'the itch job is gone').toMatch(/^\s{2}itch:/m);
+    for (const job of ['deploy', 'itch']) {
+      const needs = new RegExp(`^\\s{2}${job}:\\s*\\n\\s*needs:\\s*(\\S.*)$`, 'm').exec(yaml)?.[1]?.trim();
+      expect(needs, `${job} has no needs: line`).toBeTruthy();
+      expect(
+        needs,
+        `${job} depends on "${needs}" rather than build alone — the two destinations are chained, ` +
+          'so one being down now blocks the other',
+      ).toBe('build');
+    }
+  });
+
+  /**
+   * The same bytes, not merely the same build command. Two independent `npm ci && npm run build`
+   * runs resolve dependencies separately and stamp a build id separately, so the two destinations
+   * could ship different artifacts under one version number with nothing to say so.
+   */
+  it('gives both destinations one build, not one build command', () => {
+    const yaml = rules('.github/workflows/release.yml');
+    const job = (name: string, next: string): string =>
+      yaml.slice(yaml.search(new RegExp(`^\\s{2}${name}:`, 'm')), yaml.search(new RegExp(`^\\s{2}${next}:`, 'm')));
+
+    // ⚠️ MATCHED WITH THE `@`, and scoped to the job. A bare /upload-artifact/ also matches
+    // `upload-artifactX@v4` — which is exactly how a probe disabled this step and the test still
+    // passed. A substring of an action's name is not evidence the action runs.
+    expect(job('build', 'deploy'), 'the build job no longer publishes an artifact for itch').toMatch(
+      /uses:\s*actions\/upload-artifact@/,
+    );
+    const itch = job('itch', 'verify');
+    expect(itch, 'the itch job does not collect the build it was given').toMatch(/uses:\s*actions\/download-artifact@/);
+    expect(itch, 'the itch job runs its own build — that is two artifacts under one version').not.toMatch(
+      /npm run build/,
+    );
+  });
+
+  /**
+   * An itch HTML5 game is served from a per-upload path and `localStorage` is scoped to origin AND
+   * path, so a new upload hands players a fresh empty origin with their save stranded in the old
+   * one. butler patches the existing upload on a named channel; the channel name is load-bearing.
+   */
+  it('pushes to a named channel, which is what keeps saves reachable', () => {
+    expect(rules('.github/workflows/release.yml'), 'the butler target lost its :channel suffix').toMatch(
+      /ITCH_TARGET:\s*\S+\/\S+:\S+/,
+    );
   });
 });
 
