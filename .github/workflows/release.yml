@@ -158,7 +158,11 @@ jobs:
             echo "::error::butler could not push to $ITCH_TARGET — check the itch user and game slug."
             exit 1
           fi
-          butler status "${ITCH_TARGET%%:*}"
+          # THE FULL TARGET, channel included. Stripping it — which the predecessor does — asks
+          # about a project rather than a channel, and butler answers "No channel found for
+          # vulpeculagames/into-the-coil". That is the last line of a job that succeeded, and it
+          # reads exactly like the push failed. butler's own output says to pass the channel.
+          butler status "$ITCH_TARGET"
 
       - name: Summary
         run: |
