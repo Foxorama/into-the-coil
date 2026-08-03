@@ -3,9 +3,14 @@ dist/
 .vite/
 *.local
 
-# Working material, not project documentation. The predecessor-project audits and the
-# scaffold sequencing are inputs to the first few commits, not a record of this project.
-# The durable decisions in them get promoted into the constitution and docs/decisions/,
-# which are NOT ignored — only these two paths are, so a real doc tree can land beside them.
+# Working material, not project documentation. The predecessor-project audits, the scaffold
+# sequencing and its review are inputs to the first few commits, not a record of this project.
+# The durable decisions in them get promoted into the constitution and docs/decisions/, which
+# are NOT ignored — only these three paths are, so a real doc tree can land beside them.
+#
+# They are deliberately kept on disk rather than deleted: the plan and its review are the
+# snapshot of how this repo was intended to start, and the point of comparison for how it
+# actually went. Neither is maintained after the scaffold lands — going stale is the intent.
 docs/extraction/
 docs/scaffold-plan.md
+docs/plan-review-2026-08-03.md
