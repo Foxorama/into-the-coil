@@ -1,6 +1,7 @@
 /// <reference types="node" />
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
+import { resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
 import type { Plugin } from 'vite';
 import { viteSingleFile } from 'vite-plugin-singlefile';
@@ -17,32 +18,75 @@ const pkgVersion = (
 ).version;
 
 /**
- * The same version, for the one consumer `define` cannot reach.
+ * The same values, for the consumers `define` cannot reach.
  *
- * `define` rewrites identifiers in the MODULE graph. The boot watchdog is a classic inline script
- * that runs before that graph exists, so it takes a placeholder that this substitutes in the HTML
- * itself. Vite's own `%VITE_*%` mechanism is not used: it is scoped to `VITE_`-prefixed env vars,
- * and this version comes from package.json.
+ * `define` rewrites identifiers in the MODULE graph, and two surfaces are not in it. The boot
+ * watchdog is a classic inline script that runs before the graph exists; the service worker is
+ * copied out of `public/` verbatim and never sees the bundler at all. Both take placeholders that
+ * this stamps at build time. Vite's own `%VITE_*%` mechanism is not used: it is scoped to
+ * `VITE_`-prefixed env vars, and these come from package.json and git.
  *
- * ⚠️ Missing placeholder is a BUILD FAILURE, not a no-op. A silent substitution is the failure
+ * ⚠️ A missing placeholder is a BUILD FAILURE, not a no-op. Silently doing nothing is the failure
  * mode of every string-replacement step — the day someone edits the watchdog and the placeholder
  * goes with it, the build keeps passing and the shipped page reports its version as whatever text
- * happened to survive. There is no version to fall back to that would be more honest than
- * stopping.
+ * happened to survive. There is no value to fall back to that would be more honest than stopping.
  */
 const ITC_VERSION = '%ITC_VERSION%';
-function substituteWatchdogVersion(): Plugin {
+const ITC_BUILD = '%ITC_BUILD%';
+
+/** Which placeholders each stamped surface is REQUIRED to carry. Absence fails the build. */
+const stamped = (tokens: Record<string, string>, text: string, where: string): string => {
+  let out = text;
+  for (const [token, value] of Object.entries(tokens)) {
+    if (!out.includes(token)) {
+      throw new Error(
+        `vite: ${where} has no ${token} placeholder. It cannot import src/brand.ts, so this is the ` +
+          'only way it learns which build it belongs to. Restore the placeholder, or remove this ' +
+          'plugin along with the surface that needed it.',
+      );
+    }
+    out = out.replaceAll(token, value);
+  }
+  return out;
+};
+
+function stampBuildIdentity(): Plugin {
+  let outDir = 'dist';
   return {
-    name: 'itc-watchdog-version',
+    name: 'itc-stamp-build-identity',
+    configResolved(config) {
+      // Resolved against the project root rather than `process.cwd()`: the tests invoke the build
+      // through `process.execPath` from `tests/globalSetup.ts`, and a cwd-relative guess is the
+      // kind of thing that works locally and writes to the wrong place on a runner.
+      outDir = resolve(config.root, config.build.outDir);
+    },
+    // The watchdog needs the version only. It reports "which release is on screen"; the commit is
+    // the module graph's job, and by the time the watchdog speaks the module graph is what failed.
     transformIndexHtml(html) {
-      if (!html.includes(ITC_VERSION)) {
+      return stamped({ [ITC_VERSION]: pkgVersion }, html, 'index.html');
+    },
+    /**
+     * `public/` is COPIED, not transformed — no Vite hook sees its contents on the way through, so
+     * the worker is rewritten where it lands. `closeBundle` is the first point at which the copy
+     * is guaranteed to be on disk.
+     *
+     * The worker needs the COMMIT as well, and that is the load-bearing half: a byte-identical
+     * `sw.js` is never re-installed by the browser, so a cache name stamped with the package
+     * version alone would freeze the precached shell at whichever build first shipped that version.
+     */
+    closeBundle() {
+      const sw = resolve(outDir, 'sw.js');
+      if (!existsSync(sw)) {
         throw new Error(
-          `vite: index.html has no ${ITC_VERSION} placeholder. The boot watchdog cannot import ` +
-            'src/brand.ts, so this is the only way it learns which version it is reporting on. ' +
-            'Restore the placeholder, or remove this plugin along with the watchdog.',
+          `vite: ${outDir}/sw.js is missing. public/sw.js is the offline shell and is expected to ` +
+            'be copied verbatim into the build; if it was deliberately removed, remove this hook too.',
         );
       }
-      return html.replaceAll(ITC_VERSION, pkgVersion);
+      writeFileSync(
+        sw,
+        stamped({ [ITC_VERSION]: pkgVersion, [ITC_BUILD]: buildId() }, readFileSync(sw, 'utf8'), 'public/sw.js'),
+        'utf8',
+      );
     },
   };
 }
@@ -89,7 +133,7 @@ export default defineConfig({
   // written, and it is the same shape as the predecessor's Pages white-screens (404 / CDN
   // index-asset skew / service-worker interception). With no external asset there is nothing to
   // block and nothing to 404.
-  plugins: [substituteWatchdogVersion(), viteSingleFile()],
+  plugins: [stampBuildIdentity(), viteSingleFile()],
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
