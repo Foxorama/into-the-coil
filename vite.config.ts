@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { defineConfig } from 'vitest/config';
+import type { Plugin } from 'vite';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 
 // The shipped version, single-sourced from package.json and injected as `__APP_VERSION__`, which
@@ -9,13 +10,42 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 // `import pkg from './package.json'` so this config stays a plain ESM module with no
 // import-assertion syntax to trip over.
 //
-// A SECOND injection path is coming and is deliberately not here yet: the boot watchdog in
-// index.html runs before any module and cannot import, so it needs a `%ITC_VERSION%` placeholder
-// substituted by `transformIndexHtml`. That lands with the watchdog itself, in SHELL & IDENTITY —
-// a substitution with nothing to substitute would be untested code arriving before its consumer.
+// The SECOND injection path is `ITC_VERSION` below: the boot watchdog in index.html runs before
+// any module and cannot import, so `define` can never reach it.
 const pkgVersion = (
   JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }
 ).version;
+
+/**
+ * The same version, for the one consumer `define` cannot reach.
+ *
+ * `define` rewrites identifiers in the MODULE graph. The boot watchdog is a classic inline script
+ * that runs before that graph exists, so it takes a placeholder that this substitutes in the HTML
+ * itself. Vite's own `%VITE_*%` mechanism is not used: it is scoped to `VITE_`-prefixed env vars,
+ * and this version comes from package.json.
+ *
+ * ⚠️ Missing placeholder is a BUILD FAILURE, not a no-op. A silent substitution is the failure
+ * mode of every string-replacement step — the day someone edits the watchdog and the placeholder
+ * goes with it, the build keeps passing and the shipped page reports its version as whatever text
+ * happened to survive. There is no version to fall back to that would be more honest than
+ * stopping.
+ */
+const ITC_VERSION = '%ITC_VERSION%';
+function substituteWatchdogVersion(): Plugin {
+  return {
+    name: 'itc-watchdog-version',
+    transformIndexHtml(html) {
+      if (!html.includes(ITC_VERSION)) {
+        throw new Error(
+          `vite: index.html has no ${ITC_VERSION} placeholder. The boot watchdog cannot import ` +
+            'src/brand.ts, so this is the only way it learns which version it is reporting on. ' +
+            'Restore the placeholder, or remove this plugin along with the watchdog.',
+        );
+      }
+      return html.replaceAll(ITC_VERSION, pkgVersion);
+    },
+  };
+}
 
 /**
  * WHICH BUILD IS THIS, not which release.
@@ -59,7 +89,7 @@ export default defineConfig({
   // written, and it is the same shape as the predecessor's Pages white-screens (404 / CDN
   // index-asset skew / service-worker interception). With no external asset there is nothing to
   // block and nothing to 404.
-  plugins: [viteSingleFile()],
+  plugins: [substituteWatchdogVersion(), viteSingleFile()],
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
