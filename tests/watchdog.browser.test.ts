@@ -31,13 +31,26 @@ function shippedWatchdog(): string {
 
 const fixtures = mkdtempSync(join(tmpdir(), 'itc-watchdog-'));
 
+interface Fixture {
+  url: string;
+  limitMs: number;
+}
+
 /**
  * A page that is the shipped watchdog plus whatever is being asked to fail in front of it.
  *
  * `limitMs` drives the watchdog's boot limit down from the shipped 8s so the timeout path is
  * testable in the time a test is allowed to take.
+ *
+ * ⚠️ IT CANNOT GO MUCH LOWER THAN THIS, and 100ms — what it used to be — was too low. The watchdog
+ * latches the FIRST failure, so every fixture expecting a specific error is racing its own boot
+ * limit: a `<script type="module">` is deferred until the document has parsed, and on a loaded CI
+ * runner that took longer than 100ms. The timeout then latched first and `stays silent when
+ * something failed but the app booted anyway` reported `timeout` where it expected `resource` —
+ * intermittently, and only on CI. The limit is returned alongside the URL so the settle below cannot
+ * drift out of agreement with it.
  */
-function fixture(name: string, contents: string, limitMs = 100): string {
+function fixture(name: string, contents: string, limitMs = 800): Fixture {
   const html = `<!doctype html>
 <html lang="en">
   <head>
@@ -53,7 +66,7 @@ ${contents}
 `;
   const path = join(fixtures, `${name}.html`);
   writeFileSync(path, html, 'utf8');
-  return pathToFileURL(path).href;
+  return { url: pathToFileURL(path).href, limitMs };
 }
 
 interface BootState {
@@ -77,18 +90,20 @@ describe.runIf(chromePath)('the boot watchdog catches what it claims to', () => 
     await browser?.close();
   });
 
-  /** Opens the fixture and waits for the watchdog to reach a verdict, then reports its state. */
-  async function boot(url: string): Promise<BootState> {
+  /**
+   * Opens the fixture and waits for the watchdog to reach a verdict, then reports its state.
+   *
+   * `until` defaults to "something happened". A test whose subject is the interaction between two
+   * signals must say so — sampling on the first of them arriving reads a half-finished state.
+   */
+  async function boot(f: Fixture, until = 'window.__ITC_BOOT__ && (window.__ITC_BOOT__.error || window.__ITC_BOOT__.booted)'): Promise<BootState> {
     page = await browser!.newPage();
-    await page.goto(url);
-    await page
-      .waitForFunction('window.__ITC_BOOT__ && (window.__ITC_BOOT__.error || window.__ITC_BOOT__.booted)', null, {
-        timeout: 5_000,
-      })
-      .catch(() => undefined);
-    // A settle beyond the boot limit, so the grace period has run and the panel — or its
-    // deliberate absence — is final.
-    await page.waitForTimeout(300);
+    await page.goto(f.url);
+    await page.waitForFunction(until, null, { timeout: 10_000 }).catch(() => undefined);
+    // Settle PAST the boot limit, so the grace period has certainly run and the panel — or its
+    // deliberate absence — is final. Derived from the fixture rather than a constant, because the
+    // two silently disagreeing is what made this file flaky.
+    await page.waitForTimeout(f.limitMs + 300);
     return (await page.evaluate('window.__ITC_BOOT__')) as BootState;
   }
 
@@ -160,6 +175,9 @@ describe.runIf(chromePath)('the boot watchdog catches what it claims to', () => 
         `<script src="./decorative.js"></script>
      <script type="module">window.__ITC_BOOT__.ok()</script>`,
       ),
+      // BOTH signals, explicitly. This test is about what happens when a failure and a successful
+      // boot coexist, so waiting for "either" samples whichever won and asserts against the other.
+      'window.__ITC_BOOT__ && window.__ITC_BOOT__.error && window.__ITC_BOOT__.booted',
     );
     expect(state.error?.kind, 'the failure is still recorded').toBe('resource');
     expect(state.booted).toBe(true);
