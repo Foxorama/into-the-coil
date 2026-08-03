@@ -230,9 +230,16 @@ if (unreadable.length) {
 }
 
 const show = (v) => `\`${Array.isArray(v) ? JSON.stringify(v) : v}\``;
+// ⚠️ EVERY SECTION THAT CAN BE CHECKED MUST BE COUNTED, and environments were added to the check
+// without being added here — so the report said "19 of 19" while it had actually verified twenty
+// things, including the one that refused a release. That is the same defect the note above
+// `rulesetCheckKeys` describes, running the other way: there the denominator claimed more than was
+// looked at, here it claimed less. Both make the number meaningless, and the number is the only part
+// of this report anyone reads when it is green.
 const total =
   Object.keys(settings).length +
   Object.keys(protection?.expect ?? {}).length +
+  envNames.length +
   rulesetNames.flatMap(rulesetCheckKeys).length;
 
 const lines = [`## Settings drift — \`${repo}\``, ''];
