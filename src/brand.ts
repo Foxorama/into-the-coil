@@ -10,7 +10,7 @@
  * `<title>` and the boot watchdog run before any module, and a service worker is not in the
  * module graph at all. Those get a placeholder substituted at build time, or a literal — and
  * what holds them honest is a TEST asserting the spellings still agree, not a constant they
- * cannot import. That test lands with TEST SPINE.
+ * cannot import. That test is `tests/brand.test.ts`.
  *
  * NOT rename targets: the npm package name and the repo.
  */
@@ -33,3 +33,21 @@ export const GAME_TITLE = 'Into the Coil';
  */
 export const APP_VERSION: string =
   typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '0.0.0-dev';
+
+/** Injected by Vite from the commit being built (see `buildId()` in `vite.config.ts`). */
+declare const __BUILD_ID__: string;
+
+/**
+ * WHICH BUILD, not which release.
+ *
+ * `APP_VERSION` comes from package.json, so every build between two releases carries the same
+ * string — in the predecessor it stood at one version across fourteen merges and five deploys.
+ * That is the gap a play-test walked into: *"my phone still hasn't updated, but my wife's has"*,
+ * with no way for the player, the developer, or a support reply to establish which build either
+ * device was actually running.
+ *
+ * The commit is the one identifier that always moves. Shown beside the version wherever the
+ * version is shown, so the answer is readable off the device rather than inferred from when
+ * somebody last opened the app.
+ */
+export const BUILD_ID: string = typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : 'dev';
