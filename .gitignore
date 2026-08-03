@@ -25,3 +25,9 @@ docs/plan-review-2026-08-03.md
 # reached the way CLAUDE.md reaches the predecessor — by absolute path. If a machine change is ever
 # on the cards, copy the folder first; nothing else will.
 docs/milestones/
+
+# Facts about THIS computer — the toolchain's location, and the map of configuration that lives
+# outside git. Ignored because a clone on another machine needs none of it and would be misled by
+# all of it. It was previously inside docs/scaffold-plan.md, which is explicitly not maintained past
+# RELEASE, so the only record of how to run node sat in a file scheduled to be deleted.
+docs/machine.md
