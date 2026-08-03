@@ -18,9 +18,9 @@ jobs:
   drift:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
 
@@ -34,11 +34,33 @@ jobs:
           # `permissions:` key can grant either. Absent, the report says NOT CHECKED and lists them.
           SETTINGS_READ_TOKEN: ${{ secrets.SETTINGS_READ_TOKEN }}
         run: |
-          # ⚠️ pipefail is LOAD-BEARING. `node … | tee` reports TEE's exit code, so without it a
-          # script that threw still exited 0 and this step passed green — which is exactly what
-          # happened on the first two runs of this workflow.
+          # ⚠️ Two failures already found here, both about the REPORT rather than the check.
+          #
+          # 1. `node … | tee` reports TEE's exit code, and this shell has no pipefail, so a script
+          #    that threw still exited 0 and the step passed green.
+          # 2. A throw writes to stderr and prints nothing to stdout, so `drift.md` was EMPTY and
+          #    the issue it opened had a blank body — a guard that fired and said nothing.
+          #
+          # So: fail on error, and if the report never got written, put the error in its place.
           set -o pipefail
-          node scripts/settings-drift.mjs "$GITHUB_REPOSITORY" | tee drift.md
+          if node scripts/settings-drift.mjs "$GITHUB_REPOSITORY" > drift.md 2> drift.err; then
+            cat drift.md
+          else
+            if [ ! -s drift.md ]; then
+              {
+                echo "## Settings drift check FAILED"
+                echo
+                echo "It could not read what it was asked to check. Unverifiable is not the same"
+                echo "as correct, so this is a failure rather than a quiet pass."
+                echo
+                echo '```'
+                cat drift.err
+                echo '```'
+              } > drift.md
+            fi
+            cat drift.md
+            exit 1
+          fi
 
       - run: cat drift.md >> "$GITHUB_STEP_SUMMARY"
 
