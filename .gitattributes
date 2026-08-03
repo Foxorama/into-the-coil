@@ -1,0 +1,9 @@
+# Line endings are a property of the REPO, not of the machine that happens to clone it.
+#
+# The predecessor project has no .gitattributes and relies on `core.autocrlf=true` in the
+# system gitconfig. That has cost it nothing in 822 commits — but it is a machine setting,
+# and it survives neither a fresh machine nor a contributor with `autocrlf=false`.
+#
+# Named cost: `eol=lf` forces LF in the WORKING TREE, which `autocrlf=true` does not. Windows
+# tooling that expects CRLF will see LF here. That is the trade, made knowingly.
+* text=auto eol=lf
