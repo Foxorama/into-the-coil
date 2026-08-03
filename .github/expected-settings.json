@@ -39,5 +39,34 @@
       "value": false,
       "why": "The one merge method that does NOT: N commits on main with nothing tying them together, so there is no single thing to revert. Disabled 2026-08-03."
     }
+  },
+  "protection": {
+    "branch": "main",
+    "expect": {
+      "required_status_checks": {
+        "value": ["test"],
+        "why": "The JOB KEY in tests.yml, not the workflow name. A required context that never reports blocks every PR forever."
+      },
+      "strict": {
+        "value": true,
+        "why": "A branch must be up to date before merging, or `test` passed against a tree nobody is merging."
+      },
+      "requires_pull_request": {
+        "value": true,
+        "why": "Step 7. Ends the scaffold's deliberate direct-to-main suspension."
+      },
+      "enforce_admins": {
+        "value": true,
+        "why": "⚠️ THE ONE THAT WAS DECORATIVE. With this false, the only person who can push is exempt from every rule above — verified 2026-08-03 by a probe push that reported 'Bypassed rule violations' and succeeded. Protection that cannot stop the sole developer stops nobody."
+      },
+      "allow_force_pushes": {
+        "value": false,
+        "why": "History on main is not rewritten. See 0006."
+      },
+      "allow_deletions": {
+        "value": false,
+        "why": "main is named by every workflow and protection rule."
+      }
+    }
   }
 }

@@ -21,17 +21,21 @@ if (!repo) throw new Error('settings-drift: no repository given (argv[2] or GITH
 if (!token) throw new Error('settings-drift: no GH_TOKEN / GITHUB_TOKEN in the environment');
 
 const expectedFile = new URL('../.github/expected-settings.json', import.meta.url);
-const { settings } = JSON.parse(readFileSync(expectedFile, 'utf8'));
+const { settings, protection } = JSON.parse(readFileSync(expectedFile, 'utf8'));
 
-const res = await fetch(`https://api.github.com/repos/${repo}`, {
-  headers: {
-    authorization: `Bearer ${token}`,
-    accept: 'application/vnd.github+json',
-    'user-agent': 'into-the-coil-settings-drift',
-  },
-});
-if (!res.ok) throw new Error(`settings-drift: GET /repos/${repo} returned ${res.status} ${res.statusText}`);
-const live = await res.json();
+const api = async (path) => {
+  const res = await fetch(`https://api.github.com${path}`, {
+    headers: {
+      authorization: `Bearer ${token}`,
+      accept: 'application/vnd.github+json',
+      'user-agent': 'into-the-coil-settings-drift',
+    },
+  });
+  if (!res.ok) throw new Error(`settings-drift: GET ${path} returned ${res.status} ${res.statusText}`);
+  return res.json();
+};
+
+const live = await api(`/repos/${repo}`);
 
 const drifted = [];
 const unreadable = [];
@@ -44,6 +48,38 @@ for (const [key, { value: want, why }] of Object.entries(settings)) {
   if (live[key] !== want) drifted.push({ key, want, got: live[key], why });
 }
 
+/**
+ * Branch protection, which lives on a DIFFERENT endpoint and needs `administration: read`.
+ *
+ * Added because everything configured on 2026-08-03 — the required `test` check, the PR
+ * requirement, `enforce_admins` — sat outside the only guard built to notice settings drift. And
+ * one of them had already been wrong: `enforce_admins: false` left protection reporting correct in
+ * every settings screen while stopping nothing, because the sole developer was exempt from it.
+ * That is the failure this whole script exists for, and it was in the script's blind spot.
+ */
+const shape = (v) => (v && typeof v === 'object' && 'enabled' in v ? v.enabled : v);
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+if (protection) {
+  const p = await api(`/repos/${repo}/branches/${protection.branch}/protection`);
+  const actual = {
+    required_status_checks: p.required_status_checks?.contexts ?? null,
+    strict: p.required_status_checks?.strict ?? null,
+    requires_pull_request: p.required_pull_request_reviews != null,
+    enforce_admins: shape(p.enforce_admins),
+    allow_force_pushes: shape(p.allow_force_pushes),
+    allow_deletions: shape(p.allow_deletions),
+  };
+  for (const [key, { value: want, why }] of Object.entries(protection.expect)) {
+    const got = actual[key];
+    if (got === null || got === undefined) {
+      unreadable.push(`protection.${key}`);
+      continue;
+    }
+    if (!same(got, want)) drifted.push({ key: `protection.${key}`, want, got, why });
+  }
+}
+
 if (unreadable.length) {
   throw new Error(
     `settings-drift: the API response carries no value for ${unreadable.join(', ')} — ` +
@@ -51,13 +87,16 @@ if (unreadable.length) {
   );
 }
 
+const checked = Object.keys(settings).length + Object.keys(protection?.expect ?? {}).length;
+const show = (v) => `\`${Array.isArray(v) ? JSON.stringify(v) : v}\``;
+
 const lines = [`## Settings drift — \`${repo}\``, ''];
 if (drifted.length === 0) {
-  lines.push(`All ${Object.keys(settings).length} decided settings match. Read back, not assumed.`);
+  lines.push(`All ${checked} decided settings match, repository and branch protection. Read back, not assumed.`);
 } else {
   lines.push('| setting | decided | live | why it was decided |', '|---|---|---|---|');
   for (const { key, want, got, why } of drifted) {
-    lines.push(`| \`${key}\` | \`${want}\` | \`${got}\` | ${why} |`);
+    lines.push(`| \`${key}\` | ${show(want)} | ${show(got)} | ${why} |`);
   }
 }
 process.stdout.write(lines.join('\n') + '\n');
