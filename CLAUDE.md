@@ -38,11 +38,16 @@ decision needs no rule.
   directory under `src/` is a decision, and fails a test until it is written as one.
   — [0015](docs/decisions/0015-the-layer-ladder.md)
 
+- **A hub enumerates kinds, never instances.** Content is rows in a `Record<Kind, Row>` over a
+  closed union, in `src/content/`; behaviour rides the row; a registry is an explicit list of
+  imports. The table is the guard, so the five ways of defeating it — auto-discovery,
+  `Record<string, …>`, `any`, `@ts-ignore`, a `switch` with no `never` arm — are held by a test.
+  — [0016](docs/decisions/0016-a-hub-enumerates-kinds.md)
+
 ## Some code conventions are still deliberately absent
 
-Registries and state shape wait on decisions not yet landed; writing them first means writing them
-twice. So do file naming, function size and comment style — **not** process, which is why the rules
-above exist now.
+State shape waits on a decision not yet landed; writing it first means writing it twice. So do file
+naming, function size and comment style — **not** process, which is why the rules above exist now.
 
 ## The predecessor
 
