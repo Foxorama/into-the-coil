@@ -25,6 +25,23 @@ declare const __APP_VERSION__: string;
 export const GAME_TITLE = 'Into the Coil';
 
 /**
+ * The reserved application identifier — **frozen, and deliberately not derived from `GAME_TITLE`.**
+ *
+ * Reverse-DNS is the shape every app store and package manager wants, and reserving one costs
+ * nothing now while there is no store listing to contradict. What it buys is that the identifier
+ * cannot be *invented under pressure* later, at the one moment it is least revisable.
+ *
+ * ⚠️ It does not track the title, and a test must never make it. An app id is the thing that says
+ * two installs are the same app; changing it after publication does not rename anything, it forks
+ * the app and orphans every install under the old id. So a rename moves `GAME_TITLE` and leaves
+ * this exactly where it is — which is only possible because they were never tied together.
+ *
+ * Unused by any shipped surface today. The web manifest identifies the app by its start URL, which
+ * is what the spec asks for; this waits for a native shell, a store listing, or neither.
+ */
+export const APP_ID = 'com.foxorama.intothecoil';
+
+/**
  * The shipped version, from package.json — the string a player quotes in a bug report.
  *
  * The `typeof` guard reads an undeclared global safely (it yields `'undefined'` rather than

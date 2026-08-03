@@ -1,0 +1,11 @@
+{
+  "name": "Into the Coil",
+  "short_name": "Into the Coil",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#1b1b1f",
+  "theme_color": "#1b1b1f"
+}

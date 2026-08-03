@@ -23,7 +23,9 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": false,
 
-    "types": ["node"]
+    // `vite/client` for `import.meta.env`, which is how `src/main.ts` tells a production build from
+    // the dev server — the service worker must only ever be registered by the former.
+    "types": ["node", "vite/client"]
   },
   "include": ["src", "tests", "vite.config.ts"]
 }

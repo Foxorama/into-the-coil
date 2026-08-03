@@ -3,7 +3,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { APP_VERSION, BUILD_ID, GAME_TITLE } from '../src/brand.ts';
+import { APP_ID, APP_VERSION, BUILD_ID, GAME_TITLE } from '../src/brand.ts';
 
 /**
  * Product identity guards.
@@ -62,6 +62,49 @@ describe('the product name is single-sourced', () => {
     const title = /<title>([^<]*)<\/title>/.exec(html)?.[1];
     expect(title, 'index.html has no <title>').toBeTruthy();
     expect(title, 'index.html spells the product name differently from src/brand.ts').toBe(GAME_TITLE);
+  });
+
+  /**
+   * THE LAUNCHER-LABEL SURFACE, and the reason `brand.ts` needed a test rather than just a constant.
+   *
+   * In the predecessor a rename moved five surfaces and missed the sixth — a native resource
+   * outside the module graph, which no constant could ever have reached. The web manifest is that
+   * same shape: it is JSON copied verbatim out of `public/`, it cannot import anything, and its
+   * `name` is what a player reads on their home screen for as long as the app stays installed.
+   *
+   * `short_name` too. It is the one that actually fits under the icon, so it is the one that is
+   * seen — and the one nobody remembers to change.
+   */
+  it("the install manifest's name agrees with brand.ts", () => {
+    const manifest = JSON.parse(read('public/manifest.webmanifest')) as Record<string, unknown>;
+    expect(manifest.name, 'the manifest spells the product name differently from src/brand.ts').toBe(GAME_TITLE);
+    expect(manifest.short_name, 'the home-screen label disagrees with src/brand.ts').toBe(GAME_TITLE);
+  });
+});
+
+describe('the application identifier is reserved and frozen', () => {
+  /**
+   * Shape only, and never a derivation from `GAME_TITLE`.
+   *
+   * An app id says two installs are the same app. Changing it after publication does not rename
+   * anything — it forks the app and orphans every install under the old id. A test tying it to the
+   * title would therefore demand exactly the wrong change on the day of a rename, which is why the
+   * two are deliberately unrelated and only one of them is asserted here.
+   */
+  it('is well-formed reverse-DNS', () => {
+    expect(APP_ID).toMatch(/^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$/);
+  });
+
+  it('is written in exactly one place', () => {
+    const spellings = execSync(`git grep -c --fixed-strings "${APP_ID}" -- src tests index.html public`, {
+      encoding: 'utf8',
+      cwd: root,
+    })
+      .trim()
+      .split('\n');
+    // Declared once and referenced by import everywhere else — including by this test, which
+    // interpolates the constant rather than re-typing it and so does not appear in its own results.
+    expect(spellings).toEqual(['src/brand.ts:1']);
   });
 });
 

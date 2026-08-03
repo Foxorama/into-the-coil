@@ -1,0 +1,28 @@
+# Cache rules, for hosts that read them.
+#
+# Cloudflare Pages honours this file. GitHub Pages ignores it entirely and itch.io serves a zip, so
+# shipping it to all three costs nothing and takes effect wherever it can. See
+# docs/decisions/0008-the-shell-sidecars.md.
+#
+# THE SHELL IS NEVER SERVED FROM CACHE WITHOUT ASKING. GitHub Pages sends index.html with
+# `Cache-Control: max-age=600` and gives you no way to change it, which is what stranded the
+# predecessor's installed app on the previous build for ten minutes after every deploy. Where the
+# header IS ours to set, it says the honest thing: revalidate the shell every time.
+#
+# `no-cache` is NOT `no-store`. It lets the browser keep the single-file bundle and send
+# `If-None-Match`, so an unchanged build costs a 304 rather than a full re-download on mobile data.
+#
+# ⚠️ Every rule here is correct on ANY host, which is deliberate: if production ever moves, this
+# file makes it strictly fresher and never staler. Nothing below is staging-specific — keep it that
+# way, or this becomes a setting that silently changes meaning when the host does.
+#
+# ⚠️ `/sw.js` matters most. A cached service worker is a cached DECISION about how everything else
+# is served, and it outlives the tab that installed it.
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/sw.js
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: no-cache
