@@ -21,22 +21,27 @@
     },
     "allow_auto_merge": {
       "value": true,
+      "admin": true,
       "why": "The branch -> PR -> auto-merge lifecycle depends on it."
     },
     "delete_branch_on_merge": {
       "value": true,
+      "admin": true,
       "why": "Merged branches accumulate otherwise, and stale ones get re-used by mistake."
     },
     "allow_squash_merge": {
       "value": true,
+      "admin": true,
       "why": "Produces one revertable commit per PR, which is most of what 0001 asks for."
     },
     "allow_merge_commit": {
       "value": true,
+      "admin": true,
       "why": "Also produces a single revertable unit."
     },
     "allow_rebase_merge": {
       "value": false,
+      "admin": true,
       "why": "The one merge method that does NOT: N commits on main with nothing tying them together, so there is no single thing to revert. Disabled 2026-08-03."
     }
   },
