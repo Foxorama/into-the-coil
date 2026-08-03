@@ -32,7 +32,7 @@ if (!repo) throw new Error('settings-drift: no repository given (argv[2] or GITH
 if (!token) throw new Error('settings-drift: no GH_TOKEN / GITHUB_TOKEN in the environment');
 
 const expectedFile = new URL('../.github/expected-settings.json', import.meta.url);
-const { settings, protection } = JSON.parse(readFileSync(expectedFile, 'utf8'));
+const { settings, protection, rulesets } = JSON.parse(readFileSync(expectedFile, 'utf8'));
 
 const api = async (path, as = token) => {
   const res = await fetch(`https://api.github.com${path}`, {
@@ -93,20 +93,96 @@ if (protection && !adminToken) {
   }
 }
 
+// ---- rulesets --------------------------------------------------------------------------------
+
+/**
+ * The SECOND system stating branch policy. Both it and classic protection apply, most restrictive
+ * winning — so a change made here is invisible to a check reading only the protection endpoint.
+ * That is the same blind spot this script was extended to close, reopened in a different API.
+ */
+const rulesetNames = Object.keys(rulesets ?? {}).filter((k) => !k.startsWith('$'));
+
+/**
+ * Every assertion made about one ruleset, named. Used BOTH for the skip list and the "N of M"
+ * denominator — they were computed separately once and disagreed, so the report claimed to have
+ * checked four things it had not even looked at.
+ */
+const rulesetCheckKeys = (name) => {
+  const want = rulesets[name];
+  const keys = [`ruleset[${name}].enforcement`, `ruleset[${name}].bypass_actor_count`, `ruleset[${name}].rule_types`];
+  for (const [ruleType, fields] of Object.entries(want)) {
+    if (!fields || typeof fields !== 'object' || Array.isArray(fields)) continue;
+    for (const field of Object.keys(fields)) keys.push(`ruleset[${name}].${ruleType}.${field}`);
+  }
+  return keys;
+};
+
+if (rulesetNames.length && !adminToken) {
+  skipped.push(...rulesetNames.flatMap(rulesetCheckKeys));
+} else if (rulesetNames.length) {
+  const index = await api(`/repos/${repo}/rulesets`, adminToken);
+  for (const name of rulesetNames) {
+    const want = rulesets[name];
+    const found = index.find((r) => r.name === name);
+    if (!found) {
+      drifted.push({ key: `ruleset[${name}]`, want: 'present', got: 'missing', why: want.why });
+      continue;
+    }
+    const full = await api(`/repos/${repo}/rulesets/${found.id}`, adminToken);
+    const types = full.rules.map((r) => r.type).sort();
+
+    const cmp = (key, got, expected, why) => {
+      if (!same(got, expected)) drifted.push({ key: `ruleset[${name}].${key}`, want: expected, got, why });
+    };
+
+    cmp('enforcement', full.enforcement, want.enforcement, want.why);
+    cmp('bypass_actor_count', (full.bypass_actors ?? []).length, want.bypass_actor_count,
+      'A bypass actor is an exemption, and an exemption nobody remembers granting is how protection becomes decorative.');
+    cmp('rule_types', types, [...want.rule_types].sort(), want.why);
+
+    for (const [ruleType, fields] of Object.entries(want)) {
+      if (typeof fields !== 'object' || Array.isArray(fields) || !types.includes(ruleType)) continue;
+      const params = full.rules.find((r) => r.type === ruleType)?.parameters ?? {};
+      for (const [field, { value, why }] of Object.entries(fields)) {
+        if (!(field in params)) {
+          unreadable.push(`ruleset[${name}].${ruleType}.${field}`);
+          continue;
+        }
+        cmp(`${ruleType}.${field}`, params[field], value, why);
+      }
+    }
+  }
+}
+
 // ---- report --------------------------------------------------------------------------------
 
 if (unreadable.length) {
   // Name the fix, not just the symptom. GitHub does not error on an under-scoped token here — it
   // silently OMITS the fields, so the failure looks like a bug in this script rather than a
   // permissions problem, and the first person to hit it will go looking in the wrong place.
+  // DIAGNOSTICS, not just a complaint. GitHub does not reject an under-scoped token here — it
+  // silently omits the fields — so the failure reads as a bug in this script. `permissions` says
+  // outright what the token is treated as having, which is the one fact needed to fix it and the
+  // one nobody can see from the outside.
+  const perms = live.permissions ?? {};
+  const diagnosis = [
+    `The token is seen by GitHub as: ${JSON.stringify(perms)}`,
+    Object.keys(perms).length === 0
+      ? 'An EMPTY permissions object means the token carries no repository access role at all.'
+      : perms.admin
+        ? 'It HAS admin. If fields are still missing, the omission is not about repository scope.'
+        : '⚠️ `admin: false` is the cause. GitHub returns the merge flags only to a token it treats ' +
+          'as an admin of the repository. A fine-grained PAT scoped to Administration: read is ' +
+          'granted READ of the administration settings API — it is not treated as an admin ' +
+          'collaborator, which is what this particular response body keys off. A CLASSIC PAT with ' +
+          'the `repo` scope is treated as the owner and does surface them.',
+  ].join('\n');
+
   const hint = adminToken
-    ? 'A SETTINGS_READ_TOKEN is set, but it does not surface these. GitHub returns them only to a ' +
-      'token with admin rights on the repository: a FINE-GRAINED PAT needs Repository permissions ' +
-      '-> Administration: read (Metadata: read is added automatically), and must list this repo ' +
-      'under "Only select repositories". A CLASSIC PAT needs the `repo` scope. Check which kind ' +
-      'the secret holds before re-running.'
+    ? diagnosis
     : 'No SETTINGS_READ_TOKEN is set, and these are not marked `"admin": true` in ' +
       '.github/expected-settings.json — mark them, or supply a token that can read them.';
+
   throw new Error(
     `settings-drift: the API response carries no value for ${unreadable.join(', ')}.\n\n${hint}\n\n` +
       'Unverifiable is not the same as correct, which is why this fails rather than passing quietly.',
@@ -114,7 +190,10 @@ if (unreadable.length) {
 }
 
 const show = (v) => `\`${Array.isArray(v) ? JSON.stringify(v) : v}\``;
-const total = Object.keys(settings).length + Object.keys(protection?.expect ?? {}).length;
+const total =
+  Object.keys(settings).length +
+  Object.keys(protection?.expect ?? {}).length +
+  rulesetNames.flatMap(rulesetCheckKeys).length;
 
 const lines = [`## Settings drift — \`${repo}\``, ''];
 
@@ -130,10 +209,10 @@ if (drifted.length === 0) {
 if (skipped.length) {
   lines.push(
     '',
-    `**NOT CHECKED — ${skipped.length} settings.** The built-in workflow token cannot read these: ` +
-      'the merge flags are omitted from the repository response and branch protection returns 403. ' +
-      'Add a fine-grained PAT with *Administration: read* as the `SETTINGS_READ_TOKEN` secret to ' +
-      'cover them. Until then they are taken on trust:',
+    `**NOT CHECKED — ${skipped.length} of ${total} settings.** The built-in workflow token cannot ` +
+      'read these: the merge flags are omitted from the repository response, and branch protection ' +
+      'and rulesets both return 403. They need a `SETTINGS_READ_TOKEN` secret. Until then they are ' +
+      'taken on trust:',
     '',
     skipped.map((k) => `- \`${k}\``).join('\n'),
   );
