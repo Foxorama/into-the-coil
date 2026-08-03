@@ -28,6 +28,11 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
+          # Optional. A fine-grained PAT with *Administration: read* on this repo turns on the
+          # branch-protection half of the check; the built-in token gets 403 there and no
+          # `permissions:` key can grant it. Absent, the report says NOT CHECKED rather than
+          # implying those settings were verified.
+          SETTINGS_PROTECTION_TOKEN: ${{ secrets.SETTINGS_PROTECTION_TOKEN }}
         run: node scripts/settings-drift.mjs "$GITHUB_REPOSITORY" | tee drift.md
 
       - run: cat drift.md >> "$GITHUB_STEP_SUMMARY"

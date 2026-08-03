@@ -23,10 +23,10 @@ if (!token) throw new Error('settings-drift: no GH_TOKEN / GITHUB_TOKEN in the e
 const expectedFile = new URL('../.github/expected-settings.json', import.meta.url);
 const { settings, protection } = JSON.parse(readFileSync(expectedFile, 'utf8'));
 
-const api = async (path) => {
+const api = async (path, as = token) => {
   const res = await fetch(`https://api.github.com${path}`, {
     headers: {
-      authorization: `Bearer ${token}`,
+      authorization: `Bearer ${as}`,
       accept: 'application/vnd.github+json',
       'user-agent': 'into-the-coil-settings-drift',
     },
@@ -60,8 +60,37 @@ for (const [key, { value: want, why }] of Object.entries(settings)) {
 const shape = (v) => (v && typeof v === 'object' && 'enabled' in v ? v.enabled : v);
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
-if (protection) {
-  const p = await api(`/repos/${repo}/branches/${protection.branch}/protection`);
+/**
+ * ⚠️ THE BUILT-IN WORKFLOW TOKEN CANNOT READ THIS. Measured, not assumed:
+ * `GET /branches/main/protection` returns **403** under `github.token`, and there is no
+ * `permissions:` key that grants it — `administration` is not a valid workflow permission (a
+ * workflow declaring it fails to parse). Reading protection needs a token with admin scope.
+ *
+ * So this half is opt-in on `SETTINGS_PROTECTION_TOKEN`, a fine-grained PAT with
+ * *Administration: read* on this repo alone. Present → protection is checked and any problem is a
+ * hard failure. Absent → the report says NOT CHECKED, in those words, every week.
+ *
+ * The alternative — fail weekly until someone mints a PAT — was rejected: a job that is red for a
+ * reason nobody intends to fix gets switched off, and takes the eight repository settings it *can*
+ * check down with it. A gap that announces itself is worth more than a guard nobody runs.
+ */
+const protectionToken = process.env.SETTINGS_PROTECTION_TOKEN;
+let protectionNote = null;
+
+if (protection && !protectionToken) {
+  protectionNote =
+    '**Branch protection: NOT CHECKED.** The built-in workflow token gets 403 on the protection ' +
+    'endpoint and no `permissions:` key can grant it. To cover it, add a fine-grained PAT with ' +
+    '*Administration: read* as the `SETTINGS_PROTECTION_TOKEN` secret. Until then these are read ' +
+    'back by hand: ' +
+    Object.keys(protection.expect)
+      .map((k) => `\`${k}\``)
+      .join(', ') +
+    '.';
+}
+
+if (protection && protectionToken) {
+  const p = await api(`/repos/${repo}/branches/${protection.branch}/protection`, protectionToken);
   const actual = {
     required_status_checks: p.required_status_checks?.contexts ?? null,
     strict: p.required_status_checks?.strict ?? null,
@@ -87,18 +116,23 @@ if (unreadable.length) {
   );
 }
 
-const checked = Object.keys(settings).length + Object.keys(protection?.expect ?? {}).length;
+const checked = Object.keys(settings).length + (protectionToken ? Object.keys(protection?.expect ?? {}).length : 0);
 const show = (v) => `\`${Array.isArray(v) ? JSON.stringify(v) : v}\``;
 
 const lines = [`## Settings drift — \`${repo}\``, ''];
 if (drifted.length === 0) {
-  lines.push(`All ${checked} decided settings match, repository and branch protection. Read back, not assumed.`);
+  lines.push(
+    `All ${checked} decided settings match${protectionToken ? ', repository and branch protection' : ''}. ` +
+      'Read back, not assumed.',
+  );
 } else {
   lines.push('| setting | decided | live | why it was decided |', '|---|---|---|---|');
   for (const { key, want, got, why } of drifted) {
     lines.push(`| \`${key}\` | ${show(want)} | ${show(got)} | ${why} |`);
   }
 }
+if (protectionNote) lines.push('', protectionNote);
+
 process.stdout.write(lines.join('\n') + '\n');
 
 // Non-zero on drift so the workflow step fails visibly, rather than leaving it to whoever reads

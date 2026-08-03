@@ -28,8 +28,30 @@ Three settings inherited by this repo — public visibility, auto-merge, auto-de
 were carried as ticked-and-recorded for days. Read back on 2026-08-03 they were all correct. That
 is not evidence the practice works; it is one sample, and the cost of checking was one command.
 
-## Known gap
+## Built, 2026-08-03
 
-This rule is still prose, and prose is the tier that fails. It becomes a real guard only as a
-**scheduled check that reads the settings and opens an issue when one drifts** — cheap beside the
-weekly hotspots workflow it would sit next to. Not yet built.
+`scripts/settings-drift.mjs` and `.github/workflows/settings-drift.yml`. Expected values live in
+`.github/expected-settings.json` **with the reason beside each one**, so the report explains itself
+rather than reporting an unexplained mismatch. It speaks only when something is wrong.
+
+A missing field is a **failure**, not a pass: a token that cannot see a setting must never be
+mistaken for a setting that is correct.
+
+## The half that could not be automated
+
+**Branch protection needs a token this project does not have.** Measured, not assumed:
+`GET /branches/main/protection` returns **403** under the built-in workflow token, and no
+`permissions:` key grants it — `administration` is not valid in a workflow and a file declaring it
+fails to parse.
+
+So that half is opt-in on a `SETTINGS_PROTECTION_TOKEN` secret (a fine-grained PAT, *Administration:
+read*, this repo only). Without it the weekly report says **NOT CHECKED**, in those words, and names
+the six settings being taken on trust.
+
+Failing weekly instead was considered and rejected: a job that is red for a reason nobody intends to
+fix gets switched off, and takes the eight repository settings it *can* check down with it. A gap
+that announces itself beats a guard nobody runs.
+
+⚠️ Still outside any automated check, and read back by hand at RELEASE: Pages source, the
+`github-pages` environment ref policy, DNS, the Cloudflare build configuration, and the itch upload
+flags. Four of the ten incidents came from that list.
