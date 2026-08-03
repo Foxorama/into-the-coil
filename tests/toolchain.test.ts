@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 /**
- * The Node version, which is now one decision written in two places that cannot share a value.
+ * The Node version — one decision that three workflows and a host outside this repo all need.
  *
  * `.github/workflows/tests.yml` tells the CI runner what to install. `.node-version` tells
  * **Cloudflare Pages** what to build staging with — it is the only way to say so, since nothing
@@ -30,14 +30,31 @@ describe('the Node version agrees everywhere it is written', () => {
     expect(read('.node-version').trim()).toMatch(/^\d+$/);
   });
 
-  it('CI installs the same major that Cloudflare Pages will build with', () => {
-    const pinned = read('.node-version').trim();
-    const ci = /node-version:\s*['"]?(\d+)/.exec(read('.github/workflows/tests.yml'))?.[1];
-    expect(ci, 'tests.yml no longer pins a node-version').toBeTruthy();
-    expect(
-      ci,
-      `CI builds on Node ${ci} and staging would build on Node ${pinned} — the suite would be green ` +
-        'about a toolchain nobody deploys on',
-    ).toBe(pinned);
+  /**
+   * ONE SOURCE, not two kept in agreement — which is a better outcome than this test was originally
+   * written for.
+   *
+   * The first version asserted that `tests.yml`'s literal `node-version: 24` matched the file. Then
+   * `release.yml` arrived needing a Node too, and a third spelling of a fact with one true value is
+   * the shape the scaffold plan's ladder says to remove rather than guard. `setup-node` reads
+   * `node-version-file`, so both workflows now point at `.node-version` and there is nothing left to
+   * disagree. What is guarded is that nobody puts a literal back.
+   */
+  it('no workflow spells a Node version — they all read the file', () => {
+    for (const wf of readdirSync(resolve(root, '.github/workflows')).filter((f) => f.endsWith('.yml'))) {
+      const yaml = read(`.github/workflows/${wf}`)
+        .split('\n')
+        .map((l) => (l.trimStart().startsWith('#') ? '' : l))
+        .join('\n');
+      if (!yaml.includes('setup-node')) continue;
+      expect(
+        yaml,
+        `${wf} hardcodes a Node version. Cloudflare Pages reads .node-version and cannot read this ` +
+          'file, so a literal here is a second spelling that will drift.',
+      ).not.toMatch(/node-version:\s*['"]?\d/);
+      expect(yaml, `${wf} uses setup-node without pointing at .node-version`).toMatch(
+        /node-version-file:\s*'\.node-version'/,
+      );
+    }
   });
 });

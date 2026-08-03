@@ -34,7 +34,9 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 24
+          # One source, read by both workflows AND by Cloudflare Pages, which cannot read either
+          # of them. A literal here would be a second spelling — see tests/toolchain.test.ts.
+          node-version-file: '.node-version'
           cache: npm
 
       - run: npm ci
