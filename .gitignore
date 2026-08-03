@@ -14,3 +14,14 @@ dist/
 docs/extraction/
 docs/scaffold-plan.md
 docs/plan-review-2026-08-03.md
+
+# Milestone records — written as each milestone lands, so the next project starts faster than this
+# one did. Ignored for the same reason as the three above: they are about HOW this repo was built,
+# not about what it is, and a future contributor cloning it needs the decisions rather than the
+# retrospectives.
+#
+# ⚠️ NAMED COST, since it is a real one: gitignored means machine-local. These survive neither a
+# fresh machine nor a clone, and the whole point of them is to be read by the NEXT project. They are
+# reached the way CLAUDE.md reaches the predecessor — by absolute path. If a machine change is ever
+# on the cards, copy the folder first; nothing else will.
+docs/milestones/

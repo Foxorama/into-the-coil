@@ -47,3 +47,8 @@ named reason. Never browse it for inspiration.
 `docs/scaffold-plan.md` is gitignored — the scaffold's commit sequencing, on this machine only.
 Read it before proposing scaffold work. It is not maintained past RELEASE: as each decision in it
 moves to `docs/decisions/`, **delete the section rather than summarise it.**
+
+`docs/milestones/` is gitignored — what each milestone cost and what would make the next project
+faster. **A record is written when a milestone lands, not at the end**, and it names what went wrong
+alongside what worked; a retrospective that only lists wins transfers nothing. Start from
+`docs/milestones/NEXT-TIME.md`.
