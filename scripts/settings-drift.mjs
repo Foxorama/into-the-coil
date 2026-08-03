@@ -96,9 +96,20 @@ if (protection && !adminToken) {
 // ---- report --------------------------------------------------------------------------------
 
 if (unreadable.length) {
+  // Name the fix, not just the symptom. GitHub does not error on an under-scoped token here — it
+  // silently OMITS the fields, so the failure looks like a bug in this script rather than a
+  // permissions problem, and the first person to hit it will go looking in the wrong place.
+  const hint = adminToken
+    ? 'A SETTINGS_READ_TOKEN is set, but it does not surface these. GitHub returns them only to a ' +
+      'token with admin rights on the repository: a FINE-GRAINED PAT needs Repository permissions ' +
+      '-> Administration: read (Metadata: read is added automatically), and must list this repo ' +
+      'under "Only select repositories". A CLASSIC PAT needs the `repo` scope. Check which kind ' +
+      'the secret holds before re-running.'
+    : 'No SETTINGS_READ_TOKEN is set, and these are not marked `"admin": true` in ' +
+      '.github/expected-settings.json — mark them, or supply a token that can read them.';
   throw new Error(
-    `settings-drift: the API response carries no value for ${unreadable.join(', ')} — ` +
-      'the token lacks the scope to read it. Unverifiable is not the same as correct.',
+    `settings-drift: the API response carries no value for ${unreadable.join(', ')}.\n\n${hint}\n\n` +
+      'Unverifiable is not the same as correct, which is why this fails rather than passing quietly.',
   );
 }
 
