@@ -165,17 +165,21 @@ if (unreadable.length) {
   // outright what the token is treated as having, which is the one fact needed to fix it and the
   // one nobody can see from the outside.
   const perms = live.permissions ?? {};
+  const present = Object.keys(live).filter((k) => k.startsWith('allow_') || k === 'delete_branch_on_merge');
   const diagnosis = [
     `The token is seen by GitHub as: ${JSON.stringify(perms)}`,
-    Object.keys(perms).length === 0
-      ? 'An EMPTY permissions object means the token carries no repository access role at all.'
-      : perms.admin
-        ? 'It HAS admin. If fields are still missing, the omission is not about repository scope.'
-        : '⚠️ `admin: false` is the cause. GitHub returns the merge flags only to a token it treats ' +
-          'as an admin of the repository. A fine-grained PAT scoped to Administration: read is ' +
-          'granted READ of the administration settings API — it is not treated as an admin ' +
-          'collaborator, which is what this particular response body keys off. A CLASSIC PAT with ' +
-          'the `repo` scope is treated as the owner and does surface them.',
+    `The response carried ${Object.keys(live).length} fields, of which these are settings fields: ` +
+      `${present.length ? present.join(', ') : '(none)'}`,
+    '',
+    perms.admin
+      ? '⚠️ The token HAS admin and the fields are STILL absent, so this is not about repository ' +
+        'access level. Measured 2026-08-03: a FINE-GRAINED PAT with Administration: read reports ' +
+        '`admin: true` here and yet omits every merge setting, while a classic/OAuth token with ' +
+        '`repo` surfaces all of them. If the secret holds a fine-grained token, try Administration: ' +
+        'READ AND WRITE; if that still omits them, the endpoint does not serve these fields to ' +
+        'fine-grained tokens at all and a classic PAT with `repo` is the only option.'
+      : '⚠️ `admin: false` — the token has no admin access to the repository, which is the ' +
+        'straightforward case. Grant it, or use a classic PAT with the `repo` scope.',
   ].join('\n');
 
   const hint = adminToken
