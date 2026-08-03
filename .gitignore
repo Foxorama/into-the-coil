@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.vite/
+*.local
+
+# Working material, not project documentation. The predecessor-project audits and the
+# scaffold sequencing are inputs to the first few commits, not a record of this project.
+# The durable decisions in them get promoted into the constitution and docs/decisions/,
+# which are NOT ignored — only these two paths are, so a real doc tree can land beside them.
+docs/extraction/
+docs/scaffold-plan.md
