@@ -172,12 +172,12 @@ if (unreadable.length) {
       `${present.length ? present.join(', ') : '(none)'}`,
     '',
     perms.admin
-      ? '⚠️ The token HAS admin and the fields are STILL absent, so this is not about repository ' +
-        'access level. Measured 2026-08-03: a FINE-GRAINED PAT with Administration: read reports ' +
-        '`admin: true` here and yet omits every merge setting, while a classic/OAuth token with ' +
-        '`repo` surfaces all of them. If the secret holds a fine-grained token, try Administration: ' +
-        'READ AND WRITE; if that still omits them, the endpoint does not serve these fields to ' +
-        'fine-grained tokens at all and a classic PAT with `repo` is the only option.'
+      ? '⚠️ The token HAS admin and the fields are STILL absent, so this is not about access level. ' +
+        'MEASURED 2026-08-03, and the answer is unintuitive: a fine-grained PAT with Administration ' +
+        'set to READ reports `admin: true` here and yet omits every merge setting. Setting the same ' +
+        'token to Administration: READ AND WRITE returns all of them. The fields are write-gated in ' +
+        'this response body even though we only ever read them. Fix: raise the PAT to Administration ' +
+        'read+write, or use a classic PAT with the `repo` scope.'
       : '⚠️ `admin: false` — the token has no admin access to the repository, which is the ' +
         'straightforward case. Grant it, or use a classic PAT with the `repo` scope.',
   ].join('\n');
