@@ -9,10 +9,6 @@ on:
 permissions:
   contents: read
   issues: write
-  # Branch protection lives behind /branches/{b}/protection, which needs this. Without it the
-  # script's "a missing field is a failure" rule fires — deliberately, because a token that cannot
-  # SEE a setting must never be mistaken for a setting that is correct.
-  administration: read
 
 concurrency:
   group: settings-drift
