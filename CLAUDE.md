@@ -30,11 +30,19 @@ decision needs no rule.
   — [0003](docs/decisions/0003-single-file-build.md),
   [0008](docs/decisions/0008-the-shell-sidecars.md)
 
-## Code conventions are deliberately absent
+## Code
 
-They wait on a design decision that has not landed; writing them first means writing them twice.
-That deferral covers module layout, registries and state shape — **not** process, which is why the
-rules above exist now.
+- **`src/` is a closed set of layers and the import arrow points one way.** `brand` → `sim` →
+  `content` → `state` → {`save`, `render`} → `app`. Below the shell, time and randomness are
+  arguments; only `save/` may touch storage; only `render/` and `app/` may touch the DOM. A new
+  directory under `src/` is a decision, and fails a test until it is written as one.
+  — [0015](docs/decisions/0015-the-layer-ladder.md)
+
+## Some code conventions are still deliberately absent
+
+Registries and state shape wait on decisions not yet landed; writing them first means writing them
+twice. So do file naming, function size and comment style — **not** process, which is why the rules
+above exist now.
 
 ## The predecessor
 
