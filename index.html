@@ -6,6 +6,16 @@
     <!-- The one place the title is spelled outside src/brand.ts: HTML cannot import.
          `tests/brand.test.ts` asserts the two spellings agree. -->
     <title>Into the Coil</title>
+    <!-- The install manifest, and the SECOND place the name is spelled — held by the same test.
+         It is a separate file by necessity, not by omission: a manifest is fetched by the browser
+         from a URL, so `vite-plugin-singlefile` cannot inline it the way it inlines the bundle.
+         See docs/decisions/0008-the-shell-sidecars.md. -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="theme-color" content="#1b1b1f" />
+    <!-- iOS ignores the web manifest's icons entirely and reads this instead. Without it, adding the
+         game to a home screen on an iPhone produces a screenshot of the page rather than an icon —
+         and the plan expects most players to install from the site, not play in a tab. -->
+    <link rel="apple-touch-icon" href="icon-180.png" />
     <script>
       /*
         BOOT WATCHDOG — see docs/decisions/0007-the-boot-watchdog.md.
@@ -138,6 +148,47 @@
             verdict();
           }
         }, LIMIT);
+      })();
+    </script>
+    <script>
+      /*
+        FOREIGN SERVICE WORKERS — see docs/decisions/0009-the-page-does-not-sweep-foreign-caches.md.
+
+        A service worker registered at a scope ABOVE this page can intercept every request this page
+        makes, including the page itself. On a shared origin — `foxorama.github.io`, or itch's
+        `html-classic.itch.zone`, where every HTML game on the site lives together — that worker may
+        belong to something else entirely, and the symptom is a blank page with nothing in it that
+        points at the cause. This runs outside the module graph for the same reason the watchdog
+        does: the load where it matters is the load where the module graph did not evaluate.
+
+        ⚠️ ANCESTOR SCOPES ONLY. The predecessor unregistered every registration whose scope was not
+        its own and deleted every cache not carrying its own prefix — origin-wide, both. A SIBLING
+        scope cannot intercept this page, so removing it protects nothing and, on itch, destroys
+        another game's offline copy. This narrower rule keeps the protection and drops the damage.
+
+        Unregistering does not un-control the CURRENT page — that worker keeps answering until the
+        next load. That is a limit, not a bug: the alternative is reloading out from under a page
+        that may be fine, and the diagnosis this exists for survives one more load.
+      */
+      (function () {
+        try {
+          if (!navigator.serviceWorker) return;
+          var ours = new URL('./', location.href).href;
+          navigator.serviceWorker
+            .getRegistrations()
+            .then(function (regs) {
+              for (var i = 0; i < regs.length; i++) {
+                var scope = regs[i].scope;
+                /* A prefix of our scope, and not our scope: the only shape that can reach us.
+                   Scopes always end in `/`, so a plain prefix test cannot match a sibling
+                   directory whose name merely starts the same way. */
+                if (scope !== ours && ours.indexOf(scope) === 0) regs[i].unregister();
+              }
+            })
+            .catch(function () {});
+        } catch (e) {
+          /* Never the reason the page fails to start. */
+        }
       })();
     </script>
   </head>

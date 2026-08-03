@@ -24,8 +24,11 @@ decision needs no rule.
 - **No user-facing name or version literal outside `src/brand.ts`.** Surfaces that cannot import it
   — `index.html`, the boot watchdog, the service worker — are held by a test, not a constant.
   — [0002](docs/decisions/0002-brand-identity-contract.md)
-- **The build emits one self-contained file.** An external module script cannot load off a file
-  path. — [0003](docs/decisions/0003-single-file-build.md)
+- **The build emits one self-contained page.** An external module script cannot load off a file
+  path. Beside it ship only the files that cannot be inlined — the manifest, the service worker,
+  `_headers` — and that list is closed by a test.
+  — [0003](docs/decisions/0003-single-file-build.md),
+  [0008](docs/decisions/0008-the-shell-sidecars.md)
 
 ## Code conventions are deliberately absent
 

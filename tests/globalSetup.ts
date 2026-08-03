@@ -43,6 +43,20 @@ export default function setup(): void {
   execFileSync(process.execPath, [resolve(root, 'node_modules/vite/bin/vite.js'), 'build'], {
     cwd: root,
     stdio: 'ignore',
+    /**
+     * ⚠️ NODE_ENV IS EXPLICIT, AND THIS IS NOT DEFENSIVE TIDINESS.
+     *
+     * Vitest sets `NODE_ENV=test` in its own process, `execFileSync` inherits the environment, and
+     * Vite honours an already-set `NODE_ENV` rather than forcing `production` — so this build
+     * produced `import.meta.env.PROD === false`, and every `PROD`-guarded branch was eliminated
+     * from the bundle. The service-worker registration in `src/main.ts` is one, and it vanished.
+     *
+     * That is the worst shape a test rig can have: the suite goes green against an artifact that is
+     * NOT the artifact that ships, and it is silent about the difference. Found by the offline test,
+     * which could not explain why no worker ever took control; `tests/shell.test.ts` now asserts the
+     * registration survives into `dist/`, so the next occurrence fails loudly instead.
+     */
+    env: { ...process.env, NODE_ENV: 'production' },
   });
   if (!existsSync(resolve(root, 'dist/index.html'))) {
     throw new Error('globalSetup: `vite build` produced no dist/index.html — the build tests cannot run');
