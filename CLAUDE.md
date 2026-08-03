@@ -16,8 +16,10 @@ decision needs no rule.
   `gh api repos/Foxorama/into-the-coil` is evidence.
   — [0004](docs/decisions/0004-admin-settings-must-be-read-back.md)
 - **A guard that has only ever been green is not known to work.** Break the thing on purpose and
-  watch the test go red before trusting it.
-  — [0005](docs/decisions/0005-a-guard-must-be-seen-to-fail.md)
+  watch the test go red before trusting it — with a probe in `scripts/probes/`, never by hand.
+  `npm run prove` refuses to run the suite until it has read the file back and seen it change.
+  — [0005](docs/decisions/0005-a-guard-must-be-seen-to-fail.md),
+  [0019](docs/decisions/0019-a-probe-must-be-seen-to-apply.md)
 
 ## Product
 
