@@ -50,3 +50,11 @@ jobs:
       # tests/boot.browser.test.ts hard-fail here instead of skipping. That assertion is the whole
       # reason this job can be trusted: fifty browser tests once skipped for months on a green board.
       - run: npm run check
+
+      # Inside the REQUIRED `test` job on purpose, rather than as a job of its own. A new job means a
+      # new required context, which means a settings change — and an unrequired check is one nobody
+      # is blocked by, which is how it rots. See docs/decisions/0019-a-probe-must-be-seen-to-apply.md.
+      #
+      # It mutates the working tree and restores it, so it runs LAST: nothing after it depends on the
+      # tree, and a crash mid-probe cannot affect a step that has already passed.
+      - run: npm run prove
