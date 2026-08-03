@@ -73,5 +73,30 @@
         "why": "main is named by every workflow and protection rule."
       }
     }
+  },
+  "rulesets": {
+    "$comment": [
+      "A SECOND system stating overlapping policy. Rulesets and classic branch protection both",
+      "apply and the most restrictive wins, so a change here is invisible to a check that reads",
+      "only the protection endpoint — the same blind spot this file was extended to close, in a",
+      "different API. Covered rather than consolidated, because consolidating means moving the",
+      "required `test` context across and removing classic protection, which is a decision."
+    ],
+    "main": {
+      "why": "Blocks deletion and force-push on the default branch and requires a PR, with nobody bypassing.",
+      "enforcement": "active",
+      "bypass_actor_count": 0,
+      "rule_types": ["deletion", "non_fast_forward", "pull_request"],
+      "pull_request": {
+        "allowed_merge_methods": {
+          "value": ["merge", "squash"],
+          "why": "⚠️ MUST AGREE WITH allow_rebase_merge ABOVE. A rebase merge lands N commits on main with nothing tying them together, so there is no single thing to revert (0001). Listing it here would leave the ruleset silently permitting what the repo flag forbids, and the repo flag is one click from being flipped back."
+        },
+        "required_approving_review_count": {
+          "value": 0,
+          "why": "A sole developer cannot approve their own PR; requiring one would block every merge."
+        }
+      }
+    }
   }
 }

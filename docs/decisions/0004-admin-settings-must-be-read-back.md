@@ -66,6 +66,19 @@ Nothing about the run summary showed it. It took reading the log. That is [0005]
 applying to a workflow rather than a test: **a green job is not evidence until you have seen what it
 printed.**
 
+## Rulesets are a second system saying the same things
+
+A repository ruleset and classic branch protection **both apply**, most restrictive winning. So
+policy is stated in two places, and a check reading only the protection endpoint cannot see half of
+it — the same blind spot, reopened in a different API within a day of closing it.
+
+Both are covered rather than consolidated. Consolidating would mean moving the required `test`
+context onto the ruleset and removing classic protection, which is a decision about which system
+this project uses, not a patch. Until that decision, `expected-settings.json` holds both and the
+check compares both — including that the ruleset's `allowed_merge_methods` agrees with
+`allow_rebase_merge`, since a ruleset silently permitting what the repository flag forbids is one
+click away from being real.
+
 ⚠️ Still outside any automated check, and read back by hand at RELEASE: Pages source, the
 `github-pages` environment ref policy, DNS, the Cloudflare build configuration, and the itch upload
 flags. Four of the ten incidents came from that list.
