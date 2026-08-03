@@ -6,6 +6,140 @@
     <!-- The one place the title is spelled outside src/brand.ts: HTML cannot import.
          `tests/brand.test.ts` asserts the two spellings agree. -->
     <title>Into the Coil</title>
+    <script>
+      /*
+        BOOT WATCHDOG — see docs/decisions/0007-the-boot-watchdog.md.
+
+        A classic inline script, first thing in the document, because it is the only code that
+        exists before the module graph does. Everything it guards happens BEFORE `src/main.ts`
+        evaluates, so nothing in `src/` can report it: a module that throws at import time, a
+        script that never loads at all, a bundle the engine refuses to parse. Each of those is a
+        blank page with the evidence in a console nobody has open.
+
+        Written in ES5 by necessity, not taste. Vite processes inline MODULE scripts and leaves
+        classic ones exactly as typed, so this ships to the browser untranspiled — `const`, an
+        arrow function or a template literal here is a syntax error on the engines this is most
+        needed on, and a syntax error in the watchdog takes the page down in the one code path
+        that exists to explain why the page is down.
+
+        It cannot import `src/brand.ts` either, which is why the version arrives as a placeholder
+        that `vite.config.ts` substitutes at build time.
+      */
+      (function () {
+        /*
+          The signature. A build can print a version, a stack, or nothing at all; this exact
+          string is emitted by nothing but the code below, so seeing it on screen — or in a
+          screenshot from a player, which is the case that matters — identifies the failure as
+          "the app never started" rather than "the app started and drew nothing".
+        */
+        var MARKER = 'ITC-BOOT-FAILED';
+
+        /*
+          How long the module graph gets to signal boot, and how long a latched error waits to
+          see whether it was fatal after all. Readable from a global so the guard can drive both
+          in under a second; the default is what ships, and an unset global cannot change it.
+        */
+        var LIMIT = typeof window.__ITC_BOOT_LIMIT_MS__ === 'number' ? window.__ITC_BOOT_LIMIT_MS__ : 8000;
+        var GRACE = LIMIT < 1000 ? LIMIT : 1000;
+
+        var boot = {
+          marker: MARKER,
+          /* Substituted by vite.config.ts. Unsubstituted here is correct: raw source is exactly
+             the situation this reports on, and the literal placeholder is itself the diagnosis. */
+          version: '%ITC_VERSION%',
+          booted: false,
+          /* The FIRST failure, latched. Never overwritten — see `latch`. */
+          error: null,
+          /* Called by src/main.ts once the module graph has actually evaluated. */
+          ok: function () {
+            boot.booted = true;
+          },
+        };
+        window.__ITC_BOOT__ = boot;
+
+        function render() {
+          var host = document.getElementById('app') || document.body;
+          if (!host) return;
+          var box = document.createElement('pre');
+          box.id = 'itc-boot-error';
+          box.setAttribute(
+            'style',
+            'margin:0;padding:1rem;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;' +
+              'white-space:pre-wrap;word-break:break-word;color:#f8f8f2;background:#1b1b1f',
+          );
+          /* textContent, never innerHTML: the detail below is a URL or a message from somewhere
+             outside this file, and the one screen a player reaches when everything else has
+             already failed is not the place to start parsing it as markup. */
+          box.textContent =
+            MARKER + '\n' + boot.version + '\n\n' + boot.error.kind + ': ' + boot.error.detail;
+          host.textContent = '';
+          host.appendChild(box);
+        }
+
+        /*
+          RECORDING a failure and DECLARING one are deliberately separate.
+
+          Not every error before boot is fatal — a 404 on some decorative asset latches here and
+          the app then starts perfectly well. A watchdog that painted its panel the instant it
+          heard about that would be the second-worst thing on the page. So the panel waits for
+          the one question that actually matters: did the module graph ever signal boot?
+        */
+        function verdict() {
+          if (!boot.booted && boot.error) render();
+        }
+
+        function latch(kind, detail) {
+          /*
+            FIRST failure wins. One import-time throw cascades — the module that failed leaves
+            half a dozen others with an undefined import, and each of those throws too. The last
+            error is a consequence; the first is the cause, and it is the one worth showing.
+          */
+          if (boot.error) return;
+          boot.error = { kind: kind, detail: String(detail) };
+          setTimeout(verdict, GRACE);
+        }
+
+        window.addEventListener(
+          'error',
+          function (e) {
+            var t = e.target;
+            /*
+              A failed <script>/<link>/<img> load fires `error` ON THE ELEMENT and it does NOT
+              bubble, so only a listener registered in the CAPTURE phase (the `true` below) ever
+              sees it. Drop that argument and this still catches every thrown exception — which
+              is to say it still looks like it works, while going blind to the exact failure the
+              predecessor's white screens were made of: the asset that 404s.
+            */
+            if (t && t !== window && (t.src || t.href)) latch('resource', t.src || t.href);
+            else
+              latch(
+                'throw',
+                (e.message || 'unknown error') + ' (' + (e.filename || '?') + ':' + (e.lineno || 0) + ')',
+              );
+          },
+          true,
+        );
+
+        window.addEventListener('unhandledrejection', function (e) {
+          var r = e.reason;
+          latch('rejection', (r && r.message) || r || 'unknown rejection');
+        });
+
+        /*
+          The silent case, and the reason a listener alone is not enough. A module script blocked
+          by CORS under file://, or a bundle whose syntax the engine rejects, can leave no event
+          behind at all — the page simply renders an empty div forever. Nothing has failed that
+          anything can observe; what is observable is that nothing has SUCCEEDED, so that is what
+          is measured.
+        */
+        setTimeout(function () {
+          if (!boot.booted) {
+            latch('timeout', 'the module graph did not signal boot within ' + LIMIT + 'ms');
+            verdict();
+          }
+        }, LIMIT);
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>
