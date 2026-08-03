@@ -28,7 +28,17 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/settings-drift.mjs "$GITHUB_REPOSITORY" | tee drift.md
+          # Optional, and without it most of this check is inert. A fine-grained PAT with
+          # *Administration: read* on this repo. The built-in token cannot see the merge flags at
+          # all (they are omitted from the response) and gets 403 on branch protection; no
+          # `permissions:` key can grant either. Absent, the report says NOT CHECKED and lists them.
+          SETTINGS_READ_TOKEN: ${{ secrets.SETTINGS_READ_TOKEN }}
+        run: |
+          # ⚠️ pipefail is LOAD-BEARING. `node … | tee` reports TEE's exit code, so without it a
+          # script that threw still exited 0 and this step passed green — which is exactly what
+          # happened on the first two runs of this workflow.
+          set -o pipefail
+          node scripts/settings-drift.mjs "$GITHUB_REPOSITORY" | tee drift.md
 
       - run: cat drift.md >> "$GITHUB_STEP_SUMMARY"
 
