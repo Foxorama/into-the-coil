@@ -101,6 +101,31 @@ honest about that, at which point it permits the exact view this decision exists
 iOS Safari, so it would cover some of the gap some of the time while reading as a solution. The gate
 covers all of it everywhere, and is the thing that would still be needed afterwards.
 
+## Confirmed, not assumed
+
+Per [0005](0005-a-guard-must-be-seen-to-fail.md) and [0019](0019-a-probe-must-be-seen-to-apply.md),
+declared in `scripts/probes/0031-orientation.mjs`.
+
+| broken on purpose | went red |
+|---|---|
+| the gate condition removed, so portrait draws side-profile art moving the wrong way | `refuses to play in portrait, and says why` |
+| the gate covering the game instead of stopping it, so the run continues unseen | `THE ONE THAT MATTERS: the world does not advance behind the prompt` |
+| the prompt reduced to a bare glyph, on the one screen that exists to explain itself | `the prompt is text, so it does not rely on reading a pictogram` |
+| the prompt no longer announced, so a screen-reader player rotates into silence | `announces itself, because it appears in response to something the player just did` |
+| the resize path left ungated, so rotating MID-RUN reaches the view a fresh load cannot | `gates on a rotation INTO portrait, mid-run — the way a player actually meets this` |
+| the manifest unlocked again, so an installed PWA offers the orientation with no art | `installs locked to the one orientation whose art exists` |
+
+⚠️ **The first and fifth are the pair**, and the reason both exist: a fresh load in portrait and a
+rotation mid-run take different code paths. Guarding only the first leaves the case a player actually
+produces — playing, then turning the device — reachable.
+
+⚠️ **The second probe caught this decision's most important assertion being decoration.** It opened
+straight into portrait, where the loop is never started at all, so breaking the branch that stops it
+left the suite green: *a loop that was never running cannot be observed failing to stop.* It now
+starts in landscape, rotates, and compares two samples of the canvas 400ms apart — measuring the
+picture, per [0027](0027-measure-the-picture-not-the-model.md), rather than a counter in the model's
+own units.
+
 ## What has no guard
 
 The choice to author one view rather than two is a content decision and nothing can hold it — a
