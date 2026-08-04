@@ -158,7 +158,10 @@ describe.runIf(chromePath)('the app plays offline once it has been visited', () 
 
       const state = (await page.evaluate('window.__ITC_BOOT__')) as BootState;
       expect(state.error, 'the offline page reported a boot failure').toBeNull();
-      expect(await page.textContent('#app')).toContain(GAME_TITLE);
+      // The page mounts a canvas rather than text, so the brand arrives as its accessible name —
+      // see the note in `tests/boot.browser.test.ts`. The claim is unchanged: the module graph
+      // evaluated and `brand.ts` reached the rendered page, with the origin unreachable.
+      expect(await page.getAttribute('#app canvas', 'aria-label')).toContain(GAME_TITLE);
     } finally {
       offline = false;
       await context.close();

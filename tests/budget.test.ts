@@ -152,7 +152,28 @@ describe('the pool is the ceiling, and it is never exceeded', () => {
  * The files that run every frame. Closed, and short on purpose: the value of the list is that adding
  * to it is a deliberate act, and that anything NOT on it is free to be written normally.
  */
-const HOT_FILES = ['src/app/loop.ts', 'src/sim/pool.ts', 'src/sim/entity.ts', 'src/render/scene.ts', 'src/render/surface.ts'];
+const HOT_FILES = [
+  'src/app/loop.ts',
+  'src/app/frame.ts',
+  'src/sim/pool.ts',
+  'src/sim/entity.ts',
+  'src/render/scene.ts',
+  'src/render/surface.ts',
+  'src/render/canvas.ts',
+];
+
+/**
+ * Files that look like they belong above and deliberately do not, each with the reason.
+ *
+ * ⚠️ This list is why the split between `mount.ts` and `frame.ts` exists at all. Setup code
+ * allocates — it creates canvases, bakes bitmaps, builds pools — and a scan that covered it would be
+ * marked `@setup` line by line until the markers meant nothing. Separating the two files is what
+ * lets the scan stay strict over the half that runs sixty times a second.
+ */
+const DELIBERATELY_COLD: Record<string, string> = {
+  'src/app/mount.ts': 'boot and resize: creates the canvas, builds the pool, seeds the field. Never called from a frame.',
+  'src/render/bake.ts': 'draws every sprite once at load. Allocating is what it is FOR; blitting afterwards is the point.',
+};
 
 interface AllocationRow {
   what: string;
@@ -207,6 +228,31 @@ const ALLOCATIONS: AllocationRow[] = [
   },
 ];
 
+/**
+ * Whether `src` imports anything from `module` that survives to runtime.
+ *
+ * ⚠️ **Type-only imports do NOT count, and that is a deliberate departure from
+ * `docs/decisions/0015-the-layer-ladder.md`**, which refuses that exemption for the layer arrow. The
+ * two rules are about different things. 0015 is about coupling, and a type is the coupling that
+ * hurts. This is about whether a function can be CALLED during a frame, which is a runtime question
+ * — `import type { Atlas }` in the canvas backend is not just permitted, it is required.
+ */
+function importsAtRuntime(src: string, module: string): boolean {
+  for (const m of src.matchAll(/\bimport\s+([\s\S]*?)\s*from\s+['"]([^'"]*)['"]/g)) {
+    if (!m[2]!.endsWith(module)) continue;
+    const clause = m[1]!.trim();
+    if (clause.startsWith('type ')) continue;
+    const braced = /^\{([\s\S]*)\}$/.exec(clause);
+    if (braced === null) return true; // a default or namespace import is always a runtime edge
+    const specifiers = braced[1]!
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    if (specifiers.some((s) => !s.startsWith('type '))) return true;
+  }
+  return false;
+}
+
 /** Comments blanked but LINE NUMBERS preserved, so a `@setup` marker still lines up with its code. */
 function stripKeepingLines(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' ')).replace(/(?<!:)\/\/.*$/gm, '');
@@ -255,6 +301,29 @@ describe('nothing allocates in the frame loop', () => {
     for (const f of HOT_FILES) expect(read(f).length, `${f} is on the hot list and is empty or missing`).toBeGreaterThan(0);
     expect(HOT_FILES).toContain('src/render/scene.ts');
     expect(HOT_FILES).toContain('src/sim/entity.ts');
+    expect(HOT_FILES, 'the file that IS the frame is not being scanned').toContain('src/app/frame.ts');
+    expect(HOT_FILES, 'the blit that runs 500 times a frame is not being scanned').toContain('src/render/canvas.ts');
+  });
+
+  it('says why each cold file next door to a hot one is cold', () => {
+    // The list is the argument for the mount/frame split. A file that drops off it silently is a
+    // file that started running every frame without anyone saying so.
+    for (const [file, reason] of Object.entries(DELIBERATELY_COLD)) {
+      expect(read(file).length, `${file} is named as cold and does not exist`).toBeGreaterThan(0);
+      expect(reason.length, `${file} is exempt without a stated reason`).toBeGreaterThan(40);
+      expect(HOT_FILES, `${file} is on both lists`).not.toContain(file);
+    }
+  });
+
+  it('the frame cannot reach the baker', () => {
+    // The rule the two lists exist to hold: whatever else changes, baking may not move into a frame.
+    const reaching = HOT_FILES.filter((f) => importsAtRuntime(read(f), 'bake.ts'));
+    expect(
+      reaching,
+      `these run every frame and can call the baker: ${reaching.join(', ')}.\n` +
+        'Art is drawn once at load and blitted thereafter (0022). A frame that can bake is a frame ' +
+        'that will, the first time someone needs a sprite in a colour they have not got.',
+    ).toEqual([]);
   });
 });
 
@@ -299,6 +368,17 @@ describe('the allocation scan is known to work, not merely green', () => {
     // The house style names the banned things in the doc comments of the files that ban them.
     const commented = ['/** Never use JSON.stringify or a `template` here. */', 'const d = 1;'].join('\n');
     expect(allocationsIn('planted.ts', commented)).toEqual([]);
+  });
+
+  it('tells a runtime import of the baker from a type-only one', () => {
+    // THE distinction the whole check rests on. Its first version banned both, which would have
+    // forced the canvas backend to stop naming the type it is handed.
+    expect(importsAtRuntime("import { bakeAtlas } from './bake.ts';", 'bake.ts')).toBe(true);
+    expect(importsAtRuntime("import type { Atlas } from './bake.ts';", 'bake.ts')).toBe(false);
+    expect(importsAtRuntime("import { type Atlas } from './bake.ts';", 'bake.ts')).toBe(false);
+    expect(importsAtRuntime("import { type Atlas, bakeAtlas } from './bake.ts';", 'bake.ts')).toBe(true);
+    expect(importsAtRuntime("import Baker from './bake.ts';", 'bake.ts')).toBe(true);
+    expect(importsAtRuntime("import { paintScene } from './scene.ts';", 'bake.ts')).toBe(false);
   });
 
   it('keeps line numbers honest across a block comment', () => {

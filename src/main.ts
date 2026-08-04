@@ -1,4 +1,6 @@
 import { APP_VERSION, BUILD_ID, GAME_TITLE } from './brand.ts';
+import { DEFAULT_PALETTE, PALETTES } from './content/palette.ts';
+import { mount } from './app/mount.ts';
 
 /**
  * The boot watchdog's half of the contract, declared where TypeScript can see it.
@@ -14,12 +16,34 @@ declare global {
   }
 }
 
-// Deliberately trivial. Its one job at this phase is to be a real module graph with a real
-// consumer of `brand.ts`, so `npm run build` proves the version and commit injections actually
-// reach the bundle rather than only type-checking — and so they are not tree-shaken back out,
-// which would make the guards in `tests/brand.test.ts` assert nothing.
+/*
+  The composition root: give the page a full-viewport host, mount the game into it, and label it.
+
+  ⚠️ The brand is now carried by the canvas's ACCESSIBLE NAME rather than by visible text, and that
+  is a real move rather than a workaround. It keeps `brand.ts` a genuine consumer — so the version
+  and commit injections cannot be tree-shaken back out and leave `tests/brand.test.ts` asserting
+  nothing — and it gives a canvas an accessible name, which a bare one does not have.
+
+  The layout is set here rather than in `index.html` because the shipped page is a surface with its
+  own tests, and a stylesheet that exists only to size one element is a second place to look.
+*/
 const app = document.querySelector('#app');
-if (app) app.textContent = `${GAME_TITLE} ${APP_VERSION} (${BUILD_ID})`;
+if (app instanceof HTMLElement) {
+  document.body.style.margin = '0';
+  document.body.style.overflow = 'hidden';
+  document.body.style.background = PALETTES[DEFAULT_PALETTE].space;
+  app.style.position = 'fixed';
+  app.style.inset = '0';
+
+  const mounted = mount(app, DEFAULT_PALETTE);
+  if (mounted === null) {
+    // No 2D context. Say so where a player can read it, rather than showing a black rectangle.
+    app.textContent = `${GAME_TITLE} ${APP_VERSION} (${BUILD_ID}) — this browser cannot draw the game.`;
+  } else {
+    mounted.canvas.setAttribute('role', 'img');
+    mounted.canvas.setAttribute('aria-label', `${GAME_TITLE} ${APP_VERSION} (${BUILD_ID})`);
+  }
+}
 
 // LAST, and only here. This is the single statement that tells the watchdog the module graph
 // evaluated; anything that throws above leaves it unsaid, which is exactly the report wanted.
