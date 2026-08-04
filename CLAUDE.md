@@ -58,6 +58,13 @@ decision needs no rule.
   level reached — never a seed to re-derive them from.
   — [0021](docs/decisions/0021-one-stream-per-concern.md)
 
+- **The sim steps at a fixed 60Hz and the renderer interpolates; art is baked to bitmaps and blitted;
+  nothing allocates in the frame loop.** A sim stepped by wall-clock delta teleports bullets through
+  the player on a dropped frame. Per-frame entity pools are mutable and are **not** reducer state —
+  0017 still holds over screens, run and settings. The budget is ~10ms on a 2021 mid-range Android,
+  and its guard counts draw calls and allocations rather than wall-clock, because CI is not that
+  phone. — [0022](docs/decisions/0022-frame-rate-is-a-feature.md)
+
 ⚠️ **No counting guard.** Line ceilings, `case` ceilings and slice ceilings were each proposed and
 each measured against the predecessor before being set; every one flagged its healthy file as loudly
 as its sick one. What separates them is the shape of the dependencies, which is what the three rules
