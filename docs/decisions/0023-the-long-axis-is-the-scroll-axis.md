@@ -153,10 +153,19 @@ declared in `scripts/probes/0023-camera.mjs` and re-run by `npm run prove` on ev
 | the fit taken as the LARGER ratio, which crops the world instead of letterboxing it | `never crops, and never stretches` |
 | spawns placed against the REFERENCE view rather than the widest one — the pop-in bug | `puts the spawn line beyond the widest view any device can have` |
 | the zero-size guard removed, so a hidden tab hands the renderer a NaN transform | `returns a drawable view for a viewport with no size` |
+| the manifest locked back to landscape, making portrait unreachable on an installed app | `installs unlocked, because both orientations are the game` |
 
-⚠️ Four of the six are the same mistake wearing different clothes: **treating the device in front of
-you as the only device.** That is the failure mode this decision exists for, and it is invisible on
-the machine the code was written on.
+⚠️ Four of the first six are the same mistake wearing different clothes: **treating the device in
+front of you as the only device.** That is the failure mode this decision exists for, and it is
+invisible on the machine the code was written on.
+
+⚠️ The seventh is not about this decision at all. The manifest assertion has been in
+`tests/shell.test.ts` since the shell landed and had **never been probed in either direction** — it
+guarded a shipped surface and was itself only ever green. It was cheap to prove the moment something
+finally changed the value, which is also the last moment anyone would have thought to.
+
+⚠️ **The seventh row is retired and the probe behind it is gone** — see the dated note at the foot of
+this file. The row stays because it is a record of what was true when it was written.
 
 ## What this deliberately does not decide
 
@@ -177,16 +186,18 @@ why. Two things here were written against `any` and stop being true with it:
   so no deploy reaches the players who liked the game enough to install it. That is the reason
   [0031](0031-landscape-is-the-shipped-orientation.md) carries a rollback note, and it is why the
   value moved once more rather than twice.
-- **A seventh probe row**, `the manifest locked back to landscape` / `installs unlocked, because both
-  orientations are the game`. Its break is now the shipped state and its guard is a test that no
-  longer exists, so the entry is deleted from `scripts/probes/0023-camera.mjs` rather than flipped —
-  the surface is probed from the other direction by
+- **The seventh probe row.** Its break is now the shipped state and its guard is a test
+  `tests/shell.test.ts` no longer has, so the entry is deleted from `scripts/probes/0023-camera.mjs`
+  rather than flipped — the surface is probed from the other direction by
   [0031](0031-landscape-is-the-shipped-orientation.md)'s own manifest entry.
 
-⚠️ **The seventh row's own footnote earns keeping, because it is now twice true.** That assertion had
-sat in `tests/shell.test.ts` since the shell landed and had never been probed in either direction; it
-was cheap to prove the moment something finally changed the value, which is also the last moment
-anyone would have thought to. What the change then exposed is that *three* places described that one
-value — this file, `tests/shell.test.ts`, and `scripts/verify-deploy.mjs` — and only the one the
-suite runs moved with it. `npm run prove` caught this copy on the first CI run after 0031; the
-verifier's copy is not run by anything but a real deploy, and was caught by hand.
+⚠️ **The row and its footnote stay in the table above, and that is this folder's rule rather than
+sentiment.** `README.md` here: *"A decision file is not maintained… do not edit history into it."* A
+break table records what was proved on the day it was proved; deleting the row would leave no trace
+that the assertion had ever been probed, which is the one fact the footnote exists to carry. The
+first version of this retirement deleted both and had to be put back.
+
+⚠️ **What the episode added to that footnote.** *Three* places described the manifest's one value —
+this file, `tests/shell.test.ts` and `scripts/verify-deploy.mjs` — and only the one the suite runs
+moved with it. `npm run prove` caught this file's copy on the first CI run after 0031. The verifier's
+copy is run by nothing but a real deploy, and was caught by hand.
