@@ -32,6 +32,20 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # FIRST, and before `npm ci`, because a stacked PR is a mechanical mistake that costs five
+      # seconds to catch here and four minutes to catch after the suite. See
+      # docs/decisions/0033-a-branch-starts-at-main.md.
+      #
+      # The logic is in a SCRIPT and not in this file. A condition written inline here cannot be
+      # broken on purpose and watched to go red — `npm run prove` reaches vitest suites and cannot
+      # reach a GitHub step, so an inline check would be permanently in the "only ever green" state
+      # 0005 exists to refuse. `tests/base.test.ts` also asserts that this step calls that script,
+      # because the two are the same fact written twice.
+      #
+      # Empty outside a pull request, which the script treats as "not my business" — this job is
+      # also reached by workflow_dispatch and workflow_call.
+      - run: node scripts/check-base.mjs "${{ github.event.pull_request.base.ref }}"
+
       - uses: actions/setup-node@v5
         with:
           # One source, read by both workflows AND by Cloudflare Pages, which cannot read either
