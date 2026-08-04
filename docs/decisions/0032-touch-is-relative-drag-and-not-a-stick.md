@@ -152,9 +152,58 @@ are. And **whether a phone is better served by a gamepad**, which is the questio
 by argument: both ship on the same branch, both reach a phone at the same preview URL, and the phone
 answers it.
 
+## Confirmed, not assumed
+
+Per [0005](0005-a-guard-must-be-seen-to-fail.md) and [0019](0019-a-probe-must-be-seen-to-apply.md),
+declared in `scripts/probes/0032-touch.mjs`. Nineteen breaks; the suite went 274 → 325 assertions and
+`npm run prove` 80 → 99 guards.
+
+| broken on purpose | went red |
+|---|---|
+| the bank dropped, so a flick delivers one step and loses the rest of the movement | `THE ONE: a flick is banked and delivered in full, not clipped to one step` |
+| the bank cleared when the finger lifts, so a flick loses its tail — and a flick ENDS with a lift | `keeps the bank when the finger LEAVES, because that is what a flick is` |
+| pointercancel no longer released, so an OS gesture strands the drag | `pointercancel releases the drag, because no pointerup will ever arrive` |
+| blur no longer clearing the bank, so alt-tabbing banks movement and spends it on return | `blur clears the bank, so alt-tabbing does not fly the ship on return` |
+| a mouse admitted as a finger, which is a second desktop scheme nobody asked for | `ignores a mouse, because desktop already has a complete scheme` |
+| a second finger stealing the drag, so a resting palm takes steering out of the thumb | `ignores a second finger in the steering area rather than letting it steal the drag` |
+| the stick deadzone taken per-axis, so a diagonal is refused where a straight push of the same size is not | `THE DEADZONE IS RADIAL: a diagonal inside the circle is refused like a straight one` |
+| the tap strip hand-counted at two, so a third special reaches the keyboard and not the phone | `has exactly one band per binding, so a third special needs no code here` |
+| the iOS long-press callout suppression removed, which no browser in this suite can detect | `sets -webkit-touch-callout, which is the property the iOS long-press callout obeys` |
+| touch-action dropped, so a thumb pans and pinches the page instead of flying the ship | `tells the browser the canvas is a game, so a thumb does not pan, zoom or select it` |
+| the suppression applied to the whole document, which kills pinch-zoom for everyone | `leaves the DOCUMENT zoomable, because killing pinch page-wide is an accessibility failure` |
+| the KEYBOARD assigning rather than adding | `THE STILL-GREEN ONE: an idle REAL device does not wipe what another source asked for` |
+| TOUCH assigning rather than adding | *(the same guard)* |
+| the PAD assigning rather than adding | *(the same guard)* |
+| the clamp dropped, so two devices pushing together outrun `SHIP_SPEED` | `clamps, so a second device is not a speed-up` |
+| the zeroing dropped, so letting go leaves the last ask in place and the ship flies on | `zeroes before contributing, so letting go actually stops the ship` |
+| the pad deadzone removed, so a resting stick walks the ship across the lane on its own | `THE DRIFT: a stick resting off centre asks for nothing` |
+| the pad deadzone taken per-axis, so the pad works in four directions and not in eight | `THE RADIAL ONE: a diagonal outside the circle passes, though each axis is inside the floor` |
+| the button edge not derived, so holding a face button empties the arsenal at step rate | `fires a HELD button once, however many steps it is held for` |
+
+⚠️ **One probe came back STILL GREEN, and it is the most useful thing in this table.** The
+order-independence guard is written against *fake* sources — and a fake source is written to add, so
+flipping a real device to assign changed nothing that test could see. The property was asserted about
+the composer and never about the things being composed, and the whole of `tests/devices.test.ts` was
+green while a real device silently erased every other device's ask. `tests/devices.test.ts` grew the
+idle-device test in response, and it is probed three times because the three device files each have
+to get it right and none of them guards the others.
+
+That is [0019](0019-a-probe-must-be-seen-to-apply.md) doing exactly its job for the second decision
+running, and the second time the failure has been *a guard pointed at the wrong thing* rather than a
+guard that was missing.
+
+⚠️ **Two probes point in opposite directions at one line**, because gesture suppression has two
+failure modes and fixing one is how you cause the other: removing it lets a thumb pan the playfield;
+applying it to the document kills pinch-zoom for a player who needs it.
+
 ## What has no guard
 
-**Whether it feels good.** Everything testable here is structure — that the ask saturates, that the
-residue is delivered and not dropped, that a still finger asks for nothing, that the zone count
-tracks the budget, that a deadzone is radial. None of it can see a control that fights the player.
-That is 0027's territory and it needs the phone.
+**Whether it feels good.** Everything above is structure — that the ask saturates, that the residue
+is delivered and not dropped, that a still finger asks for nothing, that the zone count tracks the
+budget, that a deadzone is radial. None of it can see a control that fights the player. That is
+[0027](0027-measure-the-picture-not-the-model.md)'s territory and it needs the phone.
+
+⚠️ **Not verified: none of this has been played.** `DRAG_GAIN_PX`, `STICK_RADIUS_PX`,
+`STICK_DEADZONE_PX` and `PAD_DEADZONE` are all reasoned starting points, and the argument between
+drag and the stick is reasoned too — from four named mechanisms, but reasoned. What would settle it
+is a thumb on a phone at the branch preview, and that is owed rather than assumed.

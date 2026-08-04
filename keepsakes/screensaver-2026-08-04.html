@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- The one place the title is spelled outside src/brand.ts: HTML cannot import.
+         `tests/brand.test.ts` asserts the two spellings agree. -->
+    <title>Into the Coil</title>
+    <!-- The install manifest, and the SECOND place the name is spelled — held by the same test.
+         It is a separate file by necessity, not by omission: a manifest is fetched by the browser
+         from a URL, so `vite-plugin-singlefile` cannot inline it the way it inlines the bundle.
+         See docs/decisions/0008-the-shell-sidecars.md. -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="theme-color" content="#1b1b1f" />
+    <!-- iOS ignores the web manifest's icons entirely and reads this instead. Without it, adding the
+         game to a home screen on an iPhone produces a screenshot of the page rather than an icon —
+         and the plan expects most players to install from the site, not play in a tab. -->
+    <link rel="apple-touch-icon" href="icon-180.png" />
+    <script>
+      /*
+        BOOT WATCHDOG — see docs/decisions/0007-the-boot-watchdog.md.
+
+        A classic inline script, first thing in the document, because it is the only code that
+        exists before the module graph does. Everything it guards happens BEFORE `src/main.ts`
+        evaluates, so nothing in `src/` can report it: a module that throws at import time, a
+        script that never loads at all, a bundle the engine refuses to parse. Each of those is a
+        blank page with the evidence in a console nobody has open.
+
+        Written in ES5 by necessity, not taste. Vite processes inline MODULE scripts and leaves
+        classic ones exactly as typed, so this ships to the browser untranspiled — `const`, an
+        arrow function or a template literal here is a syntax error on the engines this is most
+        needed on, and a syntax error in the watchdog takes the page down in the one code path
+        that exists to explain why the page is down.
+
+        It cannot import `src/brand.ts` either, which is why the version arrives as a placeholder
+        that `vite.config.ts` substitutes at build time.
+      */
+      (function () {
+        /*
+          The signature. A build can print a version, a stack, or nothing at all; this exact
+          string is emitted by nothing but the code below, so seeing it on screen — or in a
+          screenshot from a player, which is the case that matters — identifies the failure as
+          "the app never started" rather than "the app started and drew nothing".
+        */
+        var MARKER = 'ITC-BOOT-FAILED';
+
+        /*
+          How long the module graph gets to signal boot, and how long a latched error waits to
+          see whether it was fatal after all. Readable from a global so the guard can drive both
+          in under a second; the default is what ships, and an unset global cannot change it.
+        */
+        var LIMIT = typeof window.__ITC_BOOT_LIMIT_MS__ === 'number' ? window.__ITC_BOOT_LIMIT_MS__ : 8000;
+        var GRACE = LIMIT < 1000 ? LIMIT : 1000;
+
+        var boot = {
+          marker: MARKER,
+          /* Substituted by vite.config.ts. Unsubstituted here is correct: raw source is exactly
+             the situation this reports on, and the literal placeholder is itself the diagnosis. */
+          version: '0.1.1',
+          booted: false,
+          /* The FIRST failure, latched. Never overwritten — see `latch`. */
+          error: null,
+          /* Called by src/main.ts once the module graph has actually evaluated. */
+          ok: function () {
+            boot.booted = true;
+          },
+        };
+        window.__ITC_BOOT__ = boot;
+
+        function render() {
+          var host = document.getElementById('app') || document.body;
+          if (!host) return;
+          var box = document.createElement('pre');
+          box.id = 'itc-boot-error';
+          box.setAttribute(
+            'style',
+            'margin:0;padding:1rem;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;' +
+              'white-space:pre-wrap;word-break:break-word;color:#f8f8f2;background:#1b1b1f',
+          );
+          /* textContent, never innerHTML: the detail below is a URL or a message from somewhere
+             outside this file, and the one screen a player reaches when everything else has
+             already failed is not the place to start parsing it as markup. */
+          box.textContent =
+            MARKER + '\n' + boot.version + '\n\n' + boot.error.kind + ': ' + boot.error.detail;
+          host.textContent = '';
+          host.appendChild(box);
+        }
+
+        /*
+          RECORDING a failure and DECLARING one are deliberately separate.
+
+          Not every error before boot is fatal — a 404 on some decorative asset latches here and
+          the app then starts perfectly well. A watchdog that painted its panel the instant it
+          heard about that would be the second-worst thing on the page. So the panel waits for
+          the one question that actually matters: did the module graph ever signal boot?
+        */
+        function verdict() {
+          if (!boot.booted && boot.error) render();
+        }
+
+        function latch(kind, detail) {
+          /*
+            FIRST failure wins. One import-time throw cascades — the module that failed leaves
+            half a dozen others with an undefined import, and each of those throws too. The last
+            error is a consequence; the first is the cause, and it is the one worth showing.
+          */
+          if (boot.error) return;
+          boot.error = { kind: kind, detail: String(detail) };
+          setTimeout(verdict, GRACE);
+        }
+
+        window.addEventListener(
+          'error',
+          function (e) {
+            var t = e.target;
+            /*
+              A failed <script>/<link>/<img> load fires `error` ON THE ELEMENT and it does NOT
+              bubble, so only a listener registered in the CAPTURE phase (the `true` below) ever
+              sees it. Drop that argument and this still catches every thrown exception — which
+              is to say it still looks like it works, while going blind to the exact failure the
+              predecessor's white screens were made of: the asset that 404s.
+            */
+            if (t && t !== window && (t.src || t.href)) latch('resource', t.src || t.href);
+            else
+              latch(
+                'throw',
+                (e.message || 'unknown error') + ' (' + (e.filename || '?') + ':' + (e.lineno || 0) + ')',
+              );
+          },
+          true,
+        );
+
+        window.addEventListener('unhandledrejection', function (e) {
+          var r = e.reason;
+          latch('rejection', (r && r.message) || r || 'unknown rejection');
+        });
+
+        /*
+          The silent case, and the reason a listener alone is not enough. A module script blocked
+          by CORS under file://, or a bundle whose syntax the engine rejects, can leave no event
+          behind at all — the page simply renders an empty div forever. Nothing has failed that
+          anything can observe; what is observable is that nothing has SUCCEEDED, so that is what
+          is measured.
+        */
+        setTimeout(function () {
+          if (!boot.booted) {
+            latch('timeout', 'the module graph did not signal boot within ' + LIMIT + 'ms');
+            verdict();
+          }
+        }, LIMIT);
+      })();
+    </script>
+    <script>
+      /*
+        FOREIGN SERVICE WORKERS — see docs/decisions/0009-the-page-does-not-sweep-foreign-caches.md.
+
+        A service worker registered at a scope ABOVE this page can intercept every request this page
+        makes, including the page itself. On a shared origin — `foxorama.github.io`, or itch's
+        `html-classic.itch.zone`, where every HTML game on the site lives together — that worker may
+        belong to something else entirely, and the symptom is a blank page with nothing in it that
+        points at the cause. This runs outside the module graph for the same reason the watchdog
+        does: the load where it matters is the load where the module graph did not evaluate.
+
+        ⚠️ ANCESTOR SCOPES ONLY. The predecessor unregistered every registration whose scope was not
+        its own and deleted every cache not carrying its own prefix — origin-wide, both. A SIBLING
+        scope cannot intercept this page, so removing it protects nothing and, on itch, destroys
+        another game's offline copy. This narrower rule keeps the protection and drops the damage.
+
+        Unregistering does not un-control the CURRENT page — that worker keeps answering until the
+        next load. That is a limit, not a bug: the alternative is reloading out from under a page
+        that may be fine, and the diagnosis this exists for survives one more load.
+      */
+      (function () {
+        try {
+          if (!navigator.serviceWorker) return;
+          var ours = new URL('./', location.href).href;
+          navigator.serviceWorker
+            .getRegistrations()
+            .then(function (regs) {
+              for (var i = 0; i < regs.length; i++) {
+                var scope = regs[i].scope;
+                /* A prefix of our scope, and not our scope: the only shape that can reach us.
+                   Scopes always end in `/`, so a plain prefix test cannot match a sibling
+                   directory whose name merely starts the same way. */
+                if (scope !== ours && ours.indexOf(scope) === 0) regs[i].unregister();
+              }
+            })
+            .catch(function () {});
+        } catch (e) {
+          /* Never the reason the page fails to start. */
+        }
+      })();
+    </script>
+    <script type="module" crossorigin>(function(){let e=document.createElement(`link`).relList;if(e&&e.supports&&e.supports(`modulepreload`))return;for(let e of document.querySelectorAll(`link[rel="modulepreload"]`))n(e);new MutationObserver(e=>{for(let t of e)if(t.type===`childList`)for(let e of t.addedNodes)e.tagName===`LINK`&&e.rel===`modulepreload`&&n(e)}).observe(document,{childList:!0,subtree:!0});function t(e){let t={};return e.integrity&&(t.integrity=e.integrity),e.referrerPolicy&&(t.referrerPolicy=e.referrerPolicy),t.credentials=e.crossOrigin===`use-credentials`?`include`:e.crossOrigin===`anonymous`?`omit`:`same-origin`,t}function n(e){if(e.ep)return;e.ep=!0;let n=t(e);fetch(e.href,n)}})();var e=`Into the Coil`,t=`0.1.1`,n=`2718a39`,r={vivid:{space:`#0b0b14`,player:`#7ae7ff`,ally:`#c9a7ff`,enemy:`#ff4d6d`,bullet:`#ff9f1c`,hazard:`#ffd23f`,pickup:`#d9ffd0`},"high-contrast":{space:`#000000`,player:`#00ffff`,ally:`#8080ff`,enemy:`#ff0000`,bullet:`#ff8000`,hazard:`#ff00ff`,pickup:`#ffffff`}},i=`vivid`,a=16/9,o=1.5,s=2.4;100*s;function c(e,t,n){return e<t?t:e>n?n:e}function l(e,t){if(!(Number.isFinite(e)&&Number.isFinite(t)&&e>0&&t>0))return{alongSpan:100*a,acrossSpan:100,alongAxis:`x`,scale:0,gutterAlong:0,gutterAcross:0};let n=Math.max(e,t),r=Math.min(e,t),i=100*c(n/r,o,s),l=Math.min(n/i,r/100);return{alongSpan:i,acrossSpan:100,alongAxis:e>=t?`x`:`y`,scale:l,gutterAlong:(n-i*l)/2,gutterAcross:(r-100*l)/2}}function u(e){return e+240+40}function d(e){return e-40}function f(){return{along:0,across:0,prevAlong:0,prevAcross:0,velAlong:0,velAcross:0,sprite:0}}function p(e,t,n,r){e.along=t,e.across=n,e.prevAlong=t,e.prevAcross=n,e.velAlong=0,e.velAcross=0,e.sprite=r}function m(e,t){let n=d(t);for(let t=e.size-1;t>=0;t--){let r=e.at(t);r.prevAlong=r.along,r.prevAcross=r.across,r.along+=r.velAlong,r.across+=r.velAcross,r.along<n&&e.releaseAt(t)}}function h(e){"@babel/helpers - typeof";return h=typeof Symbol==`function`&&typeof Symbol.iterator==`symbol`?function(e){return typeof e}:function(e){return e&&typeof Symbol==`function`&&e.constructor===Symbol&&e!==Symbol.prototype?`symbol`:typeof e},h(e)}function g(e,t){if(h(e)!=`object`||!e)return e;var n=e[Symbol.toPrimitive];if(n!==void 0){var r=n.call(e,t||`default`);if(h(r)!=`object`)return r;throw TypeError(`@@toPrimitive must return a primitive value.`)}return(t===`string`?String:Number)(e)}function _(e){var t=g(e,`string`);return h(t)==`symbol`?t:t+``}function v(e,t,n){return(t=_(t))in e?Object.defineProperty(e,t,{value:n,enumerable:!0,configurable:!0,writable:!0}):e[t]=n,e}var ee=class{constructor(e,t){if(v(this,`slots`,void 0),v(this,`live`,0),!Number.isInteger(e)||e<1)throw Error(`Pool: capacity must be a positive integer, got ${String(e)}`);this.slots=Array(e);for(let n=0;n<e;n++)this.slots[n]=t(n)}get capacity(){return this.slots.length}get size(){return this.live}spawn(){return this.live>=this.slots.length?null:this.slots[this.live++]}at(e){return this.slots[e]}releaseAt(e){if(e<0||e>=this.live)return;let t=this.live-1;if(e!==t){let n=this.slots[e];this.slots[e]=this.slots[t],this.slots[t]=n}this.live=t}clear(){this.live=0}};function y(e){let t=e>>>0;return function(){t|=0,t=t+1831565813|0;let e=Math.imul(t^t>>>15,1|t);return e=e+Math.imul(e^e>>>7,61|e)^e,((e^e>>>14)>>>0)/4294967296}}function b(e){let t=2166136261;for(let n=0;n<e.length;n++)t^=e.charCodeAt(n),t=Math.imul(t,16777619);return t>>>0}var x=class e{constructor(e){v(this,`next01`,void 0),v(this,`seed`,void 0),this.seed=typeof e==`string`?b(e):e>>>0,this.next01=y(this.seed)}stream(t){return new e(b(`${this.seed}:${t}`))}float(){return this.next01()}range(e,t){return e+this.next01()*(t-e)}int(e,t){return Math.floor(this.range(e,t+1))}bool(e=.5){return this.next01()<e}pick(e){if(e.length===0)throw Error(`Rng.pick: empty array`);return e[this.int(0,e.length-1)]}gaussian(e=0,t=1){let n=Math.max(this.next01(),1e-12),r=this.next01();return e+Math.sqrt(-2*Math.log(n))*Math.cos(2*Math.PI*r)*t}};function S(e){return new x(e)}var C=[`ship`,`enemy`,`bullet`,`pickup`],te={ship:0,enemy:1,bullet:2,pickup:3},ne={ship:7,enemy:5.5,bullet:1.8,pickup:3.5};function w(e){return e===`x`?`side`:`top`}function re(e,t,n){return e.view===t?!Number.isFinite(n)||n<=0?!1:Math.abs(n-e.pixelsPerUnit)>e.pixelsPerUnit*.25:!0}var T={ship:`player`,enemy:`enemy`,bullet:`bullet`,pickup:`pickup`};function E(e,t,n,r){let i=r/2,a=r*.42;switch(e.fillStyle=n[T[t]],e.strokeStyle=n.space,e.lineWidth=Math.max(1,r*.04),e.beginPath(),t){case`ship`:e.moveTo(i+a,i),e.lineTo(i-a*.7,i-a*.8),e.lineTo(i-a*.3,i),e.lineTo(i-a*.7,i+a*.8),e.closePath();break;case`enemy`:e.moveTo(i-a,i),e.lineTo(i,i-a),e.lineTo(i+a,i),e.lineTo(i,i+a),e.closePath();break;case`bullet`:e.arc(i,i,a*.8,0,Math.PI*2);break;case`pickup`:e.rect(i-a*.8,i-a*.8,a*1.6,a*1.6),e.rect(i-a*.25,i-a*.25,a*.5,a*.5);break;default:throw Error(`unbaked sprite kind: ${String(t)}`)}e.fill(`evenodd`),e.stroke()}function D(e,t,n){let r=[],i=[];for(let a of C){let o=ne[a],s=Math.max(8,Math.min(256,Math.ceil(o*n))),c=document.createElement(`canvas`);c.width=s,c.height=s;let l=c.getContext(`2d`);if(l===null)throw Error(`bakeAtlas: no 2D context — this browser cannot run the game`);t===`top`&&(l.translate(s/2,s/2),l.rotate(-Math.PI/2),l.translate(-s/2,-s/2)),E(l,a,e,s),r.push(c),i.push(o)}return{view:t,bitmaps:r,extents:i,pixelsPerUnit:n}}function ie(e){return!Number.isFinite(e)||e<=0?1:Math.min(e,2)}var ae=class{constructor(e,t){v(this,`ctx`,void 0),v(this,`atlas`,void 0),v(this,`width`,0),v(this,`height`,0),v(this,`space`,`#000000`),this.ctx=e,this.atlas=t}setAtlas(e){this.atlas=e}setSize(e,t,n){this.width=e,this.height=t,this.space=n}clear(){this.ctx.fillStyle=this.space,this.ctx.fillRect(0,0,this.width,this.height)}blit(e,t,n,r){let i=this.atlas.bitmaps[e];if(i===void 0)return;let a=this.atlas.extents[e]*r,o=a/2;this.ctx.drawImage(i,t-o,n-o,a,a)}},O={alongMinus:{kind:`axis`,sign:-1,slot:null,label:`Back`},alongPlus:{kind:`axis`,sign:1,slot:null,label:`Forward`},acrossMinus:{kind:`axis`,sign:-1,slot:null,label:`Up`},acrossPlus:{kind:`axis`,sign:1,slot:null,label:`Down`},special1:{kind:`edge`,sign:null,slot:0,label:`Special 1`},special2:{kind:`edge`,sign:null,slot:1,label:`Special 2`}},k=[`alongMinus`,`alongPlus`,`acrossMinus`,`acrossPlus`,`special1`,`special2`],oe={along:{minus:`alongMinus`,plus:`alongPlus`},across:{minus:`acrossMinus`,plus:`acrossPlus`}},A=k.filter(e=>O[e].kind===`edge`).length,se={alongPlus:[`KeyD`,`ArrowRight`],alongMinus:[`KeyA`,`ArrowLeft`],acrossMinus:[`KeyW`,`ArrowUp`],acrossPlus:[`KeyS`,`ArrowDown`],special1:[`Space`],special2:[`ShiftLeft`,`ShiftRight`]};function ce(e){if(!Number.isInteger(e)||e<1)throw RangeError(`intent needs at least one special binding, got ${e}`);return{along:0,across:0,specials:Array(e).fill(0)}}function le(e){for(let t=0;t<e.specials.length;t++)e.specials[t]=0}var j=1.7,M=100*o;function N(e,t,n){return e<t?t:e>n?n:e}function P(e,t,n,r){let i=t.along,a=t.across,o=i*i+a*a,s=o>1?j/Math.sqrt(o):j;e.velAlong=r+i*s,e.velAcross=a*s;let c=n+6,l=n+M-6,u=e.along+e.velAlong;(u<c||u>l)&&(e.velAlong=N(u,c,l)-e.along);let d=e.across+e.velAcross;(d<6||d>94)&&(e.velAcross=N(d,6,94)-e.across)}function F(e,t,n){return e.alongAxis===`x`?e.gutterAlong+t*e.scale:e.gutterAcross+n*e.scale}function I(e,t,n){return e.alongAxis===`x`?e.gutterAcross+n*e.scale:e.gutterAlong+(e.alongSpan-t)*e.scale}function L(e,t,n,r,i){e.clear();let a=n.size;for(let o=0;o<a;o++){let a=n.at(o),s=a.prevAlong+(a.along-a.prevAlong)*i,c=a.prevAcross+(a.across-a.prevAcross)*i,l=s-r;e.blit(a.sprite,F(t,l,c),I(t,l,c),t.scale)}}var R=class{constructor(e){v(this,`world`,void 0),this.world=e}step(){let e=this.world;if(e.prevCameraAlong=e.cameraAlong,e.cameraAlong+=e.scrollPerStep,e.input.contribute(e.intent),P(e.ship,e.intent,e.cameraAlong,e.scrollPerStep),m(e.pool,e.cameraAlong),e.spawnIn--,e.spawnIn<=0){e.spawnIn=9;let t=e.pool.spawn();t!==null&&(p(t,u(e.cameraAlong),e.rng.range(8,92),1+e.rng.int(0,2)),t.velAcross=e.rng.range(-.12,.12))}}draw(e){let t=this.world,n=t.prevCameraAlong+(t.cameraAlong-t.prevCameraAlong)*e;L(t.surface,t.view,t.pool,n,e)}};function z(e){return e<-1?-1:e>1?1:e}function B(e){let t=e.slice();return{contribute(e){var n;e.along=0,e.across=0,le(e);for(let r=0;r<t.length;r++)(n=t[r])==null||n.contribute(e);e.along=z(e.along),e.across=z(e.across)},release(){var e;for(let n=0;n<t.length;n++)(e=t[n])==null||e.release()}}}function V(e){let t=new Map;for(let n of k)for(let r of e[n])t.set(r,n);return t}function H(e,t=se){let n=V(t),r=Object.create(null),i=Object.create(null);for(let e of k)r[e]=!1,i[e]=0;let a=e=>{let t=e.code,a=n.get(t);a!==void 0&&(r[a]||(r[a]=!0,O[a].kind===`edge`&&i[a]++))},o=e=>{let t=n.get(e.code);t!==void 0&&(r[t]=!1)},s=()=>{for(let e of k)r[e]=!1};return e.addEventListener(`keydown`,a),e.addEventListener(`keyup`,o),e.addEventListener(`blur`,s),{contribute(e){e.along+=U(r,`along`),e.across+=U(r,`across`);for(let n of k){let r=O[n].slot;if(r!==null&&r<e.specials.length){var t;e.specials[r]=((t=e.specials[r])==null?0:t)+i[n]}i[n]=0}},release(){e.removeEventListener(`keydown`,a),e.removeEventListener(`keyup`,o),e.removeEventListener(`blur`,s)}}}function U(e,t){let n=oe[t];return!!e[n.plus]-+!!e[n.minus]}var W=[0,1,2,3];function ue(e={}){var t,n;let r=(t=e.alongAxis)==null?(()=>`x`):t,i=(n=e.pads)==null?(()=>typeof navigator>`u`||!navigator.getGamepads?de:navigator.getGamepads()):n,a=Array(A).fill(!1);return{contribute(e){let t=i(),n=0,o=0;for(let r=0;r<t.length;r++){var s,c;let i=t[r];if(!i||!i.connected)continue;let d=(s=i.axes[0])==null?0:s,f=(c=i.axes[1])==null?0:c;d*d+f*f>=.0324&&(n+=d,o+=f);for(let t=0;t<a.length;t++){var l;let n=i.buttons[(l=W[t])==null?-1:l],r=n!==void 0&&n.pressed;if(r&&!a[t]&&t<e.specials.length){var u;e.specials[t]=((u=e.specials[t])==null?0:u)+1}a[t]=r}}r()===`x`?(e.along+=n,e.across+=o):(e.along+=-o,e.across+=n)},release(){for(let e=0;e<a.length;e++)a[e]=!1}}}var de=[],fe=`drag`;function pe(e,t={}){var n,r;let i=(n=t.scheme)==null?fe:n,a=(r=t.alongAxis)==null?(()=>`x`):r,o=-1,s=0,c=0,l=0,u=0,d=0,f=0,p=Array(A).fill(0),m=t=>{var n;let r=t;if(r.pointerType===`mouse`)return;let i=me(e,r);if(i===-1){if(o!==-1)return;o=r.pointerId,s=r.clientX,c=r.clientY,l=r.clientX,u=r.clientY,d=0,f=0,e.setPointerCapture&&e.setPointerCapture(r.pointerId);return}i<p.length&&(p[i]=((n=p[i])==null?0:n)+1)},h=e=>{let t=e;t.pointerId===o&&(d+=t.clientX-s,f+=t.clientY-c,s=t.clientX,c=t.clientY)},g=e=>{e.pointerId===o&&(o=-1)},_=()=>{o=-1,d=0,f=0};return e.addEventListener(`pointerdown`,m),e.addEventListener(`pointermove`,h),e.addEventListener(`pointerup`,g),e.addEventListener(`pointercancel`,g),e.addEventListener(`blur`,_),{contribute(e){let t=0,n=0;if(i===`drag`){let e=G(d/90),r=G(f/90);d-=e*90,f-=r*90,t=e,n=r}else if(o!==-1){let e=s-l,r=c-u;e*e+r*r>=36&&(t=G(e/56),n=G(r/56))}a()===`x`?(e.along+=t,e.across+=n):(e.along+=-n,e.across+=t);for(let t=0;t<p.length;t++){var r,m;t<e.specials.length&&(e.specials[t]=((r=e.specials[t])==null?0:r)+((m=p[t])==null?0:m)),p[t]=0}},release(){e.removeEventListener(`pointerdown`,m),e.removeEventListener(`pointermove`,h),e.removeEventListener(`pointerup`,g),e.removeEventListener(`pointercancel`,g),e.removeEventListener(`blur`,_)}}}function G(e){return e<-1?-1:e>1?1:e}function me(e,t){if(A<1)return-1;let n=e.getBoundingClientRect();if(n.width<=0||n.height<=0)return-1;let r=n.width>=n.height;if((r?(t.clientX-n.left)/n.width:(t.clientY-n.top)/n.height)<.75)return-1;let i=r?(t.clientY-n.top)/n.height:(t.clientX-n.left)/n.width,a=Math.floor(i*A);return a<0?0:a>=A?A-1:a}var K=1e3/60;function he(){return{carry:0,steps:0,alpha:0,dropped:0}}function ge(e,t){let n=Number.isFinite(t)&&t>0?t:0,r=e.carry+n,i=Math.floor(r/K),a=0;i>5&&(a=i-5,i=5,r-=a*K),e.carry=r-i*K,e.steps=i,e.alpha=e.carry/K,e.dropped=a}function _e(e){let t=he(),n=0,r=!1,i=0,a=!0,o=s=>{if(a){if(i=requestAnimationFrame(o),!r){r=!0,n=s;return}ge(t,s-n),n=s;for(let n=0;n<t.steps;n++)e.step();e.draw(t.alpha)}};return i=requestAnimationFrame(o),()=>{a=!1,cancelAnimationFrame(i)}}var ve=500,q=.6,J=`data-itc-rotate`;function ye(e,t){let n=document.createElement(`div`);return n.setAttribute(J,``),n.setAttribute(`role`,`alert`),n.style.position=`absolute`,n.style.inset=`0`,n.style.display=`none`,n.style.alignItems=`center`,n.style.justifyContent=`center`,n.style.textAlign=`center`,n.style.padding=`2rem`,n.style.background=t,n.style.color=e,n.style.font=`600 1.25rem/1.4 system-ui, sans-serif`,n.textContent=`Turn your device sideways to play.`,n}function Y(e,t,n,r){let i=ie(window.devicePixelRatio);return e.width=Math.max(1,Math.round(n*i)),e.height=Math.max(1,Math.round(r*i)),e.style.width=String(n)+`px`,e.style.height=String(r)+`px`,t.setTransform(i,0,0,i,0,0),i}function be(e){e.style.touchAction=`none`,e.style.setProperty(`-webkit-touch-callout`,`none`),e.style.userSelect=`none`,e.style.setProperty(`-webkit-user-select`,`none`),e.style.overscrollBehavior=`none`}function xe(e,t=`vivid`){let n=document.createElement(`canvas`);n.style.display=`block`,be(n);let i=n.getContext(`2d`);if(i===null)return null;e.appendChild(n);let a=r[t],o=new ee(ve,f),s=o.spawn();p(s,40,50,te.ship),s.velAlong=q;let c=S(`proof-scene`).stream(`seed`);for(let e=0;e<120;e++){let e=o.spawn();if(e===null)break;p(e,c.range(10,240),c.range(8,92),1+c.int(0,2)),e.velAcross=c.range(-.12,.12)}let u=()=>l(X(e),Z(e)),d=u(),m=Y(n,i,X(e),Z(e)),h=D(a,w(d.alongAxis),d.scale*m),g=new ae(i,h);g.setSize(X(e),Z(e),a.space);let _={pool:o,view:d,surface:g,rng:S(`proof-scene`).stream(`debris`),cameraAlong:0,prevCameraAlong:0,scrollPerStep:q,spawnIn:1,ship:s,input:B([H(window),pe(n,{alongAxis:()=>d.alongAxis}),ue({alongAxis:()=>d.alongAxis})]),intent:ce(A)},v=()=>{let t=u();if(t.alongAxis!==`x`){x(!1);return}let r=X(e),o=Z(e),s=Y(n,i,r,o),c=w(t.alongAxis),l=t.scale*s;re(h,c,l)&&(h=D(a,c,l),g.setAtlas(h)),d=t,m=s,_.view=t,g.setSize(r,o,a.space),x(!0)},y=ye(a.player,a.space);e.appendChild(y);let b=null,x=e=>{y.style.display=e?`none`:`flex`,n.style.visibility=e?`visible`:`hidden`,e&&b===null?b=_e(new R(_)):!e&&b!==null&&(b(),b=null)};return window.addEventListener(`resize`,v),x(d.alongAxis===`x`),{canvas:n,stop(){window.removeEventListener(`resize`,v),_.input.release(),b==null||b(),b=null}}}function X(e){return e.clientWidth||window.innerWidth}function Z(e){return e.clientHeight||window.innerHeight}var Q,$=document.querySelector(`#app`);if($ instanceof HTMLElement){document.body.style.margin=`0`,document.body.style.overflow=`hidden`,document.body.style.background=r[i].space,$.style.position=`fixed`,$.style.inset=`0`;let a=xe($,i);a===null?$.textContent=`${e} ${t} (${n}) — this browser cannot draw the game.`:(a.canvas.setAttribute(`role`,`img`),a.canvas.setAttribute(`aria-label`,`${e} ${t} (${n})`))}if((Q=window.__ITC_BOOT__)==null||Q.ok(),`serviceWorker`in navigator){let e=new URL(`./`,location.href).href;navigator.serviceWorker.register(new URL(`./sw.js`,location.href).href,{scope:e}).catch(()=>{})}</script>
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>
