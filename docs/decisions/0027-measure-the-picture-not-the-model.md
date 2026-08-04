@@ -112,3 +112,21 @@ this class has occurred in this project, because nothing has been tuned yet. Wha
 justifies landing the rule before the failure, is structural and checkable by reading: the guards
 this repository has all count model quantities, and the one that would count a picture quantity does
 not exist.
+
+---
+
+## Confirmed, not assumed
+
+**Added 2026-08-04**, when the instrument this decision owed was built and found a bug on its first
+run. Declared in `scripts/probes/0027-picture.mjs`.
+
+| broken on purpose | went red |
+|---|---|
+| the camera subtracted at its stepped value while entities interpolate — ~4px of judder on everything | `THE ONE: a ship asking for nothing is drawn in exactly the same place at every alpha` |
+| the projection pinned, so a frozen scene satisfies every stability assertion above | `debris left behind DOES move, so this is not passing by drawing nothing` |
+
+⚠️ **The evidence above is no longer inherited.** This file originally closed by flagging that every
+number in it was the predecessor's. `reports/camera-judder-2026-08-04.md` is this project's own: a
+ship holding station *exactly* in world units drew 4.0px of screen travel per second, every
+assertion in the suite was green before the fix and after it, and the instrument reported 0.0px
+afterwards. The model was right; only the picture was wrong.
