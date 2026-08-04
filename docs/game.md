@@ -88,11 +88,19 @@ Each ship carries:
   is the only thing that fires itself.
 - **A starting special** — limited capacity, unique to the ship. May be offensive, may be shields.
   **Manual.**
+- **More specials, found during the run.** A shielded ship that picks up bombs carries both, each on
+  its own trigger and its own cooldown. Kept to the end of the run, like every other upgrade.
 
 ⚠️ **Auto-fire is the base weapon, not the arsenal.** Specials, shields, bombs and heavies are all
 triggered by the player, one trigger per owned weapon, each on its own cooldown — the Raiden II
 relationship between the shot you never think about and the bomb you have to spend. Straight from the
 Jörmungandr fight.
+
+⚠️ **The arsenal is a LIST, never a slot**, and this is a code constraint rather than a flourish. A
+ship modelled with one special field, an input layer with one special binding, or a save storing one
+special kind each independently make a second special a rewrite instead of a pickup. Nothing here
+says how many there will be — only that the shape must not decide it. One trigger per owned weapon
+is already the rule above; this is what it costs to mean it.
 
 **The skill is in surviving the onslaught, not in mashing a fire button.** A well-timed special is
 the difference between combat and tracing a finger across the screen, which is exactly why the shot
