@@ -207,3 +207,74 @@ budget, that a deadzone is radial. None of it can see a control that fights the 
 `STICK_DEADZONE_PX` and `PAD_DEADZONE` are all reasoned starting points, and the argument between
 drag and the stick is reasoned too — from four named mechanisms, but reasoned. What would settle it
 is a thumb on a phone at the branch preview, and that is owed rather than assumed.
+
+---
+
+## Played, 2026-08-05
+
+The *"none of this has been played"* caveat above is retired for two of the three devices.
+
+| device | verdict |
+|---|---|
+| touch, `drag` | *"works a lot better than previous touch-screen-pad games I've used"*, and after one tuning pass, *"that feels really good"* |
+| gamepad | *"works really well"* on desktop |
+| touch, `stick` | still unplayed. It ships as the alternative and nobody has chosen it yet |
+
+**The gamepad needed no tuning and no second pass**, which is the strongest evidence 0030's seam is
+right: a third device, written against the same `Intent`, correct on the first play.
+
+⚠️ **And it splits a hypothesis this decision had already started to assume.** The drag's delay was
+reported as the thing that makes the ship feel *flown*, and the keyboard's lack of it as the reason
+desktop does not — see `reports/drag-feel-2026-08-05.md`, which proposes ship inertia as the fix and
+notes it would reverse `src/sim/flight.ts`'s *"response is immediate"*.
+
+The gamepad has **no bank and no delay**, exactly like the keyboard, and it plays well. So the
+variable separating the keyboard from the other two may not be inertia at all:
+
+| | bank | control |
+|---|---|---|
+| touch `drag` | yes | continuous |
+| gamepad | **no** | continuous, analog |
+| keyboard | no | **three states — −1, 0, +1** |
+
+If the missing ingredient is *continuity* rather than *mass*, the fix is a ramp on the keyboard axis
+alone — no sim change, no decision reversed, no other device touched. That is a far cheaper answer
+than inertia, and it was not visible until a third device had been played.
+
+**Not settled here.** What distinguishes the two is whether the pad feels *flown* or merely precise,
+which is a question for a hand and not for reasoning.
+
+### The fork is answered, and it was two questions
+
+Same day, from the hand: *"the gamepad feels more like flying because of the **diagonality** of the
+approach"*, and *"the bank-lag or turbo-lag is **genuinely missing** — it's the diff between it
+feeling like flying and it feeling like flying in a real environment."*
+
+Both hypotheses are true. They are not competing; they separate different pairs of devices:
+
+| the difference between | is | which is |
+|---|---|---|
+| keyboard and gamepad | **continuity** — a stick pushes at any angle, a key at one of eight | *flying* |
+| gamepad and touch | **mass** — the bank, the lag, the run-on | *flying in a real environment* |
+
+⚠️ **So the turbo-lag is confirmed as a ship property and not a touch artefact**, which is this
+decision's own principle arriving from the other direction: the feel belongs to the *ship*, never to
+the input device. It reached the player by accident, through a bank that exists for an unrelated
+reason, and only on one of three devices.
+
+**That makes ship inertia in `flyShip` the answer, and it reverses**
+`src/sim/flight.ts`'s *"Response is immediate. No acceleration, no smoothing… the arcade answer, and
+a decision rather than an omission."* Owed as its own decision.
+
+Two consequences worth writing down before that decision is taken:
+
+- **Touch would then have it twice** — a bank *and* inertia. `DRAG_GAIN` goes back on the table as
+  part of that change, very likely upward, because the lag it currently supplies would be coming
+  from the ship instead. The good touch feel is not lost by moving the mechanism; it is generalised.
+- **Continuity is a separate, much cheaper change**, and it is keyboard-only: ramp each axis rather
+  than snapping to ±1. That also earns the keyboard angles between the eight — reached by *timing*
+  rather than by *aiming*, so a stick stays better at this, which is correct and not a defect.
+
+⚠️ **Neither is built here.** Both wait on `SHIP_SPEED`, which cannot be settled until something can
+kill the player — `reports/drag-feel-2026-08-05.md` has the ordering. Building inertia now would mean
+shipping an untuned mass constant over a touch feel that was just called *"really good"*.
