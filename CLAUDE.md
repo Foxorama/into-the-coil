@@ -52,6 +52,12 @@ decision needs no rule.
   or `Symbol` where a save serialises or a seeded test compares.
   — [0017](docs/decisions/0017-the-state-is-slices.md)
 
+- **Randomness is a seeded `Rng` threaded as an argument, and every concern takes its own named
+  stream.** One shared generator couples every draw to every draw before it, so a cosmetic roll added
+  anywhere rebuilds every level. The save stores resolved state — the drafted pool, the loadout, the
+  level reached — never a seed to re-derive them from.
+  — [0021](docs/decisions/0021-one-stream-per-concern.md)
+
 ⚠️ **No counting guard.** Line ceilings, `case` ceilings and slice ceilings were each proposed and
 each measured against the predecessor before being set; every one flagged its healthy file as loudly
 as its sick one. What separates them is the shape of the dependencies, which is what the three rules
