@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "prove": "node scripts/prove-guard.mjs",
+    "trace": "npm run build && node scripts/trace-frame.mjs",
     "tidy": "node scripts/tidy.mjs",
     "check": "npm run typecheck && npm test && npm run build"
   },

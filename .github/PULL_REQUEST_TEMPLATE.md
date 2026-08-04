@@ -1,6 +1,7 @@
 <!--
-  One question, and it is a question of FACT — not an estimate of how risky this feels.
-  See docs/decisions/0001-revertability-not-risk-rating.md.
+  Two questions, and each is a question of FACT — not an estimate of how risky this feels.
+  See docs/decisions/0001-revertability-not-risk-rating.md
+  and docs/decisions/0027-measure-the-picture-not-the-model.md.
 -->
 
 ## Does this touch an irreversible surface?
@@ -20,6 +21,25 @@ already out there.*
 
 ---
 
+## Does this change something the player watches move?
+
+**No → delete the section below and open the PR.**
+**Yes → run `npm run trace`, and paste the pixels.** A green suite is not an answer to this
+question. Every guard here counts a *model* quantity, and the bug this exists for lived between two
+model quantities that were both correct — the whole suite green on either side of it
+(`reports/camera-judder-2026-08-04.md`).
+
+### What the picture did
+
+| | before | after |
+|---|---|---|
+| *screen travel, or whichever line moved* | | |
+
+*Which invocation — the flags matter — and what a reader should conclude. "It looks better" is not a
+number and a number nobody has looked at is not a picture.*
+
+---
+
 ## What this changes
 
-<!-- Quality does not vary with the answer above. There is no low tier. -->
+<!-- Quality does not vary with the answers above. There is no low tier. -->
