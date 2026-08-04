@@ -89,6 +89,25 @@ async function inkedPixels(page: Page): Promise<number> {
   });
 }
 
+/**
+ * A cheap fingerprint of what is on the canvas right now.
+ *
+ * Compared across time rather than against a golden value, so it asserts *nothing moved* without
+ * anybody having to decide what the picture should look like.
+ */
+async function signature(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const canvas = document.querySelector('#app canvas');
+    if (!(canvas instanceof HTMLCanvasElement)) return '';
+    const ctx = canvas.getContext('2d');
+    if (ctx === null || canvas.width === 0 || canvas.height === 0) return '';
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let hash = 0;
+    for (let i = 0; i < data.length; i += 997) hash = (hash * 31 + (data[i] ?? 0)) | 0;
+    return String(hash);
+  });
+}
+
 describe.runIf(chromePath)('the orientation gate', () => {
   it('plays in landscape, with no prompt in the way', async () => {
     const page = await open(LANDSCAPE);
@@ -106,18 +125,40 @@ describe.runIf(chromePath)('the orientation gate', () => {
   });
 
   it('THE ONE THAT MATTERS: the world does not advance behind the prompt', async () => {
-    // An overlay over a running game is the cheap version of this feature and it is wrong: a player
-    // who rotates mid-run loses the run to something they cannot see.
-    const page = await open(PORTRAIT);
-    const before = await page.evaluate(() => performance.now());
+    /*
+      An overlay over a running game is the cheap version of this feature and it is wrong: a player
+      who rotates mid-run loses the run to something they cannot see.
+
+      ⚠️ **It has to start in LANDSCAPE.** The first version of this test opened straight into
+      portrait, where the loop is never started at all — so `npm run prove` broke the stop-the-loop
+      branch and the suite stayed GREEN. The assertion was decoration for its whole short life, and
+      only the probe said so. A loop that was never running cannot be observed failing to stop.
+
+      And the measurement is the PICTURE, not a counter: the frame is sampled twice, 400ms apart,
+      and must be byte-identical. A running loop scrolls the field, so a moving world cannot produce
+      the same signature twice — 0027's rule pointed at the one thing that would otherwise be
+      asserted in the model's own units.
+    */
+    const page = await open(LANDSCAPE);
+    await page.waitForTimeout(200);
+    expect(await inkedPixels(page), 'nothing was running to be stopped').toBeGreaterThan(0);
+
+    await page.setViewportSize(PORTRAIT);
+    await page.waitForFunction(
+      () => {
+        const gate = document.querySelector('[data-itc-rotate]');
+        return gate instanceof HTMLElement && getComputedStyle(gate).display !== 'none';
+      },
+      { timeout: 5_000 },
+    );
+
+    const before = await signature(page);
     await page.waitForTimeout(400);
-    const after = await page.evaluate(() => performance.now());
-    // Real time passed, so a running loop would have had ~24 frames to draw in.
-    expect(after - before).toBeGreaterThan(200);
-    // Nothing was drawn into the canvas at all — it was never even sized for this view.
-    expect(await inkedPixels(page)).toBe(0);
+    const after = await signature(page);
+    expect(before, 'the canvas was never drawn, so this proves nothing').not.toBe('');
+    expect(after, 'the world kept moving behind the prompt').toBe(before);
     await page.context().close();
-  });
+  }, 30_000);
 
   it('the prompt is text, so it does not rely on reading a pictogram', async () => {
     // 0024's floor, applied to the one screen whose entire job is explaining why nothing is running.
