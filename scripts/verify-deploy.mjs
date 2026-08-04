@@ -89,7 +89,12 @@ try {
 }
 
 if (manifest) {
-  check(manifest.orientation === 'any', 'the manifest installs unlocked', manifest.orientation);
+  // ⚠️ `landscape` since docs/decisions/0031-landscape-is-the-shipped-orientation.md — one art view
+  // exists, so portrait is not a destination. This line said `any` and went on saying it after the
+  // manifest changed, because it is a SECOND description of a fact `tests/shell.test.ts` already
+  // holds, in a file the suite does not cover. Caught by running the verifier against a real
+  // preview deploy, which is the only thing that reads this tree.
+  check(manifest.orientation === 'landscape', 'the manifest installs locked to landscape', manifest.orientation);
   check(manifest.name === 'Into the Coil', 'the manifest carries the product name', manifest.name);
 
   for (const icon of manifest.icons ?? []) {
