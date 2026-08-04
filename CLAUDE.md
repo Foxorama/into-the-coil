@@ -69,7 +69,10 @@ decision needs no rule.
   the player on a dropped frame. Per-frame entity pools are mutable and are **not** reducer state —
   0017 still holds over screens, run and settings. The budget is ~10ms on a 2021 mid-range Android,
   and its guard counts draw calls and allocations rather than wall-clock, because CI is not that
-  phone. — [0022](docs/decisions/0022-frame-rate-is-a-feature.md)
+  phone. The frame loop is a **closed list of hot files** where allocating syntax fails a test; a line
+  that genuinely runs once carries `// @setup: <why>` above it. This is the one code convention
+  landed so far. — [0022](docs/decisions/0022-frame-rate-is-a-feature.md),
+  [0025](docs/decisions/0025-the-frame-budget-is-counted-not-timed.md)
 
 - **There is one game and it is the loud one; accessibility is knobs over that default.** An item
   joins the floor only if it is a property of the architecture or a knob over it — one that would
