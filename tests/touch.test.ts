@@ -15,6 +15,13 @@ import { SHIP_SPEED } from '../src/sim/flight.js';
   constant that used to be written directly into this file, and the replacement is the whole point —
   see the ⚠️ on DRAG_GAIN in src/app/touch.ts.
 */
+/*
+  ⚠️ Asserted with `toBeCloseTo` and not `toBe`. STEP_PX is a division, so whether it lands on an
+  exact binary fraction is a property of whatever DRAG_GAIN happens to be — 1.6 divided cleanly and
+  1.48 does not. Four assertions here broke on the first tuning pass for that reason alone, which
+  means they had been passing by luck rather than by being right. A tuning constant must never be
+  able to break a test that is not about its value.
+*/
 const SCALE = 4;
 const STEP_PX = (SHIP_SPEED * SCALE) / DRAG_GAIN;
 
@@ -112,15 +119,15 @@ describe('drag: the finger’s movement is the ask', () => {
   it('a finger doing nothing asks for nothing', () => {
     const { glass, step } = rig();
     glass.down(STEER_X, STEER_Y);
-    expect(step().along).toBe(0);
+    expect(step().along).toBeCloseTo(0, 9);
   });
 
   it('a finger held still, having moved, asks for nothing more', () => {
     const { glass, step } = rig();
     glass.down(STEER_X, STEER_Y);
     glass.move(STEER_X + STEP_PX, STEER_Y);
-    expect(step().along).toBe(1);
-    expect(step().along).toBe(0);
+    expect(step().along).toBeCloseTo(1, 9);
+    expect(step().along).toBeCloseTo(0, 9);
   });
 
   it('converts a gain’s worth of travel into full deflection', () => {
@@ -136,10 +143,10 @@ describe('drag: the finger’s movement is the ask', () => {
     const { glass, step } = rig();
     glass.down(STEER_X, STEER_Y);
     glass.move(STEER_X + STEP_PX * 3, STEER_Y);
-    expect(step().along).toBe(1);
-    expect(step().along).toBe(1);
-    expect(step().along).toBe(1);
-    expect(step().along).toBe(0);
+    expect(step().along).toBeCloseTo(1, 9);
+    expect(step().along).toBeCloseTo(1, 9);
+    expect(step().along).toBeCloseTo(1, 9);
+    expect(step().along).toBeCloseTo(0, 9);
   });
 
   it('keeps the bank when the finger LEAVES, because that is what a flick is', () => {
@@ -147,8 +154,8 @@ describe('drag: the finger’s movement is the ask', () => {
     glass.down(STEER_X, STEER_Y);
     glass.move(STEER_X + STEP_PX * 2, STEER_Y);
     glass.up(STEER_X + STEP_PX * 2, STEER_Y);
-    expect(step().along).toBe(1);
-    expect(step().along).toBe(1);
+    expect(step().along).toBeCloseTo(1, 9);
+    expect(step().along).toBeCloseTo(1, 9);
   });
 
   it('lifting and re-placing the thumb moves the ship not at all — the re-grip', () => {
@@ -156,17 +163,17 @@ describe('drag: the finger’s movement is the ask', () => {
     glass.down(STEER_X, STEER_Y);
     glass.up(STEER_X, STEER_Y);
     glass.down(STEER_X + 300, STEER_Y + 100);
-    expect(step().along).toBe(0);
-    expect(step().across).toBe(0);
+    expect(step().along).toBeCloseTo(0, 9);
+    expect(step().across).toBeCloseTo(0, 9);
   });
 
   it('reverses immediately, with no anchor to drag back across', () => {
     const { glass, step } = rig();
     glass.down(STEER_X, STEER_Y);
     glass.move(STEER_X + STEP_PX, STEER_Y);
-    expect(step().along).toBe(1);
+    expect(step().along).toBeCloseTo(1, 9);
     glass.move(STEER_X, STEER_Y);
-    expect(step().along).toBe(-1);
+    expect(step().along).toBeCloseTo(-1, 9);
   });
 });
 
@@ -178,7 +185,7 @@ describe('the browser and the OS both take pointers away', () => {
     // A new finger steers, which it could not do if the cancelled one still held the slot.
     glass.down(STEER_X, STEER_Y, 2);
     glass.move(STEER_X + STEP_PX, STEER_Y, 2);
-    expect(step().along).toBe(1);
+    expect(step().along).toBeCloseTo(1, 9);
   });
 
   it('blur clears the bank, so alt-tabbing does not fly the ship on return', () => {
@@ -186,7 +193,7 @@ describe('the browser and the OS both take pointers away', () => {
     glass.down(STEER_X, STEER_Y);
     glass.move(STEER_X + STEP_PX * 3, STEER_Y);
     glass.blur();
-    expect(step().along).toBe(0);
+    expect(step().along).toBeCloseTo(0, 9);
   });
 
   it('takes pointer capture, so a thumb sliding off the edge keeps steering', () => {
@@ -199,7 +206,7 @@ describe('the browser and the OS both take pointers away', () => {
     const { glass, step } = rig();
     glass.down(STEER_X, STEER_Y, 1, 'mouse');
     glass.move(STEER_X + STEP_PX, STEER_Y);
-    expect(step().along).toBe(0);
+    expect(step().along).toBeCloseTo(0, 9);
   });
 
   it('ignores a second finger in the steering area rather than letting it steal the drag', () => {
@@ -207,7 +214,7 @@ describe('the browser and the OS both take pointers away', () => {
     glass.down(STEER_X, STEER_Y, 1);
     glass.down(STEER_X + 50, STEER_Y + 50, 2);
     glass.move(STEER_X + STEP_PX, STEER_Y, 2);
-    expect(step().along).toBe(0);
+    expect(step().along).toBeCloseTo(0, 9);
   });
 
   it('detaches every listener on release', () => {
@@ -224,22 +231,22 @@ describe('stick: displacement from where the finger landed', () => {
     const { glass, step } = rig('stick');
     glass.down(STEER_X, STEER_Y);
     glass.move(STEER_X + STICK_RADIUS_PX, STEER_Y);
-    expect(step().along).toBe(1);
+    expect(step().along).toBeCloseTo(1, 9);
   });
 
   it('saturates past the radius — the dead zone at the top of every stick', () => {
     const { glass, step } = rig('stick');
     glass.down(STEER_X, STEER_Y);
     glass.move(STEER_X + STICK_RADIUS_PX * 4, STEER_Y);
-    expect(step().along).toBe(1);
+    expect(step().along).toBeCloseTo(1, 9);
   });
 
   it('holds its ask while the finger holds still, which is what a stick IS', () => {
     const { glass, step } = rig('stick');
     glass.down(STEER_X, STEER_Y);
     glass.move(STEER_X + STICK_RADIUS_PX, STEER_Y);
-    expect(step().along).toBe(1);
-    expect(step().along).toBe(1);
+    expect(step().along).toBeCloseTo(1, 9);
+    expect(step().along).toBeCloseTo(1, 9);
   });
 
   it('asks for nothing once the finger lifts', () => {
@@ -247,7 +254,7 @@ describe('stick: displacement from where the finger landed', () => {
     glass.down(STEER_X, STEER_Y);
     glass.move(STEER_X + STICK_RADIUS_PX, STEER_Y);
     glass.up(STEER_X + STICK_RADIUS_PX, STEER_Y);
-    expect(step().along).toBe(0);
+    expect(step().along).toBeCloseTo(0, 9);
   });
 
   it('THE DEADZONE IS RADIAL: a diagonal inside the circle is refused like a straight one', () => {
@@ -266,8 +273,8 @@ describe('stick: displacement from where the finger landed', () => {
     const { glass, step } = rig('stick');
     glass.down(STEER_X, STEER_Y);
     glass.move(STEER_X + 1, STEER_Y - 1);
-    expect(step().along).toBe(0);
-    expect(step().across).toBe(0);
+    expect(step().along).toBeCloseTo(0, 9);
+    expect(step().across).toBeCloseTo(0, 9);
   });
 });
 
@@ -310,7 +317,7 @@ describe('the tap strip is generated from the binding budget', () => {
     tapAt(glass, 0);
     glass.move(glass.width * (1 - TAP_STRIP / 2) + STEP_PX, 200, 10);
     const intent = step();
-    expect(intent.along).toBe(0);
+    expect(intent.along).toBeCloseTo(0, 9);
     expect(intent.specials[0]).toBe(1);
   });
 });
@@ -323,8 +330,8 @@ describe('the screen’s axes become the world’s, and rotation is why', () => 
     glass.down(STEER_X, STEER_Y);
     glass.move(STEER_X + STEP_PX, STEER_Y + STEP_PX);
     src.contribute(intent);
-    expect(intent.along).toBe(1);
-    expect(intent.across).toBe(1);
+    expect(intent.along).toBeCloseTo(1, 9);
+    expect(intent.across).toBeCloseTo(1, 9);
   });
 
   it('portrait: 0023’s handedness, so a re-enable does not steer sideways', () => {
@@ -335,8 +342,8 @@ describe('the screen’s axes become the world’s, and rotation is why', () => 
     glass.move(STEER_X + STEP_PX, 300 - STEP_PX);
     src.contribute(intent);
     // `along` is screen −y and `across` is screen +x.
-    expect(intent.along).toBe(1);
-    expect(intent.across).toBe(1);
+    expect(intent.along).toBeCloseTo(1, 9);
+    expect(intent.across).toBeCloseTo(1, 9);
   });
 });
 

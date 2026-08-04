@@ -56,12 +56,29 @@ export const DEFAULT_TOUCH_SCHEME: TouchScheme = 'drag';
  * way nothing in the test suite could see. See the ⚠️ below, which is the reason this file exists in
  * this shape.
  *
- * `1` is strict 1:1: the ship moves exactly as far as the thumb did. `1.6` means the ship covers a
- * little over half again, so crossing the 100-unit dodge lane costs about 60% of a screen height in
- * landscape rather than all of it.
+ * `1` is strict 1:1: the ship moves exactly as far as the thumb did. `1.48` means the ship covers
+ * about half again, so crossing the 100-unit dodge lane costs roughly two thirds of a screen height
+ * in landscape rather than all of it.
  *
- * ⚠️ **A STARTING POINT, not a measurement** — the same status `src/sim/flight.ts` gives
- * `SHIP_SPEED`. What settles it is a thumb.
+ * ⚠️ **NO LONGER A GUESS, and still not a thing to assert on.** `1.6` was played on a phone and the
+ * verdict was that the ship's delay and its run-on after release both wanted about 10% less. This is
+ * the first pass against that, measured rather than estimated — a fast 88px swipe, on a 844×390
+ * viewport:
+ *
+ * | | 1.6 | 1.48 |
+ * |---|---|---|
+ * | ship travel after the finger lifts | 112.4px | 98.5px |
+ * | how long it keeps travelling | 300ms | 267ms |
+ * | total travel for the swipe | 140.8px | 130.2px |
+ *
+ * `reports/drag-feel-2026-08-05.md`. Nothing asserts on the value, per
+ * `docs/decisions/0027-measure-the-picture-not-the-model.md`: it is a tuning constant and a test that
+ * pinned it would make the next pass fight the suite.
+ *
+ * ⚠️ **The delay and the run-on are ONE quantity — the bank — and this constant is the only knob
+ * that moves it without touching another device.** Raising `SHIP_SPEED` would drain the bank faster
+ * and leave the swipe mapping alone, which is the better knob for the same complaint; it is not used
+ * here because it would also make the keyboard ship faster, and the keyboard was not what was played.
  *
  * ⚠️ **THE BUG THIS REPLACED, because it is the one worth remembering.** The original constant was
  * `DRAG_GAIN_PX = 90`, documented as "90px of travel asks for full speed" — true, and useless, since
@@ -72,7 +89,7 @@ export const DEFAULT_TOUCH_SCHEME: TouchScheme = 'drag';
  * 140px of thumb moved it 10.3px. `docs/decisions/0027-measure-the-picture-not-the-model.md`, twice
  * in one session.
  */
-export const DRAG_GAIN = 1.6;
+export const DRAG_GAIN = 1.48;
 
 /**
  * CSS pixels from the anchor at which the stick reads full deflection.
