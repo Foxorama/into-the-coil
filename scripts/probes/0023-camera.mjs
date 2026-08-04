@@ -72,4 +72,18 @@ export const PROBES = [
       replace: '  if (!usable && false) {',
     },
   },
+  {
+    // The orientation lock restored. This one guards a SHIPPED surface — an installed PWA keeps its
+    // own copy of the manifest, so a wrong value here is not reachable by a deploy — and it had
+    // never been probed, in either direction, in the whole time it said `landscape`.
+    decision: '0023',
+    suite: 'tests/shell.test.ts',
+    broke: 'the manifest locked back to landscape, making portrait unreachable on an installed app',
+    guard: 'installs unlocked, because both orientations are the game',
+    edit: {
+      path: 'public/manifest.webmanifest',
+      find: '  "orientation": "any",',
+      replace: '  "orientation": "landscape",',
+    },
+  },
 ];
