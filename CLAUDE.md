@@ -58,6 +58,12 @@ decision needs no rule.
   level reached — never a seed to re-derive them from.
   — [0021](docs/decisions/0021-one-stream-per-concern.md)
 
+- **The long axis of the screen is the scroll axis, and nothing is authored in screen space.** One
+  level, in `along` × `across` world units; `across` is a fixed 100 and is the difficulty axis, so
+  only lookahead varies by device and it is clamped at both ends. Spawns are placed against the
+  widest view any device can have, never the current one. The camera does not follow the player.
+  — [0023](docs/decisions/0023-the-long-axis-is-the-scroll-axis.md)
+
 - **The sim steps at a fixed 60Hz and the renderer interpolates; art is baked to bitmaps and blitted;
   nothing allocates in the frame loop.** A sim stepped by wall-clock delta teleports bullets through
   the player on a dropped frame. Per-frame entity pools are mutable and are **not** reducer state —

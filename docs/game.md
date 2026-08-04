@@ -47,7 +47,8 @@ Consequences, all mandatory:
   rotation.
 - `manifest.webmanifest` moves from `"orientation": "landscape"` to `"any"`.
 
-Owed a decision before the first frame is drawn.
+Decided — [0023](decisions/0023-the-long-axis-is-the-scroll-axis.md). `across` is a fixed 100 units
+everywhere; lookahead is clamped to 150–240; rotation is exact parity because aspect is long ÷ short.
 
 ## Characters and ships
 

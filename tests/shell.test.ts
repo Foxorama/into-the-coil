@@ -107,14 +107,19 @@ describe('the install manifest', () => {
     JSON.parse(read('dist/manifest.webmanifest')) as Record<string, unknown>;
 
   /**
-   * THE assertion this file was worth writing for.
+   * THE assertion this file was worth writing for, and the one that has since changed its mind.
    *
    * The predecessor's manifest says `"orientation": "portrait"`, and it is right to — it is a golf
-   * game. Carried forward without being read, that one word installs a landscape game as a portrait
-   * app, and the player who notices is the one who already installed it.
+   * game. Carried forward without being read, that one word installs a game as the wrong shape of
+   * app, and the player who notices is the one who already installed it. So this file has always
+   * held the value; what it held was `landscape`, landed as scaffold before any design argued it.
+   *
+   * It is now `any`, per `docs/decisions/0023-the-long-axis-is-the-scroll-axis.md`: the long axis of
+   * the screen is the scroll axis, so portrait is a native way to play rather than a broken one, and
+   * a lock is the one thing that could make it unreachable. `src/sim/camera.ts` is what earns this.
    */
-  it('installs landscape, which is the orientation this game is played in', () => {
-    expect(manifest().orientation).toBe('landscape');
+  it('installs unlocked, because both orientations are the game', () => {
+    expect(manifest().orientation).toBe('any');
   });
 
   /**

@@ -89,7 +89,7 @@ try {
 }
 
 if (manifest) {
-  check(manifest.orientation === 'landscape', 'the manifest installs landscape', manifest.orientation);
+  check(manifest.orientation === 'any', 'the manifest installs unlocked', manifest.orientation);
   check(manifest.name === 'Into the Coil', 'the manifest carries the product name', manifest.name);
 
   for (const icon of manifest.icons ?? []) {
