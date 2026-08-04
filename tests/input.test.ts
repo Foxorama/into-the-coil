@@ -101,7 +101,14 @@ describe('the action table is closed and describes one fact once', () => {
   it('there is no fire action, and auto-fire is why', () => {
     // docs/game.md: the base weapon fires itself unconditionally. An action named `fire` is the
     // first step back toward a game about holding a button.
-    for (const action of ACTION_NAMES) expect(action.toLowerCase()).not.toContain('fire');
+    //
+    // ⚠️ Scans the TABLE as well as the name list, and that is not belt-and-braces. The first
+    // version checked `ACTION_NAMES` alone, and `npm run prove` reported it red on the wrong test:
+    // a `fire` row added to `ACTIONS` was caught by the completeness assertion above, so this guard
+    // had never once been exercised by the thing it exists for.
+    for (const action of [...ACTION_NAMES, ...Object.keys(ACTIONS)]) {
+      expect(action.toLowerCase(), `${action} is an action about holding a button`).not.toContain('fire');
+    }
   });
 
   it('every action is bound, and no key is bound to two actions', () => {
