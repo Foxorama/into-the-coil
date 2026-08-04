@@ -199,7 +199,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     input: combineDevices([
       attachInput(window),
-      attachTouch(canvas, { alongAxis: () => view.alongAxis }),
+      attachTouch(canvas, { alongAxis: () => view.alongAxis, scale: () => view.scale }),
       attachPad({ alongAxis: () => view.alongAxis }),
     ]),
     intent: makeIntent(SPECIAL_BINDINGS),

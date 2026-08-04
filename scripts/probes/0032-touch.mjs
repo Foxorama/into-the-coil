@@ -242,3 +242,39 @@ export const PROBES = [
     },
   },
 ];
+
+/*
+  ⚠️ ADDED AFTER THE FACT, and the reason is the point.
+
+  Every drag probe above breaks an ASK, and every drag guard above measures one. The whole set was
+  green against a version of `src/app/touch.ts` in which a 140px swipe moved the ship 10.3 pixels and
+  crossing the dodge lane needed about five metres of thumb. A per-step ask is self-consistent at any
+  conversion factor, including an absurd one.
+
+  So these break the CONVERSION rather than the ask, and they go red only on the distance guard —
+  which did not exist until a real swipe was driven against the deployed page.
+*/
+PROBES.push(
+  {
+    decision: '0032',
+    suite: 'tests/touch.test.ts',
+    broke: 'THE BUG AS SHIPPED: the gain read as pixels-per-step, so crossing the lane takes five metres of thumb',
+    guard: 'THE DISTANCE ONE: N pixels of finger deliver N × gain pixels of ship',
+    edit: {
+      path: 'src/app/touch.ts',
+      find: '        const pxPerStep = (SHIP_SPEED * scaleOf()) / DRAG_GAIN;',
+      replace: '        const pxPerStep = 90;',
+    },
+  },
+  {
+    decision: '0032',
+    suite: 'tests/touch.test.ts',
+    broke: 'the scale dropped from the conversion, so the same swipe means different things on different phones',
+    guard: 'scales with the screen, so the same swipe means the same thing on any device',
+    edit: {
+      path: 'src/app/touch.ts',
+      find: '        const pxPerStep = (SHIP_SPEED * scaleOf()) / DRAG_GAIN;',
+      replace: '        const pxPerStep = (SHIP_SPEED * 4) / DRAG_GAIN;',
+    },
+  },
+);
