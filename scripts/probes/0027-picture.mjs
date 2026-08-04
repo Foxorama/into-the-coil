@@ -22,12 +22,17 @@ export const PROBES = [
     // above perfectly green over a completely frozen scene.
     decision: '0027',
     suite: 'tests/interpolation.test.ts',
-    broke: 'entity interpolation removed, so nothing moves and a frozen scene reads as a stable one',
+    // ⚠️ The break here is a PINNED projection, not a missing interpolation. Removing entity
+    // interpolation was the first attempt and it fired the main assertion instead — correctly, since
+    // an un-interpolated entity against an interpolated camera wobbles exactly as much as the
+    // reverse. The control exists for the failure that leaves the main assertion VACUOUSLY green:
+    // a scene where nothing moves at all satisfies "the ship is in the same place" perfectly.
+    broke: 'the projection pinned, so a frozen scene satisfies every stability assertion above',
     guard: 'debris left behind DOES move, so this is not passing by drawing nothing',
     edit: {
       path: 'src/render/scene.ts',
-      find: '    const along = e.prevAlong + (e.along - e.prevAlong) * alpha;',
-      replace: '    const along = e.prevAlong;',
+      find: '    const inView = along - cameraAlong;',
+      replace: '    const inView = 0;',
     },
   },
 ];
