@@ -130,3 +130,26 @@ number in it was the predecessor's. `reports/camera-judder-2026-08-04.md` is thi
 ship holding station *exactly* in world units drew 4.0px of screen travel per second, every
 assertion in the suite was green before the fix and after it, and the instrument reported 0.0px
 afterwards. The model was right; only the picture was wrong.
+
+---
+
+## Enforcement
+
+**Added 2026-08-04.** *"What has no guard"* above stands — the trigger for this rule is a human
+noticing something, and no test detects that. It does not follow that this rule gets nothing.
+
+[0001](0001-revertability-not-risk-rating.md) hit the identical problem and answered it: *"Prose is
+the tier that fails. The question lives in `.github/PULL_REQUEST_TEMPLATE.md` … an affordance at the
+point of use, not a rule in a document nobody re-reads."* The same file now carries a second
+question, **does this change something the player watches move**, answerable only with pixels from
+`npm run trace`.
+
+It is not a guard and is not claimed as one: it can be deleted by the author, exactly like the
+rollback note. What it changes is *when* the question gets asked — at the point of writing the
+change, rather than after the report that the change did not work. That is the whole gap this
+decision names, and the instrument now exists to answer it in one command.
+
+⚠️ **`npm run trace` builds first, deliberately.** `scripts/trace-frame.mjs` traces `dist/index.html`
+and exits 2 when it is missing, which is correct but leaves a trap: a stale `dist/` traces the
+previous commit's picture and reports it as this one's, with no error anywhere. The npm script
+removes the trap by making the build part of the invocation.
