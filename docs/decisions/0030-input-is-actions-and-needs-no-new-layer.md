@@ -105,6 +105,33 @@ is a thing that can be asked a question mid-step, and the answer could differ be
 one step. A **plain immutable `Intent` value, sampled once per step**, cannot. Same argument
 [0015](0015-the-layer-ladder.md) makes for time being an argument rather than a call.
 
+## Confirmed, not assumed
+
+Per [0005](0005-a-guard-must-be-seen-to-fail.md) and [0019](0019-a-probe-must-be-seen-to-apply.md),
+declared in `scripts/probes/0030-input.mjs`.
+
+| broken on purpose | went red |
+|---|---|
+| presses reported as a flag rather than a count, so a double-tap between steps fires once | `COUNTS two presses between steps, rather than reporting that at least one happened` |
+| the key-repeat filter removed, so leaning on the special key fires it dozens of times | `fires a HELD special once, however many times the OS repeats the keydown` |
+| presses left undrained, so one tap fires on every subsequent step forever | `drains, so a press is consumed exactly once` |
+| the budget check dropped, so a binding past the arsenal writes past the intent | `THE SEAM: a binding past the budget is dropped, and the reachable ones are undisturbed` |
+| blur no longer releasing held keys, so alt-tabbing leaves the ship flying by itself | `releases everything on blur, so alt-tab does not fly the ship into a wall` |
+| opposed directions resolved to a winner rather than to nothing | `reads both directions at once as nothing, not as a winner` |
+| the binding budget hand-written beside the table it describes | `SPECIAL_BINDINGS is derived from the table, never a literal beside it` |
+| a fire action admitted, which is the first step back toward a game about holding a button | `there is no fire action, and auto-fire is why` |
+| bindings written as key VALUES, which move under a player on a non-QWERTY layout | `binds physical positions, not printed letters, so a non-QWERTY layout keeps the shape` |
+
+⚠️ **The first two are the pair, and they pull in opposite directions.** Flagging instead of counting
+loses presses; counting the OS's key-repeat invents them. Either break alone leaves a plausible
+implementation that passes the other's test, which is why neither on its own is evidence.
+
+⚠️ **The eighth probe is here because it caught this file's own guard being decoration.** The no-fire
+ban first scanned only the name list, so a `fire` row added to the table was caught by the
+completeness assertion and the ban itself never ran against a fire action once. `npm run prove`
+reported it *red on the wrong test* — which is the failure mode 0019 exists to make visible, landing
+on the very first decision written after it was strengthened.
+
 ## What has no guard
 
 The binding *budget* is guarded — the arsenal-of-three test above is the point of the whole decision.
