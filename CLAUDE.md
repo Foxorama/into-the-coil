@@ -23,6 +23,9 @@ decision needs no rule.
 
 ## Product
 
+- **What the game is lives in `docs/game.md`.** Read it before proposing game work. It is the product
+  definition — tracked, unlike the working material, because a clone needs to know what this is.
+  — [0020](docs/decisions/0020-the-fiction-transfers-the-code-does-not.md)
 - **No user-facing name or version literal outside `src/brand.ts`.** Surfaces that cannot import it
   — `index.html`, the boot watchdog, the service worker — are held by a test, not a constant.
   — [0002](docs/decisions/0002-brand-identity-contract.md)
@@ -61,9 +64,11 @@ reasoning that kept the three above open until now.
 
 ## The predecessor
 
-`C:\Golf-Stars` (The Far Carry). **Its patterns transfer; its content does not** — it is a golf
-game, and its simulation layer is fused to that domain at the type level. Read named files for a
-named reason. Never browse it for inspiration.
+`C:\Golf-Stars` (The Far Carry). **Its patterns and its fiction transfer; its code does not** — it is
+a golf game, and its simulation layer is fused to that domain at the type level. The fiction crosses
+as raw material and not as scripture: rename it, reshape it, improve it. Read named files for a named
+reason. Never browse it for inspiration.
+  — [0020](docs/decisions/0020-the-fiction-transfers-the-code-does-not.md)
 
 ## Working material, not documentation
 
