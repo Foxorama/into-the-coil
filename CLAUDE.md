@@ -6,6 +6,20 @@ six weeks, every prune reversed — not because nobody wanted it short, but beca
 nowhere else to go. Every rule below names the decision behind it. The reverse does not hold: a
 decision needs no rule.
 
+## Quality
+
+- **The bar is set before the work, not inspected after it.** Scope, schedule and the feature list
+  are negotiable; the bar is not, and there is no tier below it for work to land in. **Before
+  building**, pressure-test the idea — say so plainly when it is sound, push back with the wrong
+  premise named when it is not, and an idea's author is not evidence about it. **While building**,
+  implement properly or stop: *"this cannot be done cleanly because X, here is what I would do
+  instead"* is a result, and longer or not-doable beats a shortcut. **After a miss**, repair the
+  class — the fix names the guard, the rule, or the reason neither is worth it. **Throughout**, an
+  assumption is discharged or owed and never merely labelled: a verified claim names what checked it,
+  an unverified one names what would — and one that makes the work wrong if it is wrong gets checked
+  or the work stops. The predecessor is the floor, not the target.
+  — [0028](docs/decisions/0028-quality-is-the-constraint.md)
+
 ## Process
 
 - **A PR that touches an irreversible surface carries a rollback note.** Storage keys (`itc_*`),
@@ -20,6 +34,11 @@ decision needs no rule.
   `npm run prove` refuses to run the suite until it has read the file back and seen it change.
   — [0005](docs/decisions/0005-a-guard-must-be-seen-to-fail.md),
   [0019](docs/decisions/0019-a-probe-must-be-seen-to-apply.md)
+- **The tracked record is the record.** A report is a committed file in `reports/`, because chat
+  evaporates between sessions. A milestone **duplicates and never originates** — a lesson living only
+  in `docs/milestones/` has not landed. A document restating another **cites the line rather than
+  summarising it**; a summary is a second copy, and one drifted here inside a single day.
+  — [0029](docs/decisions/0029-the-tracked-record-is-the-record.md)
 
 ## Product
 
@@ -74,6 +93,15 @@ decision needs no rule.
   landed so far. — [0022](docs/decisions/0022-frame-rate-is-a-feature.md),
   [0025](docs/decisions/0025-the-frame-budget-is-counted-not-timed.md)
 
+- **When a report survives a fix that measured green, go and measure the picture.** Everything this
+  repository counts is a *model* quantity — draw calls, allocations, steps, world units — and the
+  predecessor spent eight passes improving a model that was already right while the thing the player
+  watched did not move. An eyes-on rig renders at the camera the game actually ships; when a fix
+  removes a bug, ask what that bug was also doing; a play-test verdict is data about the picture, not
+  a bug report about the model. The frame-tracing instrument is owed **before the first tuning pass
+  on anything the player watches move**, not after the seventh report.
+  — [0027](docs/decisions/0027-measure-the-picture-not-the-model.md)
+
 - **There is one game and it is the loud one; accessibility is knobs over that default.** An item
   joins the floor only if it is a property of the architecture or a knob over it — one that would
   constrain what a level may contain is refused, and that refusal is why the authored assist path is
@@ -109,5 +137,8 @@ it maps every setting that lives outside git and how to read each one back.
 
 `docs/milestones/` is gitignored — what each milestone cost and what would make the next project
 faster. **A record is written when a milestone lands, not at the end**, and it names what went wrong
-alongside what worked; a retrospective that only lists wins transfers nothing. Start from
+alongside what worked; a retrospective that only lists wins transfers nothing. It is a select list to
+read at the end of the project, **never a reference for the current one**: it duplicates the tracked
+record and originates nothing, which is what makes ignoring it cost nothing —
+[0029](docs/decisions/0029-the-tracked-record-is-the-record.md). Start from
 `docs/milestones/NEXT-TIME.md`.
