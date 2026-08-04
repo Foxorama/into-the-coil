@@ -201,3 +201,32 @@ first version of this retirement deleted both and had to be put back.
 this file, `tests/shell.test.ts` and `scripts/verify-deploy.mjs` — and only the one the suite runs
 moved with it. `npm run prove` caught this file's copy on the first CI run after 0031. The verifier's
 copy is run by nothing but a real deploy, and was caught by hand.
+
+---
+
+## Asked 2026-08-05: can the game span multiple monitors?
+
+*"If you have two monitors the incoming stream stretches out to cover both, three monitors it covers
+all three."* Recorded because the question is a natural one, will be asked again, and the reflexive
+answer is only half right.
+
+**No, and the clamp above is already the reason.** Two 16:9 monitors is 32:9 — aspect 3.56. Three is
+5.33. `MAX_ASPECT` is 2.4, so spanning them would hand that player **more than double a laptop's
+lookahead**, and lookahead is reaction time and therefore difficulty. It would be a difficulty
+setting bought with hardware, which is what this decision exists to refuse and what
+[0024](0024-the-accessibility-floor-is-settings.md) refuses again from the other side.
+
+Already held: the probe `the upper clamp dropped, so an ultrawide sees half a level ahead`.
+
+⚠️ **What actually happens today on a triple monitor is worse than nothing.** The clamp holds, so the
+world renders about 2,600px wide, centred, with roughly 1,600px of black each side. Correct, and
+ugly.
+
+**The legitimate version is the gutter, which this decision already reserves.** Extra width beyond
+the clamp is gutter, the HUD lives there, and nothing says it may not also hold parallax, drifting
+scenery or telemetry. Every monitor lit; nothing gameplay-relevant outside the clamp; difficulty
+untouched. That is a real feature and it is cheap — it is **not decided here**, only shown to be
+allowed.
+
+And the unrestricted stretch is a fine idea somewhere nobody is playing: the ambient recordings in
+`keepsakes/`, where difficulty is meaningless.
