@@ -23,18 +23,23 @@
  */
 
 import { ACTIONS, ACTION_NAMES, AXES, DEFAULT_BINDINGS, type Action, type Axis } from '../content/actions.js';
-import { clearIntent, type Intent } from '../sim/intent.js';
+import type { Intent } from '../sim/intent.js';
 
-/** What a caller gets back: a way to fill an intent, and a way to stop listening. */
+/** What a caller gets back: a way to add to an intent, and a way to stop listening. */
 export interface InputSource {
   /**
-   * Write this step's asks into `intent`, and drain the press counts.
+   * ADD this step's asks to `intent`, and drain the press counts.
+   *
+   * ⚠️ **Adds; it does not assign, and it does not clear.** There is more than one device — see
+   * `src/app/devices.ts`, which zeroes the intent once and then asks every attached source to
+   * contribute. A source that assigned would silently win by being called last, making the control
+   * scheme a property of the order the shell happened to attach things in.
    *
    * Call exactly once per fixed step. Calling twice reports the second call's presses as zero,
    * which is correct — they have already been consumed — and is why draining lives here rather than
    * in the caller.
    */
-  sample(intent: Intent): void;
+  contribute(intent: Intent): void;
   /** Detach every listener. Safe to call twice. */
   release(): void;
 }
@@ -103,10 +108,9 @@ export function attachInput(target: EventTarget, bindings: Bindings = DEFAULT_BI
   target.addEventListener('blur', onBlur);
 
   return {
-    sample(intent: Intent): void {
-      intent.along = axis(held, 'along');
-      intent.across = axis(held, 'across');
-      clearIntent(intent);
+    contribute(intent: Intent): void {
+      intent.along += axis(held, 'along');
+      intent.across += axis(held, 'across');
       for (const action of ACTION_NAMES) {
         const slot = ACTIONS[action].slot;
         // A binding past the end of the intent's budget is owned and unreachable — 0030 says that

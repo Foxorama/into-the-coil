@@ -66,10 +66,14 @@ export class GameFrame implements Frame {
     w.prevCameraAlong = w.cameraAlong;
     w.cameraAlong += w.scrollPerStep;
 
-    // ⚠️ ONCE PER STEP, before anything reads it. `sample` drains the press counts, so calling it
-    // twice would report the second call's specials as zero — correct, and not what any caller
+    // ⚠️ ONCE PER STEP, before anything reads it. `contribute` drains the press counts, so calling
+    // it twice would report the second call's specials as zero — correct, and not what any caller
     // wants. The fixed step is what makes "once" a well-defined amount of input (0030).
-    w.input.sample(w.intent);
+    //
+    // This is the COMBINER (`src/app/devices.ts`), which is the one source that zeroes the intent
+    // before the real devices add to it. Handing this a bare device would leave last step's axes in
+    // place the moment the player let go.
+    w.input.contribute(w.intent);
     flyShip(w.ship, w.intent, w.cameraAlong, w.scrollPerStep);
 
     // The ship's `velAlong` carries the scroll rate as its baseline, so `stepEntities` moves it with

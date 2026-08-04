@@ -107,6 +107,29 @@ grow it. "New faces" above means characters that do not exist in the predecessor
 named yet. None of the four names on the right appears in *The Far Carry*, and the caddy there is the
 plural "Space Ducks".
 
+## Controls
+
+**Three devices, one game.** Nothing about the game changes with what is in the player's hands, and
+no device is faster than another — see
+[0032](decisions/0032-touch-is-relative-drag-and-not-a-stick.md).
+
+| | movement | specials |
+|---|---|---|
+| keyboard | arrows or WASD, by **physical key position** so a non-QWERTY layout keeps the shape | Space, Shift |
+| touch | **relative drag** — the ship moves by however far the thumb moved, not to where it is | a tap strip along the leading edge, one band per special |
+| gamepad | left stick, analog, with a radial deadzone | face buttons |
+
+**A touch stick is offered as an alternative and is not the default.** A glass stick has no tactile
+centre to return to, saturates at full deflection, and costs a re-centre to reverse. Relative drag
+has none of those and is the scheme the mobile shooters that got this right actually use. Both exist
+because *what the author thinks is the right way to play is not necessarily the right way to play* —
+but the default still has to be right, because most players never open a settings screen.
+
+⚠️ **The control scheme is a preference, never a difficulty knob.** Every device saturates at the
+same ceiling, so no device can outrun another, and none of this is allowed anywhere near
+`src/sim/assist.ts` — a player who prefers a stick must not thereby be playing an easier game.
+[0024](decisions/0024-the-accessibility-floor-is-settings.md) is why.
+
 ## Weapons
 
 Each ship carries:

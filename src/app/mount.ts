@@ -20,7 +20,10 @@ import { CanvasSurface, renderScale } from '../render/canvas.ts';
 import { SPECIAL_BINDINGS } from '../content/actions.ts';
 import { makeIntent } from '../sim/intent.ts';
 import { GameFrame, type World } from './frame.ts';
+import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
+import { attachPad } from './pad.ts';
+import { attachTouch } from './touch.ts';
 import { runLoop } from './loop.ts';
 
 /**
@@ -97,9 +100,38 @@ function fitCanvas(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, css
  * or ancient engine — and it is reported rather than thrown, because the boot watchdog is the thing
  * that should be telling the player what happened.
  */
+/**
+ * Tell the browser this element is a game, not a document.
+ *
+ * ⚠️ **Found by playing, not by reading.** On a phone, a long press on the playfield opened the iOS
+ * callout and a second finger zoomed the page — on a build with no touch handling at all, because
+ * nothing had ever told the engine to stop. Every line below is a distinct default, and removing any
+ * one of them brings back exactly one of the symptoms.
+ *
+ * ⚠️ **On the CANVAS, never on the document.** Disabling zoom page-wide is an accessibility
+ * anti-pattern and `docs/decisions/0024-the-accessibility-floor-is-settings.md` makes that this
+ * project's problem specifically. The rotate prompt and everything that is not the playfield stay
+ * pinch-zoomable; only the surface where a pinch means "dodge" does not.
+ */
+function suppressBrowserGestures(canvas: HTMLCanvasElement): void {
+  // @setup: runs once, when the canvas is created.
+  // Pan, pinch and double-tap zoom, all three of which are gestures a thumb makes while playing.
+  canvas.style.touchAction = 'none';
+  // The long-press callout on iOS — the one that was actually hit. Set through `setProperty`
+  // because it is a vendor property `CSSStyleDeclaration` does not declare, and the alternative is
+  // an `any` cast that 0016 bans on sight.
+  canvas.style.setProperty('-webkit-touch-callout', 'none');
+  // Long-press text selection, and the blue flash that comes with it.
+  canvas.style.userSelect = 'none';
+  canvas.style.setProperty('-webkit-user-select', 'none');
+  // Pull-to-refresh, which a downward drag at the top of the screen is indistinguishable from.
+  canvas.style.overscrollBehavior = 'none';
+}
+
 export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | null {
   const canvas = document.createElement('canvas');
   canvas.style.display = 'block';
+  suppressBrowserGestures(canvas);
   const ctx = canvas.getContext('2d');
   if (ctx === null) return null;
   host.appendChild(canvas);
@@ -150,13 +182,26 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     spawnIn: 1,
     ship,
     /*
-      ⚠️ Listening on `window`, not on the canvas. A canvas is not focusable, so a keydown never
-      reaches it without a `tabindex` and a click first — which would mean the game silently ignores
-      every key until the player happens to click on it, and looks broken rather than unfocused.
+      ⚠️ The KEYBOARD listens on `window`, not on the canvas. A canvas is not focusable, so a keydown
+      never reaches it without a `tabindex` and a click first — which would mean the game silently
+      ignores every key until the player happens to click on it, and looks broken rather than
+      unfocused.
 
-      Both allocated here, at boot, because this file is the one allowed to (0025).
+      ⚠️ TOUCH listens on the canvas, and that difference is not an inconsistency. A finger arrives
+      with coordinates, and coordinates are only meaningful against the element they landed on — the
+      tap strip is a fraction of the canvas box, not of the window. Pointer capture needs an element
+      too.
+
+      The GAMEPAD listens to nothing: the platform gives no move event, so it is polled per step.
+
+      Three devices, composed by `src/app/devices.ts` rather than by call order (0032). All allocated
+      here, at boot, because this file is the one allowed to (0025).
     */
-    input: attachInput(window),
+    input: combineDevices([
+      attachInput(window),
+      attachTouch(canvas, { alongAxis: () => view.alongAxis }),
+      attachPad({ alongAxis: () => view.alongAxis }),
+    ]),
     intent: makeIntent(SPECIAL_BINDINGS),
   };
 

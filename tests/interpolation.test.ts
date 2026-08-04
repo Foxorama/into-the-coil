@@ -37,7 +37,7 @@ class RecordingSurface implements Surface {
   }
 }
 
-const NO_INPUT: InputSource = { sample(): void {}, release(): void {} };
+const NO_INPUT: InputSource = { contribute(): void {}, release(): void {} };
 
 function stationKeepingWorld(surface: Surface): World {
   const pool = new Pool(8, makeEntity);

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { ACTIONS, ACTION_NAMES, DEFAULT_BINDINGS, SPECIAL_BINDINGS, type Action } from '../src/content/actions.js';
 import { makeIntent, clearIntent, type Intent } from '../src/sim/intent.js';
 import { attachInput } from '../src/app/input.js';
+import { combineDevices } from '../src/app/devices.js';
 
 /**
  * INPUT IS ACTIONS, AND THE ARSENAL IS A LIST.
@@ -158,26 +159,26 @@ describe('an intent is a value the model reads and the shell writes', () => {
 });
 
 describe('the shell fills an intent without ever telling the model about a key', () => {
-  const attach = (): { kb: FakeKeyboard; src: ReturnType<typeof attachInput>; intent: Intent } => {
+  const attach = (): { kb: FakeKeyboard; src: ReturnType<typeof combineDevices>; intent: Intent } => {
     const kb = new FakeKeyboard();
-    return { kb, src: attachInput(kb), intent: makeIntent(SPECIAL_BINDINGS) };
+    return { kb, src: combineDevices([attachInput(kb)]), intent: makeIntent(SPECIAL_BINDINGS) };
   };
 
   it('resolves a held direction to an axis', () => {
     const { kb, src, intent } = attach();
     kb.down(FORWARD);
-    src.sample(intent);
+    src.contribute(intent);
     expect(intent.along).toBe(1);
   });
 
   it('holds the axis across steps, because a level is not an event', () => {
     const { kb, src, intent } = attach();
     kb.down(FORWARD);
-    src.sample(intent);
-    src.sample(intent);
+    src.contribute(intent);
+    src.contribute(intent);
     expect(intent.along).toBe(1);
     kb.up(FORWARD);
-    src.sample(intent);
+    src.contribute(intent);
     expect(intent.along).toBe(0);
   });
 
@@ -185,7 +186,7 @@ describe('the shell fills an intent without ever telling the model about a key',
     const { kb, src, intent } = attach();
     kb.down(FORWARD);
     kb.down(BACK);
-    src.sample(intent);
+    src.contribute(intent);
     expect(intent.along).toBe(0);
   });
 
@@ -196,16 +197,16 @@ describe('the shell fills an intent without ever telling the model about a key',
     kb.up(SPACE);
     kb.down(SPACE);
     kb.up(SPACE);
-    src.sample(intent);
+    src.contribute(intent);
     expect(intent.specials[0]).toBe(2);
   });
 
   it('catches a press that both began and ended between two steps', () => {
     const { kb, src, intent } = attach();
-    src.sample(intent);
+    src.contribute(intent);
     kb.down(SPACE);
     kb.up(SPACE);
-    src.sample(intent);
+    src.contribute(intent);
     expect(intent.specials[0]).toBe(1);
   });
 
@@ -213,23 +214,23 @@ describe('the shell fills an intent without ever telling the model about a key',
     // THE other case. `keydown` repeats; the obvious implementation empties the arsenal on a lean.
     const { kb, src, intent } = attach();
     for (let i = 0; i < 20; i++) kb.down(SPACE);
-    src.sample(intent);
+    src.contribute(intent);
     expect(intent.specials[0]).toBe(1);
   });
 
   it('drains, so a press is consumed exactly once', () => {
     const { kb, src, intent } = attach();
     kb.down(SPACE);
-    src.sample(intent);
+    src.contribute(intent);
     expect(intent.specials[0]).toBe(1);
-    src.sample(intent);
+    src.contribute(intent);
     expect(intent.specials[0]).toBe(0);
   });
 
   it('keeps the two special slots apart', () => {
     const { kb, src, intent } = attach();
     kb.down(SHIFT);
-    src.sample(intent);
+    src.contribute(intent);
     expect(intent.specials[0]).toBe(0);
     expect(intent.specials[1]).toBe(1);
   });
@@ -237,24 +238,24 @@ describe('the shell fills an intent without ever telling the model about a key',
   it('releases everything on blur, so alt-tab does not fly the ship into a wall', () => {
     const { kb, src, intent } = attach();
     kb.down(FORWARD);
-    src.sample(intent);
+    src.contribute(intent);
     expect(intent.along).toBe(1);
     kb.blur();
-    src.sample(intent);
+    src.contribute(intent);
     expect(intent.along).toBe(0);
   });
 
   it('ignores a key bound to nothing', () => {
     const { kb, src, intent } = attach();
     kb.down('F13');
-    src.sample(intent);
+    src.contribute(intent);
     expect(intent.along).toBe(0);
     expect(intent.specials).toEqual([0, 0]);
   });
 
   it('detaches on release', () => {
     const kb = new FakeKeyboard();
-    const src = attachInput(kb);
+    const src = combineDevices([attachInput(kb)]);
     expect(kb.size).toBeGreaterThan(0);
     src.release();
     expect(kb.size).toBe(0);
@@ -266,11 +267,11 @@ describe('the shell fills an intent without ever telling the model about a key',
     // ship may own more specials than there are triggers — that is a content problem when it
     // arrives, and it must never be a crash or a corrupted slot.
     const kb = new FakeKeyboard();
-    const src = attachInput(kb);
+    const src = combineDevices([attachInput(kb)]);
     const narrow = makeIntent(1);
     kb.down(SHIFT); // special2 → slot 1, past this intent's budget of 1
     kb.down(SPACE); // special1 → slot 0, reachable
-    src.sample(narrow);
+    src.contribute(narrow);
     expect(narrow.specials).toEqual([1]);
   });
 });
