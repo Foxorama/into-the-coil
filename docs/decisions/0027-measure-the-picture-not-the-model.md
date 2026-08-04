@@ -153,3 +153,44 @@ decision names, and the instrument now exists to answer it in one command.
 and exits 2 when it is missing, which is correct but leaves a trap: a stale `dist/` traces the
 previous commit's picture and reports it as this one's, with no error anywhere. The npm script
 removes the trap by making the build part of the invocation.
+
+---
+
+## The second case, and the rule it earns
+
+**Added 2026-08-05**, after this decision caught a second bug six hours after the first, in a
+different layer, the same way. `reports/touch-gain-2026-08-05.md`.
+
+| | the model said | the picture said |
+|---|---|---|
+| [camera judder](../../reports/camera-judder-2026-08-04.md) | ship stationary, camera correct | 4.0px/s of judder on every entity |
+| [touch gain](../../reports/touch-gain-2026-08-05.md) | 90px of finger asks for full speed | 140px of finger moves the ship 10.3px |
+
+The evidence this decision landed on was the predecessor's. It now has two of its own.
+
+### The rule: at least one assertion in units the player experiences
+
+**A guard that measures a quantity defined in terms of the constant it is guarding proves only that
+the code is self-consistent.** Twelve drag assertions were green because *"N pixels produce an ask of
+1"* holds at **any** conversion factor — the constant appears on both sides of the assertion, so it
+cancels. Touch shipped needing five metres of thumb to cross the screen, behind a full set of correct
+tests.
+
+So: **pixels, seconds, or a fraction of the lane — never the code's own vocabulary alone.** The
+assertion that found this drains the bank and adds up the world units actually *delivered*, which is
+the quantity a thumb feels. It is not a replacement for the ask-shaped tests; it is the one they
+cannot substitute for.
+
+⚠️ **This is the second half of a hole [0019](0019-a-probe-must-be-seen-to-apply.md) opens and cannot
+close.** Nineteen probes stood over that constant and every one went red on demand. A probe proves a
+guard **fires on the bug it describes**. It cannot notice that the guard measures the wrong thing
+entirely — a break and a guard written in the same wrong units agree with each other perfectly.
+0019 catches a guard that does not fire; nothing but a player-unit assertion catches a guard that
+fires on the wrong quantity.
+
+### And the template question needs one more sentence
+
+*"There is nothing to compare against"* is not an answer to it. That is how this one got past: the PR
+adding two brand-new control devices answered the picture question with *"the before-number is no
+picture"* and merged. **A new way for the player to affect the picture has no before and always has
+an after.** `.github/PULL_REQUEST_TEMPLATE.md` now says so.
