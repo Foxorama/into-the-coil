@@ -61,23 +61,43 @@ Backspin Bo.
 **Level 1 roster:** your prologue pick, plus three drawn from the unlocked pool. Always four on
 offer. The draw is seeded from the run seed, so resuming does not reroll it.
 
-**Unlock pool:** the nine named *Far Carry* caddies — Penelope Putter, Driver Dan, Dr Chipinski,
-Space Ducks, Convict Sheep, Suggestible Sam, Sandy the Sand-Saver, Mystic Mole, Prognostic Parrot —
-plus the three prologue golfers you did not fly, plus new faces.
+**Unlock pool:** the nine *Far Carry* caddies, plus the three prologue golfers you did not fly, plus
+new faces.
 
-New to this game: **Lord Pembleforth the 5th** (Space Duck), **Peep** (Convict Sheep), **Marty** (the
-Mystic Mole). None of these names exist in *The Far Carry*; the caddy there is the plural "Space
-Ducks".
+The predecessor names most of its caddies by species and role. This game gives them **actual names
+and characterisation** — the same nine, not extra ones:
+
+| *The Far Carry* | here |
+|---|---|
+| Space Ducks | **Lord Pembleforth the 5th**, a Space Duck — singular |
+| Convict Sheep | **Peep** |
+| Mystic Mole | **Marty** |
+| Prognostic Parrot | **Percival** |
+| Penelope Putter · Driver Dan · Dr Chipinski · Suggestible Sam · Sandy the Sand-Saver | carried across as they are, for now |
+
+⚠️ **A rename is not a new face.** The pool is nine caddies either way; naming four of them does not
+grow it. "New faces" above means characters that do not exist in the predecessor at all, and none are
+named yet. None of the four names on the right appears in *The Far Carry*, and the caddy there is the
+plural "Space Ducks".
 
 ## Weapons
 
 Each ship carries:
 
-- **Auto-fire** — basic, always on, requires no input.
+- **Auto-fire** — the base weapon **and every upgrade to it**. Always on, requires no input, and it
+  is the only thing that fires itself.
 - **A starting special** — limited capacity, unique to the ship. May be offensive, may be shields.
+  **Manual.**
 
-The skill is in the specials and the heavies, not in holding a fire button. Straight from the
-Jörmungandr fight: one trigger per owned weapon, each on its own cooldown.
+⚠️ **Auto-fire is the base weapon, not the arsenal.** Specials, shields, bombs and heavies are all
+triggered by the player, one trigger per owned weapon, each on its own cooldown — the Raiden II
+relationship between the shot you never think about and the bomb you have to spend. Straight from the
+Jörmungandr fight.
+
+**The skill is in surviving the onslaught, not in mashing a fire button.** A well-timed special is
+the difference between combat and tracing a finger across the screen, which is exactly why the shot
+is free and nothing else is. Firing the rest of the arsenal for the player is an *assist* and it is
+off by default — see [0024](decisions/0024-the-accessibility-floor-is-settings.md).
 
 ## Upgrades
 
@@ -123,8 +143,10 @@ the high-contrast and colour-blind palettes free rather than a second art pass.
 
 **The simulation runs on a fixed timestep; rendering interpolates.** A sim stepped by wall-clock
 delta teleports bullets through the player on a dropped frame, and makes difficulty a property of the
-machine. Fixed steps also keep the run deterministic, which is what the seeded draws, the resume, the
-replays and the one-button clearability proof all rest on.
+machine. Fixed steps also keep the run deterministic, which is what the seeded draws, the resume and the
+replays all rest on. (0022 also listed a one-button clearability proof here;
+[0024](decisions/0024-the-accessibility-floor-is-settings.md) dropped it with the authored assist
+path. The fixed timestep is unaffected.)
 
 **No allocation in the hot loop.** Entities live in pre-allocated pools and are mutated in place. GC
 pauses are the main cause of jank in a browser game, and a bullet-hell allocates hardest exactly when
@@ -153,17 +175,21 @@ Owed a decision, and a test.
 
 ## Accessibility
 
-The floor is set before the first game file, not before launch. Confirmed: colour never carries
-meaning alone, high-contrast palette, configurable controls, an interactive first stage, reduced
-motion under one owner, a flash-intensity cap, and no information delivered by audio alone.
+Decided — [0024](decisions/0024-the-accessibility-floor-is-settings.md).
 
-One-button play is a settings bundle over assist knobs — auto-fire, non-lethal terrain, and an
-**authored** horizontal assist path per level. Not a runtime autopilot. The law it requires:
-*anything demanding cross-axis evasion is scripted, not reactive.*
+**There is one game, and it is the loud one.** Accessibility is knobs over that default, never
+restraint of it. Unconditional and not switchable off: colour never carries meaning alone, every cue
+has a visual twin, a flash-intensity cap, actions-not-keys input, an interactive first stage.
+Opt-in settings: high-contrast and colour-blind palettes, reduced motion, and a closed ladder of
+assists — pace, resilience, hurtbox, terrain, auto-specials, flight assist. **No assist ever makes
+the game harder**, and no comfort setting may touch the sim.
 
-Not claimed: blind-friendly play, which for a positional shooter is a different game.
+The **authored horizontal assist path per level is dropped**, along with the law it required
+(*anything demanding cross-axis evasion is scripted, not reactive*) — it banned most of the genre and
+taxed every level forever, to serve one setting. One-button survives as a rail input mapping, which
+costs no content and is deletable. The itch tag is not claimed until it has been played.
 
-Owed a decision.
+Not claimed: blind-friendly play, and textless. For a positional shooter both are a different game.
 
 ## Deliberately not in this game
 
@@ -178,7 +204,8 @@ fused to that domain at the type level.
 
 **Fiction transfers as raw material, not as scripture.** Names, details and characterisation may be
 changed, sharpened or replaced on the way across. "Space Ducks" becomes the singular Space Duck, and
-Lord Pembleforth the 5th, Peep and Marty are new. Nothing here is bound to the predecessor's
+four caddies the predecessor names by species are **named and given a background** rather than
+replaced — see the table above; the roster does not grow. Nothing here is bound to the predecessor's
 spellings.
 
 `CLAUDE.md`'s current wording — *"its patterns transfer; its content does not"* — is amended to say
