@@ -84,7 +84,9 @@ Probes in `scripts/probes/`, re-run by `npm run prove` in CI per
 
 | what was broken | which test went red |
 |---|---|
-| `hashSeed` returns a constant | `rng.test.ts` — the sequence is stable across machines |
-| `stream()` derived from `next01()` instead of the name | `rng.test.ts` — a stream consumes nothing from its parent |
-| two streams derived from the same name component | `rng.test.ts` — distinct names give distinct sequences |
-| `int()` made exclusive of `max` | `rng.test.ts` — the range is inclusive at both ends |
+| `hashSeed` returns a constant | *hashes a string seed to a stable 32-bit value* |
+| `stream()` derived from `next01()` instead of the name — the ported `fork()` | *derives a stream from its NAME, not from a draw* |
+| `stream()` ignores the name, so every concern shares one sequence | *gives distinct names distinct sequences* |
+| `int()` made exclusive of `max` | *makes int() inclusive at BOTH ends* |
+| `gaussian()` reduced to a single draw | *always draws twice for a gaussian, whatever the arguments* |
+| `fork()` restored to the class | *has no fork affordance at all* |

@@ -6,7 +6,7 @@ export const PROBES = [
     decision: '0021',
     suite: 'tests/rng.test.ts',
     broke: '`hashSeed` returning a constant',
-    guard: 'the string hash is stable and distinct per input',
+    guard: 'hashes a string seed to a stable 32-bit value',
     edit: {
       path: 'src/sim/rng.ts',
       find: '  let h = 2166136261 >>> 0;',
@@ -17,7 +17,7 @@ export const PROBES = [
     decision: '0021',
     suite: 'tests/rng.test.ts',
     broke: '`stream()` derived from a DRAW instead of from the name — the ported `fork()`',
-    guard: 'a stream consumes nothing from its parent',
+    guard: 'derives a stream from its NAME, not from a draw',
     edit: {
       path: 'src/sim/rng.ts',
       find: '    return new Rng(hashSeed(`${this.seed}:${name}`));',
@@ -28,7 +28,7 @@ export const PROBES = [
     decision: '0021',
     suite: 'tests/rng.test.ts',
     broke: '`stream()` ignoring the name, so every concern shares one sequence',
-    guard: 'distinct names give distinct sequences',
+    guard: 'gives distinct names distinct sequences',
     edit: {
       path: 'src/sim/rng.ts',
       find: '    return new Rng(hashSeed(`${this.seed}:${name}`));',
@@ -39,7 +39,7 @@ export const PROBES = [
     decision: '0021',
     suite: 'tests/rng.test.ts',
     broke: '`int()` made exclusive of `max`, so the last row of every table is unreachable',
-    guard: 'the range is inclusive at both ends',
+    guard: 'makes int() inclusive at BOTH ends',
     edit: {
       path: 'src/sim/rng.ts',
       find: '    return Math.floor(this.range(min, max + 1));',
@@ -50,7 +50,7 @@ export const PROBES = [
     decision: '0021',
     suite: 'tests/rng.test.ts',
     broke: '`gaussian()` reduced to a single draw',
-    guard: 'draw COUNT is part of the contract',
+    guard: 'always draws twice for a gaussian, whatever the arguments',
     edit: {
       path: 'src/sim/rng.ts',
       find: '    const u2 = this.next01();',
@@ -61,7 +61,7 @@ export const PROBES = [
     decision: '0021',
     suite: 'tests/rng.test.ts',
     broke: '`fork()` restored to the class',
-    guard: 'the affordance is removed, not deprecated',
+    guard: 'has no fork affordance at all',
     edit: {
       path: 'src/sim/rng.ts',
       find: '  /** Float in [0, 1). */',
