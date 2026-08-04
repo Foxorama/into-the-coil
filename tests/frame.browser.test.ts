@@ -173,4 +173,67 @@ describe.runIf(chromePath)('the page draws', () => {
     expect(errors, `resizing logged errors:\n${errors.join('\n')}`).toEqual([]);
     await page.context().close();
   }, 90_000);
+
+  /*
+    ⚠️ FOUND BY PLAYING, NOT BY READING. On a phone, a long press on the playfield opened the iOS
+    callout and a second finger zoomed the page — on a build with no touch handling at all, because
+    nothing had ever told the engine that this element is a game.
+
+    Asserted on COMPUTED style rather than on the string `mount.ts` assigned, because the inline
+    value only proves the line ran — the computed value proves the browser accepted it.
+
+    ⚠️ **`-webkit-touch-callout` is NOT here, and its absence is the interesting part.** Chromium
+    does not implement the property at all — it refuses it on `setProperty`, so it is unreadable
+    both computed AND inline, and the first two versions of this test failed on exactly that. It is
+    a Safari/iOS property, and iOS is the only place the bug it fixes occurs, which is also the only
+    place this suite cannot run.
+
+    So it gets the other half of a two-halves guard, per
+    docs/decisions/0025-the-frame-budget-is-counted-not-timed.md: a SOURCE SCAN, in
+    `tests/touch.test.ts`. Neither half can see what the other does — this one cannot see a property
+    the engine drops, and that one cannot see a value the engine rejected. Written down rather than
+    quietly dropped, because an assertion nobody can run is worth less than a stated gap.
+
+    See docs/decisions/0032-touch-is-relative-drag-and-not-a-stick.md.
+  */
+  it('tells the browser the canvas is a game, so a thumb does not pan, zoom or select it', async () => {
+    const { page, errors } = await open({ width: 1280, height: 720 }, 1);
+    const style = await page.evaluate(() => {
+      const canvas = document.querySelector('#app canvas');
+      if (!(canvas instanceof HTMLCanvasElement)) return null;
+      const computed = getComputedStyle(canvas);
+      return {
+        touchAction: computed.touchAction,
+        userSelect: computed.userSelect || computed.webkitUserSelect,
+        overscroll: computed.overscrollBehaviorY || computed.overscrollBehavior,
+      };
+    });
+    expect(style, 'no canvas to read a style from').not.toBeNull();
+    expect(style?.touchAction, 'a pinch or a drag on the playfield still pans the page').toBe('none');
+    expect(style?.userSelect, 'a long press still selects').toBe('none');
+    expect(style?.overscroll, 'a downward drag can still pull-to-refresh').toBe('none');
+    expect(errors, errors.join('\n')).toEqual([]);
+    await page.context().close();
+  }, 90_000);
+
+  /*
+    ⚠️ The counterpart, and the one that keeps the fix from being an accessibility regression.
+    Suppressing zoom page-wide is an anti-pattern, and 0024 makes that this project's problem
+    specifically. The playfield refuses gestures; the page around it must not.
+  */
+  it('leaves the DOCUMENT zoomable, because killing pinch page-wide is an accessibility failure', async () => {
+    const { page } = await open({ width: 1280, height: 720 }, 1);
+    const doc = await page.evaluate(() => ({
+      body: getComputedStyle(document.body).touchAction,
+      root: getComputedStyle(document.documentElement).touchAction,
+      viewport: document.querySelector('meta[name="viewport"]')?.getAttribute('content') ?? '',
+    }));
+    expect(doc.body, 'the whole page refuses gestures, not just the playfield').not.toBe('none');
+    expect(doc.root, 'the whole page refuses gestures, not just the playfield').not.toBe('none');
+    expect(doc.viewport, 'the viewport tag disables zoom for everyone').not.toMatch(/user-scalable\s*=\s*no/);
+    expect(doc.viewport, 'the viewport tag pins the scale, which disables zoom by another name').not.toMatch(
+      /maximum-scale\s*=\s*1/,
+    );
+    await page.context().close();
+  }, 90_000);
 });
