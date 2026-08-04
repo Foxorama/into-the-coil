@@ -39,6 +39,7 @@
 
 import { SPECIAL_BINDINGS } from '../content/actions.js';
 import type { ScrollAxis } from '../sim/camera.js';
+import { SHIP_SPEED } from '../sim/flight.js';
 import type { Intent } from '../sim/intent.js';
 import type { InputSource } from './input.js';
 
@@ -49,20 +50,34 @@ export type TouchScheme = 'drag' | 'stick';
 export const DEFAULT_TOUCH_SCHEME: TouchScheme = 'drag';
 
 /**
- * CSS pixels of finger travel that ask for full speed.
+ * How far the ship travels per unit of finger travel, on screen.
+ *
+ * **A RATIO, and it has to be** — this was a per-step constant in pixels, and that was wrong in a
+ * way nothing in the test suite could see. See the ⚠️ below, which is the reason this file exists in
+ * this shape.
+ *
+ * `1` is strict 1:1: the ship moves exactly as far as the thumb did. `1.6` means the ship covers a
+ * little over half again, so crossing the 100-unit dodge lane costs about 60% of a screen height in
+ * landscape rather than all of it.
  *
  * ⚠️ **A STARTING POINT, not a measurement** — the same status `src/sim/flight.ts` gives
- * `SHIP_SPEED`, and nothing may assert on its value. It is deliberately well under 1:1: the dodge
- * lane is 100 world units and lands on roughly 6cm of a phone held in landscape, so a thumb that had
- * to sweep the full 6cm to cross it would be useless. 90px of travel asks for a full step's worth of
- * ship, which crosses the lane in about a thumb's length.
+ * `SHIP_SPEED`. What settles it is a thumb.
+ *
+ * ⚠️ **THE BUG THIS REPLACED, because it is the one worth remembering.** The original constant was
+ * `DRAG_GAIN_PX = 90`, documented as "90px of travel asks for full speed" — true, and useless, since
+ * a full-deflection ask buys `SHIP_SPEED` world units for ONE STEP. Crossing the lane needed 59 such
+ * steps, so about 5,300px of finger travel: five metres of thumb. Every unit test passed, because
+ * every one of them asserted the same wrong quantity — that N pixels produce an ask of 1. Caught by
+ * driving a real swipe against the deployed page and watching where the ship was actually drawn:
+ * 140px of thumb moved it 10.3px. `docs/decisions/0027-measure-the-picture-not-the-model.md`, twice
+ * in one session.
  */
-export const DRAG_GAIN_PX = 90;
+export const DRAG_GAIN = 1.6;
 
 /**
  * CSS pixels from the anchor at which the stick reads full deflection.
  *
- * Same status as `DRAG_GAIN_PX`. A thumb's comfortable arc without re-gripping, and the number that
+ * Same status as `DRAG_GAIN`. A thumb's comfortable arc without re-gripping, and the number that
  * decides how much of a stick's travel is usable rather than saturated.
  */
 export const STICK_RADIUS_PX = 56;
@@ -94,6 +109,17 @@ export interface TouchOptions {
    * kind of thing that turns one into the other.
    */
   alongAxis?: () => ScrollAxis;
+  /**
+   * CSS pixels per world unit, from `src/sim/camera.ts`'s `View`.
+   *
+   * ⚠️ **Required to convert a finger at all**, and its absence is what made the first version of
+   * this file wrong. A drag is a distance on glass; an `Intent` is a fraction of a step's travel.
+   * Nothing can turn one into the other without knowing how big a world unit currently is on this
+   * screen, and a constant in pixels is that conversion guessed at.
+   *
+   * Read through a function because it changes on every resize and rotation.
+   */
+  scale?: () => number;
 }
 
 /**
@@ -107,6 +133,8 @@ export function attachTouch(target: HTMLElement, options: TouchOptions = {}): In
   // @setup: every buffer this source will use, fixed at attach.
   const scheme = options.scheme ?? DEFAULT_TOUCH_SCHEME;
   const alongAxisOf = options.alongAxis ?? ((): ScrollAxis => 'x');
+  // A reference-sized landscape phone, so a caller that does not thread the view still behaves.
+  const scaleOf = options.scale ?? ((): number => 3.9);
 
   /** The pointer that steers, or −1 when no finger is down. The rest are taps. */
   let steering = -1;
@@ -191,13 +219,26 @@ export function attachTouch(target: HTMLElement, options: TouchOptions = {}): In
       let askY = 0;
 
       if (scheme === 'drag') {
-        // Spend up to one full deflection per axis, and keep the rest.
-        const spendX = clamp1(bankX / DRAG_GAIN_PX);
-        const spendY = clamp1(bankY / DRAG_GAIN_PX);
-        bankX -= spendX * DRAG_GAIN_PX;
-        bankY -= spendY * DRAG_GAIN_PX;
-        askX = spendX;
-        askY = spendY;
+        /*
+          Pixels of finger → world units of ship → a fraction of one step's travel.
+
+          `pxPerStep` is what a full-deflection ask is WORTH on this screen right now: `SHIP_SPEED`
+          world units, times the current scale, divided by the gain. Spend up to one full deflection
+          per axis and keep the remainder, so a flick arrives over several steps rather than being
+          clipped to one.
+
+          ⚠️ The scale is read per step, not captured: a resize or a rotation changes how big a world
+          unit is, and a drag in progress must not keep spending against the old screen.
+        */
+        const pxPerStep = (SHIP_SPEED * scaleOf()) / DRAG_GAIN;
+        if (pxPerStep > 0) {
+          const spendX = clamp1(bankX / pxPerStep);
+          const spendY = clamp1(bankY / pxPerStep);
+          bankX -= spendX * pxPerStep;
+          bankY -= spendY * pxPerStep;
+          askX = spendX;
+          askY = spendY;
+        }
       } else if (steering !== -1) {
         const dx = lastX - anchorX;
         const dy = lastY - anchorY;
