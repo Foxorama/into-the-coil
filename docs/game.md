@@ -123,8 +123,10 @@ the high-contrast and colour-blind palettes free rather than a second art pass.
 
 **The simulation runs on a fixed timestep; rendering interpolates.** A sim stepped by wall-clock
 delta teleports bullets through the player on a dropped frame, and makes difficulty a property of the
-machine. Fixed steps also keep the run deterministic, which is what the seeded draws, the resume, the
-replays and the one-button clearability proof all rest on.
+machine. Fixed steps also keep the run deterministic, which is what the seeded draws, the resume and the
+replays all rest on. (0022 also listed a one-button clearability proof here;
+[0024](decisions/0024-the-accessibility-floor-is-settings.md) dropped it with the authored assist
+path. The fixed timestep is unaffected.)
 
 **No allocation in the hot loop.** Entities live in pre-allocated pools and are mutated in place. GC
 pauses are the main cause of jank in a browser game, and a bullet-hell allocates hardest exactly when
@@ -153,17 +155,21 @@ Owed a decision, and a test.
 
 ## Accessibility
 
-The floor is set before the first game file, not before launch. Confirmed: colour never carries
-meaning alone, high-contrast palette, configurable controls, an interactive first stage, reduced
-motion under one owner, a flash-intensity cap, and no information delivered by audio alone.
+Decided — [0024](decisions/0024-the-accessibility-floor-is-settings.md).
 
-One-button play is a settings bundle over assist knobs — auto-fire, non-lethal terrain, and an
-**authored** horizontal assist path per level. Not a runtime autopilot. The law it requires:
-*anything demanding cross-axis evasion is scripted, not reactive.*
+**There is one game, and it is the loud one.** Accessibility is knobs over that default, never
+restraint of it. Unconditional and not switchable off: colour never carries meaning alone, every cue
+has a visual twin, a flash-intensity cap, actions-not-keys input, an interactive first stage.
+Opt-in settings: high-contrast and colour-blind palettes, reduced motion, and a closed ladder of
+assists — pace, resilience, hurtbox, terrain, auto-specials, flight assist. **No assist ever makes
+the game harder**, and no comfort setting may touch the sim.
 
-Not claimed: blind-friendly play, which for a positional shooter is a different game.
+The **authored horizontal assist path per level is dropped**, along with the law it required
+(*anything demanding cross-axis evasion is scripted, not reactive*) — it banned most of the genre and
+taxed every level forever, to serve one setting. One-button survives as a rail input mapping, which
+costs no content and is deletable. The itch tag is not claimed until it has been played.
 
-Owed a decision.
+Not claimed: blind-friendly play, and textless. For a positional shooter both are a different game.
 
 ## Deliberately not in this game
 

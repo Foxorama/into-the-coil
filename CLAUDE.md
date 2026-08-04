@@ -71,6 +71,12 @@ decision needs no rule.
   and its guard counts draw calls and allocations rather than wall-clock, because CI is not that
   phone. — [0022](docs/decisions/0022-frame-rate-is-a-feature.md)
 
+- **There is one game and it is the loud one; accessibility is knobs over that default.** An item
+  joins the floor only if it is a property of the architecture or a knob over it — one that would
+  constrain what a level may contain is refused, and that refusal is why the authored assist path is
+  gone. No assist may ever make the game harder, and no comfort setting may touch the sim.
+  — [0024](docs/decisions/0024-the-accessibility-floor-is-settings.md)
+
 ⚠️ **No counting guard.** Line ceilings, `case` ceilings and slice ceilings were each proposed and
 each measured against the predecessor before being set; every one flagged its healthy file as loudly
 as its sick one. What separates them is the shape of the dependencies, which is what the three rules
