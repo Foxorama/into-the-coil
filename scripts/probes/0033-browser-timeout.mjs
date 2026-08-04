@@ -15,7 +15,7 @@ export const PROBES = [
     decision: 'suite',
     suite: 'tests/toolchain.test.ts',
     broke: 'a browser test left on vitest’s 5s default, which is how this shipped twice',
-    guard: 'tests/watchdog.browser.test.ts sets a file-level testTimeout',
+    guard: 'watchdog.browser.test.ts sets a file-level testTimeout',
     edit: {
       path: 'tests/watchdog.browser.test.ts',
       find: 'vi.setConfig({ testTimeout: 60_000 });',
@@ -27,7 +27,7 @@ export const PROBES = [
     decision: 'suite',
     suite: 'tests/toolchain.test.ts',
     broke: 'the timeout read as a bare number, so `testTimeout: 1` satisfies the guard',
-    guard: 'tests/frame.browser.test.ts sets a file-level testTimeout',
+    guard: 'frame.browser.test.ts sets a file-level testTimeout',
     edit: {
       path: 'tests/frame.browser.test.ts',
       find: 'vi.setConfig({ testTimeout: 60_000 });',
