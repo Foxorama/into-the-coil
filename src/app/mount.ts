@@ -17,7 +17,10 @@ import { Pool } from '../sim/pool.ts';
 import { makeRng } from '../sim/rng.ts';
 import { atlasIsStale, bakeAtlas, SPRITE, viewFor } from '../render/bake.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
+import { SPECIAL_BINDINGS } from '../content/actions.ts';
+import { makeIntent } from '../sim/intent.ts';
 import { GameFrame, type World } from './frame.ts';
+import { attachInput } from './input.ts';
 import { runLoop } from './loop.ts';
 
 /**
@@ -142,9 +145,19 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // here can never move a draw that matters.
     rng: makeRng('proof-scene').stream('debris'),
     cameraAlong: 0,
+    prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
     spawnIn: 1,
     ship,
+    /*
+      ⚠️ Listening on `window`, not on the canvas. A canvas is not focusable, so a keydown never
+      reaches it without a `tabindex` and a click first — which would mean the game silently ignores
+      every key until the player happens to click on it, and looks broken rather than unfocused.
+
+      Both allocated here, at boot, because this file is the one allowed to (0025).
+    */
+    input: attachInput(window),
+    intent: makeIntent(SPECIAL_BINDINGS),
   };
 
   /** Re-measure, re-fit and — only if the orientation or resolution actually moved — re-bake. */
@@ -213,6 +226,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     canvas,
     stop(): void {
       window.removeEventListener('resize', onResize);
+      world.input.release();
       stopLoop?.();
       stopLoop = null;
     },
