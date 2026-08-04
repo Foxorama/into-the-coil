@@ -17,13 +17,24 @@
  * ⚠️ **READ THE SKIPPED COUNT.** `runIf` means a machine with no browser still passes.
  */
 
-import { describe, it, expect, afterAll } from 'vitest';
+import { describe, it, expect, afterAll, vi } from 'vitest';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 
 const dist = pathToFileURL(resolve(fileURLToPath(new URL('..', import.meta.url)), 'dist/index.html')).href;
+
+/*
+  ⚠️ FILE-LEVEL, because vitest's 5s default is not a browser test's timeout and the FIRST test in a
+  file pays for the browser launch on top of its own work. Locally that fits; on a cold CI runner it
+  did not, and `plays in landscape` — the one test here that asserts the normal case — failed in CI
+  having passed on this machine every time.
+
+  Set once rather than per test: a per-test number is a thing five of the six tests below were
+  already missing, which is how the gap arose.
+*/
+vi.setConfig({ testTimeout: 60_000 });
 
 const LANDSCAPE = { width: 1280, height: 720 };
 const PORTRAIT = { width: 720, height: 1280 };
