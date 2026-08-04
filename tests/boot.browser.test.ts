@@ -22,6 +22,18 @@ describe('the built page boots', () => {
     await browser?.close();
   });
 
+  /**
+   * ⚠️ THIS ASSERTION MOVED SURFACE, AND DID NOT WEAKEN.
+   *
+   * It used to read `#app`'s text, because the page's whole content was a line of text. The page now
+   * mounts a canvas, so there is no text to read — and the claim being made was never about text. It
+   * was, and still is: **the module graph evaluated in a real browser, and `brand.ts` reached the
+   * rendered page.** The brand now arrives as the canvas's accessible name, so that is where it is
+   * read from. `tests/frame.browser.test.ts` asserts the canvas then actually paints.
+   *
+   * If this is ever tempting to delete, note what it costs: `tests/brand.test.ts` greps `dist/` and
+   * would still pass against a bundle that throws on line one.
+   */
   it.runIf(chromePath)('renders the title and version from brand.ts', async () => {
     // Gated on FINDING a browser, but LOUD about failing to launch one: past that gate, a silent
     // pass would mean the page was never opened.
@@ -31,8 +43,9 @@ describe('the built page boots', () => {
     await page.goto(pathToFileURL(dist).href);
 
     const { GAME_TITLE, APP_VERSION } = await import('../src/brand.ts');
-    const text = await page.textContent('#app');
-    expect(text).toContain(GAME_TITLE);
-    expect(text).toContain(APP_VERSION);
+    const label = await page.getAttribute('#app canvas', 'aria-label');
+    expect(label, 'the game did not mount, or mounted without an accessible name').not.toBe(null);
+    expect(label).toContain(GAME_TITLE);
+    expect(label).toContain(APP_VERSION);
   }, 60_000);
 });
