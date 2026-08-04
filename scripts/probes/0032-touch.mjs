@@ -18,8 +18,8 @@ export const PROBES = [
     guard: 'THE ONE: a flick is banked and delivered in full, not clipped to one step',
     edit: {
       path: 'src/app/touch.ts',
-      find: '        bankX -= spendX * DRAG_GAIN_PX;\n        bankY -= spendY * DRAG_GAIN_PX;',
-      replace: '        bankX = 0;\n        bankY = 0;',
+      find: '          bankX -= spendX * pxPerStep;\n          bankY -= spendY * pxPerStep;',
+      replace: '          bankX = 0;\n          bankY = 0;',
     },
   },
   {
