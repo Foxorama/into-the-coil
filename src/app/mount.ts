@@ -37,6 +37,44 @@ export interface Mounted {
   canvas: HTMLCanvasElement;
 }
 
+/**
+ * The rotate prompt, and the element the orientation guard looks for.
+ *
+ * A `data-` attribute rather than a class, because a class is a styling hook that a later art pass
+ * may reasonably rename, and this is a contract with `tests/orientation.browser.test.ts`.
+ */
+const GATE_ATTR = 'data-itc-rotate';
+
+/**
+ * Build the rotate prompt.
+ *
+ * ⚠️ **Text, not an icon.** `docs/decisions/0024-the-accessibility-floor-is-settings.md` puts
+ * "colour never carries meaning alone" in the unconditional floor, and the same argument disposes of
+ * a bare rotation glyph: the one screen whose entire job is to explain why the game is not running
+ * cannot be the one that assumes the player reads pictograms.
+ *
+ * `role="alert"` because it appears in response to something the player just did, and a player who
+ * rotated for a reason deserves to be told why nothing happened.
+ */
+function makeGate(ink: string, space: string): HTMLElement {
+  const gate = document.createElement('div');
+  gate.setAttribute(GATE_ATTR, '');
+  gate.setAttribute('role', 'alert');
+  gate.style.position = 'absolute';
+  gate.style.inset = '0';
+  gate.style.display = 'none';
+  gate.style.alignItems = 'center';
+  gate.style.justifyContent = 'center';
+  gate.style.textAlign = 'center';
+  gate.style.padding = '2rem';
+  gate.style.background = space;
+  gate.style.color = ink;
+  gate.style.font = '600 1.25rem/1.4 system-ui, sans-serif';
+  // Terse, per docs/game.md's voice rule: say the one thing, do not explain the architecture.
+  gate.textContent = 'Turn your device sideways to play.';
+  return gate;
+}
+
 /** Size the backing store for a viewport, honouring 0022's DPR cap, and draw in CSS pixels. */
 function fitCanvas(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, cssWidth: number, cssHeight: number): number {
   const dpr = renderScale(window.devicePixelRatio);
@@ -112,6 +150,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   /** Re-measure, re-fit and — only if the orientation or resolution actually moved — re-bake. */
   const onResize = (): void => {
     const next = measure();
+    // Gate FIRST and return: a view that is not drawn needs no fit and no atlas, and baking the
+    // top-down sprites for a rotation nobody will see is the one expensive thing a resize can do.
+    if (next.alongAxis !== 'x') {
+      setPlayable(false);
+      return;
+    }
     const width = viewportWidth(host);
     const height = viewportHeight(host);
     const nextDpr = fitCanvas(canvas, ctx, width, height);
@@ -125,16 +169,52 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     dpr = nextDpr;
     world.view = next;
     surface.setSize(width, height, colours.space);
+    // Last, so a resumed loop's first frame draws at the size that was just fitted.
+    setPlayable(true);
+  };
+
+  /*
+    THE ORIENTATION GATE — docs/decisions/0031-landscape-is-the-shipped-orientation.md.
+
+    ⚠️ It stops the SIMULATION, it does not cover it. An overlay above a running game loses the run
+    to something the player cannot see, and would have to be dismissible to be honest about that —
+    at which point it permits the exact view the decision exists to prevent.
+
+    The condition is `view.alongAxis`, which is already computed from the viewport's shape. There is
+    no second description of "is this portrait" to drift: a square viewport reads as landscape by
+    `viewOf`'s own tie-break, and a square window is merely gutter-heavy rather than the failure this
+    guards — art moving the wrong way.
+
+    ⚠️ The manifest's `orientation: landscape` is a HINT and is not this. It binds an installed PWA
+    and does nothing in a mobile browser tab or the itch iframe, which is where most players arrive.
+  */
+  const gate = makeGate(colours.player, colours.space);
+  host.appendChild(gate);
+  let stopLoop: (() => void) | null = null;
+
+  const setPlayable = (playable: boolean): void => {
+    gate.style.display = playable ? 'none' : 'flex';
+    canvas.style.visibility = playable ? 'visible' : 'hidden';
+    if (playable && stopLoop === null) {
+      // A resize is not a frame, so building a frame here is affordable — the rule this file opens
+      // with. Restarting also drops the accumulated step debt, which is right: time spent looking at
+      // a rotate prompt is not time the world should catch up on.
+      stopLoop = runLoop(new GameFrame(world));
+    } else if (!playable && stopLoop !== null) {
+      stopLoop();
+      stopLoop = null;
+    }
   };
 
   window.addEventListener('resize', onResize);
-  const stopLoop = runLoop(new GameFrame(world));
+  setPlayable(view.alongAxis === 'x');
 
   return {
     canvas,
     stop(): void {
       window.removeEventListener('resize', onResize);
-      stopLoop();
+      stopLoop?.();
+      stopLoop = null;
     },
   };
 }
