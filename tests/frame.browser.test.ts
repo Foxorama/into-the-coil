@@ -107,10 +107,22 @@ describe.runIf(chromePath)('the page draws', () => {
     await page.context().close();
   }, 90_000);
 
-  it('fills the viewport in landscape and in portrait, and paints in both', async () => {
+  /**
+   * ⚠️ **These two used to assert that portrait paints too, and they were right until
+   * `docs/decisions/0031-landscape-is-the-shipped-orientation.md`.** One art view exists, so portrait
+   * now gates instead of drawing — and both tests went red on this change, which is the correct
+   * behaviour of a guard that encoded the old contract rather than a problem with it.
+   *
+   * The portrait half moved to `tests/orientation.browser.test.ts`, where it asserts the opposite and
+   * stronger thing: that nothing draws and the world does not advance. What stays here is the claim
+   * this file exists for — the page fills its viewport and paints — across the range of LANDSCAPE
+   * shapes 0023's clamp is drawn against.
+   */
+  it('fills the viewport and paints across the whole landscape clamp', async () => {
     for (const viewport of [
-      { width: 1280, height: 720 },
-      { width: 720, height: 1280 },
+      { width: 1280, height: 720 }, // 16:9, mid-clamp
+      { width: 1440, height: 960 }, // 3:2, the bottom of the clamp
+      { width: 2560, height: 1080 }, // 21:9, the top of it
     ]) {
       const { page, errors } = await open(viewport, 1);
       await page.waitForTimeout(1500);
@@ -132,20 +144,22 @@ describe.runIf(chromePath)('the page draws', () => {
     }
   }, 120_000);
 
-  it('survives a rotation mid-run without erroring or going blank', async () => {
-    // 0023 says turning the device is free and the sim never learns it happened. This is that claim
-    // driven rather than argued: the atlas re-bakes, the view flips axis, the loop does not stop.
+  it('survives a resize mid-run without erroring or going blank', async () => {
+    // 0023's claim driven rather than argued: the view re-measures, the atlas re-bakes if its
+    // resolution moved, and the loop does not stop. Between two LANDSCAPE shapes since 0031 — a
+    // window dragged from 16:9 to ultrawide is the case a desktop player actually produces, and it
+    // crosses the top of the clamp, so the gutter appears mid-run.
     const { page, errors } = await open({ width: 1280, height: 720 }, 1);
     await page.waitForTimeout(1000);
-    await page.setViewportSize({ width: 720, height: 1280 });
+    await page.setViewportSize({ width: 2560, height: 800 });
     await page.waitForTimeout(1200);
-    expect(await inkFraction(page), 'the canvas went blank after rotating').toBeGreaterThan(0.001);
+    expect(await inkFraction(page), 'the canvas went blank after resizing').toBeGreaterThan(0.001);
     const box = await page.evaluate(() => {
       const canvas = document.querySelector('#app canvas');
       return canvas instanceof HTMLCanvasElement ? Math.round(canvas.getBoundingClientRect().width) : -1;
     });
-    expect(box, 'the canvas did not re-fit to the new viewport').toBe(720);
-    expect(errors, `rotating logged errors:\n${errors.join('\n')}`).toEqual([]);
+    expect(box, 'the canvas did not re-fit to the new viewport').toBe(2560);
+    expect(errors, `resizing logged errors:\n${errors.join('\n')}`).toEqual([]);
     await page.context().close();
   }, 90_000);
 });

@@ -121,12 +121,18 @@ describe('the install manifest', () => {
    * app, and the player who notices is the one who already installed it. So this file has always
    * held the value; what it held was `landscape`, landed as scaffold before any design argued it.
    *
-   * It is now `any`, per `docs/decisions/0023-the-long-axis-is-the-scroll-axis.md`: the long axis of
-   * the screen is the scroll axis, so portrait is a native way to play rather than a broken one, and
-   * a lock is the one thing that could make it unreachable. `src/sim/camera.ts` is what earns this.
+   * It was `any` under `docs/decisions/0023-the-long-axis-is-the-scroll-axis.md`, which made portrait
+   * a native way to play. `docs/decisions/0031-landscape-is-the-shipped-orientation.md` drops the
+   * second art view and with it the second orientation: side-profile art scrolling vertically is the
+   * predecessor's end-boss failure, which looked bad to the point of being unplayable.
+   *
+   * ⚠️ **This value is a hint, not the guarantee.** It binds an INSTALLED PWA and does nothing in a
+   * mobile browser tab or inside the itch iframe, which is where most players meet the game first.
+   * The gate in `src/app/mount.ts` is what actually makes portrait unreachable, and
+   * `tests/orientation.browser.test.ts` is what holds it.
    */
-  it('installs unlocked, because both orientations are the game', () => {
-    expect(manifest().orientation).toBe('any');
+  it('installs locked to the one orientation whose art exists', () => {
+    expect(manifest().orientation).toBe('landscape');
   });
 
   /**

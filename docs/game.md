@@ -39,21 +39,48 @@ Levels are authored once, in `along` × `across` world units. The camera maps th
 `along` and the short to `across`, so **both orientations show the same span of world and play at the
 same difficulty**. Desktop landscape is the primary target; portrait is native, not a fallback.
 
+⚠️ **Landscape is the only orientation shipped** — [0031](decisions/0031-landscape-is-the-shipped-orientation.md).
+Portrait is dropped as a destination, not as architecture. One art view is authored (side profile),
+and below a landscape aspect the game shows a rotate prompt and **does not step the simulation**.
+
+The predecessor shipped landscape art in a portrait fight and it looked bad to the point of being
+unplayable — not because the geometry was wrong, but because ships appearing to move the wrong way
+takes the player out of the game entirely.
+
 Consequences, all mandatory:
 
-- Every ship, enemy and boss needs **two views** — side profile and top-down. This is the single
-  largest art cost in the project.
-- Nothing is authored in screen space. Attacks, spawns and terrain are world-space or they break on
-  rotation.
-- `manifest.webmanifest` moves from `"orientation": "landscape"` to `"any"`.
+- Every ship, enemy and boss needs **one view** — side profile. Halving the largest art cost in the
+  project buys more animation and more effect work per entity, not less scope.
+- Nothing is authored in screen space. Attacks, spawns and terrain are world-space — which is
+  ordinary scrolling-shooter architecture, and is what keeps the dodge lane and the lookahead
+  identical from a 16:10 laptop to a 21:9 ultrawide.
+- `manifest.webmanifest` is `"orientation": "landscape"`, and that is a **hint**: it binds an
+  installed PWA only. The gate is the guarantee.
 
 Decided — [0023](decisions/0023-the-long-axis-is-the-scroll-axis.md). `across` is a fixed 100 units
 everywhere; lookahead is clamped to 150–240; rotation is exact parity because aspect is long ÷ short.
 
 ## Characters and ships
 
-Every character owns a ship, and the ship owns its handling, HUD, starting special and visual
-identity. Ships differ; they are not skins.
+Every character owns a ship, and the ship owns its base weapon, starting special, HUD and visual
+identity. Handling is optional — a ship may fly like another and still be a different ship.
+
+⚠️ **Every ship must differ on at least one axis the player can feel.** That is the rule; "ships are
+not skins" was the intention and this is the testable form of it. A dozen selectable characters that
+play out the same is worse than three that do not, and the same test already applies to upgrades
+below: *an upgrade that cannot change the outcome is worse than none.*
+
+The axes, in the order they are cheapest to make felt:
+
+| axis | example |
+|---|---|
+| **base weapon** | faster auto-fire · a cone spread · a single piercing beam |
+| **starting special** | a shield · bombs |
+| visual identity | always, and never on its own |
+| handling | optional, and the hardest of the four to make legible |
+
+Two or three differences authored first, then played, then extended — not a full roster designed up
+front. The constraint is that adding one stays a table edit.
 
 **Prologue roster — the four *Far Carry* golfers:** Feather Fade, Huang-Woo Hook, Longshot Larry,
 Backspin Bo.
