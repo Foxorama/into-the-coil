@@ -153,10 +153,16 @@ declared in `scripts/probes/0023-camera.mjs` and re-run by `npm run prove` on ev
 | the fit taken as the LARGER ratio, which crops the world instead of letterboxing it | `never crops, and never stretches` |
 | spawns placed against the REFERENCE view rather than the widest one — the pop-in bug | `puts the spawn line beyond the widest view any device can have` |
 | the zero-size guard removed, so a hidden tab hands the renderer a NaN transform | `returns a drawable view for a viewport with no size` |
+| the manifest locked back to landscape, making portrait unreachable on an installed app | `installs unlocked, because both orientations are the game` |
 
-⚠️ Four of those six are the same mistake wearing different clothes: **treating the device in front of
-you as the only device.** That is the failure mode this decision exists for, and it is invisible on
-the machine the code was written on.
+⚠️ Four of the first six are the same mistake wearing different clothes: **treating the device in
+front of you as the only device.** That is the failure mode this decision exists for, and it is
+invisible on the machine the code was written on.
+
+⚠️ The seventh is not about this decision at all. The manifest assertion has been in
+`tests/shell.test.ts` since the shell landed and had **never been probed in either direction** — it
+guarded a shipped surface and was itself only ever green. It was cheap to prove the moment something
+finally changed the value, which is also the last moment anyone would have thought to.
 
 ## What this deliberately does not decide
 
