@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <title>Not found — Into the Coil</title>
+
+    <!--
+      WHY THIS FILE EXISTS, WHICH IS NOT "so a 404 looks nice".
+
+      Cloudflare Pages falls back to `index.html` for every unmatched route when the output has
+      no `404.html`. Measured on the staging origins before this file was added, an unknown path
+      and a probe for `/.env` both returned 200 with the entire game bundle attached.
+
+      So every vulnerability scanner hunting for a config file was handed the whole app with a
+      200. Three costs, in rising order of how much they matter:
+
+        1. Bandwidth, paid to answer scanners with a payload they never wanted.
+        2. Status codes stopped separating bots from people. Everything was a 200, so the 404
+           rate — normally the cleanest scanner tell in an access log — read as zero, and the
+           per-path analytics in the site repo could not be trusted.
+        3. It would have followed production. GitHub Pages 404s those probes cheaply today; a
+           move to Cloudflare Pages without this file makes the origin strictly worse.
+
+      GitHub Pages and Cloudflare Pages both use `404.html` from the site root, so this is
+      correct on either host — the same reasoning as `public/_headers`. itch serves a zip and
+      never asks for it.
+
+      ⚠️ SELF-CONTAINED, LIKE EVERYTHING ELSE HERE. No script, no external stylesheet, no font,
+      no image. A 404 page that 404s on its own assets is a joke that writes itself, and this
+      file must stay servable when nothing else is.
+
+      The palette is deliberately just the two colours this game has actually committed to —
+      `#1b1b1f` and `#f8f8f2`, the pair in index.html's boot watchdog and the `theme-color`
+      meta. There is no render layer yet and therefore no accent to borrow; when one exists,
+      the link below is the single thing here worth restyling.
+    -->
+
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+      }
+      body {
+        display: grid;
+        place-content: center;
+        gap: 1.25rem;
+        padding: 2rem;
+        background: #1b1b1f;
+        color: #f8f8f2;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.5;
+        text-align: center;
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(2.5rem, 12vw, 4rem);
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        opacity: 0.55;
+      }
+      p {
+        margin: 0;
+        max-width: 32ch;
+        opacity: 0.7;
+      }
+      a {
+        justify-self: center;
+        padding: 0.7rem 1.4rem;
+        border: 1px solid rgba(248, 248, 242, 0.25);
+        border-radius: 10px;
+        color: #f8f8f2;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      a:hover,
+      a:focus-visible {
+        border-color: rgba(248, 248, 242, 0.6);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>404</h1>
+    <p>There is nothing at this address. Into the Coil is a single page, and this is not it.</p>
+    <a href="/">Open Into the Coil</a>
+  </body>
+</html>

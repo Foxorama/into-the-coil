@@ -33,8 +33,15 @@ function distFiles(dir = 'dist', prefix = ''): string[] {
  * Decisions 0003 and 0008. This list is closed on purpose. `dist/` growing a fourth entry means
  * either a real decision was made or the bundler quietly stopped inlining something — and the whole
  * value of the rule is that those two look identical until something asserts the difference.
+ *
+ * `404.html` is the decision, and it is `_headers`'s kind of sidecar rather than the manifest's:
+ * the HOST serves it, by filename, and nothing on the page ever fetches it. It cannot be inlined
+ * because being a separate file at a known name is the entire mechanism. Without it Cloudflare
+ * Pages answers every unmatched route with `index.html` and a 200, which hands the whole bundle
+ * to any scanner probing for `/.env` and flattens the 404 rate the access log is read by.
  */
 const SIDECARS = [
+  '404.html',
   'CNAME',
   '_headers',
   'manifest.webmanifest',
