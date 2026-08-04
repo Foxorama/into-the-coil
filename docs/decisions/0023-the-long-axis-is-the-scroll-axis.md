@@ -153,16 +153,10 @@ declared in `scripts/probes/0023-camera.mjs` and re-run by `npm run prove` on ev
 | the fit taken as the LARGER ratio, which crops the world instead of letterboxing it | `never crops, and never stretches` |
 | spawns placed against the REFERENCE view rather than the widest one — the pop-in bug | `puts the spawn line beyond the widest view any device can have` |
 | the zero-size guard removed, so a hidden tab hands the renderer a NaN transform | `returns a drawable view for a viewport with no size` |
-| the manifest locked back to landscape, making portrait unreachable on an installed app | `installs unlocked, because both orientations are the game` |
 
-⚠️ Four of the first six are the same mistake wearing different clothes: **treating the device in
-front of you as the only device.** That is the failure mode this decision exists for, and it is
-invisible on the machine the code was written on.
-
-⚠️ The seventh is not about this decision at all. The manifest assertion has been in
-`tests/shell.test.ts` since the shell landed and had **never been probed in either direction** — it
-guarded a shipped surface and was itself only ever green. It was cheap to prove the moment something
-finally changed the value, which is also the last moment anyone would have thought to.
+⚠️ Four of the six are the same mistake wearing different clothes: **treating the device in front of
+you as the only device.** That is the failure mode this decision exists for, and it is invisible on
+the machine the code was written on.
 
 ## What this deliberately does not decide
 
@@ -170,3 +164,29 @@ The scroll **rate**, which is tuning and belongs to content; the chart between l
 scrolling view at all; and the art's two views per entity, which
 [0022](0022-frame-rate-is-a-feature.md) already routes through `(kind, variant, palette, view)` and
 `docs/game.md` already names as the single largest art cost in the project.
+
+---
+
+## Retired 2026-08-04: the manifest half of this decision
+
+[0031](0031-landscape-is-the-shipped-orientation.md) moves `orientation` back to `landscape` and says
+why. Two things here were written against `any` and stop being true with it:
+
+- **"Rejected: a `landscape` orientation lock"** above, and its closing *"It is now `"any"`."* The
+  paragraph under it stands on its own terms — an installed PWA holds its own copy of the manifest,
+  so no deploy reaches the players who liked the game enough to install it. That is the reason
+  [0031](0031-landscape-is-the-shipped-orientation.md) carries a rollback note, and it is why the
+  value moved once more rather than twice.
+- **A seventh probe row**, `the manifest locked back to landscape` / `installs unlocked, because both
+  orientations are the game`. Its break is now the shipped state and its guard is a test that no
+  longer exists, so the entry is deleted from `scripts/probes/0023-camera.mjs` rather than flipped —
+  the surface is probed from the other direction by
+  [0031](0031-landscape-is-the-shipped-orientation.md)'s own manifest entry.
+
+⚠️ **The seventh row's own footnote earns keeping, because it is now twice true.** That assertion had
+sat in `tests/shell.test.ts` since the shell landed and had never been probed in either direction; it
+was cheap to prove the moment something finally changed the value, which is also the last moment
+anyone would have thought to. What the change then exposed is that *three* places described that one
+value — this file, `tests/shell.test.ts`, and `scripts/verify-deploy.mjs` — and only the one the
+suite runs moved with it. `npm run prove` caught this copy on the first CI run after 0031; the
+verifier's copy is not run by anything but a real deploy, and was caught by hand.

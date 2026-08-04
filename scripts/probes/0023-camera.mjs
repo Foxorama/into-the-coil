@@ -72,18 +72,11 @@ export const PROBES = [
       replace: '  if (!usable && false) {',
     },
   },
-  {
-    // The orientation lock restored. This one guards a SHIPPED surface — an installed PWA keeps its
-    // own copy of the manifest, so a wrong value here is not reachable by a deploy — and it had
-    // never been probed, in either direction, in the whole time it said `landscape`.
-    decision: '0023',
-    suite: 'tests/shell.test.ts',
-    broke: 'the manifest locked back to landscape, making portrait unreachable on an installed app',
-    guard: 'installs unlocked, because both orientations are the game',
-    edit: {
-      path: 'public/manifest.webmanifest',
-      find: '  "orientation": "any",',
-      replace: '  "orientation": "landscape",',
-    },
-  },
 ];
+
+// ⚠️ A seventh probe stood here and is gone: it restored the orientation lock, against a manifest
+// that said `any`. docs/decisions/0031-landscape-is-the-shipped-orientation.md moved the value to
+// `landscape`, which makes this probe's break the shipped state and its guard a test that no longer
+// exists. The surface is still probed — from the other direction, by the manifest entry in
+// scripts/probes/0031-orientation.mjs. Deleted rather than flipped, because two probes over one
+// value is the second description of one fact that scripts/verify-deploy.mjs was just fixed for.
