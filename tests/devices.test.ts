@@ -2,7 +2,18 @@ import { describe, it, expect } from 'vitest';
 import { SPECIAL_BINDINGS } from '../src/content/actions.js';
 import { makeIntent, type Intent } from '../src/sim/intent.js';
 import { combineDevices } from '../src/app/devices.js';
-import type { InputSource } from '../src/app/input.js';
+import { attachInput, type InputSource } from '../src/app/input.js';
+import { attachPad } from '../src/app/pad.js';
+import { attachTouch } from '../src/app/touch.js';
+
+/** A keyboard nothing is ever pressed on — the idle device the test below needs. */
+function silentKeyboard(): EventTarget {
+  return {
+    addEventListener(): void {},
+    removeEventListener(): void {},
+    dispatchEvent: () => true,
+  } as unknown as EventTarget;
+}
 
 /**
  * THREE DEVICES, ONE INTENT.
@@ -85,6 +96,37 @@ describe('every attached device composes into the one intent a step reads', () =
     expect(intent.specials[0]).toBe(1);
     combineDevices([fixed(0, 0)]).contribute(intent);
     expect(intent.specials[0]).toBe(0);
+  });
+
+  /*
+    ⚠️ THIS TEST EXISTS BECAUSE A PROBE CAME BACK "STILL GREEN".
+
+    Order-independence above is proved with fake sources, and a fake source is written to add. Point
+    a probe at the REAL devices — flip `+=` to `=` in `src/app/input.ts` — and every assertion in
+    this file stayed green, because none of them ran a real device at all. The property was asserted
+    about the composer and never about the things being composed.
+
+    An idle device is the detector. A device that assigns writes its zero over whatever the sources
+    before it asked for; a device that adds leaves it alone. All three are checked, because they are
+    three separate files that each have to get this right and none of them guards the others.
+  */
+  it('THE STILL-GREEN ONE: an idle REAL device does not wipe what another source asked for', () => {
+    const glass = {
+      addEventListener(): void {},
+      removeEventListener(): void {},
+      getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 400 }),
+    } as unknown as HTMLElement;
+
+    for (const idle of [
+      attachInput(silentKeyboard()),
+      attachTouch(glass),
+      attachPad({ pads: () => [] }),
+    ]) {
+      const intent = makeIntent(SPECIAL_BINDINGS);
+      combineDevices([fixed(0.5, -0.5), idle]).contribute(intent);
+      expect(intent.along, 'an idle device overwrote another source').toBeCloseTo(0.5, 12);
+      expect(intent.across, 'an idle device overwrote another source').toBeCloseTo(-0.5, 12);
+    }
   });
 
   it('releases every source, not just the first', () => {

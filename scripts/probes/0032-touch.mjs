@@ -40,8 +40,8 @@ export const PROBES = [
     guard: 'pointercancel releases the drag, because no pointerup will ever arrive',
     edit: {
       path: 'src/app/touch.ts',
-      find: "    target.addEventListener('pointercancel', onUpOrCancel);",
-      replace: "    void 0;",
+      find: "  target.addEventListener('pointercancel', onUpOrCancel);\n",
+      replace: '',
     },
   },
   {
@@ -139,15 +139,49 @@ export const PROBES = [
       replace: "  canvas.style.touchAction = 'none';\n  document.body.style.touchAction = 'none';",
     },
   },
+  /*
+    ⚠️ THREE PROBES, ONE GUARD, AND THE HISTORY IS THE POINT.
+
+    There was one probe here, pointed at the order-independence test, and `npm run prove` reported it
+    STILL GREEN — the failure 0019 exists to surface. That test composes FAKE sources, and a fake
+    source is written to add, so flipping a real device to assign changed nothing it could see. The
+    property was asserted about the composer and never about the things composed.
+
+    `tests/devices.test.ts` grew the idle-device test in response. Three probes rather than one
+    because these are three separate files that each have to get this right, and none of them guards
+    the others.
+  */
   {
     decision: '0032',
     suite: 'tests/devices.test.ts',
-    broke: 'a device assigning rather than adding, so the control scheme becomes the order mount.ts wired things in',
-    guard: 'THE ONE: composition is order-independent, so wiring order is not a game mechanic',
+    broke: 'the KEYBOARD assigning rather than adding, so an idle keyboard erases a thumb’s ask',
+    guard: 'THE STILL-GREEN ONE: an idle REAL device does not wipe what another source asked for',
     edit: {
       path: 'src/app/input.ts',
       find: "      intent.along += axis(held, 'along');\n      intent.across += axis(held, 'across');",
       replace: "      intent.along = axis(held, 'along');\n      intent.across = axis(held, 'across');",
+    },
+  },
+  {
+    decision: '0032',
+    suite: 'tests/devices.test.ts',
+    broke: 'TOUCH assigning rather than adding, so a thumb off the glass erases the pad’s ask',
+    guard: 'THE STILL-GREEN ONE: an idle REAL device does not wipe what another source asked for',
+    edit: {
+      path: 'src/app/touch.ts',
+      find: '        intent.along += askX;\n        intent.across += askY;',
+      replace: '        intent.along = askX;\n        intent.across = askY;',
+    },
+  },
+  {
+    decision: '0032',
+    suite: 'tests/devices.test.ts',
+    broke: 'the PAD assigning rather than adding, so an unplugged port erases everything else',
+    guard: 'THE STILL-GREEN ONE: an idle REAL device does not wipe what another source asked for',
+    edit: {
+      path: 'src/app/pad.ts',
+      find: '        intent.along += ax;\n        intent.across += ay;',
+      replace: '        intent.along = ax;\n        intent.across = ay;',
     },
   },
   {
