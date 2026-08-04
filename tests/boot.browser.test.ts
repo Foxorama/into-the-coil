@@ -1,9 +1,20 @@
-import { describe, it, expect, afterAll } from 'vitest';
+import { describe, it, expect, afterAll, vi } from 'vitest';
 import { pathToFileURL } from 'node:url';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import type { Browser } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
+
+/*
+  ⚠️ FILE-LEVEL, because vitest's 5s default is not a browser test's timeout — see
+  tests/orientation.browser.test.ts, where this was first hit, and the class fix that followed it.
+  A browser test pays for a launch, a navigation and real frames; the FIRST one in a file pays for
+  the launch on top of its own work. Locally that fits and on a cold CI runner it does not.
+
+  Held for every *.browser.test.ts by tests/toolchain.test.ts, because fixing this one file at a
+  time is exactly what happened the first time.
+*/
+vi.setConfig({ testTimeout: 60_000 });
 
 /**
  * The one browser test at this phase, and the reason the Chromium lookup is here at all.

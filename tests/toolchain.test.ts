@@ -58,3 +58,37 @@ describe('the Node version agrees everywhere it is written', () => {
     }
   });
 });
+
+/*
+  EVERY BROWSER TEST CARRIES A BROWSER TEST'S TIMEOUT.
+
+  ⚠️ This guard exists because the same bug was fixed twice. `plays in landscape` timed out in CI on
+  vitest's 5s default; the fix set a file-level timeout in `tests/orientation.browser.test.ts` and
+  stopped there. Four of the five browser files still had no timeout, and the next CI run took
+  `tests/watchdog.browser.test.ts` down the same way.
+
+  A browser test pays for a browser launch, a navigation and real frames. The FIRST test in a file
+  pays for the launch on top of its own work, which is why the failure lands on whichever test
+  happens to be first and looks like a problem with that test.
+
+  Scanning for the declaration rather than trusting a convention, because the convention had already
+  been written down once and the second file still shipped without it.
+*/
+describe('a browser test cannot run on the default timeout', () => {
+  const testsDir = fileURLToPath(new URL('.', import.meta.url));
+  const browserTests = readdirSync(testsDir).filter((f) => f.endsWith('.browser.test.ts'));
+
+  it('finds browser tests to check, so this cannot pass by scanning nothing', () => {
+    expect(browserTests.length, 'no *.browser.test.ts files found — this guard is vacuous').toBeGreaterThan(2);
+  });
+
+  for (const file of browserTests) {
+    it(`${file} sets a file-level testTimeout`, () => {
+      const source = readFileSync(resolve(testsDir, file), 'utf8');
+      const match = /vi\.setConfig\(\s*\{\s*testTimeout:\s*([0-9_]+)\s*\}\s*\)/.exec(source);
+      expect(match, `${file} runs on vitest's 5s default, which is not a browser test's timeout`).not.toBeNull();
+      const ms = Number((match?.[1] ?? '0').replace(/_/g, ''));
+      expect(ms, `${file}'s timeout is too short to survive a cold runner`).toBeGreaterThanOrEqual(30_000);
+    });
+  }
+});
