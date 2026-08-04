@@ -39,6 +39,12 @@ decision needs no rule.
   in `docs/milestones/` has not landed. A document restating another **cites the line rather than
   summarising it**; a summary is a second copy, and one drifted here inside a single day.
   — [0029](docs/decisions/0029-the-tracked-record-is-the-record.md)
+- **A branch starts at `main`, and the next one waits.** A PR's base is `main`; never another
+  branch. Squash plus `delete_branch_on_merge` orphan a stacked branch's history and then close its
+  PR, so stacking is not *harder* after the base lands — it is broken. Refused by CI before
+  `npm ci`. Not a limit on PR size: the largest PR of the session that produced this rule merged
+  first try, and the smallest cost the most hours.
+  — [0033](docs/decisions/0033-a-branch-starts-at-main.md)
 
 ## Product
 
@@ -99,8 +105,14 @@ decision needs no rule.
   watched did not move. An eyes-on rig renders at the camera the game actually ships; when a fix
   removes a bug, ask what that bug was also doing; a play-test verdict is data about the picture, not
   a bug report about the model. The frame-tracing instrument is owed **before the first tuning pass
-  on anything the player watches move**, not after the seventh report.
-  — [0027](docs/decisions/0027-measure-the-picture-not-the-model.md)
+  on anything the player watches move**, not after the seventh report. **At least one assertion is
+  written in units the player experiences** — pixels, seconds, a fraction of the lane — because a
+  guard measuring a quantity defined in terms of the constant it guards proves only that the code
+  agrees with itself, and a probe cannot see that: a break and its guard share an author and a
+  vocabulary. 0019 catches a guard that does not fire; this catches one that fires on the wrong
+  quantity. Two of this project's own bugs, not the predecessor's.
+  — [0027](docs/decisions/0027-measure-the-picture-not-the-model.md),
+  [0019](docs/decisions/0019-a-probe-must-be-seen-to-apply.md)
 
 - **There is one game and it is the loud one; accessibility is knobs over that default.** An item
   joins the floor only if it is a property of the architecture or a knob over it — one that would
