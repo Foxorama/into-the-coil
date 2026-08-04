@@ -61,13 +61,24 @@ Backspin Bo.
 **Level 1 roster:** your prologue pick, plus three drawn from the unlocked pool. Always four on
 offer. The draw is seeded from the run seed, so resuming does not reroll it.
 
-**Unlock pool:** the nine named *Far Carry* caddies — Penelope Putter, Driver Dan, Dr Chipinski,
-Space Ducks, Convict Sheep, Suggestible Sam, Sandy the Sand-Saver, Mystic Mole, Prognostic Parrot —
-plus the three prologue golfers you did not fly, plus new faces.
+**Unlock pool:** the nine *Far Carry* caddies, plus the three prologue golfers you did not fly, plus
+new faces.
 
-New to this game: **Lord Pembleforth the 5th** (Space Duck), **Peep** (Convict Sheep), **Marty** (the
-Mystic Mole). None of these names exist in *The Far Carry*; the caddy there is the plural "Space
-Ducks".
+The predecessor names most of its caddies by species and role. This game gives them **actual names
+and characterisation** — the same nine, not extra ones:
+
+| *The Far Carry* | here |
+|---|---|
+| Space Ducks | **Lord Pembleforth the 5th**, a Space Duck — singular |
+| Convict Sheep | **Peep** |
+| Mystic Mole | **Marty** |
+| Prognostic Parrot | **Percival** |
+| Penelope Putter · Driver Dan · Dr Chipinski · Suggestible Sam · Sandy the Sand-Saver | carried across as they are, for now |
+
+⚠️ **A rename is not a new face.** The pool is nine caddies either way; naming four of them does not
+grow it. "New faces" above means characters that do not exist in the predecessor at all, and none are
+named yet. None of the four names on the right appears in *The Far Carry*, and the caddy there is the
+plural "Space Ducks".
 
 ## Weapons
 
@@ -184,7 +195,8 @@ fused to that domain at the type level.
 
 **Fiction transfers as raw material, not as scripture.** Names, details and characterisation may be
 changed, sharpened or replaced on the way across. "Space Ducks" becomes the singular Space Duck, and
-Lord Pembleforth the 5th, Peep and Marty are new. Nothing here is bound to the predecessor's
+four caddies the predecessor names by species are **named and given a background** rather than
+replaced — see the table above; the roster does not grow. Nothing here is bound to the predecessor's
 spellings.
 
 `CLAUDE.md`'s current wording — *"its patterns transfer; its content does not"* — is amended to say
