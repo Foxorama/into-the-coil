@@ -176,6 +176,7 @@ declared in `scripts/probes/0024-assist.mjs` and re-run by `npm run prove` on ev
 | invulnerability that scenery ignores — the classic hole in an assist mode | `resilience at its end stops every source of damage, terrain included` |
 | a knob wired to nothing — a placebo setting, which satisfies monotonicity perfectly | `every knob actually does something` |
 | a comfort setting admitted as a difficulty knob | `no presentation setting has appeared among the knobs` |
+| auto-fire offered as a knob, which claims the base weapon can be switched off | `nothing unconditional has been demoted to a knob` |
 | the shipped default quietly assisted, so nobody ever plays the game as designed | `the default is the vibrant game` |
 | a ladder written most-assisted-first, so "more assist" points the wrong way | `the default is the vibrant game` |
 | the ordering comparing nothing, which passes every monotonicity assertion vacuously | `never makes the game harder, in any combination of knobs` |
