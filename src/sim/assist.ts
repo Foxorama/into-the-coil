@@ -42,7 +42,14 @@ export interface Assists {
   hurtbox: 'exact' | 'forgiving';
   /** Whether scenery hurts, or merely stops. */
   terrain: 'lethal' | 'solid';
-  /** Whether owned specials fire themselves the moment their cooldown is up. */
+  /**
+   * Whether owned specials fire themselves the moment their cooldown is up.
+   *
+   * ⚠️ **Auto-fire is not on this list and must never be added to it.** The base weapon and its
+   * upgrades fire themselves unconditionally — that is the default game, not an assist. What is
+   * optional is the rest of the arsenal: specials, shields, bombs and heavies are manual, because
+   * `docs/game.md` puts the skill in a well-timed special rather than in holding a trigger.
+   */
   specials: 'manual' | 'auto';
   /** Whether the ship holds its own `along` position, leaving the player only the dodge lane. */
   flight: 'manual' | 'assisted';

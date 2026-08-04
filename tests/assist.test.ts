@@ -140,6 +140,21 @@ describe('a cosmetic setting can never be an assist', () => {
     }
   });
 
+  /**
+   * A knob for something unconditional is a claim that it can be turned OFF, and both of these are
+   * load-bearing in the other direction: auto-fire on the base weapon is the default game rather
+   * than an assist, and the flash cap is a safety floor rather than a preference.
+   */
+  it('nothing unconditional has been demoted to a knob', () => {
+    for (const name of ['autoFire', 'autofire', 'flashCap']) {
+      expect(ASSIST_KNOBS, `${name} is unconditional and must not be presented as optional`).not.toContain(name);
+    }
+    // And the arsenal stays manual by default: `specials` exists, and its floor is `manual`.
+    expect(ASSIST_KNOBS).toContain('specials');
+    expect(ASSIST_LADDER.specials[0]).toBe('manual');
+    expect(DEFAULT_ASSISTS.specials).toBe('manual');
+  });
+
   it('nothing the model reads is named for a comfort setting either', () => {
     const fields = [...TUNING_FIELDS, ...GRANTED_FIELDS].map(String);
     for (const name of PRESENTATION_ONLY) {

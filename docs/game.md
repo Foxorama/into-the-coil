@@ -84,11 +84,20 @@ plural "Space Ducks".
 
 Each ship carries:
 
-- **Auto-fire** — basic, always on, requires no input.
+- **Auto-fire** — the base weapon **and every upgrade to it**. Always on, requires no input, and it
+  is the only thing that fires itself.
 - **A starting special** — limited capacity, unique to the ship. May be offensive, may be shields.
+  **Manual.**
 
-The skill is in the specials and the heavies, not in holding a fire button. Straight from the
-Jörmungandr fight: one trigger per owned weapon, each on its own cooldown.
+⚠️ **Auto-fire is the base weapon, not the arsenal.** Specials, shields, bombs and heavies are all
+triggered by the player, one trigger per owned weapon, each on its own cooldown — the Raiden II
+relationship between the shot you never think about and the bomb you have to spend. Straight from the
+Jörmungandr fight.
+
+**The skill is in surviving the onslaught, not in mashing a fire button.** A well-timed special is
+the difference between combat and tracing a finger across the screen, which is exactly why the shot
+is free and nothing else is. Firing the rest of the arsenal for the player is an *assist* and it is
+off by default — see [0024](decisions/0024-the-accessibility-floor-is-settings.md).
 
 ## Upgrades
 

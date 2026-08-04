@@ -53,6 +53,17 @@ export const PROBES = [
   {
     decision: '0024',
     suite: 'tests/assist.test.ts',
+    broke: 'auto-fire offered as a knob, which claims the base weapon can be switched off',
+    guard: 'nothing unconditional has been demoted to a knob',
+    edit: {
+      path: 'src/sim/assist.ts',
+      find: "export const ASSIST_KNOBS: readonly (keyof Assists)[] = [\n  'pace',",
+      replace: "export const ASSIST_KNOBS: readonly (keyof Assists)[] = [\n  'autoFire',\n  'pace',",
+    },
+  },
+  {
+    decision: '0024',
+    suite: 'tests/assist.test.ts',
     broke: 'the shipped default quietly assisted, so nobody ever plays the game as designed',
     guard: 'the default is the vibrant game',
     edit: {

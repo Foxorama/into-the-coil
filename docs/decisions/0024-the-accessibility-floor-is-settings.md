@@ -85,12 +85,19 @@ of buttons — it is continuous, accurate, fast movement under time pressure. On
 fix that; it substitutes an autopilot. The assist ladder attacks it directly and *continuously*, which
 also serves the much larger group of players who want some help rather than all of it.
 
-**One-button survives as an input mapping, not as a content constraint.** Auto-fire is already always
-on (`docs/game.md`), so the input floor is movement. A rail scheme — hold to travel one way across
-the lane, release to travel back — is reactive, needs no authored path, and lives entirely in the
-input layer. Combined with `pace: gentle` and `hurtbox: forgiving` it is playable. It costs one row
-in a table that does not exist yet, and **if it plays badly it is deleted with no level rework**,
-which is the whole point of moving it out of content.
+**One-button survives as an input mapping, not as a content constraint.** A rail scheme — hold to
+travel one way across the lane, release to travel back — is reactive, needs no authored path, and
+lives entirely in the input layer. It costs one row in a table that does not exist yet, and **if it
+plays badly it is deleted with no level rework**, which is the whole point of moving it out of
+content.
+
+⚠️ **It needs `specials: auto`, and that is not the default.** Auto-fire covers the base weapon and
+its upgrades only — every special, shield, bomb and heavy is manual, because `docs/game.md` puts the
+skill in a well-timed special rather than in holding a trigger, and firing the arsenal for the player
+would remove the thing the fight is made of. So the input floor of the *default* game is movement
+plus one trigger per owned weapon. A rail scheme spends its single button on movement and has nothing
+left, which means one-button play is the rail mapping **and** the auto-specials assist together —
+two opt-in settings, neither of which touches how the default game plays.
 
 ⚠️ **The tag is not claimed until it has been played.** itch's *"One button"* is a promise that the
 game can be cleared that way, and nothing in this repo can currently know whether that is true. The
