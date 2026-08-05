@@ -322,6 +322,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // The title screen does not step (`src/state/screens.ts`), so the game opens on a still field
     // and waits for the player rather than spending their first life for them.
     stepping: false,
+    shownHealth: shipRow.health,
+    // Replaced below, once the chrome exists.
+    onHealth: (): void => {},
     // Replaced below, once `dispatch` exists. A function property cannot be written before the
     // thing it calls, and the alternative — hoisting the whole reducer wiring above the world it
     // mutates — would put the shell's state machine in the middle of its entity pools.
@@ -361,6 +364,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.show(playable ? screen : null);
   };
 
+  /** Push the run's numbers at the readout. Cheap, and called only when one of them has moved. */
+  const syncHud = (): void => {
+    chrome.setHud(state.run.lives, world.ship.health, shipRow.health);
+  };
+
   const dispatch = (action: Action): void => {
     const next = reduce(state, action);
     if (next === state) return;
@@ -375,6 +383,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       (`tests/run.test.ts` holds that), which is what makes `!==` the whole test.
     */
     if (rearmed) world.weapon = weaponFor(shipRow, state.run.upgrades);
+    // The lives half of the readout. The shield half arrives from the frame, which is the only thing
+    // that knows the ship was hit.
+    if (next.run !== state.run || moved) syncHud();
     // Only on a real transition: `show` moves focus, and re-focusing a button on every dispatch
     // would fight a player who had tabbed away from it.
     if (moved) applyScreen();
@@ -440,6 +451,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     `gameOver` on its own — `src/state/root.ts` holds that as the one cross-slice agreement — so the
     check below reads the state AFTER the reducer has run rather than predicting what it will say.
   */
+  world.onHealth = syncHud;
+
   world.onDeath = (): void => {
     dispatch({ slice: 'run', type: 'lifeLost' });
     if (state.run.lives > 0) respawn(world);

@@ -181,6 +181,21 @@ export interface World {
    */
   onPickup: (kind: PickupKind) => void;
   /**
+   * The ship's health as the chrome last drew it.
+   *
+   * ⚠️ **A remembered value rather than a per-frame read, so the HUD costs nothing on the frames
+   * where nothing happened.** A shield readout that rewrote the DOM sixty times a second would be the
+   * one thing in the game allowed to touch layout in the hot path.
+   */
+  shownHealth: number;
+  /**
+   * The ship's health changed.
+   *
+   * Fired only on a change — a few times a second at worst — so the chrome can be written as ordinary
+   * DOM code rather than as something that has to be cheap.
+   */
+  onHealth: (health: number) => void;
+  /**
    * The resolved auto-fire, recomputed by the shell whenever the run's upgrade list changes.
    *
    * ⚠️ **Resolved once per change, not once per step.** `weaponFor` walks the whole upgrade list,
@@ -331,6 +346,17 @@ export class GameFrame implements Frame {
     // collision because a released slot is the next thing `spawn` hands out.
     for (let i = 0; i < w.deaths.count; i++) {
       burst(w, w.deaths.along[i]!, w.deaths.across[i]!, BURST.enemy);
+    }
+
+    /*
+      ⚠️ **Before the death check, so the last thing the HUD shows is zero.** After it, a respawn
+      would have already put the health back and the player would never see the hit that killed them
+      register — which is `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`
+      exactly: an event the model resolves and the picture never mentions.
+    */
+    if (w.ship.health !== w.shownHealth) {
+      w.shownHealth = w.ship.health;
+      w.onHealth(w.ship.health);
     }
 
     if (w.ship.health <= 0) {

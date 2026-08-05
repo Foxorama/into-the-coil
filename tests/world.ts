@@ -79,8 +79,14 @@ export function inertLevel(): {
   collected: ReturnType<typeof makeCollected>;
   onPickup: (kind: PickupKind) => void;
   weapon: ReturnType<typeof weaponFor>;
+  shownHealth: number;
+  onHealth: (health: number) => void;
 } {
   return {
+    // A fixture has no readout to update; what it needs is a starting value that matches the ship, so
+    // the frame does not report a change on its very first step.
+    shownHealth: SHIPS.proof.health,
+    onHealth: (): void => {},
     // The base weapon, which is what an empty upgrade list resolves to. A fixture that wanted a
     // different one would say so; none does, and none should have to restate the base.
     weapon: weaponFor(SHIPS.proof, []),
@@ -211,6 +217,8 @@ export function playableWorld(level: LevelRow): {
     },
     ...pickupParts(),
     weapon: weaponFor(shipRow, []),
+    shownHealth: shipRow.health,
+    onHealth: (): void => {},
     onPickup: (kind: PickupKind): void => {
       taken.push(kind);
     },

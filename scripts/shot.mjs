@@ -17,6 +17,7 @@
 //
 // Usage:
 //   node scripts/shot.mjs --at=4000,40000               two shots, 4s and 40s into the run
+//   node scripts/shot.mjs --start=no --at=300           the title screen, without starting a run
 //   node scripts/shot.mjs --at=185000 --out=keepsakes   the boss fight
 //
 // Times are milliseconds from the moment Start is pressed. One page load, many shots, so the whole
@@ -84,11 +85,17 @@ try {
   await page.goto(pathToFileURL(dist).href);
   await page.waitForSelector('#app canvas', { timeout: 15_000 });
 
+  /*
+    ⚠️ `--start=no` photographs the TITLE screen, which is otherwise unreachable by this tool: every
+    other shot has to press Start first, and the title screen is where the upgrade key lives. The
+    control is still located and still fails loud when it is missing, because a rig that silently
+    photographed a title screen for three minutes is the failure this tool was built to end.
+  */
   const start = await page.$(START);
   if (start === null) {
     throw new Error(`no start control at ${START} — see src/app/chrome.ts and tests/chrome.test.ts`);
   }
-  await start.click();
+  if (arg('start', 'yes') !== 'no') await start.click();
 
   /*
     ⚠️ **THE HOST, NOT THE CANVAS — and shooting the canvas was a real bug in this tool.** The screens
