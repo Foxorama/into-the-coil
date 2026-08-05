@@ -61,6 +61,10 @@ const INK_OF: Record<SpriteKind, keyof Palette> = {
   ship: 'player',
   drifter: 'enemy',
   lancer: 'enemy',
+  weaver: 'enemy',
+  turret: 'enemy',
+  charger: 'enemy',
+  boss: 'enemy',
   bullet: 'bullet',
   pickup: 'pickup',
   /*
@@ -87,6 +91,10 @@ const INK_OF: Record<SpriteKind, keyof Palette> = {
   shipHit: 'hazard',
   drifterHit: 'impact',
   lancerHit: 'impact',
+  weaverHit: 'impact',
+  turretHit: 'impact',
+  chargerHit: 'impact',
+  bossHit: 'impact',
   // Fragments are the impact itself, so they are the impact ink; they carry no identity of their own.
   debris: 'impact',
 };
@@ -148,6 +156,63 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
       ctx.lineTo(half + r * 0.7, half + r * 0.95);
       ctx.closePath();
       break;
+    case 'weaver':
+    case 'weaverHit':
+      /*
+        A BAR, long across the lane and thin along it — a line lying perpendicular to the way it
+        travels. Nothing else in the game is a rectangle, and orientation is the cue that tells it
+        from the charger's needle, which is the same primitive lying the other way.
+      */
+      ctx.rect(half - r * 0.22, half - r, r * 0.44, r * 2);
+      break;
+    case 'turret':
+    case 'turretHit': {
+      /*
+        A HALF-DISC with its flat face towards −x: round back, straight front pointed at the player.
+        The only curved silhouette among the enemies, so it is told apart by having no corners at all
+        rather than by counting them — which is the property `reports/enemy-silhouettes-2026-08-05.md`
+        found survives twenty pixels.
+      */
+      ctx.moveTo(half - r * 0.55, half - r);
+      ctx.lineTo(half - r * 0.55, half + r);
+      ctx.arc(half - r * 0.55, half, r, Math.PI / 2, -Math.PI / 2, true);
+      ctx.closePath();
+      break;
+    }
+    case 'charger':
+    case 'chargerHit':
+      /*
+        A NEEDLE: a long narrow triangle, nose at −x, lying along the way it travels. Same primitive
+        as the lancer and told apart by proportion — the lancer is as wide as it is long and this is
+        a fifth of that. Size and shape carrying one message together, which is the pairing
+        `src/content/sprites.ts` already uses to say how much killing a thing takes.
+      */
+      ctx.moveTo(half - r, half);
+      ctx.lineTo(half + r * 0.9, half - r * 0.22);
+      ctx.lineTo(half + r * 0.9, half + r * 0.22);
+      ctx.closePath();
+      break;
+    case 'boss':
+    case 'bossHit': {
+      /*
+        A blunt hexagonal hull with a notched prow at −x. It is the only sprite allowed to be
+        complicated, for the one reason the others are not: at 26 world units it is four times the
+        size of anything else on screen, so detail survives that would be mush on an enemy.
+
+        The notch is what makes it read as facing the player rather than as a lump.
+      */
+      ctx.moveTo(half - r, half);
+      ctx.lineTo(half - r * 0.45, half - r * 0.45);
+      ctx.lineTo(half - r * 0.55, half - r * 0.8);
+      ctx.lineTo(half + r * 0.5, half - r * 0.95);
+      ctx.lineTo(half + r, half - r * 0.4);
+      ctx.lineTo(half + r, half + r * 0.4);
+      ctx.lineTo(half + r * 0.5, half + r * 0.95);
+      ctx.lineTo(half - r * 0.55, half + r * 0.8);
+      ctx.lineTo(half - r * 0.45, half + r * 0.45);
+      ctx.closePath();
+      break;
+    }
     case 'bullet':
       ctx.arc(half, half, r * 0.8, 0, Math.PI * 2);
       break;

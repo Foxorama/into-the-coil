@@ -46,6 +46,47 @@ export const SPRITE_KINDS = [
   'drifterHit',
   'lancer',
   'lancerHit',
+  /*
+    ── THE THREE ADDED WITH THE FIRST AUTHORED LEVEL ───────────────────────────────────────────────
+
+    ⚠️ **Chosen as PRIMITIVES that survive twenty pixels, not as interesting shapes.** The lancer's
+    first silhouette was a five-sided arrowhead, reasoned to be obviously not a diamond, and it
+    shipped as a small mushy lump the player read as a slightly smaller diamond —
+    `reports/enemy-silhouettes-2026-08-05.md`. The lesson taken from that is that concavity and point
+    count are what fail at size, so what separates these five is a **primitive and an axis**:
+
+      drifter  diamond, symmetric        — points nowhere, does nothing
+      lancer   wide triangle, nose −x    — points at you, shoots
+      weaver   BAR, long ACROSS the lane — a line perpendicular to travel
+      charger  NEEDLE, long ALONG it     — a line parallel to travel
+      turret   half-disc, flat face −x   — the only round-backed thing in the game
+
+    The pair worth watching is weaver against charger: both are essentially lines, told apart by
+    which way they lie. That is a real risk and it is written down rather than assumed away —
+    `scripts/shot.mjs` renders the shipping camera so it can be LOOKED at, which is
+    `docs/decisions/0027-measure-the-picture-not-the-model.md`'s whole instruction.
+  */
+  'weaver',
+  'weaverHit',
+  'turret',
+  'turretHit',
+  'charger',
+  'chargerHit',
+  /*
+    ⚠️ **One boss silhouette, and the phases are NOT drawn.** Three sprites for three phases was the
+    first plan and it is rejected: what a phase changes is what the boss DOES — its rate, its spread,
+    how it moves — and that is legible in motion, at full frame rate, without a second art pass.
+    `docs/game.md` describes the Jörmungandr model as *"phases keyed to remaining health"* and every
+    one of those words is about behaviour.
+
+    ⚠️ **This leaves a real gap: there is no readout of how much boss is left**, only three discrete
+    changes in how it fights. Whether that is enough to feel progress is a question about the
+    picture, so it is owed a play-test rather than a guess —
+    `docs/decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md` records it as the one thing
+    that build exists to find out.
+  */
+  'boss',
+  'bossHit',
   'bullet',
   'pickup',
   'debris',
@@ -105,6 +146,29 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   */
   lancer: 7,
   lancerHit: 7,
+  // Smallest of the five: it is the one that never shoots and dies to a touch, and size is the cue
+  // that needs no learning at all.
+  weaver: 5,
+  weaverHit: 5,
+  /*
+    ⚠️ **The biggest enemy, because it takes the most killing — and `tests/combat.test.ts` caught this
+    at 6.5.** It shipped smaller than the lancer while surviving one more hit, and the guard's own
+    words are the reason that is wrong: a player would have had to learn its toughness by dying to
+    it. Size is the cue that needs no learning at all.
+  */
+  turret: 8.5,
+  turretHit: 8.5,
+  charger: 6,
+  chargerHit: 6,
+  /*
+    ⚠️ **26, against a hard ceiling of 80.** `src/sim/camera.ts` puts `EDGE_MARGIN` at 40 and says in
+    the same breath that it is *"the largest half-extent any entity may be authored at"* — so a boss
+    may be 80 across, and at anything near that it is a wall rather than an enemy. 26 is about a
+    quarter of the dodge lane: unmistakably the biggest thing in the game, with room left to fly past
+    it on either side, which is what keeps the fight about position rather than about attrition.
+  */
+  boss: 26,
+  bossHit: 26,
   bullet: 1.8,
   pickup: 3.5,
   // Small: a fragment reads as a piece of something, and eight of them at enemy size is a wall.

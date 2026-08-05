@@ -19,7 +19,7 @@
 import { GAME_TITLE } from '../brand.ts';
 
 /** Every screen, in no particular order — nothing indexes this list by position. Closed. */
-export const SCREEN_KINDS = ['title', 'playing', 'gameOver'] as const;
+export const SCREEN_KINDS = ['title', 'playing', 'gameOver', 'cleared'] as const;
 
 /**
  * Where the player is. Derived from the list, so a screen cannot exist in the union and be missing
@@ -66,4 +66,13 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    * `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`.
    */
   gameOver: { heading: 'Run over', action: 'Again', steps: false },
+  /**
+   * The boss is dead and there is nowhere to go yet.
+   *
+   * ⚠️ **"Again" and not "Continue", because there is exactly one level.** `docs/game.md` says a run
+   * is eight levels with a branching chart between them, and neither the chart nor the second level
+   * exists — so offering to continue would be a promise the build cannot keep. What this screen is
+   * for is closing the loop on the one level there is, which is what makes it playable end to end.
+   */
+  cleared: { heading: 'Level clear', action: 'Again', steps: false },
 };

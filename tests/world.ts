@@ -1,0 +1,166 @@
+/**
+ * The parts of a hand-built `World` that a test does not care about.
+ *
+ * ⚠️ **This exists because a `World` gained nine fields in one change and three test fixtures each
+ * had to be told about all of them.** Two of those fields — the level script and the boss — would
+ * have made every combat fixture start spawning waves at it, which is not a fixture failing, it is a
+ * fixture quietly measuring something else.
+ *
+ * So the answer is not *"add the fields to each literal"*: it is one place that says **what an inert
+ * level is**, cited by every fixture that wants no level at all. `docs/decisions/0029-the-tracked-record-is-the-record.md`
+ * is the same argument about prose — a second copy drifts, and here it would drift into three
+ * fixtures whose subject is collision.
+ */
+
+import { Pool } from '../src/sim/pool.ts';
+import { type Entity, makeEntity, reset } from '../src/sim/entity.ts';
+import { BOSSES } from '../src/content/bosses.ts';
+import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../src/content/enemies.ts';
+import type { LevelRow } from '../src/content/levels.ts';
+import { SHIPS } from '../src/content/ships.ts';
+import { SPECIAL_BINDINGS } from '../src/content/actions.ts';
+import { DEFAULT_ASSISTS, tuningFor } from '../src/sim/assist.ts';
+import { ACROSS_SPAN } from '../src/sim/camera.ts';
+import { makeDeaths } from '../src/sim/collide.ts';
+import { holdStation, SCROLL_PER_STEP } from '../src/sim/flight.ts';
+import { makeIntent } from '../src/sim/intent.ts';
+import { makeRng } from '../src/sim/rng.ts';
+import { SHIP_START_ALONG, type World } from '../src/app/frame.ts';
+import type { Intent } from '../src/sim/intent.ts';
+import type { Surface } from '../src/render/surface.ts';
+import { viewOf } from '../src/sim/camera.ts';
+
+/**
+ * A level that never spawns anything and whose boss never arrives.
+ *
+ * `Infinity` rather than a large number: a fixture that ran long enough to pass a big one would
+ * start a boss fight in the middle of an assertion about bullets, and would do it only sometimes.
+ */
+export const NO_LEVEL: LevelRow = { waves: [], bossAt: Number.POSITIVE_INFINITY, boss: 'sentinel' };
+
+/** The kind-to-index lookup, built the same way `mount.ts` builds it rather than restated. */
+export function enemyKindIndices(): Record<EnemyKind, number> {
+  const out = {} as Record<EnemyKind, number>;
+  ENEMY_KINDS.forEach((k, index) => {
+    out[k] = index;
+  });
+  return out;
+}
+
+/**
+ * Everything a `World` needs that a collision or interpolation fixture has no opinion about.
+ *
+ * Spread into a literal, so the fixture still writes out every field it DOES care about — the point
+ * is to stop unrelated fields from being restated three times, not to hide the world behind a
+ * builder nobody can read.
+ */
+export function inertLevel(): {
+  enemyKinds: Record<EnemyKind, number>;
+  level: LevelRow;
+  nextWave: number;
+  bossRow: typeof BOSSES.sentinel;
+  bossPool: Pool<Entity>;
+  bossSpawned: boolean;
+  bossBeaten: boolean;
+  bossPatrol: number;
+  onCleared: () => void;
+} {
+  return {
+    enemyKinds: enemyKindIndices(),
+    level: NO_LEVEL,
+    nextWave: 0,
+    bossRow: BOSSES.sentinel,
+    bossPool: new Pool<Entity>(1, makeEntity),
+    bossSpawned: false,
+    bossBeaten: false,
+    bossPatrol: 1,
+    onCleared: (): void => {},
+  };
+}
+
+/** A surface that draws nothing, so a fixture can drive the real frame with no canvas anywhere. */
+class NullSurface implements Surface {
+  clear(): void {}
+  blit(): void {}
+}
+
+/**
+ * A whole `World`, composed the way `src/app/mount.ts` composes one, for a level given to it.
+ *
+ * ⚠️ **This is what makes a boss fight testable at all.** The fight is a state machine spread across
+ * `src/app/boss.ts`, the collision pairings and the wave script, and the only honest way to check it
+ * is to run it — `docs/decisions/0015-the-layer-ladder.md` says the whole point of keeping the model
+ * free of the DOM is that a stage can be played to completion without a browser. This is that claim
+ * being cashed.
+ *
+ * Deaths are counted rather than acted on, and `cleared` records whether the level ever ended.
+ */
+export function playableWorld(level: LevelRow): {
+  world: World;
+  deaths: { count: number };
+  cleared: { count: number };
+} {
+  const shipPool = new Pool<Entity>(1, makeEntity);
+  const enemies = new Pool<Entity>(40, makeEntity);
+  const playerShots = new Pool<Entity>(80, makeEntity);
+  const enemyShots = new Pool<Entity>(150, makeEntity);
+  const debris = new Pool<Entity>(200, makeEntity);
+  const bossPool = new Pool<Entity>(1, makeEntity);
+
+  const enemyRows: readonly EnemyRow[] = ENEMY_KINDS.map((k) => ENEMIES[k]);
+  const shipRow = SHIPS.proof;
+  const ship = shipPool.spawn()!;
+  reset(ship, SHIP_START_ALONG, ACROSS_SPAN / 2, shipRow);
+  holdStation(ship, SCROLL_PER_STEP);
+
+  const deaths = { count: 0 };
+  const cleared = { count: 0 };
+
+  const world: World = {
+    layers: [debris, bossPool, enemies, enemyShots, playerShots, shipPool],
+    shipPool,
+    enemies,
+    playerShots,
+    enemyShots,
+    debris,
+    deaths: makeDeaths(40),
+    burstRng: makeRng('test').stream('burst'),
+    view: viewOf(1280, 720),
+    surface: new NullSurface(),
+    rng: makeRng('test').stream('spawns'),
+    cameraAlong: 0,
+    prevCameraAlong: 0,
+    scrollPerStep: SCROLL_PER_STEP,
+    fireIn: shipRow.fireEvery,
+    ship,
+    shipRow,
+    enemyRows,
+    enemyKinds: enemyKindIndices(),
+    tuning: tuningFor(DEFAULT_ASSISTS),
+    input: {
+      contribute(intent: Intent): void {
+        // A fixture flies nothing. The ship holds station, which is the honest baseline for a
+        // question about whether the LEVEL works rather than about whether a hand can survive it.
+        intent.along = 0;
+        intent.across = 0;
+      },
+      release(): void {},
+    },
+    intent: makeIntent(SPECIAL_BINDINGS),
+    stepping: true,
+    onDeath: (): void => {
+      deaths.count++;
+    },
+    level,
+    nextWave: 0,
+    bossRow: BOSSES[level.boss],
+    bossPool,
+    bossSpawned: false,
+    bossBeaten: false,
+    bossPatrol: 1,
+    onCleared: (): void => {
+      cleared.count++;
+    },
+  };
+  return { world, deaths, cleared };
+}

@@ -16,7 +16,7 @@ import type { ShotKind } from './shots.ts';
 import { SPRITE } from './sprites.ts';
 
 /** Every enemy in the game. Closed. */
-export type EnemyKind = 'drifter' | 'lancer';
+export type EnemyKind = 'drifter' | 'lancer' | 'weaver' | 'turret' | 'charger';
 
 export interface EnemyRow extends Body {
   /**
@@ -31,10 +31,32 @@ export interface EnemyRow extends Body {
   fireEvery: number;
   /** What it fires. Ignored when `fireEvery` is `0`. */
   shot: ShotKind;
+  /**
+   * How far it swings either side of the line it was spawned on, in world units. `0` flies straight.
+   *
+   * ── WHY TWO NUMBERS AND NOT A `motion` UNION ────────────────────────────────────────────────────
+   *
+   * A closed union of motion kinds — `'straight' | 'weave' | 'dive'` — is the shape
+   * `docs/decisions/0016-a-hub-enumerates-kinds.md` reaches for, and it is the wrong one *here*,
+   * because a straight line is a weave of amplitude zero. A union would enumerate two members that
+   * are one member with a parameter, and every consumer would carry a `switch` proving it.
+   *
+   * The union earns its place the moment a motion arrives that is **not** a parameterisation of this
+   * one — something that turns towards the player, or stops. That is a real trigger rather than a
+   * someday, and it is named here so the next person does not have to re-derive it.
+   *
+   * ⚠️ **The path is a function of `along`, not of elapsed time.** Two of these spawned four seconds
+   * apart trace the same shape through the same piece of world, which is what makes a level
+   * authorable — a formation is a picture, not a coincidence of when it happened to be created.
+   * A weaver with `closing: 0` therefore does not weave at all, because it never moves along.
+   */
+  weaveAmplitude: number;
+  /** World units along per complete swing. Ignored when `weaveAmplitude` is `0`. */
+  weaveWavelength: number;
 }
 
 /** Written out rather than derived, so the table below cannot quietly lose a row. */
-export const ENEMY_KINDS: readonly EnemyKind[] = ['drifter', 'lancer'];
+export const ENEMY_KINDS: readonly EnemyKind[] = ['drifter', 'lancer', 'weaver', 'turret', 'charger'];
 
 export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   /**
@@ -55,6 +77,8 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     closing: 0,
     fireEvery: 0,
     shot: 'spit',
+    weaveAmplitude: 0,
+    weaveWavelength: 0,
   },
   /**
    * Closes, and shoots where the ship is. Aimed rather than sprayed, because the quantity this whole
@@ -75,5 +99,76 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     closing: 0.35,
     fireEvery: 75,
     shot: 'spit',
+    weaveAmplitude: 0,
+    weaveWavelength: 0,
+  },
+  /**
+   * Crosses the lane while it closes, and never fires.
+   *
+   * The one enemy whose threat is **where it will be** rather than what it sends. A drifter is a
+   * target and a lancer is a shot to dodge; this is neither, and it is the first thing in the game
+   * that makes the player lead a moving object with the auto-fire they otherwise never think about.
+   *
+   * ⚠️ **Amplitude 9, which is a bound of 18 and not of 9.** The path is `across₀ + A·(sin k·along −
+   * sin k·along₀)`: every weaver traces a full swing of ±A, but where that swing is CENTRED depends
+   * on the phase it happened to spawn at, and that shifts it by up to another A. So the lane a wave
+   * is authored on has to leave `2A` clear on both sides, not `A` — `tests/level.test.ts` checks
+   * every authored wave against that bound rather than trusting the author to have done the algebra.
+   */
+  weaver: {
+    sprite: SPRITE.weaver,
+    spriteHit: SPRITE.weaverHit,
+    radius: 2.2,
+    health: 1,
+    damage: 2,
+    closing: 0.5,
+    fireEvery: 0,
+    shot: 'spit',
+    weaveAmplitude: 7,
+    // 110 units is about 3 seconds of camera at the current scroll — roughly one full swing per
+    // crossing of the screen, so the shape is legible rather than a vibration.
+    weaveWavelength: 110,
+  },
+  /**
+   * Holds its ground and fires faster than anything else.
+   *
+   * ⚠️ **Three health, so it is the first thing that cannot be cleared in passing.** The player has
+   * to choose between spending time on it and living with it, which is the choice a level is made
+   * of. `closing: 0` means it arrives with the world rather than coming to meet you — so it is
+   * always on screen for a known amount of time, and a formation can be authored around that.
+   */
+  turret: {
+    sprite: SPRITE.turret,
+    spriteHit: SPRITE.turretHit,
+    radius: 3.7,
+    health: 3,
+    damage: 2,
+    closing: 0,
+    // Faster than the lancer's 75 and it is the whole of what this enemy is. `docs/state-of-play.md`
+    // says no enemy shot has ever landed on an attentive player; this is the row that tests that.
+    fireEvery: 48,
+    shot: 'spit',
+    weaveAmplitude: 0,
+    weaveWavelength: 0,
+  },
+  /**
+   * Comes straight at you, fast, and dies to one shot.
+   *
+   * A pure contact threat: no weapon, one health, and roughly three times the lancer's closing
+   * speed. It punishes a player who is looking at the wrong part of the lane, and it rewards the
+   * auto-fire they already have — which is the right shape for the first fast thing in a game whose
+   * skill is *surviving the onslaught, not mashing a fire button*.
+   */
+  charger: {
+    sprite: SPRITE.charger,
+    spriteHit: SPRITE.chargerHit,
+    radius: 2.4,
+    health: 1,
+    damage: 2,
+    closing: 1.1,
+    fireEvery: 0,
+    shot: 'spit',
+    weaveAmplitude: 0,
+    weaveWavelength: 0,
   },
 };
