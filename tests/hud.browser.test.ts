@@ -152,11 +152,18 @@ describe.runIf(chromePath)('the in-game readout', () => {
     await page.context().close();
   });
 
-  it('shows a spent pip as EMPTY rather than as a different colour', async () => {
+  it('follows the ship down as it takes hits, and shows a spent pip as EMPTY', async () => {
     /*
-      ⚠️ **THE FIRST VERSION OF THIS COUNTED PIPS AND CALLED ITSELF DONE**, which `npm run prove`
-      caught: a probe that replaced the fill difference with an opacity change stayed GREEN, because
-      nothing here had ever looked at what *spent* actually renders as.
+      ⚠️ **TWO PROPERTIES, ONE DRIVE, AND THE MERGE IS ABOUT TIME RATHER THAN TIDINESS.** These were
+      two tests, each waiting about twelve seconds for the fixture to be hit — which is a direct cost
+      of `docs/decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md` emptying the opening
+      screen, and it is paid **once per probe**: `npm run prove` runs this suite for every probe that
+      names it, and CI's test job went from five minutes to ten. They observe the same event, so they
+      wait for it once.
+
+      ⚠️ **THE FIRST VERSION OF THE SECOND HALF COUNTED PIPS AND CALLED ITSELF DONE**, which
+      `npm run prove` caught: a probe that replaced the fill difference with an opacity change stayed
+      GREEN, because nothing here had ever looked at what *spent* actually renders as.
 
       `docs/decisions/0024-the-accessibility-floor-is-settings.md` puts *colour never carries meaning
       alone* in the unconditional tier, and a shield readout is the most tempting place in the game to
@@ -190,28 +197,19 @@ describe.runIf(chromePath)('the in-game readout', () => {
     expect(spent[0]!.background, `a spent pip is filled with ${spent[0]!.background}`).toMatch(transparent);
     expect(full[0]!.background, 'a full pip is not filled at all').not.toMatch(transparent);
     expect(spent[0]!.border, 'spent and full pips differ by colour rather than by fill').toBe(full[0]!.border);
-    await page.context().close();
-  });
 
-  it('follows the ship down as it takes hits', async () => {
     /*
-      ⚠️ **THE ONE THAT MATTERS, and it is driven rather than asserted from the outside.** A readout
-      that renders once and never updates looks completely correct in a screenshot —
+      ⚠️ **AND THAT THE READOUT MOVED AT ALL, which is the half a screenshot cannot see.** A HUD that
+      renders once and never updates looks completely correct in a still image —
       `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` is the rule that a
-      thing the model resolves has to reach the picture, and a HUD is the purest case of it.
-
-      The fixture does not dodge, so it takes contact damage from the first wave. Waited on rather
-      than timed: `waitForFunction` polls until the readout has actually moved, which is the same
-      reason `tests/frames.ts` counts frames instead of milliseconds.
+      thing the model resolves has to reach the picture, and a readout is the purest case of it.
     */
-    const page = await open();
-    await page.click('.' + prefixFor('title') + 'action');
-    await page.waitForFunction(
-      () => document.querySelectorAll('.itc-playing-hud-spent').length > 0,
-      { timeout: 40_000 },
+    expect(spent.length, 'the ship took a hit and the shield readout did not move').toBeGreaterThan(0);
+    const label = await page.getAttribute('.itc-playing-hud-group[role="img"]', 'aria-label');
+    expect(label, 'the spoken readout did not follow the ship down').not.toContain(
+      'Shield ' + String(SHIPS.proof.health),
     );
-    const spent = await page.evaluate(() => document.querySelectorAll('.itc-playing-hud-spent').length);
-    expect(spent, 'the ship took a hit and the shield readout did not move').toBeGreaterThan(0);
     await page.context().close();
   });
+
 });

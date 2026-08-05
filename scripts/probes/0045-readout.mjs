@@ -26,7 +26,7 @@ export const PROBES = [
     // ⚠️ THE ONE A SCREENSHOT CANNOT SEE. The readout is drawn correctly once and then never again;
     // every still image of the game looks exactly right.
     broke: 'the readout rendered once and never updated',
-    guard: 'follows the ship down as it takes hits',
+    guard: 'follows the ship down as it takes hits, and shows a spent pip as EMPTY',
     edit: {
       path: 'src/app/frame.ts',
       find: '    if (w.ship.health !== w.shownHealth) {',
@@ -39,7 +39,7 @@ export const PROBES = [
     // Colour carrying the meaning by itself, which is what every other shooter does and what 0024
     // puts in the unconditional tier against.
     broke: 'spent shield shown as a colour change rather than a hollow pip',
-    guard: 'shows a spent pip as EMPTY rather than as a different colour',
+    guard: 'follows the ship down as it takes hits, and shows a spent pip as EMPTY',
     edit: {
       path: 'src/app/chrome.ts',
       find: "        pips[i]!.classList.toggle('itc-playing-hud-spent', i >= health);",
