@@ -92,25 +92,24 @@ const STYLE = `
   ⚠️ An outline OFFSET from the border, not a colour change. A focus ring that only recolours is
   invisible to the high-contrast and colour-blind palettes 0024 promises, and those palettes exist
   precisely so no cue is carried by colour alone.
-*/
-.itc-title-action:focus-visible,
-.itc-gameover-action:focus-visible,
-.itc-cleared-action:focus-visible,
-.itc-victory-action:focus-visible {
-  outline: 3px solid currentColor;
-  outline-offset: 3px;
-}
-/*
-  ⚠️ **The focus ring is drawn for the PAD too, and :focus-visible alone would not do it.** A
-  browser decides :focus-visible from how the focus arrived, and focus moved by the menu reader
-  arrives by script — which most engines classify as not-visible, so a player navigating with a
-  stick would watch a menu with no cursor in it at all. The class below is set by the chrome itself
-  whenever it moves focus, and it says the same thing in the same ink. See decision 0046.
+
+  ⚠️ **The -cursor classes sit in the SAME rule, and that is not tidiness.** A browser decides
+  :focus-visible from how the focus arrived, and focus moved by the menu reader arrives by script —
+  which most engines classify as not-visible, so a pad player would navigate a menu with no cursor
+  in it at all. The chrome therefore sets a class of its own; and it has to draw the IDENTICAL ring,
+  because two devices reaching the same control must not produce two pictures. A second rule saying
+  the same thing in the same words is a second description, and this one was written that way first
+  and immediately broke 0039's probe — which anchors on this declaration precisely because there was
+  only ever one of it. See decision 0046.
 
   ⚠️ Neither backticks NOR file paths in here. It is a template literal, so a backtick ends the
   string; and the prefix guard reads every dotted token in this block as a CSS class, so a path with
   an extension on it fails as an unprefixed class name. Both were hit while writing this comment.
 */
+.itc-title-action:focus-visible,
+.itc-gameover-action:focus-visible,
+.itc-cleared-action:focus-visible,
+.itc-victory-action:focus-visible,
 .itc-title-action-cursor,
 .itc-gameover-action-cursor,
 .itc-cleared-action-cursor,

@@ -77,6 +77,12 @@ export const PROBES = [
       // anchored on the latter and went stale within a day: adding the `cleared` screen extended
       // that selector list and `npm run prove` refused the probe. A rule every new screen has to
       // join is a bad anchor; this one is a property of the button, which is not per-screen.
+      //
+      // ⚠️ It went ambiguous once more, in CI, when 0046 added a pad cursor as a SECOND rule
+      // declaring the same outline — `find` appeared twice and the harness refused it, exactly as it
+      // is supposed to. The repair is in the stylesheet rather than here: one ring, one declaration,
+      // both selectors on it. A probe anchored on a declaration is a probe that notices the day
+      // something else starts declaring it, which is worth more than an anchor that never complains.
       find: '  outline: 3px solid currentColor;',
       replace: '  outline: 3px solid currentColor;\n}\n.hud {\n  opacity: 1;',
     },
