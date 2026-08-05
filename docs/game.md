@@ -187,6 +187,10 @@ arsenal's work, and nothing triggers a special yet.
 because a death empties the arsenal. That is a constraint on every level ever authored, and it is
 guarded rather than remembered.
 
+**The title screen carries a key** — every pickup, its real sprite, and what it does.
+[0045](decisions/0045-the-player-can-see-what-they-are-carrying.md). The enemies deliberately get no
+key: an enemy announces itself by shooting at you, and a pickup announces nothing.
+
 ## Levels, bosses and hazards
 
 Themed on the fourteen *Far Carry* biomes, split into difficulty tiers. Each level gets its own

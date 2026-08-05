@@ -46,6 +46,18 @@ export type PickupEffect = 'life' | 'upgrade';
 export interface PickupRow extends Body {
   /** What the player would call it. Terse, per `docs/game.md`'s voice rule. */
   label: string;
+  /**
+   * What taking it does, in the fewest words that say it.
+   *
+   * ⚠️ **Player-facing text, and it lives on the ROW rather than in the chrome that shows it.** The
+   * title screen's key is built by walking `PICKUP_KINDS`, so a pickup added to the table appears in
+   * the key without anybody remembering to add it — which is the whole point of the table being the
+   * hub. A list of explanations in `src/app/chrome.ts` would be a second description of the content.
+   *
+   * Terse, per `docs/game.md`'s voice rule: *no explanatory commentary, no restating what the screen
+   * already shows.* Three words is the target, not the limit anybody is pushing against.
+   */
+  hint: string;
   effect: PickupEffect;
 }
 
@@ -65,6 +77,7 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     health: 1,
     damage: 0,
     label: 'Extra life',
+    hint: 'One more try',
     effect: 'life',
   },
   /** Faster auto-fire. `docs/game.md`'s first-named upgrade, and the one felt soonest. */
@@ -75,6 +88,7 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     health: 1,
     damage: 0,
     label: 'Rapid fire',
+    hint: 'Shoot faster',
     effect: 'upgrade',
   },
   /**
@@ -88,6 +102,7 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     health: 1,
     damage: 0,
     label: 'Spread',
+    hint: 'Another barrel',
     effect: 'upgrade',
   },
 };

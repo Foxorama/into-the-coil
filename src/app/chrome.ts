@@ -31,6 +31,8 @@
 
 import { SCREENS, type Screen } from '../state/screens.ts';
 import type { Palette } from '../content/palette.ts';
+import { PICKUPS, PICKUP_KINDS } from '../content/pickups.ts';
+import { bakeAtlas } from '../render/bake.ts';
 
 /**
  * The class prefix a screen's chrome owns.
@@ -98,6 +100,53 @@ const STYLE = `
   outline: 3px solid currentColor;
   outline-offset: 3px;
 }
+.itc-title-key {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  gap: 0.4em 0.8em;
+  align-items: center;
+  font-size: clamp(0.75rem, 2vw, 1rem);
+  font-weight: 400;
+  opacity: 0.85;
+}
+.itc-title-key-icon { display: block; width: 1.6em; height: 1.6em; }
+.itc-title-key-name { text-align: left; }
+.itc-title-key-hint { text-align: left; opacity: 0.7; }
+/*
+  ⚠️ The HUD is NOT inside a screen's overlay. Those are absolutely positioned over the whole page
+  and would swallow every pointer event on the playfield; this sits in a corner and takes no pointer
+  events at all, because nothing on it is a control.
+*/
+.itc-playing-hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: none;
+  gap: 1.2em;
+  align-items: center;
+  padding: 0.7em 1em;
+  font: 600 clamp(0.8rem, 2vw, 1.05rem)/1 system-ui, sans-serif;
+  pointer-events: none;
+}
+.itc-playing-hud-shown { display: flex; }
+.itc-playing-hud-group { display: flex; gap: 0.35em; align-items: center; }
+.itc-playing-hud-icon { display: block; width: 1.4em; height: 1.4em; }
+/*
+  ⚠️ A filled disc against a HOLLOW one, not two colours. Decision 0024 puts "colour never carries
+  meaning alone" in the unconditional tier, and a shield readout is the most tempting place in the
+  game to break it — full and empty are the same shape in two inks everywhere else in the genre.
+
+  ⚠️ No backticks anywhere in this stylesheet. It is a template literal, and the house style's
+  backtick-quoted file paths end the string — twice, while this block was being written.
+*/
+.itc-playing-hud-pip {
+  width: 0.7em;
+  height: 0.7em;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  background: currentColor;
+}
+.itc-playing-hud-spent { background: transparent; }
 `;
 
 /** A screen's overlay, and the control on it. */
@@ -107,9 +156,32 @@ interface Panel {
   action: HTMLButtonElement | null;
 }
 
+/**
+ * The resolution the chrome's own icons are baked at, in pixels per world unit.
+ *
+ * ⚠️ **Its own bake, deliberately not the atlas the game is drawing with.** That one is re-baked on
+ * every rotation and DPI change (`src/app/mount.ts`), and its bitmaps are the live objects the
+ * painter blits — appending one to the DOM would take it out of the atlas. This is a second bake at
+ * a fixed size, and it costs one pass over the sprite list at boot.
+ *
+ * ⚠️ **The icons are still the REAL art**, which is the whole point: a key drawn with hand-written
+ * SVG would be a second description of every silhouette, and the day an art pass changed one the key
+ * would quietly go on showing the old shape. `src/content/sprites.ts` records what a second
+ * description of the sprite table already cost this project once.
+ *
+ * ⚠️ **28 and not 12, and the difference was looked at rather than reasoned about.** The icons render
+ * at roughly 20 CSS pixels, so 12 per unit produced a source barely larger than its destination and
+ * the life icon showed visible pixel steps at the top of the screen. Baking well above the drawn size
+ * costs a few kilobytes once and is what the whole bake-and-blit pipeline is for — art that is a
+ * function of resolution rather than a fixed asset (0022).
+ */
+const ICON_PIXELS_PER_UNIT = 28;
+
 export interface Chrome {
   /** Everything to put on the page, in order. The stylesheet first. */
   elements: readonly HTMLElement[];
+  /** Redraw the in-game readout. Called on a change, never per frame. */
+  setHud(lives: number, health: number, maxHealth: number): void;
   /**
    * Show exactly one screen's chrome and hide the rest. `null` shows none of it, which is what the
    * rotate gate needs — an overlay left visible under the gate is a focusable button on a page whose
@@ -142,6 +214,19 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen) => void)
   const style = document.createElement('style');
   style.textContent = STYLE;
 
+  /** The chrome's own icons, at a fixed size, copied out of a bake so the atlas keeps its own. */
+  const icons = bakeAtlas(colours, 'side', ICON_PIXELS_PER_UNIT);
+  const iconOf = (sprite: number): HTMLCanvasElement => {
+    const source = icons.bitmaps[sprite];
+    const canvas = document.createElement('canvas');
+    const size = Math.max(8, Math.round(icons.extents[sprite]! * ICON_PIXELS_PER_UNIT));
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (ctx !== null && source !== undefined) ctx.drawImage(source, 0, 0, size, size);
+    return canvas;
+  };
+
   const panels: Partial<Record<Screen, Panel>> = {};
   const elements: HTMLElement[] = [style];
   const listeners: (() => void)[] = [];
@@ -162,6 +247,40 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen) => void)
     heading.textContent = row.heading;
     root.appendChild(heading);
 
+    /*
+      ⚠️ **THE KEY, ON THE TITLE SCREEN ONLY, AND IT IS THE UPGRADES AND NOT THE ENEMIES.** Asked for
+      in play: *"on the intro starting screen we need a quick user key of what each upgrade does. We
+      don't need a key for the enemies, but knowing that the upgrades are good pickups is important."*
+
+      That asymmetry is right and worth writing down: an enemy announces itself by shooting at you, so
+      the game teaches it in the only way that sticks. A pickup announces nothing — it is a small
+      shape in a lane, and a player who does not already know it is good will not fly across the lane
+      to find out.
+
+      Built by walking `PICKUP_KINDS`, so a pickup added to the table appears here without anybody
+      remembering to come and add it.
+    */
+    if (screen === 'title') {
+      const key = document.createElement('div');
+      key.className = prefix + 'key';
+      for (const pickup of PICKUP_KINDS) {
+        const row = PICKUPS[pickup];
+        const icon = iconOf(row.sprite);
+        icon.className = prefix + 'key-icon';
+        // Decorative: the name beside it is the accessible text, and a screen reader announcing
+        // "canvas" before every row would be noise rather than information.
+        icon.setAttribute('aria-hidden', 'true');
+        const name = document.createElement('span');
+        name.className = prefix + 'key-name';
+        name.textContent = row.label;
+        const hint = document.createElement('span');
+        hint.className = prefix + 'key-hint';
+        hint.textContent = row.hint;
+        key.append(icon, name, hint);
+      }
+      root.appendChild(key);
+    }
+
     let action: HTMLButtonElement | null = null;
     if (row.action !== null) {
       action = document.createElement('button');
@@ -178,9 +297,62 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen) => void)
     elements.push(root);
   }
 
+  /*
+    ── THE IN-GAME READOUT ─────────────────────────────────────────────────────────────────────────
+
+    Asked for in play: *"in game we need a life and shield tracker icons so the player has a clue."*
+
+    ⚠️ **"Shield" is the ship's health, and it is the player's word rather than the code's.** There is
+    also a `shield` in `src/content/specials.ts` — a special that absorbs a hit — and nothing triggers
+    one yet. If both ever exist at once it is the SPECIAL that gets renamed, because this is the word
+    a player already used for the thing that keeps them alive.
+
+    ⚠️ **Built once and mutated, never rebuilt.** `setHud` is called on a change rather than on a
+    frame (`src/app/frame.ts` only fires `onHealth` when the number actually moves), but rebuilding
+    the pip row from scratch on every hit would still churn layout for no reason. The pips exist from
+    boot at the ship's full health; a hit toggles a class.
+  */
+  const hud = document.createElement('div');
+  hud.className = 'itc-playing-hud';
+  hud.style.color = colours.player;
+
+  const livesGroup = document.createElement('div');
+  livesGroup.className = 'itc-playing-hud-group';
+  const livesIcon = iconOf(PICKUPS.extraLife.sprite);
+  livesIcon.className = 'itc-playing-hud-icon';
+  livesIcon.setAttribute('aria-hidden', 'true');
+  const livesCount = document.createElement('span');
+  livesGroup.append(livesIcon, livesCount);
+
+  const shieldGroup = document.createElement('div');
+  shieldGroup.className = 'itc-playing-hud-group';
+  // `role="img"` with a label, because a row of divs is not something a screen reader can read and
+  // the number is what matters — 0024's floor is that every cue has a twin, not that it is visual.
+  shieldGroup.setAttribute('role', 'img');
+  const pips: HTMLElement[] = [];
+  hud.append(livesGroup, shieldGroup);
+  elements.push(hud);
+
   return {
     elements,
+    setHud(lives: number, health: number, maxHealth: number): void {
+      livesCount.textContent = '×' + String(Math.max(0, lives));
+      livesGroup.setAttribute('aria-label', String(Math.max(0, lives)) + ' lives');
+      // Grown once, to whatever the ship's full health turns out to be. A later ship with a different
+      // maximum is a table edit, not a rewrite of this.
+      while (pips.length < maxHealth) {
+        const pip = document.createElement('div');
+        pip.className = 'itc-playing-hud-pip';
+        pips.push(pip);
+        shieldGroup.appendChild(pip);
+      }
+      for (let i = 0; i < pips.length; i++) {
+        pips[i]!.classList.toggle('itc-playing-hud-spent', i >= health);
+      }
+      shieldGroup.setAttribute('aria-label', 'Shield ' + String(Math.max(0, health)) + ' of ' + String(maxHealth));
+    },
     show(screen: Screen | null): void {
+      hud.classList.toggle('itc-playing-hud-shown', screen === 'playing');
       for (const name of Object.keys(panels) as Screen[]) {
         const panel = panels[name];
         if (panel === undefined) continue;
