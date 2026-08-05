@@ -160,6 +160,25 @@ export interface World {
   input: InputSource;
   /** This step's ask. One instance, overwritten in place; never allocated in a frame. */
   intent: Intent;
+  /**
+   * Whether the simulation advances. Set by the shell from the current screen's `steps`.
+   *
+   * ⚠️ **The frame stops STEPPING and keeps DRAWING**, which is the opposite of what the rotate gate
+   * does and is right for a different reason. The gate hides a view that would be actively
+   * misleading; a game-over screen sits over the wreck that explains itself, and
+   * `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` is the rule that
+   * the picture has to keep saying what happened.
+   */
+  stepping: boolean;
+  /**
+   * The ship reached zero health.
+   *
+   * ⚠️ **The frame reports it and decides nothing.** What a death costs is
+   * `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md`'s subject and it lives in
+   * `src/state/` — this file cannot know whether a life remains, and the version that did know was
+   * the `restart()` placeholder this replaced.
+   */
+  onDeath: () => void;
 }
 
 export class GameFrame implements Frame {
@@ -167,6 +186,9 @@ export class GameFrame implements Frame {
 
   step(): void {
     const w = this.world;
+    // A screen that does not step, per `src/state/screens.ts`. The draw below still runs, so the
+    // scene the run ended in stays on the page underneath the overlay.
+    if (!w.stepping) return;
     w.prevCameraAlong = w.cameraAlong;
     w.cameraAlong += w.scrollPerStep;
 
@@ -216,7 +238,9 @@ export class GameFrame implements Frame {
 
     if (w.ship.health <= 0) {
       burst(w, w.ship.along, w.ship.across, BURST.ship);
-      restart(w);
+      // The shell spends a life and decides what happens next — it may call `respawn` before this
+      // step is over, or it may raise the game-over screen and leave the wreck where it is.
+      w.onDeath();
     }
 
     w.spawnIn--;
@@ -344,24 +368,37 @@ function spawnEnemy(w: World): void {
 }
 
 /**
- * The ship ran out of health.
+ * Put the ship back after a death the run survived.
  *
- * ⚠️ **The scene restarts; the RUN does not, because there is no run.** A game-over screen needs
- * `src/state/`, which does not exist and whose creation is its own decision under
- * `docs/decisions/0015-the-layer-ladder.md`. Landing it here would put three decisions in one PR.
- * What this has to do is make death legible enough that a play-test verdict about the dodge is about
- * the dodge — and an emptied screen with the ship back at the start does that.
+ * Called by the shell, not from the step above — `docs/decisions/0039-…` puts the cost of a death in
+ * `src/state/`, and this is only the half of it that moves an entity.
+ *
+ * ⚠️ **Debris is NOT cleared, and it is the one thing on screen that survives a death.** The burst
+ * marking where the ship died is the clearest signal in the game that a life just ended; wiping it
+ * on the same step would delete the explanation along with the cause.
  */
-function restart(w: World): void {
+export function respawn(w: World): void {
   w.enemies.clear();
   w.playerShots.clear();
   w.enemyShots.clear();
-  // ⚠️ Debris is NOT cleared, and that is the one thing on screen that survives a death. The burst
-  // marking where the ship died is the clearest signal in the game that a run just ended; wiping it
-  // on the same step would delete the explanation along with the cause.
   reset(w.ship, w.cameraAlong + SHIP_START_ALONG, ACROSS_SPAN / 2, w.shipRow);
   holdStation(w.ship, w.scrollPerStep);
   w.ship.invulnFor = INVULN_STEPS;
   w.fireIn = w.shipRow.fireEvery;
   w.spawnIn = SPAWN_EVERY;
+}
+
+/**
+ * Everything `respawn` does, plus the state that belongs to the run rather than to the life: the
+ * camera goes back to the start and the debris of the last run is swept.
+ *
+ * ⚠️ **The camera reset is what makes two runs the same run.** Distance travelled is the only clock
+ * a level has — a wave table places its content against `cameraAlong` — so a second run that started
+ * where the first one ended would be playing a different level with the same name.
+ */
+export function resetScene(w: World): void {
+  w.cameraAlong = 0;
+  w.prevCameraAlong = 0;
+  w.debris.clear();
+  respawn(w);
 }

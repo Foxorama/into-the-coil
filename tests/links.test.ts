@@ -56,12 +56,23 @@ function trackedPaths(): Set<string> | null {
   return out;
 }
 
-/** Every markdown file that is tracked prose. `node_modules` and `dist` are neither. */
+/**
+ * Directories with no prose in them worth checking.
+ *
+ * ⚠️ **This used to be `name.startsWith('.')`, and that skipped `.github/`.** The intent was to
+ * avoid walking `.git`, and the shorthand quietly took a tracked directory with it —
+ * `.github/PULL_REQUEST_TEMPLATE.md` is prose every contributor reads, and it was outside the scan
+ * from the day the scan was written. It had no links at the time, so nothing was broken; a guard
+ * with a hole in it that happens to be empty is still a guard with a hole in it.
+ */
+const NOT_PROSE = new Set(['node_modules', 'dist', '.git']);
+
+/** Every markdown file that is tracked prose. */
 function markdownFiles(): string[] {
   const out: string[] = [];
   const walk = (dir: string): void => {
     for (const entry of readdirSync(resolve(root, dir), { withFileTypes: true })) {
-      if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name.startsWith('.')) continue;
+      if (NOT_PROSE.has(entry.name)) continue;
       const path = dir === '' ? entry.name : `${dir}/${entry.name}`;
       if (entry.isDirectory()) walk(path);
       else if (entry.name.endsWith('.md')) out.push(path);
@@ -121,6 +132,17 @@ describe('the prose does not cite things that are not there', () => {
         '\nA citation that rots reads exactly like one that works, which is the cost of the rule ' +
         'that everything cites rather than summarises (0029). A GITIGNORED target is the same defect ' +
         'wearing a disguise: it resolves on the machine that wrote it and on no other.',
+    ).toEqual([]);
+  });
+
+  it('walks the dot-directories that hold prose, and not the ones that hold git', () => {
+    // The hole this closes, asserted rather than described: a scan that skips every dotted directory
+    // looks identical to one that skips the right ones.
+    const files = markdownFiles();
+    expect(files, 'the contributor-facing template is outside the scan').toContain('.github/PULL_REQUEST_TEMPLATE.md');
+    expect(
+      files.filter((f) => f.startsWith('.git/')),
+      'the scan is walking git internals',
     ).toEqual([]);
   });
 

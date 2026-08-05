@@ -24,31 +24,30 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | three input devices, input is actions | [0030](decisions/0030-input-is-actions-and-needs-no-new-layer.md), [0032](decisions/0032-touch-is-relative-drag-and-not-a-stick.md) |
 | bullets, contact, death | [0034](decisions/0034-a-threat-is-absolute-and-a-pool-is-the-pairing.md) |
 | damage is legible; a death is drawn | [0035](decisions/0035-damage-is-legible-on-the-body-that-took-it.md), [0036](decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md) |
-| **flight — all four constants have a hand behind them** | [0037](decisions/0037-the-ship-has-mass.md), [`inertia-played`](../reports/inertia-played-2026-08-05.md) |
+| flight — all four constants have a hand behind them | [0037](decisions/0037-the-ship-has-mass.md), [`inertia-played`](../reports/inertia-played-2026-08-05.md) |
+| **what a run is: three lives, and a death costs the arsenal** | [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
+| the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were
-deliberately left alone. That was the entire purpose of building something that could kill the
-player — [`drag-feel`](../reports/drag-feel-2026-08-05.md) has the ordering and
+deliberately left alone — [`drag-feel`](../reports/drag-feel-2026-08-05.md) has the ordering and
 [`inertia-played`](../reports/inertia-played-2026-08-05.md) closes it.
+
+⚠️ **`STARTING_LIVES` is NOT closed.** Three is a starting point placed by a hand, in the same
+category [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) puts it in as the
+flight constants before they were played. It cannot be settled before there is a full level to lose
+it in.
 
 ## What the game currently is
 
-A proof scene in `src/app/frame.ts`, and its own comment says it is not the game: one ship, two
-enemy kinds, one shot each way, one spawn rule, and a death that restarts the scene in place.
-Difficulty was placed by a hand at *"intro to 50% of the first level"* —
-[`ship-speed-settled`](../reports/ship-speed-settled-2026-08-05.md).
+A proof scene in `src/app/frame.ts`, wrapped in a real run: a title screen, three lives, a death that
+spends one, and a game over that ends it. Its own comment still says the scene is not the game — one
+ship, two enemy kinds, one shot each way, one spawn rule. Difficulty was placed by a hand at *"intro
+to 50% of the first level"* — [`ship-speed-settled`](../reports/ship-speed-settled-2026-08-05.md).
 
 ## What is next, and why in this order
 
-**1 — `src/state/`: screens, a run, a real game over.**
-
-A new directory under `src/` is a decision and fails `tests/layering.test.ts` until one is written —
-[0015](decisions/0015-the-layer-ladder.md). It comes before waves because a wave table wants to know
-which level it is in, `save/` requires it, and `restart()` in `frame.ts` is a placeholder for run
-state. **Building waves first means building the run concept twice.**
-
-**2 — Waves, and the first real level content.**
+**1 — Waves, and the first real level content.**
 
 ⚠️ **This is where the bullet threat model finally gets exercised, and it has never been felt.** Every
 hit in every play-test so far has been *contact*; no enemy shot has ever landed on an attentive
@@ -62,28 +61,40 @@ edge because there is one spawn rule, not because of any constraint —
 [`enemy-silhouettes`](../reports/enemy-silhouettes-2026-08-05.md) has the argument, and names the one
 real gap that comes with it (there is no `across` cull).
 
-**3 — `save/`, and the first `itc_*` key.**
+And owed by [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md): **a level's
+pickup density is load-bearing** now that a death empties the arsenal, and **extra lives are
+findable**, which is the first pickup whose effect is on the run rather than on the ship.
 
-Requires `state/`. Lands with `PRIVACY.md`'s storage-key table and a guard cross-checking `src/` in
-both directions, which `docs/scaffold-plan.md` has been holding open since the scaffold *"until the
-first one is real"*. Carries a rollback note — [0001](decisions/0001-revertability-not-risk-rating.md).
+**2 — `save/`, and the first `itc_*` key.**
 
-**4 — The arsenal: specials, and weapon upgrades.**
+Requires the run slice, which now exists. Lands with `PRIVACY.md`'s storage-key table and a guard
+cross-checking `src/` in both directions, which `docs/scaffold-plan.md` has been holding open since
+the scaffold *"until the first one is real"*. Carries a rollback note —
+[0001](decisions/0001-revertability-not-risk-rating.md). The schema it persists is decided:
+[0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) says current lives, current
+arsenal, and the level to resume at.
 
-`docs/game.md`: *the arsenal is a LIST, never a slot*, and it calls that a code constraint rather
-than a flourish. The input half already exists — `SPECIAL_BINDINGS` and `Intent.specials` — and
-nothing consumes it. Best done after `save/` exists so the schema is designed with a list from day
-one rather than migrated into one.
+**3 — The arsenal: specials, and weapon upgrades.**
+
+`src/content/specials.ts` has the union and the rows; nothing fires one. The input half has existed
+since [0030](decisions/0030-input-is-actions-and-needs-no-new-layer.md) — `SPECIAL_BINDINGS` and
+`Intent.specials` — and nothing consumes it either. The run slice already carries the arsenal as a
+list, so this adds behaviour to a shape rather than changing one.
 
 ## Deliberately not next
 
-**Level content and the character roster**, beyond what a wave table needs. `src/content/ships.ts`
-has one row and it is deliberately not one of `docs/game.md`'s four golfers; authoring characters is
-expensive to redo and it is downstream of everything above.
+**The character roster**, beyond what a wave table needs. `src/content/ships.ts` has one row and it is
+deliberately not one of `docs/game.md`'s four golfers; authoring characters is expensive to redo and
+it is downstream of everything above.
 
 **Anything about flight.** It is settled. The keyboard's eight directions are inherent to binary keys
 and are **not** a defect to be tuned away — [0037](decisions/0037-the-ship-has-mass.md) records why a
 ramp cannot fix it, so a later session need not rediscover that.
+
+**A pause screen and a settings screen.** Both are real and neither is urgent. They are also what
+[0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) names as the trigger for the
+back-intent switch [0017](decisions/0017-the-state-is-slices.md) still defers, so whichever lands
+first carries it.
 
 ## Still open, and small
 

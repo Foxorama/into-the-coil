@@ -70,7 +70,14 @@ measured before being set, and every one of them flagged the healthy file as lou
 The property that separated them each time was the shape of the dependencies, which is what these
 three decisions hold and what a number never sees.
 
-## Deferred, with the trigger named: the CSS prefix rule
+## Deferred, with the trigger named: the CSS prefix rule — LANDED
+
+✅ **Landed 2026-08-05**, on the trigger below, in the same PR as the first screen's chrome. The rule
+is `itc-<screen>-`, the single description of it is `prefixFor` in `src/app/chrome.ts`, and the guard
+is `tests/chrome.test.ts` — proved against the real stylesheet rather than against a fixture, which
+is what the deferral was for. See
+[0039](0039-a-run-is-lives-and-a-death-costs-the-arsenal.md). The original reasoning follows.
+
 
 Every screen's chrome should own a class prefix — `itc-<screen>-` — because CSS classes and DOM ids
 are global while the modules that write them cannot see each other. The predecessor took a real
