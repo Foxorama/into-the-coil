@@ -41,7 +41,7 @@ import { BURST, DEBRIS } from '../content/debris.ts';
 import { FORMATIONS } from '../content/formations.ts';
 import type { LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
-import { PICKUP_KINDS, type PickupKind, type PickupRow, type Weapon } from '../content/pickups.ts';
+import { PICKUP_KINDS, PLAYER_SHOT_LIFE, type PickupKind, type PickupRow, type Weapon } from '../content/pickups.ts';
 import { stepBoss } from './boss.ts';
 import type { Frame } from './loop.ts';
 
@@ -420,6 +420,15 @@ function fireShip(w: World): void {
     reset(shot, w.ship.along + MUZZLE_ALONG, w.ship.across, row);
     shot.velAlong = Math.cos(angle) * row.speed + w.scrollPerStep;
     shot.velAcross = Math.sin(angle) * row.speed;
+    // Weight, once barrels and rate have nowhere left to go — `src/content/pickups.ts`.
+    shot.damage = w.weapon.damage;
+    /*
+      ⚠️ **A lifetime, so a volley cannot outlive the screen and starve the next one.** Without it a
+      shot runs to the leading cull, eighty units beyond the furthest edge of the widest device, and
+      at a full loadout the pool stays full — which truncates every volley from the back and is
+      exactly the *"two streams continuous and the others stutter"* that play reported.
+    */
+    shot.lifeFor = PLAYER_SHOT_LIFE;
   }
 }
 

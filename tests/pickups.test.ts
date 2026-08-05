@@ -10,6 +10,7 @@ import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { GameFrame } from '../src/app/frame.ts';
 import { initialState, reduce } from '../src/state/root.ts';
 import { playableWorld } from './world.ts';
+import { CAPACITY } from '../src/app/mount.ts';
 
 /**
  * WHAT A PICKUP IS WORTH, AND WHAT A DEATH TAKES BACK.
@@ -75,6 +76,50 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
     const weapon = weaponFor(SHIPS.proof, many);
     expect(weapon.fireEvery, 'auto-fire outruns the impact flash and hits stop being countable').toBeGreaterThanOrEqual(4);
     expect(Number.isFinite(weapon.fireEvery)).toBe(true);
+  });
+
+  it('a volley is never truncated, however heavily the ship is loaded', () => {
+    /*
+      ⚠️ **THE BUG THIS GUARD EXISTS FOR, REPORTED FROM PLAY.** *"If you get too many weapon upgrades
+      the weapon fire seems to get to two streams of bullets are continuous and the other streams slow
+      down and it's a bit weird."*
+
+      The cause was arithmetic nobody had done: barrels and fire rate multiplied with no ceiling, so a
+      full loadout asked for twelve bullets every four steps against a pool of eighty and a shot that
+      lived past the widest screen. The pool then refused the LATER barrels of every volley — the fan
+      is spawned in order — so the first streams fired continuously and the rest stuttered. Measured
+      at 284 of 900 steps spent at the cap.
+
+      Asserted as *the pool never fills*, which is the property, at a loadout far past anything two
+      levels can hand out. Every number involved — the barrel cap, the fire floor, the shot life and
+      the pool size — is one of four that have to agree, and this is the only place they are checked
+      against each other.
+    */
+    const everything: UpgradeKind[] = [];
+    for (let i = 0; i < 15; i++) everything.push('spread');
+    for (let i = 0; i < 15; i++) everything.push('rapid');
+
+    const { world } = playableWorld({
+      waves: [],
+      pickups: [],
+      bossAt: Number.POSITIVE_INFINITY,
+      boss: 'sentinel',
+    });
+    world.weapon = weaponFor(SHIPS.proof, everything);
+    const frame = new GameFrame(world);
+
+    let peak = 0;
+    // Long enough that anything accumulating has accumulated: fifteen seconds of continuous fire.
+    for (let i = 0; i < 900; i++) {
+      frame.step();
+      if (world.playerShots.size > peak) peak = world.playerShots.size;
+    }
+    expect(
+      peak,
+      `a fully loaded weapon puts ${peak} bullets in flight against a pool of ${CAPACITY.playerShots}. ` +
+        'The pool refuses the later barrels of every volley, so the fan fires unevenly — which is ' +
+        'what the player sees as some streams stuttering.',
+    ).toBeLessThan(CAPACITY.playerShots);
   });
 
   it('an empty list IS the base weapon, so a death needs no second description of one', () => {

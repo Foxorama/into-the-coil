@@ -43,12 +43,21 @@ import { runLoop } from './loop.ts';
  * ⚠️ **These are 0022's worst-case scene split up rather than a new budget** — it reads *~150 enemy
  * bullets, ~80 player projectiles, ~40 enemies, ~200 particles* and totals 500, which is the number
  * `tests/budget.test.ts` asserts the frame cost against. The particle share is now claimed by
- * `debris`, at exactly the 200 it was written for; the total is 471 and the ceiling has not moved.
+ * `debris`, at exactly the 200 it was written for.
+ *
+ * ⚠️ **`playerShots` moved 80 → 100, and the total is now EXACTLY 500.** A fully upgraded weapon is
+ * five barrels every four steps against an eighty-step shot life, which is a hundred bullets in
+ * flight — `src/content/pickups.ts` has that arithmetic and the reason each of those three numbers is
+ * what it is. At 80 the pool stayed full and every volley was truncated from the back.
+ *
+ * ⚠️ **Exported, so `tests/world.ts` builds fixtures at the real sizes rather than at remembered
+ * ones.** A fixture with a smaller pool than the game cannot see a pool-exhaustion bug, which is the
+ * bug this number exists to prevent.
  *
  * Splitting one pool into four is what makes the collision cost the product of two small pools
  * instead of the square of one big one — `src/sim/collide.ts` has the argument.
  */
-const CAPACITY = { ship: 1, enemies: 40, playerShots: 80, enemyShots: 150, debris: 200, boss: 1, pickups: 8 };
+export const CAPACITY = { ship: 1, enemies: 40, playerShots: 100, enemyShots: 150, debris: 200, boss: 1, pickups: 8 };
 
 export interface Mounted {
   /** Stop the loop and drop the resize listener. */

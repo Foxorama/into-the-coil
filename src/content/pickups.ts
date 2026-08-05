@@ -24,6 +24,7 @@
 
 import type { Body } from '../sim/entity.ts';
 import type { ShipRow } from './ships.ts';
+import { SHOTS } from './shots.ts';
 import { SPRITE } from './sprites.ts';
 
 /** Every pickup in the game. Closed. */
@@ -102,6 +103,14 @@ export interface Weapon {
   shots: number;
   /** Total angular spread of a volley, radians. Ignored when `shots` is 1. */
   spread: number;
+  /**
+   * What one shot takes off what it hits.
+   *
+   * ⚠️ **Where an upgrade goes once it can no longer go anywhere else.** Barrels are capped and the
+   * fire rate has a floor, so without this the sixth spread and the eleventh rapid would change
+   * nothing — and `docs/game.md` says an upgrade that cannot change the outcome is worse than none.
+   */
+  damage: number;
 }
 
 /**
@@ -129,6 +138,42 @@ const FASTEST_FIRE = 4;
 const SPREAD_STEP = 0.13;
 
 /**
+ * The most barrels the ship may ever fire at once.
+ *
+ * ⚠️ **A BUDGET, and it was found by playing rather than by reasoning.** Without it the volley is
+ * `shots` bullets every `fireEvery` steps with no ceiling, and at five spreads and five rapids that
+ * is twelve barrels every four steps — which overruns the player-shot pool and stays overrun. The
+ * pool then refuses the later barrels of every volley, so the first two streams fire continuously and
+ * the rest stutter. Measured at **284 of 900 steps spent at the cap**, and reported from play as
+ * *"two streams of bullets are continuous and the other streams slow down and it's a bit weird."*
+ *
+ * ⚠️ **FOUR, and five was measured and rejected.** The arithmetic that has to close is
+ * `barrels × PLAYER_SHOT_LIFE / FASTEST_FIRE ≤ pool`, and at five barrels that is exactly 100
+ * against a pool of 100 — no headroom at all, so the fan still clips on the step a volley overlaps
+ * the one before it. Four gives 80 against 100.
+ *
+ * The pool cannot simply grow: `docs/decisions/0022-frame-rate-is-a-feature.md` budgets a 500-entity
+ * worst-case scene and the pools already total exactly that.
+ *
+ * `tests/pickups.test.ts` drives the strongest possible weapon and fails if the pool ever fills, so
+ * these four numbers are checked against each other rather than trusted to stay in step.
+ */
+const MAX_BARRELS = 4;
+
+/**
+ * Steps a player shot lives before retiring itself.
+ *
+ * ⚠️ **A shot that has left the widest view any device can have is doing nothing.** It used to live
+ * until the leading cull at `spawnAlong + EDGE_MARGIN`, which is 80 units beyond the furthest edge
+ * of the furthest screen — so a third of every bullet's life was spent killing things nobody could
+ * see, and occupying the pool slot the next volley needed.
+ *
+ * `(MAX_ALONG_SPAN − 40) / pulse speed` is 77 steps, where 40 is where the ship flies. Rounded up,
+ * because a shot vanishing exactly at the edge on the widest device is a shot vanishing visibly.
+ */
+export const PLAYER_SHOT_LIFE = 80;
+
+/**
  * The ship's auto-fire, given what it is carrying.
  *
  * Pure, and a function of the whole list rather than of a running total — so it can be recomputed
@@ -138,9 +183,20 @@ const SPREAD_STEP = 0.13;
 export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weapon {
   let fireEvery = ship.fireEvery;
   let shots = 1;
+  let damage = SHOTS[ship.shot].damage;
   for (let i = 0; i < upgrades.length; i++) {
-    if (upgrades[i] === 'rapid') fireEvery = Math.max(FASTEST_FIRE, Math.round(fireEvery * RAPID_FACTOR));
+    /*
+      ⚠️ **Each upgrade spends itself on the first thing it still can.** A rapid that would push past
+      the fire floor, or a spread past the barrel cap, becomes WEIGHT instead — which is what keeps
+      *every upgrade is worth taking* true at the eleventh one as well as at the first, without
+      letting either count run away.
+    */
+    if (upgrades[i] === 'rapid') {
+      const faster = Math.round(fireEvery * RAPID_FACTOR);
+      if (faster < FASTEST_FIRE) damage++;
+      else fireEvery = faster;
+    } else if (shots >= MAX_BARRELS) damage++;
     else shots++;
   }
-  return { fireEvery, shots, spread: SPREAD_STEP * (shots - 1) };
+  return { fireEvery, shots, spread: SPREAD_STEP * (shots - 1), damage };
 }

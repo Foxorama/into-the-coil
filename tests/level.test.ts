@@ -135,19 +135,41 @@ describe('an authored level is a script the spawner can actually run', () => {
 
 describe('a level actually puts something in front of the player', () => {
   /**
-   * ⚠️ **THE GUARD THAT WOULD HAVE CAUGHT THE FIRST DRAFT, AND DID NOT EXIST TO.** `at` began life as
-   * a trigger — every wave was placed at the leading edge whatever it was authored at — so a run
-   * opened onto an empty field for about eight seconds. Every assertion above passed. The only thing
-   * that said so was `scripts/shot.mjs`, and a screenshot is not a guard.
+   * ⚠️ **THIS GUARD USED TO ASSERT THE OPPOSITE, AND IT WAS WRONG ABOUT THE GAME RATHER THAN ABOUT
+   * THE CODE.** It required a wave inside the opening view, because the failure it was written
+   * against was a level that began on empty space and stayed that way for eight seconds. That is a
+   * real failure and this is not the way to prevent it: play reported the fix as *"the initial row of
+   * enemies is too close to the player — the first screen should have no enemies so that the player
+   * can orient themselves and test out the ship speed and controls."*
+   *
+   * Both halves are true at once, and neither is the other's opposite: **nothing on the first screen,
+   * and not for long.** The guard is now that pair.
    */
-  it('has waves inside the opening spawn horizon, so a run does not begin on an empty screen', () => {
+  it('opens on an empty screen, so the player can find the controls first', () => {
     for (const kind of LEVEL_KINDS) {
-      const opening = LEVELS[kind].waves.filter((w) => w.at <= MAX_ALONG_SPAN);
+      const first = LEVELS[kind].waves[0];
+      expect(first, `${kind} has no waves`).toBeDefined();
+      /*
+        `MAX_ALONG_SPAN` and not the 16:9 view: the widest device sees furthest, so a wave that is
+        off-screen at 21:9 is off-screen everywhere. Authored against the widest view is the same rule
+        `src/sim/camera.ts` gives spawns, for the same reason.
+      */
       expect(
-        opening.length,
-        `${kind} authors nothing within the first screen, so a run opens on empty space and stays ` +
-          'that way until the camera has travelled a full lookahead.',
-      ).toBeGreaterThan(0);
+        first!.at,
+        `${kind}'s first wave is on screen the moment a run begins, so the player is under fire ` +
+          'before they have found out which way the ship moves.',
+      ).toBeGreaterThan(MAX_ALONG_SPAN);
+    }
+  });
+
+  it('and does not leave the player waiting', () => {
+    // In SECONDS, which is what the complaint would be phrased in. The ship flies 40 units ahead of
+    // the camera, so this is when the first wave actually reaches it.
+    const unitsPerSecond = SCROLL_PER_STEP * 60;
+    for (const kind of LEVEL_KINDS) {
+      const first = LEVELS[kind].waves[0]!;
+      const seconds = (first.at - 40) / unitsPerSecond;
+      expect(seconds, `${kind} leaves the player flying at nothing for ${seconds.toFixed(1)}s`).toBeLessThan(12);
     }
   });
 
@@ -173,7 +195,27 @@ describe('a level actually puts something in front of the player', () => {
         in the level that was decided on purpose.
       */
       const lastWave = waves[waves.length - 1]?.at ?? 0;
-      for (let camera = 0; camera + MAX_ALONG_SPAN <= lastWave; camera += 40) {
+      const firstWave = waves[0]?.at ?? 0;
+      /*
+        ⚠️ **EVERY point where the count can change, not a fixed stride.** This walked in steps of 40
+        and that is a sieve: it stepped over a six-enemy trough in level two and only found it once an
+        unrelated edit moved where the samples landed.
+
+        ⚠️ **And `at + 1`, not `at` — the first replacement was still wrong.** Density is a step
+        function, but its TROUGHS are not at the breakpoints: the count drops the moment a wave leaves
+        the view, which is just *past* its `at`. Sampling the boundaries exactly reported the level as
+        fine and re-hid the same six. Sampling one unit later finds it.
+
+        ⚠️ It starts at the FIRST wave, because the level now opens on a deliberately empty screen so
+        the player can find the controls, and it stops a lookahead short of the last, because of the
+        deliberate quiet in front of the boss. Both are pacing that was decided on purpose.
+      */
+      const points: number[] = [];
+      for (const wave of waves) {
+        points.push(wave.at + 1, wave.at - MAX_ALONG_SPAN);
+      }
+      for (const camera of points) {
+        if (camera < firstWave || camera + MAX_ALONG_SPAN > lastWave) continue;
         let onScreen = 0;
         for (const wave of waves) {
           if (wave.at >= camera && wave.at <= camera + MAX_ALONG_SPAN) onScreen += wave.count;
