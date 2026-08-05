@@ -161,3 +161,51 @@ ring, that top speed is unchanged, that station-keeping survives. None can see a
 soggy or one whose lag fights the hand. `FLIGHT_RESPONSE` is a starting point picked to land near a
 run-on a hand has already called *"really good"* on another device, and nothing asserts its value.
 That is [0027](0027-measure-the-picture-not-the-model.md)'s territory, and it needs the hand.
+
+---
+
+## Played, 2026-08-05
+
+> *"55 feels really good, tested on gamepad→desktop, mobile→thumb-touch, desktop→WASD."*
+
+Three devices, one sitting. `FLIGHT_RESPONSE` stays at 0.2 and nothing above is re-tuned.
+
+### The prediction this decision made about `DRAG_GAIN` was wrong
+
+⚠️ The section above says *"touch now has mass twice… `DRAG_GAIN` is step 3 and is now **due**, very
+likely upward"*, and `reports/drag-feel-2026-08-05.md` had been saying the same since before inertia
+existed. **A thumb on glass says no.** Touch was played with the bank *and* the ship's mass and came
+back *"really good"* with the rest.
+
+So `DRAG_GAIN` stays at 1.48 and **step 3 closes with no change**, exactly as step 1 did. Worth
+recording as a refuted prediction rather than quietly dropping: the compounding is real arithmetic —
+the two lags do add — and the conclusion drawn from it was that the sum would be too much. It is not.
+Two mechanisms adding is not the same claim as their sum being wrong, and only a hand could tell
+those apart.
+
+### And the keyboard ramp is closed as superseded, not deferred
+
+> *"The WASD/arrow keys don't feel great, but it's more the directionality, and I'm happy with the
+> other two where they are to not try and tweak the keyboard keys."*
+
+[0032](0032-touch-is-relative-drag-and-not-a-stick.md) listed *keyboard continuity* — ramping each
+axis rather than snapping to ±1 — as an independent, cheaper alternative to this decision. It should
+now be struck from that list, and the reason matters more than the outcome:
+
+- **The ramp's purpose was smoothing, and inertia delivers it to every device.** 0032 proposed it as
+  the *cheap* answer if the missing ingredient turned out to be continuity rather than mass. Mass was
+  built. The keyboard already got the smoothing the ramp existed for.
+- **What is left is directionality, and a ramp does not fix it.** Both axes ramping at the same rate
+  still resolve to the same eight directions in the steady state; angles appear only *during*
+  transitions. 0032 half-admits this — *"reached by timing rather than by aiming"* — and timing a tap
+  to modulate an angle is a workaround, not a control.
+- ⚠️ **And it would now cost something it did not before.** A keyboard-only ramp makes a key slower to
+  reach full deflection than a stick slammed to its gate. Before inertia every device snapped, so the
+  asymmetry was the point; after it, the ship smooths everything and the ramp adds a device-specific
+  delay on top — which is the shape of thing `docs/game.md` forbids when it says no device may be
+  faster than another.
+
+**Eight directions is what a binary key is**, and it is not a defect to be tuned away. A stick and a
+thumb are better at aiming than a keyboard, which 0032 already called *"correct and not a defect"*.
+Recorded here so a later session does not spend an afternoon rediscovering that a ramp cannot add a
+ninth direction.
