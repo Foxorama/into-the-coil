@@ -92,13 +92,20 @@ usage to prove the extraction against.
 
 ## Confirmed, not assumed
 
-Per [0005](0005-a-guard-must-be-seen-to-fail.md). `src/state/` does not exist yet, so each break was
-a planted file, removed afterwards.
+Per [0005](0005-a-guard-must-be-seen-to-fail.md). When this was written `src/state/` did not exist,
+so each break was a planted file, removed afterwards.
+
+⚠️ **Two of those breaks have since been re-proved against the real thing.**
+[0039](0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) built the directory, and `npm run prove`
+then refused both plants — *"a plant must create the file"* — rather than reporting green, which is
+the harness catching its own staleness. The sibling break is now a new slice reaching for the real
+`run.ts`; the root break moved to `scripts/probes/0039-run.mjs`, where it edits the real reducer
+rather than a fixture. Keeping a copy here would be two probes claiming one guard.
 
 | broken on purpose | went red |
 |---|---|
-| `src/state/slices/run.ts` importing `./meta.ts` | `no slice imports a sibling slice` |
-| `src/state/root.ts` given a two-case `switch` | `the root reducer routes and does not decide` |
+| a new slice reaching for the run slice next door | `no slice imports a sibling slice` |
+| the real root reducer given a `case` arm — [0039](0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) | `the root reducer routes and does not decide` |
 | `new Map<string, number>()` in a slice | `state is plain data — nothing that a save cannot round-trip` |
 | `\bclass\s` added to the plain-data pattern | `the plain-data pattern … and nothing else` |
 | the self-exclusion removed from `isSiblingSlice` | `the sibling rule tells a sibling from the slice itself` |
