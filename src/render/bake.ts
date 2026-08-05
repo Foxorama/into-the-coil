@@ -20,18 +20,7 @@
  */
 
 import type { Palette } from '../content/palette.ts';
-
-/** What can be drawn. Closed, per `docs/decisions/0016-a-hub-enumerates-kinds.md`. */
-export type SpriteKind = 'ship' | 'enemy' | 'bullet' | 'pickup';
-
-/** Baking order, and therefore the blit index. Explicit, never derived from the table. */
-export const SPRITE_KINDS: readonly SpriteKind[] = ['ship', 'enemy', 'bullet', 'pickup'];
-
-/** The index a painter blits by. A number, because this is read five hundred times a frame. */
-export const SPRITE: Record<SpriteKind, number> = { ship: 0, enemy: 1, bullet: 2, pickup: 3 };
-
-/** How big each kind is, in WORLD units across — so its screen size falls out of the camera. */
-export const SPRITE_EXTENT: Record<SpriteKind, number> = { ship: 7, enemy: 5.5, bullet: 1.8, pickup: 3.5 };
+import { SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 
 /** Side profile for a horizontally scrolling screen, top-down for a vertical one. */
 export type SpriteView = 'side' | 'top';
@@ -70,9 +59,36 @@ export function atlasIsStale(atlas: Atlas, view: SpriteView, pixelsPerUnit: numb
 /** Which ink each kind is drawn in. A role, never a colour — see `content/palette.ts`. */
 const INK_OF: Record<SpriteKind, keyof Palette> = {
   ship: 'player',
-  enemy: 'enemy',
+  drifter: 'enemy',
+  lancer: 'enemy',
   bullet: 'bullet',
   pickup: 'pickup',
+  /*
+    THE HURT SILHOUETTES: the SAME shape in a different ink.
+
+    Same shape is what makes it read as *that thing being hurt* rather than as a second object
+    appearing where the first one was. And the ink is the only channel doing colour work here, which
+    is allowed precisely because the silhouette is unchanged — 0024's rule is that colour may not
+    carry meaning ALONE, and here the shape carries identity while the colour carries the event.
+
+    ⚠️ **THE SHIP IS YELLOW AND AN ENEMY IS WHITE, and they are different on purpose.** The ship
+    briefly went white too, when the flash was generalised from the ship to everything, and a
+    play-test asked for the yellow back. It is the better answer for a reason worth writing down: the
+    ship's blink means *you cannot be hurt right now* and an enemy's flash means *this just was*, and
+    those are opposite meanings. One ink for both is one channel carrying two things, which is the
+    failure `docs/decisions/0024-the-accessibility-floor-is-settings.md` exists to prevent.
+
+    ⚠️ `hazard` is borrowed rather than owned, and it will want revisiting when environmental hazards
+    land — an asteroid and a recovering ship would then share a colour. They would not share a
+    silhouette, so it is a note rather than a defect, and inventing a `warn` role for content that
+    does not exist yet is the shape of mistake this project has already made once with the ship
+    roster. `docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md`.
+  */
+  shipHit: 'hazard',
+  drifterHit: 'impact',
+  lancerHit: 'impact',
+  // Fragments are the impact itself, so they are the impact ink; they carry no identity of their own.
+  debris: 'impact',
 };
 
 /**
@@ -90,24 +106,58 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
   ctx.beginPath();
   switch (kind) {
     case 'ship':
-      // A wedge, nose towards +x.
+    case 'shipHit':
+      // A wedge, nose towards +x. One shape, two inks — see `INK_OF`.
       ctx.moveTo(half + r, half);
       ctx.lineTo(half - r * 0.7, half - r * 0.8);
       ctx.lineTo(half - r * 0.3, half);
       ctx.lineTo(half - r * 0.7, half + r * 0.8);
       ctx.closePath();
       break;
-    case 'enemy':
-      // A diamond, so it reads as a different SHAPE and not only a different colour — 0024's
-      // "colour never carries meaning alone", at the one place it can be applied today.
+    case 'drifter':
+    case 'drifterHit':
+      // A diamond: symmetrical, pointing nowhere, which is exactly what a drifter does. It holds its
+      // line and never fires, and the silhouette says so by having no front.
       ctx.moveTo(half - r, half);
       ctx.lineTo(half, half - r);
       ctx.lineTo(half + r, half);
       ctx.lineTo(half, half + r);
       ctx.closePath();
       break;
+    case 'lancer':
+    case 'lancerHit':
+      /*
+        A plain triangle, nose towards −x: pointing back down the lane, at the player.
+
+        ⚠️ **THE SECOND ATTEMPT, and the first one is why this comment is long.** It was a
+        five-sided arrowhead — a point at −x, swept wings, a blunt back — reasoned to be obviously an
+        arrow and obviously not a diamond. Screenshotted at the size it actually ships, it was a
+        small mushy lump that read as *a slightly smaller diamond*, so the player saw diamonds
+        everywhere, some of which died to one shot and some to two, and reported the game as buggy.
+
+        Three points against four is a silhouette difference that survives twenty pixels; five points
+        with a 0.25r notch in them is not. `reports/enemy-silhouettes-2026-08-05.md`, and
+        `docs/decisions/0027-measure-the-picture-not-the-model.md` for the reason a shape has to be
+        LOOKED at rather than argued about.
+
+        It cannot be confused with the player's wedge: that one is cyan, points the other way, and
+        has a concave tail this deliberately does not.
+      */
+      ctx.moveTo(half - r, half);
+      ctx.lineTo(half + r * 0.7, half - r * 0.95);
+      ctx.lineTo(half + r * 0.7, half + r * 0.95);
+      ctx.closePath();
+      break;
     case 'bullet':
       ctx.arc(half, half, r * 0.8, 0, Math.PI * 2);
+      break;
+    case 'debris':
+      // A shard: small, angular, and deliberately NOT a disc, so a fragment is never mistaken for a
+      // bullet at the one moment the screen is busiest.
+      ctx.moveTo(half + r, half);
+      ctx.lineTo(half - r * 0.4, half - r * 0.8);
+      ctx.lineTo(half - r, half + r * 0.2);
+      ctx.closePath();
       break;
     case 'pickup':
       // A square with a hole: distinct in silhouette from both the diamond and the disc.
@@ -123,34 +173,47 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
   ctx.stroke();
 }
 
+/** One sprite, drawn into its own offscreen canvas at the resolution it will be blitted at. */
+function bakeOne(kind: SpriteKind, palette: Palette, view: SpriteView, pixelsPerUnit: number): HTMLCanvasElement {
+  // Clamped so a zero-sized viewport or an absurd DPI cannot ask for a 0px or a 4096px sprite.
+  const size = Math.max(8, Math.min(256, Math.ceil(SPRITE_EXTENT[kind] * pixelsPerUnit)));
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (ctx === null) throw new Error('bakeAtlas: no 2D context — this browser cannot run the game');
+  if (view === 'top') {
+    // Point the shape at -y instead of +x. Placeholder-only: real top-down art is its own drawing.
+    ctx.translate(size / 2, size / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.translate(-size / 2, -size / 2);
+  }
+  drawKind(ctx, kind, palette, size);
+  return canvas;
+}
+
 /**
  * Bake every sprite for one palette and one view.
  *
  * `pixelsPerUnit` is CSS pixels per world unit times the device pixel ratio — the resolution the
  * bitmaps will actually be blitted at. Baking below it is a blurry game; baking far above it is
  * memory spent on detail nobody will see.
+ *
+ * ⚠️ **`map` rather than a loop that pushes, and it is the last link in a chain.**
+ * `src/content/sprites.ts` is now the one description of what exists, what order it is in, and what
+ * index it blits at. This is where that order becomes actual bitmaps, and a `for` loop with a
+ * `push` in it can skip one — a `continue`, an early return, a conditional bake — which would slide
+ * every sprite after it down by one and mis-draw the whole screen. `map` emits exactly one output
+ * per input, in order, and a filter would have to be written down where a reader can see it.
+ *
+ * This file is on `tests/budget.test.ts`'s DELIBERATELY_COLD list: it allocates freely because it
+ * runs at load and on rotation, never in a frame. Two `map`s here cost nothing.
  */
 export function bakeAtlas(palette: Palette, view: SpriteView, pixelsPerUnit: number): Atlas {
-  const bitmaps: CanvasImageSource[] = [];
-  const extents: number[] = [];
-  for (const kind of SPRITE_KINDS) {
-    const extent = SPRITE_EXTENT[kind];
-    // Clamped so a zero-sized viewport or an absurd DPI cannot ask for a 0px or a 4096px sprite.
-    const size = Math.max(8, Math.min(256, Math.ceil(extent * pixelsPerUnit)));
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    if (ctx === null) throw new Error('bakeAtlas: no 2D context — this browser cannot run the game');
-    if (view === 'top') {
-      // Point the shape at -y instead of +x. Placeholder-only: real top-down art is its own drawing.
-      ctx.translate(size / 2, size / 2);
-      ctx.rotate(-Math.PI / 2);
-      ctx.translate(-size / 2, -size / 2);
-    }
-    drawKind(ctx, kind, palette, size);
-    bitmaps.push(canvas);
-    extents.push(extent);
-  }
-  return { view, bitmaps, extents, pixelsPerUnit };
+  return {
+    view,
+    bitmaps: SPRITE_KINDS.map((kind) => bakeOne(kind, palette, view, pixelsPerUnit)),
+    extents: SPRITE_KINDS.map((kind) => SPRITE_EXTENT[kind]),
+    pixelsPerUnit,
+  };
 }

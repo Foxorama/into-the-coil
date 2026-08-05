@@ -32,6 +32,7 @@ import { type Entity, makeEntity, reset, stepEntities } from '../src/sim/entity.
 import { Pool } from '../src/sim/pool.ts';
 import { paintScene } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
+import { sprite } from './bodies.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
@@ -64,7 +65,7 @@ function fullPool(): Pool<Entity> {
   const pool = new Pool<Entity>(WORST_CASE, makeEntity);
   for (let i = 0; i < WORST_CASE; i++) {
     const e = pool.spawn()!;
-    reset(e, 1000 + i, (i * 7) % ACROSS_SPAN, i % 16);
+    reset(e, 1000 + i, (i * 7) % ACROSS_SPAN, sprite(i % 16));
     e.velAlong = -0.5;
   }
   return pool;
@@ -74,7 +75,7 @@ describe('the worst-case scene costs one blit per entity, and nothing else', () 
   it('draws exactly one call per live entity, plus one clear', () => {
     const surface = new CountingSurface();
     const pool = fullPool();
-    paintScene(surface, viewOf(1920, 1080), pool, 900, 0.5);
+    paintScene(surface, viewOf(1920, 1080), [pool], 900, 0.5);
     expect(surface.blits, 'the painter is doing more work per entity than a blit').toBe(WORST_CASE);
     expect(surface.clears).toBe(1);
   });
@@ -88,10 +89,40 @@ describe('the worst-case scene costs one blit per entity, and nothing else', () 
     let previous = 0;
     for (let frame = 0; frame < FRAMES; frame++) {
       surface.blits = 0;
-      paintScene(surface, view, pool, 900, (frame % 60) / 60);
+      paintScene(surface, view, [pool], 900, (frame % 60) / 60);
       if (frame > 0) expect(surface.blits, `frame ${frame} drew a different amount`).toBe(previous);
       previous = surface.blits;
     }
+  });
+
+  it('costs the same split across layers as it does in one pool', () => {
+    /*
+      The scene is drawn as several pools now, in a declared order (`src/app/frame.ts`). The cost
+      must be a property of how many entities exist and not of how they are filed — a painter that
+      cleared per layer, or blitted a layer twice, would look completely correct on screen.
+
+      ⚠️ It also pins the CLEAR at one. Four layers is four chances to wipe the frame, and the three
+      extra wipes would be invisible in a screenshot and would quadruple the most expensive single
+      call the painter makes.
+    */
+    const one = new CountingSurface();
+    const many = new CountingSurface();
+    const view = viewOf(1920, 1080);
+    paintScene(one, view, [fullPool()], 900, 0.5);
+
+    const quarters: Pool<Entity>[] = [];
+    for (let q = 0; q < 4; q++) {
+      const pool = new Pool<Entity>(WORST_CASE / 4, makeEntity);
+      for (let i = 0; i < WORST_CASE / 4; i++) {
+        const e = pool.spawn()!;
+        reset(e, 1000 + i, (i * 7) % ACROSS_SPAN, sprite(i % 16));
+      }
+      quarters.push(pool);
+    }
+    paintScene(many, view, quarters, 900, 0.5);
+
+    expect(many.blits, 'splitting the scene into layers changed what it costs to draw').toBe(one.blits);
+    expect(many.clears, 'each layer wiped the frame — the painter clears once, not once per pool').toBe(1);
   });
 
   it('holds in portrait too, at the same cost', () => {
@@ -99,8 +130,8 @@ describe('the worst-case scene costs one blit per entity, and nothing else', () 
     const pool = fullPool();
     const flat = new CountingSurface();
     const upright = new CountingSurface();
-    paintScene(flat, viewOf(2400, 1080), pool, 900, 0.25);
-    paintScene(upright, viewOf(1080, 2400), pool, 900, 0.25);
+    paintScene(flat, viewOf(2400, 1080), [pool], 900, 0.25);
+    paintScene(upright, viewOf(1080, 2400), [pool], 900, 0.25);
     expect(upright.blits).toBe(flat.blits);
   });
 });
@@ -131,7 +162,7 @@ describe('the pool is the ceiling, and it is never exceeded', () => {
     for (let frame = 0; frame < FRAMES; frame++) {
       // Refill whatever the cull retired, which is the churn a real wave produces.
       for (let e = pool.spawn(); e !== null; e = pool.spawn()) {
-        reset(e, camera + 200 + pool.size, (pool.size * 7) % ACROSS_SPAN, pool.size % 16);
+        reset(e, camera + 200 + pool.size, (pool.size * 7) % ACROSS_SPAN, sprite(pool.size % 16));
         e.velAlong = -0.5;
       }
       advance(clock, 16.7);
@@ -139,7 +170,7 @@ describe('the pool is the ceiling, and it is never exceeded', () => {
         camera += 0.6;
         stepEntities(pool, camera);
       }
-      paintScene(surface, view, pool, camera, clock.alpha);
+      paintScene(surface, view, [pool], camera, clock.alpha);
     }
     expect(built, 'entities were constructed during play — the pool is not a pool').toBe(WORST_CASE);
     expect(pool.capacity).toBe(WORST_CASE);
@@ -157,6 +188,11 @@ const HOT_FILES = [
   'src/app/frame.ts',
   'src/sim/pool.ts',
   'src/sim/entity.ts',
+  // ⚠️ Added with the combat slice, and adding it is the deliberate act 0025 says this list exists
+  // to require. Collision runs once per step over every pairing — the densest loop in the game, and
+  // the one place where an innocent `.filter()` over "the live ones" would allocate hardest exactly
+  // when the screen is fullest.
+  'src/sim/collide.ts',
   'src/render/scene.ts',
   'src/render/surface.ts',
   'src/render/canvas.ts',
@@ -303,6 +339,7 @@ describe('nothing allocates in the frame loop', () => {
     expect(HOT_FILES).toContain('src/sim/entity.ts');
     expect(HOT_FILES, 'the file that IS the frame is not being scanned').toContain('src/app/frame.ts');
     expect(HOT_FILES, 'the blit that runs 500 times a frame is not being scanned').toContain('src/render/canvas.ts');
+    expect(HOT_FILES, 'the densest loop in the game is not being scanned').toContain('src/sim/collide.ts');
   });
 
   it('says why each cold file next door to a hot one is cold', () => {

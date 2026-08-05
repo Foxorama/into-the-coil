@@ -52,6 +52,27 @@ async function open(viewport: { width: number; height: number }): Promise<Page> 
   // `attached`, not the default `visible`: in portrait the gate deliberately hides the canvas, so
   // waiting for it to be visible would time out on exactly the state under test.
   await page.waitForSelector('#app canvas', { state: 'attached', timeout: 15_000 });
+  /*
+    ⚠️ AND THEN WAIT FOR A FRAME, because the canvas exists before anything has been drawn on it.
+
+    `mount()` creates the element and only then starts the loop, so between `attached` and the first
+    rAF the backing store is untouched — every sampled pixel equals every other one, and
+    `inkedPixels` returns a truthful, useless 0. That is a race in the GUARD, not in the game: it
+    fails perhaps one run in fifteen, on the one test here that asserts the normal case, and it says
+    "expected 0 to be greater than 0" as though the page had drawn nothing at all.
+
+    Two frames rather than one: the first is the one that may already have been scheduled before
+    this promise was registered. This is the browser's own rAF and it fires whether or not the game's
+    loop is running, so the portrait case — where the simulation is deliberately never started — does
+    not hang on it.
+
+    It does NOT wait for pixels to appear. Waiting for the thing under assertion is how a guard
+    becomes a tautology; this waits for the opportunity to draw and still lets the assertion fail if
+    nothing was drawn.
+  */
+  await page.evaluate(
+    () => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))),
+  );
   return page;
 }
 

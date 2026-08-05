@@ -68,40 +68,95 @@ if (!existsSync(dist)) {
  * The atlas bake also fills rectangles, on its own offscreen context and the same prototype. Those
  * land before any entity is blitted, so they open frames with zero draws and are dropped.
  *
- * The SHIP is the first blit of each frame, because it lives in pool slot 0 and the painter walks
- * the pool in order. That is an assumption about draw order rather than an identity check, and it is
- * stated here rather than hidden: if the ship ever stops being drawn first, this script reports the
- * wrong entity and says nothing. It is the cheapest hook that needs no production code to know it
- * is being watched.
+ * ── HOW THE SHIP IS FOUND, AND WHY IT IS NO LONGER THE FIRST BLIT ───────────────────────────────
+ *
+ * ⚠️ **This used to read `the SHIP is the first blit of each frame, because it lives in pool slot 0`,
+ * and it said in its own comment what would happen if that stopped being true: "this script reports
+ * the wrong entity and says nothing."** It stopped being true in the change that added enemies —
+ * `src/app/frame.ts` now draws the ship LAST, so the player can find it in a crowd. The assumption
+ * would have gone on passing, silently tracing a bullet, during the one tuning pass this instrument
+ * exists for. `docs/decisions/0034-a-threat-is-absolute-and-a-pool-is-the-pairing.md`.
+ *
+ * What replaces it is an identification that is CHECKED. Each blit is tagged with which atlas bitmap
+ * it drew, and the ship is found as the smallest set of bitmaps that contributes **exactly one blit
+ * to every single frame** — which is a real property of the game rather than of the draw order: there
+ * is one ship, it is never culled and never absent, and everything else spawns and dies. A set rather
+ * than a single bitmap because the ship swaps between two of them while it is flashing after a hit.
+ *
+ * If no such set exists, or more than one minimal set does, the script says so and exits non-zero.
+ * That is the difference that matters: the old version could not tell a right answer from a wrong
+ * one, and this one refuses to guess.
  */
 const HOOK = () => {
   const proto = CanvasRenderingContext2D.prototype;
   const realFill = proto.fillRect;
   const realDraw = proto.drawImage;
   const frames = [];
+  /** Atlas bitmaps, in the order they were first drawn. Identity only — never inspected. */
+  const bitmaps = [];
   let current = null;
   proto.fillRect = function (...args) {
     // A full-canvas fill anchored at the origin IS the clear. Anything else is ordinary drawing.
     if (args[0] === 0 && args[1] === 0) {
       if (current !== null && current.draws > 0) frames.push(current);
-      current = { draws: 0, firstX: null, firstY: null, t: performance.now() };
+      current = { draws: 0, marks: [], t: performance.now() };
     }
     return realFill.apply(this, args);
   };
   proto.drawImage = function (...args) {
     if (current !== null) {
       current.draws++;
-      if (current.firstX === null) {
-        // (image, dx, dy) or (image, sx, sy, sw, sh, dx, dy, dw, dh) — take the destination.
-        const [dx, dy] = args.length >= 9 ? [args[5], args[6]] : [args[1], args[2]];
-        current.firstX = dx;
-        current.firstY = dy;
-      }
+      // (image, dx, dy[, dw, dh]) or (image, sx, sy, sw, sh, dx, dy, dw, dh) — take the destination.
+      const [dx, dy] = args.length >= 9 ? [args[5], args[6]] : [args[1], args[2]];
+      let sprite = bitmaps.indexOf(args[0]);
+      if (sprite < 0) sprite = bitmaps.push(args[0]) - 1;
+      current.marks.push({ sprite, x: dx, y: dy });
     }
     return realDraw.apply(this, args);
   };
   Object.defineProperty(window, '__ITC_TRACE__', { value: frames });
 };
+
+/**
+ * The smallest set of sprites that puts exactly one blit in every frame, or a reason there is none.
+ *
+ * Subsets rather than a single sprite because a ship flashing after a hit alternates between two
+ * bitmaps of the same silhouette, and either alone is absent from half the frames.
+ */
+function findTheShip(frames) {
+  const sprites = new Set();
+  for (const f of frames) for (const m of f.marks) sprites.add(m.sprite);
+  const all = [...sprites].sort((a, b) => a - b);
+  if (all.length === 0) return { error: 'no sprite was drawn in any frame' };
+
+  const oneEveryFrame = (set) =>
+    frames.every((f) => f.marks.reduce((n, m) => n + (set.has(m.sprite) ? 1 : 0), 0) === 1);
+
+  // Smallest first, so a lone sprite wins over the pair it belongs to and the answer is the tightest
+  // one available rather than the first one stumbled on.
+  for (let size = 1; size <= all.length; size++) {
+    const found = [];
+    for (let mask = 1; mask < 1 << all.length; mask++) {
+      const bits = all.filter((_, i) => (mask >> i) & 1);
+      if (bits.length !== size) continue;
+      if (oneEveryFrame(new Set(bits))) found.push(bits);
+    }
+    if (found.length === 1) return { set: new Set(found[0]) };
+    if (found.length > 1) {
+      return {
+        error:
+          `${found.length} different sprite sets are drawn exactly once per frame ` +
+          `(${found.map((f) => `{${f.join(',')}}`).join(' ')}), so the ship cannot be told apart from ` +
+          'something else that happens to be alone on screen. Trace a busier scene, or a longer one.',
+      };
+    }
+  }
+  return {
+    error:
+      'no sprite is drawn exactly once in every frame, so there is nothing here with the ship\'s ' +
+      'shape. Either the ship was not drawn, or it is being drawn more than once.',
+  };
+}
 
 const browser = await launchChromium({ headless: true });
 let failure = null;
@@ -122,20 +177,52 @@ try {
   if (frames.length === 0) {
     failure = 'no frames were recorded — the page drew nothing at all, so there is no picture to measure';
   } else {
-    const drawn = frames.filter((f) => f.firstX !== null);
-    if (drawn.length === 0) {
+    const blitted = frames.filter((f) => f.marks.length > 0);
+    const ship = blitted.length === 0 ? { error: null } : findTheShip(blitted);
+    if (blitted.length === 0) {
       failure = 'frames were cleared but nothing was blitted — the painter ran and drew no entities';
+    } else if (ship.error) {
+      // ⚠️ Refusing to guess IS the fix. The previous version took the first blit of each frame and
+      // could not tell the ship from anything else drawn before it.
+      failure = `the ship could not be identified: ${ship.error}`;
     } else {
+      const drawn = blitted.map((f) => {
+        const mark = f.marks.find((m) => ship.set.has(m.sprite));
+        return { t: f.t, draws: f.draws, shipX: mark.x, shipY: mark.y };
+      });
       const t0 = drawn[0].t;
       const seconds = (drawn[drawn.length - 1].t - t0) / 1000;
+      /*
+        A JUMP IS NOT MOTION, and telling them apart is the second thing this script has had to learn
+        about its own averages.
+
+        The ship can now die, and a restart puts it back at the middle of the lane in one frame —
+        316.8px on a 720-tall viewport, against a real top speed of 12.3px per frame. Folded into the
+        totals it inflated `px/s` by half and became the `peak`, which is precisely the figure a
+        tuning pass reads. The threshold is a fraction of the viewport rather than a multiple of any
+        speed, because a speed is what is being measured and a guard defined in terms of its own
+        subject proves nothing — the same argument
+        `docs/decisions/0027-measure-the-picture-not-the-model.md` makes about assertions.
+
+        ⚠️ They are COUNTED and REPORTED, never silently dropped. A run with jumps in it is a run
+        where the player died, and that is information about the picture.
+      */
+      const TELEPORT_PX = Math.min(width, height) / 8;
       let travelX = 0;
       let travelY = 0;
+      let teleports = 0;
       for (let i = 1; i < drawn.length; i++) {
-        travelX += Math.abs(drawn[i].firstX - drawn[i - 1].firstX);
-        travelY += Math.abs(drawn[i].firstY - drawn[i - 1].firstY);
+        const dx = drawn[i].shipX - drawn[i - 1].shipX;
+        const dy = drawn[i].shipY - drawn[i - 1].shipY;
+        if (Math.hypot(dx, dy) > TELEPORT_PX) {
+          teleports++;
+          continue;
+        }
+        travelX += Math.abs(dx);
+        travelY += Math.abs(dy);
       }
-      const netX = drawn[drawn.length - 1].firstX - drawn[0].firstX;
-      const netY = drawn[drawn.length - 1].firstY - drawn[0].firstY;
+      const netX = drawn[drawn.length - 1].shipX - drawn[0].shipX;
+      const netY = drawn[drawn.length - 1].shipY - drawn[0].shipY;
       const maxDraws = Math.max(...drawn.map((f) => f.draws));
 
       console.log(`\n  ${width}×${height}, holding ${hold} for ${ms}ms — ${drawn.length} drawn frames over ${seconds.toFixed(2)}s\n`);
@@ -147,8 +234,8 @@ try {
         const cells = [
           String(i).padStart(5),
           (f.t - t0).toFixed(0).padStart(5),
-          f.firstX.toFixed(1).padStart(7),
-          f.firstY.toFixed(1).padStart(7),
+          f.shipX.toFixed(1).padStart(7),
+          f.shipY.toFixed(1).padStart(7),
           String(f.draws).padStart(5),
         ];
         console.log(`  | ${cells.join(' | ')} |`);
@@ -168,7 +255,8 @@ try {
       let movingSeconds = 0;
       let peakPerFrame = 0;
       for (let i = 1; i < drawn.length; i++) {
-        const d = Math.hypot(drawn[i].firstX - drawn[i - 1].firstX, drawn[i].firstY - drawn[i - 1].firstY);
+        const d = Math.hypot(drawn[i].shipX - drawn[i - 1].shipX, drawn[i].shipY - drawn[i - 1].shipY);
+        if (d > TELEPORT_PX) continue;
         if (d > 0.5) {
           movingFrames++;
           movingSeconds += (drawn[i].t - drawn[i - 1].t) / 1000;
@@ -184,7 +272,12 @@ try {
           `${movingSeconds > 0 ? (travel / movingSeconds).toFixed(0) : '—'} px/s`,
       );
       console.log(`  peak            ${peakPerFrame.toFixed(1)} px/frame`);
-      console.log(`  peak blits/frame ${maxDraws}\n`);
+      console.log(`  peak blits/frame ${maxDraws}`);
+      console.log(
+        `  jumps            ${teleports}` +
+          (teleports > 0 ? `  (over ${TELEPORT_PX.toFixed(0)}px in a frame — the ship died and restarted)` : ''),
+      );
+      console.log('');
 
       if (key !== null && Math.abs(netX) < 1 && Math.abs(netY) < 1) {
         failure =

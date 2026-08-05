@@ -3,10 +3,15 @@ import { viewOf } from '../src/sim/camera.ts';
 import { makeEntity, reset } from '../src/sim/entity.ts';
 import { makeIntent } from '../src/sim/intent.ts';
 import { Pool } from '../src/sim/pool.ts';
+import { makeDeaths } from '../src/sim/collide.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { GameFrame, type World } from '../src/app/frame.ts';
 import type { InputSource } from '../src/app/input.ts';
+import { DEFAULT_ASSISTS, tuningFor } from '../src/sim/assist.ts';
+import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
+import { SHIPS } from '../src/content/ships.ts';
+import { SPRITE } from '../src/content/sprites.ts';
 
 /**
  * A SHIP HOLDING STATION MUST NOT MOVE ON SCREEN.
@@ -39,21 +44,57 @@ class RecordingSurface implements Surface {
 
 const NO_INPUT: InputSource = { contribute(): void {}, release(): void {} };
 
+/** Far enough out that nothing spawns or fires during these frames and adds a blit. */
+const NEVER = 10_000;
+
+/**
+ * ⚠️ **Everything below finds the ship BY ITS SPRITE, never by being the first blit drawn.**
+ *
+ * It used to be `blits[0]`, which was true while one pool held everything and the ship sat in slot
+ * 0. `src/app/frame.ts` now draws the ship LAST so the player can find it in a crowd — and the
+ * assumption would have gone on passing, silently measuring an enemy, exactly as the same assumption
+ * in `scripts/trace-frame.mjs` would have. Both were fixed the same way and in the same change; see
+ * `docs/decisions/0034-a-threat-is-absolute-and-a-pool-is-the-pairing.md`.
+ */
+function drawnAt(surface: RecordingSurface, spriteIndex: number): { x: number; y: number } | undefined {
+  const hit = surface.blits.filter((b) => b.sprite === spriteIndex);
+  expect(hit.length, `expected exactly one blit of sprite ${spriteIndex}, saw ${hit.length}`).toBe(1);
+  return hit[0];
+}
+
 function stationKeepingWorld(surface: Surface): World {
-  const pool = new Pool(8, makeEntity);
-  const ship = pool.spawn()!;
-  reset(ship, 40, 50, 0);
+  const shipPool = new Pool(1, makeEntity);
+  const enemies = new Pool(8, makeEntity);
+  const playerShots = new Pool(8, makeEntity);
+  const enemyShots = new Pool(8, makeEntity);
+  // The real ship's numbers with its trigger held off, so the scene under test is the camera and
+  // nothing else. A stream of auto-fire would not move the ship; it would only make the picture
+  // harder to read for no gain.
+  const shipRow = { ...SHIPS.proof, fireEvery: NEVER };
+  const ship = shipPool.spawn()!;
+  reset(ship, 40, 50, shipRow);
   return {
-    pool,
+    layers: [enemies, enemyShots, playerShots, shipPool],
+    shipPool,
+    enemies,
+    playerShots,
+    enemyShots,
+    // No debris in this scene: it is about the camera, and a burst would add blits that come and go.
+    debris: new Pool(4, makeEntity),
+    deaths: makeDeaths(8),
+    burstRng: makeRng('interp').stream('burst'),
     view: viewOf(1280, 720),
     surface,
-    rng: makeRng('interp').stream('debris'),
+    rng: makeRng('interp').stream('spawns'),
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: 0.6,
-    // Far enough out that no spawn lands during these frames and moves the first blit.
-    spawnIn: 10_000,
+    spawnIn: NEVER,
+    fireIn: NEVER,
     ship,
+    shipRow,
+    enemyRows: ENEMY_KINDS.map((k) => ENEMIES[k]),
+    tuning: tuningFor(DEFAULT_ASSISTS),
     input: NO_INPUT,
     intent: makeIntent(2),
   };
@@ -68,9 +109,9 @@ describe('the camera interpolates on the same alpha as everything it is subtract
     const seen: { x: number; y: number }[] = [];
     for (const alpha of [0, 0.25, 0.5, 0.75, 1]) {
       frame.draw(alpha);
-      const first = surface.blits[0];
-      expect(first, `nothing was drawn at alpha ${alpha}`).toBeDefined();
-      seen.push({ x: first!.x, y: first!.y });
+      const drawn = drawnAt(surface, SPRITE.ship);
+      expect(drawn, `the ship was not drawn at alpha ${alpha}`).toBeDefined();
+      seen.push({ x: drawn!.x, y: drawn!.y });
     }
     for (const point of seen) {
       expect(point.x, `the ship moves with alpha: ${JSON.stringify(seen)}`).toBeCloseTo(seen[0]!.x, 9);
@@ -85,32 +126,34 @@ describe('the camera interpolates on the same alpha as everything it is subtract
     const frame = new GameFrame(stationKeepingWorld(surface));
     frame.step();
     frame.draw(0.5);
-    const start = { ...surface.blits[0]! };
+    const start = { ...drawnAt(surface, SPRITE.ship)! };
 
     for (let i = 0; i < 600; i++) {
       frame.step();
       frame.draw(0.5);
     }
-    const end = surface.blits[0]!;
+    const end = drawnAt(surface, SPRITE.ship)!;
     expect(end.x, 'the ship drifted along over ten seconds of station-keeping').toBeCloseTo(start.x, 6);
     expect(end.y, 'the ship drifted across over ten seconds of station-keeping').toBeCloseTo(start.y, 6);
   });
 
-  it('debris left behind DOES move, so this is not passing by drawing nothing', () => {
+  it('an enemy left behind DOES move, so this is not passing by drawing nothing', () => {
     // The control. If the projection were broken in a way that pinned everything, the assertions
     // above would be perfectly green and the whole scene would be frozen.
     const surface = new RecordingSurface();
     const world = stationKeepingWorld(surface);
-    const debris = world.pool.spawn()!;
-    reset(debris, 80, 30, 1);
+    const holding = world.enemies.spawn()!;
+    // Placed well clear of the ship: an enemy that reaches it deals contact damage, and a restart
+    // mid-test would empty the pool and take the control with it.
+    reset(holding, 120, 20, ENEMIES.drifter);
     const frame = new GameFrame(world);
 
     frame.step();
     frame.draw(0.5);
-    const before = { ...surface.blits[1]! };
+    const before = { ...drawnAt(surface, SPRITE.drifter)! };
     for (let i = 0; i < 30; i++) frame.step();
     frame.draw(0.5);
-    const after = surface.blits[1]!;
+    const after = drawnAt(surface, SPRITE.drifter)!;
     expect(Math.hypot(after.x - before.x, after.y - before.y)).toBeGreaterThan(10);
   });
 });

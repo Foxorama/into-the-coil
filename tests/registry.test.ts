@@ -224,10 +224,14 @@ describe('the table is the guard', () => {
 /**
  * ⚠️ THE ASSERTIONS THAT KEEP THE FILE ABOVE FROM BEING DECORATIVE.
  *
- * There is no `src/content/` yet. Every scan above therefore runs over two files and passes, which
- * is what a broken pattern also does — decision 0005's failure shape, aimed at the guard rather than
- * the code. These run the real patterns over samples of what they exist to catch, and over lines
- * they must leave alone.
+ * The scans above run over code written to pass them, so they report nothing — which is exactly what
+ * a broken pattern also does: decision 0005's failure shape, aimed at the guard rather than at the
+ * code. These run the real patterns over samples of what they exist to catch, and over lines they
+ * must leave alone.
+ *
+ * ⚠️ This paragraph used to open *"there is no `src/content/` yet"*, which was the original argument
+ * for it and stopped being true. `src/content/` now holds six tables — the exact thing this file
+ * guards — and the argument is stronger without the claim than it was with it.
  */
 describe('the guards above are known to work, not merely green', () => {
   it('every pattern matches the move it bans', () => {

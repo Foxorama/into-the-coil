@@ -18,8 +18,17 @@
 /** Which palette is in use. A setting, per 0024 — never a difficulty knob. */
 export type PaletteName = 'vivid' | 'high-contrast';
 
-/** What a colour is FOR. Closed, so a new role fails to build until every palette answers it. */
-export type Ink = 'space' | 'player' | 'ally' | 'enemy' | 'bullet' | 'hazard' | 'pickup';
+/**
+ * What a colour is FOR. Closed, so a new role fails to build until every palette answers it.
+ *
+ * ⚠️ **`impact` is not `hazard`, and it is a separate role rather than a shade of one.** The ship's
+ * hit flash borrowed `hazard` when it was the only thing that flashed. Hazards are environmental and
+ * are coming — `docs/game.md` has asteroids in the vocabulary — and sharing one colour between *this
+ * just took damage* and *this will hurt you* is the confusion
+ * `docs/decisions/0024-the-accessibility-floor-is-settings.md` exists to prevent, arriving by the
+ * back door. See [0035](../../docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md).
+ */
+export type Ink = 'space' | 'player' | 'ally' | 'enemy' | 'bullet' | 'hazard' | 'pickup' | 'impact';
 
 export type Palette = Record<Ink, string>;
 
@@ -33,6 +42,9 @@ export const PALETTES: Record<PaletteName, Palette> = {
     bullet: '#ff9f1c',
     hazard: '#ffd23f',
     pickup: '#d9ffd0',
+    // Near-white and deliberately the brightest thing in the palette: a flash reads as an impact
+    // because it is momentarily louder than everything around it, not because of its hue.
+    impact: '#fff4e6',
   },
   /**
    * Maximum separation on the luminance channel, which is the one that survives every kind of
@@ -47,6 +59,7 @@ export const PALETTES: Record<PaletteName, Palette> = {
     bullet: '#ff8000',
     hazard: '#ff00ff',
     pickup: '#ffffff',
+    impact: '#ffffff',
   },
 };
 

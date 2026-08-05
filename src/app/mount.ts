@@ -14,12 +14,17 @@ import { PALETTES, type PaletteName } from '../content/palette.ts';
 import { ACROSS_SPAN, MAX_ALONG_SPAN, type View, viewOf } from '../sim/camera.ts';
 import { type Entity, makeEntity, reset } from '../sim/entity.ts';
 import { Pool } from '../sim/pool.ts';
+import { makeDeaths } from '../sim/collide.ts';
 import { makeRng } from '../sim/rng.ts';
-import { atlasIsStale, bakeAtlas, SPRITE, viewFor } from '../render/bake.ts';
+import { atlasIsStale, bakeAtlas, viewFor } from '../render/bake.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
 import { SPECIAL_BINDINGS } from '../content/actions.ts';
+import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
+import { ENEMIES, ENEMY_KINDS, type EnemyRow } from '../content/enemies.ts';
+import { SCROLL_PER_STEP } from '../sim/flight.ts';
+import { SHIPS } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
-import { GameFrame, type World } from './frame.ts';
+import { GameFrame, SHIP_START_ALONG, type World } from './frame.ts';
 import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
 import { attachPad } from './pad.ts';
@@ -27,14 +32,17 @@ import { attachTouch } from './touch.ts';
 import { runLoop } from './loop.ts';
 
 /**
- * The entity ceiling, and it is 0022's worst-case scene rather than a guess: ~150 enemy bullets,
- * ~80 player projectiles, ~40 enemies, ~200 particles. The frame budget is asserted against this
- * number in `tests/budget.test.ts`, so the running game may not quietly exceed what was measured.
+ * The entity ceiling, per pool.
+ *
+ * ⚠️ **These are 0022's worst-case scene split up rather than a new budget** — it reads *~150 enemy
+ * bullets, ~80 player projectiles, ~40 enemies, ~200 particles* and totals 500, which is the number
+ * `tests/budget.test.ts` asserts the frame cost against. The particle share is now claimed by
+ * `debris`, at exactly the 200 it was written for; the total is 471 and the ceiling has not moved.
+ *
+ * Splitting one pool into four is what makes the collision cost the product of two small pools
+ * instead of the square of one big one — `src/sim/collide.ts` has the argument.
  */
-const CAPACITY = 500;
-
-/** World units the camera advances per fixed step — 36 units a second at 60Hz. */
-const SCROLL_PER_STEP = 0.6;
+const CAPACITY = { ship: 1, enemies: 40, playerShots: 80, enemyShots: 150, debris: 200 };
 
 export interface Mounted {
   /** Stop the loop and drop the resize listener. */
@@ -137,10 +145,18 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   host.appendChild(canvas);
 
   const colours = PALETTES[palette];
-  const pool = new Pool<Entity>(CAPACITY, makeEntity);
+  const shipPool = new Pool<Entity>(CAPACITY.ship, makeEntity);
+  const enemies = new Pool<Entity>(CAPACITY.enemies, makeEntity);
+  const playerShots = new Pool<Entity>(CAPACITY.playerShots, makeEntity);
+  const enemyShots = new Pool<Entity>(CAPACITY.enemyShots, makeEntity);
+  const debris = new Pool<Entity>(CAPACITY.debris, makeEntity);
 
-  const ship = pool.spawn()!;
-  reset(ship, 40, 50, SPRITE.ship);
+  /** Enemy rows by index, so a per-step lookup in the frame is an array index and not a string key. */
+  const enemyRows: readonly EnemyRow[] = ENEMY_KINDS.map((k) => ENEMIES[k]);
+
+  const shipRow = SHIPS.proof;
+  const ship = shipPool.spawn()!;
+  reset(ship, SHIP_START_ALONG, ACROSS_SPAN / 2, shipRow);
   ship.velAlong = SCROLL_PER_STEP;
 
   /*
@@ -153,13 +169,20 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     job is to prove the page draws. The browser test caught it as a nearly-blank canvas.
 
     Its own named stream, per 0021: seeding the field must not move the ongoing spawns by one draw.
+
+    ⚠️ Seeded well clear of the ship's start, or the player is hit before the first frame is drawn —
+    which reads as the game being broken rather than as the game being hard.
   */
   const seed = makeRng('proof-scene').stream('seed');
-  for (let i = 0; i < 120; i++) {
-    const e = pool.spawn();
+  for (let i = 0; i < 12; i++) {
+    const e = enemies.spawn();
     if (e === null) break;
-    reset(e, seed.range(10, MAX_ALONG_SPAN), seed.range(8, ACROSS_SPAN - 8), 1 + seed.int(0, 2));
-    e.velAcross = seed.range(-0.12, 0.12);
+    const kind = seed.int(0, enemyRows.length - 1);
+    const row = enemyRows[kind]!;
+    const margin = row.radius + 2;
+    reset(e, seed.range(SHIP_START_ALONG + 60, MAX_ALONG_SPAN), seed.range(margin, ACROSS_SPAN - margin), row, kind);
+    e.velAlong = -row.closing;
+    e.fireIn = row.fireEvery;
   }
 
   const measure = (): View => viewOf(viewportWidth(host), viewportHeight(host));
@@ -170,17 +193,41 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   surface.setSize(viewportWidth(host), viewportHeight(host), colours.space);
 
   const world: World = {
-    pool,
+    /*
+      DRAW ORDER, back to front, and it is a decision rather than whichever pool came first.
+
+      Enemies underneath, both sets of shots above them so a volley leaving a body reads as leaving
+      it, and the SHIP last — the player must never lose their own ship in a crowd, and at 150 enemy
+      bullets a crowd is the normal state. `src/render/scene.ts` walks this array in order.
+    */
+    // Debris first, so fragments sit UNDER everything still alive. An explosion that draws over a
+    // bullet hides the one thing on screen the player cannot afford to lose track of.
+    layers: [debris, enemies, enemyShots, playerShots, shipPool],
+    shipPool,
+    enemies,
+    playerShots,
+    enemyShots,
+    debris,
+    deaths: makeDeaths(CAPACITY.enemies),
+    // Its own stream per 0021: a fragment's direction is the most cosmetic roll in the game and it
+    // must not be able to move a wave by one enemy.
+    burstRng: makeRng('proof-scene').stream('burst'),
     view,
     surface,
     // One named stream, per docs/decisions/0021-one-stream-per-concern.md, so a cosmetic roll added
     // here can never move a draw that matters.
-    rng: makeRng('proof-scene').stream('debris'),
+    rng: makeRng('proof-scene').stream('spawns'),
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
     spawnIn: 1,
+    fireIn: shipRow.fireEvery,
     ship,
+    shipRow,
+    enemyRows,
+    // The game as designed, per 0024 — every knob at its least-assisted position. There is no
+    // settings screen yet to move them, and `tuningFor` is where they will arrive from when there is.
+    tuning: tuningFor(DEFAULT_ASSISTS),
     /*
       ⚠️ The KEYBOARD listens on `window`, not on the canvas. A canvas is not focusable, so a keydown
       never reaches it without a `tabindex` and a click first — which would mean the game silently
