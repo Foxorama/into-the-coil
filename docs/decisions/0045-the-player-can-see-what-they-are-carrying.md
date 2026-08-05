@@ -79,6 +79,12 @@ project as collision faults that turned out to be that.
 - **The numbers are on the elements as labels.** The converse of the same rule: a row of coloured
   discs is not something a screen reader can read.
 
+⚠️ **The first version of that first guard counted pips and called itself done**, and `npm run prove`
+caught it: a probe replacing the fill difference with an opacity change stayed GREEN, because nothing
+in the test had ever looked at what *spent* renders as. It now asserts the property directly — the
+two states differ by **fill**, and agree on their **border colour**, which is what makes the
+difference survive a palette swap.
+
 ## Confirmed, not assumed
 
 Per [0005](0005-a-guard-must-be-seen-to-fail.md) and [0019](0019-a-probe-must-be-seen-to-apply.md).

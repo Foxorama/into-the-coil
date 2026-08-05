@@ -30,6 +30,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **pickups: extra lives, and upgrades a death takes back** | [0041](decisions/0041-a-pickup-is-the-answer-to-what-a-death-costs.md) |
 | **a run is a sequence of levels; the order is the list** | [0042](decisions/0042-a-run-is-a-sequence-of-levels.md) |
 | a weapon is a budget; a level opens empty | [0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md) |
+| lives and shield on screen; a key on the title | [0045](decisions/0045-the-player-can-see-what-they-are-carrying.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -65,7 +66,8 @@ Questions, not findings — each one a number nothing in the repository can sett
   player unarmed? [0041](decisions/0041-a-pickup-is-the-answer-to-what-a-death-costs.md) picked that
   number without having played it.
 - **Do the two upgrades read on screen?** `docs/game.md` says every upgrade changes how the ship
-  looks, and neither of these does yet — they change what leaves it.
+  looks, and neither of these does yet — they change what leaves it, and the title screen now says
+  what they are ([0045](decisions/0045-the-player-can-see-what-they-are-carrying.md)).
 - **Do the weaver and the charger read apart?** Both are essentially lines, told apart by which way
   they lie — `src/content/sprites.ts` writes that risk down rather than assuming it away.
 - **Do enemy shots ever land?** [0034](decisions/0034-a-threat-is-absolute-and-a-pool-is-the-pairing.md)'s
