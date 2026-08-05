@@ -266,6 +266,22 @@ export interface World {
    * the `restart()` placeholder this replaced.
    */
   onDeath: () => void;
+  /**
+   * A fixed step happened and the simulation did not take it.
+   *
+   * ⚠️ **The screens with chrome on them are exactly the screens the simulation is stopped on**
+   * (`src/state/screens.ts`), and until now that meant nothing ran there at all — including
+   * `w.input.contribute`, which is why a gamepad could not press a button.
+   * `docs/decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md` has the diagnosis.
+   *
+   * ⚠️ **It is handed a step, never a clock.** The loop is what decides how many of these there
+   * were; a countdown on a menu is therefore counted in the same fixed units as everything else in
+   * the game, and a throttled tab does not run it fast.
+   *
+   * Reported rather than decided, exactly as `onDeath` and `onCleared` are: what a menu step is
+   * WORTH — moving a focus ring, expiring a screen — belongs to the shell.
+   */
+  onIdle: () => void;
 }
 
 export class GameFrame implements Frame {
@@ -273,9 +289,18 @@ export class GameFrame implements Frame {
 
   step(): void {
     const w = this.world;
-    // A screen that does not step, per `src/state/screens.ts`. The draw below still runs, so the
-    // scene the run ended in stays on the page underneath the overlay.
-    if (!w.stepping) return;
+    /*
+      A screen that does not step, per `src/state/screens.ts`. The draw below still runs, so the
+      scene the run ended in stays on the page underneath the overlay.
+
+      ⚠️ **It is not a step that does NOTHING, and that distinction is the whole of decision 0046.**
+      The chrome on top of the frozen scene has controls on it, and the one device the DOM cannot
+      deliver to them is the gamepad. This is the step that reaches it.
+    */
+    if (!w.stepping) {
+      w.onIdle();
+      return;
+    }
     w.prevCameraAlong = w.cameraAlong;
     w.cameraAlong += w.scrollPerStep;
 

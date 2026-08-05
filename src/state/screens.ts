@@ -33,8 +33,16 @@ export interface ScreenRow {
    * restating what the screen already shows.*
    */
   heading: string;
-  /** What the one control says, or `null` for a screen the player does not act on. */
-  action: string | null;
+  /**
+   * What the controls say, in the order they appear. Empty for a screen the player does not act on.
+   *
+   * ⚠️ **A LIST and not one nullable label, and the reason is the same one `docs/game.md` gives for
+   * the arsenal being a list rather than a slot.** Every screen has exactly one control today; a
+   * screen with a choice on it — which difficulty, which destination on the chart — is a screen this
+   * shape already fits, and `src/app/chrome.ts`'s focus ring is only meaningful over a list.
+   * `docs/decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md`.
+   */
+  actions: readonly string[];
   /**
    * Whether the simulation steps while this screen is up.
    *
@@ -44,7 +52,31 @@ export interface ScreenRow {
    * makes it one answer rather than two.
    */
   steps: boolean;
+  /**
+   * What happens if the player does nothing at all, and after how many fixed steps.
+   *
+   * ⚠️ **One nullable object rather than two fields, so "a timeout with nowhere to go" cannot be
+   * written.** A duration and a destination are meaningless apart.
+   *
+   * ⚠️ **Counted in STEPS, not in milliseconds**, because the step is fixed at 60Hz
+   * (`docs/decisions/0022-frame-rate-is-a-feature.md`) and a screen that is not stepping the
+   * simulation is still being stepped by the loop. A wall-clock timer here would be the one thing on
+   * these screens that runs at display rate, and it would drift on a throttled tab.
+   * `src/content/ships.ts` counts `INVULN_STEPS` the same way, for the same reason.
+   */
+  timeout: { steps: number; then: Screen } | null;
 }
+
+/**
+ * Fixed steps in a second, at the 60Hz `docs/decisions/0022-frame-rate-is-a-feature.md` fixes.
+ *
+ * ⚠️ **Exported, because the shell has to turn a step count back into the number it shows the
+ * player** — and two spellings of "sixty" is the shape of second description
+ * `tests/one-description.test.ts` exists for. It is not imported from `src/app/loop.ts` because the
+ * arrow runs the other way: `docs/decisions/0015-the-layer-ladder.md` puts `state` above `app`'s
+ * reach, so the rate is stated here and the shell reads it.
+ */
+export const STEPS_PER_SECOND = 60;
 
 export const SCREENS: Record<Screen, ScreenRow> = {
   /**
@@ -56,8 +88,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   // ⚠️ The heading is `GAME_TITLE`, never a literal — `docs/decisions/0002-brand-identity-contract.md`
   // puts every user-facing spelling of the name in `src/brand.ts`, and this is the first screen in
   // the game that says it out loud.
-  title: { heading: GAME_TITLE, action: 'Start', steps: false },
-  playing: { heading: '', action: null, steps: true },
+  title: { heading: GAME_TITLE, actions: ['Start'], steps: false, timeout: null },
+  playing: { heading: '', actions: [], steps: true, timeout: null },
   /**
    * ⚠️ **No score, no summary, no coaching.** `docs/game.md`: *players are assumed to be adaptable;
    * hints are added where play proves they are needed, never pre-emptively.* What the player needs to
@@ -65,7 +97,22 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    * everything about why —
    * `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`.
    */
-  gameOver: { heading: 'Run over', action: 'Again', steps: false },
+  /*
+   * ⚠️ **The one screen with a timeout, and it was asked for in play**: *"this screen should have a
+   * 7 second countdown; when it expires, the player is returned to the title screen."*
+   *
+   * It is the right screen for it and the only one. `cleared` and `victory` both sit on top of
+   * something the player earned and would be rude to take away; `title` is where a player who has
+   * walked away should end up, because it is the screen that says what the game is
+   * (`docs/decisions/0045-the-player-can-see-what-they-are-carrying.md` put the pickup key there).
+   * An arcade cabinet does exactly this and for exactly this reason.
+   */
+  gameOver: {
+    heading: 'Run over',
+    actions: ['Again'],
+    steps: false,
+    timeout: { steps: 7 * STEPS_PER_SECOND, then: 'title' },
+  },
   /**
    * The boss is dead and there is another level behind it.
    *
@@ -75,7 +122,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    * levels, and a button is what a straight line looks like —
    * `docs/decisions/0042-a-run-is-a-sequence-of-levels.md`.
    */
-  cleared: { heading: 'Level clear', action: 'Onward', steps: false },
+  cleared: { heading: 'Level clear', actions: ['Onward'], steps: false, timeout: null },
   /**
    * Every level in the run is behind the player.
    *
@@ -84,5 +131,5 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    * final boss at the end of a run; two of them exist, so this is the end of what has been authored
    * rather than the end of the game — and the wording says only what is true.
    */
-  victory: { heading: 'Coil cleared', action: 'Again', steps: false },
+  victory: { heading: 'Coil cleared', actions: ['Again'], steps: false, timeout: null },
 };

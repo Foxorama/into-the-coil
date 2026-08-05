@@ -31,6 +31,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **a run is a sequence of levels; the order is the list** | [0042](decisions/0042-a-run-is-a-sequence-of-levels.md) |
 | a weapon is a budget; a level opens empty | [0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md) |
 | lives and shield on screen; a key on the title | [0045](decisions/0045-the-player-can-see-what-they-are-carrying.md) |
+| **a pad can press a button; a run-over screen expires** | [0046](decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -98,31 +99,24 @@ it did **not** answer.
 **The order below is the player's, given 2026-08-06.** It is not the order the dependencies would
 have picked, and that is fine — none of the three blocks another.
 
-**1 — A gamepad cannot press a button on a screen. BUG.**
+**1 — ✅ DONE. A gamepad can press a button; the run-over screen expires.**
 
-Reported from play: *"gamepad controls on title screens — currently not working."* Keyboard and touch
-work; the gamepad does nothing on `title`, `gameOver`, `cleared` or `victory`.
+[0046](decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md). The bug was architectural
+rather than a binding, and 0030's claim survived with one distinction added: a menu is not the game,
+so its confirm button is not `special1`.
 
-⚠️ **Diagnosed, not guessed, and it is architectural rather than a binding.** Two facts meet:
+**2 — Difficulty tiers, chosen before a run.**
 
-- `src/app/frame.ts`'s `step()` opens with `if (!w.stepping) return;` — **above** the line that calls
-  `w.input.contribute(w.intent)`. On every screen except `playing`, `stepping` is false, so no device
-  is sampled at all.
-- The Gamepad API is **poll-only**. It emits no DOM events, so the `click` listener on the chrome's
-  `<button>` can never hear it. Keyboard and touch work precisely because the DOM hands them to the
-  focused button itself.
+Asked for: three tiers — *Legendary Pilot*, *Savior of the Galaxy*, *Let the Galaxy Burn* — with the
+game as it currently plays being the EASIEST of the three, and the middle one tuned so that an
+average player reaches level four and no further.
 
-So there is no route at all from a pad to the chrome, and adding one is the first time input has to
-exist **outside the simulation**. That makes it a decision rather than a patch:
-[0030](decisions/0030-input-is-actions-and-needs-no-new-layer.md) says input is actions and needs no
-new layer, and this is the case that tests the claim.
+⚠️ **A tier is not an assist and cannot be one.**
+[0024](decisions/0024-the-accessibility-floor-is-settings.md) closes the assist ladder with *no assist
+may ever make the game harder*, which makes "harder than default" unrepresentable there — correctly.
+The two axes are orthogonal and both must exist.
 
-⚠️ Whatever polls the pad on a screen must not read the clock or step anything — the screens with
-chrome on them are exactly the screens where the simulation is deliberately stopped
-([0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md)), and 0031's probe already
-caught one redundant path to stopping it.
-
-**2 — More waves, and better spawns.**
+**3 — More waves, and better spawns.**
 
 Asked for: *"increasing enemy waves, improving the spawns."*
 
@@ -142,7 +136,7 @@ Pool headroom is the other constraint: the pools total exactly
 [0022](decisions/0022-frame-rate-is-a-feature.md)'s 500-entity worst case, so more enemies on screen
 at once is a budget question and not only an authoring one — see `CAPACITY` in `src/app/mount.ts`.
 
-**3 — The arsenal: specials, and what a trigger spends.**
+**4 — The arsenal: specials, and what a trigger spends.**
 
 `src/content/specials.ts` has the union and the rows; nothing fires one. The input half has existed
 since [0030](decisions/0030-input-is-actions-and-needs-no-new-layer.md) — `SPECIAL_BINDINGS` and
@@ -153,7 +147,7 @@ list, so this adds behaviour to a shape rather than changing one.
 weapon, each on its own cooldown* is decided in `docs/game.md`; which specials exist and what they do
 is a product question the player has kept.
 
-**4 — The chart, and more levels behind it.**
+**5 — The chart, and more levels behind it.**
 
 A level is a row in `LEVELS` and the sequence is that list —
 [0042](decisions/0042-a-run-is-a-sequence-of-levels.md). What does *not* exist is the branching map
@@ -161,7 +155,7 @@ A level is a row in `LEVELS` and the sequence is that list —
 screen, a graph and a set of rules about what may follow what, and all three want deciding against
 levels somebody has played.
 
-**5 — `save/`, and the first `itc_*` key.**
+**6 — `save/`, and the first `itc_*` key.**
 
 Requires the run slice, which now exists. Lands with `PRIVACY.md`'s storage-key table and a guard
 cross-checking `src/` in both directions, which `docs/scaffold-plan.md` has been holding open since

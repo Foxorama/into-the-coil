@@ -202,6 +202,7 @@ export function playableWorld(level: LevelRow): {
     },
     intent: makeIntent(SPECIAL_BINDINGS),
     stepping: true,
+    onIdle: (): void => {},
     onDeath: (): void => {
       deaths.count++;
     },
