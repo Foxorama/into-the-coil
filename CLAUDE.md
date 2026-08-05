@@ -34,6 +34,12 @@ decision needs no rule.
   `npm run prove` refuses to run the suite until it has read the file back and seen it change.
   — [0005](docs/decisions/0005-a-guard-must-be-seen-to-fail.md),
   [0019](docs/decisions/0019-a-probe-must-be-seen-to-apply.md)
+- **Where the work has got to lives in `docs/state-of-play.md`** — what is settled, what is next, and
+  why in that order. Read it before proposing work; rewrite it when the answer changes. It holds
+  **pointers and intentions, never findings**: a status document is a summary generator, and the only
+  version that survives is the one that cannot state a conclusion. Every relative link in the
+  repository resolves, because a citation rots as silently as a summary drifts.
+  — [0038](docs/decisions/0038-the-handover-is-a-file.md)
 - **The tracked record is the record.** A report is a committed file in `reports/`, because chat
   evaporates between sessions. A milestone **duplicates and never originates** — a lesson living only
   in `docs/milestones/` has not landed. A document restating another **cites the line rather than

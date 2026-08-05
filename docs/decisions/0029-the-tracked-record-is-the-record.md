@@ -80,7 +80,7 @@ is to be the durable record.
 destroy the property that makes them worth writing.
 
 **`IDEAS.md` and `DEVLOG-IDEAS.md`.** Deferred rather than refused. Both were load-bearing in the
-predecessor and both will earn a place here — but [milestone 0003](../milestones/0003-the-line-before-the-game.md)
+predecessor and both will earn a place here — but milestone 0003 (`docs/milestones/`, gitignored)
 already caught this constitution referencing an `IDEAS.md` that did not exist, which is the exact
 failure a file created before it has contents produces. The trigger is contents, not a date.
 
@@ -96,7 +96,7 @@ not have, and that specific pattern silently cost the predecessor fifty tests fo
 So clause 2 is enforced by re-reading, at the moment a milestone record is written, which is also the
 moment the lesson is freshest. Named as a gap, per
 [0028](0028-quality-is-the-constraint.md) clause 4 and
-[milestone 0004](../milestones/0004-the-game-appears.md)'s *a prose document has no guard*.
+milestone 0004 (`docs/milestones/`, gitignored)'s *a prose document has no guard*.
 
 Clauses 1 and 3 are *partly* mechanisable and deliberately not mechanised yet: a scan could assert
 that `reports/` is not gitignored, or that a decision naming another document also links it. Neither
