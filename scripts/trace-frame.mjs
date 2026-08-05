@@ -170,6 +170,27 @@ try {
   await page.goto(pathToFileURL(dist).href);
   await page.waitForSelector('#app canvas', { state: 'attached', timeout: 15_000 });
 
+  /*
+    ⚠️ PRESS START, because the game no longer runs on load.
+    docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md opens it on a title screen
+    with the simulation stopped, so a tracer that skipped this would record a perfectly still ship
+    and report zero travel — the exact "measured the plan, not the picture" failure this whole tool
+    exists to prevent, produced BY the tool.
+
+    The class is built the way tests/chrome.test.ts requires and src/app/chrome.ts spells it. This is
+    a .mjs script and cannot import the TypeScript seam, so it is the one second description of the
+    prefix in the repository, and it FAILS LOUD below rather than tracing a frozen page.
+  */
+  const START = '.itc-title-action';
+  const started = await page.$(START);
+  if (started === null) {
+    throw new Error(
+      `no start control at ${START} — the title screen's chrome moved, and this tracer would have ` +
+        'silently recorded a stopped simulation. See src/app/chrome.ts and tests/chrome.test.ts.',
+    );
+  }
+  await started.click();
+
   const key = HOLD_KEYS[hold];
   await page.waitForTimeout(300);
   if (key !== null) await page.keyboard.down(key);
