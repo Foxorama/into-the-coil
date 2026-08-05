@@ -63,11 +63,12 @@ date and is exactly what a play-test is for.
 
 Questions, not findings — each one a number nothing in the repository can settle.
 
-⚠️ **The first pass has happened**, and the verdict was *"playing really good at the moment, excellent
-baseline"*. Four things came back from it and all four are fixed:
-[0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md) has the weapon and the
-opening; [0045](decisions/0045-the-player-can-see-what-they-are-carrying.md) has the readout and the
-key. The questions below are the ones it did **not** answer.
+⚠️ **The first pass has happened** —
+[`two-levels-played`](../reports/two-levels-played-2026-08-06.md) has the verdict, the four findings
+and their measurements. All four are fixed:
+[0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md) and
+[0045](decisions/0045-the-player-can-see-what-they-are-carrying.md). The questions below are the ones
+it did **not** answer.
 
 - **Is the boss's progress readable at all?** Nothing says how much of it is left, by decision —
   [0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md) names this as the thing that
@@ -94,14 +95,65 @@ key. The questions below are the ones it did **not** answer.
 
 ## What is next, and why in this order
 
-**1 — The arsenal: specials, and what a trigger spends.**
+**The order below is the player's, given 2026-08-06.** It is not the order the dependencies would
+have picked, and that is fine — none of the three blocks another.
+
+**1 — A gamepad cannot press a button on a screen. BUG.**
+
+Reported from play: *"gamepad controls on title screens — currently not working."* Keyboard and touch
+work; the gamepad does nothing on `title`, `gameOver`, `cleared` or `victory`.
+
+⚠️ **Diagnosed, not guessed, and it is architectural rather than a binding.** Two facts meet:
+
+- `src/app/frame.ts`'s `step()` opens with `if (!w.stepping) return;` — **above** the line that calls
+  `w.input.contribute(w.intent)`. On every screen except `playing`, `stepping` is false, so no device
+  is sampled at all.
+- The Gamepad API is **poll-only**. It emits no DOM events, so the `click` listener on the chrome's
+  `<button>` can never hear it. Keyboard and touch work precisely because the DOM hands them to the
+  focused button itself.
+
+So there is no route at all from a pad to the chrome, and adding one is the first time input has to
+exist **outside the simulation**. That makes it a decision rather than a patch:
+[0030](decisions/0030-input-is-actions-and-needs-no-new-layer.md) says input is actions and needs no
+new layer, and this is the case that tests the claim.
+
+⚠️ Whatever polls the pad on a screen must not read the clock or step anything — the screens with
+chrome on them are exactly the screens where the simulation is deliberately stopped
+([0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md)), and 0031's probe already
+caught one redundant path to stopping it.
+
+**2 — More waves, and better spawns.**
+
+Asked for: *"increasing enemy waves, improving the spawns."*
+
+The density floor in `tests/level.test.ts` is a **floor**, not a target — it holds ≥ 8 in one
+lookahead, and both levels sit not far above it.
+[0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md) records that density is a
+property of the view rather than of the gap between waves, and that its own guard has been a sieve
+twice, so re-read that before tuning.
+
+⚠️ **The spawn half is the more interesting one and is already unlocked: entry from the `across`
+edges.** Everything arrives at the leading edge because that is the only spawn rule written, not
+because of any constraint — [`enemy-silhouettes`](../reports/enemy-silhouettes-2026-08-05.md) has the
+argument, and names the one real gap that comes with it: **there is no `across` cull**, so anything
+that leaves the lane is gone and still holding a pool slot. That gap has to close in the same change.
+
+Pool headroom is the other constraint: the pools total exactly
+[0022](decisions/0022-frame-rate-is-a-feature.md)'s 500-entity worst case, so more enemies on screen
+at once is a budget question and not only an authoring one — see `CAPACITY` in `src/app/mount.ts`.
+
+**3 — The arsenal: specials, and what a trigger spends.**
 
 `src/content/specials.ts` has the union and the rows; nothing fires one. The input half has existed
 since [0030](decisions/0030-input-is-actions-and-needs-no-new-layer.md) — `SPECIAL_BINDINGS` and
 `Intent.specials` — and nothing consumes it either. The run slice already carries the arsenal as a
 list, so this adds behaviour to a shape rather than changing one.
 
-**2 — The chart, and more levels behind it.**
+⚠️ **What is open is the content, not the architecture.** *A list not a slot, one trigger per owned
+weapon, each on its own cooldown* is decided in `docs/game.md`; which specials exist and what they do
+is a product question the player has kept.
+
+**4 — The chart, and more levels behind it.**
 
 A level is a row in `LEVELS` and the sequence is that list —
 [0042](decisions/0042-a-run-is-a-sequence-of-levels.md). What does *not* exist is the branching map
@@ -109,12 +161,7 @@ A level is a row in `LEVELS` and the sequence is that list —
 screen, a graph and a set of rules about what may follow what, and all three want deciding against
 levels somebody has played.
 
-Also still unlocked and still not done: **entry from the `across` edges.** Everything arrives at the
-leading edge because that is the only spawn rule written, not because of any constraint —
-[`enemy-silhouettes`](../reports/enemy-silhouettes-2026-08-05.md) has the argument, and names the one
-real gap that comes with it (there is no `across` cull).
-
-**3 — `save/`, and the first `itc_*` key.**
+**5 — `save/`, and the first `itc_*` key.**
 
 Requires the run slice, which now exists. Lands with `PRIVACY.md`'s storage-key table and a guard
 cross-checking `src/` in both directions, which `docs/scaffold-plan.md` has been holding open since

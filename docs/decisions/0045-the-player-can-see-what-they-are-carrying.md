@@ -1,6 +1,7 @@
 # 0045 — The player can see what they are carrying
 
-**Accepted 2026-08-06.** Both halves asked for in play, after the first run of the two-level build.
+**Accepted 2026-08-06.** Both halves asked for in play, after the first run of the two-level build —
+[`two-levels-played`](../../reports/two-levels-played-2026-08-06.md).
 
 ## The rule
 
