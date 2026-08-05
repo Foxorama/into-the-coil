@@ -28,6 +28,7 @@ import { holdStation, SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { makeIntent } from '../src/sim/intent.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { SHIP_START_ALONG, type World } from '../src/app/frame.ts';
+import { CAPACITY } from '../src/app/mount.ts';
 import type { Intent } from '../src/sim/intent.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { viewOf } from '../src/sim/camera.ts';
@@ -87,7 +88,7 @@ export function inertLevel(): {
     level: NO_LEVEL,
     nextWave: 0,
     bossRow: BOSSES.sentinel,
-    bossPool: new Pool<Entity>(1, makeEntity),
+    bossPool: new Pool<Entity>(CAPACITY.boss, makeEntity),
     bossSpawned: false,
     bossBeaten: false,
     bossPatrol: 1,
@@ -111,10 +112,10 @@ export function pickupParts(): {
   });
   return {
     nextPickup: 0,
-    pickups: new Pool<Entity>(8, makeEntity),
+    pickups: new Pool<Entity>(CAPACITY.pickups, makeEntity),
     pickupRows: PICKUP_KINDS.map((k) => PICKUPS[k]),
     pickupKinds,
-    collected: makeCollected(8),
+    collected: makeCollected(CAPACITY.pickups),
   };
 }
 
@@ -141,12 +142,17 @@ export function playableWorld(level: LevelRow): {
   cleared: { count: number };
   taken: PickupKind[];
 } {
-  const shipPool = new Pool<Entity>(1, makeEntity);
-  const enemies = new Pool<Entity>(40, makeEntity);
-  const playerShots = new Pool<Entity>(80, makeEntity);
-  const enemyShots = new Pool<Entity>(150, makeEntity);
-  const debris = new Pool<Entity>(200, makeEntity);
-  const bossPool = new Pool<Entity>(1, makeEntity);
+  /*
+    ⚠️ **The REAL capacities, imported rather than remembered.** These were hand-written copies, and
+    a fixture with a smaller pool than the game cannot see a pool-exhaustion bug — which is precisely
+    the bug that reached play as *"two streams continuous and the others stutter"*.
+  */
+  const shipPool = new Pool<Entity>(CAPACITY.ship, makeEntity);
+  const enemies = new Pool<Entity>(CAPACITY.enemies, makeEntity);
+  const playerShots = new Pool<Entity>(CAPACITY.playerShots, makeEntity);
+  const enemyShots = new Pool<Entity>(CAPACITY.enemyShots, makeEntity);
+  const debris = new Pool<Entity>(CAPACITY.debris, makeEntity);
+  const bossPool = new Pool<Entity>(CAPACITY.boss, makeEntity);
 
   const enemyRows: readonly EnemyRow[] = ENEMY_KINDS.map((k) => ENEMIES[k]);
   const shipRow = SHIPS.proof;
@@ -165,7 +171,7 @@ export function playableWorld(level: LevelRow): {
     playerShots,
     enemyShots,
     debris,
-    deaths: makeDeaths(40),
+    deaths: makeDeaths(CAPACITY.enemies),
     burstRng: makeRng('test').stream('burst'),
     view: viewOf(1280, 720),
     surface: new NullSurface(),

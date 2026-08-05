@@ -16,8 +16,8 @@ export const PROBES = [
     guard: 'lists its waves in ascending order of place',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 150, enemy: 'drifter', formation: 'line', count: 5, lane: 30 },",
-      replace: "  { at: 50, enemy: 'drifter', formation: 'line', count: 5, lane: 30 },",
+      find: "  { at: 510, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },",
+      replace: "  { at: 410, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },",
     },
   },
   {
@@ -33,19 +33,17 @@ export const PROBES = [
       replace: "  { at: 960, enemy: 'weaver', formation: 'line', count: 5, lane: 20 },",
     },
   },
-  {
-    decision: '0040',
-    suite: 'tests/level.test.ts',
-    // ⚠️ THE ONE THE SCREENSHOT FOUND. Pushing the opening past the horizon is exactly what treating
-    // `at` as a trigger did, and the level still looks completely reasonable in the table.
-    broke: 'the opening waves pushed past the horizon, so a run starts on an empty screen',
-    guard: 'has waves inside the opening spawn horizon',
-    edit: {
-      path: 'src/content/levels.ts',
-      find: "  { at: 60, enemy: 'drifter', formation: 'line', count: 5, lane: 50 },\n  { at: 150, enemy: 'drifter', formation: 'line', count: 5, lane: 30 },\n  { at: 240, enemy: 'drifter', formation: 'vee', count: 5, lane: 70 },\n  { at: 330, enemy: 'drifter', formation: 'line', count: 5, lane: 45 },",
-      replace: "  { at: 330, enemy: 'drifter', formation: 'line', count: 5, lane: 45 },",
-    },
-  },
+  /*
+    ⚠️ **A PROBE WAS REMOVED HERE, and its absence is the record.** It broke *has waves inside the
+    opening spawn horizon* — 0040's rule that a level must not begin on an empty screen. Play asked
+    for the exact opposite, so `docs/decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md`
+    replaced that guard with a pair: nothing on the first screen, and not for long. Both halves are
+    probed in `0043-budget.mjs`.
+
+    Deleted rather than re-aimed, because re-aiming it produced a second probe doing what one of
+    0043's already does, and two probes claiming one guard is the duplication
+    `docs/decisions/0017-the-state-is-slices.md` records the cost of.
+  */
   {
     decision: '0040',
     suite: 'tests/level.test.ts',

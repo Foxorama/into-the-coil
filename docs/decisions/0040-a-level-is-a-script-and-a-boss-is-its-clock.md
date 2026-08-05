@@ -28,8 +28,14 @@ the earliest a wave could exist was a full lookahead ahead of them.
 [0027](0027-measure-the-picture-not-the-model.md) is the rule that says to go and look, and
 `scripts/shot.mjs` is what it needed to exist for. Every number in the model was correct.
 
-There is now a guard for it — *has waves inside the opening spawn horizon* — and it is worth being
+There was a guard for it — *has waves inside the opening spawn horizon* — and it is worth being
 honest that the guard was written **after** the screenshot, not before it.
+
+⚠️ **AMENDED by [0043](0043-a-weapon-is-a-budget-and-a-level-opens-empty.md), which found that guard
+pointing the wrong way.** Play asked for the first screen to be **empty**, so the player can find the
+controls before anything finds them. Both complaints are real and neither is the other's opposite —
+*nothing on the first screen, and not for long* — and the guard is now that pair. This section
+records the half that was right: a level must not open onto nothing and stay that way.
 
 ## Density is a property of the view, not of the gap between waves
 
@@ -90,7 +96,7 @@ Per [0005](0005-a-guard-must-be-seen-to-fail.md) and [0019](0019-a-probe-must-be
 |---|---|
 | a wave authored out of order, which the spawner skips rather than delays | `lists its waves in ascending order of place` |
 | a lane that lets a weaver's swing leave the dodge lane it can never return to | `never puts an enemy where it can leave the dodge lane` |
-| the opening waves pushed past the horizon, so a run starts on an empty screen | `has waves inside the opening spawn horizon` |
+| ~~the opening waves pushed past the horizon~~ | superseded — see below |
 | the formation spacing widened back out, thinning the level to its first draft | `keeps enough on screen at once to be a shooter` |
 | a boss phase that eases off as it dies rather than escalating | `every phase is reachable, and they only get harder` |
 | the boss parked in world coordinates instead of the camera's frame | `arrives, closes on its station, and then holds it` |

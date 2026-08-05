@@ -106,7 +106,8 @@ export interface LevelRow {
   authored at `at` about `(at − 40) / 36` seconds in. That makes the script below **2 minutes 55
   seconds** of stage before the boss, against `docs/game.md`'s *"~3 minutes of stage per level"*.
 
-    60 – 900       0:00 – 0:24   drifters and the first lancers. Nothing here can be met by surprise
+    0 – 300        0:00 – 0:07   NOTHING. The player finds the controls before anything finds them
+    300 – 900      0:07 – 0:24   drifters and the first lancers. Nothing here can be met by surprise
     900 – 2300     0:24 – 1:03   weavers: the first thing whose threat is where it WILL be
     2300 – 3700    1:03 – 1:42   turrets: the first thing that cannot be cleared in passing
     3700 – 5000    1:42 – 2:18   chargers: the first thing faster than a reaction
@@ -126,12 +127,17 @@ export interface LevelRow {
   `docs/decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md`.
 */
 const APPROACH: readonly WaveEntry[] = [
-  // ── Teaching. One kind at a time, in shapes that read at a glance. Some of this is already on
-  //    screen when the run begins, because `at` is a place and the opening sits inside the horizon.
-  { at: 60, enemy: 'drifter', formation: 'line', count: 5, lane: 50 },
-  { at: 150, enemy: 'drifter', formation: 'line', count: 5, lane: 30 },
-  { at: 240, enemy: 'drifter', formation: 'vee', count: 5, lane: 70 },
-  { at: 330, enemy: 'drifter', formation: 'line', count: 5, lane: 45 },
+  /*
+    ⚠️ **NOTHING BEFORE 300, AND THE FIRST DRAFT OPENED AT 60.** Play reported it: *"the initial row
+    of enemies is too close to the player — the first screen should have no enemies so that the player
+    can orient themselves and test out the ship speed and controls."*
+
+    300 is past `MAX_ALONG_SPAN`, so the opening screen is empty on the WIDEST device as well as the
+    narrowest — a 16:9 player gets about four seconds of quiet and a 21:9 player about two. That
+    difference is inherent to seeing further and is not something a level can author away.
+  */
+  // ── Teaching. One kind at a time, in shapes that read at a glance.
+  { at: 300, enemy: 'drifter', formation: 'line', count: 5, lane: 45 },
   { at: 420, enemy: 'lancer', formation: 'column', count: 4, lane: 50 },
   { at: 510, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },
   { at: 600, enemy: 'lancer', formation: 'line', count: 4, lane: 30 },
@@ -246,7 +252,8 @@ const APPROACH_PICKUPS: readonly PickupEntry[] = [
   kind are gone — nearly every wave here is authored against the one before it rather than as its own
   idea.
 
-    60 – 900       0:00 – 0:24   straight into mixed waves; no teaching stretch
+    0 – 300        0:00 – 0:07   empty, exactly as level one opens
+    300 – 900      0:07 – 0:24   straight into mixed waves; no teaching stretch
     900 – 2200     0:24 – 1:00   wardens, which weave AND shoot
     2200 – 3600    1:00 – 1:39   chargers at density, through turret fire
     3600 – 5000    1:39 – 2:17   everything, with wardens holding the lane
@@ -258,16 +265,14 @@ const APPROACH_PICKUPS: readonly PickupEntry[] = [
   more here than it did there.
 */
 const DESCENT: readonly WaveEntry[] = [
-  { at: 60, enemy: 'lancer', formation: 'vee', count: 5, lane: 50 },
-  { at: 145, enemy: 'drifter', formation: 'line', count: 6, lane: 45 },
-  { at: 230, enemy: 'charger', formation: 'line', count: 4, lane: 60 },
-  { at: 315, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
+  { at: 300, enemy: 'lancer', formation: 'vee', count: 5, lane: 50 },
+  { at: 385, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
   { at: 400, enemy: 'turret', formation: 'column', count: 3, lane: 30 },
   { at: 485, enemy: 'lancer', formation: 'line', count: 5, lane: 65 },
   { at: 570, enemy: 'charger', formation: 'vee', count: 5, lane: 50 },
   { at: 655, enemy: 'drifter', formation: 'vee', count: 6, lane: 40 },
-  { at: 740, enemy: 'weaver', formation: 'column', count: 4, lane: 60 },
-  { at: 825, enemy: 'lancer', formation: 'column', count: 4, lane: 35 },
+  { at: 740, enemy: 'weaver', formation: 'column', count: 5, lane: 60 },
+  { at: 825, enemy: 'lancer', formation: 'column', count: 5, lane: 35 },
 
   // ── Wardens. Four health, weaving, and shooting — the first thing that is two problems at once. ─
   { at: 910, enemy: 'warden', formation: 'line', count: 3, lane: 50 },
@@ -277,6 +282,10 @@ const DESCENT: readonly WaveEntry[] = [
   { at: 1250, enemy: 'weaver', formation: 'vee', count: 5, lane: 50 },
   { at: 1335, enemy: 'lancer', formation: 'vee', count: 5, lane: 62 },
   { at: 1420, enemy: 'warden', formation: 'line', count: 3, lane: 45 },
+  // ⚠️ Filler, and it is filling something the density guard measured rather than something anybody
+  // felt: two three-wide waves in a row is a six-enemy trough, and wardens are four health each so
+  // making THEM more numerous would have changed the level's difficulty to fix its pacing.
+  { at: 1462, enemy: 'drifter', formation: 'line', count: 5, lane: 62 },
   { at: 1505, enemy: 'turret', formation: 'line', count: 3, lane: 55 },
   { at: 1590, enemy: 'charger', formation: 'column', count: 5, lane: 25 },
   { at: 1675, enemy: 'drifter', formation: 'vee', count: 6, lane: 50 },
@@ -292,7 +301,7 @@ const DESCENT: readonly WaveEntry[] = [
   { at: 2355, enemy: 'drifter', formation: 'line', count: 6, lane: 50 },
   { at: 2440, enemy: 'charger', formation: 'line', count: 5, lane: 35 },
   { at: 2525, enemy: 'turret', formation: 'line', count: 3, lane: 60 },
-  { at: 2610, enemy: 'weaver', formation: 'column', count: 4, lane: 30 },
+  { at: 2610, enemy: 'weaver', formation: 'column', count: 5, lane: 30 },
   { at: 2695, enemy: 'charger', formation: 'column', count: 5, lane: 70 },
   { at: 2780, enemy: 'lancer', formation: 'vee', count: 5, lane: 50 },
   { at: 2865, enemy: 'warden', formation: 'column', count: 3, lane: 55 },
