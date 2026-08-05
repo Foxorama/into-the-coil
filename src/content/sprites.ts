@@ -88,7 +88,18 @@ export const SPRITE_KINDS = [
   'boss',
   'bossHit',
   'bullet',
-  'pickup',
+  /*
+    ⚠️ **THREE PICKUP SILHOUETTES, NOT ONE IN THREE COLOURS.**
+    `docs/decisions/0024-the-accessibility-floor-is-settings.md` puts *colour never carries meaning
+    alone* in the unconditional tier, and a pickup is the case where that is most tempting to break:
+    they all do the same thing to the player (fly into it) and differ only in what happens after.
+
+    They share an ink and differ in shape, which is the same division of labour every enemy uses —
+    silhouette carries identity, colour carries role.
+  */
+  'pickupLife',
+  'pickupRapid',
+  'pickupSpread',
   'debris',
 ] as const;
 
@@ -170,7 +181,14 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   boss: 26,
   bossHit: 26,
   bullet: 1.8,
-  pickup: 3.5,
+  /*
+    ⚠️ **Bigger than the smallest enemy, on purpose.** A pickup is the one thing on screen the player
+    is supposed to fly TOWARDS, and at 3.5 it was smaller than everything it had to be picked out
+    from. It is still well under the drifter, so it never reads as a threat.
+  */
+  pickupLife: 4.6,
+  pickupRapid: 4.6,
+  pickupSpread: 4.6,
   // Small: a fragment reads as a piece of something, and eight of them at enemy size is a wall.
   debris: 1.4,
 };

@@ -1,0 +1,217 @@
+import { describe, expect, it } from 'vitest';
+
+import { PICKUPS, PICKUP_KINDS, weaponFor, type UpgradeKind } from '../src/content/pickups.ts';
+import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
+import { SHIPS } from '../src/content/ships.ts';
+import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
+import { ACROSS_SPAN } from '../src/sim/camera.ts';
+import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
+import { GameFrame } from '../src/app/frame.ts';
+import { playableWorld } from './world.ts';
+
+/**
+ * WHAT A PICKUP IS WORTH, AND WHAT A DEATH TAKES BACK.
+ *
+ * `docs/decisions/0041-a-pickup-is-the-answer-to-what-a-death-costs.md` is the reasoning. Two rules
+ * meet here and they are easy to get subtly wrong in opposite directions: an upgrade that cannot
+ * change the outcome is worse than none, and a fifth one must not end the game.
+ */
+
+describe('an upgrade changes the ship, and stacking one changes it again', () => {
+  it('every upgrade is worth taking', () => {
+    /*
+      `docs/game.md`: *"every upgrade is worth taking — an upgrade that cannot change the outcome is
+      worse than none."* Stated as a property rather than as numbers: whatever a weapon is, adding
+      any single upgrade to it has to produce a DIFFERENT weapon.
+    */
+    const base = weaponFor(SHIPS.proof, []);
+    for (const upgrade of ['rapid', 'spread'] as UpgradeKind[]) {
+      const after = weaponFor(SHIPS.proof, [upgrade]);
+      expect(
+        after.fireEvery !== base.fireEvery || after.shots !== base.shots,
+        `taking a ${upgrade} changes nothing about the ship`,
+      ).toBe(true);
+    }
+  });
+
+  it('stacks — the second of a kind is not swallowed by the first', () => {
+    // The failure this catches is a `Set` where a list was meant, or a tier that saturates at one.
+    const one = weaponFor(SHIPS.proof, ['rapid']);
+    const two = weaponFor(SHIPS.proof, ['rapid', 'rapid']);
+    expect(two.fireEvery, 'a second rapid did nothing').toBeLessThan(one.fireEvery);
+    expect(weaponFor(SHIPS.proof, ['spread', 'spread']).shots).toBeGreaterThan(
+      weaponFor(SHIPS.proof, ['spread']).shots,
+    );
+  });
+
+  it('never fires faster than a hit can be read, however many are taken', () => {
+    /*
+      ⚠️ **The other end of "worth taking".** `src/app/frame.ts` records that successive shots connect
+      6 to 7 steps apart and that the impact flash must END before the next one lands, or two hits
+      produce one picture and the player cannot count them —
+      `docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md`. A weapon that outruns that
+      makes damage unreadable, which is a bug that was already reported once.
+
+      Twenty of them: far past anything a level would hand out, which is the point of a floor.
+      Asserted against the flash's own length rather than a number typed here, so raising the flash
+      raises the floor.
+    */
+    const many: UpgradeKind[] = [];
+    for (let i = 0; i < 20; i++) many.push('rapid');
+    const weapon = weaponFor(SHIPS.proof, many);
+    expect(weapon.fireEvery, 'auto-fire outruns the impact flash and hits stop being countable').toBeGreaterThanOrEqual(4);
+    expect(Number.isFinite(weapon.fireEvery)).toBe(true);
+  });
+
+  it('an empty list IS the base weapon, so a death needs no second description of one', () => {
+    // 0039 says a death goes "back to the ship's base weapon". That sentence is only cheap because
+    // the base weapon is what an empty list resolves to.
+    const base = weaponFor(SHIPS.proof, []);
+    expect(base.fireEvery).toBe(SHIPS.proof.fireEvery);
+    expect(base.shots).toBe(1);
+  });
+});
+
+describe('a pickup is legible before it is taken', () => {
+  it('every kind has its own silhouette, so none of them is told apart by colour alone', () => {
+    /*
+      `docs/decisions/0024-the-accessibility-floor-is-settings.md` puts *colour never carries meaning
+      alone* in the unconditional tier. Pickups are where that is most tempting to break: they all do
+      the same thing to the player and differ only in what happens afterwards.
+    */
+    const sprites = new Set(PICKUP_KINDS.map((k) => PICKUPS[k].sprite));
+    expect(sprites.size, 'two pickups share a silhouette and can only be told apart by their ink').toBe(
+      PICKUP_KINDS.length,
+    );
+  });
+
+  it('is drawn big enough to be aimed at, and never big enough to read as a threat', () => {
+    const extentOf: number[] = [];
+    for (const k of SPRITE_KINDS) extentOf[SPRITE[k]] = SPRITE_EXTENT[k];
+    const smallestEnemy = Math.min(...ENEMY_KINDS.map((k) => extentOf[ENEMIES[k].sprite]!));
+    const largestEnemy = Math.max(...ENEMY_KINDS.map((k) => extentOf[ENEMIES[k].sprite]!));
+    for (const kind of PICKUP_KINDS) {
+      const extent = extentOf[PICKUPS[kind].sprite]!;
+      // It is the one thing the player is supposed to fly TOWARDS, so it may not be the smallest
+      // thing on screen — it was, at 3.5, and was harder to pick out than everything it competed with.
+      expect(extent, `${kind} is smaller than the smallest enemy`).toBeGreaterThanOrEqual(smallestEnemy * 0.85);
+      expect(extent, `${kind} is as big as an enemy and will read as one`).toBeLessThan(largestEnemy);
+    }
+  });
+
+  it('hurts nothing, because it is in no pairing that could', () => {
+    for (const kind of PICKUP_KINDS) {
+      expect(PICKUPS[kind].damage, `${kind} carries damage, and something will eventually apply it`).toBe(0);
+    }
+  });
+});
+
+describe('a level answers what a death costs', () => {
+  it('never leaves the player unarmed for long', () => {
+    /*
+      ⚠️ **THE LOAD-BEARING GUARD, AND IT IS 0039'S BILL.** A death empties the arsenal, so the
+      question a level has to answer is *how long is a player who just died without a weapon*. In
+      SECONDS, which is a unit the player experiences —
+      `docs/decisions/0027-measure-the-picture-not-the-model.md` requires at least one assertion in
+      one, and "every 600 world units" is the model talking to itself.
+
+      Twenty seconds is a ceiling on the gap, not a target. It fails when a level has quietly grown a
+      stretch with nothing in it to rearm from.
+    */
+    const unitsPerSecond = SCROLL_PER_STEP * 60;
+    for (const kind of LEVEL_KINDS) {
+      const level = LEVELS[kind];
+      const upgrades = level.pickups.filter((p) => PICKUPS[p.kind].effect === 'upgrade');
+      expect(upgrades.length, `${kind} has no upgrades in it at all`).toBeGreaterThan(0);
+
+      let previous = 0;
+      let worst = 0;
+      let worstAt = 0;
+      for (const pickup of upgrades) {
+        const gap = (pickup.at - previous) / unitsPerSecond;
+        if (gap > worst) {
+          worst = gap;
+          worstAt = pickup.at;
+        }
+        previous = pickup.at;
+      }
+      const tail = (level.bossAt - previous) / unitsPerSecond;
+      if (tail > worst) {
+        worst = tail;
+        worstAt = level.bossAt;
+      }
+      expect(
+        worst,
+        `${kind} goes ${worst.toFixed(0)}s without an upgrade, ending at ${worstAt}. A player who ` +
+          'died at the start of that stretch flies all of it with the base weapon.',
+      ).toBeLessThan(20);
+    }
+  });
+
+  it('lists its pickups in order, and inside the lane', () => {
+    for (const kind of LEVEL_KINDS) {
+      const pickups = LEVELS[kind].pickups;
+      for (let i = 0; i < pickups.length; i++) {
+        const item = pickups[i]!;
+        const radius = PICKUPS[item.kind].radius;
+        // The spawner walks this list once and never looks back, exactly as it does for waves.
+        if (i > 0) expect(item.at, `${kind} pickup ${i} is behind the one before it`).toBeGreaterThanOrEqual(pickups[i - 1]!.at);
+        expect(item.lane - radius, `${kind}'s ${item.kind} at ${item.at} hangs off the lane`).toBeGreaterThan(0);
+        expect(item.lane + radius).toBeLessThan(ACROSS_SPAN);
+      }
+    }
+  });
+
+  it('has lives in it, because a fixed complement is what makes them findable', () => {
+    // 0039 refused lives that refill at a level boundary and named this as the replacement. A level
+    // with none is that refusal with nothing behind it.
+    for (const kind of LEVEL_KINDS) {
+      const lives = LEVELS[kind].pickups.filter((p) => PICKUPS[p.kind].effect === 'life');
+      expect(lives.length, `${kind} has no extra lives in it, so the complement can only go down`).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('collecting one, in the real frame', () => {
+  /** A level that is one pickup and nothing else, placed where the ship will fly through it. */
+  function onePickup(kind: 'extraLife' | 'rapid'): ReturnType<typeof playableWorld> {
+    return playableWorld({
+      waves: [],
+      pickups: [{ at: 200, kind, lane: ACROSS_SPAN / 2 }],
+      bossAt: Number.POSITIVE_INFINITY,
+      boss: 'sentinel',
+    });
+  }
+
+  it('is reported exactly once, and by name', () => {
+    const { world, taken } = onePickup('rapid');
+    const frame = new GameFrame(world);
+    for (let i = 0; i < 600; i++) frame.step();
+    expect(taken, 'the ship flew through a pickup and nothing was reported').toEqual(['rapid']);
+  });
+
+  it('leaves the field once taken, so it cannot be collected twice', () => {
+    const { world } = onePickup('extraLife');
+    const frame = new GameFrame(world);
+    for (let i = 0; i < 600; i++) frame.step();
+    expect(world.pickups.size, 'the pickup is still on the field after being collected').toBe(0);
+  });
+
+  it('is collectable while the ship is invulnerable', () => {
+    /*
+      ⚠️ **The case `collideIntoOne` would have got wrong.** It skips a target that is invulnerable —
+      correct for damage, and exactly backwards here: the moments after a hit are when a player is
+      most likely to be flying through things, and a pickup that silently passed through them would
+      read as the collection being broken.
+    */
+    const { world, taken } = onePickup('rapid');
+    const frame = new GameFrame(world);
+    for (let i = 0; i < 600; i++) {
+      // Held permanently invulnerable, which is the state under test rather than an incidental one.
+      world.ship.invulnFor = 60;
+      frame.step();
+    }
+    expect(taken, 'a pickup passed through an invulnerable ship').toEqual(['rapid']);
+  });
+});

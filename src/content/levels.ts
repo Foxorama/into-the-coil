@@ -39,6 +39,7 @@
 import type { EnemyKind } from './enemies.ts';
 import type { FormationKind } from './formations.ts';
 import type { BossKind } from './bosses.ts';
+import type { PickupKind } from './pickups.ts';
 
 /** Every level. Closed, and one long — the roster is downstream of playing this one. */
 export const LEVEL_KINDS = ['approach'] as const;
@@ -57,9 +58,30 @@ export interface WaveEntry {
   lane: number;
 }
 
+export interface PickupEntry {
+  /** World units from the level's start. A place, exactly as a wave's `at` is. */
+  at: number;
+  kind: PickupKind;
+  /** Where across the lane it sits, 0 to 100. */
+  lane: number;
+}
+
 export interface LevelRow {
   /** In order of `at`, ascending. `tests/level.test.ts` holds that, because the spawner assumes it. */
   waves: readonly WaveEntry[];
+  /**
+   * What is lying about, in order of `at`.
+   *
+   * ⚠️ **A separate list rather than a wave of one**, because a pickup is in a different collision
+   * pairing from everything else in the game — it is collected, never destroyed, and it must be
+   * collectable while the ship is invulnerable. `src/sim/collide.ts` has the argument.
+   *
+   * ⚠️ **This is the load-bearing half of 0039.** A death empties the arsenal, so a player who dies
+   * late in a level and cannot rearm has been handed its hardest stretch with its weakest loadout.
+   * How much of that is answered is a property of THIS LIST, and `tests/pickups.test.ts` holds a
+   * floor under it rather than leaving it to be noticed in a play-test.
+   */
+  pickups: readonly PickupEntry[];
   /** Camera distance at which the boss arrives. Everything after it is the fight. */
   bossAt: number;
   boss: BossKind;
@@ -174,6 +196,38 @@ const APPROACH: readonly WaveEntry[] = [
   { at: 6140, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
 ];
 
+/*
+  ⚠️ **PLACED AGAINST THE DEATH RULE, NOT SPRINKLED.**
+  `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md` empties the arsenal on a
+  death, which makes the question *"how long is a player who just died without a weapon"*. The answer
+  authored here is **never more than about twenty seconds**: an upgrade appears roughly every 600
+  units, which is under seventeen seconds of camera, all the way to the boss.
+
+  The two lives are early-middle and late — one before the difficulty turns, one in the stretch that
+  decides the run. Lives survive a death, so they are worth flying for at any point.
+
+  ⚠️ Lanes are deliberately off-centre and alternating. A pickup on the centreline is one the player
+  drifts into without deciding anything, and `docs/game.md` wants every upgrade to be worth taking —
+  which starts with taking it being a choice about position.
+*/
+const APPROACH_PICKUPS: readonly PickupEntry[] = [
+  { at: 420, kind: 'rapid', lane: 25 },
+  { at: 1010, kind: 'spread', lane: 72 },
+  { at: 1620, kind: 'rapid', lane: 38 },
+  { at: 2150, kind: 'extraLife', lane: 60 },
+  // ⚠️ Added because `tests/pickups.test.ts` measured a 28-second stretch with nothing to rearm
+  // from — an extra life sitting in the middle of it does not answer the question a death asks.
+  { at: 2200, kind: 'spread', lane: 30 },
+  { at: 2620, kind: 'spread', lane: 28 },
+  { at: 3160, kind: 'rapid', lane: 70 },
+  { at: 3700, kind: 'spread', lane: 45 },
+  { at: 4240, kind: 'rapid', lane: 22 },
+  { at: 4700, kind: 'spread', lane: 40 },
+  { at: 4800, kind: 'extraLife', lane: 66 },
+  { at: 5300, kind: 'spread', lane: 35 },
+  { at: 5860, kind: 'rapid', lane: 62 },
+];
+
 export const LEVELS: Record<LevelKind, LevelRow> = {
   /**
    * The first level.
@@ -184,6 +238,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
    */
   approach: {
     waves: APPROACH,
+    pickups: APPROACH_PICKUPS,
     /*
       ⚠️ **250 units of quiet before the boss, which is about seven seconds.** It is not padding: the
       last wave is the densest in the level, and arriving at a 26-unit hull still clearing the

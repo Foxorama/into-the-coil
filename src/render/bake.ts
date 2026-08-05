@@ -66,7 +66,9 @@ const INK_OF: Record<SpriteKind, keyof Palette> = {
   charger: 'enemy',
   boss: 'enemy',
   bullet: 'bullet',
-  pickup: 'pickup',
+  pickupLife: 'pickup',
+  pickupRapid: 'pickup',
+  pickupSpread: 'pickup',
   /*
     THE HURT SILHOUETTES: the SAME shape in a different ink.
 
@@ -224,11 +226,39 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
       ctx.lineTo(half - r, half + r * 0.2);
       ctx.closePath();
       break;
-    case 'pickup':
-      // A square with a hole: distinct in silhouette from both the diamond and the disc.
-      ctx.rect(half - r * 0.8, half - r * 0.8, r * 1.6, r * 1.6);
-      ctx.rect(half - r * 0.25, half - r * 0.25, r * 0.5, r * 0.5);
+    case 'pickupLife': {
+      /*
+        A PLUS. The one glyph that means *more of something* without any game having to teach it,
+        and four arms make a silhouette no enemy in the game shares — the diamond has four points
+        and no waist.
+      */
+      const arm = r * 0.34;
+      ctx.rect(half - arm, half - r, arm * 2, r * 2);
+      ctx.rect(half - r, half - arm, r * 2, arm * 2);
       break;
+    }
+    case 'pickupRapid':
+      // A square with a hole — the old pickup shape, kept for the commonest of the three. Distinct
+      // from both the diamond and the disc, and the hole survives being small.
+      ctx.rect(half - r * 0.8, half - r * 0.8, r * 1.6, r * 1.6);
+      ctx.rect(half - r * 0.3, half - r * 0.3, r * 0.6, r * 0.6);
+      break;
+    case 'pickupSpread': {
+      /*
+        A hexagon: round enough to read as *not a square* at a glance, cornered enough to read as
+        *not the bullet's disc*. It is the loosest of the three distinctions, and the one to look at
+        first if a play-test says the pickups are muddled — `scripts/shot.mjs` is how.
+      */
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i;
+        const x = half + Math.cos(angle) * r;
+        const y = half + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      break;
+    }
     default: {
       const never: never = kind;
       throw new Error(`unbaked sprite kind: ${String(never)}`);

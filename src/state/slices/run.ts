@@ -12,6 +12,7 @@
  */
 
 import { type SpecialKind } from '../../content/specials.ts';
+import { type UpgradeKind } from '../../content/pickups.ts';
 
 /**
  * Lives a run starts with.
@@ -39,12 +40,24 @@ export interface RunState {
    * not weapon kinds. This is the state half.
    */
   arsenal: readonly SpecialKind[];
+  /**
+   * Auto-fire upgrades, in the order they were taken.
+   *
+   * ⚠️ **A LIST rather than a tier, for the same reason the arsenal is** — and this is where that
+   * shape stops being an argument and starts being used. `src/content/pickups.ts` resolves the whole
+   * list into a weapon every time it changes, so *"two rapids and a spread"* is a statement the save
+   * can hold and the reducer can compare. A running `fireEvery` on the run would be a number nobody
+   * could undo, and a death has to undo it.
+   */
+  upgrades: readonly UpgradeKind[];
 }
 
 export type RunAction =
   | { slice: 'run'; type: 'begin' }
   | { slice: 'run'; type: 'lifeLost' }
   | { slice: 'run'; type: 'took'; special: SpecialKind }
+  | { slice: 'run'; type: 'gainedLife' }
+  | { slice: 'run'; type: 'upgraded'; upgrade: UpgradeKind }
   | { slice: 'run'; type: 'levelCleared' };
 
 /**
@@ -54,12 +67,12 @@ export type RunAction =
  * that is already stocked would let a reload or a stray dispatch drop the player into a half-run
  * whose level and arsenal came from nowhere.
  */
-export const initialRun: RunState = { lives: 0, level: 0, arsenal: [] };
+export const initialRun: RunState = { lives: 0, level: 0, arsenal: [], upgrades: [] };
 
 export function reduceRun(state: RunState, action: RunAction): RunState {
   switch (action.type) {
     case 'begin':
-      return { lives: STARTING_LIVES, level: 0, arsenal: [] };
+      return { lives: STARTING_LIVES, level: 0, arsenal: [], upgrades: [] };
     case 'lifeLost':
       /*
         ⚠️ **The arsenal is cleared on EVERY death, including the last one.** It reads as redundant —
@@ -72,9 +85,29 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         reducer is not the place to find out whether anything did: a negative life count would
         propagate silently into the save schema and into whatever renders a life counter.
       */
-      return state.lives <= 0 ? state : { lives: state.lives - 1, level: state.level, arsenal: [] };
+      /*
+        ⚠️ **The UPGRADES go too, and that is `docs/decisions/0039-…`'s rule reaching the field it
+        was written about before that field existed.** It says a death clears the arsenal *"back to
+        the ship's base weapon and starting special"* — the base weapon is exactly what an empty
+        upgrade list resolves to, so this line and `weaponFor` between them mean there is no second
+        description anywhere of what the ship shoots when it has nothing.
+      */
+      return state.lives <= 0
+        ? state
+        : { lives: state.lives - 1, level: state.level, arsenal: [], upgrades: [] };
     case 'took':
-      return { lives: state.lives, level: state.level, arsenal: [...state.arsenal, action.special] };
+      return { lives: state.lives, level: state.level, arsenal: [...state.arsenal, action.special], upgrades: state.upgrades };
+    case 'gainedLife':
+      // No ceiling. A level author decides how many are findable, which is 0039's replacement for
+      // lives that refill at a boundary — and a cap here would quietly overrule that decision.
+      return { lives: state.lives + 1, level: state.level, arsenal: state.arsenal, upgrades: state.upgrades };
+    case 'upgraded':
+      return {
+        lives: state.lives,
+        level: state.level,
+        arsenal: state.arsenal,
+        upgrades: [...state.upgrades, action.upgrade],
+      };
     case 'levelCleared':
       /*
         ⚠️ **Lives and arsenal are untouched, and that is the whole of what "carry forward" means.**
@@ -82,7 +115,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         to say upgrades cross a LEVEL boundary and not a death, and this line is the level boundary.
         A clear that reset anything would be the death rule wearing the wrong name.
       */
-      return { lives: state.lives, level: state.level + 1, arsenal: state.arsenal };
+      return { lives: state.lives, level: state.level + 1, arsenal: state.arsenal, upgrades: state.upgrades };
     default: {
       // Adding a member to `RunAction` fails to compile HERE, per
       // `docs/decisions/0016-a-hub-enumerates-kinds.md`'s fifth defeat.

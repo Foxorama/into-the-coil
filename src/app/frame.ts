@@ -23,7 +23,7 @@
  */
 
 import { ACROSS_SPAN, spawnAlong, type View } from '../sim/camera.ts';
-import { collideInto, collideIntoOne, type Deaths } from '../sim/collide.ts';
+import { collectInto, collideInto, collideIntoOne, type Collected, type Deaths } from '../sim/collide.ts';
 import { type Entity, reset, stepEntities } from '../sim/entity.ts';
 import { flyShip, holdStation } from '../sim/flight.ts';
 import type { Intent } from '../sim/intent.ts';
@@ -41,6 +41,7 @@ import { BURST, DEBRIS } from '../content/debris.ts';
 import { FORMATIONS } from '../content/formations.ts';
 import type { LevelRow } from '../content/levels.ts';
 import type { BossRow } from '../content/bosses.ts';
+import { PICKUP_KINDS, type PickupKind, type PickupRow, type Weapon } from '../content/pickups.ts';
 import { stepBoss } from './boss.ts';
 import type { Frame } from './loop.ts';
 
@@ -161,6 +162,32 @@ export interface World {
   level: LevelRow;
   /** Index of the next wave in `level.waves` that has not spawned yet. Only ever goes up. */
   nextWave: number;
+  /** Index of the next pickup in `level.pickups`. Its own index, because the two lists interleave. */
+  nextPickup: number;
+  /** What is lying about, waiting to be flown into. In no pairing that can hurt anything. */
+  pickups: Pool<Entity>;
+  /** Pickup rows in `PICKUP_KINDS` order, so an entity's opaque `kind` reads back as a name. */
+  pickupRows: readonly PickupRow[];
+  /** Which index each authored pickup kind is, built once at boot. */
+  pickupKinds: Record<PickupKind, number>;
+  /** What was collected this step. Reused, never rebuilt. */
+  collected: Collected;
+  /**
+   * The ship flew into something.
+   *
+   * ⚠️ Reported rather than decided, like `onDeath` and `onCleared`. What a pickup is WORTH is
+   * `src/state/`'s business — an extra life and an upgrade land in different fields and are cleared
+   * by different events.
+   */
+  onPickup: (kind: PickupKind) => void;
+  /**
+   * The resolved auto-fire, recomputed by the shell whenever the run's upgrade list changes.
+   *
+   * ⚠️ **Resolved once per change, not once per step.** `weaponFor` walks the whole upgrade list,
+   * which is the right shape for a pure function of saved state and the wrong thing to do sixty
+   * times a second — and this file may not allocate, so it could not build the result anyway.
+   */
+  weapon: Weapon;
   /** The boss's row, resolved once at boot so a step never looks a kind up by name. */
   bossRow: BossRow;
   /** The boss, alone in its own pool — so `playerShots` meeting it is its own pairing. */
@@ -256,6 +283,7 @@ export class GameFrame implements Frame {
     // the camera and a player asking for nothing holds station. An enemy carries its own closing
     // speed and nothing else, which is what makes the world appear to move past it.
     stepEntities(w.shipPool, w.cameraAlong);
+    stepEntities(w.pickups, w.cameraAlong);
     stepEntities(w.bossPool, w.cameraAlong);
     stepEntities(w.enemies, w.cameraAlong);
     stepEntities(w.playerShots, w.cameraAlong);
@@ -282,6 +310,22 @@ export class GameFrame implements Frame {
     // cheapest way to clear the screen.
     collideIntoOne(w.enemies, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
     collideIntoOne(w.bossPool, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
+
+    /*
+      ⚠️ **At the FULL hurtbox, never the assisted one.** `w.tuning.hurtbox` shrinks the ship's circle
+      for a player who has asked for a larger margin — and running collection through it would make
+      that assist HARDER to play with, because the same setting that removes hits would also remove
+      pickups. `docs/decisions/0024-the-accessibility-floor-is-settings.md` says no assist may ever
+      make the game harder, and this is the one line in the game where the obvious code breaks it.
+    */
+    w.collected.count = 0;
+    collectInto(w.pickups, w.ship, 1, w.collected);
+    for (let i = 0; i < w.collected.count; i++) {
+      // `PICKUP_KINDS` IS the index order — `pickupRows` is built by walking it — so the entity's
+      // opaque `kind` reads back as the authored name with no second table to keep in step.
+      const kind = PICKUP_KINDS[w.collected.kind[i]!];
+      if (kind !== undefined) w.onPickup(kind);
+    }
 
     // Every enemy that died this step leaves something behind. The positions were recorded by the
     // collision because a released slot is the next thing `spawn` hands out.
@@ -317,6 +361,11 @@ export class GameFrame implements Frame {
       spawnWave(w, w.nextWave);
       w.nextWave++;
     }
+    // Its own index, because the two lists interleave and neither is a subsequence of the other.
+    while (w.nextPickup < w.level.pickups.length && w.level.pickups[w.nextPickup]!.at <= horizon) {
+      spawnPickup(w, w.nextPickup);
+      w.nextPickup++;
+    }
 
     if (!w.bossSpawned && horizon >= w.level.bossAt) {
       w.bossSpawned = true;
@@ -350,13 +399,28 @@ export class GameFrame implements Frame {
 function fireShip(w: World): void {
   w.fireIn--;
   if (w.fireIn > 0) return;
-  w.fireIn = w.shipRow.fireEvery;
+  w.fireIn = w.weapon.fireEvery;
   const row = SHOTS[w.shipRow.shot];
-  const shot = w.playerShots.spawn();
-  if (shot === null) return;
-  reset(shot, w.ship.along + MUZZLE_ALONG, w.ship.across, row);
-  // Camera frame, like everything else the player can see move — see `fireEnemies`.
-  shot.velAlong = row.speed + w.scrollPerStep;
+  /*
+    The volley, fanned about the nose. One barrel takes the nose exactly; `spread` is the TOTAL angle
+    across the fan, so the step between neighbours is `spread / (shots - 1)` — the same arithmetic
+    `src/app/boss.ts` does, deliberately written the same way in both places rather than shared,
+    because a helper reached for from two hot files is an import edge that only exists to save four
+    lines.
+
+    ⚠️ Every barrel carries the scroll rate, like everything else the player watches move.
+  */
+  const step = w.weapon.shots > 1 ? w.weapon.spread / (w.weapon.shots - 1) : 0;
+  const first = -(step * (w.weapon.shots - 1)) / 2;
+  for (let i = 0; i < w.weapon.shots; i++) {
+    const shot = w.playerShots.spawn();
+    // A volley one barrel short is dropped rather than grown — `src/sim/pool.ts` has the argument.
+    if (shot === null) return;
+    const angle = first + step * i;
+    reset(shot, w.ship.along + MUZZLE_ALONG, w.ship.across, row);
+    shot.velAlong = Math.cos(angle) * row.speed + w.scrollPerStep;
+    shot.velAcross = Math.sin(angle) * row.speed;
+  }
 }
 
 /**
@@ -492,6 +556,25 @@ function steerEnemies(w: World): void {
   }
 }
 
+/**
+ * One authored pickup, at the place the level put it.
+ *
+ * ⚠️ **It holds station in the world and closes at exactly the scroll rate**, like a drifter — so a
+ * player who sees one has a known amount of time to decide to go for it. Anything that closed faster
+ * would make the decision a reflex, and `docs/game.md` wants taking an upgrade to be worth doing
+ * rather than something that happens to you.
+ */
+function spawnPickup(w: World, index: number): void {
+  const entry = w.level.pickups[index];
+  if (entry === undefined) return;
+  const kind = w.pickupKinds[entry.kind];
+  const row = w.pickupRows[kind];
+  if (row === undefined) return;
+  const item = w.pickups.spawn();
+  if (item === null) return;
+  reset(item, entry.at, entry.lane, row, kind);
+}
+
 /** The boss, if there is one on the field. Its whole behaviour lives in `src/app/boss.ts`. */
 function driveBoss(w: World): void {
   if (w.bossPool.size === 0) return;
@@ -539,7 +622,13 @@ export function respawn(w: World): void {
   reset(w.ship, w.cameraAlong + SHIP_START_ALONG, ACROSS_SPAN / 2, w.shipRow);
   holdStation(w.ship, w.scrollPerStep);
   w.ship.invulnFor = INVULN_STEPS;
-  w.fireIn = w.shipRow.fireEvery;
+  /*
+    ⚠️ **The pickups on screen are NOT cleared, and that is the answer to what a death costs.**
+    0039 empties the arsenal, which means the twenty seconds after a death are the hardest in the
+    level — so anything the player had not yet reached is still there to be flown for. Wiping them
+    would turn one mistake into a stretch with no way back out of it.
+  */
+  w.fireIn = w.weapon.fireEvery;
 }
 
 /**
@@ -560,7 +649,9 @@ export function resetScene(w: World): void {
     answer and the one that keeps a life worth spending. Only a new run puts it back.
   */
   w.bossPool.clear();
+  w.pickups.clear();
   w.nextWave = 0;
+  w.nextPickup = 0;
   w.bossSpawned = false;
   w.bossBeaten = false;
   w.bossPatrol = 1;

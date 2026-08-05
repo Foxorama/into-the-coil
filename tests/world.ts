@@ -15,6 +15,8 @@
 import { Pool } from '../src/sim/pool.ts';
 import { type Entity, makeEntity, reset } from '../src/sim/entity.ts';
 import { BOSSES } from '../src/content/bosses.ts';
+import { PICKUPS, PICKUP_KINDS, type PickupKind, type PickupRow, weaponFor } from '../src/content/pickups.ts';
+import { makeCollected } from '../src/sim/collide.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../src/content/enemies.ts';
 import type { LevelRow } from '../src/content/levels.ts';
 import { SHIPS } from '../src/content/ships.ts';
@@ -36,7 +38,12 @@ import { viewOf } from '../src/sim/camera.ts';
  * `Infinity` rather than a large number: a fixture that ran long enough to pass a big one would
  * start a boss fight in the middle of an assertion about bullets, and would do it only sometimes.
  */
-export const NO_LEVEL: LevelRow = { waves: [], bossAt: Number.POSITIVE_INFINITY, boss: 'sentinel' };
+export const NO_LEVEL: LevelRow = {
+  waves: [],
+  pickups: [],
+  bossAt: Number.POSITIVE_INFINITY,
+  boss: 'sentinel',
+};
 
 /** The kind-to-index lookup, built the same way `mount.ts` builds it rather than restated. */
 export function enemyKindIndices(): Record<EnemyKind, number> {
@@ -64,8 +71,18 @@ export function inertLevel(): {
   bossBeaten: boolean;
   bossPatrol: number;
   onCleared: () => void;
+  nextPickup: number;
+  pickups: Pool<Entity>;
+  pickupRows: readonly PickupRow[];
+  pickupKinds: Record<PickupKind, number>;
+  collected: ReturnType<typeof makeCollected>;
+  onPickup: (kind: PickupKind) => void;
+  weapon: ReturnType<typeof weaponFor>;
 } {
   return {
+    // The base weapon, which is what an empty upgrade list resolves to. A fixture that wanted a
+    // different one would say so; none does, and none should have to restate the base.
+    weapon: weaponFor(SHIPS.proof, []),
     enemyKinds: enemyKindIndices(),
     level: NO_LEVEL,
     nextWave: 0,
@@ -75,6 +92,29 @@ export function inertLevel(): {
     bossBeaten: false,
     bossPatrol: 1,
     onCleared: (): void => {},
+    ...pickupParts(),
+    onPickup: (): void => {},
+  };
+}
+
+/** The pickup half of a world, built the way `mount.ts` builds it rather than restated. */
+export function pickupParts(): {
+  nextPickup: number;
+  pickups: Pool<Entity>;
+  pickupRows: readonly PickupRow[];
+  pickupKinds: Record<PickupKind, number>;
+  collected: ReturnType<typeof makeCollected>;
+} {
+  const pickupKinds = {} as Record<PickupKind, number>;
+  PICKUP_KINDS.forEach((k, index) => {
+    pickupKinds[k] = index;
+  });
+  return {
+    nextPickup: 0,
+    pickups: new Pool<Entity>(8, makeEntity),
+    pickupRows: PICKUP_KINDS.map((k) => PICKUPS[k]),
+    pickupKinds,
+    collected: makeCollected(8),
   };
 }
 
@@ -99,6 +139,7 @@ export function playableWorld(level: LevelRow): {
   world: World;
   deaths: { count: number };
   cleared: { count: number };
+  taken: PickupKind[];
 } {
   const shipPool = new Pool<Entity>(1, makeEntity);
   const enemies = new Pool<Entity>(40, makeEntity);
@@ -115,6 +156,7 @@ export function playableWorld(level: LevelRow): {
 
   const deaths = { count: 0 };
   const cleared = { count: 0 };
+  const taken: PickupKind[] = [];
 
   const world: World = {
     layers: [debris, bossPool, enemies, enemyShots, playerShots, shipPool],
@@ -161,6 +203,11 @@ export function playableWorld(level: LevelRow): {
     onCleared: (): void => {
       cleared.count++;
     },
+    ...pickupParts(),
+    weapon: weaponFor(shipRow, []),
+    onPickup: (kind: PickupKind): void => {
+      taken.push(kind);
+    },
   };
-  return { world, deaths, cleared };
+  return { world, deaths, cleared, taken };
 }
