@@ -28,6 +28,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **what a run is: three lives, and a death costs the arsenal** | [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 | **a level is a script; a boss is phases keyed to health** | [0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md) |
 | **pickups: extra lives, and upgrades a death takes back** | [0041](decisions/0041-a-pickup-is-the-answer-to-what-a-death-costs.md) |
+| **a run is a sequence of levels; the order is the list** | [0042](decisions/0042-a-run-is-a-sequence-of-levels.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
@@ -37,20 +38,21 @@ deliberately left alone — [`drag-feel`](../reports/drag-feel-2026-08-05.md) ha
 
 ⚠️ **`STARTING_LIVES` is NOT closed.** Three is a starting point placed by a hand, in the same
 category [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) puts it in as the
-flight constants before they were played. It cannot be settled before there is a full level to lose
-it in.
+flight constants before they were played. There are now two full levels to lose it in, and it has
+still never been played.
 
 ## What the game currently is
 
-**One playable level, end to end, with upgrades.** A title screen, three lives, five enemy kinds, an
-authored wave script of about three minutes, weapon upgrades and extra lives lying about in it, and a
-boss with phases keyed to its health — then a level-clear screen.
+**A two-level run, playable start to finish.** A title screen, three lives, six enemy kinds, two
+authored levels of about three minutes each, weapon upgrades and extra lives lying about in them, a
+unique boss at the end of each, a screen between them, and a victory screen after the second.
 
 Nothing is *triggered*: the arsenal — the specials a player spends — is still a list with nothing in
 it. Difficulty was last placed by a hand at *"intro to 50% of the first level"* —
-[`ship-speed-settled`](../reports/ship-speed-settled-2026-08-05.md).
+[`ship-speed-settled`](../reports/ship-speed-settled-2026-08-05.md), which is now two levels out of
+date and is exactly what a play-test is for.
 
-## What the first play-test of level one has to answer
+## What the first play-test has to answer
 
 Questions, not findings — each one a number nothing in the repository can settle.
 
@@ -65,10 +67,16 @@ Questions, not findings — each one a number nothing in the repository can sett
 - **Do the weaver and the charger read apart?** Both are essentially lines, told apart by which way
   they lie — `src/content/sprites.ts` writes that risk down rather than assuming it away.
 - **Do enemy shots ever land?** [0034](decisions/0034-a-threat-is-absolute-and-a-pool-is-the-pairing.md)'s
-  `spit` speed and the fire rates have never been felt by an attentive player, and the turret is the
-  row that exists to test them —
+  `spit` speed and the fire rates have never been felt by an attentive player; the turret and the
+  warden are the rows that exist to test them —
   [`ship-speed-settled`](../reports/ship-speed-settled-2026-08-05.md) has the measurement they
   replace.
+- **Is level two a different game or the same one denser?**
+  [0042](decisions/0042-a-run-is-a-sequence-of-levels.md) claims the harrow takes away the lane the
+  sentinel taught the player to hold. That is a claim about how a fight feels, and nothing in this
+  repository can check it.
+- **Does a run that survives a level boundary feel like one run?** Six minutes is longer than
+  anything here has been played end to end.
 
 ## What is next, and why in this order
 
@@ -79,12 +87,13 @@ since [0030](decisions/0030-input-is-actions-and-needs-no-new-layer.md) — `SPE
 `Intent.specials` — and nothing consumes it either. The run slice already carries the arsenal as a
 list, so this adds behaviour to a shape rather than changing one.
 
-**2 — Level two, and therefore the chart.**
+**2 — The chart, and more levels behind it.**
 
-A second level is a row in `LEVELS` —
-[0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md) made that a table edit. What it
-is *not* yet is a destination: `docs/game.md` puts a branching chart between levels, and nothing
-knows how to move from one to the next.
+A level is a row in `LEVELS` and the sequence is that list —
+[0042](decisions/0042-a-run-is-a-sequence-of-levels.md). What does *not* exist is the branching map
+`docs/game.md` puts between levels, and 0042 says why a straight line came first: a chart is a
+screen, a graph and a set of rules about what may follow what, and all three want deciding against
+levels somebody has played.
 
 Also still unlocked and still not done: **entry from the `across` edges.** Everything arrives at the
 leading edge because that is the only spawn rule written, not because of any constraint —
@@ -106,7 +115,7 @@ arsenal, and the level to resume at.
 deliberately not one of `docs/game.md`'s four golfers; authoring characters is expensive to redo and
 it is downstream of everything above.
 
-**Theming level one to a biome.** `docs/game.md` themes levels on the fourteen *Far Carry* biomes and
+**Theming the levels to biomes.** `docs/game.md` themes levels on the fourteen *Far Carry* biomes and
 names none of them, so picking one means going to the predecessor for material — which `CLAUDE.md`
 allows only for a named file and a named reason. It is a one-line table edit whenever that reason
 exists.
