@@ -282,10 +282,24 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   /** Whether the viewport is one the game may be played in at all — the orientation gate's answer. */
   let playable = false;
 
-  /** Push the current screen at the two things that care: the chrome, and whether the sim steps. */
+  /**
+   * Push the current screen at the two things that care: the chrome, and whether the sim steps.
+   *
+   * ⚠️ **`playable` MUST NOT appear in the `stepping` line, and this cost a CI failure to learn.**
+   * It read `playable && SCREENS[screen].steps` at first, which is true and is a SECOND mechanism for
+   * a guarantee that already had one: the orientation gate stops the loop outright
+   * (`docs/decisions/0031-landscape-is-the-shipped-orientation.md`). With both in place, breaking the
+   * gate's stop on purpose left the world frozen anyway — so 0031's probe reported STILL GREEN and
+   * the assertion it protects had quietly become unfalsifiable.
+   *
+   * The rule is the general one and it is worth more than the line: **one guarantee, one mechanism.**
+   * A redundant safety net does not make a system safer, it makes the original mechanism untestable —
+   * and an untested mechanism is the one that gets refactored away. The chrome below is a different
+   * question, because there is no second thing hiding it.
+   */
   const applyScreen = (): void => {
     const screen = state.screen.current;
-    world.stepping = playable && SCREENS[screen].steps;
+    world.stepping = SCREENS[screen].steps;
     chrome.show(playable ? screen : null);
   };
 
