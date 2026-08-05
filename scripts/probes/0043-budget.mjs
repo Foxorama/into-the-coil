@@ -60,15 +60,24 @@ export const PROBES = [
   {
     decision: '0043',
     suite: 'tests/level.test.ts',
-    // ⚠️ The guard's own sampling, broken back to what it was. This is the version that reported the
-    // level as fine while a six-enemy trough sat in it — a guard measuring a real property at the
-    // wrong points.
-    broke: 'the density guard sampling boundaries instead of the troughs just past them',
+    /*
+      ⚠️ **THE TROUGH ITSELF, and this probe was first written against the SAMPLING and stayed
+      green.** It restored the old boundary sampling — and the suite passed, because by then the
+      content had been fixed and there was no longer a trough for either version to miss. Proving
+      that the sampling is what catches it would need two edits at once, which the harness does not
+      do, and correctly: a probe that changed both the guard and the code it guards would prove
+      nothing about either.
+
+      So this breaks the level instead. Removing one filler wave puts two three-wide waves next to
+      each other and the view holds six — which is a real thin spot, was really there, and was really
+      invisible to the sampling this guard used to do.
+    */
+    broke: 'a filler wave removed, leaving a six-enemy trough between two small waves',
     guard: 'keeps enough on screen at once to be a shooter',
     edit: {
-      path: 'tests/level.test.ts',
-      find: '        points.push(wave.at + 1, wave.at - MAX_ALONG_SPAN);',
-      replace: '        points.push(wave.at, wave.at - MAX_ALONG_SPAN);',
+      path: 'src/content/levels.ts',
+      find: "  { at: 1462, enemy: 'drifter', formation: 'line', count: 5, lane: 62 },\n",
+      replace: '',
     },
   },
 ];
