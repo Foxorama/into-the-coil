@@ -29,8 +29,8 @@ export const PROBES = [
     guard: 'never fires faster than a hit can be read',
     edit: {
       path: 'src/content/pickups.ts',
-      find: "    if (upgrades[i] === 'rapid') fireEvery = Math.max(FASTEST_FIRE, Math.round(fireEvery * RAPID_FACTOR));",
-      replace: "    if (upgrades[i] === 'rapid') fireEvery = fireEvery - 1;",
+      find: '      const faster = Math.round(fireEvery * RAPID_FACTOR);',
+      replace: '      const faster = fireEvery - 3;',
     },
   },
   {

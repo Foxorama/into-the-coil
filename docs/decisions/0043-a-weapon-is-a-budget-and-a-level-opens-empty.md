@@ -86,6 +86,13 @@ real property at the wrong points is a guard that reports green, which is
 [0027](0027-measure-the-picture-not-the-model.md)'s subject aimed at the sampling rather than at the
 quantity.
 
+⚠️ **The sampling correction is not itself probe-provable, and the attempt is worth recording.** A
+probe that restored the old boundary sampling stayed GREEN — by then the content had been fixed, so
+there was no trough left for either version to miss. Proving it would need two simultaneous edits,
+which `npm run prove` does not do and should not: a probe that changed both a guard and the code it
+guards proves nothing about either. The probe breaks the **level** instead, which is the property
+that actually matters.
+
 ## Confirmed, not assumed
 
 Per [0005](0005-a-guard-must-be-seen-to-fail.md) and [0019](0019-a-probe-must-be-seen-to-apply.md).

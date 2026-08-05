@@ -16,8 +16,8 @@ export const PROBES = [
     guard: 'lists its waves in ascending order of place',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 150, enemy: 'drifter', formation: 'line', count: 5, lane: 30 },",
-      replace: "  { at: 50, enemy: 'drifter', formation: 'line', count: 5, lane: 30 },",
+      find: "  { at: 510, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },",
+      replace: "  { at: 410, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },",
     },
   },
   {
@@ -38,8 +38,10 @@ export const PROBES = [
     suite: 'tests/level.test.ts',
     // ⚠️ THE ONE THE SCREENSHOT FOUND. Pushing the opening past the horizon is exactly what treating
     // `at` as a trigger did, and the level still looks completely reasonable in the table.
-    broke: 'the opening waves pushed past the horizon, so a run starts on an empty screen',
-    guard: 'has waves inside the opening spawn horizon',
+    // Re-aimed by 0043, which replaced the guard this pointed at. The opening is now supposed to be
+    // empty; what must not happen is the player being left flying at nothing.
+    broke: 'the whole opening deleted, so the player flies at empty space for half a minute',
+    guard: 'and does not leave the player waiting',
     edit: {
       path: 'src/content/levels.ts',
       find: "  { at: 60, enemy: 'drifter', formation: 'line', count: 5, lane: 50 },\n  { at: 150, enemy: 'drifter', formation: 'line', count: 5, lane: 30 },\n  { at: 240, enemy: 'drifter', formation: 'vee', count: 5, lane: 70 },\n  { at: 330, enemy: 'drifter', formation: 'line', count: 5, lane: 45 },",
