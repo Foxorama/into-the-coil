@@ -46,18 +46,28 @@ still never been played.
 
 ## What the game currently is
 
-**A two-level run, playable start to finish.** A title screen, three lives, six enemy kinds, two
-authored levels of about three minutes each, weapon upgrades and extra lives lying about in them, a
-unique boss at the end of each, a screen between them, and a victory screen after the second.
+**A two-level run, playable start to finish, and played.** A title screen with a key to the pickups,
+three lives, six enemy kinds, two authored levels of about three minutes each, weapon upgrades and
+extra lives lying about in them, a lives-and-shield readout while playing, a unique boss at the end
+of each level, a screen between them, and a victory screen after the second.
+
+Each level opens on an empty screen so the player can find the controls before anything finds them —
+[0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md).
 
 Nothing is *triggered*: the arsenal — the specials a player spends — is still a list with nothing in
 it. Difficulty was last placed by a hand at *"intro to 50% of the first level"* —
 [`ship-speed-settled`](../reports/ship-speed-settled-2026-08-05.md), which is now two levels out of
 date and is exactly what a play-test is for.
 
-## What the first play-test has to answer
+## What the play-test still has to answer
 
 Questions, not findings — each one a number nothing in the repository can settle.
+
+⚠️ **The first pass has happened**, and the verdict was *"playing really good at the moment, excellent
+baseline"*. Four things came back from it and all four are fixed:
+[0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md) has the weapon and the
+opening; [0045](decisions/0045-the-player-can-see-what-they-are-carrying.md) has the readout and the
+key. The questions below are the ones it did **not** answer.
 
 - **Is the boss's progress readable at all?** Nothing says how much of it is left, by decision —
   [0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md) names this as the thing that
