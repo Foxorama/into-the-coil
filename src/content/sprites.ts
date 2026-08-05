@@ -73,6 +73,19 @@ export const SPRITE_KINDS = [
   'charger',
   'chargerHit',
   /*
+    ⚠️ **A RING, and it is the last unused primitive.** The five before it are a diamond, a wide
+    triangle, a bar, a needle and a half-disc — told apart by shape and by axis. What is left that
+    survives twenty pixels is *round with a hole in it*, which is also the only silhouette in the
+    game that reads as an aperture rather than as a body. It fires and it weaves, and the shape says
+    the first half.
+
+    ⚠️ Level two's enemy, and `docs/game.md` asks for one per level. What it is NOT is a sixth
+    behaviour: it is the weave and the shot, both of which already exist, on one row —
+    `docs/decisions/0042-a-run-is-a-sequence-of-levels.md` on why that is the right kind of new.
+  */
+  'warden',
+  'wardenHit',
+  /*
     ⚠️ **One boss silhouette, and the phases are NOT drawn.** Three sprites for three phases was the
     first plan and it is rejected: what a phase changes is what the boss DOES — its rate, its spread,
     how it moves — and that is legible in motion, at full frame rate, without a second art pass.
@@ -87,6 +100,10 @@ export const SPRITE_KINDS = [
   */
   'boss',
   'bossHit',
+  // The second boss. Its own silhouette, because `docs/game.md` says every boss is unique and a
+  // shared hull would make two fights look like one with different numbers.
+  'boss2',
+  'boss2Hit',
   'bullet',
   /*
     ⚠️ **THREE PICKUP SILHOUETTES, NOT ONE IN THREE COLOURS.**
@@ -171,6 +188,10 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   turretHit: 8.5,
   charger: 6,
   chargerHit: 6,
+  // The toughest thing that is not a boss, so the biggest — size carries toughness, and
+  // `tests/combat.test.ts` holds the ordering.
+  warden: 9.5,
+  wardenHit: 9.5,
   /*
     ⚠️ **26, against a hard ceiling of 80.** `src/sim/camera.ts` puts `EDGE_MARGIN` at 40 and says in
     the same breath that it is *"the largest half-extent any entity may be authored at"* — so a boss
@@ -180,6 +201,9 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   */
   boss: 26,
   bossHit: 26,
+  // Bigger than the first, and still well under the 80 that `src/sim/camera.ts` calls the ceiling.
+  boss2: 30,
+  boss2Hit: 30,
   bullet: 1.8,
   /*
     ⚠️ **Bigger than the smallest enemy, on purpose.** A pickup is the one thing on screen the player

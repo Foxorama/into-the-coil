@@ -21,14 +21,14 @@ import { CanvasSurface, renderScale } from '../render/canvas.ts';
 import { SPECIAL_BINDINGS } from '../content/actions.ts';
 import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../content/enemies.ts';
-import { LEVELS } from '../content/levels.ts';
+import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { BOSSES } from '../content/bosses.ts';
 import { PICKUPS, PICKUP_KINDS, type PickupKind, weaponFor } from '../content/pickups.ts';
 import { holdStation, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { SHIPS } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
-import { GameFrame, SHIP_START_ALONG, resetScene, respawn, type World } from './frame.ts';
-import { SCREENS } from '../state/screens.ts';
+import { GameFrame, SHIP_START_ALONG, resetScene, respawn, startLevel, type World } from './frame.ts';
+import { SCREENS, type Screen } from '../state/screens.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { makeChrome } from './chrome.ts';
 import { combineDevices } from './devices.ts';
@@ -375,6 +375,26 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * Start a run. The same answer for both controls, because both mean the same thing — 0039 says a
    * game over ends the run outright, so *Again* is a new run and not a continue.
    */
+  /**
+   * Put the run's current level on the field.
+   *
+   * ⚠️ **`LEVEL_KINDS` IS the order** — `src/content/levels.ts` refuses a second ordering table — so
+   * the run's level index reads straight off it. Past the end is a run that has been finished, and
+   * the caller is what decides that; this clamps rather than throwing, because a level index that
+   * has run off the end is a bug in the shell and a black screen is a worse way to report it.
+   */
+  const enterLevel = (): void => {
+    const kind = LEVEL_KINDS[Math.min(state.run.level, LEVEL_KINDS.length - 1)]!;
+    startLevel(world, LEVELS[kind]);
+  };
+
+  /** Carry on into the next level. Everything the run is carrying comes with it. */
+  const continueRun = (): void => {
+    enterLevel();
+    world.rng = makeRng('proof-scene').stream('spawns');
+    dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
+  };
+
   const startRun = (): void => {
     resetScene(world);
     /*
@@ -389,11 +409,21 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     // A fresh spawn stream, so run two is run one — the reason `seedField` gives.
     world.rng = makeRng('proof-scene').stream('spawns');
+    // ⚠️ `begin` FIRST, because it resets the level index to zero and `enterLevel` reads it.
     dispatch({ slice: 'run', type: 'begin' });
+    enterLevel();
     dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
   };
 
-  const chrome = makeChrome(colours, startRun);
+  /*
+    What a screen's one control does. Three of the four start a fresh run; `cleared` is the only one
+    that carries anything forward, which is the whole difference between a level ending and a run
+    ending — `docs/decisions/0042-a-run-is-a-sequence-of-levels.md`.
+  */
+  const chrome = makeChrome(colours, (screen: Screen): void => {
+    if (screen === 'cleared') continueRun();
+    else startRun();
+  });
   for (const element of chrome.elements) host.appendChild(element);
 
   /*
@@ -412,6 +442,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   world.onCleared = (): void => {
     dispatch({ slice: 'run', type: 'levelCleared' });
+    /*
+      ⚠️ **`cleared` unconditionally, and the reducer decides whether that is the truth.**
+      `src/state/root.ts` holds *a level cleared past the end of the run is the run finished* as a
+      cross-slice agreement, so the shell does not get to have an opinion about which screen this is —
+      which is what makes the rule testable without mounting a canvas.
+    */
     dispatch({ slice: 'screen', type: 'show', screen: 'cleared' });
   };
 

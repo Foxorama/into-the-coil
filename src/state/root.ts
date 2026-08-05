@@ -7,11 +7,12 @@
  *
  * ⚠️ **`tests/state-shape.test.ts` counts `case ` in this file and requires zero.** That is a
  * mechanical check over a structural rule, and the structural rule is the one below: a decision that
- * belongs to one slice's state goes in that slice. What is left here is routing, and one agreement.
+ * belongs to one slice's state goes in that slice. What is left here is routing, and two agreements.
  */
 
 import { type ScreenAction, type ScreenState, initialScreen, reduceScreen } from './slices/screen.ts';
 import { type RunAction, type RunState, initialRun, reduceRun } from './slices/run.ts';
+import { LEVEL_KINDS } from '../content/levels.ts';
 
 /** Every slice. Closed — a new one fails `State` to build until it has been given a shape below. */
 export type SliceName = 'screen' | 'run';
@@ -54,11 +55,12 @@ export function reduce(state: State, action: Action): State {
   return agree(run === state.run ? state : { screen: state.screen, run });
 }
 
-/** The one action the agreement below needs. Module-level, so routing allocates nothing extra. */
+/** The actions the agreements below need. Module-level, so routing allocates nothing extra. */
 const SHOW_GAME_OVER: ScreenAction = { slice: 'screen', type: 'show', screen: 'gameOver' };
+const SHOW_VICTORY: ScreenAction = { slice: 'screen', type: 'show', screen: 'victory' };
 
 /**
- * THE ONE AGREEMENT BETWEEN TWO SLICES, and it is deliberately here rather than in either of them.
+ * THE AGREEMENTS BETWEEN TWO SLICES, deliberately here rather than in either of them.
  *
  * A run with no lives left is over, and the screen has to say so. `run` cannot import `screen` and
  * `screen` cannot import `run` — 0017's sibling ban — so this is the sanctioned place, where it is
@@ -69,6 +71,21 @@ const SHOW_GAME_OVER: ScreenAction = { slice: 'screen', type: 'show', screen: 'g
  * lives — would be immediately overwritten by a stale reading of a state that no longer holds.
  */
 function agree(state: State): State {
-  if (state.run.lives > 0 || state.screen.current !== 'playing') return state;
-  return { screen: reduceScreen(state.screen, SHOW_GAME_OVER), run: state.run };
+  if (state.run.lives <= 0 && state.screen.current === 'playing') {
+    return { screen: reduceScreen(state.screen, SHOW_GAME_OVER), run: state.run };
+  }
+  /*
+    THE SECOND AGREEMENT: a level cleared past the end of the run is the run finished.
+
+    ⚠️ **Here rather than in the shell, so the rule can be tested without a browser.** The first
+    version asked `state.run.level < LEVEL_KINDS.length` inside `src/app/mount.ts` and dispatched one
+    screen or the other — correct, and reachable only by mounting a canvas. The distinction between
+    *a level ended* and *a run ended* is exactly the sort of thing that gets quietly inverted, and
+    `docs/decisions/0015-the-layer-ladder.md` gives this layer no capabilities precisely so rules
+    like it can be played out in a unit test.
+  */
+  if (state.screen.current === 'cleared' && state.run.level >= LEVEL_KINDS.length) {
+    return { screen: reduceScreen(state.screen, SHOW_VICTORY), run: state.run };
+  }
+  return state;
 }

@@ -64,7 +64,9 @@ const INK_OF: Record<SpriteKind, keyof Palette> = {
   weaver: 'enemy',
   turret: 'enemy',
   charger: 'enemy',
+  warden: 'enemy',
   boss: 'enemy',
+  boss2: 'enemy',
   bullet: 'bullet',
   pickupLife: 'pickup',
   pickupRapid: 'pickup',
@@ -96,7 +98,9 @@ const INK_OF: Record<SpriteKind, keyof Palette> = {
   weaverHit: 'impact',
   turretHit: 'impact',
   chargerHit: 'impact',
+  wardenHit: 'impact',
   bossHit: 'impact',
+  boss2Hit: 'impact',
   // Fragments are the impact itself, so they are the impact ink; they carry no identity of their own.
   debris: 'impact',
 };
@@ -212,6 +216,40 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
       ctx.lineTo(half + r * 0.5, half + r * 0.95);
       ctx.lineTo(half - r * 0.55, half + r * 0.8);
       ctx.lineTo(half - r * 0.45, half + r * 0.45);
+      ctx.closePath();
+      break;
+    }
+    case 'warden':
+    case 'wardenHit':
+      /*
+        A RING. Filled with `evenodd` below, so the inner circle is a hole rather than a second disc —
+        which is what makes it read as an aperture rather than as a fat bullet. It is the only
+        silhouette in the game with a hole in it, and holes survive being small better than corners
+        do.
+      */
+      ctx.arc(half, half, r, 0, Math.PI * 2);
+      ctx.moveTo(half + r * 0.45, half);
+      ctx.arc(half, half, r * 0.45, 0, Math.PI * 2);
+      break;
+    case 'boss2':
+    case 'boss2Hit': {
+      /*
+        THREE PRONGS facing the player, on a narrow spine. The first boss is a solid hexagonal hull;
+        this is the opposite reading — open, reaching, with gaps a player can fly into and regret.
+
+        Same licence as the first: at 30 world units it is five times the size of anything else on
+        screen, so detail survives that would be mush on an enemy.
+      */
+      ctx.moveTo(half - r, half - r * 0.16);
+      ctx.lineTo(half - r * 0.25, half - r * 0.3);
+      ctx.lineTo(half - r * 0.55, half - r * 0.95);
+      ctx.lineTo(half + r * 0.15, half - r * 0.8);
+      ctx.lineTo(half + r * 0.95, half - r * 0.35);
+      ctx.lineTo(half + r * 0.95, half + r * 0.35);
+      ctx.lineTo(half + r * 0.15, half + r * 0.8);
+      ctx.lineTo(half - r * 0.55, half + r * 0.95);
+      ctx.lineTo(half - r * 0.25, half + r * 0.3);
+      ctx.lineTo(half - r, half + r * 0.16);
       ctx.closePath();
       break;
     }

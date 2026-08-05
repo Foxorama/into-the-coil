@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { type Action, type State, initialState, reduce } from '../src/state/root.ts';
 import { STARTING_LIVES } from '../src/state/slices/run.ts';
 import { SCREENS } from '../src/state/screens.ts';
+import { LEVEL_KINDS } from '../src/content/levels.ts';
 
 /**
  * WHAT A RUN COSTS — `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md`.
@@ -163,6 +164,52 @@ describe('the root routes and the slices stay strangers', () => {
     const dead = play(BEGIN, PLAY, DIE, DIE, DIE);
     expect(dead.screen.current).toBe('gameOver');
     expect(reduce(dead, BEGIN).screen.current, 'starting a run re-raised the game over screen').toBe('gameOver');
+  });
+});
+
+describe('a run is a sequence of levels', () => {
+  const CLEAR: Action = { slice: 'run', type: 'levelCleared' };
+  const SHOW_CLEARED: Action = { slice: 'screen', type: 'show', screen: 'cleared' };
+
+  it('carries everything forward across a level boundary', () => {
+    // `docs/game.md`'s "carry forward" as amended by 0039: across LEVELS, not across deaths. This is
+    // the boundary, and it is the one place that sentence is actually true or false.
+    const before = armed();
+    const after = reduce(before, CLEAR);
+    expect(after.run.level).toBe(before.run.level + 1);
+    expect(after.run.lives, 'clearing a level cost a life').toBe(before.run.lives);
+    expect(after.run.arsenal, 'clearing a level emptied the arsenal').toEqual(before.run.arsenal);
+    expect(after.run.upgrades, 'clearing a level took the weapon upgrades').toEqual(before.run.upgrades);
+  });
+
+  it('a level cleared with more still to come is not the end of the run', () => {
+    let state = play(BEGIN, PLAY, CLEAR);
+    state = reduce(state, SHOW_CLEARED);
+    expect(state.screen.current, 'the run ended with levels still unplayed').toBe('cleared');
+  });
+
+  it('a level cleared past the last one IS the end of the run', () => {
+    /*
+      ⚠️ **The rule that used to live in `src/app/mount.ts` and could only be reached by mounting a
+      canvas.** A level ending and a run ending are one comparison apart, and inverting it is the
+      kind of edit that looks right in review.
+
+      Driven against `LEVEL_KINDS.length` rather than a literal, so authoring a third level does not
+      make this go red for the wrong reason.
+    */
+    let state = play(BEGIN, PLAY);
+    for (let i = 0; i < LEVEL_KINDS.length; i++) state = reduce(state, CLEAR);
+    state = reduce(state, SHOW_CLEARED);
+    expect(state.run.level).toBe(LEVEL_KINDS.length);
+    expect(state.screen.current, 'the last level was cleared and the run carried on').toBe('victory');
+  });
+
+  it('starting again after a victory goes back to the first level', () => {
+    let state = play(BEGIN, PLAY);
+    for (let i = 0; i < LEVEL_KINDS.length; i++) state = reduce(state, CLEAR);
+    state = reduce(reduce(state, SHOW_CLEARED), BEGIN);
+    expect(state.run.level, 'a new run resumed where the last one finished').toBe(0);
+    expect(state.screen.current, 'starting a run re-raised the victory screen').toBe('victory');
   });
 });
 

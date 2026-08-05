@@ -41,8 +41,20 @@ import type { FormationKind } from './formations.ts';
 import type { BossKind } from './bosses.ts';
 import type { PickupKind } from './pickups.ts';
 
-/** Every level. Closed, and one long — the roster is downstream of playing this one. */
-export const LEVEL_KINDS = ['approach'] as const;
+/**
+ * Every level, **in the order a run plays them**.
+ *
+ * ⚠️ **The order IS the list, and there is no separate ordering table.** A `Record` keyed by level
+ * plus a hand-kept sequence beside it is two descriptions of one fact, and
+ * `src/content/sprites.ts` records what that cost the last time it happened here — an off-by-one
+ * between two lists that were each valid on their own, which made every entity in the game draw as
+ * something else.
+ *
+ * ⚠️ **This is not the chart.** `docs/game.md` puts a branching map of destinations between levels;
+ * a straight line is what exists until that is built, and
+ * `docs/decisions/0042-a-run-is-a-sequence-of-levels.md` says why a line first is the right order.
+ */
+export const LEVEL_KINDS = ['approach', 'descent'] as const;
 
 /** Derived from the list, so a level cannot exist in the union and be missing from the table. */
 export type LevelKind = (typeof LEVEL_KINDS)[number];
@@ -228,6 +240,124 @@ const APPROACH_PICKUPS: readonly PickupEntry[] = [
   { at: 5860, kind: 'rapid', lane: 62 },
 ];
 
+/*
+  ⚠️ **LEVEL TWO IS NOT LEVEL ONE WITH BIGGER NUMBERS.** What changes is the SHAPE of the pressure:
+  it opens where level one ended, wardens arrive early and never stop, and the stretches of one enemy
+  kind are gone — nearly every wave here is authored against the one before it rather than as its own
+  idea.
+
+    60 – 900       0:00 – 0:24   straight into mixed waves; no teaching stretch
+    900 – 2200     0:24 – 1:00   wardens, which weave AND shoot
+    2200 – 3600    1:00 – 1:39   chargers at density, through turret fire
+    3600 – 5000    1:39 – 2:17   everything, with wardens holding the lane
+    5000 – 6300    2:17 – 2:53   the hardest stretch in the game so far
+    6400          2:57          the harrow
+
+  ⚠️ **Fewer upgrades than level one, and that is the difficulty.** 0041's ceiling still holds — never
+  more than twenty seconds unarmed — but the pickups sit further apart inside it, so a death costs
+  more here than it did there.
+*/
+const DESCENT: readonly WaveEntry[] = [
+  { at: 60, enemy: 'lancer', formation: 'vee', count: 5, lane: 50 },
+  { at: 145, enemy: 'drifter', formation: 'line', count: 6, lane: 45 },
+  { at: 230, enemy: 'charger', formation: 'line', count: 4, lane: 60 },
+  { at: 315, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
+  { at: 400, enemy: 'turret', formation: 'column', count: 3, lane: 30 },
+  { at: 485, enemy: 'lancer', formation: 'line', count: 5, lane: 65 },
+  { at: 570, enemy: 'charger', formation: 'vee', count: 5, lane: 50 },
+  { at: 655, enemy: 'drifter', formation: 'vee', count: 6, lane: 40 },
+  { at: 740, enemy: 'weaver', formation: 'column', count: 4, lane: 60 },
+  { at: 825, enemy: 'lancer', formation: 'column', count: 4, lane: 35 },
+
+  // ── Wardens. Four health, weaving, and shooting — the first thing that is two problems at once. ─
+  { at: 910, enemy: 'warden', formation: 'line', count: 3, lane: 50 },
+  { at: 995, enemy: 'charger', formation: 'line', count: 5, lane: 30 },
+  { at: 1080, enemy: 'drifter', formation: 'line', count: 6, lane: 55 },
+  { at: 1165, enemy: 'warden', formation: 'column', count: 3, lane: 40 },
+  { at: 1250, enemy: 'weaver', formation: 'vee', count: 5, lane: 50 },
+  { at: 1335, enemy: 'lancer', formation: 'vee', count: 5, lane: 62 },
+  { at: 1420, enemy: 'warden', formation: 'line', count: 3, lane: 45 },
+  { at: 1505, enemy: 'turret', formation: 'line', count: 3, lane: 55 },
+  { at: 1590, enemy: 'charger', formation: 'column', count: 5, lane: 25 },
+  { at: 1675, enemy: 'drifter', formation: 'vee', count: 6, lane: 50 },
+  { at: 1760, enemy: 'warden', formation: 'vee', count: 3, lane: 50 },
+  { at: 1845, enemy: 'weaver', formation: 'line', count: 5, lane: 40 },
+  { at: 1930, enemy: 'lancer', formation: 'line', count: 5, lane: 68 },
+  { at: 2015, enemy: 'charger', formation: 'line', count: 5, lane: 45 },
+  { at: 2100, enemy: 'turret', formation: 'column', count: 3, lane: 35 },
+
+  // ── Chargers at density, through standing fire. The stretch that punishes standing still. ───────
+  { at: 2185, enemy: 'charger', formation: 'vee', count: 5, lane: 55 },
+  { at: 2270, enemy: 'warden', formation: 'line', count: 3, lane: 45 },
+  { at: 2355, enemy: 'drifter', formation: 'line', count: 6, lane: 50 },
+  { at: 2440, enemy: 'charger', formation: 'line', count: 5, lane: 35 },
+  { at: 2525, enemy: 'turret', formation: 'line', count: 3, lane: 60 },
+  { at: 2610, enemy: 'weaver', formation: 'column', count: 4, lane: 30 },
+  { at: 2695, enemy: 'charger', formation: 'column', count: 5, lane: 70 },
+  { at: 2780, enemy: 'lancer', formation: 'vee', count: 5, lane: 50 },
+  { at: 2865, enemy: 'warden', formation: 'column', count: 3, lane: 55 },
+  { at: 2950, enemy: 'drifter', formation: 'line', count: 6, lane: 42 },
+  { at: 3035, enemy: 'charger', formation: 'vee', count: 5, lane: 60 },
+  { at: 3120, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
+  { at: 3205, enemy: 'turret', formation: 'column', count: 3, lane: 28 },
+  { at: 3290, enemy: 'lancer', formation: 'line', count: 5, lane: 65 },
+  { at: 3375, enemy: 'warden', formation: 'line', count: 3, lane: 45 },
+  { at: 3460, enemy: 'charger', formation: 'line', count: 5, lane: 50 },
+
+  // ── Everything, with wardens holding the lane the player wants. ─────────────────────────────────
+  { at: 3545, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },
+  { at: 3630, enemy: 'warden', formation: 'vee', count: 3, lane: 50 },
+  { at: 3715, enemy: 'weaver', formation: 'line', count: 5, lane: 40 },
+  { at: 3800, enemy: 'charger', formation: 'column', count: 5, lane: 65 },
+  { at: 3885, enemy: 'turret', formation: 'line', count: 3, lane: 45 },
+  { at: 3970, enemy: 'lancer', formation: 'column', count: 5, lane: 32 },
+  { at: 4055, enemy: 'warden', formation: 'line', count: 3, lane: 58 },
+  { at: 4140, enemy: 'charger', formation: 'vee', count: 5, lane: 45 },
+  { at: 4225, enemy: 'drifter', formation: 'line', count: 6, lane: 50 },
+  { at: 4310, enemy: 'weaver', formation: 'vee', count: 5, lane: 55 },
+  { at: 4395, enemy: 'turret', formation: 'column', count: 3, lane: 70 },
+  { at: 4480, enemy: 'lancer', formation: 'vee', count: 5, lane: 38 },
+  { at: 4565, enemy: 'warden', formation: 'column', count: 3, lane: 50 },
+  { at: 4650, enemy: 'charger', formation: 'line', count: 5, lane: 60 },
+  { at: 4735, enemy: 'drifter', formation: 'vee', count: 6, lane: 45 },
+  { at: 4820, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
+  { at: 4905, enemy: 'lancer', formation: 'line', count: 5, lane: 30 },
+
+  // ── The hardest stretch in the game so far. ─────────────────────────────────────────────────────
+  { at: 4990, enemy: 'warden', formation: 'line', count: 4, lane: 50 },
+  { at: 5070, enemy: 'charger', formation: 'vee', count: 5, lane: 55 },
+  { at: 5150, enemy: 'turret', formation: 'line', count: 3, lane: 40 },
+  { at: 5230, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
+  { at: 5310, enemy: 'charger', formation: 'line', count: 5, lane: 65 },
+  { at: 5390, enemy: 'lancer', formation: 'vee', count: 5, lane: 50 },
+  { at: 5470, enemy: 'warden', formation: 'column', count: 4, lane: 35 },
+  { at: 5550, enemy: 'drifter', formation: 'line', count: 6, lane: 55 },
+  { at: 5630, enemy: 'charger', formation: 'column', count: 5, lane: 25 },
+  { at: 5710, enemy: 'weaver', formation: 'vee', count: 5, lane: 50 },
+  { at: 5790, enemy: 'turret', formation: 'column', count: 3, lane: 68 },
+  { at: 5870, enemy: 'warden', formation: 'vee', count: 3, lane: 45 },
+  { at: 5950, enemy: 'lancer', formation: 'line', count: 5, lane: 60 },
+  { at: 6030, enemy: 'charger', formation: 'vee', count: 5, lane: 40 },
+  { at: 6110, enemy: 'drifter', formation: 'line', count: 6, lane: 50 },
+  { at: 6190, enemy: 'warden', formation: 'line', count: 4, lane: 50 },
+];
+
+/** Level two's pickups: the same ceiling, further apart inside it. */
+const DESCENT_PICKUPS: readonly PickupEntry[] = [
+  { at: 480, kind: 'rapid', lane: 28 },
+  { at: 1120, kind: 'spread', lane: 68 },
+  { at: 1720, kind: 'rapid', lane: 42 },
+  { at: 2280, kind: 'extraLife', lane: 55 },
+  { at: 2340, kind: 'spread', lane: 32 },
+  { at: 2940, kind: 'rapid', lane: 62 },
+  { at: 3540, kind: 'spread', lane: 45 },
+  { at: 4140, kind: 'rapid', lane: 25 },
+  { at: 4720, kind: 'spread', lane: 58 },
+  { at: 4780, kind: 'extraLife', lane: 35 },
+  { at: 5320, kind: 'rapid', lane: 50 },
+  { at: 5900, kind: 'spread', lane: 40 },
+];
+
 export const LEVELS: Record<LevelKind, LevelRow> = {
   /**
    * The first level.
@@ -247,5 +377,19 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     */
     bossAt: 6350,
     boss: 'sentinel',
+  },
+  /**
+   * The second level.
+   *
+   * ⚠️ **Named for the descent toward the centre of the galaxy and for no biome**, on the same terms
+   * as `approach`: `docs/game.md` themes levels on the fourteen *Far Carry* biomes and names none of
+   * them here, and going to the predecessor to pick one is browsing it for inspiration, which
+   * `CLAUDE.md` refuses.
+   */
+  descent: {
+    waves: DESCENT,
+    pickups: DESCENT_PICKUPS,
+    bossAt: 6400,
+    boss: 'harrow',
   },
 };

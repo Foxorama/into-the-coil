@@ -56,7 +56,7 @@ export function prefixFor(screen: Screen): string {
  * itch.io, an iframe inside somebody else's document.
  */
 const STYLE = `
-.itc-title, .itc-gameover, .itc-cleared {
+.itc-title, .itc-gameover, .itc-cleared, .itc-victory {
   position: absolute;
   inset: 0;
   display: none;
@@ -68,10 +68,13 @@ const STYLE = `
   padding: 2rem;
   font: 600 1.25rem/1.4 system-ui, sans-serif;
 }
-.itc-title-shown, .itc-gameover-shown, .itc-cleared-shown { display: flex; }
+.itc-title-shown, .itc-gameover-shown, .itc-cleared-shown, .itc-victory-shown { display: flex; }
 .itc-title-heading { font-size: clamp(1.75rem, 6vw, 3.5rem); letter-spacing: 0.02em; margin: 0; }
-.itc-gameover-heading, .itc-cleared-heading { font-size: clamp(1.5rem, 5vw, 2.75rem); margin: 0; }
-.itc-title-action, .itc-gameover-action, .itc-cleared-action {
+.itc-gameover-heading, .itc-cleared-heading, .itc-victory-heading {
+  font-size: clamp(1.5rem, 5vw, 2.75rem);
+  margin: 0;
+}
+.itc-title-action, .itc-gameover-action, .itc-cleared-action, .itc-victory-action {
   font: inherit;
   padding: 0.6em 2em;
   border-radius: 0.4em;
@@ -80,7 +83,7 @@ const STYLE = `
   color: inherit;
   cursor: pointer;
 }
-.itc-title-action:hover, .itc-gameover-action:hover, .itc-cleared-action:hover {
+.itc-title-action:hover, .itc-gameover-action:hover, .itc-cleared-action:hover, .itc-victory-action:hover {
   background: rgba(255, 255, 255, 0.12);
 }
 /*
@@ -88,7 +91,10 @@ const STYLE = `
   invisible to the high-contrast and colour-blind palettes 0024 promises, and those palettes exist
   precisely so no cue is carried by colour alone.
 */
-.itc-title-action:focus-visible, .itc-gameover-action:focus-visible, .itc-cleared-action:focus-visible {
+.itc-title-action:focus-visible,
+.itc-gameover-action:focus-visible,
+.itc-cleared-action:focus-visible,
+.itc-victory-action:focus-visible {
   outline: 3px solid currentColor;
   outline-offset: 3px;
 }
