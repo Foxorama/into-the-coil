@@ -33,9 +33,6 @@ export const PROBES = [
       replace: "  { at: 960, enemy: 'weaver', formation: 'line', count: 5, lane: 20 },",
     },
   },
-  {
-    decision: '0040',
-    suite: 'tests/level.test.ts',
   /*
     ⚠️ **A PROBE WAS REMOVED HERE, and its absence is the record.** It broke *has waves inside the
     opening spawn horizon* — 0040's rule that a level must not begin on an empty screen. Play asked
