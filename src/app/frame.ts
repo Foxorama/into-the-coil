@@ -25,7 +25,7 @@
 import { ACROSS_SPAN, spawnAlong, type View } from '../sim/camera.ts';
 import { collideInto, collideIntoOne, type Deaths } from '../sim/collide.ts';
 import { type Entity, reset, stepEntities } from '../sim/entity.ts';
-import { flyShip } from '../sim/flight.ts';
+import { flyShip, holdStation } from '../sim/flight.ts';
 import type { Intent } from '../sim/intent.ts';
 import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
@@ -360,7 +360,7 @@ function restart(w: World): void {
   // marking where the ship died is the clearest signal in the game that a run just ended; wiping it
   // on the same step would delete the explanation along with the cause.
   reset(w.ship, w.cameraAlong + SHIP_START_ALONG, ACROSS_SPAN / 2, w.shipRow);
-  w.ship.velAlong = w.scrollPerStep;
+  holdStation(w.ship, w.scrollPerStep);
   w.ship.invulnFor = INVULN_STEPS;
   w.fireIn = w.shipRow.fireEvery;
   w.spawnIn = SPAWN_EVERY;

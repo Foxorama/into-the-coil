@@ -21,7 +21,7 @@ import { CanvasSurface, renderScale } from '../render/canvas.ts';
 import { SPECIAL_BINDINGS } from '../content/actions.ts';
 import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyRow } from '../content/enemies.ts';
-import { SCROLL_PER_STEP } from '../sim/flight.ts';
+import { holdStation, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { SHIPS } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
 import { GameFrame, SHIP_START_ALONG, type World } from './frame.ts';
@@ -157,7 +157,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const shipRow = SHIPS.proof;
   const ship = shipPool.spawn()!;
   reset(ship, SHIP_START_ALONG, ACROSS_SPAN / 2, shipRow);
-  ship.velAlong = SCROLL_PER_STEP;
+  holdStation(ship, SCROLL_PER_STEP);
 
   /*
     Seed the field, so the first frame is not empty.

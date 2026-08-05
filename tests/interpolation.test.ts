@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { viewOf } from '../src/sim/camera.ts';
 import { makeEntity, reset } from '../src/sim/entity.ts';
 import { makeIntent } from '../src/sim/intent.ts';
+import { holdStation } from '../src/sim/flight.ts';
 import { Pool } from '../src/sim/pool.ts';
 import { makeDeaths } from '../src/sim/collide.ts';
 import { makeRng } from '../src/sim/rng.ts';
@@ -73,6 +74,16 @@ function stationKeepingWorld(surface: Surface): World {
   const shipRow = { ...SHIPS.proof, fireEvery: NEVER };
   const ship = shipPool.spawn()!;
   reset(ship, 40, 50, shipRow);
+  /*
+    ⚠️ **`reset` leaves a ship at zero velocity, which is not the same as at rest**, and since the
+    ship gained mass the difference is permanent rather than momentary: from zero it spends about
+    five steps accelerating up to the scroll rate, and the ground it fails to cover in those steps is
+    ground it never recovers — velocity converges on the camera's *rate*, not on a *position*.
+
+    This test found that by drifting 15px over ten seconds of "station-keeping". Both real composers
+    call `holdStation`; this one was building a world by hand and skipping it.
+  */
+  holdStation(ship, 0.6);
   return {
     layers: [enemies, enemyShots, playerShots, shipPool],
     shipPool,
