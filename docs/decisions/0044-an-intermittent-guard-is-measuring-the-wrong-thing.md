@@ -16,6 +16,8 @@ re-run until it is convenient.
 
 ## What happened
 
+The measurements are in [`two-levels-played`](../../reports/two-levels-played-2026-08-06.md).
+
 `tests/frame.browser.test.ts`'s *moves — the frame after is not the frame before* failed once during
 `npm run prove`, and the first response written down was *"that browser failure was flaky"* — with no
 investigation, in the same sentence as moving on. The correction came from the player:

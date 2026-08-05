@@ -1,7 +1,9 @@
 # 0043 — A weapon is a budget, and a level opens empty
 
-**Accepted 2026-08-06.** Both halves come from the first real play-test of the two-level build, and
-both amend decisions that were accepted without the arithmetic behind them being done.
+**Accepted 2026-08-06.** Both halves come from the first real play-test of the two-level build —
+[`two-levels-played`](../../reports/two-levels-played-2026-08-06.md) has the verdict, the reports and the
+measurements — and both amend decisions that were accepted without the arithmetic behind them being
+done.
 
 Amends [0041](0041-a-pickup-is-the-answer-to-what-a-death-costs.md) and
 [0040](0040-a-level-is-a-script-and-a-boss-is-its-clock.md).
