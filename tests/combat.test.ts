@@ -41,6 +41,7 @@ import type { InputSource } from '../src/app/input.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { paintScene } from '../src/render/scene.ts';
 import { bodyOf } from './bodies.ts';
+import { inertLevel } from './world.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
@@ -427,7 +428,7 @@ function firingAt(row: EnemyRow, distance: number): World {
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
-    spawnIn: NEVER,
+    ...inertLevel(),
     fireIn: shipRow.fireEvery,
     ship,
     shipRow,
@@ -490,7 +491,7 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
-    spawnIn: NEVER,
+    ...inertLevel(),
     fireIn: NEVER,
     ship,
     shipRow,

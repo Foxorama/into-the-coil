@@ -33,18 +33,28 @@ import type { Pool } from '../sim/pool.ts';
 import { paintScene } from '../render/scene.ts';
 import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
-import type { EnemyRow } from '../content/enemies.ts';
+import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
 import type { ShipRow } from '../content/ships.ts';
 import { INVULN_STEPS } from '../content/ships.ts';
 import { SHOTS } from '../content/shots.ts';
 import { BURST, DEBRIS } from '../content/debris.ts';
+import { FORMATIONS } from '../content/formations.ts';
+import type { LevelRow } from '../content/levels.ts';
+import type { BossRow } from '../content/bosses.ts';
+import { stepBoss } from './boss.ts';
 import type { Frame } from './loop.ts';
 
 /** How far in front of the ship a shot appears, in world units — clear of its own hurtbox. */
 const MUZZLE_ALONG = 3;
 
-/** Steps between enemy spawns. The proof scene's whole wave table, and it is one number. */
-const SPAWN_EVERY = 42;
+/**
+ * Two pi, hoisted.
+ *
+ * ⚠️ A weave is authored as a WAVELENGTH in world units, which is the number a level designer can
+ * hold; the sine wants an angular rate. This is the conversion, and it is a module constant because
+ * the alternative is computing `Math.PI * 2` once per weaving enemy per step forever.
+ */
+const TAU = Math.PI * 2;
 
 /**
  * Where the ship sits in its box, in world units ahead of the camera's trailing edge.
@@ -139,8 +149,35 @@ export interface World {
   prevCameraAlong: number;
   /** World units the camera advances per fixed step. */
   scrollPerStep: number;
-  /** Steps until the next spawn. Counted down rather than timed — the step IS the clock. */
-  spawnIn: number;
+  /**
+   * The level being played — its wave script, and what waits at the end of it.
+   *
+   * ⚠️ **The camera is the clock.** A wave carries the camera distance it spawns at, so the level
+   * plays at the same pace on every device and in a headless test, and a dropped frame costs the
+   * player nothing. `src/content/levels.ts` has the reasoning; the fixed step
+   * (`docs/decisions/0022-frame-rate-is-a-feature.md`) is what makes distance and time the same
+   * statement.
+   */
+  level: LevelRow;
+  /** Index of the next wave in `level.waves` that has not spawned yet. Only ever goes up. */
+  nextWave: number;
+  /** The boss's row, resolved once at boot so a step never looks a kind up by name. */
+  bossRow: BossRow;
+  /** The boss, alone in its own pool — so `playerShots` meeting it is its own pairing. */
+  bossPool: Pool<Entity>;
+  /** Whether the boss has been put on the field. Set once; cleared only by a fresh run. */
+  bossSpawned: boolean;
+  /** Whether the level has already been reported as cleared, so it is reported exactly once. */
+  bossBeaten: boolean;
+  /** Which way the boss is currently sliding across the lane: −1 or 1. */
+  bossPatrol: number;
+  /**
+   * The boss died, so the level is over.
+   *
+   * ⚠️ Reported rather than decided, exactly as `onDeath` is. What clearing a level is worth belongs
+   * to `src/state/`, not to the file that moves the bodies.
+   */
+  onCleared: () => void;
   /** Steps until the ship's auto-fire goes again. */
   fireIn: number;
   /** The player's ship. Held live in its pool; this is the same object. */
@@ -154,6 +191,14 @@ export interface World {
    * Same argument `src/render/surface.ts` makes for the sprite being a number.
    */
   enemyRows: readonly EnemyRow[];
+  /**
+   * Which index in `enemyRows` each authored kind is, built once at boot.
+   *
+   * ⚠️ A level names its enemies in words, because a script written in array indices is a script
+   * nobody can read or review. This is the one place that word becomes the number the entity carries
+   * — and it is resolved at boot rather than per spawn, so a wave costs a property read.
+   */
+  enemyKinds: Record<EnemyKind, number>;
   /** What the model's numbers currently are — `docs/decisions/0024-…`'s assists, resolved. */
   tuning: Tuning;
   /** Where devices are read. Sampled exactly once per fixed step — see 0030. */
@@ -203,12 +248,15 @@ export class GameFrame implements Frame {
     flyShip(w.ship, w.intent, w.cameraAlong, w.scrollPerStep);
 
     fireShip(w);
+    steerEnemies(w);
     fireEnemies(w);
+    driveBoss(w);
 
     // The ship's `velAlong` carries the scroll rate as its baseline, so `stepEntities` moves it with
     // the camera and a player asking for nothing holds station. An enemy carries its own closing
     // speed and nothing else, which is what makes the world appear to move past it.
     stepEntities(w.shipPool, w.cameraAlong);
+    stepEntities(w.bossPool, w.cameraAlong);
     stepEntities(w.enemies, w.cameraAlong);
     stepEntities(w.playerShots, w.cameraAlong);
     stepEntities(w.enemyShots, w.cameraAlong);
@@ -225,10 +273,15 @@ export class GameFrame implements Frame {
     */
     w.deaths.count = 0;
     collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
+    // The boss is its own pairing rather than another enemy, and the reason is the pool: it is the
+    // only body in the game that must survive a hundred and fifty hits, so it cannot share a pool
+    // with things that are released after one.
+    collideInto(w.playerShots, w.bossPool, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
     collideIntoOne(w.enemyShots, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, true);
     // Not consumed: an enemy the player flew into is still there afterwards, or ramming would be the
     // cheapest way to clear the screen.
     collideIntoOne(w.enemies, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
+    collideIntoOne(w.bossPool, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
 
     // Every enemy that died this step leaves something behind. The positions were recorded by the
     // collision because a released slot is the next thing `spawn` hands out.
@@ -243,10 +296,38 @@ export class GameFrame implements Frame {
       w.onDeath();
     }
 
-    w.spawnIn--;
-    if (w.spawnIn <= 0) {
-      w.spawnIn = SPAWN_EVERY;
-      spawnEnemy(w);
+    /*
+      The level script.
+
+      ⚠️ **The test is against `spawnAlong`, not against the camera, because `at` is a PLACE.** The
+      first version compared `at` to the camera and then placed every wave at the leading edge — so
+      the authored position was thrown away, the level could not put anything in front of the player
+      at the start of a run, and the first eight seconds were empty. `scripts/shot.mjs` at six
+      seconds showed a ship and its own bullets and nothing else, which is the picture finding
+      `docs/decisions/0027-measure-the-picture-not-the-model.md` exists to make reachable: every
+      number involved was correct.
+
+      A `while` rather than an `if`, because a run begins with the whole opening stretch inside the
+      spawn horizon at once, and because two waves may be authored close enough that one step crosses
+      both — a step that spawned only the first would leave the script permanently behind the camera
+      rather than visibly wrong.
+    */
+    const horizon = spawnAlong(w.cameraAlong);
+    while (w.nextWave < w.level.waves.length && w.level.waves[w.nextWave]!.at <= horizon) {
+      spawnWave(w, w.nextWave);
+      w.nextWave++;
+    }
+
+    if (!w.bossSpawned && horizon >= w.level.bossAt) {
+      w.bossSpawned = true;
+      spawnBoss(w);
+    }
+    // Reported once. The boss is the only thing that can empty this pool, so an empty pool after it
+    // was filled is the level ending — and `bossBeaten` is what stops that being said every step
+    // from then until the screen changes.
+    if (w.bossSpawned && !w.bossBeaten && w.bossPool.size === 0) {
+      w.bossBeaten = true;
+      w.onCleared();
     }
   }
 
@@ -352,19 +433,93 @@ function burst(w: World, along: number, across: number, count: number): void {
   }
 }
 
-/** One enemy, at the leading edge, in a lane the spawn stream chose. */
-function spawnEnemy(w: World): void {
-  const e = w.enemies.spawn();
-  if (e === null) return;
-  const kind = w.rng.int(0, w.enemyRows.length - 1);
+/**
+ * One authored wave, placed beyond the widest leading edge any device can have.
+ *
+ * ⚠️ **The spawn stream is not consulted, and the level is the poorer for nothing.** Every position
+ * here comes from the script and its formation, which is what `docs/game.md` means by *"levels are
+ * authored; the chart between them is the variety"* — a wave that rolled its own lane would play
+ * differently every run and could not be tuned by a hand.
+ *
+ * `w.rng` therefore has no caller in the frame any more. It stays on the world because the pool
+ * draft, the character draw and the upgrade drops all want it, and because
+ * `docs/decisions/0021-one-stream-per-concern.md` is about which stream a draw comes from rather
+ * than about how many exist.
+ */
+function spawnWave(w: World, index: number): void {
+  const wave = w.level.waves[index];
+  if (wave === undefined) return;
+  const kind = w.enemyKinds[wave.enemy];
   const row = w.enemyRows[kind];
   if (row === undefined) return;
-  const margin = row.radius + 2;
-  reset(e, spawnAlong(w.cameraAlong), w.rng.range(margin, ACROSS_SPAN - margin), row, kind);
-  // ⚠️ NEGATED here rather than stored negative. `closing` is "towards the player" in the table, so a
-  // typo produces a slow enemy rather than one that silently flees off the leading edge.
-  e.velAlong = -row.closing;
-  e.fireIn = row.fireEvery;
+  const formation = FORMATIONS[wave.formation];
+  // The authored position, not the leading edge. A wave inside the opening horizon is therefore
+  // already in front of the player when a run begins, which is what a level is supposed to look like.
+  const along = wave.at;
+  for (let i = 0; i < wave.count; i++) {
+    const e = w.enemies.spawn();
+    // A wave one enemy short is dropped rather than grown — `src/sim/pool.ts` has the argument, and
+    // it is the same one a burst that will not fit gets.
+    if (e === null) return;
+    const across = wave.lane + formation.acrossOffset(i, wave.count);
+    reset(e, along + formation.alongOffset(i, wave.count), across, row, kind);
+    // ⚠️ NEGATED here rather than stored negative. `closing` is "towards the player" in the table, so a
+    // typo produces a slow enemy rather than one that silently flees off the leading edge.
+    e.velAlong = -row.closing;
+    e.fireIn = row.fireEvery;
+  }
+}
+
+/**
+ * Everything that steers itself rather than flying straight — which today is the weave.
+ *
+ * ⚠️ **The path is a function of `along`, so it is a shape in the WORLD rather than a wobble in
+ * time.** Two weavers spawned a minute apart trace the same curve through the same piece of level,
+ * which is what lets a formation of them be authored at all. `src/content/enemies.ts` has the
+ * algebra and the bound it puts on where a wave may be placed.
+ *
+ * The derivative rather than the position, because `stepEntities` owns integration: for a path
+ * `across₀ + A·sin(k·along)`, the rate is `A·k·cos(k·along)` per unit of along, and the entity
+ * covers `velAlong` of those per step.
+ */
+function steerEnemies(w: World): void {
+  for (let i = w.enemies.size - 1; i >= 0; i--) {
+    const e = w.enemies.at(i);
+    const row = w.enemyRows[e.kind];
+    if (row === undefined || row.weaveAmplitude <= 0 || row.weaveWavelength <= 0) continue;
+    const k = TAU / row.weaveWavelength;
+    e.velAcross = row.weaveAmplitude * k * Math.cos(e.along * k) * e.velAlong;
+  }
+}
+
+/** The boss, if there is one on the field. Its whole behaviour lives in `src/app/boss.ts`. */
+function driveBoss(w: World): void {
+  if (w.bossPool.size === 0) return;
+  const boss = w.bossPool.at(0);
+  w.bossPatrol = stepBoss(
+    boss,
+    w.bossRow,
+    w.ship,
+    w.enemyShots,
+    SHOTS[w.bossRow.shot],
+    w.cameraAlong,
+    w.scrollPerStep,
+    w.bossPatrol,
+  );
+}
+
+/**
+ * Put the boss on the field, at the leading edge and in the middle of the lane.
+ *
+ * Centred rather than placed, because it is about to occupy a quarter of the lane and there is no
+ * side of it that is the interesting one to arrive on.
+ */
+function spawnBoss(w: World): void {
+  const boss = w.bossPool.spawn();
+  if (boss === null) return;
+  reset(boss, w.level.bossAt, ACROSS_SPAN / 2, w.bossRow);
+  boss.fireIn = w.bossRow.phases[0]!.fireEvery;
+  w.bossPatrol = 1;
 }
 
 /**
@@ -385,7 +540,6 @@ export function respawn(w: World): void {
   holdStation(w.ship, w.scrollPerStep);
   w.ship.invulnFor = INVULN_STEPS;
   w.fireIn = w.shipRow.fireEvery;
-  w.spawnIn = SPAWN_EVERY;
 }
 
 /**
@@ -400,5 +554,15 @@ export function resetScene(w: World): void {
   w.cameraAlong = 0;
   w.prevCameraAlong = 0;
   w.debris.clear();
+  /*
+    ⚠️ **The boss is cleared HERE and deliberately not in `respawn`.** A death during the fight leaves
+    the boss exactly as the player left it — damaged, mid-phase, still there — which is the arcade
+    answer and the one that keeps a life worth spending. Only a new run puts it back.
+  */
+  w.bossPool.clear();
+  w.nextWave = 0;
+  w.bossSpawned = false;
+  w.bossBeaten = false;
+  w.bossPatrol = 1;
   respawn(w);
 }

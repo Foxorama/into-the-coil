@@ -20,7 +20,9 @@ import { atlasIsStale, bakeAtlas, viewFor } from '../render/bake.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
 import { SPECIAL_BINDINGS } from '../content/actions.ts';
 import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
-import { ENEMIES, ENEMY_KINDS, type EnemyRow } from '../content/enemies.ts';
+import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../content/enemies.ts';
+import { LEVELS } from '../content/levels.ts';
+import { BOSSES } from '../content/bosses.ts';
 import { holdStation, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { SHIPS } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
@@ -45,7 +47,7 @@ import { runLoop } from './loop.ts';
  * Splitting one pool into four is what makes the collision cost the product of two small pools
  * instead of the square of one big one — `src/sim/collide.ts` has the argument.
  */
-const CAPACITY = { ship: 1, enemies: 40, playerShots: 80, enemyShots: 150, debris: 200 };
+const CAPACITY = { ship: 1, enemies: 40, playerShots: 80, enemyShots: 150, debris: 200, boss: 1 };
 
 export interface Mounted {
   /** Stop the loop and drop the resize listener. */
@@ -153,9 +155,24 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const playerShots = new Pool<Entity>(CAPACITY.playerShots, makeEntity);
   const enemyShots = new Pool<Entity>(CAPACITY.enemyShots, makeEntity);
   const debris = new Pool<Entity>(CAPACITY.debris, makeEntity);
+  const bossPool = new Pool<Entity>(CAPACITY.boss, makeEntity);
 
   /** Enemy rows by index, so a per-step lookup in the frame is an array index and not a string key. */
   const enemyRows: readonly EnemyRow[] = ENEMY_KINDS.map((k) => ENEMIES[k]);
+  /**
+   * The reverse lookup, so a level can name its enemies in words and a spawn still costs an index.
+   *
+   * ⚠️ Built from `ENEMY_KINDS` rather than written out, so it cannot disagree with `enemyRows` — the
+   * two are the same list read in opposite directions, and `src/content/sprites.ts` records what a
+   * pair of hand-kept lists in that relationship cost the last time.
+   */
+  const enemyKinds = {} as Record<EnemyKind, number>;
+  ENEMY_KINDS.forEach((k, index) => {
+    enemyKinds[k] = index;
+  });
+
+  const level = LEVELS.approach;
+  const bossRow = BOSSES[level.boss];
 
   const shipRow = SHIPS.proof;
   const ship = shipPool.spawn()!;
@@ -213,7 +230,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     // Debris first, so fragments sit UNDER everything still alive. An explosion that draws over a
     // bullet hides the one thing on screen the player cannot afford to lose track of.
-    layers: [debris, enemies, enemyShots, playerShots, shipPool],
+    // ⚠️ The boss sits directly above the debris and BELOW everything else. It is four times the
+    // size of anything on screen, so drawing it over the enemies and shots would hide exactly the
+    // things the player cannot afford to lose track of while fighting it.
+    layers: [debris, bossPool, enemies, enemyShots, playerShots, shipPool],
     shipPool,
     enemies,
     playerShots,
@@ -231,11 +251,20 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
-    spawnIn: 1,
     fireIn: shipRow.fireEvery,
     ship,
     shipRow,
     enemyRows,
+    enemyKinds,
+    level,
+    nextWave: 0,
+    bossRow,
+    bossPool,
+    bossSpawned: false,
+    bossBeaten: false,
+    bossPatrol: 1,
+    // Replaced below, once `dispatch` exists — the same reason `onDeath` is.
+    onCleared: (): void => {},
     // The game as designed, per 0024 — every knob at its least-assisted position. There is no
     // settings screen yet to move them, and `tuningFor` is where they will arrive from when there is.
     tuning: tuningFor(DEFAULT_ASSISTS),
@@ -319,8 +348,17 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    */
   const startRun = (): void => {
     resetScene(world);
-    seedField();
-    // A fresh spawn stream too, for the reason `seedField` gives: run two must be run one.
+    /*
+      ⚠️ **`seedField` is NOT called here, and it used to be.** A random opening field is the right
+      answer for a scene proving the page draws and the wrong one for an authored level: it puts
+      content the designer did not write in front of the player, at positions no play-test can act
+      on. `src/content/levels.ts` opens with waves inside the spawn horizon, so the level fills its
+      own first screen — which is what an authored level is FOR.
+
+      It still runs once at boot, because the title screen is over a still field and an empty one
+      would look like a broken build.
+    */
+    // A fresh spawn stream, so run two is run one — the reason `seedField` gives.
     world.rng = makeRng('proof-scene').stream('spawns');
     dispatch({ slice: 'run', type: 'begin' });
     dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
@@ -337,6 +375,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   world.onDeath = (): void => {
     dispatch({ slice: 'run', type: 'lifeLost' });
     if (state.run.lives > 0) respawn(world);
+  };
+
+  /*
+    The boss is dead. The run survives it — 0039's *carry forward* is exactly this boundary — so the
+    only things that change are the level count and the screen.
+  */
+  world.onCleared = (): void => {
+    dispatch({ slice: 'run', type: 'levelCleared' });
+    dispatch({ slice: 'screen', type: 'show', screen: 'cleared' });
   };
 
   /** Re-measure, re-fit and — only if the orientation or resolution actually moved — re-bake. */

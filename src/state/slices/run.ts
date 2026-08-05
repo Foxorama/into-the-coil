@@ -44,7 +44,8 @@ export interface RunState {
 export type RunAction =
   | { slice: 'run'; type: 'begin' }
   | { slice: 'run'; type: 'lifeLost' }
-  | { slice: 'run'; type: 'took'; special: SpecialKind };
+  | { slice: 'run'; type: 'took'; special: SpecialKind }
+  | { slice: 'run'; type: 'levelCleared' };
 
 /**
  * No run in progress.
@@ -74,6 +75,14 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
       return state.lives <= 0 ? state : { lives: state.lives - 1, level: state.level, arsenal: [] };
     case 'took':
       return { lives: state.lives, level: state.level, arsenal: [...state.arsenal, action.special] };
+    case 'levelCleared':
+      /*
+        ⚠️ **Lives and arsenal are untouched, and that is the whole of what "carry forward" means.**
+        `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md` amended `docs/game.md`
+        to say upgrades cross a LEVEL boundary and not a death, and this line is the level boundary.
+        A clear that reset anything would be the death rule wearing the wrong name.
+      */
+      return { lives: state.lives, level: state.level + 1, arsenal: state.arsenal };
     default: {
       // Adding a member to `RunAction` fails to compile HERE, per
       // `docs/decisions/0016-a-hub-enumerates-kinds.md`'s fifth defeat.

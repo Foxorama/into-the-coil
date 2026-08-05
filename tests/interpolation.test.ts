@@ -13,6 +13,7 @@ import { DEFAULT_ASSISTS, tuningFor } from '../src/sim/assist.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { SPRITE } from '../src/content/sprites.ts';
+import { inertLevel } from './world.ts';
 
 /**
  * A SHIP HOLDING STATION MUST NOT MOVE ON SCREEN.
@@ -100,7 +101,7 @@ function stationKeepingWorld(surface: Surface): World {
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: 0.6,
-    spawnIn: NEVER,
+    ...inertLevel(),
     fireIn: NEVER,
     ship,
     shipRow,

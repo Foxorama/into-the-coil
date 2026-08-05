@@ -26,6 +26,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | damage is legible; a death is drawn | [0035](decisions/0035-damage-is-legible-on-the-body-that-took-it.md), [0036](decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md) |
 | flight — all four constants have a hand behind them | [0037](decisions/0037-the-ship-has-mass.md), [`inertia-played`](../reports/inertia-played-2026-08-05.md) |
 | **what a run is: three lives, and a death costs the arsenal** | [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
+| **a level is a script; a boss is phases keyed to health** | [0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
@@ -40,32 +41,59 @@ it in.
 
 ## What the game currently is
 
-A proof scene in `src/app/frame.ts`, wrapped in a real run: a title screen, three lives, a death that
-spends one, and a game over that ends it. Its own comment still says the scene is not the game — one
-ship, two enemy kinds, one shot each way, one spawn rule. Difficulty was placed by a hand at *"intro
-to 50% of the first level"* — [`ship-speed-settled`](../reports/ship-speed-settled-2026-08-05.md).
+**One playable level, end to end, with no upgrades.** A title screen, three lives, five enemy kinds,
+an authored wave script of about three minutes, and a boss with phases keyed to its health — then a
+level-clear screen. Nothing is picked up and nothing is spent: the arsenal is a list with nothing in
+it, which is what makes this a **baseline** rather than the game. Difficulty was last placed by a
+hand at *"intro to 50% of the first level"* —
+[`ship-speed-settled`](../reports/ship-speed-settled-2026-08-05.md).
+
+## What the first play-test of level one has to answer
+
+Questions, not findings — each one a number nothing in the repository can settle.
+
+- **Is the boss's progress readable at all?** Nothing says how much of it is left, by decision —
+  [0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md) names this as the thing that
+  build exists to find out.
+- **Is three lives right**, and is a level that empties the arsenal on death too punishing before
+  there is anything to pick up?
+- **Do the weaver and the charger read apart?** Both are essentially lines, told apart by which way
+  they lie — `src/content/sprites.ts` writes that risk down rather than assuming it away.
+- **Do enemy shots ever land?** [0034](decisions/0034-a-threat-is-absolute-and-a-pool-is-the-pairing.md)'s
+  `spit` speed and the fire rates have never been felt by an attentive player, and the turret is the
+  row that exists to test them —
+  [`ship-speed-settled`](../reports/ship-speed-settled-2026-08-05.md) has the measurement they
+  replace.
 
 ## What is next, and why in this order
 
-**1 — Waves, and the first real level content.**
+**1 — Pickups: extra lives, and weapon upgrades.**
 
-⚠️ **This is where the bullet threat model finally gets exercised, and it has never been felt.** Every
-hit in every play-test so far has been *contact*; no enemy shot has ever landed on an attentive
-player, because the dodge has roughly thirty times the room it needs. `spit`'s speed and the
-lancer's fire rate are still the reasoned starting points 0034 shipped —
-[`ship-speed-settled`](../reports/ship-speed-settled-2026-08-05.md) has the measurement. The honest
-place to settle them is a wave that actually puts shots in the air.
+Owed by [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md), which made a level's
+**pickup density load-bearing** by emptying the arsenal on a death — a constraint level one does not
+yet answer. An extra life is the first pickup whose effect is on the **run** rather than on the ship,
+which is a category `src/content/` has no shape for.
 
-Also unlocked here: **entry from the `across` edges.** Everything currently arrives at the leading
-edge because there is one spawn rule, not because of any constraint —
+**2 — The arsenal: specials, and what a trigger spends.**
+
+`src/content/specials.ts` has the union and the rows; nothing fires one. The input half has existed
+since [0030](decisions/0030-input-is-actions-and-needs-no-new-layer.md) — `SPECIAL_BINDINGS` and
+`Intent.specials` — and nothing consumes it either. The run slice already carries the arsenal as a
+list, so this adds behaviour to a shape rather than changing one.
+
+**3 — Level two, and therefore the chart.**
+
+A second level is a row in `LEVELS` —
+[0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md) made that a table edit. What it
+is *not* yet is a destination: `docs/game.md` puts a branching chart between levels, and nothing
+knows how to move from one to the next.
+
+Also still unlocked and still not done: **entry from the `across` edges.** Everything arrives at the
+leading edge because that is the only spawn rule written, not because of any constraint —
 [`enemy-silhouettes`](../reports/enemy-silhouettes-2026-08-05.md) has the argument, and names the one
 real gap that comes with it (there is no `across` cull).
 
-And owed by [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md): **a level's
-pickup density is load-bearing** now that a death empties the arsenal, and **extra lives are
-findable**, which is the first pickup whose effect is on the run rather than on the ship.
-
-**2 — `save/`, and the first `itc_*` key.**
+**4 — `save/`, and the first `itc_*` key.**
 
 Requires the run slice, which now exists. Lands with `PRIVACY.md`'s storage-key table and a guard
 cross-checking `src/` in both directions, which `docs/scaffold-plan.md` has been holding open since
@@ -74,18 +102,16 @@ the scaffold *"until the first one is real"*. Carries a rollback note —
 [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) says current lives, current
 arsenal, and the level to resume at.
 
-**3 — The arsenal: specials, and weapon upgrades.**
-
-`src/content/specials.ts` has the union and the rows; nothing fires one. The input half has existed
-since [0030](decisions/0030-input-is-actions-and-needs-no-new-layer.md) — `SPECIAL_BINDINGS` and
-`Intent.specials` — and nothing consumes it either. The run slice already carries the arsenal as a
-list, so this adds behaviour to a shape rather than changing one.
-
 ## Deliberately not next
 
 **The character roster**, beyond what a wave table needs. `src/content/ships.ts` has one row and it is
 deliberately not one of `docs/game.md`'s four golfers; authoring characters is expensive to redo and
 it is downstream of everything above.
+
+**Theming level one to a biome.** `docs/game.md` themes levels on the fourteen *Far Carry* biomes and
+names none of them, so picking one means going to the predecessor for material — which `CLAUDE.md`
+allows only for a named file and a named reason. It is a one-line table edit whenever that reason
+exists.
 
 **Anything about flight.** It is settled. The keyboard's eight directions are inherent to binary keys
 and are **not** a defect to be tuned away — [0037](decisions/0037-the-ship-has-mass.md) records why a
