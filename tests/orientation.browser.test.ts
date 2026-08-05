@@ -23,6 +23,7 @@ import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
+import { framesInARow, moved } from './frames.ts';
 
 const dist = pathToFileURL(resolve(fileURLToPath(new URL('..', import.meta.url)), 'dist/index.html')).href;
 
@@ -144,25 +145,6 @@ async function inkedPixels(page: Page): Promise<number> {
   });
 }
 
-/**
- * A cheap fingerprint of what is on the canvas right now.
- *
- * Compared across time rather than against a golden value, so it asserts *nothing moved* without
- * anybody having to decide what the picture should look like.
- */
-async function signature(page: Page): Promise<string> {
-  return page.evaluate(() => {
-    const canvas = document.querySelector('#app canvas');
-    if (!(canvas instanceof HTMLCanvasElement)) return '';
-    const ctx = canvas.getContext('2d');
-    if (ctx === null || canvas.width === 0 || canvas.height === 0) return '';
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    let hash = 0;
-    for (let i = 0; i < data.length; i += 997) hash = (hash * 31 + (data[i] ?? 0)) | 0;
-    return String(hash);
-  });
-}
-
 describe.runIf(chromePath)('the orientation gate', () => {
   it('plays in landscape, with no prompt in the way', async () => {
     const page = await open(LANDSCAPE);
@@ -206,12 +188,10 @@ describe.runIf(chromePath)('the orientation gate', () => {
       test going red. Two signatures 200ms apart is the same measurement the real assertion makes,
       pointed at the opposite claim.
     */
-    const movingBefore = await signature(page);
-    await page.waitForTimeout(200);
     expect(
-      await signature(page),
+      moved(await framesInARow(page, 4)),
       'the world was already still in landscape, so stopping it proves nothing',
-    ).not.toBe(movingBefore);
+    ).toBe(true);
 
     await page.setViewportSize(PORTRAIT);
     await page.waitForFunction(
@@ -222,11 +202,14 @@ describe.runIf(chromePath)('the orientation gate', () => {
       { timeout: 5_000 },
     );
 
-    const before = await signature(page);
-    await page.waitForTimeout(400);
-    const after = await signature(page);
-    expect(before, 'the canvas was never drawn, so this proves nothing').not.toBe('');
-    expect(after, 'the world kept moving behind the prompt').toBe(before);
+    /*
+      ⚠️ **Consecutive FRAMES, not a wall-clock gap** — `tests/frames.ts` has the reason, and it is
+      the harness's own load rather than anything about the game: 600ms of wall clock is not 600ms of
+      rendering when `npm run prove` is running the suite for the 172nd time.
+    */
+    const frozen = await framesInARow(page, 4);
+    expect(frozen[0], 'the canvas was never drawn, so this proves nothing').not.toBe('');
+    expect(moved(frozen), 'the world kept moving behind the prompt').toBe(false);
     await page.context().close();
   }, 30_000);
 

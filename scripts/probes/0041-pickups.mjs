@@ -29,8 +29,11 @@ export const PROBES = [
     guard: 'never fires faster than a hit can be read',
     edit: {
       path: 'src/content/pickups.ts',
-      find: '      const faster = Math.round(fireEvery * RAPID_FACTOR);',
-      replace: '      const faster = fireEvery - 3;',
+      // ⚠️ The FLOOR removed, not the factor changed. A first attempt subtracted a constant instead
+      // and `npm run prove` reported WRONG TEST: it broke stacking rather than the floor, because the
+      // floor still caught it. The break has to be the thing the guard is about.
+      find: '      if (faster < FASTEST_FIRE) damage++;\n      else fireEvery = faster;',
+      replace: '      fireEvery = faster;',
     },
   },
   {

@@ -18,6 +18,7 @@ import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
+import { framesInARow, moved } from './frames.ts';
 
 /*
   ⚠️ FILE-LEVEL, because vitest's 5s default is not a browser test's timeout — see
@@ -70,18 +71,6 @@ async function start(page: Page): Promise<void> {
   await page.waitForTimeout(120);
 }
 
-/** Two canvases, a moment apart, as strings. Equal means the picture did not move. */
-async function twoFrames(page: Page, apartMs: number): Promise<[string, string]> {
-  const snapshot = (): Promise<string> =>
-    page.evaluate(() => {
-      const canvas = document.querySelector('#app canvas');
-      return canvas instanceof HTMLCanvasElement ? canvas.toDataURL().slice(0, 20_000) : '';
-    });
-  const before = await snapshot();
-  await page.waitForTimeout(apartMs);
-  return [before, await snapshot()];
-}
-
 /** How many of the sampled pixels are not the background. The cheapest honest "did it draw". */
 async function inkFraction(page: Page): Promise<number> {
   return page.evaluate(() => {
@@ -119,10 +108,10 @@ describe.runIf(chromePath)('the page draws', () => {
     // which is the failure a static screenshot cannot tell apart.
     const { page } = await open({ width: 1280, height: 720 }, 1);
     await start(page);
-    await page.waitForTimeout(1200);
-    const [before, after] = await twoFrames(page, 600);
-    expect(before.length, 'nothing was captured').toBeGreaterThan(100);
-    expect(after, 'the canvas is frozen — the rAF loop stopped or never started').not.toBe(before);
+    await page.waitForTimeout(300);
+    const frames = await framesInARow(page, 4);
+    expect(frames[0]!.length, 'nothing was captured').toBeGreaterThan(100);
+    expect(moved(frames), 'the canvas is frozen — the rAF loop stopped or never started').toBe(true);
     await page.context().close();
   }, 90_000);
 
@@ -139,18 +128,17 @@ describe.runIf(chromePath)('the page draws', () => {
    */
   it('waits on the title screen — nothing moves until Start is pressed', async () => {
     const { page, errors } = await open({ width: 1280, height: 720 }, 1);
-    await page.waitForTimeout(1200);
-    const [before, after] = await twoFrames(page, 600);
-    expect(before.length, 'nothing was captured').toBeGreaterThan(100);
-    expect(after, 'the world is advancing behind the title screen').toBe(before);
+    await page.waitForTimeout(300);
+    const still = await framesInARow(page, 4);
+    expect(still[0]!.length, 'nothing was captured').toBeGreaterThan(100);
+    expect(moved(still), 'the world is advancing behind the title screen').toBe(false);
     // And the field IS drawn behind it, so "frozen" is not "blank" — a black page would pass the
     // assertion above for entirely the wrong reason.
     expect(await inkFraction(page), 'the title screen is over an empty canvas').toBeGreaterThan(0.001);
 
     await start(page);
-    await page.waitForTimeout(400);
-    const [running, later] = await twoFrames(page, 600);
-    expect(later, 'pressing Start did not start the simulation').not.toBe(running);
+    await page.waitForTimeout(300);
+    expect(moved(await framesInARow(page, 4)), 'pressing Start did not start the simulation').toBe(true);
     expect(errors, errors.join('\n')).toEqual([]);
     await page.context().close();
   }, 90_000);
