@@ -75,8 +75,15 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   shipHit: 7,
   drifter: 5.5,
   drifterHit: 5.5,
-  lancer: 5.5,
-  lancerHit: 5.5,
+  /*
+    ⚠️ **BIGGER THAN THE DRIFTER, and the size is carrying the toughness.** Shape says *which* enemy
+    this is; size says *how much killing it takes*, and size is the one cue that needs no learning at
+    all — every game the player has ever played taught it. The two shipped at the same extent with
+    one dying to one shot and the other to two, and that read as the game being inconsistent rather
+    than as two enemies.
+  */
+  lancer: 7,
+  lancerHit: 7,
   bullet: 1.8,
   pickup: 3.5,
 };

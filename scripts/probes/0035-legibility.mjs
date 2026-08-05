@@ -38,7 +38,7 @@ export const PROBES = [
     guard: 'THE ONE: a survivor is drawn differently on the step it is hit',
     edit: {
       path: 'src/sim/entity.ts',
-      find: '    e.sprite = e.flashFor > 0 ? e.spriteHit : e.spriteBase;',
+      find: '    e.sprite = e.flashFor > 0 || blinking ? e.spriteHit : e.spriteBase;',
       replace: '    e.sprite = e.spriteBase;',
     },
   },
@@ -65,6 +65,30 @@ export const PROBES = [
       path: 'src/content/enemies.ts',
       find: '    sprite: SPRITE.drifter,\n    spriteHit: SPRITE.drifterHit,',
       replace: '    sprite: SPRITE.drifter,\n    spriteHit: SPRITE.drifter,',
+    },
+  },
+  {
+    decision: '0035',
+    suite: 'tests/combat.test.ts',
+    // ⚠️ THE PLAY-TEST REVERSAL. This break IS the version that shipped and was rejected: one solid
+    // flash lasting the whole invulnerable window, in place of a pulse.
+    broke: 'the recovery blink folded into the impact flash, so a state is shown as one long colour change',
+    guard: 'an impact and a recovery are two signals, and the second one pulses',
+    edit: {
+      path: 'src/sim/entity.ts',
+      find: '    const blinking = e.invulnFor > 0 && (e.invulnFor & BLINK_PHASE) !== 0;',
+      replace: '    const blinking = e.invulnFor > 0;',
+    },
+  },
+  {
+    decision: '0035',
+    suite: 'tests/combat.test.ts',
+    broke: 'the tougher enemy drawn at the same size as the harmless one, which is what shipped',
+    guard: 'the enemy that takes more killing is drawn bigger',
+    edit: {
+      path: 'src/content/sprites.ts',
+      find: '  lancer: 7,\n  lancerHit: 7,',
+      replace: '  lancer: 5.5,\n  lancerHit: 5.5,',
     },
   },
   {

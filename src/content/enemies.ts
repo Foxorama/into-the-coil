@@ -67,7 +67,9 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   lancer: {
     sprite: SPRITE.lancer,
     spriteHit: SPRITE.lancerHit,
-    radius: 2.6,
+    // Bigger on screen, so bigger to hit. A drawn size and a hurtbox that disagree is the complaint
+    // `tests/combat.test.ts` holds a band against, in both directions.
+    radius: 3.2,
     health: 2,
     damage: 2,
     closing: 0.35,

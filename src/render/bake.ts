@@ -112,21 +112,25 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
     case 'lancer':
     case 'lancerHit':
       /*
-        An arrowhead with its nose towards −x — pointing back down the lane, at the player.
+        A plain triangle, nose towards −x: pointing back down the lane, at the player.
 
-        ⚠️ **The shape is the telegraph.** A lancer closes and shoots where the ship is; a drifter
-        does neither, and the two shipped as the same diamond, so a player had no way to tell which
-        of the things on screen was aiming at them. Facing is the cheapest silhouette cue there is
-        and it is the one this genre already teaches: the pointy end is the dangerous end.
+        ⚠️ **THE SECOND ATTEMPT, and the first one is why this comment is long.** It was a
+        five-sided arrowhead — a point at −x, swept wings, a blunt back — reasoned to be obviously an
+        arrow and obviously not a diamond. Screenshotted at the size it actually ships, it was a
+        small mushy lump that read as *a slightly smaller diamond*, so the player saw diamonds
+        everywhere, some of which died to one shot and some to two, and reported the game as buggy.
 
-        Notched at the back so it cannot be read as the player's wedge seen in a mirror — that one
-        has a concave tail and points the other way.
+        Three points against four is a silhouette difference that survives twenty pixels; five points
+        with a 0.25r notch in them is not. `reports/enemy-silhouettes-2026-08-05.md`, and
+        `docs/decisions/0027-measure-the-picture-not-the-model.md` for the reason a shape has to be
+        LOOKED at rather than argued about.
+
+        It cannot be confused with the player's wedge: that one is cyan, points the other way, and
+        has a concave tail this deliberately does not.
       */
       ctx.moveTo(half - r, half);
-      ctx.lineTo(half + r * 0.5, half - r * 0.85);
-      ctx.lineTo(half + r, half - r * 0.25);
-      ctx.lineTo(half + r, half + r * 0.25);
-      ctx.lineTo(half + r * 0.5, half + r * 0.85);
+      ctx.lineTo(half + r * 0.7, half - r * 0.95);
+      ctx.lineTo(half + r * 0.7, half + r * 0.95);
       ctx.closePath();
       break;
     case 'bullet':

@@ -54,17 +54,22 @@ const SPAWN_EVERY = 42;
 export const SHIP_START_ALONG = 40;
 
 /**
- * How long an enemy shows a hit it survived, in steps — about an eighth of a second.
+ * How long a body shows a hit it survived, in steps — about an eighth of a second.
  *
- * Long enough to be seen on a 60Hz display and on a frame the compositor drops; short enough that a
- * lancer under sustained fire reads as *being hit repeatedly* rather than as having changed colour.
- * The ship's flash is `INVULN_STEPS` instead, because there it doubles as *you are briefly safe*.
+ * Long enough to be seen on a 60Hz display and on a frame the compositor drops; short enough that
+ * anything under sustained fire reads as *being hit repeatedly* rather than as having changed
+ * colour. The same number for the ship and for an enemy, because it means the same thing.
+ *
+ * ⚠️ **The ship's recovery is a SEPARATE signal** and it is the blink `src/sim/entity.ts` derives
+ * from `invulnFor`. This was briefly one number doing both — the ship's flash set to the whole
+ * invulnerable window — and a play-test said the blink was better. An impact is an event; being
+ * briefly safe is a state; a state that does not pulse looks like a colour change.
  *
  * ⚠️ `docs/decisions/0024-the-accessibility-floor-is-settings.md` caps flash intensity
  * unconditionally. This is one silhouette in two inks, never a full-screen flash, which is the side
  * of that line it is meant to be on.
  */
-const ENEMY_FLASH_STEPS = 8;
+const IMPACT_FLASH_STEPS = 8;
 
 /** Everything a frame reads. Mutable, set up once, and updated on a resize — never reducer state. */
 export interface World {
@@ -165,11 +170,11 @@ export class GameFrame implements Frame {
       `src/sim/assist.ts` reaches the model at all. `tests/assist.test.ts` proved the TABLE was
       monotone; `tests/combat.test.ts` is what proves the code using it is.
     */
-    collideInto(w.playerShots, w.enemies, 1, 1, ENEMY_FLASH_STEPS);
-    collideIntoOne(w.enemyShots, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, INVULN_STEPS, true);
+    collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS);
+    collideIntoOne(w.enemyShots, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, true);
     // Not consumed: an enemy the player flew into is still there afterwards, or ramming would be the
     // cheapest way to clear the screen.
-    collideIntoOne(w.enemies, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, INVULN_STEPS, false);
+    collideIntoOne(w.enemies, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
 
     if (w.ship.health <= 0) restart(w);
 

@@ -125,7 +125,18 @@ declared in `scripts/probes/0035-legibility.mjs`.
 | the sprite selection dropped, so the counter runs and nothing is drawn from it | `THE ONE: a survivor is drawn differently on the step it is hit` |
 | both enemy kinds pointed back at one sprite, which is what shipped | `no two enemy kinds share a sprite` |
 | a hit sprite set to the body's ordinary one, which passes a `Record` and shows nothing | `every enemy kind has a hit sprite that is not its ordinary one` |
+| the recovery blink folded into the impact flash, so a state is shown as one long colour change | `an impact and a recovery are two signals, and the second one pulses` |
+| the tougher enemy drawn at the same size as the harmless one, which is what shipped | `the enemy that takes more killing is drawn bigger` |
 | `impact` pointed back at `hazard`, so a hit and a hazard become one colour | `clears WCAG AA against the background, in every palette` |
+
+⚠️ **One of those guards was written wrong twice and `npm run prove` said STILL GREEN both times.**
+The blink assertion first checked that two distinct sprites appeared across the invulnerable window —
+which a solid flash that ends also does — and then that the sprite changed more than once, which a
+solid flash also does, once in and once out. What separates a pulse from a flash is how many times
+the lit state *starts*. Both earlier versions measured something real and neither measured this, and
+neither would have been noticed without a probe: the test was green against the exact implementation
+it existed to reject. This is [0019](0019-a-probe-must-be-seen-to-apply.md) doing the thing it was
+written for, twice in one sitting.
 
 ## What has no guard
 
@@ -133,3 +144,59 @@ declared in `scripts/probes/0035-legibility.mjs`.
 picture questions about quantities in pixels and milliseconds, and 0027 refuses a threshold on an
 unvalidated one — a guard on either would defend whatever number happened to ship. They go back to a
 hand, which is where this decision came from.
+
+---
+
+## Both open questions came back answered, and both answers were "no"
+
+**Added 2026-08-05**, within the hour.
+[`reports/enemy-silhouettes-2026-08-05.md`](../../reports/enemy-silhouettes-2026-08-05.md). The
+section above named two things it was leaving to a hand; the hand returned both, and neither was the
+way this file guessed.
+
+### The lancer's nose did not read, and one screenshot would have said so
+
+*"The diamond shapes took two shots to take down … sometimes they'd get hit, go white, then need a
+second shot and other times they appeared to just die straight away."*
+
+The behaviour described is **correct**: a drifter dies to one shot and never flashes, a lancer takes
+two and flashes between. It reads as random only if the two cannot be told apart — and they could
+not, because the five-sided arrowhead rendered at shipping size as a small mushy lump that looked
+like *a slightly smaller diamond*.
+
+| | |
+|---|---|
+| shape | **a plain triangle**. Three points against four survives twenty pixels; five points with a 0.25r notch do not |
+| size | **7 units against 5.5**, and the size is doing more work than the shape |
+| hurtbox | 3.2, up from 2.6 |
+
+⚠️ **Size carries toughness and needs no learning at all.** Two enemies of different shapes at the
+same size still make *"how many shots does this take"* something to memorise instead of something to
+see. `tests/combat.test.ts` holds the ordering — the enemy that survives more hits is drawn bigger —
+as an ordering and never as a ratio, because a ratio is a picture quantity nobody has validated.
+
+### An impact and a recovery are two signals
+
+*"I think the previous ship flash was better than the new one."* Correct, and the reasoning that
+replaced it was wrong in a nameable way: **an impact is an event and wants to be solid and brief; a
+recovery is a state, and a state that does not pulse looks like a colour change.** Folding them into
+one number was not the job — the job was generalising the flash to enemies — and a generalisation
+that changes behaviour at the site it started from is two changes, of which the second was never
+argued.
+
+Both are back and both are generic: anything with `invulnFor` blinks, anything with `flashFor`
+flashes, and no branch anywhere names the ship.
+
+### What this cost, and the habit rather than the guard
+
+⚠️ **`scripts/trace-frame.mjs` could not have caught either.** It traces *motion* — where a thing was
+drawn, per frame — and has three bugs to its name. Both of these are about **form**: what a shape
+looks like at the size it ships at. 0027 is about measuring the picture and it did not prevent this,
+because the picture it teaches you to measure is the moving kind.
+
+No guard is proposed. A test cannot look at a triangle and say whether it reads as one, and pretending
+otherwise is exactly the unvalidated threshold 0027 refuses. What is worth carrying is the trigger:
+**when a change is about what something looks like rather than where it moves, take the picture
+before shipping it.** It cost one throwaway script and about a minute, and it answered in one image a
+question that two rounds of reasoning had got wrong — including the round in this very file that
+wrote down *"no instrument here can judge it"* and shipped anyway.

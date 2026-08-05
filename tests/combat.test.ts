@@ -588,6 +588,59 @@ describe('damage is legible on the body that took it', () => {
     expect(e.sprite, 'the enemy never stopped flashing — it has simply changed colour').toBe(SPRITE.lancer);
   });
 
+  it('an impact and a recovery are two signals, and the second one pulses', () => {
+    /*
+      ⚠️ **A PLAY-TEST REVERSAL.** These were briefly folded into one — the ship's flash set to the
+      whole invulnerable window — and the verdict was that the previous blink was better. The
+      mistake was treating them as one thing: an impact is an EVENT and wants to be solid and brief;
+      being briefly safe is a STATE, and a state that does not pulse just looks like the ship has
+      changed colour.
+
+      Both are generic rather than ship-specific: anything with `invulnFor` blinks, anything with
+      `flashFor` flashes, and the ship is simply the only thing that currently gets both.
+    */
+    const pool = new Pool<Entity>(1, makeEntity);
+    const ship = pool.spawn()!;
+    reset(ship, 100, 50, SHIPS.proof);
+    ship.invulnFor = INVULN_STEPS;
+
+    /*
+      ⚠️ **COUNT THE LIT PERIODS. This assertion was wrong TWICE and `npm run prove` caught it both
+      times**, which is the clearest demonstration of decision 0019 this project has produced.
+
+      Attempt one asserted that two distinct sprites appeared across the window — but a solid flash
+      that ends also shows two. STILL GREEN.
+
+      Attempt two counted transitions and demanded more than one — but a solid flash that starts and
+      ends has two, one in and one out. STILL GREEN again.
+
+      What actually separates a pulse from a flash is how many times the lit state STARTS. Once is a
+      flash however long it lasts; more than once is a blink. Both earlier versions were measuring
+      something real, and neither was measuring this.
+    */
+    const seen = new Set<number>();
+    let litRuns = 0;
+    let wasLit = false;
+    for (let step = 0; step < INVULN_STEPS; step++) {
+      stepEntities(pool, 0);
+      seen.add(ship.sprite);
+      const lit = ship.sprite === SHIPS.proof.spriteHit;
+      if (lit && !wasLit) litRuns++;
+      wasLit = lit;
+    }
+    expect(seen.has(SHIPS.proof.sprite) && seen.has(SHIPS.proof.spriteHit)).toBe(true);
+    expect(
+      litRuns,
+      'the ship lit up once and stayed lit for the whole invulnerable window — that is a colour ' +
+        'change that ends, not a blink',
+    ).toBeGreaterThan(1);
+
+    // And it ends: an invulnerability that never expired would also show two sprites forever.
+    stepEntities(pool, 0);
+    expect(ship.invulnFor, 'the invulnerable window never closed').toBe(0);
+    expect(ship.sprite, 'the ship is still blinking after it stopped being invulnerable').toBe(SHIPS.proof.sprite);
+  });
+
   it('a shot never flashes, because it does not survive being one', () => {
     // Not a special case in the code, and worth pinning as a consequence rather than a rule: a shot
     // has one health, so `collideInto` releases it rather than reaching the flash at all.
@@ -619,6 +672,34 @@ describe('an enemy kind is told apart by its silhouette, not by its colour', () 
       const other = seen.get(ENEMIES[kind].sprite);
       expect(other, `${kind} and ${other} are drawn as the same shape`).toBeUndefined();
       seen.set(ENEMIES[kind].sprite, kind);
+    }
+  });
+
+  it('the enemy that takes more killing is drawn bigger', () => {
+    /*
+      ⚠️ **Size carries toughness, and it is the one cue that needs no learning at all.** The two
+      kinds shipped at the same extent with one dying to a single shot and the other to two, and it
+      read as the game being inconsistent rather than as two different enemies — *"sometimes they'd
+      get hit, go white, then need a second shot and other times they appeared to just die straight
+      away"*. `reports/enemy-silhouettes-2026-08-05.md`.
+
+      Asserted as an ORDERING rather than a ratio: nothing here may pin how much bigger, because
+      that is a picture quantity nobody has validated, and 0027 refuses a guard on one of those.
+      What has to hold at any values is that the two agree in direction.
+    */
+    const extentOf: number[] = [];
+    for (const k of SPRITE_KINDS) extentOf[SPRITE[k]] = SPRITE_EXTENT[k];
+
+    const kinds = [...ENEMY_KINDS].sort((a, b) => ENEMIES[a].health - ENEMIES[b].health);
+    for (let i = 1; i < kinds.length; i++) {
+      const softer = kinds[i - 1]!;
+      const tougher = kinds[i]!;
+      if (ENEMIES[tougher].health === ENEMIES[softer].health) continue;
+      expect(
+        extentOf[ENEMIES[tougher].sprite]!,
+        `${tougher} survives more hits than ${softer} and is not drawn any bigger, so a player has ` +
+          'to learn its toughness by dying to it',
+      ).toBeGreaterThan(extentOf[ENEMIES[softer].sprite]!);
     }
   });
 

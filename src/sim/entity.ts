@@ -24,6 +24,19 @@ import { cullAlong, cullLeadingAlong } from './camera.ts';
 import type { Pool } from './pool.ts';
 
 /**
+ * How many steps each half of an invulnerability blink lasts.
+ *
+ * A power of two so the phase is a mask rather than a modulo, and eight steps is about five and a
+ * half pulses across the ship's invulnerable window — fast enough to read as *recovering*, slow
+ * enough that a 60Hz display shows every one of them and a dropped frame costs nothing.
+ *
+ * ⚠️ It is a picture cadence living in `sim/`, which is where the sprite selection has to be:
+ * `docs/decisions/0015-the-layer-ladder.md` gives the painter one job, and a branch there on "is this
+ * thing flashing" is the painter deciding what exists.
+ */
+const BLINK_PHASE = 8;
+
+/**
  * The part of an entity that comes from a table rather than from play.
  *
  * Declared here, in `sim/`, and *implemented* by the rows in `src/content/` — the arrow points that
@@ -194,8 +207,21 @@ export function stepEntities(pool: Pool<Entity>, cameraAlong: number): void {
     e.across += e.velAcross;
     if (e.invulnFor > 0) e.invulnFor--;
     if (e.flashFor > 0) e.flashFor--;
-    // The one place the hit flash is decided, for every body in the game rather than for the ship.
-    e.sprite = e.flashFor > 0 ? e.spriteHit : e.spriteBase;
+    /*
+      The one place a body's sprite is decided, and it answers TWO signals rather than one.
+
+      ⚠️ **They were folded into one and a play-test caught it.** A single solid flash lasting the
+      whole invulnerable window replaced the ship's blink, and the verdict was that the blink was
+      better. The mistake was treating them as one thing: an IMPACT is an event and wants to be solid
+      and brief; INVULNERABILITY is a state and wants to pulse, because a state that does not pulse
+      just looks like the ship has changed colour. `reports/enemy-silhouettes-2026-08-05.md`.
+
+      Both are generic — anything with `invulnFor` blinks and anything with `flashFor` flashes — so
+      neither is a special case for the ship. The ship simply happens to be the only thing that
+      currently gets both, and gets them in that order: a solid hit, then a pulse while it recovers.
+    */
+    const blinking = e.invulnFor > 0 && (e.invulnFor & BLINK_PHASE) !== 0;
+    e.sprite = e.flashFor > 0 || blinking ? e.spriteHit : e.spriteBase;
     if (e.along < cull || e.along > cullLeading) pool.releaseAt(i);
   }
 }
