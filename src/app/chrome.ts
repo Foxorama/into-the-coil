@@ -100,6 +100,36 @@ const STYLE = `
   outline: 3px solid currentColor;
   outline-offset: 3px;
 }
+/*
+  ⚠️ **The focus ring is drawn for the PAD too, and :focus-visible alone would not do it.** A
+  browser decides :focus-visible from how the focus arrived, and focus moved by the menu reader
+  arrives by script — which most engines classify as not-visible, so a player navigating with a
+  stick would watch a menu with no cursor in it at all. The class below is set by the chrome itself
+  whenever it moves focus, and it says the same thing in the same ink. See decision 0046.
+
+  ⚠️ Neither backticks NOR file paths in here. It is a template literal, so a backtick ends the
+  string; and the prefix guard reads every dotted token in this block as a CSS class, so a path with
+  an extension on it fails as an unprefixed class name. Both were hit while writing this comment.
+*/
+.itc-title-action-cursor,
+.itc-gameover-action-cursor,
+.itc-cleared-action-cursor,
+.itc-victory-action-cursor {
+  outline: 3px solid currentColor;
+  outline-offset: 3px;
+}
+/*
+  The countdown on a screen that expires. Small and beneath the control, because it is a fact about
+  the screen rather than something to do — the voice rule in the product definition: say the one
+  thing and stop.
+*/
+.itc-gameover-timer {
+  font-size: clamp(0.75rem, 2vw, 1rem);
+  font-weight: 400;
+  opacity: 0.7;
+  /* Reserves its own line so the button does not jump a pixel as the digit changes. */
+  min-height: 1.4em;
+}
 .itc-title-key {
   display: grid;
   grid-template-columns: auto auto auto;
@@ -149,11 +179,20 @@ const STYLE = `
 .itc-playing-hud-spent { background: transparent; }
 `;
 
-/** A screen's overlay, and the control on it. */
+/** A screen's overlay, the controls on it, and whatever else it has to say. */
 interface Panel {
   root: HTMLElement;
-  /** `null` for a screen the player does not act on. */
-  action: HTMLButtonElement | null;
+  /**
+   * The controls, in the order `SCREENS` lists them. Empty for a screen the player does not act on.
+   *
+   * ⚠️ **A list even though every screen has one today.** `src/state/screens.ts` says why the row is
+   * a list; this is where a focus ring becomes possible at all, and a ring over one control is
+   * exactly what a pad needs on the screens that exist —
+   * `docs/decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md`.
+   */
+  controls: readonly HTMLButtonElement[];
+  /** Where the countdown is written, for a screen that has one. `null` for a screen that waits. */
+  timer: HTMLElement | null;
 }
 
 /**
@@ -188,6 +227,22 @@ export interface Chrome {
    * whole message is that the game is not running.
    */
   show(screen: Screen | null): void;
+  /**
+   * Move the focus by `delta` controls on the screen currently shown.
+   *
+   * ⚠️ **Wraps, and does not clamp.** A ring of controls has no end to get stuck against, which is
+   * what a player pushing a stick expects; a clamp makes the last control feel broken.
+   */
+  move(delta: number): void;
+  /** Press the focused control, exactly as a click would. */
+  activate(): void;
+  /**
+   * Say how long the shown screen has left, in whole seconds, or `null` for a screen that waits.
+   *
+   * Called on a change of the displayed number — once a second at most — so it may be ordinary DOM
+   * code, on the same terms as `setHud`.
+   */
+  setTimer(seconds: number | null): void;
   /** Drop every listener. */
   release(): void;
 }
@@ -201,7 +256,7 @@ export interface Chrome {
  */
 function hasChrome(screen: Screen): boolean {
   const row = SCREENS[screen];
-  return row.heading.length > 0 || row.action !== null;
+  return row.heading.length > 0 || row.actions.length > 0;
 }
 
 /**
@@ -210,7 +265,7 @@ function hasChrome(screen: Screen): boolean {
  * Allocates freely: this runs once at boot, from `mount.ts`, which is on
  * `tests/budget.test.ts`'s deliberately-cold list.
  */
-export function makeChrome(colours: Palette, onAction: (screen: Screen) => void): Chrome {
+export function makeChrome(colours: Palette, onAction: (screen: Screen, index: number) => void): Chrome {
   const style = document.createElement('style');
   style.textContent = STYLE;
 
@@ -281,19 +336,43 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen) => void)
       root.appendChild(key);
     }
 
-    let action: HTMLButtonElement | null = null;
-    if (row.action !== null) {
-      action = document.createElement('button');
-      action.type = 'button';
-      action.className = prefix + 'action';
-      action.textContent = row.action;
-      const onClick = (): void => onAction(screen);
-      action.addEventListener('click', onClick);
-      listeners.push(() => action?.removeEventListener('click', onClick));
-      root.appendChild(action);
+    /*
+      The controls, one per label the row carries.
+
+      ⚠️ **`click` is the ONE activation path, and the pad goes through it too** — `activate` below
+      calls `.click()` rather than reaching for `onAction` itself. Two paths to the same effect is
+      two places for a screen to start a run without resetting something, and this project has
+      already paid once for two descriptions of one fact (`src/content/sprites.ts`).
+    */
+    const controls: HTMLButtonElement[] = [];
+    row.actions.forEach((label, index) => {
+      const control = document.createElement('button');
+      control.type = 'button';
+      control.className = prefix + 'action';
+      control.textContent = label;
+      const onClick = (): void => onAction(screen, index);
+      control.addEventListener('click', onClick);
+      listeners.push(() => control.removeEventListener('click', onClick));
+      root.appendChild(control);
+      controls.push(control);
+    });
+
+    /*
+      The countdown, for a screen that expires.
+
+      `aria-live="off"`: it is announced once by the button's own label and re-announcing a number
+      every second would talk over everything else on the screen. A screen reader user who wants it
+      can read it; one who does not is not interrupted seven times.
+    */
+    let timer: HTMLElement | null = null;
+    if (row.timeout !== null) {
+      timer = document.createElement('div');
+      timer.className = prefix + 'timer';
+      timer.setAttribute('aria-live', 'off');
+      root.appendChild(timer);
     }
 
-    panels[screen] = { root, action };
+    panels[screen] = { root, controls, timer };
     elements.push(root);
   }
 
@@ -333,6 +412,31 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen) => void)
   hud.append(livesGroup, shieldGroup);
   elements.push(hud);
 
+  /*
+    ── THE FOCUS RING ──────────────────────────────────────────────────────────────────────────────
+
+    Which screen is up, and which of its controls the focus is on.
+
+    ⚠️ **Held here rather than read back from `document.activeElement`.** The browser's idea of focus
+    is lost the moment the player taps the canvas — a touch on the playfield blurs the button — and a
+    pad pressed afterwards would then have nowhere to start from. This is the chrome's own answer and
+    it survives anything the player does with another device.
+  */
+  let shownScreen: Screen | null = null;
+  let focused = 0;
+
+  const paintFocus = (): void => {
+    const panel = shownScreen === null ? undefined : panels[shownScreen];
+    if (panel === undefined) return;
+    for (let i = 0; i < panel.controls.length; i++) {
+      const control = panel.controls[i]!;
+      control.classList.toggle(prefixFor(shownScreen!) + 'action-cursor', i === focused);
+      // Focus the element as well, so the keyboard, the screen reader and the pad all agree about
+      // where the player is — one cursor, three devices.
+      if (i === focused) control.focus();
+    }
+  };
+
   return {
     elements,
     setHud(lives: number, health: number, maxHealth: number): void {
@@ -358,10 +462,33 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen) => void)
         if (panel === undefined) continue;
         const shown = name === screen;
         panel.root.classList.toggle(prefixFor(name) + 'shown', shown);
-        // Focus the control the moment its screen appears, so a keyboard player never has to find
-        // it and a screen reader announces the one thing there is to do.
-        if (shown && panel.action !== null) panel.action.focus();
       }
+      shownScreen = screen;
+      // Back to the first control every time a screen appears. A remembered position on a screen the
+      // player has left is a cursor sitting somewhere nobody put it.
+      focused = 0;
+      paintFocus();
+    },
+    move(delta: number): void {
+      const panel = shownScreen === null ? undefined : panels[shownScreen];
+      const count = panel?.controls.length ?? 0;
+      if (count === 0) return;
+      // `+ count` before the modulo: JavaScript's `%` keeps the sign of the left operand, so a
+      // backwards move off the first control would land on −1 and focus nothing.
+      focused = (focused + delta + count) % count;
+      paintFocus();
+    },
+    activate(): void {
+      const panel = shownScreen === null ? undefined : panels[shownScreen];
+      panel?.controls[focused]?.click();
+    },
+    setTimer(seconds: number | null): void {
+      const panel = shownScreen === null ? undefined : panels[shownScreen];
+      const timer = panel?.timer;
+      if (timer === undefined || timer === null) return;
+      // Terse, per `docs/game.md`: the screen already says the run is over, so this says only how
+      // long it will keep saying it.
+      timer.textContent = seconds === null ? '' : String(seconds);
     },
     release(): void {
       for (const drop of listeners) drop();

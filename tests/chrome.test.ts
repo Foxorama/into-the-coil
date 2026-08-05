@@ -89,7 +89,7 @@ describe('every screen owns its class prefix', () => {
     const styled = classesInStyle(source);
     const missing = SCREEN_KINDS.filter((screen) => {
       const row = SCREENS[screen];
-      if (row.heading.length === 0 && row.action === null) return false;
+      if (row.heading.length === 0 && row.actions.length === 0) return false;
       return !styled.some((c) => c.startsWith(prefixFor(screen).slice(0, -1)));
     });
     expect(missing, `these screens draw chrome that nothing styles: ${missing.join(', ')}`).toEqual([]);
@@ -99,7 +99,7 @@ describe('every screen owns its class prefix', () => {
     // `playing` is the case: the game IS the screen. If it ever gained a heading this would stop
     // being true, and the row above would then require styles for it — which is the correct chain.
     expect(SCREENS.playing.heading, 'the playing screen has chrome over the game').toBe('');
-    expect(SCREENS.playing.action).toBe(null);
+    expect(SCREENS.playing.actions, 'the playing screen has a control over the game').toEqual([]);
   });
 
   /**

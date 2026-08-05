@@ -112,6 +112,7 @@ function stationKeepingWorld(surface: Surface): World {
     // A hand-built world for a test drives the step directly, so it is always stepping and a
     // death is nobody's business but the assertion's — 0039 puts the cost of one in the shell.
     stepping: true,
+    onIdle: (): void => {},
     onDeath: (): void => {},
   };
 }

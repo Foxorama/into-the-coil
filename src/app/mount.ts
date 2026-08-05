@@ -28,11 +28,12 @@ import { holdStation, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { SHIPS } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
 import { GameFrame, SHIP_START_ALONG, resetScene, respawn, startLevel, type World } from './frame.ts';
-import { SCREENS, type Screen } from '../state/screens.ts';
+import { SCREENS, STEPS_PER_SECOND, type Screen } from '../state/screens.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { makeChrome } from './chrome.ts';
 import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
+import { attachMenuPad, makeMenuAsk } from './menu.ts';
 import { attachPad } from './pad.ts';
 import { attachTouch } from './touch.ts';
 import { runLoop } from './loop.ts';
@@ -329,6 +330,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // thing it calls, and the alternative — hoisting the whole reducer wiring above the world it
     // mutates — would put the shell's state machine in the middle of its entity pools.
     onDeath: (): void => {},
+    // Replaced below, once the chrome and `dispatch` exist.
+    onIdle: (): void => {},
   };
 
   /*
@@ -342,6 +345,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   let state: State = initialState;
   /** Whether the viewport is one the game may be played in at all — the orientation gate's answer. */
   let playable = false;
+  /** Fixed steps left before the current screen expires by itself. `0` on a screen that waits. */
+  let timeoutLeft = 0;
+  /** The whole seconds the chrome is currently showing, or `−1` for *no countdown*. */
+  let shownSeconds = -1;
 
   /**
    * Push the current screen at the two things that care: the chrome, and whether the sim steps.
@@ -361,7 +368,34 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const applyScreen = (): void => {
     const screen = state.screen.current;
     world.stepping = SCREENS[screen].steps;
+    /*
+      Arm the screen's own countdown, if it has one.
+
+      ⚠️ **`playable` is allowed to appear HERE, unlike in the `stepping` line above.** The rule
+      broken there was *one guarantee, one mechanism* — the orientation gate already stops the loop,
+      so a second stop made the first untestable. A countdown is not a guarantee anything else makes:
+      the gate stops the loop, so `onIdle` never runs, so the timer simply would not tick — and it
+      would then resume mid-count when the player turned the device back. Re-arming is the only
+      honest answer to *"how long has the run-over screen been up"* while nobody could see it.
+    */
+    const timeout = SCREENS[screen].timeout;
+    timeoutLeft = playable && timeout !== null ? timeout.steps : 0;
+    shownSeconds = -1;
     chrome.show(playable ? screen : null);
+    tickTimer();
+  };
+
+  /**
+   * Push the countdown's whole seconds at the chrome, and only when the digit has actually moved.
+   *
+   * `−1` is *no countdown*, so the comparison is one number against one number — the same argument
+   * `World.shownHealth` makes for remembering what the HUD says rather than rewriting it per step.
+   */
+  const tickTimer = (): void => {
+    const next = timeoutLeft > 0 ? Math.ceil(timeoutLeft / STEPS_PER_SECOND) : -1;
+    if (next === shownSeconds) return;
+    shownSeconds = next;
+    chrome.setTimer(next < 0 ? null : next);
   };
 
   /** Push the run's numbers at the readout. Cheap, and called only when one of them has moved. */
@@ -444,6 +478,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (screen === 'cleared') continueRun();
     else startRun();
   });
+  // The control's index is unused today: every screen has exactly one. It is in the signature
+  // because `src/state/screens.ts` made `actions` a list, and a screen with a choice on it is the
+  // next thing that lands on top of that shape.
   for (const element of chrome.elements) host.appendChild(element);
 
   /*
@@ -452,6 +489,43 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     check below reads the state AFTER the reducer has run rather than predicting what it will say.
   */
   world.onHealth = syncHud;
+
+  /*
+    ── A STEP ON A SCREEN THE SIMULATION IS NOT RUNNING ────────────────────────────────────────────
+
+    `docs/decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md`. Two jobs, and neither of
+    them touches the world: move the focus ring where a pad asks, and expire a screen that says it
+    expires.
+
+    ⚠️ **The pad is read HERE and the combiner is read in the step**, so exactly one snapshot is
+    taken per fixed step either way — `src/app/frame.ts` takes the other branch. Reading both would
+    double the one call in the game that genuinely allocates.
+  */
+  const menuPad = attachMenuPad();
+  const menuAsk = makeMenuAsk();
+
+  world.onIdle = (): void => {
+    menuPad.read(menuAsk);
+    if (menuAsk.move !== 0) chrome.move(menuAsk.move);
+    if (menuAsk.confirm) {
+      /*
+        ⚠️ **Return, because activating changed the screen underneath us.** `activate` clicks the
+        control, which runs `startRun`, which dispatches, which re-arms the countdown — and counting
+        the new screen's first step down here would spend a step of a timer that was armed a
+        microsecond ago on a screen the player has already left.
+      */
+      chrome.activate();
+      return;
+    }
+
+    if (timeoutLeft <= 0) return;
+    timeoutLeft--;
+    tickTimer();
+    if (timeoutLeft > 0) return;
+    const timeout = SCREENS[state.screen.current].timeout;
+    // Read off the row rather than remembered, so *where it goes* has exactly one description.
+    if (timeout !== null) dispatch({ slice: 'screen', type: 'show', screen: timeout.then });
+  };
 
   world.onDeath = (): void => {
     dispatch({ slice: 'run', type: 'lifeLost' });
@@ -553,6 +627,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       window.removeEventListener('resize', onResize);
       chrome.release();
       world.input.release();
+      menuPad.release();
       stopLoop?.();
       stopLoop = null;
     },
