@@ -15,9 +15,9 @@
  *    fixes the dodge lane at 100 units precisely so difficulty does not vary with the screen. Letting
  *    the player use the whole of a 21:9's 240-unit view would hand that player 60% more room to
  *    retreat into than a laptop gets. Extra view is LOOKAHEAD, never extra play space.
- * 3. **Response is immediate.** No acceleration, no smoothing: velocity is the ask, scaled. That is
- *    the arcade answer and it is a decision rather than an omission — R-Type and Raiden both move the
- *    ship the frame the stick does.
+ * 3. **The ship has mass.** Velocity is not the ask — it *approaches* the ask. See `FLIGHT_RESPONSE`
+ *    below, and `docs/decisions/0037-the-ship-has-mass.md` for why this reverses what this comment
+ *    used to say.
  */
 
 import { ACROSS_SPAN, MIN_ASPECT } from './camera.ts';
@@ -53,6 +53,28 @@ export const SHIP_SPEED = 1.7;
 export const SCROLL_PER_STEP = 0.6;
 
 /**
+ * How much of the gap between the ship's current velocity and the asked-for one it closes each step.
+ *
+ * `1` is the old behaviour exactly — velocity IS the ask, arriving whole on the step it is asked for.
+ * Below 1 the ship takes time to get going and time to stop, and both come from this one number:
+ * the gap shrinks by a fixed fraction per step, so `0.2` closes 20% of what is left every step and
+ * settles in about a fifth of a second.
+ *
+ * ⚠️ **A STARTING POINT, not a measurement**, on the same terms as `SHIP_SPEED` above, and picked to
+ * land near a quantity that HAS been felt: `reports/drag-feel-2026-08-05.md` measured the touch
+ * bank's run-on at 267ms to complete, which is three or four time constants, so a time constant of
+ * about five steps is the shape a hand already called *"really good"*. What settles it is a hand,
+ * and `scripts/trace-frame.mjs` is what makes two candidates cost four minutes instead of a
+ * play-test.
+ *
+ * ⚠️ **It applies to the ship and to nothing else.** Enemies and shots carry constant velocity; this
+ * is a property of the thing the player is flying, which is the whole point of
+ * `docs/decisions/0037-the-ship-has-mass.md` — the feel belongs to the ship rather than to whatever
+ * is in the player's hands.
+ */
+export const FLIGHT_RESPONSE = 0.2;
+
+/**
  * The player's movement box along the scroll axis, in world units from the camera's trailing edge.
  *
  * `ACROSS_SPAN * MIN_ASPECT` — the NARROWEST view any device gets, so every device gives the player
@@ -72,6 +94,23 @@ export const PLAYER_MARGIN = 6;
 
 function clamp(n: number, min: number, max: number): number {
   return n < min ? min : n > max ? max : n;
+}
+
+/**
+ * Put a ship at rest **in the camera's frame** — moving with the world, asking for nothing.
+ *
+ * ⚠️ **A newly `reset` ship has zero velocity, which is not the same thing**, and since inertia
+ * landed the difference is permanent rather than momentary. A ship starting from zero spends about
+ * five steps accelerating up to the scroll rate, and everything it fails to travel in those steps is
+ * ground it never gets back: velocity converges on the camera's *rate*, not on a *position*. It would
+ * appear a couple of units further down-lane than it was placed, every spawn and every restart.
+ *
+ * This exists so that fact has a name and one home, rather than living as `ship.velAlong = SCROLL`
+ * repeated at each of the places that place a ship and omitted at the next one.
+ */
+export function holdStation(ship: Entity, scrollPerStep: number): void {
+  ship.velAlong = scrollPerStep;
+  ship.velAcross = 0;
 }
 
 /**
@@ -96,10 +135,24 @@ export function flyShip(ship: Entity, intent: Intent, cameraAlong: number, scrol
   const lengthSquared = ax * ax + ay * ay;
   const scale = lengthSquared > 1 ? SHIP_SPEED / Math.sqrt(lengthSquared) : SHIP_SPEED;
 
-  // The ship holds station in the camera's frame, so the scroll rate is its baseline velocity and
-  // the player's ask is a departure from it.
-  ship.velAlong = scrollPerStep + ax * scale;
-  ship.velAcross = ay * scale;
+  /*
+    THE MASS. Velocity approaches the ask instead of becoming it, by a fixed fraction of the
+    remaining gap each step — so the ship takes time to get going and time to stop, and both come
+    from `FLIGHT_RESPONSE` alone.
+
+    The target still carries `scrollPerStep` as its baseline: the ship holds station in the camera's
+    frame, so the player's ask is a departure from the scroll rate rather than a replacement for it.
+    Drop that and a ship asking for nothing decelerates to zero and falls off the back of the world.
+
+    ⚠️ **The obvious-looking refinement here is a NO-OP, and it was written and reverted.** Splitting
+    the velocity into `scroll + departure` and lagging only the departure looks like it protects the
+    baseline from the mass. It is algebraically the same expression — exponential approach is affine,
+    so `s + lag(v − s → T)` and `lag(v → s + T)` are identical to floating-point noise, and a test
+    written to guard the difference passed under both. The real hazard it was reaching for is
+    `holdStation` below, which is about the velocity a ship STARTS at, not about how it is decomposed.
+  */
+  ship.velAlong += (scrollPerStep + ax * scale - ship.velAlong) * FLIGHT_RESPONSE;
+  ship.velAcross += (ay * scale - ship.velAcross) * FLIGHT_RESPONSE;
 
   // Clamp by trimming VELOCITY, not by moving the ship: writing `along` here would break the
   // interpolation contract, and a ship teleported back inside its box would visibly stutter at the

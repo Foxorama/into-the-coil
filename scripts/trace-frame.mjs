@@ -16,7 +16,7 @@
 // and on the author's machine every one of them silently rendered nothing for months while
 // reporting success.
 //
-// Usage:  node scripts/trace-frame.mjs [--hold=acrossPlus] [--ms=1500] [--width=1280] [--height=720]
+// Usage:  node scripts/trace-frame.mjs [--hold=acrossPlus] [--ms=1500] [--after=0] [--width=1280] [--height=720]
 
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
@@ -44,6 +44,9 @@ const hold = arg('hold', 'acrossPlus');
 const ms = Number(arg('ms', '1500'));
 const width = Number(arg('width', '1280'));
 const height = Number(arg('height', '720'));
+/** Milliseconds to keep recording AFTER the key is released — where the run-on lives. */
+const after = Number(arg('after', '0'));
+let releasedAt = null;
 
 if (!(hold in HOLD_KEYS)) {
   console.error(`--hold must be one of: ${Object.keys(HOLD_KEYS).join(', ')}`);
@@ -172,6 +175,19 @@ try {
   if (key !== null) await page.keyboard.down(key);
   await page.waitForTimeout(ms);
   if (key !== null) await page.keyboard.up(key);
+  /*
+    ⚠️ KEEP RECORDING AFTER THE KEY COMES UP, when asked to.
+
+    Recording stopped at key-up, which was fine while velocity was the ask: the ship stopped on the
+    same step and there was nothing after it to see. Since the ship gained mass
+    (`docs/decisions/0037-the-ship-has-mass.md`) the most interesting thing this script can measure
+    happens entirely after the release — the run-on is half of what inertia IS, and it was invisible
+    to the one instrument built to see the picture.
+  */
+  if (after > 0) {
+    releasedAt = await page.evaluate(() => performance.now());
+    await page.waitForTimeout(after);
+  }
 
   const frames = await page.evaluate(() => window.__ITC_TRACE__.map((f) => ({ ...f })));
   if (frames.length === 0) {
@@ -272,6 +288,33 @@ try {
           `${movingSeconds > 0 ? (travel / movingSeconds).toFixed(0) : '—'} px/s`,
       );
       console.log(`  peak            ${peakPerFrame.toFixed(1)} px/frame`);
+      if (releasedAt !== null) {
+        /*
+          THE RUN-ON: everything the ship did after the key came up.
+
+          This is half of what mass IS, and until `--after` existed the recording stopped on the
+          release, so the instrument could not see it at all. Reported in pixels and milliseconds,
+          which is what a hand is judging.
+        */
+        let runOn = 0;
+        let runOnMs = 0;
+        let last = null;
+        for (const f of drawn) {
+          if (f.t < releasedAt) {
+            last = f;
+            continue;
+          }
+          if (last !== null) {
+            const d = Math.hypot(f.shipX - last.shipX, f.shipY - last.shipY);
+            if (d <= TELEPORT_PX && d > 0.05) {
+              runOn += d;
+              runOnMs = f.t - releasedAt;
+            }
+          }
+          last = f;
+        }
+        console.log(`  after release   ${runOn.toFixed(1)}px over ${runOnMs.toFixed(0)}ms`);
+      }
       console.log(`  peak blits/frame ${maxDraws}`);
       console.log(
         `  jumps            ${teleports}` +
