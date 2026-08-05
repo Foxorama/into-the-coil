@@ -68,19 +68,20 @@ export const PROBES = [
       replace: '    spriteHit: SPRITE.ship,',
     },
   },
-  {
-    decision: '0036',
-    suite: 'tests/combat.test.ts',
-    // ⚠️ NOT a probe for a bug that happened — for one that nearly did, while adding `debris`.
-    // `SPRITE_KINDS` is the baking order and `SPRITE` is the blit index, they are two descriptions of
-    // one fact, and nothing type-checks that they agree. Out of step, every entity in the game draws
-    // as something else.
-    broke: 'the baking order and the blit index disagreeing, so every entity draws as the wrong thing',
-    guard: 'every kind blits at the index its baking order gives it',
-    edit: {
-      path: 'src/content/sprites.ts',
-      find: "  'pickup',\n  'debris',\n];",
-      replace: "  'debris',\n  'pickup',\n];",
-    },
-  },
 ];
+
+/*
+  ⚠️ **A SEVENTH PROBE WAS HERE AND HAS BEEN DELETED WITH THE GUARD IT PROVED.**
+
+  It reordered `SPRITE_KINDS` against a hand-written `Record` of blit indices, which was the bug that
+  nearly shipped while `debris` was being added: three descriptions of one fact — the union, the
+  order, the indices — none type-checked against the others, and every entity in the game drawing as
+  something else if any two drifted.
+
+  `src/content/sprites.ts` now derives the union and the indices from the one list, and
+  `src/render/bake.ts` `map`s over that list rather than pushing in a loop. Reordering the list is
+  now a no-op that reorders everything together, so the probe has nothing to break and the guard has
+  nothing to catch. Both are gone rather than kept green for comfort — `docs/scaffold-plan.md`'s
+  ladder puts *remove the affordance* above *write a rule about it*, and a probe standing over a
+  tautology is the second thing pretending to be the first.
+*/

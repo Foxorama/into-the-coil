@@ -58,8 +58,23 @@ back before any of that reasoning was needed.
 
 ## What is still silent
 
-**A miss draws nothing**, so a near miss and a wide miss look the same. Named and left: unlike the
-three above, nobody has yet reported it as something else.
+~~**A miss draws nothing**, so a near miss and a wide miss look the same.~~
+
+⚠️ **Struck the same day, and the objection is worth more than the claim was:** *"what's the diff
+with miss and near miss? Both should be showing the same as a miss unless we add something like an
+explosion that does reduced damage on a near miss?"*
+
+A near miss is **not an event the model resolves** — `overlaps` returns a boolean and there is no
+*near* anywhere in the simulation. It is a non-event, so 0036's rule does not reach it, and putting
+it on this list made an absence of feedback look like a defect. It also nearly licensed the opposite
+error: feedback for something with no consequence teaches the player that something happened when
+nothing did.
+
+0036 now carries the boundary this exposed — *an event the model does not resolve, the picture must
+not invent* — and names the two things that would make a near miss real, both of which are mechanics
+first: splash damage, or a graze. Neither is proposed.
+
+**With that struck, nothing the model resolves goes unmentioned.**
 
 ---
 

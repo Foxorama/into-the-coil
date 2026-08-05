@@ -96,9 +96,8 @@ one is a starting point and nothing asserts one, on the same terms `src/sim/flig
 `SHIP_SPEED`. What is guarded is that a death produces debris, in the right place, that goes away on
 its own.
 
-**A miss still draws nothing**, so a near miss and a wide miss look the same. Named in
-`reports/enemy-legibility-2026-08-05.md` and left, because unlike the three above nobody has yet
-reported it as something else.
+**A miss still draws nothing** — and see the correction below, because listing that here was an
+error and a useful one.
 
 ---
 
@@ -129,8 +128,76 @@ burst has actually happened and requires the spawn stream to be exactly where an
 is. **That is the third assertion in two sittings that was green against the implementation it
 existed to reject**, and all three were found the same way.
 
-⚠️ **A near-miss worth recording because no probe would have caught it.** `SPRITE_KINDS` is the
-baking order and `SPRITE` is the blit index, and they are two descriptions of one fact that nothing
-type-checks — adding `debris` to the middle of one list and the end of the other made every entity in
-the game draw as something else. Caught by reading, and now held by
-`tests/combat.test.ts`: every kind blits at the index its baking order gives it.
+⚠️ **A near-miss worth recording because no probe would have caught it.** `SPRITE_KINDS` was the
+baking order, `SPRITE` a hand-written `Record` of indices, and `SpriteKind` a hand-written union:
+three descriptions of one fact that nothing type-checked, and adding `debris` to the middle of one
+and the end of another made every entity in the game draw as something else. Caught by reading. The
+first fix was a test that they agreed; the second correction below says why that was the wrong tier.
+
+---
+
+## The rule's own boundary, found within the hour
+
+**Added 2026-08-05.** The section above listed *"a miss draws nothing, so a near miss and a wide miss
+look the same"* as an outstanding silence. That was wrong, and the objection is the sharpest thing
+said about this decision:
+
+> *"What's the diff with miss and near miss? Both should be showing the same as a miss unless we add
+> something like an explosion that does reduced damage on a near miss?"*
+
+**Correct. A near miss is not an event the model resolves.** `overlaps` returns a boolean; there is
+no *near* anywhere in the simulation. So it is not a silent event — it is a **non-event**, and this
+decision's rule does not reach it. Listing it made an absence of feedback look like an outstanding
+defect when there is nothing to feed back.
+
+⚠️ **So the rule needs its boundary written down, or it licenses inventing feedback for everything:**
+
+> **An event the model resolves, the picture mentions. An event the model does NOT resolve, the
+> picture must not invent.**
+
+Showing a near miss with no mechanic behind it is worse than showing nothing, because it teaches the
+player that something happened when nothing did — the same failure as a silent event, in the opposite
+direction, and harder to diagnose because the screen is now lying rather than quiet.
+
+The objection also names the only two things that would make it real, and both are **mechanics
+first**: splash damage, where *near* becomes a band the model actually computes; or a graze, where
+proximity earns something. Either would put the near miss inside the rule automatically, and neither
+is proposed here — `docs/game.md` has no score and no meter. The picture follows the mechanic; it
+never gets to imply one.
+
+**With that struck, no silent event remains.** Every damage, death, spawn and shot the model resolves
+is drawn. The only remaining silences are spawns dropped by a full pool, which
+[0022](0022-frame-rate-is-a-feature.md) chose deliberately and which are unreachable at the current
+capacities.
+
+---
+
+## And the sprite guard was the wrong tier
+
+**Added 2026-08-05**, on the same reading: *"fix up the sprite discrepancy, that's going to cause
+real problems if we don't address it now."*
+
+It had been answered with a test asserting the baking order and the blit index agreed.
+`docs/scaffold-plan.md`'s instruction ladder puts **remove the affordance** at the top and calls it
+*"the only tier that reliably works"*, above making the repo agree and far above writing a rule. A
+test that two hand-maintained lists match is near the bottom of that ladder: it reports the drift
+after someone has already written it.
+
+So the affordance is gone instead. `src/content/sprites.ts` holds **one** list; the union is
+`(typeof SPRITE_KINDS)[number]` and the indices are positions in it, and `src/render/bake.ts` now
+`map`s over that same list rather than pushing in a loop — so a skipped bake would have to be written
+as a visible `filter` rather than hiding in a `continue`. Reordering the list is a no-op that
+reorders everything together.
+
+⚠️ **The test and its probe were deleted rather than kept green.** An assertion that cannot fail is
+noise a future reader has to work out the purpose of, and a probe standing over a tautology is the
+appearance of proof — which is the one thing [0019](0019-a-probe-must-be-seen-to-apply.md) exists to
+prevent. What remains is a comment in `tests/combat.test.ts` saying what used to be there and why it
+is not: the reasoning is worth more than the test was.
+
+⚠️ **One cast was bought with it**, in `blitIndices`: TypeScript cannot see that a loop over an
+exhaustive list fills every key of a `Record` over that same list. The alternative is
+`Record<string, number>`, which [0016](0016-a-hub-enumerates-kinds.md) bans outright — every kind
+would be "present" and none could ever be reported missing. One localised `as` in a four-line helper
+against three hand-maintained lists is the right side of that trade, and it is named here rather than
+left for a reader to find.

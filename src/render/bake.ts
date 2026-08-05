@@ -173,34 +173,47 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
   ctx.stroke();
 }
 
+/** One sprite, drawn into its own offscreen canvas at the resolution it will be blitted at. */
+function bakeOne(kind: SpriteKind, palette: Palette, view: SpriteView, pixelsPerUnit: number): HTMLCanvasElement {
+  // Clamped so a zero-sized viewport or an absurd DPI cannot ask for a 0px or a 4096px sprite.
+  const size = Math.max(8, Math.min(256, Math.ceil(SPRITE_EXTENT[kind] * pixelsPerUnit)));
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (ctx === null) throw new Error('bakeAtlas: no 2D context — this browser cannot run the game');
+  if (view === 'top') {
+    // Point the shape at -y instead of +x. Placeholder-only: real top-down art is its own drawing.
+    ctx.translate(size / 2, size / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.translate(-size / 2, -size / 2);
+  }
+  drawKind(ctx, kind, palette, size);
+  return canvas;
+}
+
 /**
  * Bake every sprite for one palette and one view.
  *
  * `pixelsPerUnit` is CSS pixels per world unit times the device pixel ratio — the resolution the
  * bitmaps will actually be blitted at. Baking below it is a blurry game; baking far above it is
  * memory spent on detail nobody will see.
+ *
+ * ⚠️ **`map` rather than a loop that pushes, and it is the last link in a chain.**
+ * `src/content/sprites.ts` is now the one description of what exists, what order it is in, and what
+ * index it blits at. This is where that order becomes actual bitmaps, and a `for` loop with a
+ * `push` in it can skip one — a `continue`, an early return, a conditional bake — which would slide
+ * every sprite after it down by one and mis-draw the whole screen. `map` emits exactly one output
+ * per input, in order, and a filter would have to be written down where a reader can see it.
+ *
+ * This file is on `tests/budget.test.ts`'s DELIBERATELY_COLD list: it allocates freely because it
+ * runs at load and on rotation, never in a frame. Two `map`s here cost nothing.
  */
 export function bakeAtlas(palette: Palette, view: SpriteView, pixelsPerUnit: number): Atlas {
-  const bitmaps: CanvasImageSource[] = [];
-  const extents: number[] = [];
-  for (const kind of SPRITE_KINDS) {
-    const extent = SPRITE_EXTENT[kind];
-    // Clamped so a zero-sized viewport or an absurd DPI cannot ask for a 0px or a 4096px sprite.
-    const size = Math.max(8, Math.min(256, Math.ceil(extent * pixelsPerUnit)));
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    if (ctx === null) throw new Error('bakeAtlas: no 2D context — this browser cannot run the game');
-    if (view === 'top') {
-      // Point the shape at -y instead of +x. Placeholder-only: real top-down art is its own drawing.
-      ctx.translate(size / 2, size / 2);
-      ctx.rotate(-Math.PI / 2);
-      ctx.translate(-size / 2, -size / 2);
-    }
-    drawKind(ctx, kind, palette, size);
-    bitmaps.push(canvas);
-    extents.push(extent);
-  }
-  return { view, bitmaps, extents, pixelsPerUnit };
+  return {
+    view,
+    bitmaps: SPRITE_KINDS.map((kind) => bakeOne(kind, palette, view, pixelsPerUnit)),
+    extents: SPRITE_KINDS.map((kind) => SPRITE_EXTENT[kind]),
+    pixelsPerUnit,
+  };
 }

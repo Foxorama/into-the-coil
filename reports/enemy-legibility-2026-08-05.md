@@ -77,10 +77,14 @@ rather than a new mechanism.
 debris, no sound. *"They just disappeared"* is a literally accurate description of what the code
 does. Particles are in 0022's budget and have never been built.
 
-**A shot that misses draws nothing either**, so a near miss and a wide miss look the same.
+~~**A shot that misses draws nothing either**, so a near miss and a wide miss look the same.~~
+⚠️ **Struck the same day** — a near miss is not an event the model resolves at all, so it is not in
+this class and should never have been listed in it. The correction and the rule it produced are in
+[0036](../docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md#the-rules-own-boundary-found-within-the-hour).
 
-Neither is a bug and neither is urgent. Both are the same class as the finding above: an event the
-model knows about and the picture does not mention.
+The death is a real one, is not urgent, and is the same class as the finding above: an event the
+model knows about and the picture does not mention. It is now drawn —
+`reports/destruct-burst-2026-08-05.md`.
 
 ---
 

@@ -13,7 +13,20 @@
  */
 
 /**
- * What can be drawn.
+ * Every sprite, in baking order — and **the single description of all three facts below**.
+ *
+ * ⚠️ **THIS LIST USED TO BE THREE LISTS, and the third one nearly shipped out of step.** There was a
+ * hand-written union, a hand-written order, and a hand-written `Record` of indices, with a comment
+ * on the order saying *"explicit, never derived from the table"*. Adding `debris` to the middle of
+ * one and the end of another was a two-line edit that made **every entity in the game draw as
+ * something else** — the atlas is filled by walking the order and every blit indexes it by the
+ * `Record`, so an off-by-one between them mis-draws the whole screen. Nothing type-checked it,
+ * because both were valid tables independently.
+ *
+ * The first fix was a test that the two agreed. That is the wrong tier: `docs/scaffold-plan.md`'s
+ * instruction ladder puts **remove the affordance** above *write a rule about it*, and it is the only
+ * tier that reliably works. So the order is now the source, the union is `(typeof …)[number]`, and
+ * the indices are positions in it. There is nothing left to disagree.
  *
  * ⚠️ **A kind per enemy, not one `enemy` for all of them**, and it is a play-test finding rather
  * than a preference: `drifter` and `lancer` shipped as the same diamond, so the one that shoots back
@@ -26,19 +39,7 @@
  * `impact` ink. A hit that changes nothing on screen reads as a bug, and did.
  * [0035](../../docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md).
  */
-export type SpriteKind =
-  | 'ship'
-  | 'shipHit'
-  | 'drifter'
-  | 'drifterHit'
-  | 'lancer'
-  | 'lancerHit'
-  | 'bullet'
-  | 'pickup'
-  | 'debris';
-
-/** Baking order, and therefore the blit index. Explicit, never derived from the table. */
-export const SPRITE_KINDS: readonly SpriteKind[] = [
+export const SPRITE_KINDS = [
   'ship',
   'shipHit',
   'drifter',
@@ -48,20 +49,37 @@ export const SPRITE_KINDS: readonly SpriteKind[] = [
   'bullet',
   'pickup',
   'debris',
-];
+] as const;
+
+/**
+ * What can be drawn. Closed, per `docs/decisions/0016-a-hub-enumerates-kinds.md` — every `Record`
+ * over it still fails to build until a new kind has been given a row, and `bakeAtlas` still switches
+ * over it with a `never` arm.
+ *
+ * Derived from the list rather than written beside it, so a kind cannot exist in the union and be
+ * missing from the atlas.
+ */
+export type SpriteKind = (typeof SPRITE_KINDS)[number];
+
+/**
+ * Positions in `SPRITE_KINDS`, which is what `bakeAtlas` fills the atlas in.
+ *
+ * ⚠️ **The one cast in this file, and it is what buys the single description.** TypeScript cannot
+ * see that a loop over an exhaustive list fills every key of a `Record` over that same list, so the
+ * accumulator is `Partial` until it is complete. The alternative is `Record<string, number>`, which
+ * `docs/decisions/0016-a-hub-enumerates-kinds.md` bans outright and `tests/registry.test.ts`
+ * enforces — every kind would be "present" and none could ever be reported missing.
+ */
+function blitIndices<K extends string>(kinds: readonly K[]): Record<K, number> {
+  const out: Partial<Record<K, number>> = {};
+  kinds.forEach((kind, index) => {
+    out[kind] = index;
+  });
+  return out as Record<K, number>;
+}
 
 /** The index a painter blits by. A number, because this is read five hundred times a frame. */
-export const SPRITE: Record<SpriteKind, number> = {
-  ship: 0,
-  shipHit: 1,
-  drifter: 2,
-  drifterHit: 3,
-  lancer: 4,
-  lancerHit: 5,
-  bullet: 6,
-  pickup: 7,
-  debris: 8,
-};
+export const SPRITE: Record<SpriteKind, number> = blitIndices(SPRITE_KINDS);
 
 /**
  * How big each kind is, in WORLD units across — so its screen size falls out of the camera.

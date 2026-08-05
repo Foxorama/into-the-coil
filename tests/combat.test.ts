@@ -827,23 +827,24 @@ describe('damage is legible on the body that took it', () => {
   });
 });
 
-describe('the sprite table describes its order once', () => {
-  it('every kind blits at the index its baking order gives it', () => {
-    /*
-      ⚠️ **`SPRITE_KINDS` is the baking order and `SPRITE` is the blit index, and they are two
-      descriptions of one fact.** `bakeAtlas` fills the atlas by walking `SPRITE_KINDS`, and every
-      blit indexes it through `SPRITE` — so if the two disagree, every entity of every kind draws as
-      something else. Nothing type-checks that: both are valid tables independently.
+/*
+  ⚠️ **THERE WAS A GUARD HERE AND IT WAS THE WRONG TIER.**
 
-      Written after nearly landing exactly that while adding a kind to the middle of one list and the
-      end of the other. Cheap, and the failure it prevents is the whole screen drawing wrong.
-    */
-    SPRITE_KINDS.forEach((kind, index) => {
-      expect(SPRITE[kind], `${kind} is baked at ${index} and blitted as ${SPRITE[kind]}`).toBe(index);
-    });
-    expect(SPRITE_KINDS.length, 'a kind exists that is never baked').toBe(Object.keys(SPRITE).length);
-  });
-});
+  `SPRITE_KINDS` was the baking order, `SPRITE` was a hand-written `Record` of indices, and
+  `SpriteKind` was a hand-written union: three descriptions of one fact, none of which type-checked
+  against the others. Adding `debris` to the middle of one and the end of another was a two-line edit
+  that made every entity in the game draw as something else.
+
+  The first response was a test that the two agreed. `docs/scaffold-plan.md`'s instruction ladder
+  puts **remove the affordance** above *write a rule about it*, and calls it the only tier that
+  reliably works — so `src/content/sprites.ts` now derives the union and the indices from the one
+  list, and `src/render/bake.ts` `map`s over that same list instead of pushing in a loop.
+
+  The assertion that used to live here can no longer fail, and a guard that cannot fail is noise a
+  reader has to work out the purpose of. It is deleted rather than kept for comfort; this comment is
+  what remains, because the *reason* is worth more than the test was.
+  `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`.
+*/
 
 describe('an enemy kind is told apart by its silhouette, not by its colour', () => {
   it('no two enemy kinds share a sprite', () => {
