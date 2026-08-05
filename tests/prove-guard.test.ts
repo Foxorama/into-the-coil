@@ -70,6 +70,11 @@ const WITHOUT_PROBES: Record<string, string> = {
   // fail every run by design. They were run once from a temporary file, and the two refusals that
   // can hold on every commit are the unit tests in this file.
   '0019': 'its breaks are probes that must FAIL, so a permanent probe set cannot contain them; the two refusals that can be held continuously are unit-tested above',
+  // The second exemption that is not a hole. What 0044 asserts is a rule about how a HUMAN answers a
+  // red test — there is no file to break that would make the suite refuse the sentence "that was
+  // flaky". What it carries instead of a probe is a measurement: 5/5 in both directions on the
+  // shipped page, and a full `npm run prove` under the load that produced the original failure.
+  '0044': 'its subject is what a person does when a guard goes red, and no edit to any file can stage that; what backs it is a measurement rather than a break',
 };
 
 describe('the probe set stays honest', () => {

@@ -34,6 +34,11 @@ decision needs no rule.
   `npm run prove` refuses to run the suite until it has read the file back and seen it change.
   — [0005](docs/decisions/0005-a-guard-must-be-seen-to-fail.md),
   [0019](docs/decisions/0019-a-probe-must-be-seen-to-apply.md)
+- **An intermittent guard has found something, and "flaky" is not what it found.** A rerun is not
+  evidence. Establish which it is — a real intermittency in the code, or a wrong quantity in the
+  guard — then delete it, fix it, or leave it red. The one this rule is named for was reading wall
+  clock where it meant frames, and only failed under the load of `npm run prove` itself.
+  — [0044](docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md)
 - **Where the work has got to lives in `docs/state-of-play.md`** — what is settled, what is next, and
   why in that order. Read it before proposing work; rewrite it when the answer changes. It holds
   **pointers and intentions, never findings**: a status document is a summary generator, and the only
