@@ -22,14 +22,15 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
-import { ACROSS_SPAN, spawnAlong, viewOf } from '../src/sim/camera.ts';
+import { ACROSS_SPAN, EDGE_MARGIN, spawnAlong, viewOf } from '../src/sim/camera.ts';
 import { ASSIST_LADDER, DEFAULT_ASSISTS, type Assists, tuningFor } from '../src/sim/assist.ts';
-import { collideInto, collideIntoOne, overlaps } from '../src/sim/collide.ts';
+import { collideInto, collideIntoOne, makeDeaths, overlaps } from '../src/sim/collide.ts';
 import { type Entity, makeEntity, reset, stepEntities } from '../src/sim/entity.ts';
 import { SCROLL_PER_STEP, SHIP_SPEED } from '../src/sim/flight.ts';
 import { makeIntent, type Intent } from '../src/sim/intent.ts';
 import { Pool } from '../src/sim/pool.ts';
 import { makeRng } from '../src/sim/rng.ts';
+import { BURST } from '../src/content/debris.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyRow } from '../src/content/enemies.ts';
 import { INVULN_STEPS, SHIPS } from '../src/content/ships.ts';
 import { SHOT_KINDS, SHOTS } from '../src/content/shots.ts';
@@ -121,7 +122,7 @@ describe('a shot cannot step over the thing it was fired at', () => {
     shot.velAlong = speed;
     stepEntities(shots, 0);
     stepEntities(targets, 0);
-    const destroyed = collideInto(shots, targets, 1, 1, FLASH);
+    const destroyed = collideInto(shots, targets, 1, 1, FLASH, null);
     return { hit: destroyed > 0 || target.health < 2, health: target.health };
   }
 
@@ -203,7 +204,7 @@ describe('who can hit whom is the caller’s decision, and it is the whole guard
       const shot = shots.spawn()!;
       reset(shot, 100, 50, bodyOf(SPRITE.bullet, 0.9, 1, 1));
     }
-    expect(collideInto(shots, targets, 1, 1, FLASH), 'two hits on two health did not destroy it').toBe(1);
+    expect(collideInto(shots, targets, 1, 1, FLASH, null), 'two hits on two health did not destroy it').toBe(1);
     expect(shots.size, 'a shot survived arriving').toBe(0);
     expect(targets.size).toBe(0);
   });
@@ -214,7 +215,7 @@ describe('who can hit whom is the caller’s decision, and it is the whole guard
     reset(target, 100, 50, bodyOf(SPRITE.drifter, 2.6, 2, 2));
     const shot = shots.spawn()!;
     reset(shot, 100, 90, bodyOf(SPRITE.bullet, 0.9, 1, 1));
-    expect(collideInto(shots, targets, 1, 1, FLASH)).toBe(0);
+    expect(collideInto(shots, targets, 1, 1, FLASH, null)).toBe(0);
     expect(shots.size).toBe(1);
     expect(target.health).toBe(2);
   });
@@ -230,7 +231,7 @@ describe('who can hit whom is the caller’s decision, and it is the whole guard
       const s = shots.spawn()!;
       reset(s, 100 + i * 20, 50, bodyOf(SPRITE.bullet, 0.9, 1, 1));
     }
-    expect(collideInto(shots, targets, 1, 1, FLASH), 'a pass over eight overlapping pairs missed some').toBe(8);
+    expect(collideInto(shots, targets, 1, 1, FLASH, null), 'a pass over eight overlapping pairs missed some').toBe(8);
     expect(targets.size).toBe(0);
     expect(shots.size).toBe(0);
   });
@@ -417,6 +418,9 @@ function firingAt(row: EnemyRow, distance: number): World {
     enemies,
     playerShots,
     enemyShots,
+    debris: new Pool<Entity>(64, makeEntity),
+    deaths: makeDeaths(8),
+    burstRng: makeRng('combat').stream('burst'),
     view: viewOf(VIEWPORT.width, VIEWPORT.height),
     surface: BLIND,
     rng: makeRng('combat').stream('spawns'),
@@ -473,6 +477,9 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
     enemies,
     playerShots,
     enemyShots,
+    debris: new Pool<Entity>(64, makeEntity),
+    deaths: makeDeaths(8),
+    burstRng: makeRng('combat').stream('burst'),
     view: viewOf(VIEWPORT.width, VIEWPORT.height),
     surface: BLIND,
     rng: makeRng('combat').stream('spawns'),
@@ -607,7 +614,7 @@ describe('damage is legible on the body that took it', () => {
     reset(target, 100, 50, body);
     const shot = shots.spawn()!;
     reset(shot, 100, 50, bodyOf(SPRITE.bullet, 0.9, 1, 1));
-    collideInto(shots, targets, 1, 1, FLASH);
+    collideInto(shots, targets, 1, 1, FLASH, null);
     return target;
   }
 
@@ -706,7 +713,7 @@ describe('damage is legible on the body that took it', () => {
     const shot = shots.spawn()!;
     reset(shot, 100, 50, bodyOf(SPRITE.bullet, 0.9, 1, 1));
 
-    collideInto(shots, targets, 1, 1, FLASH);
+    collideInto(shots, targets, 1, 1, FLASH, null);
     expect(target.health, 'a shot landing mid-flash was absorbed by it').toBe(1);
     expect(shots.size, 'the shot was not spent, which is a different bug').toBe(0);
   });
@@ -719,7 +726,7 @@ describe('damage is legible on the body that took it', () => {
     target.flashFor = FLASH;
     reset(shots.spawn()!, 100, 50, bodyOf(SPRITE.bullet, 0.9, 1, 1));
 
-    expect(collideInto(shots, targets, 1, 1, FLASH), 'a flashing target survived a lethal hit').toBe(1);
+    expect(collideInto(shots, targets, 1, 1, FLASH, null), 'a flashing target survived a lethal hit').toBe(1);
     expect(targets.size).toBe(0);
   });
 
@@ -820,6 +827,24 @@ describe('damage is legible on the body that took it', () => {
   });
 });
 
+describe('the sprite table describes its order once', () => {
+  it('every kind blits at the index its baking order gives it', () => {
+    /*
+      ⚠️ **`SPRITE_KINDS` is the baking order and `SPRITE` is the blit index, and they are two
+      descriptions of one fact.** `bakeAtlas` fills the atlas by walking `SPRITE_KINDS`, and every
+      blit indexes it through `SPRITE` — so if the two disagree, every entity of every kind draws as
+      something else. Nothing type-checks that: both are valid tables independently.
+
+      Written after nearly landing exactly that while adding a kind to the middle of one list and the
+      end of the other. Cheap, and the failure it prevents is the whole screen drawing wrong.
+    */
+    SPRITE_KINDS.forEach((kind, index) => {
+      expect(SPRITE[kind], `${kind} is baked at ${index} and blitted as ${SPRITE[kind]}`).toBe(index);
+    });
+    expect(SPRITE_KINDS.length, 'a kind exists that is never baked').toBe(Object.keys(SPRITE).length);
+  });
+});
+
 describe('an enemy kind is told apart by its silhouette, not by its colour', () => {
   it('no two enemy kinds share a sprite', () => {
     /*
@@ -869,6 +894,112 @@ describe('an enemy kind is told apart by its silhouette, not by its colour', () 
     // silhouette has to do the work, and it is why this file checks sprites rather than colours.
     expect(ENEMY_KINDS.length, 'there is only one enemy kind, so this guard is not yet load-bearing')
       .toBeGreaterThan(1);
+  });
+});
+
+// ── A DEATH LEAVES SOMETHING BEHIND, WHICH IS HALF DIAGNOSTIC AND HALF EFFECT ───────────────────
+
+describe('a death is visible, and so is how long its debris lasts', () => {
+  /*
+    ⚠️ **Before this, a death drew NOTHING.** The entity was released and that was the whole of it,
+    so *"it died"*, *"it drifted off the edge"* and *"the collision missed and it is behind
+    something"* all produced the same picture — none. Three play-tests running reported a version of
+    *"they just disappeared"*, and every one was a question the screen could not answer.
+
+    `src/content/debris.ts` has the reasoning and the budget it claims.
+  */
+  it('an enemy that dies leaves fragments where it died', () => {
+    const world = firingAt(ENEMIES.drifter, 60);
+    const frame = new GameFrame(world);
+    const enemy = world.enemies.at(0);
+    const diedAlong = enemy.along;
+
+    for (let step = 0; step < 900 && world.enemies.size > 0; step++) frame.step();
+    expect(world.enemies.size, 'the enemy never died, so there is nothing to leave behind').toBe(0);
+    expect(world.debris.size, 'a death drew nothing at all').toBeGreaterThan(0);
+
+    // Placed where it died rather than at the ship or the origin — the collision reports the
+    // position because a released slot is the next thing `spawn` hands out.
+    for (let i = 0; i < world.debris.size; i++) {
+      expect(Math.abs(world.debris.at(i).along - diedAlong), 'a fragment spawned nowhere near the death')
+        .toBeLessThan(40);
+    }
+  });
+
+  it('and the fragments retire themselves, without the camera having to pass them', () => {
+    // A lifetime, not a cull. Debris that waited for the trailing edge would sit on screen for
+    // several seconds and the pool would be permanently near full.
+    const world = firingAt(ENEMIES.drifter, 60);
+    const frame = new GameFrame(world);
+    for (let step = 0; step < 900 && world.debris.size === 0; step++) frame.step();
+    expect(world.debris.size).toBeGreaterThan(0);
+
+    const cameraWhenBurst = world.cameraAlong;
+    for (let step = 0; step < BURST.lifeMax + 2; step++) frame.step();
+    expect(world.debris.size, 'fragments outlived their lifetime').toBe(0);
+    // And they went before the camera could have culled them, which is what makes it a lifetime.
+    expect(world.cameraAlong - cameraWhenBurst).toBeLessThan(EDGE_MARGIN);
+  });
+
+  it('the fragments do not all go at once, so a burst dissipates rather than switching off', () => {
+    // Measured on the real page as 64 → 46 → 19 → 14 → 2 → 0 blits per 50ms. A single lifetime for
+    // every fragment reads as the effect being turned off; a spread reads as it thinning out.
+    expect(BURST.lifeMax, 'every fragment lives exactly as long as every other one').toBeGreaterThan(BURST.lifeMin);
+  });
+
+  it('debris cannot hurt anything, because it is in no pairing at all', () => {
+    /*
+      ⚠️ **The guarantee is the PAIRING and not the radius.** `src/sim/collide.ts` takes the two
+      sides it may test as arguments, so a pool nobody passes can never touch anything — which is
+      why this drives the real frame and watches the ship rather than asserting `radius === 0`. A
+      fragment sitting inside the ship still has reach, because reach is the SUM of two radii.
+    */
+    const world = firingAt(ENEMIES.drifter, 60);
+    const frame = new GameFrame(world);
+    for (let step = 0; step < 900 && world.debris.size === 0; step++) frame.step();
+    expect(world.debris.size).toBeGreaterThan(0);
+
+    // Park every fragment exactly on top of the ship, which is the worst case there is.
+    for (let i = 0; i < world.debris.size; i++) {
+      const piece = world.debris.at(i);
+      piece.along = world.ship.along;
+      piece.across = world.ship.across;
+      piece.prevAlong = piece.along;
+      piece.prevAcross = piece.across;
+      piece.lifeFor = 500;
+    }
+    const before = world.ship.health;
+    for (let step = 0; step < 60; step++) frame.step();
+    expect(world.ship.health, 'the ship was damaged by its own debris').toBe(before);
+  });
+
+  it('the burst rolls on its own stream, so an explosion cannot move a wave', () => {
+    /*
+      `docs/decisions/0021-one-stream-per-concern.md`, and this is the exact case it was written
+      for: a fragment's direction is the most cosmetic roll in the game, and on a shared generator it
+      would shift every spawn that followed it — so the level a player gets would depend on how many
+      things they happened to blow up.
+    */
+    /*
+      ⚠️ **Written twice, and the first one was a tautology `npm run prove` caught.** It drained a
+      stream the test had constructed itself and checked the other one had not moved — which proves
+      `Rng.stream()` returns independent streams, a thing `tests/rng.test.ts` already owns, and says
+      nothing whatever about which stream the GAME reaches for.
+
+      This drives the real frame instead: run one world until a burst has actually happened, and the
+      spawn stream must be exactly where an untouched world's is. Nothing else in this scene draws
+      from it, so any divergence is the explosion.
+    */
+    const untouched = firingAt(ENEMIES.drifter, 60);
+    const exploded = firingAt(ENEMIES.drifter, 60);
+    const frame = new GameFrame(exploded);
+    for (let step = 0; step < 900 && exploded.debris.size === 0; step++) frame.step();
+    expect(exploded.debris.size, 'nothing ever exploded, so this measures nothing').toBeGreaterThan(0);
+
+    expect(
+      exploded.rng.range(0, 1),
+      'blowing something up moved the spawn stream, so the level a player gets depends on their kills',
+    ).toBe(untouched.rng.range(0, 1));
   });
 });
 

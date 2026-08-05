@@ -14,6 +14,7 @@ import { PALETTES, type PaletteName } from '../content/palette.ts';
 import { ACROSS_SPAN, MAX_ALONG_SPAN, type View, viewOf } from '../sim/camera.ts';
 import { type Entity, makeEntity, reset } from '../sim/entity.ts';
 import { Pool } from '../sim/pool.ts';
+import { makeDeaths } from '../sim/collide.ts';
 import { makeRng } from '../sim/rng.ts';
 import { atlasIsStale, bakeAtlas, viewFor } from '../render/bake.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
@@ -35,14 +36,13 @@ import { runLoop } from './loop.ts';
  *
  * ⚠️ **These are 0022's worst-case scene split up rather than a new budget** — it reads *~150 enemy
  * bullets, ~80 player projectiles, ~40 enemies, ~200 particles* and totals 500, which is the number
- * `tests/budget.test.ts` asserts the frame cost against. Particles do not exist yet, so their share
- * is unclaimed rather than redistributed: spending it here would quietly raise the ceiling that has
- * actually been measured.
+ * `tests/budget.test.ts` asserts the frame cost against. The particle share is now claimed by
+ * `debris`, at exactly the 200 it was written for; the total is 471 and the ceiling has not moved.
  *
  * Splitting one pool into four is what makes the collision cost the product of two small pools
  * instead of the square of one big one — `src/sim/collide.ts` has the argument.
  */
-const CAPACITY = { ship: 1, enemies: 40, playerShots: 80, enemyShots: 150 };
+const CAPACITY = { ship: 1, enemies: 40, playerShots: 80, enemyShots: 150, debris: 200 };
 
 export interface Mounted {
   /** Stop the loop and drop the resize listener. */
@@ -149,6 +149,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const enemies = new Pool<Entity>(CAPACITY.enemies, makeEntity);
   const playerShots = new Pool<Entity>(CAPACITY.playerShots, makeEntity);
   const enemyShots = new Pool<Entity>(CAPACITY.enemyShots, makeEntity);
+  const debris = new Pool<Entity>(CAPACITY.debris, makeEntity);
 
   /** Enemy rows by index, so a per-step lookup in the frame is an array index and not a string key. */
   const enemyRows: readonly EnemyRow[] = ENEMY_KINDS.map((k) => ENEMIES[k]);
@@ -199,11 +200,18 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       it, and the SHIP last — the player must never lose their own ship in a crowd, and at 150 enemy
       bullets a crowd is the normal state. `src/render/scene.ts` walks this array in order.
     */
-    layers: [enemies, enemyShots, playerShots, shipPool],
+    // Debris first, so fragments sit UNDER everything still alive. An explosion that draws over a
+    // bullet hides the one thing on screen the player cannot afford to lose track of.
+    layers: [debris, enemies, enemyShots, playerShots, shipPool],
     shipPool,
     enemies,
     playerShots,
     enemyShots,
+    debris,
+    deaths: makeDeaths(CAPACITY.enemies),
+    // Its own stream per 0021: a fragment's direction is the most cosmetic roll in the game and it
+    // must not be able to move a wave by one enemy.
+    burstRng: makeRng('proof-scene').stream('burst'),
     view,
     surface,
     // One named stream, per docs/decisions/0021-one-stream-per-concern.md, so a cosmetic roll added

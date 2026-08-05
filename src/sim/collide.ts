@@ -82,6 +82,31 @@ export function overlaps(a: Entity, b: Entity, radiusScaleB: number): boolean {
 }
 
 /**
+ * Where things died this step, so a caller can put something there.
+ *
+ * ⚠️ **An out-parameter rather than a return value, and it is pre-allocated at boot.** A collision
+ * that returned an array of positions would allocate on the densest step of the game, which is the
+ * one thing `docs/decisions/0022-frame-rate-is-a-feature.md` bans; a callback would put a closure in
+ * the same place and hand `sim/` a way to be told what to do.
+ *
+ * ⚠️ **And it does not know what it is for.** `sim/` may import `brand` and nothing else, so it
+ * cannot spawn debris, score a kill, or play a sound. It reports a fact — *something died here* —
+ * and `src/app/frame.ts` decides what that is worth.
+ */
+export interface Deaths {
+  /** How many entries of the two arrays below are meaningful. Reset by the caller, never here. */
+  count: number;
+  along: number[];
+  across: number[];
+}
+
+/** A log big enough for `capacity` deaths in one step. Built once, at boot. */
+export function makeDeaths(capacity: number): Deaths {
+  // @setup: one log per pairing, built when the world is composed and reused every step forever.
+  return { count: 0, along: new Array<number>(capacity).fill(0), across: new Array<number>(capacity).fill(0) };
+}
+
+/**
  * Shots spend themselves on targets. Returns how many targets were destroyed.
  *
  * A shot is consumed by arriving, whether or not it kills; a target that runs out of health is
@@ -94,6 +119,7 @@ export function collideInto(
   targetRadiusScale: number,
   damageScale: number,
   flashSteps: number,
+  deaths: Deaths | null,
 ): number {
   let destroyed = 0;
   for (let t = targets.size - 1; t >= 0; t--) {
@@ -105,6 +131,12 @@ export function collideInto(
       target.health -= shot.damage * damageScale;
       shots.releaseAt(s);
       if (target.health <= 0) {
+        // Recorded BEFORE the release, because a released slot is the next thing `spawn` hands out.
+        if (deaths !== null && deaths.count < deaths.along.length) {
+          deaths.along[deaths.count] = target.along;
+          deaths.across[deaths.count] = target.across;
+          deaths.count++;
+        }
         targets.releaseAt(t);
         destroyed++;
         break;

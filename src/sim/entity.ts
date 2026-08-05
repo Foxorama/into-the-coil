@@ -133,6 +133,14 @@ export interface Entity extends Body {
    * scattering they have to read.
    */
   fireIn: number;
+  /**
+   * Steps until this retires itself, or `0` for something that lives until the world removes it.
+   *
+   * ⚠️ **Zero means NO lifetime, not "expire now"** — every ship, enemy and shot in the game leaves
+   * this at zero and is retired by the cull or by dying. Only debris counts down. The alternative,
+   * `-1` for immortal, puts a sentinel in a field that is otherwise a plain count.
+   */
+  lifeFor: number;
 }
 
 /** A blank entity. Called only while a pool is being constructed. */
@@ -155,6 +163,7 @@ export function makeEntity(): Entity {
     flashFor: 0,
     kind: 0,
     fireIn: 0,
+    lifeFor: 0,
   };
 }
 
@@ -182,6 +191,7 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.flashFor = 0;
   e.kind = kind;
   e.fireIn = 0;
+  e.lifeFor = 0;
 }
 
 /**
@@ -222,6 +232,18 @@ export function stepEntities(pool: Pool<Entity>, cameraAlong: number): void {
     */
     const blinking = e.invulnFor > 0 && (e.invulnFor & BLINK_PHASE) !== 0;
     e.sprite = e.flashFor > 0 || blinking ? e.spriteHit : e.spriteBase;
+    /*
+      A lifetime retires the entity itself, and it is checked BEFORE the cull rather than after.
+
+      ⚠️ **Both conditions have to be able to fire.** Debris is the only thing with a lifetime and it
+      is also the only thing that can drift off any edge while it still has one left, so a lifetime
+      that skipped the cull would leak a fragment that wandered out of the world, and a cull that
+      skipped the lifetime would keep every fragment on screen until the camera passed it.
+    */
+    if (e.lifeFor > 0 && --e.lifeFor === 0) {
+      pool.releaseAt(i);
+      continue;
+    }
     if (e.along < cull || e.along > cullLeading) pool.releaseAt(i);
   }
 }

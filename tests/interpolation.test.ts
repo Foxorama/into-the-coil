@@ -3,6 +3,7 @@ import { viewOf } from '../src/sim/camera.ts';
 import { makeEntity, reset } from '../src/sim/entity.ts';
 import { makeIntent } from '../src/sim/intent.ts';
 import { Pool } from '../src/sim/pool.ts';
+import { makeDeaths } from '../src/sim/collide.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { GameFrame, type World } from '../src/app/frame.ts';
@@ -78,6 +79,10 @@ function stationKeepingWorld(surface: Surface): World {
     enemies,
     playerShots,
     enemyShots,
+    // No debris in this scene: it is about the camera, and a burst would add blits that come and go.
+    debris: new Pool(4, makeEntity),
+    deaths: makeDeaths(8),
+    burstRng: makeRng('interp').stream('burst'),
     view: viewOf(1280, 720),
     surface,
     rng: makeRng('interp').stream('spawns'),

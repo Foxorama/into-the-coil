@@ -113,9 +113,12 @@ decision needs no rule.
   guard measuring a quantity defined in terms of the constant it guards proves only that the code
   agrees with itself, and a probe cannot see that: a break and its guard share an author and a
   vocabulary. 0019 catches a guard that does not fire; this catches one that fires on the wrong
-  quantity. Two of this project's own bugs, not the predecessor's.
+  quantity. Two of this project's own bugs, not the predecessor's. **An event the model resolves and
+  the picture never mentions gets reported as a different bug, every time** — three running, each one
+  filed as a collision fault that did not exist.
   — [0027](docs/decisions/0027-measure-the-picture-not-the-model.md),
-  [0019](docs/decisions/0019-a-probe-must-be-seen-to-apply.md)
+  [0019](docs/decisions/0019-a-probe-must-be-seen-to-apply.md),
+  [0036](docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md)
 
 - **There is one game and it is the loud one; accessibility is knobs over that default.** An item
   joins the floor only if it is a property of the architecture or a knob over it — one that would

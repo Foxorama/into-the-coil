@@ -23,7 +23,7 @@
  */
 
 import { ACROSS_SPAN, spawnAlong, type View } from '../sim/camera.ts';
-import { collideInto, collideIntoOne } from '../sim/collide.ts';
+import { collideInto, collideIntoOne, type Deaths } from '../sim/collide.ts';
 import { type Entity, reset, stepEntities } from '../sim/entity.ts';
 import { flyShip } from '../sim/flight.ts';
 import type { Intent } from '../sim/intent.ts';
@@ -37,6 +37,7 @@ import type { EnemyRow } from '../content/enemies.ts';
 import type { ShipRow } from '../content/ships.ts';
 import { INVULN_STEPS } from '../content/ships.ts';
 import { SHOTS } from '../content/shots.ts';
+import { BURST, DEBRIS } from '../content/debris.ts';
 import type { Frame } from './loop.ts';
 
 /** How far in front of the ship a shot appears, in world units — clear of its own hurtbox. */
@@ -99,6 +100,24 @@ export interface World {
   /** What the player fired. Separate from `enemyShots` because the PAIRING is the collision guard. */
   playerShots: Pool<Entity>;
   enemyShots: Pool<Entity>;
+  /**
+   * Fragments. In no collision pairing, which is what makes them cosmetic in fact.
+   *
+   * ⚠️ They claim 0022's unspent particle share of the worst-case scene — see
+   * `src/content/debris.ts`. They are also the only pool whose members retire on a timer.
+   */
+  debris: Pool<Entity>;
+  /** Where enemies died this step, so a burst can be put there. Reused, never rebuilt. */
+  deaths: Deaths;
+  /**
+   * The burst stream, and it is SEPARATE from `rng` on purpose.
+   *
+   * `docs/decisions/0021-one-stream-per-concern.md`: one shared generator couples every draw to
+   * every draw before it, so a cosmetic roll added anywhere rebuilds every level. This is the exact
+   * case it warns about — a fragment's direction is the most cosmetic roll in the game, and it must
+   * not be able to move a wave by one enemy.
+   */
+  burstRng: Rng;
   view: View;
   surface: Surface;
   /** The spawn stream, named per 0021 — a cosmetic roll added later must not move a wave. */
@@ -171,6 +190,7 @@ export class GameFrame implements Frame {
     stepEntities(w.enemies, w.cameraAlong);
     stepEntities(w.playerShots, w.cameraAlong);
     stepEntities(w.enemyShots, w.cameraAlong);
+    stepEntities(w.debris, w.cameraAlong);
 
     /*
       THE PAIRINGS, written out. Each line names two sides that can meet, which is what makes the
@@ -181,13 +201,23 @@ export class GameFrame implements Frame {
       `src/sim/assist.ts` reaches the model at all. `tests/assist.test.ts` proved the TABLE was
       monotone; `tests/combat.test.ts` is what proves the code using it is.
     */
-    collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS);
+    w.deaths.count = 0;
+    collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
     collideIntoOne(w.enemyShots, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, true);
     // Not consumed: an enemy the player flew into is still there afterwards, or ramming would be the
     // cheapest way to clear the screen.
     collideIntoOne(w.enemies, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
 
-    if (w.ship.health <= 0) restart(w);
+    // Every enemy that died this step leaves something behind. The positions were recorded by the
+    // collision because a released slot is the next thing `spawn` hands out.
+    for (let i = 0; i < w.deaths.count; i++) {
+      burst(w, w.deaths.along[i]!, w.deaths.across[i]!, BURST.enemy);
+    }
+
+    if (w.ship.health <= 0) {
+      burst(w, w.ship.along, w.ship.across, BURST.ship);
+      restart(w);
+    }
 
     w.spawnIn--;
     if (w.spawnIn <= 0) {
@@ -271,6 +301,33 @@ function fireEnemies(w: World): void {
   }
 }
 
+/**
+ * Scatter fragments from a point.
+ *
+ * ⚠️ **A burst that cannot fit is DROPPED, never grown**, exactly as a wave one bullet short is
+ * dropped — `src/sim/pool.ts` has the argument. Debris is the one pool where running out is
+ * genuinely invisible, because the frame it happens on is the frame the screen is fullest.
+ *
+ * ⚠️ Nothing allocates: the angle and the speed are numbers, and `Math.cos`/`Math.sin` return
+ * numbers. There is no vector and no array of fragments.
+ */
+function burst(w: World, along: number, across: number, count: number): void {
+  for (let i = 0; i < count; i++) {
+    const piece = w.debris.spawn();
+    if (piece === null) return;
+    reset(piece, along, across, DEBRIS);
+    /*
+      A random angle rather than an even fan. An even fan is a RING, and a ring reads as a shockwave
+      — a deliberate, authored effect — where this wants to read as something coming apart.
+    */
+    const angle = w.burstRng.range(0, Math.PI * 2);
+    const speed = w.burstRng.range(BURST.speedMin, BURST.speedMax);
+    piece.velAlong = Math.cos(angle) * speed;
+    piece.velAcross = Math.sin(angle) * speed;
+    piece.lifeFor = Math.round(w.burstRng.range(BURST.lifeMin, BURST.lifeMax));
+  }
+}
+
 /** One enemy, at the leading edge, in a lane the spawn stream chose. */
 function spawnEnemy(w: World): void {
   const e = w.enemies.spawn();
@@ -299,6 +356,9 @@ function restart(w: World): void {
   w.enemies.clear();
   w.playerShots.clear();
   w.enemyShots.clear();
+  // ⚠️ Debris is NOT cleared, and that is the one thing on screen that survives a death. The burst
+  // marking where the ship died is the clearest signal in the game that a run just ended; wiping it
+  // on the same step would delete the explanation along with the cause.
   reset(w.ship, w.cameraAlong + SHIP_START_ALONG, ACROSS_SPAN / 2, w.shipRow);
   w.ship.velAlong = w.scrollPerStep;
   w.ship.invulnFor = INVULN_STEPS;

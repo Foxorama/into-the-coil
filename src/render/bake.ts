@@ -64,16 +64,31 @@ const INK_OF: Record<SpriteKind, keyof Palette> = {
   bullet: 'bullet',
   pickup: 'pickup',
   /*
-    THE HIT FLASH: the SAME silhouette in the `impact` ink.
+    THE HURT SILHOUETTES: the SAME shape in a different ink.
 
     Same shape is what makes it read as *that thing being hurt* rather than as a second object
     appearing where the first one was. And the ink is the only channel doing colour work here, which
     is allowed precisely because the silhouette is unchanged — 0024's rule is that colour may not
     carry meaning ALONE, and here the shape carries identity while the colour carries the event.
+
+    ⚠️ **THE SHIP IS YELLOW AND AN ENEMY IS WHITE, and they are different on purpose.** The ship
+    briefly went white too, when the flash was generalised from the ship to everything, and a
+    play-test asked for the yellow back. It is the better answer for a reason worth writing down: the
+    ship's blink means *you cannot be hurt right now* and an enemy's flash means *this just was*, and
+    those are opposite meanings. One ink for both is one channel carrying two things, which is the
+    failure `docs/decisions/0024-the-accessibility-floor-is-settings.md` exists to prevent.
+
+    ⚠️ `hazard` is borrowed rather than owned, and it will want revisiting when environmental hazards
+    land — an asteroid and a recovering ship would then share a colour. They would not share a
+    silhouette, so it is a note rather than a defect, and inventing a `warn` role for content that
+    does not exist yet is the shape of mistake this project has already made once with the ship
+    roster. `docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md`.
   */
-  shipHit: 'impact',
+  shipHit: 'hazard',
   drifterHit: 'impact',
   lancerHit: 'impact',
+  // Fragments are the impact itself, so they are the impact ink; they carry no identity of their own.
+  debris: 'impact',
 };
 
 /**
@@ -135,6 +150,14 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
       break;
     case 'bullet':
       ctx.arc(half, half, r * 0.8, 0, Math.PI * 2);
+      break;
+    case 'debris':
+      // A shard: small, angular, and deliberately NOT a disc, so a fragment is never mistaken for a
+      // bullet at the one moment the screen is busiest.
+      ctx.moveTo(half + r, half);
+      ctx.lineTo(half - r * 0.4, half - r * 0.8);
+      ctx.lineTo(half - r, half + r * 0.2);
+      ctx.closePath();
       break;
     case 'pickup':
       // A square with a hole: distinct in silhouette from both the diamond and the disc.

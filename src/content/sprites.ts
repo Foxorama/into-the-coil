@@ -34,7 +34,8 @@ export type SpriteKind =
   | 'lancer'
   | 'lancerHit'
   | 'bullet'
-  | 'pickup';
+  | 'pickup'
+  | 'debris';
 
 /** Baking order, and therefore the blit index. Explicit, never derived from the table. */
 export const SPRITE_KINDS: readonly SpriteKind[] = [
@@ -46,6 +47,7 @@ export const SPRITE_KINDS: readonly SpriteKind[] = [
   'lancerHit',
   'bullet',
   'pickup',
+  'debris',
 ];
 
 /** The index a painter blits by. A number, because this is read five hundred times a frame. */
@@ -58,6 +60,7 @@ export const SPRITE: Record<SpriteKind, number> = {
   lancerHit: 5,
   bullet: 6,
   pickup: 7,
+  debris: 8,
 };
 
 /**
@@ -86,4 +89,6 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   lancerHit: 7,
   bullet: 1.8,
   pickup: 3.5,
+  // Small: a fragment reads as a piece of something, and eight of them at enemy size is a wall.
+  debris: 1.4,
 };
