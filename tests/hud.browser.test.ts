@@ -140,20 +140,56 @@ describe.runIf(chromePath)('the in-game readout', () => {
     await page.context().close();
   });
 
-  it('draws one pip per point of the ship’s health, spent ones hollow', async () => {
-    // ⚠️ Filled against HOLLOW rather than two colours: 0024's *colour never carries meaning alone*,
-    // and a shield readout is the most tempting place in the game to break it.
+  it('draws one pip per point of the ship’s health', async () => {
     const page = await open();
     await page.click('.' + prefixFor('title') + 'action');
     await page.waitForTimeout(200);
     const pips = await page.evaluate(() =>
-      [...document.querySelectorAll('.itc-playing-hud-pip')].map((el) => ({
-        spent: el.classList.contains('itc-playing-hud-spent'),
-        background: getComputedStyle(el).backgroundColor,
-      })),
+      [...document.querySelectorAll('.itc-playing-hud-pip')].map((el) => el.classList.contains('itc-playing-hud-spent')),
     );
     expect(pips.length, 'the pip row does not match the ship').toBe(SHIPS.proof.health);
-    expect(pips.every((p) => !p.spent), 'a fresh run opens with the shield already down').toBe(true);
+    expect(pips.every((spent) => !spent), 'a fresh run opens with the shield already down').toBe(true);
+    await page.context().close();
+  });
+
+  it('shows a spent pip as EMPTY rather than as a different colour', async () => {
+    /*
+      ⚠️ **THE FIRST VERSION OF THIS COUNTED PIPS AND CALLED ITSELF DONE**, which `npm run prove`
+      caught: a probe that replaced the fill difference with an opacity change stayed GREEN, because
+      nothing here had ever looked at what *spent* actually renders as.
+
+      `docs/decisions/0024-the-accessibility-floor-is-settings.md` puts *colour never carries meaning
+      alone* in the unconditional tier, and a shield readout is the most tempting place in the game to
+      break it — full and empty are the same shape in two inks in most of the genre. So the property
+      is stated directly: the two states differ by FILL, and they agree on their border colour, which
+      is what makes the difference survive a palette swap.
+    */
+    const page = await open();
+    await page.click('.' + prefixFor('title') + 'action');
+    // The fixture does not dodge, so it takes contact damage from the first wave. Waited on rather
+    // than timed — the same reason `tests/frames.ts` counts frames instead of milliseconds.
+    await page.waitForFunction(() => document.querySelectorAll('.itc-playing-hud-spent').length > 0, {
+      timeout: 40_000,
+    });
+    const styles = await page.evaluate(() =>
+      [...document.querySelectorAll('.itc-playing-hud-pip')].map((el) => {
+        const computed = getComputedStyle(el);
+        return {
+          spent: el.classList.contains('itc-playing-hud-spent'),
+          background: computed.backgroundColor,
+          border: computed.borderTopColor,
+        };
+      }),
+    );
+    const spent = styles.filter((s) => s.spent);
+    const full = styles.filter((s) => !s.spent);
+    expect(spent.length, 'nothing was spent, so this compares nothing').toBeGreaterThan(0);
+    expect(full.length, 'the whole shield went at once, so this compares nothing').toBeGreaterThan(0);
+
+    const transparent = /rgba\(0,\s*0,\s*0,\s*0\)|transparent/;
+    expect(spent[0]!.background, `a spent pip is filled with ${spent[0]!.background}`).toMatch(transparent);
+    expect(full[0]!.background, 'a full pip is not filled at all').not.toMatch(transparent);
+    expect(spent[0]!.border, 'spent and full pips differ by colour rather than by fill').toBe(full[0]!.border);
     await page.context().close();
   });
 

@@ -88,6 +88,6 @@ Per [0005](0005-a-guard-must-be-seen-to-fail.md) and [0019](0019-a-probe-must-be
 |---|---|
 | a pickup added to the table and forgotten by the key | `lists every pickup, with its name and what it does` |
 | the readout rendered once and never updated | `follows the ship down as it takes hits` |
-| spent shield shown as a colour change rather than a hollow pip | `draws one pip per point of the ship’s health, spent ones hollow` |
+| spent shield shown as a colour change rather than a hollow pip | `shows a spent pip as EMPTY rather than as a different colour` |
 | the readout left up over the title screen | `is hidden until a run starts, and shows while playing` |
 | the shield readout stripped of its label, leaving a row of unreadable discs | `reports the run in words as well as in pictures` |

@@ -39,11 +39,11 @@ export const PROBES = [
     // Colour carrying the meaning by itself, which is what every other shooter does and what 0024
     // puts in the unconditional tier against.
     broke: 'spent shield shown as a colour change rather than a hollow pip',
-    guard: 'draws one pip per point of the ship’s health, spent ones hollow',
+    guard: 'shows a spent pip as EMPTY rather than as a different colour',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '        pips[i]!.classList.toggle',
-      replace: '        pips[i]!.style.opacity = i >= health ? "0.3" : "1";\n        void pips[i]!.classList.toggle',
+      find: "        pips[i]!.classList.toggle('itc-playing-hud-spent', i >= health);",
+      replace: "        pips[i]!.style.opacity = i >= health ? '0.3' : '1';",
     },
   },
   {
