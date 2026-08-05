@@ -42,7 +42,16 @@ const at = arg('at', '4000')
   .sort((a, b) => a - b);
 const width = Number(arg('width', '1280'));
 const height = Number(arg('height', '720'));
-const outDir = resolve(root, arg('out', 'keepsakes/shots'));
+/*
+  ⚠️ **`shots/`, which is GITIGNORED, and it defaulted to `keepsakes/` — which was wrong.**
+  `keepsakes/README.md` is explicit that a keepsake is a frozen BUILD, kept because ordinary progress
+  destroys the thing it records, and that it "makes no claim at all". What this tool produces is
+  neither: it is working output, most of it from scratch builds that were never committed — a boss
+  moved to the start of a level, a wave list emptied, a level order swapped. Committing those put
+  pictures of builds that do not exist into the one directory whose whole value is that its contents
+  did.
+*/
+const outDir = resolve(root, arg('out', 'shots'));
 
 if (at.length === 0) {
   console.error('--at needs at least one non-negative number of milliseconds');
