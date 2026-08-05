@@ -54,11 +54,22 @@ const SPAWN_EVERY = 42;
 export const SHIP_START_ALONG = 40;
 
 /**
- * How long a body shows a hit it survived, in steps — about an eighth of a second.
+ * How long a body shows a hit it survived, in steps — four, about 67ms.
  *
- * Long enough to be seen on a 60Hz display and on a frame the compositor drops; short enough that
- * anything under sustained fire reads as *being hit repeatedly* rather than as having changed
- * colour. The same number for the ship and for an enemy, because it means the same thing.
+ * ⚠️ **IT HAS TO END BEFORE THE NEXT HIT CAN LAND, and at 8 it did not.** Measured against the real
+ * frame at the real fire rate: successive shots connect on the same enemy **6 to 7 steps apart**
+ * (100–117ms) at every distance, because the gap between shots in flight is fixed and the closing
+ * speed is what turns it into a time. A flash of 8 steps therefore never finished — a lancer went
+ * white once and died still white, and the second hit was invisible because it landed inside the
+ * first one's flash.
+ *
+ * That is the whole of *"sometimes they'd get hit, go white, then need a second shot and other times
+ * they appeared to just die straight away"*: the player could not count hits, because two hits and
+ * one hit produced the same picture. `reports/enemy-legibility-2026-08-05.md`.
+ *
+ * ⚠️ **The relationship is guarded, the number is not.** `tests/combat.test.ts` drives the real
+ * frame and asserts the flash has ENDED before the next shot connects, which is a property that must
+ * hold at any fire rate and any flash length. Raising the fire rate later will fail it, correctly.
  *
  * ⚠️ **The ship's recovery is a SEPARATE signal** and it is the blink `src/sim/entity.ts` derives
  * from `invulnFor`. This was briefly one number doing both — the ship's flash set to the whole
@@ -69,7 +80,7 @@ export const SHIP_START_ALONG = 40;
  * unconditionally. This is one silhouette in two inks, never a full-screen flash, which is the side
  * of that line it is meant to be on.
  */
-const IMPACT_FLASH_STEPS = 8;
+const IMPACT_FLASH_STEPS = 4;
 
 /** Everything a frame reads. Mutable, set up once, and updated on a resize — never reducer state. */
 export interface World {

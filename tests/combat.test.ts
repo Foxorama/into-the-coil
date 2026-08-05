@@ -30,7 +30,7 @@ import { SCROLL_PER_STEP, SHIP_SPEED } from '../src/sim/flight.ts';
 import { makeIntent, type Intent } from '../src/sim/intent.ts';
 import { Pool } from '../src/sim/pool.ts';
 import { makeRng } from '../src/sim/rng.ts';
-import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
+import { ENEMIES, ENEMY_KINDS, type EnemyRow } from '../src/content/enemies.ts';
 import { INVULN_STEPS, SHIPS } from '../src/content/ships.ts';
 import { SHOT_KINDS, SHOTS } from '../src/content/shots.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
@@ -391,6 +391,49 @@ describe('no assist makes the game harder, and now that is a claim about the COD
 
 // ── THE PICTURE, IN THE UNITS A PLAYER HAS ───────────────────────────────────────────────────────
 
+/**
+ * The proof scene with one enemy parked `distance` ahead in the ship's own lane, the ship firing at
+ * its real cadence, and nothing else spawning. The scene for "how many shots does this take".
+ */
+function firingAt(row: EnemyRow, distance: number): World {
+  const shipPool = new Pool<Entity>(1, makeEntity);
+  const enemies = new Pool<Entity>(1, makeEntity);
+  const playerShots = new Pool<Entity>(16, makeEntity);
+  const enemyShots = new Pool<Entity>(8, makeEntity);
+  const shipRow = SHIPS.proof;
+  const ship = shipPool.spawn()!;
+  reset(ship, SHIP_START_ALONG, ACROSS_SPAN / 2, shipRow);
+  ship.velAlong = SCROLL_PER_STEP;
+
+  const enemy = enemies.spawn()!;
+  reset(enemy, SHIP_START_ALONG + distance, ACROSS_SPAN / 2, row, ENEMY_KINDS.indexOf('lancer'));
+  enemy.velAlong = -row.closing;
+  // Held off, so nothing the enemy does can kill the ship and restart the scene mid-count.
+  enemy.fireIn = NEVER;
+
+  return {
+    layers: [enemies, enemyShots, playerShots, shipPool],
+    shipPool,
+    enemies,
+    playerShots,
+    enemyShots,
+    view: viewOf(VIEWPORT.width, VIEWPORT.height),
+    surface: BLIND,
+    rng: makeRng('combat').stream('spawns'),
+    cameraAlong: 0,
+    prevCameraAlong: 0,
+    scrollPerStep: SCROLL_PER_STEP,
+    spawnIn: NEVER,
+    fireIn: shipRow.fireEvery,
+    ship,
+    shipRow,
+    enemyRows: ENEMY_KINDS.map((k) => ENEMIES[k]),
+    tuning: tuningFor(DEFAULT_ASSISTS),
+    input: holding(0),
+    intent: makeIntent(2),
+  };
+}
+
 /** An input source that asks for the same thing every step. */
 function holding(across: number): InputSource {
   return {
@@ -639,6 +682,124 @@ describe('damage is legible on the body that took it', () => {
     stepEntities(pool, 0);
     expect(ship.invulnFor, 'the invulnerable window never closed').toBe(0);
     expect(ship.sprite, 'the ship is still blinking after it stopped being invulnerable').toBe(SHIPS.proof.sprite);
+  });
+
+  it('THE CLAIM: a shot that lands while the target is flashing still counts', () => {
+    /*
+      ⚠️ **From a play-test, as a mechanism rather than a feeling**: *"I had to wait for the white
+      flash to go away and then shoot them again … 1 bullet triggers flash, 2nd bullet hits white,
+      3rd bullet kills."*
+
+      If that were true it would be a real and nasty bug — a flash that eats a shot makes damage
+      output depend on how the player's fire rate happens to line up with a cosmetic timer, and it
+      would be invisible in every other test here.
+
+      It is NOT true, and this is the assertion that says so rather than an argument that it cannot
+      be. The only thing `flashFor` gates is which bitmap is drawn. The gate that DOES exist —
+      `invulnFor` — is never set on an enemy by anything.
+    */
+    const shots = new Pool<Entity>(1, makeEntity);
+    const targets = new Pool<Entity>(1, makeEntity);
+    const target = targets.spawn()!;
+    reset(target, 100, 50, bodyOf(SPRITE.lancer, 3.2, 2, 2, SPRITE.lancerHit));
+    target.flashFor = FLASH;
+    const shot = shots.spawn()!;
+    reset(shot, 100, 50, bodyOf(SPRITE.bullet, 0.9, 1, 1));
+
+    collideInto(shots, targets, 1, 1, FLASH);
+    expect(target.health, 'a shot landing mid-flash was absorbed by it').toBe(1);
+    expect(shots.size, 'the shot was not spent, which is a different bug').toBe(0);
+  });
+
+  it('and a mid-flash shot can kill, so the flash cannot make anything immortal', () => {
+    const shots = new Pool<Entity>(1, makeEntity);
+    const targets = new Pool<Entity>(1, makeEntity);
+    const target = targets.spawn()!;
+    reset(target, 100, 50, bodyOf(SPRITE.lancer, 3.2, 1, 2, SPRITE.lancerHit));
+    target.flashFor = FLASH;
+    reset(shots.spawn()!, 100, 50, bodyOf(SPRITE.bullet, 0.9, 1, 1));
+
+    expect(collideInto(shots, targets, 1, 1, FLASH), 'a flashing target survived a lethal hit').toBe(1);
+    expect(targets.size).toBe(0);
+  });
+
+  it('THE ONE THAT EXPLAINS THE REPORT: a hit finishes flashing before the next one lands', () => {
+    /*
+      ⚠️ **The mechanism the play-test was actually describing**, once measured. Successive shots
+      connect on the same enemy 6–7 steps apart (100–117ms) at every distance — the gap between shots
+      in flight is fixed, and the closing speed turns it into a time. The flash was 8 steps, so it
+      never finished: a lancer went white once and died still white, and the SECOND hit produced no
+      picture of its own because it landed inside the first one's flash.
+
+      One hit and two hits looked the same. That is why *"sometimes they'd get hit, go white, then
+      need a second shot and other times they appeared to just die straight away"* reads as the game
+      being inconsistent — the player could not count hits, so the count looked random.
+
+      ⚠️ **This asserts a RELATIONSHIP and not a duration.** Nothing here pins the flash at four
+      steps or the fire rate at nine; what has to hold at any values is that a player can tell two
+      hits from one. Raising the fire rate later fails this, which is correct — it would have to be
+      paid for with a shorter flash.
+    */
+    const world = firingAt(ENEMIES.lancer, 120);
+    const frame = new GameFrame(world);
+    const enemy = world.enemies.at(0);
+
+    let previous = enemy.health;
+    let firstHit = -1;
+    let flashEndedAt = -1;
+    let secondHit = -1;
+    for (let step = 1; step <= 900 && secondHit === -1; step++) {
+      frame.step();
+      const alive = world.enemies.size > 0;
+      if (firstHit !== -1 && flashEndedAt === -1 && (!alive || enemy.flashFor === 0)) flashEndedAt = step;
+      if (!alive) {
+        secondHit = step;
+        break;
+      }
+      if (enemy.health < previous) {
+        if (firstHit === -1) firstHit = step;
+        else secondHit = step;
+        previous = enemy.health;
+      }
+    }
+
+    expect(firstHit, 'nothing ever hit the enemy').toBeGreaterThan(0);
+    expect(secondHit, 'the enemy never took a second hit').toBeGreaterThan(firstHit);
+    expect(flashEndedAt, 'the flash never ended at all').toBeGreaterThan(0);
+    expect(
+      flashEndedAt,
+      `the enemy was hit at step ${firstHit} and again at step ${secondHit}, ` +
+        `${(secondHit - firstHit) * STEP_MS}ms later, while its flash from the first hit was still ` +
+        'running. The second hit draws nothing of its own, so one hit and two hits look identical ' +
+        'and the player cannot count them.',
+    ).toBeLessThan(secondHit);
+  });
+
+  it('an enemy takes exactly as many connecting shots as it has health, at the real fire rate', () => {
+    /*
+      The end-to-end half, driven by the real frame at the real cadence rather than by a hand-built
+      pool: an enemy parked in the ship's lane, the ship firing on its own, nothing else spawning.
+
+      ⚠️ Counts CONNECTIONS, not steps and not shots fired. The claim under test is that a shot can
+      be spent without counting, so what has to be pinned is that the number of times health moves
+      equals the number of hits the enemy is built to survive — no more.
+    */
+    const world = firingAt(ENEMIES.lancer, 60);
+    const frame = new GameFrame(world);
+    const enemy = world.enemies.at(0);
+
+    let connections = 0;
+    let previous = enemy.health;
+    for (let step = 0; step < 900 && world.enemies.size > 0; step++) {
+      frame.step();
+      if (world.enemies.size > 0 && enemy.health < previous) {
+        connections++;
+        previous = enemy.health;
+      }
+    }
+    expect(world.enemies.size, 'the enemy never died inside fifteen seconds of auto-fire').toBe(0);
+    // The last connection is the fatal one, which happens on the step the enemy is released.
+    expect(connections + 1, 'the enemy took more connecting shots than it has health').toBe(ENEMIES.lancer.health);
   });
 
   it('a shot never flashes, because it does not survive being one', () => {

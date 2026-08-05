@@ -129,6 +129,9 @@ declared in `scripts/probes/0035-legibility.mjs`.
 | the tougher enemy drawn at the same size as the harmless one, which is what shipped | `the enemy that takes more killing is drawn bigger` |
 | `impact` pointed back at `hazard`, so a hit and a hazard become one colour | `clears WCAG AA against the background, in every palette` |
 
+| the impact flash lasting longer than the gap between connecting shots, so two hits look like one | `a hit finishes flashing before the next one lands` |
+| the flash gating damage, so a shot arriving while a target is lit is silently thrown away | `THE CLAIM: a shot that lands while the target is flashing still counts` |
+
 ⚠️ **One of those guards was written wrong twice and `npm run prove` said STILL GREEN both times.**
 The blink assertion first checked that two distinct sprites appeared across the invulnerable window —
 which a solid flash that ends also does — and then that the sprite changed more than once, which a
@@ -200,3 +203,40 @@ otherwise is exactly the unvalidated threshold 0027 refuses. What is worth carry
 before shipping it.** It cost one throwaway script and about a minute, and it answered in one image a
 question that two rounds of reasoning had got wrong — including the round in this very file that
 wrote down *"no instrument here can judge it"* and shipped anyway.
+
+---
+
+## A flash must be over before the next hit lands
+
+**Added 2026-08-05**, after the same play-test was re-phrased and re-read.
+[`reports/enemy-legibility-2026-08-05.md`](../../reports/enemy-legibility-2026-08-05.md).
+
+The section above read the complaint as being about silhouettes. It was not — the player was
+distinguishing drifters from lancers by **motion**, correctly, the whole time. The silhouette fix
+stands on its own; it answered a different question from the one being asked.
+
+**The rule this adds: a hit's flash must finish before the next hit can land.** Otherwise the second
+hit draws nothing of its own, and one hit and two hits produce the same picture.
+
+Measured against the real frame at the real fire rate, successive shots connect on the same enemy
+**6–7 steps apart (100–117ms)** at every distance, because the gap between shots in flight is fixed
+and the closing speed converts it into a time. The flash was **8 steps**. It never finished. A lancer
+went white once and died still white, and the hit count therefore looked random to the only
+instrument that could see it — a player.
+
+The flash is 4 steps now, and **the guard is the relationship rather than the duration**: the real
+frame is driven and the flash must have ended before the next connection. Nothing pins four steps or
+a fire rate of nine, so the next tuning pass may move either — and if it moves them into conflict,
+the guard says so.
+
+⚠️ **The stated mechanism in the report was not real and is now asserted against.** *"2nd bullet →
+hit white"* — a shot absorbed by the flash — would make damage output depend on a cosmetic timer.
+`flashFor` gates only which bitmap is drawn. Two assertions and a probe now hold that, because *"it
+cannot happen"* is an argument and this project prefers a test.
+
+⚠️ **And one hypothesis is deliberately NOT acted on.** The ship blinks to the `impact` ink while it
+*cannot be hurt*; an enemy flashes the same ink when it just *has been*. One channel, two opposite
+meanings, and *"I had to wait for the white flash to go away"* is what a player would say if they had
+read the enemy's flash as the ship's. That is inference about a mental model rather than a
+measurement, the measured defect explains the report on its own, and the fix if it is needed is a
+third sprite — a dimmed ship for the recovery blink — not a new mechanism.
