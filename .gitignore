@@ -31,3 +31,6 @@ docs/milestones/
 # all of it. It was previously inside docs/scaffold-plan.md, which is explicitly not maintained past
 # RELEASE, so the only record of how to run node sat in a file scheduled to be deleted.
 docs/machine.md
+
+# Eyes-on output from scripts/shot.mjs. Working material, not keepsakes — see keepsakes/README.md.
+/shots/

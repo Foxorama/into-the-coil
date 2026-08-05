@@ -19,6 +19,12 @@ is 25 kB and opens straight off a file path with no server.
 import from here, no test may read it, and a difference between a keepsake and the current build is
 never evidence of a regression — it is what progress looks like.
 
+⚠️ **And this is NOT where `scripts/shot.mjs` writes.** That tool's output is working material —
+mostly from scratch builds that were never committed, with a boss moved to the start of a level or a
+wave list emptied to see something. It defaulted here once and eleven such images were tracked,
+which put pictures of builds that never existed into the one directory whose entire value is that its
+contents did. It writes to `shots/`, which is gitignored.
+
 ## What is here
 
 ### `screensaver-2026-08-04.*`
