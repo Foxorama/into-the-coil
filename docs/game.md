@@ -177,6 +177,16 @@ The vocabulary: faster fire, wider spray, shields, homing rockets, extra lasers,
 multi-tag tracking specials, piercing shots, faster engines, orbiting mines that are half shield and
 half weapon.
 
+**Two of them exist** — faster fire and wider spray, both always-on upgrades to auto-fire, both
+stacking, both lost on a death. Plus **extra lives**, which are the one pickup whose effect is on the
+run rather than on the ship. Decided,
+[0041](decisions/0041-a-pickup-is-the-answer-to-what-a-death-costs.md); the rest of the list is the
+arsenal's work, and nothing triggers a special yet.
+
+⚠️ **A level may never leave the player more than twenty seconds without something to rearm from**,
+because a death empties the arsenal. That is a constraint on every level ever authored, and it is
+guarded rather than remembered.
+
 ## Levels, bosses and hazards
 
 Themed on the fourteen *Far Carry* biomes, split into difficulty tiers. Each level gets its own

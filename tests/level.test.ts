@@ -238,7 +238,7 @@ describe('a boss fight can reach all of its phases', () => {
    */
   describe('and it can be fought, start to finish, with nothing but the base weapon', () => {
     /** A level that is nothing but its boss, so the fight is the only thing under test. */
-    const soloBoss = { waves: [], bossAt: 200, boss: 'sentinel' as const };
+    const soloBoss = { waves: [], pickups: [], bossAt: 200, boss: 'sentinel' as const };
 
     it('arrives, closes on its station, and then holds it', () => {
       const { world } = playableWorld(soloBoss);

@@ -14,7 +14,7 @@ import { PALETTES, type PaletteName } from '../content/palette.ts';
 import { ACROSS_SPAN, MAX_ALONG_SPAN, type View, viewOf } from '../sim/camera.ts';
 import { type Entity, makeEntity, reset } from '../sim/entity.ts';
 import { Pool } from '../sim/pool.ts';
-import { makeDeaths } from '../sim/collide.ts';
+import { makeCollected, makeDeaths } from '../sim/collide.ts';
 import { makeRng } from '../sim/rng.ts';
 import { atlasIsStale, bakeAtlas, viewFor } from '../render/bake.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
@@ -23,6 +23,7 @@ import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../content/enemies.ts';
 import { LEVELS } from '../content/levels.ts';
 import { BOSSES } from '../content/bosses.ts';
+import { PICKUPS, PICKUP_KINDS, type PickupKind, weaponFor } from '../content/pickups.ts';
 import { holdStation, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { SHIPS } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
@@ -47,7 +48,7 @@ import { runLoop } from './loop.ts';
  * Splitting one pool into four is what makes the collision cost the product of two small pools
  * instead of the square of one big one — `src/sim/collide.ts` has the argument.
  */
-const CAPACITY = { ship: 1, enemies: 40, playerShots: 80, enemyShots: 150, debris: 200, boss: 1 };
+const CAPACITY = { ship: 1, enemies: 40, playerShots: 80, enemyShots: 150, debris: 200, boss: 1, pickups: 8 };
 
 export interface Mounted {
   /** Stop the loop and drop the resize listener. */
@@ -156,6 +157,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const enemyShots = new Pool<Entity>(CAPACITY.enemyShots, makeEntity);
   const debris = new Pool<Entity>(CAPACITY.debris, makeEntity);
   const bossPool = new Pool<Entity>(CAPACITY.boss, makeEntity);
+  const pickupPool = new Pool<Entity>(CAPACITY.pickups, makeEntity);
+
+  /** Pickup rows in `PICKUP_KINDS` order, and the reverse lookup, built the same way enemies are. */
+  const pickupRows = PICKUP_KINDS.map((k) => PICKUPS[k]);
+  const pickupKinds = {} as Record<PickupKind, number>;
+  PICKUP_KINDS.forEach((k, index) => {
+    pickupKinds[k] = index;
+  });
 
   /** Enemy rows by index, so a per-step lookup in the frame is an array index and not a string key. */
   const enemyRows: readonly EnemyRow[] = ENEMY_KINDS.map((k) => ENEMIES[k]);
@@ -233,7 +242,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // ⚠️ The boss sits directly above the debris and BELOW everything else. It is four times the
     // size of anything on screen, so drawing it over the enemies and shots would hide exactly the
     // things the player cannot afford to lose track of while fighting it.
-    layers: [debris, bossPool, enemies, enemyShots, playerShots, shipPool],
+    // Pickups sit just above the debris and below every threat: the player must never lose a bullet
+    // behind the thing they are flying towards.
+    layers: [debris, pickupPool, bossPool, enemies, enemyShots, playerShots, shipPool],
     shipPool,
     enemies,
     playerShots,
@@ -263,8 +274,17 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     bossSpawned: false,
     bossBeaten: false,
     bossPatrol: 1,
+    nextPickup: 0,
+    pickups: pickupPool,
+    pickupRows,
+    pickupKinds,
+    collected: makeCollected(CAPACITY.pickups),
+    // The base weapon, which is what an empty upgrade list resolves to. There is no second
+    // description of it anywhere — 0039's "back to the base weapon" is this call with `[]`.
+    weapon: weaponFor(shipRow, []),
     // Replaced below, once `dispatch` exists — the same reason `onDeath` is.
     onCleared: (): void => {},
+    onPickup: (): void => {},
     // The game as designed, per 0024 — every knob at its least-assisted position. There is no
     // settings screen yet to move them, and `tuningFor` is where they will arrive from when there is.
     tuning: tuningFor(DEFAULT_ASSISTS),
@@ -336,7 +356,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const next = reduce(state, action);
     if (next === state) return;
     const moved = next.screen !== state.screen;
+    const rearmed = next.run.upgrades !== state.run.upgrades;
     state = next;
+    /*
+      ⚠️ **Re-resolved on a CHANGE of the list, by identity, not on every dispatch.** `weaponFor`
+      walks the whole upgrade list, which is right for a pure function of saved state and wrong to do
+      sixty times a second — and `src/app/frame.ts` may not allocate, so it could not do it there
+      anyway. The reducer preserves identity when a slice does not move
+      (`tests/run.test.ts` holds that), which is what makes `!==` the whole test.
+    */
+    if (rearmed) world.weapon = weaponFor(shipRow, state.run.upgrades);
     // Only on a real transition: `show` moves focus, and re-focusing a button on every dispatch
     // would fight a player who had tabbed away from it.
     if (moved) applyScreen();
@@ -384,6 +413,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   world.onCleared = (): void => {
     dispatch({ slice: 'run', type: 'levelCleared' });
     dispatch({ slice: 'screen', type: 'show', screen: 'cleared' });
+  };
+
+  /*
+    A pickup landed. The two effects go to different fields and are cleared by different events —
+    `src/content/pickups.ts` has the split, and 0039 has the reason for it.
+  */
+  world.onPickup = (kind: PickupKind): void => {
+    if (PICKUPS[kind].effect === 'life') dispatch({ slice: 'run', type: 'gainedLife' });
+    else dispatch({ slice: 'run', type: 'upgraded', upgrade: kind === 'rapid' ? 'rapid' : 'spread' });
   };
 
   /** Re-measure, re-fit and — only if the orientation or resolution actually moved — re-bake. */

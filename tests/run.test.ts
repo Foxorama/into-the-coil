@@ -28,9 +28,22 @@ const BEGIN: Action = { slice: 'run', type: 'begin' };
 const PLAY: Action = { slice: 'screen', type: 'show', screen: 'playing' };
 const DIE: Action = { slice: 'run', type: 'lifeLost' };
 
-/** A run in progress, with something in the arsenal to lose. */
+/**
+ * A run in progress with something to lose — in BOTH of the places a death empties.
+ *
+ * ⚠️ **The upgrades half was added because `npm run prove` caught its absence.** Without them, a
+ * break that left the weapon upgrades on the ship through a death kept the whole suite green: the
+ * assertion below read the arsenal and nothing read the field beside it.
+ */
 function armed(): State {
-  return play(BEGIN, PLAY, { slice: 'run', type: 'took', special: 'bomb' }, { slice: 'run', type: 'took', special: 'shield' });
+  return play(
+    BEGIN,
+    PLAY,
+    { slice: 'run', type: 'took', special: 'bomb' },
+    { slice: 'run', type: 'took', special: 'shield' },
+    { slice: 'run', type: 'upgraded', upgrade: 'rapid' },
+    { slice: 'run', type: 'upgraded', upgrade: 'spread' },
+  );
 }
 
 describe('a run is lives', () => {
@@ -58,7 +71,20 @@ describe('a run is lives', () => {
     // ship only ever gets stronger, and the last level is the easiest thing in the game.
     const before = armed();
     expect(before.run.arsenal, 'the fixture has nothing to lose, so this proves nothing').toEqual(['bomb', 'shield']);
-    expect(reduce(before, DIE).run.arsenal, 'the arsenal survived a death').toEqual([]);
+    expect(before.run.upgrades, 'the fixture has no upgrades to lose, so this proves half of nothing').toEqual([
+      'rapid',
+      'spread',
+    ]);
+
+    const after = reduce(before, DIE);
+    expect(after.run.arsenal, 'the arsenal survived a death').toEqual([]);
+    /*
+      ⚠️ **Both fields, because "back to the ship's base weapon and starting special" is two fields.**
+      `docs/decisions/0041-a-pickup-is-the-answer-to-what-a-death-costs.md` made the base weapon
+      exactly what an empty upgrade list resolves to, so this line is what makes that sentence true
+      rather than aspirational.
+    */
+    expect(after.run.upgrades, 'the weapon upgrades survived a death').toEqual([]);
   });
 
   it('clears the arsenal on the LAST death too, so the rule has no hidden condition', () => {

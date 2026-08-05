@@ -18,8 +18,8 @@ export const PROBES = [
     guard: 'a death clears the arsenal back to base',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: "return state.lives <= 0 ? state : { lives: state.lives - 1, level: state.level, arsenal: [] };",
-      replace: "return state.lives <= 0 ? state : { lives: state.lives - 1, level: state.level, arsenal: state.arsenal };",
+      find: '        : { lives: state.lives - 1, level: state.level, arsenal: [], upgrades: [] };',
+      replace: '        : { lives: state.lives - 1, level: state.level, arsenal: state.arsenal, upgrades: [] };',
     },
   },
   {
@@ -31,8 +31,8 @@ export const PROBES = [
     guard: 'lives never go below zero',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: "return state.lives <= 0 ? state : { lives: state.lives - 1, level: state.level, arsenal: [] };",
-      replace: "return { lives: state.lives - 1, level: state.level, arsenal: [] };",
+      find: '      return state.lives <= 0\n        ? state\n        : { lives: state.lives - 1, level: state.level, arsenal: [], upgrades: [] };',
+      replace: '      return { lives: state.lives - 1, level: state.level, arsenal: [], upgrades: [] };',
     },
   },
   {

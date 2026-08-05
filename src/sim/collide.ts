@@ -156,6 +156,45 @@ export function collideInto(
   return destroyed;
 }
 
+/** What was collected this step, so a caller can decide what each one is worth. */
+export interface Collected {
+  /** How many entries of `kind` are meaningful. Reset by the caller, never here. */
+  count: number;
+  /** The `kind` each collected entity carried — opaque here, an index the composer owns. */
+  kind: number[];
+}
+
+/** A log big enough for `capacity` collections in one step. Built once, at boot. */
+export function makeCollected(capacity: number): Collected {
+  // @setup: one log, built when the world is composed and reused every step forever.
+  return { count: 0, kind: new Array<number>(capacity).fill(0) };
+}
+
+/**
+ * Things the ship flies into and keeps.
+ *
+ * ⚠️ **Deliberately NOT `collideIntoOne` with zero damage.** Three of that function's rules are
+ * exactly wrong here: it skips a target that is invulnerable, it takes only the WORST of what is
+ * touching, and it exists to reduce health. A player who is briefly invulnerable after a hit must
+ * still be able to collect — the alternative is a pickup that silently passes through the ship at
+ * the one moment the player is most likely to be flying into things — and two pickups touched on the
+ * same step are two pickups, not the worse of them.
+ *
+ * ⚠️ It reports kinds and decides nothing, for the reason `Deaths` gives: `sim/` may import `brand`
+ * and nothing else, so it cannot know what a pickup IS.
+ */
+export function collectInto(pickups: Pool<Entity>, target: Entity, targetRadiusScale: number, out: Collected): void {
+  for (let i = pickups.size - 1; i >= 0; i--) {
+    const pickup = pickups.at(i);
+    if (!overlaps(pickup, target, targetRadiusScale)) continue;
+    if (out.count < out.kind.length) {
+      out.kind[out.count] = pickup.kind;
+      out.count++;
+    }
+    pickups.releaseAt(i);
+  }
+}
+
 /**
  * Threats arriving at one entity — the ship. Returns the damage it actually took.
  *
