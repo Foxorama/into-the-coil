@@ -70,8 +70,12 @@ export const PROBES = [
     guard: "every screen's chrome namespaces its classes",
     edit: {
       path: 'src/app/chrome.ts',
-      find: '.itc-title-shown, .itc-gameover-shown { display: flex; }',
-      replace: '.itc-title-shown, .itc-gameover-shown { display: flex; }\n.hud { opacity: 1; }',
+      // ⚠️ Anchored on the FOCUS RING rather than on the shown-state rule, and the first version was
+      // anchored on the latter and went stale within a day: adding the `cleared` screen extended
+      // that selector list and `npm run prove` refused the probe. A rule every new screen has to
+      // join is a bad anchor; this one is a property of the button, which is not per-screen.
+      find: '  outline: 3px solid currentColor;',
+      replace: '  outline: 3px solid currentColor;\n}\n.hud {\n  opacity: 1;',
     },
   },
 ];
