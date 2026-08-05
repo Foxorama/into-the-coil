@@ -57,10 +57,12 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * The player's auto-fire. Fast, small, and cheap to survive being wrong about — it is the shot
    * `docs/game.md` says the player never thinks about.
    */
-  pulse: { sprite: SPRITE.bullet, radius: 0.9, health: 1, damage: 1, speed: 2.6 },
+  // ⚠️ `spriteHit` is the same bitmap, and that is honest rather than lazy: a shot has one health,
+  // so it never survives a hit and never flashes. There is no second silhouette to draw.
+  pulse: { sprite: SPRITE.bullet, spriteHit: SPRITE.bullet, radius: 0.9, health: 1, damage: 1, speed: 2.6 },
   /**
    * What an enemy sends back. **Slower than the ship**, which is the whole of what makes it
    * dodgeable rather than a coin flip: a player who reacts can always leave the line it is on.
    */
-  spit: { sprite: SPRITE.bullet, radius: 0.9, health: 1, damage: 1, speed: 1.4 },
+  spit: { sprite: SPRITE.bullet, spriteHit: SPRITE.bullet, radius: 0.9, health: 1, damage: 1, speed: 1.4 },
 };

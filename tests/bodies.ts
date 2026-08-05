@@ -14,10 +14,16 @@ import type { Body } from '../src/sim/entity.ts';
 
 /** A body that is drawn as `index` and is otherwise inert: no reach, no health worth taking. */
 export function sprite(index: number): Body {
-  return { sprite: index, radius: 0, health: 1, damage: 0 };
+  return { sprite: index, spriteHit: index, radius: 0, health: 1, damage: 0 };
 }
 
-/** A body with a hurtbox, for the tests that are about contact. */
-export function bodyOf(index: number, radius: number, health: number, damage: number): Body {
-  return { sprite: index, radius, health, damage };
+/**
+ * A body with a hurtbox, for the tests that are about contact.
+ *
+ * `spriteHit` defaults to the same bitmap, because most of these tests are about whether contact
+ * happened rather than about whether it was visible. A test that cares passes its own — and
+ * `tests/combat.test.ts` has the ones that do.
+ */
+export function bodyOf(index: number, radius: number, health: number, damage: number, hit = index): Body {
+  return { sprite: index, spriteHit: hit, radius, health, damage };
 }

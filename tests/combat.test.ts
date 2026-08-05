@@ -33,7 +33,7 @@ import { makeRng } from '../src/sim/rng.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { INVULN_STEPS, SHIPS } from '../src/content/ships.ts';
 import { SHOT_KINDS, SHOTS } from '../src/content/shots.ts';
-import { SPRITE, SPRITE_EXTENT } from '../src/content/sprites.ts';
+import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { GameFrame, SHIP_START_ALONG, type World } from '../src/app/frame.ts';
 import { STEP_MS } from '../src/app/loop.ts';
 import type { InputSource } from '../src/app/input.ts';
@@ -56,6 +56,9 @@ const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
 const VIEWPORT = { width: 844, height: 390 };
 
 const NEVER = 1_000_000;
+
+/** Steps of hit flash the tests below hand to a collision. Any positive number; nothing asserts it. */
+const FLASH = 8;
 
 // ── THE RULE THAT KEEPS THE TUNING ORDER MEANINGFUL ──────────────────────────────────────────────
 
@@ -112,13 +115,13 @@ describe('a shot cannot step over the thing it was fired at', () => {
     const shots = new Pool<Entity>(1, makeEntity);
     const targets = new Pool<Entity>(1, makeEntity);
     const target = targets.spawn()!;
-    reset(target, 100, 50, bodyOf(SPRITE.enemy, 2, 2, 0));
+    reset(target, 100, 50, bodyOf(SPRITE.drifter, 2, 2, 0));
     const shot = shots.spawn()!;
     reset(shot, from, across, bodyOf(SPRITE.bullet, 0.9, 1, 1));
     shot.velAlong = speed;
     stepEntities(shots, 0);
     stepEntities(targets, 0);
-    const destroyed = collideInto(shots, targets, 1, 1);
+    const destroyed = collideInto(shots, targets, 1, 1, FLASH);
     return { hit: destroyed > 0 || target.health < 2, health: target.health };
   }
 
@@ -160,10 +163,21 @@ describe('a hurtbox is smaller than the art and not very much smaller', () => {
       ⚠️ The band is deliberately wide. It is not a claim about what feels fair; it is a claim that
       the drawn size and the hit size cannot drift apart without somebody saying so.
     */
+    /*
+      Extent looked up through the row's OWN sprite rather than named per family by hand.
+
+      ⚠️ It used to read `SPRITE_EXTENT.enemy` for every enemy, which stopped compiling the moment
+      each enemy kind got its own silhouette — and would silently have measured the wrong sprite if
+      the two had happened to share a name. Going through `row.sprite` means a new kind is covered by
+      this the day it is added, without anybody remembering to extend a list.
+    */
+    const extentOf: number[] = [];
+    for (const k of SPRITE_KINDS) extentOf[SPRITE[k]] = SPRITE_EXTENT[k];
+
     const bodies: [string, number, number][] = [
-      ['ship', SHIPS.proof.radius, SPRITE_EXTENT.ship],
-      ...ENEMY_KINDS.map((k): [string, number, number] => [k, ENEMIES[k].radius, SPRITE_EXTENT.enemy]),
-      ...SHOT_KINDS.map((k): [string, number, number] => [k, SHOTS[k].radius, SPRITE_EXTENT.bullet]),
+      ['ship', SHIPS.proof.radius, extentOf[SHIPS.proof.sprite]!],
+      ...ENEMY_KINDS.map((k): [string, number, number] => [k, ENEMIES[k].radius, extentOf[ENEMIES[k].sprite]!]),
+      ...SHOT_KINDS.map((k): [string, number, number] => [k, SHOTS[k].radius, extentOf[SHOTS[k].sprite]!]),
     ];
     for (const [name, radius, extent] of bodies) {
       const fraction = radius / extent;
@@ -184,12 +198,12 @@ describe('who can hit whom is the caller’s decision, and it is the whole guard
   it('a shot is spent by arriving, and a target that runs out of health is retired', () => {
     const { shots, targets } = twoPools();
     const target = targets.spawn()!;
-    reset(target, 100, 50, bodyOf(SPRITE.enemy, 2.6, 2, 2));
+    reset(target, 100, 50, bodyOf(SPRITE.drifter, 2.6, 2, 2));
     for (let i = 0; i < 2; i++) {
       const shot = shots.spawn()!;
       reset(shot, 100, 50, bodyOf(SPRITE.bullet, 0.9, 1, 1));
     }
-    expect(collideInto(shots, targets, 1, 1), 'two hits on two health did not destroy it').toBe(1);
+    expect(collideInto(shots, targets, 1, 1, FLASH), 'two hits on two health did not destroy it').toBe(1);
     expect(shots.size, 'a shot survived arriving').toBe(0);
     expect(targets.size).toBe(0);
   });
@@ -197,10 +211,10 @@ describe('who can hit whom is the caller’s decision, and it is the whole guard
   it('a miss costs nothing on either side', () => {
     const { shots, targets } = twoPools();
     const target = targets.spawn()!;
-    reset(target, 100, 50, bodyOf(SPRITE.enemy, 2.6, 2, 2));
+    reset(target, 100, 50, bodyOf(SPRITE.drifter, 2.6, 2, 2));
     const shot = shots.spawn()!;
     reset(shot, 100, 90, bodyOf(SPRITE.bullet, 0.9, 1, 1));
-    expect(collideInto(shots, targets, 1, 1)).toBe(0);
+    expect(collideInto(shots, targets, 1, 1, FLASH)).toBe(0);
     expect(shots.size).toBe(1);
     expect(target.health).toBe(2);
   });
@@ -212,11 +226,11 @@ describe('who can hit whom is the caller’s decision, and it is the whole guard
     const targets = new Pool<Entity>(8, makeEntity);
     for (let i = 0; i < 8; i++) {
       const t = targets.spawn()!;
-      reset(t, 100 + i * 20, 50, bodyOf(SPRITE.enemy, 2.6, 1, 2));
+      reset(t, 100 + i * 20, 50, bodyOf(SPRITE.drifter, 2.6, 1, 2));
       const s = shots.spawn()!;
       reset(s, 100 + i * 20, 50, bodyOf(SPRITE.bullet, 0.9, 1, 1));
     }
-    expect(collideInto(shots, targets, 1, 1), 'a pass over eight overlapping pairs missed some').toBe(8);
+    expect(collideInto(shots, targets, 1, 1, FLASH), 'a pass over eight overlapping pairs missed some').toBe(8);
     expect(targets.size).toBe(0);
     expect(shots.size).toBe(0);
   });
@@ -224,10 +238,10 @@ describe('who can hit whom is the caller’s decision, and it is the whole guard
   it('a body is not consumed by being flown into, or ramming would clear the screen', () => {
     const enemies = new Pool<Entity>(1, makeEntity);
     const enemy = enemies.spawn()!;
-    reset(enemy, 100, 50, bodyOf(SPRITE.enemy, 2.6, 2, 2));
+    reset(enemy, 100, 50, bodyOf(SPRITE.drifter, 2.6, 2, 2));
     const ship = makeEntity();
     reset(ship, 100, 50, SHIPS.proof);
-    expect(collideIntoOne(enemies, ship, 1, 1, INVULN_STEPS, false)).toBe(2);
+    expect(collideIntoOne(enemies, ship, 1, 1, INVULN_STEPS, INVULN_STEPS, false)).toBe(2);
     expect(enemies.size, 'the enemy died of being touched').toBe(1);
   });
 });
@@ -242,13 +256,13 @@ describe('health is a number of hits and not a number of steps', () => {
     */
     const enemies = new Pool<Entity>(1, makeEntity);
     const enemy = enemies.spawn()!;
-    reset(enemy, 100, 50, bodyOf(SPRITE.enemy, 2.6, 99, 1));
+    reset(enemy, 100, 50, bodyOf(SPRITE.drifter, 2.6, 99, 1));
     const ship = makeEntity();
     reset(ship, 100, 50, SHIPS.proof);
 
     const start = ship.health;
     for (let step = 0; step < INVULN_STEPS; step++) {
-      collideIntoOne(enemies, ship, 1, 1, INVULN_STEPS, false);
+      collideIntoOne(enemies, ship, 1, 1, INVULN_STEPS, INVULN_STEPS, false);
       if (ship.invulnFor > 0) ship.invulnFor--;
     }
     expect(start - ship.health, 'the ship was billed per step rather than per hit').toBe(1);
@@ -257,13 +271,13 @@ describe('health is a number of hits and not a number of steps', () => {
   it('and the flashing ends, so the ship is not permanently safe', () => {
     const enemies = new Pool<Entity>(1, makeEntity);
     const enemy = enemies.spawn()!;
-    reset(enemy, 100, 50, bodyOf(SPRITE.enemy, 2.6, 99, 1));
+    reset(enemy, 100, 50, bodyOf(SPRITE.drifter, 2.6, 99, 1));
     const ship = makeEntity();
     reset(ship, 100, 50, SHIPS.proof);
 
     let hits = 0;
     for (let step = 0; step < INVULN_STEPS * 3; step++) {
-      if (collideIntoOne(enemies, ship, 1, 1, INVULN_STEPS, false) > 0) hits++;
+      if (collideIntoOne(enemies, ship, 1, 1, INVULN_STEPS, INVULN_STEPS, false) > 0) hits++;
       if (ship.invulnFor > 0) ship.invulnFor--;
     }
     expect(hits, 'invulnerability never expired — the ship is immortal').toBeGreaterThan(1);
@@ -312,11 +326,11 @@ function damageUnder(assists: Assists): number {
   reset(ship, 100, 50, SHIPS.proof);
   // Inside both circles: reach is 2.6 + 2 exact, 2.6 + 1.4 forgiving, against a distance of 1.
   const heavy = threats.spawn()!;
-  reset(heavy, 101, 50, bodyOf(SPRITE.enemy, 2.6, 1, 3));
+  reset(heavy, 101, 50, bodyOf(SPRITE.drifter, 2.6, 1, 3));
   // Inside the exact circle only: reach is 0.9 + 2 exact, 0.9 + 1.4 forgiving, at a distance of 2.6.
   const light = threats.spawn()!;
   reset(light, 102.6, 50, bodyOf(SPRITE.bullet, 0.9, 1, 1));
-  return collideIntoOne(threats, ship, tuning.hurtbox, tuning.playerDamage, INVULN_STEPS, false);
+  return collideIntoOne(threats, ship, tuning.hurtbox, tuning.playerDamage, INVULN_STEPS, INVULN_STEPS, false);
 }
 
 describe('no assist makes the game harder, and now that is a claim about the CODE', () => {
@@ -529,6 +543,93 @@ describe('an aimed shot arrives, and a player who moves is not there when it doe
   });
 });
 
+// ── A HIT THAT CHANGES NOTHING ON SCREEN READS AS A BUG, AND WAS REPORTED AS ONE ────────────────
+
+describe('damage is legible on the body that took it', () => {
+  /*
+    ⚠️ **THE PLAY-TEST FINDING**, `reports/combat-legibility-2026-08-05.md`:
+    *"I legit thought it was a bug for a bit that bullets hit an enemy and the enemy didn't get
+    destroyed."*
+
+    Every enemy shipped with two health and no damage feedback, so the FIRST shot to land on
+    anything in the game removed a bullet and changed nothing else. That is pixel-for-pixel what a
+    shot passing straight through looks like. The model was right, every assertion was green, and the
+    picture was reporting a collision failure that had not happened —
+    `docs/decisions/0027-measure-the-picture-not-the-model.md` again, from the feedback side.
+  */
+  function hitOnce(body: ReturnType<typeof bodyOf>): Entity {
+    const shots = new Pool<Entity>(1, makeEntity);
+    const targets = new Pool<Entity>(1, makeEntity);
+    const target = targets.spawn()!;
+    reset(target, 100, 50, body);
+    const shot = shots.spawn()!;
+    reset(shot, 100, 50, bodyOf(SPRITE.bullet, 0.9, 1, 1));
+    collideInto(shots, targets, 1, 1, FLASH);
+    return target;
+  }
+
+  it('THE ONE: a survivor is drawn differently on the step it is hit', () => {
+    const survivor = hitOnce(bodyOf(SPRITE.lancer, 2.6, 2, 2, SPRITE.lancerHit));
+    expect(survivor.health, 'this scenario is meant to leave the target alive').toBeGreaterThan(0);
+    const pool = new Pool<Entity>(1, makeEntity);
+    const drawn = pool.spawn()!;
+    reset(drawn, 100, 50, bodyOf(SPRITE.lancer, 2.6, 2, 2, SPRITE.lancerHit));
+    drawn.flashFor = survivor.flashFor;
+    stepEntities(pool, 0);
+    expect(drawn.sprite, 'the enemy survived a hit and is drawn exactly as it was before it').toBe(SPRITE.lancerHit);
+  });
+
+  it('and goes back to itself afterwards, so the flash is an event and not a state', () => {
+    const pool = new Pool<Entity>(1, makeEntity);
+    const e = pool.spawn()!;
+    reset(e, 100, 50, bodyOf(SPRITE.lancer, 2.6, 2, 2, SPRITE.lancerHit));
+    e.flashFor = FLASH;
+    for (let step = 0; step <= FLASH; step++) stepEntities(pool, 0);
+    expect(e.sprite, 'the enemy never stopped flashing — it has simply changed colour').toBe(SPRITE.lancer);
+  });
+
+  it('a shot never flashes, because it does not survive being one', () => {
+    // Not a special case in the code, and worth pinning as a consequence rather than a rule: a shot
+    // has one health, so `collideInto` releases it rather than reaching the flash at all.
+    for (const kind of SHOT_KINDS) {
+      expect(SHOTS[kind].health, `${kind} survives a hit, which would need a hit sprite of its own`).toBe(1);
+    }
+  });
+
+  it('every enemy kind has a hit sprite that is not its ordinary one', () => {
+    // The compile-forced half is that `spriteHit` exists. This is the half a `Record` cannot hold:
+    // that somebody filled it in with a DIFFERENT bitmap rather than the same one twice.
+    for (const kind of ENEMY_KINDS) {
+      expect(ENEMIES[kind].spriteHit, `${kind} flashes to the sprite it already was`).not.toBe(ENEMIES[kind].sprite);
+    }
+    expect(SHIPS.proof.spriteHit).not.toBe(SHIPS.proof.sprite);
+  });
+});
+
+describe('an enemy kind is told apart by its silhouette, not by its colour', () => {
+  it('no two enemy kinds share a sprite', () => {
+    /*
+      `docs/decisions/0024-the-accessibility-floor-is-settings.md` puts *colour never carries meaning
+      alone* in the unconditional tier, so shape is the channel that has to carry which enemy this
+      is. `drifter` and `lancer` shipped as the same diamond — one closes and shoots where the ship
+      is, the other cannot do either, and a player had no way to tell which was which.
+    */
+    const seen = new Map<number, string>();
+    for (const kind of ENEMY_KINDS) {
+      const other = seen.get(ENEMIES[kind].sprite);
+      expect(other, `${kind} and ${other} are drawn as the same shape`).toBeUndefined();
+      seen.set(ENEMIES[kind].sprite, kind);
+    }
+  });
+
+  it('and the ink alone would not be enough, which is why the shapes differ', () => {
+    // Every enemy is drawn in the same ink by design — they are all enemies. That is exactly why the
+    // silhouette has to do the work, and it is why this file checks sprites rather than colours.
+    expect(ENEMY_KINDS.length, 'there is only one enemy kind, so this guard is not yet load-bearing')
+      .toBeGreaterThan(1);
+  });
+});
+
 // ── DRAW ORDER, WHICH USED TO BE WHATEVER THE POOL HAPPENED TO CONTAIN ──────────────────────────
 
 describe('layers are drawn in the order they are given', () => {
@@ -551,13 +652,13 @@ describe('layers are drawn in the order they are given', () => {
     };
     const back = new Pool<Entity>(2, makeEntity);
     const front = new Pool<Entity>(1, makeEntity);
-    for (let i = 0; i < 2; i++) reset(back.spawn()!, 100 + i, 50, bodyOf(SPRITE.enemy, 1, 1, 0));
+    for (let i = 0; i < 2; i++) reset(back.spawn()!, 100 + i, 50, bodyOf(SPRITE.drifter, 1, 1, 0));
     reset(front.spawn()!, 100, 50, SHIPS.proof);
 
     paintScene(recording, viewOf(VIEWPORT.width, VIEWPORT.height), [back, front], 90, 1);
     expect(order, 'the ship was not drawn last, so it is underneath everything else').toEqual([
-      SPRITE.enemy,
-      SPRITE.enemy,
+      SPRITE.drifter,
+      SPRITE.drifter,
       SPRITE.ship,
     ]);
   });

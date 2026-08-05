@@ -47,9 +47,32 @@ export interface Body {
   health: number;
   /** What it takes off whatever it hits. */
   damage: number;
+  /**
+   * Which bitmap to blit while it is flashing from a hit — the same silhouette in the `impact` ink.
+   *
+   * ⚠️ **On the body, so that a hit is legible on ANY body rather than only on the ship.** The first
+   * version flashed the player and nothing else, and every enemy in the game had two health, so the
+   * first shot to land on anything looked like it had passed straight through. That reads as a
+   * collision bug and was reported as one.
+   * `docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md`.
+   */
+  spriteHit: number;
 }
 
 export interface Entity extends Body {
+  /**
+   * The bitmap this is drawn as when nothing is happening to it.
+   *
+   * ⚠️ `sprite` is DERIVED — `stepEntities` writes it every step from `spriteBase`, `spriteHit` and
+   * `flashFor`. The alternative was to swap the two values in place and keep an implicit invariant
+   * that `sprite` is the hit one exactly while `flashFor > 0`; a third number is cheaper than an
+   * invariant two call sites have to remember, and a pool is plain numbers anyway.
+   *
+   * ⚠️ **The selection is here rather than in the painter.** `src/render/scene.ts` draws what it is
+   * handed — 0015's rule for the layer — and a branch there on "is this thing flashing" is the
+   * painter deciding what exists.
+   */
+  spriteBase: number;
   /** Position along the scroll axis, in world units. */
   along: number;
   /** Position across it, in world units. `0` to `ACROSS_SPAN`. */
@@ -69,6 +92,16 @@ export interface Entity extends Body {
    * from full health, which is a bug report about collision and is really this field missing.
    */
   invulnFor: number;
+  /**
+   * Steps of hit flash remaining. Counted down by `stepEntities`, set by `collide`.
+   *
+   * ⚠️ **Separate from `invulnFor`, and the split is the point.** One is a rule — what may hit this
+   * — and the other is a picture — whether the player can see that something did. The ship happens
+   * to want both at once; an enemy takes every hit and still has to show each one, and a shot shows
+   * nothing because it does not survive. Folding them into one counter makes every future body that
+   * flashes without being invulnerable a special case.
+   */
+  flashFor: number;
   /**
    * Which row this was spawned from, as an index into a list the COMPOSER owns.
    *
@@ -100,10 +133,13 @@ export function makeEntity(): Entity {
     velAlong: 0,
     velAcross: 0,
     sprite: 0,
+    spriteBase: 0,
     radius: 0,
     health: 0,
     damage: 0,
+    spriteHit: 0,
     invulnFor: 0,
+    flashFor: 0,
     kind: 0,
     fireIn: 0,
   };
@@ -124,10 +160,13 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.velAlong = 0;
   e.velAcross = 0;
   e.sprite = body.sprite;
+  e.spriteBase = body.sprite;
   e.radius = body.radius;
   e.health = body.health;
   e.damage = body.damage;
+  e.spriteHit = body.spriteHit;
   e.invulnFor = 0;
+  e.flashFor = 0;
   e.kind = kind;
   e.fireIn = 0;
 }
@@ -154,6 +193,9 @@ export function stepEntities(pool: Pool<Entity>, cameraAlong: number): void {
     e.along += e.velAlong;
     e.across += e.velAcross;
     if (e.invulnFor > 0) e.invulnFor--;
+    if (e.flashFor > 0) e.flashFor--;
+    // The one place the hit flash is decided, for every body in the game rather than for the ship.
+    e.sprite = e.flashFor > 0 ? e.spriteHit : e.spriteBase;
     if (e.along < cull || e.along > cullLeading) pool.releaseAt(i);
   }
 }

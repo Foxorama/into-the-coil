@@ -12,14 +12,53 @@
  * with a `never` arm, so a kind added here fails to build until it has been drawn.
  */
 
-/** What can be drawn. */
-export type SpriteKind = 'ship' | 'shipHit' | 'enemy' | 'bullet' | 'pickup';
+/**
+ * What can be drawn.
+ *
+ * ⚠️ **A kind per enemy, not one `enemy` for all of them**, and it is a play-test finding rather
+ * than a preference: `drifter` and `lancer` shipped as the same diamond, so the one that shoots back
+ * and the one that cannot were indistinguishable.
+ * `docs/decisions/0024-the-accessibility-floor-is-settings.md` puts *colour never carries meaning
+ * alone* in the unconditional tier, which makes silhouette the channel that has to carry it — and
+ * the lancer's nose points at the player, so its shape says what it does.
+ *
+ * ⚠️ **Every kind that can take damage has a `…Hit` twin**, which is the same silhouette in the
+ * `impact` ink. A hit that changes nothing on screen reads as a bug, and did.
+ * [0035](../../docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md).
+ */
+export type SpriteKind =
+  | 'ship'
+  | 'shipHit'
+  | 'drifter'
+  | 'drifterHit'
+  | 'lancer'
+  | 'lancerHit'
+  | 'bullet'
+  | 'pickup';
 
 /** Baking order, and therefore the blit index. Explicit, never derived from the table. */
-export const SPRITE_KINDS: readonly SpriteKind[] = ['ship', 'shipHit', 'enemy', 'bullet', 'pickup'];
+export const SPRITE_KINDS: readonly SpriteKind[] = [
+  'ship',
+  'shipHit',
+  'drifter',
+  'drifterHit',
+  'lancer',
+  'lancerHit',
+  'bullet',
+  'pickup',
+];
 
 /** The index a painter blits by. A number, because this is read five hundred times a frame. */
-export const SPRITE: Record<SpriteKind, number> = { ship: 0, shipHit: 1, enemy: 2, bullet: 3, pickup: 4 };
+export const SPRITE: Record<SpriteKind, number> = {
+  ship: 0,
+  shipHit: 1,
+  drifter: 2,
+  drifterHit: 3,
+  lancer: 4,
+  lancerHit: 5,
+  bullet: 6,
+  pickup: 7,
+};
 
 /**
  * How big each kind is, in WORLD units across — so its screen size falls out of the camera.
@@ -34,7 +73,10 @@ export const SPRITE: Record<SpriteKind, number> = { ship: 0, shipHit: 1, enemy: 
 export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   ship: 7,
   shipHit: 7,
-  enemy: 5.5,
+  drifter: 5.5,
+  drifterHit: 5.5,
+  lancer: 5.5,
+  lancerHit: 5.5,
   bullet: 1.8,
   pickup: 3.5,
 };

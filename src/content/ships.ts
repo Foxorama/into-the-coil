@@ -38,7 +38,15 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
    * The proof scene's ship. `health` is hits, not a bar: five is enough that a player learns what
    * killed them, and few enough that they find out inside one sitting.
    */
-  proof: { sprite: SPRITE.ship, radius: 2, health: 5, damage: 0, fireEvery: 9, shot: 'pulse' },
+  proof: {
+    sprite: SPRITE.ship,
+    spriteHit: SPRITE.shipHit,
+    radius: 2,
+    health: 5,
+    damage: 0,
+    fireEvery: 9,
+    shot: 'pulse',
+  },
 };
 
 /**

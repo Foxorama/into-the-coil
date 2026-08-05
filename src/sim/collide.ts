@@ -93,6 +93,7 @@ export function collideInto(
   targets: Pool<Entity>,
   targetRadiusScale: number,
   damageScale: number,
+  flashSteps: number,
 ): number {
   let destroyed = 0;
   for (let t = targets.size - 1; t >= 0; t--) {
@@ -108,6 +109,16 @@ export function collideInto(
         destroyed++;
         break;
       }
+      /*
+        ⚠️ **A SURVIVED HIT HAS TO SHOW.** Without this the shot simply vanishes and the target is
+        unchanged, which is indistinguishable from the shot passing through — and it was reported as
+        exactly that, on a build where every enemy had two health so the FIRST hit on everything in
+        the game looked like a collision bug.
+
+        On the survivor only. A target that died is already gone from the screen, which is its own
+        feedback and a louder one.
+      */
+      target.flashFor = flashSteps;
     }
   }
   return destroyed;
@@ -140,6 +151,7 @@ export function collideIntoOne(
   targetRadiusScale: number,
   damageScale: number,
   invulnSteps: number,
+  flashSteps: number,
   consume: boolean,
 ): number {
   if (target.invulnFor > 0) return 0;
@@ -154,6 +166,10 @@ export function collideIntoOne(
   if (taken > 0) {
     target.health -= taken;
     target.invulnFor = invulnSteps;
+    // Lit for the whole invulnerable window rather than a short burst, so the flash says two things
+    // at once: *that hurt*, and *you are briefly safe*. Whether a solid flash or a blink reads better
+    // is a picture question and belongs to a hand, not to this file.
+    target.flashFor = flashSteps;
   }
   return taken;
 }

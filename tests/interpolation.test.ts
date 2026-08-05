@@ -145,10 +145,10 @@ describe('the camera interpolates on the same alpha as everything it is subtract
 
     frame.step();
     frame.draw(0.5);
-    const before = { ...drawnAt(surface, SPRITE.enemy)! };
+    const before = { ...drawnAt(surface, SPRITE.drifter)! };
     for (let i = 0; i < 30; i++) frame.step();
     frame.draw(0.5);
-    const after = drawnAt(surface, SPRITE.enemy)!;
+    const after = drawnAt(surface, SPRITE.drifter)!;
     expect(Math.hypot(after.x - before.x, after.y - before.y)).toBeGreaterThan(10);
   });
 });

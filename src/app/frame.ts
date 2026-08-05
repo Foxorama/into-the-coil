@@ -37,7 +37,6 @@ import type { EnemyRow } from '../content/enemies.ts';
 import type { ShipRow } from '../content/ships.ts';
 import { INVULN_STEPS } from '../content/ships.ts';
 import { SHOTS } from '../content/shots.ts';
-import { SPRITE } from '../content/sprites.ts';
 import type { Frame } from './loop.ts';
 
 /** How far in front of the ship a shot appears, in world units — clear of its own hurtbox. */
@@ -55,15 +54,17 @@ const SPAWN_EVERY = 42;
 export const SHIP_START_ALONG = 40;
 
 /**
- * How many steps of the hit flash are lit, and how many dark.
+ * How long an enemy shows a hit it survived, in steps — about an eighth of a second.
  *
- * A power of two so the phase is a mask rather than a modulo, and eight steps is about 7.5 flashes
- * across `INVULN_STEPS` — fast enough to read as damage, slow enough that a 60Hz display shows every
- * one of them. ⚠️ `docs/decisions/0024-the-accessibility-floor-is-settings.md` caps flash intensity
- * unconditionally; this is two inks of one silhouette rather than a full-screen flash, which is the
- * side of that line it is meant to be on.
+ * Long enough to be seen on a 60Hz display and on a frame the compositor drops; short enough that a
+ * lancer under sustained fire reads as *being hit repeatedly* rather than as having changed colour.
+ * The ship's flash is `INVULN_STEPS` instead, because there it doubles as *you are briefly safe*.
+ *
+ * ⚠️ `docs/decisions/0024-the-accessibility-floor-is-settings.md` caps flash intensity
+ * unconditionally. This is one silhouette in two inks, never a full-screen flash, which is the side
+ * of that line it is meant to be on.
  */
-const FLASH_PHASE = 8;
+const ENEMY_FLASH_STEPS = 8;
 
 /** Everything a frame reads. Mutable, set up once, and updated on a resize — never reducer state. */
 export interface World {
@@ -164,15 +165,11 @@ export class GameFrame implements Frame {
       `src/sim/assist.ts` reaches the model at all. `tests/assist.test.ts` proved the TABLE was
       monotone; `tests/combat.test.ts` is what proves the code using it is.
     */
-    collideInto(w.playerShots, w.enemies, 1, 1);
-    collideIntoOne(w.enemyShots, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, true);
+    collideInto(w.playerShots, w.enemies, 1, 1, ENEMY_FLASH_STEPS);
+    collideIntoOne(w.enemyShots, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, INVULN_STEPS, true);
     // Not consumed: an enemy the player flew into is still there afterwards, or ramming would be the
     // cheapest way to clear the screen.
-    collideIntoOne(w.enemies, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, false);
-
-    // The hit flash is a SPRITE the sim selects, never a branch inside the painter: `render/scene.ts`
-    // draws what it is handed, which is the rule 0015 gives the layer.
-    w.ship.sprite = w.ship.invulnFor > 0 && (w.ship.invulnFor & FLASH_PHASE) !== 0 ? SPRITE.shipHit : SPRITE.ship;
+    collideIntoOne(w.enemies, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, INVULN_STEPS, false);
 
     if (w.ship.health <= 0) restart(w);
 

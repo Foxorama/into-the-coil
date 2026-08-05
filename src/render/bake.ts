@@ -59,13 +59,21 @@ export function atlasIsStale(atlas: Atlas, view: SpriteView, pixelsPerUnit: numb
 /** Which ink each kind is drawn in. A role, never a colour — see `content/palette.ts`. */
 const INK_OF: Record<SpriteKind, keyof Palette> = {
   ship: 'player',
-  // The hit flash: the SAME silhouette in a different ink, which is what makes it read as the ship
-  // being hurt rather than as a second object appearing. `hazard` is separated from `player` by
-  // luminance in both palettes, so the flash survives 0024's colour-blind case without a second idea.
-  shipHit: 'hazard',
-  enemy: 'enemy',
+  drifter: 'enemy',
+  lancer: 'enemy',
   bullet: 'bullet',
   pickup: 'pickup',
+  /*
+    THE HIT FLASH: the SAME silhouette in the `impact` ink.
+
+    Same shape is what makes it read as *that thing being hurt* rather than as a second object
+    appearing where the first one was. And the ink is the only channel doing colour work here, which
+    is allowed precisely because the silhouette is unchanged — 0024's rule is that colour may not
+    carry meaning ALONE, and here the shape carries identity while the colour carries the event.
+  */
+  shipHit: 'impact',
+  drifterHit: 'impact',
+  lancerHit: 'impact',
 };
 
 /**
@@ -91,13 +99,34 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
       ctx.lineTo(half - r * 0.7, half + r * 0.8);
       ctx.closePath();
       break;
-    case 'enemy':
-      // A diamond, so it reads as a different SHAPE and not only a different colour — 0024's
-      // "colour never carries meaning alone", at the one place it can be applied today.
+    case 'drifter':
+    case 'drifterHit':
+      // A diamond: symmetrical, pointing nowhere, which is exactly what a drifter does. It holds its
+      // line and never fires, and the silhouette says so by having no front.
       ctx.moveTo(half - r, half);
       ctx.lineTo(half, half - r);
       ctx.lineTo(half + r, half);
       ctx.lineTo(half, half + r);
+      ctx.closePath();
+      break;
+    case 'lancer':
+    case 'lancerHit':
+      /*
+        An arrowhead with its nose towards −x — pointing back down the lane, at the player.
+
+        ⚠️ **The shape is the telegraph.** A lancer closes and shoots where the ship is; a drifter
+        does neither, and the two shipped as the same diamond, so a player had no way to tell which
+        of the things on screen was aiming at them. Facing is the cheapest silhouette cue there is
+        and it is the one this genre already teaches: the pointy end is the dangerous end.
+
+        Notched at the back so it cannot be read as the player's wedge seen in a mirror — that one
+        has a concave tail and points the other way.
+      */
+      ctx.moveTo(half - r, half);
+      ctx.lineTo(half + r * 0.5, half - r * 0.85);
+      ctx.lineTo(half + r, half - r * 0.25);
+      ctx.lineTo(half + r, half + r * 0.25);
+      ctx.lineTo(half + r * 0.5, half + r * 0.85);
       ctx.closePath();
       break;
     case 'bullet':

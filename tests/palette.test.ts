@@ -21,7 +21,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_PALETTE, type Ink, type Palette, type PaletteName, PALETTES } from '../src/content/palette.ts';
 
 const NAMES = Object.keys(PALETTES) as PaletteName[];
-const INKS: readonly Ink[] = ['space', 'player', 'ally', 'enemy', 'bullet', 'hazard', 'pickup'];
+const INKS: readonly Ink[] = ['space', 'player', 'ally', 'enemy', 'bullet', 'hazard', 'pickup', 'impact'];
 
 /** One channel of sRGB, linearised. The gamma step every naive contrast check leaves out. */
 function linear(channel: number): number {

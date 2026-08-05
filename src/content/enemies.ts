@@ -40,12 +40,38 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   /**
    * Holds its line and never fires. The thing you shoot while you are learning where the lane is —
    * and the case that proves `fireEvery: 0` is a row rather than a second entity type.
+   *
+   * ⚠️ **One health, so the harmless one dies to one shot.** It shipped at two, which meant the
+   * FIRST hit on every enemy in the game changed nothing visible and read as a bug. The flash fixes
+   * the reading; this makes the common case not need one, and buys the two kinds a difference the
+   * player feels rather than only sees.
    */
-  drifter: { sprite: SPRITE.enemy, radius: 2.6, health: 2, damage: 2, closing: 0, fireEvery: 0, shot: 'spit' },
+  drifter: {
+    sprite: SPRITE.drifter,
+    spriteHit: SPRITE.drifterHit,
+    radius: 2.6,
+    health: 1,
+    damage: 2,
+    closing: 0,
+    fireEvery: 0,
+    shot: 'spit',
+  },
   /**
    * Closes, and shoots where the ship is. Aimed rather than sprayed, because the quantity this whole
    * build exists to make measurable is *whether the player can get out of the way* — and a shot that
    * was never coming at them measures nothing.
+   *
+   * Two health, and it is the only thing in the game that takes two — so "it did not die" is now a
+   * fact about the lancer specifically, told by a silhouette the player can read before firing.
    */
-  lancer: { sprite: SPRITE.enemy, radius: 2.6, health: 2, damage: 2, closing: 0.35, fireEvery: 75, shot: 'spit' },
+  lancer: {
+    sprite: SPRITE.lancer,
+    spriteHit: SPRITE.lancerHit,
+    radius: 2.6,
+    health: 2,
+    damage: 2,
+    closing: 0.35,
+    fireEvery: 75,
+    shot: 'spit',
+  },
 };
