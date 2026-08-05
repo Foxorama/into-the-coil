@@ -24,7 +24,10 @@ import { ENEMIES, ENEMY_KINDS, type EnemyRow } from '../content/enemies.ts';
 import { holdStation, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { SHIPS } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
-import { GameFrame, SHIP_START_ALONG, type World } from './frame.ts';
+import { GameFrame, SHIP_START_ALONG, resetScene, respawn, type World } from './frame.ts';
+import { SCREENS } from '../state/screens.ts';
+import { type Action, type State, initialState, reduce } from '../state/root.ts';
+import { makeChrome } from './chrome.ts';
 import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
 import { attachPad } from './pad.ts';
@@ -172,18 +175,26 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
 
     ⚠️ Seeded well clear of the ship's start, or the player is hit before the first frame is drawn —
     which reads as the game being broken rather than as the game being hard.
+
+    ⚠️ **A FRESH stream every time, which is what makes two runs the same run.** Reusing one
+    generator across runs would deal a different opening field to a second attempt at a level that is
+    supposed to be authored — and `docs/decisions/0021-one-stream-per-concern.md` exists precisely so
+    a draw cannot be moved by something unrelated to it. Run two must be run one.
   */
-  const seed = makeRng('proof-scene').stream('seed');
-  for (let i = 0; i < 12; i++) {
-    const e = enemies.spawn();
-    if (e === null) break;
-    const kind = seed.int(0, enemyRows.length - 1);
-    const row = enemyRows[kind]!;
-    const margin = row.radius + 2;
-    reset(e, seed.range(SHIP_START_ALONG + 60, MAX_ALONG_SPAN), seed.range(margin, ACROSS_SPAN - margin), row, kind);
-    e.velAlong = -row.closing;
-    e.fireIn = row.fireEvery;
-  }
+  const seedField = (): void => {
+    const seed = makeRng('proof-scene').stream('seed');
+    for (let i = 0; i < 12; i++) {
+      const e = enemies.spawn();
+      if (e === null) break;
+      const kind = seed.int(0, enemyRows.length - 1);
+      const row = enemyRows[kind]!;
+      const margin = row.radius + 2;
+      reset(e, seed.range(SHIP_START_ALONG + 60, MAX_ALONG_SPAN), seed.range(margin, ACROSS_SPAN - margin), row, kind);
+      e.velAlong = -row.closing;
+      e.fireIn = row.fireEvery;
+    }
+  };
+  seedField();
 
   const measure = (): View => viewOf(viewportWidth(host), viewportHeight(host));
   let view = measure();
@@ -250,6 +261,82 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       attachPad({ alongAxis: () => view.alongAxis }),
     ]),
     intent: makeIntent(SPECIAL_BINDINGS),
+    // The title screen does not step (`src/state/screens.ts`), so the game opens on a still field
+    // and waits for the player rather than spending their first life for them.
+    stepping: false,
+    // Replaced below, once `dispatch` exists. A function property cannot be written before the
+    // thing it calls, and the alternative — hoisting the whole reducer wiring above the world it
+    // mutates — would put the shell's state machine in the middle of its entity pools.
+    onDeath: (): void => {},
+  };
+
+  /*
+    ── THE RUN, AND THE SCREEN IT IS ON ────────────────────────────────────────────────────────────
+
+    `src/state/` is a pure `(State, Action) => State`
+    (`docs/decisions/0017-the-state-is-slices.md`), so everything that is an EFFECT of a state change
+    happens here: showing chrome, stopping the simulation, putting the ship back. The reducer knows
+    none of it, which is what lets the whole run be played in a unit test with no canvas.
+  */
+  let state: State = initialState;
+  /** Whether the viewport is one the game may be played in at all — the orientation gate's answer. */
+  let playable = false;
+
+  /**
+   * Push the current screen at the two things that care: the chrome, and whether the sim steps.
+   *
+   * ⚠️ **`playable` MUST NOT appear in the `stepping` line, and this cost a CI failure to learn.**
+   * It read `playable && SCREENS[screen].steps` at first, which is true and is a SECOND mechanism for
+   * a guarantee that already had one: the orientation gate stops the loop outright
+   * (`docs/decisions/0031-landscape-is-the-shipped-orientation.md`). With both in place, breaking the
+   * gate's stop on purpose left the world frozen anyway — so 0031's probe reported STILL GREEN and
+   * the assertion it protects had quietly become unfalsifiable.
+   *
+   * The rule is the general one and it is worth more than the line: **one guarantee, one mechanism.**
+   * A redundant safety net does not make a system safer, it makes the original mechanism untestable —
+   * and an untested mechanism is the one that gets refactored away. The chrome below is a different
+   * question, because there is no second thing hiding it.
+   */
+  const applyScreen = (): void => {
+    const screen = state.screen.current;
+    world.stepping = SCREENS[screen].steps;
+    chrome.show(playable ? screen : null);
+  };
+
+  const dispatch = (action: Action): void => {
+    const next = reduce(state, action);
+    if (next === state) return;
+    const moved = next.screen !== state.screen;
+    state = next;
+    // Only on a real transition: `show` moves focus, and re-focusing a button on every dispatch
+    // would fight a player who had tabbed away from it.
+    if (moved) applyScreen();
+  };
+
+  /**
+   * Start a run. The same answer for both controls, because both mean the same thing — 0039 says a
+   * game over ends the run outright, so *Again* is a new run and not a continue.
+   */
+  const startRun = (): void => {
+    resetScene(world);
+    seedField();
+    // A fresh spawn stream too, for the reason `seedField` gives: run two must be run one.
+    world.rng = makeRng('proof-scene').stream('spawns');
+    dispatch({ slice: 'run', type: 'begin' });
+    dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
+  };
+
+  const chrome = makeChrome(colours, startRun);
+  for (const element of chrome.elements) host.appendChild(element);
+
+  /*
+    ⚠️ **The frame reports a death; this decides what it cost.** `dispatch` may flip the screen to
+    `gameOver` on its own — `src/state/root.ts` holds that as the one cross-slice agreement — so the
+    check below reads the state AFTER the reducer has run rather than predicting what it will say.
+  */
+  world.onDeath = (): void => {
+    dispatch({ slice: 'run', type: 'lifeLost' });
+    if (state.run.lives > 0) respawn(world);
   };
 
   /** Re-measure, re-fit and — only if the orientation or resolution actually moved — re-bake. */
@@ -297,9 +384,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   host.appendChild(gate);
   let stopLoop: (() => void) | null = null;
 
-  const setPlayable = (playable: boolean): void => {
+  const setPlayable = (next: boolean): void => {
+    playable = next;
     gate.style.display = playable ? 'none' : 'flex';
     canvas.style.visibility = playable ? 'visible' : 'hidden';
+    // The chrome follows the gate, so a hidden game never leaves a focusable button behind it.
+    applyScreen();
     if (playable && stopLoop === null) {
       // A resize is not a frame, so building a frame here is affordable — the rule this file opens
       // with. Restarting also drops the accumulated step debt, which is right: time spent looking at
@@ -318,6 +408,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     canvas,
     stop(): void {
       window.removeEventListener('resize', onResize);
+      chrome.release();
       world.input.release();
       stopLoop?.();
       stopLoop = null;

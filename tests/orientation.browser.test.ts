@@ -22,6 +22,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
+import { prefixFor } from '../src/app/chrome.ts';
 
 const dist = pathToFileURL(resolve(fileURLToPath(new URL('..', import.meta.url)), 'dist/index.html')).href;
 
@@ -74,6 +75,28 @@ async function open(viewport: { width: number; height: number }): Promise<Page> 
     () => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))),
   );
   return page;
+}
+
+/**
+ * Press Start, so there is a running world for the gate to stop.
+ *
+ * ⚠️ **THE SAME FAILURE THIS FILE ALREADY RECORDS ONCE, ARRIVING BY A SECOND ROUTE.** The comment on
+ * *the world does not advance* says the first version opened straight into portrait, where the loop
+ * never started, so the probe broke the stop-the-loop branch and the suite stayed green — *"a loop
+ * that was never running cannot be observed failing to stop."*
+ *
+ * `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md` reintroduced exactly that
+ * state in landscape: the game now opens on a title screen with the simulation stopped, so starting
+ * in landscape was no longer enough to have a world in motion. `npm run prove` reported STILL GREEN
+ * on 0031's probe, and nothing else in the suite noticed.
+ *
+ * The lesson is the general one rather than the two instances: **this guard is only as strong as its
+ * claim that something was moving beforehand**, and that precondition has now been quietly removed
+ * twice by unrelated work. It is asserted below, not assumed.
+ */
+async function start(page: Page): Promise<void> {
+  await page.click('.' + prefixFor('title') + 'action');
+  await page.waitForTimeout(120);
 }
 
 /** Is the rotate prompt actually laid out and painted, rather than merely present in the DOM? */
@@ -172,8 +195,23 @@ describe.runIf(chromePath)('the orientation gate', () => {
       asserted in the model's own units.
     */
     const page = await open(LANDSCAPE);
+    await start(page);
     await page.waitForTimeout(200);
     expect(await inkedPixels(page), 'nothing was running to be stopped').toBeGreaterThan(0);
+
+    /*
+      ⚠️ **The precondition, asserted rather than assumed.** `inkedPixels > 0` proves something is
+      DRAWN; it says nothing about whether anything is MOVING, and a frozen title screen satisfies it
+      completely. That gap is what let 0039 turn the assertion below into a tautology without a single
+      test going red. Two signatures 200ms apart is the same measurement the real assertion makes,
+      pointed at the opposite claim.
+    */
+    const movingBefore = await signature(page);
+    await page.waitForTimeout(200);
+    expect(
+      await signature(page),
+      'the world was already still in landscape, so stopping it proves nothing',
+    ).not.toBe(movingBefore);
 
     await page.setViewportSize(PORTRAIT);
     await page.waitForFunction(
@@ -211,6 +249,7 @@ describe.runIf(chromePath)('the orientation gate', () => {
     // initial call, the second is the resize handler. Testing only the first would leave the case
     // the player produces — playing, then turning the device — reachable and unguarded.
     const page = await open(LANDSCAPE);
+    await start(page);
     await page.waitForTimeout(120);
     expect(await gateShown(page)).toBe(false);
     await page.setViewportSize(PORTRAIT);

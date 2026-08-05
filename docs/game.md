@@ -25,8 +25,12 @@ whole game.
 | **The betrayer** | returns as the end boss of a later level |
 | **Target length** | 15–30 minutes, prologue to final boss. ~3 minutes of stage per level plus its boss |
 
-Upgrades, buffs and items carry forward for the whole run. There is **no shop and no currency** —
-everything is found in the level and applied the instant you touch it.
+Upgrades, buffs and items **carry forward across levels, and are lost on a death** —
+[0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md). There is **no shop and no
+currency** — everything is found in the level and applied the instant you touch it.
+
+A run carries **three lives**, fixed, with extras findable in a level. A death spends one and takes
+the arsenal back to the ship's base weapon; the last one ends the run.
 
 ## Orientation — the load-bearing rule
 
@@ -159,9 +163,15 @@ off by default — see [0024](decisions/0024-the-accessibility-floor-is-settings
 
 ## Upgrades
 
-Found in the level, applied on contact, carried to the end of the run. Every upgrade **changes how
+Found in the level, applied on contact, kept across every level that follows — and **lost on a
+death**, back to the ship's base weapon and starting special
+([0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md)). Every upgrade **changes how
 the ship looks on screen**, and every upgrade is worth taking — an upgrade that cannot change the
 outcome is worse than none.
+
+⚠️ **That makes a level's pickup density load-bearing.** A player who dies near the end of a level
+and cannot rearm has been handed its hardest stretch with its weakest loadout. Authoring a level
+answers this; 0039 names it as a constraint rather than leaving it to a play-test.
 
 The vocabulary: faster fire, wider spray, shields, homing rockets, extra lasers, one-shot bombs,
 multi-tag tracking specials, piercing shots, faster engines, orbiting mines that are half shield and
@@ -182,8 +192,13 @@ auto-fire and low-input control schemes.
 
 ## Save and resume
 
-A run resumes **from the start of the last level reached**. No re-picks, no re-rolls, and a countdown
-before the first wave arrives.
+The save is an **interruption hedge and not a safety net** —
+[0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md). It exists so that a browser
+killed in the background does not destroy a run, and it must never turn a game over into a retry.
+
+So it stores the run's **current** lives and **current** arsenal, and resumes at the start of the
+level the player was in. No re-picks, no re-rolls, and a countdown before the first wave arrives.
+Closing the page costs the progress made through that level and returns nothing.
 
 Storage keys are `itc_*`, listed in `PRIVACY.md`, versioned from v1 with a migration chain.
 

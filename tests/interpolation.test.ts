@@ -108,6 +108,10 @@ function stationKeepingWorld(surface: Surface): World {
     tuning: tuningFor(DEFAULT_ASSISTS),
     input: NO_INPUT,
     intent: makeIntent(2),
+    // A hand-built world for a test drives the step directly, so it is always stepping and a
+    // death is nobody's business but the assertion's — 0039 puts the cost of one in the shell.
+    stepping: true,
+    onDeath: (): void => {},
   };
 }
 

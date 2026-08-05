@@ -1,38 +1,25 @@
 // The breaks behind docs/decisions/0017-the-state-is-slices.md.
+//
+// ⚠️ **Two of these used to PLANT `src/state/slices/run.ts` and `src/state/root.ts`, because neither
+// existed.** They do now — decision 0039 built them — and `npm run prove` refused both with *"a plant
+// must create the file"* rather than passing quietly, which is the harness doing exactly its job.
+//
+// The sibling break is now a plant of a NEW slice reaching for the real one, which is the realistic
+// version of it: nobody adds an importing slice to an empty directory, they add the second slice to a
+// directory that already has one. The root break moved to `0039-run.mjs`, where it edits the real
+// reducer instead of a fixture — a strictly stronger proof, and keeping a duplicate here would mean
+// two probes claiming one guard.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
   {
     decision: '0017',
     suite: 'tests/state-shape.test.ts',
-    broke: '`src/state/slices/run.ts` importing `./meta.ts`',
+    broke: 'a NEW slice reaching for the run slice next door, which is how the second one always arrives',
     guard: 'no slice imports a sibling slice',
     plant: {
-      path: 'src/state/slices/run.ts',
-      content: "import { META } from './meta.ts';\nexport const RUN = META;\n",
-    },
-  },
-  {
-    decision: '0017',
-    suite: 'tests/state-shape.test.ts',
-    broke: '`src/state/root.ts` given a two-case `switch`',
-    guard: 'the root reducer routes and does not decide',
-    plant: {
-      path: 'src/state/root.ts',
-      content: [
-        'export const reduce = (s: number, a: string): number => {',
-        '  switch (a) {',
-        "    case 'a':",
-        '      return s + 1;',
-        "    case 'b':",
-        '      return s - 1;',
-        '    default: {',
-        '      return s;',
-        '    }',
-        '  }',
-        '};',
-        '',
-      ].join('\n'),
+      path: 'src/state/slices/level.ts',
+      content: "import { type RunState } from './run.ts';\nexport type LevelOf = RunState['level'];\n",
     },
   },
   {

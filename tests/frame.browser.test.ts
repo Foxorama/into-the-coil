@@ -17,6 +17,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
+import { prefixFor } from '../src/app/chrome.ts';
 
 /*
   ⚠️ FILE-LEVEL, because vitest's 5s default is not a browser test's timeout — see
@@ -51,6 +52,34 @@ async function open(
   await page.goto(dist);
   await page.waitForSelector('#app canvas', { timeout: 15_000 });
   return { page, errors };
+}
+
+/**
+ * Press Start.
+ *
+ * ⚠️ **The game no longer runs on load** — `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md`
+ * opens it on a title screen with the simulation stopped, so every test below whose subject is a
+ * MOVING game has to start one first. The pair of tests around `waits on the title screen` is what
+ * keeps that from being an assumption.
+ *
+ * The selector is built from `prefixFor` rather than typed out, so a class rename cannot leave this
+ * silently clicking nothing — `tests/chrome.test.ts` holds the same single description.
+ */
+async function start(page: Page): Promise<void> {
+  await page.click('.' + prefixFor('title') + 'action');
+  await page.waitForTimeout(120);
+}
+
+/** Two canvases, a moment apart, as strings. Equal means the picture did not move. */
+async function twoFrames(page: Page, apartMs: number): Promise<[string, string]> {
+  const snapshot = (): Promise<string> =>
+    page.evaluate(() => {
+      const canvas = document.querySelector('#app canvas');
+      return canvas instanceof HTMLCanvasElement ? canvas.toDataURL().slice(0, 20_000) : '';
+    });
+  const before = await snapshot();
+  await page.waitForTimeout(apartMs);
+  return [before, await snapshot()];
 }
 
 /** How many of the sampled pixels are not the background. The cheapest honest "did it draw". */
@@ -89,17 +118,40 @@ describe.runIf(chromePath)('the page draws', () => {
     // A single painted frame proves the painter ran once. This is what proves the LOOP is running,
     // which is the failure a static screenshot cannot tell apart.
     const { page } = await open({ width: 1280, height: 720 }, 1);
+    await start(page);
     await page.waitForTimeout(1200);
-    const snapshot = (): Promise<string> =>
-      page.evaluate(() => {
-        const canvas = document.querySelector('#app canvas');
-        return canvas instanceof HTMLCanvasElement ? canvas.toDataURL().slice(0, 20_000) : '';
-      });
-    const before = await snapshot();
-    await page.waitForTimeout(600);
-    const after = await snapshot();
+    const [before, after] = await twoFrames(page, 600);
     expect(before.length, 'nothing was captured').toBeGreaterThan(100);
     expect(after, 'the canvas is frozen — the rAF loop stopped or never started').not.toBe(before);
+    await page.context().close();
+  }, 90_000);
+
+  /**
+   * ⚠️ **The other half, and the reason the one above needed a `start`.**
+   *
+   * `docs/decisions/0039-…` says the simulation steps on `playing` and on nothing else, because a run
+   * that began before the player's hands were on the keys has already spent some of their three
+   * lives. That is a claim about the PICTURE — the thing 0027 says to measure — so it is asserted the
+   * same way the motion above is, on real pixels a real browser drew.
+   *
+   * The pair matters more than either half: identical frames alone would also be produced by a loop
+   * that never started, and the test above is what rules that out.
+   */
+  it('waits on the title screen — nothing moves until Start is pressed', async () => {
+    const { page, errors } = await open({ width: 1280, height: 720 }, 1);
+    await page.waitForTimeout(1200);
+    const [before, after] = await twoFrames(page, 600);
+    expect(before.length, 'nothing was captured').toBeGreaterThan(100);
+    expect(after, 'the world is advancing behind the title screen').toBe(before);
+    // And the field IS drawn behind it, so "frozen" is not "blank" — a black page would pass the
+    // assertion above for entirely the wrong reason.
+    expect(await inkFraction(page), 'the title screen is over an empty canvas').toBeGreaterThan(0.001);
+
+    await start(page);
+    await page.waitForTimeout(400);
+    const [running, later] = await twoFrames(page, 600);
+    expect(later, 'pressing Start did not start the simulation').not.toBe(running);
+    expect(errors, errors.join('\n')).toEqual([]);
     await page.context().close();
   }, 90_000);
 
@@ -161,6 +213,7 @@ describe.runIf(chromePath)('the page draws', () => {
     // window dragged from 16:9 to ultrawide is the case a desktop player actually produces, and it
     // crosses the top of the clamp, so the gutter appears mid-run.
     const { page, errors } = await open({ width: 1280, height: 720 }, 1);
+    await start(page);
     await page.waitForTimeout(1000);
     await page.setViewportSize({ width: 2560, height: 800 });
     await page.waitForTimeout(1200);
