@@ -138,7 +138,7 @@ and running them side by side is the only evidence that both halves are load-bea
 
 ## The guard's first contact with real code
 
-[Milestone 0003](../milestones/0003-the-line-before-the-game.md) predicted the first real file would
+Milestone 0003 (`docs/milestones/`, gitignored) predicted the first real file would
 break a guard, and said to suspect the guard first. It happened here rather than in
 [0023](0023-the-long-axis-is-the-scroll-axis.md), which passed everything unmodified: the allocation
 scan flagged `Pool`'s constructor, which validates its capacity and throws with a template literal.

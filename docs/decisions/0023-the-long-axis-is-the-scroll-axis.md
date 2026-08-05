@@ -112,7 +112,7 @@ most of the parity for none of that, and it names what it did not buy.
 
 `public/manifest.webmanifest` has said `"orientation": "landscape"` since the shell landed. It went in
 as scaffold configuration and was never argued — the case
-[milestone 0003](../milestones/0003-the-line-before-the-game.md) uses as its example of a design
+milestone 0003 (`docs/milestones/`, gitignored) uses as its example of a design
 decision taken as a setting. It is now `"any"`.
 
 ⚠️ **This is an irreversible surface, and here is the precise reason.** An installed PWA holds its own
