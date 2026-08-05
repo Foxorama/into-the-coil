@@ -91,8 +91,8 @@ Per [0005](0005-a-guard-must-be-seen-to-fail.md) and [0019](0019-a-probe-must-be
 | a wave authored out of order, which the spawner skips rather than delays | `lists its waves in ascending order of place` |
 | a lane that lets a weaver's swing leave the dodge lane it can never return to | `never puts an enemy where it can leave the dodge lane` |
 | the opening waves pushed past the horizon, so a run starts on an empty screen | `has waves inside the opening spawn horizon` |
-| the script thinned back to its first draft's spacing | `keeps enough on screen at once to be a shooter` |
-| a boss phase that eases off as it dies | `every phase is reachable, and they only get harder` |
+| the formation spacing widened back out, thinning the level to its first draft | `keeps enough on screen at once to be a shooter` |
+| a boss phase that eases off as it dies rather than escalating | `every phase is reachable, and they only get harder` |
 | the boss parked in world coordinates instead of the camera's frame | `arrives, closes on its station, and then holds it` |
 | the level cleared every step instead of once | `dies to the base weapon, and says so exactly once` |
 

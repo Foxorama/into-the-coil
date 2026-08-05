@@ -182,9 +182,20 @@ half weapon.
 Themed on the fourteen *Far Carry* biomes, split into difficulty tiers. Each level gets its own
 enemies, upgrade flavour and bosses.
 
+A level is **an authored script** — a list of waves, each a place, an enemy kind, a formation and a
+lane — plus one boss at the end of it. Decided,
+[0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md).
+⚠️ **No level is themed yet**, and naming one means going to the predecessor for material, which
+`CLAUDE.md` allows only for a named file and a named reason.
+
 **Every boss is unique** — its own attacks, its own effects, its own escalation. The Jörmungandr
 model is the baseline: phases keyed to remaining health, so every arsenal meets every phase, and a
 heavier loadout shortens the fight without trivialising it.
+
+⚠️ **A phase changes what a boss DOES, not what it looks like** —
+[0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md). Nothing on screen currently
+says how much boss is left, and whether that reads as progress is the first question a play-test of
+level one has to answer.
 
 Hazards are environmental and must be dealt with, not only dodged. Asteroids are the reference case:
 shoot one and the fragments become weapons that damage enemies — a hazard that stays playable under
