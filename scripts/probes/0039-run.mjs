@@ -44,8 +44,11 @@ export const PROBES = [
     guard: 'the last life ends the run',
     edit: {
       path: 'src/state/root.ts',
-      find: "  if (state.run.lives > 0 || state.screen.current !== 'playing') return state;",
-      replace: '  if (true) return state;',
+      // Re-anchored when 0042 gave `agree` a second branch and turned this one inside out. The
+      // harness refused the stale string rather than reporting green, which is the whole reason it
+      // reads the file back.
+      find: "  if (state.run.lives <= 0 && state.screen.current === 'playing') {",
+      replace: '  if (false) {',
     },
   },
   {

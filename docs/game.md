@@ -195,6 +195,12 @@ enemies, upgrade flavour and bosses.
 A level is **an authored script** — a list of waves, each a place, an enemy kind, a formation and a
 lane — plus one boss at the end of it. Decided,
 [0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md).
+
+**Two levels exist**, played as a straight sequence with a screen between them —
+[0042](decisions/0042-a-run-is-a-sequence-of-levels.md). Lives, upgrades and the arsenal cross that
+boundary; the camera, the waves and the ship reset. **The chart does not exist yet**, and a line
+first is deliberate: a chart is a screen, a graph and a set of rules that want to be decided against
+levels somebody has played.
 ⚠️ **No level is themed yet**, and naming one means going to the predecessor for material, which
 `CLAUDE.md` allows only for a named file and a named reason.
 

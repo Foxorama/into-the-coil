@@ -24,7 +24,7 @@ import type { ShotKind } from './shots.ts';
 import { SPRITE } from './sprites.ts';
 
 /** Every boss in the game. Closed. */
-export const BOSS_KINDS = ['sentinel'] as const;
+export const BOSS_KINDS = ['sentinel', 'harrow'] as const;
 
 /** Derived from the list, so a boss cannot exist in the union and be missing from the table. */
 export type BossKind = (typeof BOSS_KINDS)[number];
@@ -110,6 +110,42 @@ export const BOSSES: Record<BossKind, BossRow> = {
         with the base weapon alone, which is exactly what the first play-test of this build measures.
       */
       { upTo: 0.3, fireEvery: 48, shots: 5, spread: 0.9, patrolScale: 2 },
+    ],
+  },
+  /**
+   * Level two's boss, and it is a different fight rather than the same one with bigger numbers.
+   *
+   * ⚠️ **`docs/game.md`: every boss is unique — its own attacks, its own effects, its own
+   * escalation.** What makes this one different is not that it has more health: it **stands closer**,
+   * **moves faster than the player can comfortably track**, and opens with a spread rather than
+   * earning one. The sentinel teaches a player to find a lane and hold it; this one exists to take
+   * that lane away.
+   *
+   * ⚠️ 220 health and four phases are PLAY-TEST NUMBERS, on the same terms as everything else here.
+   * Nothing asserts on them.
+   */
+  harrow: {
+    sprite: SPRITE.boss2,
+    spriteHit: SPRITE.boss2Hit,
+    radius: 12.5,
+    health: 220,
+    damage: 3,
+    // Closer than the sentinel's 120, which is most of what makes it feel like a different fight:
+    // the player has less room in front of them and less warning on everything it throws.
+    station: 100,
+    patrol: 0.42,
+    shot: 'spit',
+    phases: [
+      // No gentle opening. It starts where the sentinel's second phase ended.
+      { upTo: 1, fireEvery: 72, shots: 3, spread: 0.45, patrolScale: 1 },
+      { upTo: 0.7, fireEvery: 60, shots: 5, spread: 0.8, patrolScale: 1.3 },
+      { upTo: 0.4, fireEvery: 48, shots: 5, spread: 1.15, patrolScale: 1.8 },
+      /*
+        The last fifth: seven shots across most of a right angle, and a hull crossing the lane at
+        two and a half times its opening speed. Every arsenal meets every phase, so this has to be
+        survivable with the base weapon alone — which is exactly what `tests/level.test.ts` drives.
+      */
+      { upTo: 0.2, fireEvery: 40, shots: 7, spread: 1.4, patrolScale: 2.5 },
     ],
   },
 };

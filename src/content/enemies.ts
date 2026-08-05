@@ -16,7 +16,7 @@ import type { ShotKind } from './shots.ts';
 import { SPRITE } from './sprites.ts';
 
 /** Every enemy in the game. Closed. */
-export type EnemyKind = 'drifter' | 'lancer' | 'weaver' | 'turret' | 'charger';
+export type EnemyKind = 'drifter' | 'lancer' | 'weaver' | 'turret' | 'charger' | 'warden';
 
 export interface EnemyRow extends Body {
   /**
@@ -56,7 +56,7 @@ export interface EnemyRow extends Body {
 }
 
 /** Written out rather than derived, so the table below cannot quietly lose a row. */
-export const ENEMY_KINDS: readonly EnemyKind[] = ['drifter', 'lancer', 'weaver', 'turret', 'charger'];
+export const ENEMY_KINDS: readonly EnemyKind[] = ['drifter', 'lancer', 'weaver', 'turret', 'charger', 'warden'];
 
 export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   /**
@@ -170,5 +170,32 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     shot: 'spit',
     weaveAmplitude: 0,
     weaveWavelength: 0,
+  },
+  /**
+   * Weaves **and** fires. Level two's enemy.
+   *
+   * ⚠️ **Not a sixth behaviour — the two that already exist, on one row.** Every other enemy does
+   * exactly one thing: hold, close, weave, or shoot. This is the first that makes the player solve
+   * two problems with one answer, and it needed no new code at all, which is
+   * `docs/decisions/0016-a-hub-enumerates-kinds.md`'s whole promise about behaviour riding the row.
+   *
+   * ⚠️ **Four health, so it is the toughest thing in the game that is not a boss** — and therefore
+   * the biggest, because size carries toughness and `tests/combat.test.ts` holds that ordering. It
+   * fires slower than a turret to pay for the rest: something this hard to kill, that also moves and
+   * also shoots, at a turret's rate would be a wall rather than an enemy.
+   */
+  warden: {
+    sprite: SPRITE.warden,
+    spriteHit: SPRITE.wardenHit,
+    radius: 4,
+    health: 4,
+    damage: 2,
+    closing: 0.3,
+    fireEvery: 64,
+    shot: 'spit',
+    // A shallower swing than the weaver's, because this one is also aiming at you: a wide weave plus
+    // an aimed shot is two threats the player cannot read at the same time.
+    weaveAmplitude: 5,
+    weaveWavelength: 130,
   },
 };

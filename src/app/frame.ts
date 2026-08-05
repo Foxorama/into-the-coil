@@ -40,7 +40,7 @@ import { SHOTS } from '../content/shots.ts';
 import { BURST, DEBRIS } from '../content/debris.ts';
 import { FORMATIONS } from '../content/formations.ts';
 import type { LevelRow } from '../content/levels.ts';
-import type { BossRow } from '../content/bosses.ts';
+import { BOSSES, type BossRow } from '../content/bosses.ts';
 import { PICKUP_KINDS, type PickupKind, type PickupRow, type Weapon } from '../content/pickups.ts';
 import { stepBoss } from './boss.ts';
 import type { Frame } from './loop.ts';
@@ -639,6 +639,20 @@ export function respawn(w: World): void {
  * a level has — a wave table places its content against `cameraAlong` — so a second run that started
  * where the first one ended would be playing a different level with the same name.
  */
+/**
+ * Put a level on the field and start it from the beginning.
+ *
+ * ⚠️ **It touches the level and the scene, and nothing about the RUN.** Lives, upgrades and the
+ * arsenal all cross a level boundary — that is what `docs/game.md`'s *"carry forward"* means once
+ * `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md` amended it — so they live in
+ * `src/state/` and this cannot reach them even by accident.
+ */
+export function startLevel(w: World, level: LevelRow): void {
+  w.level = level;
+  w.bossRow = BOSSES[level.boss];
+  resetScene(w);
+}
+
 export function resetScene(w: World): void {
   w.cameraAlong = 0;
   w.prevCameraAlong = 0;

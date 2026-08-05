@@ -19,7 +19,7 @@
 import { GAME_TITLE } from '../brand.ts';
 
 /** Every screen, in no particular order — nothing indexes this list by position. Closed. */
-export const SCREEN_KINDS = ['title', 'playing', 'gameOver', 'cleared'] as const;
+export const SCREEN_KINDS = ['title', 'playing', 'gameOver', 'cleared', 'victory'] as const;
 
 /**
  * Where the player is. Derived from the list, so a screen cannot exist in the union and be missing
@@ -67,12 +67,22 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    */
   gameOver: { heading: 'Run over', action: 'Again', steps: false },
   /**
-   * The boss is dead and there is nowhere to go yet.
+   * The boss is dead and there is another level behind it.
    *
-   * ⚠️ **"Again" and not "Continue", because there is exactly one level.** `docs/game.md` says a run
-   * is eight levels with a branching chart between them, and neither the chart nor the second level
-   * exists — so offering to continue would be a promise the build cannot keep. What this screen is
-   * for is closing the loop on the one level there is, which is what makes it playable end to end.
+   * ⚠️ **"Onward" now, and it said "Again" when there was one level** — a screen that offered to
+   * continue when there was nowhere to go would have been a promise the build could not keep. This is
+   * where the chart will eventually go: `docs/game.md` puts a branching map of destinations between
+   * levels, and a button is what a straight line looks like —
+   * `docs/decisions/0042-a-run-is-a-sequence-of-levels.md`.
    */
-  cleared: { heading: 'Level clear', action: 'Again', steps: false },
+  cleared: { heading: 'Level clear', action: 'Onward', steps: false },
+  /**
+   * Every level in the run is behind the player.
+   *
+   * ⚠️ **A separate screen rather than `cleared` with different words**, because they are different
+   * events: one carries a run forward and the other ends it. `docs/game.md` puts eight levels and a
+   * final boss at the end of a run; two of them exist, so this is the end of what has been authored
+   * rather than the end of the game — and the wording says only what is true.
+   */
+  victory: { heading: 'Coil cleared', action: 'Again', steps: false },
 };
