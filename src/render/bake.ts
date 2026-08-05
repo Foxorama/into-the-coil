@@ -20,18 +20,7 @@
  */
 
 import type { Palette } from '../content/palette.ts';
-
-/** What can be drawn. Closed, per `docs/decisions/0016-a-hub-enumerates-kinds.md`. */
-export type SpriteKind = 'ship' | 'enemy' | 'bullet' | 'pickup';
-
-/** Baking order, and therefore the blit index. Explicit, never derived from the table. */
-export const SPRITE_KINDS: readonly SpriteKind[] = ['ship', 'enemy', 'bullet', 'pickup'];
-
-/** The index a painter blits by. A number, because this is read five hundred times a frame. */
-export const SPRITE: Record<SpriteKind, number> = { ship: 0, enemy: 1, bullet: 2, pickup: 3 };
-
-/** How big each kind is, in WORLD units across — so its screen size falls out of the camera. */
-export const SPRITE_EXTENT: Record<SpriteKind, number> = { ship: 7, enemy: 5.5, bullet: 1.8, pickup: 3.5 };
+import { SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 
 /** Side profile for a horizontally scrolling screen, top-down for a vertical one. */
 export type SpriteView = 'side' | 'top';
@@ -70,6 +59,10 @@ export function atlasIsStale(atlas: Atlas, view: SpriteView, pixelsPerUnit: numb
 /** Which ink each kind is drawn in. A role, never a colour — see `content/palette.ts`. */
 const INK_OF: Record<SpriteKind, keyof Palette> = {
   ship: 'player',
+  // The hit flash: the SAME silhouette in a different ink, which is what makes it read as the ship
+  // being hurt rather than as a second object appearing. `hazard` is separated from `player` by
+  // luminance in both palettes, so the flash survives 0024's colour-blind case without a second idea.
+  shipHit: 'hazard',
   enemy: 'enemy',
   bullet: 'bullet',
   pickup: 'pickup',
@@ -90,7 +83,8 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
   ctx.beginPath();
   switch (kind) {
     case 'ship':
-      // A wedge, nose towards +x.
+    case 'shipHit':
+      // A wedge, nose towards +x. One shape, two inks — see `INK_OF`.
       ctx.moveTo(half + r, half);
       ctx.lineTo(half - r * 0.7, half - r * 0.8);
       ctx.lineTo(half - r * 0.3, half);

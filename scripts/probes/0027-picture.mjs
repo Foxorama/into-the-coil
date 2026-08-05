@@ -28,7 +28,10 @@ export const PROBES = [
     // reverse. The control exists for the failure that leaves the main assertion VACUOUSLY green:
     // a scene where nothing moves at all satisfies "the ship is in the same place" perfectly.
     broke: 'the projection pinned, so a frozen scene satisfies every stability assertion above',
-    guard: 'debris left behind DOES move, so this is not passing by drawing nothing',
+    // ⚠️ Named `debris left behind` until 0034 replaced the proof scene's drifting debris with real
+    // enemies. The harness reported WRONG TEST rather than passing, which is the whole point of it:
+    // by hand this is a probe that quietly proves nothing while the table still claims it does.
+    guard: 'left behind DOES move, so this is not passing by drawing nothing',
     edit: {
       path: 'src/render/scene.ts',
       find: '    const inView = along - cameraAlong;',

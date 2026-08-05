@@ -16,6 +16,7 @@ import { type Entity, makeEntity, reset, stepEntities } from '../src/sim/entity.
 import { Pool } from '../src/sim/pool.ts';
 import { paintScene } from '../src/render/scene.ts';
 import { screenX, screenY, type Surface } from '../src/render/surface.ts';
+import { sprite } from './bodies.ts';
 
 /** Remembers where the last blit landed. Enough to ask the painter where it thinks things are. */
 class RecordingSurface implements Surface {
@@ -58,7 +59,7 @@ describe('the pool is a fixed set of objects that are handed round', () => {
     // "fixes" it by clearing on release, which would put the work back in the frame.
     const pool = pooled(1);
     const first = pool.spawn()!;
-    reset(first, 42, 7, 3);
+    reset(first, 42, 7, sprite(3));
     pool.releaseAt(0);
     const again = pool.spawn()!;
     expect(again, 'a different object came back — the pool is allocating').toBe(first);
@@ -67,7 +68,7 @@ describe('the pool is a fixed set of objects that are handed round', () => {
 
   it('keeps live items packed with no holes', () => {
     const pool = pooled(5);
-    for (let i = 0; i < 5; i++) reset(pool.spawn()!, i, 0, i);
+    for (let i = 0; i < 5; i++) reset(pool.spawn()!, i, 0, sprite(i));
     pool.releaseAt(1);
     expect(pool.size).toBe(4);
     const sprites: number[] = [];
@@ -78,14 +79,14 @@ describe('the pool is a fixed set of objects that are handed round', () => {
 
   it('REORDERS on release, and the last live item is what moves', () => {
     const pool = pooled(4);
-    for (let i = 0; i < 4; i++) reset(pool.spawn()!, i, 0, i);
+    for (let i = 0; i < 4; i++) reset(pool.spawn()!, i, 0, sprite(i));
     pool.releaseAt(0);
     expect(pool.at(0).sprite, 'release did not swap the tail into the hole').toBe(3);
   });
 
   it('ignores a release outside the live range instead of corrupting itself', () => {
     const pool = pooled(2);
-    reset(pool.spawn()!, 0, 0, 0);
+    reset(pool.spawn()!, 0, 0, sprite(0));
     pool.releaseAt(5);
     pool.releaseAt(-1);
     expect(pool.size).toBe(1);
@@ -102,7 +103,7 @@ describe('a step carries the previous position forward', () => {
   it('leaves prev where the entity was, so the renderer has something to interpolate from', () => {
     const pool = pooled(1);
     const e = pool.spawn()!;
-    reset(e, 100, 50, 0);
+    reset(e, 100, 50, sprite(0));
     e.velAlong = 2;
     e.velAcross = -1;
     stepEntities(pool, 0);
@@ -114,9 +115,9 @@ describe('a step carries the previous position forward', () => {
 
   it('retires everything that has fallen behind the camera, and nothing that has not', () => {
     const pool = pooled(3);
-    reset(pool.spawn()!, 1000, 0, 1); // well ahead
-    reset(pool.spawn()!, 0, 0, 2); // far behind
-    reset(pool.spawn()!, 995, 0, 3); // just behind the camera, inside the margin
+    reset(pool.spawn()!, 1000, 0, sprite(1)); // well ahead
+    reset(pool.spawn()!, 0, 0, sprite(2)); // far behind
+    reset(pool.spawn()!, 995, 0, sprite(3)); // just behind the camera, inside the margin
     stepEntities(pool, 1000);
     const sprites: number[] = [];
     for (let i = 0; i < pool.size; i++) sprites.push(pool.at(i).sprite);
@@ -129,7 +130,7 @@ describe('a step carries the previous position forward', () => {
     // The forwards-iteration bug: releasing while walking forwards skips the swapped-in item, so
     // roughly half of them survive a frame they should not have.
     const pool = pooled(50);
-    for (let i = 0; i < 50; i++) reset(pool.spawn()!, 0, 0, i);
+    for (let i = 0; i < 50; i++) reset(pool.spawn()!, 0, 0, sprite(i));
     stepEntities(pool, 10_000);
     expect(pool.size, 'entities that should have been culled survived the pass').toBe(0);
   });
@@ -143,30 +144,30 @@ describe('the painter draws between the last two steps', () => {
     const view = viewOf(1920, 1080);
     const pool = pooled(1);
     const e = pool.spawn()!;
-    reset(e, 100, 20, 0);
+    reset(e, 100, 20, sprite(0));
     e.along = 110;
     e.across = 30;
 
     const surface = new RecordingSurface();
-    paintScene(surface, view, pool, 0, 0);
+    paintScene(surface, view, [pool], 0, 0);
     expect(surface.x).toBeCloseTo(screenX(view, 100, 20), 6);
     expect(surface.y).toBeCloseTo(screenY(view, 100, 20), 6);
 
-    paintScene(surface, view, pool, 0, 1);
+    paintScene(surface, view, [pool], 0, 1);
     expect(surface.x, 'the painter ignored alpha').toBeCloseTo(screenX(view, 110, 30), 6);
 
-    paintScene(surface, view, pool, 0, 0.5);
+    paintScene(surface, view, [pool], 0, 0.5);
     expect(surface.x).toBeCloseTo(screenX(view, 105, 25), 6);
   });
 
   it('draws relative to the camera, so a moving camera moves the world past a still entity', () => {
     const view = viewOf(1920, 1080);
     const pool = pooled(1);
-    reset(pool.spawn()!, 500, 50, 0);
+    reset(pool.spawn()!, 500, 50, sprite(0));
     const surface = new RecordingSurface();
-    paintScene(surface, view, pool, 400, 1);
+    paintScene(surface, view, [pool], 400, 1);
     const near = surface.x;
-    paintScene(surface, view, pool, 450, 1);
+    paintScene(surface, view, [pool], 450, 1);
     expect(surface.x, 'the camera advanced and the world did not move').toBeLessThan(near);
   });
 });

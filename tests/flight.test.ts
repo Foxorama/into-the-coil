@@ -4,6 +4,7 @@ import { makeIntent, type Intent } from '../src/sim/intent.ts';
 import { flyShip, PLAYER_ALONG_SPAN, PLAYER_MARGIN, SHIP_SPEED } from '../src/sim/flight.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { Pool } from '../src/sim/pool.ts';
+import { sprite } from './bodies.ts';
 
 /**
  * HOW AN INTENT BECOMES MOVEMENT.
@@ -23,7 +24,7 @@ const SCROLL = 0.6;
 
 function ship(along = 50, across = 50) {
   const e = makeEntity();
-  reset(e, along, across, 0);
+  reset(e, along, across, sprite(0));
   return e;
 }
 
@@ -172,7 +173,7 @@ describe('the interpolation contract survives', () => {
     // that is not exactly 60Hz.
     const pool = new Pool(4, makeEntity);
     const e = pool.spawn()!;
-    reset(e, 50, ACROSS_SPAN - PLAYER_MARGIN, 0);
+    reset(e, 50, ACROSS_SPAN - PLAYER_MARGIN, sprite(0));
     for (let i = 0; i < 5; i++) {
       flyShip(e, ask(0, 1), 0, SCROLL);
       stepEntities(pool, 0);

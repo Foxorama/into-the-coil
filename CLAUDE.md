@@ -87,7 +87,10 @@ decision needs no rule.
   level, in `along` × `across` world units; `across` is a fixed 100 and is the difficulty axis, so
   only lookahead varies by device and it is clamped at both ends. Spawns are placed against the
   widest view any device can have, never the current one. The camera does not follow the player.
-  — [0023](docs/decisions/0023-the-long-axis-is-the-scroll-axis.md)
+  **Every speed is in the camera's frame**, which is the one the ship already flies in — a shot aimed
+  in world coordinates arrives where the ship *was*, and does it only off the lane, so it hides.
+  — [0023](docs/decisions/0023-the-long-axis-is-the-scroll-axis.md),
+  [0034](docs/decisions/0034-a-threat-is-absolute-and-a-pool-is-the-pairing.md)
 
 - **The sim steps at a fixed 60Hz and the renderer interpolates; art is baked to bitmaps and blitted;
   nothing allocates in the frame loop.** A sim stepped by wall-clock delta teleports bullets through

@@ -152,3 +152,19 @@ export function spawnAlong(cameraAlong: number): number {
 export function cullAlong(cameraAlong: number): number {
   return cameraAlong - EDGE_MARGIN;
 }
+
+/**
+ * The `along` coordinate above which an entity is ahead of everyone and may be returned to its pool.
+ *
+ * ⚠️ **One `EDGE_MARGIN` BEYOND `spawnAlong`, and the gap is the whole point.** A wave is placed at
+ * exactly `spawnAlong`; a leading cull set to the same number retires it on the step it arrives, so
+ * the level plays as an empty field and nothing anywhere reports an error. The margin between the two
+ * is the room a spawn has to exist in.
+ *
+ * It exists for the player's own shots. Everything else in the world drifts backwards and meets
+ * `cullAlong`; a shot outruns the camera forwards and would otherwise be immortal — a pool quietly
+ * full of bullets that left the screen seconds ago, refusing the next one.
+ */
+export function cullLeadingAlong(cameraAlong: number): number {
+  return spawnAlong(cameraAlong) + EDGE_MARGIN;
+}

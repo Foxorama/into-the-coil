@@ -36,6 +36,23 @@ import type { Intent } from './intent.ts';
 export const SHIP_SPEED = 1.7;
 
 /**
+ * World units the camera advances per fixed step — 0.6, so 36 units a second at 60Hz.
+ *
+ * ⚠️ **Same status as `SHIP_SPEED`, and it lives beside it because the two are ONE knob with two
+ * halves.** The scroll rate is the player's *time* budget — at a 16:9 view of 177.8 units it is about
+ * 4.9 seconds between a threat appearing at the leading edge and reaching the ship. `SHIP_SPEED` is
+ * the *distance* budget: how much of the 100-unit lane the player can cross in that time. The dodge
+ * margin is a function of both, so settling one against the other while the other still moves is the
+ * eight-pass bounce `docs/decisions/0027-measure-the-picture-not-the-model.md` records, reached from a
+ * third direction. `reports/drag-feel-2026-08-05.md` lists both as waiting on the same trigger and
+ * puts only one of them in its ordering; this is the correction.
+ *
+ * ⚠️ **It moved here from `src/app/mount.ts`.** A difficulty quantity living in the shell is one the
+ * model cannot be tuned against, and one a level cannot be authored against either.
+ */
+export const SCROLL_PER_STEP = 0.6;
+
+/**
  * The player's movement box along the scroll axis, in world units from the camera's trailing edge.
  *
  * `ACROSS_SPAN * MIN_ASPECT` — the NARROWEST view any device gets, so every device gives the player
