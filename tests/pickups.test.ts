@@ -8,6 +8,7 @@ import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { GameFrame } from '../src/app/frame.ts';
+import { initialState, reduce } from '../src/state/root.ts';
 import { playableWorld } from './world.ts';
 
 /**
@@ -36,13 +37,25 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
   });
 
   it('stacks — the second of a kind is not swallowed by the first', () => {
-    // The failure this catches is a `Set` where a list was meant, or a tier that saturates at one.
+    /*
+      The failure this catches is a `Set` where a list was meant, or a tier that saturates at one.
+
+      ⚠️ **Driven through the REDUCER as well as through `weaponFor`, and the first version was not.**
+      `npm run prove` deduplicated the list inside `src/state/slices/run.ts` and this stayed green,
+      because a resolver handed a hand-built array cannot see what the thing building the array did.
+      Two layers, two assertions — a guard over one of them is a guard over neither.
+    */
     const one = weaponFor(SHIPS.proof, ['rapid']);
     const two = weaponFor(SHIPS.proof, ['rapid', 'rapid']);
     expect(two.fireEvery, 'a second rapid did nothing').toBeLessThan(one.fireEvery);
     expect(weaponFor(SHIPS.proof, ['spread', 'spread']).shots).toBeGreaterThan(
       weaponFor(SHIPS.proof, ['spread']).shots,
     );
+
+    let state = reduce(initialState, { slice: 'run', type: 'begin' });
+    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'rapid' });
+    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'rapid' });
+    expect(state.run.upgrades, 'the run kept one rapid where two were taken').toEqual(['rapid', 'rapid']);
   });
 
   it('never fires faster than a hit can be read, however many are taken', () => {
