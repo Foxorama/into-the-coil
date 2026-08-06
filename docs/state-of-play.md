@@ -42,7 +42,10 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
 | **a death takes the ship, and the level carries on** | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
 | **a trigger is a place on the glass, and it is drawn** | [0060](decisions/0060-a-trigger-is-a-place-on-the-glass.md) |
+| **a level boundary keeps the shell; a death and a new run do not** | [0058](decisions/0058-a-level-boundary-keeps-the-shell.md) |
 | **a boss's station drifts, so a fight is still flight** | [0061](decisions/0061-a-boss-keeps-flying.md) |
+| **a pickup waits to be taken, and its face turns half a second faster** | [0064](decisions/0064-a-pickup-waits-to-be-taken.md) |
+| **a death scatters what it took, non-cycling and on a short timer** | [0066](decisions/0066-a-death-scatters-what-it-took.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
@@ -80,50 +83,32 @@ easiest of three tiers as well as two levels out of date —
 [`ship-speed-settled`](../reports/ship-speed-settled-2026-08-05.md), which is now two levels out of
 date and is exactly what a play-test is for.
 
-## What the play-test still has to answer
+## What the play-test has answered
 
-Questions, not findings — each one a number nothing in the repository can settle.
+⚠️ **All eight questions have been played and answered** —
+[`the-eight-questions-answered`](../reports/the-eight-questions-answered-2026-08-07.md) has them in
+the player's own words, and the seven things still open at the end of them.
+[`two-levels-played`](../reports/two-levels-played-2026-08-06.md) is the pass before it.
 
-⚠️ **The first pass has happened** —
-[`two-levels-played`](../reports/two-levels-played-2026-08-06.md) has the verdict, the four findings
-and their measurements. All four are fixed:
-[0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md) and
-[0045](decisions/0045-the-player-can-see-what-they-are-carrying.md). The questions below are the ones
-it did **not** answer.
+⚠️ **Two were answered *"can't tell yet"*, and both are blocked on the same thing: a balance pass
+against a one-hit hull.** That is now the largest open item in the project, and it is not on the list
+below — 0047's two harder tiers were sized against a five-health ship and have never been re-sized.
 
-- **Is the boss's progress readable at all?** Nothing says how much of it is left, by decision —
-  [0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md) names this as the thing that
-  build exists to find out.
-- **Is any of the three life counts right**, and is twenty seconds the right ceiling on how long a
-  death leaves the player unarmed?
-  [0041](decisions/0041-a-pickup-is-the-answer-to-what-a-death-costs.md) picked that number without
-  having played it, and item 4 below makes a death cost considerably more.
-- **Are the two harder tiers anywhere near their targets?** *"Level four with challenge"* and
-  *"maybe the end boss of level two"* are the numbers
-  [0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md) was sized against,
-  and only the easiest tier — the one that changes nothing — has ever been played.
-- **Do the two upgrades read on screen?** `docs/game.md` says every upgrade changes how the ship
-  looks, and neither of these does yet — they change what leaves it, and the title screen now says
-  what they are ([0045](decisions/0045-the-player-can-see-what-they-are-carrying.md)).
-- **Do the weaver and the charger read apart?** Both are essentially lines, told apart by which way
-  they lie — `src/content/sprites.ts` writes that risk down rather than assuming it away.
-- **Do enemy shots ever land?** [0034](decisions/0034-a-threat-is-absolute-and-a-pool-is-the-pairing.md)'s
-  `spit` speed and the fire rates have never been felt by an attentive player; the turret and the
-  warden are the rows that exist to test them —
-  [`ship-speed-settled`](../reports/ship-speed-settled-2026-08-05.md) has the measurement they
-  replace.
-- **Is level two a different game or the same one denser?**
-  [0042](decisions/0042-a-run-is-a-sequence-of-levels.md) claims the harrow takes away the lane the
-  sentinel taught the player to hold. That is a claim about how a fight feels, and nothing in this
-  repository can check it.
-- **Does a run that survives a level boundary feel like one run?** Six minutes is longer than
-  anything here has been played end to end.
+⚠️ **The chart between levels is now a QUESTION rather than a plan.**
+`docs/decisions/0063-a-level-break-is-a-respite.md` carries the report; `docs/game.md` still puts a
+branching map there, and the evidence points away from a screen rather than towards one.
 
-## The second play-test list, given 2026-08-06
+## The second play-test list, given 2026-08-06 and added to on 2026-08-07
 
-**Twelve items, in the player's words, after playing the build that item 4 below produced.** Four have
-landed; **eight have not been started**, and they are written out here rather than left in a chat
-log — [0029](decisions/0029-the-tracked-record-is-the-record.md).
+**Fourteen items, in the player's words** — twelve after playing the build that item 4 below produced,
+and two more the morning after. Five have landed; **nine have not been started**, and they are written
+out here rather than left in a chat log — [0029](decisions/0029-the-tracked-record-is-the-record.md).
+
+⚠️ **They are asked for as ONE list and cannot be judged apart.** *"Individually they can't be judged
+because they all affect the gameplay and game balance… something might feel right by itself in
+isolation and then completely fail when you mix something else in."* So each lands as its own change
+with its own guards, and **the verdict on all of them is one play-test after the last one lands** —
+not a report per item.
 
 ⚠️ **Nothing below has been played since these landed.** Four of them change what a run feels like on
 the first ten seconds, and one of them ([0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md))
@@ -136,9 +121,20 @@ makes a death cost more in the same session as a report that dying is already to
 | the jerky flick, and the bomb that fires itself on starting a run | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the missile tube the ship should not start with; pickups too small to grab | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
 | a death that emptied the screen | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
+| shields lost at every level boundary | [0058](decisions/0058-a-level-boundary-keeps-the-shell.md) |
 
 **Not started, in the player's own words.** Each is a real design question, not a tidy-up:
 
+1. **✅ DONE — pickups linger, bounce and cycle faster.**
+   [0064](decisions/0064-a-pickup-waits-to-be-taken.md). ⚠️ The two halves answer the complaint
+   together and neither does alone: the wait turns *catch it as it goes past* into *go and get the one
+   you want*, and the faster cycle turns that wait into two and a quarter faces rather than a third of
+   one. It also puts a pickup on the field for sixteen seconds rather than nine, which item 2 has to
+   count against a pool of eight.
+2. **A death should scatter the lost upgrades as grabbable pickups.** *"Non-cycling and on a short
+   timer so there's enough time to grab some, but maybe not all."* This is the half of the
+   dying-is-punishing report that 0057 deliberately did **not** answer, and it is the one that
+   actually answers it. It needs item 1 first: scattered pickups are bouncing pickups.
 1. **Pickups must linger, bounce and cycle faster.** *"They enter the screen, change when they get to
    player safe distance, then disappear off the screen. They need to bounce and move around the
    screen so the player can grab them safely and grab the power up they want safely."* Also
@@ -148,10 +144,10 @@ makes a death cost more in the same session as a report that dying is already to
    comment has been corrected and now carries its own arithmetic, so *0.5 faster* is a departure from
    3.6. Lingering means a pickup holding station in the camera's frame — 0034's *every speed is in
    the camera's frame*.
-2. **A death should scatter the lost upgrades as grabbable pickups.** *"Non-cycling and on a short
-   timer so there's enough time to grab some, but maybe not all."* This is the half of the
-   dying-is-punishing report that 0057 deliberately did **not** answer, and it is the one that
-   actually answers it. It needs item 1 first: scattered pickups are bouncing pickups.
+2. **✅ DONE — a death scatters the lost upgrades.**
+   [0066](decisions/0066-a-death-scatters-what-it-took.md). It is the half of the dying-is-punishing
+   report 0057 deliberately left, and 0056 had made a death cost more in the same session. ⚠️ The
+   pickup pool went from eight to twelve, out of the particle share.
 3. **Bosses need a real explosion and an end-of-level beat.** *"Currently the level just ends."*
 4. **The between-levels screen should become a brief respite.** *"The current pause/level screen
    interrupts the flow."* ⚠️ Touches `SCREENS` — [0046](decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md)
@@ -175,6 +171,12 @@ makes a death cost more in the same session as a report that dying is already to
 9. **Shields do not carry between levels.** ⚠️ A shield lives on `ship.health` by 0050 and
    deliberately not in the run slice, so it is the one thing the player carries that a level boundary
    has no reason to preserve.
+8. **A bomb cannot be fired twice on a phone.** *"How do you fire bombs on mobile? I can do one and
+   then can't fire any more."* ⚠️ The tap strip is `SPECIAL_BINDINGS` bands wide whatever the ship
+   owns, so half of it is bound to a special nobody has — and nothing draws it, so where the other
+   half is is a guess. `src/app/touch.ts`.
+9. **✅ DONE — shields did not carry between levels.**
+   [0058](decisions/0058-a-level-boundary-keeps-the-shell.md).
 
 ## What was next before that list, and why in this order
 
