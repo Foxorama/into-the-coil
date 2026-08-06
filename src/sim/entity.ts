@@ -153,6 +153,22 @@ export interface Entity extends Body {
    * `docs/decisions/0048-a-threat-may-arrive-from-the-side.md`.
    */
   steerAcross: number;
+  /**
+   * Steps this body still has of holding station in the camera's frame, or `0` for one that does not.
+   *
+   * ⚠️ **Only pickups carry one**, exactly as `steerAcross` is only read by something crossing the
+   * lane. Everything else in the game either drifts back with the world or closes on the player, and
+   * a body that is not lingering has a zero here — so no sentinel is needed and none is defined.
+   *
+   * ⚠️ **A STEP COUNT, in a file that argues elsewhere for distances.** `src/content/enemies.ts` says
+   * a shape in the world can be authored against and a wobble in time cannot, and that argument does
+   * not reach here: the step is fixed (0022), so a count of steps IS a distance of camera travel, and
+   * this one is set at spawn from the distance the pickup has to cover. What it could not have been
+   * is a comparison against the pickup's own position, because a body holding station never moves
+   * relative to the camera and so can never test its way back out of the hold.
+   * `docs/decisions/0064-a-pickup-waits-to-be-taken.md`.
+   */
+  holdFor: number;
 }
 
 /** A blank entity. Called only while a pool is being constructed. */
@@ -177,6 +193,7 @@ export function makeEntity(): Entity {
     fireIn: 0,
     lifeFor: 0,
     steerAcross: 0,
+    holdFor: 0,
   };
 }
 
@@ -206,6 +223,7 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.fireIn = 0;
   e.lifeFor = 0;
   e.steerAcross = 0;
+  e.holdFor = 0;
 }
 
 /**

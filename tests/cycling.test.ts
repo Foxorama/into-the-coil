@@ -9,6 +9,8 @@ import {
   faceOf,
   type PickupKind,
 } from '../src/content/pickups.ts';
+import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
+import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { playableWorld, NO_LEVEL } from './world.ts';
 
 /**
@@ -86,6 +88,22 @@ describe('the camera says which face', () => {
       expect(faceOf(kind, CYCLE_UNITS), 'the face did not change at the phase boundary').toBe(CYCLE[kind]);
       expect(faceOf(kind, CYCLE_UNITS * 2), 'the face did not come back').toBe(kind);
     }
+  });
+
+  it('is half a second faster than it was, which is what was asked for', () => {
+    /*
+      ⚠️ **THE ONE NUMBER IN THIS FILE THAT IS ASSERTED, and it is asserted as a DURATION.** The ask
+      was *"cycle .5 sec faster"* against a baseline of 3.611s — `130 ÷ SCROLL_PER_STEP ÷ 60` — and a
+      half second is the sort of change that is invisible in every screenshot and every still frame.
+      `docs/decisions/0064-a-pickup-waits-to-be-taken.md`.
+
+      ⚠️ **In SECONDS rather than in units**, per
+      `docs/decisions/0027-measure-the-picture-not-the-model.md`: `CYCLE_UNITS` is a distance and the
+      request was made in time, so a guard written in units would prove the constant equals itself.
+      Held to a tenth of a second, because 112 is the nearest whole unit to the exact answer.
+    */
+    const seconds = CYCLE_UNITS / SCROLL_PER_STEP / STEPS_PER_SECOND;
+    expect(seconds, `a face lasts ${seconds.toFixed(2)}s`).toBeCloseTo(3.11, 1);
   });
 
   it('flips everything on the field on the same step', () => {

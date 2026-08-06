@@ -146,6 +146,43 @@ const SCATTER_SPEED = 0.66;
 const SCATTER_STEPS = 300;
 
 /**
+ * Where a pickup stops running away and waits, in world units ahead of the camera.
+ *
+ * ── WHY A PICKUP LINGERS AT ALL ─────────────────────────────────────────────────────────────────
+ *
+ * Reported from play: *"they enter the screen, change when they get to player safe distance, then
+ * disappear off the screen. They need to bounce and move around the screen so the player can grab
+ * them safely and grab the power up they want safely."* And the complaint underneath it: *"shields
+ * are a hundred times more valuable than lives, and nine times out of ten the player is picking up a
+ * life or placing themselves in danger to try and get a shield."*
+ * `docs/decisions/0064-a-pickup-waits-to-be-taken.md`.
+ *
+ * ⚠️ **A pickup used to cross the whole view at the scroll rate and leave**, which is about nine
+ * seconds of travel — and it spent most of that either beyond the player's reach or already behind
+ * them. Holding station is what turns *catch it as it goes past* into *go and get the one you want*.
+ *
+ * ⚠️ **100, and both bounds are real.** It is inside the narrowest view any device gets — 150 units
+ * (`src/sim/camera.ts`) — so the wait happens on screen everywhere; and it is inside the player's own
+ * box, which reaches `PLAYER_ALONG_SPAN − PLAYER_MARGIN` at 144, so the player can actually fly to it.
+ * A station outside either would be a pickup that waits somewhere nobody can go.
+ */
+const PICKUP_STATION = 100;
+
+/**
+ * How long a pickup waits once it has arrived, in steps — seven seconds.
+ *
+ * ⚠️ **Measured against the CYCLE rather than chosen for roundness.** `CYCLE_UNITS` is 3.11 seconds
+ * (`src/content/pickups.ts`), so seven seconds is **two and a quarter faces while the player is
+ * beside it** — enough to see the other face, decide, and still have time to take it. Anything under
+ * one full cycle would leave *which one you get* down to when you happened to arrive, which is the
+ * complaint the ask came from.
+ *
+ * A starting point on `docs/decisions/0037-the-ship-has-mass.md`'s terms, and nothing asserts on it;
+ * what `tests/pickups.test.ts` holds is that the wait covers more than one cycle.
+ */
+const PICKUP_LINGER_STEPS = 420;
+
+/**
  * How much wider than the hull the ship's reach is when COLLECTING, as a multiple of its radius.
  *
  * Reported from play: *"power ups are slightly too hard to pick up in size."*
@@ -1322,6 +1359,25 @@ function driftPickups(w: World): void {
       a fuse: after the release the slot belongs to whatever spawns next, so its position is gone.
     */
     if (item.lifeFor === 1) burst(w, item.along, item.across, BURST.shield);
+    /*
+      THE WAIT — `docs/decisions/0064-a-pickup-waits-to-be-taken.md`.
+
+      ⚠️ **`holdFor` covers the whole window: the approach AND the wait**, and it is set at spawn from
+      the distance the pickup has to cover. That is what makes it end. A test on *have I reached the
+      station* cannot: a body holding station never moves relative to the camera, so the condition
+      that started the hold is true forever afterwards and the pickup would never leave.
+
+      ⚠️ **Holding station is `velAlong = scrollPerStep`**, which is the camera's own rate — 0034's
+      *every speed is in the camera's frame*, and the same line the boss's station uses. Zero is what
+      the pickup carries before and after: a body with no speed of its own falls back through the view
+      at the scroll rate, which is exactly what a pickup arriving and then leaving should do.
+    */
+    if (item.holdFor <= 0) continue;
+    item.holdFor--;
+    item.velAlong = item.along - w.cameraAlong <= PICKUP_STATION ? w.scrollPerStep : 0;
+    // The last step of the wait hands the pickup back to the scroll, or it would hold station for
+    // ever on a counter that has already run out.
+    if (item.holdFor === 0) item.velAlong = 0;
   }
 }
 
@@ -1396,6 +1452,19 @@ function spawnPickup(w: World, index: number): void {
     Alternating means two pickups near each other visibly separate rather than moving as a pair.
   */
   item.velAcross = index % 2 === 0 ? PICKUP_DRIFT : -PICKUP_DRIFT;
+  /*
+    HOW LONG IT HAS BEFORE THE SCROLL TAKES IT AWAY — the approach plus the wait, in steps.
+
+    ⚠️ **Computed from where it actually starts rather than from a constant**, because a wave's
+    authored `at` and the camera at the moment it spawns differ by up to one step, and because
+    `docs/decisions/0064-a-pickup-waits-to-be-taken.md` wants the WAIT to be the same seven seconds
+    for every pickup rather than the total to be the same. A pickup that spawned already inside the
+    station gets no approach and all of the wait, which is the honest answer.
+
+    ⚠️ **Nothing allocates**: a subtraction, a divide and a `Math.max`.
+  */
+  const approach = (entry.at - w.cameraAlong - PICKUP_STATION) / w.scrollPerStep;
+  item.holdFor = PICKUP_LINGER_STEPS + Math.max(0, Math.round(approach));
 }
 
 /** The boss, if there is one on the field. Its whole behaviour lives in `src/app/boss.ts`. */
@@ -1511,10 +1580,29 @@ export function respawn(w: World): void {
  * `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md` amended it — so they live in
  * `src/state/` and this cannot reach them even by accident.
  */
-export function startLevel(w: World, level: LevelRow): void {
+export function startLevel(w: World, level: LevelRow, keepShell: boolean): void {
   w.level = level;
   w.bossRow = BOSSES[level.boss];
+  /*
+    ⚠️ **THE SHELL CROSSES A BOUNDARY BECAUSE THE SHIP DOES, AND IT DOES NOT CROSS A RUN.**
+    `resetScene` calls `respawn`, which puts a hull with nothing on it back on the field — right for a
+    death and wrong at a level boundary, where nothing died. Reported from play: *"shields don't carry
+    forward between levels."* `docs/decisions/0058-a-level-boundary-keeps-the-shell.md`.
+
+    ⚠️ **Read before and written after rather than *not reset***, so `respawn` goes on saying exactly
+    one thing — *this is what a new life gets* — and the difference between a life and a level lives
+    in the function whose name is that difference.
+
+    ⚠️ **`keepShell` IS AN ARGUMENT AND WAS BRIEFLY AN ORDERING.** The first version read the count
+    unconditionally and relied on `src/app/mount.ts` calling `resetScene` before `startLevel` at the
+    top of a run, so that what crossed was zero. That is true, invisible, and reached by a line in
+    another file that reads as redundant — and `npm run prove` said so: the probe that removed that
+    line came back STILL GREEN, because no test could see an ordering nothing states. A caller that
+    has to say which of the two it is cannot get it wrong quietly.
+  */
+  const shields = keepShell ? shieldsOf(w.shipRow, w.ship.health) : 0;
   resetScene(w);
+  w.ship.health += shields;
 }
 
 export function resetScene(w: World): void {

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import { type Entity, makeEntity, reset } from '../src/sim/entity.ts';
 import { Pool } from '../src/sim/pool.ts';
-import { GameFrame, respawn, type World } from '../src/app/frame.ts';
+import { GameFrame, respawn, startLevel, type World } from '../src/app/frame.ts';
 import { MAX_SHIELDS, SHIPS, fullHealthFor, shieldsOf } from '../src/content/ships.ts';
 import { PICKUPS, PICKUP_KINDS, UPGRADE_KINDS, isUpgrade, type PickupKind } from '../src/content/pickups.ts';
 import { SHOTS } from '../src/content/shots.ts';
@@ -312,6 +312,74 @@ describe('the shell costs nothing the budget did not already have', () => {
     frame.step();
     expect(shieldsOf(world.shipRow, world.ship.health), 'a single contact took more than one shield').toBe(
       MAX_SHIELDS - 1,
+    );
+  });
+});
+
+/**
+ * A LEVEL BOUNDARY KEEPS THE SHELL, AND A DEATH DOES NOT.
+ *
+ * `docs/decisions/0058-a-level-boundary-keeps-the-shell.md`. Reported from play: *"shields don't
+ * carry forward between levels."*
+ *
+ * ⚠️ **The two paths run through the same function and must not agree.** `startLevel` calls
+ * `resetScene`, which calls `respawn` — so the code that puts a fresh hull on the field after a death
+ * is also the code that puts one there at the top of a level. The difference between a life ending
+ * and a level ending is the whole of what these hold, and *"is gone the moment the ship is"* above is
+ * the other half of it.
+ */
+describe('a level boundary keeps the shell, and a death does not', () => {
+  it('carries every shield into the next level', () => {
+    const { world } = quietWorld();
+    giveShields(world, MAX_SHIELDS);
+    startLevel(world, NO_LEVEL, true);
+    expect(shieldsOf(world.shipRow, world.ship.health), 'the level boundary took the shell').toBe(MAX_SHIELDS);
+  });
+
+  it('carries a partial shell too, so it is the count and not a flag', () => {
+    /*
+      One shield rather than a full shell, because *"health was restored to full"* and *"the shell
+      crossed"* are the same picture at three and different pictures at one — and the first would be
+      a shield pickup nobody has to find.
+    */
+    const { world } = quietWorld();
+    giveShields(world, 1);
+    startLevel(world, NO_LEVEL, true);
+    expect(shieldsOf(world.shipRow, world.ship.health), 'the boundary refilled the shell instead of keeping it').toBe(1);
+  });
+
+  it('puts the marks back on the ship, so the picture says so too', () => {
+    // 0036: an event the model resolves and the picture never mentions is a bug report about
+    // something else. A shell that survived as a number and not as marks is exactly that.
+    const { world, frame } = quietWorld();
+    giveShields(world, 2);
+    startLevel(world, NO_LEVEL, true);
+    frame.step();
+    expect(world.shieldOrbs.size, 'the ship crossed the boundary wearing nothing').toBe(2);
+  });
+
+  it('cannot carry one into a NEW run, because the caller has to say which it is', () => {
+    /*
+      ⚠️ **The half that could have leaked**, and the reason `keepShell` is an argument rather than an
+      ordering. A shell carried out of the run that just ended is a player starting their next attempt
+      already armoured — and the first version of this made that impossible by an ordering in
+      `src/app/mount.ts` that no test could see. `npm run prove` reported the probe over it STILL
+      GREEN, which is 0019 catching a guard that could not fire.
+    */
+    const { world } = quietWorld();
+    giveShields(world, MAX_SHIELDS);
+    startLevel(world, NO_LEVEL, false);
+    expect(shieldsOf(world.shipRow, world.ship.health), 'a new run opened wearing the last run’s shell').toBe(0);
+  });
+
+  it('never carries more than the ship can wear', () => {
+    // The cap is `fullHealthFor`, and a carry that added to a full ship would put a fourth mark in a
+    // pool of three — `src/app/mount.ts` caps the pickup for the same reason.
+    const { world } = quietWorld();
+    giveShields(world, MAX_SHIELDS);
+    startLevel(world, NO_LEVEL, true);
+    expect(world.ship.health, 'the boundary handed the ship more health than it has room for').toBeLessThanOrEqual(
+      fullHealthFor(world.shipRow),
     );
   });
 });
