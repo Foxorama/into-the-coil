@@ -9,6 +9,7 @@ import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { GameFrame } from '../src/app/frame.ts';
 import { initialState, reduce } from '../src/state/root.ts';
+import { DEFAULT_DIFFICULTY } from '../src/state/slices/run.ts';
 import { playableWorld } from './world.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 
@@ -53,7 +54,7 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
       weaponFor(SHIPS.proof, ['spread']).shots,
     );
 
-    let state = reduce(initialState, { slice: 'run', type: 'begin' });
+    let state = reduce(initialState, { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY });
     state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'rapid' });
     state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'rapid' });
     expect(state.run.upgrades, 'the run kept one rapid where two were taken').toEqual(['rapid', 'rapid']);

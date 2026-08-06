@@ -32,6 +32,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | a weapon is a budget; a level opens empty | [0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md) |
 | lives and shield on screen; a key on the title | [0045](decisions/0045-the-player-can-see-what-they-are-carrying.md) |
 | **a pad can press a button; a run-over screen expires** | [0046](decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md) |
+| **difficulty is a tier, and the easy one is the content** | [0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -105,16 +106,15 @@ have picked, and that is fine — none of the three blocks another.
 rather than a binding, and 0030's claim survived with one distinction added: a menu is not the game,
 so its confirm button is not `special1`.
 
-**2 — Difficulty tiers, chosen before a run.**
+**2 — ✅ DONE. Difficulty tiers, chosen before a run.**
 
-Asked for: three tiers — *Legendary Pilot*, *Savior of the Galaxy*, *Let the Galaxy Burn* — with the
-game as it currently plays being the EASIEST of the three, and the middle one tuned so that an
-average player reaches level four and no further.
+[0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md). Three tiers on the
+title screen, the easiest one multiplying nothing, and a tier that lives on the run rather than on
+the assist ladder — which could not have held it.
 
-⚠️ **A tier is not an assist and cannot be one.**
-[0024](decisions/0024-the-accessibility-floor-is-settings.md) closes the assist ladder with *no assist
-may ever make the game harder*, which makes "harder than default" unrepresentable there — correctly.
-The two axes are orthogonal and both must exist.
+⚠️ **The two harder tiers are guesses against a stated target and have never been played.** *"Level
+four with challenge"* and *"maybe the end boss of level two"* are the numbers to measure the next
+play-test against, and there are only two levels to do it in.
 
 **3 — More waves, and better spawns.**
 

@@ -13,18 +13,46 @@
 
 import { type SpecialKind } from '../../content/specials.ts';
 import { type UpgradeKind } from '../../content/pickups.ts';
+import { DIFFICULTIES, type DifficultyKind } from '../../content/difficulty.ts';
 
 /**
- * Lives a run starts with.
+ * The tier a run that has not begun is carrying.
  *
- * ⚠️ **A play-test number, not a decided one** — 0039 puts it in the same category as `SHIP_SPEED`
- * and `SCROLL_PER_STEP`, which `docs/decisions/0037-the-ship-has-mass.md` settled by playing rather
- * than by reasoning. Nothing may assert on this value; what the tests hold are the relationships
- * that must be true at any value.
+ * ⚠️ **`begin` always sets one, so nothing reads this except a state nobody is playing.** It is the
+ * middle tier because that is the one the game is tuned for — a default that is a real answer,
+ * rather than a sentinel that would have to be checked for.
  */
-export const STARTING_LIVES = 3;
+export const DEFAULT_DIFFICULTY: DifficultyKind = 'savior';
+
+/**
+ * Lives a run starts with, on a given tier.
+ *
+ * ⚠️ **`STARTING_LIVES` was the single description of this and is now a column in
+ * `src/content/difficulty.ts`.** 0039 put the number in the same category as `SHIP_SPEED` — placed
+ * by a hand, settled by playing — and that is still true of each of the three; what has changed is
+ * that there are three of them and a tier is what picks one.
+ * `docs/decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md`.
+ *
+ * Nothing may assert on the values. What the tests hold are the relationships that must be true at
+ * any value.
+ */
+export function livesFor(difficulty: DifficultyKind): number {
+  return DIFFICULTIES[difficulty].lives;
+}
 
 export interface RunState {
+  /**
+   * How hard this run is, chosen before it started and fixed for its length.
+   *
+   * ⚠️ **On the RUN, because it is a property of the run and because `save/` has to store it.** A
+   * saved run resumed at a different tier would be a different run, and the resume
+   * (`docs/game.md`) is explicitly an interruption hedge rather than a second chance.
+   *
+   * ⚠️ **Not on `Assists`, and it never may be.**
+   * `docs/decisions/0024-the-accessibility-floor-is-settings.md` closes that ladder with *no assist
+   * may ever make the game harder*, which makes two of these three tiers unrepresentable there.
+   */
+  difficulty: DifficultyKind;
   /** Lives left. A death spends one; at zero the run is over. */
   lives: number;
   /** Which level, zero-based. */
@@ -53,7 +81,7 @@ export interface RunState {
 }
 
 export type RunAction =
-  | { slice: 'run'; type: 'begin' }
+  | { slice: 'run'; type: 'begin'; difficulty: DifficultyKind }
   | { slice: 'run'; type: 'lifeLost' }
   | { slice: 'run'; type: 'took'; special: SpecialKind }
   | { slice: 'run'; type: 'gainedLife' }
@@ -67,12 +95,18 @@ export type RunAction =
  * that is already stocked would let a reload or a stray dispatch drop the player into a half-run
  * whose level and arsenal came from nowhere.
  */
-export const initialRun: RunState = { lives: 0, level: 0, arsenal: [], upgrades: [] };
+export const initialRun: RunState = {
+  lives: 0,
+  level: 0,
+  arsenal: [],
+  upgrades: [],
+  difficulty: DEFAULT_DIFFICULTY,
+};
 
 export function reduceRun(state: RunState, action: RunAction): RunState {
   switch (action.type) {
     case 'begin':
-      return { lives: STARTING_LIVES, level: 0, arsenal: [], upgrades: [] };
+      return { lives: livesFor(action.difficulty), level: 0, arsenal: [], upgrades: [], difficulty: action.difficulty };
     case 'lifeLost':
       /*
         ⚠️ **The arsenal is cleared on EVERY death, including the last one.** It reads as redundant —
@@ -94,19 +128,32 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
       */
       return state.lives <= 0
         ? state
-        : { lives: state.lives - 1, level: state.level, arsenal: [], upgrades: [] };
+        : { lives: state.lives - 1, level: state.level, arsenal: [], upgrades: [], difficulty: state.difficulty };
     case 'took':
-      return { lives: state.lives, level: state.level, arsenal: [...state.arsenal, action.special], upgrades: state.upgrades };
+      return {
+        lives: state.lives,
+        level: state.level,
+        arsenal: [...state.arsenal, action.special],
+        upgrades: state.upgrades,
+        difficulty: state.difficulty,
+      };
     case 'gainedLife':
       // No ceiling. A level author decides how many are findable, which is 0039's replacement for
       // lives that refill at a boundary — and a cap here would quietly overrule that decision.
-      return { lives: state.lives + 1, level: state.level, arsenal: state.arsenal, upgrades: state.upgrades };
+      return {
+        lives: state.lives + 1,
+        level: state.level,
+        arsenal: state.arsenal,
+        upgrades: state.upgrades,
+        difficulty: state.difficulty,
+      };
     case 'upgraded':
       return {
         lives: state.lives,
         level: state.level,
         arsenal: state.arsenal,
         upgrades: [...state.upgrades, action.upgrade],
+        difficulty: state.difficulty,
       };
     case 'levelCleared':
       /*
@@ -115,7 +162,13 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         to say upgrades cross a LEVEL boundary and not a death, and this line is the level boundary.
         A clear that reset anything would be the death rule wearing the wrong name.
       */
-      return { lives: state.lives, level: state.level + 1, arsenal: state.arsenal, upgrades: state.upgrades };
+      return {
+        lives: state.lives,
+        level: state.level + 1,
+        arsenal: state.arsenal,
+        upgrades: state.upgrades,
+        difficulty: state.difficulty,
+      };
     default: {
       // Adding a member to `RunAction` fails to compile HERE, per
       // `docs/decisions/0016-a-hub-enumerates-kinds.md`'s fifth defeat.

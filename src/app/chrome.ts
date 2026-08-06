@@ -85,6 +85,23 @@ const STYLE = `
   color: inherit;
   cursor: pointer;
 }
+/*
+  The hint under a control's label. A block, so it takes its own line inside the button rather than
+  running on after it — three tiers whose names wrap into each other is a choice nobody can read at a
+  glance, and the choice is the whole screen.
+*/
+.itc-title-action-hint {
+  display: block;
+  font-size: 0.62em;
+  font-weight: 400;
+  opacity: 0.72;
+  margin-top: 0.3em;
+}
+/*
+  The tiers are a column and they are wider than a one-word button, so they get a shared width. The
+  order is the table's order, which is easiest first — see decision 0047.
+*/
+.itc-title-action { min-width: min(22ch, 80vw); }
 .itc-title-action:hover, .itc-gameover-action:hover, .itc-cleared-action:hover, .itc-victory-action:hover {
   background: rgba(255, 255, 255, 0.12);
 }
@@ -344,11 +361,24 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen, index: n
       already paid once for two descriptions of one fact (`src/content/sprites.ts`).
     */
     const controls: HTMLButtonElement[] = [];
-    row.actions.forEach((label, index) => {
+    row.actions.forEach((action, index) => {
       const control = document.createElement('button');
       control.type = 'button';
       control.className = prefix + 'action';
-      control.textContent = label;
+      control.textContent = action.label;
+      /*
+        The hint, INSIDE the button so it is part of what the control announces itself as.
+
+        ⚠️ **Beside it would be a second thing to focus and a second thing to tab past**, and the
+        hint is not a thing to do — it is what the control means. A `<span>` in the accessible name
+        is read as one phrase by a screen reader, which is exactly the reading a sighted player gets.
+      */
+      if (action.hint.length > 0) {
+        const hint = document.createElement('span');
+        hint.className = prefix + 'action-hint';
+        hint.textContent = action.hint;
+        control.appendChild(hint);
+      }
       const onClick = (): void => onAction(screen, index);
       control.addEventListener('click', onClick);
       listeners.push(() => control.removeEventListener('click', onClick));

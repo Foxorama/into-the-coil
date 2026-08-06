@@ -24,6 +24,7 @@ import { ACROSS_SPAN } from '../sim/camera.ts';
 import { type Entity, reset } from '../sim/entity.ts';
 import type { Pool } from '../sim/pool.ts';
 import type { BossPhase, BossRow } from '../content/bosses.ts';
+import { type DifficultyRow, fireGapFor } from '../content/difficulty.ts';
 import type { ShotRow } from '../content/shots.ts';
 
 /**
@@ -44,9 +45,17 @@ const APPROACH_PER_STEP = 0.45;
  * when nothing matches, which cannot happen while `tests/level.test.ts` holds that the first `upTo`
  * is 1 — and a boss with no phase at all would simply stop fighting, which is the least legible
  * failure available.
+ *
+ * ⚠️ **`full` is an ARGUMENT and is no longer `row.health`.** A difficulty tier scales what the boss
+ * starts with (`docs/decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md`), so
+ * dividing by the row would put a tougher boss below every threshold at once — it would open in its
+ * final phase and stay there, which looks like a hard fight rather than like a bug.
+ *
+ * A `full` of zero or less falls back to the row, because a fraction with a zero denominator is a
+ * `NaN` that compares false against every `upTo` and silently leaves the boss in phase one.
  */
-export function phaseFor(row: BossRow, health: number): BossPhase {
-  const fraction = health / row.health;
+export function phaseFor(row: BossRow, health: number, full: number = row.health): BossPhase {
+  const fraction = health / (full > 0 ? full : row.health);
   let active = row.phases[0]!;
   for (let i = 0; i < row.phases.length; i++) {
     const phase = row.phases[i]!;
@@ -71,6 +80,8 @@ export function phaseFor(row: BossRow, health: number): BossPhase {
 export function stepBoss(
   boss: Entity,
   row: BossRow,
+  fullHealth: number,
+  tier: DifficultyRow,
   ship: Entity,
   shots: Pool<Entity>,
   bullet: ShotRow,
@@ -78,7 +89,7 @@ export function stepBoss(
   scrollPerStep: number,
   patrolDirection: number,
 ): number {
-  const phase = phaseFor(row, boss.health);
+  const phase = phaseFor(row, boss.health, fullHealth);
 
   // Close on the station, then hold it. Holding is `scrollPerStep` and nothing else: the station is
   // a distance from the camera, so matching the camera's rate IS standing still on screen.
@@ -98,7 +109,9 @@ export function stepBoss(
 
   boss.fireIn--;
   if (boss.fireIn > 0) return direction;
-  boss.fireIn = phase.fireEvery;
+  // ⚠️ The tier's gap over the PHASE's, so escalation and difficulty compose rather than compete: a
+  // hard tier's opening phase is still slower than its own last one.
+  boss.fireIn = fireGapFor(phase.fireEvery, tier);
 
   const dAlong = ship.along - boss.along;
   const dAcross = ship.across - boss.across;
@@ -123,8 +136,9 @@ export function stepBoss(
     if (shot === null) break;
     const angle = first + step * i;
     reset(shot, boss.along, boss.across, bullet);
-    shot.velAlong = Math.cos(angle) * bullet.speed + scrollPerStep;
-    shot.velAcross = Math.sin(angle) * bullet.speed;
+    const speed = bullet.speed * tier.shotSpeed;
+    shot.velAlong = Math.cos(angle) * speed + scrollPerStep;
+    shot.velAcross = Math.sin(angle) * speed;
   }
   return direction;
 }

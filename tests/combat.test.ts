@@ -22,6 +22,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
+import { BOSSES } from '../src/content/bosses.ts';
+import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { ACROSS_SPAN, EDGE_MARGIN, spawnAlong, viewOf } from '../src/sim/camera.ts';
 import { ASSIST_LADDER, DEFAULT_ASSISTS, type Assists, tuningFor } from '../src/sim/assist.ts';
 import { collideInto, collideIntoOne, makeDeaths, overlaps } from '../src/sim/collide.ts';
@@ -439,6 +441,8 @@ function firingAt(row: EnemyRow, distance: number): World {
     // A hand-built world for a test drives the step directly, so it is always stepping and a
     // death is nobody's business but the assertion's — 0039 puts the cost of one in the shell.
     stepping: true,
+    difficulty: DIFFICULTIES[DIFFICULTY_KINDS[0]!],
+    bossFullHealth: BOSSES.sentinel.health,
     onIdle: (): void => {},
     onDeath: (): void => {},
   };
@@ -503,6 +507,8 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
     // A hand-built world for a test drives the step directly, so it is always stepping and a
     // death is nobody's business but the assertion's — 0039 puts the cost of one in the shell.
     stepping: true,
+    difficulty: DIFFICULTIES[DIFFICULTY_KINDS[0]!],
+    bossFullHealth: BOSSES.sentinel.health,
     onIdle: (): void => {},
     onDeath: (): void => {},
   };

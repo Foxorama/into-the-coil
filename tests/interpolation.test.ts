@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { BOSSES } from '../src/content/bosses.ts';
+import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { viewOf } from '../src/sim/camera.ts';
 import { makeEntity, reset } from '../src/sim/entity.ts';
 import { makeIntent } from '../src/sim/intent.ts';
@@ -112,6 +114,8 @@ function stationKeepingWorld(surface: Surface): World {
     // A hand-built world for a test drives the step directly, so it is always stepping and a
     // death is nobody's business but the assertion's — 0039 puts the cost of one in the shell.
     stepping: true,
+    difficulty: DIFFICULTIES[DIFFICULTY_KINDS[0]!],
+    bossFullHealth: BOSSES.sentinel.health,
     onIdle: (): void => {},
     onDeath: (): void => {},
   };
