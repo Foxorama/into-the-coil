@@ -218,9 +218,21 @@ export const CYCLE: Record<PickupKind, PickupKind> = {
  * `src/content/enemies.ts` makes the same argument for the weave: a shape in the world can be
  * authored against, and a wobble in time cannot.
  *
- * ⚠️ **Long enough to reach, short enough to wait for.** At the scroll rate this is a little over two
- * seconds, and a pickup is in view for about nine — so a player who wants the other face can hold
- * off, and a player who wants either can take whatever is there. Nothing asserts on it.
+ * ⚠️ **Long enough to reach, short enough to wait for.** `130 ÷ SCROLL_PER_STEP` is 217 steps, which
+ * is **3.6 seconds** — against a pickup that is in view for about nine (`320 ÷ SCROLL_PER_STEP`, the
+ * spawn horizon plus the trailing cull). So a player who wants the other face can hold off, and a
+ * player who wants either can take whatever is there. Nothing asserts on it.
+ *
+ * ⚠️ **This comment said *a little over two seconds* and that was wrong**, by three quarters of a
+ * face. The number was never checked against the constant it is a duration of — which is the failure
+ * `docs/decisions/0027-measure-the-picture-not-the-model.md` names from the other end: a quantity
+ * stated in prose is a claim, and a claim about a derived number is owed its arithmetic. The
+ * arithmetic is written out above so the next reader can check it rather than believe it.
+ *
+ * ⚠️ **It is also about to be tuned rather than corrected.** The second play-test list asks for the
+ * cycle *"0.5 sec faster"*, and 3.6 is the baseline that ask is a departure from — not the 2 this
+ * line used to claim. `docs/state-of-play.md` has it as the first thing that item checks, and the
+ * hand that turns the knob is the one that should turn it.
  */
 export const CYCLE_UNITS = 130;
 
