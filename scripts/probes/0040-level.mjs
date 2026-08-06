@@ -79,8 +79,10 @@ export const PROBES = [
     guard: 'arrives, closes on its station, and then holds it',
     edit: {
       path: 'src/app/boss.ts',
-      find: '  boss.velAlong = boss.along > station ? scrollPerStep - APPROACH_PER_STEP : scrollPerStep;',
-      replace: '  boss.velAlong = boss.along > station ? -APPROACH_PER_STEP : 0;',
+      // ⚠️ Re-aimed by 0061, which turned the approach into a tracker. The break is the same one:
+      // drop the camera's rate from the baseline and the boss is parked in world coordinates.
+      find: '    scrollPerStep + (pull > APPROACH_PER_STEP',
+      replace: '    0 * scrollPerStep + (pull > APPROACH_PER_STEP',
     },
   },
   {

@@ -58,6 +58,30 @@ export interface BossRow extends Body {
    * bug that made every off-lane enemy shot miss.
    */
   station: number;
+  /**
+   * How far either side of its station it drifts along the lane, in world units.
+   *
+   * ── WHY A BOSS NEEDED ONE ───────────────────────────────────────────────────────────────────────
+   *
+   * Reported from play: *"when a boss reaches mid screen, it just goes up/down and there's no longer
+   * any flowing movement."* The scroll never stops — the camera advances every step of the fight —
+   * but everything the player can SEE stops moving along it, because the boss holds one distance and
+   * nothing else is left on the field. The picture the player gets is a still one with a sprite
+   * sliding up and down it. `docs/decisions/0061-a-boss-keeps-flying.md`.
+   *
+   * ⚠️ **A shape in the world, as a function of the camera** — the same argument
+   * `src/content/enemies.ts` makes for the weave and `src/app/frame.ts` makes for the shield shell: a
+   * wobble in time cannot be authored against, and a fight that plays differently on a machine
+   * dropping frames is not a fight anybody can be asked to learn.
+   *
+   * ⚠️ **A PHASE DOES NOT SCALE IT, unlike `patrol`.** The forward bound is the NARROWEST view any
+   * device gets, and a later phase that swung further would put a quarter of the hull off the screen —
+   * on a phone, in the phase the player is least able to afford it. `tests/level.test.ts` holds the
+   * bound rather than the value.
+   */
+  drift: number;
+  /** World units of camera per complete drift cycle. Ignored when `drift` is `0`. */
+  driftWavelength: number;
   /** World units per step it slides across the lane, before a phase scales it. */
   patrol: number;
   /** What it fires. */
@@ -89,6 +113,16 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // Far enough forward that the whole hull is on screen on the narrowest view the clamp allows,
     // and far enough back that the player is not fighting it at the very edge of their reach.
     station: 120,
+    /*
+      ⚠️ **14, which is the most the narrowest view leaves room for.** `120 + 14 + 11` is 145 against
+      a 150-unit view — the whole hull stays on screen on a 3:2 laptop at the forward end of every
+      swing. It is also 28 units of travel, which against a 22-unit hull is a body visibly moving
+      rather than breathing.
+    */
+    drift: 14,
+    // About six seconds a cycle at the scroll rate. Slower than the patrol, so the two do not beat
+    // against each other into a figure the player reads as one rhythm.
+    driftWavelength: 220,
     patrol: 0.32,
     shot: 'spit',
     phases: [
@@ -133,6 +167,14 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // Closer than the sentinel's 120, which is most of what makes it feel like a different fight:
     // the player has less room in front of them and less warning on everything it throws.
     station: 100,
+    /*
+      Wider than the sentinel's and it still clears the narrowest view by a comfortable margin —
+      `100 + 20 + 12.5` is 132.5 against 150 — because standing closer buys the room the sentinel
+      spent on being further out. A bigger swing at a shorter wavelength is the same *takes the lane
+      away* this row is built around: it closes on the player and backs off inside four seconds.
+    */
+    drift: 20,
+    driftWavelength: 150,
     patrol: 0.42,
     shot: 'spit',
     phases: [

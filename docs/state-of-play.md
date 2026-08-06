@@ -41,6 +41,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
 | **a death takes the ship, and the level carries on** | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
+| **a boss's station drifts, so a fight is still flight** | [0061](decisions/0061-a-boss-keeps-flying.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
@@ -158,9 +159,10 @@ makes a death cost more in the same session as a report that dying is already to
    tunnel and it makes the feel very restrictive and not like you're in a large area."* They should
    fly off the `across` edges and back on. ⚠️ 0048 landed entry from the edges and the `across` cull;
    this is about what they do AFTER arriving, which is `steerEnemies`.
-6. **A boss kills the sense of flight.** *"When a boss reaches mid screen, it just goes up/down and
-   there's no longer any flowing movement."* Two options given: a wall-type boss holding the far
-   edge with its own style, or the scroll keeps running and the boss holds a distance while drifting.
+6. **✅ DONE — a boss killed the sense of flight.**
+   [0061](decisions/0061-a-boss-keeps-flying.md), which took the second of the two options given. The
+   first — a wall-type boss holding the far edge with its own style — is **content** rather than a
+   repair, and `docs/game.md`'s *every boss is unique* is where it belongs.
 7. **A background.** *"Needs a starry background or a background of some kind."* ⚠️ Against
    [0022](decisions/0022-frame-rate-is-a-feature.md) and
    [0025](decisions/0025-the-frame-budget-is-counted-not-timed.md): counted draw calls, nothing

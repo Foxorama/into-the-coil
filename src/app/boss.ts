@@ -38,6 +38,34 @@ import type { ShotRow } from '../content/shots.ts';
 const APPROACH_PER_STEP = 0.45;
 
 /**
+ * Two pi, hoisted — the drift is authored as a WAVELENGTH and the sine wants an angular rate.
+ *
+ * Written out here rather than imported from `src/app/frame.ts`, which has its own: a helper reached
+ * for from two hot files is an import edge that exists to save one line, and `fireShip` already makes
+ * that argument about the volley fan it shares with this file.
+ */
+const TAU = Math.PI * 2;
+
+/**
+ * How hard the boss pulls itself back onto its station, per step.
+ *
+ * ── WHY THIS REPLACED A BANG-BANG APPROACH ──────────────────────────────────────────────────────
+ *
+ * ⚠️ **The station MOVES now** (`docs/decisions/0061-a-boss-keeps-flying.md`), and the old rule was
+ * *close at a fixed rate while you are past it, otherwise match the camera exactly*. Against a
+ * station that slides back and forth that is a switch flipping every few steps, at a closing rate
+ * five times the drift — the boss would jitter rather than fly.
+ *
+ * So it tracks: the ask is the distance to the station, capped at `APPROACH_PER_STEP`. Far away that
+ * saturates and the entrance is exactly the arrival 0040's seven seconds of quiet exist for; near it,
+ * the boss eases onto the station and then follows it. The cap is what keeps the entrance slow.
+ *
+ * 0.03 saturates beyond 15 units, so the last 15 of the arrival are the ease-in — about half a second
+ * of settling, which is what makes the arrival read as a thing landing rather than a thing stopping.
+ */
+const STATION_TRACK = 0.03;
+
+/**
  * The phase for a boss at `health` out of `full`.
  *
  * The ACTIVE phase is the last one whose `upTo` still covers the current fraction, so the table
@@ -91,10 +119,34 @@ export function stepBoss(
 ): number {
   const phase = phaseFor(row, boss.health, fullHealth);
 
-  // Close on the station, then hold it. Holding is `scrollPerStep` and nothing else: the station is
-  // a distance from the camera, so matching the camera's rate IS standing still on screen.
-  const station = cameraAlong + row.station;
-  boss.velAlong = boss.along > station ? scrollPerStep - APPROACH_PER_STEP : scrollPerStep;
+  /*
+    THE STATION, AND IT DRIFTS.
+
+    Reported from play: *"when a boss reaches mid screen, it just goes up/down and there's no longer
+    any flowing movement."* `docs/decisions/0061-a-boss-keeps-flying.md`. The station is still a
+    distance from the camera — so matching the camera's rate is still standing still on screen — and
+    it now slides forward and back along the lane as the camera travels.
+
+    ⚠️ **A function of the CAMERA and not of a step count**, exactly as the weave and the shield shell
+    are: a shape in the world can be authored against and a wobble in time cannot, and the fight has
+    to be the same fight on a machine dropping frames.
+  */
+  const drift = row.drift > 0 && row.driftWavelength > 0
+    ? row.drift * Math.sin((cameraAlong * TAU) / row.driftWavelength)
+    : 0;
+  const station = cameraAlong + row.station + drift;
+  /*
+    Track it: the ask is how far off station the boss is, capped at the approach rate.
+
+    ⚠️ **The cap is the entrance and the tracking is the flight.** Far out, this saturates at exactly
+    the old fixed approach — `src/content/levels.ts` leaves seven seconds of quiet in front of a boss
+    so that the arrival is something the player watches happen — and near the station it eases in and
+    then follows. The bang-bang it replaced would switch state every few steps against a station that
+    moves, at five times the drift rate, which is a jitter rather than a flight.
+  */
+  const pull = (station - boss.along) * STATION_TRACK;
+  boss.velAlong =
+    scrollPerStep + (pull > APPROACH_PER_STEP ? APPROACH_PER_STEP : pull < -APPROACH_PER_STEP ? -APPROACH_PER_STEP : pull);
 
   /*
     Patrol, and reverse at the lane edges.

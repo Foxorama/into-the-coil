@@ -6,11 +6,12 @@ import { FORMATIONS, FORMATION_KINDS } from '../src/content/formations.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { INVULN_STEPS } from '../src/content/ships.ts';
 import { phaseFor } from '../src/app/boss.ts';
-import { GameFrame, respawn } from '../src/app/frame.ts';
+import { GameFrame, SHIP_START_ALONG, respawn } from '../src/app/frame.ts';
 import { playableWorld } from './world.ts';
 import { ACROSS_SPAN, MAX_ALONG_SPAN } from '../src/sim/camera.ts';
 import { SCROLL_PER_STEP, SHIP_SPEED } from '../src/sim/flight.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 
 /**
  * WHAT MUST BE TRUE OF ANY AUTHORED LEVEL — never of this particular one.
@@ -292,17 +293,107 @@ describe('a boss fight can reach all of its phases', () => {
 
       // Long enough to have closed the distance, and then some.
       for (let i = 0; i < 900; i++) frame.step();
+      /*
+        ⚠️ **A BAND AND NO LONGER A POINT** — `docs/decisions/0061-a-boss-keeps-flying.md`. The
+        station drifts along the lane, so *settled* is *inside its own band* rather than *on one
+        number*. The tolerance is the drift plus one step of it, because the boss tracks a moving
+        target and is a step behind it.
+      */
+      const room = BOSSES.sentinel.drift + 2;
       const settled = world.bossPool.at(0).along - world.cameraAlong;
-      expect(settled, 'the boss did not settle at its station').toBeCloseTo(BOSSES.sentinel.station, 0);
-
-      // ⚠️ Holding station is the load-bearing half. A boss parked in WORLD coordinates slides off the
-      // back of the screen at the scroll rate, which is the bug that made every off-lane enemy shot
-      // miss — `docs/decisions/0034-a-threat-is-absolute-and-a-pool-is-the-pairing.md`.
-      for (let i = 0; i < 600; i++) frame.step();
-      expect(world.bossPool.at(0).along - world.cameraAlong, 'the boss drifted out of the camera frame').toBeCloseTo(
-        BOSSES.sentinel.station,
-        0,
+      expect(Math.abs(settled - BOSSES.sentinel.station), `the boss settled ${settled.toFixed(1)} out`).toBeLessThan(
+        room,
       );
+
+      /*
+        ⚠️ Holding station is the load-bearing half. A boss parked in WORLD coordinates slides off the
+        back of the screen at the scroll rate, which is the bug that made every off-lane enemy shot
+        miss — `docs/decisions/0034-a-threat-is-absolute-and-a-pool-is-the-pairing.md`. Ten seconds
+        further on is several full drift cycles, so a boss that had merely *started* on the right
+        number would be well behind by now.
+      */
+      for (let i = 0; i < 600; i++) frame.step();
+      const later = world.bossPool.at(0).along - world.cameraAlong;
+      expect(Math.abs(later - BOSSES.sentinel.station), 'the boss drifted out of the camera frame').toBeLessThan(room);
+    });
+
+    it('and it never stops moving along the lane, which is what a fight is', () => {
+      /*
+        ⚠️ **THE REPORTED ONE.** *"When a boss reaches mid screen, it just goes up/down and there's no
+        longer any flowing movement."* The camera never stops, but everything the player can SEE stops
+        moving along it — the boss holds one distance and there is nothing else left on the field.
+
+        ⚠️ **Measured as how much of the SCREEN it covers, in world units against the narrowest view**,
+        rather than as a velocity — `docs/decisions/0027-measure-the-picture-not-the-model.md`. A
+        velocity that averages to zero is what holding station already looks like; what the report is
+        about is the picture.
+      */
+      const { world } = playableWorld(soloBoss);
+      const frame = new GameFrame(world);
+      for (let i = 0; i < 960; i++) frame.step();
+      let nearest = Number.POSITIVE_INFINITY;
+      let furthest = Number.NEGATIVE_INFINITY;
+      for (let i = 0; i < 900 && world.bossPool.size > 0; i++) {
+        frame.step();
+        if (world.bossPool.size === 0) break;
+        const onScreen = world.bossPool.at(0).along - world.cameraAlong;
+        if (onScreen < nearest) nearest = onScreen;
+        if (onScreen > furthest) furthest = onScreen;
+      }
+      const travelled = furthest - nearest;
+      // A tenth of the narrowest screen is the floor: less than that and it is a body breathing
+      // rather than flying. Nothing asserts on the value the row actually carries.
+      expect(travelled, `the boss covered ${travelled.toFixed(1)} units of the lane while fighting`).toBeGreaterThan(
+        (ACROSS_SPAN * 1.5) / 10,
+      );
+    });
+
+    it('and its arrival is still something the player watches happen', () => {
+      /*
+        ⚠️ **The half the tracker could have quietly spent.** `src/content/levels.ts` leaves seven
+        seconds of quiet in front of a boss *"so that the arrival is something the player watches
+        happen"* — and a tracker with no cap on it closes two hundred units in a single step, which
+        turns that quiet into an empty screen followed by a boss simply being there.
+
+        In SECONDS, which is the unit the player experiences it in —
+        `docs/decisions/0027-measure-the-picture-not-the-model.md`. Nothing here asserts on the
+        approach rate.
+      */
+      const { world } = playableWorld(soloBoss);
+      const frame = new GameFrame(world);
+      while (!world.bossSpawned) frame.step();
+      const arrived = BOSSES.sentinel.station + BOSSES.sentinel.drift;
+      let steps = 0;
+      while (steps < 2000 && world.bossPool.size > 0 && world.bossPool.at(0).along - world.cameraAlong > arrived) {
+        frame.step();
+        steps++;
+      }
+      const seconds = steps / STEPS_PER_SECOND;
+      expect(seconds, `the boss covered its whole approach in ${seconds.toFixed(2)}s`).toBeGreaterThan(1.5);
+    });
+
+    it('and the whole hull stays on screen on the narrowest device, at every point of the drift', () => {
+      /*
+        ⚠️ **The bound the drift is authored against, and the reason a PHASE does not scale it.** The
+        forward end of the swing is measured against `ACROSS_SPAN * MIN_ASPECT` — the narrowest view
+        any device gets (`src/sim/camera.ts`) — so a boss that swung further would put a quarter of
+        its hull off the edge of a 3:2 laptop, in the phase the player can least afford it.
+
+        Checked over the TABLE rather than by driving, because it has to hold for every boss including
+        the ones nobody has fought.
+      */
+      for (const kind of BOSS_KINDS) {
+        const row = BOSSES[kind];
+        const narrow = ACROSS_SPAN * 1.5;
+        expect(
+          row.station + row.drift + row.radius,
+          `${kind} drifts ${(row.station + row.drift + row.radius - narrow).toFixed(1)} units off the narrowest screen`,
+        ).toBeLessThanOrEqual(narrow);
+        // And the back of the swing never reaches where a life begins, or a respawn is a collision.
+        expect(row.station - row.drift - row.radius, `${kind} drifts back onto the ship's start`).toBeGreaterThan(
+          SHIP_START_ALONG,
+        );
+      }
     });
 
     it('never leaves the lane, however long it patrols', () => {
