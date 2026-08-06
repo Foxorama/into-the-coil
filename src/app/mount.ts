@@ -28,7 +28,15 @@ import { DIFFICULTIES, DIFFICULTY_KINDS, type DifficultyKind } from '../content/
 import { holdStation, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { MAX_SHIELDS, SHIPS, fullHealthFor, shieldsOf } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
-import { GameFrame, SHIP_START_ALONG, resetScene, respawn, startLevel, type World } from './frame.ts';
+import {
+  GameFrame,
+  SHIP_START_ALONG,
+  launchSpecial,
+  resetScene,
+  respawn,
+  startLevel,
+  type World,
+} from './frame.ts';
 import { SCREENS, STEPS_PER_SECOND, type Screen } from '../state/screens.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { makeChrome } from './chrome.ts';
@@ -70,6 +78,11 @@ import { runLoop } from './loop.ts';
  * `src/content/pickups.ts` has the same sum written out for the pulse, and `tests/pickups.test.ts`
  * drives the strongest loadout there is and fails if either pool fills.
  *
+ * ⚠️ **`bombs` and `blasts` are four slots each, out of the same particle share.** Four is more
+ * than a player can have in the air — the arsenal starts with two charges and a level cleared adds
+ * one — and it is the same headroom argument the other pools make: a pool that refuses a spawn is a
+ * weapon that silently does nothing on the frame the player spent it.
+ *
  * ⚠️ **`tests/budget.test.ts` now holds that sum, which nothing did before.** The 500 was written in
  * a comment here and asserted nowhere, so the next pool would have been added by arithmetic done in
  * somebody's head — and `docs/state-of-play.md` says the arsenal wants slots for missiles, orbs and a
@@ -84,8 +97,10 @@ export const CAPACITY = {
   enemies: 40,
   playerShots: 100,
   missiles: 24,
+  bombs: 4,
+  blasts: 4,
   enemyShots: 150,
-  debris: 200 - MAX_SHIELDS - 24,
+  debris: 200 - MAX_SHIELDS - 24 - 8,
   boss: 1,
   pickups: 8,
 };
@@ -196,6 +211,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const enemies = new Pool<Entity>(CAPACITY.enemies, makeEntity);
   const playerShots = new Pool<Entity>(CAPACITY.playerShots, makeEntity);
   const missiles = new Pool<Entity>(CAPACITY.missiles, makeEntity);
+  const bombs = new Pool<Entity>(CAPACITY.bombs, makeEntity);
+  const blasts = new Pool<Entity>(CAPACITY.blasts, makeEntity);
   const enemyShots = new Pool<Entity>(CAPACITY.enemyShots, makeEntity);
   const debris = new Pool<Entity>(CAPACITY.debris, makeEntity);
   const bossPool = new Pool<Entity>(CAPACITY.boss, makeEntity);
@@ -295,12 +312,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // between them, and a bullet passing over one has visibly passed over it.
     // Missiles sit directly above the pulses: they are the heavier stream and the one the player is
     // meant to be able to pick out of a screen full of the lighter one.
-    layers: [debris, pickupPool, bossPool, enemies, enemyShots, playerShots, missiles, shieldOrbs, shipPool],
+    // The blast sits under everything it is doing damage to, so the player can see what is inside
+    // it — including their own ship, which is the one thing they need to be looking at.
+    layers: [debris, blasts, pickupPool, bossPool, enemies, enemyShots, playerShots, missiles, bombs, shieldOrbs, shipPool],
     shipPool,
     shieldOrbs,
     enemies,
     playerShots,
     missiles,
+    bombs,
+    blasts,
     enemyShots,
     debris,
     deaths: makeDeaths(CAPACITY.enemies),
@@ -341,6 +362,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // Replaced below, once `dispatch` exists — the same reason `onDeath` is.
     onCleared: (): void => {},
     onPickup: (): void => {},
+    onSpecial: (): void => {},
     // The game as designed, per 0024 — every knob at its least-assisted position. There is no
     // settings screen yet to move them, and `tuningFor` is where they will arrive from when there is.
     tuning: tuningFor(DEFAULT_ASSISTS),
@@ -462,14 +484,25 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * the ship is built from — so the row of pips and the ring of marks cannot disagree.
    */
   const syncHud = (): void => {
-    chrome.setHud(state.run.lives, shieldsOf(shipRow, world.ship.health), MAX_SHIELDS);
+    chrome.setHud(state.run.lives, shieldsOf(shipRow, world.ship.health), MAX_SHIELDS, chargesOf(state.run.arsenal));
   };
+
+  /**
+   * How many uses the arsenal has left, across everything in it.
+   *
+   * ⚠️ **A total rather than a per-weapon list, because the readout is one number today and the
+   * arsenal is one weapon.** When a second special can be owned this becomes a row per entry, which
+   * is a chrome change and not a state one — the list is already the right shape (0039).
+   */
+  const chargesOf = (arsenal: State['run']['arsenal']): number =>
+    arsenal.reduce((total, entry) => total + entry.charges, 0);
 
   const dispatch = (action: Action): void => {
     const next = reduce(state, action);
     if (next === state) return;
     const moved = next.screen !== state.screen;
     const rearmed = next.run.upgrades !== state.run.upgrades;
+    const runChanged = next.run !== state.run;
     state = next;
     /*
       ⚠️ **Re-resolved on a CHANGE of the list, by identity, not on every dispatch.** `weaponFor`
@@ -479,9 +512,21 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       (`tests/run.test.ts` holds that), which is what makes `!==` the whole test.
     */
     if (rearmed) world.weapon = weaponFor(shipRow, state.run.upgrades);
-    // The lives half of the readout. The shield half arrives from the frame, which is the only thing
-    // that knows the ship was hit.
-    if (next.run !== state.run || moved) syncHud();
+    /*
+      The run's half of the readout — lives and charges. The shield half arrives from the frame,
+      which is the only thing that knows the ship was hit.
+
+      ⚠️ **THE COMPARISON WAS MADE AFTER `state` HAD ALREADY BEEN REASSIGNED, so it was always
+      false.** `next.run !== state.run` with `state` already set to `next` compares a thing to itself:
+      the readout only ever refreshed when the SCREEN moved. It looked fine because the two things it
+      showed both changed at a screen boundary — a death that ended the run raised the game-over
+      screen, and the lives count updated on the way past.
+
+      The bomb is what made it visible: a charge is spent mid-run, with no screen change anywhere
+      near it, so the player pressed the trigger and watched the count stay where it was.
+      `tests/hud.browser.test.ts` now drives exactly that.
+    */
+    if (runChanged || moved) syncHud();
     // Only on a real transition: `show` moves focus, and re-focusing a button on every dispatch
     // would fight a player who had tabbed away from it.
     if (moved) applyScreen();
@@ -632,6 +677,24 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     A pickup landed. The two effects go to different fields and are cleared by different events —
     `src/content/pickups.ts` has the split, and 0039 has the reason for it.
   */
+  /*
+    THE FIRST TRIGGERED SPECIAL — 0053, and the first consumer of the input half 0030 landed.
+
+    ⚠️ **The frame reports the ask and this decides**, exactly as it does for a death. Whether there
+    is a charge is the run's business; whether anything happens on screen is the frame's; and the two
+    halves meet here rather than either one growing an opinion about the other.
+
+    ⚠️ **A slot nobody owns is silence, not a throw.** `src/content/actions.ts` says a binding is a
+    POSITION in the arsenal, and a player pressing the second trigger with one special owned is
+    asking for something that does not exist yet.
+  */
+  world.onSpecial = (slot: number): void => {
+    const entry = state.run.arsenal[slot];
+    if (entry === undefined || entry.charges <= 0) return;
+    dispatch({ slice: 'run', type: 'spent', slot });
+    launchSpecial(world, entry.kind);
+  };
+
   world.onPickup = (kind: PickupKind): void => {
     const effect = PICKUPS[kind].effect;
     if (effect === 'life') dispatch({ slice: 'run', type: 'gainedLife' });

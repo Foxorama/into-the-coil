@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { type Action, type State, initialState, reduce } from '../src/state/root.ts';
-import { DEFAULT_DIFFICULTY, livesFor } from '../src/state/slices/run.ts';
+import { DEFAULT_DIFFICULTY, livesFor, startingArsenal } from '../src/state/slices/run.ts';
 import { SCREENS } from '../src/state/screens.ts';
 import { LEVEL_KINDS } from '../src/content/levels.ts';
 
@@ -74,14 +74,27 @@ describe('a run is lives', () => {
     // LEVELS, not across deaths. An arsenal that survived a death would make a run monotonic — the
     // ship only ever gets stronger, and the last level is the easiest thing in the game.
     const before = armed();
-    expect(before.run.arsenal, 'the fixture has nothing to lose, so this proves nothing').toEqual(['bomb', 'mines']);
+    /*
+      ⚠️ **"Back to base" is the STARTING KIT now, not an empty list — 0053.** 0039's own words are
+      *"back to the ship's base weapon and starting special"*, and `[]` was the placeholder for a game
+      that had no starting special. What a death costs is everything EARNED: the charges banked from
+      clearing levels, and every special picked up along the way.
+    */
+    expect(
+      before.run.arsenal.map((entry) => entry.kind),
+      'the fixture has nothing to lose, so this proves nothing',
+    ).toEqual(['bomb', 'mines']);
+    expect(
+      before.run.arsenal[0]!.charges,
+      'the fixture never banked a charge, so a death cannot be seen to cost one',
+    ).toBeGreaterThan(startingArsenal()[0]!.charges);
     expect(before.run.upgrades, 'the fixture has no upgrades to lose, so this proves half of nothing').toEqual([
       'rapid',
       'spread',
     ]);
 
     const after = reduce(before, DIE);
-    expect(after.run.arsenal, 'the arsenal survived a death').toEqual([]);
+    expect(after.run.arsenal, 'the arsenal survived a death').toEqual(startingArsenal());
     /*
       ⚠️ **Both fields, because "back to the ship's base weapon and starting special" is two fields.**
       `docs/decisions/0041-a-pickup-is-the-answer-to-what-a-death-costs.md` made the base weapon
@@ -97,7 +110,7 @@ describe('a run is lives', () => {
     let state = armed();
     for (let i = 0; i < STARTING_LIVES_OF_THE_TIER; i++) state = reduce(state, DIE);
     expect(state.run.lives).toBe(0);
-    expect(state.run.arsenal).toEqual([]);
+    expect(state.run.arsenal).toEqual(startingArsenal());
   });
 
   it('the last life ends the run', () => {
@@ -136,7 +149,7 @@ describe('a run is lives', () => {
     expect(state.screen.current).toBe('gameOver');
     const again = reduce(reduce(state, BEGIN), PLAY);
     expect(again.run.lives).toBe(STARTING_LIVES_OF_THE_TIER);
-    expect(again.run.arsenal).toEqual([]);
+    expect(again.run.arsenal).toEqual(startingArsenal());
     expect(again.screen.current).toBe('playing');
   });
 });
@@ -181,7 +194,19 @@ describe('a run is a sequence of levels', () => {
     const after = reduce(before, CLEAR);
     expect(after.run.level).toBe(before.run.level + 1);
     expect(after.run.lives, 'clearing a level cost a life').toBe(before.run.lives);
-    expect(after.run.arsenal, 'clearing a level emptied the arsenal').toEqual(before.run.arsenal);
+    /*
+      ⚠️ **Carried forward AND paid into.** 0039's *carry forward* is the floor: nothing may be lost
+      at a boundary. 0053 adds the ask's *"gains one per level cleared"*, so what is asserted is that
+      every special the run owned is still owned and every one of them is one use richer.
+    */
+    expect(
+      after.run.arsenal.map((entry) => entry.kind),
+      'clearing a level emptied the arsenal',
+    ).toEqual(before.run.arsenal.map((entry) => entry.kind));
+    expect(
+      after.run.arsenal.map((entry) => entry.charges),
+      'clearing a level did not pay the arsenal',
+    ).toEqual(before.run.arsenal.map((entry) => entry.charges + 1));
     expect(after.run.upgrades, 'clearing a level took the weapon upgrades').toEqual(before.run.upgrades);
   });
 

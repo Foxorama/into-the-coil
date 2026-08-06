@@ -27,7 +27,7 @@ import type { Body } from '../sim/entity.ts';
 import { SPRITE } from './sprites.ts';
 
 /** Every shot in the game. Closed. */
-export type ShotKind = 'pulse' | 'spit' | 'missile';
+export type ShotKind = 'pulse' | 'spit' | 'missile' | 'bomb' | 'blast';
 
 export interface ShotRow extends Body {
   /**
@@ -50,7 +50,7 @@ export interface ShotRow extends Body {
 }
 
 /** Written out rather than derived, so the table below cannot quietly lose a row. */
-export const SHOT_KINDS: readonly ShotKind[] = ['pulse', 'spit', 'missile'];
+export const SHOT_KINDS: readonly ShotKind[] = ['pulse', 'spit', 'missile', 'bomb', 'blast'];
 
 export const SHOTS: Record<ShotKind, ShotRow> = {
   /**
@@ -82,4 +82,29 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * light one is a shot the player cannot aim differently. It stays well under the smallest enemy.
    */
   missile: { sprite: SPRITE.missile, spriteHit: SPRITE.missile, radius: 1.3, health: 1, damage: 3, speed: 1.5 },
+  /**
+   * The bomb itself, which hurts nothing at all.
+   *
+   * ⚠️ **`damage` is 0 and that is not an oversight.** A bomb is spent by its FUSE rather than by
+   * arriving — it is in no collision pairing, exactly like debris, so it passes through whatever it
+   * is aimed at and goes off where the player aimed it. A bomb that detonated on contact would be a
+   * missile with a bigger number, and the thing that makes it a skill is choosing the PLACE.
+   */
+  bomb: { sprite: SPRITE.bomb, spriteHit: SPRITE.bomb, radius: 2, health: 1, damage: 0, speed: 2.2 },
+  /**
+   * What a bomb becomes: six pulses of damage, everywhere inside a third of the lane.
+   *
+   * ⚠️ **The damage is a RATIO of the pulse's, like the missile's is** — *"6× a pulse's damage"* is
+   * what was asked for, and it is a relationship between two of the player's own weapons.
+   *
+   * ⚠️ **`radius` is the reach of the damage AND the size it is drawn at**, and the two are held to
+   * each other by `tests/bombs.test.ts` because they live in different files. Everywhere else in
+   * this project the hurtbox is deliberately smaller than the art
+   * (`src/content/sprites.ts`) — a blast is the one body where that would be a lie, because the
+   * player is inside it too and is being asked to judge the edge.
+   *
+   * ⚠️ **`speed` is 0: it does not travel.** It appears where the bomb was and stays there while the
+   * world moves past it, which is what a shockwave in a scrolling world looks like.
+   */
+  blast: { sprite: SPRITE.blast, spriteHit: SPRITE.blast, radius: 34, health: 1, damage: 6, speed: 0 },
 };

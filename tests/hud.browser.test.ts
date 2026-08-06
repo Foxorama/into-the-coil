@@ -239,3 +239,31 @@ describe.runIf(chromePath)('the in-game readout', () => {
   });
 
 });
+
+describe.runIf(chromePath)('the readout follows what the player spends', () => {
+  it('follows a spent charge, which changes no screen at all', async () => {
+    /*
+      ⚠️ **THE BUG THE BOMB MADE VISIBLE.** `dispatch` compared the incoming run slice to
+      `state.run` *after* `state` had already been reassigned — a thing compared to itself — so the
+      readout only ever refreshed when the SCREEN changed. It looked fine because both things it
+      showed happened to change at a screen boundary: a death that ended the run raised the game-over
+      screen, and the lives count updated on the way past.
+
+      A charge is the first thing in the game that changes mid-run with no screen anywhere near it,
+      which is why this is the test that can see it. It is also deterministic: press the trigger, read
+      the number — no dodging, no waiting for a wave.
+    */
+    const page = await open();
+    await page.click('.' + prefixFor('title') + 'action');
+    await page.waitForTimeout(300);
+    const label = '.itc-playing-hud-group[aria-label*="bomb"]';
+    const before = await page.getAttribute(label, 'aria-label');
+    expect(before, 'the readout does not say what the player is carrying').toMatch(/\d+ bombs/);
+
+    await page.keyboard.press('Space');
+    await page.waitForTimeout(250);
+    const after = await page.getAttribute(label, 'aria-label');
+    expect(after, 'a bomb was spent and the readout did not move').not.toBe(before);
+    await page.context().close();
+  });
+});

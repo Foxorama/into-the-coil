@@ -20,7 +20,10 @@ export const PROBES = [
       // The old anchor was the literal, and it went stale the day 0047 added a field to it — CI
       // refused the probe, which is the harness doing its job. `level + 1` is the one line in this
       // arm that says what a level boundary IS, so it is the part that will not move.
-      find: '        level: state.level + 1,\n        arsenal: state.arsenal,\n        upgrades: state.upgrades,',
+      find:
+        '        level: state.level + 1,\n' +
+        '        arsenal: state.arsenal.map((entry) => ({ kind: entry.kind, charges: entry.charges + 1 })),\n' +
+        '        upgrades: state.upgrades,',
       replace: '        level: state.level + 1,\n        arsenal: [],\n        upgrades: [],',
     },
   },

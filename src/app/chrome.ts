@@ -32,6 +32,7 @@
 import { SCREENS, type Screen } from '../state/screens.ts';
 import type { Palette } from '../content/palette.ts';
 import { PICKUPS, PICKUP_KINDS } from '../content/pickups.ts';
+import { SPRITE } from '../content/sprites.ts';
 import { bakeAtlas } from '../render/bake.ts';
 
 /**
@@ -309,8 +310,15 @@ const ICON_PIXELS_PER_UNIT = 28;
 export interface Chrome {
   /** Everything to put on the page, in order. The stylesheet first. */
   elements: readonly HTMLElement[];
-  /** Redraw the in-game readout. Called on a change, never per frame. */
-  setHud(lives: number, health: number, maxHealth: number): void;
+  /**
+   * Redraw the in-game readout. Called on a change, never per frame.
+   *
+   * ⚠️ **`charges` is what the player can SPEND**, and it is the third thing on the row because it
+   * is the third resource a run has: lives survive everything, the shell survives until it is hit,
+   * and a bomb survives until it is thrown. A triggered weapon whose count is invisible is a weapon
+   * the player will not use — which is 0045's whole argument, reaching the arsenal.
+   */
+  setHud(lives: number, health: number, maxHealth: number, charges: number): void;
   /**
    * Show exactly one screen's chrome and hide the rest. `null` shows none of it, which is what the
    * rotate gate needs — an overlay left visible under the gate is a focusable button on a page whose
@@ -532,13 +540,21 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen, index: n
   const livesCount = document.createElement('span');
   livesGroup.append(livesIcon, livesCount);
 
+  const bombGroup = document.createElement('div');
+  bombGroup.className = 'itc-playing-hud-group';
+  const bombIcon = iconOf(SPRITE.bomb);
+  bombIcon.className = 'itc-playing-hud-icon';
+  bombIcon.setAttribute('aria-hidden', 'true');
+  const bombCount = document.createElement('span');
+  bombGroup.append(bombIcon, bombCount);
+
   const shieldGroup = document.createElement('div');
   shieldGroup.className = 'itc-playing-hud-group';
   // `role="img"` with a label, because a row of divs is not something a screen reader can read and
   // the number is what matters — 0024's floor is that every cue has a twin, not that it is visual.
   shieldGroup.setAttribute('role', 'img');
   const pips: HTMLElement[] = [];
-  hud.append(livesGroup, shieldGroup);
+  hud.append(livesGroup, shieldGroup, bombGroup);
   elements.push(hud);
 
   /*
@@ -568,8 +584,10 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen, index: n
 
   return {
     elements,
-    setHud(lives: number, health: number, maxHealth: number): void {
+    setHud(lives: number, health: number, maxHealth: number, charges: number): void {
       livesCount.textContent = '×' + String(Math.max(0, lives));
+      bombCount.textContent = '×' + String(Math.max(0, charges));
+      bombGroup.setAttribute('aria-label', String(Math.max(0, charges)) + ' bombs');
       livesGroup.setAttribute('aria-label', String(Math.max(0, lives)) + ' lives');
       // Grown once, to whatever the ship's full health turns out to be. A later ship with a different
       // maximum is a table edit, not a rewrite of this.

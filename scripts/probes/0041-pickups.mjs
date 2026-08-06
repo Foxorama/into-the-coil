@@ -58,8 +58,11 @@ export const PROBES = [
     guard: 'a death clears the arsenal back to base',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '        : { lives: state.lives - 1, level: state.level, arsenal: [], upgrades: [], difficulty: state.difficulty };',
-      replace: '        : { lives: state.lives - 1, level: state.level, arsenal: [], upgrades: state.upgrades, difficulty: state.difficulty };',
+      // ⚠️ Anchored on the UPGRADES line rather than on the whole returned literal, which is what it
+      // was and what went stale the day 0053 turned the arm into a multi-line object. The twelve-space
+      // indent is the `lifeLost` arm; `begin` has the same field at eight.
+      find: '            upgrades: [],\n            difficulty: state.difficulty,',
+      replace: '            upgrades: state.upgrades,\n            difficulty: state.difficulty,',
     },
   },
   {

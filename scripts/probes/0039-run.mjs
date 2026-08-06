@@ -18,8 +18,10 @@ export const PROBES = [
     guard: 'a death clears the arsenal back to base',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '        : { lives: state.lives - 1, level: state.level, arsenal: [], upgrades: [], difficulty: state.difficulty };',
-      replace: '        : { lives: state.lives - 1, level: state.level, arsenal: state.arsenal, upgrades: [], difficulty: state.difficulty };',
+      // Anchored on the ARSENAL line rather than on the whole returned literal, for the reason
+      // 0042's probe gives: a literal goes stale the day a field is added to it, and two have been.
+      find: '            arsenal: startingArsenal(),\n            upgrades: [],',
+      replace: '            arsenal: state.arsenal,\n            upgrades: [],',
     },
   },
   {
@@ -31,8 +33,8 @@ export const PROBES = [
     guard: 'lives never go below zero',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '      return state.lives <= 0\n        ? state\n        : { lives: state.lives - 1, level: state.level, arsenal: [], upgrades: [], difficulty: state.difficulty };',
-      replace: '      return { lives: state.lives - 1, level: state.level, arsenal: [], upgrades: [], difficulty: state.difficulty };',
+      find: '      return state.lives <= 0\n        ? state\n        : {\n            lives: state.lives - 1,',
+      replace: '      return {\n            lives: state.lives - 1,',
     },
   },
   {

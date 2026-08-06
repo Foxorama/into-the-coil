@@ -11,7 +11,7 @@
  * error anywhere.
  */
 
-import { type SpecialKind } from '../../content/specials.ts';
+import { SPECIALS, type SpecialKind } from '../../content/specials.ts';
 import { type UpgradeKind } from '../../content/pickups.ts';
 import { DIFFICULTIES, type DifficultyKind } from '../../content/difficulty.ts';
 
@@ -38,6 +38,37 @@ export const DEFAULT_DIFFICULTY: DifficultyKind = 'savior';
  */
 export function livesFor(difficulty: DifficultyKind): number {
   return DIFFICULTIES[difficulty].lives;
+}
+
+/**
+ * One owned special, and how many uses are left of it.
+ *
+ * ⚠️ **A LIST OF ENTRIES rather than a list of kinds, and the difference is the binding table.**
+ * `src/content/actions.ts` says `special1` and `special2` are POSITIONS in this list, one trigger
+ * per owned weapon — so charges cannot be repeated entries, or a player carrying three bombs would
+ * have the same weapon on three triggers and the third would be unreachable.
+ *
+ * ⚠️ **Plain data, because this is what `save/` serialises** (0039). Two fields, both numbers or
+ * strings, no class and no `Map` — `tests/state-shape.test.ts` is the guard.
+ */
+export interface ArsenalEntry {
+  kind: SpecialKind;
+  /** Uses left. An owned weapon at zero is still owned, and still holds its trigger. */
+  charges: number;
+}
+
+/**
+ * What a run — or a life — begins with.
+ *
+ * ⚠️ **This is 0039's *"back to the ship's base weapon and starting special"* finally cashing.** The
+ * reducer used to clear the arsenal to `[]` on a death, because there was no starting special for it
+ * to go back to; there is one now, and the ask names its size: *"the player starts with 2."*
+ *
+ * ⚠️ **A function rather than a constant**, so nothing can hold a reference to the array a run is
+ * using and mutate the next run's starting kit through it.
+ */
+export function startingArsenal(): readonly ArsenalEntry[] {
+  return [{ kind: 'bomb', charges: SPECIALS.bomb.charges }];
 }
 
 export interface RunState {
@@ -67,7 +98,7 @@ export interface RunState {
    * mistake — `src/content/actions.ts` says `special1` and `special2` are POSITIONS in this list and
    * not weapon kinds. This is the state half.
    */
-  arsenal: readonly SpecialKind[];
+  arsenal: readonly ArsenalEntry[];
   /**
    * Auto-fire upgrades, in the order they were taken.
    *
@@ -84,6 +115,7 @@ export type RunAction =
   | { slice: 'run'; type: 'begin'; difficulty: DifficultyKind }
   | { slice: 'run'; type: 'lifeLost' }
   | { slice: 'run'; type: 'took'; special: SpecialKind }
+  | { slice: 'run'; type: 'spent'; slot: number }
   | { slice: 'run'; type: 'gainedLife' }
   | { slice: 'run'; type: 'upgraded'; upgrade: UpgradeKind }
   | { slice: 'run'; type: 'levelCleared' };
@@ -106,7 +138,13 @@ export const initialRun: RunState = {
 export function reduceRun(state: RunState, action: RunAction): RunState {
   switch (action.type) {
     case 'begin':
-      return { lives: livesFor(action.difficulty), level: 0, arsenal: [], upgrades: [], difficulty: action.difficulty };
+      return {
+        lives: livesFor(action.difficulty),
+        level: 0,
+        arsenal: startingArsenal(),
+        upgrades: [],
+        difficulty: action.difficulty,
+      };
     case 'lifeLost':
       /*
         ⚠️ **The arsenal is cleared on EVERY death, including the last one.** It reads as redundant —
@@ -126,17 +164,63 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         upgrade list resolves to, so this line and `weaponFor` between them mean there is no second
         description anywhere of what the ship shoots when it has nothing.
       */
+      /*
+        ⚠️ **The arsenal goes back to the STARTING kit rather than to nothing**, which is what 0039
+        actually says: *"back to the ship's base weapon and starting special."* An empty list was the
+        placeholder for a game with no starting special in it. What a death costs is therefore
+        everything EARNED — the charges banked from clearing levels — and never the thing the ship
+        came with, which would leave a player who died with the tier's hardest stretch and no answer
+        to it at all.
+      */
       return state.lives <= 0
         ? state
-        : { lives: state.lives - 1, level: state.level, arsenal: [], upgrades: [], difficulty: state.difficulty };
-    case 'took':
+        : {
+            lives: state.lives - 1,
+            level: state.level,
+            arsenal: startingArsenal(),
+            upgrades: [],
+            difficulty: state.difficulty,
+          };
+    case 'took': {
+      /*
+        ⚠️ **A special already owned gains CHARGES rather than a second trigger.** `docs/game.md`
+        says one trigger per owned weapon; a second entry of the same kind would put the same weapon
+        on two buttons and, past the binding budget, on none.
+      */
+      const owned = state.arsenal.findIndex((entry) => entry.kind === action.special);
+      const added = SPECIALS[action.special].charges;
+      const arsenal =
+        owned >= 0
+          ? state.arsenal.map((entry, i) => (i === owned ? { kind: entry.kind, charges: entry.charges + added } : entry))
+          : [...state.arsenal, { kind: action.special, charges: added }];
       return {
         lives: state.lives,
         level: state.level,
-        arsenal: [...state.arsenal, action.special],
+        arsenal,
         upgrades: state.upgrades,
         difficulty: state.difficulty,
       };
+    }
+    case 'spent': {
+      /*
+        ⚠️ **An entry at zero is KEPT.** The weapon is still owned — it holds its trigger, it appears
+        in the readout, and the next thing that grants charges finds it. Removing it would shuffle
+        every trigger below it, so spending the last bomb would silently rebind the player's buttons.
+
+        ⚠️ **Clamped at zero, and a slot nobody owns is a no-op**, on the same terms `lifeLost` is
+        clamped: the reducer is not the place to find out whether the shell asked for something
+        impossible, and a negative charge count would reach the save and the readout.
+      */
+      const entry = state.arsenal[action.slot];
+      if (entry === undefined || entry.charges <= 0) return state;
+      return {
+        lives: state.lives,
+        level: state.level,
+        arsenal: state.arsenal.map((e, i) => (i === action.slot ? { kind: e.kind, charges: e.charges - 1 } : e)),
+        upgrades: state.upgrades,
+        difficulty: state.difficulty,
+      };
+    }
     case 'gainedLife':
       // No ceiling. A level author decides how many are findable, which is 0039's replacement for
       // lives that refill at a boundary — and a cap here would quietly overrule that decision.
@@ -162,10 +246,15 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         to say upgrades cross a LEVEL boundary and not a death, and this line is the level boundary.
         A clear that reset anything would be the death rule wearing the wrong name.
       */
+      /*
+        ⚠️ **Every owned special gains a charge**, which is the ask — *"gains one per level cleared"* —
+        stated as a rule about the arsenal rather than about the bomb. A second special added later
+        inherits it without anybody remembering to, which is the whole reason the arsenal is a list.
+      */
       return {
         lives: state.lives,
         level: state.level + 1,
-        arsenal: state.arsenal,
+        arsenal: state.arsenal.map((entry) => ({ kind: entry.kind, charges: entry.charges + 1 })),
         upgrades: state.upgrades,
         difficulty: state.difficulty,
       };

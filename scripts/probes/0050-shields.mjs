@@ -129,8 +129,8 @@ export const PROBES = [
     guard: 'never asks the frame to draw more entities than the budget was measured for',
     edit: {
       path: 'src/app/mount.ts',
-      find: '  debris: 200 - MAX_SHIELDS - 24,',
-      replace: '  debris: 200 - MAX_SHIELDS,',
+      find: '  debris: 200 - MAX_SHIELDS - 24 - 8,',
+      replace: '  debris: 200 - MAX_SHIELDS - 24,',
     },
   },
   {
@@ -142,8 +142,10 @@ export const PROBES = [
     guard: 'draws one pip per shield the ship can carry',
     edit: {
       path: 'src/app/mount.ts',
-      find: '    chrome.setHud(state.run.lives, shieldsOf(shipRow, world.ship.health), MAX_SHIELDS);',
-      replace: '    chrome.setHud(state.run.lives, world.ship.health, shipRow.health);',
+      find:
+        '    chrome.setHud(state.run.lives, shieldsOf(shipRow, world.ship.health), MAX_SHIELDS, chargesOf(state.run.arsenal));',
+      replace:
+        '    chrome.setHud(state.run.lives, world.ship.health, shipRow.health, chargesOf(state.run.arsenal));',
     },
   },
 ];

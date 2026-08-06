@@ -38,6 +38,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **the ship is one hit; a shield is what stands in front of it** | [0050](decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md) |
 | **a missile is the second auto-weapon; a launcher is a place on the ship** | [0051](decisions/0051-a-missile-is-the-second-auto-weapon.md) |
 | **a pickup is two things, and the camera says which** | [0052](decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md) |
+| **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -149,21 +150,22 @@ guard. Two reasons to do it after item 4 rather than before:
 
 ⚠️ **Pool headroom is the constraint, not the authoring.** The pools total exactly
 [0022](decisions/0022-frame-rate-is-a-feature.md)'s 500-entity worst case — see `CAPACITY` in
-`src/app/mount.ts` — and item 4 wants slots for missiles, shield orbs and a bomb's blast. More
-enemies on screen at once is a budget question that has to be settled against that, in that order.
+`src/app/mount.ts`, and `tests/budget.test.ts` now refuses a total above it. Item 4 has since spent
+35 of those slots on the shell, the missiles and the bomb, all out of the particle share. More
+enemies on screen at once is a budget question that has to be settled against what is left.
 
 ⚠️ **`tests/level.test.ts`'s density floor holds ≥ 8 in one lookahead and both levels sit not far
 above it.** It is a floor, not a target, and raising it to match whatever the tuning pass settles on
 would make it a copy of the content rather than a guard over it.
 
-**4 — The ship is one hit, and it carries shields, missiles and bombs.**
+**4 — ✅ DONE. The ship is one hit, and it carries shields, missiles and bombs.**
 
 ⚠️ **Asked for as one list on 2026-08-06, and it is four changes that only make sense together** —
 the ship becoming fragile is what the other three exist to answer. Written out here in the player's
 own terms so a later session does not have to reconstruct the ask; every number in it is a starting
 point, not a decision.
 
-**Three of the four have landed** —
+**ALL FOUR HAVE LANDED** —
 [0050](decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md),
 [0051](decisions/0051-a-missile-is-the-second-auto-weapon.md) and
 [0052](decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md). The hull is one hit, a
@@ -172,8 +174,9 @@ shield; missiles fire themselves from one to three launchers; and every pickup o
 things, flipping together with the camera. The special that was called `shield` is now `mines`, which
 is what 0045 said would happen.
 
-**What is left of this item is the bomb** — the first triggered special, and the first consumer of
-the input half 0030 landed.
+The bomb is the fourth: the first triggered special, the first consumer of the input half 0030
+landed, and the first thing to put a number in 0039's arsenal —
+[0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md).
 
 ⚠️ **What 0050 leaves owed is the tiers.** 0047's two harder ones were sized against a five-health
 ship and neither has been played since, and `resilience: hardy` is now a rung that does nothing.
@@ -190,28 +193,23 @@ stretch is now a shield *or* an extra life. Both answer the question a one-hit h
 `docs/game.md` puts hints *where play proves they are needed, never pre-emptively*, so whether that
 reads as *six pickups* rather than *three that change* is a play-test question.
 
-*Bombs — the first triggered special.* The player starts with **2** and gains one per level cleared.
-A bomb launches forward and detonates a set distance ahead of the ship, doing **6× a pulse's damage**
-in a wide blast — **and the blast hurts the player**, which is the skill in it.
+*Bombs — **done**, [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md).* Two
+charges to start, one more per level cleared, thrown forward and detonating 80 world units ahead — the
+ask's fraction of the screen, authored against the reference view because 0023 refuses screen space.
+Six pulses of damage inside a third of the lane, landing once, on everything in it **including the
+ship**.
 
-⚠️ **The ask states the bomb's range and blast as fractions of the SCREEN**, and
-[0023](decisions/0023-the-long-axis-is-the-scroll-axis.md) refuses screen-space authoring outright:
-`alongSpan` runs 150–240 by device, so a screen-relative bomb would be a different weapon on a
-21:9 monitor. Author it in world units against the **reference view** (16:9 → 177.8 along), which is
-exactly the stated fraction on the aspect the levels are already authored for, and say so in the row.
+⚠️ **What it left behind is a play-test question and a bug that is already fixed.** The question:
+whether a blast that is dangerous only on the step it appears reads as fair, when the ring it leaves
+stays on screen for a fifth of a second afterwards. The bug: the readout only refreshed when the
+SCREEN changed, which nothing had noticed because lives and shields both moved at screen boundaries —
+0053 has it, and `tests/hud.browser.test.ts` now drives a spent charge.
 
-*What is already in place.* `src/content/specials.ts` has the union and the rows; the input half has
-existed since 0030 — `SPECIAL_BINDINGS` and `Intent.specials` — and nothing consumes it. The run
-slice carries the arsenal as a list. So the bomb adds behaviour to a shape rather than changing one,
-which is what [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) bought.
-
-⚠️ **Pool headroom is the binding constraint on all of it**, not the authoring:
-`CAPACITY` in `src/app/mount.ts` totals exactly
-[0022](decisions/0022-frame-rate-is-a-feature.md)'s 500-entity worst case, and
-`tests/budget.test.ts` now refuses a total above it rather than leaving the arithmetic to a comment.
-The shell took its three slots out of the particle share (0050); missiles and a bomb's blast have to
-come from somewhere too, and `src/content/pickups.ts` records what happened the last time a weapon
-outran its pool — *"two streams continuous and the others stutter"*.
+⚠️ **Pool headroom was the binding constraint and it held.** `CAPACITY` in `src/app/mount.ts` still
+totals exactly [0022](decisions/0022-frame-rate-is-a-feature.md)'s 500-entity worst case:
+`tests/budget.test.ts` refuses a total above it, and the shell (3), the missiles (24) and the bomb
+with its blast (8) all came out of the particle share, which is the only share 0022 names as
+sheddable.
 
 **5 — The chart, and more levels behind it.**
 
