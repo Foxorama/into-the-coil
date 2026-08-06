@@ -42,6 +42,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
 | **a death takes the ship, and the level carries on** | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
 | **a boss's station drifts, so a fight is still flight** | [0061](decisions/0061-a-boss-keeps-flying.md) |
+| **the sky is baked and blitted, and it is not entities** | [0065](decisions/0065-the-sky-is-baked-and-blitted.md) |
 | **a death scatters what it took, non-cycling and on a short timer** | [0066](decisions/0066-a-death-scatters-what-it-took.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
@@ -164,11 +165,11 @@ makes a death cost more in the same session as a report that dying is already to
    [0061](decisions/0061-a-boss-keeps-flying.md), which took the second of the two options given. The
    first — a wall-type boss holding the far edge with its own style — is **content** rather than a
    repair, and `docs/game.md`'s *every boss is unique* is where it belongs.
-7. **A background.** *"Needs a starry background or a background of some kind."* ⚠️ Against
-   [0022](decisions/0022-frame-rate-is-a-feature.md) and
-   [0025](decisions/0025-the-frame-budget-is-counted-not-timed.md): counted draw calls, nothing
-   allocating in the frame loop, and `CAPACITY` in `src/app/mount.ts` is already at 0022's 500-entity
-   worst case — so a starfield is not entities.
+7. **✅ DONE — a background.**
+   [0065](decisions/0065-the-sky-is-baked-and-blitted.md). Two baked tiles at different parallax
+   rates, a handful of blits a frame, and no entities: `CAPACITY` is still exactly 0022's worst case.
+   ⚠️ **Nothing about it has been looked at**, which is the one class of change 0027 says can have
+   every guard green while the picture is wrong.
 
 ## What was next before that list, and why in this order
 

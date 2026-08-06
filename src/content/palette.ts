@@ -28,7 +28,24 @@ export type PaletteName = 'vivid' | 'high-contrast';
  * `docs/decisions/0024-the-accessibility-floor-is-settings.md` exists to prevent, arriving by the
  * back door. See [0035](../../docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md).
  */
-export type Ink = 'space' | 'player' | 'ally' | 'enemy' | 'bullet' | 'hazard' | 'pickup' | 'impact';
+/**
+ * ⚠️ **`sky` is the one ink that must NOT stand out, and it is the only exception in the table.**
+ * Every other role here is something the player has to be able to find; the sky is the thing they all
+ * have to be findable AGAINST. `tests/palette.test.ts` holds the contrast floor for every ink and
+ * holds the OPPOSITE for this one — it has to sit nearer `space` than anything that carries meaning,
+ * or a starfield becomes a field of things that look like pickups.
+ * `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
+ */
+export type Ink =
+  | 'space'
+  | 'sky'
+  | 'player'
+  | 'ally'
+  | 'enemy'
+  | 'bullet'
+  | 'hazard'
+  | 'pickup'
+  | 'impact';
 
 export type Palette = Record<Ink, string>;
 
@@ -36,6 +53,8 @@ export const PALETTES: Record<PaletteName, Palette> = {
   /** The default game, per 0024: there is one game and it is the loud one. */
   vivid: {
     space: '#0b0b14',
+    // A dim blue-grey: visibly not the void, and nowhere near anything the player has to find.
+    sky: '#2a2c44',
     player: '#7ae7ff',
     ally: '#c9a7ff',
     enemy: '#ff4d6d',
@@ -53,6 +72,13 @@ export const PALETTES: Record<PaletteName, Palette> = {
    */
   'high-contrast': {
     space: '#000000',
+    /*
+      ⚠️ **Darker here than in the vivid palette, not brighter.** A high-contrast palette maximises the
+      separation between the things that MATTER and the background; a louder sky would spend exactly
+      that separation on scenery. It is still above the void, so the parallax is still readable as
+      motion — which is the whole of what the sky is for.
+    */
+    sky: '#1a1a1a',
     player: '#00ffff',
     ally: '#8080ff',
     enemy: '#ff0000',

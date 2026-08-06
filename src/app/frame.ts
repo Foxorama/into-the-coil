@@ -44,7 +44,7 @@ import type { Intent } from '../sim/intent.ts';
 import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
 import type { Pool } from '../sim/pool.ts';
-import { paintScene } from '../render/scene.ts';
+import { paintScene, type Sky } from '../render/scene.ts';
 import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
@@ -304,6 +304,15 @@ export interface World {
    * *within* a layer — between layers, this array is the whole statement.
    */
   layers: readonly Pool<Entity>[];
+  /**
+   * The background, back to front. Built once at mount; empty for a scene that has none.
+   *
+   * ⚠️ **Not entities, and that is the whole of
+   * `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.**
+   * `CAPACITY` in `src/app/mount.ts` totals 0022's 500-entity worst case exactly, so a starfield made
+   * of bodies would come out of the pools that hold bullets.
+   */
+  sky: Sky;
   /** The player's ship, alone in its own pool so that death is a release and a respawn. */
   shipPool: Pool<Entity>;
   /**
@@ -787,7 +796,7 @@ export class GameFrame implements Frame {
     // The camera is interpolated on the same alpha as everything it gets subtracted from. Passing
     // the stepped value here is what made a ship holding station exactly still judder on screen.
     const camera = w.prevCameraAlong + (w.cameraAlong - w.prevCameraAlong) * alpha;
-    paintScene(w.surface, w.view, w.layers, camera, alpha);
+    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky);
   }
 }
 
