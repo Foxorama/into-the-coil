@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { PICKUPS, PICKUP_KINDS, weaponFor, type UpgradeKind } from '../src/content/pickups.ts';
+import { PICKUPS, PICKUP_KINDS, UPGRADE_KINDS, weaponFor, type UpgradeKind } from '../src/content/pickups.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
-import { ACROSS_SPAN } from '../src/sim/camera.ts';
+import { ACROSS_SPAN, MAX_ASPECT, viewOf } from '../src/sim/camera.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { GameFrame } from '../src/app/frame.ts';
 import { initialState, reduce } from '../src/state/root.ts';
@@ -28,11 +28,18 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
       worse than none."* Stated as a property rather than as numbers: whatever a weapon is, adding
       any single upgrade to it has to produce a DIFFERENT weapon.
     */
+    /*
+      ⚠️ **Walked from the table, and it was a list of the two that existed.** The rule is about every
+      upgrade there will ever be, so the loop has to be over every upgrade there is — and the fields
+      compared have to be every field a weapon has, or the next upgrade to change a NEW field passes
+      this while doing nothing the player can feel.
+    */
     const base = weaponFor(SHIPS.proof, []);
-    for (const upgrade of ['rapid', 'spread'] as UpgradeKind[]) {
+    const fields = Object.keys(base) as (keyof typeof base)[];
+    for (const upgrade of UPGRADE_KINDS) {
       const after = weaponFor(SHIPS.proof, [upgrade]);
       expect(
-        after.fireEvery !== base.fireEvery || after.shots !== base.shots,
+        fields.some((field) => after[field] !== base[field]),
         `taking a ${upgrade} changes nothing about the ship`,
       ).toBe(true);
     }
@@ -96,9 +103,16 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
       the pool size — is one of four that have to agree, and this is the only place they are checked
       against each other.
     */
+    /*
+      ⚠️ **EVERY upgrade there is, fifteen of each**, built by walking the table rather than by
+      listing the two that existed when this was written. A weapon added to `UPGRADE_KINDS` and left
+      out of this list would be a weapon whose pool nothing checks — which is the exact failure this
+      test exists for, one table further back.
+    */
     const everything: UpgradeKind[] = [];
-    for (let i = 0; i < 15; i++) everything.push('spread');
-    for (let i = 0; i < 15; i++) everything.push('rapid');
+    for (const kind of UPGRADE_KINDS) {
+      for (let i = 0; i < 15; i++) everything.push(kind);
+    }
 
     const { world } = playableWorld({
       waves: [],
@@ -107,13 +121,23 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
       boss: 'sentinel',
     });
     world.weapon = weaponFor(SHIPS.proof, everything);
+    /*
+      ⚠️ **THE WIDEST VIEW THE CLAMP ALLOWS, because the pool arithmetic depends on it.** A shot is
+      culled at the edge of the screen in front of the player (0048), so a 21:9 monitor keeps a shot
+      in flight nearly half as long again as a 16:9 one — and the fixture's default view is 16:9.
+      Measured there, this test reports a peak the widest device never sees, which is the shape of
+      guard that passes while the thing it guards is broken for a third of the players.
+    */
+    world.view = viewOf(ACROSS_SPAN * MAX_ASPECT * 10, ACROSS_SPAN * 10);
     const frame = new GameFrame(world);
 
     let peak = 0;
+    let missilePeak = 0;
     // Long enough that anything accumulating has accumulated: fifteen seconds of continuous fire.
     for (let i = 0; i < 900; i++) {
       frame.step();
       if (world.playerShots.size > peak) peak = world.playerShots.size;
+      if (world.missiles.size > missilePeak) missilePeak = world.missiles.size;
     }
     expect(
       peak,
@@ -121,6 +145,18 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
         'The pool refuses the later barrels of every volley, so the fan fires unevenly — which is ' +
         'what the player sees as some streams stuttering.',
     ).toBeLessThan(CAPACITY.playerShots);
+    /*
+      ⚠️ **The same arithmetic for the second weapon, and it is why the missiles have a pool of their
+      own.** Launchers, the missile fire floor, the flight time and the pool size are four numbers
+      that have to agree; this is the only place they are checked against each other.
+    */
+    expect(
+      missilePeak,
+      `a fully loaded weapon puts ${missilePeak} missiles in flight against a pool of ${CAPACITY.missiles}. ` +
+        'A full pool drops the later tubes of every volley, so a three-launcher ship fires like a ' +
+        'one-launcher ship at exactly the moment the player has earned otherwise.',
+    ).toBeLessThan(CAPACITY.missiles);
+    expect(missilePeak, 'no missile was ever fired, so this measured nothing').toBeGreaterThan(0);
   });
 
   it('an empty list IS the base weapon, so a death needs no second description of one', () => {

@@ -116,8 +116,8 @@ export const PROBES = [
     guard: 'every upgrade-effect pickup is an upgrade kind',
     edit: {
       path: 'src/content/pickups.ts',
-      find: "export const UPGRADE_KINDS = ['rapid', 'spread'] as const;",
-      replace: "export const UPGRADE_KINDS = ['rapid'] as const;",
+      find: "export const UPGRADE_KINDS = ['rapid', 'spread', 'missileRate', 'missileSpread'] as const;",
+      replace: "export const UPGRADE_KINDS = ['rapid', 'missileRate', 'missileSpread'] as const;",
     },
   },
   {
@@ -129,8 +129,8 @@ export const PROBES = [
     guard: 'never asks the frame to draw more entities than the budget was measured for',
     edit: {
       path: 'src/app/mount.ts',
-      find: '  debris: 200 - MAX_SHIELDS,',
-      replace: '  debris: 200,',
+      find: '  debris: 200 - MAX_SHIELDS - 24,',
+      replace: '  debris: 200 - MAX_SHIELDS,',
     },
   },
   {

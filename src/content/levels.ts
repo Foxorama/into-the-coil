@@ -281,6 +281,13 @@ const APPROACH_PICKUPS: readonly PickupEntry[] = [
   { at: 420, kind: 'rapid', lane: 25 },
   { at: 1010, kind: 'spread', lane: 72 },
   { at: 1300, kind: 'shield', lane: 55 },
+  /*
+    ⚠️ **THE MISSILE UPGRADES START LATER THAN THE PULSE ONES, and that is teaching rather than
+    balance.** A player meets the pulse and its two upgrades in the opening minute; the second weapon
+    fires itself from the first frame, so what is left to learn is that a DIFFERENT pickup family
+    changes it. Handing both families out at once would make the first four pickups a lottery.
+  */
+  { at: 1450, kind: 'missileSpread', lane: 30 },
   { at: 1620, kind: 'rapid', lane: 38 },
   { at: 2150, kind: 'extraLife', lane: 60 },
   // ⚠️ Added because `tests/pickups.test.ts` measured a 28-second stretch with nothing to rearm
@@ -288,14 +295,17 @@ const APPROACH_PICKUPS: readonly PickupEntry[] = [
   { at: 2200, kind: 'spread', lane: 30 },
   { at: 2400, kind: 'shield', lane: 68 },
   { at: 2620, kind: 'spread', lane: 28 },
+  { at: 2900, kind: 'missileRate', lane: 64 },
   { at: 3160, kind: 'rapid', lane: 70 },
   { at: 3400, kind: 'shield', lane: 32 },
   { at: 3700, kind: 'spread', lane: 45 },
   { at: 4240, kind: 'rapid', lane: 22 },
+  { at: 4340, kind: 'missileSpread', lane: 44 },
   { at: 4400, kind: 'shield', lane: 58 },
   { at: 4700, kind: 'spread', lane: 40 },
   { at: 4800, kind: 'extraLife', lane: 66 },
   { at: 5300, kind: 'spread', lane: 35 },
+  { at: 5420, kind: 'missileRate', lane: 72 },
   { at: 5500, kind: 'shield', lane: 26 },
   { at: 5860, kind: 'rapid', lane: 62 },
   // ⚠️ The last one is before the boss rather than during it. A fight that hands out shields while
@@ -417,18 +427,22 @@ const DESCENT_PICKUPS: readonly PickupEntry[] = [
   { at: 480, kind: 'rapid', lane: 28 },
   { at: 1120, kind: 'spread', lane: 68 },
   { at: 1500, kind: 'shield', lane: 35 },
+  { at: 1640, kind: 'missileSpread', lane: 66 },
   { at: 1720, kind: 'rapid', lane: 42 },
   { at: 2280, kind: 'extraLife', lane: 55 },
   { at: 2340, kind: 'spread', lane: 32 },
   { at: 2800, kind: 'shield', lane: 70 },
   { at: 2940, kind: 'rapid', lane: 62 },
+  { at: 3180, kind: 'missileRate', lane: 30 },
   { at: 3540, kind: 'spread', lane: 45 },
   { at: 3900, kind: 'shield', lane: 24 },
   { at: 4140, kind: 'rapid', lane: 25 },
+  { at: 4400, kind: 'missileSpread', lane: 52 },
   { at: 4720, kind: 'spread', lane: 58 },
   { at: 4780, kind: 'extraLife', lane: 35 },
   { at: 5100, kind: 'shield', lane: 48 },
   { at: 5320, kind: 'rapid', lane: 50 },
+  { at: 5600, kind: 'missileRate', lane: 22 },
   { at: 5900, kind: 'spread', lane: 40 },
   { at: 6200, kind: 'shield', lane: 50 },
 ];
