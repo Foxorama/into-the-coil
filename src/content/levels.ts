@@ -32,8 +32,8 @@
  *
  * ⚠️ **Lanes are checked, not trusted.** `tests/level.test.ts` walks every wave, applies its own
  * formation's offsets, adds the enemy's radius and — for a weaver — twice its weave amplitude, and
- * fails if any member could leave the lane. There is no `across` cull, so an enemy that wanders out
- * of the dodge lane does not come back and does not get retired.
+ * fails if any member could leave the lane. A wave with an `origin` enters from outside the lane and
+ * is checked against the lane it is HEADING for — see `WaveOrigin` below.
  */
 
 import type { EnemyKind } from './enemies.ts';
@@ -59,6 +59,19 @@ export const LEVEL_KINDS = ['approach', 'descent'] as const;
 /** Derived from the list, so a level cannot exist in the union and be missing from the table. */
 export type LevelKind = (typeof LEVEL_KINDS)[number];
 
+/**
+ * Which edge of the world a wave arrives from.
+ *
+ * ⚠️ **A closed union, and it EARNS being one where the weave deliberately did not.**
+ * `src/content/enemies.ts` refuses a motion union on the grounds that a straight line is a weave of
+ * amplitude zero — one member with a parameter. These three are not that: `lead` is a place off the
+ * leading edge and the other two are places off the `across` edges, and no value of one produces
+ * another. That file names the trigger for a union arriving — *something that turns towards the
+ * player* — and a flanker straightening out into the lane is it.
+ * `docs/decisions/0048-a-threat-may-arrive-from-the-side.md`.
+ */
+export type WaveOrigin = 'lead' | 'acrossMinus' | 'acrossPlus';
+
 export interface WaveEntry {
   /** Camera distance, in world units from the level's start, at which this wave spawns. */
   at: number;
@@ -66,9 +79,37 @@ export interface WaveEntry {
   formation: FormationKind;
   /** How many. The formation decides where each of them goes. */
   count: number;
-  /** Where the formation is centred across the lane, 0 to 100. */
+  /**
+   * Where the formation is centred across the lane, 0 to 100.
+   *
+   * ⚠️ For a wave that arrives from an `across` edge this is where it is HEADING, not where it
+   * starts — it enters from outside the lane and straightens out here. `tests/level.test.ts` checks
+   * it either way, because the target lane is what the wave eventually occupies.
+   */
   lane: number;
+  /**
+   * Which edge it comes from. Absent means `lead`, which is where everything came from until now.
+   *
+   * ⚠️ **Optional rather than required, and that is a considered exception.** The house answer is a
+   * field every row has to answer, and 130 waves each restating *the usual one* would bury the
+   * dozen that do something else — which is the opposite of what a script is for. The default is
+   * named once, below, and `tests/level.test.ts` reads it from there.
+   *
+   * ⚠️ **The player's own words for the cap**: *"entry point should be capped at 50% from the right
+   * side of the screen — the player has a safe spawn zone from the left."* That is enforced by
+   * `FLANK_ALONG` in `src/sim/camera.ts` and not by the author, because *half the screen* is not one
+   * distance: a view is 150 to 240 world units wide by aspect.
+   */
+  origin?: WaveOrigin;
 }
+
+/**
+ * Where a wave comes from when it does not say.
+ *
+ * The single description of the default, read by the spawner and by the guard rather than restated
+ * in either — `src/app/chrome.ts`'s `prefixFor` is the same pattern for the same reason.
+ */
+export const DEFAULT_ORIGIN: WaveOrigin = 'lead';
 
 export interface PickupEntry {
   /** World units from the level's start. A place, exactly as a wave's `at` is. */
@@ -183,15 +224,15 @@ const APPROACH: readonly WaveEntry[] = [
   // ── Chargers. Faster than a reaction, so they have to be seen coming. ───────────────────────────
   { at: 3750, enemy: 'charger', formation: 'line', count: 5, lane: 50 },
   { at: 3840, enemy: 'drifter', formation: 'line', count: 6, lane: 35 },
-  { at: 3930, enemy: 'charger', formation: 'column', count: 5, lane: 65 },
+  { at: 3930, enemy: 'charger', formation: 'column', count: 5, lane: 65, origin: 'acrossMinus' },
   { at: 4020, enemy: 'lancer', formation: 'vee', count: 5, lane: 45 },
-  { at: 4110, enemy: 'charger', formation: 'vee', count: 5, lane: 55 },
+  { at: 4110, enemy: 'charger', formation: 'column', count: 4, lane: 55, origin: 'acrossPlus' },
   { at: 4200, enemy: 'turret', formation: 'line', count: 4, lane: 40 },
   { at: 4290, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
   { at: 4380, enemy: 'charger', formation: 'line', count: 5, lane: 50 },
   { at: 4470, enemy: 'lancer', formation: 'column', count: 5, lane: 60 },
   { at: 4560, enemy: 'drifter', formation: 'vee', count: 6, lane: 40 },
-  { at: 4650, enemy: 'charger', formation: 'column', count: 5, lane: 30 },
+  { at: 4650, enemy: 'charger', formation: 'column', count: 5, lane: 30, origin: 'acrossMinus' },
   { at: 4740, enemy: 'weaver', formation: 'vee', count: 5, lane: 50 },
   { at: 4830, enemy: 'turret', formation: 'column', count: 5, lane: 65 },
   { at: 4920, enemy: 'charger', formation: 'line', count: 5, lane: 55 },
@@ -202,7 +243,7 @@ const APPROACH: readonly WaveEntry[] = [
   { at: 5180, enemy: 'charger', formation: 'line', count: 5, lane: 60 },
   { at: 5260, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
   { at: 5340, enemy: 'drifter', formation: 'line', count: 6, lane: 50 },
-  { at: 5420, enemy: 'charger', formation: 'column', count: 5, lane: 70 },
+  { at: 5420, enemy: 'charger', formation: 'column', count: 5, lane: 70, origin: 'acrossPlus' },
   { at: 5500, enemy: 'lancer', formation: 'line', count: 5, lane: 35 },
   { at: 5580, enemy: 'turret', formation: 'line', count: 5, lane: 45 },
   { at: 5660, enemy: 'weaver', formation: 'vee', count: 5, lane: 55 },
@@ -210,7 +251,7 @@ const APPROACH: readonly WaveEntry[] = [
   { at: 5820, enemy: 'drifter', formation: 'vee', count: 6, lane: 35 },
   { at: 5900, enemy: 'lancer', formation: 'column', count: 5, lane: 65 },
   { at: 5980, enemy: 'turret', formation: 'column', count: 5, lane: 40 },
-  { at: 6060, enemy: 'charger', formation: 'line', count: 6, lane: 50 },
+  { at: 6060, enemy: 'charger', formation: 'column', count: 6, lane: 50, origin: 'acrossMinus' },
   { at: 6140, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
 ];
 
@@ -276,7 +317,7 @@ const DESCENT: readonly WaveEntry[] = [
 
   // ── Wardens. Four health, weaving, and shooting — the first thing that is two problems at once. ─
   { at: 910, enemy: 'warden', formation: 'line', count: 3, lane: 50 },
-  { at: 995, enemy: 'charger', formation: 'line', count: 5, lane: 30 },
+  { at: 995, enemy: 'charger', formation: 'column', count: 5, lane: 30, origin: 'acrossMinus' },
   { at: 1080, enemy: 'drifter', formation: 'line', count: 6, lane: 55 },
   { at: 1165, enemy: 'warden', formation: 'column', count: 3, lane: 40 },
   { at: 1250, enemy: 'weaver', formation: 'vee', count: 5, lane: 50 },
@@ -287,7 +328,7 @@ const DESCENT: readonly WaveEntry[] = [
   // making THEM more numerous would have changed the level's difficulty to fix its pacing.
   { at: 1462, enemy: 'drifter', formation: 'line', count: 5, lane: 62 },
   { at: 1505, enemy: 'turret', formation: 'line', count: 3, lane: 55 },
-  { at: 1590, enemy: 'charger', formation: 'column', count: 5, lane: 25 },
+  { at: 1590, enemy: 'charger', formation: 'column', count: 5, lane: 25, origin: 'acrossPlus' },
   { at: 1675, enemy: 'drifter', formation: 'vee', count: 6, lane: 50 },
   { at: 1760, enemy: 'warden', formation: 'vee', count: 3, lane: 50 },
   { at: 1845, enemy: 'weaver', formation: 'line', count: 5, lane: 40 },
@@ -299,10 +340,10 @@ const DESCENT: readonly WaveEntry[] = [
   { at: 2185, enemy: 'charger', formation: 'vee', count: 5, lane: 55 },
   { at: 2270, enemy: 'warden', formation: 'line', count: 3, lane: 45 },
   { at: 2355, enemy: 'drifter', formation: 'line', count: 6, lane: 50 },
-  { at: 2440, enemy: 'charger', formation: 'line', count: 5, lane: 35 },
+  { at: 2440, enemy: 'charger', formation: 'column', count: 5, lane: 35, origin: 'acrossMinus' },
   { at: 2525, enemy: 'turret', formation: 'line', count: 3, lane: 60 },
   { at: 2610, enemy: 'weaver', formation: 'column', count: 5, lane: 30 },
-  { at: 2695, enemy: 'charger', formation: 'column', count: 5, lane: 70 },
+  { at: 2695, enemy: 'charger', formation: 'column', count: 5, lane: 70, origin: 'acrossPlus' },
   { at: 2780, enemy: 'lancer', formation: 'vee', count: 5, lane: 50 },
   { at: 2865, enemy: 'warden', formation: 'column', count: 3, lane: 55 },
   { at: 2950, enemy: 'drifter', formation: 'line', count: 6, lane: 42 },
@@ -311,7 +352,7 @@ const DESCENT: readonly WaveEntry[] = [
   { at: 3205, enemy: 'turret', formation: 'column', count: 3, lane: 28 },
   { at: 3290, enemy: 'lancer', formation: 'line', count: 5, lane: 65 },
   { at: 3375, enemy: 'warden', formation: 'line', count: 3, lane: 45 },
-  { at: 3460, enemy: 'charger', formation: 'line', count: 5, lane: 50 },
+  { at: 3460, enemy: 'charger', formation: 'column', count: 5, lane: 50, origin: 'acrossMinus' },
 
   // ── Everything, with wardens holding the lane the player wants. ─────────────────────────────────
   { at: 3545, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },
@@ -327,7 +368,7 @@ const DESCENT: readonly WaveEntry[] = [
   { at: 4395, enemy: 'turret', formation: 'column', count: 3, lane: 70 },
   { at: 4480, enemy: 'lancer', formation: 'vee', count: 5, lane: 38 },
   { at: 4565, enemy: 'warden', formation: 'column', count: 3, lane: 50 },
-  { at: 4650, enemy: 'charger', formation: 'line', count: 5, lane: 60 },
+  { at: 4650, enemy: 'charger', formation: 'column', count: 5, lane: 60, origin: 'acrossPlus' },
   { at: 4735, enemy: 'drifter', formation: 'vee', count: 6, lane: 45 },
   { at: 4820, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
   { at: 4905, enemy: 'lancer', formation: 'line', count: 5, lane: 30 },
@@ -337,7 +378,7 @@ const DESCENT: readonly WaveEntry[] = [
   { at: 5070, enemy: 'charger', formation: 'vee', count: 5, lane: 55 },
   { at: 5150, enemy: 'turret', formation: 'line', count: 3, lane: 40 },
   { at: 5230, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
-  { at: 5310, enemy: 'charger', formation: 'line', count: 5, lane: 65 },
+  { at: 5310, enemy: 'charger', formation: 'column', count: 5, lane: 65, origin: 'acrossMinus' },
   { at: 5390, enemy: 'lancer', formation: 'vee', count: 5, lane: 50 },
   { at: 5470, enemy: 'warden', formation: 'column', count: 4, lane: 35 },
   { at: 5550, enemy: 'drifter', formation: 'line', count: 6, lane: 55 },
@@ -346,7 +387,7 @@ const DESCENT: readonly WaveEntry[] = [
   { at: 5790, enemy: 'turret', formation: 'column', count: 3, lane: 68 },
   { at: 5870, enemy: 'warden', formation: 'vee', count: 3, lane: 45 },
   { at: 5950, enemy: 'lancer', formation: 'line', count: 5, lane: 60 },
-  { at: 6030, enemy: 'charger', formation: 'vee', count: 5, lane: 40 },
+  { at: 6030, enemy: 'charger', formation: 'column', count: 5, lane: 40, origin: 'acrossPlus' },
   { at: 6110, enemy: 'drifter', formation: 'line', count: 6, lane: 50 },
   { at: 6190, enemy: 'warden', formation: 'line', count: 4, lane: 50 },
 ];

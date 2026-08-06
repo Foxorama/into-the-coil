@@ -22,7 +22,14 @@
  * `docs/decisions/0034-a-threat-is-absolute-and-a-pool-is-the-pairing.md`.
  */
 
-import { ACROSS_SPAN, spawnAlong, type View } from '../sim/camera.ts';
+import {
+  ACROSS_SPAN,
+  FLANK_ALONG,
+  FLANK_MARGIN,
+  cullPlayerShotAlong,
+  spawnAlong,
+  type View,
+} from '../sim/camera.ts';
 import { collectInto, collideInto, collideIntoOne, type Collected, type Deaths } from '../sim/collide.ts';
 import { type Entity, reset, stepEntities } from '../sim/entity.ts';
 import { flyShip, holdStation } from '../sim/flight.ts';
@@ -39,7 +46,7 @@ import { INVULN_STEPS } from '../content/ships.ts';
 import { SHOTS } from '../content/shots.ts';
 import { BURST, DEBRIS } from '../content/debris.ts';
 import { FORMATIONS } from '../content/formations.ts';
-import type { LevelRow } from '../content/levels.ts';
+import { DEFAULT_ORIGIN, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
 import { type DifficultyRow, fireGapFor, toughnessFor } from '../content/difficulty.ts';
 import { PICKUP_KINDS, PLAYER_SHOT_LIFE, type PickupKind, type PickupRow, type Weapon } from '../content/pickups.ts';
@@ -57,6 +64,32 @@ const MUZZLE_ALONG = 3;
  * the alternative is computing `Math.PI * 2` once per weaving enemy per step forever.
  */
 const TAU = Math.PI * 2;
+
+/**
+ * How fast a flanker crosses the lane on its way in, in world units per step.
+ *
+ * ⚠️ **A PLAY-TEST NUMBER, on `SHIP_SPEED`'s terms.** It has to be quick enough that the wave is not
+ * a slow slide the player watches for four seconds, and slow enough that a body arriving from an
+ * edge nobody was looking at is not a hit that could not have been avoided. Nothing asserts on it;
+ * what `tests/level.test.ts` holds is that a flanker reaches its lane before it leaves the screen,
+ * which is a relationship that must be true at any value.
+ *
+ * 0.9 crosses the widest entry — outside the lane to the far side — in a little under two seconds.
+ */
+const FLANK_ENTRY_SPEED = 0.9;
+
+/**
+ * How fast a pickup wanders across the lane, in world units per step.
+ *
+ * Asked for in play: *"power ups and buffs should also have a drifting, moving flight rather than a
+ * static straight line."*
+ *
+ * ⚠️ **Deliberately slower than the ship by a wide margin.** `src/content/pickups.ts` records that
+ * the point of a pickup closing at exactly the scroll rate is that the player has a *known* amount
+ * of time to decide to go for it — drift is meant to make that decision about a moving target, not
+ * to turn taking one into a reflex. At 0.22 it crosses the lane in about seven seconds.
+ */
+const PICKUP_DRIFT = 0.22;
 
 /**
  * Where the ship sits in its box, in world units ahead of the camera's trailing edge.
@@ -339,6 +372,7 @@ export class GameFrame implements Frame {
 
     fireShip(w);
     steerEnemies(w);
+    driftPickups(w);
     fireEnemies(w);
     driveBoss(w);
 
@@ -349,7 +383,9 @@ export class GameFrame implements Frame {
     stepEntities(w.pickups, w.cameraAlong);
     stepEntities(w.bossPool, w.cameraAlong);
     stepEntities(w.enemies, w.cameraAlong);
-    stepEntities(w.playerShots, w.cameraAlong);
+    // ⚠️ The one pool with its own leading cull, and it is the player's REACH rather than content —
+    // `src/sim/camera.ts` has the play report that argues it.
+    stepEntities(w.playerShots, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
     stepEntities(w.enemyShots, w.cameraAlong);
     stepEntities(w.debris, w.cameraAlong);
 
@@ -605,16 +641,44 @@ function spawnWave(w: World, index: number): void {
   const row = w.enemyRows[kind];
   if (row === undefined) return;
   const formation = FORMATIONS[wave.formation];
-  // The authored position, not the leading edge. A wave inside the opening horizon is therefore
-  // already in front of the player when a run begins, which is what a level is supposed to look like.
-  const along = wave.at;
+  const origin = wave.origin ?? DEFAULT_ORIGIN;
+  const flanking = origin !== 'lead';
+  /*
+    WHERE THE WAVE IS PUT.
+
+    A leading wave goes at its AUTHORED position, not at the leading edge — a wave inside the opening
+    horizon is therefore already in front of the player when a run begins, which is what a level is
+    supposed to look like.
+
+    ⚠️ **A flanking wave is placed against the CAMERA instead, and its `at` decides only WHEN.** It
+    is not hidden by being far ahead — it is hidden by being outside the lane — so the authored
+    distance would put it wherever the horizon happens to be, which is 280 units out and behind
+    nothing. `FLANK_ALONG` is the cap the player asked for, and `src/sim/camera.ts` has the argument
+    for why it is a fixed 120 rather than a fraction of the view.
+  */
+  const along = flanking ? w.cameraAlong + FLANK_ALONG : wave.at;
+  // Which side it comes in from, as a sign on `across`. −1 enters from the acrossMinus edge.
+  const side = origin === 'acrossPlus' ? 1 : -1;
+  const entryAcross = side < 0 ? -FLANK_MARGIN : ACROSS_SPAN + FLANK_MARGIN;
   for (let i = 0; i < wave.count; i++) {
     const e = w.enemies.spawn();
     // A wave one enemy short is dropped rather than grown — `src/sim/pool.ts` has the argument, and
     // it is the same one a burst that will not fit gets.
     if (e === null) return;
-    const across = wave.lane + formation.acrossOffset(i, wave.count);
+    const target = wave.lane + formation.acrossOffset(i, wave.count);
+    /*
+      ⚠️ **A flanker's formation offset is applied ALONG rather than across at the entry point.** The
+      members leave the edge in a stream at their own target lanes; spreading them across the lane
+      before they had entered it would put half the wave on screen already.
+    */
+    const across = flanking ? entryAcross : target;
     reset(e, along + formation.alongOffset(i, wave.count), across, row, kind);
+    if (flanking) {
+      // The turn: cross at a fixed rate until the authored lane, then straighten and close like
+      // anything else. `steerEnemies` is where that second half happens.
+      e.velAcross = -side * FLANK_ENTRY_SPEED;
+      e.steerAcross = target;
+    }
     /*
       THE TIER, applied here and nowhere else for anything that arrives in a wave.
 
@@ -647,9 +711,50 @@ function steerEnemies(w: World): void {
   for (let i = w.enemies.size - 1; i >= 0; i--) {
     const e = w.enemies.at(i);
     const row = w.enemyRows[e.kind];
-    if (row === undefined || row.weaveAmplitude <= 0 || row.weaveWavelength <= 0) continue;
-    const k = TAU / row.weaveWavelength;
-    e.velAcross = row.weaveAmplitude * k * Math.cos(e.along * k) * e.velAlong;
+    if (row === undefined) continue;
+    if (row.weaveAmplitude > 0 && row.weaveWavelength > 0) {
+      const k = TAU / row.weaveWavelength;
+      e.velAcross = row.weaveAmplitude * k * Math.cos(e.along * k) * e.velAlong;
+      continue;
+    }
+    /*
+      THE FLANKER'S TURN — the first motion in the game that is not a function of `along`.
+
+      ⚠️ **Gated on `velAcross`, so nothing else in the game pays for it.** Everything that is not
+      currently crossing the lane has a zero here, and a weaver has already `continue`d above —
+      `src/sim/entity.ts` says why *not crossing* is a velocity rather than a sentinel.
+
+      ⚠️ **The comparison is against the direction of travel, not against a distance.** A body
+      crossing at 0.8 a step will step OVER any tolerance band you pick, so a *"close enough to the
+      target"* test misses at one speed and holds at another; *have I passed it* cannot.
+    */
+    if (e.velAcross > 0 ? e.across >= e.steerAcross : e.velAcross < 0 && e.across <= e.steerAcross) {
+      e.across = e.steerAcross;
+      e.velAcross = 0;
+    }
+  }
+}
+
+/**
+ * Everything lying about, wandering.
+ *
+ * Asked for in play: *"power ups and buffs should also have a drifting, moving flight rather than a
+ * static straight line."*
+ *
+ * ⚠️ **It bounces off the lane edges rather than wrapping or stopping**, which is the same shape
+ * `src/app/boss.ts` uses for the boss's patrol and for the same reason: there is nothing off the
+ * lane worth drifting to, and a pickup that parked at the edge would be one the player has to fly
+ * into the wall for.
+ *
+ * ⚠️ **It stays slow.** `src/content/pickups.ts` records that a pickup holding station is what gives
+ * the player a known amount of time to decide to go for it; drift is meant to make that decision
+ * about a moving target rather than to turn it into a reflex.
+ */
+function driftPickups(w: World): void {
+  for (let i = w.pickups.size - 1; i >= 0; i--) {
+    const item = w.pickups.at(i);
+    if (item.across - item.radius <= 0) item.velAcross = Math.abs(item.velAcross);
+    else if (item.across + item.radius >= ACROSS_SPAN) item.velAcross = -Math.abs(item.velAcross);
   }
 }
 
@@ -670,6 +775,13 @@ function spawnPickup(w: World, index: number): void {
   const item = w.pickups.spawn();
   if (item === null) return;
   reset(item, entry.at, entry.lane, row, kind);
+  /*
+    ⚠️ **Which way it starts drifting alternates by INDEX rather than being rolled.** The spawn
+    stream exists and is deliberately not consulted here for the reason `spawnWave` gives: a level is
+    authored, and a pickup that drifted a different way every run could not be placed by a hand.
+    Alternating means two pickups near each other visibly separate rather than moving as a pair.
+  */
+  item.velAcross = index % 2 === 0 ? PICKUP_DRIFT : -PICKUP_DRIFT;
 }
 
 /** The boss, if there is one on the field. Its whole behaviour lives in `src/app/boss.ts`. */

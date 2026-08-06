@@ -33,6 +33,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | lives and shield on screen; a key on the title | [0045](decisions/0045-the-player-can-see-what-they-are-carrying.md) |
 | **a pad can press a button; a run-over screen expires** | [0046](decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md) |
 | **difficulty is a tier, and the easy one is the content** | [0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md) |
+| **a threat may arrive from the side; a shot stops at the edge** | [0048](decisions/0048-a-threat-may-arrive-from-the-side.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -116,7 +117,13 @@ the assist ladder — which could not have held it.
 four with challenge"* and *"maybe the end boss of level two"* are the numbers to measure the next
 play-test against, and there are only two levels to do it in.
 
-**3 — Where things come from, and where a shot stops.**
+**3 — ✅ MOSTLY DONE. Where things come from, and where a shot stops.**
+
+[0048](decisions/0048-a-threat-may-arrive-from-the-side.md) landed the entry from the across edges,
+the cap, the across cull, the drifting pickups and the reported shot-range bug. **What it did NOT do
+is the density pass** — *"increasing enemy waves"* is a tuning question against a play-test, and it is
+the pass 0047's middle tier is waiting on. The rest of this section is what remains.
+
 
 Asked for: *"increasing enemy waves, improving the spawns"*, and then in more detail after playing —
 entry from the top and bottom of the screen, capped so nothing arrives behind the player; shots that
