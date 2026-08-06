@@ -67,8 +67,13 @@ Keyboard, touch and gamepad all reach every screen; the run-over screen gives up
 Each level opens on an empty screen so the player can find the controls before anything finds them —
 [0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md).
 
-Nothing is *triggered*: the arsenal — the specials a player spends — is still a list with nothing in
-it. Difficulty was last placed by a hand at *"intro to 50% of the first level"* — which is now the
+⚠️ **The ship now opens a run with no missile launcher** —
+[0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) — so the second
+auto-weapon is found rather than carried, and a death takes it away with the rest of the upgrades.
+A death no longer empties the screen ([0057](decisions/0057-a-death-does-not-rewind-the-level.md)).
+
+Nothing is *triggered* beyond the bomb: the arsenal — the specials a player spends — is otherwise
+still a list with nothing in it. Difficulty was last placed by a hand at *"intro to 50% of the first level"* — which is now the
 easiest of three tiers as well as two levels out of date —
 [`ship-speed-settled`](../reports/ship-speed-settled-2026-08-05.md), which is now two levels out of
 date and is exactly what a play-test is for.
@@ -112,11 +117,60 @@ it did **not** answer.
 - **Does a run that survives a level boundary feel like one run?** Six minutes is longer than
   anything here has been played end to end.
 
-## What is next, and why in this order
+## The second play-test list, given 2026-08-06
 
-**The order below is the player's, given 2026-08-06.** It is not the order the dependencies would
-have picked, and that is fine. **Three of the six have landed**; what is left is marked, and item 4
-is the large one.
+**Twelve items, in the player's words, after playing the build that item 4 below produced.** Four have
+landed; **eight have not been started**, and they are written out here rather than left in a chat
+log — [0029](decisions/0029-the-tracked-record-is-the-record.md).
+
+⚠️ **Nothing below has been played since these landed.** Four of them change what a run feels like on
+the first ten seconds, and one of them ([0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md))
+makes a death cost more in the same session as a report that dying is already too punishing.
+
+**Landed:**
+
+| | |
+|---|---|
+| the jerky flick, and the bomb that fires itself on starting a run | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
+| the missile tube the ship should not start with; pickups too small to grab | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
+| a death that emptied the screen | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
+
+**Not started, in the player's own words.** Each is a real design question, not a tidy-up:
+
+1. **Pickups must linger, bounce and cycle faster.** *"They enter the screen, change when they get to
+   player safe distance, then disappear off the screen. They need to bounce and move around the
+   screen so the player can grab them safely and grab the power up they want safely."* Also
+   *"cycle .5 sec faster"*. ⚠️ `CYCLE_UNITS` is a DISTANCE, not a duration —
+   [0052](decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md) says why that matters,
+   and its own comment claims *"a little over two seconds"* where the arithmetic gives 3.6s at
+   `SCROLL_PER_STEP`. **That comment is wrong and is the first thing to check.** Lingering means a
+   pickup holding station in the camera's frame — 0034's *every speed is in the camera's frame*.
+2. **A death should scatter the lost upgrades as grabbable pickups.** *"Non-cycling and on a short
+   timer so there's enough time to grab some, but maybe not all."* This is the half of the
+   dying-is-punishing report that 0057 deliberately did **not** answer, and it is the one that
+   actually answers it. It needs item 1 first: scattered pickups are bouncing pickups.
+3. **Bosses need a real explosion and an end-of-level beat.** *"Currently the level just ends."*
+4. **The between-levels screen should become a brief respite.** *"The current pause/level screen
+   interrupts the flow."* ⚠️ Touches `SCREENS` — [0046](decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md)
+   and 0055 both have opinions about what a screen change costs.
+5. **Enemies are stuck in a narrow tunnel.** *"Once on screen the enemies are in a very narrow
+   tunnel and it makes the feel very restrictive and not like you're in a large area."* They should
+   fly off the `across` edges and back on. ⚠️ 0048 landed entry from the edges and the `across` cull;
+   this is about what they do AFTER arriving, which is `steerEnemies`.
+6. **A boss kills the sense of flight.** *"When a boss reaches mid screen, it just goes up/down and
+   there's no longer any flowing movement."* Two options given: a wall-type boss holding the far
+   edge with its own style, or the scroll keeps running and the boss holds a distance while drifting.
+7. **A background.** *"Needs a starry background or a background of some kind."* ⚠️ Against
+   [0022](decisions/0022-frame-rate-is-a-feature.md) and
+   [0025](decisions/0025-the-frame-budget-is-counted-not-timed.md): counted draw calls, nothing
+   allocating in the frame loop, and `CAPACITY` in `src/app/mount.ts` is already at 0022's 500-entity
+   worst case — so a starfield is not entities.
+
+## What was next before that list, and why in this order
+
+**The order below is the player's, given earlier on 2026-08-06.** It is not the order the
+dependencies would have picked, and that is fine. **Three of the six have landed**; what is left is
+marked, and item 4 is the large one.
 
 **1 — ✅ DONE. A gamepad can press a button; the run-over screen expires.**
 
