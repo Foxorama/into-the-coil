@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { PICKUPS, PICKUP_KINDS, UPGRADE_KINDS, weaponFor, type UpgradeKind } from '../src/content/pickups.ts';
+import { CYCLE, PICKUPS, PICKUP_KINDS, UPGRADE_KINDS, weaponFor, type UpgradeKind } from '../src/content/pickups.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
@@ -298,10 +298,21 @@ describe('collecting one, in the real frame', () => {
     }
   }
 
-  it('is reported exactly once, and by name', () => {
+  it('is reported exactly once, and by the name it was showing', () => {
+    /*
+      ⚠️ **The PAIR rather than the authored kind, since 0052.** A pickup on the field is one of two
+      things and the camera says which, so expecting the authored name would be asserting that the
+      cycle does not happen. What this test is about is the collection being reported — once, by a
+      name that belongs to the thing the level put there. WHICH of the two is the cycle's own guard,
+      in `tests/cycling.test.ts`, where the camera is placed rather than left where it lands.
+    */
     const { world, taken } = onePickup('rapid');
     flyInto(world, 600);
-    expect(taken, 'the ship flew through a pickup and nothing was reported').toEqual(['rapid']);
+    expect(taken.length, 'the ship flew through a pickup and nothing was reported').toBe(1);
+    expect(
+      [taken[0] === 'rapid' || taken[0] === CYCLE.rapid],
+      'the pickup was reported as something outside the pair it was authored as',
+    ).toEqual([true]);
   });
 
   it('leaves the field once taken, so it cannot be collected twice', () => {
@@ -322,6 +333,6 @@ describe('collecting one, in the real frame', () => {
     flyInto(world, 600, () => {
       world.ship.invulnFor = 60;
     });
-    expect(taken, 'a pickup passed through an invulnerable ship').toEqual(['rapid']);
+    expect(taken.length, 'a pickup passed through an invulnerable ship').toBe(1);
   });
 });

@@ -49,7 +49,7 @@ import { FORMATIONS } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
 import { type DifficultyRow, fireGapFor, toughnessFor } from '../content/difficulty.ts';
-import { PICKUP_KINDS, type PickupKind, type PickupRow, type Weapon } from '../content/pickups.ts';
+import { CYCLE_UNITS, PICKUP_KINDS, type PickupKind, type PickupRow, type Weapon } from '../content/pickups.ts';
 import { stepBoss } from './boss.ts';
 import type { Frame } from './loop.ts';
 
@@ -287,6 +287,24 @@ export interface World {
   pickupRows: readonly PickupRow[];
   /** Which index each authored pickup kind is, built once at boot. */
   pickupKinds: Record<PickupKind, number>;
+  /**
+   * The other face of each pickup, as an index into `pickupRows`. Built once at boot.
+   *
+   * ⚠️ **An array of indices rather than `CYCLE` itself**, for the reason `enemyRows` is an array:
+   * it is read once per live pickup per step, and a string key into a `Record` is a lookup the hot
+   * path does not have to do. `src/content/pickups.ts` holds the table it is built from, which is
+   * the single description.
+   */
+  pickupCycle: readonly number[];
+  /**
+   * Whether the field is currently showing the second face. Derived from the camera every step.
+   *
+   * ⚠️ **Computed once per step and read twice** — by the sprites and by the collection — so a
+   * pickup cannot be drawn as one thing and collected as another. That is not a hypothetical: they
+   * are separate loops, and the second copy of `floor(camera / units) % 2` is exactly the drift
+   * `src/content/sprites.ts` records the cost of.
+   */
+  pickupFlipped: boolean;
   /** What was collected this step. Reused, never rebuilt. */
   collected: Collected;
   /**
@@ -455,6 +473,7 @@ export class GameFrame implements Frame {
     w.input.contribute(w.intent);
     flyShip(w.ship, w.intent, w.cameraAlong, w.scrollPerStep);
 
+    cyclePickups(w);
     fireShip(w);
     fireMissiles(w);
     steerMissiles(w);
@@ -535,7 +554,14 @@ export class GameFrame implements Frame {
     for (let i = 0; i < w.collected.count; i++) {
       // `PICKUP_KINDS` IS the index order — `pickupRows` is built by walking it — so the entity's
       // opaque `kind` reads back as the authored name with no second table to keep in step.
-      const kind = PICKUP_KINDS[w.collected.kind[i]!];
+      /*
+        ⚠️ **The FACE, not the authored kind.** The entity keeps the kind the level wrote — so the
+        cycle has no state to accumulate and a pickup cannot drift out of step with the field — and
+        which face that is right now is the same boolean the sprites were drawn from a moment ago.
+      */
+      const index = w.collected.kind[i]!;
+      const face = w.pickupFlipped ? (w.pickupCycle[index] ?? index) : index;
+      const kind = PICKUP_KINDS[face];
       if (kind !== undefined) w.onPickup(kind);
     }
 
@@ -659,6 +685,45 @@ function fireShip(w: World): void {
       sooner than that timer could, on every device, so the timer had become a second mechanism for
       a guarantee that already had one. `src/content/pickups.ts` has what it left behind.
     */
+  }
+}
+
+/**
+ * What every pickup on the field currently is.
+ *
+ * Asked for after playing the two-level build: *"a pickup on the field changes what it is every few
+ * seconds, and changes its sprite with it, so which one a player gets is a matter of when they reach
+ * it."* `docs/decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md`.
+ *
+ * ⚠️ **The entity's `kind` is NOT rewritten, and the first draft of this rewrote it.** A face
+ * written back onto the entity is state that accumulates: on the next step the same rule reads the
+ * face rather than the authored kind and flips it back, so every pickup on the field alternates once
+ * a step forever. What the entity carries is what the level authored; what it is *right now* is that
+ * plus a boolean, and the boolean lives on the world because the collection needs the same one.
+ *
+ * ⚠️ **It runs BEFORE the collision**, so a pickup taken on the step it flips gives what it was
+ * showing when the ship reached it rather than what it had been a moment earlier.
+ *
+ * ⚠️ **A function of the camera, so every pickup on screen flips on the same step**, which is what
+ * makes it read as the field changing rather than as each object keeping its own timer.
+ */
+function cyclePickups(w: World): void {
+  // One divide per step rather than one per pickup: the phase is the same for everything on screen.
+  w.pickupFlipped = Math.floor(w.cameraAlong / CYCLE_UNITS) % 2 !== 0;
+  for (let i = w.pickups.size - 1; i >= 0; i--) {
+    const item = w.pickups.at(i);
+    const face = w.pickupFlipped ? (w.pickupCycle[item.kind] ?? item.kind) : item.kind;
+    const row = w.pickupRows[face];
+    if (row === undefined) continue;
+    /*
+      ⚠️ **`spriteBase` as well as `sprite`, because `stepEntities` derives the second from the
+      first every step.** Setting only `sprite` would be a face that lasts exactly until the next
+      step and then silently reverts — the kind of bug that is invisible in a screenshot and reads as
+      flickering in play.
+    */
+    item.spriteBase = row.sprite;
+    item.spriteHit = row.spriteHit;
+    item.sprite = row.sprite;
   }
 }
 

@@ -37,6 +37,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **the chrome is authored against the short axis** | [0049](decisions/0049-the-chrome-is-authored-against-the-short-axis.md) |
 | **the ship is one hit; a shield is what stands in front of it** | [0050](decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md) |
 | **a missile is the second auto-weapon; a launcher is a place on the ship** | [0051](decisions/0051-a-missile-is-the-second-auto-weapon.md) |
+| **a pickup is two things, and the camera says which** | [0052](decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -163,35 +164,31 @@ own terms so a later session does not have to reconstruct the ask; every number 
 point, not a decision.
 
 **Three of the four have landed** —
-[0050](decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md) and
-[0051](decisions/0051-a-missile-is-the-second-auto-weapon.md). The hull is one hit, a shield is a
-pickup capped at three, the HUD's pips are the shell, and the ship wears a ring per shield; missiles
-fire themselves from one to three launchers, with two more pickups behind them. The special that was
-called `shield` is now `mines`, which is what 0045 said would happen.
+[0050](decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md),
+[0051](decisions/0051-a-missile-is-the-second-auto-weapon.md) and
+[0052](decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md). The hull is one hit, a
+shield is a pickup capped at three, the HUD's pips are the shell, and the ship wears a ring per
+shield; missiles fire themselves from one to three launchers; and every pickup on the field is two
+things, flipping together with the camera. The special that was called `shield` is now `mines`, which
+is what 0045 said would happen.
+
+**What is left of this item is the bomb** — the first triggered special, and the first consumer of
+the input half 0030 landed.
 
 ⚠️ **What 0050 leaves owed is the tiers.** 0047's two harder ones were sized against a five-health
 ship and neither has been played since, and `resilience: hardy` is now a rung that does nothing.
 
-*Cycling pickups.* A pickup on the field **changes what it is every few seconds, and changes its
-sprite with it**, so which one a player gets is a matter of when they reach it:
+*Cycling pickups — **done**, [0052](decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md).*
+The three pairs are the ones asked for, the phase is a distance rather than a duration, and a level
+authors the pair with the camera picking the face.
 
-| the shape on the field | phase A | phase B |
-|---|---|---|
-| rapid | shoot faster | missiles fire faster |
-| spread | another barrel | another missile launcher |
-| extra life | one more try | a shield |
+⚠️ **It amends 0050's line about the opening shield**: what a player finds in the empty opening
+stretch is now a shield *or* an extra life. Both answer the question a one-hit hull asks, and
+`src/content/levels.ts` says so where the pickup is authored.
 
-⚠️ The phase has to be a function of the **camera** rather than of wall clock or of each pickup's own
-age, for the reason `src/content/enemies.ts` gives about the weave: a shape in the world can be
-authored against, and a wobble in time cannot. Every cycling pickup on screen then flips together,
-which reads as deliberate.
-
-⚠️ **All six faces now exist as ordinary pickups**, which is most of what this item needed:
-[0051](decisions/0051-a-missile-is-the-second-auto-weapon.md) added `missileRate` and
-`missileSpread`, and [0050](decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md)
-added `shield`. Each pair is deliberately one silhouette in two fills, so a pickup alternating
-between them reads as one object in two states rather than as two objects taking turns. What is left
-is the alternation itself, the pairing table, and what the title screen's key does with six rows.
+⚠️ **The title screen's key lists all six faces and does not say that a pickup alternates.**
+`docs/game.md` puts hints *where play proves they are needed, never pre-emptively*, so whether that
+reads as *six pickups* rather than *three that change* is a play-test question.
 
 *Bombs — the first triggered special.* The player starts with **2** and gains one per level cleared.
 A bomb launches forward and detonates a set distance ahead of the ship, doing **6× a pulse's damage**
