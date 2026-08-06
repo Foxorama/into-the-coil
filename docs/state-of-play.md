@@ -79,44 +79,20 @@ easiest of three tiers as well as two levels out of date —
 [`ship-speed-settled`](../reports/ship-speed-settled-2026-08-05.md), which is now two levels out of
 date and is exactly what a play-test is for.
 
-## What the play-test still has to answer
+## What the play-test has answered
 
-Questions, not findings — each one a number nothing in the repository can settle.
+⚠️ **All eight questions have been played and answered** —
+[`the-eight-questions-answered`](../reports/the-eight-questions-answered-2026-08-07.md) has them in
+the player's own words, and the seven things still open at the end of them.
+[`two-levels-played`](../reports/two-levels-played-2026-08-06.md) is the pass before it.
 
-⚠️ **The first pass has happened** —
-[`two-levels-played`](../reports/two-levels-played-2026-08-06.md) has the verdict, the four findings
-and their measurements. All four are fixed:
-[0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md) and
-[0045](decisions/0045-the-player-can-see-what-they-are-carrying.md). The questions below are the ones
-it did **not** answer.
+⚠️ **Two were answered *"can't tell yet"*, and both are blocked on the same thing: a balance pass
+against a one-hit hull.** That is now the largest open item in the project, and it is not on the list
+below — 0047's two harder tiers were sized against a five-health ship and have never been re-sized.
 
-- **Is the boss's progress readable at all?** Nothing says how much of it is left, by decision —
-  [0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md) names this as the thing that
-  build exists to find out.
-- **Is any of the three life counts right**, and is twenty seconds the right ceiling on how long a
-  death leaves the player unarmed?
-  [0041](decisions/0041-a-pickup-is-the-answer-to-what-a-death-costs.md) picked that number without
-  having played it, and item 4 below makes a death cost considerably more.
-- **Are the two harder tiers anywhere near their targets?** *"Level four with challenge"* and
-  *"maybe the end boss of level two"* are the numbers
-  [0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md) was sized against,
-  and only the easiest tier — the one that changes nothing — has ever been played.
-- **Do the two upgrades read on screen?** `docs/game.md` says every upgrade changes how the ship
-  looks, and neither of these does yet — they change what leaves it, and the title screen now says
-  what they are ([0045](decisions/0045-the-player-can-see-what-they-are-carrying.md)).
-- **Do the weaver and the charger read apart?** Both are essentially lines, told apart by which way
-  they lie — `src/content/sprites.ts` writes that risk down rather than assuming it away.
-- **Do enemy shots ever land?** [0034](decisions/0034-a-threat-is-absolute-and-a-pool-is-the-pairing.md)'s
-  `spit` speed and the fire rates have never been felt by an attentive player; the turret and the
-  warden are the rows that exist to test them —
-  [`ship-speed-settled`](../reports/ship-speed-settled-2026-08-05.md) has the measurement they
-  replace.
-- **Is level two a different game or the same one denser?**
-  [0042](decisions/0042-a-run-is-a-sequence-of-levels.md) claims the harrow takes away the lane the
-  sentinel taught the player to hold. That is a claim about how a fight feels, and nothing in this
-  repository can check it.
-- **Does a run that survives a level boundary feel like one run?** Six minutes is longer than
-  anything here has been played end to end.
+⚠️ **The chart between levels is now a QUESTION rather than a plan.**
+`docs/decisions/0063-a-level-break-is-a-respite.md` carries the report; `docs/game.md` still puts a
+branching map there, and the evidence points away from a screen rather than towards one.
 
 ## The second play-test list, given 2026-08-06
 
