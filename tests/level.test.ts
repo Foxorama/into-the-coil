@@ -4,11 +4,12 @@ import { LEVELS, LEVEL_KINDS, type WaveEntry } from '../src/content/levels.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { FORMATIONS, FORMATION_KINDS } from '../src/content/formations.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
+import { INVULN_STEPS } from '../src/content/ships.ts';
 import { phaseFor } from '../src/app/boss.ts';
-import { GameFrame } from '../src/app/frame.ts';
+import { GameFrame, respawn } from '../src/app/frame.ts';
 import { playableWorld } from './world.ts';
 import { ACROSS_SPAN, MAX_ALONG_SPAN } from '../src/sim/camera.ts';
-import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
+import { SCROLL_PER_STEP, SHIP_SPEED } from '../src/sim/flight.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 
 /**
@@ -389,5 +390,91 @@ describe('a boss fight can reach all of its phases', () => {
         expect(extent, `${kind} is not drawn bigger than a ${enemy}`).toBeGreaterThan(extentOf[ENEMIES[enemy].sprite]!);
       }
     }
+  });
+});
+
+/**
+ * A DEATH DOES NOT REWIND THE LEVEL.
+ *
+ * `docs/decisions/0057-a-death-does-not-rewind-the-level.md`. Reported from play: *"when a player
+ * dies the entire screen resets, the level shouldn't reset, just the player's power ups."*
+ *
+ * ⚠️ **The level's own clock never moved, and that is what makes the report interesting.** `nextWave`
+ * and the camera both survived a death before this change — what did not survive was everything the
+ * player could SEE, because `respawn` swept the field. A rewind and an empty screen are
+ * indistinguishable from the cockpit, which is
+ * `docs/decisions/0027-measure-the-picture-not-the-model.md`'s point made by a player rather than by
+ * a guard.
+ */
+describe('a death costs the ship and not the level', () => {
+  /** Fly until enemies are on the field, then kill the ship where it stands. */
+  function intoAFight(): { world: ReturnType<typeof playableWorld>['world']; frame: GameFrame } {
+    const { world } = playableWorld(LEVELS[LEVEL_KINDS[0]!]);
+    const frame = new GameFrame(world);
+    for (let i = 0; i < 4000 && world.enemies.size === 0; i++) frame.step();
+    expect(world.enemies.size, 'no wave ever arrived, so this test measured nothing').toBeGreaterThan(0);
+    return { world, frame };
+  }
+
+  it('leaves the enemies where they were, so the screen does not empty', () => {
+    /*
+      ⚠️ **THE REPORTED ONE.** Sweeping the field is the mercy that reads as a rewind: everything the
+      player fought through vanishes, the level goes quiet, and the next wave arrives out of nowhere.
+    */
+    const { world } = intoAFight();
+    const before = world.enemies.size;
+    respawn(world);
+    expect(world.enemies.size, 'the respawn swept the field, which is what reads as a restart').toBe(before);
+  });
+
+  it('and does not rewind the wave table or the camera either', () => {
+    // Both were already true. Held here because they are what "the level" MEANS, and a later change
+    // that reset them would produce the reported bug again by a different route.
+    const { world } = intoAFight();
+    const wave = world.nextWave;
+    const camera = world.cameraAlong;
+    expect(camera, 'the camera never moved, so this asserts nothing').toBeGreaterThan(0);
+    respawn(world);
+    expect(world.nextWave, 'a death rewound the wave table').toBe(wave);
+    expect(world.cameraAlong, 'a death rewound the camera').toBe(camera);
+  });
+
+  it('takes away what belonged to the ship that died, and nothing else', () => {
+    // 0039's cost, at the smallest scale: a bomb in the air was already spent, and a shot from a ship
+    // that no longer exists would be a hit nobody fired.
+    const { world } = intoAFight();
+    world.playerShots.spawn();
+    world.missiles.spawn();
+    respawn(world);
+    expect(world.playerShots.size, 'a dead ship’s shots outlived it').toBe(0);
+    expect(world.missiles.size, 'a dead ship’s missiles outlived it').toBe(0);
+  });
+
+  it('comes back harder to kill than a ship that was merely hit', () => {
+    /*
+      ⚠️ **THE HALF THAT STOPS THIS BEING A PUNISHMENT.** Keeping the field is what the player asked
+      for, and it hands the replacement ship a lane still carrying everything that just killed them.
+      A hit's 0.75s is sized for a player already flying, with their hand on the ship; a respawn is
+      not that, and reusing the number would turn the fix into a second death they never had a hand on.
+    */
+    const { world } = intoAFight();
+    respawn(world);
+    expect(world.ship.invulnFor, 'a respawn is no safer than being clipped mid-flight').toBeGreaterThan(
+      INVULN_STEPS,
+    );
+  });
+
+  it('and is invulnerable long enough to fly clear across the lane', () => {
+    /*
+      ⚠️ **Asserted in the distance the PLAYER covers, not in steps** — 0027. What the window has to
+      buy is the ability to leave wherever the ship was put down and find a gap, and the only honest
+      measure of that is how much of the lane it crosses at the speed the ship actually flies.
+    */
+    const { world } = intoAFight();
+    respawn(world);
+    const reachable = world.ship.invulnFor * SHIP_SPEED;
+    expect(reachable, 'the window does not cover the lane, so there is nowhere to escape to').toBeGreaterThan(
+      ACROSS_SPAN,
+    );
   });
 });
