@@ -100,6 +100,30 @@ const FLANK_ENTRY_SPEED = 0.9;
 const PICKUP_DRIFT = 0.22;
 
 /**
+ * How much wider than the hull the ship's reach is when COLLECTING, as a multiple of its radius.
+ *
+ * Reported from play: *"power ups are slightly too hard to pick up in size."*
+ *
+ * ⚠️ **The REACH grows and the SPRITES do not**, which is the whole of why this is a scale here
+ * rather than a bigger `radius` on six rows in `src/content/pickups.ts`. A pickup drawn larger is a
+ * different picture — 0052 pairs each one with another as a single silhouette in two fills, and
+ * `src/content/sprites.ts` already writes down that two of them risk reading alike. Growing the art
+ * to fix a collision problem would spend that legibility on something that is not an art question.
+ *
+ * ⚠️ **It is on the SHIP's radius and applies only to the pickup pairing.** Nothing that can hurt the
+ * player is collected, so widening this cannot make the game harder — which is what keeps it clear of
+ * `src/sim/assist.ts`, where `hurtbox` shrinks the ship and 0024 forbids an assist that costs
+ * anything.
+ *
+ * ⚠️ **A number the player can check: the reach is `pickup.radius + ship.radius × this`, and at 2.4,
+ * 2 and 1.8 that is exactly 6 world units — 6% of the lane**, against 4.4% before.
+ * `tests/pickups.test.ts` asserts the lane fraction rather than the multiplier, per
+ * `docs/decisions/0027-measure-the-picture-not-the-model.md`: a guard written against the constant it
+ * guards would prove only that the code agrees with itself.
+ */
+const COLLECT_REACH = 1.8;
+
+/**
  * How far off the ship's centreline the side launchers sit, in world units.
  *
  * The hull is 7 units across, so this is inside it: the tubes are ON the ship rather than beside it.
@@ -608,7 +632,7 @@ export class GameFrame implements Frame {
       make the game harder, and this is the one line in the game where the obvious code breaks it.
     */
     w.collected.count = 0;
-    collectInto(w.pickups, w.ship, 1, w.collected);
+    collectInto(w.pickups, w.ship, COLLECT_REACH, w.collected);
     for (let i = 0; i < w.collected.count; i++) {
       // `PICKUP_KINDS` IS the index order — `pickupRows` is built by walking it — so the entity's
       // opaque `kind` reads back as the authored name with no second table to keep in step.
@@ -867,6 +891,13 @@ export function launchSpecial(w: World, kind: SpecialKind): void {
  * who has taken one launcher upgrade can see WHICH side it went on.
  */
 function fireMissiles(w: World): void {
+  /*
+    ⚠️ **No tube, no clock.** The base ship carries no launcher until one is found (0056), and
+    counting down a cadence for a weapon that does not exist would arm the first volley to leave the
+    instant the pickup lands — so the reward for finding a launcher would be a missile fired from
+    wherever the ship happened to be, rather than a weapon starting.
+  */
+  if (w.weapon.launchers === 0) return;
   w.missileIn--;
   if (w.missileIn > 0) return;
   w.missileIn = w.weapon.missileEvery;

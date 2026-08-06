@@ -26,6 +26,16 @@ import { playableWorld, NO_LEVEL } from './world.ts';
 /** Long enough for a volley or two at any cadence anybody would author. */
 const A_WHILE = 200;
 
+/**
+ * The smallest loadout that has a missile weapon at all.
+ *
+ * ⚠️ **The base ship carries NO tube** — `docs/decisions/0056-…` amends 0051's *"the base ship has
+ * one, at the middle"*, so a test about missiles has to say it found one. Written as a named
+ * constant rather than a literal in eight places, because it is the same fact each time and it is
+ * exactly the fact that just moved.
+ */
+const ARMED: readonly UpgradeKind[] = ['missileSpread'];
+
 function quietWorld(upgrades: readonly UpgradeKind[] = []): { world: World; frame: GameFrame } {
   const built = playableWorld(NO_LEVEL);
   built.world.weapon = weaponFor(built.world.shipRow, upgrades);
@@ -64,7 +74,7 @@ describe('the ship fires it without being asked', () => {
       `src/content/actions.ts`: *there is no `fire` action and there must never be one.* The fixture
       contributes an empty intent every step, so anything that arrives here arrived by itself.
     */
-    const { world, frame } = quietWorld();
+    const { world, frame } = quietWorld(ARMED);
     for (let i = 0; i < A_WHILE; i++) frame.step();
     expect(world.missiles.size, 'nothing was fired without a trigger').toBeGreaterThan(0);
     for (let i = 0; i < world.missiles.size; i++) {
@@ -82,7 +92,7 @@ describe('the ship fires it without being asked', () => {
       The failure this catches is a single `fireIn` shared by both: the missiles would then fire at
       the pulse's rate, or the pulse at the missile's, and every upgrade to either would move both.
     */
-    const { world, frame } = quietWorld();
+    const { world, frame } = quietWorld(ARMED);
     world.missileIn = 1;
     world.fireIn = 10_000;
     for (let i = 0; i < 4; i++) frame.step();
@@ -95,7 +105,7 @@ describe('a launcher is a position on the ship', () => {
   it('fires one missile per launcher, from the centre outwards', () => {
     for (const launchers of [1, 2, 3]) {
       const upgrades: UpgradeKind[] = [];
-      for (let i = 1; i < launchers; i++) upgrades.push('missileSpread');
+      for (let i = 0; i < launchers; i++) upgrades.push('missileSpread');
       const { world, frame } = quietWorld(upgrades);
       expect(world.weapon.launchers, `${launchers} upgrades did not produce ${launchers} launchers`).toBe(launchers);
 
@@ -112,7 +122,7 @@ describe('a launcher is a position on the ship', () => {
       upgrade VISIBLE — a player who takes one can see which side it went on, and a player who takes
       two sees the ship become symmetric.
     */
-    const { world, frame } = quietWorld(['missileSpread', 'missileSpread']);
+    const { world, frame } = quietWorld(['missileSpread', 'missileSpread', 'missileSpread']);
     world.missileIn = 1;
     frame.step();
     const across: number[] = [];
@@ -132,7 +142,7 @@ describe('a launcher is a position on the ship', () => {
       Measured against the hull's own drawn size, which is what the player sees the missile clear —
       `docs/decisions/0027-measure-the-picture-not-the-model.md` on assertions in the player's units.
     */
-    const { world, frame } = quietWorld(['missileSpread', 'missileSpread']);
+    const { world, frame } = quietWorld(['missileSpread', 'missileSpread', 'missileSpread']);
     world.missileIn = 1;
     frame.step();
     const shipAcross = world.ship.across;
@@ -168,7 +178,7 @@ describe('a missile hits things, and stops where the player can see', () => {
       0048: *you can shoot what you can see*, and it is one promise rather than one per weapon. A
       missile that outlived the view would kill things off-screen and hold a pool slot while doing it.
     */
-    const { world, frame } = quietWorld();
+    const { world, frame } = quietWorld(ARMED);
     world.view = viewOf(ACROSS_SPAN * MAX_ASPECT * 10, ACROSS_SPAN * 10);
     world.missileIn = 1;
     frame.step();
@@ -260,12 +270,48 @@ describe('the upgrades reach the weapon rather than the wrong one', () => {
     }
   });
 
-  it('a death takes the missiles back to the ship’s own tube', () => {
-    // 0039: a death is back to the base weapon, and there is no second description of what that is —
-    // it is what an empty upgrade list resolves to, for both weapons.
+  it('a death takes the missiles away entirely, because the base ship has no tube', () => {
+    /*
+      0039: a death is back to the base weapon, and there is no second description of what that is —
+      it is what an empty upgrade list resolves to, for both weapons.
+
+      ⚠️ **The base ship carries NO launcher**, which is `docs/decisions/0056-…` amending 0051's
+      *"the base ship has one, at the middle"*. So this is no longer *back to one tube*: a death takes
+      the second weapon away completely, and finding a launcher is what brings it back. That makes a
+      death cost more than it did, which is a real change to the run and not a tidy-up.
+    */
     const base = weaponFor(SHIPS.proof, []);
-    expect(base.launchers, 'the base ship does not have exactly one tube').toBe(1);
+    expect(base.launchers, 'the base ship still carries a launcher of its own').toBe(0);
     expect(base.missileEvery).toBe(SHIPS.proof.missileEvery);
     expect(base.missileDamage).toBe(SHOTS[SHIPS.proof.missile].damage);
+  });
+
+  it('fires nothing at all until a launcher is found', () => {
+    /*
+      ⚠️ **The reported bug, at the weapon**: *"missile secondary weapon keeps a missile tube on the
+      player ship."* Asserting the COUNT is zero is not enough — a cadence that keeps counting down
+      with no tube to fire from is the same bug one level in, and it would arm the first volley to
+      leave the instant a pickup landed.
+    */
+    const { world, frame } = quietWorld();
+    for (let i = 0; i < A_WHILE; i++) frame.step();
+    expect(world.missiles.size, 'a ship with no launcher fired a missile').toBe(0);
+    expect(world.playerShots.size, 'the pulse stopped too, so this proved nothing').toBeGreaterThan(0);
+  });
+
+  it('and does not run the missile clock down while it has nothing to fire from', () => {
+    /*
+      ⚠️ **The same bug one level in, and it is invisible in the missile COUNT.** A cadence that keeps
+      counting while the ship has no tube reaches zero, resets, and reaches zero again — so the moment
+      a launcher pickup lands, the clock is at a position nobody chose. The reward for finding the
+      weapon would be a volley leaving from wherever the ship happened to be, up to a full cadence
+      early, and it would look like the pickup firing the gun.
+
+      Asserted on the clock rather than on a missile because the count is zero either way, which is
+      exactly why this needs its own guard.
+    */
+    const { world, frame } = quietWorld();
+    for (let i = 0; i < A_WHILE; i++) frame.step();
+    expect(world.missileIn, 'the missile clock ran while the ship had no launcher').toBe(world.weapon.missileEvery);
   });
 });
