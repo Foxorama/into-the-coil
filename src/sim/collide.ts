@@ -113,6 +113,24 @@ export function makeDeaths(capacity: number): Deaths {
  * returned to its pool. Nothing here decides what to draw or what to score — a caller reads the
  * count and does that.
  */
+/**
+ * Log a death and return the body to its pool.
+ *
+ * ⚠️ **Shared by the two functions that can kill something, because the ORDER is the fragile part**:
+ * the position has to be read before the release, since a released slot is the next thing `spawn`
+ * hands out. Written twice, the second copy is where somebody eventually swaps those two lines —
+ * and the symptom is a burst appearing wherever the pool's newest occupant happens to be.
+ */
+function killed(targets: Pool<Entity>, index: number, deaths: Deaths | null): void {
+  const target = targets.at(index);
+  if (deaths !== null && deaths.count < deaths.along.length) {
+    deaths.along[deaths.count] = target.along;
+    deaths.across[deaths.count] = target.across;
+    deaths.count++;
+  }
+  targets.releaseAt(index);
+}
+
 export function collideInto(
   shots: Pool<Entity>,
   targets: Pool<Entity>,
@@ -131,13 +149,7 @@ export function collideInto(
       target.health -= shot.damage * damageScale;
       shots.releaseAt(s);
       if (target.health <= 0) {
-        // Recorded BEFORE the release, because a released slot is the next thing `spawn` hands out.
-        if (deaths !== null && deaths.count < deaths.along.length) {
-          deaths.along[deaths.count] = target.along;
-          deaths.across[deaths.count] = target.across;
-          deaths.count++;
-        }
-        targets.releaseAt(t);
+        killed(targets, t, deaths);
         destroyed++;
         break;
       }
@@ -150,6 +162,46 @@ export function collideInto(
         On the survivor only. A target that died is already gone from the screen, which is its own
         feedback and a louder one.
       */
+      target.flashFor = flashSteps;
+    }
+  }
+  return destroyed;
+}
+
+/**
+ * One body against many, damaging every target it covers and being consumed by none of them.
+ *
+ * ⚠️ **NOT `collideInto` WITH THE RELEASE REMOVED, and the difference is the whole point.** A shot
+ * is spent by arriving, so it hits exactly one thing; a blast is an area, so it hits everything
+ * inside it in the same step. Written as a shot that forgot to be consumed, it would hit whatever
+ * the pool happened to hand back first and nothing else — which looks like a blast that missed.
+ *
+ * ⚠️ **It does not manage its own repetition.** A blast that lives more than a step would bill every
+ * target once a step; the caller is what decides that a blast lands once, by zeroing its damage
+ * afterwards. That is deliberate: `sim/` may import `brand` and nothing else, so it cannot know
+ * what a blast IS or how long one is supposed to last.
+ */
+export function blastInto(
+  blasts: Pool<Entity>,
+  targets: Pool<Entity>,
+  damageScale: number,
+  flashSteps: number,
+  deaths: Deaths | null,
+): number {
+  let destroyed = 0;
+  for (let t = targets.size - 1; t >= 0; t--) {
+    const target = targets.at(t);
+    if (target.invulnFor > 0) continue;
+    for (let b = blasts.size - 1; b >= 0; b--) {
+      const blast = blasts.at(b);
+      if (blast.damage <= 0) continue;
+      if (!overlaps(blast, target, 1)) continue;
+      target.health -= blast.damage * damageScale;
+      if (target.health <= 0) {
+        killed(targets, t, deaths);
+        destroyed++;
+        break;
+      }
       target.flashFor = flashSteps;
     }
   }

@@ -30,7 +30,14 @@ import {
   spawnAlong,
   type View,
 } from '../sim/camera.ts';
-import { collectInto, collideInto, collideIntoOne, type Collected, type Deaths } from '../sim/collide.ts';
+import {
+  blastInto,
+  collectInto,
+  collideInto,
+  collideIntoOne,
+  type Collected,
+  type Deaths,
+} from '../sim/collide.ts';
 import { type Entity, reset, stepEntities } from '../sim/entity.ts';
 import { flyShip, holdStation } from '../sim/flight.ts';
 import type { Intent } from '../sim/intent.ts';
@@ -50,6 +57,7 @@ import { DEFAULT_ORIGIN, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
 import { type DifficultyRow, fireGapFor, toughnessFor } from '../content/difficulty.ts';
 import { CYCLE_UNITS, PICKUP_KINDS, type PickupKind, type PickupRow, type Weapon } from '../content/pickups.ts';
+import { SPECIALS, type SpecialKind } from '../content/specials.ts';
 import { stepBoss } from './boss.ts';
 import type { Frame } from './loop.ts';
 
@@ -127,6 +135,16 @@ const LAUNCHER_POP_SPEED = 0.55;
  * and *"one hit destroys the ship"* the same sentence about the same number.
  */
 const ONE_HIT = 1;
+
+/**
+ * How long a blast is on screen after it has done its damage, in steps — about a fifth of a second.
+ *
+ * ⚠️ **The damage lands on ONE step and the picture lasts longer, which is why the two are separate
+ * numbers.** A blast that billed every enemy inside it once a step would do ten times what the row
+ * says; a blast drawn for one step is a frame the player never sees. So the caller zeroes the
+ * damage after the step it landed, and what is left is the picture.
+ */
+const BLAST_STEPS = 12;
 
 /**
  * How far from the ship's centre a shield mark orbits, in world units.
@@ -359,6 +377,24 @@ export interface World {
   fireIn: number;
   /** Steps until the ship's missiles go again. Their own clock, because their own cadence. */
   missileIn: number;
+  /**
+   * What the player has thrown, and what it turns into.
+   *
+   * ⚠️ **Two pools rather than one**, because the thing that flies and the thing that hurts are
+   * different bodies: one is in no pairing at all and the other is in three. Reusing one pool would
+   * mean a body whose pairings change halfway through its life, which is a rule nothing else in this
+   * game has and nothing here would enforce.
+   */
+  bombs: Pool<Entity>;
+  blasts: Pool<Entity>;
+  /**
+   * The player asked to trigger the special in slot `slot`.
+   *
+   * ⚠️ **Reported rather than decided, exactly as `onDeath` and `onPickup` are.** Whether there is a
+   * charge left, and what spending one costs, is `src/state/`'s business — this file cannot see the
+   * run and must not learn to. The shell answers by calling `launchSpecial`.
+   */
+  onSpecial: (slot: number) => void;
   /** The player's ship. Held live in its pool; this is the same object. */
   ship: Entity;
   /** What the ship is, so a respawn restores it without a second description of its numbers. */
@@ -474,6 +510,7 @@ export class GameFrame implements Frame {
     flyShip(w.ship, w.intent, w.cameraAlong, w.scrollPerStep);
 
     cyclePickups(w);
+    askSpecials(w);
     fireShip(w);
     fireMissiles(w);
     steerMissiles(w);
@@ -494,6 +531,11 @@ export class GameFrame implements Frame {
     stepEntities(w.playerShots, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
     // The same cull as the pulses: a missile is the player's reach too, and *you can shoot what you
     // can see* is one promise rather than one per weapon — 0048.
+    // Before the pools step, so a bomb that reaches its fuse this step leaves a blast where it was
+    // rather than one step further on.
+    stepBombs(w);
+    stepEntities(w.bombs, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
+    stepEntities(w.blasts, w.cameraAlong);
     stepEntities(w.missiles, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
     stepEntities(w.enemyShots, w.cameraAlong);
     stepEntities(w.debris, w.cameraAlong);
@@ -515,6 +557,9 @@ export class GameFrame implements Frame {
     // with things that are released after one.
     collideInto(w.playerShots, w.bossPool, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
     collideInto(w.missiles, w.bossPool, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
+    // An area rather than an arrival: everything inside it, once, and nothing consumes it.
+    blastInto(w.blasts, w.enemies, 1, IMPACT_FLASH_STEPS, w.deaths);
+    blastInto(w.blasts, w.bossPool, 1, IMPACT_FLASH_STEPS, w.deaths);
     /*
       ⚠️ **THE SHIP TAKES HITS, NOT DAMAGE, and this is where a number becomes a count.** Its health
       is the hull plus the shell (`src/content/ships.ts`), and a shield is what absorbs **one hit** —
@@ -540,7 +585,20 @@ export class GameFrame implements Frame {
     // cheapest way to clear the screen.
     collideIntoOne(w.enemies, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
     collideIntoOne(w.bossPool, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
+    /*
+      ⚠️ **THE PLAYER'S OWN BLAST, IN THE SAME LIST AS EVERY OTHER THREAT — and that is the skill in
+      it.** Asked for: *"and the blast hurts the player."* It goes through `collideIntoOne` rather
+      than through a check of its own so that the hit costs exactly what any other hit costs: one
+      shield, or the life, with the same invulnerable window afterwards. A separate path would be a
+      second description of what a hit is, and the two would disagree the first time either moved.
+    */
+    collideIntoOne(w.blasts, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
     if (w.ship.health < healthBefore) w.ship.health = healthBefore - ONE_HIT;
+    /*
+      A blast lands ONCE. Everything above has now seen it, so it spends itself here and what remains
+      is the picture — `BLAST_STEPS` of ring, which is how the player learns where the edge was.
+    */
+    for (let i = w.blasts.size - 1; i >= 0; i--) w.blasts.at(i).damage = 0;
 
     /*
       ⚠️ **At the FULL hurtbox, never the assisted one.** `w.tuning.hurtbox` shrinks the ship's circle
@@ -725,6 +783,75 @@ function cyclePickups(w: World): void {
     item.spriteHit = row.spriteHit;
     item.sprite = row.sprite;
   }
+}
+
+/**
+ * What the player pressed, passed up to whoever owns the arsenal.
+ *
+ * ⚠️ **The FIRST auto-weapon-free input in the game, and the only one there will ever be.**
+ * `src/content/actions.ts`: *there is no `fire` action and there must never be one* — a special is
+ * the thing the player spends, and this is where 0030's `Intent.specials` finally has a consumer.
+ *
+ * ⚠️ **A count, not a boolean, and every press is reported.** `src/sim/intent.ts` counts presses
+ * because several can land between two steps on a slow frame; dropping the extras here would make
+ * the arsenal lossy exactly when the game is already struggling, which is the failure that argues
+ * for the count in the first place.
+ */
+function askSpecials(w: World): void {
+  for (let slot = 0; slot < w.intent.specials.length; slot++) {
+    for (let press = w.intent.specials[slot] ?? 0; press > 0; press--) w.onSpecial(slot);
+  }
+}
+
+/**
+ * Every bomb whose fuse has run out, turned into the thing that hurts.
+ *
+ * ⚠️ **`lifeFor` is the fuse, and that is what the field already means** — *steps until this retires
+ * itself* (`src/sim/entity.ts`). A bomb retires by going off, so the two are the same event; this
+ * runs before `stepEntities` so the blast appears where the bomb was rather than a step beyond it.
+ *
+ * ⚠️ **The bomb is in no collision pairing at all**, like debris: it passes through whatever it is
+ * aimed at and detonates where the player aimed it. A bomb that went off on contact would be a
+ * missile with a bigger number, and choosing the PLACE is the whole of what makes it a skill.
+ */
+function stepBombs(w: World): void {
+  for (let i = w.bombs.size - 1; i >= 0; i--) {
+    const bomb = w.bombs.at(i);
+    if (bomb.lifeFor > 1) continue;
+    const becomes = SPECIALS.bomb.becomes;
+    if (becomes === null) continue;
+    const blast = w.blasts.spawn();
+    if (blast !== null) {
+      reset(blast, bomb.along, bomb.across, SHOTS[becomes]);
+      // The blast holds station in the world while everything else moves past it — a shockwave is a
+      // place rather than a body. `speed` is 0 on the row; this is the same statement for the camera.
+      blast.lifeFor = BLAST_STEPS;
+    }
+    burst(w, bomb.along, bomb.across, BURST.ship);
+  }
+}
+
+/**
+ * Throw the special in `slot`, having been told by the shell that there was a charge for it.
+ *
+ * ⚠️ **Exported and called by `src/app/mount.ts`, exactly as `respawn` is.** The frame reports the
+ * ask and the shell decides; this is the half of the answer that moves an entity, and keeping it
+ * here is what stops `mount.ts` reaching into a pool.
+ */
+export function launchSpecial(w: World, kind: SpecialKind): void {
+  const row = SPECIALS[kind];
+  if (row.shot === null) return;
+  const body = SHOTS[row.shot];
+  const thrown = w.bombs.spawn();
+  if (thrown === null) return;
+  reset(thrown, w.ship.along + MUZZLE_ALONG, w.ship.across, body);
+  thrown.velAlong = body.speed + w.scrollPerStep;
+  /*
+    The fuse, in steps, from the reach the row states in world units. Computed here rather than
+    written on the row because it is a consequence of two numbers that are both authored — and a
+    third number agreeing with them by hand is the drift this project keeps paying for.
+  */
+  thrown.lifeFor = Math.max(1, Math.round(row.reach / body.speed));
 }
 
 /**
@@ -1135,6 +1262,13 @@ export function respawn(w: World): void {
   w.enemies.clear();
   w.playerShots.clear();
   w.missiles.clear();
+  /*
+    ⚠️ **A bomb in the air is lost with the ship that threw it, and its blast with it.** The charge
+    was spent, which is 0039's rule about what a death costs read at its smallest scale — and a blast
+    that outlived its thrower would be a hit on the replacement ship from a weapon nobody fired.
+  */
+  w.bombs.clear();
+  w.blasts.clear();
   w.enemyShots.clear();
   /*
     ⚠️ **The shell is cleared HERE rather than left to `stepShields`.** The ship comes back with its

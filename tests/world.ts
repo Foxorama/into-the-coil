@@ -165,6 +165,8 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
   const enemies = new Pool<Entity>(CAPACITY.enemies, makeEntity);
   const playerShots = new Pool<Entity>(CAPACITY.playerShots, makeEntity);
   const missiles = new Pool<Entity>(CAPACITY.missiles, makeEntity);
+  const bombs = new Pool<Entity>(CAPACITY.bombs, makeEntity);
+  const blasts = new Pool<Entity>(CAPACITY.blasts, makeEntity);
   const enemyShots = new Pool<Entity>(CAPACITY.enemyShots, makeEntity);
   const debris = new Pool<Entity>(CAPACITY.debris, makeEntity);
   const bossPool = new Pool<Entity>(CAPACITY.boss, makeEntity);
@@ -180,12 +182,15 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
   const taken: PickupKind[] = [];
 
   const world: World = {
-    layers: [debris, bossPool, enemies, enemyShots, playerShots, missiles, shieldOrbs, shipPool],
+    layers: [debris, blasts, bossPool, enemies, enemyShots, playerShots, missiles, bombs, shieldOrbs, shipPool],
     shipPool,
     shieldOrbs,
     enemies,
     playerShots,
     missiles,
+    bombs,
+    blasts,
+    onSpecial: (): void => {},
     enemyShots,
     debris,
     deaths: makeDeaths(CAPACITY.enemies),

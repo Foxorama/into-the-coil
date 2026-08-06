@@ -14,8 +14,9 @@ export const PROBES = [
     guard: 'THE ONE: a survivor is drawn differently on the step it is hit',
     edit: {
       path: 'src/sim/collide.ts',
-      find: '      target.flashFor = flashSteps;\n    }\n  }\n  return destroyed;',
-      replace: '    }\n  }\n  return destroyed;',
+      // The `shots` release above it is what keeps this unique — `blastInto` ends the same way.
+      find: '      shots.releaseAt(s);\n      if (target.health <= 0) {\n        killed(targets, t, deaths);\n        destroyed++;\n        break;\n      }',
+      replace: '      shots.releaseAt(s);\n      if (target.health <= 0) {\n        killed(targets, t, deaths);\n        destroyed++;\n        break;\n      }\n      continue;',
     },
   },
   {

@@ -25,6 +25,8 @@
  * shape changes then, which is the whole reason for landing the shape early.
  */
 
+import type { ShotKind } from './shots.ts';
+
 /**
  * Every special, closed. A new one fails every `Record` over this union to BUILD until it has a row.
  *
@@ -54,6 +56,36 @@ export interface SpecialRow {
   /** What the player would call it. Terse, per `docs/game.md`'s voice rule. */
   label: string;
   /**
+   * What leaves the ship when the player triggers it, or `null` for a special nothing fires yet.
+   *
+   * ⚠️ **NULLABLE, and that is honesty rather than a loophole.** `docs/decisions/0016-a-hub-enumerates-kinds.md`
+   * says behaviour rides the row and that a table forces every kind to answer — so the row answers,
+   * and `mines` answers *nothing fires me*. The alternative was inventing a weapon for it in the
+   * same commit as the bomb, which is exactly the *product to satisfy a shape* that
+   * `src/content/ships.ts` refuses for the character roster.
+   */
+  shot: ShotKind | null;
+  /**
+   * What it becomes when its fuse runs out, or `null` for something that simply retires.
+   *
+   * Two rows rather than one because the thing that flies and the thing that hurts are different
+   * bodies with different radii, different inks and different pairings — see `src/content/shots.ts`.
+   */
+  becomes: ShotKind | null;
+  /**
+   * How far ahead of the ship it goes off, in **world units**.
+   *
+   * ⚠️ **THE ASK STATED THIS AS A FRACTION OF THE SCREEN, AND 0023 REFUSES SCREEN-SPACE AUTHORING.**
+   * `alongSpan` runs 150 to 240 units by device, so a bomb thrown *"halfway up the screen"* would be
+   * a different weapon on a 21:9 monitor than on a phone — a longer reach for the player with the
+   * wider display, which is the difficulty parity 0023 exists to protect.
+   *
+   * So it is authored in world units against the **reference view** — 16:9, 177.8 units along, the
+   * aspect `src/content/levels.ts` is already written for. 80 is a little under half of it, which is
+   * the stated fraction on the aspect the levels assume, and it is the same distance everywhere.
+   */
+  reach: number;
+  /**
    * Uses before it is spent, per pickup.
    *
    * ⚠️ **Read by nothing today.** `docs/game.md` says a special is *"limited capacity"* and
@@ -70,7 +102,14 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
    * `docs/game.md`'s *"orbiting mines that are half shield and half weapon"* — the example of a
    * special that is not only a weapon, which is the role `shield` used to hold here.
    */
-  mines: { label: 'Mines', charges: 1 },
-  /** The one the whole arsenal rule is named after — spent, not held. */
-  bomb: { label: 'Bomb', charges: 3 },
+  mines: { label: 'Mines', charges: 1, shot: null, becomes: null, reach: 0 },
+  /**
+   * The one the whole arsenal rule is named after — spent, not held.
+   *
+   * ⚠️ **`charges` is 2 and it was 3**, because the ask says so: *"the player starts with 2 and
+   * gains one per level cleared."* It is the number a run BEGINS with and the number a death goes
+   * back to — 0039's *"back to the ship's base weapon and starting special"*, which had nothing to
+   * cash until now.
+   */
+  bomb: { label: 'Bomb', charges: 2, shot: 'bomb', becomes: 'blast', reach: 80 },
 };

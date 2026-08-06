@@ -28,8 +28,8 @@ export const PROBES = [
     guard: 'an enemy that dies leaves fragments where it died',
     edit: {
       path: 'src/sim/collide.ts',
-      find: '          deaths.along[deaths.count] = target.along;',
-      replace: '          deaths.along[deaths.count] = 0;',
+      find: '    deaths.along[deaths.count] = target.along;',
+      replace: '    deaths.along[deaths.count] = 0;',
     },
   },
   {

@@ -76,6 +76,15 @@ const INK_OF: Record<SpriteKind, keyof Palette> = {
   pickupMissileSpread: 'pickup',
   // The bullet ink, because it is a bullet. What separates it from the pulse is shape and size.
   missile: 'bullet',
+  bomb: 'bullet',
+  /*
+    ⚠️ **THE HAZARD INK, WHICH THE PLAYER'S OWN WEAPONS DO NOT USE — and that is the point.** A bomb's
+    blast hurts the player as well as everything else in it, so it is the one thing the ship fires
+    that the ship has to get away from. `src/content/palette.ts` calls hazard the warning role, and
+    the ship's own recovery blink borrows it too — which is a note rather than a defect, because the
+    two never share a silhouette: one is a wedge and this is a ring the width of a third of the lane.
+  */
+  blast: 'hazard',
   // The player's own ink, because a shield IS the player — it is the last thing between a hit and
   // the hull, and a shell drawn in the pickup ink would read as something to fly into.
   shieldOrb: 'player',
@@ -318,6 +327,38 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
       ctx.lineTo(half - r * 0.4, half + r * 0.55);
       ctx.closePath();
       break;
+    case 'bomb':
+      /*
+        A disc with a wedge taken out of the tail. The notch is what stops it reading as a large
+        pulse at twenty pixels — the lesson the lancer's silhouette cost, applied to the player's
+        own side of the screen.
+      */
+      ctx.arc(half, half, r * 0.78, Math.PI * 0.78, Math.PI * 1.22, true);
+      ctx.lineTo(half - r, half);
+      ctx.closePath();
+      break;
+    case 'blast': {
+      /*
+        A ring: a wide circle with most of its middle taken out, so it reads as a shockwave rather
+        than as a solid disc the player cannot see through. The hole is what keeps the ship and the
+        enemies inside it visible while it is on screen — a filled blast at this size would hide the
+        thing the player is trying to fly away from.
+
+        ⚠️ **THE ONLY SPRITE DRAWN TO THE EDGE OF ITS OWN BOX, and the picture caught it.** Everything
+        else here is drawn at `r`, which is 42% of the extent — a margin that keeps a silhouette off
+        its neighbours. A blast's extent IS its damage diameter (`src/content/shots.ts`), so that
+        margin made the ring a fifth smaller than the thing it was drawing: the player watched a
+        shockwave miss something it had already killed. `scripts/shot.mjs` is what said so, and no
+        assertion in the suite could have — both numbers were correct.
+      */
+      // Half the stroke, because a stroke is centred on its path: the INK then ends exactly on the
+      // extent, which is the radius the damage uses.
+      const edge = half - ctx.lineWidth / 2;
+      ctx.arc(half, half, edge, 0, Math.PI * 2);
+      ctx.moveTo(half + edge * 0.74, half);
+      ctx.arc(half, half, edge * 0.74, 0, Math.PI * 2);
+      break;
+    }
     case 'pickupMissileRate':
       // The rapid pickup's square, filled. Same family, other face — see `SPRITE_KINDS`.
       ctx.rect(half - r * 0.8, half - r * 0.8, r * 1.6, r * 1.6);

@@ -117,6 +117,19 @@ export const SPRITE_KINDS = [
   */
   'missile',
   /*
+    ⚠️ **A DISC WITH ITS TAIL CUT AWAY, and it is the only silhouette in the game that is asymmetric
+    across its own travel.** The pulse is a small disc and the missile is a dart, so a bomb has to
+    read as something LOBBED rather than as a bigger bullet — round at the front, notched behind.
+  */
+  'bomb',
+  /*
+    ⚠️ **A RING, drawn at exactly the radius that does the damage.** A blast whose picture is smaller
+    than its reach kills things the player watched it miss; one whose picture is larger makes them
+    dodge something that was never going to touch them. The two numbers live in different files —
+    the extent here, the radius on the shot row — so `tests/bombs.test.ts` holds them to each other.
+  */
+  'blast',
+  /*
     ⚠️ **THREE PICKUP SILHOUETTES, NOT ONE IN THREE COLOURS.**
     `docs/decisions/0024-the-accessibility-floor-is-settings.md` puts *colour never carries meaning
     alone* in the unconditional tier, and a pickup is the case where that is most tempting to break:
@@ -258,6 +271,14 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   bullet: 1.8,
   // Longer than the pulse and pointed. A missile is the shot the player is meant to notice.
   missile: 3.4,
+  // Heavier than the missile: the biggest thing that leaves the ship, and the one that is spent.
+  bomb: 4.4,
+  /*
+    ⚠️ **Twice the blast's hurtbox radius, and `tests/bombs.test.ts` is what keeps it so.** It is the
+    one extent in this table whose value is owed to another file — the number itself is on
+    `SHOTS.blast`, because how far a blast reaches is a gameplay number rather than an art one.
+  */
+  blast: 68,
   /*
     ⚠️ **Bigger than the smallest enemy, on purpose.** A pickup is the one thing on screen the player
     is supposed to fly TOWARDS, and at 3.5 it was smaller than everything it had to be picked out
