@@ -42,6 +42,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
 | **a death takes the ship, and the level carries on** | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
 | **a boss's station drifts, so a fight is still flight** | [0061](decisions/0061-a-boss-keeps-flying.md) |
+| **a death scatters what it took, non-cycling and on a short timer** | [0066](decisions/0066-a-death-scatters-what-it-took.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
@@ -147,10 +148,10 @@ makes a death cost more in the same session as a report that dying is already to
    comment has been corrected and now carries its own arithmetic, so *0.5 faster* is a departure from
    3.6. Lingering means a pickup holding station in the camera's frame — 0034's *every speed is in
    the camera's frame*.
-2. **A death should scatter the lost upgrades as grabbable pickups.** *"Non-cycling and on a short
-   timer so there's enough time to grab some, but maybe not all."* This is the half of the
-   dying-is-punishing report that 0057 deliberately did **not** answer, and it is the one that
-   actually answers it. It needs item 1 first: scattered pickups are bouncing pickups.
+2. **✅ DONE — a death scatters the lost upgrades.**
+   [0066](decisions/0066-a-death-scatters-what-it-took.md). It is the half of the dying-is-punishing
+   report 0057 deliberately left, and 0056 had made a death cost more in the same session. ⚠️ The
+   pickup pool went from eight to twelve, out of the particle share.
 3. **Bosses need a real explosion and an end-of-level beat.** *"Currently the level just ends."*
 4. **The between-levels screen should become a brief respite.** *"The current pause/level screen
    interrupts the flow."* ⚠️ Touches `SCREENS` — [0046](decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md)

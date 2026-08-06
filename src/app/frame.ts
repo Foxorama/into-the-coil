@@ -56,7 +56,14 @@ import { FORMATIONS } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
 import { type DifficultyRow, fireGapFor, toughnessFor } from '../content/difficulty.ts';
-import { CYCLE_UNITS, PICKUP_KINDS, type PickupKind, type PickupRow, type Weapon } from '../content/pickups.ts';
+import {
+  CYCLE_UNITS,
+  PICKUP_KINDS,
+  type PickupKind,
+  type PickupRow,
+  type UpgradeKind,
+  type Weapon,
+} from '../content/pickups.ts';
 import { SPECIALS, type SpecialKind } from '../content/specials.ts';
 import { stepBoss } from './boss.ts';
 import type { Frame } from './loop.ts';
@@ -98,6 +105,45 @@ const FLANK_ENTRY_SPEED = 0.9;
  * to turn taking one into a reflex. At 0.22 it crosses the lane in about seven seconds.
  */
 const PICKUP_DRIFT = 0.22;
+
+/**
+ * How fast a scattered upgrade is thrown across the lane, in world units per step.
+ *
+ * ── WHAT A DEATH THROWS AWAY, AND WHERE IT LANDS ────────────────────────────────────────────────
+ *
+ * Asked for in play: *"when a player dies, their power ups should explode from where they were and
+ * bounce around the screen"*, and *"non-cycling and on a short timer so there's enough time to grab
+ * some, but maybe not all."* `docs/decisions/0066-a-death-scatters-what-it-took.md`.
+ *
+ * ⚠️ **This is the half of the dying-is-punishing report that
+ * `docs/decisions/0057-a-death-does-not-rewind-the-level.md` deliberately did not answer**, and
+ * `docs/decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md` made it cost more in
+ * the same session: a death now takes the missiles as well as the pulse upgrades.
+ *
+ * ⚠️ **ACROSS ONLY, and that is what makes it a scatter rather than a firework.** Every scattered
+ * pickup carries the scroll rate along, so it holds the distance the ship died at and spreads out
+ * across the lane instead — bouncing off the edges like any other pickup. Thrown along as well, they
+ * would be off the front or the back of the screen inside two seconds, which is the opposite of
+ * *"enough time to grab some"*.
+ *
+ * Faster than `PICKUP_DRIFT` by a factor of three, because this one is an event rather than a
+ * wander: what it has to read as is *these came off the ship*.
+ */
+const SCATTER_SPEED = 0.66;
+
+/**
+ * How long a scattered upgrade stays on the field, in steps — five seconds.
+ *
+ * ⚠️ **A SHORT timer and it is the ask's own word**: *"enough time to grab some, but maybe not all."*
+ * A respawned ship is invulnerable for two seconds (`RESPAWN_INVULN_STEPS`), so five is that window
+ * plus three seconds of flying — long enough to cross the lane twice at `SHIP_SPEED` and nowhere near
+ * long enough to collect a full loadout.
+ *
+ * ⚠️ **It is also what makes a scattered pickup NON-CYCLING**, which is the other half of the ask: a
+ * lifetime is the one thing an authored pickup never has, so `lifeFor > 0` IS *this is a scattered
+ * one* — no flag, no second field, and no way for the two to disagree. `cyclePickups` skips them.
+ */
+const SCATTER_STEPS = 300;
 
 /**
  * How much wider than the hull the ship's reach is when COLLECTING, as a multiple of its radius.
@@ -813,6 +859,17 @@ function cyclePickups(w: World): void {
   w.pickupFlipped = Math.floor(w.cameraAlong / CYCLE_UNITS) % 2 !== 0;
   for (let i = w.pickups.size - 1; i >= 0; i--) {
     const item = w.pickups.at(i);
+    /*
+      ⚠️ **A SCATTERED PICKUP DOES NOT CYCLE, and its lifetime is how that is known.** Asked for:
+      *"non-cycling and on a short timer."* An authored pickup never carries a lifetime, so
+      `lifeFor > 0` is exactly *this came off a ship that just died* — one field, no flag, and no way
+      for the two answers to disagree. `docs/decisions/0066-a-death-scatters-what-it-took.md`.
+
+      It is also the right rule rather than a convenient one: what was scattered is what the player
+      just LOST, and a spread that turned into a launcher on the way back would be the game handing
+      out something they never had.
+    */
+    if (item.lifeFor > 0) continue;
     const face = w.pickupFlipped ? (w.pickupCycle[item.kind] ?? item.kind) : item.kind;
     const row = w.pickupRows[face];
     if (row === undefined) continue;
@@ -1233,6 +1290,64 @@ function driftPickups(w: World): void {
     const item = w.pickups.at(i);
     if (item.across - item.radius <= 0) item.velAcross = Math.abs(item.velAcross);
     else if (item.across + item.radius >= ACROSS_SPAN) item.velAcross = -Math.abs(item.velAcross);
+    /*
+      ⚠️ **A scattered pickup that runs out of time leaves a burst**, because
+      `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` is named for
+      exactly this: the model resolves *that one is gone now* and, without this, the picture says
+      nothing — a pickup the player was flying towards simply is not there any more, which reads as a
+      collection that failed rather than as a clock that ran out.
+
+      ⚠️ **On the step BEFORE `stepEntities` retires it**, which is the same shape `stepBombs` uses for
+      a fuse: after the release the slot belongs to whatever spawns next, so its position is gone.
+    */
+    if (item.lifeFor === 1) burst(w, item.along, item.across, BURST.shield);
+  }
+}
+
+/**
+ * Throw the upgrades a death has just cost back onto the field.
+ *
+ * Asked for in play: *"when a player dies, their power ups should explode from where they were and
+ * bounce around the screen… non-cycling and on a short timer so there's enough time to grab some, but
+ * maybe not all."* `docs/decisions/0066-a-death-scatters-what-it-took.md`.
+ *
+ * ⚠️ **Exported and called by `src/app/mount.ts`, exactly as `respawn` and `launchSpecial` are.** The
+ * frame cannot see the run — `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md`
+ * puts the upgrade list in `src/state/` — so the shell hands over what was lost and this is the half
+ * that moves entities.
+ *
+ * ⚠️ **It has to be called BEFORE the reducer clears the list**, which is a real ordering the shell
+ * has to keep. There is no way to state it here; `tests/pickups.test.ts` drives the shell's order.
+ *
+ * ⚠️ **A FAN rather than a roll, which is the opposite of what `burst` does and deliberately so.**
+ * Debris is something coming apart and wants to look accidental; this is the game handing the player
+ * back a countable set of things, and a seeded scatter that happened to stack two of them on one lane
+ * would take one of them away. `src/app/frame.ts`'s `spawnPickup` alternates by index for the same
+ * reason.
+ */
+export function scatterUpgrades(w: World, upgrades: readonly UpgradeKind[]): void {
+  for (let i = 0; i < upgrades.length; i++) {
+    const kind = w.pickupKinds[upgrades[i]!];
+    const row = w.pickupRows[kind];
+    if (row === undefined) continue;
+    const item = w.pickups.spawn();
+    // A scatter one pickup short is dropped rather than grown — `src/sim/pool.ts` has the argument,
+    // and a player with more upgrades than the pool has slots has had a very good run.
+    if (item === null) return;
+    reset(item, w.ship.along, w.ship.across, row, kind);
+    /*
+      Spread evenly either side of the ship, alternating, each one further out than the last — so a
+      loadout of six arrives as six separate things rather than as three pairs.
+
+      ⚠️ **`velAlong` carries the scroll rate**, which is 0034's *every speed is in the camera's
+      frame*: the scatter holds the distance the ship died at and spreads ACROSS. Thrown along as
+      well, it would be off the screen inside two seconds.
+    */
+    const side = i % 2 === 0 ? 1 : -1;
+    const rank = Math.floor(i / 2) + 1;
+    item.velAcross = SCATTER_SPEED * side * (1 - rank * 0.15);
+    item.velAlong = w.scrollPerStep;
+    item.lifeFor = SCATTER_STEPS;
   }
 }
 

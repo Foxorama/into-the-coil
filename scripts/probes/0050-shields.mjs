@@ -129,7 +129,9 @@ export const PROBES = [
     guard: 'never asks the frame to draw more entities than the budget was measured for',
     edit: {
       path: 'src/app/mount.ts',
-      find: '  debris: 200 - MAX_SHIELDS - 24 - 8,',
+      // The subtrahends grow as pools are added — 0066 took four more for the scatter — and the
+      // break is the same one: a pool that pays for itself out of nothing.
+      find: '  debris: 200 - MAX_SHIELDS - 24 - 8 - 4,',
       replace: '  debris: 200 - MAX_SHIELDS - 24,',
     },
   },
