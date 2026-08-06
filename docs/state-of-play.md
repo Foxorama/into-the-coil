@@ -42,23 +42,25 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 deliberately left alone — [`drag-feel`](../reports/drag-feel-2026-08-05.md) has the ordering and
 [`inertia-played`](../reports/inertia-played-2026-08-05.md) closes it.
 
-⚠️ **`STARTING_LIVES` is NOT closed.** Three is a starting point placed by a hand, in the same
-category [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) puts it in as the
-flight constants before they were played. There are now two full levels to lose it in, and it has
-still never been played.
+⚠️ **How many lives a run starts with is NOT closed, and there are now three answers rather than
+one.** `STARTING_LIVES` is gone as a constant — it is a column in `src/content/difficulty.ts` —
+and [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) puts each of the three in
+the same category as the flight constants before they were played. None of them has been.
 
 ## What the game currently is
 
-**A two-level run, playable start to finish, and played.** A title screen with a key to the pickups,
-three lives, six enemy kinds, two authored levels of about three minutes each, weapon upgrades and
-extra lives lying about in them, a lives-and-shield readout while playing, a unique boss at the end
-of each level, a screen between them, and a victory screen after the second.
+**A two-level run, playable start to finish, and played.** A title screen that is the difficulty
+choice and carries a key to the pickups, six enemy kinds, two authored levels of about three minutes
+each, weapon upgrades and extra lives lying about in them, a lives-and-shield readout while playing,
+a unique boss at the end of each level, a screen between them, and a victory screen after the second.
+Keyboard, touch and gamepad all reach every screen; the run-over screen gives up after seven seconds.
 
 Each level opens on an empty screen so the player can find the controls before anything finds them —
 [0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md).
 
 Nothing is *triggered*: the arsenal — the specials a player spends — is still a list with nothing in
-it. Difficulty was last placed by a hand at *"intro to 50% of the first level"* —
+it. Difficulty was last placed by a hand at *"intro to 50% of the first level"* — which is now the
+easiest of three tiers as well as two levels out of date —
 [`ship-speed-settled`](../reports/ship-speed-settled-2026-08-05.md), which is now two levels out of
 date and is exactly what a play-test is for.
 
@@ -76,9 +78,14 @@ it did **not** answer.
 - **Is the boss's progress readable at all?** Nothing says how much of it is left, by decision —
   [0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md) names this as the thing that
   build exists to find out.
-- **Is three lives right**, and is twenty seconds the right ceiling on how long a death leaves the
-  player unarmed? [0041](decisions/0041-a-pickup-is-the-answer-to-what-a-death-costs.md) picked that
-  number without having played it.
+- **Is any of the three life counts right**, and is twenty seconds the right ceiling on how long a
+  death leaves the player unarmed?
+  [0041](decisions/0041-a-pickup-is-the-answer-to-what-a-death-costs.md) picked that number without
+  having played it, and item 4 below makes a death cost considerably more.
+- **Are the two harder tiers anywhere near their targets?** *"Level four with challenge"* and
+  *"maybe the end boss of level two"* are the numbers
+  [0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md) was sized against,
+  and only the easiest tier — the one that changes nothing — has ever been played.
 - **Do the two upgrades read on screen?** `docs/game.md` says every upgrade changes how the ship
   looks, and neither of these does yet — they change what leaves it, and the title screen now says
   what they are ([0045](decisions/0045-the-player-can-see-what-they-are-carrying.md)).
@@ -99,7 +106,8 @@ it did **not** answer.
 ## What is next, and why in this order
 
 **The order below is the player's, given 2026-08-06.** It is not the order the dependencies would
-have picked, and that is fine — none of the three blocks another.
+have picked, and that is fine. **Three of the six have landed**; what is left is marked, and item 4
+is the large one.
 
 **1 — ✅ DONE. A gamepad can press a button; the run-over screen expires.**
 
@@ -119,52 +127,30 @@ play-test against, and there are only two levels to do it in.
 
 **3 — ✅ MOSTLY DONE. Where things come from, and where a shot stops.**
 
-[0048](decisions/0048-a-threat-may-arrive-from-the-side.md) landed the entry from the across edges,
-the cap, the across cull, the drifting pickups and the reported shot-range bug. **What it did NOT do
-is the density pass** — *"increasing enemy waves"* is a tuning question against a play-test, and it is
-the pass 0047's middle tier is waiting on. The rest of this section is what remains.
+[0048](decisions/0048-a-threat-may-arrive-from-the-side.md) landed five of the six: entry from the
+`across` edges and its cap, the `across` cull, the drifting pickups, the flanker's turn — the first
+motion in the game that is not a function of `along` — and the reported shot-range bug.
 
+**What remains is the density pass, and it is deliberately last.**
 
-Asked for: *"increasing enemy waves, improving the spawns"*, and then in more detail after playing —
-entry from the top and bottom of the screen, capped so nothing arrives behind the player; shots that
-stop killing things nobody can see; and movement that is not all straight lines.
+*"Increasing enemy waves"* is a tuning question, and the thing that answers it is a hand rather than a
+guard. Two reasons to do it after item 4 rather than before:
 
-⚠️ **One of these is a reported BUG and it is the shot range.** *"In playtesting I didn't even see the
-boss monsters on screen because they died before they even entered the visible play area."* A player
-shot lives `PLAYER_SHOT_LIFE` = 80 steps at 2.6 units a step, so it reaches ~248 units ahead of the
-camera; a 16:9 view is 177.8 wide. Everything in the 70 units between is being shot at and cannot be
-seen — and a boss spends about four seconds there while it closes on its station.
+- **The middle tier is waiting on it.** 0047's *"level four with challenge"* was sized against a ship
+  with five health. Item 4 makes the ship one hit, which moves the answer more than any wave table
+  will.
+- **Density is a property of the VIEW, not of the gap between waves** —
+  [0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md), which also records that its
+  own density guard has been a sieve twice. Read that before touching a number.
 
-⚠️ **The entry cap is a request with a device problem in it**: *"entry point should be capped at 50%
-from the right side of the screen."* 50% of *which* screen — `alongSpan` runs 150–240 by device
-([0023](decisions/0023-the-long-axis-is-the-scroll-axis.md)). `MAX_ALONG_SPAN / 2` is the only
-answer that keeps the promise on every device, because it is at or beyond the halfway line of every
-view the clamp allows.
+⚠️ **Pool headroom is the constraint, not the authoring.** The pools total exactly
+[0022](decisions/0022-frame-rate-is-a-feature.md)'s 500-entity worst case — see `CAPACITY` in
+`src/app/mount.ts` — and item 4 wants slots for missiles, shield orbs and a bomb's blast. More
+enemies on screen at once is a budget question that has to be settled against that, in that order.
 
-The density floor in `tests/level.test.ts` is a **floor**, not a target — it holds ≥ 8 in one
-lookahead, and both levels sit not far above it.
-
-The density floor in `tests/level.test.ts` is a **floor**, not a target — it holds ≥ 8 in one
-lookahead, and both levels sit not far above it.
-[0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md) records that density is a
-property of the view rather than of the gap between waves, and that its own guard has been a sieve
-twice, so re-read that before tuning.
-
-⚠️ **The spawn half is the more interesting one and is already unlocked: entry from the `across`
-edges.** Everything arrives at the leading edge because that is the only spawn rule written, not
-because of any constraint — [`enemy-silhouettes`](../reports/enemy-silhouettes-2026-08-05.md) has the
-argument, and names the one real gap that comes with it: **there is no `across` cull**, so anything
-that leaves the lane is gone and still holding a pool slot. That gap has to close in the same change.
-
-Pool headroom is the other constraint: the pools total exactly
-[0022](decisions/0022-frame-rate-is-a-feature.md)'s 500-entity worst case, so more enemies on screen
-at once is a budget question and not only an authoring one — see `CAPACITY` in `src/app/mount.ts`.
-
-Also asked for and belonging here: **pickups should drift rather than run on a rail**, and **enemy
-paths should not all be static**. The weave already exists and is a parameter rather than a kind
-(`src/content/enemies.ts` says why, and names the trigger for a motion union: *something that turns
-towards the player, or stops*). Anything that enters from an `across` edge and then turns down-lane
-is that trigger arriving.
+⚠️ **`tests/level.test.ts`'s density floor holds ≥ 8 in one lookahead and both levels sit not far
+above it.** It is a floor, not a target, and raising it to match whatever the tuning pass settles on
+would make it a copy of the content rather than a guard over it.
 
 **4 — The ship is one hit, and it carries shields, missiles and bombs.**
 
