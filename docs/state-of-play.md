@@ -42,6 +42,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
 | **a death takes the ship, and the level carries on** | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
 | **a boss's station drifts, so a fight is still flight** | [0061](decisions/0061-a-boss-keeps-flying.md) |
+| **a level break is a respite: a screen says whether it stops the world AND whether it hides it** | [0063](decisions/0063-a-level-break-is-a-respite.md) |
 | **a death scatters what it took, non-cycling and on a short timer** | [0066](decisions/0066-a-death-scatters-what-it-took.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
@@ -153,9 +154,13 @@ makes a death cost more in the same session as a report that dying is already to
    report 0057 deliberately left, and 0056 had made a death cost more in the same session. ⚠️ The
    pickup pool went from eight to twelve, out of the particle share.
 3. **Bosses need a real explosion and an end-of-level beat.** *"Currently the level just ends."*
-4. **The between-levels screen should become a brief respite.** *"The current pause/level screen
-   interrupts the flow."* ⚠️ Touches `SCREENS` — [0046](decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md)
-   and 0055 both have opinions about what a screen change costs.
+4. **✅ DONE — the between-levels screen is a respite.**
+   [0063](decisions/0063-a-level-break-is-a-respite.md). ⚠️ **It carries a product finding about a
+   feature that does not exist yet**: the same report says the branching chart's player choice *"will
+   probably get scrapped, because a flowing continuation with a brief respite will feel better than
+   the hard pause interruption."* 0063 records it and does not act on it —
+   [0042](decisions/0042-a-run-is-a-sequence-of-levels.md) is where the chart lives, and item 5 below
+   is what it now has to argue with.
 5. **Enemies are stuck in a narrow tunnel.** *"Once on screen the enemies are in a very narrow
    tunnel and it makes the feel very restrictive and not like you're in a large area."* They should
    fly off the `across` edges and back on. ⚠️ 0048 landed entry from the edges and the `across` cull;
@@ -280,6 +285,13 @@ A level is a row in `LEVELS` and the sequence is that list —
 `docs/game.md` puts between levels, and 0042 says why a straight line came first: a chart is a
 screen, a graph and a set of rules about what may follow what, and all three want deciding against
 levels somebody has played.
+
+⚠️ **Somebody has now played them, and the answer is not obviously *build the chart*.**
+[0063](decisions/0063-a-level-break-is-a-respite.md) carries the report: the player choice between
+levels *"will probably get scrapped, because a flowing continuation with a brief respite will feel
+better than the hard pause interruption."* That is exactly the evidence 0042 said it was waiting for,
+and it argues against a screen rather than for one. Not settled; the next session gets to argue with
+it rather than rediscover it.
 
 **6 — `save/`, and the first `itc_*` key.**
 

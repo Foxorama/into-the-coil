@@ -566,6 +566,19 @@ export interface World {
    * WORTH — moving a focus ring, expiring a screen — belongs to the shell.
    */
   onIdle: () => void;
+  /**
+   * A fixed step happened, whether or not the simulation took it.
+   *
+   * ⚠️ **NOT a second `onIdle`, and the difference is the whole of decision 0063.** `onIdle` answers
+   * *the simulation did not step*, which is where the menu pad is read; this answers *a step
+   * happened*, which is where a screen's countdown is spent. They were the same question for as long
+   * as every screen with chrome on it also stopped the world — the level break is a screen that does
+   * not, and its countdown has to run anyway.
+   *
+   * ⚠️ **Reported rather than decided**, exactly as `onDeath`, `onPickup` and `onIdle` are: what a
+   * step is WORTH to a screen belongs to the shell.
+   */
+  onTick: () => void;
 }
 
 export class GameFrame implements Frame {
@@ -573,6 +586,14 @@ export class GameFrame implements Frame {
 
   step(): void {
     const w = this.world;
+    /*
+      ⚠️ **EVERY step, on both sides of the branch below** — `docs/decisions/0063-a-level-break-is-a-respite.md`.
+      `onIdle` answers *a step happened and the simulation did not take it*, which was the same
+      question as *is a screen counting down* for exactly as long as every screen with chrome on it
+      also stopped the world. The level break is a screen that does not, so the two questions came
+      apart and the countdown moved here.
+    */
+    w.onTick();
     /*
       A screen that does not step, per `src/state/screens.ts`. The draw below still runs, so the
       scene the run ended in stays on the page underneath the overlay.

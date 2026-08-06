@@ -450,6 +450,7 @@ function firingAt(row: EnemyRow, distance: number): World {
     difficulty: DIFFICULTIES[DIFFICULTY_KINDS[0]!],
     bossFullHealth: BOSSES.sentinel.health,
     onIdle: (): void => {},
+    onTick: (): void => {},
     onDeath: (): void => {},
   };
 }
@@ -523,6 +524,7 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
     difficulty: DIFFICULTIES[DIFFICULTY_KINDS[0]!],
     bossFullHealth: BOSSES.sentinel.health,
     onIdle: (): void => {},
+    onTick: (): void => {},
     onDeath: (): void => {},
   };
   return { world, frame: new GameFrame(world) };

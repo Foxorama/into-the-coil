@@ -79,6 +79,21 @@ const STYLE = `
 }
 .itc-title-shown, .itc-gameover-shown, .itc-cleared-shown, .itc-victory-shown { display: flex; }
 /*
+  ── A SCREEN THAT DOES NOT DIM ──────────────────────────────────────────────────────────────────
+
+  Decision 0063. The level break keeps the world running behind it, so its overlay must not paint
+  over the scene and must not take the pointer — a full-bleed box across the playfield would swallow
+  every drag the player makes with the thumb they are still steering with.
+
+  ⚠️ **The CONTROL takes pointer events back**, so *Onward* is still pressable by a hand that wants
+  to skip the break. That pair — none on the box, auto on the button — is the whole mechanism, and it
+  is the same one the HUD uses one rule down.
+
+  The background is set inline per screen by the builder, so nothing here has to know which is which.
+*/
+.itc-cleared { pointer-events: none; }
+.itc-cleared-action { pointer-events: auto; }
+/*
   ⚠️ **Centred by AUTO MARGINS, not by justify-content, and that is the fix rather than a style.** A
   flex item centred by the container is centred when it overflows too — half of it pushed off the
   START edge, where no scrollbar can reach it. That is precisely what the title screen did on a phone:
@@ -268,6 +283,18 @@ const STYLE = `
   background: currentColor;
 }
 .itc-playing-hud-spent { background: transparent; }
+/*
+  ⚠️ **LAST IN THE SHEET, AND THAT IS THE WHOLE OF WHY IT WORKS.** The panel rule near the top sets
+  margin: auto to centre every screen's content, so this has to beat it on source order — written
+  earlier it lost the cascade silently and the banner went on sitting exactly where it was not
+  wanted. Caught by measuring where the button actually landed, which is the only thing that could
+  have caught it.
+
+  The level break sits at the TOP because the middle is where the ship is: a banner centred over a
+  playfield the player is still flying in covers the one part of the screen they cannot look away
+  from. Auto on the bottom only, so it is a top margin rather than a centred box.
+*/
+.itc-cleared-panel { margin-top: min(1.5rem, 5cqh); margin-bottom: auto; }
 `;
 
 /** A screen's overlay, the controls on it, and whatever else it has to say. */
@@ -392,7 +419,13 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen, index: n
     // Trailing `-` trimmed for the block itself, so the overlay is `itc-title` and its parts are
     // `itc-title-heading`. Still one prefix, still one description of it.
     root.className = prefix.slice(0, -1);
-    root.style.background = colours.space;
+    /*
+      ⚠️ **Only a screen that DIMS paints over the scene** — decision 0063. A screen that keeps the
+      world running is a banner, and a banner filling itself with the space colour would hide exactly
+      the thing it is a banner over. The stylesheet cannot say this, because it is a fact about the
+      screen rather than about the class.
+    */
+    if (row.dims) root.style.background = colours.space;
     root.style.color = colours.player;
 
     /*
@@ -502,7 +535,13 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen, index: n
       can read it; one who does not is not interrupted seven times.
     */
     let timer: HTMLElement | null = null;
-    if (row.timeout !== null) {
+    /*
+      ⚠️ **Only a DIMMING screen gets one, and that is a relationship rather than a filter.** A screen
+      that has stopped the world owes the player a number saying when it will stop doing that; a
+      banner over a world that never stopped does not, and a countdown on one would be exactly the
+      *restating what the screen already shows* `docs/game.md` bans. Decision 0063.
+    */
+    if (row.timeout !== null && row.dims) {
       timer = document.createElement('div');
       timer.className = prefix + 'timer';
       timer.setAttribute('aria-live', 'off');
@@ -603,7 +642,13 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen, index: n
       shieldGroup.setAttribute('aria-label', 'Shield ' + String(Math.max(0, health)) + ' of ' + String(maxHealth));
     },
     show(screen: Screen | null): void {
-      hud.classList.toggle('itc-playing-hud-shown', screen === 'playing');
+      /*
+        ⚠️ **Shown while the SIMULATION runs, not while the screen is `playing`** — decision 0063. The
+        level break steps the world, so the player is still flying and still spending charges, and a
+        readout that vanished for it would be the one moment in the game where what they are carrying
+        is invisible.
+      */
+      hud.classList.toggle('itc-playing-hud-shown', screen !== null && SCREENS[screen].steps);
       for (const name of Object.keys(panels) as Screen[]) {
         const panel = panels[name];
         if (panel === undefined) continue;
