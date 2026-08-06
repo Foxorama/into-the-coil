@@ -23,10 +23,16 @@ export const PROBES = [
   {
     decision: '0040',
     suite: 'tests/level.test.ts',
-    // A lane that looks perfectly ordinary. There is no `across` cull, so the two outermost members
-    // of this wave leave the game and keep their pool slots.
-    broke: "a lane that lets a weaver's swing leave the dodge lane it can never return to",
-    guard: 'never puts an enemy where it can leave the dodge lane',
+    /*
+      A lane that looks perfectly ordinary. The two outermost members of this wave swing past the
+      `across` cull and are gone from the game, still holding their pool slots.
+
+      ⚠️ **The bound moved from the dodge lane to the ROAM band** —
+      `docs/decisions/0059-the-lane-is-the-players-box.md` — because enemies now leave the lane on
+      purpose. What was always at stake is the cull, and that has not moved.
+    */
+    broke: "a lane that lets a weaver's swing leave the band it can never return from",
+    guard: 'never puts an enemy where it can leave the ROAM band and be culled',
     edit: {
       path: 'src/content/levels.ts',
       find: "  { at: 960, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },",
