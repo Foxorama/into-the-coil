@@ -13,8 +13,8 @@ import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
-import { ACROSS_SPAN, MAX_ASPECT, viewOf } from '../src/sim/camera.ts';
-import { PLAYER_MARGIN, SCROLL_PER_STEP, SHIP_SPEED } from '../src/sim/flight.ts';
+import { ACROSS_SPAN, MAX_ASPECT, MIN_ASPECT, viewOf } from '../src/sim/camera.ts';
+import { PLAYER_ALONG_SPAN, PLAYER_MARGIN, SCROLL_PER_STEP, SHIP_SPEED } from '../src/sim/flight.ts';
 import { GameFrame, SHIP_START_ALONG, scatterUpgrades } from '../src/app/frame.ts';
 import { initialState, reduce } from '../src/state/root.ts';
 import { DEFAULT_DIFFICULTY } from '../src/state/slices/run.ts';
@@ -301,7 +301,17 @@ describe('collecting one, in the real frame', () => {
   function flyInto(world: ReturnType<typeof playableWorld>['world'], steps: number, each?: () => void): void {
     const frame = new GameFrame(world);
     for (let i = 0; i < steps; i++) {
-      if (world.pickups.size > 0) world.ship.across = world.pickups.at(0).across;
+      if (world.pickups.size > 0) {
+        world.ship.across = world.pickups.at(0).across;
+        /*
+          ⚠️ **AND `along`, since 0064.** A pickup no longer runs back through the whole view: it
+          stops at `PICKUP_STATION` and waits there, which is ahead of where the ship starts. A
+          fixture that only matched the lane was waiting for the pickup to come to it, and it never
+          does any more — which is the change, not a fixture failing. Flying forward to a pickup that
+          is waiting is what a player now does.
+        */
+        world.ship.along = world.pickups.at(0).along;
+      }
       each?.();
       frame.step();
     }
@@ -340,8 +350,22 @@ describe('collecting one, in the real frame', () => {
     const { world, taken } = onePickup('rapid');
     const frame = new GameFrame(world);
     for (let i = 0; i < 600; i++) {
-      // Held exactly `offset` off the pickup's lane, rather than steered onto it.
-      if (world.pickups.size > 0) world.ship.across = world.pickups.at(0).across + offset;
+      /*
+        Held exactly `offset` off the pickup's lane, rather than steered onto it — and level with it
+        ALONG the lane, because since 0064 a pickup waits ahead of where the ship starts.
+
+        ⚠️ **The pickup's own wander is stopped, and it has to be.** It now spends seven seconds
+        crossing the lane, so it reaches the edges — and a ship parked `offset` outside the lane there
+        is pulled back inside it by `flyShip`'s clamp, closing the gap this is trying to hold open.
+        The subject is the REACH; the drift is `tests/spawns.test.ts`'s.
+      */
+      if (world.pickups.size > 0) {
+        world.pickups.at(0).velAcross = 0;
+        world.pickups.at(0).across = ACROSS_SPAN / 2;
+        world.ship.across = ACROSS_SPAN / 2 + offset;
+        world.ship.velAcross = 0;
+        world.ship.along = world.pickups.at(0).along;
+      }
       frame.step();
     }
     return taken.length > 0;
@@ -530,6 +554,123 @@ describe('collecting one, in the real frame', () => {
         if (item.sprite !== drawn) flipped = true;
       }
       expect(flipped, 'an authored pickup stopped cycling').toBe(true);
+    });
+  });
+
+  /**
+   * A PICKUP WAITS TO BE TAKEN.
+   *
+   * `docs/decisions/0064-a-pickup-waits-to-be-taken.md`. Reported from play: *"they enter the screen,
+   * change when they get to player safe distance, then disappear off the screen. They need to bounce
+   * and move around the screen so the player can grab them safely and grab the power up they want
+   * safely"* — and, underneath it, *"shields are a hundred times more valuable than lives, and nine
+   * times out of ten the player is picking up a life or placing themselves in danger to get a
+   * shield."*
+   */
+  describe('and it waits where the player can reach it', () => {
+    /** Where a pickup is on screen, in world units ahead of the camera, over its whole life. */
+    function trackOffset(steps: number): { world: ReturnType<typeof playableWorld>['world']; offsets: number[] } {
+      const { world } = onePickup('rapid');
+      const frame = new GameFrame(world);
+      const offsets: number[] = [];
+      for (let i = 0; i < steps; i++) {
+        frame.step();
+        if (world.pickups.size > 0) offsets.push(world.pickups.at(0).along - world.cameraAlong);
+      }
+      return { world, offsets };
+    }
+
+    it('THE REPORTED ONE: it stops running away, and holds still on screen for seconds', () => {
+      /*
+        ⚠️ **Measured as a place ON SCREEN — world units ahead of the camera — which is the frame the
+        player watches it in.** Before this a pickup carried no speed of its own, so it fell back
+        through the whole view at the scroll rate and was gone in about nine seconds, most of which it
+        spent either beyond the player's reach or already behind them. Nothing here asserts on
+        `PICKUP_STATION` or on how long the wait is; what is held is that there IS one.
+      */
+      const { offsets } = trackOffset(1400);
+      let longest = 0;
+      let run = 0;
+      for (let i = 1; i < offsets.length; i++) {
+        // Holding station is the offset not moving. One step of float noise is not motion.
+        if (Math.abs(offsets[i]! - offsets[i - 1]!) < 0.01) run++;
+        else run = 0;
+        if (run > longest) longest = run;
+      }
+      const seconds = longest / STEPS_PER_SECOND;
+      expect(seconds, `the pickup never stopped; it held station for ${seconds.toFixed(1)}s`).toBeGreaterThan(1);
+    });
+
+    it('waits long enough for the player to see both of its faces and choose', () => {
+      /*
+        ⚠️ **THE ONE THE COMPLAINT IS ABOUT.** *"Nine times out of ten the player is picking up a life
+        or placing themselves in danger to get a shield"* — which is what happens when the wait is
+        shorter than the cycle: which face you get is decided by when you happened to arrive.
+
+        Held against `CYCLE_UNITS` rather than against either constant on its own, so it stays true
+        whichever of the two is tuned next.
+      */
+      const { offsets } = trackOffset(1400);
+      let held = 0;
+      for (let i = 1; i < offsets.length; i++) if (Math.abs(offsets[i]! - offsets[i - 1]!) < 0.01) held++;
+      const cycleSteps = CYCLE_UNITS / SCROLL_PER_STEP;
+      expect(held / cycleSteps, 'the wait is shorter than one face, so which one you get is luck').toBeGreaterThan(1);
+    });
+
+    it('waits somewhere the ship can actually fly to, on the narrowest device there is', () => {
+      /*
+        ⚠️ **Both bounds, in world units against the two boxes that decide them.** A station beyond
+        `PLAYER_ALONG_SPAN − PLAYER_MARGIN` is a pickup the player cannot reach; one beyond the
+        narrowest view is a pickup that waits off the edge of a 3:2 laptop. Measured from the picture
+        rather than from the constant — `docs/decisions/0027-measure-the-picture-not-the-model.md`.
+      */
+      const { offsets } = trackOffset(1400);
+      let station = 0;
+      for (let i = 1; i < offsets.length; i++) {
+        if (Math.abs(offsets[i]! - offsets[i - 1]!) < 0.01) station = offsets[i]!;
+      }
+      expect(station, 'the pickup never held station at all').toBeGreaterThan(0);
+      expect(station, 'it waits further out than the ship can fly').toBeLessThan(PLAYER_ALONG_SPAN - PLAYER_MARGIN);
+      expect(station, 'it waits off the edge of the narrowest screen there is').toBeLessThan(ACROSS_SPAN * MIN_ASPECT);
+    });
+
+    it('and then leaves, so the field does not fill up with things nobody took', () => {
+      /*
+        ⚠️ **The half that stops the wait becoming a park.** The pool is eight slots
+        (`src/app/mount.ts`), and a pickup that held station forever would take one of them for the
+        rest of the level — so the fourth pickup of a level would silently never appear.
+      */
+      const { world } = trackOffset(2400);
+      expect(world.pickups.size, 'the pickup waited for ever and kept its pool slot').toBe(0);
+    });
+
+    it('bounces across the lane while it waits, rather than sitting on one line', () => {
+      // *"They need to bounce and move around the screen."* Measured as how much of the lane it
+      // covered, which is the thing the player sees.
+      const { world } = onePickup('rapid');
+      const frame = new GameFrame(world);
+      let lowest = Number.POSITIVE_INFINITY;
+      let highest = Number.NEGATIVE_INFINITY;
+      /*
+        ⚠️ **The loop condition is the step count and NOT the pool**, which is the mistake
+        `tests/spawns.test.ts` records making twice: the pickup has not spawned on step zero, so a
+        `while (pickups.size > 0)` runs no steps at all and every assertion after it passes for
+        entirely the wrong reason.
+      */
+      let seen = false;
+      for (let i = 0; i < 1400; i++) {
+        frame.step();
+        if (world.pickups.size === 0) {
+          if (seen) break;
+          continue;
+        }
+        seen = true;
+        const across = world.pickups.at(0).across;
+        if (across < lowest) lowest = across;
+        if (across > highest) highest = across;
+      }
+      const covered = highest - lowest;
+      expect(covered, `the pickup covered ${covered.toFixed(0)} units of the lane`).toBeGreaterThan(ACROSS_SPAN / 4);
     });
   });
 
