@@ -35,6 +35,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **difficulty is a tier, and the easy one is the content** | [0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md) |
 | **a threat may arrive from the side; a shot stops at the edge** | [0048](decisions/0048-a-threat-may-arrive-from-the-side.md) |
 | **the chrome is authored against the short axis** | [0049](decisions/0049-the-chrome-is-authored-against-the-short-axis.md) |
+| **the ship is one hit; a shield is what stands in front of it** | [0050](decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -160,16 +161,12 @@ the ship becoming fragile is what the other three exist to answer. Written out h
 own terms so a later session does not have to reconstruct the ask; every number in it is a starting
 point, not a decision.
 
-*The ship.* **One hit destroys it.** That alone is most of the difficulty rise the tiers were sized
-against, so [0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md)'s two
-harder tiers want re-reading once it lands. `SHIPS.proof.health` is 5 today and the HUD's shield pips
-are that number; the pips become the shield count instead.
-
-*Shields.* **A pickup, capped at 3.** Each absorbs one hit and is destroyed; an enemy or an enemy
-effect that meets a shield never reaches the hull. Drawn as 1–3 marks orbiting the ship, spaced
-equally. ⚠️ There is already a `shield` in `src/content/specials.ts` and
-[0045](decisions/0045-the-player-can-see-what-they-are-carrying.md) settled which name wins if both
-exist: *"it is the SPECIAL that gets renamed."*
+**The first two have landed** —
+[0050](decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md). The hull
+is one hit, a shield is a pickup capped at three, the HUD's pips are the shell, and the ship wears a
+ring per shield. The special that was called `shield` is now `mines`, which is what 0045 said would
+happen. What that decision leaves owed is the tiers: 0047's two harder ones were sized against a
+five-health ship and neither has been played since.
 
 *Missiles — a second auto-weapon.* Slower than the pulse, **3× its damage**, fired from launchers on
 the ship. The base ship has one, at the middle; the first upgrade adds one on the `across`-minus
@@ -208,9 +205,11 @@ which is what [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal
 
 ⚠️ **Pool headroom is the binding constraint on all of it**, not the authoring:
 `CAPACITY` in `src/app/mount.ts` totals exactly
-[0022](decisions/0022-frame-rate-is-a-feature.md)'s 500-entity worst case. Missiles, shield orbs and
-a bomb's blast each want slots, and `src/content/pickups.ts` already records what happened the last
-time a weapon outran its pool — *"two streams continuous and the others stutter"*.
+[0022](decisions/0022-frame-rate-is-a-feature.md)'s 500-entity worst case, and
+`tests/budget.test.ts` now refuses a total above it rather than leaving the arithmetic to a comment.
+The shell took its three slots out of the particle share (0050); missiles and a bomb's blast have to
+come from somewhere too, and `src/content/pickups.ts` records what happened the last time a weapon
+outran its pool — *"two streams continuous and the others stutter"*.
 
 **5 — The chart, and more levels behind it.**
 

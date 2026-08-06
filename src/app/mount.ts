@@ -23,10 +23,10 @@ import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../content/enemies.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { BOSSES } from '../content/bosses.ts';
-import { PICKUPS, PICKUP_KINDS, type PickupKind, weaponFor } from '../content/pickups.ts';
+import { PICKUPS, PICKUP_KINDS, isUpgrade, type PickupKind, weaponFor } from '../content/pickups.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS, type DifficultyKind } from '../content/difficulty.ts';
 import { holdStation, SCROLL_PER_STEP } from '../sim/flight.ts';
-import { SHIPS } from '../content/ships.ts';
+import { MAX_SHIELDS, SHIPS, fullHealthFor, shieldsOf } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
 import { GameFrame, SHIP_START_ALONG, resetScene, respawn, startLevel, type World } from './frame.ts';
 import { SCREENS, STEPS_PER_SECOND, type Screen } from '../state/screens.ts';
@@ -44,8 +44,8 @@ import { runLoop } from './loop.ts';
  *
  * ⚠️ **These are 0022's worst-case scene split up rather than a new budget** — it reads *~150 enemy
  * bullets, ~80 player projectiles, ~40 enemies, ~200 particles* and totals 500, which is the number
- * `tests/budget.test.ts` asserts the frame cost against. The particle share is now claimed by
- * `debris`, at exactly the 200 it was written for.
+ * `tests/budget.test.ts` asserts the frame cost against. The particle share is claimed by `debris`
+ * and by the one thing below that has been taken out of it.
  *
  * ⚠️ **`playerShots` moved 80 → 100, and the total is now EXACTLY 500.** A fully upgraded weapon is
  * five barrels every four steps against an eighty-step shot life, which is a hundred bullets in
@@ -56,10 +56,31 @@ import { runLoop } from './loop.ts';
  * ones.** A fixture with a smaller pool than the game cannot see a pool-exhaustion bug, which is the
  * bug this number exists to prevent.
  *
+ * ⚠️ **`shieldOrbs` is three slots taken from the PARTICLE share, and that is the only share 0022
+ * says may move.** Its list of *where a device may legitimately differ* is background parallax,
+ * particle counts, debris lifetime and screen-space effects — the cosmetics that shed under load —
+ * and the shell is the opposite of that: it is how a player reads what is left between them and the
+ * end of a life (0050). So the three come out of `debris`, the total stays at exactly 500, and
+ * nothing about the frame budget moves.
+ *
+ * ⚠️ **`tests/budget.test.ts` now holds that sum, which nothing did before.** The 500 was written in
+ * a comment here and asserted nowhere, so the next pool would have been added by arithmetic done in
+ * somebody's head — and `docs/state-of-play.md` says the arsenal wants slots for missiles, orbs and a
+ * blast. A budget nothing checks is a budget that is already spent.
+ *
  * Splitting one pool into four is what makes the collision cost the product of two small pools
  * instead of the square of one big one — `src/sim/collide.ts` has the argument.
  */
-export const CAPACITY = { ship: 1, enemies: 40, playerShots: 100, enemyShots: 150, debris: 200, boss: 1, pickups: 8 };
+export const CAPACITY = {
+  ship: 1,
+  shieldOrbs: MAX_SHIELDS,
+  enemies: 40,
+  playerShots: 100,
+  enemyShots: 150,
+  debris: 200 - MAX_SHIELDS,
+  boss: 1,
+  pickups: 8,
+};
 
 export interface Mounted {
   /** Stop the loop and drop the resize listener. */
@@ -163,6 +184,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
 
   const colours = PALETTES[palette];
   const shipPool = new Pool<Entity>(CAPACITY.ship, makeEntity);
+  const shieldOrbs = new Pool<Entity>(CAPACITY.shieldOrbs, makeEntity);
   const enemies = new Pool<Entity>(CAPACITY.enemies, makeEntity);
   const playerShots = new Pool<Entity>(CAPACITY.playerShots, makeEntity);
   const enemyShots = new Pool<Entity>(CAPACITY.enemyShots, makeEntity);
@@ -255,8 +277,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // things the player cannot afford to lose track of while fighting it.
     // Pickups sit just above the debris and below every threat: the player must never lose a bullet
     // behind the thing they are flying towards.
-    layers: [debris, pickupPool, bossPool, enemies, enemyShots, playerShots, shipPool],
+    // The shell sits directly under the ship: the marks are the ship's, so nothing may come
+    // between them, and a bullet passing over one has visibly passed over it.
+    layers: [debris, pickupPool, bossPool, enemies, enemyShots, playerShots, shieldOrbs, shipPool],
     shipPool,
+    shieldOrbs,
     enemies,
     playerShots,
     enemyShots,
@@ -409,9 +434,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.setTimer(next < 0 ? null : next);
   };
 
-  /** Push the run's numbers at the readout. Cheap, and called only when one of them has moved. */
+  /**
+   * Push the run's numbers at the readout. Cheap, and called only when one of them has moved.
+   *
+   * ⚠️ **The pips are SHIELDS now, not health**, and the two stopped being the same number when the
+   * hull became one hit (0050). The conversion is `shieldsOf`, which is also what the shell around
+   * the ship is built from — so the row of pips and the ring of marks cannot disagree.
+   */
   const syncHud = (): void => {
-    chrome.setHud(state.run.lives, world.ship.health, shipRow.health);
+    chrome.setHud(state.run.lives, shieldsOf(shipRow, world.ship.health), MAX_SHIELDS);
   };
 
   const dispatch = (action: Action): void => {
@@ -582,8 +613,22 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     `src/content/pickups.ts` has the split, and 0039 has the reason for it.
   */
   world.onPickup = (kind: PickupKind): void => {
-    if (PICKUPS[kind].effect === 'life') dispatch({ slice: 'run', type: 'gainedLife' });
-    else dispatch({ slice: 'run', type: 'upgraded', upgrade: kind === 'rapid' ? 'rapid' : 'spread' });
+    const effect = PICKUPS[kind].effect;
+    if (effect === 'life') dispatch({ slice: 'run', type: 'gainedLife' });
+    /*
+      ⚠️ **A shield goes on the SHIP and not through the reducer**, and it is the one pickup that
+      does. `docs/decisions/0017-the-state-is-slices.md` puts the run's own numbers in state — lives,
+      upgrades, the tier — because they survive a life and have to be saved; a shield is armour on the
+      life being flown, spent by the collision, and gone with the ship that wore it. Its home is the
+      ship's `health`, which is the field the collision already moves. A copy in the reducer would be
+      a second answer that only the pickup ever updated.
+
+      ⚠️ **Capped here.** `MAX_SHIELDS` is the shell the player can read at a glance, and a fourth
+      mark would have nowhere to be drawn — `src/content/ships.ts`.
+    */ else if (effect === 'shield') world.ship.health = Math.min(world.ship.health + 1, fullHealthFor(shipRow));
+    // `isUpgrade` rather than a ternary on one name: the ternary was correct for exactly as long as
+    // there were two upgrades, and the pickup above is not one — `src/content/pickups.ts`.
+    else if (isUpgrade(kind)) dispatch({ slice: 'run', type: 'upgraded', upgrade: kind });
   };
 
   /** Re-measure, re-fit and — only if the orientation or resolution actually moved — re-bake. */

@@ -42,7 +42,7 @@ import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
 import type { ShipRow } from '../content/ships.ts';
-import { INVULN_STEPS } from '../content/ships.ts';
+import { INVULN_STEPS, SHIELD_MARK, shieldsOf } from '../content/ships.ts';
 import { SHOTS } from '../content/shots.ts';
 import { BURST, DEBRIS } from '../content/debris.ts';
 import { FORMATIONS } from '../content/formations.ts';
@@ -90,6 +90,36 @@ const FLANK_ENTRY_SPEED = 0.9;
  * to turn taking one into a reflex. At 0.22 it crosses the lane in about seven seconds.
  */
 const PICKUP_DRIFT = 0.22;
+
+/**
+ * What one landing costs the ship, in health.
+ *
+ * ⚠️ **The unit the ship's health is counted in, stated once.** The hull is one of these and every
+ * shield is one more (`src/content/ships.ts`), which is what makes *"each shield absorbs one hit"*
+ * and *"one hit destroys the ship"* the same sentence about the same number.
+ */
+const ONE_HIT = 1;
+
+/**
+ * How far from the ship's centre a shield mark orbits, in world units.
+ *
+ * The ship is 7 units across, so this puts the shell clear of the hull with a visible gap — close
+ * enough to read as *worn* rather than as a formation flying alongside.
+ */
+const SHIELD_ORBIT = 5.6;
+
+/**
+ * How fast the shell turns, in radians per world unit the CAMERA travels.
+ *
+ * ⚠️ **A function of the camera and not of a step count, for the reason `src/content/enemies.ts`
+ * gives about the weave**: a shape in the world can be authored against and a wobble in time cannot.
+ * It also means the shell is stationary on screen when the game is not scrolling, which is what
+ * everything else the player watches does.
+ *
+ * At the scroll rate this is a turn every eight seconds or so — slow enough that it never competes
+ * with the lane for attention, fast enough that a mark hidden behind the hull comes back out.
+ */
+const SHIELD_SPIN = 0.02;
 
 /**
  * Where the ship sits in its box, in world units ahead of the camera's trailing edge.
@@ -141,6 +171,20 @@ export interface World {
   layers: readonly Pool<Entity>[];
   /** The player's ship, alone in its own pool so that death is a release and a respawn. */
   shipPool: Pool<Entity>;
+  /**
+   * The shell: one orbiting mark per shield the ship is carrying.
+   *
+   * ⚠️ **In no collision pairing, exactly like debris.** A shield absorbs a hit because the ship's
+   * `health` is the hull plus the shell (`src/content/ships.ts`), and the collision that already
+   * exists takes it off. These are the PICTURE of that number and nothing else — a mark with its own
+   * hurtbox would be a second answer to *what did this hit*, and the two would disagree the first
+   * time a bullet passed between two marks.
+   *
+   * ⚠️ **Its own pool rather than three fields on the ship**, so the painter draws them the way it
+   * draws everything — one blit per entity, interpolated between two positions — with no branch
+   * anywhere in `src/render/` about what a ship is wearing.
+   */
+  shieldOrbs: Pool<Entity>;
   enemies: Pool<Entity>;
   /** What the player fired. Separate from `enemyShots` because the PAIRING is the collision guard. */
   playerShots: Pool<Entity>;
@@ -404,11 +448,32 @@ export class GameFrame implements Frame {
     // only body in the game that must survive a hundred and fifty hits, so it cannot share a pool
     // with things that are released after one.
     collideInto(w.playerShots, w.bossPool, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
+    /*
+      ⚠️ **THE SHIP TAKES HITS, NOT DAMAGE, and this is where a number becomes a count.** Its health
+      is the hull plus the shell (`src/content/ships.ts`), and a shield is what absorbs **one hit** —
+      so the 2-damage contact an enemy carries must not spend two of them, and the `hardy` assist's
+      half must not leave the ship on two and a half. Both would be true of the raw arithmetic:
+      damage is authored per threat and the assists scale it.
+
+      ⚠️ **A clamp AFTER the pairings rather than a cap inside `collideIntoOne`.** Only one of the
+      three can land in a step — the first sets `invulnFor` and the rest skip a target that has it —
+      so *what did the ship lose this step* has exactly one answer here, and `src/sim/collide.ts`
+      keeps its monotonicity argument untouched: it still takes the WORST of an overlap set, and this
+      still shrinks as the set does.
+
+      ⚠️ **It reads `< before` rather than recomputing**, so an assist that removes damage entirely
+      (`resilience: proof`) still removes it. What this cannot preserve is `hardy`'s half — a hit is a
+      hit against a one-hit hull — and that rung of the ladder is degenerate until the ladder is
+      re-read. 0024 still holds: it is never HARDER than standard, only no longer softer. 0050 has it
+      written down as owed.
+    */
+    const healthBefore = w.ship.health;
     collideIntoOne(w.enemyShots, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, true);
     // Not consumed: an enemy the player flew into is still there afterwards, or ramming would be the
     // cheapest way to clear the screen.
     collideIntoOne(w.enemies, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
     collideIntoOne(w.bossPool, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
+    if (w.ship.health < healthBefore) w.ship.health = healthBefore - ONE_HIT;
 
     /*
       ⚠️ **At the FULL hurtbox, never the assisted one.** `w.tuning.hurtbox` shrinks the ship's circle
@@ -431,6 +496,12 @@ export class GameFrame implements Frame {
     for (let i = 0; i < w.deaths.count; i++) {
       burst(w, w.deaths.along[i]!, w.deaths.across[i]!, BURST.enemy);
     }
+
+    /*
+      The shell, after every collision that could have spent one and before the death check that
+      could clear them all — so a mark that absorbed a hit is gone on the frame the hit landed.
+    */
+    stepShields(w);
 
     /*
       ⚠️ **Before the death check, so the last thing the HUD shows is zero.** After it, a respawn
@@ -540,6 +611,64 @@ function fireShip(w: World): void {
       sooner than that timer could, on every device, so the timer had become a second mechanism for
       a guarantee that already had one. `src/content/pickups.ts` has what it left behind.
     */
+  }
+}
+
+/**
+ * The shell of shields: as many orbiting marks as the ship has hits above its hull, placed.
+ *
+ * ── WHY THE COUNT IS DERIVED RATHER THAN STORED ─────────────────────────────────────────────────
+ *
+ * ⚠️ **`shieldsOf(row, health)` is the only description of how many shields a ship has**, and this
+ * function owns none of it. A counter kept beside `health` would be a second answer to the same
+ * question, and the collision only ever moves the first one — so the shell would keep a mark the
+ * player had already spent, on exactly the frame they were looking to see whether they had.
+ * `docs/decisions/0050-…` has the argument; `src/content/ships.ts` has the function.
+ *
+ * ⚠️ **A spent shield leaves a burst**, because a mark that simply vanishes is the failure
+ * `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` is named for: the
+ * model resolved *that hit was absorbed* and the picture said nothing.
+ *
+ * ⚠️ **`stepEntities` is deliberately not called on this pool.** These are not bodies with a
+ * velocity — they are a function of where the ship is and how far the camera has come, evaluated
+ * every step — so integration would fight the placement, and the culls have nothing to do: a mark is
+ * never anywhere the ship is not.
+ */
+function stepShields(w: World): void {
+  const want = shieldsOf(w.shipRow, w.ship.health);
+  // Spent, in the order they were taken. A burst where the mark was, then the slot goes back.
+  while (w.shieldOrbs.size > want) {
+    const last = w.shieldOrbs.size - 1;
+    const orb = w.shieldOrbs.at(last);
+    burst(w, orb.along, orb.across, BURST.shield);
+    w.shieldOrbs.releaseAt(last);
+  }
+  while (w.shieldOrbs.size < want) {
+    const orb = w.shieldOrbs.spawn();
+    // A shell one mark short is dropped rather than grown, exactly as a volley is — and it cannot
+    // happen: the pool is `MAX_SHIELDS` long and the pickup refuses a fourth.
+    if (orb === null) break;
+    reset(orb, w.ship.along, w.ship.across, SHIELD_MARK);
+  }
+  /*
+    Placed evenly about the ship, turning with the camera.
+
+    ⚠️ **Evenly about the CURRENT count, so three marks are a triangle and two are opposite each
+    other.** Fixing each mark to a slot of three would leave one shield sitting alone at an arbitrary
+    angle, which reads as a piece having fallen off rather than as a shell.
+  */
+  const count = w.shieldOrbs.size;
+  if (count === 0) return;
+  const base = w.cameraAlong * SHIELD_SPIN;
+  const step = TAU / count;
+  for (let i = 0; i < count; i++) {
+    const orb = w.shieldOrbs.at(i);
+    const angle = base + step * i;
+    // Carried by hand, because nothing else steps this pool — and the renderer interpolates from it.
+    orb.prevAlong = orb.along;
+    orb.prevAcross = orb.across;
+    orb.along = w.ship.along + Math.cos(angle) * SHIELD_ORBIT;
+    orb.across = w.ship.across + Math.sin(angle) * SHIELD_ORBIT;
   }
 }
 
@@ -835,6 +964,13 @@ export function respawn(w: World): void {
   w.enemies.clear();
   w.playerShots.clear();
   w.enemyShots.clear();
+  /*
+    ⚠️ **The shell is cleared HERE rather than left to `stepShields`.** The ship comes back with its
+    hull and nothing else, so the marks would be released anyway — but as three bursts, at the place
+    the new ship is sitting, one step after it arrived. A player who had just lost a life would be
+    shown three shields popping off a ship that never carried them.
+  */
+  w.shieldOrbs.clear();
   reset(w.ship, w.cameraAlong + SHIP_START_ALONG, ACROSS_SPAN / 2, w.shipRow);
   holdStation(w.ship, w.scrollPerStep);
   w.ship.invulnFor = INVULN_STEPS;

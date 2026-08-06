@@ -52,6 +52,17 @@ export const BURST = {
   enemy: 8,
   /** Fragments when the player's ship dies. More, because it is the one death that matters. */
   ship: 16,
+  /**
+   * Fragments when a shield is spent.
+   *
+   * ⚠️ **Fewest of the three, and it exists because a shield popping is an EVENT the model resolves
+   * and the picture would otherwise not mention** —
+   * `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`, which records that
+   * three such events were each reported as a collision bug that did not exist. Without this, the
+   * only sign that a hit was absorbed is one of the orbiting marks no longer being there, on the one
+   * frame the player is least likely to be looking at their own ship.
+   */
+  shield: 5,
   /** World units per step, radially. A spread rather than one value, so a burst is not a ring. */
   speedMin: 0.35,
   speedMax: 1.15,

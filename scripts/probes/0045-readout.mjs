@@ -22,11 +22,19 @@ export const PROBES = [
   },
   {
     decision: '0045',
-    suite: 'tests/hud.browser.test.ts',
-    // ⚠️ THE ONE A SCREENSHOT CANNOT SEE. The readout is drawn correctly once and then never again;
-    // every still image of the game looks exactly right.
+    /*
+      ⚠️ THE ONE A SCREENSHOT CANNOT SEE. The readout is drawn correctly once and then never again;
+      every still image of the game looks exactly right.
+
+      ⚠️ IT MOVED OUT OF THE BROWSER SUITE, AND CI IS WHY. It used to be caught by a test that waited
+      for the ship to lose a pip, and decision 0050 deleted that event: a one-hit hull with no shell
+      is destroyed rather than dented, so the pips no longer move on a hit the player survives. The
+      suite went green with this break in place. The model half of the same contract — does the FRAME
+      say anything when the number moves — is deterministic and lives next door.
+    */
+    suite: 'tests/shields.test.ts',
     broke: 'the readout rendered once and never updated',
-    guard: 'follows the ship down as it takes hits, and shows a spent pip as EMPTY',
+    guard: 'reports a change to the readout exactly when',
     edit: {
       path: 'src/app/frame.ts',
       find: '    if (w.ship.health !== w.shownHealth) {',
@@ -39,7 +47,7 @@ export const PROBES = [
     // Colour carrying the meaning by itself, which is what every other shooter does and what 0024
     // puts in the unconditional tier against.
     broke: 'spent shield shown as a colour change rather than a hollow pip',
-    guard: 'follows the ship down as it takes hits, and shows a spent pip as EMPTY',
+    guard: 'follows the run down as it is spent, and shows a spent pip as EMPTY',
     edit: {
       path: 'src/app/chrome.ts',
       find: "        pips[i]!.classList.toggle('itc-playing-hud-spent', i >= health);",

@@ -44,7 +44,7 @@ function armed(): State {
     BEGIN,
     PLAY,
     { slice: 'run', type: 'took', special: 'bomb' },
-    { slice: 'run', type: 'took', special: 'shield' },
+    { slice: 'run', type: 'took', special: 'mines' },
     { slice: 'run', type: 'upgraded', upgrade: 'rapid' },
     { slice: 'run', type: 'upgraded', upgrade: 'spread' },
   );
@@ -74,7 +74,7 @@ describe('a run is lives', () => {
     // LEVELS, not across deaths. An arsenal that survived a death would make a run monotonic — the
     // ship only ever gets stronger, and the last level is the easiest thing in the game.
     const before = armed();
-    expect(before.run.arsenal, 'the fixture has nothing to lose, so this proves nothing').toEqual(['bomb', 'shield']);
+    expect(before.run.arsenal, 'the fixture has nothing to lose, so this proves nothing').toEqual(['bomb', 'mines']);
     expect(before.run.upgrades, 'the fixture has no upgrades to lose, so this proves half of nothing').toEqual([
       'rapid',
       'spread',
