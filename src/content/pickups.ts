@@ -218,23 +218,25 @@ export const CYCLE: Record<PickupKind, PickupKind> = {
  * `src/content/enemies.ts` makes the same argument for the weave: a shape in the world can be
  * authored against, and a wobble in time cannot.
  *
- * ⚠️ **Long enough to reach, short enough to wait for.** `130 ÷ SCROLL_PER_STEP` is 217 steps, which
- * is **3.6 seconds** — against a pickup that is in view for about nine (`320 ÷ SCROLL_PER_STEP`, the
- * spawn horizon plus the trailing cull). So a player who wants the other face can hold off, and a
- * player who wants either can take whatever is there. Nothing asserts on it.
+ * ⚠️ **Long enough to reach, short enough to wait for.** `112 ÷ SCROLL_PER_STEP` is 187 steps, which
+ * is **3.11 seconds**. So a player who wants the other face can hold off, and a player who wants
+ * either can take whatever is there. Nothing asserts on it.
  *
- * ⚠️ **This comment said *a little over two seconds* and that was wrong**, by three quarters of a
- * face. The number was never checked against the constant it is a duration of — which is the failure
- * `docs/decisions/0027-measure-the-picture-not-the-model.md` names from the other end: a quantity
- * stated in prose is a claim, and a claim about a derived number is owed its arithmetic. The
- * arithmetic is written out above so the next reader can check it rather than believe it.
+ * ⚠️ **112 AND IT WAS 130, WHICH IS THE HALF-SECOND THE PLAY-TEST ASKED FOR.** *"Cycle .5 sec
+ * faster."* 130 units is 3.611s; 0.5 off that is 3.111s, which is 187 steps, which is 112 units. The
+ * arithmetic is written out because a claim about a derived number is owed it — this comment once
+ * said *a little over two seconds* and was wrong by three quarters of a face, and the number had never
+ * been checked against the constant it is a duration of.
+ * `docs/decisions/0027-measure-the-picture-not-the-model.md` from the other end.
  *
- * ⚠️ **It is also about to be tuned rather than corrected.** The second play-test list asks for the
- * cycle *"0.5 sec faster"*, and 3.6 is the baseline that ask is a departure from — not the 2 this
- * line used to claim. `docs/state-of-play.md` has it as the first thing that item checks, and the
- * hand that turns the knob is the one that should turn it.
+ * ⚠️ **The half-second is worth much more than it was**, because a pickup no longer merely passes
+ * through: it holds station in the camera's frame for seven seconds
+ * (`docs/decisions/0064-a-pickup-waits-to-be-taken.md`), so what the faster cycle buys is **two and a
+ * quarter faces while the player is beside it** rather than the third of one they used to get on the
+ * way past. The complaint the ask came from — *"the player is picking up a life or placing themselves
+ * in danger to try and get a shield"* — is answered by the pair rather than by either.
  */
-export const CYCLE_UNITS = 130;
+export const CYCLE_UNITS = 112;
 
 /**
  * Which face a pickup authored as `kind` is showing, at a given camera.
