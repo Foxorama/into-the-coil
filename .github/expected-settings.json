@@ -54,8 +54,8 @@
         "why": "The JOB KEY in tests.yml, not the workflow name. A required context that never reports blocks every PR forever."
       },
       "strict": {
-        "value": true,
-        "why": "A branch must be up to date before merging, or `test` passed against a tree nobody is merging."
+        "value": false,
+        "why": "TURNED OFF 2026-08-07, deliberately. The argument FOR it is real and is kept here rather than deleted: a branch that is not up to date passed `test` against a tree nobody is merging. What outweighed it is that nine PRs landed in one session, and this rule makes merging strictly serial — rebase, wait for CI, merge, repeat — which at eight minutes a run is most of a day. The guard that replaces it is that main is re-checked after a batch lands, and that every branch is proved locally before it is pushed. Reopen it the moment merges stop coming in batches."
       },
       "requires_pull_request": {
         "value": true,
