@@ -65,11 +65,11 @@ and a tier that also moved them would mean that hand had settled one third of a 
 levels wearing one name, and `tests/level.test.ts`'s lane, ordering and pacing guards would then be
 checking one of the three. Density is authored; toughness is a tier.
 
-⚠️ **`toughness` rounds UP and floors at one, and the rounding is where it would break silently.** At
-1.2, a one-health drifter rounds down to 1 and a four-health warden to 4 — nothing changes. At 1.6 the
-drifter still rounds down to 1 while the warden goes to 6, so the commonest enemy in the game is
-unchanged on a tier that doubled the rarest. Rounding up makes *never fewer shots than the tier below*
-true by construction rather than by luck.
+⚠️ **`toughness` rounds UP and floors at one, and the rounding is where it would break silently.**
+Rounding down at 1.6 leaves a one-health drifter at 1 while a four-health warden goes to 6 — so the
+three commonest enemies in the game are unchanged on a tier that has half-again toughened the rest,
+and the tier is mostly not one. Rounding up makes **strictly more hits than the tier below** true by
+construction for any integer health, which is the property the guard now asserts.
 
 ⚠️ **`fireGap` is a GAP and is therefore inverted**, and is named for that. `src/sim/assist.ts` makes
 the same argument for `playerDamage` over `playerToughness`: a field whose direction has to be
