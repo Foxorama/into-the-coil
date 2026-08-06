@@ -116,9 +116,26 @@ the assist ladder — which could not have held it.
 four with challenge"* and *"maybe the end boss of level two"* are the numbers to measure the next
 play-test against, and there are only two levels to do it in.
 
-**3 — More waves, and better spawns.**
+**3 — Where things come from, and where a shot stops.**
 
-Asked for: *"increasing enemy waves, improving the spawns."*
+Asked for: *"increasing enemy waves, improving the spawns"*, and then in more detail after playing —
+entry from the top and bottom of the screen, capped so nothing arrives behind the player; shots that
+stop killing things nobody can see; and movement that is not all straight lines.
+
+⚠️ **One of these is a reported BUG and it is the shot range.** *"In playtesting I didn't even see the
+boss monsters on screen because they died before they even entered the visible play area."* A player
+shot lives `PLAYER_SHOT_LIFE` = 80 steps at 2.6 units a step, so it reaches ~248 units ahead of the
+camera; a 16:9 view is 177.8 wide. Everything in the 70 units between is being shot at and cannot be
+seen — and a boss spends about four seconds there while it closes on its station.
+
+⚠️ **The entry cap is a request with a device problem in it**: *"entry point should be capped at 50%
+from the right side of the screen."* 50% of *which* screen — `alongSpan` runs 150–240 by device
+([0023](decisions/0023-the-long-axis-is-the-scroll-axis.md)). `MAX_ALONG_SPAN / 2` is the only
+answer that keeps the promise on every device, because it is at or beyond the halfway line of every
+view the clamp allows.
+
+The density floor in `tests/level.test.ts` is a **floor**, not a target — it holds ≥ 8 in one
+lookahead, and both levels sit not far above it.
 
 The density floor in `tests/level.test.ts` is a **floor**, not a target — it holds ≥ 8 in one
 lookahead, and both levels sit not far above it.
@@ -136,16 +153,70 @@ Pool headroom is the other constraint: the pools total exactly
 [0022](decisions/0022-frame-rate-is-a-feature.md)'s 500-entity worst case, so more enemies on screen
 at once is a budget question and not only an authoring one — see `CAPACITY` in `src/app/mount.ts`.
 
-**4 — The arsenal: specials, and what a trigger spends.**
+Also asked for and belonging here: **pickups should drift rather than run on a rail**, and **enemy
+paths should not all be static**. The weave already exists and is a parameter rather than a kind
+(`src/content/enemies.ts` says why, and names the trigger for a motion union: *something that turns
+towards the player, or stops*). Anything that enters from an `across` edge and then turns down-lane
+is that trigger arriving.
 
-`src/content/specials.ts` has the union and the rows; nothing fires one. The input half has existed
-since [0030](decisions/0030-input-is-actions-and-needs-no-new-layer.md) — `SPECIAL_BINDINGS` and
-`Intent.specials` — and nothing consumes it either. The run slice already carries the arsenal as a
-list, so this adds behaviour to a shape rather than changing one.
+**4 — The ship is one hit, and it carries shields, missiles and bombs.**
 
-⚠️ **What is open is the content, not the architecture.** *A list not a slot, one trigger per owned
-weapon, each on its own cooldown* is decided in `docs/game.md`; which specials exist and what they do
-is a product question the player has kept.
+⚠️ **Asked for as one list on 2026-08-06, and it is four changes that only make sense together** —
+the ship becoming fragile is what the other three exist to answer. Written out here in the player's
+own terms so a later session does not have to reconstruct the ask; every number in it is a starting
+point, not a decision.
+
+*The ship.* **One hit destroys it.** That alone is most of the difficulty rise the tiers were sized
+against, so [0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md)'s two
+harder tiers want re-reading once it lands. `SHIPS.proof.health` is 5 today and the HUD's shield pips
+are that number; the pips become the shield count instead.
+
+*Shields.* **A pickup, capped at 3.** Each absorbs one hit and is destroyed; an enemy or an enemy
+effect that meets a shield never reaches the hull. Drawn as 1–3 marks orbiting the ship, spaced
+equally. ⚠️ There is already a `shield` in `src/content/specials.ts` and
+[0045](decisions/0045-the-player-can-see-what-they-are-carrying.md) settled which name wins if both
+exist: *"it is the SPECIAL that gets renamed."*
+
+*Missiles — a second auto-weapon.* Slower than the pulse, **3× its damage**, fired from launchers on
+the ship. The base ship has one, at the middle; the first upgrade adds one on the `across`-minus
+side and the second on the `across`-plus side, and those two pop out before they straighten. Auto,
+never triggered — [0030](decisions/0030-input-is-actions-and-needs-no-new-layer.md)'s *"there is no
+`fire` action and there must never be one"* covers every auto-weapon, not just the pulse.
+
+*Cycling pickups.* A pickup on the field **changes what it is every few seconds, and changes its
+sprite with it**, so which one a player gets is a matter of when they reach it:
+
+| the shape on the field | phase A | phase B |
+|---|---|---|
+| rapid | shoot faster | missiles fire faster |
+| spread | another barrel | another missile launcher |
+| extra life | one more try | a shield |
+
+⚠️ The phase has to be a function of the **camera** rather than of wall clock or of each pickup's own
+age, for the reason `src/content/enemies.ts` gives about the weave: a shape in the world can be
+authored against, and a wobble in time cannot. Every cycling pickup on screen then flips together,
+which reads as deliberate.
+
+*Bombs — the first triggered special.* The player starts with **2** and gains one per level cleared.
+A bomb launches forward and detonates a set distance ahead of the ship, doing **6× a pulse's damage**
+in a wide blast — **and the blast hurts the player**, which is the skill in it.
+
+⚠️ **The ask states the bomb's range and blast as fractions of the SCREEN**, and
+[0023](decisions/0023-the-long-axis-is-the-scroll-axis.md) refuses screen-space authoring outright:
+`alongSpan` runs 150–240 by device, so a screen-relative bomb would be a different weapon on a
+21:9 monitor. Author it in world units against the **reference view** (16:9 → 177.8 along), which is
+exactly the stated fraction on the aspect the levels are already authored for, and say so in the row.
+
+*What is already in place.* `src/content/specials.ts` has the union and the rows; the input half has
+existed since 0030 — `SPECIAL_BINDINGS` and `Intent.specials` — and nothing consumes it. The run
+slice carries the arsenal as a list. So the bomb adds behaviour to a shape rather than changing one,
+which is what [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) bought.
+
+⚠️ **Pool headroom is the binding constraint on all of it**, not the authoring:
+`CAPACITY` in `src/app/mount.ts` totals exactly
+[0022](decisions/0022-frame-rate-is-a-feature.md)'s 500-entity worst case. Missiles, shield orbs and
+a bomb's blast each want slots, and `src/content/pickups.ts` already records what happened the last
+time a weapon outran its pool — *"two streams continuous and the others stutter"*.
 
 **5 — The chart, and more levels behind it.**
 
@@ -185,6 +256,15 @@ back-intent switch [0017](decisions/0017-the-state-is-slices.md) still defers, s
 first carries it.
 
 ## Still open, and small
+
+- **A cheat code, for testing the levels nobody can reach.** Asked for alongside the tiers: *"5, 6, 7
+  I'd need to put in a code for invulnerability or something (doesn't currently exist)."* Half of it
+  already does — `src/sim/assist.ts`'s `resilience: 'proof'` is exactly no damage taken, and nothing
+  switches it on. ⚠️ It is an ASSIST, so
+  [0024](decisions/0024-the-accessibility-floor-is-settings.md) already permits it and
+  [0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md) keeps it off the
+  tier axis; what is missing is a way to reach it and a decision about whether a run flown that way
+  may finish.
 
 - **itch**: `BUTLER_API_KEY`, the *played in the browser* flag, and the channel. `docs/scaffold-plan.md`
   has the list; none of it is code.
