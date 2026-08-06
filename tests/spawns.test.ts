@@ -87,18 +87,29 @@ describe('a shot stops where the player can no longer see it', () => {
     world.view = NARROW;
     const frame = new GameFrame(world);
     const full = world.bossRow.health;
-    for (let step = 0; step < 2000; step++) {
+    let firstHit = Number.NaN;
+    for (let step = 0; step < 4000; step++) {
       frame.step();
+      /*
+        ⚠️ **`bossSpawned` and not an empty pool, and the first draft got this wrong in the way that
+        matters.** It broke out on `bossPool.size === 0`, which is true on step ZERO — the boss has
+        not arrived yet — so the loop exited before the frame had done anything and the assertion
+        never ran at all. `npm run prove 0048` reported the probe STILL GREEN, which is the only
+        reason it was noticed: the test passed identically with the bug restored.
+      */
+      if (!world.bossSpawned) continue;
       if (world.bossPool.size === 0) break;
       const boss = world.bossPool.at(0);
       if (boss.health >= full) continue;
       // It has been hit. Its leading edge must be inside the view by now.
-      const ahead = boss.along - boss.radius - world.cameraAlong;
-      expect(ahead, `the boss took a hit ${ahead.toFixed(0)} units out, on a ${NARROW.alongSpan}-unit view`).toBeLessThan(
-        NARROW.alongSpan,
-      );
+      firstHit = boss.along - boss.radius - world.cameraAlong;
       break;
     }
+    expect(Number.isNaN(firstHit), 'the boss was never hit at all, so this measured nothing').toBe(false);
+    expect(
+      firstHit,
+      `the boss took its first hit ${firstHit.toFixed(0)} units out, on a ${NARROW.alongSpan}-unit view`,
+    ).toBeLessThan(NARROW.alongSpan);
   });
 });
 

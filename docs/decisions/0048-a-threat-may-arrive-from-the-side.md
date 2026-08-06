@@ -133,6 +133,16 @@ steer — which is what a player does, and what those tests were always about.
 | the turn tested against a tolerance band rather than against the direction of travel | `turns down-lane and stops exactly where the wave was authored` |
 | a drifting pickup that never turns at the lane edge, so it wanders out and is culled | `but stays inside the lane, so it is never unreachable` |
 
+## The guard that measured nothing
+
+⚠️ **The first version of the boss test broke out of its loop on step zero.** It waited for an empty
+boss pool to mean *the fight is over*, and an empty boss pool on the first step means *the boss has
+not arrived yet*. The assertion never ran, and the test passed identically with the bug restored.
+
+`npm run prove 0048` is the only reason that was noticed — [0005](0005-a-guard-must-be-seen-to-fail.md)
+exactly, and the second decision running to be caught this way. It waits for the boss to be on the
+field now, and fails outright if the boss was never hit.
+
 ## What this does not do
 
 - **No new enemy kinds, and no denser script.** *"More waves"* was asked for in the same breath and is
