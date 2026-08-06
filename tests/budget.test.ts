@@ -34,6 +34,7 @@ import { paintScene } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { sprite } from './bodies.ts';
 import { CAPACITY } from '../src/app/mount.ts';
+import { BURST } from '../src/content/debris.ts';
 import { MAX_SHIELDS } from '../src/content/ships.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -159,6 +160,32 @@ describe('the pools are the worst-case scene, and they add up to it', () => {
         'out of an existing share — the particle share is the one 0022 names as sheddable — or the ' +
         'decision is reopened, and that conversation is WebGL rather than the phone.',
     ).toBeLessThanOrEqual(WORST_CASE);
+  });
+
+  it('leaves room for a whole boss explosion, which is the fullest the debris pool ever gets', () => {
+    /*
+      ⚠️ **The loudest moment in the game is exactly the moment a burst that will not fit is
+      dropped.** `src/sim/pool.ts` drops rather than grows, and 0022 says a dropped particle is the
+      right trade — but a boss coming apart is not a particle, it is the event the level ends on
+      (`docs/decisions/0062-a-boss-dies-loudly.md`), and it is the one place the debris pool is
+      driven at a sustained rate rather than in single bursts.
+
+      The arithmetic: a pulse of `BURST.boss` every `BOSS_PULSE` steps, each fragment living up to
+      `BURST.lifeMax` — so about `boss × lifeMax / pulse` on screen at once, plus one enemy-sized
+      burst from the death itself.
+
+      ⚠️ **`BOSS_PULSE` is not exported and is not restated here.** What is checked is the property
+      at the WORST pulse rate the pool could survive: if the standing population at one pulse per step
+      would overrun the pool, the rate is the only thing standing between the game and a dropped
+      explosion, and that is a number in a file nothing checks. So the assertion is against a rate
+      slow enough to be legible — a pulse every five steps is the fastest a fragment spread of 18–34
+      steps reads as separate — and it fails if either constant moves without the other.
+    */
+    const concurrent = (BURST.boss * BURST.lifeMax) / 5 + BURST.enemy;
+    expect(
+      concurrent,
+      `a boss explosion peaks at about ${Math.round(concurrent)} fragments against a pool of ${CAPACITY.debris}`,
+    ).toBeLessThanOrEqual(CAPACITY.debris);
   });
 
   it('gives the shell exactly as many slots as the ship has shields', () => {

@@ -3,10 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { LEVELS, LEVEL_KINDS, type WaveEntry } from '../src/content/levels.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { FORMATIONS, FORMATION_KINDS } from '../src/content/formations.ts';
+import { BURST } from '../src/content/debris.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { INVULN_STEPS } from '../src/content/ships.ts';
 import { phaseFor } from '../src/app/boss.ts';
-import { GameFrame, SHIP_START_ALONG, respawn } from '../src/app/frame.ts';
+import { GameFrame, SHIP_START_ALONG, resetScene, respawn } from '../src/app/frame.ts';
 import { playableWorld } from './world.ts';
 import { ACROSS_SPAN, MAX_ALONG_SPAN } from '../src/sim/camera.ts';
 import { SCROLL_PER_STEP, SHIP_SPEED } from '../src/sim/flight.ts';
@@ -460,6 +461,120 @@ describe('a boss fight can reach all of its phases', () => {
       // And it stays reported once, however long the frame runs on afterwards.
       for (let i = 0; i < 300; i++) frame.step();
       expect(cleared.count, 'the level kept being cleared, every step, forever').toBe(1);
+    });
+
+    /**
+     * A BOSS DIES LOUDLY, AND THE LEVEL DOES NOT END ON THE SAME STEP.
+     *
+     * `docs/decisions/0062-a-boss-dies-loudly.md`. Reported from play: *"bosses need a real explosion
+     * and an end-of-level beat. Currently the level just ends."*
+     */
+    describe('and it comes apart before the level ends', () => {
+      /** Kill the boss as fast as the fixture can, and stop on the step its pool empties. */
+      function killTheBoss(): { world: ReturnType<typeof playableWorld> } {
+        const built = playableWorld(soloBoss);
+        const frame = new GameFrame(built.world);
+        for (let i = 0; i < 10_800 && (!built.world.bossSpawned || built.world.bossPool.size > 0); i++) {
+          built.world.ship.health = built.world.shipRow.health;
+          if (built.world.bossPool.size > 0) built.world.bossPool.at(0).health = 1;
+          frame.step();
+        }
+        return { world: built };
+      }
+
+      it('does not report the level cleared on the step the boss stops existing', () => {
+        /*
+          ⚠️ **THE REPORTED ONE.** The clear used to fire on the exact step the pool emptied, and the
+          shell answers a clear by raising a screen over the frame — so the loudest event in the game
+          happened behind an overlay, on the frame it started.
+        */
+        const { world: built } = killTheBoss();
+        expect(built.world.bossPool.size, 'the boss is still alive; this measured nothing').toBe(0);
+        expect(built.cleared.count, 'the level ended on the same step the boss did').toBe(0);
+        expect(built.world.clearedIn, 'nothing is happening between the death and the clear').toBeGreaterThan(0);
+      });
+
+      it('scatters fragments over many steps, where the player watched it die', () => {
+        /*
+          ⚠️ **Over MANY STEPS, which is the whole difference between an explosion and a puff.** One
+          burst of any size is over inside half a second and reads exactly like an enemy dying,
+          because it is an enemy dying with a bigger number.
+
+          ⚠️ **And in the CAMERA's frame.** The camera covers about 54 units while the beat plays, so
+          a remembered WORLD position would put the explosion visibly behind where the boss was.
+        */
+        const { world: built } = killTheBoss();
+        const frame = new GameFrame(built.world);
+        // Swept first: the fixture flies into everything and dies repeatedly on the way here, and
+        // what is under test is where the BOSS's fragments go.
+        built.world.debris.clear();
+        const where = built.world.bossOffset;
+        let stepsThatAdded = 0;
+        let furthest = 0;
+        /*
+          ⚠️ **Held immortal through the beat, and by a health nothing can reach rather than by a
+          reset each step.** The boss's last volley is still in the air; a ship put back to one hit
+          every step dies to it every step, and its own burst — 90 units up-lane — is what this
+          measurement then finds. Two explosions wearing one name.
+        */
+        built.world.ship.health = Number.MAX_SAFE_INTEGER;
+        // Bounded: a probe that stops the world for the beat would otherwise hang this loop forever,
+        // and a guard that never returns is not a guard.
+        for (let i = 0; i < 600 && built.world.clearedIn > 0; i++) {
+          const before = built.world.debris.size;
+          frame.step();
+          if (built.world.debris.size > before) stepsThatAdded++;
+          for (let i = 0; i < built.world.debris.size; i++) {
+            const piece = built.world.debris.at(i);
+            const offset = piece.along - built.world.cameraAlong;
+            const away = Math.abs(offset - where);
+            if (away > furthest) furthest = away;
+          }
+        }
+        expect(stepsThatAdded, 'the boss went up in a single puff').toBeGreaterThan(3);
+        /*
+          The hull, plus what a fragment can travel in its own lifetime — **relative to the camera**,
+          which is the frame the player watches it in. A fragment carries no scroll of its own, so it
+          falls back at `SCROLL_PER_STEP` on top of its own speed. Anything beyond this is an
+          explosion the scroll has left behind, which is what a remembered WORLD position produces.
+        */
+        const reach = BOSSES.sentinel.radius * 2 + (BURST.speedMax + SCROLL_PER_STEP) * BURST.lifeMax;
+        expect(furthest, `a fragment was ${furthest.toFixed(0)} units from where the boss died`).toBeLessThan(reach);
+      });
+
+      it('keeps the world running through the beat, so it is not a pause', () => {
+        // ⚠️ The scroll continues, the player still flies, and anything the boss left in the air still
+        // arrives — a player can die in the ninety steps after killing it, which is the arcade answer.
+        const { world: built } = killTheBoss();
+        const frame = new GameFrame(built.world);
+        const camera = built.world.cameraAlong;
+        for (let i = 0; i < 600 && built.world.clearedIn > 0; i++) frame.step();
+        expect(built.world.cameraAlong, 'the world froze for the explosion').toBeGreaterThan(camera);
+        expect(built.cleared.count, 'the level was never cleared at all').toBe(1);
+      });
+
+      it('does not carry the beat into the next level', () => {
+        /*
+          ⚠️ **The one this needs a guard for rather than a comment.** A counter left running across
+          a level boundary reports the NEXT level cleared a second and a half in, with its own boss
+          still ahead of the player — and it would read as a broken run rather than as a stale
+          number. `resetScene` clears it; this is what says so.
+        */
+        const { world: built } = killTheBoss();
+        expect(built.world.clearedIn, 'the beat never started; this measures nothing').toBeGreaterThan(0);
+        resetScene(built.world);
+        built.cleared.count = 0;
+        const frame = new GameFrame(built.world);
+        // Comfortably longer than the beat, and comfortably shorter than killing a fresh boss.
+        for (let i = 0; i < 240; i++) frame.step();
+        expect(built.cleared.count, 'a level cleared itself on the last one’s beat').toBe(0);
+      });
+
+      it('and the beat is long enough to be watched', () => {
+        // In seconds, per 0027. Half a second is a flicker; this is the floor, not the value.
+        const { world: built } = killTheBoss();
+        expect(built.world.clearedIn / STEPS_PER_SECOND, 'the beat is over before it is noticed').toBeGreaterThan(0.75);
+      });
     });
   });
 
