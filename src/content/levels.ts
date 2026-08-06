@@ -271,11 +271,16 @@ const APPROACH: readonly WaveEntry[] = [
 */
 const APPROACH_PICKUPS: readonly PickupEntry[] = [
   /*
-    ⚠️ **THE FIRST THING THE LEVEL OFFERS IS A SHIELD, and it is in the empty opening stretch.**
-    The hull is one hit (0050), so a player who has not yet found the controls is one contact from a
-    life — and `docs/decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md` gave them that
-    stretch precisely so the first thing that happens to them is not a death. It sits off-centre like
-    every other pickup: reaching it is still a decision, made against an empty screen.
+    ⚠️ **THE FIRST THING THE LEVEL OFFERS IS THE SHIELD PAIR, and it is in the empty opening
+    stretch.** The hull is one hit (0050), so a player who has not yet found the controls is one
+    contact from a life — and `docs/decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md`
+    gave them that stretch precisely so the first thing that happens to them is not a death. It sits
+    off-centre like every other pickup: reaching it is still a decision, made against an empty screen.
+
+    ⚠️ **What a player actually gets here is a shield OR an extra life**, because
+    `docs/decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md` made every pickup two
+    things. A level authors the PAIR and the camera picks the face — which amends what 0050 wrote
+    about this line, and does not weaken it: both faces of this pair answer *the ship is one hit*.
   */
   { at: 260, kind: 'shield', lane: 40 },
   { at: 420, kind: 'rapid', lane: 25 },

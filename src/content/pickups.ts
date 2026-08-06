@@ -177,6 +177,61 @@ export const UPGRADE_KINDS = ['rapid', 'spread', 'missileRate', 'missileSpread']
 export type UpgradeKind = (typeof UPGRADE_KINDS)[number];
 
 /**
+ * What each pickup turns into, and back into.
+ *
+ * ── WHY A PICKUP IS TWO THINGS ──────────────────────────────────────────────────────────────────
+ *
+ * Asked for after playing the two-level build: *"a pickup on the field changes what it is every few
+ * seconds, and changes its sprite with it, so which one a player gets is a matter of when they reach
+ * it."* `docs/decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md`.
+ *
+ * ⚠️ **An INVOLUTION over the whole table, not a list of pairs with an exception.** Every kind maps
+ * to exactly one other kind and that mapping is its own inverse, so *what is this pickup right now*
+ * is one lookup rather than a search, and no kind can be left out — `tests/cycling.test.ts` holds
+ * both properties, and the second is what stops a seventh pickup being added with nowhere to go.
+ *
+ * ⚠️ **The pairs are the ones the ask names**, and each is one weapon's upgrade against the other
+ * weapon's: *shoot faster* against *missiles fire faster*, *another barrel* against *another
+ * launcher*, *one more try* against *a shield*. `src/content/sprites.ts` draws each pair as one
+ * silhouette in two fills for exactly this reason — a pickup that alternates has to read as one
+ * object in two states rather than as two objects taking turns.
+ */
+export const CYCLE: Record<PickupKind, PickupKind> = {
+  rapid: 'missileRate',
+  missileRate: 'rapid',
+  spread: 'missileSpread',
+  missileSpread: 'spread',
+  extraLife: 'shield',
+  shield: 'extraLife',
+};
+
+/**
+ * How far the camera travels between one face and the next, in world units.
+ *
+ * ⚠️ **A DISTANCE and not a duration, which is the whole mechanism.** The phase is a function of
+ * where the world is, so every pickup on screen flips on the same step — which reads as deliberate —
+ * and a level plays the same on a machine dropping frames as on one that is not.
+ * `src/content/enemies.ts` makes the same argument for the weave: a shape in the world can be
+ * authored against, and a wobble in time cannot.
+ *
+ * ⚠️ **Long enough to reach, short enough to wait for.** At the scroll rate this is a little over two
+ * seconds, and a pickup is in view for about nine — so a player who wants the other face can hold
+ * off, and a player who wants either can take whatever is there. Nothing asserts on it.
+ */
+export const CYCLE_UNITS = 130;
+
+/**
+ * Which face a pickup authored as `kind` is showing, at a given camera.
+ *
+ * ⚠️ **THE single description of the phase.** The frame writes it onto the entity and the guard reads
+ * it back; a second copy of `floor(camera / units) % 2` anywhere would be the shape of drift
+ * `src/content/sprites.ts` records the cost of.
+ */
+export function faceOf(kind: PickupKind, cameraAlong: number): PickupKind {
+  return Math.floor(cameraAlong / CYCLE_UNITS) % 2 === 0 ? kind : CYCLE[kind];
+}
+
+/**
  * Whether a pickup is one of the upgrades — a real narrowing, so the shell needs no cast.
  *
  * ⚠️ **This replaces `kind === 'rapid' ? 'rapid' : 'spread'` in `src/app/mount.ts`.** That line was

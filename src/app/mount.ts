@@ -23,7 +23,7 @@ import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../content/enemies.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { BOSSES } from '../content/bosses.ts';
-import { PICKUPS, PICKUP_KINDS, isUpgrade, type PickupKind, weaponFor } from '../content/pickups.ts';
+import { CYCLE, PICKUPS, PICKUP_KINDS, isUpgrade, type PickupKind, weaponFor } from '../content/pickups.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS, type DifficultyKind } from '../content/difficulty.ts';
 import { holdStation, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { MAX_SHIELDS, SHIPS, fullHealthFor, shieldsOf } from '../content/ships.ts';
@@ -207,6 +207,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   PICKUP_KINDS.forEach((k, index) => {
     pickupKinds[k] = index;
   });
+  /**
+   * The other face of each pickup, by index — `CYCLE` resolved once so the frame never looks a kind
+   * up by name. Built from the table rather than written out, so a pair added there arrives here.
+   */
+  const pickupCycle = PICKUP_KINDS.map((k) => pickupKinds[CYCLE[k]]);
 
   /** Enemy rows by index, so a per-step lookup in the frame is an array index and not a string key. */
   const enemyRows: readonly EnemyRow[] = ENEMY_KINDS.map((k) => ENEMIES[k]);
@@ -327,6 +332,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     pickups: pickupPool,
     pickupRows,
     pickupKinds,
+    pickupCycle,
+    pickupFlipped: false,
     collected: makeCollected(CAPACITY.pickups),
     // The base weapon, which is what an empty upgrade list resolves to. There is no second
     // description of it anywhere — 0039's "back to the base weapon" is this call with `[]`.

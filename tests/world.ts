@@ -16,7 +16,7 @@ import { DIFFICULTIES, DIFFICULTY_KINDS, type DifficultyKind } from '../src/cont
 import { Pool } from '../src/sim/pool.ts';
 import { type Entity, makeEntity, reset } from '../src/sim/entity.ts';
 import { BOSSES } from '../src/content/bosses.ts';
-import { PICKUPS, PICKUP_KINDS, type PickupKind, type PickupRow, weaponFor } from '../src/content/pickups.ts';
+import { CYCLE, PICKUPS, PICKUP_KINDS, type PickupKind, type PickupRow, weaponFor } from '../src/content/pickups.ts';
 import { makeCollected } from '../src/sim/collide.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../src/content/enemies.ts';
 import type { LevelRow } from '../src/content/levels.ts';
@@ -77,6 +77,8 @@ export function inertLevel(): {
   pickups: Pool<Entity>;
   pickupRows: readonly PickupRow[];
   pickupKinds: Record<PickupKind, number>;
+  pickupCycle: readonly number[];
+  pickupFlipped: boolean;
   collected: ReturnType<typeof makeCollected>;
   onPickup: (kind: PickupKind) => void;
   weapon: ReturnType<typeof weaponFor>;
@@ -107,6 +109,8 @@ export function inertLevel(): {
 
 /** The pickup half of a world, built the way `mount.ts` builds it rather than restated. */
 export function pickupParts(): {
+  pickupCycle: readonly number[];
+  pickupFlipped: boolean;
   nextPickup: number;
   pickups: Pool<Entity>;
   pickupRows: readonly PickupRow[];
@@ -118,6 +122,8 @@ export function pickupParts(): {
     pickupKinds[k] = index;
   });
   return {
+    pickupCycle: PICKUP_KINDS.map((k) => pickupKinds[CYCLE[k]]!),
+    pickupFlipped: false,
     nextPickup: 0,
     pickups: new Pool<Entity>(CAPACITY.pickups, makeEntity),
     pickupRows: PICKUP_KINDS.map((k) => PICKUPS[k]),
