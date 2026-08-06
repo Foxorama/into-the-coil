@@ -106,6 +106,26 @@ because the seam is `src/app/mount.ts` — so the guard is the number on the HUD
 with the button held, which is [0027](0027-measure-the-picture-not-the-model.md)'s rule about
 asserting in units the player experiences.
 
+## The guard that disagreed with itself, and what it was measuring
+
+⚠️ **The browser probe went red locally and `STILL GREEN` on CI**, on the same commit. That is
+[0044](0044-an-intermittent-guard-is-measuring-the-wrong-thing.md)'s situation exactly, and its rule
+is that a rerun is not evidence — establish whether it is a real intermittency in the code or a wrong
+quantity in the guard.
+
+It was the guard. The test waited for `.itc-playing-hud-shown` and then read the bomb count, but that
+class appears **inside the dispatch that raises the screen**, which is at least one animation frame
+before the run's first simulation step. So it read the count before the bomb could have been thrown —
+and passed with the fix removed. CI's slower frame interval widens that window, which is why the
+machine that runs the suite in five minutes is the one that saw it.
+
+**The quantity was wrong, so the quantity is what changed**: the test now waits for *at least one step
+to have run*, and the defect fires on the first. The wait does not need to be accurate — only longer
+than one frame on any machine that renders at all.
+
+⚠️ **Worth naming, because the fix could have been a rerun.** Every other browser probe in the
+repository was red on that same CI run, so "the browser rig is flaky" was available and wrong.
+
 ## What this leaves owed
 
 **Whether `MENU_REVERSE` at 0.6 is right on a worn pad has not been played** — only that a spring

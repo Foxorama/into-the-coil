@@ -165,10 +165,29 @@ describe.runIf(chromePath)('a press belongs to one screen', () => {
     await setPad(page, [0, 0], [MENU_CONFIRM_BUTTONS[0]!]);
     await page.waitForSelector('.itc-playing-hud-shown', { timeout: 10_000 });
 
+    /*
+      ⚠️ **WAITING FOR A STEP, NOT FOR AN ELEMENT — and the first version of this test got that
+      wrong.** `.itc-playing-hud-shown` appears inside the dispatch that raises the screen, which is
+      at least one animation frame BEFORE the run's first simulation step. Reading the count there
+      reads it before the bomb could have been thrown, so the guard passed with the fix removed. It
+      went red locally and STILL GREEN on CI, where the slower frame interval widens the window —
+      `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`, and the answer it
+      demands: the guard was measuring the wrong quantity, so the quantity is what changed.
+
+      ⚠️ **The quantity is "at least one step has run", and the defect fires on the FIRST one.** So
+      the wait does not have to be accurate, only longer than one frame on any machine that renders
+      at all — a second is sixty steps at rate and still several on a runner dropping frames.
+    */
+    await page.waitForTimeout(1000);
+
     // Still down: the run is under way and the thumb has not moved.
     const bombs = '.itc-playing-hud-group[aria-label*="bomb"]';
     await page.waitForSelector(bombs, { timeout: 5_000 });
     const carried = await page.getAttribute(bombs, 'aria-label');
+    expect(
+      await shown(page, '.' + prefixFor('title').slice(0, -1)),
+      'the run never started, so nothing was measured',
+    ).toBe(false);
     await setPad(page, [0, 0], []);
 
     expect(carried, 'the readout does not say how many bombs are carried').toMatch(/\d+ bombs/);
