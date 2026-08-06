@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { type Action, type State, initialState, reduce } from '../src/state/root.ts';
-import { STARTING_LIVES } from '../src/state/slices/run.ts';
+import { DEFAULT_DIFFICULTY, livesFor } from '../src/state/slices/run.ts';
 import { SCREENS } from '../src/state/screens.ts';
 import { LEVEL_KINDS } from '../src/content/levels.ts';
 
@@ -12,7 +12,7 @@ import { LEVEL_KINDS } from '../src/content/levels.ts';
  * no clock. That is the entire value of the layer — `docs/decisions/0015-the-layer-ladder.md` grants
  * `state` no capabilities at all, precisely so this file can exist.
  *
- * ⚠️ **Nothing here asserts on `STARTING_LIVES`.** It is a play-test number, on the same terms
+ * ⚠️ **Nothing here asserts on how many lives a tier grants.** It is a play-test number, on the same terms
  * `src/sim/flight.ts` sets for `SHIP_SPEED` — what these hold are the relationships that must be
  * true at any value. A test pinning it to three would go red the first time a hand moved it, which
  * is the one moment a guard should be silent.
@@ -25,7 +25,10 @@ function play(...actions: Action[]): State {
   return state;
 }
 
-const BEGIN: Action = { slice: 'run', type: 'begin' };
+const BEGIN: Action = { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY };
+
+/** Lives the tier BEGIN picks starts with. Read from the table, never written down here. */
+const STARTING_LIVES_OF_THE_TIER = livesFor(DEFAULT_DIFFICULTY);
 const PLAY: Action = { slice: 'screen', type: 'show', screen: 'playing' };
 const DIE: Action = { slice: 'run', type: 'lifeLost' };
 
@@ -57,13 +60,13 @@ describe('a run is lives', () => {
   });
 
   it('stocks a full complement on begin, whatever that complement is', () => {
-    expect(play(BEGIN).run.lives).toBe(STARTING_LIVES);
+    expect(play(BEGIN).run.lives).toBe(STARTING_LIVES_OF_THE_TIER);
     expect(play(BEGIN).run.level).toBe(0);
   });
 
   it('spends exactly one life per death', () => {
-    expect(play(BEGIN, PLAY, DIE).run.lives).toBe(STARTING_LIVES - 1);
-    expect(play(BEGIN, PLAY, DIE, DIE).run.lives).toBe(STARTING_LIVES - 2);
+    expect(play(BEGIN, PLAY, DIE).run.lives).toBe(STARTING_LIVES_OF_THE_TIER - 1);
+    expect(play(BEGIN, PLAY, DIE, DIE).run.lives).toBe(STARTING_LIVES_OF_THE_TIER - 2);
   });
 
   it('a death clears the arsenal back to base', () => {
@@ -92,14 +95,14 @@ describe('a run is lives', () => {
     // It reads as redundant — nobody flies that ship again. It is what keeps the reducer a function
     // of its arguments rather than of what the shell intends to do next.
     let state = armed();
-    for (let i = 0; i < STARTING_LIVES; i++) state = reduce(state, DIE);
+    for (let i = 0; i < STARTING_LIVES_OF_THE_TIER; i++) state = reduce(state, DIE);
     expect(state.run.lives).toBe(0);
     expect(state.run.arsenal).toEqual([]);
   });
 
   it('the last life ends the run', () => {
     let state = play(BEGIN, PLAY);
-    for (let i = 0; i < STARTING_LIVES - 1; i++) {
+    for (let i = 0; i < STARTING_LIVES_OF_THE_TIER - 1; i++) {
       state = reduce(state, DIE);
       expect(state.screen.current, 'the run ended while lives remained').toBe('playing');
     }
@@ -113,7 +116,7 @@ describe('a run is lives', () => {
     // whether anything did: a negative count would propagate into the save schema and into whatever
     // draws a life counter, silently and far from the line that caused it.
     let state = play(BEGIN, PLAY);
-    for (let i = 0; i < STARTING_LIVES + 5; i++) state = reduce(state, DIE);
+    for (let i = 0; i < STARTING_LIVES_OF_THE_TIER + 5; i++) state = reduce(state, DIE);
     expect(state.run.lives).toBe(0);
   });
 
@@ -129,10 +132,10 @@ describe('a run is lives', () => {
     // 0039: a game over ends the run outright. The betrayal this rules out is a "continue" that
     // quietly hands back the arsenal the death was supposed to have cost.
     let state = armed();
-    for (let i = 0; i < STARTING_LIVES; i++) state = reduce(state, DIE);
+    for (let i = 0; i < STARTING_LIVES_OF_THE_TIER; i++) state = reduce(state, DIE);
     expect(state.screen.current).toBe('gameOver');
     const again = reduce(reduce(state, BEGIN), PLAY);
-    expect(again.run.lives).toBe(STARTING_LIVES);
+    expect(again.run.lives).toBe(STARTING_LIVES_OF_THE_TIER);
     expect(again.run.arsenal).toEqual([]);
     expect(again.screen.current).toBe('playing');
   });

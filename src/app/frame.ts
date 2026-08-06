@@ -41,6 +41,7 @@ import { BURST, DEBRIS } from '../content/debris.ts';
 import { FORMATIONS } from '../content/formations.ts';
 import type { LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
+import { type DifficultyRow, fireGapFor, toughnessFor } from '../content/difficulty.ts';
 import { PICKUP_KINDS, PLAYER_SHOT_LIFE, type PickupKind, type PickupRow, type Weapon } from '../content/pickups.ts';
 import { stepBoss } from './boss.ts';
 import type { Frame } from './loop.ts';
@@ -243,6 +244,28 @@ export interface World {
   enemyKinds: Record<EnemyKind, number>;
   /** What the model's numbers currently are — `docs/decisions/0024-…`'s assists, resolved. */
   tuning: Tuning;
+  /**
+   * How hard this run is, resolved once when it begins.
+   *
+   * ⚠️ **A different axis from `tuning`, and the two must never merge.**
+   * `docs/decisions/0024-the-accessibility-floor-is-settings.md` closes the assist ladder with *no
+   * assist may ever make the game harder*, and `src/sim/assist.ts` proves the whole product of
+   * settings monotone against that. A tier is chosen in order to be harder, so it cannot live there
+   * — `docs/decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md`.
+   *
+   * ⚠️ **Applied at SPAWN, never per step.** Health, closing speed and the fire gap are written onto
+   * the entity when it is put on the field, exactly as its row's numbers are; the only thing this is
+   * read for during a step is the speed of a shot leaving something.
+   */
+  difficulty: DifficultyRow;
+  /**
+   * What the boss on the field started with, after the tier scaled it.
+   *
+   * ⚠️ **Its row's `health` is no longer the answer**, and a phase is a fraction of remaining
+   * health — so a boss with a tier's toughness applied would otherwise open in its final phase and
+   * stay there, which is a completely reasonable-looking fight that is wrong from the first frame.
+   */
+  bossFullHealth: number;
   /** Where devices are read. Sampled exactly once per fixed step — see 0030. */
   input: InputSource;
   /** This step's ask. One instance, overwritten in place; never allocated in a frame. */
@@ -515,7 +538,9 @@ function fireEnemies(w: World): void {
     if (row === undefined || row.fireEvery <= 0) continue;
     e.fireIn--;
     if (e.fireIn > 0) continue;
-    e.fireIn = row.fireEvery;
+    // The tier's gap, not the row's — and recomputed rather than remembered, because two numbers
+    // multiplied is cheaper than a field on every entity in the game that only enemies would use.
+    e.fireIn = fireGapFor(row.fireEvery, w.difficulty);
     const dAlong = ship.along - e.along;
     const dAcross = ship.across - e.across;
     const distance = Math.sqrt(dAlong * dAlong + dAcross * dAcross);
@@ -525,8 +550,11 @@ function fireEnemies(w: World): void {
     const shot = w.enemyShots.spawn();
     if (shot === null) continue;
     reset(shot, e.along, e.across, bullet);
-    shot.velAlong = (dAlong / distance) * bullet.speed + w.scrollPerStep;
-    shot.velAcross = (dAcross / distance) * bullet.speed;
+    // ⚠️ The tier scales the SPEED and not the direction. A harder tier is less time to move, never
+    // a shot that leads the player — `src/content/shots.ts` keeps the dodge in the player's hands.
+    const speed = bullet.speed * w.difficulty.shotSpeed;
+    shot.velAlong = (dAlong / distance) * speed + w.scrollPerStep;
+    shot.velAcross = (dAcross / distance) * speed;
   }
 }
 
@@ -587,10 +615,19 @@ function spawnWave(w: World, index: number): void {
     if (e === null) return;
     const across = wave.lane + formation.acrossOffset(i, wave.count);
     reset(e, along + formation.alongOffset(i, wave.count), across, row, kind);
+    /*
+      THE TIER, applied here and nowhere else for anything that arrives in a wave.
+
+      ⚠️ **After `reset`, which copied the row's own numbers in.** That is the order rather than an
+      afterthought: `reset` is what puts a recycled slot into a known state, and a spawner that
+      scaled the row before handing it over would have to build a scaled row per spawn — an
+      allocation, in the frame, which is the one thing 0022 bans outright.
+    */
+    e.health = toughnessFor(row.health, w.difficulty);
     // ⚠️ NEGATED here rather than stored negative. `closing` is "towards the player" in the table, so a
     // typo produces a slow enemy rather than one that silently flees off the leading edge.
-    e.velAlong = -row.closing;
-    e.fireIn = row.fireEvery;
+    e.velAlong = -row.closing * w.difficulty.closing;
+    e.fireIn = fireGapFor(row.fireEvery, w.difficulty);
   }
 }
 
@@ -642,6 +679,8 @@ function driveBoss(w: World): void {
   w.bossPatrol = stepBoss(
     boss,
     w.bossRow,
+    w.bossFullHealth,
+    w.difficulty,
     w.ship,
     w.enemyShots,
     SHOTS[w.bossRow.shot],
@@ -661,7 +700,11 @@ function spawnBoss(w: World): void {
   const boss = w.bossPool.spawn();
   if (boss === null) return;
   reset(boss, w.level.bossAt, ACROSS_SPAN / 2, w.bossRow);
-  boss.fireIn = w.bossRow.phases[0]!.fireEvery;
+  boss.health = toughnessFor(w.bossRow.health, w.difficulty);
+  // Recorded, because a phase is a fraction of what the boss STARTED with and the row no longer
+  // says what that was. `src/app/boss.ts` takes it as an argument for exactly that reason.
+  w.bossFullHealth = boss.health;
+  boss.fireIn = fireGapFor(w.bossRow.phases[0]!.fireEvery, w.difficulty);
   w.bossPatrol = 1;
 }
 

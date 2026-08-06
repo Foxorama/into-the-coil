@@ -17,6 +17,7 @@
  */
 
 import { GAME_TITLE } from '../brand.ts';
+import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
 
 /** Every screen, in no particular order — nothing indexes this list by position. Closed. */
 export const SCREEN_KINDS = ['title', 'playing', 'gameOver', 'cleared', 'victory'] as const;
@@ -26,6 +27,19 @@ export const SCREEN_KINDS = ['title', 'playing', 'gameOver', 'cleared', 'victory
  * from the table — the incident that argues for deriving is in `src/content/sprites.ts`.
  */
 export type Screen = (typeof SCREEN_KINDS)[number];
+
+/**
+ * One control on a screen.
+ *
+ * ⚠️ **The hint is on the ROW rather than in the chrome that draws it**, for the reason
+ * `src/content/pickups.ts` gives about the title screen's key: a list of explanations living in
+ * `src/app/chrome.ts` is a second description of the content, and the day one changes the other goes
+ * on saying the old thing. Empty for a control that needs none, which is most of them.
+ */
+export interface ScreenAction {
+  label: string;
+  hint: string;
+}
 
 export interface ScreenRow {
   /**
@@ -37,12 +51,14 @@ export interface ScreenRow {
    * What the controls say, in the order they appear. Empty for a screen the player does not act on.
    *
    * ⚠️ **A LIST and not one nullable label, and the reason is the same one `docs/game.md` gives for
-   * the arsenal being a list rather than a slot.** Every screen has exactly one control today; a
-   * screen with a choice on it — which difficulty, which destination on the chart — is a screen this
-   * shape already fits, and `src/app/chrome.ts`'s focus ring is only meaningful over a list.
-   * `docs/decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md`.
+   * the arsenal being a list rather than a slot.** It was written one release before anything
+   * needed it, and the thing that needed it arrived immediately: the title screen is now the
+   * difficulty choice —
+   * `docs/decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md`.
+   * `docs/decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md` has the focus ring that
+   * makes a list navigable at all.
    */
-  actions: readonly string[];
+  actions: readonly ScreenAction[];
   /**
    * Whether the simulation steps while this screen is up.
    *
@@ -88,7 +104,23 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   // ⚠️ The heading is `GAME_TITLE`, never a literal — `docs/decisions/0002-brand-identity-contract.md`
   // puts every user-facing spelling of the name in `src/brand.ts`, and this is the first screen in
   // the game that says it out loud.
-  title: { heading: GAME_TITLE, actions: ['Start'], steps: false, timeout: null },
+  /*
+   * ⚠️ **"Start" is gone, and the three tiers are in its place.** A run cannot begin without a
+   * difficulty, so a screen that started one without asking would be choosing for the player — and
+   * `docs/decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md` says a tier is a
+   * property of the run rather than a setting to be found later.
+   *
+   * ⚠️ **Built by walking `DIFFICULTY_KINDS`, so the buttons ARE the table.** A tier added to
+   * `src/content/difficulty.ts` appears here without anybody remembering to come and add it — the
+   * same argument `src/app/chrome.ts` makes for the pickup key being walked rather than listed, and
+   * the order is the table's order, which is easiest first.
+   */
+  title: {
+    heading: GAME_TITLE,
+    actions: DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })),
+    steps: false,
+    timeout: null,
+  },
   playing: { heading: '', actions: [], steps: true, timeout: null },
   /**
    * ⚠️ **No score, no summary, no coaching.** `docs/game.md`: *players are assumed to be adaptable;
@@ -109,7 +141,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    */
   gameOver: {
     heading: 'Run over',
-    actions: ['Again'],
+    actions: [{ label: 'Again', hint: '' }],
     steps: false,
     timeout: { steps: 7 * STEPS_PER_SECOND, then: 'title' },
   },
@@ -122,7 +154,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    * levels, and a button is what a straight line looks like —
    * `docs/decisions/0042-a-run-is-a-sequence-of-levels.md`.
    */
-  cleared: { heading: 'Level clear', actions: ['Onward'], steps: false, timeout: null },
+  cleared: { heading: 'Level clear', actions: [{ label: 'Onward', hint: '' }], steps: false, timeout: null },
   /**
    * Every level in the run is behind the player.
    *
@@ -131,5 +163,5 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    * final boss at the end of a run; two of them exist, so this is the end of what has been authored
    * rather than the end of the game — and the wording says only what is true.
    */
-  victory: { heading: 'Coil cleared', actions: ['Again'], steps: false, timeout: null },
+  victory: { heading: 'Coil cleared', actions: [{ label: 'Again', hint: '' }], steps: false, timeout: null },
 };

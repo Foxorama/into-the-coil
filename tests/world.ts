@@ -12,6 +12,7 @@
  * fixtures whose subject is collision.
  */
 
+import { DIFFICULTIES, DIFFICULTY_KINDS, type DifficultyKind } from '../src/content/difficulty.ts';
 import { Pool } from '../src/sim/pool.ts';
 import { type Entity, makeEntity, reset } from '../src/sim/entity.ts';
 import { BOSSES } from '../src/content/bosses.ts';
@@ -142,7 +143,7 @@ class NullSurface implements Surface {
  *
  * Deaths are counted rather than acted on, and `cleared` records whether the level ever ended.
  */
-export function playableWorld(level: LevelRow): {
+export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFFICULTY_KINDS[0]!): {
   world: World;
   deaths: { count: number };
   cleared: { count: number };
@@ -202,6 +203,8 @@ export function playableWorld(level: LevelRow): {
     },
     intent: makeIntent(SPECIAL_BINDINGS),
     stepping: true,
+    difficulty: DIFFICULTIES[difficulty],
+    bossFullHealth: BOSSES.sentinel.health,
     onIdle: (): void => {},
     onDeath: (): void => {
       deaths.count++;

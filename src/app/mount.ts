@@ -24,6 +24,7 @@ import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../content/
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { BOSSES } from '../content/bosses.ts';
 import { PICKUPS, PICKUP_KINDS, type PickupKind, weaponFor } from '../content/pickups.ts';
+import { DIFFICULTIES, DIFFICULTY_KINDS, type DifficultyKind } from '../content/difficulty.ts';
 import { holdStation, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { SHIPS } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
@@ -299,6 +300,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // settings screen yet to move them, and `tuningFor` is where they will arrive from when there is.
     tuning: tuningFor(DEFAULT_ASSISTS),
     /*
+      The tier, replaced by `startRun` the moment a run begins.
+
+      ⚠️ **The easiest one at boot rather than the state's default**, and the difference matters for
+      exactly one thing: the still field behind the title screen. It is scenery — nothing on it can
+      hurt anybody, because the simulation is not stepping — and scaling scenery by a tier the player
+      has not chosen yet would be the game answering a question before it was asked.
+    */
+    difficulty: DIFFICULTIES[DIFFICULTY_KINDS[0]!],
+    bossFullHealth: bossRow.health,
+    /*
       ⚠️ The KEYBOARD listens on `window`, not on the canvas. A canvas is not focusable, so a keydown
       never reaches it without a `tabindex` and a click first — which would mean the game silently
       ignores every key until the player happens to click on it, and looks broken rather than
@@ -449,7 +460,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
   };
 
-  const startRun = (): void => {
+  const startRun = (difficulty: DifficultyKind): void => {
+    /*
+      ⚠️ **Resolved to a ROW here, once, and the frame never looks a tier up by name.** Same argument
+      `enemyRows` and `pickupRows` make next door: a per-spawn lookup by string key is a cost paid
+      forever to avoid one line at the start of a run.
+    */
+    world.difficulty = DIFFICULTIES[difficulty];
     resetScene(world);
     /*
       ⚠️ **`seedField` is NOT called here, and it used to be.** A random opening field is the right
@@ -463,8 +480,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     // A fresh spawn stream, so run two is run one — the reason `seedField` gives.
     world.rng = makeRng('proof-scene').stream('spawns');
-    // ⚠️ `begin` FIRST, because it resets the level index to zero and `enterLevel` reads it.
-    dispatch({ slice: 'run', type: 'begin' });
+    // ⚠️ `begin` FIRST, because it resets the level index to zero and `enterLevel` reads it. The
+    // tier travels with it: `src/state/slices/run.ts` is where a run's lives come from now.
+    dispatch({ slice: 'run', type: 'begin', difficulty });
     enterLevel();
     dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
   };
@@ -474,13 +492,25 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     that carries anything forward, which is the whole difference between a level ending and a run
     ending — `docs/decisions/0042-a-run-is-a-sequence-of-levels.md`.
   */
-  const chrome = makeChrome(colours, (screen: Screen): void => {
+  /*
+    What a screen's controls do.
+
+    ⚠️ **Only two of the four screens start anything, and that is 0047's doing.** A run cannot begin
+    without a tier, so *Again* on the run-over and victory screens goes back to the TITLE rather than
+    restarting — the title is where the choice is, and a button that silently reused the last tier
+    would be the game deciding for a player who has just watched a run end.
+
+    ⚠️ `cleared` is the only screen that carries anything forward, which is the whole difference
+    between a level ending and a run ending —
+    `docs/decisions/0042-a-run-is-a-sequence-of-levels.md`.
+  */
+  const chrome = makeChrome(colours, (screen: Screen, index: number): void => {
     if (screen === 'cleared') continueRun();
-    else startRun();
+    // `DIFFICULTY_KINDS` IS the order the title screen's buttons were built in
+    // (`src/state/screens.ts` walks it), so the control's index reads straight off it.
+    else if (screen === 'title') startRun(DIFFICULTY_KINDS[index] ?? DIFFICULTY_KINDS[0]!);
+    else dispatch({ slice: 'screen', type: 'show', screen: 'title' });
   });
-  // The control's index is unused today: every screen has exactly one. It is in the signature
-  // because `src/state/screens.ts` made `actions` a list, and a screen with a choice on it is the
-  // next thing that lands on top of that shape.
   for (const element of chrome.elements) host.appendChild(element);
 
   /*
