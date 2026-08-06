@@ -176,15 +176,27 @@ const SPREAD_STEP = 0.13;
 const MAX_BARRELS = 4;
 
 /**
- * Steps a player shot lives before retiring itself.
+ * The most steps a player shot can be in flight, on the widest device there is.
  *
- * ⚠️ **A shot that has left the widest view any device can have is doing nothing.** It used to live
- * until the leading cull at `spawnAlong + EDGE_MARGIN`, which is 80 units beyond the furthest edge
- * of the furthest screen — so a third of every bullet's life was spent killing things nobody could
- * see, and occupying the pool slot the next volley needed.
+ * ── THIS USED TO BE A LIFETIME ON THE SHOT, AND `npm run prove` IS WHY IT IS NOT ────────────────
  *
- * `(MAX_ALONG_SPAN − 40) / pulse speed` is 77 steps, where 40 is where the ship flies. Rounded up,
- * because a shot vanishing exactly at the edge on the widest device is a shot vanishing visibly.
+ * ⚠️ **It was a real mechanism and it stopped being one.** A shot used to retire itself after 80
+ * steps, because otherwise it ran to the leading cull — 80 units beyond the furthest edge of the
+ * furthest screen — and held the pool slot the next volley needed
+ * (`docs/decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md`).
+ *
+ * `docs/decisions/0048-a-threat-may-arrive-from-the-side.md` then culled player shots at the edge of
+ * the view the player is actually looking at, which is **at most 240 units ahead of the camera** —
+ * strictly tighter than the 251 the lifetime allowed, on every device the clamp permits. So the
+ * lifetime could no longer fire, and its probe went STILL GREEN: the guard over it had become
+ * unfalsifiable while reading as thorough.
+ *
+ * ⚠️ **The rule is `src/app/mount.ts`'s, learned there over the orientation gate: one guarantee, one
+ * mechanism.** A redundant safety net does not make a system safer — it makes the real mechanism
+ * untestable, and an untested mechanism is the one that gets refactored away. So the lifetime is
+ * gone and this is the number that remains: what the pool arithmetic is checked against.
+ *
+ * `(MAX_ALONG_SPAN − SHIP_START_ALONG) / pulse speed` — 77 steps, rounded up.
  */
 export const PLAYER_SHOT_LIFE = 80;
 

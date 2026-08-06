@@ -49,7 +49,7 @@ import { FORMATIONS } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
 import { type DifficultyRow, fireGapFor, toughnessFor } from '../content/difficulty.ts';
-import { PICKUP_KINDS, PLAYER_SHOT_LIFE, type PickupKind, type PickupRow, type Weapon } from '../content/pickups.ts';
+import { PICKUP_KINDS, type PickupKind, type PickupRow, type Weapon } from '../content/pickups.ts';
 import { stepBoss } from './boss.ts';
 import type { Frame } from './loop.ts';
 
@@ -533,12 +533,13 @@ function fireShip(w: World): void {
     // Weight, once barrels and rate have nowhere left to go — `src/content/pickups.ts`.
     shot.damage = w.weapon.damage;
     /*
-      ⚠️ **A lifetime, so a volley cannot outlive the screen and starve the next one.** Without it a
-      shot runs to the leading cull, eighty units beyond the furthest edge of the widest device, and
-      at a full loadout the pool stays full — which truncates every volley from the back and is
-      exactly the *"two streams continuous and the others stutter"* that play reported.
+      ⚠️ **No lifetime, and there used to be one.** A volley that outlives the screen starves the
+      next one — *"two streams continuous and the others stutter"* is how play reported it — and the
+      answer was an 80-step timer on every bullet. The view cull
+      (`docs/decisions/0048-a-threat-may-arrive-from-the-side.md`) now retires a shot strictly
+      sooner than that timer could, on every device, so the timer had become a second mechanism for
+      a guarantee that already had one. `src/content/pickups.ts` has what it left behind.
     */
-    shot.lifeFor = PLAYER_SHOT_LIFE;
   }
 }
 

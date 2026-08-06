@@ -44,9 +44,24 @@ the dark to keep a 21:9 player's range honest.
 a wider screen also *sees* further, `across` — the difficulty axis — is a fixed 100 on every device,
 and the clamp bounds the whole range to 150–240.
 
-`PLAYER_SHOT_LIFE` stays, as a pool-safety backstop rather than as the range limit. It now retires
-strictly fewer shots than the cull does, which is headroom rather than a second mechanism: the pool
-arithmetic in `src/content/pickups.ts` was sized against the lifetime and is now conservative.
+### And the shot's own lifetime is gone
+
+⚠️ **`PLAYER_SHOT_LIFE` was a real mechanism and this decision stopped it being one.** A shot used to
+retire itself after 80 steps, because otherwise it ran to the leading cull and held the pool slot the
+next volley needed ([0043](0043-a-weapon-is-a-budget-and-a-level-opens-empty.md), reported from play
+as *"two streams continuous and the others stutter"*). The view cull retires a shot **at most 240
+units out** against the lifetime's 251 — strictly sooner, on every device the clamp allows.
+
+The first draft of this decision kept the timer and called it *"a backstop, which is headroom rather
+than a second mechanism."* `npm run prove` disagreed: 0043's probe lengthened the lifetime to 200 and
+the suite stayed **green**, because the cull had taken over. The guard had become unfalsifiable while
+reading as thorough.
+
+⚠️ **That is `src/app/mount.ts`'s rule, learned there over the orientation gate: one guarantee, one
+mechanism.** A redundant safety net does not make a system safer — it makes the real mechanism
+untestable, and an untested mechanism is the one that gets refactored away. So the timer is deleted,
+0043's probe now breaks the cull instead, and `PLAYER_SHOT_LIFE` survives only as the number the pool
+arithmetic in `src/content/pickups.ts` is checked against.
 
 ## Entry from the side, and the cap
 
