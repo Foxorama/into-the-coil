@@ -41,6 +41,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
 | **a death takes the ship, and the level carries on** | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
+| **a level boundary keeps the shell; a death and a new run do not** | [0058](decisions/0058-a-level-boundary-keeps-the-shell.md) |
 | **a boss's station drifts, so a fight is still flight** | [0061](decisions/0061-a-boss-keeps-flying.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
@@ -118,11 +119,17 @@ it did **not** answer.
 - **Does a run that survives a level boundary feel like one run?** Six minutes is longer than
   anything here has been played end to end.
 
-## The second play-test list, given 2026-08-06
+## The second play-test list, given 2026-08-06 and added to on 2026-08-07
 
-**Twelve items, in the player's words, after playing the build that item 4 below produced.** Four have
-landed; **eight have not been started**, and they are written out here rather than left in a chat
-log — [0029](decisions/0029-the-tracked-record-is-the-record.md).
+**Fourteen items, in the player's words** — twelve after playing the build that item 4 below produced,
+and two more the morning after. Five have landed; **nine have not been started**, and they are written
+out here rather than left in a chat log — [0029](decisions/0029-the-tracked-record-is-the-record.md).
+
+⚠️ **They are asked for as ONE list and cannot be judged apart.** *"Individually they can't be judged
+because they all affect the gameplay and game balance… something might feel right by itself in
+isolation and then completely fail when you mix something else in."* So each lands as its own change
+with its own guards, and **the verdict on all of them is one play-test after the last one lands** —
+not a report per item.
 
 ⚠️ **Nothing below has been played since these landed.** Four of them change what a run feels like on
 the first ten seconds, and one of them ([0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md))
@@ -135,6 +142,7 @@ makes a death cost more in the same session as a report that dying is already to
 | the jerky flick, and the bomb that fires itself on starting a run | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the missile tube the ship should not start with; pickups too small to grab | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
 | a death that emptied the screen | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
+| shields lost at every level boundary | [0058](decisions/0058-a-level-boundary-keeps-the-shell.md) |
 
 **Not started, in the player's own words.** Each is a real design question, not a tidy-up:
 
@@ -168,6 +176,12 @@ makes a death cost more in the same session as a report that dying is already to
    [0025](decisions/0025-the-frame-budget-is-counted-not-timed.md): counted draw calls, nothing
    allocating in the frame loop, and `CAPACITY` in `src/app/mount.ts` is already at 0022's 500-entity
    worst case — so a starfield is not entities.
+8. **A bomb cannot be fired twice on a phone.** *"How do you fire bombs on mobile? I can do one and
+   then can't fire any more."* ⚠️ The tap strip is `SPECIAL_BINDINGS` bands wide whatever the ship
+   owns, so half of it is bound to a special nobody has — and nothing draws it, so where the other
+   half is is a guess. `src/app/touch.ts`.
+9. **✅ DONE — shields did not carry between levels.**
+   [0058](decisions/0058-a-level-boundary-keeps-the-shell.md).
 
 ## What was next before that list, and why in this order
 
