@@ -63,6 +63,13 @@ import { runLoop } from './loop.ts';
  * end of a life (0050). So the three come out of `debris`, the total stays at exactly 500, and
  * nothing about the frame budget moves.
  *
+ * ⚠️ **`missiles` is 24 slots and they come out of the particle share too**, on the same terms and
+ * for the same reason: a second weapon is not a cosmetic. The arithmetic is
+ * `launchers × flight ÷ missileEvery` — three tubes, about 130 steps in flight on the widest view,
+ * a floor of 20 steps between volleys — which is 20 in the air at once, against 24.
+ * `src/content/pickups.ts` has the same sum written out for the pulse, and `tests/pickups.test.ts`
+ * drives the strongest loadout there is and fails if either pool fills.
+ *
  * ⚠️ **`tests/budget.test.ts` now holds that sum, which nothing did before.** The 500 was written in
  * a comment here and asserted nowhere, so the next pool would have been added by arithmetic done in
  * somebody's head — and `docs/state-of-play.md` says the arsenal wants slots for missiles, orbs and a
@@ -76,8 +83,9 @@ export const CAPACITY = {
   shieldOrbs: MAX_SHIELDS,
   enemies: 40,
   playerShots: 100,
+  missiles: 24,
   enemyShots: 150,
-  debris: 200 - MAX_SHIELDS,
+  debris: 200 - MAX_SHIELDS - 24,
   boss: 1,
   pickups: 8,
 };
@@ -187,6 +195,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const shieldOrbs = new Pool<Entity>(CAPACITY.shieldOrbs, makeEntity);
   const enemies = new Pool<Entity>(CAPACITY.enemies, makeEntity);
   const playerShots = new Pool<Entity>(CAPACITY.playerShots, makeEntity);
+  const missiles = new Pool<Entity>(CAPACITY.missiles, makeEntity);
   const enemyShots = new Pool<Entity>(CAPACITY.enemyShots, makeEntity);
   const debris = new Pool<Entity>(CAPACITY.debris, makeEntity);
   const bossPool = new Pool<Entity>(CAPACITY.boss, makeEntity);
@@ -279,11 +288,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // behind the thing they are flying towards.
     // The shell sits directly under the ship: the marks are the ship's, so nothing may come
     // between them, and a bullet passing over one has visibly passed over it.
-    layers: [debris, pickupPool, bossPool, enemies, enemyShots, playerShots, shieldOrbs, shipPool],
+    // Missiles sit directly above the pulses: they are the heavier stream and the one the player is
+    // meant to be able to pick out of a screen full of the lighter one.
+    layers: [debris, pickupPool, bossPool, enemies, enemyShots, playerShots, missiles, shieldOrbs, shipPool],
     shipPool,
     shieldOrbs,
     enemies,
     playerShots,
+    missiles,
     enemyShots,
     debris,
     deaths: makeDeaths(CAPACITY.enemies),
@@ -299,6 +311,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
     fireIn: shipRow.fireEvery,
+    missileIn: shipRow.missileEvery,
     ship,
     shipRow,
     enemyRows,

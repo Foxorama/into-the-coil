@@ -27,7 +27,7 @@ import type { Body } from '../sim/entity.ts';
 import { SPRITE } from './sprites.ts';
 
 /** Every shot in the game. Closed. */
-export type ShotKind = 'pulse' | 'spit';
+export type ShotKind = 'pulse' | 'spit' | 'missile';
 
 export interface ShotRow extends Body {
   /**
@@ -50,7 +50,7 @@ export interface ShotRow extends Body {
 }
 
 /** Written out rather than derived, so the table below cannot quietly lose a row. */
-export const SHOT_KINDS: readonly ShotKind[] = ['pulse', 'spit'];
+export const SHOT_KINDS: readonly ShotKind[] = ['pulse', 'spit', 'missile'];
 
 export const SHOTS: Record<ShotKind, ShotRow> = {
   /**
@@ -65,4 +65,21 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * dodgeable rather than a coin flip: a player who reacts can always leave the line it is on.
    */
   spit: { sprite: SPRITE.bullet, spriteHit: SPRITE.bullet, radius: 0.9, health: 1, damage: 1, speed: 1.4 },
+  /**
+   * The player's second auto-weapon: slower than the pulse, and worth three of it.
+   *
+   * Asked for after playing the two-level build: *"missiles — a second auto-weapon, slower than the
+   * pulse, 3x its damage, fired from launchers on the ship."*
+   *
+   * ⚠️ **The DAMAGE is a ratio and the SPEED is not, and that asymmetry is the rule this file opens
+   * with.** *Three times the pulse* is what was asked for and it is a relationship between two of the
+   * player's own weapons — `tests/combat.test.ts` holds it as a ratio, so tuning the pulse moves the
+   * missile with it. A speed written as a ratio would be the banned kind: what makes a threat
+   * dodgeable is measured against the ship, and 0034 keeps every speed absolute for exactly that
+   * reason. 1.5 is slower than the pulse's 2.6 and that is the whole of what the ask says about it.
+   *
+   * ⚠️ **Bigger radius than the pulse**, because a heavier shot that misses by the same margin as a
+   * light one is a shot the player cannot aim differently. It stays well under the smallest enemy.
+   */
+  missile: { sprite: SPRITE.missile, spriteHit: SPRITE.missile, radius: 1.3, health: 1, damage: 3, speed: 1.5 },
 };

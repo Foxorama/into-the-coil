@@ -28,6 +28,17 @@ export interface ShipRow extends Body {
   fireEvery: number;
   /** The base weapon. */
   shot: ShotKind;
+  /**
+   * The second auto-weapon, and the steps between its volleys.
+   *
+   * ⚠️ **On the ROW beside the first, because `docs/game.md` says the ship owns its base weapon** —
+   * and a missile is a base weapon rather than an arsenal entry: it fires itself, it needs no input,
+   * and `src/content/actions.ts`'s *there is no `fire` action and there must never be one* covers
+   * every auto-weapon rather than only the pulse. A second ship that carries a different missile, or
+   * none at all, is a table edit.
+   */
+  missile: ShotKind;
+  missileEvery: number;
 }
 
 /** Written out rather than derived, so the table below cannot quietly lose a row. */
@@ -56,6 +67,15 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     damage: 0,
     fireEvery: 9,
     shot: 'pulse',
+    /*
+      ⚠️ **Five times the gap between pulses, and it is what makes the two weapons different.** A
+      missile worth three pulses fired at the pulse's own rate would simply BE the weapon, and the
+      pulse would be decoration; the ask says *slower*, and the number a hand settles is how much.
+      Nothing asserts on it — `tests/pickups.test.ts` holds the pool arithmetic it feeds, which must
+      hold at any value.
+    */
+    missile: 'missile',
+    missileEvery: 45,
   },
 };
 

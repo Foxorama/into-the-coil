@@ -92,6 +92,34 @@ const FLANK_ENTRY_SPEED = 0.9;
 const PICKUP_DRIFT = 0.22;
 
 /**
+ * How far off the ship's centreline the side launchers sit, in world units.
+ *
+ * The hull is 7 units across, so this is inside it: the tubes are ON the ship rather than beside it.
+ */
+const LAUNCHER_ACROSS = 1.8;
+
+/**
+ * How far a side launcher's missile drifts out before it straightens, in world units from the ship.
+ *
+ * Asked for in the ask itself: *"those two pop out before they straighten."*
+ *
+ * ⚠️ **Wider than the hull and narrower than a dodge.** It has to clear the ship — a missile that
+ * straightened while still over the hull would look like it had come out of the middle after all —
+ * without becoming a spread weapon: the fan is the pulse's job, and a missile that covered the lane
+ * would make position stop mattering.
+ */
+const LAUNCHER_POP = 5.5;
+
+/**
+ * How fast a side missile pops out, in world units per step.
+ *
+ * ⚠️ It is the same shape as the flanker's entry, and it is deliberately quick: the pop is a piece of
+ * punctuation on the firing, not a manoeuvre the player waits through. At 0.55 it is done in ten
+ * steps, about a sixth of a second.
+ */
+const LAUNCHER_POP_SPEED = 0.55;
+
+/**
  * What one landing costs the ship, in health.
  *
  * ⚠️ **The unit the ship's health is counted in, stated once.** The hull is one of these and every
@@ -188,6 +216,17 @@ export interface World {
   enemies: Pool<Entity>;
   /** What the player fired. Separate from `enemyShots` because the PAIRING is the collision guard. */
   playerShots: Pool<Entity>;
+  /**
+   * The player's missiles.
+   *
+   * ⚠️ **A pool of their own rather than more `playerShots`, and the reason is exhaustion rather
+   * than collision.** They meet exactly the same two pools the pulses do, so a shared pool would
+   * cost one pairing fewer — and a full volley of pulses would then starve the missiles, which is
+   * precisely the failure `src/content/pickups.ts` records reaching play as *"two streams
+   * continuous and the others stutter"*. A weapon with its own budget cannot be crowded out by the
+   * other one.
+   */
+  missiles: Pool<Entity>;
   enemyShots: Pool<Entity>;
   /**
    * Fragments. In no collision pairing, which is what makes them cosmetic in fact.
@@ -300,6 +339,8 @@ export interface World {
   onCleared: () => void;
   /** Steps until the ship's auto-fire goes again. */
   fireIn: number;
+  /** Steps until the ship's missiles go again. Their own clock, because their own cadence. */
+  missileIn: number;
   /** The player's ship. Held live in its pool; this is the same object. */
   ship: Entity;
   /** What the ship is, so a respawn restores it without a second description of its numbers. */
@@ -415,6 +456,8 @@ export class GameFrame implements Frame {
     flyShip(w.ship, w.intent, w.cameraAlong, w.scrollPerStep);
 
     fireShip(w);
+    fireMissiles(w);
+    steerMissiles(w);
     steerEnemies(w);
     driftPickups(w);
     fireEnemies(w);
@@ -430,6 +473,9 @@ export class GameFrame implements Frame {
     // ⚠️ The one pool with its own leading cull, and it is the player's REACH rather than content —
     // `src/sim/camera.ts` has the play report that argues it.
     stepEntities(w.playerShots, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
+    // The same cull as the pulses: a missile is the player's reach too, and *you can shoot what you
+    // can see* is one promise rather than one per weapon — 0048.
+    stepEntities(w.missiles, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
     stepEntities(w.enemyShots, w.cameraAlong);
     stepEntities(w.debris, w.cameraAlong);
 
@@ -444,10 +490,12 @@ export class GameFrame implements Frame {
     */
     w.deaths.count = 0;
     collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
+    collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
     // The boss is its own pairing rather than another enemy, and the reason is the pool: it is the
     // only body in the game that must survive a hundred and fifty hits, so it cannot share a pool
     // with things that are released after one.
     collideInto(w.playerShots, w.bossPool, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
+    collideInto(w.missiles, w.bossPool, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
     /*
       ⚠️ **THE SHIP TAKES HITS, NOT DAMAGE, and this is where a number becomes a count.** Its health
       is the hull plus the shell (`src/content/ships.ts`), and a shield is what absorbs **one hit** —
@@ -611,6 +659,64 @@ function fireShip(w: World): void {
       sooner than that timer could, on every device, so the timer had become a second mechanism for
       a guarantee that already had one. `src/content/pickups.ts` has what it left behind.
     */
+  }
+}
+
+/**
+ * The player's missiles: one per launcher, on their own clock.
+ *
+ * ⚠️ **No input is read here either.** `src/content/actions.ts`'s *there is no `fire` action and
+ * there must never be one* is about every auto-weapon rather than about the pulse in particular, and
+ * this is the second one. What the player spends is the arsenal.
+ *
+ * ⚠️ **The launchers are POSITIONS, and the middle one is the ship's own.** One launcher fires from
+ * the centreline; the second and third sit either side of it and their missiles pop out before they
+ * straighten. That order — centre, minus, plus — is the order the ask gives, and it means a player
+ * who has taken one launcher upgrade can see WHICH side it went on.
+ */
+function fireMissiles(w: World): void {
+  w.missileIn--;
+  if (w.missileIn > 0) return;
+  w.missileIn = w.weapon.missileEvery;
+  const row = SHOTS[w.shipRow.missile];
+  for (let i = 0; i < w.weapon.launchers; i++) {
+    const missile = w.missiles.spawn();
+    // A volley one tube short is dropped rather than grown — `src/sim/pool.ts` has the argument.
+    if (missile === null) return;
+    // 0 → the centreline; 1 → the acrossMinus side; 2 → the acrossPlus side.
+    const side = i === 0 ? 0 : i === 1 ? -1 : 1;
+    reset(missile, w.ship.along + MUZZLE_ALONG, w.ship.across + LAUNCHER_ACROSS * side, row);
+    missile.velAlong = row.speed + w.scrollPerStep;
+    missile.damage = w.weapon.missileDamage;
+    /*
+      The pop, as a crossing that stops — the flanker's mechanism exactly, and `steerMissiles` is
+      where it ends. A centre missile never crosses, so its `velAcross` stays zero and it costs the
+      steering loop nothing at all: `src/sim/entity.ts` says why *not crossing* is a velocity rather
+      than a sentinel.
+    */
+    if (side !== 0) {
+      missile.velAcross = LAUNCHER_POP_SPEED * side;
+      missile.steerAcross = w.ship.across + LAUNCHER_POP * side;
+    }
+  }
+}
+
+/**
+ * The side missiles, straightening once they have popped clear of the hull.
+ *
+ * ⚠️ **The comparison is against the direction of travel, not against a distance** — the same
+ * argument `steerEnemies` makes for the flanker's turn: a body crossing at half a unit a step will
+ * step OVER any tolerance band you pick, so *close enough to the target* misses at one speed and
+ * holds at another, and *have I passed it* cannot.
+ */
+function steerMissiles(w: World): void {
+  for (let i = w.missiles.size - 1; i >= 0; i--) {
+    const m = w.missiles.at(i);
+    if (m.velAcross === 0) continue;
+    if (m.velAcross > 0 ? m.across >= m.steerAcross : m.across <= m.steerAcross) {
+      m.across = m.steerAcross;
+      m.velAcross = 0;
+    }
   }
 }
 
@@ -963,6 +1069,7 @@ function spawnBoss(w: World): void {
 export function respawn(w: World): void {
   w.enemies.clear();
   w.playerShots.clear();
+  w.missiles.clear();
   w.enemyShots.clear();
   /*
     ⚠️ **The shell is cleared HERE rather than left to `stepShields`.** The ship comes back with its
@@ -981,6 +1088,7 @@ export function respawn(w: World): void {
     would turn one mistake into a stretch with no way back out of it.
   */
   w.fireIn = w.weapon.fireEvery;
+  w.missileIn = w.weapon.missileEvery;
 }
 
 /**

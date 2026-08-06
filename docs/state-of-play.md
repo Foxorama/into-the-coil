@@ -36,6 +36,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **a threat may arrive from the side; a shot stops at the edge** | [0048](decisions/0048-a-threat-may-arrive-from-the-side.md) |
 | **the chrome is authored against the short axis** | [0049](decisions/0049-the-chrome-is-authored-against-the-short-axis.md) |
 | **the ship is one hit; a shield is what stands in front of it** | [0050](decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md) |
+| **a missile is the second auto-weapon; a launcher is a place on the ship** | [0051](decisions/0051-a-missile-is-the-second-auto-weapon.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -161,18 +162,15 @@ the ship becoming fragile is what the other three exist to answer. Written out h
 own terms so a later session does not have to reconstruct the ask; every number in it is a starting
 point, not a decision.
 
-**The first two have landed** —
-[0050](decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md). The hull
-is one hit, a shield is a pickup capped at three, the HUD's pips are the shell, and the ship wears a
-ring per shield. The special that was called `shield` is now `mines`, which is what 0045 said would
-happen. What that decision leaves owed is the tiers: 0047's two harder ones were sized against a
-five-health ship and neither has been played since.
+**Three of the four have landed** —
+[0050](decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md) and
+[0051](decisions/0051-a-missile-is-the-second-auto-weapon.md). The hull is one hit, a shield is a
+pickup capped at three, the HUD's pips are the shell, and the ship wears a ring per shield; missiles
+fire themselves from one to three launchers, with two more pickups behind them. The special that was
+called `shield` is now `mines`, which is what 0045 said would happen.
 
-*Missiles — a second auto-weapon.* Slower than the pulse, **3× its damage**, fired from launchers on
-the ship. The base ship has one, at the middle; the first upgrade adds one on the `across`-minus
-side and the second on the `across`-plus side, and those two pop out before they straighten. Auto,
-never triggered — [0030](decisions/0030-input-is-actions-and-needs-no-new-layer.md)'s *"there is no
-`fire` action and there must never be one"* covers every auto-weapon, not just the pulse.
+⚠️ **What 0050 leaves owed is the tiers.** 0047's two harder ones were sized against a five-health
+ship and neither has been played since, and `resilience: hardy` is now a rung that does nothing.
 
 *Cycling pickups.* A pickup on the field **changes what it is every few seconds, and changes its
 sprite with it**, so which one a player gets is a matter of when they reach it:
@@ -187,6 +185,13 @@ sprite with it**, so which one a player gets is a matter of when they reach it:
 age, for the reason `src/content/enemies.ts` gives about the weave: a shape in the world can be
 authored against, and a wobble in time cannot. Every cycling pickup on screen then flips together,
 which reads as deliberate.
+
+⚠️ **All six faces now exist as ordinary pickups**, which is most of what this item needed:
+[0051](decisions/0051-a-missile-is-the-second-auto-weapon.md) added `missileRate` and
+`missileSpread`, and [0050](decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md)
+added `shield`. Each pair is deliberately one silhouette in two fills, so a pickup alternating
+between them reads as one object in two states rather than as two objects taking turns. What is left
+is the alternation itself, the pairing table, and what the title screen's key does with six rows.
 
 *Bombs — the first triggered special.* The player starts with **2** and gains one per level cleared.
 A bomb launches forward and detonates a set distance ahead of the ship, doing **6× a pulse's damage**

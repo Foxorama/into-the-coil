@@ -28,7 +28,7 @@ import { SHOTS } from './shots.ts';
 import { SPRITE } from './sprites.ts';
 
 /** Every pickup in the game. Closed. */
-export const PICKUP_KINDS = ['extraLife', 'rapid', 'spread', 'shield'] as const;
+export const PICKUP_KINDS = ['extraLife', 'rapid', 'spread', 'shield', 'missileRate', 'missileSpread'] as const;
 
 /** Derived from the list, so a pickup cannot exist in the union and be missing from the table. */
 export type PickupKind = (typeof PICKUP_KINDS)[number];
@@ -132,6 +132,35 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     hint: 'One hit absorbed',
     effect: 'shield',
   },
+  /**
+   * The missile half of *shoot faster*.
+   *
+   * ⚠️ **Its own kind rather than a stronger `rapid`**, because the two weapons have separate
+   * cadences and a player who wants more missiles is asking for a different thing from a player who
+   * wants more pulses. It is also what makes the pair a pair — see `src/content/sprites.ts` on the
+   * two faces of one silhouette.
+   */
+  missileRate: {
+    sprite: SPRITE.pickupMissileRate,
+    spriteHit: SPRITE.pickupMissileRate,
+    radius: 2.4,
+    health: 1,
+    damage: 0,
+    label: 'Rapid missiles',
+    hint: 'Missiles fire faster',
+    effect: 'upgrade',
+  },
+  /** Another launcher. The base ship has one; this is how the other two arrive. */
+  missileSpread: {
+    sprite: SPRITE.pickupMissileSpread,
+    spriteHit: SPRITE.pickupMissileSpread,
+    radius: 2.4,
+    health: 1,
+    damage: 0,
+    label: 'Launcher',
+    hint: 'Another missile tube',
+    effect: 'upgrade',
+  },
 };
 
 /**
@@ -142,7 +171,7 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
  * and the shell narrowed to it with a ternary on one name, so a third upgrade would have been
  * silently filed as the other one. `tests/pickups.test.ts` holds the two in step.
  */
-export const UPGRADE_KINDS = ['rapid', 'spread'] as const;
+export const UPGRADE_KINDS = ['rapid', 'spread', 'missileRate', 'missileSpread'] as const;
 
 /** Every pickup whose effect is on the ship rather than on the run. */
 export type UpgradeKind = (typeof UPGRADE_KINDS)[number];
@@ -157,7 +186,15 @@ export function isUpgrade(kind: PickupKind): kind is UpgradeKind {
   return (UPGRADE_KINDS as readonly PickupKind[]).includes(kind);
 }
 
-/** The resolved auto-fire: what the ship actually shoots this frame. */
+/**
+ * The resolved auto-fire: what the ship actually shoots this frame.
+ *
+ * ⚠️ **TWO WEAPONS, ONE RESOLVED SHAPE.** The pulse and the missile fire on their own cadences from
+ * their own hardware, and both are auto — `src/content/actions.ts`'s *there is no `fire` action and
+ * there must never be one* is about the arsenal, not about how many things fire themselves. Keeping
+ * them in one `Weapon` is what lets `src/app/frame.ts` read a resolved number per step instead of
+ * walking the upgrade list twice.
+ */
 export interface Weapon {
   /** Steps between volleys. */
   fireEvery: number;
@@ -165,6 +202,12 @@ export interface Weapon {
   shots: number;
   /** Total angular spread of a volley, radians. Ignored when `shots` is 1. */
   spread: number;
+  /** Steps between missile volleys. */
+  missileEvery: number;
+  /** Launchers, fired together. One is the ship's own; the rest are found. */
+  launchers: number;
+  /** What one missile takes off what it hits — its row's damage, plus whatever had nowhere else to go. */
+  missileDamage: number;
   /**
    * What one shot takes off what it hits.
    *
@@ -186,6 +229,15 @@ export interface Weapon {
 const RAPID_FACTOR = 0.78;
 
 /**
+ * How much faster each `missileRate` makes the missiles, as a fraction of the gap between volleys.
+ *
+ * ⚠️ **Gentler than the pulse's, and that is the weapon being different rather than a rounder
+ * number.** A missile is worth three pulses, so the same 0.78 would put three times the damage on
+ * the same curve and the pulse would stop mattering by the third pickup.
+ */
+const MISSILE_FACTOR = 0.85;
+
+/**
  * The fastest the base weapon may ever fire, in steps between volleys.
  *
  * ⚠️ Not a balance number — a **legibility** one. `src/app/frame.ts` records that successive shots
@@ -195,6 +247,28 @@ const RAPID_FACTOR = 0.78;
  * exists to prevent.
  */
 const FASTEST_FIRE = 4;
+
+/**
+ * The fastest missiles may ever leave the ship, in steps between volleys.
+ *
+ * ⚠️ **A POOL number as much as a balance one**, and the arithmetic is the same one `MAX_BARRELS`
+ * answers: `launchers × flight / missileEvery` has to stay under the missile pool, and a missile is
+ * in flight for about 130 steps on the widest view. Three launchers at 20 steps is 20 slots against
+ * a pool of 24. `tests/pickups.test.ts` drives the strongest possible loadout and fails if the pool
+ * ever fills, so these numbers are checked against each other rather than trusted to stay in step.
+ */
+const MISSILE_FASTEST = 20;
+
+/**
+ * The most launchers a ship may ever carry.
+ *
+ * ⚠️ **THREE, AND IT IS THE ASK'S OWN NUMBER**: *"the base ship has one, at the middle; the first
+ * upgrade adds one on the `across`-minus side and the second on the `across`-plus side."* There is
+ * no fourth position on the ship for one to be drawn from, which is the same argument
+ * `src/content/ships.ts` makes for capping the shell at three: a picture nobody can read at a glance
+ * has stopped being a readout.
+ */
+const MAX_LAUNCHERS = 3;
 
 /** Radians between neighbouring barrels. Wide enough to see, narrow enough to still hit one thing. */
 const SPREAD_STEP = 0.13;
@@ -258,6 +332,9 @@ export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weap
   let fireEvery = ship.fireEvery;
   let shots = 1;
   let damage = SHOTS[ship.shot].damage;
+  let missileEvery = ship.missileEvery;
+  let launchers = 1;
+  let missileDamage = SHOTS[ship.missile].damage;
   for (let i = 0; i < upgrades.length; i++) {
     /*
       ⚠️ **Each upgrade spends itself on the first thing it still can.** A rapid that would push past
@@ -265,12 +342,28 @@ export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weap
       *every upgrade is worth taking* true at the eleventh one as well as at the first, without
       letting either count run away.
     */
-    if (upgrades[i] === 'rapid') {
+    const upgrade = upgrades[i];
+    if (upgrade === 'rapid') {
       const faster = Math.round(fireEvery * RAPID_FACTOR);
       if (faster < FASTEST_FIRE) damage++;
       else fireEvery = faster;
+    } else if (upgrade === 'missileRate') {
+      const faster = Math.round(missileEvery * MISSILE_FACTOR);
+      if (faster < MISSILE_FASTEST) missileDamage++;
+      else missileEvery = faster;
+    } else if (upgrade === 'missileSpread') {
+      if (launchers >= MAX_LAUNCHERS) missileDamage++;
+      else launchers++;
     } else if (shots >= MAX_BARRELS) damage++;
     else shots++;
   }
-  return { fireEvery, shots, spread: SPREAD_STEP * (shots - 1), damage };
+  return {
+    fireEvery,
+    shots,
+    spread: SPREAD_STEP * (shots - 1),
+    damage,
+    missileEvery,
+    launchers,
+    missileDamage,
+  };
 }

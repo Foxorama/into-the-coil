@@ -72,6 +72,10 @@ const INK_OF: Record<SpriteKind, keyof Palette> = {
   pickupRapid: 'pickup',
   pickupSpread: 'pickup',
   pickupShield: 'pickup',
+  pickupMissileRate: 'pickup',
+  pickupMissileSpread: 'pickup',
+  // The bullet ink, because it is a bullet. What separates it from the pulse is shape and size.
+  missile: 'bullet',
   // The player's own ink, because a shield IS the player — it is the last thing between a hit and
   // the hull, and a shell drawn in the pickup ink would read as something to fly into.
   shieldOrb: 'player',
@@ -295,6 +299,45 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
         const angle = (Math.PI / 3) * i;
         const x = half + Math.cos(angle) * r;
         const y = half + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      break;
+    }
+    case 'missile':
+      /*
+        A dart: a long point forward, a notched tail. The notch is what keeps it from reading as a
+        triangle at twenty pixels — the same lesson the lancer's silhouette cost.
+      */
+      ctx.moveTo(half + r, half);
+      ctx.lineTo(half - r * 0.4, half - r * 0.55);
+      ctx.lineTo(half - r, half - r * 0.2);
+      ctx.lineTo(half - r * 0.75, half);
+      ctx.lineTo(half - r, half + r * 0.2);
+      ctx.lineTo(half - r * 0.4, half + r * 0.55);
+      ctx.closePath();
+      break;
+    case 'pickupMissileRate':
+      // The rapid pickup's square, filled. Same family, other face — see `SPRITE_KINDS`.
+      ctx.rect(half - r * 0.8, half - r * 0.8, r * 1.6, r * 1.6);
+      break;
+    case 'pickupMissileSpread': {
+      // The spread pickup's hexagon, holed. Wound the same way and filled `evenodd`, exactly as the
+      // rapid square's hole is.
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i;
+        const x = half + Math.cos(angle) * r;
+        const y = half + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.moveTo(half + r * 0.42, half);
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i;
+        const x = half + Math.cos(angle) * r * 0.42;
+        const y = half + Math.sin(angle) * r * 0.42;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }

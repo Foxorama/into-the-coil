@@ -106,6 +106,17 @@ export const SPRITE_KINDS = [
   'boss2Hit',
   'bullet',
   /*
+    ⚠️ **A DART, AND THE ONLY THING IN THE GAME DRAWN LONG ALONG ITS OWN TRAVEL IN THE BULLET INK.**
+    The pulse is a disc of 1.8 units; this is 2.8 and pointed, so the two are told apart by shape and
+    by size before colour is involved at all — which matters more here than anywhere else, because
+    they leave the same ship at the same time and the player has to read WHICH stream is landing.
+
+    The charger is also a needle and is 6 units of enemy ink arriving from the other direction; the
+    pair is a real risk and it is written down rather than assumed away, exactly as the weaver and
+    the charger were. `scripts/shot.mjs` is how it gets looked at.
+  */
+  'missile',
+  /*
     ⚠️ **THREE PICKUP SILHOUETTES, NOT ONE IN THREE COLOURS.**
     `docs/decisions/0024-the-accessibility-floor-is-settings.md` puts *colour never carries meaning
     alone* in the unconditional tier, and a pickup is the case where that is most tempting to break:
@@ -129,6 +140,22 @@ export const SPRITE_KINDS = [
     point at the top where this has an edge.
   */
   'pickupShield',
+  /*
+    ── THE TWO MISSILE UPGRADES, AND THEY ARE THE OTHER FACE OF A SHAPE ────────────────────────────
+
+    ⚠️ **Each is its partner's silhouette with the fill inverted**, which is a shape cue rather than
+    a colour one — `docs/decisions/0024-the-accessibility-floor-is-settings.md` again. A holed square
+    is *shoot faster* and a solid one is *missiles fire faster*; a solid hexagon is *another barrel*
+    and a holed one is *another launcher*. The family says which weapon a pickup is about and the fill
+    says which of the two it currently is.
+
+    ⚠️ That pairing is not decoration: the next change in `docs/state-of-play.md` makes a pickup on
+    the field CYCLE between the two faces, so a pair that reads as one object in two states is what
+    that mechanic needs to be legible. It is authored as two ordinary pickups first, because a shape
+    nobody can pick up cannot be judged.
+  */
+  'pickupMissileRate',
+  'pickupMissileSpread',
   /*
     ⚠️ **A RING IN THE PLAYER'S OWN INK, and the ring is deliberately the warden's primitive.** The
     two are never confusable in play — one is 9.5 units of enemy at the leading edge and this is 3
@@ -229,6 +256,8 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   boss2: 30,
   boss2Hit: 30,
   bullet: 1.8,
+  // Longer than the pulse and pointed. A missile is the shot the player is meant to notice.
+  missile: 3.4,
   /*
     ⚠️ **Bigger than the smallest enemy, on purpose.** A pickup is the one thing on screen the player
     is supposed to fly TOWARDS, and at 3.5 it was smaller than everything it had to be picked out
@@ -238,6 +267,8 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   pickupRapid: 4.6,
   pickupSpread: 4.6,
   pickupShield: 4.6,
+  pickupMissileRate: 4.6,
+  pickupMissileSpread: 4.6,
   /*
     ⚠️ **Small enough to read as the ship's, not as a body of its own.** Three of these orbit a
     7-unit ship at a 5.6-unit radius; at enemy size they would be a formation flying with the player
