@@ -71,6 +71,10 @@ const INK_OF: Record<SpriteKind, keyof Palette> = {
   pickupLife: 'pickup',
   pickupRapid: 'pickup',
   pickupSpread: 'pickup',
+  pickupShield: 'pickup',
+  // The player's own ink, because a shield IS the player — it is the last thing between a hit and
+  // the hull, and a shell drawn in the pickup ink would read as something to fly into.
+  shieldOrb: 'player',
   /*
     THE HURT SILHOUETTES: the SAME shape in a different ink.
 
@@ -297,6 +301,29 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
       ctx.closePath();
       break;
     }
+    case 'pickupShield': {
+      /*
+        A heraldic shield: flat across the top, straight down the sides, tapering to a point. Drawn
+        pointing +x like everything else, so the taper is the nose — which also means it reads the
+        same way up in both orientations without a second bake.
+      */
+      ctx.moveTo(half - r, half - r * 0.85);
+      ctx.lineTo(half + r * 0.25, half - r * 0.85);
+      ctx.lineTo(half + r, half);
+      ctx.lineTo(half + r * 0.25, half + r * 0.85);
+      ctx.lineTo(half - r, half + r * 0.85);
+      ctx.closePath();
+      break;
+    }
+    case 'shieldOrb':
+      /*
+        A ring. Two circles wound the same way and filled `evenodd`, which is how the hole survives
+        being two pixels across — the same trick `pickupRapid` uses for its square.
+      */
+      ctx.arc(half, half, r, 0, Math.PI * 2);
+      ctx.moveTo(half + r * 0.45, half);
+      ctx.arc(half, half, r * 0.45, 0, Math.PI * 2);
+      break;
     default: {
       const never: never = kind;
       throw new Error(`unbaked sprite kind: ${String(never)}`);

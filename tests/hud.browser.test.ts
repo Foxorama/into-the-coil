@@ -5,7 +5,7 @@ import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
 import { PICKUPS, PICKUP_KINDS } from '../src/content/pickups.ts';
-import { SHIPS } from '../src/content/ships.ts';
+import { MAX_SHIELDS } from '../src/content/ships.ts';
 
 /**
  * WHAT THE PLAYER CAN SEE ABOUT THEIR OWN RUN.
@@ -140,19 +140,26 @@ describe.runIf(chromePath)('the in-game readout', () => {
     await page.context().close();
   });
 
-  it('draws one pip per point of the ship’s health', async () => {
+  it('draws one pip per shield the ship can carry, and a fresh life carries none', async () => {
+    /*
+      ⚠️ **THE PIPS CHANGED MEANING AND THE COUNT CHANGED WITH THEM.** They were one per point of the
+      ship's health, when a ship had five; the hull is one hit now and the row is the SHELL — see
+      decision 0050. A life therefore opens with three EMPTY sockets rather than a full bar, which is
+      the honest picture: nothing stands between this ship and the next thing that touches it until
+      the player has flown for a shield.
+    */
     const page = await open();
     await page.click('.' + prefixFor('title') + 'action');
     await page.waitForTimeout(200);
     const pips = await page.evaluate(() =>
       [...document.querySelectorAll('.itc-playing-hud-pip')].map((el) => el.classList.contains('itc-playing-hud-spent')),
     );
-    expect(pips.length, 'the pip row does not match the ship').toBe(SHIPS.proof.health);
-    expect(pips.every((spent) => !spent), 'a fresh run opens with the shield already down').toBe(true);
+    expect(pips.length, 'the pip row is not the shell the ship can carry').toBe(MAX_SHIELDS);
+    expect(pips.every((spent) => spent), 'a fresh life opens already shielded').toBe(true);
     await page.context().close();
   });
 
-  it('follows the ship down as it takes hits, and shows a spent pip as EMPTY', async () => {
+  it('follows the run down as it is spent, and shows a spent pip as EMPTY', async () => {
     /*
       ⚠️ **TWO PROPERTIES, ONE DRIVE, AND THE MERGE IS ABOUT TIME RATHER THAN TIDINESS.** These were
       two tests, each waiting about twelve seconds for the fixture to be hit — which is a direct cost
@@ -173,25 +180,31 @@ describe.runIf(chromePath)('the in-game readout', () => {
     */
     const page = await open();
     await page.click('.' + prefixFor('title') + 'action');
-    // The fixture does not dodge, so it takes contact damage from the first wave. Waited on rather
-    // than timed — the same reason `tests/frames.ts` counts frames instead of milliseconds.
-    await page.waitForFunction(() => document.querySelectorAll('.itc-playing-hud-spent').length > 0, {
-      timeout: 40_000,
-    });
-    const styles = await page.evaluate(() =>
-      [...document.querySelectorAll('.itc-playing-hud-pip')].map((el) => {
+    await page.waitForTimeout(200);
+    /*
+      ⚠️ **BOTH PIP STATES ARE PUT ON SCREEN BY THE CHROME'S OWN CLASS, and that is deliberate.** A
+      life opens with an empty shell, so the two states are no longer both on screen at once until the
+      player has flown for a shield — and waiting for a stationary fixture to catch a drifting pickup
+      would be timing a coincidence rather than testing a rule. The class is the one `setHud` toggles;
+      what is under test here is what the STYLESHEET does with it, which is precisely what a probe
+      swapping fill for opacity broke and what nothing caught until `npm run prove` said so.
+    */
+    const styles = await page.evaluate(() => {
+      const pips = [...document.querySelectorAll('.itc-playing-hud-pip')];
+      pips[0]?.classList.remove('itc-playing-hud-spent');
+      return pips.map((el) => {
         const computed = getComputedStyle(el);
         return {
           spent: el.classList.contains('itc-playing-hud-spent'),
           background: computed.backgroundColor,
           border: computed.borderTopColor,
         };
-      }),
-    );
+      });
+    });
     const spent = styles.filter((s) => s.spent);
     const full = styles.filter((s) => !s.spent);
-    expect(spent.length, 'nothing was spent, so this compares nothing').toBeGreaterThan(0);
-    expect(full.length, 'the whole shield went at once, so this compares nothing').toBeGreaterThan(0);
+    expect(spent.length, 'nothing is spent, so this compares nothing').toBeGreaterThan(0);
+    expect(full.length, 'nothing is full, so this compares nothing').toBeGreaterThan(0);
 
     const transparent = /rgba\(0,\s*0,\s*0,\s*0\)|transparent/;
     expect(spent[0]!.background, `a spent pip is filled with ${spent[0]!.background}`).toMatch(transparent);
@@ -199,15 +212,28 @@ describe.runIf(chromePath)('the in-game readout', () => {
     expect(spent[0]!.border, 'spent and full pips differ by colour rather than by fill').toBe(full[0]!.border);
 
     /*
-      ⚠️ **AND THAT THE READOUT MOVED AT ALL, which is the half a screenshot cannot see.** A HUD that
+      ⚠️ **AND THAT THE READOUT MOVES AT ALL, which is the half a screenshot cannot see.** A HUD that
       renders once and never updates looks completely correct in a still image —
       `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` is the rule that a
       thing the model resolves has to reach the picture, and a readout is the purest case of it.
+
+      ⚠️ **Driven by a DEATH rather than by a hit, and the one-hit hull is why.** A ship with no shell
+      does not lose a pip when it is hit; it is destroyed. The lives count is written by the same
+      `setHud` call, so a readout that had stopped updating still fails here.
     */
-    expect(spent.length, 'the ship took a hit and the shield readout did not move').toBeGreaterThan(0);
+    const before = await page.textContent('.itc-playing-hud-group span');
+    // The fixture does not dodge, so the first wave ends the life. Waited on rather than timed — the
+    // same reason `tests/frames.ts` counts frames instead of milliseconds.
+    await page.waitForFunction(
+      (was: string) => (document.querySelector('.itc-playing-hud-group span')?.textContent ?? '') !== was,
+      before ?? '',
+      { timeout: 60_000 },
+    );
+    const after = await page.textContent('.itc-playing-hud-group span');
+    expect(after, 'the run spent a life and the readout did not move').not.toBe(before);
     const label = await page.getAttribute('.itc-playing-hud-group[role="img"]', 'aria-label');
-    expect(label, 'the spoken readout did not follow the ship down').not.toContain(
-      'Shield ' + String(SHIPS.proof.health),
+    expect(label, 'the spoken shield readout is not a count of shields').toMatch(
+      new RegExp('Shield \\d+ of ' + String(MAX_SHIELDS)),
     );
     await page.context().close();
   });

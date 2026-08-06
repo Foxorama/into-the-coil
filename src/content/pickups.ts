@@ -28,7 +28,7 @@ import { SHOTS } from './shots.ts';
 import { SPRITE } from './sprites.ts';
 
 /** Every pickup in the game. Closed. */
-export const PICKUP_KINDS = ['extraLife', 'rapid', 'spread'] as const;
+export const PICKUP_KINDS = ['extraLife', 'rapid', 'spread', 'shield'] as const;
 
 /** Derived from the list, so a pickup cannot exist in the union and be missing from the table. */
 export type PickupKind = (typeof PICKUP_KINDS)[number];
@@ -36,12 +36,22 @@ export type PickupKind = (typeof PICKUP_KINDS)[number];
 /**
  * What taking one does.
  *
- * ⚠️ A closed union of exactly two members, and it earns being one where
- * `src/content/enemies.ts`'s weave deliberately did not: these are not the same effect with a
- * different parameter. One is a number on the run and the other is an entry in a list on the ship,
- * they are cleared by different events, and no value of one produces the other.
+ * ⚠️ A closed union, and it earns being one where `src/content/enemies.ts`'s weave deliberately did
+ * not: these are not the same effect with a different parameter. Each is a different FIELD, cleared
+ * by a different event, and no value of one produces another.
+ *
+ *   **life**     a number on the run. Survives everything, including a death
+ *   **upgrade**  an entry in a list on the ship. Lost on a death — 0039
+ *   **shield**   armour on the LIFE. Spent by being hit, and gone with the ship that wore it
+ *
+ * ⚠️ **The third one is not an upgrade, and that is why it is a third member rather than a row with
+ * a flag.** An upgrade is kept until the ship dies and is worth exactly as much on the last frame of
+ * a life as on the first; a shield is consumed by the thing it protects against, so a player who has
+ * three is in a different position from a player who took three ten seconds ago. Folding it into
+ * `upgrade` would put a consumable in the list `weaponFor` resolves and a death empties, which is two
+ * wrong answers at once.
  */
-export type PickupEffect = 'life' | 'upgrade';
+export type PickupEffect = 'life' | 'upgrade' | 'shield';
 
 export interface PickupRow extends Body {
   /** What the player would call it. Terse, per `docs/game.md`'s voice rule. */
@@ -105,10 +115,47 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     hint: 'Another barrel',
     effect: 'upgrade',
   },
+  /**
+   * One more hit that never reaches the hull.
+   *
+   * ⚠️ **It is the answer to the ship being one hit**, and the two landed together for that reason —
+   * `docs/decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md`. A
+   * one-hit ship with nothing to find would be a difficulty change wearing a mechanic's clothes.
+   */
+  shield: {
+    sprite: SPRITE.pickupShield,
+    spriteHit: SPRITE.pickupShield,
+    radius: 2.4,
+    health: 1,
+    damage: 0,
+    label: 'Shield',
+    hint: 'One hit absorbed',
+    effect: 'shield',
+  },
 };
 
+/**
+ * Every pickup whose effect is an entry in the ship's upgrade list.
+ *
+ * ⚠️ **Written out, and then CHECKED against the table rather than trusted.** It was a hand-written
+ * union beside a table that already says `effect: 'upgrade'`, which is two descriptions of one fact —
+ * and the shell narrowed to it with a ternary on one name, so a third upgrade would have been
+ * silently filed as the other one. `tests/pickups.test.ts` holds the two in step.
+ */
+export const UPGRADE_KINDS = ['rapid', 'spread'] as const;
+
 /** Every pickup whose effect is on the ship rather than on the run. */
-export type UpgradeKind = 'rapid' | 'spread';
+export type UpgradeKind = (typeof UPGRADE_KINDS)[number];
+
+/**
+ * Whether a pickup is one of the upgrades — a real narrowing, so the shell needs no cast.
+ *
+ * ⚠️ **This replaces `kind === 'rapid' ? 'rapid' : 'spread'` in `src/app/mount.ts`.** That line was
+ * correct for exactly as long as there were two upgrades, and the pickup added beside it is not one.
+ */
+export function isUpgrade(kind: PickupKind): kind is UpgradeKind {
+  return (UPGRADE_KINDS as readonly PickupKind[]).includes(kind);
+}
 
 /** The resolved auto-fire: what the ship actually shoots this frame. */
 export interface Weapon {

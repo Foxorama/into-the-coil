@@ -33,6 +33,8 @@ import { Pool } from '../src/sim/pool.ts';
 import { paintScene } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { sprite } from './bodies.ts';
+import { CAPACITY } from '../src/app/mount.ts';
+import { MAX_SHIELDS } from '../src/content/ships.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
@@ -133,6 +135,36 @@ describe('the worst-case scene costs one blit per entity, and nothing else', () 
     paintScene(flat, viewOf(2400, 1080), [pool], 900, 0.25);
     paintScene(upright, viewOf(1080, 2400), [pool], 900, 0.25);
     expect(upright.blits).toBe(flat.blits);
+  });
+});
+
+describe('the pools are the worst-case scene, and they add up to it', () => {
+  it('never asks the frame to draw more entities than the budget was measured for', () => {
+    /*
+      ⚠️ **NOTHING HELD THIS UNTIL A POOL WAS ADDED TO THE GAME.** `src/app/mount.ts` said *"the total
+      is now EXACTLY 500"* in a comment, and 0022's worst case is the number every assertion in this
+      file is written against — so the two agreed only for as long as somebody did the arithmetic in
+      their head. The next pool would have been added the same way, and `docs/state-of-play.md` has
+      three of them queued: missiles, shield orbs and a bomb's blast.
+
+      ⚠️ **A ceiling, not an equality.** Spending the budget exactly is not a virtue; what 0022 fixes
+      is the most the frame may ever be asked to draw, on a 2021 mid-range Android that this runner is
+      not. A pool added by taking slots from another passes; a pool added by arithmetic in somebody's
+      head does not.
+    */
+    const total = Object.values(CAPACITY).reduce((sum, n) => sum + n, 0);
+    expect(
+      total,
+      `the pools total ${total} entities against 0022's worst case of ${WORST_CASE}. A new pool comes ` +
+        'out of an existing share — the particle share is the one 0022 names as sheddable — or the ' +
+        'decision is reopened, and that conversation is WebGL rather than the phone.',
+    ).toBeLessThanOrEqual(WORST_CASE);
+  });
+
+  it('gives the shell exactly as many slots as the ship has shields', () => {
+    // The one pool whose size is a rule rather than a budget: a mark per shield, and the pickup
+    // refuses a fourth — `src/content/ships.ts`. A pool one short would drop a mark the player owns.
+    expect(CAPACITY.shieldOrbs, 'the shell cannot draw everything the ship can carry').toBe(MAX_SHIELDS);
   });
 });
 

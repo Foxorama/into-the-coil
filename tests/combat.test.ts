@@ -34,7 +34,7 @@ import { Pool } from '../src/sim/pool.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { BURST } from '../src/content/debris.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyRow } from '../src/content/enemies.ts';
-import { INVULN_STEPS, SHIPS } from '../src/content/ships.ts';
+import { INVULN_STEPS, MAX_SHIELDS, SHIPS } from '../src/content/ships.ts';
 import { SHOT_KINDS, SHOTS } from '../src/content/shots.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { GameFrame, SHIP_START_ALONG, type World } from '../src/app/frame.ts';
@@ -418,6 +418,7 @@ function firingAt(row: EnemyRow, distance: number): World {
   return {
     layers: [enemies, enemyShots, playerShots, shipPool],
     shipPool,
+    shieldOrbs: new Pool<Entity>(MAX_SHIELDS, makeEntity),
     enemies,
     playerShots,
     enemyShots,
@@ -484,6 +485,7 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
   const world: World = {
     layers: [enemies, enemyShots, playerShots, shipPool],
     shipPool,
+    shieldOrbs: new Pool<Entity>(MAX_SHIELDS, makeEntity),
     enemies,
     playerShots,
     enemyShots,

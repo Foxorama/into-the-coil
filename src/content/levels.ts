@@ -270,21 +270,38 @@ const APPROACH: readonly WaveEntry[] = [
   which starts with taking it being a choice about position.
 */
 const APPROACH_PICKUPS: readonly PickupEntry[] = [
+  /*
+    ⚠️ **THE FIRST THING THE LEVEL OFFERS IS A SHIELD, and it is in the empty opening stretch.**
+    The hull is one hit (0050), so a player who has not yet found the controls is one contact from a
+    life — and `docs/decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md` gave them that
+    stretch precisely so the first thing that happens to them is not a death. It sits off-centre like
+    every other pickup: reaching it is still a decision, made against an empty screen.
+  */
+  { at: 260, kind: 'shield', lane: 40 },
   { at: 420, kind: 'rapid', lane: 25 },
   { at: 1010, kind: 'spread', lane: 72 },
+  { at: 1300, kind: 'shield', lane: 55 },
   { at: 1620, kind: 'rapid', lane: 38 },
   { at: 2150, kind: 'extraLife', lane: 60 },
   // ⚠️ Added because `tests/pickups.test.ts` measured a 28-second stretch with nothing to rearm
   // from — an extra life sitting in the middle of it does not answer the question a death asks.
   { at: 2200, kind: 'spread', lane: 30 },
+  { at: 2400, kind: 'shield', lane: 68 },
   { at: 2620, kind: 'spread', lane: 28 },
   { at: 3160, kind: 'rapid', lane: 70 },
+  { at: 3400, kind: 'shield', lane: 32 },
   { at: 3700, kind: 'spread', lane: 45 },
   { at: 4240, kind: 'rapid', lane: 22 },
+  { at: 4400, kind: 'shield', lane: 58 },
   { at: 4700, kind: 'spread', lane: 40 },
   { at: 4800, kind: 'extraLife', lane: 66 },
   { at: 5300, kind: 'spread', lane: 35 },
+  { at: 5500, kind: 'shield', lane: 26 },
   { at: 5860, kind: 'rapid', lane: 62 },
+  // ⚠️ The last one is before the boss rather than during it. A fight that hands out shields while
+  // it is being fought is a fight whose difficulty is a supply line — 0040 keeps a boss to its own
+  // clock, and this is the shell the player takes INTO it.
+  { at: 6200, kind: 'shield', lane: 50 },
 ];
 
 /*
@@ -394,18 +411,26 @@ const DESCENT: readonly WaveEntry[] = [
 
 /** Level two's pickups: the same ceiling, further apart inside it. */
 const DESCENT_PICKUPS: readonly PickupEntry[] = [
+  // The opening shield, on the same terms as level one's — and level two opens on the same empty
+  // stretch for the same reason, so it is the same answer to the same question.
+  { at: 260, kind: 'shield', lane: 62 },
   { at: 480, kind: 'rapid', lane: 28 },
   { at: 1120, kind: 'spread', lane: 68 },
+  { at: 1500, kind: 'shield', lane: 35 },
   { at: 1720, kind: 'rapid', lane: 42 },
   { at: 2280, kind: 'extraLife', lane: 55 },
   { at: 2340, kind: 'spread', lane: 32 },
+  { at: 2800, kind: 'shield', lane: 70 },
   { at: 2940, kind: 'rapid', lane: 62 },
   { at: 3540, kind: 'spread', lane: 45 },
+  { at: 3900, kind: 'shield', lane: 24 },
   { at: 4140, kind: 'rapid', lane: 25 },
   { at: 4720, kind: 'spread', lane: 58 },
   { at: 4780, kind: 'extraLife', lane: 35 },
+  { at: 5100, kind: 'shield', lane: 48 },
   { at: 5320, kind: 'rapid', lane: 50 },
   { at: 5900, kind: 'spread', lane: 40 },
+  { at: 6200, kind: 'shield', lane: 50 },
 ];
 
 export const LEVELS: Record<LevelKind, LevelRow> = {

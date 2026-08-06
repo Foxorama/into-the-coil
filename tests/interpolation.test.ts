@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { BOSSES } from '../src/content/bosses.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { viewOf } from '../src/sim/camera.ts';
-import { makeEntity, reset } from '../src/sim/entity.ts';
+import { type Entity, makeEntity, reset } from '../src/sim/entity.ts';
 import { makeIntent } from '../src/sim/intent.ts';
 import { holdStation } from '../src/sim/flight.ts';
 import { Pool } from '../src/sim/pool.ts';
@@ -13,7 +13,7 @@ import { GameFrame, type World } from '../src/app/frame.ts';
 import type { InputSource } from '../src/app/input.ts';
 import { DEFAULT_ASSISTS, tuningFor } from '../src/sim/assist.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
-import { SHIPS } from '../src/content/ships.ts';
+import { MAX_SHIELDS, SHIPS } from '../src/content/ships.ts';
 import { SPRITE } from '../src/content/sprites.ts';
 import { inertLevel } from './world.ts';
 
@@ -90,6 +90,7 @@ function stationKeepingWorld(surface: Surface): World {
   return {
     layers: [enemies, enemyShots, playerShots, shipPool],
     shipPool,
+    shieldOrbs: new Pool<Entity>(MAX_SHIELDS, makeEntity),
     enemies,
     playerShots,
     enemyShots,

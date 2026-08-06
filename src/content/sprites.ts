@@ -117,6 +117,30 @@ export const SPRITE_KINDS = [
   'pickupLife',
   'pickupRapid',
   'pickupSpread',
+  /*
+    ⚠️ **A HERALDIC SHIELD, and it is the one pickup whose meaning a player already owns.** The other
+    three are arbitrary glyphs the game has to teach — a plus, a holed square, a hexagon — and the
+    title screen's key is how it teaches them. This one does not need teaching, which is worth more
+    than shape-family tidiness: flat across the top, tapering to a point.
+
+    Against the three it has to be told apart from at four world units: the plus has four arms and a
+    waist, the holed square has a hole, the hexagon is symmetric in every direction. Against the
+    ENEMIES it shares no ink with, the nearest silhouette is the drifter's diamond — which has a
+    point at the top where this has an edge.
+  */
+  'pickupShield',
+  /*
+    ⚠️ **A RING IN THE PLAYER'S OWN INK, and the ring is deliberately the warden's primitive.** The
+    two are never confusable in play — one is 9.5 units of enemy at the leading edge and this is 3
+    units of player ink orbiting the ship — and reusing the aperture shape says the right thing: a
+    shell with a hole in it, which is what a shield that is about to pop looks like.
+
+    The alternative was a small disc, and it is rejected for the reason the pickups are three shapes
+    rather than three colours: a small disc is the BULLET, and *a dot near the ship* would then mean
+    two opposite things told apart by colour alone —
+    `docs/decisions/0024-the-accessibility-floor-is-settings.md`.
+  */
+  'shieldOrb',
   'debris',
 ] as const;
 
@@ -213,6 +237,20 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   pickupLife: 4.6,
   pickupRapid: 4.6,
   pickupSpread: 4.6,
+  pickupShield: 4.6,
+  /*
+    ⚠️ **Small enough to read as the ship's, not as a body of its own.** Three of these orbit a
+    7-unit ship at a 5.6-unit radius; at enemy size they would be a formation flying with the player
+    rather than a shell around it, and the whole point is that the player counts them at a glance
+    without looking away from the lane.
+
+    ⚠️ **It was 2.2 and that was too small, which is a thing only the picture could say.** At 640×360
+    — a phone's worth of pixels — a 2.2-unit ring is about seven pixels of hairline and the shell
+    read as three specks. `scripts/shot.mjs` at that size is what said so, which is
+    `docs/decisions/0027-measure-the-picture-not-the-model.md` doing its job: every number in the
+    model was correct at 2.2.
+  */
+  shieldOrb: 3,
   // Small: a fragment reads as a piece of something, and eight of them at enemy size is a wall.
   debris: 1.4,
 };

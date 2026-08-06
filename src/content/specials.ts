@@ -25,8 +25,23 @@
  * shape changes then, which is the whole reason for landing the shape early.
  */
 
-/** Every special, closed. A new one fails every `Record` over this union to BUILD until it has a row. */
-export const SPECIAL_KINDS = ['shield', 'bomb'] as const;
+/**
+ * Every special, closed. A new one fails every `Record` over this union to BUILD until it has a row.
+ *
+ * ⚠️ **`shield` was here and has been RENAMED, which is the outcome
+ * `docs/decisions/0045-the-player-can-see-what-they-are-carrying.md` wrote down in advance**: *"if
+ * both ever exist at once it is the SPECIAL that gets renamed, because this is the word a player
+ * already used for the thing that keeps them alive."* Both now exist — a shield is a pickup and a
+ * shell around the ship, per
+ * `docs/decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md` — so the
+ * special takes the other name `docs/game.md` already has for it: *"orbiting mines that are half
+ * shield and half weapon."*
+ *
+ * ⚠️ **A rename and not a deletion.** 0039's rule — a death empties the arsenal — needs a list that
+ * can hold two different things to be testable at all, and `src/content/specials.ts` says so; one
+ * row would make the guard unfalsifiable. Nothing fires either of them yet.
+ */
+export const SPECIAL_KINDS = ['mines', 'bomb'] as const;
 
 /**
  * What the player can be carrying. Derived from the list rather than written beside it, so a kind
@@ -51,8 +66,11 @@ export interface SpecialRow {
 }
 
 export const SPECIALS: Record<SpecialKind, SpecialRow> = {
-  /** Absorbs what would otherwise land. `docs/game.md`'s example of a special that is not a weapon. */
-  shield: { label: 'Shield', charges: 1 },
+  /**
+   * `docs/game.md`'s *"orbiting mines that are half shield and half weapon"* — the example of a
+   * special that is not only a weapon, which is the role `shield` used to hold here.
+   */
+  mines: { label: 'Mines', charges: 1 },
   /** The one the whole arsenal rule is named after — spent, not held. */
   bomb: { label: 'Bomb', charges: 3 },
 };

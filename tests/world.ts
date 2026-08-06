@@ -155,6 +155,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     the bug that reached play as *"two streams continuous and the others stutter"*.
   */
   const shipPool = new Pool<Entity>(CAPACITY.ship, makeEntity);
+  const shieldOrbs = new Pool<Entity>(CAPACITY.shieldOrbs, makeEntity);
   const enemies = new Pool<Entity>(CAPACITY.enemies, makeEntity);
   const playerShots = new Pool<Entity>(CAPACITY.playerShots, makeEntity);
   const enemyShots = new Pool<Entity>(CAPACITY.enemyShots, makeEntity);
@@ -172,8 +173,9 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
   const taken: PickupKind[] = [];
 
   const world: World = {
-    layers: [debris, bossPool, enemies, enemyShots, playerShots, shipPool],
+    layers: [debris, bossPool, enemies, enemyShots, playerShots, shieldOrbs, shipPool],
     shipPool,
+    shieldOrbs,
     enemies,
     playerShots,
     enemyShots,
