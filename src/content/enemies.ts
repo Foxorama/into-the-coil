@@ -53,6 +53,33 @@ export interface EnemyRow extends Body {
   weaveAmplitude: number;
   /** World units along per complete swing. Ignored when `weaveAmplitude` is `0`. */
   weaveWavelength: number;
+  /**
+   * World units per step it wanders across, turning round at the roam band. `0` holds its lane.
+   *
+   * ── WHY THIS IS NOT THE WEAVE WITH DIFFERENT NUMBERS ────────────────────────────────────────────
+   *
+   * ⚠️ **A weave is a function of `along`, so a body that does not travel along cannot weave** — the
+   * field above says so, and `velAcross = A·k·cos(k·along)·velAlong` is zero whenever `velAlong` is.
+   * The drifter and the turret both have `closing: 0`: they hold station in the world and let the
+   * camera come to them, which means the weave is structurally unavailable to exactly the two rows
+   * that sit stillest. Reported from play as the narrow tunnel, and they are the middle of it.
+   *
+   * So this is a rate rather than a shape, it turns round at `ROAM_MIN`/`ROAM_MAX` in
+   * `src/sim/camera.ts`, and a body carrying one leaves the lane and comes back.
+   * `docs/decisions/0059-the-lane-is-the-players-box.md`.
+   *
+   * ⚠️ **A wobble in time, which this file argues against for the weave — and the argument does not
+   * reach here.** What it protects is a FORMATION being a picture rather than a coincidence of when
+   * something was created: a weave has to be a shape in the world so five weavers spawned together
+   * trace one curve. A roam has no phase to get wrong. Every member of a wave starts at a known
+   * `across` and a known direction, the step is fixed (0022), so the picture is as reproducible as
+   * the weave's and a seeded test compares equal.
+   *
+   * ⚠️ **A row that weaves ignores this**, because two lateral mechanisms writing one `velAcross`
+   * would be a body whose motion depends on the order of two `if`s. `tests/spawns.test.ts` holds
+   * that no row carries both.
+   */
+  roam: number;
 }
 
 /** Written out rather than derived, so the table below cannot quietly lose a row. */
@@ -79,6 +106,15 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     shot: 'spit',
     weaveAmplitude: 0,
     weaveWavelength: 0,
+    /*
+      ⚠️ **The stillest thing in the game, and now the widest-ranging.** `closing: 0` means it holds
+      station in the world and lets the camera reach it, so it has no motion of its own at all —
+      which is what made it the middle of the reported *narrow tunnel*. It cannot weave, because a
+      weave is a function of `along` and this has no `along` of its own, so a roam is the only
+      lateral motion available to it. It gets the fastest one: it is harmless, so a player who has to
+      lead it is being taught rather than punished.
+    */
+    roam: 0.3,
   },
   /**
    * Closes, and shoots where the ship is. Aimed rather than sprayed, because the quantity this whole
@@ -101,6 +137,9 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     shot: 'spit',
     weaveAmplitude: 0,
     weaveWavelength: 0,
+    // Slower than the drifter's, because this one is also shooting at you: something that moves and
+    // fires is two problems, and the warden below pays for the same pair in the same coin.
+    roam: 0.22,
   },
   /**
    * Crosses the lane while it closes, and never fires.
@@ -124,10 +163,30 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     closing: 0.5,
     fireEvery: 0,
     shot: 'spit',
-    weaveAmplitude: 7,
-    // 110 units is about 3 seconds of camera at the current scroll — roughly one full swing per
-    // crossing of the screen, so the shape is legible rather than a vibration.
-    weaveWavelength: 110,
+    /*
+      ⚠️ **16, and it was 7.** The bound is `2A` — 32 either side of the member's own start — which
+      takes a weaver spawned on lane 45 out to 13 and 77, and the acrossMinus member of a wave on lane
+      40 clear off the edge of the screen and back. That is the reported *narrow tunnel* answered in
+      the one row that already had the mechanism for it.
+
+      ⚠️ **It is the widest the authored script leaves room for, and it was found by the guard rather
+      than by choosing it.** `tests/level.test.ts` checks every member of every wave against the ROAM
+      band, and 18 put the outermost weaver of two waves past it —
+      `docs/decisions/0059-the-lane-is-the-players-box.md`.
+    */
+    weaveAmplitude: 16,
+    /*
+      130 units is about 3.6 seconds of camera at the current scroll — one full swing per crossing of
+      the screen, so the shape is legible rather than a vibration.
+
+      ⚠️ **Lengthened WITH the amplitude, and that is not tidiness.** The lateral rate is `A·k·closing`,
+      so widening the swing at the old wavelength would have taken it from 0.20 to 0.46 units a step —
+      and what a weaver is for is making the player LEAD it, which stops being a decision once it
+      crosses the lane faster than they can react. At 130 it peaks at 0.39.
+    */
+    weaveWavelength: 130,
+    // It weaves, and no row carries both — `tests/spawns.test.ts` holds that.
+    roam: 0,
   },
   /**
    * Holds its ground and fires faster than anything else.
@@ -150,6 +209,13 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     shot: 'spit',
     weaveAmplitude: 0,
     weaveWavelength: 0,
+    /*
+      ⚠️ **The slowest roam there is, and it still has one.** `closing: 0` is the whole of what a
+      turret is — it arrives with the world and is on screen for a known length of time, which is what
+      a formation is authored around — and that is exactly the property a fast roam would spend. Slow
+      enough that the emplacement still reads as an emplacement; fast enough that it is not a post.
+    */
+    roam: 0.16,
   },
   /**
    * Comes straight at you, fast, and dies to one shot.
@@ -170,6 +236,13 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     shot: 'spit',
     weaveAmplitude: 0,
     weaveWavelength: 0,
+    /*
+      ⚠️ **ZERO, and it is the one row that answers the roam with a no.** *"Comes straight at you"* is
+      the whole of this enemy: it is the only thing in the game faster than a reaction, and what makes
+      that fair is that its line is readable the instant it appears. A charger that also wandered
+      would be unreadable at exactly the speed nothing can be read twice at.
+    */
+    roam: 0,
   },
   /**
    * Weaves **and** fires. Level two's enemy.
@@ -194,8 +267,10 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     fireEvery: 64,
     shot: 'spit',
     // A shallower swing than the weaver's, because this one is also aiming at you: a wide weave plus
-    // an aimed shot is two threats the player cannot read at the same time.
-    weaveAmplitude: 5,
-    weaveWavelength: 130,
+    // an aimed shot is two threats the player cannot read at the same time. Widened WITH it — 12
+    // against 18 — so what is authored is the ratio rather than the old number.
+    weaveAmplitude: 12,
+    weaveWavelength: 150,
+    roam: 0,
   },
 };

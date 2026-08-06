@@ -26,6 +26,8 @@ import {
   ACROSS_SPAN,
   FLANK_ALONG,
   FLANK_MARGIN,
+  ROAM_MAX,
+  ROAM_MIN,
   cullPlayerShotAlong,
   spawnAlong,
   type View,
@@ -1050,6 +1052,23 @@ function fireEnemies(w: World): void {
     const e = w.enemies.at(i);
     const row = w.enemyRows[e.kind];
     if (row === undefined || row.fireEvery <= 0) continue;
+    /*
+      ⚠️ **A THREAT THE PLAYER CANNOT SEE DOES NOT SHOOT**, and this line arrives with the roam that
+      makes it reachable. `across` is fully visible on every device (0023 fixes it at 100 and the
+      excess becomes gutter), so a body entirely outside `0…ACROSS_SPAN` is entirely off screen — and
+      a shot arriving from there is a hit with no cause on the picture, which is the exact shape
+      `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` records being
+      reported three times as a collision fault that did not exist.
+
+      ⚠️ **Its clock keeps running.** `fireIn` is not held back, so an enemy that wanders out and
+      back does not come back with a volley saved up — it simply skipped its turn, which is what the
+      player watched happen.
+
+      ⚠️ **The hull's edge and not its centre**, so something half on screen is something that can
+      shoot: the player can see it, so it is fair, and the alternative is a turret that stops firing
+      while it is still visibly there.
+    */
+    if (e.across + e.radius < 0 || e.across - e.radius > ACROSS_SPAN) continue;
     e.fireIn--;
     if (e.fireIn > 0) continue;
     // The tier's gap, not the row's — and recomputed rather than remembered, because two numbers
@@ -1152,10 +1171,24 @@ function spawnWave(w: World, index: number): void {
     const across = flanking ? entryAcross : target;
     reset(e, along + formation.alongOffset(i, wave.count), across, row, kind);
     if (flanking) {
-      // The turn: cross at a fixed rate until the authored lane, then straighten and close like
-      // anything else. `steerEnemies` is where that second half happens.
+      // The turn: cross at a fixed rate until the authored lane, then slow to the roam and carry on.
+      // `steerEnemies` is where that second half happens.
       e.velAcross = -side * FLANK_ENTRY_SPEED;
       e.steerAcross = target;
+    } else {
+      /*
+        WHICH WAY IT WANDERS, and it is a parity rather than a roll.
+
+        ⚠️ **The spawn stream is deliberately not consulted**, for the reason this function opens
+        with: a level is authored, and a wave that rolled its own direction would play differently
+        every run and could not be tuned by a hand. `src/app/frame.ts`'s `spawnPickup` alternates by
+        index for exactly the same reason and says so.
+
+        ⚠️ **The wave's index is in it as well as the member's**, so a formation fans apart AND two
+        waves in a row do not lean the same way. Without the first the members move as a block, which
+        is the tunnel wearing a wider coat; without the second the whole level drifts one way.
+      */
+      e.velAcross = (index + i) % 2 === 0 ? row.roam : -row.roam;
     }
     /*
       THE TIER, applied here and nowhere else for anything that arrives in a wave.
@@ -1190,26 +1223,64 @@ function steerEnemies(w: World): void {
     const e = w.enemies.at(i);
     const row = w.enemyRows[e.kind];
     if (row === undefined) continue;
+    /*
+      THE FLANKER'S TURN, and it now runs BEFORE the weave rather than after it.
+
+      ⚠️ **`steerAcross` is the marker, and zero means *nothing to steer to*.** It used to be
+      `velAcross !== 0`, on `src/sim/entity.ts`'s argument that *not currently crossing* is a fact
+      about the body rather than a magic number — and that argument stopped being true the moment
+      anything else wrote `velAcross` after arrival. A roaming body is always crossing, so the
+      velocity can no longer answer *is this still coming in from the edge*, and the sentinel is now
+      the honest answer rather than the lazy one. `tests/level.test.ts` holds that no authored lane
+      is zero, so the sentinel is a value the content cannot collide with.
+
+      ⚠️ **Ordered above the weave, which is what lets a weaving row arrive from the side at all.**
+      `tests/spawns.test.ts` used to hold that no flanking wave sends a weaver, because a weave
+      overwrote the turn — that constraint on the level author is gone, and the guard now drives one
+      instead of forbidding it.
+
+      ⚠️ **The comparison is against the direction of travel, not against a distance.** A body
+      crossing at 0.9 a step will step OVER any tolerance band you pick, so a *"close enough to the
+      target"* test misses at one speed and holds at another; *have I passed it* cannot.
+    */
+    if (e.steerAcross !== 0) {
+      if (e.velAcross > 0 ? e.across < e.steerAcross : e.across > e.steerAcross) continue;
+      e.across = e.steerAcross;
+      e.steerAcross = 0;
+      /*
+        ⚠️ **It slows to its roam rather than stopping, and keeps the way it was going.** 0048's turn
+        was *cross, then straighten and close like anything else*; what *anything else* does has
+        changed. Keeping the sign means a flanker carries on across the lane it just reached and
+        turns round at the far side, which is the same journey it was already making, at a fifth of
+        the speed.
+      */
+      e.velAcross = row.roam > 0 ? (e.velAcross > 0 ? row.roam : -row.roam) : 0;
+      continue;
+    }
     if (row.weaveAmplitude > 0 && row.weaveWavelength > 0) {
       const k = TAU / row.weaveWavelength;
       e.velAcross = row.weaveAmplitude * k * Math.cos(e.along * k) * e.velAlong;
       continue;
     }
     /*
-      THE FLANKER'S TURN — the first motion in the game that is not a function of `along`.
+      THE ROAM — what a body does with the whole area once it has arrived.
 
-      ⚠️ **Gated on `velAcross`, so nothing else in the game pays for it.** Everything that is not
-      currently crossing the lane has a zero here, and a weaver has already `continue`d above —
-      `src/sim/entity.ts` says why *not crossing* is a velocity rather than a sentinel.
+      Reported from play: *"once on screen the enemies are in a very narrow tunnel and it makes the
+      feel very restrictive… they should fly off the `across` edges and back on."*
+      `docs/decisions/0059-the-lane-is-the-players-box.md`.
 
-      ⚠️ **The comparison is against the direction of travel, not against a distance.** A body
-      crossing at 0.8 a step will step OVER any tolerance band you pick, so a *"close enough to the
-      target"* test misses at one speed and holds at another; *have I passed it* cannot.
+      ⚠️ **It turns round OUTSIDE the lane, at `ROAM_MIN`/`ROAM_MAX`.** Bouncing at 0 and
+      `ACROSS_SPAN` would be the tunnel with a bigger diameter; the whole of what was asked for is
+      that a threat leaves the screen sideways and comes back, and the band it turns in is the same
+      one 0048 already lets it enter from.
+
+      ⚠️ **On the CENTRE and not on the hull's edge**, which is the opposite of the boss's patrol in
+      `src/app/boss.ts` — a boss turning on its centre would put half a 26-unit hull outside the lane
+      with nothing to bring it back, and an enemy leaving the lane entirely is the point here.
     */
-    if (e.velAcross > 0 ? e.across >= e.steerAcross : e.velAcross < 0 && e.across <= e.steerAcross) {
-      e.across = e.steerAcross;
-      e.velAcross = 0;
-    }
+    if (row.roam <= 0) continue;
+    if (e.across <= ROAM_MIN) e.velAcross = row.roam;
+    else if (e.across >= ROAM_MAX) e.velAcross = -row.roam;
   }
 }
 

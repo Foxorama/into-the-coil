@@ -41,6 +41,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
 | **a death takes the ship, and the level carries on** | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
+| **the lane is the player's box; a threat roams past it and back** | [0059](decisions/0059-the-lane-is-the-players-box.md) |
 | **a boss's station drifts, so a fight is still flight** | [0061](decisions/0061-a-boss-keeps-flying.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
@@ -155,10 +156,10 @@ makes a death cost more in the same session as a report that dying is already to
 4. **The between-levels screen should become a brief respite.** *"The current pause/level screen
    interrupts the flow."* ⚠️ Touches `SCREENS` — [0046](decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md)
    and 0055 both have opinions about what a screen change costs.
-5. **Enemies are stuck in a narrow tunnel.** *"Once on screen the enemies are in a very narrow
-   tunnel and it makes the feel very restrictive and not like you're in a large area."* They should
-   fly off the `across` edges and back on. ⚠️ 0048 landed entry from the edges and the `across` cull;
-   this is about what they do AFTER arriving, which is `steerEnemies`.
+5. **✅ DONE — enemies were stuck in a narrow tunnel.**
+   [0059](decisions/0059-the-lane-is-the-players-box.md). ⚠️ It also moved the weaver's amplitude,
+   added a rule that something off screen does not shoot, and lifted the constraint that a flanking
+   wave may not use a weaving enemy. Every rate in it is unplayed.
 6. **✅ DONE — a boss killed the sense of flight.**
    [0061](decisions/0061-a-boss-keeps-flying.md), which took the second of the two options given. The
    first — a wall-type boss holding the far edge with its own style — is **content** rather than a
