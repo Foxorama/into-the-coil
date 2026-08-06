@@ -58,8 +58,8 @@ export const PROBES = [
     guard: 'a death clears the arsenal back to base',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '        : { lives: state.lives - 1, level: state.level, arsenal: [], upgrades: [] };',
-      replace: '        : { lives: state.lives - 1, level: state.level, arsenal: [], upgrades: state.upgrades };',
+      find: '        : { lives: state.lives - 1, level: state.level, arsenal: [], upgrades: [], difficulty: state.difficulty };',
+      replace: '        : { lives: state.lives - 1, level: state.level, arsenal: [], upgrades: state.upgrades, difficulty: state.difficulty };',
     },
   },
   {

@@ -128,7 +128,7 @@ export const PROBES = [
     guard: 'a shot from off the ship',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    shot.velAlong = (dAlong / distance) * bullet.speed + w.scrollPerStep;',
+      find: '    shot.velAlong = (dAlong / distance) * speed + w.scrollPerStep;',
       replace: '    shot.velAlong = (dAlong / distance) * bullet.speed;',
     },
   },

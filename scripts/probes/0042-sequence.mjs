@@ -16,8 +16,12 @@ export const PROBES = [
     guard: 'carries everything forward across a level boundary',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '      return { lives: state.lives, level: state.level + 1, arsenal: state.arsenal, upgrades: state.upgrades };',
-      replace: '      return { lives: state.lives, level: state.level + 1, arsenal: [], upgrades: [] };',
+      // ⚠️ Anchored on `level + 1` and the line after it, rather than on the whole returned literal.
+      // The old anchor was the literal, and it went stale the day 0047 added a field to it — CI
+      // refused the probe, which is the harness doing its job. `level + 1` is the one line in this
+      // arm that says what a level boundary IS, so it is the part that will not move.
+      find: '        level: state.level + 1,\n        arsenal: state.arsenal,\n        upgrades: state.upgrades,',
+      replace: '        level: state.level + 1,\n        arsenal: [],\n        upgrades: [],',
     },
   },
   {
