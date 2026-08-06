@@ -243,17 +243,34 @@ describe('collecting one, in the real frame', () => {
     });
   }
 
+
+  /**
+   * Drive the frame, keeping the ship on the pickup's lane.
+   *
+   * ⚠️ **The ship used to be able to sit still, and a drifting pickup is why it cannot.**
+   * `docs/decisions/0048-a-threat-may-arrive-from-the-side.md` gave
+   * pickups a wandering flight, so a fixture that held station and waited was measuring whether the
+   * drift happened to cross the centreline — which it does not. Steering is what a player does, and
+   * it is what these tests are about: the collection, not the navigation.
+   */
+  function flyInto(world: ReturnType<typeof playableWorld>['world'], steps: number, each?: () => void): void {
+    const frame = new GameFrame(world);
+    for (let i = 0; i < steps; i++) {
+      if (world.pickups.size > 0) world.ship.across = world.pickups.at(0).across;
+      each?.();
+      frame.step();
+    }
+  }
+
   it('is reported exactly once, and by name', () => {
     const { world, taken } = onePickup('rapid');
-    const frame = new GameFrame(world);
-    for (let i = 0; i < 600; i++) frame.step();
+    flyInto(world, 600);
     expect(taken, 'the ship flew through a pickup and nothing was reported').toEqual(['rapid']);
   });
 
   it('leaves the field once taken, so it cannot be collected twice', () => {
     const { world } = onePickup('extraLife');
-    const frame = new GameFrame(world);
-    for (let i = 0; i < 600; i++) frame.step();
+    flyInto(world, 600);
     expect(world.pickups.size, 'the pickup is still on the field after being collected').toBe(0);
   });
 
@@ -265,12 +282,10 @@ describe('collecting one, in the real frame', () => {
       read as the collection being broken.
     */
     const { world, taken } = onePickup('rapid');
-    const frame = new GameFrame(world);
-    for (let i = 0; i < 600; i++) {
-      // Held permanently invulnerable, which is the state under test rather than an incidental one.
+    // Held permanently invulnerable, which is the state under test rather than an incidental one.
+    flyInto(world, 600, () => {
       world.ship.invulnFor = 60;
-      frame.step();
-    }
+    });
     expect(taken, 'a pickup passed through an invulnerable ship').toEqual(['rapid']);
   });
 });

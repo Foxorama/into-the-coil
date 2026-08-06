@@ -20,7 +20,7 @@
  * this bites is to widen the layer arrow, which 0015 exists to refuse.
  */
 
-import { cullAlong, cullLeadingAlong } from './camera.ts';
+import { ACROSS_CULL_MAX, ACROSS_CULL_MIN, cullAlong, cullLeadingAlong } from './camera.ts';
 import type { Pool } from './pool.ts';
 
 /**
@@ -141,6 +141,18 @@ export interface Entity extends Body {
    * `-1` for immortal, puts a sentinel in a field that is otherwise a plain count.
    */
   lifeFor: number;
+  /**
+   * The `across` a body that entered from the side straightens out at.
+   *
+   * ⚠️ **Read only while `velAcross` is non-zero**, which is what makes it cost nothing for the
+   * things that do not flank: everything else in the game leaves `velAcross` at zero or has it
+   * rewritten from its row every step, so this field is never consulted. No sentinel value is
+   * needed and none is defined — *not currently crossing* is a velocity of zero, which is a fact
+   * about the body rather than a magic number in a field.
+   *
+   * `docs/decisions/0048-a-threat-may-arrive-from-the-side.md`.
+   */
+  steerAcross: number;
 }
 
 /** A blank entity. Called only while a pool is being constructed. */
@@ -164,6 +176,7 @@ export function makeEntity(): Entity {
     kind: 0,
     fireIn: 0,
     lifeFor: 0,
+    steerAcross: 0,
   };
 }
 
@@ -192,6 +205,7 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.kind = kind;
   e.fireIn = 0;
   e.lifeFor = 0;
+  e.steerAcross = 0;
 }
 
 /**
@@ -206,9 +220,16 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
  * camera, so it never falls behind and is never retired — the pool fills with bullets that left the
  * screen seconds ago, and then refuses to spawn the one the player is watching for.
  */
-export function stepEntities(pool: Pool<Entity>, cameraAlong: number): void {
+export function stepEntities(pool: Pool<Entity>, cameraAlong: number, leadingCull?: number): void {
   const cull = cullAlong(cameraAlong);
-  const cullLeading = cullLeadingAlong(cameraAlong);
+  /*
+    ⚠️ **The leading cull is an ARGUMENT with a default, and the one caller that overrides it is the
+    player's own shots.** Everything else in the world is content, and content is placed against the
+    widest view any device can have (0023) — so its cull is the same everywhere. A shot is not
+    content: it is the player's reach, and *"you can shoot what you can see"* is a promise about the
+    screen in front of them. `cullPlayerShotAlong` in `src/sim/camera.ts` has the bug that argues it.
+  */
+  const cullLeading = leadingCull ?? cullLeadingAlong(cameraAlong);
   for (let i = pool.size - 1; i >= 0; i--) {
     const e = pool.at(i);
     e.prevAlong = e.along;
@@ -244,6 +265,21 @@ export function stepEntities(pool: Pool<Entity>, cameraAlong: number): void {
       pool.releaseAt(i);
       continue;
     }
-    if (e.along < cull || e.along > cullLeading) pool.releaseAt(i);
+    if (e.along < cull || e.along > cullLeading) {
+      pool.releaseAt(i);
+      continue;
+    }
+    /*
+      ⚠️ **THE `across` CULL, and until now there was none at all.**
+      `reports/enemy-silhouettes-2026-08-05.md` named it as the one real gap that comes with entry
+      from the lane's edges: anything that leaves the dodge lane is gone from the game and was still
+      holding a pool slot, forever. Nothing could leave while everything arrived at the leading edge,
+      so it was a hypothetical; a flanker that misses its turn makes it a live path.
+
+      ⚠️ **The ship cannot reach this.** `src/sim/flight.ts` clamps it to `PLAYER_MARGIN` inside both
+      edges, which is well inside `ACROSS_CULL_MIN`/`MAX` — so the one body whose release would end
+      the run silently is structurally unable to get there.
+    */
+    if (e.across < ACROSS_CULL_MIN || e.across > ACROSS_CULL_MAX) pool.releaseAt(i);
   }
 }

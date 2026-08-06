@@ -168,3 +168,67 @@ export function cullAlong(cameraAlong: number): number {
 export function cullLeadingAlong(cameraAlong: number): number {
   return spawnAlong(cameraAlong) + EDGE_MARGIN;
 }
+
+/**
+ * The `along` coordinate a PLAYER'S shot may not pass, given what the player can actually see.
+ *
+ * ── THE ONE CULL THAT DEPENDS ON THE DEVICE, AND IT IS A BUG FIX ────────────────────────────────
+ *
+ * ⚠️ **Reported from play**: *"in playtesting I didn't even see the boss monsters on screen because
+ * they died before they even entered the visible play area."* A pulse lives
+ * `PLAYER_SHOT_LIFE` steps at its own speed, which carries it about 250 units ahead of the camera —
+ * and a 16:9 view is 178 wide. Everything in the 70 units between was being shot at, and a boss
+ * spends about four seconds there while it closes on its station.
+ *
+ * ⚠️ **`view.alongSpan` and NOT `MAX_ALONG_SPAN`, which is the opposite of every other rule here.**
+ * `spawnAlong` uses the widest view any device can have, because content is authored once and must
+ * be off-screen everywhere. This is not content: it is the player's reach, and *"you can shoot what
+ * you can see"* is the rule a player actually holds. Tying it to the widest device instead would
+ * leave a 16:9 player shooting 70 units into the dark to keep a 21:9 player's reach honest.
+ *
+ * It does mean a wider screen shoots further, which is the same trade
+ * `docs/decisions/0023-the-long-axis-is-the-scroll-axis.md` already made and clamped: a wider screen
+ * also sees further, and `across` — the difficulty axis — is fixed at 100 on every device.
+ */
+export function cullPlayerShotAlong(cameraAlong: number, alongSpan: number): number {
+  return cameraAlong + alongSpan;
+}
+
+/**
+ * How far outside the dodge lane a body may drift before it is gone for good.
+ *
+ * ⚠️ **THE GAP `reports/enemy-silhouettes-2026-08-05.md` NAMED, closed in the change that opens it.**
+ * Until now nothing entered or left across the lane, so `cullAlong` was the whole story; anything
+ * that did leave was gone from the game and still holding a pool slot forever. Entry from the
+ * `across` edges makes that a live path rather than a hypothetical.
+ *
+ * `EDGE_MARGIN` on each side, which is the same clearance the along edges get and is by definition
+ * larger than anything that may be authored — so a body spawning off the lane spawns inside the
+ * cull, and one that leaves is genuinely past everybody.
+ */
+export const ACROSS_CULL_MIN = -EDGE_MARGIN;
+export const ACROSS_CULL_MAX = ACROSS_SPAN + EDGE_MARGIN;
+
+/**
+ * How far outside the lane something entering from an `across` edge starts.
+ *
+ * Half the cull margin: far enough that it is off screen on every device before it moves, close
+ * enough that it is never sitting in the dead zone for long.
+ */
+export const FLANK_MARGIN = EDGE_MARGIN / 2;
+
+/**
+ * How far ahead of the camera a flanker appears, in world units.
+ *
+ * ⚠️ **`MAX_ALONG_SPAN / 2`, and it is the only number that keeps the promise on every device.**
+ * Asked for in play: *"entry point should be capped at 50% from the right side of the screen — the
+ * player has a safe spawn zone from the left side."* A view is 150 to 240 units wide by aspect
+ * (0023), so *half the screen* is not one place. 120 is at or beyond the halfway line of every view
+ * the clamp allows — dead centre on the widest, and 80% of the way across on the narrowest — so
+ * nothing ever appears behind the player, on any device.
+ *
+ * ⚠️ It is measured from the CAMERA rather than from the ship, because the ship moves and a spawn
+ * rule that followed it would let a player standing forward drag their own ambushes in front of
+ * them.
+ */
+export const FLANK_ALONG = MAX_ALONG_SPAN / 2;

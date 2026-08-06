@@ -21,14 +21,22 @@ export const PROBES = [
   {
     decision: '0043',
     suite: 'tests/pickups.test.ts',
-    // The other half. A shot that runs to the leading cull spends a third of its life past the
-    // furthest edge of the furthest screen, holding the slot the next volley needs.
+    /*
+      The other half. A shot that runs to the leading cull spends a third of its life past the
+      furthest edge of the furthest screen, holding the slot the next volley needs.
+
+      ⚠️ **Re-anchored, because the MECHANISM changed.** This used to lengthen `PLAYER_SHOT_LIFE`,
+      which was the shot's own timer. 0048 culls player shots at the edge of the view instead —
+      strictly sooner than that timer could fire on any device — so lengthening the timer stopped
+      doing anything and the probe reported STILL GREEN. The timer is gone; what starves the pool
+      now is the view cull, so that is what this breaks.
+    */
     broke: 'a player shot left to run to the leading cull, starving the next volley',
     guard: 'a volley is never truncated, however heavily the ship is loaded',
     edit: {
-      path: 'src/content/pickups.ts',
-      find: 'export const PLAYER_SHOT_LIFE = 80;',
-      replace: 'export const PLAYER_SHOT_LIFE = 200;',
+      path: 'src/app/frame.ts',
+      find: '    stepEntities(w.playerShots, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));',
+      replace: '    stepEntities(w.playerShots, w.cameraAlong);',
     },
   },
   {

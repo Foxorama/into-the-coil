@@ -57,8 +57,10 @@ export const PROBES = [
     guard: 'a player shot does not live forever ahead of the level',
     edit: {
       path: 'src/sim/entity.ts',
-      find: '    if (e.along < cull || e.along > cullLeading) pool.releaseAt(i);',
-      replace: '    if (e.along < cull) pool.releaseAt(i);',
+      // ⚠️ Re-anchored when 0048 gave the leading cull an early `continue` so an across cull could
+      // follow it. The condition itself is the part that cannot move.
+      find: '    if (e.along < cull || e.along > cullLeading) {',
+      replace: '    if (e.along < cull) {',
     },
   },
   {
