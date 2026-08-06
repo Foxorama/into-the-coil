@@ -34,6 +34,7 @@ import {
   launchSpecial,
   resetScene,
   respawn,
+  scatterUpgrades,
   startLevel,
   type World,
 } from './frame.ts';
@@ -100,9 +101,20 @@ export const CAPACITY = {
   bombs: 4,
   blasts: 4,
   enemyShots: 150,
-  debris: 200 - MAX_SHIELDS - 24 - 8,
+  debris: 200 - MAX_SHIELDS - 24 - 8 - 4,
   boss: 1,
-  pickups: 8,
+  /*
+    ⚠️ **TWELVE, AND IT WAS EIGHT.** A death now throws every upgrade it took back onto the field
+    (`docs/decisions/0066-a-death-scatters-what-it-took.md`), on top of whatever the level had already
+    placed there — and a scatter one pickup short is a pickup the player watched themselves lose and
+    was never offered back. The four come out of the particle share, on the same terms as the shell,
+    the missiles and the bomb: a pickup is the opposite of a cosmetic.
+
+    ⚠️ It is not the arsenal's whole size and cannot be. A player carrying twenty upgrades scatters
+    twelve; `src/sim/pool.ts` drops rather than grows, and a pool sized for a run nobody has had would
+    be spending 0022's budget on a hypothetical.
+  */
+  pickups: 12,
 };
 
 export interface Mounted {
@@ -687,6 +699,18 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   };
 
   world.onDeath = (): void => {
+    /*
+      ⚠️ **BEFORE the reducer, because the reducer is what empties the list.** `lifeLost` clears the
+      upgrades (0039), so a scatter dispatched after it would throw nothing —
+      `docs/decisions/0066-a-death-scatters-what-it-took.md`. The ordering is real and unstatable in
+      `src/app/frame.ts`, so `tests/pickups.test.ts` drives the shell rather than the frame.
+
+      ⚠️ **On EVERY death, including the last one**, on the same terms `src/state/slices/run.ts` gives
+      for clearing the arsenal at zero lives: a rule with a hidden condition is a rule nobody can
+      read, and the condition would be *did the caller intend to keep playing*. Nothing collects them
+      on a run that is over, and the wreck is on screen under the overlay either way (0036).
+    */
+    scatterUpgrades(world, state.run.upgrades);
     dispatch({ slice: 'run', type: 'lifeLost' });
     if (state.run.lives > 0) respawn(world);
   };

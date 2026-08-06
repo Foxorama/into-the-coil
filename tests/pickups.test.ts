@@ -1,17 +1,26 @@
 import { describe, expect, it } from 'vitest';
 
-import { CYCLE, PICKUPS, PICKUP_KINDS, UPGRADE_KINDS, weaponFor, type UpgradeKind } from '../src/content/pickups.ts';
+import {
+  CYCLE,
+  CYCLE_UNITS,
+  PICKUPS,
+  PICKUP_KINDS,
+  UPGRADE_KINDS,
+  weaponFor,
+  type UpgradeKind,
+} from '../src/content/pickups.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { ACROSS_SPAN, MAX_ASPECT, viewOf } from '../src/sim/camera.ts';
-import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
-import { GameFrame } from '../src/app/frame.ts';
+import { PLAYER_MARGIN, SCROLL_PER_STEP, SHIP_SPEED } from '../src/sim/flight.ts';
+import { GameFrame, SHIP_START_ALONG, scatterUpgrades } from '../src/app/frame.ts';
 import { initialState, reduce } from '../src/state/root.ts';
 import { DEFAULT_DIFFICULTY } from '../src/state/slices/run.ts';
 import { playableWorld } from './world.ts';
 import { CAPACITY } from '../src/app/mount.ts';
+import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 
 /**
  * WHAT A PICKUP IS WORTH, AND WHAT A DEATH TAKES BACK.
@@ -361,6 +370,167 @@ describe('collecting one, in the real frame', () => {
     const { world } = onePickup('extraLife');
     flyInto(world, 600);
     expect(world.pickups.size, 'the pickup is still on the field after being collected').toBe(0);
+  });
+
+  /**
+   * A DEATH SCATTERS WHAT IT TOOK.
+   *
+   * `docs/decisions/0066-a-death-scatters-what-it-took.md`. Asked for in play: *"when a player dies,
+   * their power ups should explode from where they were and bounce around the screen"*, and
+   * *"non-cycling and on a short timer so there's enough time to grab some, but maybe not all."*
+   *
+   * ⚠️ **This is the half of the dying-is-punishing report that 0057 deliberately did not answer**,
+   * and 0056 made a death cost more in the same session.
+   */
+  describe('a death throws back what it took', () => {
+    /**
+     * A world with nothing in it, a ship that has just died carrying `upgrades`, and a replacement.
+     *
+     * ⚠️ **The ship is moved out of the way afterwards, because in the game it IS.** `onDeath` in
+     * `src/app/mount.ts` scatters and then calls `respawn`, which puts the replacement back at
+     * `SHIP_START_ALONG` — so the scatter and the new ship are only in the same place if the player
+     * died at the very back of their box. A fixture that left them on top of each other would
+     * collect the whole scatter on the first step and measure nothing at all, which is exactly what
+     * the first version of this did.
+     */
+    function died(upgrades: readonly UpgradeKind[]): ReturnType<typeof playableWorld> {
+      const built = playableWorld({
+        waves: [],
+        pickups: [],
+        bossAt: Number.POSITIVE_INFINITY,
+        boss: 'sentinel',
+      });
+      scatterUpgrades(built.world, upgrades);
+      built.world.ship.along = built.world.cameraAlong + PLAYER_MARGIN;
+      built.world.ship.prevAlong = built.world.ship.along;
+      return built;
+    }
+
+    /** Where the scatter was thrown from — the ship's start, which is where it died. */
+    const deathAlong = SHIP_START_ALONG;
+
+    it('THE REPORTED ONE: one pickup per upgrade, where the ship was', () => {
+      const carried: UpgradeKind[] = ['rapid', 'spread', 'missileSpread'];
+      const { world } = died(carried);
+      expect(world.pickups.size, 'the upgrades were not thrown back').toBe(carried.length);
+      for (let i = 0; i < world.pickups.size; i++) {
+        const item = world.pickups.at(i);
+        expect(Math.abs(item.along - deathAlong), 'a pickup was thrown from somewhere else').toBeLessThan(1);
+        expect(Math.abs(item.across - ACROSS_SPAN / 2), 'a pickup was thrown from somewhere else').toBeLessThan(1);
+      }
+    });
+
+    it('throws back exactly what was carried, and nothing the player never had', () => {
+      /*
+        ⚠️ **The set, not the count.** A scatter that threw three of whatever was cheapest to look up
+        would pass a count assertion and hand a player back a launcher they never found — which is the
+        game giving away an upgrade rather than returning one.
+      */
+      const carried: UpgradeKind[] = ['spread', 'spread', 'missileRate'];
+      const { world } = died(carried);
+      const thrown: string[] = [];
+      for (let i = 0; i < world.pickups.size; i++) thrown.push(PICKUP_KINDS[world.pickups.at(i).kind]!);
+      expect(thrown.sort(), 'the scatter is not what the death took').toEqual([...carried].sort());
+    });
+
+    it('does not cycle, so what comes back is what was lost', () => {
+      /*
+        ⚠️ *"Non-cycling"*, and it is the ask's own word. A scattered `spread` that turned into a
+        `missileSpread` on the way back would be the game handing out something the player never had —
+        and `docs/decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md`'s cycle is
+        exactly the mechanism that would do it.
+
+        Driven across a whole phase boundary, because the cycle flips on a distance and a test that
+        stopped short of one would pass with no rule in place at all.
+      */
+      const { world } = died(['spread']);
+      const frame = new GameFrame(world);
+      const item = world.pickups.at(0);
+      const drawn = item.sprite;
+      for (let i = 0; i < Math.ceil((CYCLE_UNITS * 2) / SCROLL_PER_STEP) && world.pickups.size > 0; i++) {
+        frame.step();
+        if (world.pickups.size === 0) break;
+        expect(item.sprite, 'a scattered pickup turned into something the player never had').toBe(drawn);
+      }
+    });
+
+    it('spreads across the lane instead of stacking on one line', () => {
+      // *"Bounce around the screen."* Six upgrades arriving on one lane is one pickup the player can
+      // reach and five they cannot.
+      const { world } = died(['rapid', 'rapid', 'spread', 'spread', 'missileRate', 'missileSpread']);
+      const frame = new GameFrame(world);
+      for (let i = 0; i < 90; i++) frame.step();
+      const lanes = new Set<number>();
+      for (let i = 0; i < world.pickups.size; i++) lanes.add(Math.round(world.pickups.at(i).across));
+      expect(lanes.size, 'the scatter arrived stacked on top of itself').toBe(world.pickups.size);
+    });
+
+    it('holds the distance the ship died at, rather than flying off the screen', () => {
+      /*
+        ⚠️ **0034's *every speed is in the camera's frame*.** A scatter thrown ALONG as well as across
+        is off the front or the back of the view inside two seconds, which is the opposite of *"enough
+        time to grab some"*. Measured as where they are on screen, which is what the player sees.
+      */
+      const { world } = died(['rapid', 'spread']);
+      const frame = new GameFrame(world);
+      const where = world.pickups.at(0).along - world.cameraAlong;
+      for (let i = 0; i < 120; i++) frame.step();
+      for (let i = 0; i < world.pickups.size; i++) {
+        const onScreen = world.pickups.at(i).along - world.cameraAlong;
+        expect(Math.abs(onScreen - where), 'the scatter drifted out of the camera frame').toBeLessThan(2);
+      }
+    });
+
+    it('is gone on a short timer, and says so when it goes', () => {
+      /*
+        ⚠️ *"A short timer so there's enough time to grab some, but maybe not all."* Both halves: it
+        expires, and the expiry is an EVENT the picture mentions —
+        `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`, which is named
+        for three cases where the model resolved something and the screen said nothing.
+
+        In seconds, per 0027, and as a band rather than a value: long enough to cross the lane, short
+        enough that a full loadout cannot be recovered by flying calmly from one to the next.
+      */
+      const { world } = died(['rapid']);
+      const frame = new GameFrame(world);
+      world.debris.clear();
+      let steps = 0;
+      for (; steps < 1800 && world.pickups.size > 0; steps++) frame.step();
+      const seconds = steps / STEPS_PER_SECOND;
+      expect(seconds, `the scatter lasted ${seconds.toFixed(1)}s`).toBeGreaterThan(ACROSS_SPAN / SHIP_SPEED / 60);
+      expect(seconds, `the scatter lasted ${seconds.toFixed(1)}s, which is not a short timer`).toBeLessThan(10);
+      expect(world.debris.size, 'a scattered pickup vanished with nothing to say it had').toBeGreaterThan(0);
+    });
+
+    it('never asks the pool for more than it has', () => {
+      // `src/sim/pool.ts` drops rather than grows, and a player with a very long run should not take
+      // the game with them. Twice the pool, which is a loadout nothing can currently hand out.
+      const many: UpgradeKind[] = [];
+      for (let i = 0; i < CAPACITY.pickups * 2; i++) many.push('rapid');
+      const { world } = died(many);
+      expect(world.pickups.size, 'the scatter overran the pool').toBeLessThanOrEqual(CAPACITY.pickups);
+      expect(world.pickups.size, 'the scatter threw nothing at all').toBeGreaterThan(0);
+    });
+
+    it('and an AUTHORED pickup still cycles, so this rule reaches only the scattered ones', () => {
+      /*
+        ⚠️ **The counterweight.** *Non-cycling* is a property of a scattered pickup and not of pickups,
+        and the mechanism that tells them apart is a lifetime — so a break that switched the cycle off
+        everywhere would satisfy every other assertion above. 0052 is the decision this must not undo.
+      */
+      const { world } = onePickup('rapid');
+      const frame = new GameFrame(world);
+      while (world.pickups.size === 0) frame.step();
+      const item = world.pickups.at(0);
+      const drawn = item.sprite;
+      let flipped = false;
+      for (let i = 0; i < Math.ceil((CYCLE_UNITS * 2) / SCROLL_PER_STEP) && world.pickups.size > 0; i++) {
+        frame.step();
+        if (world.pickups.size === 0) break;
+        if (item.sprite !== drawn) flipped = true;
+      }
+      expect(flipped, 'an authored pickup stopped cycling').toBe(true);
+    });
   });
 
   it('is collectable while the ship is invulnerable', () => {
