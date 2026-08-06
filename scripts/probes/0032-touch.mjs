@@ -237,8 +237,10 @@ export const PROBES = [
     guard: 'fires a HELD button once, however many steps it is held for',
     edit: {
       path: 'src/app/pad.ts',
-      find: '          if (down && !wasDown[i] && i < intent.specials.length) {',
-      replace: '          if (down && i < intent.specials.length) {',
+      // ⚠️ Re-expressed when 0055 added `!spending` to this line. The BREAK is unchanged — the edge
+      // is no longer derived — and only the surrounding text moved. `PROBE FAILED` is what said so.
+      find: '          if (down && !wasDown[i] && !spending && i < intent.specials.length) {',
+      replace: '          if (down && !spending && i < intent.specials.length) {',
     },
   },
 ];

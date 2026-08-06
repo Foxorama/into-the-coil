@@ -6,6 +6,7 @@ import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
 import { MENU_CONFIRM_BUTTONS } from '../src/app/menu.ts';
 import { SCREENS, STEPS_PER_SECOND } from '../src/state/screens.ts';
+import { SPECIALS } from '../src/content/specials.ts';
 
 /**
  * A PAD DRIVING THE REAL PAGE, AND A SCREEN THAT EXPIRES BY ITSELF.
@@ -140,6 +141,60 @@ describe.runIf(chromePath)('a gamepad can press a button on a screen', () => {
     await page.waitForTimeout(200);
     expect(await shown(page, '.itc-playing-hud'), 'moving the focus started a run').toBe(false);
     expect(await page.locator('.' + prefixFor('title') + 'action-cursor').count()).toBe(1);
+    await page.context().close();
+  });
+});
+
+describe.runIf(chromePath)('a press belongs to one screen', () => {
+  it('starts a run without also throwing the bomb that button is bound to', async () => {
+    /*
+      THE REPORTED BUG, end to end: *"gamepad input button on title menus is the same button as the
+      bomb special weapon so starting a new game automatically fires a bomb."*
+
+      ⚠️ **THE ASSERTION IS THE NUMBER THE PLAYER READS OFF THE HUD**, not a count of edges inside a
+      reader — `docs/decisions/0027-measure-the-picture-not-the-model.md`. Both readers can be
+      individually correct about their own snapshots and the bomb still goes, because the defect is
+      in the seam between them, and the seam is `src/app/mount.ts`. Nothing below the shell can see
+      it: this is the only test that fails if the wiring is removed.
+
+      ⚠️ **The button is HELD across the transition**, deliberately and unlike every other test on
+      this page, because releasing it is what makes the bug disappear. A player pressing A to start a
+      run does not let go within one sixtieth of a second.
+    */
+    const page = await open();
+    await setPad(page, [0, 0], [MENU_CONFIRM_BUTTONS[0]!]);
+    await page.waitForSelector('.itc-playing-hud-shown', { timeout: 10_000 });
+
+    /*
+      ⚠️ **WAITING FOR A STEP, NOT FOR AN ELEMENT — and the first version of this test got that
+      wrong.** `.itc-playing-hud-shown` appears inside the dispatch that raises the screen, which is
+      at least one animation frame BEFORE the run's first simulation step. Reading the count there
+      reads it before the bomb could have been thrown, so the guard passed with the fix removed. It
+      went red locally and STILL GREEN on CI, where the slower frame interval widens the window —
+      `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`, and the answer it
+      demands: the guard was measuring the wrong quantity, so the quantity is what changed.
+
+      ⚠️ **The quantity is "at least one step has run", and the defect fires on the FIRST one.** So
+      the wait does not have to be accurate, only longer than one frame on any machine that renders
+      at all — a second is sixty steps at rate and still several on a runner dropping frames.
+    */
+    await page.waitForTimeout(1000);
+
+    // Still down: the run is under way and the thumb has not moved.
+    const bombs = '.itc-playing-hud-group[aria-label*="bomb"]';
+    await page.waitForSelector(bombs, { timeout: 5_000 });
+    const carried = await page.getAttribute(bombs, 'aria-label');
+    expect(
+      await shown(page, '.' + prefixFor('title').slice(0, -1)),
+      'the run never started, so nothing was measured',
+    ).toBe(false);
+    await setPad(page, [0, 0], []);
+
+    expect(carried, 'the readout does not say how many bombs are carried').toMatch(/\d+ bombs/);
+    expect(
+      Number(/(\d+) bombs/.exec(carried ?? '')?.[1]),
+      'the press that started the run was read a second time and spent a bomb',
+    ).toBe(SPECIALS.bomb.charges);
     await page.context().close();
   });
 });

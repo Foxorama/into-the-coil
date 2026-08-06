@@ -27,15 +27,19 @@ function silentKeyboard(): EventTarget {
  */
 
 /** A device that always asks for the same thing. */
-function fixed(along: number, across: number, presses = 0): InputSource & { released: boolean } {
+function fixed(along: number, across: number, presses = 0): InputSource & { released: boolean; spent: boolean } {
   return {
     released: false,
+    spent: false,
     contribute(intent: Intent): void {
       intent.along += along;
       intent.across += across;
       if (presses > 0 && intent.specials.length > 0) {
         intent.specials[0] = (intent.specials[0] ?? 0) + presses;
       }
+    },
+    spend(): void {
+      this.spent = true;
     },
     release(): void {
       this.released = true;
@@ -135,5 +139,20 @@ describe('every attached device composes into the one intent a step reads', () =
     combineDevices([a, b]).release();
     expect(a.released).toBe(true);
     expect(b.released).toBe(true);
+  });
+
+  it('spends every source, not just the first', () => {
+    /*
+      ⚠️ **The shell holds the combiner and nothing else**, so a screen change that spent only the
+      first device would leave the others holding a press that has already been used — and which
+      device is "first" is the order `src/app/mount.ts` happened to attach them in, which
+      `combineDevices` exists to make irrelevant. See
+      `docs/decisions/0055-a-press-belongs-to-one-screen.md`.
+    */
+    const a = fixed(0, 0);
+    const b = fixed(0, 0);
+    combineDevices([a, b]).spend();
+    expect(a.spent).toBe(true);
+    expect(b.spent).toBe(true);
   });
 });

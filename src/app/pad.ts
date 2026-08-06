@@ -74,6 +74,15 @@ export function attachPad(options: PadOptions = {}): InputSource {
 
   // @setup: which special buttons were down at the previous step, so a press can be an edge.
   const wasDown: boolean[] = new Array<boolean>(SPECIAL_BINDINGS).fill(false);
+  /*
+    @setup: whether the next snapshot is being read only to learn what is already held.
+
+    ⚠️ **A FLAG RATHER THAN A SNAPSHOT TAKEN IN `spend`.** `navigator.getGamepads()` allocates and
+    there is no API that does not, so `spend` taking its own reading would add a second allocating
+    call at every screen change. Deferring to the next `contribute` — which was going to take a
+    snapshot anyway — costs nothing at all.
+  */
+  let spending = false;
 
   return {
     contribute(intent: Intent): void {
@@ -102,12 +111,16 @@ export function attachPad(options: PadOptions = {}): InputSource {
           // The edge, derived: a snapshot cannot tell you a press happened, only that a button is
           // down now. Holding must fire once, which is the same rule `src/app/input.ts` enforces
           // against the OS's key repeat.
-          if (down && !wasDown[i] && i < intent.specials.length) {
+          // ⚠️ `!spending` — on the step after a screen change, the snapshot is read to LEARN what
+          // is held rather than to act on it. Without it, a button held through the transition is
+          // down-now and was-not-down-last-step, which is indistinguishable from a fresh press.
+          if (down && !wasDown[i] && !spending && i < intent.specials.length) {
             intent.specials[i] = (intent.specials[i] ?? 0) + 1;
           }
           wasDown[i] = down;
         }
       }
+      spending = false;
 
       // 0023's handedness, exactly as `src/app/touch.ts` applies it.
       if (alongAxisOf() === 'x') {
@@ -117,6 +130,16 @@ export function attachPad(options: PadOptions = {}): InputSource {
         intent.along += -ay;
         intent.across += ax;
       }
+    },
+    /*
+      ⚠️ **This is the one device where `spend` and `release` point OPPOSITE ways**, which is why the
+      two are separate methods rather than one with a comment. `release` forgets what was held, so
+      the next press is heard — correct when a source is being torn down. Here the button is still
+      under a thumb and its press has already been used by a menu, so the answer is to remember it as
+      held. `release`'s version of this bug is the reported one: a bomb on the first step of a run.
+    */
+    spend(): void {
+      spending = true;
     },
     release(): void {
       for (let i = 0; i < wasDown.length; i++) wasDown[i] = false;

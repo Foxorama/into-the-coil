@@ -275,3 +275,51 @@ describe('the shell fills an intent without ever telling the model about a key',
     expect(narrow.specials).toEqual([1]);
   });
 });
+
+/**
+ * THE KEYBOARD HALF OF THE BOMB THAT FIRES ITSELF.
+ *
+ * `docs/decisions/0055-a-press-belongs-to-one-screen.md`. The bug was reported on a gamepad, and it
+ * is not a gamepad bug: `Space` activates a focused `<button>` through the DOM **and** is bound to
+ * `special1`, so pressing it on the title screen starts a run and arms a bomb for the run's first
+ * step. Fixing only the device it was reported on would leave the same defect under the other hand.
+ */
+describe('a press that a screen has already used is not delivered again', () => {
+  it('THE BOMB: a press counted before a screen change is not delivered after it', () => {
+    const kb = new FakeKeyboard();
+    const src = combineDevices([attachInput(kb, DEFAULT_BINDINGS)]);
+    const intent = makeIntent(SPECIAL_BINDINGS);
+    kb.down(SPACE);
+    src.spend();
+    src.contribute(intent);
+    expect(intent.specials[0], 'the press that started the run also threw a bomb').toBe(0);
+  });
+
+  it('and the key still works afterwards, once it has actually been pressed again', () => {
+    /*
+      ⚠️ **`held` must SURVIVE the spend**, which is the opposite of what a blur does. The key is
+      still under a finger; releasing and pressing it is a new press and nothing less is.
+    */
+    const kb = new FakeKeyboard();
+    const src = combineDevices([attachInput(kb, DEFAULT_BINDINGS)]);
+    const intent = makeIntent(SPECIAL_BINDINGS);
+    kb.down(SPACE);
+    src.spend();
+    src.contribute(intent);
+    kb.up(SPACE);
+    kb.down(SPACE);
+    clearIntent(intent);
+    src.contribute(intent);
+    expect(intent.specials[0], 'the special was latched off for good').toBe(1);
+  });
+
+  it('does not swallow a press made after the screen changed', () => {
+    const kb = new FakeKeyboard();
+    const src = combineDevices([attachInput(kb, DEFAULT_BINDINGS)]);
+    const intent = makeIntent(SPECIAL_BINDINGS);
+    src.spend();
+    kb.down(SPACE);
+    src.contribute(intent);
+    expect(intent.specials[0], 'spend outlived the screen change it belonged to').toBe(1);
+  });
+});

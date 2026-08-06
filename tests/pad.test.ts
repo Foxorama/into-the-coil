@@ -29,7 +29,11 @@ function pad(x: number, y: number, buttons: readonly boolean[] = [], connected =
   } as unknown as Gamepad;
 }
 
-function rig(): { set: (...pads: (Gamepad | null)[]) => void; step: () => Intent } {
+function rig(): {
+  set: (...pads: (Gamepad | null)[]) => void;
+  step: () => Intent;
+  spend: () => void;
+} {
   let snapshot: readonly (Gamepad | null)[] = [];
   const src = combineDevices([attachPad({ pads: () => snapshot })]);
   const intent = makeIntent(SPECIAL_BINDINGS);
@@ -38,6 +42,7 @@ function rig(): { set: (...pads: (Gamepad | null)[]) => void; step: () => Intent
       snapshot = pads;
     },
     step: (): Intent => (src.contribute(intent), intent),
+    spend: (): void => src.spend(),
   };
 }
 
@@ -145,5 +150,69 @@ describe('pads come and go, and nothing may throw when they do', () => {
     const { step } = rig();
     expect(step().along).toBe(0);
     expect(step().across).toBe(0);
+  });
+});
+
+/**
+ * THE BOMB THAT FIRES ITSELF, REPORTED FROM PLAY.
+ *
+ * *"Gamepad input button on title menus is the same button as the bomb special weapon so starting a
+ * new game automatically fires a bomb."*
+ * `docs/decisions/0055-a-press-belongs-to-one-screen.md`.
+ *
+ * ⚠️ **It was never a binding clash.** The binding table is right, and
+ * `docs/decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md` gives the reason a menu's
+ * confirm may not follow a rebound special. One press was read twice, by two readers, either side of
+ * a screen change — and the shape of that is a snapshot device, not a table.
+ */
+describe('a press that has already been used is not read again', () => {
+  it('THE BOMB: a button held through a screen change is not a fresh press', () => {
+    /*
+      The reported sequence exactly. The player holds the confirm button on the title screen; the
+      menu reader acts on it; the run starts; the game's reader takes its FIRST snapshot with that
+      button still down. Down-now and not-down-last-step is indistinguishable from a press.
+    */
+    const { set, step, spend } = rig();
+    set(pad(0, 0, buttonsWith(FIRST)));
+    spend();
+    expect(step().specials[0], 'the press that started the run also threw a bomb').toBe(0);
+  });
+
+  it('and the next real press, after letting go, still fires', () => {
+    /*
+      ⚠️ **The half that would make this fix worse than the bug.** Swallowing the press is easy;
+      swallowing the button is what a naive latch does, and a player whose bomb never works again is
+      worse off than one who wastes a charge at the start.
+    */
+    const { set, step, spend } = rig();
+    set(pad(0, 0, buttonsWith(FIRST)));
+    spend();
+    step();
+    set(pad(0, 0, [false]));
+    step();
+    set(pad(0, 0, buttonsWith(FIRST)));
+    expect(step().specials[0], 'the special was latched off for good').toBe(1);
+  });
+
+  it('spends only the step it was asked for, not every step after it', () => {
+    // A flag that never cleared would be the same bug wearing the fix's clothes.
+    const { set, step, spend } = rig();
+    set(pad(0, 0, [false]));
+    spend();
+    step();
+    set(pad(0, 0, buttonsWith(FIRST)));
+    expect(step().specials[0], 'spend swallowed a press made after the screen changed').toBe(1);
+  });
+
+  it('is not `release`, which points the opposite way', () => {
+    /*
+      ⚠️ **The distinction the whole decision rests on.** `release` forgets what was held so the next
+      press is heard — right when a source is being torn down, and exactly wrong across a screen
+      change, where it manufactures the press this test exists to prevent.
+    */
+    const { set, step } = rig();
+    set(pad(0, 0, buttonsWith(FIRST)));
+    step();
+    expect(step().specials[0], 'a held button repeated').toBe(0);
   });
 });

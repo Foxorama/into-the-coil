@@ -40,6 +40,26 @@ export interface InputSource {
    * in the caller.
    */
   contribute(intent: Intent): void;
+  /**
+   * Something else has already used whatever the player is currently holding. Discard it.
+   *
+   * ⚠️ **THE PRESS THAT LEFT A SCREEN IS SPENT, and it is not `release`.** `release` detaches
+   * listeners; this keeps listening and throws away the asks in flight. The two are opposites and
+   * conflating them was the bug: a pad's `release` clears *"was it down last step"*, so a button
+   * still physically held reads as a fresh press on the very next step.
+   *
+   * Reported from play: *"gamepad input button on title menus is the same button as the bomb special
+   * weapon so starting a new game automatically fires a bomb."* It is not a binding clash — the
+   * binding table is right, and `docs/decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md`
+   * gives the reason a menu's confirm may not follow a rebound special. One press was simply read
+   * twice, by two readers, either side of a screen change. The keyboard has the identical bug for
+   * the identical reason: `Space` activates a focused `<button>` **and** is bound to `special1`.
+   *
+   * ⚠️ **It must not mean "pretend the control is up".** A player whose thumb is still on the button
+   * has not released it; the next press is the next time they press it, which is what makes this
+   * different from a blur. See `docs/decisions/0055-a-press-belongs-to-one-screen.md`.
+   */
+  spend(): void;
   /** Detach every listener. Safe to call twice. */
   release(): void;
 }
@@ -120,6 +140,15 @@ export function attachInput(target: EventTarget, bindings: Bindings = DEFAULT_BI
         }
         pressed[action] = 0;
       }
+    },
+    /*
+      ⚠️ **The counts go and `held` stays**, and the asymmetry is the whole point. A counted press is
+      an ask that has not been delivered yet, and the screen that just closed delivered it. `held` is
+      a fact about the player's hand, and their hand has not moved — leaving it set is what stops the
+      key's own repeat guard from re-arming and firing a second press they never made.
+    */
+    spend(): void {
+      for (const action of ACTION_NAMES) pressed[action] = 0;
     },
     release(): void {
       target.removeEventListener('keydown', onKeyDown);

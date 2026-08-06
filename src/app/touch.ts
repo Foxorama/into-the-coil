@@ -282,6 +282,11 @@ export function attachTouch(target: HTMLElement, options: TouchOptions = {}): In
         pressed[i] = 0;
       }
     },
+    // A tap that a screen has already acted on. The counts are asks not yet delivered; the stick's
+    // own state is a finger still on the glass, and that is not this method's business.
+    spend(): void {
+      for (let i = 0; i < pressed.length; i++) pressed[i] = 0;
+    },
     release(): void {
       target.removeEventListener('pointerdown', onDown);
       target.removeEventListener('pointermove', onMove);

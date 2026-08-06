@@ -16,7 +16,9 @@ export const PROBES = [
     guard: 'reports one move for a push and holds silent until it comes back',
     edit: {
       path: 'src/app/menu.ts',
-      find: '      ask.move = move !== 0 && move !== heldMove ? move : 0;',
+      // ⚠️ Re-expressed when 0055 rewrote the edge. The break is the same one — the stick read as a
+      // level — and this is the line that now carries the edge.
+      find: '      ask.move = heard && !spending ? move : 0;',
       replace: '      ask.move = move;',
     },
   },
@@ -28,7 +30,8 @@ export const PROBES = [
     guard: 'fires once for a button held down across many steps',
     edit: {
       path: 'src/app/menu.ts',
-      find: '      ask.confirm = confirm && !heldConfirm;',
+      // ⚠️ Re-expressed when 0055 added `&& !spending`. Same break: confirm read as a hold.
+      find: '      ask.confirm = confirm && !heldConfirm && !spending;',
       replace: '      ask.confirm = confirm;',
     },
   },
@@ -41,8 +44,14 @@ export const PROBES = [
     guard: 'hears the opposite direction without a trip through the centre',
     edit: {
       path: 'src/app/menu.ts',
-      find: '      ask.move = move !== 0 && move !== heldMove ? move : 0;',
-      replace: '      ask.move = move !== 0 && heldMove === 0 ? move : 0;',
+      /*
+        ⚠️ Re-expressed when 0055 rewrote the edge, and this is the probe that guards the property
+        0055 most easily could have destroyed — its own fix for the jerky flick is a threshold on
+        reversals, and the lazy version of that is *"require a trip through the centre"*, which is
+        exactly this break.
+      */
+      find: '      const heard = move !== 0 && move !== heldMove && (heldMove === 0 || strength >= MENU_REVERSE);',
+      replace: '      const heard = move !== 0 && heldMove === 0;',
     },
   },
   {

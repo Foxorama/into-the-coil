@@ -215,6 +215,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
         intent.along = 0;
         intent.across = 0;
       },
+      spend(): void {},
       release(): void {},
     },
     intent: makeIntent(SPECIAL_BINDINGS),
