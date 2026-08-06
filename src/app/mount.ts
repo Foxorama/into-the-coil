@@ -497,6 +497,24 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const chargesOf = (arsenal: State['run']['arsenal']): number =>
     arsenal.reduce((total, entry) => total + entry.charges, 0);
 
+  /*
+    ── A STEP ON A SCREEN THE SIMULATION IS NOT RUNNING ────────────────────────────────────────────
+
+    `docs/decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md`. Two jobs, and neither of
+    them touches the world: move the focus ring where a pad asks, and expire a screen that says it
+    expires. `world.onIdle` below is what drives it.
+
+    ⚠️ **The pad is read THERE and the combiner is read in the step**, so exactly one snapshot is
+    taken per fixed step either way — `src/app/frame.ts` takes the other branch. Reading both would
+    double the one call in the game that genuinely allocates.
+
+    ⚠️ **Declared up here, above `dispatch`, because `dispatch` spends it on a screen change** —
+    0055. It reads as out of place beside the chrome it belongs to, and the alternative is a
+    block-scoped read before its own declaration.
+  */
+  const menuPad = attachMenuPad();
+  const menuAsk = makeMenuAsk();
+
   const dispatch = (action: Action): void => {
     const next = reduce(state, action);
     if (next === state) return;
@@ -530,6 +548,24 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // Only on a real transition: `show` moves focus, and re-focusing a button on every dispatch
     // would fight a player who had tabbed away from it.
     if (moved) applyScreen();
+    /*
+      ⚠️ **A PRESS BELONGS TO ONE SCREEN, and this is the only place that can know a screen changed.**
+      `docs/decisions/0055-a-press-belongs-to-one-screen.md`. Reported from play: starting a run with
+      a pad *"automatically fires a bomb"* — the confirm button and `special1` are the same physical
+      button, and nothing had spent the press on the way past, so two readers each counted it once.
+
+      ⚠️ **Both readers, and the asymmetry is deliberate.** They swap over exactly here — the menu
+      reader runs while the simulation does not and the device combiner runs while it does — so a
+      press made under one is read by the other unless the transition spends it. Fixing only the
+      device that was reported would leave the same bug facing the other way.
+
+      ⚠️ **After `applyScreen`, because that is what changes which reader is about to run.** Spending
+      first would hand the baseline to the reader that is on its way out.
+    */
+    if (moved) {
+      world.input.spend();
+      menuPad.spend();
+    }
   };
 
   /**
@@ -627,9 +663,6 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     taken per fixed step either way — `src/app/frame.ts` takes the other branch. Reading both would
     double the one call in the game that genuinely allocates.
   */
-  const menuPad = attachMenuPad();
-  const menuAsk = makeMenuAsk();
-
   world.onIdle = (): void => {
     menuPad.read(menuAsk);
     if (menuAsk.move !== 0) chrome.move(menuAsk.move);

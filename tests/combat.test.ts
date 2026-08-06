@@ -461,6 +461,7 @@ function holding(across: number): InputSource {
       intent.along = 0;
       intent.across = across;
     },
+    spend(): void {},
     release(): void {},
   };
 }

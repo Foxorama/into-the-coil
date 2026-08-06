@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   MENU_CONFIRM_BUTTONS,
   MENU_DPAD_BUTTONS,
+  MENU_RELEASE,
+  MENU_REVERSE,
   attachMenuPad,
   makeMenuAsk,
   type MenuAsk,
@@ -89,6 +91,90 @@ describe('a held stick asks once, not once per step', () => {
     const resting = PAD_DEADZONE * 0.9;
     const asks = drive([[pad(AXES(resting, -resting))]]);
     expect(asks[0]!.move, 'a resting stick moved the focus').toBe(0);
+  });
+});
+
+/**
+ * THE JERKY FLICK, REPORTED FROM PLAY.
+ *
+ * *"Gamepad title menu is jerky with a quick flick stick — the stick resetting to center makes the
+ * menu move and it's jerky. happens about 50% of the time."*
+ * `docs/decisions/0055-a-press-belongs-to-one-screen.md`.
+ *
+ * ⚠️ **The reading below is a REAL SPRING, not a step function**, and that is what makes this a test
+ * of the reported bug rather than of the fix. A stick let go of from full deflection does not walk
+ * back to zero — it crosses zero and rings out on the far side. The old rule heard any direction
+ * that differed from the one held, so the ring was a perfectly good reversal.
+ */
+describe('a stick let go of is not a second ask', () => {
+  /** One flick and its release: hard over, then the spring ringing past centre and settling. */
+  const FLICK: readonly number[] = [1, 0.95, 0.6, 0.15, -0.3, -0.22, -0.08, -0.02, 0];
+
+  it('moves the focus exactly once for one flick of the stick', () => {
+    /*
+      ⚠️ **ONE, and the number is the whole report.** The old reader answered this with two moves in
+      opposite directions — which is precisely what *"jerky"* describes, and why it happened about
+      half the time: whether the ring clears `PAD_DEADZONE` depends on how hard the flick was.
+    */
+    const asks = drive(FLICK.map((v) => [pad(AXES(0, v))]));
+    const moves = asks.map((a) => a.move).filter((m) => m !== 0);
+    expect(moves, `one flick asked for ${moves.length} moves: ${moves.join(', ')}`).toEqual([1]);
+  });
+
+  it('and the ring back through centre is refused however deep it goes, short of a real push', () => {
+    // Every overshoot the threshold is meant to survive, driven one at a time from the same hold.
+    for (const ring of [-0.2, -0.35, -0.5, -(MENU_REVERSE - 0.01)]) {
+      const asks = drive([[pad(AXES(0, 1))], [pad(AXES(0, ring))]]);
+      expect(asks[1]!.move, `a spring ringing to ${ring} moved the focus`).toBe(0);
+    }
+  });
+
+  it('but a deliberate reversal is still heard, with no trip through the centre', () => {
+    /*
+      ⚠️ **The half that must NOT regress.** This file already refuses the obvious fix — requiring a
+      return to neutral — because *"a stick rolled from up to down without passing centre stays held
+      and the second direction is never heard"*. A push at the threshold is the boundary case.
+    */
+    expect(drive([[pad(AXES(0, -1))], [pad(AXES(0, 1))]]).map((a) => a.move)).toEqual([-1, 1]);
+    expect(drive([[pad(AXES(0, -1))], [pad(AXES(0, MENU_REVERSE))]])[1]!.move).toBe(1);
+  });
+
+  it('does not re-arm on a stick hovering at the deadzone, which is what a worn one rests at', () => {
+    /*
+      ⚠️ **The other half of *"jerky"*, and a different mechanism.** With one threshold for engaging
+      and disengaging, a stick sitting near it re-crosses on noise alone and the focus walks down the
+      menu on its own. `src/app/pad.ts` records that a worn stick rests at 0.15 — above `MENU_RELEASE`
+      and below nothing.
+    */
+    const hover = [1, 0.3, 0.19, 0.3, 0.19, 0.3];
+    const asks = drive(hover.map((v) => [pad(AXES(0, v))]));
+    expect(asks.map((a) => a.move).filter((m) => m !== 0), 'a hovering stick asked more than once').toEqual([1]);
+  });
+
+  it('and hears the next push once the stick has genuinely come back', () => {
+    // The release threshold has to actually release, or one flick would be the last one ever heard.
+    const asks = drive([[pad(AXES(0, 1))], [pad(AXES(0, MENU_RELEASE / 2))], [pad(AXES(0, 1))]]);
+    expect(asks.map((a) => a.move)).toEqual([1, 0, 1]);
+  });
+});
+
+describe('a press belongs to one screen', () => {
+  it('hears nothing on the step a screen change spends, and takes what is held as the baseline', () => {
+    /*
+      ⚠️ **`spend` is not `release`, and the difference is the reported bug.** `release` forgets what
+      was held, so a button still under a thumb reads as a fresh press on the very next step — which
+      on the game's reader is the bomb that fires itself as a run starts.
+    */
+    const held = [pad(AXES(0, 1), [MENU_CONFIRM_BUTTONS[0]!])];
+    const source = attachMenuPad({ pads: () => held });
+    const ask = makeMenuAsk();
+    source.spend();
+    source.read(ask);
+    expect(ask.confirm, 'a spent press was still delivered').toBe(false);
+    expect(ask.move, 'a spent push still moved the focus').toBe(0);
+    source.read(ask);
+    expect(ask.confirm, 'the held button was not taken as the baseline').toBe(false);
+    expect(ask.move, 'the held direction was not taken as the baseline').toBe(0);
   });
 });
 

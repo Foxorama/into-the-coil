@@ -55,6 +55,11 @@ export function combineDevices(sources: readonly InputSource[]): InputSource {
       intent.along = clamp1(intent.along);
       intent.across = clamp1(intent.across);
     },
+    // Forwarded to every source, for the same reason `release` is: the shell holds one handle and
+    // must not have to know which devices are behind it.
+    spend(): void {
+      for (let i = 0; i < attached.length; i++) attached[i]?.spend();
+    },
     release(): void {
       for (let i = 0; i < attached.length; i++) attached[i]?.release();
     },

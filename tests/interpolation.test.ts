@@ -46,7 +46,7 @@ class RecordingSurface implements Surface {
   }
 }
 
-const NO_INPUT: InputSource = { contribute(): void {}, release(): void {} };
+const NO_INPUT: InputSource = { contribute(): void {}, spend(): void {}, release(): void {} };
 
 /** Far enough out that nothing spawns or fires during these frames and adds a blit. */
 const NEVER = 10_000;

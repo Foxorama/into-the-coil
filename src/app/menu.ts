@@ -52,6 +52,41 @@ export const MENU_CONFIRM_BUTTONS: readonly number[] = [0, 9];
  */
 export const MENU_DPAD_BUTTONS = { up: 12, down: 13, left: 14, right: 15 } as const;
 
+/**
+ * How far a stick must fall back before the menu will hear a new push in the SAME direction.
+ *
+ * ⚠️ **Below `PAD_DEADZONE`, and the gap between them is the mechanism.** Engaging at 0.18 and
+ * disengaging at 0.18 is one threshold, and a stick sitting anywhere near it re-crosses it on noise
+ * alone — `src/app/pad.ts` records that a worn stick rests at 0.15. The focus then walks down the
+ * menu on its own while nobody is touching anything.
+ *
+ * Reported from play as half of *"gamepad title menu is jerky with a quick flick stick"*.
+ */
+export const MENU_RELEASE = 0.1;
+
+/**
+ * How hard a stick must be pushed to reverse a direction it is already holding.
+ *
+ * ── THE OTHER HALF OF THE JERKY FLICK, AND THE HALF THAT IS 50/50 ───────────────────────────────
+ *
+ * ⚠️ **A released stick does not return to centre — it springs PAST it.** Let go of a full
+ * deflection and the reading crosses zero and rings out on the other side, briefly, at a few tenths.
+ * The old rule heard any direction that differed from the one held, so that overshoot was a
+ * perfectly good reversal and the focus jumped back. Reported exactly that way: *"the stick
+ * resetting to center makes the menu move and it's jerky. happens about 50% of the time"* — 50%
+ * because whether the ring clears the deadzone depends on how hard the flick was.
+ *
+ * ⚠️ **It must NOT be fixed by requiring a trip through the centre.** That is what this file already
+ * refuses — *"a stick rolled from up to down without passing centre stays held and the second
+ * direction is never heard"* — and `tests/menu.test.ts` holds it. A deliberate reversal and a spring
+ * overshoot differ in **how far**, not in where they went, so the threshold is a magnitude.
+ *
+ * ⚠️ **A STARTING POINT, on `PAD_DEADZONE`'s terms**, not a measurement: past half travel is further
+ * than any spring carries and well short of what a thumb doing it on purpose reaches. The D-pad is
+ * exempt by construction — it reports full deflection and has no spring to ring.
+ */
+export const MENU_REVERSE = 0.6;
+
 /** What the pad asked of a menu this step. Written into by `read`; owned by the caller. */
 export interface MenuAsk {
   /** Focus movement: −1 for the previous control, 1 for the next, 0 for none. An EDGE, not a level. */
@@ -69,6 +104,20 @@ export function makeMenuAsk(): MenuAsk {
 export interface MenuSource {
   /** Overwrite `ask` with what the pad is asking for. Call once per fixed step. */
   read(ask: MenuAsk): void;
+  /**
+   * A screen has just changed under this reader. Take what is held as the new baseline.
+   *
+   * ⚠️ **The mirror of `src/app/input.ts`'s `spend`, and it is the SYMMETRY that is the point.** This
+   * reader does not run while the game is stepping, so when a screen comes back up its memory is of
+   * whatever the player's hands were doing on the last menu — possibly minutes and a whole level ago.
+   * Re-baselining on the transition is what makes *a press belongs to one screen* one rule with one
+   * meaning on both readers, rather than two behaviours that happen to agree today.
+   *
+   * ⚠️ **Honest scope:** the confirm half is defensive rather than a reported bug — `heldConfirm`
+   * survives the level, so a held button already reads as held. The stick half is real: a direction
+   * held from a title screen is compared against one pushed after a death.
+   */
+  spend(): void;
   /** Forget what was held, so re-entering a menu does not inherit a press from the last one. */
   release(): void;
 }
@@ -101,11 +150,22 @@ export function attachMenuPad(options: MenuPadOptions = {}): MenuSource {
   */
   let heldMove = 0;
   let heldConfirm = false;
+  // @setup: whether the next read is only learning what is already held. See `spend`.
+  let spending = false;
 
   return {
     read(ask: MenuAsk): void {
       const pads = readPads();
       let move = 0;
+      /*
+        @setup-free: how HARD the strongest pad is being pushed, 0…1.
+
+        ⚠️ **The direction alone is not enough any more**, which is the whole of the flick fix. Both
+        thresholds below are magnitudes, so the reader has to carry one — and it takes the strongest
+        across pads rather than the last, so a second controller resting on a sofa cannot speak over
+        the one in somebody's hands.
+      */
+      let strength = 0;
       let confirm = false;
 
       for (let p = 0; p < pads.length; p++) {
@@ -128,24 +188,67 @@ export function attachMenuPad(options: MenuPadOptions = {}): MenuSource {
         const x = pad.axes[PAD_AXIS_X] ?? 0;
         const y = pad.axes[PAD_AXIS_Y] ?? 0;
         const dominant = Math.abs(y) >= Math.abs(x) ? y : x;
+        const push = Math.abs(dominant);
+        if (push > strength) strength = push;
         if (dominant <= -PAD_DEADZONE) move = -1;
         else if (dominant >= PAD_DEADZONE) move = 1;
 
-        if (down(pad, MENU_DPAD_BUTTONS.up) || down(pad, MENU_DPAD_BUTTONS.left)) move = -1;
-        else if (down(pad, MENU_DPAD_BUTTONS.down) || down(pad, MENU_DPAD_BUTTONS.right)) move = 1;
+        // The D-pad is a switch, so it asks at full strength — it has no spring to ring past centre
+        // and no rest position to drift from, which is what both thresholds below exist to survive.
+        if (down(pad, MENU_DPAD_BUTTONS.up) || down(pad, MENU_DPAD_BUTTONS.left)) {
+          move = -1;
+          strength = 1;
+        } else if (down(pad, MENU_DPAD_BUTTONS.down) || down(pad, MENU_DPAD_BUTTONS.right)) {
+          move = 1;
+          strength = 1;
+        }
 
         for (let i = 0; i < MENU_CONFIRM_BUTTONS.length; i++) {
           if (down(pad, MENU_CONFIRM_BUTTONS[i] ?? -1)) confirm = true;
         }
       }
 
-      // The edges. A direction the stick was already holding is not a new ask, and a confirm button
-      // that is merely still down is not a second press — which is what stops one thumb on the A
-      // button starting a run and immediately ending it on the screen behind.
-      ask.move = move !== 0 && move !== heldMove ? move : 0;
-      ask.confirm = confirm && !heldConfirm;
-      heldMove = move;
+      /*
+        The edges. A direction the stick was already holding is not a new ask, and a confirm button
+        that is merely still down is not a second press — which is what stops one thumb on the A
+        button starting a run and immediately ending it on the screen behind.
+
+        ⚠️ **Neutral is reached at `MENU_RELEASE`, not at `PAD_DEADZONE`.** The gap between the two
+        is what stops a stick hovering near the floor from re-arming on noise and walking the focus
+        down the menu on its own.
+      */
+      if (heldMove !== 0 && strength < MENU_RELEASE) heldMove = 0;
+      /*
+        ⚠️ **A reversal is heard only if it is pushed as hard as `MENU_REVERSE`**, because a released
+        stick springs past centre and the old rule counted that as a deliberate change of mind.
+      */
+      const heard = move !== 0 && move !== heldMove && (heldMove === 0 || strength >= MENU_REVERSE);
+      ask.move = heard && !spending ? move : 0;
+      ask.confirm = confirm && !heldConfirm && !spending;
+      /*
+        ⚠️ **`heldMove` is cleared by the RELEASE THRESHOLD ABOVE AND BY NOTHING ELSE.** Clearing it
+        here whenever the direction reads zero is the obvious-looking line, and it silently undoes
+        the whole of `MENU_RELEASE`: a stick decaying through the deadzone reports no direction while
+        still a long way from centre, so the next thing it does — which is ring past centre — meets
+        an already-neutral reader and is heard as a first push. That is the reported bug again, with
+        the fix in place. It cost a test to find, which is what the test is for.
+
+        ⚠️ **A REFUSED reversal leaves `heldMove` alone**, and getting this wrong loses a real input:
+        recording the overshoot's direction would make the player's next genuine push that way read
+        as already-held and be swallowed — a spurious move traded for a missing one.
+      */
+      if (heard || spending) heldMove = move;
       heldConfirm = confirm;
+      spending = false;
+    },
+    /*
+      ⚠️ **`heldConfirm` is set, not cleared, and that is the opposite of `release`.** The button is
+      still under a thumb and the screen it belonged to has gone; remembering it as held is what
+      stops the next screen reading it as a press of its own. Clearing it here is the mirror of the
+      bomb bug `src/app/pad.ts` describes, and it would dismiss a screen before it could be read.
+    */
+    spend(): void {
+      spending = true;
     },
     release(): void {
       heldMove = 0;

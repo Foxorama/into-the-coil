@@ -153,6 +153,7 @@ describe('anything that leaves the lane is gone, and the ship cannot', () => {
         intent.along = 0;
         intent.across = 1;
       },
+      spend: (): void => {},
       release: (): void => {},
     };
     for (let step = 0; step < 600; step++) frame.step();
