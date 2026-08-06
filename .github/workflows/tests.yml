@@ -69,6 +69,7 @@ jobs:
       # new required context, which means a settings change — and an unrequired check is one nobody
       # is blocked by, which is how it rots. See docs/decisions/0019-a-probe-must-be-seen-to-apply.md.
       #
-      # It mutates the working tree and restores it, so it runs LAST: nothing after it depends on the
-      # tree, and a crash mid-probe cannot affect a step that has already passed.
+      # ⚠️ It no longer mutates the checkout — it proves against disposable copies, in parallel. See
+      # docs/decisions/0054-the-proof-runs-beside-the-work-not-on-it.md. It still runs last only
+      # because `npm run check` above is the cheaper of the two ways to find out the tree is broken.
       - run: npm run prove
