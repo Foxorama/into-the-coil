@@ -141,10 +141,11 @@ makes a death cost more in the same session as a report that dying is already to
    player safe distance, then disappear off the screen. They need to bounce and move around the
    screen so the player can grab them safely and grab the power up they want safely."* Also
    *"cycle .5 sec faster"*. ⚠️ `CYCLE_UNITS` is a DISTANCE, not a duration —
-   [0052](decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md) says why that matters,
-   and its own comment claims *"a little over two seconds"* where the arithmetic gives 3.6s at
-   `SCROLL_PER_STEP`. **That comment is wrong and is the first thing to check.** Lingering means a
-   pickup holding station in the camera's frame — 0034's *every speed is in the camera's frame*.
+   [0052](decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md) says why that matters.
+   **The baseline is 3.6 seconds**, not the *"a little over two"* the comment used to claim: the
+   comment has been corrected and now carries its own arithmetic, so *0.5 faster* is a departure from
+   3.6. Lingering means a pickup holding station in the camera's frame — 0034's *every speed is in
+   the camera's frame*.
 2. **A death should scatter the lost upgrades as grabbable pickups.** *"Non-cycling and on a short
    timer so there's enough time to grab some, but maybe not all."* This is the half of the
    dying-is-punishing report that 0057 deliberately did **not** answer, and it is the one that
