@@ -1,9 +1,15 @@
 // The breaks behind docs/decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md.
 //
 // ⚠️ The theme of every one of these is a game that still plays. A tier that never reaches the field
-// gives three buttons that all start the same run; a boss that reads its phase against the wrong
-// total opens in its hardest phase, which is a completely plausible picture of a difficult fight.
-// None of it looks like a bug from the outside, which is what makes the guards worth having.
+// gives three buttons that all start the same run; a boss reading its phase against the wrong total
+// sits in its opening phase for half the fight, which is a picture of a slow boss rather than of a
+// broken one. None of it looks like a bug from the outside.
+//
+// ⚠️ **TWO OF THESE FOUND THE GUARD RATHER THAN THE CODE, on their first run.** The phase probe and
+// the rounding probe both left the suite GREEN, because both guards had been written to catch what
+// the author expected the break to look like rather than what it actually does — an assertion about
+// the first frame of a fight that goes wrong in the middle, and a "never fewer" that `Math.floor`
+// satisfies. Decision 0005 is about exactly this and the repairs are in the tests.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
@@ -26,7 +32,7 @@ export const PROBES = [
     // A phase is a fraction of REMAINING health, so a boss scaled by a tier and measured against its
     // row sits below every threshold from the first frame — and fights its last phase throughout.
     broke: 'a boss read its phase against its row rather than against what the tier gave it',
-    guard: 'reads its phase against what it actually started with',
+    guard: 'reaches every phase at the same fraction of the fight on every tier',
     edit: {
       path: 'src/app/boss.ts',
       find: '  const fraction = health / (full > 0 ? full : row.health);',
@@ -39,7 +45,7 @@ export const PROBES = [
     // Rounding down. The commonest enemy in the game is unchanged on every tier, and the rarest is
     // twice as tough — a difficulty curve that is mostly not one.
     broke: 'toughness rounded down, so a one-health body is unchanged on every tier',
-    guard: 'never makes something take fewer shots on a harder tier',
+    guard: 'makes everything that can be shot take strictly more hits on a tougher tier',
     edit: {
       path: 'src/content/difficulty.ts',
       find: '  return Math.max(1, Math.ceil(base * tier.toughness));',
@@ -82,8 +88,8 @@ export const PROBES = [
     guard: 'travels with a run and survives everything that happens during one',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '        upgrades: state.upgrades,\n        difficulty: state.difficulty,\n      };\n    case \'levelCleared\':',
-      replace: "        upgrades: state.upgrades,\n        difficulty: 'legendary',\n      };\n    case 'levelCleared':",
+      find: '        upgrades: [...state.upgrades, action.upgrade],\n        difficulty: state.difficulty,',
+      replace: "        upgrades: [...state.upgrades, action.upgrade],\n        difficulty: 'legendary',",
     },
   },
 ];

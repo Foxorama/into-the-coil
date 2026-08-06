@@ -78,13 +78,23 @@ remembered is a field the next guard gets backwards.
 ## The bug the boss found
 
 A phase is a fraction of **remaining** health ([0040](0040-a-level-is-a-script-and-a-boss-is-its-clock.md)),
-and `phaseFor` divided by `row.health`. Scale a boss to 2.2× and it sits below every threshold from
-the first frame: it opens in its final phase — seven shots across most of a right angle — and stays
-there for the whole fight.
+and `phaseFor` divided by `row.health`. Scale a boss to 2.2× and it spawns reading as *2.2 of its own
+health*, which matches no threshold at all — so the lookup falls through to its default, and the boss
+sits in its **opening** phase for the whole of the health the tier added, then escalates normally
+through the last 150.
 
-⚠️ **Nothing about that looks like a bug.** It looks like a hard tier. `full` is now an argument, the
-frame records what the boss actually started with, and `tests/difficulty.test.ts` checks that every
-boss opens in phase one and reaches its last phase before it dies, on every tier.
+⚠️ **Nothing about that looks like a bug.** It looks like a slow boss. `full` is now an argument, and
+the frame records what the boss actually started with.
+
+⚠️ **The first guard over it did not catch it, and `npm run prove` is what said so.** It asserted the
+boss *opens in phase one* — which the broken version also does, for the wrong reason. The guard now
+walks every threshold in the table on every tier, which is where the fight actually goes wrong.
+[0005](0005-a-guard-must-be-seen-to-fail.md) exists for precisely this: a guard written to catch what
+its author imagined the break would look like.
+
+The rounding guard failed the same way in the same run — *never fewer hits* is satisfied by
+`Math.floor`, under which half the enemies in the game are unchanged on the middle tier. It now
+asserts **strictly more**, which has teeth.
 
 ## Why the title screen is the choice, and *Again* goes back to it
 
@@ -121,8 +131,8 @@ applies three times over.
 | broken | what went red |
 |---|---|
 | the tier never reached the spawn, so all three buttons started the same run | `spawns tougher, faster bodies that throw faster shots on a harder tier` |
-| a boss read its phase against its row rather than against what the tier gave it | `reads its phase against what it actually started with` |
-| toughness rounded down, so a one-health body is unchanged on every tier | `never makes something take fewer shots on a harder tier` |
+| a boss read its phase against its row rather than against what the tier gave it | `reaches every phase at the same fraction of the fight on every tier` |
+| toughness rounded down, so a one-health body is unchanged on every tier | `makes everything that can be shot take strictly more hits on a tougher tier` |
 | the easiest tier given a multiplier, so the authored content is no tier at all | `multiplies nothing at all` |
 | the title screen listing the tiers in the wrong order | `offers every tier, in the table order, easiest first` |
 | a level boundary dropping the run's tier | `travels with a run and survives everything that happens during one` |

@@ -122,15 +122,34 @@ describe('the two helpers cannot produce a body that does not work', () => {
     }
   });
 
-  it('never makes something take fewer shots on a harder tier', () => {
+  it('makes everything that can be shot take strictly more hits on a tougher tier', () => {
     /*
-      ⚠️ **Rounding is where this would break silently.** At a toughness of 1.2 a one-health drifter
-      rounds DOWN to 1 and a four-health warden to 4, so nothing changes; rounding down at 1.6 would
-      take a one-health body to 1 while the warden went to 6 — and a tier where the commonest enemy
-      is unchanged is a tier that mostly is not one. Up, the ordering holds by construction.
+      ⚠️ **ROUNDING IS WHERE THIS BREAKS SILENTLY, and the first version of this test could not see
+      it.** That version asserted *never fewer*, which `Math.floor` satisfies — and under `floor` at
+      a toughness of 1.6 the drifter, the weaver and the charger are all unchanged while the warden
+      goes from four hits to six. Half the enemies in the game would be identical on a tier that had
+      doubled the other half, and nothing would have said so.
 
-      Walked over every real health in the game rather than over a made-up range, so the property is
-      checked where it is actually used.
+      `npm run prove 0047` caught exactly that: the probe swapped `ceil` for `floor` and the suite
+      stayed green. Strictly-more is the property that has teeth, and it is true by construction for
+      any integer health and any toughness above one.
+    */
+    for (const [easier, harder] of PAIRS) {
+      if (DIFFICULTIES[harder].toughness <= DIFFICULTIES[easier].toughness) continue;
+      for (const kind of ENEMY_KINDS) {
+        const base = ENEMIES[kind].health;
+        expect(
+          toughnessFor(base, DIFFICULTIES[harder]),
+          `a ${kind} takes the same number of hits on ${harder} as on ${easier}`,
+        ).toBeGreaterThan(toughnessFor(base, DIFFICULTIES[easier]));
+      }
+    }
+  });
+
+  it('and never makes something take fewer, whatever the tiers turn out to be', () => {
+    /*
+      The weaker property, kept alongside the stronger one because it is the one that must hold even
+      between two tiers with the SAME toughness — the bosses are walked here and the enemies above.
     */
     for (const [easier, harder] of PAIRS) {
       for (const kind of ENEMY_KINDS) {
@@ -150,18 +169,34 @@ describe('the two helpers cannot produce a body that does not work', () => {
 });
 
 describe('a boss still opens in its first phase, however tough the tier made it', () => {
-  it('reads its phase against what it actually started with', () => {
+  it('reaches every phase at the same fraction of the fight on every tier', () => {
     /*
-      ⚠️ **THE BUG THIS TEST EXISTS FOR, and it would have looked like a hard fight.** A phase is a
+      ⚠️ **THE BUG THIS TEST EXISTS FOR, and it looked exactly like a longer fight.** A phase is a
       fraction of remaining health, and it used to be a fraction of the ROW's health — so a boss
-      scaled to 2.2× would sit below every threshold from the first frame, open in its final phase,
-      and stay there. Seven shots across a right angle from a boss at full health is a completely
-      plausible picture of a difficult game.
+      scaled to 2.2× read as being at 2.2 of its own health when it spawned, matched no threshold at
+      all, and sat in its opening phase for the whole of the health the tier had added. It would then
+      escalate normally through the last 150. Half a minute of a boss firing one readable shot every
+      one and a half seconds is a picture of a slow fight rather than of a broken one.
+
+      ⚠️ **The first version of this guard asserted only that the boss OPENS in phase one, and
+      `npm run prove 0047` showed it stayed green** — because the buggy fraction is *above* every
+      `upTo` rather than below it, so the lookup falls through to its default, which is phase one.
+      Correct answer, wrong reason, and the whole middle of the fight unmeasured. What is walked now
+      is every threshold in the table.
     */
     for (const tier of DIFFICULTY_KINDS) {
       for (const kind of BOSS_KINDS) {
         const row = BOSSES[kind];
         const full = toughnessFor(row.health, DIFFICULTIES[tier]);
+        row.phases.forEach((phase, index) => {
+          // Just inside this phase's threshold, in health the boss actually has. The phase there is
+          // this one, on every tier, because a tier changes how long a fight is and never its shape.
+          const health = full * phase.upTo - 0.5;
+          if (health <= 0) return;
+          expect(phaseFor(row, health, full), `${kind} is not in phase ${index} at ${phase.upTo} on ${tier}`).toBe(
+            phase,
+          );
+        });
         expect(phaseFor(row, full, full), `${kind} does not open in its first phase on ${tier}`).toBe(row.phases[0]);
       }
     }
