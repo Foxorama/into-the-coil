@@ -58,27 +58,92 @@ export function prefixFor(screen: Screen): string {
  * itch.io, an iframe inside somebody else's document.
  */
 const STYLE = `
+/*
+  ⚠️ **THE OVERLAY IS A SCROLL CONTAINER AND A QUERY CONTAINER, AND BOTH ARE LOAD-BEARING.**
+  Decision 0049. It is a query container so every size below can be a fraction of THIS BOX rather
+  than of the viewport — the box is the one the player is looking at, and on a page that embeds the
+  game those are not the same number. It scrolls so that content which does not fit is reachable
+  rather than lost, which is what the reported bug actually was.
+
+  ⚠️ **No font here, and no padding either.** A container cannot query itself: a length in cq units
+  written on this element resolves against its own nearest ANCESTOR container, which is the page.
+  Everything sized against the short axis therefore lives on the panel below.
+*/
 .itc-title, .itc-gameover, .itc-cleared, .itc-victory {
   position: absolute;
   inset: 0;
   display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.5rem;
-  text-align: center;
-  padding: 2rem;
-  font: 600 1.25rem/1.4 system-ui, sans-serif;
+  overflow: auto;
+  container-type: size;
 }
 .itc-title-shown, .itc-gameover-shown, .itc-cleared-shown, .itc-victory-shown { display: flex; }
-.itc-title-heading { font-size: clamp(1.75rem, 6vw, 3.5rem); letter-spacing: 0.02em; margin: 0; }
+/*
+  ⚠️ **Centred by AUTO MARGINS, not by justify-content, and that is the fix rather than a style.** A
+  flex item centred by the container is centred when it overflows too — half of it pushed off the
+  START edge, where no scrollbar can reach it. That is precisely what the title screen did on a phone:
+  the heading was off the top of the screen and the third tier was off the bottom. Auto margins
+  distribute POSITIVE free space only, so an overflowing panel falls back to the top and scrolls.
+*/
+.itc-title-panel, .itc-gameover-panel, .itc-cleared-panel, .itc-victory-panel {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: min(1.5rem, 3.5cqh);
+  padding: min(2rem, 5cqh) min(2rem, 4cqw);
+  max-width: 100%;
+  text-align: center;
+  /*
+    ⚠️ **A clamp and not a bare min: type has a FLOOR.** Sizing purely as a fraction of the box means
+    a short enough box has 5px buttons, which "fit" in the sense that a photograph of them fits —
+    decision 0024's accessibility floor is about the opposite of that. Below the floor the screen
+    overflows instead, which is what the scroll container is for and what the suite asserts
+    separately. (No file paths in this block: the prefix guard reads every dotted token here as a CSS
+    class, so an extension fails as an unprefixed class name.)
+  */
+  font: 600 clamp(0.85rem, 5.4cqh, 1.25rem)/1.35 system-ui, sans-serif;
+}
+.itc-title-heading { font-size: clamp(1.25rem, min(6cqw, 9cqh), 3.5rem); letter-spacing: 0.02em; margin: 0; }
 .itc-gameover-heading, .itc-cleared-heading, .itc-victory-heading {
-  font-size: clamp(1.5rem, 5vw, 2.75rem);
+  font-size: clamp(1.1rem, min(5cqw, 8cqh), 2.75rem);
   margin: 0;
+}
+/*
+  THE TITLE SCREEN'S TWO COLUMNS — the key beside the choice, not above it.
+
+  ⚠️ **The long axis is where a list goes.** Landscape is the shipped orientation
+  (docs/decisions/0031), so the screen the game is read on is wide and SHORT — a phone gives about
+  320 to 400 CSS pixels of height and two or three times that of width. Stacking six things down the
+  short axis is what put half of them off the screen; the key and the tiers are independent, so they
+  sit side by side and the scarce axis carries whichever is taller rather than their sum.
+
+  ⚠️ **A GRID WITH FRACTIONAL COLUMNS, AND THE FIRST VERSION WAS A WRAPPING FLEX ROW THAT CI CAUGHT.**
+  A flex row wraps when its items' NATURAL widths do not fit, and a natural width is a text
+  measurement — so the layout held on the machine it was written on and stacked on the CI runner,
+  where system-ui is a different font with wider metrics. Sixty-seven pixels off the bottom of a
+  480x320 phone, from a font. Fractional tracks are a fraction of the container and cannot be pushed
+  wider by their contents, so the two columns are two columns on every font there will ever be.
+
+  ⚠️ **minmax(0, Nfr) and not a bare fr.** A track's default floor is its content's min-content
+  width, which is the same blowout wearing grid syntax. (No backticks in this block: it is a template
+  literal, and the house style's backtick quoting ends the string — twice now.)
+*/
+.itc-title-body {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 11fr);
+  align-items: center;
+  gap: min(1.5rem, 3.5cqh) min(2.5rem, 4cqw);
+  width: 100%;
+}
+.itc-title-choices, .itc-gameover-choices, .itc-cleared-choices, .itc-victory-choices {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: min(1.5rem, 3.5cqh);
 }
 .itc-title-action, .itc-gameover-action, .itc-cleared-action, .itc-victory-action {
   font: inherit;
-  padding: 0.6em 2em;
+  padding: 0.55em 1em;
   border-radius: 0.4em;
   border: 2px solid currentColor;
   background: transparent;
@@ -100,8 +165,14 @@ const STYLE = `
 /*
   The tiers are a column and they are wider than a one-word button, so they get a shared width. The
   order is the table's order, which is easiest first — see decision 0047.
+
+  ⚠️ **A width rather than a min-width, and it is a fraction of its own COLUMN.** A minimum is a
+  floor that content can push past, which is the wrapping mistake above in miniature; a full-width
+  button is whatever the grid track turned out to be, so three tiers are always exactly as wide as
+  each other and never wider than the space there is. The character cap is what stops a desktop
+  drawing a button the width of a table.
 */
-.itc-title-action { min-width: min(22ch, 80vw); }
+.itc-title-action { width: min(100%, 32ch); }
 .itc-title-action:hover, .itc-gameover-action:hover, .itc-cleared-action:hover, .itc-victory-action:hover {
   background: rgba(255, 255, 255, 0.12);
 }
@@ -140,7 +211,7 @@ const STYLE = `
   thing and stop.
 */
 .itc-gameover-timer {
-  font-size: clamp(0.75rem, 2vw, 1rem);
+  font-size: clamp(0.7rem, min(2cqw, 3.2cqh), 1rem);
   font-weight: 400;
   opacity: 0.7;
   /* Reserves its own line so the button does not jump a pixel as the digit changes. */
@@ -149,9 +220,12 @@ const STYLE = `
 .itc-title-key {
   display: grid;
   grid-template-columns: auto auto auto;
+  /* Its own three columns centred inside whatever track it was given, so the two halves of the
+     screen read as balanced rather than as a block shoved against the left of a wide one. */
+  justify-content: center;
   gap: 0.4em 0.8em;
   align-items: center;
-  font-size: clamp(0.75rem, 2vw, 1rem);
+  font-size: clamp(0.7rem, min(2.2cqw, 4cqh), 1rem);
   font-weight: 400;
   opacity: 0.85;
 }
@@ -313,10 +387,31 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen, index: n
     root.style.background = colours.space;
     root.style.color = colours.player;
 
+    /*
+      THE PANEL — everything the screen says, in one box that the overlay centres.
+
+      ⚠️ **A wrapper rather than laying the children out on the overlay directly**, because the
+      overlay has two other jobs now: it is the scroll container and the query container
+      (decision 0049), and a scroll container cannot centre its own overflowing content safely. One
+      child with `margin: auto` can, and it is the same element every screen scrolls.
+    */
+    const panel = document.createElement('div');
+    panel.className = prefix + 'panel';
+    root.appendChild(panel);
+
     const heading = document.createElement('h1');
     heading.className = prefix + 'heading';
     heading.textContent = row.heading;
-    root.appendChild(heading);
+    panel.appendChild(heading);
+
+    /*
+      The controls' own box. On the title screen it is a column BESIDE the key rather than under it —
+      see the stylesheet, and decision 0049 for why the short axis decides that. Every other screen
+      has one control and the box is a formality, which is the point: one description of where a
+      screen's controls go.
+    */
+    const choices = document.createElement('div');
+    choices.className = prefix + 'choices';
 
     /*
       ⚠️ **THE KEY, ON THE TITLE SCREEN ONLY, AND IT IS THE UPGRADES AND NOT THE ENEMIES.** Asked for
@@ -349,7 +444,12 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen, index: n
         hint.textContent = row.hint;
         key.append(icon, name, hint);
       }
-      root.appendChild(key);
+      const body = document.createElement('div');
+      body.className = prefix + 'body';
+      body.append(key, choices);
+      panel.appendChild(body);
+    } else {
+      panel.appendChild(choices);
     }
 
     /*
@@ -382,7 +482,7 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen, index: n
       const onClick = (): void => onAction(screen, index);
       control.addEventListener('click', onClick);
       listeners.push(() => control.removeEventListener('click', onClick));
-      root.appendChild(control);
+      choices.appendChild(control);
       controls.push(control);
     });
 
@@ -398,7 +498,7 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen, index: n
       timer = document.createElement('div');
       timer.className = prefix + 'timer';
       timer.setAttribute('aria-live', 'off');
-      root.appendChild(timer);
+      panel.appendChild(timer);
     }
 
     panels[screen] = { root, controls, timer };
