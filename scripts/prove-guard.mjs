@@ -237,8 +237,16 @@ function manifest(treeRoot) {
  * old check could only see a bad restore that some test happened to assert on, and 0019's own
  * worked example — *"a probe that reverted its own file but left a planted one behind"* — is exactly
  * the case a suite can miss.
+ *
+ * Exported so it can be unit-tested and probed. It is the check that stands between "every probe
+ * restored" and "every probe after the first ran in a tree the one before it had broken", and a
+ * check in that position is exactly what 0005 refuses to take on trust.
+ *
+ * @param {Map<string, string>} before
+ * @param {Map<string, string>} after
+ * @returns {string[]}
  */
-function drift(before, after) {
+export function drift(before, after) {
   const out = [];
   for (const [path, hash] of before) {
     if (!after.has(path)) out.push(`${path} — GONE`);

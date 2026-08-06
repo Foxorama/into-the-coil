@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { planEdit, verifyApplied } from '../scripts/prove-guard.mjs';
+import { drift, planEdit, verifyApplied } from '../scripts/prove-guard.mjs';
 
 /**
  * THE HARNESS THAT PROVES THE GUARDS IS ITSELF A GUARD.
@@ -46,6 +46,50 @@ describe('a probe must be seen to apply', () => {
   it('refuses to continue when the bytes on disk did not move', () => {
     expect(() => verifyApplied('same', 'same', 'tests/x.ts')).toThrow(/byte-identical/);
     expect(() => verifyApplied('before', 'after', 'tests/x.ts')).not.toThrow();
+  });
+});
+
+/**
+ * THE CHECK THAT A PROBE RUN IS INDEPENDENT OF THE ONE BEFORE IT.
+ *
+ * See `docs/decisions/0054-the-proof-runs-beside-the-work-not-on-it.md`. A worker applies one probe
+ * at a time to its own copy of the repository and restores between them, so a restore that half
+ * worked does not fail — it silently hands the next probe a tree that is already broken, and that
+ * probe's red then belongs to somebody else's break.
+ *
+ * ⚠️ **This is what replaced *"and the suite is green again afterwards"*, and it is stronger.** The
+ * old check ran the suites again at the end: it could only see a bad restore that some test happened
+ * to assert on, and 0019's own worked example — a probe that reverted its own file but left a
+ * planted one behind — is precisely the case where no test imports the leftover. Comparing the whole
+ * tree to the copy it started as has no such blind spot.
+ */
+describe('a worker tree is known to come back to what it was copied as', () => {
+  const before = new Map([
+    ['src/sim/rng.ts', 'aaa'],
+    ['src/app/frame.ts', 'bbb'],
+  ]);
+
+  it('says nothing about a tree that came back unchanged', () => {
+    expect(drift(before, new Map(before))).toEqual([]);
+  });
+
+  it('sees a file the probe did not restore', () => {
+    // The `edit` probe's failure mode: the undo wrote, and wrote the wrong thing.
+    const after = new Map([...before, ['src/sim/rng.ts', 'MUTATED'] as [string, string]]);
+    expect(drift(before, after)).toEqual(['src/sim/rng.ts — not restored']);
+  });
+
+  it('sees a file the probe left behind', () => {
+    // ⚠️ THE ONE 0019 NAMES. A `plant` whose undo missed leaves a file no suite imports, so every
+    // later probe in that tree runs against a repository with an extra module in it.
+    const after = new Map([...before, ['src/sim/harmless.ts', 'ccc'] as [string, string]]);
+    expect(drift(before, after)).toEqual(['src/sim/harmless.ts — LEFT BEHIND']);
+  });
+
+  it('sees a file that went missing altogether', () => {
+    const after = new Map(before);
+    after.delete('src/app/frame.ts');
+    expect(drift(before, after)).toEqual(['src/app/frame.ts — GONE']);
   });
 });
 
