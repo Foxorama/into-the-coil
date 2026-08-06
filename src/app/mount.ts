@@ -19,6 +19,7 @@ import { makeRng } from '../sim/rng.ts';
 import { atlasIsStale, bakeAtlas, viewFor } from '../render/bake.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
 import { SPECIAL_BINDINGS } from '../content/actions.ts';
+import { SPECIALS } from '../content/specials.ts';
 import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../content/enemies.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
@@ -44,7 +45,7 @@ import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
 import { attachMenuPad, makeMenuAsk } from './menu.ts';
 import { attachPad } from './pad.ts';
-import { attachTouch } from './touch.ts';
+import { attachTouch, bandCount } from './touch.ts';
 import { runLoop } from './loop.ts';
 
 /**
@@ -394,7 +395,17 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     input: combineDevices([
       attachInput(window),
-      attachTouch(canvas, { alongAxis: () => view.alongAxis, scale: () => view.scale }),
+      /*
+        ⚠️ **`bands` is what the ship OWNS, not what the binding table budgets for** — 0060. The
+        strip used to be `SPECIAL_BINDINGS` bands wide unconditionally, so with one special owned
+        the second band was a quarter of the glass bound to a slot `onSpecial` answers with silence.
+        Reported as *"how do you fire bombs on mobile? I can do one and then can't fire any more."*
+      */
+      attachTouch(canvas, {
+        alongAxis: () => view.alongAxis,
+        scale: () => view.scale,
+        bands: () => state.run.arsenal.length,
+      }),
       attachPad({ alongAxis: () => view.alongAxis }),
     ]),
     intent: makeIntent(SPECIAL_BINDINGS),
@@ -485,6 +496,39 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    */
   const syncHud = (): void => {
     chrome.setHud(state.run.lives, shieldsOf(shipRow, world.ship.health), MAX_SHIELDS, chargesOf(state.run.arsenal));
+    chrome.setTriggers(triggers());
+  };
+
+  /**
+   * Whether this device has a place to press at all.
+   *
+   * ⚠️ **A CAPABILITY AND NOT A GUESS AT WHAT THE PLAYER IS HOLDING.** Read once, at boot: the strip
+   * is a picture of where `src/app/touch.ts` is listening, and that listener is attached on every
+   * device — so the honest question is *can a finger land here*, not *is the player using one*. A
+   * laptop with a touchscreen gets the strip and the strip is telling it the truth.
+   *
+   * ⚠️ **The alternative was to reveal it on the first touch, and it is worse in the one case that
+   * matters**: the first touch of a run is as likely to be in the strip as anywhere else, so the
+   * player would discover where the bomb is by spending one.
+   */
+  const touchable = navigator.maxTouchPoints > 0;
+
+  /**
+   * What the tap strip draws: one band per trigger that has a weapon behind it.
+   *
+   * ⚠️ **The same count the hit test uses**, through `bandCount`, so the picture cannot claim a band
+   * the canvas is not listening on. An arsenal longer than the binding budget is 0030's *owned,
+   * saved, and currently unreachable* — the strip does not draw a band nothing can press.
+   */
+  const triggers = (): { label: string; sprite: number; charges: number }[] => {
+    if (!touchable) return [];
+    const count = Math.min(state.run.arsenal.length, bandCount(state.run.arsenal.length));
+    const out: { label: string; sprite: number; charges: number }[] = [];
+    for (let i = 0; i < count; i++) {
+      const entry = state.run.arsenal[i]!;
+      out.push({ label: SPECIALS[entry.kind].label, sprite: SPECIALS[entry.kind].face, charges: entry.charges });
+    }
+    return out;
   };
 
   /**
