@@ -74,7 +74,10 @@ export const PROBES = [
     guard: 'is collectable while the ship is invulnerable',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    collectInto(w.pickups, w.ship, 1, w.collected);',
+      // ⚠️ Re-expressed when 0056 gave collection a reach of its own. The break is unchanged and the
+      // temptation it models is now STRONGER, not weaker: with a named scale already on this line,
+      // multiplying the assist into it reads even more like consistency than passing `1` did.
+      find: '    collectInto(w.pickups, w.ship, COLLECT_REACH, w.collected);',
       replace: '    if (w.ship.invulnFor <= 0) collectInto(w.pickups, w.ship, w.tuning.hurtbox, w.collected);',
     },
   },

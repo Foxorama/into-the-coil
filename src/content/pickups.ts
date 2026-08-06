@@ -150,7 +150,10 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     hint: 'Missiles fire faster',
     effect: 'upgrade',
   },
-  /** Another launcher. The base ship has one; this is how the other two arrive. */
+  /**
+   * A launcher. The base ship has NONE — 0056 — so the first of these is the missile weapon
+   * arriving at all, and the two after it are the side tubes 0051 placed.
+   */
   missileSpread: {
     sprite: SPRITE.pickupMissileSpread,
     spriteHit: SPRITE.pickupMissileSpread,
@@ -158,7 +161,8 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     health: 1,
     damage: 0,
     label: 'Launcher',
-    hint: 'Another missile tube',
+    // ⚠️ Not *"another"* any more: with no tube on the base ship the first one is the weapon itself.
+    hint: 'A missile tube',
     effect: 'upgrade',
   },
 };
@@ -388,7 +392,19 @@ export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weap
   let shots = 1;
   let damage = SHOTS[ship.shot].damage;
   let missileEvery = ship.missileEvery;
-  let launchers = 1;
+  /*
+    ⚠️ **ZERO, and this is the amendment to
+    `docs/decisions/0051-a-missile-is-the-second-auto-weapon.md`.** 0051 gave the base ship one tube
+    at the centreline, so every run began with both weapons and the first launcher pickup was the
+    *second* one. Reported from play: *"missile secondary weapon keeps a missile tube on the player
+    ship, default missile tubes should be 0 and increase to 1 then to 2."*
+
+    ⚠️ **It makes the missile an EARNED weapon rather than a second default**, which is a real change
+    to what a run opens as — see `docs/decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md`.
+    Everything 0051 says about launchers being POSITIONS still holds; there is now a rung below its
+    first one. It also means a death, which empties the upgrade list, takes the missiles with it.
+  */
+  let launchers = 0;
   let missileDamage = SHOTS[ship.missile].damage;
   for (let i = 0; i < upgrades.length; i++) {
     /*

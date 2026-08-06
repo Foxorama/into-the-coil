@@ -315,6 +315,48 @@ describe('collecting one, in the real frame', () => {
     ).toEqual([true]);
   });
 
+  /**
+   * HOW CLOSE THE SHIP HAS TO GET, in the only unit the player has.
+   *
+   * Reported from play: *"power ups are slightly too hard to pick up in size."*
+   * `docs/decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md`.
+   *
+   * ⚠️ **Measured as a FRACTION OF THE LANE and never against `COLLECT_REACH`.** The lane is a fixed
+   * 100 across on every device (0023), so a fraction of it is a real distance a player experiences —
+   * where an assertion written in terms of the multiplier would prove only that the code agrees with
+   * itself, which is the failure `docs/decisions/0027-measure-the-picture-not-the-model.md` records
+   * and `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` says a probe cannot catch.
+   */
+  function grabbableFrom(offset: number): boolean {
+    const { world, taken } = onePickup('rapid');
+    const frame = new GameFrame(world);
+    for (let i = 0; i < 600; i++) {
+      // Held exactly `offset` off the pickup's lane, rather than steered onto it.
+      if (world.pickups.size > 0) world.ship.across = world.pickups.at(0).across + offset;
+      frame.step();
+    }
+    return taken.length > 0;
+  }
+
+  it('is taken from 5% of the lane away, which one flick of the stick covers', () => {
+    /*
+      ⚠️ **The number the report is about.** Before this the reach was 4.4% of the lane and a pass
+      that felt like a hit was a miss. The assertion is deliberately INSIDE the new reach and OUTSIDE
+      the old one, so it fails if the change is reverted and it does not merely restate the constant.
+    */
+    expect(grabbableFrom(ACROSS_SPAN * 0.05), 'a pickup half a ship-width off the lane was missed').toBe(true);
+    expect(grabbableFrom(-ACROSS_SPAN * 0.05), 'the reach is not symmetric across the lane').toBe(true);
+  });
+
+  it('and is still MISSED from far enough away, so this is a reach and not a magnet', () => {
+    /*
+      ⚠️ **The half that stops the fix going too far.** A collection radius nobody can miss is not a
+      more forgiving game — it takes away the choice 0052 built the whole cycling pickup around, which
+      is *which* of the two faces the player flies for.
+    */
+    expect(grabbableFrom(ACROSS_SPAN * 0.12), 'a pickup an eighth of the lane away collected itself').toBe(false);
+  });
+
   it('leaves the field once taken, so it cannot be collected twice', () => {
     const { world } = onePickup('extraLife');
     flyInto(world, 600);
