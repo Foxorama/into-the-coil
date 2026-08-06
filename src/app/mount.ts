@@ -607,14 +607,22 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * the caller is what decides that; this clamps rather than throwing, because a level index that
    * has run off the end is a bug in the shell and a black screen is a worse way to report it.
    */
-  const enterLevel = (): void => {
+  /**
+   * `keepShell` is the difference between the two callers, and it is stated rather than ordered.
+   *
+   * ⚠️ **A level boundary keeps the shell; a run beginning does not** —
+   * [0058](../../docs/decisions/0058-a-level-boundary-keeps-the-shell.md). It was briefly implicit in
+   * the order `startRun` does things, and a probe over that ordering came back STILL GREEN: nothing
+   * could see a rule that no line stated. `src/app/frame.ts` has the whole of it.
+   */
+  const enterLevel = (keepShell: boolean): void => {
     const kind = LEVEL_KINDS[Math.min(state.run.level, LEVEL_KINDS.length - 1)]!;
-    startLevel(world, LEVELS[kind]);
+    startLevel(world, LEVELS[kind], keepShell);
   };
 
-  /** Carry on into the next level. Everything the run is carrying comes with it. */
+  /** Carry on into the next level. Everything the run is carrying comes with it — the shell too. */
   const continueRun = (): void => {
-    enterLevel();
+    enterLevel(true);
     world.rng = makeRng('proof-scene').stream('spawns');
     dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
   };
@@ -642,7 +650,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // ⚠️ `begin` FIRST, because it resets the level index to zero and `enterLevel` reads it. The
     // tier travels with it: `src/state/slices/run.ts` is where a run's lives come from now.
     dispatch({ slice: 'run', type: 'begin', difficulty });
-    enterLevel();
+    // ⚠️ `false`: a run begins with the ship's hull and nothing on it, whatever the last run ended
+    // wearing — 0058.
+    enterLevel(false);
     dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
   };
 
