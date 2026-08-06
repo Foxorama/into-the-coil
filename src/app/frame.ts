@@ -124,6 +124,25 @@ const PICKUP_DRIFT = 0.22;
 const COLLECT_REACH = 1.8;
 
 /**
+ * Steps of invulnerability a RESPAWNED ship gets, as opposed to one that has merely been hit.
+ *
+ * ⚠️ **Two seconds, and it exists because 0057 stopped clearing the field.** `INVULN_STEPS` is 0.75s
+ * and is sized for a hit landed mid-flight: the player is already where they chose to be, their hand
+ * is on the ship, and they keep flying. A respawn is not that. It hands back a ship the player is not
+ * yet holding, at the back of a lane still carrying everything that just killed them — so the number
+ * that was right when the field was swept is not the number that is right now.
+ *
+ * ⚠️ **It is NOT on the assist ladder**, for exactly the reason `src/content/ships.ts` gives for
+ * `INVULN_STEPS`: it is part of the one game at the same value for everybody, and
+ * `docs/decisions/0024-the-accessibility-floor-is-settings.md` keeps that ladder closed.
+ *
+ * A starting point rather than a measurement — long enough to cross the lane at `SHIP_SPEED` and
+ * find a gap, which is the thing it has to buy. `tests/level.test.ts` asserts that it is longer than
+ * a hit's and that it covers the lane, never what it is.
+ */
+const RESPAWN_INVULN_STEPS = 120;
+
+/**
  * How far off the ship's centreline the side launchers sit, in world units.
  *
  * The hull is 7 units across, so this is inside it: the tubes are ON the ship rather than beside it.
@@ -1290,7 +1309,16 @@ function spawnBoss(w: World): void {
  * on the same step would delete the explanation along with the cause.
  */
 export function respawn(w: World): void {
-  w.enemies.clear();
+  /*
+    ⚠️ **THE ENEMIES AND THEIR SHOTS ARE NOT CLEARED, AND THAT IS THE WHOLE OF 0057.** They used to
+    be, and reported from play: *"when a player dies the entire screen resets, the level shouldn't
+    reset, just the player's power ups."* Sweeping the field is the mercy that reads as a rewind —
+    everything the player had fought through vanishes, the level goes quiet, and the next wave
+    arrives out of nowhere. Nothing about the level's own clock ever moved (`nextWave` and the camera
+    both survived a death already); it only LOOKED as though it had, because the screen emptied.
+
+    What is cleared below is exactly what belonged to the ship that died.
+  */
   w.playerShots.clear();
   w.missiles.clear();
   /*
@@ -1300,7 +1328,6 @@ export function respawn(w: World): void {
   */
   w.bombs.clear();
   w.blasts.clear();
-  w.enemyShots.clear();
   /*
     ⚠️ **The shell is cleared HERE rather than left to `stepShields`.** The ship comes back with its
     hull and nothing else, so the marks would be released anyway — but as three bursts, at the place
@@ -1310,7 +1337,18 @@ export function respawn(w: World): void {
   w.shieldOrbs.clear();
   reset(w.ship, w.cameraAlong + SHIP_START_ALONG, ACROSS_SPAN / 2, w.shipRow);
   holdStation(w.ship, w.scrollPerStep);
-  w.ship.invulnFor = INVULN_STEPS;
+  /*
+    ⚠️ **A RESPAWN'S INVULNERABILITY IS NOT A HIT'S, and it stopped being the same number the moment
+    the field survived a death.** `INVULN_STEPS` is 0.75s and it is sized for *a hit landed while the
+    player was flying* — they are already where they chose to be, and they keep flying. A respawn
+    puts a ship the player is not yet holding into a lane that is still full of everything that just
+    killed them, and 0.75s of that is a second death they never had a hand on.
+
+    See `docs/decisions/0057-a-death-does-not-rewind-the-level.md`: keeping the field is the change
+    the player asked for, and this is the number that has to move with it or the change is a
+    punishment rather than a mercy.
+  */
+  w.ship.invulnFor = RESPAWN_INVULN_STEPS;
   /*
     ⚠️ **The pickups on screen are NOT cleared, and that is the answer to what a death costs.**
     0039 empties the arsenal, which means the twenty seconds after a death are the hardest in the
