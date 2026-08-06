@@ -1490,10 +1490,29 @@ export function respawn(w: World): void {
  * `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md` amended it — so they live in
  * `src/state/` and this cannot reach them even by accident.
  */
-export function startLevel(w: World, level: LevelRow): void {
+export function startLevel(w: World, level: LevelRow, keepShell: boolean): void {
   w.level = level;
   w.bossRow = BOSSES[level.boss];
+  /*
+    ⚠️ **THE SHELL CROSSES A BOUNDARY BECAUSE THE SHIP DOES, AND IT DOES NOT CROSS A RUN.**
+    `resetScene` calls `respawn`, which puts a hull with nothing on it back on the field — right for a
+    death and wrong at a level boundary, where nothing died. Reported from play: *"shields don't carry
+    forward between levels."* `docs/decisions/0058-a-level-boundary-keeps-the-shell.md`.
+
+    ⚠️ **Read before and written after rather than *not reset***, so `respawn` goes on saying exactly
+    one thing — *this is what a new life gets* — and the difference between a life and a level lives
+    in the function whose name is that difference.
+
+    ⚠️ **`keepShell` IS AN ARGUMENT AND WAS BRIEFLY AN ORDERING.** The first version read the count
+    unconditionally and relied on `src/app/mount.ts` calling `resetScene` before `startLevel` at the
+    top of a run, so that what crossed was zero. That is true, invisible, and reached by a line in
+    another file that reads as redundant — and `npm run prove` said so: the probe that removed that
+    line came back STILL GREEN, because no test could see an ordering nothing states. A caller that
+    has to say which of the two it is cannot get it wrong quietly.
+  */
+  const shields = keepShell ? shieldsOf(w.shipRow, w.ship.health) : 0;
   resetScene(w);
+  w.ship.health += shields;
 }
 
 export function resetScene(w: World): void {
