@@ -52,14 +52,62 @@ export const PROBES = [
   {
     decision: '0063',
     suite: 'tests/menu.test.ts',
-    // A screen that expires with nothing to press. Expiring now presses the first control, so this
-    // is a screen that silently does nothing at all when its countdown runs out.
-    broke: 'a screen that expires with no control for the expiry to press',
-    guard: 'a screen that expires has a control for the expiry to press',
+    // A screen that expires onto its own control with nothing to press — so it silently does nothing
+    // at all when its countdown runs out.
+    broke: 'a screen that expires onto its own control with no control for the expiry to press',
+    guard: 'a screen that expires onto its own control has a control to press',
     edit: {
       path: 'src/state/screens.ts',
       find: "  playing: { heading: '', actions: [], steps: true, dims: false, timeout: null },",
-      replace: "  playing: { heading: '', actions: [], steps: true, dims: false, timeout: { steps: 60 } },",
+      replace:
+        "  playing: { heading: '', actions: [], steps: true, dims: false, timeout: { steps: 60, then: null } },",
+    },
+  },
+  {
+    decision: '0063',
+    suite: 'tests/menu.test.ts',
+    /*
+      ⚠️ THE ONE THIS DECISION GOT WRONG AND HAD TO TAKE BACK, restored exactly. This is what the row
+      said until 0068 turned the run-over button into *Continue*: expiring pressed the first control,
+      which then meant the seven-second countdown RESUMED the run the player had walked away from.
+    */
+    broke: 'the run-over countdown pressing its own Continue button, which hands back the dead run',
+    guard: 'a screen whose control RESUMES the run does not expire onto it',
+    edit: {
+      path: 'src/state/screens.ts',
+      find: "    timeout: { steps: 7 * STEPS_PER_SECOND, then: 'title' },",
+      replace: '    timeout: { steps: 7 * STEPS_PER_SECOND, then: null },',
+    },
+  },
+  {
+    decision: '0063',
+    suite: 'tests/chrome.test.ts',
+    /*
+      ⚠️ THE DAMAGE A CONFLICT RESOLUTION ACTUALLY DID, restored exactly: the tap strip's comment
+      opener, eaten while two branches' appends to the end of `STYLE` were merged. It typechecks,
+      lints and builds — and the CSS parser throws away every rule from there to where it recovers,
+      which took `.itc-playing-strip`'s `display: none` and `pointer-events: none` with it.
+    */
+    broke: "a stylesheet comment's opener eaten, so the parser discards the rules behind it",
+    guard: 'every comment in the stylesheet is opened and closed',
+    edit: {
+      path: 'src/app/chrome.ts',
+      find: '.itc-cleared-panel { margin-top: min(1.5rem, 5cqh); margin-bottom: auto; }\n/*\n  ── THE TAP STRIP, DRAWN',
+      replace: '.itc-cleared-panel { margin-top: min(1.5rem, 5cqh); margin-bottom: auto; }\n  ── THE TAP STRIP, DRAWN',
+    },
+  },
+  {
+    decision: '0063',
+    suite: 'tests/menu.browser.test.ts',
+    // The same break, watched for seven real seconds in a browser rather than read off the table.
+    // 0027: the assertion the player would make is *the title screen came back*, and only this makes
+    // it. The shell half of the same bug — `onTick` ignoring `then` and always pressing the control.
+    broke: 'the shell pressing the control on expiry rather than going where the row says',
+    guard: 'counts down and returns to the title with no input at all',
+    edit: {
+      path: 'src/app/mount.ts',
+      find: '    if (then == null) chrome.activate();\n    else dispatch({ slice: \'screen\', type: \'show\', screen: then });',
+      replace: '    chrome.activate();',
     },
   },
   {

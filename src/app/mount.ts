@@ -709,17 +709,23 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * the world AND counts down, and `onIdle` fires only on the steps the simulation does not take, so
    * its timer would simply never have ticked there.
    *
-   * ⚠️ **Expiring PRESSES the screen's own first control.** `src/state/screens.ts` used to carry a
-   * `then: Screen` beside the duration, which was a second description of what the control already
-   * did — the run-over screen's *Again* went to the title and its timeout went to the title, and they
-   * agreed by hand. It is also what lets a level break expire into `continueRun`, which is not a
-   * screen at all and could never have been named by one.
+   * ⚠️ **Where expiring GOES is the row's answer, not this function's** — `src/state/screens.ts`
+   * carries `then`, and the two cases are there because they are genuinely two: a level break expires
+   * into `continueRun`, which is not a screen and could never be named by one, and the run-over
+   * screen expires to the title *past* a *Continue* button that would have resumed the run.
+   *
+   * ⚠️ **This read `chrome.activate()` unconditionally for one commit and it was a live bug**, caught
+   * by `tests/menu.browser.test.ts` rather than by reading: pressing the control was the same thing as
+   * the destination only while the only button on a dead run was a way of giving up.
    */
   world.onTick = (): void => {
     if (timeoutLeft <= 0) return;
     timeoutLeft--;
     tickTimer();
-    if (timeoutLeft <= 0) chrome.activate();
+    if (timeoutLeft > 0) return;
+    const then = SCREENS[state.screen.current].timeout?.then;
+    if (then == null) chrome.activate();
+    else dispatch({ slice: 'screen', type: 'show', screen: then });
   };
 
   world.onDeath = (): void => {

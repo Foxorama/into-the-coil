@@ -88,15 +88,24 @@ export interface ScreenRow {
   /**
    * How many fixed steps the player has before the screen acts for them, or `null` for one that waits.
    *
-   * ── WHAT EXPIRING MEANS, AND WHY IT NO LONGER NEEDS SAYING ──────────────────────────────────────
+   * ── WHAT EXPIRING MEANS ─────────────────────────────────────────────────────────────────────────
    *
-   * ⚠️ **A screen that expires PRESSES ITS OWN FIRST CONTROL**, and that is the whole rule. It used
-   * to carry a `then: Screen` as well, which was a second description of what the control already
-   * did: the run-over screen's *Again* went to the title and its timeout went to the title, and the
-   * two agreed only because somebody kept them in step. `docs/decisions/0063-…`.
+   * ⚠️ **`then: null` means the screen presses its own first control**, which is what lets a level
+   * break expire into something that is not a screen at all: *Onward* carries the run into the next
+   * level, and no `Screen` value could ever have named that.
    *
-   * It is also what lets a level break expire into something that is not a screen at all — *Onward*
-   * carries the run into the next level, which no `Screen` value could have named.
+   * ⚠️ **A named screen means the timeout goes SOMEWHERE ELSE than the button, and this field was
+   * deleted once for being a second description before it earned itself back the same week.** 0063
+   * removed it on the grounds that the run-over screen's *Again* went to the title and its timeout
+   * went to the title, so the destination was written twice and kept in step by hand. That was true.
+   * Then `docs/decisions/0068-a-run-over-is-a-continue.md` turned *Again* into *Continue* — a button
+   * that RESUMES the run — and pressing the control on expiry revived a run the player had walked
+   * away from, which is the precise opposite of what a countdown is for.
+   *
+   * The rule the two of them add up to: **what happens when the player does nothing is a different
+   * question from what happens when they press the only button**, and it only looks like the same
+   * question while the button happens to be a way of giving up. Collapsing them is not a
+   * de-duplication, it is an assumption about every future label — and it survived one.
    *
    * ⚠️ **Counted in STEPS, not in milliseconds**, because the step is fixed at 60Hz
    * (`docs/decisions/0022-frame-rate-is-a-feature.md`) and a screen that is not stepping the
@@ -104,7 +113,7 @@ export interface ScreenRow {
    * these screens that runs at display rate, and it would drift on a throttled tab.
    * `src/content/ships.ts` counts `INVULN_STEPS` the same way, for the same reason.
    */
-  timeout: { steps: number } | null;
+  timeout: { steps: number; then: Screen | null } | null;
 }
 
 /**
@@ -183,9 +192,10 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     actions: [{ label: 'Continue', hint: '' }],
     steps: false,
     dims: true,
-    // ⚠️ **`then: 'title'` is gone and nothing was lost.** Expiring presses *Again*, and *Again* goes
-    // to the title — the destination was written twice and agreed only by hand. 0063.
-    timeout: { steps: 7 * STEPS_PER_SECOND },
+    // ⚠️ **`then: 'title'` and NOT the button.** *Continue* resumes the run (0068); a countdown that
+    // pressed it would hand the walked-away player their run back, which is the one thing seven
+    // seconds of silence is evidence against. The offer expires — that is what gives it its cost.
+    timeout: { steps: 7 * STEPS_PER_SECOND, then: 'title' },
   },
   /**
    * The boss is dead and there is another level behind it.
@@ -212,7 +222,9 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     actions: [{ label: 'Onward', hint: '' }],
     steps: true,
     dims: false,
-    timeout: { steps: 3 * STEPS_PER_SECOND },
+    // ⚠️ **`then: null` — the one screen that genuinely presses its own button.** *Onward* is not a
+    // screen, it is `continueRun`, so there is nothing here a destination could have been written as.
+    timeout: { steps: 3 * STEPS_PER_SECOND, then: null },
   },
   /**
    * Every level in the run is behind the player.

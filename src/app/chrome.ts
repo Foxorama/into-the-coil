@@ -287,17 +287,18 @@ const STYLE = `
 }
 .itc-playing-hud-spent { background: transparent; }
 /*
-  ⚠️ **LAST IN THE SHEET, AND THAT IS THE WHOLE OF WHY IT WORKS.** The panel rule near the top sets
-  margin: auto to centre every screen's content, so this has to beat it on source order — written
-  earlier it lost the cascade silently and the banner went on sitting exactly where it was not
-  wanted. Caught by measuring where the button actually landed, which is the only thing that could
-  have caught it.
+  ⚠️ **BELOW THE SHARED PANEL RULE, AND THAT IS THE WHOLE OF WHY IT WORKS.** The panel rule near the
+  top sets margin: auto to centre every screen's content, so this has to beat it on source order —
+  written earlier it lost the cascade silently and the banner went on sitting exactly where it was
+  not wanted. Caught by measuring where the button actually landed, which is the only thing that
+  could have caught it. Anything after it is free to be here as long as it is not about margins.
 
   The level break sits at the TOP because the middle is where the ship is: a banner centred over a
   playfield the player is still flying in covers the one part of the screen they cannot look away
   from. Auto on the bottom only, so it is a top margin rather than a centred box.
 */
 .itc-cleared-panel { margin-top: min(1.5rem, 5cqh); margin-bottom: auto; }
+/*
   ── THE TAP STRIP, DRAWN ────────────────────────────────────────────────────────────────────────
 
   Decision 0060. Reported from play: *"how do you fire bombs on mobile? I can do one and then can't

@@ -284,22 +284,43 @@ describe('a screen that expires presses its own control, and says how long it wa
     );
   });
 
-  it('and a screen that expires has a control for the expiry to press', () => {
+  it('and a screen that expires onto its own control has a control to press', () => {
     /*
-      ⚠️ **THE RULE THAT REPLACED A SECOND DESTINATION.** A timeout used to carry `then: Screen`
-      beside its duration, which said a second time what the screen's own control already did — the
-      run-over screen's *Again* went to the title and its timeout went to the title, and the two
-      agreed only because somebody kept them in step. Expiring now presses the first control, so a
-      screen that expires with nothing to press would silently do nothing at all when it ran out.
+      ⚠️ **`then: null` means press the first control**, so a screen that expires with nothing to
+      press would silently do nothing at all when it ran out. A screen naming a destination is exempt,
+      because it never touches its controls.
     */
     for (const screen of SCREEN_KINDS) {
       const timeout = SCREENS[screen].timeout;
       if (timeout === null) continue;
       expect(timeout.steps, `${screen} expires in no time at all`).toBeGreaterThan(0);
+      if (timeout.then !== null) continue;
       expect(
         SCREENS[screen].actions.length,
-        `${screen} expires, and has no control for the expiry to press`,
+        `${screen} expires onto its own control, and has no control for the expiry to press`,
       ).toBeGreaterThan(0);
+    }
+  });
+
+  it('and a screen whose control RESUMES the run does not expire onto it', () => {
+    /*
+      ⚠️ **THE BUG THIS IS NAMED FOR, and it shipped to a branch.**
+      `docs/decisions/0063-a-level-break-is-a-respite.md` collapsed `timeout.then` into *press the
+      first control* while the run-over screen's button was *Again* → the title. Then
+      `docs/decisions/0068-a-run-over-is-a-continue.md` made that button *Continue* → resume the run,
+      and the seven-second countdown started handing the run back to a player who had walked away.
+
+      The rule in general form: **a countdown is what happens when the player does NOTHING**, so it
+      may never fire a control that carries the run onward. `tests/menu.browser.test.ts` watches the
+      real seven seconds; this is the same rule stated where it can be read.
+    */
+    for (const screen of SCREEN_KINDS) {
+      const timeout = SCREENS[screen].timeout;
+      if (timeout === null || timeout.then !== null) continue;
+      expect(
+        SCREENS[screen].steps,
+        `${screen} expires onto its own control while the run is over — that control cannot be a way of carrying on`,
+      ).toBe(true);
     }
   });
 });
