@@ -93,6 +93,42 @@ export function bakeSize(extent: number, pixelsPerUnit: number): number {
  */
 const SKY_STARS = { skyFar: 90, skyNear: 34 };
 
+/**
+ * The biggest a star may be drawn, as a radius in WORLD UNITS. One ceiling for the whole sky.
+ *
+ * ⚠️ **A world quantity and not a fraction of the tile, because the thing it has to be smaller than
+ * is a BULLET.** `docs/decisions/0069-the-sky-is-behind-the-game.md`. It used to be a per-layer
+ * fraction — `size * 0.012` for the near layer, which on a tile `ACROSS_SPAN` units across is a
+ * radius of **1.2 units against a pulse's 0.9**. The background's dots were drawn larger than the
+ * smallest thing in the game that can kill the player, and nothing else about a shape that size
+ * matters.
+ *
+ * ⚠️ **The far layer's value is unchanged and the near layer's is halved**, which is the whole of
+ * the size change: 0.6 was already what the far one used, nobody reported it, and it is two thirds
+ * of `SHOTS.pulse.radius`.
+ *
+ * ⚠️ **Not exported, and the guard does not read it.** `tests/budget.test.ts` measures the radii
+ * `skyField` actually produces, against `SHOTS` — `docs/decisions/0027-measure-the-picture-not-the-model.md`,
+ * because a ceiling checked against the constant it is derived from proves only that the code agrees
+ * with itself, and 0019 says no probe can see that.
+ */
+const SKY_MAX_STAR_UNITS = 0.6;
+
+/**
+ * How solid each layer is drawn, against the void behind it.
+ *
+ * ⚠️ **The near layer is the dim one, and it is the ONLY thing that now says which layer is which**
+ * besides parallax and count — size no longer does. That reads backwards for depth and is the right
+ * way round here, for the reason `SKY_STARS` already gives about count: the near layer is the one
+ * that MOVES, and motion is what buys attention. Reported from play as *"the closer to screen layer
+ * is too prominent, needs to be backgrounded a bit."*
+ * `docs/decisions/0069-the-sky-is-behind-the-game.md`.
+ *
+ * ⚠️ **Baked in, never applied per blit** — 0025 counts state changes in the frame loop, and a tile
+ * is drawn once at load and once per rotation.
+ */
+const SKY_ALPHA = { skyFar: 1, skyNear: 0.4 };
+
 /** Which ink each kind is drawn in. A role, never a colour — see `content/palette.ts`. */
 const INK_OF: Record<SpriteKind, keyof Palette> = {
   ship: 'player',
@@ -482,27 +518,63 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
   ctx.stroke();
 }
 
+/** One star, in tile pixels: where it goes and how big it is. */
+export interface SkyStar {
+  x: number;
+  y: number;
+  /** Radius, in pixels of a tile `size` across. */
+  r: number;
+}
+
+/**
+ * The field a sky tile is made of — WHAT will be drawn, before anything draws it.
+ *
+ * ⚠️ **Split out from the drawing so the picture can be measured without a canvas**, which is the
+ * only way `tests/budget.test.ts` can hold what a star actually IS rather than what a constant says.
+ * `docs/decisions/0069-the-sky-is-behind-the-game.md`: a ceiling asserted against the constant it
+ * was derived from proves that the code agrees with itself, and 0027 says a probe cannot see that.
+ * A test that reads the radii off the field is looking at the drawing.
+ *
+ * ⚠️ **`bake.ts` is on `tests/budget.test.ts`'s DELIBERATELY COLD list** — it runs at load and on
+ * rotation and may allocate freely. This is the only place in the project where a per-star loop, and
+ * an array of them, is affordable; it is exactly why the sky is baked rather than drawn.
+ */
+export function skyField(kind: 'skyFar' | 'skyNear', size: number): { alpha: number; stars: SkyStar[] } {
+  // @setup: one generator per bake, and its own stream so a star cannot move a spawn.
+  const rng = makeRng('sky').stream(kind);
+  const margin = size * 0.06;
+  const span = size - margin * 2;
+  /*
+    ⚠️ **World units converted to tile pixels HERE, and the constant stays a world quantity.** The
+    tile is `SPRITE_EXTENT[kind]` units across, so `size / extent` is its pixels per unit — and
+    `SKY_MAX_STAR_UNITS` can then be read against `SHOTS.pulse.radius` by a person and by a test.
+  */
+  const biggest = (size / SPRITE_EXTENT[kind]) * SKY_MAX_STAR_UNITS;
+  const stars: SkyStar[] = [];
+  for (let i = 0; i < SKY_STARS[kind]; i++) {
+    stars.push({ x: margin + rng.range(0, span), y: margin + rng.range(0, span), r: biggest * rng.range(0.5, 1) });
+  }
+  return { alpha: SKY_ALPHA[kind], stars };
+}
+
 /**
  * One tile of sky: a fixed field of dots, in the sky ink, clear of the seams.
  *
- * ⚠️ **`bake.ts` is on `tests/budget.test.ts`'s DELIBERATELY COLD list** — it runs at load and on
- * rotation and may allocate freely. This is the only place in the project where a per-star loop is
- * affordable, which is exactly why the sky is baked rather than drawn.
+ * ⚠️ **The near layer is DIMMED, and it is dimmed at BAKE time.** Alpha per blit would be a canvas
+ * state change inside the frame loop, which
+ * `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md` counts; baked into the tile it costs
+ * nothing and cannot be forgotten. Size alone put the stars below a bullet; the alpha is what puts
+ * them behind the game.
  */
 function drawSky(ctx: CanvasRenderingContext2D, kind: 'skyFar' | 'skyNear', size: number): void {
-  // @setup: one generator per bake, and its own stream so a star cannot move a spawn.
-  const stars = makeRng('sky').stream(kind);
-  const margin = size * 0.06;
-  const span = size - margin * 2;
-  const count = SKY_STARS[kind];
-  // The near layer's stars are bigger as well as fewer: what says *closer* is size, and what keeps it
-  // from competing with a bullet is how few there are.
-  const biggest = size * (kind === 'skyNear' ? 0.012 : 0.006);
-  for (let i = 0; i < count; i++) {
+  const field = skyField(kind, size);
+  ctx.globalAlpha = field.alpha;
+  for (const star of field.stars) {
     ctx.beginPath();
-    ctx.arc(margin + stars.range(0, span), margin + stars.range(0, span), biggest * stars.range(0.5, 1), 0, Math.PI * 2);
+    ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
     ctx.fill();
   }
+  ctx.globalAlpha = 1;
 }
 
 /** One sprite, drawn into its own offscreen canvas at the resolution it will be blitted at. */
