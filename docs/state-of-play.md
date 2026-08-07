@@ -48,6 +48,8 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **the sky is baked and blitted, and it is not entities** | [0065](decisions/0065-the-sky-is-baked-and-blitted.md) |
 | **a pickup waits to be taken, and its face turns half a second faster** | [0064](decisions/0064-a-pickup-waits-to-be-taken.md) |
 | **a death scatters what it took, non-cycling and on a short timer** | [0066](decisions/0066-a-death-scatters-what-it-took.md) |
+| **a new run opens on an empty field** | [0067](decisions/0067-a-new-run-opens-on-an-empty-field.md), [`the-sweep-that-served-two-rules`](../reports/the-sweep-that-served-two-rules-2026-08-07.md) |
+| **a run over is a continue, and it keeps the level** | [0068](decisions/0068-a-run-over-is-a-continue.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
@@ -69,15 +71,27 @@ the same category as the flight constants before they were played. None of them 
 choice and carries a key to the pickups, six enemy kinds, two authored levels of about three minutes
 each, weapon upgrades and extra lives lying about in them, a lives-and-shield readout while playing,
 a unique boss at the end of each level, a screen between them, and a victory screen after the second.
-Keyboard, touch and gamepad all reach every screen; the run-over screen gives up after seven seconds.
+Keyboard, touch and gamepad all reach every screen; the run-over screen offers a continue for seven
+seconds and then gives up.
 
 Each level opens on an empty screen so the player can find the controls before anything finds them —
 [0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md).
 
+⚠️ **A run that runs out of lives can now be continued** —
+[0068](decisions/0068-a-run-over-is-a-continue.md). The run-over screen's button says *Continue*, it
+resumes the level rather than restarting it, and the seven-second countdown that was already there is
+now what the offer costs. Whether a free continue is the right generosity has never been played, and
+it interacts with the balance pass below: a run that can always be resumed cannot be lost. 0068's
+*what this leaves owed* has it.
+
 ⚠️ **The ship now opens a run with no missile launcher** —
 [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) — so the second
 auto-weapon is found rather than carried, and a death takes it away with the rest of the upgrades.
-A death no longer empties the screen ([0057](decisions/0057-a-death-does-not-rewind-the-level.md)).
+A death no longer empties the screen ([0057](decisions/0057-a-death-does-not-rewind-the-level.md)),
+and a new run no longer inherits the last one's
+([0067](decisions/0067-a-new-run-opens-on-an-empty-field.md) — a regression 0057 introduced and the
+suite could not see, post-mortem in
+[`the-sweep-that-served-two-rules`](../reports/the-sweep-that-served-two-rules-2026-08-07.md)).
 
 Nothing is *triggered* beyond the bomb: the arsenal — the specials a player spends — is otherwise
 still a list with nothing in it. Difficulty was last placed by a hand at *"intro to 50% of the first level"* — which is now the
@@ -103,8 +117,16 @@ branching map there, and the evidence points away from a screen rather than towa
 ## The second play-test list, given 2026-08-06 and added to on 2026-08-07
 
 **Fourteen items, in the player's words** — twelve after playing the build that item 4 below produced,
-and two more the morning after. Five have landed; **nine have not been started**, and they are written
-out here rather than left in a chat log — [0029](decisions/0029-the-tracked-record-is-the-record.md).
+and two more the morning after. **Only item 4 below has not been started**; the rest have landed and
+say where. They are written out here rather than left in a chat log —
+[0029](decisions/0029-the-tracked-record-is-the-record.md).
+
+⚠️ **Items 1, 2, 3, 7, 8 and 9 each appeared TWICE — once landed and once not started** — after six
+PRs edited this list from branches that could not see each other. Repaired on 2026-08-07 alongside
+[0068](decisions/0068-a-run-over-is-a-continue.md). It is the drift 0038 names, and the shape is
+worth remembering: a handover that contradicts itself is worse than one that is merely out of date,
+because both halves read as current. Six branches off one `main` will do this to any list that is
+edited in place rather than appended to.
 
 ⚠️ **They are asked for as ONE list and cannot be judged apart.** *"Individually they can't be judged
 because they all affect the gameplay and game balance… something might feel right by itself in
@@ -125,7 +147,7 @@ makes a death cost more in the same session as a report that dying is already to
 | a death that emptied the screen | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
 | shields lost at every level boundary | [0058](decisions/0058-a-level-boundary-keeps-the-shell.md) |
 
-**Not started, in the player's own words.** Each is a real design question, not a tidy-up:
+**The nine, in the player's own words.** Each is a real design question, not a tidy-up:
 
 1. **✅ DONE — pickups linger, bounce and cycle faster.**
    [0064](decisions/0064-a-pickup-waits-to-be-taken.md). ⚠️ The two halves answer the complaint
@@ -133,33 +155,15 @@ makes a death cost more in the same session as a report that dying is already to
    you want*, and the faster cycle turns that wait into two and a quarter faces rather than a third of
    one. It also puts a pickup on the field for sixteen seconds rather than nine, which item 2 has to
    count against a pool of eight.
-2. **A death should scatter the lost upgrades as grabbable pickups.** *"Non-cycling and on a short
-   timer so there's enough time to grab some, but maybe not all."* This is the half of the
-   dying-is-punishing report that 0057 deliberately did **not** answer, and it is the one that
-   actually answers it. It needs item 1 first: scattered pickups are bouncing pickups.
-1. **Pickups must linger, bounce and cycle faster.** *"They enter the screen, change when they get to
-   player safe distance, then disappear off the screen. They need to bounce and move around the
-   screen so the player can grab them safely and grab the power up they want safely."* Also
-   *"cycle .5 sec faster"*. ⚠️ `CYCLE_UNITS` is a DISTANCE, not a duration —
-   [0052](decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md) says why that matters.
-   **The baseline is 3.6 seconds**, not the *"a little over two"* the comment used to claim: the
-   comment has been corrected and now carries its own arithmetic, so *0.5 faster* is a departure from
-   3.6. Lingering means a pickup holding station in the camera's frame — 0034's *every speed is in
-   the camera's frame*.
-2. **A death should scatter the lost upgrades as grabbable pickups.** *"Non-cycling and on a short
-   timer so there's enough time to grab some, but maybe not all."* This is the half of the
-   dying-is-punishing report that 0057 deliberately did **not** answer, and it is the one that
-   actually answers it. It needs item 1 first: scattered pickups are bouncing pickups.
+2. **✅ DONE — a death scatters the lost upgrades.**
+   [0066](decisions/0066-a-death-scatters-what-it-took.md). It is the half of the dying-is-punishing
+   report 0057 deliberately left, and 0056 had made a death cost more in the same session. ⚠️ The
+   pickup pool went from eight to twelve, out of the particle share.
 3. **✅ DONE — bosses needed a real explosion and an end-of-level beat.**
    [0062](decisions/0062-a-boss-dies-loudly.md). Both halves of that report were the same bug: the
    explosion could not be seen because there was no beat, and there was no beat because the clear
    fired on the step the pool emptied. ⚠️ The beat currently hands over to the screen item 4 is
    about, and the two want playing together.
-2. **✅ DONE — a death scatters the lost upgrades.**
-   [0066](decisions/0066-a-death-scatters-what-it-took.md). It is the half of the dying-is-punishing
-   report 0057 deliberately left, and 0056 had made a death cost more in the same session. ⚠️ The
-   pickup pool went from eight to twelve, out of the particle share.
-3. **Bosses need a real explosion and an end-of-level beat.** *"Currently the level just ends."*
 4. **The between-levels screen should become a brief respite.** *"The current pause/level screen
    interrupts the flow."* ⚠️ Touches `SCREENS` — [0046](decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md)
    and 0055 both have opinions about what a screen change costs.
@@ -176,21 +180,9 @@ makes a death cost more in the same session as a report that dying is already to
    rates, a handful of blits a frame, and no entities: `CAPACITY` is still exactly 0022's worst case.
    ⚠️ **Nothing about it has been looked at**, which is the one class of change 0027 says can have
    every guard green while the picture is wrong.
-7. **A background.** *"Needs a starry background or a background of some kind."* ⚠️ Against
-   [0022](decisions/0022-frame-rate-is-a-feature.md) and
-   [0025](decisions/0025-the-frame-budget-is-counted-not-timed.md): counted draw calls, nothing
-   allocating in the frame loop, and `CAPACITY` in `src/app/mount.ts` is already at 0022's 500-entity
-   worst case — so a starfield is not entities.
 8. **✅ DONE — a bomb could not be fired twice on a phone.**
    [0060](decisions/0060-a-trigger-is-a-place-on-the-glass.md). Two bugs, one symptom: half the strip
    was bound to a slot nobody owns, and nothing drew any of it.
-9. **Shields do not carry between levels.** ⚠️ A shield lives on `ship.health` by 0050 and
-   deliberately not in the run slice, so it is the one thing the player carries that a level boundary
-   has no reason to preserve.
-8. **A bomb cannot be fired twice on a phone.** *"How do you fire bombs on mobile? I can do one and
-   then can't fire any more."* ⚠️ The tap strip is `SPECIAL_BINDINGS` bands wide whatever the ship
-   owns, so half of it is bound to a special nobody has — and nothing draws it, so where the other
-   half is is a guess. `src/app/touch.ts`.
 9. **✅ DONE — shields did not carry between levels.**
    [0058](decisions/0058-a-level-boundary-keeps-the-shell.md).
 

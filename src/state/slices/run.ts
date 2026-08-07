@@ -113,6 +113,7 @@ export interface RunState {
 
 export type RunAction =
   | { slice: 'run'; type: 'begin'; difficulty: DifficultyKind }
+  | { slice: 'run'; type: 'continued' }
   | { slice: 'run'; type: 'lifeLost' }
   | { slice: 'run'; type: 'took'; special: SpecialKind }
   | { slice: 'run'; type: 'spent'; slot: number }
@@ -144,6 +145,35 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         arsenal: startingArsenal(),
         upgrades: [],
         difficulty: action.difficulty,
+      };
+    case 'continued':
+      /*
+        A CONTINUE — `docs/decisions/0068-a-run-over-is-a-continue.md`.
+
+        ⚠️ **`begin` with the level left alone, and that single difference is the whole feature.** A
+        run that ran out of lives is picked up where it stopped: the level index does not move, so
+        the shell has nothing to re-enter and the field carries on underneath. Everything else goes
+        back to what a run starts with — the tier's full complement, the starting kit, and no
+        upgrades, which is 0039's *a death costs the arsenal* applied one more time rather than
+        forgiven.
+
+        ⚠️ **The tier is carried, never re-chosen.** It is a property of the run
+        (`docs/decisions/0047-…`), and this is still the same run — a continue that dropped the
+        player onto the middle tier because that is the default would be the game quietly changing
+        the game.
+
+        ⚠️ **Not conditioned on the lives being zero.** The reducer is not the place to find out
+        whether the shell asked at a sensible moment, on the same terms `lifeLost` and `spent` give
+        for clamping rather than throwing. Nothing but the run-over screen dispatches it, and the
+        run-over screen is the only screen a run with no lives can be on —
+        `src/state/root.ts` holds that as an agreement.
+      */
+      return {
+        lives: livesFor(state.difficulty),
+        level: state.level,
+        arsenal: startingArsenal(),
+        upgrades: [],
+        difficulty: state.difficulty,
       };
     case 'lifeLost':
       /*
