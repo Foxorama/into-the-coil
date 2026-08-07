@@ -31,12 +31,13 @@ import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import { type Entity, makeEntity, reset, stepEntities } from '../src/sim/entity.ts';
 import { Pool } from '../src/sim/pool.ts';
 import { paintScene } from '../src/render/scene.ts';
-import { bakeSize } from '../src/render/bake.ts';
+import { bakeSize, skyField } from '../src/render/bake.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { sprite } from './bodies.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import { BURST } from '../src/content/debris.ts';
 import { MAX_SHIELDS } from '../src/content/ships.ts';
+import { SHOTS } from '../src/content/shots.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -271,6 +272,64 @@ describe('the sky costs a fixed number of calls, whatever the camera is doing', 
     }
     // And it is a ceiling rather than a floor: below it, the ask is honoured.
     expect(bakeSize(10, 4), 'a modest resolution was rounded up to the ceiling').toBe(40);
+  });
+
+  /**
+   * THE SKY IS BEHIND THE GAME — `docs/decisions/0069-the-sky-is-behind-the-game.md`.
+   *
+   * Reported from play: *"the closer to screen layer is too prominent, needs to be backgrounded a
+   * bit."* A screenshot of the shipped page said why — the near layer's stars were discs the same
+   * size as the enemy bullets, in a different ink.
+   *
+   * ⚠️ **Read off `skyField`, which is what will be DRAWN, rather than off the constants behind
+   * it.** 0027: a ceiling asserted against the constant it was derived from proves that the code
+   * agrees with itself, and 0019 says no probe can see that. The star radii below are the ones the
+   * bake loop will use.
+   */
+  describe('and it stays behind the game', () => {
+    /** The two tiles at the resolution they bake at on an ordinary screen. */
+    const FAR = skyField('skyFar', bakeSize(SPRITE_EXTENT.skyFar, 6));
+    const NEAR = skyField('skyNear', bakeSize(SPRITE_EXTENT.skyNear, 6));
+
+    /** A star's radius in WORLD units, which is the only unit a bullet can be compared in. */
+    const inUnits = (kind: 'skyFar' | 'skyNear', field: { stars: { r: number }[] }): number[] => {
+      const perUnit = bakeSize(SPRITE_EXTENT[kind], 6) / SPRITE_EXTENT[kind];
+      return field.stars.map((star) => star.r / perUnit);
+    };
+
+    it('THE REPORTED ONE: no star is drawn as big as the smallest thing that can kill the player', () => {
+      /*
+        ⚠️ **Against `SHOTS` and never against a number written here.** A bullet is the right thing
+        to compare with: it is the smallest body in the game that ends a life, so anything the
+        background draws bigger than one is a background competing with the game. The near layer used
+        to reach 1.2 world units against a pulse's 0.9.
+      */
+      const smallestThreat = Math.min(SHOTS.pulse.radius, SHOTS.spit.radius);
+      for (const kind of ['skyFar', 'skyNear'] as const) {
+        const radii = inUnits(kind, kind === 'skyFar' ? FAR : NEAR);
+        const biggest = Math.max(...radii);
+        expect(
+          biggest,
+          `a ${kind} star is ${biggest.toFixed(2)} units across where the smallest bullet is ${smallestThreat}`,
+        ).toBeLessThan(smallestThreat);
+      }
+    });
+
+    it('and the near layer is the quiet one, on every count that buys attention', () => {
+      /*
+        ⚠️ **Three properties, because the near layer is the one that MOVES** — `src/app/mount.ts`
+        runs it at two and a half times the far layer's rate — and motion is what buys attention. It
+        pays that back by being fainter and fewer. Size no longer separates them at all, which is the
+        change: whichever layer were bigger, one of them would be over the bullet ceiling above or
+        indistinguishable from the other.
+
+        ⚠️ **The alpha is a hand's number and is deliberately NOT pinned** — 0037's rule, the one
+        `tests/run.test.ts` states for lives. What is held is the RELATIONSHIP, which has to be true
+        at whatever value a later play-test settles on.
+      */
+      expect(NEAR.alpha, 'the near layer is drawn as solidly as the far one').toBeLessThan(FAR.alpha);
+      expect(NEAR.stars.length, 'the near layer is as dense as the far one').toBeLessThan(FAR.stars.length);
+    });
   });
 });
 
