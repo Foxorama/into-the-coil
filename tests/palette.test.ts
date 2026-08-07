@@ -21,7 +21,17 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_PALETTE, type Ink, type Palette, type PaletteName, PALETTES } from '../src/content/palette.ts';
 
 const NAMES = Object.keys(PALETTES) as PaletteName[];
-const INKS: readonly Ink[] = ['space', 'player', 'ally', 'enemy', 'bullet', 'hazard', 'pickup', 'impact'];
+const INKS: readonly Ink[] = ['space', 'sky', 'player', 'ally', 'enemy', 'bullet', 'hazard', 'pickup', 'impact'];
+
+/**
+ * The two inks that are BACKGROUND — the things everything else has to be legible against.
+ *
+ * ⚠️ **`sky` is the only exception in this whole file, and it is an exception in the right
+ * direction** — `docs/decisions/0065-the-sky-is-baked-and-blitted.md`. Every other role is something
+ * the player must be able to find; a starfield that cleared the legibility floor would be a screen
+ * full of dots as loud as a pickup. So the floor is inverted for it below rather than waived.
+ */
+const BACKGROUND: readonly Ink[] = ['space', 'sky'];
 
 /** One channel of sRGB, linearised. The gamma step every naive contrast check leaves out. */
 function linear(channel: number): number {
@@ -89,11 +99,38 @@ describe('every ink is legible against space', () => {
     for (const name of NAMES) {
       const palette: Palette = PALETTES[name];
       for (const ink of INKS) {
-        if (ink === 'space') continue;
+        if (BACKGROUND.includes(ink)) continue;
         expect(
           contrast(palette[ink], palette.space),
           `${name}: ${ink} (${palette[ink]}) is not legible against space (${palette.space})`,
         ).toBeGreaterThanOrEqual(LEGIBLE);
+      }
+    }
+  });
+
+  it('and the SKY is the one ink held to the opposite rule, because it is what they are legible against', () => {
+    /*
+      ⚠️ **Inverted rather than waived** — `docs/decisions/0065-the-sky-is-baked-and-blitted.md`. A
+      starfield is dozens of small dots scattered across the whole screen, and a dot bright enough to
+      clear the legibility floor is a dot the player has to check is not a pickup. So the sky must be
+      the DIMMEST thing in the palette that is not the void itself, and it must sit nearer the void
+      than anything that carries meaning.
+
+      Two assertions, and the second is the load-bearing one: an ink can be dim and still be closer to
+      a pickup than to the background, which is the case that actually costs a life.
+    */
+    for (const name of NAMES) {
+      const palette: Palette = PALETTES[name];
+      const againstSpace = contrast(palette.sky, palette.space);
+      expect(againstSpace, `${name}: the sky is as loud as the things the player has to find`).toBeLessThan(LEGIBLE);
+      // Visible at all, or there is no sky and the parallax says nothing.
+      expect(againstSpace, `${name}: the sky is invisible against the void`).toBeGreaterThan(1.05);
+      for (const ink of INKS) {
+        if (BACKGROUND.includes(ink)) continue;
+        expect(
+          contrast(palette.sky, palette[ink]),
+          `${name}: the sky is closer to ${ink} than to the void — a star will read as one`,
+        ).toBeGreaterThan(againstSpace);
       }
     }
   });

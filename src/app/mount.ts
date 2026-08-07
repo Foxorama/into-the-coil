@@ -26,6 +26,7 @@ import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { BOSSES } from '../content/bosses.ts';
 import { CYCLE, PICKUPS, PICKUP_KINDS, isUpgrade, type PickupKind, weaponFor } from '../content/pickups.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS, type DifficultyKind } from '../content/difficulty.ts';
+import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { MAX_SHIELDS, SHIPS, fullHealthFor, shieldsOf } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
@@ -328,6 +329,20 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // The blast sits under everything it is doing damage to, so the player can see what is inside
     // it — including their own ship, which is the one thing they need to be looking at.
     layers: [debris, blasts, pickupPool, bossPool, enemies, enemyShots, playerShots, missiles, bombs, shieldOrbs, shipPool],
+    /*
+      THE SKY, back to front — `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
+
+      ⚠️ **Both depths are well under 1**, or the layer stops being a background: at 1 it moves
+      exactly with the world and reads as a field of objects going past at the rate of the things
+      that can kill the player. 0.12 and 0.3 put the far field almost still and the near one at a
+      third of the world's rate, which is the parallax.
+
+      ⚠️ **Built HERE, once**, because this file may allocate and `src/render/scene.ts` may not.
+    */
+    sky: [
+      { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.12 },
+      { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.3 },
+    ],
     shipPool,
     shieldOrbs,
     enemies,

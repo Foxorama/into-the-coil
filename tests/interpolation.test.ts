@@ -89,6 +89,7 @@ function stationKeepingWorld(surface: Surface): World {
   holdStation(ship, 0.6);
   return {
     layers: [enemies, enemyShots, playerShots, shipPool],
+    sky: [],
     shipPool,
     shieldOrbs: new Pool<Entity>(MAX_SHIELDS, makeEntity),
     missiles: new Pool<Entity>(8, makeEntity),

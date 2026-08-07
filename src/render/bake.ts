@@ -21,6 +21,7 @@
 
 import type { Palette } from '../content/palette.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
+import { makeRng } from '../sim/rng.ts';
 
 /** Side profile for a horizontally scrolling screen, top-down for a vertical one. */
 export type SpriteView = 'side' | 'top';
@@ -55,6 +56,42 @@ export function atlasIsStale(atlas: Atlas, view: SpriteView, pixelsPerUnit: numb
   if (!Number.isFinite(pixelsPerUnit) || pixelsPerUnit <= 0) return false;
   return Math.abs(pixelsPerUnit - atlas.pixelsPerUnit) > atlas.pixelsPerUnit * 0.25;
 }
+
+/**
+ * The most detail any bitmap is ever baked at, in pixels per world unit.
+ *
+ * ⚠️ **It replaces a flat 256-pixel ceiling that meant this all along.** Ten pixels per unit is a
+ * 26-unit boss at 260px, which is where the old number came from; the difference only becomes visible
+ * when something is baked that is much bigger than a boss, which the sky tiles are.
+ *
+ * Baking below the blit resolution is a blurry game; baking far above it is memory spent on detail
+ * nobody sees — and the sky is the one bitmap where *far above* would be measured in megabytes.
+ */
+const MAX_PIXELS_PER_UNIT = 10;
+
+/**
+ * How many pixels square a bitmap of `extent` world units is baked at.
+ *
+ * ⚠️ **Exported and pure so the CEILING can be proved without a canvas**, which is the only way the
+ * property that matters can be stated: the cap is a **resolution**, so it is the same pixels-per-unit
+ * for every kind. A flat pixel ceiling is not — it silently bakes anything bigger than a boss at a
+ * fraction of the detail, and the picture is only wrong on the biggest thing on the screen.
+ * `tests/budget.test.ts` holds it; `docs/decisions/0065-the-sky-is-baked-and-blitted.md` has the why.
+ */
+export function bakeSize(extent: number, pixelsPerUnit: number): number {
+  return Math.max(8, Math.min(extent * MAX_PIXELS_PER_UNIT, Math.ceil(extent * pixelsPerUnit)));
+}
+
+/**
+ * How many stars a sky tile carries, per layer.
+ *
+ * ⚠️ **The near layer is SPARSER than the far one**, which is the wrong way round for depth and the
+ * right way round for a shooter: the near layer moves fastest, and fast-moving dots near the player's
+ * eye are the ones that compete with a bullet. `docs/decisions/0024-the-accessibility-floor-is-settings.md`
+ * puts a flash-intensity cap in the unconditional tier for the same reason a background does not get
+ * to be busy.
+ */
+const SKY_STARS = { skyFar: 90, skyNear: 34 };
 
 /** Which ink each kind is drawn in. A role, never a colour — see `content/palette.ts`. */
 const INK_OF: Record<SpriteKind, keyof Palette> = {
@@ -120,6 +157,14 @@ const INK_OF: Record<SpriteKind, keyof Palette> = {
   boss2Hit: 'impact',
   // Fragments are the impact itself, so they are the impact ink; they carry no identity of their own.
   debris: 'impact',
+  /*
+    ⚠️ **The one ink that is not meant to be found.** `src/content/palette.ts` records it: every other
+    role is something the player has to be able to pick out, and the sky is the thing they are all
+    picked out against. A starfield in `pickup` or `ally` would be a screen full of things that look
+    collectable. `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
+  */
+  skyFar: 'sky',
+  skyNear: 'sky',
 };
 
 /**
@@ -408,6 +453,26 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
       ctx.moveTo(half + r * 0.45, half);
       ctx.arc(half, half, r * 0.45, 0, Math.PI * 2);
       break;
+    /*
+      ── THE SKY, AND IT IS THE ONE DRAWING THAT RETURNS EARLY ───────────────────────────────────────
+
+      Every other kind here is one path, filled and stroked once, by the two lines at the bottom of
+      this function. A field of stars is dozens of separate discs with no outline at all — a stroke in
+      the space colour around each one is what a `1px` dot would be made ENTIRELY of — so it draws
+      itself and leaves.
+
+      ⚠️ **The placement is a SEEDED draw**, per `docs/decisions/0021-one-stream-per-concern.md`: its
+      own named stream, so a star's position can never move a wave by one enemy, and the same sky is
+      baked on every machine and after every rotation.
+
+      ⚠️ **Stars stay clear of the tile's edges**, because the tile repeats along the scroll axis and
+      a disc crossing a seam would be sliced in half at the join. A margin is the cheap answer; the
+      expensive one is wrapping every dot, and nothing about a starfield is worth that.
+    */
+    case 'skyFar':
+    case 'skyNear':
+      drawSky(ctx, kind, size);
+      return;
     default: {
       const never: never = kind;
       throw new Error(`unbaked sprite kind: ${String(never)}`);
@@ -417,10 +482,43 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
   ctx.stroke();
 }
 
+/**
+ * One tile of sky: a fixed field of dots, in the sky ink, clear of the seams.
+ *
+ * ⚠️ **`bake.ts` is on `tests/budget.test.ts`'s DELIBERATELY COLD list** — it runs at load and on
+ * rotation and may allocate freely. This is the only place in the project where a per-star loop is
+ * affordable, which is exactly why the sky is baked rather than drawn.
+ */
+function drawSky(ctx: CanvasRenderingContext2D, kind: 'skyFar' | 'skyNear', size: number): void {
+  // @setup: one generator per bake, and its own stream so a star cannot move a spawn.
+  const stars = makeRng('sky').stream(kind);
+  const margin = size * 0.06;
+  const span = size - margin * 2;
+  const count = SKY_STARS[kind];
+  // The near layer's stars are bigger as well as fewer: what says *closer* is size, and what keeps it
+  // from competing with a bullet is how few there are.
+  const biggest = size * (kind === 'skyNear' ? 0.012 : 0.006);
+  for (let i = 0; i < count; i++) {
+    ctx.beginPath();
+    ctx.arc(margin + stars.range(0, span), margin + stars.range(0, span), biggest * stars.range(0.5, 1), 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 /** One sprite, drawn into its own offscreen canvas at the resolution it will be blitted at. */
 function bakeOne(kind: SpriteKind, palette: Palette, view: SpriteView, pixelsPerUnit: number): HTMLCanvasElement {
-  // Clamped so a zero-sized viewport or an absurd DPI cannot ask for a 0px or a 4096px sprite.
-  const size = Math.max(8, Math.min(256, Math.ceil(SPRITE_EXTENT[kind] * pixelsPerUnit)));
+  /*
+    Clamped so a zero-sized viewport or an absurd DPI cannot ask for a 0px or a 4096px sprite.
+
+    ⚠️ **THE CEILING IS A RESOLUTION AND IT USED TO BE A PIXEL COUNT.** It was a flat 256px, which is
+    what a 26-unit boss comes to at ten pixels per unit — so the number was always a resolution cap
+    wearing a size cap's clothes, and it only looked like a size because nothing was bigger than a
+    boss. A sky tile is `ACROSS_SPAN` units across (`src/content/sprites.ts`), four times the boss, and
+    at a flat 256 it would have baked at 2.5 pixels per world unit and blitted at three times that:
+    stars as blurry blobs. Stated as what it always meant.
+    `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
+  */
+  const size = bakeSize(SPRITE_EXTENT[kind], pixelsPerUnit);
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
