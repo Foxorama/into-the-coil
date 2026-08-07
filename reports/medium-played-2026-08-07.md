@@ -1,13 +1,13 @@
 # Medium, played end to end — 2026-08-07
 
 **The first play-test of the middle tier, and the first verdict on the fourteen changes
-`docs/state-of-play.md` had been holding unplayed.** Played on the build **before** the sound work
-([PR #97](https://github.com/Foxorama/into-the-coil/pull/97), decision 0072) landed, so none of it is
-about sound.
+`docs/state-of-play.md` had been holding unplayed.** Played on the build **before**
+[0072](../docs/decisions/0072-a-cue-is-baked-and-played.md) landed, so none of it is about sound.
 
-⚠️ **That decision is deliberately not linked as a file.** It is unmerged as this is written, and
-`tests/links.test.ts` refuses a relative link to something no clone has — correctly. The citation
-becomes a link when 0072 is on `main`.
+⚠️ **One of the seven findings has since been answered** —
+[0073](../docs/decisions/0073-an-enemy-is-a-pilot.md), which is the enemy half. Nothing else below has
+been acted on, and the report is left as it was written rather than annotated item by item: what it
+records is what was said and what was measured on that build.
 
 The player's words are kept verbatim, because they are the findings and a status document cannot
 hold one ([0029](../docs/decisions/0029-the-tracked-record-is-the-record.md)).

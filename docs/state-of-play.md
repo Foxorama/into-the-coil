@@ -55,6 +55,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **seven levels, seven bosses, one idea each** | [0071](decisions/0071-five-more-levels-and-one-idea-each.md) |
 | **a style is a setting, a choice is not an action, and neither may touch the sim** | [0070](decisions/0070-a-style-is-a-setting-and-the-first-one.md) |
 | **a cue is baked and played, and it names the picture it is the twin of** | [0072](decisions/0072-a-cue-is-baked-and-played.md) |
+| **an enemy is a pilot: motion is a closed union and three of them react to the player** | [0073](decisions/0073-an-enemy-is-a-pilot.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
@@ -118,6 +119,18 @@ date and is exactly what a play-test is for.
 
 ## What the play-test has answered
 
+⚠️ **THE MIDDLE TIER HAS NOW BEEN PLAYED END TO END, AND THE HEADLINE IS ONE WORD** —
+[`medium-played`](../reports/medium-played-2026-08-07.md): *"honestly, it was just boring."* Not a
+crash, not a wrong number, not a silent event; every guard in the repository was green for all of it.
+Read it before proposing game work — it is the current account of what the game is like to play, and
+seven findings in it are open.
+
+⚠️ **One of those findings outranks the rest and it quotes this project back at itself.** *"It has
+actually become what we tried to avoid, a one-button autopilot stick"* is
+[0024](decisions/0024-the-accessibility-floor-is-settings.md)'s own words about the DEFAULT game.
+[0073](decisions/0073-an-enemy-is-a-pilot.md) is the answer to it and is the only finding on that list
+that has landed.
+
 ⚠️ **All eight questions have been played and answered** —
 [`the-eight-questions-answered`](../reports/the-eight-questions-answered-2026-08-07.md) has them in
 the player's own words, and the seven things still open at the end of them.
@@ -138,10 +151,11 @@ and two more the morning after. **All fourteen have landed**, and each says wher
 out here rather than left in a chat log —
 [0029](decisions/0029-the-tracked-record-is-the-record.md).
 
-⚠️ **NONE OF THEM HAS BEEN PLAYED, AND THAT IS THE ONLY THING THAT MATTERS ABOUT THIS SECTION.**
-Fourteen changes to how a run feels, landed against each other without a hand on any of them. The
-next thing this project needs is not another item — it is the play-test, and then the balance pass
-under *What is next*.
+⚠️ **THEY HAVE NOW BEEN PLAYED, AND THIS SECTION IS CLOSED** —
+[`medium-played`](../reports/medium-played-2026-08-07.md). For weeks this said *none of them has been
+played, and that is the only thing that matters about this section*; the verdict arrived as one
+play-test over all fourteen, which is how the list was asked for. **The findings are in that report
+and the live list is under *What is next*, not here.**
 
 ⚠️ **THIS LIST HAS DOUBLED ITSELF TWICE, AND NEITHER TIME WAS A MERGE CONFLICT** —
 [`the-list-that-doubled-itself-twice`](../reports/the-list-that-doubled-itself-twice-2026-08-07.md),
@@ -155,11 +169,7 @@ isolation and then completely fail when you mix something else in."* So each lan
 with its own guards, and **the verdict on all of them is one play-test after the last one lands** —
 not a report per item.
 
-⚠️ **Nothing below has been played since these landed.** Several of them change what a run feels like
-in the first ten seconds, and one ([0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md))
-makes a death cost more in the same session as a report that dying is already too punishing.
-
-**Landed:**
+**Landed, and now played:**
 
 | | |
 |---|---|
@@ -213,35 +223,72 @@ makes a death cost more in the same session as a report that dying is already to
 
 ## What is next
 
-**1 — Play the build.** Fourteen changes to how a run feels have landed against each other without a
-hand on any of them, and [0027](decisions/0027-measure-the-picture-not-the-model.md) is the rule that
-says a green model proves nothing about the picture. The verdict is one play-test over all of them,
-not a report per item — that is how the list was asked for.
+**The list is [`medium-played`](../reports/medium-played-2026-08-07.md)'s seven findings, and the
+order below is the one the player set.** One of the seven has landed. Everything else here is a
+pointer into that report or into the decision that answered it —
+[0029](decisions/0029-the-tracked-record-is-the-record.md), so read the report for the words rather
+than a summary of them here.
 
-⚠️ **And the game now makes a noise, which the same play-test covers** —
-[0072](decisions/0072-a-cue-is-baked-and-played.md). Landing it first was deliberate: audio cannot
-touch the sim and a scan proves it, so it cannot move any verdict on the fourteen, and one session at
-the controls answers both. Every one of the twelve cue rows is a starting point on
-[0037](decisions/0037-the-ship-has-mass.md)'s terms; `threat` and `pulse` are the two most likely to
-be wrong, and 0072 says why.
+**1 — ✅ DONE. The enemies are enemies.**
+[0073](decisions/0073-an-enemy-is-a-pilot.md). Motion became a closed union, lancers hunt, wardens
+orbit, chargers double back, and a tier's `aggression` is the *"depending on difficulty"* half. It
+also closed the reported defect that an enemy off the LEADING edge could shoot — the `across` axis had
+that check since [0059](decisions/0059-the-lane-is-the-players-box.md) and the other never did.
 
-**2 — The balance pass, and it is the largest open item in the project.** It is deliberately last, in
-the player's own words on 2026-08-07:
+⚠️ **Every number in it is unplayed**, and so is every cue in
+[0072](decisions/0072-a-cue-is-baked-and-played.md).
 
-> *"I've been leaving balancing passes because it's been playing well and pre-balancing means
-> re-balancing later."*
+**2 — The two remaining defects.** Both confirmed in the code before the report was written, both
+small, and both are removing a false signal rather than a design change:
 
-⚠️ **So the ordering is a decision rather than a backlog.** Two of the eight play-test answers came
-back *"can't tell yet"* and both are blocked on this;
-[0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md)'s two harder tiers
-were sized against a five-health ship and have never been re-sized since it became one hit. Every
-rate in [0059](decisions/0059-the-lane-is-the-players-box.md) is unplayed, and so is the three-second
-level break, which [0063](decisions/0063-a-level-break-is-a-respite.md) names as the number most
-likely to be wrong.
+- **The player's box is a wall with nothing drawn on it** — `camera + 6 … camera + 144` against a
+  leading edge at 178 on 16:9 and **240 on 21:9**. The box must stay
+  ([0023](decisions/0023-the-long-axis-is-the-scroll-axis.md) makes lookahead the only thing that
+  varies by device); what is missing is that it is invisible.
+- **The level boundary resets the camera to zero**, so the sky snaps and the ship is repositioned.
+  Not deletable — `resetScene` records that distance travelled is a level's only clock — so seamless
+  means **giving a level an origin** rather than assuming it starts at zero.
 
-**3 — The free continue.** A run cannot currently be lost, on purpose and as a testing affordance —
-see *What the game currently is*. It is the thing to reconsider once the difficulty above has a hand
-behind it, because it is what has been standing in for one.
+**3 — The arsenal answers backwards**, which is the rear-firing upgrade and the omnidirectional
+special.
+
+⚠️ **IT CARRIES A PICKUP TAXONOMY PASS AND THAT IS A PRECONDITION, NOT A FOLLOW-UP.** In the player's
+words: *"there's a lot of upgrades now so I think this'll need at bare minimum better icons to
+distinguish and also better grouping of upgrades as it'll get complex pretty quickly."*
+[0052](decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md) already records that two of
+the six faces risk reading alike, and the title key lists six things when three of them alternate.
+Landing two more kinds first and tidying afterwards is how the field becomes unreadable.
+
+⚠️ **`loop` has already taken the urgency out of it** — a charger that comes back is a threat the
+forward guns can answer, so the rear weapon is an option rather than a requirement (0073).
+
+**4 — The curve, both halves, and it is now the largest open item.** Stretch the climb AND let a
+capped pickup convert into something spendable, tuned against each other. Four of the report's seven
+findings are this one system: *hard at tier 1–2 and easy at 3–4*, *upgrades too frequent*, *only
+shield refreshes matter at the cap*, *bosses die in under a second*.
+
+⚠️ **It moved UP in importance because of 0073, not down.** A field that fights back changes what
+every number in it is worth, so this wants measuring against the current build rather than the one the
+report was played on.
+
+⚠️ **The deferral that got us here was a decision rather than a backlog**, in the player's own words:
+*"I've been leaving balancing passes because it's been playing well and pre-balancing means
+re-balancing later."* It has now been paid for and the evidence has arrived.
+
+**5 — Boss movement.** *"They all do the exact same movement with different shapes."*
+[0061](decisions/0061-a-boss-keeps-flying.md) gave all seven the same drifting station because its
+subject was *a boss that stopped flying*; it named the wall-type alternative and called it content.
+Last, because a boss that dies in under a second is a curve problem before it is a movement problem.
+
+**6 — The free continue.** A run cannot currently be lost, on purpose and as a testing affordance —
+see *What the game currently is*. It is what has been standing in for a difficulty, so it is
+reconsidered once item 4 has a hand behind it.
+
+⚠️ **And the forward room the player asked for is worth SIX UNITS at the current device support.**
+`MIN_ASPECT` guarantees every device shows at least 150 along-units and the box already reaches 144;
+raising that floor to 16:9 would buy a ~172-unit box and cost letterboxing on 16:10 laptops and 3:2
+tablets, which are gutter-free today. **That trade is deferred rather than refused** — the value of
+forward room against something that hunts is a different question from its value against a wall.
 
 ## What was next before that list, and why in this order
 
