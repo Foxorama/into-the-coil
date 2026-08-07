@@ -53,6 +53,21 @@ export const BURST = {
   /** Fragments when the player's ship dies. More, because it is the one death that matters. */
   ship: 16,
   /**
+   * Fragments per PULSE of a boss coming apart — and a boss comes apart over a second and a half.
+   *
+   * ⚠️ **A rate rather than a total, which is what makes it an event instead of a puff.** Reported
+   * from play: *"bosses need a real explosion and an end-of-level beat — currently the level just
+   * ends."* One burst of any size is over in half a second and reads exactly like an enemy dying,
+   * because it IS an enemy dying with a bigger number.
+   * `docs/decisions/0062-a-boss-dies-loudly.md` has the beat this is the picture of.
+   *
+   * ⚠️ **The ceiling is the debris pool.** A pulse every `BOSS_PULSE` steps against a fragment life of
+   * up to `lifeMax` puts about `boss × lifeMax / BOSS_PULSE` on screen at once —
+   * `tests/budget.test.ts` holds the arithmetic, because a burst that will not fit is dropped
+   * (`src/sim/pool.ts`) and the loudest moment in the game is exactly when that would happen.
+   */
+  boss: 12,
+  /**
    * Fragments when a shield is spent.
    *
    * ⚠️ **Fewest of the three, and it exists because a shield popping is an EVENT the model resolves

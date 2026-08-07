@@ -71,6 +71,9 @@ export function inertLevel(): {
   bossPool: Pool<Entity>;
   bossSpawned: boolean;
   bossBeaten: boolean;
+  clearedIn: number;
+  bossOffset: number;
+  bossAcross: number;
   bossPatrol: number;
   onCleared: () => void;
   nextPickup: number;
@@ -100,6 +103,9 @@ export function inertLevel(): {
     bossPool: new Pool<Entity>(CAPACITY.boss, makeEntity),
     bossSpawned: false,
     bossBeaten: false,
+    clearedIn: 0,
+    bossOffset: 0,
+    bossAcross: ACROSS_SPAN / 2,
     bossPatrol: 1,
     onCleared: (): void => {},
     ...pickupParts(),
@@ -233,6 +239,9 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     bossPool,
     bossSpawned: false,
     bossBeaten: false,
+    clearedIn: 0,
+    bossOffset: 0,
+    bossAcross: ACROSS_SPAN / 2,
     bossPatrol: 1,
     onCleared: (): void => {
       cleared.count++;

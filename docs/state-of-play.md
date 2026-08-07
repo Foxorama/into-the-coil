@@ -41,6 +41,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
 | **a death takes the ship, and the level carries on** | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
+| **a boss dies loudly, and the level ends after it** | [0062](decisions/0062-a-boss-dies-loudly.md) |
 | **a trigger is a place on the glass, and it is drawn** | [0060](decisions/0060-a-trigger-is-a-place-on-the-glass.md) |
 | **a level boundary keeps the shell; a death and a new run do not** | [0058](decisions/0058-a-level-boundary-keeps-the-shell.md) |
 | **a boss's station drifts, so a fight is still flight** | [0061](decisions/0061-a-boss-keeps-flying.md) |
@@ -145,6 +146,15 @@ makes a death cost more in the same session as a report that dying is already to
    comment has been corrected and now carries its own arithmetic, so *0.5 faster* is a departure from
    3.6. Lingering means a pickup holding station in the camera's frame — 0034's *every speed is in
    the camera's frame*.
+2. **A death should scatter the lost upgrades as grabbable pickups.** *"Non-cycling and on a short
+   timer so there's enough time to grab some, but maybe not all."* This is the half of the
+   dying-is-punishing report that 0057 deliberately did **not** answer, and it is the one that
+   actually answers it. It needs item 1 first: scattered pickups are bouncing pickups.
+3. **✅ DONE — bosses needed a real explosion and an end-of-level beat.**
+   [0062](decisions/0062-a-boss-dies-loudly.md). Both halves of that report were the same bug: the
+   explosion could not be seen because there was no beat, and there was no beat because the clear
+   fired on the step the pool emptied. ⚠️ The beat currently hands over to the screen item 4 is
+   about, and the two want playing together.
 2. **✅ DONE — a death scatters the lost upgrades.**
    [0066](decisions/0066-a-death-scatters-what-it-took.md). It is the half of the dying-is-punishing
    report 0057 deliberately left, and 0056 had made a death cost more in the same session. ⚠️ The
