@@ -151,10 +151,10 @@ makes a death cost more in the same session as a report that dying is already to
 4. **The between-levels screen should become a brief respite.** *"The current pause/level screen
    interrupts the flow."* ⚠️ Touches `SCREENS` — [0046](decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md)
    and 0055 both have opinions about what a screen change costs.
-5. **Enemies are stuck in a narrow tunnel.** *"Once on screen the enemies are in a very narrow
-   tunnel and it makes the feel very restrictive and not like you're in a large area."* They should
-   fly off the `across` edges and back on. ⚠️ 0048 landed entry from the edges and the `across` cull;
-   this is about what they do AFTER arriving, which is `steerEnemies`.
+5. **✅ DONE — enemies were stuck in a narrow tunnel.**
+   [0059](decisions/0059-the-lane-is-the-players-box.md). ⚠️ It also moved the weaver's amplitude,
+   added a rule that something off screen does not shoot, and lifted the constraint that a flanking
+   wave may not use a weaving enemy. Every rate in it is unplayed.
 6. **✅ DONE — a boss killed the sense of flight.**
    [0061](decisions/0061-a-boss-keeps-flying.md), which took the second of the two options given. The
    first — a wall-type boss holding the far edge with its own style — is **content** rather than a
