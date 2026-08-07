@@ -124,6 +124,7 @@ function stationKeepingWorld(surface: Surface): World {
     difficulty: DIFFICULTIES[DIFFICULTY_KINDS[0]!],
     bossFullHealth: BOSSES.sentinel.health,
     onIdle: (): void => {},
+    onTick: (): void => {},
     onDeath: (): void => {},
   };
 }

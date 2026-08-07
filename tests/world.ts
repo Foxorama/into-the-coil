@@ -230,6 +230,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     difficulty: DIFFICULTIES[difficulty],
     bossFullHealth: BOSSES.sentinel.health,
     onIdle: (): void => {},
+    onTick: (): void => {},
     onDeath: (): void => {
       deaths.count++;
     },

@@ -69,10 +69,43 @@ export interface ScreenRow {
    */
   steps: boolean;
   /**
-   * What happens if the player does nothing at all, and after how many fixed steps.
+   * Whether this screen's chrome HIDES the scene behind it.
    *
-   * ⚠️ **One nullable object rather than two fields, so "a timeout with nowhere to go" cannot be
-   * written.** A duration and a destination are meaningless apart.
+   * ── A SECOND FIELD BECAUSE THERE ARE TWO QUESTIONS ──────────────────────────────────────────────
+   *
+   * ⚠️ **`steps` and `dims` were one thing until a screen wanted them apart.** Every screen with
+   * chrome on it stopped the simulation AND painted over the scene, so nothing had ever needed to say
+   * which of the two it meant. Reported from play: *"the current pause/level screen interrupts the
+   * flow"* — and what the level break wants is the second without the first: a banner over a sky that
+   * is still moving. `docs/decisions/0063-a-level-break-is-a-respite.md`.
+   *
+   * ⚠️ **A dimming screen is also the only kind that shows a countdown**, and that is a relationship
+   * rather than tidiness: a screen that has stopped the world owes the player a number saying when it
+   * will stop doing that. A banner over a world that never stopped does not, and a countdown on one
+   * would be exactly the *restating what the screen already shows* `docs/game.md` bans.
+   */
+  dims: boolean;
+  /**
+   * How many fixed steps the player has before the screen acts for them, or `null` for one that waits.
+   *
+   * ── WHAT EXPIRING MEANS ─────────────────────────────────────────────────────────────────────────
+   *
+   * ⚠️ **`then: null` means the screen presses its own first control**, which is what lets a level
+   * break expire into something that is not a screen at all: *Onward* carries the run into the next
+   * level, and no `Screen` value could ever have named that.
+   *
+   * ⚠️ **A named screen means the timeout goes SOMEWHERE ELSE than the button, and this field was
+   * deleted once for being a second description before it earned itself back the same week.** 0063
+   * removed it on the grounds that the run-over screen's *Again* went to the title and its timeout
+   * went to the title, so the destination was written twice and kept in step by hand. That was true.
+   * Then `docs/decisions/0068-a-run-over-is-a-continue.md` turned *Again* into *Continue* — a button
+   * that RESUMES the run — and pressing the control on expiry revived a run the player had walked
+   * away from, which is the precise opposite of what a countdown is for.
+   *
+   * The rule the two of them add up to: **what happens when the player does nothing is a different
+   * question from what happens when they press the only button**, and it only looks like the same
+   * question while the button happens to be a way of giving up. Collapsing them is not a
+   * de-duplication, it is an assumption about every future label — and it survived one.
    *
    * ⚠️ **Counted in STEPS, not in milliseconds**, because the step is fixed at 60Hz
    * (`docs/decisions/0022-frame-rate-is-a-feature.md`) and a screen that is not stepping the
@@ -80,7 +113,7 @@ export interface ScreenRow {
    * these screens that runs at display rate, and it would drift on a throttled tab.
    * `src/content/ships.ts` counts `INVULN_STEPS` the same way, for the same reason.
    */
-  timeout: { steps: number; then: Screen } | null;
+  timeout: { steps: number; then: Screen | null } | null;
 }
 
 /**
@@ -119,9 +152,10 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     heading: GAME_TITLE,
     actions: DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })),
     steps: false,
+    dims: true,
     timeout: null,
   },
-  playing: { heading: '', actions: [], steps: true, timeout: null },
+  playing: { heading: '', actions: [], steps: true, dims: false, timeout: null },
   /**
    * ⚠️ **No score, no summary, no coaching.** `docs/game.md`: *players are assumed to be adaptable;
    * hints are added where play proves they are needed, never pre-emptively.* What the player needs to
@@ -157,6 +191,10 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     heading: 'Run over',
     actions: [{ label: 'Continue', hint: '' }],
     steps: false,
+    dims: true,
+    // ⚠️ **`then: 'title'` and NOT the button.** *Continue* resumes the run (0068); a countdown that
+    // pressed it would hand the walked-away player their run back, which is the one thing seven
+    // seconds of silence is evidence against. The offer expires — that is what gives it its cost.
     timeout: { steps: 7 * STEPS_PER_SECOND, then: 'title' },
   },
   /**
@@ -168,7 +206,26 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    * levels, and a button is what a straight line looks like —
    * `docs/decisions/0042-a-run-is-a-sequence-of-levels.md`.
    */
-  cleared: { heading: 'Level clear', actions: [{ label: 'Onward', hint: '' }], steps: false, timeout: null },
+  /*
+    ⚠️ **THE ONE SCREEN THAT KEEPS THE WORLD RUNNING.** Reported from play: *"the current pause/level
+    screen interrupts the flow"*, and — in the same breath — that the interruption is what makes the
+    branching chart between levels look like the wrong idea.
+    `docs/decisions/0063-a-level-break-is-a-respite.md`.
+
+    `steps: true` and `dims: false`: the sky the boss died in goes on scrolling, the player goes on
+    flying, and this is a line of text over the top of it. `timeout` presses *Onward* after three
+    seconds, so the break costs the player nothing they have to do — and *Onward* is still there for
+    a hand that wants to skip it.
+  */
+  cleared: {
+    heading: 'Level clear',
+    actions: [{ label: 'Onward', hint: '' }],
+    steps: true,
+    dims: false,
+    // ⚠️ **`then: null` — the one screen that genuinely presses its own button.** *Onward* is not a
+    // screen, it is `continueRun`, so there is nothing here a destination could have been written as.
+    timeout: { steps: 3 * STEPS_PER_SECOND, then: null },
+  },
   /**
    * Every level in the run is behind the player.
    *
@@ -177,5 +234,5 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    * final boss at the end of a run; two of them exist, so this is the end of what has been authored
    * rather than the end of the game — and the wording says only what is true.
    */
-  victory: { heading: 'Coil cleared', actions: [{ label: 'Again', hint: '' }], steps: false, timeout: null },
+  victory: { heading: 'Coil cleared', actions: [{ label: 'Again', hint: '' }], steps: false, dims: true, timeout: null },
 };

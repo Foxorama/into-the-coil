@@ -63,6 +63,43 @@ function literalClasses(src: string): string[] {
   return out;
 }
 
+/**
+ * Every way the stylesheet's comments fail to be comments, described.
+ *
+ * ⚠️ **A walk rather than two counts**, because equal numbers of openers and closers is not the same
+ * claim — a closer followed by an opener balances and is entirely broken. The walk answers the
+ * question the CSS parser actually asks, which is *am I inside a comment right now*.
+ */
+function commentFaults(src: string): string[] {
+  const style = /const STYLE = `([\s\S]*?)`;/.exec(src)?.[1] ?? '';
+  const out: string[] = [];
+  let at = 0;
+  let open = -1;
+  while (at < style.length) {
+    if (open < 0) {
+      const next = style.indexOf('/*', at);
+      const stray = style.indexOf('*/', at);
+      if (stray >= 0 && (next < 0 || stray < next)) {
+        out.push(`a comment closes at index ${stray} that nothing opened`);
+        at = stray + 2;
+        continue;
+      }
+      if (next < 0) break;
+      open = next;
+      at = next + 2;
+    } else {
+      const close = style.indexOf('*/', at);
+      if (close < 0) {
+        out.push(`a comment opens at index ${open} and never closes`);
+        break;
+      }
+      open = -1;
+      at = close + 2;
+    }
+  }
+  return out;
+}
+
 /** Whether a class belongs to some screen — its prefix, or the prefix without its trailing dash. */
 function isNamespaced(name: string): boolean {
   // The real function, not a restatement of it. `docs/decisions/0017-…` records what it cost to
@@ -120,6 +157,36 @@ describe('every screen owns its class prefix', () => {
     expect(literalClasses("el.className = 'hud';")).toEqual(['hud']);
     expect(literalClasses("el.classList.toggle('itc-title-shown', true);")).toEqual(['itc-title-shown']);
     expect(literalClasses('el.className = prefix + "heading";'), 'a built name is not a literal').toEqual([]);
+  });
+
+  /**
+   * ⚠️ THE ONE THAT TYPECHECKS, LINTS, BUILDS AND IS STILL BROKEN.
+   *
+   * The stylesheet is a template literal, so a mangled comment inside it is not a syntax error in
+   * TypeScript — it is a valid string with rubbish in it, and the CSS parser silently discards from
+   * the rubbish to the next thing it can recover at. **The rules it eats on the way are gone.**
+   *
+   * Twice now at the same spot, both times while resolving a conflict where two branches appended to
+   * the end of `STYLE`: once the whole tap-strip block was dropped, and once its opening `/*` was,
+   * which fed seventeen lines of prose to the parser and took `.itc-playing-strip`'s `display: none`
+   * and `pointer-events: none` down with it — a strip drawn on every desktop, swallowing the taps it
+   * exists to advertise. `docs/decisions/0063-a-level-break-is-a-respite.md` has the incident.
+   *
+   * Three browser tests caught it, at seconds apiece and only because they happened to exist. This
+   * catches the whole class in a string scan, which is what it deserves.
+   */
+  it('every comment in the stylesheet is opened and closed, so no rule can be eaten by prose', () => {
+    expect(commentFaults(source), 'the stylesheet has a comment the CSS parser will not survive').toEqual([]);
+  });
+
+  it('the comment scan finds the two ways a stylesheet comment breaks', () => {
+    // Decision 0005, aimed at the guard: run it over the exact damage rather than trusting the shape.
+    const wrap = (css: string): string => 'const STYLE = `\n' + css + '\n`;';
+    expect(commentFaults(wrap('/* fine */\n.a { color: red; }')), 'a healthy sheet was called broken').toEqual([]);
+    expect(commentFaults(wrap('/* opened\n.a { color: red; }')).length, 'an unclosed comment passed').toBe(1);
+    expect(commentFaults(wrap('.a { color: red; }\nprose */\n.b { color: red; }')).length, 'a lost opener passed').toBe(
+      1,
+    );
   });
 
   it('the namespace rule accepts a screen prefix and refuses everything else', () => {

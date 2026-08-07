@@ -443,6 +443,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     onDeath: (): void => {},
     // Replaced below, once the chrome and `dispatch` exist.
     onIdle: (): void => {},
+    onTick: (): void => {},
   };
 
   /*
@@ -692,24 +693,39 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   world.onIdle = (): void => {
     menuPad.read(menuAsk);
     if (menuAsk.move !== 0) chrome.move(menuAsk.move);
-    if (menuAsk.confirm) {
-      /*
-        ⚠️ **Return, because activating changed the screen underneath us.** `activate` clicks the
-        control, which runs `startRun`, which dispatches, which re-arms the countdown — and counting
-        the new screen's first step down here would spend a step of a timer that was armed a
-        microsecond ago on a screen the player has already left.
-      */
-      chrome.activate();
-      return;
-    }
+    /*
+      ⚠️ **No `return` needed any more, and the countdown is no longer here.** `activate` changes the
+      screen underneath, and counting the new screen's first step down would have spent a step of a
+      timer armed a microsecond ago — decision 0063 moved the countdown to `onTick`, which runs
+      BEFORE this, so the two can no longer race in that order.
+    */
+    if (menuAsk.confirm) chrome.activate();
+  };
 
+  /**
+   * A fixed step happened, whether or not the simulation took it. Spend the screen's countdown.
+   *
+   * ⚠️ **This ran inside `onIdle` until a screen wanted both** — decision 0063. The level break steps
+   * the world AND counts down, and `onIdle` fires only on the steps the simulation does not take, so
+   * its timer would simply never have ticked there.
+   *
+   * ⚠️ **Where expiring GOES is the row's answer, not this function's** — `src/state/screens.ts`
+   * carries `then`, and the two cases are there because they are genuinely two: a level break expires
+   * into `continueRun`, which is not a screen and could never be named by one, and the run-over
+   * screen expires to the title *past* a *Continue* button that would have resumed the run.
+   *
+   * ⚠️ **This read `chrome.activate()` unconditionally for one commit and it was a live bug**, caught
+   * by `tests/menu.browser.test.ts` rather than by reading: pressing the control was the same thing as
+   * the destination only while the only button on a dead run was a way of giving up.
+   */
+  world.onTick = (): void => {
     if (timeoutLeft <= 0) return;
     timeoutLeft--;
     tickTimer();
     if (timeoutLeft > 0) return;
-    const timeout = SCREENS[state.screen.current].timeout;
-    // Read off the row rather than remembered, so *where it goes* has exactly one description.
-    if (timeout !== null) dispatch({ slice: 'screen', type: 'show', screen: timeout.then });
+    const then = SCREENS[state.screen.current].timeout?.then;
+    if (then == null) chrome.activate();
+    else dispatch({ slice: 'screen', type: 'show', screen: then });
   };
 
   world.onDeath = (): void => {

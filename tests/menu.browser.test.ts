@@ -241,3 +241,51 @@ describe.runIf(chromePath)('the run-over screen gives up on its own', () => {
     await page.context().close();
   });
 });
+
+/**
+ * A LEVEL BREAK IS A RESPITE.
+ *
+ * `docs/decisions/0063-a-level-break-is-a-respite.md`. Reported from play: *"the current pause/level
+ * screen interrupts the flow."*
+ *
+ * ⚠️ **The half that has to be a browser test is that it does not COVER the game.** `tests/menu.test.ts`
+ * holds the table — the level break steps and does not dim — and a table cannot say whether the
+ * overlay paints over the canvas or swallows the thumb the player is still steering with. Both of
+ * those are computed style, and both of them are how the interruption would come straight back.
+ */
+describe.runIf(chromePath)('the level break is a banner rather than a wall', () => {
+  it('paints nothing over the scene and takes no pointer, while its control still does', async () => {
+    /*
+      ⚠️ **The overlay is shown by its own class rather than by clearing a level**, which would be
+      three minutes of real time per assertion. What is under test is what the STYLESHEET does with
+      the state — exactly as the pip test next door drives the spent class directly, and for the same
+      reason `npm run prove` gave it: nothing else can see a rule that only CSS enforces.
+    */
+    const page = await open();
+    const styles = await page.evaluate(() => {
+      const root = document.querySelector('.itc-cleared');
+      const action = document.querySelector('.itc-cleared-action');
+      if (!(root instanceof HTMLElement) || !(action instanceof HTMLElement)) return null;
+      root.classList.add('itc-cleared-shown');
+      const box = getComputedStyle(root);
+      const button = getComputedStyle(action);
+      return {
+        background: box.backgroundColor,
+        events: box.pointerEvents,
+        buttonEvents: button.pointerEvents,
+        // Where the panel sits, as a fraction of the overlay: the middle is where the ship is.
+        top: (action.getBoundingClientRect().top - root.getBoundingClientRect().top) / root.clientHeight,
+      };
+    });
+    expect(styles, 'there is no level-break overlay to measure').not.toBeNull();
+    const s = styles!;
+    // Transparent in any notation a browser might report it in.
+    expect(/rgba\(0, 0, 0, 0\)|transparent/.test(s.background), `the break painted ${s.background} over the game`).toBe(
+      true,
+    );
+    expect(s.events, 'the break would swallow every drag the player makes').toBe('none');
+    expect(s.buttonEvents, 'Onward cannot be pressed by the hand that wants to skip the break').toBe('auto');
+    expect(s.top, 'the banner sits over the middle of the playfield, which is where the ship is').toBeLessThan(0.5);
+    await page.context().close();
+  });
+});

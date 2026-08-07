@@ -11,6 +11,8 @@ import {
 } from '../src/app/menu.ts';
 import { PAD_AXIS_X, PAD_AXIS_Y, PAD_DEADZONE } from '../src/app/pad.ts';
 import { SCREENS, SCREEN_KINDS, STEPS_PER_SECOND, type Screen } from '../src/state/screens.ts';
+import { GameFrame } from '../src/app/frame.ts';
+import { NO_LEVEL, playableWorld } from './world.ts';
 
 /**
  * A GAMEPAD ON A SCREEN WITH BUTTONS ON IT.
@@ -248,7 +250,7 @@ describe('a disconnected or absent pad asks for nothing', () => {
   });
 });
 
-describe('a screen that expires says where it goes and how long it waits', () => {
+describe('a screen that expires presses its own control, and says how long it waits', () => {
   it('gives the run-over screen seven seconds back to the title', () => {
     /*
       Asked for in play: *"this screen should have a 7 second countdown; when it expires, the player
@@ -261,26 +263,132 @@ describe('a screen that expires says where it goes and how long it waits', () =>
     const timeout = SCREENS.gameOver.timeout;
     expect(timeout, 'the run-over screen waits forever').not.toBe(null);
     expect(timeout!.steps / STEPS_PER_SECOND).toBe(7);
-    expect(timeout!.then).toBe('title');
   });
 
-  it('and no other screen expires, because no other screen may', () => {
+  it('and `victory` is the only screen left that waits forever', () => {
     /*
-      ⚠️ **The half that matters more.** `cleared` and `victory` both sit on top of something the
-      player earned; timing either of them out would throw a run away while its owner was looking at
-      it. `playing` timing out would end a run nobody lost, and `title` has nowhere to go.
+      ⚠️ **THIS USED TO SAY *no screen other than the run-over screen expires*, and it was right about
+      `victory` and wrong about `cleared`** — decision 0063. The reasoning it carried was that both
+      *"sit on top of something the player earned, and timing either out would throw a run away while
+      its owner was looking at it."* That is exactly true of `victory`, which ends a run. It is not
+      true of a LEVEL break, which does not end anything: expiring there carries the run onward, which
+      is what the player was going to press anyway. Reported as *"the current pause/level screen
+      interrupts the flow."*
+
+      `playing` timing out would end a run nobody lost, and `title` has nothing to press for the
+      player: a run cannot begin without a tier being chosen (0047).
     */
-    const expiring = SCREEN_KINDS.filter((s: Screen) => SCREENS[s].timeout !== null);
-    expect(expiring, 'a screen other than the run-over screen expires by itself').toEqual(['gameOver']);
+    const waiting = SCREEN_KINDS.filter((s: Screen) => SCREENS[s].timeout === null);
+    expect(waiting.sort(), 'a screen that should wait for a hand expires by itself').toEqual(
+      ['playing', 'title', 'victory'].sort(),
+    );
   });
 
-  it('and every destination is a screen that exists', () => {
+  it('and a screen that expires onto its own control has a control to press', () => {
+    /*
+      ⚠️ **`then: null` means press the first control**, so a screen that expires with nothing to
+      press would silently do nothing at all when it ran out. A screen naming a destination is exempt,
+      because it never touches its controls.
+    */
     for (const screen of SCREEN_KINDS) {
       const timeout = SCREENS[screen].timeout;
       if (timeout === null) continue;
-      expect(SCREEN_KINDS, `${screen} expires to a screen that is not in the table`).toContain(timeout.then);
-      expect(timeout.then, `${screen} expires to itself`).not.toBe(screen);
       expect(timeout.steps, `${screen} expires in no time at all`).toBeGreaterThan(0);
+      if (timeout.then !== null) continue;
+      expect(
+        SCREENS[screen].actions.length,
+        `${screen} expires onto its own control, and has no control for the expiry to press`,
+      ).toBeGreaterThan(0);
+    }
+  });
+
+  it('and a screen whose control RESUMES the run does not expire onto it', () => {
+    /*
+      ⚠️ **THE BUG THIS IS NAMED FOR, and it shipped to a branch.**
+      `docs/decisions/0063-a-level-break-is-a-respite.md` collapsed `timeout.then` into *press the
+      first control* while the run-over screen's button was *Again* → the title. Then
+      `docs/decisions/0068-a-run-over-is-a-continue.md` made that button *Continue* → resume the run,
+      and the seven-second countdown started handing the run back to a player who had walked away.
+
+      The rule in general form: **a countdown is what happens when the player does NOTHING**, so it
+      may never fire a control that carries the run onward. `tests/menu.browser.test.ts` watches the
+      real seven seconds; this is the same rule stated where it can be read.
+    */
+    for (const screen of SCREEN_KINDS) {
+      const timeout = SCREENS[screen].timeout;
+      if (timeout === null || timeout.then !== null) continue;
+      expect(
+        SCREENS[screen].steps,
+        `${screen} expires onto its own control while the run is over — that control cannot be a way of carrying on`,
+      ).toBe(true);
+    }
+  });
+});
+
+/**
+ * A LEVEL BREAK IS A RESPITE.
+ *
+ * `docs/decisions/0063-a-level-break-is-a-respite.md`. Reported from play: *"the current pause/level
+ * screen interrupts the flow"* — and, in the same breath, that the interruption is what makes the
+ * branching chart between levels look like the wrong idea.
+ */
+describe('a screen says whether it stops the world and whether it hides it', () => {
+  it('the level break keeps the world running and does not paint over it', () => {
+    expect(SCREENS.cleared.steps, 'the level break stops the world it is meant to fly through').toBe(true);
+    expect(SCREENS.cleared.dims, 'the level break paints over the sky it is a banner on').toBe(false);
+  });
+
+  it('and it is the only screen with chrome on it that does either', () => {
+    /*
+      ⚠️ **`steps` and `dims` were one thing until this screen wanted them apart**, and holding that
+      here is what stops them quietly becoming one thing again. Every OTHER screen with something to
+      say stops the world and hides it; `playing` has nothing to say at all.
+    */
+    for (const screen of SCREEN_KINDS) {
+      const row = SCREENS[screen];
+      const hasChrome = row.heading.length > 0 || row.actions.length > 0;
+      if (!hasChrome || screen === 'cleared') continue;
+      expect(row.steps, `${screen} has chrome on it and leaves the world running`).toBe(false);
+      expect(row.dims, `${screen} has chrome on it and does not hide the scene`).toBe(true);
+    }
+  });
+
+  it('a countdown gets a step whether or not the simulation took it', () => {
+    /*
+      ⚠️ **THE MECHANISM THE LEVEL BREAK NEEDED, and the reason `onTick` is not a second `onIdle`.**
+      A screen's countdown used to be spent inside `onIdle`, which fires only on the steps the
+      simulation does NOT take — true of every screen with chrome on it, right up until one of them
+      kept the world running. On that screen the timer would simply never have ticked, and the break
+      would have waited forever with the game playing underneath it.
+    */
+    const built = playableWorld(NO_LEVEL);
+    let ticks = 0;
+    let idles = 0;
+    built.world.onTick = (): void => {
+      ticks++;
+    };
+    built.world.onIdle = (): void => {
+      idles++;
+    };
+    const frame = new GameFrame(built.world);
+
+    built.world.stepping = true;
+    for (let i = 0; i < 10; i++) frame.step();
+    expect(ticks, 'a stepping screen got no ticks at all').toBe(10);
+    expect(idles, 'the simulation stepped and the menu reader ran anyway').toBe(0);
+
+    built.world.stepping = false;
+    for (let i = 0; i < 10; i++) frame.step();
+    expect(ticks, 'a stopped screen stopped counting down').toBe(20);
+    expect(idles, 'the menu reader never ran on a screen the simulation is stopped on').toBe(10);
+  });
+
+  it('a screen that does not dim never carries a countdown, because it never took anything away', () => {
+    // `docs/game.md`'s voice rule: no restating what the screen already shows. A number counting down
+    // over a world that never stopped is a fact about nothing the player is waiting for.
+    for (const screen of SCREEN_KINDS) {
+      if (SCREENS[screen].timeout === null || SCREENS[screen].dims) continue;
+      expect(SCREENS[screen].steps, `${screen} shows a countdown over a world it did not stop`).toBe(true);
     }
   });
 });

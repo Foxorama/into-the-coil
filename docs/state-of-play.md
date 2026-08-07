@@ -45,6 +45,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **a trigger is a place on the glass, and it is drawn** | [0060](decisions/0060-a-trigger-is-a-place-on-the-glass.md) |
 | **a level boundary keeps the shell; a death and a new run do not** | [0058](decisions/0058-a-level-boundary-keeps-the-shell.md) |
 | **a boss's station drifts, so a fight is still flight** | [0061](decisions/0061-a-boss-keeps-flying.md) |
+| **a level break is a respite: a screen says whether it stops the world AND whether it hides it** | [0063](decisions/0063-a-level-break-is-a-respite.md) |
 | **the sky is baked and blitted, and it is not entities** | [0065](decisions/0065-the-sky-is-baked-and-blitted.md) |
 | **nothing the sky draws is as big as a bullet** | [0069](decisions/0069-the-sky-is-behind-the-game.md) |
 | **a pickup waits to be taken, and its face turns half a second faster** | [0064](decisions/0064-a-pickup-waits-to-be-taken.md) |
@@ -165,6 +166,18 @@ makes a death cost more in the same session as a report that dying is already to
    [0066](decisions/0066-a-death-scatters-what-it-took.md). It is the half of the dying-is-punishing
    report 0057 deliberately left, and 0056 had made a death cost more in the same session. ⚠️ The
    pickup pool went from eight to twelve, out of the particle share.
+3. **Bosses need a real explosion and an end-of-level beat.** *"Currently the level just ends."*
+4. **✅ DONE — the between-levels screen is a respite.**
+   [0063](decisions/0063-a-level-break-is-a-respite.md). ⚠️ **It carries a product finding about a
+   feature that does not exist yet**: the same report says the branching chart's player choice *"will
+   probably get scrapped, because a flowing continuation with a brief respite will feel better than
+   the hard pause interruption."* 0063 records it and does not act on it —
+   [0042](decisions/0042-a-run-is-a-sequence-of-levels.md) is where the chart lives, and item 5 below
+   is what it now has to argue with.
+5. **Enemies are stuck in a narrow tunnel.** *"Once on screen the enemies are in a very narrow
+   tunnel and it makes the feel very restrictive and not like you're in a large area."* They should
+   fly off the `across` edges and back on. ⚠️ 0048 landed entry from the edges and the `across` cull;
+   this is about what they do AFTER arriving, which is `steerEnemies`.
 3. **✅ DONE — bosses needed a real explosion and an end-of-level beat.**
    [0062](decisions/0062-a-boss-dies-loudly.md). Both halves of that report were the same bug: the
    explosion could not be seen because there was no beat, and there was no beat because the clear
@@ -302,6 +315,13 @@ A level is a row in `LEVELS` and the sequence is that list —
 `docs/game.md` puts between levels, and 0042 says why a straight line came first: a chart is a
 screen, a graph and a set of rules about what may follow what, and all three want deciding against
 levels somebody has played.
+
+⚠️ **Somebody has now played them, and the answer is not obviously *build the chart*.**
+[0063](decisions/0063-a-level-break-is-a-respite.md) carries the report: the player choice between
+levels *"will probably get scrapped, because a flowing continuation with a brief respite will feel
+better than the hard pause interruption."* That is exactly the evidence 0042 said it was waiting for,
+and it argues against a screen rather than for one. Not settled; the next session gets to argue with
+it rather than rediscover it.
 
 **6 — `save/`, and the first `itc_*` key.**
 
