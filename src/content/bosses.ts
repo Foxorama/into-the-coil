@@ -24,7 +24,7 @@ import type { ShotKind } from './shots.ts';
 import { SPRITE } from './sprites.ts';
 
 /** Every boss in the game. Closed. */
-export const BOSS_KINDS = ['sentinel', 'harrow'] as const;
+export const BOSS_KINDS = ['sentinel', 'harrow', 'lattice', 'shoalMother', 'redoubt', 'chorus', 'axis'] as const;
 
 /** Derived from the list, so a boss cannot exist in the union and be missing from the table. */
 export type BossKind = (typeof BOSS_KINDS)[number];
@@ -188,6 +188,149 @@ export const BOSSES: Record<BossKind, BossRow> = {
         survivable with the base weapon alone — which is exactly what `tests/level.test.ts` drives.
       */
       { upTo: 0.2, fireEvery: 40, shots: 7, spread: 1.4, patrolScale: 2.5 },
+    ],
+  },
+
+  /**
+   * Level three's boss, and its fight is the level's own idea turned on the player.
+   *
+   * ⚠️ **It stands FURTHER OUT than either of the two before it and swings widest.** Level three is
+   * about the sides of the lane, so its boss is the one that occupies them: a slow hull at long range
+   * crossing almost the whole of its allowance, which makes the safe lane a thing that moves.
+   *
+   * ⚠️ Every number here is a play-test number, on the same terms as the sentinel's 150. Nothing
+   * asserts on one.
+   */
+  lattice: {
+    sprite: SPRITE.boss3,
+    spriteHit: SPRITE.boss3Hit,
+    radius: 11.5,
+    health: 260,
+    damage: 3,
+    /*
+      ⚠️ **The furthest station any hull can have, and the guard is what said where that is.** The
+      first draft put it at 130 with a 16-unit drift, which is 130 + 16 + 11.5 = 157.5 against a
+      150-unit view — seven and a half units of boss off the narrowest screen at the far end of
+      every swing. It was written up as deliberate and measured as wrong, which is exactly why a
+      station is not a number anybody gets to pick by feel.
+      `docs/decisions/0061-a-boss-keeps-flying.md` holds that assertion.
+    */
+    station: 122,
+    drift: 15,
+    driftWavelength: 260,
+    patrol: 0.5,
+    shot: 'spit',
+    phases: [
+      // Wide and slow from the start: the shots are the lane-taking, not the hull.
+      { upTo: 1, fireEvery: 84, shots: 3, spread: 0.9, patrolScale: 1 },
+      { upTo: 0.66, fireEvery: 66, shots: 5, spread: 1.2, patrolScale: 1.3 },
+      { upTo: 0.33, fireEvery: 52, shots: 7, spread: 1.5, patrolScale: 1.7 },
+    ],
+  },
+  /**
+   * Level four's boss. The level is about speed, so this is the one that moves.
+   *
+   * ⚠️ **The fastest patrol in the game and the shortest drift wavelength**, which together make a
+   * hull that crosses the lane and comes back inside three seconds. It fires little and hits hard:
+   * what threatens the player is where it IS, not what leaves it.
+   */
+  shoalMother: {
+    sprite: SPRITE.boss4,
+    spriteHit: SPRITE.boss4Hit,
+    radius: 13,
+    health: 280,
+    damage: 3,
+    station: 110,
+    drift: 18,
+    driftWavelength: 120,
+    patrol: 0.62,
+    shot: 'spit',
+    phases: [
+      { upTo: 1, fireEvery: 96, shots: 1, spread: 0, patrolScale: 1 },
+      { upTo: 0.7, fireEvery: 78, shots: 3, spread: 0.4, patrolScale: 1.5 },
+      { upTo: 0.4, fireEvery: 66, shots: 3, spread: 0.7, patrolScale: 2.1 },
+      { upTo: 0.15, fireEvery: 58, shots: 5, spread: 0.9, patrolScale: 2.8 },
+    ],
+  },
+  /**
+   * Level five's boss. The level is about things that will not go away, and neither will this.
+   *
+   * ⚠️ **The slowest hull in the game and the heaviest.** It barely patrols; what it does is fire,
+   * constantly and widely, from a station close enough that the shots arrive with little warning. The
+   * fight is a damage race rather than a dance, which is the opposite reading from level four's.
+   */
+  redoubt: {
+    sprite: SPRITE.boss5,
+    spriteHit: SPRITE.boss5Hit,
+    radius: 14,
+    health: 340,
+    damage: 3,
+    station: 105,
+    drift: 8,
+    driftWavelength: 300,
+    patrol: 0.16,
+    shot: 'spit',
+    phases: [
+      { upTo: 1, fireEvery: 54, shots: 3, spread: 0.7, patrolScale: 1 },
+      { upTo: 0.7, fireEvery: 44, shots: 5, spread: 1, patrolScale: 1.2 },
+      { upTo: 0.4, fireEvery: 36, shots: 7, spread: 1.3, patrolScale: 1.4 },
+      { upTo: 0.15, fireEvery: 30, shots: 7, spread: 1.6, patrolScale: 1.6 },
+    ],
+  },
+  /**
+   * Level six's boss. The level is about there being no gaps, and this is the fight with none.
+   *
+   * ⚠️ **Five phases, and every one of them changes both halves at once.** The other bosses escalate
+   * along one axis at a time; this one moves faster AND fires wider at every step, so there is no
+   * stretch of it that rewards the same answer twice.
+   */
+  chorus: {
+    sprite: SPRITE.boss6,
+    spriteHit: SPRITE.boss6Hit,
+    radius: 12.5,
+    health: 320,
+    damage: 3,
+    station: 115,
+    drift: 15,
+    driftWavelength: 180,
+    patrol: 0.45,
+    shot: 'spit',
+    phases: [
+      { upTo: 1, fireEvery: 70, shots: 3, spread: 0.5, patrolScale: 1 },
+      { upTo: 0.8, fireEvery: 62, shots: 3, spread: 0.9, patrolScale: 1.3 },
+      { upTo: 0.6, fireEvery: 54, shots: 5, spread: 1.1, patrolScale: 1.6 },
+      { upTo: 0.4, fireEvery: 46, shots: 7, spread: 1.3, patrolScale: 2 },
+      { upTo: 0.2, fireEvery: 38, shots: 7, spread: 1.6, patrolScale: 2.4 },
+    ],
+  },
+  /**
+   * The last boss of the authored run.
+   *
+   * ⚠️ **It is not the hardest of these by every measure, and that is deliberate.** `redoubt` fires
+   * faster and `shoalMother` moves faster; what this one does is refuse to be either — it is the
+   * biggest hull, at the closest station, with the longest health bar, and its escalation is the
+   * whole of what the run has taught, in order. `docs/game.md` puts a final boss at the end of eight
+   * levels; there are seven, so this is the end of what is authored rather than the end of the game.
+   */
+  axis: {
+    sprite: SPRITE.boss7,
+    spriteHit: SPRITE.boss7Hit,
+    radius: 16,
+    health: 420,
+    damage: 3,
+    // The closest station in the game. `95 + 14 + 16` is 125 against 150 — the hull fills a fifth of
+    // the narrowest view, which is what a last boss should cost the player in room.
+    station: 95,
+    drift: 14,
+    driftWavelength: 200,
+    patrol: 0.4,
+    shot: 'spit',
+    phases: [
+      { upTo: 1, fireEvery: 66, shots: 3, spread: 0.6, patrolScale: 1 },
+      { upTo: 0.8, fireEvery: 56, shots: 5, spread: 0.9, patrolScale: 1.4 },
+      { upTo: 0.6, fireEvery: 48, shots: 5, spread: 1.2, patrolScale: 1.8 },
+      { upTo: 0.35, fireEvery: 40, shots: 7, spread: 1.5, patrolScale: 2.2 },
+      { upTo: 0.15, fireEvery: 34, shots: 7, spread: 1.8, patrolScale: 2.8 },
     ],
   },
 };

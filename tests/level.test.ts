@@ -282,6 +282,47 @@ describe('a level actually puts something in front of the player', () => {
   });
 });
 
+/**
+ * EVERY BOSS IS UNIQUE — `docs/game.md`, and the one line of it a test can hold.
+ *
+ * `docs/decisions/0071-five-more-levels-and-one-idea-each.md`. *Unique* is mostly a claim about how a
+ * fight feels, which nothing here can check. Two things about it ARE checkable, and both are the
+ * mistakes that actually get made when a roster grows: a level pointed at a boss another level
+ * already uses, and two bosses drawn as the same object.
+ */
+describe('every level has a boss of its own, and no two of them are the same object', () => {
+  it('no boss is fought twice in one run', () => {
+    /*
+      ⚠️ **The failure is silent and reads as a saving.** A seventh level pointed at the sentinel
+      builds, runs, and plays as a repeat of level one with different waves in front of it —
+      `docs/game.md`'s *every boss is unique* broken in the one way no compiler can see.
+    */
+    const fought = LEVEL_KINDS.map((kind) => LEVELS[kind].boss);
+    expect(new Set(fought).size, `the run fights ${fought.join(', ')}`).toBe(fought.length);
+  });
+
+  it('and no two bosses wear the same hull', () => {
+    // The cheapest half of *unique* is the silhouette: it is the first thing a player learns about a
+    // boss and the last thing they forget. Two rows sharing a sprite is one fight wearing two names.
+    const hulls = BOSS_KINDS.map((kind) => BOSSES[kind].sprite);
+    expect(new Set(hulls).size, 'two bosses are drawn as the same shape').toBe(hulls.length);
+    const hit = BOSS_KINDS.map((kind) => BOSSES[kind].spriteHit);
+    expect(new Set(hit).size, 'two bosses flash as the same shape').toBe(hit.length);
+  });
+
+  it('and every level in the sequence is reachable, which is what makes the roster a run', () => {
+    // A level nobody can get to is content that does not exist. `src/state/root.ts` ends a run when
+    // the level index passes the end of this list, so the list IS the run's length.
+    expect(LEVEL_KINDS.length, 'the run is shorter than the two levels that were already here').toBeGreaterThanOrEqual(
+      2,
+    );
+    for (const kind of LEVEL_KINDS) {
+      expect(LEVELS[kind].waves.length, `${kind} has no waves`).toBeGreaterThan(0);
+      expect(BOSS_KINDS.includes(LEVELS[kind].boss), `${kind}'s boss is not in the table`).toBe(true);
+    }
+  });
+});
+
 describe('a boss fight can reach all of its phases', () => {
   it('starts in a phase, whatever its health', () => {
     // A phase table whose first `upTo` is below 1 leaves a full-health boss matching nothing, and

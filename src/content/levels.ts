@@ -54,7 +54,7 @@ import type { PickupKind } from './pickups.ts';
  * a straight line is what exists until that is built, and
  * `docs/decisions/0042-a-run-is-a-sequence-of-levels.md` says why a line first is the right order.
  */
-export const LEVEL_KINDS = ['approach', 'descent'] as const;
+export const LEVEL_KINDS = ['approach', 'descent', 'coilward', 'shoal', 'batteries', 'gauntlet', 'eye'] as const;
 
 /** Derived from the list, so a level cannot exist in the union and be missing from the table. */
 export type LevelKind = (typeof LEVEL_KINDS)[number];
@@ -452,6 +452,517 @@ const DESCENT_PICKUPS: readonly PickupEntry[] = [
   { at: 6200, kind: 'shield', lane: 50 },
 ];
 
+
+/*
+  LEVEL THREE — THE SIDES STOP BEING SAFE.
+
+  ⚠️ **One idea per level, and this one's is `origin`.** Levels one and two are about what arrives;
+  this is about WHERE FROM. Roughly a third of its waves enter across the lane rather than down it —
+  `docs/decisions/0048-a-threat-may-arrive-from-the-side.md` landed that machinery and level two uses
+  it twice. A player who has learned to hold a lane and watch the leading edge is being told that the
+  edge is three edges.
+
+  The escalation is level one's ladder run faster — two kinds, weavers, turrets, chargers, everything
+  — and what changes across it is the flank cadence, from every fourth wave to every second.
+*/
+const COILWARD: readonly WaveEntry[] = [
+  { at: 300, enemy: 'drifter', formation: 'line', count: 5, lane: 47 },
+  { at: 392, enemy: 'lancer', formation: 'line', count: 5, lane: 58 },
+  { at: 484, enemy: 'drifter', formation: 'line', count: 5, lane: 42 },
+  { at: 576, enemy: 'lancer', formation: 'line', count: 5, lane: 53, origin: 'acrossMinus' },
+  { at: 668, enemy: 'drifter', formation: 'line', count: 5, lane: 44 },
+  { at: 760, enemy: 'lancer', formation: 'line', count: 5, lane: 60 },
+  { at: 852, enemy: 'drifter', formation: 'line', count: 5, lane: 50 },
+  { at: 944, enemy: 'lancer', formation: 'line', count: 5, lane: 40, origin: 'acrossPlus' },
+  { at: 1036, enemy: 'weaver', formation: 'column', count: 5, lane: 50 },
+  { at: 1128, enemy: 'drifter', formation: 'column', count: 5, lane: 41 },
+  { at: 1220, enemy: 'lancer', formation: 'column', count: 5, lane: 60, origin: 'acrossMinus' },
+  { at: 1312, enemy: 'weaver', formation: 'column', count: 5, lane: 45 },
+  { at: 1404, enemy: 'drifter', formation: 'column', count: 5, lane: 55 },
+  { at: 1496, enemy: 'lancer', formation: 'column', count: 5, lane: 42, origin: 'acrossPlus' },
+  { at: 1588, enemy: 'weaver', formation: 'column', count: 5, lane: 56 },
+  { at: 1680, enemy: 'drifter', formation: 'column', count: 5, lane: 49 },
+  { at: 1772, enemy: 'lancer', formation: 'column', count: 5, lane: 50, origin: 'acrossMinus' },
+  { at: 1864, enemy: 'weaver', formation: 'column', count: 5, lane: 44 },
+  { at: 1956, enemy: 'drifter', formation: 'column', count: 5, lane: 60 },
+  { at: 2048, enemy: 'lancer', formation: 'column', count: 5, lane: 45, origin: 'acrossPlus' },
+  { at: 2140, enemy: 'weaver', formation: 'column', count: 5, lane: 55 },
+  { at: 2232, enemy: 'drifter', formation: 'column', count: 5, lane: 42 },
+  { at: 2324, enemy: 'turret', formation: 'vee', count: 4, lane: 47 },
+  { at: 2416, enemy: 'weaver', formation: 'vee', count: 4, lane: 56 },
+  { at: 2508, enemy: 'lancer', formation: 'vee', count: 4, lane: 42, origin: 'acrossMinus' },
+  { at: 2600, enemy: 'turret', formation: 'vee', count: 4, lane: 53 },
+  { at: 2692, enemy: 'weaver', formation: 'vee', count: 4, lane: 44 },
+  { at: 2784, enemy: 'lancer', formation: 'vee', count: 4, lane: 60, origin: 'acrossPlus' },
+  { at: 2876, enemy: 'turret', formation: 'vee', count: 4, lane: 50 },
+  { at: 2968, enemy: 'weaver', formation: 'vee', count: 4, lane: 44 },
+  { at: 3060, enemy: 'lancer', formation: 'vee', count: 4, lane: 47, origin: 'acrossMinus' },
+  { at: 3152, enemy: 'turret', formation: 'vee', count: 4, lane: 58 },
+  { at: 3244, enemy: 'weaver', formation: 'vee', count: 4, lane: 44 },
+  { at: 3336, enemy: 'lancer', formation: 'vee', count: 4, lane: 53, origin: 'acrossPlus' },
+  { at: 3428, enemy: 'turret', formation: 'vee', count: 4, lane: 44 },
+  { at: 3520, enemy: 'weaver', formation: 'vee', count: 4, lane: 56 },
+  { at: 3612, enemy: 'charger', formation: 'line', count: 5, lane: 50 },
+  { at: 3704, enemy: 'drifter', formation: 'line', count: 5, lane: 41, origin: 'acrossMinus' },
+  { at: 3796, enemy: 'weaver', formation: 'line', count: 5, lane: 56 },
+  { at: 3888, enemy: 'charger', formation: 'line', count: 5, lane: 45, origin: 'acrossPlus' },
+  { at: 3980, enemy: 'drifter', formation: 'line', count: 5, lane: 55 },
+  { at: 4072, enemy: 'weaver', formation: 'line', count: 5, lane: 44, origin: 'acrossMinus' },
+  { at: 4164, enemy: 'charger', formation: 'line', count: 5, lane: 59 },
+  { at: 4256, enemy: 'drifter', formation: 'line', count: 5, lane: 49, origin: 'acrossPlus' },
+  { at: 4348, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
+  { at: 4440, enemy: 'charger', formation: 'line', count: 5, lane: 41, origin: 'acrossMinus' },
+  { at: 4532, enemy: 'drifter', formation: 'line', count: 5, lane: 60 },
+  { at: 4624, enemy: 'weaver', formation: 'line', count: 5, lane: 45, origin: 'acrossPlus' },
+  { at: 4716, enemy: 'charger', formation: 'line', count: 5, lane: 55 },
+  { at: 4808, enemy: 'drifter', formation: 'line', count: 5, lane: 42, origin: 'acrossMinus' },
+  { at: 4900, enemy: 'charger', formation: 'column', count: 5, lane: 47 },
+  { at: 4992, enemy: 'turret', formation: 'column', count: 5, lane: 58, origin: 'acrossMinus' },
+  { at: 5084, enemy: 'weaver', formation: 'column', count: 5, lane: 44 },
+  { at: 5176, enemy: 'lancer', formation: 'column', count: 5, lane: 53, origin: 'acrossPlus' },
+  { at: 5268, enemy: 'charger', formation: 'column', count: 5, lane: 44 },
+  { at: 5360, enemy: 'turret', formation: 'column', count: 5, lane: 60, origin: 'acrossMinus' },
+  { at: 5452, enemy: 'weaver', formation: 'column', count: 5, lane: 50 },
+  { at: 5544, enemy: 'lancer', formation: 'column', count: 5, lane: 40, origin: 'acrossPlus' },
+  { at: 5636, enemy: 'charger', formation: 'column', count: 5, lane: 47 },
+  { at: 5728, enemy: 'turret', formation: 'column', count: 5, lane: 58, origin: 'acrossMinus' },
+  { at: 5820, enemy: 'weaver', formation: 'column', count: 5, lane: 44 },
+  { at: 5912, enemy: 'lancer', formation: 'column', count: 5, lane: 53, origin: 'acrossPlus' },
+  { at: 6004, enemy: 'charger', formation: 'column', count: 5, lane: 44 },
+  { at: 6096, enemy: 'turret', formation: 'column', count: 5, lane: 60, origin: 'acrossMinus' },
+];
+
+const COILWARD_PICKUPS: readonly PickupEntry[] = [
+  { at: 420, kind: 'rapid', lane: 48 },
+  { at: 760, kind: 'shield', lane: 40 },
+  { at: 1100, kind: 'spread', lane: 56 },
+  { at: 1440, kind: 'shield', lane: 44 },
+  { at: 1780, kind: 'missileRate', lane: 60 },
+  { at: 2120, kind: 'shield', lane: 38 },
+  { at: 2460, kind: 'missileSpread', lane: 52 },
+  { at: 2800, kind: 'shield', lane: 62 },
+  { at: 2900, kind: 'extraLife', lane: 50 },
+  { at: 3140, kind: 'rapid', lane: 48 },
+  { at: 3480, kind: 'shield', lane: 40 },
+  { at: 3820, kind: 'spread', lane: 56 },
+  { at: 4160, kind: 'shield', lane: 44 },
+  { at: 4500, kind: 'missileRate', lane: 60 },
+  { at: 4840, kind: 'shield', lane: 38 },
+  { at: 5180, kind: 'missileSpread', lane: 52 },
+  { at: 5520, kind: 'shield', lane: 62 },
+  { at: 5860, kind: 'rapid', lane: 48 },
+  { at: 6200, kind: 'rapid', lane: 56 },
+];
+
+/*
+  LEVEL FOUR — FASTER THAN YOU.
+
+  ⚠️ **Its idea is the CHARGER**, which levels one and two hold back until their last third. Here it
+  opens the level and never leaves, so the standing population is the fastest thing in
+  `src/content/enemies.ts` alongside the one whose threat is where it WILL be. Flanks are rarer than
+  level three's on purpose: two ideas at once is neither.
+*/
+const SHOAL: readonly WaveEntry[] = [
+  { at: 300, enemy: 'charger', formation: 'line', count: 5, lane: 50 },
+  { at: 390, enemy: 'drifter', formation: 'line', count: 5, lane: 41 },
+  { at: 480, enemy: 'charger', formation: 'line', count: 5, lane: 60 },
+  { at: 570, enemy: 'drifter', formation: 'line', count: 5, lane: 45 },
+  { at: 660, enemy: 'charger', formation: 'line', count: 5, lane: 55 },
+  { at: 750, enemy: 'drifter', formation: 'line', count: 5, lane: 42 },
+  { at: 840, enemy: 'charger', formation: 'line', count: 5, lane: 59 },
+  { at: 930, enemy: 'drifter', formation: 'line', count: 5, lane: 49 },
+  { at: 1020, enemy: 'charger', formation: 'column', count: 5, lane: 47 },
+  { at: 1110, enemy: 'weaver', formation: 'column', count: 5, lane: 56 },
+  { at: 1200, enemy: 'charger', formation: 'column', count: 5, lane: 42 },
+  { at: 1290, enemy: 'weaver', formation: 'column', count: 5, lane: 53 },
+  { at: 1380, enemy: 'charger', formation: 'column', count: 5, lane: 44, origin: 'acrossMinus' },
+  { at: 1470, enemy: 'weaver', formation: 'column', count: 5, lane: 56 },
+  { at: 1560, enemy: 'charger', formation: 'column', count: 5, lane: 50 },
+  { at: 1650, enemy: 'weaver', formation: 'column', count: 5, lane: 44 },
+  { at: 1740, enemy: 'charger', formation: 'column', count: 5, lane: 47 },
+  { at: 1830, enemy: 'weaver', formation: 'column', count: 5, lane: 56, origin: 'acrossPlus' },
+  { at: 1920, enemy: 'charger', formation: 'column', count: 5, lane: 42 },
+  { at: 2010, enemy: 'weaver', formation: 'column', count: 5, lane: 53 },
+  { at: 2100, enemy: 'charger', formation: 'column', count: 5, lane: 44 },
+  { at: 2190, enemy: 'weaver', formation: 'column', count: 5, lane: 56 },
+  { at: 2280, enemy: 'weaver', formation: 'vee', count: 5, lane: 50 },
+  { at: 2370, enemy: 'charger', formation: 'vee', count: 6, lane: 41 },
+  { at: 2460, enemy: 'lancer', formation: 'vee', count: 6, lane: 60 },
+  { at: 2550, enemy: 'weaver', formation: 'vee', count: 5, lane: 45, origin: 'acrossMinus' },
+  { at: 2640, enemy: 'charger', formation: 'vee', count: 6, lane: 55 },
+  { at: 2730, enemy: 'lancer', formation: 'vee', count: 6, lane: 42 },
+  { at: 2820, enemy: 'weaver', formation: 'vee', count: 5, lane: 56 },
+  { at: 2910, enemy: 'charger', formation: 'vee', count: 6, lane: 49, origin: 'acrossPlus' },
+  { at: 3000, enemy: 'lancer', formation: 'vee', count: 6, lane: 50 },
+  { at: 3090, enemy: 'weaver', formation: 'vee', count: 5, lane: 44 },
+  { at: 3180, enemy: 'charger', formation: 'vee', count: 6, lane: 60 },
+  { at: 3270, enemy: 'lancer', formation: 'vee', count: 6, lane: 45, origin: 'acrossMinus' },
+  { at: 3360, enemy: 'weaver', formation: 'vee', count: 5, lane: 55 },
+  { at: 3450, enemy: 'charger', formation: 'vee', count: 6, lane: 42 },
+  { at: 3540, enemy: 'charger', formation: 'line', count: 5, lane: 47 },
+  { at: 3630, enemy: 'weaver', formation: 'line', count: 5, lane: 56 },
+  { at: 3720, enemy: 'turret', formation: 'line', count: 5, lane: 42, origin: 'acrossMinus' },
+  { at: 3810, enemy: 'charger', formation: 'line', count: 5, lane: 53 },
+  { at: 3900, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
+  { at: 3990, enemy: 'turret', formation: 'line', count: 5, lane: 60, origin: 'acrossPlus' },
+  { at: 4080, enemy: 'charger', formation: 'line', count: 5, lane: 50 },
+  { at: 4170, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
+  { at: 4260, enemy: 'turret', formation: 'line', count: 5, lane: 47, origin: 'acrossMinus' },
+  { at: 4350, enemy: 'charger', formation: 'line', count: 5, lane: 58 },
+  { at: 4440, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
+  { at: 4530, enemy: 'turret', formation: 'line', count: 5, lane: 53, origin: 'acrossPlus' },
+  { at: 4620, enemy: 'charger', formation: 'line', count: 5, lane: 44 },
+  { at: 4710, enemy: 'weaver', formation: 'line', count: 5, lane: 56 },
+  { at: 4800, enemy: 'charger', formation: 'column', count: 6, lane: 50 },
+  { at: 4890, enemy: 'weaver', formation: 'column', count: 5, lane: 44 },
+  { at: 4980, enemy: 'drifter', formation: 'column', count: 6, lane: 60, origin: 'acrossMinus' },
+  { at: 5070, enemy: 'charger', formation: 'column', count: 6, lane: 45 },
+  { at: 5160, enemy: 'charger', formation: 'column', count: 6, lane: 55 },
+  { at: 5250, enemy: 'weaver', formation: 'column', count: 5, lane: 44, origin: 'acrossPlus' },
+  { at: 5340, enemy: 'drifter', formation: 'column', count: 6, lane: 59 },
+  { at: 5430, enemy: 'charger', formation: 'column', count: 6, lane: 49 },
+  { at: 5520, enemy: 'charger', formation: 'column', count: 6, lane: 50, origin: 'acrossMinus' },
+  { at: 5610, enemy: 'weaver', formation: 'column', count: 5, lane: 44 },
+  { at: 5700, enemy: 'drifter', formation: 'column', count: 6, lane: 60 },
+  { at: 5790, enemy: 'charger', formation: 'column', count: 6, lane: 45, origin: 'acrossPlus' },
+  { at: 5880, enemy: 'charger', formation: 'column', count: 6, lane: 55 },
+  { at: 5970, enemy: 'weaver', formation: 'column', count: 5, lane: 44 },
+  { at: 6060, enemy: 'drifter', formation: 'column', count: 6, lane: 59, origin: 'acrossMinus' },
+];
+
+const SHOAL_PICKUPS: readonly PickupEntry[] = [
+  { at: 400, kind: 'rapid', lane: 48 },
+  { at: 740, kind: 'shield', lane: 40 },
+  { at: 1080, kind: 'spread', lane: 56 },
+  { at: 1420, kind: 'shield', lane: 44 },
+  { at: 1760, kind: 'missileRate', lane: 60 },
+  { at: 2100, kind: 'shield', lane: 38 },
+  { at: 2440, kind: 'missileSpread', lane: 52 },
+  { at: 2780, kind: 'shield', lane: 62 },
+  { at: 2820, kind: 'extraLife', lane: 50 },
+  { at: 3120, kind: 'rapid', lane: 48 },
+  { at: 3460, kind: 'shield', lane: 40 },
+  { at: 3800, kind: 'spread', lane: 56 },
+  { at: 4140, kind: 'shield', lane: 44 },
+  { at: 4480, kind: 'missileRate', lane: 60 },
+  { at: 4820, kind: 'shield', lane: 38 },
+  { at: 5160, kind: 'missileSpread', lane: 52 },
+  { at: 5500, kind: 'shield', lane: 62 },
+  { at: 5840, kind: 'rapid', lane: 48 },
+  { at: 6180, kind: 'rapid', lane: 56 },
+];
+
+/*
+  LEVEL FIVE — THINGS THAT MUST BE KILLED.
+
+  ⚠️ **Its idea is the opposite of level four's**: nothing here can be outrun. Turrets and wardens are
+  the two kinds that hold station and shoot, so the lane fills with bodies that stay until they are
+  dealt with, and every wave the player leaves alive is still there when the next arrives.
+  `docs/game.md`'s *hazards must be dealt with, not only dodged* is the shape this reaches for with
+  the vocabulary that exists.
+*/
+const BATTERIES: readonly WaveEntry[] = [
+  { at: 300, enemy: 'turret', formation: 'line', count: 4, lane: 47 },
+  { at: 390, enemy: 'drifter', formation: 'line', count: 4, lane: 58 },
+  { at: 480, enemy: 'turret', formation: 'line', count: 4, lane: 42 },
+  { at: 570, enemy: 'drifter', formation: 'line', count: 4, lane: 53 },
+  { at: 660, enemy: 'turret', formation: 'line', count: 4, lane: 44 },
+  { at: 750, enemy: 'drifter', formation: 'line', count: 4, lane: 60 },
+  { at: 840, enemy: 'turret', formation: 'line', count: 4, lane: 50 },
+  { at: 930, enemy: 'drifter', formation: 'line', count: 4, lane: 40 },
+  { at: 1020, enemy: 'turret', formation: 'column', count: 4, lane: 50 },
+  { at: 1110, enemy: 'warden', formation: 'column', count: 4, lane: 41 },
+  { at: 1200, enemy: 'turret', formation: 'column', count: 4, lane: 60 },
+  { at: 1290, enemy: 'warden', formation: 'column', count: 4, lane: 45 },
+  { at: 1380, enemy: 'turret', formation: 'column', count: 4, lane: 55 },
+  { at: 1470, enemy: 'warden', formation: 'column', count: 4, lane: 42, origin: 'acrossMinus' },
+  { at: 1560, enemy: 'turret', formation: 'column', count: 4, lane: 59 },
+  { at: 1650, enemy: 'warden', formation: 'column', count: 4, lane: 49 },
+  { at: 1740, enemy: 'turret', formation: 'column', count: 4, lane: 50 },
+  { at: 1830, enemy: 'warden', formation: 'column', count: 4, lane: 41 },
+  { at: 1920, enemy: 'turret', formation: 'column', count: 4, lane: 60 },
+  { at: 2010, enemy: 'warden', formation: 'column', count: 4, lane: 45, origin: 'acrossPlus' },
+  { at: 2100, enemy: 'turret', formation: 'column', count: 4, lane: 55 },
+  { at: 2190, enemy: 'warden', formation: 'column', count: 4, lane: 42 },
+  { at: 2280, enemy: 'warden', formation: 'vee', count: 4, lane: 47 },
+  { at: 2370, enemy: 'turret', formation: 'vee', count: 4, lane: 58 },
+  { at: 2460, enemy: 'lancer', formation: 'vee', count: 4, lane: 42 },
+  { at: 2550, enemy: 'warden', formation: 'vee', count: 4, lane: 53 },
+  { at: 2640, enemy: 'turret', formation: 'vee', count: 4, lane: 44, origin: 'acrossMinus' },
+  { at: 2730, enemy: 'lancer', formation: 'vee', count: 4, lane: 60 },
+  { at: 2820, enemy: 'warden', formation: 'vee', count: 4, lane: 50 },
+  { at: 2910, enemy: 'turret', formation: 'vee', count: 4, lane: 40 },
+  { at: 3000, enemy: 'lancer', formation: 'vee', count: 4, lane: 47 },
+  { at: 3090, enemy: 'warden', formation: 'vee', count: 4, lane: 58, origin: 'acrossPlus' },
+  { at: 3180, enemy: 'turret', formation: 'vee', count: 4, lane: 42 },
+  { at: 3270, enemy: 'lancer', formation: 'vee', count: 4, lane: 53 },
+  { at: 3360, enemy: 'warden', formation: 'vee', count: 4, lane: 44 },
+  { at: 3450, enemy: 'turret', formation: 'vee', count: 4, lane: 60 },
+  { at: 3540, enemy: 'turret', formation: 'line', count: 5, lane: 50 },
+  { at: 3630, enemy: 'warden', formation: 'line', count: 5, lane: 41 },
+  { at: 3720, enemy: 'weaver', formation: 'line', count: 5, lane: 56 },
+  { at: 3810, enemy: 'turret', formation: 'line', count: 5, lane: 45, origin: 'acrossMinus' },
+  { at: 3900, enemy: 'warden', formation: 'line', count: 5, lane: 55 },
+  { at: 3990, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
+  { at: 4080, enemy: 'turret', formation: 'line', count: 5, lane: 59 },
+  { at: 4170, enemy: 'warden', formation: 'line', count: 5, lane: 49, origin: 'acrossPlus' },
+  { at: 4260, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
+  { at: 4350, enemy: 'turret', formation: 'line', count: 5, lane: 41 },
+  { at: 4440, enemy: 'warden', formation: 'line', count: 5, lane: 60 },
+  { at: 4530, enemy: 'weaver', formation: 'line', count: 5, lane: 45, origin: 'acrossMinus' },
+  { at: 4620, enemy: 'turret', formation: 'line', count: 5, lane: 55 },
+  { at: 4710, enemy: 'warden', formation: 'line', count: 5, lane: 42 },
+  { at: 4800, enemy: 'warden', formation: 'column', count: 5, lane: 47 },
+  { at: 4890, enemy: 'turret', formation: 'column', count: 5, lane: 58 },
+  { at: 4980, enemy: 'charger', formation: 'column', count: 5, lane: 42, origin: 'acrossMinus' },
+  { at: 5070, enemy: 'weaver', formation: 'column', count: 5, lane: 53 },
+  { at: 5160, enemy: 'warden', formation: 'column', count: 5, lane: 44 },
+  { at: 5250, enemy: 'turret', formation: 'column', count: 5, lane: 60, origin: 'acrossPlus' },
+  { at: 5340, enemy: 'charger', formation: 'column', count: 5, lane: 50 },
+  { at: 5430, enemy: 'weaver', formation: 'column', count: 5, lane: 44 },
+  { at: 5520, enemy: 'warden', formation: 'column', count: 5, lane: 47, origin: 'acrossMinus' },
+  { at: 5610, enemy: 'turret', formation: 'column', count: 5, lane: 58 },
+  { at: 5700, enemy: 'charger', formation: 'column', count: 5, lane: 42 },
+  { at: 5790, enemy: 'weaver', formation: 'column', count: 5, lane: 53, origin: 'acrossPlus' },
+  { at: 5880, enemy: 'warden', formation: 'column', count: 5, lane: 44 },
+  { at: 5970, enemy: 'turret', formation: 'column', count: 5, lane: 60 },
+  { at: 6060, enemy: 'charger', formation: 'column', count: 5, lane: 50, origin: 'acrossMinus' },
+];
+
+const BATTERIES_PICKUPS: readonly PickupEntry[] = [
+  { at: 400, kind: 'rapid', lane: 48 },
+  { at: 740, kind: 'shield', lane: 40 },
+  { at: 1080, kind: 'spread', lane: 56 },
+  { at: 1420, kind: 'shield', lane: 44 },
+  { at: 1760, kind: 'missileRate', lane: 60 },
+  { at: 2100, kind: 'shield', lane: 38 },
+  { at: 2440, kind: 'missileSpread', lane: 52 },
+  { at: 2780, kind: 'shield', lane: 62 },
+  { at: 2860, kind: 'extraLife', lane: 50 },
+  { at: 3120, kind: 'rapid', lane: 48 },
+  { at: 3460, kind: 'shield', lane: 40 },
+  { at: 3800, kind: 'spread', lane: 56 },
+  { at: 4140, kind: 'shield', lane: 44 },
+  { at: 4480, kind: 'missileRate', lane: 60 },
+  { at: 4820, kind: 'shield', lane: 38 },
+  { at: 5160, kind: 'missileSpread', lane: 52 },
+  { at: 5500, kind: 'shield', lane: 62 },
+  { at: 5840, kind: 'rapid', lane: 48 },
+  { at: 6180, kind: 'rapid', lane: 56 },
+];
+
+/*
+  LEVEL SIX — NO GAPS.
+
+  ⚠️ **The first level whose idea is DENSITY rather than a kind.** Waves sit 85 units apart against
+  levels one and two's 90 to 95, every wave past the opening mixes kinds, and the flank cadence
+  reaches every second wave. It is the level `docs/state-of-play.md`'s open density question —
+  *"increasing enemy waves"* — is meant to be answered against, because it is the only one deliberately
+  authored past the others.
+*/
+const GAUNTLET: readonly WaveEntry[] = [
+  { at: 300, enemy: 'lancer', formation: 'line', count: 5, lane: 50 },
+  { at: 385, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
+  { at: 470, enemy: 'drifter', formation: 'line', count: 5, lane: 60 },
+  { at: 555, enemy: 'lancer', formation: 'line', count: 5, lane: 45, origin: 'acrossMinus' },
+  { at: 640, enemy: 'weaver', formation: 'line', count: 5, lane: 55 },
+  { at: 725, enemy: 'drifter', formation: 'line', count: 5, lane: 42 },
+  { at: 810, enemy: 'lancer', formation: 'line', count: 5, lane: 59 },
+  { at: 895, enemy: 'weaver', formation: 'line', count: 5, lane: 49, origin: 'acrossPlus' },
+  { at: 980, enemy: 'drifter', formation: 'line', count: 5, lane: 50 },
+  { at: 1065, enemy: 'turret', formation: 'line', count: 5, lane: 47 },
+  { at: 1150, enemy: 'charger', formation: 'line', count: 5, lane: 58 },
+  { at: 1235, enemy: 'weaver', formation: 'line', count: 5, lane: 44, origin: 'acrossMinus' },
+  { at: 1320, enemy: 'turret', formation: 'line', count: 5, lane: 53 },
+  { at: 1405, enemy: 'charger', formation: 'line', count: 5, lane: 44 },
+  { at: 1490, enemy: 'weaver', formation: 'line', count: 5, lane: 56, origin: 'acrossPlus' },
+  { at: 1575, enemy: 'turret', formation: 'line', count: 5, lane: 50 },
+  { at: 1660, enemy: 'charger', formation: 'line', count: 5, lane: 40 },
+  { at: 1745, enemy: 'weaver', formation: 'line', count: 5, lane: 47, origin: 'acrossMinus' },
+  { at: 1830, enemy: 'turret', formation: 'line', count: 5, lane: 58 },
+  { at: 1915, enemy: 'charger', formation: 'line', count: 5, lane: 42 },
+  { at: 2000, enemy: 'weaver', formation: 'line', count: 5, lane: 53, origin: 'acrossPlus' },
+  { at: 2085, enemy: 'turret', formation: 'line', count: 5, lane: 44 },
+  { at: 2170, enemy: 'charger', formation: 'line', count: 5, lane: 60 },
+  { at: 2255, enemy: 'weaver', formation: 'line', count: 5, lane: 50, origin: 'acrossMinus' },
+  { at: 2340, enemy: 'warden', formation: 'line', count: 5, lane: 50 },
+  { at: 2425, enemy: 'charger', formation: 'line', count: 5, lane: 41 },
+  { at: 2510, enemy: 'lancer', formation: 'line', count: 5, lane: 60, origin: 'acrossMinus' },
+  { at: 2595, enemy: 'warden', formation: 'line', count: 5, lane: 45 },
+  { at: 2680, enemy: 'charger', formation: 'line', count: 5, lane: 55 },
+  { at: 2765, enemy: 'lancer', formation: 'line', count: 5, lane: 42, origin: 'acrossPlus' },
+  { at: 2850, enemy: 'warden', formation: 'line', count: 5, lane: 59 },
+  { at: 2935, enemy: 'charger', formation: 'line', count: 5, lane: 49 },
+  { at: 3020, enemy: 'lancer', formation: 'line', count: 5, lane: 50, origin: 'acrossMinus' },
+  { at: 3105, enemy: 'warden', formation: 'line', count: 5, lane: 41 },
+  { at: 3190, enemy: 'charger', formation: 'line', count: 5, lane: 60 },
+  { at: 3275, enemy: 'lancer', formation: 'line', count: 5, lane: 45, origin: 'acrossPlus' },
+  { at: 3360, enemy: 'warden', formation: 'line', count: 5, lane: 55 },
+  { at: 3445, enemy: 'charger', formation: 'line', count: 5, lane: 42 },
+  { at: 3530, enemy: 'lancer', formation: 'line', count: 5, lane: 59, origin: 'acrossMinus' },
+  { at: 3615, enemy: 'charger', formation: 'line', count: 6, lane: 47 },
+  { at: 3700, enemy: 'turret', formation: 'line', count: 6, lane: 58, origin: 'acrossMinus' },
+  { at: 3785, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
+  { at: 3870, enemy: 'warden', formation: 'line', count: 6, lane: 53, origin: 'acrossPlus' },
+  { at: 3955, enemy: 'charger', formation: 'line', count: 6, lane: 44 },
+  { at: 4040, enemy: 'turret', formation: 'line', count: 6, lane: 60, origin: 'acrossMinus' },
+  { at: 4125, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
+  { at: 4210, enemy: 'warden', formation: 'line', count: 6, lane: 40, origin: 'acrossPlus' },
+  { at: 4295, enemy: 'charger', formation: 'line', count: 6, lane: 47 },
+  { at: 4380, enemy: 'turret', formation: 'line', count: 6, lane: 58, origin: 'acrossMinus' },
+  { at: 4465, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
+  { at: 4550, enemy: 'warden', formation: 'line', count: 6, lane: 53, origin: 'acrossPlus' },
+  { at: 4635, enemy: 'charger', formation: 'line', count: 6, lane: 44 },
+  { at: 4720, enemy: 'turret', formation: 'line', count: 6, lane: 60, origin: 'acrossMinus' },
+  { at: 4805, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
+  { at: 4890, enemy: 'charger', formation: 'line', count: 6, lane: 50 },
+  { at: 4975, enemy: 'weaver', formation: 'line', count: 5, lane: 44, origin: 'acrossMinus' },
+  { at: 5060, enemy: 'warden', formation: 'line', count: 6, lane: 60 },
+  { at: 5145, enemy: 'turret', formation: 'line', count: 6, lane: 45, origin: 'acrossPlus' },
+  { at: 5230, enemy: 'lancer', formation: 'line', count: 6, lane: 55 },
+  { at: 5315, enemy: 'charger', formation: 'line', count: 6, lane: 42, origin: 'acrossMinus' },
+  { at: 5400, enemy: 'weaver', formation: 'line', count: 5, lane: 56 },
+  { at: 5485, enemy: 'warden', formation: 'line', count: 6, lane: 49, origin: 'acrossPlus' },
+  { at: 5570, enemy: 'turret', formation: 'line', count: 6, lane: 50 },
+  { at: 5655, enemy: 'lancer', formation: 'line', count: 6, lane: 41, origin: 'acrossMinus' },
+  { at: 5740, enemy: 'charger', formation: 'line', count: 6, lane: 60 },
+  { at: 5825, enemy: 'weaver', formation: 'line', count: 5, lane: 45, origin: 'acrossPlus' },
+  { at: 5910, enemy: 'warden', formation: 'line', count: 6, lane: 55 },
+  { at: 5995, enemy: 'turret', formation: 'line', count: 6, lane: 42, origin: 'acrossMinus' },
+  { at: 6080, enemy: 'lancer', formation: 'line', count: 6, lane: 59 },
+  { at: 6165, enemy: 'charger', formation: 'line', count: 6, lane: 49, origin: 'acrossPlus' },
+];
+
+const GAUNTLET_PICKUPS: readonly PickupEntry[] = [
+  { at: 380, kind: 'rapid', lane: 48 },
+  { at: 720, kind: 'shield', lane: 40 },
+  { at: 1060, kind: 'spread', lane: 56 },
+  { at: 1400, kind: 'shield', lane: 44 },
+  { at: 1740, kind: 'missileRate', lane: 60 },
+  { at: 2080, kind: 'shield', lane: 38 },
+  { at: 2420, kind: 'missileSpread', lane: 52 },
+  { at: 2700, kind: 'extraLife', lane: 50 },
+  { at: 2760, kind: 'shield', lane: 62 },
+  { at: 3100, kind: 'rapid', lane: 48 },
+  { at: 3440, kind: 'shield', lane: 40 },
+  { at: 3780, kind: 'spread', lane: 56 },
+  { at: 4120, kind: 'shield', lane: 44 },
+  { at: 4460, kind: 'missileRate', lane: 60 },
+  { at: 4800, kind: 'shield', lane: 38 },
+  { at: 5140, kind: 'missileSpread', lane: 52 },
+  { at: 5480, kind: 'shield', lane: 62 },
+  { at: 5820, kind: 'rapid', lane: 48 },
+  { at: 6160, kind: 'rapid', lane: 56 },
+];
+
+/*
+  LEVEL SEVEN — ALL OF IT.
+
+  ⚠️ **The last authored level, and its idea is that it has none of its own.** Every kind, the
+  tightest spacing in the game at 82 units, the largest counts, and a flank every second wave.
+  `docs/game.md` describes a run as eight levels deep; seven exist, and the eighth is where the final
+  boss goes when there is one to put in it.
+*/
+const EYE: readonly WaveEntry[] = [
+  { at: 300, enemy: 'weaver', formation: 'line', count: 5, lane: 47 },
+  { at: 382, enemy: 'charger', formation: 'line', count: 5, lane: 58 },
+  { at: 464, enemy: 'turret', formation: 'line', count: 5, lane: 42, origin: 'acrossMinus' },
+  { at: 546, enemy: 'weaver', formation: 'line', count: 5, lane: 53 },
+  { at: 628, enemy: 'charger', formation: 'line', count: 5, lane: 44 },
+  { at: 710, enemy: 'turret', formation: 'line', count: 5, lane: 60, origin: 'acrossPlus' },
+  { at: 792, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
+  { at: 874, enemy: 'charger', formation: 'line', count: 5, lane: 40 },
+  { at: 956, enemy: 'turret', formation: 'line', count: 5, lane: 47, origin: 'acrossMinus' },
+  { at: 1038, enemy: 'warden', formation: 'line', count: 6, lane: 50 },
+  { at: 1120, enemy: 'charger', formation: 'line', count: 6, lane: 41 },
+  { at: 1202, enemy: 'weaver', formation: 'line', count: 5, lane: 56, origin: 'acrossMinus' },
+  { at: 1284, enemy: 'warden', formation: 'line', count: 6, lane: 45 },
+  { at: 1366, enemy: 'charger', formation: 'line', count: 6, lane: 55 },
+  { at: 1448, enemy: 'weaver', formation: 'line', count: 5, lane: 44, origin: 'acrossPlus' },
+  { at: 1530, enemy: 'warden', formation: 'line', count: 6, lane: 59 },
+  { at: 1612, enemy: 'charger', formation: 'line', count: 6, lane: 49 },
+  { at: 1694, enemy: 'weaver', formation: 'line', count: 5, lane: 50, origin: 'acrossMinus' },
+  { at: 1776, enemy: 'warden', formation: 'line', count: 6, lane: 41 },
+  { at: 1858, enemy: 'charger', formation: 'line', count: 6, lane: 60 },
+  { at: 1940, enemy: 'weaver', formation: 'line', count: 5, lane: 45, origin: 'acrossPlus' },
+  { at: 2022, enemy: 'warden', formation: 'line', count: 6, lane: 55 },
+  { at: 2104, enemy: 'charger', formation: 'line', count: 6, lane: 42 },
+  { at: 2186, enemy: 'weaver', formation: 'line', count: 5, lane: 56, origin: 'acrossMinus' },
+  { at: 2268, enemy: 'warden', formation: 'line', count: 6, lane: 49 },
+  { at: 2350, enemy: 'charger', formation: 'vee', count: 6, lane: 47 },
+  { at: 2432, enemy: 'turret', formation: 'vee', count: 6, lane: 58, origin: 'acrossMinus' },
+  { at: 2514, enemy: 'warden', formation: 'vee', count: 6, lane: 42 },
+  { at: 2596, enemy: 'charger', formation: 'vee', count: 6, lane: 53, origin: 'acrossPlus' },
+  { at: 2678, enemy: 'turret', formation: 'vee', count: 6, lane: 44 },
+  { at: 2760, enemy: 'warden', formation: 'vee', count: 6, lane: 60, origin: 'acrossMinus' },
+  { at: 2842, enemy: 'charger', formation: 'vee', count: 6, lane: 50 },
+  { at: 2924, enemy: 'turret', formation: 'vee', count: 6, lane: 40, origin: 'acrossPlus' },
+  { at: 3006, enemy: 'warden', formation: 'vee', count: 6, lane: 47 },
+  { at: 3088, enemy: 'charger', formation: 'vee', count: 6, lane: 58, origin: 'acrossMinus' },
+  { at: 3170, enemy: 'turret', formation: 'vee', count: 6, lane: 42 },
+  { at: 3252, enemy: 'warden', formation: 'vee', count: 6, lane: 53, origin: 'acrossPlus' },
+  { at: 3334, enemy: 'charger', formation: 'vee', count: 6, lane: 44 },
+  { at: 3416, enemy: 'turret', formation: 'vee', count: 6, lane: 60, origin: 'acrossMinus' },
+  { at: 3498, enemy: 'warden', formation: 'vee', count: 6, lane: 50 },
+  { at: 3580, enemy: 'charger', formation: 'vee', count: 6, lane: 40, origin: 'acrossPlus' },
+  { at: 3662, enemy: 'weaver', formation: 'column', count: 5, lane: 50 },
+  { at: 3744, enemy: 'charger', formation: 'column', count: 6, lane: 41, origin: 'acrossMinus' },
+  { at: 3826, enemy: 'warden', formation: 'column', count: 6, lane: 60 },
+  { at: 3908, enemy: 'turret', formation: 'column', count: 6, lane: 45, origin: 'acrossPlus' },
+  { at: 3990, enemy: 'weaver', formation: 'column', count: 5, lane: 55 },
+  { at: 4072, enemy: 'charger', formation: 'column', count: 6, lane: 42, origin: 'acrossMinus' },
+  { at: 4154, enemy: 'warden', formation: 'column', count: 6, lane: 59 },
+  { at: 4236, enemy: 'turret', formation: 'column', count: 6, lane: 49, origin: 'acrossPlus' },
+  { at: 4318, enemy: 'weaver', formation: 'column', count: 5, lane: 50 },
+  { at: 4400, enemy: 'charger', formation: 'column', count: 6, lane: 41, origin: 'acrossMinus' },
+  { at: 4482, enemy: 'warden', formation: 'column', count: 6, lane: 60 },
+  { at: 4564, enemy: 'turret', formation: 'column', count: 6, lane: 45, origin: 'acrossPlus' },
+  { at: 4646, enemy: 'weaver', formation: 'column', count: 5, lane: 55 },
+  { at: 4728, enemy: 'charger', formation: 'column', count: 6, lane: 42, origin: 'acrossMinus' },
+  { at: 4810, enemy: 'warden', formation: 'column', count: 6, lane: 59 },
+  { at: 4892, enemy: 'turret', formation: 'column', count: 6, lane: 49, origin: 'acrossPlus' },
+  { at: 4974, enemy: 'charger', formation: 'line', count: 6, lane: 47 },
+  { at: 5056, enemy: 'warden', formation: 'line', count: 6, lane: 58, origin: 'acrossMinus' },
+  { at: 5138, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
+  { at: 5220, enemy: 'turret', formation: 'line', count: 6, lane: 53, origin: 'acrossPlus' },
+  { at: 5302, enemy: 'lancer', formation: 'line', count: 6, lane: 44 },
+  { at: 5384, enemy: 'charger', formation: 'line', count: 6, lane: 60, origin: 'acrossMinus' },
+  { at: 5466, enemy: 'warden', formation: 'line', count: 6, lane: 50 },
+  { at: 5548, enemy: 'weaver', formation: 'line', count: 5, lane: 44, origin: 'acrossPlus' },
+  { at: 5630, enemy: 'turret', formation: 'line', count: 6, lane: 47 },
+  { at: 5712, enemy: 'lancer', formation: 'line', count: 6, lane: 58, origin: 'acrossMinus' },
+  { at: 5794, enemy: 'charger', formation: 'line', count: 6, lane: 42 },
+  { at: 5876, enemy: 'warden', formation: 'line', count: 6, lane: 53, origin: 'acrossPlus' },
+  { at: 5958, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
+  { at: 6040, enemy: 'turret', formation: 'line', count: 6, lane: 60, origin: 'acrossMinus' },
+  { at: 6122, enemy: 'lancer', formation: 'line', count: 6, lane: 50 },
+  { at: 6204, enemy: 'charger', formation: 'line', count: 6, lane: 40, origin: 'acrossPlus' },
+  { at: 6286, enemy: 'warden', formation: 'line', count: 6, lane: 47 },
+];
+
+const EYE_PICKUPS: readonly PickupEntry[] = [
+  { at: 360, kind: 'rapid', lane: 48 },
+  { at: 700, kind: 'shield', lane: 40 },
+  { at: 1040, kind: 'spread', lane: 56 },
+  { at: 1380, kind: 'shield', lane: 44 },
+  { at: 1720, kind: 'missileRate', lane: 60 },
+  { at: 2060, kind: 'shield', lane: 38 },
+  { at: 2400, kind: 'missileSpread', lane: 52 },
+  { at: 2680, kind: 'extraLife', lane: 50 },
+  { at: 2740, kind: 'shield', lane: 62 },
+  { at: 3080, kind: 'rapid', lane: 48 },
+  { at: 3420, kind: 'shield', lane: 40 },
+  { at: 3760, kind: 'spread', lane: 56 },
+  { at: 4100, kind: 'shield', lane: 44 },
+  { at: 4440, kind: 'missileRate', lane: 60 },
+  { at: 4780, kind: 'shield', lane: 38 },
+  { at: 5120, kind: 'missileSpread', lane: 52 },
+  { at: 5460, kind: 'shield', lane: 62 },
+  { at: 5800, kind: 'rapid', lane: 48 },
+  { at: 6140, kind: 'rapid', lane: 56 },
+  { at: 6480, kind: 'spread', lane: 44 },
+];
+
 export const LEVELS: Record<LevelKind, LevelRow> = {
   /**
    * The first level.
@@ -485,5 +996,70 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     pickups: DESCENT_PICKUPS,
     bossAt: 6400,
     boss: 'harrow',
+  },
+  /**
+   * Level three. Its idea is written above its script.
+   *
+   * ⚠️ **The name claims no biome**, on the same terms as the two above: `docs/game.md` themes levels
+   * on the fourteen *Far Carry* biomes and names none of them, and going to the predecessor to pick
+   * one is browsing it for inspiration, which `CLAUDE.md` refuses.
+   */
+  coilward: {
+    waves: COILWARD,
+    pickups: COILWARD_PICKUPS,
+    bossAt: 6350,
+    boss: 'lattice',
+  },
+  /**
+   * Level four. Its idea is written above its script.
+   *
+   * ⚠️ **The name claims no biome**, on the same terms as the two above: `docs/game.md` themes levels
+   * on the fourteen *Far Carry* biomes and names none of them, and going to the predecessor to pick
+   * one is browsing it for inspiration, which `CLAUDE.md` refuses.
+   */
+  shoal: {
+    waves: SHOAL,
+    pickups: SHOAL_PICKUPS,
+    bossAt: 6320,
+    boss: 'shoalMother',
+  },
+  /**
+   * Level five. Its idea is written above its script.
+   *
+   * ⚠️ **The name claims no biome**, on the same terms as the two above: `docs/game.md` themes levels
+   * on the fourteen *Far Carry* biomes and names none of them, and going to the predecessor to pick
+   * one is browsing it for inspiration, which `CLAUDE.md` refuses.
+   */
+  batteries: {
+    waves: BATTERIES,
+    pickups: BATTERIES_PICKUPS,
+    bossAt: 6320,
+    boss: 'redoubt',
+  },
+  /**
+   * Level six. Its idea is written above its script.
+   *
+   * ⚠️ **The name claims no biome**, on the same terms as the two above: `docs/game.md` themes levels
+   * on the fourteen *Far Carry* biomes and names none of them, and going to the predecessor to pick
+   * one is browsing it for inspiration, which `CLAUDE.md` refuses.
+   */
+  gauntlet: {
+    waves: GAUNTLET,
+    pickups: GAUNTLET_PICKUPS,
+    bossAt: 6420,
+    boss: 'chorus',
+  },
+  /**
+   * Level seven. Its idea is written above its script.
+   *
+   * ⚠️ **The name claims no biome**, on the same terms as the two above: `docs/game.md` themes levels
+   * on the fourteen *Far Carry* biomes and names none of them, and going to the predecessor to pick
+   * one is browsing it for inspiration, which `CLAUDE.md` refuses.
+   */
+  eye: {
+    waves: EYE,
+    pickups: EYE_PICKUPS,
+    bossAt: 6540,
+    boss: 'axis',
   },
 };
