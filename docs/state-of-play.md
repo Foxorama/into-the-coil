@@ -124,16 +124,20 @@ branching map there, and the evidence points away from a screen rather than towa
 ## The second play-test list, given 2026-08-06 and added to on 2026-08-07
 
 **Fourteen items, in the player's words** — twelve after playing the build that item 4 below produced,
-and two more the morning after. **Only item 4 below has not been started**; the rest have landed and
-say where. They are written out here rather than left in a chat log —
+and two more the morning after. **All fourteen have landed**, and each says where. They are written
+out here rather than left in a chat log —
 [0029](decisions/0029-the-tracked-record-is-the-record.md).
 
-⚠️ **Items 1, 2, 3, 7, 8 and 9 each appeared TWICE — once landed and once not started** — after six
-PRs edited this list from branches that could not see each other. Repaired on 2026-08-07 alongside
-[0068](decisions/0068-a-run-over-is-a-continue.md). It is the drift 0038 names, and the shape is
-worth remembering: a handover that contradicts itself is worse than one that is merely out of date,
-because both halves read as current. Six branches off one `main` will do this to any list that is
-edited in place rather than appended to.
+⚠️ **NONE OF THEM HAS BEEN PLAYED, AND THAT IS THE ONLY THING THAT MATTERS ABOUT THIS SECTION.**
+Fourteen changes to how a run feels, landed against each other without a hand on any of them. The
+next thing this project needs is not another item — it is the play-test, and then the balance pass
+under *What is next*.
+
+⚠️ **THIS LIST HAS DOUBLED ITSELF TWICE, AND NEITHER TIME WAS A MERGE CONFLICT** —
+[`the-list-that-doubled-itself-twice`](../reports/the-list-that-doubled-itself-twice-2026-08-07.md),
+which has why `git merge` cannot see it and what shape of list would not have done it. Read it before
+editing this list from more than one branch. The tell, if it happens again: **a numbered list whose
+numbers do not ascend.**
 
 ⚠️ **They are asked for as ONE list and cannot be judged apart.** *"Individually they can't be judged
 because they all affect the gameplay and game balance… something might feel right by itself in
@@ -141,8 +145,8 @@ isolation and then completely fail when you mix something else in."* So each lan
 with its own guards, and **the verdict on all of them is one play-test after the last one lands** —
 not a report per item.
 
-⚠️ **Nothing below has been played since these landed.** Four of them change what a run feels like on
-the first ten seconds, and one of them ([0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md))
+⚠️ **Nothing below has been played since these landed.** Several of them change what a run feels like
+in the first ten seconds, and one ([0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md))
 makes a death cost more in the same session as a report that dying is already too punishing.
 
 **Landed:**
@@ -166,7 +170,11 @@ makes a death cost more in the same session as a report that dying is already to
    [0066](decisions/0066-a-death-scatters-what-it-took.md). It is the half of the dying-is-punishing
    report 0057 deliberately left, and 0056 had made a death cost more in the same session. ⚠️ The
    pickup pool went from eight to twelve, out of the particle share.
-3. **Bosses need a real explosion and an end-of-level beat.** *"Currently the level just ends."*
+3. **✅ DONE — bosses needed a real explosion and an end-of-level beat.**
+   [0062](decisions/0062-a-boss-dies-loudly.md). Both halves of that report were the same bug: the
+   explosion could not be seen because there was no beat, and there was no beat because the clear
+   fired on the step the pool emptied. ⚠️ The beat currently hands over to the screen item 4 is
+   about, and the two want playing together.
 4. **✅ DONE — the between-levels screen is a respite.**
    [0063](decisions/0063-a-level-break-is-a-respite.md). ⚠️ **It carries a product finding about a
    feature that does not exist yet**: the same report says the branching chart's player choice *"will
@@ -174,18 +182,6 @@ makes a death cost more in the same session as a report that dying is already to
    the hard pause interruption."* 0063 records it and does not act on it —
    [0042](decisions/0042-a-run-is-a-sequence-of-levels.md) is where the chart lives, and item 5 below
    is what it now has to argue with.
-5. **Enemies are stuck in a narrow tunnel.** *"Once on screen the enemies are in a very narrow
-   tunnel and it makes the feel very restrictive and not like you're in a large area."* They should
-   fly off the `across` edges and back on. ⚠️ 0048 landed entry from the edges and the `across` cull;
-   this is about what they do AFTER arriving, which is `steerEnemies`.
-3. **✅ DONE — bosses needed a real explosion and an end-of-level beat.**
-   [0062](decisions/0062-a-boss-dies-loudly.md). Both halves of that report were the same bug: the
-   explosion could not be seen because there was no beat, and there was no beat because the clear
-   fired on the step the pool emptied. ⚠️ The beat currently hands over to the screen item 4 is
-   about, and the two want playing together.
-4. **The between-levels screen should become a brief respite.** *"The current pause/level screen
-   interrupts the flow."* ⚠️ Touches `SCREENS` — [0046](decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md)
-   and 0055 both have opinions about what a screen change costs.
 5. **✅ DONE — enemies were stuck in a narrow tunnel.**
    [0059](decisions/0059-the-lane-is-the-players-box.md). ⚠️ It also moved the weaver's amplitude,
    added a rule that something off screen does not shoot, and lifted the constraint that a flanking
@@ -204,6 +200,31 @@ makes a death cost more in the same session as a report that dying is already to
    was bound to a slot nobody owns, and nothing drew any of it.
 9. **✅ DONE — shields did not carry between levels.**
    [0058](decisions/0058-a-level-boundary-keeps-the-shell.md).
+
+## What is next
+
+**1 — Play the build.** Fourteen changes to how a run feels have landed against each other without a
+hand on any of them, and [0027](decisions/0027-measure-the-picture-not-the-model.md) is the rule that
+says a green model proves nothing about the picture. The verdict is one play-test over all of them,
+not a report per item — that is how the list was asked for.
+
+**2 — The balance pass, and it is the largest open item in the project.** It is deliberately last, in
+the player's own words on 2026-08-07:
+
+> *"I've been leaving balancing passes because it's been playing well and pre-balancing means
+> re-balancing later."*
+
+⚠️ **So the ordering is a decision rather than a backlog.** Two of the eight play-test answers came
+back *"can't tell yet"* and both are blocked on this;
+[0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md)'s two harder tiers
+were sized against a five-health ship and have never been re-sized since it became one hit. Every
+rate in [0059](decisions/0059-the-lane-is-the-players-box.md) is unplayed, and so is the three-second
+level break, which [0063](decisions/0063-a-level-break-is-a-respite.md) names as the number most
+likely to be wrong.
+
+**3 — The free continue.** A run cannot currently be lost, on purpose and as a testing affordance —
+see *What the game currently is*. It is the thing to reconsider once the difficulty above has a hand
+behind it, because it is what has been standing in for one.
 
 ## What was next before that list, and why in this order
 
