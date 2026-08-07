@@ -140,6 +140,16 @@ const INK_OF: Record<SpriteKind, keyof Palette> = {
   warden: 'enemy',
   boss: 'enemy',
   boss2: 'enemy',
+  boss3: 'enemy',
+  boss3Hit: 'enemy',
+  boss4: 'enemy',
+  boss4Hit: 'enemy',
+  boss5: 'enemy',
+  boss5Hit: 'enemy',
+  boss6: 'enemy',
+  boss6Hit: 'enemy',
+  boss7: 'enemy',
+  boss7Hit: 'enemy',
   bullet: 'bullet',
   pickupLife: 'pickup',
   pickupRapid: 'pickup',
@@ -351,6 +361,94 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
       ctx.closePath();
       break;
     }
+    /*
+      ── THE FIVE LATER HULLS ────────────────────────────────────────────────────────────────────
+
+      `docs/game.md`: every boss is unique. These are five silhouettes rather than five sets of
+      numbers, and each one is built around ONE readable idea, because at 28 to 38 world units the
+      shape is the first thing a player learns and the last thing they forget.
+
+      ⚠️ **Still placeholders, and the pipeline is still not.** The file's own opening paragraph says
+      so; what these buy is that no two bosses in the run are the same object in a different colour.
+    */
+    case 'boss3':
+    case 'boss3Hit':
+      // A LATTICE: a wide diamond with a hollow centre, so the player can see through it and cannot
+      // fly through it. The gap is the idea — it reads as a frame rather than as a body.
+      ctx.moveTo(half - r, half);
+      ctx.lineTo(half, half - r * 0.85);
+      ctx.lineTo(half + r, half);
+      ctx.lineTo(half, half + r * 0.85);
+      ctx.closePath();
+      ctx.moveTo(half - r * 0.42, half);
+      ctx.lineTo(half, half - r * 0.36);
+      ctx.lineTo(half + r * 0.42, half);
+      ctx.lineTo(half, half + r * 0.36);
+      ctx.closePath();
+      break;
+    case 'boss4':
+    case 'boss4Hit':
+      // A SHOAL MOTHER: a blunt teardrop trailing four fins. Level four is about speed, and this is
+      // the only hull in the game that reads as moving while it is standing still.
+      ctx.moveTo(half - r, half);
+      ctx.lineTo(half - r * 0.3, half - r * 0.62);
+      ctx.lineTo(half + r * 0.55, half - r * 0.5);
+      ctx.lineTo(half + r * 0.95, half - r * 0.86);
+      ctx.lineTo(half + r * 0.8, half - r * 0.22);
+      ctx.lineTo(half + r, half);
+      ctx.lineTo(half + r * 0.8, half + r * 0.22);
+      ctx.lineTo(half + r * 0.95, half + r * 0.86);
+      ctx.lineTo(half + r * 0.55, half + r * 0.5);
+      ctx.lineTo(half - r * 0.3, half + r * 0.62);
+      ctx.closePath();
+      break;
+    case 'boss5':
+    case 'boss5Hit':
+      // A REDOUBT: a squat slab with a stepped face, and the widest hull so far. Level five is about
+      // things that must be killed, and this is what that looks like — a wall with gun ports.
+      ctx.moveTo(half - r * 0.72, half - r * 0.95);
+      ctx.lineTo(half + r * 0.35, half - r * 0.95);
+      ctx.lineTo(half + r * 0.35, half - r * 0.55);
+      ctx.lineTo(half + r, half - r * 0.4);
+      ctx.lineTo(half + r, half + r * 0.4);
+      ctx.lineTo(half + r * 0.35, half + r * 0.55);
+      ctx.lineTo(half + r * 0.35, half + r * 0.95);
+      ctx.lineTo(half - r * 0.72, half + r * 0.95);
+      ctx.lineTo(half - r * 0.95, half + r * 0.4);
+      ctx.lineTo(half - r * 0.95, half - r * 0.4);
+      ctx.closePath();
+      // Three ports along the face, hollow, so the thing that shoots has somewhere it shoots from.
+      for (let i = -1; i <= 1; i++) {
+        const y = half + i * r * 0.5;
+        ctx.moveTo(half + r * 0.62, y);
+        ctx.arc(half + r * 0.45, y, r * 0.17, 0, Math.PI * 2);
+      }
+      break;
+    case 'boss6':
+    case 'boss6Hit':
+      // A CHORUS: three stacked lobes on one spine, so it reads as several things that turned out to
+      // be one. Level six is about there being no gaps, and this is the hull that has none.
+      for (let i = -1; i <= 1; i++) {
+        const y = half + i * r * 0.62;
+        ctx.moveTo(half + r * 0.62, y);
+        ctx.arc(half, y, r * 0.62, 0, Math.PI * 2);
+      }
+      ctx.moveTo(half - r * 0.18, half - r);
+      ctx.lineTo(half + r * 0.18, half - r);
+      ctx.lineTo(half + r * 0.18, half + r);
+      ctx.lineTo(half - r * 0.18, half + r);
+      ctx.closePath();
+      break;
+    case 'boss7':
+    case 'boss7Hit':
+      // AN AXIS: a ringed eye. The biggest hull in the game and the only round one, because the last
+      // boss of the authored run should be the one shape nothing else in it shares.
+      ctx.arc(half, half, r, 0, Math.PI * 2);
+      ctx.moveTo(half + r * 0.66, half);
+      ctx.arc(half, half, r * 0.66, 0, Math.PI * 2);
+      ctx.moveTo(half + r * 0.3, half);
+      ctx.arc(half, half, r * 0.3, 0, Math.PI * 2);
+      break;
     case 'bullet':
       ctx.arc(half, half, r * 0.8, 0, Math.PI * 2);
       break;

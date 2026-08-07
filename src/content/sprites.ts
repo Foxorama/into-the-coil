@@ -108,6 +108,16 @@ export const SPRITE_KINDS = [
   // shared hull would make two fights look like one with different numbers.
   'boss2',
   'boss2Hit',
+  'boss3',
+  'boss3Hit',
+  'boss4',
+  'boss4Hit',
+  'boss5',
+  'boss5Hit',
+  'boss6',
+  'boss6Hit',
+  'boss7',
+  'boss7Hit',
   'bullet',
   /*
     ⚠️ **A DART, AND THE ONLY THING IN THE GAME DRAWN LONG ALONG ITS OWN TRAVEL IN THE BULLET INK.**
@@ -286,6 +296,22 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // Bigger than the first, and still well under the 80 that `src/sim/camera.ts` calls the ceiling.
   boss2: 30,
   boss2Hit: 30,
+  /*
+    ⚠️ **Five more hulls, and every one of them a different SIZE as well as a different shape.**
+    `docs/game.md`: every boss is unique. Two bosses that differ only in their numbers read as the
+    same fight twice, and the cheapest half of *unique* is the silhouette — so the extents climb with
+    the run rather than repeating a value already on this list.
+  */
+  boss3: 28,
+  boss3Hit: 28,
+  boss4: 32,
+  boss4Hit: 32,
+  boss5: 34,
+  boss5Hit: 34,
+  boss6: 30,
+  boss6Hit: 30,
+  boss7: 38,
+  boss7Hit: 38,
   bullet: 1.8,
   // Longer than the pulse and pointed. A missile is the shot the player is meant to notice.
   missile: 3.4,

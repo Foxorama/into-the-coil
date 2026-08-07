@@ -52,6 +52,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **a death scatters what it took, non-cycling and on a short timer** | [0066](decisions/0066-a-death-scatters-what-it-took.md) |
 | **a new run opens on an empty field** | [0067](decisions/0067-a-new-run-opens-on-an-empty-field.md), [`the-sweep-that-served-two-rules`](../reports/the-sweep-that-served-two-rules-2026-08-07.md) |
 | **a run over is a continue, and it keeps the level** | [0068](decisions/0068-a-run-over-is-a-continue.md) |
+| **seven levels, seven bosses, one idea each** | [0071](decisions/0071-five-more-levels-and-one-idea-each.md) |
 | **a style is a setting, a choice is not an action, and neither may touch the sim** | [0070](decisions/0070-a-style-is-a-setting-and-the-first-one.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
@@ -70,7 +71,7 @@ the same category as the flight constants before they were played. None of them 
 
 ## What the game currently is
 
-**A two-level run, playable start to finish, and played.** A title screen that is the difficulty
+**A SEVEN-level run, playable start to finish. Two of the seven have been played.** A title screen that is the difficulty
 choice and carries a key to the pickups, six enemy kinds, two authored levels of about three minutes
 each, weapon upgrades and extra lives lying about in them, a lives-and-shield readout while playing,
 a unique boss at the end of each level, a screen between them, and a victory screen after the second.

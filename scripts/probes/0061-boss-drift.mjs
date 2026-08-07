@@ -75,6 +75,16 @@ export const PROBES = [
     // table gives no sign of it, and it is right on every monitor the author owns.
     broke: 'a drift widened past what the narrowest device can show',
     guard: 'the whole hull stays on screen on the narrowest device',
-    edit: { path: 'src/content/bosses.ts', find: '    drift: 14,', replace: '    drift: 40,' },
+    /*
+      ⚠️ **Anchored on the sentinel's WAVELENGTH, because `drift: 14` stopped being unique.** The
+      roster went from two bosses to seven — `docs/decisions/0071-five-more-levels-and-one-idea-each.md`
+      — and `axis` happens to swing the same distance. An ambiguous `find` is refused by the harness
+      rather than applied to whichever row came first, which is the whole reason it counts matches.
+    */
+    edit: {
+      path: 'src/content/bosses.ts',
+      find: '    drift: 14,\n    // About six seconds a cycle',
+      replace: '    drift: 40,\n    // About six seconds a cycle',
+    },
   },
 ];
