@@ -84,7 +84,15 @@ describe('an authored level is a script the spawner can actually run', () => {
     for (const kind of LEVEL_KINDS) {
       for (const wave of LEVELS[kind].waves) {
         const row = ENEMIES[wave.enemy];
-        const margin = row.radius + row.weaveAmplitude * 2;
+        /*
+          ⚠️ **Only a WEAVE has a bound this test can compute, and after 0073 that is a statement
+          about the union rather than about a zero.** A drift turns round at the band by
+          construction; the three reactive motions steer towards a ship that is always inside the
+          lane, so their bound is the player's box rather than an amplitude. What is left needing an
+          authored margin is the one motion whose path is a shape: the weaver.
+        */
+        const swing = row.motion.kind === 'weave' ? row.motion.amplitude : 0;
+        const margin = row.radius + swing * 2;
         for (const member of membersOf(wave)) {
           if (member.across - margin < ROAM_MIN || member.across + margin > ROAM_MAX) {
             offences.push(`${kind} ${wave.enemy} at ${wave.at} reaches ${member.across.toFixed(1)} ± ${margin}`);

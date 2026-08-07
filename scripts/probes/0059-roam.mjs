@@ -20,7 +20,9 @@ export const PROBES = [
     guard: 'takes something that holds station clear off the edge of the screen',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      e.velAcross = (index + i) % 2 === 0 ? row.roam : -row.roam;',
+      // ⚠️ Re-anchored by 0073, which made the motion a union: only a drifting row is given a
+      // starting direction, because a reactive one recomputes `velAcross` from the ship every step.
+      find: "      e.velAcross = row.motion.kind === 'drift' ? ((index + i) % 2 === 0 ? row.motion.roam : -row.motion.roam) : 0;",
       replace: '      e.velAcross = 0;',
     },
   },
@@ -37,8 +39,8 @@ export const PROBES = [
     guard: 'takes something that holds station clear off the edge of the screen',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    if (e.across <= ROAM_MIN) e.velAcross = row.roam;\n    else if (e.across >= ROAM_MAX) e.velAcross = -row.roam;',
-      replace: '    if (e.across <= 0) e.velAcross = row.roam;\n    else if (e.across >= ACROSS_SPAN) e.velAcross = -row.roam;',
+      find: '        if (e.across <= ROAM_MIN) e.velAcross = m.roam;\n        else if (e.across >= ROAM_MAX) e.velAcross = -m.roam;',
+      replace: '        if (e.across <= 0) e.velAcross = m.roam;\n        else if (e.across >= ACROSS_SPAN) e.velAcross = -m.roam;',
     },
   },
   {
@@ -50,8 +52,8 @@ export const PROBES = [
     guard: 'never leaves the roam band, so nothing that wandered off is culled',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    if (e.across <= ROAM_MIN) e.velAcross = row.roam;\n    else if (e.across >= ROAM_MAX) e.velAcross = -row.roam;',
-      replace: '    void ROAM_MIN;\n    void ROAM_MAX;',
+      find: '        if (e.across <= ROAM_MIN) e.velAcross = m.roam;\n        else if (e.across >= ROAM_MAX) e.velAcross = -m.roam;',
+      replace: '        void ROAM_MIN;\n        void ROAM_MAX;',
     },
   },
   {
@@ -68,9 +70,11 @@ export const PROBES = [
       path: 'src/app/frame.ts',
       find: '    if (e.steerAcross !== 0) {\n      if (e.velAcross > 0 ? e.across < e.steerAcross : e.across > e.steerAcross) continue;',
       replace:
-        '    if (row.weaveAmplitude > 0 && row.weaveWavelength > 0) {\n' +
-        '      const wk = TAU / row.weaveWavelength;\n' +
-        '      e.velAcross = row.weaveAmplitude * wk * Math.cos(e.along * wk) * e.velAlong;\n' +
+        // ⚠️ Re-anchored by 0073. The weave is one arm of a union now; what is restored is the old
+        // ORDER, which is what this probe has always been about.
+        "    if (row.motion.kind === 'weave') {\n" +
+        '      const wk = TAU / row.motion.wavelength;\n' +
+        '      e.velAcross = row.motion.amplitude * wk * Math.cos(e.along * wk) * e.velAlong;\n' +
         '      continue;\n' +
         '    }\n' +
         '    if (e.steerAcross !== 0) {\n' +
@@ -90,8 +94,13 @@ export const PROBES = [
     guard: 'something that has wandered off the screen does not shoot from there',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    if (e.across + e.radius < 0 || e.across - e.radius > ACROSS_SPAN) continue;\n    e.fireIn--;',
-      replace: '    e.fireIn--;',
+      /*
+        ⚠️ Re-anchored by 0073, which put the LEADING-edge twin of this check directly underneath it.
+        The find can no longer run on to `e.fireIn--`, and the break is narrowed to the `across` line
+        this decision owns — the `along` one has its own probe under 0073.
+      */
+      find: '    if (e.across + e.radius < 0 || e.across - e.radius > ACROSS_SPAN) continue;',
+      replace: '',
     },
   },
   {
@@ -101,6 +110,11 @@ export const PROBES = [
     // deletes part of itself, and the table gives no sign of it.
     broke: 'a weave widened past what the authored lanes leave room for',
     guard: 'never puts an enemy where it can leave the ROAM band and be culled',
-    edit: { path: 'src/content/enemies.ts', find: '    weaveAmplitude: 16,', replace: '    weaveAmplitude: 26,' },
+    edit: {
+      path: 'src/content/enemies.ts',
+      // ⚠️ Re-anchored by 0073: the weave's two numbers are the parameters of one arm of a union now.
+      find: "    motion: { kind: 'weave', amplitude: 16, wavelength: 130 },",
+      replace: "    motion: { kind: 'weave', amplitude: 26, wavelength: 130 },",
+    },
   },
 ];

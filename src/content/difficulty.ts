@@ -107,6 +107,25 @@ export interface DifficultyRow {
    * ship.
    */
   shotSpeed: number;
+  /**
+   * Multiplier on how hard a body that reacts to the player steers towards them.
+   *
+   * ── WHY THIS IS THE TIER AXIS THE PLAY-TEST ASKED FOR BY NAME ───────────────────────────────────
+   *
+   * Reported: *"they need to circle, double back etc and be actively dog-fighting with the player,
+   * **it can be straightforward dog-fighting depending on difficulty**."*
+   * `docs/decisions/0073-an-enemy-is-a-pilot.md`. So the reactive motions in
+   * `src/content/enemies.ts` author a rate, and this is what a tier does to it: the easiest tier
+   * gets a body that leans towards you, the hardest gets one that stays on you.
+   *
+   * ⚠️ **It reaches only the three REACTIVE motions.** A weave is a shape in the world and a roam
+   * turns round at a fixed band; multiplying either would change a picture the level is authored
+   * against rather than change how hard something is trying, which is the distinction between this
+   * field and `closing`.
+   *
+   * ⚠️ **Higher is harder, like everything here except `fireGap`.**
+   */
+  aggression: number;
 }
 
 export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
@@ -126,6 +145,9 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     fireGap: 1,
     closing: 1,
     shotSpeed: 1,
+    // Straightforward dog-fighting, which is the play report's own phrase for what the easy tier
+    // should get: the reactive motions run at exactly the rate `src/content/enemies.ts` authors.
+    aggression: 1,
   },
   /**
    * The tier the game is tuned for.
@@ -142,6 +164,7 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     fireGap: 0.7,
     closing: 1.2,
     shotSpeed: 1.15,
+    aggression: 1.3,
   },
   /**
    * The tier that is supposed to end runs.
@@ -158,6 +181,12 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     fireGap: 0.5,
     closing: 1.4,
     shotSpeed: 1.3,
+    /*
+      ⚠️ **Raised further than `closing` is, and that is deliberate.** A faster body is less time to
+      decide; a body that STAYS ON YOU is a different problem, and it is the one this tier is named
+      for. At 1.7 a hunting lancer crosses the lane in about five seconds rather than nine.
+    */
+    aggression: 1.7,
   },
 };
 

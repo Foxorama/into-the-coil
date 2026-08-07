@@ -169,6 +169,33 @@ export interface Entity extends Body {
    * `docs/decisions/0064-a-pickup-waits-to-be-taken.md`.
    */
   holdFor: number;
+  /**
+   * How many more times a body that doubles back may cross the ship before it gives up and leaves.
+   *
+   * ⚠️ **Only a `loop` body carries one**, on exactly the terms `steerAcross` and `holdFor` state
+   * above: everything else in the game leaves it at zero and nothing reads it. No sentinel is needed
+   * and none is defined — *not doubling back* is a count of zero, which is a fact about the body.
+   *
+   * ⚠️ **A COUNT rather than a distance, and it is the one field here that could not have been
+   * either.** What bounds a dog-fight is how many passes the player has to survive, and a pass is an
+   * event rather than a length: the same two crossings take twice as long against a player who runs.
+   * `docs/decisions/0073-an-enemy-is-a-pilot.md`.
+   */
+  turnsLeft: number;
+  /**
+   * Which way round a body that orbits the ship goes: `+1` or `-1`.
+   *
+   * ⚠️ **Only a `circle` body carries one**, same terms again. It is set at spawn from the member's
+   * index rather than rolled, for the reason `src/app/frame.ts`'s `spawnWave` gives about the roam's
+   * direction: a level is authored, and a wave that rolled its own handedness would play differently
+   * every run and could not be tuned by a hand.
+   *
+   * ⚠️ **It cannot be derived from the body's position**, which is what the first draft tried. The
+   * sign of *which side of the ship it is on* flips halfway round every orbit, so an orbit computed
+   * from it reverses at the top and the bottom and the body oscillates on an arc instead of going
+   * round.
+   */
+  spin: number;
 }
 
 /** A blank entity. Called only while a pool is being constructed. */
@@ -194,6 +221,8 @@ export function makeEntity(): Entity {
     lifeFor: 0,
     steerAcross: 0,
     holdFor: 0,
+    turnsLeft: 0,
+    spin: 0,
   };
 }
 
@@ -224,6 +253,8 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.lifeFor = 0;
   e.steerAcross = 0;
   e.holdFor = 0;
+  e.turnsLeft = 0;
+  e.spin = 0;
 }
 
 /**
