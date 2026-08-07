@@ -41,6 +41,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
 | **a death takes the ship, and the level carries on** | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
+| **a trigger is a place on the glass, and it is drawn** | [0060](decisions/0060-a-trigger-is-a-place-on-the-glass.md) |
 | **a level boundary keeps the shell; a death and a new run do not** | [0058](decisions/0058-a-level-boundary-keeps-the-shell.md) |
 | **a boss's station drifts, so a fight is still flight** | [0061](decisions/0061-a-boss-keeps-flying.md) |
 | **a pickup waits to be taken, and its face turns half a second faster** | [0064](decisions/0064-a-pickup-waits-to-be-taken.md) |
@@ -164,6 +165,12 @@ makes a death cost more in the same session as a report that dying is already to
    [0025](decisions/0025-the-frame-budget-is-counted-not-timed.md): counted draw calls, nothing
    allocating in the frame loop, and `CAPACITY` in `src/app/mount.ts` is already at 0022's 500-entity
    worst case — so a starfield is not entities.
+8. **✅ DONE — a bomb could not be fired twice on a phone.**
+   [0060](decisions/0060-a-trigger-is-a-place-on-the-glass.md). Two bugs, one symptom: half the strip
+   was bound to a slot nobody owns, and nothing drew any of it.
+9. **Shields do not carry between levels.** ⚠️ A shield lives on `ship.health` by 0050 and
+   deliberately not in the run slice, so it is the one thing the player carries that a level boundary
+   has no reason to preserve.
 8. **A bomb cannot be fired twice on a phone.** *"How do you fire bombs on mobile? I can do one and
    then can't fire any more."* ⚠️ The tap strip is `SPECIAL_BINDINGS` bands wide whatever the ship
    owns, so half of it is bound to a special nobody has — and nothing draws it, so where the other

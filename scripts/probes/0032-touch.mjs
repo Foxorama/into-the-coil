@@ -93,12 +93,19 @@ export const PROBES = [
   {
     decision: '0032',
     suite: 'tests/touch.test.ts',
-    broke: 'the tap strip hand-counted at two, so a third special reaches the keyboard and not the phone',
+    /*
+      ⚠️ **RE-AIMED BY 0060, and the rule it holds has not moved.** The band count used to be
+      `SPECIAL_BINDINGS` written into `tapZone`; it is now what the ship OWNS, clamped to that number
+      — `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`. So the hand-count this catches is
+      one rung further out, in the default a caller with no arsenal to ask about gets. What is still
+      being held is 0030's promise that a third special is one table row and no code on the phone.
+    */
+    broke: 'the tap strip hand-counted, so a third special reaches the keyboard and not the phone',
     guard: 'has exactly one band per binding, so a third special needs no code here',
     edit: {
       path: 'src/app/touch.ts',
-      find: '  const band = Math.floor(acrossFraction * SPECIAL_BINDINGS);',
-      replace: '  const band = Math.floor(acrossFraction * 1);',
+      find: '  const bandsOf = options.bands ?? ((): number => SPECIAL_BINDINGS);',
+      replace: '  const bandsOf = options.bands ?? ((): number => 1);',
     },
   },
   {

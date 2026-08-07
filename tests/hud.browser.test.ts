@@ -6,6 +6,7 @@ import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
 import { PICKUPS, PICKUP_KINDS } from '../src/content/pickups.ts';
 import { MAX_SHIELDS } from '../src/content/ships.ts';
+import { TAP_STRIP } from '../src/app/touch.ts';
 
 /**
  * WHAT THE PLAYER CAN SEE ABOUT THEIR OWN RUN.
@@ -30,9 +31,15 @@ afterAll(async () => {
   await browser?.close();
 });
 
-async function open(): Promise<Page> {
+async function open(hasTouch = false): Promise<Page> {
   browser ??= await launchChromium({ headless: true });
-  const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 720 },
+    deviceScaleFactor: 1,
+    // ⚠️ The tap strip is drawn on a CAPABILITY, not on a guess about what the player is holding —
+    // `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`. This is the capability.
+    hasTouch,
+  });
   const page = await context.newPage();
   await page.goto(dist);
   await page.waitForSelector('#app canvas', { timeout: 15_000 });
@@ -107,6 +114,108 @@ describe.runIf(chromePath)('the title screen says what a pickup is for', () => {
     for (const enemy of ['drifter', 'lancer', 'weaver', 'turret', 'charger', 'warden']) {
       expect(text.toLowerCase(), `the key explains the ${enemy}, which play asked it not to`).not.toContain(enemy);
     }
+    await page.context().close();
+  });
+});
+
+/**
+ * A TRIGGER IS A PLACE ON THE GLASS.
+ *
+ * `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`. Reported from play: *"how do you fire
+ * bombs on mobile? I can do one and then can't fire any more."*
+ *
+ * ⚠️ **The half that has to be a browser test is that the strip is DRAWN WHERE THE TAP IS HEARD.**
+ * `tests/touch.test.ts` holds the hit test and can hold nothing about pixels; a strip whose picture
+ * and whose hit region disagree is a player pressing what they can see and something else happening,
+ * which is `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` with the sign
+ * reversed.
+ */
+describe.runIf(chromePath)('the tap strip says where the bomb is', () => {
+  const STRIP = '.itc-playing-strip';
+
+  it('is not drawn on a device with nothing to tap it with', async () => {
+    const page = await open(false);
+    await page.click('.' + prefixFor('title') + 'action');
+    await page.waitForTimeout(200);
+    expect(await shown(page, STRIP), 'a desktop was shown a place to put a finger').toBe(false);
+    await page.context().close();
+  });
+
+  it('is drawn on a touch device, once a run is running and never before it', async () => {
+    const page = await open(true);
+    expect(await shown(page, STRIP), 'the strip was up before there was a run to fire in').toBe(false);
+    await page.click('.' + prefixFor('title') + 'action');
+    await page.waitForTimeout(200);
+    expect(await shown(page, STRIP), 'a phone was shown no place to press').toBe(true);
+    await page.context().close();
+  });
+
+  it('draws one band per owned trigger, and each band covers the part of the glass that fires it', async () => {
+    /*
+      ⚠️ **THE ONE THAT MATTERS, and it is measured in pixels against the canvas.** The reported bug
+      was a strip split into the binding BUDGET rather than into what the ship owns, so half of it was
+      bound to a slot the shell answers with silence — a quarter of the screen that swallows taps and
+      is drawn nowhere. This asserts the picture covers the hit region exactly: the same right-hand
+      `TAP_STRIP` of the canvas, divided into the same bands.
+    */
+    const page = await open(true);
+    await page.click('.' + prefixFor('title') + 'action');
+    await page.waitForTimeout(200);
+    const geometry = await page.evaluate(() => {
+      const canvas = document.querySelector('#app canvas');
+      const strip = document.querySelector('.itc-playing-strip');
+      const bands = [...document.querySelectorAll('.itc-playing-strip-band')];
+      if (!(canvas instanceof HTMLElement) || !(strip instanceof HTMLElement)) return null;
+      const c = canvas.getBoundingClientRect();
+      const s = strip.getBoundingClientRect();
+      return {
+        canvas: { left: c.left, right: c.right, top: c.top, bottom: c.bottom },
+        strip: { left: s.left, right: s.right, top: s.top, bottom: s.bottom },
+        bands: bands.map((b) => {
+          const r = b.getBoundingClientRect();
+          return { top: r.top, bottom: r.bottom };
+        }),
+        // Not a control, and it must never become one: the canvas underneath is what hears the tap.
+        events: getComputedStyle(strip).pointerEvents,
+      };
+    });
+    expect(geometry, 'there is no strip to measure').not.toBeNull();
+    const g = geometry!;
+    // A run opens carrying exactly one special — the bomb — so the strip is one band.
+    expect(g.bands.length, 'the strip is not split by what the ship owns').toBe(1);
+    expect(g.events, 'the strip would swallow the tap it exists to advertise').toBe('none');
+    // The leading edge, and `TAP_STRIP` of the canvas wide. Within a pixel of rounding.
+    expect(Math.abs(g.strip.right - g.canvas.right), 'the strip is not on the leading edge').toBeLessThan(2);
+    const width = g.canvas.right - g.canvas.left;
+    expect(Math.abs((g.strip.right - g.strip.left) / width - TAP_STRIP), 'the strip is not the tap zone').toBeLessThan(
+      0.01,
+    );
+    // And it covers the whole short axis, which is where the bands are divided.
+    expect(Math.abs(g.bands[0]!.top - g.canvas.top)).toBeLessThan(2);
+    expect(Math.abs(g.bands[0]!.bottom - g.canvas.bottom)).toBeLessThan(2);
+    await page.context().close();
+  });
+
+  it('shows the real baked sprite of the special the band fires, and how many are left', async () => {
+    // The same rule as the title screen's key: the real art, never a drawing of it. A glyph here
+    // would be a second description of the bomb's silhouette.
+    const page = await open(true);
+    await page.click('.' + prefixFor('title') + 'action');
+    await page.waitForTimeout(200);
+    const band = await page.evaluate(() => {
+      const el = document.querySelector('.itc-playing-strip-band');
+      const icon = document.querySelector('.itc-playing-strip-icon');
+      let inked = 0;
+      if (icon instanceof HTMLCanvasElement) {
+        const ctx = icon.getContext('2d');
+        const data = ctx?.getImageData(0, 0, icon.width, icon.height).data;
+        if (data) for (let i = 3; i < data.length; i += 4) if (data[i]! > 0) inked++;
+      }
+      return { text: el?.textContent ?? '', isCanvas: icon instanceof HTMLCanvasElement, inked };
+    });
+    expect(band.isCanvas, 'the band draws a glyph rather than the baked sprite').toBe(true);
+    expect(band.inked, 'the band’s icon is blank').toBeGreaterThan(0);
+    expect(band.text, `the band does not say how many are left: ${band.text}`).toMatch(/\d/);
     await page.context().close();
   });
 });
