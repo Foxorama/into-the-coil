@@ -80,9 +80,14 @@ Each level opens on an empty screen so the player can find the controls before a
 ⚠️ **A run that runs out of lives can now be continued** —
 [0068](decisions/0068-a-run-over-is-a-continue.md). The run-over screen's button says *Continue*, it
 resumes the level rather than restarting it, and the seven-second countdown that was already there is
-now what the offer costs. Whether a free continue is the right generosity has never been played, and
-it interacts with the balance pass below: a run that can always be resumed cannot be lost. 0068's
-*what this leaves owed* has it.
+now what the offer costs.
+
+⚠️ **The free continue is DELIBERATE and temporary, and it is currently the closest thing the project
+has to a cheat code.** 0068 left *"whether a free continue is the right generosity"* open as its
+largest risk; the answer, given the same day: *"perfectly fine now, especially in testing — it's
+effectively unlimited lives. Probably will change later."* So a run that cannot be lost is a
+**testing affordance being used on purpose**, not an oversight, and the thing to weigh when it
+changes is what it was buying — see the cheat-code item under *Still open, and small*.
 
 ⚠️ **The ship now opens a run with no missile launcher** —
 [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) — so the second
@@ -336,6 +341,13 @@ first carries it.
   [0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md) keeps it off the
   tier axis; what is missing is a way to reach it and a decision about whether a run flown that way
   may finish.
+
+  ⚠️ **[0068](decisions/0068-a-run-over-is-a-continue.md)'s free continue is standing in for it**, and
+  it was not built to: *"effectively unlimited lives."* It gets a tester past a level they cannot
+  beat, which is what the ask wanted, and it does it by handing back the ship rather than by making
+  the ship immortal — so the tester still flies every fight. **This item stays open**, because the
+  continue is a product decision that will be tuned and an assist is one that will not, and the day
+  the continue stops being free is the day the levels behind it become unreachable again.
 
 - **itch**: `BUTLER_API_KEY`, the *played in the browser* flag, and the channel. `docs/scaffold-plan.md`
   has the list; none of it is code.
