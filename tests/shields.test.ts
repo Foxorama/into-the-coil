@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import { type Entity, makeEntity, reset } from '../src/sim/entity.ts';
 import { Pool } from '../src/sim/pool.ts';
-import { GameFrame, respawn, startLevel, type World } from '../src/app/frame.ts';
+import { GameFrame, advanceLevel, respawn, startLevel, type World } from '../src/app/frame.ts';
 import { MAX_SHIELDS, SHIPS, fullHealthFor, shieldsOf } from '../src/content/ships.ts';
 import { PICKUPS, PICKUP_KINDS, UPGRADE_KINDS, isUpgrade, type PickupKind } from '../src/content/pickups.ts';
 import { SHOTS } from '../src/content/shots.ts';
@@ -332,7 +332,7 @@ describe('a level boundary keeps the shell, and a death does not', () => {
   it('carries every shield into the next level', () => {
     const { world } = quietWorld();
     giveShields(world, MAX_SHIELDS);
-    startLevel(world, NO_LEVEL, true);
+    advanceLevel(world, NO_LEVEL);
     expect(shieldsOf(world.shipRow, world.ship.health), 'the level boundary took the shell').toBe(MAX_SHIELDS);
   });
 
@@ -344,7 +344,7 @@ describe('a level boundary keeps the shell, and a death does not', () => {
     */
     const { world } = quietWorld();
     giveShields(world, 1);
-    startLevel(world, NO_LEVEL, true);
+    advanceLevel(world, NO_LEVEL);
     expect(shieldsOf(world.shipRow, world.ship.health), 'the boundary refilled the shell instead of keeping it').toBe(1);
   });
 
@@ -353,7 +353,7 @@ describe('a level boundary keeps the shell, and a death does not', () => {
     // something else. A shell that survived as a number and not as marks is exactly that.
     const { world, frame } = quietWorld();
     giveShields(world, 2);
-    startLevel(world, NO_LEVEL, true);
+    advanceLevel(world, NO_LEVEL);
     frame.step();
     expect(world.shieldOrbs.size, 'the ship crossed the boundary wearing nothing').toBe(2);
   });
@@ -368,7 +368,7 @@ describe('a level boundary keeps the shell, and a death does not', () => {
     */
     const { world } = quietWorld();
     giveShields(world, MAX_SHIELDS);
-    startLevel(world, NO_LEVEL, false);
+    startLevel(world, NO_LEVEL);
     expect(shieldsOf(world.shipRow, world.ship.health), 'a new run opened wearing the last run’s shell').toBe(0);
   });
 
@@ -377,7 +377,7 @@ describe('a level boundary keeps the shell, and a death does not', () => {
     // pool of three — `src/app/mount.ts` caps the pickup for the same reason.
     const { world } = quietWorld();
     giveShields(world, MAX_SHIELDS);
-    startLevel(world, NO_LEVEL, true);
+    advanceLevel(world, NO_LEVEL);
     expect(world.ship.health, 'the boundary handed the ship more health than it has room for').toBeLessThanOrEqual(
       fullHealthFor(world.shipRow),
     );
