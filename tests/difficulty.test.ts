@@ -58,6 +58,9 @@ describe('the easiest tier is the content, exactly as authored', () => {
     expect(easiest.fireGap, 'the easiest tier changes how often things shoot').toBe(1);
     expect(easiest.closing, 'the easiest tier changes how fast things arrive').toBe(1);
     expect(easiest.shotSpeed, 'the easiest tier changes how fast bullets travel').toBe(1);
+    // 0073: 'straightforward dog-fighting depending on difficulty' is the play report's own phrase for
+    // what the easiest tier gets — the reactive motions at exactly the rate the enemy table authors.
+    expect(easiest.aggression, 'the easiest tier changes how hard things chase').toBe(1);
   });
 
   it('and leaves every body it touches at the numbers its own row states', () => {
@@ -90,6 +93,7 @@ describe('every tier is harder than the one before it', () => {
       expect(b.fireGap, `${harder} shoots slower than ${easier}`).toBeLessThanOrEqual(a.fireGap);
       expect(b.closing, `${harder} closes slower than ${easier}`).toBeGreaterThanOrEqual(a.closing);
       expect(b.shotSpeed, `${harder} throws slower bullets than ${easier}`).toBeGreaterThanOrEqual(a.shotSpeed);
+      expect(b.aggression, `${harder} chases less than ${easier}`).toBeGreaterThanOrEqual(a.aggression);
       expect(b.lives, `${harder} is more forgiving than ${easier}`).toBeLessThanOrEqual(a.lives);
     }
   });
@@ -106,6 +110,7 @@ describe('every tier is harder than the one before it', () => {
         b.fireGap !== a.fireGap ||
         b.closing !== a.closing ||
         b.shotSpeed !== a.shotSpeed ||
+        b.aggression !== a.aggression ||
         b.lives !== a.lives;
       expect(moved, `${harder} plays exactly like ${easier}`).toBe(true);
     }

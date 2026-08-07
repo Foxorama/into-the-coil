@@ -97,6 +97,35 @@ const TAU = Math.PI * 2;
 const FLANK_ENTRY_SPEED = 0.9;
 
 /**
+ * How far out a circling body starts orbiting rather than closing, as a multiple of its radius.
+ *
+ * ⚠️ **An orbit attempted from the spawn horizon is a TANGENT.** A body 246 units out that applied a
+ * tangential velocity would travel sideways at its full agility while barely approaching, and would
+ * leave the lane across before it ever reached the fight. At 1.6 the warden flies in like anything
+ * else and engages about half a hull's width outside its own orbit, which reads as arriving.
+ */
+const CIRCLE_ENGAGE = 1.6;
+
+/**
+ * How hard a circling body is pulled back onto its radius, per world unit it is off it.
+ *
+ * ⚠️ **Well under 1, or the orbit is a spring.** At 1 a body one unit out is pulled a whole unit
+ * back in a single step, which overshoots inward and oscillates in and out forever; the tangential
+ * component then turns that wobble into a flower rather than a circle. At 0.08 it converges over
+ * about a second and the path reads as a curve.
+ */
+const CIRCLE_PULL = 0.08;
+
+/**
+ * How far ahead of the camera a circling body's orbit is clipped, in world units.
+ *
+ * ⚠️ **`src/sim/entity.ts` culls anything behind the camera**, so an orbit around a ship the player
+ * has flown to the back of its box would retire the toughest body in the game for free. Ten units is
+ * clear of the trailing edge and still on screen.
+ */
+const CIRCLE_FLOOR = 10;
+
+/**
  * How fast a pickup wanders across the lane, in world units per step.
  *
  * Asked for in play: *"power ups and buffs should also have a drifting, moving flight rather than a
@@ -1338,6 +1367,35 @@ function fireEnemies(w: World): void {
       while it is still visibly there.
     */
     if (e.across + e.radius < 0 || e.across - e.radius > ACROSS_SPAN) continue;
+    /*
+      ── AND THE SAME RULE ON THE OTHER AXIS, WHICH IT HAS NEVER HAD ─────────────────────────────
+
+      ⚠️ **REPORTED FROM PLAY, AND CONFIRMED AS A DEFECT BEFORE IT WAS ANSWERED**: *"most of the
+      difficulty is enemies that fly past and shoot, or shoot from off-screen."*
+      `reports/medium-played-2026-08-07.md` has the arithmetic. 0059 added the `across` test above
+      when the roam made those edges reachable, and the leading edge never got one — so a wave
+      placed at `camera + MAX_ALONG_SPAN + EDGE_MARGIN` (about 246) has been firing at the player
+      from beyond a 16:9 device's 178-unit view for roughly two seconds of every approach, on every
+      wave, since the day enemies could shoot.
+
+      ⚠️ **It is worse on a NARROWER screen, which is the tell that it was never considered.** 0023
+      fixes the spawn distance against the widest view that exists so that content is authored once;
+      the visible span is not fixed, so the smaller the device the longer the invisible sniping.
+
+      ⚠️ **`w.view.alongSpan` and not `MAX_ALONG_SPAN`, and this is the one place in the game that
+      difference is allowed to matter.** The question here is *can the player see it* — which is a
+      fact about the device in front of them, exactly like the `across` test above is a fact about a
+      lane that is the same everywhere. Using the widest view would let a phone go on being shot at
+      by things it cannot see, which is the bug.
+
+      ⚠️ **Its clock keeps running**, exactly as the `across` case says: a body that spends its
+      approach off screen does not arrive with a volley saved up.
+
+      This is `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`'s own
+      failure mode — *a hit with no cause on the picture* — which 0036 records being reported three
+      separate times as a collision fault that did not exist.
+    */
+    if (e.along - e.radius > w.cameraAlong + w.view.alongSpan) continue;
     e.fireIn--;
     if (e.fireIn > 0) continue;
     // The tier's gap, not the row's — and recomputed rather than remembered, because two numbers
@@ -1466,9 +1524,27 @@ function spawnWave(w: World, index: number): void {
         ⚠️ **The wave's index is in it as well as the member's**, so a formation fans apart AND two
         waves in a row do not lean the same way. Without the first the members move as a block, which
         is the tunnel wearing a wider coat; without the second the whole level drifts one way.
+
+        ⚠️ **Only a DRIFTING row is given a direction here** — the reactive motions decide their own
+        `velAcross` every step from where the ship is, so a lean written at spawn would last exactly
+        one step. 0073.
       */
-      e.velAcross = (index + i) % 2 === 0 ? row.roam : -row.roam;
+      e.velAcross = row.motion.kind === 'drift' ? ((index + i) % 2 === 0 ? row.motion.roam : -row.motion.roam) : 0;
     }
+    /*
+      WHAT A PILOT NEEDS TO KNOW ABOUT ITSELF, set once here — `docs/decisions/0073-an-enemy-is-a-pilot.md`.
+
+      ⚠️ **Both are the same parity trick the roam above uses, and for the identical reason.** A level
+      is authored: a wave that rolled its own handedness would play differently every run and could
+      not be tuned by a hand, and `src/sim/rng.ts`'s stream would be consulted for something that is
+      not a variation the designer asked for.
+
+      ⚠️ **`spin` cannot be derived from the body's position at the moment it engages**, which is what
+      the first draft did — the side of the ship it is on flips halfway round every orbit, so the
+      orbit reverses at the top and the bottom and the body swings on an arc instead of going round.
+    */
+    if (row.motion.kind === 'circle') e.spin = (index + i) % 2 === 0 ? 1 : -1;
+    else if (row.motion.kind === 'loop') e.turnsLeft = row.motion.turns;
     /*
       THE TIER, applied here and nowhere else for anything that arrives in a wave.
 
@@ -1498,6 +1574,14 @@ function spawnWave(w: World, index: number): void {
  * covers `velAlong` of those per step.
  */
 function steerEnemies(w: World): void {
+  /*
+    ⚠️ **Hoisted out of the loop, and the ship is read ONCE for the whole pool.** Three of the five
+    motions below are functions of where the player is, so this is the step's snapshot of them: every
+    body reacts to the same ship position, which is what stops two enemies in one wave disagreeing
+    about where the player was depending on their index in the pool.
+  */
+  const ship = w.ship;
+  const aggression = w.difficulty.aggression;
   for (let i = w.enemies.size - 1; i >= 0; i--) {
     const e = w.enemies.at(i);
     const row = w.enemyRows[e.kind];
@@ -1533,33 +1617,150 @@ function steerEnemies(w: World): void {
         turns round at the far side, which is the same journey it was already making, at a fifth of
         the speed.
       */
-      e.velAcross = row.roam > 0 ? (e.velAcross > 0 ? row.roam : -row.roam) : 0;
-      continue;
-    }
-    if (row.weaveAmplitude > 0 && row.weaveWavelength > 0) {
-      const k = TAU / row.weaveWavelength;
-      e.velAcross = row.weaveAmplitude * k * Math.cos(e.along * k) * e.velAlong;
+      /*
+        ⚠️ **Only a DRIFTING row slows to a roam; every other motion takes over on the next step
+        anyway.** A hunter, a circler or a looper that arrived from the side is steered by its own
+        arm below from here on, so writing a roam onto it would be a velocity that survives exactly
+        one step — and the reactive arms all overwrite `velAcross` unconditionally, which is what
+        makes that harmless rather than a bug waiting for a reordering.
+      */
+      e.velAcross = row.motion.kind === 'drift' && row.motion.roam > 0 ? (e.velAcross > 0 ? row.motion.roam : -row.motion.roam) : 0;
       continue;
     }
     /*
-      THE ROAM — what a body does with the whole area once it has arrived.
+      ── WHAT KIND OF PILOT THIS IS ──────────────────────────────────────────────────────────────
 
-      Reported from play: *"once on screen the enemies are in a very narrow tunnel and it makes the
-      feel very restrictive… they should fly off the `across` edges and back on."*
-      `docs/decisions/0059-the-lane-is-the-players-box.md`.
+      `docs/decisions/0073-an-enemy-is-a-pilot.md`. Two of the five arms are the behaviour that was
+      already here under different names; three of them react to where the ship is, which is the
+      whole of what the play-test asked for: *"every wave is just a wall that you pass by."*
 
-      ⚠️ **It turns round OUTSIDE the lane, at `ROAM_MIN`/`ROAM_MAX`.** Bouncing at 0 and
-      `ACROSS_SPAN` would be the tunnel with a bigger diameter; the whole of what was asked for is
-      that a threat leaves the screen sideways and comes back, and the band it turns in is the same
-      one 0048 already lets it enter from.
-
-      ⚠️ **On the CENTRE and not on the hull's edge**, which is the opposite of the boss's patrol in
-      `src/app/boss.ts` — a boss turning on its centre would put half a 26-unit hull outside the lane
-      with nothing to bring it back, and an enemy leaving the lane entirely is the point here.
+      ⚠️ **Exhaustive, with a `never` arm** — `docs/decisions/0016-a-hub-enumerates-kinds.md`'s fifth
+      defeat, and `tests/registry.test.ts` refuses a switch without one. A motion added to the union
+      fails to compile HERE, which is the point of putting the union in the table.
     */
-    if (row.roam <= 0) continue;
-    if (e.across <= ROAM_MIN) e.velAcross = row.roam;
-    else if (e.across >= ROAM_MAX) e.velAcross = -row.roam;
+    const m = row.motion;
+    switch (m.kind) {
+      /*
+        THE ROAM — what a body does with the whole area once it has arrived.
+
+        Reported from play: *"once on screen the enemies are in a very narrow tunnel and it makes the
+        feel very restrictive… they should fly off the `across` edges and back on."*
+        `docs/decisions/0059-the-lane-is-the-players-box.md`.
+
+        ⚠️ **It turns round OUTSIDE the lane, at `ROAM_MIN`/`ROAM_MAX`.** Bouncing at 0 and
+        `ACROSS_SPAN` would be the tunnel with a bigger diameter; the whole of what was asked for is
+        that a threat leaves the screen sideways and comes back, and the band it turns in is the same
+        one 0048 already lets it enter from.
+
+        ⚠️ **On the CENTRE and not on the hull's edge**, which is the opposite of the boss's patrol in
+        `src/app/boss.ts` — a boss turning on its centre would put half a 26-unit hull outside the lane
+        with nothing to bring it back, and an enemy leaving the lane entirely is the point here.
+      */
+      case 'drift': {
+        if (m.roam <= 0) break;
+        if (e.across <= ROAM_MIN) e.velAcross = m.roam;
+        else if (e.across >= ROAM_MAX) e.velAcross = -m.roam;
+        break;
+      }
+      case 'weave': {
+        const k = TAU / m.wavelength;
+        e.velAcross = m.amplitude * k * Math.cos(e.along * k) * e.velAlong;
+        break;
+      }
+      /*
+        Lean across towards wherever the ship is, at a bounded rate.
+
+        ⚠️ **CLAMPED to the rate rather than proportional to the gap**, which is what stops it
+        oscillating: a proportional steer overshoots by exactly the gap every step once the rate is
+        larger than the distance left, and the body sits vibrating on top of the player. The last
+        arm of the clamp — using the gap itself when it is smaller than the rate — is what lands it
+        exactly rather than jittering around the line.
+      */
+      case 'hunt': {
+        const rate = m.agility * aggression;
+        const gap = ship.across - e.across;
+        e.velAcross = gap > rate ? rate : gap < -rate ? -rate : gap;
+        break;
+      }
+      /*
+        Fly in, then orbit.
+
+        ⚠️ **`velAlong` gets `scrollPerStep` ADDED, and leaving it out is the bug the constitution
+        warns about by name**: *"every speed is in the camera's frame, which is the one the ship
+        already flies in."* An orbit computed in world coordinates orbits where the ship WAS, drifts
+        a full scroll rate up-lane every step, and reads as a body slowly falling off the back of its
+        own circle. `src/app/frame.ts`'s `fireEnemies` has the same note about aimed shots, which is
+        where this project learned it.
+      */
+      case 'circle': {
+        const dAlong = e.along - ship.along;
+        const dAcross = e.across - ship.across;
+        const dist = Math.sqrt(dAlong * dAlong + dAcross * dAcross);
+        const rate = m.agility * aggression;
+        /*
+          Still on its way in. It closes at whatever the spawner gave it and leans across, exactly as
+          a hunter does — an orbit attempted from 246 units out is a tangent, and the body would
+          leave the lane sideways long before it ever arrived.
+        */
+        if (dist > m.radius * CIRCLE_ENGAGE) {
+          const gap = ship.across - e.across;
+          e.velAcross = gap > rate ? rate : gap < -rate ? -rate : gap;
+          break;
+        }
+        const inv = dist > 0 ? 1 / dist : 0;
+        const nAlong = dAlong * inv;
+        const nAcross = dAcross * inv;
+        // How far off the orbit it is, as a speed pulling it back on. Positive is too far out.
+        const pull = (dist - m.radius) * CIRCLE_PULL;
+        // The tangent, turned the way this body turns — `spin` is set at spawn and cannot be derived
+        // from the position, because the side it is on flips halfway round every orbit.
+        e.velAlong = w.scrollPerStep + (-nAcross * e.spin * rate - nAlong * pull);
+        e.velAcross = nAlong * e.spin * rate - nAcross * pull;
+        /*
+          ⚠️ **Clipped against the trailing edge rather than allowed to leave.** A ship flown to the
+          very back of its box would otherwise have its orbit dip behind the camera, where
+          `src/sim/entity.ts`'s cull retires it — which would make retreating to the back edge a way
+          of deleting the toughest body in the game for free. Holding station in the camera's frame
+          flattens the orbit against the edge instead, and the across half carries on.
+        */
+        if (e.along + e.velAlong < w.cameraAlong + CIRCLE_FLOOR) e.velAlong = w.scrollPerStep;
+        break;
+      }
+      /*
+        Chase the ship's position ALONG the lane, turning each time it overshoots.
+
+        ⚠️ **The speed is the row's own `closing` plus the scroll, so the turn changes direction and
+        never pace** — `src/content/enemies.ts` has the argument for why this arm authors no speed of
+        its own. It also means the velocity computed on the way in is exactly what the spawner
+        already set, so no engagement range is needed and there is no step where the body visibly
+        changes gear.
+
+        ⚠️ **The crossing is detected against the SHIP'S previous position as well as its own.** Both
+        are moving; comparing this step's positions against last step's own would report a crossing
+        every time the player flew past a stationary body.
+      */
+      case 'loop': {
+        if (e.turnsLeft <= 0) break;
+        const isAhead = e.along >= ship.along;
+        if (isAhead !== e.prevAlong >= ship.prevAlong) {
+          e.turnsLeft--;
+          // Out of turns: hand it back to the closing speed it was spawned with, and let it go.
+          if (e.turnsLeft <= 0) {
+            e.velAlong = -row.closing * w.difficulty.closing;
+            break;
+          }
+        }
+        const rate = (row.closing * w.difficulty.closing + w.scrollPerStep) * aggression;
+        e.velAlong = w.scrollPerStep + (isAhead ? -rate : rate);
+        break;
+      }
+      default: {
+        // Adding a member to `Motion` fails to compile HERE, per 0016's fifth defeat.
+        const unhandled: never = m;
+        void unhandled;
+        break;
+      }
+    }
   }
 }
 

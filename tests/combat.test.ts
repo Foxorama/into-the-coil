@@ -489,6 +489,21 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
   reset(lancer, SHIP_START_ALONG + distance, ACROSS_SPAN / 2 - lane, ENEMIES.lancer, ENEMY_KINDS.indexOf('lancer'));
   lancer.velAlong = -ENEMIES.lancer.closing;
   lancer.fireIn = 1;
+  /*
+    ⚠️ **THE BODY CANNOT HURT THE SHIP HERE, AND IT COULD UNTIL A LANCER LEARNED TO CHASE.** Every
+    assertion in this fixture is about where a SHOT goes, and it reads that through *was the ship
+    hit* — which was an exact question for as long as the only thing that could reach the ship from
+    over there was the bullet.
+
+    `docs/decisions/0073-an-enemy-is-a-pilot.md` gave the lancer a hunt, so it now closes the
+    off-lane offset itself and rams. `npm run prove` caught it the moment it happened: 0034's probe
+    for *an enemy aiming in WORLD coordinates* came back STILL GREEN, because the ship was being hit
+    either way and the guard could no longer tell a shot arriving from a body arriving.
+
+    Zeroing the contact damage makes the question exact again. It does not weaken the fixture — the
+    thing under test never was the ram.
+  */
+  lancer.damage = 0;
 
   const world: World = {
     layers: [enemies, enemyShots, playerShots, shipPool],
@@ -618,11 +633,28 @@ describe('an aimed shot arrives, and a player who moves is not there when it doe
       Nothing was wrong with the aim, the collision or the picture. Each was correct in a different
       frame. `src/app/frame.ts` says what the fix is and why it leads only the drift.
     */
-    const offLane = aimedAtTheShip(160, holding(0), 30);
-    const hitAt = stepsUntilHit(offLane.frame, offLane.world, 200);
+    /*
+      ⚠️ **THE WINDOW IS THE FIRST SHOT'S FLIGHT, AND IT USED TO BE THE WHOLE RUN.** At 200 steps a
+      lancer fires three times, and `docs/decisions/0073-an-enemy-is-a-pilot.md` gave it a hunt — so
+      by its second shot it has closed the thirty-unit offset and is firing straight down the lane,
+      where a shot aimed in the wrong frame *"still connected, which is why it hid."* The guard was
+      therefore measuring the in-lane case it was written to be blind to, and `npm run prove` said so:
+      0034's probe came back STILL GREEN.
+
+      One shot's flight, taken from the in-lane scenario at the same distance, is the honest window.
+      What is under test is where a shot fired from off the lane GOES, and the second shot is not
+      fired from off the lane any more.
+    */
+    const OFF_LANE = 30;
+    const inLane = aimedAtTheShip(160, holding(0));
+    const flight = stepsUntilHit(inLane.frame, inLane.world, 600);
+    expect(flight, 'the in-lane shot never arrived, so there is no window to measure against').not.toBe(null);
+
+    const offLane = aimedAtTheShip(160, holding(0), OFF_LANE);
+    const hitAt = stepsUntilHit(offLane.frame, offLane.world, flight! + 5);
     expect(
       hitAt,
-      'an aimed shot from 30 units off the lane never arrived — it was aimed in the wrong frame',
+      `an aimed shot from ${OFF_LANE} units off the lane never arrived — it was aimed in the wrong frame`,
     ).not.toBe(null);
   });
 });

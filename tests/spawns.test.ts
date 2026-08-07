@@ -16,7 +16,8 @@ import { makeEntity, reset, stepEntities } from '../src/sim/entity.ts';
 import { Pool } from '../src/sim/pool.ts';
 import type { Entity } from '../src/sim/entity.ts';
 import { DEFAULT_ORIGIN, LEVELS, LEVEL_KINDS, type LevelRow } from '../src/content/levels.ts';
-import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
+// The enemy table's own guards moved to `tests/pilots.test.ts` with 0073, which is where the motion
+// union and everything that reacts to the player is held.
 import { PLAYER_SHOT_LIFE } from '../src/content/pickups.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { GameFrame } from '../src/app/frame.ts';
@@ -377,17 +378,23 @@ describe('a threat uses the whole area, and the player does not', () => {
     expect(world.ship.across, 'the ship left the dodge lane').toBeGreaterThanOrEqual(0);
   });
 
-  it('no row both weaves and roams, because two mechanisms would fight over one velocity', () => {
-    // `src/content/enemies.ts` says why: a body whose motion depends on the order of two `if`s is a
-    // body nobody can author against.
-    for (const kind of ENEMY_KINDS) {
-      const row = ENEMIES[kind];
-      expect(
-        row.weaveAmplitude > 0 && row.roam > 0,
-        `${kind} carries both a weave and a roam, and only one of them can win`,
-      ).toBe(false);
-    }
-  });
+  /*
+    ⚠️ **THE GUARD THAT USED TO BE HERE IS DELETED, AND THE REASON IS WORTH MORE THAN IT WAS.** It
+    asserted that *no row both weaves and roams, because two mechanisms would fight over one
+    velocity* — true, load-bearing, and only ever expressible because a row carried `weaveAmplitude`
+    and `roam` side by side and could set both.
+
+    `docs/decisions/0073-an-enemy-is-a-pilot.md` made `motion` a discriminated union, so a row now
+    carries the parameters of exactly one motion and **cannot** describe two. The affordance is gone
+    rather than policed, which `docs/scaffold-plan.md`'s instruction ladder puts at the top and calls
+    the only tier that reliably works — the same move
+    `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` made when it deleted
+    a sprite-ordering test rather than keep it green.
+
+    An assertion that cannot fail is noise a future reader has to work out the purpose of, and a
+    probe standing over one is the appearance of proof
+    (`docs/decisions/0019-a-probe-must-be-seen-to-apply.md`). What replaced it is the compiler.
+  */
 
   it('and something that has wandered off the screen does not shoot from there', () => {
     /*
