@@ -5,12 +5,7 @@ gives three of the six enemies a reason to care where the player is, adds an `ag
 the tier table, and closes a defect in `fireEnemies` that has been in the game since enemies could
 shoot.
 
-From the medium-tier play-test, `reports/medium-played-2026-08-07.md`.
-
-⚠️ **That report is deliberately cited as a path rather than linked.** It is unmerged as this is
-written — [PR #98](https://github.com/Foxorama/into-the-coil/pull/98) — and `tests/links.test.ts`
-refuses a relative link to something no clone has, correctly. It becomes a link when the report is on
-`main`.
+From [`medium-played`](../../reports/medium-played-2026-08-07.md).
 
 ## The rule
 
