@@ -12,6 +12,7 @@
  * fixtures whose subject is collision.
  */
 
+import type { CueKind } from '../src/content/cues.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS, type DifficultyKind } from '../src/content/difficulty.ts';
 import { Pool } from '../src/sim/pool.ts';
 import { type Entity, makeEntity, reset } from '../src/sim/entity.ts';
@@ -87,8 +88,12 @@ export function inertLevel(): {
   weapon: ReturnType<typeof weaponFor>;
   shownHealth: number;
   onHealth: (health: number) => void;
+  onCue: (kind: CueKind) => void;
 } {
   return {
+    // A collision fixture has no ears. `playableWorld` is the one that records cues, because it is
+    // the one that drives whole levels — `docs/decisions/0072-a-cue-is-baked-and-played.md`.
+    onCue: (): void => {},
     // A fixture has no readout to update; what it needs is a starting value that matches the ship, so
     // the frame does not report a change on its very first step.
     shownHealth: SHIPS.proof.health,
@@ -154,12 +159,18 @@ class NullSurface implements Surface {
  * being cashed.
  *
  * Deaths are counted rather than acted on, and `cleared` records whether the level ever ended.
+ *
+ * ⚠️ **`cues` is a RECORDING and not a speaker**, on the same terms: what a cue is worth belongs to
+ * `src/app/sound.ts`, and a fixture that made a noise would be a fixture that needed a browser. This
+ * is how `tests/sound.test.ts` asks the real frame *what did the player hear* —
+ * `docs/decisions/0072-a-cue-is-baked-and-played.md`.
  */
 export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFFICULTY_KINDS[0]!): {
   world: World;
   deaths: { count: number };
   cleared: { count: number };
   taken: PickupKind[];
+  cues: CueKind[];
 } {
   /*
     ⚠️ **The REAL capacities, imported rather than remembered.** These were hand-written copies, and
@@ -186,6 +197,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
   const deaths = { count: 0 };
   const cleared = { count: 0 };
   const taken: PickupKind[] = [];
+  const cues: CueKind[] = [];
 
   const world: World = {
     layers: [debris, blasts, bossPool, enemies, enemyShots, playerShots, missiles, bombs, shieldOrbs, shipPool],
@@ -254,6 +266,9 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     onPickup: (kind: PickupKind): void => {
       taken.push(kind);
     },
+    onCue: (kind: CueKind): void => {
+      cues.push(kind);
+    },
   };
-  return { world, deaths, cleared, taken };
+  return { world, deaths, cleared, taken, cues };
 }

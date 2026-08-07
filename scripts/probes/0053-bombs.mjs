@@ -59,10 +59,13 @@ export const PROBES = [
     guard: 'hurts nothing on its way there',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths);',
+      // ⚠️ Re-anchored when the pairings started summing what they destroyed — decision 0072, which
+      // needed a survived hit to be tellable from a kill. The break is unchanged: the bomb, added to
+      // a pairing it must never be in.
+      find: '    killedByShots += collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths);',
       replace:
-        '    collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths);\n' +
-        '    collideInto(w.bombs, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths);',
+        '    killedByShots += collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths);\n' +
+        '    killedByShots += collideInto(w.bombs, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths);',
     },
   },
   {

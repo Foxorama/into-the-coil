@@ -462,6 +462,21 @@ const HOT_FILES = [
 const DELIBERATELY_COLD: Record<string, string> = {
   'src/app/mount.ts': 'boot and resize: creates the canvas, builds the pool, seeds the field. Never called from a frame.',
   'src/render/bake.ts': 'draws every sprite once at load. Allocating is what it is FOR; blitting afterwards is the point.',
+  /*
+    ⚠️ **THE ONE ENTRY ON THIS LIST THAT IS REACHED FROM A STEP, and it is here rather than above
+    because putting it above would be a claim this scan cannot make.** A cue is played during a step,
+    and playing one allocates: a Web Audio source node is single-use by specification, so there is no
+    pool to take it from. The scan would not SEE that — `ctx.createBufferSource()` is a call, not a
+    `new` — so listing the file as hot would report clean while it allocated per shot, which is worse
+    than not listing it. The allocation is bounded instead, by the voice cap, and counted:
+    `tests/sound.test.ts` asserts that at most `MAX_VOICES` start on one step. That is
+    `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md`'s own move applied to the budget
+    it did not anticipate — `docs/decisions/0072-a-cue-is-baked-and-played.md`.
+  */
+  'src/app/sound.ts':
+    'reached from a step, and it allocates one single-use audio source per voice because the platform ' +
+    'has no other way to play a buffer. Bounded by MAX_VOICES rather than by this scan, which cannot ' +
+    'see a factory call — and the cap is asserted in tests/sound.test.ts.',
 };
 
 interface AllocationRow {
