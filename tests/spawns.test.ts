@@ -7,6 +7,8 @@ import {
   FLANK_ALONG,
   MAX_ALONG_SPAN,
   MIN_ASPECT,
+  ROAM_MAX,
+  ROAM_MIN,
   cullPlayerShotAlong,
   viewOf,
 } from '../src/sim/camera.ts';
@@ -14,7 +16,7 @@ import { makeEntity, reset, stepEntities } from '../src/sim/entity.ts';
 import { Pool } from '../src/sim/pool.ts';
 import type { Entity } from '../src/sim/entity.ts';
 import { DEFAULT_ORIGIN, LEVELS, LEVEL_KINDS, type LevelRow } from '../src/content/levels.ts';
-import { ENEMIES } from '../src/content/enemies.ts';
+import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { PLAYER_SHOT_LIFE } from '../src/content/pickups.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { GameFrame } from '../src/app/frame.ts';
@@ -247,12 +249,164 @@ describe('a wave may arrive from the side, and never behind the player', () => {
     for (const kind of LEVEL_KINDS) {
       const flanking = LEVELS[kind].waves.filter((w) => (w.origin ?? DEFAULT_ORIGIN) !== 'lead');
       expect(flanking.length, `${kind} has nothing arriving from the side`).toBeGreaterThan(0);
-      for (const wave of flanking) {
-        const row = ENEMIES[wave.enemy];
-        expect(
-          row.weaveAmplitude,
-          `${kind} sends a weaving ${wave.enemy} in from the side, and a weave overwrites the turn`,
-        ).toBe(0);
+    }
+  });
+
+  it('a WEAVING row can arrive from the side now, which it could not before', () => {
+    /*
+      ⚠️ **THIS TEST REPLACES A CONSTRAINT ON THE LEVEL AUTHOR.** It used to read *"no flanking wave
+      may use a weaving enemy"*, because the weave ran first in `steerEnemies` and overwrote the turn
+      before it could finish — so the guard forbade the combination rather than the code supporting
+      it. `docs/decisions/0059-the-lane-is-the-players-box.md` reordered the two, and a rule about
+      what may be authored is worth less than a rule the code keeps.
+    */
+    const level: LevelRow = {
+      waves: [{ at: 400, enemy: 'weaver', formation: 'column', count: 3, lane: 50, origin: 'acrossMinus' }],
+      pickups: [],
+      bossAt: Number.POSITIVE_INFINITY,
+      boss: 'sentinel',
+    };
+    const { world } = playableWorld(level);
+    const frame = new GameFrame(world);
+    while (world.enemies.size === 0) frame.step();
+    expect(world.enemies.at(0).across, 'it did not enter from outside the lane').toBeLessThan(0);
+
+    let arrived = false;
+    for (let step = 0; step < 900 && world.enemies.size > 0; step++) {
+      frame.step();
+      if (world.enemies.size > 0 && world.enemies.at(0).steerAcross === 0) {
+        arrived = true;
+        break;
+      }
+    }
+    expect(arrived, 'a weaving flanker never straightened out — the weave ate the turn again').toBe(true);
+  });
+});
+
+/**
+ * THE LANE IS THE PLAYER'S BOX AND IT IS NOT THE ENEMIES'.
+ *
+ * `docs/decisions/0059-the-lane-is-the-players-box.md`. Reported from play: *"once on screen the
+ * enemies are in a very narrow tunnel and it makes the feel very restrictive and not like you're in a
+ * large area. They should fly off the `across` edges and back on."*
+ *
+ * ⚠️ **The subject is what a body does AFTER it has arrived**, which is the half 0048 left alone.
+ */
+describe('a threat uses the whole area, and the player does not', () => {
+  /** One wave of `enemy`, on a lane, arriving at the leading edge. */
+  function oneWave(enemy: 'drifter' | 'turret' | 'lancer' | 'charger' | 'weaver', lane: number): LevelRow {
+    return {
+      waves: [{ at: 400, enemy, formation: 'column', count: 1, lane }],
+      pickups: [],
+      bossAt: Number.POSITIVE_INFINITY,
+      boss: 'sentinel',
+    };
+  }
+
+  it('takes something that holds station clear off the edge of the screen, and brings it back', () => {
+    /*
+      ⚠️ **A DRIFTER, because it is the case a weave cannot reach.** `closing: 0` means it never
+      moves along, and a weave is `A·k·cos(k·along)·velAlong` — identically zero. The two rows that
+      sit stillest in the game were structurally unable to move sideways, which is the middle of what
+      *narrow tunnel* was describing.
+
+      ⚠️ **Asserted in the units the player experiences**, per
+      `docs/decisions/0027-measure-the-picture-not-the-model.md`: `across` is fully visible on every
+      device, so *left the lane* IS *left the screen*, and the assertion is that it went off and came
+      back rather than that a velocity had a sign.
+    */
+    const { world } = playableWorld(oneWave('drifter', 30));
+    const frame = new GameFrame(world);
+    while (world.enemies.size === 0) frame.step();
+
+    let leftTheScreen = false;
+    let cameBack = false;
+    // Long enough to cross the band and return at the drifter's rate, with room to spare.
+    for (let step = 0; step < 2400; step++) {
+      frame.step();
+      if (world.enemies.size === 0) break;
+      const e = world.enemies.at(0);
+      if (e.across + e.radius < 0 || e.across - e.radius > ACROSS_SPAN) leftTheScreen = true;
+      else if (leftTheScreen) cameBack = true;
+    }
+    expect(leftTheScreen, 'the enemy never left the screen — this is the tunnel').toBe(true);
+    expect(cameBack, 'the enemy left and never came back, which is a hole rather than a roam').toBe(true);
+  });
+
+  it('never leaves the roam band, so nothing that wandered off is culled', () => {
+    // The other half: leaving the screen is the point, leaving the GAME is the bug 0048's `across`
+    // cull exists for. The band is strictly inside the cull, and this is what proves it in motion.
+    for (const enemy of ['drifter', 'turret', 'lancer'] as const) {
+      const { world } = playableWorld(oneWave(enemy, 45));
+      const frame = new GameFrame(world);
+      while (world.enemies.size === 0) frame.step();
+      let steps = 0;
+      for (; steps < 2400 && world.enemies.size > 0; steps++) {
+        frame.step();
+        if (world.enemies.size === 0) break;
+        const e = world.enemies.at(0);
+        expect(e.across, `a ${enemy} reached ${e.across.toFixed(1)}, outside the roam band`).toBeGreaterThanOrEqual(
+          ROAM_MIN - 1,
+        );
+        expect(e.across, `a ${enemy} reached ${e.across.toFixed(1)}, outside the roam band`).toBeLessThanOrEqual(
+          ROAM_MAX + 1,
+        );
+      }
+      expect(steps, `a ${enemy} was retired while it was still roaming`).toBeGreaterThan(0);
+    }
+  });
+
+  it('the ship cannot follow it out there, which is what makes the area feel bigger', () => {
+    /*
+      ⚠️ **The asymmetry is the feature.** `src/sim/flight.ts` clamps the player inside the lane, so
+      the roam band is somewhere threats go and the player cannot — and that is what makes the space
+      read as larger than the box being flown in. Driven rather than asserted about the constant,
+      because the clamp is what the player meets.
+    */
+    const { world } = playableWorld(oneWave('drifter', 50));
+    const frame = new GameFrame(world);
+    world.input = {
+      contribute: (intent) => {
+        intent.across = -1;
+      },
+      spend: () => {},
+      release: () => {},
+    };
+    for (let i = 0; i < 600; i++) frame.step();
+    expect(world.ship.across, 'the ship reached the roam band').toBeGreaterThan(ROAM_MIN);
+    expect(world.ship.across, 'the ship left the dodge lane').toBeGreaterThanOrEqual(0);
+  });
+
+  it('no row both weaves and roams, because two mechanisms would fight over one velocity', () => {
+    // `src/content/enemies.ts` says why: a body whose motion depends on the order of two `if`s is a
+    // body nobody can author against.
+    for (const kind of ENEMY_KINDS) {
+      const row = ENEMIES[kind];
+      expect(
+        row.weaveAmplitude > 0 && row.roam > 0,
+        `${kind} carries both a weave and a roam, and only one of them can win`,
+      ).toBe(false);
+    }
+  });
+
+  it('and something that has wandered off the screen does not shoot from there', () => {
+    /*
+      ⚠️ **An event the model resolves and the picture never mentions**, which
+      `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` records being
+      reported three separate times as a collision fault that did not exist. A shot arriving from a
+      body that is not on screen is a hit with no cause, and the roam is what makes it reachable.
+    */
+    const { world } = playableWorld(oneWave('turret', 45));
+    const frame = new GameFrame(world);
+    while (world.enemies.size === 0) frame.step();
+    for (let step = 0; step < 2400 && world.enemies.size > 0; step++) {
+      const before = world.enemyShots.size;
+      frame.step();
+      if (world.enemies.size === 0) break;
+      const e = world.enemies.at(0);
+      const offScreen = e.across + e.radius < 0 || e.across - e.radius > ACROSS_SPAN;
+      if (offScreen) {
+        expect(world.enemyShots.size, 'something off the screen fired at the player').toBeLessThanOrEqual(before);
       }
     }
   });

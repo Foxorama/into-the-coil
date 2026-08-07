@@ -12,6 +12,10 @@
  * with a `never` arm, so a kind added here fails to build until it has been drawn.
  */
 
+// The lane's width, so a sky tile is exactly as tall as the screen — `SPRITE_EXTENT` below says
+// why. `docs/decisions/0015-the-layer-ladder.md` puts `sim` below `content`, so the arrow is right.
+import { ACROSS_SPAN } from '../sim/camera.ts';
+
 /**
  * Every sprite, in baking order — and **the single description of all three facts below**.
  *
@@ -182,6 +186,20 @@ export const SPRITE_KINDS = [
   */
   'shieldOrb',
   'debris',
+  /*
+    ── THE SKY, AND IT IS TWO SPRITES RATHER THAN A THOUSAND ENTITIES ─────────────────────────────
+
+    Asked for in play: *"needs a starry background or a background of some kind."*
+    `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
+
+    ⚠️ **A star is not an entity and must never become one.** `CAPACITY` in `src/app/mount.ts` already
+    totals 0022's 500-entity worst case exactly, so a starfield made of bodies would either overrun
+    the frame budget or come out of the pools that hold bullets. These are two TILES, baked once and
+    blitted a fixed handful of times a frame — which is the pipeline 0022 already describes, used for
+    something the size of the screen instead of something the size of a ship.
+  */
+  'skyFar',
+  'skyNear',
 ] as const;
 
 /**
@@ -305,4 +323,12 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   shieldOrb: 3,
   // Small: a fragment reads as a piece of something, and eight of them at enemy size is a wall.
   debris: 1.4,
+  /*
+    ⚠️ **`ACROSS_SPAN`, which makes one tile exactly as tall as the lane** — so the sky tiles along
+    the scroll axis and along it only, and no seam ever runs across the short axis of the screen. It
+    is also four times the largest thing in the game, which is why `bakeOne`'s resolution ceiling had
+    to stop being a pixel count: `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
+  */
+  skyFar: ACROSS_SPAN,
+  skyNear: ACROSS_SPAN,
 };

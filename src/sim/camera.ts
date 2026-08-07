@@ -218,6 +218,33 @@ export const ACROSS_CULL_MAX = ACROSS_SPAN + EDGE_MARGIN;
 export const FLANK_MARGIN = EDGE_MARGIN / 2;
 
 /**
+ * The band a THREAT may occupy across the lane — the dodge lane, plus the margin it arrives from.
+ *
+ * ── THE LANE IS THE PLAYER'S BOX AND IT IS NOT THE ENEMIES' ─────────────────────────────────────
+ *
+ * Reported from play: *"once on screen the enemies are in a very narrow tunnel and it makes the feel
+ * very restrictive and not like you're in a large area. They should fly off the `across` edges and
+ * back on."* `docs/decisions/0059-the-lane-is-the-players-box.md`.
+ *
+ * ⚠️ **It is `FLANK_MARGIN` and not a fourth number**, because it is the same fact read the other
+ * way round: 0048 already says a threat may enter from `FLANK_MARGIN` outside the lane, so the band
+ * a threat may *be* in is the band it may arrive from. A separate constant would be two descriptions
+ * of one edge, and they would drift the first time either moved.
+ *
+ * ⚠️ **Strictly inside `ACROSS_CULL_MIN`/`MAX`, which is what makes roaming safe.** The cull is at
+ * `EDGE_MARGIN`; this is half of it. So a body that turns around here is never anywhere near being
+ * retired, and the cull goes on meaning what 0048 made it mean — *this has left the game* — rather
+ * than becoming a wall that things bounce off.
+ *
+ * ⚠️ **The SHIP cannot reach it.** `src/sim/flight.ts` clamps the player inside `PLAYER_MARGIN` of
+ * the lane, so the extra band is somewhere threats can go and the player cannot follow. That
+ * asymmetry is the point rather than an oversight: it is what makes the area read as larger than the
+ * box the player flies in.
+ */
+export const ROAM_MIN = -FLANK_MARGIN;
+export const ROAM_MAX = ACROSS_SPAN + FLANK_MARGIN;
+
+/**
  * How far ahead of the camera a flanker appears, in world units.
  *
  * ⚠️ **`MAX_ALONG_SPAN / 2`, and it is the only number that keeps the promise on every device.**

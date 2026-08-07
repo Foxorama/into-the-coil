@@ -19,12 +19,14 @@ import { makeRng } from '../sim/rng.ts';
 import { atlasIsStale, bakeAtlas, viewFor } from '../render/bake.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
 import { SPECIAL_BINDINGS } from '../content/actions.ts';
+import { SPECIALS } from '../content/specials.ts';
 import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../content/enemies.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { BOSSES } from '../content/bosses.ts';
 import { CYCLE, PICKUPS, PICKUP_KINDS, isUpgrade, type PickupKind, weaponFor } from '../content/pickups.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS, type DifficultyKind } from '../content/difficulty.ts';
+import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { MAX_SHIELDS, SHIPS, fullHealthFor, shieldsOf } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
@@ -45,7 +47,7 @@ import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
 import { attachMenuPad, makeMenuAsk } from './menu.ts';
 import { attachPad } from './pad.ts';
-import { attachTouch } from './touch.ts';
+import { attachTouch, bandCount } from './touch.ts';
 import { runLoop } from './loop.ts';
 
 /**
@@ -327,6 +329,20 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // The blast sits under everything it is doing damage to, so the player can see what is inside
     // it — including their own ship, which is the one thing they need to be looking at.
     layers: [debris, blasts, pickupPool, bossPool, enemies, enemyShots, playerShots, missiles, bombs, shieldOrbs, shipPool],
+    /*
+      THE SKY, back to front — `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
+
+      ⚠️ **Both depths are well under 1**, or the layer stops being a background: at 1 it moves
+      exactly with the world and reads as a field of objects going past at the rate of the things
+      that can kill the player. 0.12 and 0.3 put the far field almost still and the near one at a
+      third of the world's rate, which is the parallax.
+
+      ⚠️ **Built HERE, once**, because this file may allocate and `src/render/scene.ts` may not.
+    */
+    sky: [
+      { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.12 },
+      { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.3 },
+    ],
     shipPool,
     shieldOrbs,
     enemies,
@@ -406,7 +422,17 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     input: combineDevices([
       attachInput(window),
-      attachTouch(canvas, { alongAxis: () => view.alongAxis, scale: () => view.scale }),
+      /*
+        ⚠️ **`bands` is what the ship OWNS, not what the binding table budgets for** — 0060. The
+        strip used to be `SPECIAL_BINDINGS` bands wide unconditionally, so with one special owned
+        the second band was a quarter of the glass bound to a slot `onSpecial` answers with silence.
+        Reported as *"how do you fire bombs on mobile? I can do one and then can't fire any more."*
+      */
+      attachTouch(canvas, {
+        alongAxis: () => view.alongAxis,
+        scale: () => view.scale,
+        bands: () => state.run.arsenal.length,
+      }),
       attachPad({ alongAxis: () => view.alongAxis }),
     ]),
     intent: makeIntent(SPECIAL_BINDINGS),
@@ -498,6 +524,39 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    */
   const syncHud = (): void => {
     chrome.setHud(state.run.lives, shieldsOf(shipRow, world.ship.health), MAX_SHIELDS, chargesOf(state.run.arsenal));
+    chrome.setTriggers(triggers());
+  };
+
+  /**
+   * Whether this device has a place to press at all.
+   *
+   * ⚠️ **A CAPABILITY AND NOT A GUESS AT WHAT THE PLAYER IS HOLDING.** Read once, at boot: the strip
+   * is a picture of where `src/app/touch.ts` is listening, and that listener is attached on every
+   * device — so the honest question is *can a finger land here*, not *is the player using one*. A
+   * laptop with a touchscreen gets the strip and the strip is telling it the truth.
+   *
+   * ⚠️ **The alternative was to reveal it on the first touch, and it is worse in the one case that
+   * matters**: the first touch of a run is as likely to be in the strip as anywhere else, so the
+   * player would discover where the bomb is by spending one.
+   */
+  const touchable = navigator.maxTouchPoints > 0;
+
+  /**
+   * What the tap strip draws: one band per trigger that has a weapon behind it.
+   *
+   * ⚠️ **The same count the hit test uses**, through `bandCount`, so the picture cannot claim a band
+   * the canvas is not listening on. An arsenal longer than the binding budget is 0030's *owned,
+   * saved, and currently unreachable* — the strip does not draw a band nothing can press.
+   */
+  const triggers = (): { label: string; sprite: number; charges: number }[] => {
+    if (!touchable) return [];
+    const count = Math.min(state.run.arsenal.length, bandCount(state.run.arsenal.length));
+    const out: { label: string; sprite: number; charges: number }[] = [];
+    for (let i = 0; i < count; i++) {
+      const entry = state.run.arsenal[i]!;
+      out.push({ label: SPECIALS[entry.kind].label, sprite: SPECIALS[entry.kind].face, charges: entry.charges });
+    }
+    return out;
   };
 
   /**

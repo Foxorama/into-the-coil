@@ -4,7 +4,14 @@ import { fileURLToPath } from 'node:url';
 import { SPECIAL_BINDINGS } from '../src/content/actions.js';
 import { makeIntent, type Intent } from '../src/sim/intent.js';
 import { combineDevices } from '../src/app/devices.js';
-import { attachTouch, DRAG_GAIN, STICK_RADIUS_PX, STICK_DEADZONE_PX, TAP_STRIP } from '../src/app/touch.js';
+import {
+  attachTouch,
+  bandCount,
+  DRAG_GAIN,
+  STICK_RADIUS_PX,
+  STICK_DEADZONE_PX,
+  TAP_STRIP,
+} from '../src/app/touch.js';
 import { SHIP_SPEED } from '../src/sim/flight.js';
 
 /*
@@ -319,6 +326,81 @@ describe('the tap strip is generated from the binding budget', () => {
     const intent = step();
     expect(intent.along).toBeCloseTo(0, 9);
     expect(intent.specials[0]).toBe(1);
+  });
+});
+
+/**
+ * A TRIGGER IS A PLACE ON THE GLASS.
+ *
+ * `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`. Reported from play: *"how do you fire
+ * bombs on mobile? I can do one and then can't fire any more."*
+ *
+ * ⚠️ **The band count used to be the binding BUDGET rather than what the ship owns**, so with one
+ * special carried the second band was a quarter of the glass bound to a slot the shell answers with
+ * silence — a piece of the screen that swallows taps, invisibly. On a keyboard a key nobody has
+ * bound costs the player nothing; on the surface they also steer with, it costs a quarter of it.
+ */
+describe('the strip is divided by what the ship owns, not by what the table budgets for', () => {
+  /** Tap the middle of band `band`, on a strip split into `bands`. */
+  const tapBand = (glass: FakeGlass, band: number, bands: number): void => {
+    glass.down(glass.width * (1 - TAP_STRIP / 2), glass.height * ((band + 0.5) / bands), 20 + band);
+  };
+
+  it('THE REPORTED ONE: with one special owned, every tap in the strip fires it', () => {
+    /*
+      The whole strip, sampled top to bottom. At two bands and one owned special the lower half
+      reported nothing at all, which is what *"I can do one and then can't fire any more"* is.
+    */
+    const glass = new FakeGlass(800, 400);
+    const src = combineDevices([attachTouch(glassAs(glass), { scale: () => SCALE, bands: () => 1 })]);
+    const intent = makeIntent(SPECIAL_BINDINGS);
+    for (let i = 0; i < 8; i++) {
+      glass.down(glass.width * (1 - TAP_STRIP / 2), glass.height * ((i + 0.5) / 8), 30 + i);
+    }
+    src.contribute(intent);
+    expect(intent.specials[0], 'part of the strip did nothing').toBe(8);
+    expect(intent.specials[1], 'a slot nobody owns was asked for').toBe(0);
+  });
+
+  it('splits into as many bands as there are triggers, and each one reaches its own', () => {
+    for (let bands = 1; bands <= SPECIAL_BINDINGS; bands++) {
+      const glass = new FakeGlass(800, 400);
+      const src = combineDevices([attachTouch(glassAs(glass), { scale: () => SCALE, bands: () => bands })]);
+      const intent = makeIntent(SPECIAL_BINDINGS);
+      for (let band = 0; band < bands; band++) tapBand(glass, band, bands);
+      src.contribute(intent);
+      for (let band = 0; band < bands; band++) {
+        expect(intent.specials[band], `band ${band} of ${bands} did not reach its own trigger`).toBe(1);
+      }
+    }
+  });
+
+  it('clamps to the binding budget, so an arsenal longer than the triggers cannot reach past them', () => {
+    // 0030: a special past the budget is owned, saved, and currently unreachable. That is a content
+    // problem and it must not become an index off the end of the intent.
+    expect(bandCount(SPECIAL_BINDINGS + 5)).toBe(SPECIAL_BINDINGS);
+    expect(bandCount(0), 'zero bands would divide the strip by zero').toBe(1);
+    expect(bandCount(-3)).toBe(1);
+    expect(bandCount(Number.NaN)).toBe(1);
+  });
+
+  it('and asks for the count on every tap, because the arsenal grows during a run', () => {
+    // Captured once, the strip would keep the shape it had when the device was attached — which is
+    // before the run exists, so it would be the shape of an empty arsenal forever.
+    const glass = new FakeGlass(800, 400);
+    let owned = 1;
+    const src = combineDevices([attachTouch(glassAs(glass), { scale: () => SCALE, bands: () => owned })]);
+    const first = makeIntent(SPECIAL_BINDINGS);
+    // The bottom of the strip: one band means trigger 0; two means trigger 1.
+    glass.down(glass.width * (1 - TAP_STRIP / 2), glass.height * 0.9, 40);
+    src.contribute(first);
+    expect(first.specials[0]).toBe(1);
+
+    owned = 2;
+    const second = makeIntent(SPECIAL_BINDINGS);
+    glass.down(glass.width * (1 - TAP_STRIP / 2), glass.height * 0.9, 41);
+    src.contribute(second);
+    expect(second.specials[1], 'the strip kept the shape it had when it was attached').toBe(1);
   });
 });
 

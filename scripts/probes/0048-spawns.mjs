@@ -71,8 +71,8 @@ export const PROBES = [
     guard: 'turns down-lane and stops exactly where the wave was authored',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    if (e.velAcross > 0 ? e.across >= e.steerAcross : e.velAcross < 0 && e.across <= e.steerAcross) {',
-      replace: '    if (e.velAcross !== 0 && Math.abs(e.across - e.steerAcross) < 0.1) {',
+      find: '      if (e.velAcross > 0 ? e.across < e.steerAcross : e.across > e.steerAcross) continue;',
+      replace: '      if (Math.abs(e.across - e.steerAcross) >= 0.1) continue;',
     },
   },
   {

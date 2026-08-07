@@ -34,6 +34,9 @@ import type { Palette } from '../content/palette.ts';
 import { PICKUPS, PICKUP_KINDS } from '../content/pickups.ts';
 import { SPRITE } from '../content/sprites.ts';
 import { bakeAtlas } from '../render/bake.ts';
+// The strip's width, from the file that hit-tests it. One number, or the picture and the hit region
+// disagree — `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`.
+import { TAP_STRIP } from './touch.ts';
 
 /**
  * The class prefix a screen's chrome owns.
@@ -295,6 +298,51 @@ const STYLE = `
   from. Auto on the bottom only, so it is a top margin rather than a centred box.
 */
 .itc-cleared-panel { margin-top: min(1.5rem, 5cqh); margin-bottom: auto; }
+  ── THE TAP STRIP, DRAWN ────────────────────────────────────────────────────────────────────────
+
+  Decision 0060. Reported from play: *"how do you fire bombs on mobile? I can do one and then can't
+  fire any more."* Half of that was a dead band; this is the other half — the live one was never
+  drawn, so where to press was a guess.
+
+  ⚠️ **pointer-events: none, on every part of it.** The bands are a PICTURE of where the canvas is
+  listening, not controls of their own. A real button here would take the tap away from the touch
+  source, which is also what owns not-stealing-the-drag — and the two would then disagree about what
+  a second finger means.
+
+  ⚠️ **The geometry is the tap zone's, read from the same two numbers.** TAP_STRIP is the width and
+  the band count comes from bandCount, so the picture cannot drift from the hit test.
+
+  ⚠️ No file paths anywhere in this stylesheet: the prefix guard reads every dotted token in it as a
+  CSS class, so an extension fails as an unprefixed class name. Hit again while writing this block.
+*/
+.itc-playing-strip {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  display: none;
+  flex-direction: column;
+  pointer-events: none;
+  font: 600 clamp(0.7rem, 2vw, 1rem)/1 system-ui, sans-serif;
+}
+.itc-playing-strip-shown { display: flex; }
+/*
+  A dashed edge, because a solid one reads as a wall in a game whose whole subject is where the walls
+  are. Only the leading edge is drawn: the strip's outer three sides are the screen.
+*/
+.itc-playing-strip-band {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3em;
+  border-left: 2px dashed currentColor;
+  border-bottom: 2px dashed currentColor;
+  opacity: 0.45;
+}
+.itc-playing-strip-band:last-child { border-bottom: none; }
+.itc-playing-strip-icon { display: block; width: 1.6em; height: 1.6em; }
 `;
 
 /** A screen's overlay, the controls on it, and whatever else it has to say. */
@@ -361,6 +409,18 @@ export interface Chrome {
   move(delta: number): void;
   /** Press the focused control, exactly as a click would. */
   activate(): void;
+  /**
+   * Draw the tap strip: one band per trigger that has a weapon behind it, in trigger order.
+   *
+   * ⚠️ **A PICTURE OF WHERE `src/app/touch.ts` IS LISTENING**, and nothing more — the bands take no
+   * pointer events, so the canvas underneath still hears every tap. Two answers to *where is the
+   * bomb* would be worse than one wrong one, and a real `<button>` here would take the tap away from
+   * the file that also owns not-stealing-the-drag.
+   *
+   * An empty list hides it, which is what a device with no touch gets —
+   * `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`.
+   */
+  setTriggers(triggers: readonly { label: string; sprite: number; charges: number }[]): void;
   /**
    * Say how long the shown screen has left, in whole seconds, or `null` for a screen that waits.
    *
@@ -597,6 +657,24 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen, index: n
   elements.push(hud);
 
   /*
+    ── WHERE TO PRESS, ON A DEVICE WHERE THAT IS A PLACE RATHER THAN A KEY ─────────────────────────
+
+    Decision 0060. Its width is `TAP_STRIP`, imported from the file that hit-tests it rather than
+    written again here — the picture and the hit test are one number, or the player presses what they
+    can see and something else happens.
+  */
+  const strip = document.createElement('div');
+  strip.className = 'itc-playing-strip';
+  strip.style.color = colours.player;
+  strip.style.width = String(TAP_STRIP * 100) + '%';
+  // Decorative twice over: it is a picture of a hit region, and the HUD already announces the
+  // charges. A screen reader user is not tapping a band they cannot see the edges of.
+  strip.setAttribute('aria-hidden', 'true');
+  /** One band per trigger, grown once and reused — `setHud`'s argument about churning layout. */
+  const bands: { root: HTMLElement; icon: HTMLElement; count: HTMLElement }[] = [];
+  elements.push(strip);
+
+  /*
     ── THE FOCUS RING ──────────────────────────────────────────────────────────────────────────────
 
     Which screen is up, and which of its controls the focus is on.
@@ -608,6 +686,13 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen, index: n
   */
   let shownScreen: Screen | null = null;
   let focused = 0;
+  /** The faces the strip is currently built from, so it is rebuilt on a change and not per call. */
+  let bandFaces: number[] = [];
+
+  /** Show the strip only where it is true: on the playing screen, with something behind a trigger. */
+  const paintStrip = (): void => {
+    strip.classList.toggle('itc-playing-strip-shown', shownScreen === 'playing' && bands.length > 0);
+  };
 
   const paintFocus = (): void => {
     const panel = shownScreen === null ? undefined : panels[shownScreen];
@@ -641,6 +726,35 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen, index: n
       }
       shieldGroup.setAttribute('aria-label', 'Shield ' + String(Math.max(0, health)) + ' of ' + String(maxHealth));
     },
+    setTriggers(triggers: readonly { label: string; sprite: number; charges: number }[]): void {
+      /*
+        ⚠️ **Rebuilt on a change of the FACES, not on every call.** `setTriggers` rides `setHud`, which
+        fires whenever a charge is spent — several times a run — and replacing three elements to write
+        a number into one of them is the layout churn the pips already refuse.
+      */
+      const same = triggers.length === bandFaces.length && triggers.every((t, i) => t.sprite === bandFaces[i]);
+      if (!same) {
+        strip.replaceChildren();
+        bands.length = 0;
+        for (const trigger of triggers) {
+          const band = document.createElement('div');
+          band.className = 'itc-playing-strip-band';
+          const icon = iconOf(trigger.sprite);
+          icon.className = 'itc-playing-strip-icon';
+          const count = document.createElement('span');
+          band.append(icon, count);
+          strip.appendChild(band);
+          bands.push({ root: band, icon, count });
+        }
+        bandFaces = triggers.map((t) => t.sprite);
+      }
+      // Terse, per `docs/game.md`'s voice rule: the icon says what it is and this says how many are
+      // left. No label — the title screen's key is where a thing gets a name.
+      for (let i = 0; i < bands.length; i++) {
+        bands[i]!.count.textContent = '×' + String(Math.max(0, triggers[i]?.charges ?? 0));
+      }
+      paintStrip();
+    },
     show(screen: Screen | null): void {
       /*
         ⚠️ **Shown while the SIMULATION runs, not while the screen is `playing`** — decision 0063. The
@@ -656,6 +770,7 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen, index: n
         panel.root.classList.toggle(prefixFor(name) + 'shown', shown);
       }
       shownScreen = screen;
+      paintStrip();
       // Back to the first control every time a screen appears. A remembered position on a screen the
       // player has left is a cursor sitting somewhere nobody put it.
       focused = 0;

@@ -137,6 +137,27 @@ export interface TouchOptions {
    * Read through a function because it changes on every resize and rotation.
    */
   scale?: () => number;
+  /**
+   * How many bands the strip is divided into — how many triggers currently have a weapon behind them.
+   *
+   * ⚠️ **THE BUG THIS REPLACED, and it is the whole of the reported one.** The strip used to be
+   * `SPECIAL_BINDINGS` bands wide unconditionally, which is a budget rather than a fact about the
+   * ship: with one special owned, the second band is bound to a slot `src/app/mount.ts` answers with
+   * silence. So **half the strip did nothing**, invisibly, and where the live half was is not drawn
+   * anywhere. Reported as *"how do you fire bombs on mobile? I can do one and then can't fire any
+   * more."* `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`.
+   *
+   * ⚠️ **The keyboard and the pad do not need this and must not get it.** A key is a place on a
+   * keyboard whether or not anything is bound to it, and pressing it costs the player nothing. A band
+   * is a place on the only surface the player also steers with, so a dead band is a piece of the
+   * screen that swallows a tap — `src/content/actions.ts`'s *a slot nobody owns is silence* is the
+   * right answer for a key and the wrong one for a quarter of the glass.
+   *
+   * Read through a function because the arsenal grows during a run. Clamped into
+   * `1…SPECIAL_BINDINGS`: a ship owning more specials than there are triggers is 0030's *owned,
+   * saved, and currently unreachable*, and zero bands would be a division by zero.
+   */
+  bands?: () => number;
 }
 
 /**
@@ -152,6 +173,9 @@ export function attachTouch(target: HTMLElement, options: TouchOptions = {}): In
   const alongAxisOf = options.alongAxis ?? ((): ScrollAxis => 'x');
   // A reference-sized landscape phone, so a caller that does not thread the view still behaves.
   const scaleOf = options.scale ?? ((): number => 3.9);
+  // The whole budget, for a caller that has no arsenal to ask about — a test rig, or a device
+  // attached before a run exists.
+  const bandsOf = options.bands ?? ((): number => SPECIAL_BINDINGS);
 
   /** The pointer that steers, or −1 when no finger is down. The rest are taps. */
   let steering = -1;
@@ -174,7 +198,7 @@ export function attachTouch(target: HTMLElement, options: TouchOptions = {}): In
     // ⚠️ A mouse is NOT a finger. Desktop already has a complete scheme and a second one that works
     // only while a button is held is a bug report, not a feature. See 0032's rejection.
     if (e.pointerType === 'mouse') return;
-    const zone = tapZone(target, e);
+    const zone = tapZone(target, e, bandCount(bandsOf()));
     if (zone === -1) {
       // The steering area. A second finger here while one already steers is ignored rather than
       // stealing the drag — the common case is a palm or the other thumb resting on the glass.
@@ -310,16 +334,26 @@ function clamp1(n: number): number {
 export const TAP_STRIP = 0.25;
 
 /**
- * Which tap zone a pointer landed in, or −1 for the steering area.
+ * How many bands the strip really has, given what the caller asked for.
  *
- * ⚠️ **The band count is `SPECIAL_BINDINGS`, imported rather than re-derived.** That number is
- * already computed from `ACTIONS` in `src/content/actions.ts`, and counting the edge rows a second
- * time here would be the second description of one fact that `tests/one-description.test.ts` exists
- * to catch. `docs/decisions/0030-input-is-actions-and-needs-no-new-layer.md` promises a third
- * special is one table row; the strip becoming three bands instead of two, with nothing in this file
- * touched, is what keeping that promise looks like on a phone.
+ * ⚠️ **Exported, because `src/app/chrome.ts` draws exactly these bands** and two answers to *how
+ * wide is a band* would be a strip whose picture and whose hit-testing disagree — which is
+ * `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` with the sign
+ * reversed: the player presses what they can see and something else happens.
+ *
+ * ⚠️ **`SPECIAL_BINDINGS` is the CEILING and no longer the answer.** That number is derived from
+ * `ACTIONS` in `src/content/actions.ts` and is a budget — how many triggers exist — where the strip
+ * needs a fact about the ship: how many of them have a weapon behind them.
+ * `docs/decisions/0030-input-is-actions-and-needs-no-new-layer.md` promises a third special is one
+ * table row, and that is still true: the ceiling moves and this file is not touched.
  */
-function tapZone(target: HTMLElement, e: PointerEvent): number {
+export function bandCount(want: number): number {
+  if (!Number.isFinite(want)) return 1;
+  return Math.max(1, Math.min(SPECIAL_BINDINGS, Math.floor(want)));
+}
+
+/** Which tap zone a pointer landed in, or −1 for the steering area. */
+function tapZone(target: HTMLElement, e: PointerEvent, bands: number): number {
   if (SPECIAL_BINDINGS < 1) return -1;
   const box = target.getBoundingClientRect();
   if (box.width <= 0 || box.height <= 0) return -1;
@@ -330,6 +364,6 @@ function tapZone(target: HTMLElement, e: PointerEvent): number {
   if (alongFraction < 1 - TAP_STRIP) return -1;
 
   const acrossFraction = horizontal ? (e.clientY - box.top) / box.height : (e.clientX - box.left) / box.width;
-  const band = Math.floor(acrossFraction * SPECIAL_BINDINGS);
-  return band < 0 ? 0 : band >= SPECIAL_BINDINGS ? SPECIAL_BINDINGS - 1 : band;
+  const band = Math.floor(acrossFraction * bands);
+  return band < 0 ? 0 : band >= bands ? bands - 1 : band;
 }

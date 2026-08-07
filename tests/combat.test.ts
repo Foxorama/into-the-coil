@@ -417,6 +417,7 @@ function firingAt(row: EnemyRow, distance: number): World {
 
   return {
     layers: [enemies, enemyShots, playerShots, shipPool],
+    sky: [],
     shipPool,
     shieldOrbs: new Pool<Entity>(MAX_SHIELDS, makeEntity),
     missiles: new Pool<Entity>(8, makeEntity),
@@ -491,6 +492,7 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
 
   const world: World = {
     layers: [enemies, enemyShots, playerShots, shipPool],
+    sky: [],
     shipPool,
     shieldOrbs: new Pool<Entity>(MAX_SHIELDS, makeEntity),
     missiles: new Pool<Entity>(8, makeEntity),
