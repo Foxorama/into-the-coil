@@ -32,8 +32,10 @@ export const PROBES = [
     guard: 'preserves identity when nothing moved, which is what stops a re-paint per press',
     edit: {
       path: 'src/state/slices/settings.ts',
-      find: '      return state.style === action.style ? state : { style: action.style };',
-      replace: '      return { style: action.style };',
+      // ⚠️ Re-anchored when the slice gained a second field — decision 0072. The identity rule is
+      // unchanged; what moved is that preserving the OTHER setting now needs a spread.
+      find: '      return state.style === action.style ? state : { ...state, style: action.style };',
+      replace: '      return { ...state, style: action.style };',
     },
   },
   {

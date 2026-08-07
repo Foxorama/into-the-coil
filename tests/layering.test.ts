@@ -50,7 +50,7 @@ const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
 type Layer = 'brand' | 'sim' | 'content' | 'state' | 'save' | 'render' | 'app';
 
 /** A thing a module can reach for that is not another module. */
-type Capability = 'dom' | 'clock' | 'random' | 'storage';
+type Capability = 'dom' | 'clock' | 'random' | 'storage' | 'audio';
 
 interface CapabilityRow {
   /** The shape of a reach, in comment-stripped source. */
@@ -92,6 +92,22 @@ const CAPABILITIES: Record<Capability, CapabilityRow> = {
       'itch.io serves every HTML5 game from one shared origin, so a stray write lands in a bucket ' +
       "shared with strangers' data. Persistence goes through the save layer or it is not persistence, " +
       'it is a key nobody migrates and PRIVACY.md never hears about.',
+  },
+  /*
+    ⚠️ **A HOLE THIS TABLE HAD UNTIL THE DAY AUDIO ARRIVED** —
+    `docs/decisions/0072-a-cue-is-baked-and-played.md`. Web Audio matches none of the four rows above:
+    `AudioContext` is not `window`, not the clock, not randomness and not storage, so `src/sim/` could
+    have reached for it and every scan in this file would have stayed green. The layer table's whole
+    claim is that the capabilities are enumerated, and one had never been.
+  */
+  audio: {
+    pattern: /\bAudioContext\b|\bwebkitAudioContext\b|\bAudioBuffer\b|\bOfflineAudioContext\b|\bBaseAudioContext\b/,
+    sample: 'const ctx = new AudioContext();',
+    cost:
+      'An audio context is a device, a clock and a piece of global state at once: it cannot exist in ' +
+      'a node test, it advances on its own, and it makes a sound the second time a module is ' +
+      'imported. The shell owns it for the same reason it owns the rAF loop — 0015 names audio as ' +
+      "app's, and a model that could make a noise could no longer be replayed silently from a seed.",
   },
 };
 
@@ -183,7 +199,7 @@ const LAYERS: Record<Layer, LayerRow> = {
     dir: 'src/app',
     what: 'the shell: boot, the rAF loop, input, audio, wiring — the only layer with side effects',
     mayImport: ['brand', 'sim', 'content', 'state', 'save', 'render'],
-    allows: ['dom', 'clock', 'random', 'storage'],
+    allows: ['dom', 'clock', 'random', 'storage', 'audio'],
     why:
       'Everything the other six are refused has to happen somewhere, and it happens here, where it ' +
       'is visible. This is also the layer that became the predecessor\'s 4,588-line attractor, so the ' +

@@ -18,6 +18,7 @@
 
 import { GAME_TITLE } from '../brand.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
+import { SOUNDS, SOUND_KINDS } from '../content/sound.ts';
 import { STYLES, STYLE_KINDS } from '../content/styles.ts';
 
 /** Every screen, in no particular order — nothing indexes this list by position. Closed. */
@@ -49,7 +50,7 @@ export interface ScreenAction {
  * `slices/` and is the sanctioned place for a shape two of them must agree on. `settings` keys its
  * state by it and `screen` rows name it, and neither imports the other.
  */
-export type SettingName = 'style';
+export type SettingName = 'style' | 'sound';
 
 /**
  * One setting a screen offers, and the options it offers for it.
@@ -215,11 +216,23 @@ export const SCREENS: Record<Screen, ScreenRow> = {
       ⚠️ **Built by walking `STYLE_KINDS`, so the buttons ARE the table.** Same argument the tiers
       above make, and the same one `src/app/chrome.ts` makes for the pickup key.
     */
+    /*
+      ⚠️ **THE SECOND SETTING, AND IT COST NOTHING BUT THIS ROW** —
+      `docs/decisions/0072-a-cue-is-baked-and-played.md`. 0070 said the queue behind the style was
+      *"already the same shape"* and this is the first entry to test that claim: `src/app/chrome.ts`
+      walks `choices` and needs no edit, the shell routes by `name` and needs one line, and the state
+      is a field. It is the row that proves the mechanism rather than the one that needed it.
+    */
     choices: [
       {
         name: 'style',
         label: 'Look',
         options: STYLE_KINDS.map((kind) => ({ label: STYLES[kind].title, hint: STYLES[kind].hint })),
+      },
+      {
+        name: 'sound',
+        label: 'Sound',
+        options: SOUND_KINDS.map((kind) => ({ label: SOUNDS[kind].title, hint: SOUNDS[kind].hint })),
       },
     ],
     steps: false,

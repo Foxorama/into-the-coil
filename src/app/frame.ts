@@ -67,6 +67,7 @@ import {
   type Weapon,
 } from '../content/pickups.ts';
 import { SPECIALS, type SpecialKind } from '../content/specials.ts';
+import type { CueKind } from '../content/cues.ts';
 import { stepBoss } from './boss.ts';
 import type { Frame } from './loop.ts';
 
@@ -651,6 +652,29 @@ export interface World {
    */
   onIdle: () => void;
   /**
+   * Something happened that the player should hear.
+   *
+   * ── REPORTED, LIKE EVERY OTHER EVENT THIS FILE KNOWS ABOUT ──────────────────────────────────────
+   *
+   * ⚠️ **Reported rather than decided, exactly as `onDeath`, `onPickup` and `onCleared` are** — and
+   * here the distinction is load-bearing rather than tidy. Whether the player has sound switched on is
+   * a SETTING, and `docs/decisions/0024-the-accessibility-floor-is-settings.md` forbids the step from
+   * seeing one: *"a player who turns the flashing down must not thereby be playing an easier game."*
+   * This file says *a shot was fired*; `src/app/sound.ts` decides whether anything comes out, and
+   * `tests/sound.test.ts` scans to prove this file cannot see `src/content/sound.ts`.
+   *
+   * ⚠️ **A cue is emitted only where a PICTURE is emitted too** —
+   * `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` and 0024's *no
+   * information by audio alone*. Every call below sits beside the line that makes the thing visible:
+   * where the shot spawns, where the burst is put, where the readout moves. A cue with no picture
+   * beside it is the bug this arrangement exists to make obvious in review.
+   *
+   * ⚠️ **A dropped spawn is a silent cue, and that is deliberate.** The calls are placed AFTER the
+   * `null` check on a pool, so a volley the pool refused makes no noise — the screen shows nothing
+   * either, and a sound for a bullet that does not exist is the exact inverse failure 0036 names.
+   */
+  onCue: (kind: CueKind) => void;
+  /**
    * A fixed step happened, whether or not the simulation took it.
    *
    * ⚠️ **NOT a second `onIdle`, and the difference is the whole of decision 0063.** `onIdle` answers
@@ -744,16 +768,41 @@ export class GameFrame implements Frame {
       monotone; `tests/combat.test.ts` is what proves the code using it is.
     */
     w.deaths.count = 0;
-    collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
-    collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
+    /*
+      ⚠️ **The two numbers below exist so a SURVIVED hit can be heard, and there is no third way to
+      know about one.** `collideInto` returns what it destroyed and logs where; a hit that was
+      survived is reported by neither — its only trace is the flash it wrote onto the body
+      (`src/sim/collide.ts`), which nothing else reads back. So the arithmetic is: a player shot is
+      released exactly when it arrives, and an arrival either killed or did not.
+
+      ⚠️ **Counted here rather than added to `Deaths` as a second log.** `sim/` may import `brand` and
+      nothing else, so a survivals log would be one more out-parameter threaded through the densest
+      loop in the game to serve a sound — and the two pool sizes already say it exactly.
+    */
+    const inFlight = w.playerShots.size + w.missiles.size;
+    let killedByShots = 0;
+    killedByShots += collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
+    killedByShots += collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
     // The boss is its own pairing rather than another enemy, and the reason is the pool: it is the
     // only body in the game that must survive a hundred and fifty hits, so it cannot share a pool
     // with things that are released after one.
-    collideInto(w.playerShots, w.bossPool, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
-    collideInto(w.missiles, w.bossPool, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
+    killedByShots += collideInto(w.playerShots, w.bossPool, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
+    killedByShots += collideInto(w.missiles, w.bossPool, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
     // An area rather than an arrival: everything inside it, once, and nothing consumes it.
     blastInto(w.blasts, w.enemies, 1, IMPACT_FLASH_STEPS, w.deaths);
     blastInto(w.blasts, w.bossPool, 1, IMPACT_FLASH_STEPS, w.deaths);
+    // The impact flash's twin. An arrival that did not kill is a body that went white and stayed.
+    if (w.playerShots.size + w.missiles.size < inFlight - killedByShots) w.onCue('hit');
+    /*
+      The debris burst's twin, and it is skipped on the one step the boss dies.
+
+      ⚠️ **Not because two cues would be wrong, but because the CAP would then decide which one the
+      player hears.** `src/app/sound.ts` allows four voices a step and drops the rest, and the boss's
+      cue is emitted at the bottom of this step — behind the pulse, the threat and the hit. So the
+      loudest event in the game is the one the ceiling would eat. `tests/sound.test.ts` drives a real
+      boss death and asserts it actually sounds.
+    */
+    if (w.deaths.count > 0 && !bossJustDied(w)) w.onCue('kill');
     /*
       ⚠️ **THE SHIP TAKES HITS, NOT DAMAGE, and this is where a number becomes a count.** Its health
       is the hull plus the shell (`src/content/ships.ts`), and a shield is what absorbs **one hit** —
@@ -789,6 +838,14 @@ export class GameFrame implements Frame {
     collideIntoOne(w.blasts, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
     if (w.ship.health < healthBefore) w.ship.health = healthBefore - ONE_HIT;
     /*
+      ⚠️ **A hit the ship SURVIVED, which is exactly the case that has a shield in it.** The hull is
+      one hit and every shield is one more (`src/content/ships.ts`), so *lost health and still alive*
+      and *a shield absorbed it* are the same sentence about the same number — and the mark leaving
+      the shell two lines below in `stepShields` is this cue's twin. A ship on its last life takes the
+      other branch, and the two cues are deliberately opposite sweeps.
+    */
+    if (w.ship.health < healthBefore && w.ship.health > 0) w.onCue('shield');
+    /*
       A blast lands ONCE. Everything above has now seen it, so it spends itself here and what remains
       is the picture — `BLAST_STEPS` of ring, which is how the player learns where the edge was.
     */
@@ -814,7 +871,11 @@ export class GameFrame implements Frame {
       const index = w.collected.kind[i]!;
       const face = w.pickupFlipped ? (w.pickupCycle[index] ?? index) : index;
       const kind = PICKUP_KINDS[face];
-      if (kind !== undefined) w.onPickup(kind);
+      if (kind === undefined) continue;
+      // One cue for all six faces — `src/content/cues.ts` has why, and which split play would ask
+      // for first. The readout moving is the twin, and it already says WHICH one was taken.
+      w.onCue('pickup');
+      w.onPickup(kind);
     }
 
     // Every enemy that died this step leaves something behind. The positions were recorded by the
@@ -842,6 +903,9 @@ export class GameFrame implements Frame {
 
     if (w.ship.health <= 0) {
       burst(w, w.ship.along, w.ship.across, BURST.ship);
+      // Beside the burst, which is the picture it is the twin of. The ship coming apart and the ship
+      // being heard to come apart are one event and are written on one line apart.
+      w.onCue('death');
       // The shell spends a life and decides what happens next — it may call `respawn` before this
       // step is over, or it may raise the game-over screen and leave the wreck where it is.
       w.onDeath();
@@ -881,8 +945,12 @@ export class GameFrame implements Frame {
     // Reported once. The boss is the only thing that can empty this pool, so an empty pool after it
     // was filled is the level ending — and `bossBeaten` is what stops that being said every step
     // from then until the screen changes.
-    if (w.bossSpawned && !w.bossBeaten && w.bossPool.size === 0) {
+    if (bossJustDied(w)) {
       w.bossBeaten = true;
+      // The one cue sized to fill a beat rather than to punctuate one: `BOSS_DEATH_STEPS` is 1.6
+      // seconds of the level carrying on while the boss comes apart, and `src/content/cues.ts` sizes
+      // `bossDown` against it.
+      w.onCue('bossDown');
       /*
         ⚠️ **THE LEVEL DOES NOT END HERE ANY MORE.** Reported from play: *"bosses need a real
         explosion and an end-of-level beat — currently the level just ends."* It did: the same step
@@ -901,6 +969,21 @@ export class GameFrame implements Frame {
     const camera = w.prevCameraAlong + (w.cameraAlong - w.prevCameraAlong) * alpha;
     paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky);
   }
+}
+
+/**
+ * Whether this is the step the boss came apart on.
+ *
+ * ⚠️ **One description, two call sites, and the second one is why this is a function.** The step
+ * both starts the boss's beat and decides whether the ordinary kill cue should sound, and those two
+ * places are two hundred lines apart — written out twice, the day somebody adds a condition to the
+ * latch is the day the sound and the beat disagree about what happened.
+ *
+ * `bossBeaten` is the latch that makes it true exactly once; the pool is the only thing the boss can
+ * empty.
+ */
+function bossJustDied(w: World): boolean {
+  return w.bossSpawned && !w.bossBeaten && w.bossPool.size === 0;
 }
 
 /**
@@ -930,6 +1013,14 @@ function fireShip(w: World): void {
     const shot = w.playerShots.spawn();
     // A volley one barrel short is dropped rather than grown — `src/sim/pool.ts` has the argument.
     if (shot === null) return;
+    /*
+      ⚠️ **ONE CUE PER VOLLEY, NOT PER BARREL, and the placement is what makes it both.** A fully
+      upgraded weapon is five barrels on this step (`src/content/pickups.ts`), and five identical
+      clicks at one instant is not five times as loud — it is a different and worse sound. Inside the
+      loop but gated on the first barrel, so a volley the pool refused entirely is silent, which is
+      the same rule every other cue in this file follows.
+    */
+    if (i === 0) w.onCue('pulse');
     const angle = first + step * i;
     reset(shot, w.ship.along + MUZZLE_ALONG, w.ship.across, row);
     shot.velAlong = Math.cos(angle) * row.speed + w.scrollPerStep;
@@ -1039,6 +1130,13 @@ function stepBombs(w: World): void {
       // place rather than a body. `speed` is 0 on the row; this is the same statement for the camera.
       blast.lifeFor = BLAST_STEPS;
     }
+    /*
+      ⚠️ **Outside the `blast !== null` branch, beside the burst rather than beside the ring.** The
+      bomb went off whether or not the blast pool had a slot — the fragments say so, and they are the
+      one picture of a detonation that cannot be refused. Inside the branch this would be the only
+      cue in the file that goes quiet on the frame the screen is fullest.
+    */
+    w.onCue('blast');
     burst(w, bomb.along, bomb.across, BURST.ship);
   }
 }
@@ -1056,6 +1154,8 @@ export function launchSpecial(w: World, kind: SpecialKind): void {
   const body = SHOTS[row.shot];
   const thrown = w.bombs.spawn();
   if (thrown === null) return;
+  // Rising, because the thing it turns into has not happened yet — the fuse is the point of a bomb.
+  w.onCue('bomb');
   reset(thrown, w.ship.along + MUZZLE_ALONG, w.ship.across, body);
   thrown.velAlong = body.speed + w.scrollPerStep;
   /*
@@ -1094,6 +1194,8 @@ function fireMissiles(w: World): void {
     const missile = w.missiles.spawn();
     // A volley one tube short is dropped rather than grown — `src/sim/pool.ts` has the argument.
     if (missile === null) return;
+    // One cue for the volley, on the same terms the pulse gets one: three tubes are one launch.
+    if (i === 0) w.onCue('missile');
     // 0 → the centreline; 1 → the acrossMinus side; 2 → the acrossPlus side.
     const side = i === 0 ? 0 : i === 1 ? -1 : 1;
     reset(missile, w.ship.along + MUZZLE_ALONG, w.ship.across + LAUNCHER_ACROSS * side, row);
@@ -1249,6 +1351,16 @@ function fireEnemies(w: World): void {
     const bullet = SHOTS[row.shot];
     const shot = w.enemyShots.spawn();
     if (shot === null) continue;
+    /*
+      ⚠️ **Once per enemy that actually fired, and the HOLD is what stops that being a wall of
+      noise** — `src/content/cues.ts` gives `threat` four steps, so a screen of turrets going off
+      together is one sound rather than nine. Gating it here instead would be a second rate limiter
+      in a second place, disagreeing with the first the day either moves.
+
+      It is below the off-screen check above, so a threat the player cannot see is one they cannot
+      hear either — the same rule, in the channel 0036 was not written about.
+    */
+    w.onCue('threat');
     reset(shot, e.along, e.across, bullet);
     // ⚠️ The tier scales the SPEED and not the direction. A harder tier is less time to move, never
     // a shot that leads the player — `src/content/shots.ts` keeps the dodge in the player's hands.

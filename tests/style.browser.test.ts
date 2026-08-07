@@ -3,7 +3,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
-import { prefixFor } from '../src/app/chrome.ts';
+import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { STYLES, STYLE_KINDS } from '../src/content/styles.ts';
 
 /**
@@ -69,7 +69,17 @@ function inkOn(page: Page): Promise<number> {
   });
 }
 
-const option = (index: number): string => `.${prefixFor('title')}option >> nth=${index}`;
+/**
+ * The nth option of the STYLE row specifically.
+ *
+ * ⚠️ **Scoped to the setting, and it was scoped to the screen until there were two of them.** With
+ * one choice on the title screen *the nth option* was exact; a second row
+ * (`docs/decisions/0072-a-cue-is-baked-and-played.md`) made it *the nth option of whichever setting
+ * is listed first*, which is a test that goes on passing while measuring something else the day the
+ * order changes. `SETTING_ATTR` is the contract, imported rather than spelled out again.
+ */
+const STYLE_OPTIONS = `[${SETTING_ATTR}="style"] .${prefixFor('title')}option`;
+const option = (index: number): string => `${STYLE_OPTIONS} >> nth=${index}`;
 
 describe.runIf(chromePath)('a style is a setting, and pressing it changes the picture', () => {
   it('THE REPORTED ONE: retro is the game before the sky, and the sky actually goes', async () => {
@@ -121,7 +131,7 @@ describe.runIf(chromePath)('a style is a setting, and pressing it changes the pi
         const style = getComputedStyle(el);
         return { on: el.className.includes('option-on'), background: style.backgroundColor };
       });
-    }, '.' + prefixFor('title') + 'option');
+    }, STYLE_OPTIONS);
 
     expect(marked.length, 'the chooser has no options at all').toBe(STYLE_KINDS.length);
     expect(marked.filter((m) => m.on).length, 'more or less than one option is marked').toBe(1);

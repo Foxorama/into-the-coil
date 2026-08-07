@@ -26,7 +26,9 @@ import { LEVELS } from '../content/levels.ts';
 import { BOSSES } from '../content/bosses.ts';
 import { CYCLE, PICKUPS, PICKUP_KINDS, isUpgrade, type PickupKind, weaponFor } from '../content/pickups.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
+import { DEFAULT_SOUND, SOUND_KINDS } from '../content/sound.ts';
 import { DEFAULT_STYLE, STYLES, STYLE_KINDS } from '../content/styles.ts';
+import { makeAudioOut, makeSpeaker } from './sound.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { MAX_SHIELDS, SHIPS, fullHealthFor, shieldsOf } from '../content/ships.ts';
@@ -315,6 +317,21 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   };
   seedField();
 
+  /*
+    SOUND — `docs/decisions/0072-a-cue-is-baked-and-played.md`.
+
+    ⚠️ **Built here, before the world, because `onCue` is a field on it.** Neither half costs
+    anything at boot: `makeAudioOut` creates no context until a gesture arrives (browsers refuse to
+    make a sound before one, and a context built outside a gesture starts suspended), and the speaker
+    is three counters.
+
+    ⚠️ **`speaker.play` is handed over directly rather than wrapped in an arrow.** It is a closure
+    over `makeSpeaker`'s locals with no `this` in it, so detaching it is safe — and the frame calls it
+    several times a step, where a wrapper would be one more call for nothing.
+  */
+  const audioOut = makeAudioOut();
+  const speaker = makeSpeaker(audioOut);
+
   const measure = (): View => viewOf(viewportWidth(host), viewportHeight(host));
   let view = measure();
   let dpr = fitCanvas(canvas, ctx, viewportWidth(host), viewportHeight(host));
@@ -461,6 +478,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // thing it calls, and the alternative — hoisting the whole reducer wiring above the world it
     // mutates — would put the shell's state machine in the middle of its entity pools.
     onDeath: (): void => {},
+    // The one callback that is NOT replaced below: what a cue is worth does not depend on the
+    // reducer, the chrome or the screen — it is `src/app/sound.ts`'s whole answer.
+    onCue: speaker.play,
     // Replaced below, once the chrome and `dispatch` exist.
     onIdle: (): void => {},
     onTick: (): void => {},
@@ -608,7 +628,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const moved = next.screen !== state.screen;
     const rearmed = next.run.upgrades !== state.run.upgrades;
     const runChanged = next.run !== state.run;
-    const settingsChanged = next.settings !== state.settings;
+    /*
+      ⚠️ **Per FIELD rather than per slice, and it stopped being the same question at the second
+      setting.** `next.settings !== state.settings` was exactly right while there was one field on it;
+      with two, changing the sound would re-run `applyStyle`, which touches the DOM and re-marks a
+      chooser nobody pressed. The identity check the reducer preserves is still what makes this cheap
+      — this only narrows which of the two effects it licenses.
+    */
+    const styleChanged = next.settings.style !== state.settings.style;
+    const soundChanged = next.settings.sound !== state.settings.sound;
     state = next;
     /*
       ⚠️ **Re-resolved on a CHANGE of the list, by identity, not on every dispatch.** `weaponFor`
@@ -638,7 +666,17 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       (`tests/style.test.ts` holds that), so pressing the option that is already on re-paints
       nothing — and `applyStyle` touches the DOM.
     */
-    if (settingsChanged) applyStyle();
+    if (styleChanged) applyStyle();
+    /*
+      ⚠️ **The chime is HERE and not in `applySound`**, so it sounds on a change the player made and
+      never at boot. It is the only cue in the game whose subject is whether sound works, and a game
+      that blipped at itself on load would be exactly the autoplay behaviour every browser forbids
+      and every player resents — `src/content/cues.ts` has the argument for it existing at all.
+    */
+    if (soundChanged) {
+      applySound();
+      if (state.settings.sound === 'on') speaker.play('chime');
+    }
     // Only on a real transition: `show` moves focus, and re-focusing a button on every dispatch
     // would fight a player who had tabbed away from it.
     if (moved) applyScreen();
@@ -710,6 +748,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   (name: SettingName, index: number): void => {
     if (name === 'style') dispatch({ slice: 'settings', type: 'style', style: STYLE_KINDS[index] ?? DEFAULT_STYLE });
+    // The second setting, and it is one more line here because 0070 built the mechanism rather than
+    // the style. `SOUND_KINDS` IS the order `src/state/screens.ts` built the options in.
+    else if (name === 'sound') dispatch({ slice: 'settings', type: 'sound', sound: SOUND_KINDS[index] ?? DEFAULT_SOUND });
   });
   for (const element of chrome.elements) host.appendChild(element);
 
@@ -738,6 +779,37 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   applyStyle();
 
   /*
+    WHAT THE SOUND SETTING CHANGES, in one place — and it is one thing.
+
+    ⚠️ **The speaker is told, and the WORLD is not.** That is the whole ban:
+    `docs/decisions/0024-the-accessibility-floor-is-settings.md` forbids a comfort setting from
+    reaching anything that decides an outcome, and `src/app/frame.ts` goes on emitting exactly the
+    same cues on exactly the same steps whether this is `on` or `off`. Silence is something that
+    happens on the way out, not something the game plays differently.
+  */
+  const applySound = (): void => {
+    speaker.setOn(state.settings.sound === 'on');
+    chrome.setChoice('sound', SOUND_KINDS.indexOf(state.settings.sound));
+  };
+  applySound();
+
+  /*
+    THE UNLOCK — `src/app/sound.ts` has the platform rule and its one gap.
+
+    ⚠️ **On `window` in the CAPTURE phase, so it runs before whatever the player actually pressed.**
+    The gesture that starts a run is the gesture that turns the sound on, and a listener that ran
+    after the button's own handler would leave the first cue of the first run playing into a context
+    that had not resumed yet.
+
+    ⚠️ **Never removed until `stop`, and that is not a leak.** A mobile browser suspends the context
+    when the tab goes to the background, so the gesture that brings the player back is the one that
+    has to revive it — `unlock` is idempotent and re-resumes rather than rebuilding.
+  */
+  const unlock = (): void => audioOut.unlock();
+  window.addEventListener('pointerdown', unlock, { capture: true });
+  window.addEventListener('keydown', unlock, { capture: true });
+
+  /*
     ⚠️ **The frame reports a death; this decides what it cost.** `dispatch` may flip the screen to
     `gameOver` on its own — `src/state/root.ts` holds that as the one cross-slice agreement — so the
     check below reads the state AFTER the reducer has run rather than predicting what it will say.
@@ -757,6 +829,21 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   world.onIdle = (): void => {
     menuPad.read(menuAsk);
+    /*
+      ⚠️ **THE PAD ASKS FOR THE UNLOCK TOO, AND IT IS NOT POINTLESS EVEN THOUGH IT USUALLY FAILS.**
+      Reported, as an objection to this decision's own wording: *"if the gamepad can move between
+      menus and select a menu option to start a game, how can that not be counted as input to start
+      sounds?"* — and the answer is that the browser never saw anything. The Gamepad API produces no
+      DOM events at all; it is polled, and user activation is granted by input EVENTS. There is
+      nothing for the platform to attribute a press to.
+
+      **But refusing to try was this file's mistake rather than the platform's.** Activation is
+      sticky per page: a player who clicked anything at all earlier — itch's own play button, the
+      canvas, a tab — has it, and a `resume()` from here then succeeds. Attempting costs a branch on
+      the frames a pad is actually asking for something, and it converts *silent for pad users* into
+      *silent only where the browser genuinely forbids it*.
+    */
+    if (menuAsk.move !== 0 || menuAsk.confirm) audioOut.unlock();
     if (menuAsk.move !== 0) chrome.move(menuAsk.move);
     /*
       ⚠️ **No `return` needed any more, and the countdown is no longer here.** `activate` changes the
@@ -784,6 +871,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * the destination only while the only button on a dead run was a way of giving up.
    */
   world.onTick = (): void => {
+    /*
+      ⚠️ **The speaker's clock, and it is here rather than in `onIdle` for decision 0063's reason.**
+      A cue's hold is counted in fixed steps (`src/content/cues.ts`), and holds have to expire on the
+      screens the simulation is not running as well as the one it is — otherwise a cue heard on the
+      last step of a level is still held when the next one starts. This is the callback that fires on
+      every step either way, which is exactly what it was split out of `onIdle` to be.
+    */
+    speaker.step();
     if (timeoutLeft <= 0) return;
     timeoutLeft--;
     tickTimer();
@@ -935,8 +1030,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     canvas,
     stop(): void {
       window.removeEventListener('resize', onResize);
+      window.removeEventListener('pointerdown', unlock, { capture: true });
+      window.removeEventListener('keydown', unlock, { capture: true });
       chrome.release();
       world.input.release();
+      // Closes the context and drops the buffers. A page that mounts twice must not leave the first
+      // mount's audio graph alive behind the second's — `tests/boot.browser.test.ts` mounts and stops.
+      audioOut.release();
       menuPad.release();
       stopLoop?.();
       stopLoop = null;

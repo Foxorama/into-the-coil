@@ -55,6 +55,14 @@ export function prefixFor(screen: Screen): string {
 }
 
 /**
+ * The attribute naming which setting a strip of options belongs to.
+ *
+ * Exported for the same reason `prefixFor` is: it is a contract with a browser test, and a second
+ * spelling of it in the test file is a contract kept in step by hand.
+ */
+export const SETTING_ATTR = 'data-itc-setting';
+
+/**
  * The stylesheet, as one string.
  *
  * ⚠️ **Every selector in here is a class, and every class is prefixed.** No element selectors, no
@@ -109,7 +117,14 @@ const STYLE = `
   flex-direction: column;
   align-items: center;
   gap: min(1.5rem, 3.5cqh);
-  padding: min(2rem, 5cqh) min(2rem, 4cqw);
+  /*
+    ⚠️ **4cqh and not 5, and the change is about the SHORTEST screen only.** Both terms are a min, so
+    a desktop is unaffected past a container about 800px tall; what moves is the phone, where 5cqh
+    was spending 32 of 320 pixels on the margin of a full-bleed overlay. Decision 0049 says the chrome
+    is authored against the short axis, and padding is the first thing that should give on it — ahead
+    of type, which has a floor, and ahead of content, which is the screen.
+  */
+  padding: min(2rem, 4cqh) min(2rem, 4cqw);
   max-width: 100%;
   text-align: center;
   /*
@@ -151,7 +166,15 @@ const STYLE = `
   display: grid;
   grid-template-columns: minmax(0, 7fr) minmax(0, 11fr);
   align-items: center;
-  gap: min(1.5rem, 3.5cqh) min(2.5rem, 4cqw);
+  /*
+    ⚠️ **The ROW gap is small and the COLUMN gap is not, and they stopped being one number when the
+    settings became a row of their own.** There are exactly two rows here — the key beside the tiers,
+    and the settings strip under both — so the row gap applies to nothing except the space above that
+    strip. It is a subdued footer at 85% opacity and two thirds the type size, not a third peer, and
+    the space above it should say so. Measured at 480x320 it is the difference between fitting and a
+    scrollbar.
+  */
+  gap: min(0.4rem, 1.2cqh) min(2.5rem, 4cqw);
   width: 100%;
 }
 .itc-title-choices, .itc-gameover-choices, .itc-cleared-choices, .itc-victory-choices {
@@ -314,12 +337,30 @@ const STYLE = `
   of thing that gets added at a comfortable desktop size and quietly pushes a phone over the edge.
   It did, and the layout guard said so before anybody looked at a phone.
 */
+/*
+  ⚠️ **THE SETTINGS SIT BESIDE EACH OTHER AND WRAP, AND THEY STACKED UNTIL THERE WERE TWO.** The box
+  had no rule of its own — one setting needs no arrangement — so the second one took a whole line of
+  the shortest axis on the screen and pushed the smallest landscape phone six pixels into a
+  scrollbar. The layout guard said so before a phone did, for the second time in two settings.
+
+  A wrapping ROW rather than a shorter stack, because the shape has to survive the queue: the palette,
+  reduced motion and flash intensity are all waiting, and five labelled rows down a 320px-tall screen
+  is not a layout that can be shaved into working. Wrapped, they cost a line only when a line is what
+  is left.
+*/
+.itc-title-settings-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  grid-column: 1 / -1;
+  gap: 0.35em 1.2em;
+}
 .itc-title-settings {
   display: flex;
   align-items: center;
   gap: 0.5em;
   flex-wrap: wrap;
-  margin-top: 0.4em;
   font: 500 clamp(0.6rem, min(2cqw, 2.4cqh), 0.9rem)/1.1 system-ui, sans-serif;
   opacity: 0.85;
 }
@@ -666,10 +707,19 @@ export function makeChrome(
       }
       const column = document.createElement('div');
       column.className = prefix + 'column';
-      column.append(key, settingsBox);
+      column.append(key);
       const body = document.createElement('div');
       body.className = prefix + 'body';
-      body.append(column, choices);
+      /*
+        ⚠️ **THE SETTINGS ARE A FULL-WIDTH ROW UNDER BOTH COLUMNS, AND THEY RODE IN THE LEFT ONE
+        UNTIL THERE WERE TWO** — `docs/decisions/0072-a-cue-is-baked-and-played.md`. 0070 put the
+        style beside the pickup key because that column had the slack; measured at 480x320, the key
+        is 191px against the tiers' 214, so the slack is 23px and two stacked settings want 51.
+
+        Across the whole body they are 225px wide against 442 available, so they fit on one line —
+        the deficit was vertical and the space that was going spare was horizontal.
+      */
+      body.append(column, choices, settingsBox);
       panel.appendChild(body);
     } else {
       panel.appendChild(choices);
@@ -731,6 +781,17 @@ export function makeChrome(
       label.textContent = choice.label;
       const box = document.createElement('div');
       box.className = prefix + 'options';
+      /*
+        ⚠️ **WHICH setting this strip belongs to, on the element rather than in a position** — added
+        with the second setting (`docs/decisions/0072-a-cue-is-baked-and-played.md`), because with one
+        there was no question to answer. `tests/style.browser.test.ts` had been reaching for *the nth
+        option on the title screen*, which was exact while every option belonged to the same row and
+        became a test about whichever setting happened to be listed first.
+
+        A `data-` attribute rather than a class, on the same terms as `mount.ts`'s rotate gate: a
+        class is a styling hook a later art pass may rename, and this is a contract with a test.
+      */
+      box.setAttribute(SETTING_ATTR, choice.name);
       const buttons: HTMLButtonElement[] = [];
       choice.options.forEach((option, index) => {
         const button = document.createElement('button');

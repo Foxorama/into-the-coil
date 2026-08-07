@@ -100,8 +100,11 @@ export const PROBES = [
     guard: 'dies to the base weapon, and says so exactly once',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    if (w.bossSpawned && !w.bossBeaten && w.bossPool.size === 0) {',
-      replace: '    if (w.bossSpawned && w.bossPool.size === 0) {',
+      // ⚠️ Re-anchored when the predicate became a function — decision 0072 needed the same question
+      // asked two hundred lines earlier, to keep the boss's cue off the ordinary kill sound. The
+      // break is unchanged: it is still the latch, removed.
+      find: '  return w.bossSpawned && !w.bossBeaten && w.bossPool.size === 0;',
+      replace: '  return w.bossSpawned && w.bossPool.size === 0;',
     },
   },
 ];

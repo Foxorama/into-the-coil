@@ -1,0 +1,156 @@
+import { describe, it, expect, afterAll, vi } from 'vitest';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
+import type { Browser, Page } from 'playwright-core';
+import { chromePath, launchChromium } from './chromium.ts';
+import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
+import { CUE_KINDS } from '../src/content/cues.ts';
+import { SOUND_KINDS } from '../src/content/sound.ts';
+import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
+
+/**
+ * SOUND, IN A REAL BROWSER, COUNTED AT THE PLATFORM.
+ *
+ * `docs/decisions/0072-a-cue-is-baked-and-played.md`. `tests/sound.test.ts` holds the table, the
+ * samples and the gate — **and every one of those assertions is green on a build that never makes a
+ * sound**, because the whole chain from a gesture to a speaker lives in the six lines no unit test
+ * can reach: the unlock, the context, the bake, the source node.
+ *
+ * ⚠️ **So this counts the platform calls rather than trusting the shell.** Web Audio's own
+ * constructors are wrapped before the page's script runs, which is the audible equivalent of
+ * `tests/style.browser.test.ts` counting ink on the canvas — the only honest end of the chain.
+ * `docs/decisions/0027-measure-the-picture-not-the-model.md`.
+ *
+ * ⚠️ **READ THE SKIPPED COUNT.** `runIf` means a machine with no browser still passes.
+ */
+
+vi.setConfig({ testTimeout: 60_000 });
+
+const dist = pathToFileURL(resolve(fileURLToPath(new URL('..', import.meta.url)), 'dist/index.html')).href;
+
+let browser: Browser | undefined;
+afterAll(async () => {
+  await browser?.close();
+});
+
+interface AudioTally {
+  buffers: number;
+  voices: number;
+}
+
+declare global {
+  interface Window {
+    __itcAudio?: AudioTally;
+  }
+}
+
+/**
+ * A page with Web Audio instrumented before anything on it has run.
+ *
+ * ⚠️ **Patched on `AudioContext.prototype`, which shadows `BaseAudioContext.prototype` for the
+ * instances the game builds.** Counting `createBuffer` counts the bake; counting `createBufferSource`
+ * counts voices, because a source node is single-use and there is exactly one per sound.
+ */
+async function open(): Promise<Page> {
+  browser ??= await launchChromium({ headless: true });
+  const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  await page.addInitScript(() => {
+    const tally = { buffers: 0, voices: 0 };
+    window.__itcAudio = tally;
+    const proto = window.AudioContext.prototype;
+    const buffer = proto.createBuffer;
+    const source = proto.createBufferSource;
+    proto.createBuffer = function (...args: Parameters<typeof buffer>): ReturnType<typeof buffer> {
+      tally.buffers++;
+      return buffer.apply(this, args);
+    };
+    proto.createBufferSource = function (): ReturnType<typeof source> {
+      tally.voices++;
+      return source.apply(this);
+    };
+  });
+  await page.goto(dist);
+  await page.waitForSelector('#app canvas', { timeout: 15_000 });
+  return page;
+}
+
+const tally = (page: Page): Promise<AudioTally> =>
+  page.evaluate(() => window.__itcAudio ?? { buffers: -1, voices: -1 });
+
+const soundOption = (kind: (typeof SOUND_KINDS)[number]): string =>
+  `[${SETTING_ATTR}="sound"] .${prefixFor('title')}option >> nth=${SOUND_KINDS.indexOf(kind)}`;
+
+/** The easiest tier's button, which is the first control on the title screen — 0047 walks the table. */
+const startButton = `.${prefixFor('title')}action >> nth=${DIFFICULTY_KINDS.indexOf(DIFFICULTY_KINDS[0]!)}`;
+
+describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture', () => {
+  it('builds no audio at all until the player touches something', async () => {
+    /*
+      ⚠️ **A claim about cost as well as about policy.** Every browser refuses to play before a
+      gesture, so a context built at boot would be a suspended one — and the twelve buffers baked
+      into it would be work done for a player who may never press anything. `src/app/sound.ts`
+      builds the context ON the first gesture instead, and this is that being true rather than
+      intended.
+    */
+    const page = await open();
+    const before = await tally(page);
+    expect(before.buffers, 'the page baked audio before anyone touched it').toBe(0);
+    expect(before.voices, 'the page made a sound before anyone touched it').toBe(0);
+    await page.context().close();
+  });
+
+  it('THE WHOLE CHAIN: a press unlocks it, the cues bake once, and a run makes voices', async () => {
+    const page = await open();
+    await page.click(startButton);
+    await page.waitForTimeout(1200);
+    const after = await tally(page);
+    /*
+      ⚠️ **Exactly one buffer per cue, which is the bake being a BAKE.** More than that is a
+      synthesiser running during play, which is the audio spelling of baking in the frame loop and
+      the thing `docs/decisions/0022-frame-rate-is-a-feature.md` bans for art.
+    */
+    expect(after.buffers, 'the cues did not bake once on the unlocking gesture').toBe(CUE_KINDS.length);
+    expect(after.voices, 'a run played for a second and the game stayed silent').toBeGreaterThan(0);
+    /*
+      And the voices are BOUNDED. A second of play at 60Hz is 60 steps; the cap allows four a step,
+      so anything near 240 would mean the caps and holds are not running at all. The real figure is a
+      small fraction of that — this is a ceiling, not a target.
+    */
+    expect(after.voices, 'more voices than the cap and the holds could possibly allow').toBeLessThan(240);
+    await page.context().close();
+  });
+
+  it('and choosing Off makes it silent without making it any less unlocked', async () => {
+    /*
+      ⚠️ **The two halves have to be checked together.** A build that never unlocked would pass
+      "silent" perfectly, and be broken for everybody. So: the context is built and the cues are
+      baked — the gesture did its work — and nothing comes out.
+    */
+    const page = await open();
+    await page.click(soundOption('off'));
+    await page.click(startButton);
+    await page.waitForTimeout(1200);
+    const after = await tally(page);
+    expect(after.buffers, 'pressing a setting did not unlock the context, so silence proves nothing').toBe(CUE_KINDS.length);
+    expect(after.voices, 'sound is off and the game played anyway').toBe(0);
+    await page.context().close();
+  });
+
+  it('and turning it back on says so, because a setting with no feedback is a broken build', async () => {
+    /*
+      The chime — `src/content/cues.ts` has the argument for the one cue that is not an event the
+      model resolves. On the title screen nothing else is playing, so a voice here is that cue and
+      nothing else.
+    */
+    const page = await open();
+    await page.click(soundOption('off'));
+    await page.waitForTimeout(150);
+    const quiet = await tally(page);
+    await page.click(soundOption('on'));
+    await page.waitForTimeout(300);
+    const loud = await tally(page);
+    expect(loud.voices - quiet.voices, 'switching sound on made no sound, on the one press that is about sound').toBe(1);
+    await page.context().close();
+  });
+});

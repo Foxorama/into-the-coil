@@ -54,6 +54,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **a run over is a continue, and it keeps the level** | [0068](decisions/0068-a-run-over-is-a-continue.md) |
 | **seven levels, seven bosses, one idea each** | [0071](decisions/0071-five-more-levels-and-one-idea-each.md) |
 | **a style is a setting, a choice is not an action, and neither may touch the sim** | [0070](decisions/0070-a-style-is-a-setting-and-the-first-one.md) |
+| **a cue is baked and played, and it names the picture it is the twin of** | [0072](decisions/0072-a-cue-is-baked-and-played.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
@@ -76,7 +77,14 @@ choice and carries a key to the pickups, six enemy kinds, two authored levels of
 each, weapon upgrades and extra lives lying about in them, a lives-and-shield readout while playing,
 a unique boss at the end of each level, a screen between them, and a victory screen after the second.
 Keyboard, touch and gamepad all reach every screen; the run-over screen offers a continue for seven
-seconds and then gives up.
+seconds and then gives up. **It also makes a noise** —
+[0072](decisions/0072-a-cue-is-baked-and-played.md): twelve synthesised cues, baked at the first
+press and switchable off on the title screen.
+
+⚠️ **A pad alone cannot unlock the audio, and no code in this repository can change that.** Pad input
+is not a user gesture to any browser, so a player who touches nothing but a pad has a silent game
+until they tap the screen or press a key. 0072 has it written down so it is not rediscovered as a
+bug.
 
 Each level opens on an empty screen so the player can find the controls before anything finds them —
 [0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md).
@@ -209,6 +217,13 @@ makes a death cost more in the same session as a report that dying is already to
 hand on any of them, and [0027](decisions/0027-measure-the-picture-not-the-model.md) is the rule that
 says a green model proves nothing about the picture. The verdict is one play-test over all of them,
 not a report per item — that is how the list was asked for.
+
+⚠️ **And the game now makes a noise, which the same play-test covers** —
+[0072](decisions/0072-a-cue-is-baked-and-played.md). Landing it first was deliberate: audio cannot
+touch the sim and a scan proves it, so it cannot move any verdict on the fourteen, and one session at
+the controls answers both. Every one of the twelve cue rows is a starting point on
+[0037](decisions/0037-the-ship-has-mass.md)'s terms; `threat` and `pulse` are the two most likely to
+be wrong, and 0072 says why.
 
 **2 — The balance pass, and it is the largest open item in the project.** It is deliberately last, in
 the player's own words on 2026-08-07:
@@ -369,9 +384,20 @@ where the rest of the ask goes: *"and then start updating the graphics across th
 `save/`: a setting is the one piece of state a save should hold **without a run attached**, which
 `docs/game.md`'s interruption-hedge framing does not currently cover.
 
+**The second landed the same day** — [0072](decisions/0072-a-cue-is-baked-and-played.md). *Sound —
+On / Off*, beside *Look*, and it cost one row plus one line in the shell: 0070's claim that the queue
+was *"already the same shape"* is now tested rather than predicted.
+
 **The queue behind it is already the same shape** — the palette (`PALETTES` has two and nothing
 switches them), reduced motion, and flash intensity. Each is a row in `choices` plus a field on the
 settings slice; none of them needs a new mechanism.
+
+⚠️ **BUT THE TITLE SCREEN IS FULL, AND THE NEXT SETTING CARRIES THE SETTINGS SCREEN.** 0072 has the
+measurement at 480×320: the second row cost the last of the horizontal space, and a third will not
+fit. 0070 rejected a settings screen on the grounds that inventing one *"to hold a single two-option
+row"* put the one thing a player wants before their first run behind a door — that reasoning does not
+survive a fourth setting, and the layout guard is what says so. Whichever screen lands first also
+carries the back-intent switch [0017](decisions/0017-the-state-is-slices.md) defers.
 
 ## Deliberately not next
 
@@ -416,7 +442,14 @@ first carries it.
 - **A hand measurement on a physical 2021-class Android**, once, to calibrate the frame budget's
   counts against milliseconds — owed by [0022](decisions/0022-frame-rate-is-a-feature.md) and
   restated by [0025](decisions/0025-the-frame-budget-is-counted-not-timed.md).
-- **Audio.** Nothing exists. `docs/game.md` says synthesised either way.
+- **Music.** [0072](decisions/0072-a-cue-is-baked-and-played.md) landed the effects and deliberately
+  did not touch this; `docs/game.md` still has it under *Open*. Procedural synthesis keeps the
+  single-file build and a baked track does not, which is the whole of what is decided.
+
+  ⚠️ **The twelve effects have never been heard in play.** `node scripts/hear.mjs` writes every one of
+  them to a `.wav` without launching the game — that is the ears-on half of
+  [0027](decisions/0027-measure-the-picture-not-the-model.md) — but the verdict is a hand on the
+  controls, and it wants to be the same play-test that covers the fourteen above.
 
 ## How to check the things this file cannot know
 
