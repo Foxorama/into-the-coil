@@ -68,6 +68,26 @@ export interface SkyLayer {
 /** The sky, back to front. Empty for a scene with none, which is what a fixture has. */
 export type Sky = readonly SkyLayer[];
 
+/**
+ * The edge of the player's box, as a mark to tile down the lane and where to put it.
+ *
+ * ⚠️ **`inView` is a distance from the camera's trailing edge, not a world position, and that is the
+ * whole of why the painter can be handed it.** The box is defined relative to the camera
+ * (`src/sim/flight.ts`), so its edge does not move in the world — a world `along` would have to be
+ * recomputed here from a camera this function is already given, which is a second description of the
+ * same subtraction.
+ *
+ * `null` for a scene that has no box to draw, which is every fixture and every menu.
+ */
+export interface Bound {
+  /** The baked dash, as an index into the atlas. */
+  sprite: number;
+  /** The tiling period down the lane, in world units. */
+  extent: number;
+  /** How far ahead of the camera the edge sits, in world units. */
+  inView: number;
+}
+
 export function paintScene(
   surface: Surface,
   view: View,
@@ -75,9 +95,18 @@ export function paintScene(
   cameraAlong: number,
   alpha: number,
   sky: Sky = NO_SKY,
+  bound: Bound | null = null,
 ): void {
   surface.clear();
   paintSky(surface, view, cameraAlong, sky);
+  /*
+    ⚠️ **BEHIND EVERY BODY AND IN FRONT OF THE SKY.** It is a piece of information about the rules
+    rather than a thing in the world, and the one absolute in this file's draw order is that the
+    player must never lose a bullet — or their own ship — behind something. Drawn last it would be a
+    row of marks over the top of the lane at the exact distance the player is most likely to be
+    dodging at.
+  */
+  paintBound(surface, view, bound);
   for (let layer = 0; layer < layers.length; layer++) {
     const entities = layers[layer]!;
     const count = entities.size;
@@ -99,6 +128,26 @@ export function paintScene(
  */
 // @setup: one empty array for the lifetime of the module.
 const NO_SKY: Sky = [];
+
+/**
+ * The edge of the player's box: one dash per tiling period, straight down the lane.
+ *
+ * ⚠️ **A FIXED number of blits and it does not vary with anything** — `acrossSpan / extent`, which is
+ * ten on every device, because the lane is a fixed hundred units (0023) whatever the screen is doing.
+ * That is the same property `paintSky` has and the same one `tests/budget.test.ts` holds it to: a
+ * count that moved with the camera would be a seam the player can see travelling.
+ *
+ * ⚠️ **Nothing allocates.** A divide, a ceiling, and a loop over numbers.
+ */
+function paintBound(surface: Surface, view: View, bound: Bound | null): void {
+  if (bound === null || bound.extent <= 0) return;
+  const count = Math.ceil(view.acrossSpan / bound.extent);
+  for (let i = 0; i < count; i++) {
+    // Centred, because `blit` centres — half a period on from the mark's own edge.
+    const across = i * bound.extent + bound.extent / 2;
+    surface.blit(bound.sprite, screenX(view, bound.inView, across), screenY(view, bound.inView, across), view.scale);
+  }
+}
 
 /**
  * The sky: each layer's tile, repeated along the scroll axis, offset by the camera and slowed.

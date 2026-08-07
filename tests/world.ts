@@ -89,8 +89,16 @@ export function inertLevel(): {
   shownHealth: number;
   onHealth: (health: number) => void;
   onCue: (kind: CueKind) => void;
+  bound: null;
 } {
   return {
+    /*
+      A fixture draws nothing, so it has no box to mark — `docs/decisions/0074-the-box-is-drawn.md`.
+      `null` is the scene that shows none, and it is the honest value here rather than a mark nobody
+      blits: `tests/interpolation.test.ts` counts what the painter does, and a bound would add ten
+      blits to a scene whose subject is one entity's position.
+    */
+    bound: null,
     // A collision fixture has no ears. `playableWorld` is the one that records cues, because it is
     // the one that drives whole levels — `docs/decisions/0072-a-cue-is-baked-and-played.md`.
     onCue: (): void => {},
@@ -202,6 +210,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
   const world: World = {
     layers: [debris, blasts, bossPool, enemies, enemyShots, playerShots, missiles, bombs, shieldOrbs, shipPool],
     sky: [],
+    bound: null,
     shipPool,
     shieldOrbs,
     enemies,

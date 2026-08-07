@@ -92,6 +92,25 @@ export const PLAYER_ALONG_SPAN = ACROSS_SPAN * MIN_ASPECT;
  */
 export const PLAYER_MARGIN = 6;
 
+/**
+ * How far ahead of the camera the ship may fly, in world units. The wall it meets going forward.
+ *
+ * ── ONE DESCRIPTION, BECAUSE THE PICTURE OF IT IS NOW DRAWN ─────────────────────────────────────
+ *
+ * ⚠️ **This exists so the clamp and the mark cannot disagree.** Reported from play: *"the hard block
+ * on the player movement was a problem because there was no indication of it, and I got shot a couple
+ * of times because I tried to fly forward on the screen to avoid a bullet and couldn't."* The answer
+ * is to draw it (`docs/decisions/0074-the-box-is-drawn.md`) — and a drawn boundary computed from
+ * `PLAYER_ALONG_SPAN - PLAYER_MARGIN` at the call site would be a second copy of this subtraction,
+ * in a file that has no way to know when either term moves.
+ *
+ * `src/content/sprites.ts` records what three hand-kept descriptions of one fact cost the last time.
+ *
+ * ⚠️ **A distance from the camera, not a world position**, so it is a constant rather than something
+ * recomputed per step: the box travels with the camera, which is the whole of what 0023 fixes.
+ */
+export const PLAYER_LEAD = PLAYER_ALONG_SPAN - PLAYER_MARGIN;
+
 function clamp(n: number, min: number, max: number): number {
   return n < min ? min : n > max ? max : n;
 }
@@ -158,7 +177,7 @@ export function flyShip(ship: Entity, intent: Intent, cameraAlong: number, scrol
   // interpolation contract, and a ship teleported back inside its box would visibly stutter at the
   // wall on high-refresh displays.
   const minAlong = cameraAlong + PLAYER_MARGIN;
-  const maxAlong = cameraAlong + PLAYER_ALONG_SPAN - PLAYER_MARGIN;
+  const maxAlong = cameraAlong + PLAYER_LEAD;
   const nextAlong = ship.along + ship.velAlong;
   if (nextAlong < minAlong || nextAlong > maxAlong) {
     ship.velAlong = clamp(nextAlong, minAlong, maxAlong) - ship.along;

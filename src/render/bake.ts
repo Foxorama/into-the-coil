@@ -129,6 +129,33 @@ const SKY_MAX_STAR_UNITS = 0.6;
  */
 const SKY_ALPHA = { skyFar: 1, skyNear: 0.4 };
 
+/**
+ * How much of the boundary's tile is mark rather than gap.
+ *
+ * ⚠️ **Under a half, so the line reads as dashed at a glance.** At more than half the gaps are what
+ * look like the marks, and the thing stops saying *a limit* and starts saying *a broken wall*.
+ */
+const BOUND_DASH = 0.45;
+
+/**
+ * Half the boundary mark's thickness, as a fraction of its tile.
+ *
+ * At a ten-unit tile this is a mark a third of a world unit across — thinner than the smallest thing
+ * in the game that can kill the player (`SHOTS.pulse.radius` is 0.9), which is the same ceiling
+ * `docs/decisions/0069-the-sky-is-behind-the-game.md` puts on a star and for the same reason.
+ */
+const BOUND_WIDTH = 0.017;
+
+/**
+ * How solid the boundary is drawn.
+ *
+ * ⚠️ **A play-test number and the one most likely to be wrong in this change.** It has to be visible
+ * on a bright phone in daylight and ignorable while a screen full of bullets is being read, and those
+ * two pull opposite ways. Nothing asserts it; what `tests/layout.browser.test.ts`'s sibling asserts is
+ * that it is drawn at all and in the right place.
+ */
+const BOUND_ALPHA = 0.35;
+
 /** Which ink each kind is drawn in. A role, never a colour — see `content/palette.ts`. */
 const INK_OF: Record<SpriteKind, keyof Palette> = {
   ship: 'player',
@@ -211,6 +238,13 @@ const INK_OF: Record<SpriteKind, keyof Palette> = {
   */
   skyFar: 'sky',
   skyNear: 'sky',
+  /*
+    ⚠️ **The PLAYER's ink, because the thing it marks is the player's box and nothing else's.**
+    Enemies, bullets and pickups all cross this line freely — `src/sim/flight.ts` clamps the ship and
+    only the ship — so drawing it in the enemy ink or a neutral one would say *a wall* when what is
+    true is *your limit*. `docs/decisions/0074-the-box-is-drawn.md`.
+  */
+  bound: 'player',
 };
 
 /**
@@ -607,6 +641,30 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
     case 'skyNear':
       drawSky(ctx, kind, size);
       return;
+    /*
+      ── THE EDGE OF THE PLAYER'S BOX ────────────────────────────────────────────────────────────
+
+      One dash of a dashed line, tiled down the lane by `src/render/scene.ts` —
+      `docs/decisions/0074-the-box-is-drawn.md`. It returns early for the same reason the sky does:
+      it is a filled rectangle with no outline, and the stroke at the bottom of this function would
+      put a ring of the space colour around a mark one pixel wide.
+
+      ⚠️ **The alpha is BAKED, never applied per blit.** 0025 counts state changes in the frame loop,
+      and 0036 refused to grow the painter a verb that hides work — so *faint* is a property of the
+      bitmap, exactly as `SKY_ALPHA` makes the near starfield dim.
+
+      ⚠️ **Faint enough to be scenery and solid enough to be seen, which is the whole tuning.** It
+      marks a rule the player meets a few times a run; a bright line across the playfield would
+      compete with the bullets it exists to help them dodge, and `docs/game.md`'s voice rule about not
+      over-explaining applies to pictures too.
+    */
+    case 'bound': {
+      const dash = size * BOUND_DASH;
+      ctx.globalAlpha = BOUND_ALPHA;
+      // Centred in the tile on both axes, so the tiling period is the gap plus the mark.
+      ctx.fillRect(half - size * BOUND_WIDTH, half - dash / 2, size * BOUND_WIDTH * 2, dash);
+      return;
+    }
     default: {
       const never: never = kind;
       throw new Error(`unbaked sprite kind: ${String(never)}`);
