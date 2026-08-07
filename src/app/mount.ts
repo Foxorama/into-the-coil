@@ -829,6 +829,21 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   world.onIdle = (): void => {
     menuPad.read(menuAsk);
+    /*
+      ⚠️ **THE PAD ASKS FOR THE UNLOCK TOO, AND IT IS NOT POINTLESS EVEN THOUGH IT USUALLY FAILS.**
+      Reported, as an objection to this decision's own wording: *"if the gamepad can move between
+      menus and select a menu option to start a game, how can that not be counted as input to start
+      sounds?"* — and the answer is that the browser never saw anything. The Gamepad API produces no
+      DOM events at all; it is polled, and user activation is granted by input EVENTS. There is
+      nothing for the platform to attribute a press to.
+
+      **But refusing to try was this file's mistake rather than the platform's.** Activation is
+      sticky per page: a player who clicked anything at all earlier — itch's own play button, the
+      canvas, a tab — has it, and a `resume()` from here then succeeds. Attempting costs a branch on
+      the frames a pad is actually asking for something, and it converts *silent for pad users* into
+      *silent only where the browser genuinely forbids it*.
+    */
+    if (menuAsk.move !== 0 || menuAsk.confirm) audioOut.unlock();
     if (menuAsk.move !== 0) chrome.move(menuAsk.move);
     /*
       ⚠️ **No `return` needed any more, and the countdown is no longer here.** `activate` changes the

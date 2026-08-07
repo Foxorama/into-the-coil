@@ -138,11 +138,23 @@ anything pays nothing, and the press that starts a run is the press that turns t
 title screen cannot be got past without one ([0047](0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md)
 put the tier there), so no gameplay cue can be the first thing that needed it.
 
-⚠️ **A GAMEPAD CANNOT UNLOCK IT.** Pad input is not a user gesture to any browser, so a player who
-touches nothing but a pad has a silent game until they tap the screen or press a key.
-[0046](0046-a-pad-is-a-first-class-way-to-press-a-button.md) made the pad first-class for every button
-in the game and cannot make it first-class for this; **nothing in this repository can.** Written down
-so the next session does not spend an hour looking for the defect.
+⚠️ **A GAMEPAD CANNOT GRANT ACTIVATION, AND IT ASKS ANYWAY.** The Gamepad API produces no DOM events
+at all — it is polled — and user activation is granted by input *events*, so there is nothing for the
+platform to attribute a pad press to. [0046](0046-a-pad-is-a-first-class-way-to-press-a-button.md)
+made the pad first-class for every button in the game and cannot make it first-class for this.
+
+**But the shell attempts the unlock from the menu-pad path regardless, and that is worth doing.**
+Activation is sticky per page: a player who clicked anything at all earlier — itch's own play button,
+the canvas, a tab — already has it, and the `resume()` then succeeds. What is left is narrow: a cold
+load, a pad, and a browser that has never seen a click on this origin.
+
+⚠️ **The first draft of this section said *nothing in this repository can*, and that was wrong** —
+true of the platform, false about the code. It came back as an objection within the hour: *"if the
+gamepad can move between menus and select a menu option to start a game, how can that not be counted
+as input to start sounds?"* The platform answer stands; **not trying was a choice this file had made
+and had dressed up as a law.** That is the more useful half of the correction, and it is the same
+shape as the two probe findings above: a confident sentence about a mechanism, standing in for a
+check nobody ran.
 
 ⚠️ **`resume()` runs on every gesture, not only the first** — a mobile browser suspends the context
 when the tab is backgrounded, and a first-run-only unlock is silent for the rest of the session after

@@ -289,12 +289,19 @@ export interface WebAudioOut extends AudioOut {
  * (`docs/decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md` put the tier there),
  * so no gameplay cue can ever be the first thing that needed the unlock.
  *
- * ⚠️ **A GAMEPAD CANNOT UNLOCK IT, and that is a platform fact rather than a bug here.** Pad input is
- * not a user gesture to any browser, so a player who touches nothing but a pad gets a silent game
- * until they tap the screen or press a key. `docs/decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md`
- * made the pad first-class for every button in the game and cannot make it first-class for this;
- * nothing in this repository can. It is written down here so the next session does not spend an hour
- * looking for the defect.
+ * ⚠️ **A GAMEPAD CANNOT GRANT ACTIVATION, AND IT ASKS FOR THE UNLOCK ANYWAY.** The Gamepad API
+ * produces no DOM events at all — it is polled — and user activation is granted by input EVENTS, so
+ * there is nothing for the platform to attribute a pad press to. `src/app/mount.ts` calls `unlock`
+ * from the menu-pad path regardless, and that is not a gesture of futility: activation is **sticky
+ * per page**, so a player who clicked anything at all earlier already has it and the `resume()`
+ * below then succeeds.
+ *
+ * What is left after that is narrow and honest: a player who loads the page, touches nothing but a
+ * pad, and whose browser has never seen a click on this origin, gets silence until they tap or press
+ * a key. `docs/decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md` made the pad
+ * first-class for every button in the game and cannot make it first-class for this — but the earlier
+ * wording of this comment said *nothing in this repository can*, which was true of the platform and
+ * false about the code: not trying was a choice this file had made.
  *
  * ⚠️ **`resume()` on every unlock, not only the first.** A context is suspended again when a tab is
  * backgrounded on mobile, and the gesture that brings the player back is the one that has to revive
