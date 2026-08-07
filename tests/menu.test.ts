@@ -208,7 +208,8 @@ describe('confirm is a press and never a hold', () => {
     /*
       ⚠️ **The one that would be worst in play.** A held confirm re-fires every step, so the button
       that starts a run also presses whatever the next screen puts under the player's thumb — and on
-      the run-over screen that is *Again*, which would restart the run they were reading about.
+      the run-over screen that is *Continue*, which would spend the offer they were reading about
+      before they had decided to take it (`docs/decisions/0068-a-run-over-is-a-continue.md`).
     */
     const held = [pad(AXES(0, 0), [MENU_CONFIRM_BUTTONS[0]!])];
     const asks = drive([held, held, held, [pad(AXES(0, 0))], held]);

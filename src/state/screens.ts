@@ -150,9 +150,19 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   /**
    * ⚠️ **No score, no summary, no coaching.** `docs/game.md`: *players are assumed to be adaptable;
    * hints are added where play proves they are needed, never pre-emptively.* What the player needs to
-   * know is that the run ended and how to start another one, and the frozen scene behind this says
-   * everything about why —
-   * `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`.
+   * know is that the run ended and how to carry on, and the frozen scene behind this says everything
+   * about why — `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`.
+   */
+  /*
+   * ⚠️ **"Continue", not "Again", and the two words describe different games** —
+   * `docs/decisions/0068-a-run-over-is-a-continue.md`. The button no longer throws the run away and
+   * sends the player back to the tier choice: it puts a fresh ship into the level that was already
+   * running, on the field that is frozen behind this screen, with the scatter the last death threw
+   * still lying in it (`docs/decisions/0066-a-death-scatters-what-it-took.md`).
+   *
+   * ⚠️ **The label is the promise, so it is the thing that must not drift.** *Again* over a resumed
+   * level, or *Continue* over a restart, is a screen lying about what the button does — and it is
+   * the only account of it the player ever gets.
    */
   /*
    * ⚠️ **The one screen with a timeout, and it was asked for in play**: *"this screen should have a
@@ -163,10 +173,14 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    * walked away should end up, because it is the screen that says what the game is
    * (`docs/decisions/0045-the-player-can-see-what-they-are-carrying.md` put the pickup key there).
    * An arcade cabinet does exactly this and for exactly this reason.
+   *
+   * ⚠️ **It is now the countdown a cabinet actually has**, which it was not before: seven seconds to
+   * decide whether to continue, and the run is gone when they run out. That is the shape 0068 gives
+   * the offer its cost, since nothing here takes a coin.
    */
   gameOver: {
     heading: 'Run over',
-    actions: [{ label: 'Again', hint: '' }],
+    actions: [{ label: 'Continue', hint: '' }],
     steps: false,
     dims: true,
     // ⚠️ **`then: 'title'` is gone and nothing was lost.** Expiring presses *Again*, and *Again* goes

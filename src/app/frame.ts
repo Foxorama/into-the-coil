@@ -275,6 +275,32 @@ const ONE_HIT = 1;
 const BLAST_STEPS = 12;
 
 /**
+ * How long a boss takes to come apart, in steps — a second and a half.
+ *
+ * ⚠️ **The level is not over until it has finished.** Reported from play: *"bosses need a real
+ * explosion and an end-of-level beat. Currently the level just ends."* It did, on the exact step the
+ * pool emptied: a screen went up over the frame and the loudest event in the game happened behind it.
+ * `docs/decisions/0062-a-boss-dies-loudly.md`.
+ *
+ * ⚠️ **The simulation keeps stepping through it**, which is what makes it a beat rather than a pause.
+ * The scroll runs on, the player still flies, and whatever the boss had in the air still arrives —
+ * a player can still die in the ninety steps after killing it, which is the arcade answer.
+ *
+ * A starting point on [0037](docs/decisions/0037-the-ship-has-mass.md)'s terms; nothing asserts on it.
+ */
+const BOSS_DEATH_STEPS = 96;
+
+/**
+ * Steps between one pulse of the boss's explosion and the next.
+ *
+ * ⚠️ **It is what turns `BURST.boss` from a number of fragments into a number ON SCREEN**, and the
+ * ceiling is the debris pool: `BURST.boss × BURST.lifeMax / this` has to stay under it, or the
+ * loudest moment in the game is the one where `src/sim/pool.ts` starts dropping bursts.
+ * `tests/budget.test.ts` holds that sum.
+ */
+const BOSS_PULSE = 5;
+
+/**
  * How far from the ship's centre a shield mark orbits, in world units.
  *
  * The ship is 7 units across, so this puts the shell clear of the hull with a visible gap — close
@@ -499,8 +525,18 @@ export interface World {
   bossPool: Pool<Entity>;
   /** Whether the boss has been put on the field. Set once; cleared only by a fresh run. */
   bossSpawned: boolean;
-  /** Whether the level has already been reported as cleared, so it is reported exactly once. */
+  /** Whether the boss has been beaten, so the beat below is started exactly once. */
   bossBeaten: boolean;
+  /**
+   * Steps left of the boss coming apart, or `0` when nothing is exploding.
+   *
+   * ⚠️ **The level is reported cleared when this reaches zero, not when the pool empties** —
+   * `docs/decisions/0062-a-boss-dies-loudly.md`. `bossBeaten` is still the latch; this is the beat.
+   */
+  clearedIn: number;
+  /** Where the boss is, ahead of the camera — remembered every step, read on the step it dies. */
+  bossOffset: number;
+  bossAcross: number;
   /** Which way the boss is currently sliding across the lane: −1 or 1. */
   bossPatrol: number;
   /**
@@ -847,8 +883,15 @@ export class GameFrame implements Frame {
     // from then until the screen changes.
     if (w.bossSpawned && !w.bossBeaten && w.bossPool.size === 0) {
       w.bossBeaten = true;
-      w.onCleared();
+      /*
+        ⚠️ **THE LEVEL DOES NOT END HERE ANY MORE.** Reported from play: *"bosses need a real
+        explosion and an end-of-level beat — currently the level just ends."* It did: the same step
+        that emptied the pool raised a screen over the frame, so the loudest event in the game was a
+        boss vanishing behind an overlay. `docs/decisions/0062-a-boss-dies-loudly.md`.
+      */
+      w.clearedIn = BOSS_DEATH_STEPS;
     }
+    stepBossDeath(w);
   }
 
   draw(alpha: number): void {
@@ -1547,6 +1590,43 @@ function spawnPickup(w: World, index: number): void {
   item.holdFor = PICKUP_LINGER_STEPS + Math.max(0, Math.round(approach));
 }
 
+/**
+ * A boss coming apart, and the beat before the level is reported cleared.
+ *
+ * Asked for in play: *"bosses need a real explosion and an end-of-level beat. Currently the level just
+ * ends."* `docs/decisions/0062-a-boss-dies-loudly.md`.
+ *
+ * ⚠️ **A rate rather than one big burst.** One burst of any size is over in half a second and reads
+ * exactly like an enemy dying, because it is an enemy dying with a bigger number. Pulses over a second
+ * and a half read as a thing coming apart.
+ *
+ * ⚠️ **In the CAMERA's frame**, which is why the place is remembered as an offset rather than as a
+ * world position: over a second and a half the camera covers 54 units, so a world position would put
+ * the explosion visibly behind where the player watched the boss die.
+ *
+ * ⚠️ **The simulation keeps running through it**, so the beat is a beat rather than a freeze — the
+ * scroll continues, the player still flies, and anything the boss left in the air still arrives.
+ */
+function stepBossDeath(w: World): void {
+  if (w.clearedIn <= 0) return;
+  w.clearedIn--;
+  if (w.clearedIn % BOSS_PULSE === 0) {
+    /*
+      Scattered across the hull rather than all from its centre. The burst stream, per 0021: where a
+      fragment comes from is the most cosmetic roll in the game and must not move a wave by one enemy.
+    */
+    const spread = w.bossRow.radius;
+    burst(
+      w,
+      w.cameraAlong + w.bossOffset + w.burstRng.range(-spread, spread),
+      w.bossAcross + w.burstRng.range(-spread, spread),
+      BURST.boss,
+    );
+  }
+  // The one report, at the end of the beat. `bossBeaten` already latched, so this happens once.
+  if (w.clearedIn === 0) w.onCleared();
+}
+
 /** The boss, if there is one on the field. Its whole behaviour lives in `src/app/boss.ts`. */
 function driveBoss(w: World): void {
   if (w.bossPool.size === 0) return;
@@ -1563,6 +1643,18 @@ function driveBoss(w: World): void {
     w.scrollPerStep,
     w.bossPatrol,
   );
+  /*
+    ⚠️ **Where it is, remembered every step, so that where it DIED is known on the step it stops
+    existing.** A released slot is the next thing `spawn` hands out (`src/sim/pool.ts`), so reading
+    the position off the pool after the collision is reading whatever moved in behind it. `deaths`
+    carries positions for exactly this reason and cannot be used here: it does not say which pool an
+    entry came from, and a boss can die on the same step as an enemy.
+
+    An OFFSET from the camera rather than a world position, because the explosion has to stay where
+    the player watched it happen and the camera covers 54 units while it plays.
+  */
+  w.bossOffset = boss.along - w.cameraAlong;
+  w.bossAcross = boss.across;
 }
 
 /**
@@ -1603,6 +1695,11 @@ export function respawn(w: World): void {
     both survived a death already); it only LOOKED as though it had, because the screen emptied.
 
     What is cleared below is exactly what belonged to the ship that died.
+
+    ⚠️ **They are cleared by `resetScene`, and the day 0057 landed they were cleared by nothing** —
+    `docs/decisions/0067-a-new-run-opens-on-an-empty-field.md`. A reader who takes this paragraph to
+    mean *the enemies are never swept* has the half that produced the bug: they are swept when a
+    LEVEL starts, and this function is about a LIFE.
   */
   w.playerShots.clear();
   w.missiles.clear();
@@ -1645,14 +1742,6 @@ export function respawn(w: World): void {
 }
 
 /**
- * Everything `respawn` does, plus the state that belongs to the run rather than to the life: the
- * camera goes back to the start and the debris of the last run is swept.
- *
- * ⚠️ **The camera reset is what makes two runs the same run.** Distance travelled is the only clock
- * a level has — a wave table places its content against `cameraAlong` — so a second run that started
- * where the first one ended would be playing a different level with the same name.
- */
-/**
  * Put a level on the field and start it from the beginning.
  *
  * ⚠️ **It touches the level and the scene, and nothing about the RUN.** Lives, upgrades and the
@@ -1685,9 +1774,32 @@ export function startLevel(w: World, level: LevelRow, keepShell: boolean): void 
   w.ship.health += shields;
 }
 
+/**
+ * Everything `respawn` does, plus the state that belongs to the LEVEL rather than to the life: the
+ * field is emptied, the camera goes back to the start and the debris of the last one is swept.
+ *
+ * ⚠️ **The camera reset is what makes two runs the same run.** Distance travelled is the only clock
+ * a level has — a wave table places its content against `cameraAlong` — so a second run that started
+ * where the first one ended would be playing a different level with the same name.
+ */
 export function resetScene(w: World): void {
   w.cameraAlong = 0;
   w.prevCameraAlong = 0;
+  /*
+    ⚠️ **THE ENEMIES AND THEIR SHOTS ARE CLEARED HERE, AND UNTIL NOW THEY WERE CLEARED NOWHERE.**
+    `docs/decisions/0067-a-new-run-opens-on-an-empty-field.md`. They used to be swept by `respawn`,
+    which this function calls at the bottom — so 0057 taking that sweep out of a DEATH silently took
+    it out of a new LEVEL and a new RUN as well, and both then opened on the last one's field.
+    Reported from play as *"when you restart at level 1, the run is the same run as you were up to
+    previously."*
+
+    The rule that stops it happening a third time is the split, not the two lines: **a pool that
+    belongs to the LEVEL is emptied here, and a pool that belongs to the LIFE is emptied by
+    `respawn`.** An enemy belongs to the level, which is exactly why it survives a death and must not
+    survive a level.
+  */
+  w.enemies.clear();
+  w.enemyShots.clear();
   w.debris.clear();
   /*
     ⚠️ **The boss is cleared HERE and deliberately not in `respawn`.** A death during the fight leaves
@@ -1700,6 +1812,9 @@ export function resetScene(w: World): void {
   w.nextPickup = 0;
   w.bossSpawned = false;
   w.bossBeaten = false;
+  // ⚠️ Cleared HERE as well as latched, or a level entered while the last one was still exploding
+  // would report itself cleared a second and a half in, with its own boss still ahead of the player.
+  w.clearedIn = 0;
   w.bossPatrol = 1;
   respawn(w);
 }

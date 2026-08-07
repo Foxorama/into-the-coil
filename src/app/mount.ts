@@ -22,24 +22,16 @@ import { SPECIAL_BINDINGS } from '../content/actions.ts';
 import { SPECIALS } from '../content/specials.ts';
 import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../content/enemies.ts';
-import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
+import { LEVELS } from '../content/levels.ts';
 import { BOSSES } from '../content/bosses.ts';
 import { CYCLE, PICKUPS, PICKUP_KINDS, isUpgrade, type PickupKind, weaponFor } from '../content/pickups.ts';
-import { DIFFICULTIES, DIFFICULTY_KINDS, type DifficultyKind } from '../content/difficulty.ts';
+import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { MAX_SHIELDS, SHIPS, fullHealthFor, shieldsOf } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
-import {
-  GameFrame,
-  SHIP_START_ALONG,
-  launchSpecial,
-  resetScene,
-  respawn,
-  scatterUpgrades,
-  startLevel,
-  type World,
-} from './frame.ts';
+import { GameFrame, SHIP_START_ALONG, launchSpecial, respawn, scatterUpgrades, type World } from './frame.ts';
+import { makeLifecycle } from './lifecycle.ts';
 import { SCREENS, STEPS_PER_SECOND, type Screen } from '../state/screens.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { makeChrome } from './chrome.ts';
@@ -376,6 +368,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     bossPool,
     bossSpawned: false,
     bossBeaten: false,
+    clearedIn: 0,
+    bossOffset: 0,
+    bossAcross: ACROSS_SPAN / 2,
     bossPatrol: 1,
     nextPickup: 0,
     pickups: pickupPool,
@@ -640,89 +635,39 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     }
   };
 
-  /**
-   * Start a run. The same answer for both controls, because both mean the same thing — 0039 says a
-   * game over ends the run outright, so *Again* is a new run and not a continue.
-   */
-  /**
-   * Put the run's current level on the field.
-   *
-   * ⚠️ **`LEVEL_KINDS` IS the order** — `src/content/levels.ts` refuses a second ordering table — so
-   * the run's level index reads straight off it. Past the end is a run that has been finished, and
-   * the caller is what decides that; this clamps rather than throwing, because a level index that
-   * has run off the end is a bug in the shell and a black screen is a worse way to report it.
-   */
-  /**
-   * `keepShell` is the difference between the two callers, and it is stated rather than ordered.
-   *
-   * ⚠️ **A level boundary keeps the shell; a run beginning does not** —
-   * [0058](../../docs/decisions/0058-a-level-boundary-keeps-the-shell.md). It was briefly implicit in
-   * the order `startRun` does things, and a probe over that ordering came back STILL GREEN: nothing
-   * could see a rule that no line stated. `src/app/frame.ts` has the whole of it.
-   */
-  const enterLevel = (keepShell: boolean): void => {
-    const kind = LEVEL_KINDS[Math.min(state.run.level, LEVEL_KINDS.length - 1)]!;
-    startLevel(world, LEVELS[kind], keepShell);
-  };
-
-  /** Carry on into the next level. Everything the run is carrying comes with it — the shell too. */
-  const continueRun = (): void => {
-    enterLevel(true);
-    world.rng = makeRng('proof-scene').stream('spawns');
-    dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
-  };
-
-  const startRun = (difficulty: DifficultyKind): void => {
-    /*
-      ⚠️ **Resolved to a ROW here, once, and the frame never looks a tier up by name.** Same argument
-      `enemyRows` and `pickupRows` make next door: a per-spawn lookup by string key is a cost paid
-      forever to avoid one line at the start of a run.
-    */
-    world.difficulty = DIFFICULTIES[difficulty];
-    resetScene(world);
-    /*
-      ⚠️ **`seedField` is NOT called here, and it used to be.** A random opening field is the right
-      answer for a scene proving the page draws and the wrong one for an authored level: it puts
-      content the designer did not write in front of the player, at positions no play-test can act
-      on. `src/content/levels.ts` opens with waves inside the spawn horizon, so the level fills its
-      own first screen — which is what an authored level is FOR.
-
-      It still runs once at boot, because the title screen is over a still field and an empty one
-      would look like a broken build.
-    */
-    // A fresh spawn stream, so run two is run one — the reason `seedField` gives.
-    world.rng = makeRng('proof-scene').stream('spawns');
-    // ⚠️ `begin` FIRST, because it resets the level index to zero and `enterLevel` reads it. The
-    // tier travels with it: `src/state/slices/run.ts` is where a run's lives come from now.
-    dispatch({ slice: 'run', type: 'begin', difficulty });
-    // ⚠️ `false`: a run begins with the ship's hull and nothing on it, whatever the last run ended
-    // wearing — 0058.
-    enterLevel(false);
-    dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
-  };
-
   /*
-    What a screen's one control does. Three of the four start a fresh run; `cleared` is the only one
-    that carries anything forward, which is the whole difference between a level ending and a run
-    ending — `docs/decisions/0042-a-run-is-a-sequence-of-levels.md`.
+    The three ways a run moves, and they live in `src/app/lifecycle.ts` rather than here.
+
+    ⚠️ **They were closures over `state`, `world` and `dispatch`, and that is why nothing could test
+    them.** *Does a continue reset the level?* is the single most important question 0068 asks, and
+    as long as the answer was a line inside `mount` the only way to ask it was to boot a canvas —
+    which `docs/decisions/0005-a-guard-must-be-seen-to-fail.md` cannot break on purpose.
+    `tests/continue.test.ts` now drives all three against a fixture world and the real reducer.
+
+    ⚠️ **`() => state.run` and not `state.run`**, because `dispatch` reassigns `state` — a run
+    captured at construction would be stale by the first `begin`.
   */
+  const lifecycle = makeLifecycle(world, dispatch, () => state.run);
+
   /*
     What a screen's controls do.
 
-    ⚠️ **Only two of the four screens start anything, and that is 0047's doing.** A run cannot begin
-    without a tier, so *Again* on the run-over and victory screens goes back to the TITLE rather than
-    restarting — the title is where the choice is, and a button that silently reused the last tier
-    would be the game deciding for a player who has just watched a run end.
+    ⚠️ **Three of the four screens now carry something forward, and only `victory` throws a run
+    away.** `cleared` keeps the run and changes the level; `gameOver` keeps the LEVEL and restocks
+    the run — `docs/decisions/0068-a-run-over-is-a-continue.md`, which is what turned *Again* into
+    *Continue*. A run cannot begin without a tier (0047), so the two that do end a run go back to the
+    title, where the choice is.
 
-    ⚠️ `cleared` is the only screen that carries anything forward, which is the whole difference
-    between a level ending and a run ending —
-    `docs/decisions/0042-a-run-is-a-sequence-of-levels.md`.
+    ⚠️ **The difference between `cleared` and `gameOver` is which half is reset, and the two must not
+    drift into each other** — `docs/decisions/0042-a-run-is-a-sequence-of-levels.md` and 0068. The
+    table at the top of `src/app/lifecycle.ts` is the one description of it.
   */
   const chrome = makeChrome(colours, (screen: Screen, index: number): void => {
-    if (screen === 'cleared') continueRun();
+    if (screen === 'cleared') lifecycle.onward();
+    else if (screen === 'gameOver') lifecycle.resume();
     // `DIFFICULTY_KINDS` IS the order the title screen's buttons were built in
     // (`src/state/screens.ts` walks it), so the control's index reads straight off it.
-    else if (screen === 'title') startRun(DIFFICULTY_KINDS[index] ?? DIFFICULTY_KINDS[0]!);
+    else if (screen === 'title') lifecycle.begin(DIFFICULTY_KINDS[index] ?? DIFFICULTY_KINDS[0]!);
     else dispatch({ slice: 'screen', type: 'show', screen: 'title' });
   });
   for (const element of chrome.elements) host.appendChild(element);
