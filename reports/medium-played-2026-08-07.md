@@ -177,6 +177,64 @@ edge with its own style"* — and called it **content rather than a repair**.
 
 ---
 
+## Said when the plan was set out, and it is a precondition rather than a preference
+
+Two more things were given after the findings above, in answer to *what should answer a threat behind
+the player* and *how should the upgrade curve be fixed*. Both are recorded here because they are the
+player's words and the work they constrain has not started.
+
+### The enemies are the answer, and the diagnosis is the sharpest thing said
+
+> *"We need to make the enemies actually enemies, currently basically every wave is just a wall that
+> you pass by. They need to circle, double back etc and be actively dog-fighting with the player, it
+> can be straightforward dog-fighting depending on difficulty, but currently, especially with
+> auto-fire mode (which I think we should still keep) the game is just not a game, it has actually
+> become what we tried to avoid, a one-button autopilot stick where you just move around a bit."*
+
+⚠️ **That last clause is [0024](../docs/decisions/0024-the-accessibility-floor-is-settings.md)'s own
+words about the DEFAULT game.** 0024 dropped the authored horizontal assist path partly because *"a
+ship following an authored path with auto-fire on is a game playing itself"*, and argued the real
+difficulty is *"continuous, accurate, fast movement under time pressure."* Enemies on rails apply no
+time pressure, so the shipped default has drifted into the thing that decision refused to build as an
+opt-in assist.
+
+⚠️ **0024 also already cleared the way.** It dropped the law that *"anything demanding cross-axis
+evasion is scripted, not reactive"* because *"the law bans the genre… rules out aimed shots, homing
+shots and anything that responds to where the player is."* Reactive enemies are permitted by name.
+**Auto-fire stays** — `src/content/actions.ts`'s *there is no `fire` action and there must never be
+one* is untouched by any of this.
+
+Also chosen, alongside the enemy work: a **rear-firing weapon upgrade**, an **omnidirectional
+special**, and **more forward room for the ship**.
+
+⚠️ **The forward room is worth six world units and no more, at the current device support.** The box
+is `camera + 6 … camera + 144` and `MIN_ASPECT` guarantees every device shows at least 150 along-units
+— a wider box puts the ship off its own screen on a 3:2 tablet. Raising that floor to 16:9 exactly
+would buy a ~172-unit box and cost letterboxing on 16:10 laptops and 3:2 tablets, which are gutter-free
+today. **That trade is not taken here**; it is deferred until the enemies are reactive, because the
+value of forward room against something that hunts is a different question from its value against a
+wall.
+
+### And the upgrades cannot simply be added to
+
+> *"with the bonus upgrades, we'll need to be careful if we're adding stuff there. like there's a lot
+> of upgrades now so I think this'll need at bare minimum better icons to distinguish and also better
+> grouping of upgrades as it'll get complex pretty quickly"*
+
+⚠️ **This is a precondition on the arsenal work, not a follow-up to it.** A rear weapon, an
+omnidirectional special and a conversion rule for a capped pickup are three more things on a field
+that already carries six faces —
+and [0052](../docs/decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md) records that
+**two of the six already risk reading alike**, while `src/content/sprites.ts` says the same thing
+about the drawings. The title screen's key lists all six as if they were six pickups when three of
+them are the same object alternating, which
+[0052](../docs/decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md) already flagged as
+a play-test question and which has now been played.
+
+So the arsenal step carries a **taxonomy and legibility pass** with it: what the groups are, what
+distinguishes a group at a glance, and what the key says. Landing two more kinds first and tidying
+afterwards is how the field becomes unreadable.
+
 ## What this does not settle
 
 **Nothing here is a decision.** Every item above is a finding; where it belongs is a file in
