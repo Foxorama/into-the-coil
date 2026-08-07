@@ -51,15 +51,63 @@ export function baseProblem(base) {
   ].join('\n');
 }
 
+/**
+ * Decide whether this PR is one too many, and say why when it is.
+ *
+ * ── THE OTHER HALF OF 0033, WHICH WAS ENFORCED BY MEMORY ────────────────────────────────────────
+ *
+ * ⚠️ **0033 is titled *"A branch starts at `main`, AND THE NEXT ONE WAITS"* and only the first half
+ * was ever checked.** Its body is explicit — *"what survives of the instinct is the serialisation,
+ * and that is in the rule above: the next branch waits. That is what stops there being anything to
+ * stack onto."* The base check above cannot see it: four PRs open at once are four PRs based on
+ * `main`, and it passes every one of them.
+ *
+ * ⚠️ **It went wrong exactly as predicted, and the tell was work being done AROUND it rather than a
+ * failure.** Four PRs in flight produced two documents each citing the other as *"becomes a link
+ * when the other merges"*, a `docs/state-of-play.md` edit skipped on two branches because
+ * `reports/the-list-that-doubled-itself-twice-2026-08-07.md` says that file cannot be edited from
+ * more than one, and a running argument about which preview had which half of the game in it. None
+ * of that is a merge conflict, which is precisely why nothing caught it.
+ *
+ * ⚠️ **Reported as a quality problem rather than as a preference**: *"this PR piling up bullshit is
+ * getting to be a pita and it's poor form quality that's going to introduce real issues at some
+ * point."* `docs/decisions/0075-the-serialisation-is-checked.md`.
+ *
+ * `open` is how many pull requests are open, including this one — so `1` is the healthy state and
+ * anything above it is the rule broken. A non-number means the workflow could not ask, which is not
+ * this check's business: it is advisory infrastructure and must not fail a PR because an API call
+ * did.
+ */
+export function pileUpProblem(open) {
+  const count = Number(open);
+  if (!Number.isFinite(count) || count <= 1) return null;
+
+  return [
+    `There are ${count} pull requests open, and 0033 says the next branch waits.`,
+    '',
+    'A PR\'s base being `main` is only half of that decision. The other half is the serialisation,',
+    'and it is what stops there being anything to stack onto in the first place — with several in',
+    'flight the cost does not arrive as a merge conflict, it arrives as documents that cite each',
+    "other as \"this becomes a link once that merges\", as a handover nobody may edit because two",
+    'branches would both edit it, and as previews that each hold half of the game.',
+    '',
+    'Land the older one first. If they genuinely do not depend on each other, that costs a merge',
+    'button; if they do, this is the message that saved the recovery.',
+    '',
+    'See docs/decisions/0033-a-branch-starts-at-main.md and',
+    'docs/decisions/0075-the-serialisation-is-checked.md.',
+  ].join('\n');
+}
+
 // @setup: the CLI half, and it must not run when a test imports this file. Compared as URLs rather
 // than as paths because on Windows `process.argv[1]` is a backslashed drive path and
 // `import.meta.url` is a `file://` URL — a string compare of the two never matches, and a filename
 // compare matches any file with the same basename.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const problem = baseProblem(process.argv[2]);
+  const problem = baseProblem(process.argv[2]) ?? pileUpProblem(process.argv[3]);
   if (problem !== null) {
     console.error(problem);
     process.exit(1);
   }
-  console.log(`base is \`${BASE}\``);
+  console.log(`base is \`${BASE}\`, and it is the only pull request open`);
 }
