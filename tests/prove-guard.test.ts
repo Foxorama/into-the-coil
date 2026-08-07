@@ -154,7 +154,26 @@ describe('the probe set stays honest', () => {
     }
   });
 
-  it('every probe names the decision, the break and the guard it must redden', async () => {
+  /**
+   * ⚠️ **THIS TEST WAS INTERMITTENT AND IT WAS TIMING, NOT FLAKING** —
+   * `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`, which is explicit
+   * that *"a rerun is not evidence"* and that the answer is to establish which it is.
+   *
+   * It failed once in a full `npm test` at **5024ms** against vitest's default 5000ms, and passed in
+   * isolation at well under a second. That is not an assertion failing: it is the default timeout,
+   * and the quantity it was measuring is **how long 57 dynamic imports take to transform under
+   * parallel load** — which has nothing whatever to do with the claim being made, that every probe
+   * names its decision, its break and its guard.
+   *
+   * ⚠️ **The cost grows with the probe count, so the ceiling has to be stated rather than inherited.**
+   * There are 57 probe files today and every decision adds one; a default sized for an ordinary unit
+   * test was always going to be crossed eventually, on whichever machine happened to be busiest.
+   *
+   * ⚠️ **The import is REAL and stays real.** Reading the files as text would make the timeout go
+   * away and would stop checking the thing that matters — that each module actually exports a
+   * `PROBES` array of the right shape. The slow part is the point.
+   */
+  it('every probe names the decision, the break and the guard it must redden', { timeout: 60_000 }, async () => {
     for (const file of probeFiles) {
       // The extension stays in the static part: vite's dynamic-import analysis warns otherwise.
       const mod: { PROBES: unknown[] } = await import(`../scripts/probes/${file.replace(/\.mjs$/, '')}.mjs`);
