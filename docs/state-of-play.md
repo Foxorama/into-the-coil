@@ -56,6 +56,8 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **a style is a setting, a choice is not an action, and neither may touch the sim** | [0070](decisions/0070-a-style-is-a-setting-and-the-first-one.md) |
 | **a cue is baked and played, and it names the picture it is the twin of** | [0072](decisions/0072-a-cue-is-baked-and-played.md) |
 | **an enemy is a pilot: motion is a closed union and three of them react to the player** | [0073](decisions/0073-an-enemy-is-a-pilot.md) |
+| **the edge of the player's box is drawn, and the clamp and the mark are one number** | [0074](decisions/0074-the-box-is-drawn.md) |
+| **a branch starts at `main` AND the next one waits — both halves checked** | [0033](decisions/0033-a-branch-starts-at-main.md), [0075](decisions/0075-the-serialisation-is-checked.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
@@ -241,13 +243,15 @@ that check since [0059](decisions/0059-the-lane-is-the-players-box.md) and the o
 **2 — The two remaining defects.** Both confirmed in the code before the report was written, both
 small, and both are removing a false signal rather than a design change:
 
-- **The player's box is a wall with nothing drawn on it** — `camera + 6 … camera + 144` against a
-  leading edge at 178 on 16:9 and **240 on 21:9**. The box must stay
-  ([0023](decisions/0023-the-long-axis-is-the-scroll-axis.md) makes lookahead the only thing that
-  varies by device); what is missing is that it is invisible.
+- **✅ DONE — the player's box was a wall with nothing drawn on it.**
+  [0074](decisions/0074-the-box-is-drawn.md). Ten dashes down the lane in the player's own ink, and
+  `PLAYER_LEAD` exported so the clamp and the mark are one number rather than one subtraction written
+  twice. ⚠️ **The forward room asked for alongside it is worth six units** at the current device
+  support; 0074 names the aspect-floor trade that would buy ~28 more and does not take it.
 - **The level boundary resets the camera to zero**, so the sky snaps and the ship is repositioned.
   Not deletable — `resetScene` records that distance travelled is a level's only clock — so seamless
-  means **giving a level an origin** rather than assuming it starts at zero.
+  means **giving a level an origin** rather than assuming it starts at zero. **This is the next thing
+  to build.**
 
 **3 — The arsenal answers backwards**, which is the rear-firing upgrade and the omnidirectional
 special.

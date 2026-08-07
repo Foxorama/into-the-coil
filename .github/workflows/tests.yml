@@ -44,7 +44,16 @@ jobs:
       #
       # Empty outside a pull request, which the script treats as "not my business" — this job is
       # also reached by workflow_dispatch and workflow_call.
-      - run: node scripts/check-base.mjs "${{ github.event.pull_request.base.ref }}"
+      #
+      # The second argument is how many pull requests are open, including this one — 0033's OTHER
+      # half, which was enforced by memory until it was not. `gh` is on every GitHub runner and
+      # `GH_TOKEN` is the job's own token; `|| echo ""` because a failed API call must not fail a
+      # PR, and the script treats a non-number as "could not ask".
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          open=$(gh pr list --state open --json number --jq 'length' 2>/dev/null || echo "")
+          node scripts/check-base.mjs "${{ github.event.pull_request.base.ref }}" "$open"
 
       - uses: actions/setup-node@v5
         with:

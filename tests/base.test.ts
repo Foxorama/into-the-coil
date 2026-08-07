@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 // A plain .mjs script, deliberately: it is a CLI the workflow runs,
 // not a module `src/` imports. Typing it would mean a build step for something node runs directly.
-import { baseProblem, BASE } from '../scripts/check-base.mjs';
+import { baseProblem, pileUpProblem, BASE } from '../scripts/check-base.mjs';
 
 /**
  * A BRANCH STARTS AT `main`.
@@ -64,6 +64,45 @@ describe('a pull request targets main, and nothing else', () => {
   });
 });
 
+describe('and the next branch waits, which is 0033’s other half', () => {
+  /**
+   * ⚠️ **THIS IS THE HALF THAT WAS ENFORCED BY MEMORY, AND MEMORY LOST.** 0033 is titled *"A branch
+   * starts at `main`, and the next one waits"*, and until now only the first clause was checked —
+   * four PRs open at once are four PRs based on `main`, and every one of them passed.
+   * `docs/decisions/0075-the-serialisation-is-checked.md`.
+   */
+  it('accepts the healthy state, which is exactly one', () => {
+    expect(pileUpProblem(1)).toBeNull();
+    expect(pileUpProblem('1')).toBeNull();
+  });
+
+  it('THE ONE: refuses a second pull request in flight', () => {
+    const problem = pileUpProblem(2);
+    expect(problem, 'a second PR was allowed to be open alongside the first').not.toBeNull();
+    expect(problem).toContain('2 pull requests open');
+  });
+
+  it('says what the cost actually is, because "poor form" is a preference and this is not', () => {
+    /*
+      The failures that arrived were not merge conflicts — they were documents citing each other as
+      *"this becomes a link once that merges"*, a handover nobody could edit, and previews holding
+      half the game each. A refusal that does not name them reads as tidiness.
+    */
+    const problem = pileUpProblem(4) ?? '';
+    expect(problem, 'the message does not say what to do').toContain('Land the older one first');
+    expect(problem, 'the message does not name the decision behind it').toContain('0033');
+  });
+
+  it('ignores a count it could not obtain, because advisory infrastructure may not fail a PR', () => {
+    // `gh` failing, a token without the scope, an API blip. None of those are a reason to block a
+    // change, and a guard that fails open here is the difference between a check and an outage.
+    expect(pileUpProblem('')).toBeNull();
+    expect(pileUpProblem(undefined)).toBeNull();
+    expect(pileUpProblem('not a number')).toBeNull();
+    expect(pileUpProblem(0), 'zero is what a non-PR run reports, and it is not a pile-up').toBeNull();
+  });
+});
+
 describe('the workflow actually runs the check', () => {
   const workflow = readFileSync(resolve(root, '.github/workflows/tests.yml'), 'utf8');
 
@@ -73,6 +112,17 @@ describe('the workflow actually runs the check', () => {
 
   it('passes the pull request’s base ref to it', () => {
     expect(workflow).toMatch(/check-base\.mjs\s+"\$\{\{\s*github\.event\.pull_request\.base\.ref\s*\}\}"/);
+  });
+
+  it('and passes it how many pull requests are open, which is 0033’s other half', () => {
+    /*
+      ⚠️ **The half that rots**, exactly as this file's header warns: a perfect `pileUpProblem` that
+      the workflow never calls is a guard describing a fact it has stopped being told about. The
+      count comes from `gh`, which is on every runner, with the job's own token.
+    */
+    expect(workflow, 'the count is never obtained').toContain("gh pr list --state open --json number --jq 'length'");
+    expect(workflow, 'the count is obtained and not handed to the script').toMatch(/check-base\.mjs\s+"[^"]*"\s+"\$open"/);
+    expect(workflow, 'a failed API call would fail the PR rather than being ignored').toContain('|| echo ""');
   });
 
   it('THE ORDERING ONE: runs it before npm ci, so a stacked PR fails in seconds', () => {
