@@ -12,15 +12,22 @@
 
 import { type ScreenAction, type ScreenState, initialScreen, reduceScreen } from './slices/screen.ts';
 import { type RunAction, type RunState, initialRun, reduceRun } from './slices/run.ts';
+import {
+  type SettingsAction,
+  type SettingsState,
+  initialSettings,
+  reduceSettings,
+} from './slices/settings.ts';
 import { LEVEL_KINDS } from '../content/levels.ts';
 
 /** Every slice. Closed — a new one fails `State` to build until it has been given a shape below. */
-export type SliceName = 'screen' | 'run';
+export type SliceName = 'screen' | 'run' | 'settings';
 
 /** What each slice holds. The one place a slice name is tied to its type. */
 interface SliceState {
   screen: ScreenState;
   run: RunState;
+  settings: SettingsState;
 }
 
 /**
@@ -30,9 +37,9 @@ interface SliceState {
 export type State = { readonly [K in SliceName]: SliceState[K] };
 
 /** Every action in the game. Each names its slice, which is what makes routing a lookup. */
-export type Action = ScreenAction | RunAction;
+export type Action = ScreenAction | RunAction | SettingsAction;
 
-export const initialState: State = { screen: initialScreen, run: initialRun };
+export const initialState: State = { screen: initialScreen, run: initialRun, settings: initialSettings };
 
 /**
  * Route an action to the slice that owns it, then let the one cross-slice agreement have its say.
@@ -49,10 +56,20 @@ export const initialState: State = { screen: initialScreen, run: initialRun };
 export function reduce(state: State, action: Action): State {
   if (action.slice === 'screen') {
     const screen = reduceScreen(state.screen, action);
-    return agree(screen === state.screen ? state : { screen, run: state.run });
+    return agree(screen === state.screen ? state : { screen, run: state.run, settings: state.settings });
+  }
+  /*
+    ⚠️ **The settings slice takes part in NO agreement, and that is the point of it.** What a run is
+    doing and what the game looks like are independent by construction — `agree` below never reads
+    it, so a style change can never move a screen and a screen can never change a style.
+    `docs/decisions/0070-a-style-is-a-setting-and-the-first-one.md`.
+  */
+  if (action.slice === 'settings') {
+    const settings = reduceSettings(state.settings, action);
+    return settings === state.settings ? state : { screen: state.screen, run: state.run, settings };
   }
   const run = reduceRun(state.run, action);
-  return agree(run === state.run ? state : { screen: state.screen, run });
+  return agree(run === state.run ? state : { screen: state.screen, run, settings: state.settings });
 }
 
 /** The actions the agreements below need. Module-level, so routing allocates nothing extra. */
@@ -72,7 +89,7 @@ const SHOW_VICTORY: ScreenAction = { slice: 'screen', type: 'show', screen: 'vic
  */
 function agree(state: State): State {
   if (state.run.lives <= 0 && state.screen.current === 'playing') {
-    return { screen: reduceScreen(state.screen, SHOW_GAME_OVER), run: state.run };
+    return { screen: reduceScreen(state.screen, SHOW_GAME_OVER), run: state.run, settings: state.settings };
   }
   /*
     THE SECOND AGREEMENT: a level cleared past the end of the run is the run finished.
@@ -85,7 +102,7 @@ function agree(state: State): State {
     like it can be played out in a unit test.
   */
   if (state.screen.current === 'cleared' && state.run.level >= LEVEL_KINDS.length) {
-    return { screen: reduceScreen(state.screen, SHOW_VICTORY), run: state.run };
+    return { screen: reduceScreen(state.screen, SHOW_VICTORY), run: state.run, settings: state.settings };
   }
   return state;
 }

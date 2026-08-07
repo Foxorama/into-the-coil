@@ -26,13 +26,14 @@ import { LEVELS } from '../content/levels.ts';
 import { BOSSES } from '../content/bosses.ts';
 import { CYCLE, PICKUPS, PICKUP_KINDS, isUpgrade, type PickupKind, weaponFor } from '../content/pickups.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
+import { DEFAULT_STYLE, STYLES, STYLE_KINDS } from '../content/styles.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { MAX_SHIELDS, SHIPS, fullHealthFor, shieldsOf } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
 import { GameFrame, SHIP_START_ALONG, launchSpecial, respawn, scatterUpgrades, type World } from './frame.ts';
 import { makeLifecycle } from './lifecycle.ts';
-import { SCREENS, STEPS_PER_SECOND, type Screen } from '../state/screens.ts';
+import { SCREENS, STEPS_PER_SECOND, type Screen, type SettingName } from '../state/screens.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { makeChrome } from './chrome.ts';
 import { combineDevices } from './devices.ts';
@@ -110,6 +111,28 @@ export const CAPACITY = {
   */
   pickups: 12,
 };
+
+/**
+ * The sky, back to front — `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
+ *
+ * ⚠️ **Both depths are well under 1**, or the layer stops being a background: at 1 it moves exactly
+ * with the world and reads as a field of objects going past at the rate of the things that can kill
+ * the player. 0.12 and 0.3 put the far field almost still and the near one at a third of the world's
+ * rate, which is the parallax.
+ *
+ * ⚠️ **Module-level and frozen in place, because a STYLE can turn it off** —
+ * `docs/decisions/0070-a-style-is-a-setting-and-the-first-one.md`. Retro is the game before the sky,
+ * and what `retro` means is that `World.sky` is the empty list: nothing in `src/render/scene.ts`
+ * or `src/app/frame.ts` learns that a style exists, because the layer list is already the whole of
+ * what it reads. Built once here, since this file may allocate and the painter may not.
+ */
+const SKY = [
+  { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.12 },
+  { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.3 },
+];
+
+/** What a style with no sky gets. Module-level, so switching styles allocates nothing. */
+const NO_SKY: typeof SKY = [];
 
 export interface Mounted {
   /** Stop the loop and drop the resize listener. */
@@ -331,10 +354,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
 
       ⚠️ **Built HERE, once**, because this file may allocate and `src/render/scene.ts` may not.
     */
-    sky: [
-      { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.12 },
-      { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.3 },
-    ],
+    sky: SKY,
     shipPool,
     shieldOrbs,
     enemies,
@@ -588,6 +608,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const moved = next.screen !== state.screen;
     const rearmed = next.run.upgrades !== state.run.upgrades;
     const runChanged = next.run !== state.run;
+    const settingsChanged = next.settings !== state.settings;
     state = next;
     /*
       ⚠️ **Re-resolved on a CHANGE of the list, by identity, not on every dispatch.** `weaponFor`
@@ -612,6 +633,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       `tests/hud.browser.test.ts` now drives exactly that.
     */
     if (runChanged || moved) syncHud();
+    /*
+      ⚠️ **By identity, like the weapon above.** The reducer preserves it when nothing moved
+      (`tests/style.test.ts` holds that), so pressing the option that is already on re-paints
+      nothing — and `applyStyle` touches the DOM.
+    */
+    if (settingsChanged) applyStyle();
     // Only on a real transition: `show` moves focus, and re-focusing a button on every dispatch
     // would fight a player who had tabbed away from it.
     if (moved) applyScreen();
@@ -669,8 +696,46 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // (`src/state/screens.ts` walks it), so the control's index reads straight off it.
     else if (screen === 'title') lifecycle.begin(DIFFICULTY_KINDS[index] ?? DIFFICULTY_KINDS[0]!);
     else dispatch({ slice: 'screen', type: 'show', screen: 'title' });
+  },
+  /*
+    A SETTING WAS PRESSED — `docs/decisions/0070-a-style-is-a-setting-and-the-first-one.md`.
+
+    ⚠️ **The index is narrowed against the content hub, exactly as a tier is.** `STYLE_KINDS` IS the
+    order `src/state/screens.ts` built the options in, so the position the chrome hands back reads
+    straight off it — and nothing anywhere has to cast a string into a `StyleKind`, which is what
+    `docs/decisions/0016-a-hub-enumerates-kinds.md` bans the escape hatches for.
+
+    ⚠️ **It dispatches and stops.** What a style CHANGES is decided in one place below, off the state,
+    so a second way in — a pad, a later settings screen — cannot apply half of it.
+  */
+  (name: SettingName, index: number): void => {
+    if (name === 'style') dispatch({ slice: 'settings', type: 'style', style: STYLE_KINDS[index] ?? DEFAULT_STYLE });
   });
   for (const element of chrome.elements) host.appendChild(element);
+
+  /*
+    WHAT A STYLE CHANGES, in one place — `docs/decisions/0070-a-style-is-a-setting-and-the-first-one.md`.
+
+    ⚠️ **Read off the ROW, never off the kind.** `STYLES[style].sky` and `.face` are the whole of
+    it, so a third style is a row in `src/content/styles.ts` and no line here — the same shape
+    `enemyRows` and `pickupRows` already have.
+
+    ⚠️ **The sky is a LIST SWAP and not a flag the painter reads.** `src/render/scene.ts` walks
+    `World.sky`, so an empty list is a sky that costs nothing and needs no branch: nothing below the
+    shell learns that a style exists, which is what keeps 0024's *no cosmetic setting may touch the
+    sim* true by construction rather than by discipline.
+
+    ⚠️ **Called at boot as well as on a change**, or the chooser opens with nothing marked and the
+    default is a thing the player can only discover by pressing something.
+  */
+  const applyStyle = (): void => {
+    const row = STYLES[state.settings.style];
+    world.sky = row.sky ? SKY : NO_SKY;
+    chrome.setFace(row.face);
+    chrome.setChoice('style', STYLE_KINDS.indexOf(state.settings.style));
+  };
+  // Once at boot, so the chooser opens with the default marked and the sky matches it.
+  applyStyle();
 
   /*
     ⚠️ **The frame reports a death; this decides what it cost.** `dispatch` may flip the screen to

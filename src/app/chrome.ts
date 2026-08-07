@@ -29,7 +29,7 @@
  * twice. `tests/chrome.test.ts` is the guard.
  */
 
-import { SCREENS, type Screen } from '../state/screens.ts';
+import { SCREENS, type Screen, type SettingName } from '../state/screens.ts';
 import type { Palette } from '../content/palette.ts';
 import { PICKUPS, PICKUP_KINDS } from '../content/pickups.ts';
 import { SPRITE } from '../content/sprites.ts';
@@ -299,6 +299,79 @@ const STYLE = `
 */
 .itc-cleared-panel { margin-top: min(1.5rem, 5cqh); margin-bottom: auto; }
 /*
+  ── A SETTING, OFFERED ──────────────────────────────────────────────────────────────────────────
+
+  Decision 0070. A choice is not an action: it has a current value, the player can see which one is
+  on, and pressing it leaves them where they were. So it is drawn as a labelled row of small buttons
+  with the live one filled, rather than as another full-width control that looks like a way to start.
+
+  ⚠️ Only the title screen has any, which is why only its prefix appears here. The builder is
+  general — a screen that grows a choice gets its rules the same way its actions did.
+*/
+/*
+  ⚠️ **Sized against the SHORT axis first** — decision 0049. On the smallest landscape phone the
+  title screen is already within eleven pixels of needing a scrollbar, and a settings row is the kind
+  of thing that gets added at a comfortable desktop size and quietly pushes a phone over the edge.
+  It did, and the layout guard said so before anybody looked at a phone.
+*/
+.itc-title-settings {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  flex-wrap: wrap;
+  margin-top: 0.4em;
+  font: 500 clamp(0.6rem, min(2cqw, 2.4cqh), 0.9rem)/1.1 system-ui, sans-serif;
+  opacity: 0.85;
+}
+.itc-title-setting-label { opacity: 0.7; }
+/* The key and the settings, stacked, as the left half of the title screen's two columns. */
+.itc-title-column { display: flex; flex-direction: column; gap: 0.6em; min-width: 0; }
+.itc-title-options { display: flex; gap: 0.4em; }
+/*
+  ⚠️ A FILLED button against a HOLLOW one, not two colours — decision 0024 puts "colour never carries
+  meaning alone" in the unconditional tier, and which setting is on is exactly the kind of state a
+  hue alone would hide.
+*/
+.itc-title-option {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 2px solid currentColor;
+  border-radius: 0.4em;
+  padding: 0.15em 0.6em;
+  cursor: pointer;
+  opacity: 0.55;
+}
+/*
+  ⚠️ **The fill comes from a CUSTOM PROPERTY and not from currentColor, and the difference is a
+  black-on-black button.** currentColor in a background resolves against the element's OWN colour —
+  which this rule has just set to the void — so the two lines would cancel and the label would
+  vanish. The pair is set on the overlay by the builder, where the palette is.
+*/
+.itc-title-option-on {
+  background: var(--itc-ink);
+  color: var(--itc-void);
+  opacity: 1;
+}
+/*
+  ── THE FACE, WHICH IS THE UI HALF OF A STYLE ───────────────────────────────────────────────────
+
+  Decision 0070: the ask is *"Retro UI / Modern UI"*, and a style that changed only the background
+  would be a sky toggle with a misleading name. The stack lives here rather than in the style table
+  for the reason the palette gives about inks: a font stack is a fact about a browser, and a second
+  copy of it in a content row drifts the day one of them gains a fallback.
+
+  ⚠️ No file paths in this stylesheet — the prefix guard reads every dotted token as a class name.
+*/
+.itc-title-face-pixel,
+.itc-gameover-face-pixel,
+.itc-cleared-face-pixel,
+.itc-victory-face-pixel,
+.itc-playing-face-pixel {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.06em;
+}
+/*
   ── THE TAP STRIP, DRAWN ────────────────────────────────────────────────────────────────────────
 
   Decision 0060. Reported from play: *"how do you fire bombs on mobile? I can do one and then can't
@@ -360,6 +433,15 @@ interface Panel {
   controls: readonly HTMLButtonElement[];
   /** Where the countdown is written, for a screen that has one. `null` for a screen that waits. */
   timer: HTMLElement | null;
+  /**
+   * The option buttons, per setting the screen offers — decision 0070.
+   *
+   * ⚠️ **Kept apart from `controls` even though every one of them is also IN `controls`.** The
+   * focus ring needs one flat list; painting which option is on needs them grouped by setting. One
+   * list cannot be both without the painter re-deriving the grouping from an index, which is the
+   * second description this file already refuses elsewhere.
+   */
+  options: Partial<Readonly<Record<SettingName, readonly HTMLButtonElement[]>>>;
 }
 
 /**
@@ -429,6 +511,22 @@ export interface Chrome {
    * code, on the same terms as `setHud`.
    */
   setTimer(seconds: number | null): void;
+  /**
+   * Say which option of a setting is currently on, so the row can show it — decision 0070.
+   *
+   * ⚠️ **Pushed in rather than read out.** The chrome holds no state about a setting; it is told,
+   * on the same terms as `setHud`. A chrome that remembered which style was on would be a second
+   * copy of `src/state/slices/settings.ts`, and the two would disagree the first time anything
+   * dispatched without going through here.
+   */
+  setChoice(name: SettingName, index: number): void;
+  /**
+   * Switch the chrome's typeface role — the UI half of a style, decision 0070.
+   *
+   * A class on every overlay rather than on the document, because the build puts this stylesheet in
+   * a page it does not own (0003) and a rule on `body` would reach past the game.
+   */
+  setFace(face: 'pixel' | 'clean'): void;
   /** Drop every listener. */
   release(): void;
 }
@@ -451,7 +549,11 @@ function hasChrome(screen: Screen): boolean {
  * Allocates freely: this runs once at boot, from `mount.ts`, which is on
  * `tests/budget.test.ts`'s deliberately-cold list.
  */
-export function makeChrome(colours: Palette, onAction: (screen: Screen, index: number) => void): Chrome {
+export function makeChrome(
+  colours: Palette,
+  onAction: (screen: Screen, index: number) => void,
+  onChoice: (name: SettingName, index: number) => void,
+): Chrome {
   const style = document.createElement('style');
   style.textContent = STYLE;
 
@@ -488,6 +590,10 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen, index: n
     */
     if (row.dims) root.style.background = colours.space;
     root.style.color = colours.player;
+    // The two inks a filled control needs, where the palette is. Custom properties rather than a
+    // second stylesheet: the palette is chosen at runtime and a static rule cannot know it.
+    root.style.setProperty('--itc-ink', colours.player);
+    root.style.setProperty('--itc-void', colours.space);
 
     /*
       THE PANEL — everything the screen says, in one box that the overlay centres.
@@ -514,6 +620,18 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen, index: n
     */
     const choices = document.createElement('div');
     choices.className = prefix + 'choices';
+
+    /*
+      The settings' own box — decision 0070.
+
+      ⚠️ **It rides with the KEY and not with the controls, and that is a fit rather than a taste.**
+      On the title screen the two columns are the key and the tier buttons, and the buttons are the
+      taller of the two: a row added under them makes the panel taller and the smallest landscape
+      phone starts scrolling, which decision 0049 refuses. Under the key it costs nothing, because the
+      key column has the headroom. The layout guard is what found that, at nine pixels.
+    */
+    const settingsBox = document.createElement('div');
+    settingsBox.className = prefix + 'settings-box';
 
     /*
       ⚠️ **THE KEY, ON THE TITLE SCREEN ONLY, AND IT IS THE UPGRADES AND NOT THE ENEMIES.** Asked for
@@ -546,12 +664,16 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen, index: n
         hint.textContent = row.hint;
         key.append(icon, name, hint);
       }
+      const column = document.createElement('div');
+      column.className = prefix + 'column';
+      column.append(key, settingsBox);
       const body = document.createElement('div');
       body.className = prefix + 'body';
-      body.append(key, choices);
+      body.append(column, choices);
       panel.appendChild(body);
     } else {
       panel.appendChild(choices);
+      panel.appendChild(settingsBox);
     }
 
     /*
@@ -589,6 +711,48 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen, index: n
     });
 
     /*
+      THE SETTINGS THIS SCREEN OFFERS — decision 0070.
+
+      ⚠️ **Appended to `controls` AFTER the actions, so the focus ring reaches them and starts
+      nowhere near them.** `show` puts the cursor back on control zero every time a screen appears
+      (0046), so a pad user who presses confirm on arriving still starts a run; the settings are one
+      move further on, which is where a thing you change once belongs.
+
+      ⚠️ **Each option captures its own position and nothing else.** `src/state/screens.ts` says an
+      option carries no value — the content hub's order IS the value — so the shell narrows an index
+      against its own table rather than this file narrowing a string.
+    */
+    const options: Partial<Record<SettingName, HTMLButtonElement[]>> = {};
+    for (const choice of row.choices) {
+      const line = document.createElement('div');
+      line.className = prefix + 'settings';
+      const label = document.createElement('span');
+      label.className = prefix + 'setting-label';
+      label.textContent = choice.label;
+      const box = document.createElement('div');
+      box.className = prefix + 'options';
+      const buttons: HTMLButtonElement[] = [];
+      choice.options.forEach((option, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = prefix + 'option';
+        button.textContent = option.label;
+        // The hint is the accessible description rather than visible text: the row is a strip of
+        // small buttons, and a sentence under each one would be a paragraph where a word will do.
+        if (option.hint.length > 0) button.title = option.hint;
+        const press = (): void => onChoice(choice.name, index);
+        button.addEventListener('click', press);
+        listeners.push(() => button.removeEventListener('click', press));
+        box.append(button);
+        buttons.push(button);
+        controls.push(button);
+      });
+      options[choice.name] = buttons;
+      line.append(label, box);
+      settingsBox.appendChild(line);
+    }
+
+    /*
       The countdown, for a screen that expires.
 
       `aria-live="off"`: it is announced once by the button's own label and re-announcing a number
@@ -609,7 +773,7 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen, index: n
       panel.appendChild(timer);
     }
 
-    panels[screen] = { root, controls, timer };
+    panels[screen] = { root, controls, timer, options };
     elements.push(root);
   }
 
@@ -797,6 +961,27 @@ export function makeChrome(colours: Palette, onAction: (screen: Screen, index: n
       // Terse, per `docs/game.md`: the screen already says the run is over, so this says only how
       // long it will keep saying it.
       timer.textContent = seconds === null ? '' : String(seconds);
+    },
+    setChoice(name: SettingName, index: number): void {
+      for (const screen of Object.keys(panels) as Screen[]) {
+        const buttons = panels[screen]?.options[name];
+        if (buttons === undefined) continue;
+        for (let i = 0; i < buttons.length; i++) {
+          buttons[i]!.classList.toggle(prefixFor(screen) + 'option-on', i === index);
+        }
+      }
+    },
+    setFace(face: 'pixel' | 'clean'): void {
+      /*
+        ⚠️ **Toggled on every screen's overlay and on the readout**, because a face that changed on
+        the title and not in the game would be the setting half-applied — and the readout is the one
+        piece of chrome the player looks at while flying.
+      */
+      for (const screen of Object.keys(panels) as Screen[]) {
+        panels[screen]?.root.classList.toggle(prefixFor(screen) + 'face-pixel', face === 'pixel');
+      }
+      hud.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
+      strip.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
     },
     release(): void {
       for (const drop of listeners) drop();
