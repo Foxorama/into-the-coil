@@ -57,6 +57,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **a cue is baked and played, and it names the picture it is the twin of** | [0072](decisions/0072-a-cue-is-baked-and-played.md) |
 | **an enemy is a pilot: motion is a closed union and three of them react to the player** | [0073](decisions/0073-an-enemy-is-a-pilot.md) |
 | **the edge of the player's box is drawn, and the clamp and the mark are one number** | [0074](decisions/0074-the-box-is-drawn.md) |
+| **a level boundary is a change of script, not a change of scene** | [0076](decisions/0076-a-level-has-an-origin.md) |
 | **a branch starts at `main` AND the next one waits — both halves checked** | [0033](decisions/0033-a-branch-starts-at-main.md), [0075](decisions/0075-the-serialisation-is-checked.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
@@ -248,10 +249,14 @@ small, and both are removing a false signal rather than a design change:
   `PLAYER_LEAD` exported so the clamp and the mark are one number rather than one subtraction written
   twice. ⚠️ **The forward room asked for alongside it is worth six units** at the current device
   support; 0074 names the aspect-floor trade that would buy ~28 more and does not take it.
-- **The level boundary resets the camera to zero**, so the sky snaps and the ship is repositioned.
-  Not deletable — `resetScene` records that distance travelled is a level's only clock — so seamless
-  means **giving a level an origin** rather than assuming it starts at zero. **This is the next thing
-  to build.**
+- **✅ DONE — the level boundary reset the camera to zero**, so the sky snapped and the ship was
+  repositioned. [0076](decisions/0076-a-level-has-an-origin.md). The camera reset was load-bearing and
+  is not deleted: a level now has an ORIGIN and its script is read from it, so a boundary changes the
+  script and nothing the player is watching. ⚠️ *Seamless* turned out to mean the camera and the ship
+  and **not** the bodies — [0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md) says
+  a level opens empty, and the existing suite caught a draft that had forgotten it.
+
+**All three defects are now closed, and none of the three has been played.**
 
 **3 — The arsenal answers backwards**, which is the rear-firing upgrade and the omnidirectional
 special.

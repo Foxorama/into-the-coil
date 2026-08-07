@@ -67,6 +67,7 @@ export function enemyKindIndices(): Record<EnemyKind, number> {
 export function inertLevel(): {
   enemyKinds: Record<EnemyKind, number>;
   level: LevelRow;
+  levelOrigin: number;
   nextWave: number;
   bossRow: typeof BOSSES.sentinel;
   bossPool: Pool<Entity>;
@@ -111,6 +112,7 @@ export function inertLevel(): {
     weapon: weaponFor(SHIPS.proof, []),
     enemyKinds: enemyKindIndices(),
     level: NO_LEVEL,
+    levelOrigin: 0,
     nextWave: 0,
     bossRow: BOSSES.sentinel,
     bossPool: new Pool<Entity>(CAPACITY.boss, makeEntity),
@@ -256,6 +258,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
       deaths.count++;
     },
     level,
+    levelOrigin: 0,
     nextWave: 0,
     bossRow: BOSSES[level.boss],
     bossPool,

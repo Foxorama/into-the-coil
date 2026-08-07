@@ -416,6 +416,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     enemyRows,
     enemyKinds,
     level,
+    // A run begins at the beginning, so the script and the camera share an origin — 0076.
+    levelOrigin: 0,
     nextWave: 0,
     bossRow,
     bossPool,

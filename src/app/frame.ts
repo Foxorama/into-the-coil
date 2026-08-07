@@ -499,6 +499,27 @@ export interface World {
    * statement.
    */
   level: LevelRow;
+  /**
+   * The camera distance this level's script is measured from.
+   *
+   * ── WHY A LEVEL HAS AN ORIGIN, WHICH IT DID NOT UNTIL NOW ───────────────────────────────────────
+   *
+   * Reported from play: *"there's a background scene reset between levels that's disjointing because
+   * it moves the player's ship, the level change needs to be seamless."*
+   * `docs/decisions/0076-a-level-has-an-origin.md`.
+   *
+   * ⚠️ **The camera reset was load-bearing and could not simply be deleted.** `resetScene` says why:
+   * *"distance travelled is the only clock a level has — a wave table places its content against
+   * `cameraAlong` — so a second run that started where the first one ended would be playing a
+   * different level with the same name."* That is true, and it is an argument for the script being
+   * measured from somewhere rather than for the camera going back to zero.
+   *
+   * So the script is read in LEVEL coordinates and this is the offset. A run that begins sets it to
+   * zero along with the camera; a level boundary sets it to wherever the camera has got to and
+   * touches nothing else. Two runs of the same level are still the same level, because what a wave
+   * is authored against is its distance from the level's own start.
+   */
+  levelOrigin: number;
   /** Index of the next wave in `level.waves` that has not spawned yet. Only ever goes up. */
   nextWave: number;
   /** Index of the next pickup in `level.pickups`. Its own index, because the two lists interleave. */
@@ -967,7 +988,14 @@ export class GameFrame implements Frame {
       both — a step that spawned only the first would leave the script permanently behind the camera
       rather than visibly wrong.
     */
-    const horizon = spawnAlong(w.cameraAlong);
+    /*
+      ⚠️ **IN THE LEVEL'S COORDINATES, NOT THE WORLD'S** — `docs/decisions/0076-a-level-has-an-origin.md`.
+      Subtracting the origin here rather than adding it to every `at` below is what keeps the three
+      comparisons reading exactly as they did when a level always started at zero: an authored `at`
+      is a distance from the level's own beginning, and this is the only line that has to know the
+      level did not begin at the beginning of the run.
+    */
+    const horizon = spawnAlong(w.cameraAlong) - w.levelOrigin;
     while (w.nextWave < w.level.waves.length && w.level.waves[w.nextWave]!.at <= horizon) {
       spawnWave(w, w.nextWave);
       w.nextWave++;
@@ -1501,7 +1529,9 @@ function spawnWave(w: World, index: number): void {
     nothing. `FLANK_ALONG` is the cap the player asked for, and `src/sim/camera.ts` has the argument
     for why it is a fixed 120 rather than a fraction of the view.
   */
-  const along = flanking ? w.cameraAlong + FLANK_ALONG : wave.at;
+  // ⚠️ The authored place is in LEVEL coordinates — 0076. A flanking wave is placed against the
+  // camera instead and so needs no origin: its `at` decides only WHEN, never where.
+  const along = flanking ? w.cameraAlong + FLANK_ALONG : wave.at + w.levelOrigin;
   // Which side it comes in from, as a sign on `across`. −1 enters from the acrossMinus edge.
   const side = origin === 'acrossPlus' ? 1 : -1;
   const entryAcross = side < 0 ? -FLANK_MARGIN : ACROSS_SPAN + FLANK_MARGIN;
@@ -1990,7 +2020,8 @@ function driveBoss(w: World): void {
 function spawnBoss(w: World): void {
   const boss = w.bossPool.spawn();
   if (boss === null) return;
-  reset(boss, w.level.bossAt, ACROSS_SPAN / 2, w.bossRow);
+  // In LEVEL coordinates like every other authored place — 0076.
+  reset(boss, w.level.bossAt + w.levelOrigin, ACROSS_SPAN / 2, w.bossRow);
   boss.health = toughnessFor(w.bossRow.health, w.difficulty);
   // Recorded, because a phase is a fraction of what the boss STARTED with and the row no longer
   // says what that was. `src/app/boss.ts` takes it as an argument for exactly that reason.
@@ -2073,29 +2104,60 @@ export function respawn(w: World): void {
  * `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md` amended it — so they live in
  * `src/state/` and this cannot reach them even by accident.
  */
-export function startLevel(w: World, level: LevelRow, keepShell: boolean): void {
+export function startLevel(w: World, level: LevelRow): void {
+  w.level = level;
+  w.bossRow = BOSSES[level.boss];
+  resetScene(w);
+}
+
+/**
+ * Change which script is running, and change nothing else.
+ *
+ * ── A LEVEL BOUNDARY IS A CHANGE OF SCRIPT, NOT A CHANGE OF SCENE ───────────────────────────────
+ *
+ * Reported from play: *"there's a background scene reset between levels that's disjointing because it
+ * moves the player's ship, the level change needs to be seamless."*
+ * `docs/decisions/0076-a-level-has-an-origin.md`.
+ *
+ * ⚠️ **The camera does not move, the ship does not move, and no pool is swept.** Every one of those
+ * was a visible jump at the one moment [0063](docs/decisions/0063-a-level-break-is-a-respite.md) had
+ * just finished arranging for the world to keep flowing — a banner over a moving sky, and then the
+ * sky snapping back to its start and the ship teleporting under it.
+ *
+ * ⚠️ **`keepShell` IS GONE, AND THIS IS WHY.** It existed because this path called `resetScene`,
+ * which calls `respawn`, which puts a bare hull back — so the shell had to be read out and added
+ * back around it. Nothing is reset here, so nothing has to be carried: 0058's rule *the shell crosses
+ * a boundary because the ship does* is now true because **the ship never leaves**, rather than true
+ * because of arithmetic. That is `docs/scaffold-plan.md`'s instruction ladder — remove the affordance
+ * — applied to a mechanism 0058 had to build and no longer needs.
+ *
+ * ⚠️ **The level's BODIES are still swept, and a first draft of this did not sweep them.**
+ * `tests/continue.test.ts` caught it: *"a level boundary sweeps the field for the same reason a run
+ * does — an enemy belongs to the level."*
+ * [0067](docs/decisions/0067-a-new-run-opens-on-an-empty-field.md) states it and
+ * [0043](docs/decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md) is what it protects:
+ * every level opens on an empty screen so the player can find the controls before anything finds
+ * them. Carrying the last level's enemies through would fill exactly that opening stretch.
+ *
+ * ⚠️ **So *seamless* turned out to mean the CAMERA and the SHIP, not the bodies.** That is the whole
+ * of what was reported — *"it moves the player's ship"* — and by the time `onward` runs, a boss has
+ * died and three seconds of respite (0063) have passed, so what is being swept is a field that is
+ * already almost empty. Nothing the player is watching jumps.
+ *
+ * ⚠️ **Debris is left alone**, because it retires itself and because the thing most likely to still
+ * be on screen at this moment is the boss coming apart — which 0062 went to some trouble to make
+ * visible. The player's own shots stay too: the ship did not leave, so neither did what it fired.
+ */
+export function advanceLevel(w: World, level: LevelRow): void {
   w.level = level;
   w.bossRow = BOSSES[level.boss];
   /*
-    ⚠️ **THE SHELL CROSSES A BOUNDARY BECAUSE THE SHIP DOES, AND IT DOES NOT CROSS A RUN.**
-    `resetScene` calls `respawn`, which puts a hull with nothing on it back on the field — right for a
-    death and wrong at a level boundary, where nothing died. Reported from play: *"shields don't carry
-    forward between levels."* `docs/decisions/0058-a-level-boundary-keeps-the-shell.md`.
-
-    ⚠️ **Read before and written after rather than *not reset***, so `respawn` goes on saying exactly
-    one thing — *this is what a new life gets* — and the difference between a life and a level lives
-    in the function whose name is that difference.
-
-    ⚠️ **`keepShell` IS AN ARGUMENT AND WAS BRIEFLY AN ORDERING.** The first version read the count
-    unconditionally and relied on `src/app/mount.ts` calling `resetScene` before `startLevel` at the
-    top of a run, so that what crossed was zero. That is true, invisible, and reached by a line in
-    another file that reads as redundant — and `npm run prove` said so: the probe that removed that
-    line came back STILL GREEN, because no test could see an ordering nothing states. A caller that
-    has to say which of the two it is cannot get it wrong quietly.
+    ⚠️ **The one line that makes the rest of it possible.** The script is authored from the level's
+    own beginning, so the level begins here — wherever the camera has got to. Everything downstream
+    reads `spawnAlong(camera) - levelOrigin` and cannot tell the difference.
   */
-  const shields = keepShell ? shieldsOf(w.shipRow, w.ship.health) : 0;
-  resetScene(w);
-  w.ship.health += shields;
+  w.levelOrigin = w.cameraAlong;
+  beginScript(w);
 }
 
 /**
@@ -2106,39 +2168,47 @@ export function startLevel(w: World, level: LevelRow, keepShell: boolean): void 
  * a level has — a wave table places its content against `cameraAlong` — so a second run that started
  * where the first one ended would be playing a different level with the same name.
  */
-export function resetScene(w: World): void {
-  w.cameraAlong = 0;
-  w.prevCameraAlong = 0;
-  /*
-    ⚠️ **THE ENEMIES AND THEIR SHOTS ARE CLEARED HERE, AND UNTIL NOW THEY WERE CLEARED NOWHERE.**
-    `docs/decisions/0067-a-new-run-opens-on-an-empty-field.md`. They used to be swept by `respawn`,
-    which this function calls at the bottom — so 0057 taking that sweep out of a DEATH silently took
-    it out of a new LEVEL and a new RUN as well, and both then opened on the last one's field.
-    Reported from play as *"when you restart at level 1, the run is the same run as you were up to
-    previously."*
-
-    The rule that stops it happening a third time is the split, not the two lines: **a pool that
-    belongs to the LEVEL is emptied here, and a pool that belongs to the LIFE is emptied by
-    `respawn`.** An enemy belongs to the level, which is exactly why it survives a death and must not
-    survive a level.
-  */
+/**
+ * Put a level's SCRIPT back to its beginning, and sweep what belongs to a level.
+ *
+ * ⚠️ **Shared by the two ways a level starts, and it was duplicated into both for about an hour.**
+ * `npm run prove` is what found it: four probes belonging to 0062 and 0067 reported *"the probe's
+ * find appears 2 times — make it unique"*, which is the harness refusing to anchor on a line that had
+ * quietly become two copies. The answer is one description rather than longer anchors —
+ * `docs/decisions/0029-the-tracked-record-is-the-record.md` about prose, arriving in code.
+ *
+ * ⚠️ **A pool that belongs to the LEVEL is emptied here; a pool that belongs to the LIFE is emptied
+ * by `respawn`** — `docs/decisions/0067-a-new-run-opens-on-an-empty-field.md`, which is the split that
+ * stops 0057's regression happening a third time. An enemy belongs to the level, which is exactly why
+ * it survives a death and must not survive a level.
+ *
+ * ⚠️ **`debris` is NOT here and that is deliberate.** It is cosmetic, it retires itself, and the thing
+ * most likely to be on screen at a level boundary is a boss coming apart — which 0062 went to some
+ * trouble to make visible. A new RUN sweeps it below; a boundary does not.
+ */
+function beginScript(w: World): void {
   w.enemies.clear();
   w.enemyShots.clear();
-  w.debris.clear();
-  /*
-    ⚠️ **The boss is cleared HERE and deliberately not in `respawn`.** A death during the fight leaves
-    the boss exactly as the player left it — damaged, mid-phase, still there — which is the arcade
-    answer and the one that keeps a life worth spending. Only a new run puts it back.
-  */
   w.bossPool.clear();
   w.pickups.clear();
   w.nextWave = 0;
   w.nextPickup = 0;
   w.bossSpawned = false;
   w.bossBeaten = false;
-  // ⚠️ Cleared HERE as well as latched, or a level entered while the last one was still exploding
-  // would report itself cleared a second and a half in, with its own boss still ahead of the player.
+  // ⚠️ Cleared as well as latched, or a level entered while the last one was still exploding would
+  // report itself cleared a second and a half in, with its own boss still ahead of the player.
   w.clearedIn = 0;
   w.bossPatrol = 1;
+}
+
+export function resetScene(w: World): void {
+  w.cameraAlong = 0;
+  w.prevCameraAlong = 0;
+  // The camera and the script start together, which is what a RUN beginning means — 0076.
+  w.levelOrigin = 0;
+  beginScript(w);
+  // ⚠️ The one sweep a level boundary does not do: a new run opens on nothing at all, including the
+  // fragments of whatever ended the last one.
+  w.debris.clear();
   respawn(w);
 }

@@ -8,8 +8,15 @@
  * | | the run | the field | the shell |
  * |---|---|---|---|
  * | `begin`  | back to level one, a full complement | emptied, camera to zero | dropped |
- * | `onward` | carried forward untouched | emptied, camera to zero | kept — 0058 |
+ * | `onward` | carried forward untouched | **left exactly as it was** — 0076 | kept |
  * | `resume` | back to a full complement, level UNTOUCHED | left exactly as it was | dropped |
+ *
+ * ⚠️ **`onward`'s middle column changed, and it is the whole of
+ * [0076](../../docs/decisions/0076-a-level-has-an-origin.md).** It used to read *emptied, camera to
+ * zero*, and that was reported as *"a background scene reset between levels that's disjointing
+ * because it moves the player's ship."* A level boundary is now a change of script and nothing else,
+ * which also collapses the right-hand column: the shell is kept because the ship never leaves,
+ * rather than because a number was read out and added back.
  *
  * ⚠️ **`resume` drops the shell with `begin` rather than keeping it with `onward`**, and it is the one
  * row where the three do not line up by which half they reset.
@@ -34,7 +41,7 @@ import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { makeRng } from '../sim/rng.ts';
 import type { Action } from '../state/root.ts';
 import type { RunState } from '../state/slices/run.ts';
-import { respawn, startLevel, type World } from './frame.ts';
+import { advanceLevel, respawn, startLevel, type World } from './frame.ts';
 
 export interface Lifecycle {
   /** A run at a chosen tier, from the top: level one, an empty field, a full complement of lives. */
@@ -54,9 +61,18 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
    * the caller is what decides that; this clamps rather than throwing, because a level index that
    * has run off the end is a bug in the shell and a black screen is a worse way to report it.
    */
-  const enterLevel = (keepShell: boolean): void => {
+  const enterLevel = (seamless: boolean): void => {
     const kind = LEVEL_KINDS[Math.min(runOf().level, LEVEL_KINDS.length - 1)]!;
-    startLevel(world, LEVELS[kind], keepShell);
+    /*
+      ⚠️ **TWO FUNCTIONS RATHER THAN A FLAG, and the flag it replaces was `keepShell`** —
+      `docs/decisions/0076-a-level-has-an-origin.md`. A run beginning and a level boundary are not one
+      operation with a switch on it: one sweeps the scene and puts the camera back to zero, the other
+      changes which script is running and touches nothing the player is looking at. Naming them apart
+      is what let the shell-carrying arithmetic 0058 needed disappear entirely — the ship no longer
+      leaves, so there is nothing to carry.
+    */
+    if (seamless) advanceLevel(world, LEVELS[kind]);
+    else startLevel(world, LEVELS[kind]);
   };
 
   return {
@@ -94,14 +110,15 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
       // ⚠️ `begin` FIRST, because it resets the level index to zero and `enterLevel` reads it. The
       // tier travels with it: `src/state/slices/run.ts` is where a run's lives come from now.
       dispatch({ slice: 'run', type: 'begin', difficulty });
-      // ⚠️ `false`: a run begins with the ship's hull and nothing on it, whatever the last run ended
-      // wearing — 0058.
+      // ⚠️ `false`: not seamless. A run begins on a swept field with the camera at zero, whatever
+      // the last one ended as — 0058 and 0067.
       enterLevel(false);
       dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
     },
 
     onward(): void {
-      // ⚠️ `true`: the shell crosses a level boundary because the ship does, and nothing died — 0058.
+      // ⚠️ `true`: seamless. The camera, the ship and the field all carry on; only the script
+      // changes — 0076. The shell crosses because the ship never leaves, which is 0058 by construction.
       enterLevel(true);
       world.rng = makeRng('proof-scene').stream('spawns');
       dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
