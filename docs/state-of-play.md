@@ -52,6 +52,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **a death scatters what it took, non-cycling and on a short timer** | [0066](decisions/0066-a-death-scatters-what-it-took.md) |
 | **a new run opens on an empty field** | [0067](decisions/0067-a-new-run-opens-on-an-empty-field.md), [`the-sweep-that-served-two-rules`](../reports/the-sweep-that-served-two-rules-2026-08-07.md) |
 | **a run over is a continue, and it keeps the level** | [0068](decisions/0068-a-run-over-is-a-continue.md) |
+| **a style is a setting, a choice is not an action, and neither may touch the sim** | [0070](decisions/0070-a-style-is-a-setting-and-the-first-one.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
@@ -352,6 +353,24 @@ the scaffold *"until the first one is real"*. Carries a rollback note —
 [0001](decisions/0001-revertability-not-risk-rating.md). The schema it persists is decided:
 [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) says current lives, current
 arsenal, and the level to resume at.
+
+## The settings, now that there is a place to put them
+
+**The first one landed on 2026-08-07** — [0070](decisions/0070-a-style-is-a-setting-and-the-first-one.md).
+A screen row can now carry a **choice**, which is a named setting with a list of options, and the
+title screen carries one: *Look — Retro / Modern*.
+
+⚠️ **Retro and modern currently differ by a starfield and a typeface.** The sprites are the same
+placeholder shapes in both, and `bakeAtlas` does not take a style yet. Adding a drawing per style is
+where the rest of the ask goes: *"and then start updating the graphics across the board."*
+
+⚠️ **Nothing persists.** A reload is back to the default, and 0070 names that as the reason to do
+`save/`: a setting is the one piece of state a save should hold **without a run attached**, which
+`docs/game.md`'s interruption-hedge framing does not currently cover.
+
+**The queue behind it is already the same shape** — the palette (`PALETTES` has two and nothing
+switches them), reduced motion, and flash intensity. Each is a row in `choices` plus a field on the
+settings slice; none of them needs a new mechanism.
 
 ## Deliberately not next
 

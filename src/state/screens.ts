@@ -18,6 +18,7 @@
 
 import { GAME_TITLE } from '../brand.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
+import { STYLES, STYLE_KINDS } from '../content/styles.ts';
 
 /** Every screen, in no particular order — nothing indexes this list by position. Closed. */
 export const SCREEN_KINDS = ['title', 'playing', 'gameOver', 'cleared', 'victory'] as const;
@@ -41,6 +42,36 @@ export interface ScreenAction {
   hint: string;
 }
 
+/**
+ * Every setting that can appear on a screen. Closed.
+ *
+ * ⚠️ **Declared HERE rather than in the slice, on 0017's own terms**: this file is one level above
+ * `slices/` and is the sanctioned place for a shape two of them must agree on. `settings` keys its
+ * state by it and `screen` rows name it, and neither imports the other.
+ */
+export type SettingName = 'style';
+
+/**
+ * One setting a screen offers, and the options it offers for it.
+ *
+ * ⚠️ **`name` is the SETTING and not a label**, which is what lets the shell route a press without a
+ * table of its own: `src/app/mount.ts` reads it to decide which action to dispatch, and a second
+ * setting is a row here rather than an arm there.
+ *
+ * ⚠️ **An option carries NO VALUE, only a position — and that is what keeps the shell cast-free.**
+ * The difficulty buttons already work this way: `DIFFICULTY_KINDS` IS the order, so a control's index
+ * reads straight off it. A `value: string` here would arrive at the reducer as a string that has to
+ * be narrowed to a `StyleKind`, and `docs/decisions/0016-a-hub-enumerates-kinds.md` bans exactly the
+ * escape hatches that would take.
+ */
+export interface ScreenChoice {
+  name: SettingName;
+  /** What the row is called on screen. */
+  label: string;
+  /** The options, in the order the content hub lists them. Position is the value. */
+  options: readonly { label: string; hint: string }[];
+}
+
 export interface ScreenRow {
   /**
    * The one line of chrome. Terse, per `docs/game.md`'s voice rule: *no explanatory commentary, no
@@ -59,6 +90,28 @@ export interface ScreenRow {
    * makes a list navigable at all.
    */
   actions: readonly ScreenAction[];
+  /**
+   * The settings this screen lets the player change, if any.
+   *
+   * ⚠️ **A CHOICE IS NOT AN ACTION, and keeping them apart is the whole of this field.**
+   * `docs/decisions/0070-a-style-is-a-setting-and-the-first-one.md`. An action *does* something and
+   * the screen usually stops existing afterwards — a tier button starts a run. A choice *is*
+   * something: it has a current value, the player can see which one is on, and pressing it leaves
+   * them exactly where they were. Folded into `actions`, the title screen would have five buttons of
+   * which three start a run and two do not, told apart by an index — and
+   * `docs/decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md`'s focus ring would walk
+   * them as if they were the same thing.
+   *
+   * ⚠️ **A LIST of choices, each with a LIST of options**, for the reason `actions` gives one field
+   * up: the second setting is a row rather than a rewrite. `docs/state-of-play.md` names the queue —
+   * palette, reduced motion, flash intensity — and every one of them is this shape.
+   *
+   * ⚠️ **The state itself is NOT here.** A row says a choice exists and what it offers; which option
+   * is on lives in `src/state/slices/settings.ts`, and the shell is what puts the two together. A
+   * current value on this table would be a second copy of the state, drifting the moment anything
+   * dispatched.
+   */
+  choices: readonly ScreenChoice[];
   /**
    * Whether the simulation steps while this screen is up.
    *
@@ -151,11 +204,29 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   title: {
     heading: GAME_TITLE,
     actions: DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })),
+    /*
+      ⚠️ **THE FIRST SETTING, AND IT IS ON THE TITLE SCREEN RATHER THAN BEHIND ONE** —
+      `docs/decisions/0070-a-style-is-a-setting-and-the-first-one.md`. A settings screen is real and
+      is not this: `docs/state-of-play.md` has had one queued for weeks, and inventing it to hold a
+      single two-option row would put the one thing a player might want before their first run behind
+      a door they have to find. The title screen is already the place a run is configured — 0047 put
+      the tier there for the same reason.
+
+      ⚠️ **Built by walking `STYLE_KINDS`, so the buttons ARE the table.** Same argument the tiers
+      above make, and the same one `src/app/chrome.ts` makes for the pickup key.
+    */
+    choices: [
+      {
+        name: 'style',
+        label: 'Look',
+        options: STYLE_KINDS.map((kind) => ({ label: STYLES[kind].title, hint: STYLES[kind].hint })),
+      },
+    ],
     steps: false,
     dims: true,
     timeout: null,
   },
-  playing: { heading: '', actions: [], steps: true, dims: false, timeout: null },
+  playing: { heading: '', actions: [], choices: [], steps: true, dims: false, timeout: null },
   /**
    * ⚠️ **No score, no summary, no coaching.** `docs/game.md`: *players are assumed to be adaptable;
    * hints are added where play proves they are needed, never pre-emptively.* What the player needs to
@@ -190,6 +261,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   gameOver: {
     heading: 'Run over',
     actions: [{ label: 'Continue', hint: '' }],
+    choices: [],
     steps: false,
     dims: true,
     // ⚠️ **`then: 'title'` and NOT the button.** *Continue* resumes the run (0068); a countdown that
@@ -220,6 +292,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   cleared: {
     heading: 'Level clear',
     actions: [{ label: 'Onward', hint: '' }],
+    choices: [],
     steps: true,
     dims: false,
     // ⚠️ **`then: null` — the one screen that genuinely presses its own button.** *Onward* is not a
@@ -234,5 +307,5 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    * final boss at the end of a run; two of them exist, so this is the end of what has been authored
    * rather than the end of the game — and the wording says only what is true.
    */
-  victory: { heading: 'Coil cleared', actions: [{ label: 'Again', hint: '' }], steps: false, dims: true, timeout: null },
+  victory: { heading: 'Coil cleared', actions: [{ label: 'Again', hint: '' }], choices: [], steps: false, dims: true, timeout: null },
 };

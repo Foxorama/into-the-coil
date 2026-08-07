@@ -19,8 +19,10 @@ export const PROBES = [
     guard: 'the level break keeps the world running and does not paint over it',
     edit: {
       path: 'src/state/screens.ts',
-      find: "    heading: 'Level clear',\n    actions: [{ label: 'Onward', hint: '' }],\n    steps: true,",
-      replace: "    heading: 'Level clear',\n    actions: [{ label: 'Onward', hint: '' }],\n    steps: false,",
+      // ⚠️ `choices: []` sits between the actions and the steps now — decision 0070 gave every screen
+      // row a settings list. The probe follows the code; the break it makes is unchanged.
+      find: "    actions: [{ label: 'Onward', hint: '' }],\n    choices: [],\n    steps: true,",
+      replace: "    actions: [{ label: 'Onward', hint: '' }],\n    choices: [],\n    steps: false,",
     },
   },
   {
@@ -58,9 +60,10 @@ export const PROBES = [
     guard: 'a screen that expires onto its own control has a control to press',
     edit: {
       path: 'src/state/screens.ts',
-      find: "  playing: { heading: '', actions: [], steps: true, dims: false, timeout: null },",
+      // ⚠️ The row gained `choices` — decision 0070. Same break, current text.
+      find: "  playing: { heading: '', actions: [], choices: [], steps: true, dims: false, timeout: null },",
       replace:
-        "  playing: { heading: '', actions: [], steps: true, dims: false, timeout: { steps: 60, then: null } },",
+        "  playing: { heading: '', actions: [], choices: [], steps: true, dims: false, timeout: { steps: 60, then: null } },",
     },
   },
   {
@@ -92,8 +95,11 @@ export const PROBES = [
     guard: 'every comment in the stylesheet is opened and closed',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '.itc-cleared-panel { margin-top: min(1.5rem, 5cqh); margin-bottom: auto; }\n/*\n  ── THE TAP STRIP, DRAWN',
-      replace: '.itc-cleared-panel { margin-top: min(1.5rem, 5cqh); margin-bottom: auto; }\n  ── THE TAP STRIP, DRAWN',
+      // ⚠️ **The block after that rule is 0070's settings row now, not the tap strip** — which is
+      // this probe's own point arriving a second time: the break is *whatever comment follows the
+      // line two branches both append near*, and the probe has to be pointed at whatever that is.
+      find: '.itc-cleared-panel { margin-top: min(1.5rem, 5cqh); margin-bottom: auto; }\n/*\n  ── A SETTING, OFFERED',
+      replace: '.itc-cleared-panel { margin-top: min(1.5rem, 5cqh); margin-bottom: auto; }\n  ── A SETTING, OFFERED',
     },
   },
   {
