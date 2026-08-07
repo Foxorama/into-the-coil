@@ -189,6 +189,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
 
   const world: World = {
     layers: [debris, blasts, bossPool, enemies, enemyShots, playerShots, missiles, bombs, shieldOrbs, shipPool],
+    sky: [],
     shipPool,
     shieldOrbs,
     enemies,

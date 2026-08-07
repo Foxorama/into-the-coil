@@ -26,6 +26,7 @@
  */
 
 import type { ShotKind } from './shots.ts';
+import { SPRITE } from './sprites.ts';
 
 /**
  * Every special, closed. A new one fails every `Record` over this union to BUILD until it has a row.
@@ -95,6 +96,22 @@ export interface SpecialRow {
    * adding a kind is forced to answer something.
    */
   charges: number;
+  /**
+   * Which baked bitmap says *this one*, wherever the player is shown their triggers.
+   *
+   * ⚠️ **On the ROW rather than derived from `shot`**, even though the bomb's face and the bomb's
+   * thrown body happen to be the same bitmap. `shot` is nullable — 0016's *a table forces every kind
+   * to answer*, and `mines` answers *nothing fires me* — so deriving it would leave exactly the kinds
+   * that have no weapon yet with no face either, and those are the ones a player most needs told
+   * apart. `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md` is what needed it.
+   *
+   * ⚠️ **The real art, never a drawing of it** — the same argument `src/app/chrome.ts` makes for the
+   * pickup key: a hand-written glyph is a second description of a silhouette, and the day the art
+   * pass moves one the key goes on showing the old shape.
+   *
+   * An index rather than a name, exactly as `Body.sprite` is.
+   */
+  face: number;
 }
 
 export const SPECIALS: Record<SpecialKind, SpecialRow> = {
@@ -102,7 +119,9 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
    * `docs/game.md`'s *"orbiting mines that are half shield and half weapon"* — the example of a
    * special that is not only a weapon, which is the role `shield` used to hold here.
    */
-  mines: { label: 'Mines', charges: 1, shot: null, becomes: null, reach: 0 },
+  // The orbiting mark is the closest thing the art has to *half shield and half weapon*, which is
+  // what `docs/game.md` calls this. It has no shot, so it could not have borrowed one.
+  mines: { label: 'Mines', charges: 1, shot: null, becomes: null, reach: 0, face: SPRITE.shieldOrb },
   /**
    * The one the whole arsenal rule is named after — spent, not held.
    *
@@ -111,5 +130,5 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
    * back to — 0039's *"back to the ship's base weapon and starting special"*, which had nothing to
    * cash until now.
    */
-  bomb: { label: 'Bomb', charges: 2, shot: 'bomb', becomes: 'blast', reach: 80 },
+  bomb: { label: 'Bomb', charges: 2, shot: 'bomb', becomes: 'blast', reach: 80, face: SPRITE.bomb },
 };

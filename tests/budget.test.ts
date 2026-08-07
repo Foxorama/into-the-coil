@@ -31,11 +31,13 @@ import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import { type Entity, makeEntity, reset, stepEntities } from '../src/sim/entity.ts';
 import { Pool } from '../src/sim/pool.ts';
 import { paintScene } from '../src/render/scene.ts';
+import { bakeSize } from '../src/render/bake.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { sprite } from './bodies.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import { BURST } from '../src/content/debris.ts';
 import { MAX_SHIELDS } from '../src/content/ships.ts';
+import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
@@ -61,6 +63,23 @@ class CountingSurface implements Surface {
     // A NaN reaching a real canvas silently draws nothing, so the counting surface refuses it here
     // rather than letting a blank frame pass as a full one.
     if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error(`blit at a non-finite point: ${x}, ${y}`);
+  }
+}
+
+/**
+ * A `Surface` that records the leftmost and rightmost edge anything was drawn at.
+ *
+ * ⚠️ **Edges rather than centres**, because a tile is drawn centred and what matters is whether the
+ * COVERAGE reaches the edge of the view. A guard on centres would pass with the screen half bare.
+ */
+class SpanSurface implements Surface {
+  left = Number.POSITIVE_INFINITY;
+  right = Number.NEGATIVE_INFINITY;
+  clear(): void {}
+  blit(sprite: number, x: number, _y: number, scale: number): void {
+    const half = (SPRITE_EXTENT[SPRITE_KINDS[sprite]!] * scale) / 2;
+    if (x - half < this.left) this.left = x - half;
+    if (x + half > this.right) this.right = x + half;
   }
 }
 
@@ -136,6 +155,122 @@ describe('the worst-case scene costs one blit per entity, and nothing else', () 
     paintScene(flat, viewOf(2400, 1080), [pool], 900, 0.25);
     paintScene(upright, viewOf(1080, 2400), [pool], 900, 0.25);
     expect(upright.blits).toBe(flat.blits);
+  });
+});
+
+/**
+ * THE SKY IS BAKED AND BLITTED, AND IT COSTS A FIXED HANDFUL OF CALLS.
+ *
+ * `docs/decisions/0065-the-sky-is-baked-and-blitted.md`. Asked for in play: *"needs a starry
+ * background or a background of some kind."*
+ *
+ * ⚠️ **The two things a background can do to a frame budget are grow with the camera and grow with
+ * the screen**, and both are invisible on the machine it was written on: a wrapping tile drawn one
+ * too many times on some frames costs a blit nobody notices, and a per-star draw costs nothing at
+ * 1280×720 and everything on a phone with a full screen. Both are counted here.
+ */
+describe('the sky costs a fixed number of calls, whatever the camera is doing', () => {
+  /** The real sky, built the way `src/app/mount.ts` builds it rather than restated. */
+  const SKY = [
+    { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.12 },
+    { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.3 },
+  ];
+
+  it('draws the same number of tiles on every frame of a whole level', () => {
+    /*
+      ⚠️ **THE ONE THAT MATTERS, and it is a modulo bug that nothing else could see.** A tiling offset
+      taken with `%` alone, or a count that rounds rather than ceils, draws an extra tile on some
+      cameras and one too few on others — the cost wobbles and, worse, a seam of empty space crosses
+      the screen once per tile. Ten thousand units of camera is more than a level.
+    */
+    const view = viewOf(1920, 1080);
+    const counts = new Set<number>();
+    for (let camera = 0; camera < 10_000; camera += 37) {
+      const surface = new CountingSurface();
+      paintScene(surface, view, [], camera, 0.5, SKY);
+      counts.add(surface.blits);
+    }
+    expect([...counts], `the sky's cost varies with the camera: ${[...counts].join(', ')}`).toHaveLength(1);
+  });
+
+  it('and the same number on every device the clamp allows', () => {
+    // A tile is `ACROSS_SPAN` units and the view is 150 to 240 (0023), so the count varies by one at
+    // most between the narrowest and the widest. What must not vary is the ORDER of it.
+    for (const view of [viewOf(1500, 1000), viewOf(2400, 1000), viewOf(1000, 1500)]) {
+      const surface = new CountingSurface();
+      paintScene(surface, view, [], 4321, 0.5, SKY);
+      expect(surface.blits, `a ${view.alongSpan}-unit view drew ${surface.blits} sky tiles`).toBeLessThanOrEqual(
+        SKY.length * 5,
+      );
+      expect(surface.blits, 'the sky drew nothing at all').toBeGreaterThan(0);
+    }
+  });
+
+  it('covers the whole view, so no seam of empty space ever crosses the screen', () => {
+    /*
+      ⚠️ **In world units against the view, which is what the player would see go past.** The count
+      has to be *span ÷ tile* rounded UP, plus one for the tile straddling the trailing edge. Both
+      halves are one character and both are invisible at a glance: `round` for `ceil` is short by a
+      whole tile on the widest device only, and dropping the `+ 1` is short at every camera that is
+      not exactly on a tile boundary.
+
+      ⚠️ **Every view the clamp allows**, which is where the `ceil` half lives: at 16:9 the span is
+      1.78 tiles and rounding up and to-nearest agree, so a test on one device proves nothing.
+    */
+    /*
+      ⚠️ **ONE LAYER AT A TIME, and measuring both at once hid the bug this exists for.** The layers
+      move at different rates, so at any given camera one is nearly aligned with a tile boundary and
+      the other is not — and a `SpanSurface` fed both records the widest pair of edges, which is the
+      LUCKIER layer's coverage. The first version of this test passed with a layer visibly a tile
+      short. A guard that aggregates the thing it is comparing is not a guard.
+    */
+    for (const view of [viewOf(1500, 1000), viewOf(1920, 1080), viewOf(2400, 1000)]) {
+      for (const camera of [0, 13, 49.5, 99.9, 100, 100.1, 1234.5]) {
+        for (const layer of SKY) {
+          const surface = new SpanSurface();
+          paintScene(surface, view, [], camera, 0.5, [layer]);
+          // The tiles have to reach from at or before the trailing edge to at or past the far one.
+          // `SpanSurface` records the extremes in CSS pixels.
+          const where = `a ${view.alongSpan}-unit view at camera ${camera}, depth ${layer.depth}`;
+          expect(surface.left, `${where}: the sky starts ${surface.left.toFixed(0)}px in`).toBeLessThanOrEqual(
+            view.gutterAlong + 0.001,
+          );
+          expect(surface.right, `${where}: the sky stops short`).toBeGreaterThanOrEqual(
+            view.gutterAlong + view.alongSpan * view.scale - 0.001,
+          );
+        }
+      }
+    }
+  });
+
+  it('is not entities, so it costs the pools nothing', () => {
+    // The rule this decision is really about: `CAPACITY` totals 0022's worst case exactly, so a
+    // starfield of bodies would have come out of the pools that hold bullets.
+    const before = Object.values(CAPACITY).reduce((sum, n) => sum + n, 0);
+    expect(before, 'the sky took slots from the entity budget').toBeLessThanOrEqual(WORST_CASE);
+  });
+
+  it('and the bake ceiling is a RESOLUTION, so the biggest bitmap is not the blurriest', () => {
+    /*
+      ⚠️ **The ceiling was a flat pixel count and it always meant this.** 256px is a 26-unit boss at
+      ten pixels per unit — so the number was a resolution wearing a size's clothes, and it only
+      looked like a size while nothing was bigger than a boss. A sky tile is four times that: under a
+      flat cap it bakes at a quarter of the detail and blits at three times its own resolution, and
+      the picture is wrong on the biggest thing on the screen and nowhere else.
+
+      Stated as the property rather than as the number: at a resolution high enough that everything is
+      capped, every kind is capped at the SAME pixels per world unit.
+    */
+    const far = 10_000;
+    const resolutions = SPRITE_KINDS.map((kind) => bakeSize(SPRITE_EXTENT[kind], far) / SPRITE_EXTENT[kind]);
+    for (const ppu of resolutions) {
+      expect(ppu, `the cap gives ${ppu} pixels per unit where another kind gets ${resolutions[0]}`).toBeCloseTo(
+        resolutions[0]!,
+        6,
+      );
+    }
+    // And it is a ceiling rather than a floor: below it, the ask is honoured.
+    expect(bakeSize(10, 4), 'a modest resolution was rounded up to the ceiling').toBe(40);
   });
 });
 

@@ -9,7 +9,14 @@ import { INVULN_STEPS } from '../src/content/ships.ts';
 import { phaseFor } from '../src/app/boss.ts';
 import { GameFrame, SHIP_START_ALONG, resetScene, respawn } from '../src/app/frame.ts';
 import { playableWorld } from './world.ts';
-import { ACROSS_SPAN, MAX_ALONG_SPAN } from '../src/sim/camera.ts';
+import {
+  ACROSS_CULL_MAX,
+  ACROSS_CULL_MIN,
+  ACROSS_SPAN,
+  MAX_ALONG_SPAN,
+  ROAM_MAX,
+  ROAM_MIN,
+} from '../src/sim/camera.ts';
 import { SCROLL_PER_STEP, SHIP_SPEED } from '../src/sim/flight.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -56,12 +63,18 @@ describe('an authored level is a script the spawner can actually run', () => {
     }
   });
 
-  it('never puts an enemy where it can leave the dodge lane', () => {
+  it('never puts an enemy where it can leave the ROAM band and be culled', () => {
     /*
-      ⚠️ **There is no `across` cull.** `src/sim/entity.ts` retires an entity on the along axis at
-      both edges and on nothing else, so an enemy that wanders out of the lane is gone from the game
-      and still occupying a pool slot — `reports/enemy-silhouettes-2026-08-05.md` names that as the
-      one real gap that came with authored spawns.
+      ⚠️ **The bound is the ROAM band and it used to be the dodge lane** —
+      `docs/decisions/0059-the-lane-is-the-players-box.md`. What this has always been about is the
+      `across` cull: a body outside `ACROSS_CULL_MIN`/`MAX` is gone from the game, so a wave whose
+      members can reach it is a wave that silently deletes itself.
+      `reports/enemy-silhouettes-2026-08-05.md` named it as the one real gap that came with authored
+      spawns, and it was written against the lane because the lane was where everything stayed.
+
+      Enemies now leave the lane on purpose, so the lane cannot be the bound. `ROAM_MIN`/`ROAM_MAX`
+      can, and they are strictly inside the cull — which is what keeps the cull meaning *this has
+      left the game* rather than becoming a wall.
 
       The margin is the hurtbox PLUS twice the weave amplitude, and the two is not a safety factor:
       `src/content/enemies.ts` has the algebra. A weaver traces a swing of ±A about a centre that its
@@ -73,13 +86,44 @@ describe('an authored level is a script the spawner can actually run', () => {
         const row = ENEMIES[wave.enemy];
         const margin = row.radius + row.weaveAmplitude * 2;
         for (const member of membersOf(wave)) {
-          if (member.across - margin < 0 || member.across + margin > ACROSS_SPAN) {
+          if (member.across - margin < ROAM_MIN || member.across + margin > ROAM_MAX) {
             offences.push(`${kind} ${wave.enemy} at ${wave.at} reaches ${member.across.toFixed(1)} ± ${margin}`);
           }
         }
       }
     }
-    expect(offences, `these can leave the lane, and nothing brings them back:\n  ${offences.join('\n  ')}`).toEqual([]);
+    expect(offences, `these can leave the roam band, and nothing brings them back:\n  ${offences.join('\n  ')}`).toEqual(
+      [],
+    );
+  });
+
+  it('and the roam band is strictly inside the cull, so nothing turns round on a wall', () => {
+    /*
+      ⚠️ **The relationship the test above rests on**, stated where it can fail. If the band ever
+      reached the cull, a roaming body would be retired at the moment it turned round — which reads
+      as enemies vanishing at the edge of the screen rather than as a bound being wrong.
+    */
+    expect(ROAM_MIN, 'the roam band reaches the cull').toBeGreaterThan(ACROSS_CULL_MIN);
+    expect(ROAM_MAX, 'the roam band reaches the cull').toBeLessThan(ACROSS_CULL_MAX);
+    // And it is genuinely OUTSIDE the lane, or the whole change is the tunnel with a wider diameter.
+    expect(ROAM_MIN, 'the roam band does not leave the lane').toBeLessThan(0);
+    expect(ROAM_MAX, 'the roam band does not leave the lane').toBeGreaterThan(ACROSS_SPAN);
+  });
+
+  it('never authors a lane of zero, because zero is what "nowhere to steer to" means', () => {
+    /*
+      ⚠️ **A sentinel the content must not be able to collide with.** `steerEnemies` reads
+      `steerAcross === 0` as *this body is not crossing in from an edge*, which is what lets a
+      flanking wave straighten and then roam without the straightening test firing again forever.
+      A wave authored at lane 0 would arrive already believing it had arrived.
+    */
+    for (const kind of LEVEL_KINDS) {
+      for (const wave of LEVELS[kind].waves) {
+        for (const member of membersOf(wave)) {
+          expect(member.across, `${kind} ${wave.enemy} at ${wave.at} is authored on lane zero`).not.toBe(0);
+        }
+      }
+    }
   });
 
   it('the boss arrives after the last wave, with room to be looked at', () => {

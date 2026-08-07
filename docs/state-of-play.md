@@ -42,8 +42,10 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
 | **a death takes the ship, and the level carries on** | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
 | **a boss dies loudly, and the level ends after it** | [0062](decisions/0062-a-boss-dies-loudly.md) |
+| **a trigger is a place on the glass, and it is drawn** | [0060](decisions/0060-a-trigger-is-a-place-on-the-glass.md) |
 | **a level boundary keeps the shell; a death and a new run do not** | [0058](decisions/0058-a-level-boundary-keeps-the-shell.md) |
 | **a boss's station drifts, so a fight is still flight** | [0061](decisions/0061-a-boss-keeps-flying.md) |
+| **the sky is baked and blitted, and it is not entities** | [0065](decisions/0065-the-sky-is-baked-and-blitted.md) |
 | **a pickup waits to be taken, and its face turns half a second faster** | [0064](decisions/0064-a-pickup-waits-to-be-taken.md) |
 | **a death scatters what it took, non-cycling and on a short timer** | [0066](decisions/0066-a-death-scatters-what-it-took.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
@@ -161,19 +163,30 @@ makes a death cost more in the same session as a report that dying is already to
 4. **The between-levels screen should become a brief respite.** *"The current pause/level screen
    interrupts the flow."* ⚠️ Touches `SCREENS` — [0046](decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md)
    and 0055 both have opinions about what a screen change costs.
-5. **Enemies are stuck in a narrow tunnel.** *"Once on screen the enemies are in a very narrow
-   tunnel and it makes the feel very restrictive and not like you're in a large area."* They should
-   fly off the `across` edges and back on. ⚠️ 0048 landed entry from the edges and the `across` cull;
-   this is about what they do AFTER arriving, which is `steerEnemies`.
+5. **✅ DONE — enemies were stuck in a narrow tunnel.**
+   [0059](decisions/0059-the-lane-is-the-players-box.md). ⚠️ It also moved the weaver's amplitude,
+   added a rule that something off screen does not shoot, and lifted the constraint that a flanking
+   wave may not use a weaving enemy. Every rate in it is unplayed.
 6. **✅ DONE — a boss killed the sense of flight.**
    [0061](decisions/0061-a-boss-keeps-flying.md), which took the second of the two options given. The
    first — a wall-type boss holding the far edge with its own style — is **content** rather than a
    repair, and `docs/game.md`'s *every boss is unique* is where it belongs.
+7. **✅ DONE — a background.**
+   [0065](decisions/0065-the-sky-is-baked-and-blitted.md). Two baked tiles at different parallax
+   rates, a handful of blits a frame, and no entities: `CAPACITY` is still exactly 0022's worst case.
+   ⚠️ **Nothing about it has been looked at**, which is the one class of change 0027 says can have
+   every guard green while the picture is wrong.
 7. **A background.** *"Needs a starry background or a background of some kind."* ⚠️ Against
    [0022](decisions/0022-frame-rate-is-a-feature.md) and
    [0025](decisions/0025-the-frame-budget-is-counted-not-timed.md): counted draw calls, nothing
    allocating in the frame loop, and `CAPACITY` in `src/app/mount.ts` is already at 0022's 500-entity
    worst case — so a starfield is not entities.
+8. **✅ DONE — a bomb could not be fired twice on a phone.**
+   [0060](decisions/0060-a-trigger-is-a-place-on-the-glass.md). Two bugs, one symptom: half the strip
+   was bound to a slot nobody owns, and nothing drew any of it.
+9. **Shields do not carry between levels.** ⚠️ A shield lives on `ship.health` by 0050 and
+   deliberately not in the run slice, so it is the one thing the player carries that a level boundary
+   has no reason to preserve.
 8. **A bomb cannot be fired twice on a phone.** *"How do you fire bombs on mobile? I can do one and
    then can't fire any more."* ⚠️ The tap strip is `SPECIAL_BINDINGS` bands wide whatever the ship
    owns, so half of it is bound to a special nobody has — and nothing draws it, so where the other
