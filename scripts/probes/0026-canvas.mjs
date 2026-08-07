@@ -81,9 +81,12 @@ export const PROBES = [
     guard: 'the frame cannot reach the baker',
     edit: {
       path: 'src/app/frame.ts',
-      // The import line gained the sky's type when 0065 landed; the break is the same one.
-      find: "import { paintScene, type Sky } from '../render/scene.ts';",
-      replace: "import { paintScene, type Sky } from '../render/scene.ts';\nimport { bakeAtlas } from '../render/bake.ts';",
+      // The import line gained the sky's type when 0065 landed and the box's when 0074 did; the
+      // break is the same one it has always been.
+      find: "import { paintScene, type Bound, type Sky } from '../render/scene.ts';",
+      replace:
+        "import { paintScene, type Bound, type Sky } from '../render/scene.ts';\n" +
+        "import { bakeAtlas } from '../render/bake.ts';",
     },
   },
   {

@@ -30,7 +30,7 @@ import { DEFAULT_SOUND, SOUND_KINDS } from '../content/sound.ts';
 import { DEFAULT_STYLE, STYLES, STYLE_KINDS } from '../content/styles.ts';
 import { makeAudioOut, makeSpeaker } from './sound.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
-import { holdStation, SCROLL_PER_STEP } from '../sim/flight.ts';
+import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { MAX_SHIELDS, SHIPS, fullHealthFor, shieldsOf } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
 import { GameFrame, SHIP_START_ALONG, launchSpecial, respawn, scatterUpgrades, type World } from './frame.ts';
@@ -135,6 +135,18 @@ const SKY = [
 
 /** What a style with no sky gets. Module-level, so switching styles allocates nothing. */
 const NO_SKY: typeof SKY = [];
+
+/**
+ * The edge of the player's box, as the painter needs it — `docs/decisions/0074-the-box-is-drawn.md`.
+ *
+ * ⚠️ **`PLAYER_LEAD` is imported rather than recomputed**, so the mark and the clamp are one number.
+ * A `PLAYER_ALONG_SPAN - PLAYER_MARGIN` written here would be a second copy of the subtraction in a
+ * file with no way to know when either term moves, and the failure would be a line drawn near but not
+ * at the wall — which is worse than no line, because it teaches the player something false.
+ *
+ * ⚠️ **Module-level and frozen, like `SKY`**: this file may allocate and the painter may not.
+ */
+export const BOUND = { sprite: SPRITE.bound, extent: SPRITE_EXTENT.bound, inView: PLAYER_LEAD };
 
 export interface Mounted {
   /** Stop the loop and drop the resize listener. */
@@ -372,6 +384,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       ⚠️ **Built HERE, once**, because this file may allocate and `src/render/scene.ts` may not.
     */
     sky: SKY,
+    // The picture of the wall the ship meets going forward — 0074. Always drawn: it is a property
+    // of the playfield rather than of a screen, and a boundary that appeared only while playing
+    // would be a thing the player first meets at the moment it is already stopping them.
+    bound: BOUND,
     shipPool,
     shieldOrbs,
     enemies,

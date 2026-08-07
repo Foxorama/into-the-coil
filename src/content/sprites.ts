@@ -210,6 +210,20 @@ export const SPRITE_KINDS = [
   */
   'skyFar',
   'skyNear',
+  /*
+    ── THE EDGE OF THE PLAYER'S BOX, WHICH WAS A WALL WITH NOTHING DRAWN ON IT ─────────────────────
+
+    Reported from play: *"the hard block on the player movement was a problem because there was no
+    indication of it, and I got shot a couple of times because I tried to fly forward on the screen
+    to avoid a bullet and couldn't."*
+    `docs/decisions/0074-the-box-is-drawn.md`.
+
+    ⚠️ **One DASH, tiled down the lane rather than one line the height of it.** A sprite
+    `ACROSS_SPAN` tall would be a two-megabyte bitmap that is 99% empty, on the same argument
+    `bakeOne` makes about the sky tile's resolution — and a dash is what makes it read as a limit
+    rather than as a wall the enemies are ignoring.
+  */
+  'bound',
 ] as const;
 
 /**
@@ -357,4 +371,14 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   */
   skyFar: ACROSS_SPAN,
   skyNear: ACROSS_SPAN,
+  /*
+    ⚠️ **The TILING PERIOD of the dash, exactly as a sky tile's extent is.** Ten units is a mark and
+    a gap, so the boundary is ten dashes down a hundred-unit lane — legible as a line at a glance and
+    obviously not solid on a second look.
+
+    ⚠️ **It divides `ACROSS_SPAN` exactly, and that is worth keeping.** A period that did not would
+    leave a part-dash at one end of the lane and not the other, which reads as the marker being
+    slightly wrong rather than as the lane being a hundred units.
+  */
+  bound: 10,
 };
