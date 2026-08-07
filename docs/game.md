@@ -32,6 +32,13 @@ currency** — everything is found in the level and applied the instant you touc
 A run carries **three lives**, fixed, with extras findable in a level. A death spends one and takes
 the arsenal back to the ship's base weapon; the last one ends the run.
 
+**A run that ends may be continued**, once per ending and only from the screen it ends on —
+[0068](decisions/0068-a-run-over-is-a-continue.md). The level does not restart: the field is frozen
+where the run stopped, the last death's scatter is still lying in it, and the button hands back a
+fresh ship and a full complement. What it does **not** hand back is the arsenal — the cost 0039 puts
+on a death is paid one more time, not forgiven. The offer expires after seven seconds, which is the
+only thing it costs.
+
 ## Orientation — the load-bearing rule
 
 **The long axis of the screen is always the scroll axis.**
@@ -226,6 +233,10 @@ auto-fire and low-input control schemes.
 The save is an **interruption hedge and not a safety net** —
 [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md). It exists so that a browser
 killed in the background does not destroy a run, and it must never turn a game over into a retry.
+
+⚠️ **[0068](decisions/0068-a-run-over-is-a-continue.md) does not weaken this.** A continue is offered
+on a screen, for seven seconds, and expires; reloading the page past a game over is still refused.
+The save is not the place a second chance comes from.
 
 So it stores the run's **current** lives and **current** arsenal, and resumes at the start of the
 level the player was in. No re-picks, no re-rolls, and a countdown before the first wave arrives.

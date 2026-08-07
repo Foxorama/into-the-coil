@@ -1674,6 +1674,11 @@ export function respawn(w: World): void {
     both survived a death already); it only LOOKED as though it had, because the screen emptied.
 
     What is cleared below is exactly what belonged to the ship that died.
+
+    ⚠️ **They are cleared by `resetScene`, and the day 0057 landed they were cleared by nothing** —
+    `docs/decisions/0067-a-new-run-opens-on-an-empty-field.md`. A reader who takes this paragraph to
+    mean *the enemies are never swept* has the half that produced the bug: they are swept when a
+    LEVEL starts, and this function is about a LIFE.
   */
   w.playerShots.clear();
   w.missiles.clear();
@@ -1716,14 +1721,6 @@ export function respawn(w: World): void {
 }
 
 /**
- * Everything `respawn` does, plus the state that belongs to the run rather than to the life: the
- * camera goes back to the start and the debris of the last run is swept.
- *
- * ⚠️ **The camera reset is what makes two runs the same run.** Distance travelled is the only clock
- * a level has — a wave table places its content against `cameraAlong` — so a second run that started
- * where the first one ended would be playing a different level with the same name.
- */
-/**
  * Put a level on the field and start it from the beginning.
  *
  * ⚠️ **It touches the level and the scene, and nothing about the RUN.** Lives, upgrades and the
@@ -1756,9 +1753,32 @@ export function startLevel(w: World, level: LevelRow, keepShell: boolean): void 
   w.ship.health += shields;
 }
 
+/**
+ * Everything `respawn` does, plus the state that belongs to the LEVEL rather than to the life: the
+ * field is emptied, the camera goes back to the start and the debris of the last one is swept.
+ *
+ * ⚠️ **The camera reset is what makes two runs the same run.** Distance travelled is the only clock
+ * a level has — a wave table places its content against `cameraAlong` — so a second run that started
+ * where the first one ended would be playing a different level with the same name.
+ */
 export function resetScene(w: World): void {
   w.cameraAlong = 0;
   w.prevCameraAlong = 0;
+  /*
+    ⚠️ **THE ENEMIES AND THEIR SHOTS ARE CLEARED HERE, AND UNTIL NOW THEY WERE CLEARED NOWHERE.**
+    `docs/decisions/0067-a-new-run-opens-on-an-empty-field.md`. They used to be swept by `respawn`,
+    which this function calls at the bottom — so 0057 taking that sweep out of a DEATH silently took
+    it out of a new LEVEL and a new RUN as well, and both then opened on the last one's field.
+    Reported from play as *"when you restart at level 1, the run is the same run as you were up to
+    previously."*
+
+    The rule that stops it happening a third time is the split, not the two lines: **a pool that
+    belongs to the LEVEL is emptied here, and a pool that belongs to the LIFE is emptied by
+    `respawn`.** An enemy belongs to the level, which is exactly why it survives a death and must not
+    survive a level.
+  */
+  w.enemies.clear();
+  w.enemyShots.clear();
   w.debris.clear();
   /*
     ⚠️ **The boss is cleared HERE and deliberately not in `respawn`.** A death during the fight leaves

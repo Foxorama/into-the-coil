@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { type Action, type State, initialState, reduce } from '../src/state/root.ts';
 import { DEFAULT_DIFFICULTY, livesFor, startingArsenal } from '../src/state/slices/run.ts';
 import { SCREENS } from '../src/state/screens.ts';
+import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { LEVEL_KINDS } from '../src/content/levels.ts';
 
 /**
@@ -141,9 +142,13 @@ describe('a run is lives', () => {
     expect(SCREENS.title.steps, 'a run begins before the player has touched anything').toBe(false);
   });
 
-  it('again is a new run and not a continue', () => {
+  it('a begin is a new run and never a continue', () => {
     // 0039: a game over ends the run outright. The betrayal this rules out is a "continue" that
     // quietly hands back the arsenal the death was supposed to have cost.
+    //
+    // ⚠️ **There IS a continue now — `docs/decisions/0068-a-run-over-is-a-continue.md` — and it does
+    // not undo this.** It restocks the run to what a fresh one carries and leaves the LEVEL alone,
+    // which is a different action with a different name; what a death cost is still gone.
     let state = armed();
     for (let i = 0; i < STARTING_LIVES_OF_THE_TIER; i++) state = reduce(state, DIE);
     expect(state.screen.current).toBe('gameOver');
@@ -151,6 +156,78 @@ describe('a run is lives', () => {
     expect(again.run.lives).toBe(STARTING_LIVES_OF_THE_TIER);
     expect(again.run.arsenal).toEqual(startingArsenal());
     expect(again.screen.current).toBe('playing');
+  });
+});
+
+/**
+ * A CONTINUE — `docs/decisions/0068-a-run-over-is-a-continue.md`.
+ *
+ * The world half is in `tests/continue.test.ts`, where the field is. What is here is the half a pure
+ * reducer can answer: a continue is `begin` with the level left where it was, and nothing else.
+ */
+describe('a run over is a continue', () => {
+  const CONTINUE: Action = { slice: 'run', type: 'continued' };
+
+  /** A run that has reached the second level and then run out of lives on it. */
+  function ranOutDeep(): State {
+    let state = reduce(armed(), { slice: 'run', type: 'levelCleared' });
+    expect(state.run.level, 'the fixture never left level one, so keeping the level proves nothing').toBeGreaterThan(0);
+    for (let i = 0; i < STARTING_LIVES_OF_THE_TIER; i++) state = reduce(state, DIE);
+    expect(state.screen.current).toBe('gameOver');
+    return state;
+  }
+
+  it('THE POINT OF IT: the level does not move', () => {
+    const before = ranOutDeep();
+    expect(reduce(before, CONTINUE).run.level, 'the continue sent the player back to the first level').toBe(
+      before.run.level,
+    );
+  });
+
+  it('and everything else goes back to what a run starts with', () => {
+    /*
+      ⚠️ **Compared against `begin` rather than against written-down numbers**, which is what makes
+      this hold at any tier and against any later change to what a run opens with. The rule is *a
+      continue is a begin that does not move the level*, and a comparison is the only way to state a
+      rule about one action in terms of another.
+    */
+    const fresh = play(BEGIN).run;
+    const resumed = reduce(ranOutDeep(), CONTINUE).run;
+    expect(resumed.lives, 'the continue did not restock the run').toBe(fresh.lives);
+    expect(resumed.arsenal, 'the continue did not restock the arsenal').toEqual(fresh.arsenal);
+    expect(resumed.upgrades, 'the continue handed back what the last death took').toEqual(fresh.upgrades);
+  });
+
+  it('carries the tier rather than re-choosing it', () => {
+    // A property of the RUN (0047), and this is still the same run. A continue that dropped the
+    // player onto the default tier would be the game quietly changing the game.
+    for (const difficulty of DIFFICULTY_KINDS) {
+      let state = reduce(play({ slice: 'run', type: 'begin', difficulty }), PLAY);
+      for (let i = 0; i < livesFor(difficulty); i++) state = reduce(state, DIE);
+      const resumed = reduce(state, CONTINUE).run;
+      expect(resumed.difficulty, `a continue on ${difficulty} changed the tier`).toBe(difficulty);
+      expect(resumed.lives, `a continue on ${difficulty} restocked somebody else's complement`).toBe(
+        livesFor(difficulty),
+      );
+    }
+  });
+
+  it('and the screen may follow it back into the game without bouncing', () => {
+    /*
+      ⚠️ **THE ORDER IS THE WHOLE OF THIS, and the other one is an infinite loop.** `src/state/root.ts`
+      raises the run-over screen for a run at zero lives on the playing screen — so `show playing`
+      dispatched before the restock would be read at zero and would put the run-over screen straight
+      back up. The button would do nothing, and would do it every time it was pressed.
+    */
+    const restocked = reduce(ranOutDeep(), CONTINUE);
+    expect(reduce(restocked, PLAY).screen.current, 'the continue bounced off the agreement it has to pass').toBe(
+      'playing',
+    );
+
+    const backwards = reduce(reduce(ranOutDeep(), PLAY), CONTINUE);
+    expect(backwards.screen.current, 'the wrong order stopped being wrong, so the rule above is unenforced').toBe(
+      'gameOver',
+    );
   });
 });
 
