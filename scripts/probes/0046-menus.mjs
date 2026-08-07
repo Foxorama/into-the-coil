@@ -75,10 +75,11 @@ export const PROBES = [
     guard: 'counts down and returns to the title with no input at all',
     edit: {
       path: 'src/app/mount.ts',
-      // 0063 moved the countdown out of `onIdle` and made expiring press the screen's own control.
-      // The break is the same one: the counter reaches zero and nothing happens.
-      find: '    if (timeoutLeft <= 0) chrome.activate();',
-      replace: '    if (timeoutLeft < 0) chrome.activate();',
+      // 0063 moved the countdown out of `onIdle`, and then moved WHERE it goes onto the row. The
+      // break is the same one it has always been, aimed at the guard the expiry now falls through:
+      // the counter reaches zero, the function returns anyway, and nothing happens.
+      find: '    if (timeoutLeft > 0) return;',
+      replace: '    if (timeoutLeft >= 0) return;',
     },
   },
 ];
