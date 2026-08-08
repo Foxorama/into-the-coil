@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { drift, planEdit, verifyApplied } from '../scripts/prove-guard.mjs';
+import { anchorFailures, drift, planEdit, verifyApplied } from '../scripts/prove-guard.mjs';
 
 /**
  * THE HARNESS THAT PROVES THE GUARDS IS ITSELF A GUARD.
@@ -46,6 +46,84 @@ describe('a probe must be seen to apply', () => {
   it('refuses to continue when the bytes on disk did not move', () => {
     expect(() => verifyApplied('same', 'same', 'tests/x.ts')).toThrow(/byte-identical/);
     expect(() => verifyApplied('before', 'after', 'tests/x.ts')).not.toThrow();
+  });
+});
+
+/**
+ * AND THE SAME REFUSAL, ASKED BEFORE ANYTHING IS COPIED.
+ *
+ * ⚠️ **This exists because the answer used to arrive twelve minutes late, from CI.** A change to
+ * `src/app/frame.ts` moved two lines and stranded probes belonging to **0041 and 0050** — neither of
+ * which the session had any reason to open — and `npm run prove` reported it after the baseline
+ * suites, six tree copies and 384 vitest runs.
+ * `docs/decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md`.
+ *
+ * ⚠️ **It is not a second mechanism.** `anchorFailures` calls `planEdit`, so *does this anchor
+ * resolve* still has one description — what moved is when it is asked, and over which probes.
+ */
+describe('a stranded probe is found before anything runs', () => {
+  /** The harness's own shape, borrowed rather than restated — it is a JSDoc typedef over there. */
+  type Probe = import('../scripts/prove-guard.mjs').Probe;
+
+  const edit = (path: string, find: string): Probe => ({
+    decision: '0000',
+    broke: 'something',
+    guard: 'something',
+    suite: 'tests/x.test.ts',
+    edit: { path, find, replace: 'gone' },
+  });
+
+  it('says nothing about a probe whose anchor still resolves', () => {
+    expect(anchorFailures([edit('a.ts', 'const a = 1;')], () => 'const a = 1;\n')).toEqual([]);
+  });
+
+  it('names the probe whose anchor the code moved out from under', () => {
+    // THE case, and the one that cost a CI cycle: the edit was somewhere else entirely.
+    const found = anchorFailures([edit('a.ts', 'const a = 1;')], () => 'const a = 2;\n');
+    expect(found.length).toBe(1);
+    expect(found[0]).toContain('does not appear');
+  });
+
+  it('names a probe whose file has gone', () => {
+    const found = anchorFailures([edit('gone.ts', 'x')], () => null);
+    expect(found.length).toBe(1);
+    expect(found[0]).toContain('does not exist');
+  });
+
+  it('names a plant whose file is already there', () => {
+    // A plant must CREATE its file, so the anchor's health is that nothing is at that path yet.
+    const plant = {
+      decision: '0000',
+      broke: 'something',
+      guard: 'something',
+      suite: 'tests/x.test.ts',
+      plant: { path: 'src/x.ts', content: 'x' },
+    };
+    expect(anchorFailures([plant], () => 'already here').length).toBe(1);
+    expect(anchorFailures([plant], () => null)).toEqual([]);
+  });
+
+  it('every probe in the repository can still be applied to the tree as it stands', { timeout: 60_000 }, async () => {
+    /*
+      ⚠️ **The live one, and it is the reason the four above are not enough.** They prove the check
+      works; this asks it about the actual probe set, which is the thing that goes stale — and it
+      answers in a second rather than at the end of a full `npm run prove`.
+
+      ⚠️ The generous timeout is the one the probe-shape test below carries and for the same reason:
+      the cost is 57-and-growing dynamic imports under parallel load, and a default sized for an
+      ordinary unit test was always going to be crossed —
+      `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`.
+    */
+    const all: Probe[] = [];
+    for (const file of readdirSync(resolve(root, 'scripts/probes')).filter((f) => f.endsWith('.mjs'))) {
+      const mod: { PROBES: Probe[] } = await import(`../scripts/probes/${file.replace(/\.mjs$/, '')}.mjs`);
+      all.push(...mod.PROBES);
+    }
+    expect(
+      anchorFailures(all),
+      'a probe can no longer be applied. The code moved and the probe did not — by hand, this is ' +
+        'exactly the point at which nothing changes and the suite reports green.',
+    ).toEqual([]);
   });
 });
 

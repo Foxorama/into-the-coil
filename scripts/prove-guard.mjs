@@ -121,6 +121,58 @@ async function loadProbes(filter) {
   return out;
 }
 
+/**
+ * Every probe whose anchor no longer resolves against the tree as it stands, with the reason.
+ *
+ * ── THE CHECK `planEdit` ALREADY MAKES, ASKED BEFORE ANYTHING IS COPIED ─────────────────────────
+ *
+ * ⚠️ **It is NOT a second mechanism, and one would be refused.** `src/app/mount.ts` learned *one
+ * guarantee, one mechanism* over the orientation gate — a redundant safety net does not make a system
+ * safer, it makes the original untestable. This CALLS `planEdit`, so *does this anchor resolve* has
+ * exactly one description and it is the one `apply` uses.
+ *
+ * ⚠️ **What it changes is WHEN it is asked, and that is what earns it a function.** The answer used
+ * to arrive after the baseline suites, six tree copies and up to 384 vitest runs — about twelve
+ * minutes, and in practice from CI rather than from the machine that moved the line. It costs one
+ * read per probe here, so a probe orphaned by an unrelated edit is a two-second failure.
+ *
+ * ⚠️ **It checks EVERY probe even on a filtered run, which is the whole point.** A run filtered to
+ * one decision has no business running the other suites — that is `main`'s own rule — but it has
+ * every business telling you that today's edit stranded somebody else's break. The change that made
+ * this necessary moved two lines in `src/app/frame.ts` and orphaned probes belonging to 0041 and
+ * 0050, neither of which the session had any reason to look at.
+ *
+ * `read` returns a file's contents, or `null` when there is no such file — injected so the failure
+ * modes can be unit-tested without staging a repository.
+ *
+ * @param {Probe[]} probes
+ * @param {(path: string) => string | null} [read]
+ * @returns {string[]}
+ */
+export function anchorFailures(probes, read = (p) => (existsSync(abs(p)) ? readFileSync(abs(p), 'utf8') : null)) {
+  const out = [];
+  for (const probe of probes) {
+    const label = `${probe.decision}  ${probe.broke}`;
+    const detail = (message) => out.push(`${label}\n    ${String(message).split('\n').join('\n    ')}`);
+    if (probe.plant) {
+      // A plant must CREATE its file, so the anchor's health is that nothing is there yet.
+      if (read(probe.plant.path) !== null) detail(`${probe.plant.path} already exists — a plant must create the file`);
+      continue;
+    }
+    const source = read(probe.edit.path);
+    if (source === null) {
+      detail(`${probe.edit.path} does not exist. The file moved and the probe did not.`);
+      continue;
+    }
+    try {
+      planEdit(source, probe.edit);
+    } catch (e) {
+      detail(e.message ?? e);
+    }
+  }
+  return out;
+}
+
 /** Directories created for a plant, innermost last, so they can be removed in reverse. */
 function makeDirs(path, treeRoot) {
   const made = [];
@@ -309,6 +361,22 @@ async function main(filter) {
     console.error(filter ? `No probes for ${filter}.` : 'No probes found under scripts/probes/.');
     return 1;
   }
+  /*
+    ⚠️ **FIRST, over EVERY probe, before a tree is copied or a suite is run** — see `anchorFailures`.
+    A filtered run still checks the whole set, because the probe an edit strands is almost never one
+    belonging to the decision being worked on.
+  */
+  const stale = anchorFailures(await loadProbes());
+  if (stale.length) {
+    console.error(`${stale.length} probe(s) can no longer be applied at all:\n`);
+    for (const s of stale) console.error(`  ${s}\n`);
+    console.error(
+      'Nothing was run. Fix the anchors — a probe that cannot be applied proves nothing, and by hand ' +
+        'this is exactly the point at which the suite reports green.',
+    );
+    return 1;
+  }
+
   const suites = [...new Set(probes.map((p) => p.suite))];
   const base = mkdtempSync(join(tmpdir(), 'itc-prove-'));
 

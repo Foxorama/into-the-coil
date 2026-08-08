@@ -202,4 +202,63 @@ export const PROBES = [
     guard: 'leaves room for a boss and a player dying in the same second',
     edit: { path: 'src/content/debris.ts', find: '  dying: 10,', replace: '  dying: 30,' },
   },
+  /*
+    ── THE OTHER THING THIS SESSION BROKE, AND THE REPAIR FOR IT ───────────────────────────────────
+
+    Two lines moved in `src/app/frame.ts` and stranded probes belonging to **0041 and 0050** — neither
+    of which this decision had any reason to open. `npm run prove` says so, correctly and by name, and
+    it said so after the baseline suites, six tree copies and 384 vitest runs: twelve minutes, from
+    CI, on a machine that was not the one that moved the line.
+
+    `anchorFailures` asks `planEdit`'s existing question before anything is copied, over EVERY probe
+    rather than the filtered set. The three below are what make that check itself falsifiable.
+  */
+  {
+    decision: '0079',
+    suite: 'tests/prove-guard.test.ts',
+    // The pre-flight taught to answer *nothing wrong*, which is the one answer it must never guess.
+    broke: 'the anchor pre-flight made to report nothing, so a stranded probe runs and proves nothing',
+    guard: 'names the probe whose anchor the code moved out from under',
+    edit: {
+      path: 'scripts/prove-guard.mjs',
+      find: '  const out = [];\n  for (const probe of probes) {\n    const label = ',
+      replace: '  const out = [];\n  if (probes.length >= 0) return out;\n  for (const probe of probes) {\n    const label = ',
+    },
+  },
+  {
+    decision: '0079',
+    suite: 'tests/prove-guard.test.ts',
+    // The missing-file arm dropped. A probe whose whole FILE moved is the same failure as one whose
+    // line moved, and it is the arm a reader is most likely to think redundant.
+    broke: 'the pre-flight’s missing-file arm dropped, so a probe whose file moved reads as healthy',
+    guard: 'names a probe whose file has gone',
+    edit: {
+      path: 'scripts/prove-guard.mjs',
+      find: "      detail(`${probe.edit.path} does not exist. The file moved and the probe did not.`);\n      continue;",
+      replace: '      continue;',
+    },
+  },
+  {
+    decision: '0079',
+    suite: 'tests/prove-guard.test.ts',
+    /*
+      ⚠️ **THE LIVE ONE, and it is the only probe here that strands a REAL anchor.** The two synthetic
+      cases prove the check works; this proves it is pointed at the actual probe set, which is the
+      thing that goes stale.
+
+      ⚠️ **It strands ANOTHER decision's probe, deliberately and out of necessity.** Deliberately,
+      because that is the failure being modelled — an edit here orphaned probes belonging to 0041 and
+      0050, and neither was a file this session opened. Out of necessity, because `planEdit` searches
+      one file: a probe that quoted an anchor from THIS file would make that anchor appear twice in
+      it — once as the real probe and once inside this literal — and the harness would refuse it as
+      ambiguous. Which it did, on the first attempt.
+    */
+    broke: 'a real probe’s anchor pointed at code that is not there, exactly as an unrelated edit does',
+    guard: 'every probe in the repository can still be applied to the tree as it stands',
+    edit: {
+      path: 'scripts/probes/0078-sky-speed.mjs',
+      find: "find: '{ sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.16 },'",
+      replace: "find: '{ sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.99 },'",
+    },
+  },
 ];

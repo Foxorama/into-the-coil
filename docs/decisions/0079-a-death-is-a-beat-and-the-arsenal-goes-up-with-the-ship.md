@@ -172,7 +172,7 @@ available and is a render change rather than a content one. Noted, not ruled on.
 ## Confirmed, not assumed
 
 Per [0005](0005-a-guard-must-be-seen-to-fail.md) and [0019](0019-a-probe-must-be-seen-to-apply.md),
-declared in `scripts/probes/0079-death-beat.mjs`. **15 red, and every tree back to what it was copied
+declared in `scripts/probes/0079-death-beat.mjs`. **18 red, and every tree back to what it was copied
 as.**
 
 | broken on purpose | went red |
@@ -192,6 +192,9 @@ as.**
 | the pyre's top rung unclamped, so a full arsenal falls off the end of the ladder | `is the ladder the ask names` |
 | a pyre rung drawn at a size other than the one it damages at | `draws every rung at exactly the radius it damages at` |
 | the death beat's rate raised past what the debris pool can hold beside a boss | `leaves room for a boss and a player dying in the same second` |
+| the anchor pre-flight made to report nothing, so a stranded probe runs and proves nothing | `names the probe whose anchor the code moved out from under` |
+| the pre-flight's missing-file arm dropped, so a probe whose file moved reads as healthy | `names a probe whose file has gone` |
+| a real probe's anchor pointed at code that is not there, exactly as an unrelated edit does | `every probe in the repository can still be applied to the tree as it stands` |
 
 ## What proving it cost, and it is a new failure mode for this project
 
@@ -211,6 +214,28 @@ it. [0019](0019-a-probe-must-be-seen-to-apply.md) is about a probe that proves n
 wrong quantity. This is the neighbour of both: **a guard that cannot report at all.** It is written
 here rather than as a constitution rule because one occurrence is a fixture bug, not a class — if it
 happens twice, it is a rule.
+
+### And it stranded two other decisions' probes, which cost a CI cycle
+
+⚠️ **Two lines moved in `src/app/frame.ts` and orphaned probes belonging to
+[0041](0041-a-pickup-is-the-answer-to-what-a-death-costs.md) and
+[0050](0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md)** — the `collectInto`
+call gained an `if (flying)`, and `respawn`'s `shieldOrbs.clear()` stopped being adjacent to the
+`reset` under it. Neither file was one this session had any reason to open.
+
+⚠️ **`npm run prove` said so, correctly and by name — after twelve minutes, from CI.** It applies
+probes inside worker trees, so the answer arrives behind the baseline suites, six tree copies and up
+to 384 vitest runs. On the machine that moved the line, the working tree looked perfect.
+
+**The repair is the same question asked earlier, not a second answer to it.** `anchorFailures` in
+`scripts/prove-guard.mjs` calls `planEdit` — the existing check — over **every** probe, before a tree
+is copied, even on a filtered run. `tests/prove-guard.test.ts` asks it about the real probe set, so
+`npm test` now reports a stranded probe in a second.
+
+⚠️ **It is deliberately not a new mechanism, because one would be refused.**
+`src/app/mount.ts` learned *one guarantee, one mechanism* over the orientation gate: a redundant
+safety net does not make a system safer, it makes the original untestable. *Does this anchor resolve*
+still has exactly one description; what changed is when it is asked, and over what.
 
 ## And it was looked at
 
