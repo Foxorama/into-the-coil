@@ -33,7 +33,15 @@ import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { MAX_SHIELDS, SHIPS, fullHealthFor, shieldsOf } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
-import { GameFrame, SHIP_START_ALONG, launchSpecial, respawn, scatterUpgrades, type World } from './frame.ts';
+import {
+  GameFrame,
+  SHIP_START_ALONG,
+  detonateArsenal,
+  launchSpecial,
+  respawn,
+  scatterUpgrades,
+  type World,
+} from './frame.ts';
 import { makeLifecycle } from './lifecycle.ts';
 import { SCREENS, STEPS_PER_SECOND, type Screen, type SettingName } from '../state/screens.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
@@ -446,6 +454,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     bossOffset: 0,
     bossAcross: ACROSS_SPAN / 2,
     bossPatrol: 1,
+    // Nothing is dying at boot, and where the last ship died is not a question anybody has asked yet
+    // — the middle of the lane is the honest blank, since it is where a ship starts. 0079.
+    dyingIn: 0,
+    deathOffset: SHIP_START_ALONG,
+    deathAcross: ACROSS_SPAN / 2,
     nextPickup: 0,
     pickups: pickupPool,
     pickupRows,
@@ -514,6 +527,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // Replaced below, once `dispatch` exists. A function property cannot be written before the
     // thing it calls, and the alternative — hoisting the whole reducer wiring above the world it
     // mutates — would put the shell's state machine in the middle of its entity pools.
+    onWreck: (): void => {},
     onDeath: (): void => {},
     // The one callback that is NOT replaced below: what a cue is worth does not depend on the
     // reducer, the chrome or the screen — it is `src/app/sound.ts`'s whole answer.
@@ -923,6 +937,22 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const then = SCREENS[state.screen.current].timeout?.then;
     if (then == null) chrome.activate();
     else dispatch({ slice: 'screen', type: 'show', screen: then });
+  };
+
+  /*
+    THE SHIP CAME APART — 0079, and this fires `DEATH_STEPS` before `onDeath` below.
+
+    ⚠️ **The charges are read HERE because they are gone by the time `onDeath` runs.** `lifeLost`
+    takes the arsenal back to the ship's starting kit (`src/state/slices/run.ts`), and that is the same
+    dispatch `src/state/root.ts` raises the continue screen off — so the end of the beat is exactly
+    the wrong moment to ask what the player was carrying.
+
+    ⚠️ **Every charge in the arsenal, not every bomb.** `chargesOf` already totals the list for the
+    readout, and using it says *what the ship was carrying goes up with it* — a rule a second special
+    inherits without anybody remembering to, on the same terms `levelCleared` grants each of them one.
+  */
+  world.onWreck = (): void => {
+    detonateArsenal(world, chargesOf(state.run.arsenal));
   };
 
   world.onDeath = (): void => {

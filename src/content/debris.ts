@@ -53,6 +53,21 @@ export const BURST = {
   /** Fragments when the player's ship dies. More, because it is the one death that matters. */
   ship: 16,
   /**
+   * Fragments per PULSE of the player's ship coming apart — and it comes apart over about a second.
+   *
+   * ⚠️ **Fewer per pulse than `ship`, and that is the split rather than an inconsistency.** `ship` is
+   * the BANG, thrown once on the step the hull reaches zero; this is what keeps happening while the
+   * wreck is on screen. Reported from play: *"when a player dies, they instantly respawn, there needs
+   * to be the player ship explosion, a pause, then a respawn."*
+   * `docs/decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md` has the beat this
+   * is the picture of, and `docs/decisions/0062-a-boss-dies-loudly.md` is the mechanism it copies.
+   *
+   * ⚠️ **The ceiling is the debris pool, exactly as `boss`'s is** — `count × lifeMax / pulse` has to
+   * stay inside it, and this one shares the screen with the pyre's kills and, on a bad step, with a
+   * boss. `tests/budget.test.ts` holds the arithmetic for both beats at once.
+   */
+  dying: 10,
+  /**
    * Fragments per PULSE of a boss coming apart — and a boss comes apart over a second and a half.
    *
    * ⚠️ **A rate rather than a total, which is what makes it an event instead of a puff.** Reported

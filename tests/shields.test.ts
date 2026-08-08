@@ -67,29 +67,36 @@ describe('the hull is one hit', () => {
     const { world, frame } = quietWorld();
     expect(shieldsOf(world.shipRow, world.ship.health), 'a run opens with a shell already on').toBe(0);
 
-    let deaths = 0;
-    world.onDeath = (): void => {
-      deaths++;
+    /*
+      ⚠️ **`onWreck` AND NOT `onDeath`, and the difference is a whole decision.** 0079 split a death
+      into *the ship came apart* and *the life is spent*, `DEATH_STEPS` apart — and the subject here is
+      the first one: the hull is one hit. `onDeath` would be true of this too and would be true
+      four fifths of a second later, so a fixture that stops the instant the health moves would read
+      zero and call the hull immortal.
+    */
+    let wrecked = 0;
+    world.onWreck = (): void => {
+      wrecked++;
     };
     takeAHit(world, frame);
     expect(world.ship.health, 'the hull survived a hit it should not have').toBeLessThanOrEqual(0);
-    expect(deaths, 'the ship reached zero and nothing was told').toBe(1);
+    expect(wrecked, 'the ship reached zero and nothing was told').toBe(1);
   });
 
   it('survives exactly one more hit per shield, and no more', () => {
     for (let shields = 0; shields <= MAX_SHIELDS; shields++) {
       const { world, frame } = quietWorld();
       giveShields(world, shields);
-      let deaths = 0;
-      world.onDeath = (): void => {
-        deaths++;
+      let wrecked = 0;
+      world.onWreck = (): void => {
+        wrecked++;
       };
       for (let hit = 0; hit < shields; hit++) {
         takeAHit(world, frame);
-        expect(deaths, `a ship with ${shields} shields died on hit ${hit + 1}`).toBe(0);
+        expect(wrecked, `a ship with ${shields} shields died on hit ${hit + 1}`).toBe(0);
       }
       takeAHit(world, frame);
-      expect(deaths, `a ship with ${shields} shields survived ${shields + 1} hits`).toBe(1);
+      expect(wrecked, `a ship with ${shields} shields survived ${shields + 1} hits`).toBe(1);
     }
   });
 

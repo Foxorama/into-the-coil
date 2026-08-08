@@ -132,3 +132,42 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
    */
   bomb: { label: 'Bomb', charges: 2, shot: 'bomb', becomes: 'blast', reach: 80, face: SPRITE.bomb },
 };
+
+/**
+ * WHAT AN UNSPENT ARSENAL BECOMES WHEN THE SHIP CARRYING IT COMES APART — one rung per charge.
+ *
+ * Asked for in play: *"the player's ship (and only the player's ship) exploding on death should fire
+ * all unspent bombs at the player ship's location with an expanding ring based on number of bombs —
+ * 0 bombs = half current bomb explosion size, 1 bomb = bomb explosion, 2 bombs = increased explosion
+ * size, 3 increased further… effectively a way to give the player some breathing space for when they
+ * respawn."*
+ * `docs/decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md`.
+ *
+ * ⚠️ **HERE rather than in `src/content/shots.ts`, because the ladder is indexed by a fact about the
+ * ARSENAL.** The rows are shots; which rung a death lights is a statement about what the player never
+ * spent, and this file is what owns that.
+ *
+ * ⚠️ **The zeroth rung is a real rung and it is half a blast.** A player who died having spent
+ * everything still gets something, which is what makes this a beat the player can read rather than a
+ * reward that sometimes appears — `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`
+ * from the useful direction: *the ship came apart* is an event, and it now always draws one.
+ */
+export const PYRES: readonly ShotKind[] = ['blastHalf', 'blast', 'blastWide', 'blastWidest'];
+
+/**
+ * Which rung a death with `charges` unspent lights.
+ *
+ * ⚠️ **CLAMPED at the top, and the run goes past it.** The ask names four rungs; a bomb starts at two
+ * charges and every level cleared adds one (`src/state/slices/run.ts`), so a player reaching level
+ * four is carrying five. Letting the ladder keep growing would make the last levels' deaths clear the
+ * whole screen twice over, and the widest rung already covers the lane — so the top of the ask is the
+ * top of the ladder, and everything above it looks the same.
+ *
+ * ⚠️ **Counted over the WHOLE arsenal rather than over bombs**, on the same terms `levelCleared`
+ * grants a charge to every special: what goes up with the ship is what the ship was carrying, and a
+ * second special added later inherits that without anybody remembering to.
+ */
+export function pyreFor(charges: number): ShotKind {
+  const rung = charges < 0 ? 0 : charges > PYRES.length - 1 ? PYRES.length - 1 : Math.floor(charges);
+  return PYRES[rung] ?? PYRES[0]!;
+}

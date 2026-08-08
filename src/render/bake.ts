@@ -195,6 +195,19 @@ const INK_OF: Record<SpriteKind, keyof Palette> = {
     two never share a silhouette: one is a wedge and this is a ring the width of a third of the lane.
   */
   blast: 'hazard',
+  /*
+    The pyre's other three rungs — 0079. The hazard ink for the same reason the blast has it: the
+    player has already learned that a wide ring is a thing to be outside of, and this is the same
+    event with a different cause.
+
+    ⚠️ **It cannot actually hurt the ship, and the ink is still right.** The pyre lands on the step
+    after it appears, and on that step there is no ship in `shipPool` for the pairing to find — the
+    beat has not finished. Drawing it in a harmless ink would be teaching the player that a ring is
+    sometimes safe, which is worth more to get wrong than the one case where it is.
+  */
+  blastHalf: 'hazard',
+  blastWide: 'hazard',
+  blastWidest: 'hazard',
   // The player's own ink, because a shield IS the player — it is the last thing between a hit and
   // the hull, and a shell drawn in the pickup ink would read as something to fly into.
   shieldOrb: 'player',
@@ -550,6 +563,10 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
       ctx.lineTo(half - r, half);
       ctx.closePath();
       break;
+    // The pyre's rungs are the SAME drawing at a different extent — 0079. Four bitmaps, one shape.
+    case 'blastHalf':
+    case 'blastWide':
+    case 'blastWidest':
     case 'blast': {
       /*
         A ring: a wide circle with most of its middle taken out, so it reads as a shockwave rather

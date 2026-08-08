@@ -77,8 +77,10 @@ export const PROBES = [
       // ⚠️ Re-expressed when 0056 gave collection a reach of its own. The break is unchanged and the
       // temptation it models is now STRONGER, not weaker: with a named scale already on this line,
       // multiplying the assist into it reads even more like consistency than passing `1` did.
-      find: '    collectInto(w.pickups, w.ship, COLLECT_REACH, w.collected);',
-      replace: '    if (w.ship.invulnFor <= 0) collectInto(w.pickups, w.ship, w.tuning.hurtbox, w.collected);',
+      // ⚠️ The `if (flying)` is 0079's death-beat gate, and it is carried through the break rather
+      // than dropped: removing it here would redden the wrong guard, on the wrong decision.
+      find: '    if (flying) collectInto(w.pickups, w.ship, COLLECT_REACH, w.collected);',
+      replace: '    if (flying && w.ship.invulnFor <= 0) collectInto(w.pickups, w.ship, w.tuning.hurtbox, w.collected);',
     },
   },
   {

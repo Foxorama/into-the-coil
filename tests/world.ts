@@ -29,7 +29,7 @@ import { makeDeaths } from '../src/sim/collide.ts';
 import { holdStation, SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { makeIntent } from '../src/sim/intent.ts';
 import { makeRng } from '../src/sim/rng.ts';
-import { SHIP_START_ALONG, type World } from '../src/app/frame.ts';
+import { SHIP_START_ALONG, respawn, type World } from '../src/app/frame.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import type { Intent } from '../src/sim/intent.ts';
 import type { Surface } from '../src/render/surface.ts';
@@ -77,6 +77,10 @@ export function inertLevel(): {
   bossOffset: number;
   bossAcross: number;
   bossPatrol: number;
+  dyingIn: number;
+  deathOffset: number;
+  deathAcross: number;
+  onWreck: () => void;
   onCleared: () => void;
   nextPickup: number;
   pickups: Pool<Entity>;
@@ -122,6 +126,13 @@ export function inertLevel(): {
     bossOffset: 0,
     bossAcross: ACROSS_SPAN / 2,
     bossPatrol: 1,
+    // Nothing is dying in a fixture that has not been driven yet — 0079.
+    dyingIn: 0,
+    deathOffset: SHIP_START_ALONG,
+    deathAcross: ACROSS_SPAN / 2,
+    // A fixture carries no arsenal, so there is nothing for a wreck to light. `tests/death.test.ts`
+    // is what drives the shell's real answer.
+    onWreck: (): void => {},
     onCleared: (): void => {},
     ...pickupParts(),
     onPickup: (): void => {},
@@ -178,6 +189,7 @@ class NullSurface implements Surface {
 export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFFICULTY_KINDS[0]!): {
   world: World;
   deaths: { count: number };
+  wrecks: { count: number };
   cleared: { count: number };
   taken: PickupKind[];
   cues: CueKind[];
@@ -205,6 +217,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
   holdStation(ship, SCROLL_PER_STEP);
 
   const deaths = { count: 0 };
+  const wrecks = { count: 0 };
   const cleared = { count: 0 };
   const taken: PickupKind[] = [];
   const cues: CueKind[] = [];
@@ -255,8 +268,22 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     bossFullHealth: BOSSES.sentinel.health,
     onIdle: (): void => {},
     onTick: (): void => {},
+    /*
+      ⚠️ **IT PUTS THE SHIP BACK, and it did not have to until the death became a beat.** 0079
+      releases the ship from its pool for `DEATH_STEPS` and `respawn` is what returns it — so a
+      fixture that only counted would fly the rest of a three-minute boss fight with no ship at all,
+      which is not a fixture failing, it is a fixture measuring nothing. Four of them did exactly
+      that on the first run of this change.
+
+      ⚠️ **It is the SHELL's answer, deliberately** — `src/app/mount.ts` calls `respawn` on every
+      death the run survives, and a fixture that answered differently is the divergence
+      `docs/decisions/0067-a-new-run-opens-on-an-empty-field.md`'s post-mortem is about. What is
+      missing here is the run: a fixture has no lives to spend, so every death is one the run
+      survives.
+    */
     onDeath: (): void => {
       deaths.count++;
+      respawn(world);
     },
     level,
     levelOrigin: 0,
@@ -269,6 +296,14 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     bossOffset: 0,
     bossAcross: ACROSS_SPAN / 2,
     bossPatrol: 1,
+    dyingIn: 0,
+    deathOffset: SHIP_START_ALONG,
+    deathAcross: ACROSS_SPAN / 2,
+    // Counted rather than acted on, exactly as `onDeath` is — the two are `DEATH_STEPS` apart and a
+    // fixture that wants to know a death was DRAWN asks this one. 0079.
+    onWreck: (): void => {
+      wrecks.count++;
+    },
     onCleared: (): void => {
       cleared.count++;
     },
@@ -283,5 +318,5 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
       cues.push(kind);
     },
   };
-  return { world, deaths, cleared, taken, cues };
+  return { world, deaths, wrecks, cleared, taken, cues };
 }

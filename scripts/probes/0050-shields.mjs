@@ -103,8 +103,14 @@ export const PROBES = [
     guard: 'is gone the moment the ship is',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  w.shieldOrbs.clear();\n  reset(w.ship,',
-      replace: '  reset(w.ship,',
+      /*
+        ⚠️ **It used to anchor on this line AND the `reset` under it, and 0079 put a block between
+        them.** The pair was there to make the anchor unique; it is unique on its own now — the only
+        other `shieldOrbs.clear()` in the file is inside a comment saying why `wreckShip` does not
+        have one — so the shorter anchor is the honest one rather than a looser one.
+      */
+      find: '  w.shieldOrbs.clear();',
+      replace: '',
     },
   },
   {
