@@ -225,6 +225,17 @@ key: an enemy announces itself by shooting at you, and a pickup announces nothin
 Themed on the fourteen *Far Carry* biomes, split into difficulty tiers. Each level gets its own
 enemies, upgrade flavour and bosses.
 
+**Difficulty has two axes.** A **tier** is chosen before a run and fixed for its length
+([0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md)). A **dial** moves
+during one: it is `1 + the level's index + the weapon pickups that level has already offered`, so it
+climbs through a level, drops back at a boundary without losing the run's progress, and reaches
+**11 at the last boss** — [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md). The two
+multiply; neither replaces the other.
+
+⚠️ **What the dial spends today is one rule**: nothing takes more than one hit until the first level
+has offered two weapon pickups. That is the reported spike at the start of the game, and the dial was
+landed with the smallest content on it on purpose — what a rising dial *sends* is still to be authored.
+
 A level is **an authored script** — a list of waves, each a place, an enemy kind, a formation and a
 lane — plus one boss at the end of it. Decided,
 [0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md).

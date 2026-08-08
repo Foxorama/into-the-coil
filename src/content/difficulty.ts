@@ -190,6 +190,130 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
   },
 };
 
+/*
+  ── THE DIAL: A SECOND DIFFICULTY AXIS, AND IT MOVES DURING A LEVEL ──────────────────────────────
+
+  `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md`. Everything above is a TIER — chosen
+  before a run and fixed for its length (0047). The dial is the other half of what the play-test asked
+  for, and the project had no mechanism for it at all:
+
+  > *"There should be progression of mission and difficulty from one level to the next… It's a dial
+  > that starts at 1 and should be at 11 when the player is dealing with the last boss at the end of
+  > the last level."*
+
+  > *"Level 1 -> dial starts at 1, increases to 2 when the player gets their first weapon power up,
+  > increases again when they get their next, until they get to the boss which should be difficulty 4
+  > or so on the dial. Level 2 starts by dialing it back 2 notches to give the player a breathing
+  > space and then dials it up per power up spawn so it should be around 5 at the end of the level.
+  > That pattern then repeats."*
+
+  ⚠️ **The two axes multiply and neither replaces the other.** A tier says *how hard is this run*; the
+  dial says *how far into it are we*. `legendary` at dial 11 and `burn` at dial 1 are different games
+  and both have to be reachable, which is why this is not a fourth tier.
+*/
+
+/** Where a run opens. The first level's first screen, before anything has been offered. */
+export const DIAL_MIN = 1;
+
+/**
+ * Where the last boss sits, and it is the ask's own number.
+ *
+ * ⚠️ **REACHED EXACTLY, and that is arithmetic rather than luck** — see `dialFor`. A ceiling the
+ * content stops short of would make the top of the dial a thing nobody ever sees, and one the content
+ * runs past would make the clamp the real ending.
+ */
+export const DIAL_MAX = 11;
+
+/**
+ * What a level boundary adds, and what each weapon pickup the level OFFERS adds.
+ *
+ * ── THE SAWTOOTH IS THESE TWO NUMBERS AND NOTHING ELSE ──────────────────────────────────────────
+ *
+ * A level ends `DIAL_PER_WEAPON × weapons` above where it began, and the next begins
+ * `DIAL_PER_LEVEL` above where the last one BEGAN — which is the *"dial it back a couple of notches
+ * to give the player a breathing space"* the ask describes, expressed as a rise rather than as a drop
+ * so that nothing has to remember where the previous level ended.
+ *
+ * ⚠️ **Both are 1, and that is derived rather than chosen.** `src/content/levels.ts` offers four
+ * weapon pickups a level over seven levels, so the last boss sits at
+ * `DIAL_MIN + 6×DIAL_PER_LEVEL + 4×DIAL_PER_WEAPON` = **11**, which is the ask's number to the
+ * notch. `tests/dial.test.ts` recomputes that from the content rather than restating it, so a level
+ * that gains a weapon pickup fails there rather than silently moving the top of the dial.
+ */
+export const DIAL_PER_LEVEL = 1;
+export const DIAL_PER_WEAPON = 1;
+
+/**
+ * Where the dial is, given how far into the run and how much the level has already put on the field.
+ *
+ * ── OFFERED, NOT HELD — AND THE ASK SAYS BOTH ───────────────────────────────────────────────────
+ *
+ * ⚠️ **This counts what the LEVEL HAS SPAWNED, not what the player picked up**, and the ask uses both
+ * words: *"increases to 2 when the player **gets** their first weapon power up"* and *"dials it up
+ * **per power up spawn**"*. They are different mechanisms and only one of them can sawtooth.
+ *
+ * **Held cannot.** Upgrades cross a level boundary
+ * (`docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md`), so a player entering level
+ * two with four weapon tiers would carry those four notches with them and the dial would climb
+ * monotonically to the end of the run — no breathing space, ever. Offered restarts with the script,
+ * which is what makes the shape the ask drew possible at all.
+ *
+ * ⚠️ **What that costs is written down rather than hidden**: a player who ignores every pickup still
+ * faces a rising dial. 0084 argues that the gap is small — a pickup waits seven seconds and reaches
+ * 6% of the lane (0064, 0056), and a death now hands everything back (0083) — and names it as the
+ * first thing a play-test should disagree with.
+ *
+ * ⚠️ **Clamped at both ends.** A level index past the roster is a shell bug and a black screen is a
+ * worse way to report it than a hard fight — `src/app/lifecycle.ts` clamps the index for the same
+ * reason.
+ */
+export function dialFor(levelIndex: number, weaponsOffered: number): number {
+  const raw = DIAL_MIN + levelIndex * DIAL_PER_LEVEL + weaponsOffered * DIAL_PER_WEAPON;
+  return raw < DIAL_MIN ? DIAL_MIN : raw > DIAL_MAX ? DIAL_MAX : raw;
+}
+
+/**
+ * The dial below which nothing the player meets takes more than one hit.
+ *
+ * ⚠️ **THE SMALLEST PROOF THE DIAL CAN CARRY, and it is a reported defect rather than a demo.**
+ * *"At the start of the game there should be no multiple hit enemies until after the 2nd upgrade has
+ * been spawned — the difficulty curve currently has a massive spike at the start, then it also
+ * immediately scales out and then drops off to super easy based on buffs the player has."*
+ *
+ * ⚠️ **Three, and it is the ask's *after the 2nd upgrade has been spawned* in dial units.** Level one
+ * opens at `DIAL_MIN` = 1; the second weapon pickup puts it at 3. Written as a dial threshold rather
+ * than as *two pickups* so that it means the same thing in every level — the clamp is a property of
+ * how far into the run the player is, and level two opens past it.
+ */
+export const MULTI_HIT_DIAL = 3;
+
+/**
+ * Whether the run is still in the opening stretch where everything dies to one shot.
+ *
+ * ── THE `levelIndex === 0` TERM IS NOT BELT AND BRACES, AND A GUARD CAUGHT ITS ABSENCE ───────────
+ *
+ * ⚠️ **A dial threshold ALONE cannot express this, and the first draft assumed it could.** The
+ * sawtooth reuses low dial values by construction: level two opens at `DIAL_MIN + 1` = 2, which is
+ * under `MULTI_HIT_DIAL` — so a plain `dial < MULTI_HIT_DIAL` brings the clamp back at the start of
+ * level two, and again at the start of level three's first weapon. The opening of most of the game
+ * would have had no multi-hit enemies in it.
+ *
+ * ⚠️ **And no threshold fixes it, which is worth writing down so nobody tries.** The clamp must be
+ * OFF at dial 2 (level two's opening) and ON at dial 2 (level one, one weapon in). Those are the same
+ * number. The dial says *how hard*; it does not say *how far in*, and this rule is about the second.
+ *
+ * ⚠️ **It still reads the dial rather than counting pickups**, so the threshold stays a dial fact and
+ * moves with it. What the level term adds is *and only during the opening*.
+ *
+ * ⚠️ **A predicate rather than an arm inside `toughnessFor`, because it must not reach a BOSS.** The
+ * dial at every boss is far past the threshold, so folding it in would be dead code that only looked
+ * safe — and the day somebody authored a boss earlier, a one-health boss would be the result.
+ * `src/app/frame.ts` applies it at the one spawn site that is an enemy in a wave.
+ */
+export function singleHitOnly(levelIndex: number, weaponsOffered: number): boolean {
+  return levelIndex === 0 && dialFor(levelIndex, weaponsOffered) < MULTI_HIT_DIAL;
+}
+
 /**
  * The health a body of `base` health has on a given tier — at least one, always.
  *

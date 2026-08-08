@@ -57,8 +57,11 @@ export const PROBES = [
       // ⚠️ The two functions merged, which is the tidy-up somebody would actually reach for once
       // they look similar. `startLevel` is the one that must sweep; giving it the seamless body
       // hands a new run the last one's armour.
-      find: '  w.level = level;\n  w.bossRow = BOSSES[level.boss];\n  resetScene(w);\n}',
-      replace: '  advanceLevel(w, level);\n}',
+      // ⚠️ Re-anchored by 0084, which put `w.levelIndex = 0` between the two lines this used to span
+      // and gave `advanceLevel` a third argument. Zero is what `startLevel` means, so it is what the
+      // merged call passes — the break is the sweep going missing, not the index.
+      find: '  w.bossRow = BOSSES[level.boss];\n  resetScene(w);\n}',
+      replace: '  advanceLevel(w, level, 0);\n}',
     },
   },
 ];

@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import {
   DIFFICULTIES,
   DIFFICULTY_KINDS,
+  MULTI_HIT_DIAL,
   type DifficultyKind,
   fireGapFor,
   toughnessFor,
@@ -283,6 +284,23 @@ describe('the tier reaches the field, and not only the table', () => {
   /** Drive until the wave is on the field, then report what actually arrived. */
   function firstWave(tier: DifficultyKind): { health: number; closing: number; shotSpeed: number } {
     const { world } = playableWorld(ONE_WAVE, tier);
+    /*
+      ⚠️ **PAST THE OPENING CLAMP, and this fixture went red the day the dial landed.**
+      `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md` holds every enemy to one hit until
+      the first level has offered two weapon pickups, so a turret spawned at dial 1 arrives at one
+      health **on every tier** — which is the dial working and this test measuring nothing.
+
+      ⚠️ **The two axes deliberately do not commute, and that is the finding rather than the fix.**
+      The clamp is a floor on *shots to kill* and it wins over the tier's multiplier while it is on, so
+      **the hardest tier is no tougher than the easiest for the opening of level one.** That is
+      intended — the report's complaint was a spike *at the start of the game*, and a spike is no less
+      of one for having been chosen on the title screen — but it is a real thing about what the three
+      buttons do, and nothing else in the repository says it.
+
+      The subject here is the tier, so the fixture turns the dial past the clamp rather than the clamp
+      being weakened to suit it. `tests/dial.test.ts` owns the other direction.
+    */
+    world.weaponsOffered = MULTI_HIT_DIAL;
     const frame = new GameFrame(world);
     // Long enough for the wave to spawn and for a turret to have fired at least once on any tier.
     for (let step = 0; step < 400; step++) frame.step();

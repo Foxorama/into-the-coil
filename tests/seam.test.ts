@@ -63,7 +63,7 @@ describe('a level boundary is a change of script, not a change of scene', () => 
     const before = shipAt(recorder);
     expect(before, 'the ship was not drawn, so this measures nothing').toBeDefined();
 
-    advanceLevel(world, LEVELS[LEVEL_KINDS[1]!]);
+    advanceLevel(world, LEVELS[LEVEL_KINDS[1]!], 1);
     frame.draw(0);
     const after = shipAt(recorder);
     expect(after, 'the ship stopped being drawn across the boundary').toBeDefined();
@@ -80,7 +80,7 @@ describe('a level boundary is a change of script, not a change of scene', () => 
     const { world, frame } = partWayThrough();
     const before = world.cameraAlong;
     expect(before, 'the camera never moved, so this measures nothing').toBeGreaterThan(100);
-    advanceLevel(world, LEVELS[LEVEL_KINDS[1]!]);
+    advanceLevel(world, LEVELS[LEVEL_KINDS[1]!], 1);
     expect(world.cameraAlong, 'the camera was sent back to the start of the run').toBe(before);
     frame.step();
     const step = world.cameraAlong - before;
@@ -91,7 +91,7 @@ describe('a level boundary is a change of script, not a change of scene', () => 
     // 0058 had to read the shield count out and add it back around a respawn. There is no respawn.
     const { world } = partWayThrough();
     world.ship.health = 3;
-    advanceLevel(world, LEVELS[LEVEL_KINDS[1]!]);
+    advanceLevel(world, LEVELS[LEVEL_KINDS[1]!], 1);
     expect(world.ship.health, 'the boundary took the shell off a ship that never left').toBe(3);
   });
 });
@@ -117,7 +117,7 @@ describe('and the level still plays the same wherever it begins', () => {
       const frame = new GameFrame(world);
       world.cameraAlong = enterAt;
       world.prevCameraAlong = enterAt;
-      advanceLevel(world, LEVELS[LEVEL_KINDS[1]!]);
+      advanceLevel(world, LEVELS[LEVEL_KINDS[1]!], 1);
       for (let i = 0; i < seconds(60) && world.enemies.size === 0; i++) frame.step();
       expect(world.enemies.size, `nothing spawned when the level was entered at ${enterAt}`).toBeGreaterThan(0);
       // Where it is, measured from the level's own beginning rather than from the run's.
@@ -152,7 +152,7 @@ describe('and the level still plays the same wherever it begins', () => {
     const { world, frame } = partWayThrough();
     const enteredAt = world.cameraAlong;
     const next = LEVELS[LEVEL_KINDS[1]!];
-    advanceLevel(world, next);
+    advanceLevel(world, next, 1);
     // Straight to where the boss is owed, in the level's own coordinates.
     world.cameraAlong = enteredAt + next.bossAt;
     for (let i = 0; i < seconds(5) && !world.bossSpawned; i++) frame.step();
@@ -172,7 +172,7 @@ describe('and the level still plays the same wherever it begins', () => {
       jumped forwards would spawn the whole level at once. Both are silent.
     */
     const { world, frame } = partWayThrough();
-    advanceLevel(world, LEVELS[LEVEL_KINDS[1]!]);
+    advanceLevel(world, LEVELS[LEVEL_KINDS[1]!], 1);
     expect(world.nextWave, 'the script did not start at its beginning').toBe(0);
     const horizon = spawnAlong(world.cameraAlong) - world.levelOrigin;
     expect(horizon, 'the level opened with its horizon already past its own start').toBeLessThan(

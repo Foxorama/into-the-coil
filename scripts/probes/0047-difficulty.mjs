@@ -22,8 +22,11 @@ export const PROBES = [
     guard: 'spawns tougher, faster bodies that throw faster shots on a harder tier',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    e.health = toughnessFor(row.health, w.difficulty);',
-      replace: '    e.health = row.health;',
+      // ⚠️ Re-anchored by 0084: the dial's opening clamp shares this line now, and the break is
+      // unchanged — the TIER dropped from the spawn while the clamp stays, so all three buttons start
+      // the same run and the dial goes on working.
+      find: '    e.health = singleHitOnly(w.levelIndex, w.weaponsOffered) ? 1 : toughnessFor(row.health, w.difficulty);',
+      replace: '    e.health = singleHitOnly(w.levelIndex, w.weaponsOffered) ? 1 : row.health;',
     },
   },
   {
