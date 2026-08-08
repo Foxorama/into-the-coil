@@ -88,11 +88,32 @@ describe('a shot stops where the player can no longer see it', () => {
     const bossOnly: LevelRow = { waves: [], pickups: [], bossAt: 300, boss: 'sentinel' };
     const { world } = playableWorld(bossOnly);
     world.view = NARROW;
+    /*
+      ── THE REACH IS MEASURED DIRECTLY, AND IT DID NOT HAVE TO BE UNTIL 0080 ────────────────────
+
+      ⚠️ **`docs/decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md` raised the narrowest
+      view from 150 units to 177.8, and this guard's margin was 19.** Measured with the bug restored,
+      the boss's first hit moved from 168.7 to 175.0 against a bound of 177.8 — so it passed either
+      way, by three units, and `npm run prove` reported the probe **WRONG TEST** rather than red.
+
+      ⚠️ **The first hit was always a CONSEQUENCE of the rule rather than the rule**, and it is a
+      consequence with a confound in it: the fixture's ship is killed by the boss it is shooting at,
+      so how far out a shot reaches depends on when the ship happened to be alive and where it had
+      got to. Flying it forward does not fix that — it dies sooner.
+
+      So the rule itself is measured — **the furthest ahead of the camera any live player shot ever
+      gets** — and the first hit is kept below as the thing the player actually reported. The reach is
+      in the units the report used: world units ahead of the camera, against the width of the screen.
+    */
     const frame = new GameFrame(world);
     const full = world.bossRow.health;
     let firstHit = Number.NaN;
+    let furthestShot = 0;
     for (let step = 0; step < 4000; step++) {
       frame.step();
+      for (let i = 0; i < world.playerShots.size; i++) {
+        furthestShot = Math.max(furthestShot, world.playerShots.at(i).along - world.cameraAlong);
+      }
       /*
         ⚠️ **`bossSpawned` and not an empty pool, and the first draft got this wrong in the way that
         matters.** It broke out on `bossPool.size === 0`, which is true on step ZERO — the boss has
@@ -108,10 +129,22 @@ describe('a shot stops where the player can no longer see it', () => {
       firstHit = boss.along - boss.radius - world.cameraAlong;
       break;
     }
+    /*
+      ⚠️ **THE RULE, and it is what the probe now reddens.** *You can shoot what you can see*: no shot
+      the player fired is ever further ahead of the camera than the screen is wide. One step of travel
+      of slack, because the cull runs after the move.
+    */
+    expect(furthestShot, 'the ship never fired, so this measured nothing').toBeGreaterThan(0);
+    expect(
+      furthestShot,
+      `a shot reached ${furthestShot.toFixed(0)} units ahead of the camera on a ${NARROW.alongSpan.toFixed(0)}-unit ` +
+        'view — which is the strip the report describes things dying in, unseen',
+    ).toBeLessThan(NARROW.alongSpan + SHOTS.pulse.speed);
+    // And the consequence the player actually reported, kept: the boss is not damaged out of sight.
     expect(Number.isNaN(firstHit), 'the boss was never hit at all, so this measured nothing').toBe(false);
     expect(
       firstHit,
-      `the boss took its first hit ${firstHit.toFixed(0)} units out, on a ${NARROW.alongSpan}-unit view`,
+      `the boss took its first hit ${firstHit.toFixed(0)} units out, on a ${NARROW.alongSpan.toFixed(0)}-unit view`,
     ).toBeLessThan(NARROW.alongSpan);
   });
 });

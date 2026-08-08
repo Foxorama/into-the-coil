@@ -216,11 +216,29 @@ describe('the device table straddles the clamp, so the assertions above have wor
     expect(DEVICES.filter(inClamp).length, 'no device is inside the clamp').toBeGreaterThan(3);
   });
 
-  it('the clamp lets every phone and every ordinary monitor through', () => {
-    // The clamp was chosen for this, so it is worth failing when someone narrows it.
-    for (const name of ['3:2 laptop', '16:10 laptop', '16:9 monitor', '19.5:9 phone', '20:9 phone', '21:9 ultrawide']) {
+  it('the clamp lets every phone and every 16:9-or-longer monitor through', () => {
+    /*
+      ⚠️ **THIS LIST USED TO INCLUDE THE 3:2 AND 16:10 LAPTOPS, AND THE PLAYER TOOK THEM OFF IT** —
+      `docs/decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md`: *"let's optimise for
+      desktop and we'll add a different viewport for mobile."* Raising `MIN_ASPECT` to the reference
+      aspect is what extends the player's box to the screen it is drawn on, and the price is bars on
+      the two squarer laptop classes. It is a price rather than an accident, so it is listed below
+      rather than dropped.
+    */
+    for (const name of ['16:9 monitor', '19.5:9 phone', '20:9 phone', '21:9 ultrawide']) {
       const d = DEVICES.find((x) => x.name === name)!;
       expect(inClamp(d), `${name} has fallen outside the clamp and now gets bars`).toBe(true);
     }
+  });
+
+  it('bars the two laptop classes the player traded away, and nothing else that was inside', () => {
+    /*
+      ⚠️ **The cost, asserted rather than implied.** A trade that is only written in prose is one that
+      can be quietly reversed or quietly widened — and *which devices get bars* is the whole of what
+      0080 spent to buy the box. If a third class ever joins this list, that is a decision and not a
+      constant edit.
+    */
+    const barred = DEVICES.filter((d) => !inClamp(d)).map((d) => d.name);
+    expect(barred.sort()).toEqual(['16:10 laptop', '32:9 superwide', '3:2 laptop', '4:3 tablet', '5:4 monitor']);
   });
 });

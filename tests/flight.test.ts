@@ -1,8 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { makeEntity, reset, stepEntities } from '../src/sim/entity.ts';
 import { makeIntent, type Intent } from '../src/sim/intent.ts';
-import { flyShip, holdStation, PLAYER_ALONG_SPAN, PLAYER_MARGIN, SHIP_SPEED } from '../src/sim/flight.ts';
-import { ACROSS_SPAN } from '../src/sim/camera.ts';
+import {
+  flyShip,
+  holdStation,
+  PLAYER_ALONG_MARGIN,
+  PLAYER_ALONG_SPAN,
+  PLAYER_LEAD,
+  PLAYER_MARGIN,
+  SHIP_SPEED,
+} from '../src/sim/flight.ts';
+import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import { Pool } from '../src/sim/pool.ts';
 import { sprite } from './bodies.ts';
 
@@ -188,7 +196,9 @@ describe('the box is the same on every device', () => {
       flyShip(e, ask(1, 0), 0, SCROLL);
       e.along += e.velAlong;
     }
-    expect(e.along).toBeLessThanOrEqual(PLAYER_ALONG_SPAN - PLAYER_MARGIN + 1e-9);
+    // ⚠️ `PLAYER_LEAD` rather than the subtraction — 0074's one description, and 0080 gave it a
+    // second term to get wrong: the ALONG margin, which is no longer the across one.
+    expect(e.along).toBeLessThanOrEqual(PLAYER_LEAD + 1e-9);
   });
 
   it('cannot be pushed back through the camera', () => {
@@ -197,7 +207,7 @@ describe('the box is the same on every device', () => {
       flyShip(e, ask(-1, 0), 0, SCROLL);
       e.along += e.velAlong;
     }
-    expect(e.along).toBeGreaterThanOrEqual(PLAYER_MARGIN - 1e-9);
+    expect(e.along).toBeGreaterThanOrEqual(PLAYER_ALONG_MARGIN - 1e-9);
   });
 
   it('stays inside the dodge lane at both edges', () => {
@@ -222,15 +232,40 @@ describe('the box is the same on every device', () => {
       camera += SCROLL;
       flyShip(e, ask(-1, 0), camera, SCROLL);
       e.along += e.velAlong;
-      expect(e.along).toBeGreaterThanOrEqual(camera + PLAYER_MARGIN - 1e-9);
+      expect(e.along).toBeGreaterThanOrEqual(camera + PLAYER_ALONG_MARGIN - 1e-9);
     }
   });
 
   it('is measured against the NARROWEST view, so a 21:9 buys lookahead and not room', () => {
-    // 0023 fixes the dodge lane so difficulty does not vary with the screen. Sizing the player's box
-    // off the current view would undo that on the other axis: a 240-unit view would hand its player
-    // 60% more room to retreat into than a 150-unit one.
-    expect(PLAYER_ALONG_SPAN).toBe(150);
+    /*
+      0023 fixes the dodge lane so difficulty does not vary with the screen. Sizing the player's box
+      off the current view would undo that on the other axis: the widest view would hand its player
+      35% more room to retreat into than the narrowest one.
+
+      ⚠️ **Stated as the PROPERTY rather than as the number, which is what 0080 cost it.** It read
+      `toBe(150)` — a value that meant *the narrowest view* only as long as `MIN_ASPECT` was 1.5, and
+      the whole of 0080 is that `MIN_ASPECT` moved. What has to hold at any value is that the box is
+      the narrowest view and that every wider one spends its extra span on lookahead.
+    */
+    expect(PLAYER_ALONG_SPAN, 'the box is not the narrowest view').toBeCloseTo(viewOf(1920, 1080).alongSpan, 9);
+    expect(PLAYER_ALONG_SPAN, 'a wider screen bought play space rather than lookahead').toBeLessThan(
+      viewOf(3440, 1440).alongSpan,
+    );
+  });
+
+  it('insets by the same fraction on both axes, so the box is the screen’s own shape', () => {
+    /*
+      ⚠️ **Reported from play**: *"change the player 'box' proportions to correctly be a rectangle."*
+      The box was already a rectangle in world units; what it was not was the same rectangle as the
+      view it sits inside. Held as a ratio rather than as two margins, because two numbers is exactly
+      the shape that let the axes disagree.
+    */
+    expect(PLAYER_ALONG_MARGIN / PLAYER_ALONG_SPAN).toBeCloseTo(PLAYER_MARGIN / ACROSS_SPAN, 9);
+    // And in the player's own units: the same share of each axis is out of reach, either way up.
+    const alongReach = (PLAYER_ALONG_SPAN - 2 * PLAYER_ALONG_MARGIN) / PLAYER_ALONG_SPAN;
+    const acrossReach = (ACROSS_SPAN - 2 * PLAYER_MARGIN) / ACROSS_SPAN;
+    expect(alongReach).toBeCloseTo(acrossReach, 9);
+    expect(alongReach, 'the player cannot reach most of their own screen').toBeGreaterThan(0.85);
   });
 });
 

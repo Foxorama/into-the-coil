@@ -377,9 +377,27 @@ describe('the sky costs a fixed number of calls, whatever the camera is doing', 
         ⚠️ **The alpha is a hand's number and is deliberately NOT pinned** — 0037's rule, the one
         `tests/run.test.ts` states for lives. What is held is the RELATIONSHIP, which has to be true
         at whatever value a later play-test settles on.
+
+        ⚠️ **SIZE SEPARATES THEM AGAIN, and the paragraph above used to say it did not** —
+        `docs/decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md`. Reported from play:
+        *"the closer starfield layer is still too close to play view, needs to be a bit more
+        background. I think it's actually the perspective zoom level is wrong."* Distance in a flat
+        starfield is carried by exactly two things — how big a dot is and how many there are — so the
+        near layer is now the smaller one as well as the fainter one. 0069's ceiling still holds over
+        both of them, above; this is the layer against the other layer rather than against a bullet.
       */
       expect(NEAR.alpha, 'the near layer is drawn as solidly as the far one').toBeLessThan(FAR.alpha);
       expect(NEAR.stars.length, 'the near layer is as dense as the far one').toBeLessThan(FAR.stars.length);
+      /*
+        Compared in tile pixels directly, because both tiles are `ACROSS_SPAN` units across and are
+        baked at the same resolution above — so a pixel means the same thing in both, and converting
+        to world units would be a divide by one number written twice.
+      */
+      const biggest = (field: typeof NEAR): number => Math.max(...field.stars.map((s) => s.r));
+      expect(
+        biggest(NEAR),
+        'the near layer draws dots as big as the far one, so the layer that MOVES is the loud one',
+      ).toBeLessThan(biggest(FAR));
     });
   });
 });

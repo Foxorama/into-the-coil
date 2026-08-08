@@ -98,7 +98,7 @@ export interface WaveEntry {
    * ⚠️ **The player's own words for the cap**: *"entry point should be capped at 50% from the right
    * side of the screen — the player has a safe spawn zone from the left."* That is enforced by
    * `FLANK_ALONG` in `src/sim/camera.ts` and not by the author, because *half the screen* is not one
-   * distance: a view is 150 to 240 world units wide by aspect.
+   * distance: a view is 178 to 240 world units wide by aspect (0080 raised the floor).
    */
   origin?: WaveOrigin;
 }

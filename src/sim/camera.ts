@@ -35,20 +35,45 @@ export const ACROSS_SPAN = 100;
 
 /**
  * The aspect the levels are authored against — 16:9, so the reference view is 177.8 × 100 units.
- * Nothing enforces it at runtime; it is the number a level designer holds in their head.
+ *
+ * ⚠️ **It is now `MIN_ASPECT` as well, and the two being one number is the point** —
+ * `docs/decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md`. The aspect a level is
+ * written for is the aspect the player's box is sized to, so *what the designer sees* and *where the
+ * ship may fly* stopped being two separate answers. It used to enforce nothing at runtime; the floor
+ * below is what it now does.
  */
 export const REFERENCE_ASPECT = 16 / 9;
 
 /**
- * The clamp on lookahead, in aspect terms. Chosen against the device classes rather than for
- * roundness, and the choice is that **every phone and every ordinary laptop or monitor falls inside
- * it and gets no bars**: 3:2 (1.5), 16:10 (1.6), 16:9 (1.78), 19.5:9 (2.17), 20:9 (2.22) and 21:9
- * (2.33) are all in range.
+ * The clamp on lookahead, in aspect terms.
  *
- * Outside it the excess becomes gutter, never extra world. Below: 4:3 and 5:4 tablets. Above: true
- * ultrawide, and a desktop window someone has dragged into a letterbox shape.
+ * ── THE FLOOR IS THE REFERENCE ASPECT, AND THAT IS A CHANGE THE PLAYER CHOSE ────────────────────
+ *
+ * Reported from play: *"almost a quarter of the screen space is not playable by the player"*, and
+ * with it the trade taken: *"we should be able to extend the desktop one… let's optimise for desktop
+ * and we'll add a different viewport for mobile."*
+ * `docs/decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md`.
+ *
+ * ⚠️ **It was 1.5, and 1.5 was the whole of why the player's box was a quarter short of the screen.**
+ * `src/sim/flight.ts` sizes the box at `ACROSS_SPAN × MIN_ASPECT` — the narrowest view any device
+ * gets — precisely so every player has the same box. At 1.5 that box was 150 units against a 16:9
+ * view of 177.8, so a 16:9 monitor drew 28 units of playfield the ship could not reach, and a 21:9
+ * drew 90. [0074](../../docs/decisions/0074-the-box-is-drawn.md) named raising this as the lever and
+ * refused it because it letterboxes 16:10 laptops and 3:2 tablets. **That refusal has been
+ * overruled by the player**, in those words.
+ *
+ * ⚠️ **`REFERENCE_ASPECT` rather than 1.78 written again**, because they are now the same decision:
+ * the aspect levels are authored against is the aspect the box is sized to, so a level designer's
+ * screen and the player's box are one number. A second literal here would be the drift
+ * `src/content/sprites.ts` records the cost of.
+ *
+ * **Who gets bars now**: 4:3 and 5:4 tablets, as before, plus 3:2 (1.50) and 16:10 (1.60) laptops.
+ * **Who does not**: 16:9 (1.78) exactly, 19.5:9 (2.17), 20:9 (2.22), 21:9 (2.39) — which is every
+ * phone in the table and every ordinary monitor.
+ *
+ * Outside the clamp the excess becomes gutter, never extra world.
  */
-export const MIN_ASPECT = 1.5;
+export const MIN_ASPECT = REFERENCE_ASPECT;
 export const MAX_ASPECT = 2.4;
 
 /** The most world any device may ever see ahead. Levels are authored to be safe at this number. */
@@ -66,7 +91,7 @@ export const EDGE_MARGIN = 40;
 export type ScrollAxis = 'x' | 'y';
 
 export interface View {
-  /** World units visible along the scroll axis: 150 to 240, per the clamp. */
+  /** World units visible along the scroll axis: 177.8 to 240, per the clamp. */
   alongSpan: number;
   /** World units visible across it. Always `ACROSS_SPAN`. */
   acrossSpan: number;
@@ -125,8 +150,17 @@ export function viewOf(widthPx: number, heightPx: number): View {
     acrossSpan: ACROSS_SPAN,
     alongAxis: widthPx >= heightPx ? 'x' : 'y',
     scale,
-    gutterAlong: (long - alongSpan * scale) / 2,
-    gutterAcross: (short - ACROSS_SPAN * scale) / 2,
+    /*
+      ⚠️ **Floored at zero, and the floor is arithmetic rather than caution.** `scale` is the smaller
+      of the two ratios, so the axis it came from divides out exactly and its gutter is zero — in
+      real arithmetic. In floating point it can land a ten-thousandth of a nanometre below it, which
+      is what a 16:10 laptop produced the moment `MIN_ASPECT` stopped dividing its width evenly.
+      A negative gutter means *world that exists and is not on screen*, so leaving the sign to
+      rounding would let a crop and a rounding error wear the same shape.
+      `docs/decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md`.
+    */
+    gutterAlong: Math.max(0, (long - alongSpan * scale) / 2),
+    gutterAcross: Math.max(0, (short - ACROSS_SPAN * scale) / 2),
   };
 }
 
@@ -249,7 +283,7 @@ export const ROAM_MAX = ACROSS_SPAN + FLANK_MARGIN;
  *
  * ⚠️ **`MAX_ALONG_SPAN / 2`, and it is the only number that keeps the promise on every device.**
  * Asked for in play: *"entry point should be capped at 50% from the right side of the screen — the
- * player has a safe spawn zone from the left side."* A view is 150 to 240 units wide by aspect
+ * player has a safe spawn zone from the left side."* A view is 178 to 240 units wide by aspect
  * (0023), so *half the screen* is not one place. 120 is at or beyond the halfway line of every view
  * the clamp allows — dead centre on the widest, and 80% of the way across on the narrowest — so
  * nothing ever appears behind the player, on any device.

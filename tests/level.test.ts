@@ -14,6 +14,7 @@ import {
   ACROSS_CULL_MIN,
   ACROSS_SPAN,
   MAX_ALONG_SPAN,
+  MIN_ASPECT,
   ROAM_MAX,
   ROAM_MIN,
 } from '../src/sim/camera.ts';
@@ -471,14 +472,21 @@ describe('a boss fight can reach all of its phases', () => {
         ⚠️ **The bound the drift is authored against, and the reason a PHASE does not scale it.** The
         forward end of the swing is measured against `ACROSS_SPAN * MIN_ASPECT` — the narrowest view
         any device gets (`src/sim/camera.ts`) — so a boss that swung further would put a quarter of
-        its hull off the edge of a 3:2 laptop, in the phase the player can least afford it.
+        its hull off the edge of the squarest screen the clamp still allows, in the phase the player
+        can least afford it.
+
+        ⚠️ **It read `1.5` and now reads the constant, which LOOSENS it** —
+        `docs/decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md` raised the floor to 16:9,
+        so the narrowest view is 177.8 rather than 150 and every boss has 28 more units of room it did
+        not have. That is the honest bound rather than a tighter one kept out of habit: what this
+        guards is *the hull stays on the narrowest screen*, and the narrowest screen moved.
 
         Checked over the TABLE rather than by driving, because it has to hold for every boss including
         the ones nobody has fought.
       */
       for (const kind of BOSS_KINDS) {
         const row = BOSSES[kind];
-        const narrow = ACROSS_SPAN * 1.5;
+        const narrow = ACROSS_SPAN * MIN_ASPECT;
         expect(
           row.station + row.drift + row.radius,
           `${kind} drifts ${(row.station + row.drift + row.radius - narrow).toFixed(1)} units off the narrowest screen`,

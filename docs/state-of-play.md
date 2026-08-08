@@ -53,6 +53,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **a new run opens on an empty field** | [0067](decisions/0067-a-new-run-opens-on-an-empty-field.md), [`the-sweep-that-served-two-rules`](../reports/the-sweep-that-served-two-rules-2026-08-07.md) |
 | **a run over is a continue, and it keeps the level** | [0068](decisions/0068-a-run-over-is-a-continue.md) |
 | **a death is a beat, and the unspent arsenal goes up with the ship** | [0079](decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md) |
+| **the box is the screen, and the screen is 16:9** | [0080](decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md) |
 | **seven levels, seven bosses, one idea each** | [0071](decisions/0071-five-more-levels-and-one-idea-each.md) |
 | **a style is a setting, a choice is not an action, and neither may touch the sim** | [0070](decisions/0070-a-style-is-a-setting-and-the-first-one.md) |
 | **a cue is baked and played, and it names the picture it is the twin of** | [0072](decisions/0072-a-cue-is-baked-and-played.md) |
@@ -278,7 +279,7 @@ fail when you mix something else in."*
 |---|---|---|---|
 | 1 | **The bug sweep** — pickups hitting a wall mid-screen, the death scatter firing straight up and down, missile tubes reaching three | Cheapest, and each one is a **false signal in the picture**. [0027](decisions/0027-measure-the-picture-not-the-model.md): tuning against a lying picture tunes the wrong thing. | ✅ [0077](decisions/0077-a-pickup-arrives-rather-than-stopping.md) |
 | 2 | **The death beat** — explosion, pause, respawn, and the same before the continue screen | A death is the most-repeated event in a run and it currently has no beat at all. Independent of everything else. | ✅ [0079](decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md), which also carries **the pyre** the player added to it |
-| 3 | **The view** — sky +33%, the perspective zoom, the box made a rectangle and extended, desktop-first | **Blocks 6, 7 and 8.** *"enemies fly too fast"* and *"a quarter of the screen is unplayable"* are both statements about the viewport; changing it changes what every one of those numbers means. | **sky ✅** [0078](decisions/0078-the-sky-moves-a-third-faster.md) — the zoom and the box are the rest |
+| 3 | **The view** — sky +33%, the perspective zoom, the box made a rectangle and extended, desktop-first | **Blocks 6, 7 and 8.** *"enemies fly too fast"* and *"a quarter of the screen is unplayable"* are both statements about the viewport; changing it changes what every one of those numbers means. | ✅ [0078](decisions/0078-the-sky-moves-a-third-faster.md) + [0080](decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md) — **mobile's own viewport is still owed** |
 | 4 | **Legibility** — shape and size differentiation, over the palette rather than instead of it | **Blocks the re-play.** A player who cannot tell a pickup from a bullet cannot give a verdict on anything below. | |
 | 5 | **The pickup taxonomy** — one weapon pickup, per-level budgets, the 50% death scatter, and the max-speed nerf | The player calls pickups *"the lynchpin of whether this game is actually good"*. Comes before the dial because the dial is keyed to them. | **two constraints already known** — [`two-things-found-while-chunking`](../reports/two-things-found-while-chunking-2026-08-08.md) |
 | 6 | **The difficulty dial** — a dial that moves inside a level, keyed to the arsenal, sawtoothing across the run | The mechanism the project **does not have**. Smallest proof first: no multi-hit enemies until the 2nd upgrade has spawned. | |
@@ -384,10 +385,12 @@ small, and both are removing a false signal rather than a design change:
   ⚠️ **PLAYED, AND THE VERDICT IS THAT IT FIXED THE REPORT AND NOT THE PROBLEM** — *"the barrier line
   is just super bad - it solved the problem I was having, but it did not solve the problem the game has
   in that almost a quarter of the screen space is not playable by the player."* 0074 wrote that failure
-  mode down about itself (*"the fix is a picture, not a number"*) and the number was the problem. **The
-  aspect-floor trade 0074 deferred has now been taken by the player** — optimise for desktop, mobile
-  gets its own viewport — which is **chunk 3** and is a change to
-  [0023](decisions/0023-the-long-axis-is-the-scroll-axis.md), not to a constant.
+  mode down about itself (*"the fix is a picture, not a number"*) and the number was the problem.
+
+  ⚠️ **✅ THE NUMBER HAS NOW MOVED** — [0080](decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md),
+  which takes the aspect-floor trade 0074 deferred and amends
+  [0023](decisions/0023-the-long-axis-is-the-scroll-axis.md)'s clamp. The line is unchanged and sits
+  at 94% of a 16:9 screen instead of 81%.
 - **✅ DONE — the level boundary reset the camera to zero**, so the sky snapped and the ship was
   repositioned. [0076](decisions/0076-a-level-has-an-origin.md). The camera reset was load-bearing and
   is not deleted: a level now has an ORIGIN and its script is read from it, so a boundary changes the
@@ -432,11 +435,11 @@ Last, because a boss that dies in under a second is a curve problem before it is
 see *What the game currently is*. It is what has been standing in for a difficulty, so it is
 reconsidered once item 4 has a hand behind it.
 
-⚠️ **The forward room is no longer worth six units, because the constraint that made it six has been
-lifted by the player.** `MIN_ASPECT` guarantees every device shows at least 150 along-units and the box
-reaches 144, so six was all a single shared viewport had to give; raising the floor to 16:9 buys a
-~172-unit box and costs letterboxing on 16:10 laptops and 3:2 tablets. **That trade is now taken** —
-*"let's optimise for desktop and we'll add a different viewport for mobile"* — and it is **chunk 3**.
+⚠️ **✅ TAKEN** — [0080](decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md). `MIN_ASPECT`
+is the reference aspect, the box is 177.8 units inset by one fraction on both axes, and the ship
+reaches 88% of each. **What is still owed is the other half of the same sentence: mobile's own
+viewport.** A 20:9 phone gets 217 units of view against a 177.8-unit box, which is the same complaint
+at 18% rather than 22% — 0080 says why it is a second decision rather than a clause.
 
 ## What was next before that list, and why in this order
 
