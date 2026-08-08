@@ -117,20 +117,36 @@ export const CAPACITY = {
 /**
  * The sky, back to front — `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
  *
- * ⚠️ **Both depths are well under 1**, or the layer stops being a background: at 1 it moves exactly
- * with the world and reads as a field of objects going past at the rate of the things that can kill
- * the player. 0.12 and 0.3 put the far field almost still and the near one at a third of the world's
- * rate, which is the parallax.
+ * ── THE DEPTHS ARE A THIRD LARGER THAN 0065 SHIPPED ─────────────────────────────────────────────
+ *
+ * Reported from play: *"the background starfield layers both still need to be scrolling past about
+ * 1/3 faster - currently feels like i'm on a casual stroll and not a super fast spaceflight combat
+ * battle."* `docs/decisions/0078-the-sky-moves-a-third-faster.md`.
+ *
+ * ⚠️ **BOTH, by the same factor, which is what keeps the parallax.** 0.12 and 0.3 became 0.16 and
+ * 0.4 — `× 4/3` each — so the ratio between the two layers is exactly what it was and the only thing
+ * that changed is how fast the whole sky goes past. Scaling one of them would have bought the speed
+ * out of the depth cue, which is the one thing a two-layer sky is for.
+ *
+ * ⚠️ **Both are still well under 1**, which is 0065's rule and the reason there is a ceiling here at
+ * all: at 1 the sky moves exactly with the world and reads as a field of objects going past at the
+ * rate of the things that can kill the player. At 0.4 the near field is still under half.
  *
  * ⚠️ **Module-level and frozen in place, because a STYLE can turn it off** —
  * `docs/decisions/0070-a-style-is-a-setting-and-the-first-one.md`. Retro is the game before the sky,
  * and what `retro` means is that `World.sky` is the empty list: nothing in `src/render/scene.ts`
  * or `src/app/frame.ts` learns that a style exists, because the layer list is already the whole of
  * what it reads. Built once here, since this file may allocate and the painter may not.
+ *
+ * ⚠️ **Exported so the guard reads THIS rather than a copy of it.** `tests/budget.test.ts` used to
+ * restate the array under a comment claiming it was *"the real sky, built the way `src/app/mount.ts`
+ * builds it rather than restated"* — which it was not, and which is the shape of drift
+ * `tests/one-description.test.ts` exists for. It went unnoticed because a depth cannot change a draw
+ * count, so the two could disagree for ever and the budget guard would stay green.
  */
-const SKY = [
-  { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.12 },
-  { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.3 },
+export const SKY = [
+  { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.16 },
+  { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.4 },
 ];
 
 /** What a style with no sky gets. Module-level, so switching styles allocates nothing. */
