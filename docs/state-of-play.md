@@ -79,6 +79,15 @@ the same category as the flight constants before they were played. None of them 
 
 ## What the game currently is
 
+⚠️ **A DEATH IS NOW AN EVENT WITH A LENGTH, AND THE SHIP SHOWS WHAT IT IS CARRYING** —
+[0079](decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md) and
+[0081](decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md). The ship
+comes apart over eight tenths of a second, its unspent bombs go off as a ring at the wreck, the
+continue screen waits for all of it, and the hull gains a tier every two upgrades. **The player owns
+88% of both axes of a 16:9 screen** rather than 81% of one of them
+([0080](decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md)), and **what shoots back is no
+longer drawn as what the player fires** — which it had been since enemies could shoot.
+
 **A SEVEN-level run, playable start to finish. Two of the seven have been played.** A title screen that is the difficulty
 choice and carries a key to the pickups, six enemy kinds, two authored levels of about three minutes
 each, weapon upgrades and extra lives lying about in them, a lives-and-shield readout while playing,
@@ -282,7 +291,7 @@ fail when you mix something else in."*
 | 2 | **The death beat** — explosion, pause, respawn, and the same before the continue screen | A death is the most-repeated event in a run and it currently has no beat at all. Independent of everything else. | ✅ [0079](decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md), which also carries **the pyre** the player added to it |
 | 3 | **The view** — sky +33%, the perspective zoom, the box made a rectangle and extended, desktop-first | **Blocks 6, 7 and 8.** *"enemies fly too fast"* and *"a quarter of the screen is unplayable"* are both statements about the viewport; changing it changes what every one of those numbers means. | ✅ [0078](decisions/0078-the-sky-moves-a-third-faster.md) + [0080](decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md) — **mobile's own viewport is still owed** |
 | 4 | **Legibility** — shape and size differentiation, over the palette rather than instead of it | **Blocks the re-play.** A player who cannot tell a pickup from a bullet cannot give a verdict on anything below. | ✅ [0081](decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md) — the two bullets, and the ship's hull. **The pickups are deliberately left to chunk 5** |
-| 5 | **The pickup taxonomy** — one weapon pickup, per-level budgets, the 50% death scatter, and the max-speed nerf | The player calls pickups *"the lynchpin of whether this game is actually good"*. Comes before the dial because the dial is keyed to them. | **two constraints already known** — [`two-things-found-while-chunking`](../reports/two-things-found-while-chunking-2026-08-08.md) |
+| 5 | **The pickup taxonomy** — one weapon pickup, per-level budgets, the 50% death scatter, and the max-speed nerf | The player calls pickups *"the lynchpin of whether this game is actually good"*. Comes before the dial because the dial is keyed to them. | **mapped, not started** — [`the-pickup-taxonomy-mapped`](../reports/the-pickup-taxonomy-mapped-2026-08-08.md). **Start here.** |
 | 6 | **The difficulty dial** — a dial that moves inside a level, keyed to the arsenal, sawtoothing across the run | The mechanism the project **does not have**. Smallest proof first: no multi-hit enemies until the 2nd upgrade has spawned. | |
 | 7 | **Enemies that fight** — slower, patterned, more of them shooting, slower bullets | The headline. Deliberately after 3 and 6, because *"too fast"* is measured through the viewport and *"actively trying to stop the player"* is what the dial spends. | |
 | 8 | **Bosses that are bosses** — tougher, damage that shows, one idea each, and a miniboss below them | Last, on [`medium-played`](../reports/medium-played-2026-08-07.md)'s own reasoning: a boss that dies in under a second is a curve problem before it is a movement problem, and 5 is the curve. | |
@@ -314,19 +323,58 @@ is the bug it looks like it prevents. The single description
 ⚠️ **The two numbers the map left open are now chosen and neither has been flown**, which is exactly
 the accumulation the ⚠️ below is about: 48 steps of beat, and the scatter thrown at the END of it.
 
-⚠️ **Two constraints on chunk 5 are already known and both change what it costs** —
-[`two-things-found-while-chunking`](../reports/two-things-found-while-chunking-2026-08-08.md).
-Merging two pickups into one takes `CYCLE` from six kinds to five, and
-[0052](decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md)'s cycle is a **proved
-involution** that an odd count cannot satisfy without a fixed point; and *"max speed auto-fire is way
-too strong"* has a named line behind it — every upgrade past every cap is `damage++` with no ceiling
-anywhere, which is half of a sentence `src/content/pickups.ts` quotes in full.
+⚠️ **CHUNK 5 IS MAPPED AND IS WHERE THE NEXT SESSION STARTS** —
+[`the-pickup-taxonomy-mapped`](../reports/the-pickup-taxonomy-mapped-2026-08-08.md), which measures
+the density, proposes a taxonomy that satisfies the involution, and names the one line behind *"max
+speed auto-fire is way too strong"*. It supersedes nothing in
+[`two-things-found-while-chunking`](../reports/two-things-found-while-chunking-2026-08-08.md) — that
+report found the two constraints and this one measures against them.
 
-⚠️ **Nothing landed since the third play-test has been flown**, which is the same accumulation
+⚠️ **The headline number is that the levels carry about FOUR TIMES the pickups the ask allows**, and
+the survival pair is over by a factor of five: every level authors 19–24 entries, of which nine are
+*shield or extra life*, against an ask of one or two. That is why the chunk is a content edit across
+seven lists with prose attached to most of the entries, and not a table swap.
+
+⚠️ **NOTHING LANDED SINCE THE THIRD PLAY-TEST HAS BEEN FLOWN, AND THAT IS NOW SIX DECISIONS DEEP** —
+0077, 0078, 0079, 0080, 0081 and the two reports. This is the same accumulation
 [0075](decisions/0075-the-serialisation-is-checked.md) guards on the PR axis and no CI check can ask
-about. The habit is: land a batch, play it, then decide.
+about. The habit is: land a batch, play it, then decide — **and the batch is now large enough that the
+next thing to happen should be a play-test rather than chunk 5.**
 
-⚠️ **Two guards were caught measuring something adjacent to what they named, in one session.** 0077's
+⚠️ **What that play-test is FOR, in order.** Four of the six changes are things only a hand can
+judge, and each has a number behind it that nothing asserts:
+
+1. **The death beat** ([0079](decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md))
+   — 48 steps, eight tenths of a second, several times a run. Too long is a tax and too short is not a
+   beat, and the decision says so about itself. The eyes-on pass also found the debris cloud is
+   **wide** — about 560px of 1280 — which the numbers did not suggest.
+2. **The pyre** (same decision) — the ring at the wreck, four sizes by unspent charges. **It has never
+   been seen**: it lives a fifth of a second and `scripts/shot.mjs` could not land on it in six
+   attempts.
+3. **The box** ([0080](decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md)) — the ship now
+   reaches 88% of both axes instead of 81% along. The named cost is that **a ship at its forward wall
+   has almost no shot range**, because a shot dies at the edge of the view; 8 units of travel against
+   30 before. That is the ordinary shape of a horizontal shooter and it is the thing most likely to be
+   reported next as a bug.
+4. **The two bullets** ([0081](decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md))
+   — enemy fire is now a pink square at 2.6 units against the player's orange disc at 1.8. **Also
+   never seen in a still**, for a rig reason the decision states: `shot.mjs` walks an unattended run,
+   so it can photograph what a level puts in front of a stationary ship but not a fight.
+
+⚠️ **THE PROOF HARNESS NOW REFUSES A STRANDED PROBE IN A SECOND RATHER THAN IN TWELVE MINUTES** —
+[0079](decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md) records why. An
+edit to `src/app/frame.ts` orphaned probes belonging to 0041 and 0050, and `npm run prove` said so
+after the baseline suites, six tree copies and 384 vitest runs, from CI. `anchorFailures` asks
+`planEdit`'s existing question over **every** probe before a tree is copied, and `npm test` asks it of
+the real set. **It has already earned itself twice** — it caught 0069's two probes during 0080.
+
+⚠️ **AND A GUARD CAN STOP WORKING BECAUSE A BOUND MOVED, WHICH ONLY A WHOLE-SET `prove` CAN SEE.**
+0080 raised `MIN_ASPECT` and two other decisions' guards stopped firing: 0061's drift probe went
+STILL GREEN (the bound loosened by 28 units under it) and 0048's boss guard went WRONG TEST (its
+margin was 19 units and the bug moved the number by 6). **Run `npm run prove` in full before pushing a
+change to a shared constant** — `npm test` cannot see either failure.
+
+⚠️ **Three guards were caught measuring something adjacent to what they named.** 0077's
 bob guard stayed green with the bob switched off — it was measuring the band the pickup waits in, and
 the ease-in is worth five units of band on its own — and 0078 found `tests/budget.test.ts` restating
 the sky array under a comment claiming it did not. Both were found by changing a number and asking
