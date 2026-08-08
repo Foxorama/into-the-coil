@@ -97,6 +97,10 @@ drifters and turrets deliberately still do neither. How hard a body tries is a t
 column. Auto-fire is untouched and always will be —
 `src/content/actions.ts` says there is no `fire` action and there must never be one.
 
+⚠️ **AND A PLAY-TEST OF THAT BUILD SAYS THEY STILL DO NOT** —
+[`the-third-play-test`](../reports/the-third-play-test-2026-08-08.md). Whatever the paragraph above
+describes, it is not what the player experienced, and that gap is chunk 7 under *What is next*.
+
 Each level opens on an empty screen so the player can find the controls before anything finds them —
 [0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md) — and a level BOUNDARY no
 longer resets the scene: the camera, the ship and the sky all carry on
@@ -132,7 +136,26 @@ date and is exactly what a play-test is for.
 
 ## What the play-test has answered
 
-⚠️ **THE MIDDLE TIER HAS NOW BEEN PLAYED END TO END, AND THE HEADLINE IS ONE WORD** —
+⚠️ **THE THIRD PLAY-TEST IS THE CURRENT ONE AND IT OUTRANKS EVERYTHING BELOW IT** —
+[`the-third-play-test`](../reports/the-third-play-test-2026-08-08.md), given 2026-08-08 against the
+build carrying 0072, 0073, 0074 and 0076 — the five-changes-unflown batch the previous version of this
+file was waiting on. **Read it before proposing any game work.** It is the largest batch of feedback
+the project has received and it is about what the game IS, not about what it does wrong; it arrived
+with an explicit instruction that it outranks the queued weapon and design work.
+
+⚠️ **Its headline is a thesis rather than a finding, and it re-opens
+[0073](decisions/0073-an-enemy-is-a-pilot.md) from the far side.** *"the waves and enemies we have
+just 'exist', they aren't actively trying to interact or stop the player"* — said about the build
+where the enemies had already been made to react. The report has why that distinction matters.
+
+⚠️ **Two things in it CHANGE DECISIONS rather than tune them**, and both are named in the chunk list
+under *What is next*: the player has chosen to **optimise the viewport for desktop** and give mobile
+its own (which amends [0023](decisions/0023-the-long-axis-is-the-scroll-axis.md) and takes the
+`MIN_ASPECT` trade [0074](decisions/0074-the-box-is-drawn.md) deferred), and the accessibility default
+is reported as having gone **too far toward uniformity** for sighted play, which is
+[0024](decisions/0024-the-accessibility-floor-is-settings.md) read against itself.
+
+⚠️ **THE MIDDLE TIER WAS PLAYED END TO END THE DAY BEFORE, AND THE HEADLINE WAS ONE WORD** —
 [`medium-played`](../reports/medium-played-2026-08-07.md): *"honestly, it was just boring."* Not a
 crash, not a wrong number, not a silent event; every guard in the repository was green for all of it.
 Read it before proposing game work — it is the current account of what the game is like to play, and
@@ -236,24 +259,55 @@ not a report per item.
 
 ## What is next
 
-⚠️ **START HERE, AND THE ANSWER IS NOT ON THIS LIST: FIVE CHANGES HAVE LANDED AND NOT ONE OF THEM HAS
-BEEN FLOWN.** [0072](decisions/0072-a-cue-is-baked-and-played.md),
-[0073](decisions/0073-an-enemy-is-a-pilot.md), [0074](decisions/0074-the-box-is-drawn.md) and
-[0076](decisions/0076-a-level-has-an-origin.md) all shipped in one session against a report nobody
-has re-played. **A large batch of feedback was gathered on 2026-08-08 and is expected to arrive as the
-next session's opening message** — read it before proposing anything below, because it was taken
-against this build and half of this list may already be answered or reordered by it.
+⚠️ **START HERE. THE LIST IS THE EIGHT CHUNKS BELOW AND IT COMES FROM
+[`the-third-play-test`](../reports/the-third-play-test-2026-08-08.md).** That report is where the
+words are; this is only the order and the state. **Read the report first** —
+[0029](decisions/0029-the-tracked-record-is-the-record.md), a summary is a second copy.
 
-⚠️ **Every number in those four is a guess**, on [0037](decisions/0037-the-ship-has-mass.md)'s terms:
-five agilities, an orbit radius, two turn counts, three aggression multipliers, twelve cue rows and a
-boundary's opacity. Nothing asserts a value; what is asserted is a relationship.
+⚠️ **The ORDER is a proposal and the player has not set it**, unlike the previous two lists. It is
+sequenced so that nothing is tuned before the thing it is judged through moves: the picture is made
+honest first, then legible, then the systems, then the tuning. **If the player gives an order, that
+one wins.**
 
-⚠️ **This is the same accumulation problem as the PR pile-up
-[0075](decisions/0075-the-serialisation-is-checked.md) now guards, on a different axis** — unvalidated
-work stacked on unvalidated work — and there is no guard for this one, because *"is it fun"* is not a
-thing CI can ask. It is a habit, and the habit is: land a batch, play it, then decide.
+⚠️ **The verdict on all eight is ONE play-test after the last one lands**, for the reason that
+governed both previous lists: *"something might feel right by itself in isolation and then completely
+fail when you mix something else in."*
 
-**The list is [`medium-played`](../reports/medium-played-2026-08-07.md)'s seven findings, and the
+| # | chunk | why here | state |
+|---|---|---|---|
+| 1 | **The bug sweep** — pickups hitting a wall mid-screen, the death scatter firing straight up and down, missile tubes reaching three | Cheapest, and each one is a **false signal in the picture**. [0027](decisions/0027-measure-the-picture-not-the-model.md): tuning against a lying picture tunes the wrong thing. | |
+| 2 | **The death beat** — explosion, pause, respawn, and the same before the continue screen | A death is the most-repeated event in a run and it currently has no beat at all. Independent of everything else. | |
+| 3 | **The view** — sky +33%, the perspective zoom, the box made a rectangle and extended, desktop-first | **Blocks 6, 7 and 8.** *"enemies fly too fast"* and *"a quarter of the screen is unplayable"* are both statements about the viewport; changing it changes what every one of those numbers means. | |
+| 4 | **Legibility** — shape and size differentiation, over the palette rather than instead of it | **Blocks the re-play.** A player who cannot tell a pickup from a bullet cannot give a verdict on anything below. | |
+| 5 | **The pickup taxonomy** — one weapon pickup, per-level budgets, the 50% death scatter, and the max-speed nerf | The player calls pickups *"the lynchpin of whether this game is actually good"*. Comes before the dial because the dial is keyed to them. | |
+| 6 | **The difficulty dial** — a dial that moves inside a level, keyed to the arsenal, sawtoothing across the run | The mechanism the project **does not have**. Smallest proof first: no multi-hit enemies until the 2nd upgrade has spawned. | |
+| 7 | **Enemies that fight** — slower, patterned, more of them shooting, slower bullets | The headline. Deliberately after 3 and 6, because *"too fast"* is measured through the viewport and *"actively trying to stop the player"* is what the dial spends. | |
+| 8 | **Bosses that are bosses** — tougher, damage that shows, one idea each, and a miniboss below them | Last, on [`medium-played`](../reports/medium-played-2026-08-07.md)'s own reasoning: a boss that dies in under a second is a curve problem before it is a movement problem, and 5 is the curve. | |
+
+⚠️ **Chunks 3 and 4 each change a DECISION and not a number**, so each carries one:
+[0023](decisions/0023-the-long-axis-is-the-scroll-axis.md)'s *only lookahead varies by device* and
+[0024](decisions/0024-the-accessibility-floor-is-settings.md)'s loud default. Neither is a constant
+edit and neither should be landed as one.
+
+⚠️ **Chunk 6 is the largest thing on the list and it is not a tuning pass.** Nothing in `src/`
+currently reads the player's arsenal to decide what to spawn; difficulty is a tier chosen before a run
+([0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md)) multiplied over
+content authored per level. Chunks 7 and 8 are what the dial spends, so it is worth landing the
+mechanism with the smallest content on it and authoring against it afterwards.
+
+### The previous list, and what survives of it
+
+**It was [`medium-played`](../reports/medium-played-2026-08-07.md)'s seven findings.** Four had landed
+and been flown by the time the third play-test was taken, and the third play-test's verdict on them is
+in the report — in two cases it is *that did not work*. Kept below because the three unlanded items
+are still real and the eight chunks above swallow them rather than replacing them:
+
+- **the arsenal answering backwards** (item 3 below) — untouched by the new feedback, and its
+  precondition is now **chunk 4** rather than a vague taxonomy pass
+- **the curve** (item 4 below) — now **chunks 5 and 6**, with a specified shape instead of a direction
+- **boss movement** (item 5 below) — now **chunk 8**, with three more complaints attached
+
+**The order below is the one the player set for the PREVIOUS list.** The
 order below is the one the player set.** Four of the seven have landed. Everything else here is a
 pointer into that report or into the decision that answered it —
 [0029](decisions/0029-the-tracked-record-is-the-record.md), so read the report for the words rather
@@ -265,8 +319,15 @@ orbit, chargers double back, and a tier's `aggression` is the *"depending on dif
 also closed the reported defect that an enemy off the LEADING edge could shoot — the `across` axis had
 that check since [0059](decisions/0059-the-lane-is-the-players-box.md) and the other never did.
 
-⚠️ **Every number in it is unplayed**, and so is every cue in
-[0072](decisions/0072-a-cue-is-baked-and-played.md).
+⚠️ **IT HAS NOW BEEN PLAYED AND THE VERDICT IS THAT IT DID NOT LAND** —
+[`the-third-play-test`](../reports/the-third-play-test-2026-08-08.md): *"the waves and enemies we have
+just 'exist', they aren't actively trying to interact or stop the player"*, said about the build where
+0073 was already in. **Chunk 7 is the answer and it is not a re-tune of 0073's numbers** until
+somebody has established which of the two readings holds — a reactive tier too timid to read as
+reactive, or *actively working to stop the player* meaning something 0073 did not build.
+
+⚠️ **The cues in [0072](decisions/0072-a-cue-is-baked-and-played.md) have still never been mentioned
+by a play-test**, in either direction, across two of them.
 
 **2 — The two remaining defects.** Both confirmed in the code before the report was written, both
 small, and both are removing a false signal rather than a design change:
@@ -274,8 +335,15 @@ small, and both are removing a false signal rather than a design change:
 - **✅ DONE — the player's box was a wall with nothing drawn on it.**
   [0074](decisions/0074-the-box-is-drawn.md). Ten dashes down the lane in the player's own ink, and
   `PLAYER_LEAD` exported so the clamp and the mark are one number rather than one subtraction written
-  twice. ⚠️ **The forward room asked for alongside it is worth six units** at the current device
-  support; 0074 names the aspect-floor trade that would buy ~28 more and does not take it.
+  twice.
+
+  ⚠️ **PLAYED, AND THE VERDICT IS THAT IT FIXED THE REPORT AND NOT THE PROBLEM** — *"the barrier line
+  is just super bad - it solved the problem I was having, but it did not solve the problem the game has
+  in that almost a quarter of the screen space is not playable by the player."* 0074 wrote that failure
+  mode down about itself (*"the fix is a picture, not a number"*) and the number was the problem. **The
+  aspect-floor trade 0074 deferred has now been taken by the player** — optimise for desktop, mobile
+  gets its own viewport — which is **chunk 3** and is a change to
+  [0023](decisions/0023-the-long-axis-is-the-scroll-axis.md), not to a constant.
 - **✅ DONE — the level boundary reset the camera to zero**, so the sky snapped and the ship was
   repositioned. [0076](decisions/0076-a-level-has-an-origin.md). The camera reset was load-bearing and
   is not deleted: a level now has an ORIGIN and its script is read from it, so a boundary changes the
@@ -320,11 +388,11 @@ Last, because a boss that dies in under a second is a curve problem before it is
 see *What the game currently is*. It is what has been standing in for a difficulty, so it is
 reconsidered once item 4 has a hand behind it.
 
-⚠️ **And the forward room the player asked for is worth SIX UNITS at the current device support.**
-`MIN_ASPECT` guarantees every device shows at least 150 along-units and the box already reaches 144;
-raising that floor to 16:9 would buy a ~172-unit box and cost letterboxing on 16:10 laptops and 3:2
-tablets, which are gutter-free today. **That trade is deferred rather than refused** — the value of
-forward room against something that hunts is a different question from its value against a wall.
+⚠️ **The forward room is no longer worth six units, because the constraint that made it six has been
+lifted by the player.** `MIN_ASPECT` guarantees every device shows at least 150 along-units and the box
+reaches 144, so six was all a single shared viewport had to give; raising the floor to 16:9 buys a
+~172-unit box and costs letterboxing on 16:10 laptops and 3:2 tablets. **That trade is now taken** —
+*"let's optimise for desktop and we'll add a different viewport for mobile"* — and it is **chunk 3**.
 
 ## What was next before that list, and why in this order
 
