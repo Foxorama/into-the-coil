@@ -14,10 +14,12 @@ export const PROBES = [
     // against a pulse's 0.9 — the background drawing discs bigger than the smallest thing that kills.
     broke: 'the near layer’s stars restored to the size they shipped at',
     guard: 'THE REPORTED ONE: no star is drawn as big as the smallest thing that can kill the player',
+    // ⚠️ The ceiling became per-layer again in 0080, which gave the near field its own perspective —
+    // so the break restores the near layer alone, which is exactly what it always meant.
     edit: {
       path: 'src/render/bake.ts',
-      find: 'const SKY_MAX_STAR_UNITS = 0.6;',
-      replace: 'const SKY_MAX_STAR_UNITS = 1.2;',
+      find: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.35 };',
+      replace: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 1.2 };',
     },
   },
   {
@@ -33,7 +35,7 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: no star is drawn as big as the smallest thing that can kill the player',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  const biggest = (size / SPRITE_EXTENT[kind]) * SKY_MAX_STAR_UNITS;',
+      find: '  const biggest = (size / SPRITE_EXTENT[kind]) * SKY_MAX_STAR_UNITS[kind];',
       replace: "  const biggest = size * (kind === 'skyNear' ? 0.012 : 0.006);",
     },
   },

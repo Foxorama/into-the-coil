@@ -91,7 +91,7 @@ export function bakeSize(extent: number, pixelsPerUnit: number): number {
  * puts a flash-intensity cap in the unconditional tier for the same reason a background does not get
  * to be busy.
  */
-const SKY_STARS = { skyFar: 90, skyNear: 34 };
+const SKY_STARS = { skyFar: 90, skyNear: 55 };
 
 /**
  * The biggest a star may be drawn, as a radius in WORLD UNITS. One ceiling for the whole sky.
@@ -111,8 +111,23 @@ const SKY_STARS = { skyFar: 90, skyNear: 34 };
  * `skyField` actually produces, against `SHOTS` — `docs/decisions/0027-measure-the-picture-not-the-model.md`,
  * because a ceiling checked against the constant it is derived from proves only that the code agrees
  * with itself, and 0019 says no probe can see that.
+ *
+ * ── AND IT IS NOW PER LAYER AGAIN, WHICH IS THE PERSPECTIVE THE PLAY-TEST ASKED FOR ─────────────
+ *
+ * Reported from play: *"on desktop, the closer starfield layer is still too close to play view,
+ * needs to be a bit more background. I think it's actually the perspective zoom level is wrong."*
+ * `docs/decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md`.
+ *
+ * ⚠️ **Smaller AND more numerous, which is what *further away* looks like.** Distance in a starfield
+ * is carried by exactly two things a flat layer has: how big a dot is and how many of them there are.
+ * The near layer went 0.6 → 0.35 with `SKY_STARS` 34 → 55, so the ink it puts on the screen is
+ * `(0.35/0.6)² × (55/34)` — about **55% of what it was** — spread over 60% more points. Less loud and
+ * more distant at once, which is the only combination that answers the report without taking back
+ * the speed [0078](../../docs/decisions/0078-the-sky-moves-a-third-faster.md) just gave it.
+ *
+ * ⚠️ **The far layer is untouched, because nothing was reported about it.**
  */
-const SKY_MAX_STAR_UNITS = 0.6;
+const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.35 };
 
 /**
  * How solid each layer is drawn, against the void behind it.
@@ -722,7 +737,7 @@ export function skyField(kind: 'skyFar' | 'skyNear', size: number): { alpha: num
     tile is `SPRITE_EXTENT[kind]` units across, so `size / extent` is its pixels per unit — and
     `SKY_MAX_STAR_UNITS` can then be read against `SHOTS.pulse.radius` by a person and by a test.
   */
-  const biggest = (size / SPRITE_EXTENT[kind]) * SKY_MAX_STAR_UNITS;
+  const biggest = (size / SPRITE_EXTENT[kind]) * SKY_MAX_STAR_UNITS[kind];
   const stars: SkyStar[] = [];
   for (let i = 0; i < SKY_STARS[kind]; i++) {
     stars.push({ x: margin + rng.range(0, span), y: margin + rng.range(0, span), r: biggest * rng.range(0.5, 1) });

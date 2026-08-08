@@ -6,7 +6,7 @@ import { LEVELS } from '../src/content/levels.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { SPRITE } from '../src/content/sprites.ts';
 import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
-import { PLAYER_LEAD } from '../src/sim/flight.ts';
+import { PLAYER_ALONG_SPAN, PLAYER_LEAD } from '../src/sim/flight.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { playableWorld } from './world.ts';
 
@@ -100,6 +100,61 @@ describe('the wall the ship meets is the line that is drawn', () => {
     expect(held, 'the ship did not move forward at all').toBeGreaterThan(start + 10);
     expect(held, 'the ship flew past its own box').toBeLessThanOrEqual(PLAYER_LEAD + 0.001);
     expect(held, 'the ship stopped short of its box, so the wall is somewhere else').toBeGreaterThan(PLAYER_LEAD - 1);
+  });
+});
+
+describe('how much of the screen the player owns', () => {
+  it('THE REPORTED ONE: the strip in front of the wall is a sliver, in pixels of a real screen', () => {
+    /*
+      ⚠️ **THE COMPLAINT, IN THE UNITS IT WAS MADE IN** — *"it did not solve the problem the game has
+      in that almost a quarter of the screen space is not playable by the player."*
+      `docs/decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md`.
+
+      ⚠️ **Measured on the glass rather than in world units, because *a quarter of the screen* is a
+      statement about the glass.** The ship is flown into its wall by the real frame and the strip is
+      the distance from where it stops to the leading edge of the drawn view — which is what the
+      player was looking at when they said it. Before 0080 this was 22% of a 1280px screen; the box is
+      now the view inset by one fraction, so it is the same 6% the lane already gave up.
+
+      ⚠️ **A ceiling and not an equality**, so the number a hand settles can move without this
+      becoming a copy of it. What must never come back is a quarter.
+    */
+    const width = 1280;
+    const { frame, world } = pushingForward(width, 720);
+    for (let i = 0; i < 240; i++) frame.step();
+
+    const shipPx = (world.ship.along - world.cameraAlong) * world.view.scale + world.view.gutterAlong;
+    const edgePx = width - world.view.gutterAlong;
+    const strip = (edgePx - shipPx) / width;
+    expect(world.view.gutterAlong, 'a 16:9 viewport was letterboxed along, so this is not measuring the screen').toBe(
+      0,
+    );
+    expect(strip, 'the ship is off the leading edge, so this measures nothing').toBeGreaterThan(0);
+    expect(
+      strip,
+      `${(strip * 100).toFixed(1)}% of the screen ahead of the ship is playfield the player cannot enter. ` +
+        'The report called a quarter of it unplayable.',
+    ).toBeLessThan(0.1);
+  });
+
+  it('and the trailing edge gives up the same share, because the box is the view’s own shape', () => {
+    // The other half of *"correctly be a rectangle"*: an inset that is generous at one end and mean
+    // at the other is a box that is not the shape of the thing it sits in.
+    const { frame, world } = pushingForward();
+    world.input = {
+      contribute: (intent) => {
+        intent.along = -1;
+      },
+      spend: () => {},
+      release: () => {},
+    };
+    for (let i = 0; i < 240; i++) frame.step();
+    const held = world.ship.along - world.cameraAlong;
+    expect(held, 'the ship did not retreat at all').toBeLessThan(PLAYER_LEAD);
+    expect(held / PLAYER_ALONG_SPAN, 'the trailing inset is not the leading one').toBeCloseTo(
+      1 - PLAYER_LEAD / PLAYER_ALONG_SPAN,
+      6,
+    );
   });
 });
 

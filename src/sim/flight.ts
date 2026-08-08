@@ -80,17 +80,57 @@ export const FLIGHT_RESPONSE = 0.2;
  * `ACROSS_SPAN * MIN_ASPECT` — the NARROWEST view any device gets, so every device gives the player
  * the same box and the widest screens spend their extra span on lookahead. The alternative, clamping
  * to the current view, makes retreat distance a property of the monitor.
+ *
+ * ⚠️ **The expression has not changed and the number has: 150 → 177.8.**
+ * `docs/decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md` raised `MIN_ASPECT` to the
+ * reference aspect, and this is where that lands. Reported from play: *"the barrier line is just
+ * super bad — it solved the problem I was having, but it did not solve the problem the game has in
+ * that almost a quarter of the screen space is not playable by the player."*
  */
 export const PLAYER_ALONG_SPAN = ACROSS_SPAN * MIN_ASPECT;
 
 /**
- * How close the ship may get to the edge of its box, in world units.
+ * How far from the edge of its box the ship is held, as a fraction of the axis it is measured on.
  *
- * Half a ship, roughly, so it never half-leaves the playfield — and enough on the trailing edge that
- * a player who has retreated as far as they can still has the camera behind them rather than under
- * them.
+ * ── WHY A FRACTION, WHICH IS THE OTHER HALF OF WHAT WAS ASKED FOR ───────────────────────────────
+ *
+ * Reported from play: *"change the player 'box' proportions to correctly be a rectangle."* The box
+ * was already a rectangle in world units; what it was not was **the screen's own rectangle**. With a
+ * flat margin of 6 the ship reached 94% of the lane across and — once `MIN_ASPECT` rose — 97% of the
+ * view along, so the playable area was a different shape from the thing it sits inside.
+ *
+ * ⚠️ **0.06 is exactly what the across margin already was**, so this changes nothing about the lane:
+ * `ACROSS_SPAN × 0.06` is 6, which is the number
+ * `docs/decisions/0074-the-box-is-drawn.md` shipped and which reads as *half a ship, so it never
+ * half-leaves the playfield*. What it changes is the along axis, which now insets by the same
+ * fraction rather than by the same distance — 10.7 units instead of 6.
+ *
+ * ⚠️ **It is a fraction rather than two constants, because two would drift.** The whole complaint was
+ * that the two axes disagreed about how much of the screen the player owns; a pair of hand-kept
+ * numbers is the shape that lets them disagree again.
  */
-export const PLAYER_MARGIN = 6;
+const PLAYER_INSET = 0.06;
+
+/**
+ * How close the ship may get to the edge of its box ACROSS the lane, in world units.
+ *
+ * Half a ship, roughly, so it never half-leaves the playfield.
+ */
+export const PLAYER_MARGIN = ACROSS_SPAN * PLAYER_INSET;
+
+/**
+ * How close the ship may get to the ends of its box ALONG the lane, in world units.
+ *
+ * ⚠️ **The same fraction as the across margin, which makes it a bigger distance** — 10.7 against 6,
+ * because the axis is longer. That is the whole of *"correctly be a rectangle"*: the box is the view
+ * inset by one fraction, so the playable area and the screen are the same shape.
+ *
+ * ⚠️ **It is also what stops the extended box reaching the leading edge.** At a flat 6 the ship could
+ * fly to within a hull of the place waves become visible, which is a player standing where the level
+ * arrives; at 10.7 there is a body's width of screen in front of them on the narrowest device the
+ * clamp now allows.
+ */
+export const PLAYER_ALONG_MARGIN = PLAYER_ALONG_SPAN * PLAYER_INSET;
 
 /**
  * How far ahead of the camera the ship may fly, in world units. The wall it meets going forward.
@@ -109,7 +149,7 @@ export const PLAYER_MARGIN = 6;
  * ⚠️ **A distance from the camera, not a world position**, so it is a constant rather than something
  * recomputed per step: the box travels with the camera, which is the whole of what 0023 fixes.
  */
-export const PLAYER_LEAD = PLAYER_ALONG_SPAN - PLAYER_MARGIN;
+export const PLAYER_LEAD = PLAYER_ALONG_SPAN - PLAYER_ALONG_MARGIN;
 
 function clamp(n: number, min: number, max: number): number {
   return n < min ? min : n > max ? max : n;
@@ -176,7 +216,9 @@ export function flyShip(ship: Entity, intent: Intent, cameraAlong: number, scrol
   // Clamp by trimming VELOCITY, not by moving the ship: writing `along` here would break the
   // interpolation contract, and a ship teleported back inside its box would visibly stutter at the
   // wall on high-refresh displays.
-  const minAlong = cameraAlong + PLAYER_MARGIN;
+  // ⚠️ The ALONG margin at both ends, not the across one — 0080. They were the same number until the
+  // box became the screen's own shape, and the trailing edge is the one a reader forgets.
+  const minAlong = cameraAlong + PLAYER_ALONG_MARGIN;
   const maxAlong = cameraAlong + PLAYER_LEAD;
   const nextAlong = ship.along + ship.velAlong;
   if (nextAlong < minAlong || nextAlong > maxAlong) {

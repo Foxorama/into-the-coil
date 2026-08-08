@@ -77,7 +77,7 @@ export interface SpecialRow {
    * How far ahead of the ship it goes off, in **world units**.
    *
    * ⚠️ **THE ASK STATED THIS AS A FRACTION OF THE SCREEN, AND 0023 REFUSES SCREEN-SPACE AUTHORING.**
-   * `alongSpan` runs 150 to 240 units by device, so a bomb thrown *"halfway up the screen"* would be
+   * `alongSpan` runs 178 to 240 units by device, so a bomb thrown *"halfway up the screen"* would be
    * a different weapon on a 21:9 monitor than on a phone — a longer reach for the player with the
    * wider display, which is the difficulty parity 0023 exists to protect.
    *

@@ -69,7 +69,7 @@ Consequences, all mandatory:
   installed PWA only. The gate is the guarantee.
 
 Decided — [0023](decisions/0023-the-long-axis-is-the-scroll-axis.md). `across` is a fixed 100 units
-everywhere; lookahead is clamped to 150–240; rotation is exact parity because aspect is long ÷ short.
+everywhere; lookahead is clamped to 178–240; rotation is exact parity because aspect is long ÷ short.
 
 ## Characters and ships
 

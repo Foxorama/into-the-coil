@@ -276,7 +276,7 @@ const SCATTER_SPREAD_MAX = 1.3;
  *
  * ⚠️ **100, and both bounds are real.** It is inside the narrowest view any device gets — 150 units
  * (`src/sim/camera.ts`) — so the wait happens on screen everywhere; and it is inside the player's own
- * box, which reaches `PLAYER_ALONG_SPAN − PLAYER_MARGIN` at 144, so the player can actually fly to it.
+ * box, which reaches `PLAYER_LEAD` at 167 (0080), so the player can actually fly to it.
  * A station outside either would be a pickup that waits somewhere nobody can go.
  */
 const PICKUP_STATION = 100;
