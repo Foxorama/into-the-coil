@@ -50,11 +50,14 @@ export const PROBES = [
     suite: 'tests/missiles.test.ts',
     // Every tube firing from the centreline. The launcher upgrade still adds missiles, so the model
     // is right and the ship simply stops showing what the player earned.
+    //
+    // ⚠️ RE-AIMED BY 0077, which changed both the cap and the geometry. The break is the same one —
+    // the sides collapsed to the centreline — and the guard it reddens now counts to two.
     broke: 'every launcher firing from the centreline, so a launcher upgrade is invisible',
-    guard: 'puts the second tube on one side and the third on the other',
+    guard: 'puts one tube on the centreline and two on the wings',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const side = i === 0 ? 0 : i === 1 ? -1 : 1;',
+      find: '    const side = w.weapon.launchers === 1 ? 0 : i === 0 ? -1 : 1;',
       replace: '    const side = 0;',
     },
   },

@@ -335,13 +335,26 @@ const MISSILE_FASTEST = 20;
 /**
  * The most launchers a ship may ever carry.
  *
- * ⚠️ **THREE, AND IT IS THE ASK'S OWN NUMBER**: *"the base ship has one, at the middle; the first
- * upgrade adds one on the `across`-minus side and the second on the `across`-plus side."* There is
- * no fourth position on the ship for one to be drawn from, which is the same argument
- * `src/content/ships.ts` makes for capping the shell at three: a picture nobody can read at a glance
- * has stopped being a readout.
+ * ── IT WAS THREE, AND THAT WAS 0056 LEFT HALF-APPLIED ───────────────────────────────────────────
+ *
+ * ⚠️ **Three was the ask's own number for a ship that started with one.**
+ * `docs/decisions/0051-a-missile-is-the-second-auto-weapon.md`: *"the base ship has one, at the
+ * middle; the first upgrade adds one on the `across`-minus side and the second on the `across`-plus
+ * side"* — three POSITIONS on the hull, of which the player found two.
+ *
+ * ⚠️ **`docs/decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md` then took the
+ * base launcher away and did not move this.** Its ask was *"default missile tubes should be 0 and
+ * increase to 1 then to 2"*, so the run now reaches a rung the ask does not have — reported from play
+ * as *"after a player's first death, the player can then have 3 missile tubes instead of being capped
+ * at two"*, and a death is where it shows because that is when a player has found three of them.
+ * `docs/decisions/0077-a-pickup-arrives-rather-than-stopping.md`.
+ *
+ * ⚠️ **The two positions are SYMMETRIC, which the old ordering was not.** One tube is the
+ * centreline; two are the wings. Keeping *centre, then minus, then plus* and simply stopping at two
+ * would leave a fully-upgraded ship firing off-centre, which is a worse picture than the one being
+ * fixed — `src/app/frame.ts`'s `fireMissiles` places them.
  */
-const MAX_LAUNCHERS = 3;
+const MAX_LAUNCHERS = 2;
 
 /** Radians between neighbouring barrels. Wide enough to see, narrow enough to still hit one thing. */
 const SPREAD_STEP = 0.13;

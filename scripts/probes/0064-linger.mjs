@@ -15,11 +15,18 @@ export const PROBES = [
       the whole view at the scroll rate. It is the tidiest possible line and it is what shipped.
     */
     broke: 'the wait removed, so a pickup runs back through the view and is gone',
-    guard: 'THE REPORTED ONE: it stops running away, and holds still on screen for seconds',
+    guard: 'THE REPORTED ONE: it stops running away, and stays on screen for seconds',
+    /*
+      ⚠️ REWRITTEN BY 0077, WHICH CHANGED THE LINE THIS USED TO PLANT. `driftPickups` no longer
+      assigns `velAlong`; it eases toward a target, so the break is now *the target has no station in
+      it* rather than *the velocity is zero*. What the probe is for is unchanged: a pickup with
+      nothing holding it falls back through the whole view at the scroll rate, which is what shipped
+      before 0064.
+    */
     edit: {
       path: 'src/app/frame.ts',
-      find: '    item.velAlong = item.along - w.cameraAlong <= PICKUP_STATION ? w.scrollPerStep : 0;',
-      replace: '    item.velAlong = 0;',
+      find: '    const station = item.along - w.cameraAlong <= PICKUP_STATION ? w.scrollPerStep : 0;',
+      replace: '    const station = 0;',
     },
   },
   {
@@ -42,9 +49,15 @@ export const PROBES = [
     */
     broke: 'the wait made a position test rather than a count, so a pickup parks in the view for ever',
     guard: 'and then leaves, so the field does not fill up with things nobody took',
+    /*
+      ⚠️ REWRITTEN BY 0077 — the branch this planted over now carries the scattered pieces' decay, so
+      the break is the decrement alone. It is the same mistake and a smaller diff: a hold that is
+      never counted down never ends, because a body holding station never moves relative to the camera
+      and the condition that started the hold is true for ever.
+    */
     edit: {
       path: 'src/app/frame.ts',
-      find: '    if (item.holdFor <= 0) continue;\n    item.holdFor--;',
+      find: '    item.holdFor--;',
       replace: '    if (item.along - w.cameraAlong > PICKUP_STATION) continue;',
     },
   },

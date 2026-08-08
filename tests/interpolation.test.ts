@@ -104,6 +104,7 @@ function stationKeepingWorld(surface: Surface): World {
     debris: new Pool(4, makeEntity),
     deaths: makeDeaths(8),
     burstRng: makeRng('interp').stream('burst'),
+    scatterRng: makeRng('interp').stream('scatter'),
     view: viewOf(1280, 720),
     surface,
     rng: makeRng('interp').stream('spawns'),

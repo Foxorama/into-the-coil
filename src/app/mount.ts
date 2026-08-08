@@ -401,6 +401,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // Its own stream per 0021: a fragment's direction is the most cosmetic roll in the game and it
     // must not be able to move a wave by one enemy.
     burstRng: makeRng('proof-scene').stream('burst'),
+    // Its own stream per 0021, and NOT `burst`'s: what a death costs is which pieces the player can
+    // reach, so a fragment's direction must not be able to deal a different scatter — 0077.
+    scatterRng: makeRng('proof-scene').stream('scatter'),
     view,
     surface,
     // One named stream, per docs/decisions/0021-one-stream-per-concern.md, so a cosmetic roll added

@@ -48,29 +48,34 @@ export const PROBES = [
     decision: '0066',
     suite: 'tests/pickups.test.ts',
     /*
-      ⚠️ THROWN ALONG AS WELL AS ACROSS, which is what an explosion looks like in a game that does not
-      scroll. Here it puts the whole scatter off the front or the back of the view inside two seconds
-      — 0034's *every speed is in the camera's frame*, and the tidiest-looking way to break it.
+      ⚠️ THROWN ALONG AND LEFT THERE, which is what an explosion looks like in a game that does not
+      scroll. It is 0034's *every speed is in the camera's frame*, and 0077 is what makes it worth
+      restating: the scatter IS now thrown along, and the only thing keeping it on screen is that the
+      along half decays back to the camera's rate. Take the decay away and 0066's original objection
+      comes true exactly as it was written.
     */
-    broke: 'the scatter thrown along the lane too, so it leaves the screen before it can be reached',
-    guard: 'holds the distance the ship died at, rather than flying off the screen',
+    broke: 'the along throw left undecayed, so the scatter leaves the screen before it can be reached',
+    guard: 'is thrown in both axes, and the along half is spent rather than carried',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    item.velAlong = w.scrollPerStep;',
-      replace: '    item.velAlong = w.scrollPerStep + SCATTER_SPEED * side;',
+      find: '      const drift = item.lifeFor > 0 ? w.scrollPerStep : 0;',
+      replace: '      const drift = item.lifeFor > 0 ? item.velAlong : 0;',
     },
   },
   {
     decision: '0066',
     suite: 'tests/pickups.test.ts',
-    // The fan flattened. Six upgrades then arrive stacked on one lane, which is one pickup the player
-    // can reach and five they cannot.
-    broke: 'the fan flattened, so a whole loadout arrives stacked on one lane',
-    guard: 'spreads across the lane instead of stacking on one line',
+    /*
+      ⚠️ THE EVEN TERM DROPPED, leaving the jitter on its own. 0077 turned the fan into a ring and this
+      is the same break in the new shape: without `i/n` of a circle every piece leaves on nearly the
+      same heading, so a whole loadout travels together and the player reaches one of it.
+    */
+    broke: 'the even spacing dropped, so a whole loadout leaves on one heading',
+    guard: 'leaves in every direction, and no two pieces travel together',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    item.velAcross = SCATTER_SPEED * side * (1 - rank * 0.15);',
-      replace: '    item.velAcross = 0;\n    void side;\n    void rank;',
+      find: '    const angle = (i / upgrades.length) * Math.PI * 2 + w.scatterRng.range(-halfGap, halfGap);',
+      replace: '    const angle = w.scatterRng.range(-halfGap, halfGap);',
     },
   },
   {

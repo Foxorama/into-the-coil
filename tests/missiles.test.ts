@@ -102,35 +102,56 @@ describe('the ship fires it without being asked', () => {
 });
 
 describe('a launcher is a position on the ship', () => {
-  it('fires one missile per launcher, from the centre outwards', () => {
-    for (const launchers of [1, 2, 3]) {
+  it('fires one missile per launcher, and stops at two tubes', () => {
+    /*
+      ⚠️ **TWO, AND IT WAS THREE** —
+      `docs/decisions/0077-a-pickup-arrives-rather-than-stopping.md`. Three was the cap for a ship
+      that started with one tube at the centreline (0051); 0056 took the base tube away on the ask
+      *"default missile tubes should be 0 and increase to 1 then to 2"* and left the ceiling where it
+      was, so a run reached a rung the ask does not have. Reported from play as *"after a player's
+      first death, the player can then have 3 missile tubes instead of being capped at two."*
+
+      ⚠️ **The overflow is held here rather than only in `weaponFor`'s unit test**, because the thing
+      that broke was the number of missiles LEAVING THE SHIP, which is what the player counted.
+    */
+    for (const upgradeCount of [1, 2, 3, 6]) {
       const upgrades: UpgradeKind[] = [];
-      for (let i = 0; i < launchers; i++) upgrades.push('missileSpread');
+      for (let i = 0; i < upgradeCount; i++) upgrades.push('missileSpread');
       const { world, frame } = quietWorld(upgrades);
-      expect(world.weapon.launchers, `${launchers} upgrades did not produce ${launchers} launchers`).toBe(launchers);
+      const expected = Math.min(upgradeCount, 2);
+      expect(world.weapon.launchers, `${upgradeCount} upgrades did not produce ${expected} launchers`).toBe(expected);
 
       world.missileIn = 1;
       frame.step();
-      expect(world.missiles.size, 'a volley is not one missile per launcher').toBe(launchers);
+      expect(world.missiles.size, 'a volley is not one missile per launcher').toBe(expected);
     }
   });
 
-  it('puts the second tube on one side and the third on the other', () => {
+  it('puts one tube on the centreline and two on the wings', () => {
     /*
-      ⚠️ **The ask names the sides**: *"the first upgrade adds one on the `across`-minus side and the
-      second on the `across`-plus side."* It is worth holding because it is what makes a launcher
-      upgrade VISIBLE — a player who takes one can see which side it went on, and a player who takes
-      two sees the ship become symmetric.
+      ⚠️ **What is held is that a launcher upgrade is VISIBLE**, which is 0051's actual claim — a
+      player who takes one can see what changed. The rung it used to count to has moved (0077) and the
+      claim has not: the volley goes from one missile down the nose to two off the wings.
+
+      ⚠️ **Symmetric at the cap, and that is the half 0077 added.** The old order was centre, then
+      minus, then plus, so simply stopping at two would have left a fully-upgraded ship firing
+      off-centre — a worse picture than the defect being fixed.
     */
-    const { world, frame } = quietWorld(['missileSpread', 'missileSpread', 'missileSpread']);
+    const one = quietWorld(['missileSpread']);
+    one.world.missileIn = 1;
+    one.frame.step();
+    expect(one.world.missiles.size).toBe(1);
+    expect(one.world.missiles.at(0).across - one.world.ship.across, 'a single tube is not on the centreline').toBe(0);
+
+    const { world, frame } = quietWorld(['missileSpread', 'missileSpread']);
     world.missileIn = 1;
     frame.step();
     const across: number[] = [];
     for (let i = 0; i < world.missiles.size; i++) across.push(world.missiles.at(i).across - world.ship.across);
-    expect(across.length).toBe(3);
-    expect(across.some((a) => a === 0), 'nothing fired from the centreline').toBe(true);
+    expect(across.length).toBe(2);
     expect(across.some((a) => a < 0), 'nothing fired from the acrossMinus side').toBe(true);
     expect(across.some((a) => a > 0), 'nothing fired from the acrossPlus side').toBe(true);
+    expect(across[0]! + across[1]!, 'the two tubes are not symmetric about the hull').toBeCloseTo(0, 6);
   });
 
   it('pops the side tubes out clear of the hull, then straightens them', () => {
@@ -142,7 +163,7 @@ describe('a launcher is a position on the ship', () => {
       Measured against the hull's own drawn size, which is what the player sees the missile clear —
       `docs/decisions/0027-measure-the-picture-not-the-model.md` on assertions in the player's units.
     */
-    const { world, frame } = quietWorld(['missileSpread', 'missileSpread', 'missileSpread']);
+    const { world, frame } = quietWorld(['missileSpread', 'missileSpread']);
     world.missileIn = 1;
     frame.step();
     const shipAcross = world.ship.across;
