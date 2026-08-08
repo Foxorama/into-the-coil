@@ -16,8 +16,11 @@ export const PROBES = [
     guard: 'lists every pickup, with its name and what it does',
     edit: {
       path: 'src/app/chrome.ts',
+      // ⚠️ `bomb` and it was `spread` — 0082 merged four kinds into one and `spread` stopped existing,
+      // so the filter removed nothing and this went STILL GREEN. The break is unchanged in shape and
+      // bigger in effect: the key is three rows now, so dropping one hides a third of the pickups.
       find: '      for (const pickup of PICKUP_KINDS) {',
-      replace: "      for (const pickup of PICKUP_KINDS.filter((k) => k !== 'spread')) {",
+      replace: "      for (const pickup of PICKUP_KINDS.filter((k) => k !== 'bomb')) {",
     },
   },
   {

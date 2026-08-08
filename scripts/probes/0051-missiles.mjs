@@ -95,25 +95,54 @@ export const PROBES = [
     suite: 'tests/missiles.test.ts',
     // A missile upgrade reaching into the other weapon — the copy-paste `weaponFor` invites, and one
     // a player only notices by realising the pickup they flew for changed something else.
-    broke: 'a missile upgrade wired to the pulse’s barrels',
-    guard: 'a missile upgrade never moves the pulse',
+    /*
+      ⚠️ RE-ANCHORED BY 0082, AND THE RULE IT DEFENDS IS THE OPPOSITE OF WHAT IT WAS. When there were
+      four upgrade kinds, the break was a missile pickup reaching into the pulse and the guard was
+      *never moves the other weapon*. 0082 merged the kinds so that one pickup moves BOTH by design —
+      *"increase its tier and rate of fire together"* — and the copy-paste that matters now is the one
+      that leaves the missile cadence behind, which un-merges the pickup without changing its name.
+    */
+    broke: 'the merged rung wired to the pulse twice, so the missile cadence never moves',
+    guard: 'THE MERGE: one pickup moves BOTH weapons',
     edit: {
       path: 'src/content/pickups.ts',
-      find: '      if (faster < MISSILE_FASTEST) missileDamage++;\n      else missileEvery = faster;',
-      replace: '      if (faster < MISSILE_FASTEST) missileDamage++;\n      else fireEvery = faster;',
+      find: '    const fasterMissiles = Math.round(missileEvery * MISSILE_FACTOR);\n    if (fasterMissiles >= MISSILE_FASTEST) missileEvery = fasterMissiles;',
+      replace: '    const fasterMissiles = Math.round(fireEvery * RAPID_FACTOR);\n    if (fasterMissiles >= FASTEST_FIRE) fireEvery = fasterMissiles;',
     },
   },
   {
     decision: '0051',
     suite: 'tests/missiles.test.ts',
-    // A launcher past the cap that buys nothing. `docs/game.md`: an upgrade that cannot change the
-    // outcome is worse than none — and a player at three tubes takes every one of them.
-    broke: 'a launcher past the cap spending itself on nothing',
-    guard: 'spends an upgrade that has nowhere left to go on damage instead',
+    /*
+      ⚠️ RE-ANCHORED BY 0082. It used to break the launcher's OVERFLOW — a tube past the cap that
+      bought nothing — and that overflow is deleted, because unbounded overflow damage is exactly the
+      reported defect *"max speed auto-fire is way too strong."*
+
+      What is worth breaking in the merged ladder is the CAP itself. Reported from play once already:
+      *"after a player's first death, the player can then have 3 missile tubes instead of being capped
+      at two."* Removing the `launchers < MAX_LAUNCHERS` term leaves the proportional test on its own,
+      which keeps handing out tubes forever — and every one of them fires, which is what the player
+      counted.
+    */
+    broke: 'the launcher cap dropped, so a long run reaches a rung the ask does not have',
+    guard: 'fires one missile per launcher, and stops at two tubes',
     edit: {
       path: 'src/content/pickups.ts',
-      find: '      if (launchers >= MAX_LAUNCHERS) missileDamage++;',
-      replace: '      if (launchers >= MAX_LAUNCHERS) void 0;',
+      /*
+        ⚠️ THE CONSTANT, AND TWO ATTEMPTS AT ONE OF ITS USES WENT STILL GREEN FIRST. `MAX_LAUNCHERS`
+        appears in `grows` (should the loop still run) and in the hardpoint line (which side does this
+        rung buy), and at the current constants `grows` stops the loop before the other one could
+        matter — so removing either occurrence alone changes nothing. Neither is redundant; the cap is
+        one number doing two jobs, and `src/content/pickups.ts` says so where it happens.
+
+        ⚠️ Breaking the constant is also the more faithful probe. THREE is not a hypothetical: it is
+        what shipped. 0051 set the cap for a ship that started with one tube at the centreline, 0056
+        took the base tube away and left the ceiling where it was, and it was reported from play as
+        *"after a player's first death, the player can then have 3 missile tubes instead of being
+        capped at two."*
+      */
+      find: 'const MAX_LAUNCHERS = 2;',
+      replace: 'const MAX_LAUNCHERS = 3;',
     },
   },
   {

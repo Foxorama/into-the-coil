@@ -25,10 +25,39 @@
 import type { Body } from '../sim/entity.ts';
 import type { ShipRow } from './ships.ts';
 import { SHOTS } from './shots.ts';
+import type { SpecialKind } from './specials.ts';
 import { SPRITE } from './sprites.ts';
 
-/** Every pickup in the game. Closed. */
-export const PICKUP_KINDS = ['extraLife', 'rapid', 'spread', 'shield', 'missileRate', 'missileSpread'] as const;
+/**
+ * Every pickup in the game. Closed.
+ *
+ * ── IT WAS SIX AND IT IS THREE ──────────────────────────────────────────────────────────────────
+ *
+ * `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md`. Reported from play: *"power ups are
+ * too common still and these are premium game pieces that are the lynchpin of whether this game is
+ * actually good or not"*, and *"too many varieties and it's overwhelming and weak."*
+ *
+ * ⚠️ **`rapid`, `spread`, `missileRate` and `missileSpread` are ONE kind now**, which is the ask's own
+ * words: *"rapid fire/rapid missiles rapid whatever else we add need to be combined into one power up
+ * — which is the weapon change power up… picking up a second of the same weapon needs to increase
+ * it's tier and rate of fire together."* `weaponFor` below is where *together* lives.
+ *
+ * ⚠️ **`extraLife` is GONE, and that is a product change rather than a merge** — *"a shield is an
+ * extra life anyway and it's far more game impactful and meaningful."* It is: a shield stops the death
+ * happening, so it keeps the arsenal that
+ * `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md` says a death takes, and an
+ * extra life hands back a ship with nothing on it. **The cost is that a run's complement of lives can
+ * now only go DOWN** — 0039 refused lives that refill at a level boundary and named findable ones as
+ * the replacement, and there are no findable ones. 0082 has why that is survivable today and what
+ * makes it not.
+ *
+ * ⚠️ **`bomb` is the third, and it is what the merge freed room for.** `docs/game.md` has *"more
+ * specials, found during the run"*; `src/state/slices/run.ts` has carried a `took` action since 0039
+ * with nothing that dispatches it; and
+ * `docs/decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md` left *how a player gets more
+ * bombs* to level clears alone. One row closes all three.
+ */
+export const PICKUP_KINDS = ['weapon', 'shield', 'bomb'] as const;
 
 /** Derived from the list, so a pickup cannot exist in the union and be missing from the table. */
 export type PickupKind = (typeof PICKUP_KINDS)[number];
@@ -40,18 +69,26 @@ export type PickupKind = (typeof PICKUP_KINDS)[number];
  * not: these are not the same effect with a different parameter. Each is a different FIELD, cleared
  * by a different event, and no value of one produces another.
  *
- *   **life**     a number on the run. Survives everything, including a death
  *   **upgrade**  an entry in a list on the ship. Lost on a death — 0039
  *   **shield**   armour on the LIFE. Spent by being hit, and gone with the ship that wore it
+ *   **special**  charges in the arsenal. Spent by the player, and the only one they choose to use
  *
- * ⚠️ **The third one is not an upgrade, and that is why it is a third member rather than a row with
- * a flag.** An upgrade is kept until the ship dies and is worth exactly as much on the last frame of
- * a life as on the first; a shield is consumed by the thing it protects against, so a player who has
+ * ⚠️ **A shield is not an upgrade, and that is why it is its own member rather than a row with a
+ * flag.** An upgrade is kept until the ship dies and is worth exactly as much on the last frame of a
+ * life as on the first; a shield is consumed by the thing it protects against, so a player who has
  * three is in a different position from a player who took three ten seconds ago. Folding it into
  * `upgrade` would put a consumable in the list `weaponFor` resolves and a death empties, which is two
  * wrong answers at once.
+ *
+ * ⚠️ **`special` is the fourth field a pickup can move and the first one the player SPENDS** — 0082.
+ * It is not a shield either: a shield is armour on the life being flown and is gone with the ship,
+ * where an arsenal survives to the end of the run minus what 0039 takes. Three effects, three fields,
+ * three different events that clear them.
+ *
+ * ⚠️ **`life` is gone with `extraLife`.** It was the one effect whose target was the RUN rather than
+ * the ship, and nothing grants one any more — see `PICKUP_KINDS` above.
  */
-export type PickupEffect = 'life' | 'upgrade' | 'shield';
+export type PickupEffect = 'upgrade' | 'shield' | 'special';
 
 export interface PickupRow extends Body {
   /** What the player would call it. Terse, per `docs/game.md`'s voice rule. */
@@ -73,46 +110,29 @@ export interface PickupRow extends Body {
 
 export const PICKUPS: Record<PickupKind, PickupRow> = {
   /**
-   * ⚠️ **The reason a fixed complement of lives can still be a full run.**
-   * `docs/decisions/0039-…` refused lives that refill at a level boundary, because a game over
-   * nothing can reach is a screen that is never designed. This is what replaces it, in the level's
-   * own vocabulary: the level author decides how forgiving the level is.
+   * THE WEAPON, AND EVERY REPEAT RAISES TIER AND RATE TOGETHER.
+   *
+   * ⚠️ **One kind where there were four**, and the ask says why: *"there's just too many power ups for
+   * these to be separate things."* What it does is `weaponFor`'s ladder, which is the single
+   * description of *together* — the row carries no numbers, exactly as 0016 intends.
+   *
+   * ⚠️ **`docs/game.md`'s *"we haven't implemented other weapons yet"* is the shape this is built
+   * for.** The ask calls it *"the weapon change power up"*, so a second weapon added later is a
+   * different ladder under the same silhouette rather than a fifth pickup beside it.
    */
-  extraLife: {
-    sprite: SPRITE.pickupLife,
-    spriteHit: SPRITE.pickupLife,
-    radius: 2.4,
+  weapon: {
+    sprite: SPRITE.pickupWeapon,
+    spriteHit: SPRITE.pickupWeapon,
+    // ⚠️ Half its extent in `src/content/sprites.ts`, and that holds for all three rows below —
+    // `docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md` makes the picture the
+    // hurtbox, so the three sizes 0082 gave the pickups are three hurtboxes as well as three targets.
+    radius: 3,
     // A pickup is not a body that fights. One health and no damage: it is taken, never destroyed,
     // and it is in no collision pairing that could hurt anything.
     health: 1,
     damage: 0,
-    label: 'Extra life',
-    hint: 'One more try',
-    effect: 'life',
-  },
-  /** Faster auto-fire. `docs/game.md`'s first-named upgrade, and the one felt soonest. */
-  rapid: {
-    sprite: SPRITE.pickupRapid,
-    spriteHit: SPRITE.pickupRapid,
-    radius: 2.4,
-    health: 1,
-    damage: 0,
-    label: 'Rapid fire',
-    hint: 'Shoot faster',
-    effect: 'upgrade',
-  },
-  /**
-   * Another barrel, fanned. `docs/game.md`'s *"wider spray"* and *"extra lasers"* are the same
-   * upgrade at different counts, which is why this stacks rather than having tiers.
-   */
-  spread: {
-    sprite: SPRITE.pickupSpread,
-    spriteHit: SPRITE.pickupSpread,
-    radius: 2.4,
-    health: 1,
-    damage: 0,
-    label: 'Spread',
-    hint: 'Another barrel',
+    label: 'Weapon',
+    hint: 'Guns up a tier',
     effect: 'upgrade',
   },
   /**
@@ -121,11 +141,16 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
    * ⚠️ **It is the answer to the ship being one hit**, and the two landed together for that reason —
    * `docs/decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md`. A
    * one-hit ship with nothing to find would be a difficulty change wearing a mechanic's clothes.
+   *
+   * ⚠️ **It is now the ONLY thing standing between the player and a lost life**, because 0082 took
+   * the extra life away on the grounds that this is the better version of one. Reported from play:
+   * *"shields in particular are so much more stronger than I had anticipated."* That is the reason it
+   * survived the cut and the reason a level may only author two.
    */
   shield: {
     sprite: SPRITE.pickupShield,
     spriteHit: SPRITE.pickupShield,
-    radius: 2.4,
+    radius: 2.5,
     health: 1,
     damage: 0,
     label: 'Shield',
@@ -133,37 +158,29 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     effect: 'shield',
   },
   /**
-   * The missile half of *shoot faster*.
+   * CHARGES FOR THE ARSENAL — the first pickup the player has to decide when to use.
    *
-   * ⚠️ **Its own kind rather than a stronger `rapid`**, because the two weapons have separate
-   * cadences and a player who wants more missiles is asking for a different thing from a player who
-   * wants more pulses. It is also what makes the pair a pair — see `src/content/sprites.ts` on the
-   * two faces of one silhouette.
+   * ⚠️ **It cashes three things that had been left open in three different places.** `docs/game.md`
+   * wants *"more specials, found during the run"*; `src/state/slices/run.ts` has carried a `took`
+   * action since 0039 with nothing that dispatches it; and 0053 left *how a player gets more bombs*
+   * to level clears alone. `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md`.
+   *
+   * ⚠️ **How many charges it grants is `src/content/specials.ts`'s answer, not this row's** — `took`
+   * reads `SPECIALS[kind].charges`, which is 2. So a bomb pickup is worth a level clear twice over,
+   * which is a play-test number and is written down as one in 0082.
    */
-  missileRate: {
-    sprite: SPRITE.pickupMissileRate,
-    spriteHit: SPRITE.pickupMissileRate,
-    radius: 2.4,
+  bomb: {
+    sprite: SPRITE.pickupBomb,
+    spriteHit: SPRITE.pickupBomb,
+    radius: 2.2,
     health: 1,
     damage: 0,
-    label: 'Rapid missiles',
-    hint: 'Missiles fire faster',
-    effect: 'upgrade',
-  },
-  /**
-   * A launcher. The base ship has NONE — 0056 — so the first of these is the missile weapon
-   * arriving at all, and the two after it are the side tubes 0051 placed.
-   */
-  missileSpread: {
-    sprite: SPRITE.pickupMissileSpread,
-    spriteHit: SPRITE.pickupMissileSpread,
-    radius: 2.4,
-    health: 1,
-    damage: 0,
-    label: 'Launcher',
-    // ⚠️ Not *"another"* any more: with no tube on the base ship the first one is the weapon itself.
-    hint: 'A missile tube',
-    effect: 'upgrade',
+    label: 'Bomb',
+    // ⚠️ **Not *"two more charges"*, which is what this said first.** How many a pickup grants is
+    // `SPECIALS.bomb.charges`, and a hint that spells the number out is a second description of it —
+    // the day that row is tuned, the title screen goes on telling the player the old one.
+    hint: 'Charges to spend',
+    effect: 'special',
   },
 };
 
@@ -173,80 +190,84 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
  * ⚠️ **Written out, and then CHECKED against the table rather than trusted.** It was a hand-written
  * union beside a table that already says `effect: 'upgrade'`, which is two descriptions of one fact —
  * and the shell narrowed to it with a ternary on one name, so a third upgrade would have been
- * silently filed as the other one. `tests/pickups.test.ts` holds the two in step.
+ * silently filed as the other one. `tests/shields.test.ts` holds the two in step.
+ *
+ * ⚠️ **ONE MEMBER, and it stays a list rather than becoming a constant.** 0082 merged four kinds into
+ * one; `docs/game.md`'s *"we haven't implemented other weapons yet"* is the reason the shape that held
+ * four is kept for one. A `UpgradeKind = 'weapon'` type alias would make the second weapon a change to
+ * every signature that mentions it.
  */
-export const UPGRADE_KINDS = ['rapid', 'spread', 'missileRate', 'missileSpread'] as const;
+export const UPGRADE_KINDS = ['weapon'] as const;
 
 /** Every pickup whose effect is on the ship rather than on the run. */
 export type UpgradeKind = (typeof UPGRADE_KINDS)[number];
 
 /**
- * What each pickup turns into, and back into.
+ * Which special a weapon pickup becomes once the weapon can take no more.
  *
- * ── WHY A PICKUP IS TWO THINGS ──────────────────────────────────────────────────────────────────
- *
- * Asked for after playing the two-level build: *"a pickup on the field changes what it is every few
- * seconds, and changes its sprite with it, so which one a player gets is a matter of when they reach
- * it."* `docs/decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md`.
- *
- * ⚠️ **An INVOLUTION over the whole table, not a list of pairs with an exception.** Every kind maps
- * to exactly one other kind and that mapping is its own inverse, so *what is this pickup right now*
- * is one lookup rather than a search, and no kind can be left out — `tests/cycling.test.ts` holds
- * both properties, and the second is what stops a seventh pickup being added with nowhere to go.
- *
- * ⚠️ **The pairs are the ones the ask names**, and each is one weapon's upgrade against the other
- * weapon's: *shoot faster* against *missiles fire faster*, *another barrel* against *another
- * launcher*, *one more try* against *a shield*. `src/content/sprites.ts` draws each pair as one
- * silhouette in two fills for exactly this reason — a pickup that alternates has to read as one
- * object in two states rather than as two objects taking turns.
+ * ⚠️ **The cap and the thing an upgrade becomes are ONE decision, and this is the half that is
+ * content.** `docs/game.md` says *"an upgrade that cannot change the outcome is worse than none"*, and
+ * the old answer to that was an unbounded `damage++` — which is exactly the reported defect *"max
+ * speed auto-fire is way too strong for the current game… bosses die in less a second."*
+ * `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md` takes the other option the report
+ * named: a cap, **plus something else for an upgrade to become**.
  */
-export const CYCLE: Record<PickupKind, PickupKind> = {
-  rapid: 'missileRate',
-  missileRate: 'rapid',
-  spread: 'missileSpread',
-  missileSpread: 'spread',
-  extraLife: 'shield',
-  shield: 'extraLife',
-};
+export const WEAPON_OVERFLOW: SpecialKind = 'bomb';
 
 /**
- * How far the camera travels between one face and the next, in world units.
+ * Whether another weapon pickup would still change this ship.
  *
- * ⚠️ **A DISTANCE and not a duration, which is the whole mechanism.** The phase is a function of
- * where the world is, so every pickup on screen flips on the same step — which reads as deliberate —
- * and a level plays the same on a machine dropping frames as on one that is not.
- * `src/content/enemies.ts` makes the same argument for the weave: a shape in the world can be
- * authored against, and a wobble in time cannot.
+ * ⚠️ **THE single description of the ladder's stop condition**, asked in two places that must agree:
+ * `weaponFor`'s loop uses it to know an upgrade had nowhere to go, and `src/app/mount.ts` uses it to
+ * decide whether the pickup the player just flew into is a weapon or a bomb. Two copies of *is it
+ * full* would be a pickup that vanished into a list without changing anything, which is the rule this
+ * whole mechanism exists to keep.
  *
- * ⚠️ **Long enough to reach, short enough to wait for.** `112 ÷ SCROLL_PER_STEP` is 187 steps, which
- * is **3.11 seconds**. So a player who wants the other face can hold off, and a player who wants
- * either can take whatever is there. Nothing asserts on it.
- *
- * ⚠️ **112 AND IT WAS 130, WHICH IS THE HALF-SECOND THE PLAY-TEST ASKED FOR.** *"Cycle .5 sec
- * faster."* 130 units is 3.611s; 0.5 off that is 3.111s, which is 187 steps, which is 112 units. The
- * arithmetic is written out because a claim about a derived number is owed it — this comment once
- * said *a little over two seconds* and was wrong by three quarters of a face, and the number had never
- * been checked against the constant it is a duration of.
- * `docs/decisions/0027-measure-the-picture-not-the-model.md` from the other end.
- *
- * ⚠️ **The half-second is worth much more than it was**, because a pickup no longer merely passes
- * through: it holds station in the camera's frame for seven seconds
- * (`docs/decisions/0064-a-pickup-waits-to-be-taken.md`), so what the faster cycle buys is **two and a
- * quarter faces while the player is beside it** rather than the third of one they used to get on the
- * way past. The complaint the ask came from — *"the player is picking up a life or placing themselves
- * in danger to try and get a shield"* — is answered by the pair rather than by either.
+ * ⚠️ **Four arguments rather than a `Weapon`, with a one-line wrapper over it.** The loop asks this
+ * of numbers it is part-way through computing, and there is no `Weapon` in existence at that moment —
+ * an object literal to satisfy the signature would be an allocation inside a resolve that
+ * `docs/decisions/0022-frame-rate-is-a-feature.md` would then have to reason about, and a cast would
+ * be a lie about a half-built value.
  */
-export const CYCLE_UNITS = 112;
+function grows(fireEvery: number, missileEvery: number, shots: number, launchers: number): boolean {
+  return (
+    Math.round(fireEvery * RAPID_FACTOR) >= FASTEST_FIRE ||
+    Math.round(missileEvery * MISSILE_FACTOR) >= MISSILE_FASTEST ||
+    shots < MAX_BARRELS ||
+    launchers < MAX_LAUNCHERS
+  );
+}
+
+/** The same question, of a weapon that has already been resolved. */
+export function weaponGrows(weapon: Weapon): boolean {
+  return grows(weapon.fireEvery, weapon.missileEvery, weapon.shots, weapon.launchers);
+}
 
 /**
- * Which face a pickup authored as `kind` is showing, at a given camera.
+ * What taking `kind` actually does to a ship already carrying `weapon`.
  *
- * ⚠️ **THE single description of the phase.** The frame writes it onto the entity and the guard reads
- * it back; a second copy of `floor(camera / units) % 2` anywhere would be the shape of drift
- * `src/content/sprites.ts` records the cost of.
+ * ── A WEAPON PICKUP AT THE CAP IS A BOMB, AND THAT IS A FACT ABOUT THE TABLE ─────────────────────
+ *
+ * `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md`. Reported from play: *"max speed
+ * auto-fire is way too strong for the current game - when you get max speed nothing is a challenge,
+ * bosses die in less a second and they are supposed to be tough."*
+ *
+ * ⚠️ **`PICKUPS[kind].effect` is what a pickup does in general and this is what it does to YOU**, and
+ * the difference is one upgrade wide. The row cannot answer it — 0016 says behaviour rides the row,
+ * and *is this player's weapon full* is not a property of the row — so the row keeps the general
+ * answer and this narrows it against the ship.
+ *
+ * ⚠️ **HERE rather than in `src/app/mount.ts`, and it was there first.** As a branch in the shell it
+ * was a content rule living in the one layer no unit test can reach without a DOM, so the rule that
+ * pays for deleting the unbounded damage had nothing holding it. `tests/shields.test.ts` drives this
+ * directly. The shell keeps what is genuinely its own: which action a given effect dispatches.
+ *
+ * ⚠️ **Returns an EFFECT rather than an action, so nothing in `src/content/` grows an opinion about
+ * the reducer** — and no allocation, which keeps it usable from anywhere.
  */
-export function faceOf(kind: PickupKind, cameraAlong: number): PickupKind {
-  return Math.floor(cameraAlong / CYCLE_UNITS) % 2 === 0 ? kind : CYCLE[kind];
+export function effectOf(kind: PickupKind, weapon: Weapon): PickupEffect {
+  const effect = PICKUPS[kind].effect;
+  return effect === 'upgrade' && !weaponGrows(weapon) ? 'special' : effect;
 }
 
 /**
@@ -284,9 +305,20 @@ export interface Weapon {
   /**
    * What one shot takes off what it hits.
    *
-   * ⚠️ **Where an upgrade goes once it can no longer go anywhere else.** Barrels are capped and the
-   * fire rate has a floor, so without this the sixth spread and the eleventh rapid would change
-   * nothing — and `docs/game.md` says an upgrade that cannot change the outcome is worse than none.
+   * ── IT USED TO CLIMB WITHOUT A CEILING, AND THAT WAS THE REPORTED DEFECT ────────────────────────
+   *
+   * ⚠️ **A CONSTANT now — the ship's own shot row, whatever it is carrying.** This was where an
+   * upgrade went once barrels and fire rate were capped, on `docs/game.md`'s grounds that *"an upgrade
+   * that cannot change the outcome is worse than none"*. Nothing bounded it, so the twelfth pickup was
+   * worth exactly as much as the fifth and the curve never flattened — reported from play as *"max
+   * speed auto-fire is way too strong for the current game - when you get max speed nothing is a
+   * challenge, bosses die in less a second and they are supposed to be tough."*
+   *
+   * ⚠️ **The rule it was serving is kept and paid for elsewhere**, which is why this is a deletion
+   * rather than a cap: a weapon pickup with nowhere left to go becomes a **bomb charge**, so it still
+   * changes the outcome and it does it in a currency the player spends rather than one that fires
+   * itself. `WEAPON_OVERFLOW` above, and
+   * `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md`.
    */
   damage: number;
   /**
@@ -452,7 +484,12 @@ export const PLAYER_SHOT_LIFE = 80;
 export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weapon {
   let fireEvery = ship.fireEvery;
   let shots = 1;
-  let damage = SHOTS[ship.shot].damage;
+  /*
+    ⚠️ **`const`, and it was `let` — that one keyword IS the max-speed nerf.** Both damage numbers
+    used to climb without a ceiling once every hardpoint and both cadences were capped. See `damage`
+    on the `Weapon` interface for what replaced the rule that put them there.
+  */
+  const damage = SHOTS[ship.shot].damage;
   let missileEvery = ship.missileEvery;
   /*
     ⚠️ **ZERO, and this is the amendment to
@@ -467,28 +504,54 @@ export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weap
     first one. It also means a death, which empties the upgrade list, takes the missiles with it.
   */
   let launchers = 0;
-  let missileDamage = SHOTS[ship.missile].damage;
+  const missileDamage = SHOTS[ship.missile].damage;
   for (let i = 0; i < upgrades.length; i++) {
     /*
-      ⚠️ **Each upgrade spends itself on the first thing it still can.** A rapid that would push past
-      the fire floor, or a spread past the barrel cap, becomes WEIGHT instead — which is what keeps
-      *every upgrade is worth taking* true at the eleventh one as well as at the first, without
-      letting either count run away.
+      ── ONE PICKUP MOVES A RATE AND A HARDPOINT, WHICH IS THE ASK'S *TOGETHER* ────────────────────
+
+      ⚠️ **Every rung advances BOTH weapons' cadence and one hardpoint**, rather than each pickup
+      picking a lane. *"Picking up a second of the same weapon needs to increase it's tier and rate of
+      fire together."* Four kinds each nudging one number is what that sentence is written against.
+
+      ⚠️ **An upgrade past every cap is not applied here at all.** It never reaches this list: the
+      shell asks `weaponGrows` first and dispatches a bomb charge instead
+      (`src/app/mount.ts`), so `weaponFor` stays a pure resolve of a list every entry of which did
+      something. The `continue` is the belt to that braces — a saved run, or a test, may hand this
+      function a longer list than the shell would ever have built.
     */
-    const upgrade = upgrades[i];
-    if (upgrade === 'rapid') {
-      const faster = Math.round(fireEvery * RAPID_FACTOR);
-      if (faster < FASTEST_FIRE) damage++;
-      else fireEvery = faster;
-    } else if (upgrade === 'missileRate') {
-      const faster = Math.round(missileEvery * MISSILE_FACTOR);
-      if (faster < MISSILE_FASTEST) missileDamage++;
-      else missileEvery = faster;
-    } else if (upgrade === 'missileSpread') {
-      if (launchers >= MAX_LAUNCHERS) missileDamage++;
-      else launchers++;
-    } else if (shots >= MAX_BARRELS) damage++;
-    else shots++;
+    if (!grows(fireEvery, missileEvery, shots, launchers)) continue;
+
+    // Both cadences, each stopped at its own floor rather than at a shared one — a missile is worth
+    // three pulses, so the same factor on both would let the pulse stop mattering by the third rung.
+    const faster = Math.round(fireEvery * RAPID_FACTOR);
+    if (faster >= FASTEST_FIRE) fireEvery = faster;
+    const fasterMissiles = Math.round(missileEvery * MISSILE_FACTOR);
+    if (fasterMissiles >= MISSILE_FASTEST) missileEvery = fasterMissiles;
+
+    /*
+      ⚠️ **The hardpoint goes to whichever side is proportionally further from its own cap**, so the
+      two fill together rather than one filling first. Written as a cross-multiplication to keep it in
+      integers: `launchers / MAX_LAUNCHERS ≤ (shots − 1) / MAX_BARRELS`.
+
+      ⚠️ **A ship starts at zero launchers, so the FIRST rung is the missile weapon arriving** —
+      `docs/decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md` said the missile
+      is found rather than carried, and merging the kinds must not quietly hand it back at rung three.
+      The order the ladder produces is launcher, barrel, barrel, launcher, barrel — five rungs to a
+      full ship.
+
+      ⚠️ **`MAX_LAUNCHERS` APPEARS TWICE — here and in `grows` — AND NEITHER IS REDUNDANT.** `npm run
+      prove` removed this one and the suite stayed green, which looks like a bound nothing is testing
+      and is not: `grows` uses it to decide whether the LOOP should still run, and this uses it to
+      decide which hardpoint a rung buys. At the current constants `grows` happens to stop the loop
+      first, so breaking either occurrence alone is invisible.
+
+      That is worth knowing rather than fixing. The cap is one number with two jobs, which is what
+      `MAX_BARRELS` is on the line below as well; what it means is that the PROBE for the launcher cap
+      has to break the constant rather than one of its uses — `scripts/probes/0051-missiles.mjs`, and
+      that is the shape of the defect that actually shipped (0077: the ceiling was three).
+    */
+    if (launchers < MAX_LAUNCHERS && launchers * MAX_BARRELS <= (shots - 1) * MAX_LAUNCHERS) launchers++;
+    else if (shots < MAX_BARRELS) shots++;
   }
   return {
     fireEvery,

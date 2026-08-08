@@ -218,9 +218,18 @@ describe('the ship comes apart, and the player watches it happen', () => {
       for the whole beat while the camera moved — so the pieces would arrive a beat's worth of scroll
       behind the explosion they came out of.
     */
+    /*
+      ⚠️ **EIGHT of them, and it was one of each kind.** 0082 merged the four upgrade kinds into one
+      and made the scatter a 50% coin per piece, so *one of each* is now a single upgrade with an even
+      chance of being filtered out — and this test, which is about WHERE the pieces land, would have
+      measured an empty field half the time. Eight makes the odds of nothing surviving one in 256, and
+      the seed is the fixture's, so it is deterministic rather than merely unlikely.
+    */
     const built = shell(NO_LEVEL);
     built.dispatch({ slice: 'run', type: 'begin', difficulty: TIER });
-    for (const upgrade of UPGRADE_KINDS) built.dispatch({ slice: 'run', type: 'upgraded', upgrade });
+    for (let i = 0; i < 8; i++) {
+      for (const upgrade of UPGRADE_KINDS) built.dispatch({ slice: 'run', type: 'upgraded', upgrade });
+    }
     built.dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
     killShip(built.world, built.frame);
     const offset = built.world.deathOffset;

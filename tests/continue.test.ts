@@ -193,8 +193,8 @@ describe('a run over is a continue', () => {
     const built = shell();
     built.lifecycle.begin(TIER);
     intoAFight(built);
-    built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'rapid' });
-    built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'spread' });
+    built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'weapon' });
+    built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'weapon' });
     dieOutTheRun(built);
     expect(built.state().run.lives, 'the fixture kept a life, so there is no run to continue').toBe(0);
     expect(built.state().screen.current, 'the run ended without raising the run-over screen').toBe('gameOver');

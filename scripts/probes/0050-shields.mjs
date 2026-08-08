@@ -122,8 +122,19 @@ export const PROBES = [
     guard: 'every upgrade-effect pickup is an upgrade kind',
     edit: {
       path: 'src/content/pickups.ts',
-      find: "export const UPGRADE_KINDS = ['rapid', 'spread', 'missileRate', 'missileSpread'] as const;",
-      replace: "export const UPGRADE_KINDS = ['rapid', 'missileRate', 'missileSpread'] as const;",
+      /*
+        ⚠️ RE-ANCHORED BY 0082, AND THE BREAK CHANGED SIDES. It used to drop `spread` from
+        `UPGRADE_KINDS`, leaving the list one short of the table. `UPGRADE_KINDS` now has a single
+        member, so shortening it makes `UpgradeKind` uninhabitable and the tree stops building —
+        which is a compile error rather than a red guard, and `docs/decisions/0019-a-probe-must-be-seen-to-apply.md`
+        wants the guard to be the thing that speaks.
+
+        So the disagreement is staged from the TABLE instead: a pickup reclassified as a special while
+        the upgrade list still calls it an upgrade. That is also the likelier real mistake now — 0082
+        added a `special` effect and a bomb pickup in the same change.
+      */
+      find: "    hint: 'Guns up a tier',\n    effect: 'upgrade',",
+      replace: "    hint: 'Guns up a tier',\n    effect: 'special',",
     },
   },
   {

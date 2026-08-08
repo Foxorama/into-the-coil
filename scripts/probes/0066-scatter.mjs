@@ -12,38 +12,34 @@ export const PROBES = [
     suite: 'tests/pickups.test.ts',
     // ⚠️ THE REPORTED ONE: a death that takes the upgrades and gives nothing back. It is what shipped.
     broke: 'the scatter removed, so a death takes the upgrades and offers none of them back',
-    guard: 'THE REPORTED ONE: one pickup per upgrade, where the ship was',
+    // ⚠️ Renamed by 0082: the guard is no longer *one pickup per upgrade*, because a death now throws
+    // each piece on a coin. What it holds is that something comes back, where the ship was.
+    guard: 'THE REPORTED ONE: pickups where the ship was, and never more than it carried',
     edit: {
       path: 'src/app/frame.ts',
       find: '    const item = w.pickups.spawn();\n    // A scatter one pickup short is dropped rather than grown',
       replace: '    const item = null;\n    // A scatter one pickup short is dropped rather than grown',
     },
   },
-  {
-    decision: '0066',
-    suite: 'tests/pickups.test.ts',
-    /*
-      ⚠️ THE CYCLE, LEFT ON. A scattered `spread` turns into a `missileSpread` a few seconds later and
-      the game hands the player something they never found — which is 0052 working exactly as designed
-      on a body it was never meant to reach.
-    */
-    broke: 'the scatter left cycling, so what comes back is not what was lost',
-    guard: 'does not cycle, so what comes back is what was lost',
-    edit: { path: 'src/app/frame.ts', find: '    if (item.lifeFor > 0) continue;\n    const face', replace: '    const face' },
-  },
-  {
-    decision: '0066',
-    suite: 'tests/pickups.test.ts',
-    // And the counterweight: the same rule applied to every pickup would switch the cycle off for the
-    // whole game. 0052 is the decision that must not be undone by this one.
-    broke: 'the no-cycling rule widened to every pickup, which undoes 0052 entirely',
-    guard: 'an AUTHORED pickup still cycles',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: '    if (item.lifeFor > 0) continue;\n    const face',
-      replace: '    if (item.lifeFor >= 0) continue;\n    const face',
-    },
-  },
+  /*
+    ── TWO PROBES WERE HERE AND THEIR SUBJECT NO LONGER EXISTS ────────────────────────────────────
+
+    Both were about the CYCLE reaching a scattered piece. The first left it on — so a scattered
+    `spread` turned into a `missileSpread` and the game handed the player something they never found —
+    and the second was its counterweight, widening the no-cycling rule to every pickup and thereby
+    undoing 0052 entirely.
+
+    ⚠️ **`docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md` removed the cycle**, so
+    *non-cycling* — the ask's own word — is now true of every pickup in the game by construction. There
+    is no `cyclePickups`, no `CYCLE`, and no edit that would make a scattered piece turn into
+    something else. Deleted rather than repointed: a probe with nothing to break is
+    `docs/decisions/0019-a-probe-must-be-seen-to-apply.md`'s STILL GREEN, which is the failure mode
+    the harness exists to surface.
+
+    ⚠️ **What survives of the concern is an assertion rather than a probe** —
+    `tests/pickups.test.ts` holds that the scatter is a SUBSET of what the death took, which catches
+    the same class of *the game gave back something it never took* by a different route.
+  */
   {
     decision: '0066',
     suite: 'tests/pickups.test.ts',
@@ -74,7 +70,9 @@ export const PROBES = [
     guard: 'leaves in every direction, and no two pieces travel together',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const angle = (i / upgrades.length) * Math.PI * 2 + w.scatterRng.range(-halfGap, halfGap);',
+      // ⚠️ `count` and it was `upgrades.length` — 0082's 50% filter runs first, so the divisor is how
+      // many pieces are really thrown rather than how many the death took. The break is unchanged.
+      find: '    const angle = (i / count) * Math.PI * 2 + w.scatterRng.range(-halfGap, halfGap);',
       replace: '    const angle = w.scatterRng.range(-halfGap, halfGap);',
     },
   },
@@ -95,7 +93,7 @@ export const PROBES = [
       upgrade list, so a scatter dispatched after it throws nothing — and the code reads perfectly.
     */
     broke: 'the scatter moved after the reducer that empties the list, so it throws nothing',
-    guard: 'THE REPORTED ONE: one pickup per upgrade, where the ship was',
+    guard: 'THE REPORTED ONE: pickups where the ship was, and never more than it carried',
     edit: {
       path: 'src/app/frame.ts',
       find: '    const kind = w.pickupKinds[upgrades[i]!];',

@@ -209,6 +209,14 @@ export const SPRITE_KINDS = [
   'blastWide',
   'blastWidest',
   /*
+    ⚠️ **NOT A PICKUP ANY MORE, AND THE NAME SAYS SO** — `pickupLife` until
+    `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md` took the extra life off the field.
+    The plus survives because the HUD still counts lives with it (`src/app/chrome.ts`), and a sprite
+    named for a pickup nobody can pick up is the kind of stale name `src/content/levels.ts` records
+    the cost of.
+  */
+  'lifeIcon',
+  /*
     ⚠️ **THREE PICKUP SILHOUETTES, NOT ONE IN THREE COLOURS.**
     `docs/decisions/0024-the-accessibility-floor-is-settings.md` puts *colour never carries meaning
     alone* in the unconditional tier, and a pickup is the case where that is most tempting to break:
@@ -216,10 +224,14 @@ export const SPRITE_KINDS = [
 
     They share an ink and differ in shape, which is the same division of labour every enemy uses —
     silhouette carries identity, colour carries role.
+
+    ⚠️ **AND THEY NOW DIFFER IN SIZE AS WELL**, which is the half of
+    `docs/decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md` that was
+    deliberately left to this chunk. Reported from play: *"when they're all the same colour and
+    essentially the same size, they're all the same."* 0081 answered it for the two bullets and the
+    hull; the extents below answer it here.
   */
-  'pickupLife',
-  'pickupRapid',
-  'pickupSpread',
+  'pickupWeapon',
   /*
     ⚠️ **A HERALDIC SHIELD, and it is the one pickup whose meaning a player already owns.** The other
     three are arbitrary glyphs the game has to teach — a plus, a holed square, a hexagon — and the
@@ -233,21 +245,24 @@ export const SPRITE_KINDS = [
   */
   'pickupShield',
   /*
-    ── THE TWO MISSILE UPGRADES, AND THEY ARE THE OTHER FACE OF A SHAPE ────────────────────────────
+    ── THE BOMB PICKUP WEARS THE BOMB'S OWN SILHOUETTE ─────────────────────────────────────────────
 
-    ⚠️ **Each is its partner's silhouette with the fill inverted**, which is a shape cue rather than
-    a colour one — `docs/decisions/0024-the-accessibility-floor-is-settings.md` again. A holed square
-    is *shoot faster* and a solid one is *missiles fire faster*; a solid hexagon is *another barrel*
-    and a holed one is *another launcher*. The family says which weapon a pickup is about and the fill
-    says which of the two it currently is.
+    ⚠️ **The same drawing as `bomb`, in the pickup ink and at the pickup's extent** — `src/render/bake.ts`
+    shares the path between the two cases, which is the only place in this table two kinds do that
+    outside the pyre's rungs. It is deliberate and it is the point: a player learns the notched disc
+    from the trigger strip before they ever find one lying about, so *the thing on the ground is the
+    thing on the button* needs no teaching at all.
 
-    ⚠️ That pairing is not decoration: the next change in `docs/state-of-play.md` makes a pickup on
-    the field CYCLE between the two faces, so a pair that reads as one object in two states is what
-    that mechanic needs to be legible. It is authored as two ordinary pickups first, because a shape
-    nobody can pick up cannot be judged.
+    ⚠️ **The INK is what makes it a pickup rather than a thrown bomb**, and that is the one channel
+    `docs/decisions/0024-the-accessibility-floor-is-settings.md` allows to carry role while shape
+    carries identity. The two are never on screen in the same place: a thrown bomb is leaving the ship
+    at speed and this holds station in the lane.
+
+    ⚠️ **The four faces this replaces were a pair-with-inverted-fill scheme** — a holed square against
+    a solid one, a solid hexagon against a holed one — and it lost its subject when 0082 merged the
+    four upgrades into one. There is no *other face* of anything any more.
   */
-  'pickupMissileRate',
-  'pickupMissileSpread',
+  'pickupBomb',
   /*
     ⚠️ **A RING IN THE PLAYER'S OWN INK, and the ring is deliberately the warden's primitive.** The
     two are never confusable in play — one is 9.5 units of enemy at the leading edge and this is 3
@@ -436,17 +451,35 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   blastHalf: 34,
   blastWide: 102,
   blastWidest: 136,
+  // The HUD's lives counter, and nothing on the field. It keeps the size the pickups had when it was
+  // one of them, because the thing it has to be legible against is a line of text.
+  lifeIcon: 4.6,
   /*
+    ── THREE PICKUPS, THREE SIZES, AND THEY WERE ALL 4.6 ──────────────────────────────────────────
+
     ⚠️ **Bigger than the smallest enemy, on purpose.** A pickup is the one thing on screen the player
     is supposed to fly TOWARDS, and at 3.5 it was smaller than everything it had to be picked out
-    from. It is still well under the drifter, so it never reads as a threat.
+    from. `tests/pickups.test.ts` holds a floor at 85% of the smallest enemy (the weaver, at 5) and a
+    ceiling under the largest (the warden, at 9.5).
+
+    ⚠️ **THE ORDER IS WHAT THE PLAYER SHOULD CROSS THE LANE FOR** —
+    `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md`. Six pickups a level instead of
+    twenty makes each one a decision, and the weapon is the one the report calls *"the lynchpin"*, so
+    it is the one that reads from furthest away.
+
+    ⚠️ **The weapon at 6 is bigger than the drifter (5.5) and the weaver (5), which the old comment
+    here said a pickup must never be.** That intent is kept and paid differently: what stops a pickup
+    reading as a threat is the ink and the silhouette, not being small — and being small was exactly
+    the complaint. It is still well under the turret and the warden.
+
+    ⚠️ **Each is twice its row's `radius` in `src/content/pickups.ts`**, because
+    `docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md` makes the picture the hurtbox.
+    Growing one of these without growing its radius would draw a target the player can touch and not
+    collect, which is the same lie with the sign reversed.
   */
-  pickupLife: 4.6,
-  pickupRapid: 4.6,
-  pickupSpread: 4.6,
-  pickupShield: 4.6,
-  pickupMissileRate: 4.6,
-  pickupMissileSpread: 4.6,
+  pickupWeapon: 6,
+  pickupShield: 5,
+  pickupBomb: 4.4,
   /*
     ⚠️ **Small enough to read as the ship's, not as a body of its own.** Three of these orbit a
     7-unit ship at a 5.6-unit radius; at enemy size they would be a formation flying with the player

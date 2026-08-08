@@ -117,7 +117,6 @@ export type RunAction =
   | { slice: 'run'; type: 'lifeLost' }
   | { slice: 'run'; type: 'took'; special: SpecialKind }
   | { slice: 'run'; type: 'spent'; slot: number }
-  | { slice: 'run'; type: 'gainedLife' }
   | { slice: 'run'; type: 'upgraded'; upgrade: UpgradeKind }
   | { slice: 'run'; type: 'levelCleared' };
 
@@ -251,16 +250,28 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         difficulty: state.difficulty,
       };
     }
-    case 'gainedLife':
-      // No ceiling. A level author decides how many are findable, which is 0039's replacement for
-      // lives that refill at a boundary — and a cap here would quietly overrule that decision.
-      return {
-        lives: state.lives + 1,
-        level: state.level,
-        arsenal: state.arsenal,
-        upgrades: state.upgrades,
-        difficulty: state.difficulty,
-      };
+    /*
+      ── `gainedLife` WAS HERE, AND ITS REMOVAL IS THE LOUDEST THING IN 0082 ────────────────────────
+
+      It added one to `lives` with no ceiling, on the grounds that *a level author decides how many
+      are findable* — `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md`'s
+      replacement for lives that refill at a level boundary.
+
+      ⚠️ **`docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md` took the extra life off the
+      field**, on the ask's own reasoning: *"a shield is an extra life anyway and it's far more game
+      impactful and meaningful."* It is — a shield stops the death happening, so it also keeps the
+      arsenal a death would cost. **But nothing grants a life any more, so a run's complement can only
+      go down**, and 0039's replacement now has nothing behind it.
+
+      ⚠️ **Deleted rather than left dispatchable, and that is the honest half.** An action nothing
+      sends is a rule nobody can test — `src/content/specials.ts` argues exactly this about `took`,
+      which had been in that state since 0039 and is only now cashed. Leaving a door ajar for a life
+      source that does not exist would make this reducer describe a game that is not being played.
+
+      ⚠️ **What makes it survivable today is `docs/decisions/0068-a-run-over-is-a-continue.md`'s free
+      continue**, which is deliberate and temporary. The day that stops being free is the day this
+      needs an answer, and 0082 says so rather than leaving it to be rediscovered.
+    */
     case 'upgraded':
       return {
         lives: state.lives,

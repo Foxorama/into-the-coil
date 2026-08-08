@@ -127,6 +127,21 @@ describe('the ship wears what it is carrying', () => {
       ⚠️ **Over the LIST rather than over barrels.** A player who spends four upgrades on missiles has
       upgraded exactly as much as one who spent them on the pulse, and a hull keyed to barrels alone
       would tell the first of them nothing.
+
+      ── AND THE WAY THIS WAS WRITTEN STOPPED WORKING WHEN 0082 MERGED THE KINDS ────────────────────
+
+      ⚠️ **It varied the upgrade KIND, and there is only one kind now.** *"Whatever the upgrades were
+      spent on"* used to mean *a list of twelve `missileRate`s against a list of twelve `spread`s*, and
+      a hull keyed to barrels told the first of them nothing.
+      `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md` made every upgrade the same
+      `weapon` — which spends its rungs on launchers AND barrels — so a tier keyed to barrels climbed
+      too, and 0081's probe for this went **STILL GREEN**.
+
+      ⚠️ **What varies now is the RUNG, and it is a sharper test than the old one.** `weaponFor`'s
+      ladder is launcher, barrel, barrel, launcher, barrel: at four upgrades a ship has three barrels
+      and two launchers, so a tier keyed to barrels reads 1 where the list says 2. That single rung is
+      the whole difference and it is asserted directly, because a property written loosely enough to
+      survive the merge is what let the probe go green in the first place.
     */
     expect(weaponFor(SHIPS.proof, []).tier, 'a run opens on an upgraded hull').toBe(0);
     for (const only of UPGRADE_KINDS) {
@@ -135,6 +150,33 @@ describe('the ship wears what it is carrying', () => {
         MAX_HULL_TIER,
       );
     }
+
+    /*
+      THE PROPERTY THAT SEPARATES *counted over the list* FROM *counted over barrels*, and it is an
+      existence rather than a number.
+
+      ⚠️ **Stated as *the tier is not a function of the barrel count*.** A first attempt asserted the
+      tier at four upgrades against `floor(shots / 2)`, which is one rival formula out of many — the
+      probe uses `shots - 1`, so the guard passed while the hull was keyed to barrels and 0081's probe
+      went STILL GREEN a second time. Naming the rival is guessing; naming the property is not.
+
+      The ladder spends rung four on a launcher, so a ship with three upgrades and a ship with four
+      have **the same three barrels and different tiers**. Any rule computed from `shots` alone must
+      draw them identically, and this is what notices.
+    */
+    const byBarrelCount = new Map<number, Set<number>>();
+    for (let n = 0; n <= 12; n++) {
+      const resolved = weaponFor(SHIPS.proof, Array.from({ length: n }, () => UPGRADE_KINDS[0]!));
+      const seen = byBarrelCount.get(resolved.shots) ?? new Set<number>();
+      seen.add(resolved.tier);
+      byBarrelCount.set(resolved.shots, seen);
+    }
+    const splits = [...byBarrelCount.values()].filter((tiers) => tiers.size > 1);
+    expect(
+      splits.length,
+      'every barrel count maps to exactly one hull, so the hull is a function of the barrels rather ' +
+        'than of the upgrade list — a ship that spent a rung on a launcher is drawn as one that spent nothing',
+    ).toBeGreaterThan(0);
     // Monotone, and it stops. An unbounded list may not run off the end of the hulls.
     let last = -1;
     for (let n = 0; n <= 20; n++) {

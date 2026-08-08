@@ -32,10 +32,17 @@ export const PROBES = [
   {
     decision: '0064',
     suite: 'tests/pickups.test.ts',
-    // The wait cut below one cycle. Which of the two faces the player gets is then decided by when
-    // they happened to arrive, which is the complaint the whole ask came from.
-    broke: 'the wait cut below one full cycle, so which face you get is luck again',
-    guard: 'waits long enough for the player to see both of its faces and choose',
+    /*
+      The wait cut to a second and a half.
+
+      ⚠️ RE-AIMED BY 0082, WHICH MOVED WHAT THE WAIT IS FOR. It used to be measured against
+      `CYCLE_UNITS` — long enough to see both faces and choose — and 0082 removed the cycle. The wait
+      itself is untouched at 420, and what it now has to cover is the thing the player is actually
+      doing: crossing the lane for one of six pickups a level. Same break, same constant, a guard that
+      measures the player instead of a constant that no longer exists.
+    */
+    broke: 'the wait cut below a crossing, so a pickup can only be taken by a player already beside it',
+    guard: 'waits long enough to be crossed the whole lane for',
     edit: { path: 'src/app/frame.ts', find: 'const PICKUP_LINGER_STEPS = 420;', replace: 'const PICKUP_LINGER_STEPS = 90;' },
   },
   {
@@ -84,13 +91,16 @@ export const PROBES = [
       replace: '  item.velAcross = 0;',
     },
   },
-  {
-    decision: '0064',
-    suite: 'tests/cycling.test.ts',
-    // The cycle put back to what it was. It is half a second, it is exactly what was asked for, and
-    // nothing in a still frame can see it — so the guard is the arithmetic between the two constants.
-    broke: 'the cycle returned to its old length, undoing the half second that was asked for',
-    guard: 'is half a second faster than it was, which is what was asked for',
-    edit: { path: 'src/content/pickups.ts', find: 'export const CYCLE_UNITS = 112;', replace: 'export const CYCLE_UNITS = 130;' },
-  },
+  /*
+    ⚠️ **A THIRD PROBE WAS HERE AND ITS SUBJECT NO LONGER EXISTS.** It put `CYCLE_UNITS` back to 130,
+    undoing the half second 0064 was asked for, and it was anchored on
+    `tests/cycling.test.ts`'s arithmetic between two constants.
+    `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md` removed the cycle, the constant and
+    the suite, so the probe is deleted rather than repointed: there is nothing left for it to break.
+
+    ⚠️ **The OTHER half of 0064 is untouched and both probes above still hold it.** The wait
+    (`PICKUP_LINGER_STEPS`) and the bounce are what the report actually asked for — *"pickups
+    linger"* — and 0082 kept both. What it took away is the reason the wait was 420 rather than some
+    other number, which `src/app/frame.ts` now says out loud.
+  */
 ];

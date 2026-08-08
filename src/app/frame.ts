@@ -58,14 +58,7 @@ import { FORMATIONS } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
 import { type DifficultyRow, fireGapFor, toughnessFor } from '../content/difficulty.ts';
-import {
-  CYCLE_UNITS,
-  PICKUP_KINDS,
-  type PickupKind,
-  type PickupRow,
-  type UpgradeKind,
-  type Weapon,
-} from '../content/pickups.ts';
+import { PICKUP_KINDS, type PickupKind, type PickupRow, type UpgradeKind, type Weapon } from '../content/pickups.ts';
 import { SPECIALS, pyreFor, type SpecialKind } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
 import { stepBoss } from './boss.ts';
@@ -179,14 +172,15 @@ const PICKUP_BOB_SPEED = 0.25;
 /**
  * The bob's period, in world units of camera travel.
  *
- * ⚠️ **A DISTANCE and not a duration**, which is `src/content/pickups.ts`'s own argument for
- * `CYCLE_UNITS`: a shape in the world can be authored against, a wobble in time cannot, and a machine
+ * ⚠️ **A DISTANCE and not a duration**, which is `src/content/enemies.ts`'s own argument for the
+ * weave: a shape in the world can be authored against, a wobble in time cannot, and a machine
  * dropping frames plays the same level. 14 units is a full cycle every `2π × 14 ÷ SCROLL_PER_STEP`
  * steps — about 2.4 seconds.
  *
  * ⚠️ **The phase is offset by the pickup's own `across`**, so two pickups on screen do not bob in
- * unison. That costs no field and no draw, and it is the one place this file wants pickups to look
- * independent — the cycle deliberately wants them synchronised, and for the opposite reason.
+ * unison. That costs no field and no draw, and it is the last thing on the field that still wants
+ * pickups to look independent — the CYCLE was the thing that wanted them synchronised, and 0082
+ * removed it.
  */
 const PICKUP_BOB_UNITS = 14;
 
@@ -223,11 +217,33 @@ const SCATTER_SPEED = 0.66;
  * plus three seconds of flying — long enough to cross the lane twice at `SHIP_SPEED` and nowhere near
  * long enough to collect a full loadout.
  *
- * ⚠️ **It is also what makes a scattered pickup NON-CYCLING**, which is the other half of the ask: a
- * lifetime is the one thing an authored pickup never has, so `lifeFor > 0` IS *this is a scattered
- * one* — no flag, no second field, and no way for the two to disagree. `cyclePickups` skips them.
+ * ⚠️ **It used to be what made a scattered pickup NON-CYCLING as well**, which was the other half of
+ * the ask: a lifetime is the one thing an authored pickup never has, so `lifeFor > 0` IS *this is a
+ * scattered one*, with no flag and no second field. Nothing cycles since 0082, so that half of the ask
+ * is now true of every pickup in the game and this field only says *when it goes*.
  */
 const SCATTER_STEPS = 300;
+
+/**
+ * What share of the upgrades a death took come back, as a probability per upgrade.
+ *
+ * ⚠️ **The ask's own number**: *"when a player dies let's change it to 50% chance of each power up
+ * they have collected spawning from their death, current implementation means there's not really a
+ * cost to dying at all."*
+ * `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md`, amending
+ * `docs/decisions/0066-a-death-scatters-what-it-took.md`.
+ *
+ * ⚠️ **PER UPGRADE and not per death**, which is what makes it a cost rather than a coin toss on the
+ * whole run. A player who dies with six upgrades expects three back and can be unlucky; a player who
+ * dies with one is being told, half the time, that the death was free.
+ *
+ * ⚠️ **It is the thing that pays for a level offering six pickups instead of twenty.** 0082 cut the
+ * density on the grounds that a rare pickup is a premium piece, and `docs/game.md`'s answer to *what
+ * is a player who just died flying with* used to be *another upgrade within twenty seconds*. It is now
+ * *half of what you were carrying, on the spot* — so these two numbers are one decision and neither
+ * survives being tuned without the other.
+ */
+const SCATTER_KEPT = 0.5;
 
 /**
  * How far a scattered piece's heading may wander from its share of the circle, as a share of the
@@ -284,14 +300,17 @@ const PICKUP_STATION = 100;
 /**
  * How long a pickup waits once it has arrived, in steps — seven seconds.
  *
- * ⚠️ **Measured against the CYCLE rather than chosen for roundness.** `CYCLE_UNITS` is 3.11 seconds
- * (`src/content/pickups.ts`), so seven seconds is **two and a quarter faces while the player is
- * beside it** — enough to see the other face, decide, and still have time to take it. Anything under
- * one full cycle would leave *which one you get* down to when you happened to arrive, which is the
- * complaint the ask came from.
+ * ⚠️ **THE NUMBER IS UNCHANGED AND THE REASON FOR IT IS GONE.** It was measured against
+ * `CYCLE_UNITS` — seven seconds was two and a quarter faces of a cycling pickup, *enough to see the
+ * other face, decide, and still have time to take it* — and 0082 removed the cycle. Kept at 420
+ * because the other half of 0064's ask stands on its own and is what the report actually said:
+ * *"pickups linger"*, so a player crossing the lane for one has time to get there.
  *
- * A starting point on `docs/decisions/0037-the-ship-has-mass.md`'s terms, and nothing asserts on it;
- * what `tests/pickups.test.ts` holds is that the wait covers more than one cycle.
+ * ⚠️ **It matters MORE than it did, and the guard over it had to be rewritten rather than deleted.**
+ * A level offers six pickups instead of twenty (0082), so a pickup the player could not reach in time
+ * is no longer one of a stream — it is a sixth of what the level had to give. `tests/pickups.test.ts`
+ * now holds the wait against the time it takes to cross the lane, which is the thing the player is
+ * actually doing, rather than against a cycle that no longer exists.
  */
 const PICKUP_LINGER_STEPS = 420;
 
@@ -661,26 +680,25 @@ export interface World {
   pickupRows: readonly PickupRow[];
   /** Which index each authored pickup kind is, built once at boot. */
   pickupKinds: Record<PickupKind, number>;
-  /**
-   * The other face of each pickup, as an index into `pickupRows`. Built once at boot.
-   *
-   * ⚠️ **An array of indices rather than `CYCLE` itself**, for the reason `enemyRows` is an array:
-   * it is read once per live pickup per step, and a string key into a `Record` is a lookup the hot
-   * path does not have to do. `src/content/pickups.ts` holds the table it is built from, which is
-   * the single description.
-   */
-  pickupCycle: readonly number[];
-  /**
-   * Whether the field is currently showing the second face. Derived from the camera every step.
-   *
-   * ⚠️ **Computed once per step and read twice** — by the sprites and by the collection — so a
-   * pickup cannot be drawn as one thing and collected as another. That is not a hypothetical: they
-   * are separate loops, and the second copy of `floor(camera / units) % 2` is exactly the drift
-   * `src/content/sprites.ts` records the cost of.
-   */
-  pickupFlipped: boolean;
+  /*
+    ⚠️ **`pickupCycle` and `pickupFlipped` were two more fields here, and 0082 removed both.** They
+    were what let a pickup be drawn as one kind and collected as another on the same step, which is
+    the hardest thing 0052 had to get right and the reason `tests/cycling.test.ts` existed. Nothing
+    on the field changes what it is any more, so an entity's `kind` is the whole answer.
+  */
   /** What was collected this step. Reused, never rebuilt. */
   collected: Collected;
+  /**
+   * Scratch for the death scatter: the upgrades the coin kept, written before the ring is built.
+   *
+   * ⚠️ **A field on the world rather than an array built in `scatterUpgrades`**, because this file is
+   * one of `docs/decisions/0022-frame-rate-is-a-feature.md`'s hot files and a death happens inside a
+   * step. Sized to the pickup pool, which is the most that can ever reach the field.
+   *
+   * ⚠️ **It exists because the 50% filter has to run BEFORE the spacing**, not during it — 0082 has
+   * the reasoning, and `scatterUpgrades` restates the consequence where the loop is.
+   */
+  scattered: UpgradeKind[];
   /**
    * The ship flew into something.
    *
@@ -986,7 +1004,6 @@ export class GameFrame implements Frame {
     const flying = w.shipPool.size > 0;
     if (flying) flyShip(w.ship, w.intent, w.cameraAlong, w.scrollPerStep);
 
-    cyclePickups(w);
     /*
       ⚠️ **A wreck does not fire and does not throw.** `askSpecials` is gated with the two weapons
       rather than left to the shell, because the shell's answer to a press is `launchSpecial`, which
@@ -1145,11 +1162,17 @@ export class GameFrame implements Frame {
         cycle has no state to accumulate and a pickup cannot drift out of step with the field — and
         which face that is right now is the same boolean the sprites were drawn from a moment ago.
       */
-      const index = w.collected.kind[i]!;
-      const face = w.pickupFlipped ? (w.pickupCycle[index] ?? index) : index;
-      const kind = PICKUP_KINDS[face];
+      /*
+        ⚠️ **The authored kind, full stop — and it used to be *the face the field was showing*.**
+        `docs/decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md` made every pickup
+        alternate between two kinds, so this loop had to resolve which one was on screen at the moment
+        the ship reached it, and the whole of `tests/cycling.test.ts` existed to hold the drawing and
+        this line in step. 0082 dropped the cycle: at six pickups a level a level author has to be
+        able to say what a level offers, and a coin flip on a premium piece is not that.
+      */
+      const kind = PICKUP_KINDS[w.collected.kind[i]!];
       if (kind === undefined) continue;
-      // One cue for all six faces — `src/content/cues.ts` has why, and which split play would ask
+      // One cue for all three kinds — `src/content/cues.ts` has why, and which split play would ask
       // for first. The readout moving is the twin, and it already says WHICH one was taken.
       w.onCue('pickup');
       w.onPickup(kind);
@@ -1326,55 +1349,27 @@ function fireShip(w: World): void {
   }
 }
 
-/**
- * What every pickup on the field currently is.
- *
- * Asked for after playing the two-level build: *"a pickup on the field changes what it is every few
- * seconds, and changes its sprite with it, so which one a player gets is a matter of when they reach
- * it."* `docs/decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md`.
- *
- * ⚠️ **The entity's `kind` is NOT rewritten, and the first draft of this rewrote it.** A face
- * written back onto the entity is state that accumulates: on the next step the same rule reads the
- * face rather than the authored kind and flips it back, so every pickup on the field alternates once
- * a step forever. What the entity carries is what the level authored; what it is *right now* is that
- * plus a boolean, and the boolean lives on the world because the collection needs the same one.
- *
- * ⚠️ **It runs BEFORE the collision**, so a pickup taken on the step it flips gives what it was
- * showing when the ship reached it rather than what it had been a moment earlier.
- *
- * ⚠️ **A function of the camera, so every pickup on screen flips on the same step**, which is what
- * makes it read as the field changing rather than as each object keeping its own timer.
- */
-function cyclePickups(w: World): void {
-  // One divide per step rather than one per pickup: the phase is the same for everything on screen.
-  w.pickupFlipped = Math.floor(w.cameraAlong / CYCLE_UNITS) % 2 !== 0;
-  for (let i = w.pickups.size - 1; i >= 0; i--) {
-    const item = w.pickups.at(i);
-    /*
-      ⚠️ **A SCATTERED PICKUP DOES NOT CYCLE, and its lifetime is how that is known.** Asked for:
-      *"non-cycling and on a short timer."* An authored pickup never carries a lifetime, so
-      `lifeFor > 0` is exactly *this came off a ship that just died* — one field, no flag, and no way
-      for the two answers to disagree. `docs/decisions/0066-a-death-scatters-what-it-took.md`.
+/*
+  ── `cyclePickups` USED TO BE HERE, AND ITS DELETION IS THE POINT ────────────────────────────────
 
-      It is also the right rule rather than a convenient one: what was scattered is what the player
-      just LOST, and a spread that turned into a launcher on the way back would be the game handing
-      out something they never had.
-    */
-    if (item.lifeFor > 0) continue;
-    const face = w.pickupFlipped ? (w.pickupCycle[item.kind] ?? item.kind) : item.kind;
-    const row = w.pickupRows[face];
-    if (row === undefined) continue;
-    /*
-      ⚠️ **`spriteBase` as well as `sprite`, because `stepEntities` derives the second from the
-      first every step.** Setting only `sprite` would be a face that lasts exactly until the next
-      step and then silently reverts — the kind of bug that is invisible in a screenshot and reads as
-      flickering in play.
-    */
-    item.spriteBase = row.sprite;
-    item.spriteHit = row.spriteHit;
-    item.sprite = row.sprite;
-  }
-}
+  `docs/decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md` made a pickup alternate
+  between two kinds on a distance, so this walked the field every step rewriting sprites, and the
+  collection loop above had to resolve the same phase a second time to hand over the face the player
+  was looking at. Both halves are gone —
+  `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md`.
+
+  ⚠️ **0052's reasoning did not stop being true; its PREMISE did.** *"Which one a player gets is a
+  matter of when they reach it"* was written for a field with a pickup every 250 units, where a player
+  passes dozens and takes whatever is beside them. A level now offers six, each one worth crossing the
+  lane for, and a coin flip on a premium piece reads as the game taking something away rather than as
+  the field changing its mind.
+
+  ⚠️ **What went with it**: `CYCLE`, `CYCLE_UNITS` and `faceOf` in `src/content/pickups.ts`,
+  `pickupCycle` and `pickupFlipped` on the world, `tests/cycling.test.ts`, and
+  `scripts/probes/0052-cycling.mjs`. An entity's `kind` is now simply what the level authored, all the
+  way from the spawn to the collection, which is what `spawnPickup` and `scatterUpgrades` already
+  assumed of the pieces they place.
+*/
 
 /**
  * What the player pressed, passed up to whoever owns the arsenal.
@@ -2083,8 +2078,8 @@ function driftPickups(w: World): void {
     */
     if (item.holdFor <= 0) {
       /*
-        ⚠️ **A SCATTERED piece lands here, and `lifeFor` is what says so** — it carries no `holdFor`,
-        exactly as `cyclePickups` relies on. `scatterUpgrades` throws it in two axes and this is what
+        ⚠️ **A SCATTERED piece lands here, and `lifeFor` is what says so** — it carries no `holdFor`.
+        `scatterUpgrades` throws it in two axes and this is what
         spends the `along` half: the excursion is `speed ÷ PICKUP_EASE`, about 11 world units, after
         which it is holding station and bouncing across for the rest of its five seconds. That is the
         whole of why `docs/decisions/0066-a-death-scatters-what-it-took.md`'s objection to throwing
@@ -2150,6 +2145,48 @@ function driftPickups(w: World): void {
  */
 export function scatterUpgrades(w: World, upgrades: readonly UpgradeKind[]): void {
   /*
+    ── HALF OF THEM, AND THE COIN IS TOSSED BEFORE THE RING IS BUILT ──────────────────────────────
+
+    Reported from play: *"when a player dies let's change it to 50% chance of each power up they have
+    collected spawning from their death, current implementation means there's not really a cost to
+    dying at all."* `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md`, amending
+    `docs/decisions/0066-a-death-scatters-what-it-took.md`, which threw every one of them.
+
+    ⚠️ **COUNTED FIRST, then placed — and filtering inside the placing loop would have been the bug.**
+    0077's guarantee is that the pieces are spaced `i / n` of a circle apart, so `n` has to be *how
+    many are actually thrown*. A coin tossed inside that loop leaves the survivors on the headings the
+    full set would have used, which reads as pieces having failed to appear rather than as a smaller
+    scatter — and it is the one failure mode 0066 says the even spacing exists to prevent.
+
+    ⚠️ **`scatterRng` and not `burstRng`**, which is why
+    `docs/decisions/0021-one-stream-per-concern.md` separated them in the first place: *which pieces a
+    player can reach is the entire cost of a death*, so it may not move because a cosmetic roll was
+    added somewhere else. This is the draw that stream was named for.
+  */
+  let thrown = 0;
+  for (let i = 0; i < upgrades.length; i++) {
+    /*
+      ⚠️ **Bounded by the scratch buffer, which is the pool's own size.** A player carrying thirty
+      upgrades cannot have thirty pieces on the field either way — `src/sim/pool.ts` drops rather than
+      grows, and the loop below already returns when `spawn` comes back empty. Stopping here means the
+      RING is built over a number the field can actually hold, so the spacing stays even instead of
+      leaving a gap where the pool refused.
+    */
+    if (thrown >= w.scattered.length) break;
+    if (w.scatterRng.float() < SCATTER_KEPT) w.scattered[thrown++] = upgrades[i]!;
+  }
+  scatterRing(w, w.scattered, thrown);
+}
+
+/**
+ * Throw exactly these `count` pieces, evenly around a circle at the wreck.
+ *
+ * ⚠️ **Split out from `scatterUpgrades` so the ring is built over the SURVIVORS**, per the note
+ * above: `count` is the divisor that spaces them, and it has to be how many are really going to
+ * appear.
+ */
+function scatterRing(w: World, upgrades: readonly UpgradeKind[], count: number): void {
+  /*
     ⚠️ **WHERE THE SHIP DIED, not where the ship object still is** — 0079. This used to read
     `w.ship.along` and that was exactly right for as long as the scatter happened on the step the hull
     reached zero. It now happens at the END of the beat, `DEATH_STEPS` later, and the ship object has
@@ -2158,7 +2195,7 @@ export function scatterUpgrades(w: World, upgrades: readonly UpgradeKind[]): voi
     came off. `stepBossDeath` remembers an offset for the identical reason and 0062 says so.
   */
   const along = w.cameraAlong + w.deathOffset;
-  for (let i = 0; i < upgrades.length; i++) {
+  for (let i = 0; i < count; i++) {
     const kind = w.pickupKinds[upgrades[i]!];
     const row = w.pickupRows[kind];
     if (row === undefined) continue;
@@ -2180,8 +2217,8 @@ export function scatterUpgrades(w: World, upgrades: readonly UpgradeKind[]): voi
       11 world units — and what is left is a piece holding the distance the ship died at and bouncing
       across the lane, which is what 0066 built and this keeps.
     */
-    const halfGap = (Math.PI / upgrades.length) * SCATTER_JITTER_SHARE;
-    const angle = (i / upgrades.length) * Math.PI * 2 + w.scatterRng.range(-halfGap, halfGap);
+    const halfGap = (Math.PI / count) * SCATTER_JITTER_SHARE;
+    const angle = (i / count) * Math.PI * 2 + w.scatterRng.range(-halfGap, halfGap);
     const speed = SCATTER_SPEED * w.scatterRng.range(SCATTER_SPREAD_MIN, SCATTER_SPREAD_MAX);
     item.velAcross = Math.sin(angle) * speed;
     item.velAlong = w.scrollPerStep + Math.cos(angle) * speed;

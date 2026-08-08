@@ -4,6 +4,19 @@
 pickup on the field changes what it is every few seconds, and changes its sprite with it, so which
 one a player gets is a matter of when they reach it."*
 
+> ⚠️ **SUPERSEDED 2026-08-08 by [0082](0082-a-pickup-is-rare-and-says-what-it-is.md).** The cycle is
+> gone, along with `CYCLE`, `CYCLE_UNITS`, `faceOf`, `cyclePickups` and `tests/cycling.test.ts`.
+> **Nothing below was found to be wrong — its PREMISE stopped being true.** The reasoning here is
+> written for a field with a pickup every 250 units, where a player passes dozens and takes whatever
+> is beside them; 0082 cut a level to six, and a coin flip on a premium piece the player crossed the
+> lane for reads as the game taking something away. It also made the ask's per-level budgets
+> unauthorable, which is what settled it.
+>
+> **Kept in full and unedited**, because it is the record of a real mechanism that shipped and was
+> played, and because the involution argument below is the reason a three-kind table was not available
+> until the cycle went. Its probes are deleted and it is listed in `WITHOUT_PROBES` —
+> [0019](0019-a-probe-must-be-seen-to-apply.md)'s STILL GREEN is what repointing them would have been.
+
 ## The rule
 
 | | |

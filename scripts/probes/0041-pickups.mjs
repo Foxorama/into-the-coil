@@ -16,7 +16,14 @@ export const PROBES = [
     guard: 'never leaves the player unarmed for long',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 4700, kind: 'spread', lane: 40 },\n",
+      /*
+        ⚠️ RE-ANCHORED BY 0082, and the break is much bigger than it was. It used to remove one of
+        approach's four `spread` pickups out of twenty-four, leaving a level that still read as
+        generous. A level now carries THREE weapons, so removing one leaves a 94-second stretch —
+        which is the same defect at three times the size, and the reason the guard's ceiling moving
+        from 20s to 55s is not the guard being switched off.
+      */
+      find: "  { at: 2900, kind: 'weapon', lane: 68 },\n",
       replace: '',
     },
   },
@@ -32,8 +39,10 @@ export const PROBES = [
       // ⚠️ The FLOOR removed, not the factor changed. A first attempt subtracted a constant instead
       // and `npm run prove` reported WRONG TEST: it broke stacking rather than the floor, because the
       // floor still caught it. The break has to be the thing the guard is about.
-      find: '      if (faster < FASTEST_FIRE) damage++;\n      else fireEvery = faster;',
-      replace: '      fireEvery = faster;',
+      // ⚠️ Re-anchored by 0082: the floor used to sit inside a `rapid` arm and now sits in the merged
+      // ladder's only arm. Same edit, same guard, one fewer branch around it.
+      find: '    if (faster >= FASTEST_FIRE) fireEvery = faster;',
+      replace: '    fireEvery = faster;',
     },
   },
   {
@@ -92,8 +101,11 @@ export const PROBES = [
     guard: 'every kind has its own silhouette',
     edit: {
       path: 'src/content/pickups.ts',
-      find: '    sprite: SPRITE.pickupSpread,\n    spriteHit: SPRITE.pickupSpread,',
-      replace: '    sprite: SPRITE.pickupRapid,\n    spriteHit: SPRITE.pickupRapid,',
+      // ⚠️ Re-anchored by 0082, which cut six pickups to three. The temptation is unchanged and the
+      // stakes are higher: with only three faces left, giving two of them one silhouette makes a
+      // third of the game's pickups unreadable rather than a sixth.
+      find: '    sprite: SPRITE.pickupBomb,\n    spriteHit: SPRITE.pickupBomb,',
+      replace: '    sprite: SPRITE.pickupShield,\n    spriteHit: SPRITE.pickupShield,',
     },
   },
 ];

@@ -37,7 +37,8 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **the chrome is authored against the short axis** | [0049](decisions/0049-the-chrome-is-authored-against-the-short-axis.md) |
 | **the ship is one hit; a shield is what stands in front of it** | [0050](decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md) |
 | **a missile is the second auto-weapon; a launcher is a place on the ship** | [0051](decisions/0051-a-missile-is-the-second-auto-weapon.md) |
-| **a pickup is two things, and the camera says which** | [0052](decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md) |
+| ~~a pickup is two things, and the camera says which~~ — **superseded** | [0052](decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md) → [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) |
+| **a pickup is rare, and says what it is: six a level, of three kinds** | [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
 | **a death takes the ship, and the level carries on** | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
@@ -49,7 +50,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **the sky is baked and blitted, and it is not entities** | [0065](decisions/0065-the-sky-is-baked-and-blitted.md) |
 | **nothing the sky draws is as big as a bullet** | [0069](decisions/0069-the-sky-is-behind-the-game.md) |
 | **a pickup waits to be taken, and its face turns half a second faster** | [0064](decisions/0064-a-pickup-waits-to-be-taken.md) |
-| **a death scatters what it took, non-cycling and on a short timer** | [0066](decisions/0066-a-death-scatters-what-it-took.md) |
+| **a death scatters HALF of what it took, on a short timer** | [0066](decisions/0066-a-death-scatters-what-it-took.md), amended by [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) |
 | **a new run opens on an empty field** | [0067](decisions/0067-a-new-run-opens-on-an-empty-field.md), [`the-sweep-that-served-two-rules`](../reports/the-sweep-that-served-two-rules-2026-08-07.md) |
 | **a run over is a continue, and it keeps the level** | [0068](decisions/0068-a-run-over-is-a-continue.md) |
 | **a death is a beat, and the unspent arsenal goes up with the ship** | [0079](decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md) |
@@ -78,6 +79,15 @@ and [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) puts 
 the same category as the flight constants before they were played. None of them has been.
 
 ## What the game currently is
+
+⚠️ **A PICKUP IS NOW A PREMIUM GAME PIECE, WHICH IS THE LARGEST CHANGE TO WHAT A RUN FEELS LIKE
+SINCE THE ENEMIES STARTED SHOOTING** — [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md).
+A level offers **six** where it offered nineteen to twenty-four: three `weapon`, two `shield`, one
+`bomb`, and what the level authors is what the player gets, because the cycle is gone. One weapon
+pickup raises both cadences and a hardpoint together; past the cap it becomes a bomb charge instead of
+unbounded damage, which is *"max speed auto-fire is way too strong"* answered at its cause. **A death
+now hands back half of what it took** rather than all of it. **There are no extra lives to find** —
+0082 replaced the extra-life pickup with a second shield, and a run's complement now only goes down.
 
 ⚠️ **A DEATH IS NOW AN EVENT WITH A LENGTH, AND THE SHIP SHOWS WHAT IT IS CARRYING** —
 [0079](decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md) and
@@ -291,7 +301,7 @@ fail when you mix something else in."*
 | 2 | **The death beat** — explosion, pause, respawn, and the same before the continue screen | A death is the most-repeated event in a run and it currently has no beat at all. Independent of everything else. | ✅ [0079](decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md), which also carries **the pyre** the player added to it |
 | 3 | **The view** — sky +33%, the perspective zoom, the box made a rectangle and extended, desktop-first | **Blocks 6, 7 and 8.** *"enemies fly too fast"* and *"a quarter of the screen is unplayable"* are both statements about the viewport; changing it changes what every one of those numbers means. | ✅ [0078](decisions/0078-the-sky-moves-a-third-faster.md) + [0080](decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md) — **mobile's own viewport is still owed** |
 | 4 | **Legibility** — shape and size differentiation, over the palette rather than instead of it | **Blocks the re-play.** A player who cannot tell a pickup from a bullet cannot give a verdict on anything below. | ✅ [0081](decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md) — the two bullets, and the ship's hull. **The pickups are deliberately left to chunk 5** |
-| 5 | **The pickup taxonomy** — one weapon pickup, per-level budgets, the 50% death scatter, and the max-speed nerf | The player calls pickups *"the lynchpin of whether this game is actually good"*. Comes before the dial because the dial is keyed to them. | **mapped, not started** — [`the-pickup-taxonomy-mapped`](../reports/the-pickup-taxonomy-mapped-2026-08-08.md). **Start here.** |
+| 5 | **The pickup taxonomy** — one weapon pickup, per-level budgets, the 50% death scatter, and the max-speed nerf | The player calls pickups *"the lynchpin of whether this game is actually good"*. Comes before the dial because the dial is keyed to them. | ✅ [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md), off [`the-pickup-taxonomy-mapped`](../reports/the-pickup-taxonomy-mapped-2026-08-08.md). **Start at row 6.** |
 | 6 | **The difficulty dial** — a dial that moves inside a level, keyed to the arsenal, sawtoothing across the run | The mechanism the project **does not have**. Smallest proof first: no multi-hit enemies until the 2nd upgrade has spawned. | |
 | 7 | **Enemies that fight** — slower, patterned, more of them shooting, slower bullets | The headline. Deliberately after 3 and 6, because *"too fast"* is measured through the viewport and *"actively trying to stop the player"* is what the dial spends. | |
 | 8 | **Bosses that are bosses** — tougher, damage that shows, one idea each, and a miniboss below them | Last, on [`medium-played`](../reports/medium-played-2026-08-07.md)'s own reasoning: a boss that dies in under a second is a curve problem before it is a movement problem, and 5 is the curve. | |
@@ -323,43 +333,52 @@ is the bug it looks like it prevents. The single description
 ⚠️ **The two numbers the map left open are now chosen and neither has been flown**, which is exactly
 the accumulation the ⚠️ below is about: 48 steps of beat, and the scatter thrown at the END of it.
 
-⚠️ **CHUNK 5 IS MAPPED AND IS WHERE THE NEXT SESSION STARTS** —
-[`the-pickup-taxonomy-mapped`](../reports/the-pickup-taxonomy-mapped-2026-08-08.md), which measures
-the density, proposes a taxonomy that satisfies the involution, and names the one line behind *"max
-speed auto-fire is way too strong"*. It supersedes nothing in
-[`two-things-found-while-chunking`](../reports/two-things-found-while-chunking-2026-08-08.md) — that
-report found the two constraints and this one measures against them.
+⚠️ **CHUNK 5 HAS LANDED** — [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md), off
+[`the-pickup-taxonomy-mapped`](../reports/the-pickup-taxonomy-mapped-2026-08-08.md). Six kinds became
+three, every level went from 19–24 entries to six, the cycle is gone, the 50% scatter is in and the
+unbounded overflow damage behind *"max speed auto-fire is way too strong"* is deleted. **Read the
+decision before touching a pickup number**: four of its parts are one decision and three of them
+cannot be tuned alone.
 
-⚠️ **The headline number is that the levels carry about FOUR TIMES the pickups the ask allows**, and
-the survival pair is over by a factor of five: every level authors 19–24 entries, of which nine are
-*shield or extra life*, against an ask of one or two. That is why the chunk is a content edit across
-seven lists with prose attached to most of the entries, and not a table swap.
+⚠️ **It amends more than it adds, and two of those are worth knowing before you read anything older
+than it.** `docs/game.md`'s **twenty-second rearm rule is gone** — three weapons a level cannot meet
+it, and the 50% scatter is what replaced it — and **there are no extra lives to find any more**, so a
+run's complement only goes down. 0082 has both, and the second is the one to look at the day
+[0068](decisions/0068-a-run-over-is-a-continue.md)'s free continue stops being free.
 
-⚠️ **NOTHING LANDED SINCE THE THIRD PLAY-TEST HAS BEEN FLOWN, AND THAT IS NOW SIX DECISIONS DEEP** —
-0077, 0078, 0079, 0080, 0081 and the two reports. This is the same accumulation
-[0075](decisions/0075-the-serialisation-is-checked.md) guards on the PR axis and no CI check can ask
-about. The habit is: land a batch, play it, then decide — **and the batch is now large enough that the
-next thing to happen should be a play-test rather than chunk 5.**
+⚠️ **THE SIX-DECISION BATCH HAS BEEN FLOWN AND THE VERDICT WAS SHORT** —
+[`the-batch-flown`](../reports/the-batch-flown-2026-08-08.md), taken on `into-the-coil.pages.dev`
+against a build confirmed byte-exact with `main`. *"Not much feedback… the ship now takes on a new
+appearance with upgrades and it looks good."* That closes the four numbers below and is
+[0081](decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md)'s first
+evidence. Read the report for what silence does and does not settle.
 
-⚠️ **What that play-test is FOR, in order.** Four of the six changes are things only a hand can
-judge, and each has a number behind it that nothing asserts:
+| what was owed | outcome |
+|---|---|
+| the death beat's 48 steps ([0079](decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md)) | not reported. Stands, with its first evidence |
+| the pyre, never seen in a still | not mentioned, which is not the same as seen |
+| the box's short shot range at the forward wall ([0080](decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md)) | not reported as the bug 0080 predicted |
+| the two bullets ([0081](decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md)) | not mentioned; still never seen in a still |
 
-1. **The death beat** ([0079](decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md))
-   — 48 steps, eight tenths of a second, several times a run. Too long is a tax and too short is not a
-   beat, and the decision says so about itself. The eyes-on pass also found the debris cloud is
-   **wide** — about 560px of 1280 — which the numbers did not suggest.
-2. **The pyre** (same decision) — the ring at the wreck, four sizes by unspent charges. **It has never
-   been seen**: it lives a fifth of a second and `scripts/shot.mjs` could not land on it in six
-   attempts.
-3. **The box** ([0080](decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md)) — the ship now
-   reaches 88% of both axes instead of 81% along. The named cost is that **a ship at its forward wall
-   has almost no shot range**, because a shot dies at the edge of the view; 8 units of travel against
-   30 before. That is the ordinary shape of a horizontal shooter and it is the thing most likely to be
-   reported next as a bug.
-4. **The two bullets** ([0081](decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md))
-   — enemy fire is now a pink square at 2.6 units against the player's orange disc at 1.8. **Also
-   never seen in a still**, for a rig reason the decision states: `shot.mjs` walks an unattended run,
-   so it can photograph what a level puts in front of a stationary ship but not a fight.
+⚠️ **AND THE BATCH IS ALREADY ONE DEEP AGAIN.** 0082 is unflown, and it is the largest change to what
+a run feels like since the enemies started shooting: a quarter of the pickups, a different weapon
+curve, and dying costing something. **The next thing to happen is a play-test, not chunk 6.**
+
+⚠️ **What that play-test is FOR, and every one of these is a number nobody has felt:**
+
+1. **Six pickups a level.** The ask's own budget, and the risk is in the other direction now — a level
+   that starves the player rather than drowning them. `gauntlet` is the one to watch: it is the
+   density level, and its worst stretch is fifty seconds without a weapon.
+2. **The 50% scatter.** Whether a death now costs enough, or too much. This and the density are one
+   decision — if dying reads as brutal, `SCATTER_KEPT` moves and the budget follows it.
+3. **The bomb pickup's two charges.** One a level on top of 0053's one-per-level-cleared. It is the
+   first thing to look at if bombs feel free.
+4. **The hull ladder against the new density.** `UPGRADES_PER_TIER` is 2 and was just validated by
+   hand — **against the old density**. At three weapons a level the last hull now arrives in level two
+   rather than inside level one.
+5. **Whether dropping the cycle was right.** It was the player's call and it is reversible, but what
+   it bought — a level authoring exactly what it offers — is only worth something if the field reads
+   as deliberate rather than as sparse.
 
 ⚠️ **THE PROOF HARNESS NOW REFUSES A STRANDED PROBE IN A SECOND RATHER THAN IN TWELVE MINUTES** —
 [0079](decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md) records why. An
@@ -452,20 +471,27 @@ small, and both are removing a false signal rather than a design change:
 **3 — The arsenal answers backwards**, which is the rear-firing upgrade and the omnidirectional
 special.
 
-⚠️ **IT CARRIES A PICKUP TAXONOMY PASS AND THAT IS A PRECONDITION, NOT A FOLLOW-UP.** In the player's
-words: *"there's a lot of upgrades now so I think this'll need at bare minimum better icons to
-distinguish and also better grouping of upgrades as it'll get complex pretty quickly."*
-[0052](decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md) already records that two of
-the six faces risk reading alike, and the title key lists six things when three of them alternate.
-Landing two more kinds first and tidying afterwards is how the field becomes unreadable.
+⚠️ **✅ THE PRECONDITION IS PAID.** It carried a pickup taxonomy pass —
+*"there's a lot of upgrades now so I think this'll need at bare minimum better icons to distinguish
+and also better grouping of upgrades as it'll get complex pretty quickly"* — and
+[0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) is it: six kinds became three, three
+silhouettes at three sizes, and the title key is three rows. **The field has room for a fourth kind
+now**, which is what this item wanted before it could land.
 
 ⚠️ **`loop` has already taken the urgency out of it** — a charger that comes back is a threat the
 forward guns can answer, so the rear weapon is an option rather than a requirement (0073).
 
-**4 — The curve, both halves, and it is now the largest open item.** Stretch the climb AND let a
-capped pickup convert into something spendable, tuned against each other. Four of the report's seven
-findings are this one system: *hard at tier 1–2 and easy at 3–4*, *upgrades too frequent*, *only
-shield refreshes matter at the cap*, *bosses die in under a second*.
+**4 — The curve, both halves.** Stretch the climb AND let a capped pickup convert into something
+spendable, tuned against each other. Four of the report's seven findings are this one system: *hard at
+tier 1–2 and easy at 3–4*, *upgrades too frequent*, *only shield refreshes matter at the cap*, *bosses
+die in under a second*.
+
+⚠️ **✅ BOTH HALVES HAVE NOW LANDED, AND NEITHER HAS BEEN PLAYED** —
+[0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md). The climb is stretched by the density
+cut (three weapon pickups a level instead of a stream), and *a capped pickup converts into something
+spendable* is exactly what a weapon pickup at the cap now does: it becomes a bomb charge. **That is
+this item's own shape, arriving from the other list**, which is worth noticing — the two feedback
+rounds asked for the same thing in different words.
 
 ⚠️ **It moved UP in importance because of 0073, not down.** A field that fights back changes what
 every number in it is worth, so this wants measuring against the current build rather than the one the
@@ -563,17 +589,15 @@ landed, and the first thing to put a number in 0039's arsenal —
 ⚠️ **What 0050 leaves owed is the tiers.** 0047's two harder ones were sized against a five-health
 ship and neither has been played since, and `resilience: hardy` is now a rung that does nothing.
 
-*Cycling pickups — **done**, [0052](decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md).*
-The three pairs are the ones asked for, the phase is a distance rather than a duration, and a level
-authors the pair with the camera picking the face.
+*Cycling pickups — **done and then UNDONE**, [0052](decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md)
+→ [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md).* The three pairs were the ones asked
+for and the mechanism worked; what stopped being true was its premise. At six pickups a level a coin
+flip on a premium piece reads as the game taking something away, and it made the ask's per-level
+budgets unauthorable. **A level now authors exactly what the player gets.**
 
-⚠️ **It amends 0050's line about the opening shield**: what a player finds in the empty opening
-stretch is now a shield *or* an extra life. Both answer the question a one-hit hull asks, and
-`src/content/levels.ts` says so where the pickup is authored.
-
-⚠️ **The title screen's key lists all six faces and does not say that a pickup alternates.**
-`docs/game.md` puts hints *where play proves they are needed, never pre-emptively*, so whether that
-reads as *six pickups* rather than *three that change* is a play-test question.
+⚠️ **The two questions this section left open are both closed by that**: what a player finds in the
+empty opening stretch is a shield, full stop (there is no extra life to alternate with), and the title
+key is three rows that each name one thing.
 
 *Bombs — **done**, [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md).* Two
 charges to start, one more per level cleared, thrown forward and detonating 80 world units ahead — the
@@ -676,6 +700,13 @@ first carries it.
   [0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md) keeps it off the
   tier axis; what is missing is a way to reach it and a decision about whether a run flown that way
   may finish.
+
+  ⚠️ **AND IT IS NOW STANDING IN FOR A SECOND THING** —
+  [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) took the extra-life pickup off the
+  field, so a run has **no way at all to gain a life**. 0039's *"lives that refill at a boundary are
+  refused BECAUSE findable ones exist"* now has nothing behind it. The continue is what makes that
+  survivable, and it was not built to do that either — so the day it stops being free, two open items
+  come due at once rather than one.
 
   ⚠️ **[0068](decisions/0068-a-run-over-is-a-continue.md)'s free continue is standing in for it**, and
   it was not built to: *"effectively unlimited lives."* It gets a tester past a level they cannot

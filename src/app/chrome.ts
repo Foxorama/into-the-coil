@@ -859,7 +859,10 @@ export function makeChrome(
 
   const livesGroup = document.createElement('div');
   livesGroup.className = 'itc-playing-hud-group';
-  const livesIcon = iconOf(PICKUPS.extraLife.sprite);
+  // ⚠️ `SPRITE.lifeIcon` and it was `PICKUPS.extraLife.sprite` — 0082 took the extra life off the
+  // field, and the plus survives as this readout's icon and nothing else. It sits beside the bomb
+  // group, which has always read its face straight off `SPRITE` for the same reason.
+  const livesIcon = iconOf(SPRITE.lifeIcon);
   livesIcon.className = 'itc-playing-hud-icon';
   livesIcon.setAttribute('aria-hidden', 'true');
   const livesCount = document.createElement('span');
