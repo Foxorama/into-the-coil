@@ -289,7 +289,42 @@ export interface Weapon {
    * nothing — and `docs/game.md` says an upgrade that cannot change the outcome is worse than none.
    */
   damage: number;
+  /**
+   * Which hull the ship is drawn as: `0`, `1` or `2`.
+   *
+   * ── AN UPGRADE HAS TO SHOW, AND FOR A LONG TIME NONE OF THEM DID ────────────────────────────────
+   *
+   * Reported from play: *"additional autofire and missile upgrades don't change the look of the
+   * player's ship."* `docs/game.md` makes it a rule — *"every upgrade changes how the ship looks on
+   * screen"* — and the ship had one silhouette from the first pickup to the last.
+   * `docs/decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md`.
+   *
+   * ⚠️ **On the resolved WEAPON rather than counted at the call site**, for the reason every other
+   * field here is: it is a pure function of the upgrade list, it is recomputed only when that list
+   * moves, and `src/app/frame.ts` may not walk a list sixty times a second. It also means a death
+   * puts the hull back with no second description of what the base ship looks like — an empty list
+   * resolves to tier 0, exactly as it resolves to the base weapon.
+   *
+   * ⚠️ **A NUMBER rather than a sprite index, because `content/pickups.ts` has no business naming
+   * art.** Which bitmap a tier is is `src/content/ships.ts`'s answer, and that is where `hullFor`
+   * lives.
+   */
+  tier: number;
 }
+
+/**
+ * How many upgrades each hull tier is worth.
+ *
+ * ⚠️ **Two, so the first tier arrives early enough to teach the rule.** A player who has taken one
+ * pickup and seen nothing change learns that pickups do not change the ship, and never looks again.
+ * At two, the second thing they pick up says otherwise.
+ *
+ * A starting point on `docs/decisions/0037-the-ship-has-mass.md`'s terms; nothing asserts on it.
+ */
+const UPGRADES_PER_TIER = 2;
+
+/** The most hull tiers there are — the last one is what everything past it also gets. */
+export const MAX_HULL_TIER = 2;
 
 /**
  * How much faster each `rapid` makes the ship fire, as a fraction of the gap between shots.
@@ -463,5 +498,12 @@ export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weap
     missileEvery,
     launchers,
     missileDamage,
+    /*
+      ⚠️ **Counted over the whole list rather than over barrels** — 0081. A player who spends four
+      upgrades on missiles has upgraded exactly as much as one who spent them on the pulse, and a
+      hull keyed to barrels alone would tell the first of them nothing. Clamped, because the list is
+      unbounded and the hulls are not.
+    */
+    tier: Math.min(MAX_HULL_TIER, Math.floor(upgrades.length / UPGRADES_PER_TIER)),
   };
 }

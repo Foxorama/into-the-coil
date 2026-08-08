@@ -46,6 +46,28 @@ import { ACROSS_SPAN } from '../sim/camera.ts';
 export const SPRITE_KINDS = [
   'ship',
   'shipHit',
+  /*
+    ── TWO MORE HULLS, BECAUSE AN UPGRADE HAS TO SHOW ─────────────────────────────────────────────
+
+    Reported from play, as the last of five defects: *"additional autofire and missile upgrades don't
+    change the look of the player's ship."* `docs/game.md` states it as a rule rather than a wish —
+    *"every upgrade changes how the ship looks on screen"* — and the ship had exactly one silhouette
+    from the first pickup to the last.
+    `docs/decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md`.
+
+    ⚠️ **The same wedge with more of it, and not three different ships.** What the player has to read
+    is *I am further along than I was*, and a hull that changed KIND would say *I am flying something
+    else* — the one thing that is not true. Each tier adds a pair of swept fins to the one before it,
+    so the growth is legible at a glance and the ship is recognisably the same object.
+
+    ⚠️ **Three tiers and not one per upgrade.** `weaponFor` already caps barrels, launchers and both
+    fire rates, and past those an upgrade becomes weight — so a hull per upgrade would need an
+    unbounded number of them. Three is what a player can tell apart at ship size.
+  */
+  'shipMk2',
+  'shipMk2Hit',
+  'shipMk3',
+  'shipMk3Hit',
   'drifter',
   'drifterHit',
   'lancer',
@@ -119,6 +141,29 @@ export const SPRITE_KINDS = [
   'boss7',
   'boss7Hit',
   'bullet',
+  /*
+    ── WHAT SHOOTS BACK, AND IT WAS THE SAME BITMAP AS WHAT THE PLAYER FIRES ───────────────────────
+
+    Reported from play: *"it's now very hard for sighted users to differentiate between power ups,
+    player/enemy fire, different types of enemies. When they're all the same colour and essentially
+    the same size, they're all the same."*
+    `docs/decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md`.
+
+    ⚠️ **`spit` used `SPRITE.bullet`, so a threat and the player's own shot were ONE BITMAP** — the
+    same disc, the same ink, the same 1.8 units. There was no channel at all separating the thing
+    that kills you from the thing you kill with, which is the report's own sentence read literally.
+
+    ⚠️ **A SQUARE, and it is the last primitive that survives fifteen pixels.** At 2.6 units on a
+    16:9 desktop this is about nineteen pixels; the shapes already proved at that size are a disc, a
+    diamond, a bar, a needle, a half-disc and a ring (`reports/enemy-silhouettes-2026-08-05.md`). A
+    square against the pulse's disc is *corners against none*, which is the same distinction the
+    turret already earns among the enemies — and it is not the drifter's diamond, because a diamond
+    is a square turned 45° and the two would read alike the moment either was small.
+
+    ⚠️ **Bigger than the pulse, on purpose.** Size is the cue that needs no learning: the thing the
+    player must not touch is drawn larger than the thing they fire.
+  */
+  'spit',
   /*
     ⚠️ **A DART, AND THE ONLY THING IN THE GAME DRAWN LONG ALONG ITS OWN TRAVEL IN THE BULLET INK.**
     The pulse is a disc of 1.8 units; this is 2.8 and pointed, so the two are told apart by shape and
@@ -289,6 +334,17 @@ export const SPRITE: Record<SpriteKind, number> = blitIndices(SPRITE_KINDS);
 export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   ship: 7,
   shipHit: 7,
+  /*
+    ⚠️ **The same extent at every tier, and the growth is in the DRAWING.** A bigger hull is a bigger
+    hurtbox's worth of picture — `tests/combat.test.ts` holds the band between `radius` and extent —
+    and a ship that got physically larger as it upgraded would be a ship that got easier to hit for
+    picking things up, which is the opposite of a reward. What grows is how much of the box the
+    silhouette fills. 0081.
+  */
+  shipMk2: 7,
+  shipMk2Hit: 7,
+  shipMk3: 7,
+  shipMk3Hit: 7,
   drifter: 5.5,
   drifterHit: 5.5,
   /*
@@ -347,6 +403,14 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   boss7: 38,
   boss7Hit: 38,
   bullet: 1.8,
+  /*
+    ⚠️ **Bigger than the pulse and drawn in the ENEMY ink** — 0081. It is the only thing on screen the
+    player must never touch that is smaller than a hull, so every channel it has is spent on saying
+    so: shape (a square against a disc), size (2.6 against 1.8) and role (`enemy` against `bullet`).
+    Its HURTBOX is unchanged at 0.9, so this is a legibility change and not a difficulty one — the
+    band `tests/combat.test.ts` holds puts it at 0.35 of its own extent, well inside.
+  */
+  spit: 2.6,
   // Longer than the pulse and pointed. A missile is the shot the player is meant to notice.
   missile: 3.4,
   // Heavier than the missile: the biggest thing that leaves the ship, and the one that is spent.

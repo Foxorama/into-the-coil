@@ -171,8 +171,15 @@ const BOUND_WIDTH = 0.017;
  */
 const BOUND_ALPHA = 0.35;
 
-/** Which ink each kind is drawn in. A role, never a colour — see `content/palette.ts`. */
-const INK_OF: Record<SpriteKind, keyof Palette> = {
+/**
+ * Which ink each kind is drawn in. A role, never a colour — see `content/palette.ts`.
+ *
+ * ⚠️ **Exported so a guard can read the ROLE rather than a hex string** — 0081. What the legibility
+ * report is about is which things share a channel, and *are these two drawn in the same ink* is a
+ * question about this table; asking it of `PALETTES` would compare colours and answer it once per
+ * palette, which is the same fact twice.
+ */
+export const INK_OF: Record<SpriteKind, keyof Palette> = {
   ship: 'player',
   drifter: 'enemy',
   lancer: 'enemy',
@@ -193,6 +200,18 @@ const INK_OF: Record<SpriteKind, keyof Palette> = {
   boss7: 'enemy',
   boss7Hit: 'enemy',
   bullet: 'bullet',
+  /*
+    ⚠️ **THE ENEMY INK, and this is the one ink assignment in the table that changed a rule** — 0081.
+    `bullet` used to mean *a shot*, whoever fired it, so the player's own fire and the fire they had
+    to dodge were the same colour as well as the same shape. It now means *the player's fire*, and
+    what shoots back wears the same ink as what shot it.
+
+    ⚠️ **That is colour carrying the SIDE and shape carrying the rest**, which is exactly the division
+    `docs/decisions/0024-the-accessibility-floor-is-settings.md` asks for: nothing here is told apart
+    by hue alone — a spit is a square at 2.6 units and an enemy is a five-to-nine-unit silhouette, so
+    sharing an ink costs nothing and buys the player one rule instead of two. *Pink will hurt you.*
+  */
+  spit: 'enemy',
   pickupLife: 'pickup',
   pickupRapid: 'pickup',
   pickupSpread: 'pickup',
@@ -248,6 +267,11 @@ const INK_OF: Record<SpriteKind, keyof Palette> = {
     roster. `docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md`.
   */
   shipHit: 'hazard',
+  // The upgraded hulls are the same ship — 0081 — so they carry the same two inks as the first one.
+  shipMk2: 'player',
+  shipMk2Hit: 'hazard',
+  shipMk3: 'player',
+  shipMk3Hit: 'hazard',
   drifterHit: 'impact',
   lancerHit: 'impact',
   weaverHit: 'impact',
@@ -297,6 +321,36 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
       ctx.lineTo(half - r * 0.3, half);
       ctx.lineTo(half - r * 0.7, half + r * 0.8);
       ctx.closePath();
+      break;
+    /*
+      ── THE SAME WEDGE, WITH MORE OF IT — 0081 ──────────────────────────────────────────────────
+
+      Each tier keeps the hull above and adds a pair of swept fins outside it, so what the player
+      reads is *the same ship, further along* rather than *a different ship*. The fins are drawn as
+      separate sub-paths and filled `evenodd` with the hull, exactly as every holed silhouette in this
+      file is — they are outside the wedge, so they add to it rather than cutting into it.
+
+      ⚠️ **The nose is untouched at every tier.** It is the one part of this silhouette the player
+      aims with, and it is what makes the three read as one object.
+    */
+    case 'shipMk2':
+    case 'shipMk2Hit':
+      ctx.moveTo(half + r, half);
+      ctx.lineTo(half - r * 0.7, half - r * 0.8);
+      ctx.lineTo(half - r * 0.3, half);
+      ctx.lineTo(half - r * 0.7, half + r * 0.8);
+      ctx.closePath();
+      drawFins(ctx, half, r, 0.62);
+      break;
+    case 'shipMk3':
+    case 'shipMk3Hit':
+      ctx.moveTo(half + r, half);
+      ctx.lineTo(half - r * 0.7, half - r * 0.8);
+      ctx.lineTo(half - r * 0.3, half);
+      ctx.lineTo(half - r * 0.7, half + r * 0.8);
+      ctx.closePath();
+      drawFins(ctx, half, r, 0.62);
+      drawFins(ctx, half, r, 0.95);
       break;
     case 'drifter':
     case 'drifterHit':
@@ -514,6 +568,14 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
     case 'bullet':
       ctx.arc(half, half, r * 0.8, 0, Math.PI * 2);
       break;
+    case 'spit':
+      /*
+        A SQUARE — corners against the pulse's disc, and the last primitive left that survives fifteen
+        pixels (0081). Axis-aligned rather than turned, because a square turned 45° is the drifter's
+        diamond and the two would read alike the moment either was small.
+      */
+      ctx.rect(half - r * 0.72, half - r * 0.72, r * 1.44, r * 1.44);
+      break;
     case 'debris':
       // A shard: small, angular, and deliberately NOT a disc, so a fragment is never mistaken for a
       // bullet at the one moment the screen is busiest.
@@ -704,6 +766,26 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
   }
   ctx.fill('evenodd');
   ctx.stroke();
+}
+
+/**
+ * A mirrored pair of swept fins at `spanY` of the hull's radius, trailing towards −x.
+ *
+ * ⚠️ **A helper rather than the same six lines twice, and it is the only one in this file** — the
+ * upgraded hulls differ from each other by *how many pairs*, so writing the pair out per tier would
+ * make *another pair* a copy-paste rather than a call. `drawKind` stays the place that says which
+ * shape a kind is; this says what one piece of that shape is.
+ *
+ * `bake.ts` is on `tests/budget.test.ts`'s deliberately-cold list, so a call per bake costs nothing.
+ */
+function drawFins(ctx: CanvasRenderingContext2D, half: number, r: number, spanY: number): void {
+  for (const side of [-1, 1]) {
+    ctx.moveTo(half - r * 0.15, half + r * spanY * side * 0.55);
+    ctx.lineTo(half + r * 0.1, half + r * spanY * side);
+    ctx.lineTo(half - r * 0.62, half + r * spanY * side);
+    ctx.lineTo(half - r * 0.78, half + r * spanY * side * 0.5);
+    ctx.closePath();
+  }
 }
 
 /** One star, in tile pixels: where it goes and how big it is. */

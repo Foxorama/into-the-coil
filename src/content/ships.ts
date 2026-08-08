@@ -44,6 +44,36 @@ export interface ShipRow extends Body {
 /** Written out rather than derived, so the table below cannot quietly lose a row. */
 export const SHIP_KINDS: readonly ShipKind[] = ['proof'];
 
+/**
+ * The hulls, in tier order — and their hit twins beside them.
+ *
+ * ⚠️ **Here rather than on the row, because a tier is not a property of THIS ship** — 0081. Every
+ * ship in the roster `docs/game.md` describes will have three of these, and the day a second row is
+ * added the alternative is three more fields on it that all say *the same wedge with more of it*.
+ *
+ * ⚠️ **A pair per tier, because `stepEntities` derives `sprite` from `spriteBase` AND `spriteHit`
+ * every step** (`src/sim/entity.ts`). Handing back only the base would leave an upgraded ship
+ * flashing as the tier-0 hull on every hit, which is a silhouette changing at the one moment the
+ * player is least able to read it.
+ */
+const HULLS: readonly { base: number; hit: number }[] = [
+  { base: SPRITE.ship, hit: SPRITE.shipHit },
+  { base: SPRITE.shipMk2, hit: SPRITE.shipMk2Hit },
+  { base: SPRITE.shipMk3, hit: SPRITE.shipMk3Hit },
+];
+
+/**
+ * Which hull a ship carrying `tier` upgrades' worth of kit is drawn as.
+ *
+ * ⚠️ **Clamped rather than trusted.** `weaponFor` already clamps, so this can only fire if the two
+ * ever disagree — and the failure it prevents is an `undefined` reaching `Entity.sprite`, which is a
+ * blit of nothing rather than an error anybody would see.
+ */
+export function hullFor(tier: number): { base: number; hit: number } {
+  const rung = tier < 0 ? 0 : tier > HULLS.length - 1 ? HULLS.length - 1 : Math.floor(tier);
+  return HULLS[rung] ?? HULLS[0]!;
+}
+
 export const SHIPS: Record<ShipKind, ShipRow> = {
   /**
    * The proof scene's ship.
