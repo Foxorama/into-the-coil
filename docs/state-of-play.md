@@ -90,8 +90,18 @@ is not a user gesture to any browser, so a player who touches nothing but a pad 
 until they tap the screen or press a key. 0072 has it written down so it is not rediscovered as a
 bug.
 
+⚠️ **AND THE ENEMIES NOW FIGHT BACK, which is the largest change to what this game IS since it had a
+run in it** — [0073](decisions/0073-an-enemy-is-a-pilot.md). Lancers steer across to your lane while
+they close, wardens fly in and orbit you, chargers pass and come back twice before they leave;
+drifters and turrets deliberately still do neither. How hard a body tries is a tier's `aggression`
+column. Auto-fire is untouched and always will be —
+`src/content/actions.ts` says there is no `fire` action and there must never be one.
+
 Each level opens on an empty screen so the player can find the controls before anything finds them —
-[0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md).
+[0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md) — and a level BOUNDARY no
+longer resets the scene: the camera, the ship and the sky all carry on
+([0076](decisions/0076-a-level-has-an-origin.md)). The forward edge of the player's box is drawn
+([0074](decisions/0074-the-box-is-drawn.md)), so the wall the ship meets is a wall the player can see.
 
 ⚠️ **A run that runs out of lives can now be continued** —
 [0068](decisions/0068-a-run-over-is-a-continue.md). The run-over screen's button says *Continue*, it
@@ -226,8 +236,25 @@ not a report per item.
 
 ## What is next
 
+⚠️ **START HERE, AND THE ANSWER IS NOT ON THIS LIST: FIVE CHANGES HAVE LANDED AND NOT ONE OF THEM HAS
+BEEN FLOWN.** [0072](decisions/0072-a-cue-is-baked-and-played.md),
+[0073](decisions/0073-an-enemy-is-a-pilot.md), [0074](decisions/0074-the-box-is-drawn.md) and
+[0076](decisions/0076-a-level-has-an-origin.md) all shipped in one session against a report nobody
+has re-played. **A large batch of feedback was gathered on 2026-08-08 and is expected to arrive as the
+next session's opening message** — read it before proposing anything below, because it was taken
+against this build and half of this list may already be answered or reordered by it.
+
+⚠️ **Every number in those four is a guess**, on [0037](decisions/0037-the-ship-has-mass.md)'s terms:
+five agilities, an orbit radius, two turn counts, three aggression multipliers, twelve cue rows and a
+boundary's opacity. Nothing asserts a value; what is asserted is a relationship.
+
+⚠️ **This is the same accumulation problem as the PR pile-up
+[0075](decisions/0075-the-serialisation-is-checked.md) now guards, on a different axis** — unvalidated
+work stacked on unvalidated work — and there is no guard for this one, because *"is it fun"* is not a
+thing CI can ask. It is a habit, and the habit is: land a batch, play it, then decide.
+
 **The list is [`medium-played`](../reports/medium-played-2026-08-07.md)'s seven findings, and the
-order below is the one the player set.** One of the seven has landed. Everything else here is a
+order below is the one the player set.** Four of the seven have landed. Everything else here is a
 pointer into that report or into the decision that answered it —
 [0029](decisions/0029-the-tracked-record-is-the-record.md), so read the report for the words rather
 than a summary of them here.
