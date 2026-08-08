@@ -276,10 +276,10 @@ fail when you mix something else in."*
 | # | chunk | why here | state |
 |---|---|---|---|
 | 1 | **The bug sweep** — pickups hitting a wall mid-screen, the death scatter firing straight up and down, missile tubes reaching three | Cheapest, and each one is a **false signal in the picture**. [0027](decisions/0027-measure-the-picture-not-the-model.md): tuning against a lying picture tunes the wrong thing. | ✅ [0077](decisions/0077-a-pickup-arrives-rather-than-stopping.md) |
-| 2 | **The death beat** — explosion, pause, respawn, and the same before the continue screen | A death is the most-repeated event in a run and it currently has no beat at all. Independent of everything else. | |
+| 2 | **The death beat** — explosion, pause, respawn, and the same before the continue screen | A death is the most-repeated event in a run and it currently has no beat at all. Independent of everything else. | **mapped, not started** — [`the-death-beat-mapped`](../reports/the-death-beat-mapped-2026-08-08.md) |
 | 3 | **The view** — sky +33%, the perspective zoom, the box made a rectangle and extended, desktop-first | **Blocks 6, 7 and 8.** *"enemies fly too fast"* and *"a quarter of the screen is unplayable"* are both statements about the viewport; changing it changes what every one of those numbers means. | **sky ✅** [0078](decisions/0078-the-sky-moves-a-third-faster.md) — the zoom and the box are the rest |
 | 4 | **Legibility** — shape and size differentiation, over the palette rather than instead of it | **Blocks the re-play.** A player who cannot tell a pickup from a bullet cannot give a verdict on anything below. | |
-| 5 | **The pickup taxonomy** — one weapon pickup, per-level budgets, the 50% death scatter, and the max-speed nerf | The player calls pickups *"the lynchpin of whether this game is actually good"*. Comes before the dial because the dial is keyed to them. | |
+| 5 | **The pickup taxonomy** — one weapon pickup, per-level budgets, the 50% death scatter, and the max-speed nerf | The player calls pickups *"the lynchpin of whether this game is actually good"*. Comes before the dial because the dial is keyed to them. | **two constraints already known** — [`two-things-found-while-chunking`](../reports/two-things-found-while-chunking-2026-08-08.md) |
 | 6 | **The difficulty dial** — a dial that moves inside a level, keyed to the arsenal, sawtoothing across the run | The mechanism the project **does not have**. Smallest proof first: no multi-hit enemies until the 2nd upgrade has spawned. | |
 | 7 | **Enemies that fight** — slower, patterned, more of them shooting, slower bullets | The headline. Deliberately after 3 and 6, because *"too fast"* is measured through the viewport and *"actively trying to stop the player"* is what the dial spends. | |
 | 8 | **Bosses that are bosses** — tougher, damage that shows, one idea each, and a miniboss below them | Last, on [`medium-played`](../reports/medium-played-2026-08-07.md)'s own reasoning: a boss that dies in under a second is a curve problem before it is a movement problem, and 5 is the curve. | |
@@ -288,6 +288,37 @@ fail when you mix something else in."*
 [0023](decisions/0023-the-long-axis-is-the-scroll-axis.md)'s *only lookahead varies by device* and
 [0024](decisions/0024-the-accessibility-floor-is-settings.md)'s loud default. Neither is a constant
 edit and neither should be landed as one.
+
+### Where the session that took this feedback got to
+
+**Three landed on 2026-08-08, in this order**, and each is linked from its row above:
+[0077](decisions/0077-a-pickup-arrives-rather-than-stopping.md) (chunk 1, all three defects),
+[0078](decisions/0078-the-sky-moves-a-third-faster.md) (the sky half of chunk 3), and the record
+itself. **Chunk 2 was mapped and deliberately not started** —
+[`the-death-beat-mapped`](../reports/the-death-beat-mapped-2026-08-08.md) has the whole
+investigation, including the eight call sites that have to be gated and the two numbers nobody has
+chosen. **Start there**: it is the cheapest remaining chunk and the map is already paid for.
+
+⚠️ **Two constraints on chunk 5 are already known and both change what it costs** —
+[`two-things-found-while-chunking`](../reports/two-things-found-while-chunking-2026-08-08.md).
+Merging two pickups into one takes `CYCLE` from six kinds to five, and
+[0052](decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md)'s cycle is a **proved
+involution** that an odd count cannot satisfy without a fixed point; and *"max speed auto-fire is way
+too strong"* has a named line behind it — every upgrade past every cap is `damage++` with no ceiling
+anywhere, which is half of a sentence `src/content/pickups.ts` quotes in full.
+
+⚠️ **Nothing landed since the third play-test has been flown**, which is the same accumulation
+[0075](decisions/0075-the-serialisation-is-checked.md) guards on the PR axis and no CI check can ask
+about. The habit is: land a batch, play it, then decide.
+
+⚠️ **Two guards were caught measuring something adjacent to what they named, in one session.** 0077's
+bob guard stayed green with the bob switched off — it was measuring the band the pickup waits in, and
+the ease-in is worth five units of band on its own — and 0078 found `tests/budget.test.ts` restating
+the sky array under a comment claiming it did not. Both were found by changing a number and asking
+what should have gone red. **`npm run prove` caught the first and would not have caught the second**,
+because a probe can only redden a guard that exists; the second was found because the change forced a
+look at the copy. That is [0027](decisions/0027-measure-the-picture-not-the-model.md)'s gap and
+0019 does not close it.
 
 ⚠️ **Chunk 6 is the largest thing on the list and it is not a tuning pass.** Nothing in `src/`
 currently reads the player's arsenal to decide what to spawn; difficulty is a tier chosen before a run
