@@ -38,7 +38,8 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **the ship is one hit; a shield is what stands in front of it** | [0050](decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md) |
 | **a missile is the second auto-weapon; a launcher is a place on the ship** | [0051](decisions/0051-a-missile-is-the-second-auto-weapon.md) |
 | ~~a pickup is two things, and the camera says which~~ — **superseded** | [0052](decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md) → [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) |
-| **a pickup is rare, and says what it is: six a level, of three kinds** | [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) |
+| **a pickup is rare, and says what it is** | [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) |
+| **two upgrade ladders of four tiers; nine pickups a level, of four kinds** | [0083](decisions/0083-two-ladders-of-four.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
 | **a death takes the ship, and the level carries on** | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
@@ -360,25 +361,31 @@ evidence. Read the report for what silence does and does not settle.
 | the box's short shot range at the forward wall ([0080](decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md)) | not reported as the bug 0080 predicted |
 | the two bullets ([0081](decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md)) | not mentioned; still never seen in a still |
 
-⚠️ **AND THE BATCH IS ALREADY ONE DEEP AGAIN.** 0082 is unflown, and it is the largest change to what
-a run feels like since the enemies started shooting: a quarter of the pickups, a different weapon
-curve, and dying costing something. **The next thing to happen is a play-test, not chunk 6.**
+⚠️ **AND 0082 WAS AMENDED BEFORE IT WAS EVER PLAYED THROUGH** —
+[0083](decisions/0083-two-ladders-of-four.md). Missiles are their own kind again, both upgrade ladders
+are exactly four tiers, a level offers **nine** pickups rather than six, and the 50% scatter is gone
+(*"too punishing"*, played). **Read 0083 before 0082**: it supersedes 0082 on the taxonomy, the density
+and the scatter, and 0082 remains the record of why the four kinds became one in the first place.
 
-⚠️ **What that play-test is FOR, and every one of these is a number nobody has felt:**
+⚠️ **The one thing 0082 said that 0083 makes obsolete on purpose**: it argued that dropping the cycle
+was right because a coin flip on a premium piece reads as the game taking something away. Still true —
+and the cycle is coming back one level down, **between weapon TYPES rather than between kinds**, which
+is the version that argument always supported.
 
-1. **Six pickups a level.** The ask's own budget, and the risk is in the other direction now — a level
-   that starves the player rather than drowning them. `gauntlet` is the one to watch: it is the
-   density level, and its worst stretch is fifty seconds without a weapon.
-2. **The 50% scatter.** Whether a death now costs enough, or too much. This and the density are one
-   decision — if dying reads as brutal, `SCATTER_KEPT` moves and the budget follows it.
-3. **The bomb pickup's two charges.** One a level on top of 0053's one-per-level-cleared. It is the
-   first thing to look at if bombs feel free.
-4. **The hull ladder against the new density.** `UPGRADES_PER_TIER` is 2 and was just validated by
-   hand — **against the old density**. At three weapons a level the last hull now arrives in level two
-   rather than inside level one.
-5. **Whether dropping the cycle was right.** It was the player's call and it is reversible, but what
-   it bought — a level authoring exactly what it offers — is only worth something if the field reads
-   as deliberate rather than as sparse.
+⚠️ **What the next play-test is FOR, and every one of these is a number nobody has felt:**
+
+1. **Nine pickups a level, and whether the weapon cap lands where it should.** Four weapons cap the
+   guns about 48 seconds before the boss; two missiles reach tier 2; then a bomb and a shield. *"Then
+   I'll test and we'll cut back or add based on that."*
+2. **The bomb pickup's two charges.** One a level on top of 0053's one-per-level-cleared. First thing
+   to look at if bombs feel free.
+3. **The hull ladder, which has now been re-measured out from under itself twice.**
+   `UPGRADES_PER_TIER` is 2 over three hulls; a run can reach eight upgrade tiers, so the last hull
+   arrives at four — inside level one again. The hand that validated it was flying a different density.
+4. **The four glyphs.** Shield and bomb turned a quarter turn, missiles are a new face. Eyes-on says
+   all four read at the key and in play; whether they read *in a fight* is what 0081's rig cannot show.
+5. **Whether a capped ladder handing out bombs reads as a reward or as a shrug.** It is what pays for
+   the weapon cap existing at all, and no still frame can say.
 
 ⚠️ **THE PROOF HARNESS NOW REFUSES A STRANDED PROBE IN A SECOND RATHER THAN IN TWELVE MINUTES** —
 [0079](decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md) records why. An

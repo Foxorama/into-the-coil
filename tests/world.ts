@@ -22,7 +22,6 @@ import {
   PICKUP_KINDS,
   type PickupKind,
   type PickupRow,
-  type UpgradeKind,
   weaponFor,
 } from '../src/content/pickups.ts';
 import { makeCollected } from '../src/sim/collide.ts';
@@ -93,7 +92,6 @@ export function inertLevel(): {
   pickups: Pool<Entity>;
   pickupRows: readonly PickupRow[];
   pickupKinds: Record<PickupKind, number>;
-  scattered: UpgradeKind[];
   collected: ReturnType<typeof makeCollected>;
   onPickup: (kind: PickupKind) => void;
   weapon: ReturnType<typeof weaponFor>;
@@ -147,7 +145,6 @@ export function inertLevel(): {
 
 /** The pickup half of a world, built the way `mount.ts` builds it rather than restated. */
 export function pickupParts(): {
-  scattered: UpgradeKind[];
   nextPickup: number;
   pickups: Pool<Entity>;
   pickupRows: readonly PickupRow[];
@@ -159,7 +156,6 @@ export function pickupParts(): {
     pickupKinds[k] = index;
   });
   return {
-    scattered: new Array<UpgradeKind>(CAPACITY.pickups),
     nextPickup: 0,
     pickups: new Pool<Entity>(CAPACITY.pickups, makeEntity),
     pickupRows: PICKUP_KINDS.map((k) => PICKUPS[k]),

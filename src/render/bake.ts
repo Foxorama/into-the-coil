@@ -216,6 +216,7 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // number beside it is drawn in the player's own colour and the icon has to sit with it.
   lifeIcon: 'pickup',
   pickupWeapon: 'pickup',
+  pickupMissile: 'pickup',
   pickupShield: 'pickup',
   /*
     ⚠️ **THE PICKUP INK OVER THE BOMB'S OWN SILHOUETTE, and the ink is doing the whole job here.**
@@ -637,6 +638,30 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
       ctx.closePath();
       break;
     }
+    case 'pickupMissile': {
+      /*
+        THE WEAPON'S CHEVRON, TURNED A QUARTER TURN TO POINT UP THE SCREEN.
+
+        ⚠️ **A family rather than a second glyph to learn** — 0083. The two upgrade pickups are the
+        same kind of object (a four-tier ladder over one of the ship's two auto-weapons), so they read
+        as one thing in two orientations. The chevron points along the lane and this points across it,
+        which is also the direction a wing tube sits.
+
+        ⚠️ **Rotation is a weak cue for an ENEMY and a strong one here**, which is worth stating
+        because `reports/enemy-silhouettes-2026-08-05.md` cost this project an art pass for ignoring
+        it. That finding was about concavity and point count failing at fifteen pixels; a chevron is
+        the most strongly asymmetric shape in the atlas and 40px of it is unambiguous. And it is not
+        rotation alone: 5.5 units against the weapon's 6.
+      */
+      ctx.moveTo(half, half - r);
+      ctx.lineTo(half + r * 0.85, half + r * 0.2);
+      ctx.lineTo(half + r * 0.85, half + r);
+      ctx.lineTo(half, half + r * 0.25);
+      ctx.lineTo(half - r * 0.85, half + r);
+      ctx.lineTo(half - r * 0.85, half + r * 0.2);
+      ctx.closePath();
+      break;
+    }
     case 'missile':
       /*
         A dart: a long point forward, a notched tail. The notch is what keeps it from reading as a
@@ -661,12 +686,27 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
     case 'pickupBomb':
     case 'bomb':
       /*
-        A disc with a wedge taken out of the tail. The notch is what stops it reading as a large
-        pulse at twenty pixels — the lesson the lancer's silhouette cost, applied to the player's
+        A disc with a spike at the TOP — a bomb with a fuse. The spike is what stops it reading as a
+        large pulse at twenty pixels: the lesson the lancer's silhouette cost, applied to the player's
         own side of the screen.
+
+        ⚠️ **A quarter turn from where it was, and it moves the THROWN bomb as well as the pickup.**
+        The spike used to trail at -x, which is a fin on a projectile and reads as nothing at all on
+        an object holding station in a lane. Turning only the pickup would have split the one drawing
+        these two kinds share, and that sharing is deliberate — a player learns the shape from the
+        trigger strip before they ever find one, so *the thing on the ground is the thing on the
+        button* costs no teaching. A fuse reads on both; a fin read on neither.
+
+        ⚠️ **THE FUSE IS THREE TIMES THE STUB IT WAS, AND A SCREENSHOT IS WHY.** The rotation alone put
+        a 0.22r nub on top of a 0.78r disc, which at the title key's sixteen pixels is under two pixels
+        and simply is not there — the icon read as a plain green dot beside three shapes that read
+        fine. Turning the shape achieved nothing a player could see, which is
+        `docs/decisions/0027-measure-the-picture-not-the-model.md` exactly: the model had rotated and
+        the picture had not. The disc is now 0.6r and the spike reaches r over a narrower base, so it
+        is a fuse rather than a bump.
       */
-      ctx.arc(half, half, r * 0.78, Math.PI * 0.78, Math.PI * 1.22, true);
-      ctx.lineTo(half - r, half);
+      ctx.arc(half, half, r * 0.6, Math.PI * 1.35, Math.PI * 1.65, true);
+      ctx.lineTo(half, half - r);
       ctx.closePath();
       break;
     // The pyre's rungs are the SAME drawing at a different extent — 0079. Four bitmaps, one shape.
@@ -697,15 +737,26 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
     }
     case 'pickupShield': {
       /*
-        A heraldic shield: flat across the top, straight down the sides, tapering to a point. Drawn
-        pointing +x like everything else, so the taper is the nose — which also means it reads the
-        same way up in both orientations without a second bake.
+        A heraldic shield: flat across the top, straight down the sides, tapering to a point at the
+        BOTTOM.
+
+        ⚠️ **A quarter turn from where it was, and the old orientation was the mistake.** It used to
+        point +x *"like everything else, so the taper is the nose — which also means it reads the same
+        way up in both orientations without a second bake."* Both halves of that were wrong for this
+        one shape: a pickup is not a body that flies, so it has no nose; and
+        `docs/decisions/0031-landscape-is-the-shipped-orientation.md` dropped portrait, so the second
+        bake it was avoiding does not exist. What it cost was the one pickup whose meaning a player
+        already owns — a shield lying on its side is a pennant, which is what the picture showed.
+
+        ⚠️ **This is the only sprite in the atlas deliberately NOT drawn along +x.** Everything else
+        here is a body with a heading; if portrait ever returns, `bakeOne`'s `top` rotation will turn
+        this one the wrong way and it will need its own arm.
       */
-      ctx.moveTo(half - r, half - r * 0.85);
-      ctx.lineTo(half + r * 0.25, half - r * 0.85);
-      ctx.lineTo(half + r, half);
-      ctx.lineTo(half + r * 0.25, half + r * 0.85);
-      ctx.lineTo(half - r, half + r * 0.85);
+      ctx.moveTo(half + r * 0.85, half - r);
+      ctx.lineTo(half + r * 0.85, half + r * 0.25);
+      ctx.lineTo(half, half + r);
+      ctx.lineTo(half - r * 0.85, half + r * 0.25);
+      ctx.lineTo(half - r * 0.85, half - r);
       ctx.closePath();
       break;
     }

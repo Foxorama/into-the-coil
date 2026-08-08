@@ -6,7 +6,16 @@ import { SHIPS } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { SPRITE, SPRITE_EXTENT } from '../src/content/sprites.ts';
-import { weaponFor, type UpgradeKind } from '../src/content/pickups.ts';
+import {
+  FASTEST_FIRE,
+  MAX_BARRELS,
+  MAX_LAUNCHERS,
+  MISSILE_FASTEST,
+  UPGRADE_KINDS,
+  UPGRADE_TIERS,
+  weaponFor,
+  type UpgradeKind,
+} from '../src/content/pickups.ts';
 import { playableWorld, NO_LEVEL } from './world.ts';
 
 /**
@@ -34,7 +43,7 @@ const A_WHILE = 200;
  * constant rather than a literal in eight places, because it is the same fact each time and it is
  * exactly the fact that just moved.
  */
-const ARMED: readonly UpgradeKind[] = ['weapon'];
+const ARMED: readonly UpgradeKind[] = ['missile'];
 
 function quietWorld(upgrades: readonly UpgradeKind[] = []): { world: World; frame: GameFrame } {
   const built = playableWorld(NO_LEVEL);
@@ -115,31 +124,30 @@ describe('a launcher is a position on the ship', () => {
       that broke was the number of missiles LEAVING THE SHIP, which is what the player counted.
     */
     /*
-      ⚠️ **THE RUNGS ARE NO LONGER ONE-PER-UPGRADE, AND 0082 IS WHY.** Four upgrade kinds became one
-      `weapon` pickup whose every repeat *"increases its tier and rate of fire together"*, so a rung
-      spends itself on a launcher OR a barrel — whichever hardpoint is proportionally further from its
-      cap — while both cadences move regardless. `src/content/pickups.ts` has the ladder; the order it
-      produces is launcher, barrel, barrel, launcher, barrel.
+      ⚠️ **A MISSILE LADDER OF FOUR TIERS OVER TWO TUBES, so two of the four buy rate alone** — 0083,
+      and the ask's own words: *"missile upgrades - add missile tubes and upgrade missile speed -> max
+      of two tubes and 4 speed rate."* `src/content/pickups.ts` interpolates the tubes across the
+      tiers, which is why the second one lands at tier 3 rather than at tier 2.
 
-      ⚠️ **The FIRST rung is the launcher, and that is 0056 surviving the merge.** The base ship has no
-      tube, so a merge that handed the missile out at rung three would quietly un-earn the second
-      weapon. The pair at count 1 is what holds it.
+      ⚠️ **The FIRST tier is a tube, and that is 0056 surviving two taxonomy changes.** The base ship
+      has no launcher, so a ladder that handed the missile out at tier 2 would quietly un-earn the
+      second weapon. The pair at count 1 is what holds it.
 
-      ⚠️ **Written as the expected count per rung rather than `min(n, 2)`.** The old formula was the
-      ladder restated in a second place; this is a table of what the player gets, which is the thing
-      a play-test can disagree with.
+      ⚠️ **Written as the expected count per tier rather than as a formula.** A formula would be the
+      ladder restated in a second place; this is a table of what the player gets, which is the thing a
+      play-test can disagree with.
     */
     const LAUNCHERS_AT: readonly (readonly [number, number])[] = [
       [1, 1],
       [2, 1],
-      [3, 1],
+      [3, 2],
       [4, 2],
       [6, 2],
       [12, 2],
     ];
     for (const [upgradeCount, expected] of LAUNCHERS_AT) {
       const upgrades: UpgradeKind[] = [];
-      for (let i = 0; i < upgradeCount; i++) upgrades.push('weapon');
+      for (let i = 0; i < upgradeCount; i++) upgrades.push('missile');
       const { world, frame } = quietWorld(upgrades);
       expect(world.weapon.launchers, `${upgradeCount} upgrades did not produce ${expected} launchers`).toBe(expected);
 
@@ -159,7 +167,7 @@ describe('a launcher is a position on the ship', () => {
       minus, then plus, so simply stopping at two would have left a fully-upgraded ship firing
       off-centre — a worse picture than the defect being fixed.
     */
-    const one = quietWorld(['weapon']);
+    const one = quietWorld(['missile']);
     one.world.missileIn = 1;
     one.frame.step();
     expect(one.world.missiles.size).toBe(1);
@@ -167,7 +175,9 @@ describe('a launcher is a position on the ship', () => {
 
     // ⚠️ FOUR, and it was two. The second launcher is the ladder's fourth rung since 0082 merged the
     // upgrade kinds — the test above has the table, and this is the first place that shape is felt.
-    const { world, frame } = quietWorld(['weapon', 'weapon', 'weapon', 'weapon']);
+    // ⚠️ THREE, and it was two: 0083 interpolates two tubes across four tiers, so the second lands at
+    // tier 3. The table in the test above is where that shape is stated.
+    const { world, frame } = quietWorld(['missile', 'missile', 'missile']);
     world.missileIn = 1;
     frame.step();
     const across: number[] = [];
@@ -189,7 +199,9 @@ describe('a launcher is a position on the ship', () => {
     */
     // ⚠️ FOUR, and it was two. The second launcher is the ladder's fourth rung since 0082 merged the
     // upgrade kinds — the test above has the table, and this is the first place that shape is felt.
-    const { world, frame } = quietWorld(['weapon', 'weapon', 'weapon', 'weapon']);
+    // ⚠️ THREE, and it was two: 0083 interpolates two tubes across four tiers, so the second lands at
+    // tier 3. The table in the test above is where that shape is stated.
+    const { world, frame } = quietWorld(['missile', 'missile', 'missile']);
     world.missileIn = 1;
     frame.step();
     const shipAcross = world.ship.across;
@@ -271,76 +283,120 @@ function damageDealt(kind: 'pulse' | 'missile', row: typeof ENEMIES.turret): num
 }
 
 describe('the upgrades reach the weapon rather than the wrong one', () => {
-  it('THE MERGE: one pickup moves BOTH weapons, which is what "together" means', () => {
+  it('THE SPLIT: a weapon pickup never touches the missiles, and a missile never touches the guns', () => {
     /*
-      ── THIS ASSERTION IS THE EXACT OPPOSITE OF WHAT IT USED TO BE ─────────────────────────────────
+      ── THIS ASSERTION HAS NOW BEEN BOTH WAYS ROUND IN TWO DAYS ────────────────────────────────────
 
-      ⚠️ **It was *a missile upgrade never moves the pulse, and a pulse upgrade never moves the
-      missiles*.** That was the right rule when there were four upgrade kinds and the failure it caught
-      was a copy-paste in `weaponFor` sending a pickup to the wrong weapon.
+      ⚠️ **It began as *a missile upgrade never moves the pulse*** — four upgrade kinds, and the
+      failure it caught was a copy-paste in `weaponFor` sending a pickup to the wrong weapon.
 
-      ⚠️ **`docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md` merged the four into one**, on
-      the ask's own words: *"rapid fire/rapid missiles rapid whatever else we add need to be combined
-      into one power up… picking up a second of the same weapon needs to increase it's tier and rate of
-      fire together."* Separation is no longer the property; **simultaneity is**, and a `weaponFor` that
-      moved only one weapon per rung would now be the bug.
+      ⚠️ **0082 merged the kinds and inverted it to *one pickup moves BOTH*.** That was right for a
+      single `weapon` ladder whose ask was *"increase its tier and rate of fire together."*
 
-      ⚠️ **The one thing kept from the old test is that the two rates are NOT the same number.**
-      `RAPID_FACTOR` and `MISSILE_FACTOR` differ deliberately — a missile is worth three pulses, so the
-      same factor on both would let the pulse stop mattering by the third rung — and a merge that
-      collapsed them into one constant would pass everything above.
+      ⚠️ **0083 split them again and it is back to separation** — *"I want weapons and missiles as
+      separate upgrades because we're going to add different types of weapons and missiles."* Two
+      ladders, two tier counts, and a pickup that reached across would make `tiersOf` a lie.
+
+      ⚠️ **Worth stating plainly: the rule flipped because the CONTENT flipped, not because anyone was
+      wrong.** Each version was the correct guard for the taxonomy it was written against, which is
+      what a guard tied to a decision looks like when the decision moves.
     */
     const base = weaponFor(SHIPS.proof, []);
-    const one = weaponFor(SHIPS.proof, ['weapon']);
-    expect(one.fireEvery, 'a weapon pickup left the pulse cadence alone').toBeLessThan(base.fireEvery);
-    expect(one.missileEvery, 'a weapon pickup left the missile cadence alone').toBeLessThan(base.missileEvery);
-    expect(one.launchers, 'the first rung is not the launcher, so the missile is not earned').toBe(base.launchers + 1);
 
-    /*
-      The two cadences fall at their own rates. Compared as fractions of where each started, because
-      the two base numbers are different — 9 steps against 45 — so a raw difference proves nothing.
-    */
-    const pulseShare = one.fireEvery / base.fireEvery;
-    const missileShare = one.missileEvery / base.missileEvery;
-    expect(pulseShare, 'both weapons speed up by the same fraction, so the pulse will stop mattering').not.toBeCloseTo(
-      missileShare,
-      2,
+    const gun = weaponFor(SHIPS.proof, ['weapon']);
+    expect(gun.fireEvery, 'a weapon pickup left the pulse cadence alone').toBeLessThan(base.fireEvery);
+    expect(gun.shots, 'a weapon pickup added no barrel').toBeGreaterThan(base.shots);
+    expect(gun.missileEvery, 'a weapon pickup moved the missile cadence').toBe(base.missileEvery);
+    expect(gun.launchers, 'a weapon pickup added a launcher').toBe(base.launchers);
+
+    const tube = weaponFor(SHIPS.proof, ['missile']);
+    expect(tube.missileEvery, 'a missile pickup left the missile cadence alone').toBeLessThan(base.missileEvery);
+    expect(tube.launchers, 'the first missile tier is not a tube, so the second weapon is not earned').toBe(
+      base.launchers + 1,
     );
+    expect(tube.fireEvery, 'a missile pickup moved the pulse cadence').toBe(base.fireEvery);
+    expect(tube.shots, 'a missile pickup added a barrel').toBe(base.shots);
   });
 
-  it('THE NERF: a weapon past its caps stops growing, rather than piling on damage', () => {
+  it('THE TIERS: each ladder is exactly UPGRADE_TIERS long, and every tier changes something', () => {
     /*
-      ── THIS TEST HELD THE BEHAVIOUR THAT WAS THE REPORTED DEFECT ─────────────────────────────────
+      ⚠️ **THE NUMBER IS THE ASK AND IT IS NOW A CONSTANT** — *"4 tiers for weapons, 4 tiers for
+      missiles."* 0083 made `UPGRADE_TIERS` the statement and interpolated the cadences across it,
+      because under the old multiplicative ladder *how many tiers is a weapon* was whatever
+      `round(9 × 0.78ⁿ) ≥ 4` happened to produce — three, with nothing saying so.
 
-      ⚠️ **It was *spends an upgrade that has nowhere left to go on damage instead*, and it was
-      correct.** `docs/game.md` says *an upgrade that cannot change the outcome is worse than none*, so
-      once barrels, launchers and both fire floors were capped, `weaponFor` put every further upgrade
-      into `damage`. Nothing bounded it.
+      ⚠️ **Every tier must change SOMETHING, which is `docs/game.md`'s rule and the thing rounding
+      threatens.** Barrels run 1 → 4 across four tiers and tubes run 0 → 2, so some tiers buy a
+      hardpoint and some buy rate alone — but none may buy nothing, or a level is handing out a pickup
+      that does not land.
 
-      ⚠️ **Reported from play**: *"max speed auto-fire is way too strong for the current game - when
-      you get max speed nothing is a challenge, bosses die in less a second and they are supposed to be
-      tough."* The twelfth pickup was worth as much as the fifth and the curve never flattened.
-      `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md`.
+      ⚠️ **And the ladder must STOP at the tier count**, or `effectOf`'s bomb conversion fires while
+      the ship is still improving.
+    */
+    for (const kind of UPGRADE_KINDS) {
+      const carried: UpgradeKind[] = [];
+      let previous = weaponFor(SHIPS.proof, carried);
+      for (let tier = 1; tier <= UPGRADE_TIERS; tier++) {
+        carried.push(kind);
+        const now = weaponFor(SHIPS.proof, carried);
+        expect(JSON.stringify(now), `tier ${tier} of ${kind} changed nothing about the ship`).not.toBe(
+          JSON.stringify(previous),
+        );
+        previous = now;
+      }
+      const past = weaponFor(SHIPS.proof, [...carried, kind]);
+      expect(JSON.stringify(past), `a ${kind} past tier ${UPGRADE_TIERS} still changed the ship`).toBe(
+        JSON.stringify(previous),
+      );
+    }
+  });
 
-      ⚠️ **The rule it was serving is kept and paid for in the SHELL, not here** — a weapon that cannot
-      grow makes the next pickup a bomb charge (`src/app/mount.ts`, and `tests/shields.test.ts` drives
-      it). So what this now holds is the flattening: the twentieth weapon is exactly the fifth.
+  it('THE FLOORS: the last tier lands exactly on them, and nothing goes past', () => {
+    /*
+      ⚠️ **Both floors are bounds rather than targets, and until 0083 the ladder stopped SHORT of
+      them** — a multiplicative step refuses the rung that would cross, so the fastest a fully-upgraded
+      ship ever fired was whatever the last legal multiply produced. Interpolating to the floor lands on
+      it, which is what makes *tier 4 is maxed* true rather than approximately true.
+
+      ⚠️ **Asserted against the ship's own base and the resolved maximum**, never against 4 and 20
+      typed here — those are `src/content/pickups.ts`'s numbers and this is a test of the RELATIONSHIP.
     */
     const base = weaponFor(SHIPS.proof, []);
-    const full = weaponFor(SHIPS.proof, Array.from({ length: 5 }, () => 'weapon' as UpgradeKind));
-    const absurd = weaponFor(SHIPS.proof, Array.from({ length: 20 }, () => 'weapon' as UpgradeKind));
+    const guns: UpgradeKind[] = [];
+    const tubes: UpgradeKind[] = [];
+    for (let i = 0; i < UPGRADE_TIERS; i++) {
+      guns.push('weapon');
+      tubes.push('missile');
+    }
+    const maxGun = weaponFor(SHIPS.proof, guns);
+    const maxTube = weaponFor(SHIPS.proof, tubes);
 
-    expect(absurd.damage, 'the pulse still gains damage without a ceiling').toBe(base.damage);
-    expect(absurd.missileDamage, 'the missile still gains damage without a ceiling').toBe(base.missileDamage);
-    expect(absurd, 'a weapon kept growing past the rung where it should have stopped').toEqual(full);
     /*
-      ⚠️ **And the flattening must not have started early**, which is the failure in the other
-      direction: a ladder that capped at rung two would satisfy every assertion above while making
-      pickups three, four and five worthless. Five rungs is what `src/content/pickups.ts` says the
-      ladder is, and this is the guard that a level's three-a-level budget is spending on something.
+      ⚠️ **EQUALITY, AND IT WAS `toBeLessThan` — WHICH IS NOT WHAT THIS TEST IS NAMED.** *"The last
+      tier lands exactly on them"* was asserted as *the last tier is faster than the base*, which is
+      true of any ladder at all: `npm run prove` shortened the ladder by a rung and this stayed green
+      while every missile test around it went red. A guard that cannot fail on its own subject is
+      `docs/decisions/0019-a-probe-must-be-seen-to-apply.md`'s STILL GREEN, found by the harness one
+      pass after the test was written.
+
+      ⚠️ **Naming the floors is legitimate here and would not be in a ladder test.** They are separate
+      constants with their own reasons — `FASTEST_FIRE` is a legibility number and `MISSILE_FASTEST` is
+      a pool number — so this asserts that two independent things agree, not that the code equals
+      itself. They are exported for exactly this.
     */
-    const four = weaponFor(SHIPS.proof, Array.from({ length: 4 }, () => 'weapon' as UpgradeKind));
-    expect(four, 'the fifth weapon pickup bought nothing, so the ladder is shorter than it claims').not.toEqual(full);
+    expect(maxGun.fireEvery, 'the pulse stops short of its floor, so the last tier is not the last').toBe(FASTEST_FIRE);
+    expect(maxTube.missileEvery, 'the missiles stop short of their floor').toBe(MISSILE_FASTEST);
+    expect(maxGun.shots, 'the pulse never reaches its barrel cap').toBe(MAX_BARRELS);
+    expect(maxTube.launchers, 'the missiles never reach their tube cap').toBe(MAX_LAUNCHERS);
+    /*
+      A twentieth of either is the same as the fourth — the ladder is a function of the tier, and the
+      tier is clamped. This is the property that replaced the `continue` the loop used to need.
+    */
+    const absurdGun: UpgradeKind[] = [];
+    for (let i = 0; i < 20; i++) absurdGun.push('weapon');
+    expect(weaponFor(SHIPS.proof, absurdGun), 'the pulse ladder kept climbing past its tiers').toEqual(maxGun);
+    expect(maxGun.damage, 'the pulse gains damage without a ceiling again').toBe(base.damage);
+    expect(maxTube.missileDamage, 'the missile gains damage without a ceiling again').toBe(base.missileDamage);
   });
 
   it('a death takes the missiles away entirely, because the base ship has no tube', () => {

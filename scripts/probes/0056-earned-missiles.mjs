@@ -13,7 +13,13 @@ export const PROBES = [
     // this in place except the one that says the weapon has to be found.
     broke: 'the base ship given a launcher again, so a run opens with both weapons',
     guard: 'fires nothing at all until a launcher is found',
-    edit: { path: 'src/content/pickups.ts', find: '  let launchers = 0;', replace: '  let launchers = 1;' },
+    // ⚠️ Re-anchored by 0083: the base tube count is the bottom of the missile ladder's interpolation
+    // rather than a mutable local. Same break, same guard — a ship that opens with the second weapon.
+    edit: {
+      path: 'src/content/pickups.ts',
+      find: '  const launchers = rung(0, MAX_LAUNCHERS, tubes);',
+      replace: '  const launchers = rung(1, MAX_LAUNCHERS, tubes);',
+    },
   },
   {
     decision: '0056',

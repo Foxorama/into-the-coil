@@ -31,7 +31,6 @@ import {
   effectOf,
   isUpgrade,
   type PickupKind,
-  type UpgradeKind,
   weaponFor,
 } from '../content/pickups.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
@@ -469,9 +468,6 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     pickupRows,
     pickupKinds,
     collected: makeCollected(CAPACITY.pickups),
-    // ⚠️ Sized to the pool, and filled at each death rather than at boot — `src/app/frame.ts` says
-    // why the 50% filter needs somewhere to put its survivors before the ring is spaced over them.
-    scattered: new Array<UpgradeKind>(CAPACITY.pickups),
     // The base weapon, which is what an empty upgrade list resolves to. There is no second
     // description of it anywhere — 0039's "back to the base weapon" is this call with `[]`.
     weapon: weaponFor(shipRow, []),
@@ -1037,7 +1033,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       pickup does to this ship is content's, and it lived here until 0082 moved it — where no unit
       test could reach it without a DOM.
     */
-    const effect = effectOf(kind, world.weapon);
+    /*
+      ⚠️ **The upgrade LIST rather than `world.weapon`, since 0083.** Two ladders cap at different
+      times, so *is this pickup still worth taking* is a question about the kind in the player's hand
+      — a resolved weapon cannot tell a maxed pulse from an empty missile rack.
+    */
+    const effect = effectOf(kind, state.run.upgrades);
     /*
       A SPECIAL — charges into the arsenal, and it is the `took` action finally cashing.
       `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md`.

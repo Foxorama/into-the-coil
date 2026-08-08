@@ -233,6 +233,20 @@ export const SPRITE_KINDS = [
   */
   'pickupWeapon',
   /*
+    ⚠️ **THE MISSILE PICKUP, AND IT IS THE WEAPON'S SILHOUETTE ROTATED A QUARTER TURN.** 0083 split
+    the missiles back out of `weapon`, and the two are the same *kind* of thing — a ladder of four
+    tiers over one of the ship's two auto-weapons — so they read as a family rather than as strangers.
+    The chevron points along the lane; this one points across it, which is also what a tube on a wing
+    does.
+
+    ⚠️ **Rotation is a legitimate distinction here and is NOT one for enemies.**
+    `reports/enemy-silhouettes-2026-08-05.md` is the pass that cost this project an art round, and its
+    finding was about CONCAVITY and point count failing at size — a rotation of a strongly asymmetric
+    shape survives what a subtler outline does not. It also has size behind it: 5.5 against the
+    weapon's 6.
+  */
+  'pickupMissile',
+  /*
     ⚠️ **A HERALDIC SHIELD, and it is the one pickup whose meaning a player already owns.** The other
     three are arbitrary glyphs the game has to teach — a plus, a holed square, a hexagon — and the
     title screen's key is how it teaches them. This one does not need teaching, which is worth more
@@ -478,6 +492,7 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     collect, which is the same lie with the sign reversed.
   */
   pickupWeapon: 6,
+  pickupMissile: 5.5,
   pickupShield: 5,
   pickupBomb: 4.4,
   /*

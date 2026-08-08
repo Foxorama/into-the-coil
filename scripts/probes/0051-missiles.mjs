@@ -93,21 +93,23 @@ export const PROBES = [
   {
     decision: '0051',
     suite: 'tests/missiles.test.ts',
-    // A missile upgrade reaching into the other weapon — the copy-paste `weaponFor` invites, and one
-    // a player only notices by realising the pickup they flew for changed something else.
     /*
-      ⚠️ RE-ANCHORED BY 0082, AND THE RULE IT DEFENDS IS THE OPPOSITE OF WHAT IT WAS. When there were
-      four upgrade kinds, the break was a missile pickup reaching into the pulse and the guard was
-      *never moves the other weapon*. 0082 merged the kinds so that one pickup moves BOTH by design —
-      *"increase its tier and rate of fire together"* — and the copy-paste that matters now is the one
-      that leaves the missile cadence behind, which un-merges the pickup without changing its name.
+      ⚠️ RE-ANCHORED TWICE AND THE RULE HAS BEEN BOTH WAYS ROUND. With four upgrade kinds the break was
+      a missile pickup reaching into the pulse, and the guard was *never moves the other weapon*. 0082
+      merged the kinds so that one pickup moved BOTH by design, and the guard inverted. 0083 split them
+      again — *"I want weapons and missiles as separate upgrades"* — so separation is the rule once
+      more, and this is the copy-paste that breaks it: a weapon tier reaching into the missile cadence.
+
+      ⚠️ **Each version was the right guard for the taxonomy it was written against**, which is what a
+      probe tied to a decision looks like when the decision moves. Worth reading before assuming an
+      inverted assertion is a mistake.
     */
-    broke: 'the merged rung wired to the pulse twice, so the missile cadence never moves',
-    guard: 'THE MERGE: one pickup moves BOTH weapons',
+    broke: 'the weapon ladder wired into the missile cadence, so one pickup moves both again',
+    guard: 'THE SPLIT: a weapon pickup never touches the missiles',
     edit: {
       path: 'src/content/pickups.ts',
-      find: '    const fasterMissiles = Math.round(missileEvery * MISSILE_FACTOR);\n    if (fasterMissiles >= MISSILE_FASTEST) missileEvery = fasterMissiles;',
-      replace: '    const fasterMissiles = Math.round(fireEvery * RAPID_FACTOR);\n    if (fasterMissiles >= FASTEST_FIRE) fireEvery = fasterMissiles;',
+      find: '  const missileEvery = rung(ship.missileEvery, MISSILE_FASTEST, tubes);',
+      replace: '  const missileEvery = rung(ship.missileEvery, MISSILE_FASTEST, gun + tubes);',
     },
   },
   {

@@ -178,21 +178,28 @@ death**, back to the ship's base weapon and starting special
 the ship looks on screen**, and every upgrade is worth taking — an upgrade that cannot change the
 outcome is worse than none.
 
-**A pickup is rare, and a level offers six of three kinds** —
-[0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md). Three `weapon`, two `shield`, one
-`bomb`. They are premium game pieces: each one is a crossing the player commits to under fire, and
-what the level authors is what the player gets.
+**A pickup is rare, and a level offers nine of four kinds** —
+[0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) and
+[0083](decisions/0083-two-ladders-of-four.md). They are premium game pieces: each one is a crossing the
+player commits to under fire, and what the level authors is what the player gets.
 
-| | |
-|---|---|
-| **`weapon`** | every repeat raises tier and rate of fire together — both cadences and a hardpoint |
-| **`shield`** | one hit that never reaches the hull |
-| **`bomb`** | charges for the arsenal, and the only pickup the player has to decide when to use |
+| | a tier buys | tiers | per level |
+|---|---|---|---|
+| **`weapon`** | a barrel **and** a fire-rate step | 4 | 4 |
+| **`missile`** | a tube **and** a rate step, max 2 tubes | 4 | 2 |
+| **`shield`** | one hit that never reaches the hull, capped at 3 | — | 2 |
+| **`bomb`** | charges for the arsenal, uncapped — the only pickup the player decides when to use | — | 1 |
 
-⚠️ **A weapon pickup taken once the weapon is full becomes a bomb charge**, which is how *every
-upgrade is worth taking* survives having a cap. Before 0082 it became unbounded damage instead, and
-that was the reported defect: *"when you get max speed nothing is a challenge, bosses die in less a
-second."*
+**A level offers exactly enough weapons to cap the guns before its boss**, and then a couple of things
+that are not weapons. The nine is derived from that rather than chosen.
+
+⚠️ **An upgrade pickup taken once its own ladder is full becomes a bomb charge** — per ladder, which is
+what makes bombs uncapped. That is how *every upgrade is worth taking* survives having a cap; before
+0082 it became unbounded damage instead, which was the reported defect: *"when you get max speed
+nothing is a challenge, bosses die in less a second."*
+
+⚠️ **Weapons and missiles are separate kinds because different weapon TYPES are coming**, and that is
+where a cycling pickup returns — alternating between two guns rather than between a gun and a shield.
 
 The rest of the vocabulary is unbuilt: homing rockets, multi-tag tracking specials, piercing shots,
 faster engines, orbiting mines that are half shield and half weapon. Nothing triggers a special except
@@ -203,10 +210,11 @@ grounds that a shield is the better version of the same promise: it stops the de
 arsenal a death would cost. **This is open rather than settled**, and it is what
 [0068](decisions/0068-a-run-over-is-a-continue.md)'s free continue is currently standing in for.
 
-⚠️ **A death hands back half of what it took, where it happened.** That — and not density — is the
-answer to *what is a player who just died flying with*. It replaces the twenty-second rearm ceiling
-this page carried until 0082, which three pickups a level cannot meet and which the ask overrides;
-the two numbers are one decision and neither survives being tuned alone.
+⚠️ **A death hands back everything it took, where it happened — but never a shield.** That is the
+answer to *what is a player who just died flying with*, and it replaces the twenty-second rearm ceiling
+this page carried until 0082. [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) made it
+half and a play-test called that *"too punishing"*, so
+[0083](decisions/0083-two-ladders-of-four.md) put it back to all of it.
 
 **The title screen carries a key** — every pickup, its real sprite, and what it does.
 [0045](decisions/0045-the-player-can-see-what-they-are-carrying.md). The enemies deliberately get no

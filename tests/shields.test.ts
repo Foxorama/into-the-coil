@@ -8,6 +8,7 @@ import {
   PICKUPS,
   PICKUP_KINDS,
   UPGRADE_KINDS,
+  UPGRADE_TIERS,
   effectOf,
   isUpgrade,
   type PickupKind,
@@ -421,7 +422,7 @@ describe('a pickup says which field it lands in', () => {
     expect(kinds.includes('shield'), 'the shield is not in the table the key is built from').toBe(true);
   });
 
-  it('a weapon pickup taken at the cap becomes a bomb charge, so it is never a dead pickup', () => {
+  it('an upgrade pickup taken at its cap becomes a bomb charge, so it is never a dead pickup', () => {
     /*
       ── THE HALF THAT PAYS FOR DELETING THE UNBOUNDED DAMAGE ───────────────────────────────────────
 
@@ -431,41 +432,52 @@ describe('a pickup says which field it lands in', () => {
 
       `weaponFor` used to spend every upgrade past every cap on `damage`, with no ceiling anywhere —
       because `docs/game.md` says *"an upgrade that cannot change the outcome is worse than none"* and
-      that was the only answer available. 0082 caps the weapon and gives the pickup somewhere else to
-      go, so **both** halves of that sentence hold: the curve flattens AND the pickup still does
-      something.
+      that was the only answer available. The cap plus the conversion holds **both** halves of that
+      sentence: the curve flattens AND the pickup still does something.
 
-      ⚠️ **Two assertions in opposite directions, because either alone is a different bug.** A ship
-      that has not capped must still get the upgrade — an `effectOf` that always said `special` would
-      make the weapon un-upgradable and pass a test of *the last one is a bomb*.
+      ⚠️ **PER LADDER since 0083, which is the assertion that changed.** A capped pulse must not turn
+      a MISSILE pickup into a bomb — that would be one ladder's ceiling stealing the other's upgrades,
+      and a player who spent four on the guns would find the missiles unupgradable.
 
-      ⚠️ **Held against `weaponFor` rather than against a rung number.** The ladder's length is a
-      tuning decision and this is not a test of it; what is held is that the two functions agree about
-      where it ends, which is the thing a later change to either could break silently.
+      ⚠️ **Both directions, for both kinds, because either alone is a different bug.** An `effectOf`
+      that always said `special` would make the weapons un-upgradable and still pass a test of *the
+      last one is a bomb*.
     */
-    const base = weaponFor(SHIPS.proof, []);
-    expect(effectOf('weapon', base), 'a ship with nothing on it was refused an upgrade').toBe('upgrade');
+    for (const kind of UPGRADE_KINDS) {
+      expect(effectOf(kind, []), `a ship with nothing on it was refused a ${kind}`).toBe('upgrade');
 
-    const many: UpgradeKind[] = [];
-    for (let i = 0; i < 30; i++) many.push('weapon');
-    const capped = weaponFor(SHIPS.proof, many);
-    expect(effectOf('weapon', capped), 'a weapon pickup at the cap is still filed as an upgrade').toBe('special');
+      const capped: UpgradeKind[] = [];
+      for (let i = 0; i < UPGRADE_TIERS; i++) capped.push(kind);
+      expect(effectOf(kind, capped), `a ${kind} at its cap is still filed as an upgrade`).toBe('special');
+
+      /*
+        ⚠️ **THE CROSS-CHECK: the OTHER ladder is untouched by this one being full.** This is the
+        assertion 0083 exists for, and nothing before it could have made it.
+      */
+      for (const other of UPGRADE_KINDS) {
+        if (other === kind) continue;
+        expect(effectOf(other, capped), `a full ${kind} ladder turned a ${other} pickup into a bomb`).toBe('upgrade');
+      }
+    }
 
     /*
-      ⚠️ **And the changeover is exactly where the weapon stops growing** — one upgrade either side.
-      A ladder that stopped at rung four while `effectOf` switched at rung six would leave two dead
-      pickups, which is the defect wearing a smaller number.
+      ⚠️ **And the changeover is exactly where the ladder stops growing** — one upgrade either side,
+      checked against `weaponFor` rather than against a rung number. A ladder that stopped at tier
+      three while `effectOf` switched at tier five would leave two dead pickups, which is the defect
+      wearing a smaller number.
     */
-    for (let n = 0; n < 12; n++) {
-      const carried: UpgradeKind[] = [];
-      for (let i = 0; i < n; i++) carried.push('weapon');
-      const now = weaponFor(SHIPS.proof, carried);
-      const next = weaponFor(SHIPS.proof, [...carried, 'weapon']);
-      const grew = JSON.stringify(next) !== JSON.stringify(now);
-      expect(
-        effectOf('weapon', now),
-        `at ${n} upgrades the next weapon ${grew ? 'does' : 'does not'} change the ship, and the effect disagrees`,
-      ).toBe(grew ? 'upgrade' : 'special');
+    for (const kind of UPGRADE_KINDS) {
+      for (let n = 0; n < UPGRADE_TIERS + 3; n++) {
+        const carried: UpgradeKind[] = [];
+        for (let i = 0; i < n; i++) carried.push(kind);
+        const now = weaponFor(SHIPS.proof, carried);
+        const next = weaponFor(SHIPS.proof, [...carried, kind]);
+        const grew = JSON.stringify(next) !== JSON.stringify(now);
+        expect(
+          effectOf(kind, carried),
+          `at ${n} ${kind}s the next one ${grew ? 'does' : 'does not'} change the ship, and the effect disagrees`,
+        ).toBe(grew ? 'upgrade' : 'special');
+      }
     }
   });
 
@@ -481,13 +493,11 @@ describe('a pickup says which field it lands in', () => {
       never a decision about what a pickup is worth.
     */
     const named = new Set<string>(PICKUP_KINDS.map((k) => PICKUPS[k].effect));
-    const base = weaponFor(SHIPS.proof, []);
-    const many: UpgradeKind[] = [];
-    for (let i = 0; i < 30; i++) many.push('weapon');
-    const capped = weaponFor(SHIPS.proof, many);
+    const everything: UpgradeKind[] = [];
+    for (let i = 0; i < UPGRADE_TIERS; i++) for (const k of UPGRADE_KINDS) everything.push(k);
     for (const kind of PICKUP_KINDS) {
-      for (const weapon of [base, capped]) {
-        expect(named.has(effectOf(kind, weapon)), `${kind} can report an effect no row in the table names`).toBe(true);
+      for (const carried of [[], everything]) {
+        expect(named.has(effectOf(kind, carried)), `${kind} can report an effect no row in the table names`).toBe(true);
       }
     }
   });

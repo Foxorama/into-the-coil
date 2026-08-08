@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { GameFrame, wearHull } from '../src/app/frame.ts';
 import { INK_OF } from '../src/render/bake.ts';
-import { MAX_HULL_TIER, UPGRADE_KINDS, weaponFor } from '../src/content/pickups.ts';
+import {
+  MAX_HULL_TIER,
+  UPGRADE_KINDS,
+  UPGRADE_TIERS,
+  type UpgradeKind,
+  weaponFor,
+} from '../src/content/pickups.ts';
 import { SHIPS, hullFor } from '../src/content/ships.ts';
 import { SHOTS, SHOT_KINDS } from '../src/content/shots.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
@@ -165,11 +171,23 @@ describe('the ship wears what it is carrying', () => {
       draw them identically, and this is what notices.
     */
     const byBarrelCount = new Map<number, Set<number>>();
-    for (let n = 0; n <= 12; n++) {
-      const resolved = weaponFor(SHIPS.proof, Array.from({ length: n }, () => UPGRADE_KINDS[0]!));
-      const seen = byBarrelCount.get(resolved.shots) ?? new Set<number>();
-      seen.add(resolved.tier);
-      byBarrelCount.set(resolved.shots, seen);
+    for (let guns = 0; guns <= 6; guns++) {
+      for (let tubes = 0; tubes <= 6; tubes++) {
+        /*
+          ⚠️ **BOTH LADDERS, and scanning one of them is what let this pass while broken.** 0083 split
+          the missiles back out, and a loadout of nothing but weapons moves the barrels on almost every
+          tier — so over that axis alone the barrel count and the hull climb together and a hull keyed
+          to barrels is indistinguishable. The whole point is the ship that spent its upgrades on
+          MISSILES: same one barrel as a bare ship, and it has upgraded four times.
+        */
+        const carried: UpgradeKind[] = [];
+        for (let i = 0; i < guns; i++) carried.push('weapon');
+        for (let i = 0; i < tubes; i++) carried.push('missile');
+        const resolved = weaponFor(SHIPS.proof, carried);
+        const seen = byBarrelCount.get(resolved.shots) ?? new Set<number>();
+        seen.add(resolved.tier);
+        byBarrelCount.set(resolved.shots, seen);
+      }
     }
     const splits = [...byBarrelCount.values()].filter((tiers) => tiers.size > 1);
     expect(
@@ -177,14 +195,27 @@ describe('the ship wears what it is carrying', () => {
       'every barrel count maps to exactly one hull, so the hull is a function of the barrels rather ' +
         'than of the upgrade list — a ship that spent a rung on a launcher is drawn as one that spent nothing',
     ).toBeGreaterThan(0);
-    // Monotone, and it stops. An unbounded list may not run off the end of the hulls.
+    /*
+      Monotone, and it stops. An unbounded list may not run off the end of the hulls.
+
+      ⚠️ **WALKED OVER BOTH LADDERS, AND ONE LADDER COULD NOT REACH THE CLAMP.** This used to add
+      `UPGRADE_KINDS[0]` twenty times, and since 0083 a single ladder caps at `UPGRADE_TIERS` — so the
+      most tiers one kind can contribute is four, the hull reads two, and the clamp is never tested.
+      `npm run prove` removed the clamp entirely and this stayed **STILL GREEN**.
+
+      Both ladders full is eight tiers, which is four hulls' worth against the three that exist. That
+      is the only loadout in the game that can reach the ceiling, and it is one a real run can build.
+    */
     let last = -1;
-    for (let n = 0; n <= 20; n++) {
-      const tier = weaponFor(SHIPS.proof, Array.from({ length: n }, () => UPGRADE_KINDS[0]!)).tier;
+    for (let n = 0; n <= UPGRADE_TIERS * UPGRADE_KINDS.length + 6; n++) {
+      const carried: UpgradeKind[] = [];
+      for (let i = 0; i < n; i++) carried.push(UPGRADE_KINDS[i % UPGRADE_KINDS.length]!);
+      const tier = weaponFor(SHIPS.proof, carried).tier;
       expect(tier, 'the hull went backwards as the ship upgraded').toBeGreaterThanOrEqual(last);
       expect(tier, 'the hull ran off the end of the hulls there are').toBeLessThanOrEqual(MAX_HULL_TIER);
       last = tier;
     }
+    expect(last, 'a fully upgraded ship never reaches the last hull, so the clamp is untested').toBe(MAX_HULL_TIER);
   });
 
   it('is the hull the painter actually blits, and a death puts it back', () => {
