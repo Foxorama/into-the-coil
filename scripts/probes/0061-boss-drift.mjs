@@ -81,10 +81,18 @@ export const PROBES = [
       — and `axis` happens to swing the same distance. An ambiguous `find` is refused by the harness
       rather than applied to whichever row came first, which is the whole reason it counts matches.
     */
+    /*
+      ⚠️ **The break was `40` and had to become `60`, and the reason is a finding rather than a
+      nudge.** `docs/decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md` raised the aspect
+      floor, so the narrowest view any device gets went from 150 units to 177.8 — and the guard is
+      *the whole hull stays on that screen*, so it loosened by 28 units along with it. At 40 the
+      sentinel's swing is `120 + 40 + 13 = 173` and now fits, which is the guard staying green on a
+      break that is genuinely no longer a break. `npm run prove` reported it STILL GREEN.
+    */
     edit: {
       path: 'src/content/bosses.ts',
       find: '    drift: 14,\n    // About six seconds a cycle',
-      replace: '    drift: 40,\n    // About six seconds a cycle',
+      replace: '    drift: 60,\n    // About six seconds a cycle',
     },
   },
 ];

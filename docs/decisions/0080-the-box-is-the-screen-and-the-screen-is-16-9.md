@@ -182,6 +182,35 @@ as.**
   separates them at all"*. That was true of 0069 and is what 0080 changes, so the guard gained the
   assertion the decision actually makes.
 
+## And it made two OTHER decisions' guards stop working, which is the real cost
+
+⚠️ **Raising a bound loosens every guard measured against it, and two of them stopped being
+falsifiable.** Both were found by `npm run prove` over the whole set — not by the suite, which was
+green — and neither is in a file this change had a reason to open.
+
+**[0061](0061-a-boss-keeps-flying.md)'s drift guard: STILL GREEN.** *The whole hull stays on screen on
+the narrowest device* is measured against `ACROSS_SPAN × MIN_ASPECT`, so it loosened by 28 units along
+with the floor. Its probe widened the sentinel's drift from 14 to 40, which now sums to 173 against a
+bound of 177.8 — a break that is genuinely no longer a break. The probe now uses 60.
+
+**[0048](0048-a-threat-may-arrive-from-the-side.md)'s boss guard: WRONG TEST.** *The boss is never hit
+before it can be seen* had a margin of 19 units. Measured with the bug restored, the first hit moved
+from **168.7 to 175.0 against a bound of 177.8** — so it passed either way, by three units.
+
+⚠️ **And the repair for that one is not a louder break, because the guard was measuring a
+consequence.** *The boss's first hit* depends on when the fixture's ship happened to be alive: the
+ship is killed by the boss it is shooting at, so flying it forward — the obvious fix — makes it die
+sooner rather than reach further. The RULE is *you can shoot what you can see*, so the test now
+measures the furthest ahead of the camera any live player shot ever gets, and keeps the first hit
+below it as the consequence the player actually reported.
+
+That is [0027](0027-measure-the-picture-not-the-model.md) in its second form — a guard measuring a
+quantity adjacent to the one it names — and the third time this project has caught one. The first two
+are in [0077](0077-a-pickup-arrives-rather-than-stopping.md) and
+[0078](0078-the-sky-moves-a-third-faster.md), and both of those were found by changing a number and
+asking what should have gone red. **This one was found by the harness**, which is the difference the
+whole-set run buys.
+
 ## And it was looked at
 
 `node scripts/shot.mjs`, per [0027](0027-measure-the-picture-not-the-model.md), at 1280×720 and at
