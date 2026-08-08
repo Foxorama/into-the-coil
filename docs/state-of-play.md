@@ -52,6 +52,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **a death scatters what it took, non-cycling and on a short timer** | [0066](decisions/0066-a-death-scatters-what-it-took.md) |
 | **a new run opens on an empty field** | [0067](decisions/0067-a-new-run-opens-on-an-empty-field.md), [`the-sweep-that-served-two-rules`](../reports/the-sweep-that-served-two-rules-2026-08-07.md) |
 | **a run over is a continue, and it keeps the level** | [0068](decisions/0068-a-run-over-is-a-continue.md) |
+| **a death is a beat, and the unspent arsenal goes up with the ship** | [0079](decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md) |
 | **seven levels, seven bosses, one idea each** | [0071](decisions/0071-five-more-levels-and-one-idea-each.md) |
 | **a style is a setting, a choice is not an action, and neither may touch the sim** | [0070](decisions/0070-a-style-is-a-setting-and-the-first-one.md) |
 | **a cue is baked and played, and it names the picture it is the twin of** | [0072](decisions/0072-a-cue-is-baked-and-played.md) |
@@ -276,7 +277,7 @@ fail when you mix something else in."*
 | # | chunk | why here | state |
 |---|---|---|---|
 | 1 | **The bug sweep** — pickups hitting a wall mid-screen, the death scatter firing straight up and down, missile tubes reaching three | Cheapest, and each one is a **false signal in the picture**. [0027](decisions/0027-measure-the-picture-not-the-model.md): tuning against a lying picture tunes the wrong thing. | ✅ [0077](decisions/0077-a-pickup-arrives-rather-than-stopping.md) |
-| 2 | **The death beat** — explosion, pause, respawn, and the same before the continue screen | A death is the most-repeated event in a run and it currently has no beat at all. Independent of everything else. | **mapped, not started** — [`the-death-beat-mapped`](../reports/the-death-beat-mapped-2026-08-08.md) |
+| 2 | **The death beat** — explosion, pause, respawn, and the same before the continue screen | A death is the most-repeated event in a run and it currently has no beat at all. Independent of everything else. | ✅ [0079](decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md), which also carries **the pyre** the player added to it |
 | 3 | **The view** — sky +33%, the perspective zoom, the box made a rectangle and extended, desktop-first | **Blocks 6, 7 and 8.** *"enemies fly too fast"* and *"a quarter of the screen is unplayable"* are both statements about the viewport; changing it changes what every one of those numbers means. | **sky ✅** [0078](decisions/0078-the-sky-moves-a-third-faster.md) — the zoom and the box are the rest |
 | 4 | **Legibility** — shape and size differentiation, over the palette rather than instead of it | **Blocks the re-play.** A player who cannot tell a pickup from a bullet cannot give a verdict on anything below. | |
 | 5 | **The pickup taxonomy** — one weapon pickup, per-level budgets, the 50% death scatter, and the max-speed nerf | The player calls pickups *"the lynchpin of whether this game is actually good"*. Comes before the dial because the dial is keyed to them. | **two constraints already known** — [`two-things-found-while-chunking`](../reports/two-things-found-while-chunking-2026-08-08.md) |
@@ -289,7 +290,7 @@ fail when you mix something else in."*
 [0024](decisions/0024-the-accessibility-floor-is-settings.md)'s loud default. Neither is a constant
 edit and neither should be landed as one.
 
-### Where the session that took this feedback got to
+### Where the sessions that took this feedback got to
 
 **Three landed on 2026-08-08, in this order**, and each is linked from its row above:
 [0077](decisions/0077-a-pickup-arrives-rather-than-stopping.md) (chunk 1, all three defects),
@@ -297,7 +298,19 @@ edit and neither should be landed as one.
 itself. **Chunk 2 was mapped and deliberately not started** —
 [`the-death-beat-mapped`](../reports/the-death-beat-mapped-2026-08-08.md) has the whole
 investigation, including the eight call sites that have to be gated and the two numbers nobody has
-chosen. **Start there**: it is the cheapest remaining chunk and the map is already paid for.
+chosen. **It has since landed off that map**:
+[0079](decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md), which answers
+both halves of the report with one moved call and carries the pyre the player added on top of it.
+
+⚠️ **0079 records what the map got wrong, which is worth as much as what it got right.** The map
+listed eight call sites to gate and one of them — `stepShields` — turned out to need no gate at all:
+gating it would have frozen an orbiting mark in world coordinates for the length of the beat, which
+is the bug it looks like it prevents. The single description
+([0050](decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md)'s
+`shieldsOf`) already answered correctly.
+
+⚠️ **The two numbers the map left open are now chosen and neither has been flown**, which is exactly
+the accumulation the ⚠️ below is about: 48 steps of beat, and the scatter thrown at the END of it.
 
 ⚠️ **Two constraints on chunk 5 are already known and both change what it costs** —
 [`two-things-found-while-chunking`](../reports/two-things-found-while-chunking-2026-08-08.md).

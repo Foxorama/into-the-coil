@@ -66,7 +66,7 @@ import {
   type UpgradeKind,
   type Weapon,
 } from '../content/pickups.ts';
-import { SPECIALS, type SpecialKind } from '../content/specials.ts';
+import { SPECIALS, pyreFor, type SpecialKind } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
 import { stepBoss } from './boss.ts';
 import type { Frame } from './loop.ts';
@@ -412,6 +412,44 @@ const BOSS_DEATH_STEPS = 96;
 const BOSS_PULSE = 5;
 
 /**
+ * How long the player's ship takes to come apart, in steps — about eight tenths of a second.
+ *
+ * ── WHY A DEATH IS A BEAT AT ALL ────────────────────────────────────────────────────────────────
+ *
+ * Reported from play: *"when a player dies, they instantly respawn, there needs to be the player ship
+ * explosion, a pause, then a respawn. This also needs to happen before the 'continue' screen shows up
+ * as well."*
+ * `docs/decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md`.
+ *
+ * ⚠️ **Both halves of that report were one cause: the explosion, the scatter, the lost life and the
+ * new ship all happened on one step.** The player never saw the death, because the replacement was
+ * already there on the next frame drawn — and on the last life the overlay went up before the burst
+ * had drawn a single one.
+ *
+ * ⚠️ **Half a boss's, and the halving is the argument.** `BOSS_DEATH_STEPS` is 96 and is sized for a
+ * thing coming apart at the end of a level, which the player watches once. A death is a smaller event
+ * and the player is WAITING through it — every one of them, several times a run — so the number that
+ * is right for a boss is roughly twice the number that is right here. It is not derived from
+ * `BOSS_DEATH_STEPS`, because the two answer different questions and the day one moves the other
+ * should not follow it.
+ *
+ * A starting point on `docs/decisions/0037-the-ship-has-mass.md`'s terms; nothing asserts on it. What
+ * `tests/death.test.ts` holds is stated in the player's units — that the ship is off the screen for
+ * more than half a second, and that the continue screen does not appear on the step the last life is
+ * lost.
+ */
+const DEATH_STEPS = 48;
+
+/**
+ * Steps between one pulse of the ship coming apart and the next.
+ *
+ * ⚠️ **It is what turns `BURST.dying` from a number of fragments into a number ON SCREEN**, and the
+ * ceiling is the debris pool — `BURST.dying × BURST.lifeMax / this` has to stay inside it, with room
+ * left for the pyre's kills. `tests/budget.test.ts` holds that sum beside the boss's.
+ */
+const DEATH_PULSE = 8;
+
+/**
  * How far from the ship's centre a shield mark orbits, in world units.
  *
  * The ship is 7 units across, so this puts the shell clear of the hull with a visible gap — close
@@ -692,6 +730,29 @@ export interface World {
   /** Where the boss is, ahead of the camera — remembered every step, read on the step it dies. */
   bossOffset: number;
   bossAcross: number;
+  /**
+   * Steps left of the player's ship coming apart, or `0` when nothing is dying.
+   *
+   * ⚠️ **The life is reported spent when this reaches zero, not when the hull does** —
+   * `docs/decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md`. Everything a
+   * death COSTS is `onDeath`'s, and `onDeath` now fires at the end of the beat rather than on the step
+   * the health hit zero, which is what puts the explosion in front of the continue screen.
+   *
+   * ⚠️ **It is NOT the gate on whether there is a ship.** `shipPool.size === 0` is that, and it is a
+   * fact the pool already holds — a second field saying the same thing is the shape of drift
+   * `src/sim/entity.ts` argues against three times over. This is only the clock.
+   */
+  dyingIn: number;
+  /**
+   * Where the ship died, as an offset AHEAD OF THE CAMERA rather than as a world position.
+   *
+   * ⚠️ **The mistake `docs/decisions/0062-a-boss-dies-loudly.md` documents having made, avoided
+   * here.** The camera covers about 27 world units during the beat, so a world position would put the
+   * explosion — and the scatter that follows it — visibly behind where the player watched the ship
+   * come apart. `bossOffset` exists for the identical reason and says so.
+   */
+  deathOffset: number;
+  deathAcross: number;
   /** Which way the boss is currently sliding across the lane: −1 or 1. */
   bossPatrol: number;
   /**
@@ -781,12 +842,37 @@ export interface World {
    */
   stepping: boolean;
   /**
-   * The ship reached zero health.
+   * The ship came apart. Fired on the step its health reached zero, once per death.
+   *
+   * ── THE FIRST OF THE TWO HALVES A DEATH IS NOW SPLIT INTO ───────────────────────────────────────
+   *
+   * `docs/decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md`. This is *the
+   * wreck exists now*; `onDeath` below is *the life is spent*, and they are `DEATH_STEPS` apart.
+   *
+   * ⚠️ **It exists because the ARSENAL is `src/state/`'s and the beat is this file's.** The player
+   * asked for the ship's unspent bombs to go off where it died — the frame cannot see the arsenal
+   * (0015, 0039) and the reducer that empties it is the same dispatch that raises the continue
+   * screen, so a shell told only at the END of the beat would be told after the charges were gone.
+   * This is the report that arrives while they are still there, and `detonateArsenal` is the half of
+   * the answer that moves an entity.
+   *
+   * ⚠️ **Reported rather than decided, exactly as `onDeath` and `onCleared` are.** Nothing here knows
+   * what an arsenal is or how big a ring one buys.
+   */
+  onWreck: () => void;
+  /**
+   * The ship's death is FINISHED — the beat has played out and the life is now spent.
    *
    * ⚠️ **The frame reports it and decides nothing.** What a death costs is
    * `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md`'s subject and it lives in
    * `src/state/` — this file cannot know whether a life remains, and the version that did know was
    * the `restart()` placeholder this replaced.
+   *
+   * ⚠️ **IT NO LONGER FIRES ON THE STEP THE HULL REACHED ZERO, and that is the whole of the
+   * continue-screen half of 0079.** `src/state/root.ts` raises the run-over screen off the `lifeLost`
+   * dispatch this callback makes, so for as long as the two were the same step the overlay went up
+   * before the explosion had drawn a frame. Moving this to the end of the beat fixes both halves of
+   * the report with one line, which is why 0079 is one decision and not two.
    */
   onDeath: () => void;
   /**
@@ -879,12 +965,39 @@ export class GameFrame implements Frame {
     // before the real devices add to it. Handing this a bare device would leave last step's axes in
     // place the moment the player let go.
     w.input.contribute(w.intent);
-    flyShip(w.ship, w.intent, w.cameraAlong, w.scrollPerStep);
+    /*
+      ── IS THERE A SHIP? ────────────────────────────────────────────────────────────────────────
+
+      `docs/decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md`. For the length
+      of a death beat there is not: the ship is released from its pool, so it is not drawn, and every
+      line below that touches it has to say what it does about that.
+
+      ⚠️ **The POOL is the gate, never a flag.** *There is no ship* is a fact `shipPool` already
+      holds, and a boolean beside it would be a second answer that the first one is free to disagree
+      with — which is the argument `src/sim/entity.ts` makes three times over for `steerAcross`,
+      `holdFor` and `turnsLeft`. Read once here, because it cannot change during a step: the only
+      thing that releases the ship is the death check at the bottom, and the only thing that puts it
+      back is `respawn`, which the shell calls from `onDeath` after everything below has run.
+
+      ⚠️ **The one gate that matters is the collision.** A dead ship left in its pairings goes on
+      taking hits, so `health` walks further negative and `health <= 0` fires again every step:
+      repeated bursts, repeated beats, and a life lost per step until the run is over.
+    */
+    const flying = w.shipPool.size > 0;
+    if (flying) flyShip(w.ship, w.intent, w.cameraAlong, w.scrollPerStep);
 
     cyclePickups(w);
-    askSpecials(w);
-    fireShip(w);
-    fireMissiles(w);
+    /*
+      ⚠️ **A wreck does not fire and does not throw.** `askSpecials` is gated with the two weapons
+      rather than left to the shell, because the shell's answer to a press is `launchSpecial`, which
+      spawns at the ship's muzzle — a bomb thrown from a ship that is not there, out of a charge the
+      death is about to take anyway.
+    */
+    if (flying) {
+      askSpecials(w);
+      fireShip(w);
+      fireMissiles(w);
+    }
     steerMissiles(w);
     steerEnemies(w);
     driftPickups(w);
@@ -976,29 +1089,37 @@ export class GameFrame implements Frame {
       re-read. 0024 still holds: it is never HARDER than standard, only no longer softer. 0050 has it
       written down as owed.
     */
-    const healthBefore = w.ship.health;
-    collideIntoOne(w.enemyShots, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, true);
-    // Not consumed: an enemy the player flew into is still there afterwards, or ramming would be the
-    // cheapest way to clear the screen.
-    collideIntoOne(w.enemies, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
-    collideIntoOne(w.bossPool, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
     /*
-      ⚠️ **THE PLAYER'S OWN BLAST, IN THE SAME LIST AS EVERY OTHER THREAT — and that is the skill in
-      it.** Asked for: *"and the blast hurts the player."* It goes through `collideIntoOne` rather
-      than through a check of its own so that the hit costs exactly what any other hit costs: one
-      shield, or the life, with the same invulnerable window afterwards. A separate path would be a
-      second description of what a hit is, and the two would disagree the first time either moved.
+      ⚠️ **THE GATE THAT MATTERS, and the failure it prevents is not subtle** — 0079. A ship released
+      from its pool is still a live object with a health field, so leaving these four pairings in
+      place would let a wreck go on being shot: `health` walks further and further negative, the death
+      check below fires again on every step of the beat, and the run empties itself one life per step.
     */
-    collideIntoOne(w.blasts, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
-    if (w.ship.health < healthBefore) w.ship.health = healthBefore - ONE_HIT;
-    /*
-      ⚠️ **A hit the ship SURVIVED, which is exactly the case that has a shield in it.** The hull is
-      one hit and every shield is one more (`src/content/ships.ts`), so *lost health and still alive*
-      and *a shield absorbed it* are the same sentence about the same number — and the mark leaving
-      the shell two lines below in `stepShields` is this cue's twin. A ship on its last life takes the
-      other branch, and the two cues are deliberately opposite sweeps.
-    */
-    if (w.ship.health < healthBefore && w.ship.health > 0) w.onCue('shield');
+    if (flying) {
+      const healthBefore = w.ship.health;
+      collideIntoOne(w.enemyShots, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, true);
+      // Not consumed: an enemy the player flew into is still there afterwards, or ramming would be
+      // the cheapest way to clear the screen.
+      collideIntoOne(w.enemies, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
+      collideIntoOne(w.bossPool, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
+      /*
+        ⚠️ **THE PLAYER'S OWN BLAST, IN THE SAME LIST AS EVERY OTHER THREAT — and that is the skill in
+        it.** Asked for: *"and the blast hurts the player."* It goes through `collideIntoOne` rather
+        than through a check of its own so that the hit costs exactly what any other hit costs: one
+        shield, or the life, with the same invulnerable window afterwards. A separate path would be a
+        second description of what a hit is, and the two would disagree the first time either moved.
+      */
+      collideIntoOne(w.blasts, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
+      if (w.ship.health < healthBefore) w.ship.health = healthBefore - ONE_HIT;
+      /*
+        ⚠️ **A hit the ship SURVIVED, which is exactly the case that has a shield in it.** The hull is
+        one hit and every shield is one more (`src/content/ships.ts`), so *lost health and still
+        alive* and *a shield absorbed it* are the same sentence about the same number — and the mark
+        leaving the shell below in `stepShields` is this cue's twin. A ship on its last life takes the
+        other branch, and the two cues are deliberately opposite sweeps.
+      */
+      if (w.ship.health < healthBefore && w.ship.health > 0) w.onCue('shield');
+    }
     /*
       A blast lands ONCE. Everything above has now seen it, so it spends itself here and what remains
       is the picture — `BLAST_STEPS` of ring, which is how the player learns where the edge was.
@@ -1013,7 +1134,9 @@ export class GameFrame implements Frame {
       make the game harder, and this is the one line in the game where the obvious code breaks it.
     */
     w.collected.count = 0;
-    collectInto(w.pickups, w.ship, COLLECT_REACH, w.collected);
+    // ⚠️ A wreck does not collect the scatter it is about to throw — 0079. The loop below then runs
+    // over a count of zero, which is why nothing else in this section needs a gate.
+    if (flying) collectInto(w.pickups, w.ship, COLLECT_REACH, w.collected);
     for (let i = 0; i < w.collected.count; i++) {
       // `PICKUP_KINDS` IS the index order — `pickupRows` is built by walking it — so the entity's
       // opaque `kind` reads back as the authored name with no second table to keep in step.
@@ -1042,6 +1165,14 @@ export class GameFrame implements Frame {
       The shell, after every collision that could have spent one and before the death check that
       could clear them all — so a mark that absorbed a hit is gone on the frame the hit landed.
     */
+    /*
+      ⚠️ **NOT gated on `flying`, and it is the one line in this section that needed no statement
+      adding.** `shieldsOf(row, health)` is the single description of how many marks a ship has
+      (`src/content/ships.ts`), and a wrecked ship's health is at or below zero — so this releases the
+      shell, bursts each mark where it was, and returns before it places anything. A gate here would
+      have frozen an orbiting mark in world coordinates for the length of the beat, which is the bug
+      it looks like it prevents. 0079.
+    */
     stepShields(w);
 
     /*
@@ -1055,15 +1186,10 @@ export class GameFrame implements Frame {
       w.onHealth(w.ship.health);
     }
 
-    if (w.ship.health <= 0) {
-      burst(w, w.ship.along, w.ship.across, BURST.ship);
-      // Beside the burst, which is the picture it is the twin of. The ship coming apart and the ship
-      // being heard to come apart are one event and are written on one line apart.
-      w.onCue('death');
-      // The shell spends a life and decides what happens next — it may call `respawn` before this
-      // step is over, or it may raise the game-over screen and leave the wreck where it is.
-      w.onDeath();
-    }
+    // ⚠️ `flying &&`, or the wreck reports its own death again on every step of the beat. Nothing
+    // takes health off a released ship any more, so this is the belt to that gate's braces — and it
+    // is worth having, because the failure is a run that empties itself in under a second.
+    if (flying && w.ship.health <= 0) wreckShip(w);
 
     /*
       The level script.
@@ -1121,6 +1247,7 @@ export class GameFrame implements Frame {
       w.clearedIn = BOSS_DEATH_STEPS;
     }
     stepBossDeath(w);
+    stepShipDeath(w);
   }
 
   draw(alpha: number): void {
@@ -2022,6 +2149,15 @@ function driftPickups(w: World): void {
  * decays back to the scroll rate in `driftPickups`, so its whole excursion is about 11 world units.
  */
 export function scatterUpgrades(w: World, upgrades: readonly UpgradeKind[]): void {
+  /*
+    ⚠️ **WHERE THE SHIP DIED, not where the ship object still is** — 0079. This used to read
+    `w.ship.along` and that was exactly right for as long as the scatter happened on the step the hull
+    reached zero. It now happens at the END of the beat, `DEATH_STEPS` later, and the ship object has
+    been sitting still in world coordinates the whole time — so the camera has moved about 27 units
+    out from under it, and the pickups would arrive a beat's worth of scroll behind the wreck they
+    came off. `stepBossDeath` remembers an offset for the identical reason and 0062 says so.
+  */
+  const along = w.cameraAlong + w.deathOffset;
   for (let i = 0; i < upgrades.length; i++) {
     const kind = w.pickupKinds[upgrades[i]!];
     const row = w.pickupRows[kind];
@@ -2030,7 +2166,7 @@ export function scatterUpgrades(w: World, upgrades: readonly UpgradeKind[]): voi
     // A scatter one pickup short is dropped rather than grown — `src/sim/pool.ts` has the argument,
     // and a player with more upgrades than the pool has slots has had a very good run.
     if (item === null) return;
-    reset(item, w.ship.along, w.ship.across, row, kind);
+    reset(item, along, w.deathAcross, row, kind);
     /*
       THE RING — an angle per piece, evenly spaced and then jittered.
 
@@ -2129,6 +2265,128 @@ function stepBossDeath(w: World): void {
   if (w.clearedIn === 0) w.onCleared();
 }
 
+/**
+ * The ship reached zero health: throw the bang, take it off the field, and start the beat.
+ *
+ * ── THE STEP THIS USED TO BE THE WHOLE OF ───────────────────────────────────────────────────────
+ *
+ * Reported from play: *"when a player dies, they instantly respawn, there needs to be the player ship
+ * explosion, a pause, then a respawn. This also needs to happen before the 'continue' screen shows up
+ * as well."*
+ * `docs/decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md`.
+ *
+ * ⚠️ **It used to be one burst and `onDeath()`, and `onDeath` put a new ship at the back of the box
+ * before the frame was drawn.** So the player's own death was the one event in the game with no
+ * picture at all — `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` names
+ * that failure and records it being reported three times as something else.
+ *
+ * ⚠️ **THE SHIP LEAVES ITS POOL, which is what makes the beat a picture rather than a pause.** A
+ * stationary hull sitting in the lane for a second reads as the game having frozen; an absence reads
+ * as a death. It is also the honest gate — see the `flying` block in `step`.
+ */
+function wreckShip(w: World): void {
+  /*
+    ⚠️ **An OFFSET from the camera, not a world position** — the same note `driveBoss` carries, and
+    the same mistake 0062 documents having made. The camera covers about 27 units during the beat, so
+    a world position would drift the explosion, and the scatter that follows it, out from under the
+    place the player was looking.
+  */
+  w.deathOffset = w.ship.along - w.cameraAlong;
+  w.deathAcross = w.ship.across;
+  burst(w, w.ship.along, w.ship.across, BURST.ship);
+  // Beside the burst, which is the picture it is the twin of. The ship coming apart and the ship
+  // being heard to come apart are one event and are written on one line apart.
+  w.onCue('death');
+  /*
+    ⚠️ **The shell is NOT cleared here, and that is deliberate rather than forgotten.** `stepShields`
+    derives the mark count from the ship's health every step and this ship's health is at or below
+    zero, so the shell is released — with a burst per mark, which is the right picture — by the one
+    description that already owns it. A `shieldOrbs.clear()` here would be a second answer to *how
+    many shields does this ship have*, and `src/content/ships.ts` spends a paragraph on why there is
+    only ever one.
+  */
+  // Index 0, because `CAPACITY.ship` is 1 and there is exactly one live occupant to release.
+  w.shipPool.releaseAt(0);
+  w.dyingIn = DEATH_STEPS;
+  /*
+    ⚠️ **Reported HERE and not at the end of the beat, because the arsenal is still full here.** The
+    shell answers by lighting the pyre; the dispatch that empties the charges is the one at the end,
+    which is also the one that raises the continue screen. 0079.
+  */
+  w.onWreck();
+}
+
+/**
+ * The ship coming apart, and the beat before the life is reported spent.
+ *
+ * ⚠️ **`stepBossDeath`'s mechanism exactly, at a different size** — 0062 built it and 0079 copies it
+ * rather than inventing a second way for a thing to come apart. A rate rather than one big burst,
+ * placed in the camera's frame, and **one report at the end**.
+ *
+ * ⚠️ **The simulation keeps running through it**, so it is a beat rather than a freeze: the scroll
+ * continues, the waves keep arriving, and whatever killed the player is still there when the new ship
+ * appears — which is `docs/decisions/0057-a-death-does-not-rewind-the-level.md` and the reason
+ * `RESPAWN_INVULN_STEPS` is as long as it is.
+ */
+function stepShipDeath(w: World): void {
+  if (w.dyingIn <= 0) return;
+  w.dyingIn--;
+  if (w.dyingIn % DEATH_PULSE === 0) {
+    // Scattered across the hull rather than all from one point, exactly as the boss's pulses are.
+    // The burst stream, per 0021: a fragment's place must not move a wave by one enemy.
+    const spread = w.shipRow.radius;
+    burst(
+      w,
+      w.cameraAlong + w.deathOffset + w.burstRng.range(-spread, spread),
+      w.deathAcross + w.burstRng.range(-spread, spread),
+      BURST.dying,
+    );
+  }
+  /*
+    The one report, at the end of the beat. The shell scatters the upgrades, spends the life and — if
+    the run survives — calls `respawn`, which is what clears this counter.
+
+    ⚠️ **`src/state/root.ts` raises the run-over screen off that dispatch**, so this line is also
+    what puts the explosion in front of the continue screen. Both halves of the report, one place.
+  */
+  if (w.dyingIn === 0) w.onDeath();
+}
+
+/**
+ * Light the pyre: everything the ship never spent, going off where it died.
+ *
+ * Asked for in play: *"the player's ship (and only the player's ship) exploding on death should fire
+ * all unspent bombs at the player ship's location with an expanding ring based on number of bombs…
+ * effectively a way to give the player some breathing space for when they respawn."*
+ * `docs/decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md`.
+ *
+ * ⚠️ **Exported and called by `src/app/mount.ts`, exactly as `scatterUpgrades` and `respawn` are.**
+ * The frame cannot see the run (0015, 0039), so the shell counts the charges and this is the half
+ * that moves an entity — and it is called from `onWreck` rather than `onDeath` because the dispatch
+ * at the end of the beat is what takes those charges away.
+ *
+ * ⚠️ **It cannot hurt the player, and that falls out of the beat rather than being checked for.** A
+ * blast lands on the step AFTER it appears (`step` zeroes the damage at the end of the step it lands
+ * on), and on that step the ship is not in `shipPool` — so the pairing has nothing to find. By the
+ * time the ship is back, `BLAST_STEPS` has expired four times over.
+ *
+ * ⚠️ **`w.blasts` is the pool, so a pyre can be refused.** Four slots and a player who has just lost
+ * a ship that was carrying at most one bomb in the air: the case cannot arise, and if it ever does,
+ * a dropped spawn is silent for the reason every other dropped spawn in this file is —
+ * `src/sim/pool.ts` drops rather than grows.
+ */
+export function detonateArsenal(w: World, charges: number): void {
+  const ring = w.blasts.spawn();
+  if (ring === null) return;
+  reset(ring, w.cameraAlong + w.deathOffset, w.deathAcross, SHOTS[pyreFor(charges)]);
+  // It holds station in the world while everything else moves past it — a shockwave is a place rather
+  // than a body, which is the same statement `stepBombs` makes about a bomb's blast.
+  ring.lifeFor = BLAST_STEPS;
+  // The blast's own cue. It is the same event as a bomb going off, so it is the same sound — and it
+  // is emitted after the `null` check, like every other cue in this file.
+  w.onCue('blast');
+}
+
 /** The boss, if there is one on the field. Its whole behaviour lives in `src/app/boss.ts`. */
 function driveBoss(w: World): void {
   if (w.bossPool.size === 0) return;
@@ -2220,6 +2478,28 @@ export function respawn(w: World): void {
     shown three shields popping off a ship that never carried them.
   */
   w.shieldOrbs.clear();
+  /*
+    ── THE SHIP COMES BACK INTO ITS POOL, WHICH IT ONLY HAS TO DO BECAUSE IT LEFT ──────────────────
+
+    `docs/decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md`. `wreckShip`
+    releases it so that the beat shows an absence rather than a stationary hull, and this is the other
+    end of that.
+
+    ⚠️ **`w.ship` is REASSIGNED rather than assumed**, and the assumption it replaces is true today
+    and is not a thing to lean on silently: `CAPACITY.ship` is 1, so the pool owns exactly one object
+    and hands the same one back. `tests/death.test.ts` drives a death and asserts the pool's occupant
+    IS `w.ship` afterwards, so the day the capacity moves the guard says so rather than the game
+    quietly flying a ship nobody is drawing.
+
+    ⚠️ **Guarded on `size === 0`, because two of the three callers reach here with the ship still in
+    the pool** — `resume` after a run-over that stopped stepping mid-beat, and `resetScene` at boot.
+    Spawning unconditionally would be a second live ship the first time either of them ran.
+  */
+  w.dyingIn = 0;
+  if (w.shipPool.size === 0) {
+    const back = w.shipPool.spawn();
+    if (back !== null) w.ship = back;
+  }
   reset(w.ship, w.cameraAlong + SHIP_START_ALONG, ACROSS_SPAN / 2, w.shipRow);
   holdStation(w.ship, w.scrollPerStep);
   /*

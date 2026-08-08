@@ -27,7 +27,7 @@ import type { Body } from '../sim/entity.ts';
 import { SPRITE } from './sprites.ts';
 
 /** Every shot in the game. Closed. */
-export type ShotKind = 'pulse' | 'spit' | 'missile' | 'bomb' | 'blast';
+export type ShotKind = 'pulse' | 'spit' | 'missile' | 'bomb' | 'blast' | 'blastHalf' | 'blastWide' | 'blastWidest';
 
 export interface ShotRow extends Body {
   /**
@@ -50,7 +50,28 @@ export interface ShotRow extends Body {
 }
 
 /** Written out rather than derived, so the table below cannot quietly lose a row. */
-export const SHOT_KINDS: readonly ShotKind[] = ['pulse', 'spit', 'missile', 'bomb', 'blast'];
+export const SHOT_KINDS: readonly ShotKind[] = [
+  'pulse',
+  'spit',
+  'missile',
+  'bomb',
+  'blast',
+  'blastHalf',
+  'blastWide',
+  'blastWidest',
+];
+
+/**
+ * How far a bomb's blast reaches, in world units — and the unit the other three are counted in.
+ *
+ * ⚠️ **Hoisted so the ladder below is arithmetic rather than four numbers that have to agree.** The
+ * ask that produced the wide ones states them as multiples of this one — *"0 bombs = half current
+ * bomb explosion size, 1 bomb = bomb explosion, 2 bombs = increased explosion size, 3 increased
+ * further"* — so writing 17, 51 and 68 here would be three hand-computed copies of a relationship the
+ * player stated, and the day this number moves they would each go on saying the old thing.
+ * `docs/decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md`.
+ */
+const BLAST_RADIUS = 34;
 
 export const SHOTS: Record<ShotKind, ShotRow> = {
   /**
@@ -106,5 +127,51 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * ⚠️ **`speed` is 0: it does not travel.** It appears where the bomb was and stays there while the
    * world moves past it, which is what a shockwave in a scrolling world looks like.
    */
-  blast: { sprite: SPRITE.blast, spriteHit: SPRITE.blast, radius: 34, health: 1, damage: 6, speed: 0 },
+  blast: { sprite: SPRITE.blast, spriteHit: SPRITE.blast, radius: BLAST_RADIUS, health: 1, damage: 6, speed: 0 },
+  /*
+    ── THE THREE OTHER RUNGS OF THE PYRE, AND THE MIDDLE ONE IS `blast` ITSELF ─────────────────────
+
+    Asked for in play: *"the player's ship (and only the player's ship) exploding on death should fire
+    all unspent bombs at the player ship's location with an expanding ring based on number of bombs —
+    0 bombs = half current bomb explosion size, 1 bomb = bomb explosion, 2 bombs = increased explosion
+    size, 3 increased further."*
+    `docs/decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md`.
+
+    ⚠️ **Four rungs and only three rows, because the ask names the second one as a thing that already
+    exists**: *"1 bomb = bomb explosion"* is the bomb's own blast, so `PYRES` in
+    `src/content/specials.ts` lists `blast` at that rung rather than a fourth row saying 34 again.
+
+    ⚠️ **A SIZE ladder and not a DAMAGE one.** Every rung takes exactly what a bomb takes, because
+    what the player is being given is room rather than a stronger weapon — and a rung that also hit
+    harder would make dying with a full arsenal the best way to kill a boss.
+
+    ⚠️ **Each is a separate row because each is a separate BITMAP.** `src/render/surface.ts` blits at
+    the extent the atlas baked, so *the same ring, larger* is not something a caller can ask for — the
+    picture and the reach are one number (`src/content/sprites.ts`), and `tests/death.test.ts` holds
+    all four pairs to each other the way `tests/bombs.test.ts` already held the first.
+  */
+  blastHalf: {
+    sprite: SPRITE.blastHalf,
+    spriteHit: SPRITE.blastHalf,
+    radius: BLAST_RADIUS * 0.5,
+    health: 1,
+    damage: 6,
+    speed: 0,
+  },
+  blastWide: {
+    sprite: SPRITE.blastWide,
+    spriteHit: SPRITE.blastWide,
+    radius: BLAST_RADIUS * 1.5,
+    health: 1,
+    damage: 6,
+    speed: 0,
+  },
+  blastWidest: {
+    sprite: SPRITE.blastWidest,
+    spriteHit: SPRITE.blastWidest,
+    radius: BLAST_RADIUS * 2,
+    health: 1,
+    damage: 6,
+    speed: 0,
+  },
 };

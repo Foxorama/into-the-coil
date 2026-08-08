@@ -433,6 +433,32 @@ describe('the pools are the worst-case scene, and they add up to it', () => {
     ).toBeLessThanOrEqual(CAPACITY.debris);
   });
 
+  it('leaves room for a boss and a player dying in the same second', () => {
+    /*
+      ⚠️ **The second sustained draw on the debris pool, and it can share a step with the first** —
+      `docs/decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md`. The ship now
+      comes apart over a beat exactly as a boss does, and the two can overlap: a player killed by the
+      volley a dying boss already had in the air is an ordinary way for a fight to end.
+
+      The arithmetic is the boss's, twice, plus the bang the ship's own death throws once — and the
+      rate is again asserted at the fastest that reads as separate pulses rather than at the constant,
+      for the reason the boss's own guard gives above.
+    */
+    const bossBeat = (BURST.boss * BURST.lifeMax) / 5;
+    const shipBeat = (BURST.dying * BURST.lifeMax) / 8 + BURST.ship;
+    expect(
+      bossBeat + shipBeat,
+      `a boss and a ship coming apart together peak at about ${Math.round(bossBeat + shipBeat)} fragments ` +
+        `against a pool of ${CAPACITY.debris}`,
+    ).toBeLessThanOrEqual(CAPACITY.debris);
+    /*
+      ⚠️ **And the ship's beat is quieter per pulse than the boss's, which is the shape of the two
+      events rather than a budget dodge.** A boss is the loudest thing in the game and the level ends
+      on it; a death is something the player sees several times a run and is waiting through.
+    */
+    expect(BURST.dying, 'the ship comes apart louder per pulse than a boss does').toBeLessThan(BURST.boss);
+  });
+
   it('gives the shell exactly as many slots as the ship has shields', () => {
     // The one pool whose size is a rule rather than a budget: a mark per shield, and the pickup
     // refuses a fourth — `src/content/ships.ts`. A pool one short would drop a mark the player owns.

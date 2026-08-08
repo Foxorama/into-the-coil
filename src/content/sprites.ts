@@ -144,6 +144,26 @@ export const SPRITE_KINDS = [
   */
   'blast',
   /*
+    ── THE SAME RING AT THREE MORE SIZES, AND THE SIZE IS THE WHOLE MESSAGE ────────────────────────
+
+    Asked for in play: *"an expanding ring based on number of bombs."*
+    `docs/decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md`.
+
+    ⚠️ **One drawing, four bitmaps, and it has to be four bitmaps.** `src/render/surface.ts` blits a
+    baked bitmap at the extent the atlas recorded for it, so *the same sprite, bigger* is not a thing a
+    caller can ask for — and it must not become one. A per-entity draw scale would let any body in the
+    game be drawn at a size unrelated to its art, which is the affordance that makes
+    `docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md`'s *the picture is the hurtbox*
+    unenforceable everywhere rather than just here.
+
+    ⚠️ **They share the ring silhouette and the hazard ink deliberately.** A player who has learned
+    that a wide ring at the far end of a bomb's flight is something to be outside of should read this
+    the same way at a glance; it is the same event with a different cause.
+  */
+  'blastHalf',
+  'blastWide',
+  'blastWidest',
+  /*
     ⚠️ **THREE PICKUP SILHOUETTES, NOT ONE IN THREE COLOURS.**
     `docs/decisions/0024-the-accessibility-floor-is-settings.md` puts *colour never carries meaning
     alone* in the unconditional tier, and a pickup is the case where that is most tempting to break:
@@ -337,6 +357,21 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     `SHOTS.blast`, because how far a blast reaches is a gameplay number rather than an art one.
   */
   blast: 68,
+  /*
+    ⚠️ **The same relationship as `blast`'s, three more times: twice the row's hurtbox radius.**
+    `tests/death.test.ts` holds all four pairs, which is the guard `tests/bombs.test.ts` already
+    wrote for one of them — a blast whose picture is smaller than its reach kills things the player
+    watched it miss.
+
+    ⚠️ **The widest one is 136 units against a 100-unit lane, and that is deliberate rather than
+    unnoticed.** It is what a player who died carrying three unspent bombs gets, and covering the
+    whole lane is the point of it. What it costs is atlas memory: the ceiling in
+    `src/render/bake.ts` is a RESOLUTION, so this bakes at about 980px on a phone's pixel density
+    rather than at its desktop 1360 — which is the only reason a ring this big is affordable at all.
+  */
+  blastHalf: 34,
+  blastWide: 102,
+  blastWidest: 136,
   /*
     ⚠️ **Bigger than the smallest enemy, on purpose.** A pickup is the one thing on screen the player
     is supposed to fly TOWARDS, and at 3.5 it was smaller than everything it had to be picked out
