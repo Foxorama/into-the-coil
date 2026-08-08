@@ -26,16 +26,22 @@ export const PROBES = [
       that only catches a total reversion is a guard that lets the density creep back one pickup at a
       time, which is how it got to twenty-four in the first place.
     */
-    broke: 'a level quietly given more weapons than the ask allows',
+    broke: 'a level quietly given more shields than the ask allows',
     guard: 'offers the budget the ask named, in every level',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 4600, kind: 'weapon', lane: 30 },",
+      /*
+        ⚠️ RE-AIMED AT THE SHIELDS BY 0083. It used to add weapons, and 0083 gave the weapon count a
+        guard of its own — an exact match against `UPGRADE_TIERS`, because *cap the guns before the
+        boss* is arithmetic rather than a range. Extra weapons now redden that one instead, which is
+        the wrong guard for this probe to be standing over. The shields still have a RANGE, so they are
+        what a budget ceiling is actually made of.
+      */
+      find: "  { at: 5900, kind: 'shield', lane: 62 },",
       replace:
-        "  { at: 4600, kind: 'weapon', lane: 30 },\n" +
-        "  { at: 4900, kind: 'weapon', lane: 55 },\n" +
-        "  { at: 5200, kind: 'weapon', lane: 35 },\n" +
-        "  { at: 5400, kind: 'weapon', lane: 60 },",
+        "  { at: 5900, kind: 'shield', lane: 62 },\n" +
+        "  { at: 6000, kind: 'shield', lane: 40 },\n" +
+        "  { at: 6100, kind: 'shield', lane: 55 },",
     },
   },
   {
@@ -53,7 +59,9 @@ export const PROBES = [
       A guard that only catches a careless change would not catch this one.
     */
     broke: 'the overflow damage written back, so a capped weapon keeps getting stronger forever',
-    guard: 'THE NERF: a weapon past its caps stops growing',
+    // ⚠️ The guard was `THE NERF: a weapon past its caps stops growing` and 0083 folded its assertions
+    // into `THE FLOORS`, which now holds both halves: the ladder stops, and the damage does not climb.
+    guard: 'THE FLOORS: the last tier lands exactly on them',
     edit: {
       path: 'src/content/pickups.ts',
       /*
@@ -85,7 +93,9 @@ export const PROBES = [
       silently, which is the failure the deleted `damage++` was there to prevent.
     */
     broke: 'a capped weapon pickup still filed as an upgrade, so it buys nothing',
-    guard: 'a weapon pickup taken at the cap becomes a bomb charge',
+    // ⚠️ Renamed by 0083 — it is two ladders now, so the guard is about *an upgrade pickup* rather
+    // than about the weapon.
+    guard: 'an upgrade pickup taken at its cap becomes a bomb charge',
     edit: {
       path: 'src/content/pickups.ts',
       /*
@@ -94,54 +104,40 @@ export const PROBES = [
         already says `upgrade`, so the extra term looks redundant right up until the player's weapon is
         full.
       */
-      find: "  return effect === 'upgrade' && !weaponGrows(weapon) ? 'special' : effect;",
-      replace: '  void weapon;\n  return effect;',
+      find: "  return effect === 'upgrade' && isUpgrade(kind) && !upgradeGrows(upgrades, kind) ? 'special' : effect;",
+      replace: '  void upgrades;\n  return effect;',
     },
   },
+  /*
+    ── TWO PROBES MOVED TO `0083-ladders.mjs` ────────────────────────────────────────────────────
+
+    The 50% scatter and the shields-stay-out rule are both 0083's now: it reverted the first after a
+    play-test called it *"too punishing"* and guarded the second for the first time. A probe belongs
+    to the decision whose rule it breaks, so they went with the rule rather than staying beside the
+    decision that happened to touch the same function.
+  */
   {
     decision: '0082',
     suite: 'tests/pickups.test.ts',
     /*
-      ⚠️ THE COST OF DYING. *"When a player dies let's change it to 50% chance of each power up they
-      have collected spawning from their death, current implementation means there's not really a cost
-      to dying at all."* The break is the filter removed, which is the state 0066 shipped.
-    */
-    broke: 'the 50% filter removed, so a death hands the whole loadout straight back',
-    guard: 'THE 50% RULE: gives back about half of a large loadout',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: '    if (w.scatterRng.float() < SCATTER_KEPT) w.scattered[thrown++] = upgrades[i]!;',
-      replace: '    w.scattered[thrown++] = upgrades[i]!;\n    void SCATTER_KEPT;',
-    },
-  },
-  {
-    decision: '0082',
-    suite: 'tests/pickups.test.ts',
-    /*
-      ⚠️ THE ORDER, AND IT IS THE ONE THING THE FILTER GETS WRONG BY DEFAULT. Filtering inside the
-      placing loop is the obvious way to write *50% chance of each power up*, and it reads perfectly:
-      the same coin, the same rate, the same survivors. What it breaks is 0077's even spacing —
-      the ring is still divided over the FULL loadout, so the pieces that survive sit on the headings
-      the whole set would have used and the gaps read as pieces having failed to appear.
+      ⚠️ THE RING SPACED OVER PIECES THAT ARE NOT BEING PLACED. `count` exists because the pool can
+      truncate a very long loadout, and it was written for 0082's 50% coin — which is gone, and the
+      divisor is not: spacing over `upgrades.length` while placing `count` leaves the survivors on the
+      headings the whole set would have used, so part of the ring is empty and the player reads it as
+      pieces having failed to appear.
 
       ⚠️ This is the break the decision is most likely to lose to a later refactor, because the two
-      versions produce the same COUNT and differ only in where the pieces are. Nothing about the
-      numbers would look wrong.
+      versions place the same NUMBER of pieces and differ only in where. Nothing about the counts would
+      look wrong, which is why it needed an assertion about the ANGLES.
     */
-    broke: 'the ring spaced over the whole loadout rather than over the pieces that survived the coin',
+    broke: 'the ring spaced over the whole loadout rather than over the pieces being placed',
     guard: 'leaves in every direction, and no two pieces travel together',
     edit: {
       path: 'src/app/frame.ts',
-      /*
-        ⚠️ The divisor, and only the divisor. `upgrades` here is `w.scattered`, whose length is the
-        pool's — so this is precisely *space the circle over more pieces than are being placed*, which
-        is what tossing the coin inside this loop would produce. The COUNT is unchanged, which is why
-        it needed a new assertion rather than an existing one.
-      */
       find: '    const halfGap = (Math.PI / count) * SCATTER_JITTER_SHARE;\n    const angle = (i / count) * Math.PI * 2',
       replace:
-        '    const halfGap = (Math.PI / upgrades.length) * SCATTER_JITTER_SHARE;\n' +
-        '    const angle = (i / upgrades.length) * Math.PI * 2',
+        '    const halfGap = (Math.PI / (count * 3)) * SCATTER_JITTER_SHARE;\n' +
+        '    const angle = (i / (count * 3)) * Math.PI * 2',
     },
   },
 ];

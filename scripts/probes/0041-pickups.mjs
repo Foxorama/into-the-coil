@@ -17,13 +17,18 @@ export const PROBES = [
     edit: {
       path: 'src/content/levels.ts',
       /*
-        ⚠️ RE-ANCHORED BY 0082, and the break is much bigger than it was. It used to remove one of
-        approach's four `spread` pickups out of twenty-four, leaving a level that still read as
-        generous. A level now carries THREE weapons, so removing one leaves a 94-second stretch —
-        which is the same defect at three times the size, and the reason the guard's ceiling moving
-        from 20s to 55s is not the guard being switched off.
+        ⚠️ RE-ANCHORED TWICE, AND THE SECOND TIME TAUGHT SOMETHING. It removed one of approach's four
+        `spread` pickups out of twenty-four; 0082 pointed it at one of three weapons; 0083 gave a level
+        two missiles as well, and **removing a middle weapon stopped reddening this guard at all** —
+        the missiles now sit in the gaps, so the worst stretch went from 94 seconds to 49 and the
+        ceiling is 55.
+
+        ⚠️ So the break is the LAST upgrade in the level, which leaves the run to the boss with nothing
+        in it: 71 seconds from the last missile at 3,800 to the boss at 6,350. That is the defect the
+        guard is actually about — a player who dies late flies the hardest stretch with the base weapon
+        — and the middle-of-the-level version had quietly stopped being it.
       */
-      find: "  { at: 2900, kind: 'weapon', lane: 68 },\n",
+      find: "  { at: 4600, kind: 'weapon', lane: 50 },\n",
       replace: '',
     },
   },
@@ -41,8 +46,8 @@ export const PROBES = [
       // floor still caught it. The break has to be the thing the guard is about.
       // ⚠️ Re-anchored by 0082: the floor used to sit inside a `rapid` arm and now sits in the merged
       // ladder's only arm. Same edit, same guard, one fewer branch around it.
-      find: '    if (faster >= FASTEST_FIRE) fireEvery = faster;',
-      replace: '    fireEvery = faster;',
+      find: '  const fireEvery = rung(ship.fireEvery, FASTEST_FIRE, gun);',
+      replace: '  const fireEvery = rung(ship.fireEvery, 1, gun);',
     },
   },
   {

@@ -224,26 +224,32 @@ const SCATTER_SPEED = 0.66;
  */
 const SCATTER_STEPS = 300;
 
-/**
- * What share of the upgrades a death took come back, as a probability per upgrade.
- *
- * ⚠️ **The ask's own number**: *"when a player dies let's change it to 50% chance of each power up
- * they have collected spawning from their death, current implementation means there's not really a
- * cost to dying at all."*
- * `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md`, amending
- * `docs/decisions/0066-a-death-scatters-what-it-took.md`.
- *
- * ⚠️ **PER UPGRADE and not per death**, which is what makes it a cost rather than a coin toss on the
- * whole run. A player who dies with six upgrades expects three back and can be unlucky; a player who
- * dies with one is being told, half the time, that the death was free.
- *
- * ⚠️ **It is the thing that pays for a level offering six pickups instead of twenty.** 0082 cut the
- * density on the grounds that a rare pickup is a premium piece, and `docs/game.md`'s answer to *what
- * is a player who just died flying with* used to be *another upgrade within twenty seconds*. It is now
- * *half of what you were carrying, on the spot* — so these two numbers are one decision and neither
- * survives being tuned without the other.
- */
-const SCATTER_KEPT = 0.5;
+/*
+  ── `SCATTER_KEPT` WAS HERE AND IT LASTED ONE PLAY-TEST ──────────────────────────────────────────
+
+  0082 made a death throw back each upgrade on a 50% coin, which was the ask at the time: *"when a
+  player dies let's change it to 50% chance of each power up they have collected spawning from their
+  death, current implementation means there's not really a cost to dying at all."*
+
+  ⚠️ **It was flown and the verdict was one word.** *"Tested the 50% on death and it's too punishing,
+  let's make 100% for weapons and missiles."*
+  `docs/decisions/0083-two-ladders-of-four.md`. So a death throws back everything it took, which is
+  what `docs/decisions/0066-a-death-scatters-what-it-took.md` built and 0082 briefly amended.
+
+  ⚠️ **The FILTER is deleted rather than set to 1.** A coin that always comes up heads is a mechanism
+  nothing can test — its probe would go STILL GREEN, and 0019 is explicit that an unfalsifiable guard
+  is worse than none. What survives is `scatterRing`'s explicit `count`, which was written for the
+  filter and is worth keeping without it: the ring is spaced over the pieces that actually reach the
+  field rather than over the ones the death took, so a pool that truncates leaves a smaller ring
+  instead of a gappy one.
+
+  ⚠️ **AND SHIELDS ARE NOT IN THIS AT ALL, which was already true and is now guarded.** *"But no
+  shields spawn on death."* A shield lives on the ship's `health`
+  (`docs/decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md`) rather
+  than in the upgrade list, so it has never been scatterable — `scatterUpgrades` takes `UpgradeKind[]`
+  and a shield is not one. `tests/pickups.test.ts` now holds that it stays that way, because *true by
+  accident* is one refactor from false.
+*/
 
 /**
  * How far a scattered piece's heading may wander from its share of the circle, as a share of the
@@ -688,17 +694,13 @@ export interface World {
   */
   /** What was collected this step. Reused, never rebuilt. */
   collected: Collected;
-  /**
-   * Scratch for the death scatter: the upgrades the coin kept, written before the ring is built.
-   *
-   * ⚠️ **A field on the world rather than an array built in `scatterUpgrades`**, because this file is
-   * one of `docs/decisions/0022-frame-rate-is-a-feature.md`'s hot files and a death happens inside a
-   * step. Sized to the pickup pool, which is the most that can ever reach the field.
-   *
-   * ⚠️ **It exists because the 50% filter has to run BEFORE the spacing**, not during it — 0082 has
-   * the reasoning, and `scatterUpgrades` restates the consequence where the loop is.
-   */
-  scattered: UpgradeKind[];
+  /*
+    ⚠️ **`scattered` WAS A FIELD HERE AND IT LASTED ONE DAY.** It was the scratch buffer 0082's 50%
+    coin needed: the survivors had to be counted before the ring could be spaced over them, and this
+    file is one of `docs/decisions/0022-frame-rate-is-a-feature.md`'s hot files, so the copy could not
+    be an array built per death. 0083 threw the coin away — *"too punishing"* — and a buffer with
+    nothing to filter into is a field that only makes the world bigger.
+  */
   /**
    * The ship flew into something.
    *
@@ -2145,45 +2147,44 @@ function driftPickups(w: World): void {
  */
 export function scatterUpgrades(w: World, upgrades: readonly UpgradeKind[]): void {
   /*
-    ── HALF OF THEM, AND THE COIN IS TOSSED BEFORE THE RING IS BUILT ──────────────────────────────
+    ── ALL OF THEM, AND FOR ONE DAY IT WAS HALF ───────────────────────────────────────────────────
 
-    Reported from play: *"when a player dies let's change it to 50% chance of each power up they have
-    collected spawning from their death, current implementation means there's not really a cost to
-    dying at all."* `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md`, amending
-    `docs/decisions/0066-a-death-scatters-what-it-took.md`, which threw every one of them.
+    Reported from play: *"tested the 50% on death and it's too punishing, let's make 100% for weapons
+    and missiles, but no shields spawn on death."*
+    `docs/decisions/0083-two-ladders-of-four.md`, restoring what
+    `docs/decisions/0066-a-death-scatters-what-it-took.md` built.
 
-    ⚠️ **COUNTED FIRST, then placed — and filtering inside the placing loop would have been the bug.**
-    0077's guarantee is that the pieces are spaced `i / n` of a circle apart, so `n` has to be *how
-    many are actually thrown*. A coin tossed inside that loop leaves the survivors on the headings the
-    full set would have used, which reads as pieces having failed to appear rather than as a smaller
-    scatter — and it is the one failure mode 0066 says the even spacing exists to prevent.
+    ⚠️ **Shields are absent by CONSTRUCTION rather than by a filter.** They live on the ship's
+    `health` (0050), not in the upgrade list, so the signature is the guarantee: this takes
+    `UpgradeKind[]` and a shield is not one. `tests/pickups.test.ts` holds it anyway, because *true
+    because of a type* stops being obvious the moment somebody widens the type.
 
-    ⚠️ **`scatterRng` and not `burstRng`**, which is why
-    `docs/decisions/0021-one-stream-per-concern.md` separated them in the first place: *which pieces a
-    player can reach is the entire cost of a death*, so it may not move because a cosmetic roll was
-    added somewhere else. This is the draw that stream was named for.
+    ⚠️ **Bounded by the pool, and the bound is what `count` is for.** A player carrying thirty
+    upgrades cannot have thirty pieces on the field — `src/sim/pool.ts` drops rather than grows — so
+    the ring is spaced over what will actually reach it. Spacing over the whole loadout and letting
+    the pool refuse the tail is the version that leaves gaps, which is the one failure mode 0066 says
+    the even spacing exists to prevent.
+
+    ⚠️ **Read off the POOL rather than from `CAPACITY` in `src/app/mount.ts`.** They are the same
+    number and only one of them is reachable from here: `mount.ts` imports this file, so importing it
+    back would be a cycle. `Pool` already knows how big it is, which makes this the single description
+    rather than a copy that has to be kept in step.
+
+    ⚠️ **Unreachable at the current tiers, and kept anyway.** Both ladders cap at `UPGRADE_TIERS`, so
+    the shell can never build a list longer than eight — but `weaponFor` deliberately tolerates a
+    longer one (a saved run, a test), and this is the line that stops such a list spacing a ring the
+    field cannot hold.
   */
-  let thrown = 0;
-  for (let i = 0; i < upgrades.length; i++) {
-    /*
-      ⚠️ **Bounded by the scratch buffer, which is the pool's own size.** A player carrying thirty
-      upgrades cannot have thirty pieces on the field either way — `src/sim/pool.ts` drops rather than
-      grows, and the loop below already returns when `spawn` comes back empty. Stopping here means the
-      RING is built over a number the field can actually hold, so the spacing stays even instead of
-      leaving a gap where the pool refused.
-    */
-    if (thrown >= w.scattered.length) break;
-    if (w.scatterRng.float() < SCATTER_KEPT) w.scattered[thrown++] = upgrades[i]!;
-  }
-  scatterRing(w, w.scattered, thrown);
+  const room = w.pickups.capacity;
+  scatterRing(w, upgrades, upgrades.length > room ? room : upgrades.length);
 }
 
 /**
  * Throw exactly these `count` pieces, evenly around a circle at the wreck.
  *
- * ⚠️ **Split out from `scatterUpgrades` so the ring is built over the SURVIVORS**, per the note
- * above: `count` is the divisor that spaces them, and it has to be how many are really going to
- * appear.
+ * ⚠️ **`count` rather than `upgrades.length`, and it survived the filter that needed it.** 0082's
+ * 50% coin is gone, but the reason for the split is not: `count` is the divisor that spaces the ring,
+ * and it has to be how many pieces are really going to appear.
  */
 function scatterRing(w: World, upgrades: readonly UpgradeKind[], count: number): void {
   /*

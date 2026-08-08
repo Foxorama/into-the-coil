@@ -113,7 +113,7 @@ export const PROBES = [
     guard: 'climbs with the upgrade list whatever the upgrades were spent on',
     edit: {
       path: 'src/content/pickups.ts',
-      find: '    tier: Math.min(MAX_HULL_TIER, Math.floor(upgrades.length / UPGRADES_PER_TIER)),',
+      find: '    tier: Math.min(MAX_HULL_TIER, Math.floor((gun + tubes) / UPGRADES_PER_TIER)),',
       replace: '    tier: Math.min(MAX_HULL_TIER, shots - 1),',
     },
   },
@@ -126,8 +126,8 @@ export const PROBES = [
     guard: 'climbs with the upgrade list whatever the upgrades were spent on',
     edit: {
       path: 'src/content/pickups.ts',
-      find: '    tier: Math.min(MAX_HULL_TIER, Math.floor(upgrades.length / UPGRADES_PER_TIER)),',
-      replace: '    tier: Math.floor(upgrades.length / UPGRADES_PER_TIER),',
+      find: '    tier: Math.min(MAX_HULL_TIER, Math.floor((gun + tubes) / UPGRADES_PER_TIER)),',
+      replace: '    tier: Math.floor((gun + tubes) / UPGRADES_PER_TIER),',
     },
   },
 ];

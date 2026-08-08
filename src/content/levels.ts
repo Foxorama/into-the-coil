@@ -262,27 +262,35 @@ const APPROACH: readonly WaveEntry[] = [
 ];
 
 /*
-  ── SIX PICKUPS, AND THERE WERE TWENTY-FOUR ──────────────────────────────────────────────────────
+  ── NINE PICKUPS, AND THERE WERE TWENTY-FOUR, AND FOR ONE DAY THERE WERE SIX ─────────────────────
 
+  `docs/decisions/0083-two-ladders-of-four.md`, amending
   `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md`. Reported from play: *"power ups are
   too common still and these are premium game pieces that are the lynchpin of whether this game is
   actually good or not"*, and *"these are a key driver of the players feeling of power growth and
   they're currently a steady stream of non-earned upgrades that make the game trivial."*
 
-  ⚠️ **THE SHAPE IS THE SAME IN ALL SEVEN LEVELS, and that is deliberate rather than lazy**: three
-  weapons, two shields, one bomb. The budgets are the ask's own — *"shields/lives should be kept to 1-2
-  per level"*, *"missile upgrades need to be 2-3 per level"* — and a level that quietly gave itself a
-  fourth weapon would be authoring a difficulty curve in the one file that must not.
+  ⚠️ **THE SHAPE IS THE SAME IN ALL SEVEN LEVELS, and that is deliberate rather than lazy**: four
+  weapons, two missiles, two shields, one bomb. A level that quietly gave itself a fifth weapon would
+  be authoring a difficulty curve in the one file that must not.
 
-  ⚠️ **THREE WEAPONS IS ALSO THE DIFFICULTY DIAL'S OWN NUMBER**, which is worth knowing before chunk 6
+  ⚠️ **THE COUNT IS DERIVED FROM A TARGET RATHER THAN CHOSEN.** *"The player should be able to cap
+  weapons before the first boss and have tier 2 on missiles and then have 2 shields per level plus a
+  bomb. So we need 9 upgrades per level to start with."* `UPGRADE_TIERS` is 4, so capping the guns is
+  four weapon pickups and tier 2 on the missiles is two — and 4 + 2 + 2 + 1 is the nine.
+
+  ⚠️ **SO THE PICKUP BUDGET AND `UPGRADE_TIERS` ARE ONE DECISION.** Raising the tier count without
+  raising the weapon count leaves a player who can never cap; lowering it leaves pickups that convert
+  straight to bombs. `tests/pickups.test.ts` holds the arithmetic rather than the two numbers.
+
+  ⚠️ **FOUR WEAPONS IS ALSO THE DIFFICULTY DIAL'S OWN NUMBER**, which is worth knowing before chunk 6
   moves it: *"Level 1 -> dial starts at 1, increases to 2 when the player gets their first weapon power
   up, increases again when they get their next, until they get to the boss which should be difficulty 4
-  or so."* Three notches from 1 is 4. The count here and the dial there are the same decision seen from
-  two ends, and neither should be changed alone.
+  or so."* Four notches from 1 overshoots 4 by one and three undershot it; the dial is keyed to *a
+  weapon power up*, and there are now four of those in level one. Worth settling when the dial lands
+  rather than guessing here.
 
-  ⚠️ **What differs level to level is WHERE, not how many.** The first weapon comes later as the run
-  goes on — 1200 units in level one against 1220 in level seven is barely anything, and the real
-  stretch is the middle: a later level makes the player fly longer between the second and the third.
+  ⚠️ **What differs level to level is WHERE, not how many.**
 
   ── WHAT PAYS FOR THE STRETCHES THIS LEAVES ──────────────────────────────────────────────────────
 
@@ -317,26 +325,46 @@ const APPROACH_PICKUPS: readonly PickupEntry[] = [
   */
   { at: 260, kind: 'shield', lane: 40 },
   /*
-    ⚠️ **THE FIRST WEAPON IS ALSO THE MISSILE ARRIVING.** The base ship has no launcher (0056) and
-    `weaponFor`'s ladder spends its first rung on one, so this single pickup is the second weapon
-    turning up as well as the first upgrade — which is what *"increase its tier and rate of fire
-    together"* buys. It is late on purpose: a player flies the base ship for thirty-three seconds and
-    a full wave of drifters before anything changes, so the change is something they notice.
+    ⚠️ **THE FIRST WEAPON, and it is late on purpose.** A player flies the base ship for twenty-four
+    seconds and a full wave of drifters before anything changes, so the change is something they
+    notice rather than something that happens to them.
   */
-  { at: 1200, kind: 'weapon', lane: 25 },
-  { at: 2900, kind: 'weapon', lane: 68 },
+  { at: 900, kind: 'weapon', lane: 25 },
   /*
-    ⚠️ **THE BOMB IS THE ONLY PICKUP THE PLAYER HAS TO DECIDE WHEN TO USE**, and it sits where the
-    level turns — the stretch after this is where chargers start arriving. 0053 gave a run two charges
-    and one more per level cleared; this is the first thing in the game that grants any mid-level, and
-    it grants two. Whether that is generous is a play-test question and 0082 says so.
+    ⚠️ **THE FIRST MISSILE PICKUP IS THE SECOND WEAPON ARRIVING AT ALL.** The base ship has no tube
+    (`docs/decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md`) and the ladder
+    puts the first tube on tier 1, so this is not an upgrade to a thing the player has — it is a new
+    thing. It comes after the first weapon because one new weapon at a time is how either gets noticed.
   */
-  { at: 3600, kind: 'bomb', lane: 45 },
-  { at: 4600, kind: 'weapon', lane: 30 },
+  { at: 1700, kind: 'missile', lane: 62 },
+  { at: 2300, kind: 'weapon', lane: 34 },
+  { at: 3100, kind: 'weapon', lane: 68 },
+  { at: 3800, kind: 'missile', lane: 30 },
+  /*
+    ⚠️ **THE FOURTH WEAPON CAPS THE GUNS, AND IT DOES IT 1,750 UNITS — FORTY-EIGHT SECONDS — BEFORE
+    THE BOSS.** That is the ask: *"I want the player to be able to cap weapons before the 1st boss and
+    then also have a couple of additional shields/bombs."* It is the only placement in this list with a
+    stated target behind it, and `tests/pickups.test.ts` holds it as arithmetic against `UPGRADE_TIERS`
+    rather than against the number four typed here.
+  */
+  { at: 4600, kind: 'weapon', lane: 50 },
+  /*
+    ⚠️ **THE LAST TWO ARE DELIBERATELY AFTER THE CAP, and that is the *"and then also"* half of the
+    ask.** Once the guns are full a weapon pickup would convert straight to a bomb charge (0082) — a
+    fine rule, and a poor thing to build a level's last minute out of, because the player would be
+    flying for pickups whose face does not say what they give. So the level stops offering guns and
+    offers the two things that still land where they say: a charge, and the shell to take into the
+    fight.
+
+    ⚠️ **THE BOMB IS THE ONLY PICKUP THE PLAYER HAS TO DECIDE WHEN TO USE.** 0053 gave a run two
+    charges and one more per level cleared; this is the first thing in the game that grants any
+    mid-level, and it grants two.
+  */
+  { at: 5300, kind: 'bomb', lane: 38 },
   // ⚠️ The last one is before the boss rather than during it. A fight that hands out shields while
   // it is being fought is a fight whose difficulty is a supply line — 0040 keeps a boss to its own
   // clock, and this is the shell the player takes INTO it.
-  { at: 5700, kind: 'shield', lane: 62 },
+  { at: 5900, kind: 'shield', lane: 62 },
 ];
 
 /*
@@ -459,11 +487,14 @@ const DESCENT_PICKUPS: readonly PickupEntry[] = [
   // The opening shield, on the same terms as level one's — and level two opens on the same empty
   // stretch for the same reason, so it is the same answer to the same question.
   { at: 260, kind: 'shield', lane: 62 },
-  { at: 1350, kind: 'weapon', lane: 28 },
-  { at: 3050, kind: 'weapon', lane: 70 },
-  { at: 3800, kind: 'bomb', lane: 38 },
-  { at: 4750, kind: 'weapon', lane: 55 },
-  { at: 5850, kind: 'shield', lane: 32 },
+  { at: 950, kind: 'weapon', lane: 28 },
+  { at: 1750, kind: 'missile', lane: 66 },
+  { at: 2400, kind: 'weapon', lane: 40 },
+  { at: 3200, kind: 'weapon', lane: 30 },
+  { at: 3900, kind: 'missile', lane: 58 },
+  { at: 4700, kind: 'weapon', lane: 44 },
+  { at: 5400, kind: 'bomb', lane: 52 },
+  { at: 5950, kind: 'shield', lane: 32 },
 ];
 
 
@@ -554,11 +585,14 @@ const COILWARD: readonly WaveEntry[] = [
  */
 const COILWARD_PICKUPS: readonly PickupEntry[] = [
   { at: 300, kind: 'shield', lane: 44 },
-  { at: 1300, kind: 'weapon', lane: 56 },
-  { at: 2950, kind: 'weapon', lane: 34 },
-  { at: 3700, kind: 'bomb', lane: 60 },
+  { at: 920, kind: 'weapon', lane: 56 },
+  { at: 1720, kind: 'missile', lane: 34 },
+  { at: 2350, kind: 'weapon', lane: 60 },
+  { at: 3150, kind: 'weapon', lane: 38 },
+  { at: 3850, kind: 'missile', lane: 56 },
   { at: 4650, kind: 'weapon', lane: 48 },
-  { at: 5800, kind: 'shield', lane: 38 },
+  { at: 5350, kind: 'bomb', lane: 46 },
+  { at: 5900, kind: 'shield', lane: 38 },
 ];
 
 /*
@@ -646,11 +680,14 @@ const SHOAL: readonly WaveEntry[] = [
  */
 const SHOAL_PICKUPS: readonly PickupEntry[] = [
   { at: 290, kind: 'shield', lane: 52 },
-  { at: 1280, kind: 'weapon', lane: 36 },
-  { at: 2920, kind: 'weapon', lane: 62 },
-  { at: 3650, kind: 'bomb', lane: 44 },
+  { at: 900, kind: 'weapon', lane: 36 },
+  { at: 1700, kind: 'missile', lane: 62 },
+  { at: 2320, kind: 'weapon', lane: 44 },
+  { at: 3120, kind: 'weapon', lane: 58 },
+  { at: 3820, kind: 'missile', lane: 40 },
   { at: 4620, kind: 'weapon', lane: 30 },
-  { at: 5760, kind: 'shield', lane: 66 },
+  { at: 5320, kind: 'bomb', lane: 50 },
+  { at: 5860, kind: 'shield', lane: 66 },
 ];
 
 /*
@@ -737,11 +774,14 @@ const BATTERIES: readonly WaveEntry[] = [
  */
 const BATTERIES_PICKUPS: readonly PickupEntry[] = [
   { at: 290, kind: 'shield', lane: 36 },
-  { at: 1260, kind: 'weapon', lane: 60 },
-  { at: 2900, kind: 'weapon', lane: 42 },
-  { at: 3640, kind: 'bomb', lane: 54 },
-  { at: 4600, kind: 'weapon', lane: 66 },
-  { at: 5740, kind: 'shield', lane: 30 },
+  { at: 900, kind: 'weapon', lane: 60 },
+  { at: 1700, kind: 'missile', lane: 42 },
+  { at: 2320, kind: 'weapon', lane: 54 },
+  { at: 3120, kind: 'weapon', lane: 30 },
+  { at: 3820, kind: 'missile', lane: 50 },
+  { at: 4620, kind: 'weapon', lane: 62 },
+  { at: 5320, kind: 'bomb', lane: 40 },
+  { at: 5860, kind: 'shield', lane: 44 },
 ];
 
 /*
@@ -834,11 +874,14 @@ const GAUNTLET: readonly WaveEntry[] = [
  */
 const GAUNTLET_PICKUPS: readonly PickupEntry[] = [
   { at: 280, kind: 'shield', lane: 58 },
-  { at: 1240, kind: 'weapon', lane: 42 },
-  { at: 2880, kind: 'weapon', lane: 66 },
-  { at: 3620, kind: 'bomb', lane: 34 },
-  { at: 4680, kind: 'weapon', lane: 52 },
-  { at: 5900, kind: 'shield', lane: 46 },
+  { at: 880, kind: 'weapon', lane: 42 },
+  { at: 1680, kind: 'missile', lane: 66 },
+  { at: 2300, kind: 'weapon', lane: 34 },
+  { at: 3100, kind: 'weapon', lane: 60 },
+  { at: 3800, kind: 'missile', lane: 38 },
+  { at: 4600, kind: 'weapon', lane: 54 },
+  { at: 5350, kind: 'bomb', lane: 44 },
+  { at: 5950, kind: 'shield', lane: 46 },
 ];
 
 /*
@@ -934,11 +977,17 @@ const EYE: readonly WaveEntry[] = [
  */
 const EYE_PICKUPS: readonly PickupEntry[] = [
   { at: 280, kind: 'shield', lane: 48 },
-  { at: 1220, kind: 'weapon', lane: 64 },
-  { at: 2900, kind: 'weapon', lane: 32 },
-  { at: 3600, kind: 'bomb', lane: 56 },
-  { at: 4700, kind: 'weapon', lane: 40 },
-  { at: 6000, kind: 'shield', lane: 60 },
+  { at: 880, kind: 'weapon', lane: 64 },
+  { at: 1680, kind: 'missile', lane: 32 },
+  { at: 2300, kind: 'weapon', lane: 56 },
+  { at: 3100, kind: 'weapon', lane: 40 },
+  { at: 3800, kind: 'missile', lane: 62 },
+  // ⚠️ 4800 rather than the 4600 the other levels use, and it is the boss being furthest away here:
+  // level seven's is at 6540, so a cap at 4600 would leave a 54-second run to it with nothing to
+  // rearm from — four seconds inside `tests/pickups.test.ts`'s ceiling, which is not headroom.
+  { at: 4800, kind: 'weapon', lane: 34 },
+  { at: 5500, kind: 'bomb', lane: 52 },
+  { at: 6050, kind: 'shield', lane: 60 },
 ];
 
 export const LEVELS: Record<LevelKind, LevelRow> = {

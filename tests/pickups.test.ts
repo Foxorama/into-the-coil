@@ -4,6 +4,7 @@ import {
   PICKUPS,
   PICKUP_KINDS,
   UPGRADE_KINDS,
+  UPGRADE_TIERS,
   weaponFor,
   type PickupKind,
   type UpgradeKind,
@@ -274,26 +275,75 @@ describe('a level answers what a death costs', () => {
     }
   });
 
-  it('offers the budget the ask named, in every level', () => {
+  it('THE TARGET: a level offers exactly enough weapons to cap the guns, and it does it before the boss', () => {
     /*
-      ⚠️ **THE OTHER HALF OF THE SAME DECISION, AND IT IS A CEILING RATHER THAN A FLOOR.** The guard
-      above stops a level starving the player; this stops one drifting back to the stream of pickups
-      the report called *"non-earned upgrades that make the game trivial"*.
+      ── THE ONE PLACEMENT WITH A STATED TARGET BEHIND IT ───────────────────────────────────────────
 
-      The numbers are the ask's, in the player's own words: *"shields/lives should be kept to 1-2 per
-      level"* and *"missile upgrades need to be 2-3 per level"* — which under 0082's merge is the
-      weapon pickup, because it is the only thing that grants a launcher.
+      Asked for: *"the player should be able to cap weapons before the 1st boss and then also have a
+      couple of additional shields/bombs."*
+      `docs/decisions/0083-two-ladders-of-four.md`.
 
-      ⚠️ **Written as the ask's range and not as what the levels contain.** Every level currently
-      authors exactly three weapons, two shields and one bomb, and asserting *three* would make this a
-      copy of `src/content/levels.ts` rather than a guard over it —
-      `tests/level.test.ts`'s density floor records what that costs.
+      ⚠️ **Held as ARITHMETIC against `UPGRADE_TIERS` rather than against the number four.** The tier
+      count and the pickup budget are one decision — raising the tiers without raising the weapons
+      leaves a player who can never cap, and lowering them leaves pickups that convert straight to
+      bombs. A guard written as *four weapons* would be a copy of `src/content/levels.ts`; this fails
+      the moment either number moves without the other.
+
+      ⚠️ **And *"before the boss"* is the half that is easy to lose.** Four weapons in a level whose
+      last one sits inside the boss fight satisfies a count and not the ask.
     */
     for (const kind of LEVEL_KINDS) {
-      const counts = { weapon: 0, shield: 0, bomb: 0 };
+      const level = LEVELS[kind];
+      const weapons = level.pickups.filter((p) => p.kind === 'weapon');
+      expect(
+        weapons.length,
+        `${kind} offers ${weapons.length} weapons against ${UPGRADE_TIERS} tiers, so the guns cannot be capped`,
+      ).toBe(UPGRADE_TIERS);
+      const capsAt = weapons[weapons.length - 1]!.at;
+      expect(capsAt, `${kind} caps the guns at ${capsAt}, which is not before its boss at ${level.bossAt}`).toBeLessThan(
+        level.bossAt,
+      );
+      /*
+        ⚠️ **AND THE *"AND THEN ALSO"* HALF: something after the cap.** Once the guns are full a weapon
+        pickup converts to a bomb charge, so a level whose last minute is all weapons is a level
+        offering pickups whose face does not say what they give. Two is what the levels author; one is
+        what this refuses to go below, because the ask says *a couple* and a guard should not be a copy
+        of the content.
+      */
+      const afterCap = level.pickups.filter((p) => p.at > capsAt);
+      expect(
+        afterCap.length,
+        `${kind} offers nothing after the guns cap at ${capsAt} — the run to the boss has no pickup in it`,
+      ).toBeGreaterThan(0);
+      for (const late of afterCap) {
+        expect(
+          late.kind === 'shield' || late.kind === 'bomb',
+          `${kind} offers a ${late.kind} at ${late.at}, after the guns are already full`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('offers the budget the ask named, in every level', () => {
+    /*
+      ⚠️ **THE OTHER HALF, AND IT IS A CEILING RATHER THAN A FLOOR.** The guards above stop a level
+      starving the player; this stops one drifting back to the stream of pickups the report called
+      *"non-earned upgrades that make the game trivial"*.
+
+      The numbers are the ask's: *"shields/lives should be kept to 1-2 per level"*, and the missiles
+      come from *"have tier 2 on missiles"* — two pickups, because `tiersOf` counts them one for one.
+
+      ⚠️ **Written as the ask's range and not as what the levels contain.** Every level currently
+      authors nine, and asserting nine would make this a copy of `src/content/levels.ts` rather than a
+      guard over it — `tests/level.test.ts`'s density floor records what that costs.
+    */
+    for (const kind of LEVEL_KINDS) {
+      const counts = { weapon: 0, missile: 0, shield: 0, bomb: 0 };
       for (const entry of LEVELS[kind].pickups) counts[entry.kind]++;
-      expect(counts.weapon, `${kind} offers ${counts.weapon} weapons, and the ask is 2-3`).toBeGreaterThanOrEqual(2);
-      expect(counts.weapon, `${kind} offers ${counts.weapon} weapons, and the ask is 2-3`).toBeLessThanOrEqual(3);
+      expect(counts.missile, `${kind} offers ${counts.missile} missiles, and the ask is tier 2`).toBeGreaterThanOrEqual(
+        2,
+      );
+      expect(counts.missile, `${kind} offers ${counts.missile} missiles, and the ask is tier 2`).toBeLessThanOrEqual(3);
       expect(counts.shield, `${kind} offers ${counts.shield} shields, and the ask is 1-2`).toBeGreaterThanOrEqual(1);
       expect(counts.shield, `${kind} offers ${counts.shield} shields, and the ask is 1-2`).toBeLessThanOrEqual(2);
       /*
@@ -572,52 +622,57 @@ describe('collecting one, in the real frame', () => {
       }
     });
 
-    it('THE 50% RULE: gives back about half of a large loadout, and not all of it', () => {
+    it('THE COST OF DYING: gives back every upgrade, on every seed', () => {
       /*
-        ⚠️ **THE ONE 0082 ADDED, AND IT IS THE COST OF DYING.** Reported from play: *"when a player
-        dies let's change it to 50% chance of each power up they have collected spawning from their
-        death, current implementation means there's not really a cost to dying at all."*
-        `SCATTER_KEPT` in `src/app/frame.ts`, amending
-        `docs/decisions/0066-a-death-scatters-what-it-took.md`.
+        ── THIS GUARD HELD THE OPPOSITE FOR ONE DAY, AND A PLAY-TEST IS WHY ────────────────────────
 
-        ⚠️ **Asserted over MANY DEATHS rather than over one, because the rule is a probability.** A
-        single death of six upgrades can legitimately give back six or none; a hundred deaths that give
-        back everything is the filter not being there at all. The band is deliberately wide — the
-        failure this catches is *the filter is missing* or *the filter is throwing everything away*,
-        not a drift of a few percent.
+        ⚠️ **0082 made a death throw each upgrade on a 50% coin**, which was the ask at the time:
+        *"current implementation means there's not really a cost to dying at all."* It was flown and
+        the verdict was *"tested the 50% on death and it's too punishing, let's make 100% for weapons
+        and missiles."* `docs/decisions/0083-two-ladders-of-four.md`.
 
-        ⚠️ **The seed is the fixture's, so this is deterministic** —
-        `docs/decisions/0021-one-stream-per-concern.md` gives the scatter its own named stream
-        precisely so a roll added elsewhere cannot move it. If this ever goes intermittent, that is
-        `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`'s subject and the
-        stream is the first place to look.
+        ⚠️ **Walked over MANY SEEDS even though there is no longer a draw**, and that is the point: a
+        filter reintroduced anywhere — a coin, a cap, an off-by-one on the ring's count — shows up as
+        one seed giving back fewer than it took. A single-seed assertion would pass against a coin that
+        happened to come up heads.
+
+        ⚠️ **And the whole ladder's worth, not two.** Both ladders cap at `UPGRADE_TIERS`, so eight is
+        the most a shell can ever hand this — which makes it the loadout worth measuring.
       */
-      const carried: UpgradeKind[] = ['weapon', 'weapon', 'weapon', 'weapon', 'weapon', 'weapon'];
-      let thrown = 0;
-      let deaths = 0;
-      let everything = 0;
-      /*
-        ⚠️ **A DIFFERENT SEED PER DEATH, and `scattered` rather than `died`.** The fixture above finds
-        a death that kept everything, which is exactly the wrong thing here; and a fresh world built
-        the same way twice replays the same stream, so sixty identical deaths would measure one draw
-        sixty times. That is the failure this loop was written with and it reported 83%.
-      */
-      for (let i = 0; i < 60; i++) {
-        const { world } = scattered(carried, `share:${i}`);
-        thrown += world.pickups.size;
-        if (world.pickups.size === carried.length) everything++;
-        deaths++;
+      const carried: UpgradeKind[] = [];
+      for (let i = 0; i < UPGRADE_TIERS; i++) carried.push('weapon', 'missile');
+      for (let seed = 0; seed < 40; seed++) {
+        const { world } = scattered(carried, `whole:${seed}`);
+        expect(
+          world.pickups.size,
+          `seed ${seed} gave back ${world.pickups.size} of ${carried.length} — something is filtering the scatter`,
+        ).toBe(carried.length);
       }
-      const share = thrown / (deaths * carried.length);
-      expect(share, `a death gives back ${(share * 100).toFixed(0)}% of what it took`).toBeGreaterThan(0.3);
-      expect(share, `a death gives back ${(share * 100).toFixed(0)}% of what it took`).toBeLessThan(0.7);
+    });
+
+    it('and never throws a shield, because a shield was never in the list', () => {
       /*
-        ⚠️ **And it is PER UPGRADE, which the share alone cannot see.** A filter that kept everything
-        half the time and nothing the other half averages to 50% and is a completely different rule —
-        the player would experience a free death or a total one. Six upgrades all surviving is a 1-in-64
-        event, so it happens in sixty deaths and must not happen in most of them.
+        ⚠️ **Asked for in the same breath as the 100%**: *"but no shields spawn on death."*
+
+        ⚠️ **It is already true and the guard is here because of WHY it is true.** A shield lives on
+        the ship's `health`
+        (`docs/decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md`),
+        not in the upgrade list, so `scatterUpgrades` cannot see one: the signature is the guarantee.
+        That makes it true by a type rather than by a rule, and a type stops being a guarantee the
+        moment somebody widens it — which is exactly what 0083 just did to `UpgradeKind`, taking it
+        from one member to two.
+
+        ⚠️ **Driven at the largest loadout the shell can build**, so a widening that quietly admitted a
+        shield would have to show up here.
       */
-      expect(everything, 'every death gave back the whole loadout, so the coin is per DEATH').toBeLessThan(deaths / 2);
+      const carried: UpgradeKind[] = [];
+      for (let i = 0; i < UPGRADE_TIERS; i++) carried.push('weapon', 'missile');
+      const { world } = scattered(carried, 'no-shields');
+      expect(world.pickups.size, 'nothing was thrown, so this measured nothing').toBeGreaterThan(0);
+      for (let i = 0; i < world.pickups.size; i++) {
+        const kind = PICKUP_KINDS[world.pickups.at(i).kind]!;
+        expect(kind, 'a death put a shield back on the field').not.toBe('shield');
+      }
     });
 
     /*
