@@ -24,7 +24,16 @@ import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../content/enemies.ts';
 import { LEVELS } from '../content/levels.ts';
 import { BOSSES } from '../content/bosses.ts';
-import { CYCLE, PICKUPS, PICKUP_KINDS, isUpgrade, type PickupKind, weaponFor } from '../content/pickups.ts';
+import {
+  PICKUPS,
+  PICKUP_KINDS,
+  WEAPON_OVERFLOW,
+  effectOf,
+  isUpgrade,
+  type PickupKind,
+  type UpgradeKind,
+  weaponFor,
+} from '../content/pickups.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
 import { DEFAULT_SOUND, SOUND_KINDS } from '../content/sound.ts';
 import { DEFAULT_STYLE, STYLES, STYLE_KINDS } from '../content/styles.ts';
@@ -292,11 +301,6 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   PICKUP_KINDS.forEach((k, index) => {
     pickupKinds[k] = index;
   });
-  /**
-   * The other face of each pickup, by index — `CYCLE` resolved once so the frame never looks a kind
-   * up by name. Built from the table rather than written out, so a pair added there arrives here.
-   */
-  const pickupCycle = PICKUP_KINDS.map((k) => pickupKinds[CYCLE[k]]);
 
   /** Enemy rows by index, so a per-step lookup in the frame is an array index and not a string key. */
   const enemyRows: readonly EnemyRow[] = ENEMY_KINDS.map((k) => ENEMIES[k]);
@@ -464,9 +468,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     pickups: pickupPool,
     pickupRows,
     pickupKinds,
-    pickupCycle,
-    pickupFlipped: false,
     collected: makeCollected(CAPACITY.pickups),
+    // ⚠️ Sized to the pool, and filled at each death rather than at boot — `src/app/frame.ts` says
+    // why the 50% filter needs somewhere to put its survivors before the ring is spaced over them.
+    scattered: new Array<UpgradeKind>(CAPACITY.pickups),
     // The base weapon, which is what an empty upgrade list resolves to. There is no second
     // description of it anywhere — 0039's "back to the base weapon" is this call with `[]`.
     weapon: weaponFor(shipRow, []),
@@ -1021,8 +1026,41 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   };
 
   world.onPickup = (kind: PickupKind): void => {
-    const effect = PICKUPS[kind].effect;
-    if (effect === 'life') dispatch({ slice: 'run', type: 'gainedLife' });
+    /*
+      ⚠️ **`effectOf` and not `PICKUPS[kind].effect`, and the difference is the max-speed nerf.** A
+      weapon pickup taken by a ship whose weapon can no longer grow reports itself as a `special`, so
+      it lands in the arsenal instead of in a list where it would change nothing —
+      `src/content/pickups.ts` has the reasoning and `docs/game.md`'s *"an upgrade that cannot change
+      the outcome is worse than none"* is the rule it keeps.
+
+      ⚠️ **The shell's own business is only WHICH ACTION an effect dispatches.** Deciding what a
+      pickup does to this ship is content's, and it lived here until 0082 moved it — where no unit
+      test could reach it without a DOM.
+    */
+    const effect = effectOf(kind, world.weapon);
+    /*
+      A SPECIAL — charges into the arsenal, and it is the `took` action finally cashing.
+      `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md`.
+
+      ⚠️ **`took` has existed since 0039 with nothing that dispatches it**, which
+      `src/content/specials.ts` says out loud about its own table: a rule about what a death costs
+      needs a list that can be non-empty before it is testable at all. This is the line that makes it
+      a mechanism rather than a shape.
+
+      ⚠️ **The reducer decides what a charge is worth, not this.** `took` reads
+      `SPECIALS[kind].charges`, and a special already owned gains charges rather than a second
+      trigger — `src/state/slices/run.ts` has that rule and it is not restated here.
+
+      ⚠️ **`WEAPON_OVERFLOW` COVERS BOTH WAYS OF GETTING HERE, AND THAT IS TRUE RATHER THAN GENERAL.**
+      Two things report `special`: the bomb pickup, and a weapon pickup taken by a ship whose weapon
+      is full — and both grant a bomb, so one constant answers both. **A SECOND special pickup breaks
+      that**, because this line would hand out a bomb for it. Left as one constant rather than a
+      lookup because `src/content/pickups.ts`'s table is what would force the question: a new kind
+      cannot be added without answering `effect`, and the row that answers `special` is the row that
+      has to say which one. Writing the branch now would be inventing a shape for content that does
+      not exist, which is what `src/content/ships.ts` refuses for the character roster.
+    */
+    if (effect === 'special') dispatch({ slice: 'run', type: 'took', special: WEAPON_OVERFLOW });
     /*
       ⚠️ **A shield goes on the SHIP and not through the reducer**, and it is the one pickup that
       does. `docs/decisions/0017-the-state-is-slices.md` puts the run's own numbers in state — lives,

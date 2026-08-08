@@ -212,12 +212,20 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
     sharing an ink costs nothing and buys the player one rule instead of two. *Pink will hurt you.*
   */
   spit: 'enemy',
-  pickupLife: 'pickup',
-  pickupRapid: 'pickup',
-  pickupSpread: 'pickup',
+  // The HUD's lives counter rather than a pickup, since 0082 — it keeps the pickup ink because the
+  // number beside it is drawn in the player's own colour and the icon has to sit with it.
+  lifeIcon: 'pickup',
+  pickupWeapon: 'pickup',
   pickupShield: 'pickup',
-  pickupMissileRate: 'pickup',
-  pickupMissileSpread: 'pickup',
+  /*
+    ⚠️ **THE PICKUP INK OVER THE BOMB'S OWN SILHOUETTE, and the ink is doing the whole job here.**
+    `pickupBomb` and `bomb` share a drawing (see the case below), so this line is the only thing that
+    says *this one is lying in the lane waiting to be collected* rather than *this one just left the
+    ship*. That is colour carrying the ROLE while shape carries identity, which is the division
+    `docs/decisions/0024-the-accessibility-floor-is-settings.md` asks for — and the two are never in
+    the same place, because a thrown bomb is travelling and this is holding station.
+  */
+  pickupBomb: 'pickup',
   // The bullet ink, because it is a bullet. What separates it from the pulse is shape and size.
   missile: 'bullet',
   bomb: 'bullet',
@@ -584,36 +592,48 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
       ctx.lineTo(half - r, half + r * 0.2);
       ctx.closePath();
       break;
-    case 'pickupLife': {
+    case 'lifeIcon': {
       /*
         A PLUS. The one glyph that means *more of something* without any game having to teach it,
         and four arms make a silhouette no enemy in the game shares — the diamond has four points
         and no waist.
+
+        ⚠️ **It is only ever drawn in the HUD now** — 0082 took the extra life off the field — so the
+        thing it has to be legible against is a numeral rather than a lane full of bodies.
       */
       const arm = r * 0.34;
       ctx.rect(half - arm, half - r, arm * 2, r * 2);
       ctx.rect(half - r, half - arm, r * 2, arm * 2);
       break;
     }
-    case 'pickupRapid':
-      // A square with a hole — the old pickup shape, kept for the commonest of the three. Distinct
-      // from both the diamond and the disc, and the hole survives being small.
-      ctx.rect(half - r * 0.8, half - r * 0.8, r * 1.6, r * 1.6);
-      ctx.rect(half - r * 0.3, half - r * 0.3, r * 0.6, r * 0.6);
-      break;
-    case 'pickupSpread': {
+    case 'pickupWeapon': {
       /*
-        A hexagon: round enough to read as *not a square* at a glance, cornered enough to read as
-        *not the bullet's disc*. It is the loosest of the three distinctions, and the one to look at
-        first if a play-test says the pickups are muddled — `scripts/shot.mjs` is how.
+        A CHEVRON, pointing the way the ship flies.
+
+        ⚠️ **A new shape rather than one of the four it replaces**, and that is worth the drawing.
+        0082 merged `rapid`, `spread`, `missileRate` and `missileSpread` into one kind, and every one
+        of those four silhouettes belonged to a scheme — a family with an inverted fill for its
+        partner — that no longer has a partner to invert. Keeping the holed square would have kept a
+        shape whose whole meaning was *the other one is the solid version*.
+
+        ⚠️ **It points, which none of the other pickups does.** A chevron aimed along the scroll axis
+        reads as *forward, more, faster* without teaching, and it is the only pickup that is
+        asymmetric along `along` — so it is told apart from the shield and the bomb by orientation as
+        well as by outline, at the size where outlines start to fail.
+
+        ⚠️ **ONE simple polygon, and the first draft was two overlapping ones.** Two nested chevrons
+        wound so `evenodd` left a gap between them is the obvious way to draw a `»`, and it is a
+        silhouette that self-intersects: wherever the two overlap the fill rule cancels them, so the
+        shape depends on arithmetic nobody checked rather than on the drawing. This is the same
+        chevron with the gap cut out of its TAIL, which needs no fill rule at all — the notch is also
+        what keeps it off the lancer, the one enemy silhouette that also comes to a forward point.
       */
-      for (let i = 0; i < 6; i++) {
-        const angle = (Math.PI / 3) * i;
-        const x = half + Math.cos(angle) * r;
-        const y = half + Math.sin(angle) * r;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
+      ctx.moveTo(half + r, half);
+      ctx.lineTo(half - r * 0.2, half - r * 0.85);
+      ctx.lineTo(half - r, half - r * 0.85);
+      ctx.lineTo(half - r * 0.25, half);
+      ctx.lineTo(half - r, half + r * 0.85);
+      ctx.lineTo(half - r * 0.2, half + r * 0.85);
       ctx.closePath();
       break;
     }
@@ -630,6 +650,15 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
       ctx.lineTo(half - r * 0.4, half + r * 0.55);
       ctx.closePath();
       break;
+    /*
+      ⚠️ **ONE DRAWING, TWO KINDS, AND IT IS THE ONLY SHARED SILHOUETTE OUTSIDE THE PYRE'S RUNGS.**
+      `bomb` is what leaves the ship; `pickupBomb` is what is lying in the lane waiting to be
+      collected (0082). They are baked at different extents and in different inks — the family map
+      above is what separates them — and sharing the path is the point rather than a saving: a player
+      learns the notched disc from the trigger strip long before they find one, so *the thing on the
+      ground is the thing on the button* costs no teaching at all.
+    */
+    case 'pickupBomb':
     case 'bomb':
       /*
         A disc with a wedge taken out of the tail. The notch is what stops it reading as a large
@@ -666,32 +695,6 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
       ctx.arc(half, half, edge * 0.74, 0, Math.PI * 2);
       break;
     }
-    case 'pickupMissileRate':
-      // The rapid pickup's square, filled. Same family, other face — see `SPRITE_KINDS`.
-      ctx.rect(half - r * 0.8, half - r * 0.8, r * 1.6, r * 1.6);
-      break;
-    case 'pickupMissileSpread': {
-      // The spread pickup's hexagon, holed. Wound the same way and filled `evenodd`, exactly as the
-      // rapid square's hole is.
-      for (let i = 0; i < 6; i++) {
-        const angle = (Math.PI / 3) * i;
-        const x = half + Math.cos(angle) * r;
-        const y = half + Math.sin(angle) * r;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
-      ctx.moveTo(half + r * 0.42, half);
-      for (let i = 0; i < 6; i++) {
-        const angle = (Math.PI / 3) * i;
-        const x = half + Math.cos(angle) * r * 0.42;
-        const y = half + Math.sin(angle) * r * 0.42;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
-      break;
-    }
     case 'pickupShield': {
       /*
         A heraldic shield: flat across the top, straight down the sides, tapering to a point. Drawn
@@ -709,7 +712,7 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
     case 'shieldOrb':
       /*
         A ring. Two circles wound the same way and filled `evenodd`, which is how the hole survives
-        being two pixels across — the same trick `pickupRapid` uses for its square.
+        being two pixels across.
       */
       ctx.arc(half, half, r, 0, Math.PI * 2);
       ctx.moveTo(half + r * 0.45, half);

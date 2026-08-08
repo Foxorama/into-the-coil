@@ -4,7 +4,16 @@ import { type Entity, makeEntity, reset } from '../src/sim/entity.ts';
 import { Pool } from '../src/sim/pool.ts';
 import { GameFrame, advanceLevel, respawn, startLevel, type World } from '../src/app/frame.ts';
 import { MAX_SHIELDS, SHIPS, fullHealthFor, shieldsOf } from '../src/content/ships.ts';
-import { PICKUPS, PICKUP_KINDS, UPGRADE_KINDS, isUpgrade, type PickupKind } from '../src/content/pickups.ts';
+import {
+  PICKUPS,
+  PICKUP_KINDS,
+  UPGRADE_KINDS,
+  effectOf,
+  isUpgrade,
+  type PickupKind,
+  type UpgradeKind,
+  weaponFor,
+} from '../src/content/pickups.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { SPRITE, SPRITE_EXTENT } from '../src/content/sprites.ts';
@@ -410,6 +419,77 @@ describe('a pickup says which field it lands in', () => {
     expect(PICKUPS.shield.effect, 'a shield landed in a field that survives a death').toBe('shield');
     const kinds: readonly PickupKind[] = PICKUP_KINDS;
     expect(kinds.includes('shield'), 'the shield is not in the table the key is built from').toBe(true);
+  });
+
+  it('a weapon pickup taken at the cap becomes a bomb charge, so it is never a dead pickup', () => {
+    /*
+      ── THE HALF THAT PAYS FOR DELETING THE UNBOUNDED DAMAGE ───────────────────────────────────────
+
+      `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md`. Reported from play: *"max speed
+      auto-fire is way too strong for the current game - when you get max speed nothing is a
+      challenge, bosses die in less a second and they are supposed to be tough."*
+
+      `weaponFor` used to spend every upgrade past every cap on `damage`, with no ceiling anywhere —
+      because `docs/game.md` says *"an upgrade that cannot change the outcome is worse than none"* and
+      that was the only answer available. 0082 caps the weapon and gives the pickup somewhere else to
+      go, so **both** halves of that sentence hold: the curve flattens AND the pickup still does
+      something.
+
+      ⚠️ **Two assertions in opposite directions, because either alone is a different bug.** A ship
+      that has not capped must still get the upgrade — an `effectOf` that always said `special` would
+      make the weapon un-upgradable and pass a test of *the last one is a bomb*.
+
+      ⚠️ **Held against `weaponFor` rather than against a rung number.** The ladder's length is a
+      tuning decision and this is not a test of it; what is held is that the two functions agree about
+      where it ends, which is the thing a later change to either could break silently.
+    */
+    const base = weaponFor(SHIPS.proof, []);
+    expect(effectOf('weapon', base), 'a ship with nothing on it was refused an upgrade').toBe('upgrade');
+
+    const many: UpgradeKind[] = [];
+    for (let i = 0; i < 30; i++) many.push('weapon');
+    const capped = weaponFor(SHIPS.proof, many);
+    expect(effectOf('weapon', capped), 'a weapon pickup at the cap is still filed as an upgrade').toBe('special');
+
+    /*
+      ⚠️ **And the changeover is exactly where the weapon stops growing** — one upgrade either side.
+      A ladder that stopped at rung four while `effectOf` switched at rung six would leave two dead
+      pickups, which is the defect wearing a smaller number.
+    */
+    for (let n = 0; n < 12; n++) {
+      const carried: UpgradeKind[] = [];
+      for (let i = 0; i < n; i++) carried.push('weapon');
+      const now = weaponFor(SHIPS.proof, carried);
+      const next = weaponFor(SHIPS.proof, [...carried, 'weapon']);
+      const grew = JSON.stringify(next) !== JSON.stringify(now);
+      expect(
+        effectOf('weapon', now),
+        `at ${n} upgrades the next weapon ${grew ? 'does' : 'does not'} change the ship, and the effect disagrees`,
+      ).toBe(grew ? 'upgrade' : 'special');
+    }
+  });
+
+  it('and the shell has no opinion of its own about which field a pickup lands in', () => {
+    /*
+      ⚠️ **The rule above lived in `src/app/mount.ts` first, and that is why this exists.** As a branch
+      in the shell it was a content rule in the one layer no unit test reaches without a DOM — so the
+      thing paying for the deleted `damage++` had nothing holding it, which is
+      `docs/decisions/0005-a-guard-must-be-seen-to-fail.md`'s shape exactly.
+
+      What is held is the property that made moving it worthwhile: **every effect a pickup can report
+      is one the table already names**, so the shell's job is a routing table over `PickupEffect` and
+      never a decision about what a pickup is worth.
+    */
+    const named = new Set<string>(PICKUP_KINDS.map((k) => PICKUPS[k].effect));
+    const base = weaponFor(SHIPS.proof, []);
+    const many: UpgradeKind[] = [];
+    for (let i = 0; i < 30; i++) many.push('weapon');
+    const capped = weaponFor(SHIPS.proof, many);
+    for (const kind of PICKUP_KINDS) {
+      for (const weapon of [base, capped]) {
+        expect(named.has(effectOf(kind, weapon)), `${kind} can report an effect no row in the table names`).toBe(true);
+      }
+    }
   });
 });
 

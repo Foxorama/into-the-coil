@@ -6,7 +6,7 @@ import { SHIPS } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { SPRITE, SPRITE_EXTENT } from '../src/content/sprites.ts';
-import { UPGRADE_KINDS, weaponFor, type UpgradeKind } from '../src/content/pickups.ts';
+import { weaponFor, type UpgradeKind } from '../src/content/pickups.ts';
 import { playableWorld, NO_LEVEL } from './world.ts';
 
 /**
@@ -34,7 +34,7 @@ const A_WHILE = 200;
  * constant rather than a literal in eight places, because it is the same fact each time and it is
  * exactly the fact that just moved.
  */
-const ARMED: readonly UpgradeKind[] = ['missileSpread'];
+const ARMED: readonly UpgradeKind[] = ['weapon'];
 
 function quietWorld(upgrades: readonly UpgradeKind[] = []): { world: World; frame: GameFrame } {
   const built = playableWorld(NO_LEVEL);
@@ -114,11 +114,33 @@ describe('a launcher is a position on the ship', () => {
       ⚠️ **The overflow is held here rather than only in `weaponFor`'s unit test**, because the thing
       that broke was the number of missiles LEAVING THE SHIP, which is what the player counted.
     */
-    for (const upgradeCount of [1, 2, 3, 6]) {
+    /*
+      ⚠️ **THE RUNGS ARE NO LONGER ONE-PER-UPGRADE, AND 0082 IS WHY.** Four upgrade kinds became one
+      `weapon` pickup whose every repeat *"increases its tier and rate of fire together"*, so a rung
+      spends itself on a launcher OR a barrel — whichever hardpoint is proportionally further from its
+      cap — while both cadences move regardless. `src/content/pickups.ts` has the ladder; the order it
+      produces is launcher, barrel, barrel, launcher, barrel.
+
+      ⚠️ **The FIRST rung is the launcher, and that is 0056 surviving the merge.** The base ship has no
+      tube, so a merge that handed the missile out at rung three would quietly un-earn the second
+      weapon. The pair at count 1 is what holds it.
+
+      ⚠️ **Written as the expected count per rung rather than `min(n, 2)`.** The old formula was the
+      ladder restated in a second place; this is a table of what the player gets, which is the thing
+      a play-test can disagree with.
+    */
+    const LAUNCHERS_AT: readonly (readonly [number, number])[] = [
+      [1, 1],
+      [2, 1],
+      [3, 1],
+      [4, 2],
+      [6, 2],
+      [12, 2],
+    ];
+    for (const [upgradeCount, expected] of LAUNCHERS_AT) {
       const upgrades: UpgradeKind[] = [];
-      for (let i = 0; i < upgradeCount; i++) upgrades.push('missileSpread');
+      for (let i = 0; i < upgradeCount; i++) upgrades.push('weapon');
       const { world, frame } = quietWorld(upgrades);
-      const expected = Math.min(upgradeCount, 2);
       expect(world.weapon.launchers, `${upgradeCount} upgrades did not produce ${expected} launchers`).toBe(expected);
 
       world.missileIn = 1;
@@ -137,13 +159,15 @@ describe('a launcher is a position on the ship', () => {
       minus, then plus, so simply stopping at two would have left a fully-upgraded ship firing
       off-centre — a worse picture than the defect being fixed.
     */
-    const one = quietWorld(['missileSpread']);
+    const one = quietWorld(['weapon']);
     one.world.missileIn = 1;
     one.frame.step();
     expect(one.world.missiles.size).toBe(1);
     expect(one.world.missiles.at(0).across - one.world.ship.across, 'a single tube is not on the centreline').toBe(0);
 
-    const { world, frame } = quietWorld(['missileSpread', 'missileSpread']);
+    // ⚠️ FOUR, and it was two. The second launcher is the ladder's fourth rung since 0082 merged the
+    // upgrade kinds — the test above has the table, and this is the first place that shape is felt.
+    const { world, frame } = quietWorld(['weapon', 'weapon', 'weapon', 'weapon']);
     world.missileIn = 1;
     frame.step();
     const across: number[] = [];
@@ -163,7 +187,9 @@ describe('a launcher is a position on the ship', () => {
       Measured against the hull's own drawn size, which is what the player sees the missile clear —
       `docs/decisions/0027-measure-the-picture-not-the-model.md` on assertions in the player's units.
     */
-    const { world, frame } = quietWorld(['missileSpread', 'missileSpread']);
+    // ⚠️ FOUR, and it was two. The second launcher is the ladder's fourth rung since 0082 merged the
+    // upgrade kinds — the test above has the table, and this is the first place that shape is felt.
+    const { world, frame } = quietWorld(['weapon', 'weapon', 'weapon', 'weapon']);
     world.missileIn = 1;
     frame.step();
     const shipAcross = world.ship.across;
@@ -245,50 +271,76 @@ function damageDealt(kind: 'pulse' | 'missile', row: typeof ENEMIES.turret): num
 }
 
 describe('the upgrades reach the weapon rather than the wrong one', () => {
-  it('a missile upgrade never moves the pulse, and a pulse upgrade never moves the missiles', () => {
+  it('THE MERGE: one pickup moves BOTH weapons, which is what "together" means', () => {
     /*
-      ⚠️ **The failure this catches is a copy-paste in `weaponFor`**, and it is invisible in play until
-      a player notices that the pickup they flew for changed the other weapon. Each upgrade is checked
-      against the fields it must NOT touch as well as the one it must.
+      ── THIS ASSERTION IS THE EXACT OPPOSITE OF WHAT IT USED TO BE ─────────────────────────────────
+
+      ⚠️ **It was *a missile upgrade never moves the pulse, and a pulse upgrade never moves the
+      missiles*.** That was the right rule when there were four upgrade kinds and the failure it caught
+      was a copy-paste in `weaponFor` sending a pickup to the wrong weapon.
+
+      ⚠️ **`docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md` merged the four into one**, on
+      the ask's own words: *"rapid fire/rapid missiles rapid whatever else we add need to be combined
+      into one power up… picking up a second of the same weapon needs to increase it's tier and rate of
+      fire together."* Separation is no longer the property; **simultaneity is**, and a `weaponFor` that
+      moved only one weapon per rung would now be the bug.
+
+      ⚠️ **The one thing kept from the old test is that the two rates are NOT the same number.**
+      `RAPID_FACTOR` and `MISSILE_FACTOR` differ deliberately — a missile is worth three pulses, so the
+      same factor on both would let the pulse stop mattering by the third rung — and a merge that
+      collapsed them into one constant would pass everything above.
     */
     const base = weaponFor(SHIPS.proof, []);
-    const rapid = weaponFor(SHIPS.proof, ['rapid']);
-    expect(rapid.fireEvery).toBeLessThan(base.fireEvery);
-    expect(rapid.missileEvery, 'a rapid moved the missiles').toBe(base.missileEvery);
-    expect(rapid.launchers, 'a rapid added a launcher').toBe(base.launchers);
+    const one = weaponFor(SHIPS.proof, ['weapon']);
+    expect(one.fireEvery, 'a weapon pickup left the pulse cadence alone').toBeLessThan(base.fireEvery);
+    expect(one.missileEvery, 'a weapon pickup left the missile cadence alone').toBeLessThan(base.missileEvery);
+    expect(one.launchers, 'the first rung is not the launcher, so the missile is not earned').toBe(base.launchers + 1);
 
-    const missileRate = weaponFor(SHIPS.proof, ['missileRate']);
-    expect(missileRate.missileEvery).toBeLessThan(base.missileEvery);
-    expect(missileRate.fireEvery, 'a missile upgrade moved the pulse').toBe(base.fireEvery);
-
-    const launcher = weaponFor(SHIPS.proof, ['missileSpread']);
-    expect(launcher.launchers).toBe(base.launchers + 1);
-    expect(launcher.shots, 'a launcher added a pulse barrel').toBe(base.shots);
+    /*
+      The two cadences fall at their own rates. Compared as fractions of where each started, because
+      the two base numbers are different — 9 steps against 45 — so a raw difference proves nothing.
+    */
+    const pulseShare = one.fireEvery / base.fireEvery;
+    const missileShare = one.missileEvery / base.missileEvery;
+    expect(pulseShare, 'both weapons speed up by the same fraction, so the pulse will stop mattering').not.toBeCloseTo(
+      missileShare,
+      2,
+    );
   });
 
-  it('spends an upgrade that has nowhere left to go on damage instead', () => {
+  it('THE NERF: a weapon past its caps stops growing, rather than piling on damage', () => {
     /*
-      `docs/game.md`: *an upgrade that cannot change the outcome is worse than none.* Both weapons cap
-      — barrels, launchers, and both fire floors — so both need the same answer past the cap, and a
-      weapon that got one without the other would have a dead pickup in it.
-    */
-    /*
-      ⚠️ **ONE KIND AT A TIME, AND `npm run prove` IS WHY.** The first version stacked twelve of every
-      upgrade together and asserted that the two damage fields had moved — which they had, because the
-      RATE upgrades overflow into the same field the launcher ones do. Deleting the launcher's
-      overflow entirely left the suite green. A test of *the caps between them buy something* is not a
-      test of *each cap buys something*, and the second is the rule.
+      ── THIS TEST HELD THE BEHAVIOUR THAT WAS THE REPORTED DEFECT ─────────────────────────────────
+
+      ⚠️ **It was *spends an upgrade that has nowhere left to go on damage instead*, and it was
+      correct.** `docs/game.md` says *an upgrade that cannot change the outcome is worse than none*, so
+      once barrels, launchers and both fire floors were capped, `weaponFor` put every further upgrade
+      into `damage`. Nothing bounded it.
+
+      ⚠️ **Reported from play**: *"max speed auto-fire is way too strong for the current game - when
+      you get max speed nothing is a challenge, bosses die in less a second and they are supposed to be
+      tough."* The twelfth pickup was worth as much as the fifth and the curve never flattened.
+      `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md`.
+
+      ⚠️ **The rule it was serving is kept and paid for in the SHELL, not here** — a weapon that cannot
+      grow makes the next pickup a bomb charge (`src/app/mount.ts`, and `tests/shields.test.ts` drives
+      it). So what this now holds is the flattening: the twentieth weapon is exactly the fifth.
     */
     const base = weaponFor(SHIPS.proof, []);
-    for (const kind of UPGRADE_KINDS) {
-      const many: UpgradeKind[] = [];
-      for (let i = 0; i < 20; i++) many.push(kind);
-      const loaded = weaponFor(SHIPS.proof, many);
-      expect(
-        loaded.damage > base.damage || loaded.missileDamage > base.missileDamage,
-        `the twentieth ${kind} bought nothing at all — past its own cap it is a dead pickup`,
-      ).toBe(true);
-    }
+    const full = weaponFor(SHIPS.proof, Array.from({ length: 5 }, () => 'weapon' as UpgradeKind));
+    const absurd = weaponFor(SHIPS.proof, Array.from({ length: 20 }, () => 'weapon' as UpgradeKind));
+
+    expect(absurd.damage, 'the pulse still gains damage without a ceiling').toBe(base.damage);
+    expect(absurd.missileDamage, 'the missile still gains damage without a ceiling').toBe(base.missileDamage);
+    expect(absurd, 'a weapon kept growing past the rung where it should have stopped').toEqual(full);
+    /*
+      ⚠️ **And the flattening must not have started early**, which is the failure in the other
+      direction: a ladder that capped at rung two would satisfy every assertion above while making
+      pickups three, four and five worthless. Five rungs is what `src/content/pickups.ts` says the
+      ladder is, and this is the guard that a level's three-a-level budget is spending on something.
+    */
+    const four = weaponFor(SHIPS.proof, Array.from({ length: 4 }, () => 'weapon' as UpgradeKind));
+    expect(four, 'the fifth weapon pickup bought nothing, so the ladder is shorter than it claims').not.toEqual(full);
   });
 
   it('a death takes the missiles away entirely, because the base ship has no tube', () => {

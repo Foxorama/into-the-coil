@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  CYCLE,
-  CYCLE_UNITS,
   PICKUPS,
   PICKUP_KINDS,
   UPGRADE_KINDS,
   weaponFor,
+  type PickupKind,
   type UpgradeKind,
 } from '../src/content/pickups.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
@@ -21,6 +20,7 @@ import { DEFAULT_DIFFICULTY } from '../src/state/slices/run.ts';
 import { playableWorld } from './world.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
+import { Rng } from '../src/sim/rng.ts';
 
 /**
  * WHAT A PICKUP IS WORTH, AND WHAT A DEATH TAKES BACK.
@@ -63,17 +63,17 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
       because a resolver handed a hand-built array cannot see what the thing building the array did.
       Two layers, two assertions — a guard over one of them is a guard over neither.
     */
-    const one = weaponFor(SHIPS.proof, ['rapid']);
-    const two = weaponFor(SHIPS.proof, ['rapid', 'rapid']);
+    const one = weaponFor(SHIPS.proof, ['weapon']);
+    const two = weaponFor(SHIPS.proof, ['weapon', 'weapon']);
     expect(two.fireEvery, 'a second rapid did nothing').toBeLessThan(one.fireEvery);
-    expect(weaponFor(SHIPS.proof, ['spread', 'spread']).shots).toBeGreaterThan(
-      weaponFor(SHIPS.proof, ['spread']).shots,
+    expect(weaponFor(SHIPS.proof, ['weapon', 'weapon']).shots).toBeGreaterThan(
+      weaponFor(SHIPS.proof, ['weapon']).shots,
     );
 
     let state = reduce(initialState, { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY });
-    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'rapid' });
-    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'rapid' });
-    expect(state.run.upgrades, 'the run kept one rapid where two were taken').toEqual(['rapid', 'rapid']);
+    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'weapon' });
+    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'weapon' });
+    expect(state.run.upgrades, 'the run kept one rapid where two were taken').toEqual(['weapon', 'weapon']);
   });
 
   it('never fires faster than a hit can be read, however many are taken', () => {
@@ -89,7 +89,7 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
       raises the floor.
     */
     const many: UpgradeKind[] = [];
-    for (let i = 0; i < 20; i++) many.push('rapid');
+    for (let i = 0; i < 20; i++) many.push('weapon');
     const weapon = weaponFor(SHIPS.proof, many);
     expect(weapon.fireEvery, 'auto-fire outruns the impact flash and hits stop being countable').toBeGreaterThanOrEqual(4);
     expect(Number.isFinite(weapon.fireEvery)).toBe(true);
@@ -220,8 +220,28 @@ describe('a level answers what a death costs', () => {
       `docs/decisions/0027-measure-the-picture-not-the-model.md` requires at least one assertion in
       one, and "every 600 world units" is the model talking to itself.
 
-      Twenty seconds is a ceiling on the gap, not a target. It fails when a level has quietly grown a
-      stretch with nothing in it to rearm from.
+      ── THE CEILING WAS TWENTY SECONDS AND IT IS NOW FIFTY ─────────────────────────────────────────
+
+      ⚠️ **This is the guard `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md` had to move
+      rather than keep, and moving a ceiling to fit the content is normally the thing this repository
+      refuses.** It is written out because the exception has to be argued rather than assumed.
+
+      The old number came straight from `docs/game.md`: *"a level may never leave the player more than
+      twenty seconds without something to rearm from."* Reported from play: *"power ups are too common
+      still and these are premium game pieces."* At the ask's own budget — two to three weapon pickups
+      a level — no arrangement over 6,350 units makes twenty seconds. The two are in direct conflict
+      and the ask wins, so the RULE changes and this changes with it.
+
+      ⚠️ **What makes fifty survivable is a different mechanism, not a looser standard.** 0082 also
+      made a death throw **half of what it took** back onto the field where it happened
+      (`SCATTER_KEPT` in `src/app/frame.ts`). The question this guard asks is *what is a player who
+      just died flying with*, and the answer is no longer *the next authored pickup* — it is *half of
+      their own loadout, immediately*. Fifty-five seconds is what the levels actually author with three
+      weapons in them (the worst is `gauntlet`, at fifty) plus a little slack; it is a drift detector
+      now rather than a promise.
+
+      ⚠️ **So this guard is weaker than it was and it says so.** If a play-test reports that dying is
+      brutal, the thing to change is `SCATTER_KEPT`, and this number follows it.
     */
     const unitsPerSecond = SCROLL_PER_STEP * 60;
     for (const kind of LEVEL_KINDS) {
@@ -248,8 +268,40 @@ describe('a level answers what a death costs', () => {
       expect(
         worst,
         `${kind} goes ${worst.toFixed(0)}s without an upgrade, ending at ${worstAt}. A player who ` +
-          'died at the start of that stretch flies all of it with the base weapon.',
-      ).toBeLessThan(20);
+          'died at the start of that stretch flies all of it with the base weapon and whatever half ' +
+          'of their loadout the scatter handed back.',
+      ).toBeLessThan(55);
+    }
+  });
+
+  it('offers the budget the ask named, in every level', () => {
+    /*
+      ⚠️ **THE OTHER HALF OF THE SAME DECISION, AND IT IS A CEILING RATHER THAN A FLOOR.** The guard
+      above stops a level starving the player; this stops one drifting back to the stream of pickups
+      the report called *"non-earned upgrades that make the game trivial"*.
+
+      The numbers are the ask's, in the player's own words: *"shields/lives should be kept to 1-2 per
+      level"* and *"missile upgrades need to be 2-3 per level"* — which under 0082's merge is the
+      weapon pickup, because it is the only thing that grants a launcher.
+
+      ⚠️ **Written as the ask's range and not as what the levels contain.** Every level currently
+      authors exactly three weapons, two shields and one bomb, and asserting *three* would make this a
+      copy of `src/content/levels.ts` rather than a guard over it —
+      `tests/level.test.ts`'s density floor records what that costs.
+    */
+    for (const kind of LEVEL_KINDS) {
+      const counts = { weapon: 0, shield: 0, bomb: 0 };
+      for (const entry of LEVELS[kind].pickups) counts[entry.kind]++;
+      expect(counts.weapon, `${kind} offers ${counts.weapon} weapons, and the ask is 2-3`).toBeGreaterThanOrEqual(2);
+      expect(counts.weapon, `${kind} offers ${counts.weapon} weapons, and the ask is 2-3`).toBeLessThanOrEqual(3);
+      expect(counts.shield, `${kind} offers ${counts.shield} shields, and the ask is 1-2`).toBeGreaterThanOrEqual(1);
+      expect(counts.shield, `${kind} offers ${counts.shield} shields, and the ask is 1-2`).toBeLessThanOrEqual(2);
+      /*
+        ⚠️ **The bomb has no stated budget, so what is held is that a level HAS one.** 0053 left *how
+        a player gets more bombs* to level clears alone and 0082 is what answers it; a level with no
+        bomb in it would leave the arsenal back where 0053 found it.
+      */
+      expect(counts.bomb, `${kind} has no bomb in it, so the arsenal only grows between levels`).toBeGreaterThan(0);
     }
   });
 
@@ -267,19 +319,31 @@ describe('a level answers what a death costs', () => {
     }
   });
 
-  it('has lives in it, because a fixed complement is what makes them findable', () => {
-    // 0039 refused lives that refill at a level boundary and named this as the replacement. A level
-    // with none is that refusal with nothing behind it.
-    for (const kind of LEVEL_KINDS) {
-      const lives = LEVELS[kind].pickups.filter((p) => PICKUPS[p.kind].effect === 'life');
-      expect(lives.length, `${kind} has no extra lives in it, so the complement can only go down`).toBeGreaterThan(0);
-    }
-  });
+  /*
+    ── `has lives in it` WAS HERE, AND WHAT REPLACED IT IS NOT THE SAME PROMISE ────────────────────
+
+    It held that every level authors at least one `extraLife`, because
+    `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md` refused lives that refill at
+    a boundary and named findable ones as the replacement.
+
+    ⚠️ **`docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md` removed the extra life**, on
+    the ask's reasoning that *"a shield is an extra life anyway and it's far more game impactful and
+    meaningful"* — a shield stops the death, so it keeps the arsenal a death would cost.
+
+    ⚠️ **The guard is NOT quietly weakened into *has a shield in it*, and that would have been the
+    tempting move.** They are different promises: a shield lets a player survive a hit, and nothing in
+    the game any more lets a run's life count go UP. The shield floor lives in the budget guard above,
+    where it is stated as a budget rather than dressed as 0039's replacement.
+
+    What 0039 is owed instead is a decision, and 0082 says so: the day
+    `docs/decisions/0068-a-run-over-is-a-continue.md`'s free continue stops being free, a run has no
+    way to gain a life and this is where the guard for whatever answers that will go.
+  */
 });
 
 describe('collecting one, in the real frame', () => {
   /** A level that is one pickup and nothing else, placed where the ship will fly through it. */
-  function onePickup(kind: 'extraLife' | 'rapid'): ReturnType<typeof playableWorld> {
+  function onePickup(kind: PickupKind): ReturnType<typeof playableWorld> {
     return playableWorld({
       waves: [],
       pickups: [{ at: 200, kind, lane: ACROSS_SPAN / 2 }],
@@ -317,21 +381,27 @@ describe('collecting one, in the real frame', () => {
     }
   }
 
-  it('is reported exactly once, and by the name it was showing', () => {
+  it('is reported exactly once, and by the name the level authored', () => {
     /*
-      ⚠️ **The PAIR rather than the authored kind, since 0052.** A pickup on the field is one of two
-      things and the camera says which, so expecting the authored name would be asserting that the
-      cycle does not happen. What this test is about is the collection being reported — once, by a
-      name that belongs to the thing the level put there. WHICH of the two is the cycle's own guard,
-      in `tests/cycling.test.ts`, where the camera is placed rather than left where it lands.
+      ⚠️ **THE AUTHORED KIND, EXACTLY — AND FOR TWO YEARS' WORTH OF DECISIONS IT COULD NOT BE.**
+      `docs/decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md` made a pickup one of
+      two things with the camera choosing, so this could only assert *something inside the pair*, and
+      the real question — which one — lived in a suite of its own.
+
+      `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md` removed the cycle, so the
+      assertion is now the one it always wanted to be: **what the level put there is what the player
+      is handed.** That equality is the whole of what a level author can rely on.
+
+      ⚠️ **Checked for every kind rather than for one**, because the collection loop resolves a name
+      out of an index and an off-by-one in `PICKUP_KINDS` would hand over the neighbouring row — which
+      is the bug `src/content/sprites.ts` records having shipped once already, in this exact shape.
     */
-    const { world, taken } = onePickup('rapid');
-    flyInto(world, 600);
-    expect(taken.length, 'the ship flew through a pickup and nothing was reported').toBe(1);
-    expect(
-      [taken[0] === 'rapid' || taken[0] === CYCLE.rapid],
-      'the pickup was reported as something outside the pair it was authored as',
-    ).toEqual([true]);
+    for (const kind of PICKUP_KINDS) {
+      const { world, taken } = onePickup(kind);
+      flyInto(world, 600);
+      expect(taken.length, `the ship flew through a ${kind} and nothing was reported`).toBe(1);
+      expect(taken[0], `a ${kind} was handed over as something else`).toBe(kind);
+    }
   });
 
   /**
@@ -346,8 +416,25 @@ describe('collecting one, in the real frame', () => {
    * itself, which is the failure `docs/decisions/0027-measure-the-picture-not-the-model.md` records
    * and `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` says a probe cannot catch.
    */
+  /**
+   * ⚠️ **THE SMALLEST PICKUP THERE IS, AND `npm run prove` IS WHY.** This used to take whichever kind
+   * the caller had to hand, which was fine while every pickup was 2.4 units across.
+   * `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md` gave the three kinds three sizes,
+   * and the reach is the ship's own plus **the pickup's radius** — so measuring on the biggest one
+   * bought 0.8 units of slack that the reach was not providing.
+   *
+   * 0056's probe went **STILL GREEN** because of it: `COLLECT_REACH` put back to the hull, a pass that
+   * felt like a hit is a miss again, and this said nothing. The guard had stopped measuring the thing
+   * it names while reading as thorough — which is
+   * `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` catching exactly the failure it exists for,
+   * one decision downstream of the change that caused it.
+   *
+   * The worst case is the smallest pickup, so that is what the corridor is measured on.
+   */
+  const SMALLEST: PickupKind = PICKUP_KINDS.reduce((a, b) => (PICKUPS[b].radius < PICKUPS[a].radius ? b : a));
+
   function grabbableFrom(offset: number): boolean {
-    const { world, taken } = onePickup('rapid');
+    const { world, taken } = onePickup(SMALLEST);
     const frame = new GameFrame(world);
     for (let i = 0; i < 600; i++) {
       /*
@@ -391,7 +478,7 @@ describe('collecting one, in the real frame', () => {
   });
 
   it('leaves the field once taken, so it cannot be collected twice', () => {
-    const { world } = onePickup('extraLife');
+    const { world } = onePickup('shield');
     flyInto(world, 600);
     expect(world.pickups.size, 'the pickup is still on the field after being collected').toBe(0);
   });
@@ -417,26 +504,49 @@ describe('collecting one, in the real frame', () => {
      * collect the whole scatter on the first step and measure nothing at all, which is exactly what
      * the first version of this did.
      */
-    function died(upgrades: readonly UpgradeKind[]): ReturnType<typeof playableWorld> {
+    function scattered(upgrades: readonly UpgradeKind[], seed: string): ReturnType<typeof playableWorld> {
       const built = playableWorld({
         waves: [],
         pickups: [],
         bossAt: Number.POSITIVE_INFINITY,
         boss: 'sentinel',
       });
+      built.world.scatterRng = new Rng(seed);
       scatterUpgrades(built.world, upgrades);
       built.world.ship.along = built.world.cameraAlong + PLAYER_MARGIN;
       built.world.ship.prevAlong = built.world.ship.along;
       return built;
     }
 
+    /**
+     * A death that happened to keep the WHOLE loadout, found by walking seeds.
+     *
+     * ⚠️ **A fixture, and it exists because 0082 made the scatter a coin toss.** Every test below
+     * except the 50% one is about the ring's geometry, the lifetime or the set of kinds — properties
+     * of *whatever is thrown* — and a fixture that sometimes threw two pieces and sometimes five would
+     * make each of them measure a different thing on a different day.
+     *
+     * ⚠️ **Deterministic, not random.** It walks a fixed list of seeds and takes the first that keeps
+     * everything, so the same seed is used on every run and on every machine; it THROWS rather than
+     * skipping if none does, because a fixture that silently found nothing is
+     * `docs/decisions/0019-a-probe-must-be-seen-to-apply.md`'s subject wearing a different hat.
+     */
+    function died(upgrades: readonly UpgradeKind[]): ReturnType<typeof playableWorld> {
+      for (let attempt = 0; attempt < 200; attempt++) {
+        const built = scattered(upgrades, `scatter:${attempt}`);
+        if (built.world.pickups.size === upgrades.length) return built;
+      }
+      throw new Error(`no seed in 200 kept all ${upgrades.length} upgrades — the scatter filter is not a coin`);
+    }
+
     /** Where the scatter was thrown from — the ship's start, which is where it died. */
     const deathAlong = SHIP_START_ALONG;
 
-    it('THE REPORTED ONE: one pickup per upgrade, where the ship was', () => {
-      const carried: UpgradeKind[] = ['rapid', 'spread', 'missileSpread'];
+    it('THE REPORTED ONE: pickups where the ship was, and never more than it carried', () => {
+      const carried: UpgradeKind[] = ['weapon', 'weapon', 'weapon'];
       const { world } = died(carried);
-      expect(world.pickups.size, 'the upgrades were not thrown back').toBe(carried.length);
+      expect(world.pickups.size, 'nothing at all was thrown back').toBeGreaterThan(0);
+      expect(world.pickups.size, 'the scatter gave back more than the death took').toBeLessThanOrEqual(carried.length);
       for (let i = 0; i < world.pickups.size; i++) {
         const item = world.pickups.at(i);
         expect(Math.abs(item.along - deathAlong), 'a pickup was thrown from somewhere else').toBeLessThan(1);
@@ -444,39 +554,83 @@ describe('collecting one, in the real frame', () => {
       }
     });
 
-    it('throws back exactly what was carried, and nothing the player never had', () => {
+    it('throws back nothing the player never had', () => {
       /*
-        ⚠️ **The set, not the count.** A scatter that threw three of whatever was cheapest to look up
-        would pass a count assertion and hand a player back a launcher they never found — which is the
-        game giving away an upgrade rather than returning one.
+        ⚠️ **The set, not the count.** A scatter that threw whatever was cheapest to look up would pass
+        a count assertion and hand a player back something they never found — which is the game giving
+        away an upgrade rather than returning one.
+
+        ⚠️ **A SUBSET now rather than an equality, and 0082 is why.** A death used to throw everything
+        it took; it now throws each piece with a 50% chance, so *exactly what was carried* is no longer
+        the rule. What survives is the half that matters: nothing comes back that did not go in.
       */
-      const carried: UpgradeKind[] = ['spread', 'spread', 'missileRate'];
+      const carried: UpgradeKind[] = ['weapon', 'weapon', 'weapon'];
       const { world } = died(carried);
-      const thrown: string[] = [];
-      for (let i = 0; i < world.pickups.size; i++) thrown.push(PICKUP_KINDS[world.pickups.at(i).kind]!);
-      expect(thrown.sort(), 'the scatter is not what the death took').toEqual([...carried].sort());
-    });
-
-    it('does not cycle, so what comes back is what was lost', () => {
-      /*
-        ⚠️ *"Non-cycling"*, and it is the ask's own word. A scattered `spread` that turned into a
-        `missileSpread` on the way back would be the game handing out something the player never had —
-        and `docs/decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md`'s cycle is
-        exactly the mechanism that would do it.
-
-        Driven across a whole phase boundary, because the cycle flips on a distance and a test that
-        stopped short of one would pass with no rule in place at all.
-      */
-      const { world } = died(['spread']);
-      const frame = new GameFrame(world);
-      const item = world.pickups.at(0);
-      const drawn = item.sprite;
-      for (let i = 0; i < Math.ceil((CYCLE_UNITS * 2) / SCROLL_PER_STEP) && world.pickups.size > 0; i++) {
-        frame.step();
-        if (world.pickups.size === 0) break;
-        expect(item.sprite, 'a scattered pickup turned into something the player never had').toBe(drawn);
+      for (let i = 0; i < world.pickups.size; i++) {
+        const kind = PICKUP_KINDS[world.pickups.at(i).kind]!;
+        expect(carried, `the scatter handed back a ${kind}, which the death never took`).toContain(kind);
       }
     });
+
+    it('THE 50% RULE: gives back about half of a large loadout, and not all of it', () => {
+      /*
+        ⚠️ **THE ONE 0082 ADDED, AND IT IS THE COST OF DYING.** Reported from play: *"when a player
+        dies let's change it to 50% chance of each power up they have collected spawning from their
+        death, current implementation means there's not really a cost to dying at all."*
+        `SCATTER_KEPT` in `src/app/frame.ts`, amending
+        `docs/decisions/0066-a-death-scatters-what-it-took.md`.
+
+        ⚠️ **Asserted over MANY DEATHS rather than over one, because the rule is a probability.** A
+        single death of six upgrades can legitimately give back six or none; a hundred deaths that give
+        back everything is the filter not being there at all. The band is deliberately wide — the
+        failure this catches is *the filter is missing* or *the filter is throwing everything away*,
+        not a drift of a few percent.
+
+        ⚠️ **The seed is the fixture's, so this is deterministic** —
+        `docs/decisions/0021-one-stream-per-concern.md` gives the scatter its own named stream
+        precisely so a roll added elsewhere cannot move it. If this ever goes intermittent, that is
+        `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`'s subject and the
+        stream is the first place to look.
+      */
+      const carried: UpgradeKind[] = ['weapon', 'weapon', 'weapon', 'weapon', 'weapon', 'weapon'];
+      let thrown = 0;
+      let deaths = 0;
+      let everything = 0;
+      /*
+        ⚠️ **A DIFFERENT SEED PER DEATH, and `scattered` rather than `died`.** The fixture above finds
+        a death that kept everything, which is exactly the wrong thing here; and a fresh world built
+        the same way twice replays the same stream, so sixty identical deaths would measure one draw
+        sixty times. That is the failure this loop was written with and it reported 83%.
+      */
+      for (let i = 0; i < 60; i++) {
+        const { world } = scattered(carried, `share:${i}`);
+        thrown += world.pickups.size;
+        if (world.pickups.size === carried.length) everything++;
+        deaths++;
+      }
+      const share = thrown / (deaths * carried.length);
+      expect(share, `a death gives back ${(share * 100).toFixed(0)}% of what it took`).toBeGreaterThan(0.3);
+      expect(share, `a death gives back ${(share * 100).toFixed(0)}% of what it took`).toBeLessThan(0.7);
+      /*
+        ⚠️ **And it is PER UPGRADE, which the share alone cannot see.** A filter that kept everything
+        half the time and nothing the other half averages to 50% and is a completely different rule —
+        the player would experience a free death or a total one. Six upgrades all surviving is a 1-in-64
+        event, so it happens in sixty deaths and must not happen in most of them.
+      */
+      expect(everything, 'every death gave back the whole loadout, so the coin is per DEATH').toBeLessThan(deaths / 2);
+    });
+
+    /*
+      ⚠️ **`does not cycle, so what comes back is what was lost` WAS HERE.** It drove a scattered piece
+      across a whole phase boundary and held that its sprite never changed, because
+      `docs/decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md`'s cycle was the one
+      mechanism that could hand a player back something they never had.
+
+      0082 removed the cycle, so *non-cycling* — the ask's own word — is now true of every pickup in
+      the game by construction, and there is nothing left for this to catch. Its twin,
+      `and an AUTHORED pickup still cycles`, went with it for the same reason. What survives of the
+      concern is the subset assertion above.
+    */
 
     it('leaves in every direction, and no two pieces travel together', () => {
       /*
@@ -493,7 +647,43 @@ describe('collecting one, in the real frame', () => {
         Driven at the largest loadout, which is the worst case for the ring — the gap between
         neighbouring headings is narrowest when there are the most of them.
       */
-      const { world } = died(['rapid', 'rapid', 'spread', 'spread', 'missileRate', 'missileSpread']);
+      const { world } = died(['weapon', 'weapon', 'weapon', 'weapon', 'weapon', 'weapon']);
+
+      /*
+        ⚠️ **THE RING IS DIVIDED OVER WHAT IS ACTUALLY THROWN, and 0082 is what put that at risk.**
+        Read off the velocities before a single step, because the along component decays
+        (`PICKUP_EASE`) and the headings stop being recoverable from position within a second.
+
+        A death now throws each piece on a 50% coin, so `scatterUpgrades` has to count the survivors
+        BEFORE spacing them. The obvious way round — toss the coin while placing — divides the circle
+        over the full loadout and leaves the survivors sitting on its headings, so a third of the ring
+        is empty and the player reads it as pieces having failed to appear. `src/app/frame.ts` says so
+        where the loop is; this is what would notice.
+
+        Held as *the widest gap is under twice the narrowest*, which is loose enough to survive the
+        jitter (`SCATTER_JITTER_SHARE` is under half a gap by construction) and tight enough that one
+        missing piece — a 2:1 gap at six, worse at fewer — fails it.
+      */
+      const headings: number[] = [];
+      for (let i = 0; i < world.pickups.size; i++) {
+        const item = world.pickups.at(i);
+        headings.push(Math.atan2(item.velAcross, item.velAlong - world.scrollPerStep));
+      }
+      headings.sort((a, b) => a - b);
+      let widest = 0;
+      let narrowest = Infinity;
+      for (let i = 0; i < headings.length; i++) {
+        const next = i + 1 === headings.length ? headings[0]! + Math.PI * 2 : headings[i + 1]!;
+        const gap = next - headings[i]!;
+        if (gap > widest) widest = gap;
+        if (gap < narrowest) narrowest = gap;
+      }
+      expect(
+        widest / narrowest,
+        `the ring has a gap ${(widest / narrowest).toFixed(1)}x its narrowest, so it was spaced over ` +
+          'pieces that were never thrown',
+      ).toBeLessThan(2);
+
       const frame = new GameFrame(world);
       for (let i = 0; i < 90; i++) frame.step();
       let closest = Infinity;
@@ -523,7 +713,7 @@ describe('collecting one, in the real frame', () => {
           it MOVES along, visibly             — or the ring is a fan again
           it settles, and stays settled       — or it is drifting out slowly instead of quickly
       */
-      const { world } = died(['rapid', 'spread', 'missileRate', 'missileSpread']);
+      const { world } = died(['weapon', 'weapon', 'weapon', 'weapon']);
       const frame = new GameFrame(world);
       const start: number[] = [];
       for (let i = 0; i < world.pickups.size; i++) start.push(world.pickups.at(i).along - world.cameraAlong);
@@ -559,7 +749,7 @@ describe('collecting one, in the real frame', () => {
         In seconds, per 0027, and as a band rather than a value: long enough to cross the lane, short
         enough that a full loadout cannot be recovered by flying calmly from one to the next.
       */
-      const { world } = died(['rapid']);
+      const { world } = died(['weapon']);
       const frame = new GameFrame(world);
       world.debris.clear();
       let steps = 0;
@@ -570,34 +760,56 @@ describe('collecting one, in the real frame', () => {
       expect(world.debris.size, 'a scattered pickup vanished with nothing to say it had').toBeGreaterThan(0);
     });
 
-    it('never asks the pool for more than it has', () => {
-      // `src/sim/pool.ts` drops rather than grows, and a player with a very long run should not take
-      // the game with them. Twice the pool, which is a loadout nothing can currently hand out.
+    it('never asks the pool for more than it has, however long the run was', () => {
+      /*
+        `src/sim/pool.ts` drops rather than grows, and a player with a very long run should not take
+        the game with them. Six times the pool, which is a loadout nothing can currently hand out.
+
+        ⚠️ **`scattered` rather than `died`, and the fixture's own error message is what said why.**
+        `died` walks seeds for a death that keeps EVERY piece, and at this size that is a one-in-2^72
+        event — it threw *"no seed in 200 kept all 24 upgrades"*, which is the fixture correctly
+        refusing to pretend. The 50% coin is not what this test is about: what it holds is that the
+        cap is a cap, and 0082's filter only ever makes the number smaller.
+
+        ⚠️ **Several seeds, because one draw could land under the cap by luck.** A filter bug that
+        overran would do so on most seeds and this would catch it on the first; walking a handful means
+        it cannot pass because one particular death happened to be unlucky.
+      */
       const many: UpgradeKind[] = [];
-      for (let i = 0; i < CAPACITY.pickups * 2; i++) many.push('rapid');
-      const { world } = died(many);
-      expect(world.pickups.size, 'the scatter overran the pool').toBeLessThanOrEqual(CAPACITY.pickups);
-      expect(world.pickups.size, 'the scatter threw nothing at all').toBeGreaterThan(0);
+      for (let i = 0; i < CAPACITY.pickups * 6; i++) many.push('weapon');
+      for (let seed = 0; seed < 8; seed++) {
+        const { world } = scattered(many, `overrun:${seed}`);
+        expect(world.pickups.size, 'the scatter overran the pool').toBeLessThanOrEqual(CAPACITY.pickups);
+        expect(world.pickups.size, 'the scatter threw nothing at all').toBeGreaterThan(0);
+      }
     });
 
-    it('and an AUTHORED pickup still cycles, so this rule reaches only the scattered ones', () => {
+    it('and an AUTHORED pickup is still itself, all the way to the cull', () => {
       /*
-        ⚠️ **The counterweight.** *Non-cycling* is a property of a scattered pickup and not of pickups,
-        and the mechanism that tells them apart is a lifetime — so a break that switched the cycle off
-        everywhere would satisfy every other assertion above. 0052 is the decision this must not undo.
+        ⚠️ **This was the counterweight to the cycle and it is now the counterweight to nothing
+        changing at all.** It used to hold that an authored pickup DOES flip, so that a break switching
+        the cycle off everywhere could not satisfy the *non-cycling* assertions above by accident. 0082
+        removed the cycle, so the property inverts: an authored pickup must keep the face the level
+        gave it, for its whole life on the field.
+
+        ⚠️ **Kept rather than deleted, because the failure it now catches is real and new.** A pickup
+        is drawn from `spriteBase`, which `stepEntities` re-derives every step for the hit flash — so a
+        drawing that reverted, drifted or picked up a neighbour's row would be invisible in a still and
+        obvious in play. Nothing else in the suite watches one sprite over a whole lifetime.
       */
-      const { world } = onePickup('rapid');
+      const { world } = onePickup('weapon');
       const frame = new GameFrame(world);
       while (world.pickups.size === 0) frame.step();
       const item = world.pickups.at(0);
       const drawn = item.sprite;
-      let flipped = false;
-      for (let i = 0; i < Math.ceil((CYCLE_UNITS * 2) / SCROLL_PER_STEP) && world.pickups.size > 0; i++) {
+      let steps = 0;
+      while (world.pickups.size > 0 && steps < 2000) {
         frame.step();
+        steps++;
         if (world.pickups.size === 0) break;
-        if (item.sprite !== drawn) flipped = true;
+        expect(item.sprite, 'an authored pickup changed what it was drawn as').toBe(drawn);
       }
-      expect(flipped, 'an authored pickup stopped cycling').toBe(true);
+      expect(steps, 'the pickup never reached the field, so nothing was watched').toBeGreaterThan(100);
     });
   });
 
@@ -614,7 +826,7 @@ describe('collecting one, in the real frame', () => {
   describe('and it waits where the player can reach it', () => {
     /** Where a pickup is on screen, in world units ahead of the camera, over its whole life. */
     function trackOffset(steps: number): { world: ReturnType<typeof playableWorld>['world']; offsets: number[] } {
-      const { world } = onePickup('rapid');
+      const { world } = onePickup('weapon');
       const frame = new GameFrame(world);
       const offsets: number[] = [];
       for (let i = 0; i < steps; i++) {
@@ -728,20 +940,36 @@ describe('collecting one, in the real frame', () => {
       );
     });
 
-    it('waits long enough for the player to see both of its faces and choose', () => {
+    it('waits long enough to be crossed the whole lane for', () => {
       /*
-        ⚠️ **THE ONE THE COMPLAINT IS ABOUT.** *"Nine times out of ten the player is picking up a life
-        or placing themselves in danger to get a shield"* — which is what happens when the wait is
-        shorter than the cycle: which face you get is decided by when you happened to arrive.
+        ── THIS GUARD WAS MEASURING THE CYCLE AND IT NOW MEASURES THE PLAYER ───────────────────────
 
-        Held against `CYCLE_UNITS` rather than against either constant on its own, so it stays true
-        whichever of the two is tuned next.
+        ⚠️ **It used to be *waits long enough to see both of its faces and choose*, held against
+        `CYCLE_UNITS`.** That was the right question when a pickup was two things
+        (`docs/decisions/0052-…`) and the complaint was *"nine times out of ten the player is picking
+        up a life or placing themselves in danger to get a shield"*. 0082 removed the cycle, so the
+        constant it was held against is gone and the reason with it.
+
+        ⚠️ **What replaced it is a stronger claim, not a weaker one, and it is in the player's own
+        units** — `docs/decisions/0027-measure-the-picture-not-the-model.md`. A level now offers six
+        pickups (0082), so each one is something the player commits to a crossing for: the wait has to
+        cover **flying the full width of the lane and back**, from wherever they happened to be. At
+        `SHIP_SPEED` that is `2 × ACROSS_SPAN / SHIP_SPEED` steps, and nothing here restates either
+        number.
+
+        ⚠️ **Doubled deliberately.** One crossing would be a pickup reachable only by a player who
+        starts moving the instant it appears and never has to dodge anything on the way. The whole
+        point of the wait is that going for one is a decision made under fire.
       */
       const { offsets } = trackOffset(1400);
       let held = 0;
       for (let i = 1; i < offsets.length; i++) if (waiting(offsets, i)) held++;
-      const cycleSteps = CYCLE_UNITS / SCROLL_PER_STEP;
-      expect(held / cycleSteps, 'the wait is shorter than one face, so which one you get is luck').toBeGreaterThan(1);
+      const crossingSteps = (2 * ACROSS_SPAN) / SHIP_SPEED;
+      expect(
+        held / crossingSteps,
+        `the wait is ${(held / crossingSteps).toFixed(2)} of a there-and-back crossing, so a player ` +
+          'who is not already beside it cannot reach it',
+      ).toBeGreaterThan(1);
     });
 
     it('waits somewhere the ship can actually fly to, on the narrowest device there is', () => {
@@ -782,7 +1010,7 @@ describe('collecting one, in the real frame', () => {
     it('bounces across the lane while it waits, rather than sitting on one line', () => {
       // *"They need to bounce and move around the screen."* Measured as how much of the lane it
       // covered, which is the thing the player sees.
-      const { world } = onePickup('rapid');
+      const { world } = onePickup('weapon');
       const frame = new GameFrame(world);
       let lowest = Number.POSITIVE_INFINITY;
       let highest = Number.NEGATIVE_INFINITY;
@@ -816,7 +1044,7 @@ describe('collecting one, in the real frame', () => {
       most likely to be flying through things, and a pickup that silently passed through them would
       read as the collection being broken.
     */
-    const { world, taken } = onePickup('rapid');
+    const { world, taken } = onePickup('weapon');
     // Held permanently invulnerable, which is the state under test rather than an incidental one.
     flyInto(world, 600, () => {
       world.ship.invulnFor = 60;

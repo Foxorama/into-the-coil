@@ -46,8 +46,8 @@ function armed(): State {
     PLAY,
     { slice: 'run', type: 'took', special: 'bomb' },
     { slice: 'run', type: 'took', special: 'mines' },
-    { slice: 'run', type: 'upgraded', upgrade: 'rapid' },
-    { slice: 'run', type: 'upgraded', upgrade: 'spread' },
+    { slice: 'run', type: 'upgraded', upgrade: 'weapon' },
+    { slice: 'run', type: 'upgraded', upgrade: 'weapon' },
   );
 }
 
@@ -90,8 +90,8 @@ describe('a run is lives', () => {
       'the fixture never banked a charge, so a death cannot be seen to cost one',
     ).toBeGreaterThan(startingArsenal()[0]!.charges);
     expect(before.run.upgrades, 'the fixture has no upgrades to lose, so this proves half of nothing').toEqual([
-      'rapid',
-      'spread',
+      'weapon',
+      'weapon',
     ]);
 
     const after = reduce(before, DIE);

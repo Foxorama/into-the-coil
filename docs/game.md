@@ -29,8 +29,10 @@ Upgrades, buffs and items **carry forward across levels, and are lost on a death
 [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md). There is **no shop and no
 currency** — everything is found in the level and applied the instant you touch it.
 
-A run carries **three lives**, fixed, with extras findable in a level. A death spends one and takes
-the arsenal back to the ship's base weapon; the last one ends the run.
+A run carries **three lives**, fixed. A death spends one and takes the arsenal back to the ship's base
+weapon; the last one ends the run. ⚠️ **There are no extras findable in a level** —
+[0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) replaced the extra-life pickup with a
+second shield, so the complement only goes down. See *Upgrades*.
 
 **A run that ends may be continued**, once per ending and only from the screen it ends on —
 [0068](decisions/0068-a-run-over-is-a-continue.md). The level does not restart: the field is frozen
@@ -176,23 +178,35 @@ death**, back to the ship's base weapon and starting special
 the ship looks on screen**, and every upgrade is worth taking — an upgrade that cannot change the
 outcome is worse than none.
 
-⚠️ **That makes a level's pickup density load-bearing.** A player who dies near the end of a level
-and cannot rearm has been handed its hardest stretch with its weakest loadout. Authoring a level
-answers this; 0039 names it as a constraint rather than leaving it to a play-test.
+**A pickup is rare, and a level offers six of three kinds** —
+[0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md). Three `weapon`, two `shield`, one
+`bomb`. They are premium game pieces: each one is a crossing the player commits to under fire, and
+what the level authors is what the player gets.
 
-The vocabulary: faster fire, wider spray, shields, homing rockets, extra lasers, one-shot bombs,
-multi-tag tracking specials, piercing shots, faster engines, orbiting mines that are half shield and
-half weapon.
+| | |
+|---|---|
+| **`weapon`** | every repeat raises tier and rate of fire together — both cadences and a hardpoint |
+| **`shield`** | one hit that never reaches the hull |
+| **`bomb`** | charges for the arsenal, and the only pickup the player has to decide when to use |
 
-**Two of them exist** — faster fire and wider spray, both always-on upgrades to auto-fire, both
-stacking, both lost on a death. Plus **extra lives**, which are the one pickup whose effect is on the
-run rather than on the ship. Decided,
-[0041](decisions/0041-a-pickup-is-the-answer-to-what-a-death-costs.md); the rest of the list is the
-arsenal's work, and nothing triggers a special yet.
+⚠️ **A weapon pickup taken once the weapon is full becomes a bomb charge**, which is how *every
+upgrade is worth taking* survives having a cap. Before 0082 it became unbounded damage instead, and
+that was the reported defect: *"when you get max speed nothing is a challenge, bosses die in less a
+second."*
 
-⚠️ **A level may never leave the player more than twenty seconds without something to rearm from**,
-because a death empties the arsenal. That is a constraint on every level ever authored, and it is
-guarded rather than remembered.
+The rest of the vocabulary is unbuilt: homing rockets, multi-tag tracking specials, piercing shots,
+faster engines, orbiting mines that are half shield and half weapon. Nothing triggers a special except
+the bomb.
+
+⚠️ **There are no extra lives to find, and a run's complement can only go down** — 0082, on the
+grounds that a shield is the better version of the same promise: it stops the death, so it keeps the
+arsenal a death would cost. **This is open rather than settled**, and it is what
+[0068](decisions/0068-a-run-over-is-a-continue.md)'s free continue is currently standing in for.
+
+⚠️ **A death hands back half of what it took, where it happened.** That — and not density — is the
+answer to *what is a player who just died flying with*. It replaces the twenty-second rearm ceiling
+this page carried until 0082, which three pickups a level cannot meet and which the ask overrides;
+the two numbers are one decision and neither survives being tuned alone.
 
 **The title screen carries a key** — every pickup, its real sprite, and what it does.
 [0045](decisions/0045-the-player-can-see-what-they-are-carrying.md). The enemies deliberately get no

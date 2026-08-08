@@ -129,10 +129,16 @@ export interface LevelRow {
    * pairing from everything else in the game — it is collected, never destroyed, and it must be
    * collectable while the ship is invulnerable. `src/sim/collide.ts` has the argument.
    *
-   * ⚠️ **This is the load-bearing half of 0039.** A death empties the arsenal, so a player who dies
-   * late in a level and cannot rearm has been handed its hardest stretch with its weakest loadout.
-   * How much of that is answered is a property of THIS LIST, and `tests/pickups.test.ts` holds a
-   * floor under it rather than leaving it to be noticed in a play-test.
+   * ⚠️ **It USED to be the load-bearing half of 0039, and it is now half of it.** A death empties the
+   * arsenal, so a player who dies late in a level and cannot rearm has been handed its hardest stretch
+   * with its weakest loadout — and the answer was density: an upgrade every twenty seconds, held by
+   * `tests/pickups.test.ts`. `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md` cut a level
+   * to six pickups, which no arrangement makes twenty seconds, and moved the other half of the answer
+   * onto the **death scatter** — half of what was lost, thrown back where it happened.
+   *
+   * ⚠️ **So this list and `SCATTER_KEPT` in `src/app/frame.ts` are one decision.** The guard over this
+   * is a ceiling of fifty-five seconds now: a drift detector rather than a promise, and 0082 says what
+   * to move first if dying reads as brutal.
    */
   pickups: readonly PickupEntry[];
   /** Camera distance at which the boss arrives. Everything after it is the fight. */
@@ -256,67 +262,81 @@ const APPROACH: readonly WaveEntry[] = [
 ];
 
 /*
-  ⚠️ **PLACED AGAINST THE DEATH RULE, NOT SPRINKLED.**
-  `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md` empties the arsenal on a
-  death, which makes the question *"how long is a player who just died without a weapon"*. The answer
-  authored here is **never more than about twenty seconds**: an upgrade appears roughly every 600
-  units, which is under seventeen seconds of camera, all the way to the boss.
+  ── SIX PICKUPS, AND THERE WERE TWENTY-FOUR ──────────────────────────────────────────────────────
 
-  The two lives are early-middle and late — one before the difficulty turns, one in the stretch that
-  decides the run. Lives survive a death, so they are worth flying for at any point.
+  `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md`. Reported from play: *"power ups are
+  too common still and these are premium game pieces that are the lynchpin of whether this game is
+  actually good or not"*, and *"these are a key driver of the players feeling of power growth and
+  they're currently a steady stream of non-earned upgrades that make the game trivial."*
+
+  ⚠️ **THE SHAPE IS THE SAME IN ALL SEVEN LEVELS, and that is deliberate rather than lazy**: three
+  weapons, two shields, one bomb. The budgets are the ask's own — *"shields/lives should be kept to 1-2
+  per level"*, *"missile upgrades need to be 2-3 per level"* — and a level that quietly gave itself a
+  fourth weapon would be authoring a difficulty curve in the one file that must not.
+
+  ⚠️ **THREE WEAPONS IS ALSO THE DIFFICULTY DIAL'S OWN NUMBER**, which is worth knowing before chunk 6
+  moves it: *"Level 1 -> dial starts at 1, increases to 2 when the player gets their first weapon power
+  up, increases again when they get their next, until they get to the boss which should be difficulty 4
+  or so."* Three notches from 1 is 4. The count here and the dial there are the same decision seen from
+  two ends, and neither should be changed alone.
+
+  ⚠️ **What differs level to level is WHERE, not how many.** The first weapon comes later as the run
+  goes on — 1200 units in level one against 1220 in level seven is barely anything, and the real
+  stretch is the middle: a later level makes the player fly longer between the second and the third.
+
+  ── WHAT PAYS FOR THE STRETCHES THIS LEAVES ──────────────────────────────────────────────────────
+
+  ⚠️ **`docs/game.md`'s twenty-second rule is AMENDED and this is where the bill lands.**
+  `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md` empties the arsenal on a death,
+  and the old answer to *how long is a player who just died without a weapon* was *never more than
+  twenty seconds* — an upgrade every 600 units. At three a level it is about fifty, and no arrangement
+  of three pickups over 6,350 units makes it twenty.
+
+  What replaces it is `src/app/frame.ts`'s `SCATTER_KEPT`: a death now throws **half of what it took
+  back onto the field where it happened**, so the answer to *what am I flying with* is *half of what
+  you had, immediately* rather than *a fresh one, soon*. The two numbers are one decision. Raising
+  either without the other is how this level stops being playable after a death, and
+  `tests/pickups.test.ts` holds the fifty-second ceiling so the drift is visible.
 
   ⚠️ Lanes are deliberately off-centre and alternating. A pickup on the centreline is one the player
   drifts into without deciding anything, and `docs/game.md` wants every upgrade to be worth taking —
-  which starts with taking it being a choice about position.
+  which starts with taking it being a choice about position. At six a level that matters more than it
+  did at twenty-four: each of these is a crossing the player commits to.
 */
 const APPROACH_PICKUPS: readonly PickupEntry[] = [
   /*
-    ⚠️ **THE FIRST THING THE LEVEL OFFERS IS THE SHIELD PAIR, and it is in the empty opening
-    stretch.** The hull is one hit (0050), so a player who has not yet found the controls is one
-    contact from a life — and `docs/decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md`
-    gave them that stretch precisely so the first thing that happens to them is not a death. It sits
-    off-centre like every other pickup: reaching it is still a decision, made against an empty screen.
+    ⚠️ **THE FIRST THING THE LEVEL OFFERS IS A SHIELD, and it is in the empty opening stretch.** The
+    hull is one hit (0050), so a player who has not yet found the controls is one contact from a life
+    — and `docs/decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md` gave them that stretch
+    precisely so the first thing that happens to them is not a death. It sits off-centre like every
+    other pickup: reaching it is still a decision, made against an empty screen.
 
-    ⚠️ **What a player actually gets here is a shield OR an extra life**, because
-    `docs/decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md` made every pickup two
-    things. A level authors the PAIR and the camera picks the face — which amends what 0050 wrote
-    about this line, and does not weaken it: both faces of this pair answer *the ship is one hit*.
+    ⚠️ **It used to be a PAIR — a shield or an extra life, whichever face the camera was showing.**
+    0082 dropped both the cycle and the extra life, so what the level authors is now what the player
+    gets. The line 0050 wrote about this pickup is back to being literally true.
   */
   { at: 260, kind: 'shield', lane: 40 },
-  { at: 420, kind: 'rapid', lane: 25 },
-  { at: 1010, kind: 'spread', lane: 72 },
-  { at: 1300, kind: 'shield', lane: 55 },
   /*
-    ⚠️ **THE MISSILE UPGRADES START LATER THAN THE PULSE ONES, and that is teaching rather than
-    balance.** A player meets the pulse and its two upgrades in the opening minute; the second weapon
-    fires itself from the first frame, so what is left to learn is that a DIFFERENT pickup family
-    changes it. Handing both families out at once would make the first four pickups a lottery.
+    ⚠️ **THE FIRST WEAPON IS ALSO THE MISSILE ARRIVING.** The base ship has no launcher (0056) and
+    `weaponFor`'s ladder spends its first rung on one, so this single pickup is the second weapon
+    turning up as well as the first upgrade — which is what *"increase its tier and rate of fire
+    together"* buys. It is late on purpose: a player flies the base ship for thirty-three seconds and
+    a full wave of drifters before anything changes, so the change is something they notice.
   */
-  { at: 1450, kind: 'missileSpread', lane: 30 },
-  { at: 1620, kind: 'rapid', lane: 38 },
-  { at: 2150, kind: 'extraLife', lane: 60 },
-  // ⚠️ Added because `tests/pickups.test.ts` measured a 28-second stretch with nothing to rearm
-  // from — an extra life sitting in the middle of it does not answer the question a death asks.
-  { at: 2200, kind: 'spread', lane: 30 },
-  { at: 2400, kind: 'shield', lane: 68 },
-  { at: 2620, kind: 'spread', lane: 28 },
-  { at: 2900, kind: 'missileRate', lane: 64 },
-  { at: 3160, kind: 'rapid', lane: 70 },
-  { at: 3400, kind: 'shield', lane: 32 },
-  { at: 3700, kind: 'spread', lane: 45 },
-  { at: 4240, kind: 'rapid', lane: 22 },
-  { at: 4340, kind: 'missileSpread', lane: 44 },
-  { at: 4400, kind: 'shield', lane: 58 },
-  { at: 4700, kind: 'spread', lane: 40 },
-  { at: 4800, kind: 'extraLife', lane: 66 },
-  { at: 5300, kind: 'spread', lane: 35 },
-  { at: 5420, kind: 'missileRate', lane: 72 },
-  { at: 5500, kind: 'shield', lane: 26 },
-  { at: 5860, kind: 'rapid', lane: 62 },
+  { at: 1200, kind: 'weapon', lane: 25 },
+  { at: 2900, kind: 'weapon', lane: 68 },
+  /*
+    ⚠️ **THE BOMB IS THE ONLY PICKUP THE PLAYER HAS TO DECIDE WHEN TO USE**, and it sits where the
+    level turns — the stretch after this is where chargers start arriving. 0053 gave a run two charges
+    and one more per level cleared; this is the first thing in the game that grants any mid-level, and
+    it grants two. Whether that is generous is a play-test question and 0082 says so.
+  */
+  { at: 3600, kind: 'bomb', lane: 45 },
+  { at: 4600, kind: 'weapon', lane: 30 },
   // ⚠️ The last one is before the boss rather than during it. A fight that hands out shields while
   // it is being fought is a fight whose difficulty is a supply line — 0040 keeps a boss to its own
   // clock, and this is the shell the player takes INTO it.
-  { at: 6200, kind: 'shield', lane: 50 },
+  { at: 5700, kind: 'shield', lane: 62 },
 ];
 
 /*
@@ -333,9 +353,11 @@ const APPROACH_PICKUPS: readonly PickupEntry[] = [
     5000 – 6300    2:17 – 2:53   the hardest stretch in the game so far
     6400          2:57          the harrow
 
-  ⚠️ **Fewer upgrades than level one, and that is the difficulty.** 0041's ceiling still holds — never
-  more than twenty seconds unarmed — but the pickups sit further apart inside it, so a death costs
-  more here than it did there.
+  ⚠️ **It used to say *"fewer upgrades than level one, and that is the difficulty"* and both halves of
+  that are gone.** `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md` fixes every level at
+  three weapons, so a level cannot be made harder by being stingier; and 0041's twenty-second ceiling
+  is amended, because three a level cannot meet it. What makes level two harder than level one is the
+  script below and the placement of the six — see `DESCENT_PICKUPS`.
 */
 const DESCENT: readonly WaveEntry[] = [
   { at: 300, enemy: 'lancer', formation: 'vee', count: 5, lane: 50 },
@@ -424,32 +446,24 @@ const DESCENT: readonly WaveEntry[] = [
   { at: 6190, enemy: 'warden', formation: 'line', count: 4, lane: 50 },
 ];
 
-/** Level two's pickups: the same ceiling, further apart inside it. */
+/**
+ * Level two's pickups: the same six, and the middle stretch is longer.
+ *
+ * ⚠️ **The old comment here said *"fewer upgrades than level one, and that is the difficulty"* and
+ * that is no longer available as a lever** — 0082 fixes the budget at three weapons everywhere, so a
+ * level cannot be made harder by being stingier. What is left is placement, and level two's second
+ * weapon sits 1,700 units after its first against level one's 1,700 with a later start, so a death in
+ * the middle third costs more here.
+ */
 const DESCENT_PICKUPS: readonly PickupEntry[] = [
   // The opening shield, on the same terms as level one's — and level two opens on the same empty
   // stretch for the same reason, so it is the same answer to the same question.
   { at: 260, kind: 'shield', lane: 62 },
-  { at: 480, kind: 'rapid', lane: 28 },
-  { at: 1120, kind: 'spread', lane: 68 },
-  { at: 1500, kind: 'shield', lane: 35 },
-  { at: 1640, kind: 'missileSpread', lane: 66 },
-  { at: 1720, kind: 'rapid', lane: 42 },
-  { at: 2280, kind: 'extraLife', lane: 55 },
-  { at: 2340, kind: 'spread', lane: 32 },
-  { at: 2800, kind: 'shield', lane: 70 },
-  { at: 2940, kind: 'rapid', lane: 62 },
-  { at: 3180, kind: 'missileRate', lane: 30 },
-  { at: 3540, kind: 'spread', lane: 45 },
-  { at: 3900, kind: 'shield', lane: 24 },
-  { at: 4140, kind: 'rapid', lane: 25 },
-  { at: 4400, kind: 'missileSpread', lane: 52 },
-  { at: 4720, kind: 'spread', lane: 58 },
-  { at: 4780, kind: 'extraLife', lane: 35 },
-  { at: 5100, kind: 'shield', lane: 48 },
-  { at: 5320, kind: 'rapid', lane: 50 },
-  { at: 5600, kind: 'missileRate', lane: 22 },
-  { at: 5900, kind: 'spread', lane: 40 },
-  { at: 6200, kind: 'shield', lane: 50 },
+  { at: 1350, kind: 'weapon', lane: 28 },
+  { at: 3050, kind: 'weapon', lane: 70 },
+  { at: 3800, kind: 'bomb', lane: 38 },
+  { at: 4750, kind: 'weapon', lane: 55 },
+  { at: 5850, kind: 'shield', lane: 32 },
 ];
 
 
@@ -532,26 +546,19 @@ const COILWARD: readonly WaveEntry[] = [
   { at: 6096, enemy: 'turret', formation: 'column', count: 5, lane: 60, origin: 'acrossMinus' },
 ];
 
+/**
+ * ⚠️ **Level three's lanes swing wider than level one's, which is its own idea reaching the pickups.**
+ * The level is about `origin` — threats arriving across the lane rather than down it — so a player
+ * crossing for a pickup here is crossing the axis the level attacks from. The pickups do not change;
+ * what changes is what it costs to reach them.
+ */
 const COILWARD_PICKUPS: readonly PickupEntry[] = [
-  { at: 420, kind: 'rapid', lane: 48 },
-  { at: 760, kind: 'shield', lane: 40 },
-  { at: 1100, kind: 'spread', lane: 56 },
-  { at: 1440, kind: 'shield', lane: 44 },
-  { at: 1780, kind: 'missileRate', lane: 60 },
-  { at: 2120, kind: 'shield', lane: 38 },
-  { at: 2460, kind: 'missileSpread', lane: 52 },
-  { at: 2800, kind: 'shield', lane: 62 },
-  { at: 2900, kind: 'extraLife', lane: 50 },
-  { at: 3140, kind: 'rapid', lane: 48 },
-  { at: 3480, kind: 'shield', lane: 40 },
-  { at: 3820, kind: 'spread', lane: 56 },
-  { at: 4160, kind: 'shield', lane: 44 },
-  { at: 4500, kind: 'missileRate', lane: 60 },
-  { at: 4840, kind: 'shield', lane: 38 },
-  { at: 5180, kind: 'missileSpread', lane: 52 },
-  { at: 5520, kind: 'shield', lane: 62 },
-  { at: 5860, kind: 'rapid', lane: 48 },
-  { at: 6200, kind: 'rapid', lane: 56 },
+  { at: 300, kind: 'shield', lane: 44 },
+  { at: 1300, kind: 'weapon', lane: 56 },
+  { at: 2950, kind: 'weapon', lane: 34 },
+  { at: 3700, kind: 'bomb', lane: 60 },
+  { at: 4650, kind: 'weapon', lane: 48 },
+  { at: 5800, kind: 'shield', lane: 38 },
 ];
 
 /*
@@ -630,26 +637,20 @@ const SHOAL: readonly WaveEntry[] = [
   { at: 6060, enemy: 'drifter', formation: 'column', count: 6, lane: 59, origin: 'acrossMinus' },
 ];
 
+/**
+ * ⚠️ **Level four is the charger's level, so a pickup here is a thing to be grabbed between passes.**
+ * Nothing about the list says so — that is the waves' job — but it is why the bomb sits at 3,650,
+ * inside the stretch where chargers arrive in vees: 0053's blast lands on everything in a third of the
+ * lane at once, and a formation that comes back twice is the one thing in the game that is worth
+ * spending a charge on rather than outflying.
+ */
 const SHOAL_PICKUPS: readonly PickupEntry[] = [
-  { at: 400, kind: 'rapid', lane: 48 },
-  { at: 740, kind: 'shield', lane: 40 },
-  { at: 1080, kind: 'spread', lane: 56 },
-  { at: 1420, kind: 'shield', lane: 44 },
-  { at: 1760, kind: 'missileRate', lane: 60 },
-  { at: 2100, kind: 'shield', lane: 38 },
-  { at: 2440, kind: 'missileSpread', lane: 52 },
-  { at: 2780, kind: 'shield', lane: 62 },
-  { at: 2820, kind: 'extraLife', lane: 50 },
-  { at: 3120, kind: 'rapid', lane: 48 },
-  { at: 3460, kind: 'shield', lane: 40 },
-  { at: 3800, kind: 'spread', lane: 56 },
-  { at: 4140, kind: 'shield', lane: 44 },
-  { at: 4480, kind: 'missileRate', lane: 60 },
-  { at: 4820, kind: 'shield', lane: 38 },
-  { at: 5160, kind: 'missileSpread', lane: 52 },
-  { at: 5500, kind: 'shield', lane: 62 },
-  { at: 5840, kind: 'rapid', lane: 48 },
-  { at: 6180, kind: 'rapid', lane: 56 },
+  { at: 290, kind: 'shield', lane: 52 },
+  { at: 1280, kind: 'weapon', lane: 36 },
+  { at: 2920, kind: 'weapon', lane: 62 },
+  { at: 3650, kind: 'bomb', lane: 44 },
+  { at: 4620, kind: 'weapon', lane: 30 },
+  { at: 5760, kind: 'shield', lane: 66 },
 ];
 
 /*
@@ -729,26 +730,18 @@ const BATTERIES: readonly WaveEntry[] = [
   { at: 6060, enemy: 'charger', formation: 'column', count: 5, lane: 50, origin: 'acrossMinus' },
 ];
 
+/**
+ * ⚠️ **Level five is the one where nothing can be outrun**, so the bomb is placed against the level's
+ * own idea rather than against the clock: turrets and wardens hold station and accumulate, and a
+ * charge is the only thing in the game that clears a lane the player has let fill up.
+ */
 const BATTERIES_PICKUPS: readonly PickupEntry[] = [
-  { at: 400, kind: 'rapid', lane: 48 },
-  { at: 740, kind: 'shield', lane: 40 },
-  { at: 1080, kind: 'spread', lane: 56 },
-  { at: 1420, kind: 'shield', lane: 44 },
-  { at: 1760, kind: 'missileRate', lane: 60 },
-  { at: 2100, kind: 'shield', lane: 38 },
-  { at: 2440, kind: 'missileSpread', lane: 52 },
-  { at: 2780, kind: 'shield', lane: 62 },
-  { at: 2860, kind: 'extraLife', lane: 50 },
-  { at: 3120, kind: 'rapid', lane: 48 },
-  { at: 3460, kind: 'shield', lane: 40 },
-  { at: 3800, kind: 'spread', lane: 56 },
-  { at: 4140, kind: 'shield', lane: 44 },
-  { at: 4480, kind: 'missileRate', lane: 60 },
-  { at: 4820, kind: 'shield', lane: 38 },
-  { at: 5160, kind: 'missileSpread', lane: 52 },
-  { at: 5500, kind: 'shield', lane: 62 },
-  { at: 5840, kind: 'rapid', lane: 48 },
-  { at: 6180, kind: 'rapid', lane: 56 },
+  { at: 290, kind: 'shield', lane: 36 },
+  { at: 1260, kind: 'weapon', lane: 60 },
+  { at: 2900, kind: 'weapon', lane: 42 },
+  { at: 3640, kind: 'bomb', lane: 54 },
+  { at: 4600, kind: 'weapon', lane: 66 },
+  { at: 5740, kind: 'shield', lane: 30 },
 ];
 
 /*
@@ -833,26 +826,19 @@ const GAUNTLET: readonly WaveEntry[] = [
   { at: 6165, enemy: 'charger', formation: 'line', count: 6, lane: 49, origin: 'acrossPlus' },
 ];
 
+/**
+ * ⚠️ **Level six's idea is density, which is exactly what makes reaching one of these expensive.** Six
+ * pickups over a script with no gaps in it is the level that will say soonest whether 0082's budget is
+ * too mean — if any level leaves the player unable to reach what it offers, it is this one, and the
+ * play-test after this chunk is where that shows.
+ */
 const GAUNTLET_PICKUPS: readonly PickupEntry[] = [
-  { at: 380, kind: 'rapid', lane: 48 },
-  { at: 720, kind: 'shield', lane: 40 },
-  { at: 1060, kind: 'spread', lane: 56 },
-  { at: 1400, kind: 'shield', lane: 44 },
-  { at: 1740, kind: 'missileRate', lane: 60 },
-  { at: 2080, kind: 'shield', lane: 38 },
-  { at: 2420, kind: 'missileSpread', lane: 52 },
-  { at: 2700, kind: 'extraLife', lane: 50 },
-  { at: 2760, kind: 'shield', lane: 62 },
-  { at: 3100, kind: 'rapid', lane: 48 },
-  { at: 3440, kind: 'shield', lane: 40 },
-  { at: 3780, kind: 'spread', lane: 56 },
-  { at: 4120, kind: 'shield', lane: 44 },
-  { at: 4460, kind: 'missileRate', lane: 60 },
-  { at: 4800, kind: 'shield', lane: 38 },
-  { at: 5140, kind: 'missileSpread', lane: 52 },
-  { at: 5480, kind: 'shield', lane: 62 },
-  { at: 5820, kind: 'rapid', lane: 48 },
-  { at: 6160, kind: 'rapid', lane: 56 },
+  { at: 280, kind: 'shield', lane: 58 },
+  { at: 1240, kind: 'weapon', lane: 42 },
+  { at: 2880, kind: 'weapon', lane: 66 },
+  { at: 3620, kind: 'bomb', lane: 34 },
+  { at: 4680, kind: 'weapon', lane: 52 },
+  { at: 5900, kind: 'shield', lane: 46 },
 ];
 
 /*
@@ -940,27 +926,19 @@ const EYE: readonly WaveEntry[] = [
   { at: 6286, enemy: 'warden', formation: 'line', count: 6, lane: 47 },
 ];
 
+/**
+ * ⚠️ **The last authored level, and its pickups are the same six as the first one's.** That is the
+ * point rather than an oversight: 0082's budget is a property of *a level*, and a run that reached
+ * here is carrying whatever survived six levels' worth of deaths. What makes level seven harder than
+ * level one is the script above it, not what it withholds.
+ */
 const EYE_PICKUPS: readonly PickupEntry[] = [
-  { at: 360, kind: 'rapid', lane: 48 },
-  { at: 700, kind: 'shield', lane: 40 },
-  { at: 1040, kind: 'spread', lane: 56 },
-  { at: 1380, kind: 'shield', lane: 44 },
-  { at: 1720, kind: 'missileRate', lane: 60 },
-  { at: 2060, kind: 'shield', lane: 38 },
-  { at: 2400, kind: 'missileSpread', lane: 52 },
-  { at: 2680, kind: 'extraLife', lane: 50 },
-  { at: 2740, kind: 'shield', lane: 62 },
-  { at: 3080, kind: 'rapid', lane: 48 },
-  { at: 3420, kind: 'shield', lane: 40 },
-  { at: 3760, kind: 'spread', lane: 56 },
-  { at: 4100, kind: 'shield', lane: 44 },
-  { at: 4440, kind: 'missileRate', lane: 60 },
-  { at: 4780, kind: 'shield', lane: 38 },
-  { at: 5120, kind: 'missileSpread', lane: 52 },
-  { at: 5460, kind: 'shield', lane: 62 },
-  { at: 5800, kind: 'rapid', lane: 48 },
-  { at: 6140, kind: 'rapid', lane: 56 },
-  { at: 6480, kind: 'spread', lane: 44 },
+  { at: 280, kind: 'shield', lane: 48 },
+  { at: 1220, kind: 'weapon', lane: 64 },
+  { at: 2900, kind: 'weapon', lane: 32 },
+  { at: 3600, kind: 'bomb', lane: 56 },
+  { at: 4700, kind: 'weapon', lane: 40 },
+  { at: 6000, kind: 'shield', lane: 60 },
 ];
 
 export const LEVELS: Record<LevelKind, LevelRow> = {
