@@ -34,11 +34,11 @@ import { paintScene } from '../src/render/scene.ts';
 import { bakeSize, skyField } from '../src/render/bake.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { sprite } from './bodies.ts';
-import { CAPACITY } from '../src/app/mount.ts';
+import { CAPACITY, SKY } from '../src/app/mount.ts';
 import { BURST } from '../src/content/debris.ts';
 import { MAX_SHIELDS } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';
-import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
@@ -170,12 +170,63 @@ describe('the worst-case scene costs one blit per entity, and nothing else', () 
  * too many times on some frames costs a blit nobody notices, and a per-star draw costs nothing at
  * 1280×720 and everything on a phone with a full screen. Both are counted here.
  */
+/**
+ * THE SKY GOES PAST A THIRD FASTER THAN 0065 SHIPPED IT.
+ *
+ * `docs/decisions/0078-the-sky-moves-a-third-faster.md`. Reported from play: *"the background
+ * starfield layers both still need to be scrolling past about 1/3 faster - currently feels like i'm
+ * on a casual stroll and not a super fast spaceflight combat battle."*
+ *
+ * ⚠️ **The ask is a RATIO against what shipped, so the guard is the arithmetic** — the same shape
+ * `tests/cycling.test.ts` holds for *"cycle .5 sec faster"*, and for the same reason: there is no
+ * absolute value to assert, only a change. What the other two claims here cover is everything the
+ * ratio does not — that the parallax survived it, and that 0065's ceiling still does.
+ */
+describe('the sky goes past a third faster, and the parallax survives it', () => {
+  /** What `docs/decisions/0065-the-sky-is-baked-and-blitted.md` shipped, back to front. */
+  const SHIPPED = [0.12, 0.3];
+
+  it('moves both layers a third faster, which is what was asked for', () => {
+    for (let i = 0; i < SKY.length; i++) {
+      const want = SHIPPED[i]! * (4 / 3);
+      expect(SKY[i]!.depth, `sky layer ${i} is not a third faster than it was`).toBeCloseTo(want, 6);
+    }
+  });
+
+  it('scales BOTH by the same factor, so the depth cue is not what paid for the speed', () => {
+    /*
+      ⚠️ **THE ONE A HAND WOULD GET WRONG.** *"Both layers a third faster"* is satisfied on the near
+      one alone by anybody reading quickly, and a two-layer sky whose layers move at the same relative
+      rates is the only thing that reads as depth at all. Held as the RATIO between them, which is the
+      parallax itself and is the one quantity the ask does not touch.
+    */
+    const was = SHIPPED[1]! / SHIPPED[0]!;
+    const now = SKY[1]!.depth / SKY[0]!.depth;
+    expect(now, 'the two layers no longer move at the same relative rates — the parallax was spent').toBeCloseTo(was, 6);
+  });
+
+  it('is still behind the game, which is the ceiling 0065 set', () => {
+    /*
+      ⚠️ **The counterweight, and the reason a speed ask has an upper bound at all.** At a depth of 1
+      the sky moves exactly with the world and stops being a background — it reads as a field of
+      objects going past at the rate of the things that can kill the player, which is
+      `docs/decisions/0069-the-sky-is-behind-the-game.md`'s subject. There is no natural stopping
+      point on *"faster"*, so this is where it stops.
+    */
+    for (let i = 0; i < SKY.length; i++) {
+      expect(SKY[i]!.depth, `sky layer ${i} moves with the world — it is not a background any more`).toBeLessThan(0.5);
+    }
+  });
+});
+
 describe('the sky costs a fixed number of calls, whatever the camera is doing', () => {
-  /** The real sky, built the way `src/app/mount.ts` builds it rather than restated. */
-  const SKY = [
-    { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.12 },
-    { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.3 },
-  ];
+  /*
+    ⚠️ **THE REAL SKY, AND NOW ACTUALLY SO.** This comment used to sit above a restatement of the
+    array — *"built the way `src/app/mount.ts` builds it rather than restated"*, above a restatement.
+    It survived because a depth cannot change a draw count, so the copy and the original could
+    disagree for ever with this file green. `docs/decisions/0078-the-sky-moves-a-third-faster.md` is
+    where the two were found to have to move together, and `SKY` is exported for it.
+  */
 
   it('draws the same number of tiles on every frame of a whole level', () => {
     /*
