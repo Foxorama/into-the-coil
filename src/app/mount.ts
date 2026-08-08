@@ -40,6 +40,7 @@ import {
   launchSpecial,
   respawn,
   scatterUpgrades,
+  wearHull,
   type World,
 } from './frame.ts';
 import { makeLifecycle } from './lifecycle.ts';
@@ -696,7 +697,17 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       anyway. The reducer preserves identity when a slice does not move
       (`tests/run.test.ts` holds that), which is what makes `!==` the whole test.
     */
-    if (rearmed) world.weapon = weaponFor(shipRow, state.run.upgrades);
+    if (rearmed) {
+      world.weapon = weaponFor(shipRow, state.run.upgrades);
+      /*
+        ⚠️ **THE HULL FOLLOWS THE WEAPON, which is the whole of `docs/game.md`'s *every upgrade
+        changes how the ship looks on screen*** — 0081. Reported from play as the fifth defect:
+        *"additional autofire and missile upgrades don't change the look of the player's ship."*
+        Here rather than in the frame, on the same terms the line above sets: it is a pure function of
+        a list that moves a few times a run, and `src/app/frame.ts` may not walk one per step.
+      */
+      wearHull(world);
+    }
     /*
       The run's half of the readout — lives and charges. The shield half arrives from the frame,
       which is the only thing that knows the ship was hit.

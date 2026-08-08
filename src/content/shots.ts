@@ -85,7 +85,13 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * What an enemy sends back. **Slower than the ship**, which is the whole of what makes it
    * dodgeable rather than a coin flip: a player who reacts can always leave the line it is on.
    */
-  spit: { sprite: SPRITE.bullet, spriteHit: SPRITE.bullet, radius: 0.9, health: 1, damage: 1, speed: 1.4 },
+  /*
+    ⚠️ **Its own silhouette and its own ink since 0081, and it had NEITHER.** It was `SPRITE.bullet`
+    at `SPRITE.bullet`'s size in `SPRITE.bullet`'s colour — the same bitmap as the player's own pulse,
+    which is the *"player/enemy fire"* half of the legibility report with no channel separating them
+    at all. The radius is untouched, so nothing about dodging one has changed.
+  */
+  spit: { sprite: SPRITE.spit, spriteHit: SPRITE.spit, radius: 0.9, health: 1, damage: 1, speed: 1.4 },
   /**
    * The player's second auto-weapon: slower than the pulse, and worth three of it.
    *

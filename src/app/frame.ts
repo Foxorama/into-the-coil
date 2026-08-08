@@ -51,7 +51,7 @@ import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
 import type { ShipRow } from '../content/ships.ts';
-import { INVULN_STEPS, SHIELD_MARK, shieldsOf } from '../content/ships.ts';
+import { INVULN_STEPS, SHIELD_MARK, hullFor, shieldsOf } from '../content/ships.ts';
 import { SHOTS } from '../content/shots.ts';
 import { BURST, DEBRIS } from '../content/debris.ts';
 import { FORMATIONS } from '../content/formations.ts';
@@ -2437,6 +2437,33 @@ function spawnBoss(w: World): void {
 }
 
 /**
+ * Draw the ship as what it is carrying — `docs/decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md`.
+ *
+ * Reported from play: *"additional autofire and missile upgrades don't change the look of the
+ * player's ship"*, against `docs/game.md`'s rule that every upgrade does.
+ *
+ * ⚠️ **Exported and called from two places, which is one description rather than two.** `respawn`
+ * calls it because `reset` writes the ROW's sprite back over whatever the ship was wearing, and the
+ * shell calls it because a pickup changes the weapon without touching the ship. Written out at either
+ * call site instead, the day somebody adds a third is the day the hull stops keeping up.
+ *
+ * ⚠️ **`spriteHit` as well as `spriteBase`, because `stepEntities` derives `sprite` from both.**
+ * Setting only the first would leave an upgraded ship flashing as the tier-0 hull on every hit — a
+ * silhouette that changes at the one moment the player is least able to read it.
+ *
+ * ⚠️ **Not called per step.** It is a pure function of the resolved weapon, which the shell
+ * recomputes only when the upgrade list moves; a per-step write would be this file doing work sixty
+ * times a second to answer a question that changes a few times a run.
+ */
+export function wearHull(w: World): void {
+  const hull = hullFor(w.weapon.tier);
+  w.ship.spriteBase = hull.base;
+  w.ship.spriteHit = hull.hit;
+  // `sprite` is derived by `stepEntities`, but the frame between now and the next step draws from it.
+  w.ship.sprite = w.ship.flashFor > 0 ? hull.hit : hull.base;
+}
+
+/**
  * Put the ship back after a death the run survived.
  *
  * Called by the shell, not from the step above — `docs/decisions/0039-…` puts the cost of a death in
@@ -2514,6 +2541,9 @@ export function respawn(w: World): void {
     punishment rather than a mercy.
   */
   w.ship.invulnFor = RESPAWN_INVULN_STEPS;
+  // ⚠️ AFTER `reset`, which wrote the ROW's sprite back over whatever the ship was wearing — 0081.
+  // A death clears the upgrades, so this is normally the base hull; a CONTINUE is the same statement.
+  wearHull(w);
   /*
     ⚠️ **The pickups on screen are NOT cleared, and that is the answer to what a death costs.**
     0039 empties the arsenal, which means the twenty seconds after a death are the hardest in the
