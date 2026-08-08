@@ -74,6 +74,8 @@ export function inertLevel(): {
   enemyKinds: Record<EnemyKind, number>;
   level: LevelRow;
   levelOrigin: number;
+  levelIndex: number;
+  weaponsOffered: number;
   nextWave: number;
   bossRow: typeof BOSSES.sentinel;
   bossPool: Pool<Entity>;
@@ -121,6 +123,14 @@ export function inertLevel(): {
     enemyKinds: enemyKindIndices(),
     level: NO_LEVEL,
     levelOrigin: 0,
+    /*
+      ⚠️ **The FIRST level and nothing offered, which is the bottom of the difficulty dial** —
+      `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md`. A fixture is the content as
+      authored at its gentlest, on the same terms as `legendary` being the tier that multiplies
+      nothing: a collision test that silently ran at dial 11 would be measuring a different game.
+    */
+    levelIndex: 0,
+    weaponsOffered: 0,
     nextWave: 0,
     bossRow: BOSSES.sentinel,
     bossPool: new Pool<Entity>(CAPACITY.boss, makeEntity),
@@ -287,6 +297,8 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     },
     level,
     levelOrigin: 0,
+    levelIndex: 0,
+    weaponsOffered: 0,
     nextWave: 0,
     bossRow: BOSSES[level.boss],
     bossPool,

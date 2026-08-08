@@ -40,6 +40,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | ~~a pickup is two things, and the camera says which~~ — **superseded** | [0052](decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md) → [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) |
 | **a pickup is rare, and says what it is** | [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) |
 | **two upgrade ladders of four tiers; nine pickups a level, of four kinds** | [0083](decisions/0083-two-ladders-of-four.md) |
+| **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
 | **a death takes the ship, and the level carries on** | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
@@ -303,7 +304,7 @@ fail when you mix something else in."*
 | 3 | **The view** — sky +33%, the perspective zoom, the box made a rectangle and extended, desktop-first | **Blocks 6, 7 and 8.** *"enemies fly too fast"* and *"a quarter of the screen is unplayable"* are both statements about the viewport; changing it changes what every one of those numbers means. | ✅ [0078](decisions/0078-the-sky-moves-a-third-faster.md) + [0080](decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md) — **mobile's own viewport is still owed** |
 | 4 | **Legibility** — shape and size differentiation, over the palette rather than instead of it | **Blocks the re-play.** A player who cannot tell a pickup from a bullet cannot give a verdict on anything below. | ✅ [0081](decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md) — the two bullets, and the ship's hull. **The pickups are deliberately left to chunk 5** |
 | 5 | **The pickup taxonomy** — one weapon pickup, per-level budgets, the 50% death scatter, and the max-speed nerf | The player calls pickups *"the lynchpin of whether this game is actually good"*. Comes before the dial because the dial is keyed to them. | ✅ [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md), off [`the-pickup-taxonomy-mapped`](../reports/the-pickup-taxonomy-mapped-2026-08-08.md). **Start at row 6.** |
-| 6 | **The difficulty dial** — a dial that moves inside a level, keyed to the arsenal, sawtoothing across the run | The mechanism the project **does not have**. Smallest proof first: no multi-hit enemies until the 2nd upgrade has spawned. | |
+| 6 | **The difficulty dial** — a dial that moves inside a level, keyed to the arsenal, sawtoothing across the run | The mechanism the project **does not have**. Smallest proof first: no multi-hit enemies until the 2nd upgrade has spawned. | ✅ [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) — the mechanism and its one consumer. **Chunks 7 and 8 are what it spends** |
 | 7 | **Enemies that fight** — slower, patterned, more of them shooting, slower bullets | The headline. Deliberately after 3 and 6, because *"too fast"* is measured through the viewport and *"actively trying to stop the player"* is what the dial spends. | |
 | 8 | **Bosses that are bosses** — tougher, damage that shows, one idea each, and a miniboss below them | Last, on [`medium-played`](../reports/medium-played-2026-08-07.md)'s own reasoning: a boss that dies in under a second is a curve problem before it is a movement problem, and 5 is the curve. | |
 
@@ -409,11 +410,19 @@ because a probe can only redden a guard that exists; the second was found becaus
 look at the copy. That is [0027](decisions/0027-measure-the-picture-not-the-model.md)'s gap and
 0019 does not close it.
 
-⚠️ **Chunk 6 is the largest thing on the list and it is not a tuning pass.** Nothing in `src/`
-currently reads the player's arsenal to decide what to spawn; difficulty is a tier chosen before a run
-([0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md)) multiplied over
-content authored per level. Chunks 7 and 8 are what the dial spends, so it is worth landing the
-mechanism with the smallest content on it and authoring against it afterwards.
+⚠️ **✅ CHUNK 6 HAS LANDED, AND IT IS A MECHANISM WITH ONE CONSUMER** —
+[0084](decisions/0084-the-dial-is-the-level-and-the-guns.md). The dial is
+`1 + levelIndex + weaponsOffered`, clamped 1–11; it sawtooths, and it reaches **exactly 11 at the last
+boss** because seven levels times four weapon pickups says so. What it spends today is the reported
+defect it was scoped around: **nothing takes more than one hit until level one has offered two weapon
+pickups.** Chunks 7 and 8 are what give it more, and 0084 is honest that a dial with a single reader is
+one refactor from being a number in a file.
+
+⚠️ **Two things in 0084 are owed a hand rather than a guard.** The first boss sits at dial **5** where
+the ask says *"4 or so"* — one notch, and the whole curve is two constants. And **while the opening
+clamp is on, all three tiers are the same game**: a floor on shots-to-kill beats a multiplier, so a
+player who picked *Let the Galaxy Burn* gets the same opening thirty seconds as one who picked
+*Legendary Pilot*. Both are written down in the decision rather than left to be found.
 
 ### The previous list, and what survives of it
 

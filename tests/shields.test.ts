@@ -349,7 +349,7 @@ describe('a level boundary keeps the shell, and a death does not', () => {
   it('carries every shield into the next level', () => {
     const { world } = quietWorld();
     giveShields(world, MAX_SHIELDS);
-    advanceLevel(world, NO_LEVEL);
+    advanceLevel(world, NO_LEVEL, 1);
     expect(shieldsOf(world.shipRow, world.ship.health), 'the level boundary took the shell').toBe(MAX_SHIELDS);
   });
 
@@ -361,7 +361,7 @@ describe('a level boundary keeps the shell, and a death does not', () => {
     */
     const { world } = quietWorld();
     giveShields(world, 1);
-    advanceLevel(world, NO_LEVEL);
+    advanceLevel(world, NO_LEVEL, 1);
     expect(shieldsOf(world.shipRow, world.ship.health), 'the boundary refilled the shell instead of keeping it').toBe(1);
   });
 
@@ -370,7 +370,7 @@ describe('a level boundary keeps the shell, and a death does not', () => {
     // something else. A shell that survived as a number and not as marks is exactly that.
     const { world, frame } = quietWorld();
     giveShields(world, 2);
-    advanceLevel(world, NO_LEVEL);
+    advanceLevel(world, NO_LEVEL, 1);
     frame.step();
     expect(world.shieldOrbs.size, 'the ship crossed the boundary wearing nothing').toBe(2);
   });
@@ -394,7 +394,7 @@ describe('a level boundary keeps the shell, and a death does not', () => {
     // pool of three — `src/app/mount.ts` caps the pickup for the same reason.
     const { world } = quietWorld();
     giveShields(world, MAX_SHIELDS);
-    advanceLevel(world, NO_LEVEL);
+    advanceLevel(world, NO_LEVEL, 1);
     expect(world.ship.health, 'the boundary handed the ship more health than it has room for').toBeLessThanOrEqual(
       fullHealthFor(world.shipRow),
     );

@@ -62,7 +62,15 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
    * has run off the end is a bug in the shell and a black screen is a worse way to report it.
    */
   const enterLevel = (seamless: boolean): void => {
-    const kind = LEVEL_KINDS[Math.min(runOf().level, LEVEL_KINDS.length - 1)]!;
+    /*
+      ⚠️ **The clamped index is now handed to the frame as well as used to pick the row** — the
+      difficulty dial is `levelIndex + weaponsOffered`
+      (`docs/decisions/0084-the-dial-is-the-level-and-the-guns.md`), so this is where a level's place
+      in the run reaches the field. The clamp matters twice over: past the roster it keeps the dial at
+      the last level's rather than running off the top.
+    */
+    const index = Math.min(runOf().level, LEVEL_KINDS.length - 1);
+    const kind = LEVEL_KINDS[index]!;
     /*
       ⚠️ **TWO FUNCTIONS RATHER THAN A FLAG, and the flag it replaces was `keepShell`** —
       `docs/decisions/0076-a-level-has-an-origin.md`. A run beginning and a level boundary are not one
@@ -71,7 +79,7 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
       is what let the shell-carrying arithmetic 0058 needed disappear entirely — the ship no longer
       leaves, so there is nothing to carry.
     */
-    if (seamless) advanceLevel(world, LEVELS[kind]);
+    if (seamless) advanceLevel(world, LEVELS[kind], index);
     else startLevel(world, LEVELS[kind]);
   };
 

@@ -57,7 +57,7 @@ import { BURST, DEBRIS } from '../content/debris.ts';
 import { FORMATIONS } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
-import { type DifficultyRow, fireGapFor, toughnessFor } from '../content/difficulty.ts';
+import { type DifficultyRow, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
 import { PICKUP_KINDS, type PickupKind, type PickupRow, type UpgradeKind, type Weapon } from '../content/pickups.ts';
 import { SPECIALS, pyreFor, type SpecialKind } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
@@ -676,6 +676,31 @@ export interface World {
    * is authored against is its distance from the level's own start.
    */
   levelOrigin: number;
+  /**
+   * Which level of the run this is, counting from zero.
+   *
+   * ⚠️ **Carried rather than derived, and the derivation was tried first.** `LEVEL_KINDS.indexOf` over
+   * `LEVELS` would find it for a real level and return −1 for every test fixture, which is a dial of
+   * zero in exactly the worlds that exercise it. `src/app/lifecycle.ts` already computes this index to
+   * pick the row, so it is handed over rather than recovered.
+   *
+   * ⚠️ **It is the only thing on the world that knows a level is part of a SEQUENCE.** Everything else
+   * here reads one script; the dial is the first mechanism that cares which one it is —
+   * `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md`.
+   */
+  levelIndex: number;
+  /**
+   * How many `weapon` pickups this level has put on the field so far. Reset with the script.
+   *
+   * ⚠️ **OFFERED rather than held, which is the whole of why the dial can sawtooth** —
+   * `src/content/difficulty.ts`'s `dialFor` has the argument. Held upgrades cross a level boundary
+   * (0039) and would carry their notches with them.
+   *
+   * ⚠️ **Counted here rather than by walking `level.pickups` up to `nextPickup`.** That walk is O(n)
+   * at every read and this is read at every wave spawn; a counter incremented at the one place a
+   * pickup is placed costs nothing and cannot disagree with itself.
+   */
+  weaponsOffered: number;
   /** Index of the next wave in `level.waves` that has not spawned yet. Only ever goes up. */
   nextWave: number;
   /** Index of the next pickup in `level.pickups`. Its own index, because the two lists interleave. */
@@ -1823,7 +1848,22 @@ function spawnWave(w: World, index: number): void {
       scaled the row before handing it over would have to build a scaled row per spawn — an
       allocation, in the frame, which is the one thing 0022 bans outright.
     */
-    e.health = toughnessFor(row.health, w.difficulty);
+    /*
+      ⚠️ **THE DIAL, and it is the first thing in the game that spawns differently depending on how
+      far into the run the player is** — `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md`.
+      Reported from play: *"at the start of the game there should be no multiple hit enemies until
+      after the 2nd upgrade has been spawned — the difficulty curve currently has a massive spike at
+      the start."*
+
+      ⚠️ **It clamps to one rather than scaling towards one.** A turret with three health at the
+      opening of level one is the spike; two would be a smaller spike. The ask is a floor on the
+      *number of shots*, which is what the player actually counts.
+
+      ⚠️ **The TIER is still applied everywhere the dial is not**, and the two multiply rather than
+      compete: past `MULTI_HIT_DIAL` this line is exactly what it was, so a hard tier is hard from the
+      first wave of level two.
+    */
+    e.health = singleHitOnly(w.levelIndex, w.weaponsOffered) ? 1 : toughnessFor(row.health, w.difficulty);
     // ⚠️ NEGATED here rather than stored negative. `closing` is "towards the player" in the table, so a
     // typo produces a slow enemy rather than one that silently flees off the leading edge.
     e.velAlong = -row.closing * w.difficulty.closing;
@@ -2243,6 +2283,22 @@ function spawnPickup(w: World, index: number): void {
   if (row === undefined) return;
   const item = w.pickups.spawn();
   if (item === null) return;
+  /*
+    ⚠️ **THE DIAL TURNS HERE, and it turns on the SPAWN rather than on the collection** —
+    `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md`, and the ask's own words: *"dials it up
+    per power up spawn."* The alternative — counting what the player picked up — cannot sawtooth,
+    because upgrades cross a level boundary and their notches would cross with them.
+
+    ⚠️ **After the pool has answered, so a pickup the field had no room for does not turn it.** The
+    dial is *what this level has offered*, and something the player never saw was not offered. It is
+    the same reason the counter is not incremented alongside `nextPickup`, which advances whether or
+    not a slot was free.
+
+    ⚠️ **`weapon` only.** The ask keys the dial to *weapon* power-ups specifically, and the arithmetic
+    depends on it: four a level over seven levels is what puts the last boss at exactly `DIAL_MAX`.
+    Counting missiles too would take it to 17.
+  */
+  if (entry.kind === 'weapon') w.weaponsOffered++;
   reset(item, entry.at, entry.lane, row, kind);
   /*
     ⚠️ **Which way it starts drifting alternates by INDEX rather than being rolled.** The spawn
@@ -2602,6 +2658,14 @@ export function respawn(w: World): void {
  */
 export function startLevel(w: World, level: LevelRow): void {
   w.level = level;
+  /*
+    ⚠️ **ZERO, and it is not a default — it is what this function MEANS.** `startLevel` is the run
+    beginning: the camera goes to zero, the field is swept, and `src/app/lifecycle.ts` dispatches
+    `begin` (which resets the run's level index) immediately before calling it. A run that started
+    anywhere else would be a resume, and 0068's continue deliberately does not come through here.
+    `advanceLevel` is the one that takes an index, because it is the one where the index varies.
+  */
+  w.levelIndex = 0;
   w.bossRow = BOSSES[level.boss];
   resetScene(w);
 }
@@ -2644,8 +2708,15 @@ export function startLevel(w: World, level: LevelRow): void {
  * be on screen at this moment is the boss coming apart — which 0062 went to some trouble to make
  * visible. The player's own shots stay too: the ship did not leave, so neither did what it fired.
  */
-export function advanceLevel(w: World, level: LevelRow): void {
+export function advanceLevel(w: World, level: LevelRow, levelIndex: number): void {
   w.level = level;
+  /*
+    ⚠️ **REQUIRED rather than defaulted, because this is the parameter the dial is made of** —
+    `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md`. A default here would be a level
+    boundary that silently kept the run at difficulty one, which is invisible in every screenshot and
+    is the whole feature not working.
+  */
+  w.levelIndex = levelIndex;
   w.bossRow = BOSSES[level.boss];
   /*
     ⚠️ **The one line that makes the rest of it possible.** The script is authored from the level's
@@ -2689,6 +2760,17 @@ function beginScript(w: World): void {
   w.pickups.clear();
   w.nextWave = 0;
   w.nextPickup = 0;
+  /*
+    ⚠️ **THE SAWTOOTH IS THIS LINE.** The dial is `levelIndex + weaponsOffered`, so zeroing the second
+    at a level boundary is what drops it back — *"level 2 starts by dialing it back a couple of notches
+    to give the player a breathing space"* — while the first keeps it above where the last level began.
+    `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md`.
+
+    ⚠️ **In `beginScript` rather than in `advanceLevel`, so a RUN beginning resets it too.** Both paths
+    come through here, which is the whole reason this function exists — `npm run prove` found the
+    duplicate the last time something belonged in both.
+  */
+  w.weaponsOffered = 0;
   w.bossSpawned = false;
   w.bossBeaten = false;
   // ⚠️ Cleared as well as latched, or a level entered while the last one was still exploding would

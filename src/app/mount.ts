@@ -449,6 +449,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     level,
     // A run begins at the beginning, so the script and the camera share an origin — 0076.
     levelOrigin: 0,
+    // ⚠️ The bottom of the difficulty dial — 0084. A run always begins at the first level with
+    // nothing offered yet, and `startLevel` restates the first of these for the same reason.
+    levelIndex: 0,
+    weaponsOffered: 0,
     nextWave: 0,
     bossRow,
     bossPool,
