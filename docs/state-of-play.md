@@ -275,7 +275,7 @@ fail when you mix something else in."*
 
 | # | chunk | why here | state |
 |---|---|---|---|
-| 1 | **The bug sweep** — pickups hitting a wall mid-screen, the death scatter firing straight up and down, missile tubes reaching three | Cheapest, and each one is a **false signal in the picture**. [0027](decisions/0027-measure-the-picture-not-the-model.md): tuning against a lying picture tunes the wrong thing. | |
+| 1 | **The bug sweep** — pickups hitting a wall mid-screen, the death scatter firing straight up and down, missile tubes reaching three | Cheapest, and each one is a **false signal in the picture**. [0027](decisions/0027-measure-the-picture-not-the-model.md): tuning against a lying picture tunes the wrong thing. | ✅ [0077](decisions/0077-a-pickup-arrives-rather-than-stopping.md) |
 | 2 | **The death beat** — explosion, pause, respawn, and the same before the continue screen | A death is the most-repeated event in a run and it currently has no beat at all. Independent of everything else. | |
 | 3 | **The view** — sky +33%, the perspective zoom, the box made a rectangle and extended, desktop-first | **Blocks 6, 7 and 8.** *"enemies fly too fast"* and *"a quarter of the screen is unplayable"* are both statements about the viewport; changing it changes what every one of those numbers means. | |
 | 4 | **Legibility** — shape and size differentiation, over the palette rather than instead of it | **Blocks the re-play.** A player who cannot tell a pickup from a bullet cannot give a verdict on anything below. | |

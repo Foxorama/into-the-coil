@@ -225,6 +225,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     debris,
     deaths: makeDeaths(CAPACITY.enemies),
     burstRng: makeRng('test').stream('burst'),
+    scatterRng: makeRng('test').stream('scatter'),
     view: viewOf(1280, 720),
     surface: new NullSurface(),
     rng: makeRng('test').stream('spawns'),

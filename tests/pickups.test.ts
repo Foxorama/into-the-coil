@@ -478,30 +478,74 @@ describe('collecting one, in the real frame', () => {
       }
     });
 
-    it('spreads across the lane instead of stacking on one line', () => {
-      // *"Bounce around the screen."* Six upgrades arriving on one lane is one pickup the player can
-      // reach and five they cannot.
+    it('leaves in every direction, and no two pieces travel together', () => {
+      /*
+        ⚠️ **THE SEPARATION IS NOW IN TWO AXES, AND SO IS THE GUARD** —
+        `docs/decisions/0077-a-pickup-arrives-rather-than-stopping.md`. This used to count distinct
+        `across` lanes, because the scatter was a fan along one line and a lane was the only thing
+        that could distinguish two pieces. A ring can put two pieces on the same lane and eleven world
+        units apart, which is not stacking — so what is held is the thing 0066 actually wanted:
+        *"bounce around the screen"* with every piece reachable as its own object.
+
+        ⚠️ **In world units the player can check, per 0027**: a twentieth of the lane apart, which is
+        wider than the reach that collects one, so no two can be taken as if they were one.
+
+        Driven at the largest loadout, which is the worst case for the ring — the gap between
+        neighbouring headings is narrowest when there are the most of them.
+      */
       const { world } = died(['rapid', 'rapid', 'spread', 'spread', 'missileRate', 'missileSpread']);
       const frame = new GameFrame(world);
       for (let i = 0; i < 90; i++) frame.step();
-      const lanes = new Set<number>();
-      for (let i = 0; i < world.pickups.size; i++) lanes.add(Math.round(world.pickups.at(i).across));
-      expect(lanes.size, 'the scatter arrived stacked on top of itself').toBe(world.pickups.size);
+      let closest = Infinity;
+      for (let a = 0; a < world.pickups.size; a++) {
+        for (let b = a + 1; b < world.pickups.size; b++) {
+          const one = world.pickups.at(a);
+          const two = world.pickups.at(b);
+          closest = Math.min(closest, Math.hypot(one.along - two.along, one.across - two.across));
+        }
+      }
+      expect(closest, `two pieces of the scatter travelled together, ${closest.toFixed(1)} units apart`).toBeGreaterThan(
+        ACROSS_SPAN / 20,
+      );
     });
 
-    it('holds the distance the ship died at, rather than flying off the screen', () => {
+    it('is thrown in both axes, and the along half is spent rather than carried', () => {
       /*
-        ⚠️ **0034's *every speed is in the camera's frame*.** A scatter thrown ALONG as well as across
-        is off the front or the back of the view inside two seconds, which is the opposite of *"enough
-        time to grab some"*. Measured as where they are on screen, which is what the player sees.
+        ⚠️ **0066 REFUSED THIS AND 0077 TAKES IT**, so both halves are held here. 0066's objection was
+        that a piece thrown along *"would be off the front or the back of the screen inside two
+        seconds"*, and it is answered by the decay rather than by not throwing: the excursion is
+        `speed ÷ PICKUP_EASE`, and after it the piece is holding the distance the ship died at exactly
+        as it did before — 0034's *every speed is in the camera's frame*.
+
+        Three claims, and the middle one is the one that was not true before:
+
+          it does not leave the view          — the excursion is a fraction of the narrowest screen
+          it MOVES along, visibly             — or the ring is a fan again
+          it settles, and stays settled       — or it is drifting out slowly instead of quickly
       */
-      const { world } = died(['rapid', 'spread']);
+      const { world } = died(['rapid', 'spread', 'missileRate', 'missileSpread']);
       const frame = new GameFrame(world);
-      const where = world.pickups.at(0).along - world.cameraAlong;
+      const start: number[] = [];
+      for (let i = 0; i < world.pickups.size; i++) start.push(world.pickups.at(i).along - world.cameraAlong);
+
+      let furthest = 0;
       for (let i = 0; i < 120; i++) frame.step();
+      const settled: number[] = [];
       for (let i = 0; i < world.pickups.size; i++) {
         const onScreen = world.pickups.at(i).along - world.cameraAlong;
-        expect(Math.abs(onScreen - where), 'the scatter drifted out of the camera frame').toBeLessThan(2);
+        settled.push(onScreen);
+        furthest = Math.max(furthest, Math.abs(onScreen - start[i]!));
+      }
+      expect(furthest, 'nothing was thrown along at all — the scatter is still a line').toBeGreaterThan(2);
+      expect(furthest, `a piece was thrown ${furthest.toFixed(1)} units along, which is off the screen`).toBeLessThan(
+        ACROSS_SPAN / 4,
+      );
+
+      // And it has stopped. A piece still moving at 120 steps is leaving, just slowly.
+      for (let i = 0; i < 130; i++) frame.step();
+      for (let i = 0; i < world.pickups.size; i++) {
+        const drift = Math.abs(world.pickups.at(i).along - world.cameraAlong - settled[i]!);
+        expect(drift, 'a scattered piece never stopped, so it is drifting out of the view').toBeLessThan(2);
       }
     });
 
@@ -580,10 +624,34 @@ describe('collecting one, in the real frame', () => {
       return { world, offsets };
     }
 
-    it('THE REPORTED ONE: it stops running away, and holds still on screen for seconds', () => {
+    /**
+     * Whether the pickup is WAITING on the step ending at `i`, from the picture alone.
+     *
+     * ── IT USED TO BE *THE OFFSET DID NOT MOVE*, AND 0077 MADE THAT WRONG ────────────────────────
+     *
+     * ⚠️ **A frozen offset was never the claim; it was how the claim happened to be implemented.**
+     * `driftPickups` assigned `velAlong` in one step, so a waiting pickup was pinned to the camera to
+     * the last decimal — and that was the bug reported as *"power ups hit a wall when they get to the
+     * center of the screen"*. A pickup now eases in and bobs while it waits
+     * (`docs/decisions/0077-a-pickup-arrives-rather-than-stopping.md`), so nothing is ever frozen and
+     * a guard looking for stillness measures the defect rather than the feature.
+     *
+     * ⚠️ **What the player sees is *it stopped running away*, so that is what this reads**: the
+     * offset falling back through the view slower than half the rate it falls back at when the pickup
+     * is doing nothing. An approaching pickup moves a full `SCROLL_PER_STEP` a step; a waiting one
+     * moves at the bob, which is well under half of it. Nothing here reads `PICKUP_STATION`,
+     * `PICKUP_EASE` or `PICKUP_BOB_SPEED` — per
+     * `docs/decisions/0027-measure-the-picture-not-the-model.md`, a guard written against the
+     * constants it guards proves only that the code agrees with itself.
+     */
+    function waiting(offsets: readonly number[], i: number): boolean {
+      return Math.abs(offsets[i]! - offsets[i - 1]!) < SCROLL_PER_STEP / 2;
+    }
+
+    it('THE REPORTED ONE: it stops running away, and stays on screen for seconds', () => {
       /*
         ⚠️ **Measured as a place ON SCREEN — world units ahead of the camera — which is the frame the
-        player watches it in.** Before this a pickup carried no speed of its own, so it fell back
+        player watches it in.** Before 0064 a pickup carried no speed of its own, so it fell back
         through the whole view at the scroll rate and was gone in about nine seconds, most of which it
         spent either beyond the player's reach or already behind them. Nothing here asserts on
         `PICKUP_STATION` or on how long the wait is; what is held is that there IS one.
@@ -592,13 +660,72 @@ describe('collecting one, in the real frame', () => {
       let longest = 0;
       let run = 0;
       for (let i = 1; i < offsets.length; i++) {
-        // Holding station is the offset not moving. One step of float noise is not motion.
-        if (Math.abs(offsets[i]! - offsets[i - 1]!) < 0.01) run++;
+        if (waiting(offsets, i)) run++;
         else run = 0;
         if (run > longest) longest = run;
       }
       const seconds = longest / STEPS_PER_SECOND;
-      expect(seconds, `the pickup never stopped; it held station for ${seconds.toFixed(1)}s`).toBeGreaterThan(1);
+      expect(seconds, `the pickup never stopped; it waited for ${seconds.toFixed(1)}s`).toBeGreaterThan(1);
+    });
+
+    it('and it never stops dead, which is what read as a wall', () => {
+      /*
+        ⚠️ **THE THIRD PLAY-TEST'S DEFECT, HELD FROM THE OTHER SIDE** — *"power ups hit a wall when
+        they get to the center of the screen and slide up/down it before continuing on."* The guard
+        above says the pickup stops running away; this one says it does not do it in one step, which
+        is the difference between arriving and colliding.
+
+        ⚠️ **In the player's own units, per 0027: the biggest single-step change in how fast the
+        pickup is crossing the screen.** A pure assignment made that the whole scroll rate in one
+        step. A lag makes it a fraction of it, and no constant in `src/app/frame.ts` is named here.
+      */
+      const { offsets } = trackOffset(1400);
+      let worst = 0;
+      for (let i = 2; i < offsets.length; i++) {
+        const now = offsets[i]! - offsets[i - 1]!;
+        const before = offsets[i - 1]! - offsets[i - 2]!;
+        worst = Math.max(worst, Math.abs(now - before));
+      }
+      expect(worst, `the pickup changed speed by ${worst.toFixed(2)} units in one step, which is an impact`).toBeLessThan(
+        SCROLL_PER_STEP / 4,
+      );
+    });
+
+    it('wanders along the lane while it waits, rather than tracking one line', () => {
+      /*
+        ⚠️ **THE OTHER HALF OF THE WALL, and the half the report described rather than diagnosed** —
+        *"…and slide up/down it before continuing on."* A pickup pinned to the station has a fixed
+        `along` and a constant `across` drift, which for seven seconds is a straight line down an edge
+        that is not drawn. `driftPickups` bobs it (0077) so the track is a curve.
+
+        ⚠️ **WHAT IS MEASURED IS THAT IT GOES BOTH WAYS, and the first draft of this guard did not.**
+        Measuring the width of the band it waits in looks like the same claim and is not: the ease-in
+        is itself worth about five units of band, because a lag approaches its target and never
+        arrives, so the guard passed with the bob switched off entirely. `npm run prove` reported it
+        STILL GREEN, which is
+        `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` catching
+        `docs/decisions/0027-measure-the-picture-not-the-model.md`'s failure — a guard firing on a
+        quantity next to the one it names.
+
+        ⚠️ **An easing pickup only ever falls BACK through the view; a bobbing one also comes
+        forward.** So the claim is total forward travel in world units, which no amount of easing can
+        produce and which a line cannot have.
+      */
+      const { offsets } = trackOffset(1400);
+      let forward = 0;
+      let low = Infinity;
+      let high = -Infinity;
+      for (let i = 1; i < offsets.length; i++) {
+        if (!waiting(offsets, i)) continue;
+        forward += Math.max(0, offsets[i]! - offsets[i - 1]!);
+        low = Math.min(low, offsets[i]!);
+        high = Math.max(high, offsets[i]!);
+      }
+      expect(forward, 'the pickup only ever fell back — it waited on one line, which read as a wall').toBeGreaterThan(2);
+      const band = high - low;
+      expect(band, `the pickup wandered ${band.toFixed(1)} units, which is a journey and not a wait`).toBeLessThan(
+        ACROSS_SPAN / 4,
+      );
     });
 
     it('waits long enough for the player to see both of its faces and choose', () => {
@@ -612,7 +739,7 @@ describe('collecting one, in the real frame', () => {
       */
       const { offsets } = trackOffset(1400);
       let held = 0;
-      for (let i = 1; i < offsets.length; i++) if (Math.abs(offsets[i]! - offsets[i - 1]!) < 0.01) held++;
+      for (let i = 1; i < offsets.length; i++) if (waiting(offsets, i)) held++;
       const cycleSteps = CYCLE_UNITS / SCROLL_PER_STEP;
       expect(held / cycleSteps, 'the wait is shorter than one face, so which one you get is luck').toBeGreaterThan(1);
     });
@@ -625,11 +752,19 @@ describe('collecting one, in the real frame', () => {
         rather than from the constant — `docs/decisions/0027-measure-the-picture-not-the-model.md`.
       */
       const { offsets } = trackOffset(1400);
+      /*
+        ⚠️ **The FURTHEST OUT it ever waits, rather than the last place it stopped.** A pickup bobs
+        while it waits (0077), so *where the station is* is a band and not a point — and the half of
+        the band that matters is the far edge, because that is the one the ship might not reach.
+      */
       let station = 0;
+      let waited = false;
       for (let i = 1; i < offsets.length; i++) {
-        if (Math.abs(offsets[i]! - offsets[i - 1]!) < 0.01) station = offsets[i]!;
+        if (!waiting(offsets, i)) continue;
+        waited = true;
+        station = Math.max(station, offsets[i]!);
       }
-      expect(station, 'the pickup never held station at all').toBeGreaterThan(0);
+      expect(waited, 'the pickup never held station at all').toBe(true);
       expect(station, 'it waits further out than the ship can fly').toBeLessThan(PLAYER_ALONG_SPAN - PLAYER_MARGIN);
       expect(station, 'it waits off the edge of the narrowest screen there is').toBeLessThan(ACROSS_SPAN * MIN_ASPECT);
     });

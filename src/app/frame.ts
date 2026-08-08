@@ -139,6 +139,58 @@ const CIRCLE_FLOOR = 10;
 const PICKUP_DRIFT = 0.22;
 
 /**
+ * How much of the gap to its target a pickup's `along` speed closes each step.
+ *
+ * ── WHY A PICKUP DOES NOT SIMPLY STOP ───────────────────────────────────────────────────────────
+ *
+ * Reported from play: *"power ups hit a wall when they get to the center of the screen and slide
+ * up/down it before continuing on."* `docs/decisions/0077-a-pickup-arrives-rather-than-stopping.md`.
+ *
+ * ⚠️ **The wall was a one-step velocity change and there was nothing there to hit.** `driftPickups`
+ * used to *assign* `velAlong`, so on the single step a pickup crossed `PICKUP_STATION` its
+ * screen-relative speed went from `SCROLL_PER_STEP` to zero between one frame and the next. Nothing
+ * else in this game decelerates — a body either carries a velocity or has it rewritten from its row —
+ * so the only picture the player had for it was an impact.
+ *
+ * ⚠️ **0.06 is about three quarters of a second to settle**, which is `1/0.06` ≈ 17 steps to close
+ * 63% of the gap and roughly 45 to close it. Slower would make the station vague; faster is the wall
+ * again with a smoother edge on it.
+ *
+ * ⚠️ **It is also what lets `scatterUpgrades` throw along the scroll axis at all.** A scattered piece
+ * spends its `along` speed against this lag, so its whole excursion is `speed ÷ this` — about 11
+ * world units — and `docs/decisions/0066-a-death-scatters-what-it-took.md`'s objection that a piece
+ * thrown along *"would be off the front or the back of the screen inside two seconds"* stops applying.
+ */
+const PICKUP_EASE = 0.06;
+
+/**
+ * How fast a waiting pickup bobs along the scroll axis, in world units per step at the extreme.
+ *
+ * ⚠️ **The other half of the wall**, and it is the *"slide up/down it"* half: a pickup holding
+ * station has a fixed `along` and a constant `across` drift, which is a straight line down an
+ * invisible edge for the whole seven seconds of the wait. A curve is not a line, and that is the
+ * entire requirement.
+ *
+ * At 0.25 against `PICKUP_BOB_UNITS` the pickup wanders about ±6 world units, which is a twentieth of
+ * the narrowest view — visible as motion, far too small to move where the pickup *is*.
+ */
+const PICKUP_BOB_SPEED = 0.25;
+
+/**
+ * The bob's period, in world units of camera travel.
+ *
+ * ⚠️ **A DISTANCE and not a duration**, which is `src/content/pickups.ts`'s own argument for
+ * `CYCLE_UNITS`: a shape in the world can be authored against, a wobble in time cannot, and a machine
+ * dropping frames plays the same level. 14 units is a full cycle every `2π × 14 ÷ SCROLL_PER_STEP`
+ * steps — about 2.4 seconds.
+ *
+ * ⚠️ **The phase is offset by the pickup's own `across`**, so two pickups on screen do not bob in
+ * unison. That costs no field and no draw, and it is the one place this file wants pickups to look
+ * independent — the cycle deliberately wants them synchronised, and for the opposite reason.
+ */
+const PICKUP_BOB_UNITS = 14;
+
+/**
  * How fast a scattered upgrade is thrown across the lane, in world units per step.
  *
  * ── WHAT A DEATH THROWS AWAY, AND WHERE IT LANDS ────────────────────────────────────────────────
@@ -176,6 +228,35 @@ const SCATTER_SPEED = 0.66;
  * one* — no flag, no second field, and no way for the two to disagree. `cyclePickups` skips them.
  */
 const SCATTER_STEPS = 300;
+
+/**
+ * How far a scattered piece's heading may wander from its share of the circle, as a share of the
+ * half-gap to its neighbour.
+ *
+ * ⚠️ **A SHARE rather than an angle, and the difference is the guarantee.** A fixed number of radians
+ * is most of the gap at eight pieces and almost none of it at two, so the one thing
+ * `docs/decisions/0066-a-death-scatters-what-it-took.md` insisted on — that no two pieces share a
+ * heading — would hold or not hold depending on how good the player's run had been. Scaled, the
+ * worst case is the same at every count: neighbours keep `2 × (1 − 0.35)` of their nominal gap,
+ * which is 65% of it, so they can never swap places and never leave together.
+ *
+ * ⚠️ **The jitter is the picture and the even term is the guarantee.** Without the first a death
+ * looks like a diagram; without the second the player loses a piece to a coincidence, which is one
+ * of the upgrades a death took and did not give back.
+ */
+const SCATTER_JITTER_SHARE = 0.35;
+
+/** The slowest a scattered piece may leave, as a fraction of `SCATTER_SPEED`. */
+const SCATTER_SPREAD_MIN = 0.7;
+
+/**
+ * The fastest a scattered piece may leave, as a fraction of `SCATTER_SPEED`.
+ *
+ * ⚠️ **The spread is what makes the ring read as thrown rather than as drawn.** Identical speeds
+ * put every piece on the same expanding circle for the whole five seconds, which is a shape and not
+ * an event.
+ */
+const SCATTER_SPREAD_MAX = 1.3;
 
 /**
  * Where a pickup stops running away and waits, in world units ahead of the camera.
@@ -468,6 +549,18 @@ export interface World {
    * not be able to move a wave by one enemy.
    */
   burstRng: Rng;
+  /**
+   * The scatter stream, and it is separate from `burstRng` for the opposite reason `burstRng` is
+   * separate from `rng`.
+   *
+   * ⚠️ **A scattered piece's heading is NOT cosmetic**, which is the whole distinction
+   * `docs/decisions/0021-one-stream-per-concern.md` turns on. Which pieces a player can reach in the
+   * five seconds a scatter lasts is the entire cost of a death
+   * (`docs/decisions/0066-a-death-scatters-what-it-took.md`), so it must not share a generator with
+   * a fragment's direction — a burst added to a new explosion somewhere would otherwise deal a
+   * different death.
+   */
+  scatterRng: Rng;
   view: View;
   surface: Surface;
   /** The spawn stream, named per 0021 — a cosmetic roll added later must not move a wave. */
@@ -1264,8 +1357,20 @@ function fireMissiles(w: World): void {
     if (missile === null) return;
     // One cue for the volley, on the same terms the pulse gets one: three tubes are one launch.
     if (i === 0) w.onCue('missile');
-    // 0 → the centreline; 1 → the acrossMinus side; 2 → the acrossPlus side.
-    const side = i === 0 ? 0 : i === 1 ? -1 : 1;
+    /*
+      WHERE THE TUBES ARE — 0077.
+
+      ⚠️ **One launcher is the centreline and two are the wings**, rather than *centre, then minus,
+      then plus*. The cap was three positions for a ship that started with one
+      (`docs/decisions/0051-a-missile-is-the-second-auto-weapon.md`); 0056 took the base tube away and
+      `src/content/pickups.ts` has now brought the cap down to match, so the old order would leave a
+      fully-upgraded ship firing off-centre.
+
+      ⚠️ **A launcher upgrade is still VISIBLE**, which is 0051's actual claim and the thing
+      `tests/missiles.test.ts` holds: the volley goes from one missile down the nose to two off the
+      wings, which is a bigger change in the picture than adding a third to a pair.
+    */
+    const side = w.weapon.launchers === 1 ? 0 : i === 0 ? -1 : 1;
     reset(missile, w.ship.along + MUZZLE_ALONG, w.ship.across + LAUNCHER_ACROSS * side, row);
     missile.velAlong = row.speed + w.scrollPerStep;
     missile.damage = w.weapon.missileDamage;
@@ -1849,12 +1954,44 @@ function driftPickups(w: World): void {
       the pickup carries before and after: a body with no speed of its own falls back through the view
       at the scroll rate, which is exactly what a pickup arriving and then leaving should do.
     */
-    if (item.holdFor <= 0) continue;
+    if (item.holdFor <= 0) {
+      /*
+        ⚠️ **A SCATTERED piece lands here, and `lifeFor` is what says so** — it carries no `holdFor`,
+        exactly as `cyclePickups` relies on. `scatterUpgrades` throws it in two axes and this is what
+        spends the `along` half: the excursion is `speed ÷ PICKUP_EASE`, about 11 world units, after
+        which it is holding station and bouncing across for the rest of its five seconds. That is the
+        whole of why `docs/decisions/0066-a-death-scatters-what-it-took.md`'s objection to throwing
+        along — *"off the front or the back of the screen inside two seconds"* — no longer applies.
+
+        ⚠️ **The two targets are different and both are 0034's frame.** A scattered piece holds the
+        distance the ship died at, so its target is the camera's own rate; an authored pickup whose
+        wait has run out is meant to leave, so its target is zero — a body with no speed of its own
+        falls back through the view.
+      */
+      const drift = item.lifeFor > 0 ? w.scrollPerStep : 0;
+      item.velAlong += (drift - item.velAlong) * PICKUP_EASE;
+      continue;
+    }
     item.holdFor--;
-    item.velAlong = item.along - w.cameraAlong <= PICKUP_STATION ? w.scrollPerStep : 0;
-    // The last step of the wait hands the pickup back to the scroll, or it would hold station for
-    // ever on a counter that has already run out.
-    if (item.holdFor === 0) item.velAlong = 0;
+    /*
+      THE WALL, AND WHY THIS IS A LAG RATHER THAN AN ASSIGNMENT — 0077.
+
+      ⚠️ **The station is the same one 0064 set and only the approach to it has changed.** These two
+      lines used to be one assignment, so the step a pickup crossed the station was a step on which
+      its screen-relative speed went from `SCROLL_PER_STEP` to zero — a picture of an impact with
+      nothing there to hit.
+
+      ⚠️ **The bob is part of the TARGET rather than added to the result**, and the difference is not
+      cosmetic: added afterwards it would accumulate into `velAlong` and only leak out at
+      `PICKUP_EASE`, which is a leaky integrator with a gain of about 13 — a pickup shuttling several
+      units a step. Inside the target it is the thing being tracked, and the lag ATTENUATES it to a
+      wander of roughly ±5 world units.
+
+      `Math.sin` allocates nothing, which is what `tests/budget.test.ts` counts.
+    */
+    const station = item.along - w.cameraAlong <= PICKUP_STATION ? w.scrollPerStep : 0;
+    const target = station + PICKUP_BOB_SPEED * Math.sin(w.cameraAlong / PICKUP_BOB_UNITS + item.across);
+    item.velAlong += (target - item.velAlong) * PICKUP_EASE;
   }
 }
 
@@ -1873,11 +2010,16 @@ function driftPickups(w: World): void {
  * ⚠️ **It has to be called BEFORE the reducer clears the list**, which is a real ordering the shell
  * has to keep. There is no way to state it here; `tests/pickups.test.ts` drives the shell's order.
  *
- * ⚠️ **A FAN rather than a roll, which is the opposite of what `burst` does and deliberately so.**
- * Debris is something coming apart and wants to look accidental; this is the game handing the player
- * back a countable set of things, and a seeded scatter that happened to stack two of them on one lane
- * would take one of them away. `src/app/frame.ts`'s `spawnPickup` alternates by index for the same
- * reason.
+ * ⚠️ **A RING rather than a line, and the even spacing survives the jitter** —
+ * `docs/decisions/0077-a-pickup-arrives-rather-than-stopping.md`. Reported from play: *"when a player
+ * dies the powerups spawn straight up/down the screen, they don't spread out in a random pattern and
+ * bounce around the screen."* This used to fan in `across` alone, so every piece left along one line.
+ *
+ * ⚠️ **0066's reason for that is kept and its conclusion is not.** *"A seeded scatter that happened
+ * to stack two of them on one lane would take one of them away"* is still true, so the angle is
+ * `i/n` of a circle PLUS a bounded jitter rather than a free draw — six upgrades still arrive as six
+ * separate things. What has gone is the claim that a piece thrown along would leave the screen: it
+ * decays back to the scroll rate in `driftPickups`, so its whole excursion is about 11 world units.
  */
 export function scatterUpgrades(w: World, upgrades: readonly UpgradeKind[]): void {
   for (let i = 0; i < upgrades.length; i++) {
@@ -1890,17 +2032,23 @@ export function scatterUpgrades(w: World, upgrades: readonly UpgradeKind[]): voi
     if (item === null) return;
     reset(item, w.ship.along, w.ship.across, row, kind);
     /*
-      Spread evenly either side of the ship, alternating, each one further out than the last — so a
-      loadout of six arrives as six separate things rather than as three pairs.
+      THE RING — an angle per piece, evenly spaced and then jittered.
 
-      ⚠️ **`velAlong` carries the scroll rate**, which is 0034's *every speed is in the camera's
-      frame*: the scatter holds the distance the ship died at and spreads ACROSS. Thrown along as
-      well, it would be off the screen inside two seconds.
+      ⚠️ **The even term is the guarantee and the jitter is the picture.** Without the first, two
+      pieces can leave along the same heading and the player loses one of them for nothing; without
+      the second, a death looks like a diagram. `SCATTER_JITTER` is under half the gap between
+      neighbours at any count, so the ordering around the circle can never invert.
+
+      ⚠️ **`velAlong` is the scroll rate PLUS the along component**, which is 0034's *every speed is
+      in the camera's frame*. The along half is spent against `PICKUP_EASE` in `driftPickups` — about
+      11 world units — and what is left is a piece holding the distance the ship died at and bouncing
+      across the lane, which is what 0066 built and this keeps.
     */
-    const side = i % 2 === 0 ? 1 : -1;
-    const rank = Math.floor(i / 2) + 1;
-    item.velAcross = SCATTER_SPEED * side * (1 - rank * 0.15);
-    item.velAlong = w.scrollPerStep;
+    const halfGap = (Math.PI / upgrades.length) * SCATTER_JITTER_SHARE;
+    const angle = (i / upgrades.length) * Math.PI * 2 + w.scatterRng.range(-halfGap, halfGap);
+    const speed = SCATTER_SPEED * w.scatterRng.range(SCATTER_SPREAD_MIN, SCATTER_SPREAD_MAX);
+    item.velAcross = Math.sin(angle) * speed;
+    item.velAlong = w.scrollPerStep + Math.cos(angle) * speed;
     item.lifeFor = SCATTER_STEPS;
   }
 }
