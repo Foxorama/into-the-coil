@@ -98,7 +98,8 @@ it is pushed — guards stop reaching their subject without ever going red, and 
 | **the sim has a clock; the guns fire on its grid and the music is moved to agree** | [0094](decisions/0094-in-time-is-not-in-phase.md) |
 | **the title and the level are two pieces; a layer's loop may be any whole multiple of the shortest** | [0095](decisions/0095-the-level-has-its-own-music.md) |
 | **everything that shoots at the player is on a sixteenth grid, phase quantised at spawn** | [0096](decisions/0096-the-enemies-play-along.md) |
-| **the near sky is pushed back on every cheap axis; the whole sky is twice 0065's rate** | [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) |
+| ~~the near sky is pushed back on every cheap axis~~ — **amended: it went out** | [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) → [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
+| **the sky is three layers, the fastest is streaks, and a tube is a side of the hull** | [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
 | **a death takes the ship, and the level carries on** | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
@@ -218,7 +219,29 @@ date and is exactly what a play-test is for.
 
 ## What the play-test has answered
 
-⚠️ **THE THIRD PLAY-TEST IS THE CURRENT ONE AND IT OUTRANKS EVERYTHING BELOW IT** —
+⚠️ **THE FIFTH PLAY-TEST IS THE CURRENT ONE AND IT OUTRANKS EVERYTHING BELOW IT** —
+[`the-fifth-play-test`](../reports/the-fifth-play-test-2026-08-10.md), given 2026-08-10 against the
+build carrying 0089 to 0096. **Six items, four of them landing as decisions 0097 to 0100**, and the
+instruction that came with it was *"full auto and merge PRs"*.
+
+⚠️ **It is the FIRST play-test that has ever mentioned the sound**, and half of it is about nothing
+else. The three audio items are all about **coherence** — *two separate tracks*, *a few seconds
+repeated for minutes*, *close to on beat but they don't mesh* — which is a third axis this project has
+never tuned: it has tuned gains (0092) and it has tuned timing (0093, 0094) and it has never once
+tuned harmony.
+
+⚠️ **THREE OF THE SIX ARE DEFECTS AGAINST THE DECISION THAT ALREADY ANSWERED THEM**, which is now the
+pattern of two feedback rounds running. The report has the table; read it before answering a repeat
+report, and read [0027](decisions/0027-measure-the-picture-not-the-model.md) first.
+
+| item | state |
+|---|---|
+| the sky lost its layers and crawls; the missiles fire from the centre | ✅ [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
+| the enemies fire in unison and every bullet is the same | |
+| the effects do not mesh with the music | |
+| the title's metronome, and a level's music that goes nowhere | |
+
+⚠️ **THE THIRD PLAY-TEST IS THE ONE ABOVE THAT AND IT OUTRANKS EVERYTHING BELOW IT** —
 [`the-third-play-test`](../reports/the-third-play-test-2026-08-08.md), given 2026-08-08 against the
 build carrying 0072, 0073, 0074 and 0076 — the five-changes-unflown batch the previous version of this
 file was waiting on. **Read it before proposing any game work.** It is the largest batch of feedback
@@ -526,6 +549,13 @@ to have chunks and pieces fly off when they change states."*
 [0087](decisions/0087-a-pickup-never-parks.md) and
 [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) are the first three.
 **The bosses are chunk 8 and are not started.**
+
+⚠️ **AND 0088's TWO SKY ITEMS CAME BACK INVERTED IN THE FIFTH PLAY-TEST** —
+[0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md). *"Still distracting"* was
+answered so thoroughly that the layer went out, and *"the background needs to move faster"* was then
+being said about a sky whose only visible layer is the slow one. **0088 predicted its own successor in
+writing** — *"after that the answer is not a number — it is a different sky"* — and 0097 is it: three
+layers, and the fastest is drawn as streaks so that speed stops having to be bought back with alpha.
 
 ⚠️ **TWO OF THE THREE WERE DEFECTS AGAINST THE DECISION THAT ALREADY ANSWERED THEM**, which is now
 the pattern of this whole feedback round rather than an accident:

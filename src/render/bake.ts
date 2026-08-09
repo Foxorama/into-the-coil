@@ -98,7 +98,25 @@ export function bakeSize(extent: number, pixelsPerUnit: number): number {
  * that could compete with a bullet; at a third of the radius they cannot, and count is the half of
  * *further away* that dimming alone does not buy.
  */
-const SKY_STARS = { skyFar: 90, skyNear: 90 };
+/*
+  ── AND THERE IS A THIRD LAYER NOW, WHICH IS THE ONE THE PLAYER SEES MOVE ─────────────────────────
+
+  `docs/decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md`. Reported from play against the
+  build 0088 landed in: *"background starfield has lost it's multiple layers, there's only one
+  starfield background and the background or the screen moves too slow… it feels like a crawl because
+  of the background visual moving soooo slowly."*
+
+  ⚠️ **Both halves of that are ONE cause and it is 0088's own success.** 0088 dimmed the near layer to
+  a fifth and shrank it to a third; what it dimmed away was the only FAST layer on the screen, so the
+  sky lost a layer and lost its speed in the same edit. What is left visible moves at 0.24 — about
+  eight world units a second, twenty seconds to cross a 16:9 view — and that is the crawl, measured.
+
+  ⚠️ **`skyRush` is few and it is meant to be.** Fifteen marks against ninety, because a streak
+  covers about twenty times a dot's area and because what reads as speed is a handful of things
+  moving quickly rather than a field of them. Two and a half tiles are in view at once, so it is
+  about forty streaks on the screen.
+*/
+const SKY_STARS = { skyFar: 90, skyNear: 90, skyRush: 15 };
 
 /**
  * The biggest a star may be drawn, as a radius in WORLD UNITS. One ceiling for the whole sky.
@@ -142,8 +160,49 @@ const SKY_STARS = { skyFar: 90, skyNear: 90 };
  * and size, and speed is the thing the other half of the report is asking for more of.
  *
  * ⚠️ **The far layer is untouched, because nothing has ever been reported about it.**
+ *
+ * ── AND 0088 WENT TOO FAR, WHICH IS THE FIRST TIME THIS LEVER HAS BEEN PULLED BACK ─────────────
+ *
+ * ⚠️ **`docs/decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md`.** Reported: *"there's
+ * only one starfield background."* 0.2 units at 0.18 alpha is about a pixel and a half at a fifth
+ * of solid on an ordinary screen, which is not a layer the eye can find — three passes of *push it
+ * back* ended one push past the point where the layer existed.
+ *
+ * ⚠️ **0.2 → 0.28, and it is still under a THIRD of a pulse.** What made this layer distracting was
+ * that it was the nearest thing on the screen with nothing in front of it. There is something in
+ * front of it now, so it is a middle distance rather than the foreground, and the ladder of
+ * thicknesses — 0.6, 0.28, 0.11 — is what `tests/budget.test.ts` holds instead of a single ceiling.
+ *
+ * ⚠️ **`skyRush` is a HALF-THICKNESS rather than a radius**, because the mark is a capped line and
+ * not a dot. It is the narrowest thing the sky draws by a factor of two and a half, which is the
+ * whole of why a layer moving at 0.85 is still a background: `tests/budget.test.ts` holds both that
+ * ladder and the aspect ratio that stops a streak degenerating into a dot.
  */
-const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.2 };
+const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.11 };
+
+/**
+ * How long a `skyRush` streak is, in world units — the range one is drawn between.
+ *
+ * ── WHY THE FAST LAYER IS A LINE AND NOT A DOT ──────────────────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md`.** Every previous answer
+ * to *the sky is too slow* moved a depth, and every one of them ran into the same ceiling: a dot that
+ * moves fast is a dot that competes with a bullet, so the speed had to be bought back with alpha and
+ * with size until the layer was gone. **A streak breaks that trade** — it says *fast* by its shape
+ * rather than by its rate, it cannot be mistaken for a round thing that kills you, and it is what
+ * every game that has ever wanted to look quick draws.
+ *
+ * ⚠️ **Drawn along the tile's own `+x`, which is the scroll axis on BOTH orientations.**
+ * `bakeOne` turns the whole atlas a quarter turn for the portrait view, so a streak authored down the
+ * tile's x arrives pointing along `along` either way. Getting this wrong would draw the streaks
+ * across the lane in portrait only — on a device the developer is not holding, which is the failure
+ * mode `src/render/surface.ts` records for the same axis.
+ *
+ * ⚠️ **The shortest one is fifty-four times its own width**, which is the aspect ratio
+ * `tests/budget.test.ts` holds: a streak that shortened towards its thickness would be back to being
+ * a dot at the fastest depth in the game, and nothing else in this file would notice.
+ */
+const SKY_STREAK_UNITS = { from: 6, to: 13 };
 
 /**
  * How solid each layer is drawn, against the void behind it.
@@ -165,8 +224,18 @@ const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.2 };
  * that acts directly on the thing being complained about, which is how much of the eye the layer
  * takes. Under a fifth is faint enough to read as depth rather than as content, and 0088 goes
  * further on it than on either of the other two because it is the cheapest to take back.
+ *
+ * ⚠️ **0.18 → 0.34, and it is the first time this lever has come back** —
+ * `docs/decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md`: *"there's only one starfield
+ * background."* The paragraph above is still the rule and this is still well under half of solid;
+ * what changed is that the near layer is no longer the nearest thing on the screen, so *the layer
+ * that moves* is `skyRush`'s description rather than this one's.
+ *
+ * ⚠️ **The back layer is the only one drawn solid, and everything in front of it is under half.**
+ * That is what `tests/budget.test.ts` holds rather than either number: a veil over a bed, whatever
+ * the values a later play-test settles on.
  */
-const SKY_ALPHA = { skyFar: 1, skyNear: 0.18 };
+const SKY_ALPHA = { skyFar: 1, skyNear: 0.34, skyRush: 0.42 };
 
 /**
  * How much of the boundary's tile is mark rather than gap.
@@ -323,6 +392,9 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   */
   skyFar: 'sky',
   skyNear: 'sky',
+  // ⚠️ **The streaks are the SAME ink**, so what separates the three layers is depth, thickness and
+  // shape and never colour — 0097, which is 0081's rule arriving in the one place it had not.
+  skyRush: 'sky',
   /*
     ⚠️ **The PLAYER's ink, because the thing it marks is the player's box and nothing else's.**
     Enemies, bullets and pickups all cross this line freely — `src/sim/flight.ts` clamps the ship and
@@ -811,6 +883,7 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
     */
     case 'skyFar':
     case 'skyNear':
+    case 'skyRush':
       drawSky(ctx, kind, size);
       return;
     /*
@@ -866,13 +939,24 @@ function drawFins(ctx: CanvasRenderingContext2D, half: number, r: number, spanY:
   }
 }
 
-/** One star, in tile pixels: where it goes and how big it is. */
+/** One star, in tile pixels: where it goes, how big it is, and how far it is smeared. */
 export interface SkyStar {
   x: number;
   y: number;
-  /** Radius, in pixels of a tile `size` across. */
+  /** Radius, in pixels of a tile `size` across. For a streak this is the half-thickness. */
   r: number;
+  /**
+   * How far the mark is drawn along the tile's `+x`, in the same pixels. `0` is a dot.
+   *
+   * ⚠️ **One field rather than two shapes, so the guard can measure both kinds in one loop** —
+   * `docs/decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md`. A separate streak type
+   * would mean `tests/budget.test.ts` walking two lists and, on the day a third form arrives, three.
+   */
+  len: number;
 }
+
+/** Every layer the sky is made of, and the only kinds `skyField` will answer for. */
+export type SkyKind = 'skyFar' | 'skyNear' | 'skyRush';
 
 /**
  * The field a sky tile is made of — WHAT will be drawn, before anything draws it.
@@ -887,7 +971,7 @@ export interface SkyStar {
  * rotation and may allocate freely. This is the only place in the project where a per-star loop, and
  * an array of them, is affordable; it is exactly why the sky is baked rather than drawn.
  */
-export function skyField(kind: 'skyFar' | 'skyNear', size: number): { alpha: number; stars: SkyStar[] } {
+export function skyField(kind: SkyKind, size: number): { alpha: number; stars: SkyStar[] } {
   // @setup: one generator per bake, and its own stream so a star cannot move a spawn.
   const rng = makeRng('sky').stream(kind);
   const margin = size * 0.06;
@@ -897,10 +981,30 @@ export function skyField(kind: 'skyFar' | 'skyNear', size: number): { alpha: num
     tile is `SPRITE_EXTENT[kind]` units across, so `size / extent` is its pixels per unit — and
     `SKY_MAX_STAR_UNITS` can then be read against `SHOTS.pulse.radius` by a person and by a test.
   */
-  const biggest = (size / SPRITE_EXTENT[kind]) * SKY_MAX_STAR_UNITS[kind];
+  const perUnit = size / SPRITE_EXTENT[kind];
+  const biggest = perUnit * SKY_MAX_STAR_UNITS[kind];
+  /*
+    ⚠️ **Only the fastest layer is smeared, and the length is a WORLD quantity like the thickness
+    is** — 0097. A streak measured as a fraction of the tile would mean something different the day
+    `ACROSS_SPAN` moved, and what it has to stay in proportion to is the lane the player flies in.
+  */
+  const streak = kind === 'skyRush';
   const stars: SkyStar[] = [];
   for (let i = 0; i < SKY_STARS[kind]; i++) {
-    stars.push({ x: margin + rng.range(0, span), y: margin + rng.range(0, span), r: biggest * rng.range(0.5, 1) });
+    const len = streak ? perUnit * rng.range(SKY_STREAK_UNITS.from, SKY_STREAK_UNITS.to) : 0;
+    /*
+      ⚠️ **A streak's whole LENGTH is inside the margin, not just its start.** The margin exists so
+      nothing is cut by a tile seam (0065); a mark with extent has to fit, and one that ran off the
+      right edge would be a hard-cut line arriving at the same place every three seconds at the
+      fastest depth in the game. It costs at most thirteen units of the eighty-eight a start may
+      land in.
+    */
+    stars.push({
+      x: margin + rng.range(0, span - len),
+      y: margin + rng.range(0, span),
+      r: biggest * rng.range(0.5, 1),
+      len,
+    });
   }
   return { alpha: SKY_ALPHA[kind], stars };
 }
@@ -914,13 +1018,31 @@ export function skyField(kind: 'skyFar' | 'skyNear', size: number): { alpha: num
  * nothing and cannot be forgotten. Size alone put the stars below a bullet; the alpha is what puts
  * them behind the game.
  */
-function drawSky(ctx: CanvasRenderingContext2D, kind: 'skyFar' | 'skyNear', size: number): void {
+function drawSky(ctx: CanvasRenderingContext2D, kind: SkyKind, size: number): void {
   const field = skyField(kind, size);
   ctx.globalAlpha = field.alpha;
+  /*
+    ⚠️ **A capped line and a filled disc are the same mark at two lengths** — 0097. `lineCap: 'round'`
+    means a streak's ends are the dot it would have been, so the two forms cannot look like two
+    different pieces of art, and a `len` of zero degenerates to exactly the arc this used to draw.
+
+    ⚠️ **`strokeStyle` is taken from the fill**, which `drawKind` has already set to the sky's ink —
+    a second colour lookup here would be a second description of `src/content/palette.ts`'s answer.
+  */
+  ctx.strokeStyle = ctx.fillStyle;
+  ctx.lineCap = 'round';
   for (const star of field.stars) {
+    if (star.len <= 0) {
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+      ctx.fill();
+      continue;
+    }
     ctx.beginPath();
-    ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.lineWidth = star.r * 2;
+    ctx.moveTo(star.x, star.y);
+    ctx.lineTo(star.x + star.len, star.y);
+    ctx.stroke();
   }
   ctx.globalAlpha = 1;
 }

@@ -6,26 +6,18 @@
 // the only thing paying for that is how little of the eye the near layer now takes. A pass that takes
 // the payment back and leaves the ceiling where it is has both halves green in isolation, which is
 // exactly the shape a guard set catches only if something asserts the two together.
+//
+// ⚠️ THERE WERE THREE AND THERE ARE NOW TWO. The alpha probe — *the near layer's alpha returned to
+// 0.4* — has been RETIRED rather than re-anchored, because
+// docs/decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md moved this layer's alpha to 0.34
+// on the report that 0088 had pushed it one pass too far. A break to 0.4 is now a sixth of a step
+// from the shipped value and cannot go red against any rule that survives; what survives of 0088's
+// alpha claim is *the near layer is a veil and not a bed*, and the probe for that is
+// scripts/probes/0069-sky.mjs's, which takes it to solid. A probe kept for a superseded value is a
+// probe that reports STILL GREEN for ever — decision 0019's own failure mode.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
-  {
-    decision: '0088',
-    suite: 'tests/budget.test.ts',
-    /*
-      ⚠️ THE PAYMENT TAKEN BACK. The near layer at the alpha it had is *"still distracting"* — the
-      report this decision is named for — and every OTHER sky guard survives it: the stars are still
-      under a bullet, the parallax is still intact, the depths are still what was asked for. What
-      goes red is the ink, which is the quantity the speed ceiling above it was loosened against.
-    */
-    broke: 'the near layer’s alpha returned, so the layer that moves fastest is loud again',
-    guard: 'and the near layer is the quiet one, on every count that buys attention',
-    edit: {
-      path: 'src/render/bake.ts',
-      find: 'const SKY_ALPHA = { skyFar: 1, skyNear: 0.18 };',
-      replace: 'const SKY_ALPHA = { skyFar: 1, skyNear: 0.4 };',
-    },
-  },
   {
     decision: '0088',
     suite: 'tests/budget.test.ts',
@@ -63,8 +55,8 @@ export const PROBES = [
     guard: 'and the near layer is the quiet one, on every count that buys attention',
     edit: {
       path: 'src/render/bake.ts',
-      find: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.2 };',
-      replace: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.55 };',
+      find: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.11 };',
+      replace: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.55, skyRush: 0.11 };',
     },
   },
 ];

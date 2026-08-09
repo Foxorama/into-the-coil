@@ -158,21 +158,42 @@ describe('a launcher is a position on the ship', () => {
     }
   });
 
-  it('puts one tube on the centreline and two on the wings', () => {
+  it('0097 — puts the first tube on the across-minus side and the second on the across-plus side', () => {
     /*
       ⚠️ **What is held is that a launcher upgrade is VISIBLE**, which is 0051's actual claim — a
       player who takes one can see what changed. The rung it used to count to has moved (0077) and the
-      claim has not: the volley goes from one missile down the nose to two off the wings.
+      claim has not.
 
-      ⚠️ **Symmetric at the cap, and that is the half 0077 added.** The old order was centre, then
-      minus, then plus, so simply stopping at two would have left a fully-upgraded ship firing
-      off-centre — a worse picture than the defect being fixed.
+      ⚠️ **AND THE FIRST TUBE IS NO LONGER THE CENTRELINE** —
+      `docs/decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md`. Reported from play:
+      *"the missiles now fire from the center of the ship and it looks like only one missile. First
+      tube should fire from the top side of the ship — yes it will look off balance, that's the
+      point when you only have one. Second tube should fire from the bottom side."*
+
+      ⚠️ **The off-balance single is the ASK.** A missile down the centreline is the same silhouette
+      as the pulse stream that never stops, so the second auto-weapon arrived invisible; one hung off
+      the top of the hull cannot be anything else. What the ladder now reads as is *off balance, then
+      balanced* rather than *one, then two*.
+
+      ⚠️ **Asserted as `across`-minus and not as *top*, because the test cannot see a screen.** The
+      two are one fact — `src/render/surface.ts` maps `across` down the screen in landscape and turns
+      the whole atlas a quarter turn for portrait — and `tests/layout.browser.test.ts` is the file
+      that owns that mapping.
     */
     const one = quietWorld(['missile']);
     one.world.missileIn = 1;
     one.frame.step();
     expect(one.world.missiles.size).toBe(1);
-    expect(one.world.missiles.at(0).across - one.world.ship.across, 'a single tube is not on the centreline').toBe(0);
+    const single = one.world.missiles.at(0).across - one.world.ship.across;
+    expect(single, 'the single tube is on the centreline, which is the picture that was reported').toBeLessThan(0);
+    /*
+      ⚠️ **And it comes out of the HULL rather than beside it**, which is the other half of *a tube is
+      a place on the ship*. Measured against the drawn hull, on 0027's terms: one step of the pop has
+      already happened by the time this reads, so the bound is the hull's own half-width plus that.
+    */
+    expect(Math.abs(single), 'the single tube fires from beside the ship rather than off it').toBeLessThan(
+      SPRITE_EXTENT.ship / 2,
+    );
 
     // ⚠️ FOUR, and it was two. The second launcher is the ladder's fourth rung since 0082 merged the
     // upgrade kinds — the test above has the table, and this is the first place that shape is felt.

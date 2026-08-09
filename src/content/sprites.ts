@@ -305,6 +305,18 @@ export const SPRITE_KINDS = [
   'skyFar',
   'skyNear',
   /*
+    ⚠️ **THE THIRD TILE, AND IT IS THE ONLY ONE DRAWN AS STREAKS** —
+    `docs/decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md`. Reported from play:
+    *"background starfield has lost it's multiple layers, there's only one starfield background and
+    the background… moves too slow."*
+
+    ⚠️ **It is a third bitmap `ACROSS_SPAN` units square, which is the real cost of this decision**
+    — about four megabytes at `bakeOne`'s resolution ceiling, on top of the eight the other two
+    already spend. Named here rather than discovered later: it buys the only lever that was left, and
+    0088 said in as many words that the next answer was *a different sky* rather than another number.
+  */
+  'skyRush',
+  /*
     ── THE EDGE OF THE PLAYER'S BOX, WHICH WAS A WALL WITH NOTHING DRAWN ON IT ─────────────────────
 
     Reported from play: *"the hard block on the player movement was a problem because there was no
@@ -518,6 +530,7 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   */
   skyFar: ACROSS_SPAN,
   skyNear: ACROSS_SPAN,
+  skyRush: ACROSS_SPAN,
   /*
     ⚠️ **The TILING PERIOD of the dash, exactly as a sky tile's extent is.** Ten units is a mark and
     a gap, so the boundary is ten dashes down a hundred-unit lane — legible as a line at a glance and
