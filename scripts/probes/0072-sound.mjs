@@ -95,7 +95,11 @@ export const PROBES = [
     guard: 'starts and ends at zero, because a buffer that stops mid-waveform clicks',
     edit: {
       path: 'src/app/sound.ts',
-      find: '    let envelope = Math.exp(-DECAY * u);',
+      // ⚠️ RE-ANCHORED by `docs/decisions/0089-a-cue-has-a-body.md`: the envelope is per LAYER now and
+      // the shared `DECAY` is its default rather than its value. Same break, same guard — and 0089
+      // added a second assertion to that guard, because the release it restored would otherwise
+      // satisfy *ends at zero* on its own.
+      find: '    let envelope = Math.exp(-curve * u);',
       replace: '    let envelope = 1;\n    void DECAY;',
     },
   },
