@@ -5,6 +5,7 @@ import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CUE_KINDS } from '../src/content/cues.ts';
+import { MUSIC_LAYERS } from '../src/content/music.ts';
 import { SOUND_KINDS } from '../src/content/sound.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 
@@ -106,11 +107,19 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     await page.waitForTimeout(1200);
     const after = await tally(page);
     /*
-      ⚠️ **Exactly one buffer per cue, which is the bake being a BAKE.** More than that is a
-      synthesiser running during play, which is the audio spelling of baking in the frame loop and
-      the thing `docs/decisions/0022-frame-rate-is-a-feature.md` bans for art.
+      ⚠️ **Exactly one buffer per cue AND one per music layer, which is the bake being a BAKE.** More
+      than that is a synthesiser running during play, which is the audio spelling of baking in the
+      frame loop and the thing `docs/decisions/0022-frame-rate-is-a-feature.md` bans for art.
+
+      ⚠️ **The music rides the same gesture** —
+      `docs/decisions/0090-the-music-is-four-loops.md`. Its four loops are built beside the cues out
+      of one context, because a second context is a second thing to resume when a tab comes back and
+      the one that gets missed is silent for the rest of the run. Counted from the two tables rather
+      than written down as a number.
     */
-    expect(after.buffers, 'the cues did not bake once on the unlocking gesture').toBe(CUE_KINDS.length);
+    expect(after.buffers, 'the cues and the music did not bake once on the unlocking gesture').toBe(
+      CUE_KINDS.length + MUSIC_LAYERS.length,
+    );
     expect(after.voices, 'a run played for a second and the game stayed silent').toBeGreaterThan(0);
     /*
       And the voices are BOUNDED. A second of play at 60Hz is 60 steps; the cap allows four a step,
@@ -132,7 +141,10 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     await page.click(startButton);
     await page.waitForTimeout(1200);
     const after = await tally(page);
-    expect(after.buffers, 'pressing a setting did not unlock the context, so silence proves nothing').toBe(CUE_KINDS.length);
+    expect(
+      after.buffers,
+      'pressing a setting did not unlock the context, so silence proves nothing',
+    ).toBe(CUE_KINDS.length + MUSIC_LAYERS.length);
     expect(after.voices, 'sound is off and the game played anyway').toBe(0);
     await page.context().close();
   });
@@ -140,8 +152,13 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
   it('and turning it back on says so, because a setting with no feedback is a broken build', async () => {
     /*
       The chime — `src/content/cues.ts` has the argument for the one cue that is not an event the
-      model resolves. On the title screen nothing else is playing, so a voice here is that cue and
-      nothing else.
+      model resolves. On the title screen no other CUE is playing, so a voice here is that one.
+
+      ⚠️ **Plus the music's four loops, and they are counted rather than excluded** —
+      `docs/decisions/0090-the-music-is-four-loops.md`. Turning the sound off stops the loops
+      outright, so turning it back on starts four sources as well as sounding the chime. Excluding
+      them would need this test to know which sources were which; adding them says the same thing and
+      also holds that the music comes back, which is a claim worth having.
     */
     const page = await open();
     await page.click(soundOption('off'));
@@ -150,7 +167,10 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     await page.click(soundOption('on'));
     await page.waitForTimeout(300);
     const loud = await tally(page);
-    expect(loud.voices - quiet.voices, 'switching sound on made no sound, on the one press that is about sound').toBe(1);
+    expect(
+      loud.voices - quiet.voices,
+      'switching sound on made no sound, on the one press that is about sound',
+    ).toBe(1 + MUSIC_LAYERS.length);
     await page.context().close();
   });
 });

@@ -36,6 +36,7 @@ import {
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
 import { DEFAULT_SOUND, SOUND_KINDS } from '../content/sound.ts';
 import { DEFAULT_STYLE, STYLES, STYLE_KINDS } from '../content/styles.ts';
+import { musicLevelFor } from './music.ts';
 import { makeAudioOut, makeSpeaker } from './sound.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
@@ -871,9 +872,38 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   const applySound = (): void => {
     speaker.setOn(state.settings.sound === 'on');
+    audioOut.music()?.setOn(state.settings.sound === 'on');
     chrome.setChoice('sound', SOUND_KINDS.indexOf(state.settings.sound));
   };
   applySound();
+
+  /*
+    HOW FAR UP THE MUSIC'S LADDER THE RUN IS — `docs/decisions/0090-the-music-is-four-loops.md`.
+
+    ⚠️ **The world is READ and never told, which is the same ban the paragraph above is about.** The
+    music asks the level script how far the boss is; nothing about the music reaches a step, so a
+    player with the sound off flies exactly the same game. `src/app/frame.ts` has no idea any of this
+    exists.
+
+    ⚠️ **Everything that is not a level is `calm`**, and that is one line rather than a list of
+    screens: the title, the level break and the run-over screen all leave the drone playing underneath
+    at a little over half. The music is one continuous piece and the levels happen inside it, which is
+    why nothing here ever stops a source.
+
+    ⚠️ **Called from `onTick` rather than per FRAME**, so it runs on the fixed clock like everything
+    else that is counted, and on the screens the simulation is not running as well as the one it is.
+    A `setTargetAtTime` that is re-issued at the same target is free.
+  */
+  const applyMusicLevel = (): void => {
+    const music = audioOut.music();
+    if (music === null) return;
+    music.start();
+    const level =
+      state.screen.current === 'playing'
+        ? musicLevelFor(world.cameraAlong - world.levelOrigin, world.level.bossAt, world.bossPool.size > 0)
+        : 'calm';
+    if (level !== music.level()) music.setLevel(level);
+  };
 
   /*
     THE UNLOCK — `src/app/sound.ts` has the platform rule and its one gap.
@@ -961,6 +991,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       every step either way, which is exactly what it was split out of `onIdle` to be.
     */
     speaker.step();
+    applyMusicLevel();
     if (timeoutLeft <= 0) return;
     timeoutLeft--;
     tickTimer();

@@ -46,6 +46,7 @@
  */
 
 import { CUES, CUE_KINDS, MAX_CUE_SECONDS, type CueKind, type CueLayer, type CueRow } from '../content/cues.ts';
+import { makeMusicOut, bakeLoops, type MusicOut } from './music.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 
 /**
@@ -270,8 +271,32 @@ export function sampleCue(row: CueRow, rate: number, rng: Rng): Float32Array {
  * first press and never again — and `tests/budget.test.ts` lists this file as deliberately cold.
  */
 function sampleLayer(layer: CueLayer, rate: number, rng: Rng, out: Float32Array): void {
+  sampleLayerInto(layer, rate, rng, out, Math.round((layer.at ?? 0) * rate), false);
+}
+
+/**
+ * One layer at an arbitrary offset, optionally wrapping round the end of the buffer.
+ *
+ * ⚠️ **`wrap` is the whole difference between a cue and a LOOP** —
+ * `docs/decisions/0090-the-music-is-four-loops.md`. A cue that runs past its buffer is a cue that was
+ * authored too long and is cut off; a music note whose tail runs past the end of the loop has to
+ * arrive at the START of it, or every repetition has a silent notch where the decay should be — at
+ * the same place every 3.6 seconds, which is audible immediately.
+ *
+ * ⚠️ **Exported for `src/app/music.ts` and for nothing else.** The alternative was a second copy of
+ * the oscillators, the filters and the envelope in the music file, which is how a project ends up
+ * with a soundtrack that does not sound like its own game.
+ */
+export function sampleLayerInto(
+  layer: CueLayer,
+  rate: number,
+  rng: Rng,
+  out: Float32Array,
+  start: number,
+  wrap: boolean,
+): void {
+  rateCeiling = rate;
   const length = Math.max(1, Math.round(layer.seconds * rate));
-  const start = Math.round((layer.at ?? 0) * rate);
   const attack = Math.max(1, Math.round((layer.attack ?? ATTACK_SECONDS) * rate));
   const curve = layer.curve ?? DECAY;
   const low = makeFilter();
@@ -282,8 +307,10 @@ function sampleLayer(layer: CueLayer, rate: number, rng: Rng, out: Float32Array)
   let held = rng.range(-1, 1);
   let heldPhase = 0;
   for (let i = 0; i < length; i++) {
-    const at = start + i;
-    if (at >= out.length) break;
+    const raw = start + i;
+    // The wrap, and it is the only line `src/app/music.ts` needed that a cue did not.
+    const at = wrap ? raw % out.length : raw;
+    if (!wrap && at >= out.length) break;
     const u = i / length;
     // Exponential in the frequency, which is what makes it linear to the ear.
     const step = (layer.from * Math.pow((layer.to || layer.from) / layer.from, u)) / rate;
@@ -436,6 +463,14 @@ export interface WebAudioOut extends AudioOut {
    */
   unlock(): void;
   release(): void;
+  /**
+   * The music, once the context exists — null before the first gesture.
+   *
+   * ⚠️ **The music rides the SAME unlock as the cues and cannot have its own.** A second context
+   * would be a second thing to resume when a tab comes back, and the one that got missed would be
+   * silent for the rest of the run. See docs/decisions/0090-the-music-is-four-loops.md.
+   */
+  music(): MusicOut | null;
 }
 
 /**
@@ -472,6 +507,7 @@ export function makeAudioOut(): WebAudioOut {
   let ctx: AudioContext | null = null;
   let master: GainNode | null = null;
   let buffers: AudioBuffer[] = [];
+  let music: MusicOut | null = null;
 
   return {
     ready(): boolean {
@@ -505,6 +541,13 @@ export function makeAudioOut(): WebAudioOut {
           buffer.getChannelData(0).set(data);
           return buffer;
         });
+        /*
+          THE MUSIC, on the same gesture and out of the same context — decision 0090. It is built
+          here rather than lazily
+          because the four loops have to START together, and a layer created later starts wherever
+          the bar happens to be.
+        */
+        music = makeMusicOut(ctx, master, bakeLoops(SAMPLE_RATE), SAMPLE_RATE);
       }
       // Every time, not only on the first: a backgrounded tab suspends the context behind us.
       if (ctx.state === 'suspended') void ctx.resume();
@@ -523,10 +566,14 @@ export function makeAudioOut(): WebAudioOut {
       source.connect(master);
       source.start();
     },
+    music(): MusicOut | null {
+      return music;
+    },
     release(): void {
       void ctx?.close();
       ctx = null;
       master = null;
+      music = null;
       buffers = [];
     },
   };
