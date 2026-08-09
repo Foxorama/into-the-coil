@@ -310,12 +310,42 @@ fail when you mix something else in."*
 | 5 | **The pickup taxonomy** — one weapon pickup, per-level budgets, the 50% death scatter, and the max-speed nerf | The player calls pickups *"the lynchpin of whether this game is actually good"*. Comes before the dial because the dial is keyed to them. | ✅ [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md), off [`the-pickup-taxonomy-mapped`](../reports/the-pickup-taxonomy-mapped-2026-08-08.md). **Start at row 6.** |
 | 6 | **The difficulty dial** — a dial that moves inside a level, keyed to the arsenal, sawtoothing across the run | The mechanism the project **does not have**. Smallest proof first: no multi-hit enemies until the 2nd upgrade has spawned. | ✅ [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) — the mechanism and its one consumer, **plus [0086](decisions/0086-the-teeth-wait-for-the-gun.md)**, which is the level half the clamp could not do. **Chunks 7 and 8 are what it spends** |
 | 7 | **Enemies that fight** — slower, patterned, more of them shooting, slower bullets | The headline. Deliberately after 3 and 6, because *"too fast"* is measured through the viewport and *"actively trying to stop the player"* is what the dial spends. | |
-| 8 | **Bosses that are bosses** — tougher, damage that shows, one idea each, and a miniboss below them | Last, on [`medium-played`](../reports/medium-played-2026-08-07.md)'s own reasoning: a boss that dies in under a second is a curve problem before it is a movement problem, and 5 is the curve. | |
+| 8 | **Bosses that are bosses** — tougher, damage that shows, one idea each, and a miniboss below them | Last, on [`medium-played`](../reports/medium-played-2026-08-07.md)'s own reasoning: a boss that dies in under a second is a curve problem before it is a movement problem, and 5 is the curve. | **Not started, on purpose — it is a SEQUENCE of sessions rather than a chunk. See below.** |
 
 ⚠️ **Chunks 3 and 4 each change a DECISION and not a number**, so each carries one:
 [0023](decisions/0023-the-long-axis-is-the-scroll-axis.md)'s *only lookahead varies by device* and
 [0024](decisions/0024-the-accessibility-floor-is-settings.md)'s loud default. Neither is a constant
 edit and neither should be landed as one.
+
+### Chunk 8 is a sequence of sessions, and the player has said so
+
+⚠️ **THE ASK, in the player's own words, 2026-08-09:** *"Bosses need much more dynamic movement as
+well and they need to have chunks and pieces fly off when they change states."*
+
+⚠️ **AND HOW IT IS TO BE BUILT, which is a process decision rather than a design one:** *"I'll do the
+boss pass as its own thing, might even do a separate session for each individual boss to keep them
+unique and interesting."* So chunk 8 is **not one PR** and should not be scoped as one. A session
+that opens this row and starts writing seven bosses is doing the wrong thing.
+
+⚠️ **The two halves of the ask are not the same size, and the cheap one is shared.**
+
+- **The chunks flying off is `docs/decisions/0036-…` unapplied**, on the most-watched event in a
+  level: a phase change is an event the model resolves and **the picture does not mention at all**
+  today. It is machinery every boss wants, so it wants landing ONCE, before the per-boss sessions —
+  otherwise seven sessions each invent it and the seventh is the only one that gets it right.
+- **The movement is per boss and is the reason for the sequence.** What exists is one behaviour with
+  seven silhouettes on it: `stepBoss` closes on a station, slides across the lane and reverses at the
+  edges, and a phase only scales that slide and adds shots. That is
+  [`medium-played`](../reports/medium-played-2026-08-07.md)'s *"they all do the exact same movement
+  with different shapes"*, still true, and [0061](decisions/0061-a-boss-keeps-flying.md) is why —
+  its subject was *a boss that stopped flying*, so it gave all seven the same drift on purpose and
+  named the alternative as content.
+
+⚠️ **ONE QUESTION IS OPEN AND IT DECIDES WHICH FILES A BOSS SESSION TOUCHES**, so ask it before
+building rather than after: is a boss's movement **a closed union per boss**, the way
+[0073](decisions/0073-an-enemy-is-a-pilot.md) did it for enemies — one named pattern per row — or
+does it **change per phase**, so one boss flies differently as it dies? The second is roughly twice
+the work and is a different shape of table. It has not been put to the player.
 
 ### Where the sessions that took this feedback got to
 
@@ -803,6 +833,11 @@ first carries it.
 - **Music.** [0072](decisions/0072-a-cue-is-baked-and-played.md) landed the effects and deliberately
   did not touch this; `docs/game.md` still has it under *Open*. Procedural synthesis keeps the
   single-file build and a baked track does not, which is the whole of what is decided.
+
+  ⚠️ **THE SOUND IS WHAT THE PLAYER HAS ASKED FOR NEXT, AHEAD OF CHUNK 8** — *"I want to change the
+  sound first and then I'll do the boss pass as its own thing"*, 2026-08-09. **What** about it is
+  not yet said, and it is worth establishing before proposing anything: the twelve cues, the mix,
+  the palette and the absence of music are four different asks with four different answers.
 
   ⚠️ **The twelve effects have never been heard in play.** `node scripts/hear.mjs` writes every one of
   them to a `.wav` without launching the game — that is the ears-on half of
