@@ -29,7 +29,7 @@ import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { SAMPLE_RATE, cueSeconds, sampleCue } from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { bakeLoops } from '../src/app/music.ts';
-import { LOOP_SECONDS, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_GAIN, AURA_LAYERS, AURA_NEAR_UNITS, AURA_FAR_UNITS } from '../src/content/music.ts';
+import { PHRASE_SECONDS, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_GAIN, AURA_LAYERS, AURA_NEAR_UNITS, AURA_FAR_UNITS } from '../src/content/music.ts';
 import { auraNearness } from '../src/app/music.ts';
 
 const args = new Map(process.argv.slice(2).map((a) => a.replace(/^--/, '').split('=')));
@@ -85,12 +85,20 @@ function wavOf(samples, rate) {
 */
 if (args.has('music')) {
   const loops = bakeLoops(SAMPLE_RATE);
-  const length = Math.round(LOOP_SECONDS * SAMPLE_RATE);
+  /*
+    ⚠️ THE PHRASE, NOT THE SHORTEST LOOP — 0095. Layers are 2 bars and 4 bars now, and every one of
+    them is indexed by ITS OWN length below. A single shared modulo would truncate the chords and the
+    lead to their first two bars, so the one instrument that can judge this music would be playing a
+    different piece from the game. That is exactly the class of defect 0027 is about, in the file
+    written to prevent it.
+  */
+  const length = Math.round(PHRASE_SECONDS * SAMPLE_RATE);
+  const at = (layer, i) => loops[layer][i % loops[layer].length];
   const mix = (level, repeats) => {
     const out = new Float32Array(length * repeats);
     for (let i = 0; i < out.length; i++) {
       let v = 0;
-      for (const layer of MUSIC_LAYERS) v += loops[layer][i % length] * MUSIC_LADDER[level][layer];
+      for (const layer of MUSIC_LAYERS) v += at(layer, i) * MUSIC_LADDER[level][layer];
       out[i] = Math.max(-1, Math.min(1, v * MUSIC_GAIN));
     }
     return out;
@@ -106,7 +114,7 @@ if (args.has('music')) {
     const to = MUSIC_LADDER[order[Math.min(order.length - 1, slot + 1)]];
     const t = into > length - ramp ? (into - (length - ramp)) / ramp : 0;
     let v = 0;
-    for (const layer of MUSIC_LAYERS) v += loops[layer][i % length] * (from[layer] + (to[layer] - from[layer]) * t);
+    for (const layer of MUSIC_LAYERS) v += at(layer, i) * (from[layer] + (to[layer] - from[layer]) * t);
     arc[i] = Math.max(-1, Math.min(1, v * MUSIC_GAIN));
   }
   const base = out.replace(/\.wav$/, '');
@@ -128,12 +136,12 @@ if (args.has('music')) {
     let v = 0;
     for (const layer of MUSIC_LAYERS) {
       const ceiling = MUSIC_LADDER.boss[layer];
-      v += loops[layer][i % length] * (AURA_LAYERS.includes(layer) ? ceiling * near : ceiling);
+      v += at(layer, i) * (AURA_LAYERS.includes(layer) ? ceiling * near : ceiling);
     }
     close[i] = Math.max(-1, Math.min(1, v * MUSIC_GAIN));
   }
   writeFileSync(`${base}-aura.wav`, wavOf(close, SAMPLE_RATE));
-  console.log(`music: ${MUSIC_LAYERS.length} loops of ${LOOP_SECONDS}s, ${Object.keys(MUSIC_LADDER).length} levels`);
+  console.log(`music: ${MUSIC_LAYERS.length} loops, a ${PHRASE_SECONDS}s phrase, ${Object.keys(MUSIC_LADDER).length} levels`);
   console.log(`wrote ${base}-{${Object.keys(MUSIC_LADDER).join(',')},arc}.wav`);
   process.exit(0);
 }

@@ -1,9 +1,13 @@
+import { BANDS, bandEnergy, spectrum } from './spectrum.ts';
 import { describe, expect, it } from 'vitest';
 
 import {
   BEAT_SECONDS,
   BOSS_APPROACH_UNITS,
-  LOOP_SECONDS,
+  LAYER_BARS,
+  PHRASE_SECONDS,
+  TITLE_ONLY,
+  secondsOfLayer,
   MUSIC,
   MUSIC_GAIN,
   MUSIC_LADDER,
@@ -12,6 +16,7 @@ import {
   AURA_LAYERS,
   AURA_NEAR_UNITS,
   AURA_FAR_UNITS,
+  type MusicLayer,
 } from '../src/content/music.ts';
 import { auraNearness, auraNearnessFor, bakeLoops, musicLevelFor, rephaseIn } from '../src/app/music.ts';
 import { STEPS_PER_BEAT } from '../src/content/music.ts';
@@ -45,20 +50,56 @@ describe('four loops that cannot drift', () => {
       it, because *four sources started together and left alone* is the whole design.
 
       ⚠️ **Checked at three rates rather than at the one this bakes at**, because the reason
-      `BEAT_SECONDS` is 0.45 is that it survives being changed, and a rate is exactly the kind of
-      thing 0089 has already moved once.
+      `BEAT_SECONDS` is what it is is that it survives being changed, and a rate is exactly the kind
+      of thing 0089 has already moved once.
+
+      ⚠️ **AND IT IS EVERY LAYER'S OWN LENGTH SINCE 0095**, not one shared loop. They are no longer
+      all equal — a chord progression needs four bars and a drum pattern does not — so the property
+      has to hold for each of them separately.
     */
     for (const rate of RATES) {
-      const exact = LOOP_SECONDS * rate;
-      expect(exact, `a ${rate}Hz loop is ${exact} samples, which rounds and therefore drifts`).toBe(Math.round(exact));
+      for (const layer of MUSIC_LAYERS) {
+        const exact = secondsOfLayer(layer) * rate;
+        expect(exact, `${layer} at ${rate}Hz is ${exact} samples, which rounds and therefore drifts`).toBe(
+          Math.round(exact),
+        );
+      }
     }
   });
 
-  it('and every layer bakes to exactly that length, so they start and end together', () => {
+  it('0095 — THE AMENDMENT: every layer is a whole MULTIPLE of the shortest, which is the same guarantee', () => {
+    /*
+      ⚠️ **0090 required identical lengths and that was one way of getting what it actually wanted.**
+      What it wanted is that loops started together can never come apart; identical lengths give that,
+      and so does a whole multiple — a 4-bar pad over a 2-bar drum loop is back at both position zeros
+      every 4 bars, for ever, because both are an exact number of samples.
+
+      ⚠️ **What identical lengths ALSO did was forbid a chord progression**, which is the ballad half
+      of what was asked for and cannot be stated in two bars.
+      `docs/decisions/0095-the-level-has-its-own-music.md`.
+
+      ⚠️ **A NON-multiple would be the unrecoverable failure wearing the new rule's clothes.** Three
+      bars against two realigns every six — that is still finite, so a naive reading says it is fine —
+      but nothing in the design restarts anything at six bars, and the phrase a correction lands on
+      would be wrong. Held as *divides*, not as *is finite*.
+    */
+    const shortest = Math.min(...MUSIC_LAYERS.map((l) => LAYER_BARS[l]));
+    for (const layer of MUSIC_LAYERS) {
+      expect(LAYER_BARS[layer] % shortest, `${layer} is ${LAYER_BARS[layer]} bars against a shortest of ${shortest}`).toBe(
+        0,
+      );
+    }
+    // And the phrase is the longest, because that is the only instant every layer is at zero together.
+    expect(PHRASE_SECONDS, 'the phrase is not the longest layer, so a correction lands mid-pattern').toBe(
+      Math.max(...MUSIC_LAYERS.map((l) => secondsOfLayer(l))),
+    );
+  });
+
+  it('and every layer bakes to exactly its own declared length', () => {
     const loops = bakeLoops(SAMPLE_RATE);
     for (const layer of MUSIC_LAYERS) {
-      expect(loops[layer].length, `${layer} is a different length from the loop it has to sit in`).toBe(
-        Math.round(LOOP_SECONDS * SAMPLE_RATE),
+      expect(loops[layer].length, `${layer} is a different length from the loop it declares`).toBe(
+        Math.round(secondsOfLayer(layer) * SAMPLE_RATE),
       );
     }
   });
@@ -151,20 +192,61 @@ describe('the ladder is additive, which is what the ask describes', () => {
       pumping as the boss appears."* That is ONE piece of music getting fuller — so each level has to
       have at least what the level below it had OPEN, whatever the gains are.
     */
-    for (let i = 1; i < MUSIC_LEVELS.length; i++) {
-      const below = MUSIC_LADDER[MUSIC_LEVELS[i - 1]!];
-      const here = MUSIC_LADDER[MUSIC_LEVELS[i]!];
-      const openBelow = MUSIC_LAYERS.filter((l) => below[l] > 0);
-      const openHere = MUSIC_LAYERS.filter((l) => here[l] > 0);
-      expect(openHere.length, `${MUSIC_LEVELS[i]} has fewer layers open than ${MUSIC_LEVELS[i - 1]}`).toBeGreaterThan(
+    /*
+      ── AND IT IS NOW TWO PIECES, SO IT IS ADDITIVE FROM `run` UPWARD ──────────────────────────────
+
+      ⚠️ **0095.** *"Keep the current background music for the title and then let's really kick it up
+      a notch in the game"* is not one piece getting fuller — it is two pieces with a screen change
+      between them, which is the one boundary a crossfade is not a seam. **`calm` is the title's**;
+      `run`, `approach` and `boss` are the level's and that ladder is 0090's, unchanged.
+
+      ⚠️ **The closure is NAMED rather than merely allowed**, which is what stops this being a rule
+      with a hole in it: only `TITLE_ONLY` may close, and every member of it has to actually be open
+      at `calm` and closed at `run` — a layer quietly added to that list without being part of the
+      title's piece fails here.
+    */
+    const level = (name: (typeof MUSIC_LEVELS)[number]): MusicLayer[] =>
+      MUSIC_LAYERS.filter((l) => MUSIC_LADDER[name][l] > 0);
+
+    const inLevel = MUSIC_LEVELS.filter((l) => l !== 'calm');
+    for (let i = 1; i < inLevel.length; i++) {
+      const openBelow = level(inLevel[i - 1]!);
+      const openHere = level(inLevel[i]!);
+      expect(openHere.length, `${inLevel[i]} has fewer layers open than ${inLevel[i - 1]}`).toBeGreaterThan(
         openBelow.length,
       );
       for (const layer of openBelow) {
-        expect(here[layer], `${MUSIC_LEVELS[i]} closed ${layer}, which ${MUSIC_LEVELS[i - 1]} had open`).toBeGreaterThan(
+        expect(MUSIC_LADDER[inLevel[i]!][layer], `${inLevel[i]} closed ${layer}, which ${inLevel[i - 1]} had open`).toBeGreaterThan(
           0,
         );
       }
     }
+
+    // The one closure the design permits, and it has to be exactly the named set.
+    const closedAtRun = level('calm').filter((l) => MUSIC_LADDER.run[l] === 0);
+    expect(closedAtRun.sort(), 'a layer closed on entering a level that is not part of the title’s piece').toEqual(
+      [...TITLE_ONLY].sort(),
+    );
+    expect(TITLE_ONLY.length, 'the title has no piece of its own, so there is only one piece').toBeGreaterThan(0);
+    for (const layer of TITLE_ONLY) {
+      expect(MUSIC_LADDER.calm[layer], `${layer} is listed as the title's and the title does not play it`).toBeGreaterThan(0);
+    }
+  });
+
+  it('and something is open at EVERY level, because the music never stops', () => {
+    /*
+      ⚠️ **Two pieces must not mean a gap between them.** 0090's *the music never stops* was free while
+      the ladder only ever opened layers; with a closure permitted it needs saying, and what says it is
+      the drone — open at every rung, and the reason the change of piece is a swell rather than an
+      edit. Held as a property rather than by naming the drone, so the day a different layer does the
+      job it simply passes.
+    */
+    for (const name of MUSIC_LEVELS) {
+      const open = MUSIC_LAYERS.filter((l) => MUSIC_LADDER[name][l] > 0);
+      expect(open.length, `${name} is silence, so the music stops`).toBeGreaterThan(0);
+    }
+    const always = MUSIC_LAYERS.filter((l) => MUSIC_LEVELS.every((name) => MUSIC_LADDER[name][l] > 0));
+    expect(always.length, 'no layer crosses every level, so the two pieces have nothing joining them').toBeGreaterThan(0);
   });
 
   it('and the quietest level is not silence, because the music never stops', () => {
@@ -237,7 +319,7 @@ describe('0094 — in time is not in phase, and the loops follow the sim', () =>
   /** No notice required, so these read the policy rather than the scheduler's lead time. */
   const NOW = 0;
   /** Comfortably past the one-loop settling rule, so the tests below are about the error. */
-  const SETTLED = LOOP_SECONDS * 3;
+  const SETTLED = PHRASE_SECONDS * 3;
 
   it('leaves the loops alone when nothing has drifted, which is almost every frame', () => {
     expect(rephaseIn(SETTLED, SETTLED, NOW), 'a perfectly tracking sim was corrected anyway').toBeNull();
@@ -298,12 +380,12 @@ describe('0094 — in time is not in phase, and the loops follow the sim', () =>
       runtime. At a boundary the loop was returning to zero anyway, so the correction moves only WHEN.
     */
     for (const position of [0, 0.3, 1.1, 2.9, 3.19]) {
-      const simElapsed = LOOP_SECONDS * 4 + position;
+      const simElapsed = PHRASE_SECONDS * 4 + position;
       const delay = rephaseIn(simElapsed + 0.4, simElapsed, NOW);
       expect(delay, `no correction was offered at loop position ${position}`).not.toBeNull();
-      const landsAt = (simElapsed + delay!) % LOOP_SECONDS;
+      const landsAt = (simElapsed + delay!) % PHRASE_SECONDS;
       expect(
-        Math.min(landsAt, LOOP_SECONDS - landsAt),
+        Math.min(landsAt, PHRASE_SECONDS - landsAt),
         `a correction at position ${position} lands ${landsAt.toFixed(3)}s into the loop, mid-phrase`,
       ).toBeCloseTo(0, 6);
     }
@@ -312,10 +394,10 @@ describe('0094 — in time is not in phase, and the loops follow the sim', () =>
   it('and never schedules one in the past, or with less notice than the scheduler needs', () => {
     // Exactly on a boundary the answer is a whole loop away and not zero — a swap scheduled for now
     // is a swap the audio thread has already gone past.
-    const onBoundary = LOOP_SECONDS * 4;
-    expect(rephaseIn(onBoundary + 0.4, onBoundary, 0)).toBeCloseTo(LOOP_SECONDS, 6);
-    for (const ahead of [0.06, 0.5, LOOP_SECONDS * 1.5]) {
-      const delay = rephaseIn(LOOP_SECONDS * 4 + 0.4, LOOP_SECONDS * 4 + 0.01, ahead);
+    const onBoundary = PHRASE_SECONDS * 4;
+    expect(rephaseIn(onBoundary + 0.4, onBoundary, 0)).toBeCloseTo(PHRASE_SECONDS, 6);
+    for (const ahead of [0.06, 0.5, PHRASE_SECONDS * 1.5]) {
+      const delay = rephaseIn(PHRASE_SECONDS * 4 + 0.4, PHRASE_SECONDS * 4 + 0.01, ahead);
       expect(delay, `a correction was offered with less than ${ahead}s notice`).toBeGreaterThanOrEqual(ahead);
     }
   });
@@ -327,13 +409,13 @@ describe('0094 — in time is not in phase, and the loops follow the sim', () =>
       back thirty seconds of error and the correction is a lurch; with it, the worst case anywhere is
       half a loop.
     */
-    const settled = LOOP_SECONDS * 4;
-    expect(rephaseIn(settled + LOOP_SECONDS, settled, NOW), 'a whole loop of drift was treated as drift').toBeNull();
-    expect(rephaseIn(settled + LOOP_SECONDS * 9, settled, NOW), 'nine whole loops was treated as drift').toBeNull();
+    const settled = PHRASE_SECONDS * 4;
+    expect(rephaseIn(settled + PHRASE_SECONDS, settled, NOW), 'a whole loop of drift was treated as drift').toBeNull();
+    expect(rephaseIn(settled + PHRASE_SECONDS * 9, settled, NOW), 'nine whole loops was treated as drift').toBeNull();
     // And a long absence resolves to at most half a loop of real error, which is one correction.
     const delay = rephaseIn(settled + 30, settled, NOW);
     expect(delay, 'thirty seconds away produced no correction at all').not.toBeNull();
-    expect(delay!, 'the correction after a long absence is more than one loop away').toBeLessThanOrEqual(LOOP_SECONDS);
+    expect(delay!, 'the correction after a long absence is more than one loop away').toBeLessThanOrEqual(PHRASE_SECONDS);
   });
 
   it('and corrects nothing until the anchor has played a whole loop, which is the allocation ceiling', () => {
@@ -345,11 +427,141 @@ describe('0094 — in time is not in phase, and the loops follow the sim', () =>
       running `MAX_STEPS` steps in one frame. **An error measured over less than a loop is measuring
       the catch-up.**
     */
-    for (const played of [0, 0.5, LOOP_SECONDS - 0.001]) {
+    for (const played of [0, 0.5, PHRASE_SECONDS - 0.001]) {
       expect(rephaseIn(played, 0, NOW), `a correction was offered after only ${played}s of playback`).toBeNull();
     }
-    expect(rephaseIn(LOOP_SECONDS + 0.4, LOOP_SECONDS, NOW), 'nothing is ever corrected at all').not.toBeNull();
+    expect(rephaseIn(PHRASE_SECONDS + 0.4, PHRASE_SECONDS, NOW), 'nothing is ever corrected at all').not.toBeNull();
   });
+});
+
+describe('0095 — the level has a piece of its own, and it covers the band', () => {
+  /*
+    `docs/decisions/0095-the-level-has-its-own-music.md`. Reported from play: *"the non-boss
+    background music makes kinda interesting title background music, but not great level background
+    music"*, and *"a mix of a power ballad style music and the game Rez"*.
+
+    ⚠️ **NOTHING HERE CAN HEAR A CHORD PROGRESSION**, and most of what this decision adds is content —
+    a kick pattern, four chords and a tune. `node scripts/hear.mjs --music` writes all of it and the
+    verdict is a hand. What a number CAN see is the shape 0089 was written for: a hump in the middle
+    with nothing at either end, which is *"a tin shed heard from outside"* one octave wider.
+  */
+  /*
+    ⚠️ **BAKED AND MIXED ONCE, AND THE FULL SUITE IS WHAT SAID SO.** These three tests each want a
+    whole phrase of real audio; the first draft called `bakeLoops` inside the mixer, so four rungs
+    meant four bakes at about half a second each. It passed alone and **timed out at five seconds
+    inside `npm test`**, which is `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`'s
+    subject exactly — and the answer there is to establish which it is rather than to re-run. It was
+    the guard's own cost, not the code's.
+  */
+  const baked = bakeLoops(SAMPLE_RATE);
+  const mixes = new Map<string, Float32Array>();
+
+  /** One phrase of a level, mixed at a rung, exactly as `src/app/music.ts` would play it. */
+  function mixAt(level: (typeof MUSIC_LEVELS)[number]): Float32Array {
+    const cached = mixes.get(level);
+    if (cached !== undefined) return cached;
+    const out = new Float32Array(Math.round(PHRASE_SECONDS * SAMPLE_RATE));
+    for (let i = 0; i < out.length; i++) {
+      let v = 0;
+      for (const layer of MUSIC_LAYERS) v += baked[layer][i % baked[layer].length]! * MUSIC_LADDER[level][layer];
+      out[i] = v * MUSIC_GAIN;
+    }
+    mixes.set(level, out);
+    return out;
+  }
+
+  /*
+    ⚠️ **A HONEST TIMEOUT RATHER THAN A FASTER GUARD.** A Goertzel over seven bands and six probes
+    across a 6.4-second phrase is tens of millions of multiplies, and shortening the window or
+    dropping bands would measure something other than the music. Twenty seconds is what real DSP
+    costs; the default five is a bound written for tests that do arithmetic.
+  */
+  const DSP_MS = 20_000;
+
+  it('THE SHED, one octave wider: a level is spread across the spectrum rather than humped in the middle', () => {
+    /*
+      ⚠️ **The same measure 0089's cues are held to, on the thing 0095 adds.** Synthesised music with
+      no sub and no air is the exact defect that report described, and it is the one failure mode of
+      a whole new piece that a suite can actually catch: every band has to carry something.
+
+      ⚠️ **Driven at `boss`, which is every layer at once** — the rung where a missing extreme would be
+      least excusable and most likely, because seven things are competing for the middle.
+    */
+    const bands = spectrum(mixAt('boss'), SAMPLE_RATE);
+    for (const [i, [lo, hi, name]] of BANDS.entries()) {
+      expect(
+        bands[i],
+        `the boss mix has nothing in ${name} (${lo}–${hi}Hz) — it is a hump in the middle`,
+      ).toBeGreaterThan(0.02);
+    }
+  }, DSP_MS);
+
+  it('and a level has more SUB than the title, because a level has a kick and the title has a pad', () => {
+    /*
+      ⚠️ **A FLOOR ON THE SHAPE WOULD HAVE PASSED A REAL DEFECT, AND THIS IS WHAT CAUGHT IT.**
+      A-weighting is thirty decibels down at 40Hz, so the sub band reads small for any music whatever
+      and an absolute floor there can only be set loose enough to be nearly useless. The first bake of
+      the level's piece had **less** energy below 60Hz than the title's — 5.1e-5 against 7.8e-5 — which
+      for a piece built on four-on-the-floor is backwards, and every other guard in this file was
+      green. The fixes are in `src/content/music.ts`: a longer, deeper kick and a sine octave under
+      the rolling sub, both named against this test.
+
+      ⚠️ **`bandEnergy` AND NOT `spectrum`, AND THE FIRST VERSION GOT THAT WRONG.** `spectrum`
+      normalises each mix to its own loudest band, so it measures SHAPE — two profiles from different
+      mixes cannot be compared to each other at all, and the first draft of this compared them anyway
+      and reported the level as bass-light because its low-mid is large. Energy is the question here.
+
+      ⚠️ **The SUB band specifically, not everything under 130Hz.** The two pieces put their bass in
+      different places on purpose — the title's riff sits around 110Hz and the level's kick and sub
+      sit at 38–55Hz — so a combined figure conflates *how much* with *where*, and would move whenever
+      either piece was revoiced. What has to be true is the thing four-on-the-floor is for.
+    */
+    const sub = BANDS.findIndex(([, , name]) => name === 'sub');
+    const title = bandEnergy(mixAt('calm'), SAMPLE_RATE)[sub]!;
+    for (const level of ['run', 'approach', 'boss'] as const) {
+      const here = bandEnergy(mixAt(level), SAMPLE_RATE)[sub]!;
+      expect(
+        here,
+        `${level} has ${here.toExponential(2)} of sub against the title's ${title.toExponential(2)} — ` +
+          'a kick quieter than a pad',
+      ).toBeGreaterThan(title);
+    }
+  }, DSP_MS);
+
+  it('and the level is LOUDER than the title, because that is what was asked for', () => {
+    /*
+      ⚠️ **In the unit the player experiences: loudness, not layer count.** *"Really kick it up a
+      notch in the game"* is a statement about how it feels to arrive in a level, and a ladder that
+      opened three new layers at the same total energy would satisfy every other guard here while
+      changing nothing. Measured as RMS over a whole phrase, which is what an ear integrates.
+    */
+    const rms = (s: Float32Array): number => {
+      let sum = 0;
+      for (const v of s) sum += v * v;
+      return Math.sqrt(sum / s.length);
+    };
+    const title = rms(mixAt('calm'));
+    const level = rms(mixAt('run'));
+    const boss = rms(mixAt('boss'));
+    expect(level, `a level is ${(level / title).toFixed(2)}× the title, which is not a notch`).toBeGreaterThan(
+      title * 1.2,
+    );
+    expect(boss, 'a boss fight is no louder than cruising').toBeGreaterThan(level);
+  });
+
+  it('and no rung clips, which is the arithmetic every layer added has to pass', () => {
+    /*
+      ⚠️ **THE GUARD THAT SIZED THIS WHOLE DECISION.** Three new layers went in and the boss mix
+      reached 1.05 of full scale on the first bake; the engine's kick, its click and its clap came
+      down, and the boss row came down with them. Every gain in `src/content/music.ts` is a hand's
+      number, and this is the one thing that constrains them.
+    */
+    for (const level of MUSIC_LEVELS) {
+      let peak = 0;
+      for (const v of mixAt(level)) peak = Math.max(peak, Math.abs(v));
+      expect(peak, `the ${level} mix peaks at ${peak.toFixed(3)} of full scale`).toBeLessThanOrEqual(1);
+    }
+  }, DSP_MS);
 });
 
 describe('the boss brings an aura with it', () => {
@@ -504,17 +716,32 @@ describe('the boss brings an aura with it', () => {
 });
 
 describe('the patterns are playable', () => {
-  it('never asks for a note past the end of the loop', () => {
+  it('0095 — every pattern spans EXACTLY its own layer, which is both a floor and a ceiling', () => {
     /*
-      A pattern longer than the loop is not an error and that is the problem: the notes past the end
-      would simply never be rendered, so a bar of a bass line would go missing with nothing failing.
+      ── IT ONLY CHECKED THE CEILING, AND `npm run prove` FOUND THE FLOOR MISSING ──────────────────
+
+      ⚠️ **It read *no notes past the end*, which is half a rule.** A pattern longer than its layer
+      loses its tail silently; a pattern SHORTER leaves the rest of the layer empty, just as silently,
+      and `renderVoice` does not repeat it. The probe truncated the chord progression to two of its
+      four bars — the harmony gone for half of every cycle — and every guard in this file stayed
+      green: the layer is not silent, its length is right, the ladder is intact and nothing clips.
+
+      ⚠️ **The two halves became different failures when the lengths did.** While every layer was the
+      same size, *shorter than the loop* was a thing you would notice writing the pattern. With 2-bar
+      and 4-bar layers side by side, a 2-bar pattern in a 4-bar layer is the single most likely way to
+      get this content wrong — which is exactly what `LAYER_BARS` introduced.
+
+      Stated as equality, because `renderVoice` plays a pattern once: anything but exact is either a
+      dropped tail or a silent remainder.
     */
     for (const layer of MUSIC_LAYERS) {
       for (const [i, voice] of MUSIC[layer].entries()) {
-        const spans = (voice.steps.length - 1) * (BEAT_SECONDS / voice.perBeat);
-        expect(spans, `${layer} voice ${i} has notes after the loop ends, and they are silently dropped`).toBeLessThan(
-          LOOP_SECONDS,
-        );
+        const spans = voice.steps.length * (BEAT_SECONDS / voice.perBeat);
+        expect(
+          spans,
+          `${layer} voice ${i} spans ${spans.toFixed(2)}s inside a ${secondsOfLayer(layer)}s layer — ` +
+            (spans > secondsOfLayer(layer) ? 'its tail is silently dropped' : 'the rest of the layer is silence'),
+        ).toBeCloseTo(secondsOfLayer(layer), 6);
       }
     }
   });

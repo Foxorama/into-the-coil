@@ -96,6 +96,7 @@ it is pushed — guards stop reaching their subject without ever going red, and 
 | **a mix number is an ear; what is guarded is the arithmetic and the geometry around it** | [0092](decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md) |
 | **a beat is a whole number of sim steps, and every cadence is a fraction of one — 150 BPM** | [0093](decisions/0093-the-gun-is-on-the-grid.md) |
 | **the sim has a clock; the guns fire on its grid and the music is moved to agree** | [0094](decisions/0094-in-time-is-not-in-phase.md) |
+| **the title and the level are two pieces; a layer's loop may be any whole multiple of the shortest** | [0095](decisions/0095-the-level-has-its-own-music.md) |
 | **the near sky is pushed back on every cheap axis; the whole sky is twice 0065's rate** | [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
@@ -908,7 +909,7 @@ first carries it.
   | 1 | the mix again, and the boss aura | ✅ [0092](decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md) |
   | 2 | **150 BPM, and the gun on the musical grid** | ✅ [0093](decisions/0093-the-gun-is-on-the-grid.md) |
   | 3 | the music phase-locked to the sim clock | ✅ [0094](decisions/0094-in-time-is-not-in-phase.md) |
-  | 4 | **the level's own music** — power ballad × Rez, title keeps the current piece | |
+  | 4 | **the level's own music** — power ballad × Rez, title keeps the current piece | ✅ [0095](decisions/0095-the-level-has-its-own-music.md) |
   | 5 | enemy fire on the grid | |
 
   ⚠️ **✅ THE MAP'S BLOCKER IS GONE AND IT WAS AN ARTIFACT OF THE TEMPO IT ASSUMED** —
@@ -945,12 +946,22 @@ first carries it.
   the same family as 0093's phase-sampling mistake seen from the other side: **a guard whose starting
   condition is the thing it means to detect.** Two of six probes came back wrong first time.
 
-  ⚠️ **AND [0090](decisions/0090-the-music-is-four-loops.md) SAID WHAT CHUNK 4 COSTS, BEFORE ANYBODY
-  ASKED FOR IT**: *"a level that wanted its own key or its own tempo would need a second set of loops
-  and a crossfade between them, which is a bigger mechanism than this one and is not owed until
-  somebody asks for it."* Somebody has asked. The cheaper answer it did not consider is **more layers
-  on the same loop clock**, with the ladder's `calm` row holding the title's and the rest holding the
-  level's — which is 0090's own design and needs no new mechanism at all.
+  ⚠️ **✅ AND THE LEVEL HAS ITS OWN MUSIC** — [0095](decisions/0095-the-level-has-its-own-music.md).
+  0090 predicted the cost (*"a second set of loops and a crossfade between them"*) and the cheaper
+  answer it did not consider is what landed: **more layers on the same loop clock**, `calm` holding the
+  title's and the rest holding the level's. No second loop set, no crossfade mechanism. **Read 0095
+  before touching a music gain** — the ladder may now CLOSE a layer, and which ones is a named list.
+
+  ⚠️ **THE PULSE CUE IS DELIBERATELY NOT RE-VOICED AS A KICK, AND THE MAP STILL LISTS IT.** *"More of
+  a deep bassy beat"* was asked when the gun was the only rhythm in the game; there is a kick on every
+  beat now, and a gun in the same band at ten shots a second would mask the thing the request was
+  reaching for. 0095 has the argument. **If it still wants weight, the edit is presence and not bass.**
+
+  ⚠️ **`tests/spectrum.ts` is new and is shared by the cue and music suites** — the A-weighted band
+  measure 0089 wrote for *"a tin shed heard from outside"*. It found a real defect in the new music
+  (less sub than the title, every other guard green) and its FIRST version was wrong in a way worth
+  knowing: **`spectrum` normalises each mix to its own loudest band, so two profiles cannot be compared
+  to each other.** `bandEnergy` is the unnormalised one.
 
   ⚠️ **The play-test's verdict on each of the four, and 0092 answers two of them:**
 
