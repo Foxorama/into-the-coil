@@ -13,6 +13,52 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 
 ---
 
+## The first five minutes
+
+⚠️ **Pointers and two commands. Nothing here is a fact you could not get from the files it names** —
+[0029](decisions/0029-the-tracked-record-is-the-record.md) — and it exists because the reading order
+is correct in `CLAUDE.md` and spread across four separate rules, so every session assembles it again.
+
+**Read, in this order:**
+
+1. `docs/machine.md` — gitignored, and **node is not on PATH without it.** It also has the
+   branch-preview URL format and how to tell which build is being looked at.
+2. `CLAUDE.md` — the constitution. Rules only; every rule names the decision behind it.
+3. `docs/game.md` — **what the game IS.** The easiest thing to skip and the one that makes a
+   proposal wrong rather than late.
+4. **This file**, and then whatever it links to for the work in hand.
+
+**Run, before proposing anything:**
+
+```bash
+gh pr list
+```
+
+Open work is deliberately not recorded here — it is the fastest thing in the project to go stale.
+
+```bash
+curl -s https://next.intothecoil.vulpecula.games/ | grep -c pointercancel
+```
+
+⚠️ **Establish which build a report is about BEFORE debugging it.** A session was once spent on
+*"I can't move the ship"*, which was a correct observation about a branch that had not merged;
+`docs/machine.md` has the exact check for a branch preview, where a byte count is exact and this
+marker is not needed.
+
+⚠️ **AND IF THE REPORT IS ABOUT SOMETHING A DECISION ALREADY ANSWERED, THE QUESTION IS WHAT THE
+PREVIOUS FIX LEFT STANDING** — not what number to move. Two of the four items in the 2026-08-09
+play-test were defects against the decision that had just answered them:
+[0077](decisions/0077-a-pickup-arrives-rather-than-stopping.md) fixed a pickup's impact and left the
+wall it hit, and [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md)'s clamp was correct
+while the level authored a three-health turret ten units behind the pickup that lifts it.
+[0027](decisions/0027-measure-the-picture-not-the-model.md) is the rule; those two are what it looks
+like in practice.
+
+⚠️ **`npm test` is not `npm run prove`.** A change to a shared quantity wants the whole proof before
+it is pushed — guards stop reaching their subject without ever going red, and only a full run sees it.
+
+---
+
 ## What is settled
 
 | | |
