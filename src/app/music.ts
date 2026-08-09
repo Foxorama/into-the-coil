@@ -30,6 +30,9 @@ import {
   MUSIC_LAYERS,
   MUSIC_ROOT,
   BOSS_APPROACH_UNITS,
+  AURA_LAYERS,
+  AURA_NEAR_UNITS,
+  AURA_FAR_UNITS,
   type MusicLayer,
   type MusicLevel,
   type MusicVoice,
@@ -105,12 +108,55 @@ export function musicLevelFor(cameraAlong: number, bossAt: number, bossOnField: 
   return bossAt - cameraAlong <= BOSS_APPROACH_UNITS ? 'approach' : 'run';
 }
 
+/**
+ * How near the boss is, `0` at `AURA_FAR_UNITS` and `1` at `AURA_NEAR_UNITS`.
+ *
+ * ⚠️ **The gap between the HULLS, not between the centres.** Two bosses of different sizes at the
+ * same centre distance are not the same distance away — `src/content/bosses.ts` runs from a radius of
+ * 11 to one of 13 and will run wider — and what the player is judging is the gap they are flying
+ * into. Passing the radii in rather than a raw distance is what keeps that true when a boss changes
+ * size.
+ *
+ * ⚠️ **Squared on the way out, so the last few units are where it moves.** A linear ramp spends most
+ * of its travel at distances the player is not thinking about; the interesting part of *"as it gets
+ * closer"* is the end, and this is the curve that puts it there.
+ *
+ * ⚠️ **`0` when there is no boss**, which is what makes the aura's absence the same code path as a
+ * boss on the far side of the screen rather than a branch somewhere else.
+ */
+export function auraNearness(gap: number): number {
+  const span = AURA_FAR_UNITS - AURA_NEAR_UNITS;
+  const raw = (AURA_FAR_UNITS - gap) / span;
+  const clamped = raw < 0 ? 0 : raw > 1 ? 1 : raw;
+  return clamped * clamped;
+}
+
+/**
+ * How near the boss is, from the two bodies rather than from a distance.
+ *
+ * ⚠️ **THE SUBTRACTION LIVES HERE AND IT USED TO LIVE AT THE CALL SITE, WHICH A PROBE CAUGHT.** *The
+ * gap is between the hulls* is part of the rule, and with it written in `src/app/mount.ts` the only
+ * thing a test could drive was the curve — so `npm run prove` reported STILL GREEN when the radii
+ * were dropped. A rule that lives in the shell is a rule with no guard over it.
+ *
+ * ⚠️ **A bigger boss is NEARER at the same centre distance**, which is the whole point: a radius runs
+ * from 11 to 13 across the seven and will run wider, and what the player is judging is the space they
+ * are flying into rather than where two centres are.
+ */
+export function auraNearnessFor(bossAlong: number, bossRadius: number, shipAlong: number, shipRadius: number): number {
+  return auraNearness(Math.abs(bossAlong - shipAlong) - bossRadius - shipRadius);
+}
+
 /** What the shell drives. The one interface the browser half has to satisfy. */
 export interface MusicOut {
   /** Start the four loops, in sync. Idempotent — a second call is ignored. */
   start(): void;
-  /** Move to a level. A ramp, never a cut. */
-  setLevel(level: MusicLevel): void;
+  /**
+   * Move to a level, with how near the boss is. A ramp, never a cut.
+   *
+   * `nearness` scales the aura layers and is ignored by every other one — 0091.
+   */
+  setLevel(level: MusicLevel, nearness: number): void;
   /** Silence the music without stopping it, for the sound setting. */
   setOn(on: boolean): void;
   /** Which level is currently asked for, so a guard can read it. */
@@ -125,6 +171,15 @@ export interface MusicOut {
  * exist to avoid; at 1.6 seconds the beat arrives over about four beats of the bar it arrives in.
  */
 const RAMP_SECONDS = 1.6;
+
+/**
+ * How long the AURA takes to follow the boss, in seconds.
+ *
+ * ⚠️ **A quarter of a level change, because it is tracking a thing the player is steering.** At
+ * `RAMP_SECONDS` the aura would still be swelling after the player had already backed out of range,
+ * which is a sound that reports where they were rather than where they are.
+ */
+const AURA_RAMP_SECONDS = 0.4;
 
 /**
  * The Web Audio half.
@@ -148,6 +203,7 @@ export function makeMusicOut(
   let started = false;
   let on = true;
   let current: MusicLevel = 'calm';
+  let near = 0;
 
   const master = ctx.createGain();
   master.gain.value = MUSIC_GAIN;
@@ -192,12 +248,23 @@ export function makeMusicOut(
         source.start(when);
       }
     },
-    setLevel(level: MusicLevel): void {
+    setLevel(level: MusicLevel, nearness: number): void {
       current = level;
+      near = nearness;
       if (!on) return;
       for (const layer of MUSIC_LAYERS) {
+        /*
+          ⚠️ **The aura follows the boss and everything else follows the level** — 0091. Its row in
+          the ladder is a CEILING, and this is where it stops being one.
+
+          ⚠️ **And it ramps far faster than a level change does.** A level is a structural move and
+          wants a second and a half; the aura is the player flying at something, and at that time
+          constant it would still be arriving after they had backed off again.
+        */
+        const aura = AURA_LAYERS.includes(layer);
+        const target = MUSIC_LADDER[level][layer] * (aura ? nearness : 1);
         gains[layer].gain.cancelScheduledValues(ctx.currentTime);
-        gains[layer].gain.setTargetAtTime(MUSIC_LADDER[level][layer], ctx.currentTime, RAMP_SECONDS / 3);
+        gains[layer].gain.setTargetAtTime(target, ctx.currentTime, (aura ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3);
       }
     },
     setOn(next: boolean): void {
@@ -208,7 +275,7 @@ export function makeMusicOut(
       // to hold, never the phase against the level.
       if (next) {
         this.start();
-        this.setLevel(current);
+        this.setLevel(current, near);
       }
     },
     level(): MusicLevel {

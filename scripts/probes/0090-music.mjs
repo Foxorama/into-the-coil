@@ -60,8 +60,10 @@ export const PROBES = [
     guard: 'opens a layer at every step and never opens one twice',
     edit: {
       path: 'src/content/music.ts',
-      find: "  boss: { drone: 0.7, bass: 1, beat: 1, drive: 1 },",
-      replace: "  boss: { drone: 0.7, bass: 0, beat: 1, drive: 1 },",
+      // ⚠️ RE-ANCHORED by docs/decisions/0091-the-boss-has-an-aura.md, which gave every level two
+      // more layers. Same break, same guard: a level that closes what the one below it had open.
+      find: "  boss: { drone: 0.7, bass: 1, beat: 1, drive: 1, auraSlow: 0.9, auraFast: 0.75 },",
+      replace: "  boss: { drone: 0.7, bass: 0, beat: 1, drive: 1, auraSlow: 0.9, auraFast: 0.75 },",
     },
   },
   {

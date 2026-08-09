@@ -34,9 +34,47 @@ import type { CueLayer } from './cues.ts';
  * ⚠️ **The order is the LADDER's order and nothing else reads it as meaning** — the same relationship
  * `src/content/cues.ts` has with the bake, stated here for the same reason.
  */
-export const MUSIC_LAYERS = ['drone', 'bass', 'beat', 'drive'] as const;
+export const MUSIC_LAYERS = ['drone', 'bass', 'beat', 'drive', 'auraSlow', 'auraFast'] as const;
 
 export type MusicLayer = (typeof MUSIC_LAYERS)[number];
+
+/**
+ * The two the boss brings with it, and they are the only layers driven by a DISTANCE.
+ *
+ * ── WHY THE AURA IS MUSIC AND NOT A CUE ─────────────────────────────────────────────────────────
+ *
+ * `docs/decisions/0091-the-boss-has-an-aura.md`. Asked for: *"can we add a sound associated with the
+ * boss that compliments and amplifies the background music… an aura of sound on the bosses so that as
+ * it gets closer to the player it builds in tempo?"*
+ *
+ * ⚠️ **The obvious build is a cue repeated at a shrinking interval, and it cannot work.** A cue is
+ * fired from the fixed-step loop and the music runs on the `AudioContext` clock — two different
+ * crystals — so a pulse meant to land on the beat wanders off it over the length of a fight, and
+ * *complements the music* becomes *fights the music*. There is nothing to tune: the two clocks are
+ * independent by construction.
+ *
+ * ⚠️ **As LAYERS they are sample-locked to the rest of the music and cannot drift**, because they are
+ * in the same loop set, the same length and started on the same timestamp. And *builds in tempo* is
+ * what adding subdivisions already does — the slow one swells on the half-note, the fast one fills in
+ * the beats and the offbeats, so the pulse doubles and then doubles again without a tempo existing
+ * anywhere as a number.
+ */
+export const AURA_LAYERS: readonly MusicLayer[] = ['auraSlow', 'auraFast'];
+
+/**
+ * How close the boss has to be for the aura to be at full, and how far for it to be silent, in world
+ * units between the two hulls.
+ *
+ * ⚠️ **This is a distance the PLAYER controls**, which is what makes the aura worth having: a boss
+ * holds a station 100–122 units ahead of the camera and the player's box runs from about 10 to 167,
+ * so how loud the boss sounds is a function of how far in they have pushed. It answers the ask —
+ * *"as it gets closer to the player"* — from the end that moves.
+ *
+ * ⚠️ **`NEAR` is not zero and cannot be.** The hulls collide at about fifteen units, so a range that
+ * ran to zero would have its top half live in a place the player cannot reach without dying.
+ */
+export const AURA_NEAR_UNITS = 26;
+export const AURA_FAR_UNITS = 105;
 
 /**
  * How loud the music gets, as a fraction of the mix.
@@ -133,11 +171,17 @@ export type MusicLevel = (typeof MUSIC_LEVELS)[number];
  * it is deliberate: with all four open the pad is what muddies the low end, and the fight wants the
  * bass and the kick to be the things underneath. It is still open, so nothing starts or stops.
  */
+/**
+ * ⚠️ **The aura's numbers here are a CEILING rather than a gain**, and it is the one row in the table
+ * that is not the whole answer: `src/app/music.ts` multiplies them by how close the boss is, so a
+ * boss at arm's length is at these values and a boss across the screen is at nothing. Every other
+ * layer means exactly what it says. `docs/decisions/0091-the-boss-has-an-aura.md`.
+ */
 export const MUSIC_LADDER: Record<MusicLevel, Record<MusicLayer, number>> = {
-  calm: { drone: 0.55, bass: 0, beat: 0, drive: 0 },
-  run: { drone: 0.8, bass: 0.75, beat: 0, drive: 0 },
-  approach: { drone: 0.8, bass: 1, beat: 0.9, drive: 0 },
-  boss: { drone: 0.7, bass: 1, beat: 1, drive: 1 },
+  calm: { drone: 0.55, bass: 0, beat: 0, drive: 0, auraSlow: 0, auraFast: 0 },
+  run: { drone: 0.8, bass: 0.75, beat: 0, drive: 0, auraSlow: 0, auraFast: 0 },
+  approach: { drone: 0.8, bass: 1, beat: 0.9, drive: 0, auraSlow: 0, auraFast: 0 },
+  boss: { drone: 0.7, bass: 1, beat: 1, drive: 1, auraSlow: 0.9, auraFast: 0.75 },
 };
 
 /** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */
@@ -271,6 +315,73 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 2,
       octave: 0,
       note: { wave: 'sine', from: 190, to: 105, seconds: 0.2, gain: 0.4, attack: 0.001, curve: 5, drive: 0.25 },
+    },
+  ],
+
+  /*
+    THE AURA, SLOW — one swell every two beats.
+
+    ⚠️ EVERY SWELL LASTS LONGER THAN THE GAP TO THE NEXT ONE, and the last one has to cross the end of
+    the loop. The first draft did not: its tails stopped at 3.51s of a 3.6s loop, so the loop restarted
+    from silence into a 0.22s attack and pumped once a bar. 0090's seam guard caught it within the
+    hour — *a loop cannot be quieter where it begins than where it ends* — which is a guard written
+    for one decision catching the very next one's content.
+
+    A boss across the screen is only ever this, and it is
+    meant to read as a presence rather than as a part: a low fifth that rises into the bar and a
+    breath of filtered noise over it.
+  */
+  auraSlow: [
+    {
+      steps: [0, _, 0, _, 0, _, 0, _],
+      pitched: true,
+      perBeat: 1,
+      octave: 1,
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.4, gain: 0.3, attack: 0.22, curve: 1.6, lowFrom: 420, lowTo: 900, q: 1.1 },
+    },
+    {
+      steps: [7, _, 7, _, 7, _, 7, _],
+      pitched: true,
+      perBeat: 1,
+      octave: 0,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 2.5, gain: 0.42, attack: 0.28, curve: 1.4 },
+    },
+    {
+      steps: [1, _, 1, _, 1, _, 1, _],
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * 2.3, gain: 0.1, attack: 0.3, curve: 1.5, lowFrom: 900, lowTo: 2600, highFrom: 300, q: 0.7 },
+    },
+  ],
+
+  /*
+    THE AURA, FAST — the beat and then the offbeat. Adding this to the layer above is what *"builds in
+    tempo"* IS: the pulse goes from one every two beats to one every half beat without a tempo
+    existing anywhere as a number, and it cannot fall out of time because it is in the same loop.
+  */
+  auraFast: [
+    {
+      steps: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      pitched: true,
+      perBeat: 2,
+      octave: 2,
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.3, gain: 0.16, attack: 0.006, curve: 5, lowFrom: 2600, lowTo: 700, q: 1.6 },
+    },
+    {
+      // The offbeats, a fifth up — the half that makes it read as a doubling rather than as louder.
+      steps: [_, 7, _, 7, _, 7, _, 7, _, 7, _, 7, _, 7, _, 7],
+      pitched: true,
+      perBeat: 2,
+      octave: 2,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.26, gain: 0.13, attack: 0.004, curve: 6 },
+    },
+    {
+      steps: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      pitched: false,
+      perBeat: 2,
+      octave: 0,
+      note: { wave: 'sine', from: 96, to: 62, seconds: 0.16, gain: 0.34, attack: 0.002, curve: 5, drive: 0.2 },
     },
   ],
 };
