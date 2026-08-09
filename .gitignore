@@ -34,3 +34,10 @@ docs/machine.md
 
 # Eyes-on output from scripts/shot.mjs. Working material, not keepsakes — see keepsakes/README.md.
 /shots/
+
+# Ears-on output from scripts/hear.mjs, on exactly the same terms as /shots/ above — the rendered
+# cues and the music arc are how a sound is judged (0027) and are regenerated in a second.
+#
+# ⚠️ Added by 0095, which is the first change that made rendering the music a routine part of working
+# on it: the arc alone is four megabytes, and nothing had ever stopped it being committed.
+/cues-*.wav

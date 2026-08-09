@@ -46,8 +46,8 @@ export const PROBES = [
     guard: 'and none of them is silence, which is the way a layer can be missing without failing',
     edit: {
       path: 'src/app/music.ts',
-      find: '    for (const voice of MUSIC[layer]) renderVoice(voice, rate, rng, buffer);',
-      replace: "    if (layer !== 'drive') for (const voice of MUSIC[layer]) renderVoice(voice, rate, rng, buffer);",
+      find: '    for (const voice of MUSIC[layer]) renderVoice(voice, seconds, rate, rng, buffer);',
+      replace: "    if (layer !== 'chords') for (const voice of MUSIC[layer]) renderVoice(voice, seconds, rate, rng, buffer);",
     },
   },
   {
@@ -64,11 +64,13 @@ export const PROBES = [
       path: 'src/content/music.ts',
       // ⚠️ RE-ANCHORED by docs/decisions/0091-the-boss-has-an-aura.md, which gave every level two
       // more layers. Same break, same guard: a level that closes what the one below it had open.
-      // ⚠️ Re-anchored by 0092, which moved `drone` and both aura ceilings on this row. The BREAK is
-      // unchanged — `bass` closed at the boss after `run` opened it — and only the row it is spelled
-      // against moved.
-      find: "  boss: { drone: 0.55, bass: 1, beat: 1, drive: 1, auraSlow: 1, auraFast: 0.9 },",
-      replace: "  boss: { drone: 0.55, bass: 0, beat: 1, drive: 1, auraSlow: 1, auraFast: 0.9 },",
+      // ⚠️ Re-anchored by 0092, which moved `drone` and both aura ceilings on this row.
+      // ⚠️ AND THE BREAK ITSELF MOVED WITH 0095. It used to close `bass` at the boss; `bass` belongs
+      // to the title's piece now and is closed at `run` on purpose, so closing it again says nothing.
+      // `engine` is the level's floor — open at `run` and `approach` — and closing it at the boss is
+      // the same failure the probe always described: a ladder that swaps rather than builds.
+      find: "  boss: { drone: 0.4, bass: 0, beat: 0, engine: 0.95, chords: 0.95, drive: 0.8, lead: 0.85, auraSlow: 1, auraFast: 0.9 },",
+      replace: "  boss: { drone: 0.4, bass: 0, beat: 0, engine: 0, chords: 0.95, drive: 0.8, lead: 0.85, auraSlow: 1, auraFast: 0.9 },",
     },
   },
   {

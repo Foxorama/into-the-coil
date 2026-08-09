@@ -34,9 +34,72 @@ import type { CueLayer } from './cues.ts';
  * ⚠️ **The order is the LADDER's order and nothing else reads it as meaning** — the same relationship
  * `src/content/cues.ts` has with the bake, stated here for the same reason.
  */
-export const MUSIC_LAYERS = ['drone', 'bass', 'beat', 'drive', 'auraSlow', 'auraFast'] as const;
+export const MUSIC_LAYERS = [
+  'drone',
+  'bass',
+  'beat',
+  'engine',
+  'chords',
+  'drive',
+  'lead',
+  'auraSlow',
+  'auraFast',
+] as const;
 
 export type MusicLayer = (typeof MUSIC_LAYERS)[number];
+
+/**
+ * The layers that belong to the TITLE's piece and are closed once a level starts.
+ *
+ * ── THE ONE PLACE THE LADDER IS ALLOWED TO CLOSE SOMETHING ──────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0095-the-level-has-its-own-music.md`.** 0090's ladder only ever opened layers,
+ * because its ask was *"backgroundy, then an increased beat and bass, then really pumping"* — one
+ * piece getting fuller. The new ask is a different shape: *"keep the current background music for the
+ * title and then let's really kick it up a notch in the game."* **That is two pieces**, and the
+ * boundary between them is a screen change, which is the one moment a crossfade is not a seam.
+ *
+ * ⚠️ **AND IT IS FORCED BY THE HARMONY RATHER THAN BY TASTE.** The title's bass is an A-rooted riff
+ * with no chord changes in it; the level's progression is A minor – F – C – G. Held open underneath,
+ * that riff is a wrong note for three bars in every four. A layer that cannot be in two places is a
+ * layer that has to stop.
+ *
+ * ⚠️ **`drone` is deliberately NOT here** — it is the connective tissue and it stays open through
+ * everything, which is what keeps 0090's *the music never stops* literally true. It sounds an A and a
+ * G, and over F, C and G those are consonances rather than accidents.
+ */
+export const TITLE_ONLY: readonly MusicLayer[] = ['bass', 'beat'];
+
+/**
+ * How many bars long each layer's loop is.
+ *
+ * ⚠️ **THE MULTIPLE IS THE RULE AND THE VALUES ARE NOT.** 0090's single unrecoverable failure is
+ * layers that drift apart, and its answer was that every loop is the same number of samples. **A
+ * whole multiple gives exactly the same guarantee**: a 4-bar pad over a 2-bar drum loop realigns
+ * every 4 bars for ever, because both are an exact number of samples at every rate the bake is given.
+ * `tests/music.test.ts` holds the multiple, not the numbers.
+ *
+ * ⚠️ **Four bars is a PROGRESSION and two bars cannot hold one**, which is the whole reason this
+ * exists — A minor – F – C – G is the ballad half of what was asked for, and it needs four bars to
+ * be itself. Everything that is a rhythm rather than a harmony stays at two, because four bars of
+ * identical drums is 6.4 seconds of buffer bought for nothing.
+ *
+ * ⚠️ **The bake is 11.5ms per second of audio and it happens at the first press.** That is the
+ * constraint that says four bars rather than eight: eight would have been a longer progression and
+ * about 900ms of synthesis on this machine, which is a freeze at *tap to start* on the phone
+ * `docs/decisions/0022-frame-rate-is-a-feature.md` sizes for.
+ */
+export const LAYER_BARS: Record<MusicLayer, number> = {
+  drone: 2,
+  bass: 2,
+  beat: 2,
+  engine: 2,
+  chords: 4,
+  drive: 2,
+  lead: 4,
+  auraSlow: 2,
+  auraFast: 2,
+};
 
 /**
  * The two the boss brings with it, and they are the only layers driven by a DISTANCE.
@@ -196,6 +259,26 @@ export const BEAT_SECONDS = 0.4;
 export const LOOP_BARS = 2;
 export const LOOP_SECONDS = BEAT_SECONDS * 4 * LOOP_BARS;
 
+/** Seconds of one bar. The unit `LAYER_BARS` is counted in. */
+export const BAR_SECONDS = BEAT_SECONDS * 4;
+
+/** How long `layer`'s loop is, in seconds. */
+export function secondsOfLayer(layer: MusicLayer): number {
+  return BAR_SECONDS * LAYER_BARS[layer];
+}
+
+/**
+ * The PHRASE: how long until every layer is back at its own position zero together.
+ *
+ * ⚠️ **The longest loop, and only because every other one divides it** — which is the rule
+ * `LAYER_BARS` states and `tests/music.test.ts` holds. It is the interval a re-phase has to land on
+ * (`src/app/music.ts`), because it is the only instant at which restarting the set is the thing the
+ * set was about to do anyway. Landing a correction on a 2-bar boundary would cut the 4-bar pad in
+ * half, which is 0090's seam arriving at runtime.
+ */
+export const PHRASE_BARS = Math.max(...Object.values(LAYER_BARS));
+export const PHRASE_SECONDS = BAR_SECONDS * PHRASE_BARS;
+
 /**
  * One voice: a pattern, and the sound one note of it makes.
  *
@@ -268,11 +351,27 @@ export type MusicLevel = (typeof MUSIC_LEVELS)[number];
  * one. Raising a ceiling here spends `MUSIC_GAIN`'s measured headroom, so the two cannot be tuned
  * apart: `tests/music.test.ts` sums this row sample by sample and is what says whether they fit.
  */
+/*
+  ── TWO PIECES NOW, AND `calm` IS THE OTHER ONE ────────────────────────────────────────────────
+
+  `docs/decisions/0095-the-level-has-its-own-music.md`. Reported from play: *"the non-boss background
+  music makes kinda interesting title background music, but not great level background music"*, and
+  then *"keep the current background music for the title and then let's really kick it up a notch in
+  the game."*
+
+  ⚠️ **`calm` is the title, the level break and the run-over screen** — the whole of what 0090's
+  piece is now for. It is `drone` and `bass` and `beat`: what a level used to sound like, moved to
+  where the play-test said it belonged.
+
+  ⚠️ **`run` upward is the LEVEL's piece and that ladder is still additive**, exactly as 0090
+  requires. What crosses between them is the drone, which is why the change of piece is a swell
+  rather than an edit.
+*/
 export const MUSIC_LADDER: Record<MusicLevel, Record<MusicLayer, number>> = {
-  calm: { drone: 0.55, bass: 0, beat: 0, drive: 0, auraSlow: 0, auraFast: 0 },
-  run: { drone: 0.8, bass: 0.75, beat: 0, drive: 0, auraSlow: 0, auraFast: 0 },
-  approach: { drone: 0.8, bass: 1, beat: 0.9, drive: 0, auraSlow: 0, auraFast: 0 },
-  boss: { drone: 0.55, bass: 1, beat: 1, drive: 1, auraSlow: 1, auraFast: 0.9 },
+  calm: { drone: 0.55, bass: 0.7, beat: 0.5, engine: 0, chords: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
+  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
+  approach: { drone: 0.5, bass: 0, beat: 0, engine: 0.9, chords: 0.92, drive: 0.7, lead: 0, auraSlow: 0, auraFast: 0 },
+  boss: { drone: 0.4, bass: 0, beat: 0, engine: 0.95, chords: 0.95, drive: 0.8, lead: 0.85, auraSlow: 1, auraFast: 0.9 },
 };
 
 /** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */
@@ -387,6 +486,159 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
   ],
 
   /*
+    ── THE ENGINE — the Rez half, and it is deliberately UNPITCHED ─────────────────────────────────
+
+    Asked for: *"a mix of a power ballad style music and the game Rez."* This is the Rez end of that:
+    four-on-the-floor, sixteenth hats, an open hat on every offbeat and a clap on two and four. The
+    layer that turns *some music is playing* into *you are inside something moving*.
+
+    ⚠️ **NOT ONE PITCHED NOTE IN IT, AND THAT IS WHAT KEEPS IT TWO BARS.** `chords` runs a four-bar
+    progression; anything pitched here would be a wrong note for half of it, and matching the length
+    would double a drum loop's buffer to say the same thing twice. A rhythm is the one thing that is
+    true over every chord.
+
+    ⚠️ **The kick is the loudest single thing in the game's music and it is on every beat**, which is
+    what makes 0093's gun audible AS a rhythm: the pulse is an eighth-note triplet against it, so
+    every third volley lands on a kick.
+  */
+  engine: [
+    {
+      // Four on the floor. A longer, deeper fall than the title beat's kick — this one is the floor
+      // rather than a pulse on top of it.
+      steps: [1, 1, 1, 1, 1, 1, 1, 1],
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      note: { wave: 'sine', from: 160, to: 38, seconds: 0.42, gain: 0.6, attack: 0.001, curve: 2.8, drive: 0.3 },
+    },
+    {
+      // The click on top of it, so the kick reads on a phone speaker with no low end at all.
+      steps: [1, 1, 1, 1, 1, 1, 1, 1],
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.015, gain: 0.15, attack: 0.0004, curve: 9, lowFrom: 7000, highFrom: 900 },
+    },
+    {
+      // A clap on two and four. Two noise bursts a few milliseconds apart is what a clap IS, and one
+      // of them is this voice — the other is below.
+      steps: [_, 1, _, 1, _, 1, _, 1],
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.13, gain: 0.27, attack: 0.001, curve: 5.5, lowFrom: 5200, lowTo: 1800, highFrom: 700 },
+    },
+    {
+      // Sixteenth hats, quiet and closed. Thirty-two of them a loop and each is under two hundredths
+      // of a second — the thing that makes a bar feel subdivided rather than empty.
+      steps: Array.from({ length: 32 }, () => 1),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.018, gain: 0.075, attack: 0.0004, curve: 9, lowFrom: 14000, highFrom: 7500 },
+    },
+    {
+      // The open hat on every offbeat, which is the single most recognisable thing in the genre —
+      // it is what makes four-on-the-floor read as *dance* rather than as *march*.
+      steps: [_, 1, _, 1, _, 1, _, 1, _, 1, _, 1, _, 1, _, 1],
+      pitched: false,
+      perBeat: 2,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.11, gain: 0.105, attack: 0.001, curve: 3.2, lowFrom: 11000, highFrom: 5200 },
+    },
+  ],
+
+  /*
+    ── THE CHORDS — the power-ballad half, and the reason a layer may be four bars ────────────────
+
+    **A minor – F – C – G**, one bar each. It is the progression every anthem is built on, and it is
+    the whole of what *"power ballad"* means once the tempo is 150: the harmony does the lifting while
+    the drums do the driving.
+
+    ⚠️ **THIS IS WHY `LAYER_BARS` EXISTS.** Two bars cannot hold four chords, and 0090's identical
+    lengths forbade a layer that needed more. Whole multiples keep 0090's guarantee and buy the
+    progression.
+
+    ⚠️ **Two saws four cents apart per voice, which is the supersaw and is not decoration.** One saw
+    is an organ; two slightly apart is the sound the genre is made of, and it is the same trick the
+    drone already uses one octave down.
+
+    ⚠️ **The sub moves with the chord and the drone does not**, which is the division of labour that
+    lets both exist: the drone holds A through everything as the connective tissue, and this states
+    the harmony underneath it.
+  */
+  chords: [
+    {
+      // The roots, held. Each note is longer than its bar so it sings into the next one — and the
+      // last one crosses the end of the loop, which is what 0090's seam guard is watching.
+      steps: [0, -4, 3, -2],
+      pitched: true,
+      perBeat: 0.25,
+      octave: 1,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.17, attack: 0.06, curve: 1.5, lowFrom: 900, lowTo: 2400, q: 1.2 },
+    },
+    {
+      steps: [0, -4, 3, -2],
+      pitched: true,
+      perBeat: 0.25,
+      octave: 1,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.17, attack: 0.07, curve: 1.5, lowFrom: 890, lowTo: 2380, q: 1.2 },
+    },
+    {
+      // The fifths.
+      steps: [7, 3, 10, 5],
+      pitched: true,
+      perBeat: 0.25,
+      octave: 1,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.5, gain: 0.13, attack: 0.09, curve: 1.5, lowFrom: 1100, lowTo: 2800, q: 1.1 },
+    },
+    {
+      // The top voice, an octave up — where the chord stops being a bed and starts being a chord.
+      steps: [15, 12, 19, 14],
+      pitched: true,
+      perBeat: 0.25,
+      octave: 1,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.1, attack: 0.12, curve: 1.6, lowFrom: 1600, lowTo: 3600, q: 1 },
+    },
+    {
+      // THE ROLLING SUB. Offbeat eighths under the kick, moving with the chord — the other half of
+      // what makes four-on-the-floor move rather than plod, and the reason the kick has room.
+      steps: [
+        _, 0, _, 0, _, 0, _, 0,
+        _, -4, _, -4, _, -4, _, -4,
+        _, 3, _, 3, _, 3, _, 3,
+        _, -2, _, -2, _, -2, _, -2,
+      ],
+      pitched: true,
+      perBeat: 2,
+      octave: 0,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.44, gain: 0.33, attack: 0.005, curve: 4.5, lowFrom: 1300, lowTo: 320, q: 1.5, drive: 0.35 },
+    },
+    {
+      /*
+        ⚠️ **THE OCTAVE UNDER THE SUB, AND A SPECTRAL GUARD IS WHY IT IS HERE.** The first bake of this
+        layer measured LESS energy below 60Hz at every level rung than the title's does — 0.028 against
+        0.042 — which for a piece built on four-on-the-floor is backwards, and is invisible to every
+        other measure in `tests/music.test.ts`. A driven saw behind a falling filter is mostly
+        harmonics; what puts fundamental in the room is a sine.
+
+        The same trick the title's bass uses one file-section up, and every explosion in
+        `src/content/cues.ts` uses, for the same reason: *felt rather than only heard*.
+      */
+      steps: [
+        _, 0, _, 0, _, 0, _, 0,
+        _, -4, _, -4, _, -4, _, -4,
+        _, 3, _, 3, _, 3, _, 3,
+        _, -2, _, -2, _, -2, _, -2,
+      ],
+      pitched: true,
+      perBeat: 2,
+      octave: 0,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.62, gain: 0.46, attack: 0.004, curve: 3.2 },
+    },
+  ],
+
+  /*
     THE DRIVE — sixteenth arpeggio and toms. Only a boss ever hears this one, and it is the whole of
     *"really get pumping as the boss appears"*.
   */
@@ -406,6 +658,59 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 2,
       octave: 0,
       note: { wave: 'sine', from: 190, to: 105, seconds: 0.2, gain: 0.4, attack: 0.001, curve: 5, drive: 0.25 },
+    },
+  ],
+
+  /*
+    ── THE LEAD — the tune, and the boss is what it arrives for ───────────────────────────────────
+
+    Four bars over the progression, mostly long notes: rise, hold, fall, lift. The thing a power
+    ballad has that a groove does not is **a melody somebody could hum**, and this is the only layer
+    in the game that is one.
+
+    ⚠️ **It opens at the BOSS and nowhere else**, which makes it the loudest structural event in the
+    music — the arrival of a tune, rather than one more part. 0090 says the boss is *"really get
+    pumping"*; a fill and an arpeggio were what that meant when there was nothing to sing.
+
+    ⚠️ **Four bars, because a melody over a four-chord progression has to be four bars.** A two-bar
+    tune would state itself twice per cycle and land on the wrong harmony the second time — the exact
+    failure `LAYER_BARS` was added to make impossible.
+
+    ⚠️ **Notes are held long and overlap deliberately.** There is no portamento available (a pitched
+    voice replaces `from` and `to` with one pitch), so what gives the line its shape is length and
+    the filter opening across it rather than any glide.
+  */
+  lead: [
+    {
+      /*
+        A minor: A – C – B. F: A held. C: G – E. G: B – A – C, lifting into the repeat.
+
+        In the natural minor throughout, so nothing in it can be wrong over the drone.
+      */
+      steps: [
+        12, _, _, _, 15, _, 14, _,
+        12, _, _, _, _, _, _, _,
+        10, _, _, _, 7, _, _, _,
+        14, _, 12, _, 14, _, 15, _,
+      ],
+      pitched: true,
+      perBeat: 2,
+      octave: 2,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.5, gain: 0.15, attack: 0.02, curve: 1.8, lowFrom: 2200, lowTo: 5200, q: 1.4 },
+    },
+    {
+      // The same line an octave down and quieter, which is what stops a lead sounding thin without
+      // making it louder. The oldest doubling there is.
+      steps: [
+        12, _, _, _, 15, _, 14, _,
+        12, _, _, _, _, _, _, _,
+        10, _, _, _, 7, _, _, _,
+        14, _, 12, _, 14, _, 15, _,
+      ],
+      pitched: true,
+      perBeat: 2,
+      octave: 1,
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 1.5, gain: 0.12, attack: 0.03, curve: 1.8 },
     },
   ],
 

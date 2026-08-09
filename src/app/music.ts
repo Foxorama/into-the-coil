@@ -23,7 +23,8 @@
 
 import {
   BEAT_SECONDS,
-  LOOP_SECONDS,
+  PHRASE_SECONDS,
+  secondsOfLayer,
   MUSIC,
   MUSIC_GAIN,
   MUSIC_LADDER,
@@ -50,13 +51,15 @@ import { STEPS_PER_SECOND } from '../state/screens.ts';
  * has a silent notch where the decay should be — and it is audible immediately, because it happens
  * at the same place every 3.6 seconds.
  */
-function renderVoice(voice: MusicVoice, rate: number, rng: Rng, into: Float32Array): void {
+function renderVoice(voice: MusicVoice, seconds: number, rate: number, rng: Rng, into: Float32Array): void {
   const step = BEAT_SECONDS / voice.perBeat;
   for (let i = 0; i < voice.steps.length; i++) {
     const value = voice.steps[i];
     if (value === null || value === undefined) continue;
     const at = i * step;
-    if (at >= LOOP_SECONDS) break;
+    // ⚠️ Its OWN layer's length since 0095, not one shared loop — a pattern longer than the layer it
+    // is in is a pattern with its tail silently cut, and the two lengths are 2 bars and 4.
+    if (at >= seconds) break;
     /*
       ⚠️ **A pitched voice REPLACES the note's own sweep and a drum keeps it.** A kick is a fall from
       150 to 45 whatever the key is; a bass note is the key. One field, two meanings, and the row
@@ -71,20 +74,27 @@ function renderVoice(voice: MusicVoice, rate: number, rng: Rng, into: Float32Arr
 }
 
 /**
- * The four loops, in `MUSIC_LAYERS` order.
+ * Every loop, in `MUSIC_LAYERS` order — **and they are no longer all the same length.**
  *
  * ⚠️ **Each layer gets its OWN named stream** — `docs/decisions/0021-one-stream-per-concern.md`. The
  * only randomness in the music is the noise in the drums, and without this a fifth layer added later
  * would re-roll the four above it. It costs nothing and it is the rule.
+ *
+ * ⚠️ **A LAYER IS A WHOLE MULTIPLE OF THE SHORTEST, WHICH IS 0090 AMENDED RATHER THAN BROKEN** —
+ * `docs/decisions/0095-the-level-has-its-own-music.md`. Identical lengths were how 0090 guaranteed
+ * that four loops started together can never come apart; **whole multiples give exactly the same
+ * guarantee** — a 4-bar pad and a 2-bar drum loop realign every 4 bars, for ever, because both are
+ * an exact number of samples. What identical lengths also did was forbid a chord progression, and a
+ * progression is what a power ballad IS.
  */
 export function bakeLoops(rate: number): Record<MusicLayer, Float32Array> {
   const root = makeRng('music');
-  const length = Math.round(LOOP_SECONDS * rate);
   const out = {} as Record<MusicLayer, Float32Array>;
   for (const layer of MUSIC_LAYERS) {
-    const buffer = new Float32Array(length);
+    const seconds = secondsOfLayer(layer);
+    const buffer = new Float32Array(Math.round(seconds * rate));
     const rng = root.stream(layer);
-    for (const voice of MUSIC[layer]) renderVoice(voice, rate, rng, buffer);
+    for (const voice of MUSIC[layer]) renderVoice(voice, seconds, rate, rng, buffer);
     out[layer] = buffer;
   }
   return out;
@@ -207,7 +217,7 @@ export function rephaseIn(audioElapsed: number, simElapsed: number, minAhead: nu
   /*
     ⚠️ **NOTHING IS CORRECTED UNTIL THE CURRENT ANCHOR HAS PLAYED A WHOLE LOOP, AND IT IS A RATE LIMIT
     AS MUCH AS A RULE.** Each correction re-anchors, so this is also the ceiling on how often the swap
-    can happen: six source nodes per `LOOP_SECONDS` at the very worst, which is the budget
+    can happen: six source nodes per `PHRASE_SECONDS` at the very worst, which is the budget
     [`the-gun-on-the-grid-mapped`](../../reports/the-gun-on-the-grid-mapped-2026-08-09.md) costed the
     idea at before it was built.
 
@@ -218,9 +228,9 @@ export function rephaseIn(audioElapsed: number, simElapsed: number, minAhead: nu
     one frame. **A phase error measured over less than a loop is measuring the catch-up**, not the
     drift, and there is nothing to correct before the loop has been round once.
   */
-  if (audioElapsed < LOOP_SECONDS) return null;
+  if (audioElapsed < PHRASE_SECONDS) return null;
   const drift = audioElapsed - simElapsed;
-  const error = drift - Math.round(drift / LOOP_SECONDS) * LOOP_SECONDS;
+  const error = drift - Math.round(drift / PHRASE_SECONDS) * PHRASE_SECONDS;
   if (Math.abs(error) <= REPHASE_SECONDS) return null;
   /*
     ⚠️ **The correction lands on a loop boundary of the SIM's, never wherever we happen to notice.**
@@ -232,8 +242,8 @@ export function rephaseIn(audioElapsed: number, simElapsed: number, minAhead: nu
     Never zero, on `stepsToGrid`'s reasoning in `src/app/frame.ts`: exactly on a boundary the answer
     is a whole loop away, not now.
   */
-  let delay = LOOP_SECONDS - (simElapsed % LOOP_SECONDS);
-  while (delay < minAhead) delay += LOOP_SECONDS;
+  let delay = PHRASE_SECONDS - (simElapsed % PHRASE_SECONDS);
+  while (delay < minAhead) delay += PHRASE_SECONDS;
   return delay;
 }
 

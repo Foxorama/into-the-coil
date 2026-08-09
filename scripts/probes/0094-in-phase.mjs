@@ -73,7 +73,7 @@ export const PROBES = [
     guard: 'THE TRICK: a whole loop of drift is no drift at all, so a backgrounded tab is a small correction',
     edit: {
       path: 'src/app/music.ts',
-      find: '  const error = drift - Math.round(drift / LOOP_SECONDS) * LOOP_SECONDS;',
+      find: '  const error = drift - Math.round(drift / PHRASE_SECONDS) * PHRASE_SECONDS;',
       replace: '  const error = drift;',
     },
   },
@@ -91,7 +91,7 @@ export const PROBES = [
     guard: 'and the correction always lands on a loop boundary, because a loop has no other seam',
     edit: {
       path: 'src/app/music.ts',
-      find: '  let delay = LOOP_SECONDS - (simElapsed % LOOP_SECONDS);',
+      find: '  let delay = PHRASE_SECONDS - (simElapsed % PHRASE_SECONDS);',
       replace: '  let delay = 0;',
     },
   },
@@ -109,7 +109,7 @@ export const PROBES = [
     guard: 'and corrects nothing until the anchor has played a whole loop, which is the allocation ceiling',
     edit: {
       path: 'src/app/music.ts',
-      find: '  if (audioElapsed < LOOP_SECONDS) return null;',
+      find: '  if (audioElapsed < PHRASE_SECONDS) return null;',
       replace: '  if (audioElapsed < 0) return null;',
     },
   },

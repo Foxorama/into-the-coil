@@ -1,3 +1,4 @@
+import { BANDS, spectrum } from './spectrum.ts';
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -299,48 +300,8 @@ describe('the synthesiser', () => {
     ⚠️ **It is still not a substitute for listening.** `node scripts/hear.mjs` writes the files and a
     hand gives the verdict — 0027 for the channel with nothing to look at.
   */
-  const BANDS: readonly [number, number, string][] = [
-    [25, 60, 'sub'],
-    [60, 130, 'low'],
-    [130, 300, 'lowmid'],
-    [300, 800, 'mid'],
-    [800, 2000, 'himid'],
-    [2000, 5000, 'hi'],
-    [5000, 12000, 'air'],
-  ];
-
-  /** IEC 61672 A-weighting, as a linear gain. */
-  function aWeight(f: number): number {
-    const f2 = f * f;
-    return (
-      ((12194 ** 2 * f2 * f2) /
-        ((f2 + 20.6 ** 2) * Math.sqrt((f2 + 107.7 ** 2) * (f2 + 737.9 ** 2)) * (f2 + 12194 ** 2))) *
-      10 ** (2.0 / 20)
-    );
-  }
-
-  /** A-weighted loudness per band, normalised to the loudest. Goertzel, six log-spaced probes each. */
-  function spectrum(samples: Float32Array, rate: number): number[] {
-    const out: number[] = [];
-    for (const [lo, hi] of BANDS) {
-      let total = 0;
-      for (let k = 0; k < 6; k++) {
-        const f = lo * Math.pow(hi / lo, (k + 0.5) / 6);
-        const c = 2 * Math.cos((2 * Math.PI * f) / rate);
-        let s1 = 0;
-        let s2 = 0;
-        for (let i = 0; i < samples.length; i++) {
-          const s0 = samples[i]! + c * s1 - s2;
-          s2 = s1;
-          s1 = s0;
-        }
-        total += ((s1 * s1 + s2 * s2 - c * s1 * s2) / (samples.length * samples.length)) * aWeight(f) ** 2;
-      }
-      out.push(Math.sqrt((total / 6) * (hi - lo)));
-    }
-    const peak = Math.max(...out, 1e-12);
-    return out.map((v) => v / peak);
-  }
+  // ⚠️ ,  and  moved to tests/spectrum.ts when 0095 needed the same
+  // measure for the music. One description, not two — the helper is imported at the top of the file.
 
   /** The cues the report is about: *"more bass-y, more boomy/explosiony"*. */
   const EXPLOSIONS = ['kill', 'blast', 'bossDown', 'death'] as const;
