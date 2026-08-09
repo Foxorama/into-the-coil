@@ -25,8 +25,8 @@ export const PROBES = [
     */
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const station = item.along - w.cameraAlong <= PICKUP_STATION ? w.scrollPerStep : 0;',
-      replace: '    const station = 0;',
+      find: '      w.scrollPerStep * (1 - PICKUP_CLOSE_SHARE) +',
+      replace: '      0 +',
     },
   },
   {
@@ -58,14 +58,24 @@ export const PROBES = [
     guard: 'and then leaves, so the field does not fill up with things nobody took',
     /*
       ⚠️ REWRITTEN BY 0077 — the branch this planted over now carries the scattered pieces' decay, so
-      the break is the decrement alone. It is the same mistake and a smaller diff: a hold that is
-      never counted down never ends, because a body holding station never moves relative to the camera
-      and the condition that started the hold is true for ever.
+      the break was the decrement alone.
+
+      ⚠️ **AND RE-AIMED AGAIN BY 0087, BECAUSE THE FAILURE MODE IT MODELLED NO LONGER EXISTS.** A hold
+      that is never counted down used to park a pickup in the view for ever, on the reasoning above:
+      a body holding station never moves relative to the camera, so the condition that started the
+      hold stays true. **Nothing holds station now** — a waiting pickup closes at
+      `PICKUP_CLOSE_SHARE` — so a hold that never ends produces a pickup that drifts past the ship and
+      is culled like anything else. `npm run prove` reported WRONG TEST: the old edit reddened 0087's
+      journey guard instead, which is a different claim.
+
+      The break is now the thing that CAN still park one: an authored pickup whose wait has run out
+      given the scattered pieces' target instead of its own. Both arms of that ternary then hold
+      station, which is one character and is exactly the tidy-up somebody would make on sight.
     */
     edit: {
       path: 'src/app/frame.ts',
-      find: '    item.holdFor--;',
-      replace: '    if (item.along - w.cameraAlong > PICKUP_STATION) continue;',
+      find: '      const drift = item.lifeFor > 0 ? w.scrollPerStep : 0;',
+      replace: '      const drift = w.scrollPerStep;',
     },
   },
   {
@@ -76,7 +86,17 @@ export const PROBES = [
     // number being wrong.
     broke: 'the station put beyond where the ship is allowed to fly',
     guard: 'waits somewhere the ship can actually fly to',
-    edit: { path: 'src/app/frame.ts', find: 'const PICKUP_STATION = 100;', replace: 'const PICKUP_STATION = 200;' },
+    /*
+      ⚠️ RE-ANCHORED BY 0087, WHICH DERIVED THE STATION RATHER THAN TYPING IT. The break used to be
+      `PICKUP_STATION = 200`; it is now the derivation replaced by one, which is the same mistake made
+      the same way — a hand deciding where a pickup waits without checking it against the box the ship
+      is allowed to fly in.
+    */
+    edit: {
+      path: 'src/app/frame.ts',
+      find: 'const PICKUP_SLOW_AT = SHIP_START_ALONG + PICKUP_LINGER_STEPS * PICKUP_CLOSE_SHARE * SCROLL_PER_STEP;',
+      replace: 'const PICKUP_SLOW_AT = 200;',
+    },
   },
   {
     decision: '0064',

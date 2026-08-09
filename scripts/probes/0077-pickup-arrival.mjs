@@ -35,7 +35,7 @@ export const PROBES = [
     */
     broke: 'the bob removed, so a waiting pickup tracks one line for seven seconds',
     guard: 'wanders along the lane while it waits, rather than tracking one line',
-    edit: { path: 'src/app/frame.ts', find: 'const PICKUP_BOB_SPEED = 0.25;', replace: 'const PICKUP_BOB_SPEED = 0;' },
+    edit: { path: 'src/app/frame.ts', find: 'const PICKUP_BOB_SPEED = 0.4;', replace: 'const PICKUP_BOB_SPEED = 0;' },
   },
   {
     decision: '0077',

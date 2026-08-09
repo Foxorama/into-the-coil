@@ -196,6 +196,25 @@ export interface Entity extends Body {
    * round.
    */
   spin: number;
+  /**
+   * Where in its bob a pickup starts, in radians. Set once at spawn and never touched again.
+   *
+   * ⚠️ **Only a PICKUP carries one**, on the same terms as the three fields above.
+   *
+   * ── IT EXISTS BECAUSE THE PHASE USED TO BE A MOVING QUANTITY ────────────────────────────────────
+   *
+   * `docs/decisions/0087-a-pickup-never-parks.md`. `driftPickups` offset the bob by `item.across` so
+   * that two pickups on screen would not bob in unison — a field it already had, costing nothing.
+   *
+   * ⚠️ **But `across` DRIFTS**, at `PICKUP_DRIFT` a step, so it was not an offset: it was a second
+   * term advancing the phase about three times faster than the camera's own. The bob ran at a quarter
+   * of the period `PICKUP_BOB_UNITS` names, and a first-order lag attenuates by frequency — so the
+   * amplitude that reached the picture was a third of the one the constant describes, and moving that
+   * constant did almost nothing. **Found by measuring the track rather than by reading the line**,
+   * which is `docs/decisions/0027-measure-the-picture-not-the-model.md` in one number: 47 steps where
+   * the source says 146.
+   */
+  bobPhase: number;
 }
 
 /** A blank entity. Called only while a pool is being constructed. */
@@ -223,6 +242,7 @@ export function makeEntity(): Entity {
     holdFor: 0,
     turnsLeft: 0,
     spin: 0,
+    bobPhase: 0,
   };
 }
 
@@ -255,6 +275,7 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.holdFor = 0;
   e.turnsLeft = 0;
   e.spin = 0;
+  e.bobPhase = 0;
 }
 
 /**

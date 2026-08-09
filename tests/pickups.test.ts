@@ -949,14 +949,56 @@ describe('collecting one, in the real frame', () => {
         pickup is crossing the screen.** A pure assignment made that the whole scroll rate in one
         step. A lag makes it a fraction of it, and no constant in `src/app/frame.ts` is named here.
       */
-      const { offsets } = trackOffset(1400);
+      /*
+        ── ONE PICKUP WAS NOT ENOUGH, AND ONLY A PROBE COULD SAY SO ─────────────────────────────────
+
+        ⚠️ **THIS GUARD WENT BLIND WHEN `docs/decisions/0087-a-pickup-never-parks.md` LANDED, AND IT
+        STAYED GREEN ABOUT IT.** `npm run prove` reported STILL GREEN for *the ease removed, so a
+        pickup stops dead at the station* — 0077's own reported defect, restored exactly, and the
+        suite did not notice.
+
+        ⚠️ **The reason is phase luck, and it is deterministic rather than flaky.** The jump the
+        missing ease produces is `target − velAlong` on the single step the pickup slows, and under
+        0087 the target on that step carries the bob. One fixture pickup crosses at one bob phase; for
+        this one the phase happened to sit where the target was already near the pickup's speed, so
+        the whole impact was 0.03 units. A guard that samples one phase of a periodic quantity is a
+        guard that measures the phase.
+
+        ⚠️ **So it samples six, at six different phases and six different crossings.** `bobPhase` is
+        the golden angle times the pickup's index (0087), so a level's pickups are as spread over the
+        cycle as they can be — which makes *several pickups* the natural fixture rather than a longer
+        run of one. Keyed by that phase rather than by pool slot, because `releaseAt` swaps the last
+        live entry into a freed one and an index is not a pickup.
+      */
+      const { world } = playableWorld({
+        waves: [],
+        pickups: [200, 400, 600, 800, 1000, 1200].map((at) => ({ at, kind: 'weapon' as const, lane: ACROSS_SPAN / 2 })),
+        bossAt: Number.POSITIVE_INFINITY,
+        boss: 'sentinel',
+      });
+      const frame = new GameFrame(world);
+      const seen = new Map<number, { offset: number; delta: number }>();
       let worst = 0;
-      for (let i = 2; i < offsets.length; i++) {
-        const now = offsets[i]! - offsets[i - 1]!;
-        const before = offsets[i - 1]! - offsets[i - 2]!;
-        worst = Math.max(worst, Math.abs(now - before));
+      for (let step = 0; step < 2600; step++) {
+        frame.step();
+        for (let i = 0; i < world.pickups.size; i++) {
+          const item = world.pickups.at(i);
+          const offset = item.along - world.cameraAlong;
+          const last = seen.get(item.bobPhase);
+          if (last === undefined) {
+            // ⚠️ `NaN` for the first sighting, so the step a pickup APPEARS is not read as a change
+            // of speed. It has no previous speed; comparing against a zero would make every spawn an
+            // impact and the guard would be measuring its own bookkeeping.
+            seen.set(item.bobPhase, { offset, delta: Number.NaN });
+            continue;
+          }
+          const delta = offset - last.offset;
+          if (!Number.isNaN(last.delta)) worst = Math.max(worst, Math.abs(delta - last.delta));
+          seen.set(item.bobPhase, { offset, delta });
+        }
       }
-      expect(worst, `the pickup changed speed by ${worst.toFixed(2)} units in one step, which is an impact`).toBeLessThan(
+      expect(seen.size, 'the fixture never put six pickups on the field, so it sampled one phase again').toBe(6);
+      expect(worst, `a pickup changed speed by ${worst.toFixed(2)} units in one step, which is an impact`).toBeLessThan(
         SCROLL_PER_STEP / 4,
       );
     });
@@ -992,10 +1034,57 @@ describe('collecting one, in the real frame', () => {
         high = Math.max(high, offsets[i]!);
       }
       expect(forward, 'the pickup only ever fell back — it waited on one line, which read as a wall').toBeGreaterThan(2);
+      /*
+        ⚠️ **THE BAND CEILING THAT WAS HERE IS NOW ITS OWN TEST, INVERTED** — see
+        `and the wait is a journey that ends where the ship flies` below. It read *the pickup wandered
+        N units, which is a journey and not a wait*, and a journey is exactly what a wait is since
+        `docs/decisions/0087-a-pickup-never-parks.md`. Split out rather than rewritten in place,
+        because the two claims fail for different reasons and a probe names one test.
+      */
+      expect(low).toBeLessThan(high);
+    });
+
+    it('and the wait is a journey that ends where the ship flies', () => {
+      /*
+        ── THE CEILING ON THE BAND BECAME A FLOOR UNDER IT ──────────────────────────────────────────
+
+        ⚠️ **THIS IS THE INVERSE OF AN ASSERTION THAT USED TO LIVE IN THE TEST ABOVE** —
+        `docs/decisions/0087-a-pickup-never-parks.md`. It held the wander to under a quarter of the
+        lane, because 0077's pickup held a fixed `along` and the bob was a wobble around it. Reported
+        from play against that build: *"pickups come up fast, still hit the middle barrier and then
+        float a bit."* Easing onto a station is still arriving at a station, and a wait spent at one
+        place on the screen is a barrier whatever the approach to it looked like.
+
+        **A wait is a journey now, so the guard says so.** A guard tied to a decision inverts when the
+        decision does; the alternative — a band loose enough to hold both — describes neither.
+
+        ⚠️ **AND IT ENDS AT THE SHIP, which is the half that makes it a design rather than a drift.**
+        `PICKUP_SLOW_AT` is derived so that a pickup nobody touches arrives at `SHIP_START_ALONG` —
+        the ship's own place in the camera's frame — on the step its wait runs out. Two constants with
+        their own separate reasons, checked against each other, which is the one shape
+        `docs/decisions/0027-measure-the-picture-not-the-model.md` allows.
+
+        ⚠️ **The tolerance is real and is stated in the lane's units.** A lag approaches its target
+        and never quite reaches it, so the pickup gives up about seven units of the journey to the
+        ease — and nothing here names `PICKUP_EASE`, `PICKUP_CLOSE_SHARE` or `PICKUP_SLOW_AT`.
+      */
+      const { offsets } = trackOffset(1400);
+      let low = Infinity;
+      let high = -Infinity;
+      for (let i = 1; i < offsets.length; i++) {
+        if (!waiting(offsets, i)) continue;
+        low = Math.min(low, offsets[i]!);
+        high = Math.max(high, offsets[i]!);
+      }
       const band = high - low;
-      expect(band, `the pickup wandered ${band.toFixed(1)} units, which is a journey and not a wait`).toBeLessThan(
-        ACROSS_SPAN / 4,
-      );
+      expect(
+        band,
+        `the pickup's wait covered ${band.toFixed(1)} units, which is a station and not a journey`,
+      ).toBeGreaterThan(ACROSS_SPAN / 2);
+      expect(
+        Math.abs(low - SHIP_START_ALONG),
+        `the pickup's journey ended ${low.toFixed(1)} out, and the ship flies at ${SHIP_START_ALONG}`,
+      ).toBeLessThan(ACROSS_SPAN / 6);
     });
 
     it('waits long enough to be crossed the whole lane for', () => {
@@ -1040,8 +1129,10 @@ describe('collecting one, in the real frame', () => {
       const { offsets } = trackOffset(1400);
       /*
         ⚠️ **The FURTHEST OUT it ever waits, rather than the last place it stopped.** A pickup bobs
-        while it waits (0077), so *where the station is* is a band and not a point — and the half of
-        the band that matters is the far edge, because that is the one the ship might not reach.
+        while it waits (0077) and, since
+        `docs/decisions/0087-a-pickup-never-parks.md`, spends the whole wait closing — so *where it
+        waits* is a stretch and not a point, and the end of the stretch that matters is the far one,
+        because that is where it starts and the one the ship might not reach.
       */
       let station = 0;
       let waited = false;
@@ -1060,8 +1151,25 @@ describe('collecting one, in the real frame', () => {
         ⚠️ **The half that stops the wait becoming a park.** The pool is eight slots
         (`src/app/mount.ts`), and a pickup that held station forever would take one of them for the
         rest of the level — so the fourth pickup of a level would silently never appear.
+
+        ── AND IT WAS ABOUT TO START PASSING FOR THE OTHER REASON ───────────────────────────────────
+
+        ⚠️ **THE SHIP IS TAKEN OFF THE FIELD, and without that this guard measures COLLECTION** —
+        `docs/decisions/0087-a-pickup-never-parks.md`. A pickup now spends its wait closing and ends
+        it at `SHIP_START_ALONG`, which is where the fixture's ship sits, on the lane the fixture puts
+        them both on. *The pool went back to zero* is then satisfied by the ship eating the pickup,
+        and a probe that parks one forever still ends with an empty pool.
+
+        ⚠️ **`npm run prove` said so**: 0064's re-aimed break — both arms of the drift given the
+        camera's own rate, so an authored pickup holds station once its wait ends — came back STILL
+        GREEN against this test. Releasing the ship leaves exactly one way for the pool to empty,
+        which is the one the test is named for.
       */
-      const { world } = trackOffset(2400);
+      const { world } = onePickup('weapon');
+      // Index 0, because `CAPACITY.ship` is 1 — the same line `wreckShip` uses to take it away.
+      world.shipPool.releaseAt(0);
+      const frame = new GameFrame(world);
+      for (let i = 0; i < 2400; i++) frame.step();
       expect(world.pickups.size, 'the pickup waited for ever and kept its pool slot').toBe(0);
     });
 

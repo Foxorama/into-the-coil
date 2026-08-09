@@ -43,6 +43,8 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
+| **a pickup never parks: the wait is a journey that ends where the ship flies** | [0087](decisions/0087-a-pickup-never-parks.md) |
+| **the near sky is pushed back on every cheap axis; the whole sky is twice 0065's rate** | [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
 | **a death takes the ship, and the level carries on** | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
@@ -388,6 +390,12 @@ two are [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) and
 - **Level one's run-up — 730 units of one-health kinds after the second weapon pickup.** Whether it
   reads as a respite the new gun is spent on, or as a flat stretch. `MULTI_HIT_RUNUP` is the floor and
   the band is a content edit either way.
+- **A pickup that comes to you.** 0087 makes an untouched pickup arrive at the ship's own `along` as
+  its wait ends, so the crossing is now a decision about ONE axis rather than two. Nobody has flown
+  it, and *"comes up fast"* is about the approach, which is untouched.
+- **The sky, for the third and second time.** The levers left are the alpha, which can go to nothing,
+  and the depth, which has a ceiling with an argument behind it. **After those the answer is not a
+  number** — 0088 says so rather than leaving a fourth pass to discover it.
 
 **And the five that were already owed:**
 
@@ -425,6 +433,30 @@ what should have gone red. **`npm run prove` caught the first and would not have
 because a probe can only redden a guard that exists; the second was found because the change forced a
 look at the copy. That is [0027](decisions/0027-measure-the-picture-not-the-model.md)'s gap and
 0019 does not close it.
+
+⚠️ **AND A FOURTH PLAY-TEST FOLLOWED IT, WITH FOUR ITEMS — THREE HAVE LANDED AND THE FOURTH IS THE
+NEXT PR.** *"Pickups come up fast, still hit the middle barrier and then float a bit"*, *"the closer
+starfield needs to be much further backgrounded, still distracting"*, *"the background needs to move
+faster, still feels really slow"*, and *"bosses need much more dynamic movement as well and they need
+to have chunks and pieces fly off when they change states."*
+[0087](decisions/0087-a-pickup-never-parks.md) and
+[0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) are the first three.
+**The bosses are chunk 8 and are not started.**
+
+⚠️ **TWO OF THE THREE WERE DEFECTS AGAINST THE DECISION THAT ALREADY ANSWERED THEM**, which is now
+the pattern of this whole feedback round rather than an accident:
+[0077](decisions/0077-a-pickup-arrives-rather-than-stopping.md) fixed the impact and left the wall,
+[0069](decisions/0069-the-sky-is-behind-the-game.md) and
+[0078](decisions/0078-the-sky-moves-a-third-faster.md) each moved the right lever and not far enough,
+and [0086](decisions/0086-the-teeth-wait-for-the-gun.md) is the same shape one chunk up. **Read
+[0027](decisions/0027-measure-the-picture-not-the-model.md) before answering a repeat report**: the
+question to ask first is what the previous fix left standing, not what number to move.
+
+⚠️ **0087 IS ALSO THE LARGEST HAUL OF BROKEN GUARDS THE PROOF HAS FOUND IN ONE CHANGE.** Three guards
+belonging to 0064 and 0077 were passing for the wrong reason, and all three were leaning on the same
+thing 0087 removed — a pickup that stops. One sampled a single phase of a periodic quantity, one had
+started measuring collection rather than departure, and one modelled a failure mode that no longer
+exists. The decision has each. `npm test` saw none of them.
 
 ⚠️ **THE DIAL WAS FLOWN THE SAME NIGHT AND CHUNK 6's OWN DEFECT CAME BACK** —
 [0086](decisions/0086-the-teeth-wait-for-the-gun.md). *"They can't start appearing till after the

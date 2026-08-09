@@ -10,11 +10,15 @@ export const PROBES = [
     decision: '0078',
     suite: 'tests/budget.test.ts',
     // ⚠️ THE REPORTED ONE, restored exactly: 0065's depths, which is the casual stroll.
+    //
+    // ⚠️ RENAMED GUARD — `docs/decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md`
+    // multiplied a second ask onto this one, so the assertion is now against twice what 0065 shipped
+    // rather than a third more. The break is the same line and the same restore.
     broke: 'the sky returned to its old rate, which is the stroll that was reported',
-    guard: 'moves both layers a third faster, which is what was asked for',
+    guard: 'moves both layers twice as fast as they shipped, which is what was asked for',
     edit: {
       path: 'src/app/mount.ts',
-      find: '{ sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.4 },',
+      find: '{ sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.6 },',
       replace: '{ sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.3 },',
     },
   },
@@ -30,8 +34,8 @@ export const PROBES = [
     guard: 'scales BOTH by the same factor, so the depth cue is not what paid for the speed',
     edit: {
       path: 'src/app/mount.ts',
-      find: '{ sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.16 },',
-      replace: '{ sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.12 },',
+      find: '{ sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.24 },',
+      replace: '{ sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.16 },',
     },
   },
   {
@@ -47,8 +51,8 @@ export const PROBES = [
     guard: 'is still behind the game, which is the ceiling 0065 set',
     edit: {
       path: 'src/app/mount.ts',
-      find: '{ sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.4 },',
-      replace: '{ sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.8 },',
+      find: '{ sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.6 },',
+      replace: '{ sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 1.2 },',
     },
   },
 ];

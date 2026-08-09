@@ -90,8 +90,15 @@ export function bakeSize(extent: number, pixelsPerUnit: number): number {
  * eye are the ones that compete with a bullet. `docs/decisions/0024-the-accessibility-floor-is-settings.md`
  * puts a flash-intensity cap in the unconditional tier for the same reason a background does not get
  * to be busy.
+ *
+ * ⚠️ **THE TWO ARE NOW EQUAL, AND THE PARAGRAPH ABOVE IS WHY THAT IS SAFE** —
+ * `docs/decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md`. A near star is 0.2
+ * world units against the far layer's 0.6, so ninety of them put a NINTH of the far layer's ink on
+ * the screen per dot before the alpha is counted. What made a sparse near layer necessary was dots
+ * that could compete with a bullet; at a third of the radius they cannot, and count is the half of
+ * *further away* that dimming alone does not buy.
  */
-const SKY_STARS = { skyFar: 90, skyNear: 55 };
+const SKY_STARS = { skyFar: 90, skyNear: 90 };
 
 /**
  * The biggest a star may be drawn, as a radius in WORLD UNITS. One ceiling for the whole sky.
@@ -125,9 +132,18 @@ const SKY_STARS = { skyFar: 90, skyNear: 55 };
  * more distant at once, which is the only combination that answers the report without taking back
  * the speed [0078](../../docs/decisions/0078-the-sky-moves-a-third-faster.md) just gave it.
  *
- * ⚠️ **The far layer is untouched, because nothing was reported about it.**
+ * ⚠️ **AND IT WAS NOT ENOUGH, SO THE SAME LEVER GOES AGAIN** —
+ * `docs/decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md`. Reported from play
+ * against the build 0069 landed in: *"the closer starfield needs to be much further backgrounded,
+ * still distracting."* 0.35 → **0.2**, with `SKY_STARS` 55 → 90, which is the far layer's own count.
+ *
+ * ⚠️ **The choice between dimming it and SLOWING it was put to the hand that reported it**, in the
+ * same breath as *"the background needs to move faster"*, and dimming won: distraction is contrast
+ * and size, and speed is the thing the other half of the report is asking for more of.
+ *
+ * ⚠️ **The far layer is untouched, because nothing has ever been reported about it.**
  */
-const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.35 };
+const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.2 };
 
 /**
  * How solid each layer is drawn, against the void behind it.
@@ -141,8 +157,16 @@ const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.35 };
  *
  * ⚠️ **Baked in, never applied per blit** — 0025 counts state changes in the frame loop, and a tile
  * is drawn once at load and once per rotation.
+ *
+ * ⚠️ **0.4 → 0.18, and it is the third time this layer has been pushed back** —
+ * `docs/decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md`: *"the closer
+ * starfield needs to be much further backgrounded, still distracting."* Alpha is the one lever that
+ * costs nothing anywhere — not a draw call, not a pool slot, not a world unit — and it is the one
+ * that acts directly on the thing being complained about, which is how much of the eye the layer
+ * takes. Under a fifth is faint enough to read as depth rather than as content, and 0088 goes
+ * further on it than on either of the other two because it is the cheapest to take back.
  */
-const SKY_ALPHA = { skyFar: 1, skyNear: 0.4 };
+const SKY_ALPHA = { skyFar: 1, skyNear: 0.18 };
 
 /**
  * How much of the boundary's tile is mark rather than gap.

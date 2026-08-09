@@ -145,9 +145,24 @@ export const CAPACITY = {
  * that changed is how fast the whole sky goes past. Scaling one of them would have bought the speed
  * out of the depth cue, which is the one thing a two-layer sky is for.
  *
- * ⚠️ **Both are still well under 1**, which is 0065's rule and the reason there is a ceiling here at
- * all: at 1 the sky moves exactly with the world and reads as a field of objects going past at the
- * rate of the things that can kill the player. At 0.4 the near field is still under half.
+ * ── AND A THIRD WAS NOT ENOUGH EITHER ───────────────────────────────────────────────────────────
+ *
+ * Reported from play against the build 0078 landed in: *"the background needs to move faster, still
+ * feels really slow."* `docs/decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md`.
+ *
+ * ⚠️ **0.16 and 0.4 become 0.24 and 0.6 — `× 3/2` each, on 0078's own rule.** The ratio is untouched
+ * for the third time; what moves is how fast the whole sky goes past. In the units a hand can judge:
+ * a near star now crosses the narrowest view in about **8 seconds** where it took twelve, and a far
+ * one in about twenty where it took thirty.
+ *
+ * ⚠️ **THE FASTER LAYER IS ALSO THE ONE 0088 DIMS TO A FIFTH**, and the two halves of that report are
+ * only compatible because *distracting* is contrast and *slow* is speed. Sizing, count and alpha all
+ * push the near layer back; the depth pushes it past.
+ *
+ * ⚠️ **Both are still under 1**, which is 0065's rule and the reason there is a ceiling here at all:
+ * at 1 the sky moves exactly with the world and reads as a field of objects going past at the rate of
+ * the things that can kill the player. At 0.6 the near field is under two thirds, and
+ * `tests/budget.test.ts` is where that ceiling is held rather than in this sentence.
  *
  * ⚠️ **Module-level and frozen in place, because a STYLE can turn it off** —
  * `docs/decisions/0070-a-style-is-a-setting-and-the-first-one.md`. Retro is the game before the sky,
@@ -162,8 +177,8 @@ export const CAPACITY = {
  * count, so the two could disagree for ever and the budget guard would stay green.
  */
 export const SKY = [
-  { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.16 },
-  { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.4 },
+  { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.24 },
+  { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.6 },
 ];
 
 /** What a style with no sky gets. Module-level, so switching styles allocates nothing. */
