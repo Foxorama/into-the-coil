@@ -36,6 +36,67 @@
  */
 
 /**
+ * The key. Every pitched note in the game is a ratio off this, so the whole thing transposes from
+ * one number.
+ *
+ * ── IT LIVES HERE NOW, AND IT USED TO LIVE ONLY IN THE MUSIC ────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0099-the-cues-are-in-the-key.md`.** A low A, minor. It was declared in
+ * `src/content/music.ts` and read by nothing else, which is exactly how the cues came to be tuned to
+ * nothing at all — the layer ladder points `music` at `cues` and not the other way round, so the file
+ * that synthesises the effects **could not see the key** even in principle. `src/content/music.ts`
+ * re-exports it, so `MUSIC_ROOT` is one description and every existing import still resolves.
+ */
+export const MUSIC_ROOT = 55;
+
+/**
+ * The natural minor, in semitones. The only notes anything in this game is allowed to sound.
+ *
+ * ⚠️ **The scale rather than the chromatic set, and that is the whole of the rule.** Twelve notes
+ * would make *in tune* mean *a note*, which is what an arbitrary Hz value already is. Seven mean a
+ * cue cannot be a wrong note over the drone, whatever bar the music happens to be in — the same
+ * argument `src/content/music.ts` makes for writing every voice in the natural minor.
+ */
+export const SCALE: readonly number[] = [0, 2, 3, 5, 7, 8, 10];
+
+/**
+ * `degree` steps up the scale from the root, in Hz. Seven to the octave, and negatives go below it.
+ *
+ * ⚠️ **A DEGREE and not a semitone, because a degree cannot be spelled wrong.** `inKey(11)` is a
+ * note; a semitone helper would let a hand write `inKey(1)` for a B flat, which is not in the key and
+ * is precisely the mistake this exists to make impossible. What the guard checks is the OUTPUT
+ * anyway — `tests/sound.test.ts` walks every layer's `from` and `to` and refuses a frequency that is
+ * not a scale tone, so a raw `190` typed straight into the table fails whether it came through here
+ * or not.
+ */
+export function inKey(degree: number): number {
+  const octave = Math.floor(degree / SCALE.length);
+  const step = degree - octave * SCALE.length;
+  return MUSIC_ROOT * Math.pow(2, octave + SCALE[step]! / 12);
+}
+
+/*
+  ── WHAT A SWEPT LAYER SOUNDS IS NOT ITS ENDPOINT, AND THIS RULE DOES NOT PRETEND OTHERWISE ───────
+
+  ⚠️ **`docs/decisions/0099-the-cues-are-in-the-key.md` tried to tune the heard pitch and could not
+  find out what it was.** An exponential sweep is still gliding when its layer stops, so neither
+  endpoint is a note the ear rests on; two defensible models of *the note a chirp sounds* — the
+  energy-weighted mean of its instantaneous frequency, and the pitch a Goertzel over the whole layer
+  responds loudest to — **disagreed by four semitones** on the death cue's own body. There is no
+  third opinion to break the tie, and the pitch of a fast chirp is genuinely ill-posed.
+
+  ⚠️ **So what is guarded is the thing that cannot be wrong either way: both ends are notes in the
+  key.** Every instant of the sweep then lies BETWEEN two notes of the scale, and whichever part of
+  it a listener picks out, they are picking it out of a musical interval rather than out of a slide
+  between two arbitrary frequencies. The old table's death fell 21.9 semitones and its kill 19.4 —
+  not intervals at all.
+
+  ⚠️ **`tests/sound.test.ts` measures what the bake actually produces against that claim** rather
+  than against a model of hearing: the loudest pitch in a layer rendered alone has to lie inside the
+  interval the row names. That is a real check on the synthesiser and it is all the samples can say.
+*/
+
+/**
  * Every cue, in bake order. Closed.
  *
  * ⚠️ **The order is the bake order and nothing else reads it as meaning** — the same relationship
@@ -283,6 +344,48 @@ export const MAX_CUE_SECONDS = 2;
  * bans a fire action), so it is the one sound the player hears continuously, and a continuous sound
  * mixed loud is the one that has to be turned off.
  */
+/*
+  ── EVERY PITCHED ENDPOINT BELOW IS A SCALE TONE, AND NONE OF THEM USED TO BE ────────────────────
+
+  `docs/decisions/0099-the-cues-are-in-the-key.md`. Reported from play: *"the primary and second
+  fire, enemy fire and explosion noises for bomb, enemy and player death don't sync into the music
+  properly, they're all close to on beat, but the sounds just don't mesh at all."*
+
+  ⚠️ **"CLOSE TO ON BEAT" IS A PASS ON 0093, 0094 AND 0096.** Those three put every cadence in the
+  game on a sixteenth grid and hold the loops in phase with the sim. The report says the timing
+  arrived and something else did not, and the something else is the third axis this project has never
+  tuned: it has tuned gains (0092), it has tuned timing, and it had never once tuned HARMONY.
+
+  ⚠️ **The music is A minor and the cues were in no key at all.** The pulse fell to 52 Hz, a kill to
+  62, the blast to 58, a death to 48 — four different notes, none of them the root (55) and none of
+  them in the scale, arriving on the beat over a drone sounding A. That is what *"close to on beat but
+  they don't mesh"* is a description of, and no amount of moving them closer to the beat could have
+  fixed it.
+
+  ⚠️ **Nothing here is a NEW number: each is the nearest scale tone to what 0089 tuned by ear.** The
+  largest move is under 5%, so every filter, envelope and decay 0089 chose is intact and this is not
+  a re-voicing. What changes is which notes the glide runs between.
+
+  ⚠️ **EVERY INTERVAL IS NOW A WHOLE NUMBER OF SEMITONES, and none of them used to be**: the old
+  death fell 21.9 semitones and the old kill 19.4, so a glide was not any interval at all and two
+  explosions half a second apart were two unrelated slides. It follows from both ends being scale
+  tones rather than being a second rule, and it is what makes a family: everything violent falls
+  about twenty semitones, everything the player gains rises an octave, the chime rises a fifth.
+
+  ── AND THE FAMILIES ARE THE POINT, NOT THE TUNING ───────────────────────────────────────────────
+
+  | | falls or rises to | which is |
+  |---|---|---|
+  | the blast, the boss coming apart | **the root** | it resolves — the player did that |
+  | a kill | the seventh | it hangs; there are more of them coming |
+  | a death | the seventh, and it is the only cue that ends unfinished | it does not resolve |
+  | a shield, a pickup, the chime | **an octave up** | everything gained rises |
+  | a bomb thrown | two octaves up, on the fourth | the thing it turns into has not happened yet |
+
+  ⚠️ **`noise` layers are untouched and the rule says why**: for noise, `from` is a sample-and-hold
+  rate rather than a pitch — one field, two meanings, stated on `CueLayer` — and everything that
+  explodes uses white, where it is zero.
+*/
 export const CUES: Record<CueKind, CueRow> = {
   /**
    * The base weapon. The most frequent sound in the game by a wide margin.
@@ -302,8 +405,12 @@ export const CUES: Record<CueKind, CueRow> = {
       // not would be the one dull sound in a game the player hears this from ten times a second.
       { wave: 'noise', from: 0, to: 0, seconds: 0.012, gain: 0.55, attack: 0.0005, curve: 9, highFrom: 900, lowFrom: 11000, lowTo: 4000 },
       // The chunk. A saturated square behind a falling filter is where *meaty* lives.
-      { wave: 'square', from: 190, to: 78, seconds: 0.075, gain: 0.85, attack: 0.001, curve: 6, lowFrom: 1700, lowTo: 320, q: 1.1, drive: 0.55 },
-      { wave: 'sine', from: 130, to: 52, seconds: 0.09, gain: 0.7, attack: 0.001, curve: 5 },
+      // G3 → E2: the seventh into the fifth, so the most frequent sound in the game is never the
+      // root and never fights the bass for it.
+      { wave: 'square', from: inKey(13), to: inKey(4), seconds: 0.075, gain: 0.85, attack: 0.001, curve: 6, lowFrom: 1700, lowTo: 320, q: 1.1, drive: 0.55 },
+      // C3 → A1. The tail lands on the ROOT, which is what makes ten of these a second read as a
+      // pulse in the music rather than as ten interruptions of it.
+      { wave: 'sine', from: inKey(9), to: inKey(0), seconds: 0.09, gain: 0.7, attack: 0.001, curve: 5 },
     ],
   },
   /**
@@ -324,9 +431,11 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.6, attack: 0.004, curve: 3.2, lowFrom: 2400, lowTo: 600, highFrom: 130, highTo: 60, q: 0.7 },
       { wave: 'noise', from: 0, to: 0, seconds: 0.34, gain: 0.09, attack: 0.02, curve: 2.6, lowFrom: 9000, highFrom: 1500, highTo: 900 },
       // The launch, at a pitch a speaker can actually reproduce — see 0089 on why 30 Hz is not it.
-      { wave: 'sine', from: 210, to: 68, seconds: 0.3, gain: 1, attack: 0.001, curve: 3 },
-      // And the octave under it, for the systems that can.
-      { wave: 'sine', from: 105, to: 34, seconds: 0.34, gain: 0.6, attack: 0.004, curve: 2.5 },
+      // A3 → C2: the root falling to the minor third, which is the interval that says *minor* in one
+      // gesture. The missile is the counter-beat (0094), so it wants to be recognisably itself.
+      { wave: 'sine', from: inKey(14), to: inKey(2), seconds: 0.3, gain: 1, attack: 0.001, curve: 3 },
+      // And the octave under it, for the systems that can. The same two notes, A2 → C1.
+      { wave: 'sine', from: inKey(7), to: inKey(-5), seconds: 0.34, gain: 0.6, attack: 0.004, curve: 2.5 },
     ],
   },
   /**
@@ -344,8 +453,10 @@ export const CUES: Record<CueKind, CueRow> = {
     glue: 0.1,
     layers: [
       // The filter chases the sweep, and the resonance is what makes it zap rather than fall.
-      { wave: 'saw', from: 1500, to: 260, seconds: 0.1, gain: 0.7, attack: 0.001, curve: 5, lowFrom: 3200, lowTo: 500, q: 2.6 },
-      { wave: 'sine', from: 900, to: 180, seconds: 0.09, gain: 0.35, attack: 0.001, curve: 5 },
+      // G6 → C4, and A5 → F3 under it. Both land on scale tones a fourth apart, which is as close to
+      // *a chord* as a hundred-millisecond zap can get.
+      { wave: 'saw', from: inKey(34), to: inKey(16), seconds: 0.1, gain: 0.7, attack: 0.001, curve: 5, lowFrom: 3200, lowTo: 500, q: 2.6 },
+      { wave: 'sine', from: inKey(28), to: inKey(12), seconds: 0.09, gain: 0.35, attack: 0.001, curve: 5 },
     ],
   },
   /**
@@ -364,7 +475,9 @@ export const CUES: Record<CueKind, CueRow> = {
     layers: [
       { wave: 'noise', from: 0, to: 0, seconds: 0.035, gain: 0.5, attack: 0.0004, curve: 8, lowFrom: 7000, lowTo: 3000, highFrom: 1100 },
       { wave: 'noise', from: 0, to: 0, seconds: 0.06, gain: 0.5, attack: 0.001, curve: 7, lowFrom: 2200, lowTo: 800, highFrom: 260, q: 0.8 },
-      { wave: 'sine', from: 240, to: 95, seconds: 0.07, gain: 0.55, attack: 0.001, curve: 6 },
+      // B3 → G2. The one cue that lands on neither the root nor the fifth, because *it lived* is the
+      // one event in the game that is not yet an answer to anything.
+      { wave: 'sine', from: inKey(15), to: inKey(6), seconds: 0.07, gain: 0.55, attack: 0.001, curve: 6 },
     ],
   },
   /** An enemy died. The debris burst is the picture; this is the same event arriving at the ear. */
@@ -380,8 +493,10 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'noise', from: 0, to: 0, seconds: 0.34, gain: 0.95, attack: 0.003, curve: 3.2, lowFrom: 2100, lowTo: 420, highFrom: 110, highTo: 45, q: 0.7, drive: 0.3 },
       // DEBRIS — quieter, longer, and the part that carries the top. It was missing entirely.
       { wave: 'noise', from: 0, to: 0, seconds: 0.42, gain: 0.055, attack: 0.02, curve: 2.4, lowFrom: 6500, highFrom: 1300, highTo: 700 },
-      { wave: 'sine', from: 190, to: 62, seconds: 0.4, gain: 1.25, attack: 0.001, curve: 2.6, drive: 0.25 },
-      { wave: 'sine', from: 95, to: 31, seconds: 0.46, gain: 0.7, attack: 0.002, curve: 2.2 },
+      // G3 → B1, and G2 → B0 under it. It HANGS on the seventh: a kill is the most repeated event in
+      // a level and there are always more coming, so the one thing it must not do is sound final.
+      { wave: 'sine', from: inKey(13), to: inKey(1), seconds: 0.4, gain: 1.25, attack: 0.001, curve: 2.6, drive: 0.25 },
+      { wave: 'sine', from: inKey(6), to: inKey(-6), seconds: 0.46, gain: 0.7, attack: 0.002, curve: 2.2 },
     ],
   },
   /**
@@ -401,8 +516,11 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.32, attack: 0.0005, curve: 6, lowFrom: 6000, lowTo: 1900, highFrom: 600 },
       { wave: 'noise', from: 0, to: 0, seconds: 1.5, gain: 1.1, attack: 0.006, curve: 2.1, lowFrom: 1900, lowTo: 330, highFrom: 95, highTo: 38, q: 0.7, drive: 0.4 },
       { wave: 'noise', from: 0, to: 0, seconds: 1.7, gain: 0.07, attack: 0.03, curve: 1.9, lowFrom: 6000, highFrom: 1200, highTo: 620 },
-      { wave: 'sine', from: 165, to: 52, seconds: 1.6, gain: 1.3, attack: 0.002, curve: 1.7, drive: 0.3 },
-      { wave: 'sine', from: 82, to: 26, seconds: 1.75, gain: 0.85, attack: 0.02, curve: 1.4 },
+      // E3 → A1, and E2 → A0 under it. A FALLING FIFTH ONTO THE ROOT, which is the oldest cadence
+      // there is and is the correct thing for the loudest event in the game: the level is over and
+      // the player did it.
+      { wave: 'sine', from: inKey(11), to: inKey(0), seconds: 1.6, gain: 1.3, attack: 0.002, curve: 1.7, drive: 0.3 },
+      { wave: 'sine', from: inKey(4), to: inKey(-7), seconds: 1.75, gain: 0.85, attack: 0.02, curve: 1.4 },
       // The second rumble, arriving late. A boss coming apart is two events, not one.
       { wave: 'noise', from: 0, to: 0, seconds: 1.1, at: 0.22, gain: 0.4, attack: 0.02, curve: 2, lowFrom: 1500, lowTo: 320, highFrom: 300, highTo: 110 },
     ],
@@ -414,10 +532,13 @@ export const CUES: Record<CueKind, CueRow> = {
     gain: 0.276,
     glue: 0.08,
     layers: [
-      { wave: 'sine', from: 150, to: 620, seconds: 0.2, gain: 0.75, attack: 0.004, curve: 3.5 },
-      { wave: 'saw', from: 75, to: 310, seconds: 0.2, gain: 0.3, attack: 0.004, curve: 3.5, lowFrom: 1400, lowTo: 5000, highFrom: 120, drive: 0.25 },
+      // D3 → D5, and everything else in the row is the same two octaves of D. The FOURTH, held all
+      // the way up: the one degree in the scale that wants to go somewhere and has not yet, which is
+      // what a thrown bomb is.
+      { wave: 'sine', from: inKey(10), to: inKey(24), seconds: 0.2, gain: 0.75, attack: 0.004, curve: 3.5 },
+      { wave: 'saw', from: inKey(3), to: inKey(17), seconds: 0.2, gain: 0.3, attack: 0.004, curve: 3.5, lowFrom: 1400, lowTo: 5000, highFrom: 120, drive: 0.25 },
       { wave: 'noise', from: 0, to: 0, seconds: 0.2, gain: 0.22, attack: 0.01, curve: 3, lowFrom: 10000, highFrom: 1100, highTo: 3200 },
-      { wave: 'sine', from: 75, to: 155, seconds: 0.22, gain: 0.42, attack: 0.006, curve: 3 },
+      { wave: 'sine', from: inKey(3), to: inKey(10), seconds: 0.22, gain: 0.42, attack: 0.006, curve: 3 },
     ],
   },
   /**
@@ -436,8 +557,10 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'noise', from: 0, to: 0, seconds: 0.035, gain: 0.33, attack: 0.0004, curve: 7, lowFrom: 5800, lowTo: 2100, highFrom: 650 },
       { wave: 'noise', from: 0, to: 0, seconds: 0.8, gain: 1.05, attack: 0.004, curve: 2.5, lowFrom: 2000, lowTo: 380, highFrom: 100, highTo: 42, q: 0.7, drive: 0.4 },
       { wave: 'noise', from: 0, to: 0, seconds: 0.95, gain: 0.06, attack: 0.02, curve: 2.2, lowFrom: 6200, highFrom: 1200, highTo: 650 },
-      { wave: 'sine', from: 180, to: 58, seconds: 0.85, gain: 1.3, attack: 0.001, curve: 2.1, drive: 0.28 },
-      { wave: 'sine', from: 90, to: 29, seconds: 0.95, gain: 0.75, attack: 0.02, curve: 1.8 },
+      // F3 → A1, and F2 → A0 under it. It RESOLVES to the root, like the boss does — the two events
+      // in the game the player caused on purpose and paid for are the two that land home.
+      { wave: 'sine', from: inKey(12), to: inKey(0), seconds: 0.85, gain: 1.3, attack: 0.001, curve: 2.1, drive: 0.28 },
+      { wave: 'sine', from: inKey(5), to: inKey(-7), seconds: 0.95, gain: 0.75, attack: 0.02, curve: 1.8 },
     ],
   },
   /**
@@ -454,11 +577,15 @@ export const CUES: Record<CueKind, CueRow> = {
     gain: 0.288,
     glue: 0.08,
     layers: [
-      { wave: 'sine', from: 420, to: 880, seconds: 0.16, gain: 0.62, attack: 0.002, curve: 4 },
-      { wave: 'square', from: 210, to: 440, seconds: 0.14, gain: 0.26, attack: 0.002, curve: 5, lowFrom: 4500, lowTo: 7000, highFrom: 300, q: 1.2 },
+      // A4 → A5, A3 → A4, C4 → C5: octaves of the ROOT and of the minor third, rising. Everything
+      // the player gains rises an octave, and this is the one they gain by surviving.
+      { wave: 'sine', from: inKey(21), to: inKey(28), seconds: 0.16, gain: 0.62, attack: 0.002, curve: 4 },
+      { wave: 'square', from: inKey(14), to: inKey(21), seconds: 0.14, gain: 0.26, attack: 0.002, curve: 5, lowFrom: 4500, lowTo: 7000, highFrom: 300, q: 1.2 },
       { wave: 'noise', from: 0, to: 0, seconds: 0.1, gain: 0.26, attack: 0.001, curve: 6, lowFrom: 11000, highFrom: 2400, highTo: 5000 },
-      { wave: 'tri', from: 250, to: 520, seconds: 0.18, gain: 0.34, attack: 0.002, curve: 3.8 },
-      { wave: 'sine', from: 105, to: 88, seconds: 0.2, gain: 0.5, attack: 0.002, curve: 3.4 },
+      { wave: 'tri', from: inKey(16), to: inKey(23), seconds: 0.18, gain: 0.34, attack: 0.002, curve: 3.8 },
+      // G2 → A2, which is the only step in the table smaller than an octave: the low body leans one
+      // degree up into the root rather than sitting on a fixed note under a rising cue.
+      { wave: 'sine', from: inKey(6), to: inKey(7), seconds: 0.2, gain: 0.5, attack: 0.002, curve: 3.4 },
     ],
   },
   /** The run lost a ship. Falling, long, and the only cue with nothing above it in the mix. */
@@ -471,9 +598,15 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.3, attack: 0.0006, curve: 6, lowFrom: 5600, lowTo: 1800, highFrom: 600 },
       { wave: 'noise', from: 0, to: 0, seconds: 1.15, gain: 1, attack: 0.005, curve: 2.3, lowFrom: 1800, lowTo: 340, highFrom: 95, highTo: 40, q: 0.7, drive: 0.45 },
       { wave: 'noise', from: 0, to: 0, seconds: 1.25, gain: 0.055, attack: 0.03, curve: 2, lowFrom: 5800, highFrom: 1100, highTo: 580 },
-      { wave: 'sine', from: 170, to: 48, seconds: 1.2, gain: 1.3, attack: 0.001, curve: 1.9, drive: 0.28 },
-      { wave: 'sine', from: 85, to: 24, seconds: 1.3, gain: 0.8, attack: 0.02, curve: 1.6 },
-      { wave: 'saw', from: 90, to: 30, seconds: 0.85, gain: 0.26, attack: 0.01, curve: 2.3, lowFrom: 1600, lowTo: 300, highFrom: 70, drive: 0.4 },
+      /*
+        F3 → G1, F2 → G0, F2 → G1. **IT DOES NOT RESOLVE, AND THAT IS THE WHOLE CHOICE.** The blast
+        and the boss both fall onto the root because the player did those; a death falls from the
+        sixth onto the seventh — a step UP in the scale under a falling pitch — so the ear is left
+        waiting for a note that never comes. It is the only cue in the game that ends unfinished.
+      */
+      { wave: 'sine', from: inKey(12), to: inKey(-1), seconds: 1.2, gain: 1.3, attack: 0.001, curve: 1.9, drive: 0.28 },
+      { wave: 'sine', from: inKey(5), to: inKey(-8), seconds: 1.3, gain: 0.8, attack: 0.02, curve: 1.6 },
+      { wave: 'saw', from: inKey(5), to: inKey(-1), seconds: 0.85, gain: 0.26, attack: 0.01, curve: 2.3, lowFrom: 1600, lowTo: 300, highFrom: 70, drive: 0.4 },
     ],
   },
   /**
@@ -491,11 +624,13 @@ export const CUES: Record<CueKind, CueRow> = {
     gain: 0.264,
     glue: 0.06,
     layers: [
-      { wave: 'sine', from: 620, to: 1240, seconds: 0.13, gain: 0.55, attack: 0.002, curve: 4 },
-      { wave: 'sine', from: 930, to: 1860, seconds: 0.13, at: 0.02, gain: 0.26, attack: 0.004, curve: 4.5 },
-      { wave: 'tri', from: 310, to: 620, seconds: 0.15, gain: 0.34, attack: 0.002, curve: 4 },
-      { wave: 'sine', from: 155, to: 310, seconds: 0.17, gain: 0.46, attack: 0.002, curve: 3.4 },
-      { wave: 'sine', from: 1860, to: 3720, seconds: 0.1, at: 0.01, gain: 0.13, attack: 0.002, curve: 5 },
+      // E and B, rising an octave each — the fifth and the ninth, which is the brightest pair the
+      // natural minor has and the only cue in the game built on two notes at once.
+      { wave: 'sine', from: inKey(25), to: inKey(32), seconds: 0.13, gain: 0.55, attack: 0.002, curve: 4 },
+      { wave: 'sine', from: inKey(29), to: inKey(36), seconds: 0.13, at: 0.02, gain: 0.26, attack: 0.004, curve: 4.5 },
+      { wave: 'tri', from: inKey(18), to: inKey(25), seconds: 0.15, gain: 0.34, attack: 0.002, curve: 4 },
+      { wave: 'sine', from: inKey(11), to: inKey(18), seconds: 0.17, gain: 0.46, attack: 0.002, curve: 3.4 },
+      { wave: 'sine', from: inKey(36), to: inKey(43), seconds: 0.1, at: 0.01, gain: 0.13, attack: 0.002, curve: 5 },
       { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.16, attack: 0.001, curve: 6, lowFrom: 12000, highFrom: 3200, highTo: 7000 },
     ],
   },
@@ -515,10 +650,12 @@ export const CUES: Record<CueKind, CueRow> = {
     gain: 0.264,
     glue: 0.06,
     layers: [
-      { wave: 'sine', from: 700, to: 1050, seconds: 0.14, gain: 0.55, attack: 0.003, curve: 4 },
-      { wave: 'tri', from: 350, to: 525, seconds: 0.16, gain: 0.3, attack: 0.003, curve: 4 },
-      { wave: 'sine', from: 175, to: 262, seconds: 0.2, gain: 0.44, attack: 0.003, curve: 3.2 },
-      { wave: 'tri', from: 1400, to: 2100, seconds: 0.1, gain: 0.16, attack: 0.003, curve: 5 },
+      // F → C, a rising fifth, in four octaves at once. It is the only cue whose interval is the
+      // same in every layer, which is what makes *did that work* read as one clean answer.
+      { wave: 'sine', from: inKey(26), to: inKey(30), seconds: 0.14, gain: 0.55, attack: 0.003, curve: 4 },
+      { wave: 'tri', from: inKey(19), to: inKey(23), seconds: 0.16, gain: 0.3, attack: 0.003, curve: 4 },
+      { wave: 'sine', from: inKey(12), to: inKey(16), seconds: 0.2, gain: 0.44, attack: 0.003, curve: 3.2 },
+      { wave: 'tri', from: inKey(33), to: inKey(37), seconds: 0.1, gain: 0.16, attack: 0.003, curve: 5 },
       { wave: 'noise', from: 0, to: 0, seconds: 0.06, gain: 0.14, attack: 0.001, curve: 6, lowFrom: 12000, highFrom: 3600, highTo: 7000 },
     ],
   },
