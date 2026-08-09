@@ -99,6 +99,7 @@ it is pushed — guards stop reaching their subject without ever going red, and 
 | **the title and the level are two pieces; a layer's loop may be any whole multiple of the shortest** | [0095](decisions/0095-the-level-has-its-own-music.md) |
 | **everything that shoots at the player is on a sixteenth grid, phase quantised at spawn** | [0096](decisions/0096-the-enemies-play-along.md) |
 | **a wave plays a FIGURE — each member on its own slot — and there are three enemy bullets** | [0098](decisions/0098-a-wave-plays-a-figure.md) |
+| **every pitched cue glides between two notes of the key, and the key lives in `cues.ts`** | [0099](decisions/0099-the-cues-are-in-the-key.md) |
 | ~~the near sky is pushed back on every cheap axis~~ — **amended: it went out** | [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) → [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the sky is three layers, the fastest is streaks, and a tube is a side of the hull** | [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
@@ -239,7 +240,7 @@ report, and read [0027](decisions/0027-measure-the-picture-not-the-model.md) fir
 |---|---|
 | the sky lost its layers and crawls; the missiles fire from the centre | ✅ [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | the enemies fire in unison and every bullet is the same | ✅ [0098](decisions/0098-a-wave-plays-a-figure.md) |
-| the effects do not mesh with the music | |
+| the effects do not mesh with the music | ✅ [0099](decisions/0099-the-cues-are-in-the-key.md) |
 | the title's metronome, and a level's music that goes nowhere | |
 
 ⚠️ **THE THIRD PLAY-TEST IS THE ONE ABOVE THAT AND IT OUTRANKS EVERYTHING BELOW IT** —

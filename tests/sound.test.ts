@@ -4,7 +4,17 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
-import { CUES, CUE_KINDS, MAX_CUE_SECONDS, TWIN_KINDS, type CueKind } from '../src/content/cues.ts';
+import {
+  CUES,
+  CUE_KINDS,
+  MAX_CUE_SECONDS,
+  MUSIC_ROOT,
+  SCALE,
+  TWIN_KINDS,
+  inKey,
+  type CueLayer,
+  type CueKind,
+} from '../src/content/cues.ts';
 import { DEFAULT_SOUND, SOUNDS, SOUND_KINDS } from '../src/content/sound.ts';
 import {
   MAX_CUE_SAMPLES,
@@ -14,6 +24,7 @@ import {
   cueSeconds,
   makeSpeaker,
   sampleCue,
+  sampleLayerInto,
   type AudioOut,
 } from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
@@ -136,6 +147,210 @@ describe('the cue table', () => {
         expect(layer.q ?? 1, `${kind} layer ${i} resonates hard enough to ring a pitch of its own`).toBeLessThan(4);
       }
     }
+  });
+
+  describe('0099 — the cues are in the key', () => {
+    /*
+      `docs/decisions/0099-the-cues-are-in-the-key.md`. Reported from play: *"the primary and second
+      fire, enemy fire and explosion noises for bomb, enemy and player death don't sync into the music
+      properly, they're all close to on beat, but the sounds just don't mesh at all."*
+
+      ⚠️ **"CLOSE TO ON BEAT" IS A PASS ON THE TIMING WORK.** 0093, 0094 and 0096 put every cadence in
+      the game on a sixteenth grid; the report says the timing arrived and something else did not.
+      What had never been tuned is HARMONY — the music is A minor and the cues were in no key at all:
+      the pulse fell to 52 Hz, a kill to 62, the blast to 58, a death to 48. Four notes, none in the
+      scale, arriving on the beat over a drone sounding A.
+    */
+
+    /** Every frequency the natural minor allows, across the whole audible range, from the root. */
+    const allowed = (): number[] => {
+      const out: number[] = [];
+      for (let octave = -3; octave <= 8; octave++) {
+        for (const semitone of SCALE) out.push(MUSIC_ROOT * Math.pow(2, octave + semitone / 12));
+      }
+      return out;
+    };
+
+    /** How far `hz` is from the nearest scale tone, in cents. */
+    const centsOff = (hz: number): number =>
+      Math.min(...allowed().map((tone) => Math.abs(1200 * Math.log2(hz / tone))));
+
+    /** Every pitched layer in the table, with the interval its glide spans. */
+    const pitched = (): { name: string; layer: CueLayer; to: number; semitones: number }[] => {
+      const out: { name: string; layer: CueLayer; to: number; semitones: number }[] = [];
+      for (const kind of CUE_KINDS) {
+        for (const [i, layer] of CUES[kind].layers.entries()) {
+          if (layer.wave === 'noise' || layer.from === 0) continue;
+          const to = layer.to || layer.from;
+          out.push({ name: `${kind} layer ${i}`, layer, to, semitones: 12 * Math.log2(to / layer.from) });
+        }
+      }
+      return out;
+    };
+
+    it('THE REPORTED ONE: every pitched cue glides between two notes of the key', () => {
+      /*
+        ⚠️ **BOTH ENDS, AND NOT THE NOTE IN THE MIDDLE — BECAUSE NOBODY CAN SAY WHAT THAT IS.** The
+        first attempt at this decision tried to tune the pitch a listener actually names, and two
+        defensible models of it disagreed by **four semitones** on the death cue's own body: the
+        energy-weighted mean of the instantaneous frequency said 131 Hz, and a Goertzel over the whole
+        rendered layer peaked at 165. A fast chirp does not have a pitch in the sense the question
+        assumes. What both models agree on is that whatever it is, it lies between the endpoints — so
+        making the endpoints notes of the scale is the claim that cannot be wrong either way.
+
+        ⚠️ **It is over the VALUES rather than over the helper**, which is the difference between a
+        guard and a tautology: `inKey` producing scale tones would be arithmetic agreeing with
+        arithmetic (`docs/decisions/0027-measure-the-picture-not-the-model.md`). This walks the two
+        numbers each layer actually carries, so a raw `190` typed straight into the table fails whether
+        it came through the helper or not — and every one of these WAS a raw number until this
+        decision.
+
+        ⚠️ **`noise` is exempt and the field says why.** For noise, `from` is a sample-and-hold rate
+        rather than a pitch — one field, two meanings, stated on `CueLayer` — and everything that
+        explodes uses white, where it is zero. Demanding a scale tone there would be asserting a
+        musical property of a number that is not a pitch.
+      */
+      const offenders: string[] = [];
+      const all = pitched();
+      for (const { name, layer, to } of all) {
+        for (const [end, hz] of [
+          ['from', layer.from],
+          ['to', to],
+        ] as const) {
+          const off = centsOff(hz);
+          if (off > 1) offenders.push(`${name} ${end} = ${hz.toFixed(1)}Hz, ${off.toFixed(0)} cents off the key`);
+        }
+      }
+      expect(all.length, 'no pitched layers were examined, so this measured nothing').toBeGreaterThan(20);
+      expect(offenders, `${offenders.length} of ${all.length} pitched layers glide off the key`).toEqual([]);
+    });
+
+    it('and every glide is therefore a whole number of semitones, which none of them used to be', () => {
+      /*
+        ⚠️ **A CONSEQUENCE RATHER THAN A SECOND RULE, and it is worth stating anyway.** Any two scale
+        tones are a whole number of semitones apart, so this follows from the assertion above — what
+        it adds is the failure message. The old table's did not: a death fell 21.9 semitones and a kill
+        19.4, so two explosions half a second apart were two unrelated slides rather than the same
+        gesture at two pitches.
+
+        ⚠️ **Held to a hundredth of a semitone**, which is far tighter than an ear and is right here:
+        it is not a claim about audibility, it is a claim that the number was chosen as an interval
+        rather than arrived at.
+      */
+      for (const { name, semitones } of pitched()) {
+        expect(
+          Math.abs(semitones - Math.round(semitones)),
+          `${name} glides ${semitones.toFixed(2)} semitones, which is not an interval`,
+        ).toBeLessThan(0.01);
+      }
+    });
+
+    it('and the scale is the natural MINOR, so nothing a cue sounds can be wrong over the drone', () => {
+      /*
+        ⚠️ **The chromatic set would make this guard mean nothing**, which is the failure it is worth
+        stating: twelve notes to the octave is *any note*, and any note is what an arbitrary Hz value
+        already was. Seven is what makes *in the key* a constraint.
+      */
+      expect([...SCALE], 'the scale is no longer the natural minor').toEqual([0, 2, 3, 5, 7, 8, 10]);
+      expect(inKey(0), 'the root is not the root').toBeCloseTo(MUSIC_ROOT, 9);
+      expect(inKey(SCALE.length), 'seven degrees is not an octave').toBeCloseTo(MUSIC_ROOT * 2, 9);
+      expect(inKey(-SCALE.length), 'seven degrees down is not an octave down').toBeCloseTo(MUSIC_ROOT / 2, 9);
+    });
+
+    it('THE SAMPLES: what a layer puts in the room lies inside the interval its row names', () => {
+      /*
+        ⚠️ **THE ASSERTION THAT IS NOT ABOUT THE TABLE**, and it is deliberately modest, because the
+        modest version is the one the samples can carry. Everything above reads numbers off rows;
+        this renders a layer and asks where its energy actually is. A synthesiser that ignored `to`,
+        a sweep that overshot, or a resonant filter ringing a pitch of its own would pass every
+        assertion above and put something else in the room.
+
+        ⚠️ **ITS FIRST VERSION ASKED FOR THE NOTE AND COULD NOT BE ANSWERED**, which is how this
+        decision found out that a chirp has no single pitch — see
+        `docs/decisions/0099-the-cues-are-in-the-key.md`. What is checked now is the claim that
+        survived: the sound lives between the two notes, and nowhere else.
+
+        ⚠️ **One LAYER on its own, not the whole cue.** A death is three pitched layers at three
+        different notes plus three of noise; a spectrum of the sum answers a question about the mix
+        rather than about the synthesiser. `sampleLayerInto` is exported, so a layer can be rendered
+        alone.
+
+        ⚠️ **The DEATH's body, because it is the longest glide in the game** — 1.2 seconds over
+        twenty-two semitones — so it is the layer with the most room to be wrong in.
+      */
+      const subject = CUES.death.layers[3]!;
+      const buffer = new Float32Array(Math.round(subject.seconds * SAMPLE_RATE));
+      sampleLayerInto(subject, SAMPLE_RATE, makeRng('pitch').stream('death'), buffer, 0, false);
+
+      /** Energy at `hz`, by the same Goertzel `tests/spectrum.ts` uses. */
+      const at = (hz: number): number => {
+        const c = 2 * Math.cos((2 * Math.PI * hz) / SAMPLE_RATE);
+        let s1 = 0;
+        let s2 = 0;
+        for (let i = 0; i < buffer.length; i++) {
+          const s0 = buffer[i]! + c * s1 - s2;
+          s2 = s1;
+          s1 = s0;
+        }
+        return Math.sqrt(Math.abs(s1 * s1 + s2 * s2 - c * s1 * s2)) / buffer.length;
+      };
+
+      const low = Math.min(subject.from, subject.to);
+      const high = Math.max(subject.from, subject.to);
+      /*
+        Swept across four octaves in quarter tones, so the loudest bin is found rather than assumed.
+        A quarter tone is finer than the semitone the claim is made in, and four octaves is wider than
+        the interval by an octave at each end — enough room for an overshoot to show.
+      */
+      let loudest = -1;
+      let peak = 0;
+      for (let step = -24; step <= 72; step++) {
+        const hz = low * Math.pow(2, step / 24);
+        const energy = at(hz);
+        if (energy > loudest) {
+          loudest = energy;
+          peak = hz;
+        }
+      }
+      expect(loudest, 'the layer baked to silence, so this measured nothing').toBeGreaterThan(0);
+      /*
+        A semitone of tolerance at each end, which is the resolution a Goertzel over a chirp has: the
+        energy at the extremes is smeared by the sweep itself, so the peak can sit a fraction outside
+        the endpoints without the sweep having gone anywhere it should not.
+      */
+      const margin = Math.pow(2, 1 / 12);
+      expect(
+        peak,
+        `the layer is loudest at ${peak.toFixed(1)}Hz, below the ${low.toFixed(1)}Hz end of the interval its row names`,
+      ).toBeGreaterThan(low / margin);
+      expect(
+        peak,
+        `the layer is loudest at ${peak.toFixed(1)}Hz, above the ${high.toFixed(1)}Hz end of the interval its row names`,
+      ).toBeLessThan(high * margin);
+      /*
+        ⚠️ **AND IT SOUNDS BOTH NOTES, WHICH THE BOUNDS ABOVE DO NOT SAY** — a probe reported STILL
+        GREEN before this was here. A synthesiser that ignored `to` entirely produces a held tone at
+        `from`, and `from` is *inside* the interval, so *the peak lies between the endpoints* was
+        satisfied by a sound that never went anywhere. What separates a glide from a held note is
+        that there is energy at the far end too.
+
+        ⚠️ **A twenty-fifth, and the two ends are not equal.** A decaying sweep spends the same time
+        per octave but arrives at its destination quiet — a curve of 1.9 leaves the far end at about
+        a seventh of the near end's amplitude — so the floor is set under that rather than at parity.
+        Measured, the far end is around a third of the peak; a held tone leaves spectral leakage,
+        which is three orders of magnitude below it.
+      */
+      expect(
+        at(low) / loudest,
+        `the layer has no energy at the ${low.toFixed(1)}Hz end of its own glide — it is a held note, not a fall`,
+      ).toBeGreaterThan(1 / 25);
+      expect(
+        at(high) / loudest,
+        `the layer has no energy at the ${high.toFixed(1)}Hz end of its own glide`,
+      ).toBeGreaterThan(1 / 25);
+      // And both ends of that interval are notes in the key, which is the fact the decision is about.
+      expect(centsOff(low) + centsOff(high), 'the interval the death glides across is not in the key').toBeLessThan(2);
+    });
   });
 
   it('THE REPORTED ONE: everything that explodes has a body, and not just a hiss', () => {

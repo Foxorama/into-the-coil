@@ -97,9 +97,13 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: everything that explodes has a body, and not just a hiss',
     edit: {
       path: 'src/content/cues.ts',
+      // ⚠️ Re-anchored by docs/decisions/0099-the-cues-are-in-the-key.md, which put every pitched
+      // endpoint on a scale degree. 0089's claim is untouched — what a boom is made of is a low sine
+      // and not a filtered saw — and the replacement stays deliberately OFF the key, because a hand
+      // reaching for a saw here would not be thinking about the key either.
       find:
-        "      { wave: 'sine', from: 180, to: 58, seconds: 0.85, gain: 1.3, attack: 0.001, curve: 2.1, drive: 0.28 },\n" +
-        "      { wave: 'sine', from: 90, to: 29, seconds: 0.95, gain: 0.75, attack: 0.02, curve: 1.8 },",
+        "      { wave: 'sine', from: inKey(12), to: inKey(0), seconds: 0.85, gain: 1.3, attack: 0.001, curve: 2.1, drive: 0.28 },\n" +
+        "      { wave: 'sine', from: inKey(5), to: inKey(-7), seconds: 0.95, gain: 0.75, attack: 0.02, curve: 1.8 },",
       replace: "      { wave: 'saw', from: 900, to: 580, seconds: 0.85, gain: 1.3, attack: 0.001, curve: 2.1, drive: 0.28 },",
     },
   },

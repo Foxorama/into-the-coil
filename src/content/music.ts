@@ -208,8 +208,18 @@ export const BOSS_APPROACH_UNITS = 430;
  *
  * A low A, minor — the notes below are the natural minor's, which are the ones that cannot sound
  * wrong over a drone in the same key.
+ *
+ * ⚠️ **IT IS DECLARED IN `src/content/cues.ts` NOW AND RE-EXPORTED HERE** —
+ * `docs/decisions/0099-the-cues-are-in-the-key.md`. It lived here and was read by nothing else,
+ * which is exactly how the cues came to be tuned to nothing at all: the import arrow runs
+ * `cues → music`, so the file that synthesises the effects **could not see the key** even in
+ * principle. Moving it down the ladder is what makes *the whole game is in A minor* a fact the
+ * compiler can carry rather than a sentence in a comment.
+ *
+ * ⚠️ **Re-exported rather than restated**, so `MUSIC_ROOT` is one description and every existing
+ * import still resolves — `tests/one-description.test.ts`'s own subject.
  */
-export const MUSIC_ROOT = 55;
+export { MUSIC_ROOT } from './cues.ts';
 
 /**
  * How many fixed sim steps there are to a beat.
