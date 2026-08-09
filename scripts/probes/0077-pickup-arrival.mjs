@@ -86,12 +86,17 @@ export const PROBES = [
       the geometry leaves the old *centre, then minus, then plus* order in place, so a fully-upgraded
       ship fires one missile down the nose and one off the left wing — off-centre, permanently, and a
       worse picture than the defect being fixed. Nothing about the COUNT is wrong in this state.
+
+      ⚠️ RE-ANCHORED BY docs/decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md, WHICH
+      TOOK THE CENTRELINE AWAY ENTIRELY. 0077's claim was *a fully-upgraded ship is symmetric* and it
+      still stands word for word; what moved underneath it is where a one-tube ship fires from, so the
+      break is written against the new expression and asserts the same thing it always did.
     */
     broke: 'the tube positions left in their old order, so a two-tube ship fires off-centre',
-    guard: 'puts one tube on the centreline and two on the wings',
+    guard: '0097 — puts the first tube on the across-minus side and the second on the across-plus side',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const side = w.weapon.launchers === 1 ? 0 : i === 0 ? -1 : 1;',
+      find: '    const side = i === 0 ? -1 : 1;',
       replace: '    const side = i === 0 ? 0 : i === 1 ? -1 : 1;',
     },
   },

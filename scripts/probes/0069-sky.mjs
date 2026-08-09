@@ -18,8 +18,8 @@ export const PROBES = [
     // so the break restores the near layer alone, which is exactly what it always meant.
     edit: {
       path: 'src/render/bake.ts',
-      find: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.2 };',
-      replace: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 1.2 };',
+      find: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.11 };',
+      replace: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 1.2, skyRush: 0.11 };',
     },
   },
   {
@@ -35,7 +35,7 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: no star is drawn as big as the smallest thing that can kill the player',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  const biggest = (size / SPRITE_EXTENT[kind]) * SKY_MAX_STAR_UNITS[kind];',
+      find: '  const biggest = perUnit * SKY_MAX_STAR_UNITS[kind];',
       replace: "  const biggest = size * (kind === 'skyNear' ? 0.012 : 0.006);",
     },
   },
@@ -48,8 +48,8 @@ export const PROBES = [
     guard: 'and the near layer is the quiet one, on every count that buys attention',
     edit: {
       path: 'src/render/bake.ts',
-      find: 'const SKY_ALPHA = { skyFar: 1, skyNear: 0.18 };',
-      replace: 'const SKY_ALPHA = { skyFar: 1, skyNear: 1 };',
+      find: 'const SKY_ALPHA = { skyFar: 1, skyNear: 0.34, skyRush: 0.42 };',
+      replace: 'const SKY_ALPHA = { skyFar: 1, skyNear: 1, skyRush: 0.42 };',
     },
   },
 ];

@@ -31,14 +31,14 @@ import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import { type Entity, makeEntity, reset, stepEntities } from '../src/sim/entity.ts';
 import { Pool } from '../src/sim/pool.ts';
 import { paintScene } from '../src/render/scene.ts';
-import { bakeSize, skyField } from '../src/render/bake.ts';
+import { bakeSize, skyField, type SkyKind } from '../src/render/bake.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { sprite } from './bodies.ts';
 import { CAPACITY, SKY } from '../src/app/mount.ts';
 import { BURST } from '../src/content/debris.ts';
 import { MAX_SHIELDS } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';
-import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
@@ -197,10 +197,17 @@ describe('the sky goes past twice as fast as it shipped, and the parallax surviv
   const FASTER = (4 / 3) * (3 / 2);
 
   it('moves both layers twice as fast as they shipped, which is what was asked for', () => {
-    for (let i = 0; i < SKY.length; i++) {
+    /*
+      ⚠️ **The two 0065 shipped, and there is a third layer in front of them now** —
+      `docs/decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md`. The loop counts `SHIPPED`
+      rather than `SKY` on purpose: this test is about what happened to the layers 0078 and 0088 were
+      reports about, and a layer that did not exist then cannot be `FASTER` times anything.
+    */
+    for (let i = 0; i < SHIPPED.length; i++) {
       const want = SHIPPED[i]! * FASTER;
       expect(SKY[i]!.depth, `sky layer ${i} is not ${FASTER}× what it shipped at`).toBeCloseTo(want, 6);
     }
+    expect(SKY.length, 'a layer was added or removed without this file being told').toBe(SHIPPED.length + 1);
   });
 
   it('scales BOTH by the same factor, so the depth cue is not what paid for the speed', () => {
@@ -235,10 +242,34 @@ describe('the sky goes past twice as fast as it shipped, and the parallax surviv
       duplicate of it.** That one holds the ink; this one holds the speed; and the sentence above is
       the only place that says they are one trade. Loosen this without that going with it and the
       argument is gone while both tests stay green.
+
+      ── AND THE CEILING IS NOW TWO CEILINGS, BECAUSE ONE LAYER IS NOT MADE OF DOTS ────────────────
+
+      ⚠️ **`docs/decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md`.** Every previous
+      answer to *the sky is too slow* moved a depth and ran into the same wall: a DOT that moves fast
+      competes with a bullet, so the speed had to be bought back with alpha and size until 0088 had
+      dimmed the only fast layer out of existence — which is the report this decision answers.
+
+      ⚠️ **A streak breaks the trade, so a streak is what may go past two thirds.** It says *fast* by
+      its shape rather than by its rate, and at 0.109 world units it is a fifth of the smallest
+      bullet's thickness — the thing a dot at that depth could never be. Held as *whichever layers
+      are above the old ceiling are exactly the streak layers*, which is a rule rather than an
+      exception list: the day a dot layer is pushed past 2/3, this goes red.
     */
+    const RUSH = SKY.findIndex((layer) => layer.sprite === SPRITE.skyRush);
     for (let i = 0; i < SKY.length; i++) {
-      expect(SKY[i]!.depth, `sky layer ${i} moves with the world — it is not a background any more`).toBeLessThan(2 / 3);
+      expect(SKY[i]!.depth, `sky layer ${i} moves with the world — it is not a background any more`).toBeLessThan(1);
+      if (i === RUSH) continue;
+      expect(
+        SKY[i]!.depth,
+        `sky layer ${i} is made of dots and moves past two thirds of the world, which is what 0069 was about`,
+      ).toBeLessThan(2 / 3);
     }
+    expect(RUSH, 'the sky has no streak layer, so nothing has bought the loosened ceiling').toBeGreaterThanOrEqual(0);
+    expect(
+      SKY[RUSH]!.depth,
+      'the streak layer is not the fastest one, so the layer that reads as speed is not the one moving',
+    ).toBe(Math.max(...SKY.map((layer) => layer.depth)));
   });
 });
 
@@ -361,14 +392,36 @@ describe('the sky costs a fixed number of calls, whatever the camera is doing', 
    * bake loop will use.
    */
   describe('and it stays behind the game', () => {
-    /** The two tiles at the resolution they bake at on an ordinary screen. */
-    const FAR = skyField('skyFar', bakeSize(SPRITE_EXTENT.skyFar, 6));
-    const NEAR = skyField('skyNear', bakeSize(SPRITE_EXTENT.skyNear, 6));
+    /** Every tile, back to front, at the resolution it bakes at on an ordinary screen. */
+    const KINDS: readonly SkyKind[] = ['skyFar', 'skyNear', 'skyRush'];
+    const FIELDS = KINDS.map((kind) => skyField(kind, bakeSize(SPRITE_EXTENT[kind], 6)));
+    const FAR = FIELDS[0]!;
+    const NEAR = FIELDS[1]!;
+    const RUSH = FIELDS[2]!;
+
+    /** Tile pixels per world unit, which every tile shares because every tile is `ACROSS_SPAN` wide. */
+    const perUnit = (kind: SkyKind): number => bakeSize(SPRITE_EXTENT[kind], 6) / SPRITE_EXTENT[kind];
 
     /** A star's radius in WORLD units, which is the only unit a bullet can be compared in. */
-    const inUnits = (kind: 'skyFar' | 'skyNear', field: { stars: { r: number }[] }): number[] => {
-      const perUnit = bakeSize(SPRITE_EXTENT[kind], 6) / SPRITE_EXTENT[kind];
-      return field.stars.map((star) => star.r / perUnit);
+    const inUnits = (kind: SkyKind, field: { stars: { r: number }[] }): number[] =>
+      field.stars.map((star) => star.r / perUnit(kind));
+
+    /**
+     * How much of the screen a layer paints, in world units squared, alpha counted.
+     *
+     * ⚠️ **A streak is a capped line and its area is not `πr²`** — 0097. The old form of this
+     * helper summed discs, and against a layer of lines it would have reported about a fiftieth of
+     * what is on the screen, which is a guard measuring a quantity the picture does not have.
+     */
+    const ink = (kind: SkyKind, field: { alpha: number; stars: { r: number; len: number }[] }): number => {
+      const p = perUnit(kind);
+      return (
+        field.alpha *
+        field.stars.reduce((total, star) => {
+          const r = star.r / p;
+          return total + Math.PI * r * r + 2 * r * (star.len / p);
+        }, 0)
+      );
     };
 
     it('THE REPORTED ONE: no star is drawn as big as the smallest thing that can kill the player', () => {
@@ -379,14 +432,69 @@ describe('the sky costs a fixed number of calls, whatever the camera is doing', 
         to reach 1.2 world units against a pulse's 0.9.
       */
       const smallestThreat = Math.min(SHOTS.pulse.radius, SHOTS.spit.radius);
-      for (const kind of ['skyFar', 'skyNear'] as const) {
-        const radii = inUnits(kind, kind === 'skyFar' ? FAR : NEAR);
-        const biggest = Math.max(...radii);
+      for (let i = 0; i < KINDS.length; i++) {
+        const kind = KINDS[i]!;
+        const biggest = Math.max(...inUnits(kind, FIELDS[i]!));
         expect(
           biggest,
           `a ${kind} star is ${biggest.toFixed(2)} units across where the smallest bullet is ${smallestThreat}`,
         ).toBeLessThan(smallestThreat);
       }
+    });
+
+    it('0097 — AND THE NEARER A LAYER IS, THE THINNER ITS MARKS ARE, WHICH IS WHAT BUYS THE SPEED', () => {
+      /*
+        ⚠️ **The ladder rather than one ceiling, and it is the guard 0088's single number became.**
+        `docs/decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md`: a layer is allowed to
+        move faster in proportion to how little of the eye one of its marks can take, and thickness
+        is the property that decides whether a mark can be mistaken for a bullet. 0.59, 0.28, 0.11 —
+        back to front, strictly down.
+
+        ⚠️ **It is the one relationship a hand cannot tune its way out of.** Alpha, count and length
+        are all judged by eye and will move again; *the fastest layer draws the thinnest mark* is
+        true of every sky that is a background, whatever those three settle at.
+
+        ⚠️ **THE MEAN AND NOT THE MAX, AND A PROBE IS WHY.** Written against the largest sample in
+        each field this reported WRONG TEST for the break it exists to catch: a maximum over fifteen
+        streaks is systematically further below its own ceiling than a maximum over ninety dots, so
+        the streak layer could be given the middle layer's ceiling outright and still measure
+        thinner. The mean converges on three quarters of the ceiling at any count, which is the same
+        statement without the sampling bias — and it is still read off what will be DRAWN rather than
+        off the constant, which is 0069's rule and the reason this helper exists at all.
+      */
+      const meanThickness = (kind: SkyKind, field: { stars: { r: number }[] }): number => {
+        const radii = inUnits(kind, field);
+        return radii.reduce((sum, r) => sum + r, 0) / radii.length;
+      };
+      for (let i = 1; i < KINDS.length; i++) {
+        const front = meanThickness(KINDS[i]!, FIELDS[i]!);
+        const behind = meanThickness(KINDS[i - 1]!, FIELDS[i - 1]!);
+        expect(
+          front,
+          `${KINDS[i]} draws marks averaging ${front.toFixed(3)} units thick in front of ${KINDS[i - 1]}'s ${behind.toFixed(3)} — the faster layer is the fatter one`,
+        ).toBeLessThan(behind);
+      }
+    });
+
+    it('0097 — and a streak stays a streak, because a short one is a fast dot', () => {
+      /*
+        ⚠️ **THE BREAK THIS CATCHES IS THE ONE THE THICKNESS LADDER CANNOT SEE.** A `skyRush` mark
+        drawn at `len: 0` passes every other assertion in this file — it is the thinnest thing on the
+        screen, it is under a bullet, its ink goes DOWN — and it is a field of dots at the fastest
+        depth in the game, which is exactly `docs/decisions/0069-the-sky-is-behind-the-game.md`'s
+        subject arriving through the door 0097 opened.
+
+        ⚠️ **Twenty times the drawn WIDTH, not the half-thickness.** What the eye judges is the
+        mark it can see, and the mark is `2r` across.
+      */
+      const p = perUnit('skyRush');
+      const width = Math.max(...RUSH.stars.map((s) => s.r)) * 2;
+      const shortest = Math.min(...RUSH.stars.map((s) => s.len));
+      expect(shortest, 'the streak layer draws dots, so nothing on the screen says speed').toBeGreaterThan(0);
+      expect(
+        shortest / width,
+        `the shortest streak is ${(shortest / p).toFixed(1)} units long and ${(width / p).toFixed(2)} wide`,
+      ).toBeGreaterThan(20);
     });
 
     it('and the near layer is the quiet one, on every count that buys attention', () => {
@@ -441,25 +549,84 @@ describe('the sky costs a fixed number of calls, whatever the camera is doing', 
         | the size alone put back | 15.1% |
 
         A twenty-fifth is under the first of those and twice the current value.
+
+        ── AND A TWENTY-FIFTH WAS A NUMBER ABOUT ONE BUILD, WHICH THE NEXT PLAY-TEST SAID SO ────────
+
+        ⚠️ **`docs/decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md`.** Reported against
+        the build this bound was written for: *"there's only one starfield background."* A guard
+        calibrated so that *the alpha put back* fails is a guard that also refuses *the layer is
+        visible at all*, and the two are the same edit at different sizes — which is 0027's own gap
+        arriving in a test rather than in a constant.
+
+        ⚠️ **So the bound is now per LEVER rather than one number over all of them**, and each of the
+        four is held where a break of it shows:
+
+        | lever | what holds it |
+        |---|---|
+        | thickness | `THE NEARER A LAYER IS, THE THINNER ITS MARKS ARE`, above |
+        | shape | `a streak stays a streak`, above |
+        | alpha | the back layer is the only solid one — below |
+        | count | a third of the bed's ink, below |
+
+        ⚠️ **A QUARTER, and it is chosen from what it must catch** on 0088's own principle — a bound
+        has to sit below the smallest break it must catch, and nowhere else.
+
+        | | ink, as a share of the bed |
+        |---|---|
+        | `skyNear` now | **8.4%** |
+        | `skyRush` now | **17.7%** |
+        | the near layer's dots back at 0.55 units — 0088's break | 32.5% |
+        | the near layer's dots back at the far layer's size — 0080's break | 38.6% |
+        | the streak layer at ninety marks instead of fifteen | 88% |
+
+        ⚠️ **The streak layer is deliberately the closest thing to this bound**, at about seven tenths
+        of it, and that is the budget the fast layer was given rather than an accident: a hairline
+        that nobody can see is 0088's mistake and 0097 is the report about it.
       */
-      const ink = (field: typeof NEAR): number =>
-        field.alpha * field.stars.reduce((total, star) => total + Math.PI * star.r * star.r, 0);
-      const share = ink(NEAR) / ink(FAR);
       expect(NEAR.alpha, 'the near layer is drawn as solidly as the far one').toBeLessThan(FAR.alpha);
-      expect(
-        share,
-        `the near layer puts ${(share * 100).toFixed(1)}% of the far layer's ink on the screen, and it is the layer that MOVES`,
-      ).toBeLessThan(1 / 25);
       /*
-        Compared in tile pixels directly, because both tiles are `ACROSS_SPAN` units across and are
-        baked at the same resolution above — so a pixel means the same thing in both, and converting
-        to world units would be a divide by one number written twice.
+        ⚠️ **THE BED IS THE ONLY LAYER DRAWN SOLID.** Everything in front of the back layer is a veil
+        over it — that is what a sky with depth in it IS, and it is the statement `SKY_ALPHA`'s two
+        numbers are an instance of. Held as a half rather than as *below the far layer*, because
+        `0.99` would pass that and is not a veil.
       */
-      const biggest = (field: typeof NEAR): number => Math.max(...field.stars.map((s) => s.r));
-      expect(
-        biggest(NEAR),
-        'the near layer draws dots as big as the far one, so the layer that MOVES is the loud one',
-      ).toBeLessThan(biggest(FAR));
+      for (let i = 1; i < KINDS.length; i++) {
+        expect(
+          FIELDS[i]!.alpha,
+          `${KINDS[i]} is drawn at ${FIELDS[i]!.alpha} of solid, in front of a bed drawn at ${FAR.alpha}`,
+        ).toBeLessThan(FAR.alpha / 2);
+      }
+      const bed = ink('skyFar', FAR);
+      for (let i = 1; i < KINDS.length; i++) {
+        const share = ink(KINDS[i]!, FIELDS[i]!) / bed;
+        expect(
+          share,
+          `${KINDS[i]} puts ${(share * 100).toFixed(1)}% of the back layer's ink on the screen, and it is a layer that MOVES`,
+        ).toBeLessThan(1 / 4);
+        /*
+          ⚠️ **AND A FLOOR, WHICH IS THE HALF NOTHING HERE HAS EVER HELD** —
+          `docs/decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md`. Every guard in this
+          block pushes one way, so three passes of *push the near layer back* each passed and the
+          fourth report was *"there's only one starfield background"* — a layer can be dimmed out of
+          existence with the whole suite green, which is the only failure mode a one-sided bound has.
+
+          ⚠️ **A SIXTEENTH, AND IT WAS A THIRTY-SECOND UNTIL A PROBE REPORTED STILL GREEN.** A floor
+          obeys the same rule as a ceiling — it sits above the smallest single-lever break it must
+          catch — and the smallest one here is not the build that was reported. 0088's near layer was
+          dimmed AND shrunk; either lever alone lands at about 4.4%, and a thirty-second is 3.1%.
+
+          | | ink, as a share of the bed |
+          |---|---|
+          | `skyNear` now | **8.4%** |
+          | its alpha alone put back to 0.18 | 4.5% |
+          | its size alone put back to 0.2 units | 4.3% |
+          | both, which is the build the report is about | **2.0%** |
+        */
+        expect(
+          share,
+          `${KINDS[i]} puts ${(share * 100).toFixed(1)}% of the back layer's ink on the screen, which is a layer nobody can see`,
+        ).toBeGreaterThan(1 / 16);
+      }
     });
   });
 });

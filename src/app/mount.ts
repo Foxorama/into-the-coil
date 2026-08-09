@@ -176,10 +176,30 @@ export const CAPACITY = {
  * builds it rather than restated"* — which it was not, and which is the shape of drift
  * `tests/one-description.test.ts` exists for. It went unnoticed because a depth cannot change a draw
  * count, so the two could disagree for ever and the budget guard would stay green.
+ *
+ * ── AND THE ANSWER TO THE THIRD REPORT IS NOT A FOURTH MULTIPLICATION ──────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md`.** Reported from play
+ * against the build 0088 landed in: *"background starfield has lost it's multiple layers, there's
+ * only one starfield background and the background or the screen moves too slow… it feels like a
+ * crawl because of the background visual moving soooo slowly."*
+ *
+ * ⚠️ **The two depths below are UNTOUCHED, and that is the finding rather than an omission.** 0088's
+ * dimming pass left the near layer at a pixel and a half of a fifth-solid dot, so the fastest thing
+ * the player could actually see was the FAR layer at 0.24 — about eight world units a second, twenty
+ * seconds to cross a 16:9 view. The sky did not slow down; the fast layer went out. Multiplying
+ * both again would answer a report about the wrong quantity, which is exactly what
+ * `docs/decisions/0027-measure-the-picture-not-the-model.md` says to check first.
+ *
+ * ⚠️ **`skyRush` is the third layer and it is where the speed now lives.** At 0.85 it crosses a
+ * 16:9 view in under six seconds where the far layer takes twenty, and it is drawn as STREAKS —
+ * `src/render/bake.ts` has why a line and not a dot is what breaks the trade every previous pass ran
+ * into. 0065's *strictly below 1* is untouched and is still the ceiling.
  */
 export const SKY = [
   { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.24 },
   { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.6 },
+  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 0.85 },
 ];
 
 /** What a style with no sky gets. Module-level, so switching styles allocates nothing. */

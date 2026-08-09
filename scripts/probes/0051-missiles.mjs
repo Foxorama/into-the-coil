@@ -61,10 +61,10 @@ export const PROBES = [
     // ⚠️ RE-AIMED BY 0077, which changed both the cap and the geometry. The break is the same one —
     // the sides collapsed to the centreline — and the guard it reddens now counts to two.
     broke: 'every launcher firing from the centreline, so a launcher upgrade is invisible',
-    guard: 'puts one tube on the centreline and two on the wings',
+    guard: '0097 — puts the first tube on the across-minus side and the second on the across-plus side',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const side = w.weapon.launchers === 1 ? 0 : i === 0 ? -1 : 1;',
+      find: '    const side = i === 0 ? -1 : 1;',
       replace: '    const side = 0;',
     },
   },
@@ -93,8 +93,8 @@ export const PROBES = [
     guard: 'pops the side tubes out clear of the hull, then straightens them',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      missile.velAcross = LAUNCHER_POP_SPEED * side;',
-      replace: '      missile.velAcross = 0;',
+      find: '    missile.velAcross = LAUNCHER_POP_SPEED * side;',
+      replace: '    missile.velAcross = 0;',
     },
   },
   {

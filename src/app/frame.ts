@@ -1630,10 +1630,10 @@ export function launchSpecial(w: World, kind: SpecialKind): void {
  * there must never be one* is about every auto-weapon rather than about the pulse in particular, and
  * this is the second one. What the player spends is the arsenal.
  *
- * ⚠️ **The launchers are POSITIONS, and the middle one is the ship's own.** One launcher fires from
- * the centreline; the second and third sit either side of it and their missiles pop out before they
- * straighten. That order — centre, minus, plus — is the order the ask gives, and it means a player
- * who has taken one launcher upgrade can see WHICH side it went on.
+ * ⚠️ **The launchers are POSITIONS, and NEITHER of them is the centreline** —
+ * `docs/decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md`. The first tube is the
+ * `across`-minus side of the hull and the second is the `across`-plus side, so the ladder reads
+ * off-balance, then balanced. Both pop out before they straighten.
  */
 function fireMissiles(w: World): void {
   /*
@@ -1654,35 +1654,44 @@ function fireMissiles(w: World): void {
     const missile = w.missiles.spawn();
     // A volley one tube short is dropped rather than grown — `src/sim/pool.ts` has the argument.
     if (missile === null) return;
-    // One cue for the volley, on the same terms the pulse gets one: three tubes are one launch.
+    // One cue for the volley, on the same terms the pulse gets one: both tubes are one launch.
     if (i === 0) w.onCue('missile');
     /*
-      WHERE THE TUBES ARE — 0077.
+      WHERE THE TUBES ARE — 0097, and it is the third answer to this question.
 
-      ⚠️ **One launcher is the centreline and two are the wings**, rather than *centre, then minus,
-      then plus*. The cap was three positions for a ship that started with one
-      (`docs/decisions/0051-a-missile-is-the-second-auto-weapon.md`); 0056 took the base tube away and
-      `src/content/pickups.ts` has now brought the cap down to match, so the old order would leave a
-      fully-upgraded ship firing off-centre.
+      ⚠️ **THE FIRST TUBE IS THE TOP OF THE HULL AND THE SECOND IS THE BOTTOM. Neither is the
+      centreline**, which is what 0051 gave the base ship and 0077 kept for a one-tube ladder.
+      Reported from play against the build 0077 landed in: *"the missiles now fire from the center of
+      the ship and it looks like only one missile."*
 
-      ⚠️ **A launcher upgrade is still VISIBLE**, which is 0051's actual claim and the thing
-      `tests/missiles.test.ts` holds: the volley goes from one missile down the nose to two off the
-      wings, which is a bigger change in the picture than adding a third to a pair.
+      ⚠️ **The off-balance single is the ASK rather than a cost the change carries** — *"yes it will
+      look off balance, that's the point when you only have one"* — and it is the whole of why the
+      old picture failed. A missile down the centreline is the same silhouette as the pulse stream
+      that never stops, so the second auto-weapon arrived invisible; one hung off the top edge of the
+      hull cannot be mistaken for anything else, and the second tube arriving underneath is then a
+      ship becoming symmetric rather than a ship gaining a third of something.
+
+      ⚠️ **`across`-minus is the TOP on both orientations**, and that is `src/render/surface.ts`
+      rather than an assumption here: in landscape `screenY` counts `across` downward from the top
+      edge, and in portrait the whole atlas is baked a quarter turn round, so the minus side is the
+      same side of the ship in both. The player's words are *top* and *bottom*; the code's are minus
+      and plus.
     */
-    const side = w.weapon.launchers === 1 ? 0 : i === 0 ? -1 : 1;
+    const side = i === 0 ? -1 : 1;
     reset(missile, w.ship.along + MUZZLE_ALONG, w.ship.across + LAUNCHER_ACROSS * side, row);
     missile.velAlong = row.speed + w.scrollPerStep;
     missile.damage = w.weapon.missileDamage;
     /*
       The pop, as a crossing that stops — the flanker's mechanism exactly, and `steerMissiles` is
-      where it ends. A centre missile never crosses, so its `velAcross` stays zero and it costs the
-      steering loop nothing at all: `src/sim/entity.ts` says why *not crossing* is a velocity rather
-      than a sentinel.
+      where it ends.
+
+      ⚠️ **EVERY tube pops now, because every tube is a side tube.** The `side !== 0` guard that used
+      to stand here was the centre launcher's exemption and it went with the centre launcher; a
+      condition kept for a case the union no longer has is a branch nothing can reach, which is worse
+      than no branch at all.
     */
-    if (side !== 0) {
-      missile.velAcross = LAUNCHER_POP_SPEED * side;
-      missile.steerAcross = w.ship.across + LAUNCHER_POP * side;
-    }
+    missile.velAcross = LAUNCHER_POP_SPEED * side;
+    missile.steerAcross = w.ship.across + LAUNCHER_POP * side;
   }
 }
 
