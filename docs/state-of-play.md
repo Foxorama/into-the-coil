@@ -97,6 +97,7 @@ it is pushed — guards stop reaching their subject without ever going red, and 
 | **a beat is a whole number of sim steps, and every cadence is a fraction of one — 150 BPM** | [0093](decisions/0093-the-gun-is-on-the-grid.md) |
 | **the sim has a clock; the guns fire on its grid and the music is moved to agree** | [0094](decisions/0094-in-time-is-not-in-phase.md) |
 | **the title and the level are two pieces; a layer's loop may be any whole multiple of the shortest** | [0095](decisions/0095-the-level-has-its-own-music.md) |
+| **everything that shoots at the player is on a sixteenth grid, phase quantised at spawn** | [0096](decisions/0096-the-enemies-play-along.md) |
 | **the near sky is pushed back on every cheap axis; the whole sky is twice 0065's rate** | [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
@@ -910,7 +911,7 @@ first carries it.
   | 2 | **150 BPM, and the gun on the musical grid** | ✅ [0093](decisions/0093-the-gun-is-on-the-grid.md) |
   | 3 | the music phase-locked to the sim clock | ✅ [0094](decisions/0094-in-time-is-not-in-phase.md) |
   | 4 | **the level's own music** — power ballad × Rez, title keeps the current piece | ✅ [0095](decisions/0095-the-level-has-its-own-music.md) |
-  | 5 | enemy fire on the grid | |
+  | 5 | enemy fire on the grid | ✅ [0096](decisions/0096-the-enemies-play-along.md) |
 
   ⚠️ **✅ THE MAP'S BLOCKER IS GONE AND IT WAS AN ARTIFACT OF THE TEMPO IT ASSUMED** —
   [0093](decisions/0093-the-gun-is-on-the-grid.md).
@@ -956,6 +957,24 @@ first carries it.
   a deep bassy beat"* was asked when the gun was the only rhythm in the game; there is a kick on every
   beat now, and a gun in the same band at ten shots a second would mask the thing the request was
   reaching for. 0095 has the argument. **If it still wants weight, the edit is presence and not bass.**
+
+  ⚠️ **✅ AND EVERYTHING THAT SHOOTS AT THE PLAYER IS ON THE GRID** —
+  [0096](decisions/0096-the-enemies-play-along.md). A **sixteenth** rather than the ship's exact note
+  values, because a ship's cadence is a ladder a hand authored and an enemy's is a tuned number: three
+  enemy rows moved by 4%, 0% and 3%. **`fireGapFor` snaps after the multiplier**, which is the one line
+  the whole thing turns on — 0.7 of a grid value is not one.
+
+  ⚠️ **AND AN ENEMY RELOADS RELATIVELY WHERE THE SHIP RELOADS ABSOLUTELY, ON PURPOSE.** There is one
+  ship and forty enemies: an absolute grid for every body of a kind is a five-bullet volley on the
+  beat instead of a pattern. **Nothing can guard that** — the shots would all be on the grid and every
+  table untouched — so it is written into 0096 and the eyes-on rig is what would show it.
+
+  ⚠️ **0096 FOUND A DEFECT THAT HAD BEEN THERE SINCE ENEMIES COULD SHOOT, AND THE COMMENTS WERE
+  ALREADY RIGHT ABOUT IT.** Both visibility rules in `stepEnemyFire` say *its clock keeps running… it
+  simply skipped its turn*, and both were written as a `continue` before the countdown, which freezes
+  it. **84 of 88 volleys were off the beat with every content guard green.** Fixing it makes a body
+  enter the view mid-count rather than with its whole gap ahead: **a real balance change, and the first
+  thing to look at if waves feel sharper.**
 
   ⚠️ **`tests/spectrum.ts` is new and is shared by the cue and music suites** — the A-weighted band
   measure 0089 wrote for *"a tin shed heard from outside"*. It found a real defect in the new music

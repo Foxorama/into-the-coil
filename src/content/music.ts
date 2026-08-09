@@ -242,6 +242,61 @@ export const MUSIC_ROOT = 55;
 export const STEPS_PER_BEAT = 24;
 
 /**
+ * The grid every cadence that is not the player's own lands on, in sim steps.
+ *
+ * ── WHY THE ENEMIES GET A COARSER GRID THAN THE GUN ─────────────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0096-the-enemies-play-along.md`.** Asked for in play: *"it's going to be
+ * tricky, but if we can balance the enemies and enemy fire into the rhythm as well that'd be sick."*
+ * The player's gun is a LADDER — five authored rungs, each chosen to be a named note value
+ * (`src/content/ships.ts`) — so it can sit on the exact subdivision a hand picked. An enemy's cadence
+ * is a **tuned number** that a level designer reached by feel, and 0034's rule is that nothing may
+ * assert on those values; snapping them to the nearest eighth would move some of them by 8%.
+ *
+ * ⚠️ **A sixteenth is 100ms and moves nothing by more than 50** — the three enemy rows move by 4%,
+ * 0% and 3%, and every boss phase stays strictly faster than the one before it, which an eighth-note
+ * grid did not manage for three of the seven. It is fine enough to be a rounding and coarse enough
+ * that every shot lands somewhere a listener would call a beat.
+ */
+export const FIRE_GRID = STEPS_PER_BEAT / 4;
+
+/**
+ * The nearest cadence to `steps` that lands on the grid, never shorter than one grid unit.
+ *
+ * ⚠️ **THE ONE DESCRIPTION, and it is asked in two places that must agree** — the content tables
+ * declare their cadences already snapped (guarded, so a hand cannot author one off the grid) and
+ * `fireGapFor` snaps again after the difficulty multiplier, which is the step that would otherwise
+ * quietly undo all of it: 0.7 of anything is rarely a multiple of anything.
+ */
+export function onFireGrid(steps: number): number {
+  const snapped = Math.round(steps / FIRE_GRID) * FIRE_GRID;
+  return snapped < FIRE_GRID ? FIRE_GRID : snapped;
+}
+
+/**
+ * Steps until a body with cadence `gap` should FIRST fire, so that the shot lands on the grid.
+ *
+ * ── A PERIOD ON THE GRID IS NOT THE SAME AS A SHOT ON THE GRID ──────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0096-the-enemies-play-along.md`, and it is 0094's lesson arriving at the other
+ * end of the field.** Snapping every cadence to a sixteenth makes each body keep a musical TEMPO;
+ * where its shots actually land still depends on the step it happened to spawn on. A dozen bodies at
+ * correct periods and arbitrary offsets is a smear, not a rhythm.
+ *
+ * ⚠️ **Quantised ONCE, at spawn, and relative for ever after.** Because `gap` is a whole number of
+ * grid units, one alignment holds for the body's whole life — and because it is not re-aligned on
+ * every shot, two enemies that spawned on different sixteenths stay on different sixteenths. That is
+ * the difference between a pattern and a volley, and it is why the player's gun (0094) reloads
+ * absolutely and an enemy does not: there is one ship and there are forty enemies.
+ *
+ * Returns between `gap - FIRE_GRID + 1` and `gap`, so a body never fires sooner than it used to by
+ * more than one grid unit.
+ */
+export function nextOnGrid(steps: number, gap: number): number {
+  return gap - FIRE_GRID + (FIRE_GRID - (steps % FIRE_GRID));
+}
+
+/**
  * The bar, in seconds, and how many of them a loop is.
  *
  * ⚠️ **THE LOOP LENGTH MUST BE A WHOLE NUMBER OF SAMPLES AT EVERY RATE IT IS BAKED AT.** A length

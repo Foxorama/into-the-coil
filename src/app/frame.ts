@@ -60,6 +60,7 @@ import { FORMATIONS } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
 import { type DifficultyRow, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
+import { nextOnGrid } from '../content/music.ts';
 import { PICKUP_KINDS, type PickupKind, type PickupRow, type UpgradeKind, type Weapon } from '../content/pickups.ts';
 import { SPECIALS, pyreFor, type SpecialKind } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
@@ -1808,6 +1809,40 @@ function fireEnemies(w: World): void {
       shoot: the player can see it, so it is fair, and the alternative is a turret that stops firing
       while it is still visibly there.
     */
+    /*
+      ── THE CLOCK RUNS FIRST, AND BOTH COMMENTS BELOW ALREADY SAID SO ─────────────────────────────
+
+      ⚠️ **`docs/decisions/0096-the-enemies-play-along.md`, and this is a comment that was true of the
+      intention and false of the code.** Both visibility rules below say *its clock keeps running… it
+      simply skipped its turn* — and both were written as a `continue` placed BEFORE the decrement,
+      which freezes it. A body that spent two seconds of its approach off the leading edge arrived
+      with its countdown exactly where it left it.
+
+      ⚠️ **Frozen is also what broke the grid**, which is how it was found: `tests/spawns.test.ts`
+      reported 84 of 88 enemy volleys off the beat with every content guard green. An arbitrary pause
+      in a periodic clock is an arbitrary phase shift, and no amount of snapping the PERIOD survives
+      one.
+
+      ⚠️ **It is a real balance change and not a tidy-up.** A body used to enter the view with its
+      whole gap ahead of it and now enters mid-count, so on average it opens fire half a cadence
+      sooner. That is what *skipped its turn* means and it is what the rules always claimed; it is
+      named here rather than left to be discovered.
+    */
+    e.fireIn--;
+    if (e.fireIn > 0) continue;
+    /*
+      The tier's gap, not the row's — and recomputed rather than remembered, because two numbers
+      multiplied is cheaper than a field on every entity in the game that only enemies would use.
+
+      ⚠️ **RELATIVE, AND THE PLAYER'S GUN IS NOT** — 0096. `stepsToGrid` is what 0094 gave the ship,
+      and an enemy deliberately does not get it: the ship is ONE metronome, so an absolute grid is
+      what puts it on the beat, while every enemy of a kind reloading to an absolute grid would fire
+      **in unison**. Five turrets on screen would be a five-bullet volley every two beats instead of a
+      pattern. What makes an enemy rhythmic is that its PERIOD is a whole number of sixteenths and its
+      phase was quantised once, when it spawned; from there a relative reload keeps it on the grid for
+      ever and keeps it out of step with its neighbours.
+    */
+    e.fireIn = fireGapFor(row.fireEvery, w.difficulty);
     if (e.across + e.radius < 0 || e.across - e.radius > ACROSS_SPAN) continue;
     /*
       ── AND THE SAME RULE ON THE OTHER AXIS, WHICH IT HAS NEVER HAD ─────────────────────────────
@@ -1838,11 +1873,6 @@ function fireEnemies(w: World): void {
       separate times as a collision fault that did not exist.
     */
     if (e.along - e.radius > w.cameraAlong + w.view.alongSpan) continue;
-    e.fireIn--;
-    if (e.fireIn > 0) continue;
-    // The tier's gap, not the row's — and recomputed rather than remembered, because two numbers
-    // multiplied is cheaper than a field on every entity in the game that only enemies would use.
-    e.fireIn = fireGapFor(row.fireEvery, w.difficulty);
     const dAlong = ship.along - e.along;
     const dAcross = ship.across - e.across;
     const distance = Math.sqrt(dAlong * dAlong + dAcross * dAcross);
@@ -2016,7 +2046,13 @@ function spawnWave(w: World, index: number): void {
     // ⚠️ NEGATED here rather than stored negative. `closing` is "towards the player" in the table, so a
     // typo produces a slow enemy rather than one that silently flees off the leading edge.
     e.velAlong = -row.closing * w.difficulty.closing;
-    e.fireIn = fireGapFor(row.fireEvery, w.difficulty);
+    /*
+      ⚠️ **QUANTISED ONCE, HERE, AND NEVER AGAIN** — 0096. A cadence on the grid keeps a musical
+      tempo; where the shots LAND still depends on the step this body happened to spawn on, and a
+      dozen bodies at correct periods and arbitrary offsets is a smear rather than a rhythm. One
+      alignment at spawn holds for its whole life, because every gap is a whole number of grid units.
+    */
+    e.fireIn = nextOnGrid(w.steps, fireGapFor(row.fireEvery, w.difficulty));
   }
 }
 
@@ -2712,7 +2748,8 @@ function spawnBoss(w: World): void {
   // Recorded, because a phase is a fraction of what the boss STARTED with and the row no longer
   // says what that was. `src/app/boss.ts` takes it as an argument for exactly that reason.
   w.bossFullHealth = boss.health;
-  boss.fireIn = fireGapFor(w.bossRow.phases[0]!.fireEvery, w.difficulty);
+  // On the grid from its first shot, like everything else that shoots — 0096.
+  boss.fireIn = nextOnGrid(w.steps, fireGapFor(w.bossRow.phases[0]!.fireEvery, w.difficulty));
   w.bossPatrol = 1;
 }
 

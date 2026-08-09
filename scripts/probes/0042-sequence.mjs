@@ -62,8 +62,10 @@ export const PROBES = [
     guard: 'every phase is reachable, and they only get harder',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '      { upTo: 0.2, fireEvery: 40, shots: 7, spread: 1.4, patrolScale: 2.5 },',
-      replace: '      { upTo: 0.2, fireEvery: 40, shots: 3, spread: 1.4, patrolScale: 2.5 },',
+      // ⚠️ Re-anchored by 0096, which snapped every authored cadence to a sixteenth. Same break, same
+      // guard: the last phase throwing FEWER shots than the first.
+      find: '      { upTo: 0.2, fireEvery: 42, shots: 7, spread: 1.4, patrolScale: 2.5 },',
+      replace: '      { upTo: 0.2, fireEvery: 42, shots: 3, spread: 1.4, patrolScale: 2.5 },',
     },
   },
   {

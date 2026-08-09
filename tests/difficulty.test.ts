@@ -11,6 +11,7 @@ import {
   fireGapFor,
   toughnessFor,
 } from '../src/content/difficulty.ts';
+import { FIRE_GRID, STEPS_PER_BEAT, nextOnGrid } from '../src/content/music.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { phaseFor } from '../src/app/boss.ts';
@@ -43,6 +44,122 @@ const PAIRS: [DifficultyKind, DifficultyKind][] = DIFFICULTY_KINDS.slice(0, -1).
   kind,
   DIFFICULTY_KINDS[i + 1]!,
 ]);
+
+describe('0096 — everything that shoots at the player plays along', () => {
+  /*
+    `docs/decisions/0096-the-enemies-play-along.md`. Asked for in play: *"it's going to be tricky, but
+    if we can balance the enemies and enemy fire into the rhythm as well that'd be sick."*
+
+    ⚠️ **0093 put the PLAYER's gun on the grid and this is the other side of the field.** The
+    difference is that a ship's cadence is a ladder of note values a hand chose, and an enemy's is a
+    tuned number a level designer reached by feel — `src/content/shots.ts` says nothing may assert on
+    those — so what is guarded here is that they land on the grid, never what they are.
+  */
+  it('THE ASK: every authored cadence is a whole number of grid units', () => {
+    for (const kind of ENEMY_KINDS) {
+      const gap = ENEMIES[kind].fireEvery;
+      // ⚠️ Zero is a row that does not shoot, which `src/content/enemies.ts` says is a row and not a
+      // second entity type. It is not off the grid; it is not on it.
+      if (gap === 0) continue;
+      expect(gap % FIRE_GRID, `${kind} fires every ${gap} steps, which is off the grid`).toBe(0);
+    }
+    for (const kind of BOSS_KINDS) {
+      for (const [i, phase] of BOSSES[kind].phases.entries()) {
+        expect(
+          phase.fireEvery % FIRE_GRID,
+          `${kind} phase ${i} fires every ${phase.fireEvery} steps, which is off the grid`,
+        ).toBe(0);
+      }
+    }
+  });
+
+  it('and the DIFFICULTY MULTIPLIER cannot take them off it, which is the step that would', () => {
+    /*
+      ⚠️ **THE WHOLE DECISION TURNS ON THIS ONE LINE.** Every cadence in the content tables is on the
+      grid and every one of them is multiplied before it is used — and 0.7 of a grid value is not a
+      grid value. A tier would silently take content that was carefully in time and put all of it back
+      off the beat, with the guard above still green.
+    */
+    for (const tier of DIFFICULTY_KINDS) {
+      for (const kind of ENEMY_KINDS) {
+        if (ENEMIES[kind].fireEvery === 0) continue;
+        const gap = fireGapFor(ENEMIES[kind].fireEvery, DIFFICULTIES[tier]);
+        expect(gap % FIRE_GRID, `${kind} on ${tier} fires every ${gap} steps, off the grid`).toBe(0);
+        expect(gap, `${kind} on ${tier} fires faster than the grid allows`).toBeGreaterThanOrEqual(FIRE_GRID);
+      }
+      for (const kind of BOSS_KINDS) {
+        for (const phase of BOSSES[kind].phases) {
+          const gap = fireGapFor(phase.fireEvery, DIFFICULTIES[tier]);
+          expect(gap % FIRE_GRID, `${kind} on ${tier} fires every ${gap} steps, off the grid`).toBe(0);
+        }
+      }
+    }
+  });
+
+  it('and a body FIRST fires on the grid too, because a period on it is not a shot on it', () => {
+    /*
+      ⚠️ **0094's lesson arriving at the other end of the field.** Snapping a cadence makes a body keep
+      a musical tempo; where its shots land still depends on the step it spawned on, and a dozen
+      bodies at correct periods and arbitrary offsets is a smear rather than a rhythm.
+
+      ⚠️ **Driven over every spawn step in a whole bar**, because the failure this catches is exactly
+      the one that only shows at some offsets — a body that spawns on a grid position was always going
+      to be fine, which is how a spot check would miss it.
+    */
+    for (const gap of [FIRE_GRID, 48, 66, 78]) {
+      for (let steps = 0; steps < STEPS_PER_BEAT * 4; steps++) {
+        const fires = steps + nextOnGrid(steps, gap);
+        expect(fires % FIRE_GRID, `a body spawned at step ${steps} with a gap of ${gap} fires at ${fires}`).toBe(0);
+      }
+    }
+  });
+
+  it('and a body never waits LONGER than its own cadence to open fire', () => {
+    /*
+      ⚠️ **The alignment is a nudge and must not become a delay.** Quantising forward is the obvious
+      way to write this and it would make every body on the field open fire up to a grid unit LATE —
+      a change to how quickly a wave becomes dangerous, which is a balance number nobody asked to
+      move. It nudges earlier instead, by less than one sixteenth.
+    */
+    for (const gap of [FIRE_GRID, 48, 66, 78]) {
+      for (let steps = 0; steps < STEPS_PER_BEAT * 4; steps++) {
+        const wait = nextOnGrid(steps, gap);
+        expect(wait, `a body with a gap of ${gap} waits ${wait} steps at spawn, which is longer`).toBeLessThanOrEqual(
+          gap,
+        );
+        expect(wait, `a body with a gap of ${gap} waits ${wait} steps, which is more than a grid early`).toBeGreaterThan(
+          gap - FIRE_GRID,
+        );
+      }
+    }
+  });
+
+  it('and a boss still escalates on every tier, which the grid compresses at the fast end', () => {
+    /*
+      ⚠️ **STRICTLY FASTER AT THE BASE TIER, NEVER SLOWER AT ANY.** The grid is 100ms and a boss's late
+      phases are thirty steps apart before scaling, so at `burn` two of them can land on the same grid
+      position — 0096 takes that trade knowingly rather than discovering it. What must never happen is
+      a phase that fires SLOWER than the one before it, which would be an escalation running backwards.
+    */
+    for (const kind of BOSS_KINDS) {
+      const base = BOSSES[kind].phases.map((p) => fireGapFor(p.fireEvery, DIFFICULTIES[DIFFICULTY_KINDS[0]!]));
+      for (let i = 1; i < base.length; i++) {
+        expect(base[i], `${kind} phase ${i} does not fire faster than phase ${i - 1} at the base tier`).toBeLessThan(
+          base[i - 1]!,
+        );
+      }
+      for (const tier of DIFFICULTY_KINDS) {
+        const gaps = BOSSES[kind].phases.map((p) => fireGapFor(p.fireEvery, DIFFICULTIES[tier]));
+        for (let i = 1; i < gaps.length; i++) {
+          expect(gaps[i], `${kind} phase ${i} fires SLOWER than phase ${i - 1} on ${tier}`).toBeLessThanOrEqual(
+            gaps[i - 1]!,
+          );
+        }
+        expect(gaps[gaps.length - 1], `${kind} does not escalate at all on ${tier}`).toBeLessThan(gaps[0]!);
+      }
+    }
+  });
+});
 
 describe('the easiest tier is the content, exactly as authored', () => {
   it('multiplies nothing at all', () => {

@@ -187,7 +187,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
         two and a half times its opening speed. Every arsenal meets every phase, so this has to be
         survivable with the base weapon alone — which is exactly what `tests/level.test.ts` drives.
       */
-      { upTo: 0.2, fireEvery: 40, shots: 7, spread: 1.4, patrolScale: 2.5 },
+      { upTo: 0.2, fireEvery: 42, shots: 7, spread: 1.4, patrolScale: 2.5 },
     ],
   },
 
@@ -224,7 +224,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       // Wide and slow from the start: the shots are the lane-taking, not the hull.
       { upTo: 1, fireEvery: 84, shots: 3, spread: 0.9, patrolScale: 1 },
       { upTo: 0.66, fireEvery: 66, shots: 5, spread: 1.2, patrolScale: 1.3 },
-      { upTo: 0.33, fireEvery: 52, shots: 7, spread: 1.5, patrolScale: 1.7 },
+      { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.5, patrolScale: 1.7 },
     ],
   },
   /**
@@ -249,7 +249,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       { upTo: 1, fireEvery: 96, shots: 1, spread: 0, patrolScale: 1 },
       { upTo: 0.7, fireEvery: 78, shots: 3, spread: 0.4, patrolScale: 1.5 },
       { upTo: 0.4, fireEvery: 66, shots: 3, spread: 0.7, patrolScale: 2.1 },
-      { upTo: 0.15, fireEvery: 58, shots: 5, spread: 0.9, patrolScale: 2.8 },
+      { upTo: 0.15, fireEvery: 60, shots: 5, spread: 0.9, patrolScale: 2.8 },
     ],
   },
   /**
@@ -272,7 +272,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     shot: 'spit',
     phases: [
       { upTo: 1, fireEvery: 54, shots: 3, spread: 0.7, patrolScale: 1 },
-      { upTo: 0.7, fireEvery: 44, shots: 5, spread: 1, patrolScale: 1.2 },
+      { upTo: 0.7, fireEvery: 42, shots: 5, spread: 1, patrolScale: 1.2 },
       { upTo: 0.4, fireEvery: 36, shots: 7, spread: 1.3, patrolScale: 1.4 },
       { upTo: 0.15, fireEvery: 30, shots: 7, spread: 1.6, patrolScale: 1.6 },
     ],
@@ -296,11 +296,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
     patrol: 0.45,
     shot: 'spit',
     phases: [
-      { upTo: 1, fireEvery: 70, shots: 3, spread: 0.5, patrolScale: 1 },
-      { upTo: 0.8, fireEvery: 62, shots: 3, spread: 0.9, patrolScale: 1.3 },
+      { upTo: 1, fireEvery: 72, shots: 3, spread: 0.5, patrolScale: 1 },
+      { upTo: 0.8, fireEvery: 60, shots: 3, spread: 0.9, patrolScale: 1.3 },
       { upTo: 0.6, fireEvery: 54, shots: 5, spread: 1.1, patrolScale: 1.6 },
-      { upTo: 0.4, fireEvery: 46, shots: 7, spread: 1.3, patrolScale: 2 },
-      { upTo: 0.2, fireEvery: 38, shots: 7, spread: 1.6, patrolScale: 2.4 },
+      { upTo: 0.4, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2 },
+      { upTo: 0.2, fireEvery: 36, shots: 7, spread: 1.6, patrolScale: 2.4 },
     ],
   },
   /**
@@ -327,10 +327,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
     shot: 'spit',
     phases: [
       { upTo: 1, fireEvery: 66, shots: 3, spread: 0.6, patrolScale: 1 },
-      { upTo: 0.8, fireEvery: 56, shots: 5, spread: 0.9, patrolScale: 1.4 },
+      { upTo: 0.8, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 1.4 },
       { upTo: 0.6, fireEvery: 48, shots: 5, spread: 1.2, patrolScale: 1.8 },
-      { upTo: 0.35, fireEvery: 40, shots: 7, spread: 1.5, patrolScale: 2.2 },
-      { upTo: 0.15, fireEvery: 34, shots: 7, spread: 1.8, patrolScale: 2.8 },
+      { upTo: 0.35, fireEvery: 42, shots: 7, spread: 1.5, patrolScale: 2.2 },
+      { upTo: 0.15, fireEvery: 36, shots: 7, spread: 1.8, patrolScale: 2.8 },
     ],
   },
 };
