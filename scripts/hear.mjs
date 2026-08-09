@@ -15,7 +15,11 @@
 // ⚠️ IT FAILS LOUD, per the note in scripts/trace-frame.mjs: a tool whose only job is to produce an
 // artefact for a human must exit non-zero when it produces nothing.
 //
-// Usage:  node scripts/hear.mjs [--out=cues.wav] [--gap=0.35] [--only=kill,blast]
+// Usage:  node scripts/hear.mjs [--out=cues.wav] [--gap=0.35] [--only=kill,blast] [--music]
+//
+// --music writes the four loops mixed at every level of the ladder, and then the whole arc: cruise,
+// the approach opening up, the boss arriving. It is the only way to hear decision 0090 without
+// playing to a boss.
 
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -24,6 +28,8 @@ import { resolve } from 'node:path';
 import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { SAMPLE_RATE, cueSeconds, sampleCue } from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
+import { bakeLoops } from '../src/app/music.ts';
+import { LOOP_SECONDS, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_GAIN } from '../src/content/music.ts';
 
 const args = new Map(process.argv.slice(2).map((a) => a.replace(/^--/, '').split('=')));
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -66,6 +72,50 @@ function wavOf(samples, rate) {
     body.writeInt16LE(Math.round(clamped * 32767), i * 2);
   }
   return Buffer.concat([header, body]);
+}
+
+/*
+  THE MUSIC — decision 0090, and the only way to hear it without playing all the way to a boss.
+
+  ⚠️ It writes the ARC as well as the levels, because the levels on their own answer the wrong
+  question. What was asked for is a build — *"an increased beat and bass leading into the boss fight
+  and really get pumping as the boss appears"* — and a build is a thing that happens between two
+  states, not either of them.
+*/
+if (args.has('music')) {
+  const loops = bakeLoops(SAMPLE_RATE);
+  const length = Math.round(LOOP_SECONDS * SAMPLE_RATE);
+  const mix = (level, repeats) => {
+    const out = new Float32Array(length * repeats);
+    for (let i = 0; i < out.length; i++) {
+      let v = 0;
+      for (const layer of MUSIC_LAYERS) v += loops[layer][i % length] * MUSIC_LADDER[level][layer];
+      out[i] = Math.max(-1, Math.min(1, v * MUSIC_GAIN));
+    }
+    return out;
+  };
+  const order = ['run', 'run', 'approach', 'approach', 'boss', 'boss', 'boss'];
+  const arc = new Float32Array(length * order.length);
+  // The ramp the gain nodes do, at the same time constant `src/app/music.ts` gives them.
+  const ramp = Math.round(1.6 * SAMPLE_RATE);
+  for (let i = 0; i < arc.length; i++) {
+    const slot = Math.floor(i / length);
+    const into = i - slot * length;
+    const from = MUSIC_LADDER[order[slot]];
+    const to = MUSIC_LADDER[order[Math.min(order.length - 1, slot + 1)]];
+    const t = into > length - ramp ? (into - (length - ramp)) / ramp : 0;
+    let v = 0;
+    for (const layer of MUSIC_LAYERS) v += loops[layer][i % length] * (from[layer] + (to[layer] - from[layer]) * t);
+    arc[i] = Math.max(-1, Math.min(1, v * MUSIC_GAIN));
+  }
+  const base = out.replace(/\.wav$/, '');
+  for (const level of Object.keys(MUSIC_LADDER)) {
+    writeFileSync(`${base}-${level}.wav`, wavOf(mix(level, 2), SAMPLE_RATE));
+  }
+  writeFileSync(`${base}-arc.wav`, wavOf(arc, SAMPLE_RATE));
+  console.log(`music: ${MUSIC_LAYERS.length} loops of ${LOOP_SECONDS}s, ${Object.keys(MUSIC_LADDER).length} levels`);
+  console.log(`wrote ${base}-{${Object.keys(MUSIC_LADDER).join(',')},arc}.wav`);
+  process.exit(0);
 }
 
 const silence = Math.round(gap * SAMPLE_RATE);
