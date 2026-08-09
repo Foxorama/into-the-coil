@@ -1,0 +1,94 @@
+// The breaks behind docs/decisions/0091-the-boss-has-an-aura.md.
+//
+// ⚠️ THE ONE THAT IS NOT HERE is "the aura runs as a repeating cue instead of as music". There is no
+// edit that stages it: it would be a different mechanism in a different file driven by a different
+// clock, and the reason it cannot work — the fixed-step loop and the AudioContext are two crystals —
+// is an argument rather than a line. The decision carries it; a probe cannot.
+
+/** @type {import('../prove-guard.mjs').Probe[]} */
+export const PROBES = [
+  {
+    decision: '0091',
+    suite: 'tests/music.test.ts',
+    /*
+      ⚠️ THE AURA MADE A PROPERTY OF THE LEVEL RATHER THAN OF THE DISTANCE, which is the edit that
+      looks like a simplification: every other layer reads its gain straight out of the ladder, so why
+      does this one need a multiply? Because the ask is *"as it gets closer to the player"* — at full
+      whenever a boss exists, it is a layer that arrives with the fight and then never says anything
+      again.
+    */
+    broke: 'the aura pinned at its ceiling, so it stops answering to how close the boss is',
+    guard: 'THE ASK: the aura follows the boss in, and is silent when it is far away',
+    edit: {
+      path: 'src/app/music.ts',
+      find: '  return clamped * clamped;',
+      replace: '  return clamped > 0 ? 1 : 1;',
+    },
+  },
+  {
+    decision: '0091',
+    suite: 'tests/music.test.ts',
+    /*
+      ⚠️ THE RANGE MEASURED FROM THE CENTRES RATHER THAN THE HULLS. It is one subtraction and it reads
+      as tidier — a distance is a distance — but a boss's radius runs from 11 to 13 today and will run
+      wider, so the same gap in front of two different bosses would be two different sounds. What the
+      player is judging is the space they are flying into.
+    */
+    broke: 'the nearness measured centre to centre, so a bigger boss is quieter at the same gap',
+    guard: 'and it is measured between the HULLS, so every boss means the same thing',
+    edit: {
+      path: 'src/app/music.ts',
+      find: '  return auraNearness(Math.abs(bossAlong - shipAlong) - bossRadius - shipRadius);',
+      replace: '  return auraNearness(Math.abs(bossAlong - shipAlong));',
+    },
+  },
+  {
+    decision: '0091',
+    suite: 'tests/music.test.ts',
+    /*
+      ⚠️ THE CURVE STRAIGHTENED. A linear ramp is the obvious reading of *builds as it gets closer* and
+      it spends most of its travel at distances nobody is thinking about — the interesting part of the
+      ask is the last few units, where the player is committed. It sounds like a tuning preference and
+      it is the difference between a sound that tracks the fight and one that tracks the level.
+    */
+    broke: 'the aura ramped linearly, so the half of the range the player fights in barely moves',
+    guard: 'and the last few units are where it moves, because that is where the fight is',
+    edit: {
+      path: 'src/app/music.ts',
+      find: '  return clamped * clamped;',
+      replace: '  return clamped;',
+    },
+  },
+  {
+    decision: '0091',
+    suite: 'tests/music.test.ts',
+    /*
+      ⚠️ THE AURA LEFT OUT OF THE BOSS ROW. Zero everywhere is a feature that is fully built, fully
+      wired, fully guarded at the edges — and silent. It is exactly the shape 0090's *a layer left out
+      of the bake* has, arriving one decision later in the table instead of in the code.
+    */
+    broke: 'the aura given no ceiling at the boss, so the whole feature is silent',
+    guard: 'THE ASK: the aura follows the boss in, and is silent when it is far away',
+    edit: {
+      path: 'src/content/music.ts',
+      find: "  boss: { drone: 0.7, bass: 1, beat: 1, drive: 1, auraSlow: 0.9, auraFast: 0.75 },",
+      replace: "  boss: { drone: 0.7, bass: 1, beat: 1, drive: 1, auraSlow: 0, auraFast: 0 },",
+    },
+  },
+  {
+    decision: '0091',
+    suite: 'tests/music.test.ts',
+    /*
+      ⚠️ THE AURA HEARD OUTSIDE A FIGHT. Opening it during the approach is a plausible reading of
+      *"leading into the boss fight"* — and it takes the boss's own sound and gives it to the level, so
+      the thing that is supposed to arrive with the fight is already there when it starts.
+    */
+    broke: 'the aura opened before the fight, so the boss brings nothing with it',
+    guard: 'and nothing but a boss ever opens it',
+    edit: {
+      path: 'src/content/music.ts',
+      find: "  approach: { drone: 0.8, bass: 1, beat: 0.9, drive: 0, auraSlow: 0, auraFast: 0 },",
+      replace: "  approach: { drone: 0.8, bass: 1, beat: 0.9, drive: 0, auraSlow: 0.5, auraFast: 0 },",
+    },
+  },
+];

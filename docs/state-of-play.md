@@ -46,6 +46,7 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **a pickup never parks: the wait is a journey that ends where the ship flies** | [0087](decisions/0087-a-pickup-never-parks.md) |
 | **a cue is layers with filters, not one oscillator** | [0089](decisions/0089-a-cue-has-a-body.md) |
 | **the music is four synchronised loops, and intensity is their gains** | [0090](decisions/0090-the-music-is-four-loops.md) |
+| **a boss brings two music layers with it, and their gain is how close it is** | [0091](decisions/0091-the-boss-has-an-aura.md) |
 | **the near sky is pushed back on every cheap axis; the whole sky is twice 0065's rate** | [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |

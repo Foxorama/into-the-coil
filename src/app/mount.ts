@@ -36,7 +36,7 @@ import {
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
 import { DEFAULT_SOUND, SOUND_KINDS } from '../content/sound.ts';
 import { DEFAULT_STYLE, STYLES, STYLE_KINDS } from '../content/styles.ts';
-import { musicLevelFor } from './music.ts';
+import { auraNearnessFor, musicLevelFor } from './music.ts';
 import { makeAudioOut, makeSpeaker } from './sound.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
@@ -894,6 +894,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     else that is counted, and on the screens the simulation is not running as well as the one it is.
     A `setTargetAtTime` that is re-issued at the same target is free.
   */
+  /**
+   * How much the aura has to move before it is worth re-issuing the ramp.
+   *
+   * A twentieth of the range is under half a decibel at the gains involved — below what a person can
+   * hear as a step, and far enough above zero that the ramp is left alone to actually travel.
+   */
+  const AURA_STEP = 0.05;
+  let shownNearness = 0;
+
   const applyMusicLevel = (): void => {
     const music = audioOut.music();
     if (music === null) return;
@@ -902,7 +911,33 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       state.screen.current === 'playing'
         ? musicLevelFor(world.cameraAlong - world.levelOrigin, world.level.bossAt, world.bossPool.size > 0)
         : 'calm';
-    if (level !== music.level()) music.setLevel(level);
+    /*
+      THE AURA — `docs/decisions/0091-the-boss-has-an-aura.md`, and it is the one thing here that
+      changes every step rather than at a boundary.
+
+      ⚠️ **The gap between the HULLS**, so a bigger boss is nearer at the same centre distance and the
+      number means the same thing for all seven of them.
+
+      ⚠️ **`world.ship` is read even while the ship is wrecked**, and that is correct rather than
+      overlooked: the entity keeps its position through the death beat
+      (`docs/decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md` releases it
+      from the POOL, not from the world), so the aura holds where the player died instead of jumping
+      to nothing for eight tenths of a second.
+    */
+    const boss = world.bossPool.size > 0 ? world.bossPool.at(0) : null;
+    const nearness =
+      boss === null ? 0 : auraNearnessFor(boss.along, boss.radius, world.ship.along, world.ship.radius);
+    /*
+      ⚠️ **Re-issued whenever the LEVEL changes or the aura has moved enough to hear**, rather than
+      every step. `setTargetAtTime` is cheap and re-issuing it at the same target is free, but
+      cancelling and rescheduling sixty times a second is a ramp that never gets anywhere — the
+      envelope would restart from wherever it had reached, which flattens the curve it is meant to be
+      following.
+    */
+    if (level !== music.level() || Math.abs(nearness - shownNearness) > AURA_STEP) {
+      shownNearness = nearness;
+      music.setLevel(level, nearness);
+    }
   };
 
   /*

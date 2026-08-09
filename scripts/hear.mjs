@@ -29,7 +29,8 @@ import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { SAMPLE_RATE, cueSeconds, sampleCue } from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { bakeLoops } from '../src/app/music.ts';
-import { LOOP_SECONDS, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_GAIN } from '../src/content/music.ts';
+import { LOOP_SECONDS, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_GAIN, AURA_LAYERS, AURA_NEAR_UNITS, AURA_FAR_UNITS } from '../src/content/music.ts';
+import { auraNearness } from '../src/app/music.ts';
 
 const args = new Map(process.argv.slice(2).map((a) => a.replace(/^--/, '').split('=')));
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -113,6 +114,25 @@ if (args.has('music')) {
     writeFileSync(`${base}-${level}.wav`, wavOf(mix(level, 2), SAMPLE_RATE));
   }
   writeFileSync(`${base}-arc.wav`, wavOf(arc, SAMPLE_RATE));
+
+  /*
+    THE AURA CLOSING IN — decision 0091, and the one thing the ladder's own levels cannot show. Every
+    other file this writes is a STEP; the aura is a continuous quantity, so what has to be heard is a
+    boss walking from the far end of its range to the near end while everything else holds still.
+  */
+  const close = new Float32Array(length * 4);
+  for (let i = 0; i < close.length; i++) {
+    const t = i / close.length;
+    const gap = AURA_FAR_UNITS + 10 - t * (AURA_FAR_UNITS + 10 - AURA_NEAR_UNITS);
+    const near = auraNearness(gap);
+    let v = 0;
+    for (const layer of MUSIC_LAYERS) {
+      const ceiling = MUSIC_LADDER.boss[layer];
+      v += loops[layer][i % length] * (AURA_LAYERS.includes(layer) ? ceiling * near : ceiling);
+    }
+    close[i] = Math.max(-1, Math.min(1, v * MUSIC_GAIN));
+  }
+  writeFileSync(`${base}-aura.wav`, wavOf(close, SAMPLE_RATE));
   console.log(`music: ${MUSIC_LAYERS.length} loops of ${LOOP_SECONDS}s, ${Object.keys(MUSIC_LADDER).length} levels`);
   console.log(`wrote ${base}-{${Object.keys(MUSIC_LADDER).join(',')},arc}.wav`);
   process.exit(0);

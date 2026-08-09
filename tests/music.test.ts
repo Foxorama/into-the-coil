@@ -9,8 +9,12 @@ import {
   MUSIC_LADDER,
   MUSIC_LAYERS,
   MUSIC_LEVELS,
+  AURA_LAYERS,
+  AURA_NEAR_UNITS,
+  AURA_FAR_UNITS,
 } from '../src/content/music.ts';
-import { bakeLoops, musicLevelFor } from '../src/app/music.ts';
+import { auraNearness, auraNearnessFor, bakeLoops, musicLevelFor } from '../src/app/music.ts';
+import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { SAMPLE_RATE } from '../src/app/sound.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -201,6 +205,93 @@ describe('how far up the ladder a run is', () => {
     expect(seconds, 'the approach is shorter than one bar of the thing it is building').toBeGreaterThan(
       BEAT_SECONDS * 4,
     );
+  });
+});
+
+describe('the boss brings an aura with it', () => {
+  /*
+    `docs/decisions/0091-the-boss-has-an-aura.md`. Asked for: *"can we add a sound associated with the
+    boss that compliments and amplifies the background music… an aura of sound on the bosses so that
+    as it gets closer to the player it builds in tempo?"*
+
+    ⚠️ **It is MUSIC and not a cue, and that is the whole decision.** A cue repeated at a shrinking
+    interval is fired from the fixed-step loop while the music runs on the `AudioContext` clock — two
+    crystals, so it wanders off the beat over a fight. As layers it is sample-locked by construction,
+    and it is the seam and length guards above that hold that rather than anything here.
+  */
+  it('THE ASK: the aura follows the boss in, and is silent when it is far away', () => {
+    expect(auraNearness(AURA_FAR_UNITS), 'a boss across the screen is already making a noise').toBe(0);
+    expect(auraNearness(AURA_FAR_UNITS + 50), 'a boss beyond the range wraps round to loud').toBe(0);
+    expect(auraNearness(AURA_NEAR_UNITS), 'a boss in the player’s face is not at full').toBe(1);
+    expect(auraNearness(0), 'the range does not hold past its own near end').toBe(1);
+    // And the ceiling exists at all, which is the way the whole feature can be silent and pass.
+    for (const layer of AURA_LAYERS) {
+      expect(MUSIC_LADDER.boss[layer], `${layer} has no ceiling at the boss, so the aura never sounds`).toBeGreaterThan(
+        0,
+      );
+    }
+  });
+
+  it('and nothing but a boss ever opens it', () => {
+    /*
+      ⚠️ **The counterweight, and *"leading into the boss fight"* is what makes it necessary.** Opening
+      the aura during the approach is a plausible misreading — and it takes the sound that is supposed
+      to ARRIVE with the boss and gives it to the level before the boss is there.
+    */
+    for (const level of MUSIC_LEVELS) {
+      if (level === 'boss') continue;
+      for (const layer of AURA_LAYERS) {
+        expect(MUSIC_LADDER[level][layer], `${layer} is open at ${level}, which has no boss in it`).toBe(0);
+      }
+    }
+  });
+
+  it('and the last few units are where it moves, because that is where the fight is', () => {
+    /*
+      ⚠️ **In the player's own terms: half the RANGE is not half the SOUND.** A linear ramp spends most
+      of its travel at distances nobody is thinking about; the ask is about closing in, so the curve
+      has to put its movement where the player is committed.
+
+      Held as a property of the shape — the near half of the range carries most of the change — rather
+      than against the exponent, which is the constant it is made of.
+    */
+    const mid = (AURA_NEAR_UNITS + AURA_FAR_UNITS) / 2;
+    expect(auraNearness(mid), 'halfway in is already halfway loud, so the approach is the whole story').toBeLessThan(
+      0.4,
+    );
+    const nearHalf = auraNearness(AURA_NEAR_UNITS) - auraNearness(mid);
+    const farHalf = auraNearness(mid) - auraNearness(AURA_FAR_UNITS);
+    expect(nearHalf, 'the far half of the range carries more of the build than the near half').toBeGreaterThan(farHalf);
+  });
+
+  it('and it is measured between the HULLS, so every boss means the same thing', () => {
+    /*
+      ⚠️ **The gap the player is flying into, not the distance between two centres.** A boss's radius
+      runs from 11 to 13 today and will run wider; measured centre to centre, the same visible gap in
+      front of two different bosses would be two different sounds.
+
+      Driven through `BOSSES` rather than against a number, so a boss that changes size moves this
+      with it.
+    */
+    const sizes = BOSS_KINDS.map((kind) => BOSSES[kind].radius);
+    const smallest = Math.min(...sizes);
+    const biggest = Math.max(...sizes);
+    expect(biggest, 'every boss is the same size, so this measures nothing').toBeGreaterThan(smallest);
+    // The same GAP in front of the biggest and the smallest is the same sound.
+    /*
+      ⚠️ Driven through , which is where the subtraction lives — and it lives there
+      because a probe found it at the call site where nothing could reach it. 0091.
+    */
+    const centres = 60;
+    expect(
+      auraNearnessFor(centres, biggest, 0, 0),
+      'the bigger boss is not the nearer one at the same centre distance',
+    ).toBeGreaterThan(auraNearnessFor(centres, smallest, 0, 0));
+    // And the SHIP's own hull counts too, on the same reasoning.
+    expect(
+      auraNearnessFor(centres, smallest, 0, 6),
+      'the ship’s own hull is not part of the gap it is flying into',
+    ).toBeGreaterThan(auraNearnessFor(centres, smallest, 0, 0));
   });
 });
 
