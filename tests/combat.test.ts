@@ -38,7 +38,7 @@ import { INVULN_STEPS, MAX_SHIELDS, SHIPS } from '../src/content/ships.ts';
 import { weaponFor } from '../src/content/pickups.ts';
 import { SHOT_KINDS, SHOTS } from '../src/content/shots.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
-import { GameFrame, SHIP_START_ALONG, type World } from '../src/app/frame.ts';
+import { GameFrame, SHIP_START_ALONG, respawn, type World } from '../src/app/frame.ts';
 import { STEP_MS } from '../src/app/loop.ts';
 import type { InputSource } from '../src/app/input.ts';
 import type { Surface } from '../src/render/surface.ts';
@@ -436,6 +436,7 @@ function firingAt(row: EnemyRow, distance: number): World {
     view: viewOf(VIEWPORT.width, VIEWPORT.height),
     surface: BLIND,
     rng: makeRng('combat').stream('spawns'),
+    steps: 0,
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
@@ -530,6 +531,7 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
     view: viewOf(VIEWPORT.width, VIEWPORT.height),
     surface: BLIND,
     rng: makeRng('combat').stream('spawns'),
+    steps: 0,
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
@@ -562,6 +564,125 @@ function stepsUntilHit(frame: GameFrame, world: World, limit: number): number | 
   }
   return null;
 }
+
+describe('0094 — the gun keeps a PHASE and not only a tempo', () => {
+  /*
+    `docs/decisions/0094-in-time-is-not-in-phase.md`. 0093 put every rung of the fire ladder on a
+    musical fraction of the beat, and that is a statement about the RATE. What makes a metronome land
+    on the beat is where it starts: `w.fireIn = w.weapon.fireEvery` puts the next volley a correct
+    interval after the last one, at whatever phase the last reset happened to leave.
+
+    ⚠️ **A gun three steps behind the beat is a gun in perfect time and audibly not on it** — 50ms at
+    150 BPM, which is exactly the offset the ear reads as *nearly*. This is the half that could not be
+    guarded before there was a clock to guard it against.
+  */
+  /** Every volley's step number over a stretch of play, read off the sim's own clock. */
+  function volleyStepsOf(world: World, steps: number): number[] {
+    const frame = new GameFrame(world);
+    const at: number[] = [];
+    let before = world.playerShots.size;
+    for (let i = 0; i < steps; i++) {
+      frame.step();
+      if (world.playerShots.size > before) at.push(world.steps);
+      before = world.playerShots.size;
+    }
+    return at;
+  }
+
+  it('THE ASK: every volley lands on a multiple of its own cadence, counted from the run’s origin', () => {
+    /*
+      ⚠️ **Driven through the real frame rather than through the arithmetic**, because the arithmetic
+      was never in doubt — what this catches is a reload path that resets the clock relatively, and
+      there are four of them.
+    */
+    const world = firingAt(ENEMIES.drifter, 400);
+    const cadence = world.weapon.fireEvery;
+    /*
+      ⚠️ **STARTED DELIBERATELY OFF THE GRID, AND `npm run prove` IS WHY.** The fixture opens at step
+      zero with a countdown equal to the cadence, so its very first volley lands on a multiple by
+      accident — and a relative reload from there produces a perfectly gridded sequence for ever.
+      The probe put the shipped code back and this stayed green. **An alignment test that starts
+      aligned tests nothing**, which is the same shape of mistake as measuring one phase of a
+      periodic quantity.
+    */
+    world.fireIn = 3;
+    const volleys = volleyStepsOf(world, 300);
+    expect(volleys.length, 'the gun never fired, so this measured nothing').toBeGreaterThan(5);
+    expect(volleys[0]! % cadence, 'the fixture did not actually start off the grid').not.toBe(0);
+    // The first volley is the deliberate offset; every one after it has to have rejoined.
+    for (const step of volleys.slice(1)) {
+      expect(step % cadence, `a volley left on step ${step}, which is not a multiple of ${cadence}`).toBe(0);
+    }
+  });
+
+  it('and the clock counts the steps the GAME ran, which is not the same as the steps called', () => {
+    /*
+      ⚠️ **A step in which nothing moved must not advance the beat.** `w.stepping` is false through a
+      death beat and on a menu — the frame is still stepped, because 0046 needs it to reach the
+      gamepad — and counting those would slide the grid under the music while the world is held
+      still. The counter means *steps of the game*, and that is the distinction this holds.
+    */
+    const world = firingAt(ENEMIES.drifter, 400);
+    const frame = new GameFrame(world);
+    for (let i = 0; i < 30; i++) frame.step();
+    expect(world.steps, 'the sim clock did not advance with the game').toBe(30);
+    world.stepping = false;
+    for (let i = 0; i < 30; i++) frame.step();
+    expect(world.steps, 'the clock advanced through steps in which nothing moved').toBe(30);
+  });
+
+  it('and a DEATH rejoins the grid rather than restarting it, which is where the phase used to go', () => {
+    /*
+      ⚠️ **A death is the one moment in a run guaranteed to happen at an arbitrary place in the bar**,
+      so a full-cadence reload there is the single largest source of the offset this decision is
+      about — and the most repeated event in a level
+      (`docs/decisions/0079-a-death-is-a-beat-and-the-arsenal-goes-up-with-the-ship.md`).
+
+      ⚠️ **`respawn` is called directly rather than reached through a collision**, because what is
+      under test is its reload arithmetic and nothing else. Driving a real death here would bring the
+      beat, the scatter and the life count with it — all of which `tests/death.test.ts` already
+      holds — and would make this fail for four reasons instead of one.
+
+      ⚠️ **AND ONLY THE FIRST VOLLEY AFTER IT CAN SEE THE BUG**, which is why the assertion covers
+      every volley including that one: `fireShip` re-grids after each volley it fires, so a respawn
+      that reloaded relatively is back on the grid by the second one. A test that skipped the first
+      would pass with the bug in.
+    */
+    const world = firingAt(ENEMIES.drifter, 400);
+    const cadence = world.weapon.fireEvery;
+    const frame = new GameFrame(world);
+    // Land the respawn deliberately OFF the grid: a step count that is not a multiple of the cadence.
+    for (let i = 0; i < cadence * 3 + 1; i++) frame.step();
+    expect(world.steps % cadence, 'the fixture happens to be on the grid, so a bug here would hide').not.toBe(0);
+
+    world.shipPool.releaseAt(0);
+    respawn(world);
+    const after = volleyStepsOf(world, 200);
+    expect(after.length, 'nothing fired after the respawn').toBeGreaterThan(3);
+    for (const step of after) {
+      expect(step % cadence, `after a respawn a volley left on step ${step}, off the grid`).toBe(0);
+    }
+  });
+
+  it('and an UPGRADE moves the cadence without moving the phase, because every rung divides the beat', () => {
+    /*
+      ⚠️ **This is what 0093's divisor rule buys and it is worth stating as its own assertion.** The
+      rungs are 8, 6 and 4 steps and all three divide `STEPS_PER_BEAT`, so a multiple of any of them
+      is a subdivision of the beat — the gun changes rate mid-level and never leaves the grid. A rung
+      that divided nothing would pass every guard in 0093 except the divisor one and fail here.
+    */
+    const world = firingAt(ENEMIES.drifter, 400);
+    volleyStepsOf(world, 100);
+    world.weapon = weaponFor(SHIPS.proof, ['weapon', 'weapon', 'weapon', 'weapon']);
+    const faster = world.weapon.fireEvery;
+    expect(faster, 'the upgrade did not change the cadence, so this measures nothing').not.toBe(
+      weaponFor(SHIPS.proof, []).fireEvery,
+    );
+    for (const step of volleyStepsOf(world, 200)) {
+      expect(step % faster, `after an upgrade a volley left on step ${step}, off the grid`).toBe(0);
+    }
+  });
+});
 
 describe('an aimed shot arrives, and a player who moves is not there when it does', () => {
   /*

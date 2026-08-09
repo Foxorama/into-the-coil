@@ -95,6 +95,7 @@ it is pushed — guards stop reaching their subject without ever going red, and 
 | **a boss brings two music layers with it, and their gain is how close it is** | [0091](decisions/0091-the-boss-has-an-aura.md) |
 | **a mix number is an ear; what is guarded is the arithmetic and the geometry around it** | [0092](decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md) |
 | **a beat is a whole number of sim steps, and every cadence is a fraction of one — 150 BPM** | [0093](decisions/0093-the-gun-is-on-the-grid.md) |
+| **the sim has a clock; the guns fire on its grid and the music is moved to agree** | [0094](decisions/0094-in-time-is-not-in-phase.md) |
 | **the near sky is pushed back on every cheap axis; the whole sky is twice 0065's rate** | [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
@@ -906,7 +907,7 @@ first carries it.
   |---|---|---|
   | 1 | the mix again, and the boss aura | ✅ [0092](decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md) |
   | 2 | **150 BPM, and the gun on the musical grid** | ✅ [0093](decisions/0093-the-gun-is-on-the-grid.md) |
-  | 3 | the music phase-locked to the sim clock | |
+  | 3 | the music phase-locked to the sim clock | ✅ [0094](decisions/0094-in-time-is-not-in-phase.md) |
   | 4 | **the level's own music** — power ballad × Rez, title keeps the current piece | |
   | 5 | enemy fire on the grid | |
 
@@ -929,11 +930,20 @@ first carries it.
   five times 40. **A single reading of a periodic quantity measures the phase you happened to pick**,
   and that is now a habit to check for rather than three incidents.
 
-  ⚠️ **THE GUN IS NOW IN TIME AND IS NOT IN PHASE, WHICH IS CHUNK 3 AND IS NOT A DETAIL.** The gun runs
-  on the fixed-step clock and the music on the `AudioContext` clock — two crystals. Every guard 0093
-  landed is about the *rate*; **nothing holds the two together over the length of a level**, and a sim
-  that stalls and catches up slides further than the crystals do. A rhythm feature that drifts by a
-  sixteenth note over three minutes is one that stops being a feature in the third minute.
+  ⚠️ **✅ AND IN TIME IS NOT IN PHASE, WHICH WAS CHUNK 3** —
+  [0094](decisions/0094-in-time-is-not-in-phase.md). Two halves: the sim now has a clock (`w.steps`)
+  and every auto-weapon fires on a multiple of its cadence counted from it, and the music's loops are
+  moved to agree with that clock when they drift past 50ms. **The thing it exists for is dropped steps,
+  not crystal drift** — 0022 discards everything past `MAX_STEPS` rather than spiralling, and each
+  discard costs the phase permanently.
+
+  ⚠️ **A `playbackRate` servo was the obvious build and is REJECTED ON ARITHMETIC** — a trim small
+  enough to be inaudible absorbs 50ms in twenty-five seconds, and one 150ms hitch throws away four
+  steps at once. Read 0094 before proposing it again.
+
+  ⚠️ **AND AN ALIGNMENT TEST THAT STARTS ALIGNED TESTS NOTHING**, which is 0094's own STILL GREEN and
+  the same family as 0093's phase-sampling mistake seen from the other side: **a guard whose starting
+  condition is the thing it means to detect.** Two of six probes came back wrong first time.
 
   ⚠️ **AND [0090](decisions/0090-the-music-is-four-loops.md) SAID WHAT CHUNK 4 COSTS, BEFORE ANYBODY
   ASKED FOR IT**: *"a level that wanted its own key or its own tempo would need a second set of loops

@@ -889,6 +889,27 @@ export interface World {
    * to `src/state/`, not to the file that moves the bodies.
    */
   onCleared: () => void;
+  /**
+   * Fixed steps the sim has run since the run began. **The sim's own clock.**
+   *
+   * ── WHY THIS EXISTS AND WHY IT IS NOT `cameraAlong / scrollPerStep` ─────────────────────────────
+   *
+   * `docs/decisions/0094-in-time-is-not-in-phase.md`. The auto-fire is a metronome the player cannot
+   * switch off (`src/content/actions.ts`), and 0093 put its cadence on musical values — but a cadence
+   * is a RATE and what makes a metronome land on the beat is a PHASE. This is the number the phase is
+   * measured from, for the gun and for the music both.
+   *
+   * ⚠️ **The camera is described as the clock and cannot be used as one here.** *"The camera is the
+   * clock"* (`level` below) is about PACE — a wave spawns at a camera distance so a level plays the
+   * same on every device — and it is true because the scroll rate happens to be constant. It is a
+   * distance that equals a time, not a time: the day a level scrolls faster, every phase in the game
+   * would move with it. `SCROLL_PER_STEP` is also 0.6, so `cameraAlong / scrollPerStep` is a float
+   * division that is not exactly an integer after a few thousand steps, and a phase is a modulo.
+   *
+   * ⚠️ **It counts a RUN and not a level**, because 0076 made a level boundary a change of script
+   * rather than a change of scene — the music does not stop there and neither does the beat.
+   */
+  steps: number;
   /** Steps until the ship's auto-fire goes again. */
   fireIn: number;
   /** Steps until the ship's missiles go again. Their own clock, because their own cadence. */
@@ -1081,6 +1102,14 @@ export class GameFrame implements Frame {
       w.onIdle();
       return;
     }
+    /*
+      ⚠️ **THE SIM'S OWN CLOCK, and it ticks HERE rather than at the top of `step`** — 0094. A step
+      the run is not stepping (`w.stepping` above) is a step in which nothing the player is watching
+      moved, and counting it would advance the beat while the death beat holds the world still. What
+      is being counted is *steps of the game*, which is the thing the gun and the music both have to
+      agree with.
+    */
+    w.steps++;
     w.prevCameraAlong = w.cameraAlong;
     w.cameraAlong += w.scrollPerStep;
 
@@ -1407,6 +1436,30 @@ function bossJustDied(w: World): boolean {
 }
 
 /**
+ * Steps from `now` to the next multiple of `cadence`, which is never zero.
+ *
+ * ── THE ONE DESCRIPTION OF *WHEN DOES THE NEXT VOLLEY LAND* ─────────────────────────────────────
+ *
+ * `docs/decisions/0094-in-time-is-not-in-phase.md`. Asked in four places — the pulse, the missiles,
+ * and both of them again on a respawn — and they have to agree, or a death silently moves the gun
+ * off the beat and nothing anywhere would say so.
+ *
+ * ⚠️ **Never zero, and that is the whole of the arithmetic.** At `now` already on a multiple the
+ * answer is a full `cadence`, not 0: a reload of zero would fire again on the same step, which is a
+ * volley the pool refuses and a cue the player hears as a stutter. `cadence - (now % cadence)` gives
+ * `cadence` exactly when the remainder is zero, which is why it is written that way round rather than
+ * as a ceiling.
+ *
+ * ⚠️ **`cadence` is trusted to be a positive integer**, because 0093's guards hold every rung of
+ * every ladder to being one. A guard there is worth more than a branch here: this runs in the frame
+ * loop, and `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md` is why it has no
+ * defensive arm.
+ */
+function stepsToGrid(now: number, cadence: number): number {
+  return cadence - (now % cadence);
+}
+
+/**
  * The player's auto-fire.
  *
  * ⚠️ **No input is read here and there is no action for it.** `src/content/actions.ts` says there is
@@ -1416,7 +1469,18 @@ function bossJustDied(w: World): boolean {
 function fireShip(w: World): void {
   w.fireIn--;
   if (w.fireIn > 0) return;
-  w.fireIn = w.weapon.fireEvery;
+  /*
+    ⚠️ **RELOADED TO THE GRID AND NOT TO THE CADENCE, WHICH IS THE HALF 0093 COULD NOT DO** — 0094.
+    `w.fireIn = w.weapon.fireEvery` puts the next volley a correct interval after this one, so the gun
+    keeps a perfect TEMPO at a phase that is whatever the last reset happened to leave. A metronome
+    three steps behind the beat is a metronome in time and out of phase, and 50ms is exactly the
+    offset the ear reads as *not quite on it*.
+
+    Every rung divides `STEPS_PER_BEAT` (0093, guarded), so landing on a multiple of the cadence from
+    the run's origin lands on a subdivision of the beat — at every tier, across every upgrade, and
+    after every death.
+  */
+  w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);
   const row = SHOTS[w.shipRow.shot];
   /*
     The volley, fanned about the nose. One barrel takes the nose exactly; `spread` is the TOTAL angle
@@ -1580,7 +1644,10 @@ function fireMissiles(w: World): void {
   if (w.weapon.launchers === 0) return;
   w.missileIn--;
   if (w.missileIn > 0) return;
-  w.missileIn = w.weapon.missileEvery;
+  // ⚠️ On the grid, like the pulse — 0094. The missile's cadence is five pulses (0093), so this lands
+  // ACROSS the beat rather than on it, which is the counter-beat. A counter-beat at a random phase is
+  // just a second thing that is nearly right.
+  w.missileIn = stepsToGrid(w.steps, w.weapon.missileEvery);
   const row = SHOTS[w.shipRow.missile];
   for (let i = 0; i < w.weapon.launchers; i++) {
     const missile = w.missiles.spawn();
@@ -2763,8 +2830,11 @@ export function respawn(w: World): void {
     level — so anything the player had not yet reached is still there to be flown for. Wiping them
     would turn one mistake into a stretch with no way back out of it.
   */
-  w.fireIn = w.weapon.fireEvery;
-  w.missileIn = w.weapon.missileEvery;
+  // ⚠️ A RESPAWN REJOINS THE GRID RATHER THAN RESTARTING IT — 0094. A full cadence here would put the
+  // gun back at whatever phase the death happened at, which is the one moment in a run guaranteed to
+  // be at an arbitrary place in the bar.
+  w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);
+  w.missileIn = stepsToGrid(w.steps, w.weapon.missileEvery);
 }
 
 /**
