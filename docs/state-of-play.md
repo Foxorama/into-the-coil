@@ -849,7 +849,19 @@ first carries it.
   **spectrum**, which is what catches *"a tin shed heard from outside"* — a hump in the middle with
   nothing at either end.
 
-  ⚠️ **The mix in a real fight is the open question.** Both were judged solo and against a synthetic
+  ⚠️ **✅ THE MIX IS MOVED, ON A REPORT RATHER THAN A GUESS** — *"the game sfx are too loud over the
+  background music"*. Four cues at once reached 0.92 of full scale against the music's 0.52; it is 1.12
+  now, cues still ahead because 0024 makes them information and the music is not.
+
+  ⚠️ **AND THE RHYTHM IDEA IS MAPPED AND BLOCKED ON ONE QUESTION** —
+  [`the-gun-on-the-grid-mapped`](../reports/the-gun-on-the-grid-mapped-2026-08-09.md). *"We could
+  almost make a rhythm style game."* The base gun IS a sixteenth note at 100 BPM and the missile IS an
+  exact 5:1 counter-beat — both already true, neither designed. **But putting the gun on a musical grid
+  halves the base fire rate, and every way of restoring the damage changes shots-to-kill**, which is
+  0084's currency and 0035's legibility rule. Read the report before starting: it has the grid, the
+  ladder, the rejected alternatives and the question.
+
+  ⚠️ **The mix in a real fight is still the open question.** Both were judged solo and against a synthetic
   battle render. Whether a chaingun at ten a second sits under a boss explosion, and whether the music
   buries the shield cue, are things only play answers — 0090 says where to look first if it does.
 

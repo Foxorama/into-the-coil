@@ -79,12 +79,17 @@ export const AURA_FAR_UNITS = 105;
 /**
  * How loud the music gets, as a fraction of the mix.
  *
- * ⚠️ **Well under the cues, and that is the whole design constraint.** Music that competes with the
+ * ⚠️ **0.34 → 0.44, reported from play** — *"the game sfx are too loud over the background music"*.
+ * The other half of that move is `MASTER_GAIN` in `src/app/sound.ts`, which came down; between them
+ * the worst-case ratio goes from 1.77 to 1.12. **Both halves are one change** and tuning either alone
+ * is how the mix ends up clipping or inaudible.
+ *
+ * ⚠️ **Still under the cues, and that is the whole design constraint.** Music that competes with the
  * sound of being shot at is music that hides the thing
  * `docs/decisions/0024-the-accessibility-floor-is-settings.md` needs the player to hear. Every cue is
  * information; the music is not, which is why it is the one that gives way.
  */
-export const MUSIC_GAIN = 0.34;
+export const MUSIC_GAIN = 0.44;
 
 /**
  * How far into a level the music starts listening for the boss, in world units.

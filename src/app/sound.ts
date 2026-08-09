@@ -102,8 +102,19 @@ export const SAMPLE_RATE = 44100;
  */
 export const MAX_VOICES = 4;
 
-/** The share of full scale the whole mix gets, so `MAX_VOICES` at once cannot clip. */
-const MASTER_GAIN = 0.55;
+/**
+ * The share of full scale the CUES get, so `MAX_VOICES` at once cannot clip.
+ *
+ * ⚠️ **0.55 → 0.45, reported from play** — *"the game sfx are too loud over the background music"*.
+ * At 0.55 the four loudest cues at once reached 0.92 of full scale against the music's 0.52, which is
+ * a ratio of nearly two to one; it is 1.12 now.
+ *
+ * ⚠️ **The cues stay AHEAD of the music and always must.**
+ * `docs/decisions/0024-the-accessibility-floor-is-settings.md` makes every cue information — a shield
+ * taken, a hit that did not land — and the music is not. When the two compete it is the music that
+ * gives way, which is why this moved less far than `MUSIC_GAIN` moved up.
+ */
+const MASTER_GAIN = 0.45;
 
 /** How long every cue takes to reach full amplitude, in seconds — short enough to read as an attack. */
 const ATTACK_SECONDS = 0.004;
