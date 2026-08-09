@@ -11,19 +11,20 @@
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
-  {
-    decision: '0039',
-    suite: 'tests/run.test.ts',
-    broke: 'a death that leaves the arsenal alone, which is what "carry forward" used to say',
-    guard: 'a death clears the arsenal back to base',
-    edit: {
-      path: 'src/state/slices/run.ts',
-      // Anchored on the ARSENAL line rather than on the whole returned literal, for the reason
-      // 0042's probe gives: a literal goes stale the day a field is added to it, and two have been.
-      find: '            arsenal: startingArsenal(),\n            upgrades: [],',
-      replace: '            arsenal: state.arsenal,\n            upgrades: [],',
-    },
-  },
+  /*
+    ⚠️ **A PROBE WAS REMOVED HERE, AND ITS ABSENCE IS THE RECORD.** It broke *a death that leaves the
+    arsenal alone* — the reading everyone reaches for on first sight, and the one `docs/game.md`
+    implied until 0039 amended it.
+
+    `docs/decisions/0085-a-death-does-not-cost-the-bombs.md` made that reading the rule: *"bombs should
+    be reset on a continue, but not on player death."* So the edit this probe applied is now the
+    shipped code, and there is nothing left for it to break. It was not re-aimed — the same break in
+    the other direction is `scripts/probes/0085-charges.mjs`'s first entry, and two probes over one
+    line is the duplication `scripts/probes/0040-level.mjs` records the cost of.
+
+    ⚠️ **What 0039 still owns on this line is the UPGRADES**, which a death still costs, and which the
+    entries below and `scripts/probes/0041-pickups.mjs` hold.
+  */
   {
     decision: '0039',
     suite: 'tests/run.test.ts',

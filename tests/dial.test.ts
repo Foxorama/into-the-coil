@@ -9,9 +9,11 @@ import {
   dialFor,
   singleHitOnly,
 } from '../src/content/difficulty.ts';
-import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
+import { LEVELS, LEVEL_KINDS, MULTI_HIT_RUNUP } from '../src/content/levels.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
-import { GameFrame, advanceLevel } from '../src/app/frame.ts';
+import { GameFrame, PICKUP_LINGER_STEPS, advanceLevel } from '../src/app/frame.ts';
+import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
+import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { playableWorld } from './world.ts';
 
 /**
@@ -163,8 +165,9 @@ describe('nothing takes more than one hit until the dial has turned twice', () =
       rule about nothing** — the same argument `tests/difficulty.test.ts` makes for the tier. What is
       counted is the health of what actually arrives.
 
-      ⚠️ **The turret is the body this is about**: three health, and `src/content/levels.ts` puts one
-      at 2,310 in level one, which is inside the clamp. It was the spike.
+      ⚠️ **The turret is the body this is about**: three health, and `src/content/levels.ts` used to
+      put one at 2,310 in level one — ten units behind the pickup that lifts the clamp, which is what
+      `docs/decisions/0086-the-teeth-wait-for-the-gun.md` moved. It was the spike.
     */
     const { world } = playableWorld(LEVELS[LEVEL_KINDS[0]!]);
     const frame = new GameFrame(world);
@@ -203,6 +206,102 @@ describe('nothing takes more than one hit until the dial has turned twice', () =
       toughest,
       `the toughest thing level one ever sent took ${toughest} hits, and the turret it authors has ${ENEMIES.turret.health}`,
     ).toBeGreaterThan(1);
+  });
+});
+
+describe('the teeth wait for the gun, which the clamp alone does not make them do', () => {
+  /*
+    `docs/decisions/0086-the-teeth-wait-for-the-gun.md`. Reported from play, about the build the clamp
+    above had already landed in: *"we need to remove the enemies that take multiple shots to kill from
+    the 1st level, they can't start appearing till after the second weapon pickup… they're too
+    difficult to kill with the default fire mode."*
+
+    ⚠️ **THE CLAMP LIFTS ON A SPAWN AND THE PLAYER IS NOT HOLDING A SPAWN.** 0084 turns the dial when
+    a weapon pickup reaches the field, which is the only version of it that can sawtooth — and level
+    one authored a three-health turret **ten world units** behind that pickup. Every guard above was
+    green: the clamp fired, it lifted at exactly the pickup it names, and the player met the turret
+    with the gun the clamp existed because they did not have.
+
+    ⚠️ **So this is the same promise measured on the other side of the handover**, and it is content
+    the guards hold rather than a threshold: *offered* is a fact about the level, *flying it* is a
+    fact about the player, and `MULTI_HIT_RUNUP` is the distance between the two.
+  */
+
+  /** Level one, which is the only level the clamp — and therefore the run-up — is about. */
+  const APPROACH = LEVELS[LEVEL_KINDS[0]!];
+
+  /** Where the pickup that lifts the clamp is authored: the second `weapon` of level one. */
+  function clampLiftsAt(): number {
+    const weapons = APPROACH.pickups.filter((p) => p.kind === 'weapon');
+    expect(weapons.length, 'level one no longer offers the two weapons the clamp is keyed to').toBeGreaterThanOrEqual(
+      2,
+    );
+    return weapons[1]!.at;
+  }
+
+  it('THE REPORTED ONE: level one authors nothing tough until the run-up is over', () => {
+    const lifts = clampLiftsAt();
+    const tough = APPROACH.waves.filter((wave) => wave.at > lifts && ENEMIES[wave.enemy].health > 1);
+    /*
+      ⚠️ **BOTH ENDS, because a level with no teeth at all passes the first assertion.** That is the
+      failure mode 0084's own counterweight is about, one layer up: *nothing arrives early* is
+      satisfied perfectly by *nothing arrives*.
+    */
+    expect(tough.length, 'level one never sends anything that takes more than one hit').toBeGreaterThan(0);
+    const first = tough[0]!;
+    expect(
+      first.at - lifts,
+      `level one sends a ${first.enemy} at ${first.at}, ${first.at - lifts} units after the pickup at ${lifts}`,
+    ).toBeGreaterThanOrEqual(MULTI_HIT_RUNUP);
+  });
+
+  it('and the run-up outlasts the wait the pickup itself gets', () => {
+    /*
+      ⚠️ **TWO INDEPENDENT CONSTANTS AGREEING, which is the only honest way to say *long enough*.**
+      `docs/decisions/0027-measure-the-picture-not-the-model.md` refuses a guard written in terms of
+      the constant it guards; `PICKUP_LINGER_STEPS` is not that — it is 0064's answer to a different
+      question, and it is the floor under this one. A run-up shorter than the linger would put a
+      multi-hit wave in front of a player who is still legitimately flying towards the thing that
+      answers it.
+
+      ⚠️ **In SECONDS, which is the unit the player experiences.**
+    */
+    const runUpSeconds = MULTI_HIT_RUNUP / SCROLL_PER_STEP / STEPS_PER_SECOND;
+    const lingerSeconds = PICKUP_LINGER_STEPS / STEPS_PER_SECOND;
+    expect(
+      runUpSeconds,
+      `the run-up is ${runUpSeconds.toFixed(1)}s and a pickup waits ${lingerSeconds.toFixed(1)}s to be taken`,
+    ).toBeGreaterThan(lingerSeconds);
+  });
+
+  it('and it reaches the FIELD: the two events are that far apart in the real frame', () => {
+    /*
+      ⚠️ **Driven rather than read, because the table cannot see the spawner.** What the player
+      experiences is the gap between *the second weapon pickup appears* and *something arrives that
+      does not die to one shot*, and both of those are field events. A content edit that satisfied the
+      table and a spawner that ignored the level would look identical above and different here.
+
+      ⚠️ **Counted in STEPS and reported in seconds.** The camera covers `SCROLL_PER_STEP` a step, so
+      the run-up is a duration as well as a distance, and the duration is the half a hand can judge.
+    */
+    const { world } = playableWorld(APPROACH);
+    const frame = new GameFrame(world);
+    let lifted = -1;
+    let tough = -1;
+    for (let step = 0; step < 20_000 && tough < 0; step++) {
+      frame.step();
+      if (lifted < 0 && world.weaponsOffered >= 2) lifted = step;
+      for (let i = 0; i < world.enemies.size; i++) {
+        if (world.enemies.at(i).health > 1 && tough < 0) tough = step;
+      }
+    }
+    expect(lifted, 'the level never offered a second weapon, so the clamp never lifted').toBeGreaterThan(-1);
+    expect(tough, 'nothing tough ever arrived, so this measured nothing').toBeGreaterThan(-1);
+    const gap = (tough - lifted) / STEPS_PER_SECOND;
+    expect(
+      gap,
+      `the first multi-hit enemy arrived ${gap.toFixed(1)}s after the pickup that lifted the clamp`,
+    ).toBeGreaterThanOrEqual(MULTI_HIT_RUNUP / SCROLL_PER_STEP / STEPS_PER_SECOND);
   });
 });
 

@@ -317,8 +317,15 @@ const PICKUP_STATION = 100;
  * is no longer one of a stream — it is a sixth of what the level had to give. `tests/pickups.test.ts`
  * now holds the wait against the time it takes to cross the lane, which is the thing the player is
  * actually doing, rather than against a cycle that no longer exists.
+ *
+ * ⚠️ **EXPORTED so a guard in another decision can name it** —
+ * `docs/decisions/0086-the-teeth-wait-for-the-gun.md`. `MULTI_HIT_RUNUP` is how long level one waits
+ * before it sends anything tough after the pickup that lifts the clamp, and the only honest statement
+ * of *long enough* is *longer than the pickup itself waits to be taken*. Two independent constants
+ * agreeing, which `docs/decisions/0027-measure-the-picture-not-the-model.md` allows and a guard
+ * written in terms of one of them would not be.
  */
-const PICKUP_LINGER_STEPS = 420;
+export const PICKUP_LINGER_STEPS = 420;
 
 /**
  * How much wider than the hull the ship's reach is when COLLECTING, as a multiple of its radius.

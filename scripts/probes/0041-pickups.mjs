@@ -66,10 +66,16 @@ export const PROBES = [
   {
     decision: '0041',
     suite: 'tests/run.test.ts',
-    // 0039's rule, now that there is a second field for it to be forgotten in. The arsenal is
-    // cleared right there on the line above, which is what makes this the plausible miss.
+    // 0039's rule, now that there is a second field for it to be forgotten in. The line above is the
+    // arsenal, which is what makes this the plausible miss.
+    //
+    // ⚠️ RENAMED GUARD, and `npm run prove` is the only thing that could have said so.
+    // `docs/decisions/0085-a-death-does-not-cost-the-bombs.md` inverted the assertion this points at
+    // and retitled it with the rule; `anchorFailures` cannot see that, because the probe's own anchor
+    // still resolves perfectly. The break is untouched — a death still costs the upgrades, and that
+    // is the half of 0039 that 0085 leaves standing.
     broke: 'a death that leaves the weapon upgrades on the ship',
-    guard: 'a death clears the arsenal back to base',
+    guard: 'a death costs the upgrades and leaves the arsenal exactly where it was',
     edit: {
       path: 'src/state/slices/run.ts',
       // ⚠️ Anchored on the UPGRADES line rather than on the whole returned literal, which is what it
