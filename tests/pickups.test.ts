@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  FASTEST_FIRE,
+  MAX_BARRELS,
   PICKUPS,
   PICKUP_KINDS,
   UPGRADE_KINDS,
   UPGRADE_TIERS,
+  fireEveryAt,
   weaponFor,
   type PickupKind,
   type UpgradeKind,
 } from '../src/content/pickups.ts';
+import { BEAT_SECONDS, LOOP_SECONDS, STEPS_PER_BEAT } from '../src/content/music.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
@@ -30,6 +34,147 @@ import { Rng } from '../src/sim/rng.ts';
  * meet here and they are easy to get subtly wrong in opposite directions: an upgrade that cannot
  * change the outcome is worse than none, and a fifth one must not end the game.
  */
+
+describe('0093 — the gun is on the musical grid, at every tier and not at two of them', () => {
+  /*
+    `docs/decisions/0093-the-gun-is-on-the-grid.md`. Asked for in play: *"we could almost make a
+    rhythm style game if we change the player sounds a bit… what can we do so that as you pick up or
+    lose power ups the music speeds up, slows down etc and works in a beat to the rhythm of the
+    fire?"*
+
+    ⚠️ **Auto-fire never stops** — `src/content/actions.ts` bans a fire action — so the gun is a
+    metronome the player cannot switch off. Whether it is in time with the music is therefore not a
+    nicety; it is the single most-heard rhythmic fact in the game.
+
+    ⚠️ **NOTHING HERE ASSERTS ON A CADENCE'S VALUE**, on `src/content/shots.ts`'s terms: which rung a
+    ship opens on is a hand's job. What is held is that every rung, whatever it is, lands on the beat.
+  */
+  /** Every rung of the pulse's ladder, in steps between volleys. */
+  const RUNGS = Array.from({ length: UPGRADE_TIERS + 1 }, (_, tier) => fireEveryAt(SHIPS.proof, tier));
+
+  it('THE ASK, in the unit the player hears: the gun closes with the music every single loop', () => {
+    /*
+      ⚠️ **This is the assertion written in the player's own terms** —
+      `docs/decisions/0027-measure-the-picture-not-the-model.md` requires at least one, and
+      *"`fireEvery` divides `STEPS_PER_BEAT`"* is the model agreeing with itself. What the player
+      experiences is that the gun and the music **come back together**: over one loop of music every
+      tier fires a whole number of volleys, so the pattern never arrives half a beat out and the
+      relationship between the two is the same in the third minute as in the first.
+
+      A rung that divided the beat but not the loop would still drift within the phrase, which is the
+      failure this catches and the divisor check below does not.
+    */
+    const loopSteps = LOOP_SECONDS * STEPS_PER_SECOND;
+    expect(Number.isInteger(loopSteps), `a music loop is ${loopSteps} steps, which is not a whole number`).toBe(true);
+    for (let tier = 0; tier < RUNGS.length; tier++) {
+      const volleys = loopSteps / RUNGS[tier]!;
+      expect(
+        Number.isInteger(volleys),
+        `at tier ${tier} the gun fires ${volleys.toFixed(2)} times per ${LOOP_SECONDS}s loop, so it walks off the music`,
+      ).toBe(true);
+    }
+  });
+
+  it('and every rung is a whole number of steps AND a musical fraction of a beat', () => {
+    /*
+      ⚠️ **THE FAILURE THIS EXISTS FOR IS THE LADDER AS IT SHIPPED**: 9, 8, 7, 5 and 4 steps against a
+      beat of 27, of which exactly one divided anything. It was not a bug anybody could see — every
+      guard in the repository was green — and it is why *"almost the right tempo"* was the report.
+
+      Both halves are needed. A whole number of steps alone is trivially true of any integer; a
+      fraction of a beat alone would allow 4.5 steps, which the fixed-step clock cannot express.
+    */
+    for (let tier = 0; tier < RUNGS.length; tier++) {
+      const steps = RUNGS[tier]!;
+      expect(Number.isInteger(steps), `tier ${tier} fires every ${steps} steps, which the clock cannot do`).toBe(true);
+      expect(
+        STEPS_PER_BEAT % steps,
+        `tier ${tier} fires every ${steps} steps against a beat of ${STEPS_PER_BEAT}, so it is off the grid`,
+      ).toBe(0);
+    }
+  });
+
+  it('and the ladder respects the two floors it did not used to have to', () => {
+    /*
+      ⚠️ **These were ENDPOINTS of an interpolation and are now constraints on a table**, which is the
+      one thing a hand-written ladder loses: `rung(base, FASTEST_FIRE, tier)` could not overshoot the
+      floor, and a list can. Both floors are unchanged and both are still what they were —
+      `FASTEST_FIRE` is legibility (`src/app/frame.ts` needs the impact flash to finish between hits)
+      and `MAX_BARRELS` is the pool budget.
+    */
+    expect(SHIPS.proof.firePerBeat.length, 'the cadence ladder is not one rung per tier').toBe(UPGRADE_TIERS + 1);
+    expect(SHIPS.proof.barrels.length, 'the barrel ladder is not one rung per tier').toBe(UPGRADE_TIERS + 1);
+    for (let tier = 0; tier < RUNGS.length; tier++) {
+      expect(RUNGS[tier], `tier ${tier} outruns the impact flash`).toBeGreaterThanOrEqual(FASTEST_FIRE);
+      expect(SHIPS.proof.barrels[tier], `tier ${tier} asks for more barrels than the pool budgets`).toBeLessThanOrEqual(
+        MAX_BARRELS,
+      );
+    }
+  });
+
+  it('THE COUNTER-BEAT: the missile is an exact ratio of the pulse at every rung, and was an accident', () => {
+    /*
+      ⚠️ **Reported from play as something that already worked** — *"the missile fire provided a great
+      counter-beat"* — and nobody had chosen it. Two unrelated interpolations happened to start about
+      five apart and stayed there: 5.00, 4.88, 4.71, 5.20, 5.00 across the old tiers. 0093 writes it
+      down, and this is what stops a later tune to either ladder quietly dissolving it.
+
+      ⚠️ **It also keeps 0051's *slower than the pulse* true by construction** rather than by two
+      numbers that have to be kept in order, which is the second assertion here.
+    */
+    /*
+      ⚠️ **THE FIRST VERSION OF THIS ASSERTION PROVED NOTHING AND `npm run prove` SAID SO.** It read
+      `missileEvery / fireEvery === MISSILE_BEAT_RATIO`, which is the constant on both sides of the
+      equals sign: setting the ratio to 4 moved the numerator and the expectation together and the
+      suite stayed GREEN. That is
+      `docs/decisions/0027-measure-the-picture-not-the-model.md`'s *a guard measuring a quantity
+      defined in terms of the constant it guards proves only that the code agrees with itself*, caught
+      by [0019](../docs/decisions/0019-a-probe-must-be-seen-to-apply.md) inside a minute.
+
+      **What is asserted instead is the musical property**, which the constant cannot satisfy by
+      moving: a counter-beat must not land ON the beat. At a ratio of 4 the missile is exactly one
+      beat apart wherever the gun is on sixteenths — a straight quarter note, the opposite of what was
+      heard — and at 5 it never closes with a beat at any rung.
+    */
+    const ratios: number[] = [];
+    for (let tier = 0; tier < RUNGS.length; tier++) {
+      const missiles = Array.from({ length: tier }, () => 'missile' as const);
+      const weapon = weaponFor(SHIPS.proof, missiles);
+      const beats = weapon.missileEvery / STEPS_PER_BEAT;
+      expect(
+        Number.isInteger(beats),
+        `at tier ${tier} a missile leaves every ${beats} beats exactly, which is ON the beat rather than across it`,
+      ).toBe(false);
+      ratios.push(weapon.missileEvery / fireEveryAt(SHIPS.proof, tier));
+      expect(weapon.missileEvery, `at tier ${tier} the second weapon fires as often as the first`).toBeGreaterThan(
+        weaponFor(SHIPS.proof, Array.from({ length: tier }, () => 'weapon' as const)).fireEvery,
+      );
+    }
+    // And it is the SAME cross-rhythm at every rung — which is what the old ladder could not promise,
+    // and is independent of what the ratio's value happens to be.
+    expect(new Set(ratios).size, `the missile sits at ${[...new Set(ratios)].join(', ')} pulses across the tiers`).toBe(
+      1,
+    );
+  });
+
+  it('and the tempo is a whole number of sim steps, which is what makes any of it possible', () => {
+    /*
+      ⚠️ **THE CROSS-FILE CHECK, and it cannot be an import.** `STEPS_PER_BEAT` lives in
+      `src/content/music.ts` and `STEPS_PER_SECOND` in `src/state/screens.ts`;
+      `docs/decisions/0015-the-layer-ladder.md` points the arrow from `content` to `state`, so content
+      may not read it. The two are held to each other here instead — the same shape of guard
+      `tests/bombs.test.ts` makes for a blast's reach and the bitmap it is drawn at.
+
+      ⚠️ **A beat that is not a whole number of steps is a gun that CANNOT be put in time**, at any
+      cadence, because the gap between volleys is counted in steps. That is the constraint the whole
+      decision turns on, and it is one line.
+    */
+    expect(
+      BEAT_SECONDS * STEPS_PER_SECOND,
+      `a beat is ${(BEAT_SECONDS * STEPS_PER_SECOND).toFixed(3)} sim steps, so no cadence can land on it`,
+    ).toBe(STEPS_PER_BEAT);
+  });
+});
 
 describe('an upgrade changes the ship, and stacking one changes it again', () => {
   it('every upgrade is worth taking', () => {
@@ -173,8 +318,9 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
     // 0039 says a death goes "back to the ship's base weapon". That sentence is only cheap because
     // the base weapon is what an empty list resolves to.
     const base = weaponFor(SHIPS.proof, []);
-    expect(base.fireEvery).toBe(SHIPS.proof.fireEvery);
-    expect(base.shots).toBe(1);
+    // 0093: the base cadence is rung 0 of the ship's own ladder rather than a field beside it.
+    expect(base.fireEvery).toBe(fireEveryAt(SHIPS.proof, 0));
+    expect(base.shots).toBe(SHIPS.proof.barrels[0]);
   });
 });
 

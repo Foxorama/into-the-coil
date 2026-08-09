@@ -24,8 +24,31 @@ import { SPRITE } from './sprites.ts';
 export type ShipKind = 'proof';
 
 export interface ShipRow extends Body {
-  /** Steps between auto-fire shots. */
-  fireEvery: number;
+  /**
+   * How many volleys a beat this ship fires, at each weapon tier. One entry per rung, so its length
+   * is `UPGRADE_TIERS + 1`.
+   *
+   * ── IT WAS `fireEvery: number` AND THE LADDER WAS INTERPOLATED ─────────────────────────────────
+   *
+   * ⚠️ **`docs/decisions/0093-the-gun-is-on-the-grid.md`.** The cadence used to be
+   * `rung(ship.fireEvery, FASTEST_FIRE, tier)` — a straight line from a base to a floor, which
+   * produced 9, 8, 7, 5, 4 steps. Only the 9 was a musical value of anything, and none of the five
+   * was a musical value of the tempo the game plays at, so **the gun drifted on and off the beat as
+   * the player upgraded**. That is what the play-test heard as *"almost the right tempo"*.
+   *
+   * ⚠️ **A LIST RATHER THAN A CURVE, because the rungs are not evenly spaced and cannot be.** The
+   * usable subdivisions of a beat are geometric — 2, 3, 4, 6 per beat — so no interpolation between
+   * a base and a floor lands on them. `rung` is kept for the launchers, where the quantity really is
+   * a count.
+   *
+   * ⚠️ **AND IT IS ON THE ROW BECAUSE A SHIP IS WHERE A WEAPON'S CHARACTER LIVES.** The play-test
+   * asked for the alternative to be kept: *"keep the chunky slower fire rate on record, we could use
+   * that for a different ship later."* 0093 records the numbers; **this field is what makes spending
+   * them a table edit** rather than a rewrite of `weaponFor`.
+   */
+  firePerBeat: readonly number[];
+  /** How many barrels fire at once, at each weapon tier. Same length as `firePerBeat`. */
+  barrels: readonly number[];
   /** The base weapon. */
   shot: ShotKind;
   /**
@@ -36,9 +59,14 @@ export interface ShipRow extends Body {
    * and `src/content/actions.ts`'s *there is no `fire` action and there must never be one* covers
    * every auto-weapon rather than only the pulse. A second ship that carries a different missile, or
    * none at all, is a table edit.
+   *
+   * ⚠️ **`missileEvery` is GONE and the missile's cadence is derived** —
+   * `docs/decisions/0093-the-gun-is-on-the-grid.md`. It is `MISSILE_BEAT_RATIO` times whatever the
+   * pulse fires at on the same rung, which is the 5:1 cross-rhythm the play-test heard and nobody
+   * had chosen. Written as its own number it was free to drift off that ratio, and across the old
+   * five tiers it already had — 5.00, 4.88, 4.71, 5.20, 5.00.
    */
   missile: ShotKind;
-  missileEvery: number;
 }
 
 /** Written out rather than derived, so the table below cannot quietly lose a row. */
@@ -95,17 +123,34 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     radius: 2,
     health: 1,
     damage: 0,
-    fireEvery: 9,
-    shot: 'pulse',
     /*
-      ⚠️ **Five times the gap between pulses, and it is what makes the two weapons different.** A
-      missile worth three pulses fired at the pulse's own rate would simply BE the weapon, and the
-      pulse would be decoration; the ask says *slower*, and the number a hand settles is how much.
-      Nothing asserts on it — `tests/pickups.test.ts` holds the pool arithmetic it feeds, which must
-      hold at any value.
+      ── THE LADDER, IN NOTE VALUES AT 150 BPM ────────────────────────────────────────────────────
+
+      `docs/decisions/0093-the-gun-is-on-the-grid.md`. Three per beat is an eighth-note triplet, four
+      is a sixteenth, six is a sixteenth-note triplet — 8, 6 and 4 steps against `STEPS_PER_BEAT`.
+
+      ⚠️ **THE OLD LADDER WAS 9, 8, 7, 5, 4 STEPS AND TWO OF ITS FIVE RUNGS ARE UNCHANGED HERE.** Tier
+      1 was already 8 and tier 4 was already 4; the grid at 150 BPM has 8, 6 and 4 in exactly the span
+      the ladder occupied. That is why putting the gun in time costs no rebalance — the report that
+      mapped this expected the base cadence to HALVE, and it expected that because it computed the
+      grid at 100 BPM. Bullets a second move by at most 17% at any rung and two rungs do not move at
+      all.
+
+      ⚠️ **The rate steps twice and the barrels step four times, which is deliberate.** There are only
+      three usable subdivisions between *slower than today* and `FASTEST_FIRE`, so two of the four
+      upgrades cannot buy rate — and an upgrade that changes nothing is the one thing `docs/game.md`
+      forbids. The barrels are what make every rung worth taking.
+
+      ⚠️ **AND THE ALTERNATIVE IS RECORDED RATHER THAN BUILT**, asked for in the same breath: *"keep
+      the chunky slower fire rate on record, we could use that for a different ship later."* It is
+      `firePerBeat: [2, 3, 3, 4, 4]` with `barrels: [2, 3, 4, 5, 6]` — a gun that opens on straight
+      eighths with two barrels and never reaches a triplet. 0093 has why it is a second SHIP rather
+      than a retune of this one.
     */
+    firePerBeat: [3, 3, 4, 4, 6],
+    barrels: [1, 2, 3, 4, 4],
+    shot: 'pulse',
     missile: 'missile',
-    missileEvery: 45,
   },
 };
 

@@ -255,8 +255,9 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
-    fireIn: shipRow.fireEvery,
-    missileIn: shipRow.missileEvery,
+    // 0093 took the two cadence numbers off `ShipRow`; the base weapon is the empty list.
+    fireIn: weaponFor(shipRow, []).fireEvery,
+    missileIn: weaponFor(shipRow, []).missileEvery,
     ship,
     shipRow,
     enemyRows,

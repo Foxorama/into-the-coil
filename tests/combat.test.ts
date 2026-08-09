@@ -35,6 +35,7 @@ import { makeRng } from '../src/sim/rng.ts';
 import { BURST } from '../src/content/debris.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyRow } from '../src/content/enemies.ts';
 import { INVULN_STEPS, MAX_SHIELDS, SHIPS } from '../src/content/ships.ts';
+import { weaponFor } from '../src/content/pickups.ts';
 import { SHOT_KINDS, SHOTS } from '../src/content/shots.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { GameFrame, SHIP_START_ALONG, type World } from '../src/app/frame.ts';
@@ -439,7 +440,10 @@ function firingAt(row: EnemyRow, distance: number): World {
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
     ...inertLevel(),
-    fireIn: shipRow.fireEvery,
+    // 0093 took `fireEvery` off the row; the base cadence is what an empty upgrade list resolves to.
+    // ⚠️ This fixture is *"how many shots does this take"* and its gun MUST fire — see `aimedAtTheShip`
+    // below for the one that must not.
+    fireIn: weaponFor(shipRow, []).fireEvery,
     ship,
     shipRow,
     enemyRows: ENEMY_KINDS.map((k) => ENEMIES[k]),
@@ -481,7 +485,7 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
   const enemies = new Pool<Entity>(1, makeEntity);
   const playerShots = new Pool<Entity>(4, makeEntity);
   const enemyShots = new Pool<Entity>(4, makeEntity);
-  const shipRow = { ...SHIPS.proof, fireEvery: NEVER };
+  const shipRow = SHIPS.proof;
   const ship = shipPool.spawn()!;
   reset(ship, SHIP_START_ALONG, ACROSS_SPAN / 2, shipRow);
   ship.velAlong = SCROLL_PER_STEP;

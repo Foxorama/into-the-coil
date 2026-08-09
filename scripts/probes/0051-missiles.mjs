@@ -27,9 +27,14 @@ export const PROBES = [
     broke: 'the missile cadence dropped to the pulse’s, so the two weapons stop being different',
     guard: 'fires less often than the pulse does',
     edit: {
-      path: 'src/content/ships.ts',
-      find: '    missileEvery: 45,',
-      replace: '    missileEvery: 5,',
+      // ⚠️ RE-ANCHORED BY 0093, and the break moved file. `missileEvery` is gone from the row: the
+      // missile's cadence is `MISSILE_BEAT_RATIO` times the pulse's on the same rung, which is the
+      // 5:1 counter-beat written down instead of left to two interpolations that happened to agree.
+      // So *the missile fires as fast as the pulse* is now exactly `MISSILE_BEAT_RATIO = 1`, which
+      // is a cleaner statement of the same break than the old hand-set 5 ever was.
+      path: 'src/content/pickups.ts',
+      find: 'export const MISSILE_BEAT_RATIO = 5;',
+      replace: 'export const MISSILE_BEAT_RATIO = 1;',
     },
   },
   {
@@ -108,8 +113,11 @@ export const PROBES = [
     guard: 'THE SPLIT: a weapon pickup never touches the missiles',
     edit: {
       path: 'src/content/pickups.ts',
-      find: '  const missileEvery = rung(ship.missileEvery, MISSILE_FASTEST, tubes);',
-      replace: '  const missileEvery = rung(ship.missileEvery, MISSILE_FASTEST, gun + tubes);',
+      // ⚠️ Re-anchored by 0093. The cadence is derived from the pulse's ladder now, so the
+      // copy-paste that breaks separation is reading the GUN's tier where the missile's belongs —
+      // which is the same mistake in one fewer character than it used to be.
+      find: '  const missileEvery = MISSILE_BEAT_RATIO * fireEveryAt(ship, tubes);',
+      replace: '  const missileEvery = MISSILE_BEAT_RATIO * fireEveryAt(ship, gun);',
     },
   },
   {
@@ -156,12 +164,25 @@ export const PROBES = [
       volley are refused, so a three-launcher ship fires like a one-launcher ship at exactly the
       moment the player has earned otherwise.
     */
-    broke: 'the missile fire floor dropped below what the pool can hold',
+    /*
+      ⚠️ RE-ANCHORED BY 0093, AND THE CONSTANT IT USED TO BREAK NO LONGER EXISTS. It dropped
+      `MISSILE_FASTEST` from 20 to 4; the missile's cadence is derived now — `MISSILE_BEAT_RATIO`
+      times the pulse's on the same rung — so the constant took part in no arithmetic at all and this
+      probe came back STILL GREEN. 0093 deleted it on this file's own *one guarantee, one mechanism*
+      argument rather than leaving a rule nothing could break.
+
+      ⚠️ The break is the same failure reached through the thing that now controls it: a ratio of 1
+      puts the missile on the pulse's own cadence, which at a full loadout is two launchers at four
+      steps against a pool of 24 — 65 slots asked for. The probe above breaks the same constant for a
+      different reason (the two weapons stop being different); one edit, two consequences, and each
+      is checked against its own guard.
+    */
+    broke: 'the missile ratio collapsed onto the pulse, so a full loadout outruns the missile pool',
     guard: 'a volley is never truncated',
     edit: {
       path: 'src/content/pickups.ts',
-      find: 'const MISSILE_FASTEST = 20;',
-      replace: 'const MISSILE_FASTEST = 4;',
+      find: 'export const MISSILE_BEAT_RATIO = 5;',
+      replace: 'export const MISSILE_BEAT_RATIO = 1;',
     },
   },
   {

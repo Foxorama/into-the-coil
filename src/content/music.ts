@@ -149,15 +149,50 @@ export const BOSS_APPROACH_UNITS = 430;
 export const MUSIC_ROOT = 55;
 
 /**
+ * How many fixed sim steps there are to a beat.
+ *
+ * ── THIS IS THE WHOLE OF WHY THE TEMPO MOVED, AND IT IS NOT A MUSIC CONSTANT ────────────────────
+ *
+ * ⚠️ **`docs/decisions/0093-the-gun-is-on-the-grid.md`.** Asked for in play: *"we could almost make a
+ * rhythm style game… what can we do so that as you pick up or lose power ups the music speeds up,
+ * slows down etc and works in a beat to the rhythm of the fire?"* The player's auto-fire runs on the
+ * fixed-step clock and never stops (`src/content/actions.ts` bans a fire action), so it is **a
+ * metronome the player cannot switch off** — and putting it in time with the music means the gap
+ * between volleys has to be a whole number of steps AND a musical fraction of a beat.
+ *
+ * ⚠️ **THAT IS ONLY POSSIBLE IF A BEAT IS A WHOLE NUMBER OF STEPS WITH USEFUL DIVISORS, AND 133⅓ BPM
+ * WAS NOT.** 0090's beat was 0.45s, which is **27** steps, and 27 divides only by 3 and 9: a
+ * three-rung fire ladder with a 3× hole in it. No amount of tuning the gun reaches a grid the music
+ * is not on, which is the fact
+ * [`the-gun-on-the-grid-mapped`](../../reports/the-gun-on-the-grid-mapped-2026-08-09.md) did not
+ * state — it computed its grid at 100 BPM, which the music has never been at.
+ *
+ * ⚠️ **24 steps gives 24, 12, 8, 6, 4 and 3** — quarters, eighths, eighth-triplets, sixteenths,
+ * sixteenth-triplets and thirty-seconds — and 3600/24 is **150 BPM**, which is where the genre the
+ * play-test named actually sits. `src/content/pickups.ts` is what spends those divisors.
+ *
+ * ⚠️ **It cannot be derived from `STEPS_PER_SECOND` here**, because that lives in
+ * `src/state/screens.ts` and `docs/decisions/0015-the-layer-ladder.md` points the arrow the other
+ * way — `content` may not import `state`. `tests/music.test.ts` holds the two to each other instead,
+ * which is the same cross-file check `tests/bombs.test.ts` makes for a blast's reach and its art.
+ */
+export const STEPS_PER_BEAT = 24;
+
+/**
  * The bar, in seconds, and how many of them a loop is.
  *
  * ⚠️ **THE LOOP LENGTH MUST BE A WHOLE NUMBER OF SAMPLES AT EVERY RATE IT IS BAKED AT.** A length
  * that rounds is a layer that drifts against the other three, and drift is the one failure this
- * design cannot recover from — there is no scheduler to re-align anything. 0.45s a beat is 133⅓ BPM,
- * and eight beats is 3.6 seconds, which is exact at 44100 and at 22050.
+ * design cannot recover from — there is no scheduler to re-align anything. 0.4s a beat is 150 BPM,
+ * and eight beats is 3.2 seconds, which is exact at 44100, at 22050 and at 48000.
  * `tests/music.test.ts` holds it rather than this comment.
+ *
+ * ⚠️ **0.45 → 0.4, and it is `STEPS_PER_BEAT` above that decides it** rather than a taste about
+ * tempo. Every note length written as a multiple of `BEAT_SECONDS` follows it; the handful written
+ * in absolute seconds — a kick's 0.26, a hat's 0.04 — deliberately do not, because a drum's decay is
+ * a property of the drum and not of the tempo.
  */
-export const BEAT_SECONDS = 0.45;
+export const BEAT_SECONDS = 0.4;
 export const LOOP_BARS = 2;
 export const LOOP_SECONDS = BEAT_SECONDS * 4 * LOOP_BARS;
 

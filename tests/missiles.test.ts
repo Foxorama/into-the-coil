@@ -10,9 +10,10 @@ import {
   FASTEST_FIRE,
   MAX_BARRELS,
   MAX_LAUNCHERS,
-  MISSILE_FASTEST,
+  MISSILE_BEAT_RATIO,
   UPGRADE_KINDS,
   UPGRADE_TIERS,
+  fireEveryAt,
   weaponFor,
   type UpgradeKind,
 } from '../src/content/pickups.ts';
@@ -300,22 +301,57 @@ describe('the upgrades reach the weapon rather than the wrong one', () => {
       ⚠️ **Worth stating plainly: the rule flipped because the CONTENT flipped, not because anyone was
       wrong.** Each version was the correct guard for the taxonomy it was written against, which is
       what a guard tied to a decision looks like when the decision moves.
+
+      ── AND 0093 LOOSENED ONE HALF OF IT, WHICH IS WORTH BEING HONEST ABOUT ────────────────────────
+
+      ⚠️ **It used to assert that a pickup moves its weapon's CADENCE specifically**, and that was a
+      statement about the mechanism rather than about the rule: an interpolated ladder moved the
+      cadence at every rung, so *the cadence moved* and *the weapon changed* were the same sentence.
+      `docs/decisions/0093-the-gun-is-on-the-grid.md` puts the cadence on musical values, and there
+      are only three usable subdivisions in the span the ladder occupies — so two rungs necessarily
+      share one and buy a barrel instead.
+
+      ⚠️ **What is asserted now is the rule itself, and on the separation half it is STRICTLY
+      STRONGER**: a pickup changes something about its own weapon, and **nothing whatever** about the
+      other one — checked field by field rather than on the two fields somebody remembered. *Every
+      tier changes something* is the next test down and is where *worth taking* is held; this one is
+      about the two ladders not touching.
+
+      ⚠️ **AND IT IS WALKED OVER EVERY TIER, WHERE IT USED TO TEST ONE PICKUP.** `npm run prove`
+      cross-wired the missile cadence to the gun's tier — the exact copy-paste this guard is named for
+      — and reported WRONG TEST: at one upgrade the broken code is indistinguishable from the correct
+      one, because tiers 0 and 1 share a cadence on the new ladder. A separation rule tested at a
+      single rung is a separation rule with four rungs of hole in it.
     */
     const base = weaponFor(SHIPS.proof, []);
+    /** The fields belonging to each weapon, so neither list can quietly lose one. */
+    const PULSE = ['fireEvery', 'shots', 'spread', 'damage'] as const;
+    const MISSILE = ['missileEvery', 'launchers', 'missileDamage'] as const;
 
-    const gun = weaponFor(SHIPS.proof, ['weapon']);
-    expect(gun.fireEvery, 'a weapon pickup left the pulse cadence alone').toBeLessThan(base.fireEvery);
-    expect(gun.shots, 'a weapon pickup added no barrel').toBeGreaterThan(base.shots);
-    expect(gun.missileEvery, 'a weapon pickup moved the missile cadence').toBe(base.missileEvery);
-    expect(gun.launchers, 'a weapon pickup added a launcher').toBe(base.launchers);
+    for (let tier = 1; tier <= UPGRADE_TIERS; tier++) {
+      const gun = weaponFor(SHIPS.proof, Array.from({ length: tier }, () => 'weapon' as const));
+      expect(PULSE.some((f) => gun[f] !== base[f]), `${tier} weapon pickups changed nothing about the pulse`).toBe(
+        true,
+      );
+      for (const field of MISSILE) {
+        expect(gun[field], `${tier} weapon pickups moved the missile's ${field}`).toBe(base[field]);
+      }
 
-    const tube = weaponFor(SHIPS.proof, ['missile']);
-    expect(tube.missileEvery, 'a missile pickup left the missile cadence alone').toBeLessThan(base.missileEvery);
-    expect(tube.launchers, 'the first missile tier is not a tube, so the second weapon is not earned').toBe(
-      base.launchers + 1,
-    );
-    expect(tube.fireEvery, 'a missile pickup moved the pulse cadence').toBe(base.fireEvery);
-    expect(tube.shots, 'a missile pickup added a barrel').toBe(base.shots);
+      const tube = weaponFor(SHIPS.proof, Array.from({ length: tier }, () => 'missile' as const));
+      expect(
+        MISSILE.some((f) => tube[f] !== base[f]),
+        `${tier} missile pickups changed nothing about the missiles`,
+      ).toBe(true);
+      for (const field of PULSE) {
+        expect(tube[field], `${tier} missile pickups moved the pulse's ${field}`).toBe(base[field]);
+      }
+    }
+
+    // And the first tube is the second weapon ARRIVING, which 0056 must not lose.
+    expect(
+      weaponFor(SHIPS.proof, ['missile']).launchers,
+      'the first missile tier is not a tube, so the second weapon is not earned',
+    ).toBe(base.launchers + 1);
   });
 
   it('THE TIERS: each ladder is exactly UPGRADE_TIERS long, and every tier changes something', () => {
@@ -379,13 +415,21 @@ describe('the upgrades reach the weapon rather than the wrong one', () => {
       `docs/decisions/0019-a-probe-must-be-seen-to-apply.md`'s STILL GREEN, found by the harness one
       pass after the test was written.
 
-      ⚠️ **Naming the floors is legitimate here and would not be in a ladder test.** They are separate
-      constants with their own reasons — `FASTEST_FIRE` is a legibility number and `MISSILE_FASTEST` is
-      a pool number — so this asserts that two independent things agree, not that the code equals
-      itself. They are exported for exactly this.
+      ⚠️ **Naming the floor is legitimate here and would not be in a ladder test.** `FASTEST_FIRE` is
+      a legibility number with its own reason, so this asserts that two independent things agree
+      rather than that the code equals itself. It is exported for exactly this.
+
+      ⚠️ **AND THE MISSILE'S HALF NO LONGER NAMES A CONSTANT, BECAUSE 0093 DELETED IT.**
+      `MISSILE_FASTEST` was 20 and the derived cadence reaches 20 on its own — so asserting the one
+      against the other had become a number agreeing with itself, and `npm run prove` proved it by
+      dropping the constant to 4 and watching everything stay green. What is asserted instead is the
+      relationship that is actually load-bearing: **both ladders land on their last rung together**,
+      at the ratio the counter-beat is made of. `docs/decisions/0093-the-gun-is-on-the-grid.md`.
     */
     expect(maxGun.fireEvery, 'the pulse stops short of its floor, so the last tier is not the last').toBe(FASTEST_FIRE);
-    expect(maxTube.missileEvery, 'the missiles stop short of their floor').toBe(MISSILE_FASTEST);
+    expect(maxTube.missileEvery, 'the missiles do not reach their last rung with the pulse').toBe(
+      MISSILE_BEAT_RATIO * maxGun.fireEvery,
+    );
     expect(maxGun.shots, 'the pulse never reaches its barrel cap').toBe(MAX_BARRELS);
     expect(maxTube.launchers, 'the missiles never reach their tube cap').toBe(MAX_LAUNCHERS);
     /*
@@ -411,7 +455,8 @@ describe('the upgrades reach the weapon rather than the wrong one', () => {
     */
     const base = weaponFor(SHIPS.proof, []);
     expect(base.launchers, 'the base ship still carries a launcher of its own').toBe(0);
-    expect(base.missileEvery).toBe(SHIPS.proof.missileEvery);
+    // 0093: the missile's cadence is derived from the pulse's, so the base is the ratio at tier 0.
+    expect(base.missileEvery).toBe(MISSILE_BEAT_RATIO * fireEveryAt(SHIPS.proof, 0));
     expect(base.missileDamage).toBe(SHOTS[SHIPS.proof.missile].damage);
   });
 
@@ -438,9 +483,22 @@ describe('the upgrades reach the weapon rather than the wrong one', () => {
 
       Asserted on the clock rather than on a missile because the count is zero either way, which is
       exactly why this needs its own guard.
+
+      ⚠️ **CHECKED EVERY STEP, AND IT USED TO BE CHECKED ONCE AT THE END — WHICH ALIASED.** A clock
+      that runs when it should not still returns to its starting value every `missileEvery` steps, so
+      a single reading after `A_WHILE` steps is a coin flip on whether `A_WHILE` happens to be a
+      multiple of the cadence. 0093 moved the base cadence from 45 to 40, `A_WHILE` is 200, and 200 is
+      exactly five times 40: the probe went STILL GREEN the same afternoon on a guard that had been
+      correct for weeks. **Third time in this project that a guard has sampled one phase of a periodic
+      quantity** — `docs/decisions/0087-a-pickup-never-parks.md` has the first and 0090's seam guard
+      the second — and the only phase-proof form is to look at every step rather than at a chosen one.
     */
     const { world, frame } = quietWorld();
-    for (let i = 0; i < A_WHILE; i++) frame.step();
-    expect(world.missileIn, 'the missile clock ran while the ship had no launcher').toBe(world.weapon.missileEvery);
+    for (let i = 0; i < A_WHILE; i++) {
+      frame.step();
+      expect(world.missileIn, `the missile clock ran while the ship had no launcher, by step ${i + 1}`).toBe(
+        world.weapon.missileEvery,
+      );
+    }
   });
 });

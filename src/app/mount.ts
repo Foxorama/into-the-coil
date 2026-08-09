@@ -456,8 +456,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
-    fireIn: shipRow.fireEvery,
-    missileIn: shipRow.missileEvery,
+    /*
+      ⚠️ **Read off the resolved WEAPON rather than off the row** — 0093 took the two cadence numbers
+      off `ShipRow`, because a rung is a note value on a ladder now and a base is just its first
+      entry. `weaponFor(shipRow, [])` is the one description of *what an unupgraded ship fires at*,
+      which is the same reason `tests/pickups.test.ts` drives an empty list to get the base weapon.
+    */
+    fireIn: weaponFor(shipRow, []).fireEvery,
+    missileIn: weaponFor(shipRow, []).missileEvery,
     ship,
     shipRow,
     enemyRows,

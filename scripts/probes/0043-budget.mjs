@@ -13,9 +13,15 @@ export const PROBES = [
     broke: 'the barrel cap removed, which is the shipped bug exactly',
     guard: 'a volley is never truncated, however heavily the ship is loaded',
     edit: {
-      path: 'src/content/pickups.ts',
-      find: 'const MAX_BARRELS = 4;',
-      replace: 'const MAX_BARRELS = 40;',
+      // ⚠️ RE-ANCHORED BY 0093, AND THE LEVER MOVED FROM ARITHMETIC TO CONTENT. `MAX_BARRELS` used to
+      // be the endpoint `rung(1, MAX_BARRELS, gun)` interpolated towards, so raising it raised the
+      // ladder; the barrels are a list on the ship's row now and the constant is a bound checked
+      // against that list. `npm run prove` reported STILL GREEN within the hour of the change.
+      // The BREAK is unchanged — the shipped bug was a volley wider than the pool can hold — and it
+      // is now spelled where the barrels actually come from.
+      path: 'src/content/ships.ts',
+      find: '    barrels: [1, 2, 3, 4, 4],',
+      replace: '    barrels: [1, 2, 3, 4, 40],',
     },
   },
   {

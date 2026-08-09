@@ -74,7 +74,9 @@ function stationKeepingWorld(surface: Surface): World {
   // The real ship's numbers with its trigger held off, so the scene under test is the camera and
   // nothing else. A stream of auto-fire would not move the ship; it would only make the picture
   // harder to read for no gain.
-  const shipRow = { ...SHIPS.proof, fireEvery: NEVER };
+  // 0093 took `fireEvery` off the row. `fireIn: NEVER` below is what actually holds the trigger off,
+  // and always was — the row's copy of it was doing nothing this fixture depended on.
+  const shipRow = SHIPS.proof;
   const ship = shipPool.spawn()!;
   reset(ship, 40, 50, shipRow);
   /*
