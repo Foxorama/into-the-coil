@@ -36,6 +36,7 @@ import {
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
 import { DEFAULT_SOUND, SOUND_KINDS } from '../content/sound.ts';
 import { DEFAULT_STYLE, STYLES, STYLE_KINDS } from '../content/styles.ts';
+import { nextOnGrid } from '../content/music.ts';
 import { auraNearnessFor, musicLevelFor } from './music.ts';
 import { makeAudioOut, makeSpeaker } from './sound.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
@@ -201,6 +202,15 @@ export const SKY = [
   { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.6 },
   { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 0.85 },
 ];
+
+/**
+ * How many bodies the opening field is seeded with, so the first frame is not empty.
+ *
+ * ⚠️ **Hoisted by `docs/decisions/0098-a-wave-plays-a-figure.md`**, which needed to divide by it: a
+ * seeded body's place in its own cadence is its index over this, and a `12` written in two places
+ * is the drift `tests/one-description.test.ts` exists for.
+ */
+const SEEDED_BODIES = 12;
 
 /** What a style with no sky gets. Module-level, so switching styles allocates nothing. */
 const NO_SKY: typeof SKY = [];
@@ -380,7 +390,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   const seedField = (): void => {
     const seed = makeRng('proof-scene').stream('seed');
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < SEEDED_BODIES; i++) {
       const e = enemies.spawn();
       if (e === null) break;
       const kind = seed.int(0, enemyRows.length - 1);
@@ -388,7 +398,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       const margin = row.radius + 2;
       reset(e, seed.range(SHIP_START_ALONG + 60, MAX_ALONG_SPAN), seed.range(margin, ACROSS_SPAN - margin), row, kind);
       e.velAlong = -row.closing;
-      e.fireIn = row.fireEvery;
+      /*
+        ⚠️ **On the grid and at its own place in it, exactly like a wave** —
+        `docs/decisions/0098-a-wave-plays-a-figure.md`. This was `row.fireEvery`, which is the one
+        reload site in the game that 0096 did not reach: the seeded field is not a wave, so it kept
+        the pre-0094 form and every body of one kind counted down together. It is the field behind
+        the title screen and behind the proof scene, so it is the first thing a player ever hears
+        anything shoot in.
+      */
+      e.fireIn = nextOnGrid(0, row.fireEvery, i / SEEDED_BODIES);
     }
   };
   seedField();

@@ -120,6 +120,12 @@ describe('0096 — everything that shoots at the player plays along', () => {
       way to write this and it would make every body on the field open fire up to a grid unit LATE —
       a change to how quickly a wave becomes dangerous, which is a balance number nobody asked to
       move. It nudges earlier instead, by less than one sixteenth.
+
+      ⚠️ **THIS IS ABOUT THE SHARE OF ZERO, AND 0098 IS WHY THE DISTINCTION EXISTS** —
+      `docs/decisions/0098-a-wave-plays-a-figure.md`. A body's place in its own cadence is what stops
+      a formation firing as one volley, and N bodies at one cadence **cannot** be at N phases while
+      every one of them waits within a grid unit of it. The two rules are incompatible; what survives
+      is the direction. The test below is the half that still holds absolutely.
     */
     for (const gap of [FIRE_GRID, 48, 66, 78]) {
       for (let steps = 0; steps < STEPS_PER_BEAT * 4; steps++) {
@@ -130,6 +136,65 @@ describe('0096 — everything that shoots at the player plays along', () => {
         expect(wait, `a body with a gap of ${gap} waits ${wait} steps, which is more than a grid early`).toBeGreaterThan(
           gap - FIRE_GRID,
         );
+      }
+    }
+  });
+
+  it('0098 — and a SHARE only ever delays a body, so nothing becomes dangerous sooner than it was', () => {
+    /*
+      ⚠️ **The half of the rule above that survives a spread, and it is the half that was load-bearing.**
+      0096's argument was never *within one grid unit* for its own sake — it was *no body opens fire
+      sooner than it used to*, because that is the balance number. A share moves a body LATER, by
+      whole grid units, and never past one more cadence.
+
+      ⚠️ **Driven over every share a wave of up to eight can produce**, not over a handful: the shares
+      are `(i + index) / count`, so a wave of seven produces sevenths and a wave of five fifths, and
+      the floor inside `nextOnGrid` is where an off-by-one would live.
+    */
+    for (const gap of [FIRE_GRID, 48, 66, 78]) {
+      for (let steps = 0; steps < STEPS_PER_BEAT * 4; steps += 5) {
+        const zero = nextOnGrid(steps, gap);
+        for (let count = 1; count <= 8; count++) {
+          for (let i = 0; i < count; i++) {
+            const wait = nextOnGrid(steps, gap, i / count);
+            expect(
+              wait,
+              `a body at share ${i}/${count} with a gap of ${gap} opens fire ${zero - wait} steps SOONER than it used to`,
+            ).toBeGreaterThanOrEqual(zero);
+            expect(
+              wait,
+              `a body at share ${i}/${count} with a gap of ${gap} waits ${wait} steps, over a whole extra cadence`,
+            ).toBeLessThanOrEqual(zero + gap - FIRE_GRID);
+            expect((steps + wait) % FIRE_GRID, `a body at share ${i}/${count} fires off the grid`).toBe(0);
+          }
+        }
+      }
+    }
+  });
+
+  it('0098 — and a wave of members at different shares does not fire as one volley', () => {
+    /*
+      ⚠️ **THE DEFECT, stated over the arithmetic.** *"The enemies all fire at exactly the same time
+      when they appear"* — reported against the build 0096 landed in, where `nextOnGrid` was handed
+      the same `steps` and the same `gap` for every member of a formation and so returned the same
+      answer. This is the assertion that would have gone red on the day 0096 shipped.
+
+      ⚠️ **Distinct PHASES, not merely distinct waits.** Two bodies whose first shots are a whole
+      cadence apart are in unison for ever afterwards, which is the failure wearing a fix: what has to
+      differ is the wait MODULO the cadence.
+
+      ⚠️ **Up to as many members as there are slots**, and no further: a turret's 48-step cadence is
+      eight sixteenths, so a wave of ten must double up somewhere and it is not a defect that it does.
+    */
+    for (const gap of [48, 66, 78]) {
+      const slots = gap / FIRE_GRID;
+      for (const count of [2, 3, 4, 5]) {
+        const phases = new Set<number>();
+        for (let i = 0; i < count; i++) phases.add(nextOnGrid(100, gap, i / count) % gap);
+        expect(
+          phases.size,
+          `a wave of ${count} with a gap of ${gap} (${slots} slots) opens fire at ${phases.size} distinct phases`,
+        ).toBe(Math.min(count, slots));
       }
     }
   });

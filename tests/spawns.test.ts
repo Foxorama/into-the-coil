@@ -21,6 +21,9 @@ import { DEFAULT_ORIGIN, LEVELS, LEVEL_KINDS, type LevelRow } from '../src/conte
 import { PLAYER_SHOT_LIFE } from '../src/content/pickups.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { FIRE_GRID } from '../src/content/music.ts';
+import { ENEMIES } from '../src/content/enemies.ts';
+import { fireGapFor } from '../src/content/difficulty.ts';
+import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { GameFrame } from '../src/app/frame.ts';
 import { playableWorld } from './world.ts';
 import { sprite } from './bodies.ts';
@@ -248,6 +251,87 @@ describe('0096 — enemy fire lands on the grid in the real frame, not only in t
       offGrid.slice(0, 5),
       `${offGrid.length} of ${seen} enemy volleys left on a step that is not a multiple of ${FIRE_GRID}`,
     ).toEqual([]);
+  });
+
+  /*
+    ── 0098 — AND ON THE GRID IS NOT THE SAME AS IN A PATTERN ──────────────────────────────────────
+
+    `docs/decisions/0098-a-wave-plays-a-figure.md`. Reported from play against the build the guard
+    above shipped in: *"the enemies all fire at exactly the same time when they appear."* Every
+    assertion in this file was green over that build and correctly so — the shots were all on the
+    grid, and they were all on the SAME grid position, which is what a volley is.
+
+    ⚠️ **The measurement is *how many bullets appeared on one step*, which is the thing the player
+    reported**, and it is the quantity the guard above cannot see: it asks whether a step is allowed,
+    never how many shots landed on it. 0027 is the rule and this is the second time in three
+    decisions it has been the difference.
+  */
+  it('0098 — THE REPORTED ONE: a formation opens fire as a figure rather than as one volley', () => {
+    /*
+      ⚠️ **One wave, one kind, five bodies — the shape the report describes.** A mixed field would
+      spread by accident: different kinds have different cadences, so their shots drift apart whatever
+      the phase, and the defect only shows where the cadences agree.
+    */
+    const { world } = playableWorld({
+      waves: [{ at: 200, enemy: 'turret', formation: 'column', count: 5, lane: 40 }],
+      pickups: [],
+      bossAt: Number.POSITIVE_INFINITY,
+      boss: 'sentinel',
+    });
+    const frame = new GameFrame(world);
+    /** Every step a bullet appeared on, and how many appeared on it. */
+    const soundings: { step: number; bullets: number }[] = [];
+    let before = world.enemyShots.size;
+    for (let i = 0; i < 1800; i++) {
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      frame.step();
+      const added = world.enemyShots.size - before;
+      if (added > 0) soundings.push({ step: world.steps, bullets: added });
+      before = world.enemyShots.size;
+    }
+    expect(soundings.length, 'the wave never fired, so this measured nothing').toBeGreaterThan(4);
+    /*
+      ⚠️ **Five at once is the report and it is what this catches.** A turret's cadence is 48 steps —
+      eight sixteenths — so five bodies have five slots of their own available and nothing forces any
+      of them to share one. What is held is that a whole formation never lands on a single step.
+    */
+    const worst = Math.max(...soundings.map((s) => s.bullets));
+    expect(worst, `${worst} enemy bullets appeared on one step, out of a wave of five`).toBeLessThan(3);
+    /*
+      ⚠️ **AND THE SPREAD IS MEASURED IN MILLISECONDS OFF THE REAL FRAME**, because *"at exactly the
+      same time"* is a claim about what a player heard rather than about a step count —
+      `docs/decisions/0027-measure-the-picture-not-the-model.md` asks for at least one assertion in
+      the units the player experiences, and a guard written in grid units would be agreeing with the
+      constant it guards.
+
+      ⚠️ **Two distinct events 100ms apart are heard as one with a smeared attack**, which is exactly
+      the argument `src/content/cues.ts` makes for its own `hold`. The first five soundings of this
+      wave have to cover more than that, and less than one cadence — over a cadence and they are no
+      longer one figure.
+    */
+    const opening = soundings.slice(0, 5);
+    const spreadMs = ((opening[opening.length - 1]!.step - opening[0]!.step) / STEPS_PER_SECOND) * 1000;
+    expect(
+      spreadMs,
+      `the wave's first five shots arrive over ${spreadMs.toFixed(0)}ms, which a listener hears as one event`,
+    ).toBeGreaterThan(150);
+    /*
+      ⚠️ **AND THEY NEVER RE-CONVERGE, WHICH IS THE PROPERTY AND NOT THE OPENING.** A spread that
+      only holds for the first round is a volley with a stagger in front of it — the bodies would
+      drift back into unison the moment one of them skipped a turn. What makes it a figure is that
+      every member keeps its own place in the cadence for its whole life, and the place is
+      `step % gap`.
+
+      ⚠️ **The gap is the SCALED one**, read through `fireGapFor` off the fixture's own tier rather
+      than off the table: a difficulty multiplies every cadence, and a modulo taken against the
+      unscaled 48 would be measuring a period the game is not playing.
+    */
+    const gap = fireGapFor(ENEMIES.turret.fireEvery, world.difficulty);
+    const phases = new Set(soundings.map((s) => s.step % gap));
+    expect(
+      phases.size,
+      `every shot this wave fired landed on ${phases.size} place(s) in a ${gap}-step cadence`,
+    ).toBeGreaterThan(2);
   });
 });
 

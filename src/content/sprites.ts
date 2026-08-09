@@ -165,6 +165,25 @@ export const SPRITE_KINDS = [
   */
   'spit',
   /*
+    ── AND TWO MORE, BECAUSE ONE THREAT BITMAP WAS THE OTHER HALF OF A PLAY REPORT ─────────────────
+
+    `docs/decisions/0098-a-wave-plays-a-figure.md`: *"all the enemy bullets are exactly the same."*
+    They were — three shooting enemy kinds and seven bosses named one row.
+
+    ⚠️ **A DASH and a SLAB, which are the two primitives left at this size.** The square is spoken
+    for and so is the disc; what separates these three from each other is ASPECT and AREA, which
+    `reports/enemy-silhouettes-2026-08-05.md` found survives twenty pixels where a notch does not.
+    A dash is a bar lying along its own travel, a spit is a square, a slab is half again as wide as
+    either — thin, medium, fat, which is a ladder a player reads without being taught it.
+
+    ⚠️ **The weaver is also a bar and the charger is also a needle**, and the pair is a real risk
+    written down rather than assumed away: both are enemy HULLS of five to nine units against
+    bullets of two to three and a half, which is the size argument `spit` above already rests on.
+    `scripts/shot.mjs` is how it gets looked at.
+  */
+  'lance',
+  'flak',
+  /*
     ⚠️ **A DART, AND THE ONLY THING IN THE GAME DRAWN LONG ALONG ITS OWN TRAVEL IN THE BULLET INK.**
     The pulse is a disc of 1.8 units; this is 2.8 and pointed, so the two are told apart by shape and
     by size before colour is involved at all — which matters more here than anywhere else, because
@@ -452,6 +471,24 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     band `tests/combat.test.ts` holds puts it at 0.35 of its own extent, well inside.
   */
   spit: 2.6,
+  /*
+    ⚠️ **The three enemy bullets are a SIZE LADDER as well as three silhouettes** — 0098. 1.9, 2.6
+    and 3.4, which is thin-fast, medium and fat-slow: how much of the lane a shot takes says how long
+    the player has to leave it, so the two channels agree instead of having to be learned separately.
+    Each step is 0.7 units, which is the five screen pixels 0081 measured as the smallest size
+    difference that survives a busy screen.
+
+    ⚠️ **The lance is the one pair where SIZE does almost nothing**, and it is written down rather
+    than hoped over: at 1.9 against the pulse's 1.8 it is barely the larger of the two, so what
+    separates the player's own shot from the fastest thing being fired at them is shape and ink
+    alone — a red dash lying along the lane against a cyan disc. 0081's *the bigger one is the one
+    you must not touch* is satisfied by a hair and is not what is doing the work here.
+
+    ⚠️ **All three keep the spit's 0.9 hurtbox**, so `tests/combat.test.ts`'s band is what these
+    extents are really bounded by — 0.47 and 0.26 of their own drawing, both inside it.
+  */
+  lance: 1.9,
+  flak: 3.4,
   // Longer than the pulse and pointed. A missile is the shot the player is meant to notice.
   missile: 3.4,
   // Heavier than the missile: the biggest thing that leaves the ship, and the one that is spent.

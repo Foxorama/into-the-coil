@@ -289,11 +289,38 @@ export function onFireGrid(steps: number): number {
  * the difference between a pattern and a volley, and it is why the player's gun (0094) reloads
  * absolutely and an enemy does not: there is one ship and there are forty enemies.
  *
- * Returns between `gap - FIRE_GRID + 1` and `gap`, so a body never fires sooner than it used to by
- * more than one grid unit.
+ * ── AND EVERY BODY IN A FORMATION SPAWNS ON THE SAME STEP, WHICH IS THE SENTENCE ABOVE FAILING ──
+ *
+ * ⚠️ **`docs/decisions/0098-a-wave-plays-a-figure.md`.** Reported from play against the build 0096
+ * landed in: *"the enemies all fire at exactly the same time when they appear."* The paragraph above
+ * is true of two enemies from two waves and false of five from one: `spawnWave` places a whole
+ * formation inside one call, so `steps` and `gap` are the same number for every member and so is the
+ * answer. **0096 aligned the phase and then handed every body the same one.**
+ *
+ * ⚠️ **`share` is where in its OWN cadence a body sits, in `[0, 1)`** — the caller's business, and
+ * `src/app/frame.ts` derives it from the member's index and the wave's. A share of zero is byte for
+ * byte what 0096 returned, which is why the boss and the seeded field can go on asking the old
+ * question.
+ *
+ * ⚠️ **IT ONLY EVER DELAYS, AND THAT IS THE HALF THAT KEEPS 0096's BALANCE CLAIM.** 0096 refused a
+ * forward rounding because *"every body on the field would open fire up to a grid unit LATE — a
+ * change to how quickly a wave becomes dangerous."* A spread cannot be free of that: N bodies at one
+ * cadence CANNOT be at N phases while all of them wait within one grid unit of it, so the two rules
+ * are incompatible and this is the direction that makes nothing arrive sooner than it used to.
+ *
+ * Returns between `gap - FIRE_GRID + 1` and `2 × gap - FIRE_GRID`.
  */
-export function nextOnGrid(steps: number, gap: number): number {
-  return gap - FIRE_GRID + (FIRE_GRID - (steps % FIRE_GRID));
+export function nextOnGrid(steps: number, gap: number, share = 0): number {
+  const base = gap - FIRE_GRID + (FIRE_GRID - (steps % FIRE_GRID));
+  /*
+    ⚠️ **The slots are the body's OWN cadence divided by the grid, never the wave's size.** A wave of
+    six turrets has eight sixteenths to sit in and a wave of six lancers has thirteen; spreading over
+    the count instead would put two bodies on one slot in the first case and leave five empty in the
+    second. `gap` is already a whole number of grid units (guarded), so this divides exactly.
+  */
+  const slots = Math.max(1, Math.round(gap / FIRE_GRID));
+  const wrapped = ((share % 1) + 1) % 1;
+  return base + Math.floor(wrapped * slots) * FIRE_GRID;
 }
 
 /**

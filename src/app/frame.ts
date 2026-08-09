@@ -2060,8 +2060,20 @@ function spawnWave(w: World, index: number): void {
       tempo; where the shots LAND still depends on the step this body happened to spawn on, and a
       dozen bodies at correct periods and arbitrary offsets is a smear rather than a rhythm. One
       alignment at spawn holds for its whole life, because every gap is a whole number of grid units.
+
+      ⚠️ **AND EVERY MEMBER GETS ITS OWN PLACE IN THAT CADENCE** —
+      `docs/decisions/0098-a-wave-plays-a-figure.md`. Reported from play against the build 0096
+      landed in: *"the enemies all fire at exactly the same time when they appear."* 0096 aligned the
+      phase and then handed every body the same one, because a formation is placed inside ONE call —
+      `w.steps` and `row.fireEvery` do not vary down this loop, so neither did the answer.
+
+      ⚠️ **The member's index AND the wave's, which is the parity idiom eight lines up.** The member
+      spreads the formation across its own cadence; the wave rotates it, so two waves of turrets in a
+      row do not play the same figure at the same offset. Both are AUTHORED rather than rolled, for
+      the reason this function opens with: a level that rolled its rhythm would play differently
+      every run and could not be tuned by a hand.
     */
-    e.fireIn = nextOnGrid(w.steps, fireGapFor(row.fireEvery, w.difficulty));
+    e.fireIn = nextOnGrid(w.steps, fireGapFor(row.fireEvery, w.difficulty), (i + index) / wave.count);
   }
 }
 

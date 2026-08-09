@@ -213,7 +213,14 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     damage: 2,
     closing: 0.35,
     fireEvery: 78,
-    shot: 'spit',
+    /*
+      ⚠️ **ITS OWN BULLET SINCE 0098, and it is the fast thin one.** *"All the enemy bullets are
+      exactly the same"* was literally true — three shooting kinds and seven bosses named one row.
+      A lancer steers into the player's lane before it fires, so its shot is the one most likely to
+      be on target already; least travel time makes it the enemy answered first rather than
+      out-flown. Same 0.9 hurtbox as every other threat.
+    */
+    shot: 'lance',
     /*
       ⚠️ **IT NOW COMES TO YOU, and this is the row where the play report bites hardest.** A lancer
       was a body on a fixed lane that happened to shoot along it, so a player who was not in that lane
@@ -299,7 +306,14 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     // Faster than the lancer's 75 and it is the whole of what this enemy is. `docs/state-of-play.md`
     // says no enemy shot has ever landed on an attentive player; this is the row that tests that.
     fireEvery: 48,
-    shot: 'spit',
+    /*
+      ⚠️ **ITS OWN BULLET SINCE 0098, and it is the slow fat one.** A turret holds station, is on
+      screen for a known length of time and fires faster than anything else in the game; a quick
+      bullet on that cadence is a wall, and a slow wide one is a pattern to move through. Which is
+      what the other half of 0098 is about — the wave now plays a figure rather than a volley, and a
+      figure is only readable if the shots are slow enough to be seen arriving.
+    */
+    shot: 'flak',
     /*
       ⚠️ **The slowest roam there is, and it still has one.** `closing: 0` is the whole of what a
       turret is — it arrives with the world and is on screen for a known length of time, which is what

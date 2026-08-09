@@ -27,7 +27,17 @@ import type { Body } from '../sim/entity.ts';
 import { SPRITE } from './sprites.ts';
 
 /** Every shot in the game. Closed. */
-export type ShotKind = 'pulse' | 'spit' | 'missile' | 'bomb' | 'blast' | 'blastHalf' | 'blastWide' | 'blastWidest';
+export type ShotKind =
+  | 'pulse'
+  | 'spit'
+  | 'lance'
+  | 'flak'
+  | 'missile'
+  | 'bomb'
+  | 'blast'
+  | 'blastHalf'
+  | 'blastWide'
+  | 'blastWidest';
 
 export interface ShotRow extends Body {
   /**
@@ -53,6 +63,8 @@ export interface ShotRow extends Body {
 export const SHOT_KINDS: readonly ShotKind[] = [
   'pulse',
   'spit',
+  'lance',
+  'flak',
   'missile',
   'bomb',
   'blast',
@@ -92,6 +104,47 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     at all. The radius is untouched, so nothing about dodging one has changed.
   */
   spit: { sprite: SPRITE.spit, spriteHit: SPRITE.spit, radius: 0.9, health: 1, damage: 1, speed: 1.4 },
+  /*
+    ── THREE ENEMY BULLETS AND THERE WAS ONE, WHICH IS THE OTHER HALF OF A PLAY REPORT ─────────────
+
+    `docs/decisions/0098-a-wave-plays-a-figure.md`. Reported from play: *"the enemies all fire at
+    exactly the same time when they appear, all the enemy bullets are exactly the same."* The second
+    clause was literally true: three shooting enemy kinds and seven bosses all named `spit`, so every
+    threat in the game was one bitmap at one speed.
+
+    ⚠️ **EVERY HURTBOX IS STILL 0.9, AND THAT IS 0081's OWN PRECEDENT.** When the spit got its own
+    silhouette its radius was deliberately left alone — *"this is a legibility change and not a
+    difficulty one"* — and the same rule governs here. What varies is what the player SEES and how
+    long they have; what they have to dodge is one circle, the same as it has always been.
+
+    ⚠️ **AND EVERY SPEED IS STILL UNDER THE SHIP'S**, which is the property that makes an aimed shot
+    dodgeable rather than a coin flip (0034). The spread is 1.0 to 1.6 around the spit's 1.4, so the
+    mean threat is roughly where it was and the variety is in the extremes.
+
+    ⚠️ **The fast one is SMALL and the slow one is BIG**, which is the trade that keeps this fair
+    rather than a stealth difficulty change: the shot that gives the player least time is the one
+    that occupies least of the lane, and the one that fills the lane is the one they can walk away
+    from. `tests/legibility.test.ts` holds both halves.
+  */
+  /**
+   * The lancer's. Quick and thin — the shot that says *this one is aiming at you*.
+   *
+   * ⚠️ **1.6 against the ship's own speed, which is the closest anything in the game comes.** A
+   * lancer steers into the player's lane before it fires (0073), so its shot is the one already most
+   * likely to be on target; giving it the least travel time is what makes the lancer the enemy the
+   * player answers first rather than the one they out-run.
+   */
+  lance: { sprite: SPRITE.lance, spriteHit: SPRITE.lance, radius: 0.9, health: 1, damage: 1, speed: 1.6 },
+  /**
+   * The turret's. Slow and fat — a shot the player is meant to see coming and choose to be elsewhere
+   * for.
+   *
+   * ⚠️ **A turret holds station and is on screen for a known length of time** (`src/content/enemies.ts`),
+   * which is what a formation is authored around, and it fires faster than anything else. A quick
+   * bullet on that cadence is a wall; a slow one is a pattern to move through, and the pattern is
+   * what 0098's other half is about.
+   */
+  flak: { sprite: SPRITE.flak, spriteHit: SPRITE.flak, radius: 0.9, health: 1, damage: 1, speed: 1 },
   /**
    * The player's second auto-weapon: slower than the pulse, and worth three of it.
    *
