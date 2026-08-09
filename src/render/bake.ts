@@ -305,6 +305,11 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
     sharing an ink costs nothing and buys the player one rule instead of two. *Pink will hurt you.*
   */
   spit: 'enemy',
+  // ⚠️ **The same ink as the spit, and that is the rule rather than a saving** — 0081 read the other
+  // way round. One colour means *this will hurt you*; what says which enemy sent it is shape and
+  // size, so a player learns one thing about ink and three things about silhouettes. 0098.
+  lance: 'enemy',
+  flak: 'enemy',
   // The HUD's lives counter rather than a pickup, since 0082 — it keeps the pickup ink because the
   // number beside it is drawn in the player's own colour and the icon has to sit with it.
   lifeIcon: 'pickup',
@@ -680,6 +685,32 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
         diamond and the two would read alike the moment either was small.
       */
       ctx.rect(half - r * 0.72, half - r * 0.72, r * 1.44, r * 1.44);
+      break;
+    case 'lance':
+      /*
+        A DASH: a bar lying ALONG the way it travels, twice as long as it is deep — 0098. The lancer's
+        shot is the quick one, and a mark stretched along its own path is what motion looks like
+        standing still, which is the same reasoning `skyRush` rests on one file-section down.
+
+        It is not the weaver's bar: that one lies across the lane and is an enemy hull five times the
+        size. It is not the charger's needle either, which is a triangle with a nose.
+      */
+      ctx.rect(half - r, half - r * 0.34, r * 2, r * 0.68);
+      break;
+    case 'flak':
+      /*
+        A SLAB: the widest bullet in the game and the only one with a bevel — a square with its
+        corners taken off, which is a shape a square cannot be mistaken for once both are on screen.
+        The turret's shot is the slow one, so it is the one that occupies the lane while the player
+        walks around it, and it is drawn as the thing filling the lane.
+      */
+      ctx.moveTo(half - r * 0.5, half - r * 0.8);
+      ctx.lineTo(half + r * 0.5, half - r * 0.8);
+      ctx.lineTo(half + r * 0.8, half);
+      ctx.lineTo(half + r * 0.5, half + r * 0.8);
+      ctx.lineTo(half - r * 0.5, half + r * 0.8);
+      ctx.lineTo(half - r * 0.8, half);
+      ctx.closePath();
       break;
     case 'debris':
       // A shard: small, angular, and deliberately NOT a disc, so a fragment is never mistaken for a

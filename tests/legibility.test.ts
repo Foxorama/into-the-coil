@@ -10,7 +10,9 @@ import {
   weaponFor,
 } from '../src/content/pickups.ts';
 import { SHIPS, hullFor } from '../src/content/ships.ts';
-import { SHOTS, SHOT_KINDS } from '../src/content/shots.ts';
+import { SHOTS, SHOT_KINDS, type ShotKind } from '../src/content/shots.ts';
+import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
+import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { viewOf } from '../src/sim/camera.ts';
 import type { Surface } from '../src/render/surface.ts';
@@ -91,6 +93,73 @@ describe('the shot that kills you is not the shot you kill with', () => {
       sprites.size,
       'two shot kinds share a silhouette and can only be told apart by their ink and their speed',
     ).toBe(SHOT_KINDS.length);
+  });
+
+  it('0098 — THE REPORTED ONE: what shoots back is not all one bullet', () => {
+    /*
+      ⚠️ **Reported from play** — *"all the enemy bullets are exactly the same"* —
+      `docs/decisions/0098-a-wave-plays-a-figure.md`, and it was literally true: three shooting enemy
+      kinds and all seven bosses named `spit`, so every threat in the game was one bitmap at one
+      speed.
+
+      ⚠️ **Held over what the CONTENT actually sends rather than over the table's length**, which is
+      the difference between *three rows exist* and *three rows are used*. A fourth bullet added and
+      never assigned would pass a count of `SHOT_KINDS`; it cannot pass this.
+
+      ⚠️ **THE ENEMIES AND THE BOSSES ARE COUNTED SEPARATELY, AND A PROBE IS WHY.** Counted together
+      this reported STILL GREEN for the break it exists to catch: the two live in different files, so
+      putting every shooting ENEMY back on one row still leaves three kinds in circulation because
+      the bosses are untouched — a guard that a one-file regression cannot reach is a guard over a
+      total rather than over a rule. **Every shooting enemy kind sends a different bullet** is the
+      rule, and there are exactly three of each so it is checkable as an equality.
+    */
+    const shooters = ENEMY_KINDS.filter((k) => ENEMIES[k].fireEvery > 0);
+    const fromEnemies = new Set(shooters.map((k) => ENEMIES[k].shot));
+    expect(
+      fromEnemies.size,
+      `${shooters.length} enemy kinds shoot at the player and they send ${fromEnemies.size} kind(s) of bullet between them`,
+    ).toBe(shooters.length);
+    const fromBosses = new Set(BOSS_KINDS.map((k) => BOSSES[k].shot));
+    expect(fromBosses.size, `all ${BOSS_KINDS.length} bosses send ${fromBosses.size} kind(s) of bullet`).toBeGreaterThan(
+      2,
+    );
+    const sent = new Set<string>([...fromEnemies, ...fromBosses]);
+
+    /*
+      ⚠️ **AND THEY DIFFER IN THE TWO CHANNELS 0081 NAMES, on the screen the report was made on.**
+      Ink is deliberately NOT one of them — every threat is one colour so the player learns one rule
+      about colour — so shape and size are carrying the whole load and both have to be real.
+    */
+    const bullets = [...sent];
+    const sprites = new Set(bullets.map((k) => SHOTS[k as ShotKind].sprite));
+    expect(sprites.size, 'two of the bullets that shoot at the player share a silhouette').toBe(bullets.length);
+    const sizes = bullets.map((k) => drawnPx(SHOTS[k as ShotKind].sprite)).sort((a, b) => a - b);
+    for (let i = 1; i < sizes.length; i++) {
+      const gap = sizes[i]! - sizes[i - 1]!;
+      expect(
+        gap,
+        `two enemy bullets are drawn ${gap.toFixed(1)}px apart on a 1280×720 screen, which is the same size`,
+      ).toBeGreaterThan(5);
+    }
+
+    /*
+      ⚠️ **AND THE FAST ONE IS THE SMALL ONE, which is what keeps this a legibility change.** The shot
+      that gives the player least time to move is the one that takes least of the lane, and the one
+      that fills the lane is the one they can walk away from. Reversed, the same three rows would be a
+      difficulty increase wearing a variety change — and every hurtbox is identical, so nothing else
+      in the suite could tell the difference.
+    */
+    const bySpeed = [...bullets].sort((a, b) => SHOTS[a as ShotKind].speed - SHOTS[b as ShotKind].speed);
+    const drawn = bySpeed.map((k) => drawnPx(SHOTS[k as ShotKind].sprite));
+    for (let i = 1; i < drawn.length; i++) {
+      expect(
+        drawn[i],
+        `${bySpeed[i]} is faster than ${bySpeed[i - 1]} and is drawn no smaller — the quick shot is also the big one`,
+      ).toBeLessThan(drawn[i - 1]!);
+    }
+    // And nothing that shoots at the player got a bigger hurtbox out of it — 0081's own rule.
+    const radii = new Set(bullets.map((k) => SHOTS[k as ShotKind].radius));
+    expect(radii.size, 'the enemy bullets no longer share one hurtbox, so this was a difficulty change').toBe(1);
   });
 
   it('and the ship’s own fire is never in the ink of the things trying to kill it', () => {

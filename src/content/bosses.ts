@@ -84,7 +84,17 @@ export interface BossRow extends Body {
   driftWavelength: number;
   /** World units per step it slides across the lane, before a phase scales it. */
   patrol: number;
-  /** What it fires. */
+  /**
+   * What it fires.
+   *
+   * ⚠️ **SEVEN BOSSES USED TO NAME ONE ROW, WHICH IS HALF OF A PLAY REPORT** —
+   * `docs/decisions/0098-a-wave-plays-a-figure.md`: *"all the enemy bullets are exactly the same."*
+   * They are now spread over the three, and the pairing is a rule rather than a rotation: **the
+   * faster a boss's cadence, the slower its bullet.** `redoubt` fires every thirty steps at its last
+   * phase, so it throws the fat slow one and the fight is a pattern to move through; `shoalMother`
+   * *"fires little and hits hard"*, so it throws the dart. `docs/game.md` says every boss is unique
+   * and this is the cheapest axis of it that had never been used.
+   */
   shot: ShotKind;
   /** Full health to empty. The first entry must cover a full-health boss. */
   phases: readonly BossPhase[];
@@ -176,7 +186,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     drift: 20,
     driftWavelength: 150,
     patrol: 0.42,
-    shot: 'spit',
+    shot: 'lance',
     phases: [
       // No gentle opening. It starts where the sentinel's second phase ended.
       { upTo: 1, fireEvery: 72, shots: 3, spread: 0.45, patrolScale: 1 },
@@ -219,7 +229,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     drift: 15,
     driftWavelength: 260,
     patrol: 0.5,
-    shot: 'spit',
+    shot: 'flak',
     phases: [
       // Wide and slow from the start: the shots are the lane-taking, not the hull.
       { upTo: 1, fireEvery: 84, shots: 3, spread: 0.9, patrolScale: 1 },
@@ -244,7 +254,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     drift: 18,
     driftWavelength: 120,
     patrol: 0.62,
-    shot: 'spit',
+    shot: 'lance',
     phases: [
       { upTo: 1, fireEvery: 96, shots: 1, spread: 0, patrolScale: 1 },
       { upTo: 0.7, fireEvery: 78, shots: 3, spread: 0.4, patrolScale: 1.5 },
@@ -269,7 +279,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     drift: 8,
     driftWavelength: 300,
     patrol: 0.16,
-    shot: 'spit',
+    shot: 'flak',
     phases: [
       { upTo: 1, fireEvery: 54, shots: 3, spread: 0.7, patrolScale: 1 },
       { upTo: 0.7, fireEvery: 42, shots: 5, spread: 1, patrolScale: 1.2 },
@@ -324,7 +334,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     drift: 14,
     driftWavelength: 200,
     patrol: 0.4,
-    shot: 'spit',
+    shot: 'lance',
     phases: [
       { upTo: 1, fireEvery: 66, shots: 3, spread: 0.6, patrolScale: 1 },
       { upTo: 0.8, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 1.4 },

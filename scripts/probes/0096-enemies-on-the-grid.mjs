@@ -55,8 +55,8 @@ export const PROBES = [
     guard: 'and a body never waits LONGER than its own cadence to open fire',
     edit: {
       path: 'src/content/music.ts',
-      find: '  return gap - FIRE_GRID + (FIRE_GRID - (steps % FIRE_GRID));',
-      replace: '  return gap + (FIRE_GRID - (steps % FIRE_GRID));',
+      find: '  const base = gap - FIRE_GRID + (FIRE_GRID - (steps % FIRE_GRID));',
+      replace: '  const base = gap + (FIRE_GRID - (steps % FIRE_GRID));',
     },
   },
   {
@@ -76,7 +76,7 @@ export const PROBES = [
     guard: 'THE PICTURE: every enemy bullet appears on a step the grid allows',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    e.fireIn = nextOnGrid(w.steps, fireGapFor(row.fireEvery, w.difficulty));',
+      find: '    e.fireIn = nextOnGrid(w.steps, fireGapFor(row.fireEvery, w.difficulty), (i + index) / wave.count);',
       replace: '    e.fireIn = fireGapFor(row.fireEvery, w.difficulty);',
     },
   },
