@@ -33,6 +33,7 @@ import {
   AURA_LAYERS,
   AURA_NEAR_UNITS,
   AURA_FAR_UNITS,
+  AURA_CURVE,
   type MusicLayer,
   type MusicLevel,
   type MusicVoice,
@@ -117,9 +118,15 @@ export function musicLevelFor(cameraAlong: number, bossAt: number, bossOnField: 
  * into. Passing the radii in rather than a raw distance is what keeps that true when a boss changes
  * size.
  *
- * ⚠️ **Squared on the way out, so the last few units are where it moves.** A linear ramp spends most
+ * ⚠️ **Bent on the way out, so the last few units are where it moves.** A linear ramp spends most
  * of its travel at distances the player is not thinking about; the interesting part of *"as it gets
  * closer"* is the end, and this is the curve that puts it there.
+ *
+ * ⚠️ **IT WAS `clamped * clamped` AND THE EXPONENT IS NOW A CONSTANT** —
+ * `docs/decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md`. Squaring put 0091's shape in
+ * far harder than 0091's sentence asked for, and the reason it survived a decision and a play-test is
+ * that a multiply has no number in it: the only edits the shape admitted were *square it* and *do
+ * not*. `AURA_CURVE` is the knob that was missing, and the argument for its value is on it.
  *
  * ⚠️ **`0` when there is no boss**, which is what makes the aura's absence the same code path as a
  * boss on the far side of the screen rather than a branch somewhere else.
@@ -128,7 +135,7 @@ export function auraNearness(gap: number): number {
   const span = AURA_FAR_UNITS - AURA_NEAR_UNITS;
   const raw = (AURA_FAR_UNITS - gap) / span;
   const clamped = raw < 0 ? 0 : raw > 1 ? 1 : raw;
-  return clamped * clamped;
+  return Math.pow(clamped, AURA_CURVE);
 }
 
 /**

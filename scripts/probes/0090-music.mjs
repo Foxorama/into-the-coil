@@ -62,8 +62,11 @@ export const PROBES = [
       path: 'src/content/music.ts',
       // ⚠️ RE-ANCHORED by docs/decisions/0091-the-boss-has-an-aura.md, which gave every level two
       // more layers. Same break, same guard: a level that closes what the one below it had open.
-      find: "  boss: { drone: 0.7, bass: 1, beat: 1, drive: 1, auraSlow: 0.9, auraFast: 0.75 },",
-      replace: "  boss: { drone: 0.7, bass: 0, beat: 1, drive: 1, auraSlow: 0.9, auraFast: 0.75 },",
+      // ⚠️ Re-anchored by 0092, which moved `drone` and both aura ceilings on this row. The BREAK is
+      // unchanged — `bass` closed at the boss after `run` opened it — and only the row it is spelled
+      // against moved.
+      find: "  boss: { drone: 0.55, bass: 1, beat: 1, drive: 1, auraSlow: 1, auraFast: 0.9 },",
+      replace: "  boss: { drone: 0.55, bass: 0, beat: 1, drive: 1, auraSlow: 1, auraFast: 0.9 },",
     },
   },
   {

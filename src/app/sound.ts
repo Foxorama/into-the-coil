@@ -105,16 +105,20 @@ export const MAX_VOICES = 4;
 /**
  * The share of full scale the CUES get, so `MAX_VOICES` at once cannot clip.
  *
- * ⚠️ **0.55 → 0.45, reported from play** — *"the game sfx are too loud over the background music"*.
- * At 0.55 the four loudest cues at once reached 0.92 of full scale against the music's 0.52, which is
- * a ratio of nearly two to one; it is 1.12 now.
+ * ⚠️ **0.55 → 0.45 → 0.40, and the SECOND move is the one that matters** —
+ * `docs/decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md`. The first was measured and
+ * the same report came back: *"main sfx need to be lowered a bit, background music needs to be
+ * raised a bit"*, said about the build the first move shipped in. A ratio computed from peaks was
+ * not what the ear was reporting on, and 0092 has why.
  *
- * ⚠️ **The cues stay AHEAD of the music and always must.**
- * `docs/decisions/0024-the-accessibility-floor-is-settings.md` makes every cue information — a shield
- * taken, a hit that did not land — and the music is not. When the two compete it is the music that
- * gives way, which is why this moved less far than `MUSIC_GAIN` moved up.
+ * ⚠️ **The cues stay ahead of the music PERCEPTUALLY and no longer do at the peak, which is the
+ * distinction 0092 draws.** `docs/decisions/0024-the-accessibility-floor-is-settings.md` makes every
+ * cue information — a shield taken, a hit that did not land — and the music is not. But a cue is a
+ * transient against a sustained bed: `MAX_VOICES` of the loudest cues at once is a rare instant and
+ * the music's peak is every kick, so holding the first above the second buys nothing the player can
+ * hear and costs the thing they asked for twice.
  */
-const MASTER_GAIN = 0.45;
+const MASTER_GAIN = 0.4;
 
 /** How long every cue takes to reach full amplitude, in seconds — short enough to read as an attack. */
 const ATTACK_SECONDS = 0.004;

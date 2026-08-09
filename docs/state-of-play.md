@@ -93,6 +93,7 @@ it is pushed — guards stop reaching their subject without ever going red, and 
 | **a cue is layers with filters, not one oscillator** | [0089](decisions/0089-a-cue-has-a-body.md) |
 | **the music is four synchronised loops, and intensity is their gains** | [0090](decisions/0090-the-music-is-four-loops.md) |
 | **a boss brings two music layers with it, and their gain is how close it is** | [0091](decisions/0091-the-boss-has-an-aura.md) |
+| **a mix number is an ear; what is guarded is the arithmetic and the geometry around it** | [0092](decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md) |
 | **the near sky is pushed back on every cheap axis; the whole sky is twice 0065's rate** | [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
@@ -895,37 +896,59 @@ first carries it.
   **spectrum**, which is what catches *"a tin shed heard from outside"* — a hump in the middle with
   nothing at either end.
 
-  ⚠️ **✅ THE MIX IS MOVED, ON A REPORT RATHER THAN A GUESS** — *"the game sfx are too loud over the
-  background music"*. Four cues at once reached 0.92 of full scale against the music's 0.52; it is 1.12
-  now, cues still ahead because 0024 makes them information and the music is not.
+  ⚠️ **THE 2026-08-09 PLAY-TEST ARRIVED AND IT IS A SEQUENCE OF FIVE PRs, NOT A TUNING PASS.** The
+  verdict on 0089/0090/0091 was given the same night and it is the whole of what the audio work is now
+  about. **The order below is the order it lands in, chosen for CI rather than for playability** —
+  the player is not flying any of it until the morning.
 
-  ⚠️ **AND THE RHYTHM IDEA IS MAPPED AND BLOCKED ON ONE QUESTION** —
-  [`the-gun-on-the-grid-mapped`](../reports/the-gun-on-the-grid-mapped-2026-08-09.md). *"We could
-  almost make a rhythm style game."* The base gun IS a sixteenth note at 100 BPM and the missile IS an
-  exact 5:1 counter-beat — both already true, neither designed. **But putting the gun on a musical grid
-  halves the base fire rate, and every way of restoring the damage changes shots-to-kill**, which is
-  0084's currency and 0035's legibility rule. Read the report before starting: it has the grid, the
-  ladder, the rejected alternatives and the question.
+  | # | what | state |
+  |---|---|---|
+  | 1 | the mix again, and the boss aura | ✅ [0092](decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md) |
+  | 2 | **150 BPM, and the gun on the musical grid** | |
+  | 3 | the music phase-locked to the sim clock | |
+  | 4 | **the level's own music** — power ballad × Rez, title keeps the current piece | |
+  | 5 | enemy fire on the grid | |
 
-  ⚠️ **START HERE. THE BUILD WAS FLOWN ON 2026-08-09 AND THE VERDICT IS THE FIRST THING THE NEXT
-  SESSION IS GETTING**, in the player's own words: *"I'll drop it in as the start of the next
-  session."* Everything below was judged solo and against a synthetic battle render, so **none of it
-  has a hand's verdict yet** — and `docs/decisions/0027-measure-the-picture-not-the-model.md` is
-  emphatic that a model measuring itself is what that leaves.
+  ⚠️ **THE MAP'S BLOCKER IS GONE AND IT WAS AN ARTIFACT OF THE TEMPO IT ASSUMED.**
+  [`the-gun-on-the-grid-mapped`](../reports/the-gun-on-the-grid-mapped-2026-08-09.md) computed the grid
+  at 100 BPM and concluded that putting the gun on it **halves the base fire rate**, which changes
+  shots-to-kill — 0084's currency and 0035's legibility rule — and stopped there for the player to
+  weigh. **The player chose 150 BPM**, and at 24 sim steps a beat the grid offers 8, 6 and 4 in exactly
+  the span the ladder already occupies: today's tier 1 and tier 4 are *already on it*. Read the report
+  for the reasoning and the rejected alternatives; **do not read its ladder or its blocker**, both of
+  which chunk 2's decision supersedes.
 
-  **What the verdict is owed on, and each is a different answer:**
+  ⚠️ **THE MUSIC HAS TO MOVE OFF 133⅓ BPM AND THAT IS WHAT MAKES ANY OF IT POSSIBLE.** 0090's beat is
+  27 sim steps, which divides only by 3 and 9 — a three-rung ladder with a 3× hole in it. **No amount
+  of tuning the gun reaches a grid the music is not on**, which is the fact the map did not state.
+
+  ⚠️ **AND [0090](decisions/0090-the-music-is-four-loops.md) SAID WHAT CHUNK 4 COSTS, BEFORE ANYBODY
+  ASKED FOR IT**: *"a level that wanted its own key or its own tempo would need a second set of loops
+  and a crossfade between them, which is a bigger mechanism than this one and is not owed until
+  somebody asks for it."* Somebody has asked. The cheaper answer it did not consider is **more layers
+  on the same loop clock**, with the ladder's `calm` row holding the title's and the rest holding the
+  level's — which is 0090's own design and needs no new mechanism at all.
+
+  ⚠️ **The play-test's verdict on each of the four, and 0092 answers two of them:**
 
   | | |
   |---|---|
-  | the twelve cues | 0089 rebuilt every one of them. *"Meaty chaingun"* and *"laser pew pew"* were the two named targets |
-  | the mix | the reported defect. Cues went from 1.77:1 over the music to 1.12:1, **on measurement rather than on ears** |
-  | the music | 0090. Whether one piece at 133 BPM carries a level at all, and whether the ladder reads as a build |
-  | the aura | 0091. Whether a boss having a presence lands, and whether the range and the ramp are right |
+  | the twelve cues | 0089. **Not reported in either direction**, which after two play-tests is itself the finding |
+  | the mix | *"main sfx need to be lowered a bit, background music needs to be raised a bit"* — the same complaint 0090's measured pass had just answered. [0092](decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md) has why a correct ratio was the wrong quantity |
+  | the music | 0090. *"Kinda interesting title background music, but not great level background music"* — chunk 4, and the title keeps it |
+  | the aura | 0091. *"Really weak, I didn't even notice it over the fire."* [0092](decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md), and it was the CURVE rather than the gain |
 
-  ⚠️ **The two things most likely to be wrong are both about the MIX**, because they are the two
-  nothing could test: whether a chaingun at ten shots a second sits under a boss explosion, and whether
-  the music buries the shield cue. 0090 names the aura as the first thing to pull down if a boss fight
-  is crowded — it is the newest and least load-bearing sound in the game.
+  ⚠️ **0092 IS THE THIRD TIME IN THIS PROJECT THAT A DECISION'S OWN GUARDS STAYED GREEN THROUGH ITS
+  OWN DEFECT**, and the cleanest example of it so far: all three of 0091's aura guards are true of a
+  curve that had collapsed to 0.004 of its ceiling where a boss fight is actually flown. They are
+  written in terms of the constants they guard.
+  [0027](decisions/0027-measure-the-picture-not-the-model.md) is the rule and
+  [0019](decisions/0019-a-probe-must-be-seen-to-apply.md) explicitly cannot catch it.
+
+  ⚠️ **AND THE COMBINED AUDIO BUS IS UNGUARDED, WHICH 0092 MAKES MORE EXPOSED AND DOES NOT FIX.** The
+  music's own peak is guarded and the cues' own peak is guarded; **nothing measures the two together**,
+  and they share a destination. 0092 names the limiter as the answer and says why it was not taken in
+  a PR nobody was going to hear before morning.
 
   ⚠️ **The effects have now been heard in play, and were rebuilt before they were** — 0089.
   `node scripts/hear.mjs` and `node scripts/hear.mjs --music` still write every cue and every music
