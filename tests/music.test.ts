@@ -93,8 +93,21 @@ describe('four loops that cannot drift', () => {
       because it is the one with tails long enough to cross — and a future layer with none is not
       exempted by name, it simply passes.
     */
+    /*
+      ── AND THE WINDOW HAD TO GROW, BECAUSE IT WAS MEASURING PHASE ────────────────────────────────
+
+      ⚠️ **At 10ms this guard was shorter than one cycle of its own subject.** The lowest content in
+      the music is around 80Hz — a 12ms period — so a 10ms mean is a mean over part of a wave, and
+      where in that wave the window lands is luck. It passed at one tempo and failed at another with
+      the same loops, the same wrap and the same envelopes, purely because a trial re-tempo moved the beat and the
+      seam landed on a different part of a cycle.
+
+      **40ms covers three cycles of the lowest thing there is**, so what is left is energy. That is
+      the second time in this project a guard has sampled one phase of a periodic quantity and
+      reported the phase — `docs/decisions/0087-a-pickup-never-parks.md` has the first.
+    */
     const loops = bakeLoops(SAMPLE_RATE);
-    const window = Math.round(SAMPLE_RATE * 0.01);
+    const window = Math.round(SAMPLE_RATE * 0.04);
     for (const layer of MUSIC_LAYERS) {
       const buffer = loops[layer];
       const mean = (from: number, to: number): number => {
