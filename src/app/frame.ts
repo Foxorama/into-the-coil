@@ -41,7 +41,9 @@ import {
   type Deaths,
 } from '../sim/collide.ts';
 import { type Entity, reset, stepEntities } from '../sim/entity.ts';
-import { flyShip, holdStation } from '../sim/flight.ts';
+// `SCROLL_PER_STEP` for `PICKUP_SLOW_AT`, which is a distance derived from a duration — 0087. Every
+// other speed in this file rides `w.scrollPerStep`, which is the same number reachable from a world.
+import { SCROLL_PER_STEP, flyShip, holdStation } from '../sim/flight.ts';
 import type { Intent } from '../sim/intent.ts';
 import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
@@ -164,10 +166,26 @@ const PICKUP_EASE = 0.06;
  * invisible edge for the whole seven seconds of the wait. A curve is not a line, and that is the
  * entire requirement.
  *
- * At 0.25 against `PICKUP_BOB_UNITS` the pickup wanders about ±6 world units, which is a twentieth of
+ * At 0.25 against `PICKUP_BOB_UNITS` the pickup wandered about ±6 world units, which is a twentieth of
  * the narrowest view — visible as motion, far too small to move where the pickup *is*.
+ *
+ * ── AND IT HAD TO RISE WHEN THE THING IT BOBS AROUND STARTED MOVING ─────────────────────────────
+ *
+ * ⚠️ **0.25 → 0.4** — `docs/decisions/0087-a-pickup-never-parks.md`. What the bob has to beat is no
+ * longer zero: a slowed pickup now closes at `PICKUP_CLOSE_SHARE` of the scroll rate, so a swing that
+ * does not reach past the camera's own rate makes the track a smooth diagonal rather than a wander.
+ * `tests/pickups.test.ts` measures exactly that — **total forward travel**, which no amount of easing
+ * can produce — and it went to zero at the old amplitude the day the pickup started closing.
+ *
+ * ⚠️ **Which is 0077's guard doing its job against a change 0077 never saw.** The bob's whole claim
+ * is *it goes both ways*; a constant that satisfied it against a stationary target satisfies it by
+ * 0.02 units a step against a moving one, and that is a feature holding on by rounding.
+ *
+ * ⚠️ **At 0.4 against `Entity.bobPhase`'s corrected period the pickup wanders about ±7.6 world
+ * units**, which is a twentieth of the widest view. The old ±6 was arithmetic over a period the code
+ * did not actually run at — see `bobPhase`.
  */
-const PICKUP_BOB_SPEED = 0.25;
+const PICKUP_BOB_SPEED = 0.4;
 
 /**
  * The bob's period, in world units of camera travel.
@@ -183,6 +201,16 @@ const PICKUP_BOB_SPEED = 0.25;
  * removed it.
  */
 const PICKUP_BOB_UNITS = 14;
+
+/**
+ * The most evenly spread angle there is, in radians — `π × (3 − √5)`.
+ *
+ * ⚠️ **A phase per pickup, so no two of a level's nine bob in step** — 0087. Any rational fraction of
+ * a turn repeats after its denominator; this one never does, so the *n*th pickup of a level is as far
+ * from all of the others as an *n*th can be. Written out rather than computed so nothing in the frame
+ * loop takes a square root.
+ */
+const GOLDEN_ANGLE = 2.399963229728653;
 
 /**
  * How fast a scattered upgrade is thrown across the lane, in world units per step.
@@ -281,7 +309,32 @@ const SCATTER_SPREAD_MIN = 0.7;
 const SCATTER_SPREAD_MAX = 1.3;
 
 /**
- * Where a pickup stops running away and waits, in world units ahead of the camera.
+ * What share of the scroll rate a slowed pickup keeps closing at, so it never parks.
+ *
+ * ── THE STATION WAS THE BARRIER, AND EASING ONTO IT DID NOT HELP ────────────────────────────────
+ *
+ * `docs/decisions/0087-a-pickup-never-parks.md`. Reported from play, about the build
+ * `docs/decisions/0077-a-pickup-arrives-rather-than-stopping.md` landed in: *"pickups come up fast,
+ * still hit the middle barrier and then float a bit."*
+ *
+ * ⚠️ **0077 fixed the impact and left the wall.** It made the velocity change take three quarters of
+ * a second instead of one step — which was real, and which the guards measure — but every pickup
+ * still ended up **stopped dead at the same place on the screen**, 100 units ahead of the camera on
+ * every device. A shared line that everything arrives at and holds is a barrier whether a body
+ * reaches it abruptly or gracefully, and 56% of the way up the view is *the middle of the screen*.
+ *
+ * ⚠️ **So a waiting pickup keeps coming.** Its target is a fraction of the scroll rate below the
+ * camera's own, which in the camera's frame is *still closing, slowly*. There is no place on the
+ * screen where pickups stop, because they do not stop.
+ *
+ * ⚠️ **0.35, and the ceiling is a guard rather than a taste.** `tests/pickups.test.ts` reads *the
+ * pickup stopped running away* as **under half the rate it approached at**, written in the player's
+ * units and naming no constant here. A share at or above 0.5 is a pickup that never slowed down.
+ */
+const PICKUP_CLOSE_SHARE = 0.35;
+
+/**
+ * Where a pickup stops running away and begins its slow close, in world units ahead of the camera.
  *
  * ── WHY A PICKUP LINGERS AT ALL ─────────────────────────────────────────────────────────────────
  *
@@ -294,14 +347,26 @@ const SCATTER_SPREAD_MAX = 1.3;
  *
  * ⚠️ **A pickup used to cross the whole view at the scroll rate and leave**, which is about nine
  * seconds of travel — and it spent most of that either beyond the player's reach or already behind
- * them. Holding station is what turns *catch it as it goes past* into *go and get the one you want*.
+ * them. Slowing down is what turns *catch it as it goes past* into *go and get the one you want*.
  *
- * ⚠️ **100, and both bounds are real.** It is inside the narrowest view any device gets — 150 units
- * (`src/sim/camera.ts`) — so the wait happens on screen everywhere; and it is inside the player's own
- * box, which reaches `PLAYER_LEAD` at 167 (0080), so the player can actually fly to it.
- * A station outside either would be a pickup that waits somewhere nobody can go.
+ * ── DERIVED, AND IT USED TO BE 100 TYPED IN ─────────────────────────────────────────────────────
+ *
+ * ⚠️ **The wait is now a JOURNEY, so where it begins is wherever it has to begin to end at the
+ * ship** — `docs/decisions/0087-a-pickup-never-parks.md`. A pickup that is never touched spends its
+ * whole `PICKUP_LINGER_STEPS` closing at `PICKUP_CLOSE_SHARE`, and this is the distance that covers:
+ * it arrives at `SHIP_START_ALONG` — the ship's own place in the camera's frame — on the step its
+ * wait runs out. Nobody chose 128; three constants with their own reasons did.
+ *
+ * ⚠️ **Both bounds are still real and are now GUARDS rather than a sentence.** It has to be inside
+ * the narrowest view any device gets, so the approach happens on screen everywhere; and inside the
+ * player's own box, which reaches `PLAYER_LEAD` (0080), so the player can fly to it. Deriving it
+ * means a tune to the linger or the share can push it past either — `tests/pickups.test.ts` holds
+ * both, which a typed constant never needed.
+ *
+ * ⚠️ **Declared below `SHIP_START_ALONG` rather than here with its neighbours**, because it is
+ * computed from it and a `const` cannot be read before it exists. The comment stays with the pickup
+ * constants it belongs to.
  */
-const PICKUP_STATION = 100;
 
 /**
  * How long a pickup waits once it has arrived, in steps — seven seconds.
@@ -509,6 +574,16 @@ const SHIELD_SPIN = 0.02;
  * two descriptions of one position drift the first time either moves.
  */
 export const SHIP_START_ALONG = 40;
+
+/**
+ * Where a pickup stops running away and begins its slow close — the declaration for the comment
+ * three hundred lines above, which is where it belongs among the other pickup constants.
+ *
+ * `SHIP_START_ALONG + PICKUP_LINGER_STEPS × PICKUP_CLOSE_SHARE × SCROLL_PER_STEP` — the distance a
+ * waiting pickup covers before its wait runs out, measured back from the ship.
+ * `docs/decisions/0087-a-pickup-never-parks.md`.
+ */
+const PICKUP_SLOW_AT = SHIP_START_ALONG + PICKUP_LINGER_STEPS * PICKUP_CLOSE_SHARE * SCROLL_PER_STEP;
 
 /**
  * How long a body shows a hit it survived, in steps — four, about 67ms.
@@ -2160,8 +2235,38 @@ function driftPickups(w: World): void {
 
       `Math.sin` allocates nothing, which is what `tests/budget.test.ts` counts.
     */
-    const station = item.along - w.cameraAlong <= PICKUP_STATION ? w.scrollPerStep : 0;
-    const target = station + PICKUP_BOB_SPEED * Math.sin(w.cameraAlong / PICKUP_BOB_UNITS + item.across);
+    /*
+      AND THE WALL SURVIVED THE LAG — `docs/decisions/0087-a-pickup-never-parks.md`. Reported from
+      play against the build 0077 landed in: *"pickups come up fast, still hit the middle barrier and
+      then float a bit."*
+
+      ⚠️ **The target used to be `w.scrollPerStep`, which is the camera's own rate — a full stop in
+      the frame the player watches.** Easing onto it made the arrival smooth and left every pickup
+      parked at one screen position, which is what a barrier IS. It is now a fraction of the scroll
+      rate BELOW the camera's, so a slowed pickup is still closing and there is no place on the
+      screen where pickups stop.
+    */
+    /*
+      ⚠️ **`item.bobPhase` AND IT USED TO BE `item.across`** — 0087, and it is a defect the picture
+      reported rather than the source. `across` drifts, so it was not an offset that spread two
+      pickups apart: it was a second term advancing the phase, and the bob ran at a quarter of the
+      period `PICKUP_BOB_UNITS` names. `src/sim/entity.ts` has the measurement.
+    */
+    /*
+      ⚠️ **AND IT BOBS ONLY ONCE IT HAS SLOWED, which the old amplitude was too small to make
+      matter.** The bob belongs to the wait, not to the arrival: a pickup still crossing the view at
+      the full scroll rate that also wobbles is a pickup whose approach reads as indecision, and at
+      0.4 the wobble is big enough to look like it has already stopped running away — which
+      `tests/pickups.test.ts` reported as *waiting further out than the ship can fly*, from a place it
+      was only passing through.
+    */
+    if (item.along - w.cameraAlong > PICKUP_SLOW_AT) {
+      item.velAlong += (0 - item.velAlong) * PICKUP_EASE;
+      continue;
+    }
+    const target =
+      w.scrollPerStep * (1 - PICKUP_CLOSE_SHARE) +
+      PICKUP_BOB_SPEED * Math.sin(w.cameraAlong / PICKUP_BOB_UNITS + item.bobPhase);
     item.velAlong += (target - item.velAlong) * PICKUP_EASE;
   }
 }
@@ -2315,17 +2420,24 @@ function spawnPickup(w: World, index: number): void {
   */
   item.velAcross = index % 2 === 0 ? PICKUP_DRIFT : -PICKUP_DRIFT;
   /*
+    WHERE IN ITS BOB THIS ONE STARTS — 0087, and the golden angle for the same reason the drift above
+    alternates rather than rolling: a level is authored, so two pickups near each other must visibly
+    separate on every run rather than on most of them. Successive multiples of 2.39996 rad are the
+    most evenly spread sequence there is, so no two of a level's nine ever land in step.
+  */
+  item.bobPhase = index * GOLDEN_ANGLE;
+  /*
     HOW LONG IT HAS BEFORE THE SCROLL TAKES IT AWAY — the approach plus the wait, in steps.
 
     ⚠️ **Computed from where it actually starts rather than from a constant**, because a wave's
     authored `at` and the camera at the moment it spawns differ by up to one step, and because
     `docs/decisions/0064-a-pickup-waits-to-be-taken.md` wants the WAIT to be the same seven seconds
     for every pickup rather than the total to be the same. A pickup that spawned already inside the
-    station gets no approach and all of the wait, which is the honest answer.
+    slowdown gets no approach and all of the wait, which is the honest answer.
 
     ⚠️ **Nothing allocates**: a subtraction, a divide and a `Math.max`.
   */
-  const approach = (entry.at - w.cameraAlong - PICKUP_STATION) / w.scrollPerStep;
+  const approach = (entry.at - w.cameraAlong - PICKUP_SLOW_AT) / w.scrollPerStep;
   item.holdFor = PICKUP_LINGER_STEPS + Math.max(0, Math.round(approach));
 }
 

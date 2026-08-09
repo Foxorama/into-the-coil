@@ -182,14 +182,24 @@ describe('the worst-case scene costs one blit per entity, and nothing else', () 
  * absolute value to assert, only a change. What the other two claims here cover is everything the
  * ratio does not — that the parallax survived it, and that 0065's ceiling still does.
  */
-describe('the sky goes past a third faster, and the parallax survives it', () => {
+describe('the sky goes past twice as fast as it shipped, and the parallax survives it', () => {
   /** What `docs/decisions/0065-the-sky-is-baked-and-blitted.md` shipped, back to front. */
   const SHIPPED = [0.12, 0.3];
 
-  it('moves both layers a third faster, which is what was asked for', () => {
+  /*
+    ⚠️ **TWO ASKS, MULTIPLIED, AND THEY COME OUT AT EXACTLY DOUBLE.**
+    `docs/decisions/0078-the-sky-moves-a-third-faster.md` took *"about 1/3 faster"* and
+    `docs/decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md` took *"the
+    background needs to move faster, still feels really slow"* at half as much again on top:
+    `4/3 × 3/2 = 2`. Written as the product rather than as `2`, because the two are separate asks from
+    separate play-tests and a later third one multiplies onto this rather than replacing it.
+  */
+  const FASTER = (4 / 3) * (3 / 2);
+
+  it('moves both layers twice as fast as they shipped, which is what was asked for', () => {
     for (let i = 0; i < SKY.length; i++) {
-      const want = SHIPPED[i]! * (4 / 3);
-      expect(SKY[i]!.depth, `sky layer ${i} is not a third faster than it was`).toBeCloseTo(want, 6);
+      const want = SHIPPED[i]! * FASTER;
+      expect(SKY[i]!.depth, `sky layer ${i} is not ${FASTER}× what it shipped at`).toBeCloseTo(want, 6);
     }
   });
 
@@ -212,9 +222,22 @@ describe('the sky goes past a third faster, and the parallax survives it', () =>
       objects going past at the rate of the things that can kill the player, which is
       `docs/decisions/0069-the-sky-is-behind-the-game.md`'s subject. There is no natural stopping
       point on *"faster"*, so this is where it stops.
+
+      ── THE CEILING MOVED FROM A HALF TO TWO THIRDS, AND SOMETHING PAID FOR IT ────────────────────
+
+      ⚠️ **A loosened bound with no argument behind it is a bound that will loosen again**, so this
+      one is tied to what bought it. `docs/decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md`
+      cut the near layer to about **2% of the far layer's ink** — a third of the radius at under a
+      fifth of the alpha — and the reason a depth ceiling exists at all is that a fast layer competes
+      for the eye. A layer that is barely there can move faster before it competes.
+
+      ⚠️ **`and the near layer is the quiet one` is the other half of this test and is not a
+      duplicate of it.** That one holds the ink; this one holds the speed; and the sentence above is
+      the only place that says they are one trade. Loosen this without that going with it and the
+      argument is gone while both tests stay green.
     */
     for (let i = 0; i < SKY.length; i++) {
-      expect(SKY[i]!.depth, `sky layer ${i} moves with the world — it is not a background any more`).toBeLessThan(0.5);
+      expect(SKY[i]!.depth, `sky layer ${i} moves with the world — it is not a background any more`).toBeLessThan(2 / 3);
     }
   });
 });
@@ -386,8 +409,47 @@ describe('the sky costs a fixed number of calls, whatever the camera is doing', 
         near layer is now the smaller one as well as the fainter one. 0069's ceiling still holds over
         both of them, above; this is the layer against the other layer rather than against a bullet.
       */
+      /*
+        ⚠️ **THE COUNT ASSERTION IS NOW AN INK ASSERTION, AND THAT IS AN INVERSION RATHER THAN A
+        RELAXATION** — `docs/decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md`.
+        It read *the near layer has fewer stars than the far one*, and 0088 gives it exactly as many:
+        at a third of the radius, **more** dots is what *further away* looks like, which is the
+        argument `SKY_STARS` itself makes in the opposite direction at the old size.
+
+        ⚠️ **What was always meant is how much of the eye the layer takes**, and count was a proxy for
+        it that stopped being one the moment size and count moved in opposite directions. Ink is
+        `alpha × Σπr²`, which is the three levers in one number and cannot be gamed by trading one
+        against another — the exact failure the count assertion would have missed.
+
+        ── AND THE BOUND IS CHOSEN FROM WHAT IT MUST CATCH, WHICH A PROBE HAD TO TEACH IT ───────────
+
+        ⚠️ **It was a fifth for one commit and `npm run prove` reported STILL GREEN on two of 0088's
+        three breaks.** *A drift detector, not the measurement* was the reasoning, and a drift
+        detector that cannot detect the drift is not a guard — restoring the near layer's old alpha
+        left it at 4.4%, comfortably inside a 20% bound, and that alpha is the exact value the player
+        called distracting.
+
+        ⚠️ **So the bound sits below the smallest single-lever break there is**, which is the only
+        principle available: a bound above one of them is a rule the code can break without the suite
+        noticing.
+
+        | | ink, as a share of the far layer |
+        |---|---|
+        | now | **2.0%** |
+        | the alpha alone put back to what shipped | 4.4% |
+        | all three levers put back (0069's layer) | 8.3% |
+        | the size alone put back | 15.1% |
+
+        A twenty-fifth is under the first of those and twice the current value.
+      */
+      const ink = (field: typeof NEAR): number =>
+        field.alpha * field.stars.reduce((total, star) => total + Math.PI * star.r * star.r, 0);
+      const share = ink(NEAR) / ink(FAR);
       expect(NEAR.alpha, 'the near layer is drawn as solidly as the far one').toBeLessThan(FAR.alpha);
-      expect(NEAR.stars.length, 'the near layer is as dense as the far one').toBeLessThan(FAR.stars.length);
+      expect(
+        share,
+        `the near layer puts ${(share * 100).toFixed(1)}% of the far layer's ink on the screen, and it is the layer that MOVES`,
+      ).toBeLessThan(1 / 25);
       /*
         Compared in tile pixels directly, because both tiles are `ACROSS_SPAN` units across and are
         baked at the same resolution above — so a pixel means the same thing in both, and converting
