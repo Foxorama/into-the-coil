@@ -99,11 +99,15 @@ export const PROBES = [
     suite: 'tests/bombs.test.ts',
     // A death handing the arsenal back empty, which is what 0039 said before there was a starting
     // special to go back to. The player then flies the hardest stretch of the level with no answer.
-    broke: 'a death emptying the arsenal instead of restoring the ship’s own kit',
-    guard: 'a death costs what was earned and never the starting kit',
+    //
+    // ⚠️ RE-ANCHORED by `docs/decisions/0085-a-death-does-not-cost-the-bombs.md`, which changed what
+    // the line says and not what this probe is about: a death must not leave the player holding
+    // nothing. The break is the same edit against the new right-hand side.
+    broke: 'a death emptying the arsenal instead of leaving the player what they were carrying',
+    guard: 'a death costs no charges at all, and a continue costs the banked ones',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '            arsenal: startingArsenal(),\n            upgrades: [],',
+      find: '            arsenal: state.arsenal,\n            upgrades: [],',
       replace: '            arsenal: [],\n            upgrades: [],',
     },
   },

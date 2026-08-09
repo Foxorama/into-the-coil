@@ -41,6 +41,8 @@ find yourself explaining a result here rather than linking it, it belongs somewh
 | **a pickup is rare, and says what it is** | [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) |
 | **two upgrade ladders of four tiers; nine pickups a level, of four kinds** | [0083](decisions/0083-two-ladders-of-four.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
+| **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
+| **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
 | **a death takes the ship, and the level carries on** | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
@@ -304,7 +306,7 @@ fail when you mix something else in."*
 | 3 | **The view** — sky +33%, the perspective zoom, the box made a rectangle and extended, desktop-first | **Blocks 6, 7 and 8.** *"enemies fly too fast"* and *"a quarter of the screen is unplayable"* are both statements about the viewport; changing it changes what every one of those numbers means. | ✅ [0078](decisions/0078-the-sky-moves-a-third-faster.md) + [0080](decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md) — **mobile's own viewport is still owed** |
 | 4 | **Legibility** — shape and size differentiation, over the palette rather than instead of it | **Blocks the re-play.** A player who cannot tell a pickup from a bullet cannot give a verdict on anything below. | ✅ [0081](decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md) — the two bullets, and the ship's hull. **The pickups are deliberately left to chunk 5** |
 | 5 | **The pickup taxonomy** — one weapon pickup, per-level budgets, the 50% death scatter, and the max-speed nerf | The player calls pickups *"the lynchpin of whether this game is actually good"*. Comes before the dial because the dial is keyed to them. | ✅ [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md), off [`the-pickup-taxonomy-mapped`](../reports/the-pickup-taxonomy-mapped-2026-08-08.md). **Start at row 6.** |
-| 6 | **The difficulty dial** — a dial that moves inside a level, keyed to the arsenal, sawtoothing across the run | The mechanism the project **does not have**. Smallest proof first: no multi-hit enemies until the 2nd upgrade has spawned. | ✅ [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) — the mechanism and its one consumer. **Chunks 7 and 8 are what it spends** |
+| 6 | **The difficulty dial** — a dial that moves inside a level, keyed to the arsenal, sawtoothing across the run | The mechanism the project **does not have**. Smallest proof first: no multi-hit enemies until the 2nd upgrade has spawned. | ✅ [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) — the mechanism and its one consumer, **plus [0086](decisions/0086-the-teeth-wait-for-the-gun.md)**, which is the level half the clamp could not do. **Chunks 7 and 8 are what it spends** |
 | 7 | **Enemies that fight** — slower, patterned, more of them shooting, slower bullets | The headline. Deliberately after 3 and 6, because *"too fast"* is measured through the viewport and *"actively trying to stop the player"* is what the dial spends. | |
 | 8 | **Bosses that are bosses** — tougher, damage that shows, one idea each, and a miniboss below them | Last, on [`medium-played`](../reports/medium-played-2026-08-07.md)'s own reasoning: a boss that dies in under a second is a curve problem before it is a movement problem, and 5 is the curve. | |
 
@@ -373,7 +375,21 @@ was right because a coin flip on a premium piece reads as the game taking someth
 and the cycle is coming back one level down, **between weapon TYPES rather than between kinds**, which
 is the version that argument always supported.
 
-⚠️ **What the next play-test is FOR, and every one of these is a number nobody has felt:**
+⚠️ **What the next play-test is FOR, and every one of these is a number nobody has felt.** The first
+two are [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) and
+[0086](decisions/0086-the-teeth-wait-for-the-gun.md); the rest were already owed:
+
+- **A death that costs no charges, and therefore grants none.** A ship that dies empty now flies again
+  empty, where it used to be handed the starting two. That is the half of 0085 nobody asked for, and it
+  is the first thing to look at if dying reads as a spiral.
+- **The free pyre.** The ring still fires at the wreck, still sized by the charges, and the ship keeps
+  them — the one place in the game where the picture shows something spent that is not. 0085 took that
+  trade deliberately and `tests/death.test.ts` holds it.
+- **Level one's run-up — 730 units of one-health kinds after the second weapon pickup.** Whether it
+  reads as a respite the new gun is spent on, or as a flat stretch. `MULTI_HIT_RUNUP` is the floor and
+  the band is a content edit either way.
+
+**And the five that were already owed:**
 
 1. **Nine pickups a level, and whether the weapon cap lands where it should.** Four weapons cap the
    guns about 48 seconds before the boss; two missiles reach tier 2; then a bomb and a shield. *"Then
@@ -409,6 +425,22 @@ what should have gone red. **`npm run prove` caught the first and would not have
 because a probe can only redden a guard that exists; the second was found because the change forced a
 look at the copy. That is [0027](decisions/0027-measure-the-picture-not-the-model.md)'s gap and
 0019 does not close it.
+
+⚠️ **THE DIAL WAS FLOWN THE SAME NIGHT AND CHUNK 6's OWN DEFECT CAME BACK** —
+[0086](decisions/0086-the-teeth-wait-for-the-gun.md). *"They can't start appearing till after the
+second weapon pickup"*, said about the build 0084 had just landed in. **0084 was not wrong and its
+guards were not asleep**: the clamp lifts when a weapon pickup SPAWNS, and level one authored a
+three-health turret **ten world units** behind that pickup. The decision has why the clamp is left
+alone and the level moved instead, and it is the second time in three days that a repair landed in the
+model while the player watched the same picture —
+[0027](decisions/0027-measure-the-picture-not-the-model.md).
+
+⚠️ **AND THE SAME PLAY-TEST FOUND A BOMB BUG THAT WAS A DECISION RATHER THAN A DEFECT** —
+[0085](decisions/0085-a-death-does-not-cost-the-bombs.md). *"Bombs should be reset on a continue, but
+not on player death."* Read the decision before touching either arm of that reducer: **a death now
+costs no charges and grants none either**, the pyre is deliberately free, and three guards that had
+been proving nothing are named there — while every death restocked, `continued`'s arsenal line was a
+byte-for-byte copy of `lifeLost`'s.
 
 ⚠️ **✅ CHUNK 6 HAS LANDED, AND IT IS A MECHANISM WITH ONE CONSUMER** —
 [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md). The dial is

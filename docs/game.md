@@ -25,21 +25,25 @@ whole game.
 | **The betrayer** | returns as the end boss of a later level |
 | **Target length** | 15–30 minutes, prologue to final boss. ~3 minutes of stage per level plus its boss |
 
-Upgrades, buffs and items **carry forward across levels, and are lost on a death** —
+Upgrades and buffs **carry forward across levels, and are lost on a death** —
 [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md). There is **no shop and no
 currency** — everything is found in the level and applied the instant you touch it.
 
-A run carries **three lives**, fixed. A death spends one and takes the arsenal back to the ship's base
-weapon; the last one ends the run. ⚠️ **There are no extras findable in a level** —
+A run carries **three lives**, fixed. A death spends one and takes the ship back to its base weapon;
+the last one ends the run. ⚠️ **A death does NOT touch the arsenal's charges** —
+[0085](decisions/0085-a-death-does-not-cost-the-bombs.md) amends 0039's *a death costs the arsenal* to
+the upgrades alone, so bombs banked from clearing levels survive a death and a ship that died with none
+flies again with none. ⚠️ **There are no extras findable in a level** —
 [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) replaced the extra-life pickup with a
 second shield, so the complement only goes down. See *Upgrades*.
 
 **A run that ends may be continued**, once per ending and only from the screen it ends on —
 [0068](decisions/0068-a-run-over-is-a-continue.md). The level does not restart: the field is frozen
 where the run stopped, the last death's scatter is still lying in it, and the button hands back a
-fresh ship and a full complement. What it does **not** hand back is the arsenal — the cost 0039 puts
-on a death is paid one more time, not forgiven. The offer expires after seven seconds, which is the
-only thing it costs.
+fresh ship and a full complement. ⚠️ **It is the one thing in the game that resets the arsenal** —
+[0085](decisions/0085-a-death-does-not-cost-the-bombs.md): a continue puts the charges back to the
+ship's starting kit, which is a reduction for a run that had banked any, and a death does not. The
+offer expires after seven seconds, which is the only other thing it costs.
 
 ## Orientation — the load-bearing rule
 
@@ -207,7 +211,9 @@ the bomb.
 
 ⚠️ **There are no extra lives to find, and a run's complement can only go down** — 0082, on the
 grounds that a shield is the better version of the same promise: it stops the death, so it keeps the
-arsenal a death would cost. **This is open rather than settled**, and it is what
+upgrades a death would cost ([0085](decisions/0085-a-death-does-not-cost-the-bombs.md) took the
+charges out of that sentence — a death no longer costs them). **This is open rather than settled**,
+and it is what
 [0068](decisions/0068-a-run-over-is-a-continue.md)'s free continue is currently standing in for.
 
 ⚠️ **A death hands back everything it took, where it happened — but never a shield.** That is the

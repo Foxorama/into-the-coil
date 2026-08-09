@@ -237,13 +237,41 @@ describe('what a run may spend', () => {
     expect(after.run.arsenal.map((e) => e.charges)).toEqual(before.run.arsenal.map((e) => e.charges + 1));
   });
 
-  it('a death costs what was earned and never the starting kit', () => {
+  it('a death costs no charges at all, and a continue costs the banked ones', () => {
+    /*
+      ⚠️ **BOTH HALVES IN ONE TEST, BECAUSE THE ASK IS A DIFFERENCE BETWEEN TWO EVENTS** —
+      `docs/decisions/0085-a-death-does-not-cost-the-bombs.md`: *"bombs should be reset on a continue,
+      but not on player death."* Either half alone passes against a reducer that restocks on both or
+      on neither, which is what this used to be: one arm, asserting the arm the other one shares.
+    */
     let state = begin();
     state = reduce(state, { slice: 'run', type: 'levelCleared' });
     state = reduce(state, { slice: 'run', type: 'levelCleared' });
-    expect(state.run.arsenal[0]!.charges).toBeGreaterThan(startingArsenal()[0]!.charges);
+    const banked = state.run.arsenal[0]!.charges;
+    expect(banked, 'the fixture never banked a charge, so neither arm can be seen to move').toBeGreaterThan(
+      startingArsenal()[0]!.charges,
+    );
+
     const dead = reduce(state, { slice: 'run', type: 'lifeLost' });
-    expect(dead.run.arsenal, 'a death did not go back to the ship’s own kit').toEqual(startingArsenal());
+    expect(dead.run.arsenal[0]!.charges, 'a death spent the bombs the player had banked').toBe(banked);
+
+    const resumed = reduce(dead, { slice: 'run', type: 'continued' });
+    expect(resumed.run.arsenal, 'a continue did not go back to the ship’s own kit').toEqual(startingArsenal());
+  });
+
+  it('and a death does not TOP UP an arsenal the player has emptied', () => {
+    /*
+      ⚠️ **THE OTHER DIRECTION, AND IT IS WHAT 0085 COSTS THE PLAYER.** The old line handed a ship
+      that died with nothing left the starting two, because it restocked rather than kept. A guard on
+      *a death keeps what was banked* passes just as well against a reducer that takes the maximum of
+      the two, which would be the ask granted in one direction only.
+    */
+    let state = begin();
+    const charges = state.run.arsenal[0]!.charges;
+    for (let i = 0; i < charges; i++) state = reduce(state, { slice: 'run', type: 'spent', slot: 0 });
+    expect(state.run.arsenal[0]!.charges, 'the fixture still has a charge, so a top-up would be invisible').toBe(0);
+    const dead = reduce(state, { slice: 'run', type: 'lifeLost' });
+    expect(dead.run.arsenal[0]!.charges, 'a death handed back charges the player had already spent').toBe(0);
   });
 
   it('a special already owned gains charges rather than a second trigger', () => {

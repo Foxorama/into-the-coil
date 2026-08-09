@@ -215,8 +215,11 @@ describe('a pickup is legible before it is taken', () => {
 describe('a level answers what a death costs', () => {
   it('never leaves the player unarmed for long', () => {
     /*
-      ⚠️ **THE LOAD-BEARING GUARD, AND IT IS 0039'S BILL.** A death empties the arsenal, so the
-      question a level has to answer is *how long is a player who just died without a weapon*. In
+      ⚠️ **THE LOAD-BEARING GUARD, AND IT IS 0039'S BILL.** A death empties the UPGRADES — the
+      charges stopped going with them at
+      `docs/decisions/0085-a-death-does-not-cost-the-bombs.md`, and what a level has to rearm was
+      always the guns — so the question a level has to answer is *how long is a player who just died
+      without a weapon*. In
       SECONDS, which is a unit the player experiences —
       `docs/decisions/0027-measure-the-picture-not-the-model.md` requires at least one assertion in
       one, and "every 600 world units" is the model talking to itself.

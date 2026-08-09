@@ -70,24 +70,25 @@ describe('a run is lives', () => {
     expect(play(BEGIN, PLAY, DIE, DIE).run.lives).toBe(STARTING_LIVES_OF_THE_TIER - 2);
   });
 
-  it('a death clears the arsenal back to base', () => {
-    // 0039's central rule, and the one `docs/game.md` was amended for: "carry forward" means across
-    // LEVELS, not across deaths. An arsenal that survived a death would make a run monotonic — the
-    // ship only ever gets stronger, and the last level is the easiest thing in the game.
-    const before = armed();
+  it('a death costs the upgrades and leaves the arsenal exactly where it was', () => {
     /*
-      ⚠️ **"Back to base" is the STARTING KIT now, not an empty list — 0053.** 0039's own words are
-      *"back to the ship's base weapon and starting special"*, and `[]` was the placeholder for a game
-      that had no starting special. What a death costs is everything EARNED: the charges banked from
-      clearing levels, and every special picked up along the way.
+      ⚠️ **THIS ASSERTION IS THE INVERSE OF THE ONE IT REPLACES, AND THAT IS CORRECT** —
+      `docs/decisions/0085-a-death-does-not-cost-the-bombs.md`. It used to read *the arsenal survived a
+      death* as a failure message, on 0039's rule that a death goes back to the starting kit. Reported
+      from play: *"bombs should be reset on a continue, but not on player death."* A guard tied to a
+      decision inverts when the decision does; the alternative is a guard loose enough to hold neither.
+
+      **What 0039 still owns is the other field.** *"Back to the ship's base weapon and starting
+      special"* is two halves, and a death now costs the first — the upgrades — and not the second.
     */
+    const before = armed();
     expect(
       before.run.arsenal.map((entry) => entry.kind),
       'the fixture has nothing to lose, so this proves nothing',
     ).toEqual(['bomb', 'mines']);
     expect(
       before.run.arsenal[0]!.charges,
-      'the fixture never banked a charge, so a death cannot be seen to cost one',
+      'the fixture never banked a charge, so a death cannot be seen to spare one',
     ).toBeGreaterThan(startingArsenal()[0]!.charges);
     expect(before.run.upgrades, 'the fixture has no upgrades to lose, so this proves half of nothing').toEqual([
       'weapon',
@@ -95,7 +96,13 @@ describe('a run is lives', () => {
     ]);
 
     const after = reduce(before, DIE);
-    expect(after.run.arsenal, 'the arsenal survived a death').toEqual(startingArsenal());
+    expect(after.run.arsenal, 'a death moved the arsenal').toEqual(before.run.arsenal);
+    /*
+      ⚠️ **And it is not the starting kit either, which is the half a `toEqual(before)` alone would
+      not say.** The old rule and the new one agree about a run that never banked anything; the fixture
+      is armed past the starting kit precisely so the two answers are different objects.
+    */
+    expect(after.run.arsenal, 'a death restocked the arsenal to the starting kit').not.toEqual(startingArsenal());
     /*
       ⚠️ **Both fields, because "back to the ship's base weapon and starting special" is two fields.**
       `docs/decisions/0041-a-pickup-is-the-answer-to-what-a-death-costs.md` made the base weapon
@@ -105,13 +112,16 @@ describe('a run is lives', () => {
     expect(after.run.upgrades, 'the weapon upgrades survived a death').toEqual([]);
   });
 
-  it('clears the arsenal on the LAST death too, so the rule has no hidden condition', () => {
+  it('and takes nothing back on the LAST death either, so the rule has no hidden condition', () => {
     // It reads as redundant — nobody flies that ship again. It is what keeps the reducer a function
-    // of its arguments rather than of what the shell intends to do next.
+    // of its arguments rather than of what the shell intends to do next. 0085 kept the shape of that
+    // argument and changed what the answer is: the charges reach the run-over screen intact, and
+    // `continued` is the one thing in the reducer that puts them back to the starting kit.
     let state = armed();
+    const carried = state.run.arsenal;
     for (let i = 0; i < STARTING_LIVES_OF_THE_TIER; i++) state = reduce(state, DIE);
     expect(state.run.lives).toBe(0);
-    expect(state.run.arsenal).toEqual(startingArsenal());
+    expect(state.run.arsenal, 'the last death emptied what the continue screen is about to restock').toEqual(carried);
   });
 
   it('the last life ends the run', () => {

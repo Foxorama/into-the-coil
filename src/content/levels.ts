@@ -156,7 +156,8 @@ export interface LevelRow {
     0 – 300        0:00 – 0:07   NOTHING. The player finds the controls before anything finds them
     300 – 900      0:07 – 0:24   drifters and the first lancers. Nothing here can be met by surprise
     900 – 2300     0:24 – 1:03   weavers: the first thing whose threat is where it WILL be
-    2300 – 3700    1:03 – 1:42   turrets: the first thing that cannot be cleared in passing
+    2300 – 3030    1:03 – 1:23   THE RUN-UP: the second weapon lands and nothing here has teeth
+    3030 – 3700    1:23 – 1:42   lancers at their own health, and then turrets
     3700 – 5000    1:42 – 2:18   chargers: the first thing faster than a reaction
     5000 – 6200    2:18 – 2:51   all five together, at density
     6350          2:55          the sentinel
@@ -173,6 +174,36 @@ export interface LevelRow {
   this particular one what it is.
   `docs/decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md`.
 */
+/**
+ * How far past the pickup that lifts the single-hit clamp level one waits before it sends anything
+ * that takes more than one shot. World units.
+ *
+ * ── WHY A CLAMP IS NOT ENOUGH ON ITS OWN ────────────────────────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0086-the-teeth-wait-for-the-gun.md`, and it exists because the clamp lifts on
+ * a SPAWN.** `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md` turns the dial when a weapon
+ * pickup reaches the field, which is the only version of it that can sawtooth — but *the level has
+ * offered you a gun* and *you are flying one* are separated by a crossing of the lane, and level one
+ * had a three-health turret ten units behind the pickup. The clamp is what covers the opening; this
+ * is what covers the handover.
+ *
+ * ⚠️ **600 units is 16.7 seconds at `SCROLL_PER_STEP`, and it is chosen against the pickup rather
+ * than against the enemy.** A pickup waits 420 steps to be taken
+ * (`docs/decisions/0064-a-pickup-waits-to-be-taken.md`) — so a run-up shorter than that could put a
+ * multi-hit wave in front of a player who is still legitimately flying towards the thing that would
+ * answer it. `tests/dial.test.ts` holds that relationship between the two constants rather than
+ * either number.
+ *
+ * ⚠️ **A FLOOR THE CONTENT SITS ABOVE, not a place a wave is authored at.** Level one's first
+ * multi-hit wave is at 3,030 against a pickup at 2,300 — 730 units — and the guard is written as a
+ * minimum so that tuning either number is a content change rather than a broken promise.
+ *
+ * ⚠️ **Level one only, because the clamp is.** Every other level opens past `MULTI_HIT_DIAL` and is
+ * meant to: 0084's whole argument for the `levelIndex === 0` term is that a game whose every opening
+ * had no teeth in it would be a game with teeth nowhere.
+ */
+export const MULTI_HIT_RUNUP = 600;
+
 const APPROACH: readonly WaveEntry[] = [
   /*
     ⚠️ **NOTHING BEFORE 300, AND THE FIRST DRAFT OPENED AT 60.** Play reported it: *"the initial row
@@ -209,15 +240,40 @@ const APPROACH: readonly WaveEntry[] = [
   { at: 2130, enemy: 'lancer', formation: 'vee', count: 5, lane: 55 },
   { at: 2220, enemy: 'drifter', formation: 'line', count: 6, lane: 50 },
 
-  // ── Turrets. Three health each, so the player starts having to choose what to leave alive. ──────
-  { at: 2310, enemy: 'turret', formation: 'column', count: 4, lane: 30 },
+  /*
+    ── THE RUN-UP: THE STRETCH THE SECOND WEAPON GETS TO ITSELF ─────────────────────────────────────
+
+    `docs/decisions/0086-the-teeth-wait-for-the-gun.md`, and `MULTI_HIT_RUNUP` above is the promise
+    these eight lines keep. Reported from play: *"we need to remove the enemies that take multiple
+    shots to kill from the 1st level, they can't start appearing till after the second weapon
+    pickup… they're too difficult to kill with the default fire mode."*
+
+    ⚠️ **A three-health turret stood at 2,310 and the second weapon pickup is at 2,300** — ten world
+    units, **a third of a second**. `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md` lifts
+    the single-hit clamp the instant that pickup SPAWNS, so the turret it was protecting the player
+    from arrived alongside the pickup rather than after it: the player met it with the gun the clamp
+    existed because they did not have.
+
+    ⚠️ **Nothing here has more than one hit in it, and that is authored rather than clamped.** Past
+    2,300 the clamp is off and every health in the table is real, so this band is a band of
+    ONE-HEALTH KINDS — drifters and weavers. The clamp and this stretch answer the same complaint at
+    two different times and neither covers the other's.
+
+    ⚠️ **It is denser than the band it replaces, deliberately** — 43 bodies where there were 38. A
+    respite made of fewer enemies is a respite the player spends waiting; this is the same eight slots
+    carrying more of them, so what the new gun buys is something they watch it do.
+  */
+  { at: 2310, enemy: 'weaver', formation: 'column', count: 5, lane: 30 },
   { at: 2400, enemy: 'drifter', formation: 'line', count: 5, lane: 60 },
   { at: 2490, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
-  { at: 2580, enemy: 'turret', formation: 'line', count: 4, lane: 50 },
-  { at: 2670, enemy: 'lancer', formation: 'vee', count: 5, lane: 55 },
+  { at: 2580, enemy: 'drifter', formation: 'vee', count: 6, lane: 50 },
+  { at: 2670, enemy: 'weaver', formation: 'line', count: 5, lane: 55 },
   { at: 2760, enemy: 'drifter', formation: 'line', count: 6, lane: 35 },
-  { at: 2850, enemy: 'turret', formation: 'column', count: 4, lane: 70 },
+  { at: 2850, enemy: 'drifter', formation: 'vee', count: 6, lane: 65 },
   { at: 2940, enemy: 'weaver', formation: 'vee', count: 5, lane: 50 },
+
+  // ── Teeth. The lancer first, at the two health the run-up was hiding, and then the turret at three
+  //    — so the level introduces *takes more than one shot* and *takes three* as two separate events.
   { at: 3030, enemy: 'lancer', formation: 'column', count: 5, lane: 40 },
   { at: 3120, enemy: 'drifter', formation: 'vee', count: 6, lane: 45 },
   { at: 3210, enemy: 'turret', formation: 'line', count: 5, lane: 50 },

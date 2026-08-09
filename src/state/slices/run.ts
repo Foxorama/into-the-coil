@@ -64,6 +64,10 @@ export interface ArsenalEntry {
  * reducer used to clear the arsenal to `[]` on a death, because there was no starting special for it
  * to go back to; there is one now, and the ask names its size: *"the player starts with 2."*
  *
+ * ⚠️ **A DEATH NO LONGER CALLS THIS** — `docs/decisions/0085-a-death-does-not-cost-the-bombs.md`.
+ * Two callers are left and both are a run being stocked rather than a ship being replaced: `begin`
+ * and `continued`.
+ *
  * ⚠️ **A function rather than a constant**, so nothing can hold a reference to the array a run is
  * using and mutate the next run's starting kit through it.
  */
@@ -153,8 +157,14 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         run that ran out of lives is picked up where it stopped: the level index does not move, so
         the shell has nothing to re-enter and the field carries on underneath. Everything else goes
         back to what a run starts with — the tier's full complement, the starting kit, and no
-        upgrades, which is 0039's *a death costs the arsenal* applied one more time rather than
-        forgiven.
+        upgrades.
+
+        ⚠️ **AND THE STARTING KIT IS NOW THE ONE THING THIS DOES THAT `lifeLost` DOES NOT** —
+        `docs/decisions/0085-a-death-does-not-cost-the-bombs.md`, in the ask's own words: *"bombs
+        should be reset on a continue, but not on player death."* Both arms used to restock, so the
+        line below was a copy of a line in the arm above it; it is now the difference between the two
+        events. It cuts both ways and 0085 says so — a player who reaches the continue screen holding
+        five charges is put back to the starting two.
 
         ⚠️ **The tier is carried, never re-chosen.** It is a property of the run
         (`docs/decisions/0047-…`), and this is still the same run — a continue that dropped the
@@ -176,37 +186,41 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
       };
     case 'lifeLost':
       /*
-        ⚠️ **The arsenal is cleared on EVERY death, including the last one.** It reads as redundant —
-        the run is over, nobody will fly that ship again — and it is what keeps this reducer a
-        function of its arguments rather than of what the shell does next. A `lifeLost` that
-        sometimes clears and sometimes does not is a rule with a hidden condition, and the condition
-        would be "did the caller intend to keep playing", which is not a thing state can know.
+        ⚠️ **A DEATH COSTS THE UPGRADES AND LEAVES THE ARSENAL ALONE** —
+        `docs/decisions/0085-a-death-does-not-cost-the-bombs.md`, reported from play: *"bombs should
+        be reset on a continue, but not on player death."* This line used to send the arsenal back to
+        `startingArsenal()` on both, and the two are now the two different events they always were: a
+        death is a beat inside a run, and a continue is a run being restocked.
+
+        ⚠️ **`state.arsenal` UNTOUCHED, which is a top-up removed as well as a cost.** A player who
+        died holding five charges keeps five; a player who died having spent all of them keeps none,
+        where the old line handed back the starting two. 0085 has the trade — the charges banked from
+        clearing levels are the thing the ask is protecting, and a free restock every death is what
+        made them worth nothing.
+
+        ⚠️ **The UPGRADES still go, and that is what is left of
+        `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md`.** It says a death goes
+        *"back to the ship's base weapon and starting special"*; the base weapon is exactly what an
+        empty upgrade list resolves to, so this line and `weaponFor` between them mean there is no
+        second description anywhere of what the ship shoots when it has nothing. What 0085 amends is
+        the *starting special* half, and `docs/decisions/0083-two-ladders-of-four.md`'s scatter is
+        what hands the upgrades straight back.
+
+        ⚠️ **Unconditional on EVERY death, including the last one**, exactly as the arsenal clear was:
+        a `lifeLost` that behaved differently on the last life would be a rule with a hidden
+        condition, and the condition would be *did the caller intend to keep playing*, which is not a
+        thing state can know. `continued` is where the answer to that question lives.
 
         ⚠️ **Clamped at zero, never below.** Nothing should dispatch this at zero lives, and the
         reducer is not the place to find out whether anything did: a negative life count would
         propagate silently into the save schema and into whatever renders a life counter.
-      */
-      /*
-        ⚠️ **The UPGRADES go too, and that is `docs/decisions/0039-…`'s rule reaching the field it
-        was written about before that field existed.** It says a death clears the arsenal *"back to
-        the ship's base weapon and starting special"* — the base weapon is exactly what an empty
-        upgrade list resolves to, so this line and `weaponFor` between them mean there is no second
-        description anywhere of what the ship shoots when it has nothing.
-      */
-      /*
-        ⚠️ **The arsenal goes back to the STARTING kit rather than to nothing**, which is what 0039
-        actually says: *"back to the ship's base weapon and starting special."* An empty list was the
-        placeholder for a game with no starting special in it. What a death costs is therefore
-        everything EARNED — the charges banked from clearing levels — and never the thing the ship
-        came with, which would leave a player who died with the tier's hardest stretch and no answer
-        to it at all.
       */
       return state.lives <= 0
         ? state
         : {
             lives: state.lives - 1,
             level: state.level,
-            arsenal: startingArsenal(),
+            arsenal: state.arsenal,
             upgrades: [],
             difficulty: state.difficulty,
           };

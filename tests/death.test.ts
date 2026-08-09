@@ -448,6 +448,31 @@ describe('the pyre: what the ship was carrying goes up with it', () => {
     expect(built.world.blasts.at(0).radius).toBe(SHOTS.blast.radius / 2);
   });
 
+  it('and the ship keeps every charge it just lit, because a death is not a cost', () => {
+    /*
+      ⚠️ **THE PYRE IS FREE, AND IT IS FREE ON PURPOSE** —
+      `docs/decisions/0085-a-death-does-not-cost-the-bombs.md`, taken as an explicit choice against the
+      other three: *"bombs should be reset on a continue, but not on player death."* The ring is the
+      ordnance going up with the hull and the next ship being issued the same kit, and 0085 argues that
+      against `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` rather than
+      leaving the tension to be found.
+
+      ⚠️ **The guard exists because the fix is one line in the OTHER direction.** *The pyre fires all
+      unspent bombs* reads as a spend, and a later session reaching for `spent` per charge would be
+      making the picture honest and the reported bug come back. This is what says the trade was taken.
+    */
+    const built = shell(NO_LEVEL);
+    built.lifecycle.begin(TIER);
+    built.dispatch({ slice: 'run', type: 'took', special: 'bomb' });
+    built.dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
+    const carried = built.state().run.arsenal;
+    expect(carried[0]!.charges, 'the fixture had nothing to light, so keeping it proves nothing').toBeGreaterThan(0);
+
+    killShip(built.world, built.frame);
+    expect(built.world.blasts.size, 'the pyre never went off, so this measures nothing').toBe(1);
+    expect(built.state().run.arsenal, 'the pyre spent the charges it was drawn from').toEqual(carried);
+  });
+
   it('clears the field it went off in', () => {
     // The stated purpose, in the player's words: *"a way to give the player some breathing space for
     // when they respawn."*

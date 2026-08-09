@@ -958,10 +958,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   /*
     THE SHIP CAME APART — 0079, and this fires `DEATH_STEPS` before `onDeath` below.
 
-    ⚠️ **The charges are read HERE because they are gone by the time `onDeath` runs.** `lifeLost`
-    takes the arsenal back to the ship's starting kit (`src/state/slices/run.ts`), and that is the same
-    dispatch `src/state/root.ts` raises the continue screen off — so the end of the beat is exactly
-    the wrong moment to ask what the player was carrying.
+    ⚠️ **The charges are read at the WRECK because that is the event the pyre is a picture of**, and
+    it is no longer also the last moment they exist. `lifeLost` used to take the arsenal back to the
+    ship's starting kit; `docs/decisions/0085-a-death-does-not-cost-the-bombs.md` leaves it alone, so
+    both ends of the beat now give the same answer. Reading it here is still the right line — the ring
+    is sized by what the ship was carrying **when it came apart** — and 0085 keeps the pyre exactly as
+    it was: the ordnance goes up with the hull and the next ship is issued the same kit, which is what
+    *"reset on a continue, but not on player death"* asks for.
 
     ⚠️ **Every charge in the arsenal, not every bomb.** `chargesOf` already totals the list for the
     readout, and using it says *what the ship was carrying goes up with it* — a rule a second special

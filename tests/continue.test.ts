@@ -195,6 +195,15 @@ describe('a run over is a continue', () => {
     intoAFight(built);
     built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'weapon' });
     built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'weapon' });
+    /*
+      ⚠️ **Banked past the starting kit, or the restock below cannot be seen** —
+      `docs/decisions/0085-a-death-does-not-cost-the-bombs.md`. Until 0085 every death restocked the
+      arsenal, so a fixture that reached the run-over screen was already holding exactly what a
+      continue was about to hand it and *the continue did not restock the arsenal* was a sentence
+      about nothing. A death now carries the charges through, so this is what makes the two arms of
+      the reducer distinguishable at all.
+    */
+    built.dispatch({ slice: 'run', type: 'took', special: 'bomb' });
     dieOutTheRun(built);
     expect(built.state().run.lives, 'the fixture kept a life, so there is no run to continue').toBe(0);
     expect(built.state().screen.current, 'the run ended without raising the run-over screen').toBe('gameOver');
@@ -245,6 +254,16 @@ describe('a run over is a continue', () => {
       any of them moves this with it — 0039's rule about numbers nobody has played yet.
     */
     const built = ranOut();
+    /*
+      ⚠️ **The arsenal reaching this screen is BIGGER than a fresh one's, and that is 0085.** The
+      restock is a reduction here — the one place in the game where a bomb count goes down without the
+      player pressing anything — and it is the half of *"reset on a continue, but not on player
+      death"* that the run-over screen owns.
+    */
+    expect(
+      built.state().run.arsenal,
+      'the run reached the continue screen with a fresh kit, so restocking it proves nothing',
+    ).not.toEqual(startingArsenal());
     built.lifecycle.resume();
     expect(built.state().run.lives, 'the continue did not restock the run').toBe(livesFor(TIER));
     expect(built.state().run.arsenal, 'the continue did not restock the arsenal').toEqual(startingArsenal());
