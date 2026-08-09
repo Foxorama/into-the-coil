@@ -100,6 +100,7 @@ it is pushed — guards stop reaching their subject without ever going red, and 
 | **everything that shoots at the player is on a sixteenth grid, phase quantised at spawn** | [0096](decisions/0096-the-enemies-play-along.md) |
 | **a wave plays a FIGURE — each member on its own slot — and there are three enemy bullets** | [0098](decisions/0098-a-wave-plays-a-figure.md) |
 | **every pitched cue glides between two notes of the key, and the key lives in `cues.ts`** | [0099](decisions/0099-the-cues-are-in-the-key.md) |
+| **an authored place is a LEVEL coordinate and every spawner adds the origin; a scatter stays in the box** | [0100](decisions/0100-a-level-places-its-pickups-too.md) |
 | ~~the near sky is pushed back on every cheap axis~~ — **amended: it went out** | [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) → [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the sky is three layers, the fastest is streaks, and a tube is a side of the hull** | [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
@@ -221,7 +222,37 @@ date and is exactly what a play-test is for.
 
 ## What the play-test has answered
 
-⚠️ **THE FIFTH PLAY-TEST IS THE CURRENT ONE AND IT OUTRANKS EVERYTHING BELOW IT** —
+⚠️ **THE SIXTH PLAY-TEST IS THE CURRENT ONE AND IT OUTRANKS EVERYTHING BELOW IT** —
+[`the-sixth-play-test`](../reports/the-sixth-play-test-2026-08-10.md), given 2026-08-10 against the
+build carrying 0097, 0098 and 0099.
+
+⚠️ **IT CONTAINS THE MOST SERIOUS DEFECT THIS PROJECT HAS SHIPPED, AND IT IS FIXED** —
+[0100](decisions/0100-a-level-places-its-pickups-too.md). **Levels two through seven have had no
+pickups in them at all** since [0076](decisions/0076-a-level-has-an-origin.md): `spawnPickup` never
+added the level origin, so every authored pickup was placed about fifteen hundred units behind the
+camera and culled on the step it spawned. **And the difficulty dial counted them anyway**, because
+`weaponsOffered` increments at the placement — so the game raised its own difficulty on schedule for
+weapons the player was never shown.
+
+⚠️ **SO LEVELS TWO TO SEVEN HAVE NEVER BEEN PLAYED AS AUTHORED.** Every impression anyone has of their
+pacing or difficulty is an impression of a different game. The next play-test is the first observation
+of the real one.
+
+⚠️ **AND THE REPORT ASKED THE RIGHT QUESTION ABOUT THE GUARDS** — *"our tests and guards seem to not
+be doing a great job"* — which is the more valuable half. They were all green, and 0100 has the three
+reasons: every pickup guard runs level one where the origin is zero; the boundary is driven by the
+shell so a `GameFrame` fixture never crosses one; and the guards that exist are about the TABLE rather
+than about where the content is put.
+
+| item | state |
+|---|---|
+| **no power-ups after level one; a scatter the player cannot reach** | ✅ [0100](decisions/0100-a-level-places-its-pickups-too.md) |
+| the sky is faster and still not fast enough | |
+| the bosses hold half the screen | |
+| the music is still flat — no depth, no pace, no tempo | |
+| the player's guns and rockets are too thin | |
+
+⚠️ **THE FIFTH PLAY-TEST IS THE ONE ABOVE THAT** —
 [`the-fifth-play-test`](../reports/the-fifth-play-test-2026-08-10.md), given 2026-08-10 against the
 build carrying 0089 to 0096. **Six items, four of them landing as decisions 0097 to 0100**, and the
 instruction that came with it was *"full auto and merge PRs"*.

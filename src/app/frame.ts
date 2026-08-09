@@ -43,7 +43,10 @@ import {
 import { type Entity, reset, stepEntities } from '../sim/entity.ts';
 // `SCROLL_PER_STEP` for `PICKUP_SLOW_AT`, which is a distance derived from a duration — 0087. Every
 // other speed in this file rides `w.scrollPerStep`, which is the same number reachable from a world.
-import { SCROLL_PER_STEP, flyShip, holdStation } from '../sim/flight.ts';
+// `PLAYER_ALONG_MARGIN` and `PLAYER_LEAD` are the two ends of the player's box, imported rather than
+// restated so a scattered pickup's wall and the ship's own clamp are one number — 0100, and the same
+// reason `src/app/mount.ts` imports `PLAYER_LEAD` for the mark that draws it (0074).
+import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, SCROLL_PER_STEP, flyShip, holdStation } from '../sim/flight.ts';
 import type { Intent } from '../sim/intent.ts';
 import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
@@ -2301,6 +2304,42 @@ function driftPickups(w: World): void {
     if (item.across - item.radius <= 0) item.velAcross = Math.abs(item.velAcross);
     else if (item.across + item.radius >= ACROSS_SPAN) item.velAcross = -Math.abs(item.velAcross);
     /*
+      ── AND THE SAME RULE ON THE OTHER AXIS, WHICH IT HAS NEVER HAD ────────────────────────────────
+
+      ⚠️ **`docs/decisions/0100-a-level-places-its-pickups-too.md`.** Reported from play: *"on player
+      death the powerups can go to a section on the left side of the screen, where they are visible
+      but the player cannot get to them."*
+
+      ⚠️ **The two lines above stop a pickup leaving the LANE and nothing stopped one leaving the
+      BOX.** `scatterRing` throws each piece around a full circle from where the ship died, and the
+      along half of that is spent over about eleven world units — so a ship that died anywhere in the
+      back eleven units of its box throws pieces to a place the ship can never return to. The player's
+      band runs from `PLAYER_ALONG_MARGIN` to `PLAYER_LEAD` in the camera's frame
+      (`src/sim/flight.ts`), and the view runs from zero: **everything below the margin is on the
+      screen and out of reach.** It is the same bug at the leading end, where a piece thrown forward
+      from the front of the box lands past `PLAYER_LEAD`.
+
+      ⚠️ **A BOUNCE and not a clamp, because that is what the across axis does** — and because a
+      clamp would park a piece on the wall while the ease was still driving it outward, which reads as
+      a pickup stuck on a line. Reversing the departure sends it back into the box under its own
+      momentum and the ease settles it there.
+
+      ⚠️ **`velAlong` carries the scroll rate as its baseline** (0034), so what is reversed is the
+      DEPARTURE from it. Reversing the whole velocity would fire the pickup backwards through the
+      world at the scroll rate as well, which is a piece leaving the screen rather than turning round.
+
+      ⚠️ **Scattered pieces only, and `lifeFor` is what says so.** An authored pickup whose wait has
+      run out is MEANT to fall back through the view and leave —
+      `docs/decisions/0064-a-pickup-waits-to-be-taken.md`, and `driftPickups` eases it to a target of
+      zero for exactly that reason. Bouncing it here would make every pickup in the game immortal.
+    */
+    if (item.lifeFor > 0) {
+      const inView = item.along - w.cameraAlong;
+      const departure = item.velAlong - w.scrollPerStep;
+      if (inView <= PLAYER_ALONG_MARGIN) item.velAlong = w.scrollPerStep + Math.abs(departure);
+      else if (inView >= PLAYER_LEAD) item.velAlong = w.scrollPerStep - Math.abs(departure);
+    }
+    /*
       ⚠️ **A scattered pickup that runs out of time leaves a burst**, because
       `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` is named for
       exactly this: the model resolves *that one is gone now* and, without this, the picture says
@@ -2535,7 +2574,27 @@ function spawnPickup(w: World, index: number): void {
     Counting missiles too would take it to 17.
   */
   if (entry.kind === 'weapon') w.weaponsOffered++;
-  reset(item, entry.at, entry.lane, row, kind);
+  /*
+    ⚠️ **`+ w.levelOrigin`, AND IT WAS MISSING FOR AS LONG AS THE ORIGIN HAS EXISTED** —
+    `docs/decisions/0100-a-level-places-its-pickups-too.md`. Reported from play: *"I didn't get a
+    single power up after level 1."*
+
+    ⚠️ **`docs/decisions/0076-a-level-has-an-origin.md` added this term to `spawnWave` and to
+    `spawnBoss` and not to this.** A level's script is authored from the level's own beginning, so an
+    authored `at` is a LEVEL coordinate and every placement has to be translated. Level one's origin
+    is zero, which is why it was invisible: on level two the origin is about 6,400, so all nine of its
+    pickups were placed **fifteen hundred units behind the camera** and culled on the step they
+    spawned. Not one frame on screen, for levels two through seven, since 0076.
+
+    ⚠️ **The SCHEDULING side was always right, and that is what made it silent.** `stepSpawns` asks
+    `pickups[next].at <= spawnAlong(camera) - levelOrigin`, which is in level coordinates and correct
+    — so `nextPickup` advanced normally and the model believed it had offered nine pickups. **So did
+    the dial**: `weaponsOffered` increments here, and
+    `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md` reads it, so from level two onward the
+    game raised its own difficulty on schedule for weapons the player was never shown. It is a
+    difficulty defect as much as a pickup one.
+  */
+  reset(item, entry.at + w.levelOrigin, entry.lane, row, kind);
   /*
     ⚠️ **Which way it starts drifting alternates by INDEX rather than being rolled.** The spawn
     stream exists and is deliberately not consulted here for the reason `spawnWave` gives: a level is

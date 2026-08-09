@@ -7,7 +7,7 @@ import { BURST } from '../src/content/debris.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { INVULN_STEPS } from '../src/content/ships.ts';
 import { phaseFor } from '../src/app/boss.ts';
-import { GameFrame, SHIP_START_ALONG, resetScene, respawn } from '../src/app/frame.ts';
+import { GameFrame, SHIP_START_ALONG, advanceLevel, resetScene, respawn } from '../src/app/frame.ts';
 import { playableWorld } from './world.ts';
 import {
   ACROSS_CULL_MAX,
@@ -299,6 +299,115 @@ describe('a level actually puts something in front of the player', () => {
  * mistakes that actually get made when a roster grows: a level pointed at a boss another level
  * already uses, and two bosses drawn as the same object.
  */
+describe('0100 — a level that is not the first one still puts its script on the screen', () => {
+  /*
+    `docs/decisions/0100-a-level-places-its-pickups-too.md`. Reported from play: *"I didn't get a
+    single power up after level 1."*
+
+    ⚠️ **EVERY GUARD IN THIS REPOSITORY RAN LEVEL ONE, WHERE `levelOrigin` IS ZERO.**
+    `docs/decisions/0076-a-level-has-an-origin.md` made a level's script relative to wherever the
+    camera had got to, and translated the waves and the boss and not the pickups — so on level two the
+    nine authored pickups were placed fifteen hundred units behind the camera and culled on the step
+    they spawned. The term that was missing is invisible at an origin of zero, which is the only
+    origin anything had ever tested.
+
+    ⚠️ **AND THE BOUNDARY IS DRIVEN BY THE SHELL**, so a `GameFrame` fixture never crosses one on its
+    own. `advanceLevel` is exported and this calls it, which is the whole of what was needed and had
+    never been done.
+
+    ⚠️ **Held over EVERY level as a second level, not just over level two.** The failure is a property
+    of the placement code rather than of any level's content, so what makes the guard general is
+    driving each level's script at a non-zero origin.
+  */
+  it('0100 — THE REPORTED ONE: every authored pickup reaches the screen, at a non-zero origin', () => {
+    for (const kind of LEVEL_KINDS) {
+      const { world } = playableWorld(LEVELS.approach);
+      const frame = new GameFrame(world);
+      // Fly far enough that the origin is unmistakably not zero, then do what the shell does.
+      for (let i = 0; i < 3000; i++) {
+        world.fireIn = Number.MAX_SAFE_INTEGER;
+        frame.step();
+      }
+      expect(world.levelOrigin, 'the fixture never moved, so this is testing an origin of zero').toBe(0);
+      advanceLevel(world, LEVELS[kind], 1);
+      expect(world.levelOrigin, 'the boundary did not set an origin').toBeGreaterThan(1000);
+
+      /*
+        ⚠️ **Measured AT THE INSTANT OF SPAWN, in world units ahead of the camera.** That is where the
+        defect lives and it is the only moment a pickup has an identity a test can hold: a pickup's
+        `along` changes every step, and the pool recycles slots, so *was this one ever on screen* needs
+        bookkeeping the frame does not offer. Where it was PUT is the whole question —
+        `docs/decisions/0027-measure-the-picture-not-the-model.md`: the model was perfectly happy, and
+        `nextPickup` reached the end of the list either way.
+
+        ⚠️ **Ahead of the camera, and not further than the spawn horizon.** Both ends matter: the
+        defect placed them fifteen hundred units behind, and the mirror-image mistake — adding the
+        origin twice — would place them thousands ahead and they would never arrive either.
+      */
+      const placed: number[] = [];
+      let before = world.pickups.size;
+      for (let i = 0; i < 30000; i++) {
+        world.fireIn = Number.MAX_SAFE_INTEGER;
+        frame.step();
+        if (world.pickups.size > before) placed.push(world.pickups.at(world.pickups.size - 1).along - world.cameraAlong);
+        before = world.pickups.size;
+        if (world.nextPickup === LEVELS[kind].pickups.length && world.pickups.size === 0 && placed.length > 0) break;
+      }
+      expect(placed.length, `${kind} as a second level spawned no pickups at all`).toBe(LEVELS[kind].pickups.length);
+      const behind = placed.filter((inView) => inView <= 0);
+      expect(
+        behind.length,
+        `${kind} as a second level placed ${behind.length} of its ${placed.length} pickups BEHIND the camera` +
+          (behind.length > 0 ? ` — the furthest by ${Math.abs(Math.min(...behind)).toFixed(0)} units` : ''),
+      ).toBe(0);
+      const furthest = Math.max(...placed);
+      expect(
+        furthest,
+        `${kind} as a second level placed a pickup ${furthest.toFixed(0)} units ahead, past the spawn horizon`,
+      ).toBeLessThan(MAX_ALONG_SPAN * 2);
+    }
+  });
+
+  it('0100 — and the dial only counts a weapon the player was actually shown', () => {
+    /*
+      ⚠️ **THE HALF OF THIS DEFECT NOBODY COULD SEE, and it is a difficulty bug rather than a pickup
+      one.** `weaponsOffered` increments where a pickup is placed, and
+      `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md` reads it as *what this level has
+      offered*. With the placement wrong, the counter climbed on schedule for weapons that were never
+      on the screen — so from level two onward the game raised its own difficulty for pickups the
+      player never got the chance to take.
+
+      ⚠️ **Held as *the dial's count and the visible count agree***, which is the property rather
+      than the arithmetic: 0084's own comment says a pickup the field had no room for was not
+      offered, and one placed behind the camera is the same thing said louder.
+    */
+    const { world } = playableWorld(LEVELS.approach);
+    const frame = new GameFrame(world);
+    for (let i = 0; i < 3000; i++) {
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      frame.step();
+    }
+    advanceLevel(world, LEVELS.descent, 1);
+    let shown = 0;
+    let before = world.pickups.size;
+    for (let i = 0; i < 30000; i++) {
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      frame.step();
+      if (world.pickups.size > before) {
+        const item = world.pickups.at(world.pickups.size - 1);
+        if (item.kind === world.pickupKinds.weapon && item.along - world.cameraAlong > 0) shown++;
+      }
+      before = world.pickups.size;
+      if (world.nextPickup === LEVELS.descent.pickups.length && world.pickups.size === 0 && i > 100) break;
+    }
+    expect(world.weaponsOffered, 'the dial counted nothing, so this measured nothing').toBeGreaterThan(0);
+    expect(
+      shown,
+      `the dial counted ${world.weaponsOffered} weapon pickups and ${shown} of them were placed where the player could see one`,
+    ).toBe(world.weaponsOffered);
+  });
+});
+
 describe('every level has a boss of its own, and no two of them are the same object', () => {
   it('no boss is fought twice in one run', () => {
     /*
