@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 import { CUES, CUE_KINDS } from '../src/content/cues.ts';
-import { SAMPLE_RATE, sampleCue } from '../src/app/sound.ts';
+import { SAMPLE_RATE, cueSeconds, sampleCue } from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
 
 const args = new Map(process.argv.slice(2).map((a) => a.replace(/^--/, '').split('=')));
@@ -73,7 +73,7 @@ const pieces = [];
 let total = 0;
 let peak = 0;
 
-console.log(`cue           wave     from → to      seconds  gain  hold  twin`);
+console.log(`cue           layers  seconds  gain  hold  twin`);
 for (const kind of kinds) {
   const row = CUES[kind];
   // The same stream the game bakes this cue from — one per kind, per decision 0021.
@@ -81,9 +81,8 @@ for (const kind of kinds) {
   for (const s of samples) peak = Math.max(peak, Math.abs(s));
   pieces.push(samples, new Float32Array(silence));
   total += samples.length + silence;
-  const sweep = `${String(row.from).padStart(4)} → ${String(row.to).padEnd(4)}`;
   console.log(
-    `${kind.padEnd(13)} ${row.wave.padEnd(8)} ${sweep}  ${row.seconds.toFixed(2).padStart(7)}  ` +
+    `${kind.padEnd(13)} ${String(row.layers.length).padStart(6)}  ${cueSeconds(row).toFixed(2).padStart(7)}  ` +
       `${row.gain.toFixed(2)}  ${String(row.hold).padStart(4)}  ${row.twin}`,
   );
 }

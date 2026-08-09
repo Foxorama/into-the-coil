@@ -45,7 +45,7 @@
  * time it — applied to the one budget it did not anticipate.
  */
 
-import { CUES, CUE_KINDS, MAX_CUE_SECONDS, type CueKind, type CueRow } from '../content/cues.ts';
+import { CUES, CUE_KINDS, MAX_CUE_SECONDS, type CueKind, type CueLayer, type CueRow } from '../content/cues.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 
 /**
@@ -70,13 +70,20 @@ declare global {
 /**
  * The rate every cue is baked at, in Hz.
  *
- * ⚠️ **22050 rather than 48000, and it is a choice about the sound as much as the size.** It halves
- * the baked bytes and the synthesis time, its ceiling is 11kHz — above every partial these twelve
- * rows produce — and the band limit is audibly the one an arcade cabinet had. An `AudioBuffer` may
- * carry a rate the context does not run at; the browser resamples it on playback, so the samples are
- * the same on every device and the `.wav` `scripts/hear.mjs` writes is what actually plays.
+ * ⚠️ **IT WAS 22050 AND THE ARGUMENT FOR IT WAS PART OF THE PROBLEM** —
+ * `docs/decisions/0089-a-cue-has-a-body.md`. *"The band limit is audibly the one an arcade cabinet
+ * had"* was true and was a description of the thing the play-test rejected: an 11 kHz ceiling has no
+ * air above it at all, and it is where a naive square's harmonics fold back hardest.
+ *
+ * ⚠️ **It costs nothing that ships.** The bake is CODE, not data — 0072's whole point — so the
+ * single-file build is exactly the size it was; what doubles is about twenty milliseconds of
+ * synthesis at the first press and the RAM the buffers sit in.
+ *
+ * An `AudioBuffer` may carry a rate the context does not run at; the browser resamples it on
+ * playback, so the samples are the same on every device and the `.wav` `scripts/hear.mjs` writes is
+ * what actually plays.
  */
-export const SAMPLE_RATE = 22050;
+export const SAMPLE_RATE = 44100;
 
 /**
  * How many cues may START on one fixed step.
@@ -108,19 +115,111 @@ const ATTACK_SECONDS = 0.004;
  */
 const DECAY = 5;
 
-/*
-  ⚠️ **THERE IS NO FADE-OUT, AND THERE WAS ONE UNTIL A PROBE PROVED IT COULD NOT MATTER.** A buffer
-  that stops mid-waveform clicks, so a two-millisecond ramp to zero at the end was written first and
-  looked obviously correct. `npm run prove` reported STILL GREEN when it was deleted on purpose, and
-  the reason is arithmetic: at `DECAY` time constants the envelope is already at 0.7% of peak when
-  the buffer ends, which is a hundred times below where a click becomes audible. The ramp was
-  defending a discontinuity the decay had already removed.
+/**
+ * How long a cue takes to ramp to silence at the very end, in seconds.
+ *
+ * ── THIS LINE WAS DELETED ON EVIDENCE AND IS BACK ON EVIDENCE ───────────────────────────────────
+ *
+ * ⚠️ **0072 removed a fade-out here after a probe proved it could not matter, and the proof was
+ * sound at the time.** With one oscillator and one shared `DECAY` of 5, the envelope was already at
+ * 0.7% of peak when the buffer ended — a hundred times below where a click is audible — so the ramp
+ * was defending a discontinuity the decay had already removed. `npm run prove` reported STILL GREEN
+ * and the line went.
+ *
+ * ⚠️ **`docs/decisions/0089-a-cue-has-a-body.md` breaks the premise, not the reasoning.** A layer
+ * carries its own `curve`, and a long rumble uses 1.4 — which ends at **25% of peak**, not 0.7%.
+ * `tests/sound.test.ts` said so within the hour: *missile is still sounding when its buffer ends*.
+ * The fade is load-bearing now in a way it never was, and this comment is here so the next person to
+ * find 0072's argument does not delete it a second time.
+ *
+ * ⚠️ **Six milliseconds: long enough to remove a step, short enough that nothing can hear it end.**
+ */
+const RELEASE_SECONDS = 0.006;
 
-  `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` is what turned that from a comment nobody
-  would have questioned into a line that is gone — and the assertion it left behind is the useful
-  one: the guard now catches an envelope that never falls, which is a real failure, rather than a
-  fade whose absence nothing can hear.
-*/
+/**
+ * The resonance a lowpass gets when a layer does not name one, and the one a highpass always gets.
+ *
+ * ⚠️ **The highpass's is not a knob and should not become one.** Its whole job is to take the box out
+ * of a noise body (`docs/decisions/0089-a-cue-has-a-body.md`); resonance at the corner would put a
+ * peak back exactly where the peak is being removed from.
+ */
+const LOW_Q = 0.7;
+const HIGH_Q = 0.6;
+
+/**
+ * PolyBLEP: what stops a square or a saw aliasing.
+ *
+ * ⚠️ **This is a real part of what *"too tinny, way too Atari 2600"* was** — 0089. A naive square
+ * steps between two values, and every harmonic it produces above half the sample rate folds back down
+ * to a frequency that is not a harmonic of anything. That is the harsh, cheap-digital edge, and at
+ * this project's old 22 kHz it was worst on `pulse`, the sound the player hears most.
+ *
+ * Two lines of correction at each discontinuity and the folded partials go away.
+ */
+function blep(t: number, dt: number): number {
+  if (t < dt) {
+    const x = t / dt;
+    return x + x - x * x - 1;
+  }
+  if (t > 1 - dt) {
+    const x = (t - 1) / dt;
+    return x * x + x + x + 1;
+  }
+  return 0;
+}
+
+/**
+ * A topology-preserving state-variable filter — lowpass and highpass out of one state.
+ *
+ * ⚠️ **THE SINGLE MOST IMPORTANT FUNCTION IN THIS FILE, and the game had nothing like it.** A boom
+ * *is* noise behind a falling cutoff; the same noise unfiltered is a hiss, which is what every
+ * explosion in the game used to be. The highpass is the other end: 130–300 Hz is the band that reads
+ * as *inside a tin shed*, and a body that is not high-passed above it sits there.
+ *
+ * ⚠️ **Topology-preserving rather than the textbook Chamberlin form**, because a cutoff that sweeps
+ * across most of the audible range in a fifth of a second walks the naive one straight into
+ * instability, and an unstable filter is not a wrong sound — it is a `NaN` in a buffer.
+ */
+function makeFilter(): (x: number, cutoff: number, q: number) => { low: number; high: number } {
+  let ic1 = 0;
+  let ic2 = 0;
+  return (x, cutoff, q) => {
+    // Clamped under half the sample rate: `tan` goes to infinity at Nyquist, and a sweep authored
+    // against one rate is played back at whatever `bakeCues` was given.
+    const g = Math.tan((Math.PI * Math.min(Math.max(cutoff, 10), rateCeiling * 0.45)) / rateCeiling);
+    const k = 1 / Math.max(0.5, q);
+    const a1 = 1 / (1 + g * (g + k));
+    const a2 = g * a1;
+    const v3 = x - ic2;
+    const v1 = a1 * ic1 + a2 * v3;
+    const v2 = ic2 + a2 * ic1 + g * a2 * v3;
+    ic1 = 2 * v1 - ic1;
+    ic2 = 2 * v2 - ic2;
+    return { low: v2, high: x - k * v1 - v2 };
+  };
+}
+
+/**
+ * The rate the filters are running at. Set by `sampleCue` before any layer is rendered.
+ *
+ * ⚠️ **Module state, which this project otherwise avoids, and the alternative was worse**: threading
+ * the rate through `makeFilter` and both of its call sites per sample. The bake is single-threaded,
+ * runs once, and is the only caller — `tests/sound.test.ts` bakes at two rates in one process and is
+ * what would catch this if it ever stopped being true.
+ */
+let rateCeiling = SAMPLE_RATE;
+
+/**
+ * Soft saturation. What *meaty* is made of — harmonics from squashing, not from adding notes.
+ *
+ * Normalised by the same curve at unity, so raising `amount` adds harmonics without also adding
+ * level: a drive that got louder would be indistinguishable from a gain in every guard below.
+ */
+function saturate(x: number, amount: number): number {
+  if (amount <= 0) return x;
+  const k = 1 + amount * 6;
+  return Math.tanh(x * k) / Math.tanh(k);
+}
 
 /**
  * One cue, synthesised.
@@ -140,37 +239,99 @@ const DECAY = 5;
  * from 880 to 330 spends most of its time in the last octave and reads as a sound that stalls.
  */
 export function sampleCue(row: CueRow, rate: number, rng: Rng): Float32Array {
-  const length = Math.max(1, Math.round(row.seconds * rate));
+  rateCeiling = rate;
+  const length = Math.max(1, Math.round(cueSeconds(row) * rate));
   const out = new Float32Array(length);
-  const attack = Math.max(1, Math.round(ATTACK_SECONDS * rate));
+  for (const layer of row.layers) sampleLayer(layer, rate, rng, out);
+  /*
+    THE GLUE — `docs/decisions/0089-a-cue-has-a-body.md`.
+
+    ⚠️ **Over the SUM, so the layers behave as one body rather than as a chord**, and gentle because
+    the first draft was not: a `tanh` over a sum dominated by a boom ducks the transients along with
+    it, which is half of what *"muffled"* turned out to mean. The top was being squashed by the
+    bottom rather than being absent.
+  */
+  const release = Math.max(1, Math.round(RELEASE_SECONDS * rate));
+  for (let i = 0; i < length; i++) {
+    // The release, applied to the SUM: a layer that ends early is already silent, and the only edge
+    // that can click is the end of the buffer itself.
+    const left = length - i;
+    const fade = left < release ? left / release : 1;
+    out[i] = saturate(out[i]!, row.glue) * row.gain * fade;
+  }
+  return out;
+}
+
+/**
+ * One layer, summed into `out`.
+ *
+ * ⚠️ **Two filters per layer and they are built here rather than shared**, because each carries state
+ * and a layer's sweep is its own. They cost nothing at bake time — this runs twelve times at the
+ * first press and never again — and `tests/budget.test.ts` lists this file as deliberately cold.
+ */
+function sampleLayer(layer: CueLayer, rate: number, rng: Rng, out: Float32Array): void {
+  const length = Math.max(1, Math.round(layer.seconds * rate));
+  const start = Math.round((layer.at ?? 0) * rate);
+  const attack = Math.max(1, Math.round((layer.attack ?? ATTACK_SECONDS) * rate));
+  const curve = layer.curve ?? DECAY;
+  const low = makeFilter();
+  const high = makeFilter();
   /** Where in the waveform we are, in cycles. Fractional part is the position within one. */
   let phase = 0;
-  /** The value sample-and-hold noise is currently holding, and the cycle it was drawn on. */
+  /** The value sample-and-hold noise is currently holding. */
   let held = rng.range(-1, 1);
-  let heldCycle = 0;
+  let heldPhase = 0;
   for (let i = 0; i < length; i++) {
+    const at = start + i;
+    if (at >= out.length) break;
     const u = i / length;
     // Exponential in the frequency, which is what makes it linear to the ear.
-    const freq = row.from * Math.pow(row.to / row.from, u);
-    phase += freq / rate;
+    const step = (layer.from * Math.pow((layer.to || layer.from) / layer.from, u)) / rate;
+    phase += step;
+    if (phase >= 1) phase -= 1;
     let value: number;
-    if (row.wave === 'sine') value = Math.sin(phase * Math.PI * 2);
-    else if (row.wave === 'square') value = phase % 1 < 0.5 ? 1 : -1;
-    else if (row.wave === 'saw') value = (phase % 1) * 2 - 1;
+    if (layer.wave === 'sine') value = Math.sin(phase * Math.PI * 2);
+    else if (layer.wave === 'tri') value = 4 * Math.abs(phase - 0.5) - 1;
+    else if (layer.wave === 'saw') value = 2 * phase - 1 - blep(phase, step);
+    else if (layer.wave === 'square') value = (phase < 0.5 ? 1 : -1) + blep(phase, step) - blep((phase + 0.5) % 1, step);
+    else if (!layer.from) value = rng.range(-1, 1);
     else {
-      // Sample and hold: one fresh draw per cycle of `freq`, held flat in between.
-      const cycle = Math.floor(phase);
-      if (cycle !== heldCycle) {
-        heldCycle = cycle;
+      // Sample and hold: one fresh draw per cycle, held flat in between. What a chiptune noise
+      // channel did, and now the exception rather than the rule — everything that explodes is white.
+      heldPhase += step;
+      if (heldPhase >= 1) {
+        heldPhase -= 1;
         held = rng.range(-1, 1);
       }
       value = held;
     }
-    let envelope = Math.exp(-DECAY * u);
+    if (layer.highFrom) {
+      value = high(value, sweep(layer.highFrom, layer.highTo, u), HIGH_Q).high;
+    }
+    if (layer.lowFrom) value = low(value, sweep(layer.lowFrom, layer.lowTo, u), layer.q ?? LOW_Q).low;
+    if (layer.drive) value = saturate(value, layer.drive);
+    let envelope = Math.exp(-curve * u);
     if (i < attack) envelope *= i / attack;
-    out[i] = value * envelope * row.gain;
+    out[at] = (out[at] ?? 0) + value * envelope * layer.gain;
   }
-  return out;
+}
+
+/** An exponential sweep from `a` to `b` at `u` in `[0, 1)`. `b` absent or zero means no sweep. */
+function sweep(a: number, b: number | undefined, u: number): number {
+  return b === undefined || b === 0 ? a : a * Math.pow(b / a, u);
+}
+
+/**
+ * How long a cue is, in seconds — the layer that finishes last.
+ *
+ * ⚠️ **Derived rather than a field, so a row cannot claim a length it does not have.** It used to be
+ * written on the row and read by four things; a layer that ran past it would simply have been cut off
+ * mid-waveform, which is the click `tests/sound.test.ts` exists to catch.
+ */
+export function cueSeconds(row: CueRow): number {
+  let longest = 0;
+  for (const layer of row.layers) longest = Math.max(longest, (layer.at ?? 0) + layer.seconds);
+  return longest;
 }
 
 /**

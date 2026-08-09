@@ -105,29 +105,108 @@ export const TWIN_KINDS = [
 export type TwinKind = (typeof TWIN_KINDS)[number];
 
 /**
- * How a cue's waveform is shaped.
+ * How a layer's waveform is shaped.
  *
- * ⚠️ **Four, and they are the four an arcade cabinet had.** The point of the small set is that every
- * sound in the game is recognisably from the same machine — a synthesiser with one more knob than
- * this produces twelve unrelated noises, which is how a game ends up sounding like a sample pack.
+ * ⚠️ **Five, and the small set used to be the whole coherence argument.** *Every sound in the game is
+ * recognisably from the same machine — a synthesiser with one more knob produces twelve unrelated
+ * noises* was this file's reasoning for four waves, and
+ * `docs/decisions/0089-a-cue-has-a-body.md` amends it: the coherence now comes from every cue being
+ * built out of **one recipe and one filter character**, which is a stronger source of it than a
+ * shortage of oscillators. A poor palette makes everything sound alike by making everything sound
+ * cheap.
  */
 export type WaveKind =
-  /** A pure tone. Soft, and the only one that reads as friendly. */
+  /** A pure tone. The only one that reads as friendly, and what every boom is made of. */
   | 'sine'
+  /** Softer than a square and brighter than a sine. Bells and the ones that have to be pleasant. */
+  | 'tri'
   /** The hollow one. Shots and warnings. */
   | 'square'
   /** The buzzy one, with the most harmonics. Weight. */
   | 'saw'
-  /** Sample-and-hold noise. Everything that breaks. */
+  /** Noise. `from` is the sample-and-hold rate, and **zero is white** — see `CueLayer`. */
   | 'noise';
+
+/**
+ * One layer of a cue.
+ *
+ * ── A CUE USED TO BE ONE OSCILLATOR, WHICH IS WHY IT SOUNDED LIKE ONE ───────────────────────────
+ *
+ * `docs/decisions/0089-a-cue-has-a-body.md`. Reported from play: *"I don't like them at all — too
+ * tinny, way too Atari 2600, not in a fun pixel sound way."*
+ *
+ * ⚠️ **That was an accurate description of the model rather than of the tuning.** A row was one wave,
+ * one exponential sweep and one shared envelope, which is exactly a TIA voice — so no arrangement of
+ * its six numbers could have produced a sound that was not one.
+ *
+ * ⚠️ **What a layer adds is the three things a body is made of**: its own envelope, so a click and a
+ * tail can be one sound; a **lowpass**, which is where a boom comes from, because unfiltered noise is
+ * a hiss; and a **highpass**, which is what takes out the box. The report's *"tin shed heard from
+ * outside"* is a spectrum with a hump in the middle and nothing at either end, and those are the two
+ * filters that fix each end.
+ */
+export interface CueLayer {
+  wave: WaveKind;
+  /**
+   * The rate the waveform advances at when the layer starts, in Hz.
+   *
+   * ⚠️ **A RATE rather than a pitch, so one pair of numbers means the same thing for all four
+   * waves.** For the tones it is the pitch. For `noise` it is the sample-and-hold rate — what a
+   * chiptune noise channel's period was — and **zero means white**, which is the one this project
+   * now uses for everything that explodes.
+   */
+  from: number;
+  /** The rate it has reached by the end, in Hz. Equal to `from` for a layer that does not sweep. */
+  to: number;
+  /** How long this layer lasts, in seconds. */
+  seconds: number;
+  /**
+   * How long after the cue starts this layer does, in seconds.
+   *
+   * ⚠️ **A second rumble arriving fifty milliseconds late is the difference between an explosion and
+   * a noise.** It is the only field here that is about arrangement rather than about timbre.
+   */
+  at?: number;
+  /** Peak amplitude of this layer before the row's own gain. */
+  gain: number;
+  /** Seconds to reach full amplitude. Short enough to read as an attack; defaulted in `sound.ts`. */
+  attack?: number;
+  /**
+   * How many time constants of exponential decay this layer spends over its length.
+   *
+   * Low is a long tail and high is a click, so this is the field that makes a four-millisecond crack
+   * and a one-and-a-half-second rumble the same mechanism.
+   */
+  curve?: number;
+  /**
+   * Lowpass cutoff sweep, in Hz. **The most important pair in the file.**
+   *
+   * A falling cutoff over noise IS an explosion; the same noise unfiltered is a hiss. Omitted leaves
+   * the layer unfiltered.
+   */
+  lowFrom?: number;
+  lowTo?: number;
+  /**
+   * Highpass cutoff sweep, in Hz — where the BOX goes.
+   *
+   * 130–300 Hz is the band that reads as *inside a tin shed*; every noise body in the table is
+   * high-passed above it and opens downward as it decays.
+   */
+  highFrom?: number;
+  highTo?: number;
+  /** Lowpass resonance. Past about 2 it stops being a filter and starts being a pitch. */
+  q?: number;
+  /** Soft saturation, `[0, 1]`. What *meaty* is made of — harmonics from squashing, not from notes. */
+  drive?: number;
+}
 
 /**
  * What a cue is.
  *
- * ⚠️ **Six numbers and no envelope**, and the missing field is deliberate. Every cue gets the same
- * attack and the same exponential decay (`src/app/sound.ts`), because a per-cue envelope is four more
- * numbers to tune per row and the thing it buys — a sound with a sustain — is a sound that is still
- * going when the next one arrives. A cue is punctuation.
+ * ⚠️ **The envelope is per LAYER and the row has none**, which is the reverse of what this file used
+ * to say. The old argument — *a per-cue envelope is four more numbers and buys a sound that is still
+ * going when the next one arrives* — was right about the risk and wrong about the cause: what makes a
+ * cue punctuation is `MAX_CUE_SECONDS` and the `hold`, both of which are still here.
  */
 export interface CueRow {
   /**
@@ -138,22 +217,25 @@ export interface CueRow {
    * is the ONLY channel that is banned, not the sound."*
    */
   twin: TwinKind;
-  wave: WaveKind;
   /**
-   * The rate the waveform advances at when the cue starts, in Hz.
+   * What the cue is made of, summed. One to six of them.
    *
-   * ⚠️ **A RATE rather than a pitch, so one pair of numbers means the same thing for all four
-   * waves.** For the three tones it is the pitch. For `noise` it is the sample-and-hold rate — how
-   * often a fresh random value is drawn — which is exactly what a chiptune noise channel's period
-   * did, and which is why a falling sweep darkens the noise rather than silencing it.
+   * ⚠️ **The recipe for anything that explodes is four**: a CRACK of a few milliseconds so it starts
+   * rather than fades in, a BODY of noise between a highpass and a falling lowpass, a quieter and
+   * longer DEBRIS tail carrying the top, and a BOOM sweeping down into the floor. The old table only
+   * ever had the body, unfiltered, which is the whole of what was wrong with it.
    */
-  from: number;
-  /** The rate it has reached by the end, in Hz. Equal to `from` for a cue that does not sweep. */
-  to: number;
-  /** How long it lasts, in seconds. */
-  seconds: number;
-  /** Peak amplitude before the master gain, in `[0, 1]`. */
+  layers: readonly CueLayer[];
+  /** Peak amplitude of the whole cue before the master gain, in `[0, 1]`. */
   gain: number;
+  /**
+   * Saturation applied to the SUM of the layers, so they glue rather than merely add.
+   *
+   * ⚠️ **Gentle, and the first draft was not.** A `tanh` over a sum dominated by a boom ducks the
+   * transients along with it, which is the other half of *muffled* — the top was being squashed by
+   * the bottom rather than being absent.
+   */
+  glue: number;
   /**
    * The fewest fixed steps between two soundings of this cue.
    *
@@ -179,12 +261,17 @@ export interface CueRow {
 /**
  * The longest a cue may be, in seconds.
  *
+ * ⚠️ **1.5 → 2, because the boss coming apart now takes 1.75** —
+ * `docs/decisions/0089-a-cue-has-a-body.md`. The ceiling is doing the same job at the new number: it
+ * is the one thing that stops a layered cue growing a tail nothing can hear the end of, and eleven of
+ * the twelve are still well under a second.
+ *
  * ⚠️ **A cue is punctuation, and past about a second it stops being one.** It is also the audible
  * form of `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md`: a sound still playing when
  * the next three arrive is the audio equivalent of a frame that did not finish, and the ceiling is
  * what makes the total baked size a number `tests/sound.test.ts` can assert rather than a hope.
  */
-export const MAX_CUE_SECONDS = 1.5;
+export const MAX_CUE_SECONDS = 2;
 
 /**
  * ⚠️ **EVERY GAIN IS WELL UNDER 1 AND THAT IS THE POINT.** Up to `MAX_VOICES` cues can sound on one
@@ -205,7 +292,20 @@ export const CUES: Record<CueKind, CueRow> = {
    * loud, it is a different and worse sound. `src/app/frame.ts` fires this once outside the barrel
    * loop.
    */
-  pulse: { twin: 'shot-appears', wave: 'square', from: 880, to: 330, seconds: 0.07, gain: 0.16, hold: 2 },
+  pulse: {
+    twin: 'shot-appears',
+    hold: 2,
+    gain: 0.3,
+    glue: 0.3,
+    layers: [
+      // The click. It keeps its top: everything else in the table gained air, and a pulse that did
+      // not would be the one dull sound in a game the player hears this from ten times a second.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.012, gain: 0.55, attack: 0.0005, curve: 9, highFrom: 900, lowFrom: 11000, lowTo: 4000 },
+      // The chunk. A saturated square behind a falling filter is where *meaty* lives.
+      { wave: 'square', from: 190, to: 78, seconds: 0.075, gain: 0.85, attack: 0.001, curve: 6, lowFrom: 1700, lowTo: 320, q: 1.1, drive: 0.55 },
+      { wave: 'sine', from: 130, to: 52, seconds: 0.09, gain: 0.7, attack: 0.001, curve: 5 },
+    ],
+  },
   /**
    * The second auto-weapon — 0051.
    *
@@ -213,7 +313,22 @@ export const CUES: Record<CueKind, CueRow> = {
    * heavier stream and the one the player is meant to be able to pick out of a screen full of the
    * lighter one.
    */
-  missile: { twin: 'missile-appears', wave: 'saw', from: 300, to: 120, seconds: 0.16, gain: 0.2, hold: 3 },
+  missile: {
+    twin: 'missile-appears',
+    hold: 3,
+    gain: 0.3,
+    glue: 0.08,
+    layers: [
+      // The motor lighting.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.5, attack: 0.0006, curve: 7, lowFrom: 7000, lowTo: 3000, highFrom: 1100 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.6, attack: 0.004, curve: 3.2, lowFrom: 2400, lowTo: 600, highFrom: 130, highTo: 60, q: 0.7 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.34, gain: 0.09, attack: 0.02, curve: 2.6, lowFrom: 9000, highFrom: 1500, highTo: 900 },
+      // The launch, at a pitch a speaker can actually reproduce — see 0089 on why 30 Hz is not it.
+      { wave: 'sine', from: 210, to: 68, seconds: 0.3, gain: 1, attack: 0.001, curve: 3 },
+      // And the octave under it, for the systems that can.
+      { wave: 'sine', from: 105, to: 34, seconds: 0.34, gain: 0.6, attack: 0.004, curve: 2.5 },
+    ],
+  },
   /**
    * Something shot at the player.
    *
@@ -222,7 +337,17 @@ export const CUES: Record<CueKind, CueRow> = {
    * screen is exciting or exhausting. It is a play-test number on
    * `docs/decisions/0037-the-ship-has-mass.md`'s terms and nothing asserts it.
    */
-  threat: { twin: 'threat-appears', wave: 'square', from: 220, to: 150, seconds: 0.09, gain: 0.11, hold: 4 },
+  threat: {
+    twin: 'threat-appears',
+    hold: 4,
+    gain: 0.204,
+    glue: 0.1,
+    layers: [
+      // The filter chases the sweep, and the resonance is what makes it zap rather than fall.
+      { wave: 'saw', from: 1500, to: 260, seconds: 0.1, gain: 0.7, attack: 0.001, curve: 5, lowFrom: 3200, lowTo: 500, q: 2.6 },
+      { wave: 'sine', from: 900, to: 180, seconds: 0.09, gain: 0.35, attack: 0.001, curve: 5 },
+    ],
+  },
   /**
    * A body took damage and lived.
    *
@@ -231,9 +356,34 @@ export const CUES: Record<CueKind, CueRow> = {
    * bug that bullets hit an enemy and the enemy didn't get destroyed"*; the answer then was the impact
    * flash, which is this cue's twin. Short and dry, so it can happen often.
    */
-  hit: { twin: 'impact-flash', wave: 'noise', from: 1200, to: 600, seconds: 0.05, gain: 0.15, hold: 2 },
+  hit: {
+    twin: 'impact-flash',
+    hold: 2,
+    gain: 0.252,
+    glue: 0.08,
+    layers: [
+      { wave: 'noise', from: 0, to: 0, seconds: 0.035, gain: 0.5, attack: 0.0004, curve: 8, lowFrom: 7000, lowTo: 3000, highFrom: 1100 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.06, gain: 0.5, attack: 0.001, curve: 7, lowFrom: 2200, lowTo: 800, highFrom: 260, q: 0.8 },
+      { wave: 'sine', from: 240, to: 95, seconds: 0.07, gain: 0.55, attack: 0.001, curve: 6 },
+    ],
+  },
   /** An enemy died. The debris burst is the picture; this is the same event arriving at the ear. */
-  kill: { twin: 'debris-burst', wave: 'noise', from: 900, to: 200, seconds: 0.3, gain: 0.28, hold: 2 },
+  kill: {
+    twin: 'debris-burst',
+    hold: 2,
+    gain: 0.33,
+    glue: 0.1,
+    layers: [
+      // CRACK — a few milliseconds, so it starts rather than fades in.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.025, gain: 0.3, attack: 0.0004, curve: 8, lowFrom: 5500, lowTo: 2200, highFrom: 700 },
+      // BODY — noise between a highpass that takes out the box and a lowpass that falls.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.34, gain: 0.95, attack: 0.003, curve: 3.2, lowFrom: 2100, lowTo: 420, highFrom: 110, highTo: 45, q: 0.7, drive: 0.3 },
+      // DEBRIS — quieter, longer, and the part that carries the top. It was missing entirely.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.42, gain: 0.055, attack: 0.02, curve: 2.4, lowFrom: 6500, highFrom: 1300, highTo: 700 },
+      { wave: 'sine', from: 190, to: 62, seconds: 0.4, gain: 1.25, attack: 0.001, curve: 2.6, drive: 0.25 },
+      { wave: 'sine', from: 95, to: 31, seconds: 0.46, gain: 0.7, attack: 0.002, curve: 2.2 },
+    ],
+  },
   /**
    * The boss came apart — 0062.
    *
@@ -242,9 +392,34 @@ export const CUES: Record<CueKind, CueRow> = {
    * (`BOSS_DEATH_STEPS`, 96 steps) is 1.6 seconds of the level carrying on while the boss comes apart.
    * This is sized to fill it and its `hold` is long enough that nothing can retrigger it inside it.
    */
-  bossDown: { twin: 'boss-burst', wave: 'noise', from: 500, to: 60, seconds: 1.2, gain: 0.5, hold: 30 },
+  bossDown: {
+    twin: 'boss-burst',
+    hold: 30,
+    gain: 0.468,
+    glue: 0.14,
+    layers: [
+      { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.32, attack: 0.0005, curve: 6, lowFrom: 6000, lowTo: 1900, highFrom: 600 },
+      { wave: 'noise', from: 0, to: 0, seconds: 1.5, gain: 1.1, attack: 0.006, curve: 2.1, lowFrom: 1900, lowTo: 330, highFrom: 95, highTo: 38, q: 0.7, drive: 0.4 },
+      { wave: 'noise', from: 0, to: 0, seconds: 1.7, gain: 0.07, attack: 0.03, curve: 1.9, lowFrom: 6000, highFrom: 1200, highTo: 620 },
+      { wave: 'sine', from: 165, to: 52, seconds: 1.6, gain: 1.3, attack: 0.002, curve: 1.7, drive: 0.3 },
+      { wave: 'sine', from: 82, to: 26, seconds: 1.75, gain: 0.85, attack: 0.02, curve: 1.4 },
+      // The second rumble, arriving late. A boss coming apart is two events, not one.
+      { wave: 'noise', from: 0, to: 0, seconds: 1.1, at: 0.22, gain: 0.4, attack: 0.02, curve: 2, lowFrom: 1500, lowTo: 320, highFrom: 300, highTo: 110 },
+    ],
+  },
   /** A bomb was thrown. Rising, because the thing it turns into has not happened yet — 0053. */
-  bomb: { twin: 'bomb-appears', wave: 'sine', from: 200, to: 700, seconds: 0.18, gain: 0.22, hold: 6 },
+  bomb: {
+    twin: 'bomb-appears',
+    hold: 6,
+    gain: 0.276,
+    glue: 0.08,
+    layers: [
+      { wave: 'sine', from: 150, to: 620, seconds: 0.2, gain: 0.75, attack: 0.004, curve: 3.5 },
+      { wave: 'saw', from: 75, to: 310, seconds: 0.2, gain: 0.3, attack: 0.004, curve: 3.5, lowFrom: 1400, lowTo: 5000, highFrom: 120, drive: 0.25 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.2, gain: 0.22, attack: 0.01, curve: 3, lowFrom: 10000, highFrom: 1100, highTo: 3200 },
+      { wave: 'sine', from: 75, to: 155, seconds: 0.22, gain: 0.42, attack: 0.006, curve: 3 },
+    ],
+  },
   /**
    * The bomb went off.
    *
@@ -252,7 +427,19 @@ export const CUES: Record<CueKind, CueRow> = {
    * `src/app/frame.ts` keeps `BLAST_STEPS` of picture after a blast has spent itself, for the same
    * reason: the player learns where the edge was from what is left behind, not from the instant.
    */
-  blast: { twin: 'blast-ring', wave: 'noise', from: 400, to: 80, seconds: 0.55, gain: 0.42, hold: 6 },
+  blast: {
+    twin: 'blast-ring',
+    hold: 6,
+    gain: 0.432,
+    glue: 0.14,
+    layers: [
+      { wave: 'noise', from: 0, to: 0, seconds: 0.035, gain: 0.33, attack: 0.0004, curve: 7, lowFrom: 5800, lowTo: 2100, highFrom: 650 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.8, gain: 1.05, attack: 0.004, curve: 2.5, lowFrom: 2000, lowTo: 380, highFrom: 100, highTo: 42, q: 0.7, drive: 0.4 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.95, gain: 0.06, attack: 0.02, curve: 2.2, lowFrom: 6200, highFrom: 1200, highTo: 650 },
+      { wave: 'sine', from: 180, to: 58, seconds: 0.85, gain: 1.3, attack: 0.001, curve: 2.1, drive: 0.28 },
+      { wave: 'sine', from: 90, to: 29, seconds: 0.95, gain: 0.75, attack: 0.02, curve: 1.8 },
+    ],
+  },
   /**
    * The ship took a hit and a shield absorbed it — 0050.
    *
@@ -261,9 +448,34 @@ export const CUES: Record<CueKind, CueRow> = {
    * cue that sounded the same for both would make the most important fact in the game the one the
    * ear cannot check, which is the exact shape 0036 warns about.
    */
-  shield: { twin: 'shell-mark', wave: 'square', from: 500, to: 900, seconds: 0.12, gain: 0.3, hold: 6 },
+  shield: {
+    twin: 'shell-mark',
+    hold: 6,
+    gain: 0.288,
+    glue: 0.08,
+    layers: [
+      { wave: 'sine', from: 420, to: 880, seconds: 0.16, gain: 0.62, attack: 0.002, curve: 4 },
+      { wave: 'square', from: 210, to: 440, seconds: 0.14, gain: 0.26, attack: 0.002, curve: 5, lowFrom: 4500, lowTo: 7000, highFrom: 300, q: 1.2 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.1, gain: 0.26, attack: 0.001, curve: 6, lowFrom: 11000, highFrom: 2400, highTo: 5000 },
+      { wave: 'tri', from: 250, to: 520, seconds: 0.18, gain: 0.34, attack: 0.002, curve: 3.8 },
+      { wave: 'sine', from: 105, to: 88, seconds: 0.2, gain: 0.5, attack: 0.002, curve: 3.4 },
+    ],
+  },
   /** The run lost a ship. Falling, long, and the only cue with nothing above it in the mix. */
-  death: { twin: 'ship-burst', wave: 'saw', from: 400, to: 40, seconds: 0.9, gain: 0.45, hold: 30 },
+  death: {
+    twin: 'ship-burst',
+    hold: 30,
+    gain: 0.45,
+    glue: 0.14,
+    layers: [
+      { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.3, attack: 0.0006, curve: 6, lowFrom: 5600, lowTo: 1800, highFrom: 600 },
+      { wave: 'noise', from: 0, to: 0, seconds: 1.15, gain: 1, attack: 0.005, curve: 2.3, lowFrom: 1800, lowTo: 340, highFrom: 95, highTo: 40, q: 0.7, drive: 0.45 },
+      { wave: 'noise', from: 0, to: 0, seconds: 1.25, gain: 0.055, attack: 0.03, curve: 2, lowFrom: 5800, highFrom: 1100, highTo: 580 },
+      { wave: 'sine', from: 170, to: 48, seconds: 1.2, gain: 1.3, attack: 0.001, curve: 1.9, drive: 0.28 },
+      { wave: 'sine', from: 85, to: 24, seconds: 1.3, gain: 0.8, attack: 0.02, curve: 1.6 },
+      { wave: 'saw', from: 90, to: 30, seconds: 0.85, gain: 0.26, attack: 0.01, curve: 2.3, lowFrom: 1600, lowTo: 300, highFrom: 70, drive: 0.4 },
+    ],
+  },
   /**
    * Something was collected.
    *
@@ -273,7 +485,20 @@ export const CUES: Record<CueKind, CueRow> = {
    * distinguishes, and the first one to be wanted is a life — which is what the decision names as the
    * split to make when play asks for it.
    */
-  pickup: { twin: 'pickup-taken', wave: 'sine', from: 600, to: 1200, seconds: 0.14, gain: 0.28, hold: 4 },
+  pickup: {
+    twin: 'pickup-taken',
+    hold: 4,
+    gain: 0.264,
+    glue: 0.06,
+    layers: [
+      { wave: 'sine', from: 620, to: 1240, seconds: 0.13, gain: 0.55, attack: 0.002, curve: 4 },
+      { wave: 'sine', from: 930, to: 1860, seconds: 0.13, at: 0.02, gain: 0.26, attack: 0.004, curve: 4.5 },
+      { wave: 'tri', from: 310, to: 620, seconds: 0.15, gain: 0.34, attack: 0.002, curve: 4 },
+      { wave: 'sine', from: 155, to: 310, seconds: 0.17, gain: 0.46, attack: 0.002, curve: 3.4 },
+      { wave: 'sine', from: 1860, to: 3720, seconds: 0.1, at: 0.01, gain: 0.13, attack: 0.002, curve: 5 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.16, attack: 0.001, curve: 6, lowFrom: 12000, highFrom: 3200, highTo: 7000 },
+    ],
+  },
   /**
    * Sound was switched on.
    *
@@ -284,5 +509,17 @@ export const CUES: Record<CueKind, CueRow> = {
    * Switching sound on and hearing nothing is indistinguishable from a broken build, and on a phone
    * it is also the gesture that unlocks the audio context in the first place.
    */
-  chime: { twin: 'chooser-fill', wave: 'sine', from: 700, to: 1050, seconds: 0.12, gain: 0.25, hold: 6 },
+  chime: {
+    twin: 'chooser-fill',
+    hold: 6,
+    gain: 0.264,
+    glue: 0.06,
+    layers: [
+      { wave: 'sine', from: 700, to: 1050, seconds: 0.14, gain: 0.55, attack: 0.003, curve: 4 },
+      { wave: 'tri', from: 350, to: 525, seconds: 0.16, gain: 0.3, attack: 0.003, curve: 4 },
+      { wave: 'sine', from: 175, to: 262, seconds: 0.2, gain: 0.44, attack: 0.003, curve: 3.2 },
+      { wave: 'tri', from: 1400, to: 2100, seconds: 0.1, gain: 0.16, attack: 0.003, curve: 5 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.06, gain: 0.14, attack: 0.001, curve: 6, lowFrom: 12000, highFrom: 3600, highTo: 7000 },
+    ],
+  },
 };

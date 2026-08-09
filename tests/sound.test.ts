@@ -5,7 +5,16 @@ import { resolve } from 'node:path';
 
 import { CUES, CUE_KINDS, MAX_CUE_SECONDS, TWIN_KINDS, type CueKind } from '../src/content/cues.ts';
 import { DEFAULT_SOUND, SOUNDS, SOUND_KINDS } from '../src/content/sound.ts';
-import { MAX_CUE_SAMPLES, MAX_VOICES, SAMPLE_RATE, bakeCues, makeSpeaker, sampleCue, type AudioOut } from '../src/app/sound.ts';
+import {
+  MAX_CUE_SAMPLES,
+  MAX_VOICES,
+  SAMPLE_RATE,
+  bakeCues,
+  cueSeconds,
+  makeSpeaker,
+  sampleCue,
+  type AudioOut,
+} from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { SCREENS } from '../src/state/screens.ts';
 import { initialState, reduce, type Action } from '../src/state/root.ts';
@@ -99,21 +108,78 @@ describe('the cue table', () => {
 
   it('keeps every cue inside the ceiling, because past a second it is not punctuation', () => {
     for (const kind of CUE_KINDS) {
-      expect(CUES[kind].seconds, `${kind} is longer than a cue may be`).toBeLessThanOrEqual(MAX_CUE_SECONDS);
-      expect(CUES[kind].seconds, `${kind} has no length`).toBeGreaterThan(0);
+      expect(cueSeconds(CUES[kind]), `${kind} is longer than a cue may be`).toBeLessThanOrEqual(MAX_CUE_SECONDS);
+      expect(cueSeconds(CUES[kind]), `${kind} has no length`).toBeGreaterThan(0);
     }
   });
 
   it('and every row is a sound that can actually be synthesised', () => {
     for (const kind of CUE_KINDS) {
       const row = CUES[kind];
-      // Both ends of the sweep are a RATE and the sweep is exponential, so zero is not a value either
-      // end can take — `Math.pow(to / from, u)` is the whole waveform.
-      expect(row.from, `${kind} sweeps from zero`).toBeGreaterThan(0);
-      expect(row.to, `${kind} sweeps to zero`).toBeGreaterThan(0);
+      expect(row.layers.length, `${kind} has no layers, so it is silence`).toBeGreaterThan(0);
       expect(row.gain, `${kind} is silent`).toBeGreaterThan(0);
       expect(row.gain, `${kind} is louder than full scale on its own`).toBeLessThanOrEqual(1);
+      expect(row.glue, `${kind} has a negative glue`).toBeGreaterThanOrEqual(0);
       expect(row.hold, `${kind} has a negative hold`).toBeGreaterThanOrEqual(0);
+      for (const [i, layer] of row.layers.entries()) {
+        /*
+          Both ends of a sweep are a RATE and the sweep is exponential, so zero is not a value the
+          START can take — `Math.pow(to / from, u)` is the whole waveform. `noise` is the exception in
+          the other direction: zero there means WHITE, which is what every explosion now uses.
+        */
+        if (layer.wave === 'noise') expect(layer.from, `${kind} layer ${i} has a negative grain`).toBeGreaterThanOrEqual(0);
+        else expect(layer.from, `${kind} layer ${i} sweeps from zero`).toBeGreaterThan(0);
+        expect(layer.seconds, `${kind} layer ${i} has no length`).toBeGreaterThan(0);
+        expect(layer.gain, `${kind} layer ${i} is silent`).toBeGreaterThan(0);
+        expect(layer.at ?? 0, `${kind} layer ${i} starts before the cue does`).toBeGreaterThanOrEqual(0);
+        expect(layer.q ?? 1, `${kind} layer ${i} resonates hard enough to ring a pitch of its own`).toBeLessThan(4);
+      }
+    }
+  });
+
+  it('THE REPORTED ONE: everything that explodes has a body, and not just a hiss', () => {
+    /*
+      ⚠️ **THE STRUCTURAL HALF OF `docs/decisions/0089-a-cue-has-a-body.md`, and it is the half a test
+      can hold.** Reported from play: *"I don't like them at all — too tinny, way too Atari 2600"*, and
+      the cause was that a cue was ONE oscillator with ONE envelope, which is a TIA voice. No
+      arrangement of its numbers could have been anything else.
+
+      ⚠️ **What is asserted is the RECIPE rather than any sound**: the four cues the player called out
+      as needing to be *"more bass-y, more boomy/explosiony"* each need a filtered body and something
+      low under it. Nothing here names a frequency the table also names — what it checks is that the
+      parts exist, which is exactly the thing that was missing rather than mistuned.
+
+      ⚠️ **A test cannot hear.** `node scripts/hear.mjs` is the other instrument and the verdict is a
+      hand — `docs/decisions/0027-measure-the-picture-not-the-model.md`, in the one channel it names
+      as having nothing to look at.
+    */
+    for (const kind of ['missile', 'kill', 'blast', 'bossDown', 'death'] as const) {
+      const layers = CUES[kind].layers;
+      expect(layers.length, `${kind} is not built out of layers, so it cannot have a body`).toBeGreaterThan(2);
+      /*
+        ⚠️ **THE BODY IS THE LOUDEST NOISE LAYER, AND NAMING IT TOOK TWO GOES.** The guard first read
+        *some filtered noise layer has a highpass*, and `npm run prove` reported STILL GREEN when the
+        highpass came off the body — the four-millisecond CRACK has one too, and it answered for a
+        sentence about a part that had just lost its filter. The second attempt said *the longest*,
+        and `missile` went red honestly: its longest noise layer is the DEBRIS tail, which is
+        deliberately bright and deliberately does not darken.
+
+        Loudest is what a body is. It is the part carrying the sound, the crack is a transient over
+        it and the debris is a whisper after it, and that ordering holds for all four.
+      */
+      const noise = layers.filter((l) => l.wave === 'noise');
+      expect(noise.length, `${kind} has no noise in it, so it has no body at all`).toBeGreaterThan(0);
+      const body = noise.reduce((a, b) => (b.gain > a.gain ? b : a));
+      expect(body.lowFrom, `${kind}'s body is unfiltered, which is a hiss and not an explosion`).toBeDefined();
+      // A falling cutoff over noise IS an explosion. A rising one is a whoosh, and a flat one a hiss.
+      expect(
+        body.lowTo !== undefined && body.lowTo < body.lowFrom!,
+        `${kind}'s body does not darken as it decays, which is what an explosion does`,
+      ).toBe(true);
+      // And the box is taken out, which is what "a tin shed heard from outside" was.
+      expect(body.highFrom, `${kind}'s body keeps the 130-300Hz band that reads as boxy`).toBeDefined();
+      const low = layers.filter((l) => l.wave === 'sine' && l.from <= 220 && (l.to || l.from) <= 220);
+      expect(low.length, `${kind} has nothing low under it, so there is no boom to feel`).toBeGreaterThan(0);
     }
   });
 
@@ -189,6 +255,122 @@ describe('the synthesiser', () => {
       const samples = sampleCue(CUES[kind], SAMPLE_RATE, makeRng('cues').stream(kind));
       expect(Math.abs(samples[0]!), `${kind} begins at full amplitude rather than attacking`).toBeLessThan(0.001);
       expect(Math.abs(samples[samples.length - 1]!), `${kind} is still sounding when its buffer ends`).toBeLessThan(0.01);
+      /*
+        ── AND THE ENVELOPE HAS TO DO THE WORK, WHICH THE RELEASE WOULD OTHERWISE HIDE ──────────────
+
+        ⚠️ **`docs/decisions/0089-a-cue-has-a-body.md` put a fade back that 0072 had deleted**, and a
+        fade satisfies *ends at zero* on its own — so with only the two assertions above, an envelope
+        that never fell at all would pass. That is exactly the shape 0072's own probe caught in the
+        other direction, and it would have come back the moment the release did.
+
+        ⚠️ **Mean energy over the last quarter against the first, rather than a peak at a point.**
+        The first draft compared the loudest sample after three quarters against the loudest anywhere
+        and `bossDown` failed it — correctly, on its own terms: a boss coming apart is meant to still
+        be rumbling at 1.3 seconds, and a guard that forbids that is a guard against the feature. What
+        every cue must do, whatever its curve, is be quieter later than it was earlier.
+      */
+      const meanOver = (from: number, to: number): number => {
+        let total = 0;
+        for (let i = from; i < to; i++) total += Math.abs(samples[i]!);
+        return total / Math.max(1, to - from);
+      };
+      const quarter = Math.floor(samples.length / 4);
+      const early = meanOver(0, quarter);
+      const late = meanOver(samples.length - quarter, samples.length);
+      expect(late, `${kind} is as loud at its end as at its start — nothing is decaying`).toBeLessThan(early * 0.5);
+    }
+  });
+
+  /*
+    ── THE SPECTRUM, WHICH IS THE ONE THING THE SUITE COULD NEVER SEE ────────────────────────────
+
+    ⚠️ **`docs/decisions/0089-a-cue-has-a-body.md`, and it is this file's first assertion about how
+    anything SOUNDS.** Everything above measures the table or the envelope; a cue could satisfy all of
+    it and still be the sound the play-test rejected. *"Too tinny… like a tin shed heard from
+    outside"* is not a metaphor — it is a spectrum with a hump in the middle and nothing at either
+    end, and that is a shape a number can see even though a test cannot hear.
+
+    ⚠️ **A-weighted, because the ear is thirty decibels less sensitive at 50 Hz than at 2 kHz.** The
+    first version of this measure was unweighted and reported that every cue was nothing but sub,
+    which is true of the energy and false of the experience — and it would have passed a sound whose
+    entire boom sat at 30 Hz, where a laptop speaker reproduces nothing. That was the actual defect in
+    the first attempt at these cues.
+
+    ⚠️ **It is still not a substitute for listening.** `node scripts/hear.mjs` writes the files and a
+    hand gives the verdict — 0027 for the channel with nothing to look at.
+  */
+  const BANDS: readonly [number, number, string][] = [
+    [25, 60, 'sub'],
+    [60, 130, 'low'],
+    [130, 300, 'lowmid'],
+    [300, 800, 'mid'],
+    [800, 2000, 'himid'],
+    [2000, 5000, 'hi'],
+    [5000, 12000, 'air'],
+  ];
+
+  /** IEC 61672 A-weighting, as a linear gain. */
+  function aWeight(f: number): number {
+    const f2 = f * f;
+    return (
+      ((12194 ** 2 * f2 * f2) /
+        ((f2 + 20.6 ** 2) * Math.sqrt((f2 + 107.7 ** 2) * (f2 + 737.9 ** 2)) * (f2 + 12194 ** 2))) *
+      10 ** (2.0 / 20)
+    );
+  }
+
+  /** A-weighted loudness per band, normalised to the loudest. Goertzel, six log-spaced probes each. */
+  function spectrum(samples: Float32Array, rate: number): number[] {
+    const out: number[] = [];
+    for (const [lo, hi] of BANDS) {
+      let total = 0;
+      for (let k = 0; k < 6; k++) {
+        const f = lo * Math.pow(hi / lo, (k + 0.5) / 6);
+        const c = 2 * Math.cos((2 * Math.PI * f) / rate);
+        let s1 = 0;
+        let s2 = 0;
+        for (let i = 0; i < samples.length; i++) {
+          const s0 = samples[i]! + c * s1 - s2;
+          s2 = s1;
+          s1 = s0;
+        }
+        total += ((s1 * s1 + s2 * s2 - c * s1 * s2) / (samples.length * samples.length)) * aWeight(f) ** 2;
+      }
+      out.push(Math.sqrt((total / 6) * (hi - lo)));
+    }
+    const peak = Math.max(...out, 1e-12);
+    return out.map((v) => v / peak);
+  }
+
+  /** The cues the report is about: *"more bass-y, more boomy/explosiony"*. */
+  const EXPLOSIONS = ['kill', 'blast', 'bossDown', 'death'] as const;
+
+  it('THE SHED: an explosion is spread across the spectrum rather than humped in the middle', () => {
+    for (const kind of EXPLOSIONS) {
+      const bands = spectrum(sampleCue(CUES[kind], SAMPLE_RATE, makeRng('cues').stream(kind)), SAMPLE_RATE);
+      const wide = bands.filter((v) => v >= 0.25).length;
+      const shape = bands.map((v, i) => `${BANDS[i]![2]} ${v.toFixed(2)}`).join(', ');
+      /*
+        Four of seven bands within 12 dB of the loudest. The table this replaced scored two or three
+        on every explosion in it — one oscillator can only ever be in one place at a time, which is
+        the whole of why the old cues sounded like one machine playing twelve notes.
+      */
+      expect(wide, `${kind} occupies ${wide} of ${BANDS.length} bands — ${shape}`).toBeGreaterThanOrEqual(4);
+    }
+  });
+
+  it('and its weight is not in the top octave, which is what a filter is for', () => {
+    /*
+      ⚠️ **The counterweight, and it is the half that catches a missing LOWPASS.** Unfiltered noise
+      scores brilliantly on spread and sounds like a hiss; what makes it an explosion rather than
+      static is that the energy sits below the top of the range. Without this, deleting the filter
+      would pass the guard above with room to spare.
+    */
+    for (const kind of EXPLOSIONS) {
+      const bands = spectrum(sampleCue(CUES[kind], SAMPLE_RATE, makeRng('cues').stream(kind)), SAMPLE_RATE);
+      const loudest = bands.indexOf(Math.max(...bands));
+      expect(BANDS[loudest]![2], `${kind} is loudest in its ${BANDS[loudest]![2]} band, which is a hiss`).not.toBe('air');
+      expect(BANDS[loudest]![2], `${kind} is loudest in its ${BANDS[loudest]![2]} band, which is a hiss`).not.toBe('hi');
     }
   });
 
@@ -196,7 +378,7 @@ describe('the synthesiser', () => {
     const baked = bakeCues();
     expect(baked.length, 'the bake and the table disagree about how many cues there are').toBe(CUE_KINDS.length);
     CUE_KINDS.forEach((kind, i) => {
-      expect(baked[i]!.length, `${kind} baked to the wrong length`).toBe(Math.round(CUES[kind].seconds * SAMPLE_RATE));
+      expect(baked[i]!.length, `${kind} baked to the wrong length`).toBe(Math.round(cueSeconds(CUES[kind]) * SAMPLE_RATE));
       expect(baked[i]!.length, `${kind} is past the ceiling in samples`).toBeLessThanOrEqual(MAX_CUE_SAMPLES);
     });
   });
