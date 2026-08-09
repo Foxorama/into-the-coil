@@ -16,7 +16,8 @@ import {
 import { auraNearness, auraNearnessFor, bakeLoops, musicLevelFor } from '../src/app/music.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { SAMPLE_RATE } from '../src/app/sound.ts';
-import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
+import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, SCROLL_PER_STEP } from '../src/sim/flight.ts';
+import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 
 /**
@@ -275,6 +276,70 @@ describe('the boss brings an aura with it', () => {
     const nearHalf = auraNearness(AURA_NEAR_UNITS) - auraNearness(mid);
     const farHalf = auraNearness(mid) - auraNearness(AURA_FAR_UNITS);
     expect(nearHalf, 'the far half of the range carries more of the build than the near half').toBeGreaterThan(farHalf);
+  });
+
+  /*
+    ── 0092's TWO, AND BOTH ARE WRITTEN IN THE GEOMETRY RATHER THAN IN THE CONSTANTS ───────────────
+
+    `docs/decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md`. Reported from play: *"the
+    boss aura music was really weak, I didn't even notice it over the fire."*
+
+    ⚠️ **Every assertion above this point stayed green through that**, and they were not asleep — they
+    are 0091's and they hold 0091's shape: silent at `FAR`, full at `NEAR`, the near half carrying more
+    of the build. All three are still true of a curve that had collapsed to nothing everywhere the
+    fight actually happens. That is
+    `docs/decisions/0027-measure-the-picture-not-the-model.md` exactly: a guard written in terms of the
+    constant it guards proves the code agrees with itself.
+
+    ⚠️ **So these two are driven off `BOSSES` and the player's box** — where a fight is flown — and
+    neither can be satisfied by moving `AURA_FAR_UNITS` to meet it.
+  */
+  /** Where the ship may sit, in the camera's frame — the box a boss fight is flown inside. */
+  const BOX_BACK = PLAYER_ALONG_MARGIN;
+  /** The gap to a boss holding station, from a given place in the box. Hulls, not centres. */
+  const gapFrom = (along: number, kind: (typeof BOSS_KINDS)[number]): number =>
+    BOSSES[kind].station - along - BOSSES[kind].radius - SHIPS[SHIP_KINDS[0]!].radius;
+
+  it('0092 — THE RANGE COVERS THE BOX, so *far away* is somewhere the player can actually be', () => {
+    /*
+      ⚠️ **`AURA_FAR_UNITS` was 105 and the widest gap the game can present is 123.5**, so the top
+      fifth of the reachable span was already silent — and *silent* meant *backed all the way off, and
+      a fair way less than that too*, which is not an edge the player can feel. It is the argument
+      `AURA_NEAR_UNITS` already makes at the other end, arriving at the far one.
+    */
+    const widest = Math.max(...BOSS_KINDS.map((k) => gapFrom(BOX_BACK, k) + BOSSES[k].drift));
+    expect(widest, 'no boss can be far away, so the range has nothing to measure').toBeGreaterThan(0);
+    expect(
+      AURA_FAR_UNITS,
+      `the widest gap the game can present is ${widest.toFixed(1)} and the aura goes silent at ${AURA_FAR_UNITS}`,
+    ).toBeGreaterThanOrEqual(widest);
+  });
+
+  it('0092 — THE DEFECT: a player who backs off to dodge is still inside the aura', () => {
+    /*
+      ⚠️ **THIS IS THE ONE THAT WOULD HAVE CAUGHT IT, and the reason it is written from the BACK of
+      the box.** Mid-box the aura was already at its ceiling for all seven bosses under the old curve,
+      so the report is not about the aggressive position — it is about the defensive one. A player
+      being shot at retreats, and retreating is what turned the boss's own sound off:
+      at the back of the box against level one's boss the old curve gave **0.004** of the ceiling.
+
+      Held as a fraction of the ceiling rather than as a gain, because the ceiling is a taste and this
+      is not: whatever the aura is mixed at, backing off must attenuate it and must not mute it.
+    */
+    for (const kind of BOSS_KINDS) {
+      const gap = gapFrom(BOX_BACK, kind);
+      const heard = auraNearness(gap);
+      expect(
+        heard,
+        `${kind} at a gap of ${gap.toFixed(0)} — the back of the player's own box — is at ${heard.toFixed(3)} of its ceiling, which is off`,
+      ).toBeGreaterThan(0.1);
+    }
+    // And it is still a build: pressing forward has to be audibly louder than sitting at the back.
+    const front = auraNearness(gapFrom(PLAYER_LEAD, BOSS_KINDS[0]!));
+    const back = auraNearness(gapFrom(BOX_BACK, BOSS_KINDS[0]!));
+    expect(front, 'flying at the boss does not make it louder, so the aura is not a distance').toBeGreaterThan(
+      back * 1.5,
+    );
   });
 
   it('and it is measured between the HULLS, so every boss means the same thing', () => {

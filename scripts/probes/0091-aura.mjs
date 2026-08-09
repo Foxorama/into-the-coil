@@ -21,7 +21,7 @@ export const PROBES = [
     guard: 'THE ASK: the aura follows the boss in, and is silent when it is far away',
     edit: {
       path: 'src/app/music.ts',
-      find: '  return clamped * clamped;',
+      find: '  return Math.pow(clamped, AURA_CURVE);',
       replace: '  return clamped > 0 ? 1 : 1;',
     },
   },
@@ -55,7 +55,7 @@ export const PROBES = [
     guard: 'and the last few units are where it moves, because that is where the fight is',
     edit: {
       path: 'src/app/music.ts',
-      find: '  return clamped * clamped;',
+      find: '  return Math.pow(clamped, AURA_CURVE);',
       replace: '  return clamped;',
     },
   },
@@ -71,8 +71,8 @@ export const PROBES = [
     guard: 'THE ASK: the aura follows the boss in, and is silent when it is far away',
     edit: {
       path: 'src/content/music.ts',
-      find: "  boss: { drone: 0.7, bass: 1, beat: 1, drive: 1, auraSlow: 0.9, auraFast: 0.75 },",
-      replace: "  boss: { drone: 0.7, bass: 1, beat: 1, drive: 1, auraSlow: 0, auraFast: 0 },",
+      find: "  boss: { drone: 0.55, bass: 1, beat: 1, drive: 1, auraSlow: 1, auraFast: 0.9 },",
+      replace: "  boss: { drone: 0.55, bass: 1, beat: 1, drive: 1, auraSlow: 0, auraFast: 0 },",
     },
   },
   {
@@ -87,6 +87,7 @@ export const PROBES = [
     guard: 'and nothing but a boss ever opens it',
     edit: {
       path: 'src/content/music.ts',
+      // ⚠️ 0092 moved the boss row, not this one — the anchor is unchanged and is checked, not assumed.
       find: "  approach: { drone: 0.8, bass: 1, beat: 0.9, drive: 0, auraSlow: 0, auraFast: 0 },",
       replace: "  approach: { drone: 0.8, bass: 1, beat: 0.9, drive: 0, auraSlow: 0.5, auraFast: 0 },",
     },

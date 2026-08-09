@@ -72,24 +72,63 @@ export const AURA_LAYERS: readonly MusicLayer[] = ['auraSlow', 'auraFast'];
  *
  * ⚠️ **`NEAR` is not zero and cannot be.** The hulls collide at about fifteen units, so a range that
  * ran to zero would have its top half live in a place the player cannot reach without dying.
+ *
+ * ⚠️ **`FAR` IS 124 BECAUSE THAT IS THE FURTHEST GAP THE GAME CAN PRESENT, AND IT WAS 105 FOR NO
+ * STATED REASON** — `docs/decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md`. Driven over
+ * every row in `src/content/bosses.ts`, the widest reachable gap is `lattice` at its far drift with
+ * the ship at the back of the box: 123.5 units. At 105 the top fifth of the reachable span was
+ * already silent and *silent* meant *the player has backed off as far as the box allows, and a bit
+ * less than that too*, which is a boundary the player cannot feel. It is the same argument `NEAR`
+ * makes at the other end, and `tests/music.test.ts` now drives it off `BOSSES` rather than trusting
+ * the number.
  */
 export const AURA_NEAR_UNITS = 26;
-export const AURA_FAR_UNITS = 105;
+export const AURA_FAR_UNITS = 124;
+
+/**
+ * The exponent the aura's ramp is raised to. Above 1 the movement crowds towards the near end.
+ *
+ * ── IT WAS 2, AND THAT WAS THE WHOLE OF *"THE BOSS AURA WAS REALLY WEAK"* ───────────────────────
+ *
+ * ⚠️ **Reported from play** — *"the boss aura music was really weak, I didn't even notice it over the
+ * fire"* — and it was not a gain problem, which is what it sounds like.
+ * `docs/decisions/0091-the-boss-has-an-aura.md` squared the ramp so that *"the last few units are
+ * where it moves"*, and squaring did that far harder than the sentence intended: at a gap of 70 world
+ * units — an utterly ordinary fighting distance, the player mid-box against a boss holding station at
+ * 110 — the aura sat at **0.196** of its ceiling. Nearly every second of every boss fight happened in
+ * the part of the curve that had already collapsed.
+ *
+ * ⚠️ **1.6 keeps 0091's shape and stops it eating the fight.** The near half of the range still
+ * carries twice the build the far half does, which is the property `tests/music.test.ts` holds and
+ * the thing 0091 actually asked for; what goes is the silent middle. At the same gap of 70 the aura
+ * is now 0.392, and 0092 has the table.
+ *
+ * ⚠️ **A CONSTANT RATHER THAN A MULTIPLY, because the multiply could not be tuned.** `clamped *
+ * clamped` has no number in it to move, so the only edits available were *square it* and *do not*.
+ */
+export const AURA_CURVE = 1.6;
 
 /**
  * How loud the music gets, as a fraction of the mix.
  *
- * ⚠️ **0.34 → 0.44, reported from play** — *"the game sfx are too loud over the background music"*.
- * The other half of that move is `MASTER_GAIN` in `src/app/sound.ts`, which came down; between them
- * the worst-case ratio goes from 1.77 to 1.12. **Both halves are one change** and tuning either alone
- * is how the mix ends up clipping or inaudible.
+ * ⚠️ **0.34 → 0.44 → 0.55, and the same report produced both moves** — *"the game sfx are too loud
+ * over the background music"*, then *"main sfx need to be lowered a bit, background music needs to be
+ * raised a bit"* about the build the first move shipped in.
+ * `docs/decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md`. The other half is
+ * `MASTER_GAIN` in `src/app/sound.ts`, which came down again; **both halves are one change** and
+ * tuning either alone is how the mix ends up clipping or inaudible.
  *
- * ⚠️ **Still under the cues, and that is the whole design constraint.** Music that competes with the
- * sound of being shot at is music that hides the thing
- * `docs/decisions/0024-the-accessibility-floor-is-settings.md` needs the player to hear. Every cue is
- * information; the music is not, which is why it is the one that gives way.
+ * ⚠️ **THE CEILING IS 0.597 AND IT IS MEASURED, NOT GUESSED.** `tests/music.test.ts` sums every layer
+ * at the boss row sample by sample and refuses a peak past full scale; with 0092's aura the unweighted
+ * sum peaks at 1.674, so this constant cannot exceed 1/1.674 whatever the ear wants. **Raising a
+ * LAYER's gain lowers that ceiling**, which is why 0092's aura move and its drone move are one
+ * change: the aura went up about a quarter and the drone paid for it.
+ *
+ * ⚠️ **0.52 rather than the 0.597 that fits, and the margin is deliberate.** The guard is over the
+ * music bus alone; the cues run into the same destination and nothing measures the two together.
+ * 0092 has the arithmetic and names it as the thing owed.
  */
-export const MUSIC_GAIN = 0.44;
+export const MUSIC_GAIN = 0.52;
 
 /**
  * How far into a level the music starts listening for the boss, in world units.
@@ -175,18 +214,30 @@ export type MusicLevel = (typeof MUSIC_LEVELS)[number];
  * ⚠️ **The drone comes DOWN for the boss**, which is the only place the ladder is not monotonic and
  * it is deliberate: with all four open the pad is what muddies the low end, and the fight wants the
  * bass and the kick to be the things underneath. It is still open, so nothing starts or stops.
+ *
+ * ⚠️ **0.7 → 0.55, and it is buying the aura's headroom rather than expressing a taste** —
+ * `docs/decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md`. The aura's voices went up
+ * about a quarter and `MUSIC_GAIN`'s measured ceiling is what that spends; a pad and an aura occupy
+ * the same low-mid band, so taking the drone further in the direction 0090 had already taken it is
+ * the cheapest place in the table to find the room. **The two moves are one change** and the sum
+ * guard in `tests/music.test.ts` is what says they fit.
  */
 /**
  * ⚠️ **The aura's numbers here are a CEILING rather than a gain**, and it is the one row in the table
  * that is not the whole answer: `src/app/music.ts` multiplies them by how close the boss is, so a
  * boss at arm's length is at these values and a boss across the screen is at nothing. Every other
  * layer means exactly what it says. `docs/decisions/0091-the-boss-has-an-aura.md`.
+ *
+ * ⚠️ **The aura's two moved to 1 and 0.9 from 0.9 and 0.75**, which is the smaller half of
+ * `docs/decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md` — `AURA_CURVE` is the larger
+ * one. Raising a ceiling here spends `MUSIC_GAIN`'s measured headroom, so the two cannot be tuned
+ * apart: `tests/music.test.ts` sums this row sample by sample and is what says whether they fit.
  */
 export const MUSIC_LADDER: Record<MusicLevel, Record<MusicLayer, number>> = {
   calm: { drone: 0.55, bass: 0, beat: 0, drive: 0, auraSlow: 0, auraFast: 0 },
   run: { drone: 0.8, bass: 0.75, beat: 0, drive: 0, auraSlow: 0, auraFast: 0 },
   approach: { drone: 0.8, bass: 1, beat: 0.9, drive: 0, auraSlow: 0, auraFast: 0 },
-  boss: { drone: 0.7, bass: 1, beat: 1, drive: 1, auraSlow: 0.9, auraFast: 0.75 },
+  boss: { drone: 0.55, bass: 1, beat: 1, drive: 1, auraSlow: 1, auraFast: 0.9 },
 };
 
 /** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */
@@ -342,21 +393,21 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 1,
       octave: 1,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.4, gain: 0.3, attack: 0.22, curve: 1.6, lowFrom: 420, lowTo: 900, q: 1.1 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.4, gain: 0.4, attack: 0.22, curve: 1.6, lowFrom: 420, lowTo: 900, q: 1.1 },
     },
     {
       steps: [7, _, 7, _, 7, _, 7, _],
       pitched: true,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 2.5, gain: 0.42, attack: 0.28, curve: 1.4 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 2.5, gain: 0.54, attack: 0.28, curve: 1.4 },
     },
     {
       steps: [1, _, 1, _, 1, _, 1, _],
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * 2.3, gain: 0.1, attack: 0.3, curve: 1.5, lowFrom: 900, lowTo: 2600, highFrom: 300, q: 0.7 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * 2.3, gain: 0.13, attack: 0.3, curve: 1.5, lowFrom: 900, lowTo: 2600, highFrom: 300, q: 0.7 },
     },
   ],
 
@@ -371,7 +422,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 2,
       octave: 2,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.3, gain: 0.16, attack: 0.006, curve: 5, lowFrom: 2600, lowTo: 700, q: 1.6 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.3, gain: 0.21, attack: 0.006, curve: 5, lowFrom: 2600, lowTo: 700, q: 1.6 },
     },
     {
       // The offbeats, a fifth up — the half that makes it read as a doubling rather than as louder.
@@ -379,14 +430,14 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 2,
       octave: 2,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.26, gain: 0.13, attack: 0.004, curve: 6 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.26, gain: 0.17, attack: 0.004, curve: 6 },
     },
     {
       steps: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
       pitched: false,
       perBeat: 2,
       octave: 0,
-      note: { wave: 'sine', from: 96, to: 62, seconds: 0.16, gain: 0.34, attack: 0.002, curve: 5, drive: 0.2 },
+      note: { wave: 'sine', from: 96, to: 62, seconds: 0.16, gain: 0.44, attack: 0.002, curve: 5, drive: 0.2 },
     },
   ],
 };
