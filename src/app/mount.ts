@@ -453,6 +453,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // One named stream, per docs/decisions/0021-one-stream-per-concern.md, so a cosmetic roll added
     // here can never move a draw that matters.
     rng: makeRng('proof-scene').stream('spawns'),
+    steps: 0,
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
@@ -913,6 +914,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const music = audioOut.music();
     if (music === null) return;
     music.start();
+    /*
+      ⚠️ **EVERY FRAME, AND IT DOES NOTHING ALMOST EVERY TIME** — 0094. The gun is on the sim's step
+      grid and the music is on the audio clock; this is the only thing that keeps the two agreeing
+      after the sim has dropped steps, which `src/app/loop.ts` does on purpose past `MAX_STEPS`.
+
+      ⚠️ **`world.steps` and not `state`** — the phase belongs to the run being stepped, not to the
+      screen. On a menu the world is not stepping, so the count holds and the music free-runs, which
+      is correct: there is no gun to be in phase with.
+    */
+    music.phaseTo(world.steps);
     const level =
       state.screen.current === 'playing'
         ? musicLevelFor(world.cameraAlong - world.levelOrigin, world.level.bossAt, world.bossPool.size > 0)

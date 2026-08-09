@@ -46,7 +46,9 @@ export const PROBES = [
     guard: 'keeps its own clock',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  w.missileIn--;\n  if (w.missileIn > 0) return;\n  w.missileIn = w.weapon.missileEvery;',
+      // ⚠️ Re-anchored by 0094, which reloads both clocks to the step grid rather than to a cadence.
+      // The break is unchanged: the missiles reading the PULSE's countdown instead of their own.
+      find: '  w.missileIn--;\n  if (w.missileIn > 0) return;',
       replace: '  if (w.fireIn > 0) return;',
     },
   },

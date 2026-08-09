@@ -110,6 +110,7 @@ function stationKeepingWorld(surface: Surface): World {
     view: viewOf(1280, 720),
     surface,
     rng: makeRng('interp').stream('spawns'),
+    steps: 0,
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: 0.6,

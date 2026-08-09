@@ -252,6 +252,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     view: viewOf(1280, 720),
     surface: new NullSurface(),
     rng: makeRng('test').stream('spawns'),
+    steps: 0,
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
