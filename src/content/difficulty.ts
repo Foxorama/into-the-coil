@@ -39,6 +39,8 @@
  * guards would then be checking one of them. Density is authored; toughness is a tier.
  */
 
+import { onFireGrid } from './music.ts';
+
 /**
  * Every tier, **easiest first**.
  *
@@ -327,11 +329,24 @@ export function toughnessFor(base: number, tier: DifficultyRow): number {
 }
 
 /**
- * The steps between shots a body with a `base` gap has on a given tier — at least one.
+ * The steps between shots a body with a `base` gap has on a given tier.
  *
- * Floored at one for the same reason `toughnessFor` is floored: a gap of zero is a body that fires
- * every step forever, which is not a hard tier but a broken one.
+ * Floored for the same reason `toughnessFor` is floored: a gap of zero is a body that fires every
+ * step forever, which is not a hard tier but a broken one. The floor is one grid unit rather than
+ * one step, because a cadence off the grid is the thing this function exists to prevent.
+ *
+ * ⚠️ **SNAPPED, AND THIS IS THE STEP THAT WOULD OTHERWISE UNDO THE WHOLE DECISION** —
+ * `docs/decisions/0096-the-enemies-play-along.md`. Every cadence in `src/content/enemies.ts` and
+ * `src/content/bosses.ts` is authored on the grid and guarded there; **0.7 of a grid value is not a
+ * grid value**, so a tier would take content that was carefully in time and put all of it back off
+ * the beat. There is exactly one multiplier in the game and this is it.
+ *
+ * ⚠️ **The ladder compresses at the fast end on the harder tiers, and that is accepted rather than
+ * missed.** Two late boss phases can land on the same grid position once multiplied — 0096 has the
+ * table — because the grid is 100ms and the phases are 30 steps apart before scaling.
+ * `tests/level.test.ts` holds *never slower than the phase before, and the last strictly faster than
+ * the first* rather than strict monotonicity at every rung of every tier.
  */
 export function fireGapFor(base: number, tier: DifficultyRow): number {
-  return Math.max(1, Math.round(base * tier.fireGap));
+  return onFireGrid(base * tier.fireGap);
 }

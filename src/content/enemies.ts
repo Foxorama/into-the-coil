@@ -212,7 +212,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     health: 2,
     damage: 2,
     closing: 0.35,
-    fireEvery: 75,
+    fireEvery: 78,
     shot: 'spit',
     /*
       ⚠️ **IT NOW COMES TO YOU, and this is the row where the play report bites hardest.** A lancer
@@ -367,7 +367,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     health: 4,
     damage: 2,
     closing: 0.3,
-    fireEvery: 64,
+    fireEvery: 66,
     shot: 'spit',
     /*
       ⚠️ **THE ONE THAT ACTUALLY DOG-FIGHTS.** It used to weave and fire — *"not a sixth behaviour,

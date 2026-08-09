@@ -20,6 +20,7 @@ import { DEFAULT_ORIGIN, LEVELS, LEVEL_KINDS, type LevelRow } from '../src/conte
 // union and everything that reacts to the player is held.
 import { PLAYER_SHOT_LIFE } from '../src/content/pickups.ts';
 import { SHOTS } from '../src/content/shots.ts';
+import { FIRE_GRID } from '../src/content/music.ts';
 import { GameFrame } from '../src/app/frame.ts';
 import { playableWorld } from './world.ts';
 import { sprite } from './bodies.ts';
@@ -196,6 +197,57 @@ describe('anything that leaves the lane is gone, and the ship cannot', () => {
     expect(world.shipPool.size, 'the ship flew out of the lane and was culled').toBe(1);
     expect(world.ship.across).toBeGreaterThan(ACROSS_CULL_MIN);
     expect(world.ship.across).toBeLessThan(ACROSS_CULL_MAX);
+  });
+});
+
+describe('0096 — enemy fire lands on the grid in the real frame, not only in the table', () => {
+  /*
+    `docs/decisions/0096-the-enemies-play-along.md`. Every other guard for this decision is over
+    `src/content/` and `fireGapFor` — arithmetic agreeing with arithmetic, which
+    `docs/decisions/0027-measure-the-picture-not-the-model.md` is emphatic is not the same as the
+    thing happening. **This drives the real frame and reads the step every bullet actually appeared
+    on.**
+
+    ⚠️ **It is the assertion that would survive somebody adding a fourth reload site.** There are
+    three today — spawn, the enemy step, and the boss — and a fourth written relatively against an
+    unaligned clock would pass every content guard in `tests/difficulty.test.ts` while putting a whole
+    enemy kind off the beat.
+  */
+  it('THE PICTURE: every enemy bullet appears on a step the grid allows', () => {
+    const { world } = playableWorld({
+      waves: [
+        { at: 200, enemy: 'turret', formation: 'column', count: 3, lane: 40 },
+        { at: 260, enemy: 'lancer', formation: 'line', count: 2, lane: 60 },
+        { at: 330, enemy: 'warden', formation: 'column', count: 2, lane: 50 },
+      ],
+      pickups: [],
+      bossAt: Number.POSITIVE_INFINITY,
+      boss: 'sentinel',
+    });
+    const frame = new GameFrame(world);
+    const offGrid: number[] = [];
+    let seen = 0;
+    let before = world.enemyShots.size;
+    /*
+      ⚠️ **The player's trigger is held off, and the first draft did not do it.** The fixture's ship
+      auto-fires, so the three waves were dead within a few seconds and the whole run recorded four
+      enemy volleys — the guard reported *nothing ever shot at the player*, correctly, which is why
+      that assertion is there at all. What is under test is when enemies fire, not who wins.
+    */
+    for (let i = 0; i < 2400; i++) {
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      frame.step();
+      if (world.enemyShots.size > before) {
+        seen += world.enemyShots.size - before;
+        if (world.steps % FIRE_GRID !== 0) offGrid.push(world.steps);
+      }
+      before = world.enemyShots.size;
+    }
+    expect(seen, 'nothing ever shot at the player, so this measured nothing').toBeGreaterThan(10);
+    expect(
+      offGrid.slice(0, 5),
+      `${offGrid.length} of ${seen} enemy volleys left on a step that is not a multiple of ${FIRE_GRID}`,
+    ).toEqual([]);
   });
 });
 
