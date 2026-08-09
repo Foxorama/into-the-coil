@@ -837,7 +837,7 @@ first carries it.
   did not touch this; `docs/game.md` still has it under *Open*. Procedural synthesis keeps the
   single-file build and a baked track does not, which is the whole of what is decided.
 
-  ⚠️ **✅ BOTH HALVES HAVE LANDED AND NEITHER HAS BEEN PLAYED** —
+  ⚠️ **✅ BOTH HALVES HAVE LANDED AND BOTH HAVE NOW BEEN FLOWN** —
   [0089](decisions/0089-a-cue-has-a-body.md) rebuilt the twelve cues and
   [0090](decisions/0090-the-music-is-four-loops.md) is the first music the game has had. Read 0089
   before touching a cue number: *"too tinny, way too Atari 2600"* was a description of the MODEL — one
@@ -861,14 +861,31 @@ first carries it.
   0084's currency and 0035's legibility rule. Read the report before starting: it has the grid, the
   ladder, the rejected alternatives and the question.
 
-  ⚠️ **The mix in a real fight is still the open question.** Both were judged solo and against a synthetic
-  battle render. Whether a chaingun at ten a second sits under a boss explosion, and whether the music
-  buries the shield cue, are things only play answers — 0090 says where to look first if it does.
+  ⚠️ **START HERE. THE BUILD WAS FLOWN ON 2026-08-09 AND THE VERDICT IS THE FIRST THING THE NEXT
+  SESSION IS GETTING**, in the player's own words: *"I'll drop it in as the start of the next
+  session."* Everything below was judged solo and against a synthetic battle render, so **none of it
+  has a hand's verdict yet** — and `docs/decisions/0027-measure-the-picture-not-the-model.md` is
+  emphatic that a model measuring itself is what that leaves.
 
-  ⚠️ **The twelve effects have never been heard in play.** `node scripts/hear.mjs` writes every one of
-  them to a `.wav` without launching the game — that is the ears-on half of
-  [0027](decisions/0027-measure-the-picture-not-the-model.md) — but the verdict is a hand on the
-  controls, and it wants to be the same play-test that covers the fourteen above.
+  **What the verdict is owed on, and each is a different answer:**
+
+  | | |
+  |---|---|
+  | the twelve cues | 0089 rebuilt every one of them. *"Meaty chaingun"* and *"laser pew pew"* were the two named targets |
+  | the mix | the reported defect. Cues went from 1.77:1 over the music to 1.12:1, **on measurement rather than on ears** |
+  | the music | 0090. Whether one piece at 133 BPM carries a level at all, and whether the ladder reads as a build |
+  | the aura | 0091. Whether a boss having a presence lands, and whether the range and the ramp are right |
+
+  ⚠️ **The two things most likely to be wrong are both about the MIX**, because they are the two
+  nothing could test: whether a chaingun at ten shots a second sits under a boss explosion, and whether
+  the music buries the shield cue. 0090 names the aura as the first thing to pull down if a boss fight
+  is crowded — it is the newest and least load-bearing sound in the game.
+
+  ⚠️ **The effects have now been heard in play, and were rebuilt before they were** — 0089.
+  `node scripts/hear.mjs` and `node scripts/hear.mjs --music` still write every cue and every music
+  layer to a `.wav` without launching the game, which is the ears-on half of
+  [0027](decisions/0027-measure-the-picture-not-the-model.md) and the only way to iterate on a sound
+  without a twenty-minute cycle.
 
 ## How to check the things this file cannot know
 
