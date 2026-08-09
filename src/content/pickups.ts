@@ -23,6 +23,18 @@
  */
 
 import type { Body } from '../sim/entity.ts';
+/*
+  ⚠️ **THE WEAPON IMPORTS THE TEMPO, AND THAT DIRECTION IS THE DECISION** —
+  `docs/decisions/0093-the-gun-is-on-the-grid.md`. A sibling import inside `content/` is ordinary
+  (this file already reads `ships`, `shots` and `specials`), but this one is worth a sentence: the gun
+  depends on the beat and not the other way round, so the music can be rewritten without touching a
+  balance number and the tempo cannot be changed without the ladder being re-checked against it.
+
+  ⚠️ **It is a CONSTANT and not the music reaching into the sim.** A player with the sound off flies
+  exactly the same game — `docs/decisions/0024-the-accessibility-floor-is-settings.md` — because what
+  crosses here is an integer, not a setting and not a signal.
+*/
+import { STEPS_PER_BEAT } from './music.ts';
 import type { ShipRow } from './ships.ts';
 import { SHOTS } from './shots.ts';
 import type { SpecialKind } from './specials.ts';
@@ -284,14 +296,54 @@ export function tiersOf(upgrades: readonly UpgradeKind[], kind: UpgradeKind): nu
 /**
  * A number that climbs from `base` to `cap` across `UPGRADE_TIERS`, at tier `tier`.
  *
- * ⚠️ **Rounded, so a tier that does not move THIS number still moves the other one.** A weapon's
- * barrels run 1 → 4 over four tiers, so one of the four buys rate alone; its missiles run 0 → 2, so
- * two of the four do. Every tier changes something, which is `docs/game.md`'s rule, and
- * `tests/pickups.test.ts` checks it tier by tier rather than trusting the arithmetic.
+ * ⚠️ **ONE CALLER LEFT, AND THAT IS THE POINT RATHER THAN AN OVERSIGHT** —
+ * `docs/decisions/0093-the-gun-is-on-the-grid.md`. It used to draw the barrels, the pulse cadence and
+ * the missile cadence as well; all three are note values or lists on the ship's row now, because the
+ * usable subdivisions of a beat are geometric and a straight line does not land on them. **The
+ * launchers keep it because a launcher is genuinely a count** — a place on the hull, evenly spaced
+ * between none and `MAX_LAUNCHERS`, with nothing musical about it.
+ *
+ * ⚠️ **Rounded, so a tier that does not move THIS number still moves the other one.** Launchers run
+ * 0 → 2 over four tiers, so two of the four buy rate alone. Every tier changes something, which is
+ * `docs/game.md`'s rule, and `tests/missiles.test.ts`'s *THE TIERS* checks it rung by rung rather
+ * than trusting the arithmetic.
  */
 function rung(base: number, cap: number, tier: number): number {
   return Math.round(base + (cap - base) * (tier / UPGRADE_TIERS));
 }
+
+/**
+ * Steps between volleys for a ship at weapon tier `tier`, from its own ladder of note values.
+ *
+ * ⚠️ **THE single description of *what cadence is this rung*, and it is asked twice** — once for the
+ * pulse and once, five times over, for the missile. `docs/decisions/0093-the-gun-is-on-the-grid.md`
+ * makes the cross-rhythm a stated ratio rather than a coincidence between two ladders, and that is
+ * only true if both read the same function.
+ *
+ * ⚠️ **Clamped on the row rather than trusted.** `tiersOf` already clamps, so a tier past the end can
+ * only arrive if the two ever disagree — and the failure it prevents is an `undefined` reaching a
+ * division, which is a `NaN` cadence and a gun that never fires again rather than an error anybody
+ * would see.
+ */
+export function fireEveryAt(ship: ShipRow, tier: number): number {
+  const rung = tier < 0 ? 0 : tier > ship.firePerBeat.length - 1 ? ship.firePerBeat.length - 1 : tier;
+  return STEPS_PER_BEAT / ship.firePerBeat[rung]!;
+}
+
+/**
+ * How many pulse-gaps there are to a missile. The counter-beat, written down.
+ *
+ * ⚠️ **Five, and it is the number the play-test heard rather than one anybody picked** —
+ * `docs/decisions/0093-the-gun-is-on-the-grid.md`. *"The missile fire provided a great
+ * counter-beat"*, said about a build where two unrelated interpolations happened to sit about five
+ * apart. Five against a beat divided in three, four or six never lands on the same instant twice
+ * inside a bar, which is what a counter-beat IS.
+ *
+ * ⚠️ **It also keeps `docs/decisions/0051-a-missile-is-the-second-auto-weapon.md`'s *slower than the
+ * pulse* true at every rung by construction**, where two separate ladders could each be tuned into
+ * violating it.
+ */
+export const MISSILE_BEAT_RATIO = 5;
 
 /**
  * Whether another pickup of `kind` would still change this ship.
@@ -460,16 +512,29 @@ export const MAX_HULL_TIER = 2;
  */
 export const FASTEST_FIRE = 4;
 
-/**
- * The fastest missiles may ever leave the ship, in steps between volleys.
- *
- * ⚠️ **A POOL number as much as a balance one**, and the arithmetic is the same one `MAX_BARRELS`
- * answers: `launchers × flight / missileEvery` has to stay under the missile pool, and a missile is
- * in flight for about 130 steps on the widest view. Three launchers at 20 steps is 20 slots against
- * a pool of 24. `tests/pickups.test.ts` drives the strongest possible loadout and fails if the pool
- * ever fills, so these numbers are checked against each other rather than trusted to stay in step.
- */
-export const MISSILE_FASTEST = 20;
+/*
+  ── `MISSILE_FASTEST` WAS HERE AND 0093 DELETED IT, ON `PLAYER_SHOT_LIFE`'s OWN ARGUMENT ─────────
+
+  It was 20: the fastest missiles could leave the ship, and the endpoint
+  `rung(ship.missileEvery, MISSILE_FASTEST, tubes)` interpolated towards. A pool number —
+  `launchers × flight / missileEvery` under the missile pool, with a missile in flight about 130
+  steps on the widest view.
+
+  ⚠️ **`docs/decisions/0093-the-gun-is-on-the-grid.md` made the missile's cadence DERIVED**, so it
+  stopped being an input to anything: `MISSILE_BEAT_RATIO × fireEveryAt(ship, tubes)` reaches 20 at
+  the cap on its own, and the constant sat beside that arithmetic taking part in none of it.
+
+  ⚠️ **AND `npm run prove` IS WHAT SAID SO, in the words this file already uses about
+  `PLAYER_SHOT_LIFE`: one guarantee, one mechanism.** 0051's probe dropped it to 4 and the suite
+  stayed GREEN — *"a redundant safety net does not make a system safer; it makes the real mechanism
+  untestable"*, and this one had gone the whole way to untestable in a single PR while still reading
+  as a rule.
+
+  **What holds the missile's pool now is the thing that always did**: `tests/pickups.test.ts` drives
+  the strongest possible loadout and fails if the pool ever fills. What holds the CAP is
+  `tests/missiles.test.ts`'s *THE FLOORS*, which asserts the two ladders land on their last rung
+  together rather than asserting a number against itself.
+*/
 
 /**
  * The most launchers a ship may ever carry.
@@ -586,17 +651,42 @@ export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weap
     puts the first tube on tier 1 — so the first missile pickup is still the second weapon ARRIVING,
     which is the thing 0056 must not lose.
   */
-  const shots = rung(1, MAX_BARRELS, gun);
+  /*
+    ⚠️ **THE BARRELS ARE A LIST ON THE SHIP AND THEY WERE `rung(1, MAX_BARRELS, gun)`** —
+    `docs/decisions/0093-the-gun-is-on-the-grid.md`. Interpolation gave 1, 2, 3, 3, 4, which was fine
+    while the rate moved at every tier and is not now: the rate can only step where the beat has a
+    subdivision, so tiers 2 and 3 share one — and with the old barrels they would have shared a
+    weapon entirely. `docs/game.md`'s *every upgrade is worth taking* is what the fourth barrel buys.
+
+    ⚠️ **`rung` is KEPT for the launchers**, and the difference is the point: a launcher is a place on
+    the hull and a count really does interpolate. A cadence is a note value and does not.
+  */
+  const shots = ship.barrels[gun] ?? ship.barrels[ship.barrels.length - 1]!;
   const launchers = rung(0, MAX_LAUNCHERS, tubes);
 
   /*
-    ⚠️ **Each cadence is interpolated to its own FLOOR, reached exactly at tier 4.** The floors are
-    unchanged and both are still floors rather than targets: `FASTEST_FIRE` is a legibility number
-    (`src/app/frame.ts` needs the impact flash to finish between hits) and `MISSILE_FASTEST` is a pool
-    number. What changed is that the last tier now lands on them instead of stopping somewhere short.
+    ── EACH CADENCE IS A NOTE VALUE, AND BOTH USED TO BE INTERPOLATED TO A FLOOR ──────────────────
+
+    `docs/decisions/0093-the-gun-is-on-the-grid.md`. The floors are unchanged and both are still
+    floor rather than a target: `FASTEST_FIRE` is a legibility number (`src/app/frame.ts` needs the
+    impact flash to finish between hits). What changed is that a rung is now a fraction of a beat
+    rather than a point on a line, so **the gun is in time with the music at every tier instead of at
+    two of them** — and that the missile's own floor stopped being a constant, because a derived
+    cadence reaches its cap without one.
+
+    ⚠️ **`tests/pickups.test.ts` holds every rung against `STEPS_PER_BEAT`**, so a ladder authored off
+    the grid fails rather than quietly going out of time — which is exactly how the old one was wrong
+    and nothing could see it.
   */
-  const fireEvery = rung(ship.fireEvery, FASTEST_FIRE, gun);
-  const missileEvery = rung(ship.missileEvery, MISSILE_FASTEST, tubes);
+  const fireEvery = fireEveryAt(ship, gun);
+  /*
+    ⚠️ **DERIVED FROM THE PULSE, WHICH MAKES THE 5:1 CROSS-RHYTHM DELIBERATE.** It was an accident and
+    the play-test heard it: *"the missile fire provided a great counter-beat."* Five against a beat
+    divided in three, four or six is a counter-beat by construction, and it held at 5.00, 4.88, 4.71,
+    5.20 and 5.00 across the old tiers purely because two independent interpolations happened to start
+    five apart. Written down, it cannot drift.
+  */
+  const missileEvery = MISSILE_BEAT_RATIO * fireEveryAt(ship, tubes);
 
   const damage = SHOTS[ship.shot].damage;
   const missileDamage = SHOTS[ship.missile].damage;

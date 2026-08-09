@@ -28,7 +28,9 @@ export const PROBES = [
     guard: 'THE ONE THAT CANNOT BE RECOVERED FROM: the loop is a whole number of samples at every rate',
     edit: {
       path: 'src/content/music.ts',
-      find: 'export const BEAT_SECONDS = 0.45;',
+      // ⚠️ Re-anchored by 0093, which took the beat to 0.4s — 150 BPM, 24 sim steps. The BREAK is
+      // unchanged and so is its reasoning: a length that does not divide the sample rate.
+      find: 'export const BEAT_SECONDS = 0.4;',
       replace: 'export const BEAT_SECONDS = 0.4667;',
     },
   },

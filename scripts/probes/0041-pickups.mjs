@@ -40,14 +40,19 @@ export const PROBES = [
     broke: 'rapid fire made a constant subtraction, so enough of them reach zero',
     guard: 'never fires faster than a hit can be read',
     edit: {
-      path: 'src/content/pickups.ts',
       // ⚠️ The FLOOR removed, not the factor changed. A first attempt subtracted a constant instead
       // and `npm run prove` reported WRONG TEST: it broke stacking rather than the floor, because the
       // floor still caught it. The break has to be the thing the guard is about.
       // ⚠️ Re-anchored by 0082: the floor used to sit inside a `rapid` arm and now sits in the merged
       // ladder's only arm. Same edit, same guard, one fewer branch around it.
-      find: '  const fireEvery = rung(ship.fireEvery, FASTEST_FIRE, gun);',
-      replace: '  const fireEvery = rung(ship.fireEvery, 1, gun);',
+      // ⚠️ AND RE-ANCHORED AGAIN BY 0093, which is the larger move: the cadence is a note value read
+      // off the ship's own ladder rather than an interpolation towards `FASTEST_FIRE`, so the floor
+      // is no longer a term in an expression that can be edited. The break is now *the ladder
+      // authored past the floor* — which is the same failure the guard names, reached from content
+      // instead of from arithmetic, and is the honest shape of it now that the rungs are a table.
+      path: 'src/content/ships.ts',
+      find: '    firePerBeat: [3, 3, 4, 4, 6],',
+      replace: '    firePerBeat: [3, 3, 4, 4, 24],',
     },
   },
   {

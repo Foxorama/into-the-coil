@@ -94,6 +94,7 @@ it is pushed — guards stop reaching their subject without ever going red, and 
 | **the music is four synchronised loops, and intensity is their gains** | [0090](decisions/0090-the-music-is-four-loops.md) |
 | **a boss brings two music layers with it, and their gain is how close it is** | [0091](decisions/0091-the-boss-has-an-aura.md) |
 | **a mix number is an ear; what is guarded is the arithmetic and the geometry around it** | [0092](decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md) |
+| **a beat is a whole number of sim steps, and every cadence is a fraction of one — 150 BPM** | [0093](decisions/0093-the-gun-is-on-the-grid.md) |
 | **the near sky is pushed back on every cheap axis; the whole sky is twice 0065's rate** | [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
@@ -904,23 +905,35 @@ first carries it.
   | # | what | state |
   |---|---|---|
   | 1 | the mix again, and the boss aura | ✅ [0092](decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md) |
-  | 2 | **150 BPM, and the gun on the musical grid** | |
+  | 2 | **150 BPM, and the gun on the musical grid** | ✅ [0093](decisions/0093-the-gun-is-on-the-grid.md) |
   | 3 | the music phase-locked to the sim clock | |
   | 4 | **the level's own music** — power ballad × Rez, title keeps the current piece | |
   | 5 | enemy fire on the grid | |
 
-  ⚠️ **THE MAP'S BLOCKER IS GONE AND IT WAS AN ARTIFACT OF THE TEMPO IT ASSUMED.**
+  ⚠️ **✅ THE MAP'S BLOCKER IS GONE AND IT WAS AN ARTIFACT OF THE TEMPO IT ASSUMED** —
+  [0093](decisions/0093-the-gun-is-on-the-grid.md).
   [`the-gun-on-the-grid-mapped`](../reports/the-gun-on-the-grid-mapped-2026-08-09.md) computed the grid
-  at 100 BPM and concluded that putting the gun on it **halves the base fire rate**, which changes
-  shots-to-kill — 0084's currency and 0035's legibility rule — and stopped there for the player to
-  weigh. **The player chose 150 BPM**, and at 24 sim steps a beat the grid offers 8, 6 and 4 in exactly
-  the span the ladder already occupies: today's tier 1 and tier 4 are *already on it*. Read the report
-  for the reasoning and the rejected alternatives; **do not read its ladder or its blocker**, both of
-  which chunk 2's decision supersedes.
+  at 100 BPM and concluded that putting the gun on it halves the base fire rate. **Read the report for
+  its reasoning and its rejected alternatives; do NOT read its ladder or its blocker** — 0093
+  supersedes both, and no enemy-health rebalance is owed after all.
 
-  ⚠️ **THE MUSIC HAS TO MOVE OFF 133⅓ BPM AND THAT IS WHAT MAKES ANY OF IT POSSIBLE.** 0090's beat is
-  27 sim steps, which divides only by 3 and 9 — a three-rung ladder with a 3× hole in it. **No amount
-  of tuning the gun reaches a grid the music is not on**, which is the fact the map did not state.
+  ⚠️ **0093 IS THE LARGEST HAUL OF BROKEN GUARDS SINCE 0087, AND FOUR OF THE FIVE HAVE ONE CAUSE.**
+  Turning a constant from an INPUT to a ladder into a CONSTRAINT checked against it is the better
+  design and it silently disarms every probe that worked by editing the constant — 0043's, two of
+  0051's and 0083's. `MISSILE_FASTEST` is deleted rather than re-anchored, on this project's own *one
+  guarantee, one mechanism*. **`npm test` was green for all of it.**
+
+  ⚠️ **AND A GUARD SAMPLED ONE PHASE OF A PERIODIC QUANTITY FOR THE THIRD TIME** —
+  [0087](decisions/0087-a-pickup-never-parks.md) had the first and 0090's seam guard the second. 0056's
+  missile-clock guard read the clock once after 200 steps; 0093 moved the cadence to 40; 200 is exactly
+  five times 40. **A single reading of a periodic quantity measures the phase you happened to pick**,
+  and that is now a habit to check for rather than three incidents.
+
+  ⚠️ **THE GUN IS NOW IN TIME AND IS NOT IN PHASE, WHICH IS CHUNK 3 AND IS NOT A DETAIL.** The gun runs
+  on the fixed-step clock and the music on the `AudioContext` clock — two crystals. Every guard 0093
+  landed is about the *rate*; **nothing holds the two together over the length of a level**, and a sim
+  that stalls and catches up slides further than the crystals do. A rhythm feature that drifts by a
+  sixteenth note over three minutes is one that stops being a feature in the third minute.
 
   ⚠️ **AND [0090](decisions/0090-the-music-is-four-loops.md) SAID WHAT CHUNK 4 COSTS, BEFORE ANYBODY
   ASKED FOR IT**: *"a level that wanted its own key or its own tempo would need a second set of loops

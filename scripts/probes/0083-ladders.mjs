@@ -48,8 +48,19 @@ export const PROBES = [
       did: it refused the rung that would cross, so a fully-upgraded ship never quite reached the
       fastest it was allowed to fire. Written back as an off-by-one, which is how it would return.
     */
-    broke: 'the ladder one rung short, so a maxed ship never reaches its own floor',
-    guard: 'THE FLOORS: the last tier lands exactly on them',
+    /*
+      ⚠️ RE-POINTED BY 0093, BECAUSE `rung` GOVERNS ONE LADDER NOW INSTEAD OF FOUR. It drew the
+      barrels, both cadences and the launchers; 0093 made the first three note values or lists on the
+      ship's row, so shortening the interpolation no longer touches a FLOOR at all — the launchers
+      still round up to `MAX_LAUNCHERS` at the last rung. `npm run prove` reported WRONG TEST.
+
+      ⚠️ What a rung-short ladder costs now is a TIER THAT BUYS NOTHING: launchers become 0, 0, 1, 1, 2
+      and the first missile pickup of a run lands on a ship it does not change. That is the same
+      underlying mistake — an interpolation that does not span the tiers it claims to — arriving at
+      the guard which can still see it.
+    */
+    broke: 'the launcher ladder one rung short, so the first missile pickup buys nothing',
+    guard: 'THE TIERS: each ladder is exactly UPGRADE_TIERS long, and every tier changes something',
     edit: {
       path: 'src/content/pickups.ts',
       find: '  return Math.round(base + (cap - base) * (tier / UPGRADE_TIERS));',
