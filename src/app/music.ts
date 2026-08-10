@@ -62,7 +62,7 @@ import { STEPS_PER_SECOND } from '../state/screens.ts';
  * prewarm under a frame, and a note is the smallest thing this can be split into: the walk over the
  * pattern lives in exactly one place either way.
  */
-function renderNote(voice: MusicVoice, value: number, at: number, rate: number, rng: Rng, into: Float32Array): void {
+function renderNote(voice: MusicVoice, value: number, step: number, at: number, rate: number, rng: Rng, into: Float32Array): void {
   {
     /*
       ⚠️ **A pitched voice REPLACES the note's own sweep and a drum keeps it.** A kick is a fall from
@@ -84,9 +84,23 @@ function renderNote(voice: MusicVoice, value: number, at: number, rate: number, 
       the note plays at all* for a drum, and every value in every table was 1 — so reading it as a
       gain is backwards-compatible to the sample and turns a rest-or-play list into a groove.
     */
+    /*
+      ⚠️ **AND A PITCHED NOTE HAS A WEIGHT NOW, WHICH IT NEVER HAD** — 0108. A pitched `steps` entry
+      is a semitone, so 0102's trick of reading it as a velocity was unavailable to exactly half the
+      piece: the arp, the groove, the chords' sub and the lead were each struck at one weight for
+      every note they have ever played. `accents` is the missing axis, indexed by position in the
+      pattern so it belongs to the beat rather than to the note —
+      `src/content/music.ts` has the argument.
+
+      ⚠️ **Absent is 1 and costs nothing**, so a voice that wants to be flat says nothing and the
+      object is not rebuilt.
+    */
     const pitch = voice.pitched ? MUSIC_ROOT * Math.pow(2, voice.octave + value / 12) : 0;
+    const accent = voice.accents === undefined ? 1 : voice.accents[step % voice.accents.length] ?? 1;
     const note = voice.pitched
-      ? { ...voice.note, from: pitch, to: pitch }
+      ? accent === 1
+        ? { ...voice.note, from: pitch, to: pitch }
+        : { ...voice.note, from: pitch, to: pitch, gain: voice.note.gain * accent }
       : value === 1
         ? voice.note
         : { ...voice.note, gain: voice.note.gain * value };
@@ -165,7 +179,7 @@ export function layerNotes(layer: MusicLayer, rate: number): { buffer: Float32Ar
       if (value === null || value === undefined) continue;
       const at = i * step;
       if (at >= seconds) break;
-      notes.push(() => renderNote(voice, value, at, rate, rng, buffer));
+      notes.push(() => renderNote(voice, value, i, at, rate, rng, buffer));
     }
   }
   return { buffer, notes };
