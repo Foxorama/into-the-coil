@@ -439,6 +439,19 @@ describe('a wave may arrive from the side, and never behind the player', () => {
     const { world } = playableWorld(level);
     const frame = new GameFrame(world);
     while (world.enemies.size === 0) frame.step();
+    /*
+      ⚠️ **THE SHIP IS MOVED OUT OF THE FLANKER'S PATH, AND 0105 IS WHY.** The wave crosses from the
+      `acrossMinus` edge to lane 50, and the fixture parks the ship at mid-lane — so the two meet.
+      That did not matter while a weaver closed at 0.5: it was past the ship's `along` before its
+      across reached 50. At the slower closing this test's subject is the crossing, and the crossing
+      now takes long enough that the wave dies on the ship one step short of arriving — measured at
+      `across` 49.3 of a target of 50.
+
+      ⚠️ **A collision is not what this test is about**, and leaving it in would make a guard over
+      the flanker's turn quietly become a guard over how fast a weaver reaches the middle of the lane.
+      95 is past the target, so nothing in the crossing can reach it.
+    */
+    world.ship.across = 95;
     expect(world.enemies.at(0).across, 'it did not enter from outside the lane').toBeLessThan(0);
 
     let arrived = false;

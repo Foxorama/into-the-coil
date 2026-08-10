@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { ENEMIES, ENEMY_KINDS, MOTION_KINDS, type EnemyKind } from '../src/content/enemies.ts';
-import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
+import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { LEVELS } from '../src/content/levels.ts';
-import { ACROSS_SPAN, cullAlong, spawnAlong } from '../src/sim/camera.ts';
+import { ACROSS_SPAN, cullAlong, spawnAlong, viewOf } from '../src/sim/camera.ts';
+import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { GameFrame, SHIP_START_ALONG } from '../src/app/frame.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { playableWorld } from './world.ts';
@@ -90,6 +91,88 @@ describe('the motion table', () => {
     expect(inert.length, 'every enemy in the game now chases the player').toBeGreaterThan(1);
     const reactive = ENEMY_KINDS.length - inert.length;
     expect(reactive, 'nothing reacts to the player at all, which is the report unanswered').toBeGreaterThan(1);
+  });
+});
+
+describe('0105 — a body is on screen long enough to be answered', () => {
+  /*
+   * ⚠️ **THE REPORTED ONE: *"enemies overall fly too fast and shoot too fast."*** Asked what *too
+   * fast* meant, the answer named the quantity outright: it *"has to do with their time onscreen and
+   * the player's time to interaction with them."* **Nothing in this repository measured either.**
+   *
+   * ⚠️ **IN SECONDS, WHICH IS 0027's OWN REQUIREMENT AND THE WHOLE POINT HERE.** A guard written in
+   * world units per step would be `closing` compared against itself; what the player experiences is
+   * *how long do I have*, and the only honest way to hold it is a clock. A body's speed in the
+   * camera's frame is `SCROLL_PER_STEP + closing` (0023), so the window is arithmetic over three
+   * files — the enemy table, the flight constants and the camera's own span.
+   *
+   * ⚠️ **Driven at the HARDEST tier**, because that is where the window is shortest and it is the
+   * case the report is about. The easiest tier passes by construction if this does.
+   */
+  const view = viewOf(1280, 720).alongSpan;
+  const hardest = DIFFICULTY_KINDS.map((kind) => DIFFICULTIES[kind]).reduce((a, b) => (a.closing > b.closing ? a : b));
+
+  /** How long `kind` is visible on a 16:9 screen at `tier`, in seconds. */
+  const onScreen = (kind: EnemyKind, closingMultiplier: number): number =>
+    view / (SCROLL_PER_STEP + ENEMIES[kind].closing * closingMultiplier) / STEPS_PER_SECOND;
+
+  it('THE REPORTED ONE: nothing crosses the screen faster than the window a player can use', () => {
+    /*
+      ⚠️ **1.8 SECONDS, and the number is the report rather than a taste.** Driven over the build that
+      was played, the charger had **1.38s** at this tier and was named as too fast; the drifter, which
+      nobody has ever called fast, has 4.94s. The floor sits above the state that was rejected and
+      well below the state that was never mentioned, which is the only place a reported bound can
+      honestly go.
+
+      ⚠️ **It is a FLOOR on the fastest thing, not a target for everything.** A field where every body
+      lasts the same time is 0034's *a threat is absolute* thrown away; what this refuses is a body
+      the player cannot engage at all.
+    */
+    for (const kind of ENEMY_KINDS) {
+      const seconds = onScreen(kind, hardest.closing);
+      expect(
+        seconds,
+        `a ${kind} is on screen for ${seconds.toFixed(2)}s at the hardest tier — too little to be answered`,
+      ).toBeGreaterThan(1.8);
+    }
+  });
+
+  it('and the ordering is untouched, so nothing lost the identity its row is written around', () => {
+    /*
+      ⚠️ **A global slowdown must not flatten the roster**, which is the way this change could do
+      harm: the charger's whole identity is *"roughly three times the lancer's closing"* and the
+      drifter's is that it never closes at all. Held as the ORDER rather than as the values, so a
+      later re-tune is free to move them together.
+    */
+    const bySpeed = [...ENEMY_KINDS].sort((a, b) => ENEMIES[a].closing - ENEMIES[b].closing);
+    expect(bySpeed[bySpeed.length - 1], 'the charger is no longer the fastest thing in the game').toBe('charger');
+    expect(
+      ENEMIES.charger.closing / ENEMIES.lancer.closing,
+      'the charger stopped being about three times the lancer, which is what its row is written around',
+    ).toBeGreaterThan(2.5);
+    // And the two that are meant to arrive with the world still do, which is what makes them ignorable.
+    expect(ENEMIES.drifter.closing, 'the drifter started closing, so nothing arrives with the world').toBe(0);
+    expect(ENEMIES.turret.closing, 'the turret started closing, so an emplacement is a chaser').toBe(0);
+  });
+
+  it('and nothing gets more volleys away at the player than a player can read', () => {
+    /*
+      ⚠️ **The other half of *"shoot too fast"*, in the same unit.** What matters is not the gap
+      between shots but how many arrive from one body while it is on screen — a body that fires twice
+      is a pattern to dodge and one that fires a dozen times is a wall.
+
+      ⚠️ **The turret is the binding case and always was**: it never closes, so it is on screen for
+      five seconds, and at the hardest tier it was putting **twelve** volleys out in that window.
+    */
+    for (const kind of ENEMY_KINDS) {
+      const row = ENEMIES[kind];
+      if (row.fireEvery === 0) continue;
+      const volleys = (onScreen(kind, hardest.closing) * STEPS_PER_SECOND) / (row.fireEvery * hardest.fireGap);
+      expect(
+        volleys,
+        `a ${kind} gets ${volleys.toFixed(1)} volleys away while it is on screen at the hardest tier`,
+      ).toBeLessThan(10);
+    }
   });
 });
 

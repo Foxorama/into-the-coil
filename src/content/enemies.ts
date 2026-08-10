@@ -149,6 +149,25 @@ export interface EnemyRow extends Body {
    * ⚠️ **`circle` and `loop` take it over once they engage**, because both of them decide their own
    * `along` velocity. It is still what gets them there.
    */
+  /*
+    ── WHAT THIS NUMBER ACTUALLY DECIDES IS HOW LONG THE BODY IS ON SCREEN ─────────────────────────
+
+    ⚠️ **`docs/decisions/0105-a-body-is-on-screen-long-enough-to-answer.md`.** Reported from play:
+    *"enemies overall fly too fast and shoot too fast"* — and asked about directly, the answer was
+    that it *"has to do with their time onscreen and the player's time to interaction with them"*.
+
+    ⚠️ **A body's speed in the camera's frame is `SCROLL_PER_STEP + closing`** (0023: every speed is
+    in the camera's frame), so a 16:9 view of 178 units gives it `178 / (0.6 + closing) / 60` seconds
+    on screen. That is the quantity the player is describing, and no row in this table was written
+    against it. Driven over the old values, the charger had **1.74 seconds** at the easiest tier and
+    **1.38** at the hardest.
+
+    ⚠️ **AND THE TIME TO REACH THE PLAYER IS SHORTER THAN ANYBODY WOULD GUESS.** The player's box
+    runs to 167 units ahead of the camera and the view is 178, so a body appears **eleven units** from
+    the front wall — a tenth of a second for a charger. A player who flies forward, which is the
+    natural way to play, is met by things that materialise on top of them. `tests/pilots.test.ts`
+    holds the window in seconds now.
+  */
   closing: number;
   /** Steps between shots. `0` never fires, which is what makes a pure obstacle a row rather than a type. */
   fireEvery: number;
@@ -211,8 +230,8 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     radius: 3.2,
     health: 2,
     damage: 2,
-    closing: 0.35,
-    fireEvery: 78,
+    closing: 0.22,
+    fireEvery: 102,
     /*
       ⚠️ **ITS OWN BULLET SINCE 0098, and it is the fast thin one.** *"All the enemy bullets are
       exactly the same"* was literally true — three shooting kinds and seven bosses named one row.
@@ -259,7 +278,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     radius: 2.2,
     health: 1,
     damage: 2,
-    closing: 0.5,
+    closing: 0.31,
     fireEvery: 0,
     shot: 'spit',
     /*
@@ -305,7 +324,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     closing: 0,
     // Faster than the lancer's 75 and it is the whole of what this enemy is. `docs/state-of-play.md`
     // says no enemy shot has ever landed on an attentive player; this is the row that tests that.
-    fireEvery: 48,
+    fireEvery: 72,
     /*
       ⚠️ **ITS OWN BULLET SINCE 0098, and it is the slow fat one.** A turret holds station, is on
       screen for a known length of time and fires faster than anything else in the game; a quick
@@ -341,7 +360,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     radius: 2.4,
     health: 1,
     damage: 2,
-    closing: 1.1,
+    closing: 0.68,
     fireEvery: 0,
     shot: 'spit',
     /*
@@ -380,8 +399,8 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     radius: 4,
     health: 4,
     damage: 2,
-    closing: 0.3,
-    fireEvery: 66,
+    closing: 0.19,
+    fireEvery: 84,
     shot: 'spit',
     /*
       ⚠️ **THE ONE THAT ACTUALLY DOG-FIGHTS.** It used to weave and fire — *"not a sixth behaviour,

@@ -38,8 +38,11 @@ export const PROBES = [
     guard: 'THE ASK: every authored cadence is a whole number of grid units',
     edit: {
       path: 'src/content/enemies.ts',
-      find: '    fireEvery: 78,',
-      replace: '    fireEvery: 75,',
+      // ⚠️ Re-anchored by 0105, which lengthened every enemy cadence — *"enemies shoot too fast"*.
+      // The break is unchanged in kind: a number a hand would reach by feel that is not a whole
+      // number of sixteenths. 100 is 16.67 of them.
+      find: '    fireEvery: 102,',
+      replace: '    fireEvery: 100,',
     },
   },
   {
