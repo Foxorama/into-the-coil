@@ -52,6 +52,9 @@ export const NO_LEVEL: LevelRow = {
   pickups: [],
   bossAt: Number.POSITIVE_INFINITY,
   boss: 'sentinel',
+  // ⚠️ The theme that changes nothing — 0107. A fixture that leaned on a themed mix would be
+  // measuring the theme as well as its own subject, and `approach` is the row authored to be neutral.
+  theme: 'approach',
 };
 
 /** The kind-to-index lookup, built the same way `mount.ts` builds it rather than restated. */

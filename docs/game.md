@@ -251,8 +251,11 @@ lane — plus one boss at the end of it. Decided,
 boundary; the camera, the waves and the ship reset. **The chart does not exist yet**, and a line
 first is deliberate: a chart is a screen, a graph and a set of rules that want to be decided against
 levels somebody has played.
-⚠️ **No level is themed yet**, and naming one means going to the predecessor for material, which
-`CLAUDE.md` allows only for a named file and a named reason.
+⚠️ **EVERY LEVEL IS A PLACE NOW** — [0107](decisions/0107-a-level-is-a-place.md). Seven themes, one
+per level, each carrying its own backdrop and its own mix of the music. **No biome is NAMED**: the
+places are this project's own, because the fiction is downstream of whether theming works at all and
+`CLAUDE.md` allows opening the predecessor only for a named file and a named reason. A biome name
+drops onto a row without touching anything else.
 
 **Every boss is unique** — its own attacks, its own effects, its own escalation. The Jörmungandr
 model is the baseline: phases keyed to remaining health, so every arsenal meets every phase, and a

@@ -48,8 +48,8 @@ export const PROBES = [
         ARRIVES is the one that has to be broken, or this probe would go on passing while standing
         over a version of the ladder that no longer exists.
       */
-      find: "  push: { drone: 0.5, bass: 0, beat: 0, engine: 0.88, chords: 0.9, groove: 0.88, arp: 0.5, hook: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },",
-      replace: "  push: { drone: 0.5, bass: 0, beat: 0, engine: 0.88, chords: 0.9, groove: 0.88, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },",
+      find: "  push: { drone: 0.5, bass: 0, beat: 0, engine: 0.88, chords: 0.9, groove: 0.88, arp: 0.5, hook: 0, drive: 0, lead: 0, auraSlow: 0.62, auraFast: 0.4 },",
+      replace: "  push: { drone: 0.5, bass: 0, beat: 0, engine: 0.88, chords: 0.9, groove: 0.88, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0.62, auraFast: 0.4 },",
     },
   },
   {
@@ -73,8 +73,8 @@ export const PROBES = [
         that is a stricter break than the old one, because it is the whole level rather than its
         last two thirds.
       */
-      find: "  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0.8, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },",
-      replace: "  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },",
+      find: "  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0.8, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0.5, auraFast: 0.28 },",
+      replace: "  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0.5, auraFast: 0.28 },",
     },
   },
   {

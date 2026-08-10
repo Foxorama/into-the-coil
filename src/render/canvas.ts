@@ -49,6 +49,22 @@ export class CanvasSurface implements Surface {
     this.space = space;
   }
 
+  /**
+   * Change the backdrop without touching the size — what a level's THEME does.
+   *
+   * ⚠️ **`docs/decisions/0107-a-level-is-a-place.md`, and it costs one property write.** The clear
+   * colour is a field rather than baked into anything, so a place is the cheapest visual change the
+   * engine has: no re-bake, no allocation, and nothing that could hitch at a level boundary
+   * `docs/decisions/0076-a-level-has-an-origin.md` says keeps the scene.
+   *
+   * ⚠️ **NOT on the `Surface` interface**, which is deliberately *clear and blit* and nothing else —
+   * `src/render/surface.ts` has the argument. This is the canvas backend's own, exactly as `setSize`
+   * and `setAtlas` are.
+   */
+  setSpace(space: string): void {
+    this.space = space;
+  }
+
   clear(): void {
     this.ctx.fillStyle = this.space;
     this.ctx.fillRect(0, 0, this.width, this.height);

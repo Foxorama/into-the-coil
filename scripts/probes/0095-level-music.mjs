@@ -76,8 +76,8 @@ export const PROBES = [
     guard: 'and something is open at EVERY level, because the music never stops',
     edit: {
       path: 'src/content/music.ts',
-      find: '  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0.8, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },',
-      replace: '  run: { drone: 0, bass: 0, beat: 0, engine: 0.85, chords: 0.88, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },',
+      find: '  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0.8, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0.5, auraFast: 0.28 },',
+      replace: '  run: { drone: 0, bass: 0, beat: 0, engine: 0.85, chords: 0.88, drive: 0, lead: 0, auraSlow: 0.5, auraFast: 0.28 },',
     },
   },
   {

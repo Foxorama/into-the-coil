@@ -195,6 +195,34 @@ export const AURA_NEAR_UNITS = 26;
 export const AURA_FAR_UNITS = 145;
 
 /**
+ * How far into a level the boss starts being audible, and how much of the aura the LEVEL can raise
+ * on its own before the fight begins.
+ *
+ * ── THE AURA WAS A PROXIMITY CUE AND IT IS NOW ALSO A LEVEL-LONG BUILD ──────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0107-a-level-is-a-place.md`.** Asked for in play: *"the aura music for the boss
+ * needs to start about 15-30secs into the start of a level and then amp up until you beat the boss."*
+ *
+ * ⚠️ **720 UNITS IS TWENTY SECONDS**, at the 36 units a second the camera covers — the middle of the
+ * range asked for, and a distance rather than a timer like everything else this project paces
+ * (`BOSS_APPROACH_UNITS` has the argument). A level authored longer therefore spends longer building,
+ * which is the behaviour a fixed timer would not have.
+ *
+ * ⚠️ **THE CEILING IS 0.55 AND THE REASON IS THAT THE FIGHT MUST STILL HAVE SOMEWHERE TO GO.** If the
+ * level-long build reached 1 the boss would arrive at the volume it had been at for a minute, and
+ * `docs/decisions/0091-the-boss-has-an-aura.md`'s whole subject — *as it gets closer to the player* —
+ * would have nothing left to say. At 0.55 the level climbs to just over half and the fight's own
+ * proximity carries the rest, so the two mechanisms are a build and a modulation rather than two
+ * claims on one gain.
+ *
+ * ⚠️ **AND THE TWO ARE COMBINED WITH A MAXIMUM, NEVER A SUM.** A sum would put the aura past its
+ * ceiling the moment a player closed on a boss at the end of a long level, which is exactly the
+ * headroom `tests/music.test.ts` measures. `auraFor` is the one description.
+ */
+export const AURA_ONSET_UNITS = 720;
+export const AURA_LEVEL_CEILING = 0.55;
+
+/**
  * The exponent the aura's ramp is raised to. Above 1 the movement crowds towards the near end.
  *
  * ── IT WAS 2, AND THAT WAS THE WHOLE OF *"THE BOSS AURA WAS REALLY WEAK"* ───────────────────────
@@ -674,12 +702,29 @@ export type MusicLevel = (typeof MUSIC_LEVELS)[number];
   opened nothing new would be 0102's *"the ingame background music doesn't change"* returning, and
   `tests/music.test.ts` holds every rung louder than the one below it.
 */
+/*
+  ── AND THE AURA HAS A CEILING AT EVERY RUNG NOW, BECAUSE THE LEVEL RAISES IT ────────────────────
+
+  ⚠️ **`docs/decisions/0107-a-level-is-a-place.md`.** Asked for: *"the aura music for the boss needs
+  to start about 15-30secs into the start of a level and then amp up until you beat the boss."* The
+  aura's rows were zero at every rung except `boss`, so there was nothing for a level-long build to
+  raise — the ceiling it multiplies was itself nothing until the fight began.
+
+  ⚠️ **THE CEILINGS RISE ACROSS THE RUNGS AND THE BUILD RIDES THEM.** `src/app/music.ts` multiplies
+  these by `auraFor(build, nearness)`, so what a rung states is *how loud the dread may get here* and
+  the build states *how far through we are*. A level therefore gains a slow swell that is a function
+  of two things at once, and the fight is still the only place either reaches 1.
+
+  ⚠️ **`calm` stays at zero and always will.** The title, the level break and the run-over screen are
+  not in a level — there is nothing to be building towards — and 0095 is the decision that says the
+  two pieces do not share a ladder.
+*/
 export const MUSIC_LADDER: Record<MusicLevel, Record<MusicLayer, number>> = {
   calm: { drone: 0.55, bass: 0.7, beat: 0.5, engine: 0, chords: 0, groove: 0, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
-  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0.8, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
-  push: { drone: 0.5, bass: 0, beat: 0, engine: 0.88, chords: 0.9, groove: 0.88, arp: 0.5, hook: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
-  surge: { drone: 0.48, bass: 0, beat: 0, engine: 0.9, chords: 0.9, groove: 0.92, arp: 0.62, hook: 0.6, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
-  approach: { drone: 0.5, bass: 0, beat: 0, engine: 0.9, chords: 0.92, groove: 0.92, arp: 0.68, hook: 0.66, drive: 0.7, lead: 0, auraSlow: 0, auraFast: 0 },
+  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0.8, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0.5, auraFast: 0.28 },
+  push: { drone: 0.5, bass: 0, beat: 0, engine: 0.88, chords: 0.9, groove: 0.88, arp: 0.5, hook: 0, drive: 0, lead: 0, auraSlow: 0.62, auraFast: 0.4 },
+  surge: { drone: 0.48, bass: 0, beat: 0, engine: 0.9, chords: 0.9, groove: 0.92, arp: 0.62, hook: 0.6, drive: 0, lead: 0, auraSlow: 0.75, auraFast: 0.55 },
+  approach: { drone: 0.5, bass: 0, beat: 0, engine: 0.9, chords: 0.92, groove: 0.92, arp: 0.68, hook: 0.66, drive: 0.7, lead: 0, auraSlow: 0.88, auraFast: 0.72 },
   boss: { drone: 0.4, bass: 0, beat: 0, engine: 0.95, chords: 0.95, groove: 0.95, arp: 0.72, hook: 0.7, drive: 0.8, lead: 0.85, auraSlow: 1, auraFast: 0.9 },
 };
 
