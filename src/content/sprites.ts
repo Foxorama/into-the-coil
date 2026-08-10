@@ -353,6 +353,20 @@ export const SPRITE_KINDS = [
   */
   'skyRush',
   /*
+    ── AND A FOURTH LAYER THAT IS NOT MARKS AT ALL ─────────────────────────────────────────────────
+
+    `docs/decisions/0112-the-sky-has-weather.md`. Reported from play: *"needs to be more than streaks
+    and some weird colouration per level. Needs an actual space skyscape with nebulous clouds and such
+    like."*
+
+    ⚠️ **The three above are FIELDS OF MARKS and this is an AREA**, which is the first thing the sky
+    has ever drawn that is not a dot or a line. What makes it safe is stated where it is bounded —
+    `nebulaField` in `src/render/bake.ts` — and it is why
+    `docs/decisions/0069-the-sky-is-behind-the-game.md`'s ceiling had to be amended rather than
+    quietly stepped around.
+  */
+  'skyNebula',
+  /*
     ── THE EDGE OF THE PLAYER'S BOX, WHICH WAS A WALL WITH NOTHING DRAWN ON IT ─────────────────────
 
     Reported from play: *"the hard block on the player movement was a problem because there was no
@@ -592,6 +606,16 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   skyFar: ACROSS_SPAN,
   skyNear: ACROSS_SPAN,
   skyRush: ACROSS_SPAN,
+  /*
+    ⚠️ **TWICE the lane, and it is the one sky tile that is not square to it.** A cloud the size of
+    the screen comes round every few seconds at any depth that reads as motion, and a repeat the
+    player can see is worse than no cloud at all. At two hundred units it repeats once in about
+    eleven seconds of camera — longer than anybody looks at one part of the sky.
+
+    ⚠️ **It costs four times a star tile's bitmap and is baked once per LEVEL**, not per frame —
+    `src/render/bake.ts`'s `bakeNebula`.
+  */
+  skyNebula: ACROSS_SPAN * 2,
   /*
     ⚠️ **The TILING PERIOD of the dash, exactly as a sky tile's extent is.** Ten units is a mark and
     a gap, so the boundary is ten dashes down a hundred-unit lane — legible as a line at a glance and

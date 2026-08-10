@@ -83,6 +83,24 @@ export interface ThemeRow {
    */
   space: Record<PaletteName, string>;
   /**
+   * The colour of the weather hanging in it, per palette.
+   *
+   * ⚠️ **`docs/decisions/0112-the-sky-has-weather.md`.** Reported: *"needs to be more than streaks and
+   * some weird colouration per level. Needs an actual space skyscape with nebulous clouds and such
+   * like."* The backdrop above is a flat hue and this is the thing IN it.
+   *
+   * ⚠️ **PER PALETTE, on exactly `space`'s terms, and 0024 is why.** High contrast is a setting a
+   * player chose; a theme that hung a purple cloud in it would be overriding that choice with a
+   * cosmetic one. `tests/palette.test.ts` holds every ink against every backdrop, and
+   * `tests/budget.test.ts` holds the cloud faint enough that what it sits on is still what everything
+   * is found against.
+   *
+   * ⚠️ **It costs ONE BITMAP at a level boundary rather than a seventh atlas** —
+   * `src/render/bake.ts`'s `bakeNebula`, and 0107's own argument about seven transposed pieces of
+   * music arriving in the other channel.
+   */
+  nebula: Record<PaletteName, string>;
+  /**
    * How this place mixes the music, as a multiplier over `MUSIC_LADDER`'s own rung.
    *
    * ⚠️ **A MULTIPLIER rather than a ladder, so a theme cannot break the ladder's shape.** 0090's rule
@@ -145,18 +163,21 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
   approach: {
     title: 'The Approach',
     space: { vivid: '#0b0b14', 'high-contrast': '#000000' },
+    nebula: { vivid: '#2b3352', 'high-contrast': '#1c1c28' },
     mix: {},
   },
   /** Level two. Warm and close: the drone and the floor come up, the top end comes down. */
   nebula: {
     title: 'Ember Nebula',
     space: { vivid: '#140b16', 'high-contrast': '#050008' },
+    nebula: { vivid: '#5c2a4a', 'high-contrast': '#2a1626' },
     mix: { drone: 1.35, sub: 1.2, chords: 1.15, arp: 0.72, hook: 0.85, perc: 0.7, toll: 1.25 },
   },
   /** Level three. Hard and percussive: the hands lead and the pads get out of the way. */
   debris: {
     title: 'The Debris Line',
     space: { vivid: '#0d1016', 'high-contrast': '#000305' },
+    nebula: { vivid: '#2a3a4c', 'high-contrast': '#16222c' },
     mix: { perc: 1.4, engine: 1.15, groove: 1.15, drone: 0.6, chords: 0.78, stomp: 1.3 },
   },
   /**
@@ -171,12 +192,14 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
   rime: {
     title: 'Rime Shelf',
     space: { vivid: '#08131a', 'high-contrast': '#000408' },
+    nebula: { vivid: '#1e4a5c', 'high-contrast': '#0e2e3a' },
     mix: { arp: 1.3, hook: 1.28, drone: 0.55, sub: 0.62, groove: 0.75, lead: 1.25 },
   },
   /** Level five. Heavy and low: turrets, and a mix that sits underneath them. */
   forge: {
     title: 'The Forge',
     space: { vivid: '#170d08', 'high-contrast': '#080200' },
+    nebula: { vivid: '#63321a', 'high-contrast': '#301608' },
     /*
       ⚠️ **`sub` is 1.22 rather than the 1.4 the band allows, and the guard is what said so.** It is
       the layer that decides the bus's peak — `MUSIC_GAIN` has the measurement — so the heaviest place
@@ -190,12 +213,14 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
   bloom: {
     title: 'Spore Bloom',
     space: { vivid: '#0f1408', 'high-contrast': '#020600' },
+    nebula: { vivid: '#2f4a1c', 'high-contrast': '#18280c' },
     mix: { hook: 1.3, chords: 1.2, perc: 1.2, arp: 1.15, toll: 1.2, drone: 0.7 },
   },
   /** Level seven. The centre: the drone returns and the tune sits on top of it. */
   core: {
     title: 'The Core',
     space: { vivid: '#16080f', 'high-contrast': '#060003' },
+    nebula: { vivid: '#5a1e3c', 'high-contrast': '#2c0c1c' },
     mix: { drone: 1.35, lead: 1.3, drive: 1.2, stomp: 1.3, perc: 0.8, hook: 1.1 },
   },
 };

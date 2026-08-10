@@ -20,7 +20,7 @@
  */
 
 import type { Palette } from '../content/palette.ts';
-import { SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
+import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { makeRng } from '../sim/rng.ts';
 
 /** Side profile for a horizontally scrolling screen, top-down for a vertical one. */
@@ -444,6 +444,14 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // ⚠️ **The streaks are the SAME ink**, so what separates the three layers is depth, thickness and
   // shape and never colour — 0097, which is 0081's rule arriving in the one place it had not.
   skyRush: 'sky',
+  /*
+    ⚠️ **The sky ink is what it is BAKED at and not what it is drawn in** — 0112. A nebula takes its
+    colour from the level's theme, which no palette knows about, and `bakeNebula` replaces this one
+    bitmap at a level boundary with the theme's own value. The entry here is what a cloud looks like
+    before a level has said otherwise, and this is the only sprite in the atlas whose ink is not
+    final.
+  */
+  skyNebula: 'sky',
   /*
     ⚠️ **The PLAYER's ink, because the thing it marks is the player's box and nothing else's.**
     Enemies, bullets and pickups all cross this line freely — `src/sim/flight.ts` clamps the ship and
@@ -1007,6 +1015,15 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
     case 'skyRush':
       drawSky(ctx, kind, size);
       return;
+    case 'skyNebula':
+      /*
+        ⚠️ **Baked in the palette's own sky ink, and a level replaces it** — 0112. `bakeNebula` writes
+        the theme's colour over this bitmap at a level boundary; what is here is what the weather looks
+        like on the title screen and on any level that has not said otherwise, so the layer is never
+        missing and never a hole in the atlas.
+      */
+      drawNebula(ctx, palette.sky, size);
+      return;
     /*
       ── THE EDGE OF THE PLAYER'S BOX ────────────────────────────────────────────────────────────
 
@@ -1128,6 +1145,142 @@ export function skyField(kind: SkyKind, size: number): { alpha: number; stars: S
     });
   }
   return { alpha: SKY_ALPHA[kind], stars };
+}
+
+/**
+ * How many clouds a nebula tile carries.
+ *
+ * ── THE SKY MAY DRAW SOMETHING BIGGER THAN A BULLET ONLY IF IT HAS NO EDGE ──────────────────────
+ *
+ * ⚠️ **`docs/decisions/0112-the-sky-has-weather.md`, and it AMENDS
+ * `docs/decisions/0069-the-sky-is-behind-the-game.md` rather than stepping around it.** That rule —
+ * *nothing the sky draws is as big as a bullet* — is enforced as a clearance from the world's own
+ * rate, scaled by how much of a bullet a mark looks like. A cloud is enormous, so under the rule as
+ * written it can never exist.
+ *
+ * ⚠️ **What makes a mark confusable with a threat is a HARD EDGE AT A BULLET'S SCALE, not area.** A
+ * disc two units across with a boundary is a bullet; a gradient forty units across that never
+ * resolves to a boundary is a place. 0069's measure was thickness because everything the sky drew was
+ * a dot or a line, and thickness was the whole of what those could be wrong about.
+ *
+ * ⚠️ **SO A CLOUD IS BOUNDED FROM THE OTHER SIDE, WHICH IS WHAT KEEPS THIS A RULE AND NOT A HOLE.**
+ * It must be **far larger** than any bullet and **fainter** than the faintest field of marks, and it
+ * is drawn as a radial gradient to zero so there is no edge anywhere in it. `tests/budget.test.ts`
+ * holds all three, so a cloud that shrank towards a bullet's size fails its own guard rather than
+ * inheriting the mark layers' exemption.
+ *
+ * ⚠️ **Seven, and they overlap on purpose.** A field of separated discs is a pattern; overlapping
+ * gradients at different sizes is what weather looks like.
+ */
+const NEBULA_CLOUDS = 7;
+
+/**
+ * The smallest and largest a cloud may be, as a radius in WORLD UNITS.
+ *
+ * ⚠️ **A world quantity for the same reason `SKY_MAX_STAR_UNITS` is one**: what it has to be measured
+ * against is a BULLET, and `tests/budget.test.ts` reads it against `SHOTS` rather than against this.
+ *
+ * ⚠️ **The floor is what makes the amendment above safe.** Eighteen units is twenty times a pulse's
+ * radius, which is not a size anything in this game is.
+ */
+const NEBULA_UNITS = { from: 18, to: 40 };
+
+/**
+ * How solid the centre of a cloud is drawn.
+ *
+ * ⚠️ **Under the faintest FIELD in the sky, which is `SKY_ALPHA.skyNear`**, so the layer nearest to
+ * being invisible is still more present than the weather behind it. That ordering is what
+ * `tests/budget.test.ts` holds, rather than either number.
+ */
+const NEBULA_ALPHA = { from: 0.1, to: 0.22 };
+
+/** One cloud: where its centre is, how far it reaches, and how solid it is there. */
+export interface NebulaCloud {
+  x: number;
+  y: number;
+  r: number;
+  alpha: number;
+}
+
+/**
+ * The field a nebula tile is made of — WHAT will be drawn, before anything draws it.
+ *
+ * ⚠️ **Split out from the drawing for the reason `skyField`'s own comment gives**: it is the only way
+ * a guard can hold what a cloud actually IS without a canvas, and a ceiling checked against the
+ * constant it came from proves only that the code agrees with itself
+ * (`docs/decisions/0027-measure-the-picture-not-the-model.md`).
+ */
+export function nebulaField(size: number): NebulaCloud[] {
+  // @setup: one generator per bake, and its own stream so a cloud cannot move a star.
+  const rng = makeRng('sky').stream('nebula');
+  const perUnit = size / SPRITE_EXTENT.skyNebula;
+  const clouds: NebulaCloud[] = [];
+  for (let i = 0; i < NEBULA_CLOUDS; i++) {
+    /*
+      ⚠️ **A cloud may hang off the tile's edge, which is the opposite of every other sky field's
+      rule.** A MARK cut by a seam is a hard edge arriving on a schedule; a gradient cut by one is
+      already down at a fraction of its own alpha out there, and the tile repeats — so what the player
+      sees is the same cloud continuing. There is no margin here on purpose.
+    */
+    clouds.push({
+      x: rng.range(0, size),
+      y: rng.range(0, size),
+      r: perUnit * rng.range(NEBULA_UNITS.from, NEBULA_UNITS.to),
+      alpha: rng.range(NEBULA_ALPHA.from, NEBULA_ALPHA.to),
+    });
+  }
+  return clouds;
+}
+
+/**
+ * One tile of weather: overlapping radial gradients in the theme's own colour.
+ *
+ * ⚠️ **`createRadialGradient` and not a blurred disc**, because a gradient to transparent is the one
+ * shape with no boundary anywhere in it — which is the property the amendment rests on. A
+ * `filter: blur()` would be a boundary softened by an amount that varies with the bake resolution.
+ */
+function drawNebula(ctx: CanvasRenderingContext2D, colour: string, size: number): void {
+  for (const cloud of nebulaField(size)) {
+    const fill = ctx.createRadialGradient(cloud.x, cloud.y, 0, cloud.x, cloud.y, cloud.r);
+    fill.addColorStop(0, colour);
+    fill.addColorStop(1, 'transparent');
+    ctx.globalAlpha = cloud.alpha;
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.arc(cloud.x, cloud.y, cloud.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * Re-bake the nebula tile in `colour`, and write it into the atlas in place.
+ *
+ * ── WHY ONE BITMAP RATHER THAN A SECOND ATLAS, OR A TINT PER BLIT ───────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0112-the-sky-has-weather.md`.** Seven themes each with their own baked atlas is
+ * seven copies of every sprite in the game for one tile's worth of difference — the same shape 0107
+ * refused for the music. A tint applied at blit time is a canvas state change inside the frame loop,
+ * which `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md` counts.
+ *
+ * ⚠️ **A level boundary is a screen** (`docs/decisions/0063-a-level-break-is-a-respite.md`), and this
+ * is one canvas the size of two lanes — the same cost class as the rotation re-bake `onResize`
+ * already does, spent where the game is already not running.
+ *
+ * ⚠️ **`bitmaps` is mutated in place and that is deliberate.** An `Atlas` is read by index every
+ * frame; building a new one to change a single entry would allocate the whole array and force a
+ * `setAtlas`, which is the path that exists for a rotation. This is the narrow case, and it is the
+ * only sprite in the atlas whose ink is not final — `INK_OF` says so.
+ */
+export function bakeNebula(atlas: Atlas, colour: string, pixelsPerUnit: number): void {
+  const size = bakeSize(SPRITE_EXTENT.skyNebula, pixelsPerUnit);
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (ctx === null) return;
+  drawNebula(ctx, colour, size);
+  (atlas.bitmaps as CanvasImageSource[])[SPRITE.skyNebula] = canvas;
 }
 
 /**

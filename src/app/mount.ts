@@ -17,7 +17,7 @@ import { type Entity, makeEntity, reset } from '../sim/entity.ts';
 import { Pool } from '../sim/pool.ts';
 import { makeCollected, makeDeaths } from '../sim/collide.ts';
 import { makeRng } from '../sim/rng.ts';
-import { atlasIsStale, bakeAtlas, viewFor } from '../render/bake.ts';
+import { atlasIsStale, bakeAtlas, bakeNebula, viewFor } from '../render/bake.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
 import { SPECIAL_BINDINGS } from '../content/actions.ts';
 import { SPECIALS } from '../content/specials.ts';
@@ -276,10 +276,33 @@ export const CAPACITY = {
  * where it took 3.1, at 570 px/s on a 1280-wide screen against the far starfield's 86. The spread of
  * rates on screen is now **0.33 to 2.2**, and the game sits at 1 inside it.
  */
+/*
+  ── AND THE SEVENTH REPORT ASKS FOR SOMETHING THAT IS NOT A NUMBER AT ALL ────────────────────────
+
+  ⚠️ **`docs/decisions/0112-the-sky-has-weather.md`.** Reported against the build 0106 shipped:
+  *"almost there. Needs to be a bit faster. Also needs to be more than streaks and some weird
+  colouration per level. Needs an actual space skyscape with nebulous clouds and such like."*
+
+  ⚠️ **THE SPEED HALF IS THE SMALLEST ASK OF THE SEVEN AND ONLY ONE LAYER CAN PAY IT.** 0103 measured
+  the near layer at **0.825 against a ceiling of 0.845** — 2% left — and the far layer cannot move
+  alone without closing the 2.5 between them, which is the depth cue itself. The streak layer is the
+  one with room, and 2.2 → 2.7 is *a bit* rather than the doublings the previous six asked for.
+
+  ⚠️ **THE OTHER HALF IS WHAT ACTUALLY MAKES A SKY LOOK FAST, AND IT IS NOT A DEPTH.** What the eye
+  reads as speed is the SPREAD of rates on screen, not the largest of them. A nebula at 0.09 widens
+  that spread from 0.33–2.2 to **0.09–2.7 — thirty times, against seven** — and the game sits at 1
+  inside it. Six passes moved the top of the range; this is the first to move the bottom.
+*/
 export const SKY = [
+  /*
+    ⚠️ **FIRST, so it is drawn behind every mark**, and slowest, so it reads as the furthest thing
+    there is. `paintScene` walks this array in order and the order is the only thing that decides what
+    is in front of what.
+  */
+  { sprite: SPRITE.skyNebula, extent: SPRITE_EXTENT.skyNebula, depth: 0.09 },
   { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.33 },
   { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.825 },
-  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.2 },
+  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.7 },
 ];
 
 /**
@@ -1066,9 +1089,22 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const applyPlace = (): void => {
     const want =
       state.screen.current === 'playing' ? THEMES[world.level.theme].space[palette] : PALETTES[palette].space;
+    /*
+      ⚠️ **THE WEATHER IS RE-BAKED HERE AND THE BACKDROP IS A PROPERTY WRITE, WHICH IS THE WHOLE
+      DIFFERENCE IN COST** — `docs/decisions/0112-the-sky-has-weather.md`. One canvas the size of two
+      lanes, drawn when the place changes and never inside a frame; `src/render/bake.ts` has why it is
+      one bitmap rather than a seventh atlas.
+
+      ⚠️ **Gated on the same memo as the backdrop, so it happens ONCE per place.** This runs every
+      frame and does nothing almost every time, exactly as `applyMusicLevel` does — and the two are
+      separate for the reason stated below: the music can be off and the place cannot.
+    */
     if (want === shownSpace) return;
     shownSpace = want;
     surface.setSpace(want);
+    const clouds =
+      state.screen.current === 'playing' ? THEMES[world.level.theme].nebula[palette] : PALETTES[palette].sky;
+    bakeNebula(atlas, clouds, view.scale * dpr);
   };
 
   const applyMusicLevel = (): void => {
