@@ -641,28 +641,74 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'sine', from: inKey(15), to: inKey(6), seconds: 0.07, gain: 0.55, attack: 0.001, curve: 6 },
     ],
   },
-  /** An enemy died. The debris burst is the picture; this is the same event arriving at the ear. */
+  /**
+   * An enemy died. The debris burst is the picture; this is the same event arriving at the ear.
+   *
+   * ── IT WAS AN EXPLOSION AND IT NEEDED TO BE A DRUM ──────────────────────────────────────────────
+   *
+   * ⚠️ **`docs/decisions/0109-a-death-is-a-drum.md`.** Reported from play: *"the player weapons are
+   * definitely feeling more like part of the music now, but the enemy deaths don't, they're on their
+   * own sound band at the moment and instead of punctuating the music, they detract from it."*
+   *
+   * ⚠️ **HALF OF 0104 IS CONFIRMED AND HALF IS REPORTED BACK, AND THE HALVES ARE THE THREE FIELDS.**
+   * That decision gave the pulse a `figure` and a length that fits its own cadence, and gave this row
+   * `onGrid` and a `duck` — **neither of the two that worked.** It is on the beat, in the key, and it
+   * is a 0.46-second explosion that pushes the bed down eighteen per cent every time it lands.
+   *
+   * ⚠️ **A LEVEL SENDS ABOUT TWO BODIES A SECOND AND THE DUCK TAKES 0.445s TO RECOVER**, so the bed
+   * was held down for most of every level — which is what *detracts from the music* is a description
+   * of. 0104 refused a duck on the pulse in as many words, *"a pulse that ducked would hold the bed
+   * down for the whole game"*, and the same arithmetic reaches this row: **the duck is gone.**
+   *
+   * ⚠️ **AND IT WAS LONGER THAN A BEAT, so two kills were never two events.** 0.46s at 150 BPM is
+   * 1.15 beats; at two a second the explosions overlapped themselves continuously into a rumble. It
+   * is 0.26s now — a punctuation mark shorter than the beat it lands on, which is the same rule
+   * 0104 applied to the gun and did not apply here.
+   */
   kill: {
     twin: 'debris-burst',
-    // Measured at +8.7 dB over the `run` bed, and the most repeated of the four — so the shallowest.
-    duck: 0.18,
     // ⚠️ **The reported one.** *"Enemy explosions should pulse with the beat"* — 0104, and this is the
     // most repeated of the six that now do.
     onGrid: true,
+    /*
+      ⚠️ **THE FIELD 0104 GAVE THE GUN AND NOT THE KILL, AND ITS OWN ARGUMENT COVERS BOTH.** Strong,
+      weak, medium, weak — the four-step cycle the pulse, the hats and the arp's hat all run, so a
+      run of kills reads as a bar being subdivided rather than as a machine going off. It is the
+      second most repeated sound in the game and it was the last one struck at one weight.
+    */
+    figure: [1, 0.72, 0.86, 0.74],
     hold: 2,
-    gain: 0.33,
-    glue: 0.1,
+    /*
+      ⚠️ **0.33 → 0.36, AND IT IS BUYING BACK WHAT THE DUCK WAS DOING RATHER THAN ADDING LOUDNESS.**
+      A cue that ducks is louder against the bed by the depth of its own duck; removing 0.18 of duck
+      and adding 0.9 dB of gain leaves the kill about where it was against the music at the instant it
+      lands, and leaves the music where it belongs for the 0.4 seconds afterwards.
+      `tests/sound.test.ts` holds the ratio rather than either number.
+    */
+    gain: 0.36,
+    glue: 0.12,
     layers: [
-      // CRACK — a few milliseconds, so it starts rather than fades in.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.025, gain: 0.3, attack: 0.0004, curve: 8, lowFrom: 5500, lowTo: 2200, highFrom: 700 },
-      // BODY — noise between a highpass that takes out the box and a lowpass that falls.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.34, gain: 0.95, attack: 0.003, curve: 3.2, lowFrom: 2100, lowTo: 420, highFrom: 110, highTo: 45, q: 0.7, drive: 0.3 },
-      // DEBRIS — quieter, longer, and the part that carries the top. It was missing entirely.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.42, gain: 0.055, attack: 0.02, curve: 2.4, lowFrom: 6500, highFrom: 1300, highTo: 700 },
-      // G3 → B1, and G2 → B0 under it. It HANGS on the seventh: a kill is the most repeated event in
-      // a level and there are always more coming, so the one thing it must not do is sound final.
-      { wave: 'sine', from: inKey(13), to: inKey(1), seconds: 0.4, gain: 1.25, attack: 0.001, curve: 2.6, drive: 0.25 },
-      { wave: 'sine', from: inKey(6), to: inKey(-6), seconds: 0.46, gain: 0.7, attack: 0.002, curve: 2.2 },
+      // CRACK — a few milliseconds, so it starts rather than fades in. Brighter than it was: the top
+      // is what a punctuation mark is made of, and it is the band the music leaves emptiest.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.42, attack: 0.0004, curve: 8, lowFrom: 7200, lowTo: 2600, highFrom: 900 },
+      // BODY — noise between a highpass that takes out the box and a lowpass that falls. Half the
+      // length it was, and the highpass holds it above the band `sub` now occupies.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.17, gain: 0.9, attack: 0.002, curve: 4.5, lowFrom: 2400, lowTo: 620, highFrom: 150, highTo: 90, q: 0.8, drive: 0.3 },
+      // DEBRIS — quieter, and the part that carries the top.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.24, gain: 0.06, attack: 0.012, curve: 3, lowFrom: 7000, highFrom: 1500, highTo: 800 },
+      /*
+        G3 → B1, and G2 → B1 under it. It HANGS on the seventh: a kill is the most repeated event in
+        a level and there are always more coming, so the one thing it must not do is sound final.
+
+        ⚠️ **THE LOWER VOICE STOPS AT B1 AND USED TO FALL TO B0**, which is 31 Hz —
+        `docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md` put the music's own fundamental
+        at 41–65 Hz, and a cue landing under it twice a second is two things claiming one band. That
+        is *"on their own sound band"* read the other way round: the kill was not beside the music, it
+        was underneath it. It is a tuned tom now — in the band the drums live in, where a thing that
+        punctuates belongs.
+      */
+      { wave: 'sine', from: inKey(13), to: inKey(1), seconds: 0.22, gain: 1.15, attack: 0.001, curve: 3.6, drive: 0.25 },
+      { wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.26, gain: 0.6, attack: 0.002, curve: 3.2 },
     ],
   },
   /**

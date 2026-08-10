@@ -477,10 +477,29 @@ const CURVE_POINTS = 1025;
  * ⚠️ **The hold is a sixteenth**, so the bed is back up by the time the next gridded cue can land.
  * Anything longer and a busy fight would hold the music down continuously, which is the reported
  * defect with the sign flipped: *"background too quiet"* caused by the fix for *"they don't mesh"*.
+ *
+ * ── AND THE PARAGRAPH ABOVE ADDS UP THE WRONG TWO NUMBERS ───────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0109-a-death-is-a-drum.md`.** *"The bed is back up by the time the next gridded
+ * cue can land"* counts the HOLD and forgets the RETURN. A duck is `DOWN + HOLD + UP` = **0.445
+ * seconds** from trigger to recovered, which is four and a half sixteenths, not one — so the
+ * condition it claims has never been true of any cue that lands more often than about twice a second.
+ *
+ * ⚠️ **A level sends about two bodies a second**, driven over every row of `src/content/levels.ts`,
+ * and `kill` carried a duck. The bed was held down for most of every level, which is what the ninth
+ * play-test's *"instead of punctuating the music, they detract from it"* is a description of.
+ *
+ * ⚠️ **The three numbers are UNCHANGED and correct**: the asymmetry is the effect, and 0104's
+ * reasoning about it stands. What was wrong is which cues may spend it, and that is a property of the
+ * ROW rather than of these — `src/content/cues.ts`.
+ *
+ * ⚠️ **Exported for `tests/sound.test.ts`**, which multiplies this envelope by the rate the level
+ * scripts actually produce. A guard that re-typed 0.445 would be the second description this project
+ * keeps finding, and the arithmetic is the whole of the finding.
  */
-const DUCK_DOWN_SECONDS = 0.025;
-const DUCK_HOLD_SECONDS = 0.1;
-const DUCK_UP_SECONDS = 0.32;
+export const DUCK_DOWN_SECONDS = 0.025;
+export const DUCK_HOLD_SECONDS = 0.1;
+export const DUCK_UP_SECONDS = 0.32;
 
 /**
  * How long the AURA takes to follow the boss, in seconds.

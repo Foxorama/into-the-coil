@@ -16,6 +16,10 @@ import {
   type CueKind,
 } from '../src/content/cues.ts';
 import { DEFAULT_SOUND, SOUNDS, SOUND_KINDS } from '../src/content/sound.ts';
+import { LEVEL_KINDS } from '../src/content/levels.ts';
+import { BEAT_SECONDS } from '../src/content/music.ts';
+import { DUCK_DOWN_SECONDS, DUCK_HOLD_SECONDS, DUCK_UP_SECONDS } from '../src/app/music.ts';
+import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import {
   MAX_CUE_SAMPLES,
   MAX_VOICES,
@@ -1339,5 +1343,128 @@ describe('what the real frame actually says out loud', () => {
     enemy.radius = 4;
     for (let i = 0; i < 4 && !cues.includes('death'); i++) frame.step();
     expect(cues, 'the ship was destroyed and the picture said so in silence').toContain('death');
+  });
+});
+
+describe('0109 — a death punctuates the music rather than getting it out of the way', () => {
+  /*
+    `docs/decisions/0109-a-death-is-a-drum.md`. Reported from play: *"the player weapons are definitely
+    feeling more like part of the music now, but the enemy deaths don't, they're on their own sound
+    band at the moment and instead of punctuating the music, they detract from it."*
+
+    ⚠️ **HALF OF 0104 IS CONFIRMED AND HALF IS REPORTED BACK.** That decision gave the pulse a `figure`
+    and a length that fits its own cadence, and gave `kill` `onGrid` and a `duck` — neither of the two
+    that worked.
+  */
+
+  /** How many bodies a second the busiest authored level sends, which is how often `kill` sounds. */
+  const bodiesPerSecond = Math.max(
+    ...LEVEL_KINDS.map((kind) => {
+      const level = LEVELS[kind];
+      const bodies = level.waves.reduce((sum, wave) => sum + wave.count, 0);
+      // The camera covers `SCROLL_PER_STEP × STEPS_PER_SECOND` units a second, so a level's length in
+      // seconds is where its boss is. `src/content/levels.ts` states the same arithmetic in prose.
+      return bodies / (level.bossAt / (SCROLL_PER_STEP * STEPS_PER_SECOND));
+    }),
+  );
+
+  /** Trigger to recovered, in seconds — the number the duck's own comment did not add up. */
+  const duckEnvelope = DUCK_DOWN_SECONDS + DUCK_HOLD_SECONDS + DUCK_UP_SECONDS;
+
+  it('THE REPORTED ONE: nothing the level script schedules by the hundred pushes the music down', () => {
+    /*
+      ⚠️ **THE ARITHMETIC IS THE WHOLE FINDING.** `src/app/music.ts` says of the duck's hold that *"the
+      bed is back up by the time the next gridded cue can land"* — which counts the hold and forgets
+      the return. Trigger to recovered is `DOWN + HOLD + UP`, **0.445 s**, and the busiest level sends
+      **2.33 bodies a second**: `2.33 × 0.445` is **104%** of a level. The bed was not being ducked for
+      an explosion; it was being held down and let up briefly between them.
+
+      ⚠️ **0104 REFUSED THIS FOR THE GUN IN AS MANY WORDS** — *"a pulse that ducked would hold the bed
+      down for the whole game"* — and the same sentence reaches `kill` the moment anybody multiplies
+      the two numbers. The gun fires four times as often and the duck does not care: anything past
+      about twice a second saturates it.
+
+      ⚠️ **WRITTEN AS THE CONDITION AND NOT AS THE ANSWER.** If a later decision halves a level's
+      density this permits a duck again, which is correct — what is being held is *the music is not
+      turned down by a thing that happens continuously*, not *`kill` has no duck*.
+    */
+    const share = bodiesPerSecond * duckEnvelope;
+    expect(share, 'a level no longer sends enough bodies for this to be measuring anything').toBeGreaterThan(0.5);
+    expect(
+      CUES.kill.duck,
+      `a level sends ${bodiesPerSecond.toFixed(2)} bodies a second and a duck takes ${duckEnvelope.toFixed(3)}s to ` +
+        `recover — ducking for each one covers ${(share * 100).toFixed(0)}% of the level, which is the music turned down`,
+    ).toBeUndefined();
+  });
+
+  it('and a punctuation mark is shorter than the beat it lands on, so two of them are two events', () => {
+    /*
+      ⚠️ **IT WAS 0.46s, WHICH IS 1.15 BEATS.** At two a second the explosions overlapped themselves
+      continuously — the same defect 0104 measured on the gun (*"sounding 110% of the time and 165% at
+      full rate… a continuous tone with bumps in it"*) and fixed there and not here.
+
+      ⚠️ **A BEAT AND NOT THE GRID.** `FIRE_GRID` is a sixteenth, 0.1 s, which no cue with a body could
+      fit inside; what makes a run of kills read as rhythm rather than rumble is that each one is over
+      before the next beat, so the ear places them. `hold` cannot do this job — it is 2 steps, and
+      0104 records that every row is deliberately longer than its own hold.
+
+      ⚠️ **Held over the cues the LEVEL schedules**, which is the category the rule is about: a bomb, a
+      boss coming apart and the ship being lost are all events the player can count, and a long tail is
+      what those are for.
+    */
+    const scheduled = CUE_KINDS.filter((kind) => CUES[kind].twin === 'debris-burst');
+    expect(scheduled.length, 'nothing in the table is the cue a level schedules, so this measured nothing').toBeGreaterThan(0);
+    for (const kind of scheduled) {
+      expect(
+        cueSeconds(CUES[kind]),
+        `${kind} lasts ${cueSeconds(CUES[kind]).toFixed(3)}s against a beat of ${BEAT_SECONDS}s, and a level sends ` +
+          `${bodiesPerSecond.toFixed(2)} of them a second — they overlap into a rumble`,
+      ).toBeLessThan(BEAT_SECONDS);
+    }
+  });
+
+  it('and it is struck at more than one weight, which is the field 0104 gave the gun and not this', () => {
+    /*
+      ⚠️ **The second most repeated sound in the game was the last one struck identically every time.**
+      0102's finding — *"identical repetition at a fixed interval is not LIKE a metronome, it is the
+      definition of one"* — is exactly as true of an explosion as of a hi-hat, and 0104 applied it to
+      the pulse alone.
+    */
+    for (const kind of CUE_KINDS.filter((k) => CUES[k].twin === 'debris-burst')) {
+      const figure = CUES[kind].figure;
+      expect(figure, `${kind} has no figure, so every one of them is bit-identical`).toBeDefined();
+      expect(new Set(figure).size, `${kind}'s figure is all one weight`).toBeGreaterThan(1);
+    }
+  });
+
+  it('and the band the music’s own fundamental sits in is not claimed by it', () => {
+    /*
+      ⚠️ **THIS IS *"THEIR OWN SOUND BAND"* READ THE OTHER WAY ROUND.** The kill was not beside the
+      music — it was **underneath** it. Its lower tonal voice fell to `inKey(-6)`, which is 31 Hz, and
+      `docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md` put the music's own fundamental at
+      41–65 Hz. Two things claiming one band, twice a second, is mud rather than punctuation.
+
+      ⚠️ **A FLOOR ON WHERE A GLIDE MAY END, in the units the table is written in.** Every pitched
+      endpoint is already a scale tone (0099), so this is one comparison per layer and needs no new
+      field.
+
+      ⚠️ **THE PLAYER'S OWN WEAPONS ARE NOT HELD TO THIS AND THE REASON IS A PLAY REPORT.** The pulse
+      falls to `inKey(-7)` and the missile to `inKey(-12)`, so both reach below the bed's fundamental
+      — measured, and left alone, because the ninth play-test signed the weapons off in the same breath
+      as it reported this row. 0109 records it as owed rather than fixing two channels at once, which
+      is what would make the next verdict unattributable.
+    */
+    const floor = MUSIC_ROOT * Math.pow(2, -5 / 12);
+    for (const kind of CUE_KINDS.filter((k) => CUES[k].twin === 'debris-burst')) {
+      for (const [i, layer] of CUES[kind].layers.entries()) {
+        if (layer.wave === 'noise') continue;
+        const lowest = Math.min(layer.from, layer.to);
+        expect(
+          lowest,
+          `${kind} layer ${i} reaches ${lowest.toFixed(1)}Hz, under the ${floor.toFixed(1)}Hz the music's own ` +
+            'fundamental occupies — it is beneath the bed rather than in it',
+        ).toBeGreaterThanOrEqual(floor - 0.01);
+      }
+    }
   });
 });
