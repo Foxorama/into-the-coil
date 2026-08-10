@@ -110,6 +110,7 @@ it is pushed — guards stop reaching their subject without ever going red, and 
 | **a level is a PLACE: a theme carries a backdrop and a mix, and the aura builds across the whole level** | [0107](decisions/0107-a-level-is-a-place.md) |
 | **a pitched note has a weight; a guard about a layer is written over the property, never the name; the bus's ceiling is the gain and not the drive** | [0108](decisions/0108-the-bed-is-felt-and-the-boss-arrives.md) |
 | **nothing the level schedules by the hundred may duck the music, and it is shorter than the beat it lands on** | [0109](decisions/0109-a-death-is-a-drum.md) |
+| **how a body SHOOTS is a closed union, and a pattern is the same pattern wherever the player is** | [0110](decisions/0110-an-attack-is-a-pattern.md) |
 | ~~the near sky is pushed back on every cheap axis~~ — **amended: it went out** | [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) → [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the sky is three layers, the fastest is streaks, and a tube is a side of the hull** | [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
@@ -257,7 +258,7 @@ channel in nine rounds to be signed off.
 |---|---|
 | **the bass, the percussion, the metronome, the pace floor, the boss's own rung** | ✅ [0108](decisions/0108-the-bed-is-felt-and-the-boss-arrives.md) |
 | **an enemy death is on its own sound band instead of punctuating the music** | ✅ [0109](decisions/0109-a-death-is-a-drum.md) |
-| **enemies: more variety, and attacks that are patterns rather than aimed** | |
+| **enemies: more variety, and attacks that are patterns rather than aimed** | ✅ [0110](decisions/0110-an-attack-is-a-pattern.md) |
 | **bosses: six of the seven are one boss with a different bullet** | |
 | **the sky: a bit faster, and an actual skyscape rather than marks and a hue** | |
 

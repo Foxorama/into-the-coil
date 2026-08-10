@@ -80,8 +80,13 @@ export const PROBES = [
     guard: '0098 — THE REPORTED ONE: what shoots back is not all one bullet',
     edit: {
       path: 'src/content/enemies.ts',
-      find: "    shot: 'lance',",
-      replace: "    shot: 'spit',",
+      /*
+        ⚠️ **The anchor carries the next line, and 0110 is why.** `shot: 'lance'` was unique until the
+        sower joined the table; an anchor that matches twice is one the harness refuses, which is the
+        same failure as one that matches nothing. The lancer's own comment is what disambiguates it.
+      */
+      find: "    shot: 'lance',\n    /*\n      ⚠️ **IT NOW COMES TO YOU,",
+      replace: "    shot: 'spit',\n    /*\n      ⚠️ **IT NOW COMES TO YOU,",
     },
   },
   {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { ENEMIES, ENEMY_KINDS, MOTION_KINDS, type EnemyKind } from '../src/content/enemies.ts';
+import { ATTACK_KINDS, ENEMIES, ENEMY_KINDS, MOTION_KINDS, shotsPerVolley, type EnemyKind } from '../src/content/enemies.ts';
+import { SHIPS } from '../src/content/ships.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { LEVELS } from '../src/content/levels.ts';
 import { ACROSS_SPAN, cullAlong, spawnAlong, viewOf } from '../src/sim/camera.ts';
@@ -164,6 +165,19 @@ describe('0105 — a body is on screen long enough to be answered', () => {
       ⚠️ **The turret is the binding case and always was**: it never closes, so it is on screen for
       five seconds, and at the hardest tier it was putting **twelve** volleys out in that window.
     */
+    /*
+      ── AND IT COUNTED VOLLEYS, WHICH STOPPED BEING THE SAME AS BULLETS ─────────────────────────
+
+      ⚠️ **`docs/decisions/0110-an-attack-is-a-pattern.md`.** Every enemy sent exactly one bullet a
+      volley when this was written, so *volleys* and *bullets* were one number and the bound was
+      unambiguous. A spray of three and a wall of four are one volley each; a bound on volleys alone
+      would let a row put twelve bullets on the screen from the same cadence and stay green.
+
+      ⚠️ **BOTH ARE HELD, because they are different questions.** How many volleys is *how often does
+      this thing act* — a rhythm the player reads. How many bullets is *how much is in the air* — the
+      pool, the screen and the dodge. A pattern is allowed to be more of the second and must not be
+      more of the first.
+    */
     for (const kind of ENEMY_KINDS) {
       const row = ENEMIES[kind];
       if (row.fireEvery === 0) continue;
@@ -172,6 +186,11 @@ describe('0105 — a body is on screen long enough to be answered', () => {
         volleys,
         `a ${kind} gets ${volleys.toFixed(1)} volleys away while it is on screen at the hardest tier`,
       ).toBeLessThan(10);
+      const bullets = volleys * shotsPerVolley(row.attack);
+      expect(
+        bullets,
+        `a ${kind} puts ${bullets.toFixed(0)} bullets on the screen while it is visible at the hardest tier`,
+      ).toBeLessThan(30);
     }
   });
 });
@@ -399,5 +418,186 @@ describe('reacting to the player did not cost reproducibility', () => {
       return e === null ? 'gone' : `${e.along.toFixed(6)}:${e.across.toFixed(6)}`;
     };
     expect(run()).toBe(run());
+  });
+});
+
+describe('0110 — an attack is a pattern, and not every pattern is aimed at you', () => {
+  /*
+    `docs/decisions/0110-an-attack-is-a-pattern.md`. Reported from play: *"need more variety and more
+    attacks that are pattern attacks and less target player attacks."*
+
+    ⚠️ **IT WAS AN ACCURATE READING OF THE CODE.** `fireEnemies` computed `atan2(ship − enemy)` for
+    every body in the game that fired, with no alternative anywhere in the model — 0073 gave MOTION a
+    closed union and left firing a single behaviour.
+  */
+  it('the table has no arm nothing uses, so the union cannot fill up with attacks no level sends', () => {
+    // The same rule the motion union already carries one describe block up, for the same reason.
+    const fired = new Set(ENEMY_KINDS.filter((k) => ENEMIES[k].fireEvery > 0).map((k) => ENEMIES[k].attack.kind));
+    const dead = ATTACK_KINDS.filter((kind) => !fired.has(kind));
+    expect(dead, `these attacks exist and no enemy sends them: ${dead.join(', ')}`).toEqual([]);
+  });
+
+  it('THE REPORTED ONE: most of what shoots is not aimed at the player', () => {
+    /*
+      ⚠️ **A MAJORITY AND NOT ALL, WHICH IS 0073'S OWN ARGUMENT IN THE OTHER AXIS.** That decision
+      kept `drift` when three reactive motions arrived, because *"a field where everything converges
+      reads as one threat rather than six"*. A field where NOTHING is aimed is the same failure the
+      other way up — it stops being a fight and becomes weather, and the player would have no reason
+      to believe anything on screen knows they are there.
+
+      ⚠️ **Counted over the kinds that actually shoot**, which is what the report is about: a body
+      with `fireEvery: 0` has no attack to be a pattern.
+    */
+    const shooters = ENEMY_KINDS.filter((k) => ENEMIES[k].fireEvery > 0);
+    const patterned = shooters.filter((k) => ENEMIES[k].attack.kind !== 'aimed');
+    expect(
+      patterned.length,
+      `${patterned.length} of ${shooters.length} shooting kinds send a pattern — the rest aim at the ship`,
+    ).toBeGreaterThan(shooters.length - patterned.length);
+    const aimed = shooters.filter((k) => ENEMIES[k].attack.kind === 'aimed');
+    expect(aimed.length, 'nothing on the field aims at the player at all, so the fight became weather').toBeGreaterThan(
+      0,
+    );
+  });
+
+  it('and a pattern is the same pattern wherever the player is, which is what makes it one', () => {
+    /*
+      ⚠️ **THE PROPERTY THAT SEPARATES A PATTERN FROM A SPREAD, DRIVEN THROUGH THE REAL FRAME.** A fan
+      centred on the ship is still *aimed* however many shots are in it — the player moves and the
+      whole shape follows, so there is nothing to learn. What makes a pattern worth the word is that
+      it is a fact about the body rather than about where the player was standing.
+
+      ⚠️ **Measured as the set of shot HEADINGS**, in a world where the ship is put somewhere
+      different each run. Two runs, two ship positions, and the volley has to come out identical.
+    */
+    for (const kind of ENEMY_KINDS.filter((k) => ENEMIES[k].fireEvery > 0 && ENEMIES[k].attack.kind !== 'aimed')) {
+      const headings: string[][] = [];
+      for (const lane of [12, 88]) {
+        const { world } = playableWorld({
+          waves: [{ at: 200, enemy: kind, formation: 'line', count: 1, lane: 50 }],
+          pickups: [],
+          bossAt: Number.POSITIVE_INFINITY,
+          boss: 'sentinel',
+          theme: 'approach',
+        });
+        const frame = new GameFrame(world);
+        // Park the ship where it cannot be hit and cannot die, so the only variable is where it IS.
+        world.ship.health = 1e9;
+        world.ship.across = lane;
+        const seen: string[] = [];
+        for (let i = 0; i < 900 && seen.length === 0; i++) {
+          world.fireIn = Number.MAX_SAFE_INTEGER;
+          world.ship.across = lane;
+          frame.step();
+          for (let s = 0; s < world.enemyShots.size; s++) {
+            const shot = world.enemyShots.at(s);
+            // The scroll is carried on `velAlong` by every threat (0034); take it back off, so what
+            // is compared is the direction the body chose rather than the camera's own motion.
+            seen.push(Math.atan2(shot.velAcross, shot.velAlong - world.scrollPerStep).toFixed(3));
+          }
+        }
+        expect(seen.length, `a ${kind} never fired, so this measured nothing`).toBeGreaterThan(0);
+        headings.push(seen.sort());
+      }
+      expect(
+        headings[0],
+        `a ${kind}'s volley changes shape depending on where the ship is, which makes it a spread rather than a pattern`,
+      ).toEqual(headings[1]);
+    }
+  });
+
+  it('and a wall leaves a hole where the body is, which is the one thing a player can read early', () => {
+    /*
+      ⚠️ **THE GAP IS THE WHOLE ATTACK AND IT IS AUTHORED BY SUBTRACTION**, so the failure to catch is
+      a wall with no hole in it — which is a solid line across the lane, and unsurvivable rather than
+      hard. Driven through the real frame and measured in world units across, against the body that
+      fired.
+    */
+    const kinds = ENEMY_KINDS.filter((k) => ENEMIES[k].attack.kind === 'wall');
+    expect(kinds.length, 'nothing in the table lays a wall, so this measured nothing').toBeGreaterThan(0);
+    for (const kind of kinds) {
+      const attack = ENEMIES[kind].attack;
+      if (attack.kind !== 'wall') continue;
+      const { world } = playableWorld({
+        waves: [{ at: 200, enemy: kind, formation: 'line', count: 1, lane: 50 }],
+        pickups: [],
+        bossAt: Number.POSITIVE_INFINITY,
+        boss: 'sentinel',
+        theme: 'approach',
+      });
+      const frame = new GameFrame(world);
+      world.ship.health = 1e9;
+      let firedAt = Number.NaN;
+      const lanes: number[] = [];
+      for (let i = 0; i < 900 && lanes.length === 0; i++) {
+        world.fireIn = Number.MAX_SAFE_INTEGER;
+        const before = world.enemyShots.size;
+        const body = world.enemies.size > 0 ? world.enemies.at(0).across : Number.NaN;
+        frame.step();
+        if (world.enemyShots.size > before) {
+          firedAt = body;
+          for (let s = 0; s < world.enemyShots.size; s++) lanes.push(world.enemyShots.at(s).across);
+        }
+      }
+      expect(lanes.length, `a ${kind} never laid a wall, so this measured nothing`).toBeGreaterThan(1);
+      const nearest = Math.min(...lanes.map((across) => Math.abs(across - firedAt)));
+      /*
+        ⚠️ **The hole has to be wider than the ship, and the bound is the ship's own hurtbox rather
+        than a number typed here** — `docs/decisions/0027-measure-the-picture-not-the-model.md`: a gap
+        measured against the constant that authored it proves the code agrees with itself.
+      */
+      expect(
+        nearest,
+        `a ${kind}'s nearest bullet is ${nearest.toFixed(1)} units from where it fired — that is not a hole`,
+      ).toBeGreaterThan(SHIPS.proof.radius * 2);
+      // And the wall is actually a wall: shots on both sides of the body, not a lopsided fan.
+      expect(lanes.some((a) => a < firedAt), `a ${kind}'s wall is only on one side of it`).toBe(true);
+      expect(lanes.some((a) => a > firedAt), `a ${kind}'s wall is only on one side of it`).toBe(true);
+    }
+  });
+
+  it('and a turning pattern turns, and two bodies of one wave do not turn together', () => {
+    /*
+      ⚠️ **TWO FAILURES IN ONE SHAPE, and each is a thing that has actually happened in this project.**
+      A `spiral` whose phase never advances is a fixed fan wearing a spiral's name — every guard above
+      passes over it, because a fixed fan is a perfectly good pattern. And a phase derived from the
+      camera rather than from the body would put every spinner on the field at one angle, which is
+      `docs/decisions/0098-a-wave-plays-a-figure.md`'s *"they all fire at exactly the same time"*
+      arriving in the other axis.
+    */
+    const kinds = ENEMY_KINDS.filter((k) => ENEMIES[k].attack.kind === 'spiral');
+    expect(kinds.length, 'nothing in the table spirals, so this measured nothing').toBeGreaterThan(0);
+    for (const kind of kinds) {
+      const { world } = playableWorld({
+        waves: [{ at: 200, enemy: kind, formation: 'column', count: 3, lane: 50 }],
+        pickups: [],
+        bossAt: Number.POSITIVE_INFINITY,
+        boss: 'sentinel',
+        theme: 'approach',
+      });
+      const frame = new GameFrame(world);
+      world.ship.health = 1e9;
+      const volleys: number[][] = [];
+      let before = 0;
+      for (let i = 0; i < 2400; i++) {
+        world.fireIn = Number.MAX_SAFE_INTEGER;
+        frame.step();
+        if (world.enemyShots.size > before) {
+          const fresh: number[] = [];
+          for (let s = before; s < world.enemyShots.size; s++) {
+            const shot = world.enemyShots.at(s);
+            fresh.push(Math.atan2(shot.velAcross, shot.velAlong - world.scrollPerStep));
+          }
+          volleys.push(fresh);
+        }
+        before = world.enemyShots.size;
+      }
+      expect(volleys.length, `a ${kind} fired ${volleys.length} volleys, which is not enough to see a turn`).toBeGreaterThan(3);
+      const angles = volleys.map((v) => v[0]!.toFixed(3));
+      expect(
+        new Set(angles).size,
+        `a ${kind} sends every volley at the same angle, so the ring never turns`,
+      ).toBeGreaterThan(1);
+    }
   });
 });

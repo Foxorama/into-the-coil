@@ -215,6 +215,28 @@ export interface Entity extends Body {
    * the source says 146.
    */
   bobPhase: number;
+  /**
+   * Which way a body whose fire TURNS is pointing, in radians. Advanced once per volley.
+   *
+   * ⚠️ **Only a `spiral` attack carries one**, on exactly the terms `spin`, `holdFor`, `turnsLeft`
+   * and `bobPhase` state above: everything else in the game leaves it at zero and nothing reads it.
+   * No sentinel is needed and none is defined — *not turning* is a phase of zero, which is a fact
+   * about the body. `docs/decisions/0110-an-attack-is-a-pattern.md`.
+   *
+   * ⚠️ **IT COULD NOT HAVE BEEN DERIVED, AND THAT IS WHY IT IS A FIELD.** This project's usual answer
+   * is a function of position — `src/content/enemies.ts` argues it for the weave and
+   * `src/app/boss.ts` for the drift, because *a shape in the world can be authored against and a
+   * wobble in time cannot*. It does not reach here twice over: a spinner holds station, so a phase
+   * off its own `along` never advances; and a phase off the CAMERA would put every spinner on the
+   * field at one angle, which is
+   * `docs/decisions/0098-a-wave-plays-a-figure.md`'s *"they all fire at exactly the same time"*
+   * arriving in the other axis.
+   *
+   * ⚠️ **Set at spawn from the member's index and never rolled**, exactly like `spin` — a level is
+   * authored, and a wave that rolled its own angles would play differently every run and could not be
+   * tuned by a hand.
+   */
+  firePhase: number;
 }
 
 /** A blank entity. Called only while a pool is being constructed. */
@@ -243,6 +265,7 @@ export function makeEntity(): Entity {
     turnsLeft: 0,
     spin: 0,
     bobPhase: 0,
+    firePhase: 0,
   };
 }
 
@@ -276,6 +299,7 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.turnsLeft = 0;
   e.spin = 0;
   e.bobPhase = 0;
+  e.firePhase = 0;
 }
 
 /**
