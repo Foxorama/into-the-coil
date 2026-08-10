@@ -79,17 +79,26 @@ export const PROBES = [
     decision: '0091',
     suite: 'tests/music.test.ts',
     /*
-      ⚠️ THE AURA HEARD OUTSIDE A FIGHT. Opening it during the approach is a plausible reading of
-      *"leading into the boss fight"* — and it takes the boss's own sound and gives it to the level, so
-      the thing that is supposed to arrive with the fight is already there when it starts.
+      ── THIS PROBE'S SUBJECT BECAME THE INTENDED BEHAVIOUR, AND IT IS RE-POINTED RATHER THAN KEPT ──
+
+      ⚠️ It used to break *the aura opened before the fight* against a guard reading *nothing but a
+      boss ever opens it*. `docs/decisions/0107-a-level-is-a-place.md` reversed that on the player's
+      instruction — *"the aura music for the boss needs to start about 15-30secs into the start of a
+      level and then amp up until you beat the boss"* — so the old break is now the feature, and a
+      probe that reproduces the feature proves nothing at all.
+
+      ⚠️ **WHAT SURVIVES OF 0091'S COUNTERWEIGHT IS THE HALF THAT WAS ALWAYS THE POINT**: the fight
+      must still be the only place the aura reaches the top, or the boss arrives at a volume the level
+      has been at for a minute and *"as it gets closer to the player"* has nothing left to say. So the
+      break is the level-long build allowed all the way to 1 — which is the one edit that makes the
+      arrival free and leaves every ladder assertion green.
     */
-    broke: 'the aura opened before the fight, so the boss brings nothing with it',
-    guard: 'and nothing but a boss ever opens it',
+    broke: 'the level-long build allowed to reach the top, so the boss arrives at a volume it was already at',
+    guard: '0107 — and nothing but a BOSS ever takes it to the top, though the level may raise it',
     edit: {
       path: 'src/content/music.ts',
-      // ⚠️ 0092 moved the boss row, not this one — the anchor is unchanged and is checked, not assumed.
-      find: "  approach: { drone: 0.5, bass: 0, beat: 0, engine: 0.9, chords: 0.92, groove: 0.92, arp: 0.68, hook: 0.66, drive: 0.7, lead: 0, auraSlow: 0, auraFast: 0 },",
-      replace: "  approach: { drone: 0.5, bass: 0, beat: 0, engine: 0.9, chords: 0.92, drive: 0.7, lead: 0, auraSlow: 0.5, auraFast: 0 },",
+      find: 'export const AURA_LEVEL_CEILING = 0.55;',
+      replace: 'export const AURA_LEVEL_CEILING = 1;',
     },
   },
 ];

@@ -11,6 +11,7 @@
  */
 
 import { PALETTES, type PaletteName } from '../content/palette.ts';
+import { THEMES, type ThemeKind } from '../content/themes.ts';
 import { ACROSS_SPAN, MAX_ALONG_SPAN, type View, viewOf } from '../sim/camera.ts';
 import { type Entity, makeEntity, reset } from '../sim/entity.ts';
 import { Pool } from '../sim/pool.ts';
@@ -37,7 +38,7 @@ import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
 import { DEFAULT_SOUND, SOUND_KINDS } from '../content/sound.ts';
 import { DEFAULT_STYLE, STYLES, STYLE_KINDS } from '../content/styles.ts';
 import { nextOnGrid } from '../content/music.ts';
-import { auraNearnessFor, musicLevelFor } from './music.ts';
+import { auraBuild, auraFor, auraNearnessFor, musicLevelFor } from './music.ts';
 import { makeAudioOut, makeSpeaker, prewarmAudio } from './sound.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
@@ -1040,6 +1041,34 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    */
   const AURA_STEP = 0.05;
   let shownNearness = 0;
+  /** Which place the mixer was last told about — 0107. */
+  let shownTheme: ThemeKind = 'approach';
+
+  /** The backdrop the surface was last given, so a place is applied once rather than every step. */
+  let shownSpace = colours.space;
+
+  /**
+   * Put the run in its PLACE — the backdrop half of a level's theme.
+   *
+   * ⚠️ **`docs/decisions/0107-a-level-is-a-place.md`.** Reported: *"the same music and boss music
+   * repeats level after level after level."* A theme's colour is the cheapest half of the answer: one
+   * property write on the canvas, no re-bake, and nothing that can hitch at a boundary.
+   *
+   * ⚠️ **Separate from `applyMusicLevel` because the music can be OFF and the place cannot.** That
+   * function returns early when there is no `AudioContext` — a player who has never pressed anything,
+   * or who chose silence on the title screen — and a backdrop folded into it would leave those
+   * players in level one's void for the whole run.
+   *
+   * ⚠️ **Everything not in a level gets the palette's own `space`**, which is what the title, the
+   * level break and the run-over screen have always been drawn on. A place belongs to a level.
+   */
+  const applyPlace = (): void => {
+    const want =
+      state.screen.current === 'playing' ? THEMES[world.level.theme].space[palette] : PALETTES[palette].space;
+    if (want === shownSpace) return;
+    shownSpace = want;
+    surface.setSpace(want);
+  };
 
   const applyMusicLevel = (): void => {
     const music = audioOut.music();
@@ -1073,8 +1102,23 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       to nothing for eight tenths of a second.
     */
     const boss = world.bossPool.size > 0 ? world.bossPool.at(0) : null;
-    const nearness =
-      boss === null ? 0 : auraNearnessFor(boss.along, boss.radius, world.ship.along, world.ship.radius);
+    /*
+      ⚠️ **AND THE LEVEL RAISES IT TOO, WHICH IS THE HALF THAT MAKES A LEVEL A SHAPE** — 0107. Asked
+      for in play: *"the aura music for the boss needs to start about 15-30secs into the start of a
+      level and then amp up until you beat the boss."* The build climbs from twenty seconds in to the
+      boss's own place; the proximity above is what the fight then modulates, and `auraFor` takes the
+      LOUDER of the two rather than adding them — see its own note for why a sum cannot be right.
+
+      ⚠️ **Only while PLAYING**, so a level break and the title do not sit under a rising dread that
+      belongs to a level nobody is in. Everything not in a level is `calm`, which is 0090's rule and
+      the same branch `level` above takes.
+    */
+    const build =
+      state.screen.current === 'playing' ? auraBuild(world.cameraAlong - world.levelOrigin, world.level.bossAt) : 0;
+    const nearness = auraFor(
+      build,
+      boss === null ? 0 : auraNearnessFor(boss.along, boss.radius, world.ship.along, world.ship.radius),
+    );
     /*
       ⚠️ **Re-issued whenever the LEVEL changes or the aura has moved enough to hear**, rather than
       every step. `setTargetAtTime` is cheap and re-issuing it at the same target is free, but
@@ -1082,9 +1126,18 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       envelope would restart from wherever it had reached, which flattens the curve it is meant to be
       following.
     */
-    if (level !== music.level() || Math.abs(nearness - shownNearness) > AURA_STEP) {
+    /*
+      ⚠️ **THE PLACE IS PART OF THE CONDITION, AND LEAVING IT OUT WOULD BE A SILENT BUG** — 0107. A
+      level boundary that changed the theme without changing the rung or moving the aura would leave
+      the whole run playing the previous place's mix, and it is exactly the case a boundary produces:
+      `advanceLevel` keeps the camera (0076), so `musicLevelFor` can answer the same rung on both
+      sides of it.
+    */
+    const theme = state.screen.current === 'playing' ? world.level.theme : 'approach';
+    if (level !== music.level() || theme !== shownTheme || Math.abs(nearness - shownNearness) > AURA_STEP) {
       shownNearness = nearness;
-      music.setLevel(level, nearness);
+      shownTheme = theme;
+      music.setLevel(level, nearness, theme);
     }
   };
 
@@ -1181,6 +1234,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       the world's number over is what makes an accent land where the bar says.
     */
     speaker.step(world.steps);
+    applyPlace();
     applyMusicLevel();
     if (timeoutLeft <= 0) return;
     timeoutLeft--;

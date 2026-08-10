@@ -40,6 +40,7 @@ import type { EnemyKind } from './enemies.ts';
 import type { FormationKind } from './formations.ts';
 import type { BossKind } from './bosses.ts';
 import type { PickupKind } from './pickups.ts';
+import type { ThemeKind } from './themes.ts';
 
 /**
  * Every level, **in the order a run plays them**.
@@ -144,6 +145,20 @@ export interface LevelRow {
   /** Camera distance at which the boss arrives. Everything after it is the fight. */
   bossAt: number;
   boss: BossKind;
+  /**
+   * Where this level IS — its backdrop and how it mixes the music.
+   *
+   * ⚠️ **`docs/decisions/0107-a-level-is-a-place.md`, and it closes `docs/game.md`'s *"no level is
+   * themed yet"*.** Reported from play: *"the same music and boss music repeats level after level
+   * after level… I think we're close to the part where we need to introduce the biomes and level
+   * themes now to start differentiating levels."*
+   *
+   * ⚠️ **A KIND rather than the colours and gains themselves**, per
+   * `docs/decisions/0016-a-hub-enumerates-kinds.md`: what a place looks and sounds like is
+   * `src/content/themes.ts`'s answer, and a level script is a list of waves. Two levels sharing a
+   * theme is a thing a run may want and this shape allows it.
+   */
+  theme: ThemeKind;
 }
 
 /*
@@ -1065,6 +1080,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     */
     bossAt: 6350,
     boss: 'sentinel',
+    theme: 'approach',
   },
   /**
    * The second level.
@@ -1079,6 +1095,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     pickups: DESCENT_PICKUPS,
     bossAt: 6400,
     boss: 'harrow',
+    theme: 'nebula',
   },
   /**
    * Level three. Its idea is written above its script.
@@ -1092,6 +1109,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     pickups: COILWARD_PICKUPS,
     bossAt: 6350,
     boss: 'lattice',
+    theme: 'debris',
   },
   /**
    * Level four. Its idea is written above its script.
@@ -1105,6 +1123,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     pickups: SHOAL_PICKUPS,
     bossAt: 6320,
     boss: 'shoalMother',
+    theme: 'rime',
   },
   /**
    * Level five. Its idea is written above its script.
@@ -1118,6 +1137,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     pickups: BATTERIES_PICKUPS,
     bossAt: 6320,
     boss: 'redoubt',
+    theme: 'forge',
   },
   /**
    * Level six. Its idea is written above its script.
@@ -1131,6 +1151,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     pickups: GAUNTLET_PICKUPS,
     bossAt: 6420,
     boss: 'chorus',
+    theme: 'bloom',
   },
   /**
    * Level seven. Its idea is written above its script.
@@ -1144,5 +1165,6 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     pickups: EYE_PICKUPS,
     bossAt: 6540,
     boss: 'axis',
+    theme: 'core',
   },
 };

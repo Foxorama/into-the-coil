@@ -315,6 +315,7 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
       pickups: [],
       bossAt: Number.POSITIVE_INFINITY,
       boss: 'sentinel',
+      theme: 'approach',
     });
     world.weapon = weaponFor(SHIPS.proof, everything);
     /*
@@ -589,6 +590,7 @@ describe('collecting one, in the real frame', () => {
       pickups: [{ at: 200, kind, lane: ACROSS_SPAN / 2 }],
       bossAt: Number.POSITIVE_INFINITY,
       boss: 'sentinel',
+      theme: 'approach',
     });
   }
 
@@ -750,6 +752,7 @@ describe('collecting one, in the real frame', () => {
         pickups: [],
         bossAt: Number.POSITIVE_INFINITY,
         boss: 'sentinel',
+      theme: 'approach',
       });
       built.world.scatterRng = new Rng(seed);
       scatterUpgrades(built.world, upgrades);
@@ -1244,6 +1247,7 @@ describe('collecting one, in the real frame', () => {
         pickups: [200, 400, 600, 800, 1000, 1200].map((at) => ({ at, kind: 'weapon' as const, lane: ACROSS_SPAN / 2 })),
         bossAt: Number.POSITIVE_INFINITY,
         boss: 'sentinel',
+      theme: 'approach',
       });
       const frame = new GameFrame(world);
       const seen = new Map<number, { offset: number; delta: number }>();

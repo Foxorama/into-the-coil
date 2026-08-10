@@ -38,11 +38,14 @@ import {
   AURA_NEAR_UNITS,
   AURA_FAR_UNITS,
   AURA_CURVE,
+  AURA_ONSET_UNITS,
+  AURA_LEVEL_CEILING,
   type MusicLayer,
   type MusicLevel,
   type MusicVoice,
 } from '../content/music.ts';
 import { sampleLayerInto, saturate } from './sound.ts';
+import { mixOf, type ThemeKind } from '../content/themes.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import { STEPS_PER_SECOND } from '../state/screens.ts';
 
@@ -252,6 +255,54 @@ export function auraNearnessFor(bossAlong: number, bossRadius: number, shipAlong
 }
 
 /**
+ * How much of the aura the LEVEL has raised on its own, from how far through it the camera is.
+ *
+ * ── THE HALF THAT MAKES A LEVEL A SHAPE RATHER THAN A LOOP ──────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0107-a-level-is-a-place.md`.** Reported: *"it's the one track repeating for
+ * minutes and minutes… it does get slightly interesting when the boss starts to appear, but then goes
+ * back to the same track."* The music had one thing in it that rose and fell, and it only existed
+ * during the twenty seconds a boss was on screen.
+ *
+ * ⚠️ **Linear, and deliberately not `auraNearness`'s curve.** That one is bent so the last few units
+ * carry the movement, because it is about a distance the player is steering. This is about a distance
+ * the player cannot change — the level goes past at the camera's rate whatever they do — so a bend
+ * would put the whole build into a stretch nobody could feel coming.
+ *
+ * ⚠️ **Zero before `AURA_ONSET_UNITS`, which is the twenty seconds of level a player gets to
+ * themselves.** `docs/decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md` opens every
+ * level on an empty field so the controls can be found before anything finds the player; a level that
+ * opened with the boss already audible would be answering a different ask.
+ *
+ * ⚠️ **`Number.POSITIVE_INFINITY` is a level with no boss** — what a fixture uses — and it yields
+ * zero for ever, which is correct rather than accidental.
+ */
+export function auraBuild(cameraAlong: number, bossAt: number): number {
+  const from = AURA_ONSET_UNITS;
+  if (!Number.isFinite(bossAt) || cameraAlong <= from || bossAt <= from) return 0;
+  const through = (cameraAlong - from) / (bossAt - from);
+  const clamped = through < 0 ? 0 : through > 1 ? 1 : through;
+  return clamped * AURA_LEVEL_CEILING;
+}
+
+/**
+ * How loud the aura is: the level's own build, or how near the boss is, whichever is further on.
+ *
+ * ⚠️ **A MAXIMUM AND NEVER A SUM** — 0107. Two mechanisms with a claim on one gain have to be
+ * combined by something that cannot exceed either's ceiling, and a sum puts the aura past the
+ * headroom `tests/music.test.ts` measures the moment a player closes on a boss at the end of a long
+ * level. The build says *how far through this is*; the proximity says *how close that is*; the louder
+ * of the two is what the player is being told.
+ *
+ * ⚠️ **THE single description, asked by the shell and by the rig.** `src/app/mount.ts` and
+ * `scripts/hear.mjs` both need *what is the aura doing right now*, and two copies of a maximum is how
+ * the rig ends up writing a file the game does not play.
+ */
+export function auraFor(build: number, nearness: number): number {
+  return build > nearness ? build : nearness;
+}
+
+/**
  * How far the loops may fall out of phase with the sim before they are moved, in seconds.
  *
  * ── WHY THERE IS A THRESHOLD AT ALL RATHER THAN A CONTINUOUS SERVO ──────────────────────────────
@@ -348,7 +399,7 @@ export interface MusicOut {
    *
    * `nearness` scales the aura layers and is ignored by every other one — 0091.
    */
-  setLevel(level: MusicLevel, nearness: number): void;
+  setLevel(level: MusicLevel, nearness: number, theme: ThemeKind): void;
   /**
    * Push the bed down for a moment, so a cue landing on top of it has somewhere to land.
    *
@@ -452,6 +503,8 @@ export function makeMusicOut(
   let on = true;
   let current: MusicLevel = 'calm';
   let near = 0;
+  /** Which place the run is in — 0107. Its mix rides over every rung. */
+  let place: ThemeKind = 'approach';
   /** Audio time at which loop position zero last began. */
   let anchorAudio = 0;
   /** Sim seconds at that same instant, or `null` until the first frame after a start. */
@@ -585,9 +638,10 @@ export function makeMusicOut(
       swapTo(ctx.currentTime + delay);
       anchorSim = simSeconds + delay;
     },
-    setLevel(level: MusicLevel, nearness: number): void {
+    setLevel(level: MusicLevel, nearness: number, theme: ThemeKind): void {
       current = level;
       near = nearness;
+      place = theme;
       if (!on) return;
       for (const layer of MUSIC_LAYERS) {
         /*
@@ -599,7 +653,14 @@ export function makeMusicOut(
           constant it would still be arriving after they had backed off again.
         */
         const aura = AURA_LAYERS.includes(layer);
-        const target = MUSIC_LADDER[level][layer] * (aura ? nearness : 1);
+        /*
+          ⚠️ **AND THE THEME MIXES IT — 0107.** A place is a multiplier over the rung the ladder
+          already decided, never a ladder of its own: 0090's *the ladder only ever opens layers* and
+          0102's *every rung adds something* are properties of `MUSIC_LADDER`, and a theme that could
+          set gains outright would be able to break both from a table about colour. Scaling keeps the
+          build's shape and changes what the build is made of.
+        */
+        const target = MUSIC_LADDER[level][layer] * mixOf(theme, layer) * (aura ? nearness : 1);
         gains[layer].gain.cancelScheduledValues(ctx.currentTime);
         gains[layer].gain.setTargetAtTime(target, ctx.currentTime, (aura ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3);
       }
@@ -629,7 +690,7 @@ export function makeMusicOut(
       // to hold, never the phase against the level.
       if (next) {
         this.start();
-        this.setLevel(current, near);
+        this.setLevel(current, near, place);
       }
     },
     level(): MusicLevel {

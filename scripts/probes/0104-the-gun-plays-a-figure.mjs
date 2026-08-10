@@ -175,8 +175,8 @@ export const PROBES = [
     guard: 'THE LEVEL: there is something in the low end that MOVES, at every rung above the opening',
     edit: {
       path: 'src/content/music.ts',
-      find: '  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0.8, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },',
-      replace: '  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },',
+      find: '  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0.8, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0.5, auraFast: 0.28 },',
+      replace: '  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0.5, auraFast: 0.28 },',
     },
   },
   {
@@ -189,8 +189,8 @@ export const PROBES = [
     guard: 'opens a layer at every step and never opens one twice',
     edit: {
       path: 'src/content/music.ts',
-      find: '  surge: { drone: 0.48, bass: 0, beat: 0, engine: 0.9, chords: 0.9, groove: 0.92, arp: 0.62, hook: 0.6, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },',
-      replace: '  surge: { drone: 0.48, bass: 0, beat: 0, engine: 0.9, chords: 0.9, groove: 0.92, arp: 0.62, hook: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },',
+      find: '  surge: { drone: 0.48, bass: 0, beat: 0, engine: 0.9, chords: 0.9, groove: 0.92, arp: 0.62, hook: 0.6, drive: 0, lead: 0, auraSlow: 0.75, auraFast: 0.55 },',
+      replace: '  surge: { drone: 0.48, bass: 0, beat: 0, engine: 0.9, chords: 0.9, groove: 0.92, arp: 0.62, hook: 0, drive: 0, lead: 0, auraSlow: 0.75, auraFast: 0.55 },',
     },
   },
 ];

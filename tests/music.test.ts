@@ -19,9 +19,11 @@ import {
   AURA_LAYERS,
   AURA_NEAR_UNITS,
   AURA_FAR_UNITS,
+  AURA_LEVEL_CEILING,
+  AURA_ONSET_UNITS,
   type MusicLayer,
 } from '../src/content/music.ts';
-import { auraNearness, auraNearnessFor, bakeLayer, bakeLoops, musicLevelFor, rephaseIn } from '../src/app/music.ts';
+import { auraBuild, auraFor, auraNearness, auraNearnessFor, bakeLayer, bakeLoops, musicLevelFor, rephaseIn } from '../src/app/music.ts';
 import { STEPS_PER_BEAT } from '../src/content/music.ts';
 import { MAX_STEPS } from '../src/app/loop.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
@@ -919,16 +921,133 @@ describe('the boss brings an aura with it', () => {
     }
   });
 
-  it('and nothing but a boss ever opens it', () => {
+  it('0107 — and nothing but a BOSS ever takes it to the top, though the level may raise it', () => {
     /*
-      ⚠️ **The counterweight, and *"leading into the boss fight"* is what makes it necessary.** Opening
-      the aura during the approach is a plausible misreading — and it takes the sound that is supposed
-      to ARRIVE with the boss and gives it to the level before the boss is there.
+      ⚠️ **THIS RULE CHANGED ON THE PLAYER'S INSTRUCTION AND THE GUARD IS REWRITTEN RATHER THAN
+      DELETED** — `docs/decisions/0107-a-level-is-a-place.md`. It used to read *nothing but a boss ever
+      opens it*, and that was 0091's counterweight: opening the aura during the approach takes the
+      sound that is supposed to ARRIVE with the boss and gives it to the level.
+
+      ⚠️ **The ask is now the opposite, in as many words:** *"the aura music for the boss needs to
+      start about 15-30secs into the start of a level and then amp up until you beat the boss."* A rule
+      the player has reversed is not a rule a guard should keep enforcing.
+
+      ⚠️ **WHAT SURVIVES IS THE HALF THAT WAS ALWAYS THE POINT: the fight is the only place it reaches
+      the top.** `src/app/music.ts` multiplies these ceilings by `auraFor(build, nearness)`, and the
+      build is capped at `AURA_LEVEL_CEILING` — so before a boss exists the aura can reach 55% of a
+      rung that is itself below the boss row, and only proximity to an actual boss takes it further.
+      That is *"leading into the boss fight"* kept and *"arrives with the boss"* given up on purpose.
+
+      ⚠️ **And `calm` is still absolutely zero**, because the title, the level break and the run-over
+      screen are not in a level and have nothing to build towards.
     */
-    for (const level of MUSIC_LEVELS) {
-      if (level === 'boss') continue;
-      for (const layer of AURA_LAYERS) {
-        expect(MUSIC_LADDER[level][layer], `${layer} is open at ${level}, which has no boss in it`).toBe(0);
+    for (const layer of AURA_LAYERS) {
+      expect(MUSIC_LADDER.calm[layer], `${layer} is open on the title screen, which is not in a level`).toBe(0);
+      // The ceiling climbs towards the fight rather than arriving at it.
+      let previous = 0;
+      for (const level of MUSIC_LEVELS) {
+        if (level === 'calm') continue;
+        const here = MUSIC_LADDER[level][layer];
+        expect(here, `${layer} at ${level} is quieter than the rung below it, so the build goes backwards`).toBeGreaterThan(
+          previous,
+        );
+        previous = here;
+      }
+      expect(MUSIC_LADDER.boss[layer], `${layer} does not reach its ceiling at the boss`).toBeGreaterThan(
+        MUSIC_LADDER.approach[layer],
+      );
+    }
+    /*
+      ⚠️ **AND THE LOUDEST A LEVEL CAN GET ON ITS OWN IS BELOW THE QUIETEST A FIGHT IS**, which is the
+      claim that stops the build stealing the arrival. Driven through the same arithmetic the shell
+      uses rather than restated.
+    */
+    for (const layer of AURA_LAYERS) {
+      /*
+        ⚠️ **THE CLAIM IS THAT THE FIGHT IS AN AUDIBLE STEP UP, and a first draft asserted something
+        weaker that `npm run prove` walked straight through.** It read *the level's peak is below the
+        boss row* — which is true at a build ceiling of 1 (0.88 against 1.00) and completely fails to
+        say what it means, so a probe opening the build all the way reported **STILL GREEN**.
+
+        ⚠️ **What it must be is a RATIO**, because *"amp up until you beat the boss"* is a claim about
+        how much further there is to go. At the shipped ceiling the fight can nearly double what the
+        level reached; at a ceiling of 1 it has 14% left, which is the boss arriving at a volume the
+        player has been sitting in for a minute.
+      */
+      const levelPeak = MUSIC_LADDER.approach[layer] * AURA_LEVEL_CEILING;
+      const fightPeak = MUSIC_LADDER.boss[layer];
+      expect(
+        fightPeak / levelPeak,
+        `${layer} reaches ${levelPeak.toFixed(2)} on the level's own build and a fight tops out at ` +
+          `${fightPeak.toFixed(2)} — the boss arrives at a volume the level was already at`,
+      ).toBeGreaterThan(1.8);
+    }
+  });
+
+  it('0107 — and the build is a level-long climb that starts after the opening', () => {
+    /*
+      ⚠️ **Reported: *"start about 15-30secs into the start of a level."*** At 36 units a second,
+      `AURA_ONSET_UNITS` of 720 is twenty seconds — the middle of the range asked for, and a DISTANCE
+      rather than a timer, so a level authored longer spends longer building rather than arriving at
+      full dread a third of the way in.
+
+      ⚠️ **Silent before the onset, which is 0043's empty opening kept.** A level opens on an empty
+      field so the controls can be found; one that opened with the boss already audible would be
+      answering a different ask.
+    */
+    const bossAt = 6350;
+    /*
+      ⚠️ **IN SECONDS AND NOT IN `AURA_ONSET_UNITS`, AND A PROBE IS WHY.** The first draft asserted
+      that the build was silent at `AURA_ONSET_UNITS - 1` — which moves with the constant, so setting
+      the onset to zero left the suite completely green. That is
+      `docs/decisions/0027-measure-the-picture-not-the-model.md`'s *a guard measuring a quantity
+      defined in terms of the constant it guards proves only that the code agrees with itself*, caught
+      by [0019](../docs/decisions/0019-a-probe-must-be-seen-to-apply.md).
+
+      ⚠️ **The window the report names is 15 to 30 seconds**, so that is what is held: silent through
+      the fifteenth second, started by the thirtieth. At 36 units a second those are 540 and 1080, and
+      neither is derived from the constant under test.
+    */
+    const at = (seconds: number): number => seconds * SCROLL_PER_STEP * STEPS_PER_SECOND;
+    expect(auraBuild(0, bossAt), 'a level opens with the boss already audible').toBe(0);
+    expect(auraBuild(at(15), bossAt), 'the build had already started fifteen seconds in').toBe(0);
+    expect(auraBuild(at(30), bossAt), 'the build had still not started thirty seconds in').toBeGreaterThan(0);
+    expect(auraBuild(bossAt, bossAt), 'the build does not reach its ceiling by the boss').toBeCloseTo(
+      AURA_LEVEL_CEILING,
+      5,
+    );
+    // It climbs the whole way rather than arriving early and sitting there.
+    const third = auraBuild(AURA_ONSET_UNITS + (bossAt - AURA_ONSET_UNITS) / 3, bossAt);
+    const twoThirds = auraBuild(AURA_ONSET_UNITS + (2 * (bossAt - AURA_ONSET_UNITS)) / 3, bossAt);
+    expect(twoThirds, 'the build flattens out before the boss').toBeGreaterThan(third);
+    /*
+      ⚠️ **A level with no boss builds nothing** — `Number.POSITIVE_INFINITY` is what a fixture uses,
+      and a fixture that quietly grew a rising aura would be measuring this decision in every other
+      suite in the repository.
+    */
+    expect(auraBuild(9999, Number.POSITIVE_INFINITY), 'a level with no boss built dread anyway').toBe(0);
+  });
+
+  it('0107 — and the two claims on the aura are combined by a MAXIMUM, never a sum', () => {
+    /*
+      ⚠️ **A sum puts the aura past the headroom this file measures**, the moment a player closes on a
+      boss at the end of a long level — which is every boss fight in the game. The build says *how far
+      through this is* and the proximity says *how close that is*; the louder of the two is what the
+      player is being told, and it can never exceed either ceiling.
+    */
+    expect(auraFor(0.55, 0.2), 'the build was thrown away when the boss was far').toBe(0.55);
+    expect(auraFor(0.55, 0.9), 'the proximity was thrown away when the boss was close').toBe(0.9);
+    expect(auraFor(0.55, 0.55), 'the two agreed and the answer moved anyway').toBe(0.55);
+    // The property, over the whole range rather than at three points.
+    for (let build = 0; build <= 1; build += 0.05) {
+      for (let near = 0; near <= 1; near += 0.05) {
+        const both = auraFor(build, near);
+        expect(both, `the aura exceeded one of its inputs at ${build}, ${near}`).toBeLessThanOrEqual(
+          Math.max(build, near) + 1e-9,
+        );
+        expect(both, `the aura fell below both of its inputs at ${build}, ${near}`).toBeGreaterThanOrEqual(
+          Math.max(build, near) - 1e-9,
+        );
       }
     }
   });

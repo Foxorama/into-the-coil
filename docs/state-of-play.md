@@ -106,6 +106,8 @@ it is pushed — guards stop reaching their subject without ever going red, and 
 | **a sky layer's depth says which SIDE of the game it is on, and only the streak layer may be in front** | [0103](decisions/0103-the-fast-layer-is-in-front.md) |
 | **an auto-weapon's cue fits inside its own cadence; a cue plays a figure by where in the BEAT it lands; the bus is mastered** | [0104](decisions/0104-the-gun-plays-a-figure.md) |
 | **an enemy's `closing` is a statement about how long it is on screen, and the window is guarded in SECONDS** | [0105](decisions/0105-a-body-is-on-screen-long-enough-to-answer.md) |
+| **a sky mark is at least 2.5 CSS PIXELS across, which is the one bound stated in the player's own units** | [0106](decisions/0106-a-mark-thinner-than-a-pixel-is-not-drawn.md) |
+| **a level is a PLACE: a theme carries a backdrop and a mix, and the aura builds across the whole level** | [0107](decisions/0107-a-level-is-a-place.md) |
 | ~~the near sky is pushed back on every cheap axis~~ — **amended: it went out** | [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) → [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the sky is three layers, the fastest is streaks, and a tube is a side of the hull** | [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
@@ -976,10 +978,12 @@ carries the back-intent switch [0017](decisions/0017-the-state-is-slices.md) def
 deliberately not one of `docs/game.md`'s four golfers; authoring characters is expensive to redo and
 it is downstream of everything above.
 
-**Theming the levels to biomes.** `docs/game.md` themes levels on the fourteen *Far Carry* biomes and
-names none of them, so picking one means going to the predecessor for material — which `CLAUDE.md`
-allows only for a named file and a named reason. It is a one-line table edit whenever that reason
-exists.
+**NAMING the biomes.** ✅ Theming itself has landed —
+[0107](decisions/0107-a-level-is-a-place.md) gives every level its own place, backdrop and mix. What
+is still open is the FICTION: the seven places are this project's own inventions, and `docs/game.md`
+themes the levels on the predecessor's fourteen. Picking those means going to the predecessor for
+material, which `CLAUDE.md` allows only for a named file and a named reason — and 0107 records that
+the reason now plausibly exists. **It wants asking rather than assuming.**
 
 **Anything about flight.** It is settled. The keyboard's eight directions are inherent to binary keys
 and are **not** a defect to be tuned away — [0037](decisions/0037-the-ship-has-mass.md) records why a

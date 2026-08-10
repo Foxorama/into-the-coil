@@ -60,8 +60,16 @@ is opened — with biome NAMES and fiction droppable on later without rework.
 
 ## What this report does not settle
 
-⚠️ **Only item 1 has landed** at the time of writing. Items 2, 3 and 4 are one piece of work and are
-not started.
+⚠️ **All four have landed** — item 1 as
+[0106](../docs/decisions/0106-a-mark-thinner-than-a-pixel-is-not-drawn.md) and items 2, 3 and 4
+together as [0107](../docs/decisions/0107-a-level-is-a-place.md), which is what closes `docs/game.md`'s
+*"no level is themed yet"*.
+
+⚠️ **AND 0107 IS SHAPED BY A MEASUREMENT RATHER THAN BY THE ASK.** Seven levels each with their own
+transposed music is **6 seconds of synthesis and 72 MB of buffers**, which is not a thing to hold on
+the phone 0022 sizes for — so a theme MIXES one set of material rather than replacing it. If *"the
+same music repeats"* survives that, the next lever is a second and third chord progression and its
+cost is already measured.
 
 ⚠️ **Nothing here is a defect.** For the first time in eight rounds the list is entirely about what the
 game is missing rather than about what it does wrong.
