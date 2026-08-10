@@ -26,6 +26,22 @@
  * turns a pattern into samples is `src/app/music.ts` and is not.
  */
 
+/*
+  ── THE STYLE BRIEF IS ADVISORY NOW, AND IT WAS LOAD-BEARING IN THIS FILE ────────────────────────
+
+  ⚠️ **`docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md`.** Said in play, unprompted: *"if
+  the power ballad and rez ask is too limiting, let's change that… don't be limited by personal 'style'
+  requests and try to fit the music into that, go off playtest reports and actual music that sounds
+  good. What I ask for may not be 'what's right' so if I put too many strictures on things, we can go
+  around them or ignore them if needed."*
+
+  ⚠️ **Every *"a mix of a power ballad style music and the game Rez"* below is now a record of WHY a
+  layer came out the way it did, not a constraint on what it may become.** The sections that quote it
+  are left exactly as written — `docs/decisions/README.md`'s *written once* applies to the reasoning
+  wherever it lives — and a later hand is free to overrule any of them with a play report and an ear.
+  `hook` is the first one that was.
+*/
+
 import type { CueLayer } from './cues.ts';
 
 /**
@@ -38,13 +54,17 @@ export const MUSIC_LAYERS = [
   'drone',
   'bass',
   'beat',
+  'sub',
   'engine',
+  'perc',
   'chords',
   'groove',
   'arp',
   'hook',
   'drive',
+  'toll',
   'lead',
+  'stomp',
   'auraSlow',
   'auraFast',
 ] as const;
@@ -104,17 +124,38 @@ export const TITLE_ONLY: readonly MusicLayer[] = ['bass', 'beat'];
  * chosen a difficulty. `chords` is eight bars: **A minor – F – C – G, then A minor – F – G – E**, so
  * the second half turns rather than repeats and the piece takes 12.8 seconds to come round.
  */
+/*
+  ── AND `engine` IS FOUR BARS NOW, WHICH IS THE METRONOME REPORTED A THIRD TIME ──────────────────
+
+  ⚠️ **`docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md`.** Reported from play:
+  *"the metronome beats are still louder and because they're two beats back and forth, every mix
+  sounds the same."*
+
+  ⚠️ **0102 ANSWERED THIS IN `beat`, WHICH IS `TITLE_ONLY`.** Its finding — every drum in the game
+  struck at one weight — was true of `engine` too, and `engine` is the layer playing under every
+  second of every level. Two bars of four-on-the-floor with a clap on two and four, every entry a
+  literal `1`, is *two beats back and forth* exactly.
+
+  ⚠️ **Velocities are half the answer and the LENGTH is the other half.** A weighted bar repeated
+  every 3.2 seconds is still the same bar; four bars is the shortest span that can hold a phrase — a
+  hole in the fourth bar's kick, a fill under it — which is what makes a listener hear a loop as music
+  rather than as a wheel. It costs 1.1 MB of buffer and nothing per frame.
+*/
 export const LAYER_BARS: Record<MusicLayer, number> = {
   drone: 2,
   bass: 2,
   beat: 2,
-  engine: 2,
+  sub: 8,
+  engine: 4,
+  perc: 4,
   chords: 8,
   groove: 4,
   arp: 8,
   hook: 4,
   drive: 2,
+  toll: 4,
   lead: 4,
+  stomp: 2,
   auraSlow: 2,
   auraFast: 2,
 };
@@ -299,8 +340,34 @@ export const AURA_CURVE = 1.5;
  * gain-staged four times and never mastered.
  *
  * ⚠️ **`MUSIC_DRIVE` below is the lever this one could not be.**
+ *
+ * ── 0.52 → 0.5, AND IT IS THE FIRST TIME THIS NUMBER HAS MOVED FOR A REASON THAT IS NOT LOUDNESS ─
+ *
+ * ⚠️ **`docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md`.** Five layers went onto the bus
+ * — a sustained sub, percussion, a bell, a boss kit — and `tests/music.test.ts` measured the boss mix
+ * at **1.020** of full scale and the approach at 1.005. Every previous move of this constant was an
+ * answer to *too quiet*; this one is the clipping guard doing the job 0095 named it for, and the
+ * direction is down.
+ *
+ * ⚠️ **THE BUS RATHER THAN THE SUB, WHICH IS THE CHOICE AND NOT AN ACCIDENT.** The overage happens
+ * where the bar line stacks the engine's kick, the sub's drop and the layers whose tails wrap onto
+ * it — so the cheapest place to find it is the one layer the report is about. Taking it there would
+ * answer *"I want to feel the bass beats in my chest"* by making the bass quieter.
+ *
+ * ⚠️ **AND THE HEADROOM WAS BOUGHT TWICE OVER BEFORE THIS NUMBER MOVED AT ALL, WHICH IS THE PART
+ * WORTH COPYING.** Measured at the boss mix's peak INSTANT rather than in aggregate, two
+ * contributions were doing most of it: `toll`'s low sine at −0.47 and `sub`'s at −0.82, both of them
+ * tails wrapping onto the bar line where the drop already lives. The bell's octave-under became a
+ * choir two octaves up and the floor's tail was shortened — **the sum fell from 2.22 to 1.88 with
+ * nothing an ear can name removed**, and what this constant then had to pay for was 0.06 rather than
+ * 0.5. A peak is an instant; the fix belongs at the instant.
+ *
+ * ⚠️ **`MUSIC_DRIVE` is what makes the smaller gain louder rather than quieter**, and the two are one
+ * change: `saturate(x, a) ≤ 1` exactly when `x ≤ 1`, so the shaper's amount has **no effect at all**
+ * on whether the bus clips — the ceiling is `MUSIC_GAIN × the summed peak` and nothing else. Drive is
+ * therefore free loudness up to the crest it spends, which is why it moved and this came down.
  */
-export const MUSIC_GAIN = 0.52;
+export const MUSIC_GAIN = 0.46;
 
 /**
  * How hard the summed music bus is driven into `saturate`, before it reaches the destination.
@@ -332,8 +399,31 @@ export const MUSIC_GAIN = 0.52;
  * nearnesses: the aura gains **5.1–5.3 dB** where the bus gains 5.5, so its share is 66% before and
  * 67% after, and the spread across nearness is **8.1× against 8.3× dry**. 0092's curve survives
  * intact, and `tests/music.test.ts` holds it rather than this table.
+ *
+ * ── 0.15 → 0.22, RE-SWEPT ON A BUS THAT IS NOT THE ONE 0104 SWEPT ───────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md`.** Five layers went on and the
+ * summed peak went from 1.674 to 1.877, so 0104's table describes a mix that no longer exists. Driven
+ * again over the new one, at `MUSIC_GAIN` 0.46:
+ *
+ * | drive | `run` peak | `run` RMS | `boss` RMS | boss over run |
+ * |---|---|---|---|---|
+ * | 0.15 | 0.851 | 0.285 | 0.365 | +2.1 dB |
+ * | **0.22** | **0.900** | **0.328** | **0.414** | **+2.0 dB** |
+ * | 0.30 | 0.939 | 0.376 | 0.458 | +1.7 dB |
+ *
+ * ⚠️ **THE COLUMN THAT DECIDED IT IS THE LAST ONE, NOT THE LOUDEST.** *"The boss music isn't
+ * increasing proportionally"* is the report this whole decision is about, and a shaper on a summed
+ * bus takes the arrival away first: 0.30 buys 1.2 dB of loudness and spends a fifth of the climb. At
+ * 0.22 the level is **2.4 dB louder than the mix the ninth play-test called a great baseline** and
+ * the fight is still a step up from it.
+ *
+ * ⚠️ **It costs nothing in headroom, which is the fact 0104 did not state.** `saturate(x, a) ≤ 1`
+ * exactly when `x ≤ 1` for every positive `a` — the amount cannot make the bus clip, so the whole of
+ * the clipping question lives in `MUSIC_GAIN` above and this is a free lever up to the crest it
+ * spends. `tests/music.test.ts` holds the crest rather than this table.
  */
-export const MUSIC_DRIVE = 0.15;
+export const MUSIC_DRIVE = 0.22;
 
 /**
  * How far into a level the music starts listening for the boss, in world units.
@@ -571,6 +661,29 @@ export interface MusicVoice {
   steps: readonly (number | null)[];
   /** Whether `steps` are semitones (pitched) or plays and rests (drums). */
   pitched: boolean;
+  /**
+   * How hard a PITCHED note is struck, by its position in the pattern. Absent means every note is
+   * full. Wraps, so four entries is one beat at `perBeat: 4`.
+   *
+   * ── 0102 GAVE THE DRUMS VELOCITIES AND LEFT EVERY PITCHED VOICE AT ONE WEIGHT ──────────────────
+   *
+   * ⚠️ **`docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md`.** 0102's finding was that
+   * *"identical repetition at a fixed interval is not LIKE a metronome, it is the definition of one"*,
+   * and its fix was to read an unpitched `steps` entry as a velocity. **A pitched entry is a
+   * semitone, so that field was already spoken for** — and the arp's hundred and twenty-eight square
+   * notes, the groove's bass line and the chords' rolling sub have been struck at exactly one weight
+   * since they were written.
+   *
+   * ⚠️ **Reported for the third round running as *"every mix sounds the same"***, and half of the
+   * piece is pitched. A theme's multiplier cannot fix it: scaling a uniform part is a quieter uniform
+   * part.
+   *
+   * ⚠️ **BY POSITION IN THE PATTERN AND NOT BY A COUNTER OVER STRUCK NOTES.** The same choice
+   * `src/content/cues.ts`'s `figure` makes and for the same reason: a counter that advances per note
+   * drifts against the bar the moment a rest moves, so an accent would belong to the note rather than
+   * to the beat it lands on. This indexes the grid.
+   */
+  accents?: readonly number[];
   /** How many steps there are to a beat. 1 is quarters, 2 eighths, 4 sixteenths. */
   perBeat: number;
   /** Octaves above `MUSIC_ROOT`. Only read by a pitched voice. */
@@ -719,13 +832,51 @@ export type MusicLevel = (typeof MUSIC_LEVELS)[number];
   not in a level — there is nothing to be building towards — and 0095 is the decision that says the
   two pieces do not share a ladder.
 */
+/*
+  ── AND THE FLOOR MOVED UP A LEVEL, WHICH IS THE ASK STATED AS A LADDER ─────────────────────────
+
+  ⚠️ **`docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md`.** Reported from play: *"the pace
+  of the music sounded good around level 4, that should be our starting point for the music."*
+
+  ⚠️ **THE ONLY THING THAT DIFFERS BETWEEN LEVEL ONE AND LEVEL FOUR IS `rime`'s MIX** — 0107 — and
+  `tests/themes.test.ts` requires `approach`, level one's theme, to be **exactly neutral**, so that
+  the other six are read against something. So *start at level four* cannot be written in the theme
+  table at all: it is a statement about what a multiplier of 1 should sound like, and that is this
+  table. `rime`'s character — drone down, engine up, arp and hook up — is folded in here, and the
+  themes are re-centred around the new middle.
+
+  ⚠️ **WHAT ARRIVES AT EACH RUNG IS THE PART THAT MAY NOT BE SPENT.** The obvious way to raise the
+  floor is to open `arp` at `run`, and it takes a rung's arrival away — 0102 bought four climbs and
+  this must not sell one back. What opens the level instead is **`sub` and `perc`**, which are new
+  material, and `arp` still arrives at `push`.
+
+  | rung | opens | what the player hears |
+  |---|---|---|
+  | `run` | **sub, perc**, engine, chords, groove | the floor is felt and there is a hand on it |
+  | `push` | arp | sixteenths — the pulse doubles |
+  | `surge` | hook | the riff |
+  | `approach` | **toll** | a bell, twice a phrase: something is coming |
+  | `boss` | lead, **stomp**, aura | the tune, and the drums go double time |
+
+  ── AND THE BOSS IS TWO NEW LAYERS BECAUSE ONE WAS NOT AN ARRIVAL ───────────────────────────────
+
+  ⚠️ **Reported from play**: *"the level music is getting passable, but the boss music isn't
+  increasing proportionally."* `boss` opened `lead` and raised eight gains by about five percent —
+  the smallest step in a ladder whose entire purpose is to arrive at it, and 0107's four new level
+  rungs are what made that visible. **A boss that adds one layer to a level that has just added four
+  is quieter, relatively, than it was before the level got better.**
+
+  ⚠️ **`toll` is placed at `approach` and not at `boss` on purpose.** The thing that makes an arrival
+  an arrival is that something changed BEFORE it; a bell over the last twelve seconds of the level is
+  what makes the boss's own rung a release rather than a step.
+*/
 export const MUSIC_LADDER: Record<MusicLevel, Record<MusicLayer, number>> = {
-  calm: { drone: 0.55, bass: 0.7, beat: 0.5, engine: 0, chords: 0, groove: 0, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
-  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0.8, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0.5, auraFast: 0.28 },
-  push: { drone: 0.5, bass: 0, beat: 0, engine: 0.88, chords: 0.9, groove: 0.88, arp: 0.5, hook: 0, drive: 0, lead: 0, auraSlow: 0.62, auraFast: 0.4 },
-  surge: { drone: 0.48, bass: 0, beat: 0, engine: 0.9, chords: 0.9, groove: 0.92, arp: 0.62, hook: 0.6, drive: 0, lead: 0, auraSlow: 0.75, auraFast: 0.55 },
-  approach: { drone: 0.5, bass: 0, beat: 0, engine: 0.9, chords: 0.92, groove: 0.92, arp: 0.68, hook: 0.66, drive: 0.7, lead: 0, auraSlow: 0.88, auraFast: 0.72 },
-  boss: { drone: 0.4, bass: 0, beat: 0, engine: 0.95, chords: 0.95, groove: 0.95, arp: 0.72, hook: 0.7, drive: 0.8, lead: 0.85, auraSlow: 1, auraFast: 0.9 },
+  calm: { drone: 0.55, bass: 0.7, beat: 0.5, sub: 0, engine: 0, perc: 0, chords: 0, groove: 0, arp: 0, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0, auraFast: 0 },
+  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.5, auraFast: 0.28 },
+  push: { drone: 0.34, bass: 0, beat: 0, sub: 0.88, engine: 0.92, perc: 0.74, chords: 0.87, groove: 0.86, arp: 0.62, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.62, auraFast: 0.4 },
+  surge: { drone: 0.33, bass: 0, beat: 0, sub: 0.9, engine: 0.93, perc: 0.8, chords: 0.88, groove: 0.9, arp: 0.68, hook: 0.66, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.75, auraFast: 0.55 },
+  approach: { drone: 0.34, bass: 0, beat: 0, sub: 0.92, engine: 0.94, perc: 0.84, chords: 0.89, groove: 0.92, arp: 0.72, hook: 0.7, drive: 0.72, toll: 0.72, lead: 0, stomp: 0, auraSlow: 0.88, auraFast: 0.72 },
+  boss: { drone: 0.24, bass: 0, beat: 0, sub: 0.98, engine: 0.98, perc: 0.95, chords: 0.88, groove: 0.96, arp: 0.78, hook: 0.86, drive: 0.94, toll: 0.86, lead: 0.98, stomp: 0.96, auraSlow: 1, auraFast: 0.9 },
 };
 
 /** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */
@@ -860,6 +1011,75 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
   ],
 
   /*
+    ── THE SUB — THE ONE THING A LISTENER FEELS RATHER THAN HEARS ─────────────────────────────────
+
+    `docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md`. Reported from play: *"how deep can
+    we push the bass? I want to feel the bass beats in my chest."*
+
+    ⚠️ **EVERY SUB IN THIS FILE WAS A TAIL AND NONE OF THEM WAS A NOTE.** The kick falls to 38 Hz over
+    0.42s, the chords' sine sub is 0.62 of a beat, the groove's is 0.34 — so the whole of the game's
+    low end was transients decaying, and between them the band was empty. **Chest is not a frequency,
+    it is a frequency that is still there a moment later**: what a body feels is sustained pressure,
+    and nothing in the piece sustained anything under 80 Hz.
+
+    ⚠️ **IT IS AT `octave: 0` AND CANNOT USEFULLY GO BELOW IT.** `MUSIC_ROOT` is 55 Hz, so this layer
+    runs 41 Hz (E) to 65 Hz (C) across the progression — the band a chest actually resolves. An octave
+    down is 20–33 Hz, which a desktop speaker does not reproduce and a phone does not know about; it
+    would be headroom spent on silence, and `tests/music.test.ts`'s A-weighted `sub` band would read
+    it as nothing because that is what the ear does with it.
+
+    ⚠️ **IT DOES NOT REPEAT `chords`' ROLLING SUB, WHICH IS THE MISTAKE THIS LAYER IS ONE EDIT AWAY
+    FROM.** That one is offbeat eighths on the chord root; two layers playing the same eighths an
+    octave apart is one thicker layer and half the buffer wasted. What is here is the two things the
+    piece did not have: a **held** fundamental under the whole bar, and a **drop** — a swept
+    sub-transient on the bar line, which is the part a body reads as an impact.
+  */
+  sub: [
+    {
+      /*
+        THE FLOOR. One note a bar, longer than the bar so it never lets go — and the last one crosses
+        the end of the loop, which is what 0090's seam guard is watching.
+      */
+      steps: [0, -4, 3, -2, 0, -4, -2, -5],
+      pitched: true,
+      perBeat: 0.25,
+      octave: 0,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.15, gain: 0.42, attack: 0.07, curve: 1.05 },
+    },
+    {
+      /*
+        THE DROP, on the bar line. Unpitched, because it SWEEPS — 75 Hz down to 34 — and a pitched
+        voice replaces `from` and `to` with one note. It is a second kick an octave under the first,
+        and it is the single loudest thing below 60 Hz in the game.
+
+        ⚠️ **On the bar and not on the beat.** Four of these a bar would be a continuous rumble, which
+        is the thing `MAX_CUE_SECONDS` refuses for a cue and the same mistake here; one is an event.
+      */
+      steps: [1, _, _, _, 1, _, _, _, 1, _, _, _, 0.85, _, _, _, 1, _, _, _, 1, _, _, _, 1, _, _, _, 0.9, _, 0.8, _],
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      note: { wave: 'sine', from: 75, to: 34, seconds: 0.52, gain: 0.46, attack: 0.002, curve: 2.4, drive: 0.15 },
+    },
+    {
+      /*
+        THE PULSE — the chord's own root on beats two, three and four, so the low end MOVES between
+        drops instead of sitting. Beat one is deliberately empty: the drop is there, and stacking a
+        note on it would spend the mix's whole headroom on one sixtieth of a second.
+      */
+      steps: [
+        _, 0, 0, 0, _, -4, -4, -4, _, 3, 3, 3, _, -2, -2, -2,
+        _, 0, 0, 0, _, -4, -4, -4, _, -2, -2, -2, _, -5, -5, -7,
+      ],
+      pitched: true,
+      perBeat: 1,
+      octave: 0,
+      accents: [1, 0.9, 0.8, 0.95],
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.9, gain: 0.34, attack: 0.006, curve: 2.6 },
+    },
+  ],
+
+  /*
     ── THE ENGINE — the Rez half, and it is deliberately UNPITCHED ─────────────────────────────────
 
     Asked for: *"a mix of a power ballad style music and the game Rez."* This is the Rez end of that:
@@ -875,19 +1095,45 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
     what makes 0093's gun audible AS a rhythm: the pulse is an eighth-note triplet against it, so
     every third volley lands on a kick.
   */
+  /*
+    ── AND IT WAS THE METRONOME, WHICH 0102 FIXED IN THE LAYER NEXT TO THIS ONE ────────────────────
+
+    ⚠️ **`docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md`.** Reported from play for the
+    third round running: *"the metronome beats are still louder and because they're two beats back and
+    forth, every mix sounds the same."*
+
+    ⚠️ **0102 FOUND EXACTLY THIS AND FIXED IT IN `beat`, WHICH IS `TITLE_ONLY`.** *"Identical
+    repetition at a fixed interval is not LIKE a metronome, it is the definition of one"* was written
+    about the title's drums; every pattern in THIS layer was a row of literal `1`s at the same time,
+    and this is the layer that plays under every second of every level. The guard 0102 left behind
+    reads `MUSIC.beat` by name, so it went on being green about the wrong drums.
+
+    ⚠️ **Kick, clap, kick, clap is *two beats back and forth* precisely**, and no gain, filter or
+    theme multiplier could have made two identical bars into a phrase. What is here is velocities on
+    every voice and **four bars instead of two**, with a hole in the fourth bar's third beat: a loop
+    the ear can find the top of.
+  */
   engine: [
     {
-      // Four on the floor. A longer, deeper fall than the title beat's kick — this one is the floor
-      // rather than a pulse on top of it.
-      steps: [1, 1, 1, 1, 1, 1, 1, 1],
+      /*
+        Four on the floor. A longer, deeper fall than the title beat's kick — this one is the floor
+        rather than a pulse on top of it.
+
+        ⚠️ **Beat one of every bar is full and nothing else is**, which is what makes a bar a bar; and
+        the fourth bar's third beat is EMPTY, which is what makes four bars a phrase. The kick is
+        still on the beat everywhere it sounds, so 0093's *every third volley lands on a kick* is
+        intact — the gun's triplet against it is unchanged.
+      */
+      steps: [1, 0.86, 0.94, 0.84, 1, 0.82, 0.96, 0.86, 1, 0.86, 0.94, 0.88, 1, 0.8, _, 0.72],
       pitched: false,
       perBeat: 1,
       octave: 0,
       note: { wave: 'sine', from: 160, to: 38, seconds: 0.42, gain: 0.6, attack: 0.001, curve: 2.8, drive: 0.3 },
     },
     {
-      // The click on top of it, so the kick reads on a phone speaker with no low end at all.
-      steps: [1, 1, 1, 1, 1, 1, 1, 1],
+      // The click on top of it, so the kick reads on a phone speaker with no low end at all — and it
+      // follows the kick exactly, including the hole. A click that did not is two parts.
+      steps: [1, 0.7, 0.8, 0.68, 1, 0.66, 0.82, 0.7, 1, 0.7, 0.8, 0.72, 1, 0.64, _, 0.6],
       pitched: false,
       perBeat: 1,
       octave: 0,
@@ -895,17 +1141,24 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
     },
     {
       // A clap on two and four. Two noise bursts a few milliseconds apart is what a clap IS, and one
-      // of them is this voice — the other is below.
-      steps: [_, 1, _, 1, _, 1, _, 1],
+      // of them is this voice — the other is below. The last bar's second clap is the loudest in the
+      // phrase, because it is the one landing over the kick's hole.
+      steps: [_, 1, _, 0.9, _, 0.94, _, 1, _, 1, _, 0.88, _, 0.92, _, 1],
       pitched: false,
       perBeat: 1,
       octave: 0,
       note: { wave: 'noise', from: 0, to: 0, seconds: 0.13, gain: 0.27, attack: 0.001, curve: 5.5, lowFrom: 5200, lowTo: 1800, highFrom: 700 },
     },
     {
-      // Sixteenth hats, quiet and closed. Thirty-two of them a loop and each is under two hundredths
-      // of a second — the thing that makes a bar feel subdivided rather than empty.
-      steps: Array.from({ length: 32 }, () => 1),
+      /*
+        Sixteenth hats, quiet and closed. Each is under two hundredths of a second — the thing that
+        makes a bar feel subdivided rather than empty.
+
+        ⚠️ **Strong, weak, medium, weak, and the last beat of the phrase opens up.** The comment this
+        layer's neighbour carries about a shuffle was false of its own data for two decisions; it is
+        true here, and `tests/music.test.ts` measures the bake rather than the table.
+      */
+      steps: Array.from({ length: 64 }, (_unused, i) => (i >= 60 ? [1, 0.75, 0.9, 0.8][i % 4]! : [1, 0.4, 0.62, 0.38][i % 4]!)),
       pitched: false,
       perBeat: 4,
       octave: 0,
@@ -913,12 +1166,93 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
     },
     {
       // The open hat on every offbeat, which is the single most recognisable thing in the genre —
-      // it is what makes four-on-the-floor read as *dance* rather than as *march*.
-      steps: [_, 1, _, 1, _, 1, _, 1, _, 1, _, 1, _, 1, _, 1],
+      // it is what makes four-on-the-floor read as *dance* rather than as *march*. Breathing on a
+      // four-bar cycle, so it is a player rather than a gate.
+      steps: Array.from({ length: 32 }, (_unused, i) => (i % 2 === 0 ? _ : [1, 0.72, 0.88, 0.66][((i - 1) / 2) % 4]!)),
       pitched: false,
       perBeat: 2,
       octave: 0,
       note: { wave: 'noise', from: 0, to: 0, seconds: 0.11, gain: 0.105, attack: 0.001, curve: 3.2, lowFrom: 11000, highFrom: 5200 },
+    },
+  ],
+
+  /*
+    ── THE PERCUSSION — THE COUNTERPOINT, AND THE PIECE HAD NONE ──────────────────────────────────
+
+    `docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md`. Asked for in play: *"Can we get some
+    percussion up in here to counterpoint it as well?"*
+
+    ⚠️ **THE PIECE HAD DRUMS AND NO PERCUSSION, AND THE DIFFERENCE IS WHAT THE WORD *COUNTERPOINT*
+    MEANS.** `beat`, `engine` and `drive` all divide the bar the same way — quarters, eighths,
+    sixteenths — so however many of them play at once, the grid underneath is one grid. Percussion is
+    the parts that divide it a DIFFERENT way, and this layer's whole job is to be at odds with the
+    four-on-the-floor it plays over.
+
+    ⚠️ **Two of the three voices are deliberately not on the sixteenth grid.** The shaker is
+    `perBeat: 3` — eighth-note triplets, three against the hats' four — and the wood is a 3-3-2
+    tresillo across sixteenths, which lands on the beat once a bar and is elsewhere the rest of the
+    time. That is what makes the bar feel turned rather than counted.
+
+    ⚠️ **NONE OF THIS TOUCHES THE SIM'S GRID.** `docs/decisions/0093-the-gun-is-on-the-grid.md` and
+    `docs/decisions/0096-the-enemies-play-along.md` fix a beat at 24 sim steps and snap every CADENCE
+    to a sixteenth of it; a triplet inside the music is a subdivision of that same beat and nothing in
+    the game fires on it. The grid the gun rides is untouched.
+  */
+  perc: [
+    {
+      /*
+        THE WOOD — 3-3-2 across sixteenths, which is the oldest counter-rhythm there is. It states the
+        downbeat and then arrives everywhere the kick is not; the fourth bar fills in.
+      */
+      steps: [
+        0.9, _, _, 0.55, _, _, 0.72, _, _, _, 0.5, _, 0.8, _, _, _,
+        0.9, _, _, 0.55, _, _, 0.72, _, _, _, 0.5, _, 0.8, _, _, 0.45,
+        0.9, _, _, 0.55, _, _, 0.72, _, _, _, 0.5, _, 0.8, _, _, _,
+        0.9, _, _, 0.6, _, _, 0.75, _, _, 0.5, 0.6, _, 0.85, _, 0.7, 0.95,
+      ],
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'tri', from: 940, to: 610, seconds: 0.05, gain: 0.28, attack: 0.0008, curve: 8, highFrom: 420 },
+    },
+    {
+      /*
+        THE SHAKER, ON TRIPLETS. Three to a beat against four hats — the one voice in the piece that
+        cannot be counted in the same breath as the rest of it.
+
+        ⚠️ **Forty-eight entries and not sixty-four, and `tests/music.test.ts` is what says so**: a
+        pattern spans exactly its own layer, so `perBeat: 3` over four bars is `3 × 4 × 4`.
+      */
+      steps: Array.from({ length: 48 }, (_unused, i) => [0.95, 0.34, 0.5][i % 3]!),
+      pitched: false,
+      perBeat: 3,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.024, gain: 0.06, attack: 0.0006, curve: 8, lowFrom: 12500, highFrom: 5200 },
+    },
+    {
+      /*
+        THE TOMS — the answer to the backbeat, and the fill that ends the phrase. This is the voice
+        that says a bar has finished, which a two-bar loop of identical drums cannot.
+      */
+      steps: [
+        _, _, _, _, _, 0.8, _, _,
+        _, _, _, 0.65, _, _, _, 0.85,
+        _, _, _, _, _, 0.8, _, _,
+        _, _, _, 0.7, _, 0.9, 0.75, 1,
+      ],
+      pitched: false,
+      perBeat: 2,
+      octave: 0,
+      note: { wave: 'sine', from: 152, to: 84, seconds: 0.19, gain: 0.34, attack: 0.001, curve: 4.5, drive: 0.2 },
+    },
+    {
+      // A tambourine on the offbeat quarters — the top end of the counterpoint, so the wood and the
+      // shaker are not both in the same octave of the spectrum.
+      steps: [_, 1, _, 0.62, _, 1, _, 0.7, _, 1, _, 0.62, _, 1, 0.55, 0.9],
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.075, attack: 0.0008, curve: 4, lowFrom: 9500, highFrom: 3800 },
     },
   ],
 
@@ -990,6 +1324,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 2,
       octave: 0,
+      accents: [1, 1, 0.88, 0.94],
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.44, gain: 0.33, attack: 0.005, curve: 4.5, lowFrom: 1300, lowTo: 320, q: 1.5, drive: 0.35 },
     },
     {
@@ -1016,6 +1351,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 2,
       octave: 0,
+      accents: [1, 1, 0.88, 0.94],
       note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.62, gain: 0.46, attack: 0.004, curve: 3.2 },
     },
   ],
@@ -1059,6 +1395,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 4,
       octave: 1,
+      accents: [1, 0.7, 0.84, 0.72],
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.3, gain: 0.3, attack: 0.004, curve: 5, lowFrom: 1500, lowTo: 340, q: 1.5, drive: 0.45 },
     },
     {
@@ -1076,6 +1413,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 4,
       octave: 0,
+      accents: [1, 0.7, 0.84, 0.72],
       note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.34, gain: 0.4, attack: 0.004, curve: 4 },
     },
   ],
@@ -1120,6 +1458,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 4,
       octave: 2,
+      accents: [1, 0.55, 0.72, 0.5],
       note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.2, gain: 0.075, attack: 0.002, curve: 6, lowFrom: 3600, lowTo: 1400, q: 1.8 },
     },
     {
@@ -1161,35 +1500,64 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
     itself over the first half and again over the second, so the harmony turns underneath a line that
     does not — which is what makes a riff a riff and costs half the buffer of writing it twice.
   */
+  /*
+    ── AND IT IS A RIFF NOW RATHER THAN A STAB, BECAUSE THE BRIEF WAS LIFTED ───────────────────────
+
+    ⚠️ **`docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md`.** Said in play, unprompted:
+    *"if the power ballad and rez ask is too limiting, let's change that… don't be limited by personal
+    'style' requests and try to fit the music into that, go off playtest reports and actual music that
+    sounds good."*
+
+    ⚠️ **THE STAB WAS A COMPROMISE WITH A BRIEF THAT NO LONGER BINDS.** 0104 wanted *a shape a listener
+    can follow* and put it in the one register the piece had empty; what it could not do was be LOUD,
+    because a power ballad's mid is a pad. **A palm-muted power chord is the same job done by the
+    genre that is actually built for this tempo** — root and fifth, no third, hard-driven and short,
+    on a gallop.
+
+    ⚠️ **A GALLOP — an eighth and two sixteenths — is the one rhythm that is neither the kick's nor
+    the arp's.** `engine` is quarters and eighths, `arp` is straight sixteenths, `perc` is triplets and
+    a tresillo; this lands on the beat and then twice more before the next one, which is why it reads
+    as drive rather than as another thing on the grid.
+
+    ⚠️ **No third in the chord, and that is what makes it a power chord rather than a wrong note.**
+    The progression turns major (C, F, G) under a fixed root-and-fifth voicing, and a root-and-fifth
+    is the one voicing that is correct over both — which is exactly why the genre uses it.
+  */
   hook: [
     {
       /*
-        Two stabs a bar, a fifth apart, walking down with the progression. Short and hard-filtered so
-        it reads as a chord being hit rather than as a pad arriving.
+        The root, on a gallop, once per bar of the progression's first half — stated again over its
+        second half, on `LAYER_BARS`' own rule.
       */
       steps: [
-        _, _, 0, _, _, 7, _, _,
-        _, _, -4, _, _, 3, _, _,
-        _, _, 3, _, _, 10, _, _,
-        _, _, -2, _, _, 5, _, _,
+        0, _, 0, 0, 0, _, 0, 0, 0, _, 0, 0, 0, _, 0, 0,
+        -4, _, -4, -4, -4, _, -4, -4, -4, _, -4, -4, -4, _, -4, -4,
+        3, _, 3, 3, 3, _, 3, 3, 3, _, 3, 3, 3, _, 3, 3,
+        -2, _, -2, -2, -2, _, -2, -2, -2, _, -2, -2, -2, _, -2, 0,
       ],
       pitched: true,
-      perBeat: 2,
+      perBeat: 4,
+      // The gallop's own shape: the eighth is the loud one and the two sixteenths lean on it. The
+      // second entry is never struck — the pattern rests there — and is written out so the cycle
+      // reads as a beat rather than as three numbers.
+      accents: [1, 1, 0.76, 0.82],
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.34, gain: 0.2, attack: 0.006, curve: 4, lowFrom: 2600, lowTo: 700, q: 2.2, drive: 0.3 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.19, gain: 0.16, attack: 0.002, curve: 6.5, lowFrom: 2600, lowTo: 780, q: 1.7, drive: 0.7 },
     },
     {
-      // The third above it, a shade quieter — two notes is a chord and one is a bleep.
+      // The fifth over it. Two notes and no third is a power chord; adding the third is what would
+      // make it wrong over three of the four bars.
       steps: [
-        _, _, 3, _, _, 10, _, _,
-        _, _, 0, _, _, 7, _, _,
-        _, _, 7, _, _, 14, _, _,
-        _, _, 2, _, _, 9, _, _,
+        7, _, 7, 7, 7, _, 7, 7, 7, _, 7, 7, 7, _, 7, 7,
+        3, _, 3, 3, 3, _, 3, 3, 3, _, 3, 3, 3, _, 3, 3,
+        10, _, 10, 10, 10, _, 10, 10, 10, _, 10, 10, 10, _, 10, 10,
+        5, _, 5, 5, 5, _, 5, 5, 5, _, 5, 5, 5, _, 5, 7,
       ],
       pitched: true,
-      perBeat: 2,
+      perBeat: 4,
+      accents: [1, 1, 0.76, 0.82],
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.3, gain: 0.14, attack: 0.008, curve: 4.5, lowFrom: 2400, lowTo: 800, q: 2, drive: 0.25 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.17, gain: 0.115, attack: 0.002, curve: 7, lowFrom: 2400, lowTo: 860, q: 1.6, drive: 0.6 },
     },
   ],
 
@@ -1203,16 +1571,85 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 4,
       octave: 3,
+      accents: [1, 0.62, 0.8, 0.6],
       note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.22, gain: 0.1, attack: 0.002, curve: 5, lowFrom: 4200, lowTo: 1200, q: 2, drive: 0.3 },
     },
     {
       // Toms rolling into the top of every bar. A fill is what tells the ear a bar has ended, and
       // without one a two-bar loop is a four-second stretch of the same thing.
-      steps: [_, _, _, _, _, _, _, _, _, _, _, _, _, 1, 1, 1],
+      //
+      // ⚠️ **It was three literal `1`s and 0108 is why it is not.** A roll that does not get louder
+      // is not a roll — it is three toms — and this is the one voice 0102's velocity model reached
+      // and nobody went back for.
+      steps: [_, _, _, _, _, _, _, _, _, _, _, _, _, 0.68, 0.84, 1],
       pitched: false,
       perBeat: 2,
       octave: 0,
       note: { wave: 'sine', from: 190, to: 105, seconds: 0.2, gain: 0.4, attack: 0.001, curve: 5, drive: 0.25 },
+    },
+  ],
+
+  /*
+    ── THE TOLL — WHAT MAKES THE BOSS'S OWN RUNG AN ARRIVAL ───────────────────────────────────────
+
+    `docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md`. Reported from play: *"the level
+    music is getting passable, but the boss music isn't increasing proportionally."*
+
+    ⚠️ **AN ARRIVAL IS A FUNCTION OF WHAT CAME BEFORE IT, AND `approach` HAD NOTHING OF ITS OWN.**
+    0102 gave `approach` the `drive` arpeggio and 0107 gave the level four rungs to climb; what the
+    boss then added was one melody over a bed that had been getting fuller for three minutes. A rung
+    that opens a bell over the last twelve seconds is what turns the next one into a release.
+
+    ⚠️ **A bell and not a riser, because a riser has a length and this has a distance.**
+    `BOSS_APPROACH_UNITS` is measured in world units and a player who backs off spends longer in it —
+    so anything shaped like a one-shot sweep would finish early and leave silence where the tension
+    was. A figure that repeats can be in the approach for as long as the approach lasts.
+  */
+  toll: [
+    {
+      /*
+        The bell: the root, then the minor third, once every two bars. Slow enough that two of them
+        are the whole of the approach, which is the point — this is a clock, not a part.
+      */
+      steps: [0, _, 3, _],
+      pitched: true,
+      perBeat: 0.25,
+      octave: 1,
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.8, gain: 0.3, attack: 0.015, curve: 1.5, lowFrom: 1400, lowTo: 420, q: 1.7 },
+    },
+    {
+      /*
+        THE CHOIR — two detuned saws holding the same two notes an octave up, behind a narrow filter.
+
+        ⚠️ **It was a sine an octave DOWN and the mix guard is why it is not.** A sustained low sine
+        under a bell is the obvious weight, and `tests/music.test.ts` measured it as the second largest
+        single contribution to the boss mix's peak — a tail wrapping onto the bar line where the sub's
+        drop already lives. **Weight below 60 Hz is `sub`'s job now**, and a second layer claiming it
+        was buying nothing an ear could separate at the cost of the headroom the report is about.
+      */
+      steps: [0, _, 3, _],
+      pitched: true,
+      perBeat: 0.25,
+      octave: 2,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.075, attack: 0.5, curve: 1.3, lowFrom: 900, lowTo: 2200, q: 1.4 },
+    },
+    {
+      // The same, four cents apart. Two saws slightly detuned is what makes a held note a section
+      // rather than an organ — the trick the drone and the chords both already rest on.
+      steps: [0, _, 3, _],
+      pitched: true,
+      perBeat: 0.25,
+      octave: 2,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.07, attack: 0.55, curve: 1.3, lowFrom: 890, lowTo: 2160, q: 1.4 },
+    },
+    {
+      // A breath of filtered noise swelling into each strike. It is what an approach sounds like when
+      // nothing has arrived yet, and it crosses the loop end so the swell never restarts from nothing.
+      steps: [_, 0.9, _, 1],
+      pitched: false,
+      perBeat: 0.25,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.1, attack: 1.1, curve: 1.3, lowFrom: 700, lowTo: 3200, highFrom: 280, q: 0.8 },
     },
   ],
 
@@ -1266,6 +1703,53 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 2,
       octave: 1,
       note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 1.5, gain: 0.12, attack: 0.03, curve: 1.8 },
+    },
+  ],
+
+  /*
+    ── THE STOMP — THE DRUMS GO DOUBLE TIME, AND ONLY A BOSS EVER HEARS IT ────────────────────────
+
+    `docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md`. Reported: *"how much can we mix it
+    up for the bosses?"*
+
+    ⚠️ **THE TEMPO STILL CANNOT MOVE AND THIS IS WHAT *DOUBLE TIME* MEANS INSTEAD.**
+    `docs/decisions/0093-the-gun-is-on-the-grid.md` fixes a beat at 24 sim steps and the gun, every
+    enemy cadence and 0094's phase-lock all ride it. A kick on the offbeat quarters turns
+    four-on-the-floor into eight-on-the-floor without a BPM existing anywhere as a number, which is
+    the same mechanism `docs/decisions/0091-the-boss-has-an-aura.md` already calls *builds in tempo*
+    — applied to the one part of the kit that had never been asked to do it.
+
+    ⚠️ **A boss now opens THREE things — `lead`, this, and the aura's ceiling** — against the one it
+    opened before. That is the whole of the report: the level's climb got four rungs in 0107 and the
+    fight's did not move, so the arrival got relatively quieter as the level got better.
+  */
+  stomp: [
+    {
+      // The offbeat kick. With `engine` still on the floor underneath it, the pulse is eight to the
+      // bar and the ear reads the piece as having doubled without a note changing pitch.
+      steps: [_, 1, _, 0.9, _, 1, _, 0.95, _, 1, _, 0.9, _, 1, _, 1],
+      pitched: false,
+      perBeat: 2,
+      octave: 0,
+      note: { wave: 'sine', from: 145, to: 40, seconds: 0.3, gain: 0.44, attack: 0.001, curve: 3.2, drive: 0.3 },
+    },
+    {
+      // A sixteenth snare roll that leans into each bar. Quiet per stroke and relentless in aggregate,
+      // which is what a roll is for: it is the only thing in the piece with no gaps at all.
+      steps: Array.from({ length: 32 }, (_unused, i) => 0.35 + 0.5 * ((i % 16) / 15)),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.045, gain: 0.14, attack: 0.0008, curve: 6, lowFrom: 3800, lowTo: 1500, highFrom: 380 },
+    },
+    {
+      // A crash on the top of each bar, which is the one sound in the game that says *this is the
+      // part where it happens*.
+      steps: [1, _, _, _, 0.82, _, _, _],
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.9, gain: 0.13, attack: 0.002, curve: 2.2, lowFrom: 9000, lowTo: 4200, highFrom: 2600 },
     },
   ],
 

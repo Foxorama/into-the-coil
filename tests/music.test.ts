@@ -1204,3 +1204,250 @@ describe('the patterns are playable', () => {
     }
   });
 });
+
+describe('0108 — the bed is felt, the hands are on it, and the boss arrives', () => {
+  /*
+    `docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md`. Four items of the ninth play-test:
+    *"I want to feel the bass beats in my chest"*, *"can we get some percussion up in here to
+    counterpoint it"*, *"the boss music isn't increasing proportionally"*, and — for the third round
+    running — *"the metronome beats are still louder… every mix sounds the same."*
+  */
+  const baked = bakeLoops(SAMPLE_RATE);
+  const mixes = new Map<string, Float32Array>();
+
+  /** One phrase at a rung, through the same shaper the bus runs. */
+  function mixAt(level: (typeof MUSIC_LEVELS)[number]): Float32Array {
+    const cached = mixes.get(level);
+    if (cached !== undefined) return cached;
+    const out = new Float32Array(Math.round(PHRASE_SECONDS * SAMPLE_RATE));
+    for (let i = 0; i < out.length; i++) {
+      let v = 0;
+      for (const layer of MUSIC_LAYERS) v += baked[layer][i % baked[layer].length]! * MUSIC_LADDER[level][layer];
+      out[i] = saturate(v * MUSIC_GAIN, MUSIC_DRIVE);
+    }
+    mixes.set(level, out);
+    return out;
+  }
+
+  const rms = (s: Float32Array): number => {
+    let sum = 0;
+    for (const v of s) sum += v * v;
+    return Math.sqrt(sum / s.length);
+  };
+
+  const DSP_MS = 30_000;
+  const SUB = BANDS.findIndex(([, , name]) => name === 'sub');
+
+  it('THE REPORTED ONE: the band a chest resolves is a real share of the mix, not a corner of it', () => {
+    /*
+      ⚠️ **THE FIRST DRAFT OF THIS GUARD MEASURED THE WRONG QUANTITY AND A PROBE IS WHAT SAID SO.**
+      It asserted that the low end is SUSTAINED — the quietest eighth of a bar against the loudest —
+      on the reasoning that a chest resolves pressure over time where an ear resolves attacks. The
+      reasoning is fine and the measurement was useless: **the trough is 0.527 with the whole sub
+      layer and 0.511 without it**, because an eighth is 0.2s and the kick's tail is 0.42, so every
+      window contains a kick whatever else is happening. `npm run prove` reported WRONG TEST, which is
+      `docs/decisions/0027-measure-the-picture-not-the-model.md`'s subject caught before it shipped
+      rather than after seven reports. It is written down instead of quietly replaced, because the
+      appealing wrong quantity is the part worth passing on.
+
+      ⚠️ **WHAT SEPARATES IS THE SHARE, AND IT SEPARATES BY FIVE TIMES.** A-weighted, the `sub` band
+      against the `hi` band is **0.34–0.46 across the level's rungs and 0.06–0.09 with the layer
+      removed** — and 0.034 for the title, which is the piece nobody has ever said they could feel.
+      A fifth is a floor with the whole of this decision's margin above it and a doubling of the
+      shipped state below it.
+
+      ⚠️ **A-WEIGHTED, WHICH MAKES IT A DEMANDING CLAIM RATHER THAN AN EASY ONE.** The curve is about
+      thirty decibels down at 40 Hz (`tests/spectrum.ts`), so *a fifth of the `hi` band* after
+      weighting is a great deal of energy before it. Unweighted this would be trivially true of any
+      music at all, which is the defect `bandEnergy`'s own comment records.
+    */
+    const HI = BANDS.findIndex(([, , name]) => name === 'hi');
+    for (const level of MUSIC_LEVELS) {
+      if (level === 'calm') continue;
+      const bands = bandEnergy(mixAt(level), SAMPLE_RATE);
+      const share = bands[SUB]! / bands[HI]!;
+      expect(
+        share,
+        `${level} puts ${(share * 100).toFixed(0)}% as much in the band a chest resolves as in the one an ear does — ` +
+          'the bass is a corner of the mix rather than the floor of it',
+      ).toBeGreaterThan(0.2);
+    }
+  }, DSP_MS);
+
+  it('and a level carries MANY times the title’s sub, not merely more of it', () => {
+    /*
+      ⚠️ **0095's version of this asserted `> title` and a rounding satisfies it.** That was the right
+      bound for its own subject — *a kick quieter than a pad is backwards* — and it is the wrong one
+      for *I want to feel it*: a piece can clear it by a percent and be exactly the mix that was
+      reported. Measured over the shaped bus at 41.6×, so eight is a floor with the whole of this
+      decision's margin still in it.
+    */
+    const title = bandEnergy(mixAt('calm'), SAMPLE_RATE)[SUB]!;
+    const level = bandEnergy(mixAt('run'), SAMPLE_RATE)[SUB]!;
+    expect(
+      level / title,
+      `a level carries ${(level / title).toFixed(1)}× the title's sub, which is not a floor under it`,
+    ).toBeGreaterThan(8);
+  }, DSP_MS);
+
+  it('THE METRONOME, in the layer that actually plays in a level', () => {
+    /*
+      ⚠️ **0102 WROTE THIS ASSERTION OVER `beat`, WHICH IS `TITLE_ONLY`, AND `engine` WAS A ROW OF
+      ONES THE WHOLE TIME.** The report it answered was about the title screen, so the guard was aimed
+      there and has been green ever since over drums that are identical in every bar of every level.
+      *"Two beats back and forth"* is kick, clap, kick, clap at one weight, and no theme multiplier
+      can make two identical bars into a phrase.
+
+      ⚠️ **Held over every UNPITCHED layer a level opens, rather than over `engine` by name**, which is
+      the mistake being repaired: a guard that names one layer goes on being green about the others.
+    */
+    /*
+      ⚠️ **THE AURA IS EXEMPT AND THE REASON IS NOT *IT IS DIFFERENT***. Its two layers are the only
+      ones in the piece whose gain is a runtime function — `src/app/music.ts` multiplies them by how
+      far away the boss is and how far through the level the player has got
+      (`docs/decisions/0091-the-boss-has-an-aura.md`, `docs/decisions/0107-a-level-is-a-place.md`) —
+      so a pulse written at one weight in the table is **not** at one weight in the room. Every other
+      layer's gain is fixed for the whole rung, which is what makes an unvarying pattern a metronome
+      there and not here.
+    */
+    const inLevel = MUSIC_LAYERS.filter(
+      (l) => MUSIC_LADDER.boss[l] > 0 && !AURA_LAYERS.includes(l) && MUSIC[l].some((v) => !v.pitched),
+    );
+    expect(inLevel.length, 'a level opens no drums at all, so this measured nothing').toBeGreaterThan(2);
+    /*
+      ⚠️ **PER VOICE RATHER THAN PER LAYER, WHICH IS STRICTLY STRONGER AND IS WHY IT MOVED.** 0102's
+      version counted how many voices of a layer varied and wanted more than one — a rule a kit
+      satisfies while one of its drums is still a machine, and a rule a single-voice layer cannot
+      satisfy at all however it is written. What is true of every part in every genre is that a
+      struck thing struck repeatedly is not struck identically.
+
+      ⚠️ **Three strokes is where it starts.** Two are a pair and cannot have a shape; three can.
+    */
+    for (const layer of inLevel) {
+      for (const [i, voice] of MUSIC[layer].entries()) {
+        if (voice.pitched) continue;
+        const struck = voice.steps.filter((s): s is number => s !== null);
+        if (struck.length < 3) continue;
+        expect(
+          new Set(struck).size,
+          `${layer} voice ${i} strikes ${struck.length} times at one weight, which is a click track`,
+        ).toBeGreaterThan(1);
+      }
+    }
+  });
+
+  it('and a PITCHED note has a weight too, which half the piece never had', () => {
+    /*
+      ⚠️ **0102's velocity is an unpitched `steps` entry, so exactly half the music was out of its
+      reach.** A pitched entry is a semitone; there was nowhere to put a weight. The arp's hundred and
+      twenty-eight square notes, the groove's bass line, the chords' rolling sub and the gallop are
+      each the same event repeated at a fixed interval, which is 0102's own definition of a metronome
+      arriving in the half it could not see.
+
+      ⚠️ **The bake, not the table** — the same lesson 0102's own accent guard records learning: its
+      first version re-implemented the multiply and `npm run prove` reported STILL GREEN. `hook` is
+      baked alone and two of its own sixteenths are compared, which is a path only `renderNote` is on.
+    */
+    const accented = MUSIC_LAYERS.filter((l) => MUSIC[l].some((v) => v.pitched && v.accents !== undefined));
+    expect(accented.length, 'not one pitched voice in the whole piece is struck at more than one weight').toBeGreaterThan(3);
+
+    const gallop = MUSIC.hook[0]!;
+    expect(gallop.pitched, 'the hook is no longer the pitched gallop this is written against').toBe(true);
+    expect(gallop.accents?.[0], 'the hook’s downbeat is no longer its full stroke').toBe(1);
+    const lean = gallop.accents?.[2] ?? 1;
+    expect(lean, 'the hook’s third sixteenth is no longer the leaned-on one').toBeLessThan(1);
+
+    const buffer = bakeLayer('hook', SAMPLE_RATE);
+    const step = BEAT_SECONDS / gallop.perBeat;
+    /** The loudest sample in the forty milliseconds beginning at sixteenth `i`. */
+    const peakAt = (i: number): number => {
+      const from = Math.round(i * step * SAMPLE_RATE);
+      let peak = 0;
+      for (let s = from; s < from + Math.round(0.04 * SAMPLE_RATE) && s < buffer.length; s++) {
+        peak = Math.max(peak, Math.abs(buffer[s]!));
+      }
+      return peak;
+    };
+    const strong = peakAt(0);
+    const weak = peakAt(2);
+    expect(strong, 'the hook baked to silence, so this measured nothing').toBeGreaterThan(0);
+    expect(
+      weak / strong,
+      `the leaned-on sixteenth bakes at ${(weak / strong).toFixed(2)} of the downbeat, against ${lean} in the table`,
+    ).toBeLessThan(0.95);
+  });
+
+  it('THE COUNTERPOINT: something a level opens does not divide the beat the way the drums do', () => {
+    /*
+      ⚠️ **Asked for as *"percussion to counterpoint"*, and the difference between drums and percussion
+      is exactly this.** `beat`, `engine`, `drive` and `stomp` divide the bar into quarters, eighths
+      and sixteenths — however many of them play at once, there is one grid underneath. A part that
+      divides it by three is at odds with all of them at once, and that is what makes a bar feel
+      turned rather than counted.
+
+      ⚠️ **Held as a property of the OPEN set at a level's first rung**, because the ask is about the
+      bed rather than about the boss — and the day a different layer carries the triplets it passes.
+
+      ⚠️ **It does not touch the SIM's grid and could not.** 0093 fixes a beat at 24 sim steps and
+      0096 snaps every cadence to a sixteenth of it; a triplet inside a baked loop is a subdivision of
+      the same beat, and nothing in the game fires on one. `tests/spawns.test.ts` is what would notice
+      if that stopped being true.
+    */
+    const open = MUSIC_LAYERS.filter((l) => MUSIC_LADDER.run[l] > 0);
+    const against = open.filter((l) => MUSIC[l].some((v) => v.perBeat % 2 !== 0 && v.perBeat > 1));
+    expect(
+      against.length,
+      `every voice a level opens divides the beat by a power of two (${open.join(', ')}) — there is no counterpoint, only more drums`,
+    ).toBeGreaterThan(0);
+  });
+
+  it('THE BOSS ARRIVES: it opens more than one new thing, and it is louder in the unit an ear integrates', () => {
+    /*
+      ⚠️ **Reported as *"the boss music isn't increasing proportionally"*, and it is 0107's success
+      producing the complaint.** That decision gave the level four rungs to climb; the fight's rung
+      gained `lead` and about five percent on eight gains. A ladder whose last step is its smallest is
+      not a ladder that arrives.
+
+      ⚠️ **TWO CLAIMS, BECAUSE EITHER ALONE IS SATISFIABLE BY THE STATE BEING FIXED.** One new layer
+      at a nudge in gain passes a *something is added* test; a rung merely turned up passes a loudness
+      test. What an arrival is, is both.
+
+      ⚠️ **The loudness half is RMS over a phrase and NOT the sum of the table's gains**, which is the
+      quantity 0104's guard already found wanting: the shaper on the bus compresses a louder rung
+      towards the one below it, so a boss that is +4 dB in the table can be +1 dB in the room. This is
+      measured after the shaper, which is where the player is.
+    */
+    const openAt = (level: (typeof MUSIC_LEVELS)[number]): MusicLayer[] =>
+      MUSIC_LAYERS.filter((l) => MUSIC_LADDER[level][l] > 0);
+    const arriving = openAt('boss').filter((l) => MUSIC_LADDER.approach[l] === 0);
+    expect(
+      arriving.length,
+      `the boss opens ${arriving.length} thing(s) the approach did not (${arriving.join(', ') || 'none'})`,
+    ).toBeGreaterThan(1);
+
+    const over = 20 * Math.log10(rms(mixAt('boss')) / rms(mixAt('run')));
+    expect(
+      over,
+      `the fight is ${over.toFixed(1)}dB over the opening of the level, measured after the bus shaper`,
+    ).toBeGreaterThan(1.5);
+  }, DSP_MS);
+
+  it('and the shaper has not flattened the ladder it is meant to make room for', () => {
+    /*
+      ⚠️ **THE OTHER DIRECTION, AND `MUSIC_DRIVE` IS THE LEVER THAT WOULD DO IT.** `saturate` cannot
+      return past 1 whatever it is handed, so the clipping guards stay green over a bus driven until
+      every rung is one level — 0104 wrote a probe for exactly that and pointed it at the peak. This
+      is the assertion that probe wanted: **every rung is measurably louder than the one below it**,
+      in RMS, after the shaper.
+    */
+    const inLevel = MUSIC_LEVELS.filter((l) => l !== 'calm');
+    for (let i = 1; i < inLevel.length; i++) {
+      const here = rms(mixAt(inLevel[i]!));
+      const below = rms(mixAt(inLevel[i - 1]!));
+      expect(
+        here / below,
+        `${inLevel[i]} is ${(20 * Math.log10(here / below)).toFixed(2)}dB over ${inLevel[i - 1]} — the shaper has eaten the climb`,
+      ).toBeGreaterThan(1.02);
+    }
+  }, DSP_MS);
+});

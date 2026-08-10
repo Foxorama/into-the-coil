@@ -68,8 +68,8 @@ export const PROBES = [
     guard: 'keeps every multiplier inside the band the mix can pay for',
     edit: {
       path: 'src/content/themes.ts',
-      find: '    mix: { arp: 1.4, hook: 1.25, drone: 0.55, engine: 1.1, groove: 0.8 },',
-      replace: '    mix: { arp: 0, hook: 1.25, drone: 0.55, engine: 1.1, groove: 0.8 },',
+      find: '    mix: { arp: 1.3, hook: 1.28, drone: 0.55, sub: 0.62, groove: 0.75, lead: 1.25 },',
+      replace: '    mix: { arp: 0, hook: 1.28, drone: 0.55, sub: 0.62, groove: 0.75, lead: 1.25 },',
     },
   },
   {
@@ -84,7 +84,7 @@ export const PROBES = [
     guard: 'and every theme actually sounds different from the one that changes nothing',
     edit: {
       path: 'src/content/themes.ts',
-      find: '    mix: { drone: 1.4, lead: 1.2, drive: 1.15, engine: 1.1, hook: 1.1 },',
+      find: '    mix: { drone: 1.35, lead: 1.3, drive: 1.2, stomp: 1.3, perc: 0.8, hook: 1.1 },',
       replace: '    mix: {},',
     },
   },

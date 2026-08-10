@@ -146,7 +146,7 @@ export const PROBES = [
     guard: '0104 — THE REPORTED ONE: the bed is not quieter than the gun playing over it',
     edit: {
       path: 'src/content/music.ts',
-      find: 'export const MUSIC_DRIVE = 0.15;',
+      find: 'export const MUSIC_DRIVE = 0.22;',
       replace: 'export const MUSIC_DRIVE = 0;',
     },
   },
@@ -159,7 +159,7 @@ export const PROBES = [
     guard: 'and the four together stay inside full scale at the loudest level there is',
     edit: {
       path: 'src/content/music.ts',
-      find: 'export const MUSIC_GAIN = 0.52;',
+      find: 'export const MUSIC_GAIN = 0.46;',
       replace: 'export const MUSIC_GAIN = 2.6;',
     },
   },
@@ -175,8 +175,8 @@ export const PROBES = [
     guard: 'THE LEVEL: there is something in the low end that MOVES, at every rung above the opening',
     edit: {
       path: 'src/content/music.ts',
-      find: '  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0.8, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0.5, auraFast: 0.28 },',
-      replace: '  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0.5, auraFast: 0.28 },',
+      find: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.5, auraFast: 0.28 },',
+      replace: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0, arp: 0, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.5, auraFast: 0.28 },',
     },
   },
   {
@@ -189,8 +189,8 @@ export const PROBES = [
     guard: 'opens a layer at every step and never opens one twice',
     edit: {
       path: 'src/content/music.ts',
-      find: '  surge: { drone: 0.48, bass: 0, beat: 0, engine: 0.9, chords: 0.9, groove: 0.92, arp: 0.62, hook: 0.6, drive: 0, lead: 0, auraSlow: 0.75, auraFast: 0.55 },',
-      replace: '  surge: { drone: 0.48, bass: 0, beat: 0, engine: 0.9, chords: 0.9, groove: 0.92, arp: 0.62, hook: 0, drive: 0, lead: 0, auraSlow: 0.75, auraFast: 0.55 },',
+      find: '  surge: { drone: 0.33, bass: 0, beat: 0, sub: 0.9, engine: 0.93, perc: 0.8, chords: 0.88, groove: 0.9, arp: 0.68, hook: 0.66, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.75, auraFast: 0.55 },',
+      replace: '  surge: { drone: 0.33, bass: 0, beat: 0, sub: 0.9, engine: 0.93, perc: 0.8, chords: 0.88, groove: 0.9, arp: 0.68, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.75, auraFast: 0.55 },',
     },
   },
 ];

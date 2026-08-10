@@ -108,6 +108,7 @@ it is pushed — guards stop reaching their subject without ever going red, and 
 | **an enemy's `closing` is a statement about how long it is on screen, and the window is guarded in SECONDS** | [0105](decisions/0105-a-body-is-on-screen-long-enough-to-answer.md) |
 | **a sky mark is at least 2.5 CSS PIXELS across, which is the one bound stated in the player's own units** | [0106](decisions/0106-a-mark-thinner-than-a-pixel-is-not-drawn.md) |
 | **a level is a PLACE: a theme carries a backdrop and a mix, and the aura builds across the whole level** | [0107](decisions/0107-a-level-is-a-place.md) |
+| **a pitched note has a weight; a guard about a layer is written over the property, never the name; the bus's ceiling is the gain and not the drive** | [0108](decisions/0108-the-bed-is-felt-and-the-boss-arrives.md) |
 | ~~the near sky is pushed back on every cheap axis~~ — **amended: it went out** | [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) → [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the sky is three layers, the fastest is streaks, and a tube is a side of the hull** | [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
@@ -229,7 +230,44 @@ date and is exactly what a play-test is for.
 
 ## What the play-test has answered
 
-⚠️ **THE SEVENTH PLAY-TEST IS THE CURRENT ONE AND IT OUTRANKS EVERYTHING BELOW IT** —
+⚠️ **THE NINTH PLAY-TEST IS THE CURRENT ONE AND IT OUTRANKS EVERYTHING BELOW IT** —
+[`the-ninth-play-test`](../reports/the-ninth-play-test-2026-08-10.md), given 2026-08-10 against the
+build carrying 0106 and 0107.
+
+⚠️ **THE HEADLINE IS *STILL NOT A LOT OF VARIETY*, AND IT IS ONE WORD ABOUT FIVE CHANNELS.** The
+report has the eight items and which of the six changes answers each; do not re-derive them here.
+
+⚠️ **TWO INSTRUCTIONS CAME WITH IT AND BOTH ARE STANDING RULES RATHER THAN NOTES ABOUT THIS BUILD.**
+
+1. **Desktop is the prestige experience and mobile is the fallback** — *"if we can make it work on
+   mobile later great, but desktop is the prestige experience here."* A number held back because a
+   phone could not pay for it may now be spent. 0022's budget is a FLOOR and is untouched.
+2. **The style brief is advisory** — *"don't be limited by personal 'style' requests… What I ask for
+   may not be 'what's right' so if I put too many strictures on things, we can go around them or
+   ignore them if needed."* *"A mix of a power ballad style music and the game Rez"* is quoted four
+   times in `src/content/music.ts` as the reason a layer is what it is;
+   [0108](decisions/0108-the-bed-is-felt-and-the-boss-arrives.md) records what that changes and what
+   it does not.
+
+⚠️ **AND THE PICKUPS ARE CLOSED BY THE PLAYER** — *"pretty good, happy with that for now"*. The first
+channel in nine rounds to be signed off.
+
+| item | state |
+|---|---|
+| **the bass, the percussion, the metronome, the pace floor, the boss's own rung** | ✅ [0108](decisions/0108-the-bed-is-felt-and-the-boss-arrives.md) |
+| **an enemy death is on its own sound band instead of punctuating the music** | |
+| **enemies: more variety, and attacks that are patterns rather than aimed** | |
+| **bosses: six of the seven are one boss with a different bullet** | |
+| **the sky: a bit faster, and an actual skyscape rather than marks and a hue** | |
+
+⚠️ **THE EIGHTH IS THE ONE ABOVE THAT AND ALL FOUR OF ITS ITEMS LANDED** —
+[`the-eighth-play-test`](../reports/the-eighth-play-test-2026-08-10.md), answered by
+[0106](decisions/0106-a-mark-thinner-than-a-pixel-is-not-drawn.md) and
+[0107](decisions/0107-a-level-is-a-place.md). **It was never written into this file, which is the
+gap the ninth report closes** — its three closing questions were each answered by the ninth round,
+two of them by omission, and the report records which.
+
+⚠️ **THE SEVENTH PLAY-TEST IS THE ONE ABOVE THAT** —
 [`the-seventh-play-test`](../reports/the-seventh-play-test-2026-08-10.md), given 2026-08-10 against
 the build carrying the whole 0097–0102 batch, flown in one pass as asked.
 

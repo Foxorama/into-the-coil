@@ -97,6 +97,18 @@ export interface ThemeRow {
    * ⚠️ **Bounded either side by `tests/music.test.ts`** — a multiplier of zero would close a layer the
    * ladder opened, which is 0090's seam arriving through a side door, and one much above 1 would
    * spend the mix's measured headroom.
+   *
+   * ── AND A THEME CAN NOW SAY SOMETHING ABOUT A BOSS WITHOUT A SECOND TABLE ───────────────────────
+   *
+   * ⚠️ **`docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md`.** Reported: *"how much can we
+   * mix it up for the bosses?"* — and the obvious build is a second `bossMix` field, which is a
+   * second table to keep in step with this one.
+   *
+   * ⚠️ **It is not needed, because four layers are now ZERO everywhere except the fight.** `toll`
+   * opens at `approach`, and `lead`, `stomp` and the aura only at `boss` — so a multiplier stated
+   * against any of them is a statement about the boss and about nothing else, and it costs no field
+   * and no guard. Every theme below states at least one, which is what stops seven bosses sharing an
+   * arrangement the way they share a behaviour.
    */
   mix: Partial<Record<MusicLayer, number>>;
 }
@@ -135,41 +147,56 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     space: { vivid: '#0b0b14', 'high-contrast': '#000000' },
     mix: {},
   },
-  /** Level two. Warm and close: the drone comes up and the top end comes down. */
+  /** Level two. Warm and close: the drone and the floor come up, the top end comes down. */
   nebula: {
     title: 'Ember Nebula',
     space: { vivid: '#140b16', 'high-contrast': '#050008' },
-    mix: { drone: 1.35, chords: 1.15, arp: 0.72, hook: 0.85 },
+    mix: { drone: 1.35, sub: 1.2, chords: 1.15, arp: 0.72, hook: 0.85, perc: 0.7, toll: 1.25 },
   },
-  /** Level three. Hard and percussive: the drums lead and the pads get out of the way. */
+  /** Level three. Hard and percussive: the hands lead and the pads get out of the way. */
   debris: {
     title: 'The Debris Line',
     space: { vivid: '#0d1016', 'high-contrast': '#000305' },
-    mix: { engine: 1.2, groove: 1.2, drone: 0.6, chords: 0.78 },
+    mix: { perc: 1.4, engine: 1.15, groove: 1.15, drone: 0.6, chords: 0.78, stomp: 1.3 },
   },
-  /** Level four. Thin, bright and fast — the level the play-test called the good one. */
+  /**
+   * Level four. Thin, bright and fast.
+   *
+   * ⚠️ **ITS OLD MIX IS NOW THE NEUTRAL ONE, WHICH IS THE WHOLE OF 0108's PACE ITEM.** *"The pace of
+   * the music sounded good around level 4, that should be our starting point"* — so what this row
+   * used to say lives in `MUSIC_LADDER` and level one starts there. What is left here is what makes
+   * it *this* place rather than the floor: the same brightness taken further, and the low end pulled
+   * out from under it.
+   */
   rime: {
     title: 'Rime Shelf',
     space: { vivid: '#08131a', 'high-contrast': '#000408' },
-    mix: { arp: 1.4, hook: 1.25, drone: 0.55, engine: 1.1, groove: 0.8 },
+    mix: { arp: 1.3, hook: 1.28, drone: 0.55, sub: 0.62, groove: 0.75, lead: 1.25 },
   },
   /** Level five. Heavy and low: turrets, and a mix that sits underneath them. */
   forge: {
     title: 'The Forge',
     space: { vivid: '#170d08', 'high-contrast': '#080200' },
-    mix: { groove: 1.35, drone: 1.2, engine: 1.15, arp: 0.6, hook: 0.7 },
+    /*
+      ⚠️ **`sub` is 1.22 rather than the 1.4 the band allows, and the guard is what said so.** It is
+      the layer that decides the bus's peak — `MUSIC_GAIN` has the measurement — so the heaviest place
+      in the game is the one row where the ceiling in `MIX_CEILING` is not the real limit. What makes
+      this The Forge is that the low end leads *and* the top gets out of its way, which is two
+      multipliers rather than one large one.
+    */
+    mix: { sub: 1.22, groove: 1.3, drone: 1.15, arp: 0.6, hook: 0.7, stomp: 1.15, drive: 0.8 },
   },
   /** Level six. Everything at once, which is what the level is. */
   bloom: {
     title: 'Spore Bloom',
     space: { vivid: '#0f1408', 'high-contrast': '#020600' },
-    mix: { hook: 1.35, chords: 1.2, arp: 1.15, groove: 1.1 },
+    mix: { hook: 1.3, chords: 1.2, perc: 1.2, arp: 1.15, toll: 1.2, drone: 0.7 },
   },
   /** Level seven. The centre: the drone returns and the tune sits on top of it. */
   core: {
     title: 'The Core',
     space: { vivid: '#16080f', 'high-contrast': '#060003' },
-    mix: { drone: 1.4, lead: 1.2, drive: 1.15, engine: 1.1, hook: 1.1 },
+    mix: { drone: 1.35, lead: 1.3, drive: 1.2, stomp: 1.3, perc: 0.8, hook: 1.1 },
   },
 };
 
