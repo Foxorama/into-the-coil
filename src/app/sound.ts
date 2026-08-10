@@ -46,7 +46,8 @@
  */
 
 import { CUES, CUE_KINDS, MAX_CUE_SECONDS, type CueKind, type CueLayer, type CueRow } from '../content/cues.ts';
-import { makeMusicOut, bakeLoops, type MusicOut } from './music.ts';
+import { makeMusicOut, bakeLoops, layerNotes, type MusicOut } from './music.ts';
+import { MUSIC_LAYERS, type MusicLayer } from '../content/music.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 
 /**
@@ -518,6 +519,114 @@ export interface WebAudioOut extends AudioOut {
  * backgrounded on mobile, and the gesture that brings the player back is the one that has to revive
  * it — a first-run-only unlock is silent for the rest of the session after one phone call.
  */
+/**
+ * Everything the synthesiser can produce before a context exists, kept from the title screen.
+ *
+ * ── THE BAKE WAS A BUDGET, AND THE BUDGET WAS AN ARTEFACT ───────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0102-the-music-goes-somewhere.md`.** `docs/decisions/0095-the-level-has-its-own-music.md`
+ * capped the chords at four bars and said why in as many words: *"eight-bar chords and lead would be
+ * about 900ms on this machine — a freeze at tap to start."* So the length of the music was decided by
+ * how long it takes to synthesise, and the report this decision answers is *"a few seconds of sound
+ * repeated for minutes."*
+ *
+ * ⚠️ **NEITHER BAKE NEEDS THE CONTEXT, AND BOTH ALREADY RUN AT A FIXED RATE.** `bakeCues` and
+ * `bakeLoops` are handed `SAMPLE_RATE` — 44100, a constant — and return `Float32Array`s. The only
+ * thing that needs an `AudioContext` is `createBuffer`, which is microseconds. The 718ms was sitting
+ * on the gesture for no reason except that it had always been written there.
+ *
+ * ⚠️ **So it runs on the title screen, a VOICE at a time.** The largest single voice is about twenty
+ * milliseconds, which is inside a frame; by the time a player has read the difficulty names the whole
+ * set is waiting. **The cap on how much music there can be is gone**, which is what pays for the two
+ * new layers and the eight-bar progression.
+ *
+ * ⚠️ **`unlock` still bakes synchronously if this is empty**, which is not a fallback nobody reaches:
+ * it is the path every headless test takes, and it is what a player who presses *before* the prewarm
+ * finishes gets. One description of the samples, two ways of arriving at them, and
+ * `tests/sound.test.ts` holds that they are identical.
+ */
+let prewarmed: { cues: Float32Array[]; loops: Record<MusicLayer, Float32Array> } | null = null;
+
+/**
+ * Synthesise everything, spread across frames, and keep it for the first gesture.
+ *
+ * ⚠️ **Idempotent and cheap to call twice** — a second call while one is in flight does nothing, and
+ * a call after it has finished does nothing. `src/app/mount.ts` fires it once at boot.
+ *
+ * ⚠️ **`schedule` is injected rather than reaching for `setTimeout`**, so a test can drive it to
+ * completion synchronously and `src/app/sound.ts` stays the file that knows about Web Audio rather
+ * than the file that knows about the event loop.
+ */
+export function prewarmAudio(schedule: (run: () => void) => void = (run) => void setTimeout(run, 0)): void {
+  if (prewarmed !== null || warming) return;
+  warming = true;
+  /*
+    ⚠️ **The CUES first, because they are what a press needs immediately.** A player who taps and
+    starts a run hears a chime and then a gun; the music has a beat and a half of grace before its
+    first bar matters, and `makeMusicOut` starts the loops a moment in the future anyway.
+  */
+  const cues: Float32Array[] = [];
+  const loops = {} as Record<MusicLayer, Float32Array>;
+  const jobs: (() => void)[] = [];
+  for (const kind of CUE_KINDS) jobs.push(() => cues.push(sampleCue(CUES[kind], SAMPLE_RATE, cueStreams.stream(kind))));
+  /*
+    ⚠️ **A JOB IS ONE NOTE, AND A MEASUREMENT IS WHY.** The first version pushed one job per LAYER,
+    and `chords` — six voices of long detuned pads over eight bars — measured **428ms** on its own.
+    Moving a 428ms freeze off the gesture and onto the title screen is moving a hitch rather than
+    removing one. A note is about thirty milliseconds at the very worst (`src/app/music.ts`).
+
+    ⚠️ **The buffer is claimed up front and filled in place**, so a press that arrives mid-prewarm
+    finds `prewarmed` still null and takes the cold path — a half-filled buffer is never reachable.
+  */
+  for (const layer of MUSIC_LAYERS) {
+    const { buffer, notes } = layerNotes(layer, SAMPLE_RATE);
+    loops[layer] = buffer;
+    for (const note of notes) jobs.push(note);
+  }
+  let next = 0;
+  const step = (): void => {
+    if (next >= jobs.length) {
+      prewarmed = { cues, loops };
+      warming = false;
+      return;
+    }
+    jobs[next++]!();
+    schedule(step);
+  };
+  schedule(step);
+}
+
+/** Whether a prewarm is in flight, so a second call does not start a second set. */
+let warming = false;
+
+/**
+ * The prewarmed set, or `null` if there is not one. **For `tests/sound.test.ts` and nothing else.**
+ *
+ * ⚠️ **Exported because the property that matters cannot be checked from outside**: the prewarmed
+ * samples and the cold ones have to be identical, and *the same game sounds different depending on
+ * how fast you pressed* would be invisible to every other assertion in the suite.
+ */
+export function takePrewarmed(): { cues: Float32Array[]; loops: Record<MusicLayer, Float32Array> } | null {
+  return prewarmed;
+}
+
+/** Throw away the prewarmed set, so a test can drive both paths. For `tests/sound.test.ts` only. */
+export function resetPrewarm(): void {
+  prewarmed = null;
+  warming = false;
+}
+
+/**
+ * The cue streams, hoisted so the prewarm and the cold bake draw from the same generator.
+ *
+ * ⚠️ **`docs/decisions/0021-one-stream-per-concern.md` and it is what makes the two paths
+ * identical.** `bakeCues` makes a fresh root and takes a named stream per cue; doing anything else
+ * here would give the prewarmed samples different noise from the cold ones, and *the same game
+ * sounds different depending on how fast you pressed* is the worst kind of bug there is.
+ */
+// @setup: one generator for the lifetime of the module, seeded exactly as `bakeCues` seeds its own.
+const cueStreams = makeRng('cues');
+
 export function makeAudioOut(): WebAudioOut {
   let ctx: AudioContext | null = null;
   let master: GainNode | null = null;
@@ -548,7 +657,7 @@ export function makeAudioOut(): WebAudioOut {
           the samples are cheap enough that the press it rides on cannot feel it: twelve cues, about
           four seconds of mono at 22kHz.
         */
-        const samples = bakeCues(SAMPLE_RATE);
+        const samples = prewarmed?.cues ?? bakeCues(SAMPLE_RATE);
         buffers = samples.map((data) => {
           const buffer = ctx!.createBuffer(1, data.length, SAMPLE_RATE);
           // `getChannelData().set` rather than `copyToChannel`, which types its argument as a
@@ -562,7 +671,7 @@ export function makeAudioOut(): WebAudioOut {
           because the four loops have to START together, and a layer created later starts wherever
           the bar happens to be.
         */
-        music = makeMusicOut(ctx, master, bakeLoops(SAMPLE_RATE), SAMPLE_RATE);
+        music = makeMusicOut(ctx, master, prewarmed?.loops ?? bakeLoops(SAMPLE_RATE), SAMPLE_RATE);
       }
       // Every time, not only on the first: a backgrounded tab suspends the context behind us.
       if (ctx.state === 'suspended') void ctx.resume();

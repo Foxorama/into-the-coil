@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 import {
   BEAT_SECONDS,
   BOSS_APPROACH_UNITS,
+  PUSH_UNITS,
+  SURGE_UNITS,
   LAYER_BARS,
   PHRASE_SECONDS,
   TITLE_ONLY,
@@ -18,7 +20,7 @@ import {
   AURA_FAR_UNITS,
   type MusicLayer,
 } from '../src/content/music.ts';
-import { auraNearness, auraNearnessFor, bakeLoops, musicLevelFor, rephaseIn } from '../src/app/music.ts';
+import { auraNearness, auraNearnessFor, bakeLayer, bakeLoops, musicLevelFor, rephaseIn } from '../src/app/music.ts';
 import { STEPS_PER_BEAT } from '../src/content/music.ts';
 import { MAX_STEPS } from '../src/app/loop.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
@@ -272,7 +274,57 @@ describe('how far up the ladder a run is', () => {
 
   it('is cruising while the boss is far away', () => {
     expect(musicLevelFor(0, BOSS_AT, false)).toBe('run');
-    expect(musicLevelFor(BOSS_AT - BOSS_APPROACH_UNITS - 1, BOSS_AT, false)).toBe('run');
+    // ⚠️ 0102: `run` is the first minute rather than the whole level, so *far away* is now measured
+    // against `PUSH_UNITS`. A level with no boss at all stays here for ever, which is what a fixture
+    // with an infinite `bossAt` relies on.
+    expect(musicLevelFor(BOSS_AT - PUSH_UNITS - 1, BOSS_AT, false)).toBe('run');
+    expect(musicLevelFor(0, Number.POSITIVE_INFINITY, false)).toBe('run');
+  });
+
+  it('0102 — and it climbs FOUR times inside a level, where it used to climb once', () => {
+    /*
+      `docs/decisions/0102-the-music-goes-somewhere.md`. Reported twice: *"the ingame background music
+      doesn't change and increase in tempo as you progress through the level"*, then *"still flat and
+      lifeless, has no depth, no pace, no increased tempo."*
+
+      ⚠️ **`run` covered about 160 seconds of a 176-second level.** One arrangement, three layers, a
+      four-bar loop — and every guard in this file was green over it, because they were all about the
+      LADDER's shape and none of them about how much of a level any rung covers.
+
+      ⚠️ **Asserted in SECONDS, which is the unit the report is in.** *A distance of 4,200* is the
+      model talking to itself; what the player experiences is how long it is before something changes,
+      and nothing here reads `PUSH_UNITS` or `SURGE_UNITS` against itself —
+      `docs/decisions/0027-measure-the-picture-not-the-model.md`.
+    */
+    const at = (units: number): (typeof MUSIC_LEVELS)[number] => musicLevelFor(BOSS_AT - units, BOSS_AT, false);
+    expect(at(PUSH_UNITS)).toBe('push');
+    expect(at(SURGE_UNITS)).toBe('surge');
+    expect(at(BOSS_APPROACH_UNITS)).toBe('approach');
+
+    /** How long the run spends at each rung, in seconds, from the level's start to its boss. */
+    const perSecond = SCROLL_PER_STEP * STEPS_PER_SECOND;
+    const spans = [
+      ['run', (BOSS_AT - PUSH_UNITS) / perSecond],
+      ['push', (PUSH_UNITS - SURGE_UNITS) / perSecond],
+      ['surge', (SURGE_UNITS - BOSS_APPROACH_UNITS) / perSecond],
+      ['approach', BOSS_APPROACH_UNITS / perSecond],
+    ] as const;
+    for (const [name, seconds] of spans) {
+      /*
+        ⚠️ **Ten seconds is the floor and it is not arbitrary**: `RAMP_SECONDS` is 1.6, so a rung
+        shorter than a handful of those is a gain ramp the player hears as a wobble rather than as a
+        change. A rung nobody spends time at is a rung that is not in the music.
+      */
+      expect(seconds, `the music spends ${seconds.toFixed(0)}s at ${name}, which is not a stretch of a level`).toBeGreaterThan(
+        10,
+      );
+      /*
+        ⚠️ **And the ceiling is what the report is about.** Before this, `run` covered 160 seconds of a
+        176-second level; anything over about a minute and a half is *a level with one arrangement in
+        it* however many rungs the table has.
+      */
+      expect(seconds, `the music spends ${seconds.toFixed(0)}s at ${name} without changing`).toBeLessThan(90);
+    }
   });
 
   it('and builds as the boss gets close, in SECONDS the player experiences', () => {
@@ -562,6 +614,174 @@ describe('0095 — the level has a piece of its own, and it covers the band', ()
       expect(peak, `the ${level} mix peaks at ${peak.toFixed(3)} of full scale`).toBeLessThanOrEqual(1);
     }
   }, DSP_MS);
+});
+
+describe('0102 — the music has accents, a bass line and a build', () => {
+  /*
+    `docs/decisions/0102-the-music-goes-somewhere.md`. Three reports across two play-tests: *"the
+    metronome doesn't fit the other beat… it sounds like two separate tracks"*, *"an incredibly
+    limited couple of repeating beats that's a few seconds of sound repeated for minutes"*, and
+    *"still flat and lifeless, has no depth, no pace, no increased tempo."*
+  */
+
+  it('THE TITLE: a drum is not struck at one weight, which is what a metronome IS', () => {
+    /*
+      ⚠️ **THERE WAS NO ACCENT ANYWHERE IN THE MODEL.** An unpitched `steps` entry said *play* or
+      *rest*, so every kick, click, snare and hat in the game was bit-identical to every other — and
+      identical repetition at a fixed interval is not *like* a metronome, it is the definition of one.
+      No arrangement of gains or filters could have answered the report.
+
+      ⚠️ **`src/content/music.ts` CLAIMED its hats alternated** — *"loud and quiet, which is what
+      makes them a shuffle rather than a machine"* — and the pattern was thirty-two ones. That is the
+      shape worth catching: prose describing something the data structure could not express, with
+      nothing able to disagree with it. This is what disagrees.
+
+      ⚠️ **Held over the TITLE's beat specifically**, because that is what was reported, and as a
+      property of the pattern rather than of any value in it.
+    */
+    const struck = (voice: (typeof MUSIC)['beat'][number]): number[] =>
+      voice.steps.filter((s): s is number => s !== null);
+    const weights = new Set(MUSIC.beat.flatMap((voice) => struck(voice)));
+    expect(weights.size, 'every drum in the title is struck at exactly one weight, which is a click track').toBeGreaterThan(
+      2,
+    );
+    // And at least one voice varies WITHIN itself — a layer of uniform voices at different levels is
+    // still four machines, which is the thing being fixed rather than a different arrangement of it.
+    const varying = MUSIC.beat.filter((voice) => new Set(struck(voice)).size > 1);
+    expect(varying.length, 'no single drum part in the title changes weight across its own bar').toBeGreaterThan(1);
+  });
+
+  it('and an accent reaches the SAMPLES, not just the table', () => {
+    /*
+      ⚠️ **The table could carry velocities that `renderVoice` throws away**, which is one line and
+      would leave every assertion above green — 0027 in the channel with nothing to look at. What is
+      measured is the bake: the loudest sixteenth of the title's hats against the quietest, over one
+      loop.
+
+      ⚠️ **Compared as a RATIO rather than against a level**, because the gain is a taste and the
+      accent is not: whatever the hats are mixed at, the strong ones have to be audibly stronger.
+    */
+    const hats = MUSIC.beat[MUSIC.beat.length - 1]!;
+    expect(hats.pitched, 'the last voice of the title beat is not a drum any more').toBe(false);
+    expect(hats.perBeat, 'the last voice of the title beat is not the sixteenth hats any more').toBe(4);
+    const values = hats.steps.filter((s): s is number => s !== null);
+    const loudest = Math.max(...values);
+    const quietest = Math.min(...values);
+    expect(loudest / quietest, 'the hats are all one weight in the table').toBeGreaterThan(1.5);
+
+    /*
+      ⚠️ **THE REAL BAKE, AND THE FIRST VERSION OF THIS RE-IMPLEMENTED THE VELOCITY ITSELF.** It built
+      the buffer by calling `sampleLayerInto` with `value === 1 ? note : { ...note, gain: gain * value }`
+      — which is the line under test, copied into the test. `npm run prove` reported STILL GREEN when
+      the multiply was deleted from `src/app/music.ts`, correctly and damningly: the guard was
+      measuring itself. It bakes the layer through `bakeLayer` now, which is the path the game takes.
+
+      ⚠️ **Separated by FREQUENCY rather than by position, because the kick's tail is louder than a
+      hat.** The kick decays over a quarter of a second and reaches 0.135 where a hat peaks at 0.07,
+      so a raw peak at a hat's position measures the kick. The hats are the only thing in the layer
+      with content above 5 kHz — `src/content/music.ts` high-passes them at 6 kHz and the snare's
+      lowpass falls to 1.6 — so the *air* band at a hat's instant is the hat and nothing else.
+
+      ⚠️ **Two sixteenths chosen because nothing else strikes on them.** At `perBeat: 2` the kick
+      lands on sixteenths 0, 6, 12, 16, 22, 28 and the snare on 4, 12, 20, 26, 28; 8 and 9 are free of
+      both, and the accent cycle makes 8 a strong hat and 9 a weak one.
+    */
+    const rate = SAMPLE_RATE;
+    const buffer = bakeLayer('beat', rate);
+    const step = BEAT_SECONDS / hats.perBeat;
+    /** The air-band energy of the twenty milliseconds beginning at sixteenth `i`. */
+    const airAt = (i: number): number => {
+      const from = Math.round(i * step * rate);
+      const window = buffer.subarray(from, Math.min(from + Math.round(0.02 * rate), buffer.length));
+      return bandEnergy(window, rate)[BANDS.findIndex(([, , name]) => name === 'air')]!;
+    };
+    expect(hats.steps[8], 'sixteenth 8 is no longer the accented hat this is written against').toBe(loudest);
+    expect(hats.steps[11], 'sixteenth 11 is no longer the quiet hat this is written against').toBe(quietest);
+    const strong = airAt(8);
+    const weak = airAt(11);
+    expect(strong, 'the hats baked to silence, so this measured nothing').toBeGreaterThan(0);
+    expect(
+      strong / weak,
+      `the accented hat bakes ${(strong / weak).toFixed(2)}× the quiet one, against ${(loudest / quietest).toFixed(2)}× in the table`,
+    ).toBeGreaterThan(1.4);
+  });
+
+  it('THE LEVEL: there is something in the low end that MOVES, at every rung above the opening', () => {
+    /*
+      ⚠️ **THE LEVEL'S PIECE HAD NO BASS LINE, AND THAT IS MOST OF *"NO DEPTH"*.** `bass` is
+      `TITLE_ONLY` — 0095 closed it, correctly, because an A-rooted riff is a wrong note over three
+      chords in four — and nothing replaced it. From the moment a level began, the only thing under
+      the kick was `chords`' own rolling sub.
+
+      ⚠️ **Held as *a pitched layer, low, that changes note WITHIN A BAR*, rather than by naming
+      `groove`.** The day a different layer does that job it simply passes.
+
+      ⚠️ **AND *WITHIN A BAR* IS THE WHOLE OF IT — a first draft counted distinct notes over the
+      whole pattern and `npm run prove` reported WRONG TEST.** `chords`' rolling sub is pitched, at
+      octave zero, and takes four different notes across the progression — so it satisfied *low and
+      moving* and the guard passed with `groove` closed. But it plays ONE note per bar, repeated on
+      eighths: it follows the chord, which is exactly the thing that was there all along and is not a
+      bass line. **What separates a line from a sub is that a line moves inside the bar.**
+    */
+    const beatsPerBar = 4;
+    const lowAndMoving = MUSIC_LAYERS.filter((layer) =>
+      MUSIC[layer].some((voice) => {
+        if (!voice.pitched || voice.octave > 1) return false;
+        const perBar = Math.round(voice.perBeat * beatsPerBar);
+        for (let bar = 0; bar * perBar < voice.steps.length; bar++) {
+          const inBar = voice.steps.slice(bar * perBar, (bar + 1) * perBar).filter((s) => s !== null);
+          if (new Set(inBar).size > 2) return true;
+        }
+        return false;
+      }),
+    );
+    expect(lowAndMoving.length, 'nothing in the whole piece is a moving bass line').toBeGreaterThan(0);
+    for (const level of MUSIC_LEVELS) {
+      if (level === 'calm' || level === 'run') continue;
+      const open = lowAndMoving.filter((layer) => MUSIC_LADDER[level][layer] > 0);
+      expect(open.length, `${level} has no moving bass line under it, so the low end is a pad`).toBeGreaterThan(0);
+    }
+  });
+
+  it('and each rung strikes MORE NOTES A BAR than the one below, which is what *pace* is', () => {
+    /*
+      ⚠️ **THE TEMPO DOES NOT CHANGE AND CANNOT** — `docs/decisions/0093-the-gun-is-on-the-grid.md`
+      fixes a beat at 24 sim steps, and the player's gun, every enemy's cadence and 0094's phase-lock
+      all ride it. A BPM ramp would take the whole game off the grid three decisions exist to put it
+      on. *"Increased tempo"* is answered by the rate of EVENTS, which is the same mechanism
+      `docs/decisions/0091-the-boss-has-an-aura.md` already calls *builds in tempo*.
+
+      ⚠️ **NOTES A BAR, and NOT the finest subdivision available — a first draft used that and it was
+      the wrong quantity.** `engine` has sixteenth hats, so the finest subdivision in the piece is
+      already 4 at the opening of every level and stays 4 for ever; measured that way the boss is no
+      busier than the first bar, which is plainly false. What rises is how much is HAPPENING, and
+      that is a count.
+
+      ⚠️ **Per bar rather than per loop**, because the layers are two, four and eight bars long and a
+      per-loop count would say an eight-bar layer is twice as busy as the same pattern written twice.
+    */
+    const perBar = (level: (typeof MUSIC_LEVELS)[number]): number =>
+      MUSIC_LAYERS.filter((l) => MUSIC_LADDER[level][l] > 0).reduce(
+        (sum, l) => sum + MUSIC[l].reduce((n, v) => n + v.steps.filter((s) => s !== null).length, 0) / LAYER_BARS[l],
+        0,
+      );
+    const inLevel = MUSIC_LEVELS.filter((l) => l !== 'calm');
+    for (let i = 1; i < inLevel.length; i++) {
+      const here = perBar(inLevel[i]!);
+      const below = perBar(inLevel[i - 1]!);
+      expect(
+        here,
+        `${inLevel[i]} strikes ${here.toFixed(0)} notes a bar against ${inLevel[i - 1]}'s ${below.toFixed(0)} — nothing about it reads as faster`,
+      ).toBeGreaterThan(below);
+    }
+    /*
+      ⚠️ **And the whole climb is worth having.** Each rung being *more* is satisfied by adding one
+      note four times; what the report is about is a level that arrives somewhere, so the boss has to
+      be half as busy again as the opening.
+    */
+    const climb = perBar('boss') / perBar('run');
+    expect(climb, `the boss is only ${climb.toFixed(2)}× as busy as the opening of a level`).toBeGreaterThan(1.5);
+  });
 });
 
 describe('the boss brings an aura with it', () => {

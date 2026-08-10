@@ -31,6 +31,8 @@ import {
   MUSIC_LAYERS,
   MUSIC_ROOT,
   BOSS_APPROACH_UNITS,
+  PUSH_UNITS,
+  SURGE_UNITS,
   AURA_LAYERS,
   AURA_NEAR_UNITS,
   AURA_FAR_UNITS,
@@ -44,31 +46,46 @@ import { makeRng, type Rng } from '../sim/rng.ts';
 import { STEPS_PER_SECOND } from '../state/screens.ts';
 
 /**
- * One voice, expanded over the loop.
+ * One note of one voice, at `at` seconds into its layer's loop.
  *
  * ⚠️ **Every note is rendered with WRAP, which is the whole difference between a loop and a bar.** A
  * note whose tail runs past the end has to arrive at the start of the buffer, or every repetition
  * has a silent notch where the decay should be — and it is audible immediately, because it happens
- * at the same place every 3.6 seconds.
+ * at the same place every loop.
+ *
+ * ⚠️ **It was `renderVoice` and the loop over the pattern moved OUT of it** —
+ * `docs/decisions/0102-the-music-goes-somewhere.md`. `layerNotes` needs one job per note to keep the
+ * prewarm under a frame, and a note is the smallest thing this can be split into: the walk over the
+ * pattern lives in exactly one place either way.
  */
-function renderVoice(voice: MusicVoice, seconds: number, rate: number, rng: Rng, into: Float32Array): void {
-  const step = BEAT_SECONDS / voice.perBeat;
-  for (let i = 0; i < voice.steps.length; i++) {
-    const value = voice.steps[i];
-    if (value === null || value === undefined) continue;
-    const at = i * step;
-    // ⚠️ Its OWN layer's length since 0095, not one shared loop — a pattern longer than the layer it
-    // is in is a pattern with its tail silently cut, and the two lengths are 2 bars and 4.
-    if (at >= seconds) break;
+function renderNote(voice: MusicVoice, value: number, at: number, rate: number, rng: Rng, into: Float32Array): void {
+  {
     /*
       ⚠️ **A pitched voice REPLACES the note's own sweep and a drum keeps it.** A kick is a fall from
       150 to 45 whatever the key is; a bass note is the key. One field, two meanings, and the row
       says which — `src/content/music.ts` has the argument.
     */
+    /*
+      ⚠️ **AN UNPITCHED STEP IS A VELOCITY, AND IT USED TO BE A FLAG** —
+      `docs/decisions/0102-the-music-goes-somewhere.md`. Reported from play: *"the metronome doesn't
+      fit the other beat… it sounds like two separate tracks being played at the same time."*
+
+      ⚠️ **There was no accent anywhere in the model, so every drum was bit-identical**, and
+      identical repetition at a fixed interval IS a metronome — there is no tuning that makes it
+      anything else. `src/content/music.ts` even claimed its hats were *"alternating loud and quiet,
+      which is what makes them a shuffle rather than a machine"*; the pattern was thirty-two ones. The
+      comment described something the data could not say.
+
+      ⚠️ **One multiply, and the field already carried the number.** `steps` was documented as *whether
+      the note plays at all* for a drum, and every value in every table was 1 — so reading it as a
+      gain is backwards-compatible to the sample and turns a rest-or-play list into a groove.
+    */
     const pitch = voice.pitched ? MUSIC_ROOT * Math.pow(2, voice.octave + value / 12) : 0;
     const note = voice.pitched
       ? { ...voice.note, from: pitch, to: pitch }
-      : voice.note;
+      : value === 1
+        ? voice.note
+        : { ...voice.note, gain: voice.note.gain * value };
     sampleLayerInto(note, rate, rng, into, Math.round(at * rate), true);
   }
 }
@@ -88,16 +105,66 @@ function renderVoice(voice: MusicVoice, seconds: number, rate: number, rng: Rng,
  * progression is what a power ballad IS.
  */
 export function bakeLoops(rate: number): Record<MusicLayer, Float32Array> {
-  const root = makeRng('music');
   const out = {} as Record<MusicLayer, Float32Array>;
-  for (const layer of MUSIC_LAYERS) {
-    const seconds = secondsOfLayer(layer);
-    const buffer = new Float32Array(Math.round(seconds * rate));
-    const rng = root.stream(layer);
-    for (const voice of MUSIC[layer]) renderVoice(voice, seconds, rate, rng, buffer);
-    out[layer] = buffer;
-  }
+  for (const layer of MUSIC_LAYERS) out[layer] = bakeLayer(layer, rate);
   return out;
+}
+
+/**
+ * One layer, on its own.
+ *
+ * ⚠️ **Split out so the synthesis can be spread across frames** —
+ * `docs/decisions/0102-the-music-goes-somewhere.md`. The whole set is about six hundred milliseconds
+ * and it used to run inside the first gesture, which is what capped how much music there could be
+ * (0095 says so in as many words). `src/app/sound.ts`'s prewarm walks these one at a time on the
+ * title screen instead.
+ *
+ * ⚠️ **The root is made HERE and not passed in**, which is what keeps the two paths identical: a
+ * layer's stream is `makeRng('music').stream(layer)` whether it was baked in a loop with its
+ * neighbours or on its own three frames later. `docs/decisions/0021-one-stream-per-concern.md` is the
+ * rule, and *the same game sounds different depending on how fast you pressed* is what breaking it
+ * would cost.
+ */
+export function bakeLayer(layer: MusicLayer, rate: number): Float32Array {
+  const { buffer, notes } = layerNotes(layer, rate);
+  for (const note of notes) note();
+  return buffer;
+}
+
+/**
+ * A layer's buffer and one job per NOTE, so the synthesis can be spread across frames.
+ *
+ * ── PER NOTE AND NOT PER LAYER, WHICH A MEASUREMENT DECIDED ─────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0102-the-music-goes-somewhere.md`.** The prewarm's first version walked
+ * LAYERS, and `chords` — six voices of long detuned pads over eight bars — measured **428ms** on its
+ * own. A 428ms job on the title screen is a freeze whether it happens on the gesture or not; moving
+ * a hitch is not the same as removing one.
+ *
+ * ⚠️ **A note is the natural grain and it is about thirty milliseconds at the very worst** — the
+ * drone's pad, 4.6 beats of saw behind two filters. Everything else is far under a frame.
+ *
+ * ⚠️ **The generator is made once per LAYER and closed over**, because the voices of a layer draw
+ * from one stream in order (`docs/decisions/0021-one-stream-per-concern.md`). Running the jobs in
+ * the order they are returned reproduces `bakeLayer` exactly, and `tests/sound.test.ts` holds that
+ * the two paths agree sample for sample.
+ */
+export function layerNotes(layer: MusicLayer, rate: number): { buffer: Float32Array; notes: (() => void)[] } {
+  const seconds = secondsOfLayer(layer);
+  const buffer = new Float32Array(Math.round(seconds * rate));
+  const rng = makeRng('music').stream(layer);
+  const notes: (() => void)[] = [];
+  for (const voice of MUSIC[layer]) {
+    const step = BEAT_SECONDS / voice.perBeat;
+    for (let i = 0; i < voice.steps.length; i++) {
+      const value = voice.steps[i];
+      if (value === null || value === undefined) continue;
+      const at = i * step;
+      if (at >= seconds) break;
+      notes.push(() => renderNote(voice, value, at, rate, rng, buffer));
+    }
+  }
+  return { buffer, notes };
 }
 
 /**
@@ -117,7 +184,25 @@ export function bakeLoops(rate: number): Record<MusicLayer, Float32Array> {
  */
 export function musicLevelFor(cameraAlong: number, bossAt: number, bossOnField: boolean): MusicLevel {
   if (bossOnField) return 'boss';
-  return bossAt - cameraAlong <= BOSS_APPROACH_UNITS ? 'approach' : 'run';
+  /*
+    ⚠️ **FIVE RUNGS INSIDE A LEVEL, AND THERE WAS ONE** —
+    `docs/decisions/0102-the-music-goes-somewhere.md`. This returned `run` from the moment a level
+    began until 430 units before its boss — about 160 seconds of a 176-second level — so nine tenths
+    of every level was one arrangement over a four-bar loop. *"The ingame background music doesn't
+    change and increase in tempo as you progress through the level"* is a description of this line.
+
+    ⚠️ **Distances, like `BOSS_APPROACH_UNITS` and like everything else this project paces**, so a
+    device that drops frames hears the same build and a retuned level carries it.
+
+    ⚠️ **Measured from the BOSS backwards rather than from the level's start forwards**, which is what
+    makes it work for a level of any length: what the player is progressing towards is the fight, and
+    a level authored longer simply spends longer at `run`.
+  */
+  const toBoss = bossAt - cameraAlong;
+  if (toBoss <= BOSS_APPROACH_UNITS) return 'approach';
+  if (toBoss <= SURGE_UNITS) return 'surge';
+  if (toBoss <= PUSH_UNITS) return 'push';
+  return 'run';
 }
 
 /**
