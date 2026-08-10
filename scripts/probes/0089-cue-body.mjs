@@ -61,8 +61,8 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: everything that explodes has a body, and not just a hiss',
     edit: {
       path: 'src/content/cues.ts',
-      find: "      { wave: 'noise', from: 0, to: 0, seconds: 0.34, gain: 0.95, attack: 0.003, curve: 3.2, lowFrom: 2100, lowTo: 420, highFrom: 110, highTo: 45, q: 0.7, drive: 0.3 },",
-      replace: "      { wave: 'noise', from: 0, to: 0, seconds: 0.34, gain: 0.95, attack: 0.003, curve: 3.2, lowFrom: 2100, lowTo: 420, q: 0.7, drive: 0.3 },",
+      find: "      { wave: 'noise', from: 0, to: 0, seconds: 0.17, gain: 0.9, attack: 0.002, curve: 4.5, lowFrom: 2400, lowTo: 620, highFrom: 150, highTo: 90, q: 0.8, drive: 0.3 },",
+      replace: "      { wave: 'noise', from: 0, to: 0, seconds: 0.17, gain: 0.9, attack: 0.002, curve: 4.5, lowFrom: 2400, lowTo: 620, q: 0.8, drive: 0.3 },",
     },
   },
   {
