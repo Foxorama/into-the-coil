@@ -47,7 +47,7 @@
 
 import { CUES, CUE_KINDS, MAX_CUE_SECONDS, type CueKind, type CueLayer, type CueRow } from '../content/cues.ts';
 import { makeMusicOut, bakeLoops, layerNotes, type MusicOut } from './music.ts';
-import { MUSIC_LAYERS, type MusicLayer } from '../content/music.ts';
+import { FIRE_GRID, MUSIC_LAYERS, STEPS_PER_BEAT, type MusicLayer } from '../content/music.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 
 /**
@@ -118,8 +118,14 @@ export const MAX_VOICES = 4;
  * transient against a sustained bed: `MAX_VOICES` of the loudest cues at once is a rare instant and
  * the music's peak is every kick, so holding the first above the second buys nothing the player can
  * hear and costs the thing they asked for twice.
+ *
+ * ⚠️ **EXPORTED FOR `scripts/hear.mjs`, WHICH IS THE ONLY THING THAT MAY READ IT.** The rig mixes
+ * cues against music to hear the balance the player hears; a `0.4` typed into the rig would be a
+ * second description of the mix, and the rig would go on reporting the old balance the day this
+ * moved — the exact failure `docs/decisions/0027-measure-the-picture-not-the-model.md` is about,
+ * arriving in the instrument built to prevent it.
  */
-const MASTER_GAIN = 0.4;
+export const MASTER_GAIN = 0.4;
 
 /** How long every cue takes to reach full amplitude, in seconds — short enough to read as an attack. */
 const ATTACK_SECONDS = 0.004;
@@ -231,8 +237,19 @@ let rateCeiling = SAMPLE_RATE;
  *
  * Normalised by the same curve at unity, so raising `amount` adds harmonics without also adding
  * level: a drive that got louder would be indistinguishable from a gain in every guard below.
+ *
+ * ⚠️ **EXPORTED, because the MUSIC BUS runs through it too** —
+ * `docs/decisions/0104-the-gun-plays-a-figure.md`. It is a `WaveShaperNode`'s curve there rather than
+ * a per-sample call, and the reason it is this function and not a `DynamicsCompressorNode` is that a
+ * compressor has an attack and a release: `tests/music.test.ts` could not model one, so the guard
+ * that holds the mix would have to be weakened to admit it. This is **stateless and deterministic**,
+ * so the guard applies the identical arithmetic and stays a real check.
+ *
+ * ⚠️ **Normalisation is what makes it an UPWARD compressor and that is the whole gain.** The slope at
+ * zero is `k / tanh(k)`, so quiet passages come up while peaks are held at unity — which is exactly
+ * what a bus with a 12 dB crest factor and 5 dB of unused headroom needs.
  */
-function saturate(x: number, amount: number): number {
+export function saturate(x: number, amount: number): number {
   if (amount <= 0) return x;
   const k = 1 + amount * 6;
   return Math.tanh(x * k) / Math.tanh(k);
@@ -255,7 +272,7 @@ function saturate(x: number, amount: number): number {
  * The sweep is exponential rather than linear because pitch is heard logarithmically: a linear ramp
  * from 880 to 330 spends most of its time in the last octave and reads as a sound that stalls.
  */
-export function sampleCue(row: CueRow, rate: number, rng: Rng): Float32Array {
+export function sampleCue(row: CueRow, rate: number, rng: Rng, velocity = 1): Float32Array {
   rateCeiling = rate;
   const length = Math.max(1, Math.round(cueSeconds(row) * rate));
   const out = new Float32Array(length);
@@ -274,7 +291,13 @@ export function sampleCue(row: CueRow, rate: number, rng: Rng): Float32Array {
     // that can click is the end of the buffer itself.
     const left = length - i;
     const fade = left < release ? left / release : 1;
-    out[i] = saturate(out[i]!, row.glue) * row.gain * fade;
+    /*
+      ⚠️ **`velocity` scales the SUM, after the glue and not before it** — 0104. Before it, a quieter
+      variant would also be a less saturated one, so the accents would differ in timbre as well as in
+      weight and the four would stop being one sound played four ways. That is the same reason the
+      glue is over the sum in the first place.
+    */
+    out[i] = saturate(out[i]!, row.glue) * row.gain * fade * velocity;
   }
   return out;
 }
@@ -384,33 +407,106 @@ export function cueSeconds(row: CueRow): number {
  * arrangement `src/content/sprites.ts` was rewritten into after three hand-kept descriptions of one
  * order made every entity in the game draw as the wrong thing.
  */
-export function bakeCues(rate: number = SAMPLE_RATE): Float32Array[] {
+export function bakeCues(rate: number = SAMPLE_RATE): Float32Array[][] {
   // Its own root, so a cosmetic roll anywhere else in the game cannot move a waveform, and vice
   // versa — `docs/decisions/0021-one-stream-per-concern.md`.
   const root = makeRng('cues');
-  return CUE_KINDS.map((kind) => sampleCue(CUES[kind], rate, root.stream(kind)));
+  return CUE_KINDS.map((kind) => velocitiesOf(CUES[kind]).map((v) => sampleCue(CUES[kind], rate, root.stream(kind), v)));
 }
+
+/**
+ * The velocities a cue is baked at — its `figure`, or a single full-weight sounding.
+ *
+ * ⚠️ **THE single description of *how many buffers is this cue*, and four things ask it**: the bake,
+ * the prewarm, the speaker's choice of variant and `tests/sound.test.ts`. A row with no figure
+ * resolves to exactly what it was before 0104 — one buffer at full weight — so the field is opt-in
+ * and eleven of the twelve rows are byte for byte unchanged.
+ *
+ * ⚠️ **THE SAME `Rng` STREAM FOR EVERY VARIANT, WHICH IS WHY THEY ARE ONE SOUND.** `bakeCues` draws
+ * `stream(kind)` once per variant, so each gets an identically-seeded generator and the four differ
+ * **only** in weight — same noise, same everything. Four different noise draws would be four
+ * different sounds rather than one played four ways, which is the whole thing this mechanism is for.
+ */
+export function velocitiesOf(row: CueRow): readonly number[] {
+  return row.figure ?? ONE_VELOCITY;
+}
+
+/** What a row with no figure gets. Module-level, so asking costs no allocation. */
+const ONE_VELOCITY: readonly number[] = [1];
 
 /** What actually makes a noise. The one interface the browser half has to satisfy. */
 export interface AudioOut {
   /** Whether anything can be heard yet — false until a gesture has unlocked the context. */
   ready(): boolean;
-  /** Sound the cue at this index in `CUE_KINDS`. Called only when the speaker has allowed it. */
-  sound(index: number): void;
+  /**
+   * Sound the cue at this index in `CUE_KINDS`, at variant `velocity`. Called only when the speaker
+   * has allowed it.
+   *
+   * ⚠️ **`velocity` indexes the row's baked variants and is not a gain** — 0104. A gain would be a
+   * `GainNode` per voice, which is a second allocation on a path `MAX_VOICES` exists to bound; the
+   * weights are baked instead, so an accented shot costs exactly what an unaccented one does.
+   */
+  sound(index: number, velocity: number): void;
+  /**
+   * Push the music down by `amount` for a moment, because a loud cue is landing — 0104.
+   *
+   * ⚠️ **On `AudioOut` rather than reached for through `music()`**, so `makeSpeaker` stays the pure
+   * counting half with no opinion about whether a music bus exists. The web half forwards it; a test
+   * double records it.
+   */
+  duck(amount: number): void;
 }
 
 export interface Speaker {
   /**
    * A fixed step happened. Resets the per-step voice count and advances the clock holds are measured
    * against.
+   *
+   * ⚠️ **`beatStep` is the SIM's own step count and is a different clock from the hold's** — 0104. A
+   * hold is counted in steps since the speaker was built, so that it expires on the screens the
+   * simulation is not running (0063); a `figure` is counted against the MUSIC, which is phase-locked
+   * to `world.steps` and to nothing else
+   * (`docs/decisions/0094-in-time-is-not-in-phase.md`). Passing the world's number in is what makes
+   * an accent land where the bar says rather than where the speaker happens to have got to.
+   *
+   * ⚠️ **Defaulted, because most callers have no world** — the menus tick this too, and the only cue
+   * they can sound has no figure.
    */
-  step(): void;
+  step(beatStep?: number): void;
   /** Sound a cue, if the mute, the hold and the voice cap all allow it. */
   play(kind: CueKind): void;
   /** Whether the player wants sound at all. */
   setOn(on: boolean): void;
   /** How many voices started on the current step — the counted budget, for the guard to read. */
   voices(): number;
+}
+
+/**
+ * Which of a row's `count` baked weights a cue landing on sim step `step` is struck at.
+ *
+ * ── WHERE IN THE BEAT, NOT HOW MANY HAVE GONE BY ────────────────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0104-the-gun-plays-a-figure.md`.** The obvious build is a counter that advances
+ * every time the cue sounds, and it drifts: the gun's cadence changes four times up the ladder
+ * (`src/content/ships.ts`), a volley the pool refuses is silent
+ * (`src/app/frame.ts`), and either one slides every later accent off the bar for the rest of the run.
+ * That is `docs/decisions/0094-in-time-is-not-in-phase.md`'s lesson — *in time is not in phase* —
+ * arriving one layer up.
+ *
+ * ⚠️ **So the position is a property of WHEN, and a cue that never sounds moves nothing.** Two shots
+ * inside one sixteenth genuinely land on the same slot and are struck the same, which is correct
+ * rather than a rounding: they are one sixteenth, played twice.
+ *
+ * ⚠️ **`FIRE_GRID` is the unit and it is imported rather than restated.** It is the sixteenth every
+ * cadence in the game is already snapped to (0096), so the accents and the shots divide the beat the
+ * same way by construction — and a `figure` of four entries is exactly one beat.
+ *
+ * Exported for `tests/sound.test.ts`, which drives it directly.
+ */
+export function variantAt(count: number, step: number): number {
+  if (count <= 1) return 0;
+  const sixteenth = Math.floor(((step % STEPS_PER_BEAT) + STEPS_PER_BEAT) % STEPS_PER_BEAT / FIRE_GRID);
+  return sixteenth % count;
 }
 
 /**
@@ -422,6 +518,8 @@ export interface Speaker {
 export function makeSpeaker(out: AudioOut): Speaker {
   /** Fixed steps since the speaker was built. Only ever goes up. */
   let clock = 0;
+  /** The SIM's step count, which is the clock the music is in phase with — 0104. */
+  let beat = 0;
   let voices = 0;
   let on = true;
   /**
@@ -434,11 +532,59 @@ export function makeSpeaker(out: AudioOut): Speaker {
   CUE_KINDS.forEach((kind, index) => {
     indexOf[kind] = index;
   });
+  /*
+    ⚠️ **How many variants each row was baked at, resolved once.** `play` runs on the hot path and
+    may not reach into `CUES[kind].figure` to read a length sixty times a second — the same reason
+    `indexOf` exists one line up.
+  */
+  const variantsOf = CUE_KINDS.map((kind) => velocitiesOf(CUES[kind]).length);
+  /*
+    ⚠️ **The cues asked for since the last grid step, as flags** — 0104. A `Uint8Array` rather than a
+    list, so a step that queues three cues allocates nothing: this is reached from a fixed step and
+    `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md` counts allocations there.
+
+    ⚠️ **A FLAG and not a count, which is the behaviour as well as the storage.** Two kills inside one
+    sixteenth are one sounding, exactly as two on consecutive steps already were — that is what
+    `hold` says about a flam and this cannot be looser than it.
+  */
+  // @setup: one array for the speaker's lifetime, cleared in place at every grid step.
+  const waiting = new Uint8Array(CUE_KINDS.length);
+
+  /** Sound `index` now, if the hold and the cap allow it. The last gate before the browser. */
+  const emit = (index: number): void => {
+    if (clock - (lastAt[index] ?? 0) < CUES[CUE_KINDS[index]!]!.hold) return;
+    if (voices >= MAX_VOICES) return;
+    if (!out.ready()) return;
+    lastAt[index] = clock;
+    voices++;
+    out.sound(index, variantAt(variantsOf[index] ?? 1, beat));
+    /*
+      ⚠️ **AFTER the cue is known to have sounded, never when it was asked for** — 0104. A cue the
+      hold or the cap refused is a cue the player never hears, and ducking the music for it would be
+      the track getting out of the way of nothing. It is the same rule `voices` follows one line up,
+      for the same reason.
+    */
+    const depth = CUES[CUE_KINDS[index]!]!.duck;
+    if (depth !== undefined) out.duck(depth);
+  };
 
   return {
-    step(): void {
+    step(beatStep?: number): void {
       clock++;
+      // The world's own count when there is a world, and the speaker's own when there is not.
+      beat = beatStep ?? beat + 1;
       voices = 0;
+      /*
+        ⚠️ **The flush is BEFORE anything this step asks for**, which is what keeps a queued cue from
+        losing its slot to one that arrived later. A cue that waited a sixteenth has already paid for
+        its place in the bar; the cap is a budget for the step, and the thing that waited goes first.
+      */
+      if (beat % FIRE_GRID !== 0) return;
+      for (let i = 0; i < waiting.length; i++) {
+        if (waiting[i] === 0) continue;
+        waiting[i] = 0;
+        emit(i);
+      }
     },
     play(kind: CueKind): void {
       if (!on) return;
@@ -455,12 +601,21 @@ export function makeSpeaker(out: AudioOut): Speaker {
         `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` catching a guard standing over nothing.
         The order below is cheap-first and that is all it is.
       */
-      if (clock - (lastAt[index] ?? 0) < CUES[kind].hold) return;
-      if (voices >= MAX_VOICES) return;
-      if (!out.ready()) return;
-      lastAt[index] = clock;
-      voices++;
-      out.sound(index);
+      /*
+        ⚠️ **A GRIDDED CUE WAITS AND IS NOT DROPPED** — 0104. It is marked and sounds at the next
+        sixteenth, which is at most `FIRE_GRID` steps away; the hold, the cap and the ready check are
+        all asked THERE rather than here, because the answer at the moment it actually sounds is the
+        one that matters. Asking now would let a cue reserve a voice for a step it does not sound on.
+
+        ⚠️ **Exactly on a grid step it still waits, and that is not an off-by-one.** `step` flushes
+        before anything this step asks for, so a cue arriving after the flush has already missed it —
+        and one sixteenth later is where the next slot is.
+      */
+      if (CUES[kind].onGrid === true) {
+        waiting[index] = 1;
+        return;
+      }
+      emit(index);
     },
     setOn(next: boolean): void {
       on = next;
@@ -545,7 +700,7 @@ export interface WebAudioOut extends AudioOut {
  * finishes gets. One description of the samples, two ways of arriving at them, and
  * `tests/sound.test.ts` holds that they are identical.
  */
-let prewarmed: { cues: Float32Array[]; loops: Record<MusicLayer, Float32Array> } | null = null;
+let prewarmed: { cues: Float32Array[][]; loops: Record<MusicLayer, Float32Array> } | null = null;
 
 /**
  * Synthesise everything, spread across frames, and keep it for the first gesture.
@@ -565,10 +720,28 @@ export function prewarmAudio(schedule: (run: () => void) => void = (run) => void
     starts a run hears a chime and then a gun; the music has a beat and a half of grace before its
     first bar matters, and `makeMusicOut` starts the loops a moment in the future anyway.
   */
-  const cues: Float32Array[] = [];
+  const cues: Float32Array[][] = [];
   const loops = {} as Record<MusicLayer, Float32Array>;
   const jobs: (() => void)[] = [];
-  for (const kind of CUE_KINDS) jobs.push(() => cues.push(sampleCue(CUES[kind], SAMPLE_RATE, cueStreams.stream(kind))));
+  /*
+    ⚠️ **ONE JOB PER VARIANT, not one per kind** — 0104, on the same measurement that made a music job
+    one NOTE rather than one layer. A row with a figure is four bakes; pushing them as one job would
+    put four synthesis passes on a single frame, which is the hitch the prewarm exists to remove.
+
+    ⚠️ **The row's list is claimed up front and filled in place**, so the ordering inside a kind is the
+    figure's own however the jobs are interleaved — `bakeCues` produces the same nesting and
+    `tests/sound.test.ts` holds the two identical.
+  */
+  for (const kind of CUE_KINDS) {
+    const variants = velocitiesOf(CUES[kind]);
+    const into: Float32Array[] = [];
+    cues.push(into);
+    variants.forEach((velocity, at) => {
+      jobs.push(() => {
+        into[at] = sampleCue(CUES[kind], SAMPLE_RATE, cueStreams.stream(kind), velocity);
+      });
+    });
+  }
   /*
     ⚠️ **A JOB IS ONE NOTE, AND A MEASUREMENT IS WHY.** The first version pushed one job per LAYER,
     and `chords` — six voices of long detuned pads over eight bars — measured **428ms** on its own.
@@ -606,7 +779,7 @@ let warming = false;
  * samples and the cold ones have to be identical, and *the same game sounds different depending on
  * how fast you pressed* would be invisible to every other assertion in the suite.
  */
-export function takePrewarmed(): { cues: Float32Array[]; loops: Record<MusicLayer, Float32Array> } | null {
+export function takePrewarmed(): { cues: Float32Array[][]; loops: Record<MusicLayer, Float32Array> } | null {
   return prewarmed;
 }
 
@@ -630,7 +803,7 @@ const cueStreams = makeRng('cues');
 export function makeAudioOut(): WebAudioOut {
   let ctx: AudioContext | null = null;
   let master: GainNode | null = null;
-  let buffers: AudioBuffer[] = [];
+  let buffers: AudioBuffer[][] = [];
   let music: MusicOut | null = null;
 
   return {
@@ -658,13 +831,15 @@ export function makeAudioOut(): WebAudioOut {
           four seconds of mono at 22kHz.
         */
         const samples = prewarmed?.cues ?? bakeCues(SAMPLE_RATE);
-        buffers = samples.map((data) => {
-          const buffer = ctx!.createBuffer(1, data.length, SAMPLE_RATE);
-          // `getChannelData().set` rather than `copyToChannel`, which types its argument as a
-          // `Float32Array<ArrayBuffer>` specifically and rejects the plain one `sampleCue` returns.
-          buffer.getChannelData(0).set(data);
-          return buffer;
-        });
+        buffers = samples.map((variants) =>
+          variants.map((data) => {
+            const buffer = ctx!.createBuffer(1, data.length, SAMPLE_RATE);
+            // `getChannelData().set` rather than `copyToChannel`, which types its argument as a
+            // `Float32Array<ArrayBuffer>` specifically and rejects the plain one `sampleCue` returns.
+            buffer.getChannelData(0).set(data);
+            return buffer;
+          }),
+        );
         /*
           THE MUSIC, on the same gesture and out of the same context — decision 0090. It is built
           here rather than lazily
@@ -676,8 +851,11 @@ export function makeAudioOut(): WebAudioOut {
       // Every time, not only on the first: a backgrounded tab suspends the context behind us.
       if (ctx.state === 'suspended') void ctx.resume();
     },
-    sound(index: number): void {
-      const buffer = buffers[index];
+    sound(index: number, velocity: number): void {
+      const variants = buffers[index];
+      // The speaker takes the modulo, so an out-of-range variant is a bug rather than a state — but
+      // a missing buffer is silence and never a throw, on the same terms as an absent context.
+      const buffer = variants?.[velocity] ?? variants?.[0];
       if (ctx === null || master === null || buffer === undefined) return;
       /*
         ⚠️ **THE ONE UNAVOIDABLE ALLOCATION, and the reason this file is on the cold list with its
@@ -689,6 +867,11 @@ export function makeAudioOut(): WebAudioOut {
       source.buffer = buffer;
       source.connect(master);
       source.start();
+    },
+    duck(amount: number): void {
+      // Silently nothing before the first gesture, exactly as `sound` is — a game with no context yet
+      // has no bed to push down.
+      music?.duck(amount);
     },
     music(): MusicOut | null {
       return music;

@@ -72,7 +72,7 @@ export const PROBES = [
       // to the title's piece now and is closed at `run` on purpose, so closing it again says nothing.
       // `engine` is the level's floor — open at `run` and `approach` — and closing it at the boss is
       // the same failure the probe always described: a ladder that swaps rather than builds.
-      find: "  boss: { drone: 0.4, bass: 0, beat: 0, engine: 0.95, chords: 0.95, groove: 0.95, arp: 0.75, drive: 0.8, lead: 0.85, auraSlow: 1, auraFast: 0.9 },",
+      find: "  boss: { drone: 0.4, bass: 0, beat: 0, engine: 0.95, chords: 0.95, groove: 0.95, arp: 0.72, hook: 0.7, drive: 0.8, lead: 0.85, auraSlow: 1, auraFast: 0.9 },",
       replace: "  boss: { drone: 0.4, bass: 0, beat: 0, engine: 0, chords: 0.95, drive: 0.8, lead: 0.85, auraSlow: 1, auraFast: 0.9 },",
     },
   },

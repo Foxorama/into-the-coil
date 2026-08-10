@@ -173,7 +173,14 @@ layer sits at 0.825 against a ceiling of **0.845**. The background sky had 2% le
 
 ## What this report does not settle
 
-⚠️ **Nothing in it has been flown**, and the audio half is not started at the time of writing.
+⚠️ **Nothing in it has been flown.** The audio half landed as
+[0104](../docs/decisions/0104-the-gun-plays-a-figure.md) after this report was written, and the
+balance half is not started.
+
+⚠️ **THE AUDIO DIAGNOSIS IS IN 0104 AND TWO OF ITS FINDINGS WERE NOT IN THIS REPORT**, because nothing
+could see them until an instrument existed: the gun was **sounding 110% of the time** from the second
+weapon pickup and 165% at the cap, and the music bus was **peak-limited by a 12–14 dB crest factor it
+never used**. Both are measured there.
 
 ⚠️ **The sky's next lever is named and is not in the sky** — 0103 says so in writing, so the sixth pass
 does not open by reaching for a depth again.

@@ -71,7 +71,7 @@ export const PROBES = [
     guard: 'THE ASK: the aura follows the boss in, and is silent when it is far away',
     edit: {
       path: 'src/content/music.ts',
-      find: "  boss: { drone: 0.4, bass: 0, beat: 0, engine: 0.95, chords: 0.95, groove: 0.95, arp: 0.75, drive: 0.8, lead: 0.85, auraSlow: 1, auraFast: 0.9 },",
+      find: "  boss: { drone: 0.4, bass: 0, beat: 0, engine: 0.95, chords: 0.95, groove: 0.95, arp: 0.72, hook: 0.7, drive: 0.8, lead: 0.85, auraSlow: 1, auraFast: 0.9 },",
       replace: "  boss: { drone: 0.4, bass: 0, beat: 0, engine: 0.95, chords: 0.95, drive: 0.8, lead: 0.85, auraSlow: 0, auraFast: 0 },",
     },
   },
@@ -88,7 +88,7 @@ export const PROBES = [
     edit: {
       path: 'src/content/music.ts',
       // ⚠️ 0092 moved the boss row, not this one — the anchor is unchanged and is checked, not assumed.
-      find: "  approach: { drone: 0.5, bass: 0, beat: 0, engine: 0.9, chords: 0.92, groove: 0.92, arp: 0.7, drive: 0.7, lead: 0, auraSlow: 0, auraFast: 0 },",
+      find: "  approach: { drone: 0.5, bass: 0, beat: 0, engine: 0.9, chords: 0.92, groove: 0.92, arp: 0.68, hook: 0.66, drive: 0.7, lead: 0, auraSlow: 0, auraFast: 0 },",
       replace: "  approach: { drone: 0.5, bass: 0, beat: 0, engine: 0.9, chords: 0.92, drive: 0.7, lead: 0, auraSlow: 0.5, auraFast: 0 },",
     },
   },

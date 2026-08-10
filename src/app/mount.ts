@@ -1152,7 +1152,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       last step of a level is still held when the next one starts. This is the callback that fires on
       every step either way, which is exactly what it was split out of `onIdle` to be.
     */
-    speaker.step();
+    /*
+      ⚠️ **The world's step goes in, and it is a DIFFERENT clock from the hold's** — 0104. A hold is
+      counted in the speaker's own steps so that it expires on the screens the simulation is stopped
+      on (0063, and the reason this call is here rather than in `onIdle`); a cue's `figure` is counted
+      against the MUSIC, which is in phase with `world.steps` and with nothing else (0094). Handing
+      the world's number over is what makes an accent land where the bar says.
+    */
+    speaker.step(world.steps);
     applyMusicLevel();
     if (timeoutLeft <= 0) return;
     timeoutLeft--;

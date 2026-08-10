@@ -26,6 +26,7 @@ import {
   PHRASE_SECONDS,
   secondsOfLayer,
   MUSIC,
+  MUSIC_DRIVE,
   MUSIC_GAIN,
   MUSIC_LADDER,
   MUSIC_LAYERS,
@@ -41,7 +42,7 @@ import {
   type MusicLevel,
   type MusicVoice,
 } from '../content/music.ts';
-import { sampleLayerInto } from './sound.ts';
+import { sampleLayerInto, saturate } from './sound.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import { STEPS_PER_SECOND } from '../state/screens.ts';
 
@@ -348,6 +349,31 @@ export interface MusicOut {
    * `nearness` scales the aura layers and is ignored by every other one — 0091.
    */
   setLevel(level: MusicLevel, nearness: number): void;
+  /**
+   * Push the bed down for a moment, so a cue landing on top of it has somewhere to land.
+   *
+   * ── THE MUSIC NEVER MOVED WHEN ANYTHING HAPPENED, WHICH IS MOST OF *"THEY DON'T MESH"* ─────────
+   *
+   * ⚠️ **`docs/decisions/0104-the-gun-plays-a-figure.md`.** Reported: *"the game sound effects also
+   * don't blend in with the music at all."* Two buses summed into one destination and neither ever
+   * acknowledged the other — so an explosion was a sound played OVER a track rather than one the
+   * track made room for, which is the difference a listener calls *meshing*.
+   *
+   * ⚠️ **It is what a sidechain does, and Web Audio has no sidechain.** A compressor keyed off
+   * another bus is not something the platform offers; what it does offer is scheduled `AudioParam`
+   * automation, and a dip scheduled at the instant a cue starts is the same gesture with the trigger
+   * written in code rather than in a graph.
+   *
+   * ⚠️ **NO ALLOCATION, which is why it is automation and not a node.** `setTargetAtTime` writes into
+   * a parameter that already exists; this is reached from a fixed step, and
+   * `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md` counts what happens there.
+   *
+   * ⚠️ **The recovery is far slower than the dip**, which is the shape of a duck: down fast enough
+   * that the cue arrives into space, back slowly enough that the return is not a second event.
+   *
+   * @param amount how far down, as a fraction of the bed to remove — `0` does nothing, `1` is silence
+   */
+  duck(amount: number): void;
   /** Silence the music without stopping it, for the sound setting. */
   setOn(on: boolean): void;
   /** Which level is currently asked for, so a guard can read it. */
@@ -362,6 +388,34 @@ export interface MusicOut {
  * exist to avoid; at 1.6 seconds the beat arrives over about four beats of the bar it arrives in.
  */
 const RAMP_SECONDS = 1.6;
+
+/**
+ * How many points the music bus's transfer curve is sampled at.
+ *
+ * ⚠️ **A `WaveShaperNode` interpolates between neighbouring points**, so what this decides is how
+ * closely the played curve follows `saturate`. At 1,025 points the step between neighbours is under
+ * 0.002 of full scale — well below a 16-bit floor — and the table is 4 kB built once.
+ *
+ * ⚠️ **Odd, so there is a point exactly at zero.** An even count straddles it, which puts a tiny
+ * offset on silence and a kink through the middle of every waveform — the one place a transfer curve
+ * must be exact, because it is where the quietest part of every note lives.
+ */
+const CURVE_POINTS = 1025;
+
+/**
+ * How long the duck takes to go down, to stay down, and to come back — 0104.
+ *
+ * ⚠️ **DOWN IN 25 ms, BACK OVER 320.** A duck is heard as *the track got out of the way* only when
+ * the return is slow enough to be missed; a symmetric one is heard as the music pumping, which is a
+ * second event arriving right where the first one's tail is. The asymmetry IS the effect.
+ *
+ * ⚠️ **The hold is a sixteenth**, so the bed is back up by the time the next gridded cue can land.
+ * Anything longer and a busy fight would hold the music down continuously, which is the reported
+ * defect with the sign flipped: *"background too quiet"* caused by the fix for *"they don't mesh"*.
+ */
+const DUCK_DOWN_SECONDS = 0.025;
+const DUCK_HOLD_SECONDS = 0.1;
+const DUCK_UP_SECONDS = 0.32;
 
 /**
  * How long the AURA takes to follow the boss, in seconds.
@@ -405,7 +459,47 @@ export function makeMusicOut(
 
   const master = ctx.createGain();
   master.gain.value = MUSIC_GAIN;
-  master.connect(destination);
+  /*
+    ── THE MASTER BUS, AND IT WENT STRAIGHT TO THE DESTINATION FOR FOUR MIX PASSES ────────────────
+
+    ⚠️ **`docs/decisions/0104-the-gun-plays-a-figure.md`.** Reported four times, most recently
+    *"background too quiet"*. Every cue has run through a soft clip since
+    `docs/decisions/0089-a-cue-has-a-body.md` — that is what `glue` is — and the music, which is the
+    one thing in the game that plays continuously, ran through nothing at all. It had been
+    gain-staged four times and never mastered.
+
+    ⚠️ **A `WaveShaperNode` RATHER THAN A `DynamicsCompressorNode`, and the reason is the guard.** A
+    compressor has an attack and a release, so it is a function of the signal's history;
+    `tests/music.test.ts` sums the layers sample by sample and could not model one, which would have
+    meant weakening the assertion that holds the mix in order to admit the thing that fixes it. A
+    shaper is **stateless**, so the guard applies the identical arithmetic to its own sum and stays a
+    real check on what comes out.
+
+    ⚠️ **It is the same `saturate` the cues use**, imported rather than repeated, which keeps
+    `docs/decisions/0072-a-cue-is-baked-and-played.md`'s one-instrument property over the mix as well
+    as over the voices.
+
+    ⚠️ **Created once with the context and never touched again** — 0025 counts allocations in the
+    frame loop and this is not in one. The curve is `CURVE_POINTS` long, which is fine enough that
+    the browser's own interpolation between points is inaudible against a 16-bit floor.
+  */
+  const shaper = ctx.createWaveShaper();
+  // @setup: the transfer curve, built once at context creation and read by the audio thread after.
+  const curve = new Float32Array(CURVE_POINTS);
+  for (let i = 0; i < CURVE_POINTS; i++) {
+    const x = (i / (CURVE_POINTS - 1)) * 2 - 1;
+    curve[i] = saturate(x, MUSIC_DRIVE);
+  }
+  shaper.curve = curve;
+  /*
+    ⚠️ **`'none'` and not the default `'2x'`.** Oversampling costs CPU on the audio thread for every
+    sample of a continuously-running bus, and what it buys is suppressed aliasing from the harmonics
+    the curve generates. At this drive the curve is gentle — the third harmonic is well below the
+    noise floor — and `docs/decisions/0022-frame-rate-is-a-feature.md`'s budget is a mid-range phone.
+  */
+  shaper.oversample = 'none';
+  master.connect(shaper);
+  shaper.connect(destination);
 
   for (const layer of MUSIC_LAYERS) {
     const data = loops[layer];
@@ -510,8 +604,25 @@ export function makeMusicOut(
         gains[layer].gain.setTargetAtTime(target, ctx.currentTime, (aura ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3);
       }
     },
+    duck(amount: number): void {
+      if (!started || !on || amount <= 0) return;
+      const now = ctx.currentTime;
+      /*
+        ⚠️ **Written on the MASTER gain rather than per layer**, so a duck is one parameter write
+        whatever the ladder is doing, and it cannot fight `setLevel`'s eleven — those are the layers'
+        own gains and this is the bus they run into.
+
+        ⚠️ **`cancelScheduledValues` first, so two explosions inside a second do not stack into
+        silence.** The second dip replaces the first one's recovery rather than adding to it, which is
+        what a real compressor does when it is already ducking.
+      */
+      master.gain.cancelScheduledValues(now);
+      master.gain.setTargetAtTime(MUSIC_GAIN * (1 - amount), now, DUCK_DOWN_SECONDS / 3);
+      master.gain.setTargetAtTime(MUSIC_GAIN, now + DUCK_HOLD_SECONDS, DUCK_UP_SECONDS / 3);
+    },
     setOn(next: boolean): void {
       on = next;
+      master.gain.cancelScheduledValues(ctx.currentTime);
       master.gain.setTargetAtTime(next ? MUSIC_GAIN : 0, ctx.currentTime, 0.08);
       // Switching it back on starts the loops if the run has been played in silence up to now. They
       // still start together, which is all the design asks — it is the phase BETWEEN them that has

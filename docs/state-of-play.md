@@ -104,6 +104,7 @@ it is pushed — guards stop reaching their subject without ever going red, and 
 | **a mark's depth ceiling is how much of a bullet it looks like; a boss leaves the player half the screen** | [0101](decisions/0101-the-sky-is-a-hurry-and-the-boss-holds-back.md) |
 | **a drum step is a VELOCITY; a level's music climbs four times; the bake happens before the press** | [0102](decisions/0102-the-music-goes-somewhere.md) |
 | **a sky layer's depth says which SIDE of the game it is on, and only the streak layer may be in front** | [0103](decisions/0103-the-fast-layer-is-in-front.md) |
+| **an auto-weapon's cue fits inside its own cadence; a cue plays a figure by where in the BEAT it lands; the bus is mastered** | [0104](decisions/0104-the-gun-plays-a-figure.md) |
 | ~~the near sky is pushed back on every cheap axis~~ — **amended: it went out** | [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) → [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the sky is three layers, the fastest is streaks, and a tube is a side of the hull** | [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
@@ -245,8 +246,18 @@ but I want the sound to be rhythmic and immersive and it's currently not close t
 | item | state |
 |---|---|
 | **bosses 3+ show no hit interaction; the second missile tube is a pickup late; the sky, for the fifth time** | ✅ [0103](decisions/0103-the-fast-layer-is-in-front.md) |
-| **the sound: five items, and the mix has been gain-staged four times and never mastered** | **NOT STARTED — it is the next thing** |
+| **the sound: the gun never stopped sounding, the explosions were off the grid, the bus was never mastered** | ✅ [0104](decisions/0104-the-gun-plays-a-figure.md) |
 | **enemies fly and shoot too fast; levels 2 and 3 want level 4's density** | **NOT STARTED, and deliberately after the sky** |
+
+⚠️ **0104 IS THE FIRST AUDIO PASS WITH AN INSTRUMENT BEHIND IT, AND THAT IS ITS LARGEST CLAIM.**
+`scripts/hear.mjs --play` renders the cues OVER the music at the mixer's own gains and prints the
+ratio; three previous mix passes had no way to hear the thing the reports were about. **The bed went
+from 2–5 dB under the effects to 1.6–4.6 dB over them.**
+
+⚠️ **AND `npm run prove` REPORTED STILL GREEN ON 0104's OWN HEADLINE MECHANISM.** Removing the
+mastering entirely left every music guard green, because **every one of them was a ceiling** — nothing
+in the repository asserted a lower bound on loudness at all. Read 0104's *What the proof found* before
+touching a mix number.
 
 ⚠️ **THE SIXTH PLAY-TEST IS THE ONE ABOVE THAT** —
 [`the-sixth-play-test`](../reports/the-sixth-play-test-2026-08-10.md), given 2026-08-10 against the

@@ -15,22 +15,48 @@
 // ⚠️ IT FAILS LOUD, per the note in scripts/trace-frame.mjs: a tool whose only job is to produce an
 // artefact for a human must exit non-zero when it produces nothing.
 //
-// Usage:  node scripts/hear.mjs [--out=cues.wav] [--gap=0.35] [--only=kill,blast] [--music]
+// Usage:  node scripts/hear.mjs [--out=cues.wav] [--gap=0.35] [--only=kill,blast] [--music] [--play]
 //
 // --music writes the four loops mixed at every level of the ladder, and then the whole arc: cruise,
 // the approach opening up, the boss arriving. It is the only way to hear decision 0090 without
 // playing to a boss.
+//
+// --play writes THE GAME: the music at a rung with the gun, the missiles and the explosions over it,
+// at their own cadences and at the gains the mixer actually uses.
+//
+// ⚠️ --play EXISTS BECAUSE EVERY OTHER MODE ANSWERS THE WRONG QUESTION, and a play-test said so:
+// *"the game sound effects don't blend in with the music at all… they're timingly in sync, but the
+// sound doesn't mesh."* That is a claim about the two channels TOGETHER, and until this flag the rig
+// could write each of them alone and nothing could write the thing being complained about. Four mix
+// passes were tuned without it. docs/decisions/0027-measure-the-picture-not-the-model.md is the rule
+// and this is the debt it names, for the channel nothing can look at.
 
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 import { CUES, CUE_KINDS } from '../src/content/cues.ts';
-import { SAMPLE_RATE, cueSeconds, sampleCue } from '../src/app/sound.ts';
+import { MASTER_GAIN, SAMPLE_RATE, cueSeconds, sampleCue, saturate, variantAt, velocitiesOf } from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { bakeLoops } from '../src/app/music.ts';
-import { PHRASE_SECONDS, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_GAIN, AURA_LAYERS, AURA_NEAR_UNITS, AURA_FAR_UNITS } from '../src/content/music.ts';
+import { PHRASE_SECONDS, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_DRIVE, MUSIC_GAIN, AURA_LAYERS, AURA_NEAR_UNITS, AURA_FAR_UNITS, STEPS_PER_BEAT } from '../src/content/music.ts';
+
+/*
+  ⚠️ **THE MUSIC BUS AS IT ACTUALLY LEAVES, AND THE RIG DID NOT HAVE IT FOR ONE COMMIT** —
+  `docs/decisions/0104-the-gun-plays-a-figure.md`. `makeMusicOut` puts `saturate` on the bus at
+  `MUSIC_DRIVE`, and the first version of this file went on writing the pre-shaper sum — so the
+  instrument built to measure the mix was reporting a mix nobody hears, and it under-reported the
+  change it had just been used to choose by about four and a half decibels.
+
+  ⚠️ **One helper, used by BOTH modes**, because `--music` and `--play` each summed the bus in their
+  own loop and either could have been fixed alone. That is the second description this whole file
+  exists to avoid.
+*/
+const busOf = (sum) => saturate(sum * MUSIC_GAIN, MUSIC_DRIVE);
 import { auraNearness } from '../src/app/music.ts';
+import { SHIPS } from '../src/content/ships.ts';
+import { UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
+import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 
 const args = new Map(process.argv.slice(2).map((a) => a.replace(/^--/, '').split('=')));
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -99,7 +125,7 @@ if (args.has('music')) {
     for (let i = 0; i < out.length; i++) {
       let v = 0;
       for (const layer of MUSIC_LAYERS) v += at(layer, i) * MUSIC_LADDER[level][layer];
-      out[i] = Math.max(-1, Math.min(1, v * MUSIC_GAIN));
+      out[i] = Math.max(-1, Math.min(1, busOf(v)));
     }
     return out;
   };
@@ -115,7 +141,7 @@ if (args.has('music')) {
     const t = into > length - ramp ? (into - (length - ramp)) / ramp : 0;
     let v = 0;
     for (const layer of MUSIC_LAYERS) v += at(layer, i) * (from[layer] + (to[layer] - from[layer]) * t);
-    arc[i] = Math.max(-1, Math.min(1, v * MUSIC_GAIN));
+    arc[i] = Math.max(-1, Math.min(1, busOf(v)));
   }
   const base = out.replace(/\.wav$/, '');
   for (const level of Object.keys(MUSIC_LADDER)) {
@@ -138,11 +164,146 @@ if (args.has('music')) {
       const ceiling = MUSIC_LADDER.boss[layer];
       v += at(layer, i) * (AURA_LAYERS.includes(layer) ? ceiling * near : ceiling);
     }
-    close[i] = Math.max(-1, Math.min(1, v * MUSIC_GAIN));
+    close[i] = Math.max(-1, Math.min(1, busOf(v)));
   }
   writeFileSync(`${base}-aura.wav`, wavOf(close, SAMPLE_RATE));
   console.log(`music: ${MUSIC_LAYERS.length} loops, a ${PHRASE_SECONDS}s phrase, ${Object.keys(MUSIC_LADDER).length} levels`);
   console.log(`wrote ${base}-{${Object.keys(MUSIC_LADDER).join(',')},arc}.wav`);
+  process.exit(0);
+}
+
+/*
+  ── THE GAME: THE MUSIC WITH THE GAME PLAYED OVER IT ──────────────────────────────────────────────
+
+  ⚠️ **This is the only mode that can answer the question the play-test actually asked**, which is
+  about the two channels together. `--music` writes a bed nobody shoots over; the default mode writes
+  cues in silence with a third of a second between them, which is a sound the player never hears once.
+
+  ⚠️ **BOTH GAINS ARE THE MIXER'S OWN, IMPORTED RATHER THAN TYPED.** `MUSIC_GAIN × MASTER_GAIN` for
+  the bed and `MASTER_GAIN` for a cue is exactly what `makeMusicOut` and `makeAudioOut` wire up, so
+  the balance in this file is the balance in the game. A number restated here would keep reporting
+  the old mix the day either moved — which is 0027's failure arriving inside the instrument built to
+  prevent it.
+
+  ⚠️ **The gun fires on ITS OWN GRID and the explosions do not, which is the point.** `fireEvery` and
+  `missileEvery` are absolute multiples, exactly as `stepsToGrid` places them
+  (`docs/decisions/0094-in-time-is-not-in-phase.md`); the kills and hits below land on arbitrary steps
+  because that is where `src/app/frame.ts` fires them — on the step a collision resolves. If the
+  explosions sound loose against the bed in this file, they are loose in the game.
+*/
+if (args.has('play')) {
+  const loops = bakeLoops(SAMPLE_RATE);
+  const at = (layer, i) => loops[layer][i % loops[layer].length];
+  /*
+    ⚠️ **Every WEIGHT of every cue, and `put` picks the one the speaker would** — 0104. A rig that
+    fired the gun at full weight on every shot would be writing a file with no accents in it, which is
+    the exact sound this decision exists to stop being written.
+  */
+  const baked = {};
+  for (const kind of CUE_KINDS) {
+    baked[kind] = velocitiesOf(CUES[kind]).map((v) => sampleCue(CUES[kind], SAMPLE_RATE, makeRng('cues').stream(kind), v));
+  }
+  const base = out.replace(/\.wav$/, '');
+  const perStep = SAMPLE_RATE / STEPS_PER_SECOND;
+  /*
+    ⚠️ **A seeded stream of its own, so the scattered kills are the same every run.** Two files that
+    differ because the rig rolled differently cannot be compared, and comparing two takes is most of
+    what this rig is for — `docs/decisions/0021-one-stream-per-concern.md`.
+  */
+  const scatter = makeRng('hear').stream('play');
+
+  /**
+   * Lay one cue in at `step`, struck at the weight its figure gives that point in the beat.
+   *
+   * ⚠️ `variantAt` is the speaker's own function rather than a copy of its arithmetic, so an accent
+   * pattern that moved would move here too.
+   */
+  const put = (into, kind, step) => {
+    const start = Math.round(step * perStep);
+    const data = baked[kind][variantAt(baked[kind].length, Math.round(step))];
+    for (let i = 0; i < data.length; i++) {
+      const j = start + i;
+      if (j >= 0 && j < into.length) into[j] += data[i] * MASTER_GAIN;
+    }
+  };
+
+  /**
+   * Bars of `level`, with a ship at weapon/missile tier `tier` shooting and things dying.
+   *
+   * Returns the mix and the two halves of it separately, because *"background too quiet"* is a claim
+   * about the RATIO and neither half alone can answer it.
+   */
+  const scene = (level, tier, bars) => {
+    const steps = bars * 4 * STEPS_PER_BEAT;
+    const length = Math.round(steps * perStep);
+    const carried = [];
+    for (let i = 0; i < tier; i++) carried.push('weapon', 'missile');
+    const weapon = weaponFor(SHIPS.proof, carried);
+    const bed = new Float32Array(length);
+    const cues = new Float32Array(length);
+    // The bed, at the mixer's own two gains.
+    for (let i = 0; i < length; i++) {
+      let v = 0;
+      for (const layer of MUSIC_LAYERS) v += at(layer, i) * MUSIC_LADDER[level][layer];
+      bed[i] = busOf(v) * MASTER_GAIN;
+    }
+    // The gun and the tubes, on their grids. One cue per volley, never one per barrel.
+    for (let s = 0; s < steps; s += weapon.fireEvery) put(cues, 'pulse', s);
+    if (weapon.launchers > 0) for (let s = 0; s < steps; s += weapon.missileEvery) put(cues, 'missile', s);
+    /*
+      ⚠️ **A kill about every two beats and a hit between them, on ARBITRARY steps.** That rate is a
+      hand's guess at an ordinary stretch of a level rather than a measured one, and it is the only
+      number in this mode that is; what it is FOR is the placement, which is not a guess — nothing
+      quantises these, so `scatter` picking the step is exactly as musical as the game is.
+    */
+    for (let s = 0; s < steps; s += STEPS_PER_BEAT * 2) {
+      put(cues, 'kill', s + Math.floor(scatter.range(0, STEPS_PER_BEAT * 2)));
+      put(cues, 'hit', s + Math.floor(scatter.range(0, STEPS_PER_BEAT * 2)));
+      put(cues, 'threat', s + Math.floor(scatter.range(0, STEPS_PER_BEAT * 2)));
+    }
+    const mix = new Float32Array(length);
+    for (let i = 0; i < length; i++) mix[i] = bed[i] + cues[i];
+    return { mix, bed, cues };
+  };
+
+  /** Peak, RMS and how many samples went past full scale. */
+  const measure = (data) => {
+    let peaked = 0;
+    let sumSq = 0;
+    let clipped = 0;
+    for (const v of data) {
+      peaked = Math.max(peaked, Math.abs(v));
+      sumSq += v * v;
+      if (Math.abs(v) > 1) clipped++;
+    }
+    return { peak: peaked, rms: Math.sqrt(sumSq / data.length), clipped };
+  };
+
+  const takes = [
+    ['run', 0, 'a level opening'],
+    ['run', 2, 'mid level, two of each'],
+    ['surge', UPGRADE_TIERS, 'the surge, maxed'],
+    ['boss', UPGRADE_TIERS, 'the boss, maxed'],
+  ];
+  /*
+    ⚠️ **THE LAST COLUMN IS THE REPORTED DEFECT AS A NUMBER.** *"Volume levels are still way off,
+    background too quiet"* is a statement about how much of what the player hears is music, and this
+    is the only place in the repository that computes it. Negative decibels mean the bed is quieter
+    than the things shooting over it.
+  */
+  console.log('take                  rung      tier  peak   rms     clip  music vs cues');
+  for (const [level, tier, what] of takes) {
+    const { mix, bed, cues } = scene(level, tier, 4);
+    const all = measure(mix);
+    const ratio = 20 * Math.log10(measure(bed).rms / measure(cues).rms);
+    writeFileSync(`${base}-play-${level}-${tier}.wav`, wavOf(mix, SAMPLE_RATE));
+    console.log(
+      `${what.padEnd(21)} ${level.padEnd(9)} ${String(tier).padStart(4)}  ` +
+        `${all.peak.toFixed(3)}  ${all.rms.toFixed(4)}  ${String(all.clipped).padStart(4)}  ` +
+        `${ratio >= 0 ? '+' : ''}${ratio.toFixed(1)}dB`,
+    );
+  }
+  console.log(`\nwrote ${base}-play-*.wav — the bed at MUSIC_GAIN × MASTER_GAIN, the cues at MASTER_GAIN`);
   process.exit(0);
 }
 

@@ -4,8 +4,19 @@ import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
-import { CUE_KINDS } from '../src/content/cues.ts';
+import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { MUSIC_LAYERS } from '../src/content/music.ts';
+import { velocitiesOf } from '../src/app/sound.ts';
+
+/**
+ * How many buffers the bake produces: one per WEIGHT of every cue, plus one per music layer.
+ *
+ * ⚠️ **It was `CUE_KINDS.length + MUSIC_LAYERS.length` and 0104 broke that arithmetic, correctly.**
+ * A cue with a `figure` bakes one buffer per weight, so the count is a sum over the table rather than
+ * its length. Still derived from the two tables and still not a number written down — which is what
+ * made this go red the moment the figure landed rather than silently drifting.
+ */
+const BAKED_BUFFERS = CUE_KINDS.reduce((total, kind) => total + velocitiesOf(CUES[kind]).length, 0) + MUSIC_LAYERS.length;
 import { SOUND_KINDS } from '../src/content/sound.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 
@@ -107,9 +118,11 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     await page.waitForTimeout(1200);
     const after = await tally(page);
     /*
-      ⚠️ **Exactly one buffer per cue AND one per music layer, which is the bake being a BAKE.** More
-      than that is a synthesiser running during play, which is the audio spelling of baking in the
-      frame loop and the thing `docs/decisions/0022-frame-rate-is-a-feature.md` bans for art.
+      ⚠️ **Exactly one buffer per cue WEIGHT and one per music layer, which is the bake being a
+      BAKE.** More than that is a synthesiser running during play, which is the audio spelling of
+      baking in the frame loop and the thing `docs/decisions/0022-frame-rate-is-a-feature.md` bans for
+      art. `docs/decisions/0104-the-gun-plays-a-figure.md` made a cue a LIST of weights, and the count
+      follows the table rather than being restated.
 
       ⚠️ **The music rides the same gesture** —
       `docs/decisions/0090-the-music-is-four-loops.md`. Its four loops are built beside the cues out
@@ -118,7 +131,7 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
       than written down as a number.
     */
     expect(after.buffers, 'the cues and the music did not bake once on the unlocking gesture').toBe(
-      CUE_KINDS.length + MUSIC_LAYERS.length,
+      BAKED_BUFFERS,
     );
     expect(after.voices, 'a run played for a second and the game stayed silent').toBeGreaterThan(0);
     /*
@@ -144,7 +157,7 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     expect(
       after.buffers,
       'pressing a setting did not unlock the context, so silence proves nothing',
-    ).toBe(CUE_KINDS.length + MUSIC_LAYERS.length);
+    ).toBe(BAKED_BUFFERS);
     expect(after.voices, 'sound is off and the game played anyway').toBe(0);
     await page.context().close();
   });

@@ -298,6 +298,80 @@ export interface CueRow {
    */
   glue: number;
   /**
+   * How hard this cue is struck, by where in the BEAT it lands. Absent means every sounding is full.
+   *
+   * ── THE GUN WAS ONE NOTE REPEATED, WHICH IS A DRONE AND NOT A RHYTHM ────────────────────────────
+   *
+   * ⚠️ **`docs/decisions/0104-the-gun-plays-a-figure.md`.** Reported from play: *"the gun fire at the
+   * moment doesn't fit in with the music at all, it's technically on beat, but it also doesn't fit a
+   * great sound experience."*
+   *
+   * ⚠️ **IT IS 0102's OWN FINDING ARRIVING AT THE CUES.** That decision found every drum in the music
+   * was bit-identical to every other and named it: *"identical repetition at a fixed interval is not
+   * LIKE a metronome, it is the definition of one."* The drums got velocities. **The cues did not**,
+   * and the pulse is the most repeated sound in the game by a wide margin.
+   *
+   * ⚠️ **INDEXED BY POSITION IN THE BEAT, NOT BY A ROTATION COUNTER.** A counter that advances per
+   * sounding drifts against the bar the moment a volley is dropped or a cadence changes, so the
+   * accents would wander — which is the thing 0094 exists to prevent, arriving one layer up. The
+   * index is which sixteenth of the beat the shot lands on, so **a shot on the downbeat is accented
+   * because it is on the downbeat**, which is what a player does and what a counter cannot express.
+   *
+   * ⚠️ **One entry per sixteenth, so four is a beat.** Longer is allowed and wraps; `src/app/sound.ts`
+   * takes it modulo its own length.
+   *
+   * ⚠️ **A VELOCITY AND NOT A PITCH, which is a deliberate limit.** Transposing a cue would need each
+   * layer's scale DEGREE, and the rows store resolved Hz — so a semitone shift would walk the
+   * endpoints off the scale and break
+   * `docs/decisions/0099-the-cues-are-in-the-key.md`'s guard rather than serve it. Weight is the axis
+   * that needs no key, and it is the one 0102 already proved was missing.
+   */
+  figure?: readonly number[];
+  /**
+   * Whether this cue waits for the next sixteenth instead of sounding on the step it was asked for.
+   *
+   * ── THE EXPLOSIONS WERE THE ONE LOUD THING IN THE GAME NOT ON THE GRID ──────────────────────────
+   *
+   * ⚠️ **`docs/decisions/0104-the-gun-plays-a-figure.md`.** Reported from play: *"enemy explosions
+   * should pulse with the beat"*, and *"they're timingly in sync, but the sound doesn't mesh."*
+   *
+   * ⚠️ **THREE DECISIONS PUT EVERY CADENCE IN THE GAME ON A SIXTEENTH AND NONE OF THEM REACHED
+   * HERE.** 0093 gridded the gun, 0096 gridded the enemies, 0094 locked the loops to the sim — and
+   * all three grid **when a body decides to fire**. A kill happens when a bullet ARRIVES, which is a
+   * function of how far away the thing was, so the loudest and most frequent event in a level landed
+   * on an arbitrary sixtieth of a second. `docs/decisions/0099-the-cues-are-in-the-key.md` assumed
+   * the opposite in as many words — *"arriving on the beat over a drone sounding A"* — and tuned the
+   * harmony of cues whose timing was never gridded at all.
+   *
+   * ⚠️ **THE COST IS UP TO ONE SIXTEENTH OF DELAY AGAINST THE PICTURE, AND IT IS BOUNDED BY
+   * CONSTRUCTION.** 100 ms at 150 BPM. `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`
+   * wants the two channels to agree, and they still do — the debris appears on the step it always
+   * did, and the sound arrives inside the same tenth of a second. What is bought is that every
+   * explosion in a fight lands on the same grid the music and the guns are already on.
+   *
+   * ⚠️ **`hit` IS DELIBERATELY OFF IT, AND SO IS `bomb`.** A hit is the damage-legibility signal
+   * (`docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md`) and its hold is 2 steps
+   * against a grid of 6, so gridding it would silently collapse three hits into one — the guard 0035
+   * exists to keep would be broken by the fix for a different report. A bomb is the one sound in the
+   * game that answers a BUTTON, and delaying that is delaying feedback on a press.
+   */
+  onGrid?: boolean;
+  /**
+   * How far this cue pushes the music down while it lands, as a fraction of the bed. Absent is none.
+   *
+   * ⚠️ **`docs/decisions/0104-the-gun-plays-a-figure.md`, and it is on the ROW because the events
+   * differ by an order of magnitude.** Measured against the `run` bed, a `kill` peaks 8.7 dB over it
+   * and a `bossDown` 11.4 — while a `hit` is 3.5 and a `pulse` is one of ten a second. One global
+   * number would either duck for a gun that never stops firing, which is the music turned down, or
+   * fail to duck for the boss.
+   *
+   * ⚠️ **ONLY THE BIG ONES CARRY IT, and the gun deliberately does not.** Auto-fire cannot be
+   * switched off (`src/content/actions.ts`), so a pulse that ducked would hold the bed down for the
+   * whole game — *"background too quiet"* returning as a consequence of the fix for *"they don't
+   * mesh"*.
+   */
+  duck?: number;
+  /**
    * The fewest fixed steps between two soundings of this cue.
    *
    * ── WHY THIS IS ON THE ROW AND NOT ONE GLOBAL NUMBER ────────────────────────────────────────────
@@ -395,11 +469,42 @@ export const CUES: Record<CueKind, CueRow> = {
    * loud, it is a different and worse sound. `src/app/frame.ts` fires this once outside the barrel
    * loop.
    */
+  /*
+    ── AND IT NEVER STOPPED SOUNDING, WHICH IS WHY IT DID NOT READ AS A RHYTHM ────────────────────
+
+    ⚠️ **`docs/decisions/0104-the-gun-plays-a-figure.md`.** The cue was **0.110s** long. The gap
+    between volleys is 0.133s at the bottom of the ladder, **0.100s from the second weapon pickup**
+    and **0.067s** at the cap — so from the second pickup onward the gun was sounding 110% of the time
+    and 165% at full rate. It was a continuous tone with bumps in it, at an RMS of 0.110 against a
+    whole music bed of 0.132.
+
+    ⚠️ **`hold` NEVER PREVENTED THIS AND WAS NEVER MEANT TO.** It is 2 steps against a cue 6.6 steps
+    long; the field exists to stop a FLAM — two soundings 17ms apart heard as one smeared attack — and
+    every one of the twelve rows is longer than its hold, correctly. Two kills close together should
+    both sound. It is only fatal here, because the player cannot choose not to fire.
+
+    ⚠️ **So the layers are shortened to fit the FASTEST rung**, and `tests/sound.test.ts` holds it
+    against `FASTEST_FIRE` rather than against a number typed here. That is
+    `docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md`'s rule for the eye — the
+    impact flash must finish before the next hit lands, or two hits draw one picture — written for the
+    ear for the first time. It was true of the flash since 0035 and was never true of the sound.
+
+    ⚠️ **What it costs is the long tail 0102 added, and the sub is KEPT.** *"Too tinny"* was answered
+    with weight below 55 Hz and that is still here; what goes is its LENGTH. A 65ms sub is three and a
+    half cycles at the root — enough to be felt, and short enough that the next one is a second event
+    rather than the same one continuing.
+  */
   pulse: {
     twin: 'shot-appears',
     hold: 2,
     gain: 0.3,
     glue: 0.3,
+    /*
+      Strong, weak, medium, weak — the four-step cycle every drum machine's shuffle is, and the same
+      one `src/content/music.ts`'s hats already run. It is what makes ten of these a second read as a
+      bar being subdivided rather than as a machine running.
+    */
+    figure: [1, 0.62, 0.82, 0.62],
     layers: [
       // The click. It keeps its top: everything else in the table gained air, and a pulse that did
       // not would be the one dull sound in a game the player hears this from ten times a second.
@@ -407,10 +512,10 @@ export const CUES: Record<CueKind, CueRow> = {
       // The chunk. A saturated square behind a falling filter is where *meaty* lives.
       // G3 → E2: the seventh into the fifth, so the most frequent sound in the game is never the
       // root and never fights the bass for it.
-      { wave: 'square', from: inKey(13), to: inKey(4), seconds: 0.075, gain: 0.85, attack: 0.001, curve: 6, lowFrom: 1700, lowTo: 320, q: 1.1, drive: 0.55 },
+      { wave: 'square', from: inKey(13), to: inKey(4), seconds: 0.048, gain: 0.85, attack: 0.001, curve: 6, lowFrom: 1700, lowTo: 320, q: 1.1, drive: 0.55 },
       // C3 → A1. The tail lands on the ROOT, which is what makes ten of these a second read as a
       // pulse in the music rather than as ten interruptions of it.
-      { wave: 'sine', from: inKey(9), to: inKey(0), seconds: 0.09, gain: 0.7, attack: 0.001, curve: 5 },
+      { wave: 'sine', from: inKey(9), to: inKey(0), seconds: 0.058, gain: 0.7, attack: 0.001, curve: 5 },
       /*
         ── THE SUB, AND THE PULSE HAD NONE ────────────────────────────────────────────────────────
 
@@ -431,7 +536,13 @@ export const CUES: Record<CueKind, CueRow> = {
         continuous low rumble under the whole game rather than a weight under each shot, and
         `MAX_CUE_SECONDS` is not what would stop it.
       */
-      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.11, gain: 0.5, attack: 0.002, curve: 4 },
+      /*
+        ⚠️ **0.11 → 0.064, and the LENGTH is the only thing that moved.** 0104. The note, the octave
+        under the layer above it and the gain are 0102's and are untouched — what could not stay is a
+        64ms-longer-than-the-gap sustain under a gun that fires every 67ms. Three and a half cycles
+        at the root is still weight; a hundred and ten milliseconds of it was a drone.
+      */
+      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.064, gain: 0.5, attack: 0.002, curve: 4 },
     ],
   },
   /**
@@ -441,6 +552,20 @@ export const CUES: Record<CueKind, CueRow> = {
    * heavier stream and the one the player is meant to be able to pick out of a screen full of the
    * lighter one.
    */
+  /*
+    ⚠️ **AND IT WAS EXACTLY ONE BEAT LONG, WHICH IS THE SAME DEFECT WITH A ROUNDER NUMBER** — 0104.
+    0.400s against `BEAT_SECONDS` of 0.4, and a fastest cadence of 20 steps — **0.333s**. At the cap
+    the launch overlapped its own successor by a fifth of a beat, so the heavier of the player's two
+    streams smeared into itself exactly where it was meant to be most legible.
+
+    ⚠️ **The counter-beat is what this cue is FOR** (`docs/decisions/0093-the-gun-is-on-the-grid.md`,
+    5:1 against the pulse), and a counter-beat that overlaps itself is a texture. Shortened to fit,
+    like the pulse, and held against `missilePerBeat`'s own floor rather than against a number here.
+
+    ⚠️ **No `figure`, and that is deliberate.** It fires once every five pulses, so successive
+    missiles are far enough apart to be separate events already; an accent pattern over something
+    that slow is heard as an inconsistent sound rather than as a groove.
+  */
   missile: {
     twin: 'missile-appears',
     hold: 3,
@@ -450,11 +575,11 @@ export const CUES: Record<CueKind, CueRow> = {
       // The motor lighting.
       { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.5, attack: 0.0006, curve: 7, lowFrom: 7000, lowTo: 3000, highFrom: 1100 },
       { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.6, attack: 0.004, curve: 3.2, lowFrom: 2400, lowTo: 600, highFrom: 130, highTo: 60, q: 0.7 },
-      { wave: 'noise', from: 0, to: 0, seconds: 0.34, gain: 0.09, attack: 0.02, curve: 2.6, lowFrom: 9000, highFrom: 1500, highTo: 900 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.3, gain: 0.09, attack: 0.02, curve: 2.6, lowFrom: 9000, highFrom: 1500, highTo: 900 },
       // The launch, at a pitch a speaker can actually reproduce — see 0089 on why 30 Hz is not it.
       // A3 → C2: the root falling to the minor third, which is the interval that says *minor* in one
       // gesture. The missile is the counter-beat (0094), so it wants to be recognisably itself.
-      { wave: 'sine', from: inKey(14), to: inKey(2), seconds: 0.3, gain: 1, attack: 0.001, curve: 3 },
+      { wave: 'sine', from: inKey(14), to: inKey(2), seconds: 0.26, gain: 1, attack: 0.001, curve: 3 },
       /*
         And the octave under it, for the systems that can. The same two notes, A2 → C1.
 
@@ -463,7 +588,7 @@ export const CUES: Record<CueKind, CueRow> = {
         picked out of a screen full of the lighter one; it reached lower than the pulse did and not by
         enough to be the reason. This is the layer 0089 would have leant on and did not.
       */
-      { wave: 'sine', from: inKey(7), to: inKey(-5), seconds: 0.34, gain: 0.95, attack: 0.004, curve: 2.5 },
+      { wave: 'sine', from: inKey(7), to: inKey(-5), seconds: 0.29, gain: 0.95, attack: 0.004, curve: 2.5 },
       /*
         ⚠️ **AND A SUB UNDER THAT, which the missile also did not have** — A1 → C0, two octaves below
         its own launch. A missile is the second auto-weapon and the ask that produced it
@@ -471,7 +596,7 @@ export const CUES: Record<CueKind, CueRow> = {
         three of the pulse*; every channel it has should say so, and the low end was the one saying
         nothing.
       */
-      { wave: 'sine', from: inKey(0), to: inKey(-12), seconds: 0.4, gain: 0.62, attack: 0.008, curve: 2 },
+      { wave: 'sine', from: inKey(0), to: inKey(-12), seconds: 0.32, gain: 0.62, attack: 0.008, curve: 2 },
     ],
   },
   /**
@@ -519,6 +644,11 @@ export const CUES: Record<CueKind, CueRow> = {
   /** An enemy died. The debris burst is the picture; this is the same event arriving at the ear. */
   kill: {
     twin: 'debris-burst',
+    // Measured at +8.7 dB over the `run` bed, and the most repeated of the four — so the shallowest.
+    duck: 0.18,
+    // ⚠️ **The reported one.** *"Enemy explosions should pulse with the beat"* — 0104, and this is the
+    // most repeated of the six that now do.
+    onGrid: true,
     hold: 2,
     gain: 0.33,
     glue: 0.1,
@@ -545,6 +675,10 @@ export const CUES: Record<CueKind, CueRow> = {
    */
   bossDown: {
     twin: 'boss-burst',
+    // +11.4 dB, once a level, and the loudest thing the game ever does. The deepest duck there is.
+    duck: 0.42,
+    // The loudest event in the game, so the one it costs most to have land off the grid — 0104.
+    onGrid: true,
     hold: 30,
     gain: 0.468,
     glue: 0.14,
@@ -586,6 +720,14 @@ export const CUES: Record<CueKind, CueRow> = {
    */
   blast: {
     twin: 'blast-ring',
+    // +10.7 dB, and the player paid a charge for it — 0053.
+    duck: 0.34,
+    /*
+      ⚠️ **Gridded even though the BOMB that throws it is not** — 0104. The two are a press and its
+      consequence: the throw answers a button and must be immediate, and the blast lands `BLAST_STEPS`
+      later on a clock the player is no longer holding. Only the second one is free to wait.
+    */
+    onGrid: true,
     hold: 6,
     gain: 0.432,
     glue: 0.14,
@@ -609,6 +751,7 @@ export const CUES: Record<CueKind, CueRow> = {
    */
   shield: {
     twin: 'shell-mark',
+    onGrid: true,
     hold: 6,
     gain: 0.288,
     glue: 0.08,
@@ -627,6 +770,14 @@ export const CUES: Record<CueKind, CueRow> = {
   /** The run lost a ship. Falling, long, and the only cue with nothing above it in the mix. */
   death: {
     twin: 'ship-burst',
+    // +11.1 dB. The run just lost a ship; the track getting out of the way is the point.
+    duck: 0.4,
+    /*
+      ⚠️ **The ship comes apart over 48 steps (0079), so a tenth of a second of wait is inside the
+      first twelfth of the event.** A death is the most-watched thing a run does and the one moment
+      the music should sound like it meant to happen.
+    */
+    onGrid: true,
     hold: 30,
     gain: 0.45,
     glue: 0.14,
@@ -656,6 +807,7 @@ export const CUES: Record<CueKind, CueRow> = {
    */
   pickup: {
     twin: 'pickup-taken',
+    onGrid: true,
     hold: 4,
     gain: 0.264,
     glue: 0.06,

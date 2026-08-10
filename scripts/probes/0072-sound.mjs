@@ -58,8 +58,10 @@ export const PROBES = [
     guard: 'does not let a cue held back spend the step’s budget anyway',
     edit: {
       path: 'src/app/sound.ts',
-      find: '      if (clock - (lastAt[index] ?? 0) < CUES[kind].hold) return;\n      if (voices >= MAX_VOICES) return;',
-      replace: '      voices++;\n      if (clock - (lastAt[index] ?? 0) < CUES[kind].hold) return;\n      if (voices > MAX_VOICES) return;',
+      // ⚠️ Re-anchored by 0104: the two gates moved out of `play` into `emit`, because a gridded cue
+      // has to be asked the same questions at the moment it SOUNDS rather than when it was asked for.
+      find: '    if (clock - (lastAt[index] ?? 0) < CUES[CUE_KINDS[index]!]!.hold) return;\n    if (voices >= MAX_VOICES) return;',
+      replace: '    voices++;\n    if (clock - (lastAt[index] ?? 0) < CUES[CUE_KINDS[index]!]!.hold) return;\n    if (voices > MAX_VOICES) return;',
     },
   },
   {
@@ -116,7 +118,7 @@ export const PROBES = [
     guard: 'takes its stream from the cue’s NAME, so a thirteenth row cannot change the twelve above it',
     edit: {
       path: 'src/app/sound.ts',
-      find: 'return CUE_KINDS.map((kind) => sampleCue(CUES[kind], rate, root.stream(kind)));',
+      find: 'return CUE_KINDS.map((kind) => velocitiesOf(CUES[kind]).map((v) => sampleCue(CUES[kind], rate, root.stream(kind), v)));',
       replace: 'return CUE_KINDS.map((kind, i) => sampleCue(CUES[kind], rate, root.stream(String(i))));',
     },
   },

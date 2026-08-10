@@ -40,8 +40,16 @@ export const PROBES = [
     guard: 'and each rung strikes MORE NOTES A BAR than the one below, which is what *pace* is',
     edit: {
       path: 'src/content/music.ts',
-      find: "  surge: { drone: 0.48, bass: 0, beat: 0, engine: 0.9, chords: 0.9, groove: 0.92, arp: 0.6, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },",
-      replace: "  surge: { drone: 0.48, bass: 0, beat: 0, engine: 0.9, chords: 0.9, groove: 0.92, arp: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },",
+      /*
+        ⚠️ **THE BREAK MOVED DOWN A RUNG WITH THE LAYER, WHICH IS NOT THE SAME AS RE-ANCHORING IT.**
+        `docs/decisions/0104-the-gun-plays-a-figure.md` opened `arp` at `push` — the ask was that a
+        level never begins thinner than the title — so closing it at `surge` no longer takes the
+        sixteenths out of the piece, it only stops them getting louder. The rung where the layer now
+        ARRIVES is the one that has to be broken, or this probe would go on passing while standing
+        over a version of the ladder that no longer exists.
+      */
+      find: "  push: { drone: 0.5, bass: 0, beat: 0, engine: 0.88, chords: 0.9, groove: 0.88, arp: 0.5, hook: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },",
+      replace: "  push: { drone: 0.5, bass: 0, beat: 0, engine: 0.88, chords: 0.9, groove: 0.88, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },",
     },
   },
   {
@@ -57,8 +65,16 @@ export const PROBES = [
     guard: 'THE LEVEL: there is something in the low end that MOVES, at every rung above the opening',
     edit: {
       path: 'src/content/music.ts',
-      find: "  push: { drone: 0.5, bass: 0, beat: 0, engine: 0.88, chords: 0.9, groove: 0.9, arp: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },",
-      replace: "  push: { drone: 0.5, bass: 0, beat: 0, engine: 0.88, chords: 0.9, groove: 0, arp: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },",
+      /*
+        ⚠️ **AND THIS ONE MOVED DOWN A RUNG TOO, FOR THE SAME REASON AND WITH MORE AT STAKE.** 0104
+        opened `groove` at `run`, so the level's bass line now arrives with the level; closing it at
+        `push` would leave the first third of every level with a bass line and take it away later,
+        which is not the shipped defect this probe reproduces. `run` is where it has to go now — and
+        that is a stricter break than the old one, because it is the whole level rather than its
+        last two thirds.
+      */
+      find: "  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0.8, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },",
+      replace: "  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },",
     },
   },
   {
@@ -111,7 +127,10 @@ export const PROBES = [
     guard: '0102 — and the PLAYER’S OWN WEAPONS have a bottom, which is what *tinny* means',
     edit: {
       path: 'src/content/cues.ts',
-      find: '      { wave: \'sine\', from: inKey(2), to: inKey(-7), seconds: 0.11, gain: 0.5, attack: 0.002, curve: 4 },',
+      // ⚠️ Re-anchored by 0104, which SHORTENED this layer from 0.11s to 0.064 rather than removing
+      // it: the sub is what stops the pulse being tinny and its LENGTH is what made the gun a drone.
+      // The break is still the whole layer going away, which is what 0102 put here.
+      find: '      { wave: \'sine\', from: inKey(2), to: inKey(-7), seconds: 0.064, gain: 0.5, attack: 0.002, curve: 4 },',
       replace: '',
     },
   },
