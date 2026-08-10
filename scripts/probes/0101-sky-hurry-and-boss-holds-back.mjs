@@ -58,7 +58,10 @@ export const PROBES = [
       because its marks are fat, which is the reason that always mattered.
     */
     broke: 'the back layer given the near layer’s rate, with marks two thirds of a bullet wide',
-    guard: 'is still behind the game, which is the ceiling 0065 set',
+    // ⚠️ The guard was RENAMED by 0103, not moved: one layer is deliberately not behind the game any
+    // more, so a title claiming they all are described something the assertions had stopped holding.
+    // The clearance this break violates is the same one, and it is still the assertion that catches it.
+    guard: 'is never at the world’s own rate, on whichever side of the game it sits',
     edit: {
       path: 'src/app/mount.ts',
       find: '  { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.33 },',

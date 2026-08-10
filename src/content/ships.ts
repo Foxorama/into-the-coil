@@ -47,6 +47,28 @@ export interface ShipRow extends Body {
    * them a table edit** rather than a rewrite of `weaponFor`.
    */
   firePerBeat: readonly number[];
+  /**
+   * How many missile volleys a beat, at each MISSILE tier. Same length as `firePerBeat`.
+   *
+   * ── THE MISSILES USED TO READ THE PULSE'S LADDER, AND THAT IS WHY THE SECOND TUBE WAS LATE ──────
+   *
+   * ⚠️ **Reported from play, 2026-08-10: *"missile tubes don't get a second firing till like the 3rd
+   * upgrade — upgrades for missiles should be 1 tube, 2 tubes, faster fire rate."*** Both halves of
+   * that were one cause. `weaponFor` asked `fireEveryAt(ship, tubes)` — the PULSE's list, indexed by
+   * the missile tier — so the two ladders had to share their rungs, and the only way to make every
+   * missile tier buy something was to stagger the tubes against the rate: `rung(0, 2, tier)` gives
+   * 0, **1, 1, 2**, 2, which puts the second tube on the third pickup exactly as reported.
+   *
+   * ⚠️ **With a list of its own the two stop having to take turns.** The tubes can climb 0, 1, 2, 2,
+   * 2 and the rate can hold, hold, then step twice — which is the ask read literally, and every rung
+   * still changes something (`docs/game.md`).
+   *
+   * ⚠️ **IT DOES NOT LOOSEN 0093 OR 0094: every entry is still a subdivision of a beat**, and the
+   * 5:1 counter-beat is still `MISSILE_BEAT_RATIO × ` this rather than a second tuned number.
+   * `tests/missiles.test.ts` holds the rungs against `STEPS_PER_BEAT`, so a hand cannot author one
+   * off the grid here any more than in the list above.
+   */
+  missilePerBeat: readonly number[];
   /** How many barrels fire at once, at each weapon tier. Same length as `firePerBeat`. */
   barrels: readonly number[];
   /** The base weapon. */
@@ -148,6 +170,24 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       than a retune of this one.
     */
     firePerBeat: [3, 3, 4, 4, 6],
+    /*
+      ── THE MISSILES: TUBE, TUBE, THEN RATE ──────────────────────────────────────────────────────
+
+      ⚠️ **Reported from play: *"upgrades for missiles should be 1 tube, 2 tubes, faster fire rate."***
+      The first two rungs hold the base cadence and buy a launcher each; the last two hold the tubes
+      at the cap and buy the rate. Every rung still changes something, which is `docs/game.md`'s rule
+      and is what the old staggered arrangement was paying for.
+
+      ⚠️ **The floor and the ceiling are BOTH unchanged**, which is what makes this a re-ordering
+      rather than a buff. Tier 0 is still eight steps to a pulse volley and tier 4 is still a
+      sixteenth-note triplet, so `MISSILE_BEAT_RATIO` still reaches 20 steps at the cap and the
+      missile pool's worst case — two launchers at the fastest cadence — is the number it always was.
+
+      ⚠️ **What DOES move is the middle, and it moves in the player's favour on purpose**: two tubes
+      arrive one pickup earlier and the first rate step arrives one later. That is the trade the ask
+      names, and it is a trade rather than a gift.
+    */
+    missilePerBeat: [3, 3, 3, 4, 6],
     barrels: [1, 2, 3, 4, 4],
     shot: 'pulse',
     missile: 'missile',

@@ -302,16 +302,19 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   warden: 'enemy',
   boss: 'enemy',
   boss2: 'enemy',
+  /*
+    ⚠️ **THE FIVE LATER BOSSES' HURT SILHOUETTES ARE NOT HERE, AND THEY USED TO BE** — see the HURT
+    SILHOUETTES block below. Each was authored on the line under its own hull, in its own hull's ink,
+    which reads as *the boss and its variant* and bakes as **the same bitmap twice**: `drawKind` shares
+    one `case` arm between a boss and its hit sprite, so the ink is the only thing that differs, and
+    with the ink the same there is nothing left. Five of the seven bosses had no hit interaction at
+    all. A hurt silhouette belongs with the other hurt silhouettes.
+  */
   boss3: 'enemy',
-  boss3Hit: 'enemy',
   boss4: 'enemy',
-  boss4Hit: 'enemy',
   boss5: 'enemy',
-  boss5Hit: 'enemy',
   boss6: 'enemy',
-  boss6Hit: 'enemy',
   boss7: 'enemy',
-  boss7Hit: 'enemy',
   bullet: 'bullet',
   /*
     ⚠️ **THE ENEMY INK, and this is the one ink assignment in the table that changed a rule** — 0081.
@@ -407,6 +410,23 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   wardenHit: 'impact',
   bossHit: 'impact',
   boss2Hit: 'impact',
+  /*
+    ⚠️ **THESE FIVE WERE `enemy` AND THAT WAS THE WHOLE OF *"BOSSES 3+ DON'T SHOW ANY HIT INTERACTION
+    AT ALL"*** — reported from play, 2026-08-10. They were authored beside their own hulls at the top
+    of this table rather than here, so each inherited its hull's ink; `drawKind` gives a boss and its
+    hit sprite ONE `case` arm, so the two bitmaps were identical and the flash was a four-step swap to
+    the same picture. Nothing about `IMPACT_FLASH_STEPS` or the collision was wrong.
+
+    ⚠️ **The rule this breaks is 0035's, and it is the only rule in the project a table can break by
+    saying nothing** — a missing entry is a type error, and a WRONG entry that happens to be a valid
+    ink is not. `tests/legibility.test.ts` now asks the question the compiler cannot: every hurt
+    silhouette is drawn in a different ink from the body it is the hurt version of.
+  */
+  boss3Hit: 'impact',
+  boss4Hit: 'impact',
+  boss5Hit: 'impact',
+  boss6Hit: 'impact',
+  boss7Hit: 'impact',
   // Fragments are the impact itself, so they are the impact ink; they carry no identity of their own.
   debris: 'impact',
   /*

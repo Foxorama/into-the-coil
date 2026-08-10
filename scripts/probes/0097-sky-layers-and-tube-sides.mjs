@@ -20,10 +20,15 @@ export const PROBES = [
       the only assertion that says a sky has a layer in it that reads as speed.
     */
     broke: 'the streak layer taken back out, so the sky is two layers of dots again',
-    guard: 'is still behind the game, which is the ceiling 0065 set',
+    // ⚠️ The guard was renamed by 0103: one layer is deliberately NOT behind the game any more, so a
+    // title claiming they all are was a false description of what the assertions hold.
+    guard: 'is never at the world’s own rate, on whichever side of the game it sits',
     edit: {
       path: 'src/app/mount.ts',
-      find: '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 0.92 },',
+      // ⚠️ Re-anchored on 2026-08-10: the streak layer crossed into the FOREGROUND at 1.61
+      // (`docs/decisions/0103-the-fast-layer-is-in-front.md`). Same break, and it now costs strictly
+      // more — without it the sky is not only two layers of dots, it is entirely behind the game.
+      find: '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 1.61 },',
       replace: '',
     },
   },

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   FASTEST_FIRE,
   MAX_BARRELS,
+  MISSILE_BEAT_RATIO,
   PICKUPS,
   PICKUP_KINDS,
   UPGRADE_KINDS,
@@ -157,11 +158,44 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
         weaponFor(SHIPS.proof, Array.from({ length: tier }, () => 'weapon' as const)).fireEvery,
       );
     }
-    // And it is the SAME cross-rhythm at every rung — which is what the old ladder could not promise,
-    // and is independent of what the ratio's value happens to be.
-    expect(new Set(ratios).size, `the missile sits at ${[...new Set(ratios)].join(', ')} pulses across the tiers`).toBe(
-      1,
-    );
+    /*
+      ── THE CLAIM HERE USED TO BE *THE RATIO IS IDENTICAL AT EVERY RUNG*, AND IT WAS AN ARTEFACT ───
+
+      ⚠️ **It read `new Set(ratios).size === 1`, and it was true because the missile READ THE PULSE'S
+      CADENCE LIST.** `weaponFor` asked `fireEveryAt(ship, tubes)` — one list, two indices — so a
+      constant ratio was not a property the ladders had, it was the same division written twice. The
+      moment the missiles got a list of their own (`missilePerBeat` on `ShipRow`, 2026-08-10, for
+      *"missile tubes don't get a second firing till like the 3rd upgrade"*) it went red, correctly,
+      and what it had been standing over turned out to be an identity rather than a rhythm.
+
+      ⚠️ **WHAT A LISTENER ACTUALLY HEARS IS HOW OFTEN THE TWO STREAMS CLOSE**, and that is asserted
+      instead. A counter-beat is a counter-beat because the missile does NOT arrive with a pulse most
+      of the time; how many pulses pass between the two landing together is the thing the play-test
+      was describing when it said *"the missile fire provided a great counter-beat"*.
+
+      ⚠️ **It cannot be satisfied by moving `MISSILE_BEAT_RATIO`**, which is the trap the first
+      version of this whole test fell into — [0019](../docs/decisions/0019-a-probe-must-be-seen-to-apply.md)
+      caught that one inside a minute. At a ratio of 4 the count below is 4 and this fails; at 5 it is
+      5 at four of the five rungs and 20 at the other.
+
+      ⚠️ **Tier 2 is the wide one and it is a CHANGE, written down rather than smoothed over.** With
+      one shared list the two streams closed every 5 pulses at every rung; with the missiles on their
+      own the pulse steps at tier 2 and the missile does not, so there the two close every 20 pulses —
+      five beats — instead. Still a cross-rhythm, and a wider one. **Nobody has heard it**, and it is
+      the first thing to listen for if the counter-beat stops reading.
+    */
+    for (let tier = 0; tier < RUNGS.length; tier++) {
+      const missiles = Array.from({ length: tier }, () => 'missile' as const);
+      const missileEvery = weaponFor(SHIPS.proof, missiles).missileEvery;
+      const pulseEvery = fireEveryAt(SHIPS.proof, tier);
+      // Both are whole steps, so the instant they next share is their least common multiple.
+      const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+      const together = (missileEvery * pulseEvery) / gcd(missileEvery, pulseEvery);
+      expect(
+        together / pulseEvery,
+        `at tier ${tier} a missile lands with a pulse every ${together / pulseEvery} volleys, which is with it rather than across it`,
+      ).toBeGreaterThanOrEqual(MISSILE_BEAT_RATIO);
+    }
   });
 
   it('and the tempo is a whole number of sim steps, which is what makes any of it possible', () => {

@@ -229,7 +229,21 @@ describe('the sky goes past twice as fast as it shipped, and the parallax surviv
     expect(now, 'the two layers no longer move at the same relative rates — the parallax was spent').toBeCloseTo(was, 6);
   });
 
-  it('is still behind the game, which is the ceiling 0065 set', () => {
+  /**
+   * How thick `kind`'s thickest mark is drawn, in world units, read off what `skyField` actually
+   * bakes rather than off the constant behind it — 0027, and `skyField`'s own reason for existing.
+   */
+  const thickestOf = (kind: SkyKind): number =>
+    Math.max(
+      ...skyField(kind, bakeSize(SPRITE_EXTENT[kind], 6)).stars.map(
+        (star) => star.r / (bakeSize(SPRITE_EXTENT[kind], 6) / SPRITE_EXTENT[kind]),
+      ),
+    );
+
+  /** The smallest thing on screen that can kill the player — what a sky mark must not resemble. */
+  const smallestThreat = Math.min(SHOTS.pulse.radius, SHOTS.spit.radius, SHOTS.lance.radius, SHOTS.flak.radius);
+
+  it('is never at the world’s own rate, on whichever side of the game it sits', () => {
     /*
       ⚠️ **The counterweight, and the reason a speed ask has an upper bound at all.** At a depth of 1
       the sky moves exactly with the world and stops being a background — it reads as a field of
@@ -281,30 +295,89 @@ describe('the sky goes past twice as fast as it shipped, and the parallax surviv
       ⚠️ **It cannot reach 1**, because a mark of no size is not a mark. 0065's absolute is still
       asserted separately, because a formula that happens to stay under 1 is not the same as a rule
       that says it must.
+
+      ── AND *BELOW 1* WAS THE SPECIAL CASE OF A RULE ABOUT DISTANCE FROM 1 ────────────────────────
+
+      ⚠️ **`docs/decisions/0103-the-fast-layer-is-in-front.md`.** Reported: *"background scroll is too
+      slow, probably needs to be another 75% faster again"* — the fifth time, and the first where the
+      answer is not a number. The measured ceilings say why: the near layer sits at 0.825 against
+      **0.845**, so the background sky had 2% left in it and ×1.75 is not a thing it can be asked for.
+
+      ⚠️ **WHY A DEPTH NEAR 1 IS THE BAD PLACE, WHICH THE OLD BOUND HAD BACKWARDS AS *ABOVE 1*.** At
+      exactly the world's rate a mark shares its motion signature with every bullet and every enemy on
+      the screen, so the eye loses the one channel that separates figure from ground. **Slower is a
+      separation and faster is equally a separation** — what 0069 is actually about is the mark that
+      moves at roughly the speed of the things that can kill you, and 1 is that speed, not a ceiling
+      above which safety lies.
+
+      ⚠️ **So the rule generalises rather than loosens: a mark must clear the world's rate by half of
+      how much of a bullet it looks like, on WHICHEVER SIDE it sits.** `|depth − 1| > share × 0.5`.
+      Every number the old bound produced is unchanged — the two dot layers are still held to 0.671
+      and 0.845 — and the branch that did not exist is now available to a mark thin enough to earn it.
+
+      ⚠️ **A layer past 1 is IN FRONT OF THE GAME, and that is a picture rather than a loophole**: it
+      overtakes the ship instead of trailing it, which is the one thing no amount of background speed
+      can imitate and is why the answer to a fifth *make it faster* is a different place rather than a
+      bigger number.
+
+      ⚠️ **The clearance is what stops that being a free pass.** A foreground dot the size of a bullet
+      would need to reach 1.67 before it cleared, and the near layer's own field would need 1.16 — so
+      *put it in front* costs exactly as much as *put it behind* did, measured off the same bake.
     */
     const RUSH = SKY.findIndex((layer) => layer.sprite === SPRITE.skyRush);
     expect(RUSH, 'the sky has no streak layer, so nothing reads as speed at all').toBeGreaterThanOrEqual(0);
-    const smallestThreat = Math.min(SHOTS.pulse.radius, SHOTS.spit.radius, SHOTS.lance.radius, SHOTS.flak.radius);
     for (let i = 0; i < SKY.length; i++) {
       const layer = SKY[i]!;
-      expect(layer.depth, `sky layer ${i} moves with the world — it is not a background any more`).toBeLessThan(1);
       const kind = SPRITE_KINDS[layer.sprite] as SkyKind;
-      const thickest = Math.max(
-        ...skyField(kind, bakeSize(SPRITE_EXTENT[kind], 6)).stars.map(
-          (star) => star.r / (bakeSize(SPRITE_EXTENT[kind], 6) / SPRITE_EXTENT[kind]),
-        ),
-      );
-      const ceiling = 1 - (thickest / smallestThreat) * 0.5;
+      const thickest = thickestOf(kind);
+      const clearance = (thickest / smallestThreat) * 0.5;
       expect(
-        layer.depth,
+        Math.abs(layer.depth - 1),
         `${kind} draws marks ${thickest.toFixed(2)} units thick — ${((thickest / smallestThreat) * 100).toFixed(0)}% of a ` +
-          `bullet — and moves at ${layer.depth} against a ceiling of ${ceiling.toFixed(3)}`,
-      ).toBeLessThan(ceiling);
+          `bullet — and moves at ${layer.depth}, which is ${Math.abs(layer.depth - 1).toFixed(3)} from the world's own ` +
+          `rate against a clearance of ${clearance.toFixed(3)}`,
+      ).toBeGreaterThan(clearance);
     }
     expect(
       SKY[RUSH]!.depth,
       'the streak layer is not the fastest one, so the layer that reads as speed is not the one moving',
     ).toBe(Math.max(...SKY.map((layer) => layer.depth)));
+  });
+
+  it('and only the streak layer may be in FRONT of the game, and only one of them', () => {
+    /*
+      ⚠️ **A SEPARATE CLAIM BECAUSE THE ARITHMETIC ABOVE CANNOT SAY IT** —
+      `docs/decisions/0103-the-fast-layer-is-in-front.md`. The clearance is about ONE mark and how much
+      of a bullet it looks like; it has no opinion on how many things are allowed to overtake the
+      player at once. A sky whose every layer had crossed over would satisfy it completely and would be
+      a game played behind a curtain, which is
+      `docs/decisions/0069-the-sky-is-behind-the-game.md`'s subject arriving from the far side.
+
+      ⚠️ **And the one that crosses must be the one that says *fast* BY ITS SHAPE.** A dot in front of
+      the game is a thing to be dodged, whatever its clearance says — the near layer's own field would
+      clear at 1.16 and would still be a field of specks flying at the player.
+      `docs/decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md` is why a streak was drawn at
+      all, and this is where that finding stops being decoration.
+
+      ⚠️ **Held as a COUNT and as a KIND, because the two fail differently.** A second streak layer is
+      a curtain; a dot layer moved across is 0069. Neither implies the other.
+    */
+    const inFront = SKY.filter((layer) => layer.depth > 1);
+    expect(inFront.length, 'more than one sky layer is in front of the game, which is a curtain').toBeLessThan(2);
+    for (const layer of inFront) {
+      expect(
+        SPRITE_KINDS[layer.sprite],
+        'a layer made of DOTS was put in front of the game, where a dot is a thing to be dodged',
+      ).toBe('skyRush');
+    }
+    /*
+      ⚠️ **AND A LAYER AT EXACTLY 1 IS THE WORST PLACE THERE IS**, which is asserted here rather than
+      left to the clearance: a mark of no size at all would satisfy `|depth − 1| > 0` and sit exactly
+      on the rate of every bullet on the screen. 0065's absolute survives as this, one step over.
+    */
+    for (let i = 0; i < SKY.length; i++) {
+      expect(SKY[i]!.depth, `sky layer ${i} moves at exactly the world's rate, so nothing separates it`).not.toBe(1);
+    }
   });
 });
 
