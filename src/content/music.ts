@@ -876,9 +876,9 @@ export const MUSIC_LADDER: Record<MusicLevel, Record<MusicLayer, number>> = {
   calm: { drone: 0.55, bass: 0.7, beat: 0.5, sub: 0, engine: 0, perc: 0, chords: 0, groove: 0, arp: 0, call: 0, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0, auraFast: 0 },
   run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, call: 0.62, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.5, auraFast: 0.28 },
   push: { drone: 0.34, bass: 0, beat: 0, sub: 0.88, engine: 0.92, perc: 0.74, chords: 0.87, groove: 0.86, arp: 0.62, call: 0.68, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.62, auraFast: 0.4 },
-  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1, engine: 0.93, perc: 0.8, chords: 0.88, groove: 0.9, arp: 0.56, call: 0.74, hook: 0.52, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.75, auraFast: 0.55 },
-  approach: { drone: 0.34, bass: 0, beat: 0, sub: 1, engine: 0.94, perc: 0.84, chords: 0.89, groove: 0.9, arp: 0.58, call: 0.8, hook: 0.55, drive: 0.42, toll: 0.6, lead: 0, stomp: 0, auraSlow: 0.88, auraFast: 0.72 },
-  boss: { drone: 0.24, bass: 0, beat: 0, sub: 1, engine: 0.98, perc: 0.95, chords: 0.88, groove: 0.9, arp: 0.58, call: 0.84, hook: 0.62, drive: 0.44, toll: 0.6, lead: 0.74, stomp: 0.48, auraSlow: 1, auraFast: 0.9 },
+  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.06, engine: 0.97, perc: 0.8, chords: 0.88, groove: 0.94, arp: 0.64, call: 0.74, hook: 0.62, drive: 0.34, toll: 0, lead: 0, stomp: 0, auraSlow: 0.75, auraFast: 0.55 },
+  approach: { drone: 0.34, bass: 0, beat: 0, sub: 1.1, engine: 1, perc: 0.86, chords: 0.89, groove: 0.94, arp: 0.7, call: 0.8, hook: 0.72, drive: 0.72, toll: 0.72, lead: 0, stomp: 0, auraSlow: 0.88, auraFast: 0.72 },
+  boss: { drone: 0.2, bass: 0, beat: 0, sub: 1.22, engine: 1.1, perc: 0.9, chords: 0.8, groove: 0.98, arp: 0.75, call: 0.81, hook: 0.83, drive: 0.88, toll: 0.79, lead: 0.93, stomp: 0.9, auraSlow: 1, auraFast: 0.9 },
 };
 
 /** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */

@@ -240,7 +240,11 @@ const APPROACH: readonly WaveEntry[] = [
 
   // ── Weavers. Introduced alone, then mixed into shapes that were safe without them. ──────────────
   { at: 960, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
+  // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
+  { at: 1005, enemy: 'drifter', formation: 'line', count: 5, lane: 38 },
   { at: 1050, enemy: 'drifter', formation: 'line', count: 5, lane: 65 },
+  // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
+  { at: 1095, enemy: 'weaver', formation: 'vee', count: 4, lane: 62 },
   { at: 1140, enemy: 'weaver', formation: 'column', count: 5, lane: 55 },
   { at: 1230, enemy: 'lancer', formation: 'vee', count: 5, lane: 50 },
   { at: 1320, enemy: 'weaver', formation: 'line', count: 5, lane: 40 },
@@ -470,7 +474,11 @@ const DESCENT: readonly WaveEntry[] = [
 
   // ── Wardens. Four health, weaving, and shooting — the first thing that is two problems at once. ─
   { at: 910, enemy: 'warden', formation: 'line', count: 3, lane: 50 },
+  // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
+  { at: 953, enemy: 'weaver', formation: 'line', count: 5, lane: 60 },
   { at: 995, enemy: 'charger', formation: 'column', count: 5, lane: 30, origin: 'acrossMinus' },
+  // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
+  { at: 1038, enemy: 'drifter', formation: 'vee', count: 5, lane: 36 },
   { at: 1080, enemy: 'drifter', formation: 'line', count: 6, lane: 55 },
   { at: 1165, enemy: 'warden', formation: 'column', count: 3, lane: 40 },
   { at: 1250, enemy: 'weaver', formation: 'vee', count: 5, lane: 50 },
@@ -590,7 +598,11 @@ const COILWARD: readonly WaveEntry[] = [
   { at: 760, enemy: 'lancer', formation: 'line', count: 5, lane: 60 },
   { at: 852, enemy: 'drifter', formation: 'line', count: 5, lane: 50 },
   { at: 944, enemy: 'lancer', formation: 'line', count: 5, lane: 40, origin: 'acrossPlus' },
+  // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
+  { at: 990, enemy: 'charger', formation: 'vee', count: 4, lane: 40 },
   { at: 1036, enemy: 'sower', formation: 'column', count: 5, lane: 50 },
+  // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
+  { at: 1082, enemy: 'drifter', formation: 'line', count: 5, lane: 64 },
   { at: 1128, enemy: 'lancer', formation: 'column', count: 5, lane: 41 },
   { at: 1220, enemy: 'lancer', formation: 'column', count: 5, lane: 60, origin: 'acrossMinus' },
   { at: 1312, enemy: 'weaver', formation: 'column', count: 5, lane: 45 },
@@ -683,7 +695,11 @@ const SHOAL: readonly WaveEntry[] = [
   { at: 750, enemy: 'drifter', formation: 'line', count: 5, lane: 42 },
   { at: 840, enemy: 'charger', formation: 'line', count: 5, lane: 59 },
   { at: 930, enemy: 'drifter', formation: 'line', count: 5, lane: 49 },
+  // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
+  { at: 975, enemy: 'drifter', formation: 'vee', count: 5, lane: 34 },
   { at: 1020, enemy: 'charger', formation: 'column', count: 5, lane: 47 },
+  // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
+  { at: 1065, enemy: 'weaver', formation: 'line', count: 5, lane: 54 },
   { at: 1110, enemy: 'weaver', formation: 'column', count: 5, lane: 56 },
   { at: 1200, enemy: 'charger', formation: 'column', count: 5, lane: 42 },
   { at: 1290, enemy: 'sower', formation: 'column', count: 5, lane: 53 },
@@ -779,7 +795,11 @@ const BATTERIES: readonly WaveEntry[] = [
   { at: 750, enemy: 'drifter', formation: 'line', count: 4, lane: 60 },
   { at: 840, enemy: 'turret', formation: 'line', count: 4, lane: 50 },
   { at: 930, enemy: 'drifter', formation: 'line', count: 4, lane: 40 },
+  // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
+  { at: 975, enemy: 'weaver', formation: 'vee', count: 4, lane: 42 },
   { at: 1020, enemy: 'spinner', formation: 'column', count: 4, lane: 50 },
+  // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
+  { at: 1065, enemy: 'drifter', formation: 'line', count: 6, lane: 58 },
   { at: 1110, enemy: 'warden', formation: 'column', count: 4, lane: 41 },
   { at: 1200, enemy: 'turret', formation: 'column', count: 4, lane: 60 },
   { at: 1290, enemy: 'warden', formation: 'column', count: 4, lane: 45 },
@@ -874,7 +894,11 @@ const GAUNTLET: readonly WaveEntry[] = [
   { at: 810, enemy: 'lancer', formation: 'line', count: 5, lane: 59 },
   { at: 895, enemy: 'weaver', formation: 'line', count: 5, lane: 49, origin: 'acrossPlus' },
   { at: 980, enemy: 'drifter', formation: 'line', count: 5, lane: 50 },
+  // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
+  { at: 1023, enemy: 'charger', formation: 'line', count: 4, lane: 44 },
   { at: 1065, enemy: 'turret', formation: 'line', count: 5, lane: 47 },
+  // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
+  { at: 1108, enemy: 'weaver', formation: 'vee', count: 5, lane: 60 },
   { at: 1150, enemy: 'charger', formation: 'line', count: 5, lane: 58 },
   { at: 1235, enemy: 'sower', formation: 'line', count: 5, lane: 44, origin: 'acrossMinus' },
   { at: 1320, enemy: 'spinner', formation: 'line', count: 5, lane: 53 },
@@ -973,7 +997,11 @@ const EYE: readonly WaveEntry[] = [
   { at: 792, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
   { at: 874, enemy: 'charger', formation: 'line', count: 5, lane: 40 },
   { at: 956, enemy: 'turret', formation: 'line', count: 5, lane: 47, origin: 'acrossMinus' },
+  // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
+  { at: 997, enemy: 'drifter', formation: 'line', count: 6, lane: 36 },
   { at: 1038, enemy: 'warden', formation: 'line', count: 6, lane: 50 },
+  // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
+  { at: 1079, enemy: 'charger', formation: 'vee', count: 4, lane: 64 },
   { at: 1120, enemy: 'charger', formation: 'line', count: 6, lane: 41 },
   { at: 1202, enemy: 'weaver', formation: 'line', count: 5, lane: 56, origin: 'acrossMinus' },
   { at: 1284, enemy: 'warden', formation: 'line', count: 6, lane: 45 },
