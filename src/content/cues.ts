@@ -109,6 +109,7 @@ export const CUE_KINDS = [
   'threat',
   'hit',
   'kill',
+  'bossPhase',
   'bossDown',
   'bomb',
   'blast',
@@ -142,6 +143,8 @@ export const TWIN_KINDS = [
   'debris-burst',
   /** The boss comes apart over `BOSS_DEATH_STEPS`, in pulses — 0062. */
   'boss-burst',
+  /** A boss crosses a health threshold and sheds `BURST.phase` fragments — 0111. */
+  'phase-burst',
   /** A thrown bomb is on the field, counting down its fuse — 0053. */
   'bomb-appears',
   /** The blast ring, which outlives its own damage by `BLAST_STEPS` — 0053. */
@@ -709,6 +712,47 @@ export const CUES: Record<CueKind, CueRow> = {
       */
       { wave: 'sine', from: inKey(13), to: inKey(1), seconds: 0.22, gain: 1.15, attack: 0.001, curve: 3.6, drive: 0.25 },
       { wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.26, gain: 0.6, attack: 0.002, curve: 3.2 },
+    ],
+  },
+  /**
+   * The boss crossed a health threshold — 0111.
+   *
+   * ⚠️ **THE ONE EVENT IN A FIGHT THAT IS GOOD NEWS AND BAD NEWS AT ONCE**, and the cue is where that
+   * gets said. The player did that — so it RISES, like everything else they gain — and what it rises
+   * to is the minor second above the root, which is the one interval in the scale that sounds like a
+   * question. Every other rising cue in this table lands on an octave or a fifth and resolves.
+   *
+   * ⚠️ **It is a twin and not a flourish.** `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`
+   * is the rule: the model resolves a phase change and until 0111 neither channel mentioned it.
+   *
+   * ⚠️ **It ducks, and the arithmetic that condemned `kill`'s duck acquits this one** —
+   * `docs/decisions/0109-a-death-is-a-drum.md`. A duck takes 0.445s to recover; a fight has at most
+   * four phase changes in it, so this is a handful of half-seconds in a level rather than 104% of one.
+   */
+  bossPhase: {
+    twin: 'phase-burst',
+    // Between a kill's 0.18 and the boss's own 0.42: rarer than one and smaller than the other.
+    duck: 0.3,
+    onGrid: true,
+    // Long enough that nothing can retrigger it inside its own tail, and a phase cannot turn over
+    // twice inside half a second at any tier.
+    hold: 24,
+    gain: 0.4,
+    glue: 0.12,
+    layers: [
+      // The crack of the pieces coming off, brighter than a kill's because there are more of them.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.04, gain: 0.42, attack: 0.0005, curve: 7, lowFrom: 8000, lowTo: 2800, highFrom: 800 },
+      // The body: shorter than a kill's and wider, so a phase reads as a bigger event of the same
+      // family rather than as a different machine.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.3, gain: 0.85, attack: 0.003, curve: 3.4, lowFrom: 3000, lowTo: 700, highFrom: 140, highTo: 85, q: 0.8, drive: 0.35 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.45, gain: 0.07, attack: 0.02, curve: 2.4, lowFrom: 7500, highFrom: 1400, highTo: 760 },
+      /*
+        A2 → B3, and A1 → B2 under it. **A RISING MINOR SECOND**: the player gained something, so it
+        rises like every gain in this table — and it lands one degree above the root, which is the
+        one place in the scale that does not settle. *Good news, and it is not over.*
+      */
+      { wave: 'tri', from: inKey(7), to: inKey(15), seconds: 0.34, gain: 0.8, attack: 0.004, curve: 2.6 },
+      { wave: 'sine', from: inKey(0), to: inKey(8), seconds: 0.4, gain: 0.7, attack: 0.006, curve: 2.2 },
     ],
   },
   /**

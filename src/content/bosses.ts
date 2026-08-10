@@ -29,6 +29,116 @@ export const BOSS_KINDS = ['sentinel', 'harrow', 'lattice', 'shoalMother', 'redo
 /** Derived from the list, so a boss cannot exist in the union and be missing from the table. */
 export type BossKind = (typeof BOSS_KINDS)[number];
 
+/**
+ * Every way a boss's hull can fly. Closed.
+ *
+ * ── SEVEN SILHOUETTES ON ONE BEHAVIOUR, AND THE PROJECT SAID SO IN WRITING FIRST ────────────────
+ *
+ * ⚠️ **`docs/decisions/0111-a-boss-has-one-idea.md`.** Reported from play: *"level 4 (or it might have
+ * been 5) was the only boss with a different attack. The rest of them either had thick or thin
+ * bullets and that was the only difference."*
+ *
+ * ⚠️ **IT IS AN ACCURATE READING OF THE TABLE AND `docs/state-of-play.md` PREDICTED IT.**
+ * `stepBoss` was one behaviour — track a drifting station, slide across the lane, reverse at the
+ * edges — and a phase only scaled the slide. What this table varied was `station`, `drift`, `patrol`,
+ * `shot` and the phase numbers, and
+ * `docs/decisions/0101-the-sky-is-a-hurry-and-the-boss-holds-back.md` drove all seven stations into a
+ * fifteen-unit band. Two axes were left that the player can actually see: the bullet, and the fan.
+ *
+ * ⚠️ **EVERY ARM IS ON THE `across` AXIS AND NONE TOUCHES `along`, WHICH IS A SCOPE DECISION.** Six
+ * assertions in `tests/level.test.ts` are written about where a hull settles and how much screen it
+ * leaves at the near end of its swing — 0061 and 0101 — and a movement that changed its distance
+ * from the player would either break them or force them to be loosened. *"Up/down motion"* is what
+ * was asked for and it is the axis those guards do not hold.
+ */
+export const BOSS_MOVE_KINDS = ['patrol', 'bob', 'stalk'] as const;
+
+/** Derived from the list, so a movement cannot exist in the union and be missing from the switch. */
+export type BossMoveKind = (typeof BOSS_MOVE_KINDS)[number];
+
+export type BossMove =
+  /**
+   * Slides across the lane at a constant rate and reverses at the edges. What every boss did.
+   *
+   * ⚠️ **It stays, and on 0073's own terms.** A field where every hull reacts to the player reads as
+   * one fight with seven skins; something that flies a fixed path is what makes the ones that do not
+   * mean anything. The phase still scales it, which is the escalation this arm already had.
+   */
+  | { kind: 'patrol' }
+  /**
+   * Rises and falls across the lane on a sine — **the up-and-down the report asked for by name.**
+   *
+   * ⚠️ **A function of the CAMERA and not of a step count**, exactly as the along-axis drift already
+   * is: a shape in the world can be authored against and a wobble in time cannot, and the fight has
+   * to be the same fight on a machine dropping frames. `wavelength` is world units of camera per
+   * complete cycle.
+   *
+   * ⚠️ **The phase scales the RATE by scaling the wavelength**, not the amplitude — a later phase
+   * that swung wider would put the hull off the lane, and `across` is a fixed hundred units on every
+   * device (0023). Faster over the same span is what escalation means here.
+   */
+  | { kind: 'bob'; amplitude: number; wavelength: number }
+  /**
+   * Tracks the ship's lane, slowly.
+   *
+   * ⚠️ **The one arm that reacts to the player**, and it is the boss half of
+   * `docs/decisions/0073-an-enemy-is-a-pilot.md`'s `hunt`. `agility` is world units per step, before
+   * the phase's own scale — so a fight against this one is a fight to get out from in front of it,
+   * where a patrol is a fight to be somewhere it is not going.
+   */
+  | { kind: 'stalk'; agility: number };
+
+/**
+ * Every way a boss's volley can be shaped. Closed.
+ *
+ * ⚠️ **THE COUNT AND THE SPREAD STILL COME FROM THE PHASE, WHICH IS WHAT MAKES THIS CHEAP.** A boss
+ * already widens its fan as its health falls — *"spray attack that increases number of bullets as
+ * health goes down"* is `phases[].shots` and it has been in this table since 0040. **What was missing
+ * is that the fan was centred on the SHIP**, and a spread centred on the player reads as one shot
+ * with error bars rather than as a wall to move through. This union says where the fan points; the
+ * phase still says how wide and how many.
+ *
+ * ⚠️ **It is deliberately NOT `src/content/enemies.ts`'s `Attack`.** That one carries its own counts,
+ * because an enemy's volley is a property of its row; a boss's is a property of its PHASE, and
+ * sharing the type would mean either duplicating the counts or reaching for a phase from a row. Two
+ * unions with one vocabulary is the honest shape, and `docs/decisions/0110-an-attack-is-a-pattern.md`
+ * is where the vocabulary is argued.
+ */
+export const BOSS_ATTACK_KINDS = ['aimed', 'spray', 'rake', 'ring', 'wall'] as const;
+
+/** Derived from the list, so an attack cannot exist in the union and be missing from the switch. */
+export type BossAttackKind = (typeof BOSS_ATTACK_KINDS)[number];
+
+export type BossAttack =
+  /** The fan, centred on the ship. What all seven did. */
+  | { kind: 'aimed' }
+  /** The fan, centred on the lane — a pattern the player reads rather than a spread that follows. */
+  | { kind: 'spray' }
+  /**
+   * The fan, centred on the lane, turning by `turn` radians every volley.
+   *
+   * ⚠️ **The turn is carried on the entity's `firePhase`**, the field 0110 added for the spinner —
+   * one description of *where in its turn a body has got to*, used by both.
+   */
+  | { kind: 'rake'; turn: number }
+  /**
+   * The phase's shots spread evenly around the whole circle rather than across `spread`.
+   *
+   * ⚠️ **The one attack whose escalation is legible without the player counting.** More shots is a
+   * denser ring, and a ring's gaps are visible from anywhere on the screen — which is what makes a
+   * boss that barely moves a damage race rather than a stalemate.
+   */
+  | { kind: 'ring' }
+  /**
+   * A row of shots across the lane, all travelling down it, with a hole where the hull is.
+   *
+   * ⚠️ **`gap` is world units between neighbours and the phase's `shots` is the number EITHER SIDE**,
+   * which is the convention `src/content/enemies.ts` states once for the sower. The hole is the hull's
+   * own width, so the safe place is directly in front of a thing that is 23 units across — which is a
+   * very different proposition from a sower's 6.
+   */
+  | { kind: 'wall'; gap: number };
+
 export interface BossPhase {
   /**
    * Active while remaining health is at or below this fraction of the row's full `health`.
@@ -118,6 +228,16 @@ export interface BossRow extends Body {
    * and this is the cheapest axis of it that had never been used.
    */
   shot: ShotKind;
+  /**
+   * How the hull flies across the lane. One arm of `BossMove`, carrying its own parameters.
+   *
+   * ⚠️ **Required rather than defaulted to `patrol`**, so an eighth boss is a decision about what the
+   * fight IS rather than a field somebody left out — `docs/decisions/0016-a-hub-enumerates-kinds.md`,
+   * and the same rule `src/content/enemies.ts` states for `attack`.
+   */
+  move: BossMove;
+  /** How its volley is shaped. The phase still says how many shots and how wide. */
+  attack: BossAttack;
   /** Full health to empty. The first entry must cover a full-health boss. */
   phases: readonly BossPhase[];
 }
@@ -136,7 +256,15 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * At the base weapon's rate it is roughly half a minute of well-aimed fire, which is a guess about
    * a fight nobody has had yet. Nothing asserts on it.
    */
+  /*
+    ⚠️ **THE TEACHER, AND IT IS DELIBERATELY THE ONE THAT DID NOT CHANGE** — 0111. A player meets
+    their first boss knowing nothing; what a fan centred on the ship teaches is *this thing is looking
+    at me*, and every pattern below is read against that. A game whose FIRST boss fired somewhere else
+    would have nothing to make the sixth one strange.
+  */
   sentinel: {
+    move: { kind: 'patrol' },
+    attack: { kind: 'aimed' },
     sprite: SPRITE.boss,
     spriteHit: SPRITE.bossHit,
     radius: 11,
@@ -190,7 +318,15 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * ⚠️ 220 health and four phases are PLAY-TEST NUMBERS, on the same terms as everything else here.
    * Nothing asserts on them.
    */
+  /*
+    ⚠️ **ITS ROW ALREADY SAID *TAKE THE LANE AWAY* AND NOW ITS FLYING DOES** — 0111. It tracks the
+    ship's lane instead of sweeping a fixed path, and then sprays down the lane rather than at the
+    ship: it comes to where you are and fills where you were going. The two halves say one thing,
+    which is what the phrase *one idea* means here.
+  */
   harrow: {
+    move: { kind: 'stalk', agility: 0.24 },
+    attack: { kind: 'spray' },
     sprite: SPRITE.boss2,
     spriteHit: SPRITE.boss2Hit,
     radius: 12.5,
@@ -233,7 +369,15 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * ⚠️ Every number here is a play-test number, on the same terms as the sentinel's 150. Nothing
    * asserts on one.
    */
+  /*
+    ⚠️ **THE LEVEL IS ABOUT THE SIDES OF THE LANE AND SO IS THE WALL** — 0111. A slow hull at long
+    range laying a row of shots with a hole in it makes the safe lane a place rather than a direction,
+    and the hole travels because the hull does. It is the sower's attack at four times the scale, and
+    the difference is that a sower is 6 units wide and this is 23.
+  */
   lattice: {
+    move: { kind: 'patrol' },
+    attack: { kind: 'wall', gap: 15 },
     sprite: SPRITE.boss3,
     spriteHit: SPRITE.boss3Hit,
     radius: 11.5,
@@ -266,7 +410,15 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * hull that crosses the lane and comes back inside three seconds. It fires little and hits hard:
    * what threatens the player is where it IS, not what leaves it.
    */
+  /*
+    ⚠️ **THE ONE THE REPORT REMEMBERED, AND IT KEEPS ITS AIM** — 0111: *"level 4 (or it might have
+    been 5) was the only boss with a different attack."* What made it different was that it fires
+    little and hits hard, and that is untouched. What it gains is the up-and-down the same report asked
+    for by name: a hull rising and falling across the lane while it throws darts at where you are.
+  */
   shoalMother: {
+    move: { kind: 'bob', amplitude: 26, wavelength: 150 },
+    attack: { kind: 'aimed' },
     sprite: SPRITE.boss4,
     spriteHit: SPRITE.boss4Hit,
     radius: 13,
@@ -291,7 +443,15 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * constantly and widely, from a station close enough that the shots arrive with little warning. The
    * fight is a damage race rather than a dance, which is the opposite reading from level four's.
    */
+  /*
+    ⚠️ **IT BARELY MOVES, SO WHAT IT SENDS HAS TO BE THE FIGHT** — 0111. A ring is the one attack
+    whose escalation is visible from anywhere on the screen: more shots is a denser circle, and the
+    gaps close as its health falls without the player ever counting anything. That is a damage race
+    with a clock on it rather than a stalemate.
+  */
   redoubt: {
+    move: { kind: 'patrol' },
+    attack: { kind: 'ring' },
     sprite: SPRITE.boss5,
     spriteHit: SPRITE.boss5Hit,
     radius: 14,
@@ -316,7 +476,15 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * along one axis at a time; this one moves faster AND fires wider at every step, so there is no
    * stretch of it that rewards the same answer twice.
    */
+  /*
+    ⚠️ **THE LEVEL WITH NO GAPS, AND A RAKE IS WHAT THAT MEANS IN ONE WORD** — 0111. The fan turns
+    every volley, so there is no stretch of the lane that stays safe and no answer that works twice;
+    the hull bobs underneath it, so the sweep does not even start from the same place. It is the fight
+    this row was already described as being and never was.
+  */
   chorus: {
+    move: { kind: 'bob', amplitude: 22, wavelength: 110 },
+    attack: { kind: 'rake', turn: 0.55 },
     sprite: SPRITE.boss6,
     spriteHit: SPRITE.boss6Hit,
     radius: 12.5,
@@ -344,7 +512,19 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * whole of what the run has taught, in order. `docs/game.md` puts a final boss at the end of eight
    * levels; there are seven, so this is the end of what is authored rather than the end of the game.
    */
+  /*
+    ⚠️ **IT FOLLOWS YOU AND FILLS THE SCREEN, WHICH IS THE TWO HARDEST THINGS THE RUN TAUGHT AT ONCE**
+    — 0111. The harrow tracks the player and the redoubt encircles them; the last boss does both, from
+    the closest station in the game, over five phases. Its ring gets denser every phase, so the gaps a
+    player was surviving in close while the hull they are trying to leave is following them.
+
+    ⚠️ **A first draft gave it the harrow's own pair and `tests/level.test.ts` refused it** — *no two
+    bosses fly the same way AND shoot the same way* — which is the guard doing the whole of what it
+    exists for on the row most likely to be written by analogy.
+  */
   axis: {
+    move: { kind: 'stalk', agility: 0.2 },
+    attack: { kind: 'ring' },
     sprite: SPRITE.boss7,
     spriteHit: SPRITE.boss7Hit,
     radius: 16,

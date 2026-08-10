@@ -83,6 +83,26 @@ export const BURST = {
    */
   boss: 12,
   /**
+   * Fragments when a boss changes PHASE.
+   *
+   * ⚠️ **`docs/decisions/0111-a-boss-has-one-idea.md`, and it is
+   * `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` unapplied on the
+   * most-watched event in a level.** A phase change is resolved by the model — the boss fires wider,
+   * faster and flies differently from that step on — and the picture has never mentioned it at all.
+   * 0036 records three separate play reports of exactly this shape being filed as collision faults
+   * that did not exist.
+   *
+   * ⚠️ **Asked for in play, 2026-08-09**: *"they need to have chunks and pieces fly off when they
+   * change states."* `docs/state-of-play.md` has had it listed as the SHARED half of the boss work
+   * since then — *"it wants landing ONCE, before the per-boss sessions, otherwise seven sessions each
+   * invent it and the seventh is the only one that gets it right."*
+   *
+   * ⚠️ **Between an enemy dying and a boss pulse.** It has to be unmistakably more than a kill — the
+   * player is shooting the boss, so kills are what they have been watching — and unmistakably less
+   * than the death, which is the end of the level. It happens at most four times a fight.
+   */
+  phase: 14,
+  /**
    * Fragments when a shield is spent.
    *
    * ⚠️ **Fewest of the three, and it exists because a shield popping is an EVENT the model resolves

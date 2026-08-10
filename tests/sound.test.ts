@@ -1037,10 +1037,37 @@ describe('the speaker decides WHEN, and it is the half that is arithmetic', () =
     for (const kind of ['pulse', 'missile', 'threat', 'hit'] as const) {
       expect(CUES[kind].duck, `${kind} ducks the music, and it fires too often to be allowed to`).toBeUndefined();
     }
-    // And everything that DOES duck is one of the four the mix measured as 8 dB or more over the bed.
+    /*
+      ── AND THE OTHER HALF WAS A LIST OF FOUR NAMES, WHICH TWO DECISIONS HAVE NOW MOVED ───────────
+
+      ⚠️ **It read `expect(['kill', 'bossDown', 'blast', 'death']).toContain(kind)`** — the four the
+      mix had measured at 8 dB or more over the bed. `docs/decisions/0109-a-death-is-a-drum.md` took
+      the duck off `kill` and `docs/decisions/0111-a-boss-has-one-idea.md` put one on `bossPhase`, so
+      the list was wrong in both directions inside two decisions. **A hand-kept list of names is the
+      second description this project keeps finding**, and it was standing in for a rule nobody had
+      written down.
+
+      ⚠️ **THE RULE IS *A CUE DUCKS EXACTLY WHEN IT OUTLASTS A BEAT*, and it is the same rule 0109
+      stated from the other end.** A cue shorter than a beat is punctuation — two of them are two
+      events, the ear places them in the bar, and the music must not move for them. A cue longer than
+      a beat is an event that takes the bar over, and the music getting out of the way is what makes
+      it read as one. **Both directions are held**, which is what makes it a rule rather than a
+      description: a long cue that did not duck would be a boss coming apart underneath the music, and
+      a short one that did would be the bed turned down for punctuation.
+
+      ⚠️ **It is derived and there is nothing to keep in step.** Driven over the whole table it
+      separates the nine short cues from the four long ones exactly, and a thirteenth row is judged by
+      what it is rather than by whether somebody remembered to add it here.
+    */
     for (const kind of CUE_KINDS) {
+      const long = cueSeconds(CUES[kind]) > BEAT_SECONDS;
+      expect(
+        CUES[kind].duck !== undefined,
+        long
+          ? `${kind} lasts ${cueSeconds(CUES[kind]).toFixed(2)}s — over a beat — and the music plays straight through it`
+          : `${kind} lasts ${cueSeconds(CUES[kind]).toFixed(2)}s and ducks the music, which is the bed turned down for punctuation`,
+      ).toBe(long);
       if (CUES[kind].duck === undefined) continue;
-      expect(['kill', 'bossDown', 'blast', 'death'], `${kind} ducks and is not one of the loud four`).toContain(kind);
       expect(CUES[kind].duck, `${kind} ducks the bed by more than half, which is a hole and not a dip`).toBeLessThan(0.5);
     }
   });
