@@ -28,7 +28,7 @@ export const PROBES = [
       // ⚠️ Re-anchored on 2026-08-10: the streak layer crossed into the FOREGROUND at 1.61
       // (`docs/decisions/0103-the-fast-layer-is-in-front.md`). Same break, and it now costs strictly
       // more — without it the sky is not only two layers of dots, it is entirely behind the game.
-      find: '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 1.61 },',
+      find: '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.2 },',
       replace: '',
     },
   },
@@ -73,8 +73,8 @@ export const PROBES = [
     guard: 'and the near layer is the quiet one, on every count that buys attention',
     edit: {
       path: 'src/render/bake.ts',
-      find: 'const SKY_ALPHA = { skyFar: 1, skyNear: 0.34, skyRush: 0.42 };',
-      replace: 'const SKY_ALPHA = { skyFar: 1, skyNear: 0.18, skyRush: 0.42 };',
+      find: 'const SKY_ALPHA = { skyFar: 1, skyNear: 0.34, skyRush: 0.46 };',
+      replace: 'const SKY_ALPHA = { skyFar: 1, skyNear: 0.18, skyRush: 0.46 };',
     },
   },
   {
@@ -96,7 +96,7 @@ export const PROBES = [
     guard: '0097 — AND THE NEARER A LAYER IS, THE THINNER ITS MARKS ARE, WHICH IS WHAT BUYS THE SPEED',
     edit: {
       path: 'src/render/bake.ts',
-      find: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.11 };',
+      find: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.24 };',
       replace: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.35 };',
     },
   },

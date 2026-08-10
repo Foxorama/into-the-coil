@@ -47,7 +47,7 @@ export const PROBES = [
     edit: {
       path: 'src/app/mount.ts',
       find: '  { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.33 },',
-      replace: '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 1.61 },',
+      replace: '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.2 },',
     },
   },
   {
@@ -64,7 +64,7 @@ export const PROBES = [
     guard: 'is never at the world’s own rate, on whichever side of the game it sits',
     edit: {
       path: 'src/app/mount.ts',
-      find: '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 1.61 },',
+      find: '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.2 },',
       replace: '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 1.02 },',
     },
   },
@@ -81,7 +81,7 @@ export const PROBES = [
     guard: 'and only the streak layer may be in FRONT of the game, and only one of them',
     edit: {
       path: 'src/app/mount.ts',
-      find: '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 1.61 },',
+      find: '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.2 },',
       replace: '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 1 },',
     },
   },

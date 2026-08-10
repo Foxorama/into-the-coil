@@ -253,11 +253,32 @@ export const CAPACITY = {
  * lever after this one is not in this file**: at 1.61 the sky is already overtaking a world that
  * scrolls at 36 units a second, so *the background is slow* would then be *the game is slow*, and
  * `SCROLL_PER_STEP` is where that lives.
+ *
+ * ── AND THE SIXTH REPORT SAID *SLOW* AND *INVISIBLE*, WHICH ARE TWO FAULTS AND NOT ONE ──────────
+ *
+ * ⚠️ **`docs/decisions/0106-a-mark-thinner-than-a-pixel-is-not-drawn.md`.** Reported against the
+ * build 0103 shipped: *"there are thin lines that are hardly visible… not so much the starfield an
+ * issue, but the slow lines, I don't feel like I'm zooming through space."*
+ *
+ * ⚠️ **THE PARAGRAPH ABOVE PREDICTED THE WRONG NEXT LEVER, AND SAYING SO IS THE POINT OF HAVING
+ * WRITTEN IT DOWN.** It said the sky was out of road and the next conversation was `SCROLL_PER_STEP`.
+ * The report says otherwise in the player's own words — *"which is a background thing"* — and the
+ * measurement agrees: the layer carrying the whole sense of speed was drawing marks **1.57 CSS
+ * pixels** across. It was never the world's rate. It was that the fast layer could barely be seen.
+ *
+ * ⚠️ **1.61 → 2.2, and it moves BECAUSE THE REPORT NAMES TWO FAULTS.** *Hardly visible* is answered
+ * in `src/render/bake.ts` — the mark is 2.2× thicker — and *slow* is answered here. Moving one lever
+ * per pass is the rule when a report names one quantity; this one names two, and answering half of
+ * it would buy a seventh report that could not distinguish them either.
+ *
+ * ⚠️ **In the units a hand can judge**: the streak crosses the narrowest view in **2.3 seconds**
+ * where it took 3.1, at 570 px/s on a 1280-wide screen against the far starfield's 86. The spread of
+ * rates on screen is now **0.33 to 2.2**, and the game sits at 1 inside it.
  */
 export const SKY = [
   { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.33 },
   { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.825 },
-  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 1.61 },
+  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.2 },
 ];
 
 /**
