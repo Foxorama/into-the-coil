@@ -112,6 +112,23 @@ export const SPRITE_KINDS = [
   'warden',
   'wardenHit',
   /*
+    ⚠️ **A CROSS and an open CHEVRON, and both were chosen against the six already here rather than
+    for themselves.** `reports/enemy-silhouettes-2026-08-05.md` is the record of what happens when
+    they are not: the lancer shipped as a five-sided arrowhead that read as *a slightly smaller
+    diamond* at the size it actually blits, and the player reported the game as buggy.
+
+      spinner  CROSS, four arms          — the only shape with a concave outline
+      sower    CHEVRON, open back        — the only shape that is not closed
+
+    The pair worth watching is the chevron against the lancer's triangle: both are wedges pointing
+    −x, told apart by whether the back is filled in. `scripts/shot.mjs` is how that gets looked at
+    rather than argued about.
+  */
+  'spinner',
+  'spinnerHit',
+  'sower',
+  'sowerHit',
+  /*
     ⚠️ **One boss silhouette, and the phases are NOT drawn.** Three sprites for three phases was the
     first plan and it is rejected: what a phase changes is what the boss DOES — its rate, its spread,
     how it moves — and that is legible in motion, at full frame rate, without a second art pass.
@@ -434,6 +451,13 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // `tests/combat.test.ts` holds the ordering.
   warden: 9.5,
   wardenHit: 9.5,
+  // Between the turret and the warden: three health, like a turret, and a shape that needs the room
+  // its arms take up.
+  spinner: 8,
+  spinnerHit: 8,
+  // Two health, so between the lancer's and the turret's.
+  sower: 7.5,
+  sowerHit: 7.5,
   /*
     ⚠️ **26, against a hard ceiling of 80.** `src/sim/camera.ts` puts `EDGE_MARGIN` at 40 and says in
     the same breath that it is *"the largest half-extent any entity may be authored at"* — so a boss

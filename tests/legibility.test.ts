@@ -113,17 +113,42 @@ describe('the shot that kills you is not the shot you kill with', () => {
       total rather than over a rule. **Every shooting enemy kind sends a different bullet** is the
       rule, and there are exactly three of each so it is checkable as an equality.
     */
+    /*
+      ── AND THE EQUALITY STOPPED BEING SATISFIABLE, WHICH IS 0110 RATHER THAN A RELAXATION ─────────
+
+      ⚠️ **It read `fromEnemies.size === shooters.length`** — every shooting kind sends a different
+      bullet — which was exactly right while there were three shooters and three bullets, and is
+      **arithmetically impossible** now that `docs/decisions/0110-an-attack-is-a-pattern.md` has added
+      two more. A guard that cannot be satisfied is not a strict guard, it is a stopped one.
+
+      ⚠️ **THE RULE UNDERNEATH IT IS *WHAT SHOOTS BACK IS TOLD APART*, AND IT IS RESTATED RATHER THAN
+      WEAKENED.** Two claims, and each catches something the other cannot:
+
+      1. **Every bullet that shoots at the player is one an ENEMY sends** — nothing in the threat
+         vocabulary is introduced first by a boss, and a fourth row added and never sent still fails,
+         which is what the equality was for.
+      2. **No two shooting kinds share BOTH a bullet and an attack.** That is stronger than the
+         equality ever was on the axis that matters — a threat now differs in what it looks like or
+         in what it asks of the player, and putting every enemy back on one bullet breaks it the
+         moment two of them also share a pattern.
+    */
     const shooters = ENEMY_KINDS.filter((k) => ENEMIES[k].fireEvery > 0);
     const fromEnemies = new Set(shooters.map((k) => ENEMIES[k].shot));
-    expect(
-      fromEnemies.size,
-      `${shooters.length} enemy kinds shoot at the player and they send ${fromEnemies.size} kind(s) of bullet between them`,
-    ).toBe(shooters.length);
     const fromBosses = new Set(BOSS_KINDS.map((k) => BOSSES[k].shot));
     expect(fromBosses.size, `all ${BOSS_KINDS.length} bosses send ${fromBosses.size} kind(s) of bullet`).toBeGreaterThan(
       2,
     );
     const sent = new Set<string>([...fromEnemies, ...fromBosses]);
+    expect(
+      fromEnemies.size,
+      `${sent.size} kinds of bullet shoot at the player and the enemies send ${fromEnemies.size} of them — ` +
+        'the rest are met first at a boss',
+    ).toBe(sent.size);
+    const signatures = new Set(shooters.map((k) => `${ENEMIES[k].shot}/${ENEMIES[k].attack.kind}`));
+    expect(
+      signatures.size,
+      `two enemy kinds send the same bullet in the same pattern (${[...signatures].join(', ')})`,
+    ).toBe(shooters.length);
 
     /*
       ⚠️ **AND THEY DIFFER IN THE TWO CHANNELS 0081 NAMES, on the screen the report was made on.**

@@ -16,7 +16,117 @@ import type { ShotKind } from './shots.ts';
 import { SPRITE } from './sprites.ts';
 
 /** Every enemy in the game. Closed. */
-export type EnemyKind = 'drifter' | 'lancer' | 'weaver' | 'turret' | 'charger' | 'warden';
+export type EnemyKind = 'drifter' | 'lancer' | 'weaver' | 'turret' | 'charger' | 'warden' | 'spinner' | 'sower';
+
+/**
+ * Every way a body can SHOOT. Closed.
+ *
+ * ── EVERY SHOT IN THE GAME WAS AIMED AT THE SHIP, AND ALWAYS HAD BEEN ───────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0110-an-attack-is-a-pattern.md`.** Reported from play: *"need more variety and
+ * more attacks that are pattern attacks and less target player attacks."*
+ *
+ * ⚠️ **IT IS AN ACCURATE READING OF THE CODE.** `fireEnemies` in `src/app/frame.ts` computed
+ * `atan2(ship − enemy)` for every body that fired, with no alternative anywhere in the model.
+ * `docs/decisions/0073-an-enemy-is-a-pilot.md` gave MOTION a closed union and left firing a single
+ * behaviour; this is that omission arriving.
+ *
+ * ⚠️ **THE DIFFERENCE IS WHAT THE PLAYER IS ASKED TO DO.** An aimed shot asks *are you where it is
+ * pointing* — the answer is always *move*, and it is the same answer every time. A pattern asks
+ * *where is the gap*, which is a different question with a different answer per pattern, and it is a
+ * question the player can get better at. That is the whole of what *"variety"* is asking for here.
+ *
+ * ⚠️ **AIMED IS NOT DEPRECATED AND MUST NOT BE.** 0073's argument for keeping `drift` when three
+ * reactive motions arrived is exactly the argument for keeping this: *"a field where everything
+ * converges reads as one threat rather than six."* A field where nothing is aimed at the player is
+ * the same failure the other way up — it becomes weather. `tests/pilots.test.ts` holds that both are
+ * on the field.
+ */
+export const ATTACK_KINDS = ['aimed', 'spray', 'wall', 'spiral'] as const;
+
+/** Derived from the list, so an attack cannot exist in the union and be missing from the switch. */
+export type AttackKind = (typeof ATTACK_KINDS)[number];
+
+export type Attack =
+  /**
+   * One shot, at wherever the ship is. What every enemy in the game did until 0110.
+   *
+   * ⚠️ **It stays on the two bodies whose identity is built on it.** A lancer *"steers into the
+   * player's lane before it fires"* and a warden *"flies in and stays with you"* — an unaimed shot
+   * from either would be a body that closes on the player in order to miss.
+   */
+  | { kind: 'aimed' }
+  /**
+   * A fan, centred on the lane rather than on the ship.
+   *
+   * ⚠️ **DOWN THE LANE AND NOT AT ANYBODY**, so where the gaps are is a fact about the pattern and
+   * not about where the player happened to be standing. `spread` is the total angle across the fan
+   * and `shots` divides it, exactly as a boss's phase does — one description of *what a fan is*.
+   */
+  | { kind: 'spray'; shots: number; spread: number }
+  /**
+   * A row of shots across the lane, all travelling down it, **with a hole where the body is**.
+   *
+   * ⚠️ **THE GAP IS THE POINT AND IT IS AUTHORED BY SUBTRACTION.** Shots are placed at ±`gap`,
+   * ±2·`gap` and so on, and the centre slot is deliberately empty — so the safe place is directly in
+   * front of the thing that fired, which is the one piece of information a player can read off the
+   * picture before the shots arrive. A wall with the gap somewhere else would be a wall the player
+   * has to be told about.
+   *
+   * ⚠️ **`shots` is the number either side, so a wall is `2 × shots` bullets.** Written that way
+   * because the shape is symmetrical and an odd count with a hole in it is a number nobody can check
+   * by looking.
+   */
+  | { kind: 'wall'; shots: number; gap: number }
+  /**
+   * A ring of shots whose whole set turns a little every volley.
+   *
+   * ⚠️ **The one attack that needs STATE, and it is one number set at spawn.** `firePhase` on the
+   * entity carries where in the turn a body has got to — the same shape `spin` and `bobPhase`
+   * already have, and for the same reason `src/sim/entity.ts` gives: everything else in the game
+   * leaves it at zero and nothing reads it.
+   *
+   * ⚠️ **IT COULD NOT BE A FUNCTION OF POSITION, WHICH IS THIS PROJECT'S USUAL ANSWER.** A weave is
+   * authored against `along` so that a shape can be drawn on a map (0073); a spinner holds station,
+   * so its `along` never changes and an angle derived from it would never turn. Deriving it from the
+   * CAMERA instead would put every spinner on the field at the same angle, which is 0098's *"they
+   * all fire at exactly the same time"* wearing a different hat.
+   *
+   * `turn` is radians added per volley.
+   */
+  | { kind: 'spiral'; shots: number; turn: number };
+
+/**
+ * How many bullets one volley of `attack` puts on the field.
+ *
+ * ⚠️ **THE ONE DESCRIPTION, and three guards were about to hand-derive it.** `tests/pilots.test.ts`
+ * bounds how many shots a body gets away while it is on screen, `tests/spawns.test.ts` counts bullets
+ * on a step to tell a figure from a volley, and `tests/level.test.ts` reads how much a wave sends —
+ * all three used to be able to assume *one body, one bullet*, and none of them can now.
+ *
+ * ⚠️ **A `wall` is `2 × shots` because `shots` is the number EITHER SIDE**, which is the one place
+ * that convention could be got wrong twice. It is stated once here and nowhere else.
+ *
+ * ⚠️ **It is an upper bound rather than a promise**, because a volley that will not fit in the pool
+ * is dropped rather than grown — `src/sim/pool.ts` — and a `wall` slot outside the lane is skipped.
+ */
+export function shotsPerVolley(attack: Attack): number {
+  switch (attack.kind) {
+    case 'aimed':
+      return 1;
+    case 'spray':
+      return attack.shots;
+    case 'wall':
+      return attack.shots * 2;
+    case 'spiral':
+      return attack.shots;
+    default: {
+      // `docs/decisions/0016-a-hub-enumerates-kinds.md`: the arm that makes the union closed.
+      const never: never = attack;
+      return never;
+    }
+  }
+}
 
 /**
  * Every way a body can move. Closed.
@@ -175,10 +285,22 @@ export interface EnemyRow extends Body {
   shot: ShotKind;
   /** How it moves. One arm of the union above, and the arm carries its own parameters. */
   motion: Motion;
+  /**
+   * How it shoots. One arm of `Attack`, and the arm carries its own parameters.
+   *
+   * ⚠️ **Required rather than defaulted to `aimed`**, so that adding a row is a decision about what
+   * the body ASKS of the player rather than a field somebody forgot. `docs/decisions/0016-a-hub-enumerates-kinds.md`
+   * — behaviour rides the row, and a default is a behaviour nobody wrote down.
+   *
+   * ⚠️ **A row that never fires still states one**, because `fireEvery: 0` is what makes a body a
+   * pure obstacle and the two facts are separate: the day a drifter starts shooting, what it shoots
+   * is already a decision on the page.
+   */
+  attack: Attack;
 }
 
 /** Written out rather than derived, so the table below cannot quietly lose a row. */
-export const ENEMY_KINDS: readonly EnemyKind[] = ['drifter', 'lancer', 'weaver', 'turret', 'charger', 'warden'];
+export const ENEMY_KINDS: readonly EnemyKind[] = ['drifter', 'lancer', 'weaver', 'turret', 'charger', 'warden', 'spinner', 'sower'];
 
 export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   /**
@@ -212,6 +334,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
       where everything converges reads as one threat rather than six. This is the one the player is
       safe to ignore, which is what makes the rest mean something.
     */
+    attack: { kind: 'aimed' },
     motion: { kind: 'drift', roam: 0.3 },
   },
   /**
@@ -257,6 +380,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
       before it passes them.** At 0.35 it crosses the whole lane in about five seconds and closes a
       full-width gap inside its own approach, which is what makes it a hunter rather than a lean.
     */
+    attack: { kind: 'aimed' },
     motion: { kind: 'hunt', agility: 0.35 },
   },
   /**
@@ -305,6 +429,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
       it will be*, which is a promise the player can learn; making it react would delete the one enemy
       whose path is a shape rather than a chase.
     */
+    attack: { kind: 'aimed' },
     motion: { kind: 'weave', amplitude: 16, wavelength: 130 },
   },
   /**
@@ -344,6 +469,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
       being a fixed problem in a known place that the player chooses whether to spend time on — 0073
       does not get to delete the one enemy a formation can be authored around.
     */
+    attack: { kind: 'spray', shots: 3, spread: 0.85 },
     motion: { kind: 'drift', roam: 0.16 },
   },
   /**
@@ -378,6 +504,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
       chargers never departed would fill the pool with the first minute's worth, and enemies leaving
       is what makes a wave table a pace rather than a total.
     */
+    attack: { kind: 'aimed' },
     motion: { kind: 'loop', turns: 2 },
   },
   /**
@@ -416,6 +543,100 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
       is why it fires slower than a turret: something this hard to kill that also stays on you would
       be a wall rather than an enemy at a turret's rate. Every number here is a play-test number.
     */
+    attack: { kind: 'aimed' },
     motion: { kind: 'circle', agility: 0.55, radius: 30 },
+  },
+  /**
+   * Holds station and turns a ring of fire round itself. The first body in the game whose threat is
+   * a SHAPE rather than a line to you.
+   *
+   * ⚠️ **`docs/decisions/0110-an-attack-is-a-pattern.md`.** Reported: *"more attacks that are pattern
+   * attacks and less target player attacks."* Every other shooting kind in this table answered *are
+   * you where I am pointing*; this one asks *where is the gap*, and the gap moves on a schedule the
+   * player can learn and the ship's position cannot change.
+   *
+   * ⚠️ **Three health, so it is a fixed problem the player chooses whether to spend time on** — the
+   * turret's own argument, and it is the row this one is closest to. What separates them is what
+   * comes out: a turret throws a fan down the lane and this throws it in every direction, so a
+   * turret is answered by leaving its arc and a spinner is answered by timing.
+   *
+   * ⚠️ **`closing: 0`, which is what makes a rotating pattern legible at all.** A body that both
+   * closes and turns its fire is two rates the player has to integrate at once; holding station makes
+   * the ring the only moving part. It is the third row with the property `tests/pilots.test.ts` calls
+   * *arrives with the world*.
+   */
+  spinner: {
+    sprite: SPRITE.spinner,
+    spriteHit: SPRITE.spinnerHit,
+    radius: 3.4,
+    health: 3,
+    damage: 2,
+    closing: 0,
+    /*
+      ⚠️ **84 steps, and the floor is a guard rather than a taste.** `closing: 0` means it is on
+      screen for the whole five seconds a 16:9 view takes to pass it, and `tests/pilots.test.ts` bounds
+      how many SHOTS one body may get away in that window. Three a volley at 84 steps is 25 shots at
+      the hardest tier; a cadence of 72 would be 29 and past the bound.
+    */
+    fireEvery: 84,
+    /*
+      ⚠️ **The slow fat one, for the turret's own reason and more so.** 0098: *"a slow wide one is a
+      pattern to move through… a figure is only readable if the shots are slow enough to be seen
+      arriving."* A ring of fast darts is a hit or a miss decided before the player can read it.
+    */
+    shot: 'flak',
+    /*
+      ⚠️ **Three shots and a fifth of a turn, so the ring closes over about ten volleys.** Any two
+      consecutive volleys leave a gap wide enough to sit in, and the gap walks — which is the whole
+      behaviour. A `turn` that divided `2π/shots` exactly would put every volley on one of three
+      angles for ever, which is a strobing triangle rather than a spiral.
+    */
+    attack: { kind: 'spiral', shots: 3, turn: 0.42 },
+    // The slowest roam there is, on the turret's terms: an emplacement that still is not a post.
+    motion: { kind: 'drift', roam: 0.12 },
+  },
+  /**
+   * Lays a wall across the lane with a hole in it, and the hole is directly in front of it.
+   *
+   * ⚠️ **THE ONE ATTACK THE PLAYER CAN READ BEFORE IT HAPPENS.** Everything else in the game is
+   * answered after the shots exist; this one announces where the safe place is by being there. That
+   * is what makes it a pattern rather than a spread — a spread asks the player to react, and this asks
+   * them to have already moved.
+   *
+   * ⚠️ **It closes slowly and it is the only wall-layer**, so the player has time to line up on it —
+   * and the wall it lays is what stops that being free, because the lane it clears is the lane the
+   * body itself is in and something else is usually there.
+   *
+   * ⚠️ **Two health.** It is a body the player wants gone before it fires rather than one they have
+   * to survive, which is the opposite reading from the spinner's three.
+   */
+  sower: {
+    sprite: SPRITE.sower,
+    spriteHit: SPRITE.sowerHit,
+    radius: 3.1,
+    health: 2,
+    damage: 2,
+    /*
+      ⚠️ **0.24, which is between the warden's 0.19 and the lancer's 0.22 and is on screen for 3.2
+      seconds at the hardest tier** — over `tests/pilots.test.ts`'s 1.8-second floor with room, and
+      slow enough that a player who sees it arrive can decide where to be.
+    */
+    closing: 0.24,
+    // Four shots a volley and about three volleys on screen: twelve bullets, which is why the cadence
+    // is the slowest of any shooter in the table.
+    fireEvery: 96,
+    // The fast thin one. A wall is read by where its hole is rather than by watching each bullet, so
+    // the shots may be quick — and quick is what makes the hole worth having found early.
+    shot: 'lance',
+    /*
+      ⚠️ **Two either side at 13 units, so the wall spans 52 of the lane's 100 with a 26-unit hole in
+      the middle.** The hole is wider than any hurtbox in the game by a factor of six, which is what
+      keeps it a place to be rather than a needle to thread; the span is narrow enough that flying
+      round the outside is a real alternative to taking the gap.
+    */
+    attack: { kind: 'wall', shots: 2, gap: 13 },
+    // It goes where the wall will be. A weave means the hole travels across the lane between volleys,
+    // so *the gap is in front of it* stays true and stops being a place the player can just park.
+    motion: { kind: 'weave', amplitude: 12, wavelength: 150 },
   },
 };

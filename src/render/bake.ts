@@ -300,6 +300,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   turret: 'enemy',
   charger: 'enemy',
   warden: 'enemy',
+  spinner: 'enemy',
+  sower: 'enemy',
   boss: 'enemy',
   boss2: 'enemy',
   /*
@@ -408,6 +410,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   turretHit: 'impact',
   chargerHit: 'impact',
   wardenHit: 'impact',
+  spinnerHit: 'impact',
+  sowerHit: 'impact',
   bossHit: 'impact',
   boss2Hit: 'impact',
   /*
@@ -593,6 +597,52 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
       ctx.closePath();
       break;
     }
+    case 'spinner':
+    case 'spinnerHit':
+      /*
+        A CROSS: four arms, and the only concave outline in the game. Every other enemy is a convex
+        blob of some kind — a diamond, a triangle, a bar, a needle, a half-disc, a ring — so what tells
+        this one apart at twenty pixels is that its edge goes in and out again four times, which is a
+        property no amount of shrinking removes.
+
+        ⚠️ **The arms are drawn along and across the lane rather than diagonally**, so the shape reads
+        as pointing at nothing — which is what a body that fires in every direction should look like.
+        A diagonal cross is an ✕, which reads as a marker.
+      */
+      ctx.moveTo(half - r * 0.3, half - r);
+      ctx.lineTo(half + r * 0.3, half - r);
+      ctx.lineTo(half + r * 0.3, half - r * 0.3);
+      ctx.lineTo(half + r, half - r * 0.3);
+      ctx.lineTo(half + r, half + r * 0.3);
+      ctx.lineTo(half + r * 0.3, half + r * 0.3);
+      ctx.lineTo(half + r * 0.3, half + r);
+      ctx.lineTo(half - r * 0.3, half + r);
+      ctx.lineTo(half - r * 0.3, half + r * 0.3);
+      ctx.lineTo(half - r, half + r * 0.3);
+      ctx.lineTo(half - r, half - r * 0.3);
+      ctx.lineTo(half - r * 0.3, half - r * 0.3);
+      ctx.closePath();
+      break;
+    case 'sower':
+    case 'sowerHit':
+      /*
+        A CHEVRON: a wedge pointing −x with the back open, so the silhouette is a band of ink with a
+        notch cut out of it rather than a filled shape.
+
+        ⚠️ **THE PAIR TO WATCH IS THIS AGAINST THE LANCER**, and it is written down rather than assumed
+        away — both are wedges pointing at the player, and what separates them is that this one has a
+        bite taken out of its back. `reports/enemy-silhouettes-2026-08-05.md` records the lancer's own
+        first draft failing exactly this test, so the notch is deliberately deep: it reaches 0.45 of
+        the radius, against the 0.25 that was found to be invisible.
+      */
+      ctx.moveTo(half - r, half);
+      ctx.lineTo(half + r * 0.55, half - r * 0.9);
+      ctx.lineTo(half + r, half - r * 0.55);
+      ctx.lineTo(half - r * 0.15, half);
+      ctx.lineTo(half + r, half + r * 0.55);
+      ctx.lineTo(half + r * 0.55, half + r * 0.9);
+      ctx.closePath();
+      break;
     case 'warden':
     case 'wardenHit':
       /*

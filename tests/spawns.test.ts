@@ -21,7 +21,7 @@ import { DEFAULT_ORIGIN, LEVELS, LEVEL_KINDS, type LevelRow } from '../src/conte
 import { PLAYER_SHOT_LIFE } from '../src/content/pickups.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { FIRE_GRID } from '../src/content/music.ts';
-import { ENEMIES } from '../src/content/enemies.ts';
+import { ENEMIES, shotsPerVolley } from '../src/content/enemies.ts';
 import { fireGapFor } from '../src/content/difficulty.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { GameFrame } from '../src/app/frame.ts';
@@ -297,8 +297,20 @@ describe('0096 — enemy fire lands on the grid in the real frame, not only in t
       eight sixteenths — so five bodies have five slots of their own available and nothing forces any
       of them to share one. What is held is that a whole formation never lands on a single step.
     */
-    const worst = Math.max(...soundings.map((s) => s.bullets));
-    expect(worst, `${worst} enemy bullets appeared on one step, out of a wave of five`).toBeLessThan(3);
+    /*
+      ⚠️ **IT COUNTED BULLETS AND ITS SUBJECT IS BODIES, WHICH ONLY BECAME A DIFFERENCE IN 0110.**
+      *"The enemies all fire at exactly the same time"* is a claim about how many things went off
+      together; while every enemy sent exactly one bullet a volley, counting bullets answered it
+      exactly. `docs/decisions/0110-an-attack-is-a-pattern.md` gives a turret a three-shot spray, so
+      one body firing alone now puts three bullets on a step and the old arithmetic reads it as three
+      bodies in unison.
+
+      ⚠️ **`shotsPerVolley` is imported rather than restated**, so the day a spray widens this keeps
+      measuring the same thing. It is a wave of one kind, which is what makes the division exact.
+    */
+    const perVolley = shotsPerVolley(ENEMIES.turret.attack);
+    const worst = Math.max(...soundings.map((s) => s.bullets)) / perVolley;
+    expect(worst, `${worst} of the five bodies fired on one step`).toBeLessThan(3);
     /*
       ⚠️ **AND THE SPREAD IS MEASURED IN MILLISECONDS OFF THE REAL FRAME**, because *"at exactly the
       same time"* is a claim about what a player heard rather than about a step count —

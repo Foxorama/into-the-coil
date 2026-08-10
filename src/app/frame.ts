@@ -1885,30 +1885,128 @@ function fireEnemies(w: World): void {
       separate times as a collision fault that did not exist.
     */
     if (e.along - e.radius > w.cameraAlong + w.view.alongSpan) continue;
-    const dAlong = ship.along - e.along;
-    const dAcross = ship.across - e.across;
-    const distance = Math.sqrt(dAlong * dAlong + dAcross * dAcross);
-    // Zero distance means the enemy is inside the ship, which contact damage has already handled.
-    if (distance <= 0) continue;
     const bullet = SHOTS[row.shot];
-    const shot = w.enemyShots.spawn();
-    if (shot === null) continue;
-    /*
-      ⚠️ **Once per enemy that actually fired, and the HOLD is what stops that being a wall of
-      noise** — `src/content/cues.ts` gives `threat` four steps, so a screen of turrets going off
-      together is one sound rather than nine. Gating it here instead would be a second rate limiter
-      in a second place, disagreeing with the first the day either moves.
-
-      It is below the off-screen check above, so a threat the player cannot see is one they cannot
-      hear either — the same rule, in the channel 0036 was not written about.
-    */
-    w.onCue('threat');
-    reset(shot, e.along, e.across, bullet);
     // ⚠️ The tier scales the SPEED and not the direction. A harder tier is less time to move, never
     // a shot that leads the player — `src/content/shots.ts` keeps the dodge in the player's hands.
     const speed = bullet.speed * w.difficulty.shotSpeed;
-    shot.velAlong = (dAlong / distance) * speed + w.scrollPerStep;
-    shot.velAcross = (dAcross / distance) * speed;
+    /*
+      ── WHAT COMES OUT, AND UNTIL 0110 THERE WAS ONE ANSWER ──────────────────────────────────────
+
+      ⚠️ **`docs/decisions/0110-an-attack-is-a-pattern.md`.** Every branch below used to be the first
+      one: `atan2(ship − enemy)`, for every body in the game that fired. Reported from play as *"more
+      attacks that are pattern attacks and less target player attacks"*, and it was an accurate
+      reading of this function.
+
+      ⚠️ **A `switch` with a `never` arm**, per `docs/decisions/0016-a-hub-enumerates-kinds.md`, so a
+      sixth attack cannot be added to the union and forgotten here.
+
+      ⚠️ **Nothing allocates.** Angles are numbers, `Math.cos` returns a number, and every branch
+      writes into a pooled entity — which is what `tests/budget.test.ts` scans this file for.
+    */
+    const attack = row.attack;
+    switch (attack.kind) {
+      case 'aimed': {
+        const dAlong = ship.along - e.along;
+        const dAcross = ship.across - e.across;
+        const distance = Math.sqrt(dAlong * dAlong + dAcross * dAcross);
+        // Zero distance means the enemy is inside the ship, which contact damage has handled.
+        if (distance <= 0) continue;
+        const shot = w.enemyShots.spawn();
+        if (shot === null) continue;
+        /*
+          ⚠️ **Once per enemy that actually fired, and the HOLD is what stops that being a wall of
+          noise** — `src/content/cues.ts` gives `threat` four steps, so a screen of turrets going off
+          together is one sound rather than nine. Gating it here instead would be a second rate
+          limiter in a second place, disagreeing with the first the day either moves.
+
+          It is below the off-screen check above, so a threat the player cannot see is one they
+          cannot hear either — the same rule, in the channel 0036 was not written about.
+
+          ⚠️ **Once per VOLLEY and not per shot, which is what a pattern makes visible.** A spray of
+          three and an aimed one are one event each; the alternative would make a wall six times as
+          loud as a lancer for firing once. The `hold` was already doing this job by accident and now
+          it is the rule.
+        */
+        w.onCue('threat');
+        reset(shot, e.along, e.across, bullet);
+        shot.velAlong = (dAlong / distance) * speed + w.scrollPerStep;
+        shot.velAcross = (dAcross / distance) * speed;
+        break;
+      }
+      case 'spray': {
+        /*
+          A fan centred on `π` — straight back down the lane, towards the side the player is on —
+          rather than on the ship. `spread` is the TOTAL angle and the step between neighbours is
+          `spread / (shots - 1)`, which is the same arithmetic `src/app/boss.ts` uses and is written
+          the same way on purpose.
+        */
+        w.onCue('threat');
+        const step = attack.shots > 1 ? attack.spread / (attack.shots - 1) : 0;
+        const first = Math.PI - (step * (attack.shots - 1)) / 2;
+        for (let s = 0; s < attack.shots; s++) {
+          const shot = w.enemyShots.spawn();
+          // A volley that will not fit is dropped rather than grown, exactly as `src/sim/pool.ts` says.
+          if (shot === null) break;
+          const angle = first + step * s;
+          reset(shot, e.along, e.across, bullet);
+          shot.velAlong = Math.cos(angle) * speed + w.scrollPerStep;
+          shot.velAcross = Math.sin(angle) * speed;
+        }
+        break;
+      }
+      case 'wall': {
+        /*
+          A row of shots straight down the lane at `gap` intervals either side, and **nothing in the
+          middle** — so the safe place is directly in front of the body that fired, which the player
+          can see before the shots exist.
+
+          ⚠️ **A shot placed outside the lane is skipped rather than clamped.** Clamping would stack
+          two bullets on the lane edge into one thicker one, which is a wall with a lie in it; a
+          skipped slot is a wall that is simply narrower near the edges, and the body's own roam is
+          bounded so this is rare.
+        */
+        w.onCue('threat');
+        for (let s = 1; s <= attack.shots; s++) {
+          for (let side = -1; side <= 1; side += 2) {
+            const across = e.across + side * s * attack.gap;
+            if (across < 0 || across > ACROSS_SPAN) continue;
+            const shot = w.enemyShots.spawn();
+            if (shot === null) break;
+            reset(shot, e.along, across, bullet);
+            shot.velAlong = -speed + w.scrollPerStep;
+            shot.velAcross = 0;
+          }
+        }
+        break;
+      }
+      case 'spiral': {
+        /*
+          `shots` evenly round the circle, with the whole set turned by however far this body has got.
+
+          ⚠️ **The phase advances BEFORE the shots are placed**, so the first volley of a body's life
+          is already off its spawn angle — otherwise every spinner in a wave would open with an
+          identical ring however their phases were seeded, and 0098's *"they all fire at exactly the
+          same time"* would be true of the picture on the one volley the player watches most.
+        */
+        w.onCue('threat');
+        e.firePhase += attack.turn;
+        const step = TAU / attack.shots;
+        for (let s = 0; s < attack.shots; s++) {
+          const shot = w.enemyShots.spawn();
+          if (shot === null) break;
+          const angle = e.firePhase + step * s;
+          reset(shot, e.along, e.across, bullet);
+          shot.velAlong = Math.cos(angle) * speed + w.scrollPerStep;
+          shot.velAcross = Math.sin(angle) * speed;
+        }
+        break;
+      }
+      default: {
+        // `docs/decisions/0016-a-hub-enumerates-kinds.md`: the arm that makes the union closed.
+        const never: never = attack;
+        return never;
+      }
+    }
   }
 }
 
@@ -2031,6 +2129,17 @@ function spawnWave(w: World, index: number): void {
     */
     if (row.motion.kind === 'circle') e.spin = (index + i) % 2 === 0 ? 1 : -1;
     else if (row.motion.kind === 'loop') e.turnsLeft = row.motion.turns;
+    /*
+      ⚠️ **WHERE A TURNING PATTERN STARTS POINTING, on exactly the terms above** — 0110. It is set
+      from the member's index rather than rolled, for the reason this function has already given
+      twice: a level is authored.
+
+      ⚠️ **`GOLDEN_ANGLE` rather than an even division**, which is what `spawnPickup` already uses for
+      the same job one function down. An even share would put a wave of three spinners on the same
+      three angles as each other for ever — a wall of six lines rather than a field of rings — and
+      the golden angle is the one step that never repeats however many members a wave has.
+    */
+    if (row.attack.kind === 'spiral') e.firePhase = i * GOLDEN_ANGLE;
     /*
       THE TIER, applied here and nowhere else for anything that arrives in a wave.
 
