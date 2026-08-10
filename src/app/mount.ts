@@ -219,11 +219,45 @@ export const CAPACITY = {
  * ⚠️ **In the units a hand can judge**, on the narrowest view: a far star now crosses in **15
  * seconds** where it took twenty-one, a near one in **6** where it took eight, and a streak in
  * **5.4** — while being nearly twice as long.
+ *
+ * ── AND THE FIFTH REPORT MOVES ONE LAYER ONLY, BECAUSE THE OTHER TWO HAVE NO ROOM LEFT ──────────
+ *
+ * ⚠️ **`docs/decisions/0103-the-fast-layer-is-in-front.md`.** Reported against the build 0101 landed
+ * in: *"background scroll is too slow, probably needs to be another 75% faster again."* The fifth
+ * pass at the same sentence, and the first one where the answer is a rule rather than a number.
+ *
+ * ⚠️ **THE BACKGROUND SKY IS OUT OF ROOM BY CONSTRUCTION, AND IT IS MEASURED.**
+ * `tests/budget.test.ts` derives a per-layer ceiling from how much of a bullet each mark looks like;
+ * driven over what `skyField` actually bakes, the near layer's is **0.845** and it sits at 0.825.
+ * There is 2% left in it. ×1.75 is not a number this sky can be asked for, and four passes of
+ * multiplying have arrived at the wall 0088 predicted in writing.
+ *
+ * ⚠️ **The two DOT layers therefore do not move at all, and the parallax between them is why.** The
+ * far layer has room to 0.671 and the near one has none; moving the far one alone would close the
+ * 2.5 between them, which is the depth cue itself — *"the only thing that reads as depth at all"*,
+ * and the quantity `tests/budget.test.ts` holds precisely so that a speed ask cannot spend it.
+ *
+ * ⚠️ **SO THE STREAK LAYER CROSSES INTO THE FOREGROUND AND CARRIES ALL OF IT: 0.92 → 1.61.** Past 1
+ * a layer is not a faster background, it is **in front of the game** — it overtakes the ship rather
+ * than trailing it, which is the one thing no amount of background speed can imitate. 0065's
+ * *strictly below 1* is amended and not merely relaxed: what a depth says is which side of the play
+ * plane a layer is on, and the ceiling is on how close to 1 it may come from either side.
+ *
+ * ⚠️ **In the units a hand can judge**: the streak crosses the narrowest view in **3.1 seconds**
+ * where it took 5.4, and it is now the only thing on screen moving faster than the things that can
+ * kill the player. The spread of rates the eye has to read went from 0.33–0.92 to **0.33–1.61**,
+ * which is nearly three times the range — and the game sits inside it rather than on top of it.
+ *
+ * ⚠️ **ONE LEVER, ON PURPOSE.** 0101 nearly doubled the streak LENGTH and this moves only the depth,
+ * so if it still reads slow the next report is about a quantity nobody has confounded. **And the
+ * lever after this one is not in this file**: at 1.61 the sky is already overtaking a world that
+ * scrolls at 36 units a second, so *the background is slow* would then be *the game is slow*, and
+ * `SCROLL_PER_STEP` is where that lives.
  */
 export const SKY = [
   { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.33 },
   { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.825 },
-  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 0.92 },
+  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 1.61 },
 ];
 
 /**

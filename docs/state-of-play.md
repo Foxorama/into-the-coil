@@ -103,6 +103,7 @@ it is pushed — guards stop reaching their subject without ever going red, and 
 | **an authored place is a LEVEL coordinate and every spawner adds the origin; a scatter stays in the box** | [0100](decisions/0100-a-level-places-its-pickups-too.md) |
 | **a mark's depth ceiling is how much of a bullet it looks like; a boss leaves the player half the screen** | [0101](decisions/0101-the-sky-is-a-hurry-and-the-boss-holds-back.md) |
 | **a drum step is a VELOCITY; a level's music climbs four times; the bake happens before the press** | [0102](decisions/0102-the-music-goes-somewhere.md) |
+| **a sky layer's depth says which SIDE of the game it is on, and only the streak layer may be in front** | [0103](decisions/0103-the-fast-layer-is-in-front.md) |
 | ~~the near sky is pushed back on every cheap axis~~ — **amended: it went out** | [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) → [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the sky is three layers, the fastest is streaks, and a tube is a side of the hull** | [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
@@ -224,7 +225,30 @@ date and is exactly what a play-test is for.
 
 ## What the play-test has answered
 
-⚠️ **THE SIXTH PLAY-TEST IS THE CURRENT ONE AND IT OUTRANKS EVERYTHING BELOW IT** —
+⚠️ **THE SEVENTH PLAY-TEST IS THE CURRENT ONE AND IT OUTRANKS EVERYTHING BELOW IT** —
+[`the-seventh-play-test`](../reports/the-seventh-play-test-2026-08-10.md), given 2026-08-10 against
+the build carrying the whole 0097–0102 batch, flown in one pass as asked.
+
+⚠️ **THE HEADLINE IS THE SOUND, FOR THE THIRD ROUND RUNNING, AND THIS TIME IT CAME WITH A QUESTION
+ABOUT WHETHER TO CONTINUE AT ALL** — *"if we can't actually do a really good rhythm game with the
+sound we're using let me know and I can drop this line of gameplay."*
+
+⚠️ **IT WAS ANSWERED THE SAME SESSION AND THE ANSWER IS RECORDED IN THE REPORT.** The sound engine is
+not the constraint — the hard parts are built. What does not exist is a rhythmic PLAYER INPUT:
+`src/content/actions.ts` bans a fire action, so everything on the grid is the machine keeping time and
+the player only steers.
+
+⚠️ **AND THE PLAYER CLOSED THE QUESTION**: *"rhythm game is definitely not what I want for this game,
+but I want the sound to be rhythmic and immersive and it's currently not close to that experience."*
+**Do not re-open it.** No rhythmic input is to be built; the whole ask is the sound.
+
+| item | state |
+|---|---|
+| **bosses 3+ show no hit interaction; the second missile tube is a pickup late; the sky, for the fifth time** | ✅ [0103](decisions/0103-the-fast-layer-is-in-front.md) |
+| **the sound: five items, and the mix has been gain-staged four times and never mastered** | **NOT STARTED — it is the next thing** |
+| **enemies fly and shoot too fast; levels 2 and 3 want level 4's density** | **NOT STARTED, and deliberately after the sky** |
+
+⚠️ **THE SIXTH PLAY-TEST IS THE ONE ABOVE THAT** —
 [`the-sixth-play-test`](../reports/the-sixth-play-test-2026-08-10.md), given 2026-08-10 against the
 build carrying 0097, 0098 and 0099.
 
@@ -267,6 +291,13 @@ rise, because [0093](decisions/0093-the-gun-is-on-the-grid.md) fixes a beat at 2
 gun, the enemies and the phase-lock all ride it. What rises is the rate of events — 52 notes a bar to
 over 90. **If that does not read as *faster* to an ear, the next conversation is whether the grid is
 worth what it costs, not another pass at the music.**
+
+⚠️ **IT HAS NOW BEEN FLOWN AND THE VERDICT IS *"way too calm and repetitive"*** —
+[`the-seventh-play-test`](../reports/the-seventh-play-test-2026-08-10.md). **The grid is NOT the thing
+to reach for**, because the same report names four causes that have nothing to do with tempo and are
+each measured in that report: the event cues are not on the grid at all, the music bus has never been
+mastered, nothing ducks, and `run` opens thinner than the title screen does. Read those before
+re-opening 0093.
 
 ⚠️ **THE FIFTH PLAY-TEST IS THE ONE ABOVE THAT** —
 [`the-fifth-play-test`](../reports/the-fifth-play-test-2026-08-10.md), given 2026-08-10 against the

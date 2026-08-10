@@ -293,41 +293,63 @@ export function tiersOf(upgrades: readonly UpgradeKind[], kind: UpgradeKind): nu
   return taken > UPGRADE_TIERS ? UPGRADE_TIERS : taken;
 }
 
-/**
- * A number that climbs from `base` to `cap` across `UPGRADE_TIERS`, at tier `tier`.
- *
- * ⚠️ **ONE CALLER LEFT, AND THAT IS THE POINT RATHER THAN AN OVERSIGHT** —
- * `docs/decisions/0093-the-gun-is-on-the-grid.md`. It used to draw the barrels, the pulse cadence and
- * the missile cadence as well; all three are note values or lists on the ship's row now, because the
- * usable subdivisions of a beat are geometric and a straight line does not land on them. **The
- * launchers keep it because a launcher is genuinely a count** — a place on the hull, evenly spaced
- * between none and `MAX_LAUNCHERS`, with nothing musical about it.
- *
- * ⚠️ **Rounded, so a tier that does not move THIS number still moves the other one.** Launchers run
- * 0 → 2 over four tiers, so two of the four buy rate alone. Every tier changes something, which is
- * `docs/game.md`'s rule, and `tests/missiles.test.ts`'s *THE TIERS* checks it rung by rung rather
- * than trusting the arithmetic.
- */
-function rung(base: number, cap: number, tier: number): number {
-  return Math.round(base + (cap - base) * (tier / UPGRADE_TIERS));
-}
+/*
+  ── `rung` WAS HERE AND ITS LAST CALLER IS GONE, WHICH IS THE END OF A THREE-DECISION RETREAT ────
+
+  It was `Math.round(base + (cap - base) * (tier / UPGRADE_TIERS))` — a straight line from a base to
+  a cap across the four tiers — and it drew the pulse cadence, the missile cadence, the barrels and
+  the launchers. `docs/decisions/0093-the-gun-is-on-the-grid.md` took the first three away, because
+  the usable subdivisions of a beat are geometric and a line does not land on them; the previous
+  version of this comment said the launchers kept it *"because a launcher is genuinely a count."*
+
+  ⚠️ **THAT SENTENCE WAS TRUE AND WAS STILL THE BUG.** A launcher is a count and this interpolated
+  it — 0 → 2 over four rungs rounds to 0, 1, 1, 2, 2 — so *"missile tubes don't get a second firing
+  till like the 3rd upgrade"* was the shape of the function rather than a number anybody chose.
+  Reported from play, 2026-08-10.
+
+  ⚠️ **What the ask wants is a LIST, exactly like the two above it**, and the rungs of an upgrade
+  ladder have now failed to be evenly spaced four times running. When the fifth arrives, author the
+  entries rather than reaching for a curve to generate them: `docs/decisions/0016-a-hub-enumerates-kinds.md`
+  is the same argument one layer up.
+*/
 
 /**
- * Steps between volleys for a ship at weapon tier `tier`, from its own ladder of note values.
+ * Steps between volleys, for a ladder of note values read at `tier`.
  *
- * ⚠️ **THE single description of *what cadence is this rung*, and it is asked twice** — once for the
- * pulse and once, five times over, for the missile. `docs/decisions/0093-the-gun-is-on-the-grid.md`
- * makes the cross-rhythm a stated ratio rather than a coincidence between two ladders, and that is
- * only true if both read the same function.
+ * ⚠️ **THE single description of *what cadence is this rung*, and it is asked for two weapons.**
+ * `docs/decisions/0093-the-gun-is-on-the-grid.md` makes the 5:1 cross-rhythm a stated ratio rather
+ * than a coincidence between two ladders, and that is only true if both are read the same way.
  *
- * ⚠️ **Clamped on the row rather than trusted.** `tiersOf` already clamps, so a tier past the end can
+ * ⚠️ **The LADDER is the argument now and it used to be `ship.firePerBeat` written inside.** The
+ * missiles read the pulse's list until 2026-08-10 — see `missilePerBeat` on `ShipRow` for the bug
+ * that came out of it — and the fix is two lists rather than two functions, because *a rung is a
+ * subdivision of a beat* is the part that must not be written twice.
+ *
+ * ⚠️ **Clamped on the list rather than trusted.** `tiersOf` already clamps, so a tier past the end can
  * only arrive if the two ever disagree — and the failure it prevents is an `undefined` reaching a
  * division, which is a `NaN` cadence and a gun that never fires again rather than an error anybody
  * would see.
  */
+function everyAt(perBeat: readonly number[], tier: number): number {
+  const rung = tier < 0 ? 0 : tier > perBeat.length - 1 ? perBeat.length - 1 : tier;
+  return STEPS_PER_BEAT / perBeat[rung]!;
+}
+
+/** Steps between PULSE volleys for a ship at weapon tier `tier`. */
 export function fireEveryAt(ship: ShipRow, tier: number): number {
-  const rung = tier < 0 ? 0 : tier > ship.firePerBeat.length - 1 ? ship.firePerBeat.length - 1 : tier;
-  return STEPS_PER_BEAT / ship.firePerBeat[rung]!;
+  return everyAt(ship.firePerBeat, tier);
+}
+
+/**
+ * Steps between the note values the MISSILE cadence is built from, at missile tier `tier`.
+ *
+ * ⚠️ **Not the missile's cadence — the thing `MISSILE_BEAT_RATIO` multiplies.** The missile fires
+ * every five of these, which is what makes it a counter-beat rather than a slower copy of the gun
+ * (`docs/decisions/0093-the-gun-is-on-the-grid.md`), and keeping the ratio outside this is what keeps
+ * *slower than the pulse* true at every rung by construction rather than by tuning.
+ */
+export function missileEveryAt(ship: ShipRow, tier: number): number {
+  return everyAt(ship.missilePerBeat, tier);
 }
 
 /**
@@ -662,7 +684,26 @@ export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weap
     the hull and a count really does interpolate. A cadence is a note value and does not.
   */
   const shots = ship.barrels[gun] ?? ship.barrels[ship.barrels.length - 1]!;
-  const launchers = rung(0, MAX_LAUNCHERS, tubes);
+  /*
+    ── ONE TUBE, THEN TWO, AND IT WAS `rung(0, MAX_LAUNCHERS, tubes)` ─────────────────────────────
+
+    ⚠️ **Reported from play, 2026-08-10: *"missile tubes don't get a second firing till like the 3rd
+    upgrade."*** Exactly right, and it was arithmetic rather than a tuned number: `rung` spreads a
+    count evenly across `UPGRADE_TIERS`, so 0 → 2 over four rungs rounds to 0, **1, 1, 2**, 2 and the
+    second tube waited for the third pickup.
+
+    ⚠️ **`rung` was not wrong; it was the only lever there was.** The missiles read the PULSE's
+    cadence list, so a rate step could only land where the pulse's did — and with both rungs of rate
+    taken, staggering the tubes was the only way to make all four tiers buy something. The ship row
+    now carries `missilePerBeat`, so the two ladders are independent and neither has to take turns.
+
+    ⚠️ **A count, capped — not interpolated.** *"Max of two tubes"*
+    (`docs/decisions/0083-two-ladders-of-four.md`) is a ceiling on a place on the hull, and the ask
+    reads the rungs off directly: one tube, then two, then the cap holds while the rate climbs.
+    `docs/decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md`'s *a ship starts
+    with none* is the tier-0 entry and is untouched.
+  */
+  const launchers = tubes > MAX_LAUNCHERS ? MAX_LAUNCHERS : tubes;
 
   /*
     ── EACH CADENCE IS A NOTE VALUE, AND BOTH USED TO BE INTERPOLATED TO A FLOOR ──────────────────
@@ -686,7 +727,7 @@ export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weap
     5.20 and 5.00 across the old tiers purely because two independent interpolations happened to start
     five apart. Written down, it cannot drift.
   */
-  const missileEvery = MISSILE_BEAT_RATIO * fireEveryAt(ship, tubes);
+  const missileEvery = MISSILE_BEAT_RATIO * missileEveryAt(ship, tubes);
 
   const damage = SHOTS[ship.shot].damage;
   const missileDamage = SHOTS[ship.missile].damage;

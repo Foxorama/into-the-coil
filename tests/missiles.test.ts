@@ -125,22 +125,34 @@ describe('a launcher is a position on the ship', () => {
       that broke was the number of missiles LEAVING THE SHIP, which is what the player counted.
     */
     /*
-      ⚠️ **A MISSILE LADDER OF FOUR TIERS OVER TWO TUBES, so two of the four buy rate alone** — 0083,
-      and the ask's own words: *"missile upgrades - add missile tubes and upgrade missile speed -> max
-      of two tubes and 4 speed rate."* `src/content/pickups.ts` interpolates the tubes across the
-      tiers, which is why the second one lands at tier 3 rather than at tier 2.
+      ⚠️ **A MISSILE LADDER OF FOUR TIERS OVER TWO TUBES** — 0083, and the ask's own words: *"missile
+      upgrades - add missile tubes and upgrade missile speed -> max of two tubes and 4 speed rate."*
 
-      ⚠️ **The FIRST tier is a tube, and that is 0056 surviving two taxonomy changes.** The base ship
+      ── AND THE ORDER OF THE FOUR WAS THE REPORTED BUG ──────────────────────────────────────────
+
+      ⚠️ **Reported from play, 2026-08-10: *"missile tubes don't get a second firing till like the 3rd
+      upgrade — upgrades for missiles should be 1 tube, 2 tubes, faster fire rate."*** This table read
+      `[2, 1], [3, 2]` and that was the defect, exactly as counted. `src/content/pickups.ts`
+      INTERPOLATED the tubes across the tiers — `rung(0, 2, tier)` rounds to 0, 1, 1, 2, 2 — so the
+      second tube waited for the third pickup, and nothing had chosen that.
+
+      ⚠️ **The interpolation was not a mistuning, it was the only lever there was.** The missiles read
+      the PULSE's cadence list, so a rate step could only land where the pulse's did; with both of
+      those spent, staggering the tubes was the one way to make all four rungs buy something. The ship
+      row carries `missilePerBeat` now, so the tubes are a count that climbs straight — 1, then 2 —
+      and the rate has the last two rungs to itself.
+
+      ⚠️ **The FIRST tier is a tube, and that is 0056 surviving three taxonomy changes.** The base ship
       has no launcher, so a ladder that handed the missile out at tier 2 would quietly un-earn the
       second weapon. The pair at count 1 is what holds it.
 
       ⚠️ **Written as the expected count per tier rather than as a formula.** A formula would be the
       ladder restated in a second place; this is a table of what the player gets, which is the thing a
-      play-test can disagree with.
+      play-test can disagree with — and did.
     */
     const LAUNCHERS_AT: readonly (readonly [number, number])[] = [
       [1, 1],
-      [2, 1],
+      [2, 2],
       [3, 2],
       [4, 2],
       [6, 2],

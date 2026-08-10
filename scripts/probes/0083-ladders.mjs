@@ -32,12 +32,19 @@ export const PROBES = [
       weapon pickups of which three change nothing — `docs/game.md`'s *an upgrade that cannot change
       the outcome is worse than none*, four times over.
     */
-    broke: 'the rungs flattened, so every tier resolves to the base ship',
+    /*
+      ⚠️ RE-ANCHORED AGAIN ON 2026-08-10, WHEN `rung` WAS DELETED OUTRIGHT. The last interpolated
+      quantity — the launchers — became a capped count, because interpolating a count is what put the
+      second missile tube on the third pickup (*"missile tubes don't get a second firing till like the
+      3rd upgrade"*). There is no curve left in this file to flatten, so the break moves to the LIST
+      the flattening would now be written in.
+    */
+    broke: 'the missile rate ladder flattened, so the last two tiers resolve to the same ship',
     guard: 'THE TIERS: each ladder is exactly UPGRADE_TIERS long',
     edit: {
-      path: 'src/content/pickups.ts',
-      find: '  return Math.round(base + (cap - base) * (tier / UPGRADE_TIERS));',
-      replace: '  void tier;\n  return base;',
+      path: 'src/content/ships.ts',
+      find: '    missilePerBeat: [3, 3, 3, 4, 6],',
+      replace: '    missilePerBeat: [3, 3, 3, 3, 3],',
     },
   },
   {
@@ -59,12 +66,25 @@ export const PROBES = [
       underlying mistake — an interpolation that does not span the tiers it claims to — arriving at
       the guard which can still see it.
     */
-    broke: 'the launcher ladder one rung short, so the first missile pickup buys nothing',
-    guard: 'THE TIERS: each ladder is exactly UPGRADE_TIERS long, and every tier changes something',
+    /*
+      ⚠️ RE-ANCHORED AGAIN ON 2026-08-10. The interpolation is gone — the tubes are a capped count now
+      — so *one rung short* is written as a cap one below `MAX_LAUNCHERS`. The break costs the same
+      thing it always did: the tubes stop climbing at tier 1, and tier 2 (which buys the second tube
+      and nothing else, by design) lands on a ship it does not change.
+
+      ⚠️ **THE GUARD IT REDDENS MOVED, AND `npm run prove` SAID SO — WRONG TEST.** It used to be
+      caught by the generic *every tier changes something*; it is now caught FIRST by the launcher
+      table, which since this play-test states the ask literally — 1 tube, then 2 —
+      (`docs/decisions/0103-the-fast-layer-is-in-front.md`). That is the right guard to name here: a
+      probe should point at the assertion that owns the claim, and the count table owns it now.
+      Naming the generic one would have this reported as WRONG TEST for ever while both were red.
+    */
+    broke: 'the launcher ladder one tube short, so the second missile pickup buys nothing',
+    guard: 'fires one missile per launcher, and stops at two tubes',
     edit: {
       path: 'src/content/pickups.ts',
-      find: '  return Math.round(base + (cap - base) * (tier / UPGRADE_TIERS));',
-      replace: '  return Math.round(base + (cap - base) * (tier / (UPGRADE_TIERS + 1)));',
+      find: '  const launchers = tubes > MAX_LAUNCHERS ? MAX_LAUNCHERS : tubes;',
+      replace: '  const launchers = tubes > MAX_LAUNCHERS - 1 ? MAX_LAUNCHERS - 1 : tubes;',
     },
   },
   {

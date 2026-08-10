@@ -173,6 +173,82 @@ describe('the shot that kills you is not the shot you kill with', () => {
   });
 });
 
+/**
+ * A HURT BODY IS DRAWN DIFFERENTLY FROM AN UNHURT ONE — EVERY BODY, NOT MOST OF THEM.
+ *
+ * ⚠️ **Reported from play, 2026-08-10: *"bosses 3+ don't show any hit interaction at all."*** It was
+ * literal and it was five of the seven. `src/render/bake.ts`'s `INK_OF` carried `boss3Hit` through
+ * `boss7Hit` in the `enemy` ink — authored on the line under each boss's own hull rather than in the
+ * HURT SILHOUETTES block with the other eleven — and `drawKind` gives a boss and its hurt sprite ONE
+ * `case` arm. Same geometry, same ink, same bitmap: `IMPACT_FLASH_STEPS` swapped the picture for the
+ * picture.
+ *
+ * ⚠️ **THE INK IS THE WHOLE OF THE DIFFERENCE, WHICH IS WHY ASSERTING ON IT IS NOT ASSERTING ON
+ * NOTHING.** `src/render/bake.ts` states the rule as *"the SAME shape in a different ink"* — sharing
+ * the arm is deliberate, so that a flash reads as *that thing being hurt* rather than as a second
+ * object appearing. `drawKind` reads exactly two things about a kind: which `case` it lands in, and
+ * `INK_OF[kind]`. With the shape held equal on purpose, a guard over the ink is a guard over every
+ * channel there is.
+ *
+ * ⚠️ **It compares two INDEPENDENTLY AUTHORED table entries rather than a constant against itself**,
+ * which is the distinction `docs/decisions/0027-measure-the-picture-not-the-model.md` draws: nothing
+ * here re-derives what `bake.ts` computes, and the failing case above is the one it was written from.
+ *
+ * ⚠️ **The pairs are WALKED off the content rows rather than listed.** A hand-kept list of hurt
+ * sprites beside a hand-kept table of them is the second description `src/content/sprites.ts` records
+ * the cost of, and it is how five entries came to be in the wrong block in the first place. An eighth
+ * boss is covered on the day its row exists.
+ */
+describe('every body that can be hurt is drawn as hurt', () => {
+  /** Every (body, hurt) pair in the game, off the rows that declare them. */
+  const pairs: { what: string; base: number; hit: number }[] = [
+    ...ENEMY_KINDS.map((kind) => ({ what: kind, base: ENEMIES[kind].sprite, hit: ENEMIES[kind].spriteHit })),
+    ...BOSS_KINDS.map((kind) => ({ what: `the ${kind} boss`, base: BOSSES[kind].sprite, hit: BOSSES[kind].spriteHit })),
+    ...Object.keys(SHIPS).map((kind) => ({
+      what: `the ${kind} ship`,
+      base: SHIPS[kind as keyof typeof SHIPS].sprite,
+      hit: SHIPS[kind as keyof typeof SHIPS].spriteHit,
+    })),
+    // The hull ladder, which is three more pairs nothing else here reaches — 0081.
+    ...Array.from({ length: MAX_HULL_TIER + 1 }, (_unused, tier) => ({
+      what: `hull tier ${tier}`,
+      base: hullFor(tier).base,
+      hit: hullFor(tier).hit,
+    })),
+  ];
+
+  it('THE REPORTED ONE: no body flashes into a bitmap identical to itself', () => {
+    for (const { what, base, hit } of pairs) {
+      const baseKind = SPRITE_KINDS[base]!;
+      const hitKind = SPRITE_KINDS[hit]!;
+      /*
+        Two ways to be the same picture, and bosses 3 to 7 were the second: the row can name one
+        sprite twice, or it can name two sprites that bake identically. The first is a content typo
+        and the second is what actually happened.
+      */
+      expect(hitKind, `${what} names one sprite for hurt and unhurt`).not.toBe(baseKind);
+      expect(
+        INK_OF[hitKind],
+        `${what} flashes to the same ink it already wears (${INK_OF[baseKind]}), so nothing on screen changes`,
+      ).not.toBe(INK_OF[baseKind]);
+    }
+  });
+
+  it('and an enemy that has just been hit is never wearing the ship’s own hurt ink', () => {
+    /*
+      ⚠️ **The two mean OPPOSITE things and `src/render/bake.ts` says so**: the ship's blink is *you
+      cannot be hurt right now* and an enemy's flash is *this just was*. One ink for both would be one
+      channel carrying two meanings, which is 0024's own failure mode. It held by hand across eleven
+      entries and five of them were in the wrong block, so it is held here instead.
+    */
+    const ship = INK_OF[SPRITE_KINDS[SHIPS.proof.spriteHit]!];
+    for (const { what, hit } of pairs) {
+      if (what.endsWith('ship') || what.startsWith('hull tier')) continue;
+      expect(INK_OF[SPRITE_KINDS[hit]!], `a hurt ${what} is drawn in the ink that means *you are safe*`).not.toBe(ship);
+    }
+  });
+});
+
 describe('the ship wears what it is carrying', () => {
   it('THE REPORTED ONE: a hull that has taken upgrades is not the hull that has not', () => {
     /*

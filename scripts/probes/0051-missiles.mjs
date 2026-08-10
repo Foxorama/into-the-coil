@@ -115,11 +115,16 @@ export const PROBES = [
     guard: 'THE SPLIT: a weapon pickup never touches the missiles',
     edit: {
       path: 'src/content/pickups.ts',
-      // ⚠️ Re-anchored by 0093. The cadence is derived from the pulse's ladder now, so the
-      // copy-paste that breaks separation is reading the GUN's tier where the missile's belongs —
-      // which is the same mistake in one fewer character than it used to be.
-      find: '  const missileEvery = MISSILE_BEAT_RATIO * fireEveryAt(ship, tubes);',
-      replace: '  const missileEvery = MISSILE_BEAT_RATIO * fireEveryAt(ship, gun);',
+      /*
+        ⚠️ Re-anchored by 0093 and again on 2026-08-10. The cadence is derived from a ladder of note
+        values, so the copy-paste that breaks separation is reading the GUN's tier where the missile's
+        belongs. **The missiles have a list of their own now** — `missilePerBeat`, added because
+        sharing the pulse's forced the second tube out to the third pickup — so the break has to read
+        the gun's TIER rather than the gun's list, or it would be caught by the compiler instead of by
+        the guard and prove nothing about the separation.
+      */
+      find: '  const missileEvery = MISSILE_BEAT_RATIO * missileEveryAt(ship, tubes);',
+      replace: '  const missileEvery = MISSILE_BEAT_RATIO * missileEveryAt(ship, gun);',
     },
   },
   {

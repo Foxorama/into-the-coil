@@ -119,6 +119,40 @@ export const PROBES = [
   },
   {
     decision: '0035',
+    suite: 'tests/legibility.test.ts',
+    /*
+      ⚠️ **THE SHIPPED BUG, RESTORED — reported 2026-08-10 as *"bosses 3+ don't show any hit
+      interaction at all"*, and it was five of the seven.** The entry above proves a row cannot name
+      its ordinary sprite as its hurt one; this proves the other way a hurt sprite reaches nothing —
+      a DIFFERENT sprite that bakes identically, because `drawKind` shares one `case` arm between a
+      boss and its hurt version and the ink was the only remaining channel.
+
+      ⚠️ **Every guard in the repository was green on the build this reproduces**, including the
+      enemy-kind one above: it walks `ENEMIES` and there is no boss in it.
+    */
+    broke: "the five later bosses' hurt sprites back in the enemy ink, which is exactly what shipped",
+    guard: 'THE REPORTED ONE: no body flashes into a bitmap identical to itself',
+    edit: {
+      path: 'src/render/bake.ts',
+      find: "  boss3Hit: 'impact',",
+      replace: "  boss3Hit: 'enemy',",
+    },
+  },
+  {
+    decision: '0035',
+    suite: 'tests/legibility.test.ts',
+    // The other half of the pair, so the walk is proved to reach the LAST boss as well as the first
+    // of the five. A loop that stops early passes the probe above and ships the bug for boss seven.
+    broke: "the last boss's hurt sprite back in the enemy ink",
+    guard: 'THE REPORTED ONE: no body flashes into a bitmap identical to itself',
+    edit: {
+      path: 'src/render/bake.ts',
+      find: "  boss7Hit: 'impact',",
+      replace: "  boss7Hit: 'enemy',",
+    },
+  },
+  {
+    decision: '0035',
     suite: 'tests/palette.test.ts',
     broke: 'impact pointed back at hazard, so a hit and a hazard become one colour',
     guard: 'clears WCAG AA against the background, in every palette',
