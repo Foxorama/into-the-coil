@@ -1,4 +1,5 @@
 import { BANDS, spectrum } from './spectrum.ts';
+import { fireEveryOn, missileEveryOn, onGrid } from '../src/content/grid.ts';
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -46,7 +47,7 @@ import { SCREENS } from '../src/state/screens.ts';
 import { initialState, reduce, type Action } from '../src/state/root.ts';
 import { LEVELS } from '../src/content/levels.ts';
 import { GameFrame, SHIP_START_ALONG } from '../src/app/frame.ts';
-import { playableWorld } from './world.ts';
+import { playableWorld, FIXTURE_GRID } from './world.ts';
 
 /**
  * SOUND — THE TABLE, THE SAMPLES, THE GATE, AND THE BAN.
@@ -496,9 +497,9 @@ describe('the cue table', () => {
         proportional to — the longest layer is the ceiling, and a layer longer than about twenty
         seconds of audio would be a job no scheduler can hide.
       */
-      const longest = Math.max(...MUSIC_LAYERS.map((layer) => secondsOfLayer(layer)));
+      const longest = Math.max(...MUSIC_LAYERS.map((layer) => secondsOfLayer(layer, FIXTURE_GRID)));
       expect(longest, `the longest layer is ${longest.toFixed(1)}s of audio in one job`).toBeLessThan(20);
-      const total = MUSIC_LAYERS.reduce((sum, layer) => sum + secondsOfLayer(layer), 0);
+      const total = MUSIC_LAYERS.reduce((sum, layer) => sum + secondsOfLayer(layer, FIXTURE_GRID), 0);
       expect(total, `the music is ${total.toFixed(1)}s of audio, which is more than a title screen can hide`).toBeLessThan(
         120,
       );
@@ -806,7 +807,7 @@ describe('the synthesiser', () => {
     */
     for (const ship of SHIP_KINDS) {
       const row = SHIPS[ship];
-      const fastest = Math.min(...row.firePerBeat.map((_unused, tier) => fireEveryAt(row, tier)));
+      const fastest = Math.min(...FIXTURE_GRID.firePerBeat.map((_unused, tier) => fireEveryOn(FIXTURE_GRID, tier)));
       const gap = fastest / STEPS_PER_SECOND;
       expect(
         cueSeconds(CUES.pulse),
@@ -815,7 +816,7 @@ describe('the synthesiser', () => {
       ).toBeLessThanOrEqual(gap);
 
       const soonest = Math.min(
-        ...row.missilePerBeat.map((_unused, tier) => MISSILE_BEAT_RATIO * missileEveryAt(row, tier)),
+        ...FIXTURE_GRID.missilePerBeat.map((_unused, tier) => MISSILE_BEAT_RATIO * missileEveryOn(FIXTURE_GRID, tier)),
       );
       const missileGap = soonest / STEPS_PER_SECOND;
       expect(
@@ -890,13 +891,13 @@ describe('the speaker decides WHEN, and it is the half that is arithmetic', () =
       ⚠️ **And the same steps in a different ORDER of soundings give the same weights**, which is what
       *a property of when* means and what a counter can never satisfy.
     */
-    expect(variantAt(4, 0), 'the downbeat is not the first weight').toBe(0);
-    expect(variantAt(4, FIRE_GRID * 4), 'the next beat did not come back to the downbeat').toBe(0);
-    expect(variantAt(4, FIRE_GRID * 2), 'the half-beat is not the third weight').toBe(2);
+    expect(variantAt(4, 0, FIXTURE_GRID), 'the downbeat is not the first weight').toBe(0);
+    expect(variantAt(4, FIRE_GRID * 4, FIXTURE_GRID), 'the next beat did not come back to the downbeat').toBe(0);
+    expect(variantAt(4, FIRE_GRID * 2, FIXTURE_GRID), 'the half-beat is not the third weight').toBe(2);
     // A figure shorter than the beat wraps rather than running off the end.
-    expect(variantAt(2, FIRE_GRID * 3), 'a two-entry figure did not wrap inside the beat').toBe(1);
+    expect(variantAt(2, FIRE_GRID * 3, FIXTURE_GRID), 'a two-entry figure did not wrap inside the beat').toBe(1);
     // A row with no figure has exactly one weight and always takes it.
-    expect(variantAt(1, FIRE_GRID * 3), 'a cue with no figure was struck at a weight it never baked').toBe(0);
+    expect(variantAt(1, FIRE_GRID * 3, FIXTURE_GRID), 'a cue with no figure was struck at a weight it never baked').toBe(0);
   });
 
   it('0104 — and a cue with no figure is untouched, which is eleven of the twelve rows', () => {

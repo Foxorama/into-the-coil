@@ -47,7 +47,8 @@
 
 import { CUES, CUE_KINDS, MAX_CUE_SECONDS, type CueKind, type CueLayer, type CueRow } from '../content/cues.ts';
 import { makeMusicOut, bakeLoops, layerNotes, type MusicOut } from './music.ts';
-import { FIRE_GRID, MUSIC_LAYERS, STEPS_PER_BEAT, type MusicLayer } from '../content/music.ts';
+import { MUSIC_LAYERS, type MusicLayer } from '../content/music.ts';
+import { GRIDS, TITLE_GRID, type GridRow, fireGridOf } from '../content/grid.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 
 /**
@@ -477,6 +478,14 @@ export interface Speaker {
   play(kind: CueKind): void;
   /** Whether the player wants sound at all. */
   setOn(on: boolean): void;
+  /**
+   * Where the beat is, for the level now being played — 0113.
+   *
+   * ⚠️ **A cue is placed on the grid's own sixteenth**, so a level at 200 BPM on a triplet grid puts
+   * its gun in a different slot of the bar from one at 90. The shell sets this at a boundary; the
+   * step that FIRES a cue cannot see it, which is 0024's ban kept intact.
+   */
+  setGrid(next: GridRow): void;
   /** How many voices started on the current step — the counted budget, for the guard to read. */
   voices(): number;
 }
@@ -503,9 +512,15 @@ export interface Speaker {
  *
  * Exported for `tests/sound.test.ts`, which drives it directly.
  */
-export function variantAt(count: number, step: number): number {
+export function variantAt(count: number, step: number, grid: GridRow): number {
   if (count <= 1) return 0;
-  const sixteenth = Math.floor(((step % STEPS_PER_BEAT) + STEPS_PER_BEAT) % STEPS_PER_BEAT / FIRE_GRID);
+  /*
+    ⚠️ **THE BEAT AND THE SIXTEENTH ARE THE LEVEL'S** — 0113. Both were module constants, so a cue
+    landed on the same slot of the same bar whatever place it was played in. `gridDiv` is 6 on a
+    triplet grid, so *which sixteenth is this* is genuinely a different question per level.
+  */
+  const beatSteps = grid.beatSteps;
+  const sixteenth = Math.floor(((step % beatSteps) + beatSteps) % beatSteps / fireGridOf(grid));
   return sixteenth % count;
 }
 
@@ -518,6 +533,13 @@ export function variantAt(count: number, step: number): number {
 export function makeSpeaker(out: AudioOut): Speaker {
   /** Fixed steps since the speaker was built. Only ever goes up. */
   let clock = 0;
+  /*
+    ⚠️ **THE GRID THE CUES ARE PLACED ON, AND IT MOVES WITH THE LEVEL** — 0113. Held rather than
+    passed per call because `play` is on the hot path and a cue is emitted from `src/app/frame.ts`,
+    which cannot see a theme and must not be able to — 0024. The shell sets it at a boundary, the same
+    place it hands the mixer a theme.
+  */
+  let grid = GRIDS[TITLE_GRID];
   /** The SIM's step count, which is the clock the music is in phase with — 0104. */
   let beat = 0;
   let voices = 0;
@@ -557,7 +579,7 @@ export function makeSpeaker(out: AudioOut): Speaker {
     if (!out.ready()) return;
     lastAt[index] = clock;
     voices++;
-    out.sound(index, variantAt(variantsOf[index] ?? 1, beat));
+    out.sound(index, variantAt(variantsOf[index] ?? 1, beat, grid));
     /*
       ⚠️ **AFTER the cue is known to have sounded, never when it was asked for** — 0104. A cue the
       hold or the cap refused is a cue the player never hears, and ducking the music for it would be
@@ -579,7 +601,7 @@ export function makeSpeaker(out: AudioOut): Speaker {
         losing its slot to one that arrived later. A cue that waited a sixteenth has already paid for
         its place in the bar; the cap is a budget for the step, and the thing that waited goes first.
       */
-      if (beat % FIRE_GRID !== 0) return;
+      if (beat % fireGridOf(grid) !== 0) return;
       for (let i = 0; i < waiting.length; i++) {
         if (waiting[i] === 0) continue;
         waiting[i] = 0;
@@ -616,6 +638,9 @@ export function makeSpeaker(out: AudioOut): Speaker {
         return;
       }
       emit(index);
+    },
+    setGrid(next: GridRow): void {
+      grid = next;
     },
     setOn(next: boolean): void {
       on = next;
@@ -752,7 +777,7 @@ export function prewarmAudio(schedule: (run: () => void) => void = (run) => void
     finds `prewarmed` still null and takes the cold path — a half-filled buffer is never reachable.
   */
   for (const layer of MUSIC_LAYERS) {
-    const { buffer, notes } = layerNotes(layer, SAMPLE_RATE);
+    const { buffer, notes } = layerNotes(layer, SAMPLE_RATE, GRIDS[TITLE_GRID]);
     loops[layer] = buffer;
     for (const note of notes) jobs.push(note);
   }
@@ -846,7 +871,7 @@ export function makeAudioOut(): WebAudioOut {
           because the four loops have to START together, and a layer created later starts wherever
           the bar happens to be.
         */
-        music = makeMusicOut(ctx, master, prewarmed?.loops ?? bakeLoops(SAMPLE_RATE), SAMPLE_RATE);
+        music = makeMusicOut(ctx, master, prewarmed?.loops ?? bakeLoops(SAMPLE_RATE, GRIDS[TITLE_GRID]), SAMPLE_RATE, GRIDS[TITLE_GRID]);
       }
       // Every time, not only on the first: a backgrounded tab suspends the context behind us.
       if (ctx.state === 'suspended') void ctx.resume();

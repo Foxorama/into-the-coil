@@ -26,6 +26,7 @@ import {
 } from '../src/content/pickups.ts';
 import { makeCollected } from '../src/sim/collide.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../src/content/enemies.ts';
+import { GRIDS, TITLE_GRID, type GridRow } from '../src/content/grid.ts';
 import type { LevelRow } from '../src/content/levels.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { SPECIAL_BINDINGS } from '../src/content/actions.ts';
@@ -40,6 +41,17 @@ import { CAPACITY } from '../src/app/mount.ts';
 import type { Intent } from '../src/sim/intent.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { viewOf } from '../src/sim/camera.ts';
+
+/**
+ * The grid every fixture flies on — 150 BPM, which is what the whole game ran at before
+ * `docs/decisions/0113-there-is-one-composition-and-seven-levels.md` made the beat a level's.
+ *
+ * ⚠️ **`TITLE_GRID` rather than a fixture of its own, so a suite cannot pass on a tempo no level
+ * uses.** Every existing assertion about a cadence was written against 24 steps to a beat, and this
+ * is what keeps them assertions about the game rather than about a test-only constant. A test that
+ * wants a different tempo says so, and `tests/grid.test.ts` is the one that walks all six.
+ */
+export const FIXTURE_GRID = GRIDS[TITLE_GRID];
 
 /**
  * A level that never spawns anything and whose boss never arrives.
@@ -76,6 +88,7 @@ export function enemyKindIndices(): Record<EnemyKind, number> {
 export function inertLevel(): {
   enemyKinds: Record<EnemyKind, number>;
   level: LevelRow;
+  grid: GridRow;
   levelOrigin: number;
   levelIndex: number;
   weaponsOffered: number;
@@ -123,9 +136,10 @@ export function inertLevel(): {
     onHealth: (): void => {},
     // The base weapon, which is what an empty upgrade list resolves to. A fixture that wanted a
     // different one would say so; none does, and none should have to restate the base.
-    weapon: weaponFor(SHIPS.proof, []),
+    weapon: weaponFor(SHIPS.proof, [], FIXTURE_GRID),
     enemyKinds: enemyKindIndices(),
     level: NO_LEVEL,
+    grid: FIXTURE_GRID,
     levelOrigin: 0,
     /*
       ⚠️ **The FIRST level and nothing offered, which is the bottom of the difficulty dial** —
@@ -262,8 +276,8 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
     // 0093 took the two cadence numbers off `ShipRow`; the base weapon is the empty list.
-    fireIn: weaponFor(shipRow, []).fireEvery,
-    missileIn: weaponFor(shipRow, []).missileEvery,
+    fireIn: weaponFor(shipRow, [], FIXTURE_GRID).fireEvery,
+    missileIn: weaponFor(shipRow, [], FIXTURE_GRID).missileEvery,
     ship,
     shipRow,
     enemyRows,
@@ -303,6 +317,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
       respawn(world);
     },
     level,
+    grid: FIXTURE_GRID,
     levelOrigin: 0,
     levelIndex: 0,
     weaponsOffered: 0,
@@ -328,7 +343,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
       cleared.count++;
     },
     ...pickupParts(),
-    weapon: weaponFor(shipRow, []),
+    weapon: weaponFor(shipRow, [], FIXTURE_GRID),
     shownHealth: shipRow.health,
     onHealth: (): void => {},
     onPickup: (kind: PickupKind): void => {

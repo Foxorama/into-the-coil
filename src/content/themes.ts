@@ -41,8 +41,23 @@
  * at the prewarm, and that buys real melodic variety across seven levels shared three ways. It is not
  * done here because this decision already changes the backdrop, the mix and the aura, and a fourth
  * axis would make a play-test unable to say which of them worked.
+ *
+ * ── AND THE PLAY-TEST SAID THE MIX WAS NOT ENOUGH, WHICH IS THE PARAGRAPH ABOVE ANSWERED ────────
+ *
+ * ⚠️ **`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`.** Reported after flying
+ * this: *"it doesn't change per level… it has no depth, no intricacy, no variety."* The measurement
+ * above is right and the conclusion drawn from it was wrong — **a mix is not a track.** Seven levels
+ * emphasising one set of material differently are seven levels playing the same notes.
+ *
+ * ⚠️ **The 72 MB it refuses is a figure for holding all seven AT ONCE, which nothing needs to do.**
+ * A run is in one place at a time and a level break is a screen with a second of slack in it, so the
+ * resident cost is one theme's set and the bake happens where 0063 already put a respite.
+ *
+ * ⚠️ **What arrives FIRST is the tempo**, which is this file's `grid` field: it costs no memory at
+ * all, and it is the axis the mix could never reach.
  */
 
+import type { GridKind } from './grid.ts';
 import type { MusicLayer } from './music.ts';
 import type { PaletteName } from './palette.ts';
 
@@ -129,6 +144,24 @@ export interface ThemeRow {
    * arrangement the way they share a behaviour.
    */
   mix: Partial<Record<MusicLayer, number>>;
+  /**
+   * Where the beat is here, and therefore how fast the gun and the enemies are.
+   *
+   * ⚠️ **`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`.** 0107 made a theme *a
+   * place* — a backdrop and a mix — and the tenth play-test's answer is that a place has a TEMPO. It
+   * is the one field on this row that is not cosmetic, and that is stated rather than hidden:
+   * `src/content/grid.ts` carries the beat and both cadence ladders, so a theme naming a grid is
+   * naming a difficulty as well as a pulse.
+   *
+   * ⚠️ **A `GridKind` rather than the numbers, so two places may share a tempo** and so the legality
+   * of a ladder is checked once per grid instead of once per theme —
+   * `docs/decisions/0016-a-hub-enumerates-kinds.md`.
+   *
+   * ⚠️ **`tests/grid.test.ts` bounds the SPREAD across the seven**, not each row alone. A tempo is a
+   * gameplay number here, and the failure it prevents is a level that reads as easy for a reason
+   * nothing in the level explains.
+   */
+  grid: GridKind;
 }
 
 /**
@@ -165,6 +198,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     space: { vivid: '#0b0b14', 'high-contrast': '#000000' },
     nebula: { vivid: '#2b3352', 'high-contrast': '#1c1c28' },
     mix: {},
+    grid: 'steady',
   },
   /** Level two. Warm and close: the drone and the floor come up, the top end comes down. */
   nebula: {
@@ -172,6 +206,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     space: { vivid: '#140b16', 'high-contrast': '#050008' },
     nebula: { vivid: '#5c2a4a', 'high-contrast': '#2a1626' },
     mix: { drone: 1.35, sub: 1.2, chords: 1.15, arp: 0.72, hook: 0.85, perc: 0.7, toll: 1.25 },
+    grid: 'steady',
   },
   /** Level three. Hard and percussive: the hands lead and the pads get out of the way. */
   debris: {
@@ -179,6 +214,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     space: { vivid: '#0d1016', 'high-contrast': '#000305' },
     nebula: { vivid: '#2a3a4c', 'high-contrast': '#16222c' },
     mix: { perc: 1.4, engine: 1.15, groove: 1.15, drone: 0.6, chords: 0.78, stomp: 1.3 },
+    grid: 'steady',
   },
   /**
    * Level four. Thin, bright and fast.
@@ -194,6 +230,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     space: { vivid: '#08131a', 'high-contrast': '#000408' },
     nebula: { vivid: '#1e4a5c', 'high-contrast': '#0e2e3a' },
     mix: { arp: 1.3, hook: 1.28, drone: 0.55, sub: 0.62, groove: 0.75, lead: 1.25 },
+    grid: 'steady',
   },
   /** Level five. Heavy and low: turrets, and a mix that sits underneath them. */
   forge: {
@@ -208,6 +245,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       multipliers rather than one large one.
     */
     mix: { sub: 1.22, groove: 1.3, drone: 1.15, arp: 0.6, hook: 0.7, stomp: 1.15, drive: 0.8 },
+    grid: 'steady',
   },
   /** Level six. Everything at once, which is what the level is. */
   bloom: {
@@ -215,6 +253,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     space: { vivid: '#0f1408', 'high-contrast': '#020600' },
     nebula: { vivid: '#2f4a1c', 'high-contrast': '#18280c' },
     mix: { hook: 1.3, chords: 1.2, perc: 1.2, arp: 1.15, toll: 1.2, drone: 0.7 },
+    grid: 'steady',
   },
   /** Level seven. The centre: the drone returns and the tune sits on top of it. */
   core: {
@@ -222,6 +261,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     space: { vivid: '#16080f', 'high-contrast': '#060003' },
     nebula: { vivid: '#5a1e3c', 'high-contrast': '#2c0c1c' },
     mix: { drone: 1.35, lead: 1.3, drive: 1.2, stomp: 1.3, perc: 0.8, hook: 1.1 },
+    grid: 'steady',
   },
 };
 

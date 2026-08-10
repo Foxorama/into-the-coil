@@ -476,143 +476,72 @@ export const SURGE_UNITS = 2400;
  */
 export { MUSIC_ROOT } from './cues.ts';
 
-/**
- * How many fixed sim steps there are to a beat.
- *
- * ── THIS IS THE WHOLE OF WHY THE TEMPO MOVED, AND IT IS NOT A MUSIC CONSTANT ────────────────────
- *
- * ⚠️ **`docs/decisions/0093-the-gun-is-on-the-grid.md`.** Asked for in play: *"we could almost make a
- * rhythm style game… what can we do so that as you pick up or lose power ups the music speeds up,
- * slows down etc and works in a beat to the rhythm of the fire?"* The player's auto-fire runs on the
- * fixed-step clock and never stops (`src/content/actions.ts` bans a fire action), so it is **a
- * metronome the player cannot switch off** — and putting it in time with the music means the gap
- * between volleys has to be a whole number of steps AND a musical fraction of a beat.
- *
- * ⚠️ **THAT IS ONLY POSSIBLE IF A BEAT IS A WHOLE NUMBER OF STEPS WITH USEFUL DIVISORS, AND 133⅓ BPM
- * WAS NOT.** 0090's beat was 0.45s, which is **27** steps, and 27 divides only by 3 and 9: a
- * three-rung fire ladder with a 3× hole in it. No amount of tuning the gun reaches a grid the music
- * is not on, which is the fact
- * [`the-gun-on-the-grid-mapped`](../../reports/the-gun-on-the-grid-mapped-2026-08-09.md) did not
- * state — it computed its grid at 100 BPM, which the music has never been at.
- *
- * ⚠️ **24 steps gives 24, 12, 8, 6, 4 and 3** — quarters, eighths, eighth-triplets, sixteenths,
- * sixteenth-triplets and thirty-seconds — and 3600/24 is **150 BPM**, which is where the genre the
- * play-test named actually sits. `src/content/pickups.ts` is what spends those divisors.
- *
- * ⚠️ **It cannot be derived from `STEPS_PER_SECOND` here**, because that lives in
- * `src/state/screens.ts` and `docs/decisions/0015-the-layer-ladder.md` points the arrow the other
- * way — `content` may not import `state`. `tests/music.test.ts` holds the two to each other instead,
- * which is the same cross-file check `tests/bombs.test.ts` makes for a blast's reach and its art.
- */
-export const STEPS_PER_BEAT = 24;
+/*
+  ── THE BEAT AND THE SNAP GRID LEFT THIS FILE ────────────────────────────────────────────────────
+
+  ⚠️ **`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`.** `STEPS_PER_BEAT`,
+  `FIRE_GRID`, `onFireGrid` and `nextOnGrid` were here, and 0093 is emphatic that the first of them
+  *"is not a music constant"* — it is where the beat is, which the gun, the enemies and the phase-lock
+  all ride. That sentence was right and the file was the wrong one: they are all `src/content/grid.ts`'s
+  now, per LEVEL rather than per game.
+
+  ⚠️ **THE ARITHMETIC IS CARRIED ACROSS UNCHANGED**, rounding, floor and all. `tests/grid.test.ts`
+  drives the `steady` row against the numbers this file used to produce, because a refactor that
+  quietly retuned the gun would be indistinguishable from one that did not until a play-test.
+
+  ⚠️ **WHAT STAYS HERE IS THE SCORE**: the layers, their bar counts, the ladder and the voices. The
+  split is *where the beat is* against *what is played on it*, and it is what lets a level change one
+  without changing the other.
+*/
 
 /**
- * The grid every cadence that is not the player's own lands on, in sim steps.
+ * The tempo the note lengths in this file are WRITTEN at, in seconds per beat.
  *
- * ── WHY THE ENEMIES GET A COARSER GRID THAN THE GUN ─────────────────────────────────────────────
+ * ⚠️ **NOT the tempo anything plays at.** `src/content/grid.ts` decides that per level, and
+ * `renderNote` scales every voice marked `tempoRelative` by the ratio between the two. This exists so
+ * the table goes on reading as music — `BEAT * 4.6` is *four and a bit beats*, which is what a
+ * musician would write and what a reader can check against the pattern above it.
  *
- * ⚠️ **`docs/decisions/0096-the-enemies-play-along.md`.** Asked for in play: *"it's going to be
- * tricky, but if we can balance the enemies and enemy fire into the rhythm as well that'd be sick."*
- * The player's gun is a LADDER — five authored rungs, each chosen to be a named note value
- * (`src/content/ships.ts`) — so it can sit on the exact subdivision a hand picked. An enemy's cadence
- * is a **tuned number** that a level designer reached by feel, and 0034's rule is that nothing may
- * assert on those values; snapping them to the nearest eighth would move some of them by 8%.
+ * ⚠️ **A LENGTH IN ABSOLUTE SECONDS IS NOT A MISTAKE HERE, AND THAT DISTINCTION PREDATES THIS
+ * CHANGE.** A kick's 0.26 and a hat's 0.04 are properties of the drum rather than of the tempo, so
+ * those voices carry no `tempoRelative` and do not move when the level does. It is what lets the kit
+ * keep its character across a tempo change while the phrasing follows —
+ * `docs/decisions/0113-there-is-one-composition-and-seven-levels.md`.
  *
- * ⚠️ **A sixteenth is 100ms and moves nothing by more than 50** — the three enemy rows move by 4%,
- * 0% and 3%, and every boss phase stays strictly faster than the one before it, which an eighth-note
- * grid did not manage for three of the seven. It is fine enough to be a rounding and coarse enough
- * that every shot lands somewhere a listener would call a beat.
+ * ⚠️ **Module-local and deliberately NOT exported.** Exporting it would put a second number meaning
+ * *the tempo* back in the codebase, which is the whole defect 0113 is unwinding.
  */
-export const FIRE_GRID = STEPS_PER_BEAT / 4;
+const BEAT = 0.4;
 
-/**
- * The nearest cadence to `steps` that lands on the grid, never shorter than one grid unit.
- *
- * ⚠️ **THE ONE DESCRIPTION, and it is asked in two places that must agree** — the content tables
- * declare their cadences already snapped (guarded, so a hand cannot author one off the grid) and
- * `fireGapFor` snaps again after the difficulty multiplier, which is the step that would otherwise
- * quietly undo all of it: 0.7 of anything is rarely a multiple of anything.
- */
-export function onFireGrid(steps: number): number {
-  const snapped = Math.round(steps / FIRE_GRID) * FIRE_GRID;
-  return snapped < FIRE_GRID ? FIRE_GRID : snapped;
-}
+/*
+  ── EVERY DURATION BELOW IS A FUNCTION OF THE GRID, AND THEY WERE ALL CONSTANTS ──────────────────
 
-/**
- * Steps until a body with cadence `gap` should FIRST fire, so that the shot lands on the grid.
- *
- * ── A PERIOD ON THE GRID IS NOT THE SAME AS A SHOT ON THE GRID ──────────────────────────────────
- *
- * ⚠️ **`docs/decisions/0096-the-enemies-play-along.md`, and it is 0094's lesson arriving at the other
- * end of the field.** Snapping every cadence to a sixteenth makes each body keep a musical TEMPO;
- * where its shots actually land still depends on the step it happened to spawn on. A dozen bodies at
- * correct periods and arbitrary offsets is a smear, not a rhythm.
- *
- * ⚠️ **Quantised ONCE, at spawn, and relative for ever after.** Because `gap` is a whole number of
- * grid units, one alignment holds for the body's whole life — and because it is not re-aligned on
- * every shot, two enemies that spawned on different sixteenths stay on different sixteenths. That is
- * the difference between a pattern and a volley, and it is why the player's gun (0094) reloads
- * absolutely and an enemy does not: there is one ship and there are forty enemies.
- *
- * ── AND EVERY BODY IN A FORMATION SPAWNS ON THE SAME STEP, WHICH IS THE SENTENCE ABOVE FAILING ──
- *
- * ⚠️ **`docs/decisions/0098-a-wave-plays-a-figure.md`.** Reported from play against the build 0096
- * landed in: *"the enemies all fire at exactly the same time when they appear."* The paragraph above
- * is true of two enemies from two waves and false of five from one: `spawnWave` places a whole
- * formation inside one call, so `steps` and `gap` are the same number for every member and so is the
- * answer. **0096 aligned the phase and then handed every body the same one.**
- *
- * ⚠️ **`share` is where in its OWN cadence a body sits, in `[0, 1)`** — the caller's business, and
- * `src/app/frame.ts` derives it from the member's index and the wave's. A share of zero is byte for
- * byte what 0096 returned, which is why the boss and the seeded field can go on asking the old
- * question.
- *
- * ⚠️ **IT ONLY EVER DELAYS, AND THAT IS THE HALF THAT KEEPS 0096's BALANCE CLAIM.** 0096 refused a
- * forward rounding because *"every body on the field would open fire up to a grid unit LATE — a
- * change to how quickly a wave becomes dangerous."* A spread cannot be free of that: N bodies at one
- * cadence CANNOT be at N phases while all of them wait within one grid unit of it, so the two rules
- * are incompatible and this is the direction that makes nothing arrive sooner than it used to.
- *
- * Returns between `gap - FIRE_GRID + 1` and `2 × gap - FIRE_GRID`.
- */
-export function nextOnGrid(steps: number, gap: number, share = 0): number {
-  const base = gap - FIRE_GRID + (FIRE_GRID - (steps % FIRE_GRID));
-  /*
-    ⚠️ **The slots are the body's OWN cadence divided by the grid, never the wave's size.** A wave of
-    six turrets has eight sixteenths to sit in and a wave of six lancers has thirteen; spreading over
-    the count instead would put two bodies on one slot in the first case and leave five empty in the
-    second. `gap` is already a whole number of grid units (guarded), so this divides exactly.
-  */
-  const slots = Math.max(1, Math.round(gap / FIRE_GRID));
-  const wrapped = ((share % 1) + 1) % 1;
-  return base + Math.floor(wrapped * slots) * FIRE_GRID;
-}
+  ⚠️ **`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`.** `BEAT_SECONDS` was 0.4,
+  `BAR_SECONDS` was 1.6 and `PHRASE_SECONDS` was 12.8, computed at module load — which is why there
+  was one tempo in the game and why a level could not sound like a different piece.
 
-/**
- * The bar, in seconds, and how many of them a loop is.
- *
- * ⚠️ **THE LOOP LENGTH MUST BE A WHOLE NUMBER OF SAMPLES AT EVERY RATE IT IS BAKED AT.** A length
- * that rounds is a layer that drifts against the other three, and drift is the one failure this
- * design cannot recover from — there is no scheduler to re-align anything. 0.4s a beat is 150 BPM,
- * and eight beats is 3.2 seconds, which is exact at 44100, at 22050 and at 48000.
- * `tests/music.test.ts` holds it rather than this comment.
- *
- * ⚠️ **0.45 → 0.4, and it is `STEPS_PER_BEAT` above that decides it** rather than a taste about
- * tempo. Every note length written as a multiple of `BEAT_SECONDS` follows it; the handful written
- * in absolute seconds — a kick's 0.26, a hat's 0.04 — deliberately do not, because a drum's decay is
- * a property of the drum and not of the tempo.
- */
-export const BEAT_SECONDS = 0.4;
-export const LOOP_BARS = 2;
-export const LOOP_SECONDS = BEAT_SECONDS * 4 * LOOP_BARS;
+  ⚠️ **THE GRID IS THE ARGUMENT AND NOT A SECOND TEMPO.** `src/content/grid.ts` states the beat in
+  sim STEPS, and `docs/decisions/0022-frame-rate-is-a-feature.md` fixes the step at 60 Hz — so
+  seconds are derived from the sim's own clock rather than written beside it. Two numbers meaning
+  *the tempo* is exactly how the gun and the music drifted apart before 0093.
 
-/** Seconds of one bar. The unit `LAYER_BARS` is counted in. */
-export const BAR_SECONDS = BEAT_SECONDS * 4;
+  ⚠️ **A note length written as a multiple of the beat therefore follows the tempo, and one written
+  in absolute seconds deliberately does not** — a kick's 0.26 and a hat's 0.04 are properties of the
+  drum. That distinction was already in this file and is what makes a per-level tempo survive it:
+  the drums keep their character while the phrasing moves.
+*/
 
-/** How long `layer`'s loop is, in seconds. */
-export function secondsOfLayer(layer: MusicLayer): number {
-  return BAR_SECONDS * LAYER_BARS[layer];
-}
+/*
+  ⚠️ **AND THE SECONDS THEMSELVES LIVE IN `src/app/music.ts`, WHICH IS 0015 RATHER THAN A PREFERENCE.**
+  A duration in seconds needs the sim's rate, `STEPS_PER_SECOND` lives in `src/state/screens.ts`, and
+  `docs/decisions/0015-the-layer-ladder.md` points the arrow the other way — `content` may not import
+  `state`. What is here is BARS, which is a fact about the score; what is there is seconds, which is a
+  fact about the clock it is played against.
+
+  ⚠️ **The old file got away with a constant because there was only one tempo.** `BEAT_SECONDS = 0.4`
+  was a hand-written 24/60 with a comment explaining it could not be derived here, which is the shape
+  of a rule being worked around rather than followed.
+*/
 
 /**
  * The PHRASE: how long until every layer is back at its own position zero together.
@@ -622,9 +551,12 @@ export function secondsOfLayer(layer: MusicLayer): number {
  * (`src/app/music.ts`), because it is the only instant at which restarting the set is the thing the
  * set was about to do anyway. Landing a correction on a 2-bar boundary would cut the 4-bar pad in
  * half, which is 0090's seam arriving at runtime.
+ *
+ * ⚠️ **The BARS are still a constant and only the seconds moved**, which is the whole shape of this
+ * change: a tempo does not alter how many bars a layer is, and every guard `LAYER_BARS` carries goes
+ * on reading the same numbers.
  */
 export const PHRASE_BARS = Math.max(...Object.values(LAYER_BARS));
-export const PHRASE_SECONDS = BAR_SECONDS * PHRASE_BARS;
 
 /**
  * One voice: a pattern, and the sound one note of it makes.
@@ -684,6 +616,22 @@ export interface MusicVoice {
    * to the beat it lands on. This indexes the grid.
    */
   accents?: readonly number[];
+  /**
+   * Whether this voice's note LENGTH follows the tempo.
+   *
+   * ⚠️ **`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`.** `note.seconds` is
+   * written against `BEAT`; a voice marked here is scaled by the level's own beat, and one that is
+   * not keeps the absolute value. A pad held *four and a bit beats* means that at every tempo; a
+   * kick's 0.26-second fall is the drum and means 0.26 everywhere.
+   *
+   * ⚠️ **Absent is false and costs nothing** — the same shape `accents` uses, and for the same
+   * reason: a voice that wants the old behaviour says nothing and no object is rebuilt.
+   *
+   * ⚠️ **`tests/music.test.ts` refuses a voice whose note is written as a multiple of `BEAT` and is
+   * NOT marked**, because that is a note that silently stops being a note value the day a level
+   * changes tempo — audible as a pad that no longer reaches the next chord.
+   */
+  tempoRelative?: boolean;
   /** How many steps there are to a beat. 1 is quarters, 2 eighths, 4 sixteenths. */
   perBeat: number;
   /** Octaves above `MUSIC_ROOT`. Only read by a pitched voice. */
@@ -895,7 +843,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.16, attack: 0.35, curve: 0.9, lowFrom: 520, lowTo: 300, q: 0.9 },
+      tempoRelative: true,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT * 4.6, gain: 0.16, attack: 0.35, curve: 0.9, lowFrom: 520, lowTo: 300, q: 0.9 },
     },
     {
       // The same note four cents sharp. Two saws slightly apart is the oldest pad there is, and it
@@ -904,21 +853,24 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.16, attack: 0.35, curve: 0.9, lowFrom: 516, lowTo: 298, q: 0.9 },
+      tempoRelative: true,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT * 4.6, gain: 0.16, attack: 0.35, curve: 0.9, lowFrom: 516, lowTo: 298, q: 0.9 },
     },
     {
       steps: [7, 5],
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.1, attack: 0.4, curve: 0.9, lowFrom: 560, lowTo: 320, q: 0.9 },
+      tempoRelative: true,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT * 4.6, gain: 0.1, attack: 0.4, curve: 0.9, lowFrom: 560, lowTo: 320, q: 0.9 },
     },
     {
       steps: [0, -2],
       pitched: true,
       perBeat: 0.25,
       octave: 0,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.2, attack: 0.3, curve: 0.9 },
+      tempoRelative: true,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT * 4.6, gain: 0.2, attack: 0.3, curve: 0.9 },
     },
   ],
 
@@ -932,7 +884,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 2,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.42, gain: 0.34, attack: 0.004, curve: 4.5, lowFrom: 1400, lowTo: 380, q: 1.4, drive: 0.4 },
+      tempoRelative: true,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT * 0.42, gain: 0.34, attack: 0.004, curve: 4.5, lowFrom: 1400, lowTo: 380, q: 1.4, drive: 0.4 },
     },
     {
       // The octave under it, which is what makes it felt rather than only heard — the same trick
@@ -941,7 +894,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       octave: 0,
       perBeat: 2,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.5, gain: 0.3, attack: 0.004, curve: 4 },
+      tempoRelative: true,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT * 0.5, gain: 0.3, attack: 0.004, curve: 4 },
     },
   ],
 
@@ -1044,7 +998,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 0.25,
       octave: 0,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.15, gain: 0.42, attack: 0.07, curve: 1.05 },
+      tempoRelative: true,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT * 4.15, gain: 0.42, attack: 0.07, curve: 1.05 },
     },
     {
       /*
@@ -1075,7 +1030,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 1,
       octave: 0,
       accents: [1, 0.9, 0.8, 0.95],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.9, gain: 0.34, attack: 0.006, curve: 2.6 },
+      tempoRelative: true,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT * 0.9, gain: 0.34, attack: 0.006, curve: 2.6 },
     },
   ],
 
@@ -1283,14 +1239,16 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.17, attack: 0.06, curve: 1.5, lowFrom: 900, lowTo: 2400, q: 1.2 },
+      tempoRelative: true,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT * 4.6, gain: 0.17, attack: 0.06, curve: 1.5, lowFrom: 900, lowTo: 2400, q: 1.2 },
     },
     {
       steps: [0, -4, 3, -2, 0, -4, -2, -5],
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.17, attack: 0.07, curve: 1.5, lowFrom: 890, lowTo: 2380, q: 1.2 },
+      tempoRelative: true,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT * 4.6, gain: 0.17, attack: 0.07, curve: 1.5, lowFrom: 890, lowTo: 2380, q: 1.2 },
     },
     {
       // The fifths.
@@ -1298,7 +1256,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.5, gain: 0.13, attack: 0.09, curve: 1.5, lowFrom: 1100, lowTo: 2800, q: 1.1 },
+      tempoRelative: true,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT * 4.5, gain: 0.13, attack: 0.09, curve: 1.5, lowFrom: 1100, lowTo: 2800, q: 1.1 },
     },
     {
       // The top voice, an octave up — where the chord stops being a bed and starts being a chord.
@@ -1306,7 +1265,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.1, attack: 0.12, curve: 1.6, lowFrom: 1600, lowTo: 3600, q: 1 },
+      tempoRelative: true,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT * 4.4, gain: 0.1, attack: 0.12, curve: 1.6, lowFrom: 1600, lowTo: 3600, q: 1 },
     },
     {
       // THE ROLLING SUB. Offbeat eighths under the kick, moving with the chord — the other half of
@@ -1325,7 +1285,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 2,
       octave: 0,
       accents: [1, 1, 0.88, 0.94],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.44, gain: 0.33, attack: 0.005, curve: 4.5, lowFrom: 1300, lowTo: 320, q: 1.5, drive: 0.35 },
+      tempoRelative: true,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT * 0.44, gain: 0.33, attack: 0.005, curve: 4.5, lowFrom: 1300, lowTo: 320, q: 1.5, drive: 0.35 },
     },
     {
       /*
@@ -1352,7 +1313,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 2,
       octave: 0,
       accents: [1, 1, 0.88, 0.94],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.62, gain: 0.46, attack: 0.004, curve: 3.2 },
+      tempoRelative: true,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT * 0.62, gain: 0.46, attack: 0.004, curve: 3.2 },
     },
   ],
 
@@ -1396,7 +1358,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 4,
       octave: 1,
       accents: [1, 0.7, 0.84, 0.72],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.3, gain: 0.3, attack: 0.004, curve: 5, lowFrom: 1500, lowTo: 340, q: 1.5, drive: 0.45 },
+      tempoRelative: true,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT * 0.3, gain: 0.3, attack: 0.004, curve: 5, lowFrom: 1500, lowTo: 340, q: 1.5, drive: 0.45 },
     },
     {
       /*
@@ -1414,7 +1377,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 4,
       octave: 0,
       accents: [1, 0.7, 0.84, 0.72],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.34, gain: 0.4, attack: 0.004, curve: 4 },
+      tempoRelative: true,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT * 0.34, gain: 0.4, attack: 0.004, curve: 4 },
     },
   ],
 
@@ -1459,7 +1423,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 4,
       octave: 2,
       accents: [1, 0.55, 0.72, 0.5],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.2, gain: 0.075, attack: 0.002, curve: 6, lowFrom: 3600, lowTo: 1400, q: 1.8 },
+      tempoRelative: true,
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT * 0.2, gain: 0.075, attack: 0.002, curve: 6, lowFrom: 3600, lowTo: 1400, q: 1.8 },
     },
     {
       /*
@@ -1542,7 +1507,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       // reads as a beat rather than as three numbers.
       accents: [1, 1, 0.76, 0.82],
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.19, gain: 0.16, attack: 0.002, curve: 6.5, lowFrom: 2600, lowTo: 780, q: 1.7, drive: 0.7 },
+      tempoRelative: true,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT * 0.19, gain: 0.16, attack: 0.002, curve: 6.5, lowFrom: 2600, lowTo: 780, q: 1.7, drive: 0.7 },
     },
     {
       // The fifth over it. Two notes and no third is a power chord; adding the third is what would
@@ -1557,7 +1523,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 4,
       accents: [1, 1, 0.76, 0.82],
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.17, gain: 0.115, attack: 0.002, curve: 7, lowFrom: 2400, lowTo: 860, q: 1.6, drive: 0.6 },
+      tempoRelative: true,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT * 0.17, gain: 0.115, attack: 0.002, curve: 7, lowFrom: 2400, lowTo: 860, q: 1.6, drive: 0.6 },
     },
   ],
 
@@ -1572,7 +1539,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 4,
       octave: 3,
       accents: [1, 0.62, 0.8, 0.6],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.22, gain: 0.1, attack: 0.002, curve: 5, lowFrom: 4200, lowTo: 1200, q: 2, drive: 0.3 },
+      tempoRelative: true,
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT * 0.22, gain: 0.1, attack: 0.002, curve: 5, lowFrom: 4200, lowTo: 1200, q: 2, drive: 0.3 },
     },
     {
       // Toms rolling into the top of every bar. A fill is what tells the ear a bar has ended, and
@@ -1615,7 +1583,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.8, gain: 0.3, attack: 0.015, curve: 1.5, lowFrom: 1400, lowTo: 420, q: 1.7 },
+      tempoRelative: true,
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT * 4.8, gain: 0.3, attack: 0.015, curve: 1.5, lowFrom: 1400, lowTo: 420, q: 1.7 },
     },
     {
       /*
@@ -1631,7 +1600,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 0.25,
       octave: 2,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.075, attack: 0.5, curve: 1.3, lowFrom: 900, lowTo: 2200, q: 1.4 },
+      tempoRelative: true,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT * 4.4, gain: 0.075, attack: 0.5, curve: 1.3, lowFrom: 900, lowTo: 2200, q: 1.4 },
     },
     {
       // The same, four cents apart. Two saws slightly detuned is what makes a held note a section
@@ -1640,7 +1610,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 0.25,
       octave: 2,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.07, attack: 0.55, curve: 1.3, lowFrom: 890, lowTo: 2160, q: 1.4 },
+      tempoRelative: true,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT * 4.3, gain: 0.07, attack: 0.55, curve: 1.3, lowFrom: 890, lowTo: 2160, q: 1.4 },
     },
     {
       // A breath of filtered noise swelling into each strike. It is what an approach sounds like when
@@ -1649,7 +1620,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: false,
       perBeat: 0.25,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.1, attack: 1.1, curve: 1.3, lowFrom: 700, lowTo: 3200, highFrom: 280, q: 0.8 },
+      tempoRelative: true,
+      note: { wave: 'noise', from: 0, to: 0, seconds: BEAT * 4.4, gain: 0.1, attack: 1.1, curve: 1.3, lowFrom: 700, lowTo: 3200, highFrom: 280, q: 0.8 },
     },
   ],
 
@@ -1688,7 +1660,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 2,
       octave: 2,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.5, gain: 0.15, attack: 0.02, curve: 1.8, lowFrom: 2200, lowTo: 5200, q: 1.4 },
+      tempoRelative: true,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT * 1.5, gain: 0.15, attack: 0.02, curve: 1.8, lowFrom: 2200, lowTo: 5200, q: 1.4 },
     },
     {
       // The same line an octave down and quieter, which is what stops a lead sounding thin without
@@ -1702,7 +1675,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 2,
       octave: 1,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 1.5, gain: 0.12, attack: 0.03, curve: 1.8 },
+      tempoRelative: true,
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT * 1.5, gain: 0.12, attack: 0.03, curve: 1.8 },
     },
   ],
 
@@ -1772,21 +1746,24 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 1,
       octave: 1,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.4, gain: 0.4, attack: 0.22, curve: 1.6, lowFrom: 420, lowTo: 900, q: 1.1 },
+      tempoRelative: true,
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT * 2.4, gain: 0.4, attack: 0.22, curve: 1.6, lowFrom: 420, lowTo: 900, q: 1.1 },
     },
     {
       steps: [7, _, 7, _, 7, _, 7, _],
       pitched: true,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 2.5, gain: 0.54, attack: 0.28, curve: 1.4 },
+      tempoRelative: true,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT * 2.5, gain: 0.54, attack: 0.28, curve: 1.4 },
     },
     {
       steps: [1, _, 1, _, 1, _, 1, _],
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * 2.3, gain: 0.13, attack: 0.3, curve: 1.5, lowFrom: 900, lowTo: 2600, highFrom: 300, q: 0.7 },
+      tempoRelative: true,
+      note: { wave: 'noise', from: 0, to: 0, seconds: BEAT * 2.3, gain: 0.13, attack: 0.3, curve: 1.5, lowFrom: 900, lowTo: 2600, highFrom: 300, q: 0.7 },
     },
   ],
 
@@ -1801,7 +1778,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 2,
       octave: 2,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.3, gain: 0.21, attack: 0.006, curve: 5, lowFrom: 2600, lowTo: 700, q: 1.6 },
+      tempoRelative: true,
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT * 0.3, gain: 0.21, attack: 0.006, curve: 5, lowFrom: 2600, lowTo: 700, q: 1.6 },
     },
     {
       // The offbeats, a fifth up — the half that makes it read as a doubling rather than as louder.
@@ -1809,7 +1787,8 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 2,
       octave: 2,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.26, gain: 0.17, attack: 0.004, curve: 6 },
+      tempoRelative: true,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT * 0.26, gain: 0.17, attack: 0.004, curve: 6 },
     },
     {
       steps: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],

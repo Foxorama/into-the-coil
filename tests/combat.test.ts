@@ -44,7 +44,7 @@ import type { InputSource } from '../src/app/input.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { paintScene } from '../src/render/scene.ts';
 import { bodyOf } from './bodies.ts';
-import { inertLevel } from './world.ts';
+import { inertLevel, FIXTURE_GRID } from './world.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
@@ -444,7 +444,7 @@ function firingAt(row: EnemyRow, distance: number): World {
     // 0093 took `fireEvery` off the row; the base cadence is what an empty upgrade list resolves to.
     // ⚠️ This fixture is *"how many shots does this take"* and its gun MUST fire — see `aimedAtTheShip`
     // below for the one that must not.
-    fireIn: weaponFor(shipRow, []).fireEvery,
+    fireIn: weaponFor(shipRow, [], FIXTURE_GRID).fireEvery,
     ship,
     shipRow,
     enemyRows: ENEMY_KINDS.map((k) => ENEMIES[k]),

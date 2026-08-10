@@ -21,10 +21,11 @@
  * is the only thing a loop needs that a cue does not.
  */
 
+import { type GridRow, beatSecondsOf } from '../content/grid.ts';
+import { STEPS_PER_SECOND } from '../state/screens.ts';
 import {
-  BEAT_SECONDS,
-  PHRASE_SECONDS,
-  secondsOfLayer,
+  LAYER_BARS,
+  PHRASE_BARS,
   MUSIC,
   MUSIC_DRIVE,
   MUSIC_GAIN,
@@ -47,7 +48,6 @@ import {
 import { sampleLayerInto, saturate } from './sound.ts';
 import { mixOf, type ThemeKind } from '../content/themes.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
-import { STEPS_PER_SECOND } from '../state/screens.ts';
 
 /**
  * One note of one voice, at `at` seconds into its layer's loop.
@@ -62,7 +62,7 @@ import { STEPS_PER_SECOND } from '../state/screens.ts';
  * prewarm under a frame, and a note is the smallest thing this can be split into: the walk over the
  * pattern lives in exactly one place either way.
  */
-function renderNote(voice: MusicVoice, value: number, step: number, at: number, rate: number, rng: Rng, into: Float32Array): void {
+function renderNote(voice: MusicVoice, value: number, step: number, at: number, rate: number, beatSeconds: number, rng: Rng, into: Float32Array): void {
   {
     /*
       ⚠️ **A pitched voice REPLACES the note's own sweep and a drum keeps it.** A kick is a fall from
@@ -95,15 +95,22 @@ function renderNote(voice: MusicVoice, value: number, step: number, at: number, 
       ⚠️ **Absent is 1 and costs nothing**, so a voice that wants to be flat says nothing and the
       object is not rebuilt.
     */
+    /*
+      ⚠️ **A NOTE WRITTEN IN BEATS FOLLOWS THE TEMPO AND ONE WRITTEN IN SECONDS DOES NOT** — 0113.
+      `src/content/music.ts` writes a pad as `BEAT * 4.6` and a kick as a flat 0.26, and the row says
+      which it means. Scaling by the RATIO rather than recomputing is what keeps the table readable
+      as music while the level decides how long a beat actually is.
+    */
+    const seconds = voice.tempoRelative === true ? voice.note.seconds * (beatSeconds / AUTHORED_BEAT) : voice.note.seconds;
     const pitch = voice.pitched ? MUSIC_ROOT * Math.pow(2, voice.octave + value / 12) : 0;
     const accent = voice.accents === undefined ? 1 : voice.accents[step % voice.accents.length] ?? 1;
     const note = voice.pitched
       ? accent === 1
-        ? { ...voice.note, from: pitch, to: pitch }
-        : { ...voice.note, from: pitch, to: pitch, gain: voice.note.gain * accent }
+        ? { ...voice.note, from: pitch, to: pitch, seconds }
+        : { ...voice.note, from: pitch, to: pitch, seconds, gain: voice.note.gain * accent }
       : value === 1
-        ? voice.note
-        : { ...voice.note, gain: voice.note.gain * value };
+        ? { ...voice.note, seconds }
+        : { ...voice.note, seconds, gain: voice.note.gain * value };
     sampleLayerInto(note, rate, rng, into, Math.round(at * rate), true);
   }
 }
@@ -122,9 +129,62 @@ function renderNote(voice: MusicVoice, value: number, step: number, at: number, 
  * an exact number of samples. What identical lengths also did was forbid a chord progression, and a
  * progression is what a power ballad IS.
  */
-export function bakeLoops(rate: number): Record<MusicLayer, Float32Array> {
+/**
+ * Seconds of one beat at this tempo.
+ *
+ * ── THE SECONDS LIVE HERE AND THE BARS LIVE IN `content`, WHICH IS 0015 ─────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`.** A duration in seconds
+ * needs the sim's rate; `STEPS_PER_SECOND` is `src/state/screens.ts`'s and
+ * `docs/decisions/0015-the-layer-ladder.md` forbids `content` reaching for it. The old file wrote
+ * `BEAT_SECONDS = 0.4` — a hand-computed 24/60 with a comment explaining why it could not be derived
+ * — which is a rule being worked around rather than obeyed. Derived here, it cannot disagree with
+ * the grid the gun rides.
+ */
+export function beatSecondsFor(grid: GridRow): number {
+  return beatSecondsOf(grid, STEPS_PER_SECOND);
+}
+
+/**
+ * The tempo `src/content/music.ts` writes its note lengths at, in seconds per beat.
+ *
+ * ⚠️ **It is a unit and not a tempo, and the two are one number only by coincidence.** The score
+ * writes a pad as `BEAT * 4.6`; `renderNote` scales that by `beatSeconds / AUTHORED_BEAT`, so a level
+ * at 90 BPM holds it for four and a bit of ITS beats. `tests/music.test.ts` holds this equal to the
+ * score's own `BEAT`, because two files agreeing by hand is the defect
+ * `docs/decisions/0113-there-is-one-composition-and-seven-levels.md` exists to stop repeating.
+ */
+const AUTHORED_BEAT = 0.4;
+
+/** Seconds of one bar. The unit `LAYER_BARS` is counted in. */
+export function barSecondsFor(grid: GridRow): number {
+  return beatSecondsFor(grid) * 4;
+}
+
+/** How long `layer`'s loop is, in seconds, at this tempo. */
+export function secondsOfLayer(layer: MusicLayer, grid: GridRow): number {
+  return barSecondsFor(grid) * LAYER_BARS[layer];
+}
+
+/**
+ * The PHRASE: how long until every layer is back at its own position zero together.
+ *
+ * ⚠️ **It is the longest loop, and only because every other one divides it** — `LAYER_BARS` states
+ * that rule and `tests/music.test.ts` holds it. A re-phase has to land here, because it is the only
+ * instant at which restarting the set is what the set was about to do anyway.
+ *
+ * ⚠️ **It MOVES WITH THE TEMPO NOW, which is what makes the re-phase correct across a boundary.** A
+ * level at 90 BPM has a phrase two thirds longer than one at 150, and `rephaseIn` measures drift in
+ * whole phrases — so a constant here would put a correction mid-pattern the moment a level changed
+ * tempo. That is 0090's seam arriving at runtime, through the door 0113 opened.
+ */
+export function phraseSecondsFor(grid: GridRow): number {
+  return barSecondsFor(grid) * PHRASE_BARS;
+}
+
+export function bakeLoops(rate: number, grid: GridRow): Record<MusicLayer, Float32Array> {
   const out = {} as Record<MusicLayer, Float32Array>;
-  for (const layer of MUSIC_LAYERS) out[layer] = bakeLayer(layer, rate);
+  for (const layer of MUSIC_LAYERS) out[layer] = bakeLayer(layer, rate, grid);
   return out;
 }
 
@@ -143,8 +203,8 @@ export function bakeLoops(rate: number): Record<MusicLayer, Float32Array> {
  * rule, and *the same game sounds different depending on how fast you pressed* is what breaking it
  * would cost.
  */
-export function bakeLayer(layer: MusicLayer, rate: number): Float32Array {
-  const { buffer, notes } = layerNotes(layer, rate);
+export function bakeLayer(layer: MusicLayer, rate: number, grid: GridRow): Float32Array {
+  const { buffer, notes } = layerNotes(layer, rate, grid);
   for (const note of notes) note();
   return buffer;
 }
@@ -167,19 +227,20 @@ export function bakeLayer(layer: MusicLayer, rate: number): Float32Array {
  * the order they are returned reproduces `bakeLayer` exactly, and `tests/sound.test.ts` holds that
  * the two paths agree sample for sample.
  */
-export function layerNotes(layer: MusicLayer, rate: number): { buffer: Float32Array; notes: (() => void)[] } {
-  const seconds = secondsOfLayer(layer);
+export function layerNotes(layer: MusicLayer, rate: number, grid: GridRow): { buffer: Float32Array; notes: (() => void)[] } {
+  const seconds = secondsOfLayer(layer, grid);
   const buffer = new Float32Array(Math.round(seconds * rate));
+  const beatSeconds = beatSecondsFor(grid);
   const rng = makeRng('music').stream(layer);
   const notes: (() => void)[] = [];
   for (const voice of MUSIC[layer]) {
-    const step = BEAT_SECONDS / voice.perBeat;
+    const step = beatSeconds / voice.perBeat;
     for (let i = 0; i < voice.steps.length; i++) {
       const value = voice.steps[i];
       if (value === null || value === undefined) continue;
       const at = i * step;
       if (at >= seconds) break;
-      notes.push(() => renderNote(voice, value, i, at, rate, rng, buffer));
+      notes.push(() => renderNote(voice, value, i, at, rate, beatSeconds, rng, buffer));
     }
   }
   return { buffer, notes };
@@ -364,7 +425,14 @@ const SCHEDULE_AHEAD = 0.06;
  * @param simElapsed seconds the SIM has run since that same instant
  * @param minAhead the least notice the scheduler will accept
  */
-export function rephaseIn(audioElapsed: number, simElapsed: number, minAhead: number): number | null {
+export function rephaseIn(audioElapsed: number, simElapsed: number, minAhead: number, grid: GridRow): number | null {
+  /*
+    ⚠️ **THE PHRASE IS THE LEVEL'S NOW AND IT USED TO BE A CONSTANT** — 0113. A correction is
+    measured in whole phrases and lands on a phrase boundary; at 90 BPM a phrase is two thirds longer
+    than at 150, so a constant here would land the correction MID-PATTERN the moment a level changed
+    tempo — which is 0090's seam arriving at runtime through the door this decision opened.
+  */
+  const PHRASE_SECONDS = phraseSecondsFor(grid);
   /*
     ⚠️ **NOTHING IS CORRECTED UNTIL THE CURRENT ANCHOR HAS PLAYED A WHOLE LOOP, AND IT IS A RATE LIMIT
     AS MUCH AS A RULE.** Each correction re-anchors, so this is also the ceiling on how often the swap
@@ -526,6 +594,8 @@ export function makeMusicOut(
   destination: AudioNode,
   loops: Record<MusicLayer, Float32Array>,
   rate: number,
+  // 0113 — the phrase a re-phase lands on is this tempo's, so the mixer has to know which one it is.
+  grid: GridRow,
 ): MusicOut {
   const gains = {} as Record<MusicLayer, GainNode>;
   const buffers = {} as Record<MusicLayer, AudioBuffer>;
@@ -666,7 +736,7 @@ export function makeMusicOut(
         anchorSim = simSeconds + (anchorAudio - ctx.currentTime);
         return;
       }
-      const delay = rephaseIn(ctx.currentTime - anchorAudio, simSeconds - anchorSim, SCHEDULE_AHEAD);
+      const delay = rephaseIn(ctx.currentTime - anchorAudio, simSeconds - anchorSim, SCHEDULE_AHEAD, grid);
       if (delay === null) return;
       swapTo(ctx.currentTime + delay);
       anchorSim = simSeconds + delay;

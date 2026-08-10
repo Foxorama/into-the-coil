@@ -37,7 +37,7 @@ import {
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
 import { DEFAULT_SOUND, SOUND_KINDS } from '../content/sound.ts';
 import { DEFAULT_STYLE, STYLES, STYLE_KINDS } from '../content/styles.ts';
-import { nextOnGrid } from '../content/music.ts';
+import { GRIDS, TITLE_GRID, nextSlot } from '../content/grid.ts';
 import { auraBuild, auraFor, auraNearnessFor, musicLevelFor } from './music.ts';
 import { makeAudioOut, makeSpeaker, prewarmAudio } from './sound.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
@@ -508,7 +508,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         the title screen and behind the proof scene, so it is the first thing a player ever hears
         anything shoot in.
       */
-      e.fireIn = nextOnGrid(0, row.fireEvery, i / SEEDED_BODIES);
+      // The TITLE's grid, because that is where this field is — 0113. It is not in a level, so there
+      // is no theme to ask, and the screens with no level are exactly what `TITLE_GRID` names.
+      e.fireIn = nextSlot(GRIDS[TITLE_GRID], 0, row.fireEvery, i / SEEDED_BODIES);
     }
   };
   seedField();
@@ -618,13 +620,18 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       entry. `weaponFor(shipRow, [])` is the one description of *what an unupgraded ship fires at*,
       which is the same reason `tests/pickups.test.ts` drives an empty list to get the base weapon.
     */
-    fireIn: weaponFor(shipRow, []).fireEvery,
-    missileIn: weaponFor(shipRow, []).missileEvery,
+    fireIn: weaponFor(shipRow, [], GRIDS[TITLE_GRID]).fireEvery,
+    missileIn: weaponFor(shipRow, [], GRIDS[TITLE_GRID]).missileEvery,
     ship,
     shipRow,
     enemyRows,
     enemyKinds,
     level,
+    // ⚠️ **Resolved from the level rather than defaulted to `TITLE_GRID`** — 0113. `startLevel` and
+    // `advanceLevel` both restate it, exactly as `levelIndex` below is restated, and the reason is
+    // the same: a world built with a grid that disagrees with its own level is a gun playing one
+    // tempo while the script is written in another, and nothing would report it.
+    grid: GRIDS[THEMES[level.theme].grid],
     // A run begins at the beginning, so the script and the camera share an origin — 0076.
     levelOrigin: 0,
     // ⚠️ The bottom of the difficulty dial — 0084. A run always begins at the first level with
@@ -653,7 +660,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     collected: makeCollected(CAPACITY.pickups),
     // The base weapon, which is what an empty upgrade list resolves to. There is no second
     // description of it anywhere — 0039's "back to the base weapon" is this call with `[]`.
-    weapon: weaponFor(shipRow, []),
+    weapon: weaponFor(shipRow, [], GRIDS[TITLE_GRID]),
     // Replaced below, once `dispatch` exists — the same reason `onDeath` is.
     onCleared: (): void => {},
     onPickup: (): void => {},
@@ -882,7 +889,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       (`tests/run.test.ts` holds that), which is what makes `!==` the whole test.
     */
     if (rearmed) {
-      world.weapon = weaponFor(shipRow, state.run.upgrades);
+      world.weapon = weaponFor(shipRow, state.run.upgrades, GRIDS[THEMES[world.level.theme].grid]);
       /*
         ⚠️ **THE HULL FOLLOWS THE WEAPON, which is the whole of `docs/game.md`'s *every upgrade
         changes how the ship looks on screen*** — 0081. Reported from play as the fifth defect:
@@ -1175,6 +1182,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       shownNearness = nearness;
       shownTheme = theme;
       music.setLevel(level, nearness, theme);
+      /*
+        ⚠️ **THE SPEAKER LEARNS THE PLACE HERE TOO, AND ON THE SAME CONDITION** — 0113. A cue is
+        struck at the weight its position in the BAR chooses (0104), and where a bar's sixteenths
+        fall is now the level's — so a boundary that moved the mix and not the grid would leave every
+        gun, hit and death being placed against the previous place's beat.
+
+        ⚠️ **Not in a level is `TITLE_GRID`**, which is the same answer `theme` gives one line up: the
+        title, the level break and the run-over screen are not a place and have their own tempo.
+      */
+      speaker.setGrid(state.screen.current === 'playing' ? world.grid : GRIDS[TITLE_GRID]);
     }
   };
 

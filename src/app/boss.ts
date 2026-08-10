@@ -25,6 +25,7 @@ import { type Entity, reset } from '../sim/entity.ts';
 import type { Pool } from '../sim/pool.ts';
 import type { BossPhase, BossRow } from '../content/bosses.ts';
 import { type DifficultyRow, fireGapFor } from '../content/difficulty.ts';
+import type { GridRow } from '../content/grid.ts';
 import type { ShotRow } from '../content/shots.ts';
 
 /**
@@ -116,6 +117,8 @@ export function stepBoss(
   cameraAlong: number,
   scrollPerStep: number,
   patrolDirection: number,
+  // 0113 — the snap grid is the level's, so a phase change lands on THIS place's sixteenth.
+  grid: GridRow,
 ): number {
   const phase = phaseFor(row, boss.health, fullHealth);
 
@@ -217,7 +220,7 @@ export function stepBoss(
   if (boss.fireIn > 0) return direction;
   // ⚠️ The tier's gap over the PHASE's, so escalation and difficulty compose rather than compete: a
   // hard tier's opening phase is still slower than its own last one.
-  boss.fireIn = fireGapFor(phase.fireEvery, tier);
+  boss.fireIn = fireGapFor(phase.fireEvery, tier, grid);
 
   const dAlong = ship.along - boss.along;
   const dAcross = ship.across - boss.across;

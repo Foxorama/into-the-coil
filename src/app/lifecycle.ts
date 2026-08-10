@@ -37,7 +37,10 @@
  */
 
 import { DIFFICULTIES, type DifficultyKind } from '../content/difficulty.ts';
+import { GRIDS } from '../content/grid.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
+import { weaponFor } from '../content/pickups.ts';
+import { THEMES } from '../content/themes.ts';
 import { makeRng } from '../sim/rng.ts';
 import type { Action } from '../state/root.ts';
 import type { RunState } from '../state/slices/run.ts';
@@ -81,6 +84,28 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
     */
     if (seamless) advanceLevel(world, LEVELS[kind], index);
     else startLevel(world, LEVELS[kind]);
+    /*
+      ── THE GUN IS RE-RESOLVED HERE BECAUSE THE BEAT IS THE LEVEL'S ─────────────────────────────
+
+      ⚠️ **`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`.** A cadence is a
+      subdivision of a beat and a beat is now a property of the place, so **the same upgrade list
+      resolves to a different weapon in a different level.** `src/app/mount.ts` re-resolves on a
+      change of the upgrade LIST by identity, which is the correct test for the thing it watches and
+      is blind to this one: crossing a boundary with nothing picked up leaves the list identical and
+      the tempo different.
+
+      ⚠️ **Here rather than in `mount`, because this is the one description of *a level was
+      entered*** — both paths run through it, and the alternative is the shell growing a second
+      opinion about when a level changed.
+
+      ⚠️ **The counters are clamped rather than left.** A ship crossing from a slow grid to a fast one
+      carries a `fireIn` larger than the whole new cadence, which is one silent gap at the exact
+      moment a level opens — and 0043 opens every level on an empty field precisely so the player can
+      find the gun.
+    */
+    world.weapon = weaponFor(world.shipRow, runOf().upgrades, GRIDS[THEMES[LEVELS[kind].theme].grid]);
+    if (world.fireIn > world.weapon.fireEvery) world.fireIn = world.weapon.fireEvery;
+    if (world.missileIn > world.weapon.missileEvery) world.missileIn = world.weapon.missileEvery;
   };
 
   return {

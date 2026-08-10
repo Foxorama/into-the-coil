@@ -63,7 +63,8 @@ import { FORMATIONS } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
 import { type DifficultyRow, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
-import { nextOnGrid } from '../content/music.ts';
+import { GRIDS, type GridRow, nextSlot } from '../content/grid.ts';
+import { THEMES } from '../content/themes.ts';
 import { PICKUP_KINDS, type PickupKind, type PickupRow, type UpgradeKind, type Weapon } from '../content/pickups.ts';
 import { SPECIALS, pyreFor, type SpecialKind } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
@@ -741,6 +742,20 @@ export interface World {
    * statement.
    */
   level: LevelRow;
+  /**
+   * Where the beat is in this level — the resolved `GridRow`, not the name of one.
+   *
+   * ⚠️ **`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`.** Every cadence in the
+   * game is a subdivision of a beat and the beat is now the theme's, so the frame needs it on every
+   * spawn. Resolved to a ROW once per level rather than looked up by name per body, on exactly the
+   * terms `enemyRows` and `pickupRows` are: a per-spawn lookup by string key is a cost paid for ever
+   * to avoid one line at a boundary.
+   *
+   * ⚠️ **Set by `startLevel` AND `advanceLevel`, which is why it is not derived at the call site.**
+   * A getter reading `THEMES[w.level.theme]` would be one description too, and it would be a table
+   * walk inside `spawnWave`.
+   */
+  grid: GridRow;
   /**
    * The camera distance this level's script is measured from.
    *
@@ -1875,7 +1890,7 @@ function fireEnemies(w: World): void {
       phase was quantised once, when it spawned; from there a relative reload keeps it on the grid for
       ever and keeps it out of step with its neighbours.
     */
-    e.fireIn = fireGapFor(row.fireEvery, w.difficulty);
+    e.fireIn = fireGapFor(row.fireEvery, w.difficulty, w.grid);
     if (e.across + e.radius < 0 || e.across - e.radius > ACROSS_SPAN) continue;
     /*
       ── AND THE SAME RULE ON THE OTHER AXIS, WHICH IT HAS NEVER HAD ─────────────────────────────
@@ -2206,7 +2221,7 @@ function spawnWave(w: World, index: number): void {
       the reason this function opens with: a level that rolled its rhythm would play differently
       every run and could not be tuned by a hand.
     */
-    e.fireIn = nextOnGrid(w.steps, fireGapFor(row.fireEvery, w.difficulty), (i + index) / wave.count);
+    e.fireIn = nextSlot(w.grid, w.steps, fireGapFor(row.fireEvery, w.difficulty, w.grid), (i + index) / wave.count);
   }
 }
 
@@ -2947,6 +2962,7 @@ function driveBoss(w: World): void {
     w.cameraAlong,
     w.scrollPerStep,
     w.bossPatrol,
+    w.grid,
   );
   /*
     ⚠️ **Where it is, remembered every step, so that where it DIED is known on the step it stops
@@ -3001,7 +3017,7 @@ function spawnBoss(w: World): void {
   // says what that was. `src/app/boss.ts` takes it as an argument for exactly that reason.
   w.bossFullHealth = boss.health;
   // On the grid from its first shot, like everything else that shoots — 0096.
-  boss.fireIn = nextOnGrid(w.steps, fireGapFor(w.bossRow.phases[0]!.fireEvery, w.difficulty));
+  boss.fireIn = nextSlot(w.grid, w.steps, fireGapFor(w.bossRow.phases[0]!.fireEvery, w.difficulty, w.grid));
   w.bossPatrol = 1;
   w.bossPhaseAt = -1;
 }
@@ -3137,6 +3153,7 @@ export function respawn(w: World): void {
  */
 export function startLevel(w: World, level: LevelRow): void {
   w.level = level;
+  w.grid = GRIDS[THEMES[level.theme].grid];
   /*
     ⚠️ **ZERO, and it is not a default — it is what this function MEANS.** `startLevel` is the run
     beginning: the camera goes to zero, the field is swept, and `src/app/lifecycle.ts` dispatches
@@ -3189,6 +3206,8 @@ export function startLevel(w: World, level: LevelRow): void {
  */
 export function advanceLevel(w: World, level: LevelRow, levelIndex: number): void {
   w.level = level;
+  // 0113 — the beat is the place's, so it moves with the script and not with the run.
+  w.grid = GRIDS[THEMES[level.theme].grid];
   /*
     ⚠️ **REQUIRED rather than defaulted, because this is the parameter the dial is made of** —
     `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md`. A default here would be a level

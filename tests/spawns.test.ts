@@ -25,7 +25,7 @@ import { ENEMIES, shotsPerVolley } from '../src/content/enemies.ts';
 import { fireGapFor } from '../src/content/difficulty.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { GameFrame } from '../src/app/frame.ts';
-import { playableWorld } from './world.ts';
+import { playableWorld, FIXTURE_GRID } from './world.ts';
 import { sprite } from './bodies.ts';
 
 /**
@@ -340,7 +340,7 @@ describe('0096 — enemy fire lands on the grid in the real frame, not only in t
       than off the table: a difficulty multiplies every cadence, and a modulo taken against the
       unscaled 48 would be measuring a period the game is not playing.
     */
-    const gap = fireGapFor(ENEMIES.turret.fireEvery, world.difficulty);
+    const gap = fireGapFor(ENEMIES.turret.fireEvery, world.difficulty, FIXTURE_GRID);
     const phases = new Set(soundings.map((s) => s.step % gap));
     expect(
       phases.size,

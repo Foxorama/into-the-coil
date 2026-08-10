@@ -23,53 +23,31 @@ import { SPRITE } from './sprites.ts';
 /** Every flyable ship. Closed, and one entry long until the roster is played rather than designed. */
 export type ShipKind = 'proof';
 
+/*
+  ── THE TWO CADENCE LADDERS LEFT THIS ROW, AND THAT AMENDS 0093 ───────────────────────────────────
+
+  ⚠️ **`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`.** `firePerBeat` and
+  `missilePerBeat` were fields here, and 0093 put them here deliberately: *"a ship is where a weapon's
+  character lives."* They are now `src/content/grid.ts`'s, and the reason is arithmetic rather than
+  taste — **every rung has to divide the beat exactly**, so a ladder written apart from the beat it
+  subdivides is a ladder that can be authored into a fractional reload, which is a `NaN` cadence and a
+  gun that never fires again.
+
+  ⚠️ **THE INTENT 0093 WAS PROTECTING SURVIVES, AND ARGUABLY IN A BETTER PLACE.** *"Keep the chunky
+  slower fire rate on record, we could use that for a different ship later"* is now a `GridRow` with a
+  slower ladder — still a table edit, still no rewrite of `weaponFor`, and now reusable by any ship
+  rather than owned by one.
+
+  ⚠️ **A SHIP STILL OWNS ITS CHARACTER; the cadence was simply never the only part of it.** `barrels`,
+  `shot`, `missile` and the hull ladder are all still here, and they are what a second ship would
+  differ by first.
+*/
 export interface ShipRow extends Body {
   /**
-   * How many volleys a beat this ship fires, at each weapon tier. One entry per rung, so its length
-   * is `UPGRADE_TIERS + 1`.
-   *
-   * ── IT WAS `fireEvery: number` AND THE LADDER WAS INTERPOLATED ─────────────────────────────────
-   *
-   * ⚠️ **`docs/decisions/0093-the-gun-is-on-the-grid.md`.** The cadence used to be
-   * `rung(ship.fireEvery, FASTEST_FIRE, tier)` — a straight line from a base to a floor, which
-   * produced 9, 8, 7, 5, 4 steps. Only the 9 was a musical value of anything, and none of the five
-   * was a musical value of the tempo the game plays at, so **the gun drifted on and off the beat as
-   * the player upgraded**. That is what the play-test heard as *"almost the right tempo"*.
-   *
-   * ⚠️ **A LIST RATHER THAN A CURVE, because the rungs are not evenly spaced and cannot be.** The
-   * usable subdivisions of a beat are geometric — 2, 3, 4, 6 per beat — so no interpolation between
-   * a base and a floor lands on them. `rung` is kept for the launchers, where the quantity really is
-   * a count.
-   *
-   * ⚠️ **AND IT IS ON THE ROW BECAUSE A SHIP IS WHERE A WEAPON'S CHARACTER LIVES.** The play-test
-   * asked for the alternative to be kept: *"keep the chunky slower fire rate on record, we could use
-   * that for a different ship later."* 0093 records the numbers; **this field is what makes spending
-   * them a table edit** rather than a rewrite of `weaponFor`.
+   * How many barrels fire at once, at each weapon tier. One entry per rung, so its length is
+   * `UPGRADE_TIERS + 1` — and the same length as the grid's two ladders, which
+   * `tests/grid.test.ts` holds across the pair.
    */
-  firePerBeat: readonly number[];
-  /**
-   * How many missile volleys a beat, at each MISSILE tier. Same length as `firePerBeat`.
-   *
-   * ── THE MISSILES USED TO READ THE PULSE'S LADDER, AND THAT IS WHY THE SECOND TUBE WAS LATE ──────
-   *
-   * ⚠️ **Reported from play, 2026-08-10: *"missile tubes don't get a second firing till like the 3rd
-   * upgrade — upgrades for missiles should be 1 tube, 2 tubes, faster fire rate."*** Both halves of
-   * that were one cause. `weaponFor` asked `fireEveryAt(ship, tubes)` — the PULSE's list, indexed by
-   * the missile tier — so the two ladders had to share their rungs, and the only way to make every
-   * missile tier buy something was to stagger the tubes against the rate: `rung(0, 2, tier)` gives
-   * 0, **1, 1, 2**, 2, which puts the second tube on the third pickup exactly as reported.
-   *
-   * ⚠️ **With a list of its own the two stop having to take turns.** The tubes can climb 0, 1, 2, 2,
-   * 2 and the rate can hold, hold, then step twice — which is the ask read literally, and every rung
-   * still changes something (`docs/game.md`).
-   *
-   * ⚠️ **IT DOES NOT LOOSEN 0093 OR 0094: every entry is still a subdivision of a beat**, and the
-   * 5:1 counter-beat is still `MISSILE_BEAT_RATIO × ` this rather than a second tuned number.
-   * `tests/missiles.test.ts` holds the rungs against `STEPS_PER_BEAT`, so a hand cannot author one
-   * off the grid here any more than in the list above.
-   */
-  missilePerBeat: readonly number[];
-  /** How many barrels fire at once, at each weapon tier. Same length as `firePerBeat`. */
   barrels: readonly number[];
   /** The base weapon. */
   shot: ShotKind;
@@ -145,49 +123,6 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     radius: 2,
     health: 1,
     damage: 0,
-    /*
-      ── THE LADDER, IN NOTE VALUES AT 150 BPM ────────────────────────────────────────────────────
-
-      `docs/decisions/0093-the-gun-is-on-the-grid.md`. Three per beat is an eighth-note triplet, four
-      is a sixteenth, six is a sixteenth-note triplet — 8, 6 and 4 steps against `STEPS_PER_BEAT`.
-
-      ⚠️ **THE OLD LADDER WAS 9, 8, 7, 5, 4 STEPS AND TWO OF ITS FIVE RUNGS ARE UNCHANGED HERE.** Tier
-      1 was already 8 and tier 4 was already 4; the grid at 150 BPM has 8, 6 and 4 in exactly the span
-      the ladder occupied. That is why putting the gun in time costs no rebalance — the report that
-      mapped this expected the base cadence to HALVE, and it expected that because it computed the
-      grid at 100 BPM. Bullets a second move by at most 17% at any rung and two rungs do not move at
-      all.
-
-      ⚠️ **The rate steps twice and the barrels step four times, which is deliberate.** There are only
-      three usable subdivisions between *slower than today* and `FASTEST_FIRE`, so two of the four
-      upgrades cannot buy rate — and an upgrade that changes nothing is the one thing `docs/game.md`
-      forbids. The barrels are what make every rung worth taking.
-
-      ⚠️ **AND THE ALTERNATIVE IS RECORDED RATHER THAN BUILT**, asked for in the same breath: *"keep
-      the chunky slower fire rate on record, we could use that for a different ship later."* It is
-      `firePerBeat: [2, 3, 3, 4, 4]` with `barrels: [2, 3, 4, 5, 6]` — a gun that opens on straight
-      eighths with two barrels and never reaches a triplet. 0093 has why it is a second SHIP rather
-      than a retune of this one.
-    */
-    firePerBeat: [3, 3, 4, 4, 6],
-    /*
-      ── THE MISSILES: TUBE, TUBE, THEN RATE ──────────────────────────────────────────────────────
-
-      ⚠️ **Reported from play: *"upgrades for missiles should be 1 tube, 2 tubes, faster fire rate."***
-      The first two rungs hold the base cadence and buy a launcher each; the last two hold the tubes
-      at the cap and buy the rate. Every rung still changes something, which is `docs/game.md`'s rule
-      and is what the old staggered arrangement was paying for.
-
-      ⚠️ **The floor and the ceiling are BOTH unchanged**, which is what makes this a re-ordering
-      rather than a buff. Tier 0 is still eight steps to a pulse volley and tier 4 is still a
-      sixteenth-note triplet, so `MISSILE_BEAT_RATIO` still reaches 20 steps at the cap and the
-      missile pool's worst case — two launchers at the fastest cadence — is the number it always was.
-
-      ⚠️ **What DOES move is the middle, and it moves in the player's favour on purpose**: two tubes
-      arrive one pickup earlier and the first rate step arrives one later. That is the trade the ask
-      names, and it is a trade rather than a gift.
-    */
-    missilePerBeat: [3, 3, 3, 4, 6],
     barrels: [1, 2, 3, 4, 4],
     shot: 'pulse',
     missile: 'missile',

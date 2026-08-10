@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { fireEveryOn } from '../src/content/grid.ts';
 
 import {
   FASTEST_FIRE,
@@ -30,7 +31,7 @@ import {
 import { GameFrame, SHIP_START_ALONG, scatterUpgrades } from '../src/app/frame.ts';
 import { initialState, reduce } from '../src/state/root.ts';
 import { DEFAULT_DIFFICULTY } from '../src/state/slices/run.ts';
-import { playableWorld } from './world.ts';
+import { playableWorld, FIXTURE_GRID } from './world.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { Rng } from '../src/sim/rng.ts';
@@ -58,7 +59,7 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
     ship opens on is a hand's job. What is held is that every rung, whatever it is, lands on the beat.
   */
   /** Every rung of the pulse's ladder, in steps between volleys. */
-  const RUNGS = Array.from({ length: UPGRADE_TIERS + 1 }, (_, tier) => fireEveryAt(SHIPS.proof, tier));
+  const RUNGS = Array.from({ length: UPGRADE_TIERS + 1 }, (_, tier) => fireEveryOn(FIXTURE_GRID, tier));
 
   it('THE ASK, in the unit the player hears: the gun closes with the music every single loop', () => {
     /*
@@ -110,7 +111,7 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
       `FASTEST_FIRE` is legibility (`src/app/frame.ts` needs the impact flash to finish between hits)
       and `MAX_BARRELS` is the pool budget.
     */
-    expect(SHIPS.proof.firePerBeat.length, 'the cadence ladder is not one rung per tier').toBe(UPGRADE_TIERS + 1);
+    expect(FIXTURE_GRID.firePerBeat.length, 'the cadence ladder is not one rung per tier').toBe(UPGRADE_TIERS + 1);
     expect(SHIPS.proof.barrels.length, 'the barrel ladder is not one rung per tier').toBe(UPGRADE_TIERS + 1);
     for (let tier = 0; tier < RUNGS.length; tier++) {
       expect(RUNGS[tier], `tier ${tier} outruns the impact flash`).toBeGreaterThanOrEqual(FASTEST_FIRE);
@@ -153,7 +154,7 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
         Number.isInteger(beats),
         `at tier ${tier} a missile leaves every ${beats} beats exactly, which is ON the beat rather than across it`,
       ).toBe(false);
-      ratios.push(weapon.missileEvery / fireEveryAt(SHIPS.proof, tier));
+      ratios.push(weapon.missileEvery / fireEveryOn(FIXTURE_GRID, tier));
       expect(weapon.missileEvery, `at tier ${tier} the second weapon fires as often as the first`).toBeGreaterThan(
         weaponFor(SHIPS.proof, Array.from({ length: tier }, () => 'weapon' as const)).fireEvery,
       );
@@ -187,7 +188,7 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
     for (let tier = 0; tier < RUNGS.length; tier++) {
       const missiles = Array.from({ length: tier }, () => 'missile' as const);
       const missileEvery = weaponFor(SHIPS.proof, missiles).missileEvery;
-      const pulseEvery = fireEveryAt(SHIPS.proof, tier);
+      const pulseEvery = fireEveryOn(FIXTURE_GRID, tier);
       // Both are whole steps, so the instant they next share is their least common multiple.
       const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
       const together = (missileEvery * pulseEvery) / gcd(missileEvery, pulseEvery);
@@ -361,7 +362,7 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
     // the base weapon is what an empty list resolves to.
     const base = weaponFor(SHIPS.proof, []);
     // 0093: the base cadence is rung 0 of the ship's own ladder rather than a field beside it.
-    expect(base.fireEvery).toBe(fireEveryAt(SHIPS.proof, 0));
+    expect(base.fireEvery).toBe(fireEveryOn(FIXTURE_GRID, 0));
     expect(base.shots).toBe(SHIPS.proof.barrels[0]);
   });
 });

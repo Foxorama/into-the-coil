@@ -39,7 +39,7 @@
  * guards would then be checking one of them. Density is authored; toughness is a tier.
  */
 
-import { onFireGrid } from './music.ts';
+import { type GridRow, onGrid } from './grid.ts';
 
 /**
  * Every tier, **easiest first**.
@@ -347,6 +347,12 @@ export function toughnessFor(base: number, tier: DifficultyRow): number {
  * `tests/level.test.ts` holds *never slower than the phase before, and the last strictly faster than
  * the first* rather than strict monotonicity at every rung of every tier.
  */
-export function fireGapFor(base: number, tier: DifficultyRow): number {
-  return onFireGrid(base * tier.fireGap);
+/*
+  ⚠️ **`grid` IS AN ARGUMENT AND IT IS THE LEVEL'S** — 0113. The snap unit was
+  `music.ts`'s module-constant `FIRE_GRID`; it is now `beatSteps / gridDiv`, so a level at 200 BPM
+  snaps its enemies to a different sixteenth from one at 90. The multiplication by `tier.fireGap` is
+  unchanged and is still the only multiplier in the game.
+*/
+export function fireGapFor(base: number, tier: DifficultyRow, grid: GridRow): number {
+  return onGrid(grid, base * tier.fireGap);
 }

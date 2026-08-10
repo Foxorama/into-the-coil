@@ -30,11 +30,16 @@ import type { Body } from '../sim/entity.ts';
   depends on the beat and not the other way round, so the music can be rewritten without touching a
   balance number and the tempo cannot be changed without the ladder being re-checked against it.
 
-  ⚠️ **It is a CONSTANT and not the music reaching into the sim.** A player with the sound off flies
-  exactly the same game — `docs/decisions/0024-the-accessibility-floor-is-settings.md` — because what
-  crosses here is an integer, not a setting and not a signal.
+  ⚠️ **It is DATA and not the music reaching into the sim.** A player with the sound off flies exactly
+  the same game — `docs/decisions/0024-the-accessibility-floor-is-settings.md` — because what crosses
+  here is a table of integers, not a setting and not a signal.
+
+  ⚠️ **AND IT IS NO LONGER `music.ts`** — 0113. The beat used to be a constant in the file that also
+  holds the score, so *the tempo* and *the tune* were one import; `src/content/grid.ts` is the beat
+  alone, which is what lets a level change its music without changing its gun and lets it change both
+  when it means to.
 */
-import { STEPS_PER_BEAT } from './music.ts';
+import { type GridRow, fireEveryOn, missileEveryOn } from './grid.ts';
 import type { ShipRow } from './ships.ts';
 import { SHOTS } from './shots.ts';
 import type { SpecialKind } from './specials.ts';
@@ -313,44 +318,19 @@ export function tiersOf(upgrades: readonly UpgradeKind[], kind: UpgradeKind): nu
   is the same argument one layer up.
 */
 
-/**
- * Steps between volleys, for a ladder of note values read at `tier`.
- *
- * ⚠️ **THE single description of *what cadence is this rung*, and it is asked for two weapons.**
- * `docs/decisions/0093-the-gun-is-on-the-grid.md` makes the 5:1 cross-rhythm a stated ratio rather
- * than a coincidence between two ladders, and that is only true if both are read the same way.
- *
- * ⚠️ **The LADDER is the argument now and it used to be `ship.firePerBeat` written inside.** The
- * missiles read the pulse's list until 2026-08-10 — see `missilePerBeat` on `ShipRow` for the bug
- * that came out of it — and the fix is two lists rather than two functions, because *a rung is a
- * subdivision of a beat* is the part that must not be written twice.
- *
- * ⚠️ **Clamped on the list rather than trusted.** `tiersOf` already clamps, so a tier past the end can
- * only arrive if the two ever disagree — and the failure it prevents is an `undefined` reaching a
- * division, which is a `NaN` cadence and a gun that never fires again rather than an error anybody
- * would see.
- */
-function everyAt(perBeat: readonly number[], tier: number): number {
-  const rung = tier < 0 ? 0 : tier > perBeat.length - 1 ? perBeat.length - 1 : tier;
-  return STEPS_PER_BEAT / perBeat[rung]!;
-}
+/*
+  ── THE CADENCE LADDER LEFT THIS FILE, AND `ShipRow`, AND IT IS NOW THE GRID'S ───────────────────
 
-/** Steps between PULSE volleys for a ship at weapon tier `tier`. */
-export function fireEveryAt(ship: ShipRow, tier: number): number {
-  return everyAt(ship.firePerBeat, tier);
-}
+  ⚠️ **`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`.** `everyAt`, `fireEveryAt`
+  and `missileEveryAt` lived here and read `ship.firePerBeat` against a module-constant
+  `STEPS_PER_BEAT`. Both halves of that are now the LEVEL's: `src/content/grid.ts` carries the beat
+  and both ladders together, because every rung has to divide the beat exactly and two files cannot
+  hold one arithmetic between them.
 
-/**
- * Steps between the note values the MISSILE cadence is built from, at missile tier `tier`.
- *
- * ⚠️ **Not the missile's cadence — the thing `MISSILE_BEAT_RATIO` multiplies.** The missile fires
- * every five of these, which is what makes it a counter-beat rather than a slower copy of the gun
- * (`docs/decisions/0093-the-gun-is-on-the-grid.md`), and keeping the ratio outside this is what keeps
- * *slower than the pulse* true at every rung by construction rather than by tuning.
- */
-export function missileEveryAt(ship: ShipRow, tier: number): number {
-  return everyAt(ship.missilePerBeat, tier);
-}
+  ⚠️ **The arithmetic is unchanged and `tests/grid.test.ts` says so against the `steady` row**, which
+  reproduces 0093's numbers rung for rung — 8, 8, 6, 6, 4 and 8, 8, 8, 6, 4. A refactor that retuned
+  the gun while introducing the ability to retune the gun would make the next play-test unreadable.
+*/
 
 /**
  * How many pulse-gaps there are to a missile. The counter-beat, written down.
@@ -640,7 +620,14 @@ export const PLAYER_SHOT_LIFE = 80;
  * from a saved run, and so a death clearing the list restores the base weapon with no second
  * description of what the base weapon was.
  */
-export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weapon {
+/*
+  ⚠️ **`grid` IS AN ARGUMENT AND IT IS THE LEVEL'S** —
+  `docs/decisions/0113-there-is-one-composition-and-seven-levels.md`. A cadence is a subdivision of a
+  beat and the beat is now a property of the place, so the same ship resolves to a different weapon in
+  a different level. `src/app/mount.ts` re-resolves on a change of EITHER, which is the half a
+  refactor forgets: the upgrade list can be identical across a level boundary and the gun still moves.
+*/
+export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[], grid: GridRow): Weapon {
   /*
     ── TWO LADDERS, EACH A PURE FUNCTION OF ITS OWN TIER — AND IT WAS A LOOP ──────────────────────
 
@@ -719,7 +706,7 @@ export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weap
     the grid fails rather than quietly going out of time — which is exactly how the old one was wrong
     and nothing could see it.
   */
-  const fireEvery = fireEveryAt(ship, gun);
+  const fireEvery = fireEveryOn(grid, gun);
   /*
     ⚠️ **DERIVED FROM THE PULSE, WHICH MAKES THE 5:1 CROSS-RHYTHM DELIBERATE.** It was an accident and
     the play-test heard it: *"the missile fire provided a great counter-beat."* Five against a beat
@@ -727,7 +714,7 @@ export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weap
     5.20 and 5.00 across the old tiers purely because two independent interpolations happened to start
     five apart. Written down, it cannot drift.
   */
-  const missileEvery = MISSILE_BEAT_RATIO * missileEveryAt(ship, tubes);
+  const missileEvery = MISSILE_BEAT_RATIO * missileEveryOn(grid, tubes);
 
   const damage = SHOTS[ship.shot].damage;
   const missileDamage = SHOTS[ship.missile].damage;

@@ -1,4 +1,6 @@
 import { BANDS, bandEnergy, spectrum } from './spectrum.ts';
+import { fireEveryOn } from '../src/content/grid.ts';
+import { FIXTURE_GRID } from './world.ts';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -67,7 +69,7 @@ describe('four loops that cannot drift', () => {
     */
     for (const rate of RATES) {
       for (const layer of MUSIC_LAYERS) {
-        const exact = secondsOfLayer(layer) * rate;
+        const exact = secondsOfLayer(layer, FIXTURE_GRID) * rate;
         expect(exact, `${layer} at ${rate}Hz is ${exact} samples, which rounds and therefore drifts`).toBe(
           Math.round(exact),
         );
@@ -99,7 +101,7 @@ describe('four loops that cannot drift', () => {
     }
     // And the phrase is the longest, because that is the only instant every layer is at zero together.
     expect(PHRASE_SECONDS, 'the phrase is not the longest layer, so a correction lands mid-pattern').toBe(
-      Math.max(...MUSIC_LAYERS.map((l) => secondsOfLayer(l))),
+      Math.max(...MUSIC_LAYERS.map((l) => secondsOfLayer(l, FIXTURE_GRID))),
     );
   });
 
@@ -107,7 +109,7 @@ describe('four loops that cannot drift', () => {
     const loops = bakeLoops(SAMPLE_RATE);
     for (const layer of MUSIC_LAYERS) {
       expect(loops[layer].length, `${layer} is a different length from the loop it declares`).toBe(
-        Math.round(secondsOfLayer(layer) * SAMPLE_RATE),
+        Math.round(secondsOfLayer(layer, FIXTURE_GRID) * SAMPLE_RATE),
       );
     }
   });
@@ -676,7 +678,7 @@ describe('0095 — the level has a piece of its own, and it covers the band', ()
     const bedRms = Math.sqrt(bedSq / bed.length);
 
     // The gun at its fastest rung, laid down over the same stretch at the cadence the ladder reaches.
-    const fastest = Math.min(...SHIPS.proof.firePerBeat.map((_unused, tier) => fireEveryAt(SHIPS.proof, tier)));
+    const fastest = Math.min(...FIXTURE_GRID.firePerBeat.map((_unused, tier) => fireEveryOn(FIXTURE_GRID, tier)));
     const shot = sampleCue(CUES.pulse, SAMPLE_RATE, makeRng('cues').stream('pulse'));
     const gun = new Float32Array(bed.length);
     const perStep = SAMPLE_RATE / STEPS_PER_SECOND;
@@ -1189,9 +1191,9 @@ describe('the patterns are playable', () => {
         const spans = voice.steps.length * (BEAT_SECONDS / voice.perBeat);
         expect(
           spans,
-          `${layer} voice ${i} spans ${spans.toFixed(2)}s inside a ${secondsOfLayer(layer)}s layer — ` +
-            (spans > secondsOfLayer(layer) ? 'its tail is silently dropped' : 'the rest of the layer is silence'),
-        ).toBeCloseTo(secondsOfLayer(layer), 6);
+          `${layer} voice ${i} spans ${spans.toFixed(2)}s inside a ${secondsOfLayer(layer, FIXTURE_GRID)}s layer — ` +
+            (spans > secondsOfLayer(layer, FIXTURE_GRID) ? 'its tail is silently dropped' : 'the rest of the layer is silence'),
+        ).toBeCloseTo(secondsOfLayer(layer, FIXTURE_GRID), 6);
       }
     }
   });

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { fireEveryOn } from '../src/content/grid.ts';
 import { ACROSS_SPAN, MAX_ASPECT, viewOf } from '../src/sim/camera.ts';
 import { reset } from '../src/sim/entity.ts';
 import { GameFrame, type World } from '../src/app/frame.ts';
@@ -17,7 +18,7 @@ import {
   weaponFor,
   type UpgradeKind,
 } from '../src/content/pickups.ts';
-import { playableWorld, NO_LEVEL } from './world.ts';
+import { playableWorld, NO_LEVEL, FIXTURE_GRID } from './world.ts';
 
 /**
  * THE SECOND AUTO-WEAPON.
@@ -489,7 +490,7 @@ describe('the upgrades reach the weapon rather than the wrong one', () => {
     const base = weaponFor(SHIPS.proof, []);
     expect(base.launchers, 'the base ship still carries a launcher of its own').toBe(0);
     // 0093: the missile's cadence is derived from the pulse's, so the base is the ratio at tier 0.
-    expect(base.missileEvery).toBe(MISSILE_BEAT_RATIO * fireEveryAt(SHIPS.proof, 0));
+    expect(base.missileEvery).toBe(MISSILE_BEAT_RATIO * fireEveryOn(FIXTURE_GRID, 0));
     expect(base.missileDamage).toBe(SHOTS[SHIPS.proof.missile].damage);
   });
 

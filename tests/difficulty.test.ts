@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { nextSlot } from '../src/content/grid.ts';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
@@ -22,7 +23,7 @@ import { livesFor } from '../src/state/slices/run.ts';
 import { GameFrame } from '../src/app/frame.ts';
 import type { LevelRow } from '../src/content/levels.ts';
 import { SHOTS } from '../src/content/shots.ts';
-import { playableWorld } from './world.ts';
+import { playableWorld, FIXTURE_GRID } from './world.ts';
 
 /**
  * DIFFICULTY IS A TIER, AND THE EASY ONE IS THE CONTENT.
@@ -108,7 +109,7 @@ describe('0096 — everything that shoots at the player plays along', () => {
     */
     for (const gap of [FIRE_GRID, 48, 66, 78]) {
       for (let steps = 0; steps < STEPS_PER_BEAT * 4; steps++) {
-        const fires = steps + nextOnGrid(steps, gap);
+        const fires = steps + nextSlot(FIXTURE_GRID, steps, gap);
         expect(fires % FIRE_GRID, `a body spawned at step ${steps} with a gap of ${gap} fires at ${fires}`).toBe(0);
       }
     }
@@ -129,7 +130,7 @@ describe('0096 — everything that shoots at the player plays along', () => {
     */
     for (const gap of [FIRE_GRID, 48, 66, 78]) {
       for (let steps = 0; steps < STEPS_PER_BEAT * 4; steps++) {
-        const wait = nextOnGrid(steps, gap);
+        const wait = nextSlot(FIXTURE_GRID, steps, gap);
         expect(wait, `a body with a gap of ${gap} waits ${wait} steps at spawn, which is longer`).toBeLessThanOrEqual(
           gap,
         );
@@ -153,10 +154,10 @@ describe('0096 — everything that shoots at the player plays along', () => {
     */
     for (const gap of [FIRE_GRID, 48, 66, 78]) {
       for (let steps = 0; steps < STEPS_PER_BEAT * 4; steps += 5) {
-        const zero = nextOnGrid(steps, gap);
+        const zero = nextSlot(FIXTURE_GRID, steps, gap);
         for (let count = 1; count <= 8; count++) {
           for (let i = 0; i < count; i++) {
-            const wait = nextOnGrid(steps, gap, i / count);
+            const wait = nextSlot(FIXTURE_GRID, steps, gap, i / count);
             expect(
               wait,
               `a body at share ${i}/${count} with a gap of ${gap} opens fire ${zero - wait} steps SOONER than it used to`,
@@ -190,7 +191,7 @@ describe('0096 — everything that shoots at the player plays along', () => {
       const slots = gap / FIRE_GRID;
       for (const count of [2, 3, 4, 5]) {
         const phases = new Set<number>();
-        for (let i = 0; i < count; i++) phases.add(nextOnGrid(100, gap, i / count) % gap);
+        for (let i = 0; i < count; i++) phases.add(nextSlot(FIXTURE_GRID, 100, gap, i / count) % gap);
         expect(
           phases.size,
           `a wave of ${count} with a gap of ${gap} (${slots} slots) opens fire at ${phases.size} distinct phases`,
@@ -254,7 +255,7 @@ describe('the easiest tier is the content, exactly as authored', () => {
       const row = ENEMIES[kind];
       expect(toughnessFor(row.health, easiest), `${kind} is not its own health on the easiest tier`).toBe(row.health);
       if (row.fireEvery > 0) {
-        expect(fireGapFor(row.fireEvery, easiest), `${kind} does not fire at its own rate`).toBe(row.fireEvery);
+        expect(fireGapFor(row.fireEvery, easiest, FIXTURE_GRID), `${kind} does not fire at its own rate`).toBe(row.fireEvery);
       }
     }
   });
