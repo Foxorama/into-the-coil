@@ -145,8 +145,36 @@ export const AURA_LAYERS: readonly MusicLayer[] = ['auraSlow', 'auraFast'];
  * makes at the other end, and `tests/music.test.ts` now drives it off `BOSSES` rather than trusting
  * the number.
  */
+/*
+  ── AND IT MOVED AGAIN, BECAUSE THE BOSSES DID ───────────────────────────────────────────────────
+
+  ⚠️ **`docs/decisions/0101-the-sky-is-a-hurry-and-the-boss-holds-back.md`.** 0101 pushed every boss
+  station about twenty units forward, so the furthest a player can be from one grew from 123.5 to
+  **130.8** — and `tests/music.test.ts` drives this off `BOSSES` rather than trusting the number, so
+  it went red the moment the stations moved. **That is the guard 0092 wrote working exactly as
+  intended**: it said in as many words that its two assertions *cannot be satisfied by moving
+  `AURA_FAR_UNITS` to meet them*, and the one that caught this is the other one.
+
+  ⚠️ **AND IT GOES PAST THE WIDEST GAP RATHER THAN TO IT, WHICH IS A CHANGE OF MEANING.** 132 covers
+  130.8 and satisfies 0092's rule as written — and it is not enough, because the two guards 0092 left
+  behind became **mutually unsatisfiable** at that span. Driven out:
+
+  | | at half the range | at the back of the box | bound |
+  |---|---|---|---|
+  | `FAR` 132, any exponent | 0.33–0.39 | **0.049–0.078** | must be over 0.1 |
+  | `FAR` 145, exponent 1.5 | 0.354 | **0.120** | ✓ both |
+
+  The midpoint bound needs an exponent above 1.32 and the back-of-the-box bound needed one below
+  1.22, at a span of 106. There is no such number: the span itself had to grow.
+
+  ⚠️ **So *silent* is now somewhere the player cannot reach, and that is 0092's own fix taken one
+  step further.** 0092 raised this because the top fifth of the reachable span was silent and *"a
+  boundary the player cannot feel"* is not a boundary. At 145 the aura is at **0.041** of its ceiling
+  at the furthest the player can get — present, nearly gone, and never actually off. A boss you can
+  still just hear from the very back of your own box is the thing the report asked for.
+*/
 export const AURA_NEAR_UNITS = 26;
-export const AURA_FAR_UNITS = 124;
+export const AURA_FAR_UNITS = 145;
 
 /**
  * The exponent the aura's ramp is raised to. Above 1 the movement crowds towards the near end.
@@ -169,7 +197,26 @@ export const AURA_FAR_UNITS = 124;
  * ⚠️ **A CONSTANT RATHER THAN A MULTIPLY, because the multiply could not be tuned.** `clamped *
  * clamped` has no number in it to move, so the only edits available were *square it* and *do not*.
  */
-export const AURA_CURVE = 1.6;
+/*
+  ── 1.6 → 1.5, AND IT IS THE SAME REPORT AS 0092's ARRIVING THROUGH THE BOSSES ──────────────────
+
+  ⚠️ **`docs/decisions/0101-the-sky-is-a-hurry-and-the-boss-holds-back.md`.** Moving the bosses
+  forward did not only widen the range — it moved **the player's defensive position further from the
+  boss**, which is precisely the position 0092's second guard is written from. At the back of the box
+  against level one's boss the gap went from 96 units to 114, and 1.6 over the new span put the aura
+  there at **0.049** of its ceiling: quiet enough to be the defect 0092 is named for, arriving again
+  from a change that has nothing to do with sound.
+
+  ⚠️ **The exponent is what decides how much of the reachable span is audible**, and the span grew.
+  1.5 over the widened range puts the back of the box at 0.120 — over the tenth `tests/music.test.ts` holds — while the near
+  half of the range still carries more of the build than the far half, which is 0091's shape and the
+  property that guard is written in.
+
+  ⚠️ **This is the second time this constant has been moved by a decision about something else**, and
+  it is the reason it is a constant at all: 0092 made it one precisely because `clamped * clamped` had
+  no number in it to move.
+*/
+export const AURA_CURVE = 1.5;
 
 /**
  * How loud the music gets, as a fraction of the mix.

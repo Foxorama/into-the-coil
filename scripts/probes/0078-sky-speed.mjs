@@ -18,7 +18,7 @@ export const PROBES = [
     guard: 'moves both layers twice as fast as they shipped, which is what was asked for',
     edit: {
       path: 'src/app/mount.ts',
-      find: '{ sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.6 },',
+      find: '{ sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.825 },',
       replace: '{ sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.3 },',
     },
   },
@@ -34,7 +34,7 @@ export const PROBES = [
     guard: 'scales BOTH by the same factor, so the depth cue is not what paid for the speed',
     edit: {
       path: 'src/app/mount.ts',
-      find: '{ sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.24 },',
+      find: '{ sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.33 },',
       replace: '{ sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.16 },',
     },
   },
@@ -51,7 +51,7 @@ export const PROBES = [
     guard: 'is still behind the game, which is the ceiling 0065 set',
     edit: {
       path: 'src/app/mount.ts',
-      find: '{ sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.6 },',
+      find: '{ sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.825 },',
       replace: '{ sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 1.2 },',
     },
   },

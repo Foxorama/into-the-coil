@@ -56,6 +56,28 @@ export interface BossRow extends Body {
    * `docs/decisions/0034-a-threat-is-absolute-and-a-pool-is-the-pairing.md`. A boss parked in world
    * coordinates would slide off the back of the screen at the scroll rate, which is precisely the
    * bug that made every off-lane enemy shot miss.
+   *
+   * ── EVERY ONE OF THESE MOVED FORWARD, AND THE NUMBER THEY WERE SIZED AGAINST IS WHY ─────────────
+   *
+   * ⚠️ **`docs/decisions/0101-the-sky-is-a-hurry-and-the-boss-holds-back.md`.** Reported from play:
+   * *"the bosses come too far into the screen, they come into 50% and then basically float at that
+   * level and it doesn't give the player enough space to respond."*
+   *
+   * ⚠️ **Every station here was chosen against a narrowest view of 150 units, and
+   * `docs/decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md` made it 177.8.** Not one of
+   * them moved. So a number that used to mean *as far forward as the hull can go* came to mean *the
+   * middle of the screen* — and `tests/level.test.ts` said so in as many words, *"every boss has 28
+   * more units of room it did not have"*, for two months without anybody spending it.
+   *
+   * ⚠️ **What the player is judging is the NEAR end of the swing, not the station.** A boss's closest
+   * approach is `station − drift − radius`, and five of the seven were inside half the screen — the
+   * axis reached **37%**. The report's *"50%"* is the measurement, and the guard that now exists is a
+   * floor on that quantity rather than on this one.
+   *
+   * ⚠️ **The seven have converged to a narrow band and that is the screen rather than a preference.**
+   * With a floor at 55% and the leading edge still on the narrowest screen, the room a station may
+   * live in is about fifteen units wide. What makes a boss unique is its drift, its wavelength, its
+   * patrol, its hull, its phases and — since 0098 — its bullet. It was never this number.
    */
   station: number;
   /**
@@ -122,7 +144,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     damage: 3,
     // Far enough forward that the whole hull is on screen on the narrowest view the clamp allows,
     // and far enough back that the player is not fighting it at the very edge of their reach.
-    station: 120,
+    station: 138,
     /*
       ⚠️ **14, which is the most the narrowest view leaves room for.** `120 + 14 + 11` is 145 against
       a 150-unit view — the whole hull stays on screen on a 3:2 laptop at the forward end of every
@@ -176,7 +198,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     damage: 3,
     // Closer than the sentinel's 120, which is most of what makes it feel like a different fight:
     // the player has less room in front of them and less warning on everything it throws.
-    station: 100,
+    station: 136,
     /*
       Wider than the sentinel's and it still clears the narrowest view by a comfortable margin —
       `100 + 20 + 12.5` is 132.5 against 150 — because standing closer buys the room the sentinel
@@ -225,7 +247,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       station is not a number anybody gets to pick by feel.
       `docs/decisions/0061-a-boss-keeps-flying.md` holds that assertion.
     */
-    station: 122,
+    station: 140,
     drift: 15,
     driftWavelength: 260,
     patrol: 0.5,
@@ -250,7 +272,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     radius: 13,
     health: 280,
     damage: 3,
-    station: 110,
+    station: 136,
     drift: 18,
     driftWavelength: 120,
     patrol: 0.62,
@@ -275,7 +297,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     radius: 14,
     health: 340,
     damage: 3,
-    station: 105,
+    station: 142,
     drift: 8,
     driftWavelength: 300,
     patrol: 0.16,
@@ -300,7 +322,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     radius: 12.5,
     health: 320,
     damage: 3,
-    station: 115,
+    station: 138,
     drift: 15,
     driftWavelength: 180,
     patrol: 0.45,
@@ -330,7 +352,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     damage: 3,
     // The closest station in the game. `95 + 14 + 16` is 125 against 150 — the hull fills a fifth of
     // the narrowest view, which is what a last boss should cost the player in room.
-    station: 95,
+    station: 134,
     drift: 14,
     driftWavelength: 200,
     patrol: 0.4,

@@ -607,6 +607,40 @@ describe('a boss fight can reach all of its phases', () => {
       }
     });
 
+    it('0101 — and it leaves the player more than half the screen, at the NEAR end of the swing', () => {
+      /*
+        `docs/decisions/0101-the-sky-is-a-hurry-and-the-boss-holds-back.md`. Reported from play: *"the
+        bosses come too far into the screen, they come into 50% and then basically float at that level
+        and it doesn't give the player enough space to respond."*
+
+        ⚠️ **THE FLOOR THIS FILE HAS NEVER HAD, and the ceiling above is why it was missed.** The
+        assertion before this one holds the FORWARD end of the swing on the narrowest screen, and its
+        own comment has been saying *"every boss has 28 more units of room it did not have"* since
+        0080 widened the view from 150 to 177.8. Nothing held the near end at all except *do not land
+        on the ship's start* — so every boss was free to drift back into the player's half, and five
+        of the seven did. The axis reached **37% of the screen**.
+
+        ⚠️ **Measured at `station − drift − radius`, which is the closest the hull's trailing edge ever
+        comes**, and expressed as a share of the narrowest view — which is the unit the report used.
+        A station on its own says nothing: a boss with a small drift can sit further forward and still
+        crowd less than one with a large drift sitting further back.
+
+        ⚠️ **55% and not 50%.** The report names the number it observed rather than the number it
+        wants, and a floor exactly at the complaint is a floor that permits the complaint. The seven
+        now sit between 58% and 67%.
+      */
+      const narrow = ACROSS_SPAN * MIN_ASPECT;
+      for (const kind of BOSS_KINDS) {
+        const row = BOSSES[kind];
+        const nearest = row.station - row.drift - row.radius;
+        expect(
+          nearest / narrow,
+          `${kind} comes within ${((nearest / narrow) * 100).toFixed(0)}% of the narrowest screen, which is the ` +
+            'half the player is flying in',
+        ).toBeGreaterThan(0.55);
+      }
+    });
+
     it('never leaves the lane, however long it patrols', () => {
       // There is no `across` cull, so a boss that turned late is a boss that is gone.
       const { world } = playableWorld(soloBoss);

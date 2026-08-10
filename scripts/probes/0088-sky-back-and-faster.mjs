@@ -34,7 +34,7 @@ export const PROBES = [
     guard: 'scales BOTH by the same factor, so the depth cue is not what paid for the speed',
     edit: {
       path: 'src/app/mount.ts',
-      find: '{ sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.6 },',
+      find: '{ sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.825 },',
       replace: '{ sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.4 },',
     },
   },

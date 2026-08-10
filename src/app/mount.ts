@@ -196,11 +196,34 @@ export const CAPACITY = {
  * 16:9 view in under six seconds where the far layer takes twenty, and it is drawn as STREAKS —
  * `src/render/bake.ts` has why a line and not a dot is what breaks the trade every previous pass ran
  * into. 0065's *strictly below 1* is untouched and is still the ceiling.
+ *
+ * ── AND THE FOURTH REPORT MOVES ALL THREE, WHICH THE THIRD DELIBERATELY DID NOT ────────────────
+ *
+ * ⚠️ **`docs/decisions/0101-the-sky-is-a-hurry-and-the-boss-holds-back.md`.** Reported against the
+ * build 0097 landed in: *"the sky moves a bit faster, but it still needs to move much more faster."*
+ *
+ * ⚠️ **0097 answered a report about the fast layer being INVISIBLE and left the two dot layers
+ * alone, correctly.** This report is about the ones it left: with the near layer visible again, the
+ * dots are most of what the player is watching, and they were still at the rates 0088 set.
+ *
+ * ⚠️ **× 11/8 on both, so 0078's ratio survives a fourth time.** 0.24 and 0.6 become **0.33** and
+ * **0.825**, which is the same 2.5 between them the sky has had since 0065. The streak layer goes to
+ * **0.92**, and 0065's *strictly below 1* is still the only absolute.
+ *
+ * ⚠️ **A DOT LAYER MAY NOW PASS TWO THIRDS, WHICH 0097 FORBADE, AND THE CEILING IS RE-DERIVED RATHER
+ * THAN RELAXED.** 0097 bought its speed by saying *only a streak may go that fast*; the honest rule
+ * underneath it was never about SHAPE, it is about how much of a bullet a mark looks like — a dot the
+ * size of a bullet at speed is 0069's subject, and a dot a third of that size is not.
+ * `tests/budget.test.ts` holds it as an arithmetic ceiling per layer instead of as an exception list.
+ *
+ * ⚠️ **In the units a hand can judge**, on the narrowest view: a far star now crosses in **15
+ * seconds** where it took twenty-one, a near one in **6** where it took eight, and a streak in
+ * **5.4** — while being nearly twice as long.
  */
 export const SKY = [
-  { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.24 },
-  { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.6 },
-  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 0.85 },
+  { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.33 },
+  { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.825 },
+  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 0.92 },
 ];
 
 /**

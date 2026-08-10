@@ -257,7 +257,7 @@ export const PROBES = [
     guard: 'every probe in the repository can still be applied to the tree as it stands',
     edit: {
       path: 'scripts/probes/0078-sky-speed.mjs',
-      find: "find: '{ sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.24 },'",
+      find: "find: '{ sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.33 },'",
       replace: "find: '{ sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.99 },'",
     },
   },

@@ -101,6 +101,7 @@ it is pushed — guards stop reaching their subject without ever going red, and 
 | **a wave plays a FIGURE — each member on its own slot — and there are three enemy bullets** | [0098](decisions/0098-a-wave-plays-a-figure.md) |
 | **every pitched cue glides between two notes of the key, and the key lives in `cues.ts`** | [0099](decisions/0099-the-cues-are-in-the-key.md) |
 | **an authored place is a LEVEL coordinate and every spawner adds the origin; a scatter stays in the box** | [0100](decisions/0100-a-level-places-its-pickups-too.md) |
+| **a mark's depth ceiling is how much of a bullet it looks like; a boss leaves the player half the screen** | [0101](decisions/0101-the-sky-is-a-hurry-and-the-boss-holds-back.md) |
 | ~~the near sky is pushed back on every cheap axis~~ — **amended: it went out** | [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) → [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the sky is three layers, the fastest is streaks, and a tube is a side of the hull** | [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
@@ -247,8 +248,7 @@ than about where the content is put.
 | item | state |
 |---|---|
 | **no power-ups after level one; a scatter the player cannot reach** | ✅ [0100](decisions/0100-a-level-places-its-pickups-too.md) |
-| the sky is faster and still not fast enough | |
-| the bosses hold half the screen | |
+| **the sky is faster and still not fast enough; the bosses hold half the screen** | ✅ [0101](decisions/0101-the-sky-is-a-hurry-and-the-boss-holds-back.md) |
 | the music is still flat — no depth, no pace, no tempo | |
 | the player's guns and rockets are too thin | |
 
