@@ -67,7 +67,7 @@ import { nextOnGrid } from '../content/music.ts';
 import { PICKUP_KINDS, type PickupKind, type PickupRow, type UpgradeKind, type Weapon } from '../content/pickups.ts';
 import { SPECIALS, pyreFor, type SpecialKind } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
-import { stepBoss } from './boss.ts';
+import { phaseFor, stepBoss } from './boss.ts';
 import type { Frame } from './loop.ts';
 
 /** How far in front of the ship a shot appears, in world units — clear of its own hurtbox. */
@@ -886,6 +886,27 @@ export interface World {
   deathAcross: number;
   /** Which way the boss is currently sliding across the lane: −1 or 1. */
   bossPatrol: number;
+  /**
+   * Which phase the boss was in at the end of the previous step. `-1` while there is no boss.
+   *
+   * ── A PHASE CHANGE IS AN EVENT AND THE MODEL STORED NO SUCH THING ──────────────────────────────
+   *
+   * ⚠️ **`docs/decisions/0111-a-boss-has-one-idea.md`.** A phase is DERIVED from health — `phaseFor`
+   * — which is exactly right for deciding what the boss does and leaves no moment at which it
+   * *changed*. Asked for in play: *"they need to have chunks and pieces fly off when they change
+   * states"*, and that is an event, so something has to remember.
+   *
+   * ⚠️ **ACROSS STEPS AND NOT WITHIN ONE, WHICH THE FIRST DRAFT GOT WRONG AND A GUARD CAUGHT.** It
+   * read the phase either side of `stepBoss` — and health does not change there: collisions are
+   * resolved later in the step, so the two reads were identical by construction and the burst could
+   * never fire. `tests/level.test.ts` drives a damaged boss through the real frame rather than
+   * asking `phaseFor`, which is the only reason it was noticed.
+   *
+   * ⚠️ **An INDEX rather than the row**, so that a world is plain data — `docs/decisions/0017-the-state-is-slices.md`
+   * bans a `Map` or a `Symbol` where a save serialises or a seeded test compares, and a stored object
+   * reference is the same class of thing one step further on.
+   */
+  bossPhaseAt: number;
   /**
    * The boss died, so the level is over.
    *
@@ -2896,6 +2917,25 @@ export function detonateArsenal(w: World, charges: number): void {
 function driveBoss(w: World): void {
   if (w.bossPool.size === 0) return;
   const boss = w.bossPool.at(0);
+  /*
+    ── THE PHASE CHANGE, WHICH THE PICTURE HAS NEVER MENTIONED ───────────────────────────────────
+
+    ⚠️ **`docs/decisions/0111-a-boss-has-one-idea.md`, and it is
+    `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` unapplied on the
+    most-watched event in a level.** From this step the boss fires wider, faster and flies
+    differently; nothing on screen said so. Asked for in play: *"they need to have chunks and pieces
+    fly off when they change states."*
+
+    ⚠️ **Read BEFORE the step and compared after, which is the only place the transition exists.**
+    A phase is derived from health — `phaseFor` — so there is no moment the model stores; the
+    difference between two consecutive answers is the event. Comparing the objects is exact, because
+    `phaseFor` returns a row out of the table rather than building one.
+
+    ⚠️ **The health does not change inside `stepBoss`** — collisions are resolved later in the step —
+    so this pair straddles the step where the phase can actually turn over, which is the one after
+    the hit that crossed the threshold. That is a sixtieth of a second behind the flash and is what
+    0036 asks for: the same event in both channels, inside the same tenth of a second.
+  */
   w.bossPatrol = stepBoss(
     boss,
     w.bossRow,
@@ -2920,6 +2960,29 @@ function driveBoss(w: World): void {
   */
   w.bossOffset = boss.along - w.cameraAlong;
   w.bossAcross = boss.across;
+  /*
+    ⚠️ **The burst is thrown where the hull IS rather than at its centre of health**, so the pieces
+    come off the thing the player is looking at. `burst` is the same scatter an enemy death uses; what
+    makes this read as a different event is the count and the cue, not a second mechanism.
+
+    ⚠️ **`bossPhase` and not `kill`, and the cue is the half that carries the meaning.** A phase change
+    is the one event in a fight that is good news and bad news at once — the player did that, and it
+    is about to get harder — and `src/content/cues.ts` says which of the two it sounds like.
+  */
+  const phase = w.bossRow.phases.indexOf(phaseFor(w.bossRow, boss.health, w.bossFullHealth));
+  if (phase !== w.bossPhaseAt) {
+    /*
+      ⚠️ **Only ever forwards, and the guard is the comparison rather than a rule about health.** A
+      boss cannot heal, so a phase index that went down would be a bug somewhere else entirely — and
+      the burst firing on it would be the picture reporting that bug, which is the right behaviour for
+      an event twin.
+    */
+    if (w.bossPhaseAt >= 0) {
+      burst(w, boss.along, boss.across, BURST.phase);
+      w.onCue('bossPhase');
+    }
+    w.bossPhaseAt = phase;
+  }
 }
 
 /**
@@ -2940,6 +3003,7 @@ function spawnBoss(w: World): void {
   // On the grid from its first shot, like everything else that shoots — 0096.
   boss.fireIn = nextOnGrid(w.steps, fireGapFor(w.bossRow.phases[0]!.fireEvery, w.difficulty));
   w.bossPatrol = 1;
+  w.bossPhaseAt = -1;
 }
 
 /**
@@ -3192,6 +3256,7 @@ function beginScript(w: World): void {
   // report itself cleared a second and a half in, with its own boss still ahead of the player.
   w.clearedIn = 0;
   w.bossPatrol = 1;
+  w.bossPhaseAt = -1;
 }
 
 export function resetScene(w: World): void {

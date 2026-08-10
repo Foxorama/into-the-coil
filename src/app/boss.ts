@@ -149,15 +149,69 @@ export function stepBoss(
     scrollPerStep + (pull > APPROACH_PER_STEP ? APPROACH_PER_STEP : pull < -APPROACH_PER_STEP ? -APPROACH_PER_STEP : pull);
 
   /*
-    Patrol, and reverse at the lane edges.
+    ── HOW THE HULL FLIES, AND THERE USED TO BE ONE ANSWER ────────────────────────────────────────
 
-    ⚠️ The turn is on the HULL's edge rather than its centre, or half the boss leaves the lane — and
-    there is no `across` cull, so nothing would ever bring it back.
+    ⚠️ **`docs/decisions/0111-a-boss-has-one-idea.md`.** Reported from play: *"the rest of them either
+    had thick or thin bullets and that was the only difference."* Every branch below used to be the
+    first one, and `docs/state-of-play.md` had predicted the report in writing: *"one behaviour with
+    seven silhouettes on it."*
+
+    ⚠️ **Every arm is on `across` and none touches `along`**, which is what keeps 0061's and 0101's
+    six station assertions meaning what they say — `src/content/bosses.ts` has the argument.
+
+    ⚠️ **Nothing allocates**, and the `never` arm is what makes the union closed —
+    `docs/decisions/0016-a-hub-enumerates-kinds.md`.
   */
   let direction = patrolDirection;
-  if (boss.across - boss.radius <= 0) direction = 1;
-  else if (boss.across + boss.radius >= ACROSS_SPAN) direction = -1;
-  boss.velAcross = row.patrol * phase.patrolScale * direction;
+  const move = row.move;
+  switch (move.kind) {
+    case 'patrol': {
+      /*
+        Slide, and reverse at the lane edges.
+
+        ⚠️ The turn is on the HULL's edge rather than its centre, or half the boss leaves the lane —
+        and there is no `across` cull, so nothing would ever bring it back.
+      */
+      if (boss.across - boss.radius <= 0) direction = 1;
+      else if (boss.across + boss.radius >= ACROSS_SPAN) direction = -1;
+      boss.velAcross = row.patrol * phase.patrolScale * direction;
+      break;
+    }
+    case 'bob': {
+      /*
+        A sine across the lane, as a function of the CAMERA — the same argument the along-axis drift
+        above makes, for the same reason: a shape in the world can be authored against and a wobble in
+        time cannot.
+
+        ⚠️ **The VELOCITY is the derivative rather than the position being written**, because the
+        renderer interpolates between `prevAcross` and `across` (`src/sim/entity.ts`) and a position
+        assigned here would be a teleport every step at high `patrolScale`. `stepEntities` integrates,
+        so what this arm owes is a rate.
+
+        ⚠️ **The phase scales the RATE by dividing the wavelength**, so a later phase completes its
+        cycle sooner over the same span. Scaling the amplitude instead would push the hull off a lane
+        that is a fixed hundred units on every device (0023).
+      */
+      const wavelength = move.wavelength / phase.patrolScale;
+      const rate = (TAU * scrollPerStep) / wavelength;
+      boss.velAcross = move.amplitude * rate * Math.cos((cameraAlong * TAU) / wavelength);
+      break;
+    }
+    case 'stalk': {
+      /*
+        Track the ship's lane, capped at the phase's own rate. The boss half of 0073's `hunt`, and the
+        cap is what stops a fast phase snapping onto the player rather than closing on them.
+      */
+      const want = ship.across - boss.across;
+      const cap = row.patrol * phase.patrolScale * (move.agility / row.patrol);
+      boss.velAcross = want > cap ? cap : want < -cap ? -cap : want;
+      break;
+    }
+    default: {
+      const never: never = move;
+      return never;
+    }
+  }
 
   boss.fireIn--;
   if (boss.fireIn > 0) return direction;
@@ -170,27 +224,96 @@ export function stepBoss(
   // Inside the hull is contact damage's business, and `Math.atan2(0, 0)` is a direction nobody asked
   // for.
   if (dAlong === 0 && dAcross === 0) return direction;
-  const aim = Math.atan2(dAcross, dAlong);
+  const speed = bullet.speed * tier.shotSpeed;
 
   /*
-    The volley, spread evenly about the aim.
+    ── WHERE THE VOLLEY POINTS, AND IT USED TO POINT AT THE SHIP ─────────────────────────────────
 
-    A single shot takes the aim exactly; `spread` is the TOTAL angle across the fan, so the step
-    between neighbours is `spread / (shots - 1)` and the fan is centred by starting half a spread
-    back. Written this way so a phase can change the shot count without also having to restate what
-    the spread means.
+    ⚠️ **`docs/decisions/0111-a-boss-has-one-idea.md`.** The phase has said how many shots and how
+    wide since 0040 — *"a spray attack that increases number of bullets as health goes down"* is
+    `phase.shots`, and it was already there. **What was missing is that the fan was centred on the
+    ship**, and a spread centred on the player reads as one shot with error bars rather than as a wall
+    to move through. The phase still decides the count and the spread; the row decides where it aims.
+
+    ⚠️ **A single shot takes the centre exactly; `spread` is the TOTAL angle across the fan**, so the
+    step between neighbours is `spread / (shots - 1)` and the fan is centred by starting half a spread
+    back. Unchanged, and written this way so a phase can change the count without restating what the
+    spread means.
+
+    ⚠️ **`π` is straight back down the lane**, which is the direction the player is on — the same
+    centre `src/app/frame.ts`'s `spray` uses for an enemy, and it is stated in both places rather than
+    shared because the two files have no other reason to import from each other.
   */
+  const attack = row.attack;
   const step = phase.shots > 1 ? phase.spread / (phase.shots - 1) : 0;
-  const first = aim - (step * (phase.shots - 1)) / 2;
-  for (let i = 0; i < phase.shots; i++) {
-    const shot = shots.spawn();
-    // A volley that will not fit is dropped rather than grown, exactly as `src/sim/pool.ts` says.
-    if (shot === null) break;
-    const angle = first + step * i;
-    reset(shot, boss.along, boss.across, bullet);
-    const speed = bullet.speed * tier.shotSpeed;
-    shot.velAlong = Math.cos(angle) * speed + scrollPerStep;
-    shot.velAcross = Math.sin(angle) * speed;
+  switch (attack.kind) {
+    case 'aimed':
+    case 'spray':
+    case 'rake': {
+      let centre = Math.PI;
+      if (attack.kind === 'aimed') centre = Math.atan2(dAcross, dAlong);
+      else if (attack.kind === 'rake') {
+        // The turn rides `firePhase` — the field 0110 added for the spinner, and the one description
+        // of *where in its turn a body has got to*.
+        boss.firePhase += attack.turn;
+        centre = Math.PI + boss.firePhase;
+      }
+      const first = centre - (step * (phase.shots - 1)) / 2;
+      for (let i = 0; i < phase.shots; i++) {
+        const shot = shots.spawn();
+        // A volley that will not fit is dropped rather than grown, exactly as `src/sim/pool.ts` says.
+        if (shot === null) break;
+        const angle = first + step * i;
+        reset(shot, boss.along, boss.across, bullet);
+        shot.velAlong = Math.cos(angle) * speed + scrollPerStep;
+        shot.velAcross = Math.sin(angle) * speed;
+      }
+      break;
+    }
+    case 'ring': {
+      /*
+        The phase's shots, evenly round the whole circle. `spread` is ignored on purpose — a ring's
+        width is a full turn by definition, and a phase that widened it would be describing something
+        that has no width.
+      */
+      const around = TAU / phase.shots;
+      for (let i = 0; i < phase.shots; i++) {
+        const shot = shots.spawn();
+        if (shot === null) break;
+        const angle = around * i;
+        reset(shot, boss.along, boss.across, bullet);
+        shot.velAlong = Math.cos(angle) * speed + scrollPerStep;
+        shot.velAcross = Math.sin(angle) * speed;
+      }
+      break;
+    }
+    case 'wall': {
+      /*
+        A row of shots straight down the lane with **nothing in the middle**, so the safe place is
+        directly in front of the hull. The convention — `shots` is the number either side — is
+        `src/content/enemies.ts`'s and is stated there.
+
+        ⚠️ **A slot outside the lane is skipped rather than clamped**, exactly as the sower's is:
+        clamping would stack two bullets on the edge into one thicker one, which is a wall with a lie
+        in it.
+      */
+      for (let i = 1; i <= phase.shots; i++) {
+        for (let side = -1; side <= 1; side += 2) {
+          const across = boss.across + side * i * attack.gap;
+          if (across < 0 || across > ACROSS_SPAN) continue;
+          const shot = shots.spawn();
+          if (shot === null) break;
+          reset(shot, boss.along, across, bullet);
+          shot.velAlong = -speed + scrollPerStep;
+          shot.velAcross = 0;
+        }
+      }
+      break;
+    }
+    default: {
+      const never: never = attack;
+      return never;
+    }
   }
   return direction;
 }

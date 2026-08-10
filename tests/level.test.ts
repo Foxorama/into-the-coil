@@ -7,6 +7,7 @@ import { BURST } from '../src/content/debris.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { INVULN_STEPS } from '../src/content/ships.ts';
 import { phaseFor } from '../src/app/boss.ts';
+import { BOSS_ATTACK_KINDS, BOSS_MOVE_KINDS } from '../src/content/bosses.ts';
 import { GameFrame, SHIP_START_ALONG, advanceLevel, resetScene, respawn } from '../src/app/frame.ts';
 import { playableWorld } from './world.ts';
 import {
@@ -926,5 +927,186 @@ describe('a death costs the ship and not the level', () => {
     expect(reachable, 'the window does not cover the lane, so there is nowhere to escape to').toBeGreaterThan(
       ACROSS_SPAN,
     );
+  });
+});
+
+/**
+ * A world whose whole level is one boss, stepped by the real frame.
+ *
+ * ⚠️ **The ship cannot die and the boss cannot be killed by it**, because everything below is about
+ * how a boss FLIES and SHOOTS — a fight that ends is a fight that stopped measuring. The boss keeps
+ * its authored health so that `phaseFor` still answers, and only the fixture that is about a phase
+ * change moves it.
+ */
+function bossFight(kind: (typeof BOSS_KINDS)[number]): { world: ReturnType<typeof playableWorld>['world']; frame: GameFrame } {
+  const { world } = playableWorld({ waves: [], pickups: [], bossAt: 200, boss: kind, theme: 'approach' });
+  const frame = new GameFrame(world);
+  world.ship.health = 1e9;
+  /*
+    ⚠️ **Stepped until the boss is actually ON THE FIELD, and the first draft of this was not.** A
+    boss arrives when the horizon reaches its `at`, so `bossPool.size` is zero for the first second
+    of every fixture — and three guards written as `while the boss exists` ran zero iterations and
+    reported `Infinity`. It is the same shape `tests/spawns.test.ts` records for a loop that broke
+    out on step zero.
+  */
+  for (let i = 0; i < 60 * 20 && world.bossPool.size === 0; i++) frame.step();
+  return { world, frame };
+}
+
+describe('0111 — a boss has one idea, and the picture mentions its phases', () => {
+  /*
+    `docs/decisions/0111-a-boss-has-one-idea.md`. Reported from play: *"level 4 (or it might have been
+    5) was the only boss with a different attack. The rest of them either had thick or thin bullets
+    and that was the only difference."*
+
+    ⚠️ **`docs/state-of-play.md` PREDICTED THIS REPORT IN WRITING** — *"one behaviour with seven
+    silhouettes on it"* — and it was an accurate reading of `stepBoss`.
+  */
+
+  it('THE REPORTED ONE: no two bosses fly the same way AND shoot the same way', () => {
+    /*
+      ⚠️ **The pair, not either half, which is what makes seven fights seven fights.** Two bosses may
+      share a movement, and two may share an attack — what may not happen is two rows a player cannot
+      tell apart by what the fight ASKS of them. With three movements and five attacks there are
+      fifteen combinations for seven rows, so this is a real constraint rather than an arithmetic
+      certainty.
+
+      ⚠️ **It says nothing about the bullet, deliberately.** 0098 already holds that, and *"thick or
+      thin bullets was the only difference"* is the report that the bullet is not enough.
+    */
+    const ideas = BOSS_KINDS.map((kind) => `${BOSSES[kind].move.kind}/${BOSSES[kind].attack.kind}`);
+    expect(
+      new Set(ideas).size,
+      `two bosses fly and shoot identically (${ideas.join(', ')})`,
+    ).toBe(BOSS_KINDS.length);
+  });
+
+  it('and every arm of both unions is flown by somebody, so neither can fill up with the unused', () => {
+    // The same rule the motion and attack unions already carry in `src/content/enemies.ts`.
+    const moves = new Set(BOSS_KINDS.map((k) => BOSSES[k].move.kind));
+    expect(BOSS_MOVE_KINDS.filter((m) => !moves.has(m)), 'a boss movement exists and nothing flies it').toEqual([]);
+    const attacks = new Set(BOSS_KINDS.map((k) => BOSSES[k].attack.kind));
+    expect(BOSS_ATTACK_KINDS.filter((a) => !attacks.has(a)), 'a boss attack exists and nothing sends it').toEqual([]);
+  });
+
+  it('and a bob is up-and-down: the hull crosses the lane and comes back, in world units', () => {
+    /*
+      ⚠️ **THE THING THE REPORT ASKED FOR BY NAME**, driven through the real frame and measured in the
+      units it was asked for. A `bob` whose velocity was written as a position, or whose rate came out
+      as zero, would leave a boss sitting still — and every other guard about bosses is about where it
+      settles ALONG the lane, so none of them would notice.
+    */
+    for (const kind of BOSS_KINDS.filter((k) => BOSSES[k].move.kind === 'bob')) {
+      const { world, frame } = bossFight(kind);
+      let lowest = Number.POSITIVE_INFINITY;
+      let highest = Number.NEGATIVE_INFINITY;
+      for (let i = 0; i < 60 * 30 && world.bossPool.size > 0; i++) {
+        frame.step();
+        if (world.bossPool.size === 0) break;
+        const across = world.bossPool.at(0).across;
+        lowest = Math.min(lowest, across);
+        highest = Math.max(highest, across);
+      }
+      const swing = highest - lowest;
+      const move = BOSSES[kind].move;
+      const want = move.kind === 'bob' ? move.amplitude : 0;
+      /*
+        ⚠️ **Against the AMPLITUDE the row authored rather than a number typed here** — a full cycle is
+        `2 × amplitude` of travel, and half of that is a floor loose enough to survive a fight that
+        ends early and tight enough to refuse a hull that barely moves.
+      */
+      expect(swing, `${kind} swings ${swing.toFixed(1)} units across the lane in half a minute`).toBeGreaterThan(want);
+    }
+  });
+
+  it('and a stalker follows the player’s lane, which a patrol does not', () => {
+    /*
+      ⚠️ **Held as *does it end up where the player is*, driven with the ship parked somewhere the boss
+      did not start.** A stalk written as a patrol still moves, still reverses and still passes every
+      other assertion; what separates them is whether the hull cares where the ship is.
+    */
+    for (const kind of BOSS_KINDS.filter((k) => BOSSES[k].move.kind === 'stalk')) {
+      const { world, frame } = bossFight(kind);
+      const lane = 12;
+      let gap = Number.POSITIVE_INFINITY;
+      for (let i = 0; i < 60 * 30 && world.bossPool.size > 0; i++) {
+        world.ship.across = lane;
+        frame.step();
+        if (world.bossPool.size === 0) break;
+        gap = Math.min(gap, Math.abs(world.bossPool.at(0).across - lane));
+      }
+      expect(gap, `${kind} never got closer than ${gap.toFixed(1)} units to the lane the ship was sitting in`).toBeLessThan(
+        BOSSES[kind].radius,
+      );
+    }
+  });
+
+  it('and a pattern is the same pattern wherever the player is, exactly as an enemy’s is', () => {
+    /*
+      ⚠️ **THE SAME PROPERTY 0110 HOLDS FOR ENEMIES, ON THE HALF OF THE GAME IT COULD NOT REACH.** A
+      fan centred on the ship is *aimed* however wide it is and however many shots are in it, and
+      *"spray attack that increases number of bullets as health goes down"* is not answered by a
+      spread that follows the player. Two fights, two ship lanes, one set of headings.
+    */
+    for (const kind of BOSS_KINDS.filter((k) => BOSSES[k].attack.kind !== 'aimed')) {
+      const headings: string[][] = [];
+      for (const lane of [15, 85]) {
+        const { world, frame } = bossFight(kind);
+        const seen: string[] = [];
+        for (let i = 0; i < 60 * 40 && seen.length === 0; i++) {
+          world.ship.across = lane;
+          frame.step();
+          if (world.bossPool.size === 0) break;
+          for (let s = 0; s < world.enemyShots.size; s++) {
+            const shot = world.enemyShots.at(s);
+            seen.push(Math.atan2(shot.velAcross, shot.velAlong - world.scrollPerStep).toFixed(3));
+          }
+        }
+        expect(seen.length, `${kind} never fired, so this measured nothing`).toBeGreaterThan(0);
+        headings.push(seen.sort());
+      }
+      expect(
+        headings[0],
+        `${kind}'s volley changes shape depending on where the ship is, which makes it a spread rather than a pattern`,
+      ).toEqual(headings[1]);
+    }
+  });
+
+  it('THE OTHER REPORTED ONE: a phase change is an event the picture mentions', () => {
+    /*
+      ⚠️ **`docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` unapplied on the
+      most-watched event in a level, and asked for in play**: *"they need to have chunks and pieces fly
+      off when they change states."* From the step a phase turns over the boss fires wider, faster and
+      flies differently — and until 0111 nothing on screen or in the mix said so.
+
+      ⚠️ **Measured as debris appearing on the step the phase changes**, driven through the real frame
+      with the boss damaged rather than by calling `phaseFor`. A guard that asked the model would be
+      asking the half that already knew.
+    */
+    const { world, frame } = bossFight('sentinel');
+    expect(world.bossPool.size, 'the boss never arrived, so this measured nothing').toBe(1);
+    /*
+      ⚠️ **A few steps of the fight before anything is damaged, and the reason is the mechanism.** The
+      FIRST step a boss is on the field is a phase change from *no boss* to *phase one*, and it
+      deliberately sheds nothing — `bossPhaseAt` starts at −1 and the burst is suppressed for exactly
+      that transition. A fixture that damaged the hull on the spawn step would be measuring the
+      arrival rather than a change, and it reported zero.
+    */
+    for (let i = 0; i < 30; i++) frame.step();
+    expect(world.bossPhaseAt, 'the fight never started, so no phase has been recorded').toBe(0);
+    const boss = world.bossPool.at(0);
+    const phases = BOSSES.sentinel.phases;
+    expect(phases.length, 'the sentinel has one phase, so it can never change').toBeGreaterThan(1);
+    /*
+      ⚠️ **Dropped just past the SECOND phase's threshold**, so the very next step is the one the
+      change happens on — `driveBoss` compares the phase either side of `stepBoss`.
+    */
+    boss.health = Math.floor(world.bossFullHealth * phases[1]!.upTo) - 1;
+    const before = world.debris.size;
+    frame.step();
+    expect(
+      world.debris.size - before,
+      'a boss crossed a health threshold and shed nothing — the phase change is invisible',
+    ).toBeGreaterThan(0);
   });
 });
