@@ -23,7 +23,7 @@ export const PROBES = [
     guard: 'is still behind the game, which is the ceiling 0065 set',
     edit: {
       path: 'src/app/mount.ts',
-      find: '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 0.85 },',
+      find: '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 0.92 },',
       replace: '',
     },
   },
@@ -42,7 +42,7 @@ export const PROBES = [
     guard: '0097 — and a streak stays a streak, because a short one is a fast dot',
     edit: {
       path: 'src/render/bake.ts',
-      find: 'const SKY_STREAK_UNITS = { from: 6, to: 13 };',
+      find: 'const SKY_STREAK_UNITS = { from: 11, to: 24 };',
       replace: 'const SKY_STREAK_UNITS = { from: 0, to: 0 };',
     },
   },

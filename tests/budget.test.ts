@@ -194,7 +194,14 @@ describe('the sky goes past twice as fast as it shipped, and the parallax surviv
     `4/3 × 3/2 = 2`. Written as the product rather than as `2`, because the two are separate asks from
     separate play-tests and a later third one multiplies onto this rather than replacing it.
   */
-  const FASTER = (4 / 3) * (3 / 2);
+  /*
+    ⚠️ **AND A THIRD ASK MULTIPLIES ONTO IT, EXACTLY AS THE COMMENT ABOVE PREDICTED IT WOULD.**
+    `docs/decisions/0101-the-sky-is-a-hurry-and-the-boss-holds-back.md` took *"it still needs to move
+    much more faster"* at another eighth again: `4/3 × 3/2 × 11/8 = 2.75`, so the two layers 0065
+    shipped now go past at 0.33 and 0.825. Written as the product for the third time, because the day
+    a fourth report arrives it multiplies onto this rather than replacing it.
+  */
+  const FASTER = (4 / 3) * (3 / 2) * (11 / 8);
 
   it('moves both layers twice as fast as they shipped, which is what was asked for', () => {
     /*
@@ -252,20 +259,48 @@ describe('the sky goes past twice as fast as it shipped, and the parallax surviv
 
       ⚠️ **A streak breaks the trade, so a streak is what may go past two thirds.** It says *fast* by
       its shape rather than by its rate, and at 0.109 world units it is a fifth of the smallest
-      bullet's thickness — the thing a dot at that depth could never be. Held as *whichever layers
-      are above the old ceiling are exactly the streak layers*, which is a rule rather than an
-      exception list: the day a dot layer is pushed past 2/3, this goes red.
+      bullet's thickness — the thing a dot at that depth could never be.
+
+      ── AND SHAPE WAS NEVER THE REASON, WHICH THE NEXT REPORT MADE UNAVOIDABLE ────────────────────
+
+      ⚠️ **`docs/decisions/0101-the-sky-is-a-hurry-and-the-boss-holds-back.md`.** 0097 held this as
+      *whichever layers are above two thirds are exactly the streak layers*, which is an exception
+      list wearing a rule's clothes — and the next report was *"it still needs to move much more
+      faster"* about the two dot layers the exception excluded.
+
+      ⚠️ **The honest rule underneath was always about SIZE.** 0069's subject is a background dot the
+      size of a bullet moving fast enough to be mistaken for one; a dot a third of that size is not
+      that thing, whatever its shape. So the ceiling is arithmetic:
+
+      **a mark may move at the world's rate, less half of how much of a bullet it looks like.**
+
+      At two thirds of a bullet the ceiling is two thirds — which is 0069's number arriving as a
+      consequence rather than as a constant, and is why the back layer is still held to roughly what
+      it always was. At an eighth of a bullet it is 0.94.
+
+      ⚠️ **It cannot reach 1**, because a mark of no size is not a mark. 0065's absolute is still
+      asserted separately, because a formula that happens to stay under 1 is not the same as a rule
+      that says it must.
     */
     const RUSH = SKY.findIndex((layer) => layer.sprite === SPRITE.skyRush);
+    expect(RUSH, 'the sky has no streak layer, so nothing reads as speed at all').toBeGreaterThanOrEqual(0);
+    const smallestThreat = Math.min(SHOTS.pulse.radius, SHOTS.spit.radius, SHOTS.lance.radius, SHOTS.flak.radius);
     for (let i = 0; i < SKY.length; i++) {
-      expect(SKY[i]!.depth, `sky layer ${i} moves with the world — it is not a background any more`).toBeLessThan(1);
-      if (i === RUSH) continue;
+      const layer = SKY[i]!;
+      expect(layer.depth, `sky layer ${i} moves with the world — it is not a background any more`).toBeLessThan(1);
+      const kind = SPRITE_KINDS[layer.sprite] as SkyKind;
+      const thickest = Math.max(
+        ...skyField(kind, bakeSize(SPRITE_EXTENT[kind], 6)).stars.map(
+          (star) => star.r / (bakeSize(SPRITE_EXTENT[kind], 6) / SPRITE_EXTENT[kind]),
+        ),
+      );
+      const ceiling = 1 - (thickest / smallestThreat) * 0.5;
       expect(
-        SKY[i]!.depth,
-        `sky layer ${i} is made of dots and moves past two thirds of the world, which is what 0069 was about`,
-      ).toBeLessThan(2 / 3);
+        layer.depth,
+        `${kind} draws marks ${thickest.toFixed(2)} units thick — ${((thickest / smallestThreat) * 100).toFixed(0)}% of a ` +
+          `bullet — and moves at ${layer.depth} against a ceiling of ${ceiling.toFixed(3)}`,
+      ).toBeLessThan(ceiling);
     }
-    expect(RUSH, 'the sky has no streak layer, so nothing has bought the loosened ceiling').toBeGreaterThanOrEqual(0);
     expect(
       SKY[RUSH]!.depth,
       'the streak layer is not the fastest one, so the layer that reads as speed is not the one moving',
@@ -596,13 +631,29 @@ describe('the sky costs a fixed number of calls, whatever the camera is doing', 
           `${KINDS[i]} is drawn at ${FIELDS[i]!.alpha} of solid, in front of a bed drawn at ${FAR.alpha}`,
         ).toBeLessThan(FAR.alpha / 2);
       }
+      /*
+        ⚠️ **THE STREAK LAYER GETS ITS OWN CEILING, AND IT IS DOUBLE** —
+        `docs/decisions/0101-the-sky-is-a-hurry-and-the-boss-holds-back.md`. A quarter was chosen when
+        the streak layer was a hairline nobody had flown; the report on that build is *"it still needs
+        to move much more faster"*, and the lever that answers it is LENGTH, which is paid for in ink.
+
+        ⚠️ **What a dot's ink bound is for is different from what a streak's is for**, which is why
+        one number over both was the wrong shape. A dot competes with the bed for the eye and can be
+        mistaken for an object; a streak is the thing the player is being asked to look at going past,
+        and it cannot be mistaken for anything. The dot layers keep the quarter.
+
+        ⚠️ **A half rather than *more*, and it is chosen from what it must catch**: the streak layer
+        sits at 36.8%, and doubling its count reaches 74%.
+      */
       const bed = ink('skyFar', FAR);
       for (let i = 1; i < KINDS.length; i++) {
         const share = ink(KINDS[i]!, FIELDS[i]!) / bed;
+        const streaks = FIELDS[i]!.stars.some((star) => star.len > 0);
+        const ceiling = streaks ? 1 / 2 : 1 / 4;
         expect(
           share,
           `${KINDS[i]} puts ${(share * 100).toFixed(1)}% of the back layer's ink on the screen, and it is a layer that MOVES`,
-        ).toBeLessThan(1 / 4);
+        ).toBeLessThan(ceiling);
         /*
           ⚠️ **AND A FLOOR, WHICH IS THE HALF NOTHING HERE HAS EVER HELD** —
           `docs/decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md`. Every guard in this

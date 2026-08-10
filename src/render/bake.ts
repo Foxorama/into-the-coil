@@ -111,12 +111,16 @@ export function bakeSize(extent: number, pixelsPerUnit: number): number {
   sky lost a layer and lost its speed in the same edit. What is left visible moves at 0.24 — about
   eight world units a second, twenty seconds to cross a 16:9 view — and that is the crawl, measured.
 
-  ⚠️ **`skyRush` is few and it is meant to be.** Fifteen marks against ninety, because a streak
-  covers about twenty times a dot's area and because what reads as speed is a handful of things
-  moving quickly rather than a field of them. Two and a half tiles are in view at once, so it is
-  about forty streaks on the screen.
+  ⚠️ **`skyRush` is few and it is meant to be.** A streak covers about twenty times a dot's area,
+  and what reads as speed is a handful of things moving quickly rather than a field of them. Two and
+  a half tiles are in view at once, so it is about thirty streaks on the screen.
+
+  ⚠️ **FIFTEEN → TWELVE, AND IT IS THE LENGTH THAT BOUGHT IT** —
+  `docs/decisions/0101-the-sky-is-a-hurry-and-the-boss-holds-back.md`. The streaks are now nearly
+  twice as long, so the same count would have put two thirds again as much ink on the screen. Fewer
+  and longer is what *faster* looks like; more and longer is a curtain.
 */
-const SKY_STARS = { skyFar: 90, skyNear: 90, skyRush: 15 };
+const SKY_STARS = { skyFar: 90, skyNear: 90, skyRush: 12 };
 
 /**
  * The biggest a star may be drawn, as a radius in WORLD UNITS. One ceiling for the whole sky.
@@ -198,11 +202,27 @@ const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.11 };
  * across the lane in portrait only — on a device the developer is not holding, which is the failure
  * mode `src/render/surface.ts` records for the same axis.
  *
- * ⚠️ **The shortest one is fifty-four times its own width**, which is the aspect ratio
+ * ⚠️ **The shortest one is fifty times its own width**, which is the aspect ratio
  * `tests/budget.test.ts` holds: a streak that shortened towards its thickness would be back to being
  * a dot at the fastest depth in the game, and nothing else in this file would notice.
+ *
+ * ── 6–13 → 11–24, AND LENGTH IS THE LEVER DEPTH RAN OUT OF ──────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0101-the-sky-is-a-hurry-and-the-boss-holds-back.md`.** Reported from play
+ * against the build 0097 landed in: *"the sky moves a bit faster, but it still needs to move much
+ * more faster."*
+ *
+ * ⚠️ **A LONGER STREAK READS AS FASTER AT THE SAME RATE, and depth cannot do that.** Every previous
+ * pass at this report moved a depth, and depth has a hard ceiling — at 1 the sky moves with the world
+ * and stops being a background (0065). Length has no such ceiling: it is the smear a fast thing
+ * leaves, so more of it is more speed, and it is why every game that wants to look quick draws them
+ * long rather than merely draws them fast.
+ *
+ * ⚠️ **It is paid for in COUNT, and `SKY_STARS` above is where.** Nearly twice the length is nearly
+ * twice the ink per mark; fifteen marks became twelve, and the streak layer's ink bound moved with an
+ * argument of its own — `tests/budget.test.ts`.
  */
-const SKY_STREAK_UNITS = { from: 6, to: 13 };
+const SKY_STREAK_UNITS = { from: 11, to: 24 };
 
 /**
  * How solid each layer is drawn, against the void behind it.

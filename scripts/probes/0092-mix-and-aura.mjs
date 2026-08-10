@@ -52,7 +52,7 @@ export const PROBES = [
     guard: '0092 — THE RANGE COVERS THE BOX, so *far away* is somewhere the player can actually be',
     edit: {
       path: 'src/content/music.ts',
-      find: 'export const AURA_FAR_UNITS = 124;',
+      find: 'export const AURA_FAR_UNITS = 145;',
       replace: 'export const AURA_FAR_UNITS = 105;',
     },
   },
