@@ -18,7 +18,14 @@ import { SHIPS } from '../src/content/ships.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { ACROSS_SPAN, MAX_ASPECT, MIN_ASPECT, viewOf } from '../src/sim/camera.ts';
-import { PLAYER_ALONG_SPAN, PLAYER_MARGIN, SCROLL_PER_STEP, SHIP_SPEED } from '../src/sim/flight.ts';
+import {
+  PLAYER_ALONG_MARGIN,
+  PLAYER_ALONG_SPAN,
+  PLAYER_LEAD,
+  PLAYER_MARGIN,
+  SCROLL_PER_STEP,
+  SHIP_SPEED,
+} from '../src/sim/flight.ts';
 import { GameFrame, SHIP_START_ALONG, scatterUpgrades } from '../src/app/frame.ts';
 import { initialState, reduce } from '../src/state/root.ts';
 import { DEFAULT_DIFFICULTY } from '../src/state/slices/run.ts';
@@ -740,6 +747,88 @@ describe('collecting one, in the real frame', () => {
 
     /** Where the scatter was thrown from — the ship's start, which is where it died. */
     const deathAlong = SHIP_START_ALONG;
+
+    it('0100 — THE REPORTED ONE: a scatter never leaves a piece where the ship cannot reach it', () => {
+      /*
+        `docs/decisions/0100-a-level-places-its-pickups-too.md`. Reported from play: *"on player death
+        the powerups can go to a section on the left side of the screen, where they are visible but
+        the player cannot get to them."*
+
+        ⚠️ **THE VIEW AND THE PLAYER'S BOX ARE NOT THE SAME BAND, and everything here assumed they
+        were.** The view begins at the camera; the ship's own clamp begins at `PLAYER_ALONG_MARGIN`
+        and ends at `PLAYER_LEAD` (`src/sim/flight.ts`). Everything below the margin is on the screen
+        and out of reach, and `scatterRing` throws a full circle — so a ship that died in the back
+        eleven units of its box put pieces there. `driftPickups` bounced a pickup off the LANE on the
+        across axis and had no rule at all on the along one.
+
+        ⚠️ **Driven from the very back of the box, which is where the defect is worst and where a
+        player who has just been shot usually is.** `deathOffset` is where the ship died, in the
+        camera's frame.
+
+        ⚠️ **Reach is the two hurtboxes, not the ship's centre.** What the player has to do is touch
+        it, so a piece a hair outside the clamp is still collectable and the guard would be wrong to
+        refuse it. `src/sim/collide.ts` is the pairing; this is the same sum.
+      */
+      const built = died(['weapon', 'weapon', 'weapon', 'missile', 'missile']);
+      const { world } = built;
+      const frame = new GameFrame(world);
+      world.deathOffset = PLAYER_ALONG_MARGIN;
+      world.pickups.clear();
+      world.scatterRng = new Rng('scatter:back-of-the-box');
+      scatterUpgrades(world, ['weapon', 'weapon', 'weapon', 'missile', 'missile']);
+      // The ship is put at the FAR end of its box, so it cannot collect the scatter it is being
+      // measured against — the fixture leaves it beside the wreck, which would empty the pool.
+      world.ship.along = world.cameraAlong + PLAYER_LEAD;
+      world.ship.prevAlong = world.ship.along;
+      expect(world.pickups.size, 'nothing was scattered, so this measured nothing').toBeGreaterThan(3);
+
+      // Long enough for the along excursion to be spent — it is about eleven world units against an
+      // ease, so a second of steps is far more than it needs.
+      const stranded: string[] = [];
+      for (let step = 0; step < 240; step++) {
+        frame.step();
+        for (let i = 0; i < world.pickups.size; i++) {
+          const item = world.pickups.at(i);
+          const inView = item.along - world.cameraAlong;
+          const reach = world.ship.radius + item.radius;
+          if (inView < PLAYER_ALONG_MARGIN - reach || inView > PLAYER_LEAD + reach) {
+            stranded.push(`a piece sat ${inView.toFixed(1)} units ahead of the camera on step ${step}`);
+          }
+        }
+      }
+      expect(
+        stranded.slice(0, 3),
+        `${stranded.length} sightings of a scattered pickup outside the band the ship can reach ` +
+          `(${PLAYER_ALONG_MARGIN.toFixed(1)}…${PLAYER_LEAD.toFixed(1)} ahead of the camera)`,
+      ).toEqual([]);
+    });
+
+    it('0100 — and the piece is still THROWN, so the bounce did not turn the ring into a clamp', () => {
+      /*
+        ⚠️ **The counterweight, and without it the fix above is satisfied by not scattering at all.**
+        `docs/decisions/0066-a-death-scatters-what-it-took.md` is a picture — pieces flying off a
+        wreck — and a bounce that pinned everything to the wall would pass every assertion above while
+        deleting the feature. What is held is that the pieces end up SPREAD along the lane rather than
+        stacked on one line.
+      */
+      const built = died(['weapon', 'weapon', 'weapon', 'missile', 'missile']);
+      const { world } = built;
+      const frame = new GameFrame(world);
+      world.deathOffset = PLAYER_ALONG_MARGIN;
+      world.pickups.clear();
+      world.scatterRng = new Rng('scatter:back-of-the-box');
+      scatterUpgrades(world, ['weapon', 'weapon', 'weapon', 'missile', 'missile']);
+      // The ship is put at the FAR end of its box, so it cannot collect the scatter it is being
+      // measured against — the fixture leaves it beside the wreck, which would empty the pool.
+      world.ship.along = world.cameraAlong + PLAYER_LEAD;
+      world.ship.prevAlong = world.ship.along;
+      for (let step = 0; step < 240; step++) frame.step();
+      const offsets: number[] = [];
+      for (let i = 0; i < world.pickups.size; i++) offsets.push(world.pickups.at(i).along - world.cameraAlong);
+      expect(offsets.length, 'every piece was collected or expired, so this measured nothing').toBeGreaterThan(2);
+      const spread = Math.max(...offsets) - Math.min(...offsets);
+      expect(spread, `the whole scatter came to rest within ${spread.toFixed(1)} units of one line`).toBeGreaterThan(4);
+    });
 
     it('THE REPORTED ONE: pickups where the ship was, and never more than it carried', () => {
       const carried: UpgradeKind[] = ['weapon', 'weapon', 'weapon'];
