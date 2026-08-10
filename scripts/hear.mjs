@@ -15,7 +15,12 @@
 // ⚠️ IT FAILS LOUD, per the note in scripts/trace-frame.mjs: a tool whose only job is to produce an
 // artefact for a human must exit non-zero when it produces nothing.
 //
-// Usage:  node scripts/hear.mjs [--out=cues.wav] [--gap=0.35] [--only=kill,blast] [--music] [--play]
+// Usage:  node scripts/hear.mjs [--out=cues.wav] [--gap=0.35] [--only=kill,blast]
+//                               [--music] [--play] [--solo [--rung=run]]
+//
+// --solo writes ONE FILE PER LAYER at a rung's own gains, so a sound a player can hear and not name
+// can be named. It is the answer to three rounds of *"the metronome"* being guessed at, and the
+// reason it is a separate mode is that every other mode in this file mixes the layers together.
 //
 // --music writes the four loops mixed at every level of the ladder, and then the whole arc: cruise,
 // the approach opening up, the boss arriving. It is the only way to hear decision 0090 without
@@ -39,7 +44,7 @@ import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { MASTER_GAIN, SAMPLE_RATE, cueSeconds, sampleCue, saturate, variantAt, velocitiesOf } from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { bakeLoops } from '../src/app/music.ts';
-import { PHRASE_SECONDS, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_DRIVE, MUSIC_GAIN, AURA_LAYERS, AURA_NEAR_UNITS, AURA_FAR_UNITS, STEPS_PER_BEAT } from '../src/content/music.ts';
+import { PHRASE_SECONDS, BAR_SECONDS, LAYER_BARS, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_DRIVE, MUSIC_GAIN, AURA_LAYERS, AURA_NEAR_UNITS, AURA_FAR_UNITS, STEPS_PER_BEAT } from '../src/content/music.ts';
 
 /*
   ⚠️ **THE MUSIC BUS AS IT ACTUALLY LEAVES, AND THE RIG DID NOT HAVE IT FOR ONE COMMIT** —
@@ -169,6 +174,73 @@ if (args.has('music')) {
   writeFileSync(`${base}-aura.wav`, wavOf(close, SAMPLE_RATE));
   console.log(`music: ${MUSIC_LAYERS.length} loops, a ${PHRASE_SECONDS}s phrase, ${Object.keys(MUSIC_LADDER).length} levels`);
   console.log(`wrote ${base}-{${Object.keys(MUSIC_LADDER).join(',')},arc}.wav`);
+  process.exit(0);
+}
+
+/*
+  ── ONE LAYER AT A TIME, WHICH IS THE ONE QUESTION EVERY OTHER MODE ANSWERS BY MIXING AWAY ────────
+
+  ⚠️ **A REPORT NAMES A SOUND AND THIS PROJECT HAS NEVER BEEN ABLE TO NAME IT BACK.** *"A note that
+  almost sounds like a bell ring, which is what I've been calling the metronome sound"* is the third
+  round that phrase has arrived in, and each previous round GUESSED which layer it was: 0102 answered
+  it in `beat`, 0108 answered it in `engine`. Two different layers, from the same four words, with
+  nothing in the repository able to settle it — and `docs/decisions/0027-measure-the-picture-not-the-model.md`
+  is precisely about a channel nobody can look at being tuned from a description.
+
+  ⚠️ **SO THE FILE NAME IS THE ANSWER.** Sixteen files, one per layer, each the layer alone through
+  the same bus the game plays it through. A player who has one of them open can say *that one* and the
+  guessing stops. It is the cheapest instrument in this file and it is the one that should have been
+  written first.
+
+  ⚠️ **AT THE RUNG'S OWN GAIN, AND SILENT LAYERS ARE SKIPPED RATHER THAN FAKED.** The complaint is
+  about the first sixty seconds of a level, which is `run` — and eight of the sixteen layers are at
+  zero there. Writing them anyway at some borrowed gain would answer *what does this layer sound
+  like* when the question is *what am I hearing right now*. `--rung=boss` opens everything.
+*/
+if (args.has('solo')) {
+  const rung = args.get('rung') ?? 'run';
+  if (!(rung in MUSIC_LADDER)) {
+    console.error(`unknown --rung=${rung}. Known: ${Object.keys(MUSIC_LADDER).join(', ')}`);
+    process.exit(1);
+  }
+  const loops = bakeLoops(SAMPLE_RATE);
+  const base = out.replace(/\.wav$/, '');
+  // Two full phrases, so a layer whose loop is the phrase is heard coming round rather than guessed at.
+  const length = Math.round(PHRASE_SECONDS * SAMPLE_RATE) * 2;
+  const written = [];
+  const silent = [];
+  for (const layer of MUSIC_LAYERS) {
+    const gain = MUSIC_LADDER[rung][layer];
+    if (gain <= 0) {
+      silent.push(layer);
+      continue;
+    }
+    const solo = new Float32Array(length);
+    const loop = loops[layer];
+    // The same bus the mix goes through, so a layer heard here is the layer heard in the game —
+    // `busOf` is shared with `--music` and `--play` for the reason stated on it.
+    for (let i = 0; i < length; i++) solo[i] = Math.max(-1, Math.min(1, busOf(loop[i % loop.length] * gain)));
+    writeFileSync(`${base}-solo-${layer}.wav`, wavOf(solo, SAMPLE_RATE));
+    /*
+      ⚠️ **THE AURA'S ROW IS A CEILING AND NOT A GAIN, AND SAYING *gain* HERE WOULD BE THE EXACT
+      DEFECT THIS MODE EXISTS TO END.** `src/app/music.ts` multiplies these two by `auraFor(build,
+      nearness)`, so at the START of a level — which is the rung this defaults to and the stretch the
+      report is about — they are at nothing and climbing.
+      `docs/decisions/0107-a-level-is-a-place.md` is the build; 0091 is the proximity. A listener
+      handed `level-solo-auraSlow.wav` and told it was *what is open at `run`* would be told a
+      falsehood by the instrument built to stop them being told one.
+    */
+    const how = AURA_LAYERS.includes(layer) ? `ceiling ${gain}, ×build — silent at level start` : `gain ${gain}`;
+    written.push(`${layer} (${LAYER_BARS[layer]} bars, ${(LAYER_BARS[layer] * BAR_SECONDS).toFixed(1)}s, ${how})`);
+  }
+  if (written.length === 0) {
+    console.error(`every layer is silent at ${rung}`);
+    process.exit(1);
+  }
+  const heard = written.length - MUSIC_LAYERS.filter((l) => AURA_LAYERS.includes(l) && MUSIC_LADDER[rung][l] > 0).length;
+  console.log(`solo at rung "${rung}" — ${heard} layers actually sounding, ${written.length} written:`);
+  for (const line of written) console.log(`  ${base}-solo-${line}`);
+  if (silent.length > 0) console.log(`silent at ${rung}, not written: ${silent.join(', ')}`);
   process.exit(0);
 }
 

@@ -234,7 +234,25 @@ date and is exactly what a play-test is for.
 
 ## What the play-test has answered
 
-⚠️ **THE NINTH PLAY-TEST IS THE CURRENT ONE AND IT OUTRANKS EVERYTHING BELOW IT** —
+⚠️ **THE TENTH PLAY-TEST IS THE CURRENT ONE AND IT OUTRANKS EVERYTHING BELOW IT** —
+[`the-tenth-play-test`](../reports/the-tenth-play-test-2026-08-11.md), given 2026-08-11 against the
+build carrying 0108 to 0112.
+
+⚠️ **FOUR OF THE FIVE CHANNELS ARE SIGNED OFF ON FIRST FLIGHT, WHICH HAS NOT HAPPENED BEFORE.** The
+report has the words. The fifth is the sound, for the fifth round running, and all of it is one item.
+
+⚠️ **AND THE ARCHITECTURE IS THE ANSWER RATHER THAN A NUMBER** —
+[0113](decisions/0113-there-is-one-composition-and-seven-levels.md). Do not open a music number
+before reading it: `MUSIC` is **one composition** and a theme is a **gain multiplier over it**, so the
+seven levels are the same notes at different volumes. Seven decisions have tuned that one piece.
+
+⚠️ **THE PLAYER SAID THEY MUST BE DESCRIBING IT WRONG. THEY WERE NOT, AND THAT IS THE FINDING TO
+CARRY.** 0113 has the class failure and the ordering mistake behind it — three rounds of *"the
+metronome"* were answered by guessing which layer it was, while
+[0027](decisions/0027-measure-the-picture-not-the-model.md) had already said not to.
+`node scripts/hear.mjs --solo` is the nine lines that end the guessing.
+
+⚠️ **THE NINTH PLAY-TEST IS THE ONE ABOVE THAT** —
 [`the-ninth-play-test`](../reports/the-ninth-play-test-2026-08-10.md), given 2026-08-10 against the
 build carrying 0106 and 0107.
 
