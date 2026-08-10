@@ -717,12 +717,34 @@ describe('the sky costs a fixed number of calls, whatever the camera is doing', 
 
         ⚠️ **A half rather than *more*, and it is chosen from what it must catch**: the streak layer
         sits at 36.8%, and doubling its count reaches 74%.
+
+        ── AND THE HALF BECAME 0.7, BECAUSE INK IS AN AREA AND THE FAILURE WAS A WIDTH ───────────────
+
+        ⚠️ **`docs/decisions/0106-a-mark-thinner-than-a-pixel-is-not-drawn.md`.** Reported from play
+        against the build 0103 shipped: *"there are thin lines that are hardly visible… I don't feel
+        like I'm zooming through space."* Measured on the view the report came from, the streaks were
+        **0.79 CSS pixels** thick.
+
+        ⚠️ **THIS METRIC CANNOT SEE THAT AND NEVER COULD.** `ink` is `alpha × Σ(πr² + 2r·len)` — an
+        area — so a 0.79 × 152 pixel line and a 1.87 × 64 one are the same number to it, and only one
+        of them is drawn. The layer sat at 36.8% of a ceiling of 50% and a floor of 6.25%, comfortably
+        inside a band that had nothing to say about the thing being reported. Three passes at *make
+        the sky faster* were governed by it.
+
+        ⚠️ **The width is now held separately** — see the assertion under this one — and this ceiling
+        is what pays for it, because ink scales linearly in thickness: making the mark visible at all
+        costs 2.2× whatever else is held equal.
+
+        ⚠️ **0.7 rather than *enough*, on the same derivation the half used.** The layer sits at 54.4%
+        with a mark that can be seen; doubling its count from ten reaches **108.8%**, so the bound
+        still catches the break it was written for and now sits above the state that answers the
+        report rather than below it.
       */
       const bed = ink('skyFar', FAR);
       for (let i = 1; i < KINDS.length; i++) {
         const share = ink(KINDS[i]!, FIELDS[i]!) / bed;
         const streaks = FIELDS[i]!.stars.some((star) => star.len > 0);
-        const ceiling = streaks ? 1 / 2 : 1 / 4;
+        const ceiling = streaks ? 0.7 : 1 / 4;
         expect(
           share,
           `${KINDS[i]} puts ${(share * 100).toFixed(1)}% of the back layer's ink on the screen, and it is a layer that MOVES`,
@@ -750,6 +772,50 @@ describe('the sky costs a fixed number of calls, whatever the camera is doing', 
           share,
           `${KINDS[i]} puts ${(share * 100).toFixed(1)}% of the back layer's ink on the screen, which is a layer nobody can see`,
         ).toBeGreaterThan(1 / 16);
+      }
+    });
+
+    it('0106 — THE REPORTED ONE: every sky mark is at least a pixel thick on the screen it is judged on', () => {
+      /*
+        ⚠️ **Reported from play: *"there are thin lines that are hardly visible… I don't feel like I'm
+        zooming through space."*** Measured on a 1280×720 desktop, which is the view the report came
+        from: the streak layer drew marks **1.57 CSS pixels** across at 42% of solid — a hairline, and
+        by a factor of two and a half the thinnest thing the game puts on the screen.
+
+        ⚠️ **THE SENSE OF SPEED WAS PRESENT AND NEARLY INVISIBLE, WHICH IS WHY THREE PASSES OF *MAKE
+        IT FASTER* DID NOT LAND.** That layer was already crossing the screen at 417 px/s against the
+        starfield's 86 — by a factor of five, the fastest thing the player could have seen.
+
+        ⚠️ **AND `ink` COULD NOT SEE IT, WHICH IS WHY THE BOUND ABOVE IS NOT THIS ONE.** That measure
+        is `alpha × Σ(πr² + 2r·len)` — an area — so a hairline 152 pixels long and a visible mark 64
+        pixels long are the same number to it. The layer sat at 36.8% of a 50% ceiling with a 6.25%
+        floor, comfortably inside a band with nothing to say about the thing being reported.
+
+        ⚠️ **2.5 PIXELS, AND IT SITS ABOVE THE STATE THAT WAS REJECTED.** The reported mark was 1.57
+        and was called hardly visible; the far layer is 8.5 and the near one 4.0 and neither has ever
+        been mentioned. A bound at 2.5 refuses what was reported and passes what was not, which is the
+        only place a reported bound can honestly go.
+
+        ⚠️ **IN THE PLAYER'S OWN PIXELS, WHICH IS THE ONE BOUND IN THIS FILE THAT MUST NOT BE A WORLD
+        UNIT.** Everything else here is authored in world units, correctly, because content must not
+        be authored against a device — but **visibility is not a world quantity**, it is a fact about
+        a display. `docs/decisions/0027-measure-the-picture-not-the-model.md` asks for at least one
+        assertion in the units the player experiences, and this is the sky's.
+
+        ⚠️ **Against the DESKTOP view, and the phone is a known limitation stated rather than
+        guarded.** A thickness fixed in world units is thinner on a smaller screen — at 480 px the
+        streaks are 0.65 px and this bound would be unmeetable without making them fat on a monitor.
+        `docs/decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md` made the game
+        desktop-first; a sky that reads on a phone is a separate change and wants its own decision.
+      */
+      const DESKTOP = viewOf(1280, 720);
+      for (const kind of KINDS) {
+        const field = FIELDS[KINDS.indexOf(kind)]!;
+        const thickest = (Math.max(...field.stars.map((star) => star.r)) / perUnit(kind)) * 2 * DESKTOP.scale;
+        expect(
+          thickest,
+          `${kind} draws marks ${thickest.toFixed(2)} CSS pixels across on a 1280×720 screen — a hairline is not a mark`,
+        ).toBeGreaterThan(2.5);
       }
     });
   });

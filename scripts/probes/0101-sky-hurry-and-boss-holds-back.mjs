@@ -41,7 +41,7 @@ export const PROBES = [
     guard: 'and the near layer is the quiet one, on every count that buys attention',
     edit: {
       path: 'src/render/bake.ts',
-      find: 'const SKY_STARS = { skyFar: 90, skyNear: 90, skyRush: 12 };',
+      find: 'const SKY_STARS = { skyFar: 90, skyNear: 90, skyRush: 10 };',
       replace: 'const SKY_STARS = { skyFar: 90, skyNear: 90, skyRush: 30 };',
     },
   },

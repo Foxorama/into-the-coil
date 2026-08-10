@@ -18,8 +18,8 @@ export const PROBES = [
     // so the break restores the near layer alone, which is exactly what it always meant.
     edit: {
       path: 'src/render/bake.ts',
-      find: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.11 };',
-      replace: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 1.2, skyRush: 0.11 };',
+      find: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.24 };',
+      replace: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 1.2, skyRush: 0.24 };',
     },
   },
   {
@@ -48,8 +48,8 @@ export const PROBES = [
     guard: 'and the near layer is the quiet one, on every count that buys attention',
     edit: {
       path: 'src/render/bake.ts',
-      find: 'const SKY_ALPHA = { skyFar: 1, skyNear: 0.34, skyRush: 0.42 };',
-      replace: 'const SKY_ALPHA = { skyFar: 1, skyNear: 1, skyRush: 0.42 };',
+      find: 'const SKY_ALPHA = { skyFar: 1, skyNear: 0.34, skyRush: 0.46 };',
+      replace: 'const SKY_ALPHA = { skyFar: 1, skyNear: 1, skyRush: 0.46 };',
     },
   },
 ];

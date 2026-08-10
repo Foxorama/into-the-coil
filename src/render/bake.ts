@@ -120,7 +120,7 @@ export function bakeSize(extent: number, pixelsPerUnit: number): number {
   twice as long, so the same count would have put two thirds again as much ink on the screen. Fewer
   and longer is what *faster* looks like; more and longer is a curtain.
 */
-const SKY_STARS = { skyFar: 90, skyNear: 90, skyRush: 12 };
+const SKY_STARS = { skyFar: 90, skyNear: 90, skyRush: 10 };
 
 /**
  * The biggest a star may be drawn, as a radius in WORLD UNITS. One ceiling for the whole sky.
@@ -182,7 +182,7 @@ const SKY_STARS = { skyFar: 90, skyNear: 90, skyRush: 12 };
  * whole of why a layer moving at 0.85 is still a background: `tests/budget.test.ts` holds both that
  * ladder and the aspect ratio that stops a streak degenerating into a dot.
  */
-const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.11 };
+const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.24 };
 
 /**
  * How long a `skyRush` streak is, in world units — the range one is drawn between.
@@ -255,7 +255,7 @@ const SKY_STREAK_UNITS = { from: 11, to: 24 };
  * That is what `tests/budget.test.ts` holds rather than either number: a veil over a bed, whatever
  * the values a later play-test settles on.
  */
-const SKY_ALPHA = { skyFar: 1, skyNear: 0.34, skyRush: 0.42 };
+const SKY_ALPHA = { skyFar: 1, skyNear: 0.34, skyRush: 0.46 };
 
 /**
  * How much of the boundary's tile is mark rather than gap.
