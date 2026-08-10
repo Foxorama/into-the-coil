@@ -31,7 +31,7 @@ import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import { type Entity, makeEntity, reset, stepEntities } from '../src/sim/entity.ts';
 import { Pool } from '../src/sim/pool.ts';
 import { paintScene } from '../src/render/scene.ts';
-import { bakeSize, skyField, type SkyKind } from '../src/render/bake.ts';
+import { bakeSize, nebulaField, skyField, type SkyKind } from '../src/render/bake.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { sprite } from './bodies.ts';
 import { CAPACITY, SKY } from '../src/app/mount.ts';
@@ -210,11 +210,20 @@ describe('the sky goes past twice as fast as it shipped, and the parallax surviv
       rather than `SKY` on purpose: this test is about what happened to the layers 0078 and 0088 were
       reports about, and a layer that did not exist then cannot be `FASTER` times anything.
     */
+    /*
+      ── AND IT INDEXED `SKY` POSITIONALLY, WHICH A FOURTH LAYER BROKE ────────────────────────────
+
+      ⚠️ **`docs/decisions/0112-the-sky-has-weather.md`.** The nebula is drawn FIRST — draw order is
+      the only thing that decides what is in front of what — so every index in this file moved by one
+      and this guard reported the cloud as a starfield that had slowed down. **The layers are found by
+      SPRITE now**, which is what the assertion was always about.
+    */
+    const shipped = [SPRITE.skyFar, SPRITE.skyNear].map((sprite) => SKY.find((layer) => layer.sprite === sprite));
     for (let i = 0; i < SHIPPED.length; i++) {
       const want = SHIPPED[i]! * FASTER;
-      expect(SKY[i]!.depth, `sky layer ${i} is not ${FASTER}× what it shipped at`).toBeCloseTo(want, 6);
+      expect(shipped[i]?.depth, `sky layer ${i} is not ${FASTER}× what it shipped at`).toBeCloseTo(want, 6);
     }
-    expect(SKY.length, 'a layer was added or removed without this file being told').toBe(SHIPPED.length + 1);
+    expect(SKY.length, 'a layer was added or removed without this file being told').toBe(SHIPPED.length + 2);
   });
 
   it('scales BOTH by the same factor, so the depth cue is not what paid for the speed', () => {
@@ -225,7 +234,10 @@ describe('the sky goes past twice as fast as it shipped, and the parallax surviv
       parallax itself and is the one quantity the ask does not touch.
     */
     const was = SHIPPED[1]! / SHIPPED[0]!;
-    const now = SKY[1]!.depth / SKY[0]!.depth;
+    // ⚠️ **By sprite and not by index** — 0112 put a fourth layer at the back and every index moved.
+    const far = SKY.find((layer) => layer.sprite === SPRITE.skyFar)!;
+    const near = SKY.find((layer) => layer.sprite === SPRITE.skyNear)!;
+    const now = near.depth / far.depth;
     expect(now, 'the two layers no longer move at the same relative rates — the parallax was spent').toBeCloseTo(was, 6);
   });
 
@@ -324,10 +336,26 @@ describe('the sky goes past twice as fast as it shipped, and the parallax surviv
       would need to reach 1.67 before it cleared, and the near layer's own field would need 1.16 — so
       *put it in front* costs exactly as much as *put it behind* did, measured off the same bake.
     */
-    const RUSH = SKY.findIndex((layer) => layer.sprite === SPRITE.skyRush);
+    /*
+      ── AND IT IS A RULE ABOUT MARKS, WHICH HAD NEVER NEEDED SAYING ───────────────────────────────
+
+      ⚠️ **`docs/decisions/0112-the-sky-has-weather.md`.** Everything the sky drew was a dot or a line,
+      so *how much of a bullet does it look like* could be answered with a thickness and the word
+      **mark** did no work. A nebula is an AREA: run through the arithmetic below it reports a
+      thickness of `-Infinity` — `Math.max` over an empty star field — and **passes for entirely the
+      wrong reason**, which is worse than failing.
+
+      ⚠️ **So the mark layers are named as the mark layers and the cloud is held to its own three
+      bounds**, in the assertion below this one. What makes that a boundary rather than a hole is that
+      the cloud is bounded from the other side: far bigger than a bullet, fainter than the faintest
+      field, and drawn with no edge in it at all.
+    */
+    const marks = SKY.filter((layer) => layer.sprite !== SPRITE.skyNebula);
+    expect(marks.length, 'the sky is all weather and no marks, so this measured nothing').toBe(SKY.length - 1);
+    const RUSH = marks.findIndex((layer) => layer.sprite === SPRITE.skyRush);
     expect(RUSH, 'the sky has no streak layer, so nothing reads as speed at all').toBeGreaterThanOrEqual(0);
-    for (let i = 0; i < SKY.length; i++) {
-      const layer = SKY[i]!;
+    for (let i = 0; i < marks.length; i++) {
+      const layer = marks[i]!;
       const kind = SPRITE_KINDS[layer.sprite] as SkyKind;
       const thickest = thickestOf(kind);
       const clearance = (thickest / smallestThreat) * 0.5;
@@ -339,9 +367,66 @@ describe('the sky goes past twice as fast as it shipped, and the parallax surviv
       ).toBeGreaterThan(clearance);
     }
     expect(
-      SKY[RUSH]!.depth,
+      marks[RUSH]!.depth,
       'the streak layer is not the fastest one, so the layer that reads as speed is not the one moving',
     ).toBe(Math.max(...SKY.map((layer) => layer.depth)));
+  });
+
+  it('0112 — and the one thing bigger than a bullet has no edge, is faint, and is furthest away', () => {
+    /*
+      ⚠️ **THIS IS THE AMENDMENT, WRITTEN AS THREE BOUNDS RATHER THAN AS AN EXEMPTION** —
+      `docs/decisions/0112-the-sky-has-weather.md`. 0069's rule is *nothing the sky draws is as big as
+      a bullet*, and its reason is that a mark which looks like a bullet and moves like the world is
+      confusable with a threat. **What makes something confusable is a hard edge at a bullet's scale,
+      not area** — a disc two units across with a boundary is a bullet, and a gradient forty units
+      across that never resolves to one is a place.
+
+      ⚠️ **So the cloud is bounded from the OTHER side, and that is what keeps this a rule.** It has to
+      be far LARGER than a bullet rather than smaller, fainter than the faintest field of marks, and
+      slower than every one of them. A cloud that shrank towards a bullet's size fails here rather
+      than inheriting the mark layers' exemption, which is exactly what an exemption would not do.
+
+      ⚠️ **Measured off `nebulaField` rather than off the constants behind it**, for the reason
+      `skyField` exists: `docs/decisions/0027-measure-the-picture-not-the-model.md`, a ceiling checked
+      against the constant it came from proves only that the code agrees with itself.
+    */
+    const cloud = SKY.find((layer) => layer.sprite === SPRITE.skyNebula);
+    expect(cloud, 'the sky has no weather in it, so this measured nothing').toBeDefined();
+    const size = bakeSize(SPRITE_EXTENT.skyNebula, 6);
+    const clouds = nebulaField(size);
+    expect(clouds.length, 'the nebula tile is empty').toBeGreaterThan(2);
+
+    /*
+      ⚠️ **Ten bullets, and the number is the point rather than a tolerance.** `smallestThreat` is what
+      0069's own ceiling is measured against; a thing an order of magnitude bigger than the smallest
+      thing that can kill the player is not a thing the player can mistake for one.
+    */
+    const smallest = Math.min(...clouds.map((c) => c.r / (size / SPRITE_EXTENT.skyNebula)));
+    expect(
+      smallest / smallestThreat,
+      `the smallest cloud is ${smallest.toFixed(1)} units across against a ${smallestThreat.toFixed(1)}-unit bullet`,
+    ).toBeGreaterThan(10);
+
+    /*
+      ⚠️ **Fainter than the FAINTEST field of marks**, so the layer nearest to being invisible is still
+      more present than the weather behind it. Held against `skyField`'s own alpha rather than against
+      `NEBULA_ALPHA`, which is the number under test.
+    */
+    const faintestField = Math.min(
+      ...(['skyFar', 'skyNear', 'skyRush'] as const).map((kind) => skyField(kind, bakeSize(SPRITE_EXTENT[kind], 6)).alpha),
+    );
+    const boldest = Math.max(...clouds.map((c) => c.alpha));
+    expect(
+      boldest,
+      `the boldest cloud is drawn at ${boldest.toFixed(2)} against the faintest starfield's ${faintestField.toFixed(2)}`,
+    ).toBeLessThan(faintestField);
+
+    // And it is the furthest thing there is, which is the other half of *behind the game*.
+    expect(
+      cloud!.depth,
+      'the weather is not the slowest thing in the sky, so something is behind it',
+    ).toBe(Math.min(...SKY.map((layer) => layer.depth)));
+    expect(SKY[0]!.sprite, 'the weather is not drawn first, so a mark can end up behind it').toBe(SPRITE.skyNebula);
   });
 
   it('and only the streak layer may be in FRONT of the game, and only one of them', () => {

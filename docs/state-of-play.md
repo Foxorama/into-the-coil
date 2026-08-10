@@ -112,6 +112,7 @@ it is pushed — guards stop reaching their subject without ever going red, and 
 | **nothing the level schedules by the hundred may duck the music, and it is shorter than the beat it lands on** | [0109](decisions/0109-a-death-is-a-drum.md) |
 | **how a body SHOOTS is a closed union, and a pattern is the same pattern wherever the player is** | [0110](decisions/0110-an-attack-is-a-pattern.md) |
 | **a boss’s movement and attack are each a closed union; a phase change is an event the picture mentions** | [0111](decisions/0111-a-boss-has-one-idea.md) |
+| **the sky may draw something bigger than a bullet only if it has NO EDGE, and then it is huge, faint and furthest** | [0112](decisions/0112-the-sky-has-weather.md) |
 | ~~the near sky is pushed back on every cheap axis~~ — **amended: it went out** | [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) → [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the sky is three layers, the fastest is streaks, and a tube is a side of the hull** | [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
@@ -261,7 +262,26 @@ channel in nine rounds to be signed off.
 | **an enemy death is on its own sound band instead of punctuating the music** | ✅ [0109](decisions/0109-a-death-is-a-drum.md) |
 | **enemies: more variety, and attacks that are patterns rather than aimed** | ✅ [0110](decisions/0110-an-attack-is-a-pattern.md) |
 | **bosses: six of the seven are one boss with a different bullet** | ✅ [0111](decisions/0111-a-boss-has-one-idea.md) |
-| **the sky: a bit faster, and an actual skyscape rather than marks and a hue** | |
+| **the sky: a bit faster, and an actual skyscape rather than marks and a hue** | ✅ [0112](decisions/0112-the-sky-has-weather.md) |
+
+⚠️ **EVERY ITEM OF THE NINTH REPORT HAS LANDED AND NONE OF IT HAS BEEN FLOWN.** Five decisions —
+0108 to 0112 — at the player’s standing instruction: *"partial implementation and adjusting is going
+to be worse than adjusting with everything in."* **The next thing that happens is one play-test over
+all of it.**
+
+⚠️ **THREE THINGS ARE MEASURED, NAMED AND DELIBERATELY NOT ACTED ON**, so that a verdict can be
+attributed. Each is in the decision that found it:
+
+1. **The player’s weapons own the bottom octave.** The pulse falls to 27.5 Hz and sits at 1.84× the
+   music’s own sub level while it plays, which at max fire is 96% of the time —
+   [0109](decisions/0109-a-death-is-a-drum.md). The same play-test signed the weapons off, so changing
+   two channels at once would make the next verdict unreadable.
+2. **A level’s total bullet output is bounded by nothing.** A spinner puts three where a turret put
+   one; what one BODY may send while it is visible is guarded, and what a level sends is not —
+   [0110](decisions/0110-an-attack-is-a-pattern.md). If the next report says *harder*, look here first.
+3. **Fill rate is the one budget this project counts nothing about**, and the nebula tile is four
+   times a star tile’s pixels — [0112](decisions/0112-the-sky-has-weather.md). The blit COUNT is
+   held; the pixels are not.
 
 ⚠️ **THE EIGHTH IS THE ONE ABOVE THAT AND ALL FOUR OF ITS ITEMS LANDED** —
 [`the-eighth-play-test`](../reports/the-eighth-play-test-2026-08-10.md), answered by
