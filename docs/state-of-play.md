@@ -105,6 +105,7 @@ it is pushed — guards stop reaching their subject without ever going red, and 
 | **a drum step is a VELOCITY; a level's music climbs four times; the bake happens before the press** | [0102](decisions/0102-the-music-goes-somewhere.md) |
 | **a sky layer's depth says which SIDE of the game it is on, and only the streak layer may be in front** | [0103](decisions/0103-the-fast-layer-is-in-front.md) |
 | **an auto-weapon's cue fits inside its own cadence; a cue plays a figure by where in the BEAT it lands; the bus is mastered** | [0104](decisions/0104-the-gun-plays-a-figure.md) |
+| **an enemy's `closing` is a statement about how long it is on screen, and the window is guarded in SECONDS** | [0105](decisions/0105-a-body-is-on-screen-long-enough-to-answer.md) |
 | ~~the near sky is pushed back on every cheap axis~~ — **amended: it went out** | [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) → [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the sky is three layers, the fastest is streaks, and a tube is a side of the hull** | [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
@@ -247,7 +248,21 @@ but I want the sound to be rhythmic and immersive and it's currently not close t
 |---|---|
 | **bosses 3+ show no hit interaction; the second missile tube is a pickup late; the sky, for the fifth time** | ✅ [0103](decisions/0103-the-fast-layer-is-in-front.md) |
 | **the sound: the gun never stopped sounding, the explosions were off the grid, the bus was never mastered** | ✅ [0104](decisions/0104-the-gun-plays-a-figure.md) |
-| **enemies fly and shoot too fast; levels 2 and 3 want level 4's density** | **NOT STARTED, and deliberately after the sky** |
+| **enemies fly and shoot too fast; levels 2 and 3 want level 4's density** | ✅ [0105](decisions/0105-a-body-is-on-screen-long-enough-to-answer.md) |
+
+⚠️ **0105 CONTAINS A MEASUREMENT THAT CONTRADICTS ITS OWN INSTRUCTION, AND THAT IS THE PART TO READ.**
+*"Raise 2 and 3 to level 4's density"* was asked for, and **density does not separate those levels**:
+bodies per minute is within 13% of each other, the share that reacts to the player was HIGHER in level
+two than in level four, and level four is the most repetitive of the three. A guard fitted to the
+share was written and then deleted. **The next report about levels two and three should not be
+answered with more content** — 0105 names the lever the evidence points at and records that the player
+has declined it for a stated reason.
+
+⚠️ **AND THE SESSION'S FIRST READING OF *"enemies fly too fast"* WAS WRONG.** It was sequenced after
+the sky on the assumption that it was a perceptual comparison; the player corrected it — *"it has to
+do with their time onscreen and the player's time to interaction with them."* **Nothing in this
+repository measured a dwell time before 0105.** A body appears **eleven units** from the front of the
+player's box, and the charger had 1.38 seconds on screen at the hardest tier.
 
 ⚠️ **0104 IS THE FIRST AUDIO PASS WITH AN INSTRUMENT BEHIND IT, AND THAT IS ITS LARGEST CLAIM.**
 `scripts/hear.mjs --play` renders the cues OVER the music at the mixer's own gains and prints the

@@ -136,9 +136,13 @@ cost a guard.
 
 > *"Enemies overall fly too fast and shoot too fast."*
 
-⚠️ **Deliberately NOT answered in the same pass as the sky.** The sky's rate is what the player judges
-enemy speed against, and 0103 moves it; tuning both at once is the confound this project has recorded
-twice already.
+⚠️ **AND THE FIRST READING OF IT WAS WRONG, CORRECTED BY THE PLAYER THE SAME SESSION:** *"enemies fly
+too fast had nothing to do with the sky, it has to do with their time onscreen and the player's time
+to interaction with them."* The session had assumed it was a perceptual comparison against the
+background and sequenced it after the sky for that reason. **It is a dwell time, and nothing in the
+repository measured one** — [0105](../docs/decisions/0105-a-body-is-on-screen-long-enough-to-answer.md)
+has the table. The charger had **1.38 seconds** on screen at the hardest tier, and a body appears
+**eleven units** from the front of the player's box.
 
 **9 — Level 4's density is the target, and levels 2 and 3 are the problem.**
 
@@ -161,6 +165,13 @@ decision:**
 
 **So the pickup tables are not to be touched.** A future session that reads item 9 and reaches for the
 level scripts' pickup lists is doing the thing that was explicitly declined.
+
+⚠️ **AND *DENSITY* TURNED OUT NOT TO BE A QUANTITY THAT SEPARATES THE LEVELS NAMED** —
+[0105](../docs/decisions/0105-a-body-is-on-screen-long-enough-to-answer.md) has three measurements
+that all fail: bodies per minute is within 13% across levels two, three and four; the share that
+reacts to the player was **higher** in level two than in level four; and level four is the *most*
+repetitive of the three. **The report's own diagnosis is the one the evidence supports** — with a
+maxed gun the content is not what is being experienced — and that is the lever the player declined.
 
 **10 — The sky, for the fifth time.**
 
