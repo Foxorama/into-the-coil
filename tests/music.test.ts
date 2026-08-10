@@ -11,6 +11,7 @@ import {
   TITLE_ONLY,
   secondsOfLayer,
   MUSIC,
+  MUSIC_DRIVE,
   MUSIC_GAIN,
   MUSIC_LADDER,
   MUSIC_LAYERS,
@@ -24,7 +25,10 @@ import { auraNearness, auraNearnessFor, bakeLayer, bakeLoops, musicLevelFor, rep
 import { STEPS_PER_BEAT } from '../src/content/music.ts';
 import { MAX_STEPS } from '../src/app/loop.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
-import { SAMPLE_RATE } from '../src/app/sound.ts';
+import { SAMPLE_RATE, sampleCue, saturate } from '../src/app/sound.ts';
+import { CUES } from '../src/content/cues.ts';
+import { fireEveryAt } from '../src/content/pickups.ts';
+import { makeRng } from '../src/sim/rng.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -178,12 +182,27 @@ describe('four loops that cannot drift', () => {
     */
     const loops = bakeLoops(SAMPLE_RATE);
     let peak = 0;
+    let raw = 0;
     for (let i = 0; i < loops.drone.length; i++) {
       let sum = 0;
       for (const layer of MUSIC_LAYERS) sum += loops[layer][i]! * MUSIC_LADDER.boss[layer];
-      peak = Math.max(peak, Math.abs(sum * MUSIC_GAIN));
+      raw = Math.max(raw, Math.abs(sum * MUSIC_GAIN));
+      // The bus as it actually leaves — `makeMusicOut`'s shaper, at the same drive. 0104.
+      peak = Math.max(peak, Math.abs(saturate(sum * MUSIC_GAIN, MUSIC_DRIVE)));
     }
     expect(peak, `the boss mix peaks at ${peak.toFixed(2)} of full scale`).toBeLessThanOrEqual(1);
+    /*
+      ⚠️ **AND THE SUM GOING INTO THE SHAPER IS HELD SEPARATELY, WHICH IS NOT THE SAME CLAIM.**
+      `saturate` cannot return past 1 whatever it is handed, so the assertion above would stay green
+      over a mix driven to ten times full scale — a squared-off wave that is no longer music.
+      `docs/decisions/0104-the-gun-plays-a-figure.md` chose 0.15 to keep the ladder's dynamics, and
+      this is what stops the drive being turned up until the ladder is flat.
+
+      ⚠️ **1.7 rather than 1, because the shaper is ALLOWED to be working.** The measured sum is 1.674
+      (0092) and clipping it in software is what the shaper is for; what this refuses is the sum
+      growing so far past the curve's knee that everything above it is one level.
+    */
+    expect(raw, `the boss mix reaches the shaper at ${raw.toFixed(2)}, which is past its knee`).toBeLessThanOrEqual(1.7);
   });
 });
 
@@ -516,7 +535,18 @@ describe('0095 — the level has a piece of its own, and it covers the band', ()
     for (let i = 0; i < out.length; i++) {
       let v = 0;
       for (const layer of MUSIC_LAYERS) v += baked[layer][i % baked[layer].length]! * MUSIC_LADDER[level][layer];
-      out[i] = v * MUSIC_GAIN;
+      /*
+        ⚠️ **THE SHAPER IS MODELLED HERE, AND THAT IS WHY IT IS A `WaveShaperNode`** —
+        `docs/decisions/0104-the-gun-plays-a-figure.md`. `makeMusicOut` puts `saturate` on the music
+        bus at `MUSIC_DRIVE`, so **the pre-shaper sum is a signal that no longer reaches anybody**.
+        A guard measuring it would be holding a number the player cannot hear, which is
+        `docs/decisions/0027-measure-the-picture-not-the-model.md` exactly.
+
+        ⚠️ **A compressor could not have been modelled and that decided which node it is.** Attack and
+        release make the output a function of the signal's history; this is stateless, so the same
+        call with the same two arguments is the whole of what the audio thread does.
+      */
+      out[i] = saturate(v * MUSIC_GAIN, MUSIC_DRIVE);
     }
     mixes.set(level, out);
     return out;
@@ -613,6 +643,75 @@ describe('0095 — the level has a piece of its own, and it covers the band', ()
       for (const v of mixAt(level)) peak = Math.max(peak, Math.abs(v));
       expect(peak, `the ${level} mix peaks at ${peak.toFixed(3)} of full scale`).toBeLessThanOrEqual(1);
     }
+  }, DSP_MS);
+
+  it('0104 — THE REPORTED ONE: the bed is not quieter than the gun playing over it', () => {
+    /*
+      ⚠️ **Reported four times, most recently *"volume levels are still way off, background too
+      quiet"*, and the first three answers all moved `MUSIC_GAIN`.** They could not have worked: this
+      file's own clipping guard caps that constant at 0.597 by measurement, so the whole remaining
+      travel was 1.2 dB against a deficit this measures at 3 to 5.
+
+      ⚠️ **NOTHING IN THIS FILE ASSERTED A LOWER BOUND ON LOUDNESS AT ALL, and a probe found it.**
+      Every music guard was a CEILING — nothing clips, no rung crunches, the sum fits — so removing
+      the mastering that answers the report left the suite completely green. That is
+      `docs/decisions/0005-a-guard-must-be-seen-to-fail.md` doing the thing it exists for, on a
+      decision's headline mechanism.
+
+      ⚠️ **The quantity is the RATIO and not a level, which is what makes it a real check.** *Too
+      quiet* is never about absolute amplitude — it is about the bed against the things playing over
+      it. `MASTER_GAIN` scales both buses and cancels, so what is compared is exactly what the player
+      hears one against the other.
+
+      ⚠️ **The gun is the right thing to compare against**, and not the loudest cue. Auto-fire never
+      stops (`src/content/actions.ts`), so the pulse is the one sound present continuously — it is the
+      floor the music has to clear to be a bed rather than something underneath the gun. An explosion
+      is a transient and is *supposed* to be louder.
+    */
+    const bed = mixAt('run');
+    let bedSq = 0;
+    for (const v of bed) bedSq += v * v;
+    const bedRms = Math.sqrt(bedSq / bed.length);
+
+    // The gun at its fastest rung, laid down over the same stretch at the cadence the ladder reaches.
+    const fastest = Math.min(...SHIPS.proof.firePerBeat.map((_unused, tier) => fireEveryAt(SHIPS.proof, tier)));
+    const shot = sampleCue(CUES.pulse, SAMPLE_RATE, makeRng('cues').stream('pulse'));
+    const gun = new Float32Array(bed.length);
+    const perStep = SAMPLE_RATE / STEPS_PER_SECOND;
+    for (let at = 0; at * fastest * perStep < gun.length; at++) {
+      const start = Math.round(at * fastest * perStep);
+      for (let i = 0; i < shot.length && start + i < gun.length; i++) gun[start + i] = (gun[start + i] ?? 0) + shot[i]!;
+    }
+    let gunSq = 0;
+    for (const v of gun) gunSq += v * v;
+    const gunRms = Math.sqrt(gunSq / gun.length);
+
+    /*
+      ⚠️ **SIX DECIBELS, WHICH IS THE BED AT TWICE THE GUN'S AMPLITUDE, AND IT IS MEASURED RATHER
+      THAN PICKED.** Driven over the shipped build and this one:
+
+      | | `run` vs the gun | `boss` vs the gun |
+      |---|---|---|
+      | unmastered, as reported | **+2.0 dB** | +5.0 dB |
+      | `MUSIC_DRIVE` 0.15 | **+7.5 dB** | +10.0 dB |
+
+      **+2.0 dB is the state a play-test called *background too quiet*, so the bound has to refuse
+      it** — and *merely louder than the gun* did not: a first draft asserted `> 0` and `npm run prove`
+      reported **STILL GREEN** with the mastering removed entirely, which is
+      `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` catching a guard standing over the
+      headline mechanism of its own decision.
+
+      ⚠️ **Twice the amplitude is the smallest bound that is also a statable rule**, rather than a
+      number chosen to sit under the current measurement. There is 1.5 dB of margin at 0.15, which is
+      deliberately thin: this is a floor the mix has to keep clearing, not a description of where it
+      happens to be.
+    */
+    const ratio = 20 * Math.log10(bedRms / gunRms);
+    expect(
+      ratio,
+      `the level's music sits ${ratio.toFixed(1)}dB over a gun firing every ${fastest} steps — ` +
+        `the background is not twice the thing playing continuously over it`,
+    ).toBeGreaterThan(6);
   }, DSP_MS);
 });
 
@@ -736,8 +835,20 @@ describe('0102 — the music has accents, a bass line and a build', () => {
       }),
     );
     expect(lowAndMoving.length, 'nothing in the whole piece is a moving bass line').toBeGreaterThan(0);
+    /*
+      ⚠️ **`run` USED TO BE SKIPPED HERE AND `npm run prove` IS WHY IT IS NOT** —
+      `docs/decisions/0104-the-gun-plays-a-figure.md`. The exemption was correct while `groove` opened
+      at `push`: a level's opening rung genuinely had no bass line and 0102 chose that deliberately.
+      The seventh play-test asked for the opposite — *"the title and boss screen music needs to be the
+      minimum base level we build upon"* — so `groove` moved down to `run`, and the skip left the guard
+      standing over the one rung the new rule is about. A probe closing `groove` at `run` reported
+      **STILL GREEN**.
+
+      ⚠️ **`calm` is still exempt and is a different piece.** It is the title's, it has `bass` open,
+      and 0095 is the decision that says the two do not share a ladder.
+    */
     for (const level of MUSIC_LEVELS) {
-      if (level === 'calm' || level === 'run') continue;
+      if (level === 'calm') continue;
       const open = lowAndMoving.filter((layer) => MUSIC_LADDER[level][layer] > 0);
       expect(open.length, `${level} has no moving bass line under it, so the low end is a pad`).toBeGreaterThan(0);
     }

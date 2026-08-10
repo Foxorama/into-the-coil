@@ -42,6 +42,7 @@ export const MUSIC_LAYERS = [
   'chords',
   'groove',
   'arp',
+  'hook',
   'drive',
   'lead',
   'auraSlow',
@@ -111,6 +112,7 @@ export const LAYER_BARS: Record<MusicLayer, number> = {
   chords: 8,
   groove: 4,
   arp: 8,
+  hook: 4,
   drive: 2,
   lead: 4,
   auraSlow: 2,
@@ -253,8 +255,57 @@ export const AURA_CURVE = 1.5;
  * ⚠️ **0.52 rather than the 0.597 that fits, and the margin is deliberate.** The guard is over the
  * music bus alone; the cues run into the same destination and nothing measures the two together.
  * 0092 has the arithmetic and names it as the thing owed.
+ *
+ * ── AND THE THING 0092 SAID WAS OWED IS NOW MEASURED, WHICH IS WHY THIS DID NOT MOVE AGAIN ──────
+ *
+ * ⚠️ **`docs/decisions/0104-the-gun-plays-a-figure.md`.** Reported for the fourth time: *"volume
+ * levels are still way off as well, background too quiet."* The three previous answers all moved
+ * this number. **This one does not**, because `scripts/hear.mjs --play` finally renders the cues over
+ * the music and reports the ratio the report is actually about: the bed was **2 to 5 dB QUIETER**
+ * than the effects playing over it, worst at max fire.
+ *
+ * ⚠️ **IT COULD NOT HAVE BEEN FIXED HERE.** `tests/music.test.ts` caps this at 0.597 by measurement —
+ * the summed layers peak at 1.674 — so the whole remaining travel was 1.2 dB against a 3–5 dB
+ * deficit. **The bus was peak-limited by a 12–14 dB crest factor it never used**, and had no
+ * compressor, limiter or soft-clip anywhere on it while every cue had `glue`. It had been
+ * gain-staged four times and never mastered.
+ *
+ * ⚠️ **`MUSIC_DRIVE` below is the lever this one could not be.**
  */
 export const MUSIC_GAIN = 0.52;
+
+/**
+ * How hard the summed music bus is driven into `saturate`, before it reaches the destination.
+ *
+ * ── THE BUS IS MASTERED NOW, AND FOUR MIX PASSES WERE SPENT NOT DOING IT ────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0104-the-gun-plays-a-figure.md`.** The same soft clip every cue already runs
+ * through as `glue` — `src/app/sound.ts`'s `saturate`, exported for this — applied to the music as a
+ * `WaveShaperNode`. It is one node, created once with the context, and it allocates nothing per frame.
+ *
+ * ⚠️ **0.15, AND IT WAS CHOSEN BY SWEEPING RATHER THAN BY EAR.** Driven over the whole ladder:
+ *
+ * | drive | `run` peak | `run` RMS | vs today | `boss` peak | crest lost |
+ * |---|---|---|---|---|---|
+ * | 0 | 0.539 | 0.132 | — | 0.819 | — |
+ * | **0.15** | **0.807** | **0.248** | **+5.5 dB** | **0.957** | **2.0 dB** |
+ * | 0.30 | 0.913 | 0.333 | +8.1 dB | 0.987 | 3.4 dB |
+ * | 0.45 | 0.965 | 0.411 | +9.9 dB | 0.997 | 4.5 dB |
+ *
+ * **+5.5 dB is the size of the reported deficit and 0.30 is past it.** A bus at 0.913 peak on an
+ * ordinary level rung is a bus with no dynamics left, and *loud* stops meaning anything when the
+ * boss arrives — which is the thing the whole ladder exists to do.
+ *
+ * ⚠️ **AND IT DOES NOT EAT THE AURA, WHICH WAS THE RISK AND IS DISCHARGED BY MEASUREMENT.** A static
+ * shaper on a summed bus compresses a quiet layer against a loud one, and the aura is a quiet layer
+ * at the loudest rung — which is
+ * `docs/decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md`'s own defect, *"I didn't even
+ * notice it over the fire"*. Measured as the RMS of (bus with aura − bus without), at four
+ * nearnesses: the aura gains **5.1–5.3 dB** where the bus gains 5.5, so its share is 66% before and
+ * 67% after, and the spread across nearness is **8.1× against 8.3× dry**. 0092's curve survives
+ * intact, and `tests/music.test.ts` holds it rather than this table.
+ */
+export const MUSIC_DRIVE = 0.15;
 
 /**
  * How far into a level the music starts listening for the boss, in world units.
@@ -601,13 +652,35 @@ export type MusicLevel = (typeof MUSIC_LEVELS)[number];
   `docs/decisions/0091-the-boss-has-an-aura.md` already calls *"builds in tempo"*, and it is written
   down here so nobody goes looking for a BPM that was never there.
 */
+/*
+  ── AND `run` OPENED THINNER THAN THE TITLE DID, WHICH IS THE ASK STATED AS A FLOOR ──────────────
+
+  ⚠️ **`docs/decisions/0104-the-gun-plays-a-figure.md`.** Reported from play: *"the title and boss
+  screen music needs to be the minimum base level we build upon for the music"*, and *"the current
+  level music is way too calm and repetitive."*
+
+  ⚠️ **THE LEVEL'S PIECE HAD NO BASS LINE FOR THE FIRST THIRD OF EVERY LEVEL.** 0102 built `groove`
+  precisely because *"a piece with no bass line is what no depth is a description of"* — and then
+  opened it at `push`, which is 4,200 units from the boss. About a minute of every level still had
+  nothing under the kick but `chords`' own rolling sub, which is the state 0102 was answering.
+
+  ⚠️ **`groove` and `arp` now open at `run`**, so a level begins with a bass line and something on
+  every sixteenth. The title's three layers are the floor and the level starts above it, which is what
+  *"the minimum base level we build upon"* says.
+
+  ⚠️ **THE LADDER IS STILL ADDITIVE AND STILL CLIMBS FOUR TIMES**, which is the thing 0102 bought and
+  this must not spend: what `push` and `surge` buy is now WEIGHT rather than arrival — the groove and
+  the arp come up as the level goes on — and `drive` and `lead` still arrive as events. A rung that
+  opened nothing new would be 0102's *"the ingame background music doesn't change"* returning, and
+  `tests/music.test.ts` holds every rung louder than the one below it.
+*/
 export const MUSIC_LADDER: Record<MusicLevel, Record<MusicLayer, number>> = {
-  calm: { drone: 0.55, bass: 0.7, beat: 0.5, engine: 0, chords: 0, groove: 0, arp: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
-  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0, arp: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
-  push: { drone: 0.5, bass: 0, beat: 0, engine: 0.88, chords: 0.9, groove: 0.9, arp: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
-  surge: { drone: 0.48, bass: 0, beat: 0, engine: 0.9, chords: 0.9, groove: 0.92, arp: 0.6, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
-  approach: { drone: 0.5, bass: 0, beat: 0, engine: 0.9, chords: 0.92, groove: 0.92, arp: 0.7, drive: 0.7, lead: 0, auraSlow: 0, auraFast: 0 },
-  boss: { drone: 0.4, bass: 0, beat: 0, engine: 0.95, chords: 0.95, groove: 0.95, arp: 0.75, drive: 0.8, lead: 0.85, auraSlow: 1, auraFast: 0.9 },
+  calm: { drone: 0.55, bass: 0.7, beat: 0.5, engine: 0, chords: 0, groove: 0, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
+  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0.8, arp: 0, hook: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
+  push: { drone: 0.5, bass: 0, beat: 0, engine: 0.88, chords: 0.9, groove: 0.88, arp: 0.5, hook: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
+  surge: { drone: 0.48, bass: 0, beat: 0, engine: 0.9, chords: 0.9, groove: 0.92, arp: 0.62, hook: 0.6, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
+  approach: { drone: 0.5, bass: 0, beat: 0, engine: 0.9, chords: 0.92, groove: 0.92, arp: 0.68, hook: 0.66, drive: 0.7, lead: 0, auraSlow: 0, auraFast: 0 },
+  boss: { drone: 0.4, bass: 0, beat: 0, engine: 0.95, chords: 0.95, groove: 0.95, arp: 0.72, hook: 0.7, drive: 0.8, lead: 0.85, auraSlow: 1, auraFast: 0.9 },
 };
 
 /** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */
@@ -1015,6 +1088,63 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 4,
       octave: 0,
       note: { wave: 'noise', from: 0, to: 0, seconds: 0.014, gain: 0.055, attack: 0.0004, curve: 9, lowFrom: 15000, highFrom: 8000 },
+    },
+  ],
+
+  /*
+    ── THE HOOK — THE RIFF, AND THE LEVEL'S PIECE HAD NOTHING A LISTENER COULD FOLLOW ──────────────
+
+    `docs/decisions/0104-the-gun-plays-a-figure.md`. Reported: *"the current level music is way too
+    calm and repetitive."*
+
+    ⚠️ **IT EXISTS BECAUSE THE LADDER RAN OUT OF THINGS TO OPEN, WHICH IS A GUARD'S FINDING.** The ask
+    — *"the title and boss screen music needs to be the minimum base level"* — meant `groove` and `arp`
+    moving down to `run`, and `tests/music.test.ts` immediately said `push` and `surge` then opened
+    nothing new. **The honest answer to a ladder with too few rungs is more music, not a shorter
+    ladder**, and *more music* is what the report asks for in the same breath.
+
+    ⚠️ **A STAB, which is the one register the piece had empty.** `groove` is the bass, `arp` is
+    texture two octaves up, `lead` is a melody that only a boss hears — and between them there was
+    nothing in the middle carrying a shape. A hook is what a listener hums back, and 0102's *"a melody
+    somebody could hum"* was true of the boss's piece and of nothing else.
+
+    ⚠️ **Syncopated against everything under it.** `engine`'s kick is four on the floor and `groove`
+    plays the offbeats and pushes; this lands on the *and* of two and the *and* of three, so it fills
+    the one part of the bar the other two leave alone. Three parts on the beat is one thicker part.
+
+    ⚠️ **Four bars over the eight-bar progression**, on `LAYER_BARS`' own rule: the figure states
+    itself over the first half and again over the second, so the harmony turns underneath a line that
+    does not — which is what makes a riff a riff and costs half the buffer of writing it twice.
+  */
+  hook: [
+    {
+      /*
+        Two stabs a bar, a fifth apart, walking down with the progression. Short and hard-filtered so
+        it reads as a chord being hit rather than as a pad arriving.
+      */
+      steps: [
+        _, _, 0, _, _, 7, _, _,
+        _, _, -4, _, _, 3, _, _,
+        _, _, 3, _, _, 10, _, _,
+        _, _, -2, _, _, 5, _, _,
+      ],
+      pitched: true,
+      perBeat: 2,
+      octave: 1,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.34, gain: 0.2, attack: 0.006, curve: 4, lowFrom: 2600, lowTo: 700, q: 2.2, drive: 0.3 },
+    },
+    {
+      // The third above it, a shade quieter — two notes is a chord and one is a bleep.
+      steps: [
+        _, _, 3, _, _, 10, _, _,
+        _, _, 0, _, _, 7, _, _,
+        _, _, 7, _, _, 14, _, _,
+        _, _, 2, _, _, 9, _, _,
+      ],
+      pitched: true,
+      perBeat: 2,
+      octave: 1,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.3, gain: 0.14, attack: 0.008, curve: 4.5, lowFrom: 2400, lowTo: 800, q: 2, drive: 0.25 },
     },
   ],
 

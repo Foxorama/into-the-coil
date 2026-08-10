@@ -28,10 +28,15 @@ import {
   sampleCue,
   sampleLayerInto,
   takePrewarmed,
+  variantAt,
+  velocitiesOf,
   type AudioOut,
 } from '../src/app/sound.ts';
 import { bakeLoops } from '../src/app/music.ts';
-import { MUSIC_LAYERS, secondsOfLayer } from '../src/content/music.ts';
+import { FIRE_GRID, MUSIC_LAYERS, secondsOfLayer } from '../src/content/music.ts';
+import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
+import { MISSILE_BEAT_RATIO, fireEveryAt, missileEveryAt } from '../src/content/pickups.ts';
+import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { SCREENS } from '../src/state/screens.ts';
 import { initialState, reduce, type Action } from '../src/state/root.ts';
@@ -84,14 +89,24 @@ function stripComments(src: string): string {
 }
 
 /** An `AudioOut` that records rather than sounds, which is the whole reason the speaker is separate. */
-function recorder(ready = true): { out: AudioOut; heard: number[] } {
+function recorder(ready = true): { out: AudioOut; heard: number[]; struck: number[]; ducked: number[] } {
   const heard: number[] = [];
+  /** Which WEIGHT each sounding was struck at, in the same order — 0104. */
+  const struck: number[] = [];
+  /** Every duck the speaker asked the music for, in order — 0104. */
+  const ducked: number[] = [];
   return {
     heard,
+    struck,
+    ducked,
     out: {
       ready: () => ready,
-      sound: (index: number) => {
+      sound: (index: number, velocity: number) => {
         heard.push(index);
+        struck.push(velocity);
+      },
+      duck: (amount: number) => {
+        ducked.push(amount);
       },
     },
   };
@@ -420,13 +435,25 @@ describe('the cue table', () => {
       expect(warm!.cues.length, 'the prewarm baked a different number of cues').toBe(cold.cues.length);
       let compared = 0;
       for (let i = 0; i < cold.cues.length; i++) {
-        const at = firstDifference(warm!.cues[i]!, cold.cues[i]!);
-        compared += cold.cues[i]!.length;
-        expect(at, `${CUE_KINDS[i]} is a different LENGTH prewarmed`).not.toBe(-1);
-        expect(
-          at,
-          `${CUE_KINDS[i]} sounds different depending on when it was baked — first at sample ${at}`,
-        ).toBe(-2);
+        /*
+          ⚠️ **A cue is a LIST of weights now** — `docs/decisions/0104-the-gun-plays-a-figure.md`. The
+          two paths build the nesting differently on purpose: `bakeCues` maps a row to its variants in
+          one pass, and the prewarm claims the row's list up front and fills each slot from its own
+          job, spread across frames. **That is exactly the kind of difference this test exists to
+          catch**, so the count is asserted per row rather than only in total.
+        */
+        expect(warm!.cues[i]!.length, `${CUE_KINDS[i]} baked a different number of weights prewarmed`).toBe(
+          cold.cues[i]!.length,
+        );
+        for (let v = 0; v < cold.cues[i]!.length; v++) {
+          const at = firstDifference(warm!.cues[i]![v]!, cold.cues[i]![v]!);
+          compared += cold.cues[i]![v]!.length;
+          expect(at, `${CUE_KINDS[i]} weight ${v} is a different LENGTH prewarmed`).not.toBe(-1);
+          expect(
+            at,
+            `${CUE_KINDS[i]} weight ${v} sounds different depending on when it was baked — first at sample ${at}`,
+          ).toBe(-2);
+        }
       }
       for (const layer of MUSIC_LAYERS) {
         const at = firstDifference(warm!.loops[layer], cold.loops[layer]);
@@ -546,7 +573,11 @@ describe('the synthesiser', () => {
     const a = bakeCues();
     const b = bakeCues();
     for (let i = 0; i < a.length; i++) {
-      expect(Array.from(a[i]!.slice(0, 64)), `cue ${i} baked differently twice`).toEqual(Array.from(b[i]!.slice(0, 64)));
+      for (let v = 0; v < a[i]!.length; v++) {
+        expect(Array.from(a[i]![v]!.slice(0, 64)), `cue ${i} weight ${v} baked differently twice`).toEqual(
+          Array.from(b[i]![v]!.slice(0, 64)),
+        );
+      }
     }
   });
 
@@ -560,8 +591,39 @@ describe('the synthesiser', () => {
     for (const kind of ['kill', 'blast', 'bossDown'] as const) {
       const alone = sampleCue(CUES[kind], SAMPLE_RATE, makeRng('cues').stream(kind));
       expect(Array.from(alone.slice(0, 32)), `${kind} is not rolled from its own name`).toEqual(
-        Array.from(baked[indexOf(kind)]!.slice(0, 32)),
+        Array.from(baked[indexOf(kind)]![0]!.slice(0, 32)),
       );
+    }
+  });
+
+  it('0104 — and every WEIGHT of a cue is the same sound, drawing the same noise', () => {
+    /*
+      ⚠️ **THIS IS WHAT MAKES A FIGURE ONE SOUND PLAYED FOUR WAYS** —
+      `docs/decisions/0104-the-gun-plays-a-figure.md`. `bakeCues` takes `stream(kind)` once per
+      variant, and `Rng.stream` is a pure function of two strings that consumes nothing — so each
+      weight gets an identically seeded generator and the four differ **only** in level. Four
+      different noise draws would be four different sounds, which is a gun that changes timbre as it
+      fires rather than one that accents.
+
+      ⚠️ **Asserted as an exact RATIO rather than as *they look similar***, because that is the whole
+      claim: sample for sample, a variant is its row's velocity times the full-weight one.
+    */
+    const baked = bakeCues();
+    for (const kind of CUE_KINDS) {
+      const weights = velocitiesOf(CUES[kind]);
+      if (weights.length < 2) continue;
+      const full = baked[indexOf(kind)]![0]!;
+      weights.forEach((velocity, at) => {
+        const variant = baked[indexOf(kind)]![at]!;
+        expect(variant.length, `${kind} weight ${at} is a different length from weight 0`).toBe(full.length);
+        for (let i = 0; i < full.length; i += 37) {
+          const want = (full[i]! / weights[0]!) * velocity;
+          expect(
+            Math.abs(variant[i]! - want),
+            `${kind} weight ${at} is a different SOUND from weight 0 at sample ${i}, not the same one quieter`,
+          ).toBeLessThan(1e-6);
+        }
+      });
     }
   });
 
@@ -712,12 +774,67 @@ describe('the synthesiser', () => {
     expect(weight('missile'), 'the pulse is heavier at the bottom than the missile').toBeGreaterThan(weight('pulse'));
   });
 
+  it('0104 — THE REPORTED ONE: an auto-weapon’s cue finishes before its own next volley', () => {
+    /*
+      ⚠️ **Reported from play: *"the gun fire doesn't fit in with the music at all, it's technically on
+      beat, but it also doesn't fit a great sound experience."*** The pulse cue was **0.110s** and the
+      gap between volleys reaches **0.067s**, so from the second weapon pickup onward the gun sounded
+      110% of the time and 165% at the cap. A sound with no gap in it is not a rhythm — it is a
+      continuous tone with bumps, and no amount of putting it *on* the beat could have made a beat
+      audible inside it.
+
+      ⚠️ **`hold` DOES NOT HOLD THIS AND WAS NEVER MEANT TO.** It is 2 steps against a cue 6.6 steps
+      long, and every one of the twelve rows is longer than its hold — correctly, because the field
+      exists to stop a flam and two kills close together should both sound. What makes the two auto
+      weapons different is that the player cannot choose not to fire them
+      (`src/content/actions.ts` bans a fire action), so their cue is the one sound that must fit.
+
+      ⚠️ **THIS IS 0035's RULE FOR THE EYE, WRITTEN FOR THE EAR FOR THE FIRST TIME.**
+      `docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md` requires the impact flash to
+      finish before the next hit lands — *"firing faster than the flash can resolve makes damage
+      unreadable"* — and `IMPACT_FLASH_STEPS` has been held against the fire rate ever since. The
+      identical claim about the sound was never made, and it was false the whole time.
+
+      ⚠️ **Driven off the SHIP'S LADDER rather than against a number typed here**, so a retuned
+      `firePerBeat` or `missilePerBeat` fails this rather than quietly reintroducing the drone —
+      `docs/decisions/0027-measure-the-picture-not-the-model.md`, and the same cross-file shape
+      `tests/bombs.test.ts` uses for a blast's reach and its art.
+    */
+    for (const ship of SHIP_KINDS) {
+      const row = SHIPS[ship];
+      const fastest = Math.min(...row.firePerBeat.map((_unused, tier) => fireEveryAt(row, tier)));
+      const gap = fastest / STEPS_PER_SECOND;
+      expect(
+        cueSeconds(CUES.pulse),
+        `the ${ship} pulse sounds for ${cueSeconds(CUES.pulse).toFixed(3)}s and fires every ${gap.toFixed(3)}s at its ` +
+          `fastest rung, so the gun never stops making a noise`,
+      ).toBeLessThanOrEqual(gap);
+
+      const soonest = Math.min(
+        ...row.missilePerBeat.map((_unused, tier) => MISSILE_BEAT_RATIO * missileEveryAt(row, tier)),
+      );
+      const missileGap = soonest / STEPS_PER_SECOND;
+      expect(
+        cueSeconds(CUES.missile),
+        `the ${ship} missile sounds for ${cueSeconds(CUES.missile).toFixed(3)}s and launches every ` +
+          `${missileGap.toFixed(3)}s at its fastest rung, so the counter-beat overlaps itself`,
+      ).toBeLessThanOrEqual(missileGap);
+    }
+  });
+
   it('bakes each cue to the length its row asks for, and none past the ceiling', () => {
     const baked = bakeCues();
     expect(baked.length, 'the bake and the table disagree about how many cues there are').toBe(CUE_KINDS.length);
     CUE_KINDS.forEach((kind, i) => {
-      expect(baked[i]!.length, `${kind} baked to the wrong length`).toBe(Math.round(cueSeconds(CUES[kind]) * SAMPLE_RATE));
-      expect(baked[i]!.length, `${kind} is past the ceiling in samples`).toBeLessThanOrEqual(MAX_CUE_SAMPLES);
+      expect(baked[i]!.length, `${kind} baked a different number of weights from its figure`).toBe(
+        velocitiesOf(CUES[kind]).length,
+      );
+      for (const variant of baked[i]!) {
+        expect(variant.length, `${kind} baked to the wrong length`).toBe(
+          Math.round(cueSeconds(CUES[kind]) * SAMPLE_RATE),
+        );
+        expect(variant.length, `${kind} is past the ceiling in samples`).toBeLessThanOrEqual(MAX_CUE_SAMPLES);
+      }
     });
   });
 });
@@ -729,6 +846,68 @@ describe('the speaker decides WHEN, and it is the half that is arithmetic', () =
     speaker.setOn(false);
     for (const kind of CUE_KINDS) speaker.play(kind);
     expect(heard, 'sound is off and the speaker sounded anyway').toEqual([]);
+  });
+
+  it('0104 — strikes a cue by WHERE IN THE BEAT it lands, not by how many have gone before', () => {
+    /*
+      ⚠️ **THE REPORTED ONE, and the difference between the two models is the whole decision** —
+      `docs/decisions/0104-the-gun-plays-a-figure.md`. A counter that advances per sounding gives the
+      same answer as this for a gun at a constant cadence with nothing dropped, and diverges for ever
+      the first time either is untrue — a cadence changes four times up the ladder and a volley the
+      pool refuses is silent. Then the accents slide off the bar and stay off, which is 0094's *in
+      time is not in phase* one layer up.
+
+      ⚠️ **Driven with a SKIP in it, because that is the case the two models disagree about.** The
+      cue is played on some sixteenths and not others; a counter would hand out 0, 1, 2, 3 to
+      whichever four happened to sound, and the bar says otherwise.
+    */
+    const { out, struck } = recorder();
+    const speaker = makeSpeaker(out);
+    /*
+      ⚠️ **Every step is driven, not only the ones that sound**, because the speaker's hold runs on its
+      own clock and a test that steps once per sounding would be measuring the hold instead. That is
+      also what the game does: `world.onTick` ticks the speaker on every step whatever happens.
+    */
+    const firesOn = new Set([0, 2, 3, 4, 5, 7]);
+    const want: number[] = [];
+    for (let sixteenth = 0; sixteenth < 8; sixteenth++) {
+      for (let i = 0; i < FIRE_GRID; i++) speaker.step(sixteenth * FIRE_GRID + i);
+      if (!firesOn.has(sixteenth)) continue;
+      speaker.play('pulse');
+      want.push(sixteenth % velocitiesOf(CUES.pulse).length);
+    }
+    expect(struck, 'the gun accents by count rather than by where in the bar the shot lands').toEqual(want);
+    /*
+      ⚠️ **And a COUNTER would have produced 0,1,2,3,0,1 over the same drive** — six soundings numbered
+      in order. The two models agree only when nothing is ever skipped, which is why the skips are here.
+    */
+    expect(want, 'the drive stopped exercising the difference between the two models').not.toEqual([0, 1, 2, 3, 0, 1]);
+    /*
+      ⚠️ **And the same steps in a different ORDER of soundings give the same weights**, which is what
+      *a property of when* means and what a counter can never satisfy.
+    */
+    expect(variantAt(4, 0), 'the downbeat is not the first weight').toBe(0);
+    expect(variantAt(4, FIRE_GRID * 4), 'the next beat did not come back to the downbeat').toBe(0);
+    expect(variantAt(4, FIRE_GRID * 2), 'the half-beat is not the third weight').toBe(2);
+    // A figure shorter than the beat wraps rather than running off the end.
+    expect(variantAt(2, FIRE_GRID * 3), 'a two-entry figure did not wrap inside the beat').toBe(1);
+    // A row with no figure has exactly one weight and always takes it.
+    expect(variantAt(1, FIRE_GRID * 3), 'a cue with no figure was struck at a weight it never baked').toBe(0);
+  });
+
+  it('0104 — and a cue with no figure is untouched, which is eleven of the twelve rows', () => {
+    /*
+      The mechanism is opt-in: a row without one bakes a single buffer at full weight and is asked for
+      index 0 for ever, which is byte for byte what every cue did before this decision.
+    */
+    const { out, struck } = recorder();
+    const speaker = makeSpeaker(out);
+    for (const kind of CUE_KINDS) {
+      if (CUES[kind].figure !== undefined) continue;
+      speaker.step(FIRE_GRID * 3);
+      speaker.play(kind);
+    }
+    expect(new Set(struck), 'a cue with no figure was struck at something other than full weight').toEqual(new Set([0]));
   });
 
   it('sounds a cue once per step however many times the step asks for it', () => {
@@ -750,20 +929,125 @@ describe('the speaker decides WHEN, and it is the half that is arithmetic', () =
       ⚠️ **The failure is not loudness, it is smearing.** Two identical cues 17ms apart are not heard
       as two events — they are heard as one with a broken attack.
     */
+    /*
+      ⚠️ **DRIVEN ON `hit` AND IT USED TO BE `kill`, WHICH IS 0027 RATHER THAN A TIDY-UP.** 0104 puts
+      the kill on the sixteenth grid, and a gridded cue can sound at most once per `FIRE_GRID` — six
+      steps against a hold of two. Driving this with `kill` would still pass and would be **measuring
+      the grid**, so the guard over the hold would have quietly stopped standing over anything. `hit`
+      is deliberately not gridded (0035 needs it dense) and has the same hold of two.
+    */
     const { out, heard } = recorder();
     const speaker = makeSpeaker(out);
-    const hold = CUES.kill.hold;
-    expect(hold, 'the kill cue no longer holds, so this test asserts nothing').toBeGreaterThan(1);
+    const hold = CUES.hit.hold;
+    expect(hold, 'the hit cue no longer holds, so this test asserts nothing').toBeGreaterThan(1);
+    expect(CUES.hit.onGrid, 'the hit cue was gridded, so this now measures the grid and not the hold').not.toBe(true);
     speaker.step();
-    speaker.play('kill');
+    speaker.play('hit');
     for (let i = 1; i < hold; i++) {
       speaker.step();
-      speaker.play('kill');
+      speaker.play('hit');
     }
     expect(heard.length, 'a held cue retriggered inside its own hold').toBe(1);
     speaker.step();
-    speaker.play('kill');
+    speaker.play('hit');
     expect(heard.length, 'the hold never expired, so the cue is heard once and never again').toBe(2);
+  });
+
+  it('0104 — a gridded cue waits for the next sixteenth, and waits at most one', () => {
+    /*
+      ⚠️ **THE REPORTED ONE: *"enemy explosions should pulse with the beat."*** A kill happens when a
+      bullet ARRIVES, which is a function of how far away the thing was — so the loudest repeated
+      event in a level landed on an arbitrary sixtieth of a second while every cadence around it was
+      on a sixteenth. `docs/decisions/0099-the-cues-are-in-the-key.md` assumed the opposite in as many
+      words and tuned only the harmony.
+
+      ⚠️ **The bound is what makes it safe against 0036**: the picture is immediate and the sound is
+      never more than `FIRE_GRID` steps behind it. That is a tenth of a second at 150 BPM, and it is
+      asserted rather than described.
+    */
+    for (let asked = 1; asked <= FIRE_GRID; asked++) {
+      const { out, heard } = recorder();
+      const speaker = makeSpeaker(out);
+      let sounded = -1;
+      for (let step = 1; step <= FIRE_GRID * 3; step++) {
+        speaker.step(step);
+        if (step === asked) speaker.play('kill');
+        if (heard.length > 0 && sounded < 0) sounded = step;
+      }
+      expect(sounded, `a kill asked for at step ${asked} never sounded at all`).toBeGreaterThan(0);
+      expect(sounded % FIRE_GRID, `a kill asked for at step ${asked} sounded at ${sounded}, off the grid`).toBe(0);
+      expect(
+        sounded - asked,
+        `a kill asked for at step ${asked} waited ${sounded - asked} steps, which is more than one sixteenth`,
+      ).toBeLessThanOrEqual(FIRE_GRID);
+    }
+  });
+
+  it('0104 — ducks the music for a cue that SOUNDED, and never for one the cap refused', () => {
+    /*
+      ⚠️ **THE FAILURE THIS IS WRITTEN FROM: ducking on the ASK.** A cue the hold or the voice cap
+      refused is one the player never hears, and pushing the bed down for it is the track getting out
+      of the way of nothing — audible as the music dipping at random on the busiest steps, which is
+      the worst possible place to introduce a mystery.
+
+      ⚠️ **And it is the one thing about the duck a unit can check.** Everything else about it — the
+      depth, the shape, the recovery — is `AudioParam` automation on a real context, which is
+      `tests/sound.browser.test.ts`'s ground and nothing here can hear.
+    */
+    const { out, ducked, heard } = recorder();
+    const speaker = makeSpeaker(out);
+    speaker.step();
+    // Four different cues fill the cap; the fifth and sixth are refused. `hit` and `threat` carry no
+    // duck at all, so what lands in `ducked` can only come from the two that do.
+    speaker.play('bomb');
+    speaker.play('hit');
+    speaker.play('threat');
+    speaker.play('chime');
+    speaker.play('missile');
+    expect(heard.length, 'the cap did not refuse anything, so this measures nothing').toBe(MAX_VOICES);
+    expect(ducked, 'the music ducked for a cue nobody heard').toEqual([]);
+
+    /*
+      And one that does sound ducks by exactly its row's depth. `death` is gridded, so it is asked for
+      on one step and driven to the next sixteenth before anything is asserted — which is also the
+      proof that the duck rides the SOUNDING and not the ask: nothing lands in `ducked` until the
+      flush.
+    */
+    const fresh = recorder();
+    const second = makeSpeaker(fresh.out);
+    second.step(1);
+    second.play('death');
+    expect(fresh.ducked, 'the music ducked when the cue was asked for rather than when it sounded').toEqual([]);
+    for (let step = 2; step <= FIRE_GRID; step++) second.step(step);
+    expect(fresh.heard.length, 'the death never sounded, so the duck cannot be measured').toBe(1);
+    expect(fresh.ducked, 'a cue that sounded did not duck by its row’s own depth').toEqual([CUES.death.duck]);
+  });
+
+  it('0104 — and the gun never ducks, whatever it is doing', () => {
+    /*
+      ⚠️ **Auto-fire cannot be switched off** — `src/content/actions.ts` bans a fire action — so a
+      pulse that ducked would hold the bed down for the whole game. That is *"background too quiet"*
+      returning as a consequence of the fix for *"they don't mesh"*, and it is the one way this
+      mechanism could undo the other half of the same decision.
+    */
+    for (const kind of ['pulse', 'missile', 'threat', 'hit'] as const) {
+      expect(CUES[kind].duck, `${kind} ducks the music, and it fires too often to be allowed to`).toBeUndefined();
+    }
+    // And everything that DOES duck is one of the four the mix measured as 8 dB or more over the bed.
+    for (const kind of CUE_KINDS) {
+      if (CUES[kind].duck === undefined) continue;
+      expect(['kill', 'bossDown', 'blast', 'death'], `${kind} ducks and is not one of the loud four`).toContain(kind);
+      expect(CUES[kind].duck, `${kind} ducks the bed by more than half, which is a hole and not a dip`).toBeLessThan(0.5);
+    }
+  });
+
+  it('0104 — and a cue that is NOT gridded still sounds on the step it was asked for', () => {
+    // The mechanism is opt-in and six of the twelve rows decline it. `hit` is the one 0035 depends on.
+    const { out, heard } = recorder();
+    const speaker = makeSpeaker(out);
+    speaker.step(1);
+    speaker.play('hit');
+    expect(heard, 'a cue with no onGrid was made to wait for the grid anyway').toEqual([indexOf('hit')]);
   });
 
   it('starts at most MAX_VOICES on one step, which is the frame budget’s audio twin', () => {
@@ -780,7 +1064,9 @@ describe('the speaker decides WHEN, and it is the half that is arithmetic', () =
     speaker.step();
     for (const kind of CUE_KINDS) speaker.play(kind);
     speaker.step();
-    speaker.play('death');
+    // ⚠️ `bomb` rather than `death`, and 0104 is why: a gridded cue would wait for the sixteenth
+    // instead of sounding on this step, so the drive would be measuring the grid and not the cap.
+    speaker.play('bomb');
     expect(heard.length, 'the cap leaked across a step boundary').toBe(MAX_VOICES + 1);
   });
 
@@ -797,21 +1083,27 @@ describe('the speaker decides WHEN, and it is the half that is arithmetic', () =
       load-bearing is this — `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` catching a guard
       that fires on nothing.
     */
+    /*
+      ⚠️ **All four are cues 0104 left OFF the grid, and that is deliberate.** The claim is about what
+      a repeat does to the step's budget, so every cue in the drive has to be one that spends the
+      budget on this step — a gridded one would be waiting rather than competing, and the guard would
+      pass while measuring nothing.
+    */
     const { out, heard } = recorder();
     const speaker = makeSpeaker(out);
     speaker.step();
-    speaker.play('kill');
-    for (let i = 0; i < MAX_VOICES + 4; i++) speaker.play('kill');
+    speaker.play('hit');
+    for (let i = 0; i < MAX_VOICES + 4; i++) speaker.play('hit');
     // Every one of these is a different cue, so all of them are inside the cap — unless the
     // repeats above were counted.
-    speaker.play('death');
-    speaker.play('pickup');
+    speaker.play('threat');
     speaker.play('bomb');
+    speaker.play('chime');
     expect(heard, 'repeats of one cue ate the budget three different cues needed').toEqual([
-      indexOf('kill'),
-      indexOf('death'),
-      indexOf('pickup'),
+      indexOf('hit'),
+      indexOf('threat'),
       indexOf('bomb'),
+      indexOf('chime'),
     ]);
   });
 
@@ -1012,6 +1304,18 @@ describe('what the real frame actually says out loud', () => {
     }
     expect(world.bossBeaten, 'the boss never died, so nothing here was measured').toBe(true);
     expect(cues, 'the frame never even asked for the boss cue').toContain('bossDown');
+    /*
+      ⚠️ **A SIXTEENTH MORE OF THE LEVEL, BECAUSE `bossDown` IS GRIDDED NOW** — 0104. The loop above
+      stops on the step the boss dies, and a gridded cue sounds at the next grid step rather than the
+      one it was asked for, so without this the test would be asserting that a cue nothing had flushed
+      yet had already been heard.
+
+      ⚠️ **The game cannot reach the state this drive did.** `world.onTick` fires on every step on
+      every screen — that is what it was split out of `onIdle` to be (0063) — and a boss death is
+      followed by `BOSS_DEATH_STEPS` of the level carrying on (0062), which is 96 steps against a
+      six-step grid. What is being worked around is the harness stopping, not a hole in the mechanism.
+    */
+    for (let i = 0; i < FIRE_GRID; i++) frame.step();
     expect(heard, 'the boss died and the voice cap ate the sound of it').toContain(indexOf('bossDown'));
     /*
       ⚠️ **And the ordinary kill cue is NOT what the boss got.** Nothing else died in this fight, so

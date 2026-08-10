@@ -23,7 +23,7 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: every pitched cue glides between two notes of the key',
     edit: {
       path: 'src/content/cues.ts',
-      find: "{ wave: 'square', from: inKey(13), to: inKey(4), seconds: 0.075",
+      find: "{ wave: 'square', from: inKey(13), to: inKey(4), seconds: 0.048",
       replace: "{ wave: 'square', from: 190, to: 78, seconds: 0.075",
     },
   },
