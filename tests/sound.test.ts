@@ -23,10 +23,15 @@ import {
   bakeCues,
   cueSeconds,
   makeSpeaker,
+  prewarmAudio,
+  resetPrewarm,
   sampleCue,
   sampleLayerInto,
+  takePrewarmed,
   type AudioOut,
 } from '../src/app/sound.ts';
+import { bakeLoops } from '../src/app/music.ts';
+import { MUSIC_LAYERS, secondsOfLayer } from '../src/content/music.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { SCREENS } from '../src/state/screens.ts';
 import { initialState, reduce, type Action } from '../src/state/root.ts';
@@ -353,6 +358,122 @@ describe('the cue table', () => {
     });
   });
 
+  describe('0102 — the synthesis happens before the press, and produces the same sound', () => {
+    /*
+      `docs/decisions/0102-the-music-goes-somewhere.md`. The bake was 718ms riding the gesture that
+      unlocks the audio, and `docs/decisions/0095-the-level-has-its-own-music.md` capped the chord
+      progression at four bars because of it: *"eight bars would be about 900ms — a freeze at tap to
+      start."* **The length of the music was decided by how long it takes to make.**
+
+      ⚠️ **Neither bake needs a context and both already run at a fixed rate**, so the whole set can
+      be synthesised on the title screen a voice at a time. What has to be true is that it comes out
+      IDENTICAL — *the same game sounds different depending on how fast you pressed* is the worst
+      shape of bug there is, and it would be invisible to every other assertion here.
+    */
+    /*
+      ⚠️ **THIRTY SECONDS, AND IT IS A REAL COST RATHER THAN SLACK.** This synthesises the whole set
+      TWICE — about sixty seconds of audio each way, which is two seconds of arithmetic on this
+      machine and more on a loaded CI box. It timed out at vitest's five-second default under the
+      full suite while passing on its own, which
+      `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md` says to establish
+      rather than re-run: it is neither a real intermittency nor a wrong quantity, it is a guard whose
+      subject genuinely costs two seconds meeting a default sized for tests that do not.
+
+      ⚠️ **The alternative was comparing fewer layers, and that is the version that would rot.** What
+      makes this worth having is that it covers every sample of every layer; a guard that sampled
+      three of them would pass a mis-seeded stream in the other eight.
+    */
+    it('THE ONE THAT WOULD BE INVISIBLE: prewarmed and cold bakes are the same samples', () => {
+      /*
+        ⚠️ **`docs/decisions/0021-one-stream-per-concern.md` is what this rests on.** A stream is
+        `hashSeed(root:name)` — a pure function of two strings, with no ordering in it — so a layer
+        baked on its own three frames later draws the identical noise it would have drawn inside the
+        loop. That is the property; this is the check that it is true rather than merely intended.
+
+        ⚠️ **Driven to completion synchronously**, which is what the injected scheduler is for: the
+        prewarm walks jobs across frames in the game and runs them straight through here.
+      */
+      const cold = { cues: bakeCues(SAMPLE_RATE), loops: bakeLoops(SAMPLE_RATE) };
+      resetPrewarm();
+      prewarmAudio((run) => run());
+      const warm = takePrewarmed();
+      expect(warm, 'the prewarm did not finish, so this measured nothing').not.toBeNull();
+
+      /*
+        ⚠️ **Walked as typed arrays rather than compared with `toEqual`, and a TIMEOUT is why.** The
+        first version converted both sides with `Array.from` and handed vitest sixty seconds of audio
+        as plain arrays — about thirty million boxed numbers. It passed on its own and timed out at
+        five seconds under the load of the full suite, which is
+        `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md` exactly: the guard
+        was right about its subject and wrong about how to look at it.
+
+        ⚠️ **Every sample, not a prefix.** A prefix would pass a generator that diverged after its
+        first draw, which is precisely what a mis-seeded stream does — the attack is deterministic and
+        the noise tail is where a difference would live. What changes is the cost of looking, not how
+        much is looked at.
+      */
+      const firstDifference = (a: Float32Array, b: Float32Array): number => {
+        if (a.length !== b.length) return -1;
+        for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return i;
+        return -2;
+      };
+      expect(warm!.cues.length, 'the prewarm baked a different number of cues').toBe(cold.cues.length);
+      let compared = 0;
+      for (let i = 0; i < cold.cues.length; i++) {
+        const at = firstDifference(warm!.cues[i]!, cold.cues[i]!);
+        compared += cold.cues[i]!.length;
+        expect(at, `${CUE_KINDS[i]} is a different LENGTH prewarmed`).not.toBe(-1);
+        expect(
+          at,
+          `${CUE_KINDS[i]} sounds different depending on when it was baked — first at sample ${at}`,
+        ).toBe(-2);
+      }
+      for (const layer of MUSIC_LAYERS) {
+        const at = firstDifference(warm!.loops[layer], cold.loops[layer]);
+        compared += cold.loops[layer].length;
+        expect(at, `the ${layer} layer is a different LENGTH prewarmed`).not.toBe(-1);
+        expect(
+          at,
+          `the ${layer} layer sounds different depending on when it was baked — first at sample ${at}`,
+        ).toBe(-2);
+      }
+      expect(compared, 'nothing was actually compared').toBeGreaterThan(SAMPLE_RATE * 30);
+    }, 30_000);
+
+    it('and a player who presses before it finishes still gets sound', () => {
+      /*
+        ⚠️ **The cold path is not a fallback nobody reaches.** It is what every headless test takes,
+        and it is what a player who taps the instant the page paints gets. Two ways of arriving at
+        one set of samples, and the assertion above is that they arrive at the same place — this one
+        is that the second way still exists.
+      */
+      resetPrewarm();
+      expect(takePrewarmed(), 'a prewarm survived a reset, so the cold path is unreachable').toBeNull();
+      expect(bakeCues(SAMPLE_RATE).length, 'the cold bake produces nothing').toBe(CUE_KINDS.length);
+    });
+
+    it('and the whole set is small enough to spread across the title screen', () => {
+      /*
+        ⚠️ **The budget did not disappear, it moved** — and it is worth stating where, because 0095's
+        was stated and then silently exceeded would be the same mistake in the other direction. What
+        matters now is the size of the largest single JOB rather than the total: the prewarm yields
+        between them, so a job longer than a frame is a hitch on the title screen.
+
+        ⚠️ **Measured rather than asserted against a clock**, on
+        `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md`'s own terms: CI is not the
+        phone. What is counted is SECONDS OF AUDIO per job, which is what the synthesis time is
+        proportional to — the longest layer is the ceiling, and a layer longer than about twenty
+        seconds of audio would be a job no scheduler can hide.
+      */
+      const longest = Math.max(...MUSIC_LAYERS.map((layer) => secondsOfLayer(layer)));
+      expect(longest, `the longest layer is ${longest.toFixed(1)}s of audio in one job`).toBeLessThan(20);
+      const total = MUSIC_LAYERS.reduce((sum, layer) => sum + secondsOfLayer(layer), 0);
+      expect(total, `the music is ${total.toFixed(1)}s of audio, which is more than a title screen can hide`).toBeLessThan(
+        120,
+      );
+    });
+  });
+
   it('THE REPORTED ONE: everything that explodes has a body, and not just a hiss', () => {
     /*
       ⚠️ **THE STRUCTURAL HALF OF `docs/decisions/0089-a-cue-has-a-body.md`, and it is the half a test
@@ -548,6 +669,47 @@ describe('the synthesiser', () => {
       expect(BANDS[loudest]![2], `${kind} is loudest in its ${BANDS[loudest]![2]} band, which is a hiss`).not.toBe('air');
       expect(BANDS[loudest]![2], `${kind} is loudest in its ${BANDS[loudest]![2]} band, which is a hiss`).not.toBe('hi');
     }
+  });
+
+  it('0102 — and the PLAYER’S OWN WEAPONS have a bottom, which is what *tinny* means', () => {
+    /*
+      `docs/decisions/0102-the-music-goes-somewhere.md`. Reported from play against the build 0099
+      landed in: *"guns and rockets for the player need a deeper bassy tone still as they're too
+      tinny and don't mesh with the background music well."*
+
+      ⚠️ **0099 gave them their NOTE and this is their BODY, and the report moved from one to the
+      other.** *"Too tinny"* is 0089's own word for the thing it fixed everywhere else — and the two
+      cues 0089 spent least on are these: the pulse was three layers where a kill has five and a
+      death six, with nothing below 55 Hz where the explosions reach 24.
+
+      ⚠️ **THE SHED GUARD ABOVE DOES NOT COVER THEM.** It walks `EXPLOSIONS`, which is what 0089's
+      report was about; the player's own weapons have never had a spectral assertion at all, and that
+      is exactly the gap the next report arrived through.
+
+      ⚠️ **A floor on the SUB band relative to the cue's own loudest**, which is how much weight it
+      has rather than how loud it is — the same shape the shed guard uses, and immune to the mix
+      moving. A-weighting suppresses the bottom heavily by design (`tests/spectrum.ts`), so these are
+      small numbers and the RATIO is what carries meaning.
+
+      ⚠️ **A fortieth, and it is chosen from what it must catch.** Measured: the pulse sits at 0.074
+      of its loudest band and 0.008 with its sub layer deleted — an order of magnitude apart, and the
+      bound is between them rather than beside either.
+    */
+    for (const kind of ['pulse', 'missile'] as const) {
+      const bands = spectrum(sampleCue(CUES[kind], SAMPLE_RATE, makeRng('cues').stream(kind)), SAMPLE_RATE);
+      const sub = bands[0]!;
+      const shape = bands.map((v, i) => `${BANDS[i]![2]} ${v.toFixed(3)}`).join(', ');
+      expect(sub, `the ${kind} has ${sub.toFixed(3)} of its weight in the sub band — ${shape}`).toBeGreaterThan(0.025);
+    }
+    /*
+      ⚠️ **And the missile stays the heavier of the two**, which is 0051's claim about what the second
+      auto-weapon IS — *slower, heavier, worth three of the pulse* — and is the thing a player has to
+      be able to pick out of a screen full of the lighter one. A pulse given more bottom than the
+      missile would answer this report by breaking that one.
+    */
+    const weight = (kind: 'pulse' | 'missile'): number =>
+      spectrum(sampleCue(CUES[kind], SAMPLE_RATE, makeRng('cues').stream(kind)), SAMPLE_RATE)[0]!;
+    expect(weight('missile'), 'the pulse is heavier at the bottom than the missile').toBeGreaterThan(weight('pulse'));
   });
 
   it('bakes each cue to the length its row asks for, and none past the ceiling', () => {

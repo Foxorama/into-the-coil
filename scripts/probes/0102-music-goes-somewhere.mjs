@@ -1,0 +1,118 @@
+// The breaks behind docs/decisions/0102-the-music-goes-somewhere.md.
+//
+// ⚠️ THREE REPORTS ACROSS TWO PLAY-TESTS AND ONE ENABLING CHANGE, so the probes come in two shapes:
+// the ones that restore what was reported, and the one that breaks the thing that PAID for the rest.
+// 0090's, 0091's and 0095's probes all still hold their own claims and none of them can see any of
+// this: the ladder was additive before and is additive now, the loops were whole numbers of samples
+// before and are now, and every one of those guards was green over a level that played one
+// arrangement for a hundred and sixty seconds.
+
+/** @type {import('../prove-guard.mjs').Probe[]} */
+export const PROBES = [
+  {
+    decision: '0102',
+    suite: 'tests/music.test.ts',
+    /*
+      ⚠️ THE SHIPPED LADDER, PUT BACK — one rung from the moment a level begins until 430 units before
+      its boss. *"The ingame background music doesn't change and increase in tempo as you progress
+      through the level."* Every other assertion about the ladder is green over this: it is still
+      additive, still opens a layer at every rung it has, still never closes one outside `TITLE_ONLY`.
+      What it is not is a build.
+    */
+    broke: 'the level ladder collapsed back to one rung, which is how it shipped',
+    guard: 'and it climbs FOUR times inside a level, where it used to climb once',
+    edit: {
+      path: 'src/app/music.ts',
+      find: '  if (toBoss <= SURGE_UNITS) return \'surge\';\n  if (toBoss <= PUSH_UNITS) return \'push\';',
+      replace: '',
+    },
+  },
+  {
+    decision: '0102',
+    suite: 'tests/music.test.ts',
+    /*
+      ⚠️ THE RUNGS KEPT AND THE PACE TAKEN OUT, which is the edit that looks like a tidy-up: `arp` is
+      the busiest layer in the level's piece and closing it at `surge` leaves four rungs that each add
+      something. The build survives as a structure and stops being a build — *"no pace, no increased
+      tempo"* — and only a count of what is actually being struck can tell.
+    */
+    broke: 'the sixteenth layer closed, so the rungs add music without adding pace',
+    guard: 'and each rung strikes MORE NOTES A BAR than the one below, which is what *pace* is',
+    edit: {
+      path: 'src/content/music.ts',
+      find: "  surge: { drone: 0.48, bass: 0, beat: 0, engine: 0.9, chords: 0.9, groove: 0.92, arp: 0.6, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },",
+      replace: "  surge: { drone: 0.48, bass: 0, beat: 0, engine: 0.9, chords: 0.9, groove: 0.92, arp: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },",
+    },
+  },
+  {
+    decision: '0102',
+    suite: 'tests/music.test.ts',
+    /*
+      ⚠️ THE LEVEL'S BASS LINE CLOSED, which is the state the game shipped in for its whole life and
+      which nothing has ever noticed. `bass` is `TITLE_ONLY` and 0095 was right to close it; what 0095
+      did not do is replace it, so from the moment a level began the only thing under the kick was the
+      chords' own sub. *"Flat and lifeless, has no depth."*
+    */
+    broke: 'the level left with no moving bass line, which is how it shipped',
+    guard: 'THE LEVEL: there is something in the low end that MOVES, at every rung above the opening',
+    edit: {
+      path: 'src/content/music.ts',
+      find: "  push: { drone: 0.5, bass: 0, beat: 0, engine: 0.88, chords: 0.9, groove: 0.9, arp: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },",
+      replace: "  push: { drone: 0.5, bass: 0, beat: 0, engine: 0.88, chords: 0.9, groove: 0, arp: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },",
+    },
+  },
+  {
+    decision: '0102',
+    suite: 'tests/music.test.ts',
+    /*
+      ⚠️ THE ACCENTS THROWN AWAY IN THE BAKE, which no assertion over the TABLE can see: every pattern
+      still carries its velocities, the ladder is untouched, no layer is silent, nothing clips. What
+      comes out of the synthesiser is the metronome the report is about — and only a measurement of
+      the samples knows. docs/decisions/0027-measure-the-picture-not-the-model.md in the channel with
+      nothing to look at.
+    */
+    broke: 'the velocity dropped in the bake, so every drum is struck at one weight again',
+    guard: 'and an accent reaches the SAMPLES, not just the table',
+    edit: {
+      path: 'src/app/music.ts',
+      find: '      : value === 1\n        ? voice.note\n        : { ...voice.note, gain: voice.note.gain * value };',
+      replace: '      : voice.note;',
+    },
+  },
+  {
+    decision: '0102',
+    suite: 'tests/sound.test.ts',
+    /*
+      ⚠️ THE PREWARM GIVEN ITS OWN GENERATOR, which is the one bug in this decision that would be
+      genuinely hard to find: the game would sound RIGHT, every guard would pass, and the noise in
+      every drum would differ depending on whether the player pressed before or after the title
+      screen had finished synthesising. *The same game sounds different depending on how fast you
+      pressed* — and `docs/decisions/0021-one-stream-per-concern.md` is the rule that makes it
+      impossible when it is followed.
+    */
+    broke: 'the prewarm seeded from its own root, so the samples depend on when they were baked',
+    guard: 'THE ONE THAT WOULD BE INVISIBLE: prewarmed and cold bakes are the same samples',
+    edit: {
+      path: 'src/app/sound.ts',
+      find: "const cueStreams = makeRng('cues');",
+      replace: "const cueStreams = makeRng('prewarm');",
+    },
+  },
+  {
+    decision: '0102',
+    suite: 'tests/sound.test.ts',
+    /*
+      ⚠️ THE PULSE'S SUB REMOVED — *"guns and rockets for the player need a deeper bassy tone still as
+      they're too tinny."* 0099 gave the pulse its note and this gave it its body; the cue is still in
+      the key, still the right length, still under every ceiling, and it is the thing the report calls
+      tinny. It is caught by the spectrum rather than by the table, which is the only place it shows.
+    */
+    broke: 'the pulse’s sub taken out, so the most frequent sound in the game has no bottom',
+    guard: '0102 — and the PLAYER’S OWN WEAPONS have a bottom, which is what *tinny* means',
+    edit: {
+      path: 'src/content/cues.ts',
+      find: '      { wave: \'sine\', from: inKey(2), to: inKey(-7), seconds: 0.11, gain: 0.5, attack: 0.002, curve: 4 },',
+      replace: '',
+    },
+  },
+];

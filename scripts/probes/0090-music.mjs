@@ -46,8 +46,11 @@ export const PROBES = [
     guard: 'and none of them is silence, which is the way a layer can be missing without failing',
     edit: {
       path: 'src/app/music.ts',
-      find: '    for (const voice of MUSIC[layer]) renderVoice(voice, seconds, rate, rng, buffer);',
-      replace: "    if (layer !== 'chords') for (const voice of MUSIC[layer]) renderVoice(voice, seconds, rate, rng, buffer);",
+      // ⚠️ Re-anchored by docs/decisions/0102-the-music-goes-somewhere.md, which split the walk over a
+      // layer's pattern out into `layerNotes` so the prewarm can spread it across frames. The break is
+      // unchanged — one layer left out of the bake — and it is expressed where the notes are gathered.
+      find: '  for (const voice of MUSIC[layer]) {',
+      replace: "  for (const voice of (layer === 'chords' ? [] : MUSIC[layer])) {",
     },
   },
   {
@@ -69,7 +72,7 @@ export const PROBES = [
       // to the title's piece now and is closed at `run` on purpose, so closing it again says nothing.
       // `engine` is the level's floor — open at `run` and `approach` — and closing it at the boss is
       // the same failure the probe always described: a ladder that swaps rather than builds.
-      find: "  boss: { drone: 0.4, bass: 0, beat: 0, engine: 0.95, chords: 0.95, drive: 0.8, lead: 0.85, auraSlow: 1, auraFast: 0.9 },",
+      find: "  boss: { drone: 0.4, bass: 0, beat: 0, engine: 0.95, chords: 0.95, groove: 0.95, arp: 0.75, drive: 0.8, lead: 0.85, auraSlow: 1, auraFast: 0.9 },",
       replace: "  boss: { drone: 0.4, bass: 0, beat: 0, engine: 0, chords: 0.95, drive: 0.8, lead: 0.85, auraSlow: 1, auraFast: 0.9 },",
     },
   },
@@ -86,8 +89,11 @@ export const PROBES = [
     guard: 'and goes to the boss the moment one is on the field, wherever the camera is',
     edit: {
       path: 'src/app/music.ts',
-      find: "  if (bossOnField) return 'boss';\n  return bossAt - cameraAlong <= BOSS_APPROACH_UNITS ? 'approach' : 'run';",
-      replace: "  if (cameraAlong >= bossAt) return 'boss';\n  return bossAt - cameraAlong <= BOSS_APPROACH_UNITS ? 'approach' : 'run';",
+      // ⚠️ Re-anchored by docs/decisions/0102-the-music-goes-somewhere.md, which turned the single
+      // return below into a cascade of four. The break is unchanged and is now the one line it always
+      // was about: what decides the boss level.
+      find: "  if (bossOnField) return 'boss';",
+      replace: "  if (cameraAlong >= bossAt) return 'boss';",
     },
   },
   {

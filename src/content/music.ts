@@ -40,6 +40,8 @@ export const MUSIC_LAYERS = [
   'beat',
   'engine',
   'chords',
+  'groove',
+  'arp',
   'drive',
   'lead',
   'auraSlow',
@@ -88,13 +90,27 @@ export const TITLE_ONLY: readonly MusicLayer[] = ['bass', 'beat'];
  * constraint that says four bars rather than eight: eight would have been a longer progression and
  * about 900ms of synthesis on this machine, which is a freeze at *tap to start* on the phone
  * `docs/decisions/0022-frame-rate-is-a-feature.md` sizes for.
+ *
+ * ── AND THE BAKE STOPPED BEING THE CONSTRAINT, WHICH IS WHY `chords` IS EIGHT ───────────────────
+ *
+ * ⚠️ **`docs/decisions/0102-the-music-goes-somewhere.md`.** The paragraph above is the reason the
+ * harmony repeated every 6.4 seconds, and the report is *"an incredibly limited couple of repeating
+ * beats that's a few seconds of sound repeated for minutes."* **The length of the music was being
+ * decided by how long it takes to synthesise.**
+ *
+ * ⚠️ **The synthesis now runs on the title screen instead of on the first press** —
+ * `src/app/sound.ts`'s prewarm — so the 900ms 0095 refused to spend is spent before the player has
+ * chosen a difficulty. `chords` is eight bars: **A minor – F – C – G, then A minor – F – G – E**, so
+ * the second half turns rather than repeats and the piece takes 12.8 seconds to come round.
  */
 export const LAYER_BARS: Record<MusicLayer, number> = {
   drone: 2,
   bass: 2,
   beat: 2,
   engine: 2,
-  chords: 4,
+  chords: 8,
+  groove: 4,
+  arp: 8,
   drive: 2,
   lead: 4,
   auraSlow: 2,
@@ -249,6 +265,29 @@ export const MUSIC_GAIN = 0.52;
  * and short enough that it is clearly about the boss rather than about the level.
  */
 export const BOSS_APPROACH_UNITS = 430;
+
+/**
+ * How far from the boss the level's two middle rungs open, in world units.
+ *
+ * ── THE SHAPE OF A LEVEL, AS TWO DISTANCES ──────────────────────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0102-the-music-goes-somewhere.md`.** A level is about 6,350 units to its boss
+ * and the camera covers 36 a second, so these divide a 176-second level into roughly a minute of
+ * `run`, fifty seconds of `push`, fifty-five of `surge` and the twelve `BOSS_APPROACH_UNITS` already
+ * bought. **Something changes about once a minute**, which is the pace a player notices without
+ * being able to point at it.
+ *
+ * ⚠️ **Measured from the BOSS backwards, like `BOSS_APPROACH_UNITS`**, so a longer level spends
+ * longer at `run` rather than compressing the build — and a level with no boss at all
+ * (`Number.POSITIVE_INFINITY`, which is what a fixture uses) stays at `run` for ever, which is
+ * correct rather than accidental.
+ *
+ * ⚠️ **Nothing asserts these values**, on `SHIP_SPEED`'s terms: they are a hand's guess at a pace
+ * nobody has flown. What `tests/music.test.ts` holds is that they are ordered, that each is a real
+ * stretch of seconds rather than a flicker, and that every rung is reachable.
+ */
+export const PUSH_UNITS = 4200;
+export const SURGE_UNITS = 2400;
 
 /**
  * The key. Every pitched note is a ratio off this, so the whole piece transposes from one number.
@@ -429,9 +468,26 @@ export const PHRASE_SECONDS = BAR_SECONDS * PHRASE_BARS;
 export interface MusicVoice {
   /**
    * One entry per step. For a `pitched` voice it is a semitone off the root; for anything else it is
-   * whether the note plays at all.
+   * **how hard the note is struck**, where 1 is full.
    *
    * ⚠️ **A rest is `null`, not a zero.** Zero is the root, which is the most common note there is.
+   *
+   * ── IT USED TO BE A FLAG, AND THAT IS WHY THE TITLE SOUNDED LIKE A METRONOME ────────────────────
+   *
+   * ⚠️ **`docs/decisions/0102-the-music-goes-somewhere.md`.** Reported from play: *"the metronome
+   * doesn't fit the other beat. It doesn't blend nicely, it sounds like two separate tracks being
+   * played at the same time."*
+   *
+   * ⚠️ **There was no accent anywhere in this model.** An unpitched step said *play* or *rest*, so
+   * every kick, click, snare and hat in the game was bit-identical to every other — and identical
+   * repetition at a fixed interval is not *like* a metronome, it is the definition of one. No
+   * arrangement of gains or filters could have fixed it, which is why three passes over the mix
+   * never touched the complaint.
+   *
+   * ⚠️ **The comment two sections down claimed the hats alternated loud and quiet** — *"which is what
+   * makes them a shuffle rather than a machine"* — and the pattern was thirty-two ones. The prose
+   * described something the data structure could not express, which is a shape worth recognising:
+   * every value in every drum table was 1, so nothing ever disagreed with it.
    */
   steps: readonly (number | null)[];
   /** Whether `steps` are semitones (pitched) or plays and rests (drums). */
@@ -461,7 +517,22 @@ export interface MusicVoice {
 */
 
 /** How far into a run the music is. */
-export const MUSIC_LEVELS = ['calm', 'run', 'approach', 'boss'] as const;
+/*
+  ── FIVE RUNGS INSIDE A LEVEL, AND THERE WAS ONE ─────────────────────────────────────────────────
+
+  ⚠️ **`docs/decisions/0102-the-music-goes-somewhere.md`.** Reported twice: *"the ingame background
+  music doesn't change and increase in tempo as you progress through the level"*, then *"still flat
+  and lifeless, has no depth, no pace, no increased tempo."*
+
+  ⚠️ **`run` covered about 160 seconds of a 176-second level.** `musicLevelFor` returned it from the
+  moment a level began until 430 units before the boss, so nine tenths of every level was one
+  arrangement of three layers over a four-bar loop. There was nothing to *"progress"* through.
+
+  ⚠️ **`push` and `surge` are the two new ones and they are DISTANCES**, like `BOSS_APPROACH_UNITS`
+  and like everything else this project paces — so they mean the same thing on a device that drops
+  frames and they carry to a level that is retuned.
+*/
+export const MUSIC_LEVELS = ['calm', 'run', 'push', 'surge', 'approach', 'boss'] as const;
 
 export type MusicLevel = (typeof MUSIC_LEVELS)[number];
 
@@ -506,11 +577,37 @@ export type MusicLevel = (typeof MUSIC_LEVELS)[number];
   requires. What crosses between them is the drone, which is why the change of piece is a swell
   rather than an edit.
 */
+/*
+  ── WHAT EACH RUNG ADDS, AND WHY THE PIECE NOW HAS A SHAPE ───────────────────────────────────────
+
+  | rung | opens | what the player hears |
+  |---|---|---|
+  | `run` | engine, chords | the level starts: drums and harmony |
+  | `push` | **groove** | **a bass line**, which the level's piece did not have at all |
+  | `surge` | **arp** | sixteenths — the pulse doubles, which is what *faster* means here |
+  | `approach` | drive | the boss is coming |
+  | `boss` | lead, aura | the tune arrives |
+
+  ⚠️ **THE LEVEL'S PIECE HAD NO BASS LINE, AND THAT IS MOST OF *"FLAT AND LIFELESS"*.** `bass` is
+  `TITLE_ONLY` (0095, and correctly — an A-rooted riff is a wrong note over three chords in four), so
+  from the moment a level began the only thing under the kick was `chords`' rolling sub. `groove`
+  moves with the progression, which is what the title's riff could not do.
+
+  ⚠️ **THE TEMPO DOES NOT CHANGE AND CANNOT, AND *"INCREASED TEMPO"* IS ANSWERED BY SUBDIVISION.**
+  `docs/decisions/0093-the-gun-is-on-the-grid.md` fixes a beat at 24 sim steps; the player's gun,
+  every enemy's cadence and 0094's phase-lock all ride that number, so a BPM ramp would take the
+  whole game off the grid three decisions exist to put it on. What rises is the rate of events —
+  quarters, then eighths, then sixteenths — which is exactly the mechanism
+  `docs/decisions/0091-the-boss-has-an-aura.md` already calls *"builds in tempo"*, and it is written
+  down here so nobody goes looking for a BPM that was never there.
+*/
 export const MUSIC_LADDER: Record<MusicLevel, Record<MusicLayer, number>> = {
-  calm: { drone: 0.55, bass: 0.7, beat: 0.5, engine: 0, chords: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
-  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
-  approach: { drone: 0.5, bass: 0, beat: 0, engine: 0.9, chords: 0.92, drive: 0.7, lead: 0, auraSlow: 0, auraFast: 0 },
-  boss: { drone: 0.4, bass: 0, beat: 0, engine: 0.95, chords: 0.95, drive: 0.8, lead: 0.85, auraSlow: 1, auraFast: 0.9 },
+  calm: { drone: 0.55, bass: 0.7, beat: 0.5, engine: 0, chords: 0, groove: 0, arp: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
+  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0, arp: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
+  push: { drone: 0.5, bass: 0, beat: 0, engine: 0.88, chords: 0.9, groove: 0.9, arp: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
+  surge: { drone: 0.48, bass: 0, beat: 0, engine: 0.9, chords: 0.9, groove: 0.92, arp: 0.6, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },
+  approach: { drone: 0.5, bass: 0, beat: 0, engine: 0.9, chords: 0.92, groove: 0.92, arp: 0.7, drive: 0.7, lead: 0, auraSlow: 0, auraFast: 0 },
+  boss: { drone: 0.4, bass: 0, beat: 0, engine: 0.95, chords: 0.95, groove: 0.95, arp: 0.75, drive: 0.8, lead: 0.85, auraSlow: 1, auraFast: 0.9 },
 };
 
 /** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */
@@ -583,40 +680,60 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
     THE BEAT — kick, snare and hats. *"An increased beat"* arriving, and the layer that turns a
     background into a thing with a pulse.
   */
+  /*
+    ⚠️ **EVERY PATTERN IN THIS LAYER WAS A ROW OF ONES, WHICH IS WHY IT WAS THE METRONOME** — 0102.
+    Four-on-the-floor with a click on every kick, a beep on two and four, and thirty-two identical
+    hats. Nothing in it was louder or quieter than anything else, so it could only ever read as a
+    click track laid over the bass rather than as a groove played with it.
+
+    ⚠️ **It is a syncopated pattern on eighths now, and the numbers are velocities.** The kick leaves
+    beats two and four to the snare and lands on the *and* instead, which is what makes a bass line
+    and a drum part one thing; the hats breathe on a four-step cycle; and the 220 Hz beep is gone.
+  */
   beat: [
     {
-      steps: [1, 1, 1, 1, 1, 1, 1, 1],
+      /*
+        THE KICK, on eighths: **one** — and — *and* — three — and — *and*. Beat one is full, the two
+        syncopated pushes are softer, and beats two and four are deliberately empty because that is
+        where the snare goes. A kick on all four with a click on top is a metronome by construction.
+      */
+      steps: [1, _, _, 0.72, _, _, 0.85, _, 1, _, _, 0.72, _, _, 0.9, _],
       pitched: false,
-      perBeat: 1,
+      perBeat: 2,
       octave: 0,
       note: { wave: 'sine', from: 150, to: 45, seconds: 0.26, gain: 0.75, attack: 0.001, curve: 4.5, drive: 0.2 },
     },
     {
-      steps: [1, 1, 1, 1, 1, 1, 1, 1],
+      // The click, following the kick exactly and at two thirds its weight on the pushes — a click
+      // that did NOT follow the kick is what made the old layer sound like two parts.
+      steps: [1, _, _, 0.6, _, _, 0.7, _, 1, _, _, 0.6, _, _, 0.75, _],
       pitched: false,
-      perBeat: 1,
+      perBeat: 2,
       octave: 0,
       note: { wave: 'noise', from: 0, to: 0, seconds: 0.02, gain: 0.16, attack: 0.0005, curve: 8, lowFrom: 6000, highFrom: 800 },
     },
     {
-      // The backbeat, on two and four, and the only thing in the layer with midrange in it.
-      steps: [_, 1, _, 1, _, 1, _, 1],
+      /*
+        The backbeat, on two and four, and the only thing in the layer with midrange in it. It now
+        carries a GHOST — a quarter-weight stroke before the last one — which is the single cheapest
+        thing that makes a drum part sound played rather than programmed.
+      */
+      steps: [_, _, 1, _, _, _, 1, _, _, _, 1, _, _, 0.28, 1, _],
       pitched: false,
-      perBeat: 1,
+      perBeat: 2,
       octave: 0,
       note: { wave: 'noise', from: 0, to: 0, seconds: 0.16, gain: 0.3, attack: 0.001, curve: 6, lowFrom: 4200, lowTo: 1600, highFrom: 400 },
     },
     {
-      steps: [_, 1, _, 1, _, 1, _, 1],
-      pitched: false,
-      perBeat: 1,
-      octave: 0,
-      note: { wave: 'tri', from: 220, to: 170, seconds: 0.1, gain: 0.16, attack: 0.001, curve: 7 },
-    },
-    {
-      // Sixteenth hats, alternating loud and quiet, which is what makes them a shuffle rather than a
-      // machine. Thirty-two of them a loop, and each is two milliseconds of noise.
-      steps: Array.from({ length: 32 }, () => 1),
+      /*
+        ⚠️ **THE 220 Hz BEEP IS GONE, AND IT WAS THE METRONOME THE REPORT NAMED.** A short pitched
+        `tri` on two and four, at the same weight every bar, over a piece whose bass never moves is
+        exactly a tick — and it was doubling a snare that already had the backbeat covered. What
+        replaces it is nothing: the layer is quieter and there is one less thing keeping time.
+      */
+      // Sixteenth hats. The accents are the four-step cycle every drum machine's shuffle is: strong,
+      // weak, medium, weak — which is what the comment here USED to claim and the data never said.
+      steps: Array.from({ length: 32 }, (_unused, i) => [1, 0.42, 0.66, 0.38][i % 4]!),
       pitched: false,
       perBeat: 4,
       octave: 0,
@@ -710,14 +827,14 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
     {
       // The roots, held. Each note is longer than its bar so it sings into the next one — and the
       // last one crosses the end of the loop, which is what 0090's seam guard is watching.
-      steps: [0, -4, 3, -2],
+      steps: [0, -4, 3, -2, 0, -4, -2, -5],
       pitched: true,
       perBeat: 0.25,
       octave: 1,
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.17, attack: 0.06, curve: 1.5, lowFrom: 900, lowTo: 2400, q: 1.2 },
     },
     {
-      steps: [0, -4, 3, -2],
+      steps: [0, -4, 3, -2, 0, -4, -2, -5],
       pitched: true,
       perBeat: 0.25,
       octave: 1,
@@ -725,7 +842,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
     },
     {
       // The fifths.
-      steps: [7, 3, 10, 5],
+      steps: [7, 3, 10, 5, 7, 3, 5, 2],
       pitched: true,
       perBeat: 0.25,
       octave: 1,
@@ -733,7 +850,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
     },
     {
       // The top voice, an octave up — where the chord stops being a bed and starts being a chord.
-      steps: [15, 12, 19, 14],
+      steps: [15, 12, 19, 14, 15, 12, 14, 11],
       pitched: true,
       perBeat: 0.25,
       octave: 1,
@@ -747,6 +864,10 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
         _, -4, _, -4, _, -4, _, -4,
         _, 3, _, 3, _, 3, _, 3,
         _, -2, _, -2, _, -2, _, -2,
+        _, 0, _, 0, _, 0, _, 0,
+        _, -4, _, -4, _, -4, _, -4,
+        _, -2, _, -2, _, -2, _, -2,
+        _, -5, _, -5, _, -5, _, -5,
       ],
       pitched: true,
       perBeat: 2,
@@ -769,11 +890,131 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
         _, -4, _, -4, _, -4, _, -4,
         _, 3, _, 3, _, 3, _, 3,
         _, -2, _, -2, _, -2, _, -2,
+        _, 0, _, 0, _, 0, _, 0,
+        _, -4, _, -4, _, -4, _, -4,
+        _, -2, _, -2, _, -2, _, -2,
+        _, -5, _, -5, _, -5, _, -5,
       ],
       pitched: true,
       perBeat: 2,
       octave: 0,
       note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.62, gain: 0.46, attack: 0.004, curve: 3.2 },
+    },
+  ],
+
+  /*
+    ── THE GROOVE — A BASS LINE, WHICH THE LEVEL'S PIECE DID NOT HAVE AT ALL ───────────────────────
+
+    `docs/decisions/0102-the-music-goes-somewhere.md`. Reported twice: *"flat and lifeless, has no
+    depth, no pace"*.
+
+    ⚠️ **`bass` is `TITLE_ONLY`, and 0095 was right to close it** — an A-rooted riff is a wrong note
+    over three chords in four. What 0095 did not do is replace it, so from the moment a level began
+    the only thing under the kick was `chords`' own rolling sub. **A piece with no bass line is what
+    *no depth* is a description of.**
+
+    ⚠️ **FOUR BARS AGAINST THE CHORDS' EIGHT**, which is the whole point of 0095's whole-multiple
+    rule: the bass says the same two bars over the progression's first half and again over its
+    second, so the harmony turns underneath a line that does not. That is how a groove works and it
+    costs half the buffer of writing it out twice.
+
+    ⚠️ **Syncopated against the kick rather than with it.** `engine`'s kick is four-on-the-floor;
+    this plays the offbeats and the pushes, so the two interlock instead of doubling. A bass on the
+    beat under a kick on the beat is one thicker kick.
+
+    ⚠️ **It opens at `push` and the ladder never closes it**, so from a third of the way into a level
+    the low end is a moving part rather than a pad.
+  */
+  groove: [
+    {
+      /*
+        Sixteenths, mostly rests: the root, the octave push, the fifth, and a walk into the next bar.
+        Written against A minor and F, which is the progression's first half — and the second half
+        (A minor and G) shares its first chord, so the same line lands either way.
+      */
+      steps: [
+        0, _, _, 0, _, 12, _, _, 0, _, _, 7, _, _, 10, _,
+        -4, _, _, -4, _, 8, _, _, -4, _, _, 3, _, _, 5, _,
+        0, _, _, 0, _, 12, _, _, 0, _, _, 7, _, _, 10, _,
+        -4, _, _, -4, _, 8, _, _, -4, _, 3, _, 5, _, 7, _,
+      ],
+      pitched: true,
+      perBeat: 4,
+      octave: 1,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.3, gain: 0.3, attack: 0.004, curve: 5, lowFrom: 1500, lowTo: 340, q: 1.5, drive: 0.45 },
+    },
+    {
+      /*
+        The octave under it as a sine, which is what makes a bass FELT rather than only heard — the
+        same trick the title's bass, the chords' sub and every explosion in `src/content/cues.ts`
+        use, and the reason 0095's spectral guard exists.
+      */
+      steps: [
+        0, _, _, 0, _, 12, _, _, 0, _, _, 7, _, _, 10, _,
+        -4, _, _, -4, _, 8, _, _, -4, _, _, 3, _, _, 5, _,
+        0, _, _, 0, _, 12, _, _, 0, _, _, 7, _, _, 10, _,
+        -4, _, _, -4, _, 8, _, _, -4, _, 3, _, 5, _, 7, _,
+      ],
+      pitched: true,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.34, gain: 0.4, attack: 0.004, curve: 4 },
+    },
+  ],
+
+  /*
+    ── THE ARP — WHAT *"INCREASED TEMPO"* MEANS WHEN THE TEMPO CANNOT MOVE ────────────────────────
+
+    `docs/decisions/0102-the-music-goes-somewhere.md`. Reported: *"no increased tempo"*.
+
+    ⚠️ **THE TEMPO IS 24 SIM STEPS TO A BEAT AND IT IS LOAD-BEARING.**
+    `docs/decisions/0093-the-gun-is-on-the-grid.md` puts the player's gun on that grid,
+    `docs/decisions/0096-the-enemies-play-along.md` puts every enemy on it, and
+    `docs/decisions/0094-in-time-is-not-in-phase.md` locks the loops to the sim clock. A BPM ramp
+    takes the whole game off the grid three decisions exist to put it on.
+
+    ⚠️ **So the rate of EVENTS rises instead, which is the same mechanism 0091 already calls *builds
+    in tempo*.** The aura doubles its pulse and then doubles it again without a tempo existing
+    anywhere as a number; this does it for the level. `engine` is quarters and eighths, `groove` is
+    a sixteenth line with holes in it, and this fills them — so `surge` is the first moment in a
+    level with something on every sixteenth.
+
+    ⚠️ **EIGHT BARS, and it is the only rhythmic layer that is not two or four.** An arpeggio is the
+    most repetitive thing in the piece — the same shape over and over is what an arpeggio IS — so it
+    is the one layer where the loop length is doing the most work per second of buffer.
+  */
+  arp: [
+    {
+      /*
+        A minor pentatonic figure over the progression, turning on the fifth bar. Two octaves up and
+        quiet: this is texture and motion rather than a part anybody follows.
+      */
+      steps: [
+        0, 7, 12, 7, 3, 7, 12, 15, 0, 7, 12, 7, 3, 7, 12, 15,
+        -4, 3, 8, 3, 0, 3, 8, 12, -4, 3, 8, 3, 0, 3, 8, 12,
+        3, 10, 15, 10, 7, 10, 15, 19, 3, 10, 15, 10, 7, 10, 15, 19,
+        -2, 5, 10, 5, 2, 5, 10, 14, -2, 5, 10, 5, 2, 5, 10, 14,
+        0, 7, 12, 7, 3, 7, 12, 15, 0, 7, 12, 7, 3, 7, 12, 15,
+        -4, 3, 8, 3, 0, 3, 8, 12, -4, 3, 8, 3, 0, 3, 8, 12,
+        -2, 5, 10, 5, 2, 5, 10, 14, -2, 5, 10, 5, 2, 5, 10, 14,
+        -5, 2, 7, 2, -1, 2, 7, 11, -5, 2, 7, 2, -1, 2, 7, 11,
+      ],
+      pitched: true,
+      perBeat: 4,
+      octave: 2,
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.2, gain: 0.075, attack: 0.002, curve: 6, lowFrom: 3600, lowTo: 1400, q: 1.8 },
+    },
+    {
+      /*
+        A closed hat on every sixteenth under it, accented on the beat. The arp says WHICH notes and
+        this says *there is something on every sixteenth now*, which is the half a listener reads as
+        speed. Velocities, which is the thing 0102 gave the model.
+      */
+      steps: Array.from({ length: 128 }, (_unused, i) => [1, 0.35, 0.55, 0.35][i % 4]!),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.014, gain: 0.055, attack: 0.0004, curve: 9, lowFrom: 15000, highFrom: 8000 },
     },
   ],
 

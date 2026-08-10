@@ -38,7 +38,7 @@ import { DEFAULT_SOUND, SOUND_KINDS } from '../content/sound.ts';
 import { DEFAULT_STYLE, STYLES, STYLE_KINDS } from '../content/styles.ts';
 import { nextOnGrid } from '../content/music.ts';
 import { auraNearnessFor, musicLevelFor } from './music.ts';
-import { makeAudioOut, makeSpeaker } from './sound.ts';
+import { makeAudioOut, makeSpeaker, prewarmAudio } from './sound.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { MAX_SHIELDS, SHIPS, fullHealthFor, shieldsOf } from '../content/ships.ts';
@@ -448,6 +448,21 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   const audioOut = makeAudioOut();
   const speaker = makeSpeaker(audioOut);
+  /*
+    ⚠️ **THE SYNTHESIS STARTS NOW, AND IT USED TO START ON THE FIRST PRESS** —
+    `docs/decisions/0102-the-music-goes-somewhere.md`. Twelve cues and eleven music layers are about
+    seven hundred milliseconds of arithmetic on this machine, and every one of those milliseconds was
+    riding the gesture that unlocks the audio — which is why
+    `docs/decisions/0095-the-level-has-its-own-music.md` capped the chord progression at four bars:
+    *"eight bars would be about 900ms, a freeze at tap to start."* The LENGTH OF THE MUSIC was being
+    decided by how long it takes to make.
+
+    ⚠️ **Nothing about it needs a context.** Both bakes are handed a fixed `SAMPLE_RATE` and hand back
+    `Float32Array`s; only `createBuffer` needs the `AudioContext`, and that is microseconds. This
+    walks the set a voice at a time across frames, so by the time a player has read the three
+    difficulty names it is done — and `unlock` still bakes synchronously if they beat it.
+  */
+  prewarmAudio();
 
   const measure = (): View => viewOf(viewportWidth(host), viewportHeight(host));
   let view = measure();

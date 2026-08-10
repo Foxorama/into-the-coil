@@ -25,7 +25,7 @@ export const PROBES = [
     guard: '0095 — THE AMENDMENT: every layer is a whole MULTIPLE of the shortest, which is the same guarantee',
     edit: {
       path: 'src/content/music.ts',
-      find: '  chords: 4,',
+      find: '  chords: 8,',
       replace: '  chords: 3,',
     },
   },
@@ -76,7 +76,7 @@ export const PROBES = [
     guard: 'and something is open at EVERY level, because the music never stops',
     edit: {
       path: 'src/content/music.ts',
-      find: '  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },',
+      find: '  run: { drone: 0.5, bass: 0, beat: 0, engine: 0.85, chords: 0.88, groove: 0, arp: 0, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },',
       replace: '  run: { drone: 0, bass: 0, beat: 0, engine: 0.85, chords: 0.88, drive: 0, lead: 0, auraSlow: 0, auraFast: 0 },',
     },
   },
@@ -93,7 +93,7 @@ export const PROBES = [
     guard: '0095 — every pattern spans EXACTLY its own layer, which is both a floor and a ceiling',
     edit: {
       path: 'src/content/music.ts',
-      find: '      steps: [0, -4, 3, -2],\n      pitched: true,\n      perBeat: 0.25,\n      octave: 1,\n      note: { wave: \'saw\', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.17, attack: 0.06, curve: 1.5, lowFrom: 900, lowTo: 2400, q: 1.2 },',
+      find: '      steps: [0, -4, 3, -2, 0, -4, -2, -5],\n      pitched: true,\n      perBeat: 0.25,\n      octave: 1,\n      note: { wave: \'saw\', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.17, attack: 0.06, curve: 1.5, lowFrom: 900, lowTo: 2400, q: 1.2 },',
       replace: '      steps: [0, -4],\n      pitched: true,\n      perBeat: 0.25,\n      octave: 1,\n      note: { wave: \'saw\', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.17, attack: 0.06, curve: 1.5, lowFrom: 900, lowTo: 2400, q: 1.2 },',
     },
   },

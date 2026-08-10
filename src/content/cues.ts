@@ -411,6 +411,27 @@ export const CUES: Record<CueKind, CueRow> = {
       // C3 → A1. The tail lands on the ROOT, which is what makes ten of these a second read as a
       // pulse in the music rather than as ten interruptions of it.
       { wave: 'sine', from: inKey(9), to: inKey(0), seconds: 0.09, gain: 0.7, attack: 0.001, curve: 5 },
+      /*
+        ── THE SUB, AND THE PULSE HAD NONE ────────────────────────────────────────────────────────
+
+        ⚠️ **`docs/decisions/0102-the-music-goes-somewhere.md`.** Reported from play against the build
+        0099 landed in: *"guns and rockets for the player need a deeper bassy tone still as they're
+        too tinny and don't mesh with the background music well."*
+
+        ⚠️ **0099 gave the pulse its NOTE and this gives it its BODY, and the report moved from one to
+        the other.** *"Too tinny"* is 0089's own word for the thing it fixed everywhere else — and the
+        pulse is the cue 0089 spent least on: three layers where a kill has five and a death six, and
+        nothing at all below 55 Hz where the explosions reach 24.
+
+        ⚠️ **An octave under the layer above, on the same note**, which is the recipe 0089 states for
+        every explosion in this file and the reason it gives: *felt rather than only heard*. It is the
+        one thing the most frequent sound in the game did not have.
+
+        ⚠️ **Quiet and short.** This fires ten times a second at the cap; a long sub would be a
+        continuous low rumble under the whole game rather than a weight under each shot, and
+        `MAX_CUE_SECONDS` is not what would stop it.
+      */
+      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.11, gain: 0.5, attack: 0.002, curve: 4 },
     ],
   },
   /**
@@ -434,8 +455,23 @@ export const CUES: Record<CueKind, CueRow> = {
       // A3 → C2: the root falling to the minor third, which is the interval that says *minor* in one
       // gesture. The missile is the counter-beat (0094), so it wants to be recognisably itself.
       { wave: 'sine', from: inKey(14), to: inKey(2), seconds: 0.3, gain: 1, attack: 0.001, curve: 3 },
-      // And the octave under it, for the systems that can. The same two notes, A2 → C1.
-      { wave: 'sine', from: inKey(7), to: inKey(-5), seconds: 0.34, gain: 0.6, attack: 0.004, curve: 2.5 },
+      /*
+        And the octave under it, for the systems that can. The same two notes, A2 → C1.
+
+        ⚠️ **0.6 → 0.95, and it is the same report as the pulse's sub** — 0102, *"guns and rockets…
+        too tinny."* A missile is the heavier of the player's two streams and is meant to be the one
+        picked out of a screen full of the lighter one; it reached lower than the pulse did and not by
+        enough to be the reason. This is the layer 0089 would have leant on and did not.
+      */
+      { wave: 'sine', from: inKey(7), to: inKey(-5), seconds: 0.34, gain: 0.95, attack: 0.004, curve: 2.5 },
+      /*
+        ⚠️ **AND A SUB UNDER THAT, which the missile also did not have** — A1 → C0, two octaves below
+        its own launch. A missile is the second auto-weapon and the ask that produced it
+        (`docs/decisions/0051-a-missile-is-the-second-auto-weapon.md`) is *slower, heavier, worth
+        three of the pulse*; every channel it has should say so, and the low end was the one saying
+        nothing.
+      */
+      { wave: 'sine', from: inKey(0), to: inKey(-12), seconds: 0.4, gain: 0.62, attack: 0.008, curve: 2 },
     ],
   },
   /**

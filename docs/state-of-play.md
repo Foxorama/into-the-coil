@@ -102,6 +102,7 @@ it is pushed — guards stop reaching their subject without ever going red, and 
 | **every pitched cue glides between two notes of the key, and the key lives in `cues.ts`** | [0099](decisions/0099-the-cues-are-in-the-key.md) |
 | **an authored place is a LEVEL coordinate and every spawner adds the origin; a scatter stays in the box** | [0100](decisions/0100-a-level-places-its-pickups-too.md) |
 | **a mark's depth ceiling is how much of a bullet it looks like; a boss leaves the player half the screen** | [0101](decisions/0101-the-sky-is-a-hurry-and-the-boss-holds-back.md) |
+| **a drum step is a VELOCITY; a level's music climbs four times; the bake happens before the press** | [0102](decisions/0102-the-music-goes-somewhere.md) |
 | ~~the near sky is pushed back on every cheap axis~~ — **amended: it went out** | [0088](decisions/0088-the-near-sky-goes-back-and-the-whole-sky-goes-faster.md) → [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the sky is three layers, the fastest is streaks, and a tube is a side of the hull** | [0097](decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md) |
 | **the bomb is the first thing the player spends** | [0053](decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md) |
@@ -249,8 +250,23 @@ than about where the content is put.
 |---|---|
 | **no power-ups after level one; a scatter the player cannot reach** | ✅ [0100](decisions/0100-a-level-places-its-pickups-too.md) |
 | **the sky is faster and still not fast enough; the bosses hold half the screen** | ✅ [0101](decisions/0101-the-sky-is-a-hurry-and-the-boss-holds-back.md) |
-| the music is still flat — no depth, no pace, no tempo | |
-| the player's guns and rockets are too thin | |
+| **the music is still flat — no depth, no pace, no tempo; the guns are too thin** | ✅ [0102](decisions/0102-the-music-goes-somewhere.md) |
+
+⚠️ **EVERY ITEM OF BOTH LISTS HAS LANDED, AND NONE OF IT HAS BEEN FLOWN.** Six decisions — 0097 to
+0102 — against two play-tests, at the player's explicit instruction: *"crank the whole list through
+and then we'll change it… partial implementation and adjusting is going to be worse than adjusting
+with everything in, and I'm expecting a lot of adjusting."* **The next thing that happens is one
+play-test over all of it.**
+
+⚠️ **THE BUILD IT PRODUCES IS THE FIRST TIME THE AUTHORED GAME HAS EXISTED.** 0100 found that levels
+two through seven have never had a pickup in them and that the difficulty dial counted them anyway, so
+any verdict on those levels before this one is about a different game.
+
+⚠️ **AND THE ONE THING THAT WAS ASKED FOR AND NOT BUILT IS NAMED IN 0102**: the music's tempo does not
+rise, because [0093](decisions/0093-the-gun-is-on-the-grid.md) fixes a beat at 24 sim steps and the
+gun, the enemies and the phase-lock all ride it. What rises is the rate of events — 52 notes a bar to
+over 90. **If that does not read as *faster* to an ear, the next conversation is whether the grid is
+worth what it costs, not another pass at the music.**
 
 ⚠️ **THE FIFTH PLAY-TEST IS THE ONE ABOVE THAT** —
 [`the-fifth-play-test`](../reports/the-fifth-play-test-2026-08-10.md), given 2026-08-10 against the
