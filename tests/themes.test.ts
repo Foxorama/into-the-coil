@@ -140,7 +140,7 @@ describe('a theme mixes the music and cannot break it', () => {
     for (const theme of THEME_KINDS) {
       for (const level of MUSIC_LEVELS) {
         const gains = MUSIC_LAYERS.map((layer) => MUSIC_LADDER[level][layer] * mixOf(theme, layer));
-        const open = MUSIC_LAYERS.map((layer, index) => index).filter((index) => gains[index] !== 0);
+        const open = MUSIC_LAYERS.map((_unused, index) => index).filter((index) => gains[index] !== 0);
         let peak = 0;
         for (let i = 0; i < longest; i++) {
           let sum = 0;
