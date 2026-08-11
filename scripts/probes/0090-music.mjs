@@ -108,7 +108,7 @@ export const PROBES = [
     guard: 'and builds as the boss gets close, in SECONDS the player experiences',
     edit: {
       path: 'src/content/music.ts',
-      find: 'export const BOSS_APPROACH_UNITS = 380;',
+      find: 'export const BOSS_APPROACH_UNITS = 643;',
       replace: 'export const BOSS_APPROACH_UNITS = 40;',
     },
   },
