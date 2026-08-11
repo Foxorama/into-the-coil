@@ -18,7 +18,7 @@ export const PROBES = [
     guard: 'opens a layer at every step and never opens one twice',
     edit: {
       path: 'src/content/music.ts',
-      find: "export const RUNG_CLOSES: Partial<Record<MusicLevel, readonly MusicLayer[]>> = {\n  surge: ['call'],\n};",
+      find: "export const RUNG_CLOSES: Partial<Record<MusicLevel, readonly MusicLayer[]>> = {\n  surge: ['call', 'arp'],\n  approach: ['groove', 'hook'],\n};",
       replace: 'export const RUNG_CLOSES: Partial<Record<MusicLevel, readonly MusicLayer[]>> = {};',
     },
   },
@@ -35,8 +35,8 @@ export const PROBES = [
     guard: 'opens a layer at every step and never opens one twice',
     edit: {
       path: 'src/content/music.ts',
-      find: "  surge: ['call'],\n};",
-      replace: "  surge: ['call'],\n  approach: ['toll'],\n};",
+      find: "  approach: ['groove', 'hook'],\n};",
+      replace: "  approach: ['groove', 'hook', 'toll'],\n};",
     },
   },
   {
@@ -53,7 +53,7 @@ export const PROBES = [
     edit: {
       path: 'src/content/music.ts',
       find:
-        "  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.86, groove: 0.94, arp: 0.7, ride: 0.68, call: 0, hook: 0.74, drive: 0.78, toll: 0, crash: 0.9, dread: 0, lead: 0.78, counter: 1.05, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },",
+        "  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.86, groove: 0.94, arp: 0, ride: 0.68, call: 0, hook: 0.74, drive: 0.78, toll: 0, crash: 0.9, dread: 0, lead: 0.78, counter: 1.05, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },",
       replace:
         "  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.86, groove: 0.94, arp: 0.7, ride: 0.68, call: 0, hook: 0.74, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0.78, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },",
     },

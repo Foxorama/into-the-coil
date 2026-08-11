@@ -108,7 +108,7 @@ export const PROBES = [
     guard: 'THE BOSS ARRIVES: it opens more than one new thing, and it is louder in the unit an ear integrates',
     edit: {
       path: 'src/content/music.ts',
-      find: 'stomp: 0.92, frenzy: 0.86, wraith: 0, auraSlow: 1, auraFast: 0.9 },',
+      find: 'stomp: 0.92, frenzy: 0.86, wraith: 0.8, auraSlow: 1, auraFast: 0.9 },',
       replace: 'stomp: 0, frenzy: 0.86, wraith: 0, auraSlow: 1, auraFast: 0.9 },',
     },
   },
