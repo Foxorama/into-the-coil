@@ -268,7 +268,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss,
     spriteHit: SPRITE.bossHit,
     radius: 11,
-    health: 150,
+    health: 480,
     damage: 3,
     // Far enough forward that the whole hull is on screen on the narrowest view the clamp allows,
     // and far enough back that the player is not fighting it at the very edge of their reach.
@@ -330,7 +330,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss2,
     spriteHit: SPRITE.boss2Hit,
     radius: 12.5,
-    health: 220,
+    health: 580,
     damage: 3,
     // Closer than the sentinel's 120, which is most of what makes it feel like a different fight:
     // the player has less room in front of them and less warning on everything it throws.
@@ -381,7 +381,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss3,
     spriteHit: SPRITE.boss3Hit,
     radius: 11.5,
-    health: 260,
+    health: 680,
     damage: 3,
     /*
       ⚠️ **The furthest station any hull can have, and the guard is what said where that is.** The
@@ -422,7 +422,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss4,
     spriteHit: SPRITE.boss4Hit,
     radius: 13,
-    health: 280,
+    health: 780,
     damage: 3,
     station: 136,
     drift: 18,
@@ -455,7 +455,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss5,
     spriteHit: SPRITE.boss5Hit,
     radius: 14,
-    health: 340,
+    health: 880,
     damage: 3,
     station: 142,
     drift: 8,
@@ -488,7 +488,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss6,
     spriteHit: SPRITE.boss6Hit,
     radius: 12.5,
-    health: 320,
+    health: 980,
     damage: 3,
     station: 138,
     drift: 15,
@@ -528,7 +528,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss7,
     spriteHit: SPRITE.boss7Hit,
     radius: 16,
-    health: 420,
+    health: 1140,
     damage: 3,
     // The closest station in the game. `95 + 14 + 16` is 125 against 150 — the hull fills a fifth of
     // the narrowest view, which is what a last boss should cost the player in room.
