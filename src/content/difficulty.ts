@@ -163,7 +163,7 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     hint: 'What the game is tuned for',
     lives: 3,
     toughness: 1.6,
-    fireGap: 0.7,
+    fireGap: 0.78,
     closing: 1.2,
     shotSpeed: 1.15,
     aggression: 1.3,

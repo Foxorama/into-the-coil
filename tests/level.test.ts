@@ -22,7 +22,9 @@ import {
 import { SCROLL_PER_STEP, SHIP_SPEED } from '../src/sim/flight.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
-import { MAX_BARRELS, SPREAD_STEP } from '../src/content/pickups.ts';
+import { MAX_BARRELS, SPREAD_STEP, UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
+import { DIFFICULTIES } from '../src/content/difficulty.ts';
+import { SHIPS } from '../src/content/ships.ts';
 import { BAR_SECONDS } from '../src/content/music.ts';
 
 /**
@@ -703,15 +705,29 @@ describe('a boss fight can reach all of its phases', () => {
         reason. A guard that passes before doing anything is the shape 0005 exists to refuse, and it
         got in here anyway.
       */
+      /*
+        ── THE BOUND IS A SOFTLOCK CHECK NOW, AND IT USED TO BE A PACING CLAIM ─────────────────────
+
+        ⚠️ **`docs/decisions/0124-the-boss-is-a-boss.md`.** Three minutes was *"far longer than the
+        fight should need"* — true when a boss had 150 health, and a **design assumption** rather than
+        a measurement. The player has since set the balance target explicitly: *"if you get to the
+        boss with level 1 weapons, you can take your time or start over… the overall game is short so
+        restarting isn't really a penalty."*
+
+        ⚠️ **So the bare fight is deliberately long and this is no longer the guard that says how
+        long.** What it still holds is `docs/game.md`'s claim that the fight is winnable with no
+        loadout at all — a softlock would be a run that cannot be finished, and that is what a
+        generous ceiling catches. **How long a fight SHOULD be is now held at the design loadout**,
+        in the guard below this one.
+      */
       let steps = 0;
-      // Three minutes of steps is far longer than the fight should need, and finite.
-      while (cleared.count === 0 && steps < 10_800) {
+      while (cleared.count === 0 && steps < 30_000) {
         world.ship.health = world.shipRow.health;
         frame.step();
         steps++;
       }
       expect(world.bossSpawned, 'the boss never arrived, so nothing was fought').toBe(true);
-      expect(world.bossPool.size, 'the boss survived three minutes of continuous fire').toBe(0);
+      expect(world.bossPool.size, 'the boss cannot be killed by the base weapon at all — the run is stuck').toBe(0);
       expect(cleared.count, 'clearing the level was reported the wrong number of times').toBe(1);
 
       // And it stays reported once, however long the frame runs on afterwards.
@@ -1227,5 +1243,108 @@ describe('0121 — a wave is close enough to die together', () => {
     const line = FORMATIONS.line;
     const span = Math.abs(line.acrossOffset(5, 6) - line.acrossOffset(0, 6));
     expect(span, `a six spans ${span} of the lane's 100 units, leaving nowhere to author it`).toBeLessThan(50);
+  });
+});
+
+/**
+ * THE BOSS IS A BOSS — `docs/decisions/0124-the-boss-is-a-boss.md`.
+ *
+ * ⚠️ **Reported**: *"at max level weapons, the boss dies too fast still, it's more of a mid-level
+ * miniboss than an end of level boss."* Measured, `sentinel` lasted **4.6 seconds** at max weapons on
+ * the tier `src/content/difficulty.ts` calls *"what the game is tuned for"*.
+ *
+ * ⚠️ **AND THE PLAYER SET THE BALANCE TARGET, WHICH IS WHAT MADE THE NUMBER PICKABLE.** A health rise
+ * lengthens the bare fight as much as the equipped one, and the two could not both be right — until:
+ * *"it's at the core of it a survival challenge game. If you get to the boss with level 1 weapons, you
+ * can take your time or start over… we should be aiming for the difficulty for the player to be having
+ * at least level 2 weapons… if the game is easy, it's no fun."*
+ *
+ * **So the design loadout is tier 2 and up, and the bare fight is a consequence rather than a case.**
+ */
+describe('0124 — a boss lasts long enough to be one, at the loadout the game is tuned for', () => {
+  /** Damage a second, everything landing, at `tier` of each ladder. */
+  const dpsAt = (tier: number): number => {
+    const ship = Object.values(SHIPS)[0]!;
+    const upgrades: ('weapon' | 'missile')[] = [];
+    for (let i = 0; i < tier; i++) {
+      upgrades.push('weapon');
+      upgrades.push('missile');
+    }
+    const w = weaponFor(ship, upgrades);
+    return (
+      (w.shots * w.damage) / (w.fireEvery / STEPS_PER_SECOND) +
+      (w.launchers > 0 ? (w.launchers * w.missileDamage) / (w.missileEvery / STEPS_PER_SECOND) : 0)
+    );
+  };
+
+  /*
+    ⚠️ **THE FASTEST THE GAME CAN KILL, which is the worst case for *"dies too fast"*.** A floor
+    written at the design loadout would be met by a boss that evaporates for a player who has
+    collected everything — and that player is the one who reported this.
+  */
+  const FASTEST = dpsAt(UPGRADE_TIERS - 1);
+  const TUNED = DIFFICULTIES.savior;
+
+  it('THE REPORTED ONE: a boss is not over before its music is', () => {
+    /*
+      ⚠️ **TWELVE SECONDS, AND IT IS THE MUSIC THAT SETS IT** —
+      [0114](../docs/decisions/0114-the-fight-is-a-different-piece.md) requires a rung to last longer
+      than a handful of `RAMP_SECONDS` or it is *"a gain ramp heard as a wobble rather than a
+      section"*. The fight is a rung. At 4.6 seconds it was shorter than the ramp into it, which is
+      why *"when the boss arrives the section change is noticeable, but not in a dramatic entrance
+      kind of way"* — there was nothing after the entrance.
+    */
+    for (const kind of BOSS_KINDS) {
+      const seconds = (BOSSES[kind].health * TUNED.toughness) / FASTEST;
+      expect(
+        seconds,
+        `${kind} is over in ${seconds.toFixed(1)}s at max weapons — a miniboss, and shorter than the music that announces it`,
+      ).toBeGreaterThan(12);
+    }
+  });
+
+  it('and every phase lasts long enough to be seen as one', () => {
+    /*
+      ⚠️ **[0111](../docs/decisions/0111-a-boss-has-one-idea.md) gives every boss phases keyed to
+      health, and a phase that lasts two seconds is not a phase.** It is the same defect as a
+      one-second music rung and a body with no dwell time
+      ([0105](../docs/decisions/0105-a-body-is-on-screen-long-enough-to-answer.md)): an event the model
+      resolves and the player never gets to answer.
+
+      ⚠️ **Driven off the phase TABLE rather than a count**, so a boss whose phases are authored
+      unevenly is measured on its shortest one — which is the one that vanishes.
+    */
+    for (const kind of BOSS_KINDS) {
+      const total = (BOSSES[kind].health * TUNED.toughness) / FASTEST;
+      const ups = BOSSES[kind].phases.map((p) => p.upTo);
+      const shortest = Math.min(...ups.map((u, i) => u - (ups[i + 1] ?? 0)));
+      expect(
+        shortest * total,
+        `${kind}'s shortest phase is ${(shortest * total).toFixed(1)}s at max weapons — the player never sees it change`,
+      ).toBeGreaterThan(3);
+    }
+  });
+
+  it('and a later boss is a longer fight than an earlier one', () => {
+    /*
+      ⚠️ **The progression, held as an ordering rather than as seven numbers.** `docs/game.md`'s
+      *seven bosses, one idea each* is not served by a level-seven boss that dies faster than
+      level one's, and nothing else in the repository would notice.
+    */
+    for (let i = 1; i < BOSS_KINDS.length; i++) {
+      expect(
+        BOSSES[BOSS_KINDS[i]!].health,
+        `${BOSS_KINDS[i]} is no tougher than ${BOSS_KINDS[i - 1]}, so the run does not get harder`,
+      ).toBeGreaterThan(BOSSES[BOSS_KINDS[i - 1]!].health);
+    }
+  });
+
+  it('AND THE TIER THE GAME IS TUNED FOR SAYS SO ABOUT ITSELF', () => {
+    /*
+      ⚠️ **`savior`'s own `hint` is *"What the game is tuned for"***, and every number above is read
+      against it. If that ever moves to another tier, these bounds are being applied to a row that no
+      longer claims to be the reference — which is the quiet kind of wrong.
+    */
+    expect(DIFFICULTIES.savior.hint.toLowerCase()).toContain('tuned for');
   });
 });
