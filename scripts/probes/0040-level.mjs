@@ -16,8 +16,12 @@ export const PROBES = [
     guard: 'lists its waves in ascending order of place',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 510, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },",
-      replace: "  { at: 410, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },",
+      // ⚠️ The break is that the wave lands BEFORE the one above it — 380 is behind the lancer at
+      // 398, so the list stops ascending. The compression moved every position, and a re-anchoring
+      // pass rewrote both sides to the same number, which `npm test` caught as a probe that changes
+      // nothing: an anchor can be moved mechanically, a BREAK cannot.
+      find: "  { at: 471, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },",
+      replace: "  { at: 380, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },",
     },
   },
   {
@@ -35,7 +39,7 @@ export const PROBES = [
     guard: 'never puts an enemy where it can leave the ROAM band and be culled',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 960, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },",
+      find: "  { at: 838, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },",
       replace: "  { at: 960, enemy: 'weaver', formation: 'line', count: 5, lane: 20 },",
     },
   },
@@ -62,7 +66,7 @@ export const PROBES = [
       // ⚠️ RE-ANCHORED by `docs/decisions/0086-the-teeth-wait-for-the-gun.md`, which took the turret
       // out of the third of these lines. The break is unchanged — three consecutive waves thinned to
       // one body each — and the anchor is the run-up band it now sits in.
-      find: "  { at: 2400, enemy: 'drifter', formation: 'line', count: 5, lane: 60 },\n  { at: 2490, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },\n  { at: 2580, enemy: 'drifter', formation: 'vee', count: 6, lane: 50 },",
+      find: "  { at: 2012, enemy: 'drifter', formation: 'line', count: 5, lane: 60 },\n  { at: 2085, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },\n  { at: 2158, enemy: 'drifter', formation: 'vee', count: 6, lane: 50 },",
       replace: "  { at: 2400, enemy: 'drifter', formation: 'line', count: 1, lane: 60 },\n  { at: 2490, enemy: 'weaver', formation: 'line', count: 1, lane: 45 },\n  { at: 2580, enemy: 'drifter', formation: 'vee', count: 1, lane: 50 },",
     },
   },

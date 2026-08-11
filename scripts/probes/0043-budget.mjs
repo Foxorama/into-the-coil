@@ -90,7 +90,7 @@ export const PROBES = [
     guard: 'keeps enough on screen at once to be a shooter',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 1462, enemy: 'drifter', formation: 'line', count: 5, lane: 62 },\n",
+      find: "  { at: 1249, enemy: 'drifter', formation: 'line', count: 5, lane: 62 },\n",
       replace: '',
     },
   },

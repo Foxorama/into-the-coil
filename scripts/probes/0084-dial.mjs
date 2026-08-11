@@ -66,8 +66,8 @@ export const PROBES = [
     edit: {
       path: 'src/content/levels.ts',
       // `eye` — the last level, so its peak is the one `DIAL_MAX` is measured against.
-      find: "  { at: 4800, kind: 'weapon', lane: 34 },",
-      replace: "  { at: 4800, kind: 'weapon', lane: 34 },\n  { at: 5100, kind: 'weapon', lane: 44 },",
+      find: "  { at: 3988, kind: 'weapon', lane: 34 },",
+      replace: "  { at: 3988, kind: 'weapon', lane: 34 },\n  { at: 5100, kind: 'weapon', lane: 44 },",
     },
   },
   {
@@ -87,8 +87,8 @@ export const PROBES = [
     edit: {
       path: 'src/content/levels.ts',
       // `gauntlet` — level six, so the flat spot lands between the last two bosses.
-      find: "  { at: 4600, kind: 'weapon', lane: 54 },",
-      replace: "  { at: 4600, kind: 'weapon', lane: 54 },\n  { at: 4900, kind: 'weapon', lane: 44 },",
+      find: "  { at: 3808, kind: 'weapon', lane: 54 },",
+      replace: "  { at: 3808, kind: 'weapon', lane: 54 },\n  { at: 4900, kind: 'weapon', lane: 44 },",
     },
   },
   {
