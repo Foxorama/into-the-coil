@@ -60,12 +60,16 @@ export const MUSIC_LAYERS = [
   'chords',
   'groove',
   'arp',
+  'ride',
   'call',
   'hook',
   'drive',
   'toll',
+  'crash',
+  'dread',
   'lead',
   'stomp',
+  'frenzy',
   'auraSlow',
   'auraFast',
 ] as const;
@@ -152,12 +156,16 @@ export const LAYER_BARS: Record<MusicLayer, number> = {
   chords: 16,
   groove: 16,
   arp: 16,
+  ride: 4,
   call: 16,
   hook: 16,
   drive: 2,
   toll: 4,
+  crash: 8,
+  dread: 4,
   lead: 4,
   stomp: 2,
+  frenzy: 8,
   auraSlow: 2,
   auraFast: 2,
 };
@@ -435,7 +443,7 @@ export const MUSIC_DRIVE = 0.22;
  * begins about twelve seconds of scroll before the boss arrives, which is long enough to be a build
  * and short enough that it is clearly about the boss rather than about the level.
  */
-export const BOSS_APPROACH_UNITS = 430;
+export const BOSS_APPROACH_UNITS = 380;
 
 /**
  * How far from the boss the level's two middle rungs open, in world units.
@@ -457,8 +465,8 @@ export const BOSS_APPROACH_UNITS = 430;
  * nobody has flown. What `tests/music.test.ts` holds is that they are ordered, that each is a real
  * stretch of seconds rather than a flicker, and that every rung is reachable.
  */
-export const PUSH_UNITS = 4200;
-export const SURGE_UNITS = 2400;
+export const PUSH_UNITS = 4050;
+export const SURGE_UNITS = 2030;
 
 /**
  * The key. Every pitched note is a ratio off this, so the whole piece transposes from one number.
@@ -873,12 +881,12 @@ export type MusicLevel = (typeof MUSIC_LEVELS)[number];
   what makes the boss's own rung a release rather than a step.
 */
 export const MUSIC_LADDER: Record<MusicLevel, Record<MusicLayer, number>> = {
-  calm: { drone: 0.55, bass: 0.7, beat: 0.5, sub: 0, engine: 0, perc: 0, chords: 0, groove: 0, arp: 0, call: 0, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0, auraFast: 0 },
-  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, call: 0.62, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.5, auraFast: 0.28 },
-  push: { drone: 0.34, bass: 0, beat: 0, sub: 0.88, engine: 0.92, perc: 0.74, chords: 0.87, groove: 0.86, arp: 0.62, call: 0.68, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.62, auraFast: 0.4 },
-  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.06, engine: 0.97, perc: 0.8, chords: 0.88, groove: 0.94, arp: 0.64, call: 0.74, hook: 0.62, drive: 0.34, toll: 0, lead: 0, stomp: 0, auraSlow: 0.75, auraFast: 0.55 },
-  approach: { drone: 0.34, bass: 0, beat: 0, sub: 1.1, engine: 1, perc: 0.86, chords: 0.89, groove: 0.94, arp: 0.7, call: 0.8, hook: 0.72, drive: 0.72, toll: 0.72, lead: 0, stomp: 0, auraSlow: 0.88, auraFast: 0.72 },
-  boss: { drone: 0.2, bass: 0, beat: 0, sub: 1.22, engine: 1.1, perc: 0.9, chords: 0.8, groove: 0.98, arp: 0.75, call: 0.81, hook: 0.83, drive: 0.88, toll: 0.79, lead: 0.93, stomp: 0.9, auraSlow: 1, auraFast: 0.9 },
+  calm: { drone: 0.55, bass: 0.7, beat: 0.5, sub: 0, engine: 0, perc: 0, chords: 0, groove: 0, arp: 0, ride: 0, call: 0, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, stomp: 0, frenzy: 0, auraSlow: 0, auraFast: 0 },
+  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, ride: 0, call: 0.62, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, stomp: 0, frenzy: 0, auraSlow: 0.5, auraFast: 0.28 },
+  push: { drone: 0.34, bass: 0, beat: 0, sub: 1.06, engine: 0.96, perc: 0.74, chords: 0.87, groove: 0.94, arp: 0.62, ride: 0.56, call: 0.68, hook: 0.6, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, stomp: 0, frenzy: 0, auraSlow: 0.62, auraFast: 0.4 },
+  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.02, engine: 0.98, perc: 0.82, chords: 0.88, groove: 0.92, arp: 0.68, ride: 0.66, call: 0.74, hook: 0.72, drive: 0.7, toll: 0, crash: 0.78, dread: 0, lead: 0.74, stomp: 0, frenzy: 0, auraSlow: 0.75, auraFast: 0.55 },
+  approach: { drone: 0.34, bass: 0, beat: 0, sub: 1.1, engine: 1.02, perc: 0.86, chords: 0.86, groove: 0.95, arp: 0.7, ride: 0.7, call: 0.76, hook: 0.78, drive: 0.8, toll: 0.76, crash: 0.8, dread: 0.72, lead: 0.82, stomp: 0, frenzy: 0, auraSlow: 0.88, auraFast: 0.72 },
+  boss: { drone: 0.2, bass: 0, beat: 0, sub: 1.24, engine: 1.08, perc: 0.88, chords: 0.78, groove: 0.98, arp: 0.7, ride: 0.72, call: 0.76, hook: 0.8, drive: 0.86, toll: 0.74, crash: 0.72, dread: 0.62, lead: 0.88, stomp: 0.86, frenzy: 0.8, auraSlow: 1, auraFast: 0.9 },
 };
 
 /** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */
@@ -1700,6 +1708,172 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       octave: 1,
       accents: [1, 0.72, 0.86, 0.66],
       note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.9, gain: 0.042, attack: 0.025, curve: 2 },
+    },
+  ],
+
+  /*
+    ── THE RIDE — THE FIRST CYMBAL IN THE GAME, AND THE BAND IT OPENS ──────────────────────────────
+
+    ⚠️ **`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`.** Reported from play:
+    *"I think we also need a bit of cymbal percussion elements as well, it is good and listenable, but
+    still very constrained along the same sound bands."*
+
+    ⚠️ **EVERY EXISTING DRUM IN THIS FILE IS A SHORT NOISE BURST.** The hats are 15 to 40 milliseconds,
+    the shaker 24, the tambourine 70 — so the top of the spectrum is a series of clicks with silence
+    between them, and *constrained along the same sound bands* is an exact description of that. A ride
+    is the opposite shape: struck as hard, and then it RINGS for a quarter of a second, so the band
+    stays occupied instead of flickering.
+
+    ⚠️ **It opens at `push`, which is thirty-odd seconds in** — the rung the report calls *"kicks in
+    about 30-45 secs into the level"*. The pulse doubles and the ceiling opens at the same moment,
+    which is what makes that arrival a section rather than another layer.
+  */
+  ride: [
+    {
+      /*
+        Eighths, leaning on the beat and riding the offbeats — the pattern a ride plays behind a
+        four-on-the-floor kick, so it agrees with `engine` rather than fighting it.
+      */
+      steps: [
+        1, 0.42, 0.68, 0.4, 1, 0.44, 0.7, 0.42,
+        1, 0.42, 0.68, 0.4, 1, 0.46, 0.72, 0.48,
+        1, 0.42, 0.68, 0.4, 1, 0.44, 0.7, 0.42,
+        1, 0.44, 0.7, 0.44, 1, 0.5, 0.78, 0.6,
+      ],
+      pitched: false,
+      perBeat: 2,
+      octave: 0,
+      // ⚠️ A quarter of a second, where every other cymbal-ish voice here is under a tenth. The DECAY
+      // is the whole point: it is what puts continuous energy above 6kHz instead of a row of ticks.
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.052, attack: 0.0006, curve: 2.6, lowFrom: 11000, lowTo: 6500, highFrom: 5200, q: 0.7 },
+    },
+    {
+      // The bell of the ride — a narrow band an octave under the wash, struck on the downbeat only,
+      // so the pattern has a centre rather than being one continuous hiss.
+      steps: [1, _, _, _, 0.7, _, _, _, 1, _, _, _, 0.74, _, _, 0.6],
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.19, gain: 0.036, attack: 0.0005, curve: 3.4, lowFrom: 7200, lowTo: 4200, highFrom: 3000, q: 1.6 },
+    },
+  ],
+
+  /*
+    ── THE CRASH — WHAT MAKES THE BOSS'S ARRIVAL AN ARRIVAL ────────────────────────────────────────
+
+    ⚠️ **It opens at `approach`, which is eight seconds before the boss is on screen** — *"boss music
+    needs to start about 5-10secs before the boss shows"*. A crash is the one drum that announces
+    rather than keeps time, so it is the right sound for the one moment in a level that is an
+    announcement.
+
+    ⚠️ **Eight bars, and it is placed on the PHRASE rather than on the bar.** A crash every bar is a
+    ride with a longer tail; a crash at the top of a phrase is punctuation. It sounds four times in
+    twelve and a half seconds, which is rare enough to still mean something when the fight starts.
+  */
+  crash: [
+    {
+      // Eight bars at four slots each: the top of the phrase, its halfway point, and a pickup into
+      // the loop. Three sounds in 12.8 seconds — punctuation, not time-keeping.
+      steps: [
+        1, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+        0.72, _, _, _, _, _, _, _, _, _, _, _, _, _, 0.55, _,
+      ],
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      /*
+        ⚠️ **1.1 seconds, which is the longest note in the piece and is nowhere near the ceiling.**
+        `tests/sound.test.ts` refuses a single note over three seconds, because that is the job the
+        prewarm cannot split — a crash that rings for a bar is well inside it and is the sound a crash
+        makes. Anything shorter is a hat with delusions.
+      */
+      note: { wave: 'noise', from: 0, to: 0, seconds: 1.1, gain: 0.058, attack: 0.001, curve: 1.5, lowFrom: 13000, lowTo: 4000, highFrom: 2600, q: 0.5 },
+    },
+  ],
+
+  /*
+    ── THE DREAD — THE FIRST DISSONANCE IN THE GAME ────────────────────────────────────────────────
+
+    ⚠️ **`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`.** Asked for, in the
+    player's own terms: *"Dark Tonality: minor keys, diminished chords… Dissonant Intervals: tritones,
+    minor seconds, and minor ninths sound aggressive and sharp. Exotic Modes: Phrygian, Locrian…"*
+
+    ⚠️ **EVERY PITCHED NOTE IN THIS FILE UNTIL NOW HAS BEEN CONSONANT**, and that is most of why the
+    boss sounded like the level with more of it. The piece is A natural minor with a raised seventh on
+    the E chord and nothing else — no interval in it is uncomfortable, so no arrangement of it can
+    sound like a threat.
+
+    ⚠️ **THE FLAT SECOND IS THE WHOLE IDEA.** B flat over A is a minor second — the sharpest interval
+    there is — and it is the note that makes A PHRYGIAN rather than A minor. Sounded together with the
+    root and held, it is a cluster the ear cannot resolve, which is exactly what *"boss music starts
+    five to ten seconds before the boss shows"* is asking a layer to say.
+
+    ⚠️ **`inKey()` IS UNTOUCHED AND THAT IS DELIBERATE.** `src/content/cues.ts` locks the CUES to the
+    natural minor and `tests/sound.test.ts` holds it — a gun that played a tritone would be a wrong
+    note eight times a second. The dissonance belongs to the music, where it is a choice, and not to
+    the effects, where it would be a mistake repeated for ever.
+  */
+  dread: [
+    {
+      // Root and flat second, held together. Bar four drops to the tritone, which is the other
+      // interval the brief names and the one that has meant *danger* for about six hundred years.
+      steps: [0, 1, 0, 6],
+      pitched: true,
+      perBeat: 0.25,
+      octave: 1,
+      accents: [1, 0.92, 0.96, 1],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.085, attack: 0.5, curve: 1.1, lowFrom: 420, lowTo: 900, q: 2.2 },
+    },
+    {
+      // The octave under the root only — the flat second is left in the mid, where a minor second is
+      // sharp. Down here it would be mud rather than menace.
+      steps: [0, 0, 0, 6],
+      pitched: true,
+      perBeat: 0.25,
+      octave: 0,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.12, attack: 0.42, curve: 1.05 },
+    },
+  ],
+
+  /*
+    ── THE FRENZY — A DRIVING OSTINATO THAT NEVER LANDS IN THE SAME PLACE TWICE ────────────────────
+
+    ⚠️ **Asked for: *"Driving Ostinatos: repeating, relentless rhythmic patterns create forward
+    momentum"* and *"Irregular Meters: meters like 7/8 or 9/8 add instability and a frantic edge"*.**
+
+    ⚠️ **THE METER CANNOT CHANGE AND THE FEELING OF IT CAN.**
+    `docs/decisions/0093-the-gun-is-on-the-grid.md` fixes a beat at 24 sim steps and the gun, every
+    enemy cadence and 0094's phase-lock all ride it — a bar of 7/8 would take the whole game off the
+    grid three decisions exist to put it on. **A SEVEN-SIXTEENTH CELL over a sixteen-sixteenth bar
+    costs none of that**: the pattern is straight 4/4 to the machine and rotates through seven
+    different positions in the bar to the ear, which is what an odd meter actually feels like.
+
+    ⚠️ **Driven rather than counted: it realigns after seven bars**, so across this layer's eight it
+    lands the same way exactly once. Nothing in the game moves; the accent does.
+
+    ⚠️ **Phrygian and the tritone again — root, flat second, tritone, root.** The brief's three
+    ingredients in one repeating cell, at sixteenth speed, which is also the *"double speed"* the
+    report asks the fight for: `stomp` doubles the drums and this doubles the note rate over them.
+  */
+  frenzy: [
+    {
+      steps: [
+        0, _, 1, 0, _, 6, 0, 0, _, 1, 0, _, 6, 0, 0, _,
+        1, 0, _, 6, 0, 0, _, 1, 0, _, 6, 0, 0, _, 1, 0,
+        _, 6, 0, 0, _, 1, 0, _, 6, 0, 0, _, 1, 0, _, 6,
+        0, 0, _, 1, 0, _, 6, 0, 0, _, 1, 0, _, 6, 0, 0,
+        _, 1, 0, _, 6, 0, 0, _, 1, 0, _, 6, 0, 0, _, 1,
+        0, _, 6, 0, 0, _, 1, 0, _, 6, 0, 0, _, 1, 0, _,
+        6, 0, 0, _, 1, 0, _, 6, 0, 0, _, 1, 0, _, 6, 0,
+        0, _, 1, 0, _, 6, 0, 0, _, 1, 0, _, 6, 0, 0, _,
+      ],
+      pitched: true,
+      perBeat: 4,
+      octave: 1,
+      // ⚠️ Four accents against a seven-note cell, so the WEIGHT rotates too and at a different rate
+      // from the notes. Heavy syncopation, per the brief, without a displaced accent being authored.
+      accents: [1, 0.58, 0.82, 0.6],
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.22, gain: 0.085, attack: 0.002, curve: 5.5, lowFrom: 2600, lowTo: 900, q: 2, drive: 0.5 },
     },
   ],
 

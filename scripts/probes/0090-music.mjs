@@ -72,8 +72,8 @@ export const PROBES = [
       // to the title's piece now and is closed at `run` on purpose, so closing it again says nothing.
       // `engine` is the level's floor — open at `run` and `approach` — and closing it at the boss is
       // the same failure the probe always described: a ladder that swaps rather than builds.
-      find: "  boss: { drone: 0.2, bass: 0, beat: 0, sub: 1.22, engine: 1.1, perc: 0.9, chords: 0.8, groove: 0.98, arp: 0.75, call: 0.81, hook: 0.83, drive: 0.88, toll: 0.79, lead: 0.93, stomp: 0.9, auraSlow: 1, auraFast: 0.9 },",
-      replace: "  boss: { drone: 0.2, bass: 0, beat: 0, sub: 1.22, engine: 0, perc: 0.9, chords: 0.8, groove: 0.98, arp: 0.75, call: 0.81, hook: 0.83, drive: 0.88, toll: 0.79, lead: 0.93, stomp: 0.9, auraSlow: 1, auraFast: 0.9 },",
+      find: "  boss: { drone: 0.2, bass: 0, beat: 0, sub: 1.24, engine: 1.08, perc: 0.88, chords: 0.78, groove: 0.98, arp: 0.7, ride: 0.72, call: 0.76, hook: 0.8, drive: 0.86, toll: 0.74, crash: 0.72, dread: 0.62, lead: 0.88, stomp: 0.86, frenzy: 0.8, auraSlow: 1, auraFast: 0.9 },",
+      replace: "  boss: { drone: 0.2, bass: 0, beat: 0, sub: 1.24, engine: 0, perc: 0.88, chords: 0.78, groove: 0.98, arp: 0.7, ride: 0.72, call: 0.76, hook: 0.8, drive: 0.86, toll: 0.74, crash: 0.72, dread: 0.62, lead: 0.88, stomp: 0.86, frenzy: 0.8, auraSlow: 1, auraFast: 0.9 },",
     },
   },
   {
@@ -108,7 +108,7 @@ export const PROBES = [
     guard: 'and builds as the boss gets close, in SECONDS the player experiences',
     edit: {
       path: 'src/content/music.ts',
-      find: 'export const BOSS_APPROACH_UNITS = 430;',
+      find: 'export const BOSS_APPROACH_UNITS = 380;',
       replace: 'export const BOSS_APPROACH_UNITS = 40;',
     },
   },
