@@ -157,6 +157,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **off stops the loops; an intermittent guard was a real race** | [0119](decisions/0119-off-stops-the-loops.md) |
 | **a rung may CLOSE a layer — 0090's additive rule is gone** | [0120](decisions/0120-a-rung-may-close-a-layer.md) |
 | **a wave sits inside one volley, and only the across axis moved** | [0121](decisions/0121-a-wave-dies-together.md) |
+| **the kick is UNDER the music; the gain was the wrong lever** | [0122](decisions/0122-the-kick-goes-under-the-music.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 

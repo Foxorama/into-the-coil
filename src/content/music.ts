@@ -1330,7 +1330,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'sine', from: 160, to: 38, seconds: 0.42, gain: 0.6, attack: 0.001, curve: 2.8, drive: 0.3 },
+      note: { wave: 'sine', from: 104, to: 34, seconds: 0.46, gain: 0.6, attack: 0.001, curve: 2.1, drive: 0.3 },
     },
     {
       // The click on top of it, so the kick reads on a phone speaker with no low end at all — and it

@@ -32,7 +32,13 @@ export const PROBES = [
     // low end is the kick's tail and the chords' own sub, and *"a level has more sub than the title"*
     // is still true of it.
     broke: 'the sub closed at a level’s opening rung, so the floor is back to being a kick’s tail',
-    guard: 'and a level carries MANY times the title’s sub, not merely more of it',
+    /*
+      ⚠️ RE-POINTED BY 0122, WHICH BROKE THE GUARD THIS NAMED. A deeper kick supplies enough of the
+      sub band on its own to clear a ratio against the title, so closing `sub` stopped reddening it —
+      `npm run prove` said WRONG TEST. The claim was always *the level has a FLOOR*, and it is now
+      measured by attribution rather than by a total. This probe is unchanged; what it aims at is.
+    */
+    guard: 'AND THE FLOOR IS STILL THE SUB LAYER, not the kick’s tail',
     edit: {
       path: 'src/content/music.ts',
       find: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86,',
