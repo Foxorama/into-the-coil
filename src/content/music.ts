@@ -68,6 +68,7 @@ export const MUSIC_LAYERS = [
   'crash',
   'dread',
   'lead',
+  'counter',
   'stomp',
   'frenzy',
   'wraith',
@@ -192,12 +193,13 @@ export const LAYER_BARS: Record<MusicLayer, number> = {
   hook: 16,
   drive: 2,
   toll: 4,
-  crash: 8,
+  crash: 4,
   dread: 4,
   lead: 4,
   stomp: 2,
   frenzy: 8,
-  wraith: 16,
+  wraith: 8,
+  counter: 16,
   auraSlow: 2,
   auraFast: 2,
 };
@@ -509,7 +511,7 @@ export const BOSS_APPROACH_UNITS = 380;
  */
 export const BOSS_PEAK_HEALTH = 0.78;
 
-export const PUSH_UNITS = 2542;
+export const PUSH_UNITS = 2758;
 export const SURGE_UNITS = 958;
 
 /**
@@ -925,13 +927,13 @@ export type MusicLevel = (typeof MUSIC_LEVELS)[number];
   what makes the boss's own rung a release rather than a step.
 */
 export const MUSIC_LADDER: Record<MusicLevel, Record<MusicLayer, number>> = {
-  calm: { drone: 0.55, bass: 0.7, beat: 0.5, sub: 0, engine: 0, perc: 0, chords: 0, groove: 0, arp: 0, ride: 0, call: 0, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
-  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, ride: 0, call: 0.62, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.5, auraFast: 0.28 },
-  push: { drone: 0.34, bass: 0, beat: 0, sub: 1.06, engine: 0.96, perc: 0.74, chords: 0.87, groove: 0.94, arp: 0.62, ride: 0.56, call: 0.68, hook: 0.6, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.62, auraFast: 0.4 },
-  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.02, engine: 0.98, perc: 0.82, chords: 0.88, groove: 0.92, arp: 0.68, ride: 0.66, call: 0.74, hook: 0.72, drive: 0.7, toll: 0, crash: 0.78, dread: 0, lead: 0.74, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },
-  approach: { drone: 0.34, bass: 0, beat: 0, sub: 1.1, engine: 1.02, perc: 0.86, chords: 0.86, groove: 0.95, arp: 0.7, ride: 0.7, call: 0.76, hook: 0.78, drive: 0.8, toll: 0.76, crash: 0.8, dread: 0.72, lead: 0.82, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.88, auraFast: 0.72 },
-  boss: { drone: 0.34, bass: 0, beat: 0, sub: 1.12, engine: 1.04, perc: 0.9, chords: 0, groove: 0, arp: 0, ride: 0.8, call: 0, hook: 0, drive: 0.82, toll: 0.86, crash: 0.84, dread: 0.92, lead: 0, stomp: 0.82, frenzy: 0.74, wraith: 0, auraSlow: 0.96, auraFast: 0.86 },
-  bossPeak: { drone: 0.28, bass: 0, beat: 0, sub: 1.1, engine: 1.02, perc: 0.88, chords: 0, groove: 0, arp: 0, ride: 0.8, call: 0, hook: 0, drive: 0.84, toll: 0.84, crash: 0.84, dread: 0.92, lead: 0, stomp: 0.88, frenzy: 0.82, wraith: 0.78, auraSlow: 1, auraFast: 0.95 },
+  calm: { drone: 0.55, bass: 0.7, beat: 0.5, sub: 0, engine: 0, perc: 0, chords: 0, groove: 0, arp: 0, ride: 0, call: 0, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
+  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, ride: 0, call: 0.62, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.5, auraFast: 0.28 },
+  push: { drone: 0.34, bass: 0, beat: 0, sub: 1.06, engine: 0.96, perc: 0.76, chords: 0.87, groove: 0.94, arp: 0.64, ride: 0.58, call: 0.68, hook: 0.64, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0.7, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.62, auraFast: 0.4 },
+  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.88, groove: 0.94, arp: 0.7, ride: 0.68, call: 0.74, hook: 0.74, drive: 0.72, toll: 0, crash: 0.78, dread: 0, lead: 0.78, counter: 0.8, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },
+  approach: { drone: 0.34, bass: 0, beat: 0, sub: 1.1, engine: 1.02, perc: 0.86, chords: 0.86, groove: 0.95, arp: 0.72, ride: 0.72, call: 0.76, hook: 0.78, drive: 0.8, toll: 0.76, crash: 0.8, dread: 0.72, lead: 0.82, counter: 0.84, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.88, auraFast: 0.72 },
+  boss: { drone: 0.34, bass: 0, beat: 0, sub: 1.12, engine: 1.04, perc: 0.9, chords: 0, groove: 0, arp: 0, ride: 0.8, call: 0, hook: 0, drive: 0.82, toll: 0.86, crash: 0.84, dread: 0.92, lead: 0, counter: 0, stomp: 0.82, frenzy: 0.74, wraith: 0, auraSlow: 0.96, auraFast: 0.86 },
+  bossPeak: { drone: 0.28, bass: 0, beat: 0, sub: 1.1, engine: 1.02, perc: 0.88, chords: 0, groove: 0, arp: 0, ride: 0.8, call: 0, hook: 0, drive: 0.84, toll: 0.84, crash: 0.84, dread: 0.92, lead: 0, counter: 0, stomp: 0.88, frenzy: 0.82, wraith: 0.78, auraSlow: 1, auraFast: 0.95 },
 };
 
 /** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */
@@ -1821,7 +1823,6 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       // the loop. Three sounds in 12.8 seconds — punctuation, not time-keeping.
       steps: [
         1, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-        0.72, _, _, _, _, _, _, _, _, _, _, _, _, _, 0.55, _,
       ],
       pitched: false,
       perBeat: 1,
@@ -1966,8 +1967,6 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       steps: [
         0, _, 3, _, 1, _, 0, _, 3, _, 7, _, 5, _, 3, _,
         0, _, 3, _, 1, _, 0, _, 7, _, 5, _, 3, _, _, _,
-        7, _, 10, _, 8, _, 7, _, 3, _, 0, _, 1, _, _, _,
-        7, _, 10, _, 8, _, 12, _, 10, _, 7, _, 5, _, 3, _,
       ],
       pitched: true,
       perBeat: 1,
@@ -1980,14 +1979,68 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       steps: [
         0, _, 3, _, 1, _, 0, _, 3, _, 7, _, 5, _, 3, _,
         0, _, 3, _, 1, _, 0, _, 7, _, 5, _, 3, _, _, _,
-        7, _, 10, _, 8, _, 7, _, 3, _, 0, _, 1, _, _, _,
-        7, _, 10, _, 8, _, 12, _, 10, _, 7, _, 5, _, 3, _,
       ],
       pitched: true,
       perBeat: 1,
       octave: 1,
       accents: [1, 0.7, 0.88, 0.64],
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.84, gain: 0.055, attack: 0.006, curve: 2.4, lowFrom: 1500, lowTo: 620, q: 1.8, drive: 0.6 },
+    },
+  ],
+
+  /*
+    ── THE COUNTER — A SECOND MELODY THAT ANSWERS THE FIRST ────────────────────────────────────────
+
+    ⚠️ **`docs/decisions/0114-the-fight-is-a-different-piece.md`.** Reported: *"the music that kicks
+    in at 1.32 needs to kick in around 42 secs and then we need a different additional accompaniment
+    kicking in around 1.32 on top of the current change in music."* Two asks in one sentence: move
+    what arrives, and then put something NEW where it used to be. The first is `PUSH_UNITS`; this is
+    the second.
+
+    ⚠️ **A COUNTER-MELODY AND NOT A THICKER `call`.** *"Additional accompaniment"* is a part, not a
+    gain — so this is a line with its own shape that fits in `call`'s gaps. `call` states a phrase and
+    rests for a bar and a half; this answers into exactly that rest, which is what makes two melodies
+    a conversation rather than a crowd.
+
+    ⚠️ **In THIRDS above the root, which is the interval that reads as harmony rather than as a second
+    tune.** A counter-line at the octave doubles; at the fifth it thickens; at the third it is heard
+    as an accompaniment, which is the word the report used.
+
+    ⚠️ **Sixteen bars, so it turns with the progression's B-section** — `LAYER_BARS`' whole-multiple
+    rule, and the reason a four-bar answer would be a wrong note for half of every phrase.
+  */
+  counter: [
+    {
+      /*
+        The answer. It enters where `call` rests — the third and fourth beat of each bar — and holds
+        back on the bars where `call` is still singing.
+      */
+      steps: [
+        _, _, _, 7, _, _, 5, _, _, _, _, 3, _, _, 2, _,
+        _, _, _, 7, _, _, 5, _, _, 3, _, 2, _, 0, _, _,
+        _, _, _, 12, _, _, 10, _, _, _, _, 7, _, _, 5, _,
+        _, _, _, 10, _, _, 8, _, _, 7, _, 5, _, 3, _, _,
+      ],
+      pitched: true,
+      perBeat: 1,
+      octave: 1,
+      accents: [0.86, 0.62, 1, 0.7],
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.92, gain: 0.088, attack: 0.03, curve: 2, lowFrom: 1900, lowTo: 850, q: 1.2 },
+    },
+    {
+      // A third above it, quiet — two notes make the line an accompaniment rather than a melody
+      // competing with `call` for the same job.
+      steps: [
+        _, _, _, 10, _, _, 8, _, _, _, _, 7, _, _, 5, _,
+        _, _, _, 10, _, _, 8, _, _, 7, _, 5, _, 3, _, _,
+        _, _, _, 15, _, _, 14, _, _, _, _, 10, _, _, 8, _,
+        _, _, _, 14, _, _, 12, _, _, 10, _, 8, _, 7, _, _,
+      ],
+      pitched: true,
+      perBeat: 1,
+      octave: 1,
+      accents: [0.86, 0.62, 1, 0.7],
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.86, gain: 0.05, attack: 0.035, curve: 2 },
     },
   ],
 

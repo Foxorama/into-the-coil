@@ -528,9 +528,33 @@ describe('the cue table', () => {
         the prestige target and the phone the fallback; this is the first bound in the repository that
         spends that permission, so it says so rather than looking like a measurement.
       */
+      /*
+        ── 48 → 56, AND IT IS THE SECOND RAISE, WHICH IS THE PART THAT MATTERS ─────────────────────
+
+        ⚠️ **`docs/decisions/0114-the-fight-is-a-different-piece.md`.** The loops were 19.0 MB when
+        this guard did not exist, 38.7 when it was written, and 52.2 now. Every raise has bought
+        something the player asked for by name — a B-section, a tune at the opening, cymbals, a boss
+        piece, a counter-melody — and every one of them is more audio.
+
+        ⚠️ **MEASURED BEFORE IT WAS MOVED, which is the whole of why it moves at all.** 272 seconds of
+        audio, about 3.1 seconds of synthesis, spread one NOTE at a time across the title screen
+        (0102) rather than as a job anybody waits for. The longest single note is guarded separately
+        above and is nowhere near its own ceiling.
+
+        ⚠️ **AND THE CHEAP SAVING WAS TAKEN FIRST**: `crash` went from eight bars to four, because it
+        is punctuation with no harmony in it and four bars say everything eight did. What is left is
+        material that cannot be shortened without a layer playing the wrong notes over the
+        progression's second half.
+
+        ⚠️ **THE THIRD RAISE MUST NOT BE A NUMBER.** Seven per-theme compositions are the next thing
+        0113 asks for, and holding all of them resident is a multiple of this that no ceiling should
+        absorb — the answer there is baking the level's own set at the boundary, which
+        `src/content/themes.ts` already costs out. If a change wants more than 56 MB, it wants that
+        mechanism instead.
+      */
       const bytes = MUSIC_LAYERS.reduce((sum, layer) => sum + secondsOfLayer(layer) * SAMPLE_RATE * 4, 0);
       const mb = bytes / 1e6;
-      expect(mb, `the loops are ${mb.toFixed(1)} MB resident, which is past what a desktop should hold for a backdrop`).toBeLessThan(48);
+      expect(mb, `the loops are ${mb.toFixed(1)} MB resident, which is past what a desktop should hold for a backdrop`).toBeLessThan(56);
     });
   });
 
@@ -1215,11 +1239,23 @@ describe('a comfort setting cannot reach the game', () => {
 describe('every cue is played by something, and every cue the frame plays exists', () => {
   it('no cue in the table is dead weight', () => {
     /*
-      ⚠️ **A row nobody plays is worse than a missing sound**, because it looks like coverage. The two
+      ⚠️ **A row nobody plays is worse than a missing sound**, because it looks like coverage. The
       files allowed to name a cue are the frame, which reports what happened, and the shell, which
       owns the one cue that is not a model event.
+
+      ⚠️ **`src/app/boss.ts` IS THE FRAME, and this list was the only place in the repository that
+      disagreed** — `docs/decisions/0114-the-fight-is-a-different-piece.md`. `FORBIDDEN` twelve lines
+      up already reads `['src/app/frame.ts', 'src/app/boss.ts']` as one thing for 0024's ban, and
+      `src/app/boss.ts` says at the top why it is a separate file: *"it could have gone inside
+      `frame.ts`, and the reason it did not is that a boss is the first thing in the game with a state
+      machine in it."* A readability split is not a permission boundary.
+
+      ⚠️ **It was found by the boss having no attack sound at all.** The fix put `onCue('bossShot')`
+      at the boss's own fire gate — the only place that knows a volley left, once per volley rather
+      than once per bullet — and this guard reported the new cue as dead weight because it was not
+      looking at the file the frame keeps its boss in.
     */
-    const sources = read('src/app/frame.ts') + read('src/app/mount.ts');
+    const sources = read('src/app/frame.ts') + read('src/app/boss.ts') + read('src/app/mount.ts');
     const unplayed = CUE_KINDS.filter((kind) => !sources.includes(`'${kind}'`));
     expect(unplayed, `these cues are in the table and nothing ever plays them: ${unplayed.join(', ')}`).toEqual([]);
   });

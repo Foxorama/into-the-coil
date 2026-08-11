@@ -71,8 +71,8 @@ export const PROBES = [
     guard: 'THE ASK: the aura follows the boss in, and is silent when it is far away',
     edit: {
       path: 'src/content/music.ts',
-      find: "  boss: { drone: 0.34, bass: 0, beat: 0, sub: 1.12, engine: 1.04, perc: 0.9, chords: 0, groove: 0, arp: 0, ride: 0.8, call: 0, hook: 0, drive: 0.82, toll: 0.86, crash: 0.84, dread: 0.92, lead: 0, stomp: 0.82, frenzy: 0.74, wraith: 0, auraSlow: 0.96, auraFast: 0.86 },",
-      replace: "  boss: { drone: 0.34, bass: 0, beat: 0, sub: 1.12, engine: 1.04, perc: 0.9, chords: 0, groove: 0, arp: 0, ride: 0.8, call: 0, hook: 0, drive: 0.82, toll: 0.86, crash: 0.84, dread: 0.92, lead: 0, stomp: 0.82, frenzy: 0.74, wraith: 0, auraSlow: 0, auraFast: 0 },",
+      find: "  boss: { drone: 0.34, bass: 0, beat: 0, sub: 1.12, engine: 1.04, perc: 0.9, chords: 0, groove: 0, arp: 0, ride: 0.8, call: 0, hook: 0, drive: 0.82, toll: 0.86, crash: 0.84, dread: 0.92, lead: 0, counter: 0, stomp: 0.82, frenzy: 0.74, wraith: 0, auraSlow: 0.96, auraFast: 0.86 },",
+      replace: "  boss: { drone: 0.34, bass: 0, beat: 0, sub: 1.12, engine: 1.04, perc: 0.9, chords: 0, groove: 0, arp: 0, ride: 0.8, call: 0, hook: 0, drive: 0.82, toll: 0.86, crash: 0.84, dread: 0.92, lead: 0, counter: 0, stomp: 0.82, frenzy: 0.74, wraith: 0, auraSlow: 0, auraFast: 0 },",
     },
   },
   {
