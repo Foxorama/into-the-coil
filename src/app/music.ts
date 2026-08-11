@@ -467,7 +467,15 @@ export interface MusicOut {
  * be one piece of music stopping and another starting, which is the thing four synchronised loops
  * exist to avoid; at 1.6 seconds the beat arrives over about four beats of the bar it arrives in.
  */
-const RAMP_SECONDS = 1.6;
+/*
+  ⚠️ **EXPORTED FOR `scripts/hear.mjs`, WHICH HAD BEEN GUESSING AT IT** — 0116. The rig's `--music`
+  arc modelled a level change as a LINEAR ramp over the last 1.6s of a slot; this is an exponential
+  approach that starts the instant the rung changes. Two different shapes in two different places,
+  and the one the player hears is this one. A number restated in the rig is
+  `docs/decisions/0027-measure-the-picture-not-the-model.md` inside the instrument, for the third
+  time in this file's history.
+*/
+export const RAMP_SECONDS = 1.6;
 
 /**
  * How many points the music bus's transfer curve is sampled at.
@@ -523,7 +531,7 @@ export const DUCK_UP_SECONDS = 0.32;
  * `RAMP_SECONDS` the aura would still be swelling after the player had already backed out of range,
  * which is a sound that reports where they were rather than where they are.
  */
-const AURA_RAMP_SECONDS = 0.4;
+export const AURA_RAMP_SECONDS = 0.4;
 
 /**
  * The Web Audio half.
