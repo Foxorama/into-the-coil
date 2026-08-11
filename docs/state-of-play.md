@@ -603,7 +603,51 @@ not a report per item.
 
 ## What is next
 
-⚠️ **START HERE. THE LIST IS THE EIGHT CHUNKS BELOW AND IT COMES FROM
+### The music is a rewrite in four phases, and two of them have landed
+
+⚠️ **THE PLAYER HAS SET THE DIRECTION AND IT IS A DECISION ABOUT WHICH RULE GOES**, 2026-08-11:
+*"the moving breathing sound is what I want… even if we have to scrap the current music implementation
+and redo it because it's a convoluted mess, I'd rather go the extra effort than accept a standard
+implementation instead of a good one. The primary rule of the project is Quality first and that
+applies to music and sound as well as everything else."*
+
+⚠️ **[0072](decisions/0072-a-cue-is-baked-and-played.md) STANDS. WHAT GOES IS
+[0090](decisions/0090-the-music-is-four-loops.md)'s *intensity is nothing but their gains*** — which
+[0114](decisions/0114-the-fight-is-a-different-piece.md) already began dismantling and stopped
+halfway. **A scheduler was considered and is not needed**: what the ask requires is BUFFER scheduling
+at a bar line, which is one `start(when)` per bar and not a note-level allocation, so 0072's objection
+does not reach it.
+
+| phase | what | state |
+|---|---|---|
+| 0 | **the rig renders a LEVEL** — rungs, ramps, theme, and where every boundary lands in the bar | ✅ [0116](decisions/0116-the-rig-plays-the-level.md) |
+| 1 | **bar-line quantisation**, per-note duration, per-layer panning | quantisation ✅ [0117](decisions/0117-a-section-change-lands-on-the-beat.md); **the other two are owed** |
+| 2 | **the transport** — sections on bar lines, one-shot fills at seams, variant slots, selection from game state | not started. This is where *moves and breathes* lives |
+| 3 | **per-theme composition**, baked at the level boundary | not started. [0113](decisions/0113-there-is-one-composition-and-seven-levels.md) as written |
+
+⚠️ **PHASE 1's REMAINING TWO ARE NAMED CEILINGS, NOT POLISH.** Every note in a voice is **the same
+length and the same timbre** — `MusicVoice.note` is one `CueLayer` per voice, so a melody where every
+note is 0.2s is a limit no mix escapes. And the output is **mono**: 23 layers stacked at one point with
+no depth cue. ⚠️ **Panning costs NO extra memory** — the layers stay mono buffers and take a
+`StereoPannerNode` each — which is not what a first reading suggests, and the 56 MB ceiling is not in
+the way.
+
+⚠️ **THE BAR CLOCK 0117 BUILT IS THE PRIMITIVE PHASE 2 NEEDS.** `nextBarFrom(anchorAudio, now)` is
+already the answer to *when does a section change land*, so the transport is closer than it was.
+
+⚠️ **AND 0114 HAS ALREADY NAMED THE FIRST THING PHASE 2 SHOULD DO**: *"a rung that closes a layer as it
+opens two is a change of arrangement rather than a thicker one, and it is the only mechanism here that
+has ever read as a section boundary."* That is 0090's additive rule being the thing in the way, in
+0114's own words.
+
+⚠️ **NOTHING FROM 0116 OR 0117 HAS BEEN HEARD BY THE PLAYER YET.** Three renders were handed over —
+level one before, level one after, and level seven — and **the verdict on whether the bar line was the
+whole of `surge` is what decides whether phase 2 starts or phase 1 finishes.** Do not stack another
+change on the channel before that answer; six rounds were spent doing exactly that.
+
+---
+
+⚠️ **START HERE FOR EVERYTHING ELSE. THE LIST IS THE EIGHT CHUNKS BELOW AND IT COMES FROM
 [`the-third-play-test`](../reports/the-third-play-test-2026-08-08.md).** That report is where the
 words are; this is only the order and the state. **Read the report first** —
 [0029](decisions/0029-the-tracked-record-is-the-record.md), a summary is a second copy.
