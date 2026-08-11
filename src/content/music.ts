@@ -162,7 +162,8 @@ export const LEVEL_ONLY: readonly MusicLayer[] = ['chords', 'groove', 'arp', 'ho
  * (*"the tune kickin around 52 secs is great"*) without it playing for the whole level.
  */
 export const RUNG_CLOSES: Partial<Record<MusicLevel, readonly MusicLayer[]>> = {
-  surge: ['call'],
+  surge: ['call', 'arp'],
+  approach: ['groove', 'hook'],
 };
 
 /**
@@ -1052,10 +1053,10 @@ export const MUSIC_LADDER: Record<MusicLevel, Record<MusicLayer, number>> = {
   calm: { drone: 0.55, bass: 0.7, beat: 0.5, sub: 0, engine: 0, perc: 0, chords: 0, groove: 0, arp: 0, ride: 0, call: 0, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
   run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, ride: 0, call: 0.62, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.5, auraFast: 0.28 },
   push: { drone: 0.34, bass: 0, beat: 0, sub: 1.06, engine: 0.96, perc: 0.76, chords: 0.87, groove: 0.94, arp: 0.64, ride: 0.58, call: 0.68, hook: 0.64, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0.7, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.62, auraFast: 0.4 },
-  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.86, groove: 0.94, arp: 0.7, ride: 0.68, call: 0, hook: 0.74, drive: 0.78, toll: 0, crash: 0.9, dread: 0, lead: 0.78, counter: 1.05, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },
-  approach: { drone: 0.34, bass: 0, beat: 0, sub: 1.1, engine: 1.02, perc: 0.86, chords: 0.84, groove: 0.95, arp: 0.72, ride: 0.72, call: 0, hook: 0.78, drive: 0.84, toll: 0.78, crash: 0.92, dread: 0.74, lead: 0.82, counter: 1.08, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.88, auraFast: 0.72 },
-  boss: { drone: 0.36, bass: 0, beat: 0, sub: 1.2, engine: 1.12, perc: 0.96, chords: 0, groove: 0, arp: 0, ride: 0.9, call: 0, hook: 0, drive: 0.94, toll: 0.92, crash: 0.94, dread: 1.02, lead: 0, counter: 0, stomp: 0.92, frenzy: 0.86, wraith: 0, auraSlow: 1, auraFast: 0.9 },
-  bossPeak: { drone: 0.3, bass: 0, beat: 0, sub: 1.2, engine: 1.1, perc: 0.95, chords: 0, groove: 0, arp: 0, ride: 0.9, call: 0, hook: 0, drive: 0.95, toll: 0.9, crash: 0.94, dread: 1, lead: 0, counter: 0, stomp: 0.97, frenzy: 0.92, wraith: 0.88, auraSlow: 1.02, auraFast: 0.94 },
+  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.86, groove: 0.94, arp: 0, ride: 0.68, call: 0, hook: 0.74, drive: 0.78, toll: 0, crash: 0.9, dread: 0, lead: 0.78, counter: 1.05, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },
+  approach: { drone: 0.34, bass: 0, beat: 0, sub: 1.1, engine: 1.02, perc: 0.86, chords: 0.84, groove: 0, arp: 0, ride: 0.72, call: 0, hook: 0, drive: 0.84, toll: 0.86, crash: 0.92, dread: 1, lead: 0.82, counter: 1.08, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.88, auraFast: 0.72 },
+  boss: { drone: 0.36, bass: 0, beat: 0, sub: 1.12, engine: 1.12, perc: 0.96, chords: 0, groove: 0, arp: 0, ride: 0.9, call: 0, hook: 0, drive: 0.94, toll: 0.92, crash: 0.94, dread: 1.02, lead: 0, counter: 0, stomp: 0.92, frenzy: 0.86, wraith: 0.8, auraSlow: 1, auraFast: 0.9 },
+  bossPeak: { drone: 0.3, bass: 0, beat: 0, sub: 1.12, engine: 1.1, perc: 0.95, chords: 0, groove: 0, arp: 0, ride: 0.9, call: 0, hook: 0, drive: 0.95, toll: 0.9, crash: 0.94, dread: 1, lead: 0, counter: 0, stomp: 0.97, frenzy: 0.92, wraith: 0.92, auraSlow: 1.02, auraFast: 0.94 },
 };
 
 /** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */
@@ -2147,7 +2148,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 1,
       octave: 1,
       accents: [0.86, 0.62, 1, 0.7],
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.92, gain: 0.088, attack: 0.03, curve: 2, lowFrom: 1900, lowTo: 850, q: 1.2 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.92, gain: 0.3, attack: 0.03, curve: 2, lowFrom: 1900, lowTo: 850, q: 1.2 },
     },
     {
       // A third above it, quiet — two notes make the line an accompaniment rather than a melody
@@ -2282,7 +2283,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.8, gain: 0.3, attack: 0.015, curve: 1.5, lowFrom: 1400, lowTo: 420, q: 1.7 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.8, gain: 0.46, attack: 0.015, curve: 1.5, lowFrom: 1400, lowTo: 420, q: 1.7 },
     },
     {
       /*

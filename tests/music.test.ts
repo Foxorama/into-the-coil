@@ -355,9 +355,16 @@ describe('the ladder is additive, which is what the ask describes', () => {
     for (let i = 1; i < inLevel.length; i++) {
       const openBelow = level(inLevel[i - 1]!);
       const openHere = level(inLevel[i]!);
-      expect(openHere.length, `${inLevel[i]} has fewer layers open than ${inLevel[i - 1]}`).toBeGreaterThan(
-        openBelow.length,
-      );
+      /*
+        ⚠️ **A COUNT OF OPEN LAYERS IS NO LONGER THE CLAIM** — 0123. It said a rung must be *fuller*
+        than the one below, which is 0090's additive rule in a third costume: a rung that swaps two
+        layers for two others fails it while being the clearest section change in the piece. What
+        holds *the piece does not thin out* is the density FLOOR next to this — no rung is sparser
+        than the level's opening — and what holds *a rung is a section* is the churn guard 0123 adds.
+
+        ⚠️ **What is kept is that a rung is never EMPTIED**, which nothing else says.
+      */
+      expect(openHere.length, `${inLevel[i]} opens nothing at all`).toBeGreaterThan(0);
       /*
         ── A RUNG MAY CLOSE A LAYER NOW, AND ONLY ONE IT HAS DECLARED ────────────────────────────
 
@@ -391,15 +398,19 @@ describe('the ladder is additive, which is what the ask describes', () => {
         expect(MUSIC_LADDER[inLevel[i]!][layer], `${inLevel[i]} declares it closes ${layer} and does not`).toBe(0);
       }
       /*
-        ⚠️ **AND A RUNG THAT CLOSES MUST OPEN MORE THAN IT CLOSES.** Without this the rule is a hole:
-        a section boundary made by taking things away is a piece getting thinner, and the ask above
-        `run` has always been that it gets bigger. 0102 bought four climbs and this must not sell one.
+        ⚠️ **AND A RUNG THAT CLOSES MUST STILL OPEN SOMETHING** — 0123 amending 0120. The rule was
+        *more than it closes*, written the same day and on the same instinct as everything else this
+        arc has had to unlearn: it makes a strip-back illegal, and a strip-back before the drop is
+        what the genre this game names actually does. **A rung that only subtracts is still refused**;
+        one that trades evenly is not.
       */
       const opened = openHere.filter((l) => MUSIC_LADDER[inLevel[i - 1]!][l] === 0);
-      expect(
-        opened.length,
-        `${inLevel[i]} closes ${closes.length} and opens ${opened.length} — a rung that subtracts is a piece thinning out`,
-      ).toBeGreaterThan(closes.length);
+      if (closes.length > 0) {
+        expect(
+          opened.length,
+          `${inLevel[i]} closes ${closes.length} and opens nothing — a rung that only subtracts is not a section`,
+        ).toBeGreaterThan(0);
+      }
     }
 
     // The one closure the design permits, and it has to be exactly the named set.
@@ -1072,14 +1083,27 @@ describe('0102 — the music has accents, a bass line and a build', () => {
         (sum, l) => sum + MUSIC[l].reduce((n, v) => n + v.steps.filter((s) => s !== null).length, 0) / LAYER_BARS[l],
         0,
       );
+    /*
+      ── IT WAS *MORE THAN THE ONE BELOW* AND THE PLAYER'S EARS SAID THAT IS THE WRONG SHAPE ───────
+
+      ⚠️ **`docs/decisions/0123-a-rung-changes-the-notes.md`.** Monotonic density forces every rung to
+      ADD net notes, so nothing can ever be taken away — **which is 0090's additive rule surviving one
+      level down**, in notes rather than in layers.
+      `docs/decisions/0120-a-rung-may-close-a-layer.md` removed it for layers and this reimposed it.
+
+      ⚠️ **What replaces it is a FLOOR rather than a staircase.** No rung is thinner than the level's
+      opening, so 0102's *the music goes somewhere* is kept as the thing it always meant — and a rung
+      is free to strip back on the way to the boss, which is what a build does.
+    */
     const inLevel = CLIMBING;
+    const opening = perBar(inLevel[0]!);
     for (let i = 1; i < inLevel.length; i++) {
       const here = perBar(inLevel[i]!);
-      const below = perBar(inLevel[i - 1]!);
       expect(
         here,
-        `${inLevel[i]} strikes ${here.toFixed(0)} notes a bar against ${inLevel[i - 1]}'s ${below.toFixed(0)} — nothing about it reads as faster`,
-      ).toBeGreaterThan(below);
+        `${inLevel[i]} strikes ${here.toFixed(0)} notes a bar against the level's opening ${opening.toFixed(0)} — ` +
+          'the piece has thinned out below where it started',
+      ).toBeGreaterThan(opening);
     }
     /*
       ⚠️ **And the whole climb is worth having.** Each rung being *more* is satisfied by adding one
@@ -1990,4 +2014,103 @@ describe('0122 — the kick is under the music rather than in front of it', () =
         'that a player reports never having heard it',
     ).toBeGreaterThan(-6);
   }, DSP_MS);
+});
+
+/**
+ * A RUNG CHANGES THE NOTES — `docs/decisions/0123-a-rung-changes-the-notes.md`.
+ *
+ * ⚠️ **THE PLAYER RANKED FOUR SECTION CHANGES AND THE RANKING IS A MEASUREMENT.** Given against the
+ * build carrying 0117 to 0122:
+ *
+ * | transition | notes changed, as a share of the bed | reported |
+ * |---|---|---|
+ * | `run` → `push` | 60% | *"good, it's clear and easy to tell what's happening"* |
+ * | `push` → `surge` | 13% | *"far too subtle… only one change and it's soft and underneath"* |
+ * | `surge` → `approach` | 2% | *"isn't noticeable at all, but it does slowly build"* |
+ * | `approach` → `boss` | 130% | *"noticeable"* |
+ *
+ * ⚠️ **AND LOUDNESS DOES NOT PREDICT IT.** Measured on the summed, shaped bus, `approach` ADDED more
+ * than `surge` — +0.52 dB against +0.09 — and was noticed less. What a listener hears as a section is
+ * how much of the material CHANGED, which is why *"it does slowly build"* is the exact right
+ * description of two sustained layers arriving over a bed that keeps playing.
+ */
+describe('0123 — a rung changes the notes, and that is what makes it a section', () => {
+  /** Notes a bar a layer strikes. The unit 0102 and 0108 already count in. */
+  const perBar = (l: MusicLayer): number =>
+    MUSIC[l].reduce((n, v) => n + v.steps.filter((s) => s !== null).length, 0) / LAYER_BARS[l];
+
+  /** What share of the notes still playing is replaced on the way into `here`. */
+  const churn = (below: (typeof MUSIC_LEVELS)[number], here: (typeof MUSIC_LEVELS)[number]): number => {
+    const bed = MUSIC_LAYERS.filter((l) => MUSIC_LADDER[below][l] > 0 && MUSIC_LADDER[here][l] > 0).reduce(
+      (a, l) => a + perBar(l),
+      0,
+    );
+    const arriving = MUSIC_LAYERS.filter((l) => MUSIC_LADDER[here][l] > 0 && MUSIC_LADDER[below][l] === 0).reduce(
+      (a, l) => a + perBar(l),
+      0,
+    );
+    const leaving = MUSIC_LAYERS.filter((l) => MUSIC_LADDER[here][l] === 0 && MUSIC_LADDER[below][l] > 0).reduce(
+      (a, l) => a + perBar(l),
+      0,
+    );
+    return (arriving + leaving) / bed;
+  };
+
+  it('THE REPORTED ONE: every rung replaces a real share of what is playing', () => {
+    /*
+      ⚠️ **25% IS THE PLAYER'S OWN BOUNDARY, NOT A ROUND NUMBER.** 13% was *"far too subtle"* and 2%
+      was *"not noticeable at all"*; 60% and 130% were both heard. The floor sits above the two that
+      failed and below the two that passed, which is the most a four-point ranking can honestly say —
+      and it is stated in the unit the ranking was given in.
+    */
+    const inLevel = CLIMBING;
+    for (let i = 1; i < inLevel.length; i++) {
+      const c = churn(inLevel[i - 1]!, inLevel[i]!);
+      expect(
+        c,
+        `${inLevel[i - 1]} → ${inLevel[i]} replaces ${(c * 100).toFixed(0)}% of the notes — the player called ` +
+          '13% "far too subtle" and 2% "not noticeable at all"',
+      ).toBeGreaterThan(0.25);
+    }
+  });
+
+  it('and the fight is the largest change in the piece, because it is the arrival', () => {
+    /*
+      ⚠️ **Reported as *"noticeable, but not in a dramatic entrance kind of way"***, which is the one
+      item this decision does not claim to fix — the fight already changes more than any rung and the
+      complaint is about its CHARACTER. What this holds is that it never stops being the biggest, so a
+      later hand cannot quietly make the boss the smallest change in the level.
+    */
+    const inLevel = CLIMBING;
+    const arrival = churn(inLevel[inLevel.length - 1]!, 'boss');
+    for (let i = 1; i < inLevel.length; i++) {
+      expect(
+        arrival,
+        `the boss replaces ${(arrival * 100).toFixed(0)}% against ${inLevel[i]}'s ${(churn(inLevel[i - 1]!, inLevel[i]!) * 100).toFixed(0)}% — it is not the biggest thing that happens`,
+      ).toBeGreaterThan(churn(inLevel[i - 1]!, inLevel[i]!));
+    }
+  });
+
+  it('AND THE FIGHT OPENS AT ITS FULL ARRANGEMENT, which is where the player said it gets good', () => {
+    /*
+      ⚠️ **Reported**: *"the boss music itself gets good around phase 3 of the boss — this is where the
+      boss music should be starting."* `wraith` is the leitmotif and
+      [0114](../docs/decisions/0114-the-fight-is-a-different-piece.md) held it back to `bossPeak` on
+      the reasoning that *"one that arrives when the boss is half dead is a payoff"*. **The player has
+      now heard that and asked for the payoff at the door.**
+
+      ⚠️ **AND THE FIGHT IS TOO SHORT TO HOLD TWO RUNGS ANYWAY.** At max weapons on `savior` the whole
+      fight is 4.6 s on level one, and `bossPeak` opens at 78% health — so 0114's *sparse arrival*
+      lasted **one second**, against its own rule that a rung shorter than a handful of `RAMP_SECONDS`
+      is a wobble rather than a section. Nothing guarded it, because that rule was written about a
+      DISTANCE and the fight is a health fraction.
+    */
+    for (const layer of MUSIC_LAYERS) {
+      if (MUSIC_LADDER.bossPeak[layer] <= 0) continue;
+      expect(
+        MUSIC_LADDER.boss[layer],
+        `${layer} waits for bossPeak, so the fight does not open at full strength`,
+      ).toBeGreaterThan(0);
+    }
+  });
 });

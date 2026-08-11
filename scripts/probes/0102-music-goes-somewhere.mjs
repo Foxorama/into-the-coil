@@ -36,7 +36,21 @@ export const PROBES = [
       something. The build survives as a structure and stops being a build — *"no pace, no increased
       tempo"* — and only a count of what is actually being struck can tell.
     */
-    broke: 'the sixteenth layer closed, so the rungs add music without adding pace',
+    /*
+      ── RE-POINTED BY 0123, WHICH RETIRED THE CLAIM THIS WAS WRITTEN FOR ────────────────────────
+
+      ⚠️ **THIS PROBE USED TO CLOSE `arp` AND EXPECT *each rung strikes more notes a bar* TO REDDEN.**
+      That assertion is gone: monotonic density forced every rung to ADD, which is 0090's additive
+      rule one level down, and the player's own ranking of four section changes is the evidence
+      against it. What survived is the FLOOR — no rung is thinner than the level's opening — which is
+      what 0102's *"the music goes somewhere"* always meant.
+
+      ⚠️ **SO THE BREAK IS NOW A LEVEL THAT THINS OUT ON THE WAY TO ITS BOSS**, which is the thing
+      that would actually make 0102's report true again. Re-anchored on the current `approach` row,
+      because a probe anchored on a row of twenty-three numbers is stranded by every mix pass — this
+      is the fourth time in two days.
+    */
+    broke: 'the level stripped back below its own opening on the way to the boss',
     guard: 'and each rung strikes MORE NOTES A BAR than the one below, which is what *pace* is',
     edit: {
       path: 'src/content/music.ts',
@@ -48,8 +62,8 @@ export const PROBES = [
         ARRIVES is the one that has to be broken, or this probe would go on passing while standing
         over a version of the ladder that no longer exists.
       */
-      find: "  push: { drone: 0.34, bass: 0, beat: 0, sub: 1.06, engine: 0.96, perc: 0.76, chords: 0.87, groove: 0.94, arp: 0.64, ride: 0.58, call: 0.68, hook: 0.64, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0.7, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.62, auraFast: 0.4 },",
-      replace: "  push: { drone: 0.34, bass: 0, beat: 0, sub: 1.06, engine: 0.96, perc: 0.76, chords: 0.87, groove: 0.94, arp: 0, ride: 0, call: 0.68, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.62, auraFast: 0.4 },",
+      find: 'chords: 0.84, groove: 0, arp: 0, ride: 0.72,',
+      replace: 'chords: 0, groove: 0, arp: 0, ride: 0,',
     },
   },
   {
