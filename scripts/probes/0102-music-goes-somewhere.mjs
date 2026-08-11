@@ -49,7 +49,7 @@ export const PROBES = [
         over a version of the ladder that no longer exists.
       */
       find: "  push: { drone: 0.34, bass: 0, beat: 0, sub: 1.06, engine: 0.96, perc: 0.76, chords: 0.87, groove: 0.94, arp: 0.64, ride: 0.58, call: 0.68, hook: 0.64, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0.7, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.62, auraFast: 0.4 },",
-      replace: "  push: { drone: 0.34, bass: 0, beat: 0, sub: 1.06, engine: 0.96, perc: 0.76, chords: 0.87, groove: 0.94, arp: 0, ride: 0.58, call: 0.68, hook: 0.64, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0.7, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.62, auraFast: 0.4 },",
+      replace: "  push: { drone: 0.34, bass: 0, beat: 0, sub: 1.06, engine: 0.96, perc: 0.76, chords: 0.87, groove: 0.94, arp: 0, ride: 0, call: 0.68, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.62, auraFast: 0.4 },",
     },
   },
   {

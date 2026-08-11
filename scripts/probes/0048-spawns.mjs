@@ -68,7 +68,7 @@ export const PROBES = [
     // is strictly worse: a body crossing at speed steps OVER any band you pick, so it holds at one
     // speed and misses at another — and the wave then flies straight out the far side of the lane.
     broke: 'the turn tested against a tolerance band rather than against the direction of travel',
-    guard: 'turns down-lane and stops exactly where the wave was authored',
+    guard: 'a WEAVING row can arrive from the side now, which it could not before',
     edit: {
       path: 'src/app/frame.ts',
       find: '      if (e.velAcross > 0 ? e.across < e.steerAcross : e.across > e.steerAcross) continue;',

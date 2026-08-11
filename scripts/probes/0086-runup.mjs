@@ -27,7 +27,7 @@ export const PROBES = [
     edit: {
       path: 'src/content/levels.ts',
       find: "  { at: 1594, enemy: 'weaver', formation: 'column', count: 5, lane: 30 },",
-      replace: "  { at: 2310, enemy: 'turret', formation: 'column', count: 4, lane: 30 },",
+      replace: "  { at: 1598, enemy: 'turret', formation: 'column', count: 4, lane: 30 },",
     },
   },
   {

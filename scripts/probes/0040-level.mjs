@@ -21,7 +21,7 @@ export const PROBES = [
       // pass rewrote both sides to the same number, which `npm test` caught as a probe that changes
       // nothing: an anchor can be moved mechanically, a BREAK cannot.
       find: "  { at: 435, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },",
-      replace: "  { at: 380, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },",
+      replace: "  { at: 360, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },",
     },
   },
   {
