@@ -1123,7 +1123,23 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     music.phaseTo(world.steps);
     const level =
       state.screen.current === 'playing'
-        ? musicLevelFor(world.cameraAlong - world.levelOrigin, world.level.bossAt, world.bossPool.size > 0)
+        ? musicLevelFor(
+            world.cameraAlong - world.levelOrigin,
+            world.level.bossAt,
+            world.bossPool.size > 0,
+            /*
+              ⚠️ **How much of the boss is left, as a share of what it started with** — 0113. The
+              fight's second rung is keyed to this rather than to a clock, so the wall of sound lands
+              when the fight is half won rather than at a fixed moment however it is going.
+
+              ⚠️ **Read off the POOL rather than remembered**, on the same terms the aura reads the
+              hulls: a boss that has just died leaves an empty pool and the branch above is what
+              catches that, so there is no stale health to go wrong.
+            */
+            world.bossPool.size > 0 && world.bossFullHealth > 0
+              ? world.bossPool.at(0).health / world.bossFullHealth
+              : 1,
+          )
         : 'calm';
     /*
       THE AURA — `docs/decisions/0091-the-boss-has-an-aura.md`, and it is the one thing here that

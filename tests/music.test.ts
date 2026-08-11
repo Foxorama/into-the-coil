@@ -226,6 +226,34 @@ describe('four loops that cannot drift', () => {
   });
 });
 
+
+/*
+  ── THE LADDER IS NO LONGER ONE SPAN, AND THAT IS 0113 AMENDING 0090 THE WAY 0095 DID ─────────────
+
+  ⚠️ **`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`.** Reported from play:
+  *"the boss part just feels like part of the regular level music, not an escalation… there is no
+  separate boss theme or dynamic climax."* That was ARITHMETIC rather than taste: 0090's ladder only
+  ever opens layers, so the fight was necessarily the level plus whatever it added.
+
+  ⚠️ **So the shape has three parts now, and every one of them is checked** — this is more structure
+  than the single additive rule it replaces, not less:
+
+    CLIMBING   run -> approach   additive, exactly as 0090 requires. Unchanged.
+    the seam   approach -> boss  a CHANGE OF PIECE. `LEVEL_ONLY` closes and the arrangement thins,
+                                 on precisely 0095's argument for the title's seam.
+    FIGHT      boss -> bossPeak  the climax. Strictly up on every axis an ear can hear.
+
+  ⚠️ **The TOP of the ladder is `bossPeak` and it used to be `boss`.** A guard that still reads
+  `boss` as the loudest rung would now be measuring the sparse arrival and passing, which is the
+  quiet way this change could have gone wrong.
+*/
+/** The level's own piece, which climbs additively. */
+const CLIMBING = MUSIC_LEVELS.filter((l) => l !== 'calm' && l !== 'boss' && l !== 'bossPeak');
+/** The fight, which is a different piece and climbs on its own terms. */
+const FIGHT = MUSIC_LEVELS.filter((l) => l === 'boss' || l === 'bossPeak');
+/** The loudest rung there is — named once, so a guard cannot go on believing it is `boss`. */
+const TOP = MUSIC_LEVELS[MUSIC_LEVELS.length - 1]!;
+
 describe('the ladder is additive, which is what the ask describes', () => {
   /**
    * ── THE REPORTED ONE, AND NOTHING IN THIS REPOSITORY HELD IT ────────────────────────────────────
@@ -303,7 +331,7 @@ describe('the ladder is additive, which is what the ask describes', () => {
     const level = (name: (typeof MUSIC_LEVELS)[number]): MusicLayer[] =>
       MUSIC_LAYERS.filter((l) => MUSIC_LADDER[name][l] > 0);
 
-    const inLevel = MUSIC_LEVELS.filter((l) => l !== 'calm');
+    const inLevel = CLIMBING;
     for (let i = 1; i < inLevel.length; i++) {
       const openBelow = level(inLevel[i - 1]!);
       const openHere = level(inLevel[i]!);
@@ -351,13 +379,37 @@ describe('the ladder is additive, which is what the ask describes', () => {
     expect(open.length, 'the calm level is silent, so the music stops between levels').toBeGreaterThan(0);
   });
 
-  it('and the loudest level is the boss, which is the whole point of the ladder', () => {
+  it('and the level climbs to its own top, which is what a sum of gains can honestly say', () => {
+    /*
+      ── THIS COMPARED THE BOSS AGAINST EVERY RUNG AND THE SUM STOPPED MEANING LOUDNESS ─────────────
+
+      ⚠️ **`docs/decisions/0114-the-fight-is-a-different-piece.md`.** A sum of gains is a proxy for
+      loudness that holds **only while layers are added**. The fight now CLOSES six harmonic layers
+      and plays what is left much louder, so it sums to 12.7 against `approach`'s 13.6 while being
+      audibly the loudest thing in the game — measured through the bus shaper, which is the guard
+      immediately below this one.
+
+      ⚠️ **So this keeps the claim it can still support and hands the other to a better instrument.**
+      Across `CLIMBING` the ladder is additive and a sum is a fair proxy; the fight's loudness is
+      `tests/music.test.ts`'s RMS guard, which integrates the way an ear does.
+      `docs/decisions/0027-measure-the-picture-not-the-model.md` is the rule — a model quantity that
+      has stopped tracking the thing it stood for is worse than no guard, because it still passes.
+    */
     const total = (level: (typeof MUSIC_LEVELS)[number]): number =>
       MUSIC_LAYERS.reduce((sum, l) => sum + MUSIC_LADDER[level][l], 0);
-    for (const level of MUSIC_LEVELS) {
-      if (level === 'boss') continue;
-      expect(total('boss'), `${level} is as loud as the boss fight`).toBeGreaterThan(total(level));
+    for (let i = 1; i < CLIMBING.length; i++) {
+      expect(
+        total(CLIMBING[i]!),
+        `${CLIMBING[i]} sums to no more than ${CLIMBING[i - 1]}, so the level stops climbing`,
+      ).toBeGreaterThan(total(CLIMBING[i - 1]!));
     }
+    /*
+      ⚠️ **AND THE FIGHT'S OWN CLIMB, which is the half this file would otherwise have lost.** Sparse
+      arrival, wall of sound: the peak has to sum above the arrival even though both are a different
+      piece from the level.
+    */
+    expect(FIGHT.length, 'the fight is not two rungs, so there is no climax to check').toBe(2);
+    expect(total(FIGHT[1]!), 'the fight does not climb: its peak sums no higher than its arrival').toBeGreaterThan(total(FIGHT[0]!));
   });
 });
 
@@ -950,7 +1002,7 @@ describe('0102 — the music has accents, a bass line and a build', () => {
         (sum, l) => sum + MUSIC[l].reduce((n, v) => n + v.steps.filter((s) => s !== null).length, 0) / LAYER_BARS[l],
         0,
       );
-    const inLevel = MUSIC_LEVELS.filter((l) => l !== 'calm');
+    const inLevel = CLIMBING;
     for (let i = 1; i < inLevel.length; i++) {
       const here = perBar(inLevel[i]!);
       const below = perBar(inLevel[i - 1]!);
@@ -964,7 +1016,7 @@ describe('0102 — the music has accents, a bass line and a build', () => {
       note four times; what the report is about is a level that arrives somewhere, so the boss has to
       be half as busy again as the opening.
     */
-    const climb = perBar('boss') / perBar('run');
+    const climb = perBar(TOP) / perBar('run');
     expect(climb, `the boss is only ${climb.toFixed(2)}× as busy as the opening of a level`).toBeGreaterThan(1.5);
   });
 });
@@ -1497,7 +1549,7 @@ describe('0108 — the bed is felt, the hands are on it, and the boss arrives', 
       `the boss opens ${arriving.length} thing(s) the approach did not (${arriving.join(', ') || 'none'})`,
     ).toBeGreaterThan(1);
 
-    const over = 20 * Math.log10(rms(mixAt('boss')) / rms(mixAt('run')));
+    const over = 20 * Math.log10(rms(mixAt(TOP)) / rms(mixAt('run')));
     expect(
       over,
       `the fight is ${over.toFixed(1)}dB over the opening of the level, measured after the bus shaper`,
@@ -1512,7 +1564,7 @@ describe('0108 — the bed is felt, the hands are on it, and the boss arrives', 
       is the assertion that probe wanted: **every rung is measurably louder than the one below it**,
       in RMS, after the shaper.
     */
-    const inLevel = MUSIC_LEVELS.filter((l) => l !== 'calm');
+    const inLevel = CLIMBING;
     for (let i = 1; i < inLevel.length; i++) {
       const here = rms(mixAt(inLevel[i]!));
       const below = rms(mixAt(inLevel[i - 1]!));

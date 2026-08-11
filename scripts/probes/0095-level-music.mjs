@@ -76,8 +76,8 @@ export const PROBES = [
     guard: 'and something is open at EVERY level, because the music never stops',
     edit: {
       path: 'src/content/music.ts',
-      find: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, ride: 0, call: 0.62, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, stomp: 0, frenzy: 0, auraSlow: 0.5, auraFast: 0.28 },',
-      replace: '  run: { drone: 0, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, ride: 0, call: 0.62, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, stomp: 0, frenzy: 0, auraSlow: 0.5, auraFast: 0.28 },',
+      find: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, ride: 0, call: 0.62, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.5, auraFast: 0.28 },',
+      replace: '  run: { drone: 0, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, ride: 0, call: 0.62, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.5, auraFast: 0.28 },',
     },
   },
   {

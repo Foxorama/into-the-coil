@@ -72,8 +72,8 @@ export const PROBES = [
       // to the title's piece now and is closed at `run` on purpose, so closing it again says nothing.
       // `engine` is the level's floor — open at `run` and `approach` — and closing it at the boss is
       // the same failure the probe always described: a ladder that swaps rather than builds.
-      find: "  boss: { drone: 0.2, bass: 0, beat: 0, sub: 1.24, engine: 1.08, perc: 0.88, chords: 0.78, groove: 0.98, arp: 0.7, ride: 0.72, call: 0.76, hook: 0.8, drive: 0.86, toll: 0.74, crash: 0.72, dread: 0.62, lead: 0.88, stomp: 0.86, frenzy: 0.8, auraSlow: 1, auraFast: 0.9 },",
-      replace: "  boss: { drone: 0.2, bass: 0, beat: 0, sub: 1.24, engine: 0, perc: 0.88, chords: 0.78, groove: 0.98, arp: 0.7, ride: 0.72, call: 0.76, hook: 0.8, drive: 0.86, toll: 0.74, crash: 0.72, dread: 0.62, lead: 0.88, stomp: 0.86, frenzy: 0.8, auraSlow: 1, auraFast: 0.9 },",
+      find: "  boss: { drone: 0.42, bass: 0, beat: 0, sub: 1.05, engine: 0.72, perc: 0.6, chords: 0, groove: 0, arp: 0, ride: 0.5, call: 0, hook: 0, drive: 0.5, toll: 0.9, crash: 0.66, dread: 1, lead: 0, stomp: 0.5, frenzy: 0.45, wraith: 0, auraSlow: 0.94, auraFast: 0.8 },",
+      replace: "  boss: { drone: 0.42, bass: 0, beat: 0, sub: 1.05, engine: 0, perc: 0.6, chords: 0, groove: 0, arp: 0, ride: 0.5, call: 0, hook: 0, drive: 0.5, toll: 0.9, crash: 0.66, dread: 1, lead: 0, stomp: 0.5, frenzy: 0.45, wraith: 0, auraSlow: 0.94, auraFast: 0.8 },",
     },
   },
   {
@@ -92,8 +92,8 @@ export const PROBES = [
       // ⚠️ Re-anchored by docs/decisions/0102-the-music-goes-somewhere.md, which turned the single
       // return below into a cascade of four. The break is unchanged and is now the one line it always
       // was about: what decides the boss level.
-      find: "  if (bossOnField) return 'boss';",
-      replace: "  if (cameraAlong >= bossAt) return 'boss';",
+      find: "  if (bossOnField) return bossHealthLeft <= BOSS_PEAK_HEALTH ? 'bossPeak' : 'boss';",
+      replace: "  if (cameraAlong >= bossAt) return bossHealthLeft <= BOSS_PEAK_HEALTH ? 'bossPeak' : 'boss';",
     },
   },
   {

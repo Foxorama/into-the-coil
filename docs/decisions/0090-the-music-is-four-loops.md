@@ -1,5 +1,14 @@
 # 0090 — The music is four loops
 
+⚠️ **SUPERSEDED IN PART BY [0114](0114-the-fight-is-a-different-piece.md), 2026-08-11.** The rule
+below that *"the ladder is additive"* no longer holds: the fight closes the level's harmonic layers
+and is a different piece. **Everything else here stands** — sample-locked loops of whole-multiple
+lengths that cannot drift is this decision's real content and 0114 does not touch it.
+
+⚠️ **The additive rule was a faithful reading of the ask AT THE TIME and outlived it.** Read this
+file for why the loops are the shape they are; read 0114 before believing anything here about how the
+ladder climbs.
+
 **Accepted 2026-08-09.** Asked for alongside [0089](0089-a-cue-has-a-body.md) and deliberately built
 after it, in the player's own words: *"this might be its own separate piece."*
 
