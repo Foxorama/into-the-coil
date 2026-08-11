@@ -22,6 +22,8 @@ import {
 import { SCROLL_PER_STEP, SHIP_SPEED } from '../src/sim/flight.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
+import { MAX_BARRELS, SPREAD_STEP } from '../src/content/pickups.ts';
+import { BAR_SECONDS } from '../src/content/music.ts';
 
 /**
  * WHAT MUST BE TRUE OF ANY AUTHORED LEVEL — never of this particular one.
@@ -1117,5 +1119,113 @@ describe('0111 — a boss has one idea, and the picture mentions its phases', ()
       world.debris.size - before,
       'a boss crossed a health threshold and shed nothing — the phase change is invisible',
     ).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * A WAVE DIES TOGETHER — `docs/decisions/0121-a-wave-dies-together.md`.
+ *
+ * ⚠️ **Reported from play**: *"I'd like the individual waves to have tighter clusters of enemies —
+ * when they're spread far apart the music beats have less impact if you kill 1-2 enemies than if you
+ * kill 3-5."* That is a claim about
+ * [0109](../docs/decisions/0109-a-death-is-a-drum.md): a death is a drum, and a drum struck once is
+ * not the same event as a drum struck five times.
+ */
+describe('0121 — a wave is close enough to die together', () => {
+  /**
+   * How wide the player's volley is `ahead` units in front of the nose.
+   *
+   * ⚠️ **Derived from the fan the game actually fires** — `SPREAD_STEP` per barrel, `MAX_BARRELS`
+   * barrels — rather than from a number typed here. A weapon retuned is a wave that has to be
+   * re-measured, and this is what says so.
+   */
+  const volleyWidth = (ahead: number): number => 2 * ahead * Math.tan((SPREAD_STEP * (MAX_BARRELS - 1)) / 2);
+
+  /**
+   * About where a wave is engaged: far enough that the player has seen it, close enough to shoot.
+   *
+   * ⚠️ **A STATED CHOICE AND NOT A MEASUREMENT**, so it is named rather than left to look like one.
+   * A body appears eleven units in front of the player's box
+   * ([0105](../docs/decisions/0105-a-body-is-on-screen-long-enough-to-answer.md)) and the box is about
+   * 157 deep, so anywhere from a few units to well over a hundred is reachable. Fifty is the middle of
+   * where a player who is pressing forward meets one.
+   */
+  const ENGAGED_AT = 50;
+
+  it('THE REPORTED ONE: a volley reaches three abreast, where it used to reach two', () => {
+    /*
+      ⚠️ **THE ASK IN THE PLAYER'S OWN UNITS — bodies per volley, not world units** —
+      `docs/decisions/0027-measure-the-picture-not-the-model.md`'s rule about a guard written over the
+      quantity it guards. A bound on `ACROSS_GAP` would prove the constant equals itself; this asks
+      how many things one trigger pull can reach.
+    */
+    const line = FORMATIONS.line;
+    const span = (count: number): number => Math.abs(line.acrossOffset(count - 1, count) - line.acrossOffset(0, count));
+    const width = volleyWidth(ENGAGED_AT);
+    expect(
+      span(3),
+      `three abreast span ${span(3).toFixed(1)} units and a volley is ${width.toFixed(1)} wide at ${ENGAGED_AT} — ` +
+        'a wave still dies one at a time, which is what the report is about',
+    ).toBeLessThanOrEqual(width);
+  });
+
+  it('and they still do not overlap, which is what stops it going tighter', () => {
+    /*
+      ⚠️ **THE OTHER END OF THE SAME ARITHMETIC, and it is why five abreast is not on offer.** Five
+      inside one volley needs a gap under five units, and the widest hurtbox in the game is four —
+      neighbours would touch. [0081](../docs/decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md)
+      is what that spends and it is not for sale.
+
+      ⚠️ **Driven off `ENEMIES` rather than a typed 4**, so a wider body tomorrow moves this rather
+      than quietly invalidating it.
+    */
+    const widest = Math.max(...ENEMY_KINDS.map((k) => ENEMIES[k].radius));
+    const line = FORMATIONS.line;
+    const gap = Math.abs(line.acrossOffset(1, 2) - line.acrossOffset(0, 2));
+    expect(
+      gap,
+      `neighbours sit ${gap} apart and the widest body is ${widest * 2} across — they overlap`,
+    ).toBeGreaterThan(widest * 2);
+  });
+
+  it('THE ONE THAT SAID THE ALONG AXIS WAS ALREADY RIGHT: a column arrives a beat at a time', () => {
+    /*
+      ⚠️ **THIS GUARD REPLACED ONE THAT COULD NOT FIRE, AND THE PROBE IS WHAT FOUND IT.** The first
+      version asked whether a column of five passed inside two bars. It did at 14, it did at the 10
+      this decision briefly changed it to, and it did at 26 — a bound nothing was near, which is the
+      vacuous shape `docs/decisions/0116-the-rig-plays-the-level.md` already found once.
+      `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` doing the more valuable half of its job.
+
+      ⚠️ **AND WHAT IT FOUND WAS THAT THE CHANGE WAS WRONG.** A beat is 14.4 world units at 36 units a
+      second, so neighbours at 14 arrive 0.97 beats apart — consecutive kills on consecutive beats,
+      which is the grid `docs/decisions/0096-the-enemies-play-along.md` puts every other cadence on.
+      **10 would have taken them off it.** The report was about the across axis and only the across
+      axis; `ALONG_GAP` was measured and left alone —
+      `docs/decisions/0105-a-body-is-on-screen-long-enough-to-answer.md` is the precedent for saying so
+      rather than tuning anyway.
+    */
+    const column = FORMATIONS.column;
+    const gap = Math.abs(column.alongOffset(1, 2) - column.alongOffset(0, 2));
+    const beats = gap / (SCROLL_PER_STEP * STEPS_PER_SECOND) / (BAR_SECONDS / 4);
+    expect(
+      beats,
+      `a column's neighbours arrive ${beats.toFixed(2)} beats apart — their kills land off the grid ` +
+        'everything else in this game is quantised to',
+    ).toBeGreaterThan(0.8);
+    expect(
+      beats,
+      `a column's neighbours arrive ${beats.toFixed(2)} beats apart — more than one beat, so the wave ` +
+        'is a sequence rather than a figure',
+    ).toBeLessThan(1.2);
+  });
+
+  it('and a wave of six still fits the lane with room to be authored anywhere', () => {
+    /*
+      The constraint the old gap was set against, kept: `tests/level.test.ts` refuses a wave that
+      could reach the lane edge, because there is no `across` cull to bring one back.
+    */
+    const line = FORMATIONS.line;
+    const span = Math.abs(line.acrossOffset(5, 6) - line.acrossOffset(0, 6));
+    expect(span, `a six spans ${span} of the lane's 100 units, leaving nowhere to author it`).toBeLessThan(50);
   });
 });

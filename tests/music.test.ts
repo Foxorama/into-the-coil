@@ -24,6 +24,7 @@ import {
   AURA_FAR_UNITS,
   AURA_LEVEL_CEILING,
   AURA_ONSET_UNITS,
+  RUNG_CLOSES,
   LAYER_PAN,
   PAN_LIMIT,
   type MusicLayer,
@@ -357,11 +358,48 @@ describe('the ladder is additive, which is what the ask describes', () => {
       expect(openHere.length, `${inLevel[i]} has fewer layers open than ${inLevel[i - 1]}`).toBeGreaterThan(
         openBelow.length,
       );
+      /*
+        ── A RUNG MAY CLOSE A LAYER NOW, AND ONLY ONE IT HAS DECLARED ────────────────────────────
+
+        ⚠️ **`docs/decisions/0120-a-rung-may-close-a-layer.md`.** 0090's additive rule is gone: an
+        additive ladder can only ever produce *the same thing with more on top*, which is exactly
+        what *"the additions are subtle"* is a description of once eleven layers are playing.
+        `docs/decisions/0114-the-fight-is-a-different-piece.md` named the replacement and did not
+        have the rule to spend it.
+
+        ⚠️ **What replaces it is MORE structure.** A closure must be named in `RUNG_CLOSES`, so a
+        layer cannot go quiet because somebody typed a zero — the same reason `TITLE_ONLY` and
+        `LEVEL_ONLY` are lists rather than permissions.
+      */
+      const closes = RUNG_CLOSES[inLevel[i]!] ?? [];
       for (const layer of openBelow) {
+        if (closes.includes(layer)) continue;
         expect(MUSIC_LADDER[inLevel[i]!][layer], `${inLevel[i]} closed ${layer}, which ${inLevel[i - 1]} had open`).toBeGreaterThan(
           0,
         );
       }
+      /*
+        ⚠️ **AND EVERY DECLARED CLOSURE HAS TO ACTUALLY HAPPEN**, member by member — 0114's own
+        formulation for `LEVEL_ONLY`. A name left in this list after the gain was put back is a rule
+        that has stopped describing the music, which is the thing 0113 found seven decisions of.
+      */
+      for (const layer of closes) {
+        expect(
+          MUSIC_LADDER[inLevel[i - 1]!][layer],
+          `${inLevel[i]} is declared to close ${layer} and ${inLevel[i - 1]} does not play it`,
+        ).toBeGreaterThan(0);
+        expect(MUSIC_LADDER[inLevel[i]!][layer], `${inLevel[i]} declares it closes ${layer} and does not`).toBe(0);
+      }
+      /*
+        ⚠️ **AND A RUNG THAT CLOSES MUST OPEN MORE THAN IT CLOSES.** Without this the rule is a hole:
+        a section boundary made by taking things away is a piece getting thinner, and the ask above
+        `run` has always been that it gets bigger. 0102 bought four climbs and this must not sell one.
+      */
+      const opened = openHere.filter((l) => MUSIC_LADDER[inLevel[i - 1]!][l] === 0);
+      expect(
+        opened.length,
+        `${inLevel[i]} closes ${closes.length} and opens ${opened.length} — a rung that subtracts is a piece thinning out`,
+      ).toBeGreaterThan(closes.length);
     }
 
     // The one closure the design permits, and it has to be exactly the named set.

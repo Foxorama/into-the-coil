@@ -128,7 +128,42 @@ export const TITLE_ONLY: readonly MusicLayer[] = ['bass', 'beat'];
  * tense, sparse intro into an all-out wall of sound"*. Nine layers stop; four remain; and then
  * `bossPeak` puts the wall back one piece at a time.
  */
-export const LEVEL_ONLY: readonly MusicLayer[] = ['chords', 'groove', 'arp', 'call', 'hook', 'lead'];
+export const LEVEL_ONLY: readonly MusicLayer[] = ['chords', 'groove', 'arp', 'hook', 'lead'];
+
+/**
+ * What each rung inside a level CLOSES as it opens. Declared, never accidental.
+ *
+ * ── 0090's ADDITIVE RULE IS GONE, AND THE PLAYER SAID SO TWICE ──────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0120-a-rung-may-close-a-layer.md`.** Reported from play: *"the push is a
+ * noticeable change in musical variation, the surge and then the approach are less noticeable because
+ * the ongoing beat and melody is strong and the additions are subtle."* And, of 0090 itself: *"if
+ * it's restricting the music, it's a problem and not a good rule."*
+ *
+ * ⚠️ **`docs/decisions/0114-the-fight-is-a-different-piece.md` ALREADY NAMED THIS AS THE ANSWER** and
+ * did not have the rule to spend: *"a rung that closes a layer as it opens two is a change of
+ * arrangement rather than a thicker one, and it is the only mechanism here that has ever read as a
+ * section boundary."* Four rounds were spent adding layers to make a section louder and every one of
+ * them made the report more true.
+ *
+ * ⚠️ **AND IT IS ARITHMETIC RATHER THAN TASTE.** An additive ladder can only ever produce *the same
+ * thing with more on top*, by construction — so *"the additions are subtle"* is not a mixing failure,
+ * it is the only thing the mechanism can do once eleven layers are already playing.
+ *
+ * ⚠️ **A TABLE RATHER THAN A PERMISSION, on exactly `TITLE_ONLY`'s and `LEVEL_ONLY`'s terms.** What
+ * replaces the rule is more structure, not less: a rung may close only what is named here, every
+ * member has to actually be open below and closed here, and a rung that closes must still open more
+ * than it closes. `tests/music.test.ts` holds all three.
+ *
+ * ⚠️ **`call` IS THE ONE CONSUMER, AND IT IS A REPLACEMENT RATHER THAN A REMOVAL.** `surge` opens
+ * `counter` — a counter-melody — in the same breath as the tune that has been running since `run`
+ * stops. The ear is handed a different tune rather than another one on top, which is what a section
+ * boundary IS. It also leaves `call` free to be the thing the player already said they liked
+ * (*"the tune kickin around 52 secs is great"*) without it playing for the whole level.
+ */
+export const RUNG_CLOSES: Partial<Record<MusicLevel, readonly MusicLayer[]>> = {
+  surge: ['call'],
+};
 
 /**
  * How many bars long each layer's loop is.
@@ -1017,8 +1052,8 @@ export const MUSIC_LADDER: Record<MusicLevel, Record<MusicLayer, number>> = {
   calm: { drone: 0.55, bass: 0.7, beat: 0.5, sub: 0, engine: 0, perc: 0, chords: 0, groove: 0, arp: 0, ride: 0, call: 0, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
   run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, ride: 0, call: 0.62, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.5, auraFast: 0.28 },
   push: { drone: 0.34, bass: 0, beat: 0, sub: 1.06, engine: 0.96, perc: 0.76, chords: 0.87, groove: 0.94, arp: 0.64, ride: 0.58, call: 0.68, hook: 0.64, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0.7, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.62, auraFast: 0.4 },
-  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.86, groove: 0.94, arp: 0.7, ride: 0.68, call: 0.7, hook: 0.74, drive: 0.78, toll: 0, crash: 0.9, dread: 0, lead: 0.78, counter: 1.05, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },
-  approach: { drone: 0.34, bass: 0, beat: 0, sub: 1.1, engine: 1.02, perc: 0.86, chords: 0.84, groove: 0.95, arp: 0.72, ride: 0.72, call: 0.72, hook: 0.78, drive: 0.84, toll: 0.78, crash: 0.92, dread: 0.74, lead: 0.82, counter: 1.08, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.88, auraFast: 0.72 },
+  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.86, groove: 0.94, arp: 0.7, ride: 0.68, call: 0, hook: 0.74, drive: 0.78, toll: 0, crash: 0.9, dread: 0, lead: 0.78, counter: 1.05, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },
+  approach: { drone: 0.34, bass: 0, beat: 0, sub: 1.1, engine: 1.02, perc: 0.86, chords: 0.84, groove: 0.95, arp: 0.72, ride: 0.72, call: 0, hook: 0.78, drive: 0.84, toll: 0.78, crash: 0.92, dread: 0.74, lead: 0.82, counter: 1.08, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.88, auraFast: 0.72 },
   boss: { drone: 0.36, bass: 0, beat: 0, sub: 1.2, engine: 1.12, perc: 0.96, chords: 0, groove: 0, arp: 0, ride: 0.9, call: 0, hook: 0, drive: 0.94, toll: 0.92, crash: 0.94, dread: 1.02, lead: 0, counter: 0, stomp: 0.92, frenzy: 0.86, wraith: 0, auraSlow: 1, auraFast: 0.9 },
   bossPeak: { drone: 0.3, bass: 0, beat: 0, sub: 1.2, engine: 1.1, perc: 0.95, chords: 0, groove: 0, arp: 0, ride: 0.9, call: 0, hook: 0, drive: 0.95, toll: 0.9, crash: 0.94, dread: 1, lead: 0, counter: 0, stomp: 0.97, frenzy: 0.92, wraith: 0.88, auraSlow: 1.02, auraFast: 0.94 },
 };
