@@ -21,8 +21,8 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: the band a chest resolves is a real share of the mix, not a corner of it',
     edit: {
       path: 'src/content/music.ts',
-      find: '      steps: [0, -4, 3, -2, 0, -4, -2, -5],\n      pitched: true,\n      perBeat: 0.25,\n      octave: 0,',
-      replace: '      steps: [0, -4, 3, -2, 0, -4, -2, -5],\n      pitched: true,\n      perBeat: 0.25,\n      octave: 1,',
+      find: '      steps: [\n        0, -4, 3, -2, 0, -4, -2, -5,\n        3, -2, 0, -4, 3, -2, -4, -5,\n      ],\n      pitched: true,\n      perBeat: 0.25,\n      octave: 0,',
+      replace: '      steps: [\n        0, -4, 3, -2, 0, -4, -2, -5,\n        3, -2, 0, -4, 3, -2, -4, -5,\n      ],\n      pitched: true,\n      perBeat: 0.25,\n      octave: 1,',
     },
   },
   {
@@ -102,8 +102,8 @@ export const PROBES = [
     guard: 'THE BOSS ARRIVES: it opens more than one new thing, and it is louder in the unit an ear integrates',
     edit: {
       path: 'src/content/music.ts',
-      find: 'lead: 0.98, stomp: 0.96, auraSlow: 1, auraFast: 0.9 },',
-      replace: 'lead: 0.98, stomp: 0, auraSlow: 1, auraFast: 0.9 },',
+      find: 'lead: 0.93, stomp: 0.9, auraSlow: 1, auraFast: 0.9 },',
+      replace: 'lead: 0.93, stomp: 0, auraSlow: 1, auraFast: 0.9 },',
     },
   },
   {

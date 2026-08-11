@@ -234,7 +234,26 @@ date and is exactly what a play-test is for.
 
 ## What the play-test has answered
 
-⚠️ **THE TENTH PLAY-TEST IS THE CURRENT ONE AND IT OUTRANKS EVERYTHING BELOW IT** —
+⚠️ **THE ELEVENTH PLAY-TEST IS THE CURRENT ONE AND IT OUTRANKS EVERYTHING BELOW IT** —
+[`the-eleventh-play-test`](../reports/the-eleventh-play-test-2026-08-11.md), three rounds in one
+session, all on the sound, against renders and then the `level-music-depth` preview.
+
+⚠️ **IT IS THE FIRST ROUND IN SIX WHERE THE SOUND MOVED** — *"it's a lot better"* — and the report has
+what was still wrong in the same breath.
+
+⚠️ **THE METRONOME IS `chords` AND IT WAS GUESSED AT TWICE BEFORE.** 0102 answered it in `beat`, 0108
+in `engine`; the solo rig is what finally let the player name it. Read the report before touching a
+music layer on a description.
+
+⚠️ **TWO OF THE THREE ROUNDS CORRECTED SOMETHING THIS PROJECT HAD JUST DONE TO ITSELF** — a boss made
+peaceful by answering a bed guard with a trim, and a body-density measurement read as *more waves
+cannot be the lever* when the missing quantity was the KILL rate. Both are in the report.
+
+⚠️ **AND A PROBE THAT REFUSED TO FIRE IS WHAT FOUND THE MISSING GUARD.** 0113's central claim — a
+level has a tune in it — had nothing holding it at all;
+[0019](decisions/0019-a-probe-must-be-seen-to-apply.md) doing the more valuable half of its job.
+
+⚠️ **THE TENTH PLAY-TEST IS THE ONE ABOVE THAT** —
 [`the-tenth-play-test`](../reports/the-tenth-play-test-2026-08-11.md), given 2026-08-11 against the
 build carrying 0108 to 0112.
 

@@ -175,8 +175,8 @@ export const PROBES = [
     guard: 'THE LEVEL: there is something in the low end that MOVES, at every rung above the opening',
     edit: {
       path: 'src/content/music.ts',
-      find: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.5, auraFast: 0.28 },',
-      replace: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0, arp: 0, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.5, auraFast: 0.28 },',
+      find: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, call: 0.62, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.5, auraFast: 0.28 },',
+      replace: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0, arp: 0, call: 0.62, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.5, auraFast: 0.28 },',
     },
   },
   {
@@ -189,8 +189,20 @@ export const PROBES = [
     guard: 'opens a layer at every step and never opens one twice',
     edit: {
       path: 'src/content/music.ts',
-      find: '  surge: { drone: 0.33, bass: 0, beat: 0, sub: 0.9, engine: 0.93, perc: 0.8, chords: 0.88, groove: 0.9, arp: 0.68, hook: 0.66, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.75, auraFast: 0.55 },',
-      replace: '  surge: { drone: 0.33, bass: 0, beat: 0, sub: 0.9, engine: 0.93, perc: 0.8, chords: 0.88, groove: 0.9, arp: 0.68, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.75, auraFast: 0.55 },',
+      find: '  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.06, engine: 0.97, perc: 0.8, chords: 0.88, groove: 0.94, arp: 0.64, call: 0.74, hook: 0.62, drive: 0.34, toll: 0, lead: 0, stomp: 0, auraSlow: 0.75, auraFast: 0.55 },',
+      /*
+        ⚠️ **`drive` IS CLOSED HERE TOO, AND THAT IS 0113 CHANGING WHAT THIS PROBE HAS TO SAY.**
+        `docs/decisions/0113-there-is-one-composition-and-seven-levels.md` moved `drive` down from
+        `approach` to `surge` — the play-test asked for the boss's material to appear in the level —
+        so this rung now has TWO arrivals and closing the hook alone no longer starves it. The probe
+        went STILL GREEN on exactly that, which is the harness catching a break that stopped being
+        one rather than a guard that stopped working.
+
+        ⚠️ **The defect described is unchanged: a rung that opens nothing new.** What moved is how many
+        layers have to be closed to produce it, and that is a fact about the ladder rather than about
+        the guard — so the fix is here and not in `tests/music.test.ts`.
+      */
+      replace: '  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.06, engine: 0.97, perc: 0.8, chords: 0.88, groove: 0.94, arp: 0.64, call: 0.74, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.75, auraFast: 0.55 },',
     },
   },
 ];

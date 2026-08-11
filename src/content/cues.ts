@@ -710,8 +710,17 @@ export const CUES: Record<CueKind, CueRow> = {
         was underneath it. It is a tuned tom now — in the band the drums live in, where a thing that
         punctuates belongs.
       */
-      { wave: 'sine', from: inKey(13), to: inKey(1), seconds: 0.22, gain: 1.15, attack: 0.001, curve: 3.6, drive: 0.25 },
-      { wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.26, gain: 0.6, attack: 0.002, curve: 3.2 },
+      /*
+        ⚠️ **THE TWO PITCHED VOICES ARE UP AND THE NOISE IS NOT, WHICH IS THE ASK READ EXACTLY** —
+        reported from play: *"can we emphasise the regular enemy death… they provide a good counter
+        point but those notes aren't quite hit often enough."* **The word is NOTES.** What the player
+        is picking out of this cue is the tuned tom, not the crack or the body — so raising `gain` on
+        the row would have made the noise louder in the same proportion and answered a different
+        sentence. `tests/sound.test.ts` holds the cue against the bed, which is why the row's own
+        gain moves only enough to keep that ratio where 0109 measured it.
+      */
+      { wave: 'sine', from: inKey(13), to: inKey(1), seconds: 0.26, gain: 1.5, attack: 0.001, curve: 3.2, drive: 0.25 },
+      { wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.3, gain: 0.82, attack: 0.002, curve: 2.9 },
     ],
   },
   /**

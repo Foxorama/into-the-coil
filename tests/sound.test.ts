@@ -37,7 +37,7 @@ import {
   type AudioOut,
 } from '../src/app/sound.ts';
 import { bakeLoops } from '../src/app/music.ts';
-import { FIRE_GRID, MUSIC_LAYERS, secondsOfLayer } from '../src/content/music.ts';
+import { FIRE_GRID, MUSIC, MUSIC_LAYERS, secondsOfLayer } from '../src/content/music.ts';
 import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { MISSILE_BEAT_RATIO, fireEveryAt, missileEveryAt } from '../src/content/pickups.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -496,12 +496,41 @@ describe('the cue table', () => {
         proportional to — the longest layer is the ceiling, and a layer longer than about twenty
         seconds of audio would be a job no scheduler can hide.
       */
-      const longest = Math.max(...MUSIC_LAYERS.map((layer) => secondsOfLayer(layer)));
-      expect(longest, `the longest layer is ${longest.toFixed(1)}s of audio in one job`).toBeLessThan(20);
-      const total = MUSIC_LAYERS.reduce((sum, layer) => sum + secondsOfLayer(layer), 0);
-      expect(total, `the music is ${total.toFixed(1)}s of audio, which is more than a title screen can hide`).toBeLessThan(
-        120,
-      );
+      /*
+        ── IT WAS MEASURING THE LAYER, AND ITS OWN COMMENT SAYS THE JOB ────────────────────────────
+
+        ⚠️ **`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`.** The paragraph above
+        is right that *"what matters now is the size of the largest single JOB"* and the assertion
+        underneath it measured `secondsOfLayer` — the whole layer. **A layer has not been one job
+        since `docs/decisions/0102-the-music-goes-somewhere.md`**, which split the prewarm per NOTE
+        precisely because `chords` measured 428 ms on its own.
+
+        ⚠️ **So the ceiling fired on a quantity nobody schedules.** A sixteen-bar layer is 25.6s of
+        audio and about four hundred jobs, none of them longer than the 1.84s pad that was always the
+        worst one — and the guard would have refused it while a single voice holding one note for a
+        minute sailed through. `docs/decisions/0027-measure-the-picture-not-the-model.md` is the rule
+        this breaks and it is the second time in this session.
+      */
+      const jobs = MUSIC_LAYERS.flatMap((layer) => MUSIC[layer].map((voice) => voice.note.seconds));
+      const longestJob = Math.max(...jobs);
+      expect(
+        longestJob,
+        `the longest single note is ${longestJob.toFixed(2)}s of synthesis, which is the job the scheduler cannot split`,
+      ).toBeLessThan(3);
+
+      /*
+        ⚠️ **AND THE QUANTITY THAT ACTUALLY GREW WAS NEVER GUARDED AT ALL.** The loops went from 19.0
+        MB to 38.7 MB when the phrase doubled, and nothing in this repository had an opinion — the
+        two assertions here were both about TIME. `docs/decisions/0022-frame-rate-is-a-feature.md`'s
+        budget is a floor for the frame and says nothing about resident audio.
+
+        ⚠️ **48 MB, and it is a desktop-first number stated as one.** The ninth play-test made desktop
+        the prestige target and the phone the fallback; this is the first bound in the repository that
+        spends that permission, so it says so rather than looking like a measurement.
+      */
+      const bytes = MUSIC_LAYERS.reduce((sum, layer) => sum + secondsOfLayer(layer) * SAMPLE_RATE * 4, 0);
+      const mb = bytes / 1e6;
+      expect(mb, `the loops are ${mb.toFixed(1)} MB resident, which is past what a desktop should hold for a backdrop`).toBeLessThan(48);
     });
   });
 

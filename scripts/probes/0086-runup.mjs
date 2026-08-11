@@ -26,7 +26,7 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: level one authors nothing tough until the run-up is over',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 2310, enemy: 'weaver', formation: 'column', count: 5, lane: 30 },",
+      find: "  { at: 1938, enemy: 'weaver', formation: 'column', count: 5, lane: 30 },",
       replace: "  { at: 2310, enemy: 'turret', formation: 'column', count: 4, lane: 30 },",
     },
   },
@@ -67,8 +67,11 @@ export const PROBES = [
     guard: 'and it reaches the FIELD: the two events are that far apart in the real frame',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 2300, kind: 'weapon', lane: 34 },\n  { at: 3100, kind: 'weapon', lane: 68 },",
-      replace: "  { at: 3300, kind: 'weapon', lane: 34 },\n  { at: 3400, kind: 'weapon', lane: 68 },",
+      // ⚠️ Level one's second weapon, which is the pickup the run-up is measured FROM. Both lines are
+      // needed: a weapon at lane 34 sits at 1932 in `gauntlet` too, and an anchor that matched there
+      // would move a different level's pickup and prove nothing about this one.
+      find: "  { at: 1930, kind: 'weapon', lane: 34 },\n  { at: 2582, kind: 'weapon', lane: 68 },",
+      replace: "  { at: 2700, kind: 'weapon', lane: 34 },\n  { at: 2582, kind: 'weapon', lane: 68 },",
     },
   },
 ];

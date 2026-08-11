@@ -171,7 +171,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     title: 'Ember Nebula',
     space: { vivid: '#140b16', 'high-contrast': '#050008' },
     nebula: { vivid: '#5c2a4a', 'high-contrast': '#2a1626' },
-    mix: { drone: 1.35, sub: 1.2, chords: 1.15, arp: 0.72, hook: 0.85, perc: 0.7, toll: 1.25 },
+    mix: { drone: 1.35, sub: 1.02, chords: 1.15, arp: 0.72, hook: 0.85, perc: 0.7, toll: 1.25 },
   },
   /** Level three. Hard and percussive: the hands lead and the pads get out of the way. */
   debris: {
@@ -207,7 +207,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       this The Forge is that the low end leads *and* the top gets out of its way, which is two
       multipliers rather than one large one.
     */
-    mix: { sub: 1.22, groove: 1.3, drone: 1.15, arp: 0.6, hook: 0.7, stomp: 1.15, drive: 0.8 },
+    mix: { sub: 1.04, groove: 1.3, drone: 1.15, arp: 0.6, hook: 0.7, stomp: 1.15, drive: 0.8 },
   },
   /** Level six. Everything at once, which is what the level is. */
   bloom: {

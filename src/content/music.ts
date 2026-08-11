@@ -60,6 +60,7 @@ export const MUSIC_LAYERS = [
   'chords',
   'groove',
   'arp',
+  'call',
   'hook',
   'drive',
   'toll',
@@ -145,13 +146,14 @@ export const LAYER_BARS: Record<MusicLayer, number> = {
   drone: 2,
   bass: 2,
   beat: 2,
-  sub: 8,
+  sub: 16,
   engine: 4,
   perc: 4,
-  chords: 8,
-  groove: 4,
-  arp: 8,
-  hook: 4,
+  chords: 16,
+  groove: 16,
+  arp: 16,
+  call: 16,
+  hook: 16,
   drive: 2,
   toll: 4,
   lead: 4,
@@ -871,12 +873,12 @@ export type MusicLevel = (typeof MUSIC_LEVELS)[number];
   what makes the boss's own rung a release rather than a step.
 */
 export const MUSIC_LADDER: Record<MusicLevel, Record<MusicLayer, number>> = {
-  calm: { drone: 0.55, bass: 0.7, beat: 0.5, sub: 0, engine: 0, perc: 0, chords: 0, groove: 0, arp: 0, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0, auraFast: 0 },
-  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.5, auraFast: 0.28 },
-  push: { drone: 0.34, bass: 0, beat: 0, sub: 0.88, engine: 0.92, perc: 0.74, chords: 0.87, groove: 0.86, arp: 0.62, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.62, auraFast: 0.4 },
-  surge: { drone: 0.33, bass: 0, beat: 0, sub: 0.9, engine: 0.93, perc: 0.8, chords: 0.88, groove: 0.9, arp: 0.68, hook: 0.66, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.75, auraFast: 0.55 },
-  approach: { drone: 0.34, bass: 0, beat: 0, sub: 0.92, engine: 0.94, perc: 0.84, chords: 0.89, groove: 0.92, arp: 0.72, hook: 0.7, drive: 0.72, toll: 0.72, lead: 0, stomp: 0, auraSlow: 0.88, auraFast: 0.72 },
-  boss: { drone: 0.24, bass: 0, beat: 0, sub: 0.98, engine: 0.98, perc: 0.95, chords: 0.88, groove: 0.96, arp: 0.78, hook: 0.86, drive: 0.94, toll: 0.86, lead: 0.98, stomp: 0.96, auraSlow: 1, auraFast: 0.9 },
+  calm: { drone: 0.55, bass: 0.7, beat: 0.5, sub: 0, engine: 0, perc: 0, chords: 0, groove: 0, arp: 0, call: 0, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0, auraFast: 0 },
+  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, call: 0.62, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.5, auraFast: 0.28 },
+  push: { drone: 0.34, bass: 0, beat: 0, sub: 0.88, engine: 0.92, perc: 0.74, chords: 0.87, groove: 0.86, arp: 0.62, call: 0.68, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.62, auraFast: 0.4 },
+  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.06, engine: 0.97, perc: 0.8, chords: 0.88, groove: 0.94, arp: 0.64, call: 0.74, hook: 0.62, drive: 0.34, toll: 0, lead: 0, stomp: 0, auraSlow: 0.75, auraFast: 0.55 },
+  approach: { drone: 0.34, bass: 0, beat: 0, sub: 1.1, engine: 1, perc: 0.86, chords: 0.89, groove: 0.94, arp: 0.7, call: 0.8, hook: 0.72, drive: 0.72, toll: 0.72, lead: 0, stomp: 0, auraSlow: 0.88, auraFast: 0.72 },
+  boss: { drone: 0.2, bass: 0, beat: 0, sub: 1.22, engine: 1.1, perc: 0.9, chords: 0.8, groove: 0.98, arp: 0.75, call: 0.81, hook: 0.83, drive: 0.88, toll: 0.79, lead: 0.93, stomp: 0.9, auraSlow: 1, auraFast: 0.9 },
 };
 
 /** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */
@@ -1006,7 +1008,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.04, gain: 0.07, attack: 0.0005, curve: 9, lowFrom: 13000, highFrom: 6000 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.04, gain: 0.05, attack: 0.0005, curve: 9, lowFrom: 13000, highFrom: 6000 },
     },
   ],
 
@@ -1040,7 +1042,10 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
         THE FLOOR. One note a bar, longer than the bar so it never lets go — and the last one crosses
         the end of the loop, which is what 0090's seam guard is watching.
       */
-      steps: [0, -4, 3, -2, 0, -4, -2, -5],
+      steps: [
+        0, -4, 3, -2, 0, -4, -2, -5,
+        3, -2, 0, -4, 3, -2, -4, -5,
+      ],
       pitched: true,
       perBeat: 0.25,
       octave: 0,
@@ -1055,7 +1060,18 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
         ⚠️ **On the bar and not on the beat.** Four of these a bar would be a continuous rumble, which
         is the thing `MAX_CUE_SECONDS` refuses for a cue and the same mistake here; one is an event.
       */
-      steps: [1, _, _, _, 1, _, _, _, 1, _, _, _, 0.85, _, _, _, 1, _, _, _, 1, _, _, _, 1, _, _, _, 0.9, _, 0.8, _],
+      /*
+        ⚠️ **Sixteen bars now, and the second eight is NOT the first eight repeated** — 0113. This
+        layer went to sixteen because its pitched neighbour had to; a drop pattern tiled twice would
+        have made the length free and bought nothing with it, which is the shape of a loop getting
+        longer without getting less repetitive.
+      */
+      steps: [
+        1, _, _, _, 1, _, _, _, 1, _, _, _, 0.85, _, _, _,
+        1, _, _, _, 1, _, _, _, 1, _, _, _, 0.9, _, 0.8, _,
+        1, _, _, _, 1, _, 0.6, _, 1, _, _, _, 0.85, _, _, _,
+        1, _, _, _, 1, _, _, _, 1, _, 0.7, _, 0.95, _, 0.8, 0.7,
+      ],
       pitched: false,
       perBeat: 1,
       octave: 0,
@@ -1070,6 +1086,15 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       steps: [
         _, 0, 0, 0, _, -4, -4, -4, _, 3, 3, 3, _, -2, -2, -2,
         _, 0, 0, 0, _, -4, -4, -4, _, -2, -2, -2, _, -5, -5, -7,
+        /*
+          ⚠️ **THE B-SECTION'S C IS VOICED DOWN AN OCTAVE, AND A GUARD IS WHY.** Written at `3` — the
+          C above A, which is what the chords play — the second eight bars sit higher than the first,
+          and 0108's *the bed is felt* guard measured the whole phrase losing a fifth of its
+          chest-band share. A bass takes the lowest voicing of the chord it is under; that is both
+          what fixes the measurement and what a bass player would have written.
+        */
+        _, -9, -9, -9, _, -2, -2, -2, _, 0, 0, 0, _, -4, -4, -4,
+        _, -9, -9, -9, _, -2, -2, -2, _, -4, -4, -4, _, -5, -5, -7,
       ],
       pitched: true,
       perBeat: 1,
@@ -1162,7 +1187,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.018, gain: 0.075, attack: 0.0004, curve: 9, lowFrom: 14000, highFrom: 7500 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.018, gain: 0.052, attack: 0.0004, curve: 9, lowFrom: 14000, highFrom: 7500 },
     },
     {
       // The open hat on every offbeat, which is the single most recognisable thing in the genre —
@@ -1172,7 +1197,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: false,
       perBeat: 2,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.11, gain: 0.105, attack: 0.001, curve: 3.2, lowFrom: 11000, highFrom: 5200 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.11, gain: 0.072, attack: 0.001, curve: 3.2, lowFrom: 11000, highFrom: 5200 },
     },
   ],
 
@@ -1279,33 +1304,75 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
     {
       // The roots, held. Each note is longer than its bar so it sings into the next one — and the
       // last one crosses the end of the loop, which is what 0090's seam guard is watching.
-      steps: [0, -4, 3, -2, 0, -4, -2, -5],
+      steps: [
+        0, -4, 3, -2, 0, -4, -2, -5,
+        3, -2, 0, -4, 3, -2, -4, -5,
+      ],
       pitched: true,
       perBeat: 0.25,
       octave: 1,
+      // THE REPORTED ONE. Eight bars at one weight is the metronome the player named — the pitch moved
+      // and nothing else ever did. Indexed by bar, so bars 1 and 5 are the phrase and 8 is the way out.
+      accents: [1, 0.82, 0.9, 0.76, 1, 0.84, 0.92, 0.68],
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.17, attack: 0.06, curve: 1.5, lowFrom: 900, lowTo: 2400, q: 1.2 },
     },
     {
-      steps: [0, -4, 3, -2, 0, -4, -2, -5],
+      steps: [
+        0, -4, 3, -2, 0, -4, -2, -5,
+        3, -2, 0, -4, 3, -2, -4, -5,
+      ],
       pitched: true,
       perBeat: 0.25,
       octave: 1,
+      accents: [1, 0.82, 0.9, 0.76, 1, 0.84, 0.92, 0.68],
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.17, attack: 0.07, curve: 1.5, lowFrom: 890, lowTo: 2380, q: 1.2 },
     },
     {
-      // The fifths.
-      steps: [7, 3, 10, 5, 7, 3, 5, 2],
+      /*
+        THE FIFTHS, AND THEY ARE THE VOICE THAT STOPS BEING A BONG. Held once a bar they were the
+        fourth identical thing landing on the fourth identical downbeat; as offbeat eighths they are
+        the only harmonic voice in the level's piece that arrives anywhere except beat one.
+
+        ⚠️ **The envelope is a fifth of what it was** — 0.24s against 1.8s — because a stab that rings
+        for longer than its own bar is a pad with a rhythm drawn on it. The roots above still hold the
+        harmony; this articulates it.
+      */
+      steps: [
+        _, _, 7, _, _, 7, _, _,
+        _, _, 3, _, _, 3, _, 3,
+        _, _, 10, _, 10, _, _, 10,
+        _, _, 5, _, _, 5, _, _,
+        _, _, 7, _, _, 7, _, 7,
+        _, _, 3, _, 3, _, _, 3,
+        _, _, 5, _, _, 5, _, _,
+        _, 2, _, 2, _, 2, _, 2,
+        _, _, 10, _, 10, _, _, 10,
+        _, _, 5, _, _, 5, _, _,
+        _, _, 7, _, _, 7, _, 7,
+        _, _, 3, _, 3, _, _, 3,
+        _, _, 10, _, _, 10, _, _,
+        _, _, 5, _, _, 5, _, 5,
+        _, _, 3, _, 3, _, _, 3,
+        _, 2, _, 2, _, 2, _, 2,
+      ],
       pitched: true,
-      perBeat: 0.25,
+      perBeat: 2,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.5, gain: 0.13, attack: 0.09, curve: 1.5, lowFrom: 1100, lowTo: 2800, q: 1.1 },
+      accents: [1, 0.66, 0.84, 0.6],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.6, gain: 0.15, attack: 0.008, curve: 3.4, lowFrom: 1100, lowTo: 2800, q: 1.1 },
     },
     {
       // The top voice, an octave up — where the chord stops being a bed and starts being a chord.
-      steps: [15, 12, 19, 14, 15, 12, 14, 11],
+      steps: [
+        15, 12, 19, 14, 15, 12, 14, 11,
+        19, 14, 15, 12, 19, 14, 12, 11,
+      ],
       pitched: true,
       perBeat: 0.25,
       octave: 1,
+      // Out of phase with the roots' contour on purpose: two voices dipping on the same bar is one
+      // quieter bong rather than two voices moving.
+      accents: [0.9, 1, 0.78, 0.94, 0.86, 1, 0.8, 0.72],
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.1, attack: 0.12, curve: 1.6, lowFrom: 1600, lowTo: 3600, q: 1 },
     },
     {
@@ -1319,6 +1386,14 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
         _, 0, _, 0, _, 0, _, 0,
         _, -4, _, -4, _, -4, _, -4,
         _, -2, _, -2, _, -2, _, -2,
+        _, -5, _, -5, _, -5, _, -5,
+        _, 3, _, 3, _, 3, _, 3,
+        _, -2, _, -2, _, -2, _, -2,
+        _, 0, _, 0, _, 0, _, 0,
+        _, -4, _, -4, _, -4, _, -4,
+        _, 3, _, 3, _, 3, _, 3,
+        _, -2, _, -2, _, -2, _, -2,
+        _, -4, _, -4, _, -4, _, -4,
         _, -5, _, -5, _, -5, _, -5,
       ],
       pitched: true,
@@ -1346,6 +1421,14 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
         _, 0, _, 0, _, 0, _, 0,
         _, -4, _, -4, _, -4, _, -4,
         _, -2, _, -2, _, -2, _, -2,
+        _, -5, _, -5, _, -5, _, -5,
+        _, 3, _, 3, _, 3, _, 3,
+        _, -2, _, -2, _, -2, _, -2,
+        _, 0, _, 0, _, 0, _, 0,
+        _, -4, _, -4, _, -4, _, -4,
+        _, 3, _, 3, _, 3, _, 3,
+        _, -2, _, -2, _, -2, _, -2,
+        _, -4, _, -4, _, -4, _, -4,
         _, -5, _, -5, _, -5, _, -5,
       ],
       pitched: true,
@@ -1387,10 +1470,22 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
         (A minor and G) shares its first chord, so the same line lands either way.
       */
       steps: [
-        0, _, _, 0, _, 12, _, _, 0, _, _, 7, _, _, 10, _,
-        -4, _, _, -4, _, 8, _, _, -4, _, _, 3, _, _, 5, _,
-        0, _, _, 0, _, 12, _, _, 0, _, _, 7, _, _, 10, _,
-        -4, _, _, -4, _, 8, _, _, -4, _, 3, _, 5, _, 7, _,
+        0, _, _, 0, _, 12, _, _, 0, _, _, 7, _, _, 3, _,
+        -4, _, _, -4, _, 8, _, _, -4, _, 3, _, 0, _, 3, _,
+        3, _, _, 3, _, 15, _, _, 3, _, _, 10, _, _, 7, _,
+        -2, _, _, -2, _, 10, _, _, -2, _, 5, _, 2, _, 0, _,
+        0, _, _, 0, _, 12, _, _, 0, _, _, 7, _, _, 3, _,
+        -4, _, _, -4, _, 8, _, _, -4, _, 3, _, 0, _, -2, _,
+        -2, _, _, -2, _, 10, _, _, -2, _, _, 5, _, _, 2, _,
+        -5, _, _, -5, _, 7, _, _, -5, _, 2, _, -1, _, 3, _,
+        3, _, _, 3, _, 15, _, _, 3, _, _, 10, _, _, 7, _,
+        -2, _, _, -2, _, 10, _, _, -2, _, 5, _, 2, _, 0, _,
+        0, _, _, 0, _, 12, _, _, 0, _, _, 7, _, _, 3, _,
+        -4, _, _, -4, _, 8, _, _, -4, _, 3, _, 0, _, 3, _,
+        3, _, _, 3, _, 15, _, _, 3, _, _, 10, _, _, 7, _,
+        -2, _, _, -2, _, 10, _, _, -2, _, 5, _, 2, _, -4, _,
+        -4, _, _, -4, _, 8, _, _, -4, _, _, 3, _, _, 0, _,
+        -5, _, _, -5, _, 7, _, _, -5, _, 2, _, -1, _, 0, _,
       ],
       pitched: true,
       perBeat: 4,
@@ -1405,10 +1500,22 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
         use, and the reason 0095's spectral guard exists.
       */
       steps: [
-        0, _, _, 0, _, 12, _, _, 0, _, _, 7, _, _, 10, _,
-        -4, _, _, -4, _, 8, _, _, -4, _, _, 3, _, _, 5, _,
-        0, _, _, 0, _, 12, _, _, 0, _, _, 7, _, _, 10, _,
-        -4, _, _, -4, _, 8, _, _, -4, _, 3, _, 5, _, 7, _,
+        0, _, _, 0, _, 12, _, _, 0, _, _, 7, _, _, 3, _,
+        -4, _, _, -4, _, 8, _, _, -4, _, 3, _, 0, _, 3, _,
+        3, _, _, 3, _, 15, _, _, 3, _, _, 10, _, _, 7, _,
+        -2, _, _, -2, _, 10, _, _, -2, _, 5, _, 2, _, 0, _,
+        0, _, _, 0, _, 12, _, _, 0, _, _, 7, _, _, 3, _,
+        -4, _, _, -4, _, 8, _, _, -4, _, 3, _, 0, _, -2, _,
+        -2, _, _, -2, _, 10, _, _, -2, _, _, 5, _, _, 2, _,
+        -5, _, _, -5, _, 7, _, _, -5, _, 2, _, -1, _, 3, _,
+        3, _, _, 3, _, 15, _, _, 3, _, _, 10, _, _, 7, _,
+        -2, _, _, -2, _, 10, _, _, -2, _, 5, _, 2, _, 0, _,
+        0, _, _, 0, _, 12, _, _, 0, _, _, 7, _, _, 3, _,
+        -4, _, _, -4, _, 8, _, _, -4, _, 3, _, 0, _, 3, _,
+        3, _, _, 3, _, 15, _, _, 3, _, _, 10, _, _, 7, _,
+        -2, _, _, -2, _, 10, _, _, -2, _, 5, _, 2, _, -4, _,
+        -4, _, _, -4, _, 8, _, _, -4, _, _, 3, _, _, 0, _,
+        -5, _, _, -5, _, 7, _, _, -5, _, 2, _, -1, _, 0, _,
       ],
       pitched: true,
       perBeat: 4,
@@ -1454,6 +1561,14 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
         -4, 3, 8, 3, 0, 3, 8, 12, -4, 3, 8, 3, 0, 3, 8, 12,
         -2, 5, 10, 5, 2, 5, 10, 14, -2, 5, 10, 5, 2, 5, 10, 14,
         -5, 2, 7, 2, -1, 2, 7, 11, -5, 2, 7, 2, -1, 2, 7, 11,
+        3, 10, 15, 10, 7, 10, 15, 19, 3, 10, 15, 10, 7, 10, 15, 19,
+        -2, 5, 10, 5, 2, 5, 10, 14, -2, 5, 10, 5, 2, 5, 10, 14,
+        0, 7, 12, 7, 3, 7, 12, 15, 0, 7, 12, 7, 3, 7, 12, 15,
+        -4, 3, 8, 3, 0, 3, 8, 12, -4, 3, 8, 3, 0, 3, 8, 12,
+        3, 10, 15, 10, 7, 10, 15, 19, 3, 10, 15, 10, 7, 10, 15, 19,
+        -2, 5, 10, 5, 2, 5, 10, 14, -2, 5, 10, 5, 2, 5, 10, 14,
+        -4, 3, 8, 3, 0, 3, 8, 12, -4, 3, 8, 3, 0, 3, 8, 12,
+        -5, 2, 7, 2, -1, 2, 7, 11, -5, 2, 7, 2, -1, 2, 7, 11,
       ],
       pitched: true,
       perBeat: 4,
@@ -1467,7 +1582,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
         this says *there is something on every sixteenth now*, which is the half a listener reads as
         speed. Velocities, which is the thing 0102 gave the model.
       */
-      steps: Array.from({ length: 128 }, (_unused, i) => [1, 0.35, 0.55, 0.35][i % 4]!),
+      steps: Array.from({ length: 256 }, (_unused, i) => [1, 0.35, 0.55, 0.35][i % 4]!),
       pitched: false,
       perBeat: 4,
       octave: 0,
@@ -1523,6 +1638,71 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
     The progression turns major (C, F, G) under a fixed root-and-fifth voicing, and a root-and-fifth
     is the one voicing that is correct over both — which is exactly why the genre uses it.
   */
+
+  /*
+    ── THE CALL — A TUNE AT `run`, WHICH IS THE ONE THING A LEVEL'S OPENING NEVER HAD ──────────────
+
+    ⚠️ **`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`.** Reported from play:
+    *"it has no depth, no intricacy, no variety"*, and — of the fix that came before this one —
+    *"it's also a bit too calm still."*
+
+    ⚠️ **THE FIRST SIXTY SECONDS OF EVERY LEVEL OPENED NO MELODIC LAYER AT ALL.** `arp` was zero at
+    `run`, `hook` at `push`, `lead` only at the boss — so what a player heard for the first minute
+    was a kick, a clap, hand percussion, a pad and a bass. *A four-on-the-floor kick with nothing
+    melodic above it* is what *"1,2,3,4,5,6,7,8 repeat"* is a description of, and it is accurate.
+
+    ⚠️ **A NEW LAYER RATHER THAN OPENING `arp` EARLIER, AND THE LADDER IS WHY.** 0102 bought four
+    climbs and 0108 says what arrives at each rung may not be spent: moving `arp` down to `run` gives
+    the opening a tune by taking `push`'s arrival away. `call` opens at `run` and every rung above it
+    still opens exactly what it opened before.
+
+    ⚠️ **A CALL AND AN ANSWER, four bars each, over sixteen.** It is quarters — the slowest thing in
+    the piece that is not a pad — because the opening of a level is the one stretch with room in it,
+    and a melody that fills every sixteenth would be a second `arp` rather than a tune. It rests for
+    a bar and a half in the middle of each phrase, which is what makes the next entry read as an
+    entry.
+  */
+  call: [
+    {
+      /*
+        The tune. In A natural minor, with the G sharp deliberately absent — the raised seventh
+        belongs to the E chord's own voicing (`chords`' top voice sounds it) and a melody that used it
+        over the other fifteen bars would be leaning on a note the harmony is not playing.
+      */
+      steps: [
+        0, _, 3, _, 2, _, 0, _, 3, _, 7, _, 5, _, 3, _,
+        0, _, 3, _, 2, _, 0, _, 7, _, 5, _, 3, _, _, _,
+        7, _, 10, _, 8, _, 7, _, 3, _, 0, _, 2, _, _, _,
+        7, _, 10, _, 8, _, 12, _, 10, _, 7, _, 5, _, 3, _,
+      ],
+      pitched: true,
+      perBeat: 1,
+      octave: 2,
+      // The phrase leans on its first note and lets the answer sit under it, so sixteen bars read as
+      // four four-bar sentences rather than as sixty-four quarters.
+      accents: [1, 0.72, 0.86, 0.66],
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.86, gain: 0.115, attack: 0.02, curve: 2.2, lowFrom: 2600, lowTo: 1200, q: 1.1 },
+    },
+    {
+      /*
+        The octave under it, quiet, so the tune has a body rather than being one thin oscillator —
+        `docs/decisions/0089-a-cue-has-a-body.md`'s argument, applied to the one layer that carries a
+        melody before the boss does.
+      */
+      steps: [
+        0, _, 3, _, 2, _, 0, _, 3, _, 7, _, 5, _, 3, _,
+        0, _, 3, _, 2, _, 0, _, 7, _, 5, _, 3, _, _, _,
+        7, _, 10, _, 8, _, 7, _, 3, _, 0, _, 2, _, _, _,
+        7, _, 10, _, 8, _, 12, _, 10, _, 7, _, 5, _, 3, _,
+      ],
+      pitched: true,
+      perBeat: 1,
+      octave: 1,
+      accents: [1, 0.72, 0.86, 0.66],
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.9, gain: 0.042, attack: 0.025, curve: 2 },
+    },
+  ],
+
   hook: [
     {
       /*
@@ -1533,7 +1713,19 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
         0, _, 0, 0, 0, _, 0, 0, 0, _, 0, 0, 0, _, 0, 0,
         -4, _, -4, -4, -4, _, -4, -4, -4, _, -4, -4, -4, _, -4, -4,
         3, _, 3, 3, 3, _, 3, 3, 3, _, 3, 3, 3, _, 3, 3,
-        -2, _, -2, -2, -2, _, -2, -2, -2, _, -2, -2, -2, _, -2, 0,
+        -2, _, -2, -2, -2, _, -2, -2, -2, _, -2, -2, -2, _, -2, -2,
+        0, _, 0, 0, 0, _, 0, 0, 0, _, 0, 0, 0, _, 0, 0,
+        -4, _, -4, -4, -4, _, -4, -4, -4, _, -4, -4, -4, _, -4, -4,
+        -2, _, -2, -2, -2, _, -2, -2, -2, _, -2, -2, -2, _, -2, -2,
+        -5, _, -5, -5, -5, _, -5, -5, -5, _, -5, -5, -5, _, -5, -5,
+        3, _, 3, 3, 3, _, 3, 3, 3, _, 3, 3, 3, _, 3, 3,
+        -2, _, -2, -2, -2, _, -2, -2, -2, _, -2, -2, -2, _, -2, -2,
+        0, _, 0, 0, 0, _, 0, 0, 0, _, 0, 0, 0, _, 0, 0,
+        -4, _, -4, -4, -4, _, -4, -4, -4, _, -4, -4, -4, _, -4, -4,
+        3, _, 3, 3, 3, _, 3, 3, 3, _, 3, 3, 3, _, 3, 3,
+        -2, _, -2, -2, -2, _, -2, -2, -2, _, -2, -2, -2, _, -2, -2,
+        -4, _, -4, -4, -4, _, -4, -4, -4, _, -4, -4, -4, _, -4, -4,
+        -5, _, -5, -5, -5, _, -5, -5, -5, _, -5, -5, -5, _, -5, -5,
       ],
       pitched: true,
       perBeat: 4,
@@ -1551,7 +1743,19 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
         7, _, 7, 7, 7, _, 7, 7, 7, _, 7, 7, 7, _, 7, 7,
         3, _, 3, 3, 3, _, 3, 3, 3, _, 3, 3, 3, _, 3, 3,
         10, _, 10, 10, 10, _, 10, 10, 10, _, 10, 10, 10, _, 10, 10,
-        5, _, 5, 5, 5, _, 5, 5, 5, _, 5, 5, 5, _, 5, 7,
+        5, _, 5, 5, 5, _, 5, 5, 5, _, 5, 5, 5, _, 5, 5,
+        7, _, 7, 7, 7, _, 7, 7, 7, _, 7, 7, 7, _, 7, 7,
+        3, _, 3, 3, 3, _, 3, 3, 3, _, 3, 3, 3, _, 3, 3,
+        5, _, 5, 5, 5, _, 5, 5, 5, _, 5, 5, 5, _, 5, 5,
+        2, _, 2, 2, 2, _, 2, 2, 2, _, 2, 2, 2, _, 2, 2,
+        10, _, 10, 10, 10, _, 10, 10, 10, _, 10, 10, 10, _, 10, 10,
+        5, _, 5, 5, 5, _, 5, 5, 5, _, 5, 5, 5, _, 5, 5,
+        7, _, 7, 7, 7, _, 7, 7, 7, _, 7, 7, 7, _, 7, 7,
+        3, _, 3, 3, 3, _, 3, 3, 3, _, 3, 3, 3, _, 3, 3,
+        10, _, 10, 10, 10, _, 10, 10, 10, _, 10, 10, 10, _, 10, 10,
+        5, _, 5, 5, 5, _, 5, 5, 5, _, 5, 5, 5, _, 5, 5,
+        3, _, 3, 3, 3, _, 3, 3, 3, _, 3, 3, 3, _, 3, 3,
+        2, _, 2, 2, 2, _, 2, 2, 2, _, 2, 2, 2, _, 2, 2,
       ],
       pitched: true,
       perBeat: 4,

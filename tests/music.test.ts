@@ -14,6 +14,7 @@ import {
   MUSIC_DRIVE,
   MUSIC_GAIN,
   MUSIC_LADDER,
+  MUSIC_ROOT,
   MUSIC_LAYERS,
   MUSIC_LEVELS,
   AURA_LAYERS,
@@ -103,6 +104,23 @@ describe('four loops that cannot drift', () => {
     );
   });
 
+  /*
+    ⚠️ **THE THREE TESTS BELOW CARRY AN EXPLICIT TIMEOUT AND IT IS A MEASUREMENT, NOT A NUISANCE**
+    — `docs/decisions/0113-there-is-one-composition-and-seven-levels.md`. The phrase went from eight
+    bars to sixteen, so `bakeLoops` synthesises 201 seconds of audio where it used to do 99, and each
+    of these calls it. Alone they take about 2.3s; under `vitest`'s parallel workers they reach 5.3s
+    and the 5000ms default fired.
+
+    ⚠️ **`docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md` is why this is a
+    comment rather than a rerun.** It says an intermittent guard has found something and *flaky* is
+    not what it found — so it was established: the failure text is `Test timed out in 5000ms`, the
+    same three tests pass under `--no-file-parallelism`, and the quantity each ASSERTS is unchanged.
+    A slow test and a wrong one look identical from a red suite and are not the same thing.
+
+    ⚠️ **The bake cost itself is guarded elsewhere and deliberately not here** — `tests/sound.test.ts`
+    holds the longest single job and the resident megabytes, which are the numbers that would actually
+    hurt a player. A timeout in a correctness test guards the CI machine, not the game.
+  */
   it('and every layer bakes to exactly its own declared length', () => {
     const loops = bakeLoops(SAMPLE_RATE);
     for (const layer of MUSIC_LAYERS) {
@@ -110,7 +128,7 @@ describe('four loops that cannot drift', () => {
         Math.round(secondsOfLayer(layer) * SAMPLE_RATE),
       );
     }
-  });
+  }, 30_000);
 
   it('and none of them is silence, which is the way a layer can be missing without failing', () => {
     /*
@@ -125,7 +143,7 @@ describe('four loops that cannot drift', () => {
       expect(peak, `${layer} baked to silence`).toBeGreaterThan(0.01);
       expect(peak, `${layer} clips on its own, before the other three are added`).toBeLessThanOrEqual(1);
     }
-  });
+  }, 30_000);
 
   it('THE SEAM: a loop is not quieter at its start than at its end, because a loop has no start', () => {
     /*
@@ -174,7 +192,7 @@ describe('four loops that cannot drift', () => {
         `${layer} ends at ${tail.toFixed(4)} and begins at ${head.toFixed(4)} — the join drops something`,
       ).toBeGreaterThanOrEqual(tail * 0.75);
     }
-  });
+  }, 30_000);
 
   it('and the four together stay inside full scale at the loudest level there is', () => {
     /*
@@ -209,6 +227,60 @@ describe('four loops that cannot drift', () => {
 });
 
 describe('the ladder is additive, which is what the ask describes', () => {
+  /**
+   * ── THE REPORTED ONE, AND NOTHING IN THIS REPOSITORY HELD IT ────────────────────────────────────
+   *
+   * ⚠️ **`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`.** *"It has no depth, no
+   * intricacy, no variety"* was said about a level whose opening rung carried a kick, a clap, hand
+   * percussion, a pad and a bass — **and no tune at all.** `arp`, `hook`, `lead` and `toll` were each
+   * zero at `run`, for the first sixty seconds of every level.
+   *
+   * ⚠️ **`npm run prove` IS WHY THIS EXISTS.** 0113's own probe closed `call` at `run` and pointed at
+   * *opens a layer at every step* — and that guard stayed GREEN, because `run` opens five other
+   * layers and none of them is a melody. A probe that does not fire is the harness reporting a
+   * MISSING guard rather than a broken break, which is
+   * `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` doing the more valuable half of its job.
+   *
+   * ⚠️ **WRITTEN OVER A PROPERTY AND NEVER A NAME** —
+   * `docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md`. A tune is a pitched voice that
+   * moves, plays at least once a beat, and sits above the bass; a pad states one note a bar and the
+   * bed sits underneath. Driven over the table that separates `arp`, `call`, `drive` and `lead` from
+   * everything else without any of the four being mentioned — so a layer renamed, replaced or added
+   * is measured on what it does.
+   *
+   * ⚠️ **`calm` is excluded and it is not an oversight.** The title, the level break and the run-over
+   * screen are a bed on purpose (0095), and the play-test that produced this decision called that
+   * piece *"a really nice music piece"*. What was wrong was a LEVEL sounding like one.
+   */
+  it('THE REPORTED ONE: every rung inside a level has a tune in it, not just a bed', () => {
+    /** The lowest a melody may sit, in Hz — below this it is a bass line whatever else it does. */
+    const MELODY_FLOOR = 150;
+    /** How far a line must travel to be a line rather than a pulse, in semitones. */
+    const MELODY_SPAN = 7;
+
+    const melodic = (layer: MusicLayer): boolean =>
+      MUSIC[layer].some((voice) => {
+        if (!voice.pitched || voice.perBeat < 1) return false;
+        const sounded = voice.steps.filter((s): s is number => s !== null && s !== undefined);
+        if (sounded.length === 0) return false;
+        const low = Math.min(...sounded);
+        const high = Math.max(...sounded);
+        return MUSIC_ROOT * Math.pow(2, voice.octave + low / 12) > MELODY_FLOOR && high - low >= MELODY_SPAN;
+      });
+
+    const tunes = MUSIC_LAYERS.filter(melodic);
+    expect(tunes.length, 'no layer in the whole piece is a tune, so this guard is measuring nothing').toBeGreaterThan(0);
+
+    for (const level of MUSIC_LEVELS) {
+      if (level === 'calm') continue;
+      const open = tunes.filter((layer) => MUSIC_LADDER[level][layer] > 0);
+      expect(
+        open.length,
+        `${level} opens no tune at all — ${MUSIC_LAYERS.filter((l) => MUSIC_LADDER[level][l] > 0).join(', ')} is a bed`,
+      ).toBeGreaterThan(0);
+    }
+  });
+
   it('opens a layer at every step and never opens one twice', () => {
     /*
       *"Backgroundy, then an increased beat and bass leading into the boss fight, then really get
