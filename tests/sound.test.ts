@@ -36,8 +36,9 @@ import {
   velocitiesOf,
   type AudioOut,
 } from '../src/app/sound.ts';
-import { bakeLoops } from '../src/app/music.ts';
-import { FIRE_GRID, MUSIC, MUSIC_LAYERS, secondsOfLayer } from '../src/content/music.ts';
+import { bakeLoops, musicLevelFor } from '../src/app/music.ts';
+import { UNITS_PER_SECOND, rungMarks, targetGain } from '../scripts/timeline.mjs';
+import { AURA_LAYERS, FIRE_GRID, MUSIC, MUSIC_LAYERS, secondsOfLayer } from '../src/content/music.ts';
 import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { MISSILE_BEAT_RATIO, fireEveryAt, missileEveryAt } from '../src/content/pickups.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -1557,6 +1558,116 @@ describe('0109 — a death punctuates the music rather than getting it out of th
             'fundamental occupies — it is beneath the bed rather than in it',
         ).toBeGreaterThanOrEqual(floor - 0.01);
       }
+    }
+  });
+});
+
+/**
+ * THE RIG PLAYS THE LEVEL — `docs/decisions/0116-the-rig-plays-the-level.md`.
+ *
+ * ⚠️ **`scripts/hear.mjs` HAS BEEN WRONG ABOUT THE GAME TWICE, AND BOTH TIMES A VERDICT WAS TAKEN
+ * FROM IT.** [0104](../docs/decisions/0104-the-gun-plays-a-figure.md): the bus shaper was missing, so
+ * the rig under-reported the change it had just been used to choose by 4.5 dB.
+ * [0114](../docs/decisions/0114-the-fight-is-a-different-piece.md): `--music` and `--play` rendered
+ * the same music at two reference levels, and *"a massive musical volume difference"* was reported as
+ * a defect in the music — **one instruction away from being tuned as one**.
+ *
+ * ⚠️ **NOTHING IN THIS REPOSITORY HELD THE RIG TO THE GAME, WHICH IS WHY IT DRIFTED TWICE.** Every
+ * other guard here measures the music; the instrument that measures the music for a human was
+ * unguarded, and a wrong instrument is worse than none because it still produces a number.
+ */
+describe('0116 — the instrument is the game, and it is not a second copy of it', () => {
+  const rig = readFileSync(resolve(root, 'scripts/hear.mjs'), 'utf8');
+
+  /*
+    ⚠️ **A restated quantity is the whole failure mode, so the guard is over restatement.** Both
+    drifts were the rig holding its own version of something the mixer owns. Importing is not
+    tidiness here — it is the only thing that makes the file play what the game plays.
+  */
+  const OWNED = [
+    ['RAMP_SECONDS', 'how long a rung change takes — the shape of every section boundary'],
+    ['AURA_RAMP_SECONDS', 'how fast the aura follows the boss'],
+    ['MUSIC_GAIN', 'the bed’s level'],
+    ['MUSIC_DRIVE', 'the bus shaper, which 0104 found missing'],
+    ['MASTER_GAIN', 'the reference level, which 0114 found differing between modes'],
+  ] as const;
+
+  it('THE ONE THAT DRIFTED TWICE: every mixer quantity the rig uses is imported, never restated', () => {
+    for (const [name, what] of OWNED) {
+      expect(rig.includes(name), `scripts/hear.mjs does not mention ${name} — ${what}`).toBe(true);
+      /*
+        A `const NAME =` in the rig is the rig owning a number the mixer owns. That is exactly what
+        both drifts were, and it is invisible: the file still runs, still writes a wav, and still
+        sounds plausible.
+      */
+      expect(
+        new RegExp(String.raw`(const|let|var)\s+${name}\s*=`).test(rig),
+        `scripts/hear.mjs defines its own ${name} — ${what}. Import it from the module that owns it.`,
+      ).toBe(false);
+    }
+  });
+
+  /*
+    ⚠️ **THE FIRST DRAFT OF THE TWO BELOW ASSERTED THAT A WORD APPEARED IN A FILE, AND `npm run prove`
+    REPORTED STILL GREEN ON BOTH.** Deleting a call site leaves the import behind, so `rig.includes
+    ('mixOf')` stayed true with the theme dropped from the render — a spellcheck standing in for a
+    property. `scripts/timeline.mjs` exists so these can be about VALUES, which is the only thing that
+    made them redden. `docs/decisions/0005-a-guard-must-be-seen-to-fail.md` caught it.
+  */
+  it('THE RUNG SEQUENCE IS THE GAME’S ANSWER, not a list the rig keeps', () => {
+    /*
+      ⚠️ **Held against `musicLevelFor` itself rather than against expected names.** A list of rungs
+      typed into this test would be the second copy arriving in the guard instead of in the rig — and
+      it would go on passing the day a rung distance moved.
+    */
+    for (const kind of LEVEL_KINDS) {
+      const { bossAt } = LEVELS[kind];
+      for (const mark of rungMarks(kind, 45)) {
+        const inFight = mark.second >= bossAt / UNITS_PER_SECOND;
+        const camera = inFight ? bossAt : mark.second * UNITS_PER_SECOND;
+        const health = inFight ? Math.max(0, 1 - (mark.second - bossAt / UNITS_PER_SECOND) / 45) : 1;
+        expect(
+          mark.rung,
+          `${kind} is reported as ${mark.rung} at ${mark.second.toFixed(2)}s, which is not where the game is`,
+        ).toBe(musicLevelFor(camera, bossAt, inFight, health));
+      }
+    }
+  });
+
+  it('and a level of a different length reaches its rungs at different times', () => {
+    /*
+      ⚠️ **THE PROPERTY AN ARC WITH A TYPED ORDER CANNOT HAVE.** `hear.mjs --music` gives every rung
+      one phrase, so its boundaries are the same seven numbers whatever the level is. A level's are a
+      function of `bossAt`, and two levels with different bosses must therefore differ.
+    */
+    const a = rungMarks('approach', 45).map((m) => m.second);
+    const b = rungMarks('eye', 45).map((m) => m.second);
+    expect(LEVELS.eye.bossAt, 'the two levels chosen have the same bossAt, so this asserts nothing').not.toBe(
+      LEVELS.approach.bossAt,
+    );
+    expect(a, 'two levels of different lengths reach their rungs at the same times').not.toEqual(b);
+  });
+
+  it('THE PLACE IS IN IT: two themes do not render the same gains', () => {
+    /*
+      ⚠️ **0107's multiplier, held where the rig would silently drop it.** Without `mixOf` every one of
+      the seven levels renders identically — which is *"the same music repeats level after level"*
+      reproduced inside the instrument built to answer it, and it would look completely correct.
+    */
+    const differs = MUSIC_LAYERS.filter(
+      (layer) => targetGain('core', 'boss', layer, 1) !== targetGain('approach', 'boss', layer, 1),
+    );
+    expect(
+      differs.length,
+      'The Core and The Approach render byte-identical gains at the boss, so the theme is not applied',
+    ).toBeGreaterThan(0);
+  });
+
+  it('and the aura arrives as a CEILING rather than a gain', () => {
+    // 0091: the ladder's aura row is multiplied by how close the boss is. At nothing, it is nothing.
+    for (const layer of AURA_LAYERS) {
+      expect(targetGain('approach', 'boss', layer, 0), `${layer} sounds with the boss at arm's length`).toBe(0);
+      expect(targetGain('approach', 'boss', layer, 1), `${layer} is silent with the boss on top of you`).toBeGreaterThan(0);
     }
   });
 });

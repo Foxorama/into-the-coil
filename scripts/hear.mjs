@@ -17,6 +17,12 @@
 //
 // Usage:  node scripts/hear.mjs [--out=cues.wav] [--gap=0.35] [--only=kill,blast]
 //                               [--music] [--play] [--solo [--rung=run]]
+//                               [--level=approach [--fight=45] [--gap-units=85]]
+//
+// --level writes A WHOLE LEVEL — start to boss death, at the rungs a distance decides, the ramps the
+// mixer actually uses and the theme the level is in. It is the only mode that writes the SHAPE of a
+// level rather than one of its arrangements, and it prints where every section boundary lands in the
+// bar. docs/decisions/0116-the-rig-plays-the-level.md is why that number matters.
 //
 // --solo writes ONE FILE PER LAYER at a rung's own gains, so a sound a player can hear and not name
 // can be named. It is the answer to three rounds of *"the metronome"* being guessed at, and the
@@ -69,8 +75,17 @@ import { PHRASE_SECONDS, BAR_SECONDS, LAYER_BARS, MUSIC_LADDER, MUSIC_LAYERS, MU
   own gain is a rig that answers a question nobody asked.
 */
 const busOf = (sum) => saturate(sum * MUSIC_GAIN, MUSIC_DRIVE) * MASTER_GAIN;
-import { auraNearness } from '../src/app/music.ts';
+import {
+  AURA_RAMP_SECONDS,
+  RAMP_SECONDS,
+  auraBuild,
+  auraFor,
+  auraNearness,
+  musicLevelFor,
+} from '../src/app/music.ts';
 import { SHIPS } from '../src/content/ships.ts';
+import { LEVEL_KINDS } from '../src/content/levels.ts';
+import { UNITS_PER_SECOND, auraAt, levelTimeline, rungAt, targetGain } from './timeline.mjs';
 import { UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 
@@ -252,6 +267,107 @@ if (args.has('solo')) {
   console.log(`solo at rung "${rung}" — ${heard} layers actually sounding, ${written.length} written:`);
   for (const line of written) console.log(`  ${base}-solo-${line}`);
   if (silent.length > 0) console.log(`silent at ${rung}, not written: ${silent.join(', ')}`);
+  process.exit(0);
+}
+
+/*
+  ── A WHOLE LEVEL, AT THE RUNGS AND THE RAMPS AND THE PLACE THE GAME ACTUALLY USES ────────────────
+
+  ⚠️ **`docs/decisions/0116-the-rig-plays-the-level.md`.** Every other mode in this file writes a
+  RUNG. `--music` writes something it calls an arc, and it is not a level: seven equal slots of one
+  phrase each, in a fixed order typed into this file, with a LINEAR fade over the last 1.6 seconds of
+  each. A level is 42s / 50s / 16.1s / 10.6s, in an order a distance decides, with an EXPONENTIAL
+  approach that begins the instant the rung changes.
+
+  ⚠️ **SO THE ONE THING NOBODY COULD LISTEN TO IS THE SHAPE OF A LEVEL**, which is what six rounds of
+  *"repetitive"*, *"goes nowhere"* and *"push and surge sound the same"* are all about. A rung heard
+  on its own answers *what does this arrangement sound like*; the question being asked is *what does
+  the next two minutes sound like*, and it has never been written to a file.
+
+  ⚠️ **IT WALKS THE CAMERA rather than listing the rungs.** `musicLevelFor` is called with the
+  distance a real camera would be at, so the boundaries land where the level puts them and a level
+  retuned tomorrow is heard retuned. Typing the order in is what `--music` does and it is why that
+  mode cannot show a boundary landing in the wrong place — it puts every one of them at a phrase.
+
+  ⚠️ **AND THE THEME IS IN IT**, which no mode in this file has ever applied. `mixOf` is 0107's
+  multiplier, so `--level=eye` is The Core's mix and not level one's. Seven levels that a play-test
+  says sound identical have never once been rendered as themselves.
+*/
+if (args.has('level')) {
+  const kind = args.get('level') === '' ? LEVEL_KINDS[0] : args.get('level');
+  if (!LEVEL_KINDS.includes(kind)) {
+    console.error(`unknown --level=${kind}. Known: ${LEVEL_KINDS.join(', ')}`);
+    process.exit(1);
+  }
+  const fightSeconds = Number(args.get('fight') ?? 45);
+  const { bossAt, theme, toBoss, total: totalSeconds, marks } = levelTimeline(kind, fightSeconds);
+  const loops = bakeLoops(SAMPLE_RATE);
+  const at = (layer, i) => loops[layer][i % loops[layer].length];
+
+  /*
+    ⚠️ **THE FIGHT'S GAP IS A STATED CHOICE AND NOT A MEASUREMENT**, so it is named here rather than
+    left to look like one. The aura's nearness is a distance the PLAYER steers (0091), so a rig has
+    no honest value for it — `--music`'s `-aura.wav` is the mode that sweeps the range. What this
+    holds is the middle of the reachable span, which is where a player who is neither pressing nor
+    retreating sits, and `--gap=` moves it.
+  */
+  const gapUnits = Number(args.get('gap-units') ?? (AURA_NEAR_UNITS + AURA_FAR_UNITS) / 2);
+  const nearnessInFight = auraNearness(gapUnits);
+
+  const total = Math.round(totalSeconds * SAMPLE_RATE);
+  const track = new Float32Array(total);
+  /*
+    ⚠️ **The gains are smoothed in BLOCKS and the audio is not.** A rung is a step function of a
+    camera position, so asking `musicLevelFor` per sample is 5.3 million answers to a question that
+    changes four times. 64 samples is 1.45ms — two orders of magnitude under the 1.6s time constant
+    it is approximating — so nothing about the shape of the ramp is lost.
+  */
+  const BLOCK = 64;
+  const held = {};
+  for (const layer of MUSIC_LAYERS) held[layer] = targetGain(theme, 'calm', layer, 0);
+
+  for (let i = 0; i < total; i += BLOCK) {
+    const second = i / SAMPLE_RATE;
+    const rung = rungAt(kind, second, fightSeconds);
+    const aura = auraAt(kind, second, nearnessInFight);
+    for (let n = 0; n < BLOCK && i + n < total; n++) {
+      let v = 0;
+      for (const layer of MUSIC_LAYERS) {
+        const target = targetGain(theme, rung, layer, aura);
+        /*
+          ⚠️ **`setTargetAtTime`'s own curve, at the same time constant `makeMusicOut` gives it.** It
+          is an exponential approach starting NOW — not a linear fade at the end of a slot, which is
+          what `--music` draws and what this mode exists to stop being the only picture available.
+        */
+        const tau = (AURA_LAYERS.includes(layer) ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3;
+        held[layer] += (target - held[layer]) * (1 - Math.exp(-1 / (SAMPLE_RATE * tau)));
+        v += at(layer, i + n) * held[layer];
+      }
+      track[i + n] = Math.max(-1, Math.min(1, busOf(v)));
+    }
+  }
+
+  const base = out.replace(/\.wav$/, '');
+  writeFileSync(`${base}-level-${kind}.wav`, wavOf(track, SAMPLE_RATE));
+
+  /*
+    ⚠️ **WHERE IN THE BAR EACH BOUNDARY LANDS, WHICH IS THE ONE THING A LISTENER CANNOT COUNT AND A
+    RIG CAN.** A section change heard away from a downbeat does not read as a section change; it
+    reads as the mix wobbling. This prints the number so the next report about *"push and surge sound
+    the same"* has somewhere to look that is not a gain.
+  */
+  console.log(`${kind} — theme ${theme}, boss at ${bossAt} units (${toBoss.toFixed(1)}s at ${UNITS_PER_SECOND} units/s)`);
+  console.log(`fight ${fightSeconds}s, aura gap held at ${gapUnits} units (nearness ${nearnessInFight.toFixed(2)})\n`);
+  console.log('  rung        starts      lasts     bar        beat of 4');
+  for (const { rung, second, lasts, bars, beat, onBar } of marks) {
+    console.log(
+      `  ${rung.padEnd(10)} ${second.toFixed(2).padStart(8)}s ${lasts.toFixed(1).padStart(8)}s ` +
+        `${bars.toFixed(2).padStart(9)} ${beat.toFixed(2).padStart(10)}  ${onBar ? 'on the bar' : '<-- MID-BAR'}`,
+    );
+  }
+  const off = marks.slice(1).filter((m) => !m.onBar).length;
+  console.log(`\n${off} of ${marks.length - 1} rung changes land mid-bar.`);
+  console.log(`wrote ${base}-level-${kind}.wav (${(total / SAMPLE_RATE).toFixed(0)}s)`);
   process.exit(0);
 }
 
