@@ -4,8 +4,8 @@ import { MIX_CEILING, MIX_FLOOR, THEMES, THEME_KINDS, mixOf, type ThemeKind } fr
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { MUSIC_LADDER, MUSIC_LAYERS, MUSIC_LEVELS, MUSIC_GAIN, MUSIC_DRIVE } from '../src/content/music.ts';
 import { PALETTES, type PaletteName } from '../src/content/palette.ts';
-import { bakeLoops } from '../src/app/music.ts';
 import { SAMPLE_RATE, saturate } from '../src/app/sound.ts';
+import { loopsAt } from './bakes.ts';
 import { contrast } from './contrast.ts';
 
 /**
@@ -123,7 +123,7 @@ describe('a theme mixes the music and cannot break it', () => {
       layers at once could clip a mix every existing guard says is fine. Driven through the same
       shaper the bus runs, at every theme and every rung.
     */
-    const loops = bakeLoops(SAMPLE_RATE);
+    const loops = loopsAt(SAMPLE_RATE);
     const longest = Math.max(...MUSIC_LAYERS.map((l) => loops[l].length));
     /*
       ⚠️ **THE GAINS ARE RESOLVED ONCE PER (THEME, RUNG) AND WERE RESOLVED ONCE PER SAMPLE** —

@@ -22,10 +22,14 @@
 // wrote to the same files. Give each worker its own copy and they stop colliding.
 //
 // **Nothing about what a probe PROVES moves.** The edit is a real edit, `verifyApplied` still reads
-// the bytes back off disk, and a real `vitest run` of the whole suite still has to go red on the
-// named test. What changes is only which directory that happens in — see
-// `docs/decisions/0054-the-proof-runs-beside-the-work-not-on-it.md`, which also records the faster
-// shortcut that was measured and refused.
+// the bytes back off disk, and a real `vitest run` still has to go red on the named test. What
+// changes is only which directory that happens in — see
+// `docs/decisions/0054-the-proof-runs-beside-the-work-not-on-it.md`.
+//
+// ⚠️ **And WHICH TESTS that run contains is 0115's**, which takes the shortcut 0054 measured and
+// refused: the run is filtered to the guard the probe names, and the whole suite is run only when
+// that guard does not fire. See `docs/decisions/0115-a-probe-runs-its-own-guard.md` for why the
+// arithmetic behind the refusal stopped holding.
 //
 // Two things follow, and both are worth more than the time:
 //
@@ -101,6 +105,55 @@ export function verifyApplied(before, after, path) {
   if (before === after) {
     throw new Error(`${path} is byte-identical after the probe was applied — nothing was changed`);
   }
+}
+
+/**
+ * A guard's title as a `--testNamePattern`, matching the literal string and nothing else.
+ *
+ * ⚠️ **`-t` IS A REGEX AND `probe.guard` IS PROSE, WHICH IS A SILENT DIFFERENCE AND NOT A LOUD ONE.**
+ * The verdict has always compared titles with `String.includes`, so a guard is a literal substring;
+ * handing that same string to vitest unescaped makes `(` a group and `.` any character. **Eight of
+ * the five hundred and fifty-two guard titles contain one of `( ) . *`** — measured, not feared — and
+ * an unbalanced `(` throws while a stray `.` quietly matches a test nobody meant.
+ *
+ * ⚠️ **The failure it prevents is the harness's own subject.** A pattern that resolves to nothing
+ * makes vitest run nothing and exit zero, which is `docs/decisions/0005-a-guard-must-be-seen-to-fail.md`'s
+ * *the developer cannot tell "the guard is vacuous" from "my probe did nothing"* — reached from a new
+ * direction. `main` refuses a run of zero tests for the same reason, and this is what stops it being
+ * reached by accident.
+ *
+ * @param {string} title
+ * @returns {string}
+ */
+export function asPattern(title) {
+  return title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * What a filtered run of the named guard proves, before the diagnostic is fetched.
+ *
+ * ⚠️ **A PURE FUNCTION FOR THE REASON `drift` AND `planEdit` ARE ONES.** The verdict used to be three
+ * inline branches inside a worker loop, which no test can reach and no probe can redden — and it is
+ * the one piece of arithmetic that decides whether `npm run prove` means anything at all.
+ *
+ * ⚠️ **`ran === 0` COMES FIRST AND IS THE NEW CLASS.** An empty vitest run exits ZERO with no
+ * failures, so a guard title the code has moved out from under is byte-for-byte indistinguishable
+ * from a guard that does not fire — the same *"the developer cannot tell the guard is vacuous from my
+ * probe did nothing"* this harness was built for
+ * (`docs/decisions/0005-a-guard-must-be-seen-to-fail.md`), reached from the test side rather than the
+ * source side.
+ *
+ * ⚠️ **`NOT THIS GUARD` IS DELIBERATELY NOT A DIAGNOSIS.** Whether the suite stayed green or reddened
+ * somewhere else is a question about the forty-seven tests this run did not execute, so it is the
+ * caller's job to go and ask it — and only on the path where somebody will read the answer.
+ *
+ * @param {{failed: string[], ran: number}} named   the filtered run's result
+ * @param {string} guard                            the probe's guard title
+ * @returns {'red' | 'NO SUCH GUARD' | 'NOT THIS GUARD'}
+ */
+export function verdictOf(named, guard) {
+  if (named.ran === 0) return 'NO SUCH GUARD';
+  return named.failed.some((t) => t.includes(guard)) ? 'red' : 'NOT THIS GUARD';
 }
 
 // ── Probes ───────────────────────────────────────────────────────────────────────────────────────
@@ -315,13 +368,31 @@ export function drift(before, after) {
  *
  * The JSON reporter rather than the human one on purpose: reading pass/fail out of formatted console
  * output is a second description of vitest's result, and the kind that rots quietly.
+ *
+ * ── `only` IS THE GUARD'S OWN TITLE, AND IT IS THE WHOLE OF WHY THIS RUN IS SHORT ────────────────
+ *
+ * ⚠️ **`docs/decisions/0115-a-probe-runs-its-own-guard.md`.** The verdict below has only ever
+ * depended on one question — *did the test named by `probe.guard` fail* — and to answer it this ran
+ * the whole suite. `tests/music.test.ts` is forty-eight tests and thirty-six seconds, and forty-two
+ * probes each paid for all of it to read one of them.
+ *
+ * ⚠️ **It is the same claim, asked of the same test.** What is dropped is the forty-seven answers
+ * nothing looked at; `main` re-runs the whole suite when the filtered run does NOT go red, which is
+ * the only path that ever wanted them.
  */
-function runSuite(suites, cwd, report) {
+function runSuite(suites, cwd, report, only) {
   return new Promise((done, fail) => {
     rmSync(report, { force: true });
     const child = spawn(
       process.execPath,
-      [resolve(cwd, 'node_modules/vitest/vitest.mjs'), 'run', ...suites, '--reporter=json', `--outputFile=${report}`],
+      [
+        resolve(cwd, 'node_modules/vitest/vitest.mjs'),
+        'run',
+        ...suites,
+        ...(only === undefined ? [] : ['-t', only]),
+        '--reporter=json',
+        `--outputFile=${report}`,
+      ],
       { cwd, stdio: ['ignore', 'pipe', 'pipe'] },
     );
     let out = '';
@@ -436,21 +507,36 @@ async function main(filter) {
           let verdict = 'red';
           try {
             undo = apply(probe, tree);
-            const { failed } = await runSuite([probe.suite], tree, report);
-            if (failed.length === 0) {
-              failures.push(
-                `${label}\n    the suite stayed GREEN. The guard does not fire on the thing it exists to catch.`,
-              );
-              verdict = 'STILL GREEN';
-            } else if (!failed.some((t) => t.includes(probe.guard))) {
-              failures.push(
-                `${label}\n    went red, but on the wrong test.\n` +
-                  `    expected a failure containing: ${probe.guard}\n` +
-                  `    got: ${failed.join(' | ')}`,
-              );
-              verdict = 'WRONG TEST';
-            } else {
+            const named = await runSuite([probe.suite], tree, report, asPattern(probe.guard));
+            verdict = verdictOf(named, probe.guard);
+            if (verdict === 'red') {
               rows.push(`| ${probe.broke} | \`${probe.guard}\` |`);
+            } else if (verdict === 'NO SUCH GUARD') {
+              failures.push(
+                `${label}\n    no test in ${probe.suite} is named: ${probe.guard}\n` +
+                  '    The test was renamed and the probe was not. NOTHING WAS PROVEN.',
+              );
+            } else {
+              /*
+                ⚠️ **THE WHOLE SUITE, AND ONLY HERE.** The named guard did not fire, and *what else
+                did* is the difference between a guard that is vacuous and one aimed at the wrong
+                thing. It is the diagnostic the unfiltered run used to buy on every probe; this pays
+                for it on the handful that fail, which is the only place it was ever read.
+              */
+              const whole = await runSuite([probe.suite], tree, report);
+              if (whole.failed.length === 0) {
+                failures.push(
+                  `${label}\n    the suite stayed GREEN. The guard does not fire on the thing it exists to catch.`,
+                );
+                verdict = 'STILL GREEN';
+              } else {
+                failures.push(
+                  `${label}\n    went red, but on the wrong test.\n` +
+                    `    expected a failure containing: ${probe.guard}\n` +
+                    `    got: ${whole.failed.join(' | ')}`,
+                );
+                verdict = 'WRONG TEST';
+              }
             }
           } catch (e) {
             failures.push(`${label}\n    ${String(e.message ?? e).split('\n').join('\n    ')}`);

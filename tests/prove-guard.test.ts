@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { anchorFailures, drift, planEdit, verifyApplied } from '../scripts/prove-guard.mjs';
+import { anchorFailures, asPattern, drift, planEdit, verdictOf, verifyApplied } from '../scripts/prove-guard.mjs';
 
 /**
  * THE HARNESS THAT PROVES THE GUARDS IS ITSELF A GUARD.
@@ -275,5 +275,69 @@ describe('the probe set stays honest', () => {
         ).toBe(true);
       }
     }
+  });
+});
+
+/**
+ * A PROBE RUNS ITS OWN GUARD — `docs/decisions/0115-a-probe-runs-its-own-guard.md`.
+ *
+ * ⚠️ **The verdict has only ever depended on one test and the harness ran forty-eight.** Filtering to
+ * the named guard is the same claim asked of the same test; what these hold is the two ways the
+ * filter can lie, and both of them are SILENT.
+ */
+describe('0115 — a probe runs the guard it names, and not the suite around it', () => {
+  const probeFiles = readdirSync(resolve(root, 'scripts/probes')).filter((f) => f.endsWith('.mjs'));
+
+  /*
+    ⚠️ **`-t` IS A REGEX AND A GUARD TITLE IS PROSE.** The verdict compares titles with
+    `String.includes`, so a guard is a literal substring; vitest's `--testNamePattern` is not, and the
+    two disagreeing is a difference nobody would see — a title with a `.` in it quietly matching a
+    different test, or a lone `(` throwing inside a worker.
+  */
+  it('THE SILENT ONE: every guard title in the repository still matches itself as a pattern', async () => {
+    /*
+      ⚠️ **Driven over EVERY probe rather than over an example**, on `tests/music.test.ts`'s own
+      lesson about the aura range: a hand-written case proves the escape works on the characters the
+      hand thought of. Eight of the five hundred and fifty-two carry one of `( ) . *` today, and the
+      set that does is not a thing anybody maintains.
+    */
+    let checked = 0;
+    for (const file of probeFiles) {
+      const mod: { PROBES: { guard: string }[] } = await import(`../scripts/probes/${file.replace(/\.mjs$/, '')}.mjs`);
+      for (const p of mod.PROBES) {
+        expect(
+          new RegExp(asPattern(p.guard)).test(p.guard),
+          `the guard "${p.guard}" does not match itself once escaped, so its probe would filter to nothing`,
+        ).toBe(true);
+        checked++;
+      }
+    }
+    expect(checked, 'no probes were checked, so this asserted nothing').toBeGreaterThan(100);
+  }, 60_000);
+
+  it('and a metacharacter is a character, not a pattern', () => {
+    // Unescaped, `.` matches any character and this test would find a guard nobody named.
+    expect(new RegExp(asPattern('a level is a place.')).test('a level is a placeX')).toBe(false);
+    expect(new RegExp(asPattern('a level is a place.')).test('a level is a place.')).toBe(true);
+    // Unescaped, this throws rather than matching — an unbalanced group.
+    expect(() => new RegExp(asPattern('the gap (in units) closed'))).not.toThrow();
+  });
+
+  /*
+    ⚠️ **THE OTHER WAY THE FILTER CAN LIE, AND IT IS THE ONE THAT COSTS THE MOST.** A pattern that
+    resolves to no test makes vitest run nothing and exit ZERO — no failures, no error — which reads
+    as `the suite stayed green` and would be reported as a guard that does not fire. It is
+    `planEdit`'s stale-anchor failure arriving on the test side, and while the whole suite was run it
+    could not happen, because a suite always ran something.
+  */
+  it('THE NEW CLASS: a guard title that resolves to no test is refused, not read as green', () => {
+    expect(verdictOf({ ran: 0, failed: [] }, 'a test that was renamed')).toBe('NO SUCH GUARD');
+  });
+
+  it('and a guard that fires is the only thing that passes', () => {
+    expect(verdictOf({ ran: 1, failed: ['the boss mix does not clip'] }, 'does not clip')).toBe('red');
+    expect(verdictOf({ ran: 1, failed: [] }, 'does not clip')).toBe('NOT THIS GUARD');
+    // Red on something else is NOT a pass, and the caller re-runs the suite to say what.
+    expect(verdictOf({ ran: 2, failed: ['some other test'] }, 'does not clip')).toBe('NOT THIS GUARD');
   });
 });
