@@ -125,16 +125,31 @@ describe('a theme mixes the music and cannot break it', () => {
     */
     const loops = bakeLoops(SAMPLE_RATE);
     const longest = Math.max(...MUSIC_LAYERS.map((l) => loops[l].length));
+    /*
+      ⚠️ **THE GAINS ARE RESOLVED ONCE PER (THEME, RUNG) AND WERE RESOLVED ONCE PER SAMPLE** —
+      `docs/decisions/0113-there-is-one-composition-and-seven-levels.md`. `mixOf` does a table lookup
+      and a clamp; multiplied by seventeen layers, 1.2 million samples, seven themes and six rungs,
+      that is about 878 million calls to compute 714 numbers. It ran inside the 60s budget while the
+      phrase was eight bars and timed out the moment it became sixteen.
+
+      ⚠️ **NOTHING ABOUT WHAT IS MEASURED CHANGES**, which is the only reason this is a hoist rather
+      than a smaller assertion: the same samples, the same shaper, the same peak. A test made faster
+      by measuring less would be the thing
+      `docs/decisions/0027-measure-the-picture-not-the-model.md` is about, arriving in the guard.
+    */
     for (const theme of THEME_KINDS) {
       for (const level of MUSIC_LEVELS) {
+        const gains = MUSIC_LAYERS.map((layer) => MUSIC_LADDER[level][layer] * mixOf(theme, layer));
+        const open = MUSIC_LAYERS.map((layer, index) => index).filter((index) => gains[index] !== 0);
         let peak = 0;
         for (let i = 0; i < longest; i++) {
           let sum = 0;
-          for (const layer of MUSIC_LAYERS) {
-            const gain = MUSIC_LADDER[level][layer] * mixOf(theme, layer);
-            if (gain !== 0) sum += loops[layer][i % loops[layer].length]! * gain;
+          for (const index of open) {
+            const buffer = loops[MUSIC_LAYERS[index]!]!;
+            sum += buffer[i % buffer.length]! * gains[index]!;
           }
-          peak = Math.max(peak, Math.abs(saturate(sum * MUSIC_GAIN, MUSIC_DRIVE)));
+          const shaped = Math.abs(saturate(sum * MUSIC_GAIN, MUSIC_DRIVE));
+          if (shaped > peak) peak = shaped;
         }
         expect(peak, `${theme} at ${level} peaks at ${peak.toFixed(3)} of full scale`).toBeLessThanOrEqual(1);
       }

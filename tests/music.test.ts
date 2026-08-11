@@ -103,6 +103,23 @@ describe('four loops that cannot drift', () => {
     );
   });
 
+  /*
+    ⚠️ **THE THREE TESTS BELOW CARRY AN EXPLICIT TIMEOUT AND IT IS A MEASUREMENT, NOT A NUISANCE**
+    — `docs/decisions/0113-there-is-one-composition-and-seven-levels.md`. The phrase went from eight
+    bars to sixteen, so `bakeLoops` synthesises 201 seconds of audio where it used to do 99, and each
+    of these calls it. Alone they take about 2.3s; under `vitest`'s parallel workers they reach 5.3s
+    and the 5000ms default fired.
+
+    ⚠️ **`docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md` is why this is a
+    comment rather than a rerun.** It says an intermittent guard has found something and *flaky* is
+    not what it found — so it was established: the failure text is `Test timed out in 5000ms`, the
+    same three tests pass under `--no-file-parallelism`, and the quantity each ASSERTS is unchanged.
+    A slow test and a wrong one look identical from a red suite and are not the same thing.
+
+    ⚠️ **The bake cost itself is guarded elsewhere and deliberately not here** — `tests/sound.test.ts`
+    holds the longest single job and the resident megabytes, which are the numbers that would actually
+    hurt a player. A timeout in a correctness test guards the CI machine, not the game.
+  */
   it('and every layer bakes to exactly its own declared length', () => {
     const loops = bakeLoops(SAMPLE_RATE);
     for (const layer of MUSIC_LAYERS) {
@@ -110,7 +127,7 @@ describe('four loops that cannot drift', () => {
         Math.round(secondsOfLayer(layer) * SAMPLE_RATE),
       );
     }
-  });
+  }, 30_000);
 
   it('and none of them is silence, which is the way a layer can be missing without failing', () => {
     /*
@@ -125,7 +142,7 @@ describe('four loops that cannot drift', () => {
       expect(peak, `${layer} baked to silence`).toBeGreaterThan(0.01);
       expect(peak, `${layer} clips on its own, before the other three are added`).toBeLessThanOrEqual(1);
     }
-  });
+  }, 30_000);
 
   it('THE SEAM: a loop is not quieter at its start than at its end, because a loop has no start', () => {
     /*
@@ -174,7 +191,7 @@ describe('four loops that cannot drift', () => {
         `${layer} ends at ${tail.toFixed(4)} and begins at ${head.toFixed(4)} — the join drops something`,
       ).toBeGreaterThanOrEqual(tail * 0.75);
     }
-  });
+  }, 30_000);
 
   it('and the four together stay inside full scale at the loudest level there is', () => {
     /*

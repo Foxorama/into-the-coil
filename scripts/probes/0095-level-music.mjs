@@ -25,7 +25,7 @@ export const PROBES = [
     guard: '0095 — THE AMENDMENT: every layer is a whole MULTIPLE of the shortest, which is the same guarantee',
     edit: {
       path: 'src/content/music.ts',
-      find: '  chords: 8,',
+      find: '  chords: 16,',
       replace: '  chords: 3,',
     },
   },
@@ -76,7 +76,7 @@ export const PROBES = [
     guard: 'and something is open at EVERY level, because the music never stops',
     edit: {
       path: 'src/content/music.ts',
-      find: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.5, auraFast: 0.28 },',
+      find: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, call: 0.62, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.5, auraFast: 0.28 },',
       replace: '  run: { drone: 0, bass: 0, beat: 0, engine: 0.85, chords: 0.88, drive: 0, lead: 0, auraSlow: 0.5, auraFast: 0.28 },',
     },
   },
@@ -93,8 +93,13 @@ export const PROBES = [
     guard: '0095 — every pattern spans EXACTLY its own layer, which is both a floor and a ceiling',
     edit: {
       path: 'src/content/music.ts',
-      find: '      steps: [0, -4, 3, -2, 0, -4, -2, -5],\n      pitched: true,\n      perBeat: 0.25,\n      octave: 1,\n      note: { wave: \'saw\', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.17, attack: 0.06, curve: 1.5, lowFrom: 900, lowTo: 2400, q: 1.2 },',
-      replace: '      steps: [0, -4],\n      pitched: true,\n      perBeat: 0.25,\n      octave: 1,\n      note: { wave: \'saw\', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.17, attack: 0.06, curve: 1.5, lowFrom: 900, lowTo: 2400, q: 1.2 },',
+      // ⚠️ Anchored on the SECOND chord voice, whose `accents` line follows `octave` directly — the
+      // first now carries a comment between the two, and a probe that includes it would restrand the
+      // moment anybody rewords a sentence. 0113 lengthened this layer to sixteen bars, so the break
+      // truncates a sixteen-bar progression to two rather than an eight-bar one to one; the defect
+      // it describes — a pattern that spans a fraction of its layer — is unchanged.
+      find: '      steps: [\n        0, -4, 3, -2, 0, -4, -2, -5,\n        3, -2, 0, -4, 3, -2, -4, -5,\n      ],\n      pitched: true,\n      perBeat: 0.25,\n      octave: 1,\n      accents: [1, 0.82, 0.9, 0.76, 1, 0.84, 0.92, 0.68],\n      note: { wave: \'saw\', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.17, attack: 0.07, curve: 1.5, lowFrom: 890, lowTo: 2380, q: 1.2 },',
+      replace: '      steps: [0, -4],\n      pitched: true,\n      perBeat: 0.25,\n      octave: 1,\n      accents: [1, 0.82, 0.9, 0.76, 1, 0.84, 0.92, 0.68],\n      note: { wave: \'saw\', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.17, attack: 0.07, curve: 1.5, lowFrom: 890, lowTo: 2380, q: 1.2 },',
     },
   },
 ];

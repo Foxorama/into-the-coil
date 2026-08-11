@@ -71,7 +71,7 @@ export const PROBES = [
     guard: 'THE ASK: the aura follows the boss in, and is silent when it is far away',
     edit: {
       path: 'src/content/music.ts',
-      find: "  boss: { drone: 0.24, bass: 0, beat: 0, sub: 0.98, engine: 0.98, perc: 0.95, chords: 0.88, groove: 0.96, arp: 0.78, hook: 0.86, drive: 0.94, toll: 0.86, lead: 0.98, stomp: 0.96, auraSlow: 1, auraFast: 0.9 },",
+      find: "  boss: { drone: 0.2, bass: 0, beat: 0, sub: 1.22, engine: 1.1, perc: 0.9, chords: 0.8, groove: 0.98, arp: 0.75, call: 0.81, hook: 0.83, drive: 0.88, toll: 0.79, lead: 0.93, stomp: 0.9, auraSlow: 1, auraFast: 0.9 },",
       replace: "  boss: { drone: 0.4, bass: 0, beat: 0, engine: 0.95, chords: 0.95, drive: 0.8, lead: 0.85, auraSlow: 0, auraFast: 0 },",
     },
   },
