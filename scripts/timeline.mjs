@@ -21,7 +21,7 @@ import {
 } from '../src/content/music.ts';
 import { LEVELS } from '../src/content/levels.ts';
 import { mixOf } from '../src/content/themes.ts';
-import { auraBuild, auraFor, musicLevelFor } from '../src/app/music.ts';
+import { auraBuild, auraFor, musicLevelFor, nextBarFrom } from '../src/app/music.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 
@@ -42,8 +42,14 @@ export const UNITS_PER_SECOND = SCROLL_PER_STEP * STEPS_PER_SECOND;
  */
 export function inBars(second) {
   const bars = second / BAR_SECONDS;
-  const beat = (bars - Math.floor(bars)) * 4;
-  return { bars, beat, onBar: beat < 0.02 || beat > 3.98 };
+  const raw = (bars - Math.floor(bars)) * 4;
+  /*
+    ⚠️ **A beat of 3.9999 IS a downbeat, and printing it as 4.00 makes a reader mistrust the rig.**
+    129.6 / 1.6 is 80.99999999999999 in binary floating point, so an exact bar line lands a
+    ten-thousandth of a beat early. Reported as zero, which is what it is.
+  */
+  const beat = raw > 3.98 ? 0 : raw;
+  return { bars, beat, onBar: beat < 0.02 };
 }
 
 /**
@@ -77,6 +83,15 @@ export function rungMarks(kind, fightSeconds, step = 1 / 64) {
   }
   for (let i = 0; i < marks.length; i++) {
     marks[i].lasts = (i + 1 < marks.length ? marks[i + 1].second : total) - marks[i].second;
+    /*
+      ⚠️ **WHERE THE GAME DECIDES AND WHERE THE PLAYER HEARS IT ARE TWO DIFFERENT INSTANTS, AND
+      REPORTING ONLY THE FIRST IS HOW THIS RIG WOULD LIE ABOUT ITS OWN FIX** — 0117. The rung still
+      turns over wherever a camera crosses a distance, which is mid-bar twenty-seven times out of
+      twenty-eight; what moves on the downbeat is the MUSIC. A table that printed only `second` would
+      have gone on reporting the defect after it was fixed.
+    */
+    marks[i].movesAt = nextBarFrom(0, marks[i].second);
+    marks[i].moves = inBars(marks[i].movesAt);
   }
   return marks;
 }

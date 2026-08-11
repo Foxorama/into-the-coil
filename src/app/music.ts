@@ -24,6 +24,7 @@
 import {
   BEAT_SECONDS,
   PHRASE_SECONDS,
+  BAR_SECONDS,
   secondsOfLayer,
   MUSIC,
   MUSIC_DRIVE,
@@ -534,6 +535,78 @@ export const DUCK_UP_SECONDS = 0.32;
 export const AURA_RAMP_SECONDS = 0.4;
 
 /**
+ * The next bar line on the loops' own clock, at or after `now`.
+ *
+ * ⚠️ **`anchor` is `anchorAudio` — the instant the loop set was last put on the air**, so it is
+ * position zero of every layer and bar zero of the piece. A rephase (0094) re-anchors it and the
+ * grid moves with the music, which is the only way this stays true.
+ *
+ * ⚠️ **`now` before the anchor yields the anchor**, which is the start case: the set is scheduled a
+ * moment ahead, and the first bar is the first bar.
+ */
+export function nextBarFrom(anchor: number, now: number): number {
+  const since = now - anchor;
+  if (since <= 0) return anchor;
+  return anchor + Math.ceil(since / BAR_SECONDS) * BAR_SECONDS;
+}
+
+/** One gain to write: which layer, what it is heading for, when the ramp starts and how fast. */
+export interface RampWrite {
+  layer: MusicLayer;
+  target: number;
+  at: number;
+  tau: number;
+}
+
+/**
+ * Every gain that has to move, and when — the whole of what a change of rung does.
+ *
+ * ── A SECTION CHANGE LANDS ON A DOWNBEAT, AND NOT ONE EVER HAS ─────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0117-a-section-change-lands-on-the-beat.md`.** `setLevel` wrote
+ * `setTargetAtTime(target, ctx.currentTime, …)` — the ramp began at the instant a frame noticed the
+ * rung had changed, which is wherever the camera happened to cross a distance.
+ * `docs/decisions/0116-the-rig-plays-the-level.md` measured where that lands: **twenty-seven of the
+ * game's twenty-eight rung changes are mid-bar**, and the one that is not is an accident of
+ * `bossAt: 4320` dividing evenly.
+ *
+ * ⚠️ **A CHANGE HEARD AWAY FROM THE BEAT IS NOT HEARD AS A CHANGE.** It reads as the mix wobbling,
+ * which is *"there is only a very subtle difference in the sound between push and surge"* —
+ * `docs/decisions/0114-the-fight-is-a-different-piece.md`, reported twice and answered twice with a
+ * gain. **This is the first answer to it that is not one.**
+ *
+ * ⚠️ **THE AURA IS DELIBERATELY NOT QUANTISED, AND THAT IS 0091 RATHER THAN AN OMISSION.** It tracks
+ * a distance the player is steering; a dread that arrived on the next downbeat would be reporting
+ * where they were rather than where they are, which is the exact reason its ramp is already a quarter
+ * of a level change's.
+ *
+ * ⚠️ **AND A LAYER WHOSE TARGET HAS NOT MOVED IS NOT WRITTEN AT ALL.** `setLevel` runs every frame;
+ * re-scheduling a ramp that is halfway through would hold it at its current value until the *next*
+ * bar and then resume, so the build would stair-step up in bar-sized steps. Writing only on a change
+ * is what makes the quantised ramp a single smooth move — it is correctness, not a saving.
+ *
+ * @param lastTargets what each layer was last told to head for, or `null` for a layer never written
+ */
+export function levelWrites(
+  level: MusicLevel,
+  theme: ThemeKind,
+  nearness: number,
+  anchor: number,
+  now: number,
+  lastTargets: Partial<Record<MusicLayer, number>>,
+): RampWrite[] {
+  const bar = nextBarFrom(anchor, now);
+  const writes: RampWrite[] = [];
+  for (const layer of MUSIC_LAYERS) {
+    const aura = AURA_LAYERS.includes(layer);
+    const target = MUSIC_LADDER[level][layer] * mixOf(theme, layer) * (aura ? nearness : 1);
+    if (!aura && lastTargets[layer] === target) continue;
+    writes.push({ layer, target, at: aura ? now : bar, tau: (aura ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3 });
+  }
+  return writes;
+}
+
+/**
  * The Web Audio half.
  *
  * ⚠️ **Four sources and four gains for the whole run, created once.** This is the answer to the
@@ -561,8 +634,15 @@ export function makeMusicOut(
   let near = 0;
   /** Which place the run is in — 0107. Its mix rides over every rung. */
   let place: ThemeKind = 'approach';
-  /** Audio time at which loop position zero last began. */
+  /** Audio time at which loop position zero last began. Bar zero of the piece — 0117's grid. */
   let anchorAudio = 0;
+  /*
+    ⚠️ **What each layer was last TOLD to head for, which is not what its gain currently reads** —
+    0117. `setLevel` runs every frame and a quantised ramp takes a bar to arrive, so comparing against
+    the live `gain.value` would re-write a ramp that is halfway through and stall it at the next bar.
+    What decides whether a layer moves is whether its DESTINATION changed.
+  */
+  const headingFor: Partial<Record<MusicLayer, number>> = {};
   /** Sim seconds at that same instant, or `null` until the first frame after a start. */
   let anchorSim: number | null = null;
 
@@ -699,26 +779,22 @@ export function makeMusicOut(
       near = nearness;
       place = theme;
       if (!on) return;
-      for (const layer of MUSIC_LAYERS) {
-        /*
-          ⚠️ **The aura follows the boss and everything else follows the level** — 0091. Its row in
-          the ladder is a CEILING, and this is where it stops being one.
+      /*
+        ⚠️ **THE WHOLE DECISION IS `levelWrites` AND NONE OF IT IS HERE** — 0117. What to write, when
+        the ramp starts and whether a layer moves at all are one piece of arithmetic, and it is
+        exported because a guard cannot reach a loop inside a closure over an `AudioContext`. That is
+        `docs/decisions/0116-the-rig-plays-the-level.md`'s lesson arriving one file over: the first
+        guards written for the rig asserted that a word appeared in a file, and `npm run prove`
+        reported STILL GREEN.
 
-          ⚠️ **And it ramps far faster than a level change does.** A level is a structural move and
-          wants a second and a half; the aura is the player flying at something, and at that time
-          constant it would still be arriving after they had backed off again.
-        */
-        const aura = AURA_LAYERS.includes(layer);
-        /*
-          ⚠️ **AND THE THEME MIXES IT — 0107.** A place is a multiplier over the rung the ladder
-          already decided, never a ladder of its own: 0090's *the ladder only ever opens layers* and
-          0102's *every rung adds something* are properties of `MUSIC_LADDER`, and a theme that could
-          set gains outright would be able to break both from a table about colour. Scaling keeps the
-          build's shape and changes what the build is made of.
-        */
-        const target = MUSIC_LADDER[level][layer] * mixOf(theme, layer) * (aura ? nearness : 1);
-        gains[layer].gain.cancelScheduledValues(ctx.currentTime);
-        gains[layer].gain.setTargetAtTime(target, ctx.currentTime, (aura ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3);
+        ⚠️ **`anchorAudio` is the clock, not `currentTime`.** It is position zero of every loop, so
+        the bar grid is the music's own and a rephase (0094) moves both together.
+      */
+      const now = ctx.currentTime;
+      for (const { layer, target, at, tau } of levelWrites(level, theme, nearness, anchorAudio, now, headingFor)) {
+        headingFor[layer] = target;
+        gains[layer].gain.cancelScheduledValues(now);
+        gains[layer].gain.setTargetAtTime(target, at, tau);
       }
     },
     duck(amount: number): void {

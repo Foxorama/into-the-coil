@@ -18,10 +18,16 @@ export const PROBES = [
     */
     broke: 'the rig given its own ramp constant, so the transitions it writes are not the ones the game plays',
     guard: 'THE ONE THAT DRIFTED TWICE: every mixer quantity the rig uses is imported, never restated',
+    /*
+      ⚠️ ANCHORED ON `busOf`, WHICH IS THE ONE LINE IN THIS FILE THAT CANNOT MOVE. The first version
+      anchored on the import block and was stranded by 0117 adding one name to it — `anchorFailures`
+      refused the whole run before a tree was copied, which is 0019 working, and it is also a lesson
+      about where to put an anchor: not in a list that grows.
+    */
     edit: {
       path: 'scripts/hear.mjs',
-      find: '  auraBuild,\n  auraFor,\n  auraNearness,\n  musicLevelFor,\n} from \'../src/app/music.ts\';',
-      replace: '  auraBuild,\n  auraFor,\n  auraNearness,\n  musicLevelFor,\n} from \'../src/app/music.ts\';\nconst RAMP_SECONDS = 1.6;',
+      find: 'const busOf = (sum) => saturate(sum * MUSIC_GAIN, MUSIC_DRIVE) * MASTER_GAIN;',
+      replace: 'const busOf = (sum) => saturate(sum * MUSIC_GAIN, MUSIC_DRIVE) * MASTER_GAIN;\nconst RAMP_SECONDS = 1.6;',
     },
   },
   {
