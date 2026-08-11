@@ -52,8 +52,15 @@ export const PROBES = [
       of every level. Closing `call` restores exactly that state, and the ladder's own rule — every
       rung opens something — is what catches it.
     */
+    /*
+      ⚠️ THIS PROBE POINTED AT THE WRONG GUARD AND `npm run prove` SAID SO. It first named *opens a
+      layer at every step*, and the suite stayed GREEN — `run` opens five other layers and not one of
+      them is a melody, so the ladder's own rule has no opinion about a level with no tune in it. A
+      probe that does not fire is the harness reporting a MISSING guard, which is the more valuable
+      half of 0019. The guard named below was written because of this line.
+    */
     broke: "the level's opening rung given no melodic layer, which is the reported defect exactly",
-    guard: 'opens a layer at every step and never opens one twice',
+    guard: 'THE REPORTED ONE: every rung inside a level has a tune in it, not just a bed',
     edit: {
       path: 'src/content/music.ts',
       find: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, call: 0.62,',
