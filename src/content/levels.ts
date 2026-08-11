@@ -498,9 +498,14 @@ const DESCENT: readonly WaveEntry[] = [
   { at: 1076, enemy: 'weaver', formation: 'vee', count: 5, lane: 50 },
   { at: 1145, enemy: 'lancer', formation: 'vee', count: 5, lane: 62 },
   { at: 1215, enemy: 'warden', formation: 'line', count: 3, lane: 45 },
-  // ⚠️ Filler, and it is filling something the density guard measured rather than something anybody
-  // felt: two three-wide waves in a row is a six-enemy trough, and wardens are four health each so
-  // making THEM more numerous would have changed the level's difficulty to fix its pacing.
+  // ⚠️ Filler, and it was filling something the density guard measured rather than something anybody
+  // felt: two three-wide waves in a row used to be a six-enemy trough, and wardens are four health
+  // each so making THEM more numerous would have changed the level's difficulty to fix its pacing.
+  //
+  // ⚠️ **IT IS NO LONGER LOAD-BEARING ON ITS OWN** — 0113 compressed every level by thirty seconds
+  // without removing a body, so the view holds more at once and this wave can go without the guard
+  // noticing. Driven: one removed is green, two are green, three go red. It stays because the level
+  // was authored with it, not because the floor still needs it.
   { at: 1249, enemy: 'drifter', formation: 'line', count: 5, lane: 62 },
   { at: 1284, enemy: 'turret', formation: 'line', count: 3, lane: 55 },
   { at: 1353, enemy: 'charger', formation: 'column', count: 5, lane: 25, origin: 'acrossPlus' },

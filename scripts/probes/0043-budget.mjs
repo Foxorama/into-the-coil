@@ -86,11 +86,25 @@ export const PROBES = [
       each other and the view holds six — which is a real thin spot, was really there, and was really
       invisible to the sampling this guard used to do.
     */
-    broke: 'a filler wave removed, leaving a six-enemy trough between two small waves',
+    /*
+      ⚠️ **IT WAS ONE WAVE AND IT TAKES THREE NOW, AND THAT IS THE COMPRESSION WORKING.**
+      `docs/decisions/0113-there-is-one-composition-and-seven-levels.md` took thirty seconds out of
+      every level without removing a body, so the view holds more at once and a single missing filler
+      is absorbed. `npm run prove` said so — this probe went STILL GREEN — and the honest answer is
+      that the thin spot it demonstrated is no longer thin, not that the guard stopped working.
+
+      ⚠️ **Driven rather than reasoned: one removed is green, two are green, three go red.** That is a
+      measurement of how much slack the denser level has, and it is the number to re-take the day the
+      density moves again.
+    */
+    broke: 'three waves in a row removed, which is what a trough costs in a level this dense',
     guard: 'keeps enough on screen at once to be a shooter',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 1249, enemy: 'drifter', formation: 'line', count: 5, lane: 62 },\n",
+      find:
+        "  { at: 1249, enemy: 'drifter', formation: 'line', count: 5, lane: 62 },\n" +
+        "  { at: 1284, enemy: 'turret', formation: 'line', count: 3, lane: 55 },\n" +
+        "  { at: 1353, enemy: 'charger', formation: 'column', count: 5, lane: 25, origin: 'acrossPlus' },\n",
       replace: '',
     },
   },
