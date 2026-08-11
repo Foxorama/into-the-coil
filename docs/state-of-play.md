@@ -57,6 +57,14 @@ like in practice.
 ⚠️ **`npm test` is not `npm run prove`.** A change to a shared quantity wants the whole proof before
 it is pushed — guards stop reaching their subject without ever going red, and only a full run sees it.
 
+⚠️ **AND `prove` IS WHAT CI COSTS — 37 of its 40 minutes.**
+[0115](decisions/0115-a-probe-runs-its-own-guard.md) is where that got to, and it takes an option
+[0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) measured and refused five days
+earlier. **Read 0115 before proposing another CI change**: it names the next lever (sharding across
+runner jobs, which costs a branch-protection change) and the two savings that are refused rather than
+un-thought-of. The audio arc 0089–0114 is what changed 0054's arithmetic — one suite is 42% of the
+run.
+
 ---
 
 ## What is settled
@@ -141,6 +149,7 @@ it is pushed — guards stop reaching their subject without ever going red, and 
 | **a branch starts at `main` AND the next one waits — both halves checked** | [0033](decisions/0033-a-branch-starts-at-main.md), [0075](decisions/0075-the-serialisation-is-checked.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
+| **a probe runs the test it NAMES, and a suite bakes the music once** | [0115](decisions/0115-a-probe-runs-its-own-guard.md) — amends 0054's *whole suite* clause |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 

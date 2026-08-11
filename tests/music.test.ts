@@ -25,7 +25,8 @@ import {
   AURA_ONSET_UNITS,
   type MusicLayer,
 } from '../src/content/music.ts';
-import { auraBuild, auraFor, auraNearness, auraNearnessFor, bakeLayer, bakeLoops, musicLevelFor, rephaseIn } from '../src/app/music.ts';
+import { auraBuild, auraFor, auraNearness, auraNearnessFor, bakeLayer, musicLevelFor, rephaseIn } from '../src/app/music.ts';
+import { loopsAt } from './bakes.ts';
 import { STEPS_PER_BEAT } from '../src/content/music.ts';
 import { MAX_STEPS } from '../src/app/loop.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
@@ -123,7 +124,7 @@ describe('four loops that cannot drift', () => {
     hurt a player. A timeout in a correctness test guards the CI machine, not the game.
   */
   it('and every layer bakes to exactly its own declared length', () => {
-    const loops = bakeLoops(SAMPLE_RATE);
+    const loops = loopsAt(SAMPLE_RATE);
     for (const layer of MUSIC_LAYERS) {
       expect(loops[layer].length, `${layer} is a different length from the loop it declares`).toBe(
         Math.round(secondsOfLayer(layer) * SAMPLE_RATE),
@@ -137,7 +138,7 @@ describe('four loops that cannot drift', () => {
       ladder would still climb, the gains would still ramp, and one quarter of the music would be
       gone with every other guard green.
     */
-    const loops = bakeLoops(SAMPLE_RATE);
+    const loops = loopsAt(SAMPLE_RATE);
     for (const layer of MUSIC_LAYERS) {
       let peak = 0;
       for (const s of loops[layer]) peak = Math.max(peak, Math.abs(s));
@@ -177,7 +178,7 @@ describe('four loops that cannot drift', () => {
       the second time in this project a guard has sampled one phase of a periodic quantity and
       reported the phase — `docs/decisions/0087-a-pickup-never-parks.md` has the first.
     */
-    const loops = bakeLoops(SAMPLE_RATE);
+    const loops = loopsAt(SAMPLE_RATE);
     const window = Math.round(SAMPLE_RATE * 0.04);
     for (const layer of MUSIC_LAYERS) {
       const buffer = loops[layer];
@@ -201,7 +202,7 @@ describe('four loops that cannot drift', () => {
       kick and the bass land on the same beat by construction, so peaks add rather than averaging.
       This is the one number that decides whether a boss fight crunches.
     */
-    const loops = bakeLoops(SAMPLE_RATE);
+    const loops = loopsAt(SAMPLE_RATE);
     let peak = 0;
     let raw = 0;
     for (let i = 0; i < loops.drone.length; i++) {
@@ -664,7 +665,7 @@ describe('0095 — the level has a piece of its own, and it covers the band', ()
     subject exactly — and the answer there is to establish which it is rather than to re-run. It was
     the guard's own cost, not the code's.
   */
-  const baked = bakeLoops(SAMPLE_RATE);
+  const baked = loopsAt(SAMPLE_RATE);
   const mixes = new Map<string, Float32Array>();
 
   /** One phrase of a level, mixed at a rung, exactly as `src/app/music.ts` would play it. */
@@ -1350,7 +1351,7 @@ describe('0108 — the bed is felt, the hands are on it, and the boss arrives', 
     counterpoint it"*, *"the boss music isn't increasing proportionally"*, and — for the third round
     running — *"the metronome beats are still louder… every mix sounds the same."*
   */
-  const baked = bakeLoops(SAMPLE_RATE);
+  const baked = loopsAt(SAMPLE_RATE);
   const mixes = new Map<string, Float32Array>();
 
   /** One phrase at a rung, through the same shaper the bus runs. */
