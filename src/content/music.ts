@@ -467,7 +467,30 @@ export const MUSIC_GAIN = 0.46;
  * the clipping question lives in `MUSIC_GAIN` above and this is a free lever up to the crest it
  * spends. `tests/music.test.ts` holds the crest rather than this table.
  */
-export const MUSIC_DRIVE = 0.22;
+/*
+  ── 0.22 → 0.3, AND IT IS THE SHAPER DOING THE JOB A GAIN COULD NOT ──────────────────────────────
+
+  ⚠️ **`docs/decisions/0114-the-fight-is-a-different-piece.md`.** Reported: *"the boss music was
+  better, but too subdued and quiet against the game sfx themselves."* Measured with
+  `node scripts/hear.mjs --play`, the fight was **+4.4 dB** over the cues where mid-level was +6.0 —
+  the quietest the music gets against the effects is the one place it should be loudest.
+
+  ⚠️ **RAISING THE RUNG DID NOT WORK AND THE PEAK IS WHY.** The fight already sits at 0.95 of full
+  scale with the cues in it; every attempt to gain its way out clipped `debris` at the boss. What a
+  bus shaper buys is exactly this: more loudness at the SAME peak, which is the definition of the
+  problem.
+
+  ⚠️ **0104's guard is what says this is safe.** *The shaper has not flattened the ladder it is meant
+  to make room for* — every rung still arrives louder than the one below at 0.3, and it is the
+  measurement that decided the value rather than an ear. Driven: 0.22 gives the fight +5.4 dB, 0.3
+  gives +6.4, and both are green.
+
+  ⚠️ **AND `debris` STOPPED DOUBLE-COUNTING THE DRUMS in the same change.** Its mix leant on `perc`
+  1.4 and `stomp` 1.3 — authored when the fight was not percussion-led. It is now, so the theme and
+  the rung were multiplying the same idea; the theme gives way, exactly as `nebula` and `forge` did
+  when the boss rung took over the bass.
+*/
+export const MUSIC_DRIVE = 0.3;
 
 /**
  * How far into a level the music starts listening for the boss, in world units.
@@ -930,10 +953,10 @@ export const MUSIC_LADDER: Record<MusicLevel, Record<MusicLayer, number>> = {
   calm: { drone: 0.55, bass: 0.7, beat: 0.5, sub: 0, engine: 0, perc: 0, chords: 0, groove: 0, arp: 0, ride: 0, call: 0, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
   run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, ride: 0, call: 0.62, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.5, auraFast: 0.28 },
   push: { drone: 0.34, bass: 0, beat: 0, sub: 1.06, engine: 0.96, perc: 0.76, chords: 0.87, groove: 0.94, arp: 0.64, ride: 0.58, call: 0.68, hook: 0.64, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0.7, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.62, auraFast: 0.4 },
-  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.88, groove: 0.94, arp: 0.7, ride: 0.68, call: 0.74, hook: 0.74, drive: 0.72, toll: 0, crash: 0.78, dread: 0, lead: 0.78, counter: 0.8, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },
-  approach: { drone: 0.34, bass: 0, beat: 0, sub: 1.1, engine: 1.02, perc: 0.86, chords: 0.86, groove: 0.95, arp: 0.72, ride: 0.72, call: 0.76, hook: 0.78, drive: 0.8, toll: 0.76, crash: 0.8, dread: 0.72, lead: 0.82, counter: 0.84, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.88, auraFast: 0.72 },
-  boss: { drone: 0.34, bass: 0, beat: 0, sub: 1.12, engine: 1.04, perc: 0.9, chords: 0, groove: 0, arp: 0, ride: 0.8, call: 0, hook: 0, drive: 0.82, toll: 0.86, crash: 0.84, dread: 0.92, lead: 0, counter: 0, stomp: 0.82, frenzy: 0.74, wraith: 0, auraSlow: 0.96, auraFast: 0.86 },
-  bossPeak: { drone: 0.28, bass: 0, beat: 0, sub: 1.1, engine: 1.02, perc: 0.88, chords: 0, groove: 0, arp: 0, ride: 0.8, call: 0, hook: 0, drive: 0.84, toll: 0.84, crash: 0.84, dread: 0.92, lead: 0, counter: 0, stomp: 0.88, frenzy: 0.82, wraith: 0.78, auraSlow: 1, auraFast: 0.95 },
+  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.86, groove: 0.94, arp: 0.7, ride: 0.68, call: 0.7, hook: 0.74, drive: 0.78, toll: 0, crash: 0.9, dread: 0, lead: 0.78, counter: 1.05, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },
+  approach: { drone: 0.34, bass: 0, beat: 0, sub: 1.1, engine: 1.02, perc: 0.86, chords: 0.84, groove: 0.95, arp: 0.72, ride: 0.72, call: 0.72, hook: 0.78, drive: 0.84, toll: 0.78, crash: 0.92, dread: 0.74, lead: 0.82, counter: 1.08, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.88, auraFast: 0.72 },
+  boss: { drone: 0.36, bass: 0, beat: 0, sub: 1.2, engine: 1.12, perc: 0.96, chords: 0, groove: 0, arp: 0, ride: 0.9, call: 0, hook: 0, drive: 0.94, toll: 0.92, crash: 0.94, dread: 1.02, lead: 0, counter: 0, stomp: 0.92, frenzy: 0.86, wraith: 0, auraSlow: 1, auraFast: 0.9 },
+  bossPeak: { drone: 0.3, bass: 0, beat: 0, sub: 1.2, engine: 1.1, perc: 0.95, chords: 0, groove: 0, arp: 0, ride: 0.9, call: 0, hook: 0, drive: 0.95, toll: 0.9, crash: 0.94, dread: 1, lead: 0, counter: 0, stomp: 0.97, frenzy: 0.92, wraith: 0.88, auraSlow: 1.02, auraFast: 0.94 },
 };
 
 /** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */

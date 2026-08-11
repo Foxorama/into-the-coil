@@ -178,7 +178,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     title: 'The Debris Line',
     space: { vivid: '#0d1016', 'high-contrast': '#000305' },
     nebula: { vivid: '#2a3a4c', 'high-contrast': '#16222c' },
-    mix: { perc: 1.4, engine: 1.15, groove: 1.15, drone: 0.6, chords: 0.78, stomp: 1.3 },
+    mix: { perc: 1.12, engine: 1.04, groove: 1.15, drone: 0.6, chords: 0.78, stomp: 1.08 },
   },
   /**
    * Level four. Thin, bright and fast.

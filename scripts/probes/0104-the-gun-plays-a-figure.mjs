@@ -146,7 +146,7 @@ export const PROBES = [
     guard: '0104 — THE REPORTED ONE: the bed is not quieter than the gun playing over it',
     edit: {
       path: 'src/content/music.ts',
-      find: 'export const MUSIC_DRIVE = 0.22;',
+      find: 'export const MUSIC_DRIVE = 0.3;',
       replace: 'export const MUSIC_DRIVE = 0;',
     },
   },
@@ -189,7 +189,7 @@ export const PROBES = [
     guard: 'opens a layer at every step and never opens one twice',
     edit: {
       path: 'src/content/music.ts',
-      find: '  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.88, groove: 0.94, arp: 0.7, ride: 0.68, call: 0.74, hook: 0.74, drive: 0.72, toll: 0, crash: 0.78, dread: 0, lead: 0.78, counter: 0.8, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },',
+      find: '  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.86, groove: 0.94, arp: 0.7, ride: 0.68, call: 0.7, hook: 0.74, drive: 0.78, toll: 0, crash: 0.9, dread: 0, lead: 0.78, counter: 1.05, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },',
       /*
         ⚠️ **`drive` IS CLOSED HERE TOO, AND THAT IS 0113 CHANGING WHAT THIS PROBE HAS TO SAY.**
         `docs/decisions/0113-there-is-one-composition-and-seven-levels.md` moved `drive` down from
@@ -202,7 +202,7 @@ export const PROBES = [
         layers have to be closed to produce it, and that is a fact about the ladder rather than about
         the guard — so the fix is here and not in `tests/music.test.ts`.
       */
-      replace: '  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.88, groove: 0.94, arp: 0.7, ride: 0.68, call: 0.74, hook: 0, drive: 0.72, toll: 0, crash: 0.78, dread: 0, lead: 0, counter: 0.8, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },',
+      replace: '  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.86, groove: 0.94, arp: 0.7, ride: 0.68, call: 0.7, hook: 0, drive: 0.78, toll: 0, crash: 0.9, dread: 0, lead: 0, counter: 1.05, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },',
     },
   },
 ];

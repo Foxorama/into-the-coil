@@ -333,6 +333,19 @@ if (args.has('play')) {
       put(cues, 'hit', s + Math.floor(scatter.range(0, STEPS_PER_BEAT * 2)));
       put(cues, 'threat', s + Math.floor(scatter.range(0, STEPS_PER_BEAT * 2)));
     }
+    /*
+      ⚠️ **THE BOSS FIRES IN THE BOSS TAKES, AND UNTIL NOW IT DID NOT** — 0114. `bossShot` is the
+      loudest cue in the game and a fight is the only place it sounds, so a boss take without it was
+      measuring a quieter fight than the player ever hears. It is what the report *“the boss music was
+      better, but too subdued and quiet against the game sfx themselves”* is largely about, and this
+      rig could not see it.
+
+      ⚠️ **On the boss's own cadence rather than scattered**, because it IS quantised (0096) — unlike
+      the kills and hits above, which nothing snaps.
+    */
+    if (level === 'boss' || level === 'bossPeak') {
+      for (let s = 0; s < steps; s += STEPS_PER_BEAT * 3) put(cues, 'bossShot', s);
+    }
     const mix = new Float32Array(length);
     for (let i = 0; i < length; i++) mix[i] = bed[i] + cues[i];
     return { mix, bed, cues };
@@ -355,7 +368,8 @@ if (args.has('play')) {
     ['run', 0, 'a level opening'],
     ['run', 2, 'mid level, two of each'],
     ['surge', UPGRADE_TIERS, 'the surge, maxed'],
-    ['boss', UPGRADE_TIERS, 'the boss, maxed'],
+    ['boss', UPGRADE_TIERS, 'the boss arrives, maxed'],
+    ['bossPeak', UPGRADE_TIERS, 'the boss at its peak, maxed'],
   ];
   /*
     ⚠️ **THE LAST COLUMN IS THE REPORTED DEFECT AS A NUMBER.** *"Volume levels are still way off,

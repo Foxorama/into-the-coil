@@ -35,7 +35,7 @@ export const PROBES = [
     guard: 'and a punctuation mark is shorter than the beat it lands on, so two of them are two events',
     edit: {
       path: 'src/content/cues.ts',
-      find: "{ wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.3, gain: 0.82, attack: 0.002, curve: 2.9 },",
+      find: "{ wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.21, gain: 0.95, attack: 0.001, curve: 4.2 },",
       replace: "{ wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.46, gain: 0.6, attack: 0.002, curve: 3.2 },",
     },
   },
@@ -65,7 +65,7 @@ export const PROBES = [
     guard: 'and the band the music’s own fundamental sits in is not claimed by it',
     edit: {
       path: 'src/content/cues.ts',
-      find: "{ wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.3,",
+      find: "{ wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.21,",
       replace: "{ wave: 'sine', from: inKey(6), to: inKey(-6), seconds: 0.26,",
     },
   },

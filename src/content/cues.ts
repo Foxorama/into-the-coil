@@ -694,7 +694,7 @@ export const CUES: Record<CueKind, CueRow> = {
     layers: [
       // CRACK — a few milliseconds, so it starts rather than fades in. Brighter than it was: the top
       // is what a punctuation mark is made of, and it is the band the music leaves emptiest.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.42, attack: 0.0004, curve: 8, lowFrom: 7200, lowTo: 2600, highFrom: 900 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.022, gain: 0.5, attack: 0.0002, curve: 10, lowFrom: 8200, lowTo: 2600, highFrom: 1000 },
       // BODY — noise between a highpass that takes out the box and a lowpass that falls. Half the
       // length it was, and the highpass holds it above the band `sub` now occupies.
       { wave: 'noise', from: 0, to: 0, seconds: 0.17, gain: 0.9, attack: 0.002, curve: 4.5, lowFrom: 2400, lowTo: 620, highFrom: 150, highTo: 90, q: 0.8, drive: 0.3 },
@@ -720,8 +720,8 @@ export const CUES: Record<CueKind, CueRow> = {
         sentence. `tests/sound.test.ts` holds the cue against the bed, which is why the row's own
         gain moves only enough to keep that ratio where 0109 measured it.
       */
-      { wave: 'sine', from: inKey(13), to: inKey(1), seconds: 0.26, gain: 1.5, attack: 0.001, curve: 3.2, drive: 0.25 },
-      { wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.3, gain: 0.82, attack: 0.002, curve: 2.9 },
+      { wave: 'sine', from: inKey(13), to: inKey(1), seconds: 0.17, gain: 1.72, attack: 0.0005, curve: 5, drive: 0.3 },
+      { wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.21, gain: 0.95, attack: 0.001, curve: 4.2 },
     ],
   },
   /**
