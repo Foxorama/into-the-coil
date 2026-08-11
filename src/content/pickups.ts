@@ -583,7 +583,7 @@ export const FASTEST_FIRE = 4;
 export const MAX_LAUNCHERS = 2;
 
 /** Radians between neighbouring barrels. Wide enough to see, narrow enough to still hit one thing. */
-const SPREAD_STEP = 0.13;
+export const SPREAD_STEP = 0.13;
 
 /**
  * The most barrels the ship may ever fire at once.
