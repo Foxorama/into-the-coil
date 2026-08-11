@@ -23,7 +23,7 @@ whole game.
 | **Levels 1–7** | waves, hazards, small and medium bosses, one unique end boss per level |
 | **The chart** | between levels, a branching map of destinations. Every step deeper is harder |
 | **The betrayer** | returns as the end boss of a later level |
-| **Target length** | 15–30 minutes, prologue to final boss. ~3 minutes of stage per level plus its boss |
+| **Target length** | 15–30 minutes, prologue to final boss. **~2 minutes of stage per level plus its boss** — it was ~3 and the player cut it twice from play, for DENSITY: *"reduce the level length without reducing enemy count to increase the density of enemies"*, and then *"it still took me 3 minutes"*. [0114](decisions/0114-the-fight-is-a-different-piece.md) |
 
 Upgrades and buffs **carry forward across levels, and are lost on a death** —
 [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md). There is **no shop and no

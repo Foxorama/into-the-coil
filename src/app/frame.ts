@@ -91,9 +91,26 @@ const TAU = Math.PI * 2;
  * what `tests/level.test.ts` holds is that a flanker reaches its lane before it leaves the screen,
  * which is a relationship that must be true at any value.
  *
- * 0.9 crosses the widest entry — outside the lane to the far side — in a little under two seconds.
+ * 0.9 crossed the widest entry — outside the lane to the far side — in a little under two seconds.
+ *
+ * ── AND IT IS 0.55 NOW, WHICH IS THE DENSITY BEING PAID FOR ────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0114-the-fight-is-a-different-piece.md`.** Reported from play: *"the darts
+ * that fly in halfway off the screen need to be changed a bit, too hard to dodge now."* **The word is
+ * NOW** — nothing about the flankers moved. What moved is that a level went from 118 bodies a minute
+ * to 181, so the same entry arrives with far more already on screen to read at the same time.
+ *
+ * ⚠️ **THE ENTRY POINT IS NOT WHAT CHANGED, AND THAT IS DELIBERATE.** *Halfway off the screen* is
+ * `FLANK_ALONG`, which is `MAX_ALONG_SPAN / 2` — the player's own cap from
+ * `docs/decisions/0048-a-threat-may-arrive-from-the-side.md`: *"entry point should be capped at 50%
+ * from the right side of the screen — the player has a safe spawn zone from the left."* Moving it
+ * would take back a guarantee that nothing appears behind them, to fix a problem that is about TIME.
+ *
+ * ⚠️ **In the unit the player experiences**: crossing to the middle of the lane took 1.30 seconds and
+ * now takes 2.12; the widest entry went from 1.67 to 2.73. The body is also on screen longer before
+ * it reaches the lane, which is the half a slower cross buys that a further entry would not.
  */
-const FLANK_ENTRY_SPEED = 0.9;
+const FLANK_ENTRY_SPEED = 0.55;
 
 /**
  * How far out a circling body starts orbiting rather than closing, as a multiple of its radius.
@@ -2947,6 +2964,7 @@ function driveBoss(w: World): void {
     w.cameraAlong,
     w.scrollPerStep,
     w.bossPatrol,
+    w.onCue,
   );
   /*
     ⚠️ **Where it is, remembered every step, so that where it DIED is known on the step it stops

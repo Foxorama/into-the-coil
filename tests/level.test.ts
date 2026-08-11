@@ -153,13 +153,22 @@ describe('an authored level is a script the spawner can actually run', () => {
       requires at least one assertion in one. World units are the model's own vocabulary, and a guard
       written in them would be agreeing with the constant it is derived from.
 
-      Two minutes is a floor and not the target. `docs/game.md` asks for ~3 minutes of stage per
-      level; this fails only if a level has quietly become a slice of one.
+      ⚠️ **THE FLOOR MOVED BECAUSE THE PRODUCT TARGET DID, NOT TO FIT A NUMBER** —
+      `docs/decisions/0114-the-fight-is-a-different-piece.md`. This said *"two minutes is a floor and
+      not the target; `docs/game.md` asks for ~3 minutes of stage per level"* — and the player has cut
+      the level twice from play, the second time saying *"it still took me 3 minutes"* about a stage
+      that was already down to 146 seconds. `docs/game.md` now asks for ~2 minutes, so the floor that
+      was derived from three has to be derived from two.
+
+      ⚠️ **100 seconds, and it is still a FLOOR rather than a target.** It fails only if a level has
+      quietly become a slice of one — which is what this guard has always been for, and the reason it
+      is not simply deleted now that shorter is the goal: *shorter* and *gone* are different, and
+      nothing else in the repository would notice the difference.
     */
     const unitsPerSecond = SCROLL_PER_STEP * 60;
     for (const kind of LEVEL_KINDS) {
       const seconds = LEVELS[kind].bossAt / unitsPerSecond;
-      expect(seconds, `${kind} is only ${seconds.toFixed(0)}s of stage before its boss`).toBeGreaterThan(120);
+      expect(seconds, `${kind} is only ${seconds.toFixed(0)}s of stage before its boss`).toBeGreaterThan(100);
     }
   });
 

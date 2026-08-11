@@ -24,6 +24,7 @@ import { ACROSS_SPAN } from '../sim/camera.ts';
 import { type Entity, reset } from '../sim/entity.ts';
 import type { Pool } from '../sim/pool.ts';
 import type { BossPhase, BossRow } from '../content/bosses.ts';
+import type { CueKind } from '../content/cues.ts';
 import { type DifficultyRow, fireGapFor } from '../content/difficulty.ts';
 import type { ShotRow } from '../content/shots.ts';
 
@@ -116,6 +117,15 @@ export function stepBoss(
   cameraAlong: number,
   scrollPerStep: number,
   patrolDirection: number,
+  /**
+   * What the fight sounds like — 0114.
+   *
+   * ⚠️ **Passed IN, so the step cannot see what it does.**
+   * `docs/decisions/0024-the-accessibility-floor-is-settings.md` bans a fixed step from reading
+   * whether sound is on, because a step that could read it could branch on it. Handing this file a
+   * function to call points the arrow the same way `src/app/frame.ts` already points it.
+   */
+  onCue: (kind: CueKind) => void,
 ): number {
   const phase = phaseFor(row, boss.health, fullHealth);
 
@@ -215,6 +225,25 @@ export function stepBoss(
 
   boss.fireIn--;
   if (boss.fireIn > 0) return direction;
+  /*
+    ── THE BOSS SHOOTS, AND UNTIL NOW IT DID IT IN SILENCE ────────────────────────────────
+
+    ⚠️ **`docs/decisions/0114-the-fight-is-a-different-piece.md`.** Reported: *"the boss needs an
+    appropriate sound for their attacks as well, a loud crashing sound."* It was not a mix problem —
+    **there was no sound at all.** Every enemy volley goes through `fireEnemies` in
+    `src/app/frame.ts`, which cues `threat`; the boss fires from here and this file emitted nothing,
+    so the loudest thing in the game was also the only silent one.
+
+    ⚠️ **ONCE PER VOLLEY AND NOT ONCE PER BULLET**, which is why it is at the gate rather than beside
+    the three `spawn()` calls below. A rake puts nine shots out in one step; nine cues would be one
+    smeared noise and would spend the whole per-step voice budget
+    (`docs/decisions/0104-the-gun-plays-a-figure.md`) on a single event.
+
+    ⚠️ **`onCue` is passed IN and the step cannot see what it does.** 0024's ban is that a fixed step
+    must not be able to read whether sound is on — handing it a function to call keeps the arrow
+    pointing the same way `src/app/frame.ts` already points it.
+  */
+  onCue('bossShot');
   // ⚠️ The tier's gap over the PHASE's, so escalation and difficulty compose rather than compete: a
   // hard tier's opening phase is still slower than its own last one.
   boss.fireIn = fireGapFor(phase.fireEvery, tier);

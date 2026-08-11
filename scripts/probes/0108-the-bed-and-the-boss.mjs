@@ -102,8 +102,8 @@ export const PROBES = [
     guard: 'THE BOSS ARRIVES: it opens more than one new thing, and it is louder in the unit an ear integrates',
     edit: {
       path: 'src/content/music.ts',
-      find: 'lead: 0.93, stomp: 0.9, auraSlow: 1, auraFast: 0.9 },',
-      replace: 'lead: 0.93, stomp: 0, auraSlow: 1, auraFast: 0.9 },',
+      find: 'stomp: 0.92, frenzy: 0.86, wraith: 0, auraSlow: 1, auraFast: 0.9 },',
+      replace: 'stomp: 0, frenzy: 0.86, wraith: 0, auraSlow: 1, auraFast: 0.9 },',
     },
   },
   {
@@ -118,7 +118,7 @@ export const PROBES = [
     guard: 'and the shaper has not flattened the ladder it is meant to make room for',
     edit: {
       path: 'src/content/music.ts',
-      find: 'export const MUSIC_DRIVE = 0.22;',
+      find: 'export const MUSIC_DRIVE = 0.3;',
       replace: 'export const MUSIC_DRIVE = 40;',
     },
   },

@@ -13,7 +13,7 @@ export const PROBES = [
     // ⚠️ THE ONE THAT SHIPPED. Removing two upgrades leaves a level that still reads as generous —
     // there are nine left — and a player who dies at the wrong moment flies half a minute unarmed.
     broke: 'a level stretch left with nothing to rearm from, which is what 0040 shipped',
-    guard: 'never leaves the player unarmed for long',
+    guard: 'THE TARGET: a level offers exactly enough weapons to cap the guns, and it does it before the boss',
     edit: {
       path: 'src/content/levels.ts',
       /*
@@ -28,7 +28,7 @@ export const PROBES = [
         guard is actually about — a player who dies late flies the hardest stretch with the base weapon
         — and the middle-of-the-level version had quietly stopped being it.
       */
-      find: "  { at: 3805, kind: 'weapon', lane: 50 },\n",
+      find: "  { at: 3069, kind: 'weapon', lane: 50 },\n",
       replace: '',
     },
   },

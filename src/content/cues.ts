@@ -109,6 +109,7 @@ export const CUE_KINDS = [
   'threat',
   'hit',
   'kill',
+  'bossShot',
   'bossPhase',
   'bossDown',
   'bomb',
@@ -693,7 +694,7 @@ export const CUES: Record<CueKind, CueRow> = {
     layers: [
       // CRACK — a few milliseconds, so it starts rather than fades in. Brighter than it was: the top
       // is what a punctuation mark is made of, and it is the band the music leaves emptiest.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.42, attack: 0.0004, curve: 8, lowFrom: 7200, lowTo: 2600, highFrom: 900 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.022, gain: 0.5, attack: 0.0002, curve: 10, lowFrom: 8200, lowTo: 2600, highFrom: 1000 },
       // BODY — noise between a highpass that takes out the box and a lowpass that falls. Half the
       // length it was, and the highpass holds it above the band `sub` now occupies.
       { wave: 'noise', from: 0, to: 0, seconds: 0.17, gain: 0.9, attack: 0.002, curve: 4.5, lowFrom: 2400, lowTo: 620, highFrom: 150, highTo: 90, q: 0.8, drive: 0.3 },
@@ -719,8 +720,8 @@ export const CUES: Record<CueKind, CueRow> = {
         sentence. `tests/sound.test.ts` holds the cue against the bed, which is why the row's own
         gain moves only enough to keep that ratio where 0109 measured it.
       */
-      { wave: 'sine', from: inKey(13), to: inKey(1), seconds: 0.26, gain: 1.5, attack: 0.001, curve: 3.2, drive: 0.25 },
-      { wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.3, gain: 0.82, attack: 0.002, curve: 2.9 },
+      { wave: 'sine', from: inKey(13), to: inKey(1), seconds: 0.17, gain: 1.72, attack: 0.0005, curve: 5, drive: 0.3 },
+      { wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.21, gain: 0.95, attack: 0.001, curve: 4.2 },
     ],
   },
   /**
@@ -738,6 +739,54 @@ export const CUES: Record<CueKind, CueRow> = {
    * `docs/decisions/0109-a-death-is-a-drum.md`. A duck takes 0.445s to recover; a fight has at most
    * four phase changes in it, so this is a handful of half-seconds in a level rather than 104% of one.
    */
+  /**
+   * The boss opens fire — 0114.
+   *
+   * ── THE LOUDEST THING IN THE GAME WAS ALSO THE ONLY SILENT ONE ──────────────────────────────────
+   *
+   * ⚠️ **Reported: *"the boss needs an appropriate sound for their attacks as well, a loud crashing
+   * sound."*** It was not a mix problem. `src/app/boss.ts` spawns its shots from its own fire gate
+   * and never emitted a cue at all, so every enemy in the game announced its volleys and the boss
+   * did not.
+   *
+   * ⚠️ **A CRASH RATHER THAN A LOUDER `threat`, and the difference is the tail.** `threat` is a
+   * hundred milliseconds because a level sends hundreds of them; this sounds a handful of times a
+   * fight, so it can afford to ring. That length is the whole of what *crashing* means here — the
+   * spectrum is the same family, the decay is not.
+   *
+   * ⚠️ **IT IS ON THE GRID, so a volley lands with the music rather than beside it** — 0104. The
+   * boss's cadence is already snapped to the level's sixteenth (0096), so this only makes audible
+   * what the sim was doing anyway.
+   *
+   * ⚠️ **`hold` is 8 because a rake fires nine bullets in one step.** The cue is emitted once per
+   * VOLLEY at the fire gate rather than once per bullet, and the hold is the second guard on that:
+   * two phases whose cadences happen to collide cannot stack two crashes on one frame.
+   */
+  bossShot: {
+    twin: 'threat-appears',
+    onGrid: true,
+    hold: 8,
+    gain: 0.42,
+    glue: 0.14,
+    layers: [
+      // THE STRIKE — bright, immediate, and wider than an enemy's tick. This is the crash's edge.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.5, attack: 0.0005, curve: 7, lowFrom: 9000, lowTo: 3200, highFrom: 1100 },
+      /*
+        THE RING — six times a `threat`'s length, falling through the band a cymbal occupies. It is
+        what makes this a crash rather than a shot, and it is affordable because a fight sounds it a
+        few dozen times where a level sends `threat` in the hundreds.
+      */
+      { wave: 'noise', from: 0, to: 0, seconds: 0.36, gain: 0.22, attack: 0.002, curve: 2.4, lowFrom: 11000, lowTo: 2600, highFrom: 1800, q: 0.6 },
+      /*
+        THE BODY — 0089: a cue without one is a hiss. Two notes of the key a fifth apart, falling to
+        the root, so the crash lands in the music rather than across it. `inKey` keeps it consonant;
+        the DISSONANCE in a boss fight belongs to the music, where it is a choice rather than a note
+        repeated every volley.
+      */
+      { wave: 'sine', from: inKey(11), to: inKey(4), seconds: 0.34, gain: 1.1, attack: 0.001, curve: 3, drive: 0.35 },
+      { wave: 'tri', from: inKey(7), to: inKey(0), seconds: 0.38, gain: 0.62, attack: 0.002, curve: 2.6, drive: 0.2 },
+    ],
+  },
   bossPhase: {
     twin: 'phase-burst',
     // Between a kill's 0.18 and the boss's own 0.42: rarer than one and smaller than the other.

@@ -21,7 +21,7 @@ export const PROBES = [
     guard: 'and the whole set is small enough to spread across the title screen',
     edit: {
       path: 'src/content/music.ts',
-      find: '  sub: 16,\n  engine: 4,\n  perc: 4,\n  chords: 16,\n  groove: 16,\n  arp: 16,\n  call: 16,\n  hook: 16,',
+      find: '  sub: 16,\n  engine: 4,\n  perc: 4,\n  chords: 16,\n  groove: 16,\n  arp: 16,\n  ride: 4,\n  call: 16,\n  hook: 16,',
       replace: '  sub: 32,\n  engine: 4,\n  perc: 4,\n  chords: 32,\n  groove: 32,\n  arp: 32,\n  call: 32,\n  hook: 32,',
     },
   },
@@ -63,8 +63,8 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: every rung inside a level has a tune in it, not just a bed',
     edit: {
       path: 'src/content/music.ts',
-      find: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, call: 0.62,',
-      replace: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, call: 0,',
+      find: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, ride: 0, call: 0.62, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.5, auraFast: 0.28 },',
+      replace: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, ride: 0, call: 0, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.5, auraFast: 0.28 },',
     },
   },
   {

@@ -32,6 +32,7 @@ import {
   MUSIC_LAYERS,
   MUSIC_ROOT,
   BOSS_APPROACH_UNITS,
+  BOSS_PEAK_HEALTH,
   PUSH_UNITS,
   SURGE_UNITS,
   AURA_LAYERS,
@@ -200,8 +201,22 @@ export function layerNotes(layer: MusicLayer, rate: number): { buffer: Float32Ar
  * `calm`, which is the title, the level break and the run-over screen, and it is why the drone never
  * stops: the music is one continuous piece and the levels happen inside it.
  */
-export function musicLevelFor(cameraAlong: number, bossAt: number, bossOnField: boolean): MusicLevel {
-  if (bossOnField) return 'boss';
+export function musicLevelFor(cameraAlong: number, bossAt: number, bossOnField: boolean, bossHealthLeft = 1): MusicLevel {
+  /*
+    ⚠️ **THE FIGHT HAS TWO RUNGS NOW, AND THAT IS THE *dynamic climax* THE REPORT ASKED FOR** —
+    `docs/decisions/0113-there-is-one-composition-and-seven-levels.md`. *"There is no separate boss
+    theme or dynamic climax"* was true twice over: the boss was the level plus two layers, and it was
+    ONE arrangement for the whole fight however it went.
+
+    ⚠️ **Keyed to the boss's HEALTH rather than to a timer**, so the climax lands when the fight is
+    actually half won. A clock would put the wall of sound on a player who is losing and on one who is
+    winning at the same instant, which is the opposite of a payoff.
+
+    ⚠️ **A FRACTION and not a phase index.** `docs/decisions/0111-a-boss-has-one-idea.md` gives every
+    boss its own phase table, so phase 2 means a different share of the health bar per boss; half is
+    half everywhere. `BOSS_PEAK_HEALTH` is the number and the argument is on it.
+  */
+  if (bossOnField) return bossHealthLeft <= BOSS_PEAK_HEALTH ? 'bossPeak' : 'boss';
   /*
     ⚠️ **FIVE RUNGS INSIDE A LEVEL, AND THERE WAS ONE** —
     `docs/decisions/0102-the-music-goes-somewhere.md`. This returned `run` from the moment a level

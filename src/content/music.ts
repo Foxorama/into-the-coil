@@ -60,12 +60,18 @@ export const MUSIC_LAYERS = [
   'chords',
   'groove',
   'arp',
+  'ride',
   'call',
   'hook',
   'drive',
   'toll',
+  'crash',
+  'dread',
   'lead',
+  'counter',
   'stomp',
+  'frenzy',
+  'wraith',
   'auraSlow',
   'auraFast',
 ] as const;
@@ -93,6 +99,36 @@ export type MusicLayer = (typeof MUSIC_LAYERS)[number];
  * G, and over F, C and G those are consonances rather than accidents.
  */
 export const TITLE_ONLY: readonly MusicLayer[] = ['bass', 'beat'];
+
+/**
+ * The layers that belong to the LEVEL's piece and are closed when the boss arrives.
+ *
+ * ── THE SECOND PLACE THE LADDER IS ALLOWED TO CLOSE SOMETHING, AND THE REASON IS 0095's ──────────
+ *
+ * ⚠️ **`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`.** Reported from play:
+ * *"the boss part just feels like part of the regular level music, not an escalation… there is no
+ * separate boss theme or dynamic climax."*
+ *
+ * ⚠️ **AND IT IS ARITHMETIC RATHER THAN TASTE.** 0090's ladder only ever OPENS layers, so the boss
+ * rung is the level's arrangement plus whatever it adds — *the level with more of it*, exactly as
+ * reported, and no amount of adding can make it anything else. **A different piece requires the old
+ * one to stop.**
+ *
+ * ⚠️ **0095 ALREADY MADE THIS ARGUMENT ONCE.** *"A layer that cannot be in two places is a layer that
+ * has to stop"* was written about the title's bass over the level's progression. The same sentence is
+ * true here for a stronger reason: the level's material is consonant A minor and the boss's is
+ * Phrygian with a tritone in it, so holding `chords` open under `dread` is not a thin arrangement, it
+ * is a wrong note.
+ *
+ * ⚠️ **`drone` and `sub` are deliberately NOT here**, on exactly the terms 0095 kept the drone across
+ * its own seam: they are the connective tissue, so the change of piece is a swell and a drop rather
+ * than an edit. `sub` sounds the root, which is common to both.
+ *
+ * ⚠️ **The list is what makes the boss's opening SPARSE**, which is the first half of *"builds from a
+ * tense, sparse intro into an all-out wall of sound"*. Nine layers stop; four remain; and then
+ * `bossPeak` puts the wall back one piece at a time.
+ */
+export const LEVEL_ONLY: readonly MusicLayer[] = ['chords', 'groove', 'arp', 'call', 'hook', 'lead'];
 
 /**
  * How many bars long each layer's loop is.
@@ -152,12 +188,18 @@ export const LAYER_BARS: Record<MusicLayer, number> = {
   chords: 16,
   groove: 16,
   arp: 16,
+  ride: 4,
   call: 16,
   hook: 16,
   drive: 2,
   toll: 4,
+  crash: 4,
+  dread: 4,
   lead: 4,
   stomp: 2,
+  frenzy: 8,
+  wraith: 8,
+  counter: 16,
   auraSlow: 2,
   auraFast: 2,
 };
@@ -425,7 +467,30 @@ export const MUSIC_GAIN = 0.46;
  * the clipping question lives in `MUSIC_GAIN` above and this is a free lever up to the crest it
  * spends. `tests/music.test.ts` holds the crest rather than this table.
  */
-export const MUSIC_DRIVE = 0.22;
+/*
+  ── 0.22 → 0.3, AND IT IS THE SHAPER DOING THE JOB A GAIN COULD NOT ──────────────────────────────
+
+  ⚠️ **`docs/decisions/0114-the-fight-is-a-different-piece.md`.** Reported: *"the boss music was
+  better, but too subdued and quiet against the game sfx themselves."* Measured with
+  `node scripts/hear.mjs --play`, the fight was **+4.4 dB** over the cues where mid-level was +6.0 —
+  the quietest the music gets against the effects is the one place it should be loudest.
+
+  ⚠️ **RAISING THE RUNG DID NOT WORK AND THE PEAK IS WHY.** The fight already sits at 0.95 of full
+  scale with the cues in it; every attempt to gain its way out clipped `debris` at the boss. What a
+  bus shaper buys is exactly this: more loudness at the SAME peak, which is the definition of the
+  problem.
+
+  ⚠️ **0104's guard is what says this is safe.** *The shaper has not flattened the ladder it is meant
+  to make room for* — every rung still arrives louder than the one below at 0.3, and it is the
+  measurement that decided the value rather than an ear. Driven: 0.22 gives the fight +5.4 dB, 0.3
+  gives +6.4, and both are green.
+
+  ⚠️ **AND `debris` STOPPED DOUBLE-COUNTING THE DRUMS in the same change.** Its mix leant on `perc`
+  1.4 and `stomp` 1.3 — authored when the fight was not percussion-led. It is now, so the theme and
+  the rung were multiplying the same idea; the theme gives way, exactly as `nebula` and `forge` did
+  when the boss rung took over the bass.
+*/
+export const MUSIC_DRIVE = 0.3;
 
 /**
  * How far into a level the music starts listening for the boss, in world units.
@@ -435,7 +500,7 @@ export const MUSIC_DRIVE = 0.22;
  * begins about twelve seconds of scroll before the boss arrives, which is long enough to be a build
  * and short enough that it is clearly about the boss rather than about the level.
  */
-export const BOSS_APPROACH_UNITS = 430;
+export const BOSS_APPROACH_UNITS = 380;
 
 /**
  * How far from the boss the level's two middle rungs open, in world units.
@@ -457,8 +522,20 @@ export const BOSS_APPROACH_UNITS = 430;
  * nobody has flown. What `tests/music.test.ts` holds is that they are ordered, that each is a real
  * stretch of seconds rather than a flicker, and that every rung is reachable.
  */
-export const PUSH_UNITS = 4200;
-export const SURGE_UNITS = 2400;
+/**
+ * How much of a boss's health has to be gone before the music reaches its wall of sound.
+ *
+ * ⚠️ **Half, and it is a share rather than a phase** — 0111 gives each boss its own phase table, so
+ * *phase two* is a different fraction of the bar for each of the seven and *half* is half for all of
+ * them. The climax has to land in the same PLACE in every fight or it is not structure, it is noise.
+ *
+ * ⚠️ **It is a floor on how long the sparse arrival lasts, too.** A boss that died instantly would
+ * never leave the tense opening, which is correct: there was no fight to build through.
+ */
+export const BOSS_PEAK_HEALTH = 0.78;
+
+export const PUSH_UNITS = 2758;
+export const SURGE_UNITS = 958;
 
 /**
  * The key. Every pitched note is a ratio off this, so the whole piece transposes from one number.
@@ -726,7 +803,7 @@ export interface MusicVoice {
   and like everything else this project paces — so they mean the same thing on a device that drops
   frames and they carry to a level that is retuned.
 */
-export const MUSIC_LEVELS = ['calm', 'run', 'push', 'surge', 'approach', 'boss'] as const;
+export const MUSIC_LEVELS = ['calm', 'run', 'push', 'surge', 'approach', 'boss', 'bossPeak'] as const;
 
 export type MusicLevel = (typeof MUSIC_LEVELS)[number];
 
@@ -873,12 +950,13 @@ export type MusicLevel = (typeof MUSIC_LEVELS)[number];
   what makes the boss's own rung a release rather than a step.
 */
 export const MUSIC_LADDER: Record<MusicLevel, Record<MusicLayer, number>> = {
-  calm: { drone: 0.55, bass: 0.7, beat: 0.5, sub: 0, engine: 0, perc: 0, chords: 0, groove: 0, arp: 0, call: 0, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0, auraFast: 0 },
-  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, call: 0.62, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.5, auraFast: 0.28 },
-  push: { drone: 0.34, bass: 0, beat: 0, sub: 0.88, engine: 0.92, perc: 0.74, chords: 0.87, groove: 0.86, arp: 0.62, call: 0.68, hook: 0, drive: 0, toll: 0, lead: 0, stomp: 0, auraSlow: 0.62, auraFast: 0.4 },
-  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.06, engine: 0.97, perc: 0.8, chords: 0.88, groove: 0.94, arp: 0.64, call: 0.74, hook: 0.62, drive: 0.34, toll: 0, lead: 0, stomp: 0, auraSlow: 0.75, auraFast: 0.55 },
-  approach: { drone: 0.34, bass: 0, beat: 0, sub: 1.1, engine: 1, perc: 0.86, chords: 0.89, groove: 0.94, arp: 0.7, call: 0.8, hook: 0.72, drive: 0.72, toll: 0.72, lead: 0, stomp: 0, auraSlow: 0.88, auraFast: 0.72 },
-  boss: { drone: 0.2, bass: 0, beat: 0, sub: 1.22, engine: 1.1, perc: 0.9, chords: 0.8, groove: 0.98, arp: 0.75, call: 0.81, hook: 0.83, drive: 0.88, toll: 0.79, lead: 0.93, stomp: 0.9, auraSlow: 1, auraFast: 0.9 },
+  calm: { drone: 0.55, bass: 0.7, beat: 0.5, sub: 0, engine: 0, perc: 0, chords: 0, groove: 0, arp: 0, ride: 0, call: 0, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
+  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, ride: 0, call: 0.62, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.5, auraFast: 0.28 },
+  push: { drone: 0.34, bass: 0, beat: 0, sub: 1.06, engine: 0.96, perc: 0.76, chords: 0.87, groove: 0.94, arp: 0.64, ride: 0.58, call: 0.68, hook: 0.64, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0.7, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.62, auraFast: 0.4 },
+  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.86, groove: 0.94, arp: 0.7, ride: 0.68, call: 0.7, hook: 0.74, drive: 0.78, toll: 0, crash: 0.9, dread: 0, lead: 0.78, counter: 1.05, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },
+  approach: { drone: 0.34, bass: 0, beat: 0, sub: 1.1, engine: 1.02, perc: 0.86, chords: 0.84, groove: 0.95, arp: 0.72, ride: 0.72, call: 0.72, hook: 0.78, drive: 0.84, toll: 0.78, crash: 0.92, dread: 0.74, lead: 0.82, counter: 1.08, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.88, auraFast: 0.72 },
+  boss: { drone: 0.36, bass: 0, beat: 0, sub: 1.2, engine: 1.12, perc: 0.96, chords: 0, groove: 0, arp: 0, ride: 0.9, call: 0, hook: 0, drive: 0.94, toll: 0.92, crash: 0.94, dread: 1.02, lead: 0, counter: 0, stomp: 0.92, frenzy: 0.86, wraith: 0, auraSlow: 1, auraFast: 0.9 },
+  bossPeak: { drone: 0.3, bass: 0, beat: 0, sub: 1.2, engine: 1.1, perc: 0.95, chords: 0, groove: 0, arp: 0, ride: 0.9, call: 0, hook: 0, drive: 0.95, toll: 0.9, crash: 0.94, dread: 1, lead: 0, counter: 0, stomp: 0.97, frenzy: 0.92, wraith: 0.88, auraSlow: 1.02, auraFast: 0.94 },
 };
 
 /** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */
@@ -1703,6 +1781,292 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
     },
   ],
 
+  /*
+    ── THE RIDE — THE FIRST CYMBAL IN THE GAME, AND THE BAND IT OPENS ──────────────────────────────
+
+    ⚠️ **`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`.** Reported from play:
+    *"I think we also need a bit of cymbal percussion elements as well, it is good and listenable, but
+    still very constrained along the same sound bands."*
+
+    ⚠️ **EVERY EXISTING DRUM IN THIS FILE IS A SHORT NOISE BURST.** The hats are 15 to 40 milliseconds,
+    the shaker 24, the tambourine 70 — so the top of the spectrum is a series of clicks with silence
+    between them, and *constrained along the same sound bands* is an exact description of that. A ride
+    is the opposite shape: struck as hard, and then it RINGS for a quarter of a second, so the band
+    stays occupied instead of flickering.
+
+    ⚠️ **It opens at `push`, which is thirty-odd seconds in** — the rung the report calls *"kicks in
+    about 30-45 secs into the level"*. The pulse doubles and the ceiling opens at the same moment,
+    which is what makes that arrival a section rather than another layer.
+  */
+  ride: [
+    {
+      /*
+        Eighths, leaning on the beat and riding the offbeats — the pattern a ride plays behind a
+        four-on-the-floor kick, so it agrees with `engine` rather than fighting it.
+      */
+      steps: [
+        1, 0.42, 0.68, 0.4, 1, 0.44, 0.7, 0.42,
+        1, 0.42, 0.68, 0.4, 1, 0.46, 0.72, 0.48,
+        1, 0.42, 0.68, 0.4, 1, 0.44, 0.7, 0.42,
+        1, 0.44, 0.7, 0.44, 1, 0.5, 0.78, 0.6,
+      ],
+      pitched: false,
+      perBeat: 2,
+      octave: 0,
+      // ⚠️ A quarter of a second, where every other cymbal-ish voice here is under a tenth. The DECAY
+      // is the whole point: it is what puts continuous energy above 6kHz instead of a row of ticks.
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.052, attack: 0.0006, curve: 2.6, lowFrom: 11000, lowTo: 6500, highFrom: 5200, q: 0.7 },
+    },
+    {
+      // The bell of the ride — a narrow band an octave under the wash, struck on the downbeat only,
+      // so the pattern has a centre rather than being one continuous hiss.
+      steps: [1, _, _, _, 0.7, _, _, _, 1, _, _, _, 0.74, _, _, 0.6],
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.19, gain: 0.036, attack: 0.0005, curve: 3.4, lowFrom: 7200, lowTo: 4200, highFrom: 3000, q: 1.6 },
+    },
+  ],
+
+  /*
+    ── THE CRASH — WHAT MAKES THE BOSS'S ARRIVAL AN ARRIVAL ────────────────────────────────────────
+
+    ⚠️ **It opens at `approach`, which is eight seconds before the boss is on screen** — *"boss music
+    needs to start about 5-10secs before the boss shows"*. A crash is the one drum that announces
+    rather than keeps time, so it is the right sound for the one moment in a level that is an
+    announcement.
+
+    ⚠️ **Eight bars, and it is placed on the PHRASE rather than on the bar.** A crash every bar is a
+    ride with a longer tail; a crash at the top of a phrase is punctuation. It sounds four times in
+    twelve and a half seconds, which is rare enough to still mean something when the fight starts.
+  */
+  crash: [
+    {
+      // Eight bars at four slots each: the top of the phrase, its halfway point, and a pickup into
+      // the loop. Three sounds in 12.8 seconds — punctuation, not time-keeping.
+      steps: [
+        1, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+      ],
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      /*
+        ⚠️ **1.1 seconds, which is the longest note in the piece and is nowhere near the ceiling.**
+        `tests/sound.test.ts` refuses a single note over three seconds, because that is the job the
+        prewarm cannot split — a crash that rings for a bar is well inside it and is the sound a crash
+        makes. Anything shorter is a hat with delusions.
+      */
+      note: { wave: 'noise', from: 0, to: 0, seconds: 1.1, gain: 0.058, attack: 0.001, curve: 1.5, lowFrom: 13000, lowTo: 4000, highFrom: 2600, q: 0.5 },
+    },
+  ],
+
+  /*
+    ── THE DREAD — THE FIRST DISSONANCE IN THE GAME ────────────────────────────────────────────────
+
+    ⚠️ **`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`.** Asked for, in the
+    player's own terms: *"Dark Tonality: minor keys, diminished chords… Dissonant Intervals: tritones,
+    minor seconds, and minor ninths sound aggressive and sharp. Exotic Modes: Phrygian, Locrian…"*
+
+    ⚠️ **EVERY PITCHED NOTE IN THIS FILE UNTIL NOW HAS BEEN CONSONANT**, and that is most of why the
+    boss sounded like the level with more of it. The piece is A natural minor with a raised seventh on
+    the E chord and nothing else — no interval in it is uncomfortable, so no arrangement of it can
+    sound like a threat.
+
+    ⚠️ **THE FLAT SECOND IS THE WHOLE IDEA.** B flat over A is a minor second — the sharpest interval
+    there is — and it is the note that makes A PHRYGIAN rather than A minor. Sounded together with the
+    root and held, it is a cluster the ear cannot resolve, which is exactly what *"boss music starts
+    five to ten seconds before the boss shows"* is asking a layer to say.
+
+    ⚠️ **`inKey()` IS UNTOUCHED AND THAT IS DELIBERATE.** `src/content/cues.ts` locks the CUES to the
+    natural minor and `tests/sound.test.ts` holds it — a gun that played a tritone would be a wrong
+    note eight times a second. The dissonance belongs to the music, where it is a choice, and not to
+    the effects, where it would be a mistake repeated for ever.
+  */
+  dread: [
+    {
+      // Root and flat second, held together. Bar four drops to the tritone, which is the other
+      // interval the brief names and the one that has meant *danger* for about six hundred years.
+      steps: [0, 1, 0, 6],
+      pitched: true,
+      perBeat: 0.25,
+      octave: 1,
+      accents: [1, 0.92, 0.96, 1],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.085, attack: 0.5, curve: 1.1, lowFrom: 420, lowTo: 900, q: 2.2 },
+    },
+    {
+      // The octave under the root only — the flat second is left in the mid, where a minor second is
+      // sharp. Down here it would be mud rather than menace.
+      steps: [0, 0, 0, 6],
+      pitched: true,
+      perBeat: 0.25,
+      octave: 0,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.12, attack: 0.42, curve: 1.05 },
+    },
+  ],
+
+  /*
+    ── THE FRENZY — A DRIVING OSTINATO THAT NEVER LANDS IN THE SAME PLACE TWICE ────────────────────
+
+    ⚠️ **Asked for: *"Driving Ostinatos: repeating, relentless rhythmic patterns create forward
+    momentum"* and *"Irregular Meters: meters like 7/8 or 9/8 add instability and a frantic edge"*.**
+
+    ⚠️ **THE METER CANNOT CHANGE AND THE FEELING OF IT CAN.**
+    `docs/decisions/0093-the-gun-is-on-the-grid.md` fixes a beat at 24 sim steps and the gun, every
+    enemy cadence and 0094's phase-lock all ride it — a bar of 7/8 would take the whole game off the
+    grid three decisions exist to put it on. **A SEVEN-SIXTEENTH CELL over a sixteen-sixteenth bar
+    costs none of that**: the pattern is straight 4/4 to the machine and rotates through seven
+    different positions in the bar to the ear, which is what an odd meter actually feels like.
+
+    ⚠️ **Driven rather than counted: it realigns after seven bars**, so across this layer's eight it
+    lands the same way exactly once. Nothing in the game moves; the accent does.
+
+    ⚠️ **Phrygian and the tritone again — root, flat second, tritone, root.** The brief's three
+    ingredients in one repeating cell, at sixteenth speed, which is also the *"double speed"* the
+    report asks the fight for: `stomp` doubles the drums and this doubles the note rate over them.
+  */
+  frenzy: [
+    {
+      steps: [
+        0, _, 1, 0, _, 6, 0, 0, _, 1, 0, _, 6, 0, 0, _,
+        1, 0, _, 6, 0, 0, _, 1, 0, _, 6, 0, 0, _, 1, 0,
+        _, 6, 0, 0, _, 1, 0, _, 6, 0, 0, _, 1, 0, _, 6,
+        0, 0, _, 1, 0, _, 6, 0, 0, _, 1, 0, _, 6, 0, 0,
+        _, 1, 0, _, 6, 0, 0, _, 1, 0, _, 6, 0, 0, _, 1,
+        0, _, 6, 0, 0, _, 1, 0, _, 6, 0, 0, _, 1, 0, _,
+        6, 0, 0, _, 1, 0, _, 6, 0, 0, _, 1, 0, _, 6, 0,
+        0, _, 1, 0, _, 6, 0, 0, _, 1, 0, _, 6, 0, 0, _,
+      ],
+      pitched: true,
+      perBeat: 4,
+      octave: 1,
+      // ⚠️ Four accents against a seven-note cell, so the WEIGHT rotates too and at a different rate
+      // from the notes. Heavy syncopation, per the brief, without a displaced accent being authored.
+      accents: [1, 0.58, 0.82, 0.6],
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.22, gain: 0.085, attack: 0.002, curve: 5.5, lowFrom: 2600, lowTo: 900, q: 2, drive: 0.5 },
+    },
+    {
+      // The same cell an octave down, which is what makes the ostinato a BASS rather than a texture —
+      // the fight needs something moving under it and the level's own bass line has stopped.
+      steps: [
+        0, _, 1, 0, _, 6, 0, 0, _, 1, 0, _, 6, 0, 0, _,
+        1, 0, _, 6, 0, 0, _, 1, 0, _, 6, 0, 0, _, 1, 0,
+        _, 6, 0, 0, _, 1, 0, _, 6, 0, 0, _, 1, 0, _, 6,
+        0, 0, _, 1, 0, _, 6, 0, 0, _, 1, 0, _, 6, 0, 0,
+        _, 1, 0, _, 6, 0, 0, _, 1, 0, _, 6, 0, 0, _, 1,
+        0, _, 6, 0, 0, _, 1, 0, _, 6, 0, 0, _, 1, 0, _,
+        6, 0, 0, _, 1, 0, _, 6, 0, 0, _, 1, 0, _, 6, 0,
+        0, _, 1, 0, _, 6, 0, 0, _, 1, 0, _, 6, 0, 0, _,
+      ],
+      pitched: true,
+      perBeat: 4,
+      octave: 0,
+      accents: [1, 0.6, 0.84, 0.62],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.26, gain: 0.1, attack: 0.003, curve: 4.5, lowFrom: 1200, lowTo: 420, q: 1.6, drive: 0.45 },
+    },
+  ],
+
+  /*
+    ── THE WRAITH — THE LEVEL'S OWN TUNE, COME BACK WRONG ──────────────────────────────────────────
+
+    ⚠️ **Asked for: *"Leitmotifs: weaving in a distorted version of the boss's theme creates narrative
+    payoff."*** This is that, pointed the way round this game can actually pay off: the player has
+    spent two minutes with `call`, and the report says of it *"the tune kickin around 52 secs is
+    great"*. It is the only melody they have had time to learn.
+
+    ⚠️ **IT IS `call`'s CONTOUR, NOTE FOR NOTE, WITH ITS SECOND FLATTENED.** Three notes move — every
+    B becomes a B flat — and that is the whole edit: the same tune in A PHRYGIAN instead of A minor,
+    which is the mode `dread` and `frenzy` already put underneath it. Recognisable and wrong, which is
+    what a distorted leitmotif is.
+
+    ⚠️ **A square through a hard drive rather than the triangle `call` sings through.** The pitch
+    change carries the harmony and the timbre carries the corruption; either alone reads as a
+    different layer rather than as the same one damaged.
+
+    ⚠️ **It opens at `bossPeak` and nowhere else.** A leitmotif that plays through the whole fight is
+    a layer; one that arrives when the boss is half dead is a payoff.
+  */
+  wraith: [
+    {
+      steps: [
+        0, _, 3, _, 1, _, 0, _, 3, _, 7, _, 5, _, 3, _,
+        0, _, 3, _, 1, _, 0, _, 7, _, 5, _, 3, _, _, _,
+      ],
+      pitched: true,
+      perBeat: 1,
+      octave: 2,
+      accents: [1, 0.7, 0.88, 0.64],
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.8, gain: 0.075, attack: 0.004, curve: 2.6, lowFrom: 2200, lowTo: 900, q: 2.4, drive: 0.75 },
+    },
+    {
+      // The octave under it, saw and driven — the body that makes it a shout rather than a whistle.
+      steps: [
+        0, _, 3, _, 1, _, 0, _, 3, _, 7, _, 5, _, 3, _,
+        0, _, 3, _, 1, _, 0, _, 7, _, 5, _, 3, _, _, _,
+      ],
+      pitched: true,
+      perBeat: 1,
+      octave: 1,
+      accents: [1, 0.7, 0.88, 0.64],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.84, gain: 0.055, attack: 0.006, curve: 2.4, lowFrom: 1500, lowTo: 620, q: 1.8, drive: 0.6 },
+    },
+  ],
+
+  /*
+    ── THE COUNTER — A SECOND MELODY THAT ANSWERS THE FIRST ────────────────────────────────────────
+
+    ⚠️ **`docs/decisions/0114-the-fight-is-a-different-piece.md`.** Reported: *"the music that kicks
+    in at 1.32 needs to kick in around 42 secs and then we need a different additional accompaniment
+    kicking in around 1.32 on top of the current change in music."* Two asks in one sentence: move
+    what arrives, and then put something NEW where it used to be. The first is `PUSH_UNITS`; this is
+    the second.
+
+    ⚠️ **A COUNTER-MELODY AND NOT A THICKER `call`.** *"Additional accompaniment"* is a part, not a
+    gain — so this is a line with its own shape that fits in `call`'s gaps. `call` states a phrase and
+    rests for a bar and a half; this answers into exactly that rest, which is what makes two melodies
+    a conversation rather than a crowd.
+
+    ⚠️ **In THIRDS above the root, which is the interval that reads as harmony rather than as a second
+    tune.** A counter-line at the octave doubles; at the fifth it thickens; at the third it is heard
+    as an accompaniment, which is the word the report used.
+
+    ⚠️ **Sixteen bars, so it turns with the progression's B-section** — `LAYER_BARS`' whole-multiple
+    rule, and the reason a four-bar answer would be a wrong note for half of every phrase.
+  */
+  counter: [
+    {
+      /*
+        The answer. It enters where `call` rests — the third and fourth beat of each bar — and holds
+        back on the bars where `call` is still singing.
+      */
+      steps: [
+        _, _, _, 7, _, _, 5, _, _, _, _, 3, _, _, 2, _,
+        _, _, _, 7, _, _, 5, _, _, 3, _, 2, _, 0, _, _,
+        _, _, _, 12, _, _, 10, _, _, _, _, 7, _, _, 5, _,
+        _, _, _, 10, _, _, 8, _, _, 7, _, 5, _, 3, _, _,
+      ],
+      pitched: true,
+      perBeat: 1,
+      octave: 1,
+      accents: [0.86, 0.62, 1, 0.7],
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.92, gain: 0.088, attack: 0.03, curve: 2, lowFrom: 1900, lowTo: 850, q: 1.2 },
+    },
+    {
+      // A third above it, quiet — two notes make the line an accompaniment rather than a melody
+      // competing with `call` for the same job.
+      steps: [
+        _, _, _, 10, _, _, 8, _, _, _, _, 7, _, _, 5, _,
+        _, _, _, 10, _, _, 8, _, _, 7, _, 5, _, 3, _, _,
+        _, _, _, 15, _, _, 14, _, _, _, _, 10, _, _, 8, _,
+        _, _, _, 14, _, _, 12, _, _, 10, _, 8, _, 7, _, _,
+      ],
+      pitched: true,
+      perBeat: 1,
+      octave: 1,
+      accents: [0.86, 0.62, 1, 0.7],
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.86, gain: 0.05, attack: 0.035, curve: 2 },
+    },
+  ],
+
   hook: [
     {
       /*
@@ -1945,6 +2309,18 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 4,
       octave: 0,
       note: { wave: 'noise', from: 0, to: 0, seconds: 0.045, gain: 0.14, attack: 0.0008, curve: 6, lowFrom: 3800, lowTo: 1500, highFrom: 380 },
+    },
+    {
+      /*
+        SIXTEENTH HATS, and they exist at the fight and nowhere else. A double-time section is carried
+        by what is on every sixteenth rather than by the kick that doubled — `engine`'s hats are on the
+        beat and the offbeat, so this is the first thing in the piece with no gap in it at the top.
+      */
+      steps: Array.from({ length: 32 }, (_unused, i) => (i % 4 === 0 ? 1 : i % 2 === 0 ? 0.6 : 0.42)),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.022, gain: 0.062, attack: 0.0004, curve: 8, lowFrom: 13500, highFrom: 7000 },
     },
     {
       // A crash on the top of each bar, which is the one sound in the game that says *this is the

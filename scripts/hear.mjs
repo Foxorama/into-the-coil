@@ -57,7 +57,18 @@ import { PHRASE_SECONDS, BAR_SECONDS, LAYER_BARS, MUSIC_LADDER, MUSIC_LAYERS, MU
   own loop and either could have been fixed alone. That is the second description this whole file
   exists to avoid.
 */
-const busOf = (sum) => saturate(sum * MUSIC_GAIN, MUSIC_DRIVE);
+/*
+  ⚠️ **AND `MASTER_GAIN` IS IN IT, WHICH IT WAS NOT** — 0114. `--music` wrote the bed at
+  `MUSIC_GAIN` alone while `--play` wrote it at `MUSIC_GAIN × MASTER_GAIN`, so the two modes rendered
+  the SAME music at two different reference levels. A player comparing the files heard *“a massive
+  musical volume difference”* between a rung and a fight that are 0.42 and 0.48 RMS apart in the game
+  — an artefact of this file, reported as a defect in the music, and very nearly tuned as one.
+
+  ⚠️ **This is 0027 inside the instrument for the second time.** The first was the missing bus
+  shaper, which under-reported a change by four and a half decibels. A rig that is not at the game's
+  own gain is a rig that answers a question nobody asked.
+*/
+const busOf = (sum) => saturate(sum * MUSIC_GAIN, MUSIC_DRIVE) * MASTER_GAIN;
 import { auraNearness } from '../src/app/music.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
@@ -317,7 +328,9 @@ if (args.has('play')) {
     for (let i = 0; i < length; i++) {
       let v = 0;
       for (const layer of MUSIC_LAYERS) v += at(layer, i) * MUSIC_LADDER[level][layer];
-      bed[i] = busOf(v) * MASTER_GAIN;
+      // `busOf` carries MASTER_GAIN now, so applying it again here would render the bed twice as
+      // quiet as the game does — which is exactly the two-reference-levels bug one mode up.
+      bed[i] = busOf(v);
     }
     // The gun and the tubes, on their grids. One cue per volley, never one per barrel.
     for (let s = 0; s < steps; s += weapon.fireEvery) put(cues, 'pulse', s);
@@ -332,6 +345,19 @@ if (args.has('play')) {
       put(cues, 'kill', s + Math.floor(scatter.range(0, STEPS_PER_BEAT * 2)));
       put(cues, 'hit', s + Math.floor(scatter.range(0, STEPS_PER_BEAT * 2)));
       put(cues, 'threat', s + Math.floor(scatter.range(0, STEPS_PER_BEAT * 2)));
+    }
+    /*
+      ⚠️ **THE BOSS FIRES IN THE BOSS TAKES, AND UNTIL NOW IT DID NOT** — 0114. `bossShot` is the
+      loudest cue in the game and a fight is the only place it sounds, so a boss take without it was
+      measuring a quieter fight than the player ever hears. It is what the report *“the boss music was
+      better, but too subdued and quiet against the game sfx themselves”* is largely about, and this
+      rig could not see it.
+
+      ⚠️ **On the boss's own cadence rather than scattered**, because it IS quantised (0096) — unlike
+      the kills and hits above, which nothing snaps.
+    */
+    if (level === 'boss' || level === 'bossPeak') {
+      for (let s = 0; s < steps; s += STEPS_PER_BEAT * 3) put(cues, 'bossShot', s);
     }
     const mix = new Float32Array(length);
     for (let i = 0; i < length; i++) mix[i] = bed[i] + cues[i];
@@ -355,7 +381,8 @@ if (args.has('play')) {
     ['run', 0, 'a level opening'],
     ['run', 2, 'mid level, two of each'],
     ['surge', UPGRADE_TIERS, 'the surge, maxed'],
-    ['boss', UPGRADE_TIERS, 'the boss, maxed'],
+    ['boss', UPGRADE_TIERS, 'the boss arrives, maxed'],
+    ['bossPeak', UPGRADE_TIERS, 'the boss at its peak, maxed'],
   ];
   /*
     ⚠️ **THE LAST COLUMN IS THE REPORTED DEFECT AS A NUMBER.** *"Volume levels are still way off,

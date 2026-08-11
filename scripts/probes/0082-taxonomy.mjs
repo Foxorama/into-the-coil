@@ -37,9 +37,9 @@ export const PROBES = [
         the wrong guard for this probe to be standing over. The shields still have a RANGE, so they are
         what a budget ceiling is actually made of.
       */
-      find: "  { at: 4864, kind: 'shield', lane: 62 },",
+      find: "  { at: 3905, kind: 'shield', lane: 62 },",
       replace:
-        "  { at: 4864, kind: 'shield', lane: 62 },\n" +
+        "  { at: 3905, kind: 'shield', lane: 62 },\n" +
         "  { at: 6000, kind: 'shield', lane: 40 },\n" +
         "  { at: 6100, kind: 'shield', lane: 55 },",
     },

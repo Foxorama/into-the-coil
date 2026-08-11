@@ -72,8 +72,8 @@ export const PROBES = [
       // to the title's piece now and is closed at `run` on purpose, so closing it again says nothing.
       // `engine` is the level's floor — open at `run` and `approach` — and closing it at the boss is
       // the same failure the probe always described: a ladder that swaps rather than builds.
-      find: "  boss: { drone: 0.2, bass: 0, beat: 0, sub: 1.22, engine: 1.1, perc: 0.9, chords: 0.8, groove: 0.98, arp: 0.75, call: 0.81, hook: 0.83, drive: 0.88, toll: 0.79, lead: 0.93, stomp: 0.9, auraSlow: 1, auraFast: 0.9 },",
-      replace: "  boss: { drone: 0.2, bass: 0, beat: 0, sub: 1.22, engine: 0, perc: 0.9, chords: 0.8, groove: 0.98, arp: 0.75, call: 0.81, hook: 0.83, drive: 0.88, toll: 0.79, lead: 0.93, stomp: 0.9, auraSlow: 1, auraFast: 0.9 },",
+      find: "  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.86, groove: 0.94, arp: 0.7, ride: 0.68, call: 0.7, hook: 0.74, drive: 0.78, toll: 0, crash: 0.9, dread: 0, lead: 0.78, counter: 1.05, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },",
+      replace: "  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 0, perc: 0.82, chords: 0.86, groove: 0.94, arp: 0.7, ride: 0.68, call: 0.7, hook: 0.74, drive: 0.78, toll: 0, crash: 0.9, dread: 0, lead: 0.78, counter: 1.05, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },",
     },
   },
   {
@@ -92,8 +92,8 @@ export const PROBES = [
       // ⚠️ Re-anchored by docs/decisions/0102-the-music-goes-somewhere.md, which turned the single
       // return below into a cascade of four. The break is unchanged and is now the one line it always
       // was about: what decides the boss level.
-      find: "  if (bossOnField) return 'boss';",
-      replace: "  if (cameraAlong >= bossAt) return 'boss';",
+      find: "  if (bossOnField) return bossHealthLeft <= BOSS_PEAK_HEALTH ? 'bossPeak' : 'boss';",
+      replace: "  if (cameraAlong >= bossAt) return bossHealthLeft <= BOSS_PEAK_HEALTH ? 'bossPeak' : 'boss';",
     },
   },
   {
@@ -108,7 +108,7 @@ export const PROBES = [
     guard: 'and builds as the boss gets close, in SECONDS the player experiences',
     edit: {
       path: 'src/content/music.ts',
-      find: 'export const BOSS_APPROACH_UNITS = 430;',
+      find: 'export const BOSS_APPROACH_UNITS = 380;',
       replace: 'export const BOSS_APPROACH_UNITS = 40;',
     },
   },
