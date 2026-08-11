@@ -1878,3 +1878,116 @@ describe('0118 — the mix has a width, and the low end does not use it', () => 
     }
   });
 });
+
+/**
+ * THE KICK GOES UNDER THE MUSIC — `docs/decisions/0122-the-kick-goes-under-the-music.md`.
+ *
+ * ⚠️ **Reported from play, with the layer NAMED by the player off a solo render**: *"the bass beat,
+ * the do do do do do do recurring beat, is probably too loud and not bassy enough still. It needs a
+ * deeper bass, but needs to play below the melody of the music to support and uplift it, and it's
+ * currently playing over the top of the music so it's drowning out some of the subtler other melody
+ * parts."* — and *"I don't think I've even heard `groove` in game."*
+ *
+ * ⚠️ **THAT IS ONE MECHANISM, NOT TWO COMPLAINTS.** The kick swept from 160 Hz, which is inside the
+ * 130–300 band `chords` and `groove` occupy — so *not bassy enough* and *drowning out the melody* were
+ * the same number. [0113](../docs/decisions/0113-there-is-one-composition-and-seven-levels.md)'s solo
+ * rig is what let the player name it instead of it being guessed at for a fourth time.
+ */
+describe('0122 — the kick is under the music rather than in front of it', () => {
+  const DSP_MS = 30_000;
+
+  it('THE REPORTED ONE: the kick does not sit in the band the harmony occupies', () => {
+    /*
+      ⚠️ **A SHARE OF ITS OWN ENERGY, so it is about where the kick IS rather than how loud it is.** A
+      bound on gain would have been the other lever and it fights
+      [0108](../docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md): `engine` is the sub band's
+      main source, so turning it down takes the floor out from under the mix — measured, and it is why
+      this decision changed the spectrum and left the gain alone.
+    */
+    const bands = bandEnergy(bakeLayer('engine', SAMPLE_RATE), SAMPLE_RATE);
+    const total = bands.reduce((a, b) => a + b, 0);
+    const lowmid = bands[BANDS.findIndex(([, , n]) => n === 'lowmid')]! / total;
+    expect(
+      lowmid,
+      `the kick puts ${(lowmid * 100).toFixed(0)}% of itself in 130–300Hz, which is where the chords and ` +
+        'the bass line live — it is in front of the music rather than under it',
+    ).toBeLessThan(0.25);
+  }, DSP_MS);
+
+  it('and it reaches deeper than the harmony it sits under', () => {
+    /*
+      ⚠️ **THE OTHER HALF OF *"needs a deeper bass"*, and it is a comparison rather than a number.** A
+      kick whose lowest reach is above the bass line's is not a floor, it is another middle voice.
+      Driven off both layers, so re-voicing either moves it.
+    */
+    const lowest = (layer: 'engine' | 'groove'): number => {
+      const bands = bandEnergy(bakeLayer(layer, SAMPLE_RATE), SAMPLE_RATE);
+      const total = bands.reduce((a, b) => a + b, 0);
+      return bands[BANDS.findIndex(([, , n]) => n === 'sub')]! / total;
+    };
+    expect(
+      lowest('engine'),
+      'the kick carries less of itself below 60Hz than the bass line does — it is not the floor',
+    ).toBeGreaterThan(lowest('groove'));
+  }, DSP_MS);
+
+  it('AND THE FLOOR IS STILL THE SUB LAYER, not the kick’s tail', () => {
+    /*
+      ── THE GUARD THIS DECISION BROKE, REPLACED BY ONE THAT MEASURES THE CLAIM ──────────────────
+
+      ⚠️ **0108's probe closes `sub` at a level's opening rung and expects *"a level carries MANY times
+      the title's sub"* to go red. After this decision it did not** — `npm run prove` reported WRONG
+      TEST — because a deeper kick supplies enough of the sub band on its own to clear a ratio against
+      the title. **The probe's own words are what happened**: *"the floor is back to being a kick's
+      tail."*
+
+      ⚠️ **A RATIO AGAINST THE TITLE STOPPED TRACKING ITS SUBJECT**, which
+      [0114](../docs/decisions/0114-the-fight-is-a-different-piece.md) says is worse than no guard
+      because it still passes. What the claim has always been is *the level has a FLOOR*, and a floor
+      is sustained where a kick's tail is a thump — the difference between support and pumping.
+
+      ⚠️ **So it is attributed rather than totalled.** `sub` must be the largest single contributor to
+      the band, which fails the instant it is closed whatever else is playing, and says nothing about
+      any particular number.
+    */
+    const SUBBAND = BANDS.findIndex(([, , n]) => n === 'sub');
+    const share = (layer: MusicLayer): number => {
+      const gain = MUSIC_LADDER.run[layer];
+      if (gain <= 0) return 0;
+      const buf = bakeLayer(layer, SAMPLE_RATE);
+      const at = new Float32Array(buf.length);
+      for (let i = 0; i < buf.length; i++) at[i] = buf[i]! * gain;
+      return bandEnergy(at, SAMPLE_RATE)[SUBBAND]!;
+    };
+    const mine = share('sub');
+    for (const layer of MUSIC_LAYERS) {
+      if (layer === 'sub') continue;
+      expect(
+        mine,
+        `${layer} puts more into the band a chest resolves than \`sub\` does — the floor is a side ` +
+          'effect of another layer rather than a part somebody wrote',
+      ).toBeGreaterThan(share(layer));
+    }
+  }, DSP_MS);
+
+  it('AND THE LAYER THE PLAYER HAD NEVER HEARD IS WITHIN REACH OF THE ONE THEY HAD', () => {
+    /*
+      ⚠️ **A-WEIGHTED, WHICH IS THE WHOLE POINT AND THE THING I GOT WRONG FIRST.** Raw RMS said `sub`
+      was the loudest layer in the game; the player said they had never heard it, and they were right —
+      energy is not loudness, and `tests/spectrum.ts` has been A-weighted since
+      [0089](../docs/decisions/0089-a-cue-has-a-body.md) for exactly this reason.
+
+      ⚠️ **A CEILING ON THE GAP RATHER THAN A FLOOR ON THE BASS LINE.** What matters is not how loud
+      `groove` is, it is how far under the drums it sits — which is what *"drowning out"* means, and
+      what a listener actually reports.
+    */
+    const heard = (layer: 'engine' | 'groove'): number =>
+      bandEnergy(bakeLayer(layer, SAMPLE_RATE), SAMPLE_RATE).reduce((a, b) => a + b, 0) * MUSIC_LADDER.run[layer];
+    const dB = 10 * Math.log10(heard('groove') / heard('engine'));
+    expect(
+      dB,
+      `the bass line is ${dB.toFixed(1)}dB under the kick at the opening of a level — far enough under ` +
+        'that a player reports never having heard it',
+    ).toBeGreaterThan(-6);
+  }, DSP_MS);
+});
