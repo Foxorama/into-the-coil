@@ -106,7 +106,7 @@ describe('four loops that cannot drift', () => {
   });
 
   /*
-    ⚠️ **THE THREE TESTS BELOW CARRY AN EXPLICIT TIMEOUT AND IT IS A MEASUREMENT, NOT A NUISANCE**
+    ⚠️ **EVERY TEST IN THIS FILE THAT BAKES CARRIES AN EXPLICIT TIMEOUT AND IT IS A MEASUREMENT, NOT A NUISANCE**
     — `docs/decisions/0113-there-is-one-composition-and-seven-levels.md`. The phrase went from eight
     bars to sixteen, so `bakeLoops` synthesises 201 seconds of audio where it used to do 99, and each
     of these calls it. Alone they take about 2.3s; under `vitest`'s parallel workers they reach 5.3s
@@ -224,7 +224,7 @@ describe('four loops that cannot drift', () => {
       growing so far past the curve's knee that everything above it is one level.
     */
     expect(raw, `the boss mix reaches the shaper at ${raw.toFixed(2)}, which is past its knee`).toBeLessThanOrEqual(1.7);
-  });
+  }, 30_000);
 });
 
 
@@ -943,7 +943,7 @@ describe('0102 — the music has accents, a bass line and a build', () => {
       strong / weak,
       `the accented hat bakes ${(strong / weak).toFixed(2)}× the quiet one, against ${(loudest / quietest).toFixed(2)}× in the table`,
     ).toBeGreaterThan(1.4);
-  });
+  }, 30_000);
 
   it('THE LEVEL: there is something in the low end that MOVES, at every rung above the opening', () => {
     /*
@@ -1513,7 +1513,7 @@ describe('0108 — the bed is felt, the hands are on it, and the boss arrives', 
       weak / strong,
       `the leaned-on sixteenth bakes at ${(weak / strong).toFixed(2)} of the downbeat, against ${lean} in the table`,
     ).toBeLessThan(0.95);
-  });
+  }, 30_000);
 
   it('THE COUNTERPOINT: something a level opens does not divide the beat the way the drums do', () => {
     /*
