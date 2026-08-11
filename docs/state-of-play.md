@@ -152,6 +152,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
 | **a probe runs the test it NAMES, and a suite bakes the music once** | [0115](decisions/0115-a-probe-runs-its-own-guard.md) — amends 0054's *whole suite* clause |
 | **the rig plays a LEVEL, and the instrument is guarded like the game** | [0116](decisions/0116-the-rig-plays-the-level.md) |
+| **a section change lands on a DOWNBEAT, and not one ever had** | [0117](decisions/0117-a-section-change-lands-on-the-beat.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -248,6 +249,11 @@ date and is exactly what a play-test is for.
 ⚠️ **THE MUSIC IS THE LIVE CHANNEL AND [0114](decisions/0114-the-fight-is-a-different-piece.md) IS
 WHERE IT GOT TO.** Read it before touching a rung: 0090's additive ladder is superseded, the fight is
 a different piece with its own two rungs, and the level runs 42s / 92s / 10.6s-before-the-boss.
+
+⚠️ **AND THE FIRST ANSWER TO `surge` THAT IS NOT A GAIN HAS LANDED, UNFLOWN** —
+[0117](decisions/0117-a-section-change-lands-on-the-beat.md). It changes no gain, no rung and no
+distance; what moves is when a change is heard. **Whether it is enough is the open question**, and
+0114's warning still governs the attempt after it.
 
 ⚠️ **AND THE INSTRUMENT FOR IT EXISTS NOW** — [0116](decisions/0116-the-rig-plays-the-level.md).
 `node scripts/hear.mjs --level=<kind>` writes a whole level at its own rungs, ramps and theme.

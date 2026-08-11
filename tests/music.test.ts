@@ -3,6 +3,7 @@ import { BANDS, bandEnergy, spectrum } from './spectrum.ts';
 import { describe, expect, it } from 'vitest';
 
 import {
+  BAR_SECONDS,
   BEAT_SECONDS,
   BOSS_APPROACH_UNITS,
   PUSH_UNITS,
@@ -25,7 +26,20 @@ import {
   AURA_ONSET_UNITS,
   type MusicLayer,
 } from '../src/content/music.ts';
-import { auraBuild, auraFor, auraNearness, auraNearnessFor, bakeLayer, musicLevelFor, rephaseIn } from '../src/app/music.ts';
+import {
+  AURA_RAMP_SECONDS,
+  RAMP_SECONDS,
+  auraBuild,
+  auraFor,
+  auraNearness,
+  auraNearnessFor,
+  bakeLayer,
+  levelWrites,
+  musicLevelFor,
+  nextBarFrom,
+  rephaseIn,
+} from '../src/app/music.ts';
+import { THEME_KINDS } from '../src/content/themes.ts';
 import { loopsAt } from './bakes.ts';
 import { STEPS_PER_BEAT } from '../src/content/music.ts';
 import { MAX_STEPS } from '../src/app/loop.ts';
@@ -1589,4 +1603,121 @@ describe('0108 — the bed is felt, the hands are on it, and the boss arrives', 
       ).toBeGreaterThan(1.02);
     }
   }, DSP_MS);
+});
+
+/**
+ * A SECTION CHANGE LANDS ON THE BEAT — `docs/decisions/0117-a-section-change-lands-on-the-beat.md`.
+ *
+ * ⚠️ **`docs/decisions/0116-the-rig-plays-the-level.md` MEASURED THE DEFECT AND DELIBERATELY LEFT
+ * IT.** Twenty-seven of the game's twenty-eight rung changes land mid-bar, because the ramp began at
+ * `ctx.currentTime` — the instant a frame noticed a camera had crossed a distance. A change heard
+ * away from the beat is not heard as a change; it reads as the mix wobbling, which is
+ * [0114](../docs/decisions/0114-the-fight-is-a-different-piece.md)'s *"only a very subtle difference
+ * between push and surge"*, reported twice and answered twice with a gain.
+ */
+describe('0117 — a section change lands on a downbeat, and not one ever has', () => {
+  const anchor = 12.345;
+
+  it('THE GRID: the next bar is on the music’s own clock, never on the wall', () => {
+    /*
+      ⚠️ **Driven over a whole phrase at a resolution finer than a step**, rather than at three
+      hand-picked instants. The property is *every* instant, and a hand picks the ones it thought of.
+    */
+    for (let t = 0; t < PHRASE_SECONDS; t += 1 / 240) {
+      const now = anchor + t;
+      const bar = nextBarFrom(anchor, now);
+      const bars = (bar - anchor) / BAR_SECONDS;
+      expect(
+        Math.abs(bars - Math.round(bars)) < 1e-9,
+        `at ${t.toFixed(3)}s the ramp would start ${bars.toFixed(4)} bars in, which is not a bar line`,
+      ).toBe(true);
+      expect(bar, `the ramp would start ${(now - bar).toFixed(3)}s in the past`).toBeGreaterThanOrEqual(now - 1e-9);
+      expect(
+        bar - now,
+        `a change would wait ${(bar - now).toFixed(2)}s, which is longer than the bar it is waiting for`,
+      ).toBeLessThan(BAR_SECONDS + 1e-9);
+    }
+  });
+
+  it('and before the loops have started, the first bar is the first bar', () => {
+    // `start()` schedules the set a moment ahead, so `now` is legitimately behind the anchor.
+    expect(nextBarFrom(anchor, anchor - 0.05)).toBe(anchor);
+    expect(nextBarFrom(anchor, anchor)).toBe(anchor);
+  });
+
+  it('THE REPORTED ONE: every layer that carries the arrangement moves on a bar line', () => {
+    /*
+      ⚠️ **This is the assertion that would have been red for the whole life of the project.** Over
+      every rung, every theme and a spread of instants, a non-aura ramp must begin on the grid.
+    */
+    for (const level of MUSIC_LEVELS) {
+      for (const theme of THEME_KINDS) {
+        for (let t = 0; t < BAR_SECONDS * 3; t += 0.037) {
+          const now = anchor + t;
+          for (const w of levelWrites(level, theme, 0.5, anchor, now, {})) {
+            if (AURA_LAYERS.includes(w.layer)) continue;
+            const bars = (w.at - anchor) / BAR_SECONDS;
+            expect(
+              Math.abs(bars - Math.round(bars)) < 1e-9,
+              `${w.layer} at ${level}/${theme} ramps from ${bars.toFixed(3)} bars, which is mid-bar`,
+            ).toBe(true);
+          }
+        }
+      }
+    }
+  });
+
+  it('AND THE AURA IS NOT QUANTISED, because it is tracking something the player steers', () => {
+    /*
+      ⚠️ **0091, and the reason its ramp is already a quarter of a level change's.** A dread that
+      arrived on the next downbeat would be reporting where the player WAS. Quantising it would look
+      like consistency and would be the defect this decision is named for, applied to the one layer
+      that must not have it.
+    */
+    const now = anchor + 0.37;
+    const writes = levelWrites('boss', 'approach', 0.5, anchor, now, {});
+    const auras = writes.filter((w) => AURA_LAYERS.includes(w.layer));
+    expect(auras.length, 'the fight opened no aura at all, so this asserts nothing').toBeGreaterThan(0);
+    for (const w of auras) {
+      expect(w.at, `${w.layer} was quantised — it must follow the boss, not the bar`).toBe(now);
+      expect(w.tau, `${w.layer} ramps at a level change's rate`).toBeCloseTo(AURA_RAMP_SECONDS / 3, 12);
+    }
+    for (const w of writes.filter((x) => !AURA_LAYERS.includes(x.layer))) {
+      expect(w.tau, `${w.layer} does not ramp at a level change's rate`).toBeCloseTo(RAMP_SECONDS / 3, 12);
+    }
+  });
+
+  it('THE STAIR-STEP: a layer whose destination has not moved is not rewritten', () => {
+    /*
+      ⚠️ **THE HALF THAT MAKES THE QUANTISING WORK AT ALL, AND IT IS NOT A SAVING.** `setLevel` runs
+      every frame. Re-scheduling a ramp that is halfway through holds it at its current value until
+      the NEXT bar and then resumes, so a build that should be one smooth move becomes a staircase in
+      bar-sized steps — audibly worse than the defect being fixed.
+    */
+    const held: Partial<Record<MusicLayer, number>> = {};
+    for (const w of levelWrites('run', 'approach', 0, anchor, anchor + 0.1, held)) held[w.layer] = w.target;
+    const again = levelWrites('run', 'approach', 0, anchor, anchor + 0.9, held);
+    expect(
+      again.filter((w) => !AURA_LAYERS.includes(w.layer)),
+      'a layer was rewritten with the rung unchanged, which stalls a ramp in progress',
+    ).toEqual([]);
+    // And a real change still writes.
+    const moved = levelWrites('push', 'approach', 0, anchor, anchor + 0.9, held);
+    expect(
+      moved.filter((w) => !AURA_LAYERS.includes(w.layer)).length,
+      'the rung changed and nothing moved',
+    ).toBeGreaterThan(0);
+  });
+
+  it('and the ramp is exactly one bar, so a change arrives before the next downbeat', () => {
+    /*
+      ⚠️ **`RAMP_SECONDS` is 1.6 and a bar is 1.6, which was a coincidence until this decision and is
+      now load-bearing.** `setTargetAtTime` is within 5% of its target after three time constants, and
+      the tau is a third of the ramp — so a change that starts on a downbeat has arrived by the next
+      one. A ramp longer than its bar would still be moving when the following bar landed.
+    */
+    expect(RAMP_SECONDS, 'a rung change no longer completes inside the bar it starts on').toBeLessThanOrEqual(
+      BAR_SECONDS + 1e-9,
+    );
+  });
 });

@@ -81,6 +81,7 @@ import {
   auraBuild,
   auraFor,
   auraNearness,
+  levelWrites,
   musicLevelFor,
 } from '../src/app/music.ts';
 import { SHIPS } from '../src/content/ships.ts';
@@ -323,24 +324,40 @@ if (args.has('level')) {
     it is approximating — so nothing about the shape of the ramp is lost.
   */
   const BLOCK = 64;
+  /*
+    ⚠️ **`levelWrites` IS THE MIXER'S OWN DECISION AND THE RIG ASKS IT** — 0117, on
+    `docs/decisions/0116-the-rig-plays-the-level.md`'s rule. A rig that smoothed toward a target on
+    its own schedule would go on drawing the OLD behaviour the day the game started quantising, which
+    is the third time this file would have drifted from the thing it measures.
+  */
   const held = {};
-  for (const layer of MUSIC_LAYERS) held[layer] = targetGain(theme, 'calm', layer, 0);
+  const ramp = {};
+  const headingFor = {};
+  for (const layer of MUSIC_LAYERS) {
+    held[layer] = targetGain(theme, 'calm', layer, 0);
+    ramp[layer] = { at: 0, target: held[layer], tau: RAMP_SECONDS / 3 };
+  }
 
   for (let i = 0; i < total; i += BLOCK) {
     const second = i / SAMPLE_RATE;
     const rung = rungAt(kind, second, fightSeconds);
     const aura = auraAt(kind, second, nearnessInFight);
+    // The loops begin at t = 0 here, so the anchor is zero and bar zero is the file's own start.
+    for (const w of levelWrites(rung, theme, aura, 0, second, headingFor)) {
+      headingFor[w.layer] = w.target;
+      ramp[w.layer] = { at: w.at, target: w.target, tau: w.tau };
+    }
     for (let n = 0; n < BLOCK && i + n < total; n++) {
+      const t = (i + n) / SAMPLE_RATE;
       let v = 0;
       for (const layer of MUSIC_LAYERS) {
-        const target = targetGain(theme, rung, layer, aura);
+        const r = ramp[layer];
         /*
-          ⚠️ **`setTargetAtTime`'s own curve, at the same time constant `makeMusicOut` gives it.** It
-          is an exponential approach starting NOW — not a linear fade at the end of a slot, which is
-          what `--music` draws and what this mode exists to stop being the only picture available.
+          ⚠️ **`setTargetAtTime` HOLDS UNTIL ITS START TIME AND THEN APPROACHES**, which is the whole
+          of what 0117 changed: the wait for the downbeat is in the `t >= r.at` and it is the thing
+          this file has to draw honestly or the fix cannot be judged by ear.
         */
-        const tau = (AURA_LAYERS.includes(layer) ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3;
-        held[layer] += (target - held[layer]) * (1 - Math.exp(-1 / (SAMPLE_RATE * tau)));
+        if (t >= r.at) held[layer] += (r.target - held[layer]) * (1 - Math.exp(-1 / (SAMPLE_RATE * r.tau)));
         v += at(layer, i + n) * held[layer];
       }
       track[i + n] = Math.max(-1, Math.min(1, busOf(v)));
@@ -358,15 +375,23 @@ if (args.has('level')) {
   */
   console.log(`${kind} — theme ${theme}, boss at ${bossAt} units (${toBoss.toFixed(1)}s at ${UNITS_PER_SECOND} units/s)`);
   console.log(`fight ${fightSeconds}s, aura gap held at ${gapUnits} units (nearness ${nearnessInFight.toFixed(2)})\n`);
-  console.log('  rung        starts      lasts     bar        beat of 4');
-  for (const { rung, second, lasts, bars, beat, onBar } of marks) {
+  console.log('  rung        the game decides   beat      the music moves   beat     lasts');
+  for (const { rung, second, lasts, beat, movesAt, moves } of marks) {
     console.log(
-      `  ${rung.padEnd(10)} ${second.toFixed(2).padStart(8)}s ${lasts.toFixed(1).padStart(8)}s ` +
-        `${bars.toFixed(2).padStart(9)} ${beat.toFixed(2).padStart(10)}  ${onBar ? 'on the bar' : '<-- MID-BAR'}`,
+      `  ${rung.padEnd(10)} ${second.toFixed(2).padStart(14)}s ${beat.toFixed(2).padStart(7)} ` +
+        `${movesAt.toFixed(2).padStart(17)}s ${moves.beat.toFixed(2).padStart(7)}  ` +
+        `${lasts.toFixed(1).padStart(7)}s ${moves.onBar ? '' : '<-- MID-BAR'}`,
     );
   }
-  const off = marks.slice(1).filter((m) => !m.onBar).length;
-  console.log(`\n${off} of ${marks.length - 1} rung changes land mid-bar.`);
+  const decidedOff = marks.slice(1).filter((m) => !m.onBar).length;
+  const heardOff = marks.slice(1).filter((m) => !m.moves.onBar).length;
+  /*
+    ⚠️ **TWO NUMBERS, BECAUSE THEY ARE TWO DIFFERENT CLAIMS** — 0117. The first is where a camera
+    crossed a distance and will stay ugly for ever; the second is where the player hears it, and it is
+    the one that was the defect.
+  */
+  console.log(`\n${decidedOff} of ${marks.length - 1} rung boundaries fall mid-bar, where the camera puts them.`);
+  console.log(`${heardOff} of ${marks.length - 1} are HEARD mid-bar.`);
   console.log(`wrote ${base}-level-${kind}.wav (${(total / SAMPLE_RATE).toFixed(0)}s)`);
   process.exit(0);
 }
