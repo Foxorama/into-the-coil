@@ -205,6 +205,70 @@ export const LAYER_BARS: Record<MusicLayer, number> = {
 };
 
 /**
+ * How far off centre each layer sits, `-1` hard left to `+1` hard right.
+ *
+ * ── TWENTY-THREE LAYERS STACKED AT ONE POINT IN SPACE ───────────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0118-the-mix-has-a-width.md`.** Reported from play: *"it's currently playing
+ * over the top of the music so it's drowning out some of the subtler other melody parts"*, and, of
+ * the rungs above `push`, *"less noticeable because the ongoing beat and melody is strong and the
+ * additions are subtle."*
+ *
+ * ⚠️ **BOTH ARE MASKING, AND MASKING IS WHAT A MONO MIX CANNOT ESCAPE.** Every layer this game has
+ * ever played came out of the same point, so two sounds in the same frequency band had nothing to
+ * separate them but level — which is why the answer has been a gain six times running.
+ * `docs/decisions/0114-the-fight-is-a-different-piece.md` says the next attempt must not be another
+ * one. **A position is not a level.**
+ *
+ * ⚠️ **IT COSTS NO MEMORY, WHICH IS NOT WHAT A FIRST READING SUGGESTS.** The obvious build is stereo
+ * buffers, and that doubles 52 MB of resident audio against a ceiling `tests/sound.test.ts` says must
+ * not be raised again. The layers stay MONO and take a `StereoPannerNode` each — twenty-three nodes,
+ * built once with the graph, nothing per frame.
+ *
+ * ── WHY NOTHING IS HARD PANNED ──────────────────────────────────────────────────────────────────
+ *
+ * ⚠️ **`PAN_LIMIT` is 0.65 and the reason is a player with one earbud in.**
+ * `docs/decisions/0024-the-accessibility-floor-is-settings.md` bans a channel that carries
+ * information alone, and music is not information — but a layer at ±1 is a layer somebody simply does
+ * not have, and *"there is one game and it is the loud one"* is not served by a mix that is missing a
+ * part depending on how you are listening. At 0.65 every layer is present in both ears.
+ *
+ * ⚠️ **AND THE LOW END IS CENTRED, WHICH IS A MEASUREMENT RATHER THAN A TASTE.** A panned low
+ * frequency spends headroom on one side and arrives in a room as the same non-directional thump
+ * anyway. `tests/music.test.ts` drives the band energy of every layer and requires anything whose
+ * weight is in `sub` and `low` to be at zero — so the rule survives a layer being re-voiced, which a
+ * typed list of names would not.
+ */
+export const LAYER_PAN: Record<MusicLayer, number> = {
+  drone: 0,
+  bass: 0,
+  beat: 0,
+  sub: 0,
+  engine: 0,
+  perc: -0.45,
+  chords: 0.2,
+  groove: 0,
+  arp: -0.55,
+  ride: 0.5,
+  call: -0.3,
+  hook: 0.55,
+  drive: 0.25,
+  toll: -0.5,
+  crash: -0.35,
+  dread: 0.15,
+  lead: 0.3,
+  counter: -0.4,
+  stomp: 0,
+  frenzy: 0.45,
+  wraith: -0.25,
+  auraSlow: -0.6,
+  auraFast: 0.6,
+};
+
+/** The widest a layer may sit. Not 1, and the reason is on `LAYER_PAN`. */
+export const PAN_LIMIT = 0.65;
+
+/**
  * The two the boss brings with it, and they are the only layers driven by a DISTANCE.
  *
  * ── WHY THE AURA IS MUSIC AND NOT A CUE ─────────────────────────────────────────────────────────

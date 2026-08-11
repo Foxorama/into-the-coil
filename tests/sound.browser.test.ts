@@ -173,9 +173,25 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
       them would need this test to know which sources were which; adding them says the same thing and
       also holds that the music comes back, which is a claim worth having.
     */
+    /*
+      ── THE MUSIC IS STARTED FIRST, ON PURPOSE, AND WITHOUT IT THIS GUARD IS A COIN FLIP ──────────
+
+      ⚠️ **`docs/decisions/0119-off-stops-the-loops.md`.** The first gesture used to be the `off`
+      click itself, and the audio is unlocked by a `pointerdown` in the CAPTURE phase — so whether
+      the loops had started by the time the setting applied depended on whether a frame landed in
+      between. **The same code passed one CI run and failed the next**, which is
+      `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`'s subject exactly.
+
+      ⚠️ **Clicking `on` first is a real gesture that changes no setting** — sound is already on — so
+      it unlocks the context and lets a frame start the loops, and what follows is then the same
+      sequence every time. The race is gone from the guard and the bug it was half-seeing is fixed in
+      `src/app/music.ts`.
+    */
     const page = await open();
+    await page.click(soundOption('on'));
+    await page.waitForTimeout(300);
     await page.click(soundOption('off'));
-    await page.waitForTimeout(150);
+    await page.waitForTimeout(300);
     const quiet = await tally(page);
     await page.click(soundOption('on'));
     await page.waitForTimeout(300);

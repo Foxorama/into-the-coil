@@ -37,6 +37,7 @@ import {
   PUSH_UNITS,
   SURGE_UNITS,
   AURA_LAYERS,
+  LAYER_PAN,
   AURA_NEAR_UNITS,
   AURA_FAR_UNITS,
   AURA_CURVE,
@@ -535,6 +536,15 @@ export const DUCK_UP_SECONDS = 0.32;
 export const AURA_RAMP_SECONDS = 0.4;
 
 /**
+ * How long after the sound is switched off the loops actually stop, in seconds.
+ *
+ * ⚠️ **Longer than the master's own 0.08s fade and short enough to be the same gesture** — 0119.
+ * Stopping a looping source mid-cycle is a click, and a setting whose whole job is to make the game
+ * quiet must not make a noise on the way.
+ */
+const STOP_AFTER_SECONDS = 0.25;
+
+/**
  * The next bar line on the loops' own clock, at or after `now`.
  *
  * ⚠️ **`anchor` is `anchorAudio` — the instant the loop set was last put on the air**, so it is
@@ -548,6 +558,24 @@ export function nextBarFrom(anchor: number, now: number): number {
   const since = now - anchor;
   if (since <= 0) return anchor;
   return anchor + Math.ceil(since / BAR_SECONDS) * BAR_SECONDS;
+}
+
+/**
+ * What a `StereoPannerNode` does to a MONO input, as the Web Audio spec defines it.
+ *
+ * ⚠️ **THE GAME DOES NOT CALL THIS — A BROWSER NODE DOES — AND THAT IS EXACTLY WHY IT IS HERE.**
+ * `scripts/hear.mjs` has to render the same field the player hears, and the only alternative is the
+ * rig keeping its own idea of a pan law. `docs/decisions/0116-the-rig-plays-the-level.md` is about
+ * that class of drift and this is the fourth place it could have happened.
+ *
+ * ⚠️ **Equal power, not equal amplitude.** `L² + R²` is 1 at every position, so a layer does not get
+ * quieter as it crosses the middle — which an equal-amplitude law does, audibly, and which would read
+ * as the mix dipping rather than as anything moving.
+ */
+export function panGains(pan: number): { left: number; right: number } {
+  const clamped = pan < -1 ? -1 : pan > 1 ? 1 : pan;
+  const x = ((clamped + 1) * Math.PI) / 4;
+  return { left: Math.cos(x), right: Math.sin(x) };
 }
 
 /** One gain to write: which layer, what it is heading for, when the ramp starts and how fast. */
@@ -697,7 +725,19 @@ export function makeMusicOut(
     buffers[layer] = buffer;
     const gain = ctx.createGain();
     gain.gain.value = MUSIC_LADDER.calm[layer];
-    gain.connect(master);
+    /*
+      ⚠️ **ONE PANNER PER LAYER, BUILT WITH THE GRAPH AND NEVER TOUCHED AGAIN** — 0118. A layer's
+      place in the field is a property of the layer, not of the moment, so this is `@setup` work in
+      the same sense the buffers are: twenty-three nodes at context creation and nothing per frame.
+      `docs/decisions/0022-frame-rate-is-a-feature.md`'s budget is untouched.
+
+      ⚠️ **The buffers stay MONO.** Stereo buffers would double 52 MB of resident audio against a
+      ceiling `tests/sound.test.ts` says must not be raised again; a panner spends no memory at all.
+    */
+    const pan = ctx.createStereoPanner();
+    pan.pan.value = LAYER_PAN[layer];
+    gain.connect(pan);
+    pan.connect(master);
     gains[layer] = gain;
   }
 
@@ -823,7 +863,38 @@ export function makeMusicOut(
       if (next) {
         this.start();
         this.setLevel(current, near, place);
+        return;
       }
+      /*
+        ── OFF HAS TO STOP THE LOOPS, AND FOR ITS WHOLE LIFE IT ONLY MUTED THEM ────────────────────
+
+        ⚠️ **`docs/decisions/0119-off-stops-the-loops.md`.** `applyMusicLevel` calls `start()` on
+        EVERY frame and `start()` refuses only while `on` is false — and the audio is unlocked by a
+        `pointerdown` in the CAPTURE phase, which lands before the `click` that applies the setting.
+        **So a frame between the two starts the loops during the very gesture that turns sound off**,
+        and `started` then stays true for ever: turning sound back on found nothing to do.
+
+        ⚠️ **IT IS A RACE AND IT IS WHY THE GUARD WAS INTERMITTENT.** The same code passed on one CI
+        run and failed on the next; `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`
+        says establish which it is rather than rerun, and it is the code. `tests/sound.browser.test.ts`
+        had the intended behaviour written in its own comment — *"turning the sound off stops the loops
+        outright"* — and nothing implemented it.
+
+        ⚠️ **Stopped AFTER the fade, not on the instant.** The master is already on its way to zero
+        over 0.08s; stopping a source mid-cycle is a click, and the whole point of the ramp is that
+        the setting is not one.
+      */
+      if (!started) return;
+      const off = ctx.currentTime + STOP_AFTER_SECONDS;
+      for (let i = 0; i < sources.length; i++) sources[i]!.stop(off);
+      sources.length = 0;
+      started = false;
+      /*
+        ⚠️ **And what each layer was heading for is forgotten with them** — 0117. A restart re-anchors
+        the bar grid, so every ramp is scheduled afresh; leaving the old destinations in place would
+        make `levelWrites` skip a layer whose gain now belongs to a different anchor.
+      */
+      for (const layer of MUSIC_LAYERS) delete headingFor[layer];
     },
     level(): MusicLevel {
       return current;

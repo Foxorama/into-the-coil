@@ -24,6 +24,8 @@ import {
   AURA_FAR_UNITS,
   AURA_LEVEL_CEILING,
   AURA_ONSET_UNITS,
+  LAYER_PAN,
+  PAN_LIMIT,
   type MusicLayer,
 } from '../src/content/music.ts';
 import {
@@ -35,6 +37,7 @@ import {
   auraNearnessFor,
   bakeLayer,
   levelWrites,
+  panGains,
   musicLevelFor,
   nextBarFrom,
   rephaseIn,
@@ -1719,5 +1722,121 @@ describe('0117 — a section change lands on a downbeat, and not one ever has', 
     expect(RAMP_SECONDS, 'a rung change no longer completes inside the bar it starts on').toBeLessThanOrEqual(
       BAR_SECONDS + 1e-9,
     );
+  });
+});
+
+/**
+ * THE MIX HAS A WIDTH — `docs/decisions/0118-the-mix-has-a-width.md`.
+ *
+ * ⚠️ **Reported from play**: *"it's currently playing over the top of the music so it's drowning out
+ * some of the subtler other melody parts"*, and of the rungs above `push`, *"less noticeable because
+ * the ongoing beat and melody is strong and the additions are subtle."* **Both are masking**, and a
+ * mono mix has nothing but level to separate two sounds in one band — which is why the answer has
+ * been a gain six rounds running.
+ */
+describe('0118 — the mix has a width, and the low end does not use it', () => {
+  /** Baking and analysing every layer is real DSP, on the terms the shed test states. */
+  const DSP_MS = 30_000;
+
+  it('THE ONE THAT IS A MEASUREMENT AND NOT A TASTE: a layer whose weight is low is centred', () => {
+    /*
+      ⚠️ **DRIVEN OFF THE BAKED AUDIO, so it survives a layer being re-voiced.** A typed list of names
+      would go on passing the day `hook` was dropped an octave — and this is the guard standing
+      between the mix and a panned bass, which spends headroom on one side and arrives in a room as
+      the same non-directional thump anyway.
+    */
+    const SUB = BANDS.findIndex((b) => b[2] === 'sub');
+    const LOW = BANDS.findIndex((b) => b[2] === 'low');
+    const heavy: string[] = [];
+    for (const layer of MUSIC_LAYERS) {
+      const bands = bandEnergy(bakeLayer(layer, SAMPLE_RATE), SAMPLE_RATE);
+      const total = bands.reduce((a, b) => a + b, 0);
+      if (total <= 0) continue;
+      const bottom = (bands[SUB]! + bands[LOW]!) / total;
+      if (bottom < 0.4) continue;
+      heavy.push(layer);
+      expect(
+        Math.abs(LAYER_PAN[layer]),
+        `${layer} carries ${(bottom * 100).toFixed(0)}% of its energy below 130Hz and sits at ` +
+          `${LAYER_PAN[layer]} — a panned low end spends headroom on one side and is not heard as placed`,
+      ).toBe(0);
+    }
+    expect(heavy.length, 'no layer measured as low-heavy, so this asserted nothing').toBeGreaterThan(0);
+  }, DSP_MS);
+
+  it('and nothing is hard panned, because a player may have one earbud in', () => {
+    /*
+      ⚠️ **`docs/decisions/0024-the-accessibility-floor-is-settings.md` bans a channel carrying
+      information alone and music is not information** — but a layer at ±1 is a layer somebody simply
+      does not have, and *"there is one game and it is the loud one"* is not served by a mix missing a
+      part depending on how you are listening.
+    */
+    for (const layer of MUSIC_LAYERS) {
+      expect(
+        Math.abs(LAYER_PAN[layer]),
+        `${layer} sits at ${LAYER_PAN[layer]}, past the ${PAN_LIMIT} that keeps every layer in both ears`,
+      ).toBeLessThanOrEqual(PAN_LIMIT + 1e-9);
+    }
+  });
+
+  it('THE POINT OF IT: the field is actually used, and the two sides are balanced', () => {
+    /*
+      ⚠️ **A table of zeros would pass every assertion above and buy nothing**, which is the shape of
+      guard this project keeps finding — one that holds a bound nobody is near. What 0118 is FOR is
+      that layers in the same band are in different places.
+    */
+    const placed = MUSIC_LAYERS.filter((l) => LAYER_PAN[l] !== 0);
+    expect(placed.length, 'every layer is centred, so the mix is still mono in everything but name').toBeGreaterThan(
+      MUSIC_LAYERS.length / 3,
+    );
+    /*
+      ⚠️ **And it leans neither way.** A field whose every layer is right of centre is not a field, it
+      is an error — and it would be inaudible as one on a phone speaker.
+    */
+    const lean = MUSIC_LAYERS.reduce((sum, l) => sum + LAYER_PAN[l], 0);
+    expect(Math.abs(lean), `the mix leans ${lean.toFixed(2)} to one side`).toBeLessThan(0.6);
+  });
+
+  it('THE LAW: a layer does not get quieter as it crosses the middle', () => {
+    /*
+      ⚠️ **EQUAL POWER, NOT EQUAL AMPLITUDE, AND THE RIG IS WHY THIS IS A FUNCTION AT ALL.** The game's
+      field is made by a browser node; `scripts/hear.mjs` has to render the same one, and the only
+      alternative was the rig keeping its own idea of a pan law — the drift
+      `docs/decisions/0116-the-rig-plays-the-level.md` is named for, in a fourth place.
+
+      ⚠️ **An equal-amplitude law is 3 dB down in the centre**, which would read as the mix dipping
+      wherever a layer sits near zero — and `LAYER_PAN` puts seven layers exactly there.
+    */
+    for (let p = -1; p <= 1; p += 1 / 64) {
+      const { left, right } = panGains(p);
+      expect(
+        left * left + right * right,
+        `a layer at ${p.toFixed(2)} is ${(10 * Math.log10(left * left + right * right)).toFixed(2)}dB off full power`,
+      ).toBeCloseTo(1, 9);
+    }
+    // Centre is both sides equally; the ends are one side, and neither end is silent on the other.
+    const middle = panGains(0);
+    expect(middle.left).toBeCloseTo(middle.right, 12);
+    expect(panGains(-1).left).toBeCloseTo(1, 9);
+    expect(panGains(1).left).toBeCloseTo(0, 9);
+  });
+
+  it('and the two layers most likely to mask each other are not in the same place', () => {
+    /*
+      ⚠️ **THE REPORTED DEFECT, STATED AS A PROPERTY.** `arp` and `hook` are the sixteenths and the
+      riff — the two things `push` and `surge` open, and the two the report calls *subtle*. In one
+      place they compete on level alone; a third of the field apart they are two parts.
+    */
+    for (const [a, b] of [
+      ['arp', 'hook'],
+      ['call', 'lead'],
+      ['counter', 'lead'],
+      ['ride', 'perc'],
+    ] as const) {
+      expect(
+        Math.abs(LAYER_PAN[a] - LAYER_PAN[b]),
+        `${a} and ${b} sit at the same place, so nothing but level separates them`,
+      ).toBeGreaterThan(0.3);
+    }
   });
 });
