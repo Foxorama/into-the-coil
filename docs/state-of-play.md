@@ -628,7 +628,7 @@ does not reach it.
 | 0 | **the rig renders a LEVEL** — rungs, ramps, theme, and where every boundary lands in the bar | ✅ [0116](decisions/0116-the-rig-plays-the-level.md) |
 | 1 | **bar-line quantisation**, per-note duration, per-layer panning | quantisation ✅ [0117](decisions/0117-a-section-change-lands-on-the-beat.md); **the other two are owed** |
 | 2 | **the transport** — sections on bar lines, one-shot fills at seams, variant slots, selection from game state | not started. This is where *moves and breathes* lives |
-| 3 | **per-theme composition**, baked at the level boundary | not started. [0113](decisions/0113-there-is-one-composition-and-seven-levels.md) as written |
+| 3 | **per-theme composition**, baked at the level boundary | not started, but **costed** — [`what-seven-compositions-would-cost`](../reports/what-seven-compositions-would-cost-2026-08-12.md). 0113's RULE stands; its storage model does not |
 
 ⚠️ **PHASE 1's REMAINING TWO ARE NAMED CEILINGS, NOT POLISH.** Every note in a voice is **the same
 length and the same timbre** — `MusicVoice.note` is one `CueLayer` per voice, so a melody where every
