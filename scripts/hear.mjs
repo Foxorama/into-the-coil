@@ -50,7 +50,7 @@ import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { MASTER_GAIN, SAMPLE_RATE, cueSeconds, sampleCue, saturate, variantAt, velocitiesOf } from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { bakeLoops } from '../src/app/music.ts';
-import { PHRASE_SECONDS, BAR_SECONDS, LAYER_BARS, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_DRIVE, MUSIC_GAIN, AURA_LAYERS, AURA_NEAR_UNITS, AURA_FAR_UNITS, STEPS_PER_BEAT } from '../src/content/music.ts';
+import { PHRASE_SECONDS, BAR_SECONDS, LAYER_BARS, LAYER_PAN, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_DRIVE, MUSIC_GAIN, AURA_LAYERS, AURA_NEAR_UNITS, AURA_FAR_UNITS, STEPS_PER_BEAT } from '../src/content/music.ts';
 
 /*
   ⚠️ **THE MUSIC BUS AS IT ACTUALLY LEAVES, AND THE RIG DID NOT HAVE IT FOR ONE COMMIT** —
@@ -82,6 +82,7 @@ import {
   auraFor,
   auraNearness,
   levelWrites,
+  panGains,
   musicLevelFor,
 } from '../src/app/music.ts';
 import { SHIPS } from '../src/content/ships.ts';
@@ -110,7 +111,7 @@ if (kinds.length === 0) {
  * scale rather than a limiter — and the clamp below is a guard against that assertion being wrong,
  * not a normal path.
  */
-function wavOf(samples, rate) {
+function wavOf(samples, rate, channels = 1) {
   const header = Buffer.alloc(44);
   const body = Buffer.alloc(samples.length * 2);
   header.write('RIFF', 0);
@@ -119,10 +120,11 @@ function wavOf(samples, rate) {
   header.write('fmt ', 12);
   header.writeUInt32LE(16, 16);
   header.writeUInt16LE(1, 20); // PCM
-  header.writeUInt16LE(1, 22); // mono
+  // 0118: interleaved when `channels` is 2. Every other mode still writes mono.
+  header.writeUInt16LE(channels, 22);
   header.writeUInt32LE(rate, 24);
-  header.writeUInt32LE(rate * 2, 28);
-  header.writeUInt16LE(2, 32);
+  header.writeUInt32LE(rate * 2 * channels, 28);
+  header.writeUInt16LE(2 * channels, 32);
   header.writeUInt16LE(16, 34);
   header.write('data', 36);
   header.writeUInt32LE(body.length, 40);
@@ -316,7 +318,15 @@ if (args.has('level')) {
   const nearnessInFight = auraNearness(gapUnits);
 
   const total = Math.round(totalSeconds * SAMPLE_RATE);
-  const track = new Float32Array(total);
+  /*
+    ⚠️ **INTERLEAVED STEREO — 0118, and the mode had to grow it or it could not show the change.** The
+    pan law is `panGains`, exported from the mixer for exactly this: the game's field is made by a
+    browser node, so the only alternative was this file keeping its own idea of one, which is the
+    class of drift `docs/decisions/0116-the-rig-plays-the-level.md` is named for.
+  */
+  const track = new Float32Array(total * 2);
+  const pan = {};
+  for (const layer of MUSIC_LAYERS) pan[layer] = panGains(LAYER_PAN[layer]);
   /*
     ⚠️ **The gains are smoothed in BLOCKS and the audio is not.** A rung is a step function of a
     camera position, so asking `musicLevelFor` per sample is 5.3 million answers to a question that
@@ -349,7 +359,8 @@ if (args.has('level')) {
     }
     for (let n = 0; n < BLOCK && i + n < total; n++) {
       const t = (i + n) / SAMPLE_RATE;
-      let v = 0;
+      let left = 0;
+      let right = 0;
       for (const layer of MUSIC_LAYERS) {
         const r = ramp[layer];
         /*
@@ -358,14 +369,22 @@ if (args.has('level')) {
           this file has to draw honestly or the fix cannot be judged by ear.
         */
         if (t >= r.at) held[layer] += (r.target - held[layer]) * (1 - Math.exp(-1 / (SAMPLE_RATE * r.tau)));
-        v += at(layer, i + n) * held[layer];
+        const v = at(layer, i + n) * held[layer];
+        left += v * pan[layer].left;
+        right += v * pan[layer].right;
       }
-      track[i + n] = Math.max(-1, Math.min(1, busOf(v)));
+      /*
+        ⚠️ **The shaper is PER CHANNEL, which is what a `WaveShaperNode` on a stereo bus does.** One
+        curve applied to a mono sum and then split would be a different sound — and it is the shape of
+        error 0104 found when the shaper was missing altogether.
+      */
+      track[(i + n) * 2] = Math.max(-1, Math.min(1, busOf(left)));
+      track[(i + n) * 2 + 1] = Math.max(-1, Math.min(1, busOf(right)));
     }
   }
 
   const base = out.replace(/\.wav$/, '');
-  writeFileSync(`${base}-level-${kind}.wav`, wavOf(track, SAMPLE_RATE));
+  writeFileSync(`${base}-level-${kind}.wav`, wavOf(track, SAMPLE_RATE, 2));
 
   /*
     ⚠️ **WHERE IN THE BAR EACH BOUNDARY LANDS, WHICH IS THE ONE THING A LISTENER CANNOT COUNT AND A
