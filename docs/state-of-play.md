@@ -160,6 +160,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the kick is UNDER the music; the gain was the wrong lever** | [0122](decisions/0122-the-kick-goes-under-the-music.md) |
 | **a rung CHANGES the notes; loudness does not predict a section** | [0123](decisions/0123-a-rung-changes-the-notes.md) |
 | **a boss lasts long enough to be one; the design loadout is TIER TWO** | [0124](decisions/0124-the-boss-is-a-boss.md) |
+| **the build starts 7.3s sooner; an ARRIVAL is what a listener hears** | [0125](decisions/0125-the-build-starts-sooner.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -628,9 +629,25 @@ does not reach it.
 | phase | what | state |
 |---|---|---|
 | 0 | **the rig renders a LEVEL** — rungs, ramps, theme, and where every boundary lands in the bar | ✅ [0116](decisions/0116-the-rig-plays-the-level.md) |
-| 1 | **bar-line quantisation**, per-note duration, per-layer panning | quantisation ✅ [0117](decisions/0117-a-section-change-lands-on-the-beat.md); **the other two are owed** |
+| 1 | **bar-line quantisation**, per-note duration, per-layer panning | quantisation ✅ [0117](decisions/0117-a-section-change-lands-on-the-beat.md), panning ✅ [0118](decisions/0118-the-mix-has-a-width.md); **per-note duration is owed** |
 | 2 | **the transport** — sections on bar lines, one-shot fills at seams, variant slots, selection from game state | not started. This is where *moves and breathes* lives |
 | 3 | **per-theme composition**, baked at the level boundary | not started, but **costed** — [`what-seven-compositions-would-cost`](../reports/what-seven-compositions-would-cost-2026-08-12.md). 0113's RULE stands; its storage model does not |
+
+⚠️ **START HERE ON THE MUSIC: `surge` AND `approach` NEED NEW MATERIAL, AND THE PLAYER HAS CHOSEN
+IT.** [0125](decisions/0125-the-build-starts-sooner.md) has the measurement and the reasoning; the
+short version is that **an ARRIVAL is what a listener hears and a departure is not**, so
+[0123](decisions/0123-a-rung-changes-the-notes.md)'s churn guard is **measuring a quantity now known
+not to predict the report** and its 25% bound must not be trusted. Each of those two rungs needs
+roughly **+60 notes a bar of material that is not already playing**, and the level has none spare.
+
+⚠️ **THE CHEAPER OPTION WAS OFFERED AND REFUSED**: *"fewer bigger sections sounds like it's going to
+flatten things out and probably not in a good way."* Do not reach for it.
+
+⚠️ **AND THE WEAPON LADDER'S 6.9× SPREAD IS AN OPEN LEVER WITH A PREFERRED SHAPE.** The player is
+open to compressing it and would rather not touch the rate of fire, which *"feels good"* — so the
+suggestion on the table is **raising the BASE weapon's damage** (7.5 dps, the state a player is in
+right after a death) rather than flattening the top. [0124](decisions/0124-the-boss-is-a-boss.md)
+records why it is the root cause and why boss health was moved instead.
 
 ⚠️ **PHASE 1's REMAINING TWO ARE NAMED CEILINGS, NOT POLISH.** Every note in a voice is **the same
 length and the same timbre** — `MusicVoice.note` is one `CueLayer` per voice, so a melody where every

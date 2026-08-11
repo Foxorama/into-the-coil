@@ -600,7 +600,7 @@ export const MUSIC_DRIVE = 0.3;
  * begins about twelve seconds of scroll before the boss arrives, which is long enough to be a build
  * and short enough that it is clearly about the boss rather than about the level.
  */
-export const BOSS_APPROACH_UNITS = 380;
+export const BOSS_APPROACH_UNITS = 643;
 
 /**
  * How far from the boss the level's two middle rungs open, in world units.
@@ -634,8 +634,8 @@ export const BOSS_APPROACH_UNITS = 380;
  */
 export const BOSS_PEAK_HEALTH = 0.78;
 
-export const PUSH_UNITS = 2758;
-export const SURGE_UNITS = 958;
+export const PUSH_UNITS = 3021;
+export const SURGE_UNITS = 1221;
 
 /**
  * The key. Every pitched note is a ratio off this, so the whole piece transposes from one number.
