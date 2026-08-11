@@ -57,13 +57,14 @@ like in practice.
 ⚠️ **`npm test` is not `npm run prove`.** A change to a shared quantity wants the whole proof before
 it is pushed — guards stop reaching their subject without ever going red, and only a full run sees it.
 
-⚠️ **AND `prove` IS WHAT CI COSTS — 37 of its 40 minutes.**
+⚠️ **AND `prove` IS THE LARGEST PART OF WHAT CI COSTS.**
 [0115](decisions/0115-a-probe-runs-its-own-guard.md) is where that got to, and it takes an option
 [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) measured and refused five days
 earlier. **Read 0115 before proposing another CI change**: it names the next lever (sharding across
 runner jobs, which costs a branch-protection change) and the two savings that are refused rather than
-un-thought-of. The audio arc 0089–0114 is what changed 0054's arithmetic — one suite is 42% of the
-run.
+un-thought-of. **The measured before-and-after is on
+[PR #150](https://github.com/Foxorama/into-the-coil/pull/150#issuecomment-5252326846)**, and the
+current number is whatever `gh run list` says — not whatever this file last said.
 
 ---
 
