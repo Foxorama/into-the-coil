@@ -57,7 +57,18 @@ import { PHRASE_SECONDS, BAR_SECONDS, LAYER_BARS, MUSIC_LADDER, MUSIC_LAYERS, MU
   own loop and either could have been fixed alone. That is the second description this whole file
   exists to avoid.
 */
-const busOf = (sum) => saturate(sum * MUSIC_GAIN, MUSIC_DRIVE);
+/*
+  ⚠️ **AND `MASTER_GAIN` IS IN IT, WHICH IT WAS NOT** — 0114. `--music` wrote the bed at
+  `MUSIC_GAIN` alone while `--play` wrote it at `MUSIC_GAIN × MASTER_GAIN`, so the two modes rendered
+  the SAME music at two different reference levels. A player comparing the files heard *“a massive
+  musical volume difference”* between a rung and a fight that are 0.42 and 0.48 RMS apart in the game
+  — an artefact of this file, reported as a defect in the music, and very nearly tuned as one.
+
+  ⚠️ **This is 0027 inside the instrument for the second time.** The first was the missing bus
+  shaper, which under-reported a change by four and a half decibels. A rig that is not at the game's
+  own gain is a rig that answers a question nobody asked.
+*/
+const busOf = (sum) => saturate(sum * MUSIC_GAIN, MUSIC_DRIVE) * MASTER_GAIN;
 import { auraNearness } from '../src/app/music.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
@@ -317,7 +328,9 @@ if (args.has('play')) {
     for (let i = 0; i < length; i++) {
       let v = 0;
       for (const layer of MUSIC_LAYERS) v += at(layer, i) * MUSIC_LADDER[level][layer];
-      bed[i] = busOf(v) * MASTER_GAIN;
+      // `busOf` carries MASTER_GAIN now, so applying it again here would render the bed twice as
+      // quiet as the game does — which is exactly the two-reference-levels bug one mode up.
+      bed[i] = busOf(v);
     }
     // The gun and the tubes, on their grids. One cue per volley, never one per barrel.
     for (let s = 0; s < steps; s += weapon.fireEvery) put(cues, 'pulse', s);

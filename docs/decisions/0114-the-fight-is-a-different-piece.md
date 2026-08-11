@@ -87,6 +87,26 @@ additive claim across `CLIMBING` and hands loudness to the RMS-through-the-shape
 [0027](0027-measure-the-picture-not-the-model.md), because a model quantity that has stopped tracking
 its subject is worse than no guard: it still passes.
 
+## What is still open, in the player's own words
+
+⚠️ **`surge` IS STILL NOT AN EVENT.** *"There is only a very subtle difference in the sound between
+push and surge… it doesn't really make any noticeable difference in game because there'll be the
+other game noises over the top."* Two rounds have raised it — `counter` now leads its own rung at
+1.05 — and the verdict is unchanged. **The next attempt should not be another gain.** What separates
+`push` from `surge` today is three layers arriving over a piece that already has eleven; what would
+separate them is the thing that separates `approach` from `boss`, which this decision already built:
+something STOPPING. A rung that closes a layer as it opens two is a change of arrangement rather than
+a thicker one, and it is the only mechanism here that has ever read as a section boundary.
+
+⚠️ **AND THE VOLUME GAP REPORTED BETWEEN THE RENDERS WAS THE RIG.** *"There's a massive musical volume
+difference between final-play-bosspeak, final-cues and v9-surge and v9-push."* Measured, the fight is
+already the loudest rung in the game — 0.4807 RMS against `surge`'s 0.4238. `--music` was writing the
+bed at `MUSIC_GAIN` and `--play` at `MUSIC_GAIN × MASTER_GAIN`, so the two modes rendered the same
+music at two reference levels and the difference between two FILES was mistaken for a difference
+between two rungs. **It was one instruction away from being tuned as a defect in the music.** Both
+modes carry the game's gain now — the second time 0027 has fired inside this rig, after the missing
+bus shaper under-reported a change by 4.5 dB.
+
 ## The one number that moved instead of a guard
 
 ⚠️ **The report asked for boss music *"5-10secs before the boss shows"* and a guard requires every rung

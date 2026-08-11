@@ -234,6 +234,17 @@ date and is exactly what a play-test is for.
 
 ## What the play-test has answered
 
+⚠️ **THE MUSIC IS THE LIVE CHANNEL AND [0114](decisions/0114-the-fight-is-a-different-piece.md) IS
+WHERE IT GOT TO.** Read it before touching a rung: 0090's additive ladder is superseded, the fight is
+a different piece with its own two rungs, and the level runs 42s / 92s / 10.6s-before-the-boss.
+
+⚠️ **TWO THINGS ARE OPEN AND BOTH ARE IN 0114's OWN WORDS.** `surge` still does not read as an event
+and **the next attempt must not be another gain** — the only mechanism that has ever read as a
+section boundary here is something STOPPING. And a reported *"massive musical volume difference"*
+turned out to be `scripts/hear.mjs` rendering its two modes at different reference levels; the fight
+is already the loudest rung. **It was one instruction away from being tuned as a defect in the
+music.**
+
 ⚠️ **THE ELEVENTH PLAY-TEST IS THE CURRENT ONE AND IT OUTRANKS EVERYTHING BELOW IT** —
 [`the-eleventh-play-test`](../reports/the-eleventh-play-test-2026-08-11.md), three rounds in one
 session, all on the sound, against renders and then the `level-music-depth` preview.
