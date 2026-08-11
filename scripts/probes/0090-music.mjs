@@ -72,8 +72,8 @@ export const PROBES = [
       // to the title's piece now and is closed at `run` on purpose, so closing it again says nothing.
       // `engine` is the level's floor — open at `run` and `approach` — and closing it at the boss is
       // the same failure the probe always described: a ladder that swaps rather than builds.
-      find: "  boss: { drone: 0.42, bass: 0, beat: 0, sub: 1.05, engine: 0.72, perc: 0.6, chords: 0, groove: 0, arp: 0, ride: 0.5, call: 0, hook: 0, drive: 0.5, toll: 0.9, crash: 0.66, dread: 1, lead: 0, stomp: 0.5, frenzy: 0.45, wraith: 0, auraSlow: 0.94, auraFast: 0.8 },",
-      replace: "  boss: { drone: 0.42, bass: 0, beat: 0, sub: 1.05, engine: 0, perc: 0.6, chords: 0, groove: 0, arp: 0, ride: 0.5, call: 0, hook: 0, drive: 0.5, toll: 0.9, crash: 0.66, dread: 1, lead: 0, stomp: 0.5, frenzy: 0.45, wraith: 0, auraSlow: 0.94, auraFast: 0.8 },",
+      find: "  boss: { drone: 0.34, bass: 0, beat: 0, sub: 1.12, engine: 1.04, perc: 0.9, chords: 0, groove: 0, arp: 0, ride: 0.8, call: 0, hook: 0, drive: 0.82, toll: 0.86, crash: 0.84, dread: 0.92, lead: 0, stomp: 0.82, frenzy: 0.74, wraith: 0, auraSlow: 0.96, auraFast: 0.86 },",
+      replace: "  boss: { drone: 0.34, bass: 0, beat: 0, sub: 1.12, engine: 0, perc: 0.9, chords: 0, groove: 0, arp: 0, ride: 0.8, call: 0, hook: 0, drive: 0.82, toll: 0.86, crash: 0.84, dread: 0.92, lead: 0, stomp: 0.82, frenzy: 0.74, wraith: 0, auraSlow: 0.96, auraFast: 0.86 },",
     },
   },
   {

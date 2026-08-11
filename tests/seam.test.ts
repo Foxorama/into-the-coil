@@ -43,6 +43,22 @@ function partWayThrough(): ReturnType<typeof playableWorld> & { frame: GameFrame
   const built = playableWorld(LEVELS[LEVEL_KINDS[0]!]);
   const recorder = new Recorder();
   built.world.surface = recorder;
+  /*
+    ⚠️ **THE FIXTURE HAS TO SURVIVE THE TWENTY SECONDS, AND SINCE 0114 IT DOES NOT ON ITS OWN.**
+    Measured: a ship that holds station and never dodges now dies at **6.2 seconds** into level one,
+    where it used to live past twenty. That is the level compression working — 118 bodies a minute
+    became 181 — and it is a fact about the game rather than about this file.
+
+    ⚠️ **This test's subject is WHERE THE SHIP IS DRAWN across a level boundary, not whether it
+    lives.** A dying ship is not drawn, so without this the assertion below silently stops measuring
+    anything — which is exactly what happened, and `expect(before).toBeDefined()` is the line that
+    caught it. Giving the fixture enough hull to reach the boundary keeps the guard pointed at its
+    own subject.
+
+    ⚠️ **On the ENTITY and not on the tier**, so nothing about what a real ship survives is changed
+    here: `src/content/difficulty.ts` and `src/content/ships.ts` are untouched.
+  */
+  built.world.ship.health = 999;
   const frame = new GameFrame(built.world);
   for (let i = 0; i < seconds(20); i++) frame.step();
   return { ...built, frame, recorder };

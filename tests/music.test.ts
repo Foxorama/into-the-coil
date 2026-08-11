@@ -1,3 +1,4 @@
+import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { BANDS, bandEnergy, spectrum } from './spectrum.ts';
 import { describe, expect, it } from 'vitest';
 
@@ -414,8 +415,21 @@ describe('the ladder is additive, which is what the ask describes', () => {
 });
 
 describe('how far up the ladder a run is', () => {
-  /** Level one's boss, near enough — the rule is about a distance, not about a level. */
-  const BOSS_AT = 6350;
+  /**
+   * Level one's boss, READ OFF THE LEVEL rather than restated.
+   *
+   * ⚠️ **It was `6350` written in, and it went stale twice in one session** —
+   * `docs/decisions/0114-the-fight-is-a-different-piece.md`. Two rounds of level compression moved
+   * every boss and this number followed neither, so the rung-duration assertion below was measuring
+   * a level 78 seconds longer than any that exists. It reported `run` lasting 106 seconds while the
+   * real answer was 48.
+   *
+   * ⚠️ **The comment on it said *"near enough — the rule is about a distance, not about a level"*, and
+   * that was true of the rule and false of the assertion.** The span checks below convert a distance
+   * to SECONDS, which is a fact about a level: how long a rung lasts depends entirely on where its
+   * boss is. Derived here, it cannot drift again.
+   */
+  const BOSS_AT = LEVELS[LEVEL_KINDS[0]!]!.bossAt;
 
   it('is cruising while the boss is far away', () => {
     expect(musicLevelFor(0, BOSS_AT, false)).toBe('run');

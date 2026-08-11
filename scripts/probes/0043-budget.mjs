@@ -102,9 +102,9 @@ export const PROBES = [
     edit: {
       path: 'src/content/levels.ts',
       find:
-        "  { at: 1249, enemy: 'drifter', formation: 'line', count: 5, lane: 62 },\n" +
-        "  { at: 1284, enemy: 'turret', formation: 'line', count: 3, lane: 55 },\n" +
-        "  { at: 1353, enemy: 'charger', formation: 'column', count: 5, lane: 25, origin: 'acrossPlus' },\n",
+        "  { at: 1052, enemy: 'drifter', formation: 'line', count: 5, lane: 62 },\n" +
+        "  { at: 1079, enemy: 'turret', formation: 'line', count: 3, lane: 55 },\n" +
+        "  { at: 1134, enemy: 'charger', formation: 'column', count: 5, lane: 25, origin: 'acrossPlus' },\n",
       replace: '',
     },
   },

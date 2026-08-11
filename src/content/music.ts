@@ -507,10 +507,10 @@ export const BOSS_APPROACH_UNITS = 380;
  * ⚠️ **It is a floor on how long the sparse arrival lasts, too.** A boss that died instantly would
  * never leave the tense opening, which is correct: there was no fight to build through.
  */
-export const BOSS_PEAK_HEALTH = 0.5;
+export const BOSS_PEAK_HEALTH = 0.78;
 
-export const PUSH_UNITS = 4050;
-export const SURGE_UNITS = 2030;
+export const PUSH_UNITS = 2542;
+export const SURGE_UNITS = 958;
 
 /**
  * The key. Every pitched note is a ratio off this, so the whole piece transposes from one number.
@@ -930,8 +930,8 @@ export const MUSIC_LADDER: Record<MusicLevel, Record<MusicLayer, number>> = {
   push: { drone: 0.34, bass: 0, beat: 0, sub: 1.06, engine: 0.96, perc: 0.74, chords: 0.87, groove: 0.94, arp: 0.62, ride: 0.56, call: 0.68, hook: 0.6, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.62, auraFast: 0.4 },
   surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.02, engine: 0.98, perc: 0.82, chords: 0.88, groove: 0.92, arp: 0.68, ride: 0.66, call: 0.74, hook: 0.72, drive: 0.7, toll: 0, crash: 0.78, dread: 0, lead: 0.74, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },
   approach: { drone: 0.34, bass: 0, beat: 0, sub: 1.1, engine: 1.02, perc: 0.86, chords: 0.86, groove: 0.95, arp: 0.7, ride: 0.7, call: 0.76, hook: 0.78, drive: 0.8, toll: 0.76, crash: 0.8, dread: 0.72, lead: 0.82, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.88, auraFast: 0.72 },
-  boss: { drone: 0.42, bass: 0, beat: 0, sub: 1.05, engine: 0.72, perc: 0.6, chords: 0, groove: 0, arp: 0, ride: 0.5, call: 0, hook: 0, drive: 0.5, toll: 0.9, crash: 0.66, dread: 1, lead: 0, stomp: 0.5, frenzy: 0.45, wraith: 0, auraSlow: 0.94, auraFast: 0.8 },
-  bossPeak: { drone: 0.28, bass: 0, beat: 0, sub: 1.12, engine: 0.98, perc: 0.86, chords: 0, groove: 0, arp: 0, ride: 0.76, call: 0, hook: 0, drive: 0.84, toll: 0.7, crash: 0.8, dread: 0.78, lead: 0, stomp: 0.86, frenzy: 0.82, wraith: 0.76, auraSlow: 1, auraFast: 0.95 },
+  boss: { drone: 0.34, bass: 0, beat: 0, sub: 1.12, engine: 1.04, perc: 0.9, chords: 0, groove: 0, arp: 0, ride: 0.8, call: 0, hook: 0, drive: 0.82, toll: 0.86, crash: 0.84, dread: 0.92, lead: 0, stomp: 0.82, frenzy: 0.74, wraith: 0, auraSlow: 0.96, auraFast: 0.86 },
+  bossPeak: { drone: 0.28, bass: 0, beat: 0, sub: 1.1, engine: 1.02, perc: 0.88, chords: 0, groove: 0, arp: 0, ride: 0.8, call: 0, hook: 0, drive: 0.84, toll: 0.84, crash: 0.84, dread: 0.92, lead: 0, stomp: 0.88, frenzy: 0.82, wraith: 0.78, auraSlow: 1, auraFast: 0.95 },
 };
 
 /** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */

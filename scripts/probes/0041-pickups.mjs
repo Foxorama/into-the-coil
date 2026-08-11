@@ -28,7 +28,7 @@ export const PROBES = [
         guard is actually about — a player who dies late flies the hardest stretch with the base weapon
         — and the middle-of-the-level version had quietly stopped being it.
       */
-      find: "  { at: 3805, kind: 'weapon', lane: 50 },\n",
+      find: "  { at: 3069, kind: 'weapon', lane: 50 },\n",
       replace: '',
     },
   },
