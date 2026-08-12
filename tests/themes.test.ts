@@ -6,6 +6,8 @@ import {
   THEMES,
   THEME_KINDS,
   mixOf,
+  airOf,
+  bakedBy,
   revoicedBy,
   voicesOf,
   type ThemeKind,
@@ -561,6 +563,32 @@ describe('0128 — a place plays its own material, and shares everything it does
     // And it decays: the tail cannot still be running a whole loop later, or the feedback is unstable.
     expect(peak(wet), 'the room did not decay — the feedback path grows').toBeLessThan(1);
   }, DSP_MS);
+
+  it('0136 — a place BAKES every layer it changes, and a room is a change', () => {
+    /*
+      ⚠️ **`revoicedBy` AND `bakedBy` WERE THE SAME SET UNTIL THIS DECISION, AND EVERYTHING THAT BAKES
+      A PLACE WAS ASKING THE FIRST.** A place can now state `air` for a layer it does not re-voice —
+      the notes are the base's and the buffer is not, because the room is baked in. `bakePlace` at a
+      level boundary (0133) and the dashboard's cache would both have shared the DRY array and the
+      room would never have arrived: silently, with every guard green, because nothing asserts about
+      a layer a place did not claim.
+
+      ⚠️ **Ember Nebula gives air only to layers it also re-voices, so nothing is wrong today.** This
+      is the trap closed before the first place walks into it, which is the cheapest moment there is —
+      and it is set arithmetic, so it costs nothing to keep.
+    */
+    for (const theme of THEME_KINDS) {
+      const baked = bakedBy(theme);
+      for (const layer of MUSIC_LAYERS) {
+        if (airOf(theme, layer) > 0) {
+          expect(baked, `${theme} gives ${layer} a room and would not bake it`).toContain(layer);
+        }
+      }
+      for (const layer of revoicedBy(theme)) {
+        expect(baked, `${theme} re-voices ${layer} and would not bake it`).toContain(layer);
+      }
+    }
+  });
 
   it('0136 — EMBER NEBULA CLIMBS INTO THE SURGE AND DROPS INTO THE FIGHT', () => {
     /*

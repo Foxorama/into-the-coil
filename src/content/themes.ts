@@ -255,25 +255,25 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       the place that should be spending it there.
     */
     mix: {
-      groove: 1.45,
-      drone: 1.3,
-      sub: 1.18,
-      engine: 1.15,
-      chords: 1.15,
-      call: 1.1,
-      toll: 1.28,
-      counter: 0.95,
-      dread: 1.05,
-      lead: 1,
-      hook: 1.35,
-      perc: 0.85,
-      crash: 0.85,
-      arp: 0.7,
-      ride: 0.7,
-      drive: 0.85,
-      stomp: 0.92,
-      frenzy: 1.3,
-      wraith: 1.4,
+      groove: 1.363,
+      drone: 1.222,
+      sub: 1.109,
+      engine: 1.081,
+      chords: 1.081,
+      call: 1.034,
+      toll: 1.203,
+      counter: 0.893,
+      dread: 0.987,
+      lead: 0.94,
+      hook: 1.269,
+      perc: 0.799,
+      crash: 0.799,
+      arp: 0.658,
+      ride: 0.658,
+      drive: 0.799,
+      stomp: 0.865,
+      frenzy: 1.222,
+      wraith: 1.316,
     },
     voices: NEBULA_VOICES,
     /*
@@ -421,6 +421,30 @@ export function revoicedBy(theme: ThemeKind): MusicLayer[] {
   const own = THEMES[theme].voices;
   if (own === undefined) return [];
   return (Object.keys(own) as MusicLayer[]).filter((layer) => own[layer] !== undefined);
+}
+
+/**
+ * Which layers a place has to BAKE for itself — the ones whose audio differs from the base.
+ *
+ * ── AND IT IS NOT THE SAME SET AS `revoicedBy`, WHICH IS A TRAP THIS NEARLY WALKED INTO ─────────
+ *
+ * ⚠️ **`docs/decisions/0136-the-place-has-a-room-and-an-arc.md` added a second way for a place's
+ * audio to differ.** Before it, *plays its own notes* and *sounds different from the base* were the
+ * same sentence; a place can now state `air` for a layer it does not re-voice, and that layer's
+ * buffer is genuinely different — the room is baked in.
+ *
+ * ⚠️ **Everything that bakes a place was asking `revoicedBy`**: `bakePlace` at a level boundary
+ * (0133) and the dashboard's own cache. Both would have shared the base's DRY array for such a layer
+ * and the room would simply never have arrived — silently, with every guard green, because nothing
+ * asserts a layer that was not claimed.
+ *
+ * ⚠️ **Ember Nebula gives air only to layers it also re-voices, so nothing is wrong today.** This is
+ * the trap closed before the first place walks into it, which is the cheapest moment there is.
+ */
+export function bakedBy(theme: ThemeKind): MusicLayer[] {
+  const air = THEMES[theme].air ?? {};
+  const withAir = (Object.keys(air) as MusicLayer[]).filter((layer) => (air[layer] ?? 0) > 0);
+  return [...new Set([...revoicedBy(theme), ...withAir])];
 }
 
 export function mixOf(theme: ThemeKind, layer: MusicLayer): number {

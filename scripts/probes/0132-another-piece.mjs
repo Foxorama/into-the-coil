@@ -13,11 +13,20 @@ export const PROBES = [
     suite: 'tests/themes.test.ts',
     broke: 'a place re-voicing a placed layer into the bottom octave, which the base-only band rule cannot see',
     guard: '0132 — A PLACE’S OWN MATERIAL IS HELD TO THE SAME BAND RULE AS THE BASE',
+    /*
+      ⚠️ THE BREAK MOVED IN 0136 AND THE REASON IS WORTH KEEPING. It used to restore the cathedral bell
+      that this decision was written about — the real shipped defect — and that stopped tripping the
+      rule twice over: 0136 gave the bell brighter partials, and `addRoom` puts broadband tail on every
+      layer, which dilutes the low FRACTION the guard measures. So the guard is less sensitive than it
+      was, and a break has to be correspondingly blunter to reach it.
+      Both arp voices become sub sines: a hard-panned layer that is nothing but bottom.
+    */
     edit: {
       path: 'src/content/nebula.ts',
-      find: "      octave: 2,\n      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.9, gain: 0.34, attack: 0.008, curve: 1.25, lowFrom: 1700, lowTo: 900, q: 1.8 },",
+      find:
+        "      octave: 2,\n      accents: [1, 0.7, 0.84, 0.68],\n      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.24, gain: 0.05, attack: 0.004, curve: 2.4, lowFrom: 3400, lowTo: 2400, q: 1.2 },\n    },\n    {\n      steps: MIXTURE,\n      pitched: true,\n      perBeat: 4,\n      octave: 3,\n      accents: [1, 0.7, 0.84, 0.68],\n      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.22, gain: 0.024, attack: 0.005, curve: 2.8, lowFrom: 5400, lowTo: 3600, q: 1 },",
       replace:
-        "      octave: 1,\n      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.9, gain: 0.44, attack: 0.008, curve: 1.25, lowFrom: 1250, lowTo: 380, q: 1.8 },",
+        "      octave: 0,\n      accents: [1, 0.7, 0.84, 0.68],\n      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.24, gain: 0.3, attack: 0.004, curve: 2.4 },\n    },\n    {\n      steps: MIXTURE,\n      pitched: true,\n      perBeat: 4,\n      octave: 0,\n      accents: [1, 0.7, 0.84, 0.68],\n      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.22, gain: 0.3, attack: 0.005, curve: 2.8 },",
     },
   },
   {

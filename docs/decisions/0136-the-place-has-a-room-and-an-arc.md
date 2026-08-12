@@ -100,6 +100,46 @@ one-percent fall, so the guard passed on an arc that had flattened.
 [0019](0019-a-probe-must-be-seen-to-apply.md) doing the more valuable half of its job; the drop has a
 size on it now, and today's is 5% against a bound of 3%.
 
+## ⚠️ And the dashboard was lying, which is the worst shape a dev tool can have
+
+> *"Sound dashboard hasn't been updated with the new sounds/tracks?"*
+
+Two things were true and only one of them was this branch not having merged. **A vite hot update
+re-runs the module and leaves every baked buffer exactly where it was**: `prewarmAudio` returns early
+once the set exists (deliberately, 0102), the dashboard's `loopsByPlace` is a live cache, and
+`MusicOut`'s `AudioBuffer`s were copied at unlock. So editing a composition updated the page, printed
+the new layer list, and **went on playing the audio it synthesised when the tab was opened.**
+
+⚠️ **It does not fail — it reports confidently on a build that no longer exists.** That is
+[0027](0027-measure-the-picture-not-the-model.md)'s subject wearing the instrument's own clothes, and
+`docs/machine.md` already records an hour lost to *establish which build a report is about* in the
+other channel. `rig/dash.ts` forces a full reload on any hot update now; it costs the four-second bake
+it was avoiding, once per edit.
+
+## ⚠️ `revoicedBy` and `bakedBy` stopped being the same set, and everything asked the wrong one
+
+Before this decision, *plays its own notes* and *sounds different from the base* were one sentence. A
+place can now state `air` for a layer it does **not** re-voice — same notes, different buffer.
+`bakePlace` at a level boundary (0133) and the dashboard's cache were both asking `revoicedBy`, so
+such a layer would have shared the base's **dry** array and the room would simply never have arrived.
+
+⚠️ **Silently, with every guard green**, because nothing asserts about a layer a place did not claim.
+Ember Nebula gives air only to layers it also re-voices, so nothing was wrong — **this is the trap
+closed before the first place walks into it**, and `bakedBy` is set arithmetic, so keeping it closed
+costs nothing.
+
+## What the room cost the mix
+
+⚠️ **The nebula's multipliers came down 6% across the board**, which changes no balance — a uniform
+scale cancels in every ratio the pace and arc guards measure — and buys **7.5–10.6% of pre-shaper
+margin** where there had been 0.2%.
+
+⚠️ **THE POST-SHAPER PEAK HIDES THAT ENTIRELY AND I MISREAD IT ONCE.** `saturate` compresses hard near
+unity, so a 6% cut to the summed input moves the measured peak from 0.998 to 0.994 and looks like it
+did nothing. **The quantity with margin in it is the sum reaching the shaper**, not the peak leaving
+it — the clip guard's own bound is really about the former, since `saturate(x) > 1` exactly when
+`x > 1`.
+
 ## Rollback
 
 None owed — [0001](0001-revertability-not-risk-rating.md). A bake-time pass, a content field and

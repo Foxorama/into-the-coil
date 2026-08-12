@@ -549,7 +549,7 @@ describe('the cue table', () => {
         expect(handed, 'the place never finished, so this measured nothing').not.toBeNull();
         const whole = bakeLoops(SAMPLE_RATE, 'nebula');
         let compared = 0;
-        for (const layer of revoicedBy('nebula')) {
+        for (const layer of MUSIC_LAYERS) {
           const a = handed![layer];
           const b = whole[layer];
           expect(a.length, `${layer} came back a different length`).toBe(b.length);

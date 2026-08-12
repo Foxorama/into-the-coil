@@ -43,7 +43,7 @@ export const PROBES = [
     guard: '0136 — EMBER NEBULA CLIMBS INTO THE SURGE AND DROPS INTO THE FIGHT',
     edit: {
       path: 'src/content/themes.ts',
-      find: '      hook: 1.35,',
+      find: '      hook: 1.269,',
       replace: '      hook: 0.5,',
     },
   },

@@ -28,7 +28,7 @@
 
 import { LEVELS, LEVEL_KINDS, type LevelKind } from '../src/content/levels.ts';
 import { LAYER_PAN, MUSIC_LAYERS, type MusicLayer } from '../src/content/music.ts';
-import { THEMES, revoicedBy, type ThemeKind } from '../src/content/themes.ts';
+import { THEMES, bakedBy, revoicedBy, type ThemeKind } from '../src/content/themes.ts';
 import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { SAMPLE_RATE, makeAudioOut, makeSpeaker, prewarmAudio, takePrewarmed } from '../src/app/sound.ts';
@@ -75,6 +75,31 @@ const el = <T extends HTMLElement>(id: string): T => {
   if (found === null) throw new Error(`rig/index.html has no #${id}`);
   return found as T;
 };
+
+/*
+  ── A HOT UPDATE RELOADS THE PAGE, BECAUSE THE AUDIO IS BAKED AND HOT UPDATES ARE NOT ─────────────
+
+  ⚠️ **Reported, 2026-08-13: *"sound dashboard hasn't been updated with the new sounds/tracks?"***
+  Two things were true and only one of them was the branch not having merged. **A vite hot update
+  re-runs the module and leaves every baked buffer exactly where it was**: `prewarmAudio` returns
+  early once `prewarmed` is set (deliberately — 0102), `loopsByPlace` below is a live cache, and the
+  `AudioBuffer`s inside `MusicOut` were copied at unlock. So editing `src/content/nebula.ts` updated
+  the page, printed the new layer list, and went on playing the audio it synthesised when the tab was
+  opened.
+
+  ⚠️ **THAT IS THE WORST SHAPE A DEV TOOL CAN HAVE.** It does not fail — it reports confidently on a
+  build that no longer exists, which is
+  `docs/decisions/0027-measure-the-picture-not-the-model.md`'s subject wearing the instrument's own
+  clothes, and `docs/machine.md` already records an hour lost to *establish which build a report is
+  about* in the other channel.
+
+  ⚠️ **A full reload is the whole fix and it costs the bake it was avoiding.** That is about four
+  seconds on a place with its own composition, once per edit, and it is the difference between a
+  dashboard and a thing that lies when you change a number.
+*/
+import.meta.hot?.accept(() => {
+  window.location.reload();
+});
 
 const out = makeAudioOut();
 const speaker = makeSpeaker(out);
@@ -300,7 +325,8 @@ function loopsFor(theme: ThemeKind): Record<MusicLayer, Float32Array> | null {
   // on the spot would freeze the page. The place arrives on the next change instead.
   if (base === undefined) return null;
   const own = { ...base } as Record<MusicLayer, Float32Array>;
-  for (const layer of revoicedBy(theme)) own[layer] = bakeLayer(layer, SAMPLE_RATE, theme);
+  // ⚠️ , so a layer this place only gives a ROOM to is re-baked too — 0136.
+  for (const layer of bakedBy(theme)) own[layer] = bakeLayer(layer, SAMPLE_RATE, theme);
   loopsByPlace.set(theme, own);
   return own;
 }
