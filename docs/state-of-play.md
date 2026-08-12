@@ -40,6 +40,20 @@ Open work is deliberately not recorded here — it is the fastest thing in the p
 curl -s https://next.intothecoil.vulpecula.games/ | grep -c pointercancel
 ```
 
+⚠️ **AND IF THE WORK IS SOUND, OPEN THE DASHBOARD BEFORE READING A NUMBER** —
+[0126](decisions/0126-the-dashboard-is-the-instrument.md), [0129](decisions/0129-the-desk-holds-a-value-not-a-multiplier.md).
+
+```bash
+npm run dash
+```
+
+It serves `/rig/`: the game's own mixer on a scrub bar, every layer's live gain read off its
+`GainNode` beside the target, absolute faders so a layer the rung has CLOSED can be dragged up and
+heard, per-layer pan, the gun and the tubes at a tier slider, every cue on a button, and a **copy
+this moment** button that prints the lot as markdown. **A music question is opened here now, not in a
+`.wav`.** `docs/machine.md` has the double-clickable launcher and the one thing about node's path on
+this machine that will otherwise cost an hour.
+
 ⚠️ **Establish which build a report is about BEFORE debugging it.** A session was once spent on
 *"I can't move the ship"*, which was a correct observation about a branch that had not merged;
 `docs/machine.md` has the exact check for a branch preview, where a byte count is exact and this
@@ -638,12 +652,18 @@ does not reach it.
 | 3 | **per-theme composition**, baked at the level boundary | **the storage model and the first place have landed** — [0128](decisions/0128-a-place-plays-its-own-material.md). **The BOUNDARY BAKE has not**: nothing in `src/app/mount.ts` calls `setLoops`, so a real run still plays the base composition |
 
 ⚠️ **START HERE ON THE MUSIC, AND START BY OPENING THE DASHBOARD** —
-[0126](decisions/0126-the-dashboard-is-the-instrument.md). `npm run dash` serves `/rig/`: the game's
-own mixer on a scrub bar, every layer's live gain read off its `GainNode`, the gun and the tubes at a
-tier slider over the top, and per-layer solo. **It is the answer to *"whole sections of sound that
-have been produced that I've apparently never heard in game"*** and it is where a music number should
-be opened from now on, because it is the only instrument here that answers a question asked at a
-moment rather than about a file.
+[0126](decisions/0126-the-dashboard-is-the-instrument.md) and
+[0129](decisions/0129-the-desk-holds-a-value-not-a-multiplier.md). `npm run dash` serves `/rig/`: the
+game's own mixer on a scrub bar, live gains read off the `GainNode`s, **absolute faders and per-layer
+pan**, the gun and the tubes at a tier slider, every cue on a button, and a copy-out. **It is the
+answer to *"whole sections of sound that have been produced that I've apparently never heard in
+game"*** and it is where a music number is opened from now on, because it is the only instrument here
+that answers a question asked at a moment rather than about a file.
+
+⚠️ **THE FADERS BEING ABSOLUTE IS THE PART THAT MATTERS FOR AUTHORING** — 0129. `open everything`
+sounds all twenty-three at once *including what the rung has closed*, so *what would `frenzy` do
+during `run`* is a question the desk can answer. What it finds pastes straight back into
+`MUSIC_LADDER` or a theme's `mix`.
 
 ⚠️ **AND IT TOOK A MEASUREMENT NOTHING HERE HAD TAKEN: how long a layer is open against how long its
 OWN loop is.** `surge` lasts 16.0 s and `counter` — the tune it opens — takes 25.6 s to say itself,
