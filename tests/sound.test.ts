@@ -17,7 +17,7 @@ import {
   type CueKind,
 } from '../src/content/cues.ts';
 import { DEFAULT_SOUND, SOUNDS, SOUND_KINDS } from '../src/content/sound.ts';
-import { LEVEL_KINDS } from '../src/content/levels.ts';
+import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { BEAT_SECONDS } from '../src/content/music.ts';
 import { DUCK_DOWN_SECONDS, DUCK_HOLD_SECONDS, DUCK_UP_SECONDS } from '../src/app/music.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
@@ -30,6 +30,7 @@ import {
   panBucket,
   panFor,
   bakeCues,
+  bakePlace,
   cueSeconds,
   makeSpeaker,
   prewarmAudio,
@@ -41,16 +42,16 @@ import {
   velocitiesOf,
   type AudioOut,
 } from '../src/app/sound.ts';
-import { bakeLoops, musicLevelFor } from '../src/app/music.ts';
+import { bakeLoops, musicLevelFor, placeFor } from '../src/app/music.ts';
 import { UNITS_PER_SECOND, rungMarks, targetGain } from '../scripts/timeline.mjs';
-import { AURA_LAYERS, FIRE_GRID, MUSIC, MUSIC_LAYERS, secondsOfLayer } from '../src/content/music.ts';
+import { AURA_LAYERS, FIRE_GRID, MUSIC, MUSIC_LAYERS, secondsOfLayer, type MusicLayer } from '../src/content/music.ts';
+import { revoicedBy } from '../src/content/themes.ts';
 import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { MISSILE_BEAT_RATIO, fireEveryAt, missileEveryAt } from '../src/content/pickups.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { SCREENS } from '../src/state/screens.ts';
 import { initialState, reduce, type Action } from '../src/state/root.ts';
-import { LEVELS } from '../src/content/levels.ts';
 import { GameFrame, SHIP_START_ALONG } from '../src/app/frame.ts';
 import { playableWorld } from './world.ts';
 
@@ -497,6 +498,137 @@ describe('the cue table', () => {
       resetPrewarm();
       expect(takePrewarmed(), 'a prewarm survived a reset, so the cold path is unreachable').toBeNull();
       expect(bakeCues(SAMPLE_RATE).length, 'the cold bake produces nothing').toBe(CUE_KINDS.length);
+    });
+
+    describe('0133 — and a PLACE is baked at the boundary, on the same terms', () => {
+      it('THE TRIGGER: the place baked is the one the RUN is heading for, not the one on the field', () => {
+        /*
+          ⚠️ **`run.level` increments when a boss dies**, so this names the incoming place while the
+          level break is still up — which is the difference between a bake that gets a screen and one
+          that races the level it belongs to. It is a function rather than two lines inside `mount`'s
+          closure for the reason `src/app/lifecycle.ts` states in its own header: three closures over
+          `state` meant the only way to ask a question about them was to boot a canvas.
+        */
+        LEVEL_KINDS.forEach((kind, index) => {
+          expect(placeFor(index), `level ${index + 1} heads for the wrong place`).toBe(LEVELS[kind].theme);
+        });
+        const last = LEVELS[LEVEL_KINDS[LEVEL_KINDS.length - 1]!].theme;
+        expect(placeFor(LEVEL_KINDS.length), 'a finished run read off the end of the roster').toBe(last);
+        expect(placeFor(-1), 'a negative level index did not clamp').toBe(LEVELS[LEVEL_KINDS[0]!].theme);
+      });
+
+
+      /*
+        `docs/decisions/0133-the-place-is-baked-at-the-boundary.md`. 0128 built `setLoops` and never
+        called it; 0132 wrote a whole composition behind it. What is held here is the half that has
+        no browser in it: the set `bakePlace` hands over.
+      */
+      /*
+        ⚠️ **Warmed ONCE for the block, because a full prewarm is about four seconds.** Doing it per
+        test is four of those against a five-second default timeout — a guard that passes alone and
+        times out under the load of `npm run prove`, which is
+        `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md` exactly. It was
+        written the slow way first and did precisely that.
+      */
+      const warm = (): void => {
+        if (takePrewarmed() === null) prewarmAudio((run) => run());
+      };
+
+      it('hands over exactly what a whole bake of that place would produce', () => {
+        /*
+          ⚠️ **THE SAME PROPERTY THE PREWARM HAS TO HAVE, ARRIVING ONE LEVEL UP.** A place walked one
+          note at a time across a break screen and a place baked in one call must be the identical
+          audio, or *the same level sounds different depending on how long you looked at the screen*
+          — which is `docs/decisions/0021-one-stream-per-concern.md`'s failure with a new trigger.
+        */
+        warm();
+        let handed: Record<MusicLayer, Float32Array> | null = null;
+        bakePlace('nebula', (loops) => {
+          handed = loops;
+        }, (run) => run());
+        expect(handed, 'the place never finished, so this measured nothing').not.toBeNull();
+        const whole = bakeLoops(SAMPLE_RATE, 'nebula');
+        let compared = 0;
+        for (const layer of revoicedBy('nebula')) {
+          const a = handed![layer];
+          const b = whole[layer];
+          expect(a.length, `${layer} came back a different length`).toBe(b.length);
+          for (let i = 0; i < a.length; i++) {
+            if (a[i] !== b[i]) throw new Error(`${layer} differs at sample ${i}: ${a[i]} vs ${b[i]}`);
+            compared++;
+          }
+        }
+        expect(compared, 'nothing was actually compared').toBeGreaterThan(SAMPLE_RATE * 30);
+      }, 30_000);
+
+      it('THE COST MODEL: a layer the place does not state is the SAME array, not a copy', () => {
+        /*
+          ⚠️ **THIS IS THE 56 MB CEILING, WRITTEN AS AN IDENTITY CHECK.**
+          [`what-a-whole-place-costs`](../reports/what-a-whole-place-costs-2026-08-12.md) measured
+          Ember Nebula at 46.85 MB of its own audio: a set that copied what it shares would put a
+          whole second composition in memory at every boundary, and `setLoops` compares by identity —
+          so a copy is also a fresh `AudioBuffer` for every layer in the game, at a level break.
+        */
+        warm();
+        const base = takePrewarmed()!.loops;
+        let handed: Record<MusicLayer, Float32Array> | null = null;
+        bakePlace('nebula', (loops) => {
+          handed = loops;
+        }, (run) => run());
+        const own = revoicedBy('nebula');
+        const shared = MUSIC_LAYERS.filter((l) => !own.includes(l));
+        expect(shared.length, 'this place states every layer, so nothing is shared to check').toBeGreaterThan(0);
+        for (const layer of shared) {
+          expect(handed![layer], `${layer} was rebuilt instead of shared`).toBe(base[layer]);
+        }
+        for (const layer of own) {
+          expect(handed![layer], `${layer} was shared instead of rebuilt`).not.toBe(base[layer]);
+        }
+      }, 30_000);
+
+      it('a place that states nothing hands the base set straight back, so it is a no-op', () => {
+        // Six of the seven places are in this state, and the title screen is too. `setLoops` then
+        // finds every array identical and does not make a single buffer.
+        warm();
+        const base = takePrewarmed()!.loops;
+        let handed: Record<MusicLayer, Float32Array> | null = null;
+        bakePlace('rime', (loops) => {
+          handed = loops;
+        }, (run) => run());
+        expect(revoicedBy('rime'), 'rime states material now, so this asserts nothing').toEqual([]);
+        for (const layer of MUSIC_LAYERS) expect(handed![layer]).toBe(base[layer]);
+      }, 30_000);
+
+      it('and a run that leaves the place before its material arrives never hears it', () => {
+        /*
+          ⚠️ **A bake is seconds long and a boss can die inside one.** Without the cancel, a run that
+          cleared two levels quickly would hand the mixer the material for a place it had already
+          left — and 0128's swap lands at the next PHRASE, so the wrong piece would arrive up to
+          twenty-five seconds into the level after it.
+        */
+        warm();
+        let arrived = false;
+        const queue: (() => void)[] = [];
+        const stop = bakePlace('nebula', () => {
+          arrived = true;
+        }, (run) => queue.push(run));
+        // Walk a few jobs, then leave.
+        for (let i = 0; i < 5 && queue.length > 0; i++) queue.shift()!();
+        stop();
+        while (queue.length > 0) queue.shift()!();
+        expect(arrived, 'a cancelled bake still handed its material over').toBe(false);
+      }, 30_000);
+
+      it('and it does nothing at all before the prewarm has a base set to share from', () => {
+        // Baking one here would be the three-second freeze 0102 exists to have removed. A boundary is
+        // minutes after the first press, so this is the title screen and nothing else.
+        resetPrewarm();
+        let arrived = false;
+        bakePlace('nebula', () => {
+          arrived = true;
+        }, (run) => run());
+        expect(arrived, 'a place was baked with no prewarmed set to share from').toBe(false);
+      });
     });
 
     it('and the whole set is small enough to spread across the title screen', () => {
