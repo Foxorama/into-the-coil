@@ -50,9 +50,20 @@ const stamped = (tokens: Record<string, string>, text: string, where: string): s
   return out;
 };
 
+/**
+ * The one page this plugin is a demand about, as Vite's own path for it.
+ *
+ * ⚠️ **A PATH AND NOT A FILENAME, AND `npm run prove` IS WHY.** The first version compared
+ * `resolve(ctx.filename)` against `resolve(config.root, 'index.html')` — which is correct here and
+ * went RED in a probe worker, because a probe runs in a disposable copy under `os.tmpdir()`
+ * (`docs/decisions/0054-the-proof-runs-beside-the-work-not-on-it.md`) and two absolute Windows paths
+ * that name one file need not be the same string. `ctx.path` is a URL, it is `/index.html` in both
+ * dev and build, and it has no machine in it.
+ */
+const SHIPPED_PAGE = '/index.html';
+
 function stampBuildIdentity(): Plugin {
   let outDir = 'dist';
-  let shipped = resolve('index.html');
   return {
     name: 'itc-stamp-build-identity',
     configResolved(config) {
@@ -60,7 +71,6 @@ function stampBuildIdentity(): Plugin {
       // through `process.execPath` from `tests/globalSetup.ts`, and a cwd-relative guess is the
       // kind of thing that works locally and writes to the wrong place on a runner.
       outDir = resolve(config.root, config.build.outDir);
-      shipped = resolve(config.root, 'index.html');
     },
     // The watchdog needs the version only. It reports "which release is on screen"; the commit is
     // the module graph's job, and by the time the watchdog speaks the module graph is what failed.
@@ -73,7 +83,7 @@ function stampBuildIdentity(): Plugin {
     // ABOUT. A dev-only page carrying a placeholder to keep a plugin quiet would be the version of
     // this that quietly stops meaning anything.
     transformIndexHtml(html, ctx) {
-      if (resolve(ctx.filename) !== shipped) return html;
+      if (ctx.path !== SHIPPED_PAGE) return html;
       return stamped({ [ITC_VERSION]: pkgVersion }, html, 'index.html');
     },
     /**
