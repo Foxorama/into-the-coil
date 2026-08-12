@@ -79,7 +79,11 @@ export const PROBES = [
     guard: '0104 — a gridded cue waits for the next sixteenth, and waits at most one',
     edit: {
       path: 'src/app/sound.ts',
-      find: "      if (CUES[kind].onGrid === true) {\n        waiting[index] = 1;\n        return;\n      }",
+      find:
+        '      if (CUES[kind].onGrid === true) {\n' +
+        '        // The first of a collapsed pair keeps its place — the note on `waitingPan` has why.\n' +
+        '        if (waiting[index] === 0) waitingPan[index] = pan;\n' +
+        '        waiting[index] = 1;\n        return;\n      }',
       replace: '',
     },
   },
@@ -109,10 +113,16 @@ export const PROBES = [
     guard: '0104 — ducks the music for a cue that SOUNDED, and never for one the cap refused',
     edit: {
       path: 'src/app/sound.ts',
-      find: '      if (CUES[kind].onGrid === true) {\n        waiting[index] = 1;\n        return;\n      }\n      emit(index);',
+      find:
+        '      if (CUES[kind].onGrid === true) {\n' +
+        '        // The first of a collapsed pair keeps its place — the note on `waitingPan` has why.\n' +
+        '        if (waiting[index] === 0) waitingPan[index] = pan;\n' +
+        '        waiting[index] = 1;\n        return;\n      }\n      emit(index, pan);',
       replace:
         '      const asked = CUES[kind].duck;\n      if (asked !== undefined) out.duck(asked);\n' +
-        '      if (CUES[kind].onGrid === true) {\n        waiting[index] = 1;\n        return;\n      }\n      emit(index);',
+        '      if (CUES[kind].onGrid === true) {\n' +
+        '        if (waiting[index] === 0) waitingPan[index] = pan;\n' +
+        '        waiting[index] = 1;\n        return;\n      }\n      emit(index, pan);',
     },
   },
   {

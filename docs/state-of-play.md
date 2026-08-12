@@ -162,6 +162,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a boss lasts long enough to be one; the design loadout is TIER TWO** | [0124](decisions/0124-the-boss-is-a-boss.md) |
 | **the build starts 7.3s sooner; an ARRIVAL is what a listener hears** | [0125](decisions/0125-the-build-starts-sooner.md) |
 | **the sound is DRIVEN rather than rendered: `npm run dash`, the game's own mixer on a slider** | [0126](decisions/0126-the-dashboard-is-the-instrument.md) |
+| **a cue sounds from where it happened; the low end turned out not to need centring** | [0127](decisions/0127-a-cue-has-a-place.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -648,6 +649,15 @@ so it reaches **0.63 of a loop**; `approach` is 0.70. Those are exactly the two 
 unnoticed. **It does not replace 0125's ask and it is not the same finding**: 0125 says those rungs
 need arriving material, this says the window they arrive in cannot hold a phrase. The table is in
 0126 and the dashboard prints it live.
+
+⚠️ **AND THE EFFECTS ARE IN THE FIELD NOW, WHICH THEY WERE NOT WHEN 0118 GAVE THE MUSIC ONE** —
+[0127](decisions/0127-a-cue-has-a-place.md). A cue sounds from the `across` it happened at; `hit` is
+the one that cannot and the decision says why. **Nobody has heard it**, and the question to put to the
+dashboard is whether a kill at the edge reads as *over there* or as the mix wobbling.
+
+⚠️ **`scripts/hear.mjs --play` IS STILL MONO and it is the mode for judging cues against music.**
+Only `--level` writes stereo. The WAV rig now shows a narrower picture than the game; the dashboard
+supersedes it for that question.
 
 ⚠️ **NO DEAD LAYER AND NO DEAD CUE WAS FOUND**, which was the first hypothesis and is worth not
 re-testing. All fourteen cues have a call site; `bass` and `beat` are title-only by 0095's design.

@@ -34,6 +34,7 @@ import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { makeAudioOut, makeSpeaker } from '../src/app/sound.ts';
 import { auraNearness } from '../src/app/music.ts';
 import { makeRng } from '../src/sim/rng.ts';
+import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import {
   UNITS_PER_SECOND,
   cueLines,
@@ -86,6 +87,15 @@ let walkSpeed = 1;
 let tier = 0;
 let killsPerSecond = 1.6;
 let gapUnits = 85;
+/**
+ * Where the ship is across the lane, in world units.
+ *
+ * ⚠️ **The dashboard fired every cue with no position until 0127 landed**, which centred all of them
+ * — and a tool that cannot show the stereo field is the tool this change would have been judged with.
+ * The gun and the tubes sound from here; a kill, a hit and a threat are scattered across the lane,
+ * because that is where the bodies are.
+ */
+let shipAcross = ACROSS_SPAN / 2;
 let cuesOn = true;
 /**
  * A layer the dashboard has taken off the mixer: whether it sounds at all, and by how much its
@@ -268,6 +278,7 @@ const bind = (id: string, outId: string, set: (v: number) => void, format = (v: 
 bind('tier', 'tierOut', (v) => (tier = v));
 bind('bodies', 'bodiesOut', (v) => (killsPerSecond = v), (v) => v.toFixed(1));
 bind('gap', 'gapOut', (v) => (gapUnits = v));
+bind('shipAt', 'shipAtOut', (v) => (shipAcross = v));
 
 // ── THE LAYER TABLE ─────────────────────────────────────────────────────────────────────────────
 
@@ -488,7 +499,9 @@ function drawCues(): void {
     button.textContent = kind;
     button.title = `${CUES[kind].twin} · gain ${CUES[kind].gain} · hold ${CUES[kind].hold} steps`;
     button.addEventListener('click', () => {
-      speaker.play(kind);
+      // Auditioned from where the ship is, so the field is audible here too — 0127. `hit` and the
+      // chime are centred by the game whatever they are handed, which is the point of trying them.
+      speaker.play(kind, shipAcross);
       flash(kind);
     });
     every.append(button);
@@ -526,23 +539,30 @@ function cuesOnStep(step: number): void {
   if (!cuesOn) return;
   const weapon = weaponAtTier(tier);
   const rung = momentOf(kind, second, FIGHT_SECONDS, auraNearness(gapUnits)).rung;
-  const play = (name: Parameters<typeof speaker.play>[0]): void => {
+  const play = (name: Parameters<typeof speaker.play>[0], across: number): void => {
     if (silenced.has(name)) return;
-    speaker.play(name);
+    speaker.play(name, across);
     flash(name);
   };
-  if (step % weapon.fireEvery === 0) play('pulse');
-  if (weapon.launchers > 0 && step % weapon.missileEvery === 0) play('missile');
-  if ((rung === 'boss' || rung === 'bossPeak') && step % 72 === 0) play('bossShot');
+  if (step % weapon.fireEvery === 0) play('pulse', shipAcross);
+  if (weapon.launchers > 0 && step % weapon.missileEvery === 0) play('missile', shipAcross);
+  // A boss holds a station and drifts across it (0061); the middle is the honest stand-in.
+  if ((rung === 'boss' || rung === 'bossPeak') && step % 72 === 0) play('bossShot', ACROSS_SPAN / 2);
   /*
     ⚠️ **A kill lands on the step a collision resolves and NOTHING quantises it**, so it is drawn
     rather than placed — which is exactly as musical as the game is. A dashboard that put these on
     the grid would be showing a tidier game than the one being judged.
   */
   const chance = killsPerSecond / STEPS_PER_SECOND;
-  if (bodies.range(0, 1) < chance) play('kill');
-  if (bodies.range(0, 1) < chance) play('hit');
-  if (bodies.range(0, 1) < chance * 0.6) play('threat');
+  /*
+    ⚠️ **Scattered across the LANE as well as across the beat** — 0127. A kill happens where the body
+    was, and the whole point of placing them is that a fight is not a single point. `hit` is drawn a
+    position here and the game centres it, which the panel below says out loud: it is the one cue with
+    nothing to ask.
+  */
+  if (bodies.range(0, 1) < chance) play('kill', bodies.range(0, ACROSS_SPAN));
+  if (bodies.range(0, 1) < chance) play('hit', bodies.range(0, ACROSS_SPAN));
+  if (bodies.range(0, 1) < chance * 0.6) play('threat', bodies.range(0, ACROSS_SPAN));
 }
 
 // ── THE TIMELINE STRIP ──────────────────────────────────────────────────────────────────────────

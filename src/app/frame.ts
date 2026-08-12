@@ -1103,7 +1103,16 @@ export interface World {
    * `null` check on a pool, so a volley the pool refused makes no noise — the screen shows nothing
    * either, and a sound for a bullet that does not exist is the exact inverse failure 0036 names.
    */
-  onCue: (kind: CueKind) => void;
+  /*
+    ⚠️ **`across` IS WHERE IT HAPPENED AND IT IS OPTIONAL** — 0127. Every call below already has the
+    coordinate to hand — the ship's, the body's, the boss's — and the conversion to a pan lives in
+    `src/app/sound.ts`'s `panFor`, so the lane's width is named once rather than seventeen times.
+    Omitting it is the honest answer for an event with no place, never a shortcut.
+
+    ⚠️ **It changes nothing about 0024's ban.** The step is handed a function and still cannot see
+    what it does; passing a coordinate OUT is the same direction `musicLevelFor` already reads in.
+  */
+  onCue: (kind: CueKind, across?: number) => void;
   /**
    * A fixed step happened, whether or not the simulation took it.
    *
@@ -1255,7 +1264,16 @@ export class GameFrame implements Frame {
     // An area rather than an arrival: everything inside it, once, and nothing consumes it.
     blastInto(w.blasts, w.enemies, 1, IMPACT_FLASH_STEPS, w.deaths);
     blastInto(w.blasts, w.bossPool, 1, IMPACT_FLASH_STEPS, w.deaths);
-    // The impact flash's twin. An arrival that did not kill is a body that went white and stayed.
+    /*
+      The impact flash's twin. An arrival that did not kill is a body that went white and stayed.
+
+      ⚠️ **THE ONE CUE WITH NO PLACE, AND IT IS A PROPERTY OF THIS LINE** — 0127. Every other cue is
+      emitted beside the thing that caused it and hands over its `across`; a hit is inferred from a
+      COUNT — bullets in flight before, minus bullets in flight after, minus the ones that killed —
+      so there is no body here to ask. Recording an impact position would mean `collideInto` logging
+      arrivals as well as deaths, which is a pool the whole game would pay for so that one cue could
+      be placed. Centred, deliberately, and `tests/sound.test.ts` names it.
+    */
     if (w.playerShots.size + w.missiles.size < inFlight - killedByShots) w.onCue('hit');
     /*
       The debris burst's twin, and it is skipped on the one step the boss dies.
@@ -1266,7 +1284,13 @@ export class GameFrame implements Frame {
       loudest event in the game is the one the ceiling would eat. `tests/sound.test.ts` drives a real
       boss death and asserts it actually sounds.
     */
-    if (w.deaths.count > 0 && !bossJustDied(w)) w.onCue('kill');
+    /*
+      ⚠️ **The FIRST death of the step, where several is one cue** — 0127. `hold` already makes
+      simultaneous kills one sounding, so the choice is which of them it is placed at; the first is
+      the one the collision resolved first, and a mean would put two deaths at opposite edges of the
+      lane in the middle, where neither of them was.
+    */
+    if (w.deaths.count > 0 && !bossJustDied(w)) w.onCue('kill', w.deaths.across[0]);
     /*
       ⚠️ **THE SHIP TAKES HITS, NOT DAMAGE, and this is where a number becomes a count.** Its health
       is the hull plus the shell (`src/content/ships.ts`), and a shield is what absorbs **one hit** —
@@ -1315,7 +1339,7 @@ export class GameFrame implements Frame {
         leaving the shell below in `stepShields` is this cue's twin. A ship on its last life takes the
         other branch, and the two cues are deliberately opposite sweeps.
       */
-      if (w.ship.health < healthBefore && w.ship.health > 0) w.onCue('shield');
+      if (w.ship.health < healthBefore && w.ship.health > 0) w.onCue('shield', w.ship.across);
     }
     /*
       A blast lands ONCE. Everything above has now seen it, so it spends itself here and what remains
@@ -1354,7 +1378,9 @@ export class GameFrame implements Frame {
       if (kind === undefined) continue;
       // One cue for all three kinds — `src/content/cues.ts` has why, and which split play would ask
       // for first. The readout moving is the twin, and it already says WHICH one was taken.
-      w.onCue('pickup');
+      // At the SHIP, because that is where a pickup is taken — 0127. `Collected` logs the kind and
+      // not a position, and the position that matters is the one the player is at anyway.
+      w.onCue('pickup', w.ship.across);
       w.onPickup(kind);
     }
 
@@ -1440,7 +1466,9 @@ export class GameFrame implements Frame {
       // The one cue sized to fill a beat rather than to punctuate one: `BOSS_DEATH_STEPS` is 1.6
       // seconds of the level carrying on while the boss comes apart, and `src/content/cues.ts` sizes
       // `bossDown` against it.
-      w.onCue('bossDown');
+      // Where the boss was: it is already out of its pool by now, and its death is the entry the
+      // collision logged this step — 0127.
+      w.onCue('bossDown', w.deaths.across[0]);
       /*
         ⚠️ **THE LEVEL DOES NOT END HERE ANY MORE.** Reported from play: *"bosses need a real
         explosion and an end-of-level beat — currently the level just ends."* It did: the same step
@@ -1546,7 +1574,7 @@ function fireShip(w: World): void {
       loop but gated on the first barrel, so a volley the pool refused entirely is silent, which is
       the same rule every other cue in this file follows.
     */
-    if (i === 0) w.onCue('pulse');
+    if (i === 0) w.onCue('pulse', w.ship.across);
     const angle = first + step * i;
     reset(shot, w.ship.along + MUZZLE_ALONG, w.ship.across, row);
     shot.velAlong = Math.cos(angle) * row.speed + w.scrollPerStep;
@@ -1634,7 +1662,7 @@ function stepBombs(w: World): void {
       one picture of a detonation that cannot be refused. Inside the branch this would be the only
       cue in the file that goes quiet on the frame the screen is fullest.
     */
-    w.onCue('blast');
+    w.onCue('blast', bomb.across);
     burst(w, bomb.along, bomb.across, BURST.ship);
   }
 }
@@ -1653,7 +1681,7 @@ export function launchSpecial(w: World, kind: SpecialKind): void {
   const thrown = w.bombs.spawn();
   if (thrown === null) return;
   // Rising, because the thing it turns into has not happened yet — the fuse is the point of a bomb.
-  w.onCue('bomb');
+  w.onCue('bomb', w.ship.across);
   reset(thrown, w.ship.along + MUZZLE_ALONG, w.ship.across, body);
   thrown.velAlong = body.speed + w.scrollPerStep;
   /*
@@ -1696,7 +1724,7 @@ function fireMissiles(w: World): void {
     // A volley one tube short is dropped rather than grown — `src/sim/pool.ts` has the argument.
     if (missile === null) return;
     // One cue for the volley, on the same terms the pulse gets one: both tubes are one launch.
-    if (i === 0) w.onCue('missile');
+    if (i === 0) w.onCue('missile', w.ship.across);
     /*
       WHERE THE TUBES ARE — 0097, and it is the third answer to this question.
 
@@ -1965,7 +1993,7 @@ function fireEnemies(w: World): void {
           loud as a lancer for firing once. The `hold` was already doing this job by accident and now
           it is the rule.
         */
-        w.onCue('threat');
+        w.onCue('threat', e.across);
         reset(shot, e.along, e.across, bullet);
         shot.velAlong = (dAlong / distance) * speed + w.scrollPerStep;
         shot.velAcross = (dAcross / distance) * speed;
@@ -1978,7 +2006,7 @@ function fireEnemies(w: World): void {
           `spread / (shots - 1)`, which is the same arithmetic `src/app/boss.ts` uses and is written
           the same way on purpose.
         */
-        w.onCue('threat');
+        w.onCue('threat', e.across);
         const step = attack.shots > 1 ? attack.spread / (attack.shots - 1) : 0;
         const first = Math.PI - (step * (attack.shots - 1)) / 2;
         for (let s = 0; s < attack.shots; s++) {
@@ -2003,7 +2031,7 @@ function fireEnemies(w: World): void {
           skipped slot is a wall that is simply narrower near the edges, and the body's own roam is
           bounded so this is rare.
         */
-        w.onCue('threat');
+        w.onCue('threat', e.across);
         for (let s = 1; s <= attack.shots; s++) {
           for (let side = -1; side <= 1; side += 2) {
             const across = e.across + side * s * attack.gap;
@@ -2026,7 +2054,7 @@ function fireEnemies(w: World): void {
           identical ring however their phases were seeded, and 0098's *"they all fire at exactly the
           same time"* would be true of the picture on the one volley the player watches most.
         */
-        w.onCue('threat');
+        w.onCue('threat', e.across);
         e.firePhase += attack.turn;
         const step = TAU / attack.shots;
         for (let s = 0; s < attack.shots; s++) {
@@ -2839,7 +2867,7 @@ function wreckShip(w: World): void {
   burst(w, w.ship.along, w.ship.across, BURST.ship);
   // Beside the burst, which is the picture it is the twin of. The ship coming apart and the ship
   // being heard to come apart are one event and are written on one line apart.
-  w.onCue('death');
+  w.onCue('death', w.ship.across);
   /*
     ⚠️ **The shell is NOT cleared here, and that is deliberate rather than forgotten.** `stepShields`
     derives the mark count from the ship's health every step and this ship's health is at or below
@@ -2926,8 +2954,9 @@ export function detonateArsenal(w: World, charges: number): void {
   // than a body, which is the same statement `stepBombs` makes about a bomb's blast.
   ring.lifeFor = BLAST_STEPS;
   // The blast's own cue. It is the same event as a bomb going off, so it is the same sound — and it
-  // is emitted after the `null` check, like every other cue in this file.
-  w.onCue('blast');
+  // is emitted after the `null` check, like every other cue in this file. Placed at the wreck, which
+  // is where the ring is — 0127.
+  w.onCue('blast', w.deathAcross);
 }
 
 /** The boss, if there is one on the field. Its whole behaviour lives in `src/app/boss.ts`. */
@@ -2997,7 +3026,7 @@ function driveBoss(w: World): void {
     */
     if (w.bossPhaseAt >= 0) {
       burst(w, boss.along, boss.across, BURST.phase);
-      w.onCue('bossPhase');
+      w.onCue('bossPhase', boss.across);
     }
     w.bossPhaseAt = phase;
   }
