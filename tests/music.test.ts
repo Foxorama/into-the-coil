@@ -41,6 +41,8 @@ import {
   panGains,
   musicLevelFor,
   nextBarFrom,
+  placeArrivesAt,
+  SCHEDULE_AHEAD,
   rephaseIn,
 } from '../src/app/music.ts';
 import { THEME_KINDS } from '../src/content/themes.ts';
@@ -1701,6 +1703,41 @@ describe('0117 — a section change lands on a downbeat, and not one ever has', 
         bar - now,
         `a change would wait ${(bar - now).toFixed(2)}s, which is longer than the bar it is waiting for`,
       ).toBeLessThan(BAR_SECONDS + 1e-9);
+    }
+  });
+
+  it('0135 — A PLACE ARRIVES WITHIN A BAR, and it used to be within a PHRASE', () => {
+    /*
+      `docs/decisions/0135-a-place-arrives-when-you-do.md`. Reported of the first level that ever
+      played its own music: *"the start of level 2 sounded a bit like the default start, it should
+      immediately pick into the new thematic track."*
+
+      ⚠️ **THE NUMBER IS 25.6 SECONDS AGAINST 1.6.** 0128 swapped a place's loops at the next PHRASE,
+      and a level opens deliberately empty (0043) — so the whole of a new level's first quiet stretch
+      could be the PREVIOUS place's music. The player heard exactly that, on the first build where a
+      place had its own music to arrive with.
+
+      ⚠️ **Asserted in SECONDS, which is the unit the report is in** —
+      `docs/decisions/0027-measure-the-picture-not-the-model.md`. *The next bar* is the model talking
+      to itself; *how long am I still hearing the last level* is what a player experiences.
+    */
+    const spread = [0, 0.01, 0.4, 0.79, 0.8, 1.59, 3.2, 12.7, 25.5, 41.3];
+    for (const offset of spread) {
+      const now = anchor + offset;
+      const when = placeArrivesAt(anchor, now, SCHEDULE_AHEAD);
+      expect(
+        when - now,
+        `a place ${offset}s into the phrase waits ${(when - now).toFixed(2)}s, which is longer than a bar`,
+      ).toBeLessThanOrEqual(BAR_SECONDS + SCHEDULE_AHEAD + 1e-9);
+      /*
+        ⚠️ **And it is still ON a bar, which is the half 0117 owns.** The fix for a slow arrival must
+        not be an arrival that lands mid-bar — that would be trading this decision's defect for the
+        one 0117 exists for.
+      */
+      const bars = (when - anchor) / BAR_SECONDS;
+      expect(Math.abs(bars - Math.round(bars)) < 1e-9, `a place arrived at bar ${bars.toFixed(3)}`).toBe(true);
+      // Far enough ahead to actually be scheduled — a bar two milliseconds away cannot be started on.
+      expect(when, 'a place was scheduled too close to now to start').toBeGreaterThanOrEqual(now + SCHEDULE_AHEAD);
     }
   });
 
