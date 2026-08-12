@@ -644,6 +644,43 @@ not a report per item.
 
 ## What is next
 
+### ⚠️ START HERE NEXT SESSION: BOTH SOUNDTRACKS WANT TWEAKING BEFORE ANY MORE ARE WRITTEN
+
+⚠️ **THE PLAYER HAS LISTENED AND THE VERDICT IS THE FIRST POSITIVE ONE THE NEBULA HAS HAD**,
+2026-08-13: *"I've had a listen on the dashboard and it's getting pretty good, but I want to make a
+fair few tweaks to both soundtracks before we expand out to the rest of the levels."*
+
+⚠️ **SO THE NEXT SESSION IS TUNING, NOT CONTENT.** *Both* soundtracks — level one's base composition
+and Ember Nebula — and **levels three to seven wait**. A session that opens this row and starts
+writing a third place is doing the wrong thing, on the player's own instruction.
+
+⚠️ **THE TWEAKS THEMSELVES ARE NOT YET NAMED**, and asking for them is the first move. What is known
+is that the last three rounds of this channel each turned a vague description into a measured quantity
+before anything was changed — [0134](decisions/0134-the-place-keeps-the-games-pace.md),
+[0136](decisions/0136-the-place-has-a-room-and-an-arc.md) — and every one of those measurements found
+the report was exactly right. **Reach for `scripts/weigh-rung.mjs` before reaching for a number.**
+
+⚠️ **THREE QUESTIONS WERE PUT TO THE PLAYER AND NONE HAS BEEN ANSWERED YET.** They are the cheapest
+thing to ask first:
+
+1. does the room read as a *building*, or as a wash over the tune?
+2. do the opening, push and surge read as three different things — or as three volumes?
+3. does the boss land as a drop? It falls an octave **and** loses almost all its reverb at once, and
+   that combination is the least certain to translate.
+
+⚠️ **AND ONE STRUCTURAL CALL IS WAITING ON THE PLAYER, WITH ITS NUMBERS ALREADY TAKEN** —
+[0134](decisions/0134-the-place-keeps-the-games-pace.md). *"The surge from level one should be the
+default music speed for the next levels at the start"* is 172 notes a bar across FOURTEEN open layers;
+a level's `run` opens nine and the ladder decides which. **Levels 2+ opening at `push` delivers it to
+within 7%** and costs one section boundary a level — which is the *fewer bigger sections* option
+[0125](decisions/0125-the-build-starts-sooner.md) records the player refusing in another form. It is
+not a call to make inside a tuning pass.
+
+⚠️ **THE DASHBOARD LIES AFTER A CODE EDIT UNLESS THE PAGE RELOADS, AND IT NOW RELOADS ITSELF** —
+0136. A vite hot update left every baked buffer where it was, so the page printed the new layer list
+and played the old audio. Fixed; but **the fix only applies from the load after you have it**, so hard
+reload once after a pull.
+
 ### The music is a rewrite in four phases, and two of them have landed
 
 ⚠️ **THE PLAYER HAS SET THE DIRECTION AND IT IS A DECISION ABOUT WHICH RULE GOES**, 2026-08-11:
@@ -664,7 +701,7 @@ does not reach it.
 | 0 | **the rig renders a LEVEL** — rungs, ramps, theme, and where every boundary lands in the bar | ✅ [0116](decisions/0116-the-rig-plays-the-level.md), and **played live** ✅ [0126](decisions/0126-the-dashboard-is-the-instrument.md) |
 | 1 | **bar-line quantisation**, per-note duration, per-layer panning | quantisation ✅ [0117](decisions/0117-a-section-change-lands-on-the-beat.md), panning ✅ [0118](decisions/0118-the-mix-has-a-width.md); **per-note duration is owed** |
 | 2 | **the transport** — sections on bar lines, one-shot fills at seams, variant slots, selection from game state | not started. This is where *moves and breathes* lives |
-| 3 | **per-theme composition**, baked at the level boundary | ✅ **done** — the storage model [0128](decisions/0128-a-place-plays-its-own-material.md), a whole place [0132](decisions/0132-a-place-may-be-another-piece-entirely.md), the boundary bake [0133](decisions/0133-the-place-is-baked-at-the-boundary.md). **Six of the seven places still state no material of their own**, and that is content rather than mechanism now |
+| 3 | **per-theme composition**, baked at the level boundary | ✅ **done, and one place is written** — the storage model [0128](decisions/0128-a-place-plays-its-own-material.md), a whole place [0132](decisions/0132-a-place-may-be-another-piece-entirely.md), the boundary bake [0133](decisions/0133-the-place-is-baked-at-the-boundary.md), its arrival [0135](decisions/0135-a-place-arrives-when-you-do.md), its pace [0134](decisions/0134-the-place-keeps-the-games-pace.md) and its room [0136](decisions/0136-the-place-has-a-room-and-an-arc.md). **Six of the seven places still state no material of their own — and they WAIT**, see the row above |
 
 ⚠️ **START HERE ON THE MUSIC, AND START BY OPENING THE DASHBOARD** —
 [0126](decisions/0126-the-dashboard-is-the-instrument.md) and
