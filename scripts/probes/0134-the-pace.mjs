@@ -30,7 +30,7 @@ export const PROBES = [
     guard: 'and none is substantially BRIGHTER, which is the other half of the same report',
     edit: {
       path: 'src/content/themes.ts',
-      find: '      groove: 1.45,\n      drone: 1.3,\n      sub: 1.18,',
+      find: '      groove: 1.363,\n      drone: 1.222,\n      sub: 1.109,',
       replace: '      groove: 0.5,\n      drone: 0.5,\n      sub: 0.5,',
     },
   },

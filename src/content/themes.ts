@@ -166,6 +166,31 @@ export interface ThemeRow {
    * re-voiced. The two are independent and both are multipliers over the same rung.
    */
   voices?: Partial<Record<MusicLayer, readonly MusicVoice[]>>;
+  /**
+   * How much room this place has, per layer. `0` is none and `1` is a cathedral.
+   *
+   * ── SPACE IS NOT SUSTAIN, AND THIS PROJECT HAD ONLY EVER HAD SUSTAIN ────────────────────────────
+   *
+   * ⚠️ **`docs/decisions/0136-the-place-has-a-room-and-an-arc.md`.** Reported: *"it still needs more
+   * reverb… the sky background is going to be the Eagle Nebula and the Pillars of Creation, so the
+   * music track needs to be suitably awe inspiring to match."* Every lever reached for before this
+   * was a longer note, a slower attack or a lower decay — and a held note is a held note. What says
+   * *large room* is the same note arriving again, later, darker.
+   *
+   * ⚠️ **PER LAYER, because a room is not a master effect here.** The drums want a short room or the
+   * pulse turns to mud, and the choir wants a long one; a single wet control over the bus would make
+   * the one that matters most impossible. It is also why this is a number and not a shape — the
+   * shape is a constant in `src/app/music.ts` and only *how much* is content.
+   *
+   * ⚠️ **Absent is dry**, so the base composition and the five places that state nothing are
+   * byte-identical to what they were, and `tests/themes.test.ts` asserts that rather than assuming
+   * it.
+   *
+   * ⚠️ **It is baked into the loop and costs nothing at runtime** — three passes of a multiply-add
+   * over a finished buffer, about eleven milliseconds for a sixteen-bar layer. What it costs is at
+   * the BOUNDARY (0133), which is where a place's whole bake is already spent.
+   */
+  air?: Partial<Record<MusicLayer, number>>;
 }
 
 /**
@@ -230,27 +255,62 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       the place that should be spending it there.
     */
     mix: {
-      groove: 1.45,
-      drone: 1.3,
-      sub: 1.18,
-      engine: 1.15,
-      chords: 1.15,
-      call: 1.1,
-      toll: 1.28,
-      counter: 0.95,
-      dread: 1.05,
-      lead: 1,
-      hook: 0.9,
-      perc: 0.85,
-      crash: 0.85,
-      arp: 0.7,
-      ride: 0.7,
-      drive: 0.85,
-      stomp: 1.02,
-      frenzy: 1.05,
-      wraith: 1.1,
+      groove: 1.363,
+      drone: 1.222,
+      sub: 1.109,
+      engine: 1.081,
+      chords: 1.081,
+      call: 1.034,
+      toll: 1.203,
+      counter: 0.893,
+      dread: 0.987,
+      lead: 0.94,
+      hook: 1.269,
+      perc: 0.799,
+      crash: 0.799,
+      arp: 0.658,
+      ride: 0.658,
+      drive: 0.799,
+      stomp: 0.865,
+      frenzy: 1.222,
+      wraith: 1.316,
     },
     voices: NEBULA_VOICES,
+    /*
+      ⚠️ **THE ROOM IS THE PLACE, AND THE BOSS IS WHERE IT STOPS** — 0136. Asked for: *"more reverb…
+      suitably awe inspiring to match the Pillars of Creation"*, and then *"the boss needs to drop
+      from the high octaves down into the lower tones of hellfire and menace."*
+
+      ⚠️ **So the drop is a drop in SPACE as well as in register.** The choir sings in a cathedral and
+      the fire is two feet from your face: `stomp` has no room at all and `frenzy` has almost none,
+      which makes the boss's arrival a change of *place* and not only of notes. Nothing else in this
+      game can say *close* — there has never been a reverb to take away.
+
+      ⚠️ **The floor stays dry whatever the ceiling does.** `groove`, `sub` and `engine` carry the
+      pulse and the bottom; a wet bass is mud and a wet kick is a kick you cannot hear the front of.
+      A room per layer rather than over the bus is exactly what buys that.
+    */
+    air: {
+      chords: 0.95,
+      crash: 0.9,
+      toll: 0.9,
+      call: 0.85,
+      lead: 0.8,
+      drone: 0.75,
+      counter: 0.7,
+      hook: 0.6,
+      ride: 0.6,
+      dread: 0.6,
+      arp: 0.5,
+      perc: 0.38,
+      auraSlow: 0.32,
+      wraith: 0.24,
+      groove: 0.18,
+      engine: 0.15,
+      auraFast: 0.15,
+      frenzy: 0.1,
+      sub: 0.08,
+    },
   },
   /** Level three. Hard and percussive: the hands lead and the pads get out of the way. */
   debris: {
@@ -327,11 +387,64 @@ export function voicesOf(theme: ThemeKind | undefined, layer: MusicLayer): reado
   return THEMES[theme].voices?.[layer] ?? MUSIC[layer];
 }
 
+/**
+ * How much room `layer` has in `theme` — `0` for a place that states none, and for no place at all.
+ *
+ * ⚠️ **Clamped rather than trusted**, on `mixOf`'s own terms: a hand that authors 3 gets a cathedral
+ * rather than a wash nothing can be heard through, and `tests/themes.test.ts` refuses the row
+ * outright.
+ */
+export function airOf(theme: ThemeKind | undefined, layer: MusicLayer): number {
+  if (theme === undefined) return 0;
+  const want = THEMES[theme].air?.[layer] ?? 0;
+  return want < 0 ? 0 : want > AIR_CEILING ? AIR_CEILING : want;
+}
+
+/**
+ * The most room a layer may have — `1` is as much room as direct sound.
+ *
+ * ⚠️ **IT IS A MIX BOUND AND NOT A STABILITY ONE, WHICH IT WAS FOR ONE DRAFT.** The first room wrote
+ * three taps back into the buffer they were all reading, so they behaved as a single loop and only
+ * decayed while their gains SUMMED under one — a ceiling of 0.55 was arithmetic about feedback.
+ * `addRoom` gives each comb its own delay line now, so each is stable on its own and `air` is a pure
+ * wet/dry mix. **The stale reason is recorded rather than deleted** because the number did not change
+ * and a reader would otherwise trust the old argument for it.
+ *
+ * ⚠️ **What bounds it now is legibility.** Past about equal parts, the direct sound stops being the
+ * thing you hear and a melody turns to weather — which is a fine effect and not one a layer carrying
+ * a tune may have.
+ */
+export const AIR_CEILING = 1;
+
 /** Which layers `theme` plays differently from the base. Empty for a place with no music of its own. */
 export function revoicedBy(theme: ThemeKind): MusicLayer[] {
   const own = THEMES[theme].voices;
   if (own === undefined) return [];
   return (Object.keys(own) as MusicLayer[]).filter((layer) => own[layer] !== undefined);
+}
+
+/**
+ * Which layers a place has to BAKE for itself — the ones whose audio differs from the base.
+ *
+ * ── AND IT IS NOT THE SAME SET AS `revoicedBy`, WHICH IS A TRAP THIS NEARLY WALKED INTO ─────────
+ *
+ * ⚠️ **`docs/decisions/0136-the-place-has-a-room-and-an-arc.md` added a second way for a place's
+ * audio to differ.** Before it, *plays its own notes* and *sounds different from the base* were the
+ * same sentence; a place can now state `air` for a layer it does not re-voice, and that layer's
+ * buffer is genuinely different — the room is baked in.
+ *
+ * ⚠️ **Everything that bakes a place was asking `revoicedBy`**: `bakePlace` at a level boundary
+ * (0133) and the dashboard's own cache. Both would have shared the base's DRY array for such a layer
+ * and the room would simply never have arrived — silently, with every guard green, because nothing
+ * asserts a layer that was not claimed.
+ *
+ * ⚠️ **Ember Nebula gives air only to layers it also re-voices, so nothing is wrong today.** This is
+ * the trap closed before the first place walks into it, which is the cheapest moment there is.
+ */
+export function bakedBy(theme: ThemeKind): MusicLayer[] {
+  const air = THEMES[theme].air ?? {};
+  const withAir = (Object.keys(air) as MusicLayer[]).filter((layer) => (air[layer] ?? 0) > 0);
+  return [...new Set([...revoicedBy(theme), ...withAir])];
 }
 
 export function mixOf(theme: ThemeKind, layer: MusicLayer): number {

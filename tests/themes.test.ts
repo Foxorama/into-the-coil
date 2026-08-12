@@ -6,6 +6,8 @@ import {
   THEMES,
   THEME_KINDS,
   mixOf,
+  airOf,
+  bakedBy,
   revoicedBy,
   voicesOf,
   type ThemeKind,
@@ -24,7 +26,7 @@ import {
 } from '../src/content/music.ts';
 import { SCALE } from '../src/content/cues.ts';
 import { LAYER_PAN } from '../src/content/music.ts';
-import { bakeLayer } from '../src/app/music.ts';
+import { addRoom, bakeLayer } from '../src/app/music.ts';
 import { BANDS, bandEnergy } from './spectrum.ts';
 import { rungShape } from './pace.ts';
 import { PALETTES, type PaletteName } from '../src/content/palette.ts';
@@ -523,6 +525,110 @@ describe('0128 — a place plays its own material, and shares everything it does
         ).toBeGreaterThanOrEqual(PACE_FLOOR);
       }
     }
+  }, DSP_MS);
+
+  it('0136 — A ROOM ADDS ENERGY AND NOT PEAK, which is what makes it a room', () => {
+    /*
+      `docs/decisions/0136-the-place-has-a-room-and-an-arc.md`. Reported: *"it still needs more
+      reverb… suitably awe inspiring to match the Pillars of Creation."*
+
+      ⚠️ **EVERY LEVER THIS PROJECT HAD REACHED FOR BEFORE WAS SUSTAIN** — a longer note, a slower
+      attack, a lower decay constant — and a held note is a held note. The property that separates a
+      room from a louder pad is that it fills the gaps BETWEEN notes without making the loud moments
+      louder: energy up, peak flat.
+
+      ⚠️ **Driven over a real layer rather than an impulse**, because the thing that could go wrong is
+      a feedback path that grows instead of decays, and a single click does not excite one.
+    */
+    const dry = bakeLayer('chords', SAMPLE_RATE);
+    const wet = Float32Array.from(dry);
+    addRoom(wet, SAMPLE_RATE, 0.9);
+    const rms = (b: Float32Array): number => Math.sqrt(b.reduce((sum, v) => sum + v * v, 0) / b.length);
+    const peak = (b: Float32Array): number => b.reduce((most, v) => Math.max(most, Math.abs(v)), 0);
+    /*
+      ⚠️ **THE ROOM'S OWN SIGNAL AND NOT THE TOTAL, AND THE DIFFERENCE IS A REAL ONE.** A first draft
+      asserted that the summed RMS rose, which sounds equivalent and is not: a reverb fills the gaps
+      between notes, so on a SUSTAINED layer — which is what a choir is — it can be plainly audible
+      while the total moves one percent. Measuring `wet − dry` asks *is there a room* instead of *did
+      the layer get louder*, and only the first is the subject.
+    */
+    const room = Float32Array.from(wet).map((v, i) => v - dry[i]!);
+    expect(rms(room) / rms(dry), 'the room is inaudible against the layer it is a room for').toBeGreaterThan(0.25);
+    /*
+      ⚠️ **THE PEAK IS THE HALF THAT COULD RUIN THE MIX.** Every gain in every theme is tuned under a
+      clipping guard; a reverb that raised peaks would silently spend that headroom and the failure
+      would land on whichever layer happened to be loudest.
+    */
+    expect(peak(wet) / peak(dry), 'the room raised the peak, which spends the mix’s headroom').toBeLessThan(1.15);
+    // And it decays: the tail cannot still be running a whole loop later, or the feedback is unstable.
+    expect(peak(wet), 'the room did not decay — the feedback path grows').toBeLessThan(1);
+  }, DSP_MS);
+
+  it('0136 — a place BAKES every layer it changes, and a room is a change', () => {
+    /*
+      ⚠️ **`revoicedBy` AND `bakedBy` WERE THE SAME SET UNTIL THIS DECISION, AND EVERYTHING THAT BAKES
+      A PLACE WAS ASKING THE FIRST.** A place can now state `air` for a layer it does not re-voice —
+      the notes are the base's and the buffer is not, because the room is baked in. `bakePlace` at a
+      level boundary (0133) and the dashboard's cache would both have shared the DRY array and the
+      room would never have arrived: silently, with every guard green, because nothing asserts about
+      a layer a place did not claim.
+
+      ⚠️ **Ember Nebula gives air only to layers it also re-voices, so nothing is wrong today.** This
+      is the trap closed before the first place walks into it, which is the cheapest moment there is —
+      and it is set arithmetic, so it costs nothing to keep.
+    */
+    for (const theme of THEME_KINDS) {
+      const baked = bakedBy(theme);
+      for (const layer of MUSIC_LAYERS) {
+        if (airOf(theme, layer) > 0) {
+          expect(baked, `${theme} gives ${layer} a room and would not bake it`).toContain(layer);
+        }
+      }
+      for (const layer of revoicedBy(theme)) {
+        expect(baked, `${theme} re-voices ${layer} and would not bake it`).toContain(layer);
+      }
+    }
+  });
+
+  it('0136 — EMBER NEBULA CLIMBS INTO THE SURGE AND DROPS INTO THE FIGHT', () => {
+    /*
+      Asked for: *"so like Up, Up, Up, drop, sharp Down for the boss."*
+
+      ⚠️ **HELD OVER WHERE THE NOTES ARE AND NOT OVER THE SPECTRUM.** The spectral centroid was tried
+      first and is the wrong instrument twice over: it moved five hertz while an octave of material
+      moved, and it reads the same report's *sharp percussive beat* — broadband noise — as the music
+      going UP at the fight. `pitchOf` is content arithmetic and sees what was actually written.
+
+      ⚠️ **A SHAPE AND NOT A VALUE, WHICH IS WHY THIS DOES NOT BREAK
+      `docs/decisions/0034-a-threat-is-absolute-and-a-pool-is-the-pairing.md`.** Nothing here asserts
+      a pitch; what is asserted is that each rung sits where the report says relative to its
+      neighbour. It is the same shape of claim as *every rung is louder than the one below*.
+
+      ⚠️ **It is named for one place on purpose.** Six others are unwritten and may want other arcs —
+      what this protects is that a later tuning pass cannot flatten THIS one without saying so.
+    */
+    const bakes = paceBakes;
+    const at = (rung: (typeof MUSIC_LEVELS)[number]): number => rungShape('nebula', rung, placeLoops('nebula'), bakes).pitch;
+    const run = at('run');
+    const push = at('push');
+    const surge = at('surge');
+    const approach = at('approach');
+    const boss = at('boss');
+    const say = `run ${run.toFixed(0)} · push ${push.toFixed(0)} · surge ${surge.toFixed(0)} · approach ${approach.toFixed(0)} · boss ${boss.toFixed(0)} Hz`;
+    expect(push / run, `UP into the push — ${say}`).toBeGreaterThan(1.15);
+    expect(surge / push, `UP into the surge — ${say}`).toBeGreaterThan(1.05);
+    /*
+      ⚠️ **THE DROP HAS A SIZE ON IT BECAUSE THE PROBE SAID SO.** This was `approach < surge` with no
+      magnitude, and pulling the organ's top rank down to a third still left a one-percent fall — the
+      guard passed on an arc that had flattened. [0019](0019-a-probe-must-be-seen-to-apply.md) doing
+      the more valuable half of its job, for the second decision running. Today's fall is 5%.
+    */
+    expect(approach / surge, `and DOWN into the approach — ${say}`).toBeLessThan(0.97);
+    /*
+      ⚠️ **The fight's drop is the one with a size on it**, because *sharp* is the word in the report
+      and a boss one hertz below the approach would satisfy an ordering and none of the ask.
+    */
+    expect(boss / approach, `and SHARPLY down into the fight — ${say}`).toBeLessThan(0.92);
   }, DSP_MS);
 
   it('AND AN OVERRIDE MAY NOT SILENCE A LAYER THE LADDER OPENS', () => {

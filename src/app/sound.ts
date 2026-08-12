@@ -56,7 +56,7 @@ import {
 } from '../content/cues.ts';
 import { ACROSS_SPAN } from '../sim/camera.ts';
 import { makeMusicOut, bakeLoops, layerNotes, type MusicOut } from './music.ts';
-import { revoicedBy, type ThemeKind } from '../content/themes.ts';
+import { bakedBy, type ThemeKind } from '../content/themes.ts';
 import { FIRE_GRID, MUSIC_LAYERS, STEPS_PER_BEAT, type MusicLayer } from '../content/music.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 
@@ -901,7 +901,9 @@ export function bakePlace(
   if (base === undefined) return () => {};
   const own = { ...base } as Record<MusicLayer, Float32Array>;
   const jobs: (() => void)[] = [];
-  for (const layer of revoicedBy(theme)) {
+  // ⚠️  and not  — a place may state a ROOM for a layer it shares the notes of,
+  // and that layer's buffer is different too (0136). Sharing the dry array would drop the room.
+  for (const layer of bakedBy(theme)) {
     jobs.push(() => {
       const { buffer, notes } = layerNotes(layer, SAMPLE_RATE, theme);
       own[layer] = buffer;
