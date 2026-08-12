@@ -29,7 +29,7 @@
 import { LEVELS, LEVEL_KINDS, type LevelKind } from '../src/content/levels.ts';
 import { MUSIC_LAYERS, type MusicLayer } from '../src/content/music.ts';
 import { THEMES } from '../src/content/themes.ts';
-import { CUES } from '../src/content/cues.ts';
+import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { makeAudioOut, makeSpeaker } from '../src/app/sound.ts';
 import { auraNearness } from '../src/app/music.ts';
@@ -343,13 +343,58 @@ function drawCues(): void {
   }
 }
 
+/*
+  ── EVERY CUE, ON DEMAND, AND THIS IS THE HALF THE REPORT WAS ACTUALLY ABOUT ─────────────────────
+
+  ⚠️ **Six cues fire by themselves and EIGHT do not.** A bomb, a blast, a shield taking a hit, a
+  pickup, a death, a boss changing phase, a boss dying and the chime are each a thing a run says
+  rarely or once — which is precisely *"whole sections of sound that have been produced that I've
+  apparently never heard in game"*. The overlay above answers *what is playing over the bed right
+  now*; this answers *what else is in there*.
+
+  ⚠️ **Through `speaker.play` and never straight at the buffer**, so the hold, the four-voice cap
+  and the duck are the game's, and an `onGrid` cue waits for the next sixteenth exactly as it does
+  in a run — 0104. An audition that bypassed the gate would be a sound the player cannot actually
+  produce.
+*/
+{
+  const every = el('every');
+  for (const kind of CUE_KINDS) {
+    const button = document.createElement('button');
+    button.textContent = kind;
+    button.title = `${CUES[kind].twin} · gain ${CUES[kind].gain} · hold ${CUES[kind].hold} steps`;
+    button.addEventListener('click', () => {
+      speaker.play(kind);
+      flash(kind);
+    });
+    every.append(button);
+  }
+}
+
 const fired = el('fired');
+/**
+ * Show that a cue just sounded.
+ *
+ * ⚠️ **REPEATS COALESCE, AND WITHOUT IT THE LOG SHOWS NOTHING BUT THE GUN.** At tier four the pulse
+ * lands fifteen times a second, so every other cue in the game was pushed out of the window inside
+ * a second and a half — the panel meant to show *what else is in there* was a list of one thing.
+ * Counting is also the more useful reading: `pulse ×14` beside a single `bossDown` is the density
+ * the eleventh play-test was about.
+ */
 function flash(kindName: string): void {
+  const first = fired.firstElementChild as HTMLElement | null;
+  if (first !== null && first.dataset.kind === kindName) {
+    const count = Number(first.dataset.count ?? '1') + 1;
+    first.dataset.count = String(count);
+    first.textContent = `${kindName} ×${count}`;
+    return;
+  }
   const tag = document.createElement('span');
+  tag.dataset.kind = kindName;
+  tag.dataset.count = '1';
   tag.textContent = kindName;
   fired.prepend(tag);
-  while (fired.childElementCount > 14) fired.lastElementChild?.remove();
-  setTimeout(() => tag.remove(), 1400);
+  while (fired.childElementCount > 12) fired.lastElementChild?.remove();
 }
 
 /** Everything that sounds on one sim step, at the cadences `rig/transport.ts` says. */
