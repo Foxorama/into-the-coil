@@ -53,8 +53,8 @@ export const PROBES = [
     broke: 'a re-voiced pattern that is shorter than the layer it plays in',
     guard: '0095 STILL HOLDS OVER AN OVERRIDE: every pattern spans EXACTLY its own layer',
     edit: {
-      path: 'src/content/themes.ts',
-      find: '  3, _, 2, _, 0, _, _, _,\n];',
+      path: 'src/content/nebula.ts',
+      find: '  -2, _, 2, _,\n  0, _, _, _,\n];',
       replace: '];',
     },
   },
@@ -70,9 +70,9 @@ export const PROBES = [
     broke: 'a re-voiced tune left the key the shared progression is in',
     guard: 'A RE-VOICED TUNE STAYS IN THE KEY, because the progression under it is still shared',
     edit: {
-      path: 'src/content/themes.ts',
-      find: '  12, _, 10, _, 8, _, 7, _,',
-      replace: '  13, _, 10, _, 8, _, 7, _,',
+      path: 'src/content/nebula.ts',
+      find: 'const DESCANT: readonly number[] = [12, 14,',
+      replace: 'const DESCANT: readonly number[] = [13, 14,',
     },
   },
   {
@@ -87,9 +87,9 @@ export const PROBES = [
     broke: 'a place removed a layer by stating an empty voice array instead of closing it in the ladder',
     guard: 'AND AN OVERRIDE MAY NOT SILENCE A LAYER THE LADDER OPENS',
     edit: {
-      path: 'src/content/themes.ts',
-      find: '  call: [\n    {\n      steps: EMBER_CALL,',
-      replace: '  call: [],\n  hook: [\n    {\n      steps: EMBER_CALL,',
+      path: 'src/content/nebula.ts',
+      find: '  call: [\n    {\n      steps: HYMN,',
+      replace: '  call: [],\n  ride: [\n    {\n      steps: HYMN,',
     },
   },
 ];

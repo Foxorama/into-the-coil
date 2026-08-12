@@ -22,7 +22,9 @@ import {
   secondsOfLayer,
 } from '../src/content/music.ts';
 import { SCALE } from '../src/content/cues.ts';
+import { LAYER_PAN } from '../src/content/music.ts';
 import { bakeLayer } from '../src/app/music.ts';
+import { BANDS, bandEnergy } from './spectrum.ts';
 import { PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SAMPLE_RATE, saturate } from '../src/app/sound.ts';
 import { loopsAt } from './bakes.ts';
@@ -309,6 +311,14 @@ describe('0128 — a place plays its own material, and shares everything it does
       Every note therefore has to be a tone of A natural minor — `SCALE` — or the place is simply
       wrong over its own bed for three bars in four, which is
       `docs/decisions/0095-the-level-has-its-own-music.md`'s argument for closing the title's bass.
+
+      ⚠️ **THE BOUND IS UNCHANGED AND THE REASON ABOVE NO LONGER COVERS EVERY PLACE** —
+      `docs/decisions/0132-a-place-may-be-another-piece-entirely.md`. Ember Nebula re-voices `chords`
+      as well, so nothing shared is underneath it and 0128's argument does not reach it. It stays in
+      the key anyway, for a reason that reaches FURTHER: **the cues are in the key too**
+      (`docs/decisions/0099-the-cues-are-in-the-key.md`), so a place in another key would put the
+      player's own gun out of tune with the level for three minutes. A guard whose reason has been
+      outgrown and whose bound is still right is worth saying so on rather than deleting.
     */
     for (const theme of THEME_KINDS) {
       for (const layer of revoicedBy(theme)) {
@@ -322,6 +332,65 @@ describe('0128 — a place plays its own material, and shares everything it does
               `${theme}/${layer} plays ${step}, which is not a tone of the key the shared chords are in`,
             ).toBe(true);
           }
+        }
+      }
+    }
+  });
+
+  it(
+    '0132 — A PLACE’S OWN MATERIAL IS HELD TO THE SAME BAND RULE AS THE BASE',
+    () => {
+      /*
+        ⚠️ **A HOLE THAT WAS FOUND BY FALLING INTO IT.** `tests/music.test.ts` refuses a layer whose
+        weight is under 130 Hz and which is placed off centre — a panned low end spends headroom on
+        one side and arrives in a room as the same non-directional thump anyway (0118). That guard
+        bakes `MUSIC` and only `MUSIC`, so it says nothing at all about a place's own voices, and
+        `LAYER_PAN` is a property of the LAYER: a place cannot move a layer's position, only what it
+        plays there.
+
+        ⚠️ **Ember Nebula's first cathedral bell was 49% below 130 Hz at a pan of −0.5**, and every
+        guard in the repository was green. `scripts/weigh-place.mjs` printed it, which is
+        `docs/decisions/0027-measure-the-picture-not-the-model.md`'s instrument doing the job — and
+        this is that measurement made permanent, because the next six places will each be authored by
+        somebody who has not read this paragraph.
+      */
+      const SUB = BANDS.findIndex((b) => b[2] === 'sub');
+      const LOW = BANDS.findIndex((b) => b[2] === 'low');
+      let measured = 0;
+      for (const theme of THEME_KINDS) {
+        for (const layer of revoicedBy(theme)) {
+          const bands = bandEnergy(bakeLayer(layer, SAMPLE_RATE, theme), SAMPLE_RATE);
+          const total = bands.reduce((a, b) => a + b, 0);
+          if (total <= 0) continue;
+          measured++;
+          const bottom = (bands[SUB]! + bands[LOW]!) / total;
+          if (bottom < 0.4) continue;
+          expect(
+            Math.abs(LAYER_PAN[layer]),
+            `${theme} re-voices ${layer} with ${(bottom * 100).toFixed(0)}% of its energy below 130Hz, ` +
+              `and the layer sits at ${LAYER_PAN[layer]} — a place may change what a layer plays and not where it is`,
+          ).toBe(0);
+        }
+      }
+      expect(measured, 'no place states any material, so this asserted nothing').toBeGreaterThan(0);
+    },
+    DSP_MS,
+  );
+
+  it('and to the same LONGEST NOTE rule, which is the job the prewarm cannot split', () => {
+    /*
+      ⚠️ **`tests/sound.test.ts` holds this over `MUSIC` and a place is a second place to break it.**
+      0102 splits the prewarm one NOTE at a time because `chords` measured 428 ms as a single job; a
+      note is the atom, so a three-second one is three seconds nobody can spread. A choir is exactly
+      the kind of material that reaches for a long note, and Ember Nebula's longest is 2.40 s.
+    */
+    for (const theme of THEME_KINDS) {
+      for (const layer of revoicedBy(theme)) {
+        for (const [i, voice] of voicesOf(theme, layer).entries()) {
+          expect(
+            voice.note.seconds,
+            `${theme}/${layer} voice ${i} is ${voice.note.seconds.toFixed(2)}s of synthesis in one job`,
+          ).toBeLessThan(3);
         }
       }
     }

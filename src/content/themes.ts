@@ -55,6 +55,7 @@
  */
 
 import { MUSIC, type MusicLayer, type MusicVoice } from './music.ts';
+import { NEBULA_VOICES } from './nebula.ts';
 import type { PaletteName } from './palette.ts';
 
 /**
@@ -191,96 +192,6 @@ export const MIX_CEILING = 1.45;
  * `tests/palette.test.ts` holds that as a contrast floor per ink per palette. What a theme moves is
  * the HUE of the dark, which is enough to say *somewhere else* and cannot cost a bullet its edge.
  */
-/** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */
-const _ = null;
-
-/**
- * EMBER NEBULA'S TUNE — the notes both of its `call` voices play, an octave apart.
- *
- * ⚠️ **Hoisted because the two voices share it, exactly as the base's two do.** They are one line
- * doubled, and two copies of sixty-four numbers is the second description this repository keeps
- * finding in its own tables.
- *
- * ⚠️ **IT DESCENDS WHERE THE BASE CLIMBS, and that is the whole of what makes it another place.**
- * Level one's `call` walks up to its top note and sits there; this falls from the twelfth to the root
- * twice, turning at the eighth bar. Same key, same progression underneath, opposite shape.
- *
- * ⚠️ **Every value is a tone of A natural minor** (`SCALE` in `src/content/cues.ts`) — the harmony
- * under it is still the base's `chords`, and a theme that re-voiced the tune without re-voicing the
- * progression can only ever be right if it stays in the key. 0128 has why the progression itself is
- * deliberately NOT changed here.
- */
-const EMBER_CALL: readonly (number | null)[] = [
-  12, _, 10, _, 8, _, 7, _,
-  5, _, 7, _, 8, _, 10, _,
-  7, _, 5, _, 3, _, 2, _,
-  0, _, 2, _, 3, _, _, _,
-  8, _, 7, _, 5, _, 3, _,
-  5, _, 7, _, 8, _, 12, _,
-  10, _, 8, _, 7, _, 5, _,
-  3, _, 2, _, 0, _, _, _,
-];
-
-/**
- * What Ember Nebula plays instead — 0128.
- *
- * ⚠️ **THE TIMBRES ARE THE BASE'S AND ONLY THE PATTERNS MOVE, WHICH IS A DELIBERATE FIRST STEP.**
- * Every `note` below is copied from `src/content/music.ts` unchanged. The spectrum of this piece is
- * held by a dozen guards — the shed, the band weights, the mix peak, the bus ceiling — and all of
- * them are about what a voice SOUNDS like rather than about what it plays. Changing both at once
- * would mean the first theme in the project could not be judged against anything.
- */
-const EMBER_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
-  /*
-    ⚠️ **THREE VOICES WHERE THE BASE HAS FIVE, WHICH IS HOW A PLACE GETS SPARSER.** Level one's engine
-    is a four-on-the-floor with a clap, a shaker and a sixteenth hat over it. This is half-time and
-    open: the kick leaves the third beat alone, and the two top voices are gone entirely. *"Warm and
-    close"* is as much about what is not playing as about what is.
-  */
-  engine: [
-    {
-      steps: [1, _, 0.8, 0.5, 1, _, 0.86, _, 1, _, 0.8, 0.55, 1, 0.62, _, 0.9],
-      pitched: false,
-      perBeat: 1,
-      octave: 0,
-      note: { wave: 'sine', from: 150, to: 45, seconds: 0.46, gain: 0.6, attack: 0.001, curve: 3.4, lowFrom: 260, lowTo: 90 },
-    },
-    {
-      steps: [1, _, 0.62, 0.4, 1, _, 0.68, _, 1, _, 0.62, 0.45, 1, 0.5, _, 0.7],
-      pitched: false,
-      perBeat: 1,
-      octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.015, gain: 0.15, attack: 0.0004, curve: 9, highFrom: 1800 },
-    },
-    {
-      steps: [_, _, 1, _, _, _, 0.95, _, _, _, 1, _, _, 0.9, _, 1],
-      pitched: false,
-      perBeat: 1,
-      octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.13, gain: 0.27, attack: 0.002, curve: 4, lowFrom: 3600, lowTo: 1400, highFrom: 400 },
-    },
-  ],
-  call: [
-    {
-      steps: EMBER_CALL,
-      pitched: true,
-      perBeat: 1,
-      octave: 2,
-      // Heavier on the turn than on the downbeat, which is the other half of falling rather than rising.
-      accents: [0.86, 1, 0.78, 0.94],
-      note: { wave: 'tri', from: 0, to: 0, seconds: 0.344, gain: 0.115, attack: 0.012, curve: 2.2, lowFrom: 2600, lowTo: 900, q: 0.9 },
-    },
-    {
-      steps: EMBER_CALL,
-      pitched: true,
-      perBeat: 1,
-      octave: 1,
-      accents: [0.86, 1, 0.78, 0.94],
-      note: { wave: 'sine', from: 0, to: 0, seconds: 0.36, gain: 0.042, attack: 0.02, curve: 2, lowFrom: 1400, lowTo: 600 },
-    },
-  ],
-};
-
 export const THEMES: Record<ThemeKind, ThemeRow> = {
   /**
    * Level one. The void as it has always been — this is the theme that changes nothing, so that the
@@ -292,18 +203,39 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     nebula: { vivid: '#2b3352', 'high-contrast': '#1c1c28' },
     mix: {},
   },
-  /** Level two. Warm and close: the drone and the floor come up, the top end comes down. */
+  /**
+   * Level two. A cathedral in a furnace: a choir, an organ, and what the fire does to both.
+   *
+   * ⚠️ **THE FIRST PLACE THAT IS ANOTHER PIECE RATHER THAN ANOTHER ARRANGEMENT** —
+   * `docs/decisions/0132-a-place-may-be-another-piece-entirely.md`. It states twenty-one of the
+   * twenty-three layers, its own sixteen-bar progression and its own tune;
+   * `src/content/nebula.ts` is the composition and has the argument.
+   *
+   * ⚠️ **The mix leans on the choir and holds the drums back**, which is the half a multiplier can do
+   * and the material cannot: `engine` is a tam-tam and a breath here, and the ladder still opens it
+   * at the same rung with the same shape.
+   */
   nebula: {
     title: 'Ember Nebula',
     space: { vivid: '#140b16', 'high-contrast': '#050008' },
     nebula: { vivid: '#5c2a4a', 'high-contrast': '#2a1626' },
-    mix: { drone: 1.35, sub: 1.02, chords: 1.15, arp: 0.72, hook: 0.85, perc: 0.7, toll: 1.25 },
-    /*
-      ⚠️ **THE FIRST PLACE WITH MUSIC OF ITS OWN** — 0128. A half-time engine with two of its five
-      voices gone, and a `call` that falls where level one's climbs. The progression underneath is
-      still the base's, which is a limit rather than an omission and the decision has why.
-    */
-    voices: EMBER_VOICES,
+    mix: {
+      chords: 1.3,
+      drone: 1.25,
+      call: 1.15,
+      counter: 1.15,
+      groove: 1.1,
+      hook: 1.1,
+      lead: 1.15,
+      toll: 1.3,
+      arp: 0.85,
+      perc: 0.8,
+      engine: 0.9,
+      stomp: 1.1,
+      frenzy: 1.1,
+      wraith: 1.15,
+    },
+    voices: NEBULA_VOICES,
   },
   /** Level three. Hard and percussive: the hands lead and the pads get out of the way. */
   debris: {
