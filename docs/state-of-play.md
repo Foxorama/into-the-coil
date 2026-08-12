@@ -161,6 +161,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a rung CHANGES the notes; loudness does not predict a section** | [0123](decisions/0123-a-rung-changes-the-notes.md) |
 | **a boss lasts long enough to be one; the design loadout is TIER TWO** | [0124](decisions/0124-the-boss-is-a-boss.md) |
 | **the build starts 7.3s sooner; an ARRIVAL is what a listener hears** | [0125](decisions/0125-the-build-starts-sooner.md) |
+| **the sound is DRIVEN rather than rendered: `npm run dash`, the game's own mixer on a slider** | [0126](decisions/0126-the-dashboard-is-the-instrument.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -628,13 +629,33 @@ does not reach it.
 
 | phase | what | state |
 |---|---|---|
-| 0 | **the rig renders a LEVEL** — rungs, ramps, theme, and where every boundary lands in the bar | ✅ [0116](decisions/0116-the-rig-plays-the-level.md) |
+| 0 | **the rig renders a LEVEL** — rungs, ramps, theme, and where every boundary lands in the bar | ✅ [0116](decisions/0116-the-rig-plays-the-level.md), and **played live** ✅ [0126](decisions/0126-the-dashboard-is-the-instrument.md) |
 | 1 | **bar-line quantisation**, per-note duration, per-layer panning | quantisation ✅ [0117](decisions/0117-a-section-change-lands-on-the-beat.md), panning ✅ [0118](decisions/0118-the-mix-has-a-width.md); **per-note duration is owed** |
 | 2 | **the transport** — sections on bar lines, one-shot fills at seams, variant slots, selection from game state | not started. This is where *moves and breathes* lives |
 | 3 | **per-theme composition**, baked at the level boundary | not started, but **costed** — [`what-seven-compositions-would-cost`](../reports/what-seven-compositions-would-cost-2026-08-12.md). 0113's RULE stands; its storage model does not |
 
-⚠️ **START HERE ON THE MUSIC: `surge` AND `approach` NEED NEW MATERIAL, AND THE PLAYER HAS CHOSEN
-IT.** [0125](decisions/0125-the-build-starts-sooner.md) has the measurement and the reasoning; the
+⚠️ **START HERE ON THE MUSIC, AND START BY OPENING THE DASHBOARD** —
+[0126](decisions/0126-the-dashboard-is-the-instrument.md). `npm run dash` serves `/rig/`: the game's
+own mixer on a scrub bar, every layer's live gain read off its `GainNode`, the gun and the tubes at a
+tier slider over the top, and per-layer solo. **It is the answer to *"whole sections of sound that
+have been produced that I've apparently never heard in game"*** and it is where a music number should
+be opened from now on, because it is the only instrument here that answers a question asked at a
+moment rather than about a file.
+
+⚠️ **AND IT TOOK A MEASUREMENT NOTHING HERE HAD TAKEN: how long a layer is open against how long its
+OWN loop is.** `surge` lasts 16.0 s and `counter` — the tune it opens — takes 25.6 s to say itself,
+so it reaches **0.63 of a loop**; `approach` is 0.70. Those are exactly the two rungs 0125 records as
+unnoticed. **It does not replace 0125's ask and it is not the same finding**: 0125 says those rungs
+need arriving material, this says the window they arrive in cannot hold a phrase. The table is in
+0126 and the dashboard prints it live.
+
+⚠️ **NO DEAD LAYER AND NO DEAD CUE WAS FOUND**, which was the first hypothesis and is worth not
+re-testing. All fourteen cues have a call site; `bass` and `beat` are title-only by 0095's design.
+What the player has genuinely never heard is **six of the seven themes**, because a run has to reach
+those levels — and the dashboard's level selector is the whole of that answer.
+
+⚠️ **`surge` AND `approach` NEED NEW MATERIAL, AND THE PLAYER HAS CHOSEN IT.**
+[0125](decisions/0125-the-build-starts-sooner.md) has the measurement and the reasoning; the
 short version is that **an ARRIVAL is what a listener hears and a departure is not**, so
 [0123](decisions/0123-a-rung-changes-the-notes.md)'s churn guard is **measuring a quantity now known
 not to predict the report** and its 25% bound must not be trusted. Each of those two rungs needs

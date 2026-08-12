@@ -460,6 +460,26 @@ export interface MusicOut {
   setOn(on: boolean): void;
   /** Which level is currently asked for, so a guard can read it. */
   level(): MusicLevel;
+  /**
+   * A layer's own gain parameter.
+   *
+   * ── THE GAME DOES NOT CALL THIS AND `rig/` DOES, WHICH IS THE SAME ARGUMENT `panGains` MAKES ────
+   *
+   * ⚠️ **`docs/decisions/0126-the-dashboard-is-the-instrument.md`.** The dashboard's central claim is
+   * that the number it prints beside a layer is what the speakers are doing, and the only way that
+   * cannot drift is for it to read the node. Everything else this repository has ever shown a human
+   * about the mix was a MODEL of the mix — and 0116 records the two occasions a verdict was taken
+   * from one that had come apart from the game.
+   *
+   * ⚠️ **It is also the solo, and a solo needs no second mechanism.** Writing zero here holds,
+   * because `levelWrites` only writes a layer whose TARGET moved (0117) — so a pinned gain is left
+   * alone until the rung changes, which is exactly when a dashboard should re-state it.
+   *
+   * ⚠️ **NOTHING UNDER `src/` MAY CALL IT** and `tests/dash.test.ts` scans for that. A parameter the
+   * shell could write is a second place the mix is decided from, which is the one thing
+   * `docs/decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md` cannot survive.
+   */
+  gainOf(layer: MusicLayer): AudioParam;
 }
 
 /**
@@ -898,6 +918,9 @@ export function makeMusicOut(
     },
     level(): MusicLevel {
       return current;
+    },
+    gainOf(layer: MusicLayer): AudioParam {
+      return gains[layer].gain;
     },
   };
 }

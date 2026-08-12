@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Into the Coil — sound dashboard</title>
+    <!--
+      docs/decisions/0126-the-dashboard-is-the-instrument.md.
+
+      ⚠️ DEV ONLY, AND IT IS NOT IN THE BUILD. `vite.config.ts` has one entry — the root
+      `index.html` — so `vite build` never sees this page, and docs/decisions/0003-single-file-build.md's
+      closed sidecar list is untouched. `npm run dash` serves it; nothing ships it.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #e8e9f2;
+        --dim: #8b90a8;
+        --line: #262a3d;
+        --panel: #14161f;
+        --back: #0b0c12;
+        --hot: #ff7a4d;
+        --cool: #4dd0ff;
+        --open: #6ee787;
+        --close: #ff6b8a;
+        --hold: #6b7089;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--back);
+        color: var(--ink);
+        font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      h1 { font-size: 14px; margin: 0; letter-spacing: 0.08em; text-transform: uppercase; }
+      h2 {
+        font-size: 11px; margin: 0 0 8px; letter-spacing: 0.12em;
+        text-transform: uppercase; color: var(--dim);
+      }
+      header {
+        display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+        padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--panel);
+        position: sticky; top: 0; z-index: 2;
+      }
+      button, select, input[type='number'] {
+        font: inherit; color: var(--ink); background: #1d2130;
+        border: 1px solid var(--line); border-radius: 3px; padding: 3px 8px; cursor: pointer;
+      }
+      button:hover { border-color: var(--cool); }
+      button[aria-pressed='true'] { background: var(--cool); color: #04121a; border-color: var(--cool); }
+      button:disabled { opacity: 0.4; cursor: default; }
+      #unlock { background: var(--hot); color: #1a0600; border-color: var(--hot); font-weight: 700; }
+      .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+      .grow { flex: 1 1 240px; }
+      input[type='range'] { accent-color: var(--cool); vertical-align: middle; }
+      main { display: grid; grid-template-columns: minmax(420px, 1.15fr) minmax(360px, 1fr); gap: 12px; padding: 12px; }
+      @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
+      section { background: var(--panel); border: 1px solid var(--line); border-radius: 5px; padding: 10px 12px; }
+      .wide { grid-column: 1 / -1; }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { text-align: right; padding: 1px 5px; white-space: nowrap; }
+      th { color: var(--dim); font-weight: 400; font-size: 11px; border-bottom: 1px solid var(--line); }
+      td:first-child, th:first-child { text-align: left; }
+      tbody tr:hover { background: #1a1e2c; }
+      .meter { display: inline-block; width: 92px; height: 8px; background: #1d2130; border-radius: 2px; overflow: hidden; vertical-align: middle; }
+      .meter i { display: block; height: 100%; background: var(--cool); width: 0; }
+      .meter.aura i { background: #b07cff; }
+      .badge { font-size: 10px; padding: 0 5px; border-radius: 2px; letter-spacing: 0.06em; }
+      .opening { background: #16351f; color: var(--open); }
+      .closing { background: #35161f; color: var(--close); }
+      .louder { background: #2a2f16; color: #e3e770; }
+      .quieter { background: #1b2530; color: #7fa8c4; }
+      .holding { color: var(--hold); }
+      .tracking { background: #2c1f45; color: #b07cff; }
+      .silent { color: #3d4155; }
+      .off td { opacity: 0.35; }
+      .big { font-size: 22px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--hot); }
+      .dim { color: var(--dim); }
+      .warn { color: var(--hot); }
+      .ok { color: var(--open); }
+      #now { display: flex; gap: 22px; align-items: baseline; flex-wrap: wrap; }
+      #fired { min-height: 22px; display: flex; gap: 5px; flex-wrap: wrap; }
+      #fired span { padding: 0 6px; border-radius: 2px; background: #24304a; color: var(--cool); font-size: 11px; }
+      #strip { position: relative; height: 46px; border: 1px solid var(--line); border-radius: 3px; background: #10121a; overflow: hidden; }
+      #strip .seg { position: absolute; top: 0; bottom: 0; border-right: 1px solid var(--line); padding: 2px 4px; font-size: 10px; overflow: hidden; }
+      #strip .head { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--hot); }
+      #strip .midbar { color: var(--hot); }
+      .note { color: var(--dim); font-size: 11px; margin-top: 8px; }
+      code { color: var(--cool); }
+      .lay { cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Into the Coil · sound</h1>
+      <button id="unlock">Click to start audio</button>
+      <label>level <select id="level"></select></label>
+      <button id="play" disabled>▶ play</button>
+      <label>speed <select id="speed">
+        <option value="0.5">0.5×</option>
+        <option value="1" selected>1×</option>
+        <option value="2">2×</option>
+        <option value="4">4×</option>
+      </select></label>
+      <label><input type="checkbox" id="cuesOn" checked /> cues</label>
+      <span id="status" class="dim">audio locked — a browser makes no sound before a gesture</span>
+    </header>
+
+    <main>
+      <section class="wide">
+        <div class="row">
+          <input type="range" id="scrub" class="grow" min="0" max="1000" value="0" step="1" />
+          <span id="clock" class="dim">0:00 / 0:00</span>
+          <span id="jumps" class="row"></span>
+        </div>
+        <div id="now" style="margin-top: 8px">
+          <span class="big" id="rung">calm</span>
+          <span><span class="dim">place</span> <b id="theme">—</b></span>
+          <span><span class="dim">camera</span> <b id="camera">0</b> <span class="dim">units</span></span>
+          <span><span class="dim">bar</span> <b id="bar">0</b> <span class="dim">beat</span> <b id="beat">0.00</b></span>
+          <span><span class="dim">next</span> <b id="next">—</b></span>
+          <span><span class="dim">sounding</span> <b id="sounding">0</b><span class="dim">/23</span></span>
+          <span><span class="dim">aura</span> <b id="aura">0.00</b></span>
+        </div>
+        <div id="strip" style="margin-top: 8px"></div>
+      </section>
+
+      <section>
+        <h2>What is sounding — click a layer to solo it</h2>
+        <table id="layers">
+          <thead>
+            <tr>
+              <th>layer</th><th>loop</th><th>pan</th><th>doing</th><th>target</th><th>live</th><th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="note">
+          <b>live</b> is read off the mixer's own <code>GainNode</code>, not modelled — so it cannot
+          disagree with what the speakers are doing. <b>target</b> is the ladder's rung × the theme's
+          multiplier × the aura's ceiling.
+        </div>
+      </section>
+
+      <section>
+        <h2>Over the top of it</h2>
+        <div class="row">
+          <label>weapon tier <input type="range" id="tier" min="0" max="4" step="1" value="0" /></label>
+          <b id="tierOut">0</b>
+        </div>
+        <div class="row">
+          <label>kills a second <input type="range" id="bodies" min="0" max="4" step="0.1" value="1.6" /></label>
+          <b id="bodiesOut">1.6</b>
+        </div>
+        <div class="row">
+          <label>boss gap <input type="range" id="gap" min="26" max="145" step="1" value="85" /></label>
+          <b id="gapOut">85</b> <span class="dim">units — the distance the player steers (0091)</span>
+        </div>
+        <table id="cues" style="margin-top: 8px">
+          <thead><tr><th>cue</th><th>every</th><th>a second</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <h2 style="margin-top: 12px">Just fired</h2>
+        <div id="fired"></div>
+      </section>
+
+      <section class="wide">
+        <h2>How many times each layer comes round before its section ends</h2>
+        <table id="spans">
+          <thead>
+            <tr><th>layer</th><th>its loop</th><th>longest run</th><th>passes</th><th>open for</th><th>when</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="note">
+          A layer open for less than its own loop has never stated itself — the listener gets a
+          fragment of a phrase and the section is over. This is the one measurement here in units a
+          player experiences rather than in gains, and nothing in the repository took it before
+          <code>docs/decisions/0126</code>.
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./dash.ts"></script>
+  </body>
+</html>

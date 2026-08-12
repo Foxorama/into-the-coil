@@ -46,7 +46,9 @@ no fix*.
 what is playing` passes at 30% while measuring a quantity now known not to predict the report. Fixing
 the threshold without fixing the *quantity* would be the third time this arc has tuned a number
 against the wrong measure — and the quantity cannot be fixed until there is material to arrive with.
-**0126 is where both go**, and this decision is what stops the next hand trusting the current bound.
+**The decision that adds the material is where both go** — not [0126](0126-the-dashboard-is-the-instrument.md),
+which took the number first and is an instrument rather than a note. This decision is what stops the
+next hand trusting the current bound.
 
 ## What the fix has to be, and it is content
 
