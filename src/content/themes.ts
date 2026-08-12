@@ -41,9 +41,20 @@
  * at the prewarm, and that buys real melodic variety across seven levels shared three ways. It is not
  * done here because this decision already changes the backdrop, the mix and the aura, and a fourth
  * axis would make a play-test unable to say which of them worked.
+ *
+ * ── AND THAT LEVER HAS NOW BEEN PULLED, ONCE ────────────────────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0128-a-place-plays-its-own-material.md`.** A theme may state `voices` for the
+ * layers it plays differently and shares every layer it does not, so the cost is proportional to how
+ * much of a place is new rather than to how many places there are. **Ember Nebula is the first and it
+ * re-voices two of twenty-three.**
+ *
+ * ⚠️ **The paragraph above priced seven whole transposed sets and was right to refuse them** —
+ * [`what-seven-compositions-would-cost`](../../reports/what-seven-compositions-would-cost-2026-08-12.md)
+ * put 0113's storage model at 672 MB resident. What it did not price is a diff, which is what this is.
  */
 
-import type { MusicLayer } from './music.ts';
+import { MUSIC, type MusicLayer, type MusicVoice } from './music.ts';
 import type { PaletteName } from './palette.ts';
 
 /**
@@ -129,6 +140,31 @@ export interface ThemeRow {
    * arrangement the way they share a behaviour.
    */
   mix: Partial<Record<MusicLayer, number>>;
+  /**
+   * The layers this place plays DIFFERENTLY, as a replacement for their voices.
+   *
+   * ── A THEME MAY REPLACE MATERIAL, AND ONLY WHAT IT REPLACES IS BAKED ────────────────────────────
+   *
+   * ⚠️ **`docs/decisions/0128-a-place-plays-its-own-material.md`.**
+   * [0113](0113-there-is-one-composition-and-seven-levels.md) says a theme is a composition and
+   * [`what-seven-compositions-would-cost`](../../reports/what-seven-compositions-would-cost-2026-08-12.md)
+   * priced its storage model at **672 MB resident** and ruled it out. What that report did not price
+   * is the shape below: a theme states the layers it changes and shares every other one, so the cost
+   * is proportional to how much of a place is actually new rather than to how many places there are.
+   *
+   * ⚠️ **Absent means the base composition, and a theme that states nothing has no music of its own**
+   * — which is exactly 0113's floor, written as a type rather than as a sentence.
+   *
+   * ⚠️ **IT REPLACES A LAYER'S WHOLE VOICE ARRAY AND NOT ONE VOICE OF IT.** Indexing into an array by
+   * position would make a theme depend on the ORDER of the base's voices, so re-ordering
+   * `src/content/music.ts` would silently re-point every override — the class of coupling
+   * `docs/decisions/0016-a-hub-enumerates-kinds.md` exists to refuse. A theme may also state FEWER
+   * voices than the base, which is how a place gets sparser.
+   *
+   * ⚠️ **The mix above still applies over the top**, so a place can lean on a layer it has also
+   * re-voiced. The two are independent and both are multipliers over the same rung.
+   */
+  voices?: Partial<Record<MusicLayer, readonly MusicVoice[]>>;
 }
 
 /**
@@ -155,6 +191,96 @@ export const MIX_CEILING = 1.45;
  * `tests/palette.test.ts` holds that as a contrast floor per ink per palette. What a theme moves is
  * the HUE of the dark, which is enough to say *somewhere else* and cannot cost a bullet its edge.
  */
+/** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */
+const _ = null;
+
+/**
+ * EMBER NEBULA'S TUNE — the notes both of its `call` voices play, an octave apart.
+ *
+ * ⚠️ **Hoisted because the two voices share it, exactly as the base's two do.** They are one line
+ * doubled, and two copies of sixty-four numbers is the second description this repository keeps
+ * finding in its own tables.
+ *
+ * ⚠️ **IT DESCENDS WHERE THE BASE CLIMBS, and that is the whole of what makes it another place.**
+ * Level one's `call` walks up to its top note and sits there; this falls from the twelfth to the root
+ * twice, turning at the eighth bar. Same key, same progression underneath, opposite shape.
+ *
+ * ⚠️ **Every value is a tone of A natural minor** (`SCALE` in `src/content/cues.ts`) — the harmony
+ * under it is still the base's `chords`, and a theme that re-voiced the tune without re-voicing the
+ * progression can only ever be right if it stays in the key. 0128 has why the progression itself is
+ * deliberately NOT changed here.
+ */
+const EMBER_CALL: readonly (number | null)[] = [
+  12, _, 10, _, 8, _, 7, _,
+  5, _, 7, _, 8, _, 10, _,
+  7, _, 5, _, 3, _, 2, _,
+  0, _, 2, _, 3, _, _, _,
+  8, _, 7, _, 5, _, 3, _,
+  5, _, 7, _, 8, _, 12, _,
+  10, _, 8, _, 7, _, 5, _,
+  3, _, 2, _, 0, _, _, _,
+];
+
+/**
+ * What Ember Nebula plays instead — 0128.
+ *
+ * ⚠️ **THE TIMBRES ARE THE BASE'S AND ONLY THE PATTERNS MOVE, WHICH IS A DELIBERATE FIRST STEP.**
+ * Every `note` below is copied from `src/content/music.ts` unchanged. The spectrum of this piece is
+ * held by a dozen guards — the shed, the band weights, the mix peak, the bus ceiling — and all of
+ * them are about what a voice SOUNDS like rather than about what it plays. Changing both at once
+ * would mean the first theme in the project could not be judged against anything.
+ */
+const EMBER_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
+  /*
+    ⚠️ **THREE VOICES WHERE THE BASE HAS FIVE, WHICH IS HOW A PLACE GETS SPARSER.** Level one's engine
+    is a four-on-the-floor with a clap, a shaker and a sixteenth hat over it. This is half-time and
+    open: the kick leaves the third beat alone, and the two top voices are gone entirely. *"Warm and
+    close"* is as much about what is not playing as about what is.
+  */
+  engine: [
+    {
+      steps: [1, _, 0.8, 0.5, 1, _, 0.86, _, 1, _, 0.8, 0.55, 1, 0.62, _, 0.9],
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      note: { wave: 'sine', from: 150, to: 45, seconds: 0.46, gain: 0.6, attack: 0.001, curve: 3.4, lowFrom: 260, lowTo: 90 },
+    },
+    {
+      steps: [1, _, 0.62, 0.4, 1, _, 0.68, _, 1, _, 0.62, 0.45, 1, 0.5, _, 0.7],
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.015, gain: 0.15, attack: 0.0004, curve: 9, highFrom: 1800 },
+    },
+    {
+      steps: [_, _, 1, _, _, _, 0.95, _, _, _, 1, _, _, 0.9, _, 1],
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.13, gain: 0.27, attack: 0.002, curve: 4, lowFrom: 3600, lowTo: 1400, highFrom: 400 },
+    },
+  ],
+  call: [
+    {
+      steps: EMBER_CALL,
+      pitched: true,
+      perBeat: 1,
+      octave: 2,
+      // Heavier on the turn than on the downbeat, which is the other half of falling rather than rising.
+      accents: [0.86, 1, 0.78, 0.94],
+      note: { wave: 'tri', from: 0, to: 0, seconds: 0.344, gain: 0.115, attack: 0.012, curve: 2.2, lowFrom: 2600, lowTo: 900, q: 0.9 },
+    },
+    {
+      steps: EMBER_CALL,
+      pitched: true,
+      perBeat: 1,
+      octave: 1,
+      accents: [0.86, 1, 0.78, 0.94],
+      note: { wave: 'sine', from: 0, to: 0, seconds: 0.36, gain: 0.042, attack: 0.02, curve: 2, lowFrom: 1400, lowTo: 600 },
+    },
+  ],
+};
+
 export const THEMES: Record<ThemeKind, ThemeRow> = {
   /**
    * Level one. The void as it has always been — this is the theme that changes nothing, so that the
@@ -172,6 +298,12 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     space: { vivid: '#140b16', 'high-contrast': '#050008' },
     nebula: { vivid: '#5c2a4a', 'high-contrast': '#2a1626' },
     mix: { drone: 1.35, sub: 1.02, chords: 1.15, arp: 0.72, hook: 0.85, perc: 0.7, toll: 1.25 },
+    /*
+      ⚠️ **THE FIRST PLACE WITH MUSIC OF ITS OWN** — 0128. A half-time engine with two of its five
+      voices gone, and a `call` that falls where level one's climbs. The progression underneath is
+      still the base's, which is a limit rather than an omission and the decision has why.
+    */
+    voices: EMBER_VOICES,
   },
   /** Level three. Hard and percussive: the hands lead and the pads get out of the way. */
   debris: {
@@ -231,6 +363,30 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
  * ⚠️ **Clamped rather than trusted**, so a hand that authors 3 gets the ceiling instead of a mix that
  * clips — and `tests/themes.test.ts` refuses the row outright, which is the half that tells somebody.
  */
+
+/**
+ * What `layer` is made of in `theme` — its own voices if it states any, the base composition if not.
+ *
+ * ⚠️ **THE SINGLE DESCRIPTION OF *WHAT DOES THIS PLACE PLAY*.** `src/app/music.ts` bakes through it
+ * and `tests/themes.test.ts` measures through it, so a theme that states nothing is provably the same
+ * audio rather than merely intended to be — which is what makes sharing a buffer safe.
+ *
+ * ⚠️ **`undefined` is *no place yet*** — the title screen, a fixture, anything before a level has
+ * been entered — and it is the base composition rather than level one's, because level one is a place
+ * like any other and may one day state material of its own.
+ */
+export function voicesOf(theme: ThemeKind | undefined, layer: MusicLayer): readonly MusicVoice[] {
+  if (theme === undefined) return MUSIC[layer];
+  return THEMES[theme].voices?.[layer] ?? MUSIC[layer];
+}
+
+/** Which layers `theme` plays differently from the base. Empty for a place with no music of its own. */
+export function revoicedBy(theme: ThemeKind): MusicLayer[] {
+  const own = THEMES[theme].voices;
+  if (own === undefined) return [];
+  return (Object.keys(own) as MusicLayer[]).filter((layer) => own[layer] !== undefined);
+}
+
 export function mixOf(theme: ThemeKind, layer: MusicLayer): number {
   const want = THEMES[theme].mix[layer] ?? 1;
   return want < MIX_FLOOR ? MIX_FLOOR : want > MIX_CEILING ? MIX_CEILING : want;
