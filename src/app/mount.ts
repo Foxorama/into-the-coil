@@ -38,8 +38,8 @@ import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
 import { DEFAULT_SOUND, SOUND_KINDS } from '../content/sound.ts';
 import { DEFAULT_STYLE, STYLES, STYLE_KINDS } from '../content/styles.ts';
 import { nextOnGrid } from '../content/music.ts';
-import { auraBuild, auraFor, auraNearnessFor, musicLevelFor } from './music.ts';
-import { makeAudioOut, makeSpeaker, prewarmAudio } from './sound.ts';
+import { auraBuild, auraFor, auraNearnessFor, musicLevelFor, placeFor } from './music.ts';
+import { bakePlace, makeAudioOut, makeSpeaker, prewarmAudio } from './sound.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { MAX_SHIELDS, SHIPS, fullHealthFor, shieldsOf } from '../content/ships.ts';
@@ -1067,6 +1067,29 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   let shownNearness = 0;
   /** Which place the mixer was last told about — 0107. */
   let shownTheme: ThemeKind = 'approach';
+  /**
+   * Which place's MATERIAL has been asked for, and how to stop asking.
+   *
+   * ── THE BOUNDARY BAKE, LEFT OPEN BY TWO DECISIONS AND CLOSED BY A THIRD ─────────────────────────
+   *
+   * ⚠️ **`docs/decisions/0133-the-place-is-baked-at-the-boundary.md`.** 0128 built `setLoops` and
+   * never called it; 0132 wrote a whole composition behind it. **Nothing in a real run has ever
+   * played a place's own notes**, and this is the two lines that were missing.
+   *
+   * ⚠️ **KEYED TO THE RUN'S NEXT LEVEL RATHER THAN TO THE FIELD'S CURRENT ONE, WHICH BUYS THE WHOLE
+   * BREAK SCREEN.** `run.level` increments when a boss dies
+   * (`src/state/slices/run.ts`), so the incoming place is known before
+   * `docs/decisions/0063-a-level-break-is-a-respite.md`'s screen is even drawn — and the bake gets
+   * however long the player spends on it instead of racing the level it belongs to. Reading
+   * `world.level.theme` here would start it at `advanceLevel`, which is three or four seconds too
+   * late.
+   *
+   * ⚠️ **The MIX still follows the field and not the run**, which is `shownTheme` above and is a
+   * different question: what is playing is a fact about where the ship is, and what is baking is a
+   * fact about where it is going.
+   */
+  let bakingTheme: ThemeKind | null = null;
+  let stopBaking: (() => void) | null = null;
 
   /** The backdrop the surface was last given, so a place is applied once rather than every step. */
   let shownSpace = colours.space;
@@ -1107,10 +1130,44 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     bakeNebula(atlas, clouds, view.scale * dpr);
   };
 
+  /**
+   * Start synthesising the place the run is heading for, if it is not the one already asked for.
+   *
+   * ⚠️ **0133.** One comparison a step and a no-op almost every time, on exactly the terms
+   * `applyMusicLevel` states for itself. What it costs when it is NOT a no-op is a walk scheduled off
+   * the frame — `bakePlace` owns that and `src/app/sound.ts` has the argument.
+   *
+   * ⚠️ **A place that states no material of its own is free end to end**: `revoicedBy` is empty, the
+   * job list is empty, `ready` fires on the first tick with the base arrays and `setLoops` finds every
+   * one identical and does nothing. Six of the seven places are in that state today, and the title
+   * screen is too.
+   */
+  const bakeIncomingPlace = (): void => {
+    const theme = placeFor(state.run.level);
+    if (theme === bakingTheme) return;
+    /*
+      ⚠️ **The one in flight is stopped rather than left to finish.** A run that clears two levels
+      while a bake is walking would otherwise hand the mixer the material for a place it has already
+      left — and 0128's swap lands at the next PHRASE, so the wrong piece would arrive up to
+      twenty-five seconds after the level it belongs to ended.
+    */
+    stopBaking?.();
+    bakingTheme = theme;
+    stopBaking = bakePlace(theme, (loops) => {
+      /*
+        ⚠️ **Asked for again at the moment it is handed over, not captured.** The context can be built
+        or torn down while a bake walks, and a `MusicOut` closed over here would be one the player is
+        no longer listening to.
+      */
+      audioOut.music()?.setLoops(loops);
+    });
+  };
+
   const applyMusicLevel = (): void => {
     const music = audioOut.music();
     if (music === null) return;
     music.start();
+    bakeIncomingPlace();
     /*
       ⚠️ **EVERY FRAME, AND IT DOES NOTHING ALMOST EVERY TIME** — 0094. The gun is on the sim's step
       grid and the music is on the audio clock; this is the only thing that keeps the two agreeing

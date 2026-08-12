@@ -56,6 +56,7 @@ import {
 } from '../content/cues.ts';
 import { ACROSS_SPAN } from '../sim/camera.ts';
 import { makeMusicOut, bakeLoops, layerNotes, type MusicOut } from './music.ts';
+import { revoicedBy, type ThemeKind } from '../content/themes.ts';
 import { FIRE_GRID, MUSIC_LAYERS, STEPS_PER_BEAT, type MusicLayer } from '../content/music.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 
@@ -853,6 +854,76 @@ export function prewarmAudio(schedule: (run: () => void) => void = (run) => void
 
 /** Whether a prewarm is in flight, so a second call does not start a second set. */
 let warming = false;
+
+/**
+ * Synthesise the layers a PLACE plays differently, spread across frames, and hand back a whole set.
+ *
+ * ── THE BOUNDARY BAKE, WHICH TWO DECISIONS HAVE NOW LEFT OPEN ───────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0133-the-place-is-baked-at-the-boundary.md`.**
+ * `docs/decisions/0128-a-place-plays-its-own-material.md` built the storage model and stopped short
+ * of wiring it, and `docs/decisions/0132-a-place-may-be-another-piece-entirely.md` wrote a whole
+ * composition into it — so **a real run has been playing the base composition whatever level it was
+ * in**, for two decisions running.
+ *
+ * ⚠️ **IT REPLACES AND DOES NOT CACHE, AND THAT IS A MEASUREMENT RATHER THAN A PREFERENCE.**
+ * [`what-a-whole-place-costs`](../../reports/what-a-whole-place-costs-2026-08-12.md): Ember Nebula is
+ * 46.85 MB of its own audio, so a set kept per place is 94.8 MB against a 56 MB ceiling and seven of
+ * them are not a number worth writing down. The arrays handed to `setLoops` are copied into
+ * `AudioBuffer`s and **nothing here keeps a reference to them**, so the steady state is one
+ * composition however many places a run visits.
+ *
+ * ⚠️ **THE BASE SET IS SHARED RATHER THAN COPIED**, which is 0128's whole cost model: a layer this
+ * place does not state comes back as the SAME `Float32Array`, and `setLoops` compares by identity and
+ * does not even make a buffer for it. A place that states nothing is therefore free and is a no-op
+ * end to end — which is what makes calling this on every screen safe.
+ *
+ * ⚠️ **ONE JOB PER NOTE, AND ONE PER LAYER BEFORE IT, on `prewarmAudio`'s own terms.** Claiming
+ * twenty-one buffers up front is 47 MB of allocation and zeroing in a single call, from a frame; a
+ * layer's buffer is therefore claimed by its own job and pushes its notes onto the queue behind it.
+ * The longest single job is the longest single NOTE, which `tests/themes.test.ts` holds under three
+ * seconds for a place exactly as `tests/sound.test.ts` holds it for the base.
+ *
+ * ⚠️ **Cancellable, because a run can leave a place before its material arrives.** The returned
+ * function stops the walk; a half-built set is never handed anywhere, so there is nothing to undo.
+ *
+ * ⚠️ **Nothing happens before the prewarm has finished**, because there is no base set to share from
+ * and baking one here would be the three-second freeze 0102 exists to have removed. A boundary is
+ * minutes after the first press; the title screen is where this cannot yet work and also where no
+ * level has a place.
+ */
+export function bakePlace(
+  theme: ThemeKind,
+  ready: (loops: Record<MusicLayer, Float32Array>) => void,
+  schedule: (run: () => void) => void = (run) => void setTimeout(run, 0),
+): () => void {
+  const base = prewarmed?.loops;
+  if (base === undefined) return () => {};
+  const own = { ...base } as Record<MusicLayer, Float32Array>;
+  const jobs: (() => void)[] = [];
+  for (const layer of revoicedBy(theme)) {
+    jobs.push(() => {
+      const { buffer, notes } = layerNotes(layer, SAMPLE_RATE, theme);
+      own[layer] = buffer;
+      for (const note of notes) jobs.push(note);
+    });
+  }
+  let next = 0;
+  let stopped = false;
+  const step = (): void => {
+    if (stopped) return;
+    if (next >= jobs.length) {
+      ready(own);
+      return;
+    }
+    jobs[next++]!();
+    schedule(step);
+  };
+  schedule(step);
+  return () => {
+    stopped = true;
+  };
+}
 
 /**
  * The prewarmed set, or `null` if there is not one. **For `tests/sound.test.ts` and nothing else.**

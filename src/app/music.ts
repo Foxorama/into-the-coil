@@ -48,6 +48,7 @@ import {
 } from '../content/music.ts';
 import { sampleLayerInto, saturate } from './sound.ts';
 import { mixOf, voicesOf, type ThemeKind } from '../content/themes.ts';
+import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import { STEPS_PER_SECOND } from '../state/screens.ts';
 
@@ -211,6 +212,31 @@ export function layerNotes(
  * `calm`, which is the title, the level break and the run-over screen, and it is why the drone never
  * stops: the music is one continuous piece and the levels happen inside it.
  */
+/**
+ * Which place the run is heading for, from the run's own level index.
+ *
+ * ── EXTRACTED FOR THE REASON `src/app/lifecycle.ts` GIVES IN ITS OWN HEADER ─────────────────────
+ *
+ * ⚠️ **`docs/decisions/0133-the-place-is-baked-at-the-boundary.md`.** The shell's version of this was
+ * two lines inside a closure over `mount`'s `state`, and the only way to ask *does level two bake
+ * Ember Nebula* would have been to boot a canvas —
+ * `docs/decisions/0005-a-guard-must-be-seen-to-fail.md` cannot break something no test can reach.
+ * `src/app/lifecycle.ts` was carved out of `mount` for exactly this and says so.
+ *
+ * ⚠️ **THE RUN'S LEVEL AND NOT THE FIELD'S, WHICH IS THE WHOLE POINT OF THE FUNCTION.** `run.level`
+ * increments when a boss dies (`src/state/slices/run.ts`), so this names the incoming place while
+ * `docs/decisions/0063-a-level-break-is-a-respite.md`'s screen is still up — and the bake gets that
+ * screen instead of racing the level it belongs to. `world.level.theme` is the other question and
+ * `applyMusicLevel` asks it separately, for the MIX.
+ *
+ * ⚠️ **Clamped past the roster on `enterLevel`'s own terms**: a run that has been finished holds the
+ * last place rather than reading off the end.
+ */
+export function placeFor(runLevel: number): ThemeKind {
+  const index = runLevel < 0 ? 0 : runLevel > LEVEL_KINDS.length - 1 ? LEVEL_KINDS.length - 1 : runLevel;
+  return LEVELS[LEVEL_KINDS[index]!].theme;
+}
+
 export function musicLevelFor(cameraAlong: number, bossAt: number, bossOnField: boolean, bossHealthLeft = 1): MusicLevel {
   /*
     ⚠️ **THE FIGHT HAS TWO RUNGS NOW, AND THAT IS THE *dynamic climax* THE REPORT ASKED FOR** —

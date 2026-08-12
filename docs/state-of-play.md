@@ -183,6 +183,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **every layer is a button: one click plays it alone, at the loudest the place ever takes it** | [0130](decisions/0130-a-layer-can-be-heard-on-its-own.md) |
 | **`surge` is crossed 14.3s sooner, on the bar it is crossed on; `push` pays for it** | [0131](decisions/0131-the-surge-comes-sooner.md) |
 | **a place may be ANOTHER PIECE: Ember Nebula is a choir, an organ and an inferno, 21 of 23 layers** | [0132](decisions/0132-a-place-may-be-another-piece-entirely.md) |
+| **and the game plays it: the incoming place is baked across the break screen and REPLACES rather than caches** | [0133](decisions/0133-the-place-is-baked-at-the-boundary.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -660,7 +661,7 @@ does not reach it.
 | 0 | **the rig renders a LEVEL** — rungs, ramps, theme, and where every boundary lands in the bar | ✅ [0116](decisions/0116-the-rig-plays-the-level.md), and **played live** ✅ [0126](decisions/0126-the-dashboard-is-the-instrument.md) |
 | 1 | **bar-line quantisation**, per-note duration, per-layer panning | quantisation ✅ [0117](decisions/0117-a-section-change-lands-on-the-beat.md), panning ✅ [0118](decisions/0118-the-mix-has-a-width.md); **per-note duration is owed** |
 | 2 | **the transport** — sections on bar lines, one-shot fills at seams, variant slots, selection from game state | not started. This is where *moves and breathes* lives |
-| 3 | **per-theme composition**, baked at the level boundary | **the storage model and a WHOLE place have landed** — [0128](decisions/0128-a-place-plays-its-own-material.md), [0132](decisions/0132-a-place-may-be-another-piece-entirely.md). **The BOUNDARY BAKE has not**: nothing in `src/app/mount.ts` calls `setLoops`, so a real run still plays the base composition — and at 46.85 MB a place it now has to REPLACE rather than cache |
+| 3 | **per-theme composition**, baked at the level boundary | ✅ **done** — the storage model [0128](decisions/0128-a-place-plays-its-own-material.md), a whole place [0132](decisions/0132-a-place-may-be-another-piece-entirely.md), the boundary bake [0133](decisions/0133-the-place-is-baked-at-the-boundary.md). **Six of the seven places still state no material of their own**, and that is content rather than mechanism now |
 
 ⚠️ **START HERE ON THE MUSIC, AND START BY OPENING THE DASHBOARD** —
 [0126](decisions/0126-the-dashboard-is-the-instrument.md) and
@@ -704,15 +705,20 @@ supersedes it for that question.
 at `run`, an organ at `push`, a symphonic counter-line at `surge`, a cathedral bell at `approach` and
 a discordant inferno at the boss. `src/content/nebula.ts` is the composition.
 
-⚠️ **STILL NOTHING IN `src/app/mount.ts` CALLS `setLoops`**, so a real run of level two is the base
-composition however this place is voiced. **The material is judgeable and the plumbing is not, which
-is the right way round** — and the measurement that says what shape the plumbing has to be is
-[`what-a-whole-place-costs`](../reports/what-a-whole-place-costs-2026-08-12.md).
+⚠️ **AND THE GAME PLAYS IT NOW, WHICH IT HAS NEVER DONE FOR ANY PLACE** —
+[0133](decisions/0133-the-place-is-baked-at-the-boundary.md). The material for the place the run is
+heading for is synthesised across frames from the moment the boss dies — so the bake gets the whole
+break screen — and handed to 0128's `setLoops`, which swaps at the next phrase.
 
-⚠️ **AND THE BOUNDARY BAKE IS NOW A REQUIREMENT RATHER THAN AN OPTIMISATION.** A place this size is
+⚠️ **IT REPLACES AND DOES NOT CACHE, AND THAT IS A MEASUREMENT** —
+[`what-a-whole-place-costs`](../reports/what-a-whole-place-costs-2026-08-12.md). A place this size is
 **46.85 MB** of its own audio. Held alongside the base it is 94.8 MB against a 56 MB ceiling; replacing
-the layers it states it is 48.0, unchanged — because a place's arrays are the same length as the ones
-they replace. `rig/dash.ts` caches per place and may; the game may not.
+the layers it states it is 48.0, unchanged, because a place's arrays are the same length as the ones
+they replace. `rig/dash.ts` caches per place and may; the game may not, and a guard holds the identity.
+
+⚠️ **WHAT IS OWED IS A LISTEN AND NOT A BUILD.** Nobody has heard a level boundary change the music in
+the game. Whether a place arriving at the next phrase reads as *the music changed* or as *the music
+glitched* is the first thing to listen for on the next play — 0133 says so rather than claiming it.
 
 ⚠️ **TWO GUARDS WERE MISSING AND A PLACE IS WHAT FOUND THEM.** The band rule and the longest-note rule
 both baked `MUSIC` and only `MUSIC`, so neither had ever seen a theme's own material — and the first
