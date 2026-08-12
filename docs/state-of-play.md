@@ -164,6 +164,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the sound is DRIVEN rather than rendered: `npm run dash`, the game's own mixer on a slider** | [0126](decisions/0126-the-dashboard-is-the-instrument.md) |
 | **a cue sounds from where it happened; the low end turned out not to need centring** | [0127](decisions/0127-a-cue-has-a-place.md) |
 | **a place plays its own material and shares the rest — level two is the first, and the GAME does not play it yet** | [0128](decisions/0128-a-place-plays-its-own-material.md) |
+| **the desk holds an ABSOLUTE value, so a layer the rung has closed can be heard; a place is a fader too** | [0129](decisions/0129-the-desk-holds-a-value-not-a-multiplier.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 

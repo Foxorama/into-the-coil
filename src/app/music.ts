@@ -489,6 +489,18 @@ export interface MusicOut {
    */
   gainOf(layer: MusicLayer): AudioParam;
   /**
+   * A layer's own pan parameter, on exactly `gainOf`'s terms.
+   *
+   * ⚠️ **`docs/decisions/0129-the-desk-holds-a-value-not-a-multiplier.md`.** 0118 fixed every layer's
+   * place at construction from `LAYER_PAN` and the game has no reason to move one — which is what
+   * makes the table's sixteen off-centre values a set of numbers nobody has ever heard moved. A desk
+   * that can drag one across while it plays is the only way to ask whether a value is right.
+   *
+   * ⚠️ **NOTHING UNDER `src/` MAY CALL IT** and `tests/dash.test.ts` scans for that, for the same
+   * reason it scans for `gainOf`: a place decided in two places is a place nobody owns.
+   */
+  panOf(layer: MusicLayer): AudioParam;
+  /**
    * Play a different set of loops, from the next phrase boundary.
    *
    * ── THE PRIMITIVE A PLACE'S OWN MATERIAL NEEDS, AND `swapTo` ALREADY DID THE HARD PART ──────────
@@ -699,6 +711,13 @@ export function makeMusicOut(
   rate: number,
 ): MusicOut {
   const gains = {} as Record<MusicLayer, GainNode>;
+  /*
+    ⚠️ **KEPT, WHERE THEY USED TO BE LOCALS** — 0129. A layer's place in the field is fixed at
+    construction and the game never touches it again, so a local was correct until something wanted to
+    ASK. `panOf` is the dashboard's, on exactly `gainOf`'s terms, and holding the reference costs one
+    record of twenty-three that already exists for the gains.
+  */
+  const pans = {} as Record<MusicLayer, StereoPannerNode>;
   const buffers = {} as Record<MusicLayer, AudioBuffer>;
   // @setup: one array for the run, reused in place by `swapTo` — a re-phase replaces its contents
   // rather than allocating a second list.
@@ -786,6 +805,7 @@ export function makeMusicOut(
     gain.connect(pan);
     pan.connect(master);
     gains[layer] = gain;
+    pans[layer] = pan;
   }
 
   /**
@@ -948,6 +968,9 @@ export function makeMusicOut(
     },
     gainOf(layer: MusicLayer): AudioParam {
       return gains[layer].gain;
+    },
+    panOf(layer: MusicLayer): AudioParam {
+      return pans[layer].pan;
     },
     setLoops(next: Record<MusicLayer, Float32Array>): void {
       /*
