@@ -139,28 +139,77 @@ const COUNTER: readonly (number | null)[] = [
   2, _, _, _,
 ];
 
-/** The organ's pedalboard: the root twice a bar, with a passing note at the end of each phrase. */
-const PEDAL: readonly (number | null)[] = [
-  0, _, 0, _,
-  -5, _, -5, _,
-  0, _, 0, _,
-  -4, _, -4, -2,
-  3, _, 3, _,
-  -2, _, -2, _,
-  0, _, 0, _,
-  0, _, 0, 2,
-  5, _, 5, _,
-  0, _, 0, _,
-  -4, _, -4, _,
-  -5, _, -5, -2,
-  2, _, 2, _,
-  -4, _, -4, _,
-  -2, _, -2, _,
-  -5, _, -5, -2,
-];
+/**
+ * THE PEDALBOARD, RUNNING — eight notes a bar under everything, and it is the undercurrent.
+ *
+ * ── THE FIRST VERSION WAS TWO NOTES A BAR AND THAT WAS THE WHOLE PROBLEM ────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0134-the-place-keeps-the-games-pace.md`.** Reported of the hymn:
+ * *"it doesn't fit the high paced gameplay we want yet… it's very high on the treble with no deep
+ * bassy times and needs either an undercurrent or emphasis riff that speeds through as a
+ * counterpoint."* Measured, level two opened at **61 notes a bar against level one's 118**, and the
+ * bass was a held pedal: present in the band meter, motionless to an ear.
+ *
+ * ⚠️ **A RUNNING PEDAL IS THE ONE ANSWER THAT IS BOTH HALVES.** Eight notes a bar in the bottom
+ * octave is deep AND fast, so *no deep bassy times* and *nothing speeds through* are one fix rather
+ * than two — and it is what an organ toccata actually does with its feet. Nothing about the hymn over
+ * the top of it changed.
+ *
+ * ⚠️ **Derived from the progression rather than typed**, like `MIXTURE`: a hundred and twenty-eight
+ * numbers that have to agree with sixteen others is the thing that goes wrong silently.
+ */
+const PEDAL: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
+  const fifth = FIFTH[bar]!;
+  // Root, octave, fifth, root · root, fifth, root, fifth — the foot pattern, and the octave on the
+  // second eighth is what stops it being a drone with a rhythm drawn on it.
+  return [root, root + 12, fifth, root, root, fifth, root + 12, fifth];
+});
 
-/** The organ's registration: root and fifth, on beats one and three of every bar. */
-const REGISTER: readonly (number | null)[] = ROOT.flatMap((root, bar) => [root, _, FIFTH[bar]!, _]);
+/**
+ * The organ's registration: root, fifth and octave, six times a bar.
+ *
+ * ⚠️ **IT WAS TWICE A BAR, WHICH IS A PAD AND NOT A REGISTRATION** — 0134. Four notes a bar across
+ * both ranks is the thing a listener hears as *the chord changed*, not as *the organ is playing*. Six
+ * eighths with two rests in them is a hand on a manual.
+ */
+const REGISTER: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
+  const fifth = FIFTH[bar]!;
+  return [root, fifth, root + 12, _, root, fifth, _, root + 12];
+});
+
+/**
+ * THE STRING OSTINATO — sixteen a bar, and it is the SURGE's own styling.
+ *
+ * ⚠️ **THREE SECTIONS, THREE KINDS OF FAST** — 0134: *"a different styling for opening, push and
+ * surge."* The opening runs eighths in the organ's feet, `push` runs sixteenths in its top rank, and
+ * this is neither: a bowed tremolo between two notes of the chord, which is what an orchestra does
+ * when it wants urgency and has already used its brass.
+ *
+ * ⚠️ **It alternates rather than walking**, which is the difference between an ostinato and an arp —
+ * `MIXTURE` climbs through the chord and this scrubs across two notes of it. Two sixteenth-note
+ * layers that both walked would be one layer twice.
+ */
+const OSTINATO: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
+  const third = THIRD[bar]!;
+  const fifth = FIFTH[bar]!;
+  return [
+    root, fifth, root, fifth,
+    root, fifth, root, fifth,
+    third, fifth, third, fifth,
+    root, fifth, root, fifth,
+  ];
+});
+
+/**
+ * The high stabs: the organ's top rank, on the bar each four-bar phrase turns on.
+ *
+ * ⚠️ **Asked for by name** — 0134: *"it also needs some really higher octave hits as well in a few
+ * spots."* Four in sixteen bars, an octave over the registration, and nothing else in the piece plays
+ * up there while the organ is out.
+ */
+const STABS: readonly (number | null)[] = ROOT.flatMap((root, bar) =>
+  bar % 4 === 3 ? [root + 12, _, FIFTH[bar]! + 12, _, root + 12, _, _, _] : [_, _, _, _, _, _, _, _],
+);
 
 /**
  * The mixture stop: eight notes a bar walking the chord, which is what makes an organ an organ.
@@ -171,7 +220,17 @@ const REGISTER: readonly (number | null)[] = ROOT.flatMap((root, bar) => [root, 
 const MIXTURE: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
   const third = THIRD[bar]!;
   const fifth = FIFTH[bar]!;
-  return [root, third, fifth, third, root + 12, third, fifth, third];
+  /*
+    ⚠️ **SIXTEENTHS, AND THE PUSH'S OWN STYLING IS THIS LINE** — 0134: *"a different styling for
+    opening, push and surge."* The opening runs eighths in the feet; this runs sixteenths in the top
+    of the organ, which is a toccata and is a different KIND of fast rather than more of the same one.
+  */
+  return [
+    root, third, fifth, third,
+    root + 12, third, fifth, root + 12,
+    fifth, third, root, third,
+    fifth, root + 12, fifth, third,
+  ];
 });
 
 /**
@@ -250,10 +309,10 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
         is the same layer doing the same job at a walking pace.
       */
       steps: [
-        1, _, _, _, 0.62, _, _, _, 1, _, _, _, 0.6, _, _, _,
-        1, _, _, _, 0.64, _, _, _, 1, _, _, _, 0.6, _, 0.5, _,
-        1, _, _, _, 0.62, _, _, _, 1, _, _, _, 0.6, _, _, _,
-        1, _, _, _, 0.66, _, _, _, 1, _, _, _, 0.68, _, 0.56, _,
+        1, _, 0.5, _, 0.62, _, 0.46, _, 1, _, 0.5, _, 0.6, _, 0.48, 0.44,
+        1, _, 0.52, _, 0.64, _, 0.46, _, 1, _, 0.5, _, 0.6, _, 0.5, 0.46,
+        1, _, 0.5, _, 0.62, _, 0.48, _, 1, _, 0.52, _, 0.6, _, 0.46, 0.5,
+        1, _, 0.54, _, 0.66, _, 0.48, _, 1, _, 0.5, _, 0.68, _, 0.56, 0.52,
       ],
       pitched: false,
       perBeat: 1,
@@ -285,22 +344,54 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
   */
   engine: [
     {
-      steps: [1, _, 0.56, _, 0.82, _, 0.5, _, 0.94, _, 0.58, _, 0.8, _, 0.52, 0.62],
+      /*
+        THE PROCESSIONAL, AND IT IS ON EVERY BEAT NOW — 0134. The first version struck twice a bar and
+        left the third beat alone, which is what a hymn does and is not what this game does: level one
+        opens at 29.5 notes a bar and this opened at 6.5. A drum that lands on every beat is the floor
+        under *high paced*, and it is still a bronze strike rather than a kick.
+      */
+      steps: [1, 0.62, 0.86, 0.6, 0.94, 0.6, 0.84, 0.58, 1, 0.64, 0.88, 0.6, 0.92, 0.66, 0.8, 0.7],
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'sine', from: 112, to: 40, seconds: 0.72, gain: 0.5, attack: 0.003, curve: 2.2, drive: 0.18 },
+      note: { wave: 'sine', from: 112, to: 40, seconds: 0.42, gain: 0.5, attack: 0.003, curve: 3.2, drive: 0.22 },
     },
     {
-      // The breath between the strikes — a choir inhaling, which is the sound a room full of people makes.
+      // The tam-tam that was the whole layer, kept as what it always should have been: an accent.
+      steps: [1, _, 0.72, _],
+      pitched: false,
+      perBeat: 0.25,
+      octave: 0,
+      note: { wave: 'sine', from: 96, to: 33, seconds: 1.2, gain: 0.32, attack: 0.004, curve: 1.4, drive: 0.15 },
+    },
+    {
+      /*
+        THE SIXTEENTH THAT SPEEDS THROUGH. Breath rather than a hat — filtered noise, short, quiet and
+        continuous — so the top of the mix has something on every sixteenth from the first bar without
+        the place turning into a drum machine. **Nothing in the first version subdivided past an
+        eighth**, and that is most of what *doesn't fit the pace* was.
+      */
       steps: [
-        _, 0.5, _, 0.32, _, 0.44, _, 0.3, _, 0.5, _, 0.34, _, 0.42, _, 0.36,
-        _, 0.48, _, 0.3, _, 0.46, _, 0.32, _, 0.52, _, 0.34, _, 0.44, 0.4, 0.38,
+        0.5, 0.26, 0.34, 0.28, 0.44, 0.26, 0.36, 0.3, 0.48, 0.26, 0.34, 0.28, 0.42, 0.28, 0.36, 0.32,
+        0.5, 0.26, 0.34, 0.3, 0.44, 0.26, 0.38, 0.28, 0.48, 0.28, 0.34, 0.26, 0.42, 0.3, 0.4, 0.34,
+        0.5, 0.26, 0.36, 0.28, 0.44, 0.28, 0.34, 0.3, 0.48, 0.26, 0.36, 0.28, 0.42, 0.26, 0.38, 0.3,
+        0.52, 0.28, 0.34, 0.3, 0.46, 0.26, 0.36, 0.28, 0.5, 0.3, 0.38, 0.32, 0.44, 0.34, 0.42, 0.38,
+      ],
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.055, attack: 0.002, curve: 5.5, lowFrom: 5200, lowTo: 2200, highFrom: 900 },
+    },
+    {
+      // The off-beat, which is what turns a pulse into a walk.
+      steps: [
+        _, 0.44, _, 0.3, _, 0.4, _, 0.32, _, 0.46, _, 0.3, _, 0.38, _, 0.34,
+        _, 0.42, _, 0.32, _, 0.44, _, 0.3, _, 0.48, _, 0.34, _, 0.4, 0.36, 0.38,
       ],
       pitched: false,
       perBeat: 2,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.2, gain: 0.055, attack: 0.03, curve: 2.8, lowFrom: 4200, lowTo: 1400, highFrom: 520 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.16, gain: 0.075, attack: 0.02, curve: 3.2, lowFrom: 3400, lowTo: 1100, highFrom: 480 },
     },
   ],
 
@@ -313,26 +404,64 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
   */
   perc: [
     {
+      // The hand bells, doubled up. Still a bell pattern and no longer a bell every other bar.
       steps: [
-        1, _, _, _, _, _, 0.7, _, _, _, _, _, 0.84, _, _, _,
-        _, _, 0.62, _, _, _, _, _, 0.9, _, _, _, _, 0.66, _, _,
-        1, _, _, _, _, _, 0.72, _, _, _, _, _, 0.8, _, _, 0.6,
-        _, _, 0.64, _, _, _, _, _, 0.88, _, _, _, 0.7, _, _, _,
+        1, _, 0.5, _, _, 0.62, _, _, 0.7, _, 0.46, _, 0.84, _, _, 0.5,
+        _, 0.58, 0.62, _, _, _, 0.7, _, 0.9, _, 0.48, _, _, 0.66, _, 0.54,
+        1, _, 0.52, _, _, 0.6, _, 0.66, 0.72, _, 0.46, _, 0.8, _, 0.56, 0.6,
+        _, 0.58, 0.64, _, 0.5, _, _, 0.7, 0.88, _, 0.48, _, 0.7, _, 0.62, 0.66,
       ],
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'tri', from: 1760, to: 1170, seconds: 0.11, gain: 0.15, attack: 0.001, curve: 5.5, highFrom: 720 },
+      note: { wave: 'tri', from: 1760, to: 1170, seconds: 0.11, gain: 0.14, attack: 0.001, curve: 5.5, highFrom: 720 },
     },
     {
+      // Sixteenths, unbroken — the other half of *something is always moving*, over the top rather
+      // than underneath it.
       steps: [
-        _, 0.4, _, 0.28, _, 0.36, _, 0.26, _, 0.42, _, 0.3, _, 0.34, _, 0.3,
-        _, 0.38, _, 0.26, _, 0.4, _, 0.28, _, 0.44, _, 0.3, _, 0.36, _, 0.32,
+        0.4, 0.24, 0.3, 0.26, 0.36, 0.24, 0.28, 0.26, 0.38, 0.24, 0.3, 0.26, 0.34, 0.26, 0.3, 0.28,
+        0.4, 0.24, 0.3, 0.26, 0.36, 0.26, 0.28, 0.24, 0.38, 0.26, 0.3, 0.28, 0.34, 0.28, 0.32, 0.3,
+        0.42, 0.24, 0.3, 0.26, 0.36, 0.24, 0.3, 0.26, 0.38, 0.26, 0.3, 0.24, 0.34, 0.26, 0.3, 0.3,
+        0.4, 0.26, 0.32, 0.26, 0.36, 0.24, 0.28, 0.28, 0.4, 0.26, 0.3, 0.28, 0.36, 0.3, 0.34, 0.32,
       ],
       pitched: false,
-      perBeat: 2,
+      perBeat: 4,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.035, gain: 0.05, attack: 0.0006, curve: 8, lowFrom: 12000, highFrom: 5400 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.05, attack: 0.0006, curve: 8, lowFrom: 12000, highFrom: 5400 },
+    },
+    {
+      /*
+        THE FRAME DRUM, AND IT IS HERE BECAUSE A MEASUREMENT SAID SO — 0134. This layer measured **0%
+        of its energy under 300 Hz** against level one's 41: bells and breath and nothing with a skin
+        on it. A place reported as *very high on the treble* had its whole percussion layer above the
+        organ.
+
+        ⚠️ **Under 130 Hz is what `LAYER_PAN` forbids here and this sits above it.** `perc` is at
+        −0.45 and `tests/music.test.ts` refuses a placed layer whose weight is in the bottom octave —
+        a 190 Hz drum falling to 110 is a low-mid, which is the band the report was actually missing.
+      */
+      steps: [1, _, _, 0.62, _, 0.7, _, _, 0.86, _, _, 0.6, _, 0.72, _, 0.66],
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      note: { wave: 'sine', from: 190, to: 108, seconds: 0.22, gain: 0.34, attack: 0.001, curve: 4.2, drive: 0.22 },
+    },
+    {
+      /*
+        THE HIGH HITS, ASKED FOR BY NAME — 0134: *"it also needs some really higher octave hits as
+        well in a few spots."*
+
+        ⚠️ **Rare and loud rather than frequent and quiet**, which is what makes a hit a hit: eight in
+        sixteen bars, on the bar the phrase turns on. A struck plate at three and a half kilohertz is
+        the top of this place's range and nothing else goes near it — so it reads as an event even at
+        a gain the mix barely notices.
+      */
+      steps: [1, _, _, 0.72, _, _, 0.86, _, _, _, 0.78, _, 1, _, _, 0.8],
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      note: { wave: 'tri', from: 3520, to: 2640, seconds: 0.26, gain: 0.11, attack: 0.0008, curve: 3.4, highFrom: 1800 },
     },
   ],
 
@@ -398,6 +527,23 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
     },
     {
       /*
+        THE ARTICULATION, AND ITS ABSENCE IS WHY THE CHOIR SAT STILL — 0134. Level one's `chords` has
+        an offbeat stab in it and says in its own comment that it is *"the voice that stops being a
+        bong"*; this had six sustained voices and nothing that arrived anywhere except beat one, which
+        measured six notes a bar against level one's fourteen.
+
+        ⚠️ **Eighths on the off-beat, short, and the choir is still holding underneath.** It reads as
+        a syllable rather than as a new instrument — the same line the roots are singing, pushed.
+      */
+      steps: ROOT.flatMap((root, bar) => [_, FIFTH[bar]!, _, root + 12, _, FIFTH[bar]!, _, THIRD[bar]!]),
+      pitched: true,
+      perBeat: 2,
+      octave: 1,
+      accents: [1, 0.7, 0.86, 0.68],
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.34, gain: 0.075, attack: 0.02, curve: 3.2, lowFrom: 900, lowTo: 520, q: 1.1 },
+    },
+    {
+      /*
         THE AIR. A room full of people is audible before any of them sings, and this is the only voice
         here that is not a note: filtered noise on a one-and-a-third second swell, under everything.
         Take it out and the choir becomes an organ again.
@@ -449,22 +595,41 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
     below 1, so a note is at most halfway down when the next one starts: a pipe holds until the key
     comes up. Every equivalent voice in the base decays at 4 to 7, because it is being plucked.
   */
+  /*
+    ⚠️ **THE UNDERCURRENT, AND IT OPENS AT `run`** — 0134. Three ranks of a running pedal: the reed
+    that gives it teeth, the sine that gives it weight, and an octave up so the FIGURE is audible
+    rather than just the pressure. Twenty-four notes a bar where the held version had four and a half.
+
+    ⚠️ **The envelope is short now and it was a sustain.** A pedal that holds through its own next
+    note is a drone whatever the pattern says; at 0.42 of a beat each note stops before the next
+    starts, which is what makes eight of them a RUN rather than a smear.
+  */
   groove: [
     {
       steps: PEDAL,
       pitched: true,
-      perBeat: 1,
+      perBeat: 2,
       octave: 0,
-      accents: [1, 0.78, 0.88, 0.76],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.05, gain: 0.28, attack: 0.03, curve: 1.1, lowFrom: 860, lowTo: 470, q: 1 },
+      // Heavy on one and on the second half of the bar — the two places a foot lands hardest.
+      accents: [1, 0.72, 0.9, 0.7],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.46, gain: 0.26, attack: 0.006, curve: 2.2, lowFrom: 620, lowTo: 300, q: 1.2, drive: 0.16 },
     },
     {
       steps: PEDAL,
       pitched: true,
-      perBeat: 1,
+      perBeat: 2,
       octave: 0,
-      accents: [1, 0.78, 0.88, 0.76],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.1, gain: 0.3, attack: 0.02, curve: 1.2 },
+      accents: [1, 0.72, 0.9, 0.7],
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.5, gain: 0.52, attack: 0.004, curve: 1.9 },
+    },
+    {
+      // The 8′ rank, an octave over the feet. Without it the run is felt and not heard.
+      steps: PEDAL,
+      pitched: true,
+      perBeat: 2,
+      octave: 1,
+      accents: [1, 0.7, 0.88, 0.68],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.38, gain: 0.055, attack: 0.006, curve: 3, lowFrom: 1100, lowTo: 560, q: 1.3 },
     },
   ],
 
@@ -472,20 +637,29 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
     {
       steps: REGISTER,
       pitched: true,
-      perBeat: 1,
+      perBeat: 2,
       octave: 1,
-      accents: [1, 0.8, 0.9, 0.78],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1, gain: 0.125, attack: 0.014, curve: 1.1, lowFrom: 1800, lowTo: 1250, q: 1 },
+      accents: [1, 0.76, 0.9, 0.74],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.5, gain: 0.13, attack: 0.01, curve: 1.9, lowFrom: 950, lowTo: 520, q: 1 },
     },
     {
       // The four-foot rank: the same notes an octave up, which is how an organ gets brighter without
       // getting louder.
       steps: REGISTER,
       pitched: true,
-      perBeat: 1,
+      perBeat: 2,
       octave: 2,
-      accents: [1, 0.8, 0.9, 0.78],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.92, gain: 0.06, attack: 0.016, curve: 1.2, lowFrom: 2900, lowTo: 2000, q: 1.1 },
+      accents: [1, 0.76, 0.9, 0.74],
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.46, gain: 0.055, attack: 0.012, curve: 2.1, lowFrom: 2900, lowTo: 1900, q: 1.1 },
+    },
+    {
+      // The top rank, four bars in four — 0134's *higher octave hits*, on the organ rather than on the
+      // bells, so the two land in different places and read as two different events.
+      steps: STABS,
+      pitched: true,
+      perBeat: 2,
+      octave: 3,
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.34, gain: 0.042, attack: 0.004, curve: 2.6, lowFrom: 6200, lowTo: 3400, q: 1.4 },
     },
   ],
 
@@ -493,18 +667,18 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
     {
       steps: MIXTURE,
       pitched: true,
-      perBeat: 2,
+      perBeat: 4,
       octave: 2,
       accents: [1, 0.7, 0.84, 0.68],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.46, gain: 0.055, attack: 0.006, curve: 1.6, lowFrom: 3400, lowTo: 2400, q: 1.2 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.24, gain: 0.05, attack: 0.004, curve: 2.4, lowFrom: 3400, lowTo: 2400, q: 1.2 },
     },
     {
       steps: MIXTURE,
       pitched: true,
-      perBeat: 2,
+      perBeat: 4,
       octave: 3,
       accents: [1, 0.7, 0.84, 0.68],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.42, gain: 0.026, attack: 0.008, curve: 1.9, lowFrom: 5400, lowTo: 3600, q: 1 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.22, gain: 0.024, attack: 0.005, curve: 2.8, lowFrom: 5400, lowTo: 3600, q: 1 },
     },
   ],
 
@@ -514,8 +688,8 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
   ride: [
     {
       steps: [
-        0.7, _, 0.4, _, 0.6, _, 0.38, _, 0.72, _, 0.42, _, 0.58, _, 0.4, 0.5,
-        0.68, _, 0.4, _, 0.62, _, 0.36, _, 0.74, _, 0.44, _, 0.6, _, 0.42, 0.52,
+        0.7, 0.34, 0.4, 0.3, 0.6, 0.32, 0.38, 0.28, 0.72, 0.34, 0.42, 0.3, 0.58, 0.32, 0.4, 0.5,
+        0.68, 0.34, 0.4, 0.28, 0.62, 0.32, 0.36, 0.3, 0.74, 0.34, 0.44, 0.3, 0.6, 0.34, 0.42, 0.52,
       ],
       pitched: false,
       perBeat: 2,
@@ -540,15 +714,24 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       perBeat: 1,
       octave: 1,
       accents: [0.88, 0.64, 1, 0.72],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.5, gain: 0.24, attack: 0.1, curve: 1.15, lowFrom: 1500, lowTo: 2700, q: 1.1 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.5, gain: 0.26, attack: 0.1, curve: 1.15, lowFrom: 1150, lowTo: 620, q: 1.1 },
     },
     {
       steps: COUNTER,
       pitched: true,
       perBeat: 1,
-      octave: 2,
+      octave: 1,
       accents: [0.88, 0.64, 1, 0.72],
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 1.4, gain: 0.065, attack: 0.13, curve: 1.25 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.5, gain: 0.16, attack: 0.13, curve: 1.1 },
+    },
+    {
+      // The tremolo under the line — the surge's own fast texture, and the third one in the piece.
+      steps: OSTINATO,
+      pitched: true,
+      perBeat: 4,
+      octave: 1,
+      accents: [1, 0.68, 0.86, 0.66],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.22, gain: 0.06, attack: 0.006, curve: 2.8, lowFrom: 1050, lowTo: 520, q: 1.2 },
     },
   ],
 
@@ -579,21 +762,21 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
     {
       // The tremulant: the mixture chattering under everything once the organ is at full.
       steps: [
-        0, _, 7, _, 12, _, 7, _, 0, _, 7, _, 10, _, 7, _,
-        0, _, 7, _, 12, _, 7, _, 0, _, 5, _, 7, _, 5, _,
+        0, 7, 12, 7, 12, 7, 0, 7, 0, 7, 12, 7, 10, 7, 0, 7,
+        0, 7, 12, 7, 12, 7, 0, 7, 0, 5, 7, 5, 7, 5, 0, 5,
       ],
       pitched: true,
       perBeat: 4,
-      octave: 3,
+      octave: 2,
       accents: [1, 0.64, 0.82, 0.62],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.24, gain: 0.075, attack: 0.004, curve: 2.6, lowFrom: 4200, lowTo: 2600, q: 1.6 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.24, gain: 0.056, attack: 0.004, curve: 2.8, lowFrom: 2600, lowTo: 1500, q: 1.6 },
     },
     {
       steps: [1, _, 0.7, _, 0.9, _, 0.68, _, 1, _, 0.72, _, 0.88, _, 0.7, 0.8],
       pitched: false,
       perBeat: 2,
       octave: 0,
-      note: { wave: 'sine', from: 178, to: 92, seconds: 0.24, gain: 0.36, attack: 0.001, curve: 4.4, drive: 0.22 },
+      note: { wave: 'sine', from: 168, to: 62, seconds: 0.3, gain: 0.46, attack: 0.001, curve: 3.4, drive: 0.26 },
     },
   ],
 

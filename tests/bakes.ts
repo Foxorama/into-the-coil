@@ -39,21 +39,40 @@
 
 import { bakeLoops } from '../src/app/music.ts';
 import { MUSIC_LAYERS, type MusicLayer } from '../src/content/music.ts';
+import type { ThemeKind } from '../src/content/themes.ts';
 
-/** One bake per rate, for the life of the process. A worker per suite, so this never spans files. */
-const cache = new Map<number, Record<MusicLayer, Float32Array>>();
+/** One bake per rate and place, for the life of the process. A worker per suite, so it never spans files. */
+const cache = new Map<string, Record<MusicLayer, Float32Array>>();
 
 /**
  * Every loop at `rate`, exactly as `bakeLoops` returns them — fresh arrays on every call.
  *
  * A drop-in for `bakeLoops(rate)` in a test. Anything whose subject is the bake itself should call
  * `bakeLoops` directly instead, and the header says which one that is.
+ *
+ * ── AND IT TAKES A PLACE NOW, BECAUSE A GUARD WAS MEASURING THE WRONG AUDIO ─────────────────────
+ *
+ * ⚠️ **`docs/decisions/0134-the-place-keeps-the-games-pace.md`.** *No theme at any rung drives the
+ * bus past full scale* baked this with no argument and then applied **every theme's multipliers to
+ * level one's samples** — so the one thing it exists to catch, a place whose own material clips, was
+ * the one thing it could not see. It went green over Ember Nebula's whole composition
+ * ([0132](../docs/decisions/0132-a-place-may-be-another-piece-entirely.md)) without ever baking a
+ * note of it.
+ *
+ * ⚠️ **THIS IS THE THIRD GUARD IN TWO DECISIONS TO HAVE THAT SHAPE** — the band rule and the
+ * longest-note rule were the other two — and the class is one sentence: *a guard written before a
+ * place could re-voice anything bakes `MUSIC` and means it.* Anything that measures AUDIO and loops
+ * over `THEME_KINDS` is suspect until it passes a theme in here.
+ *
+ * ⚠️ **A place that states nothing costs nothing**, because `bakeLoops` hands back byte-identical
+ * audio for it and the cache is keyed on the name — six of the seven places still share one bake.
  */
-export function loopsAt(rate: number): Record<MusicLayer, Float32Array> {
-  let baked = cache.get(rate);
+export function loopsAt(rate: number, theme?: ThemeKind): Record<MusicLayer, Float32Array> {
+  const key = `${rate}/${theme ?? ''}`;
+  let baked = cache.get(key);
   if (baked === undefined) {
-    baked = bakeLoops(rate);
-    cache.set(rate, baked);
+    baked = bakeLoops(rate, theme);
+    cache.set(key, baked);
   }
   const out = {} as Record<MusicLayer, Float32Array>;
   for (const layer of MUSIC_LAYERS) out[layer] = Float32Array.from(baked[layer]);

@@ -184,6 +184,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **`surge` is crossed 14.3s sooner, on the bar it is crossed on; `push` pays for it** | [0131](decisions/0131-the-surge-comes-sooner.md) |
 | **a place may be ANOTHER PIECE: Ember Nebula is a choir, an organ and an inferno, 21 of 23 layers** | [0132](decisions/0132-a-place-may-be-another-piece-entirely.md) |
 | **and the game plays it: the incoming place is baked across the break screen and REPLACES rather than caches** | [0133](decisions/0133-the-place-is-baked-at-the-boundary.md) |
+| **a place may be another piece and may NOT be a slower one — pace and bottom held against the base** | [0134](decisions/0134-the-place-keeps-the-games-pace.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -715,6 +716,20 @@ break screen — and handed to 0128's `setLoops`, which swaps at the next phrase
 **46.85 MB** of its own audio. Held alongside the base it is 94.8 MB against a 56 MB ceiling; replacing
 the layers it states it is 48.0, unchanged, because a place's arrays are the same length as the ones
 they replace. `rig/dash.ts` caches per place and may; the game may not, and a guard holds the identity.
+
+⚠️ **AND IT HAS BEEN HEARD ONCE AND WAS HALF THE SPEED OF THE GAME** —
+[0134](decisions/0134-the-place-keeps-the-games-pace.md). *"Pretty cool, but it doesn't fit the high
+paced gameplay… very high on the treble with no deep bassy times."* Measured: **61 notes a bar against
+level one's 118**, and eight points of bottom missing at `surge`. The piece now runs at 94–113% of the
+base's pace and 93–109% of its bottom at every rung, and `tests/themes.test.ts` refuses either below
+90%. **`scripts/weigh-rung.mjs` is the instrument** and it prints both against the base.
+
+⚠️ **THE ONE CLAUSE OF THAT REPORT NOT DELIVERED IS A QUESTION FOR THE PLAYER.** *"The surge from level
+one should be the default music speed for the next levels at the start"* is 172 notes a bar across
+FOURTEEN open layers; a level's `run` opens nine and the ladder decides which. Levels 2+ opening at
+`push` would deliver it to within 7% and costs one section boundary a level — which is the *fewer
+bigger sections* option [0125](decisions/0125-the-build-starts-sooner.md) records the player refusing.
+0134 has the numbers.
 
 ⚠️ **WHAT IS OWED IS A LISTEN AND NOT A BUILD.** Nobody has heard a level boundary change the music in
 the game. Whether a place arriving at the next phrase reads as *the music changed* or as *the music
