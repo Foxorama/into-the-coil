@@ -85,10 +85,16 @@ import {
   panGains,
   musicLevelFor,
 } from '../src/app/music.ts';
-import { SHIPS } from '../src/content/ships.ts';
 import { LEVEL_KINDS } from '../src/content/levels.ts';
 import { UNITS_PER_SECOND, auraAt, levelTimeline, rungAt, targetGain } from './timeline.mjs';
-import { UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
+import { UPGRADE_TIERS } from '../src/content/pickups.ts';
+/*
+  ⚠️ **THE ONE THING THIS SCRIPT TAKES FROM `rig/`, and the arrow points this way on purpose.**
+  `rig/transport.ts` is the arithmetic of *what is sounding when*, guarded by `tests/dash.test.ts`;
+  `rig/dash.ts` is the browser half and nothing imports it. A `.mjs` script importing a `.ts` module
+  is what this file already does eight lines up — node strips the types.
+*/
+import { weaponAtTier } from '../rig/transport.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 
 const args = new Map(process.argv.slice(2).map((a) => a.replace(/^--/, '').split('=')));
@@ -479,9 +485,14 @@ if (args.has('play')) {
   const scene = (level, tier, bars) => {
     const steps = bars * 4 * STEPS_PER_BEAT;
     const length = Math.round(steps * perStep);
-    const carried = [];
-    for (let i = 0; i < tier; i++) carried.push('weapon', 'missile');
-    const weapon = weaponFor(SHIPS.proof, carried);
+    /*
+      ⚠️ **ONE DESCRIPTION OF WHAT A TIER IS, SHARED WITH THE DASHBOARD** —
+      `docs/decisions/0126-the-dashboard-is-the-instrument.md`. This mode built the upgrade list
+      inline; `rig/dash.ts` needs exactly the same ship, and two copies of *a tier is one of each,
+      that many times* is how the WAV rig and the dashboard end up laying different guns over the
+      same bed while both look right. `docs/decisions/0083-two-ladders-of-four.md` is the fact.
+    */
+    const weapon = weaponAtTier(tier);
     const bed = new Float32Array(length);
     const cues = new Float32Array(length);
     // The bed, at the mixer's own two gains.

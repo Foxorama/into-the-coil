@@ -50,6 +50,18 @@ const stamped = (tokens: Record<string, string>, text: string, where: string): s
   return out;
 };
 
+/**
+ * The one page this plugin is a demand about, as Vite's own path for it.
+ *
+ * ⚠️ **A PATH AND NOT A FILENAME, AND `npm run prove` IS WHY.** The first version compared
+ * `resolve(ctx.filename)` against `resolve(config.root, 'index.html')` — which is correct here and
+ * went RED in a probe worker, because a probe runs in a disposable copy under `os.tmpdir()`
+ * (`docs/decisions/0054-the-proof-runs-beside-the-work-not-on-it.md`) and two absolute Windows paths
+ * that name one file need not be the same string. `ctx.path` is a URL, it is `/index.html` in both
+ * dev and build, and it has no machine in it.
+ */
+const SHIPPED_PAGE = '/index.html';
+
 function stampBuildIdentity(): Plugin {
   let outDir = 'dist';
   return {
@@ -62,7 +74,16 @@ function stampBuildIdentity(): Plugin {
     },
     // The watchdog needs the version only. It reports "which release is on screen"; the commit is
     // the module graph's job, and by the time the watchdog speaks the module graph is what failed.
-    transformIndexHtml(html) {
+    //
+    // ⚠️ THE SHIPPED PAGE ONLY, and the narrowing is the point rather than an exemption. This hook
+    // runs for every HTML the dev server touches, so the day a second page existed —
+    // `rig/index.html`, docs/decisions/0126-the-dashboard-is-the-instrument.md — the throw above
+    // fired on a page that is not a build surface and has no version to report. The demand on
+    // index.html is unchanged and is still a hard failure; what moved is which files it is a demand
+    // ABOUT. A dev-only page carrying a placeholder to keep a plugin quiet would be the version of
+    // this that quietly stops meaning anything.
+    transformIndexHtml(html, ctx) {
+      if (ctx.path !== SHIPPED_PAGE) return html;
       return stamped({ [ITC_VERSION]: pkgVersion }, html, 'index.html');
     },
     /**

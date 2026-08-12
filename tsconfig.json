@@ -27,5 +27,7 @@
     // the dev server — the service worker must only ever be registered by the former.
     "types": ["node", "vite/client"]
   },
-  "include": ["src", "tests", "vite.config.ts"]
+  // `rig/` is the sound dashboard — docs/decisions/0126-the-dashboard-is-the-instrument.md. It is
+  // type-checked with everything else and it is NOT in the build: `vite.config.ts` has one entry.
+  "include": ["src", "tests", "rig", "vite.config.ts"]
 }
