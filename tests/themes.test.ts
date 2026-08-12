@@ -18,6 +18,7 @@ import {
   MUSIC_LAYERS,
   MUSIC_LEVELS,
   MUSIC_GAIN,
+  type MusicLayer,
   MUSIC_DRIVE,
   secondsOfLayer,
 } from '../src/content/music.ts';
@@ -25,6 +26,7 @@ import { SCALE } from '../src/content/cues.ts';
 import { LAYER_PAN } from '../src/content/music.ts';
 import { bakeLayer } from '../src/app/music.ts';
 import { BANDS, bandEnergy } from './spectrum.ts';
+import { rungShape } from './pace.ts';
 import { PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SAMPLE_RATE, saturate } from '../src/app/sound.ts';
 import { loopsAt } from './bakes.ts';
@@ -145,8 +147,15 @@ describe('a theme mixes the music and cannot break it', () => {
       layers at once could clip a mix every existing guard says is fine. Driven through the same
       shaper the bus runs, at every theme and every rung.
     */
-    const loops = loopsAt(SAMPLE_RATE);
-    const longest = Math.max(...MUSIC_LAYERS.map((l) => loops[l].length));
+    /*
+      ⚠️ **EACH PLACE IS BAKED AS ITSELF, AND IT WAS NOT** — 0134. This took one bake with no theme in
+      it and applied every theme's multipliers to **level one's samples**, so the only thing it exists
+      to catch — a place whose own material clips — was the one thing it could not see. It ran green
+      over the whole of 0132's composition without baking a note of it.
+
+      ⚠️ **Six of the seven cost nothing**, because a place that states no voices bakes byte-identical
+      audio and `loopsAt` caches on the name.
+    */
     /*
       ⚠️ **THE GAINS ARE RESOLVED ONCE PER (THEME, RUNG) AND WERE RESOLVED ONCE PER SAMPLE** —
       `docs/decisions/0113-there-is-one-composition-and-seven-levels.md`. `mixOf` does a table lookup
@@ -159,21 +168,52 @@ describe('a theme mixes the music and cannot break it', () => {
       by measuring less would be the thing
       `docs/decisions/0027-measure-the-picture-not-the-model.md` is about, arriving in the guard.
     */
+    /*
+      ── AND THE SAMPLE IS READ ONCE FOR ALL SEVEN RUNGS, WHICH IS 0044 RATHER THAN A SAVING ────────
+
+      ⚠️ **THIS GUARD PASSED ALONE AND TIMED OUT UNDER THE FULL SUITE**, which is
+      `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`'s own shape: a
+      rerun is not evidence, and a guard that only fails when the machine is busy is a guard nobody
+      can trust the green from. Baking a second composition (0134) is what pushed it over 60 s; the
+      walk had been near the edge since the phrase doubled.
+
+      ⚠️ **The buffers do not change between rungs and only the GAINS do.** Reading them per rung was
+      seven passes of a modulo and a bounds-checked load over 1.2 million samples; reading them once
+      and taking seven dot products is the same arithmetic with a seventh of the indexing.
+
+      ⚠️ **NOTHING ABOUT WHAT IS MEASURED CHANGES** — the same samples, the same shaper, the same
+      peak, and the same assertion per (theme, rung). A test made faster by measuring less would be
+      `docs/decisions/0027-measure-the-picture-not-the-model.md` arriving inside the guard, which is
+      the trap the hoist above already had to avoid once.
+    */
     for (const theme of THEME_KINDS) {
-      for (const level of MUSIC_LEVELS) {
-        const gains = MUSIC_LAYERS.map((layer) => MUSIC_LADDER[level][layer] * mixOf(theme, layer));
-        const open = MUSIC_LAYERS.map((_unused, index) => index).filter((index) => gains[index] !== 0);
-        let peak = 0;
-        for (let i = 0; i < longest; i++) {
-          let sum = 0;
-          for (const index of open) {
-            const buffer = loops[MUSIC_LAYERS[index]!]!;
-            sum += buffer[i % buffer.length]! * gains[index]!;
-          }
-          const shaped = Math.abs(saturate(sum * MUSIC_GAIN, MUSIC_DRIVE));
-          if (shaped > peak) peak = shaped;
+      const loops = loopsAt(SAMPLE_RATE, theme);
+      const buffers = MUSIC_LAYERS.map((layer) => loops[layer]);
+      const longest = Math.max(...buffers.map((b) => b.length));
+      const rungs = MUSIC_LEVELS.map((level) => ({
+        level,
+        gains: MUSIC_LAYERS.map((layer) => MUSIC_LADDER[level][layer] * mixOf(theme, layer)),
+        peak: 0,
+      }));
+      // @setup: one scratch row of layer values, refilled per sample rather than allocated per sample.
+      const now = new Float64Array(MUSIC_LAYERS.length);
+      for (let i = 0; i < longest; i++) {
+        for (let l = 0; l < buffers.length; l++) {
+          const buffer = buffers[l]!;
+          now[l] = buffer[i % buffer.length]!;
         }
-        expect(peak, `${theme} at ${level} peaks at ${peak.toFixed(3)} of full scale`).toBeLessThanOrEqual(1);
+        for (const rung of rungs) {
+          let sum = 0;
+          for (let l = 0; l < now.length; l++) sum += now[l]! * rung.gains[l]!;
+          const shaped = Math.abs(saturate(sum * MUSIC_GAIN, MUSIC_DRIVE));
+          if (shaped > rung.peak) rung.peak = shaped;
+        }
+      }
+      for (const rung of rungs) {
+        expect(
+          rung.peak,
+          `${theme} at ${rung.level} peaks at ${rung.peak.toFixed(3)} of full scale`,
+        ).toBeLessThanOrEqual(1);
       }
     }
   }, 60_000);
@@ -395,6 +435,95 @@ describe('0128 — a place plays its own material, and shares everything it does
       }
     }
   });
+
+  /*
+    ── 0134: A PLACE MAY BE ANOTHER PIECE AND MAY NOT BE A SLOWER ONE ─────────────────────────────
+
+    Reported of Ember Nebula's first version: *"it's pretty cool, but it doesn't fit the high paced
+    gameplay we want yet… it's very high on the treble with no deep bassy times."*
+
+    ⚠️ **BOTH HALVES WERE A NUMBER AND NOTHING HERE MEASURED EITHER.** The place opened at **61 notes
+    a bar against level one's 118** and ran **31.5% of its energy under 300 Hz at `surge` against
+    40.0%** — a piece half the speed of the game it plays under, and every guard in the repository
+    green. `docs/decisions/0102-the-music-goes-somewhere.md` had already settled that the rate of
+    events IS what a listener calls pace, so this was measurable the whole time.
+
+    ⚠️ **THE FLOORS ARE PROPORTIONS OF THE BASE COMPOSITION, WHICH IS WHAT MAKES THEM STRUCTURAL
+    RATHER THAN TUNED.** `docs/decisions/0034-a-threat-is-absolute-and-a-pool-is-the-pairing.md` says
+    nothing asserts on a tuned value, and neither of these does: what is asserted is that a place is
+    not substantially thinner or brighter than the piece every other level plays, which is
+    `docs/decisions/0104-the-gun-plays-a-figure.md`'s *the title is the minimum base level we build
+    upon* pointed at places instead of at rungs.
+
+    ⚠️ **THE BOUND WAS 0.85 AND THE PROBE IS WHY IT IS NOT** —
+    `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` doing the more valuable half of its job.
+    At 0.85 both breaks below reported **STILL GREEN**: holding the undercurrent still leaves 88% of
+    the pace, and pulling the whole floor out of the mix still leaves 88% of the bottom. A bound that
+    only fires on a catastrophe is a bound nobody is near, which is the shape of guard this project
+    keeps finding in itself.
+
+    ⚠️ **0.9 IS TIGHT AND THE MARGIN IS STATED RATHER THAN GLOSSED.** Today's thinnest readings are
+    **0.94** for pace (at `boss`) and **0.93** for the bottom (at `approach`), so there are three or
+    four points in hand — less than is comfortable, and the alternative was a guard that did not
+    fire. The shipped defect this exists for was at **0.52** and **0.79**. A place that genuinely
+    wants to be a tenth thinner than level one at some rung will fail here and the argument for it
+    gets made, which is the outcome to want.
+  */
+  const PACE_FLOOR = 0.9;
+  /** One bake map across both guards below — the second asks the same forty-four questions. */
+  const paceBakes = new Map<string, number[]>();
+  /*
+    ⚠️ **THE LOOPS ARE FETCHED ONCE PER PLACE AND NOT ONCE PER RUNG.** `loopsAt` hands back fresh
+    arrays on every call — deliberately, so that no test can move another's subject — and that is
+    48 MB of copying. Asking for them inside the rung loop is forty-nine of those.
+  */
+  const loopsFor = new Map<string, Record<MusicLayer, Float32Array>>();
+  const placeLoops = (theme?: ThemeKind): Record<MusicLayer, Float32Array> => {
+    const key = theme ?? '';
+    let got = loopsFor.get(key);
+    if (got === undefined) {
+      got = loopsAt(SAMPLE_RATE, theme);
+      loopsFor.set(key, got);
+    }
+    return got;
+  };
+
+  it('0134 — NO PLACE IS SUBSTANTIALLY SLOWER THAN THE BASE COMPOSITION, at any rung', () => {
+    const bakes = paceBakes;
+    for (const rung of MUSIC_LEVELS) {
+      const base = rungShape(undefined, rung, placeLoops(), bakes).notes;
+      if (base <= 0) continue;
+      for (const theme of THEME_KINDS) {
+        const here = rungShape(theme, rung, placeLoops(theme), bakes).notes;
+        expect(
+          here / base,
+          `${theme} plays ${here.toFixed(0)} notes a bar at ${rung} where the base plays ${base.toFixed(0)} — ` +
+            `${((here / base) * 100).toFixed(0)}% of the pace the game is played at`,
+        ).toBeGreaterThanOrEqual(PACE_FLOOR);
+      }
+    }
+  }, DSP_MS);
+
+  it('and none is substantially BRIGHTER, which is the other half of the same report', () => {
+    /*
+      ⚠️ **The share under 300 Hz, against the base's own at the same rung.** *No deep bassy times* is
+      a claim about a ratio and about nothing else — and it is the half that a note count cannot see,
+      because a place can be dense and still be dense entirely above the organ.
+    */
+    const bakes = paceBakes;
+    for (const rung of MUSIC_LEVELS) {
+      const base = rungShape(undefined, rung, placeLoops(), bakes).low;
+      if (base <= 0) continue;
+      for (const theme of THEME_KINDS) {
+        const here = rungShape(theme, rung, placeLoops(theme), bakes).low;
+        expect(
+          here / base,
+          `${theme} puts ${(here * 100).toFixed(1)}% of its energy under 300Hz at ${rung} where the base puts ` +
+            `${(base * 100).toFixed(1)}% — a place that thin at the bottom reads as treble whatever it plays`,
+        ).toBeGreaterThanOrEqual(PACE_FLOOR);
+      }
+    }
+  }, DSP_MS);
 
   it('AND AN OVERRIDE MAY NOT SILENCE A LAYER THE LADDER OPENS', () => {
     // An empty voice array is a layer the ladder still raises a gain on and which makes no sound —

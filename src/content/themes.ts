@@ -219,21 +219,36 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     title: 'Ember Nebula',
     space: { vivid: '#140b16', 'high-contrast': '#050008' },
     nebula: { vivid: '#5c2a4a', 'high-contrast': '#2a1626' },
+    /*
+      ⚠️ **THE MIX LEANS ON THE FLOOR NOW AND IT USED TO LEAN ON THE CHOIR** — 0134. Reported: *"it's
+      very high on the treble with no deep bassy times."* Measured, the place ran **28.6% of its
+      energy under 300 Hz at `surge` against level one's 40.0%**, and the fix is two-sided: the
+      material grew a running pedal, and this table stopped pushing the organ's top rank over it.
+
+      ⚠️ **`groove` is at the ceiling on purpose.** It is the undercurrent, it is centred, and
+      `MIX_CEILING` is what a multiplier may spend — a place whose whole complaint was the bottom is
+      the place that should be spending it there.
+    */
     mix: {
-      chords: 1.3,
-      drone: 1.25,
-      call: 1.15,
-      counter: 1.15,
-      groove: 1.1,
-      hook: 1.1,
-      lead: 1.15,
-      toll: 1.3,
-      arp: 0.85,
-      perc: 0.8,
-      engine: 0.9,
-      stomp: 1.1,
-      frenzy: 1.1,
-      wraith: 1.15,
+      groove: 1.45,
+      drone: 1.3,
+      sub: 1.18,
+      engine: 1.15,
+      chords: 1.15,
+      call: 1.1,
+      toll: 1.28,
+      counter: 0.95,
+      dread: 1.05,
+      lead: 1,
+      hook: 0.9,
+      perc: 0.85,
+      crash: 0.85,
+      arp: 0.7,
+      ride: 0.7,
+      drive: 0.85,
+      stomp: 1.02,
+      frenzy: 1.05,
+      wraith: 1.1,
     },
     voices: NEBULA_VOICES,
   },
