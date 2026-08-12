@@ -37,8 +37,8 @@ export const PROBES = [
     guard: 'says one thing per volley and not one per barrel',
     edit: {
       path: 'src/app/frame.ts',
-      find: "    if (i === 0) w.onCue('pulse');",
-      replace: "    w.onCue('pulse');",
+      find: "    if (i === 0) w.onCue('pulse', w.ship.across);",
+      replace: "    w.onCue('pulse', w.ship.across);",
     },
   },
   {
@@ -76,8 +76,8 @@ export const PROBES = [
     guard: 'THE ONE THAT WOULD BE EATEN BY THE CAP: a boss dying is heard, through a real speaker',
     edit: {
       path: 'src/app/frame.ts',
-      find: "    if (w.deaths.count > 0 && !bossJustDied(w)) w.onCue('kill');",
-      replace: "    if (w.deaths.count > 0) w.onCue('kill');",
+      find: "    if (w.deaths.count > 0 && !bossJustDied(w)) w.onCue('kill', w.deaths.across[0]);",
+      replace: "    if (w.deaths.count > 0) w.onCue('kill', w.deaths.across[0]);",
     },
   },
   {

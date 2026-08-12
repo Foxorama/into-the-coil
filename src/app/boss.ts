@@ -125,7 +125,8 @@ export function stepBoss(
    * whether sound is on, because a step that could read it could branch on it. Handing this file a
    * function to call points the arrow the same way `src/app/frame.ts` already points it.
    */
-  onCue: (kind: CueKind) => void,
+  // `across` is where it happened — 0127, and the same signature `src/app/frame.ts` passes down.
+  onCue: (kind: CueKind, across?: number) => void,
 ): number {
   const phase = phaseFor(row, boss.health, fullHealth);
 
@@ -243,7 +244,8 @@ export function stepBoss(
     must not be able to read whether sound is on — handing it a function to call keeps the arrow
     pointing the same way `src/app/frame.ts` already points it.
   */
-  onCue('bossShot');
+  // Where the boss is, which is the one body in the game the player is watching for — 0127.
+  onCue('bossShot', boss.across);
   // ⚠️ The tier's gap over the PHASE's, so escalation and difficulty compose rather than compete: a
   // hard tier's opening phase is still slower than its own last one.
   boss.fireIn = fireGapFor(phase.fireEvery, tier);

@@ -45,7 +45,16 @@
  * time it — applied to the one budget it did not anticipate.
  */
 
-import { CUES, CUE_KINDS, MAX_CUE_SECONDS, type CueKind, type CueLayer, type CueRow } from '../content/cues.ts';
+import {
+  CUES,
+  CUE_KINDS,
+  CUE_PAN_LIMIT,
+  MAX_CUE_SECONDS,
+  type CueKind,
+  type CueLayer,
+  type CueRow,
+} from '../content/cues.ts';
+import { ACROSS_SPAN } from '../sim/camera.ts';
 import { makeMusicOut, bakeLoops, layerNotes, type MusicOut } from './music.ts';
 import { FIRE_GRID, MUSIC_LAYERS, STEPS_PER_BEAT, type MusicLayer } from '../content/music.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
@@ -446,7 +455,7 @@ export interface AudioOut {
    * `GainNode` per voice, which is a second allocation on a path `MAX_VOICES` exists to bound; the
    * weights are baked instead, so an accented shot costs exactly what an unaccented one does.
    */
-  sound(index: number, velocity: number): void;
+  sound(index: number, velocity: number, pan: number): void;
   /**
    * Push the music down by `amount` for a moment, because a loud cue is landing — 0104.
    *
@@ -473,8 +482,14 @@ export interface Speaker {
    * they can sound has no figure.
    */
   step(beatStep?: number): void;
-  /** Sound a cue, if the mute, the hold and the voice cap all allow it. */
-  play(kind: CueKind): void;
+  /**
+   * Sound a cue, if the mute, the hold and the voice cap all allow it.
+   *
+   * ⚠️ **`across` is WHERE IT HAPPENED, in world units, and it is optional on purpose** — 0127. The
+   * caller hands over the coordinate it already has and `panFor` owns the arithmetic; a call with
+   * nothing to give is centred, which is the honest answer for the chime and for a menu.
+   */
+  play(kind: CueKind, across?: number): void;
   /** Whether the player wants sound at all. */
   setOn(on: boolean): void;
   /** How many voices started on the current step — the counted budget, for the guard to read. */
@@ -503,6 +518,58 @@ export interface Speaker {
  *
  * Exported for `tests/sound.test.ts`, which drives it directly.
  */
+/**
+ * How many fixed panner nodes the cue bus keeps, spread evenly across the field.
+ *
+ * ── A POOL, BECAUSE A PANNER PER VOICE WOULD BREAK A CLAIM THIS FILE ALREADY MAKES ──────────────
+ *
+ * ⚠️ **`tests/budget.test.ts` names this file cold with a stated reason**: *"it allocates one
+ * single-use audio source per voice because the platform has no other way to play a buffer."* A
+ * `StereoPannerNode` per voice would make that sentence false and double the allocation on the one
+ * path `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md` could not otherwise see. These
+ * are built with the context and never replaced.
+ *
+ * ⚠️ **ODD, so there is a bucket exactly at centre.** An even count straddles it, which would give
+ * every unplaced cue — the chime, a menu, anything with no position — a small permanent offset to
+ * one side.
+ *
+ * ⚠️ **Nine is a resolution argument and not a memory one.** A `StereoPannerNode` costs nothing
+ * worth counting; what nine buys is a step of 0.125 of the limit between neighbours, which is well
+ * under what a listener resolves for a transient.
+ */
+export const PAN_BUCKETS = 9;
+
+/**
+ * Where a cue sits in the field, from the `across` coordinate of the thing that made it.
+ *
+ * ⚠️ **THE SINGLE DESCRIPTION, AND THE CALL SITES DELIBERATELY DO NOT DO THIS ARITHMETIC.** Seventeen
+ * places call `onCue` (`src/app/frame.ts`, `src/app/boss.ts`); each has a world coordinate to hand
+ * and none of them should own the conversion, or the day the lane changes width sixteen of them are
+ * right and one is not. `ACROSS_SPAN` is imported for the same reason.
+ *
+ * ⚠️ **The lane runs 0 to `ACROSS_SPAN` and the middle is the middle.** Clamped, because a body may
+ * be culled slightly outside the lane (`docs/decisions/0048-a-threat-may-arrive-from-the-side.md`)
+ * and a shot that leaves the field must not pan past the limit on its way out.
+ *
+ * ⚠️ **`undefined` is the centre and it is not a fallback.** The chime answers a setting, not a place
+ * (`src/app/mount.ts`), and a menu has no world at all — those are genuinely centred rather than
+ * unknown.
+ */
+export function panFor(across: number | undefined): number {
+  if (across === undefined) return 0;
+  const half = ACROSS_SPAN / 2;
+  const off = (across - half) / half;
+  const clamped = off < -1 ? -1 : off > 1 ? 1 : off;
+  return clamped * CUE_PAN_LIMIT;
+}
+
+/** Which of the fixed panners a pan lands on. */
+export function panBucket(pan: number): number {
+  const middle = (PAN_BUCKETS - 1) / 2;
+  const at = Math.round(middle + (pan / CUE_PAN_LIMIT) * middle);
+  return at < 0 ? 0 : at > PAN_BUCKETS - 1 ? PAN_BUCKETS - 1 : at;
+}
+
 export function variantAt(count: number, step: number): number {
   if (count <= 1) return 0;
   const sixteenth = Math.floor(((step % STEPS_PER_BEAT) + STEPS_PER_BEAT) % STEPS_PER_BEAT / FIRE_GRID);
@@ -549,15 +616,27 @@ export function makeSpeaker(out: AudioOut): Speaker {
   */
   // @setup: one array for the speaker's lifetime, cleared in place at every grid step.
   const waiting = new Uint8Array(CUE_KINDS.length);
+  /*
+    ⚠️ **WHERE A WAITING CUE CAME FROM, because the flag above cannot carry it** — 0127. A gridded
+    cue sounds up to a sixteenth after it was asked for, and by then the body that made it has moved
+    or been released; a pan read at flush time would place the explosion wherever the pool happens to
+    be pointing. Recorded at the moment of the ask, like the accent is.
+
+    ⚠️ **The FIRST of a collapsed pair wins.** Two kills inside one sixteenth are one sounding — the
+    rule `hold` already states — and the one that has *"paid for its place in the bar"* is the one
+    that arrived first, so this is written only on the 0 → 1 transition.
+  */
+  // @setup: one array for the speaker's lifetime, written in place beside `waiting`.
+  const waitingPan = new Float32Array(CUE_KINDS.length);
 
   /** Sound `index` now, if the hold and the cap allow it. The last gate before the browser. */
-  const emit = (index: number): void => {
+  const emit = (index: number, pan: number): void => {
     if (clock - (lastAt[index] ?? 0) < CUES[CUE_KINDS[index]!]!.hold) return;
     if (voices >= MAX_VOICES) return;
     if (!out.ready()) return;
     lastAt[index] = clock;
     voices++;
-    out.sound(index, variantAt(variantsOf[index] ?? 1, beat));
+    out.sound(index, variantAt(variantsOf[index] ?? 1, beat), pan);
     /*
       ⚠️ **AFTER the cue is known to have sounded, never when it was asked for** — 0104. A cue the
       hold or the cap refused is a cue the player never hears, and ducking the music for it would be
@@ -583,12 +662,13 @@ export function makeSpeaker(out: AudioOut): Speaker {
       for (let i = 0; i < waiting.length; i++) {
         if (waiting[i] === 0) continue;
         waiting[i] = 0;
-        emit(i);
+        emit(i, waitingPan[i] ?? 0);
       }
     },
-    play(kind: CueKind): void {
+    play(kind: CueKind, across?: number): void {
       if (!on) return;
       const index = indexOf[kind];
+      const pan = panFor(across);
       /*
         ⚠️ **`voices` counts what SOUNDED, never what was asked for**, and that is the load-bearing
         part rather than the order of the two checks below. A cap that counted drops would let four
@@ -612,10 +692,12 @@ export function makeSpeaker(out: AudioOut): Speaker {
         and one sixteenth later is where the next slot is.
       */
       if (CUES[kind].onGrid === true) {
+        // The first of a collapsed pair keeps its place — the note on `waitingPan` has why.
+        if (waiting[index] === 0) waitingPan[index] = pan;
         waiting[index] = 1;
         return;
       }
-      emit(index);
+      emit(index, pan);
     },
     setOn(next: boolean): void {
       on = next;
@@ -805,6 +887,13 @@ export function makeAudioOut(): WebAudioOut {
   let master: GainNode | null = null;
   let buffers: AudioBuffer[][] = [];
   let music: MusicOut | null = null;
+  /*
+    ⚠️ **THE FIELD, AS A FIXED SET OF PLACES RATHER THAN A NODE PER SOUND** — 0127. `PAN_BUCKETS`
+    panners are wired into the master when the context is built and never touched again, so a cue
+    still costs exactly one allocation — the source node the platform gives no way around, which is
+    the reason `tests/budget.test.ts` names this file cold.
+  */
+  let places: StereoPannerNode[] = [];
 
   return {
     ready(): boolean {
@@ -830,6 +919,18 @@ export function makeAudioOut(): WebAudioOut {
           the samples are cheap enough that the press it rides on cannot feel it: twelve cues, about
           four seconds of mono at 22kHz.
         */
+        /*
+          The places a cue may sound from, evenly across the field and built once — 0127. The
+          middle bucket is exactly centre, which is where everything with no position goes.
+        */
+        // @setup: nine panners at context creation, read by the audio thread thereafter.
+        places = [];
+        for (let i = 0; i < PAN_BUCKETS; i++) {
+          const place = ctx.createStereoPanner();
+          place.pan.value = ((i / (PAN_BUCKETS - 1)) * 2 - 1) * CUE_PAN_LIMIT;
+          place.connect(master);
+          places.push(place);
+        }
         const samples = prewarmed?.cues ?? bakeCues(SAMPLE_RATE);
         buffers = samples.map((variants) =>
           variants.map((data) => {
@@ -851,12 +952,13 @@ export function makeAudioOut(): WebAudioOut {
       // Every time, not only on the first: a backgrounded tab suspends the context behind us.
       if (ctx.state === 'suspended') void ctx.resume();
     },
-    sound(index: number, velocity: number): void {
+    sound(index: number, velocity: number, pan: number): void {
       const variants = buffers[index];
       // The speaker takes the modulo, so an out-of-range variant is a bug rather than a state — but
       // a missing buffer is silence and never a throw, on the same terms as an absent context.
       const buffer = variants?.[velocity] ?? variants?.[0];
-      if (ctx === null || master === null || buffer === undefined) return;
+      const place = places[panBucket(pan)];
+      if (ctx === null || master === null || buffer === undefined || place === undefined) return;
       /*
         ⚠️ **THE ONE UNAVOIDABLE ALLOCATION, and the reason this file is on the cold list with its
         reason written out.** A `BufferSourceNode` is single-use by specification — `start()` may be
@@ -865,7 +967,9 @@ export function makeAudioOut(): WebAudioOut {
       */
       const source = ctx.createBufferSource();
       source.buffer = buffer;
-      source.connect(master);
+      // Into its PLACE rather than straight at the master — 0127. The panner is already wired to the
+      // master, so the bus and every gain on it are unchanged.
+      source.connect(place);
       source.start();
     },
     duck(amount: number): void {
@@ -882,6 +986,7 @@ export function makeAudioOut(): WebAudioOut {
       master = null;
       music = null;
       buffers = [];
+      places = [];
     },
   };
 }

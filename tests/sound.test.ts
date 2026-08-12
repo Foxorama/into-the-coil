@@ -7,6 +7,7 @@ import { resolve } from 'node:path';
 import {
   CUES,
   CUE_KINDS,
+  CUE_PAN_LIMIT,
   MAX_CUE_SECONDS,
   MUSIC_ROOT,
   SCALE,
@@ -20,10 +21,14 @@ import { LEVEL_KINDS } from '../src/content/levels.ts';
 import { BEAT_SECONDS } from '../src/content/music.ts';
 import { DUCK_DOWN_SECONDS, DUCK_HOLD_SECONDS, DUCK_UP_SECONDS } from '../src/app/music.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
+import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import {
   MAX_CUE_SAMPLES,
   MAX_VOICES,
+  PAN_BUCKETS,
   SAMPLE_RATE,
+  panBucket,
+  panFor,
   bakeCues,
   cueSeconds,
   makeSpeaker,
@@ -94,21 +99,31 @@ function stripComments(src: string): string {
 }
 
 /** An `AudioOut` that records rather than sounds, which is the whole reason the speaker is separate. */
-function recorder(ready = true): { out: AudioOut; heard: number[]; struck: number[]; ducked: number[] } {
+function recorder(ready = true): {
+  out: AudioOut;
+  heard: number[];
+  struck: number[];
+  ducked: number[];
+  placed: number[];
+} {
   const heard: number[] = [];
   /** Which WEIGHT each sounding was struck at, in the same order — 0104. */
   const struck: number[] = [];
   /** Every duck the speaker asked the music for, in order — 0104. */
   const ducked: number[] = [];
+  /** Where each sounding was placed in the field, in the same order — 0127. */
+  const placed: number[] = [];
   return {
     heard,
     struck,
     ducked,
+    placed,
     out: {
       ready: () => ready,
-      sound: (index: number, velocity: number) => {
+      sound: (index: number, velocity: number, pan: number) => {
         heard.push(index);
         struck.push(velocity);
+        placed.push(pan);
       },
       duck: (amount: number) => {
         ducked.push(amount);
@@ -1669,5 +1684,134 @@ describe('0116 — the instrument is the game, and it is not a second copy of it
       expect(targetGain('approach', 'boss', layer, 0), `${layer} sounds with the boss at arm's length`).toBe(0);
       expect(targetGain('approach', 'boss', layer, 1), `${layer} is silent with the boss on top of you`).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('0127 — a cue has a place', () => {
+  /*
+    ── THERE IS NO *A PLACED CUE MUST BE LIGHT AT THE BOTTOM* GUARD, AND THAT IS A DELETION ────────
+
+    ⚠️ **One was written, could not be shown to fail, and was removed rather than left green.**
+    `docs/decisions/0118-the-mix-has-a-width.md` centres any MUSIC layer carrying 40% of its
+    A-weighted energy below 130 Hz, and the obvious move was the same bound over the cue table.
+    Measured, every cue is between **0.1% (`threat`) and 16.6% (`missile`)** — nowhere near it.
+
+    ⚠️ **AND IT CANNOT BE PUSHED THERE.** Adding a lowpassed noise layer to `kill` at gains up to ×9
+    moved its share from 6.8% to 6.0% — *down*, because a filter's skirt puts more into the mid than
+    it does into the sub, and A-weighting discounts 25–130 Hz by about thirty decibels. Re-voicing
+    the body into the floor crosses the bound and reddens
+    `docs/decisions/0089-a-cue-has-a-body.md`'s SHED guard first, every time.
+
+    ⚠️ **So the bound was unreachable and the guard would have been green for ever** —
+    `docs/decisions/0005-a-guard-must-be-seen-to-fail.md` says that is not a guard, and 0044's
+    instruction is to delete it, fix it, or leave it red. What actually stands over an explosion's
+    spectrum is 0089's two guards, which are proven and which every break here trips first.
+  */
+  it('nothing is hard panned, because a player may have one earbud in', () => {
+    // The same argument the music makes at 0.65, at a narrower number: a cue is a transient, and a
+    // hard-placed transient is heard as a click at one ear rather than as an event over there.
+    expect(CUE_PAN_LIMIT).toBeGreaterThan(0);
+    expect(CUE_PAN_LIMIT).toBeLessThan(1);
+  });
+
+  it('THE LANE IS THE FIELD: the edges reach the limit and the middle is the middle', () => {
+    expect(panFor(ACROSS_SPAN / 2), 'the middle of the lane is not centred').toBe(0);
+    expect(panFor(0), 'the near edge does not reach the limit').toBeCloseTo(-CUE_PAN_LIMIT, 10);
+    expect(panFor(ACROSS_SPAN), 'the far edge does not reach the limit').toBeCloseTo(CUE_PAN_LIMIT, 10);
+    /*
+      ⚠️ **Clamped, because a body may be culled slightly outside the lane** —
+      `docs/decisions/0048-a-threat-may-arrive-from-the-side.md` lets a threat enter from the across
+      edges, so a shot on its way out must not pan past the limit.
+    */
+    expect(panFor(-40), 'a body outside the lane pans past the limit').toBeCloseTo(-CUE_PAN_LIMIT, 10);
+    expect(panFor(ACROSS_SPAN + 40), 'a body outside the lane pans past the limit').toBeCloseTo(CUE_PAN_LIMIT, 10);
+  });
+
+  it('a cue with nowhere to be is CENTRED, which is an answer rather than a fallback', () => {
+    // The chime answers a setting and a menu has no world — `src/app/mount.ts`. Those are genuinely
+    // in the middle, and the same path carries `hit`, which is inferred from a count.
+    expect(panFor(undefined)).toBe(0);
+  });
+
+  it('the places are a fixed pool with an exact centre, and nothing lands outside it', () => {
+    /*
+      ⚠️ **ODD, so an unplaced cue has a bucket of its own.** An even count straddles the middle,
+      which would give every centred cue a small permanent offset to one side.
+    */
+    expect(PAN_BUCKETS % 2, 'an even number of places has no exact centre').toBe(1);
+    expect(panBucket(0), 'centre is not the middle bucket').toBe((PAN_BUCKETS - 1) / 2);
+    expect(panBucket(-CUE_PAN_LIMIT)).toBe(0);
+    expect(panBucket(CUE_PAN_LIMIT)).toBe(PAN_BUCKETS - 1);
+    // Past the limit is still inside the pool: `sound` indexes this array directly.
+    for (const pan of [-4, -1, 1, 4]) {
+      expect(panBucket(pan), `a pan of ${pan} leaves the pool`).toBeGreaterThanOrEqual(0);
+      expect(panBucket(pan), `a pan of ${pan} leaves the pool`).toBeLessThan(PAN_BUCKETS);
+    }
+  });
+
+  it('a cue sounds where it was ASKED FROM, and the speaker owns the arithmetic', () => {
+    const { out, placed } = recorder();
+    const speaker = makeSpeaker(out);
+    speaker.step(0);
+    // `hit` and `bomb` are the two cues 0104 deliberately keeps OFF the grid, so they sound on the
+    // step they are asked for and this measures the placement rather than the wait.
+    expect(CUES.hit.onGrid ?? false, 'hit went on the grid and this test now measures the wait').toBe(false);
+    expect(CUES.bomb.onGrid ?? false, 'bomb went on the grid and this test now measures the wait').toBe(false);
+    speaker.play('hit', 0);
+    speaker.play('bomb', ACROSS_SPAN);
+    expect(placed[0], 'a cue at the near edge did not go left').toBeCloseTo(-CUE_PAN_LIMIT, 10);
+    expect(placed[1], 'a cue at the far edge did not go right').toBeCloseTo(CUE_PAN_LIMIT, 10);
+  });
+
+  it('A GRIDDED CUE KEEPS THE PLACE IT WAS ASKED FROM, not the one a sixteenth later', () => {
+    /*
+      ⚠️ **THE ONE THAT IS NOT OBVIOUS, and it is a consequence of 0104 rather than of 0127.** A
+      gridded cue waits up to a sixteenth before it sounds, and by then the body that caused it has
+      moved or been released back to its pool. A pan read at flush time would place the explosion
+      wherever the pool happens to be pointing — so the position is recorded at the moment of the ask,
+      exactly as the accent already is.
+    */
+    const { out, placed } = recorder();
+    const speaker = makeSpeaker(out);
+    // A step that is NOT a grid step, so the cue has to wait.
+    speaker.step(1);
+    speaker.play('kill', 0);
+    expect(placed, 'a gridded cue sounded on the step it was asked for').toEqual([]);
+    // Walk to the next sixteenth, which is where it flushes.
+    for (let i = 2; i <= FIRE_GRID; i++) speaker.step(i);
+    expect(placed.length, 'the gridded cue never sounded').toBe(1);
+    expect(placed[0], 'a gridded cue was placed where the pool ended up rather than where it happened').toBeCloseTo(
+      -CUE_PAN_LIMIT,
+      10,
+    );
+  });
+
+  it('EVERY CUE THE GAME FIRES SAYS WHERE IT HAPPENED, and the one that cannot is named', () => {
+    /*
+      ⚠️ **A SOURCE SCAN, because the failure is a call site that forgets** — and a forgotten place is
+      silent: the cue still sounds, dead centre, and nothing anywhere goes red. That is the shape
+      `docs/decisions/0070-a-style-is-a-setting-and-the-first-one.md` chose a graph check for, and the
+      nearest thing available here is the call itself.
+
+      ⚠️ **`hit` IS THE NAMED EXCEPTION AND IT IS A PROPERTY OF THE GAME.** It is inferred from a
+      count — bullets in flight before, minus after, minus the ones that killed — so there is no body
+      to ask. Placing it would mean logging every arrival and not only every death, which is a pool
+      the whole game would pay for so that one cue could be placed. `src/app/frame.ts` says so where
+      it happens.
+    */
+    const CENTRED: readonly string[] = ['hit'];
+    const offenders: string[] = [];
+    for (const file of ['src/app/frame.ts', 'src/app/boss.ts']) {
+      const source = readFileSync(resolve(root, file), 'utf8');
+      for (const match of source.matchAll(/onCue\(\s*'([a-zA-Z]+)'\s*([,)])/g)) {
+        const kind = match[1]!;
+        if (match[2] === ')' && !CENTRED.includes(kind)) offenders.push(`${file}: ${kind}`);
+      }
+    }
+    expect(
+      offenders,
+      `these fire a cue without saying where it happened: ${offenders.join(', ')}. Pass the across the ` +
+        'call site already has, or add it to CENTRED here with the reason it has no place.',
+    ).toEqual([]);
   });
 });

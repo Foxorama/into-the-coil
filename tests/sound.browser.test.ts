@@ -48,6 +48,16 @@ afterAll(async () => {
 interface AudioTally {
   buffers: number;
   voices: number;
+  /**
+   * What each cue's source node was connected INTO, by node type — 0127.
+   *
+   * ⚠️ **THE ONLY PLACE THE FIELD CAN BE CHECKED AT ALL, and `npm run prove` is what said so.** Every
+   * other guard for 0127 drives `makeSpeaker` through a recorder double and measures the pan it
+   * computed — so deleting the panner from the real graph and connecting straight to the master left
+   * the whole suite **STILL GREEN**. The arithmetic was never the risky half; the wiring is, and it
+   * exists only in a browser.
+   */
+  into: string[];
 }
 
 declare global {
@@ -68,7 +78,7 @@ async function open(): Promise<Page> {
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   const page = await context.newPage();
   await page.addInitScript(() => {
-    const tally = { buffers: 0, voices: 0 };
+    const tally = { buffers: 0, voices: 0, into: [] as string[] };
     window.__itcAudio = tally;
     const proto = window.AudioContext.prototype;
     const buffer = proto.createBuffer;
@@ -77,9 +87,31 @@ async function open(): Promise<Page> {
       tally.buffers++;
       return buffer.apply(this, args);
     };
+    /*
+      ⚠️ **The SOURCE's own `connect` is wrapped, not the context's** — 0127. The node type is enough
+      to say where a cue went: a `StereoPannerNode` is its place, a `GainNode` is the master.
+
+      ⚠️ **AND THE MUSIC MAKES BUFFER SOURCES TOO, WHICH THE FIRST DRAFT FORGOT.** Twenty-three of
+      them at every start and at every re-phase, each into its own layer gain — so this reported 23
+      cues wired straight to the master on a completely correct build. **They are told apart by
+      LENGTH, which is exact rather than a heuristic**: a cue is capped at `MAX_CUE_SECONDS` (2 s) and
+      the shortest music loop is two bars, 3.2 s. The gap is not close.
+    */
+    const CUE_CEILING = 2.5;
     proto.createBufferSource = function (): ReturnType<typeof source> {
       tally.voices++;
-      return source.apply(this);
+      const node = source.apply(this);
+      const connect = node.connect.bind(node) as typeof node.connect;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      node.connect = function (destination: any, ...rest: unknown[]): any {
+        const seconds = node.buffer?.duration ?? 0;
+        if (seconds > 0 && seconds <= CUE_CEILING && destination?.constructor?.name !== undefined) {
+          tally.into.push(String(destination.constructor.name));
+        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (connect as any)(destination, ...rest);
+      } as typeof node.connect;
+      return node;
     };
   });
   await page.goto(dist);
@@ -88,7 +120,7 @@ async function open(): Promise<Page> {
 }
 
 const tally = (page: Page): Promise<AudioTally> =>
-  page.evaluate(() => window.__itcAudio ?? { buffers: -1, voices: -1 });
+  page.evaluate(() => window.__itcAudio ?? { buffers: -1, voices: -1, into: [] });
 
 const soundOption = (kind: (typeof SOUND_KINDS)[number]): string =>
   `[${SETTING_ATTR}="sound"] .${prefixFor('title')}option >> nth=${SOUND_KINDS.indexOf(kind)}`;
@@ -140,6 +172,33 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
       small fraction of that — this is a ceiling, not a target.
     */
     expect(after.voices, 'more voices than the cap and the holds could possibly allow').toBeLessThan(240);
+    await page.context().close();
+  });
+
+  it('0127 — EVERY CUE GOES INTO A PLACE, and this is the only guard that can see it', async () => {
+    /*
+      ⚠️ **THE PAN IS ARITHMETIC AND THE WIRING IS NOT.** `tests/sound.test.ts` checks the pan a cue
+      is given five different ways, all of them through a recorder double — and `npm run prove`
+      showed what that misses: replacing `source.connect(place)` with `source.connect(master)` left
+      **every one of those guards green**. A cue wired to the master still sounds, at the right
+      level, on the right beat, with the right accent. It is simply in the middle for ever, and
+      nothing outside a browser can tell.
+
+      ⚠️ **`docs/decisions/0027-measure-the-picture-not-the-model.md` for the channel with nothing to
+      look at**, and the same shape as counting ink on the canvas: the only honest end of the chain
+      is the platform call.
+    */
+    const page = await open();
+    await page.click(startButton);
+    await page.waitForTimeout(1200);
+    const after = await tally(page);
+    expect(after.into.length, 'no cue sounded at all, so this guard measured nothing').toBeGreaterThan(0);
+    const straight = after.into.filter((node) => node !== 'StereoPannerNode');
+    expect(
+      straight,
+      `${straight.length} of ${after.into.length} cue sources bypassed the field and went into ` +
+        `${[...new Set(straight)].join(', ')} — a cue wired to the master is centred for ever`,
+    ).toEqual([]);
     await page.context().close();
   });
 

@@ -413,6 +413,46 @@ export interface CueRow {
 export const MAX_CUE_SECONDS = 2;
 
 /**
+ * The widest a cue may sit in the stereo field, at the edge of the lane.
+ *
+ * ── THE MUSIC GOT A WIDTH AND THE EFFECTS KEPT NONE, FOR FOUR MIX PASSES ────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0127-a-cue-has-a-place.md`.** 0118 gave sixteen of the twenty-three music
+ * layers a position and every cue went on running `source.connect(master)` — mono, dead centre, in
+ * the middle of a bed that now had a field around it. *"The game sound effects don't blend in with
+ * the music at all"* has been reported four times, and for the last of those the two channels were
+ * in **different spaces by construction**.
+ *
+ * ⚠️ **NARROWER THAN THE MUSIC'S 0.65, AND FOR THE OPPOSITE REASON.** A layer is continuous, so a
+ * wide placement is a room. A cue is a transient that lands ten times a second at max fire, and a
+ * hard-placed transient is heard as a click at one ear rather than as an event over there —
+ * `docs/decisions/0089-a-cue-has-a-body.md`'s subject is precisely a sound that reads as an artefact
+ * instead of a thing.
+ *
+ * ⚠️ **AND IT IS A LIMIT AT THE EDGE OF THE LANE, NOT A PAN.** A cue's place is where the thing
+ * happened — `src/app/sound.ts`'s `panFor` maps the `across` coordinate the caller already has — so
+ * this scales an existing measurement rather than authoring twenty-eight of them.
+ */
+export const CUE_PAN_LIMIT = 0.5;
+
+/*
+  ── AND EVERY CUE IS PLACED, WITH NO EXEMPTION TABLE, WHICH IS A MEASUREMENT ──────────────────────
+
+  ⚠️ **`docs/decisions/0118-the-mix-has-a-width.md` centres any MUSIC layer carrying 40% of its
+  A-weighted energy below 130 Hz** — a panned low frequency spends headroom on one side and arrives
+  in a room as the same non-directional thump. The same question was put to this table, and the
+  answer is that it does not arise: measured across all fourteen, the heaviest is `missile` at
+  **16.6%** and the lightest is `threat` at **0.1%**.
+
+  ⚠️ **SO THERE IS NO `width` FIELD AND NO LIST OF WHICH CUES MAY LEAVE THE CENTRE.** A cue is a
+  transient with a filtered body; the bottom of it is a boom that decays in a tenth of a second, and
+  A-weighting discounts that band by about thirty decibels. What holds an explosion's spectrum is
+  `docs/decisions/0089-a-cue-has-a-body.md`'s two guards, which are proven and which any re-voice
+  heavy enough to matter here reddens first. 0127 records the guard that was written for this and
+  then deleted for being unfailable.
+*/
+
+/**
  * ⚠️ **EVERY GAIN IS WELL UNDER 1 AND THAT IS THE POINT.** Up to `MAX_VOICES` cues can sound on one
  * step (`src/app/sound.ts`), and digital audio clips hard rather than compressing — so the row's gain
  * is its share of the mix and not its loudness. The master gain is the other half.
