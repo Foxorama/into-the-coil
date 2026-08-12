@@ -163,6 +163,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the build starts 7.3s sooner; an ARRIVAL is what a listener hears** | [0125](decisions/0125-the-build-starts-sooner.md) |
 | **the sound is DRIVEN rather than rendered: `npm run dash`, the game's own mixer on a slider** | [0126](decisions/0126-the-dashboard-is-the-instrument.md) |
 | **a cue sounds from where it happened; the low end turned out not to need centring** | [0127](decisions/0127-a-cue-has-a-place.md) |
+| **a place plays its own material and shares the rest — level two is the first, and the GAME does not play it yet** | [0128](decisions/0128-a-place-plays-its-own-material.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -633,7 +634,7 @@ does not reach it.
 | 0 | **the rig renders a LEVEL** — rungs, ramps, theme, and where every boundary lands in the bar | ✅ [0116](decisions/0116-the-rig-plays-the-level.md), and **played live** ✅ [0126](decisions/0126-the-dashboard-is-the-instrument.md) |
 | 1 | **bar-line quantisation**, per-note duration, per-layer panning | quantisation ✅ [0117](decisions/0117-a-section-change-lands-on-the-beat.md), panning ✅ [0118](decisions/0118-the-mix-has-a-width.md); **per-note duration is owed** |
 | 2 | **the transport** — sections on bar lines, one-shot fills at seams, variant slots, selection from game state | not started. This is where *moves and breathes* lives |
-| 3 | **per-theme composition**, baked at the level boundary | not started, but **costed** — [`what-seven-compositions-would-cost`](../reports/what-seven-compositions-would-cost-2026-08-12.md). 0113's RULE stands; its storage model does not |
+| 3 | **per-theme composition**, baked at the level boundary | **the storage model and the first place have landed** — [0128](decisions/0128-a-place-plays-its-own-material.md). **The BOUNDARY BAKE has not**: nothing in `src/app/mount.ts` calls `setLoops`, so a real run still plays the base composition |
 
 ⚠️ **START HERE ON THE MUSIC, AND START BY OPENING THE DASHBOARD** —
 [0126](decisions/0126-the-dashboard-is-the-instrument.md). `npm run dash` serves `/rig/`: the game's
@@ -658,6 +659,18 @@ dashboard is whether a kill at the edge reads as *over there* or as the mix wobb
 ⚠️ **`scripts/hear.mjs --play` IS STILL MONO and it is the mode for judging cues against music.**
 Only `--level` writes stereo. The WAV rig now shows a narrower picture than the game; the dashboard
 supersedes it for that question.
+
+⚠️ **AND LEVEL TWO HAS MUSIC OF ITS OWN NOW — IN THE DASHBOARD AND NOT IN THE GAME** —
+[0128](decisions/0128-a-place-plays-its-own-material.md). Ember Nebula re-voices `engine` (three
+voices where the base has five, half-time) and `call` (a tune that falls where the base's climbs).
+**Nothing in `src/app/mount.ts` calls `setLoops`**, so a real run is still one composition; the
+missing piece is baking the incoming place off the frame at a level boundary, costed at 0.245 ms a
+frame. **The material is judgeable now and the plumbing is not, which is the right way round.**
+
+⚠️ **AND THE FINDING THE NEXT FIVE PLACES NEED: a theme cannot change its HARMONY without re-voicing
+every pitched layer.** Ember Nebula shares `chords`, so its tune had to stay in A natural minor. Two
+sizes of place, and they cost differently — two or three layers over a shared progression, or eight
+plus for a place with its own. 0128 has the argument.
 
 ⚠️ **NO DEAD LAYER AND NO DEAD CUE WAS FOUND**, which was the first hypothesis and is worth not
 re-testing. All fourteen cues have a call site; `bass` and `beat` are title-only by 0095's design.

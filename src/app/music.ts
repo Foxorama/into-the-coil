@@ -26,7 +26,6 @@ import {
   PHRASE_SECONDS,
   BAR_SECONDS,
   secondsOfLayer,
-  MUSIC,
   MUSIC_DRIVE,
   MUSIC_GAIN,
   MUSIC_LADDER,
@@ -48,7 +47,7 @@ import {
   type MusicVoice,
 } from '../content/music.ts';
 import { sampleLayerInto, saturate } from './sound.ts';
-import { mixOf, type ThemeKind } from '../content/themes.ts';
+import { mixOf, voicesOf, type ThemeKind } from '../content/themes.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import { STEPS_PER_SECOND } from '../state/screens.ts';
 
@@ -125,9 +124,14 @@ function renderNote(voice: MusicVoice, value: number, step: number, at: number, 
  * an exact number of samples. What identical lengths also did was forbid a chord progression, and a
  * progression is what a power ballad IS.
  */
-export function bakeLoops(rate: number): Record<MusicLayer, Float32Array> {
+/*
+  ⚠️ **`theme` IS OPTIONAL AND MEANS *WHICH PLACE'S MATERIAL*** — 0128. Absent is the base
+  composition, which is the title screen and every fixture; a place that states no voices of its own
+  bakes byte-identical audio, and `tests/themes.test.ts` asserts that rather than assuming it.
+*/
+export function bakeLoops(rate: number, theme?: ThemeKind): Record<MusicLayer, Float32Array> {
   const out = {} as Record<MusicLayer, Float32Array>;
-  for (const layer of MUSIC_LAYERS) out[layer] = bakeLayer(layer, rate);
+  for (const layer of MUSIC_LAYERS) out[layer] = bakeLayer(layer, rate, theme);
   return out;
 }
 
@@ -146,8 +150,8 @@ export function bakeLoops(rate: number): Record<MusicLayer, Float32Array> {
  * rule, and *the same game sounds different depending on how fast you pressed* is what breaking it
  * would cost.
  */
-export function bakeLayer(layer: MusicLayer, rate: number): Float32Array {
-  const { buffer, notes } = layerNotes(layer, rate);
+export function bakeLayer(layer: MusicLayer, rate: number, theme?: ThemeKind): Float32Array {
+  const { buffer, notes } = layerNotes(layer, rate, theme);
   for (const note of notes) note();
   return buffer;
 }
@@ -170,12 +174,16 @@ export function bakeLayer(layer: MusicLayer, rate: number): Float32Array {
  * the order they are returned reproduces `bakeLayer` exactly, and `tests/sound.test.ts` holds that
  * the two paths agree sample for sample.
  */
-export function layerNotes(layer: MusicLayer, rate: number): { buffer: Float32Array; notes: (() => void)[] } {
+export function layerNotes(
+  layer: MusicLayer,
+  rate: number,
+  theme?: ThemeKind,
+): { buffer: Float32Array; notes: (() => void)[] } {
   const seconds = secondsOfLayer(layer);
   const buffer = new Float32Array(Math.round(seconds * rate));
   const rng = makeRng('music').stream(layer);
   const notes: (() => void)[] = [];
-  for (const voice of MUSIC[layer]) {
+  for (const voice of voicesOf(theme, layer)) {
     const step = BEAT_SECONDS / voice.perBeat;
     for (let i = 0; i < voice.steps.length; i++) {
       const value = voice.steps[i];
@@ -480,6 +488,25 @@ export interface MusicOut {
    * `docs/decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md` cannot survive.
    */
   gainOf(layer: MusicLayer): AudioParam;
+  /**
+   * Play a different set of loops, from the next phrase boundary.
+   *
+   * ── THE PRIMITIVE A PLACE'S OWN MATERIAL NEEDS, AND `swapTo` ALREADY DID THE HARD PART ──────────
+   *
+   * ⚠️ **`docs/decisions/0128-a-place-plays-its-own-material.md`.** A theme may replace the voices of
+   * the layers it changes, which means the buffers behind those layers change when the place does.
+   * Everything difficult about that — stopping the old set at exactly the instant the new one starts,
+   * so there is no gap and no doubling — is what 0094's re-phase already built.
+   *
+   * ⚠️ **AT A PHRASE AND NOT AT A BAR, which is a different choice from 0117's.** A rung change is a
+   * gain ramp and lands on the next downbeat; this replaces the material itself, and the shortest
+   * span over which every layer is simultaneously back at position zero is the PHRASE. Swapping
+   * anywhere else restarts a sixteen-bar chord progression in the middle of itself.
+   *
+   * ⚠️ **It re-anchors, exactly as a re-phase does**, so the bar grid moves with the music and
+   * `nextBarFrom` keeps answering about the piece that is actually playing.
+   */
+  setLoops(next: Record<MusicLayer, Float32Array>): void;
 }
 
 /**
@@ -921,6 +948,36 @@ export function makeMusicOut(
     },
     gainOf(layer: MusicLayer): AudioParam {
       return gains[layer].gain;
+    },
+    setLoops(next: Record<MusicLayer, Float32Array>): void {
+      /*
+        ⚠️ **The buffers are replaced first and the sources second**, because `swapTo` reads
+        `buffers[layer]` when it builds each source. Only the layers whose DATA actually changed cost
+        anything: a place that shares a layer hands back the identical `Float32Array`, and copying it
+        into a fresh `AudioBuffer` would spend the memory the sharing exists to save.
+      */
+      let moved = false;
+      for (const layer of MUSIC_LAYERS) {
+        const data = next[layer];
+        if (data === buffers[layer].getChannelData(0)) continue;
+        const buffer = ctx.createBuffer(1, data.length, rate);
+        buffer.getChannelData(0).set(data);
+        buffers[layer] = buffer;
+        moved = true;
+      }
+      if (!moved || !started) return;
+      /*
+        ⚠️ **The next PHRASE, on the loops' own clock.** `anchorAudio` is position zero of every
+        layer, so this is the next instant at which all of them are simultaneously back at the top —
+        the only place a sixteen-bar progression can be replaced without cutting one in half.
+      */
+      const since = ctx.currentTime - anchorAudio;
+      const ahead = Math.max(0, Math.ceil(since / PHRASE_SECONDS)) * PHRASE_SECONDS;
+      let when = anchorAudio + ahead;
+      while (when < ctx.currentTime + SCHEDULE_AHEAD) when += PHRASE_SECONDS;
+      swapTo(when);
+      // The sim's side of the anchor is re-learned on the next frame, exactly as a start does — 0094.
+      anchorSim = null;
     },
   };
 }

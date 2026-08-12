@@ -310,7 +310,14 @@ if (args.has('level')) {
   }
   const fightSeconds = Number(args.get('fight') ?? 45);
   const { bossAt, theme, toBoss, total: totalSeconds, marks } = levelTimeline(kind, fightSeconds);
-  const loops = bakeLoops(SAMPLE_RATE);
+  /*
+    ⚠️ **THE PLACE'S OWN MATERIAL, AND THIS MODE IS THE ONLY ONE THAT KNOWS THE PLACE** — 0128. Baking
+    without the theme would render Ember Nebula with level one's engine and level one's tune while the
+    printed header said otherwise, which is exactly the class of drift
+    `docs/decisions/0116-the-rig-plays-the-level.md` is named for — and the same omission `mixOf` had
+    before 0116 found it.
+  */
+  const loops = bakeLoops(SAMPLE_RATE, theme);
   const at = (layer, i) => loops[layer][i % loops[layer].length];
 
   /*

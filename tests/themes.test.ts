@@ -1,8 +1,28 @@
 import { describe, expect, it } from 'vitest';
 
-import { MIX_CEILING, MIX_FLOOR, THEMES, THEME_KINDS, mixOf, type ThemeKind } from '../src/content/themes.ts';
+import {
+  MIX_CEILING,
+  MIX_FLOOR,
+  THEMES,
+  THEME_KINDS,
+  mixOf,
+  revoicedBy,
+  voicesOf,
+  type ThemeKind,
+} from '../src/content/themes.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
-import { MUSIC_LADDER, MUSIC_LAYERS, MUSIC_LEVELS, MUSIC_GAIN, MUSIC_DRIVE } from '../src/content/music.ts';
+import {
+  BEAT_SECONDS,
+  MUSIC,
+  MUSIC_LADDER,
+  MUSIC_LAYERS,
+  MUSIC_LEVELS,
+  MUSIC_GAIN,
+  MUSIC_DRIVE,
+  secondsOfLayer,
+} from '../src/content/music.ts';
+import { SCALE } from '../src/content/cues.ts';
+import { bakeLayer } from '../src/app/music.ts';
 import { PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SAMPLE_RATE, saturate } from '../src/app/sound.ts';
 import { loopsAt } from './bakes.ts';
@@ -194,6 +214,128 @@ describe('a theme mixes the music and cannot break it', () => {
         expect(value, `${theme}/${layer} resolved outside the band the clamp promises`).toBeLessThanOrEqual(
           MIX_CEILING,
         );
+      }
+    }
+  });
+});
+
+describe('0128 — a place plays its own material, and shares everything it does not', () => {
+  /** Baking layers is real DSP, on the terms the shed test states. */
+  const DSP_MS = 60_000;
+
+  it('A PLACE THAT STATES NOTHING IS THE BASE COMPOSITION, and `voicesOf` hands back the same array', () => {
+    /*
+      ⚠️ **THE CLAIM THE WHOLE COST MODEL RESTS ON.** 0113's storage model was priced at 672 MB
+      resident and ruled out; what makes seven places affordable is that a shared layer is the SAME
+      array rather than an identical-looking one — `setLoops` compares by identity and does not even
+      build an `AudioBuffer` for a layer that did not move. Identity, not deep equality, is therefore
+      the thing to assert.
+    */
+    for (const theme of THEME_KINDS) {
+      const own = revoicedBy(theme);
+      for (const layer of MUSIC_LAYERS) {
+        if (own.includes(layer)) continue;
+        expect(voicesOf(theme, layer), `${theme} rebuilt ${layer} instead of sharing it`).toBe(MUSIC[layer]);
+      }
+    }
+    for (const layer of MUSIC_LAYERS) {
+      expect(voicesOf(undefined, layer), `no place at all should be the base composition`).toBe(MUSIC[layer]);
+    }
+  });
+
+  it('AT LEAST ONE PLACE HAS MUSIC OF ITS OWN, or this whole mechanism is measuring nothing', () => {
+    // 0113's floor, as a test rather than a sentence: a theme that shares every array has no music of
+    // its own. If this ever goes red the seven levels are back to being one composition.
+    const speaking = THEME_KINDS.filter((theme) => revoicedBy(theme).length > 0);
+    expect(speaking.length, 'every place shares every layer — no theme states any material').toBeGreaterThan(0);
+  });
+
+  it(
+    'AND WHAT IT STATES ACTUALLY SOUNDS DIFFERENT, while everything else is untouched',
+    () => {
+      /*
+        ⚠️ **Driven off the BAKED audio rather than off the tables**, because the tables can differ in
+        ways that produce identical samples — a re-ordered voice array, a re-typed accent of 1. What a
+        place has to be is *audibly* another place, and the only honest test of that is the buffer.
+      */
+      for (const theme of THEME_KINDS) {
+        const own = revoicedBy(theme);
+        for (const layer of own) {
+          const base = bakeLayer(layer, SAMPLE_RATE);
+          const here = bakeLayer(layer, SAMPLE_RATE, theme);
+          expect(here.length, `${theme}/${layer} changed the LENGTH of a layer, which breaks the phrase`).toBe(
+            base.length,
+          );
+          let moved = 0;
+          for (let i = 0; i < base.length; i++) if (Math.abs(base[i]! - here[i]!) > 1e-6) moved++;
+          expect(
+            moved,
+            `${theme} claims to re-voice ${layer} and bakes the identical audio — the override says nothing`,
+          ).toBeGreaterThan(0);
+        }
+        // And a layer it did not claim is byte-identical, which is what sharing MEANS.
+        const untouched = MUSIC_LAYERS.filter((l) => !own.includes(l))[0]!;
+        expect(bakeLayer(untouched, SAMPLE_RATE, theme)).toEqual(bakeLayer(untouched, SAMPLE_RATE));
+      }
+    },
+    DSP_MS,
+  );
+
+  it('0095 STILL HOLDS OVER AN OVERRIDE: every pattern spans EXACTLY its own layer', () => {
+    /*
+      ⚠️ **The rule a theme is most likely to break, because it is authoring patterns by hand.** A
+      pattern shorter than its layer is silence at the end of every loop; one longer has its tail
+      silently dropped. `tests/music.test.ts` holds this over the base composition and an override is
+      a second place the same mistake can be made.
+    */
+    for (const theme of THEME_KINDS) {
+      for (const layer of revoicedBy(theme)) {
+        for (const [i, voice] of voicesOf(theme, layer).entries()) {
+          const spans = voice.steps.length * (BEAT_SECONDS / voice.perBeat);
+          expect(
+            spans,
+            `${theme}/${layer} voice ${i} spans ${spans.toFixed(2)}s inside a ${secondsOfLayer(layer)}s layer — ` +
+              (spans > secondsOfLayer(layer) ? 'its tail is silently dropped' : 'the rest of the layer is silence'),
+          ).toBeCloseTo(secondsOfLayer(layer), 6);
+        }
+      }
+    }
+  });
+
+  it('A RE-VOICED TUNE STAYS IN THE KEY, because the progression under it is still shared', () => {
+    /*
+      ⚠️ **THE LIMIT THAT MAKES THIS FIRST PLACE SAFE, AND IT IS THE FINDING OF 0128.** A theme may
+      replace its melodies without replacing `chords`, and then the harmony under them is the base's.
+      Every note therefore has to be a tone of A natural minor — `SCALE` — or the place is simply
+      wrong over its own bed for three bars in four, which is
+      `docs/decisions/0095-the-level-has-its-own-music.md`'s argument for closing the title's bass.
+    */
+    for (const theme of THEME_KINDS) {
+      for (const layer of revoicedBy(theme)) {
+        for (const voice of voicesOf(theme, layer)) {
+          if (!voice.pitched) continue;
+          for (const step of voice.steps) {
+            if (step === null || step === undefined) continue;
+            const degree = ((step % 12) + 12) % 12;
+            expect(
+              SCALE.includes(degree),
+              `${theme}/${layer} plays ${step}, which is not a tone of the key the shared chords are in`,
+            ).toBe(true);
+          }
+        }
+      }
+    }
+  });
+
+  it('AND AN OVERRIDE MAY NOT SILENCE A LAYER THE LADDER OPENS', () => {
+    // An empty voice array is a layer the ladder still raises a gain on and which makes no sound —
+    // 0090's seam arriving through a side door, exactly as a mix multiplier of zero would be.
+    for (const theme of THEME_KINDS) {
+      for (const layer of revoicedBy(theme)) {
+        expect(
+          voicesOf(theme, layer).length,
+          `${theme} states an empty ${layer}; to remove a layer, close it in the ladder`,
+        ).toBeGreaterThan(0);
       }
     }
   });

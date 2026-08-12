@@ -28,11 +28,11 @@
 
 import { LEVELS, LEVEL_KINDS, type LevelKind } from '../src/content/levels.ts';
 import { MUSIC_LAYERS, type MusicLayer } from '../src/content/music.ts';
-import { THEMES } from '../src/content/themes.ts';
+import { THEMES, revoicedBy, type ThemeKind } from '../src/content/themes.ts';
 import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
-import { makeAudioOut, makeSpeaker } from '../src/app/sound.ts';
-import { auraNearness } from '../src/app/music.ts';
+import { SAMPLE_RATE, makeAudioOut, makeSpeaker, prewarmAudio, takePrewarmed } from '../src/app/sound.ts';
+import { auraNearness, bakeLayer } from '../src/app/music.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import {
@@ -77,6 +77,13 @@ const el = <T extends HTMLElement>(id: string): T => {
 
 const out = makeAudioOut();
 const speaker = makeSpeaker(out);
+/*
+  ⚠️ **The prewarm runs here for the same reason `src/app/mount.ts` runs it at boot** — 0102 — and for
+  one more: 0128's per-place bake shares the base composition rather than re-synthesising it, so
+  `takePrewarmed` is where the shared half comes from. Without it the first change of place would have
+  to bake twenty-three layers on the spot, which is two and a half seconds of frozen page.
+*/
+prewarmAudio();
 /** One stream, so two takes of the same settings kill the same things — 0021. */
 const bodies = makeRng('rig').stream('bodies');
 
@@ -198,6 +205,9 @@ el<HTMLButtonElement>('unlock').addEventListener('click', () => {
   // from it rather than from the scrub.
   startedAt = performance.now();
   steps = 0;
+  // The place the selector is already showing — 0128. Without this the first level you unlock on
+  // plays the base composition however its theme is voiced.
+  goToPlace(LEVELS[kind].theme);
   playButton.disabled = !unlocked;
   status.textContent = unlocked ? 'audio running' : 'the browser refused a context — no AudioContext on this page';
   el<HTMLButtonElement>('unlock').disabled = unlocked;
@@ -249,12 +259,58 @@ function togglePlay(): void {
 }
 playButton.addEventListener('click', togglePlay);
 
+/**
+ * The loops each place plays, baked once and kept.
+ *
+ * ⚠️ **ONLY THE RE-VOICED LAYERS ARE BAKED, WHICH IS THE WHOLE POINT OF 0128.** A place that states
+ * nothing hands back the base arrays unchanged, so `setLoops` sees identical data and does not even
+ * make a buffer. Ember Nebula re-voices two of twenty-three, so changing to it costs two layers of
+ * synthesis rather than a composition.
+ */
+const loopsByPlace = new Map<ThemeKind, Record<MusicLayer, Float32Array>>();
+
+function loopsFor(theme: ThemeKind): Record<MusicLayer, Float32Array> | null {
+  const cached = loopsByPlace.get(theme);
+  if (cached !== undefined) return cached;
+  const base = takePrewarmed()?.loops;
+  // Before the prewarm has finished there is nothing to share from, and baking a whole composition
+  // on the spot would freeze the page. The place arrives on the next change instead.
+  if (base === undefined) return null;
+  const own = { ...base } as Record<MusicLayer, Float32Array>;
+  for (const layer of revoicedBy(theme)) own[layer] = bakeLayer(layer, SAMPLE_RATE, theme);
+  loopsByPlace.set(theme, own);
+  return own;
+}
+
+function goToPlace(theme: ThemeKind): void {
+  const music = out.music();
+  const loops = loopsFor(theme);
+  if (music === null || loops === null) return;
+  music.setLoops(loops);
+  // The swap re-anchors the loops, so the step clock has to be re-anchored with them or the gun ends
+  // up a phrase out of phase with the bar — the same trap a scrub used to fall into.
+  startedAt = performance.now();
+  steps = 0;
+}
+
 levelSelect.addEventListener('change', () => {
   kind = levelSelect.value as LevelKind;
   seek(0);
+  goToPlace(LEVELS[kind].theme);
   drawSpans();
   drawStrip();
+  drawPlace();
 });
+
+/** Say what this place plays that the last one did not. */
+function drawPlace(): void {
+  const theme = LEVELS[kind].theme;
+  const own = revoicedBy(theme);
+  el('place').textContent =
+    own.length === 0
+      ? 'shares every layer with the base composition'
+      : `plays its own ${own.join(', ')} — ${own.length} of ${MUSIC_LAYERS.length}`;
+}
 el<HTMLSelectElement>('speed').addEventListener('change', (e) => {
   walkSpeed = Number((e.target as HTMLSelectElement).value);
 });
@@ -783,6 +839,7 @@ function frame(at: number): void {
 drawCues();
 drawSpans();
 drawStrip();
+drawPlace();
 setInterval(drawCues, 500);
 /*
   ── A TIMER AND NOT `requestAnimationFrame`, WHICH IS A DECISION ABOUT WHAT THIS TOOL IS ──────────

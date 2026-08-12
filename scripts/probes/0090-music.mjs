@@ -47,10 +47,12 @@ export const PROBES = [
     edit: {
       path: 'src/app/music.ts',
       // ⚠️ Re-anchored by docs/decisions/0102-the-music-goes-somewhere.md, which split the walk over a
-      // layer's pattern out into `layerNotes` so the prewarm can spread it across frames. The break is
-      // unchanged — one layer left out of the bake — and it is expressed where the notes are gathered.
-      find: '  for (const voice of MUSIC[layer]) {',
-      replace: "  for (const voice of (layer === 'chords' ? [] : MUSIC[layer])) {",
+      // layer's pattern out into `layerNotes` so the prewarm can spread it across frames, and again by
+      // docs/decisions/0128-a-place-plays-its-own-material.md, which made the source of a layer's
+      // voices a function of the place. The break is unchanged both times — one layer left out of the
+      // bake — and it is still expressed where the notes are gathered.
+      find: '  for (const voice of voicesOf(theme, layer)) {',
+      replace: "  for (const voice of (layer === 'chords' ? [] : voicesOf(theme, layer))) {",
     },
   },
   {
