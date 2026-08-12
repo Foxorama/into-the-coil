@@ -19,17 +19,54 @@ import {
   MUSIC_LADDER,
   MUSIC_LAYERS,
   type MusicLayer,
+  MUSIC_ROOT,
   type MusicLevel,
 } from '../src/content/music.ts';
 import { mixOf, revoicedBy, voicesOf, type ThemeKind } from '../src/content/themes.ts';
 import { BANDS, bandEnergy } from './spectrum.ts';
 
 /** Which bands are the bottom and the top, resolved once from the one table that names them. */
+/** The middle of each band, for the centre-of-mass. */
+const MIDDLE = BANDS.map((band) => (band[0] + band[1]) / 2);
 const LOW = BANDS.map((band) => band[1] <= 300);
 const HIGH = BANDS.map((band) => band[0] >= 2000);
 
 /** The two aura layers, which are the only gains that are a distance rather than a rung. */
 const FOLLOWS_THE_BOSS: readonly MusicLayer[] = ['auraSlow', 'auraFast'];
+
+/**
+ * Where the NOTES are, in Hz — the mean pitch a rung is written at, weighted by nothing but count.
+ *
+ * ── AND IT IS NOT THE SPECTRAL CENTROID, WHICH IS THE MISTAKE THIS REPLACES ─────────────────────
+ *
+ * ⚠️ **`docs/decisions/0136-the-place-has-a-room-and-an-arc.md`.** Asked for: *"Up, Up, Up, drop,
+ * sharp Down for the boss"*, and, of the fight, *"drop from the high octaves down into the lower tones
+ * of hellfire and menace."* The obvious measure is the centre of mass of the SPECTRUM, and it was
+ * tried first — it moved five hertz while an octave of material moved, because it is dominated by
+ * whichever layers are loudest and continuous.
+ *
+ * ⚠️ **WORSE, IT ARGUES AGAINST THE OTHER HALF OF THE SAME REPORT.** The same brief asks the
+ * percussion to get sharper and faster into the fight, and sharp percussion is broadband noise — so a
+ * boss that correctly drops an octave in its TONES measures *higher* on a spectral centroid than the
+ * section before it. Tuning against that number would have meant taking the fast metal back out.
+ *
+ * ⚠️ **A pitched step is a semitone over `MUSIC_ROOT` and an octave is a field on the voice**, so
+ * where the notes sit is knowable exactly, from the content, with no audio at all. Unpitched voices
+ * are skipped — a drum has no octave to drop.
+ */
+export function pitchOf(theme: ThemeKind | undefined, layer: MusicLayer): number | null {
+  let sum = 0;
+  let notes = 0;
+  for (const voice of voicesOf(theme, layer)) {
+    if (!voice.pitched) continue;
+    for (const step of voice.steps) {
+      if (step === null || step === undefined) continue;
+      sum += MUSIC_ROOT * Math.pow(2, voice.octave + step / 12);
+      notes++;
+    }
+  }
+  return notes === 0 ? null : sum / notes;
+}
 
 /**
  * How many notes one bar of `layer` sounds in `theme`.
@@ -63,17 +100,22 @@ export function rungShape(
   rung: MusicLevel,
   loops: Record<MusicLayer, Float32Array>,
   bakes: Map<string, number[]>,
-): { notes: number; low: number; high: number } {
+): { notes: number; low: number; high: number; centre: number; pitch: number } {
   const nearness = rung === 'boss' || rung === 'bossPeak' ? 1 : AURA_LEVEL_CEILING;
   let notes = 0;
   let low = 0;
   let high = 0;
+  let centre = 0;
+  let pitch = 0;
+  let pitched = 0;
   let total = 0;
   for (const layer of MUSIC_LAYERS) {
     const ceiling = FOLLOWS_THE_BOSS.includes(layer) ? nearness : 1;
     const gain = MUSIC_LADDER[rung][layer] * mixOf(theme ?? 'approach', layer) * ceiling;
     if (gain <= 0) continue;
     notes += notesPerBar(theme, layer);
+    const where = pitchOf(theme, layer);
+    if (where !== null) { pitch += where * gain; pitched += gain; }
     /*
       ⚠️ **THE AUDIO COMES FROM THE CALLER AND THE SPECTRUM IS CACHED UNDER WHOEVER OWNS IT** — this
       function synthesised its own at first, and every probe over `tests/themes.test.ts` paid for it:
@@ -97,7 +139,25 @@ export function rungShape(
       total += at;
       if (LOW[i]) low += at;
       if (HIGH[i]) high += at;
+      centre += at * MIDDLE[i]!;
     });
   }
-  return { notes, low: total > 0 ? low / total : 0, high: total > 0 ? high / total : 0 };
+  return {
+    notes,
+    low: total > 0 ? low / total : 0,
+    high: total > 0 ? high / total : 0,
+    /*
+      ⚠️ **THE CENTRE OF MASS OF THE PITCH, WHICH IS THE ARC A LISTENER DESCRIBES** — 0136: *"Up, Up,
+      Up, drop, sharp Down for the boss."* That is a claim about where the music SITS, and neither of
+      the two numbers above can see it: a rung can hold its bottom share exactly and still climb, and
+      the whole shape of this place is that it does.
+
+      ⚠️ **Energy-weighted over the band centres**, in Hz, so it is a frequency a hand can reason
+      about rather than an index. Logarithmic would be closer to how pitch is heard; linear is what
+      makes a DROP show up as a drop rather than as a shrug, and the arc is what is being held.
+    */
+    centre: total > 0 ? centre / total : 0,
+    /** Where the NOTES sit, gain-weighted — the arc 0136 is about, and the centroid cannot see it. */
+    pitch: pitched > 0 ? pitch / pitched : 0,
+  };
 }

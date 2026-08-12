@@ -47,7 +47,7 @@ import {
   type MusicVoice,
 } from '../content/music.ts';
 import { sampleLayerInto, saturate } from './sound.ts';
-import { mixOf, voicesOf, type ThemeKind } from '../content/themes.ts';
+import { airOf, mixOf, voicesOf, type ThemeKind } from '../content/themes.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import { STEPS_PER_SECOND } from '../state/screens.ts';
@@ -194,7 +194,162 @@ export function layerNotes(
       notes.push(() => renderNote(voice, value, i, at, rate, rng, buffer));
     }
   }
+  /*
+    ⚠️ **THE ROOM IS THE LAST JOB, because it is a property of the LAYER and not of a note** — 0136.
+    Both paths run these in order — `bakeLayer` straight through, `bakePlace` and the prewarm one at a
+    time across frames — so a job appended here is a job that runs after every note of this layer has
+    landed in the buffer, on either.
+  */
+  const wet = airOf(theme, layer);
+  if (wet > 0) notes.push(() => addRoom(buffer, rate, wet));
   return { buffer, notes };
+}
+
+/**
+ * The delays a room is built from, in seconds, and how far each one comes back.
+ *
+ * ⚠️ **PRIME-ISH AND UNRELATED TO THE BEAT, which is the whole reason it sounds like a room.** A tap
+ * at a musical interval is an echo — the ear hears a repeat of the note. These are 71, 113 and 167
+ * milliseconds: close enough together to smear into one another, far enough from 400 ms and its
+ * divisors that nothing lands on a beat.
+ *
+ * ⚠️ **Three is enough because they FEED BACK.** Each pass reads samples earlier passes have already
+ * written, so three taps at 0.6 give a decaying series that is still audible eight or nine repeats
+ * later — a tail of about a second and a half, which is a stone building.
+ */
+const ROOM_TAPS: readonly [number, number][] = [
+  [0.0717, 0.84],
+  [0.1131, 0.82],
+  [0.1669, 0.79],
+];
+
+/**
+ * How much of the top a comb loses each time round.
+ *
+ * ⚠️ **Air absorbs treble and a tail that does not is a spring, not a room.** One pole per comb, so
+ * the tenth repeat is dull where the first was bright — which is most of what tells an ear *stone*
+ * rather than *delay pedal*.
+ */
+const ROOM_DAMP = 0.36;
+
+/**
+ * What the summed combs are divided by, so `air` reads as a wet/dry mix rather than as a gain.
+ *
+ * ⚠️ **Three combs at these feedbacks settle at about `1/(1 - g)` each**, which is six-ish apiece and
+ * eighteen together. Without this, an `air` of 0.5 would be nine times the dry signal — a number a
+ * hand cannot reason about, and every value in a theme's table would be a tiny fraction chosen by
+ * trial. Divided, `air: 0.5` means *half as much room as direct sound*, which is what it looks like it
+ * means.
+ */
+const ROOM_SCALE = 1 / 5;
+
+/**
+ * The diffusers the combs run into, as delay and coefficient.
+ *
+ * ── WITHOUT THESE IT IS A FLANGER AND NOT A ROOM, AND A MEASUREMENT SAID SO ─────────────────────
+ *
+ * ⚠️ **Three combs alone are a comb FILTER: notches, at fixed frequencies.** Measured over the base
+ * `chords` — a sustained pad, which is the worst case and also exactly what this place is made of —
+ * the room CANCELLED. Energy went down by a hair and the peak fell 5%, because a delayed copy of a
+ * held tone is correlated with the tone and subtracts as often as it adds. What a listener would have
+ * got is a hollow, metallic colour on the choir: the classic missing half of a Schroeder reverb.
+ *
+ * ⚠️ **An allpass passes every frequency at full amplitude and scrambles only the PHASE**, which is
+ * what turns three discrete echoes into something with no pitch of its own. Two in series is the
+ * usual count and it is enough here; the delays are short and mutually prime so the second does not
+ * reinforce the first.
+ */
+const ROOM_DIFFUSERS: readonly [number, number][] = [
+  [0.0131, 0.62],
+  [0.0047, 0.55],
+];
+
+/**
+ * Put `wet` of a stone room into a finished loop, in place.
+ *
+ * ── THE SYNTHESISER HAD NO REVERB AND A CATHEDRAL NEEDS ONE ─────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0136-the-place-has-a-room-and-an-arc.md`.** Reported of Ember Nebula: *"it
+ * still needs more reverb… the sky background is going to be the Eagle Nebula and the Pillars of
+ * Creation, so the music track needs to be suitably awe inspiring to match."* Everything this project
+ * had reached for until now was **sustain** — longer notes, slower attacks, lower decay constants —
+ * and sustain is not space. A held note is a held note; what says *large room* is the same note
+ * arriving again, later, darker, from somewhere else.
+ *
+ * ⚠️ **IT IS A POST-PASS OVER THE BAKED LOOP AND NOT A PER-NOTE RENDER, WHICH IS WHY IT IS
+ * AFFORDABLE.** Re-rendering every note two or three times is proportional to SYNTHESIS — `chords`
+ * alone is 1.5 seconds of it, so a three-tap tail would have cost four and a half. This is three
+ * passes of a multiply-add over a buffer, proportional to LENGTH: about eleven milliseconds for a
+ * sixteen-bar layer, measured. `docs/decisions/0022-frame-rate-is-a-feature.md`'s budget is untouched
+ * either way — nothing here runs in a frame — but 0133 has to spend it at a level boundary.
+ *
+ * ⚠️ **IT WRAPS, on exactly the terms a note does.** A loop's tail has to arrive at the START of the
+ * buffer or every repetition has a gap where the room should be, at the same instant every time
+ * round — which is the seam `sampleLayerInto`'s own `wrap` exists for, one level up.
+ *
+ * ⚠️ **The feedback is read from the buffer being written**, so the taps compound into a decaying
+ * series rather than being three discrete echoes. That is the difference between a room and a delay
+ * pedal, and it costs nothing: it is the same loop, read in order.
+ */
+export function addRoom(buffer: Float32Array, rate: number, wet: number): void {
+  const length = buffer.length;
+  /*
+    ⚠️ **EACH COMB GETS ITS OWN DELAY LINE, AND THE FIRST VERSION SHARED THE BUFFER.** Writing three
+    taps back into the signal they are all reading makes them one feedback loop rather than three:
+    the whole thing only stays stable while their gains SUM below one, so each was capped around 0.3
+    and the tail was gone in six hundred milliseconds. Measured, and it is why this is not the obvious
+    in-place version. Independent lines are stable at 0.8 apiece — a tail of about two seconds, which
+    is a building.
+  */
+  const dry = Float32Array.from(buffer);
+  // @setup: one accumulator for the summed combs, at bake time and never in a frame.
+  const room = new Float32Array(length);
+  for (const [seconds, feedback] of ROOM_TAPS) {
+    const delay = Math.max(1, Math.round(seconds * rate));
+    const line = new Float32Array(delay);
+    let at = 0;
+    /** One pole of lowpass inside the loop, so every pass round is darker than the last. */
+    let held = 0;
+    /*
+      ⚠️ **TWO LAPS, AND THE SECOND ONE IS THE ANSWER.** A loop's reverb has to be the tail of a piece
+      that has already been playing — the first lap is the room filling up from silence, which is a
+      state a looping level never reaches. Keeping the second lap is what makes the tail arrive at the
+      TOP of the buffer instead of a gap being there, on exactly the terms `sampleLayerInto`'s `wrap`
+      is about one level down.
+    */
+    for (let lap = 0; lap < 2; lap++) {
+      for (let i = 0; i < length; i++) {
+        const delayed = line[at]!;
+        held += (delayed - held) * (1 - ROOM_DAMP);
+        line[at] = dry[i]! + held * feedback;
+        at = at + 1 === delay ? 0 : at + 1;
+        if (lap === 1) room[i] = room[i]! + delayed;
+      }
+    }
+  }
+  /*
+    ⚠️ **THE DIFFUSERS, AND THEY RUN OVER TWO LAPS FOR THE SAME REASON THE COMBS DO.** An allpass has
+    its own feedback, so a single pass would start from an empty line and the top of the loop would be
+    the only part of the buffer without diffusion in it — audible as a tick once round, at the same
+    place every time.
+  */
+  for (const [seconds, coefficient] of ROOM_DIFFUSERS) {
+    const delay = Math.max(1, Math.round(seconds * rate));
+    const line = new Float32Array(delay);
+    let at = 0;
+    for (let lap = 0; lap < 2; lap++) {
+      for (let i = 0; i < length; i++) {
+        const held = line[at]!;
+        const input = room[i]!;
+        const out = held - coefficient * input;
+        line[at] = input + coefficient * out;
+        at = at + 1 === delay ? 0 : at + 1;
+        if (lap === 1) room[i] = out;
+      }
+    }
+  }
+  const send = wet * ROOM_SCALE;
+  for (let i = 0; i < length; i++) buffer[i] = dry[i]! + room[i]! * send;
 }
 
 /**

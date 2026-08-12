@@ -659,7 +659,20 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       pitched: true,
       perBeat: 2,
       octave: 3,
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.34, gain: 0.042, attack: 0.004, curve: 2.6, lowFrom: 6200, lowTo: 3400, q: 1.4 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.5, gain: 0.075, attack: 0.004, curve: 2.2, lowFrom: 7000, lowTo: 4200, q: 1.4 },
+    },
+    {
+      /*
+        THE STARLIGHT — 0136's *higher octave hits*, and the top of the whole piece. Four octaves over
+        the pedalboard, on the phrase turn, and nothing else in this place goes near it. It is open at
+        `push` and `surge` and closed at `approach`, which is what makes the climb a climb and the
+        drop a drop rather than two gain changes.
+      */
+      steps: STABS,
+      pitched: true,
+      perBeat: 2,
+      octave: 4,
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.9, gain: 0.05, attack: 0.002, curve: 1.9, highFrom: 2600 },
     },
   ],
 
@@ -685,16 +698,32 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
   /*
     ── THE SHIMMER: a bowed cymbal, which is the closest this synthesiser gets to a room ────────────
   */
+  /*
+    ── THE SECOND RUNG OF THE ACCELERATION, AND IT WAS A SHIMMER ────────────────────────────────────
+
+    ⚠️ **0136: *"under cutting the tones is that sharp percussive beat that increases the tempo with
+    each transition."*** The tempo cannot move (0093) so the SUBDIVISION does, and a layer plays one
+    loop — which means the acceleration is carried by WHICH layers a rung opens, not by any one of
+    them changing. `engine` runs eighths from the opening; this is sixteenths and arrives at `push`;
+    `drive` is sixteenths with a thud at `surge`; `stomp` is thirty-seconds at the boss. Four rungs,
+    four grids, and the ladder was already the mechanism.
+
+    ⚠️ **SHARP AND NOT SHIMMERING.** This was a bowed cymbal — 0.36 s of soft noise with a slow
+    attack, which is space rather than time. A tick is 25 milliseconds and its whole job is the front
+    edge.
+  */
   ride: [
     {
       steps: [
-        0.7, 0.34, 0.4, 0.3, 0.6, 0.32, 0.38, 0.28, 0.72, 0.34, 0.42, 0.3, 0.58, 0.32, 0.4, 0.5,
-        0.68, 0.34, 0.4, 0.28, 0.62, 0.32, 0.36, 0.3, 0.74, 0.34, 0.44, 0.3, 0.6, 0.34, 0.42, 0.52,
+        0.7, 0.3, 0.44, 0.28, 0.58, 0.3, 0.4, 0.26, 0.72, 0.3, 0.42, 0.28, 0.56, 0.3, 0.4, 0.48,
+        0.68, 0.28, 0.42, 0.26, 0.6, 0.3, 0.38, 0.28, 0.74, 0.3, 0.44, 0.28, 0.58, 0.32, 0.42, 0.5,
+        0.7, 0.3, 0.44, 0.26, 0.58, 0.28, 0.4, 0.3, 0.72, 0.28, 0.42, 0.3, 0.56, 0.3, 0.42, 0.46,
+        0.66, 0.3, 0.4, 0.28, 0.62, 0.3, 0.4, 0.26, 0.76, 0.32, 0.46, 0.3, 0.6, 0.34, 0.46, 0.54,
       ],
       pitched: false,
-      perBeat: 2,
+      perBeat: 4,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.36, gain: 0.042, attack: 0.02, curve: 1.9, lowFrom: 9200, lowTo: 5000, highFrom: 4200, q: 0.7 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.025, gain: 0.05, attack: 0.0004, curve: 9, lowFrom: 11000, highFrom: 5600 },
     },
   ],
 
@@ -753,7 +782,7 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       steps: [0, _, _, _, _, _, _, _, 7, _, _, _, _, _, _, _],
       pitched: true,
       perBeat: 1,
-      octave: 2,
+      octave: 3,
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.2, gain: 0.07, attack: 0.06, curve: 1.4, lowFrom: 2400, lowTo: 1000, q: 1.2 },
     },
   ],
@@ -810,7 +839,7 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.11, attack: 0.03, curve: 1.1 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.2, attack: 0.03, curve: 1.1 },
     },
     {
       // The tierce: a bell's loudest partial is a minor third above its note, and it is why a bell is sad.
@@ -824,7 +853,7 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       steps: [7, _, 2, _],
       pitched: true,
       perBeat: 0.25,
-      octave: 3,
+      octave: 2,
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.07, attack: 0.55, curve: 1.2, lowFrom: 1800, lowTo: 4200, q: 1.4 },
     },
     {
@@ -852,7 +881,7 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       perBeat: 0.25,
       octave: 1,
       accents: [1, 0.94, 0.98, 1],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.088, attack: 0.55, curve: 1.05, lowFrom: 360, lowTo: 1150, q: 2.4 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.1, attack: 0.55, curve: 1.05, lowFrom: 300, lowTo: 700, q: 2.4 },
     },
     {
       // The other half of the interval, underneath, so the two are heard as one sound going wrong.
@@ -860,7 +889,7 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       pitched: true,
       perBeat: 0.25,
       octave: 0,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.5, gain: 0.11, attack: 0.5, curve: 1 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.5, gain: 0.2, attack: 0.5, curve: 1 },
     },
   ],
 
@@ -914,16 +943,25 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       pitched: false,
       perBeat: 2,
       octave: 0,
-      note: { wave: 'sine', from: 132, to: 34, seconds: 0.36, gain: 0.46, attack: 0.001, curve: 2.9, drive: 0.42 },
+      note: { wave: 'sine', from: 124, to: 27, seconds: 0.46, gain: 0.4, attack: 0.001, curve: 2.4, drive: 0.46 },
     },
     {
-      // Chain, not a snare. Metal moving over stone, which is what the tam-tam of the hymn becomes.
+      /*
+        CHAIN, NOT A SNARE — metal over stone, which is what the tam-tam of the hymn becomes.
+
+        ⚠️ **THIRTY-SECONDS, AND IT IS THE TOP OF THE ACCELERATION** — 0136: *"increases the tempo with
+        each transition so that we've got a really fast tempo for the boss."* Eighths at the opening,
+        sixteenths at `push` and `surge`, and this. It is the fastest thing in the game by a factor of
+        two and it exists only in the fight.
+      */
       steps: [
-        _, 0.4, _, 0.62, _, 0.36, 0.5, _, _, 0.44, _, 0.6, _, 0.38, 0.52, _,
-        _, 0.42, _, 0.64, _, 0.34, 0.48, _, _, 0.46, 0.4, 0.62, _, 0.4, 0.54, 0.44,
+        _, 0.3, _, 0.4, _, 0.28, 0.34, 0.24, _, 0.32, _, 0.44, _, 0.28, 0.36, 0.26,
+        _, 0.3, 0.26, 0.42, _, 0.26, 0.34, 0.24, _, 0.34, _, 0.4, 0.24, 0.3, 0.38, 0.28,
+        _, 0.32, _, 0.44, _, 0.28, 0.36, 0.26, _, 0.3, 0.24, 0.42, _, 0.28, 0.34, 0.24,
+        _, 0.3, 0.26, 0.4, 0.24, 0.3, 0.36, 0.26, 0.28, 0.34, 0.3, 0.44, 0.26, 0.32, 0.4, 0.34,
       ],
       pitched: false,
-      perBeat: 4,
+      perBeat: 8,
       octave: 0,
       note: { wave: 'noise', from: 0, to: 0, seconds: 0.055, gain: 0.125, attack: 0.0008, curve: 5.5, lowFrom: 3400, lowTo: 1250, highFrom: 340 },
     },
@@ -958,9 +996,9 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       ],
       pitched: true,
       perBeat: 4,
-      octave: 1,
+      octave: 0,
       accents: [1, 0.6, 0.84, 0.62],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.24, gain: 0.078, attack: 0.002, curve: 4.2, lowFrom: 2600, lowTo: 950, q: 2.2, drive: 0.55 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.24, gain: 0.09, attack: 0.002, curve: 4.2, lowFrom: 2600, lowTo: 950, q: 2.2, drive: 0.55 },
     },
     {
       steps: [
@@ -975,9 +1013,9 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       ],
       pitched: true,
       perBeat: 4,
-      octave: 2,
+      octave: 1,
       accents: [1, 0.62, 0.86, 0.6],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.22, gain: 0.05, attack: 0.003, curve: 4, lowFrom: 3200, lowTo: 1400, q: 1.8, drive: 0.5 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.22, gain: 0.06, attack: 0.003, curve: 4, lowFrom: 3200, lowTo: 1400, q: 1.8, drive: 0.5 },
     },
   ],
 
@@ -996,7 +1034,7 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       ],
       pitched: true,
       perBeat: 1,
-      octave: 2,
+      octave: 1,
       accents: [1, 0.72, 0.9, 0.66],
       note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.95, gain: 0.068, attack: 0.03, curve: 2.1, lowFrom: 2400, lowTo: 820, q: 2.6, drive: 0.8 },
     },
@@ -1009,7 +1047,7 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       ],
       pitched: true,
       perBeat: 1,
-      octave: 1,
+      octave: 0,
       accents: [1, 0.72, 0.9, 0.66],
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1, gain: 0.048, attack: 0.04, curve: 1.9, lowFrom: 1600, lowTo: 580, q: 2, drive: 0.7 },
     },
@@ -1053,7 +1091,7 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       steps: [8, 8, 8, 8, 8, 8, 8, 8, 2, 2, 2, 2, 2, 2, 2, 2],
       pitched: true,
       perBeat: 2,
-      octave: 2,
+      octave: 1,
       note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.3, gain: 0.19, attack: 0.006, curve: 5, lowFrom: 2600, lowTo: 700, q: 1.6 },
     },
     {

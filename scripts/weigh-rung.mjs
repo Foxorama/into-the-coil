@@ -34,17 +34,17 @@ for (const rung of MUSIC_LEVELS) base[rung] = rungShape(undefined, rung, baseLoo
 const line = (rung, shape, against) =>
   `${rung.padEnd(10)} ${shape.notes.toFixed(0).padStart(9)}${against ? ` (${((shape.notes / against.notes) * 100).toFixed(0)}%)`.padStart(7) : '       '}   ` +
   `${(shape.low * 100).toFixed(1).padStart(8)}%${against ? ` (${((shape.low / against.low) * 100).toFixed(0)}%)`.padStart(7) : '       '}   ` +
-  `${(shape.high * 100).toFixed(1).padStart(7)}%`;
+  `${(shape.high * 100).toFixed(1).padStart(7)}%   ${shape.centre.toFixed(0).padStart(6)}Hz  ${shape.pitch.toFixed(0).padStart(5)}Hz`;
 
 console.log('── the base composition, which is what level one plays ──────────────');
-console.log('rung        notes/bar          under 300Hz          over 2kHz');
+console.log('rung        notes/bar          under 300Hz          over 2kHz   centre   notes');
 for (const rung of MUSIC_LEVELS) console.log(line(rung, base[rung]));
 console.log('');
 
 for (const theme of themes) {
   const loops = bakeLoops(SAMPLE_RATE, theme);
   console.log(`── ${theme}, and the percentages are against the base at the same rung ──`);
-  console.log('rung        notes/bar          under 300Hz          over 2kHz');
+  console.log('rung        notes/bar          under 300Hz          over 2kHz   centre   notes');
   for (const rung of MUSIC_LEVELS) console.log(line(rung, rungShape(theme, rung, loops, bakes), base[rung]));
   console.log('');
 }
