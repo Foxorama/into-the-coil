@@ -86,6 +86,24 @@
       #strip .head { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--hot); }
       #strip .midbar { color: var(--hot); }
       .note { color: var(--dim); font-size: 11px; margin-top: 8px; }
+      /*
+        PAUSED IS A VISIBLE STATE, because the layer gains do not move when the loops stop. `setOn`
+        fades the master and stops the sources; each layer's own gain is upstream of that and stays
+        exactly where it was — so a paused page would otherwise go on reading `sub 0.86` with nothing
+        coming out of the speakers, which is the one thing this dashboard exists not to do.
+      */
+      body.paused .meter i { background: #3a3f52; }
+      body.paused .live { color: #4a4f63; }
+      body.paused #rung::after { content: ' · stopped'; color: var(--dim); font-size: 13px; }
+      .held td { background: #1a1430; }
+      .held td:first-child { box-shadow: inset 3px 0 0 var(--hot); }
+      td input[type='range'] { width: 84px; }
+      td input[type='checkbox'] { accent-color: var(--cool); }
+      #dump {
+        width: 100%; margin-top: 8px; background: #0d0f16; color: var(--ink);
+        border: 1px solid var(--line); border-radius: 3px; padding: 8px;
+        font: 11px/1.4 ui-monospace, Menlo, Consolas, monospace; resize: vertical;
+      }
       code { color: var(--cool); }
       .lay { cursor: pointer; }
     </style>
@@ -123,14 +141,26 @@
           <span><span class="dim">aura</span> <b id="aura">0.00</b></span>
         </div>
         <div id="strip" style="margin-top: 8px"></div>
+        <div class="row" style="margin-top: 8px">
+          <button id="copy">📋 copy this moment</button>
+          <span id="copied" class="dim"></span>
+        </div>
+        <textarea id="dump" rows="14" spellcheck="false" hidden></textarea>
       </section>
 
       <section>
-        <h2>What is sounding — click a layer to solo it</h2>
+        <h2>What is sounding — the desk</h2>
+        <div class="row" style="margin-bottom: 6px">
+          <button id="allOn">all on</button>
+          <button id="allOff">all off</button>
+          <button id="release">hand it all back</button>
+          <span class="dim">click a layer's name to solo it · <b id="heldCount">0</b> held</span>
+        </div>
         <table id="layers">
           <thead>
             <tr>
-              <th>layer</th><th>loop</th><th>pan</th><th>doing</th><th>target</th><th>live</th><th></th>
+              <th>layer</th><th>pan</th><th>doing</th><th>target</th><th>live</th><th></th>
+              <th>on</th><th colspan="2">trim</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -139,6 +169,9 @@
           <b>live</b> is read off the mixer's own <code>GainNode</code>, not modelled — so it cannot
           disagree with what the speakers are doing. <b>target</b> is the ladder's rung × the theme's
           multiplier × the aura's ceiling.
+          <br />⚠️ A layer you switch off or trim is <b>held</b> — the dashboard owns its gain until
+          you hand it back, and a held layer follows a rung change <b>immediately</b> rather than over
+          the mixer's 1.6&nbsp;second ramp. Judge a transition with nothing held.
         </div>
       </section>
 

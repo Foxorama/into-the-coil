@@ -111,6 +111,45 @@ would hold and the thing they were listening for would never arrive. It is a tim
 elapsed time measured rather than assumed. **A tool that lies when it is not being watched is worse
 than one that costs a timer.**
 
+## ⚠️ Amended the same day, by flying it — the pause, the desk and the copy button
+
+**Three things came back within an hour of the first use**, which is the tool doing its job:
+
+⚠️ **PAUSE DID NOT STOP THE MUSIC.** *"It stops the timer bar, but the music is still running in the
+browser."* A straight omission — `playing` gated the walk and the cues and nothing told the mixer. It
+now calls [0119](0119-off-stops-the-loops.md)'s own `setOn`, so a paused dashboard is in exactly the
+state a player who turned sound off is in rather than a fifth state invented here. **Resuming
+re-anchors the step clock**, because `start()` re-anchors the loops and a count measured from the old
+anchor would put the gun a pause-length off the bar.
+
+⚠️ **AND THE READOUT LIED WHILE PAUSED, WHICH IS THE HALF THAT NEEDED THINKING ABOUT.** `setOn` fades
+the master and stops the sources; **a layer's own gain is upstream of both and does not move**, so
+the page went on reporting `sub 0.86` into silence. Being paused is now a visible state on the page.
+A tool that reports a number it is not producing is the exact failure this decision opens by naming.
+
+⚠️ **THE SOLO BECAME A DESK.** *"I need to be able to select individual layers to play together and
+adjust those layers to strengthen or diminish them."* Each layer has an on/off and a **trim over the
+mixer's own target** — at ×1 a held layer sounds exactly as the ladder says, at ×1.4 it is the same
+arrangement with that part pushed. Clicking a name still solos.
+
+⚠️ **AND HOLDING A LAYER TURNED OUT TO BE A TUG OF WAR WITH THE MIXER, ON TWO LAYERS ONLY.**
+`levelWrites` skips a layer whose target has not moved — **except the aura pair, which it writes every
+frame by design** (0091: they track a distance the player steers, so they are never at rest).
+A desk that wrote only on a change therefore could not switch those two off: they settled at
+0.01–0.02 instead of silence. A held layer is now written every frame, full stop.
+
+⚠️ **A HELD LAYER FOLLOWS A RUNG CHANGE IMMEDIATELY RATHER THAN OVER 1.6 SECONDS**, and the page says
+so where the desk is. That is a real difference from the game and it is the price of the feature;
+*hand it all back* is what a transition is judged with.
+
+⚠️ **AND A COPY BUTTON, BECAUSE EVERY REPORT ABOUT THIS CHANNEL HAS BEEN WRITTEN FROM MEMORY.** *"The
+tune kicking around 52 secs"*, *"the 1:32 and 1:48 aren't noticeable"* — and a session then spends its
+first hour working out which rung 52 seconds was, at which theme, with what open. It prints the level,
+the place, the time in bars and beats, the rung, the aura, the weapon cadences and **`live` beside
+`target` for every layer**, as markdown. The two columns together are the point: the report it exists
+to carry is *"what is supposedly playing is not actually audible"*, which is a claim about the gap
+between them.
+
 ## What the build plugin had to give up, and why it is narrower rather than weaker
 
 ⚠️ **`stampBuildIdentity`'s `transformIndexHtml` RAN ON EVERY HTML THE DEV SERVER TOUCHED**, so the

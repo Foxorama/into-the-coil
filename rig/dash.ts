@@ -87,7 +87,21 @@ let tier = 0;
 let killsPerSecond = 1.6;
 let gapUnits = 85;
 let cuesOn = true;
-let soloed: MusicLayer | null = null;
+/**
+ * A layer the dashboard has taken off the mixer: whether it sounds at all, and by how much its
+ * target is scaled.
+ *
+ * ⚠️ **A HELD LAYER IS NOT A MUTED ONE.** *"Select individual layers to play together and adjust
+ * those layers to strengthen or diminish them to hear them sound together"* is a mixing desk, not a
+ * solo button — so the unit is a **trim over the mixer's own target** rather than a gain typed in.
+ * At `trim: 1` a held layer sounds exactly as the ladder says; at 1.4 it is the same arrangement
+ * with that one part pushed, which is the comparison being asked for.
+ */
+interface Held {
+  on: boolean;
+  trim: number;
+}
+const held = new Map<MusicLayer, Held>();
 let unlocked = false;
 /**
  * Sim steps issued since the loops went on the air. Monotonic, and NOT a function of the scrub.
@@ -104,9 +118,7 @@ let steps = 0;
 /** `performance.now()` at the instant the loops were started, or `null` before the first press. */
 let startedAt: number | null = null;
 let lastFrame = 0;
-/** Layers currently held at silence by a solo. */
-const pinned = new Set<MusicLayer>();
-/** Layers a solo has written to and not yet handed back to the mixer. */
+/** Layers written by the desk and not yet handed back to the mixer. */
 const owed = new Set<MusicLayer>();
 
 const totalOf = (k: LevelKind): number => LEVELS[k].bossAt / UNITS_PER_SECOND + FIGHT_SECONDS;
@@ -182,11 +194,48 @@ el<HTMLButtonElement>('unlock').addEventListener('click', () => {
   if (unlocked && !playing) togglePlay();
 });
 
+/**
+ * Start or stop the transport — **and the music with it.**
+ *
+ * ── PAUSE USED TO STOP THE CLOCK AND LEAVE THE LOOPS RUNNING ────────────────────────────────────
+ *
+ * ⚠️ **Reported: *"it stops the timer bar, but the music is still running in the browser."*** It was
+ * a straight omission: `playing` gated the walk and the cues and nothing told the mixer. A pause
+ * that keeps playing is worse than no pause, because the one thing you press it for is to stop and
+ * think about what you just heard.
+ *
+ * ⚠️ **`setOn` IS THE GAME'S OWN STOP AND NOT A MUTE** — [0119](0119-off-stops-the-loops.md) is the
+ * decision that made it actually stop the loops rather than turn them down, after a race left
+ * `started` true for ever. Using it means a paused dashboard is in exactly the state a player who
+ * turned sound off is in, rather than in a fifth state invented here.
+ *
+ * ⚠️ **Resuming re-anchors the step clock, because `start()` re-anchors the LOOPS.** They go back on
+ * the air at a fresh instant, so a step count measured from the old one would put the gun a
+ * pause-length off the bar — which is the same class of bug a scrub caused, arriving from the other
+ * side.
+ */
 function togglePlay(): void {
   playing = !playing;
   playButton.textContent = playing ? '⏸ pause' : '▶ play';
   playButton.setAttribute('aria-pressed', String(playing));
+  /*
+    ⚠️ **The page has to SAY it is stopped, because the layer gains do not move when it is.** `setOn`
+    fades the master and stops the sources; a layer's own gain is upstream of both and stays exactly
+    where it was. Without this the readout goes on reporting `sub 0.86` into silence, which is the
+    same class of lie as the frozen transport this pause was fixed for.
+  */
+  document.body.classList.toggle('paused', !playing);
   lastFrame = performance.now();
+  const music = out.music();
+  if (music === null) return;
+  music.setOn(playing);
+  if (playing) {
+    startedAt = performance.now();
+    steps = 0;
+    // The loop set is new, so every gain the desk was holding has to be stated over it again.
+    owed.clear();
+    restate(momentOf(kind, second, FIGHT_SECONDS, auraNearness(gapUnits)));
+  }
 }
 playButton.addEventListener('click', togglePlay);
 
@@ -227,6 +276,9 @@ interface LayerRow {
   target: HTMLElement;
   live: HTMLElement;
   bar: HTMLElement;
+  on: HTMLInputElement;
+  trim: HTMLInputElement;
+  trimOut: HTMLElement;
   tr: HTMLTableRowElement;
 }
 const layerRows = {} as Record<MusicLayer, LayerRow>;
@@ -237,27 +289,34 @@ const layerRows = {} as Record<MusicLayer, LayerRow>;
   for (const layer of MUSIC_LAYERS) {
     const span = spans.find((s) => s.layer === layer)!;
     const tr = document.createElement('tr');
-    tr.className = 'lay';
+    tr.title = `${layer} — a ${span.loopSeconds.toFixed(1)}s loop`;
     tr.innerHTML =
-      `<td><b>${layer}</b></td>` +
-      `<td class="dim">${span.loopSeconds.toFixed(1)}s</td>` +
+      `<td><b class="lay">${layer}</b></td>` +
       `<td class="dim">${panText(layer)}</td>` +
       `<td><span class="badge"></span></td>` +
       `<td class="target">0.00</td>` +
       `<td class="live">0.00</td>` +
-      `<td><span class="meter"><i></i></span></td>`;
-    tr.addEventListener('click', () => {
-      soloed = soloed === layer ? null : layer;
-      applySolo();
-    });
-    body.append(tr);
-    layerRows[layer] = {
+      `<td><span class="meter"><i></i></span></td>` +
+      `<td><input type="checkbox" checked /></td>` +
+      `<td><input type="range" min="0" max="200" step="5" value="100" /></td>` +
+      `<td class="dim trimOut">—</td>`;
+    const row: LayerRow = {
       move: tr.querySelector('.badge')!,
       target: tr.querySelector('.target')!,
       live: tr.querySelector('.live')!,
       bar: tr.querySelector('.meter i')!,
+      on: tr.querySelector('input[type=checkbox]')!,
+      trim: tr.querySelector('input[type=range]')!,
+      trimOut: tr.querySelector('.trimOut')!,
       tr,
     };
+    // Clicking the NAME solos — the fast gesture, kept from the first version because naming a
+    // sound you can hear and cannot place is what the solo rig was built for (0113).
+    tr.querySelector('.lay')!.addEventListener('click', () => solo(layer));
+    row.on.addEventListener('change', () => takeFromRow(layer));
+    row.trim.addEventListener('input', () => takeFromRow(layer));
+    body.append(tr);
+    layerRows[layer] = row;
   }
 }
 
@@ -267,50 +326,115 @@ function panText(layer: MusicLayer): string {
   return `${pan < 0 ? 'L' : 'R'} ${Math.abs(pan).toFixed(2)}`;
 }
 
-/**
- * Pin every layer but the soloed one to silence, or release them all.
- *
- * ⚠️ **A PIN SURVIVES `setLevel` WITHOUT ANY HELP, WHICH IS 0117 WORKING RATHER THAN LUCK.** The
- * mixer only writes a layer whose TARGET moved, so a gain forced here is left alone until the rung
- * changes — and the rung change is exactly when the pin should be re-stated anyway.
- */
-function applySolo(): void {
-  for (const layer of MUSIC_LAYERS) {
-    const want = soloed !== null && soloed !== layer;
-    layerRows[layer].tr.classList.toggle('off', want);
-    if (want) pinned.add(layer);
-    else pinned.delete(layer);
-  }
+/** Read one row's two controls into `held`, or drop the entry when both are back at default. */
+function takeFromRow(layer: MusicLayer): void {
+  const row = layerRows[layer];
+  const on = row.on.checked;
+  const trim = Number(row.trim.value) / 100;
+  if (on && trim === 1) held.delete(layer);
+  else held.set(layer, { on, trim });
+  drawHeld();
   restate(momentOf(kind, second, FIGHT_SECONDS, auraNearness(gapUnits)));
 }
 
+/** Everything off but this one, or everything back on if it was already the only one. */
+function solo(layer: MusicLayer): void {
+  const alone = held.size === MUSIC_LAYERS.length - 1 && !held.has(layer);
+  for (const other of MUSIC_LAYERS) layerRows[other].on.checked = alone || other === layer;
+  for (const other of MUSIC_LAYERS) takeFromRow(other);
+}
+
+function drawHeld(): void {
+  for (const layer of MUSIC_LAYERS) {
+    const row = layerRows[layer];
+    const hold = held.get(layer);
+    row.tr.classList.toggle('held', hold !== undefined);
+    row.tr.classList.toggle('off', hold !== undefined && !hold.on);
+    row.trimOut.textContent = hold === undefined || hold.trim === 1 ? '—' : `×${hold.trim.toFixed(2)}`;
+  }
+  el('heldCount').textContent = String(held.size);
+}
+
+for (const [id, set] of [
+  ['allOn', (r: LayerRow) => (r.on.checked = true)],
+  ['allOff', (r: LayerRow) => (r.on.checked = false)],
+] as const) {
+  el<HTMLButtonElement>(id).addEventListener('click', () => {
+    for (const layer of MUSIC_LAYERS) set(layerRows[layer]);
+    for (const layer of MUSIC_LAYERS) takeFromRow(layer);
+  });
+}
+
+el<HTMLButtonElement>('release').addEventListener('click', () => {
+  for (const layer of MUSIC_LAYERS) {
+    layerRows[layer].on.checked = true;
+    layerRows[layer].trim.value = '100';
+  }
+  for (const layer of MUSIC_LAYERS) takeFromRow(layer);
+});
+
 /**
- * Hold the pinned layers at silence, and put a released one back where the mixer wanted it.
+ * How fast a held gain moves to where the desk says, in seconds.
  *
- * ⚠️ **THE RELEASE IS THE HALF THAT IS NOT OBVIOUS.** A pin holds because `levelWrites` only writes
- * a layer whose target moved (0117) — which is also why un-pinning cannot simply stop writing: the
- * mixer thinks that layer is already where it asked for, and would leave it silent until the next
- * rung. So a release states the target here, and `moment.layers` is where the target comes from,
- * which is the same arithmetic the readout prints.
+ * ⚠️ **Short enough to feel like a fader and long enough not to click.** A `setValueAtTime` on a
+ * dragged slider steps the waveform sixty times a second, which is audible as grain on a sustained
+ * pad. This is a tenth of the mixer's own ramp and an order of magnitude above a sample.
+ */
+const HOLD_SECONDS = 0.03;
+
+/*
+  ⚠️ **THERE IS NO *only write when it moved* SHORTCUT HERE, AND THE AURA IS WHY.** `levelWrites`
+  skips a layer whose target has not moved — except the two aura layers, which it writes on EVERY
+  frame by design (0091: they track a distance the player is steering, so they are never at rest).
+  A desk that wrote only on a change therefore lost a tug of war with the mixer on exactly those two:
+  switched off, they settled at 0.01–0.02 instead of silence, because the hold stopped writing inside
+  its own tolerance and `setLevel` went on pulling them back up sixty times a second.
+
+  ⚠️ **So a held layer is written every frame, full stop.** It is a `cancelScheduledValues` and a
+  `setTargetAtTime` per held layer per frame — the same two calls the mixer already makes for the
+  aura — and re-basing an exponential approach each frame still converges at `HOLD_SECONDS`.
+*/
+
+/**
+ * Put every held layer where the desk says, and hand a released one back to the mixer.
+ *
+ * ── WHY THE DESK HAS TO KEEP WRITING AND THE MIXER DOES NOT ─────────────────────────────────────
+ *
+ * ⚠️ **A held gain survives `setLevel` without any help, which is 0117 working rather than luck.**
+ * The mixer only writes a layer whose TARGET moved, so a gain written here is left alone until the
+ * rung changes. What it cannot do is FOLLOW: a held layer at ×1.4 has to move when the ladder moves,
+ * and the mixer's ramp for it was never scheduled. So this is called every frame and writes only
+ * when the answer has actually changed — `HOLD_EPSILON` is what keeps that from being sixty
+ * automation events a second on a layer that is sitting still.
+ *
+ * ⚠️ **A HELD LAYER THEREFORE FOLLOWS A RUNG CHANGE IMMEDIATELY RATHER THAN OVER 1.6 SECONDS**, and
+ * the page says so where the desk is. That is a real difference from the game and it is the price of
+ * the feature; judging a transition is what *hand it all back* is for.
+ *
+ * ⚠️ **THE RELEASE IS THE HALF THAT IS NOT OBVIOUS.** Un-holding cannot simply stop writing: the
+ * mixer believes that layer is already where it asked for, so it would stay wherever the desk left
+ * it until the next rung. A release states the mixer's own target once, and `moment.layers` is where
+ * that target comes from — the same arithmetic the readout prints.
  *
  * ⚠️ **Zero is the cancel time and it is not a placeholder.** `cancelScheduledValues` drops every
- * event at or after the instant it is given and a `setValueAtTime` in the past is already in effect,
- * so a time of zero means *now, and forget whatever was scheduled* — which saves `MusicOut` a second
- * accessor it would have had for this alone.
+ * event at or after the instant it is given and an automation starting in the past is already under
+ * way, so a time of zero means *now, and forget whatever was scheduled* — which saves `MusicOut` a
+ * second accessor it would have had for this alone.
  */
 function restate(moment: Moment): void {
   const music = out.music();
   if (music === null) return;
   for (const { layer, target } of moment.layers) {
-    if (pinned.has(layer)) {
+    const hold = held.get(layer);
+    if (hold !== undefined) {
       const gain = music.gainOf(layer);
       gain.cancelScheduledValues(0);
-      gain.setValueAtTime(0, 0);
+      gain.setTargetAtTime(hold.on ? target * hold.trim : 0, 0, HOLD_SECONDS);
       owed.add(layer);
     } else if (owed.has(layer)) {
       const gain = music.gainOf(layer);
       gain.cancelScheduledValues(0);
-      gain.setValueAtTime(target, 0);
+      gain.setTargetAtTime(target, 0, HOLD_SECONDS);
       owed.delete(layer);
     }
   }
@@ -470,6 +594,89 @@ function drawSpans(): void {
       `<td class="dim">${row.spans.map(([f, t]) => `${clockText(f)}–${clockText(t)}`).join(' ')}</td>`;
     body.append(tr);
   }
+}
+
+// ── COPYING A MOMENT OUT ────────────────────────────────────────────────────────────────────────
+
+/**
+ * Everything true of right now, as text that can be pasted into a conversation.
+ *
+ * ⚠️ **Asked for by name**: *"an export or copy button that'll copy the relevant levels and sounds
+ * so I can paste them easily here, or some easy way to reference point in time and sound/volume
+ * effects."* Every report about this channel so far has had to be written from memory — *"the tune
+ * kicking around 52 secs"*, *"the 1:32 and 1:48 aren't noticeable"* — and a session then spends its
+ * first hour working out which rung 52 seconds was, at which theme, with what open.
+ *
+ * ⚠️ **IT PRINTS `live` BESIDE `target` AND THAT IS THE POINT OF IT.** The report this exists to
+ * carry is *"what is supposedly playing is not actually audible"*, which is a claim about the gap
+ * between the two columns — so a paste that carried only one of them would drop the finding on the
+ * way.
+ *
+ * ⚠️ **Markdown, because it lands in a chat and in `reports/`** —
+ * `docs/decisions/0029-the-tracked-record-is-the-record.md` says a report is a committed file, and a
+ * table that has to be re-typed to become one will not become one.
+ */
+function momentAsText(moment: Moment): string {
+  const music = out.music();
+  const lines = cueLines(tier, moment.rung, killsPerSecond).filter((c) => c.sounds);
+  const sounding = moment.layers.filter((l) => l.target > 0 || held.has(l.layer));
+  const silent = moment.layers.filter((l) => l.target <= 0 && !held.has(l.layer)).map((l) => l.layer);
+  const holds = [...held.entries()].map(([layer, h]) => (h.on ? `${layer} ×${h.trim.toFixed(2)}` : `${layer} OFF`));
+
+  const rows = sounding.map((l) => {
+    const live = music === null ? 0 : music.gainOf(l.layer).value;
+    const hold = held.get(l.layer);
+    return (
+      `| ${l.layer} | ${l.pan === 0 ? 'centre' : `${l.pan < 0 ? 'L' : 'R'}${Math.abs(l.pan).toFixed(2)}`} ` +
+      `| ${l.move} | ${l.target.toFixed(2)} | ${live.toFixed(2)} | ${l.loopSeconds.toFixed(1)}s ` +
+      `| ${hold === undefined ? '' : hold.on ? `held ×${hold.trim.toFixed(2)}` : 'held OFF'} |`
+    );
+  });
+
+  return [
+    `**Into the Coil — sound dashboard**`,
+    ``,
+    `- **level** \`${kind}\` — ${THEMES[moment.theme].title} (theme \`${moment.theme}\`)`,
+    `- **at** ${clockText(second)} of ${clockText(totalOf(kind))} · camera ${moment.camera.toFixed(0)} units · bar ${Math.floor(moment.bars)} beat ${moment.beat.toFixed(2)}`,
+    `- **rung** \`${moment.rung}\`${moment.nextRung === null ? ' (last)' : ` → \`${moment.nextRung}\` in ${moment.nextIn!.toFixed(1)}s`}` +
+      ` · aura ${moment.aura.toFixed(2)} · ${moment.sounding} of ${MUSIC_LAYERS.length} sounding`,
+    `- **over it** tier ${tier} — ` +
+      lines.map((c) => `${c.kind} ${c.every === null ? 'scattered' : `every ${c.every} steps`} (${c.perSecond.toFixed(2)}/s)`).join(', '),
+    `- **boss gap** ${gapUnits} units · **cues** ${cuesOn ? 'on' : 'off'}` +
+      (silenced.size > 0 ? ` (silenced: ${[...silenced].join(', ')})` : ''),
+    `- **held on the desk** ${holds.length === 0 ? 'nothing — this is the mixer untouched' : holds.join(', ')}`,
+    ``,
+    `| layer | pan | doing | target | live | loop | desk |`,
+    `|---|---|---|---|---|---|---|`,
+    ...rows,
+    ``,
+    `silent here: ${silent.length === 0 ? 'none' : silent.join(', ')}`,
+  ].join('\n');
+}
+
+{
+  const dump = el<HTMLTextAreaElement>('dump');
+  const said = el('copied');
+  el<HTMLButtonElement>('copy').addEventListener('click', () => {
+    const text = momentAsText(momentOf(kind, second, FIGHT_SECONDS, auraNearness(gapUnits)));
+    dump.value = text;
+    /*
+      ⚠️ **The textarea is shown WHETHER OR NOT the clipboard worked.** `navigator.clipboard` needs a
+      secure context — localhost counts — but it also refuses when the document is not focused, which
+      is exactly the state a page is in the moment after you click something in another window. A
+      copy button that silently did nothing would be worse than one that never existed.
+    */
+    dump.hidden = false;
+    void navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        said.textContent = 'copied — and printed below in case it did not';
+      })
+      .catch(() => {
+        said.textContent = 'the clipboard refused — select the text below instead';
+        dump.select();
+      });
+  });
 }
 
 // ── THE FRAME ───────────────────────────────────────────────────────────────────────────────────
