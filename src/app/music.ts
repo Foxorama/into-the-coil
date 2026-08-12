@@ -395,8 +395,13 @@ const REPHASE_SECONDS = 0.05;
  *
  * Long enough that the audio thread has the buffer switch before it needs it, and short enough that
  * the correction lands inside the loop it was decided in.
+ *
+ * ⚠️ **EXPORTED FOR `tests/music.test.ts` AND FOR NOTHING ELSE** — 0135. The guard on how long a new
+ * place makes a player wait has to add this to a bar, and a `0.06` typed into the test would go on
+ * asserting the old bound the day this moved. `docs/decisions/0116-the-rig-plays-the-level.md` is the
+ * decision about a number restated somewhere it is also measured.
  */
-const SCHEDULE_AHEAD = 0.06;
+export const SCHEDULE_AHEAD = 0.06;
 
 /**
  * Seconds until the loops should be restarted to put them back in phase with the sim, or `null` when
@@ -643,6 +648,31 @@ export function nextBarFrom(anchor: number, now: number): number {
   const since = now - anchor;
   if (since <= 0) return anchor;
   return anchor + Math.ceil(since / BAR_SECONDS) * BAR_SECONDS;
+}
+
+/**
+ * When a new PLACE's loops go on the air — the next bar that is far enough ahead to schedule.
+ *
+ * ── IT WAS THE NEXT PHRASE, AND A LEVEL OPENED ON THE PREVIOUS PLACE'S MUSIC ────────────────────
+ *
+ * ⚠️ **`docs/decisions/0135-a-place-arrives-when-you-do.md`.** Reported of the first level that ever
+ * played its own music: *"the start of level 2 sounded a bit like the default start, it should
+ * immediately pick into the new thematic track."* A phrase is 25.6 seconds and a level opens
+ * deliberately empty (0043), so the whole of level two's first quiet minute could be level one's
+ * piece.
+ *
+ * ⚠️ **A FUNCTION AND NOT FOUR LINES IN A CLOSURE, on `src/app/lifecycle.ts`'s own terms** — the
+ * instant is the whole subject and it lived somewhere only an `AudioContext` could reach, so
+ * `docs/decisions/0005-a-guard-must-be-seen-to-fail.md` could not break it.
+ *
+ * ⚠️ **`nextBarFrom` is the bar arithmetic and is not repeated here** — 0117 owns it. What this adds
+ * is the scheduling floor: a bar that is two milliseconds away cannot be started on, so the next one
+ * is taken.
+ */
+export function placeArrivesAt(anchor: number, now: number, minAhead: number): number {
+  let when = nextBarFrom(anchor, now);
+  while (when < now + minAhead) when += BAR_SECONDS;
+  return when;
 }
 
 /**
@@ -1016,15 +1046,32 @@ export function makeMusicOut(
       }
       if (!moved || !started) return;
       /*
-        ⚠️ **The next PHRASE, on the loops' own clock.** `anchorAudio` is position zero of every
-        layer, so this is the next instant at which all of them are simultaneously back at the top —
-        the only place a sixteen-bar progression can be replaced without cutting one in half.
+        ── THE NEXT BAR, AND IT WAS THE NEXT PHRASE FOR ONE LEVEL OF THE GAME ────────────────────────
+
+        ⚠️ **`docs/decisions/0135-a-place-arrives-when-you-do.md`.** Reported of the first level that
+        ever played its own music: *"the start of level 2 sounded a bit like the default start, it
+        should immediately pick into the new thematic track."* A phrase is **25.6 seconds**, so a
+        level could open with up to that much of the PREVIOUS place's material — and the opening
+        stretch is deliberately empty (0043), so what the player heard was level one's piece over
+        level two's first quiet minute.
+
+        ⚠️ **0128 CHOSE THE PHRASE AND ITS ARGUMENT WAS ABOUT THE WRONG PIECE.** *"Swapping anywhere
+        else restarts a sixteen-bar chord progression in the middle of itself"* is true of the piece
+        being REPLACED and false of the one arriving: `swapTo` starts every source at position zero,
+        so the incoming place begins at its own bar one whenever this fires. What the phrase bought
+        was a tidy exit for material the player is leaving behind.
+
+        ⚠️ **AND AT A CHANGE OF PLACE, CUTTING THE OLD PIECE IS THE POINT.** A level boundary is the
+        one moment in a run where *you are somewhere else now* is the thing to say. A bar keeps
+        `docs/decisions/0117-a-section-change-lands-on-the-beat.md` — nothing lands mid-bar — and
+        costs at most 1.6 seconds instead of 25.6.
+
+        ⚠️ **`phaseTo`'s correction still uses the PHRASE and must.** There the piece is not changing:
+        a re-phase is a repair nobody should hear (0094), so it waits for the instant every layer is
+        back at the top anyway. Same call, two clocks, and the difference is whether the listener is
+        meant to notice.
       */
-      const since = ctx.currentTime - anchorAudio;
-      const ahead = Math.max(0, Math.ceil(since / PHRASE_SECONDS)) * PHRASE_SECONDS;
-      let when = anchorAudio + ahead;
-      while (when < ctx.currentTime + SCHEDULE_AHEAD) when += PHRASE_SECONDS;
-      swapTo(when);
+      swapTo(placeArrivesAt(anchorAudio, ctx.currentTime, SCHEDULE_AHEAD));
       // The sim's side of the anchor is re-learned on the next frame, exactly as a start does — 0094.
       anchorSim = null;
     },

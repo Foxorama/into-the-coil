@@ -185,6 +185,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a place may be ANOTHER PIECE: Ember Nebula is a choir, an organ and an inferno, 21 of 23 layers** | [0132](decisions/0132-a-place-may-be-another-piece-entirely.md) |
 | **and the game plays it: the incoming place is baked across the break screen and REPLACES rather than caches** | [0133](decisions/0133-the-place-is-baked-at-the-boundary.md) |
 | **a place may be another piece and may NOT be a slower one — pace and bottom held against the base** | [0134](decisions/0134-the-place-keeps-the-games-pace.md) |
+| **a place arrives on the next BAR and not the next phrase — 1.6s where it was 25.6** | [0135](decisions/0135-a-place-arrives-when-you-do.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
