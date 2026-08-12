@@ -58,6 +58,16 @@ const FIGHT_SECONDS = 45;
  */
 const MAX_STEPS = 5;
 
+/**
+ * The most steps the speaker is walked through in one tick before the rest are simply skipped.
+ *
+ * ⚠️ **A hidden tab throttled to one tick a second needs sixty**, and a machine back from sleep
+ * could need a hundred thousand. Walking them all is pointless work; not walking them at all would
+ * slide the step count — and therefore the gun — off the bar by the length of the gap. So the count
+ * jumps and the walk does not.
+ */
+const CATCH_UP_STEPS = 240;
+
 const el = <T extends HTMLElement>(id: string): T => {
   const found = document.getElementById(id);
   if (found === null) throw new Error(`rig/index.html has no #${id}`);
@@ -79,8 +89,20 @@ let gapUnits = 85;
 let cuesOn = true;
 let soloed: MusicLayer | null = null;
 let unlocked = false;
-/** Sim steps the transport has issued. The clock the music is phase-locked to — 0094. */
+/**
+ * Sim steps issued since the loops went on the air. Monotonic, and NOT a function of the scrub.
+ *
+ * ⚠️ **This is what keeps the gun on the music's grid, and it is why the dashboard never calls
+ * `phaseTo`.** 0094's re-phase exists for a sim that DROPPED steps — a game loop's backlog, thrown
+ * away by `src/app/loop.ts` rather than spiralled through. This tool has no game loop: the count
+ * below is derived from the same wall clock the `AudioContext` runs on, so the two track to within
+ * tens of parts per million (0094 says so in as many words) and there is nothing to correct. What a
+ * correction WOULD do here is move the bar grid up to a phrase into the future, which is exactly
+ * the bug a scrub used to cause.
+ */
 let steps = 0;
+/** `performance.now()` at the instant the loops were started, or `null` before the first press. */
+let startedAt: number | null = null;
 let lastFrame = 0;
 /** Layers currently held at silence by a solo. */
 const pinned = new Set<MusicLayer>();
@@ -124,15 +146,25 @@ for (const [label, at] of [
   el('jumps').append(button);
 }
 
+/**
+ * Move to a different place in the level.
+ *
+ * ── AND THE STEP CLOCK DOES NOT MOVE WITH IT, WHICH COST AN HOUR TO FIND ────────────────────────
+ *
+ * ⚠️ **THE FIRST VERSION RE-ANCHORED `steps` HERE AND IT BROKE EVERY RAMP AFTER A SCRUB.** A jump
+ * makes the step clock disagree with the audio clock by however far you jumped; `phaseTo` reads that
+ * as drift and corrects it the way 0094 says — by restarting the loop set at the next PHRASE
+ * boundary, up to 25.6 seconds ahead. `anchorAudio` becomes that future instant, `nextBarFrom`
+ * returns it for every subsequent write, and **the whole ladder freezes at whatever it was showing
+ * until the anchor arrives.** Observed as: jump to `surge`, and the layers `surge` opens stay
+ * silent while the readout insists they are at full.
+ *
+ * ⚠️ **So a scrub moves the LEVEL and never the clock.** The level position is what the slider is
+ * about; the music has been playing continuously since the first press and nothing about looking at
+ * a different part of the level should move it.
+ */
 function seek(to: number): void {
   second = Math.max(0, Math.min(totalOf(kind), to));
-  /*
-    ⚠️ **The step clock is re-anchored rather than wound forward.** `phaseTo` corrects a drift by
-    swapping the loop set at a boundary (0094), and a scrub is not a drift — it is a different place
-    in the level. Re-anchoring is what stops a two-minute jump scheduling a correction the size of
-    the jump.
-  */
-  steps = Math.round(second * STEPS_PER_SECOND);
 }
 
 el<HTMLButtonElement>('unlock').addEventListener('click', () => {
@@ -140,6 +172,10 @@ el<HTMLButtonElement>('unlock').addEventListener('click', () => {
   unlocked = out.ready();
   const music = out.music();
   music?.start();
+  // The loops go on the air here, so this is step zero — and everything the gun does is counted
+  // from it rather than from the scrub.
+  startedAt = performance.now();
+  steps = 0;
   playButton.disabled = !unlocked;
   status.textContent = unlocked ? 'audio running' : 'the browser refused a context — no AudioContext on this page';
   el<HTMLButtonElement>('unlock').disabled = unlocked;
@@ -393,9 +429,17 @@ function drawSpans(): void {
 
 // ── THE FRAME ───────────────────────────────────────────────────────────────────────────────────
 
+/**
+ * How long a gap the walk will absorb in one tick, in seconds.
+ *
+ * ⚠️ **A hidden tab throttles `setInterval` to about once a second** and a laptop that slept can
+ * return minutes later. The audio never stopped, so the walk has to catch up rather than pretend
+ * nothing happened — but it must not fast-forward a whole level on the first tick back.
+ */
+const MAX_GAP_SECONDS = 1;
+
 function frame(at: number): void {
-  requestAnimationFrame(frame);
-  const elapsed = Math.min(0.25, (at - lastFrame) / 1000);
+  const elapsed = Math.min(MAX_GAP_SECONDS, (at - lastFrame) / 1000);
   lastFrame = at;
   const total = totalOf(kind);
 
@@ -413,20 +457,28 @@ function frame(at: number): void {
     // A rung change re-writes every layer whose target moved, including the ones a solo is holding
     // down — so the pin is re-stated the moment the mixer has had its say, and never before it.
     if (rungBefore !== moment.rung || owed.size > 0) restate(moment);
-    music.phaseTo(steps);
   }
 
-  if (playing) {
-    const want = Math.round(second * STEPS_PER_SECOND);
-    let behind = want - steps;
-    if (behind > MAX_STEPS) {
-      steps = want - MAX_STEPS;
-      behind = MAX_STEPS;
-    }
-    for (let i = 0; i < behind; i++) {
+  /*
+    ⚠️ **THE CLOCK RUNS WHETHER THE TRANSPORT DOES OR NOT.** The loops never stopped, so the step
+    count has to stay derived from the same wall clock they are on — pausing the walk must not put
+    the gun a pause-length out of phase with the bar. What `playing` gates is whether anything
+    FIRES, not whether time passed.
+  */
+  if (startedAt !== null) {
+    const want = Math.round(((at - startedAt) / 1000) * STEPS_PER_SECOND);
+    /*
+      ⚠️ **A backlog is dropped rather than fired, exactly as `src/app/loop.ts` drops one** — but the
+      COUNT still catches up, or the grid would slide by however long the tab was hidden. Past a
+      long gap the speaker is not walked at all: `variantAt` reads the step number it is given, so
+      the accents land correctly on the far side either way.
+    */
+    const behind = want - steps;
+    if (behind > CATCH_UP_STEPS) steps = want - MAX_STEPS;
+    for (let i = steps; i < want; i++) {
       steps++;
       speaker.step(steps);
-      cuesOnStep(steps);
+      if (playing && want - i <= MAX_STEPS) cuesOnStep(steps);
     }
   }
 
@@ -461,13 +513,22 @@ drawSpans();
 drawStrip();
 setInterval(drawCues, 500);
 /*
-  ⚠️ **ONE FRAME NOW RATHER THAN AT THE FIRST PAINT, AND IT IS NOT A TIDY-UP.** `frame` re-registers
-  itself before it does anything, so calling it here both draws the readout and starts the loop —
-  and a page that opened reading *calm · 0:00 / 0:00* while the strip beside it already showed the
-  level was an instrument disagreeing with itself in the first second a human looked at it.
+  ── A TIMER AND NOT `requestAnimationFrame`, WHICH IS A DECISION ABOUT WHAT THIS TOOL IS ──────────
 
-  ⚠️ **It also matters that `requestAnimationFrame` does not run in a hidden tab.** Without this the
-  whole readout stays at its markup defaults until the page is looked at, which is exactly the state
-  a screenshot taken by a tool would capture.
+  ⚠️ **`requestAnimationFrame` DOES NOT RUN IN A HIDDEN TAB, AND THE AUDIO DOES.** The game is right
+  to use it — `src/app/loop.ts` drives a picture, and a picture nobody is looking at should cost
+  nothing. This drives a SOUND. A player who tabs away mid-level to read something would have the
+  music go on playing while the level stopped advancing underneath it: the rung would hold, the
+  build would freeze, and the thing they are listening for would never arrive. **A tool that lies
+  when it is not being watched is worse than one that costs a timer.**
+
+  ⚠️ **The elapsed time is measured, never assumed to be the interval.** A hidden tab throttles this
+  to about once a second, so the walk absorbs the real gap (up to `MAX_GAP_SECONDS`) and the cue
+  catch-up is bounded separately by `MAX_STEPS` — which is what `src/app/loop.ts` does with a
+  backlog, and for the same reason.
+
+  ⚠️ **The first tick is immediate**, so the readout is right before anything is pressed rather than
+  showing its markup defaults next to a strip that already knows the level.
 */
 frame(performance.now());
+setInterval(() => frame(performance.now()), 16);

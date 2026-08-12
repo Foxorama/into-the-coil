@@ -89,6 +89,28 @@ about its theme **consistently** still agrees with itself. Two different claims 
 false about the music: nothing arrived, something that had been climbing for thirty-five seconds
 crossed a threshold. It is now `tracking`, and 0117 leaves the aura unquantised for the same reason.
 
+## Two defects that only exist because this is DRIVEN, and both were found by driving it
+
+⚠️ **A SCRUB RE-ANCHORED THE MUSIC UP TO A PHRASE INTO THE FUTURE, AND FROZE THE WHOLE LADDER.** The
+first version moved the step clock with the slider. `phaseTo` reads a step clock that disagrees with
+the audio clock as drift and corrects it the way [0094](0094-in-time-is-not-in-phase.md) says — by
+restarting the loop set at the next **phrase** boundary, up to 25.6 s ahead. `anchorAudio` becomes
+that future instant, `nextBarFrom` returns it for every subsequent write, and every gain holds
+where it was until the anchor arrives. **Observed as: jump to `surge`, and the layers `surge` opens
+stay silent while the readout insists they are at full.**
+
+⚠️ **THE FIX IS THAT A SCRUB MOVES THE LEVEL AND NEVER THE CLOCK**, and the dashboard therefore does
+not call `phaseTo` at all. Its step count is derived from the same wall clock the `AudioContext`
+runs on, which 0094 itself sizes at *under ten milliseconds across a three-minute level*. **A
+re-phase exists for a sim that dropped steps; this tool has no sim.**
+
+⚠️ **AND `requestAnimationFrame` DOES NOT RUN IN A HIDDEN TAB WHILE THE AUDIO DOES.** The game is
+right to use it — it drives a picture. This drives a **sound**: a player who tabs away mid-level
+would have the music go on playing while the level stopped advancing underneath it, so the rung
+would hold and the thing they were listening for would never arrive. It is a timer instead, with the
+elapsed time measured rather than assumed. **A tool that lies when it is not being watched is worse
+than one that costs a timer.**
+
 ## What the build plugin had to give up, and why it is narrower rather than weaker
 
 ⚠️ **`stampBuildIdentity`'s `transformIndexHtml` RAN ON EVERY HTML THE DEV SERVER TOUCHED**, so the
