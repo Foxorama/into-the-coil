@@ -39,6 +39,7 @@ import {
   UNITS_PER_SECOND,
   cueLines,
   layerSpans,
+  loudestGain,
   marksOf,
   momentOf,
   weaponAtTier,
@@ -319,6 +320,10 @@ levelSelect.addEventListener('change', () => {
   kind = levelSelect.value as LevelKind;
   seek(0);
   goToPlace(LEVELS[kind].theme);
+  // An audition is *the loudest THIS PLACE takes it*, so a change of place re-states it — 0130.
+  // Without this the fader keeps the last level's number over the new level's material.
+  const only = aloneOn();
+  if (only !== null) auditionOnly(only);
   drawSpans();
   drawStrip();
   drawPlace();
@@ -467,6 +472,11 @@ function drawHeld(): void {
     row.panOut.textContent = panText(hold.pan ?? LAYER_PAN[layer]);
   }
   el('heldCount').textContent = String(held.size);
+  // The audition buttons read the desk rather than remembering what they did to it — 0130.
+  const only = aloneOn();
+  for (const layer of MUSIC_LAYERS) {
+    auditionButtons[layer].setAttribute('aria-pressed', String(layer === only));
+  }
 }
 
 /** The bulk gestures. Each one is a starting point for a listen rather than a setting. */
@@ -493,6 +503,88 @@ function syncSliders(): void {
     if (hold.gain !== null) row.gain.value = String(Math.round(hold.gain * 100));
     row.pan.value = String(Math.round((hold.pan ?? LAYER_PAN[layer]) * 100));
   }
+}
+
+// ── ONE LAYER, ON ITS OWN, IN ONE CLICK ─────────────────────────────────────────────────────────
+
+/*
+  ⚠️ **`docs/decisions/0130-a-layer-can-be-heard-on-its-own.md`.** Reported: *"the music dashboard
+  needs to let me play music components as well as every sound in the game, so I can hear them
+  individually without needing to have the main theme playing."*
+
+  ⚠️ **THE DESK COULD ALREADY DO THIS AND IT TOOK THREE GESTURES**, which is the whole of what was
+  wrong: solo the layer, find its fader, drag it up — because `solo` pins the others at silence and
+  leaves the survivor at whatever the LADDER says, and fourteen of the twenty-three are closed at any
+  given rung (0129). The panel over the cues is one click a sound; this is its twin.
+
+  ⚠️ **IT IS THE DESK AND NOT A SECOND PLAYER, WHICH IS THE PART WORTH DEFENDING.** The obvious build
+  is a `BufferSourceNode` per button straight at the destination — and it would bypass `MUSIC_GAIN`,
+  the bus shaper and the duck, so what a button played would not be what the game plays. 0116 records
+  two verdicts taken from a rig that had come apart from the game; a second playback path inside the
+  instrument built to prevent that is the same mistake with a shorter fuse. Moving the mixer's own
+  faders costs nothing and cannot drift.
+*/
+
+const auditionButtons = {} as Record<MusicLayer, HTMLButtonElement>;
+
+{
+  const row = el('alone');
+  const spans = layerSpans(kind, FIGHT_SECONDS);
+  for (const layer of MUSIC_LAYERS) {
+    const span = spans.find((s) => s.layer === layer)!;
+    const button = document.createElement('button');
+    button.textContent = layer;
+    button.title = `${layer} — a ${span.loopSeconds.toFixed(1)}s loop`;
+    button.setAttribute('aria-pressed', 'false');
+    button.addEventListener('click', () => auditionOnly(aloneOn() === layer ? null : layer));
+    row.append(button);
+    auditionButtons[layer] = button;
+  }
+  const back = document.createElement('button');
+  back.textContent = 'everything back';
+  back.addEventListener('click', () => auditionOnly(null));
+  row.append(back);
+}
+
+/**
+ * Which layer the desk currently has alone, or `null`.
+ *
+ * ⚠️ **DERIVED FROM THE DESK RATHER THAN REMEMBERED**, so dragging a fader after an audition cannot
+ * leave a button lit that is no longer telling the truth. The desk is the state; this is a reading
+ * of it, on exactly the terms the *live* column is a reading of the graph.
+ */
+function aloneOn(): MusicLayer | null {
+  let only: MusicLayer | null = null;
+  for (const layer of MUSIC_LAYERS) {
+    const gain = holdOf(layer).gain;
+    // A layer following the mixer means the desk is not holding the whole set, so nothing is alone.
+    if (gain === null) return null;
+    if (gain > 0) {
+      if (only !== null) return null;
+      only = layer;
+    }
+  }
+  return only;
+}
+
+/**
+ * Put one layer alone on the desk at the loudest this place ever takes it — or hand the lot back.
+ *
+ * ⚠️ **The loops have to be ON THE AIR, so this starts them.** A paused dashboard has called `setOn`
+ * and that STOPS the sources rather than muting them (0119), so a fader written into silence writes
+ * into nothing. What the player asked not to hear is the rest of the piece, and every other fader
+ * being at zero is what answers that.
+ */
+function auditionOnly(only: MusicLayer | null): void {
+  const theme = LEVELS[kind].theme;
+  for (const layer of MUSIC_LAYERS) {
+    const pan = holdOf(layer).pan;
+    if (only === null) setHold(layer, { gain: null, pan });
+    else setHold(layer, { gain: layer === only ? loudestGain(theme, layer) : 0, pan });
+  }
+  syncSliders();
+  if (only !== null && unlocked && !playing) togglePlay();
+  afterDeskChange();
 }
 
 /**
@@ -777,6 +869,12 @@ function momentAsText(moment: Moment): string {
     if (h.pan !== null) parts.push(panText(h.pan).replace(' ', ''));
     return `${layer} ${parts.join(' ')}`;
   });
+  /*
+    ⚠️ **AN AUDITION IS SAID IN ONE LINE RATHER THAN AS TWENTY-TWO ZEROES** — 0130. It holds every
+    layer, so the list above would be a wall of `arp 0.00` with the one fact buried in it, and a
+    paste nobody reads is the same as no copy button.
+  */
+  const only = aloneOn();
 
   const rows = sounding.map((l) => {
     const live = music === null ? 0 : music.gainOf(l.layer).value;
@@ -799,7 +897,9 @@ function momentAsText(moment: Moment): string {
       lines.map((c) => `${c.kind} ${c.every === null ? 'scattered' : `every ${c.every} steps`} (${c.perSecond.toFixed(2)}/s)`).join(', '),
     `- **boss gap** ${gapUnits} units · **cues** ${cuesOn ? 'on' : 'off'}` +
       (silenced.size > 0 ? ` (silenced: ${[...silenced].join(', ')})` : ''),
-    `- **held on the desk** ${holds.length === 0 ? 'nothing — this is the mixer untouched' : holds.join(', ')}`,
+    only !== null
+      ? `- **on the desk** \`${only}\` ALONE at ${(holdOf(only).gain ?? 0).toFixed(2)} — every other layer at zero`
+      : `- **held on the desk** ${holds.length === 0 ? 'nothing — this is the mixer untouched' : holds.join(', ')}`,
     ``,
     `| layer | pan | doing | target | live | loop | desk |`,
     `|---|---|---|---|---|---|---|`,

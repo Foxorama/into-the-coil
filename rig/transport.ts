@@ -25,6 +25,7 @@ import {
   LAYER_PAN,
   MUSIC_LADDER,
   MUSIC_LAYERS,
+  MUSIC_LEVELS,
   STEPS_PER_BEAT,
   type MusicLayer,
   type MusicLevel,
@@ -278,6 +279,40 @@ export function layerSpans(kind: LevelKind, fightSeconds: number): LayerSpan[] {
     out.push({ layer, loopSeconds, spans, openFor, longest, passes: longest / loopSeconds });
   }
   return out;
+}
+
+/**
+ * The loudest this place ever takes a layer, over every rung of the ladder.
+ *
+ * ── WHAT A ONE-CLICK AUDITION HAS TO PUT IN THE FADER ───────────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0130-a-layer-can-be-heard-on-its-own.md`.** Reported: *"the music dashboard
+ * needs to let me play music components as well as every sound in the game, so I can hear them
+ * individually without needing to have the main theme playing."* The desk could already do it in
+ * three gestures — solo, then drag the fader up, because a soloed layer sits at whatever the LADDER
+ * says and fourteen of the twenty-three are closed at any given rung (0129) — and *three gestures*
+ * is the whole difference between a panel you use and one you read.
+ *
+ * ⚠️ **THE LOUDEST RATHER THAN THE CURRENT ONE, AND THAT IS THE QUESTION BEING ASKED.** *What does
+ * this layer sound like* is a question about the material; *what is it doing right now* is what the
+ * live column beside it already answers. Auditioning at the rung's own value would give silence for
+ * every layer the rung has closed, which is exactly the state 0129 exists to reach past.
+ *
+ * ⚠️ **The aura's ceiling is taken at a boss at arm's length**, which is the only honest reading of
+ * *loudest* for a pair of layers whose gain is a distance the player steers (0091).
+ *
+ * ⚠️ **It is a value from the game's own tables and not a listening level chosen here** — the rung,
+ * the place's multiplier and the aura's ceiling, exactly as `targetGain` composes them. A flat 0.8
+ * would have been simpler and would make every layer sound equally important, which is a lie about
+ * a mix.
+ */
+export function loudestGain(theme: ThemeKind, layer: MusicLayer): number {
+  let most = 0;
+  for (const rung of MUSIC_LEVELS) {
+    const at = targetGain(theme, rung, layer, 1);
+    if (at > most) most = at;
+  }
+  return most;
 }
 
 /**

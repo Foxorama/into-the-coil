@@ -7,6 +7,7 @@ import {
   UNITS_PER_SECOND,
   cueLines,
   layerSpans,
+  loudestGain,
   marksOf,
   momentOf,
   moveOf,
@@ -18,9 +19,11 @@ import {
   LAYER_BARS,
   MUSIC_LADDER,
   MUSIC_LAYERS,
+  MUSIC_LEVELS,
   STEPS_PER_BEAT,
   type MusicLayer,
 } from '../src/content/music.ts';
+import { THEME_KINDS, mixOf } from '../src/content/themes.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { auraBuild, auraFor, levelWrites, musicLevelFor } from '../src/app/music.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
@@ -265,6 +268,67 @@ describe('what plays over the top of it', () => {
     // player is judging.
     for (const kind of ['kill', 'hit', 'threat'] as const) {
       expect(cueLines(2, 'run', 1.6).find((c) => c.kind === kind)!.every, `${kind} is on a grid`).toBeNull();
+    }
+  });
+});
+
+describe('0130 — a layer can be heard on its own', () => {
+  /*
+    `docs/decisions/0130-a-layer-can-be-heard-on-its-own.md`. Reported: *"the music dashboard needs
+    to let me play music components as well as every sound in the game, so I can hear them
+    individually without needing to have the main theme playing."*
+
+    ⚠️ **WHAT IS HELD IS THE VALUE THE BUTTON PUTS IN THE FADER**, not that a button exists. The
+    click, the DOM and the `AudioParam` write are `rig/dash.ts`'s and need a browser;
+    `docs/decisions/0116-the-rig-plays-the-level.md` records what happens when a rig is guarded by
+    looking for a word in its source instead.
+  */
+  it('an audition is the LOUDEST this place ever takes the layer, off the game’s own tables', () => {
+    for (const theme of THEME_KINDS) {
+      for (const layer of MUSIC_LAYERS) {
+        /*
+          ⚠️ **Composed here from `MUSIC_LADDER` and `mixOf` rather than from `targetGain`**, which
+          is what `loudestGain` itself walks — a guard built out of the function's own helper would
+          only prove the loop runs. The aura's pair are at a boss at arm's length, which is the one
+          reading of *loudest* available for a gain that is a distance the player steers (0091).
+        */
+        const want = Math.max(...MUSIC_LEVELS.map((rung) => MUSIC_LADDER[rung][layer])) * mixOf(theme, layer);
+        expect(loudestGain(theme, layer), `${theme}/${layer}`).toBeCloseTo(want, 10);
+      }
+    }
+  });
+
+  it('and NO LAYER IS UNREACHABLE — all twenty-three can be got at, in every place', () => {
+    /*
+      ⚠️ **THIS IS THE ASK, STATED AS A PROPERTY.** *"Whole sections of sound that have been produced
+      that I've apparently never heard"* (0126) is a claim that some of this composition is
+      effectively unreachable; a desk whose one-click audition could still hand back silence for a
+      layer would be the same complaint with a button on it. It is also a live dead-layer check: a
+      layer no rung ever opens would fail here rather than sit in the table unheard.
+    */
+    for (const theme of THEME_KINDS) {
+      for (const layer of MUSIC_LAYERS) {
+        expect(loudestGain(theme, layer), `${theme}/${layer} cannot be heard on the desk at all`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('and it reaches PAST the rung, which is the whole reason it is not the ladder’s own value', () => {
+    /*
+      ⚠️ **0129 made the faders absolute so a closed layer could be dragged up; this is that in one
+      click.** `solo` leaves the survivor at whatever the ladder says, and fourteen of the
+      twenty-three are closed at any given rung — so an audition that used the rung's value would be
+      silence for most of the table most of the time, which is exactly the state 0129 was reported
+      against.
+    */
+    const closedDuringRun = MUSIC_LAYERS.filter((layer) => MUSIC_LADDER.run[layer] === 0);
+    expect(closedDuringRun.length, 'the run rung closes nothing, so this guard is standing over nothing').toBeGreaterThan(
+      8,
+    );
+    for (const layer of closedDuringRun) {
+      expect(loudestGain('nebula', layer), `${layer} is closed at run and the audition cannot reach it`).toBeGreaterThan(
+        0,
+      );
     }
   });
 });

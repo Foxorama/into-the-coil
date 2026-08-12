@@ -49,9 +49,10 @@ npm run dash
 
 It serves `/rig/`: the game's own mixer on a scrub bar, every layer's live gain read off its
 `GainNode` beside the target, absolute faders so a layer the rung has CLOSED can be dragged up and
-heard, per-layer pan, the gun and the tubes at a tier slider, every cue on a button, and a **copy
-this moment** button that prints the lot as markdown. **A music question is opened here now, not in a
-`.wav`.** `docs/machine.md` has the double-clickable launcher and the one thing about node's path on
+heard, per-layer pan, the gun and the tubes at a tier slider, every cue on a button, **every music
+layer on a button too — one click and it plays alone**
+([0130](decisions/0130-a-layer-can-be-heard-on-its-own.md)), and a **copy this moment** button that
+prints the lot as markdown. **A music question is opened here now, not in a `.wav`.** `docs/machine.md` has the double-clickable launcher and the one thing about node's path on
 this machine that will otherwise cost an hour.
 
 ⚠️ **Establish which build a report is about BEFORE debugging it.** A session was once spent on
@@ -179,6 +180,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a cue sounds from where it happened; the low end turned out not to need centring** | [0127](decisions/0127-a-cue-has-a-place.md) |
 | **a place plays its own material and shares the rest — level two is the first, and the GAME does not play it yet** | [0128](decisions/0128-a-place-plays-its-own-material.md) |
 | **the desk holds an ABSOLUTE value, so a layer the rung has closed can be heard; a place is a fader too** | [0129](decisions/0129-the-desk-holds-a-value-not-a-multiplier.md) |
+| **every layer is a button: one click plays it alone, at the loudest the place ever takes it** | [0130](decisions/0130-a-layer-can-be-heard-on-its-own.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -655,10 +657,15 @@ does not reach it.
 [0126](decisions/0126-the-dashboard-is-the-instrument.md) and
 [0129](decisions/0129-the-desk-holds-a-value-not-a-multiplier.md). `npm run dash` serves `/rig/`: the
 game's own mixer on a scrub bar, live gains read off the `GainNode`s, **absolute faders and per-layer
-pan**, the gun and the tubes at a tier slider, every cue on a button, and a copy-out. **It is the
+pan**, the gun and the tubes at a tier slider, every cue on a button, **every music layer on a button
+beside them** ([0130](decisions/0130-a-layer-can-be-heard-on-its-own.md)), and a copy-out. **It is the
 answer to *"whole sections of sound that have been produced that I've apparently never heard in
 game"*** and it is where a music number is opened from now on, because it is the only instrument here
 that answers a question asked at a moment rather than about a file.
+
+⚠️ **AND *WHAT DOES THIS ONE SOUND LIKE* IS NOW ONE CLICK** —
+[0130](decisions/0130-a-layer-can-be-heard-on-its-own.md). It was three gestures, because a solo
+leaves the survivor at whatever the rung says and most of the table is closed at any given rung.
 
 ⚠️ **THE FADERS BEING ABSOLUTE IS THE PART THAT MATTERS FOR AUTHORING** — 0129. `open everything`
 sounds all twenty-three at once *including what the rung has closed*, so *what would `frenzy` do
