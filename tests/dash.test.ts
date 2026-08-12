@@ -274,12 +274,18 @@ describe('the rig is not in the game, and the game is not in the rig', () => {
     expect(UNITS_PER_SECOND).toBe(SCROLL_PER_STEP * STEPS_PER_SECOND);
   });
 
-  it('NOTHING UNDER src/ CALLS `gainOf` — the mix is decided in one place', () => {
+  it('NOTHING UNDER src/ CALLS `gainOf` OR `panOf` — the mix and the field are decided in one place', () => {
     /*
       ⚠️ **A parameter the shell could write is a second place the mix is decided from.** `gainOf`
       exists for `rig/` alone (0126); the moment a frame reaches for it, `docs/decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md`'s
       single hand becomes two, and `levelWrites` stops being the whole story of what a layer is doing.
       Its own declaration in `src/app/music.ts` is the one permitted mention.
+
+      ⚠️ **`panOf` IS HELD ON THE SAME TERMS AND THE ARGUMENT IS STRONGER, NOT WEAKER** — 0129. A
+      layer's place is set once from `LAYER_PAN` at construction and the game never moves one, so a
+      call site under `src/` would not be a second opinion about the field — it would be **the only
+      one**, and `tests/music.test.ts`'s guard that the low end is centred would be measuring a table
+      nobody obeys.
     */
     const offenders: string[] = [];
     const walk = (dir: string): void => {
@@ -287,12 +293,13 @@ describe('the rig is not in the game, and the game is not in the rig', () => {
         const path = `${dir}/${entry.name}`;
         if (entry.isDirectory()) walk(path);
         else if (entry.name.endsWith('.ts') && path !== 'src/app/music.ts') {
-          if (/\bgainOf\s*\(/.test(readFileSync(resolve(root, path), 'utf8'))) offenders.push(path);
+          const source = readFileSync(resolve(root, path), 'utf8');
+          if (/\b(gainOf|panOf)\s*\(/.test(source)) offenders.push(path);
         }
       }
     };
     walk('src');
-    expect(offenders, `these reach into a layer's gain directly: ${offenders.join(', ')}`).toEqual([]);
+    expect(offenders, `these reach into a layer's gain or place directly: ${offenders.join(', ')}`).toEqual([]);
   });
 
   it('NOTHING UNDER src/ IMPORTS FROM rig/ — the dashboard is not reachable from the shipped page', () => {

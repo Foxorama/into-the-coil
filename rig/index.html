@@ -98,6 +98,9 @@
       .held td { background: #1a1430; }
       .held td:first-child { box-shadow: inset 3px 0 0 var(--hot); }
       td input[type='range'] { width: 84px; }
+      /* A fader that has not been touched is the mixer's, and looks it. */
+      td input[type='range'].following { accent-color: #4b5168; opacity: 0.55; }
+      td button.fol { font-size: 10px; padding: 1px 6px; }
       td input[type='checkbox'] { accent-color: var(--cool); }
       #dump {
         width: 100%; margin-top: 8px; background: #0d0f16; color: var(--ink);
@@ -152,16 +155,16 @@
       <section>
         <h2>What is sounding — the desk</h2>
         <div class="row" style="margin-bottom: 6px">
-          <button id="allOn">all on</button>
-          <button id="allOff">all off</button>
+          <button id="openAll">open everything</button>
+          <button id="allOff">silence everything</button>
           <button id="release">hand it all back</button>
           <span class="dim">click a layer's name to solo it · <b id="heldCount">0</b> held</span>
         </div>
         <table id="layers">
           <thead>
             <tr>
-              <th>layer</th><th>pan</th><th>doing</th><th>target</th><th>live</th><th></th>
-              <th>on</th><th colspan="2">trim</th>
+              <th>layer</th><th>doing</th><th>target</th><th>live</th><th></th>
+              <th>gain</th><th colspan="2">pan</th><th></th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -170,9 +173,14 @@
           <b>live</b> is read off the mixer's own <code>GainNode</code>, not modelled — so it cannot
           disagree with what the speakers are doing. <b>target</b> is the ladder's rung × the theme's
           multiplier × the aura's ceiling.
-          <br />⚠️ A layer you switch off or trim is <b>held</b> — the dashboard owns its gain until
-          you hand it back, and a held layer follows a rung change <b>immediately</b> rather than over
-          the mixer's 1.6&nbsp;second ramp. Judge a transition with nothing held.
+          <br />⚠️ <b>The faders are ABSOLUTE, not a trim.</b> Touch one and that layer is
+          <b>held</b> there whatever the rung says — so a layer this rung has closed can be dragged up
+          and heard, which is the point. <b>follow</b> hands one layer back; <b>hand it all back</b>
+          returns the lot. A held layer follows a rung change <b>immediately</b> rather than over the
+          mixer's 1.6&nbsp;second ramp, so judge a transition with nothing held.
+          <br />⚠️ <b>pan</b> starts where <code>LAYER_PAN</code> put it. The game's own limit is
+          0.65 either side (0118) and the fader goes to 1.0 on purpose — past the limit is a question,
+          not a setting.
         </div>
       </section>
 

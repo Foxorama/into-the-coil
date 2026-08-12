@@ -27,7 +27,7 @@
  */
 
 import { LEVELS, LEVEL_KINDS, type LevelKind } from '../src/content/levels.ts';
-import { MUSIC_LAYERS, type MusicLayer } from '../src/content/music.ts';
+import { LAYER_PAN, MUSIC_LAYERS, type MusicLayer } from '../src/content/music.ts';
 import { THEMES, revoicedBy, type ThemeKind } from '../src/content/themes.ts';
 import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -110,15 +110,37 @@ let cuesOn = true;
  *
  * ⚠️ **A HELD LAYER IS NOT A MUTED ONE.** *"Select individual layers to play together and adjust
  * those layers to strengthen or diminish them to hear them sound together"* is a mixing desk, not a
- * solo button — so the unit is a **trim over the mixer's own target** rather than a gain typed in.
- * At `trim: 1` a held layer sounds exactly as the ladder says; at 1.4 it is the same arrangement
- * with that one part pushed, which is the comparison being asked for.
+ * solo button.
+ *
+ * ── AND IT WAS A MULTIPLIER, WHICH COULD NOT REACH THE THING THAT WAS ACTUALLY WANTED ────────────
+ *
+ * ⚠️ **`docs/decisions/0129-the-desk-holds-a-value-not-a-multiplier.md`.** The first desk held a
+ * **trim over the mixer's own target**, and `trim × 0` is 0 — so **the fourteen layers the ladder has
+ * closed at any given rung were unreachable**, and those are exactly the ones worth auditioning.
+ * Reported: *"I need to be able to turn on sounds that aren't playing at the moment to see what they
+ * would sound like."*
+ *
+ * ⚠️ **So a hold is an ABSOLUTE value now.** `null` follows the mixer; a number is what that layer
+ * sits at, whatever the rung says — which makes the desk able to say *what if `frenzy` were open
+ * during `run`* rather than only *what if `frenzy` were louder where it already plays*.
  */
 interface Held {
-  on: boolean;
-  trim: number;
+  /** The gain this layer is pinned at, or `null` to follow the mixer. */
+  gain: number | null;
+  /** The pan this layer is pinned at, or `null` to keep the place `LAYER_PAN` gave it. */
+  pan: number | null;
 }
 const held = new Map<MusicLayer, Held>();
+
+/** A layer is only in `held` while it is actually holding something. */
+function holdOf(layer: MusicLayer): Held {
+  return held.get(layer) ?? { gain: null, pan: null };
+}
+
+function setHold(layer: MusicLayer, next: Held): void {
+  if (next.gain === null && next.pan === null) held.delete(layer);
+  else held.set(layer, next);
+}
 let unlocked = false;
 /**
  * Sim steps issued since the loops went on the air. Monotonic, and NOT a function of the scrub.
@@ -343,11 +365,15 @@ interface LayerRow {
   target: HTMLElement;
   live: HTMLElement;
   bar: HTMLElement;
-  on: HTMLInputElement;
-  trim: HTMLInputElement;
-  trimOut: HTMLElement;
+  gain: HTMLInputElement;
+  pan: HTMLInputElement;
+  panOut: HTMLElement;
+  follow: HTMLButtonElement;
   tr: HTMLTableRowElement;
 }
+
+/** The most a layer may be pushed to on the desk. Above the ladder's own top, on purpose. */
+const DESK_CEILING = 1.5;
 const layerRows = {} as Record<MusicLayer, LayerRow>;
 
 {
@@ -359,86 +385,115 @@ const layerRows = {} as Record<MusicLayer, LayerRow>;
     tr.title = `${layer} — a ${span.loopSeconds.toFixed(1)}s loop`;
     tr.innerHTML =
       `<td><b class="lay">${layer}</b></td>` +
-      `<td class="dim">${panText(layer)}</td>` +
       `<td><span class="badge"></span></td>` +
       `<td class="target">0.00</td>` +
       `<td class="live">0.00</td>` +
       `<td><span class="meter"><i></i></span></td>` +
-      `<td><input type="checkbox" checked /></td>` +
-      `<td><input type="range" min="0" max="200" step="5" value="100" /></td>` +
-      `<td class="dim trimOut">—</td>`;
+      `<td><input class="g" type="range" min="0" max="${Math.round(DESK_CEILING * 100)}" step="2" value="0" /></td>` +
+      `<td><input class="p" type="range" min="-100" max="100" step="5" value="${Math.round(LAYER_PAN[layer] * 100)}" /></td>` +
+      `<td class="dim panOut">${panText(LAYER_PAN[layer])}</td>` +
+      `<td><button class="fol" title="hand this layer back to the mixer">follow</button></td>`;
     const row: LayerRow = {
       move: tr.querySelector('.badge')!,
       target: tr.querySelector('.target')!,
       live: tr.querySelector('.live')!,
       bar: tr.querySelector('.meter i')!,
-      on: tr.querySelector('input[type=checkbox]')!,
-      trim: tr.querySelector('input[type=range]')!,
-      trimOut: tr.querySelector('.trimOut')!,
+      gain: tr.querySelector('.g')!,
+      pan: tr.querySelector('.p')!,
+      panOut: tr.querySelector('.panOut')!,
+      follow: tr.querySelector('.fol')!,
       tr,
     };
     // Clicking the NAME solos — the fast gesture, kept from the first version because naming a
     // sound you can hear and cannot place is what the solo rig was built for (0113).
     tr.querySelector('.lay')!.addEventListener('click', () => solo(layer));
-    row.on.addEventListener('change', () => takeFromRow(layer));
-    row.trim.addEventListener('input', () => takeFromRow(layer));
+    /*
+      ⚠️ **TOUCHING A SLIDER IS WHAT TAKES THE LAYER, and there is no separate *hold* control.** A
+      checkbox to arm a fader before it does anything is a step between wanting a thing and hearing
+      it; the whole point of this panel is that the gap is short. `follow` is how a layer goes back.
+    */
+    row.gain.addEventListener('input', () => {
+      setHold(layer, { ...holdOf(layer), gain: Number(row.gain.value) / 100 });
+      afterDeskChange();
+    });
+    row.pan.addEventListener('input', () => {
+      setHold(layer, { ...holdOf(layer), pan: Number(row.pan.value) / 100 });
+      afterDeskChange();
+    });
+    row.follow.addEventListener('click', () => {
+      setHold(layer, { gain: null, pan: null });
+      afterDeskChange();
+    });
     body.append(tr);
     layerRows[layer] = row;
   }
 }
 
-function panText(layer: MusicLayer): string {
-  const pan = momentOf(kind, 0, FIGHT_SECONDS, 0).layers.find((l) => l.layer === layer)!.pan;
-  if (pan === 0) return 'centre';
+function panText(pan: number): string {
+  if (Math.abs(pan) < 0.005) return 'centre';
   return `${pan < 0 ? 'L' : 'R'} ${Math.abs(pan).toFixed(2)}`;
 }
 
-/** Read one row's two controls into `held`, or drop the entry when both are back at default. */
-function takeFromRow(layer: MusicLayer): void {
-  const row = layerRows[layer];
-  const on = row.on.checked;
-  const trim = Number(row.trim.value) / 100;
-  if (on && trim === 1) held.delete(layer);
-  else held.set(layer, { on, trim });
+function afterDeskChange(): void {
   drawHeld();
   restate(momentOf(kind, second, FIGHT_SECONDS, auraNearness(gapUnits)));
 }
 
-/** Everything off but this one, or everything back on if it was already the only one. */
+/**
+ * Hold every layer but this one at silence, or hand them all back if it was already alone.
+ *
+ * ⚠️ **The soloed layer is held at whatever the LADDER says, not at a fixed loud value** — so
+ * soloing during `run` a layer that `run` closes gives silence, which is the honest answer and is
+ * exactly what the gain fader is for. Dragging it up is the follow-on gesture.
+ */
 function solo(layer: MusicLayer): void {
-  const alone = held.size === MUSIC_LAYERS.length - 1 && !held.has(layer);
-  for (const other of MUSIC_LAYERS) layerRows[other].on.checked = alone || other === layer;
-  for (const other of MUSIC_LAYERS) takeFromRow(other);
+  const others = MUSIC_LAYERS.filter((l) => l !== layer);
+  const alone = others.every((l) => holdOf(l).gain === 0);
+  for (const other of others) setHold(other, { ...holdOf(other), gain: alone ? null : 0 });
+  if (alone) setHold(layer, { ...holdOf(layer), gain: null });
+  afterDeskChange();
 }
 
 function drawHeld(): void {
   for (const layer of MUSIC_LAYERS) {
     const row = layerRows[layer];
-    const hold = held.get(layer);
-    row.tr.classList.toggle('held', hold !== undefined);
-    row.tr.classList.toggle('off', hold !== undefined && !hold.on);
-    row.trimOut.textContent = hold === undefined || hold.trim === 1 ? '—' : `×${hold.trim.toFixed(2)}`;
+    const hold = holdOf(layer);
+    const holding = hold.gain !== null || hold.pan !== null;
+    row.tr.classList.toggle('held', holding);
+    row.tr.classList.toggle('off', hold.gain === 0);
+    row.gain.classList.toggle('following', hold.gain === null);
+    row.pan.classList.toggle('following', hold.pan === null);
+    row.follow.disabled = !holding;
+    row.panOut.textContent = panText(hold.pan ?? LAYER_PAN[layer]);
   }
   el('heldCount').textContent = String(held.size);
 }
 
-for (const [id, set] of [
-  ['allOn', (r: LayerRow) => (r.on.checked = true)],
-  ['allOff', (r: LayerRow) => (r.on.checked = false)],
-] as const) {
+/** The bulk gestures. Each one is a starting point for a listen rather than a setting. */
+const BULK: readonly [string, (layer: MusicLayer) => Held][] = [
+  // Everything audible at one level, INCLUDING what the rung has closed. This is the answer to
+  // *what is even in here* and it is the button 0129 was asked for.
+  ['openAll', () => ({ gain: 0.7, pan: null })],
+  ['allOff', () => ({ gain: 0, pan: null })],
+  ['release', () => ({ gain: null, pan: null })],
+];
+for (const [id, value] of BULK) {
   el<HTMLButtonElement>(id).addEventListener('click', () => {
-    for (const layer of MUSIC_LAYERS) set(layerRows[layer]);
-    for (const layer of MUSIC_LAYERS) takeFromRow(layer);
+    for (const layer of MUSIC_LAYERS) setHold(layer, value(layer));
+    syncSliders();
+    afterDeskChange();
   });
 }
 
-el<HTMLButtonElement>('release').addEventListener('click', () => {
+/** Put every fader where the desk now says, after something other than a drag moved it. */
+function syncSliders(): void {
   for (const layer of MUSIC_LAYERS) {
-    layerRows[layer].on.checked = true;
-    layerRows[layer].trim.value = '100';
+    const hold = holdOf(layer);
+    const row = layerRows[layer];
+    if (hold.gain !== null) row.gain.value = String(Math.round(hold.gain * 100));
+    row.pan.value = String(Math.round((hold.pan ?? LAYER_PAN[layer]) * 100));
   }
-  for (const layer of MUSIC_LAYERS) takeFromRow(layer);
-});
+}
 
 /**
  * How fast a held gain moves to where the desk says, in seconds.
@@ -492,11 +547,23 @@ function restate(moment: Moment): void {
   const music = out.music();
   if (music === null) return;
   for (const { layer, target } of moment.layers) {
-    const hold = held.get(layer);
-    if (hold !== undefined) {
+    const hold = holdOf(layer);
+    /*
+      ⚠️ **The pan is written whenever it is held and never otherwise.** It is not a per-frame tug of
+      war the way the gain is — nothing in the mixer ever moves a pan after construction — so this is
+      only reached when the desk actually has an opinion, and releasing it puts `LAYER_PAN` back.
+    */
+    const pan = music.panOf(layer);
+    const wantPan = hold.pan ?? LAYER_PAN[layer];
+    if (Math.abs(pan.value - wantPan) > 0.001) {
+      pan.cancelScheduledValues(0);
+      pan.setTargetAtTime(wantPan, 0, HOLD_SECONDS);
+    }
+    if (hold.gain !== null) {
       const gain = music.gainOf(layer);
       gain.cancelScheduledValues(0);
-      gain.setTargetAtTime(hold.on ? target * hold.trim : 0, 0, HOLD_SECONDS);
+      // ⚠️ **ABSOLUTE, so a layer the rung has closed is reachable** — 0129, and the whole point.
+      gain.setTargetAtTime(hold.gain, 0, HOLD_SECONDS);
       owed.add(layer);
     } else if (owed.has(layer)) {
       const gain = music.gainOf(layer);
@@ -697,15 +764,27 @@ function momentAsText(moment: Moment): string {
   const lines = cueLines(tier, moment.rung, killsPerSecond).filter((c) => c.sounds);
   const sounding = moment.layers.filter((l) => l.target > 0 || held.has(l.layer));
   const silent = moment.layers.filter((l) => l.target <= 0 && !held.has(l.layer)).map((l) => l.layer);
-  const holds = [...held.entries()].map(([layer, h]) => (h.on ? `${layer} ×${h.trim.toFixed(2)}` : `${layer} OFF`));
+  /*
+    ⚠️ **THE DESK IS PRINTED AS SOMETHING THAT COULD BE PASTED BACK INTO THE TABLES** — 0129. A mix
+    found by dragging faders is worth nothing if turning it into `MUSIC_LADDER` or a theme's `mix`
+    means reading numbers off a screenshot. Held gains come out as `layer 0.82`, held pans as
+    `layer L0.40`, in the order the ladder lists them.
+  */
+  const holds = MUSIC_LAYERS.filter((l) => held.has(l)).map((layer) => {
+    const h = holdOf(layer);
+    const parts: string[] = [];
+    if (h.gain !== null) parts.push(h.gain.toFixed(2));
+    if (h.pan !== null) parts.push(panText(h.pan).replace(' ', ''));
+    return `${layer} ${parts.join(' ')}`;
+  });
 
   const rows = sounding.map((l) => {
     const live = music === null ? 0 : music.gainOf(l.layer).value;
-    const hold = held.get(l.layer);
+    const at = music === null ? l.pan : music.panOf(l.layer).value;
+    const hold = holdOf(l.layer);
     return (
-      `| ${l.layer} | ${l.pan === 0 ? 'centre' : `${l.pan < 0 ? 'L' : 'R'}${Math.abs(l.pan).toFixed(2)}`} ` +
-      `| ${l.move} | ${l.target.toFixed(2)} | ${live.toFixed(2)} | ${l.loopSeconds.toFixed(1)}s ` +
-      `| ${hold === undefined ? '' : hold.on ? `held ×${hold.trim.toFixed(2)}` : 'held OFF'} |`
+      `| ${l.layer} | ${panText(at)} | ${l.move} | ${l.target.toFixed(2)} | ${live.toFixed(2)} ` +
+      `| ${l.loopSeconds.toFixed(1)}s | ${hold.gain === null && hold.pan === null ? '' : 'held'} |`
     );
   });
 

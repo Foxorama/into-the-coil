@@ -152,7 +152,7 @@ export const PROBES = [
       graph rather than over intentions, which is the shape docs/decisions/0070 chose deliberately.
     */
     broke: 'the shell reaching into a music layer’s gain, so the mix is decided in two places',
-    guard: 'NOTHING UNDER src/ CALLS `gainOf` — the mix is decided in one place',
+    guard: 'NOTHING UNDER src/ CALLS `gainOf` OR `panOf` — the mix and the field are decided in one place',
     edit: {
       path: 'src/app/sound.ts',
       find: '      music?.duck(amount);',
