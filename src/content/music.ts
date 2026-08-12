@@ -621,6 +621,25 @@ export const BOSS_APPROACH_UNITS = 643;
  * ⚠️ **Nothing asserts these values**, on `SHIP_SPEED`'s terms: they are a hand's guess at a pace
  * nobody has flown. What `tests/music.test.ts` holds is that they are ordered, that each is a real
  * stretch of seconds rather than a flicker, and that every rung is reachable.
+ *
+ * ── AND THEY HAVE BEEN FLOWN NOW, WHICH MOVED ONE OF THEM ───────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0131-the-surge-comes-sooner.md`.** Reported: *"we need to bring the surge
+ * earlier by about 14.2 secs — bring it in after a downnote, it just needs to happen sooner."* So
+ * `SURGE_UNITS` is 1736 where it was 1221: level one crosses it at **70.4 s** rather than 84.7, and
+ * `push` gives up the fourteen seconds rather than the level getting longer.
+ *
+ * ⚠️ **ONLY ONE OF THE TWO MOVES, WHICH IS THE DIFFERENCE FROM
+ * `docs/decisions/0125-the-build-starts-sooner.md`.** 0125 shifted all three distances by the same
+ * 263 units because the ask was about *the changes*; this one names a section, so the spacing between
+ * the rungs is deliberately not preserved.
+ *
+ * ⚠️ **70.4 s IS 44 BARS EXACTLY, AND THAT IS THE *downnote* HALF OF THE ASK.** 0117 already lands
+ * the ramp on the next bar line whatever is crossed, so a rung change is never heard mid-bar; what
+ * this buys on top is that level one's CROSSING is on a bar too, so the change is heard at the
+ * instant the distance is passed rather than up to 1.6 s later. It can only ever be true of one
+ * level — seven `bossAt` values share these two distances — and level one is the one every report has
+ * been about.
  */
 /**
  * How much of a boss's health has to be gone before the music reaches its wall of sound.
@@ -635,7 +654,7 @@ export const BOSS_APPROACH_UNITS = 643;
 export const BOSS_PEAK_HEALTH = 0.78;
 
 export const PUSH_UNITS = 3021;
-export const SURGE_UNITS = 1221;
+export const SURGE_UNITS = 1736;
 
 /**
  * The key. Every pitched note is a ratio off this, so the whole piece transposes from one number.

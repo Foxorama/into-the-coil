@@ -181,6 +181,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a place plays its own material and shares the rest — level two is the first, and the GAME does not play it yet** | [0128](decisions/0128-a-place-plays-its-own-material.md) |
 | **the desk holds an ABSOLUTE value, so a layer the rung has closed can be heard; a place is a fader too** | [0129](decisions/0129-the-desk-holds-a-value-not-a-multiplier.md) |
 | **every layer is a button: one click plays it alone, at the loudest the place ever takes it** | [0130](decisions/0130-a-layer-can-be-heard-on-its-own.md) |
+| **`surge` is crossed 14.3s sooner, on the bar it is crossed on; `push` pays for it** | [0131](decisions/0131-the-surge-comes-sooner.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -282,6 +283,13 @@ a different piece with its own two rungs, and the level runs 42s / 92s / 10.6s-b
 [0117](decisions/0117-a-section-change-lands-on-the-beat.md). It changes no gain, no rung and no
 distance; what moves is when a change is heard. **Whether it is enough is the open question**, and
 0114's warning still governs the attempt after it.
+
+⚠️ **AND `surge` IS NOW CROSSED 14.3 SECONDS SOONER, ASKED FOR BY NAME** —
+[0131](decisions/0131-the-surge-comes-sooner.md). It is the second answer that is not a gain and the
+first that moves a distance: the section is 30.4s where it was 16.1, which is the first time it has
+been longer than the sixteen-bar `counter` it opens. **It does NOT discharge
+[0125](decisions/0125-the-build-starts-sooner.md)'s ask** — that is still ~60 notes a bar of arriving
+material, and 0131 says why the two are different.
 
 ⚠️ **AND THE INSTRUMENT FOR IT EXISTS NOW** — [0116](decisions/0116-the-rig-plays-the-level.md).
 `node scripts/hear.mjs --level=<kind>` writes a whole level at its own rungs, ramps and theme.
