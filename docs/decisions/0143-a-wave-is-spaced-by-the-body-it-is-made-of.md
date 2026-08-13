@@ -69,6 +69,31 @@ the across axis, again.**
 the right ones: a spread a volley cannot reach, and bodies that touch. They anchored on
 `const ACROSS_GAP = 9;`, which no longer exists.
 
+## ⚠️ What the proof found, and it was a guard rather than the game
+
+`npm run prove` refused to run: `tests/seam.test.ts`'s *THE REPORTED ONE: the ship is drawn in the
+same place across the boundary* was red on this branch and green on `main`, reporting **the ship was
+not drawn, so this measures nothing**.
+
+⚠️ **THE SHIP WAS DRAWN, ALIVE AND EXACTLY WHERE IT BELONGED.** Measured on the fixture at the sampled
+step: `health 994`, never dead, `invulnFor 31` — and `sprite` equal to **`spriteHit`**. A ship inside
+its invulnerability window wears its other face, and `shipAt` looked for `SPRITE.ship` alone.
+
+⚠️ **SO THE GUARD DEPENDED ON THE FIXTURE'S DAMAGE TIMING AT ONE STEP, AND ANY CHANGE TO LEVEL PACING
+FLIPS IT.** This decision tightened the waves; the fixture took its last hit a little later; a test
+about a level boundary went red about a sprite id. The subject of every assertion in that file is
+**where** the ship is drawn — never which face — so the lookup now accepts either.
+
+⚠️ **The file already records this happening once in another form** — *a dying ship is not drawn, so
+without this the assertion below silently stops measuring anything* — and the `toBeDefined()` line
+added then is what caught it again. It did its job twice.
+
+⚠️ **NO PROBE IS PLANTED FOR IT, DELIBERATELY.** Reverting the lookup would redden the seam guard
+*today*, because today's pacing happens to leave the fixture invulnerable at that step — and stop
+reddening it after any future pacing change, while still applying cleanly. That is a probe that
+quietly stops testing, which [0019](0019-a-probe-must-be-seen-to-apply.md) is named for. It was seen
+to fail and be fixed, on this branch, and that is recorded here instead.
+
 ## Rollback
 
 ⚠️ **None owed —** [0001](0001-revertability-not-risk-rating.md). No storage key, no save field, no
