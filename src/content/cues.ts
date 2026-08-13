@@ -541,7 +541,7 @@ export const CUES: Record<CueKind, CueRow> = {
   pulse: {
     twin: 'shot-appears',
     hold: 2,
-    gain: 0.3,
+    gain: 0.24,
     glue: 0.3,
     /*
       Strong, weak, medium, weak — the four-step cycle every drum machine's shuffle is, and the same
@@ -613,7 +613,7 @@ export const CUES: Record<CueKind, CueRow> = {
   missile: {
     twin: 'missile-appears',
     hold: 3,
-    gain: 0.3,
+    gain: 0.24,
     glue: 0.08,
     layers: [
       // The motor lighting.
@@ -654,7 +654,7 @@ export const CUES: Record<CueKind, CueRow> = {
   threat: {
     twin: 'threat-appears',
     hold: 4,
-    gain: 0.204,
+    gain: 0.229,
     glue: 0.1,
     layers: [
       // The filter chases the sweep, and the resonance is what makes it zap rather than fall.
@@ -675,7 +675,7 @@ export const CUES: Record<CueKind, CueRow> = {
   hit: {
     twin: 'impact-flash',
     hold: 2,
-    gain: 0.252,
+    gain: 0.283,
     glue: 0.08,
     layers: [
       { wave: 'noise', from: 0, to: 0, seconds: 0.035, gain: 0.5, attack: 0.0004, curve: 8, lowFrom: 7000, lowTo: 3000, highFrom: 1100 },
@@ -729,17 +729,44 @@ export const CUES: Record<CueKind, CueRow> = {
       lands, and leaves the music where it belongs for the 0.4 seconds afterwards.
       `tests/sound.test.ts` holds the ratio rather than either number.
     */
-    gain: 0.36,
+    gain: 0.404,
     glue: 0.12,
     layers: [
       // CRACK — a few milliseconds, so it starts rather than fades in. Brighter than it was: the top
       // is what a punctuation mark is made of, and it is the band the music leaves emptiest.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.022, gain: 0.5, attack: 0.0002, curve: 10, lowFrom: 8200, lowTo: 2600, highFrom: 1000 },
+      /*
+        ⚠️ **SHARPER IS A FASTER FALL AND A HIGHER TOP, NOT MORE GAIN** — 0144. *"A sharper
+        percussive beat"* is a claim about the front edge; raising the row's gain would have made the
+        body louder in the same proportion and answered a different sentence, which is the mistake
+        0109 records itself avoiding on this same cue. The lowpass opens to 11 kHz and the curve
+        steepens, so the transient is brighter and gets out of the way faster.
+      */
+      { wave: 'noise', from: 0, to: 0, seconds: 0.022, gain: 0.5, attack: 0.00015, curve: 13, lowFrom: 11000, lowTo: 2600, highFrom: 1000 },
       // BODY — noise between a highpass that takes out the box and a lowpass that falls. Half the
       // length it was, and the highpass holds it above the band `sub` now occupies.
       { wave: 'noise', from: 0, to: 0, seconds: 0.17, gain: 0.9, attack: 0.002, curve: 4.5, lowFrom: 2400, lowTo: 620, highFrom: 150, highTo: 90, q: 0.8, drive: 0.3 },
-      // DEBRIS — quieter, and the part that carries the top.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.24, gain: 0.06, attack: 0.012, curve: 3, lowFrom: 7000, highFrom: 1500, highTo: 800 },
+      /*
+        DEBRIS — quieter, and the part that carries the top.
+
+        ── THE STREAK LIVES HERE AND NOT IN THE BODY ─────────────────────────────────────────────
+
+        ⚠️ **`docs/decisions/0144-a-chain-of-deaths-is-a-cymbal-streak.md`.** Reported from play:
+        *"enemy death needs a sharper percussive beat where the sound lasts a bit longer so a chain
+        of deaths sounds like a sharp cymbal streak."*
+
+        ⚠️ **0.24 → 0.36 s AND 0.06 → 0.15, ON THIS LAYER ALONE, WHICH IS THE WHOLE CARE OF IT.**
+        0109 cut this cue from 0.46 s to 0.26 because *at two a second the explosions overlapped
+        themselves continuously into a rumble* — so *lasts a bit longer* is a reversal of that
+        finding unless it is spent somewhere the rumble cannot come back. **It cannot come back
+        here**: this layer is high-passed at 1500 Hz, so what overlaps is the top and a chain of
+        overlapping tops is a cymbal streak rather than mud. The BODY below 620 Hz keeps 0109's
+        length exactly.
+
+        ⚠️ **0.36 s is still inside the beat**, which is the bound `tests/sound.test.ts` holds over
+        every `debris-burst` cue: 0.4 s at 150 BPM, and the rule that a punctuation mark is shorter
+        than the beat it lands on is untouched.
+      */
+      { wave: 'noise', from: 0, to: 0, seconds: 0.36, gain: 0.15, attack: 0.012, curve: 3, lowFrom: 7000, highFrom: 1500, highTo: 800 },
       /*
         G3 → B1, and G2 → B1 under it. It HANGS on the seventh: a kill is the most repeated event in
         a level and there are always more coming, so the one thing it must not do is sound final.
@@ -887,7 +914,7 @@ export const CUES: Record<CueKind, CueRow> = {
   bomb: {
     twin: 'bomb-appears',
     hold: 6,
-    gain: 0.276,
+    gain: 0.310,
     glue: 0.08,
     layers: [
       // D3 → D5, and everything else in the row is the same two octaves of D. The FOURTH, held all
@@ -941,7 +968,7 @@ export const CUES: Record<CueKind, CueRow> = {
     twin: 'shell-mark',
     onGrid: true,
     hold: 6,
-    gain: 0.288,
+    gain: 0.323,
     glue: 0.08,
     layers: [
       // A4 → A5, A3 → A4, C4 → C5: octaves of the ROOT and of the minor third, rising. Everything
@@ -997,7 +1024,7 @@ export const CUES: Record<CueKind, CueRow> = {
     twin: 'pickup-taken',
     onGrid: true,
     hold: 4,
-    gain: 0.264,
+    gain: 0.296,
     glue: 0.06,
     layers: [
       // E and B, rising an octave each — the fifth and the ninth, which is the brightest pair the
@@ -1023,7 +1050,7 @@ export const CUES: Record<CueKind, CueRow> = {
   chime: {
     twin: 'chooser-fill',
     hold: 6,
-    gain: 0.264,
+    gain: 0.296,
     glue: 0.06,
     layers: [
       // F → C, a rising fifth, in four octaves at once. It is the only cue whose interval is the

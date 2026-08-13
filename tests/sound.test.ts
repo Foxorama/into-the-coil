@@ -1663,6 +1663,61 @@ describe('0109 — a death punctuates the music rather than getting it out of th
     }
   });
 
+  it('0144 — A CHAIN OF DEATHS STREAKS IN THE TOP, and the band 0109 shortened stays short', () => {
+    /*
+      `docs/decisions/0144-a-chain-of-deaths-is-a-cymbal-streak.md`. Reported from play: *"enemy death
+      needs a sharper percussive beat where the sound lasts a bit longer so a chain of deaths sounds
+      like a sharp cymbal streak."*
+
+      ⚠️ **THAT IS A REVERSAL OF 0109 UNLESS IT IS SPENT IN THE RIGHT BAND.** 0109 cut this cue from
+      0.46 s to 0.26 because *at two a second the explosions overlapped themselves continuously into a
+      rumble* — so a guard that only checked the cue got longer would be holding the defect 0109
+      removed. What makes *longer* safe is WHERE: the layer that lasts is high-passed clear of the
+      one that rumbled, so a chain overlaps in the top and nowhere else.
+    */
+    for (const kind of CUE_KINDS.filter((k) => CUES[k].twin === 'debris-burst')) {
+      const layers = CUES[kind].layers.filter((l) => l.wave === 'noise');
+      const longest = layers.reduce((a, b) => (b.seconds > a.seconds ? b : a));
+      const body = layers.reduce((a, b) => ((b.lowTo ?? b.lowFrom ?? Infinity) < (a.lowTo ?? a.lowFrom ?? Infinity) ? b : a));
+      expect(
+        longest,
+        `${kind}'s longest noise layer IS its body — a chain of these overlaps where 0109 found a rumble`,
+      ).not.toBe(body);
+      expect(
+        longest.highFrom ?? 0,
+        `${kind}'s longest layer is not high-passed clear of its body, so the streak carries the rumble with it`,
+      ).toBeGreaterThan(body.lowTo ?? body.lowFrom ?? 0);
+    }
+  });
+
+  it('0145 — AN AUTO-WEAPON SOUNDS UNDER THE EVENTS IT CAUSES, because it is the one that never stops', () => {
+    /*
+      `docs/decisions/0145-the-gun-makes-room.md`. Reported after a play-through: *"for both melodies
+      we need to reduce the bullet/missile gain slightly and lift the gain on the other sounds."*
+
+      ⚠️ **THE WEAPONS WERE NEVER LOUDER PER EVENT — THEY ARE ON ALMOST ALL THE TIME.** The pulse is
+      0.064 s at up to fifteen a second, which
+      `docs/decisions/0109-a-death-is-a-drum.md` measured as sounding **96% of the time** at the cap.
+      Anything that occupies the field continuously masks the things that happen once, whatever the
+      per-event peak says — so what is held is an ORDER, not a level.
+
+      ⚠️ **`threat` IS DELIBERATELY NOT IN THIS LIST.** It is a telegraph rather than an outcome — a
+      thing about to happen, not a thing the player did or suffered — and it is frequent for the same
+      reason the gun is. Holding the gun under it would be asking the warning to shout.
+    */
+    const outcomes = CUE_KINDS.filter((k) => k !== 'pulse' && k !== 'missile' && k !== 'threat');
+    expect(outcomes.length, 'the table has no outcome cues, so this measured nothing').toBeGreaterThan(6);
+    for (const weapon of ['pulse', 'missile'] as const) {
+      for (const kind of outcomes) {
+        expect(
+          CUES[weapon].gain,
+          `${weapon} at ${CUES[weapon].gain} is not under ${kind} at ${CUES[kind].gain} — the sound that never ` +
+            'stops is louder than one the player has to notice',
+        ).toBeLessThan(CUES[kind].gain);
+      }
+    }
+  });
+
   it('and it is struck at more than one weight, which is the field 0104 gave the gun and not this', () => {
     /*
       ⚠️ **The second most repeated sound in the game was the last one struck identically every time.**

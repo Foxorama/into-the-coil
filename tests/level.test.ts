@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { LEVELS, LEVEL_KINDS, type WaveEntry } from '../src/content/levels.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
-import { FORMATIONS, FORMATION_KINDS } from '../src/content/formations.ts';
+import { FORMATIONS, FORMATION_KINDS, gapAcross } from '../src/content/formations.ts';
 import { BURST } from '../src/content/debris.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { INVULN_STEPS } from '../src/content/ships.ts';
@@ -48,7 +48,8 @@ function membersOf(wave: WaveEntry): { along: number; across: number }[] {
   for (let i = 0; i < wave.count; i++) {
     out.push({
       along: wave.at + formation.alongOffset(i, wave.count),
-      across: wave.lane + formation.acrossOffset(i, wave.count),
+      // The wave's own body decides its spacing — 0143, and a wave is a single kind.
+      across: wave.lane + formation.acrossOffset(i, wave.count, gapAcross(ENEMIES[wave.enemy].radius)),
     });
   }
   return out;
@@ -1176,13 +1177,47 @@ describe('0121 — a wave is close enough to die together', () => {
       how many things one trigger pull can reach.
     */
     const line = FORMATIONS.line;
-    const span = (count: number): number => Math.abs(line.acrossOffset(count - 1, count) - line.acrossOffset(0, count));
     const width = volleyWidth(ENGAGED_AT);
+    /*
+      ⚠️ **HELD FOR EVERY KIND NOW, WHICH IS WHAT 0143 CHANGED** — the gap is the wave's own body
+      rather than one constant sized for the widest enemy in the game, so *three abreast* is seven
+      separate claims and the widest of them is the one that used to be the only one.
+    */
+    for (const kind of ENEMY_KINDS) {
+      const gap = gapAcross(ENEMIES[kind].radius);
+      const span = (count: number): number =>
+        Math.abs(line.acrossOffset(count - 1, count, gap) - line.acrossOffset(0, count, gap));
+      expect(
+        span(3),
+        `three abreast ${kind}s span ${span(3).toFixed(1)} units and a volley is ${width.toFixed(1)} wide at ` +
+          `${ENGAGED_AT} — a wave still dies one at a time, which is what the report is about`,
+      ).toBeLessThanOrEqual(width);
+    }
+  });
+
+  it('0143 — AND THE NARROW BODIES REACH FOUR, which is what a repeat report bought', () => {
+    /*
+      ⚠️ **THE ASK AS A QUANTITY** — *"ideally a player should be able to take out a group together
+      and get a nice music reward."* 0121 tightened one constant to the tightest the WIDEST enemy
+      allows and charged every wave that price; a wave of diamonds was spaced as though a warden were
+      in it. Three kinds now fit four inside one volley where they fit three.
+
+      ⚠️ **Named as a count and not as a gap**, on the same terms as the guard above: a bound on the
+      spacing would prove the arithmetic equals itself.
+    */
+    const line = FORMATIONS.line;
+    const width = volleyWidth(ENGAGED_AT);
+    const reaches = (kind: (typeof ENEMY_KINDS)[number], count: number): boolean => {
+      const gap = gapAcross(ENEMIES[kind].radius);
+      return Math.abs(line.acrossOffset(count - 1, count, gap) - line.acrossOffset(0, count, gap)) <= width;
+    };
+    const four = ENEMY_KINDS.filter((k) => reaches(k, 4));
     expect(
-      span(3),
-      `three abreast span ${span(3).toFixed(1)} units and a volley is ${width.toFixed(1)} wide at ${ENGAGED_AT} — ` +
-        'a wave still dies one at a time, which is what the report is about',
-    ).toBeLessThanOrEqual(width);
+      four,
+      `no enemy is narrow enough for a volley to reach four of it — the widest-body spacing is still being charged to every wave`,
+    ).not.toEqual([]);
+    // The drifter is the one the report named, by its silhouette: *"grouped tighter for diamonds"*.
+    expect(reaches('drifter', 4), 'a volley still reaches only three drifters').toBe(true);
   });
 
   it('and they still do not overlap, which is what stops it going tighter', () => {
@@ -1195,13 +1230,24 @@ describe('0121 — a wave is close enough to die together', () => {
       ⚠️ **Driven off `ENEMIES` rather than a typed 4**, so a wider body tomorrow moves this rather
       than quietly invalidating it.
     */
-    const widest = Math.max(...ENEMY_KINDS.map((k) => ENEMIES[k].radius));
+    /*
+      ⚠️ **PER KIND SINCE 0143, WHICH IS STRICTLY STRONGER.** It used to compare one gap against the
+      widest body in the game — true, and silent about whether a narrow wave had any air at all. Now
+      every kind is asked about its own neighbours, so a tightening that closed one body's gap while
+      the warden's stayed legal fails here.
+    */
     const line = FORMATIONS.line;
-    const gap = Math.abs(line.acrossOffset(1, 2) - line.acrossOffset(0, 2));
-    expect(
-      gap,
-      `neighbours sit ${gap} apart and the widest body is ${widest * 2} across — they overlap`,
-    ).toBeGreaterThan(widest * 2);
+    for (const kind of ENEMY_KINDS) {
+      const across = ENEMIES[kind].radius * 2;
+      const gap = Math.abs(
+        line.acrossOffset(1, 2, gapAcross(ENEMIES[kind].radius)) -
+          line.acrossOffset(0, 2, gapAcross(ENEMIES[kind].radius)),
+      );
+      expect(
+        gap,
+        `two ${kind}s sit ${gap} apart and the body is ${across} across — they overlap`,
+      ).toBeGreaterThan(across);
+    }
   });
 
   it('THE ONE THAT SAID THE ALONG AXIS WAS ALREADY RIGHT: a column arrives a beat at a time', () => {
@@ -1241,7 +1287,11 @@ describe('0121 — a wave is close enough to die together', () => {
       could reach the lane edge, because there is no `across` cull to bring one back.
     */
     const line = FORMATIONS.line;
-    const span = Math.abs(line.acrossOffset(5, 6) - line.acrossOffset(0, 6));
+    // The WIDEST body is the worst case for the lane, which is the one kind this still asks about —
+    // 0143 made every narrower wave strictly tighter than whatever this permits.
+    const widest = Math.max(...ENEMY_KINDS.map((k) => ENEMIES[k].radius));
+    const gap = gapAcross(widest);
+    const span = Math.abs(line.acrossOffset(5, 6, gap) - line.acrossOffset(0, 6, gap));
     expect(span, `a six spans ${span} of the lane's 100 units, leaving nowhere to author it`).toBeLessThan(50);
   });
 });
