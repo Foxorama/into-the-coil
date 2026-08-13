@@ -600,7 +600,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.032, gain: 0.125, attack: 0.001, curve: 7, lowFrom: 8000, highFrom: 3000 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.04, gain: 0.17, attack: 0.001, curve: 6, lowFrom: 8000, highFrom: 3000 },
     },
   ],
 
@@ -673,7 +673,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 1.3, gain: 0.085, attack: 0.24, curve: 1.4, lowFrom: 6200, lowTo: 1400, highFrom: 500, q: 0.6 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 1.3, gain: 0.125, attack: 0.24, curve: 1.4, lowFrom: 6200, lowTo: 1400, highFrom: 500, q: 0.6 },
     },
     {
       // The water falling back. Sample-and-hold noise, dropping in period, which is a wash rather
@@ -682,7 +682,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'noise', from: 5200, to: 1200, seconds: 0.9, gain: 0.075, attack: 0.02, curve: 2.2, lowFrom: 4200, lowTo: 900, highFrom: 240 },
+      note: { wave: 'noise', from: 5200, to: 1200, seconds: 0.9, gain: 0.11, attack: 0.02, curve: 2.2, lowFrom: 4200, lowTo: 900, highFrom: 240 },
     },
   ],
 
@@ -829,7 +829,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 4,
       octave: 1,
       accents: [1, 0.62, 0.86, 0.6],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.22, gain: 0.085, attack: 0.006, curve: 4, lowFrom: 2600, lowTo: 1000, q: 2.2, drive: 0.5 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.24, gain: 0.15, attack: 0.006, curve: 3.4, lowFrom: 2600, lowTo: 1000, q: 2.2, drive: 0.5 },
     },
     {
       // The second, a fifth up. Same figure, same instant, and it is what a second head IS.
@@ -838,7 +838,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 4,
       octave: 1,
       accents: [1, 0.6, 0.84, 0.62],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.19, gain: 0.055, attack: 0.006, curve: 4.4, lowFrom: 3600, lowTo: 1500, q: 1.9, drive: 0.44 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.21, gain: 0.1, attack: 0.006, curve: 3.8, lowFrom: 3600, lowTo: 1500, q: 1.9, drive: 0.44 },
     },
   ],
 
@@ -856,7 +856,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 4,
       octave: 0,
       accents: [1, 0.66, 0.86, 0.62],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.24, gain: 0.06, attack: 0.01, curve: 3.6, lowFrom: 1500, lowTo: 620, q: 2.4, drive: 0.66 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.26, gain: 0.115, attack: 0.01, curve: 3.2, lowFrom: 1500, lowTo: 620, q: 2.4, drive: 0.66 },
     },
     {
       // And the sound of all three necks at once: held, driven, and coming apart.
@@ -870,7 +870,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 1,
       octave: 1,
       accents: [1, 0.7, 0.88, 0.66],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 1.05, gain: 0.05, attack: 0.06, curve: 1.9, lowFrom: 1300, lowTo: 520, q: 2.2, drive: 0.72 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 1.05, gain: 0.095, attack: 0.06, curve: 1.9, lowFrom: 1300, lowTo: 520, q: 2.2, drive: 0.72 },
     },
   ],
 

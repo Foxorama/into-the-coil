@@ -280,7 +280,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: false,
       perBeat: 2,
       octave: 0,
-      note: { wave: 'sine', from: 210, to: 132, seconds: 0.2, gain: 0.76, attack: 0.001, curve: 5, drive: 0.3 },
+      note: { wave: 'sine', from: 210, to: 132, seconds: 0.2, gain: 0.58, attack: 0.001, curve: 5, drive: 0.3 },
     },
     {
       // The ride, on sixteenths, played on the bell so it cuts. Nothing in this place is quiet.
@@ -424,7 +424,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 4,
       octave: 0,
       accents: [1, 0.68, 0.86, 0.66],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.26, gain: 0.7, attack: 0.002, curve: 3.2 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.26, gain: 0.54, attack: 0.002, curve: 3.2 },
     },
     {
       steps: CHUG,
@@ -642,12 +642,28 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   */
   drive: [
     {
+      /*
+        ⚠️ **THIRTY-SECONDS, AND IT IS THE ANSWER TO *HIGHER TEMPO* THAT THE GRID ALLOWS** — reported
+        2026-08-14: *"the rest of the level was really nice, just needed to be more intense with
+        higher tempo."* `docs/decisions/0093-the-gun-is-on-the-grid.md` fixes a beat at 24 sim steps
+        and the player's gun, every enemy cadence and 0094's phase-lock all ride it, so the BPM cannot
+        move — what rises is the subdivision, which is 0102's finding and is what a listener calls
+        faster.
+
+        ⚠️ **THE SAME FIGURE AT TWICE THE PICKING RATE, which is what a guitarist would actually do.**
+        Every note is doubled rather than the line being rewritten, so the riff is recognisably the
+        one the level has been playing and the hand behind it has sped up. It arrives at `surge` and
+        the fight's `stomp` is already at this rate, so the last two rungs are the fastest the game
+        gets.
+      */
       steps: [
-        0, 0, 0, 0, 3, 3, 3, 3, 0, 0, 0, 0, 7, 7, 5, 5,
-        0, 0, 0, 0, 3, 3, 3, 3, 0, 0, 7, 7, 5, 5, 3, 3,
+        0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3,
+        0, 0, 0, 0, 0, 0, 0, 0, 7, 7, 7, 7, 5, 5, 5, 5,
+        0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3,
+        0, 0, 0, 0, 7, 7, 7, 7, 5, 5, 5, 5, 3, 3, 3, 3,
       ],
       pitched: true,
-      perBeat: 4,
+      perBeat: 8,
       octave: 1,
       accents: [1, 0.62, 0.84, 0.6],
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.16, gain: 0.07, attack: 0.002, curve: 4.6, lowFrom: 2400, lowTo: 1100, q: 1.8, drive: 0.44 },
@@ -749,12 +765,30 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       note: { wave: 'noise', from: 0, to: 0, seconds: 0.035, gain: 0.085, attack: 0.0005, curve: 6.5, lowFrom: 7600, lowTo: 2600, highFrom: 1100 },
     },
     {
-      // The floor tom under the blast, on the half-bar, so the fight still has a downbeat in it.
-      steps: [1, _, 0.66, _, 0.9, _, 0.62, 0.7, 1, _, 0.68, _, 0.88, 0.58, 0.72, 0.82],
+      /*
+        THE HEART, AND IT IS THE THING THE LEVEL IS NAMED AFTER — asked for by name, 2026-08-14:
+        *"needs kind of a pulsing heartbeat rhythm for the boss if we're calling the level the black
+        heart."*
+
+        ⚠️ **TWO THUMPS AND A GAP, WHICH IS THE ONE FIGURE EVERY LISTENER ALREADY KNOWS.** The second
+        of the pair is softer and closer than the first, because that is what a heart does and it is
+        why the figure reads as a body rather than as a drum pattern. It replaces a floor tom that was
+        playing on the half-bar and saying nothing the blast beat was not already saying.
+
+        ⚠️ **IT IS LOWER AND LONGER THAN ANYTHING ELSE IN THE FIGHT** — 96 Hz down to 24 over half a
+        second — so it sits under the blast rather than competing with it, and the two together are a
+        very fast machine with a very slow pulse inside it. The Labyrinth uses the same figure in
+        `sub` for the opposite picture: there it is the player's own fear, and here it is the thing
+        the player is inside.
+      */
+      steps: [
+        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
+        1, _, 0.72, _, _, _, _, _, 0.96, _, 0.68, _, _, _, _, 0.58,
+      ],
       pitched: false,
-      perBeat: 2,
+      perBeat: 4,
       octave: 0,
-      note: { wave: 'sine', from: 112, to: 26, seconds: 0.44, gain: 0.36, attack: 0.001, curve: 2.4, drive: 0.46 },
+      note: { wave: 'sine', from: 96, to: 24, seconds: 0.52, gain: 0.44, attack: 0.002, curve: 2, drive: 0.4 },
     },
     {
       steps: [

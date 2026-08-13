@@ -59,39 +59,44 @@ export const PROBES = [
     decision: '0107',
     suite: 'tests/themes.test.ts',
     /*
-      ⚠️ A THEME THAT CLOSES A LAYER THE LADDER OPENED. Zero is the obvious way to say *this place
-      does not use the arp* — and it breaks 0090's *the ladder only ever opens layers* and 0102's
-      *every rung adds something* from a table whose subject is colour, which neither of those guards
-      reads. A place leans; it does not remove.
+      ⚠️ A THEME THAT CLOSES A LAYER OUTRIGHT. Zero is the obvious way to say *this place does not use
+      that layer* — and it breaks 0102's *every rung adds something* from a table whose subject is
+      colour, which that guard never reads. A place leans; it does not remove.
+
+      ⚠️ ANCHORED ON A CONSTANT'S NAME AND NOT ON A NUMBER, WHICH IS THIS PROBE'S SECOND RE-ANCHORING
+      — docs/decisions/0147-a-place-is-a-balance.md. It was pinned to `arp: 1.24` and went orphaned on
+      the very next tuning pass, exactly as 0146 had just written down about two other probes and then
+      re-pinned this one to a number anyway. `voices: SAURIAN_VOICES` is a symbol; a mix value is a
+      thing a hand is expected to move.
     */
     broke: 'a theme silencing a layer outright, so the ladder stops being additive from a colour table',
     guard: 'keeps every multiplier inside the band the mix can pay for',
     edit: {
       path: 'src/content/themes.ts',
-      find: '      arp: 1.24,',
-      replace: '      arp: 0,',
+      find: '    },\n    voices: SAURIAN_VOICES,',
+      replace: '      beat: 0,\n    },\n    voices: SAURIAN_VOICES,',
     },
   },
   {
     decision: '0107',
     suite: 'tests/themes.test.ts',
     /*
-      ⚠️ THE RULER GIVEN A LENGTH OF ITS OWN. `approach` is level one and is the deliberate identity —
-      every other place is a multiplier read against it — so a mix on that row means the six below are
-      being compared with something that is itself leaning. Every other assertion in the file is green
-      over it, and *the places sound different from each other* stops being a statement about anything.
+      ⚠️ THE MIX TABLE STOPPED BEING READ, WHICH IS THE WHOLE MECHANISM FAILING SILENTLY. `mixOf`
+      hands back 1 for everything: every backdrop still differs, every place still states its own
+      material, and all seven play one balance — which is precisely the state
+      docs/decisions/0147-a-place-is-a-balance.md was written about, reachable in one line.
 
-      ⚠️ IT USED TO EMPTY `core`'s MIX AND THAT ANCHOR DID NOT SURVIVE ITS FIRST TUNING PASS —
-      docs/decisions/0146-three-more-places-and-two-after-them.md. A probe pinned to numbers a hand is
-      expected to move goes orphaned every session; `mix: {}` on the neutral row is structural, because
-      the guard itself requires that row to stay empty.
+      ⚠️ ANCHORED ON CODE AND NOT ON THE TABLE, WHICH IS THE THIRD ANCHOR THIS PROBE HAS HAD. It
+      emptied `core`'s mix (orphaned by 0146's tuning), then wrote a mix onto the neutral row
+      (orphaned by 0147 giving level one a balance of its own). A probe whose subject is *the table is
+      honoured* belongs on the function that honours it.
     */
-    broke: 'the neutral place given a mix of its own, so the other six are read against nothing',
+    broke: 'the mix table stopped being read, so seven places play one balance',
     guard: 'and every theme actually sounds different from the one that changes nothing',
     edit: {
       path: 'src/content/themes.ts',
-      find: '    mix: {},',
-      replace: '    mix: { drone: 1.4, lead: 1.3 },',
+      find: '  const want = THEMES[theme].mix[layer] ?? 1;',
+      replace: '  const want = 1;',
     },
   },
   {
