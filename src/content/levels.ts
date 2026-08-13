@@ -1156,7 +1156,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     pickups: COILWARD_PICKUPS,
     bossAt: 4270,
     boss: 'lattice',
-    theme: 'debris',
+    theme: 'saurian',
   },
   /**
    * Level four. Its idea is written above its script.
@@ -1170,7 +1170,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     pickups: SHOAL_PICKUPS,
     bossAt: 4240,
     boss: 'shoalMother',
-    theme: 'rime',
+    theme: 'labyrinth',
   },
   /**
    * Level five. Its idea is written above its script.
@@ -1184,7 +1184,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     pickups: BATTERIES_PICKUPS,
     bossAt: 4240,
     boss: 'redoubt',
-    theme: 'forge',
+    theme: 'rime',
   },
   /**
    * Level six. Its idea is written above its script.
@@ -1198,7 +1198,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     pickups: GAUNTLET_PICKUPS,
     bossAt: 4340,
     boss: 'chorus',
-    theme: 'bloom',
+    theme: 'mire',
   },
   /**
    * Level seven. Its idea is written above its script.

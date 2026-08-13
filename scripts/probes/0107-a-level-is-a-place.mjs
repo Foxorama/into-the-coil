@@ -37,8 +37,8 @@ export const PROBES = [
     guard: 'and every backdrop keeps every ink legible, in every palette',
     edit: {
       path: 'src/content/themes.ts',
-      find: "    space: { vivid: '#170d08', 'high-contrast': '#080200' },",
-      replace: "    space: { vivid: '#170d08', 'high-contrast': '#6a5030' },",
+      find: "    space: { vivid: '#0b1206', 'high-contrast': '#010500' },",
+      replace: "    space: { vivid: '#0b1206', 'high-contrast': '#6a7a40' },",
     },
   },
   {
@@ -51,8 +51,8 @@ export const PROBES = [
     guard: 'and a backdrop is a dark, because the void is what everything is found against',
     edit: {
       path: 'src/content/themes.ts',
-      find: "    space: { vivid: '#0f1408', 'high-contrast': '#020600' },",
-      replace: "    space: { vivid: '#3c4a20', 'high-contrast': '#020600' },",
+      find: "    space: { vivid: '#121006', 'high-contrast': '#040300' },",
+      replace: "    space: { vivid: '#3c4a20', 'high-contrast': '#040300' },",
     },
   },
   {
@@ -68,24 +68,30 @@ export const PROBES = [
     guard: 'keeps every multiplier inside the band the mix can pay for',
     edit: {
       path: 'src/content/themes.ts',
-      find: '    mix: { arp: 1.3, hook: 1.28, drone: 0.55, sub: 0.62, groove: 0.75, lead: 1.25 },',
-      replace: '    mix: { arp: 0, hook: 1.28, drone: 0.55, sub: 0.62, groove: 0.75, lead: 1.25 },',
+      find: '      arp: 1.24,',
+      replace: '      arp: 0,',
     },
   },
   {
     decision: '0107',
     suite: 'tests/themes.test.ts',
     /*
-      ⚠️ THE TABLE FILLED IN AND MEANING NOTHING, which is the failure a new file is most likely to
-      have: seven rows, seven names, seven backdrops, and a mix that is empty everywhere. Every other
-      assertion here is green over it and the music is byte for byte what the report complained about.
+      ⚠️ THE RULER GIVEN A LENGTH OF ITS OWN. `approach` is level one and is the deliberate identity —
+      every other place is a multiplier read against it — so a mix on that row means the six below are
+      being compared with something that is itself leaning. Every other assertion in the file is green
+      over it, and *the places sound different from each other* stops being a statement about anything.
+
+      ⚠️ IT USED TO EMPTY `core`'s MIX AND THAT ANCHOR DID NOT SURVIVE ITS FIRST TUNING PASS —
+      docs/decisions/0146-three-more-places-and-two-after-them.md. A probe pinned to numbers a hand is
+      expected to move goes orphaned every session; `mix: {}` on the neutral row is structural, because
+      the guard itself requires that row to stay empty.
     */
-    broke: 'every theme given an empty mix, so the places look different and sound identical',
+    broke: 'the neutral place given a mix of its own, so the other six are read against nothing',
     guard: 'and every theme actually sounds different from the one that changes nothing',
     edit: {
       path: 'src/content/themes.ts',
-      find: '    mix: { drone: 1.35, lead: 1.3, drive: 1.2, stomp: 1.3, perc: 0.8, hook: 1.1 },',
-      replace: '    mix: {},',
+      find: '    mix: {},',
+      replace: '    mix: { drone: 1.4, lead: 1.3 },',
     },
   },
   {

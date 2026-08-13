@@ -267,6 +267,35 @@ describe('0128 — a place plays its own material, and shares everything it does
   /** Baking layers is real DSP, on the terms the shed test states. */
   const DSP_MS = 60_000;
 
+  /*
+    ⚠️ **ONE BAKE PER PLACE FOR THE WHOLE FILE, AND IT USED TO BE ONE PER (PLACE, LAYER, GUARD)** —
+    `docs/decisions/0146-three-more-places-and-two-after-them.md`. `loopsAt` hands back fresh arrays
+    on every call — deliberately, so no test can move another's subject — and that copy is about
+    forty milliseconds against a bake's two and a half seconds. Asking for them inside a loop over
+    themes is one bake each time.
+
+    ⚠️ **IT WENT RED ON CI THE FIRST TIME SIX PLACES STATED MATERIAL, AND GREEN LOCALLY.** Two places
+    meant about forty bakes; six means two hundred and fifty, and the sixty-second ceiling below is
+    the *shed test*'s number rather than this file's. That is
+    `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`'s shape without the
+    intermittency — the work genuinely tripled, and a rerun would have proved nothing.
+
+    ⚠️ **NOTHING ABOUT WHAT IS MEASURED CHANGES.** `bakeLoops` is `bakeLayer` over every layer
+    (`src/app/music.ts`), so a layer read out of this map is byte for byte what a direct bake
+    returns — the same samples, the same assertions. A guard made faster by measuring less would be
+    `docs/decisions/0027-measure-the-picture-not-the-model.md` arriving inside the guard.
+  */
+  const loopsFor = new Map<string, Record<MusicLayer, Float32Array>>();
+  const placeLoops = (theme?: ThemeKind): Record<MusicLayer, Float32Array> => {
+    const key = theme ?? '';
+    let got = loopsFor.get(key);
+    if (got === undefined) {
+      got = loopsAt(SAMPLE_RATE, theme);
+      loopsFor.set(key, got);
+    }
+    return got;
+  };
+
   it('A PLACE THAT STATES NOTHING IS THE BASE COMPOSITION, and `voicesOf` hands back the same array', () => {
     /*
       ⚠️ **THE CLAIM THE WHOLE COST MODEL RESTS ON.** 0113's storage model was priced at 672 MB
@@ -302,16 +331,18 @@ describe('0128 — a place plays its own material, and shares everything it does
         ways that produce identical samples — a re-ordered voice array, a re-typed accent of 1. What a
         place has to be is *audibly* another place, and the only honest test of that is the buffer.
       */
+      const baseLoops = placeLoops();
       for (const theme of THEME_KINDS) {
         const own = revoicedBy(theme);
+        const here = placeLoops(theme);
         for (const layer of own) {
-          const base = bakeLayer(layer, SAMPLE_RATE);
-          const here = bakeLayer(layer, SAMPLE_RATE, theme);
-          expect(here.length, `${theme}/${layer} changed the LENGTH of a layer, which breaks the phrase`).toBe(
+          const base = baseLoops[layer];
+          const mine = here[layer];
+          expect(mine.length, `${theme}/${layer} changed the LENGTH of a layer, which breaks the phrase`).toBe(
             base.length,
           );
           let moved = 0;
-          for (let i = 0; i < base.length; i++) if (Math.abs(base[i]! - here[i]!) > 1e-6) moved++;
+          for (let i = 0; i < base.length; i++) if (Math.abs(base[i]! - mine[i]!) > 1e-6) moved++;
           expect(
             moved,
             `${theme} claims to re-voice ${layer} and bakes the identical audio — the override says nothing`,
@@ -319,7 +350,7 @@ describe('0128 — a place plays its own material, and shares everything it does
         }
         // And a layer it did not claim is byte-identical, which is what sharing MEANS.
         const untouched = MUSIC_LAYERS.filter((l) => !own.includes(l))[0]!;
-        expect(bakeLayer(untouched, SAMPLE_RATE, theme)).toEqual(bakeLayer(untouched, SAMPLE_RATE));
+        expect(here[untouched]).toEqual(baseLoops[untouched]);
       }
     },
     DSP_MS,
@@ -400,8 +431,9 @@ describe('0128 — a place plays its own material, and shares everything it does
       const LOW = BANDS.findIndex((b) => b[2] === 'low');
       let measured = 0;
       for (const theme of THEME_KINDS) {
+        const here = placeLoops(theme);
         for (const layer of revoicedBy(theme)) {
-          const bands = bandEnergy(bakeLayer(layer, SAMPLE_RATE, theme), SAMPLE_RATE);
+          const bands = bandEnergy(here[layer], SAMPLE_RATE);
           const total = bands.reduce((a, b) => a + b, 0);
           if (total <= 0) continue;
           measured++;
@@ -477,18 +509,10 @@ describe('0128 — a place plays its own material, and shares everything it does
   /*
     ⚠️ **THE LOOPS ARE FETCHED ONCE PER PLACE AND NOT ONCE PER RUNG.** `loopsAt` hands back fresh
     arrays on every call — deliberately, so that no test can move another's subject — and that is
-    48 MB of copying. Asking for them inside the rung loop is forty-nine of those.
+    48 MB of copying. Asking for them inside the rung loop is forty-nine of those. `placeLoops` is
+    declared at the head of this `describe` and is now shared with the guard that measures whether a
+    place's material differs at all — 0146 has why that one could not go on baking its own.
   */
-  const loopsFor = new Map<string, Record<MusicLayer, Float32Array>>();
-  const placeLoops = (theme?: ThemeKind): Record<MusicLayer, Float32Array> => {
-    const key = theme ?? '';
-    let got = loopsFor.get(key);
-    if (got === undefined) {
-      got = loopsAt(SAMPLE_RATE, theme);
-      loopsFor.set(key, got);
-    }
-    return got;
-  };
 
   it('0134 — NO PLACE IS SUBSTANTIALLY SLOWER THAN THE BASE COMPOSITION, at any rung', () => {
     const bakes = paceBakes;

@@ -197,6 +197,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a section boundary is a DISTANCE YOU CAN DRAG, and the mixer follows the handle** | [0138](decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md) |
 | **a deadline checked between unbounded awaits is not a deadline** | [0139](decisions/0139-a-deadline-between-unbounded-awaits.md) |
 | **a GAIN IS NOT A LOUDNESS — no layer a rung opens is inaudible, and too loud beats inaudible** | [0140](decisions/0140-no-layer-is-inaudible.md) |
+| **ALL SEVEN LEVELS ARE THEIR OWN COMPOSITION; three theme kinds renamed and one moved a level** | [0146](decisions/0146-three-more-places-and-two-after-them.md), [`five-places-measured`](../reports/five-places-measured-2026-08-13.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -654,17 +655,39 @@ not a report per item.
 
 ## What is next
 
-### ⚠️ START HERE NEXT SESSION: BOTH SOUNDTRACKS WANT TWEAKING BEFORE ANY MORE ARE WRITTEN
+### ⚠️ START HERE NEXT SESSION: ALL SEVEN LEVELS HAVE THEIR OWN MUSIC AND NOBODY HAS HEARD FIVE OF THEM
 
-⚠️ **THE PLAYER HAS LISTENED AND THE VERDICT IS THE FIRST POSITIVE ONE THE NEBULA HAS HAD**,
-2026-08-13: *"I've had a listen on the dashboard and it's getting pretty good, but I want to make a
-fair few tweaks to both soundtracks before we expand out to the rest of the levels."*
+⚠️ **THE FIVE MISSING PLACES ARE WRITTEN** —
+[0146](decisions/0146-three-more-places-and-two-after-them.md), asked for by name, 2026-08-13:
+*"crank out music for level 3 and level 4… if you get those two levels done, move onto 5, 6 and 7."*
+Saurian Belt, The Labyrinth, Rime Shelf, The Toxic Mire and The Black Heart — twenty-one layers each,
+their own progressions and their own tunes. **Three theme kinds were renamed and one moved a level**,
+because the brief contradicted what the table said they were.
 
-⚠️ **SO THE NEXT SESSION IS TUNING, NOT CONTENT.** *Both* soundtracks — level one's base composition
-and Ember Nebula — and **levels three to seven wait**. A session that opens this row and starts
-writing a third place is doing the wrong thing, on the player's own instruction.
+⚠️ **THE ONLY THING THAT MATTERS NEXT IS A LISTEN, AND IT IS FIVE LISTENS RATHER THAN ONE.**
+`npm run dash`, one place at a time. Every number in
+[`five-places-measured`](../reports/five-places-measured-2026-08-13.md) is a model quantity —
+[0027](decisions/0027-measure-the-picture-not-the-model.md) — and *space laser dinosaur* is a claim
+about a picture.
 
-⚠️ **THE TWEAKS THEMSELVES ARE NOT YET NAMED**, and asking for them is the first move. What is known
+⚠️ **AND THE TUNING PASS ON LEVELS ONE AND TWO IS STILL OWED, WITH ITS THREE QUESTIONS STILL
+UNANSWERED.** It was deferred, not dropped, and the player gave the reason: *"refining each level is
+probably going to be a detailed process so getting some baseline tracks in now is probably a good time
+to get some more levels in so that tuning the tracks can also be done individually, but tonally for
+the game overall as well."* **Nothing in levels one or two was touched by 0146**, deliberately — the
+reference cannot move in the same session as the things being read against it.
+
+⚠️ **AND THE PLAYER HAS NAMED TWO STANDING FAULTS IN THEM WITHOUT DETAILING EITHER**, 2026-08-13:
+*"there are still some gain and some overlap issues for level 1 and 2 to sort out, so don't
+necessarily blindly repeat them, but they're good bases to start from."* **What *gain* and *overlap*
+mean concretely is the first question to ask**, and `scripts/weigh-audition.mjs` is where the answer
+gets measured — [0140](decisions/0140-no-layer-is-inaudible.md) built it for exactly this.
+
+⚠️ **THE FIVE NEW PLACES WERE MIXED WITH THAT WARNING IN HAND** and their spreads are in the report;
+the one to expect a report about is **`core`'s `sub`, 9.5 dB over its next loudest layer**, which is
+the widest in the game and is written down rather than pre-emptively tuned.
+
+⚠️ **THE TWEAKS THEMSELVES ARE STILL NOT NAMED**, and asking for them is the first move. What is known
 is that the last three rounds of this channel each turned a vague description into a measured quantity
 before anything was changed — [0134](decisions/0134-the-place-keeps-the-games-pace.md),
 [0136](decisions/0136-the-place-has-a-room-and-an-arc.md) — and every one of those measurements found
