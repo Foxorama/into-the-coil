@@ -39,12 +39,24 @@ export const PROBES = [
   {
     decision: '0136',
     suite: 'tests/themes.test.ts',
-    broke: 'the organ’s top rank pulled back, so the climb flattens and the approach stops being a drop',
+    broke: 'the hymn sung at the organ’s own height, so the opening is already where the push goes',
     guard: '0136 — EMBER NEBULA CLIMBS INTO THE SURGE AND DROPS INTO THE FIGHT',
+    /*
+      ⚠️ ANCHORED ON THE VOICE AND NOT ON THE MIX — docs/decisions/0147-a-place-is-a-balance.md. It
+      was pinned to `hook: 1.269` and went orphaned the first time the place was re-balanced. A
+      climb is a RATIO, so it flattens as readily from below as from above: the hymn `run` opens on
+      is sung three octaves up, and the push it climbs into is already where it started. Not one note
+      of either is removed.
+
+      ⚠️ AND MOVING THE STARLIGHT VOICE DOWN WAS TRIED FIRST AND DID NOTHING. `pitchOf` weights a
+      layer by its GAIN and not by how many notes it plays, so four stabs a phrase move the mean by
+      almost nothing; `call` is a whole layer of the opening. A break has to be the size of the thing
+      it is breaking.
+    */
     edit: {
-      path: 'src/content/themes.ts',
-      find: '      hook: 1.269,',
-      replace: '      hook: 0.5,',
+      path: 'src/content/nebula.ts',
+      find: '      steps: HYMN,\n      pitched: true,\n      perBeat: 1,\n      octave: 2,',
+      replace: '      steps: HYMN,\n      pitched: true,\n      perBeat: 1,\n      octave: 5,',
     },
   },
 ];

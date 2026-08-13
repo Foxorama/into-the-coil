@@ -26,12 +26,28 @@ export const PROBES = [
   {
     decision: '0134',
     suite: 'tests/themes.test.ts',
+    /*
+      ⚠️ ANCHORED ON THE MATERIAL AND NOT ON THE MIX, WHICH IS WHY IT SURVIVED 0147 AND ITS PREVIOUS
+      ANCHOR DID NOT — docs/decisions/0147-a-place-is-a-balance.md. It was pinned to three of Ember
+      Nebula's mix values and every one of them moved the first time a hand re-balanced the place.
+      The floor of a place is where its lowest voice SITS, and an octave is a structural fact.
+
+      ⚠️ THE PROCESSIONAL IS RETUNED OUT OF THE BASEMENT — 96 Hz becomes 880 — so the place keeps
+      every note and every rhythm it had and loses the weight under them. That is *no deep bassy
+      times* exactly.
+
+      ⚠️ AND IT IS AN UNPITCHED VOICE ON PURPOSE, WHICH IS WHAT MAKES IT LAND ON THE RIGHT GUARD. A
+      first attempt raised `sub`'s root three octaves and went red on 0136's ARC instead: a pitched
+      break moves `pitchOf` as well as the band, and a probe that fires the wrong guard proves nothing
+      about the one it names. `pitchOf` skips unpitched voices, so a drum's tuning is the low end and
+      nothing else.
+    */
     broke: 'the choir left with no floor under it, which is *no deep bassy times*',
-    guard: 'and none is substantially BRIGHTER, which is the other half of the same report',
+    guard: 'and every place has a bottom AND a top, which is a band and used to be a race to the floor',
     edit: {
-      path: 'src/content/themes.ts',
-      find: '      groove: 1.363,\n      drone: 1.222,\n      sub: 1.109,',
-      replace: '      groove: 0.5,\n      drone: 0.5,\n      sub: 0.5,',
+      path: 'src/content/nebula.ts',
+      find: "      note: { wave: 'sine', from: 96, to: 36, seconds: 0.62,",
+      replace: "      note: { wave: 'sine', from: 880, to: 640, seconds: 0.62,",
     },
   },
   {

@@ -28,7 +28,15 @@ import { SCALE } from '../src/content/cues.ts';
 import { LAYER_PAN } from '../src/content/music.ts';
 import { addRoom, bakeLayer } from '../src/app/music.ts';
 import { BANDS, bandEnergy } from './spectrum.ts';
-import { AUDIBLE_FLOOR_DB, layerLevels, rungShape, underTheLoudest } from './pace.ts';
+import {
+  AUDIBLE_FLOOR_DB,
+  apartBy,
+  layerLevels,
+  profileOf,
+  quietestThird,
+  rungShape,
+  underTheLoudest,
+} from './pace.ts';
 import { PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SAMPLE_RATE, saturate } from '../src/app/sound.ts';
 import { loopsAt } from './bakes.ts';
@@ -231,12 +239,21 @@ describe('a theme mixes the music and cannot break it', () => {
       by a percent is a table that technically differs; what makes a place a place is that the balance
       of the piece has moved.
     */
+    /*
+      ── AND `approach` IS NO LONGER THE EXCEPTION, BECAUSE ITS REASON WENT ────────────────────────
+
+      ⚠️ **`docs/decisions/0147-a-place-is-a-balance.md`.** This required level one's row to be
+      *exactly* neutral so that the other six were *"read against something"* — a sound argument while
+      the only comparison this file could make was against the base. 0147 compares places **to each
+      other**, so the ruler is no longer one row and level one does not have to be it.
+
+      ⚠️ **AND HOLDING IT NEUTRAL HAD A COST NOBODY HAD NOTICED**: it is the one place that could not
+      answer *"there are still some gain and some overlap issues for level 1 and 2 to sort out"* with
+      the lever every other place has. Its quietest third measured **−18 dB** and the table it would
+      have been fixed in was the table it was forbidden to use.
+    */
     for (const theme of THEME_KINDS) {
       const moved = MUSIC_LAYERS.filter((layer) => Math.abs(mixOf(theme, layer) - 1) >= 0.1);
-      if (theme === 'approach') {
-        expect(moved.length, 'the neutral theme stopped being neutral, so nothing is read against it').toBe(0);
-        continue;
-      }
       expect(moved.length, `${theme} moves ${moved.length} layers, which is not a different place`).toBeGreaterThan(1);
     }
   });
@@ -504,6 +521,9 @@ describe('0128 — a place plays its own material, and shares everything it does
     gets made, which is the outcome to want.
   */
   const PACE_FLOOR = 0.9;
+  /** The band a place's bottom lives in — 0147 turned 0134's ratio-to-the-base into an absolute. */
+  const LOW_FLOOR = 0.28;
+  const LOW_CEILING = 0.55;
   /** One bake map across both guards below — the second asks the same forty-four questions. */
   const paceBakes = new Map<string, number[]>();
   /*
@@ -530,23 +550,43 @@ describe('0128 — a place plays its own material, and shares everything it does
     }
   }, DSP_MS);
 
-  it('and none is substantially BRIGHTER, which is the other half of the same report', () => {
+  it('and every place has a bottom AND a top, which is a band and used to be a race to the floor', () => {
     /*
-      ⚠️ **The share under 300 Hz, against the base's own at the same rung.** *No deep bassy times* is
-      a claim about a ratio and about nothing else — and it is the half that a note count cannot see,
-      because a place can be dense and still be dense entirely above the organ.
+      ⚠️ **THE SHARE UNDER 300 Hz, AS AN ABSOLUTE BAND — AND IT WAS A RATIO AGAINST THE BASE** —
+      `docs/decisions/0147-a-place-is-a-balance.md`. 0134 wrote it as *at least 90% of the base's own
+      share at the same rung*, against a place that measured 28.6% where the base put 40. That caught
+      the defect it was written for and then did something nobody intended: **it made the base's
+      balance a target that every later place was tuned down to.**
+
+      ⚠️ **FOUR OF THE FIVE PLACES 0146 ADDED HIT THIS FLOOR AND WERE ANSWERED THE SAME WAY** — raise
+      the sub, raise the kick, raise the groove — so all five ended up bass-led, which is most of what
+      *"it didn't feel like I'd travelled somewhere else"* is a description of. A floor everything is
+      tuned down to is a target, and a target is a sameness. `CLAUDE.md`'s *no counting guard* is the
+      same shape one axis over.
+
+      ⚠️ **A BAND FIXES BOTH ENDS AND COUPLES NOTHING TO ANYTHING.** The bottom stops a place being
+      the treble wash 0134 caught; **the top stops *more bass* being the answer to every question**,
+      which is the half that did not exist and is what let seven places converge. The base itself sits
+      at 36–44%, comfortably inside.
+
+      ⚠️ **The numbers are a hand's guess bracketing today's measured spread**, on 0140's terms: the
+      shipped defect was 28.6%, and the place that answered the old floor hardest reached 50.7%.
     */
     const bakes = paceBakes;
     for (const rung of MUSIC_LEVELS) {
-      const base = rungShape(undefined, rung, placeLoops(), bakes).low;
-      if (base <= 0) continue;
       for (const theme of THEME_KINDS) {
         const here = rungShape(theme, rung, placeLoops(theme), bakes).low;
+        if (here <= 0) continue;
         expect(
-          here / base,
-          `${theme} puts ${(here * 100).toFixed(1)}% of its energy under 300Hz at ${rung} where the base puts ` +
-            `${(base * 100).toFixed(1)}% — a place that thin at the bottom reads as treble whatever it plays`,
-        ).toBeGreaterThanOrEqual(PACE_FLOOR);
+          here,
+          `${theme} puts ${(here * 100).toFixed(1)}% of its energy under 300Hz at ${rung} — a place that ` +
+            `thin at the bottom reads as treble whatever it plays`,
+        ).toBeGreaterThanOrEqual(LOW_FLOOR);
+        expect(
+          here,
+          `${theme} puts ${(here * 100).toFixed(1)}% of its energy under 300Hz at ${rung} — a place that ` +
+            `bottom-heavy has answered every question with the same sub, which is what makes seven of them one`,
+        ).toBeLessThanOrEqual(LOW_CEILING);
       }
     }
   }, DSP_MS);
@@ -693,6 +733,126 @@ describe('0128 — a place plays its own material, and shares everything it does
       `these are opened by a rung and cannot be heard against the rest of the place: ${offenders.join(', ')}`,
     ).toEqual([]);
   }, DSP_MS);
+
+  /*
+    ── 0147: A PLACE IS A BALANCE, AND THESE ARE WHAT REPLACED THE ±3 dB BAND ─────────────────────
+
+    Reported, having heard all five of 0146's places: *"level 3 sounds incredibly similar to level 2…
+    level 4, 5, 6 were pretty bland and very similar to the other levels, it didn't feel like I'd
+    travelled somewhere else in the galaxy."*
+
+    ⚠️ **`MIX_FLOOR` AND `MIX_CEILING` WERE WHAT KEPT THE MIX SAFE AND THEY ARE NOW ±8 dB.** What a
+    narrow band bought was *no theme can break the ladder*; what it cost was *no theme can state a
+    balance*. The three guards below hold the first without buying the second, which is the trade
+    `docs/decisions/0120-a-rung-may-close-a-layer.md` made when it took 0090's additive rule away:
+    more structure, not less.
+  */
+  const PLACES_APART_DB = 3;
+  const QUIETEST_THIRD_DB = -15;
+
+  it('0147 — NO TWO PLACES ARE THE SAME MIX, which is the reported defect stated as a number', () => {
+    /*
+      ⚠️ **THE REPORTED ONE, AND IT IS THE FIRST GUARD HERE THAT COMPARES TWO PLACES.** Everything
+      else in this file asks *is this place inside a bound* — a question seven identical arrangements
+      pass. `apartBy` asks the question the report asks.
+
+      ⚠️ **THE THRESHOLD IS A HAND'S GUESS AGAINST A MEASURED SPREAD**, on
+      `docs/decisions/0140-no-layer-is-inaudible.md`'s terms. Before 0147 the seven sat at 1.9–6.0 dB
+      apart and the player called the closest three interchangeable and the furthest one *"really
+      nice"*. 3 dB is above the pairs that were reported as the same and below the ones that were not.
+      **If a later round finds two places at 3.1 dB that still sound alike, this number is wrong and
+      should MOVE rather than be worked around.**
+    */
+    const profiles = new Map(THEME_KINDS.map((theme) => [theme, profileOf(theme, placeLoops(theme))]));
+    const tooClose: string[] = [];
+    for (let i = 0; i < THEME_KINDS.length; i++) {
+      for (let j = i + 1; j < THEME_KINDS.length; j++) {
+        const a = THEME_KINDS[i]!;
+        const b = THEME_KINDS[j]!;
+        const apart = apartBy(profiles.get(a)!, profiles.get(b)!);
+        if (apart < PLACES_APART_DB) tooClose.push(`${a}/${b} ${apart.toFixed(1)} dB`);
+      }
+    }
+    expect(
+      tooClose,
+      `these places are the same mix with different notes in them: ${tooClose.join(', ')}`,
+    ).toEqual([]);
+  }, DSP_MS);
+
+  it('0147 — AND NO PLACE KEEPS ITS CHARACTER IN A WHISPER', () => {
+    /*
+      ⚠️ **0140's FLOOR IS −33 dB AND EVERY LAYER THAT CARRIES A BRIEF WAS AT −15 TO −30.** *"No
+      lasers and roar at the boss"* was reported about a place whose lasers measured 21 dB under its
+      own kick — comfortably inside the audible floor, and comfortably inaudible. A layer can clear
+      *can this be heard at all* and still never be what anybody hears.
+
+      ⚠️ **HELD OVER THE QUIETEST THIRD RATHER THAN OVER NAMED LAYERS**, because which layers carry a
+      place is the place's own business — `docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md`
+      says a guard about a layer is written over the property and never over the name. What is
+      asserted is that **a third of a place is not a whisper**, which is true of any mix a listener
+      would call characterful and false of every mix that reads as a bed.
+    */
+    const offenders: string[] = [];
+    for (const theme of THEME_KINDS) {
+      const down = quietestThird(profileOf(theme, placeLoops(theme)));
+      if (down < QUIETEST_THIRD_DB) offenders.push(`${theme} ${down.toFixed(1)} dB`);
+    }
+    expect(
+      offenders,
+      `these places keep their bottom third too far down to be part of the picture: ${offenders.join(', ')}`,
+    ).toEqual([]);
+  }, DSP_MS);
+
+  it('0147 — AND A WIDER BAND STILL CANNOT FLATTEN THE LADDER, at any place', () => {
+    /*
+      ⚠️ **THE PROPERTY THE ±3 dB BAND WAS PROTECTING, HELD DIRECTLY.** 0102 bought four climbs and a
+      theme with ±8 dB of authority could sell one back — by leaning on a layer `run` opens and away
+      from one `surge` does, which no existing guard reads. `tests/music.test.ts` holds this over the
+      LADDER; this holds it over the ladder as each place actually plays it.
+
+      ⚠️ **Summed over the layers rather than measured off the audio**, because the claim is about the
+      arrangement and not about the samples: a rung that opens more gain than the one below it is a
+      rung that arrives, whatever the material under it happens to be.
+    */
+    /*
+      ⚠️ **THE ARC IS `run < push < surge`, A DROP, AND THEN THE FIGHT — AND THE FIRST DRAFT OF THIS
+      GUARD ASSERTED A STRAIGHT CLIMB THAT THE BASE LADDER ITSELF DOES NOT HAVE.** `approach` closes
+      `groove` and `hook` (`RUNG_CLOSES`) and opens a bell and a tritone; it sums BELOW `surge` in
+      `MUSIC_LADDER` by design, and `docs/decisions/0136-the-place-has-a-room-and-an-arc.md` calls
+      that drop by name — *"Up, Up, Up, drop, sharp Down for the boss."*
+
+      ⚠️ **A guard that the shipped design fails is a guard measuring the wrong quantity**, which is
+      `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md` arriving at the
+      moment of writing rather than three weeks later. What is held is the shape the ladder actually
+      has: the three climbs, and a fight that is bigger than the hush before it.
+    */
+    const at = (theme: ThemeKind, rung: (typeof MUSIC_LEVELS)[number]): number =>
+      MUSIC_LAYERS.reduce((sum, layer) => sum + MUSIC_LADDER[rung][layer] * mixOf(theme, layer), 0);
+    const climbs: [(typeof MUSIC_LEVELS)[number], (typeof MUSIC_LEVELS)[number]][] = [
+      ['run', 'push'],
+      ['push', 'surge'],
+      ['approach', 'boss'],
+    ];
+    for (const theme of THEME_KINDS) {
+      for (const [below, here] of climbs) {
+        expect(
+          at(theme, here),
+          `${theme} opens ${at(theme, here).toFixed(2)} at ${here} against ${at(theme, below).toFixed(2)} at ${below} — a rung that does not arrive`,
+        ).toBeGreaterThan(at(theme, below));
+      }
+    }
+    /*
+      ⚠️ **AND THE DROP INTO `approach` IS DELIBERATELY NOT ASSERTED HERE, HAVING BEEN WRITTEN AND
+      DELETED.** A gain sum that falls at `approach` looks like
+      `docs/decisions/0136-the-place-has-a-room-and-an-arc.md`'s *drop* and is not it: 0136's arc is
+      about **where the notes sit**, which `pitchOf` measures and a sum of gains cannot see. The base
+      ladder clears a gain-sum version by 1.3%, which is a knife-edge nobody chose — so asserting it
+      would have been fitting a bound to an accident and then tuning five places against it.
+
+      ⚠️ **What the hush before the fight actually IS, is `RUNG_CLOSES` taking `groove` and `hook`
+      away** — an arrangement change, held by `tests/music.test.ts` over the ladder itself.
+    */
+  });
 
   it('AND AN OVERRIDE MAY NOT SILENCE A LAYER THE LADDER OPENS', () => {
     // An empty voice array is a layer the ladder still raises a gain on and which makes no sound —

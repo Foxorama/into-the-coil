@@ -23,7 +23,10 @@ export const PROBES = [
     edit: {
       path: 'src/content/nebula.ts',
       find: "seconds: 0.025, gain: 0.125, attack: 0.0004",
-      replace: "seconds: 0.025, gain: 0.05, attack: 0.0004",
+      // 0.05 was the shipped defect, and 0147 lifted this place’s `ride` from a mix of 0.66 to 2.1 —
+      // so the gain that used to be inaudible now clears the floor with room. The probe follows the
+      // mix, because the floor is about what comes OUT of a fader and not what goes into it.
+      replace: "seconds: 0.025, gain: 0.02, attack: 0.0004",
     },
   },
   {

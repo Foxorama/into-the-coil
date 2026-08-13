@@ -247,6 +247,72 @@ export function underTheLoudest(levels: readonly LayerLevel[], layer: MusicLayer
 }
 
 /**
+ * A place's BALANCE: how far under its own loudest layer each layer sits, in dB, on the better of the
+ * two measures.
+ *
+ * ── THE QUANTITY *IT ALL SOUNDS THE SAME* IS ABOUT, AND NOTHING MEASURED IT ─────────────────────
+ *
+ * ⚠️ **`docs/decisions/0147-a-place-is-a-balance.md`.** Reported, having heard five new places:
+ * *"level 4, 5, 6 were pretty bland and very similar to the other levels, it didn't feel like I'd
+ * travelled somewhere else in the galaxy."* Every measurement this project had was **one place
+ * against the base** — is it fast enough, is it deep enough, can its layers be heard. All three are
+ * green on seven places that are one arrangement with different notes in it.
+ *
+ * ⚠️ **THE BETTER OF RMS AND PEAK, on `underTheLoudest`'s own terms**: RMS alone calls every sparse
+ * layer a whisper, and a balance is about what a listener notices rather than about mean power.
+ *
+ * ⚠️ **A layer no rung ever opens is `-Infinity` and is skipped by every caller**, which is why this
+ * returns the raw record rather than a tidy array — the callers disagree about what to do with a
+ * silent layer and both answers are right for their question.
+ */
+export function profileOf(
+  theme: ThemeKind | undefined,
+  loops: Record<MusicLayer, Float32Array>,
+): Record<MusicLayer, number> {
+  const levels = layerLevels(theme, loops);
+  const out = {} as Record<MusicLayer, number>;
+  for (const layer of MUSIC_LAYERS) {
+    const under = underTheLoudest(levels, layer);
+    out[layer] = Math.max(under.rms, under.peak);
+  }
+  return out;
+}
+
+/**
+ * How far apart two places' balances are, in dB RMS over the layers both of them sound.
+ *
+ * ⚠️ **Zero is *the same mix, whatever the notes are*.** Measured across the seven places on the day
+ * 0147 was written: **1.9 dB** between The Labyrinth and The Toxic Mire, which the report calls
+ * interchangeable, and **6.0 dB** between Saurian Belt and The Black Heart, which it does not.
+ */
+export function apartBy(a: Record<MusicLayer, number>, b: Record<MusicLayer, number>): number {
+  let sum = 0;
+  let counted = 0;
+  for (const layer of MUSIC_LAYERS) {
+    if (!Number.isFinite(a[layer]) || !Number.isFinite(b[layer])) continue;
+    const d = a[layer] - b[layer];
+    sum += d * d;
+    counted++;
+  }
+  return counted === 0 ? 0 : Math.sqrt(sum / counted);
+}
+
+/**
+ * How far down a place keeps its quietest third, in dB — a negative number.
+ *
+ * ⚠️ **THIS IS WHERE EVERY PLACE KEEPS ITS CHARACTER, WHICH IS THE DEFECT 0147 IS NAMED FOR.** On the
+ * day it was written the bottom third of all seven places was the same seven layers — `call`,
+ * `frenzy`, `wraith`, `arp`, `crash`, `hook`, `ride` — averaging −17 to −22 dB down. Those are the
+ * tune, the lasers, the roar, the twin lead and the hydra. **The loud part of every place was a sub,
+ * a kick, a bass and a pad, and those are the same four sounds in all seven.**
+ */
+export function quietestThird(profile: Record<MusicLayer, number>): number {
+  const ranked = MUSIC_LAYERS.filter((l) => Number.isFinite(profile[l])).sort((a, b) => profile[b] - profile[a]);
+  const third = ranked.slice(Math.ceil((ranked.length * 2) / 3));
+  return third.reduce((sum, l) => sum + profile[l], 0) / third.length;
+}
+
+/**
  * How far under the loudest layer of its own place a layer may sit before it is called inaudible.
  *
  * ── A HAND'S GUESS, FROM THE MEASURED SPREAD, AND THE SPREAD HAD A GAP IN IT ────────────────────

@@ -198,6 +198,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a deadline checked between unbounded awaits is not a deadline** | [0139](decisions/0139-a-deadline-between-unbounded-awaits.md) |
 | **a GAIN IS NOT A LOUDNESS — no layer a rung opens is inaudible, and too loud beats inaudible** | [0140](decisions/0140-no-layer-is-inaudible.md) |
 | **ALL SEVEN LEVELS ARE THEIR OWN COMPOSITION; three theme kinds renamed and one moved a level** | [0146](decisions/0146-three-more-places-and-two-after-them.md), [`five-places-measured`](../reports/five-places-measured-2026-08-13.md) |
+| **A PLACE IS A BALANCE, not a ±3 dB tint over one shared arrangement; no two places may be within 3 dB** | [0147](decisions/0147-a-place-is-a-balance.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -655,7 +656,38 @@ not a report per item.
 
 ## What is next
 
-### ⚠️ START HERE NEXT SESSION: ALL SEVEN LEVELS HAVE THEIR OWN MUSIC AND NOBODY HAS HEARD FIVE OF THEM
+### ⚠️ START HERE NEXT SESSION: THE FIVE HAVE BEEN HEARD, AND THE VERDICT WAS *THEY ALL SOUND THE SAME*
+
+⚠️ **REPORTED 2026-08-14, HAVING PLAYED ALL FIVE**: *"level 3 sounds incredibly similar to level 2,
+I'm not getting saurian or robot or techno or eurobeat vibes at all. Definitely no lasers and roar at
+the boss. Level 4, 5, 6 were pretty bland and very similar to the other levels, it didn't feel like
+I'd travelled somewhere else in the galaxy. Level 7's start wasn't great, quiet, similar to previous
+levels, but the rest of the level was really nice."*
+
+⚠️ **THE CAUSE WAS MEASURED AND IT WAS NOT THE NOTES** —
+[0147](decisions/0147-a-place-is-a-balance.md). Seven places sat **1.9–6.0 dB apart**; `sub` was the
+loudest layer in all seven; and every layer carrying a brief — the lasers, the roar, the music box,
+the twin lead, the hydra — was in the bottom third of its own mix at −15 to −30 dB. **The three
+closest pairs in the table were levels 4, 5 and 6**, which is exactly the set the report names.
+
+⚠️ **`node scripts/weigh-apart.mjs` IS THE INSTRUMENT AND IT PREDICTED THE REPORT.** Every measurement
+this project had was one place against the BASE; nothing compared two places to each other, and seven
+identical arrangements pass all of them.
+
+⚠️ **AND `node scripts/weigh-mix.mjs` IS THE ONE TO RUN BEFORE TOUCHING A MIX NUMBER.** A mix has six
+bounds on it and `expect` stops at the first; six rounds of whack-a-mole were spent before that script
+existed and none after it.
+
+⚠️ **THE NEXT THING IS A SECOND LISTEN, AND THE QUESTION IS NARROWER NOW.** The balance is fixed; what
+0147 deliberately did NOT touch is whether the material reads as its genre. **If level 3 still does
+not sound like eurobeat with the floor at the top of its mix, the answer is its notes and not its
+gains** — and that is a different session's work.
+
+⚠️ **AND `apartBy` IS A PROXY.** If two places at 4 dB still sound alike, **the threshold is not the
+thing to move** — the proxy is wrong and needs replacing. That is written into 0147 so it cannot be
+worked around quietly.
+
+### ALL SEVEN LEVELS HAVE THEIR OWN MUSIC
 
 ⚠️ **THE FIVE MISSING PLACES ARE WRITTEN** —
 [0146](decisions/0146-three-more-places-and-two-after-them.md), asked for by name, 2026-08-13:

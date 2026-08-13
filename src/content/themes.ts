@@ -224,8 +224,33 @@ export interface ThemeRow {
  * (0092, 0104) and a theme is a multiplier on top of it, so `tests/music.test.ts` drives every theme
  * at every rung through the shaper and refuses one that clips.
  */
-export const MIX_FLOOR = 0.5;
-export const MIX_CEILING = 1.45;
+/*
+  ── THE BAND WAS ±3 dB, AND THAT IS WHY SEVEN PLACES SOUNDED LIKE ONE ────────────────────────────
+
+  ⚠️ **`docs/decisions/0147-a-place-is-a-balance.md`.** Reported, having heard all five of 0146's new
+  places: *"level 3 sounds incredibly similar to level 2… level 4, 5, 6 were pretty bland and very
+  similar to the other levels, it didn't feel like I'd travelled somewhere else in the galaxy."*
+
+  ⚠️ **MEASURED WITH `node scripts/weigh-apart.mjs`, THE SEVEN PLACES SIT 1.9 TO 6.0 dB APART**, and
+  the three the report names as interchangeable are the three closest pairs in the table. `sub` is the
+  loudest layer in **all seven**; the top of every mix is a sub, a kick, a bass and a pad; and every
+  layer that carries a place's brief — the lasers, the roar, the music box, the twin lead, the hydra —
+  is in the bottom third of its own mix at −15 to −30 dB.
+
+  ⚠️ **AT ±3 dB A THEME CANNOT STATE A BALANCE, IT CAN ONLY TINT ONE.** `MUSIC_LADDER` is a single
+  arrangement and every place was a small nudge over it, so the arrangement won — which is
+  `docs/decisions/0113-there-is-one-composition-and-seven-levels.md`'s own failure arriving one level
+  up: 0128 and 0132 fixed the MATERIAL and left the BALANCE shared.
+
+  ⚠️ **WHAT REPLACES THE NARROW BAND IS MORE GUARDS, NOT FEWER** — the same trade
+  `docs/decisions/0120-a-rung-may-close-a-layer.md` made when it took 0090's additive rule away.
+  `tests/themes.test.ts` now holds, per place: the bus does not clip at any rung; **every rung is
+  louder than the one below**; no layer a rung opens is inaudible; **no place's quietest third is a
+  whisper**; and **no two places are within 3 dB of each other's profile**. Those are properties of
+  the thing the report is about. A ±3 dB window was a property of nothing.
+*/
+export const MIX_FLOOR = 0.22;
+export const MIX_CEILING = 2.6;
 
 /**
  * Every theme. One per level, in order.
@@ -245,7 +270,24 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     title: 'The Approach',
     space: { vivid: '#0b0b14', 'high-contrast': '#000000' },
     nebula: { vivid: '#2b3352', 'high-contrast': '#1c1c28' },
-    mix: {},
+    mix: {
+      call: 1.6,
+      hook: 1.9,
+      arp: 1.85,
+      ride: 2.05,
+      crash: 1.85,
+      lead: 1.4,
+      counter: 1.45,
+      frenzy: 1.85,
+      wraith: 1.8,
+      toll: 1.3,
+      sub: 0.72,
+      engine: 0.82,
+      stomp: 0.78,
+      drive: 0.9,
+      groove: 1.65,
+      perc: 0.9,
+    },
   },
   /**
    * Level two. A cathedral in a furnace: a choir, an organ, and what the fire does to both.
@@ -274,25 +316,25 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       the place that should be spending it there.
     */
     mix: {
-      groove: 1.363,
-      drone: 1.222,
-      sub: 1.109,
-      engine: 1.081,
-      chords: 1.081,
-      call: 1.034,
-      toll: 1.203,
-      counter: 0.893,
-      dread: 0.987,
-      lead: 0.94,
-      hook: 1.269,
-      perc: 0.799,
-      crash: 0.799,
-      arp: 0.658,
-      ride: 0.658,
-      drive: 0.799,
-      stomp: 0.865,
-      frenzy: 1.222,
-      wraith: 1.316,
+      chords: 2.3,
+      call: 1.9,
+      hook: 2.55,
+      arp: 2.6,
+      counter: 1.85,
+      toll: 1.6,
+      crash: 2.1,
+      ride: 2.1,
+      wraith: 2.5,
+      frenzy: 2.5,
+      lead: 1.4,
+      dread: 1.2,
+      drone: 1.3,
+      sub: 0.8,
+      engine: 0.55,
+      stomp: 1.15,
+      drive: 0.78,
+      perc: 0.45,
+      groove: 0.9,
     },
     voices: NEBULA_VOICES,
     /*
@@ -349,25 +391,26 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     space: { vivid: '#121006', 'high-contrast': '#040300' },
     nebula: { vivid: '#4a4418', 'high-contrast': '#241f0c' },
     mix: {
-      groove: 1.45,
-      sub: 0.79,
-      ride: 0.92,
-      drive: 0.88,
-      arp: 1.05,
-      hook: 1.1,
-      engine: 0.92,
-      counter: 1.05,
-      lead: 1.05,
-      toll: 1.0,
-      stomp: 1.0,
-      frenzy: 1.02,
-      wraith: 0.95,
+      groove: 2.2,
+      ride: 2.2,
+      arp: 2.55,
+      hook: 2.45,
+      drive: 1.3,
+      frenzy: 2.55,
+      wraith: 2.1,
+      crash: 1.6,
+      counter: 1.6,
+      lead: 1.3,
+      auraFast: 1.4,
+      sub: 0.62,
+      chords: 1.15,
       drone: 0.72,
-      chords: 0.9,
-      call: 1.0,
-      perc: 0.9,
-      crash: 0.9,
-      dread: 0.95,
+      call: 1.5,
+      engine: 0.95,
+      stomp: 0.6,
+      toll: 0.68,
+      perc: 1.1,
+      dread: 0.8,
     },
     voices: SAURIAN_VOICES,
     /*
@@ -417,25 +460,26 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       here, which is the opposite of every other place in the game.
     */
     mix: {
-      counter: 1.2,
-      call: 1.2,
-      perc: 1.16,
-      engine: 1.06,
-      toll: 0.96,
-      groove: 1.12,
-      sub: 1.06,
-      crash: 1.1,
-      dread: 1.1,
-      stomp: 0.95,
-      wraith: 1.02,
-      frenzy: 1.05,
-      lead: 1.05,
-      drive: 1.05,
-      ride: 1.1,
-      hook: 1.15,
-      chords: 0.85,
-      arp: 1.05,
-      drone: 0.8,
+      call: 2.6,
+      counter: 2.4,
+      perc: 2.35,
+      engine: 1.8,
+      toll: 1.15,
+      ride: 1.85,
+      arp: 1.95,
+      hook: 1.9,
+      wraith: 2,
+      frenzy: 2.05,
+      crash: 1.8,
+      dread: 1.4,
+      lead: 1.3,
+      auraFast: 1.35,
+      sub: 0.5,
+      groove: 0.72,
+      drive: 0.6,
+      stomp: 0.62,
+      chords: 0.72,
+      drone: 0.7,
     },
     voices: LABYRINTH_VOICES,
     /*
@@ -494,25 +538,26 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       player turns down.
     */
     mix: {
-      arp: 1.24,
-      hook: 1.18,
-      call: 1.16,
-      counter: 1.1,
-      perc: 1.1,
-      ride: 1.05,
-      chords: 1.05,
-      groove: 1.05,
-      toll: 1.05,
-      lead: 1.15,
-      crash: 1.05,
-      drone: 0.72,
-      sub: 0.9,
-      engine: 1.12,
-      drive: 0.92,
-      stomp: 0.92,
-      frenzy: 1.0,
-      wraith: 0.95,
-      dread: 0.95,
+      arp: 2.6,
+      hook: 2.45,
+      call: 2.4,
+      ride: 2.4,
+      crash: 2.4,
+      counter: 1.95,
+      toll: 1.7,
+      perc: 1.6,
+      frenzy: 2.4,
+      wraith: 1.85,
+      lead: 1.55,
+      chords: 1.25,
+      auraFast: 1.4,
+      sub: 0.78,
+      groove: 0.95,
+      engine: 0.72,
+      stomp: 0.58,
+      drone: 0.62,
+      dread: 0.78,
+      drive: 0.8,
     },
     voices: RIME_VOICES,
     /*
@@ -565,25 +610,26 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       `docs/decisions/0140-no-layer-is-inaudible.md` is the bound it must still clear, and it does.
     */
     mix: {
-      chords: 1.18,
-      groove: 1.12,
-      engine: 1.06,
-      perc: 1.1,
-      hook: 1.16,
-      counter: 1.14,
-      toll: 1.1,
-      dread: 1.08,
-      wraith: 1.1,
-      frenzy: 1.05,
-      arp: 1.05,
-      lead: 1.0,
-      call: 0.95,
-      sub: 0.95,
-      ride: 0.9,
-      drive: 0.9,
-      stomp: 0.92,
-      crash: 0.95,
-      drone: 0.85,
+      chords: 2.05,
+      groove: 2.35,
+      wraith: 2.6,
+      frenzy: 2.45,
+      toll: 1.95,
+      dread: 1.8,
+      call: 1.35,
+      counter: 1.7,
+      hook: 1.95,
+      drone: 1.45,
+      engine: 1.25,
+      lead: 1.45,
+      auraFast: 1.35,
+      ride: 1.05,
+      arp: 1.15,
+      crash: 1.3,
+      perc: 0.95,
+      sub: 0.8,
+      drive: 0.85,
+      stomp: 0.85,
     },
     voices: MIRE_VOICES,
     /*
@@ -627,25 +673,26 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       place rather than a preference about a shared pad.
     */
     mix: {
-      drone: 1.3,
-      groove: 1.45,
-      counter: 1.04,
-      call: 1.1,
-      hook: 0.9,
-      arp: 0.96,
-      lead: 1.0,
-      toll: 0.85,
-      dread: 1.05,
-      chords: 1.12,
-      perc: 0.76,
-      engine: 0.95,
-      ride: 0.9,
-      crash: 0.85,
-      sub: 1.32,
-      drive: 1.0,
-      stomp: 0.9,
-      frenzy: 1.0,
-      wraith: 1.05,
+      groove: 1.6,
+      arp: 1.85,
+      hook: 1.85,
+      counter: 1.7,
+      stomp: 1.482,
+      frenzy: 1.911,
+      wraith: 1.755,
+      lead: 1.4,
+      drive: 1.17,
+      call: 2.6,
+      engine: 1.15,
+      drone: 1.15,
+      ride: 1.17,
+      crash: 0.897,
+      sub: 0.585,
+      perc: 1.25,
+      toll: 0.624,
+      chords: 1.2,
+      dread: 0.897,
+      auraFast: 1.014,
     },
     voices: CORE_VOICES,
     /*
