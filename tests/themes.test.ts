@@ -28,7 +28,7 @@ import { SCALE } from '../src/content/cues.ts';
 import { LAYER_PAN } from '../src/content/music.ts';
 import { addRoom, bakeLayer } from '../src/app/music.ts';
 import { BANDS, bandEnergy } from './spectrum.ts';
-import { rungShape } from './pace.ts';
+import { AUDIBLE_FLOOR_DB, layerLevels, rungShape, underTheLoudest } from './pace.ts';
 import { PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SAMPLE_RATE, saturate } from '../src/app/sound.ts';
 import { loopsAt } from './bakes.ts';
@@ -629,6 +629,45 @@ describe('0128 — a place plays its own material, and shares everything it does
       and a boss one hertz below the approach would satisfy an ordering and none of the ask.
     */
     expect(boss / approach, `and SHARPLY down into the fight — ${say}`).toBeLessThan(0.92);
+  }, DSP_MS);
+
+  it('0140 — NO LAYER A RUNG OPENS IS INAUDIBLE UNDER THE REST OF ITS OWN PLACE', () => {
+    /*
+      `docs/decisions/0140-no-layer-is-inaudible.md`. Reported of the dashboard's layer buttons:
+      *"is it on purpose that we've got such varied volume levels on the effects? Hook and Drive for
+      example, hook I can barely hear and drive is quite loud and clear by comparison."*
+
+      ⚠️ **A GAIN IS NOT A LOUDNESS, AND NOTHING HERE MEASURED THE SECOND ONE UNTIL NOW.** The faders
+      a hand sets span about 7 dB across a place; what comes out of them spans 38 dB and more. So
+      every mix number in this project was chosen against a quantity nobody could see — including the
+      ones in the guards above, which is why this sits beside them rather than replacing any.
+
+      ⚠️ **BOTH MEASURES HAVE TO CONDEMN A LAYER, and that is what keeps it off the healthy ones.**
+      RMS counts the silence between notes, so `crash` — four strikes in twelve seconds — reads 38 dB
+      down while being the most conspicuous sound in the approach. Peak counts one sample, so a
+      continuous pad reads like a click. `crash` fails RMS and passes peak, and stays.
+
+      ⚠️ **AND `AUDIBLE_FLOOR_DB` IS A HAND'S GUESS WITH A GAP UNDER IT.** Ranked across all seven
+      places, one layer sat at −38.1 dB, then a **10 dB hole**, then the population from −28.1 up.
+      The floor is in the hole. If a later mix pass closes that gap this number stops being
+      defensible and should GO rather than be widened — CLAUDE.md's *no counting guard*.
+    */
+    const offenders: string[] = [];
+    for (const theme of THEME_KINDS) {
+      const levels = layerLevels(theme, placeLoops(theme));
+      for (const layer of MUSIC_LAYERS) {
+        // A layer no rung ever opens is a different claim, held by the ladder's own guards.
+        if (levels.find((l) => l.layer === layer)!.gain <= 0) continue;
+        const under = underTheLoudest(levels, layer);
+        if (under.rms < AUDIBLE_FLOOR_DB && under.peak < AUDIBLE_FLOOR_DB) {
+          offenders.push(`${theme}/${layer} (rms ${under.rms.toFixed(1)} dB, peak ${under.peak.toFixed(1)} dB)`);
+        }
+      }
+    }
+    expect(
+      offenders,
+      `these are opened by a rung and cannot be heard against the rest of the place: ${offenders.join(', ')}`,
+    ).toEqual([]);
   }, DSP_MS);
 
   it('AND AN OVERRIDE MAY NOT SILENCE A LAYER THE LADDER OPENS', () => {

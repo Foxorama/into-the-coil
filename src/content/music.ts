@@ -1962,7 +1962,18 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       octave: 0,
       // ⚠️ A quarter of a second, where every other cymbal-ish voice here is under a tenth. The DECAY
       // is the whole point: it is what puts continuous energy above 6kHz instead of a row of ticks.
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.052, attack: 0.0006, curve: 2.6, lowFrom: 11000, lowTo: 6500, highFrom: 5200, q: 0.7 },
+      /*
+        ⚠️ **0.13 WHERE IT WAS 0.052 — the same 2.5× the report asked for, applied to the base
+        composition as well as to Ember Nebula's re-voicing** —
+        `docs/decisions/0140-no-layer-is-inaudible.md`. This one is **not** below the floor (−24.6 dB
+        on its better measure, inside the healthy cluster), so it is a change made on the player's ear
+        rather than on the guard: *"the ride needs to be 2-3x as loud as it is because otherwise it'll
+        be overwhelmed."*
+
+        ⚠️ **IT MOVES ALL SEVEN PLACES**, because six of them share this voice — which is why it is
+        called out here rather than folded in quietly. Reverting it is this number and nothing else.
+      */
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.13, attack: 0.0006, curve: 2.6, lowFrom: 11000, lowTo: 6500, highFrom: 5200, q: 0.7 },
     },
     {
       // The bell of the ride — a narrow band an octave under the wash, struck on the downbeat only,
@@ -1971,7 +1982,9 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.19, gain: 0.036, attack: 0.0005, curve: 3.4, lowFrom: 7200, lowTo: 4200, highFrom: 3000, q: 1.6 },
+      // ⚠️ Raised with the wash above it and by the same factor — 0140. The bell is what gives the
+      // pattern a centre; lifting only the hiss would change the ride's shape, not its level.
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.19, gain: 0.09, attack: 0.0005, curve: 3.4, lowFrom: 7200, lowTo: 4200, highFrom: 3000, q: 1.6 },
     },
   ],
 

@@ -161,3 +161,112 @@ export function rungShape(
     pitch: pitched > 0 ? pitch / pitched : 0,
   };
 }
+
+// ── HOW LOUD A LAYER ACTUALLY IS, AGAINST THE REST OF ITS OWN MIX ───────────────────────────────
+
+/**
+ * What one layer puts out at the loudest its place ever takes it.
+ *
+ * ── THE QUANTITY NOTHING HERE HAS EVER PRINTED, AND THE REPORT THAT ASKED FOR IT ────────────────
+ *
+ * ⚠️ **`docs/decisions/0140-no-layer-is-inaudible.md`.** Reported, of the dashboard's audition
+ * buttons, 2026-08-13: *"is it on purpose that we've got such varied volume levels on the effects?
+ * Hook and Drive for example, hook I can barely hear and drive is quite loud and clear by
+ * comparison."*
+ *
+ * ⚠️ **A GAIN IS NOT A LOUDNESS, WHICH IS THE WHOLE FINDING.** `MUSIC_LADDER` × `mixOf` is what a
+ * hand sets and what [0130](../docs/decisions/0130-a-layer-can-be-heard-on-its-own.md) puts in the
+ * fader — and the faders across a place span about **7 dB** while what comes out of them spans
+ * **38 dB and more**. Nothing multiplied the gain by the material until this, so every mix number in
+ * this project has been set against a quantity nobody could see.
+ *
+ * ⚠️ **BOTH RMS AND PEAK, BECAUSE ONE OF THEM LIES ABOUT SPARSE LAYERS.** RMS counts the silence
+ * between notes, so a cymbal struck once a bar scores near zero while being perfectly audible when it
+ * lands; peak counts only the loudest sample, so a continuous pad scores the same as a click. A
+ * layer is only called inaudible when **both** say so.
+ */
+export interface LayerLevel {
+  layer: MusicLayer;
+  /** The loudest gain this place ever takes it to — the value 0130's audition button writes. */
+  gain: number;
+  /** Root-mean-square of the whole loop, times that gain. */
+  rms: number;
+  /** The loudest single sample of the loop, times that gain. */
+  peak: number;
+}
+
+/** The loudest gain a place ever takes a layer to, over every rung. Mirrors `rig/transport.ts`. */
+function loudestOf(theme: ThemeKind | undefined, layer: MusicLayer): number {
+  let most = 0;
+  for (const rung of Object.keys(MUSIC_LADDER) as MusicLevel[]) {
+    const ceiling = FOLLOWS_THE_BOSS.includes(layer) ? AURA_LEVEL_CEILING : 1;
+    // `undefined` is *the base composition* and level one is the place that plays it unmixed —
+    // the same reading `rungShape` above takes, rather than a second opinion about what no theme means.
+    const at = MUSIC_LADDER[rung][layer] * mixOf(theme ?? 'approach', layer) * ceiling;
+    if (at > most) most = at;
+  }
+  return most;
+}
+
+/**
+ * Every layer of a place, by what it actually puts out, loudest first.
+ *
+ * @param loops the baked composition for this place — passed in rather than baked here, because a
+ *        bake is about four seconds and both callers already have one.
+ */
+export function layerLevels(theme: ThemeKind | undefined, loops: Record<MusicLayer, Float32Array>): LayerLevel[] {
+  const out: LayerLevel[] = [];
+  for (const layer of MUSIC_LAYERS) {
+    const buffer = loops[layer];
+    let sum = 0;
+    let peak = 0;
+    for (let i = 0; i < buffer.length; i++) {
+      const v = buffer[i]!;
+      sum += v * v;
+      const size = v < 0 ? -v : v;
+      if (size > peak) peak = size;
+    }
+    const gain = loudestOf(theme, layer);
+    out.push({ layer, gain, rms: Math.sqrt(sum / buffer.length) * gain, peak: peak * gain });
+  }
+  return out.sort((a, b) => b.rms - a.rms);
+}
+
+/**
+ * How far under the loudest layer of its own place a layer sits, in decibels — a negative number.
+ *
+ * ⚠️ **RELATIVE TO THE PLACE AND NOT TO FULL SCALE**, so it survives a change to `MUSIC_GAIN`, to the
+ * bus shaper, or to any master a later decision puts in front of it. What is being asked is *can this
+ * be heard against the rest of what is playing*, and that is a ratio.
+ */
+export function underTheLoudest(levels: readonly LayerLevel[], layer: MusicLayer): { rms: number; peak: number } {
+  const top = levels[0]!;
+  const it = levels.find((l) => l.layer === layer)!;
+  const db = (a: number, b: number): number => (a <= 0 || b <= 0 ? -Infinity : 20 * Math.log10(a / b));
+  return { rms: db(it.rms, top.rms), peak: db(it.peak, top.peak) };
+}
+
+/**
+ * How far under the loudest layer of its own place a layer may sit before it is called inaudible.
+ *
+ * ── A HAND'S GUESS, FROM THE MEASURED SPREAD, AND THE SPREAD HAD A GAP IN IT ────────────────────
+ *
+ * ⚠️ **`docs/decisions/0140-no-layer-is-inaudible.md`.** Chosen the way
+ * [0102](../docs/decisions/0102-the-music-goes-somewhere.md) chose its distances — by hand, marked as
+ * a hand's guess, and against a measurement rather than a taste. Asked for in those terms: *"I'm not
+ * entirely [sure] how to specify the floor by ear at the moment, so let's go from the measured spread
+ * and then see how it plays out as the min floor."*
+ *
+ * ⚠️ **THE DATA HAD A TEN-DECIBEL HOLE IN IT, WHICH IS WHY THIS IS NOT A THRESHOLD FITTED TO ONE
+ * CASE.** Every layer of every place, ranked by the better of its two measures: Ember Nebula's `ride`
+ * at **−38.1 dB**, then a **10.0 dB gap**, then `arp` at −28.1 and a tight cluster of `ride`, `crash`
+ * and `arp` from −25.0 to −23.6. One layer is on the far side of a chasm and the rest are a
+ * population. **−33 dB sits in the hole**, five decibels clear of the healthy cluster.
+ *
+ * ⚠️ **THAT IS WHAT CLAUDE.md's *no counting guard* DEMANDS OF A NUMBER LIKE THIS** — line ceilings
+ * and slice ceilings were each refused because every candidate flagged a healthy file as loudly as a
+ * sick one. This one flags exactly one layer out of 161, and that layer is ten decibels clear of the
+ * next. If a later mix pass closes the gap, this number stops being defensible and should go rather
+ * than be widened.
+ */
+export const AUDIBLE_FLOOR_DB = -33;
