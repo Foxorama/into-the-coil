@@ -115,9 +115,43 @@ describe.runIf(chromePath)('the app plays offline once it has been visited', () 
     return [context, await context.newPage()];
   }
 
+  /**
+   * How long any ONE call into the page may take before it is called a hang.
+   *
+   * ⚠️ **Generous against what the work costs and strict against for ever, which is the only pair of
+   * bounds that matter here.** The whole test runs in about seven seconds locally, so a single
+   * `caches.keys()` taking ten is already pathological — and the number is not tuning, it is the
+   * difference between a diagnostic and vitest's bare *Test timed out in 60000ms*.
+   */
+  const POLL_MS = 10_000;
+
   /** Waits until a worker is not merely registered but actually in control of this page. */
   async function waitForController(page: Page): Promise<void> {
     await page.waitForFunction('navigator.serviceWorker.controller !== null', null, { timeout: 20_000 });
+  }
+
+  /**
+   * The same await, with a bound on it.
+   *
+   * ── A DEADLINE CHECKED BETWEEN UNBOUNDED AWAITS IS NOT A DEADLINE ──────────────────────────────
+   *
+   * ⚠️ **`docs/decisions/0139-a-deadline-between-unbounded-awaits.md`.** `page.evaluate` has **no
+   * timeout of its own** — it is not covered by Playwright's default, unlike `waitForFunction` and
+   * the locator actions — so every `await` below could hang for ever and the twenty-second budget
+   * beside it would never be reached to be checked. What that produced in CI was the whole suite
+   * dying on vitest's 60-second timeout with no diagnostic at all, on a test that takes **7 seconds**
+   * locally: an 8× margin cannot be exhausted by slowness, only by something not returning.
+   *
+   * ⚠️ **AND A SERVICE WORKER IS EXACTLY THE THING THAT CAN NOT RETURN.** `activate` can hold the
+   * page's task queue while it sweeps caches, and `update()` fetches the worker over the network —
+   * so the two places this file waits are the two places a hang is plausible.
+   */
+  function within<T>(what: string, ms: number, work: Promise<T>): Promise<T> {
+    let timer: ReturnType<typeof setTimeout>;
+    const bell = new Promise<never>((_, fail) => {
+      timer = setTimeout(() => fail(new Error(`${what} did not answer within ${ms}ms — it hung rather than failed`)), ms);
+    });
+    return Promise.race([work, bell]).finally(() => clearTimeout(timer)) as Promise<T>;
   }
 
   /**
@@ -130,11 +164,14 @@ describe.runIf(chromePath)('the app plays offline once it has been visited', () 
    *
    * Returns the last keys seen either way, so a timeout produces the real diagnostic instead of a
    * bare "timed out".
+   *
+   * ⚠️ **EACH POLL IS BOUNDED AS WELL AS THE LOOP** — 0139. The whole budget is what it always was;
+   * what changed is that a single poll can no longer eat all of it and then some.
    */
   async function cacheKeysUntil(page: Page, done: (keys: string[]) => boolean, ms = 20_000): Promise<string[]> {
     const deadline = Date.now() + ms;
     for (;;) {
-      const keys = (await page.evaluate('caches.keys()')) as string[];
+      const keys = (await within('caches.keys()', POLL_MS, page.evaluate('caches.keys()'))) as string[];
       if (done(keys) || Date.now() > deadline) return keys;
       await page.waitForTimeout(100);
     }
@@ -225,7 +262,16 @@ describe.runIf(chromePath)('the app plays offline once it has been visited', () 
         while proving nothing about retiring its own.
       */
       swBody = readFileSync(resolve(dist, 'sw.js'), 'utf8').replace(/PREFIX \+ '[^']*'/, "PREFIX + 'next'");
-      await page.evaluate('navigator.serviceWorker.getRegistration().then((r) => r.update())');
+      /*
+        ⚠️ **BOUNDED, BECAUSE `update()` GOES TO THE NETWORK** — 0139. It re-fetches the worker from
+        the origin this suite is itself serving, and an unbounded await on a fetch is the other place
+        this test could stop rather than fail.
+      */
+      await within(
+        'serviceWorker.update()',
+        POLL_MS,
+        page.evaluate('navigator.serviceWorker.getRegistration().then((r) => r.update())'),
+      );
 
       /*
         Wait for the SWEEP, not for the new cache. The new cache appears during `install`, which
