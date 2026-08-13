@@ -125,6 +125,49 @@ describe.runIf(chromePath)('the app plays offline once it has been visited', () 
    */
   const POLL_MS = 10_000;
 
+  /**
+   * How long a correct worker is given to install its shell and sweep the old caches.
+   *
+   * ── AND THIS ONE *IS* A BUDGET RAISE, WHICH 0141 REFUSED FOR THE OTHER CALL ────────────────────
+   *
+   * ⚠️ **`docs/decisions/0142-a-post-condition-may-wait-and-must-say-what-it-waited-for.md`.** The
+   * distinction is the whole of it: 0141 removed an await on **machinery the test did not need**, and
+   * refused to widen it. This is the **post-condition the test exists to observe** — the sweep is the
+   * assertion — so the only question is how long a *correct* worker may take, and that is a property
+   * of the machine rather than of the code.
+   *
+   * ⚠️ **`ubuntu-latest` IS TWO CORES AND `vitest` RUNS FILES IN PARALLEL ACROSS THEM.** This suite's
+   * HTTP server lives inside one of those workers, beside Chromium instances and the DSP suites, and
+   * `install` does nine forced network fetches through it. Twenty seconds was measured against a
+   * machine doing one thing; seven seconds is what the whole test costs when nothing is competing.
+   *
+   * ⚠️ **IT IS NOT LICENCE TO KEEP RAISING IT.** If this fires again the answer is the state readout
+   * below, not a bigger number — a budget that gets widened until it stops firing has stopped being a
+   * bound, which is 0141's own rejection.
+   */
+  const SWEEP_MS = 35_000;
+
+  /**
+   * What the registration's three worker slots are doing, as text for a failure message.
+   *
+   * ⚠️ **THE THING EVERY FAILURE SO FAR HAS BEEN MISSING.** *The worker kept a stale cache* is a
+   * statement about the outcome and says nothing about whether the new worker was **installing,
+   * stuck, or never found at all** — three different faults with one symptom, and this run could not
+   * tell them apart. `redundant` means the update was rejected outright; a lasting `installing` means
+   * the shell fetches are still going.
+   */
+  async function workerState(page: Page): Promise<string> {
+    return (await within(
+      'the registration’s state',
+      POLL_MS,
+      page.evaluate(`navigator.serviceWorker.getRegistration().then(function (r) {
+        if (!r) return 'no registration at all';
+        var say = function (w) { return w ? w.state : '—'; };
+        return 'installing ' + say(r.installing) + ' · waiting ' + say(r.waiting) + ' · active ' + say(r.active);
+      })`),
+    )) as string;
+  }
+
   /** Waits until a worker is not merely registered but actually in control of this page. */
   async function waitForController(page: Page): Promise<void> {
     await page.waitForFunction('navigator.serviceWorker.controller !== null', null, { timeout: 20_000 });
@@ -263,15 +306,31 @@ describe.runIf(chromePath)('the app plays offline once it has been visited', () 
       */
       swBody = readFileSync(resolve(dist, 'sw.js'), 'utf8').replace(/PREFIX \+ '[^']*'/, "PREFIX + 'next'");
       /*
-        ⚠️ **BOUNDED, BECAUSE `update()` GOES TO THE NETWORK** — 0139. It re-fetches the worker from
-        the origin this suite is itself serving, and an unbounded await on a fetch is the other place
-        this test could stop rather than fail.
+        ⚠️ **STARTED AND NOT AWAITED, AND THAT IS 0141 RATHER THAN A LONGER TIMEOUT.**
+        `docs/decisions/0141-await-the-post-condition-not-the-machinery.md`. `registration.update()`
+        does not resolve when the new worker is fetched — it resolves when the update algorithm has
+        finished, which includes running `install`, and this worker's `install` is
+        `waitUntil(Promise.all(SHELL.map(c.add({cache: 'reload'}))))`: **nine forced network fetches
+        through the single Node server this suite is itself running.** Awaiting it makes the test
+        depend on all of that completing promptly, on a machine it does not control.
+
+        ⚠️ **AND THE TEST NEVER NEEDED IT** — its own comment below says to wait for the SWEEP, which
+        happens later still, in `activate`. `cacheKeysUntil` already polls for exactly that
+        post-condition. So the dependency is removed rather than bounded: 0139 gave this failure a
+        name, and the name is what made it obvious that the wait was not load-bearing.
+
+        ⚠️ **The rejection is kept rather than dropped.** If the new worker genuinely fails to
+        install, the sweep never happens either — and without this the test would report a stale
+        cache, which is the symptom two steps downstream of the cause.
       */
-      await within(
-        'serviceWorker.update()',
-        POLL_MS,
-        page.evaluate('navigator.serviceWorker.getRegistration().then((r) => r.update())'),
-      );
+      await page.evaluate(`
+        window.__updateFailed = null;
+        navigator.serviceWorker
+          .getRegistration()
+          .then(function (r) { return r.update(); })
+          .catch(function (e) { window.__updateFailed = String(e); });
+        'started';
+      `);
 
       /*
         Wait for the SWEEP, not for the new cache. The new cache appears during `install`, which
@@ -280,11 +339,25 @@ describe.runIf(chromePath)('the app plays offline once it has been visited', () 
         correctly. The sweep's own post-condition is the only signal that `activate` has finished:
         exactly one cache under our prefix, and it is the new one.
       */
-      const keys = await cacheKeysUntil(page, (ks) => {
-        const ours = ks.filter((k) => k.startsWith('into-the-coil-'));
-        return ours.length === 1 && ours[0] === 'into-the-coil-next';
-      });
-      expect(keys, 'the worker kept a stale cache of its own').not.toContain('into-the-coil-0.0.1+stale');
+      const keys = await cacheKeysUntil(
+        page,
+        (ks) => {
+          const ours = ks.filter((k) => k.startsWith('into-the-coil-'));
+          return ours.length === 1 && ours[0] === 'into-the-coil-next';
+        },
+        SWEEP_MS,
+      );
+      // Asked only once the poll is over, so a passing run pays nothing for it — 0142.
+      const worker = keys.includes('into-the-coil-next') ? '' : ` · the worker was: ${await workerState(page)}`;
+      /*
+        ⚠️ **ASKED FIRST, SO A FAILED INSTALL REPORTS AS ITSELF** — 0141. A worker that never
+        installed also never sweeps, so every assertion below it would fail with *the worker kept a
+        stale cache*: the symptom two steps downstream of the cause, and the reading that sent this
+        investigation after the cache logic rather than after the fetch.
+      */
+      const updateFailed = await within('window.__updateFailed', POLL_MS, page.evaluate('window.__updateFailed'));
+      expect(updateFailed, `the new worker never installed, so there was nothing to sweep${worker}`).toBeNull();
+      expect(keys, `the worker kept a stale cache of its own${worker}`).not.toContain('into-the-coil-0.0.1+stale');
       // THE assertion this test exists for. On itch.io every HTML game shares one origin, so a
       // sweep that deletes what it did not create is one game deleting another game's offline copy.
       expect(keys, 'the worker deleted a cache belonging to another app on this origin').toContain('some-other-game-v3');

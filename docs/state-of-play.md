@@ -195,6 +195,8 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the synthesiser has a ROOM, and a place has an arc: up, up, up, drop, sharp down into the fight** | [0136](decisions/0136-the-place-has-a-room-and-an-arc.md) |
 | **the desk sounds while the level stands still — a listen no longer starts the walk** | [0137](decisions/0137-the-desk-sounds-while-the-level-stands-still.md) |
 | **a section boundary is a DISTANCE YOU CAN DRAG, and the mixer follows the handle** | [0138](decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md) |
+| **a deadline checked between unbounded awaits is not a deadline** | [0139](decisions/0139-a-deadline-between-unbounded-awaits.md) |
+| **a GAIN IS NOT A LOUDNESS — no layer a rung opens is inaudible, and too loud beats inaudible** | [0140](decisions/0140-no-layer-is-inaudible.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -700,6 +702,18 @@ the same day:
 ⚠️ **AND 0134's STRUCTURAL CALL CAN NOW BE HEARD BEFORE IT IS MADE.** *Levels 2+ opening at `push`* is
 one of the two shapes the handles reach: dragging `push` out to the whole level is that proposal, and
 it costs a drag rather than a PR.
+
+⚠️ **AND THE TUNING PASS HAS AN ORDERING RULE NOW, GIVEN BY THE PLAYER** —
+[0140](decisions/0140-no-layer-is-inaudible.md): *"cacophony is probably a better result than having
+half of the sounds completely inaudible and then we can tone down the cacophony."* **Which error to
+make is settled: too loud.** A layer that is too loud gets reported after one listen; a layer that is
+inaudible produces no report at all, which is how Ember Nebula's `ride` sat 38 dB under its own mix
+for the whole life of the place.
+
+⚠️ **THE FIRST THING THAT ORDERING BOUGHT IS `node scripts/weigh-audition.mjs`** — 0140, and it is the first
+measurement here of **what a mix number actually produces** rather than what it says. The faders a
+hand sets span ~7 dB across a place; what comes out of them spans 38. **Three ride gains moved and
+nothing else did** — the before-and-after is in 0140, so a listener can say it went the wrong way.
 
 ⚠️ **THE DASHBOARD LIES AFTER A CODE EDIT UNLESS THE PAGE RELOADS, AND IT NOW RELOADS ITSELF** —
 0136. A vite hot update left every baked buffer where it was, so the page printed the new layer list
