@@ -59,7 +59,7 @@ import type { ShipRow } from '../content/ships.ts';
 import { INVULN_STEPS, SHIELD_MARK, hullFor, shieldsOf } from '../content/ships.ts';
 import { SHOTS } from '../content/shots.ts';
 import { BURST, DEBRIS } from '../content/debris.ts';
-import { FORMATIONS } from '../content/formations.ts';
+import { FORMATIONS, gapAcross } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
 import { type DifficultyRow, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
@@ -2149,7 +2149,12 @@ function spawnWave(w: World, index: number): void {
     // A wave one enemy short is dropped rather than grown — `src/sim/pool.ts` has the argument, and
     // it is the same one a burst that will not fit gets.
     if (e === null) return;
-    const target = wave.lane + formation.acrossOffset(i, wave.count);
+    /*
+      ⚠️ **THE WAVE'S OWN BODY DECIDES ITS SPACING** — 0143. `row` is already in hand and a wave is a
+      single kind, so this costs one multiply and allocates nothing: `gapAcross` returns a number and
+      `docs/decisions/0022-frame-rate-is-a-feature.md` bans anything else on the spawn path.
+    */
+    const target = wave.lane + formation.acrossOffset(i, wave.count, gapAcross(row.radius));
     /*
       ⚠️ **A flanker's formation offset is applied ALONG rather than across at the entry point.** The
       members leave the edge in a stream at their own target lanes; spreading them across the lane

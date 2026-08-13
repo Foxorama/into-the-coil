@@ -25,8 +25,15 @@ export type FormationKind = (typeof FORMATION_KINDS)[number];
 export interface FormationRow {
   /** World units along, relative to where the level placed the wave. */
   alongOffset(index: number, count: number): number;
-  /** World units across, relative to the lane position the level authored. */
-  acrossOffset(index: number, count: number): number;
+  /**
+   * World units across, relative to the lane position the level authored.
+   *
+   * ⚠️ **`gap` IS THE WAVE'S OWN AND IS NO LONGER A CONSTANT** —
+   * `docs/decisions/0143-a-wave-is-spaced-by-the-body-it-is-made-of.md`. A number passed in
+   * allocates nothing, which is what `docs/decisions/0022-frame-rate-is-a-feature.md` requires of
+   * anything the spawn path touches.
+   */
+  acrossOffset(index: number, count: number, gap: number): number;
 }
 
 /**
@@ -85,7 +92,54 @@ function centred(index: number, count: number): number {
   ⚠️ **The lane still has room.** The old comment refused 15 because a six spanned 75 of 100 units; at
   9 a six spans 45 and `tests/level.test.ts`'s lane-edge refusal has more slack than before.
 */
-const ACROSS_GAP = 9;
+/**
+ * Clear air between two neighbours' hulls, in world units.
+ *
+ * ⚠️ **IT IS 0121's OWN LOWER BOUND, KEPT AND PAID PER WAVE** —
+ * `docs/decisions/0143-a-wave-is-spaced-by-the-body-it-is-made-of.md`. That decision squeezed
+ * `ACROSS_GAP` to 9 because the widest enemy is a radius-4 warden and *neighbours that touch are
+ * `docs/decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md` being
+ * spent*. The unit of air is the part worth keeping; **the warden is not.**
+ */
+const CLEAR_AIR = 1;
+
+/**
+ * How far apart two neighbours of a given body sit, across the lane.
+ *
+ * ── WHAT 0121 LEFT STANDING, WHICH IS THE QUESTION A REPEAT REPORT ASKS ─────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0143-a-wave-is-spaced-by-the-body-it-is-made-of.md`.** Reported, twice:
+ * *"I'd like the individual waves to have tighter clusters"* (0121), and then *"formation of the
+ * enemy waves need to be grouped tighter for diamonds and a few others because they're spread out
+ * and killing a single enemy sounds out of sequence."* `docs/state-of-play.md` says a repeat report
+ * is a question about **what the previous fix left standing**, and 0121 left this: it tightened ONE
+ * CONSTANT to the tightest the **widest** enemy in the game allows, and then charged every wave that
+ * price. A wave of diamonds is spaced as though a warden were in it.
+ *
+ * ⚠️ **A WAVE IS ONE KIND** — `WaveEntry.enemy` is a single kind — so the widest body in a wave is
+ * knowable exactly, at the spawn, with no search.
+ *
+ * ⚠️ **THE WARDEN DOES NOT MOVE, WHICH IS WHAT MAKES THIS SAFE TO JUDGE.** `2 × 4 + 1` is 9, exactly
+ * the shipped constant, so the change is a strict tightening for the six narrower bodies and a no-op
+ * for the one the old number was sized for. Nothing gets wider.
+ *
+ * | kind | width | gap | 4 abreast | inside a 19.75 volley? |
+ * |---|---|---|---|---|
+ * | weaver | 4.4 | 5.4 | 16.2 | **yes — was no** |
+ * | charger | 4.8 | 5.8 | 17.4 | **yes — was no** |
+ * | drifter | 5.2 | **6.2** | **18.6** | **yes — was no** |
+ * | lancer | 6.4 | 7.4 | 22.2 | no |
+ * | spinner | 6.8 | 7.8 | 23.4 | no |
+ * | turret | 7.4 | 8.4 | 25.2 | no |
+ * | warden | 8.0 | **9.0** | 27.0 | no — unchanged |
+ *
+ * ⚠️ **THREE KINDS GO FROM THREE-IN-A-VOLLEY TO FOUR**, which is the ask stated as a quantity: *"a
+ * player should be able to take out a group together and get a nice music reward."* Four kills inside
+ * one volley is four `kill` cues on one sixteenth-grid window rather than three.
+ */
+export function gapAcross(radius: number): number {
+  return radius * 2 + CLEAR_AIR;
+}
 
 /**
  * World units between neighbours, along it.
@@ -119,7 +173,7 @@ export const FORMATIONS: Record<FormationKind, FormationRow> = {
    */
   line: {
     alongOffset: () => 0,
-    acrossOffset: (index, count) => centred(index, count) * ACROSS_GAP,
+    acrossOffset: (index, count, gap) => centred(index, count) * gap,
   },
   /**
    * Single file: one lane, arriving one after another. The formation that makes a turret dangerous —
@@ -135,6 +189,6 @@ export const FORMATIONS: Record<FormationKind, FormationRow> = {
    */
   vee: {
     alongOffset: (index, count) => Math.abs(centred(index, count)) * ALONG_GAP,
-    acrossOffset: (index, count) => centred(index, count) * ACROSS_GAP,
+    acrossOffset: (index, count, gap) => centred(index, count) * gap,
   },
 };

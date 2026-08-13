@@ -64,8 +64,28 @@ function partWayThrough(): ReturnType<typeof playableWorld> & { frame: GameFrame
   return { ...built, frame, recorder };
 }
 
+/**
+ * Where the ship was drawn, whichever of its two faces was up.
+ *
+ * ── IT LOOKED FOR ONE SPRITE AND THE SHIP HAS TWO ───────────────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0143-a-wave-is-spaced-by-the-body-it-is-made-of.md`'s proof found this, and it
+ * is a defect in the guard rather than in the game.** A ship inside its invulnerability window after
+ * a hit is drawn as `shipHit` — so this returned `undefined` for a ship that was alive, on screen,
+ * and drawn exactly where it belonged, and the test reported *the ship was not drawn*.
+ *
+ * ⚠️ **THE SUBJECT IS WHERE, NOT WHICH.** Nothing in this file is about which face the hull is
+ * wearing; every assertion is about the coordinates. Keying on one sprite made the guard depend on
+ * the fixture's damage timing at the sampled step — so **any change to level pacing flips it**, which
+ * is what happened: 0143 tightened the waves, the fixture took its last hit a little later, and a
+ * guard about a level boundary went red about a sprite id.
+ *
+ * ⚠️ **The comment above already records this happening once in a different form** — a dying ship is
+ * not drawn, and `expect(before).toBeDefined()` was added to catch it. That line did its job again
+ * here; what it caught this time was the lookup, not the fixture.
+ */
 const shipAt = (recorder: Recorder): { x: number; y: number } | undefined =>
-  recorder.blits.find((b) => b.sprite === SPRITE.ship);
+  recorder.blits.find((b) => b.sprite === SPRITE.ship || b.sprite === SPRITE.shipHit);
 
 describe('a level boundary is a change of script, not a change of scene', () => {
   it('THE REPORTED ONE: the ship is drawn in the same place across the boundary', () => {

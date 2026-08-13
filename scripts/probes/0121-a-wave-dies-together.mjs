@@ -20,8 +20,10 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: a volley reaches three abreast, where it used to reach two',
     edit: {
       path: 'src/content/formations.ts',
-      find: 'const ACROSS_GAP = 9;',
-      replace: 'const ACROSS_GAP = 11;',
+      // Re-pointed by 0143: the constant became a function of the wave's own body, and the widest
+      // enemy still resolves to 9 — so this puts the SPREAD back without restoring a constant.
+      find: '  return radius * 2 + CLEAR_AIR;',
+      replace: '  return 11;',
     },
   },
   {
@@ -37,8 +39,10 @@ export const PROBES = [
     guard: 'and they still do not overlap, which is what stops it going tighter',
     edit: {
       path: 'src/content/formations.ts',
-      find: 'const ACROSS_GAP = 9;',
-      replace: 'const ACROSS_GAP = 8;',
+      // Re-pointed by 0143. Taking the clear air out is what makes the widest bodies touch, and it
+      // is now the same edit for every wave rather than one number for all of them.
+      find: '  return radius * 2 + CLEAR_AIR;',
+      replace: '  return radius * 2;',
     },
   },
   {
