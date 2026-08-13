@@ -81,10 +81,24 @@
       #now { display: flex; gap: 22px; align-items: baseline; flex-wrap: wrap; }
       #fired { min-height: 22px; display: flex; gap: 5px; flex-wrap: wrap; }
       #fired span { padding: 0 6px; border-radius: 2px; background: #24304a; color: var(--cool); font-size: 11px; }
-      #strip { position: relative; height: 46px; border: 1px solid var(--line); border-radius: 3px; background: #10121a; overflow: hidden; }
+      #strip { position: relative; height: 46px; border: 1px solid var(--line); border-radius: 3px; background: #10121a; overflow: hidden; touch-action: none; }
       #strip .seg { position: absolute; top: 0; bottom: 0; border-right: 1px solid var(--line); padding: 2px 4px; font-size: 10px; overflow: hidden; }
       #strip .head { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--hot); }
       #strip .midbar { color: var(--hot); }
+      /*
+        A BOUNDARY YOU CAN DRAG — 0138. Wide enough to grab and centred on the line it moves, so what
+        the pointer holds is the boundary rather than a control beside it. Only three of the five
+        have one: the boss's arrival is level design, and the fight's own split is keyed to health.
+      */
+      #strip .grip {
+        position: absolute; top: 0; bottom: 0; width: 11px; margin-left: -5px; padding: 0;
+        border: 0; border-radius: 0; background: transparent; cursor: ew-resize; z-index: 1;
+      }
+      #strip .grip::before {
+        content: ''; position: absolute; top: 0; bottom: 0; left: 5px; width: 1px; background: var(--cool);
+      }
+      #strip .grip:hover::before, #strip .grip:focus-visible::before { width: 3px; left: 4px; background: var(--hot); }
+      #strip .grip:focus-visible { outline: 1px solid var(--hot); outline-offset: -1px; }
       .note { color: var(--dim); font-size: 11px; margin-top: 8px; }
       /*
         PAUSED IS A VISIBLE STATE, because the layer gains do not move when the loops stop. `setOn`
@@ -92,9 +106,16 @@
         exactly where it was — so a paused page would otherwise go on reading `sub 0.86` with nothing
         coming out of the speakers, which is the one thing this dashboard exists not to do.
       */
-      body.paused .meter i { background: #3a3f52; }
-      body.paused .live { color: #4a4f63; }
+      /*
+        ⚠️ AND THE DIMMING FOLLOWS THE AIR WHILE THE WORD *stopped* FOLLOWS THE WALK — 0137. They
+        used to be one flag. A level held still with one layer soloed is a real state now, and it is
+        the one the panel was asked for: the gains ARE moving, so greying them would be the same lie
+        in the other direction.
+      */
+      body.mute .meter i { background: #3a3f52; }
+      body.mute .live { color: #4a4f63; }
       body.paused #rung::after { content: ' · stopped'; color: var(--dim); font-size: 13px; }
+      body.paused:not(.mute) #rung::after { content: ' · stopped · the desk is sounding'; color: var(--open); }
       .held td { background: #1a1430; }
       .held td:first-child { box-shadow: inset 3px 0 0 var(--hot); }
       td input[type='range'] { width: 84px; }
@@ -145,6 +166,28 @@
           <span class="dim">this place <b id="place">—</b></span>
         </div>
         <div id="strip" style="margin-top: 8px"></div>
+        <div class="row" style="margin-top: 6px">
+          <span class="dim">boundaries</span>
+          <span id="sections"></span>
+          <span class="dim">units back from the boss</span>
+          <button id="sectionsBack" disabled>put them back</button>
+        </div>
+        <div class="note">
+          ⚠️ <b>Drag the blue lines on the strip</b> to move where <code>push</code>,
+          <code>surge</code> and <code>approach</code> open, and hear the ladder turn over where you
+          put them — through the game's own mixer, on its own 1.6&nbsp;second ramp, landing on the bar
+          line (0117). <b>← →</b> on a focused handle nudges <b>one bar</b>, which is the smallest
+          move that changes anything a listener can hear.
+          <br />⚠️ <b>They are ONE set for all seven levels, because the game's are.</b> The three are
+          distances measured back from whichever boss a level has, so dragging here is a proposal
+          about every level — the <b>copy this moment</b> button prints them as the constants they
+          would be pasted back into <code>src/content/music.ts</code> as.
+          <br />⚠️ <b>The other two boundaries deliberately have no handle.</b>
+          <code>approach</code>→<code>boss</code> is where the level's boss arrives, which is level
+          design rather than a music number; <code>boss</code>→<code>bossPeak</code> is keyed to the
+          boss's <b>health</b> and not to a clock, so a handle that moved it in time would be a
+          control over something time does not decide.
+        </div>
         <div class="row" style="margin-top: 8px">
           <button id="copy">📋 copy this moment</button>
           <span id="copied" class="dim"></span>
@@ -178,6 +221,10 @@
           and heard, which is the point. <b>follow</b> hands one layer back; <b>hand it all back</b>
           returns the lot. A held layer follows a rung change <b>immediately</b> rather than over the
           mixer's 1.6&nbsp;second ramp, so judge a transition with nothing held.
+          <br />⚠️ <b>With the transport stopped, the desk still sounds — once nothing is following
+          the mixer</b> (0137). <b>silence everything</b> and then raise the faders you want: the
+          level clock stays exactly where you stopped it, so the rung you are listening to cannot
+          move underneath you.
           <br />⚠️ <b>pan</b> starts where <code>LAYER_PAN</code> put it. The game's own limit is
           0.65 either side (0118) and the fader goes to 1.0 on purpose — past the limit is a question,
           not a setting.
@@ -233,9 +280,17 @@
           on the desk at the loudest the ladder ever takes it here, and silences the other
           twenty-two — so a layer this rung has CLOSED still sounds, which is the whole point.
           <b>Click it again</b>, or <b>everything back</b>, to hand the mixer its mix back.
-          <br />⚠️ <b>The loops have to be running, so this starts them</b> — a paused dashboard has
-          stopped them outright rather than muted them (0119). What you will not hear is the rest of
-          the piece: the transport is playing and every other fader is at zero.
+          <br />⚠️ <b>It works with the transport STOPPED, and that is what it is for</b> (0137). The
+          loops have to be on the air for a fader to write into anything at all — a stopped dashboard
+          has stopped them outright rather than muted them (0119) — so this puts them back on and
+          <b>leaves the level clock exactly where it is</b>. The rung does not move, the guns do not
+          fire, and the header says <b>stopped · the desk is sounding</b>. Click it again to go back
+          to silence.
+          <br />⚠️ <b>A fader on its own will not do this and the reason is not an omission.</b> A
+          layer with no hold FOLLOWS the mixer, so putting the loops on the air for one dragged fader
+          would start the whole piece — which is the opposite of the ask. Press <b>silence
+          everything</b> first and then any fader is audible on its own; these buttons hold all
+          twenty-three in one click, which is why they need no second gesture.
           <br />⚠️ <b>It is this PLACE's version of the layer</b>. Ember Nebula's <code>engine</code>
           is not level one's, so the level selector decides what these buttons play (0128).
           <br />⚠️ <b>In phase with the piece, because it never left it.</b> This is the game's own

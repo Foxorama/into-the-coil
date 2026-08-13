@@ -51,8 +51,14 @@ It serves `/rig/`: the game's own mixer on a scrub bar, every layer's live gain 
 `GainNode` beside the target, absolute faders so a layer the rung has CLOSED can be dragged up and
 heard, per-layer pan, the gun and the tubes at a tier slider, every cue on a button, **every music
 layer on a button too — one click and it plays alone**
-([0130](decisions/0130-a-layer-can-be-heard-on-its-own.md)), and a **copy this moment** button that
-prints the lot as markdown. **A music question is opened here now, not in a `.wav`.** `docs/machine.md` has the double-clickable launcher and the one thing about node's path on
+([0130](decisions/0130-a-layer-can-be-heard-on-its-own.md)), **which now works with the transport
+STOPPED and leaves the level clock where it is**
+([0137](decisions/0137-the-desk-sounds-while-the-level-stands-still.md)), **the three section
+boundaries on draggable handles over the game's own arithmetic**
+([0138](decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md)), and a **copy this moment**
+button that prints the lot as markdown — including the boundaries, as the constants they would be
+pasted back into `src/content/music.ts` as. **A music question is opened here now, not in a `.wav`.**
+`docs/machine.md` has the double-clickable launcher and the one thing about node's path on
 this machine that will otherwise cost an hour.
 
 ⚠️ **Establish which build a report is about BEFORE debugging it.** A session was once spent on
@@ -187,6 +193,8 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a place may be another piece and may NOT be a slower one — pace and bottom held against the base** | [0134](decisions/0134-the-place-keeps-the-games-pace.md) |
 | **a place arrives on the next BAR and not the next phrase — 1.6s where it was 25.6** | [0135](decisions/0135-a-place-arrives-when-you-do.md) |
 | **the synthesiser has a ROOM, and a place has an arc: up, up, up, drop, sharp down into the fight** | [0136](decisions/0136-the-place-has-a-room-and-an-arc.md) |
+| **the desk sounds while the level stands still — a listen no longer starts the walk** | [0137](decisions/0137-the-desk-sounds-while-the-level-stands-still.md) |
+| **a section boundary is a DISTANCE YOU CAN DRAG, and the mixer follows the handle** | [0138](decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -675,6 +683,23 @@ a level's `run` opens nine and the ladder decides which. **Levels 2+ opening at 
 within 7%** and costs one section boundary a level — which is the *fewer bigger sections* option
 [0125](decisions/0125-the-build-starts-sooner.md) records the player refusing in another form. It is
 not a call to make inside a tuning pass.
+
+⚠️ **AND THE INSTRUMENT GOT TWO THINGS FOR THAT TUNING PASS BEFORE IT STARTED**, asked for by name on
+the same day:
+
+1. **A layer can be auditioned with the transport STOPPED** —
+   [0137](decisions/0137-the-desk-sounds-while-the-level-stands-still.md). *"Pause the music and then
+   play a particular sound… without affecting the current run of the melody itself."* The level clock
+   does not move, so the rung you are listening to cannot walk on underneath you.
+2. **The `push`, `surge` and `approach` boundaries are on draggable handles** —
+   [0138](decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md), over the game's own
+   `musicLevelFor`. ⚠️ **NOTHING IS TUNED THERE — not one distance moves in that change**, and 0138
+   says why the instrument comes first. **It is the tool for question 2 above**, which is about
+   whether three sections read as three things.
+
+⚠️ **AND 0134's STRUCTURAL CALL CAN NOW BE HEARD BEFORE IT IS MADE.** *Levels 2+ opening at `push`* is
+one of the two shapes the handles reach: dragging `push` out to the whole level is that proposal, and
+it costs a drag rather than a PR.
 
 ⚠️ **THE DASHBOARD LIES AFTER A CODE EDIT UNLESS THE PAGE RELOADS, AND IT NOW RELOADS ITSELF** —
 0136. A vite hot update left every baked buffer where it was, so the page printed the new layer list

@@ -46,7 +46,7 @@ export const PROBES = [
     guard: 'THE RUNG SEQUENCE IS THE GAME’S ANSWER, not a list the rig keeps',
     edit: {
       path: 'scripts/timeline.mjs',
-      find: '  return musicLevelFor(camera, bossAt, inFight, health);',
+      find: '  return musicLevelFor(camera, bossAt, inFight, health, at);',
       replace: "  return inFight ? 'boss' : second > 40 ? 'surge' : 'run';",
     },
   },
@@ -68,8 +68,8 @@ export const PROBES = [
     */
     edit: {
       path: 'scripts/timeline.mjs',
-      find: 'export function rungAt(kind, second, fightSeconds) {\n  const { bossAt } = LEVELS[kind];',
-      replace: 'export function rungAt(kind, second, fightSeconds) {\n  const bossAt = 4270;',
+      find: 'export function rungAt(kind, second, fightSeconds, at = SECTION_UNITS) {\n  const { bossAt } = LEVELS[kind];',
+      replace: 'export function rungAt(kind, second, fightSeconds, at = SECTION_UNITS) {\n  const bossAt = 4270;',
     },
   },
   {

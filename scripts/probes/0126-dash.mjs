@@ -28,7 +28,7 @@ export const PROBES = [
     guard: 'THE RUNG IS THE GAME’S ANSWER, never a table the dashboard keeps',
     edit: {
       path: 'rig/transport.ts',
-      find: '  const rung = rungAt(kind, second, fightSeconds);',
+      find: '  const rung = rungAt(kind, second, fightSeconds, at);',
       replace: "  const rung = second < 35 ? 'run' : second < 120 ? 'push' : 'boss';",
     },
   },
