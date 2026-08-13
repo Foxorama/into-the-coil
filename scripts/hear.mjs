@@ -299,7 +299,7 @@ if (args.has('solo')) {
   mode cannot show a boundary landing in the wrong place — it puts every one of them at a phrase.
 
   ⚠️ **AND THE THEME IS IN IT**, which no mode in this file has ever applied. `mixOf` is 0107's
-  multiplier, so `--level=eye` is The Core's mix and not level one's. Seven levels that a play-test
+  multiplier, so `--level=eye` is The Black Heart's mix and not level one's. Seven levels that a play-test
   says sound identical have never once been rendered as themselves.
 */
 if (args.has('level')) {

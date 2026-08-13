@@ -50,4 +50,4 @@ for (const theme of themes) {
 }
 
 console.log(`a bar is ${BAR_SECONDS}s, so notes/bar × ${(60 / BAR_SECONDS).toFixed(0)} is notes a minute.`);
-console.log('tests/themes.test.ts refuses either percentage below 85.');
+console.log('tests/themes.test.ts refuses either percentage below 90.');

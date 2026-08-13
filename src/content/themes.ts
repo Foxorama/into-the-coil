@@ -54,9 +54,14 @@
  * put 0113's storage model at 672 MB resident. What it did not price is a diff, which is what this is.
  */
 
+import { CORE_VOICES } from './core.ts';
+import { LABYRINTH_VOICES } from './labyrinth.ts';
+import { MIRE_VOICES } from './mire.ts';
 import { MUSIC, type MusicLayer, type MusicVoice } from './music.ts';
 import { NEBULA_VOICES } from './nebula.ts';
 import type { PaletteName } from './palette.ts';
+import { RIME_VOICES } from './rime.ts';
+import { SAURIAN_VOICES } from './saurian.ts';
 
 /**
  * Every theme, in the order the run meets them. Closed —
@@ -67,8 +72,22 @@ import type { PaletteName } from './palette.ts';
  * `CLAUDE.md` allows opening the predecessor only for a named file and a named reason, and the reason
  * to open it is the FICTION, which is downstream of whether theming works at all. A biome name drops
  * onto a row here without touching anything else.
+ *
+ * ── AND FIVE OF THE SEVEN WERE NAMED BY THE PLAYER, WHICH IS WHY THREE OF THEM CHANGED ──────────
+ *
+ * ⚠️ **`docs/decisions/0146-three-more-places-and-two-after-them.md`.** Asked for, 2026-08-13:
+ * *"level 3 will be a space laser dinosaur style biome… level 4 will be a labyrinth style, lost in a
+ * maze being hounded and chased… one will be ice, one will be toxic mire hydra boss and the last will
+ * be the black hole heart of the galaxy."* Three of the seven rows were holding a name and a hue that
+ * the brief contradicts, so `debris` and `forge` are gone, `rime` moves from level four to level five
+ * where the ice now is, and `bloom` becomes what its level actually contains.
+ *
+ * ⚠️ **A theme kind is renamed by the compiler, which is the whole reason this was cheap.** The union
+ * is read in exactly two places — this table and `src/content/levels.ts`'s `theme` column — so a name
+ * that no longer describes its level fails to build rather than quietly going on being wrong, which
+ * is `docs/decisions/0016-a-hub-enumerates-kinds.md` paying for itself.
  */
-export const THEME_KINDS = ['approach', 'nebula', 'debris', 'rime', 'forge', 'bloom', 'core'] as const;
+export const THEME_KINDS = ['approach', 'nebula', 'saurian', 'labyrinth', 'rime', 'mire', 'core'] as const;
 
 /** Derived from the list, so a theme cannot exist in the union and be missing from the table. */
 export type ThemeKind = (typeof THEME_KINDS)[number];
@@ -312,15 +331,150 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       sub: 0.08,
     },
   },
-  /** Level three. Hard and percussive: the hands lead and the pads get out of the way. */
-  debris: {
-    title: 'The Debris Line',
-    space: { vivid: '#0d1016', 'high-contrast': '#000305' },
-    nebula: { vivid: '#2a3a4c', 'high-contrast': '#16222c' },
-    mix: { perc: 1.12, engine: 1.04, groove: 1.15, drone: 0.6, chords: 0.78, stomp: 1.08 },
+  /**
+   * Level three. A hot-blooded place: bone flutes over a hi-NRG floor, and a thing the size of a
+   * building at the end of it.
+   *
+   * ⚠️ **THE SECOND PLACE THAT IS ANOTHER PIECE RATHER THAN ANOTHER ARRANGEMENT** —
+   * `docs/decisions/0146-three-more-places-and-two-after-them.md`. `src/content/saurian.ts` is the
+   * composition and has the argument; what is here is the hue and the balance.
+   *
+   * ⚠️ **The mix leans on the BOTTOM AND THE TOP AND HOLLOWS THE MIDDLE**, which is what a floor
+   * sounds like and is the half a multiplier can do that the material cannot: the octave bass and the
+   * offbeat sub come up, the hats come up, and the pad that would otherwise fill the space between
+   * them gives way.
+   */
+  saurian: {
+    title: 'Saurian Belt',
+    space: { vivid: '#121006', 'high-contrast': '#040300' },
+    nebula: { vivid: '#4a4418', 'high-contrast': '#241f0c' },
+    mix: {
+      groove: 1.45,
+      sub: 0.79,
+      ride: 0.92,
+      drive: 0.88,
+      arp: 1.05,
+      hook: 1.1,
+      engine: 0.92,
+      counter: 1.05,
+      lead: 1.05,
+      toll: 1.0,
+      stomp: 1.0,
+      frenzy: 1.02,
+      wraith: 0.95,
+      drone: 0.72,
+      chords: 0.9,
+      call: 1.0,
+      perc: 0.9,
+      crash: 0.9,
+      dread: 0.95,
+    },
+    voices: SAURIAN_VOICES,
+    /*
+      ⚠️ **A CLUB HAS A ROOM AND A JUNGLE DOES NOT, SO THE SPLIT IS BY REGISTER.** Everything that
+      carries the floor is bone dry — a wet kick is a kick you cannot hear the front of, and a wet
+      sixteenth bass is mud. What gets the room is the material that is supposed to be coming from
+      somewhere else: the flute, the horn, the swell and the pad behind them.
+    */
+    air: {
+      crash: 0.62,
+      toll: 0.58,
+      call: 0.52,
+      drone: 0.5,
+      lead: 0.45,
+      chords: 0.4,
+      dread: 0.4,
+      counter: 0.34,
+      auraSlow: 0.34,
+      hook: 0.3,
+      ride: 0.24,
+      arp: 0.24,
+      wraith: 0.2,
+      perc: 0.14,
+      auraFast: 0.12,
+      drive: 0.1,
+      engine: 0.08,
+      frenzy: 0.08,
+      groove: 0.06,
+      sub: 0.05,
+      stomp: 0.05,
+    },
   },
   /**
-   * Level four. Thin, bright and fast.
+   * Level four. A corridor: a tune that comes back, and something one phrase behind it.
+   *
+   * ⚠️ **`src/content/labyrinth.ts` is the composition** and the two ideas in it are structural
+   * rather than timbral — an accent that limps and a canon that follows. What is here is the hue, the
+   * balance, and the one thing a table can say that a pattern cannot: how much room each layer is in.
+   */
+  labyrinth: {
+    title: 'The Labyrinth',
+    space: { vivid: '#0e0a14', 'high-contrast': '#030006' },
+    nebula: { vivid: '#3a2a52', 'high-contrast': '#1d1428' },
+    /*
+      ⚠️ **THE MIX LEANS ON THE THINGS A BODY MAKES.** The breath, the footfall and the heartbeat are
+      the picture; the pad is the wall they happen against and is deliberately the quietest thing
+      here, which is the opposite of every other place in the game.
+    */
+    mix: {
+      counter: 1.2,
+      call: 1.2,
+      perc: 1.16,
+      engine: 1.06,
+      toll: 0.96,
+      groove: 1.12,
+      sub: 1.06,
+      crash: 1.1,
+      dread: 1.1,
+      stomp: 0.95,
+      wraith: 1.02,
+      frenzy: 1.05,
+      lead: 1.05,
+      drive: 1.05,
+      ride: 1.1,
+      hook: 1.15,
+      chords: 0.85,
+      arp: 1.05,
+      drone: 0.8,
+    },
+    voices: LABYRINTH_VOICES,
+    /*
+      ⚠️ **THIS IS THE FIRST PLACE THAT USES `air` BY WITHHOLDING IT** — 0136 gave a place a room and
+      the interesting thing to do with one is to take it away. Almost everything here is close enough
+      to touch; the music box and the horn are not, so they read as coming from elsewhere in the maze.
+      Two numbers, and they are the whole picture.
+    */
+    air: {
+      call: 0.95,
+      toll: 0.85,
+      crash: 0.55,
+      drone: 0.4,
+      auraSlow: 0.4,
+      lead: 0.3,
+      dread: 0.3,
+      counter: 0.25,
+      wraith: 0.25,
+      chords: 0.2,
+      ride: 0.15,
+      hook: 0.12,
+      arp: 0.12,
+      perc: 0.1,
+      auraFast: 0.08,
+      drive: 0.06,
+      engine: 0.06,
+      frenzy: 0.06,
+      groove: 0.05,
+      stomp: 0.04,
+      sub: 0.04,
+    },
+  },
+  /**
+   * Level five. Ice.
+   *
+   * ⚠️ **IT WAS LEVEL FOUR AND THE BRIEF MOVED IT** —
+   * `docs/decisions/0146-three-more-places-and-two-after-them.md`: *"one will be ice."* The row keeps
+   * its name, its hue and its mix and changes which level plays it, because the only thing wrong with
+   * it was where it sat in the run.
    *
    * ⚠️ **ITS OLD MIX IS NOW THE NEUTRAL ONE, WHICH IS THE WHOLE OF 0108's PACE ITEM.** *"The pace of
    * the music sounded good around level 4, that should be our starting point"* — so what this row
@@ -332,35 +486,198 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     title: 'Rime Shelf',
     space: { vivid: '#08131a', 'high-contrast': '#000408' },
     nebula: { vivid: '#1e4a5c', 'high-contrast': '#0e2e3a' },
-    mix: { arp: 1.3, hook: 1.28, drone: 0.55, sub: 0.62, groove: 0.75, lead: 1.25 },
-  },
-  /** Level five. Heavy and low: turrets, and a mix that sits underneath them. */
-  forge: {
-    title: 'The Forge',
-    space: { vivid: '#170d08', 'high-contrast': '#080200' },
-    nebula: { vivid: '#63321a', 'high-contrast': '#301608' },
     /*
-      ⚠️ **`sub` is 1.22 rather than the 1.4 the band allows, and the guard is what said so.** It is
-      the layer that decides the bus's peak — `MUSIC_GAIN` has the measurement — so the heaviest place
-      in the game is the one row where the ceiling in `MIX_CEILING` is not the real limit. What makes
-      this The Forge is that the low end leads *and* the top gets out of its way, which is two
-      multipliers rather than one large one.
+      ⚠️ **THE MIX LEANS ON THE GLASS AND KEEPS THE FLOOR IT NEEDS.** The old row pulled the low end
+      out from under a shared composition to make it read as thin and bright; this place states its
+      own material and does not need that — what it needs is for the bell, the frost and the singing
+      to be above a floor that is genuinely there, because a cold mix with no bottom is a mix a
+      player turns down.
     */
-    mix: { sub: 1.04, groove: 1.3, drone: 1.15, arp: 0.6, hook: 0.7, stomp: 1.15, drive: 0.8 },
+    mix: {
+      arp: 1.24,
+      hook: 1.18,
+      call: 1.16,
+      counter: 1.1,
+      perc: 1.1,
+      ride: 1.05,
+      chords: 1.05,
+      groove: 1.05,
+      toll: 1.05,
+      lead: 1.15,
+      crash: 1.05,
+      drone: 0.72,
+      sub: 0.9,
+      engine: 1.12,
+      drive: 0.92,
+      stomp: 0.92,
+      frenzy: 1.0,
+      wraith: 0.95,
+      dread: 0.95,
+    },
+    voices: RIME_VOICES,
+    /*
+      ⚠️ **A LOT OF ROOM, AND IT IS THE ONE PLACE WHERE THAT IS LITERAL RATHER THAN FIGURATIVE.** An
+      ice shelf is a flat hard surface under an open sky and it is the only environment in this game
+      that would genuinely have a long reflection. The floor stays dry — 0136's own rule, because a
+      wet kick is a kick you cannot hear the front of — and everything above it is in the open.
+    */
+    air: {
+      call: 0.95,
+      toll: 0.9,
+      crash: 0.9,
+      chords: 0.85,
+      drone: 0.8,
+      counter: 0.75,
+      lead: 0.7,
+      hook: 0.65,
+      arp: 0.55,
+      dread: 0.55,
+      ride: 0.5,
+      auraSlow: 0.4,
+      perc: 0.35,
+      wraith: 0.28,
+      drive: 0.2,
+      auraFast: 0.18,
+      engine: 0.14,
+      frenzy: 0.12,
+      groove: 0.08,
+      stomp: 0.06,
+      sub: 0.05,
+    },
   },
-  /** Level six. Everything at once, which is what the level is. */
-  bloom: {
-    title: 'Spore Bloom',
-    space: { vivid: '#0f1408', 'high-contrast': '#020600' },
-    nebula: { vivid: '#2f4a1c', 'high-contrast': '#18280c' },
-    mix: { hook: 1.3, chords: 1.2, perc: 1.2, arp: 1.15, toll: 1.2, drone: 0.7 },
+  /**
+   * Level six. A toxic mire, and the thing in it grows a head back.
+   *
+   * ⚠️ **It was `bloom` and the brief renamed it** —
+   * `docs/decisions/0146-three-more-places-and-two-after-them.md`: *"one will be toxic mire hydra
+   * boss."* Level six's boss is `chorus`, which is already a body that answers in several voices, so
+   * the name is the one part of this row that had to move.
+   */
+  mire: {
+    title: 'The Toxic Mire',
+    space: { vivid: '#0b1206', 'high-contrast': '#010500' },
+    nebula: { vivid: '#3a5418', 'high-contrast': '#1c2a0c' },
+    /*
+      ⚠️ **THE MIX PUTS THE TUNE UNDER THE PAD, WHICH IS THE ONE ROW HERE THAT IS DELIBERATELY WRONG
+      BY THE USUAL RULE.** Every other place lifts `call` so the melody is legible; this one holds it
+      level with the chords, because the picture is a thing singing from under the water and a melody
+      you have to listen past is what that sounds like.
+      `docs/decisions/0140-no-layer-is-inaudible.md` is the bound it must still clear, and it does.
+    */
+    mix: {
+      chords: 1.18,
+      groove: 1.12,
+      engine: 1.06,
+      perc: 1.1,
+      hook: 1.16,
+      counter: 1.14,
+      toll: 1.1,
+      dread: 1.08,
+      wraith: 1.1,
+      frenzy: 1.05,
+      arp: 1.05,
+      lead: 1.0,
+      call: 0.95,
+      sub: 0.95,
+      ride: 0.9,
+      drive: 0.9,
+      stomp: 0.92,
+      crash: 0.95,
+      drone: 0.85,
+    },
+    voices: MIRE_VOICES,
+    /*
+      ⚠️ **HUMID RATHER THAN LARGE.** A swamp has no reflections — it is full of things that absorb —
+      so the room here is short and on the layers that are supposed to be far away rather than on the
+      ones nearby. It is the middle setting between Ember Nebula's cathedral and The Labyrinth's
+      corridor, and it exists to prove the axis has one.
+    */
+    air: {
+      toll: 0.75,
+      call: 0.6,
+      crash: 0.6,
+      chords: 0.55,
+      drone: 0.5,
+      lead: 0.45,
+      counter: 0.4,
+      dread: 0.4,
+      auraSlow: 0.38,
+      hook: 0.3,
+      arp: 0.28,
+      ride: 0.22,
+      wraith: 0.22,
+      perc: 0.18,
+      auraFast: 0.14,
+      drive: 0.12,
+      engine: 0.1,
+      frenzy: 0.08,
+      groove: 0.06,
+      stomp: 0.05,
+      sub: 0.04,
+    },
   },
-  /** Level seven. The centre: the drone returns and the tune sits on top of it. */
+  /** Level seven. The black hole at the heart of the galaxy, and the drone is what is left of it. */
   core: {
-    title: 'The Core',
-    space: { vivid: '#16080f', 'high-contrast': '#060003' },
+    title: 'The Black Heart',
+    space: { vivid: '#10050f', 'high-contrast': '#040003' },
     nebula: { vivid: '#5a1e3c', 'high-contrast': '#2c0c1c' },
-    mix: { drone: 1.35, lead: 1.3, drive: 1.2, stomp: 1.3, perc: 0.8, hook: 1.1 },
+    /*
+      ⚠️ **THE DRONE IS THE SUBJECT AND THE ROW ALREADY SAID SO.** It has leant on this layer since
+      the theme table existed; `src/content/core.ts` is what finally makes that a statement about the
+      place rather than a preference about a shared pad.
+    */
+    mix: {
+      drone: 1.3,
+      groove: 1.45,
+      counter: 1.04,
+      call: 1.1,
+      hook: 0.9,
+      arp: 0.96,
+      lead: 1.0,
+      toll: 0.85,
+      dread: 1.05,
+      chords: 1.12,
+      perc: 0.76,
+      engine: 0.95,
+      ride: 0.9,
+      crash: 0.85,
+      sub: 1.32,
+      drive: 1.0,
+      stomp: 0.9,
+      frenzy: 1.0,
+      wraith: 1.05,
+    },
+    voices: CORE_VOICES,
+    /*
+      ⚠️ **ALMOST NONE, AND IT IS THE ONLY PLACE THAT EARNS THAT BY BEING LOUD RATHER THAN BY BEING
+      SMALL.** This genre is recorded close and dry on purpose: reverb on a wall of guitars is mud,
+      and the thing that makes it enormous is the density rather than the space. What gets a room is
+      the drone, the bell and the crash — the three sounds that are supposed to be coming from the
+      hole rather than from the band.
+    */
+    air: {
+      drone: 0.8,
+      toll: 0.7,
+      crash: 0.55,
+      auraSlow: 0.45,
+      call: 0.35,
+      dread: 0.3,
+      lead: 0.22,
+      counter: 0.2,
+      chords: 0.18,
+      wraith: 0.16,
+      auraFast: 0.12,
+      ride: 0.1,
+      hook: 0.08,
+      arp: 0.08,
+      perc: 0.08,
+      drive: 0.06,
+      engine: 0.05,
+      frenzy: 0.05,
+      groove: 0.04,
+      stomp: 0.03,
+      sub: 0.03,
+    },
   },
 };
 
