@@ -263,15 +263,31 @@ describe.runIf(chromePath)('the app plays offline once it has been visited', () 
       */
       swBody = readFileSync(resolve(dist, 'sw.js'), 'utf8').replace(/PREFIX \+ '[^']*'/, "PREFIX + 'next'");
       /*
-        ⚠️ **BOUNDED, BECAUSE `update()` GOES TO THE NETWORK** — 0139. It re-fetches the worker from
-        the origin this suite is itself serving, and an unbounded await on a fetch is the other place
-        this test could stop rather than fail.
+        ⚠️ **STARTED AND NOT AWAITED, AND THAT IS 0141 RATHER THAN A LONGER TIMEOUT.**
+        `docs/decisions/0141-await-the-post-condition-not-the-machinery.md`. `registration.update()`
+        does not resolve when the new worker is fetched — it resolves when the update algorithm has
+        finished, which includes running `install`, and this worker's `install` is
+        `waitUntil(Promise.all(SHELL.map(c.add({cache: 'reload'}))))`: **nine forced network fetches
+        through the single Node server this suite is itself running.** Awaiting it makes the test
+        depend on all of that completing promptly, on a machine it does not control.
+
+        ⚠️ **AND THE TEST NEVER NEEDED IT** — its own comment below says to wait for the SWEEP, which
+        happens later still, in `activate`. `cacheKeysUntil` already polls for exactly that
+        post-condition. So the dependency is removed rather than bounded: 0139 gave this failure a
+        name, and the name is what made it obvious that the wait was not load-bearing.
+
+        ⚠️ **The rejection is kept rather than dropped.** If the new worker genuinely fails to
+        install, the sweep never happens either — and without this the test would report a stale
+        cache, which is the symptom two steps downstream of the cause.
       */
-      await within(
-        'serviceWorker.update()',
-        POLL_MS,
-        page.evaluate('navigator.serviceWorker.getRegistration().then((r) => r.update())'),
-      );
+      await page.evaluate(`
+        window.__updateFailed = null;
+        navigator.serviceWorker
+          .getRegistration()
+          .then(function (r) { return r.update(); })
+          .catch(function (e) { window.__updateFailed = String(e); });
+        'started';
+      `);
 
       /*
         Wait for the SWEEP, not for the new cache. The new cache appears during `install`, which
@@ -284,6 +300,14 @@ describe.runIf(chromePath)('the app plays offline once it has been visited', () 
         const ours = ks.filter((k) => k.startsWith('into-the-coil-'));
         return ours.length === 1 && ours[0] === 'into-the-coil-next';
       });
+      /*
+        ⚠️ **ASKED FIRST, SO A FAILED INSTALL REPORTS AS ITSELF** — 0141. A worker that never
+        installed also never sweeps, so every assertion below it would fail with *the worker kept a
+        stale cache*: the symptom two steps downstream of the cause, and the reading that sent this
+        investigation after the cache logic rather than after the fetch.
+      */
+      const updateFailed = await within('window.__updateFailed', POLL_MS, page.evaluate('window.__updateFailed'));
+      expect(updateFailed, 'the new worker never installed, so there was nothing to sweep').toBeNull();
       expect(keys, 'the worker kept a stale cache of its own').not.toContain('into-the-coil-0.0.1+stale');
       // THE assertion this test exists for. On itch.io every HTML game shares one origin, so a
       // sweep that deletes what it did not create is one game deleting another game's offline copy.
