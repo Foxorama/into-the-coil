@@ -657,6 +657,34 @@ export const PUSH_UNITS = 3021;
 export const SURGE_UNITS = 1736;
 
 /**
+ * Where a level's three middle rungs open, gathered as one thing.
+ *
+ * ── WHY THE THREE DISTANCES NEEDED A NAME BETWEEN THEM ──────────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md`.** Reported, about the
+ * dashboard: *"I'd love it if we could make the run section that has the push, surge, approach
+ * sections slideable so that I can drag them to start sooner or end sooner and see what effect that
+ * has."* Every previous answer to *where should `surge` open* — 0102, 0125, 0131 — was a number typed
+ * into this file, shipped, and judged a play-test later; three rounds of that moved one constant.
+ *
+ * ⚠️ **NOT ONE NUMBER IS RESTATED HERE, WHICH IS THE ONLY REASON THIS IS A GATHERING AND NOT A SECOND
+ * COPY** — `docs/decisions/0029-the-tracked-record-is-the-record.md`. The three constants above stay
+ * exactly where they were and keep every argument written over them; this composes them, so a hand
+ * that retunes one retunes this by construction and there is nothing to keep in step.
+ *
+ * ⚠️ **AND THE KEYS ARE `MusicLevel`'s OWN, through `Extract`**, so a rung renamed in
+ * `MUSIC_LEVELS` fails to compile here rather than leaving a record keyed on a string nobody
+ * answers to — `docs/decisions/0016-a-hub-enumerates-kinds.md`.
+ */
+export type SectionUnits = Readonly<Record<Extract<MusicLevel, 'push' | 'surge' | 'approach'>, number>>;
+
+export const SECTION_UNITS: SectionUnits = {
+  push: PUSH_UNITS,
+  surge: SURGE_UNITS,
+  approach: BOSS_APPROACH_UNITS,
+};
+
+/**
  * The key. Every pitched note is a ratio off this, so the whole piece transposes from one number.
  *
  * A low A, minor — the notes below are the natural minor's, which are the ones that cannot sound

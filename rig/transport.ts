@@ -16,6 +16,18 @@
  * exists: that rig drifted twice, and both times a verdict about the music was taken from a wrong
  * instrument. `scripts/timeline.mjs` already owns the level walk, so this asks it rather than
  * walking a second camera of its own.
+ *
+ * ── AND `at` IS THREADED THROUGH EVERY ANSWER RATHER THAN READ FROM A MODULE ────────────────────
+ *
+ * ⚠️ **`docs/decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md`.** Every function below
+ * that has an opinion about where a section begins takes the three distances as an argument and
+ * defaults them to the game's own `SECTION_UNITS`. The dashboard hands it whatever the strip has been
+ * dragged to; a test that passes nothing is asking about the shipped level, which is what almost all
+ * of `tests/dash.test.ts` wants to know.
+ *
+ * ⚠️ **IT IS STILL THE GAME'S ARITHMETIC AND NOT THE RIG'S** — `musicLevelFor` does the comparing,
+ * here as everywhere. What is driveable is the NUMBER it compares against, and there is no branch in
+ * this file that decides a rung.
  */
 
 import {
@@ -26,9 +38,11 @@ import {
   MUSIC_LADDER,
   MUSIC_LAYERS,
   MUSIC_LEVELS,
+  SECTION_UNITS,
   STEPS_PER_BEAT,
   type MusicLayer,
   type MusicLevel,
+  type SectionUnits,
 } from '../src/content/music.ts';
 import { LEVELS, type LevelKind } from '../src/content/levels.ts';
 import { type ThemeKind } from '../src/content/themes.ts';
@@ -65,8 +79,13 @@ export interface RungMark {
   moves: InBars;
 }
 
-const rungMarks = timeline.rungMarks as (kind: string, fightSeconds: number, step?: number) => RungMark[];
-const rungAt = timeline.rungAt as (kind: string, second: number, fightSeconds: number) => MusicLevel;
+const rungMarks = timeline.rungMarks as (
+  kind: string,
+  fightSeconds: number,
+  at?: SectionUnits,
+  step?: number,
+) => RungMark[];
+const rungAt = timeline.rungAt as (kind: string, second: number, fightSeconds: number, at?: SectionUnits) => MusicLevel;
 const auraAt = timeline.auraAt as (kind: string, second: number, nearnessInFight: number) => number;
 const inBars = timeline.inBars as (second: number) => InBars;
 const targetGain = timeline.targetGain as (theme: ThemeKind, rung: MusicLevel, layer: MusicLayer, aura: number) => number;
@@ -82,8 +101,8 @@ export const UNITS_PER_SECOND = timeline.UNITS_PER_SECOND as number;
  * actually starts on. A dashboard that drew only the first would be showing the defect after it was
  * fixed, which is the mistake `scripts/timeline.mjs` records itself avoiding.
  */
-export function marksOf(kind: LevelKind, fightSeconds: number): RungMark[] {
-  return rungMarks(kind, fightSeconds);
+export function marksOf(kind: LevelKind, fightSeconds: number, at: SectionUnits = SECTION_UNITS): RungMark[] {
+  return rungMarks(kind, fightSeconds, at);
 }
 
 /**
@@ -168,15 +187,21 @@ function markAt(marks: readonly RungMark[], second: number): number {
  * `scripts/hear.mjs --level` states it: the aura's nearness is a distance the player steers (0091),
  * so no rig has an honest value for it. The dashboard puts it on a slider instead of pretending.
  */
-export function momentOf(kind: LevelKind, second: number, fightSeconds: number, nearnessInFight: number): Moment {
+export function momentOf(
+  kind: LevelKind,
+  second: number,
+  fightSeconds: number,
+  nearnessInFight: number,
+  at: SectionUnits = SECTION_UNITS,
+): Moment {
   const level = LEVELS[kind];
   const theme = level.theme;
-  const marks = rungMarks(kind, fightSeconds);
+  const marks = rungMarks(kind, fightSeconds, at);
   const here = markAt(marks, second);
   const before = here > 0 ? marks[here - 1] : undefined;
   const next = marks[here + 1];
 
-  const rung = rungAt(kind, second, fightSeconds);
+  const rung = rungAt(kind, second, fightSeconds, at);
   const aura = auraAt(kind, second, nearnessInFight);
   /*
     ⚠️ **The previous rung's targets are taken at the instant that rung STARTED, aura and all.** The
@@ -250,8 +275,8 @@ export interface LayerSpan {
   passes: number;
 }
 
-export function layerSpans(kind: LevelKind, fightSeconds: number): LayerSpan[] {
-  const marks = rungMarks(kind, fightSeconds);
+export function layerSpans(kind: LevelKind, fightSeconds: number, at: SectionUnits = SECTION_UNITS): LayerSpan[] {
+  const marks = rungMarks(kind, fightSeconds, at);
   const last = marks[marks.length - 1];
   const end = last === undefined ? 0 : last.second + last.lasts;
   const out: LayerSpan[] = [];
@@ -279,6 +304,106 @@ export function layerSpans(kind: LevelKind, fightSeconds: number): LayerSpan[] {
     out.push({ layer, loopSeconds, spans, openFor, longest, passes: longest / loopSeconds });
   }
   return out;
+}
+
+// ── WHAT THE DESK IS HOLDING, AND WHETHER IT CAN BE HEARD ON ITS OWN ────────────────────────────
+
+/**
+ * A layer the dashboard has taken off the mixer: whether it sounds at all, and where it sits.
+ *
+ * ⚠️ **`null` FOLLOWS THE MIXER AND A NUMBER IS ABSOLUTE** —
+ * `docs/decisions/0129-the-desk-holds-a-value-not-a-multiplier.md`. A trim could not reach the
+ * fourteen layers any given rung has closed, because `trim × 0` is 0, and those are exactly the ones
+ * worth auditioning.
+ */
+export interface Held {
+  /** The gain this layer is pinned at, or `null` to follow the mixer. */
+  gain: number | null;
+  /** The pan this layer is pinned at, or `null` to keep the place `LAYER_PAN` gave it. */
+  pan: number | null;
+}
+
+/**
+ * Whether the desk is the ONLY thing that would sound: every layer held, at least one above zero.
+ *
+ * ── THE CONDITION FOR PUTTING THE LOOPS BACK ON THE AIR WITH THE LEVEL STOPPED ──────────────────
+ *
+ * ⚠️ **`docs/decisions/0137-the-desk-sounds-while-the-level-stands-still.md`.** Reported: *"I need to
+ * be able to pause the music and then play a particular sound… play sounds without affecting the
+ * current run of the melody itself."*
+ *
+ * ⚠️ **IT IS NOT *SOMETHING IS HELD ABOVE ZERO*, AND THAT IS THE WHOLE OF THE ARGUMENT.** A layer
+ * with no hold FOLLOWS the mixer, so a transport put back on the air for one dragged fader would
+ * start the entire piece playing — the exact thing the report asked for the opposite of. An audition
+ * holds all twenty-three (0130), so the reported gesture satisfies this in one click; `silence
+ * everything` then a fader is the two-click route to the same state.
+ *
+ * ⚠️ **DERIVED FROM THE DESK RATHER THAN REMEMBERED**, on `aloneOn`'s own terms: a remembered *I am
+ * listening* flag goes stale the instant a fader is dragged, and the page would then be making a
+ * sound it had stopped describing.
+ */
+export function deskAlone(held: ReadonlyMap<MusicLayer, Held>): boolean {
+  let audible = false;
+  for (const layer of MUSIC_LAYERS) {
+    const gain = held.get(layer)?.gain ?? null;
+    if (gain === null) return false;
+    if (gain > 0) audible = true;
+  }
+  return audible;
+}
+
+// ── DRAGGING A SECTION BOUNDARY ─────────────────────────────────────────────────────────────────
+
+/*
+  ⚠️ **`docs/decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md`.** Reported: *"I'd love
+  it if we could make the run section that has the push, surge, approach sections slideable so that I
+  can drag them to start sooner or end sooner and see what effect that has… it sure would be good for
+  helping with the timing of when to start/end the different sections."*
+
+  ⚠️ **THE ARITHMETIC IS HERE AND THE POINTER IS NOT**, on 0126's own terms: `rig/dash.ts` needs a
+  DOM and this needs nothing, so what a drag RESOLVES TO is reachable from `tests/dash.test.ts` while
+  the drag itself is driven.
+*/
+
+/** The three boundaries, from the boss outwards — which is the order they must keep. */
+export const SECTION_ORDER = ['approach', 'surge', 'push'] as const;
+
+/**
+ * The shortest a section may be dragged, in world units: one bar of scroll.
+ *
+ * ⚠️ **A BAR, BECAUSE THAT IS WHAT A SECTION CHANGE IS QUANTISED TO** —
+ * `docs/decisions/0117-a-section-change-lands-on-the-beat.md` starts the ramp on the next bar line
+ * after the camera crosses. A section narrower than one bar can therefore be crossed and left again
+ * before its own ramp has begun: the rung would turn over twice with nothing heard between, and the
+ * strip would be showing a section that does not exist in the speakers. It is stated in the player's
+ * units and derived from the two constants that decide it, never typed —
+ * `docs/decisions/0027-measure-the-picture-not-the-model.md`.
+ */
+export const SECTION_FLOOR_UNITS = BAR_SECONDS * UNITS_PER_SECOND;
+
+/**
+ * Where a boundary lands when it is dragged to `units` from the boss, with the other two held.
+ *
+ * ⚠️ **CLAMPED AGAINST ITS NEIGHBOURS RATHER THAN AGAINST A RANGE**, because the three are an
+ * ordering and not three independent numbers: `push` past `surge` does not make a long `push`, it
+ * makes a `surge` that never happens and a strip that has stopped describing the ladder.
+ * `musicLevelFor` tests them in order, so an out-of-order set silently deletes a rung.
+ *
+ * ⚠️ **`bossAt` is the outer bound and it is the LEVEL's**, not a constant here: `push` at more than
+ * the whole level is a level that never plays `run`, and a level's length is the one quantity in
+ * this that varies per place (0102's *measured from the boss backwards*).
+ */
+export function dragSection(
+  at: SectionUnits,
+  which: keyof SectionUnits,
+  units: number,
+  bossAt: number,
+): SectionUnits {
+  const floor = SECTION_FLOOR_UNITS;
+  const clamp = (low: number, high: number): number => (units < low ? low : units > high ? high : units);
+  if (which === 'approach') return { ...at, approach: clamp(floor, at.surge - floor) };
+  if (which === 'surge') return { ...at, surge: clamp(at.approach + floor, at.push - floor) };
+  return { ...at, push: clamp(at.surge + floor, bossAt - floor) };
 }
 
 /**

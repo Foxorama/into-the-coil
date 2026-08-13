@@ -23,7 +23,13 @@ export const PROBES = [
     guard: 'and it climbs FOUR times inside a level, where it used to climb once',
     edit: {
       path: 'src/app/music.ts',
-      find: '  if (toBoss <= SURGE_UNITS) return \'surge\';\n  if (toBoss <= PUSH_UNITS) return \'push\';',
+      /*
+        ⚠️ **RE-ANCHORED BY 0138, WHICH TURNED THE THREE DISTANCES INTO A PARAMETER.** The claim is
+        untouched — a level that reaches one rung and stays there is still what this puts back — but
+        the comparisons now read `at.surge` rather than the constant, because `rig/dash.ts` drags
+        them. An anchor stranded by that rename would have gone quietly orphaned.
+      */
+      find: '  if (toBoss <= at.surge) return \'surge\';\n  if (toBoss <= at.push) return \'push\';',
       replace: '',
     },
   },

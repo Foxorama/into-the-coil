@@ -4,23 +4,32 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 import {
+  SECTION_FLOOR_UNITS,
+  SECTION_ORDER,
   UNITS_PER_SECOND,
   cueLines,
+  deskAlone,
+  dragSection,
   layerSpans,
   loudestGain,
   marksOf,
   momentOf,
   moveOf,
   weaponAtTier,
+  type Held,
 } from '../rig/transport.ts';
 import {
   AURA_LAYERS,
   BAR_SECONDS,
+  BOSS_APPROACH_UNITS,
   LAYER_BARS,
   MUSIC_LADDER,
   MUSIC_LAYERS,
   MUSIC_LEVELS,
+  PUSH_UNITS,
+  SECTION_UNITS,
   STEPS_PER_BEAT,
+  SURGE_UNITS,
   type MusicLayer,
 } from '../src/content/music.ts';
 import { THEME_KINDS, mixOf } from '../src/content/themes.ts';
@@ -332,6 +341,252 @@ describe('0130 — a layer can be heard on its own', () => {
     }
   });
 });
+
+describe('0137 — the desk sounds while the level stands still', () => {
+  /*
+    `docs/decisions/0137-the-desk-sounds-while-the-level-stands-still.md`. Reported: *"I need to be
+    able to pause the music and then play a particular sound to be able to identify what's
+    playing/not playing in the soundtrack… play sounds without affecting the current run of the
+    melody itself."*
+
+    ⚠️ **WHAT IS HELD IS THE CONDITION, NOT THE CLICK.** Whether the loops actually go back on the
+    air is `music.setOn` in a browser; what a test can reach is the question the dashboard asks
+    before calling it, which is the part that was wrong for a reason rather than by omission.
+  */
+  const following = new Map<MusicLayer, Held>();
+  const desk = (gains: Partial<Record<MusicLayer, number>>): Map<MusicLayer, Held> => {
+    const map = new Map<MusicLayer, Held>();
+    for (const [layer, gain] of Object.entries(gains)) map.set(layer as MusicLayer, { gain, pan: null });
+    return map;
+  };
+
+  it('EVERY ONE-CLICK AUDITION IS AUDIBLE WITH THE TRANSPORT STOPPED — all twenty-three, in all seven places', () => {
+    /*
+      ⚠️ **THE END-TO-END CLAIM, BUILT THE WAY `auditionOnly` BUILDS IT.** One layer at the loudest
+      this place takes it and the other twenty-two pinned at zero is exactly the desk a click leaves
+      behind (0130), and this asserts that state satisfies the condition for putting the loops on the
+      air. The reported gesture is *click drive, sub or whatever* with the music stopped; a version
+      of this feature that needed a second gesture for some layer or some level would be 0130's own
+      *three gestures is what was wrong with it*, arriving again.
+    */
+    for (const theme of THEME_KINDS) {
+      for (const only of MUSIC_LAYERS) {
+        const held = new Map<MusicLayer, Held>();
+        for (const layer of MUSIC_LAYERS) {
+          held.set(layer, { gain: layer === only ? loudestGain(theme, layer) : 0, pan: null });
+        }
+        expect(deskAlone(held), `${theme}/${only} is auditioned and would still be silent`).toBe(true);
+      }
+    }
+  });
+
+  it('AND ONE FADER ON ITS OWN DOES NOT, because everything else would follow the mixer', () => {
+    /*
+      ⚠️ **THIS IS THE GUARD THE OBVIOUS IMPLEMENTATION FAILS**, and it is the reason the condition
+      is not *something is held above zero*. A layer with no hold follows the ladder, so a transport
+      restarted for one dragged fader plays the whole piece — *"without affecting the current run of
+      the melody itself"* is the sentence that refuses it.
+    */
+    expect(deskAlone(desk({ drive: 0.9 })), 'one fader dragged up would start the whole piece').toBe(false);
+  });
+
+  it('and a desk holding nothing, or holding everything at zero, is silence rather than air', () => {
+    expect(deskAlone(following), 'nothing is held, so the mixer owns the mix and there is nothing to audition').toBe(
+      false,
+    );
+    const silent = new Map<MusicLayer, Held>();
+    for (const layer of MUSIC_LAYERS) silent.set(layer, { gain: 0, pan: null });
+    expect(deskAlone(silent), 'every layer is pinned at zero — there is nothing to hear').toBe(false);
+  });
+});
+
+describe('0138 — a section boundary is a distance you can drag', () => {
+  /*
+    `docs/decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md`. Reported: *"I'd love it if
+    we could make the run section that has the push, surge, approach sections slideable so that I can
+    drag them to start sooner or end sooner and see what effect that has."*
+  */
+  it('PASSING NOTHING IS THE SHIPPED LEVEL, so every other guard here is still about the game', () => {
+    /*
+      ⚠️ **THE FIRST THING TO HOLD, BECAUSE EVERYTHING ELSE IN THIS FILE DEPENDS ON IT.** Nine
+      assertions above call `momentOf` and `marksOf` with four arguments and mean *the game as
+      shipped*; a default that had drifted from `SECTION_UNITS` would make all of them quietly about
+      something else. And `SECTION_UNITS` is composed of the three constants rather than a copy of
+      them, which is what this compares against.
+    */
+    expect(SECTION_UNITS).toEqual({ push: PUSH_UNITS, surge: SURGE_UNITS, approach: BOSS_APPROACH_UNITS });
+    for (const kind of LEVEL_KINDS) {
+      expect(marksOf(kind, FIGHT), `${kind}`).toEqual(marksOf(kind, FIGHT, SECTION_UNITS));
+    }
+  });
+
+  it('A DRAGGED BOUNDARY IS WHERE THE LADDER TURNS OVER, to the second the camera crosses it', () => {
+    /*
+      ⚠️ **STATED IN SECONDS, WHICH IS WHAT THE PLAYER IS LOOKING AT** —
+      `docs/decisions/0027-measure-the-picture-not-the-model.md` wants at least one assertion in the
+      units the thing is experienced in, and a strip is read in seconds. The whole feature is the
+      claim that dropping the handle at a place makes the section start there; anything less is a
+      slider that moves a number nobody can hear.
+
+      ⚠️ **AND THE ANSWER IS ASKED OF `musicLevelFor` RATHER THAN OF THE RIG**, so this cannot pass
+      by the dashboard agreeing with itself — the guard `THE RUNG IS THE GAME'S ANSWER` has stood
+      over that since 0126 and this is its dragged twin.
+    */
+    const kind = 'approach';
+    const { bossAt } = LEVELS[kind];
+    // Each one is a legal place for `surge` — between `approach` and `push`, a bar clear of both.
+    // Dragging it PAST a neighbour is a different claim and `NO DRAG CAN PUT THE THREE OUT OF ORDER`
+    // is where it is held; here the boundary is asked to land where it was put.
+    for (const surge of [2900, 2400, 1200, 750]) {
+      const at = { ...SECTION_UNITS, surge };
+      const crossesAt = (bossAt - surge) / UNITS_PER_SECOND;
+      const mark = marksOf(kind, FIGHT, at).find((m) => m.rung === 'surge');
+      expect(mark, `surge at ${surge} units never happens`).toBeDefined();
+      // The camera is walked at a sixty-fourth of a second, so the mark is the first sample past it.
+      expect(mark!.second, `surge dragged to ${surge} units`).toBeCloseTo(crossesAt, 1);
+      expect(momentOf(kind, crossesAt + 0.5, FIGHT, 0, at).rung).toBe('surge');
+      expect(momentOf(kind, crossesAt - 0.5, FIGHT, 0, at).rung).toBe('push');
+    }
+  });
+
+  it('and the coverage table follows the drag, because a shorter section is a layer that says less of itself', () => {
+    /*
+      ⚠️ **THE MEASUREMENT 0126 BUILT IS THE ONE A DRAG IS FOR.** *`surge` lasts 16.0 seconds and the
+      layer it opens takes 25.6 to say itself* is why `passes` exists; a strip that moved the
+      boundary while the passes table went on describing the shipped one would be answering the
+      question with the old number still on screen.
+    */
+    const wide = layerSpans('approach', FIGHT, { ...SECTION_UNITS, surge: 3000 }).find((s) => s.layer === 'counter')!;
+    const narrow = layerSpans('approach', FIGHT, { ...SECTION_UNITS, surge: 800 }).find((s) => s.layer === 'counter')!;
+    expect(narrow.longest, 'a surge dragged later gives counter less room, and the table has to say so').toBeLessThan(
+      wide.longest,
+    );
+  });
+
+  it('NO DRAG CAN PUT THE THREE OUT OF ORDER, or make one shorter than the bar its ramp lands on', () => {
+    /*
+      ⚠️ **THEY ARE AN ORDERING AND NOT THREE NUMBERS.** `musicLevelFor` tests them in order, so
+      `push` dragged past `surge` does not make a long `push` — it deletes `surge` from the level
+      silently, and the strip would go on drawing a section the ladder no longer reaches.
+
+      ⚠️ **AND THE FLOOR IS ONE BAR, IN THE PLAYER'S UNITS.** 0117 starts the ramp on the next bar
+      line after the crossing, so a section narrower than a bar can be entered and left before its
+      own ramp begins: two rung changes, nothing heard between them.
+    */
+    const { bossAt } = LEVELS.approach;
+    for (const which of SECTION_ORDER) {
+      for (const units of [-9000, -1, 0, 40, 700, 1700, 3000, 6000, 99999]) {
+        const at = dragSection(SECTION_UNITS, which, units, bossAt);
+        // A bar of scroll is 57.6 units and binary floating point subtracts it to 57.59999999999991.
+        const floor = SECTION_FLOOR_UNITS - 1e-6;
+        expect(at.approach, `${which} → ${units}`).toBeGreaterThanOrEqual(floor);
+        expect(at.surge - at.approach, `${which} → ${units}: surge on top of approach`).toBeGreaterThanOrEqual(floor);
+        expect(at.push - at.surge, `${which} → ${units}: push on top of surge`).toBeGreaterThanOrEqual(floor);
+        expect(at.push, `${which} → ${units}: push past the whole level`).toBeLessThanOrEqual(
+          bossAt - SECTION_FLOOR_UNITS + 1e-6,
+        );
+        // The two it was not asked to move are left exactly where they were.
+        for (const other of SECTION_ORDER) {
+          if (other !== which) expect(at[other], `${which} → ${units} moved ${other}`).toBe(SECTION_UNITS[other]);
+        }
+      }
+    }
+  });
+
+  it('and the floor is a BAR of scroll, derived rather than typed', () => {
+    expect(SECTION_FLOOR_UNITS).toBeCloseTo(BAR_SECONDS * SCROLL_PER_STEP * STEPS_PER_SECOND, 10);
+  });
+
+  it('NOTHING UNDER src/ PASSES ITS OWN SECTION DISTANCES — the shape of a level is decided in one place', () => {
+    /*
+      ⚠️ **HELD ON `gainOf`'s OWN TERMS** (0126). The fifth parameter exists so `rig/dash.ts` can
+      drag a boundary; a shipped call site that supplied its own would make where a section begins a
+      thing decided in two places, and `SECTION_UNITS` would stop being the whole story of a level's
+      shape. Its own declaration in `src/app/music.ts` is the one permitted mention.
+
+      ⚠️ **IT COUNTS ARGUMENTS RATHER THAN LOOKING FOR A WORD**, which is the distinction 0116 paid
+      for: a scan that only checked `SECTION_UNITS` appeared somewhere would be green over a file
+      that imported it and passed something else.
+    */
+    const offenders: string[] = [];
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(resolve(root, dir), { withFileTypes: true })) {
+        const path = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) walk(path);
+        else if (entry.name.endsWith('.ts')) {
+          const source = readFileSync(resolve(root, path), 'utf8');
+          for (const args of callArgsOf(source, 'musicLevelFor')) {
+            // Its own declaration reads as five; every call site may name at most four.
+            if (args.length > 4 && path !== 'src/app/music.ts') offenders.push(`${path} (${args.length} arguments)`);
+          }
+        }
+      }
+    };
+    walk('src');
+    expect(offenders, `these decide where a section begins for themselves: ${offenders.join(', ')}`).toEqual([]);
+  });
+});
+
+/**
+ * The source with comments and string literals blanked out.
+ *
+ * ⚠️ **A COMMA INSIDE A COMMENT IS NOT AN ARGUMENT, AND THIS FILE'S SUBJECT IS FULL OF THEM.**
+ * `src/app/mount.ts` explains its fourth argument to `musicLevelFor` in an eight-line block comment
+ * between two of them; a splitter that counted its commas read that call as eight arguments. Found
+ * by the guard below going red on its first run, which is the direction a source scan should fail in.
+ */
+function bare(source: string): string {
+  let out = '';
+  let at = 0;
+  while (at < source.length) {
+    const two = source.slice(at, at + 2);
+    if (two === '//') {
+      const end = source.indexOf('\n', at);
+      at = end === -1 ? source.length : end;
+      continue;
+    }
+    if (two === '/*') {
+      const end = source.indexOf('*/', at + 2);
+      at = end === -1 ? source.length : end + 2;
+      continue;
+    }
+    const ch = source[at]!;
+    if (ch === '"' || ch === "'" || ch === '`') {
+      for (at++; at < source.length && source[at] !== ch; ) at += source[at] === '\\' ? 2 : 1;
+      at++;
+      continue;
+    }
+    out += ch;
+    at++;
+  }
+  return out;
+}
+
+/** The argument lists of every call to `name` in `source`, split at bracket depth zero. */
+function callArgsOf(text: string, name: string): string[][] {
+  const source = bare(text);
+  const out: string[][] = [];
+  const pattern = new RegExp(`\\b${name}\\s*\\(`, 'g');
+  for (let hit = pattern.exec(source); hit !== null; hit = pattern.exec(source)) {
+    let depth = 1;
+    let at = hit.index + hit[0].length;
+    let current = '';
+    const args: string[] = [];
+    for (; at < source.length && depth > 0; at++) {
+      const ch = source[at]!;
+      if ('([{'.includes(ch)) depth++;
+      else if (')]}'.includes(ch)) depth--;
+      if (depth === 0) break;
+      if (ch === ',' && depth === 1) {
+        args.push(current.trim());
+        current = '';
+      } else current += ch;
+    }
+    if (current.trim() !== '') args.push(current.trim());
+    out.push(args);
+  }
+  return out;
+}
 
 describe('the rig is not in the game, and the game is not in the rig', () => {
   it('the walk is at the game’s own speed', () => {

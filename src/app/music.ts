@@ -31,10 +31,8 @@ import {
   MUSIC_LADDER,
   MUSIC_LAYERS,
   MUSIC_ROOT,
-  BOSS_APPROACH_UNITS,
   BOSS_PEAK_HEALTH,
-  PUSH_UNITS,
-  SURGE_UNITS,
+  SECTION_UNITS,
   AURA_LAYERS,
   LAYER_PAN,
   AURA_NEAR_UNITS,
@@ -45,6 +43,7 @@ import {
   type MusicLayer,
   type MusicLevel,
   type MusicVoice,
+  type SectionUnits,
 } from '../content/music.ts';
 import { sampleLayerInto, saturate } from './sound.ts';
 import { airOf, mixOf, voicesOf, type ThemeKind } from '../content/themes.ts';
@@ -392,7 +391,34 @@ export function placeFor(runLevel: number): ThemeKind {
   return LEVELS[LEVEL_KINDS[index]!].theme;
 }
 
-export function musicLevelFor(cameraAlong: number, bossAt: number, bossOnField: boolean, bossHealthLeft = 1): MusicLevel {
+/**
+ * How far up the ladder the run is.
+ *
+ * ── `at` IS AN INPUT AND THE GAME NEVER PASSES ONE ──────────────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md`.** The three distances
+ * are the one thing in the music nobody has ever been able to move and hear at the same time: 0102
+ * chose them, 0125 shifted all three, 0131 moved one, and each of those was a number typed into
+ * `src/content/music.ts`, shipped, and judged a play-test later. The parameter is what lets
+ * `rig/dash.ts` drag a boundary and hear the ladder turn over where it was dragged to.
+ *
+ * ⚠️ **IT IS AN ARGUMENT AND NOT A SECOND TABLE, WHICH IS THE WHOLE OF WHY IT IS SAFE.** The
+ * arithmetic below stays the only description of where a rung begins; what moves is the number it is
+ * handed. A rig that walked its own boundaries would be the drift
+ * `docs/decisions/0116-the-rig-plays-the-level.md` is named for — and `tests/dash.test.ts`'s *THE
+ * RUNG IS THE GAME'S ANSWER* is the guard that has been standing over exactly that since 0126.
+ *
+ * ⚠️ **NOTHING UNDER `src/` MAY PASS IT**, on the terms `gainOf` is held to by 0126: a shipped call
+ * site that supplied its own distances would make the shape of a level decided in two places, and
+ * `SECTION_UNITS` would stop being the whole story. `tests/dash.test.ts` scans for it.
+ */
+export function musicLevelFor(
+  cameraAlong: number,
+  bossAt: number,
+  bossOnField: boolean,
+  bossHealthLeft = 1,
+  at: SectionUnits = SECTION_UNITS,
+): MusicLevel {
   /*
     ⚠️ **THE FIGHT HAS TWO RUNGS NOW, AND THAT IS THE *dynamic climax* THE REPORT ASKED FOR** —
     `docs/decisions/0113-there-is-one-composition-and-seven-levels.md`. *"There is no separate boss
@@ -423,9 +449,9 @@ export function musicLevelFor(cameraAlong: number, bossAt: number, bossOnField: 
     a level authored longer simply spends longer at `run`.
   */
   const toBoss = bossAt - cameraAlong;
-  if (toBoss <= BOSS_APPROACH_UNITS) return 'approach';
-  if (toBoss <= SURGE_UNITS) return 'surge';
-  if (toBoss <= PUSH_UNITS) return 'push';
+  if (toBoss <= at.approach) return 'approach';
+  if (toBoss <= at.surge) return 'surge';
+  if (toBoss <= at.push) return 'push';
   return 'run';
 }
 

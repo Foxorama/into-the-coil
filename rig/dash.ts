@@ -27,7 +27,14 @@
  */
 
 import { LEVELS, LEVEL_KINDS, type LevelKind } from '../src/content/levels.ts';
-import { LAYER_PAN, MUSIC_LAYERS, type MusicLayer } from '../src/content/music.ts';
+import {
+  LAYER_PAN,
+  MUSIC_LAYERS,
+  SECTION_UNITS,
+  type MusicLayer,
+  type MusicLevel,
+  type SectionUnits,
+} from '../src/content/music.ts';
 import { THEMES, bakedBy, revoicedBy, type ThemeKind } from '../src/content/themes.ts';
 import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -36,13 +43,18 @@ import { auraNearness, bakeLayer } from '../src/app/music.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import {
+  SECTION_FLOOR_UNITS,
+  SECTION_ORDER,
   UNITS_PER_SECOND,
   cueLines,
+  deskAlone,
+  dragSection,
   layerSpans,
   loudestGain,
   marksOf,
   momentOf,
   weaponAtTier,
+  type Held,
   type LayerSpan,
   type Moment,
 } from './transport.ts';
@@ -115,7 +127,34 @@ const bodies = makeRng('rig').stream('bodies');
 
 let kind: LevelKind = LEVEL_KINDS[0]!;
 let second = 0;
-let playing = false;
+/**
+ * Whether the level clock advances and the guns fire — the play button's own state.
+ *
+ * ── IT WAS ONE FLAG CALLED `playing` AND IT WAS TWO QUESTIONS ───────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0137-the-desk-sounds-while-the-level-stands-still.md`.** Reported: *"I need to
+ * be able to pause the music and then play a particular sound to be able to identify what's
+ * playing/not playing in the soundtrack… play sounds without affecting the current run of the melody
+ * itself."* The one flag decided both whether the level WALKED and whether the loops were on the air,
+ * so an audition had no way to make a sound without also starting the level moving underneath it —
+ * `auditionOnly` called `togglePlay`, and a listen therefore advanced the rung it was a listen about.
+ *
+ * ⚠️ **THEY ARE GENUINELY TWO THINGS AND NOT A FIFTH STATE INVENTED HERE**, which is the objection
+ * 0126 raised against exactly this shape. The level clock is what the scrub bar and the rung readout
+ * are about; the loops being on the air is what `docs/decisions/0119-off-stops-the-loops.md` turns
+ * on. Naming both is what lets the piece hold still and still be audible.
+ */
+let walking = false;
+/**
+ * Whether the loop set is on the air.
+ *
+ * ⚠️ **THE PLAY BUTTON SETS IT AND SO DOES THE DESK, AND THE LAST GESTURE WINS.** Pause has to
+ * silence the mixer even with faders held — that is 0126's own amendment and the one thing a pause is
+ * pressed for — and a fader moved after that pause has to be audible, or the desk is dead while the
+ * level is stopped. There is no ordering of those two that a derived rule satisfies, so this is a
+ * variable and the page says which state it is in.
+ */
+let onAir = false;
 let walkSpeed = 1;
 let tier = 0;
 let killsPerSecond = 1.6;
@@ -149,13 +188,11 @@ let cuesOn = true;
  * ⚠️ **So a hold is an ABSOLUTE value now.** `null` follows the mixer; a number is what that layer
  * sits at, whatever the rung says — which makes the desk able to say *what if `frenzy` were open
  * during `run`* rather than only *what if `frenzy` were louder where it already plays*.
+ *
+ * ⚠️ **`Held` ITSELF LIVES IN `rig/transport.ts` NOW**, because 0137 asks a question about this map
+ * that a guard has to be able to reach — *is the desk the only thing that would sound* — and this
+ * file needs a DOM and an `AudioContext` to be imported at all (0126).
  */
-interface Held {
-  /** The gain this layer is pinned at, or `null` to follow the mixer. */
-  gain: number | null;
-  /** The pan this layer is pinned at, or `null` to keep the place `LAYER_PAN` gave it. */
-  pan: number | null;
-}
 const held = new Map<MusicLayer, Held>();
 
 /** A layer is only in `held` while it is actually holding something. */
@@ -168,6 +205,19 @@ function setHold(layer: MusicLayer, next: Held): void {
   else held.set(layer, next);
 }
 let unlocked = false;
+/**
+ * Where this level's three middle rungs open, in world units back from its boss.
+ *
+ * ⚠️ **`docs/decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md`.** It starts at the
+ * game's own `SECTION_UNITS` and every answer on this page is asked with it, so a boundary dragged on
+ * the strip moves the rung the mixer is actually handed — the ladder turns over where it was dragged
+ * to, over the game's own 1.6-second ramp, quantised to the bar exactly as 0117 says.
+ *
+ * ⚠️ **IT IS ONE SET FOR ALL SEVEN LEVELS, BECAUSE THE GAME'S IS.** The three distances are measured
+ * back from whichever boss the level has (0102), so they are not a property of a place — dragging on
+ * level one's strip is a proposal about every level, and the panel says so.
+ */
+let sections: SectionUnits = SECTION_UNITS;
 /**
  * Sim steps issued since the loops went on the air. Monotonic, and NOT a function of the scrub.
  *
@@ -188,6 +238,16 @@ const owed = new Set<MusicLayer>();
 
 const totalOf = (k: LevelKind): number => LEVELS[k].bossAt / UNITS_PER_SECOND + FIGHT_SECONDS;
 
+/**
+ * Everything true of where the page is pointed right now.
+ *
+ * ⚠️ **ONE PLACE THAT KNOWS WHAT TO ASK, so the dragged sections cannot reach some answers and miss
+ * others.** Six call sites each spelt the four arguments out; 0138 adds a fifth, and a readout still
+ * asking about the shipped boundaries while the mixer follows the dragged ones is precisely the
+ * *instrument disagreeing with the thing it measures* that 0126 exists against.
+ */
+const now = (): Moment => momentOf(kind, second, FIGHT_SECONDS, auraNearness(gapUnits), sections);
+
 const clockText = (s: number): string => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 // ── THE CONTROLS ────────────────────────────────────────────────────────────────────────────────
@@ -204,18 +264,24 @@ const scrub = el<HTMLInputElement>('scrub');
 const playButton = el<HTMLButtonElement>('play');
 const status = el('status');
 
-for (const [label, at] of [
-  ['run', 0],
-  ['push', 1],
-  ['surge', 2],
-  ['approach', 3],
-  ['boss', 4],
-  ['peak', 5],
+/*
+  ⚠️ **EACH JUMP FINDS ITS RUNG BY NAME RATHER THAN BY POSITION, WHICH 0138 MADE NECESSARY.** The
+  marks used to be six in a fixed order; a boundary dragged past the whole level removes one — `push`
+  at more than `bossAt` gives a level that opens at `push` and never plays `run` — and an index would
+  then have silently jumped to the wrong section rather than doing nothing.
+*/
+for (const [label, rung] of [
+  ['run', 'run'],
+  ['push', 'push'],
+  ['surge', 'surge'],
+  ['approach', 'approach'],
+  ['boss', 'boss'],
+  ['peak', 'bossPeak'],
 ] as const) {
   const button = document.createElement('button');
   button.textContent = label;
   button.addEventListener('click', () => {
-    const mark = marksOf(kind, FIGHT_SECONDS)[at];
+    const mark = marksOf(kind, FIGHT_SECONDS, sections).find((m) => m.rung === rung);
     // A hair past the boundary, so the readout shows the rung that has just started rather than the
     // instant before it.
     if (mark !== undefined) seek(mark.second + 0.05);
@@ -259,53 +325,84 @@ el<HTMLButtonElement>('unlock').addEventListener('click', () => {
   playButton.disabled = !unlocked;
   status.textContent = unlocked ? 'audio running' : 'the browser refused a context — no AudioContext on this page';
   el<HTMLButtonElement>('unlock').disabled = unlocked;
-  if (unlocked && !playing) togglePlay();
+  if (unlocked && !walking) togglePlay();
 });
 
 /**
- * Start or stop the transport — **and the music with it.**
+ * Start or stop the level walking — **and the music with it, unless the desk has an opinion.**
  *
  * ── PAUSE USED TO STOP THE CLOCK AND LEAVE THE LOOPS RUNNING ────────────────────────────────────
  *
  * ⚠️ **Reported: *"it stops the timer bar, but the music is still running in the browser."*** It was
- * a straight omission: `playing` gated the walk and the cues and nothing told the mixer. A pause
+ * a straight omission: the one flag gated the walk and the cues and nothing told the mixer. A pause
  * that keeps playing is worse than no pause, because the one thing you press it for is to stop and
  * think about what you just heard.
  *
- * ⚠️ **`setOn` IS THE GAME'S OWN STOP AND NOT A MUTE** — [0119](0119-off-stops-the-loops.md) is the
- * decision that made it actually stop the loops rather than turn them down, after a race left
- * `started` true for ever. Using it means a paused dashboard is in exactly the state a player who
- * turned sound off is in, rather than in a fifth state invented here.
- *
- * ⚠️ **Resuming re-anchors the step clock, because `start()` re-anchors the LOOPS.** They go back on
- * the air at a fresh instant, so a step count measured from the old one would put the gun a
- * pause-length off the bar — which is the same class of bug a scrub caused, arriving from the other
- * side.
+ * ⚠️ **AND THEN THAT FIX WENT ONE STEP TOO FAR, WHICH IS 0137** —
+ * `docs/decisions/0137-the-desk-sounds-while-the-level-stands-still.md`. Stopping the loops is right;
+ * what was wrong is that nothing could put them back on the air without also setting the level
+ * walking, so *"pause the music and then play a particular sound"* was not a state this page had.
+ * `setOnAir` is the half that was missing, and this now says only what the play button means.
  */
 function togglePlay(): void {
-  playing = !playing;
-  playButton.textContent = playing ? '⏸ pause' : '▶ play';
-  playButton.setAttribute('aria-pressed', String(playing));
-  /*
-    ⚠️ **The page has to SAY it is stopped, because the layer gains do not move when it is.** `setOn`
-    fades the master and stops the sources; a layer's own gain is upstream of both and stays exactly
-    where it was. Without this the readout goes on reporting `sub 0.86` into silence, which is the
-    same class of lie as the frozen transport this pause was fixed for.
-  */
-  document.body.classList.toggle('paused', !playing);
+  walking = !walking;
+  playButton.textContent = walking ? '⏸ pause' : '▶ play';
+  playButton.setAttribute('aria-pressed', String(walking));
   lastFrame = performance.now();
-  const music = out.music();
-  if (music === null) return;
-  music.setOn(playing);
-  if (playing) {
-    startedAt = performance.now();
-    steps = 0;
-    // The loop set is new, so every gain the desk was holding has to be stated over it again.
-    owed.clear();
-    restate(momentOf(kind, second, FIGHT_SECONDS, auraNearness(gapUnits)));
-  }
+  /*
+    ⚠️ **PAUSE SILENCES THE MIXER EVEN WITH FADERS HELD, AND THAT IS DELIBERATE** — 0126's own
+    amendment. *"It stops the timer bar, but the music is still running in the browser"* is what a
+    pause that respected the desk would go back to being. A desk gesture AFTER the pause puts the
+    loops back on the air (`afterDeskChange`), which is 0137's whole subject; the ordering is the
+    rule, and the page prints which state it is in.
+  */
+  setOnAir(walking);
+  drawTransport();
 }
 playButton.addEventListener('click', togglePlay);
+
+/**
+ * Put the loop set on the air, or take it off — and re-anchor the step clock when it goes back on.
+ *
+ * ⚠️ **`setOn` IS THE GAME'S OWN STOP AND NOT A MUTE** —
+ * `docs/decisions/0119-off-stops-the-loops.md` is the decision that made it actually stop the
+ * sources after a race left `started` true for ever. So a dashboard that is off is in exactly the
+ * state a player who turned sound off is in, rather than in a state invented here — and a fader
+ * written into a stopped transport writes into nothing, which is why every gesture that wants to be
+ * heard comes through this first.
+ *
+ * ⚠️ **GOING BACK ON THE AIR RE-ANCHORS THE STEP CLOCK, BECAUSE `start()` RE-ANCHORS THE LOOPS.**
+ * They resume at a fresh instant, so a step count measured from the old one would put the gun a
+ * stop-length off the bar — the same class of bug a scrub used to cause, arriving from the other
+ * side.
+ */
+function setOnAir(on: boolean): void {
+  if (on === onAir) return;
+  onAir = on;
+  const music = out.music();
+  if (music === null) return;
+  music.setOn(on);
+  if (!on) return;
+  startedAt = performance.now();
+  steps = 0;
+  // The loop set is new, so every gain the desk was holding has to be stated over it again.
+  owed.clear();
+  restate(now());
+}
+
+/**
+ * Say what the transport is doing, in the two states that are now separable.
+ *
+ * ⚠️ **THE DIMMING FOLLOWS THE AIR AND THE WORD *stopped* FOLLOWS THE WALK**, which is the whole
+ * reason they are two classes. A layer's own gain is upstream of `setOn`, so the *live* column goes
+ * on reporting `sub 0.86` into silence whenever the loops are off — that is what `mute` greys out.
+ * Being stopped with the desk sounding is a real and useful state and the readout has to distinguish
+ * it from silence, or the page is lying in the one direction 0126 exists to prevent.
+ */
+function drawTransport(): void {
+  document.body.classList.toggle('paused', !walking);
+  document.body.classList.toggle('mute', !onAir);
+}
 
 /**
  * The loops each place plays, baked once and kept.
@@ -353,6 +450,9 @@ levelSelect.addEventListener('change', () => {
   drawSpans();
   drawStrip();
   drawPlace();
+  // The three distances are NOT a property of a place, so they survive the change — but the strip
+  // they are drawn on has a different length now, and the readout says which level they are over.
+  drawSections();
 });
 
 /** Say what this place plays that the last one did not. */
@@ -409,7 +509,7 @@ const layerRows = {} as Record<MusicLayer, LayerRow>;
 
 {
   const body = el<HTMLTableSectionElement>('layers').querySelector('tbody')!;
-  const spans = layerSpans(kind, FIGHT_SECONDS);
+  const spans = layerSpans(kind, FIGHT_SECONDS, sections);
   for (const layer of MUSIC_LAYERS) {
     const span = spans.find((s) => s.layer === layer)!;
     const tr = document.createElement('tr');
@@ -467,7 +567,15 @@ function panText(pan: number): string {
 
 function afterDeskChange(): void {
   drawHeld();
-  restate(momentOf(kind, second, FIGHT_SECONDS, auraNearness(gapUnits)));
+  /*
+    ⚠️ **A DESK THAT IS ALONE SOUNDS WHETHER THE LEVEL IS WALKING OR NOT** — 0137. The loops have to
+    be on the air for a fader to write into anything at all (0119 stops the sources rather than
+    muting them), and the level clock does not move to let that happen: the whole point is to hold
+    the piece where it is and hear one part of it.
+  */
+  setOnAir(walking || deskAlone(held));
+  drawTransport();
+  restate(now());
 }
 
 /**
@@ -555,7 +663,7 @@ const auditionButtons = {} as Record<MusicLayer, HTMLButtonElement>;
 
 {
   const row = el('alone');
-  const spans = layerSpans(kind, FIGHT_SECONDS);
+  const spans = layerSpans(kind, FIGHT_SECONDS, sections);
   for (const layer of MUSIC_LAYERS) {
     const span = spans.find((s) => s.layer === layer)!;
     const button = document.createElement('button');
@@ -609,7 +717,12 @@ function auditionOnly(only: MusicLayer | null): void {
     else setHold(layer, { gain: layer === only ? loudestGain(theme, layer) : 0, pan });
   }
   syncSliders();
-  if (only !== null && unlocked && !playing) togglePlay();
+  /*
+    ⚠️ **IT NO LONGER STARTS THE LEVEL WALKING, WHICH IS 0137** — it used to call `togglePlay`, so a
+    listen taken while the page was stopped set the whole level moving underneath it and the rung the
+    listen was about had changed by the time it was over. `afterDeskChange` puts the loops on the air
+    and leaves the clock exactly where it was.
+  */
   afterDeskChange();
 }
 
@@ -699,7 +812,7 @@ const cueBody = el<HTMLTableSectionElement>('cues').querySelector('tbody')!;
 const silenced = new Set<string>();
 
 function drawCues(): void {
-  const lines = cueLines(tier, momentOf(kind, second, FIGHT_SECONDS, auraNearness(gapUnits)).rung, killsPerSecond);
+  const lines = cueLines(tier, now().rung, killsPerSecond);
   cueBody.replaceChildren();
   for (const line of lines) {
     const tr = document.createElement('tr');
@@ -775,11 +888,18 @@ function flash(kindName: string): void {
   while (fired.childElementCount > 12) fired.lastElementChild?.remove();
 }
 
-/** Everything that sounds on one sim step, at the cadences `rig/transport.ts` says. */
-function cuesOnStep(step: number): void {
+/**
+ * Everything that sounds on one sim step, at the cadences `rig/transport.ts` says.
+ *
+ * ⚠️ **THE RUNG IS HANDED IN RATHER THAN ASKED FOR, AND THE DRAG IS WHY.** `momentOf` walks the whole
+ * level at a sixty-fourth of a second to find its rung marks — eleven thousand steps — and this runs
+ * sixty times a second, which was tolerable while nothing else was competing. 0138 redraws the strip
+ * and the coverage table on every pointer move, so the walk is now in the way of the one gesture the
+ * feature exists for. `frame` already has the moment; it costs nothing to pass it.
+ */
+function cuesOnStep(step: number, rung: MusicLevel): void {
   if (!cuesOn) return;
   const weapon = weaponAtTier(tier);
-  const rung = momentOf(kind, second, FIGHT_SECONDS, auraNearness(gapUnits)).rung;
   const play = (name: Parameters<typeof speaker.play>[0], across: number): void => {
     if (silenced.has(name)) return;
     speaker.play(name, across);
@@ -812,10 +932,61 @@ const strip = el('strip');
 const head = document.createElement('div');
 head.className = 'head';
 
+/*
+  ── AND THE THREE BOUNDARIES ARE DRAGGED HERE ───────────────────────────────────────────────────
+
+  ⚠️ **`docs/decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md`.** Reported: *"I'd love
+  it if we could make the run section that has the push, surge, approach sections slideable so that I
+  can drag them to start sooner or end sooner and see what effect that has."*
+
+  ⚠️ **ONLY THREE OF THE FIVE MOVE, AND WHICH TWO DO NOT IS THE INTERESTING HALF.** `approach`→`boss`
+  is where the level's boss ARRIVES — `bossAt` is level design and not a music number — and
+  `boss`→`bossPeak` is keyed to the boss's HEALTH rather than to a clock, deliberately
+  (`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`: *"a clock would put the wall of
+  sound on a player who is losing and on one who is winning at the same instant"*). A handle that
+  dragged either of those in TIME would be offering a control over something time does not decide.
+*/
+
+/** Which boundary a pointer is currently holding, or `null`. */
+let dragging: keyof SectionUnits | null = null;
+
+/** Where a boundary would land if it were let go at `clientX`, in units back from the boss. */
+function unitsAtClientX(x: number): number {
+  const rect = strip.getBoundingClientRect();
+  const fraction = rect.width === 0 ? 0 : (x - rect.left) / rect.width;
+  return LEVELS[kind].bossAt - fraction * totalOf(kind) * UNITS_PER_SECOND;
+}
+
+/**
+ * Move one boundary, and redraw everything that has an opinion about where the sections are.
+ *
+ * ⚠️ **THE MIXER NEEDS NO TELLING, WHICH IS THE POINT OF THREADING `sections` RATHER THAN PATCHING
+ * A TABLE.** `frame` asks `now()` sixty times a second and hands the answer to `setLevel`, so a
+ * dragged boundary changes what the game's own mixer is told on the very next tick — over its own
+ * 1.6-second ramp, landing on the bar line 0117 puts it on. Nothing here writes a gain.
+ */
+function moveSection(which: keyof SectionUnits, units: number): void {
+  sections = dragSection(sections, which, units, LEVELS[kind].bossAt);
+  drawStrip();
+  drawSpans();
+  drawSections();
+}
+
+window.addEventListener('pointermove', (e) => {
+  if (dragging === null) return;
+  // The strip owns the pointer for the length of the drag, so a stray selection cannot start.
+  e.preventDefault();
+  moveSection(dragging, unitsAtClientX(e.clientX));
+});
+window.addEventListener('pointerup', () => {
+  dragging = null;
+});
+
 function drawStrip(): void {
   strip.replaceChildren();
   const total = totalOf(kind);
-  for (const mark of marksOf(kind, FIGHT_SECONDS)) {
+  const marks = marksOf(kind, FIGHT_SECONDS, sections);
+  for (const mark of marks) {
     const seg = document.createElement('div');
     seg.className = 'seg';
     seg.style.left = `${(mark.second / total) * 100}%`;
@@ -832,15 +1003,105 @@ function drawStrip(): void {
       `heard <span class="${mark.moves.onBar ? 'ok' : 'midbar'}">beat ${mark.moves.beat.toFixed(2)}</span></span>`;
     strip.append(seg);
   }
+  /*
+    ⚠️ **THE GRIP IS KEYED ON THE RUNG'S NAME AND NOT ON ITS INDEX**, because a boundary dragged far
+    enough removes a section from the strip altogether — `push` past the whole level leaves a level
+    that opens at `push` and never plays `run`, which is a real answer to a real question and not a
+    state to defend against. An index would silently hand the wrong handle to the wrong distance.
+  */
+  for (const mark of marks) {
+    if (!(SECTION_ORDER as readonly string[]).includes(mark.rung)) continue;
+    const which = mark.rung as keyof SectionUnits;
+    const grip = document.createElement('button');
+    grip.className = 'grip';
+    grip.type = 'button';
+    grip.style.left = `${(mark.second / total) * 100}%`;
+    grip.setAttribute(
+      'aria-label',
+      `${mark.rung} opens ${sections[which].toFixed(0)} units back from the boss — drag, or use the arrow keys`,
+    );
+    grip.title = `${mark.rung} opens ${sections[which].toFixed(0)} units back from the boss · drag me, or nudge a bar at a time with ← →`;
+    grip.addEventListener('pointerdown', (e) => {
+      dragging = which;
+      e.preventDefault();
+    });
+    /*
+      ⚠️ **A KEY NUDGES BY ONE BAR, WHICH IS THE SMALLEST MOVE THAT CAN BE HEARD** — 0117 starts the
+      ramp on the next bar line after the camera crosses, so a boundary moved by less than a bar
+      lands on the same downbeat and changes nothing in the speakers. The strip's *crossed* beat
+      would move and its *heard* beat would not, which is the one pair of numbers on this page that
+      makes the distinction. A pointer over a level this long is about six units a pixel; this is
+      how a value gets chosen rather than approached.
+    */
+    grip.addEventListener('keydown', (e) => {
+      const step = e.key === 'ArrowLeft' ? -SECTION_FLOOR_UNITS : e.key === 'ArrowRight' ? SECTION_FLOOR_UNITS : 0;
+      if (step === 0) return;
+      e.preventDefault();
+      // Left on the strip is EARLIER in the level, which is FURTHER from the boss.
+      moveSection(which, sections[which] - step);
+    });
+    strip.append(grip);
+  }
   strip.append(head);
 }
+
+// ── WHERE THE BOUNDARIES ARE, AGAINST WHERE THEY SHIP ───────────────────────────────────────────
+
+/**
+ * The three distances, printed as the constants they would be pasted back as.
+ *
+ * ⚠️ **`PUSH_UNITS = 3021` AND NOT `push 3021`, WHICH IS 0129's RULE ABOUT THE DESK APPLIED HERE.**
+ * A shape found by dragging is worth nothing if turning it into `src/content/music.ts` means reading
+ * a number off a screenshot and guessing which constant it was. The shipped value travels beside it,
+ * because *what did I change it from* is the other half of the report.
+ */
+const SECTION_CONSTANT: Readonly<Record<keyof SectionUnits, string>> = {
+  push: 'PUSH_UNITS',
+  surge: 'SURGE_UNITS',
+  approach: 'BOSS_APPROACH_UNITS',
+};
+
+/**
+ * The three in the order the STRIP draws them, which is the order a level reaches them.
+ *
+ * ⚠️ **`SECTION_ORDER` runs the other way, from the boss outwards, because that is the order the
+ * clamp has to reason in** — each boundary is bounded by the one nearer the boss. Printing that
+ * order beside a strip that reads left to right made the readout disagree with the thing it labels,
+ * which was obvious the moment it was driven and invisible before.
+ */
+const SECTION_ACROSS = [...SECTION_ORDER].reverse();
+
+const dragged = (): boolean => SECTION_ORDER.some((which) => sections[which] !== SECTION_UNITS[which]);
+
+function sectionText(): string {
+  return SECTION_ACROSS.map((which) => `${SECTION_CONSTANT[which]} = ${sections[which].toFixed(0)}`).join(' · ');
+}
+
+function drawSections(): void {
+  el('sections').innerHTML = SECTION_ACROSS.map((which) => {
+    const moved = sections[which] !== SECTION_UNITS[which];
+    return (
+      `<b class="${moved ? 'warn' : ''}">${which}</b> ` +
+      `<span class="${moved ? 'warn' : 'dim'}">${sections[which].toFixed(0)}</span>` +
+      (moved ? `<span class="dim"> (ships ${SECTION_UNITS[which]})</span>` : '')
+    );
+  }).join('<span class="dim"> · </span>');
+  el<HTMLButtonElement>('sectionsBack').disabled = !dragged();
+}
+
+el<HTMLButtonElement>('sectionsBack').addEventListener('click', () => {
+  sections = SECTION_UNITS;
+  drawStrip();
+  drawSpans();
+  drawSections();
+});
 
 // ── THE COVERAGE TABLE ──────────────────────────────────────────────────────────────────────────
 
 function drawSpans(): void {
   const body = el<HTMLTableSectionElement>('spans').querySelector('tbody')!;
   body.replaceChildren();
-  const rows: LayerSpan[] = layerSpans(kind, FIGHT_SECONDS)
+  const rows: LayerSpan[] = layerSpans(kind, FIGHT_SECONDS, sections)
     .filter((s) => s.openFor > 0)
     .sort((a, b) => a.passes - b.passes);
   for (const row of rows) {
@@ -922,7 +1183,21 @@ function momentAsText(moment: Moment): string {
     `- **over it** tier ${tier} — ` +
       lines.map((c) => `${c.kind} ${c.every === null ? 'scattered' : `every ${c.every} steps`} (${c.perSecond.toFixed(2)}/s)`).join(', '),
     `- **boss gap** ${gapUnits} units · **cues** ${cuesOn ? 'on' : 'off'}` +
-      (silenced.size > 0 ? ` (silenced: ${[...silenced].join(', ')})` : ''),
+      (silenced.size > 0 ? ` (silenced: ${[...silenced].join(', ')})` : '') +
+      ` · **transport** ${walking ? 'walking' : onAir ? 'stopped, desk sounding' : 'stopped'}`,
+    /*
+      ⚠️ **THE BOUNDARIES GO OUT AS CONSTANTS AND THE SHIPPED SET GOES WITH THEM** — 0138. A shape
+      found by dragging the strip is a proposal about `src/content/music.ts`, and a paste that said
+      *push 2400* would leave the next session to work out which of three constants that was and what
+      it had been. Printed whether or not anything moved, because *nothing was dragged* is also a
+      fact about the moment being reported.
+    */
+    `- **boundaries** ${sectionText()}` +
+      (dragged()
+        ? ` — **DRAGGED** (${SECTION_ACROSS.filter((w) => sections[w] !== SECTION_UNITS[w])
+            .map((w) => `${SECTION_CONSTANT[w]} ships ${SECTION_UNITS[w]}`)
+            .join(', ')})`
+        : ' (shipped)'),
     only !== null
       ? `- **on the desk** \`${only}\` ALONE at ${(holdOf(only).gain ?? 0).toFixed(2)} — every other layer at zero`
       : `- **held on the desk** ${holds.length === 0 ? 'nothing — this is the mixer untouched' : holds.join(', ')}`,
@@ -939,7 +1214,7 @@ function momentAsText(moment: Moment): string {
   const dump = el<HTMLTextAreaElement>('dump');
   const said = el('copied');
   el<HTMLButtonElement>('copy').addEventListener('click', () => {
-    const text = momentAsText(momentOf(kind, second, FIGHT_SECONDS, auraNearness(gapUnits)));
+    const text = momentAsText(now());
     dump.value = text;
     /*
       ⚠️ **The textarea is shown WHETHER OR NOT the clipboard worked.** `navigator.clipboard` needs a
@@ -976,13 +1251,12 @@ function frame(at: number): void {
   lastFrame = at;
   const total = totalOf(kind);
 
-  if (playing) {
+  if (walking) {
     second += elapsed * walkSpeed;
     if (second >= total) second = 0;
   }
 
-  const nearness = auraNearness(gapUnits);
-  const moment = momentOf(kind, second, FIGHT_SECONDS, nearness);
+  const moment = now();
   const music = out.music();
   if (music !== null && unlocked) {
     const rungBefore = music.level();
@@ -995,7 +1269,7 @@ function frame(at: number): void {
   /*
     ⚠️ **THE CLOCK RUNS WHETHER THE TRANSPORT DOES OR NOT.** The loops never stopped, so the step
     count has to stay derived from the same wall clock they are on — pausing the walk must not put
-    the gun a pause-length out of phase with the bar. What `playing` gates is whether anything
+    the gun a pause-length out of phase with the bar. What `walking` gates is whether anything
     FIRES, not whether time passed.
   */
   if (startedAt !== null) {
@@ -1011,7 +1285,7 @@ function frame(at: number): void {
     for (let i = steps; i < want; i++) {
       steps++;
       speaker.step(steps);
-      if (playing && want - i <= MAX_STEPS) cuesOnStep(steps);
+      if (walking && want - i <= MAX_STEPS) cuesOnStep(steps, moment.rung);
     }
   }
 
@@ -1045,6 +1319,8 @@ drawCues();
 drawSpans();
 drawStrip();
 drawPlace();
+drawSections();
+drawTransport();
 setInterval(drawCues, 500);
 /*
   ── A TIMER AND NOT `requestAnimationFrame`, WHICH IS A DECISION ABOUT WHAT THIS TOOL IS ──────────
