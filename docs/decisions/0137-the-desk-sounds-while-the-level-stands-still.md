@@ -126,5 +126,7 @@ would be 0126's opening complaint exactly.
 ## Rollback
 
 ⚠️ **None owed —** [0001](0001-revertability-not-risk-rating.md). A dev-only page, a guarded module,
-guards and a probe. No storage key, no save field, no cache prefix, and `dist/` is byte-identical:
-`vite.config.ts` has one entry and it never sees `rig/`.
+guards and a probe. No storage key, no save field, no cache prefix, and **this half touches nothing
+under `src/` at all**, so it cannot reach the build: `vite.config.ts` has one entry and it never sees
+`rig/`. ([0138](0138-a-section-boundary-is-a-distance-you-can-drag.md), which ships in the same PR,
+does reach it — by 51 bytes, measured there.)

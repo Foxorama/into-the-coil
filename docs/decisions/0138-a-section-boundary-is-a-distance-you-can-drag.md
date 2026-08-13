@@ -141,5 +141,10 @@ disagree with the thing they label. Obvious in the browser, invisible in the mod
 ## Rollback
 
 ⚠️ **None owed —** [0001](0001-revertability-not-risk-rating.md). No storage key, no save field, no
-cache prefix. The one change under `src/` is a parameter with the shipped default and a record
-composed of three existing constants; **no distance moves and `dist/` is byte-identical.**
+cache prefix, and no distance moves.
+
+⚠️ **`dist/` IS NOT BYTE-IDENTICAL, WHICH IS THE DIFFERENCE FROM 0126, 0129, 0130 AND 0137.** Those
+touched nothing under `src/`; this one does, so it is measured rather than asserted: **180,788 →
+180,839 bytes, a difference of 51.** That is the `SECTION_UNITS` object and the default parameter,
+and it is the whole price of making the shape of a level driveable. **Every rung the shipped game
+reaches is unchanged**, which is what the guards hold and what a byte count cannot say.
