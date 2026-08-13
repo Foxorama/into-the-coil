@@ -80,6 +80,14 @@ swaps them in place. `tests/sound.test.ts`'s 56 MB ceiling is untouched.
 and split one note at a time, with the longest single job at 2.16 s against `tests/sound.test.ts`'s
 3 s ceiling.
 
+⚠️ **THE DASHBOARD IS THE ONE THING THIS GREW, AND IT IS THE ONE PLACE ALLOWED TO GROW.**
+`rig/dash.ts` caches a place's loops per theme so switching is instant — deliberately, and
+[`what-a-whole-place-costs`](what-a-whole-place-costs-2026-08-12.md) says why the game may not. With
+two places that was about 95 MB in the tab; with seven visited in one session it is about **330 MB**.
+It is lazy — only places actually selected are baked — and it is a dev page on a desktop, so this is
+recorded rather than fixed. **If `npm run dash` starts to stutter after visiting several levels, that
+is the cache and a reload clears it.**
+
 ## The clipping ceiling, and how close each place gets
 
 `saturate(x, a) ≤ 1` exactly when `x ≤ 1`, so the constraint is the summed layer values at any instant

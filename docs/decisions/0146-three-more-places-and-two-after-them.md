@@ -135,6 +135,22 @@ read to an ear as *the kick is uneven*.
 has nothing** — a placement, not a gain. [0027](0027-measure-the-picture-not-the-model.md)'s shape:
 the model quantity caught something the picture would have been blamed for.
 
+## ⚠️ Four probes went orphaned, and three of them were pinned to numbers a hand is expected to move
+
+`npm run prove` refused to run at all: four of 0107's probes anchored on `src/content/themes.ts` lines
+that no longer exist — two backdrops belonging to themes that were renamed, and two whole `mix`
+literals. [0019](0019-a-probe-must-be-seen-to-apply.md) doing exactly the job it is named for, on the
+first tuning pass those anchors ever met.
+
+⚠️ **THE RENAMED BACKDROPS ARE THIS DECISION'S FAULT AND THE TWO MIX ANCHORS ARE NOT.** A probe pinned
+to `mix: { arp: 1.3, hook: 1.28, drone: 0.55, … }` breaks the moment anybody tunes that row, which is
+the one thing that row exists to have done to it. Re-anchored on the things the guards themselves make
+structural: a single `arp` value for the floor rule, and **`approach`'s `mix: {}`** for the
+sounds-different rule — a row `tests/themes.test.ts` requires to stay empty, so it cannot drift.
+
+⚠️ **`prove` EXITS 1 WHEN NOTHING RAN, WHICH WAS WORTH CHECKING RATHER THAN ASSUMING.** *Nothing was
+run* is the loudest possible message and would be worthless behind a zero exit code; it is not.
+
 ## What is NOT changed
 
 ⚠️ **The ladder, the rungs, the distances, `MUSIC_GAIN`, `MUSIC_DRIVE` and every guard.** Five places

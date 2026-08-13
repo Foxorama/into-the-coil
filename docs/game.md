@@ -257,6 +257,13 @@ places are this project's own, because the fiction is downstream of whether them
 `CLAUDE.md` allows opening the predecessor only for a named file and a named reason. A biome name
 drops onto a row without touching anything else.
 
+⚠️ **AND FIVE OF THE SEVEN WERE NAMED BY THE PLAYER, WHICH IS THE FICTION ARRIVING FROM THE OTHER
+DIRECTION** — [0146](decisions/0146-three-more-places-and-two-after-them.md), 2026-08-13. A jurassic
+belt with lasers in it, a labyrinth with something hunting you through it, an ice shelf, a toxic mire
+with a hydra in it, and the black hole at the heart of the galaxy. **Still not the predecessor's
+biomes**, and still nothing opened to find them. **Every level is now its own composition** as well as
+its own room, and no two share a progression.
+
 **Every boss is unique** — its own attacks, its own effects, its own escalation. The Jörmungandr
 model is the baseline: phases keyed to remaining health, so every arsenal meets every phase, and a
 heavier loadout shortens the fight without trivialising it.

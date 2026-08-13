@@ -45,7 +45,7 @@ import {
 import { bakeLoops, musicLevelFor, placeFor } from '../src/app/music.ts';
 import { UNITS_PER_SECOND, rungMarks, targetGain } from '../scripts/timeline.mjs';
 import { AURA_LAYERS, FIRE_GRID, MUSIC, MUSIC_LAYERS, secondsOfLayer, type MusicLayer } from '../src/content/music.ts';
-import { revoicedBy } from '../src/content/themes.ts';
+import { THEME_KINDS, revoicedBy } from '../src/content/themes.ts';
 import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { MISSILE_BEAT_RATIO, fireEveryAt, missileEveryAt } from '../src/content/pickups.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -587,15 +587,30 @@ describe('the cue table', () => {
       }, 30_000);
 
       it('a place that states nothing hands the base set straight back, so it is a no-op', () => {
-        // Six of the seven places are in this state, and the title screen is too. `setLoops` then
-        // finds every array identical and does not make a single buffer.
+        /*
+          `setLoops` then finds every array identical and does not make a single buffer.
+
+          ⚠️ **THE PLACE IS FOUND RATHER THAN NAMED, AND IT USED TO BE `rime`** —
+          `docs/decisions/0146-three-more-places-and-two-after-them.md`. Six of the seven stated no
+          material when this was written and one line picked one of them by hand; five of those six
+          now state a whole composition, and the baseline went red before a probe could run. A guard
+          written over the PROPERTY — *whichever place has no voices* —
+          (`docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md`'s own rule about layers)
+          survives the next place being written, and a name does not.
+
+          ⚠️ **`approach` is the last one and it is unlikely to move**, because
+          `tests/themes.test.ts` requires level one to be the neutral place everything else is read
+          against — but the day it does state material, this skips loudly rather than asserting
+          nothing.
+        */
+        const silent = THEME_KINDS.find((theme) => revoicedBy(theme).length === 0);
+        expect(silent, 'every place states its own material now, so this can assert nothing').toBeDefined();
         warm();
         const base = takePrewarmed()!.loops;
         let handed: Record<MusicLayer, Float32Array> | null = null;
-        bakePlace('rime', (loops) => {
+        bakePlace(silent!, (loops) => {
           handed = loops;
         }, (run) => run());
-        expect(revoicedBy('rime'), 'rime states material now, so this asserts nothing').toEqual([]);
         for (const layer of MUSIC_LAYERS) expect(handed![layer]).toBe(base[layer]);
       }, 30_000);
 
