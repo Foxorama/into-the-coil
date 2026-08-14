@@ -66,9 +66,16 @@ export const PROBES = [
       re-voices its tune and shares the progression under it, so a note off the scale is wrong against
       a bed nobody edited. A flattened second is the exact mistake — it sounds deliberate, it is a
       real mode, and it is not the mode the chords are in.
+
+      ⚠️ **AND IT IS NOW THE PROBE FOR THE UNDECLARED HALF OF THAT GUARD** —
+      `docs/decisions/0148-a-place-has-its-own-notes.md` renamed the test when a place gained the
+      right to state its own mode. **The break is unchanged and still fires**, because Ember Nebula
+      declares no scale of its own and therefore still answers to the natural minor: the flattened
+      second is a note the place does not state, which is exactly what the guard refuses now. What
+      0148 changed is who decides the scale, not whether a voice has to stay inside it.
     */
     broke: 'a re-voiced tune left the key the shared progression is in',
-    guard: 'A RE-VOICED TUNE STAYS IN THE KEY, because the progression under it is still shared',
+    guard: '0148 — A RE-VOICED TUNE STAYS IN THE NOTES ITS OWN PLACE STATES',
     edit: {
       path: 'src/content/nebula.ts',
       find: 'const DESCANT: readonly number[] = [12, 14,',

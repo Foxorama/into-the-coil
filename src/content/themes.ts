@@ -55,6 +55,7 @@
  */
 
 import { CORE_VOICES } from './core.ts';
+import { SCALE } from './cues.ts';
 import { LABYRINTH_VOICES } from './labyrinth.ts';
 import { MIRE_VOICES } from './mire.ts';
 import { MUSIC, type MusicLayer, type MusicVoice } from './music.ts';
@@ -210,6 +211,37 @@ export interface ThemeRow {
    * the BOUNDARY (0133), which is where a place's whole bake is already spent.
    */
   air?: Partial<Record<MusicLayer, number>>;
+  /**
+   * The notes this place may sound, as pitch classes over the root. Absent is `SCALE`.
+   *
+   * ── SEVEN PLACES SOUNDED ALIKE AND SIX OF THEM WERE PLAYING THE IDENTICAL SEVEN NOTES ───────────
+   *
+   * ⚠️ **`docs/decisions/0148-a-place-has-its-own-notes.md`.** Reported 2026-08-14, having played all
+   * five of 0146's places after 0147 rebalanced them: *"level 3 currently reads as a copy of level 2
+   * with some slight variation… the level melodies are copies of the earlier ones and aren't their
+   * own unique themes and styles."*
+   *
+   * ⚠️ **THE MELODIES WERE NOT COPIES AND THE MEASUREMENT SAYS WHAT WAS.** `scripts/weigh-notes.mjs`
+   * printed **two distinct pitch-class sets across seven places** — the six authored ones all
+   * sounding A B C D E F G, and the base composition, which nobody wrote as a place, the only one
+   * with any chromatic colour at all. A place could choose its rhythm, its balance and its timbre and
+   * could not choose a note.
+   *
+   * ⚠️ **THE GUARD THAT DID IT WAS WIDER THAN ITS OWN REASON.** `tests/themes.test.ts` required every
+   * re-voiced note to be a tone of A natural minor *"or the place is simply wrong over its own bed"*,
+   * and against the cues *"a place in another key would put the player's own gun out of tune."* Both
+   * are arguments for keeping the TONIC. Neither is an argument for banning the other five notes —
+   * and `src/content/music.ts` breaks the ban **ninety-three times**, with a G# in `chords`, `groove`
+   * and `arp` and a b2 and a tritone through the whole fight, over the same cues, since before the
+   * guard existed. **The rule the base composition is exempt from is the rule that flattened every
+   * place written after it.**
+   *
+   * ⚠️ **SO WHAT IS GUARDED IS THE ROOT AND NOT THE SCALE.** A place still states its notes and is
+   * still held to them, because a typo is what the original guard was genuinely catching; what it may
+   * now state is a mode of its own. `docs/decisions/0099-the-cues-are-in-the-key.md` is untouched —
+   * the cues are still in A, every place is still rooted on A, and nothing here transposes.
+   */
+  scale?: readonly number[];
 }
 
 /**
@@ -413,6 +445,19 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       dread: 0.8,
     },
     voices: SAURIAN_VOICES,
+    /*
+      ⚠️ **THE NATURAL MINOR PLUS A RAISED SEVENTH, WHICH IS THE ONLY MODE IN THE GAME THAT IS NOT
+      THE NATURAL MINOR** — `docs/decisions/0148-a-place-has-its-own-notes.md`. G# is the third of the
+      E major this place cadences onto four times in sixteen bars, and E major over an A minor key is
+      the entire harmonic signature of eurobeat. Without it the progression is a reshuffle of the same
+      six triads every other place is a reshuffle of, which is what was reported.
+
+      ⚠️ **BOTH SEVENTHS, AND NOT THE SHARP ONE INSTEAD.** `FLUTE` sings the natural G and the floor
+      plays the sharp one; a harmonic minor that dropped the G would take the ancient half of the
+      brief away to buy the machine half, which is the compromise `src/content/saurian.ts` opens by
+      refusing.
+    */
+    scale: [0, 2, 3, 5, 7, 8, 10, 11],
     /*
       ⚠️ **A CLUB HAS A ROOM AND A JUNGLE DOES NOT, SO THE SPLIT IS BY REGISTER.** Everything that
       carries the floor is bone dry — a wet kick is a kick you cannot hear the front of, and a wet
@@ -779,6 +824,18 @@ export function airOf(theme: ThemeKind | undefined, layer: MusicLayer): number {
  * a tune may have.
  */
 export const AIR_CEILING = 1;
+
+/**
+ * The notes `theme` may sound, as pitch classes over the root. `SCALE` for a place that states none,
+ * and for no place at all.
+ *
+ * ⚠️ **`docs/decisions/0148-a-place-has-its-own-notes.md`.** The default is the natural minor because
+ * that is what six of the seven places were written in and none of them has to change to keep it.
+ */
+export function scaleOf(theme: ThemeKind | undefined): readonly number[] {
+  if (theme === undefined) return SCALE;
+  return THEMES[theme].scale ?? SCALE;
+}
 
 /** Which layers `theme` plays differently from the base. Empty for a place with no music of its own. */
 export function revoicedBy(theme: ThemeKind): MusicLayer[] {

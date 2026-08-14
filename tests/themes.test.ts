@@ -9,6 +9,7 @@ import {
   airOf,
   bakedBy,
   revoicedBy,
+  scaleOf,
   voicesOf,
   type ThemeKind,
 } from '../src/content/themes.ts';
@@ -24,7 +25,6 @@ import {
   MUSIC_DRIVE,
   secondsOfLayer,
 } from '../src/content/music.ts';
-import { SCALE } from '../src/content/cues.ts';
 import { LAYER_PAN } from '../src/content/music.ts';
 import { addRoom, bakeLayer } from '../src/app/music.ts';
 import { BANDS, bandEnergy } from './spectrum.ts';
@@ -196,25 +196,80 @@ describe('a theme mixes the music and cannot break it', () => {
       `docs/decisions/0027-measure-the-picture-not-the-model.md` arriving inside the guard, which is
       the trap the hoist above already had to avoid once.
     */
+    /*
+      ── AND HALF OF THE DOT PRODUCT WAS AGAINST A GAIN OF ZERO, WHICH IS THE THIRD TIME THIS ────────
+
+      ⚠️ **`docs/decisions/0148-a-place-has-its-own-notes.md`.** This guard took **52.6 s in CI on the
+      commit before 0148**, against the 60 s budget stated below — 88% of it — and 0148's six extra
+      voices in one place took it to 62.2 s. It has now hit this wall three times, and each of the two
+      comments above is a previous one.
+
+      ⚠️ **THE GROWTH LAW IS WHAT MATTERS AND IT IS NOT ABOUT 0148.** The walk costs
+      *samples × layers × rungs × places*, and **four of the seven places still have no material of
+      their own.** Whichever of levels 4 to 7 had been written first would have tipped this; 0148 was
+      simply first. A budget at 88% with four known additions outstanding is a budget already spent.
+
+      ⚠️ **FIRST THE ARITHMETIC, BECAUSE A LOOSER BUDGET IS THE LAST RESORT AND NOT THE FIRST.**
+      `MUSIC_LADDER` holds a zero for **80 of the 161 (layer, rung) pairs**: `calm` opens three layers
+      of twenty-three, `run` nine. Every one of those was a multiply and an add against zero, every
+      sample, every place. Compacting each rung to the layers it actually opens is the same peak from
+      the same samples through the same shaper — **adding `0 × x` is what is skipped, not a layer** —
+      and it is the same trade the two hoists above made, which
+      `docs/decisions/0027-measure-the-picture-not-the-model.md` is the reason to keep making in that
+      direction and never the other.
+
+      ── AND THEN THE BUDGET, BECAUSE THE MEASUREMENT SAYS THE WALK WAS NEVER THE COST ──────────────
+
+      ⚠️ **IT HALVED THE WALK AND MOVED THE TEST BY 9%**, which is the number that settles what to do
+      next. Timed on this machine, per place:
+
+      | | |
+      |---|---|
+      | baking the seven compositions | **27.0 s** |
+      | walking every sample at every rung | **3.7 s** |
+
+      ⚠️ **88% OF THIS GUARD IS `bakeLoops`, AND THAT IS THE THING IT EXISTS TO MEASURE.** 0134's own
+      finding is that a place must be baked **as itself** — the version that baked one composition and
+      applied every place's mix to it ran green over the whole of 0132 without sounding a note of it.
+      So the bake cannot be cut without measuring less, and *measuring less* is the one direction
+      three rounds of comments here have refused.
+
+      ⚠️ **60 s WAS A BUDGET FOR TWO COMPOSITIONS AND THE GAME HAS SEVEN.** It was set when one place
+      had its own material; six do now, four more are owed a mode by 0148, and the cost grows once per
+      place for ever. **The bound being loosened is the clock and not the assertion** — the same
+      samples, the same shaper, the same `≤ 1` per (theme, rung) — which is the distinction that makes
+      this a budget and not the *widen the number until it goes quiet* move that
+      `docs/decisions/0140-no-layer-is-inaudible.md`'s second probe is written against.
+    */
     for (const theme of THEME_KINDS) {
       const loops = loopsAt(SAMPLE_RATE, theme);
       const buffers = MUSIC_LAYERS.map((layer) => loops[layer]);
       const longest = Math.max(...buffers.map((b) => b.length));
-      const rungs = MUSIC_LEVELS.map((level) => ({
-        level,
-        gains: MUSIC_LAYERS.map((layer) => MUSIC_LADDER[level][layer] * mixOf(theme, layer)),
-        peak: 0,
-      }));
+      const rungs = MUSIC_LEVELS.map((level) => {
+        // @setup: the layers this rung actually opens, and their gains, compacted out of the 23.
+        const live: number[] = [];
+        const gains: number[] = [];
+        for (const [l, layer] of MUSIC_LAYERS.entries()) {
+          const gain = MUSIC_LADDER[level][layer] * mixOf(theme, layer);
+          // `mixOf` clamps to `MIX_FLOOR` and is never zero, so a zero here is the LADDER closing it.
+          if (gain === 0) continue;
+          live.push(l);
+          gains.push(gain);
+        }
+        return { level, live, gains, peak: 0 };
+      });
       // @setup: one scratch row of layer values, refilled per sample rather than allocated per sample.
       const now = new Float64Array(MUSIC_LAYERS.length);
+      // @setup: the wrap length of each layer, so the walk below does not reload it per sample.
+      const spans = buffers.map((b) => b!.length);
       for (let i = 0; i < longest; i++) {
         for (let l = 0; l < buffers.length; l++) {
-          const buffer = buffers[l]!;
-          now[l] = buffer[i % buffer.length]!;
+          now[l] = buffers[l]![i % spans[l]!]!;
         }
         for (const rung of rungs) {
+          const { live, gains } = rung;
           let sum = 0;
-          for (let l = 0; l < now.length; l++) sum += now[l]! * rung.gains[l]!;
+          for (let k = 0; k < live.length; k++) sum += now[live[k]!]! * gains[k]!;
           const shaped = Math.abs(saturate(sum * MUSIC_GAIN, MUSIC_DRIVE));
           if (shaped > rung.peak) rung.peak = shaped;
         }
@@ -226,7 +281,12 @@ describe('a theme mixes the music and cannot break it', () => {
         ).toBeLessThanOrEqual(1);
       }
     }
-  }, 60_000);
+    /*
+      ⚠️ **THREE MINUTES: about 3× the projected cost once all seven places have their own material**,
+      and still short enough that a genuinely hung bake fails rather than hanging CI. The comment
+      above has the measurement it is sized from.
+    */
+  }, 180_000);
 
   it('and every theme actually sounds different from the one that changes nothing', () => {
     /*
@@ -394,23 +454,34 @@ describe('0128 — a place plays its own material, and shares everything it does
     }
   });
 
-  it('A RE-VOICED TUNE STAYS IN THE KEY, because the progression under it is still shared', () => {
+  it('0148 — A RE-VOICED TUNE STAYS IN THE NOTES ITS OWN PLACE STATES', () => {
     /*
-      ⚠️ **THE LIMIT THAT MAKES THIS FIRST PLACE SAFE, AND IT IS THE FINDING OF 0128.** A theme may
+      ⚠️ **THE LIMIT THAT MADE THE FIRST PLACE SAFE, AND IT IS THE FINDING OF 0128.** A theme may
       replace its melodies without replacing `chords`, and then the harmony under them is the base's.
-      Every note therefore has to be a tone of A natural minor — `SCALE` — or the place is simply
-      wrong over its own bed for three bars in four, which is
-      `docs/decisions/0095-the-level-has-its-own-music.md`'s argument for closing the title's bass.
+      Every note therefore has to be a tone of the scale that bed is in, or the place is simply wrong
+      over it for three bars in four — `docs/decisions/0095-the-level-has-its-own-music.md`'s argument
+      for closing the title's bass.
 
-      ⚠️ **THE BOUND IS UNCHANGED AND THE REASON ABOVE NO LONGER COVERS EVERY PLACE** —
-      `docs/decisions/0132-a-place-may-be-another-piece-entirely.md`. Ember Nebula re-voices `chords`
-      as well, so nothing shared is underneath it and 0128's argument does not reach it. It stays in
-      the key anyway, for a reason that reaches FURTHER: **the cues are in the key too**
-      (`docs/decisions/0099-the-cues-are-in-the-key.md`), so a place in another key would put the
-      player's own gun out of tune with the level for three minutes. A guard whose reason has been
-      outgrown and whose bound is still right is worth saying so on rather than deleting.
+      ── AND THE BOUND WAS `SCALE` FOR EVERY PLACE, WHICH IS WHY THEY ALL SOUNDED ALIKE ─────────────
+
+      ⚠️ **`docs/decisions/0148-a-place-has-its-own-notes.md`.** Six authored places, one pitch-class
+      set between them: A B C D E F G. This guard is why. Its two stated reasons — *wrong over the
+      shared bed* and *the gun goes out of tune* — are both arguments about the TONIC, and it was
+      enforcing the whole SCALE.
+
+      ⚠️ **AND `src/content/music.ts` HAS ALWAYS BROKEN IT.** The base composition sounds a G# in
+      `chords`, `groove` and `arp` and a b2 and a tritone right through the fight — ninety-three notes
+      this guard would have refused — over the same cues, for longer than the guard has existed, with
+      nothing ever reported out of tune. **The exemption was an accident of ordering: the base is not
+      re-voiced by anybody, so it was never in the loop.** A guard the shipped design fails is
+      measuring the wrong quantity (`docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`)
+      — and this one was failed by the design in the file it is written about.
+
+      ⚠️ **WHAT IS GUARDED NOW IS THAT A PLACE MEANT ITS NOTES.** The typo this has always genuinely
+      caught is still caught; what a place may DECLARE is now its own.
     */
     for (const theme of THEME_KINDS) {
+      const scale = scaleOf(theme);
       for (const layer of revoicedBy(theme)) {
         for (const voice of voicesOf(theme, layer)) {
           if (!voice.pitched) continue;
@@ -418,12 +489,59 @@ describe('0128 — a place plays its own material, and shares everything it does
             if (step === null || step === undefined) continue;
             const degree = ((step % 12) + 12) % 12;
             expect(
-              SCALE.includes(degree),
-              `${theme}/${layer} plays ${step}, which is not a tone of the key the shared chords are in`,
+              scale.includes(degree),
+              `${theme}/${layer} plays ${step}, which is not one of the notes ${theme} states`,
             ).toBe(true);
           }
         }
       }
+    }
+  });
+
+  it('0148 — A PLACE IS ROOTED ON A, whatever mode it states over it', () => {
+    /*
+      ⚠️ **THIS IS THE HALF OF THE OLD GUARD THAT WAS ALWAYS RIGHT** —
+      `docs/decisions/0099-the-cues-are-in-the-key.md`. The player's gun, every explosion and every
+      pickup chime are baked once at the first press and are in A; a place that moved its tonic would
+      put them out of tune with the level for three minutes. A place may choose a MODE and may not
+      choose a KEY, and 0148 is only sound because those are different things.
+
+      ⚠️ **The root and the fifth are what a mode cannot move**, so requiring both is requiring the
+      tonic without saying anything about the five notes between them.
+    */
+    for (const theme of THEME_KINDS) {
+      const scale = scaleOf(theme);
+      expect(scale.includes(0), `${theme} does not sound its own root`).toBe(true);
+      expect(scale.includes(7), `${theme} does not sound the fifth the cues glide to`).toBe(true);
+    }
+  });
+
+  it('0148 — NO TWO PLACES THAT CHOSE THEIR NOTES CHOSE THE SAME ONES', () => {
+    /*
+      ⚠️ **THE DEFECT 0148 IS NAMED FOR, AS FAR AS IT CAN HONESTLY BE STATED TODAY.** `weigh-notes`
+      measured two distinct pitch-class sets across seven places and the report called them
+      interchangeable. The guard this wants to be — *no two places share a mode* — **is one the
+      shipped design fails**, because five of the seven still state none and default to `SCALE`.
+
+      ⚠️ **SO IT IS WRITTEN OVER THE PLACES THAT OPTED IN, AND IT IS VACUOUS UNTIL A SECOND ONE
+      DOES.** `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md` and
+      `docs/decisions/0147-a-place-is-a-balance.md`'s own deleted guard are why: a bound the design
+      fails is not a bound, and asserting the version this wants would mean either five stated modes
+      no material plays — a declaration that is a lie — or a red suite.
+
+      ⚠️ **WHAT IT GENUINELY CATCHES IS THE NEXT PLACE COPYING THIS ONE'S**, which is the exact shape
+      of the failure 0148 exists to answer. `docs/decisions/0148-a-place-has-its-own-notes.md` records
+      levels 4 to 7 as owed, and this goes red rather than quiet if two of them arrive as twins.
+    */
+    const chose = THEME_KINDS.filter((theme) => THEMES[theme].scale !== undefined);
+    const seen = new Map<string, ThemeKind>();
+    for (const theme of chose) {
+      const key = [...scaleOf(theme)].sort((a, b) => a - b).join(',');
+      const twin = seen.get(key);
+      expect(twin, `${theme} chose the same notes as ${twin} — neither is anywhere the other is not`).toBe(
+        undefined,
+      );
+      seen.set(key, theme);
     }
   });
 

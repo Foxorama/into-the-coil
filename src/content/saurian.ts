@@ -36,13 +36,33 @@
  * `sub`'s stab is on every *and*, `groove` runs sixteenths under it, and the kick has the downbeat to
  * itself.
  *
- * ── THE ONE LIMIT, WHICH IS THE SAME LIMIT EVERY PLACE HAS ──────────────────────────────────────
+ * ── THE NOTE THIS PLACE HAS THAT NO OTHER ONE DOES ──────────────────────────────────────────────
  *
- * ⚠️ **EVERY NOTE IS A TONE OF A NATURAL MINOR**, because the cues are in the key too —
- * `docs/decisions/0099-the-cues-are-in-the-key.md` — and a place in another key would put the
- * player's own gun out of tune with the level for three minutes. Trance is a minor-key genre and paid
- * nothing for this; the *laser* material is built out of the fifth and the octave, which are the two
- * intervals a square wave already sounds like.
+ * ⚠️ **G SHARP, AND IT IS THE WHOLE REASON THIS READS AS EUROBEAT RATHER THAN AS TRANCE** —
+ * `docs/decisions/0148-a-place-has-its-own-notes.md`. The genre is minor-key with a RAISED SEVENTH:
+ * the V chord is E major and not E minor, so the harmony is permanently pulled back to the tonic by a
+ * semitone from below. Take that one note away and every hands-up progression ever written collapses
+ * into the same modal shuffle — which is exactly what this file was before, and what it was reported
+ * as: *"I'm not getting saurian or robot or techno or eurobeat vibes at all."*
+ *
+ * ⚠️ **IT WAS FORBIDDEN, BY A GUARD WIDER THAN ITS OWN REASON, AND `src/content/music.ts` HAD BEEN
+ * SOUNDING IT ALL ALONG.** `tests/themes.test.ts` held every re-voiced place to the seven tones of A
+ * natural minor because *"the cues are in the key"* — an argument about the TONIC — and the base
+ * composition breaks it ninety-three times over those same cues with nothing ever reported out of
+ * tune. 0148 is that distinction: **this place states its own mode and keeps the game's root.**
+ *
+ * ⚠️ **AND THE TWO HALVES OF THE BRIEF NOW DISAGREE BY THAT ONE NOTE, WHICH IS THE JOKE.** The bone
+ * flute is pentatonic and sings the natural seventh; the floor underneath it plays the sharp one. The
+ * ancient thing and the machine are a semitone apart on the same degree, they are never sounding it
+ * at the same moment — `FLUTE` rests on every E bar — and *that* is what makes them one piece rather
+ * than two records at once.
+ *
+ * ── AND THE OTHER LIMIT, WHICH IS THE SAME LIMIT EVERY PLACE HAS ────────────────────────────────
+ *
+ * ⚠️ **THE ROOT IS STILL A**, because the cues are — `docs/decisions/0099-the-cues-are-in-the-key.md`
+ * — and a place in another KEY would put the player's own gun out of tune with the level for three
+ * minutes. A mode is not a key, and `tests/themes.test.ts` now holds the root and the fifth rather
+ * than all seven notes between them.
  */
 
 import { BEAT_SECONDS, type MusicLayer, type MusicVoice } from './music.ts';
@@ -51,24 +71,58 @@ import { BEAT_SECONDS, type MusicLayer, type MusicVoice } from './music.ts';
 const _ = null;
 
 /**
- * THE PROGRESSION — sixteen bars, one chord a bar, and it falls where the other two rise.
+ * Cents, as the fraction of an octave `MusicVoice.octave` is measured in.
  *
- * ⚠️ **`Am G F G · Am G F Em · Dm C F G · Am F Em G`.** The base walks a four-bar turn four ways and
- * Ember Nebula holds a hymn's slow pull back to the tonic; this **descends** — root, seventh, sixth,
- * seventh — which is the oldest hands-in-the-air progression there is and is why the second half can
- * lift to `Dm C` without the piece sounding like it changed key.
+ * ── THE SUPERSAW WAS ALWAYS REACHABLE AND THIS FILE SAID IT WAS NOT ─────────────────────────────
  *
- * ⚠️ **IT NEVER RESOLVES AND THAT IS THE GENRE.** Every four-bar phrase ends on G and the loop starts
- * again on Am, so the harmony is permanently falling into the next bar. A eurobeat track that resolved
- * would stop, and this one has to run for three minutes under a fight.
+ * ⚠️ **`docs/decisions/0148-a-place-has-its-own-notes.md`.** The paragraph that used to sit over
+ * `RIFF` read *"this synthesiser has no detune (`src/app/sound.ts` takes a semitone, not a cent), so
+ * the stack is built the way `drone` builds its own — two voices an octave apart"*. That is true of
+ * `steps`, which is semitones, and **false of `octave`, which is a float**: `src/app/music.ts` bakes
+ * a voice at `MUSIC_ROOT * 2^(octave + semitone/12)` and nothing has ever required the left-hand term
+ * to be a whole number.
+ *
+ * ⚠️ **SO A DETUNED STACK COSTS NOTHING BUT SAYING SO.** Three saws at ±14 cents beat against each
+ * other at a few hertz, which is the entire sound of the genre and the one thing the octave trick
+ * cannot fake: two voices an octave apart are consonant and do not beat at all.
+ *
+ * ⚠️ **±14 RATHER THAN ±25.** A supersaw is a chord's worth of detune when it is the only thing
+ * playing; over a sixteenth bass and a four-on-the-floor it turns to mud, and the beat rate at ±25
+ * cents on a note this low is slow enough to read as wobble rather than as width.
+ */
+const cents = (n: number): number => n / 1200;
+
+/**
+ * THE PROGRESSION — sixteen bars, one chord a bar, and it CADENCES, four times.
+ *
+ * ```
+ *   Am  F   C   G  ·  Am  F   Dm  E  ·  C   G   Am  E  ·  F   G   Am  E
+ * ```
+ *
+ * ⚠️ **THE E IS MAJOR AND EVERY OTHER CHORD HERE IS DIATONIC.** That is the only chromatic event in
+ * the place and it happens four times in sixteen bars, on the bar each phrase turns on. E major over
+ * an A minor key is the V — `docs/decisions/0148-a-place-has-its-own-notes.md` — and its third is the
+ * G# that gives this level a note no other level in the game has.
+ *
+ * ⚠️ **THE VERSION THIS REPLACES SAID *IT NEVER RESOLVES AND THAT IS THE GENRE*, AND THAT WAS THE
+ * DEFECT WRITTEN DOWN AS A FEATURE.** It ran `Am G F G` four ways — root, seventh, sixth, seventh,
+ * falling for ever and cadencing nowhere. That is a fair description of trance and it is the opposite
+ * of eurobeat, which is built out of hard V–i arrivals and lives or dies on them. A loop with no
+ * cadence in it cannot sound like somewhere you are ARRIVING, which is what the level is for.
+ *
+ * ⚠️ **AND IT IS WHY THIS PLACE READ AS THE ONE BEFORE IT.** Every place in this game was a reshuffle
+ * of the same six diatonic triads; six of the seven measured as the identical pitch-class set. The
+ * cadence is not a decoration on top of that — it is the first structural thing any of them has that
+ * the others do not.
  *
  * ⚠️ **Hoisted, because eight voices spell the same sixteen chords** — the same argument
  * `src/content/nebula.ts` makes, and the same failure it is avoiding: three copies of a progression is
- * how a place ends up with a bass in one key and a lead in another.
+ * how a place ends up with a bass in one key and a lead in another. It matters more here than
+ * anywhere: **the G# has to arrive in every voice at once or it is a wrong note rather than a chord.**
  */
-const ROOT: readonly number[] = [0, -2, -4, -2, 0, -2, -4, -5, 5, 3, -4, -2, 0, -4, -5, -2];
-const THIRD: readonly number[] = [3, 2, 0, 2, 3, 2, 0, -2, 8, 7, 0, 2, 3, 0, -2, 2];
-const FIFTH: readonly number[] = [7, 5, 3, 5, 7, 5, 3, 2, 12, 10, 3, 5, 7, 3, 2, 5];
+const ROOT: readonly number[] = [0, -4, 3, -2, 0, -4, 5, -5, 3, -2, 0, -5, -4, -2, 0, -5];
+const THIRD: readonly number[] = [3, 0, 7, 2, 3, 0, 8, -1, 7, 2, 3, -1, 0, 2, 3, -1];
+const FIFTH: readonly number[] = [7, 3, 10, 5, 7, 3, 12, 2, 10, 5, 7, 2, 3, 5, 7, 2];
 
 /**
  * THE BONE FLUTE — `call`'s tune, and it is the whole of *ancient* before the floor arrives.
@@ -78,27 +132,37 @@ const FIFTH: readonly number[] = [7, 5, 3, 5, 7, 5, 3, 2, 12, 10, 3, 5, 7, 3, 2,
  * because the scale forbids them but because an instrument made of a femur does. It is the one
  * constraint in this file that is about an object rather than about a genre.
  *
+ * ⚠️ **AND THE SEVENTH IT SINGS IS THE NATURAL ONE, WHICH THE FLOOR UNDERNEATH IT HAS SHARPENED.**
+ * `docs/decisions/0148-a-place-has-its-own-notes.md`. This is the register split stated as a note
+ * rather than as a mix: the machine half plays G# and the animal half plays G, a semitone apart on the
+ * same degree of the same scale.
+ *
+ * ⚠️ **SO IT RESTS ON EVERY E BAR — 8, 12 AND 16 — AND THAT IS LOAD-BEARING RATHER THAN TASTEFUL.**
+ * Those are the four bars carrying the G#, and a pentatonic G over them is not a colour, it is a
+ * minor second against the chord's own third. **The breath every fourth bar and the cadence are the
+ * same event**, which is the only reason the two halves can hold different sevenths at all.
+ *
  * ⚠️ **Two notes a bar and a breath every fourth one.** The rests are the part that reads as *old*:
  * everything else in this place is continuous, so the layer with holes in it is the layer that sounds
  * like a person rather than a machine.
  */
 const FLUTE: readonly (number | null)[] = [
   0, _, 3, _,
-  2, _, 0, _,
-  -4, _, 0, _,
-  2, _, _, _,
-  7, _, 5, _,
-  3, _, 2, _,
+  3, _, 0, _,
+  3, _, 7, _,
+  10, _, 5, _,
   0, _, 3, _,
-  2, _, _, _,
-  5, _, 8, _,
-  7, _, 3, _,
-  5, _, 3, _,
-  2, _, _, _,
+  3, _, 0, _,
+  5, _, 12, _,
+  7, _, _, _,
+  10, _, 7, _,
+  5, _, 10, _,
+  0, _, 3, _,
+  7, _, _, _,
+  3, _, 0, _,
+  10, _, 5, _,
   12, _, 10, _,
-  8, _, 7, _,
-  3, _, 5, _,
-  2, _, _, _,
+  7, _, _, _,
 ];
 
 /**
@@ -112,24 +176,35 @@ const FLUTE: readonly (number | null)[] = [
  * ⚠️ **FOUR NOTES A BAR AND NO REST UNTIL THE PHRASE TURNS.** A trance lead is a line you can sing
  * back after one pass; that means long tones on strong beats and a shape that climbs for three bars
  * and falls in the fourth, which is what every one of these four phrases does.
+ *
+ * ⚠️ **IT IS THE LAYER THAT SOUNDS THE G#, AND IT SOUNDS IT FOUR TIMES** — bars 8, 12 and 16, and it
+ * is the last note of the loop. `docs/decisions/0148-a-place-has-its-own-notes.md`. **The sixteenth
+ * bar holds a G# alone and the first bar begins on A**, so the seam of the loop is the cadence: the
+ * strongest arrival in the piece happens at the moment the piece starts again, which is how a track
+ * that has to run for three minutes under a fight gets to resolve without ever stopping.
+ *
+ * ⚠️ **`RUNG_CLOSES` takes `call` away in the same breath** (`src/content/music.ts`), so the ear is
+ * handed a different tune rather than a second one — and the tune it is handed is the one with the
+ * chromatic note in it. `docs/decisions/0125-the-build-starts-sooner.md` says a section is heard by
+ * what ARRIVES; what arrives here is a note the level has not played yet.
  */
 const HANDS: readonly (number | null)[] = [
-  12, _, 10, 12,
-  15, _, 14, _,
-  12, 10, 8, _,
-  10, _, _, _,
-  12, _, 15, 14,
+  12, _, 14, 15,
   17, _, 15, _,
-  14, 12, 10, _,
-  12, _, _, _,
-  17, _, 15, 17,
-  19, _, 17, _,
-  15, 14, 12, _,
-  14, _, _, _,
-  12, _, 15, 17,
-  20, _, 19, _,
+  15, _, 12, 15,
+  14, _, 17, _,
+  12, _, 14, 15,
+  20, _, 17, _,
   17, 15, 14, _,
-  12, _, _, _,
+  19, _, 23, _,
+  24, _, 22, 19,
+  22, _, 19, _,
+  24, _, 19, 15,
+  23, _, 19, _,
+  20, _, 17, 20,
+  22, _, 19, _,
+  24, _, 22, 19,
+  23, _, _, _,
 ];
 
 /**
@@ -183,10 +258,11 @@ const ARPEGGIO: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
 /**
  * THE RIFF — eight a bar, syncopated, and it alternates between two shapes so the bars are not twins.
  *
- * ⚠️ **A HOOVER IS A CHORD PLAYED AS A LINE.** The sound that names it is a stack of detuned saws;
- * this synthesiser has no detune (`src/app/sound.ts` takes a semitone, not a cent), so the stack is
- * built the way `drone` builds its own — two voices an octave apart through different filters — and
- * the *chord played as a line* is what the pattern does.
+ * ⚠️ **A HOOVER IS A CHORD PLAYED AS A LINE, AND IT IS ALSO A STACK OF DETUNED SAWS.** This comment
+ * used to say the synthesiser had no detune and that the stack was therefore built out of octaves —
+ * see `cents` above for why that was wrong, and
+ * `docs/decisions/0148-a-place-has-its-own-notes.md` for what it cost. `hook` is now three saws at
+ * ±14 cents **and** the chord spelled as a line, which is both halves of what the sound is.
  */
 const RIFF: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
   const third = THIRD[bar]!;
@@ -307,11 +383,26 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
 
         ⚠️ **The pickup is now a SIXTEENTH before the bar line** — position 15, where the stab's
         eighth grid has nothing — so it is still the same gesture and it no longer stacks.
+
+        ── AND THE SIXTEENTH BAR IS A BREAK, WHICH IS THE ONE GESTURE THIS GAME HAS NEVER MADE ──────
+
+        ⚠️ **THE KICK STOPS FOR A BAR AND NOTHING ELSE DOES.** The offbeat stab, the bass, the hats
+        and the pad all carry on, so the floor does not fall out — what goes is the thing the listener
+        has been counting, and it goes on the bar the progression cadences on.
+        `docs/decisions/0114-the-fight-is-a-different-piece.md` says the only mechanism that has ever
+        read as a boundary in this game is **something stopping**, and it says it about the rungs;
+        this is the same finding spent inside a loop, where it costs no mechanism at all.
+
+        ⚠️ **IT IS ALSO THE GENRE'S OWN PUNCTUATION.** A eurobeat track breaks every sixteen bars and
+        slams back in — the two sixteenths at the end of the bar are the run-up, and the downbeat they
+        land on is bar one of the loop, where `HANDS` has just resolved its G# onto an A.
       */
       steps: ROOT.flatMap((_root, bar) =>
-        bar % 4 === 3
-          ? [1, _, _, _, 0.9, _, _, 0.6, 0.98, _, _, 0.64, 0.92, _, _, 0.72]
-          : [1, _, _, _, 0.9, _, _, _, 0.98, _, _, 0.62, 0.92, _, _, _],
+        bar === 15
+          ? [1, _, _, _, _, _, _, _, _, _, _, _, _, _, 0.7, 0.86]
+          : bar % 4 === 3
+            ? [1, _, _, _, 0.9, _, _, 0.6, 0.98, _, _, 0.64, 0.92, _, _, 0.72]
+            : [1, _, _, _, 0.9, _, _, _, 0.98, _, _, 0.62, 0.92, _, _, _],
       ),
       pitched: false,
       perBeat: 4,
@@ -461,26 +552,52 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
     {
       steps: ROOT,
       pitched: true,
-      perBeat: 0.25,
       octave: 1,
+      perBeat: 0.25,
       accents: [1, 0.86, 0.92, 0.84, 0.96, 0.88, 1, 0.82],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.13, attack: 0.16, curve: 1.5, lowFrom: 2600, lowTo: 700, q: 1.4 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.115, attack: 0.16, curve: 1.5, lowFrom: 2600, lowTo: 700, q: 1.4 },
+    },
+    {
+      // The root again, sharp. A pad is where a detune is most audible and least in the way — it is
+      // holding for four beats, so the beating has time to be heard as movement.
+      steps: ROOT,
+      pitched: true,
+      octave: 1 + cents(16),
+      perBeat: 0.25,
+      accents: [1, 0.86, 0.92, 0.84, 0.96, 0.88, 1, 0.82],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.09, attack: 0.18, curve: 1.5, lowFrom: 2500, lowTo: 690, q: 1.4 },
     },
     {
       steps: FIFTH,
       pitched: true,
-      perBeat: 0.25,
       octave: 1,
+      perBeat: 0.25,
       accents: [1, 0.86, 0.92, 0.84, 0.96, 0.88, 1, 0.82],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.095, attack: 0.2, curve: 1.5, lowFrom: 2400, lowTo: 660, q: 1.5 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.085, attack: 0.2, curve: 1.5, lowFrom: 2400, lowTo: 660, q: 1.5 },
+    },
+    {
+      /*
+        THE THIRD, AND IT IS THE VOICE THE WHOLE PLACE TURNS ON. On twelve bars in sixteen it is a
+        diatonic third; on bars 8, 12 and 16 `THIRD` hands it a G# and the chord under the level
+        becomes E major — `docs/decisions/0148-a-place-has-its-own-notes.md`. Nothing else has to
+        change for that to happen, which is the argument for hoisting the progression: the cadence
+        arrives in the pad, the arp, the riff and the bass on the same bar because all four read the
+        same array.
+      */
+      steps: THIRD,
+      pitched: true,
+      octave: 2,
+      perBeat: 0.25,
+      accents: [0.94, 0.84, 1, 0.82, 0.92, 0.88, 0.96, 0.8],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.08, attack: 0.24, curve: 1.5, lowFrom: 3400, lowTo: 1100, q: 1.4 },
     },
     {
       steps: THIRD,
       pitched: true,
+      octave: 2 - cents(16),
       perBeat: 0.25,
-      octave: 2,
       accents: [0.94, 0.84, 1, 0.82, 0.92, 0.88, 0.96, 0.8],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.08, attack: 0.24, curve: 1.5, lowFrom: 3400, lowTo: 1100, q: 1.4 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.06, attack: 0.26, curve: 1.5, lowFrom: 3300, lowTo: 1080, q: 1.4 },
     },
     {
       /*
@@ -579,20 +696,39 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
     {
       steps: RIFF,
       pitched: true,
-      perBeat: 2,
       octave: 1,
+      perBeat: 2,
       accents: [1, 0.74, 0.9, 0.72],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.42, gain: 0.165, attack: 0.006, curve: 2.6, lowFrom: 2400, lowTo: 900, q: 1.6, drive: 0.2 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.42, gain: 0.135, attack: 0.006, curve: 2.6, lowFrom: 2400, lowTo: 900, q: 1.6, drive: 0.2 },
     },
     {
-      // The octave over it. Two saws an octave apart through different filters is this synthesiser's
-      // whole answer to a supersaw, and it is the same trick `drone` uses one register down.
+      // Sharp. The centre voice above and this pair either side of it is the supersaw — three saws
+      // beating against each other at a few hertz, which is the sound the octave stack could not make.
       steps: RIFF,
       pitched: true,
+      octave: 1 + cents(14),
       perBeat: 2,
-      octave: 2,
       accents: [1, 0.74, 0.9, 0.72],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.38, gain: 0.085, attack: 0.008, curve: 3, lowFrom: 4600, lowTo: 2200, q: 1.4 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.42, gain: 0.105, attack: 0.007, curve: 2.6, lowFrom: 2300, lowTo: 880, q: 1.6, drive: 0.2 },
+    },
+    {
+      // Flat.
+      steps: RIFF,
+      pitched: true,
+      octave: 1 - cents(14),
+      perBeat: 2,
+      accents: [1, 0.74, 0.9, 0.72],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.42, gain: 0.105, attack: 0.005, curve: 2.6, lowFrom: 2500, lowTo: 920, q: 1.6, drive: 0.2 },
+    },
+    {
+      // The octave over the stack — the brightness, not the width. It was doing both jobs before and
+      // could only ever do this one.
+      steps: RIFF,
+      pitched: true,
+      octave: 2,
+      perBeat: 2,
+      accents: [1, 0.74, 0.9, 0.72],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.38, gain: 0.07, attack: 0.008, curve: 3, lowFrom: 4600, lowTo: 2200, q: 1.4 },
     },
     {
       // The high stab, four in sixteen bars: the top of the whole piece before the lasers.
@@ -685,18 +821,41 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
     {
       steps: HANDS,
       pitched: true,
-      perBeat: 1,
       octave: 2,
+      perBeat: 1,
       accents: [1, 0.72, 0.9, 0.74],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.05, gain: 0.2, attack: 0.02, curve: 1.6, lowFrom: 4200, lowTo: 1900, q: 1.5 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.05, gain: 0.16, attack: 0.02, curve: 1.6, lowFrom: 4200, lowTo: 1900, q: 1.5 },
+    },
+    {
+      /*
+        THE DETUNE ON THE HANDS-UP LINE, AND IT IS WIDER THAN THE RIFF'S ON PURPOSE. ±22 cents where
+        `hook` takes ±14: this layer arrives at `surge` with `call` and `arp` closing underneath it
+        (`src/content/music.ts`), so it is the widest thing in the mix at the moment it is also the
+        most exposed — and a lead is the one place a slow beat reads as *huge* rather than as *out of
+        tune*.
+      */
+      steps: HANDS,
+      pitched: true,
+      octave: 2 + cents(22),
+      perBeat: 1,
+      accents: [1, 0.72, 0.9, 0.74],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.05, gain: 0.10, attack: 0.024, curve: 1.6, lowFrom: 4000, lowTo: 1850, q: 1.5 },
     },
     {
       steps: HANDS,
       pitched: true,
+      octave: 2 - cents(22),
       perBeat: 1,
-      octave: 1,
       accents: [1, 0.72, 0.9, 0.74],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.05, gain: 0.13, attack: 0.03, curve: 1.5, lowFrom: 2000, lowTo: 950, q: 1.3 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.05, gain: 0.10, attack: 0.017, curve: 1.6, lowFrom: 4400, lowTo: 1950, q: 1.5 },
+    },
+    {
+      steps: HANDS,
+      pitched: true,
+      octave: 1,
+      perBeat: 1,
+      accents: [1, 0.72, 0.9, 0.74],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.05, gain: 0.11, attack: 0.03, curve: 1.5, lowFrom: 2000, lowTo: 950, q: 1.3 },
     },
     {
       steps: TREMOLO,
