@@ -752,6 +752,22 @@ cannot express at all.
 kick on with the art styles and boss styling… we can go back to working on the music when I get
 back."* The arrangement half is safe and cheap and is the first thing to do on their return.
 
+### AND THE ART CHANNEL IS SURVEYED, NOT STARTED — [`where-the-art-ceiling-is`](../reports/where-the-art-ceiling-is-2026-08-14.md)
+
+⚠️ **THE CEILING IS ONE FLAT INK PER SPRITE.** `drawKind` sets one `fillStyle`, strokes in `space`, and
+ends every arm at a single `fill('evenodd'); stroke()`. Seven boss hulls, each built on its own
+readable idea, all painted one colour. **What is placeholder about them is the fill, not the outline.**
+
+⚠️ **AND `variant` IS IN THE BRIEF AND NOT IN THE CODE.** `docs/game.md` and `src/render/bake.ts:5`
+both say art is a function of `(kind, variant, palette, view)`; the signature is
+`drawKind(ctx, kind, palette, size)`. Fourteen `SpriteKind`s stand in for seven bosses and their hit
+frames, **and that is what caused the shipped defect where five bosses had no hit interaction at all.**
+
+⚠️ **THE CHEAPEST REAL UPGRADE IS INTERIOR DETAIL IN `palette.space`** — free at runtime, no palette
+change, no accessibility risk, and it cannot collide semantically the way `impact` or `hazard` would.
+The report has what to build and the three guards it needs. **`variant` is the larger, later one and
+must not be bundled with a visual change.**
+
 ⚠️ **AND THE BRASS IS MEASURED BUT UNATTRIBUTED.** 0147 took `sub` down 3.4 dB in every place and put
 `call`, `hook`, `arp` and `counter` up 4.6–6.2 dB in every place; all four hold 42–54% of their energy
 in the 130–800 Hz trombone register, and **`call` is open at `run`**. `npm run dash` solos it in one
