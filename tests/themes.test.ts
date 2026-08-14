@@ -9,6 +9,7 @@ import {
   airOf,
   bakedBy,
   revoicedBy,
+  scaleOf,
   voicesOf,
   type ThemeKind,
 } from '../src/content/themes.ts';
@@ -24,7 +25,6 @@ import {
   MUSIC_DRIVE,
   secondsOfLayer,
 } from '../src/content/music.ts';
-import { SCALE } from '../src/content/cues.ts';
 import { LAYER_PAN } from '../src/content/music.ts';
 import { addRoom, bakeLayer } from '../src/app/music.ts';
 import { BANDS, bandEnergy } from './spectrum.ts';
@@ -394,23 +394,34 @@ describe('0128 — a place plays its own material, and shares everything it does
     }
   });
 
-  it('A RE-VOICED TUNE STAYS IN THE KEY, because the progression under it is still shared', () => {
+  it('0148 — A RE-VOICED TUNE STAYS IN THE NOTES ITS OWN PLACE STATES', () => {
     /*
-      ⚠️ **THE LIMIT THAT MAKES THIS FIRST PLACE SAFE, AND IT IS THE FINDING OF 0128.** A theme may
+      ⚠️ **THE LIMIT THAT MADE THE FIRST PLACE SAFE, AND IT IS THE FINDING OF 0128.** A theme may
       replace its melodies without replacing `chords`, and then the harmony under them is the base's.
-      Every note therefore has to be a tone of A natural minor — `SCALE` — or the place is simply
-      wrong over its own bed for three bars in four, which is
-      `docs/decisions/0095-the-level-has-its-own-music.md`'s argument for closing the title's bass.
+      Every note therefore has to be a tone of the scale that bed is in, or the place is simply wrong
+      over it for three bars in four — `docs/decisions/0095-the-level-has-its-own-music.md`'s argument
+      for closing the title's bass.
 
-      ⚠️ **THE BOUND IS UNCHANGED AND THE REASON ABOVE NO LONGER COVERS EVERY PLACE** —
-      `docs/decisions/0132-a-place-may-be-another-piece-entirely.md`. Ember Nebula re-voices `chords`
-      as well, so nothing shared is underneath it and 0128's argument does not reach it. It stays in
-      the key anyway, for a reason that reaches FURTHER: **the cues are in the key too**
-      (`docs/decisions/0099-the-cues-are-in-the-key.md`), so a place in another key would put the
-      player's own gun out of tune with the level for three minutes. A guard whose reason has been
-      outgrown and whose bound is still right is worth saying so on rather than deleting.
+      ── AND THE BOUND WAS `SCALE` FOR EVERY PLACE, WHICH IS WHY THEY ALL SOUNDED ALIKE ─────────────
+
+      ⚠️ **`docs/decisions/0148-a-place-has-its-own-notes.md`.** Six authored places, one pitch-class
+      set between them: A B C D E F G. This guard is why. Its two stated reasons — *wrong over the
+      shared bed* and *the gun goes out of tune* — are both arguments about the TONIC, and it was
+      enforcing the whole SCALE.
+
+      ⚠️ **AND `src/content/music.ts` HAS ALWAYS BROKEN IT.** The base composition sounds a G# in
+      `chords`, `groove` and `arp` and a b2 and a tritone right through the fight — ninety-three notes
+      this guard would have refused — over the same cues, for longer than the guard has existed, with
+      nothing ever reported out of tune. **The exemption was an accident of ordering: the base is not
+      re-voiced by anybody, so it was never in the loop.** A guard the shipped design fails is
+      measuring the wrong quantity (`docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`)
+      — and this one was failed by the design in the file it is written about.
+
+      ⚠️ **WHAT IS GUARDED NOW IS THAT A PLACE MEANT ITS NOTES.** The typo this has always genuinely
+      caught is still caught; what a place may DECLARE is now its own.
     */
     for (const theme of THEME_KINDS) {
+      const scale = scaleOf(theme);
       for (const layer of revoicedBy(theme)) {
         for (const voice of voicesOf(theme, layer)) {
           if (!voice.pitched) continue;
@@ -418,12 +429,59 @@ describe('0128 — a place plays its own material, and shares everything it does
             if (step === null || step === undefined) continue;
             const degree = ((step % 12) + 12) % 12;
             expect(
-              SCALE.includes(degree),
-              `${theme}/${layer} plays ${step}, which is not a tone of the key the shared chords are in`,
+              scale.includes(degree),
+              `${theme}/${layer} plays ${step}, which is not one of the notes ${theme} states`,
             ).toBe(true);
           }
         }
       }
+    }
+  });
+
+  it('0148 — A PLACE IS ROOTED ON A, whatever mode it states over it', () => {
+    /*
+      ⚠️ **THIS IS THE HALF OF THE OLD GUARD THAT WAS ALWAYS RIGHT** —
+      `docs/decisions/0099-the-cues-are-in-the-key.md`. The player's gun, every explosion and every
+      pickup chime are baked once at the first press and are in A; a place that moved its tonic would
+      put them out of tune with the level for three minutes. A place may choose a MODE and may not
+      choose a KEY, and 0148 is only sound because those are different things.
+
+      ⚠️ **The root and the fifth are what a mode cannot move**, so requiring both is requiring the
+      tonic without saying anything about the five notes between them.
+    */
+    for (const theme of THEME_KINDS) {
+      const scale = scaleOf(theme);
+      expect(scale.includes(0), `${theme} does not sound its own root`).toBe(true);
+      expect(scale.includes(7), `${theme} does not sound the fifth the cues glide to`).toBe(true);
+    }
+  });
+
+  it('0148 — NO TWO PLACES THAT CHOSE THEIR NOTES CHOSE THE SAME ONES', () => {
+    /*
+      ⚠️ **THE DEFECT 0148 IS NAMED FOR, AS FAR AS IT CAN HONESTLY BE STATED TODAY.** `weigh-notes`
+      measured two distinct pitch-class sets across seven places and the report called them
+      interchangeable. The guard this wants to be — *no two places share a mode* — **is one the
+      shipped design fails**, because five of the seven still state none and default to `SCALE`.
+
+      ⚠️ **SO IT IS WRITTEN OVER THE PLACES THAT OPTED IN, AND IT IS VACUOUS UNTIL A SECOND ONE
+      DOES.** `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md` and
+      `docs/decisions/0147-a-place-is-a-balance.md`'s own deleted guard are why: a bound the design
+      fails is not a bound, and asserting the version this wants would mean either five stated modes
+      no material plays — a declaration that is a lie — or a red suite.
+
+      ⚠️ **WHAT IT GENUINELY CATCHES IS THE NEXT PLACE COPYING THIS ONE'S**, which is the exact shape
+      of the failure 0148 exists to answer. `docs/decisions/0148-a-place-has-its-own-notes.md` records
+      levels 4 to 7 as owed, and this goes red rather than quiet if two of them arrive as twins.
+    */
+    const chose = THEME_KINDS.filter((theme) => THEMES[theme].scale !== undefined);
+    const seen = new Map<string, ThemeKind>();
+    for (const theme of chose) {
+      const key = [...scaleOf(theme)].sort((a, b) => a - b).join(',');
+      const twin = seen.get(key);
+      expect(twin, `${theme} chose the same notes as ${twin} — neither is anywhere the other is not`).toBe(
+        undefined,
+      );
+      seen.set(key, theme);
     }
   });
 
