@@ -752,6 +752,27 @@ cannot express at all.
 kick on with the art styles and boss styling… we can go back to working on the music when I get
 back."* The arrangement half is safe and cheap and is the first thing to do on their return.
 
+### AND THE BOSSES ARE ONE FAN, FOUR WAYS — [`the-boss-vocabulary-is-one-fan`](../reports/the-boss-vocabulary-is-one-fan-2026-08-14.md)
+
+⚠️ **REPORTED 2026-08-14**: *"the bosses need to be more interactive with more varied attacks, a
+baseline is the jormungdar boss battle from Golf-Stars. We currently have one unique boss in
+into-the-coil which is level 3, all the other boss attacks are almost exactly identical."*
+
+⚠️ **IT IS LITERALLY TRUE AND THE UNION'S OWN COMMENT SAYS SO.** Four of the five `BOSS_ATTACK_KINDS`
+are one mechanism — a fan of *n* bullets across a spread — differing only in where it points and
+whether it rotates. **`wall` is the only second idea in the game and it is level 3's**, which is
+exactly and only the boss the player calls unique. Seven fights are three movements × two mechanisms.
+
+⚠️ **THE PREDECESSOR'S FIGHT IS FIVE MECHANISMS AND FOUR OF THEM HAVE NO VOCABULARY HERE AT ALL** — a
+persistent hazard, a **telegraphed** lock-on, a **second-order** projectile that detonates into a ring,
+an undodgeable barrage the SHIELD is for, and a **bared-vulnerability window** to finish on. Read at
+`C:\Golf-Stars\src\app\storyFinaleScreens.ts` for the named reason CLAUDE.md requires.
+
+⚠️ **THE WORD IS *INTERACTIVE* AND THAT IS THE FINISHER, NOT THE ATTACKS.** 0050's shield and 0053's
+bomb exist and **neither has a moment it is FOR**. An `overwhelm` phase is the first thing in this game
+a shield would be for, and it costs no new resource — only a reason. The report has the ordering and
+what must not be bundled with what.
+
 ### AND THE ART CHANNEL IS SURVEYED, NOT STARTED — [`where-the-art-ceiling-is`](../reports/where-the-art-ceiling-is-2026-08-14.md)
 
 ⚠️ **THE CEILING IS ONE FLAT INK PER SPRITE.** `drawKind` sets one `fillStyle`, strokes in `space`, and
