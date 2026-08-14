@@ -656,7 +656,47 @@ not a report per item.
 
 ## What is next
 
-### ⚠️ START HERE NEXT SESSION: THE FIVE HAVE BEEN HEARD, AND THE VERDICT WAS *THEY ALL SOUND THE SAME*
+### ⚠️ START HERE NEXT SESSION: ASK FOR THE FEEDBACK. IT EXISTS AND THIS FILE DOES NOT HAVE IT.
+
+⚠️ **THE PLAYER HAS PLAYED ALL SEVEN AGAINST [0147](decisions/0147-a-place-is-a-balance.md) AND THE
+VERDICT IS THE FIRST UNRESERVEDLY POSITIVE ONE THIS CHANNEL HAS HAD**, 2026-08-14: *"I've played
+through them and can give feedback, it's sounding a lot better, but let's pick it up in a new
+session."*
+
+⚠️ **SO THE FEEDBACK IS HELD BY THE PLAYER AND NOT BY THIS FILE. ASKING FOR IT IS THE FIRST MOVE**,
+before anything below is picked up — the two queued passes are both large, both touch shared tables,
+and either could be the wrong thing to do next depending on what the report says.
+
+⚠️ **AND THE TWO QUEUED PASSES ARE ALREADY ASKED FOR, IN THE PLAYER'S OWN WORDS.** Neither is a
+proposal; both are instructions given during the session that produced 0147:
+
+1. **THE DYNAMIC-RANGE PASS, AND IT IS THE ONE WITH A NUMBER BEHIND IT.** *"If the budget is
+   unrealistic and being a blocker let's clear/update/make it proper so that we can get a broad
+   musical range from the highest highs to the lowest slows, the fastest speeds and the slowest
+   slows."* **Measured: a whole level spans 3.4–3.8 dB from `run` to `boss`** — the entire dynamic
+   range of a three-minute build. `MUSIC_LADDER` opens `run` at about 60% of the clipping ceiling, so
+   the fight has nowhere to go. **The lever is `MUSIC_GAIN` down and `MUSIC_DRIVE` up**, which is what
+   [0104](decisions/0104-the-gun-plays-a-figure.md) established: the bus shaper buys loudness at the
+   same peak. Dropping the quiet rungs instead is the obvious move and it argues with *"level 7's
+   start wasn't great, quiet"*.
+2. **THE FOCUSED PASS ON LEVELS 1, 2 AND 3** — *"after merging in this changes, then run the same pass
+   on levels 1, 2 and 3."* ⚠️ **SEQUENCE IT AFTER THE RANGE PASS**: the range change moves the ground
+   those three would be tuned against, and doing it first makes the tuning immediately stale.
+
+⚠️ **AND WHAT 0147 DELIBERATELY DID NOT TOUCH IS THE MATERIAL.** *"I'm not getting saurian or robot or
+techno or eurobeat vibes at all"* was answered by moving that place's floor, hat, arp and hoover from
+17 dB under to the top of its mix — **a balance fix, not a notes fix.** If the new report still says
+level three does not sound like the genre, **the answer is its notes**, and that is the third pass.
+
+⚠️ **ONE GUARD IS INTERMITTENT ON CI AND IT IS NOT MUSIC.**
+`tests/offline.browser.test.ts` → *retires its own stale cache* failed once on the 0147 branch and
+passed on a re-run. It passes **3/3 locally**, and the same test has failed-then-passed on **four**
+other branches. Its own comment forbids widening `SWEEP_MS`, and the failure readout says **no new
+worker appeared at all in 35 s** — which points at the `sw.js` update fetch rather than at the sweep.
+[0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) says a rerun is not
+evidence; this is recorded as **open and unexplained** rather than closed.
+
+### THE VERDICT THAT PRODUCED 0147, AND THE INSTRUMENT THAT FOUND ITS CAUSE
 
 ⚠️ **REPORTED 2026-08-14, HAVING PLAYED ALL FIVE**: *"level 3 sounds incredibly similar to level 2,
 I'm not getting saurian or robot or techno or eurobeat vibes at all. Definitely no lasers and roar at
