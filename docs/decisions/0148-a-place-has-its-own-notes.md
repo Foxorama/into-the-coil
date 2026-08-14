@@ -146,6 +146,29 @@ share under 300 Hz at `approach` to 27.96% against 0147's 28% floor; the fix is 
 `counter`**, not more bass. 0147 records *more bass as the universal answer* as the thing that made
 every place bass-led, and `scripts/weigh-mix.mjs` says every one of the six bounds is satisfied.
 
+## ⚠️ And the clipping guard's budget was for two compositions
+
+Six extra voices in one place took `and no theme at any rung drives the bus past full scale` from
+**52.6 s to 62.2 s in CI, against a stated 60 s.** It had been at **88% of its budget on main** before
+this decision touched anything.
+
+⚠️ **THE GROWTH LAW IS NOT ABOUT 0148.** The cost is *samples × layers × rungs × places*, and four of
+the seven places still have no material of their own. **Whichever of levels 4 to 7 had been written
+first would have tipped it** — this decision was simply first.
+
+⚠️ **THE ARITHMETIC WAS FIXED BEFORE THE CLOCK WAS.** `MUSIC_LADDER` holds a zero for **80 of the 161
+(layer, rung) pairs**, and each was a multiply and an add against zero at every sample of every place.
+Compacting each rung to the layers it opens is the same peak from the same samples.
+
+⚠️ **AND IT MOVED THE TEST BY 9%, WHICH IS THE NUMBER THAT SETTLED WHAT TO DO NEXT.** The seven bakes
+are **27.0 s** and the entire walk is **3.7 s** — 88% of this guard is `bakeLoops`, which is the thing
+[0134](0134-the-place-keeps-the-games-pace.md) requires it to do. The clock goes to three minutes and
+**the assertion does not move**: the same samples, the same shaper, the same `≤ 1`.
+
+⚠️ **THIS IS THE THIRD TIME THIS GUARD HAS HIT SIXTY SECONDS**, and the two comments already in it are
+the previous two. The difference is that this one is sized from a measurement of where the minute
+goes rather than from whatever made it green again.
+
 ## ⚠️ What is owed
 
 **A listen, and it is the only thing that settles this.** Every number above is a model quantity.

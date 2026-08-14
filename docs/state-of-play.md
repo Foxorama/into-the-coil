@@ -678,10 +678,40 @@ identical arrangements pass all of them.
 bounds on it and `expect` stops at the first; six rounds of whack-a-mole were spent before that script
 existed and none after it.
 
-⚠️ **THE NEXT THING IS A SECOND LISTEN, AND THE QUESTION IS NARROWER NOW.** The balance is fixed; what
-0147 deliberately did NOT touch is whether the material reads as its genre. **If level 3 still does
-not sound like eurobeat with the floor at the top of its mix, the answer is its notes and not its
-gains** — and that is a different session's work.
+⚠️ **THE SECOND LISTEN HAPPENED AND 0147's OWN PREDICTION WAS RIGHT** — reported 2026-08-14:
+*"level 3 currently reads as a copy of level 2 with some slight variation. It should be completely
+different thematically as a euro-beat technical trance melody… the level melodies are copies of the
+earlier ones and aren't their own unique themes and styles."* The answer was its notes, and
+[0148](decisions/0148-a-place-has-its-own-notes.md) is that work.
+
+### ⚠️ START HERE NEXT SESSION: LEVEL 3 HAS ITS OWN MODE AND NOBODY HAS HEARD IT
+
+⚠️ **THE MELODIES WERE NOT COPIES, AND THAT IS 0148's FINDING** — `node scripts/weigh-notes.mjs`,
+written for it: **two distinct pitch-class sets across seven places**, six of them sounding exactly
+`A B C D E F G` at 0.0% chromatic, and the only place with any colour in it was the base composition,
+which nobody wrote as a place. **A third set of notes would have produced the same report a fourth
+time.**
+
+⚠️ **THE GUARD THAT DID IT WAS WIDER THAN ITS OWN REASON AND THE SHIPPED DESIGN ALREADY BROKE IT.**
+Read 0148 before touching a place's material: `src/content/music.ts` has sounded a G# over these same
+cues ninety-three times since before the guard existed, and the exemption was a `for` loop rather than
+a judgement.
+
+⚠️ **A PLACE STATES ITS OWN MODE NOW AND KEEPS THE GAME'S ROOT.** 0099 is untouched; what moved is the
+distinction between a mode and a key.
+
+⚠️ **AND THE SUPERSAW WAS ALWAYS REACHABLE — `octave` IS A FLOAT.** Two files said this synthesiser
+had no detune. `cents()` in `src/content/saurian.ts` is the whole of it, and it costs no engine
+change; the next place should reach for it rather than for two voices an octave apart.
+
+⚠️ **LEVELS 4, 5, 6 AND 7 ARE DELIBERATELY UNTOUCHED, AT THE PLAYER'S OWN CHOICE** — level 3 first,
+then the rest once it has been heard. **If level three reads as eurobeat, the technique is proven and
+the other four are a day's work. If it does not, the answer is not four more of the same.**
+
+⚠️ **THE CLIPPING GUARD'S BUDGET WAS FOR TWO COMPOSITIONS AND THE GAME HAS SEVEN.** It sat at 88% of
+its 60 s on main and 0148's six extra voices tipped it; the four places still owed a mode would each
+have done the same. 0148 has the measurement — **27.0 s of it is baking and 3.7 s is walking** — and
+why the clock moved and the assertion did not.
 
 ⚠️ **AND `apartBy` IS A PROXY.** If two places at 4 dB still sound alike, **the threshold is not the
 thing to move** — the proxy is wrong and needs replacing. That is written into 0147 so it cannot be
