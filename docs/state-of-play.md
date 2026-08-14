@@ -199,6 +199,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a GAIN IS NOT A LOUDNESS — no layer a rung opens is inaudible, and too loud beats inaudible** | [0140](decisions/0140-no-layer-is-inaudible.md) |
 | **ALL SEVEN LEVELS ARE THEIR OWN COMPOSITION; three theme kinds renamed and one moved a level** | [0146](decisions/0146-three-more-places-and-two-after-them.md), [`five-places-measured`](../reports/five-places-measured-2026-08-13.md) |
 | **A PLACE IS A BALANCE, not a ±3 dB tint over one shared arrangement; no two places may be within 3 dB** | [0147](decisions/0147-a-place-is-a-balance.md) |
+| **a hull has an INTERIOR in `space`, baked into the same bitmap; and the art can be traced without a browser** | [0149](decisions/0149-a-hull-has-an-interior.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -773,21 +774,31 @@ bomb exist and **neither has a moment it is FOR**. An `overwhelm` phase is the f
 a shield would be for, and it costs no new resource — only a reason. The report has the ordering and
 what must not be bundled with what.
 
-### AND THE ART CHANNEL IS SURVEYED, NOT STARTED — [`where-the-art-ceiling-is`](../reports/where-the-art-ceiling-is-2026-08-14.md)
+### AND THE ART CHANNEL IS STARTED — [`where-the-art-ceiling-is`](../reports/where-the-art-ceiling-is-2026-08-14.md), and [0149](decisions/0149-a-hull-has-an-interior.md) is its first half
 
-⚠️ **THE CEILING IS ONE FLAT INK PER SPRITE.** `drawKind` sets one `fillStyle`, strokes in `space`, and
-ends every arm at a single `fill('evenodd'); stroke()`. Seven boss hulls, each built on its own
-readable idea, all painted one colour. **What is placeholder about them is the fill, not the outline.**
+⚠️ **THE CEILING WAS ONE FLAT INK PER SPRITE AND THE FILL HALF IS DONE.**
+[0149](decisions/0149-a-hull-has-an-interior.md) gives `drawKind` a second pass and the seven bosses an
+interior in `palette.space`, declared in `ACCENT_OF` beside `INK_OF`. The report's items 1 to 4, and
+nothing else in it.
 
-⚠️ **AND `variant` IS IN THE BRIEF AND NOT IN THE CODE.** `docs/game.md` and `src/render/bake.ts:5`
-both say art is a function of `(kind, variant, palette, view)`; the signature is
+⚠️ **THE SEVEN ACCENTS ARE AUTHORED AND UNFLOWN.** The geometry is guarded and the seven were
+photographed off scratch builds; whether they are the right seven marks is a question for eyes, which
+[0027](decisions/0027-measure-the-picture-not-the-model.md) says a green suite cannot answer.
+
+⚠️ **`variant` IS STILL IN THE BRIEF AND NOT IN THE CODE, DELIBERATELY.** `docs/game.md` and
+`src/render/bake.ts` both say art is a function of `(kind, variant, palette, view)`; the signature is
 `drawKind(ctx, kind, palette, size)`. Fourteen `SpriteKind`s stand in for seven bosses and their hit
 frames, **and that is what caused the shipped defect where five bosses had no hit interaction at all.**
+0149 leaves it standing on the report's own argument: a verdict on the picture and a refactor of the
+pipeline in one PR is unattributable.
 
-⚠️ **THE CHEAPEST REAL UPGRADE IS INTERIOR DETAIL IN `palette.space`** — free at runtime, no palette
-change, no accessibility risk, and it cannot collide semantically the way `impact` or `hazard` would.
-The report has what to build and the three guards it needs. **`variant` is the larger, later one and
-must not be bundled with a visual change.**
+⚠️ **AND THE SHIPS AND ENEMIES ARE STILL ONE FLAT INK**, on a size argument 0149 states and
+[`enemy-silhouettes`](../reports/enemy-silhouettes-2026-08-05.md) measured. If a play-test says the
+bosses now read as a different class of object, the answer is a row in `ACCENT_OF`.
+
+⚠️ **`src/render/bake.ts` CAN BE MEASURED NOW, WHICH IT COULD NOT BE BEFORE.** `drawKind` takes a
+`Pen` and `tests/paths.ts` traces it, so *where did the ink go* is arithmetic in node rather than a
+bake, a `document` and a real Chromium. Any future claim about a silhouette can be held the same way.
 
 ⚠️ **AND THE BRASS IS MEASURED BUT UNATTRIBUTED.** 0147 took `sub` down 3.4 dB in every place and put
 `call`, `hook`, `arp` and `counter` up 4.6–6.2 dB in every place; all four hold 42–54% of their energy
