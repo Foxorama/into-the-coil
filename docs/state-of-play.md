@@ -724,7 +724,40 @@ different thematically as a euro-beat technical trance melody… the level melod
 earlier ones and aren't their own unique themes and styles."* The answer was its notes, and
 [0148](decisions/0148-a-place-has-its-own-notes.md) is that work.
 
-### ⚠️ START HERE NEXT SESSION: LEVEL 3 HAS ITS OWN MODE AND NOBODY HAS HEARD IT
+### ⚠️ START HERE NEXT SESSION: THE RUN IS A PAD AND A FLUTE, AND THE TEMPO QUESTION IS DUE
+
+⚠️ **THE TWELFTH PLAY-TEST OUTRANKS EVERYTHING BELOW IT** —
+[`the-twelfth-play-test`](../reports/the-twelfth-play-test-2026-08-14.md), given 2026-08-14 against
+0148. **Read it before touching a music number.**
+
+⚠️ **`run` CLOSES EVERY FAST LAYER IN THE GAME** — `arp`, `hook`, `drive`, `counter`, `lead`, `ride`
+are all zero in `MUSIC_LADDER`'s `run` row, and what is open is two pads, a bass, a kit and one slow
+melody. *"Still slow and melodic… more appropriate for a cthulhu-ian investigative game"* is a literal
+description of that row, it is the SHARED ladder, and **no amount of per-place writing can reach it.**
+
+⚠️ **AND BOTH OF 0148's SUPERSAWS LIVE IN LAYERS THAT DO NOT OPEN UNTIL `push`**, so *"the run feels
+almost exactly the same"* was predictable from the table. 0148 answered a question about MATERIAL; this
+is a question about the RUNG.
+
+⚠️ **THE TEMPO ASK IS [0102](decisions/0102-the-music-goes-somewhere.md)'s OWN DEFERRED CONVERSATION,
+ARRIVING** — *"if that does not read as faster to an ear, the next conversation is whether the grid is
+worth what it costs, not another pass at the music."* It does not, and that is now said twice.
+**`STEPS_PER_BEAT = 24` is already 150 BPM, which IS eurobeat's tempo**, so the number is not the
+defect; the report has the divisor table for what a real change costs and why 20 is the only near
+candidate. ⚠️ **It is a GAMEPLAY rebalance wearing a music change** — the gun, the enemies and the
+phase-lock all ride that grid (0093, 0096) — and *"levels 3-7"* implies a per-level tempo the grid
+cannot express at all.
+
+⚠️ **DELIBERATELY NOT ACTED ON.** The player left for a day with *"if you're not sure on the music,
+kick on with the art styles and boss styling… we can go back to working on the music when I get
+back."* The arrangement half is safe and cheap and is the first thing to do on their return.
+
+⚠️ **AND THE BRASS IS MEASURED BUT UNATTRIBUTED.** 0147 took `sub` down 3.4 dB in every place and put
+`call`, `hook`, `arp` and `counter` up 4.6–6.2 dB in every place; all four hold 42–54% of their energy
+in the 130–800 Hz trombone register, and **`call` is open at `run`**. `npm run dash` solos it in one
+click and that is the cheapest thing anybody can do next.
+
+### LEVEL 3 HAS ITS OWN MODE — [0148](decisions/0148-a-place-has-its-own-notes.md)
 
 ⚠️ **THE MELODIES WERE NOT COPIES, AND THAT IS 0148's FINDING** — `node scripts/weigh-notes.mjs`,
 written for it: **two distinct pitch-class sets across seven places**, six of them sounding exactly
