@@ -26,6 +26,40 @@ import { makeRng } from '../sim/rng.ts';
 /** Side profile for a horizontally scrolling screen, top-down for a vertical one. */
 export type SpriteView = 'side' | 'top';
 
+/**
+ * The only canvas verbs the art itself uses.
+ *
+ * ⚠️ **A NARROWER TYPE SO THE DRAWING CAN BE TRACED WITHOUT A BROWSER**, which is the same move
+ * `skyField` and `bakeSize` already make one section down: the quantity a guard needs is stated as
+ * something node can hold. `drawKind` used to take a whole `CanvasRenderingContext2D`, and the only
+ * way to read back what it drew was to bake a real atlas — which needs a `document`, which means a
+ * browser, which means `dist/`. A `Pen` is fifteen members, so `tests/paths.ts` can implement one and
+ * `tests/accents.test.ts` can ask where the ink actually went.
+ *
+ * A real 2D context satisfies it structurally, so `bakeOne` hands one over unchanged and nothing
+ * about what ships moves. What the narrowing buys is that the two claims
+ * `docs/decisions/0149-a-hull-has-an-interior.md` makes about the picture — the accent is inside the
+ * hull, and no two hulls are one drawing — are arithmetic over real path data rather than prose.
+ */
+export type Pen = Pick<
+  CanvasRenderingContext2D,
+  | 'fillStyle'
+  | 'strokeStyle'
+  | 'lineWidth'
+  | 'lineCap'
+  | 'globalAlpha'
+  | 'beginPath'
+  | 'moveTo'
+  | 'lineTo'
+  | 'arc'
+  | 'rect'
+  | 'closePath'
+  | 'fill'
+  | 'stroke'
+  | 'fillRect'
+  | 'createRadialGradient'
+>;
+
 export interface Atlas {
   readonly view: SpriteView;
   /** Baked bitmaps, indexed by `SPRITE`. */
@@ -461,13 +495,229 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   bound: 'player',
 };
 
+/*
+  ══ THE INTERIOR ═════════════════════════════════════════════════════════════════════════════════
+
+  ⚠️ **ONE INK PER SPRITE WAS THE ART CEILING, AND IT WAS STRUCTURAL RATHER THAN A MATTER OF TASTE** —
+  `reports/where-the-art-ceiling-is-2026-08-14.md`, and `docs/decisions/0149-a-hull-has-an-interior.md`
+  is the change. `drawKind` set ONE `fillStyle` and ended every arm at a single fill, so a hull could
+  not have a cockpit, a vent, a gun port or a lit core: there was nowhere for a second colour to come
+  from. The silhouettes were never the placeholder. The fill was.
+
+  ⚠️ **`space`, AND THE TWO OBVIOUS CHOICES ARE BOTH WRONG.** `impact` is the hit-flash ink, so a
+  permanently impact-coloured core would muddy the one piece of feedback
+  `docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md` exists for; `hazard` means *this
+  will hurt you*. `space` means nothing, which is exactly what decoration should mean —
+  `docs/decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md` is about
+  what the player must TELL APART, and a vent is not one of those things.
+
+  ⚠️ **AND IT ADDS NO CONTRAST PAIR, WHICH IS A DIFFERENT CLAIM FROM THE REPORT'S.**
+  `reports/where-the-art-ceiling-is-2026-08-14.md` credits `tests/themes.test.ts` with holding this;
+  that file explicitly SKIPS `space` — `if (ink === 'space' || ink === 'sky') continue`, because its
+  subject is a backdrop and space is what a backdrop is measured against. The guard that actually
+  applies is `tests/palette.test.ts`'s *every ink is legible against space*, and it applies because an
+  accent is never drawn on the backdrop: it sits on the hull, so its pair is `space` against the
+  hull's own ink — **the outline's pair, already on screen around every sprite in the game.** No
+  palette moves and no new contrast is asked for.
+
+  ⚠️ **IT IS NOT AN `evenodd` HOLE.** A hole is transparent and shows the sky through it; this is
+  opaque void painted over the hull. Both are wanted, for different pictures, and the accents below
+  are deliberately kept off the holes the hulls already have — `boss3`'s lattice, `boss5`'s ports,
+  `boss7`'s ring — because filling one in would take a hole away rather than add a mark.
+
+  ⚠️ **IT COSTS NOTHING AT RUNTIME.** It is the same bitmap, so the same blit:
+  `docs/decisions/0022-frame-rate-is-a-feature.md` and
+  `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md` count draw calls and allocations,
+  not path segments, and this file is on `tests/budget.test.ts`'s deliberately-cold list.
+*/
+
+/** One piece of an accent, in fractions of the hull radius `r`, measured from the sprite's centre. */
+export type AccentShape =
+  | { readonly kind: 'poly'; readonly points: readonly (readonly [number, number])[] }
+  | { readonly kind: 'disc'; readonly x: number; readonly y: number; readonly r: number };
+
+/**
+ * The interior of one hull: shapes filled in `palette.space` over the hull, inside the same bitmap.
+ *
+ * ⚠️ **In units of `r` rather than pixels**, for the reason every other number in this file is a
+ * fraction of `size`: a bake at any resolution has to be the same picture, so a high-DPI re-bake is
+ * not a second set of art.
+ */
+export type Accent = readonly AccentShape[];
+
+/** A rectangular mark: a keel, a spine, a streak, an armour band. Corners in `r` from the centre. */
+const box = (x0: number, y0: number, x1: number, y1: number): AccentShape => ({
+  kind: 'poly',
+  points: [
+    [x0, y0],
+    [x1, y0],
+    [x1, y1],
+    [x0, y1],
+  ],
+});
+
+/** A round mark: a cockpit, a node, an eye, a pupil. */
+const dot = (x: number, y: number, r: number): AccentShape => ({ kind: 'disc', x, y, r });
+
+/*
+  ── THE NUMBERS, AND WHAT HOLDS THEM ───────────────────────────────────────────────────────────
+
+  ⚠️ **EVERY ONE OF THESE IS A CLAIM ABOUT WHERE THE HULL IS SOLID, AND A HAND CANNOT CHECK IT.**
+  The hulls are drawn imperatively a few hundred lines below, three of them are filled `evenodd` with
+  holes in them, and `boss6` is three overlapping circles and a bar whose overlaps CANCEL — so
+  *is this point on the hull* is arithmetic, not a look at the file. `tests/accents.test.ts` traces
+  the real drawing and answers it, in CSS pixels of the screen the play-tests are given on;
+  `scripts/probes/0149-a-hull-has-an-interior.mjs` is what says that guard fires.
+*/
+
+/** A cockpit behind the notched prow, then a keel back to the stern. The hull's own solidity. */
+const BOSS_KEEL: Accent = [dot(-0.3, 0, 0.14), box(-0.1, -0.1, 0.78, 0.1)];
+
+/** The spine, and the roots of the two outer prongs sitting on it. The hull's own openness. */
+const BOSS2_SPINE: Accent = [box(-0.15, -0.09, 0.85, 0.09), dot(-0.05, -0.45, 0.11), dot(-0.05, 0.45, 0.11)];
+
+/** A node in each of the four struts, off the hole rather than over it. The hull as a frame. */
+const BOSS3_NODES: Accent = [
+  dot(0.38, -0.32, 0.09),
+  dot(0.38, 0.32, 0.09),
+  dot(-0.38, -0.32, 0.09),
+  dot(-0.38, 0.32, 0.09),
+];
+
+/** Three streaks along the body, which is the one hull that reads as moving while it stands still. */
+const BOSS4_STREAKS: Accent = [
+  box(-0.35, -0.36, 0.45, -0.24),
+  box(-0.35, -0.06, 0.45, 0.06),
+  box(-0.35, 0.24, 0.45, 0.36),
+];
+
+/** Two bands across the slab, forward of the ports rather than through them. The hull as a wall. */
+const BOSS5_BANDS: Accent = [box(-0.62, -0.78, -0.46, 0.78), box(-0.3, -0.78, -0.14, 0.78)];
+
+/** An eye in each lobe, all three on the player's side. Three things that turned out to be one. */
+const BOSS6_EYES: Accent = [dot(-0.46, -0.62, 0.095), dot(-0.46, 0, 0.095), dot(-0.46, 0.62, 0.095)];
+
+/** A pupil in the core, and four marks around the outer ring. The one round hull, looking back. */
+const BOSS7_EYE: Accent = [
+  dot(0, 0, 0.16),
+  dot(0.83, 0, 0.095),
+  dot(-0.83, 0, 0.095),
+  dot(0, -0.83, 0.095),
+  dot(0, 0.83, 0.095),
+];
+
+/**
+ * Which kinds have an interior, and what it is.
+ *
+ * ⚠️ **A `Record` OVER THE WHOLE UNION RATHER THAN A SPARSE MAP, AND THAT IS NOT CEREMONY** — the
+ * defect this table is written next to is a table that said nothing. Five bosses shipped with no hit
+ * interaction at all because `boss3Hit` through `boss7Hit` were authored beside their own hulls and
+ * inherited the wrong ink, and a MISSING entry is a type error while a wrong one is not
+ * (`tests/legibility.test.ts` carries the post-mortem). Keyed on `SpriteKind`, an eighth boss cannot
+ * be added without someone writing down whether it has an interior — which is
+ * `docs/decisions/0016-a-hub-enumerates-kinds.md`'s whole claim, and the reason the forty-four
+ * `null`s below are the guard rather than noise.
+ *
+ * ⚠️ **THE SEVEN BOSSES ONLY, AND THAT IS THE SCOPE ON PURPOSE.** A boss is 26 to 38 world units —
+ * four to six times anything else on screen — which is the same licence `drawKind` already gives
+ * their silhouettes for being complicated. An enemy is five to nine units and an interior on one is
+ * mush; `reports/enemy-silhouettes-2026-08-05.md` measured what survives twenty pixels and it was
+ * outlines, not detail. The day an enemy earns one, it is a row here and nothing else moves.
+ */
+export const ACCENT_OF: Record<SpriteKind, Accent | null> = {
+  /*
+    ── THE SEVEN INTERIORS ─────────────────────────────────────────────────────────────────────────
+
+    Each says the same thing its hull already says, louder. Not a new idea per boss — the hulls are
+    seven ideas already and a second one laid over the first is two objects, which is the failure the
+    HURT SILHOUETTES block below is written about from the other direction.
+
+    ⚠️ **What each mark IS is written once, on the constant above, and not again here.** Two prose
+    descriptions of one drawing is the second copy `docs/decisions/0029-the-tracked-record-is-the-record.md`
+    is about, and this table is where a reader would come to edit the numbers.
+
+    ⚠️ **A hull and its hurt sprite share an accent, exactly as they share a `case` arm.** The accent
+    is in `space` either way, so what changes when a boss is hit is the hull ink around it — the flash
+    still reads as *that thing being hurt* rather than as a second object appearing.
+  */
+
+  boss: BOSS_KEEL,
+  bossHit: BOSS_KEEL,
+  boss2: BOSS2_SPINE,
+  boss2Hit: BOSS2_SPINE,
+  boss3: BOSS3_NODES,
+  boss3Hit: BOSS3_NODES,
+  boss4: BOSS4_STREAKS,
+  boss4Hit: BOSS4_STREAKS,
+  boss5: BOSS5_BANDS,
+  boss5Hit: BOSS5_BANDS,
+  boss6: BOSS6_EYES,
+  boss6Hit: BOSS6_EYES,
+  boss7: BOSS7_EYE,
+  boss7Hit: BOSS7_EYE,
+
+  /*
+    ── AND EVERYTHING ELSE, WHICH IS FORTY-FOUR KINDS AND ONE REASON ───────────────────────────────
+
+    Too small for an interior, or not a body at all. The ships, the eight enemies and their hurt
+    silhouettes are five to nine world units; the bullets, the pickups, the blasts and the debris are
+    smaller again; the sky, the nebula and the box edge return before the fill this rides on. Each
+    would be a mark under a pixel at the size it ships, which
+    `docs/decisions/0106-a-mark-thinner-than-a-pixel-is-not-drawn.md` is the whole of.
+  */
+  ship: null,
+  shipHit: null,
+  shipMk2: null,
+  shipMk2Hit: null,
+  shipMk3: null,
+  shipMk3Hit: null,
+  drifter: null,
+  drifterHit: null,
+  lancer: null,
+  lancerHit: null,
+  weaver: null,
+  weaverHit: null,
+  turret: null,
+  turretHit: null,
+  charger: null,
+  chargerHit: null,
+  warden: null,
+  wardenHit: null,
+  spinner: null,
+  spinnerHit: null,
+  sower: null,
+  sowerHit: null,
+  bullet: null,
+  spit: null,
+  lance: null,
+  flak: null,
+  missile: null,
+  bomb: null,
+  blast: null,
+  blastHalf: null,
+  blastWide: null,
+  blastWidest: null,
+  shieldOrb: null,
+  debris: null,
+  lifeIcon: null,
+  pickupWeapon: null,
+  pickupMissile: null,
+  pickupShield: null,
+  pickupBomb: null,
+  skyFar: null,
+  skyNear: null,
+  skyRush: null,
+  skyNebula: null,
+  bound: null,
+};
+
 /**
  * Draw one kind into a square canvas, pointing along +x, filling most of it.
  *
  * Everything is expressed as a fraction of `size` so a bake at any resolution is the same picture —
  * which is what lets the atlas be re-baked larger on a high-DPI screen without a second set of art.
  */
-function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Palette, size: number): void {
+export function drawKind(ctx: Pen, kind: SpriteKind, palette: Palette, size: number): void {
   const half = size / 2;
   const r = size * 0.42;
   ctx.fillStyle = palette[INK_OF[kind]];
@@ -1055,6 +1305,54 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
   }
   ctx.fill('evenodd');
   ctx.stroke();
+  /*
+    ── THE SECOND PASS ─────────────────────────────────────────────────────────────────────────────
+
+    ⚠️ **THE HULL IS FINISHED BEFORE THIS RUNS, AND THAT ORDER IS THE WHOLE MECHANISM.** The fill and
+    the stroke above are the silhouette; what follows is opaque `space` laid over it, so nothing here
+    can move the outer bounds, the collision box or
+    `docs/decisions/0101-the-sky-is-a-hurry-and-the-boss-holds-back.md`'s screen share. Drawn into the
+    same path, or before the stroke, it would be part of the outline instead of inside it.
+
+    ⚠️ **`ctx.clip()` WOULD MAKE THIS TRUE BY CONSTRUCTION AND IS DELIBERATELY NOT USED.** A clip to
+    the hull cannot be broken on purpose, so a guard over it could never be seen to fail —
+    `docs/decisions/0005-a-guard-must-be-seen-to-fail.md` says that is a guard nobody has the right to
+    trust. Containment is a claim about the numbers in `ACCENT_OF`, held by `tests/accents.test.ts`
+    and proved red by `scripts/probes/0149-a-hull-has-an-interior.mjs`.
+
+    ⚠️ **`evenodd` again, so an accent may have a hole in it too** — and so two overlapping shapes in
+    one accent cancel rather than merge, which is the same rule the hulls are filled under and one
+    fewer thing for a reader of this file to hold.
+  */
+  const accent = ACCENT_OF[kind];
+  if (accent === null) return;
+  ctx.fillStyle = palette.space;
+  ctx.beginPath();
+  for (const shape of accent) {
+    switch (shape.kind) {
+      case 'poly': {
+        let first = true;
+        for (const [x, y] of shape.points) {
+          if (first) ctx.moveTo(half + x * r, half + y * r);
+          else ctx.lineTo(half + x * r, half + y * r);
+          first = false;
+        }
+        ctx.closePath();
+        break;
+      }
+      case 'disc':
+        // The `moveTo` is the arc's own start point, so the sub-path opens there rather than being
+        // joined to the last one by a stray line — the same pairing every ring in this file uses.
+        ctx.moveTo(half + (shape.x + shape.r) * r, half + shape.y * r);
+        ctx.arc(half + shape.x * r, half + shape.y * r, shape.r * r, 0, Math.PI * 2);
+        break;
+      default: {
+        const never: never = shape;
+        throw new Error(`unbaked accent shape: ${JSON.stringify(never)}`);
+      }
+    }
+  }
+  ctx.fill('evenodd');
 }
 
 /**
@@ -1067,7 +1365,7 @@ function drawKind(ctx: CanvasRenderingContext2D, kind: SpriteKind, palette: Pale
  *
  * `bake.ts` is on `tests/budget.test.ts`'s deliberately-cold list, so a call per bake costs nothing.
  */
-function drawFins(ctx: CanvasRenderingContext2D, half: number, r: number, spanY: number): void {
+function drawFins(ctx: Pen, half: number, r: number, spanY: number): void {
   for (const side of [-1, 1]) {
     ctx.moveTo(half - r * 0.15, half + r * spanY * side * 0.55);
     ctx.lineTo(half + r * 0.1, half + r * spanY * side);
@@ -1239,7 +1537,7 @@ export function nebulaField(size: number): NebulaCloud[] {
  * shape with no boundary anywhere in it — which is the property the amendment rests on. A
  * `filter: blur()` would be a boundary softened by an amount that varies with the bake resolution.
  */
-function drawNebula(ctx: CanvasRenderingContext2D, colour: string, size: number): void {
+function drawNebula(ctx: Pen, colour: string, size: number): void {
   for (const cloud of nebulaField(size)) {
     const fill = ctx.createRadialGradient(cloud.x, cloud.y, 0, cloud.x, cloud.y, cloud.r);
     fill.addColorStop(0, colour);
@@ -1292,7 +1590,7 @@ export function bakeNebula(atlas: Atlas, colour: string, pixelsPerUnit: number):
  * nothing and cannot be forgotten. Size alone put the stars below a bullet; the alpha is what puts
  * them behind the game.
  */
-function drawSky(ctx: CanvasRenderingContext2D, kind: SkyKind, size: number): void {
+function drawSky(ctx: Pen, kind: SkyKind, size: number): void {
   const field = skyField(kind, size);
   ctx.globalAlpha = field.alpha;
   /*
