@@ -67,7 +67,7 @@ import { nextOnGrid } from '../content/music.ts';
 import { PICKUP_KINDS, type PickupKind, type PickupRow, type UpgradeKind, type Weapon } from '../content/pickups.ts';
 import { SPECIALS, pyreFor, type SpecialKind } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
-import { phaseFor, stepBoss } from './boss.ts';
+import { openBy, phaseFor, stepBoss, throwCurtain } from './boss.ts';
 import type { Frame } from './loop.ts';
 
 /** How far in front of the ship a shot appears, in world units — clear of its own hurtbox. */
@@ -516,8 +516,13 @@ const BLAST_STEPS = 12;
  * a player can still die in the ninety steps after killing it, which is the arcade answer.
  *
  * A starting point on [0037](docs/decisions/0037-the-ship-has-mass.md)'s terms; nothing asserts on it.
+ *
+ * ⚠️ **Exported, and something asserts on it now — but not on its VALUE** — 0150. A boss's bared
+ * window is the phase this beat runs straight out of, and a window shorter than its own consequence
+ * is one the player only sees in the explosion. `tests/level.test.ts` holds the window against this
+ * rather than against a second number of its own, so the day this moves, that floor moves with it.
  */
-const BOSS_DEATH_STEPS = 96;
+export const BOSS_DEATH_STEPS = 96;
 
 /**
  * Steps between one pulse of the boss's explosion and the next.
@@ -1259,11 +1264,27 @@ export class GameFrame implements Frame {
     // The boss is its own pairing rather than another enemy, and the reason is the pool: it is the
     // only body in the game that must survive a hundred and fifty hits, so it cannot share a pool
     // with things that are released after one.
-    killedByShots += collideInto(w.playerShots, w.bossPool, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
-    killedByShots += collideInto(w.missiles, w.bossPool, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
+    /*
+      ⚠️ **AND THE BOSS'S OWN SCALE IS THE WINDOW** — 0150. `phaseFor` is the whole of it: a boss in
+      its `bare` phase has stopped shooting and opened, and `openBy` turns that into the multiplier
+      `collideInto` has always taken. Everywhere else, and for every boss that authors no such phase,
+      it is exactly the `1` that used to be written here.
+
+      ⚠️ **Asked rather than remembered**, though `driveBoss` has already resolved the same phase
+      earlier in the same step. A field on the world would be a second answer to *what is the boss
+      standing in* and would be stale on the one step that matters most — the step it dies, when the
+      pool is empty and the field still says `bare`.
+
+      ⚠️ **The same number reaches the blast**, so a bomb spent in the window is worth what a pulse is
+      worth in it. A window that opened for the guns and not for the arsenal would be a second answer
+      to *how open is it*, and 0053 says the bomb is the first thing the player spends.
+    */
+    const open = w.bossPool.size > 0 ? openBy(phaseFor(w.bossRow, w.bossPool.at(0).health, w.bossFullHealth)) : 1;
+    killedByShots += collideInto(w.playerShots, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.deaths);
+    killedByShots += collideInto(w.missiles, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.deaths);
     // An area rather than an arrival: everything inside it, once, and nothing consumes it.
     blastInto(w.blasts, w.enemies, 1, IMPACT_FLASH_STEPS, w.deaths);
-    blastInto(w.blasts, w.bossPool, 1, IMPACT_FLASH_STEPS, w.deaths);
+    blastInto(w.blasts, w.bossPool, open, IMPACT_FLASH_STEPS, w.deaths);
     /*
       The impact flash's twin. An arrival that did not kill is a body that went white and stayed.
 
@@ -3022,6 +3043,9 @@ function driveBoss(w: World): void {
     is about to get harder — and `src/content/cues.ts` says which of the two it sounds like.
   */
   const phase = w.bossRow.phases.indexOf(phaseFor(w.bossRow, boss.health, w.bossFullHealth));
+  // What the boss is standing in NOW — 0150. Read once, because the transition below and the window
+  // below that are two statements about the same row.
+  const stance = w.bossRow.phases[phase]!.stance;
   if (phase !== w.bossPhaseAt) {
     /*
       ⚠️ **Only ever forwards, and the guard is the comparison rather than a rule about health.** A
@@ -3032,9 +3056,42 @@ function driveBoss(w: World): void {
     if (w.bossPhaseAt >= 0) {
       burst(w, boss.along, boss.across, BURST.phase);
       w.onCue('bossPhase', boss.across);
+      /*
+        ── THE UNCOIL, THROWN ON THE STEP THE PHASE TURNS OVER ─────────────────────────────────────
+
+        ⚠️ **`docs/decisions/0150-the-uncoil-and-the-eye.md`.** It is here rather than behind
+        `stepBoss`'s fire gate because it is a MOMENT and not a cadence — `src/app/boss.ts` has the
+        argument, and the short of it is that a phase is keyed to health, so an unavoidable attack on
+        a `fireEvery` costs a well-armed player one shield and a base-weapon player a dozen.
+
+        ⚠️ **Inside the `bossPhaseAt >= 0` arm on purpose**, so it fires on a phase the boss ENTERED
+        and never on the one it arrived in. A curtain on the opening phase would land while the hull
+        is still crossing the screen, at a moment 0040's seven seconds of quiet exist to leave empty.
+
+        ⚠️ **It borrows this block's cue and adds none of its own** — 0104 allows four voices a step
+        and the cap, not this file, would decide which of two the player heard.
+      */
+      if (stance.kind === 'overwhelm') {
+        const bullet = SHOTS[w.bossRow.shot];
+        throwCurtain(boss, stance.gap, w.enemyShots, bullet, bullet.speed * w.difficulty.shotSpeed, w.scrollPerStep);
+      }
     }
     w.bossPhaseAt = phase;
   }
+  /*
+    ── AND THE WINDOW IS A STATE RATHER THAN AN EVENT, SO THE PICTURE HAS TO KEEP SAYING IT ────────
+
+    ⚠️ **`docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` applied to a
+    stretch of the fight instead of to a moment of it.** From the step above, the boss throws nothing
+    and every pulse takes three times as much off it; the burst that announced the change is over in
+    half a second and the window it announced is not. A hull shedding two fragments every fifth of a
+    second is the one thing this file can say for as long as the state lasts, with no new drawing —
+    `reports/where-the-art-ceiling-is-2026-08-14.md` owns that half and 0149 is where it got to.
+
+    ⚠️ **On `w.steps` rather than on a countdown**, so the trickle is the same trickle whatever step
+    the window opened on and there is no second piece of state to reset when a boss dies.
+  */
+  if (stance.kind === 'bare' && w.steps % BURST.barePulse === 0) burst(w, boss.along, boss.across, BURST.bare);
 }
 
 /**

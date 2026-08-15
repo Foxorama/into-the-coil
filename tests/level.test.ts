@@ -6,9 +6,11 @@ import { FORMATIONS, FORMATION_KINDS, gapAcross } from '../src/content/formation
 import { BURST } from '../src/content/debris.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { INVULN_STEPS } from '../src/content/ships.ts';
-import { phaseFor } from '../src/app/boss.ts';
-import { BOSS_ATTACK_KINDS, BOSS_MOVE_KINDS } from '../src/content/bosses.ts';
-import { GameFrame, SHIP_START_ALONG, advanceLevel, resetScene, respawn } from '../src/app/frame.ts';
+import { curtainSpacing, openBy, phaseFor } from '../src/app/boss.ts';
+import { BOSS_ATTACK_KINDS, BOSS_MOVE_KINDS, BOSS_STANCE_KINDS } from '../src/content/bosses.ts';
+import { BOSS_DEATH_STEPS, GameFrame, SHIP_START_ALONG, advanceLevel, resetScene, respawn } from '../src/app/frame.ts';
+import { ASSIST_LADDER, DEFAULT_ASSISTS, tuningFor } from '../src/sim/assist.ts';
+import { SHOTS } from '../src/content/shots.ts';
 import { playableWorld } from './world.ts';
 import {
   ACROSS_CULL_MAX,
@@ -24,7 +26,7 @@ import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { MAX_BARRELS, SPREAD_STEP, UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
 import { DIFFICULTIES } from '../src/content/difficulty.ts';
-import { SHIPS } from '../src/content/ships.ts';
+import { SHIPS, fullHealthFor } from '../src/content/ships.ts';
 import { BAR_SECONDS } from '../src/content/music.ts';
 
 /**
@@ -479,6 +481,15 @@ describe('a boss fight can reach all of its phases', () => {
         const before = row.phases[i - 1]!;
         const after = row.phases[i]!;
         expect(after.upTo, `${kind}'s phases are not ordered from full to empty`).toBeLessThan(before.upTo);
+        /*
+          ⚠️ **A `bare` PHASE IS NOT EXEMPT FROM THIS AND THAT COST A DESIGN CHANGE TO ARRANGE** —
+          `docs/decisions/0150-the-uncoil-and-the-eye.md`. Its first draft zeroed the fan on a phase
+          that does not throw one, which would have needed an exemption here — and
+          `docs/decisions/0148-a-place-has-its-own-notes.md` is the standing warning about exactly
+          that: the guard it found had been widened past its own reason by an exemption nobody argued.
+          A bare row now carries the fan it would have thrown and is silenced by its stance, so these
+          two lines still hold over every phase in the game.
+        */
         // Not a claim about the values — a claim that a later phase is never a RELIEF. A boss that
         // eases off as it dies is the opposite of the escalation `docs/game.md` asks a boss for.
         expect(after.fireEvery, `${kind}'s phase ${i} fires slower than the one before it`).toBeLessThanOrEqual(
@@ -1297,6 +1308,293 @@ describe('0121 — a wave is close enough to die together', () => {
 });
 
 /**
+ * Damage a second, everything landing, at `tier` of each upgrade ladder.
+ *
+ * ⚠️ **Hoisted out of 0124's block and shared with 0150's**, because the two ask the same question
+ * about the same fight — *how long does this band of health last* — and two descriptions of the
+ * player's damage would disagree the first time either moved.
+ */
+const dpsAt = (tier: number): number => {
+  const ship = Object.values(SHIPS)[0]!;
+  const upgrades: ('weapon' | 'missile')[] = [];
+  for (let i = 0; i < tier; i++) {
+    upgrades.push('weapon');
+    upgrades.push('missile');
+  }
+  const w = weaponFor(ship, upgrades);
+  return (
+    (w.shots * w.damage) / (w.fireEvery / STEPS_PER_SECOND) +
+    (w.launchers > 0 ? (w.launchers * w.missileDamage) / (w.missileEvery / STEPS_PER_SECOND) : 0)
+  );
+};
+
+/**
+ * THE UNCOIL AND THE EYE — `docs/decisions/0150-the-uncoil-and-the-eye.md`.
+ *
+ * ⚠️ **Reported**: *"the bosses need to be more interactive with more varied attacks, a baseline is
+ * the jormungdar boss battle from Golf-Stars."*
+ * `reports/the-boss-vocabulary-is-one-fan-2026-08-14.md` measured that four of the five
+ * `BOSS_ATTACK_KINDS` are one mechanism, and named the word *interactive* as being about the FINISHER
+ * rather than about the attacks: 0050's shield and 0053's bomb both exist and neither has a moment it
+ * is for.
+ *
+ * ⚠️ **Everything below is about the two stances that answer that**, and one of them — the curtain's
+ * spacing — is stated in the ship's own radius rather than in any constant the code that draws it can
+ * see, which is `docs/decisions/0027-measure-the-picture-not-the-model.md`'s ask.
+ */
+describe('0150 — a boss can empty everything it has, and then open', () => {
+  /** The smallest the player's circle ever gets, walked off the ladder rather than remembered. */
+  const smallestHurtbox = Math.min(
+    ...ASSIST_LADDER.hurtbox.map((h) => tuningFor({ ...DEFAULT_ASSISTS, hurtbox: h }).hurtbox),
+  );
+
+  it('THE REPORTED ONE: an uncoil has no hole the ship can fly through, at any hurtbox', () => {
+    /*
+      ⚠️ **THE WHOLE CLAIM, AND IT IS GEOMETRY RATHER THAN A FEELING.** *"A barrage no pilot dodges:
+      your shields must absorb N strikes"* is the one thing in the predecessor's fight that gives a
+      hoarded resource a reason, and it is true only if the curtain is genuinely impassable. A ship
+      sitting exactly between two neighbours is `spacing / 2` from each, and it is touching them
+      whenever that is less than its radius plus the bullet's — so the curtain holds iff
+      `spacing < 2 × (shipRadius + shotRadius)`.
+
+      ⚠️ **At the SMALLEST hurtbox the settings allow, not at the standard one.**
+      `docs/decisions/0024-the-accessibility-floor-is-settings.md` permits an assist to make the game
+      easier and this would not break that rule — but a player who turned `forgiving` on would sail
+      through the one attack in the game that exists to teach them what a shield is for, and never
+      find out. Sizing against the smallest circle costs half a unit of spacing and nothing else.
+
+      ⚠️ **`curtainSpacing` is asked rather than restated.** `gap` is a ceiling on the spacing and not
+      the spacing, so a guard that recomputed it would be checking this file's arithmetic against
+      itself — which is the failure 0027 names. What it is compared against is the ship's radius and
+      the bullet's, neither of which `src/app/boss.ts` has ever heard of.
+    */
+    const reach = SHIPS.proof.radius * smallestHurtbox;
+    let found = 0;
+    for (const kind of BOSS_KINDS) {
+      for (const phase of BOSSES[kind].phases) {
+        if (phase.stance.kind !== 'overwhelm') continue;
+        found++;
+        const spacing = curtainSpacing(phase.stance.gap);
+        const clears = 2 * (reach + SHOTS[BOSSES[kind].shot].radius);
+        expect(
+          spacing,
+          `${kind}'s uncoil stands its shots ${spacing.toFixed(2)} apart, and a ship ${reach.toFixed(2)} across ` +
+            `flies between them at anything over ${clears.toFixed(2)} — so it is a fan, not a barrage`,
+        ).toBeLessThan(clears);
+      }
+    }
+    // A geometric claim about a set nobody authored into is a claim about nothing — 0005.
+    expect(found, 'no boss in the game has an uncoil, so the assertion above checked nothing').toBeGreaterThan(0);
+  });
+
+  it('and the window is the last thing a fight does, once', () => {
+    /*
+      ⚠️ **THE ONE THING THE ESCALATION RULE CANNOT SEE.** A bare row carries the fan it would have
+      thrown, so *fires slower* and *throws less* both still hold over it — and neither of them
+      notices that it throws nothing at all. A window in the middle of a fight is a relief the fight
+      then carries on through, which is precisely what that rule exists to refuse and precisely the
+      case it cannot state. So: a boss may bare itself once, at the end.
+
+      ⚠️ **And an uncoil is never the FIRST phase**, because the curtain is thrown on the step a phase
+      is ENTERED — `src/app/frame.ts` — and the opening phase is the one the boss arrives in. An
+      overwhelm authored there would never throw anything at all, which is a dead row that reads
+      exactly like a live one.
+    */
+    for (const kind of BOSS_KINDS) {
+      const stances = BOSSES[kind].phases.map((p) => p.stance.kind);
+      const bares = stances.filter((s) => s === 'bare');
+      expect(bares.length, `${kind} bares itself ${bares.length} times, and a window is a finisher`).toBeLessThan(2);
+      if (bares.length === 1) {
+        expect(stances[stances.length - 1], `${kind} goes on fighting after it has opened`).toBe('bare');
+      }
+      const uncoils = stances.filter((s) => s === 'overwhelm');
+      expect(uncoils.length, `${kind} uncoils ${uncoils.length} times, and it has one thing to empty`).toBeLessThan(2);
+      expect(stances[0], `${kind} opens on an uncoil, so its curtain is never thrown`).not.toBe('overwhelm');
+    }
+  });
+
+  it('and a window lasts longer than the death it runs into', () => {
+    /*
+      ⚠️ **THE FLOOR IS `BOSS_DEATH_STEPS` AND NOT A NUMBER OF ITS OWN.** A bared window runs straight
+      into the explosion that ends the fight, so a window shorter than that beat is one the player
+      only ever sees inside it — and 0062 spent a whole decision on the beat being long enough to be
+      noticed. Held against the constant so the day one moves, the other moves with it.
+
+      ⚠️ **AND THE MEASUREMENT DIVIDES BY THE MULTIPLIER, WHICH IS THE POINT OF WRITING IT AT ALL.**
+      The guard above this one — *"every phase lasts long enough to be seen as one"* — reads a band of
+      health against a rate of damage, and a bare phase takes `damageScale` times as much off per
+      pulse. So the honest duration of a window is its band divided by its own multiplier, and a guard
+      that used the band alone would report a 5.3-second window that lasts 1.8. That is exactly the
+      shape `docs/decisions/0027-measure-the-picture-not-the-model.md` calls a guard fired on the
+      wrong quantity, and it was green on this table before this line existed.
+    */
+    const floor = BOSS_DEATH_STEPS / STEPS_PER_SECOND;
+    const fastest = dpsAt(UPGRADE_TIERS - 1);
+    let found = 0;
+    for (const kind of BOSS_KINDS) {
+      const row = BOSSES[kind];
+      const total = (row.health * DIFFICULTIES.savior.toughness) / fastest;
+      for (let i = 0; i < row.phases.length; i++) {
+        const phase = row.phases[i]!;
+        if (phase.stance.kind !== 'bare') continue;
+        found++;
+        const band = phase.upTo - (row.phases[i + 1]?.upTo ?? 0);
+        const seconds = (band * total) / phase.stance.damageScale;
+        expect(
+          seconds,
+          `${kind}'s window lasts ${seconds.toFixed(2)}s at max weapons against a ${floor.toFixed(2)}s death — ` +
+            'the player meets it inside its own explosion',
+        ).toBeGreaterThan(floor);
+      }
+    }
+    expect(found, 'no boss in the game opens, so the assertion above checked nothing').toBeGreaterThan(0);
+  });
+
+  it('and every stance in the union is actually authored somewhere', () => {
+    /*
+      ⚠️ **`docs/decisions/0016-a-hub-enumerates-kinds.md`'s own test, applied to a union that is
+      content rather than code.** An arm nobody uses is an arm nobody has flown, and the two guards
+      above are geometry and arithmetic over rows that might not exist — this is what makes them
+      claims about the shipped game.
+    */
+    const authored = new Set(BOSS_KINDS.flatMap((k) => BOSSES[k].phases.map((p) => p.stance.kind)));
+    for (const kind of BOSS_STANCE_KINDS) {
+      expect(authored.has(kind), `no boss in the game ever stands in \`${kind}\``).toBe(true);
+    }
+  });
+
+  /** A level that is nothing but the boss under test, so the fight is the only thing running. */
+  const solo = (boss: (typeof BOSS_KINDS)[number]) =>
+    ({ waves: [], pickups: [], bossAt: 200, boss, theme: 'approach' } as const);
+
+  /** Drive a fight until the boss is on station, then put it at `fraction` of its health. */
+  const fightAt = (boss: (typeof BOSS_KINDS)[number], fraction: number) => {
+    const { world } = playableWorld(solo(boss));
+    const frame = new GameFrame(world);
+    for (let i = 0; i < 960; i++) frame.step();
+    world.bossPool.at(0).health = world.bossFullHealth * fraction;
+    return { world, frame };
+  };
+
+  it('THE OTHER REPORTED ONE: the uncoil is thrown, and the ship cannot get out of the way', () => {
+    /*
+      ⚠️ **DRIVEN, on the terms this file already sets for a boss fight**: the real `GameFrame` over a
+      real `World` with no browser anywhere. What the table guard above proves is that the geometry
+      leaves no hole; what this proves is that the curtain is actually thrown, spans the lane, and
+      arrives — three things that are each true of nothing at all if `throwCurtain` is never reached.
+
+      ⚠️ **The fixture never dodges** — `tests/world.ts` holds the ship on station — which is what
+      makes *how many hits did it cost* answerable. It is the same fixture the whole of this file's
+      fight coverage runs on.
+    */
+    const { world, frame } = fightAt('chorus', 0.5);
+    // Just above the uncoil's threshold, so the next hit crosses into it.
+    world.enemyShots.clear();
+    world.bossPool.at(0).health = world.bossFullHealth * 0.47;
+    let widest = 0;
+    for (let i = 0; i < 4 && world.enemyShots.size === 0; i++) {
+      world.bossPool.at(0).health = world.bossFullHealth * 0.45;
+      frame.step();
+    }
+    expect(world.enemyShots.size, 'the uncoil threw nothing at all').toBeGreaterThan(10);
+    let lowest = ACROSS_SPAN;
+    for (let i = 0; i < world.enemyShots.size; i++) {
+      const across = world.enemyShots.at(i).across;
+      if (across < lowest) lowest = across;
+      if (across > widest) widest = across;
+    }
+    /*
+      ⚠️ **The SPAN, in world units, and not the count.** A curtain of the right number of bullets
+      that all left from the middle of the lane would pass every arithmetic guard in this file and be
+      a fan on screen — `docs/decisions/0027-measure-the-picture-not-the-model.md`.
+    */
+    expect(lowest, `the uncoil's nearest edge sat ${lowest.toFixed(1)} into the lane`).toBeLessThan(1);
+    expect(widest, `the uncoil's far edge stopped ${(ACROSS_SPAN - widest).toFixed(1)} short of the lane`).toBeGreaterThan(
+      ACROSS_SPAN - 1,
+    );
+  });
+
+  it('and it costs exactly one hit, however long the player takes to get there', () => {
+    /*
+      ⚠️ **THE BOUND THAT MADE THIS AFFORDABLE, AND IT IS THE REASON THE CURTAIN IS NOT ON A
+      CADENCE.** A phase is keyed to remaining health, so a base-weapon player stands inside one for
+      three times as long as a player at the design loadout — and an unavoidable attack on `fireEvery`
+      would bill them three times as many shields for the same phase. Thrown once, as the phase turns
+      over, it costs one hit to everybody. `MAX_SHIELDS` is three, so *"your shields must absorb N
+      strikes"* is answered with an N the pool can actually pay.
+
+      ⚠️ **Measured as HITS TAKEN by a ship that never moves**, which is the currency
+      `src/content/ships.ts` says the hull is counted in — not as bullets spawned.
+
+      ⚠️ **The phase's ORDINARY fan is silenced for the measurement, and it is the only way to ask
+      this question.** An uncoil phase still throws the row's attack; a fixture that never dodges
+      walks into that too, and the first draft of this guard read 2 and was measuring *a stationary
+      ship in a boss fight* rather than *what the curtain costs*. Holding `fireIn` off leaves exactly
+      one thing on the field that can reach the ship, which is the thing under test — the curtain
+      comes from the phase transition and not from the fire gate, so nothing about it is suppressed.
+    */
+    const { world, frame } = fightAt('chorus', 0.5);
+    // A full shell, so *how many hits did it cost* is answerable rather than *did it kill the ship*.
+    world.ship.health = fullHealthFor(world.shipRow);
+    world.bossPool.at(0).health = world.bossFullHealth * 0.47;
+    const before = world.ship.health;
+    // Long enough for the whole curtain to cross the lane and expire, with the boss held just inside
+    // the uncoil so no later phase can turn over and throw a second one.
+    for (let i = 0; i < 600; i++) {
+      world.bossPool.at(0).health = world.bossFullHealth * 0.45;
+      world.bossPool.at(0).fireIn = 999;
+      frame.step();
+    }
+    const lost = before - world.ship.health;
+    expect(lost, `the uncoil cost ${lost} of the ship's ${before} hits, and the shell only holds three`).toBe(1);
+  });
+
+  it('and a bared boss throws nothing and dies faster for it', () => {
+    /*
+      ⚠️ **BOTH HALVES OF THE WINDOW, DRIVEN, BECAUSE EITHER ALONE IS A DIFFERENT FEATURE.** A boss
+      that stopped shooting and took the same damage is a lull; one that took triple damage and kept
+      firing is a difficulty spike. The word in the report is *interactive*, and what it names is a
+      moment the player has to be in front of.
+    */
+    const { world, frame } = fightAt('axis', 0.1);
+    const phase = phaseFor(BOSSES.axis, world.bossPool.at(0).health, world.bossFullHealth);
+    expect(phase.stance.kind, 'the fixture is not in the window it is about to measure').toBe('bare');
+    expect(openBy(phase), 'a bared boss takes no more than a fighting one').toBeGreaterThan(1);
+
+    world.enemyShots.clear();
+    for (let i = 0; i < 300; i++) {
+      world.bossPool.at(0).health = world.bossFullHealth * 0.1;
+      frame.step();
+    }
+    expect(world.enemyShots.size, 'the boss went on shooting with its eye open').toBe(0);
+  });
+
+  it('and the picture says so for as long as the window lasts', () => {
+    /*
+      ⚠️ **`docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`, applied to a
+      STATE.** The burst that announced the change is over in half a second; the window it announced
+      is not, and 0036 records three play reports of exactly this shape being filed as collision
+      faults that did not exist. A hull shedding fragments for as long as it is open is the one thing
+      this game can say with no new drawing primitive.
+
+      ⚠️ **Measured a full second AFTER the change**, deliberately past anything the transition itself
+      threw, so what it sees is the trickle rather than the announcement.
+    */
+    const { world, frame } = fightAt('axis', 0.1);
+    for (let i = 0; i < 120; i++) {
+      world.bossPool.at(0).health = world.bossFullHealth * 0.1;
+      frame.step();
+    }
+    world.debris.clear();
+    for (let i = 0; i < 60; i++) {
+      world.bossPool.at(0).health = world.bossFullHealth * 0.1;
+      frame.step();
+    }
+    expect(world.debris.size, 'a bared boss sheds nothing, so the window is invisible').toBeGreaterThan(0);
+  });
+});
+
+/**
  * THE BOSS IS A BOSS — `docs/decisions/0124-the-boss-is-a-boss.md`.
  *
  * ⚠️ **Reported**: *"at max level weapons, the boss dies too fast still, it's more of a mid-level
@@ -1312,21 +1610,6 @@ describe('0121 — a wave is close enough to die together', () => {
  * **So the design loadout is tier 2 and up, and the bare fight is a consequence rather than a case.**
  */
 describe('0124 — a boss lasts long enough to be one, at the loadout the game is tuned for', () => {
-  /** Damage a second, everything landing, at `tier` of each ladder. */
-  const dpsAt = (tier: number): number => {
-    const ship = Object.values(SHIPS)[0]!;
-    const upgrades: ('weapon' | 'missile')[] = [];
-    for (let i = 0; i < tier; i++) {
-      upgrades.push('weapon');
-      upgrades.push('missile');
-    }
-    const w = weaponFor(ship, upgrades);
-    return (
-      (w.shots * w.damage) / (w.fireEvery / STEPS_PER_SECOND) +
-      (w.launchers > 0 ? (w.launchers * w.missileDamage) / (w.missileEvery / STEPS_PER_SECOND) : 0)
-    );
-  };
-
   /*
     ⚠️ **THE FASTEST THE GAME CAN KILL, which is the worst case for *"dies too fast"*.** A floor
     written at the design loadout would be met by a boss that evaporates for a player who has
@@ -1363,11 +1646,20 @@ describe('0124 — a boss lasts long enough to be one, at the loadout the game i
 
       ⚠️ **Driven off the phase TABLE rather than a count**, so a boss whose phases are authored
       unevenly is measured on its shortest one — which is the one that vanishes.
+
+      ⚠️ **A `bare` phase is measured by 0150's guard and not by this one, and the reason is that this
+      one would get it wrong** — `docs/decisions/0150-the-uncoil-and-the-eye.md`. Every phase here is
+      a band of health read against a rate of damage, and a bared boss takes `damageScale` times as
+      much off per pulse: the band this arithmetic calls 5.3 seconds is 1.8 in the player's hands. A
+      guard reporting the wrong number is worse than no guard, which is
+      `docs/decisions/0027-measure-the-picture-not-the-model.md`'s whole subject.
     */
     for (const kind of BOSS_KINDS) {
       const total = (BOSSES[kind].health * TUNED.toughness) / FASTEST;
-      const ups = BOSSES[kind].phases.map((p) => p.upTo);
-      const shortest = Math.min(...ups.map((u, i) => u - (ups[i + 1] ?? 0)));
+      const phases = BOSSES[kind].phases;
+      const ups = phases.map((p) => p.upTo);
+      const bands = ups.map((u, i) => (phases[i]!.stance.kind === 'bare' ? Infinity : u - (ups[i + 1] ?? 0)));
+      const shortest = Math.min(...bands);
       expect(
         shortest * total,
         `${kind}'s shortest phase is ${(shortest * total).toFixed(1)}s at max weapons — the player never sees it change`,

@@ -103,6 +103,29 @@ export const BURST = {
    */
   phase: 14,
   /**
+   * Fragments per PULSE while a boss is BARE — and it stays bare until the fight ends.
+   *
+   * ⚠️ **`docs/decisions/0150-the-uncoil-and-the-eye.md`, and it is
+   * `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` applied to a STATE
+   * rather than to an event.** Every other number in this table is thrown once, at a moment; a
+   * vulnerability window is a stretch of the fight the player has to notice they are inside. The
+   * model resolves it — the boss stops firing and takes three times the damage — and 0036 records
+   * three separate play reports of exactly that shape being filed as collision faults that did not
+   * exist.
+   *
+   * ⚠️ **The smallest number here, and the pulse is what makes it read.** A hull shedding two
+   * fragments every fifth of a second is a thing coming apart; the same fragments thrown at once are
+   * a puff, which is `boss` and `dying`'s argument at the other end of the scale. It is deliberately
+   * quieter than `phase` — the change INTO the window is the event, and this is the window itself.
+   *
+   * ⚠️ **The ceiling is the debris pool and it shares a screen with a boss death**, because the two
+   * are separated by nothing: the window runs straight into the explosion that ends it.
+   * `tests/budget.test.ts` holds the arithmetic.
+   */
+  bare: 2,
+  /** Steps between one bare pulse and the next. */
+  barePulse: 12,
+  /**
    * Fragments when a shield is spent.
    *
    * ⚠️ **Fewest of the three, and it exists because a shield popping is an EVENT the model resolves

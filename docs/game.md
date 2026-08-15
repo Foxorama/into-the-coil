@@ -273,6 +273,14 @@ heavier loadout shortens the fight without trivialising it.
 says how much boss is left, and whether that reads as progress is the first question a play-test of
 level one has to answer.
 
+⚠️ **AND A PHASE MAY NOW EMPTY THE BOSS OR OPEN IT** —
+[0150](decisions/0150-the-uncoil-and-the-eye.md), from *"the bosses need to be more interactive with
+more varied attacks."* Two of the Jörmungandr fight's five mechanisms that this game had no vocabulary
+for: an **uncoil** — one curtain right across the lane with no hole in it, thrown as the phase turns
+over — and a **bared window**, where the boss stops shooting and takes triple damage until it dies.
+**The uncoil is the first thing in this game a shield is FOR**, which is the half the word
+*interactive* was actually asking for. On the chorus and the axis, and on nothing else yet.
+
 Hazards are environmental and must be dealt with, not only dodged. Asteroids are the reference case:
 shoot one and the fragments become weapons that damage enemies — a hazard that stays playable under
 auto-fire and low-input control schemes.
