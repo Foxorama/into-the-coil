@@ -725,6 +725,36 @@ different thematically as a euro-beat technical trance melody… the level melod
 earlier ones and aren't their own unique themes and styles."* The answer was its notes, and
 [0148](decisions/0148-a-place-has-its-own-notes.md) is that work.
 
+### ⚠️ THE QUEUE — TAKE THE TOP UNDONE ITEM AND DO ONLY THAT ONE
+
+⚠️ **THIS SECTION EXISTS SO A FRESH SESSION NEEDS NO PROMPT BEYOND *"read the handover and do the next
+item"***. Everything below it is findings; this is the ORDER. **Do one item, land it, stop.** The next
+session takes the next one — [0033](decisions/0033-a-branch-starts-at-main.md), one PR at a time.
+
+⚠️ **CHECK `gh pr list` FIRST. If a PR is open, the queue is BLOCKED** — help it land, or stop and say
+so. A second branch started now is the failure 0033 is written about.
+
+⚠️ **TICK AN ITEM OFF IN THIS FILE AS PART OF ITS OWN PR.** An item that landed and still reads as
+`TODO` is how two sessions build the same thing — which is exactly what happened on 2026-08-14, when
+three cloud routines could not push and the third rebuilt the second's work from scratch.
+
+| # | item | brief | state |
+|---|---|---|---|
+| 1 | **`overwhelm` + the bared-vulnerability window** — what makes a boss fight a fight rather than a damage race. Reuses the shield and bomb, which currently have no moment they are FOR. | [`the-boss-vocabulary-is-one-fan`](../reports/the-boss-vocabulary-is-one-fan-2026-08-14.md), ordering item 1 | **TODO** |
+| 2 | **`lance`** — the telegraphed lock-on, the first attack the player is warned about. Needs a new drawing primitive, so [0036](decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md) governs it. | same report, ordering item 2 | **TODO** |
+| 3 | **`sweep` and `mine`** — a curtain that walks, and a second-order shot that detonates into a ring. Cheapest of the four. | same report, ordering item 3 | **TODO** |
+| — | the links guard that went red once inside `prove` and green everywhere since | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) — **owed a diagnosis, not a rerun** | **OPEN** |
+
+⚠️ **THE MUSIC IS NOT IN THE QUEUE AND THAT IS DELIBERATE.** *"We can go back to working on the music
+when I get back"* — the `run` arrangement and the tempo question both want the player's ear, and the
+tempo half is a gameplay rebalance wearing a music change. **Do not touch the ladder, the tempo, a
+place's notes or `MUSIC_*` from this queue.**
+
+⚠️ **EVERY ITEM ABOVE CARRIES THE SAME NON-NEGOTIABLES**, because they are `CLAUDE.md`'s and not the
+queue's: guards over the thing the item is about, probes seen to go RED via
+`node scripts/prove-guard.mjs <n>`, a decision in `docs/decisions/`, a rollback note on the PR, and
+`npm run prove` before pushing. **An item is not done because it works.**
+
 ### ⚠️ START HERE NEXT SESSION: THE RUN IS A PAD AND A FLUTE, AND THE TEMPO QUESTION IS DUE
 
 ⚠️ **THE TWELFTH PLAY-TEST OUTRANKS EVERYTHING BELOW IT** —
