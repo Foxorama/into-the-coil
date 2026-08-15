@@ -79,8 +79,8 @@ export const PROBES = [
     guard: 'every phase is reachable, and they only get harder',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '      { upTo: 0.3, fireEvery: 48, shots: 5, spread: 0.9, patrolScale: 2 },',
-      replace: '      { upTo: 0.3, fireEvery: 120, shots: 5, spread: 0.9, patrolScale: 2 },',
+      find: "      { upTo: 0.3, fireEvery: 48, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' } },",
+      replace: "      { upTo: 0.3, fireEvery: 120, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' } },",
     },
   },
   {

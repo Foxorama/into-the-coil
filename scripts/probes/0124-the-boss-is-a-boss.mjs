@@ -36,8 +36,10 @@ export const PROBES = [
     guard: 'and every phase lasts long enough to be seen as one',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '      { upTo: 0.6, fireEvery: 66, shots: 3, spread: 0.5, patrolScale: 1.4 },',
-      replace: '      { upTo: 0.62, fireEvery: 66, shots: 3, spread: 0.5, patrolScale: 1.4 },\n      { upTo: 0.6, fireEvery: 66, shots: 3, spread: 0.5, patrolScale: 1.4 },',
+      find: "      { upTo: 0.6, fireEvery: 66, shots: 3, spread: 0.5, patrolScale: 1.4, stance: { kind: 'volley' } },",
+      replace:
+        "      { upTo: 0.62, fireEvery: 66, shots: 3, spread: 0.5, patrolScale: 1.4, stance: { kind: 'volley' } },\n" +
+        "      { upTo: 0.6, fireEvery: 66, shots: 3, spread: 0.5, patrolScale: 1.4, stance: { kind: 'volley' } },",
     },
   },
   {

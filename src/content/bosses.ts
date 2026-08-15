@@ -139,6 +139,82 @@ export type BossAttack =
    */
   | { kind: 'wall'; gap: number };
 
+/**
+ * Every way a boss can STAND in a phase. Closed.
+ *
+ * ── WHY A MOMENT IS NOT AN IDEA, WHICH IS WHY THIS IS NOT AN ARM OF `BossAttack` ─────────────────
+ *
+ * ⚠️ **`docs/decisions/0150-the-uncoil-and-the-eye.md`.** Reported from play: *"the bosses need to be
+ * more interactive with more varied attacks."* `reports/the-boss-vocabulary-is-one-fan-2026-08-14.md`
+ * proposed `overwhelm` alongside `sweep`, `lance` and `mine` as four arms of `BossAttack` — and three
+ * of those four are IDEAS, things a whole boss can be built around. **`overwhelm` is not.** A barrage
+ * sized against the shield pool is a *moment* in a fight, and a boss whose every volley was
+ * unavoidable would not be a fight at all. `BossAttack` says what a boss IS; this says what a phase
+ * DOES, which is the axis the report's own finisher — *"a phase that says stop shooting and open"* —
+ * was already asking for.
+ *
+ * ⚠️ **`fireEvery`, `shots` and `spread` stay on the phase rather than moving into the arms.** Two of
+ * the three arms fire a fan and use all three; `bare` fires nothing and carries zeros, which is a
+ * TRUE statement about it rather than a field it ignores. The alternative — `shots` and `spread`
+ * duplicated across two arms so that the third need not mention them — is more type and less
+ * information.
+ */
+export const BOSS_STANCE_KINDS = ['volley', 'overwhelm', 'bare'] as const;
+
+/** Derived from the list, so a stance cannot exist in the union and be missing from the switch. */
+export type BossStanceKind = (typeof BOSS_STANCE_KINDS)[number];
+
+export type BossStance =
+  /** The phase's fan, at the row's aim. What every phase in the game did. */
+  | { kind: 'volley' }
+  /**
+   * The phase's fan — **and one curtain right across the lane on the step the phase opens**, with no
+   * gap in it wide enough for the ship to pass through. The uncoil.
+   *
+   * ⚠️ **ONE curtain per phase, not a cadence, and that bound is structural rather than tuned.** A
+   * phase is keyed to remaining health, so *how long the player is inside it* is a function of their
+   * loadout — an unavoidable attack on a CADENCE therefore costs a well-armed player one shield and a
+   * base-weapon player a dozen, and no `fireEvery` exists that is right for both. Thrown once, as the
+   * phase turns over, it costs exactly **one hit to anybody**, which is what *"sized against the
+   * shield pool"* has to mean when the pool is three
+   * (`docs/decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md`).
+   *
+   * ⚠️ **`gap` is a MAXIMUM spacing and not the spacing.** The curtain spans the whole lane, so the
+   * count is `ceil(ACROSS_SPAN / gap)` and the real spacing is the lane divided by it — which lands a
+   * shot exactly on each edge and leaves no wider hole at one end than at the other.
+   * `tests/level.test.ts` holds that the spacing is narrower than the ship can fit through, in world
+   * units, off the ship's own radius and the bullet's.
+   */
+  | { kind: 'overwhelm'; gap: number }
+  /**
+   * It stops shooting and opens. The eye.
+   *
+   * ⚠️ **The one phase that is a RELIEF, and it is the last one or it is a bug.** Everything else in
+   * the table escalates — `tests/level.test.ts` refuses a phase that fires slower or throws less than
+   * the one before it — and a boss that stopped shooting and then started again would be exactly the
+   * *"boss that eases off as it dies"* that guard exists to catch. So this arm may appear once, at
+   * the end, and the guard is scoped to the run of phases in front of it rather than widened.
+   *
+   * ⚠️ **`damageScale` multiplies what the player's shots take off it**, so the window is a moment
+   * that ENDS the fight rather than a lull the fight continues through.
+   *
+   * ⚠️ **A bare row still carries the fan and the cadence it WOULD have thrown, and zeroing them was
+   * the first draft.**
+   * `src/app/boss.ts` returns before the fire gate on this arm, so the stance is what silences the
+   * boss — and a row of zeros beside it is a second description of the same fact, which is the shape
+   * `docs/decisions/0017-the-state-is-slices.md` refuses everywhere else. It is also the more
+   * dangerous of the two to lean on: the zeros are what a hand copying a volley row would get wrong,
+   * and `scripts/probes/0150-the-uncoil-and-the-eye.mjs` records that the guard could not tell the
+   * difference until they came out.
+   *
+   * ⚠️ **And it pays a second time: the row stays inside BOTH escalation rules with no exemption.**
+   * `tests/level.test.ts` wants a phase that throws no less than the one before it, and
+   * `tests/difficulty.test.ts` wants one that fires STRICTLY faster on every tier — a zeroed row
+   * would have needed carving out of two guards written for different reasons, which is the shape
+   * `docs/decisions/0148-a-place-has-its-own-notes.md` is the standing warning about.
+   */
+  | { kind: 'bare'; damageScale: number };
+
 export interface BossPhase {
   /**
    * Active while remaining health is at or below this fraction of the row's full `health`.
@@ -148,7 +224,7 @@ export interface BossPhase {
    * phase at all. `tests/level.test.ts` holds that.
    */
   upTo: number;
-  /** Steps between volleys. */
+  /** Steps between volleys. Read by every stance except `bare`, which does not fire at all. */
   fireEvery: number;
   /** Shots per volley, spread evenly about the aim. */
   shots: number;
@@ -156,6 +232,14 @@ export interface BossPhase {
   spread: number;
   /** Multiplier on the row's `patrol`, so a phase can change how fast it slides across the lane. */
   patrolScale: number;
+  /**
+   * What the boss does in this phase beyond throwing its fan.
+   *
+   * ⚠️ **Required rather than defaulted to `volley`**, on `src/content/enemies.ts`'s own terms for
+   * `attack` and this file's for `move`: a phase without one is a decision somebody did not make,
+   * and `docs/decisions/0016-a-hub-enumerates-kinds.md` says the table is the guard.
+   */
+  stance: BossStance;
 }
 
 export interface BossRow extends Body {
@@ -291,19 +375,19 @@ export const BOSSES: Record<BossKind, BossRow> = {
         slower than a turret, and it is the phase in which the player learns where the boss's hull
         ends — which is the one thing a 26-unit sprite makes genuinely hard to judge.
       */
-      { upTo: 1, fireEvery: 90, shots: 1, spread: 0, patrolScale: 1 },
+      { upTo: 1, fireEvery: 90, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' } },
       /*
         Half health: a three-way spread, so a player who has settled into one lane is moved out of
         it. The spread is wide enough that standing still is punished and narrow enough that there is
         always a side to leave towards.
       */
-      { upTo: 0.6, fireEvery: 66, shots: 3, spread: 0.5, patrolScale: 1.4 },
+      { upTo: 0.6, fireEvery: 66, shots: 3, spread: 0.5, patrolScale: 1.4, stance: { kind: 'volley' } },
       /*
         The last third: five shots, wider, faster, and the hull itself moving at twice its opening
         speed. Every arsenal meets this phase — that is 0040's point — so it has to be survivable
         with the base weapon alone, which is exactly what the first play-test of this build measures.
       */
-      { upTo: 0.3, fireEvery: 48, shots: 5, spread: 0.9, patrolScale: 2 },
+      { upTo: 0.3, fireEvery: 48, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' } },
     ],
   },
   /**
@@ -347,15 +431,15 @@ export const BOSSES: Record<BossKind, BossRow> = {
     shot: 'lance',
     phases: [
       // No gentle opening. It starts where the sentinel's second phase ended.
-      { upTo: 1, fireEvery: 72, shots: 3, spread: 0.45, patrolScale: 1 },
-      { upTo: 0.7, fireEvery: 60, shots: 5, spread: 0.8, patrolScale: 1.3 },
-      { upTo: 0.4, fireEvery: 48, shots: 5, spread: 1.15, patrolScale: 1.8 },
+      { upTo: 1, fireEvery: 72, shots: 3, spread: 0.45, patrolScale: 1, stance: { kind: 'volley' } },
+      { upTo: 0.7, fireEvery: 60, shots: 5, spread: 0.8, patrolScale: 1.3, stance: { kind: 'volley' } },
+      { upTo: 0.4, fireEvery: 48, shots: 5, spread: 1.15, patrolScale: 1.8, stance: { kind: 'volley' } },
       /*
         The last fifth: seven shots across most of a right angle, and a hull crossing the lane at
         two and a half times its opening speed. Every arsenal meets every phase, so this has to be
         survivable with the base weapon alone — which is exactly what `tests/level.test.ts` drives.
       */
-      { upTo: 0.2, fireEvery: 42, shots: 7, spread: 1.4, patrolScale: 2.5 },
+      { upTo: 0.2, fireEvery: 42, shots: 7, spread: 1.4, patrolScale: 2.5, stance: { kind: 'volley' } },
     ],
   },
 
@@ -398,9 +482,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     shot: 'flak',
     phases: [
       // Wide and slow from the start: the shots are the lane-taking, not the hull.
-      { upTo: 1, fireEvery: 84, shots: 3, spread: 0.9, patrolScale: 1 },
-      { upTo: 0.66, fireEvery: 66, shots: 5, spread: 1.2, patrolScale: 1.3 },
-      { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.5, patrolScale: 1.7 },
+      { upTo: 1, fireEvery: 84, shots: 3, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' } },
+      { upTo: 0.66, fireEvery: 66, shots: 5, spread: 1.2, patrolScale: 1.3, stance: { kind: 'volley' } },
+      { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.5, patrolScale: 1.7, stance: { kind: 'volley' } },
     ],
   },
   /**
@@ -430,10 +514,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
     patrol: 0.62,
     shot: 'lance',
     phases: [
-      { upTo: 1, fireEvery: 96, shots: 1, spread: 0, patrolScale: 1 },
-      { upTo: 0.7, fireEvery: 78, shots: 3, spread: 0.4, patrolScale: 1.5 },
-      { upTo: 0.4, fireEvery: 66, shots: 3, spread: 0.7, patrolScale: 2.1 },
-      { upTo: 0.15, fireEvery: 60, shots: 5, spread: 0.9, patrolScale: 2.8 },
+      { upTo: 1, fireEvery: 96, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' } },
+      { upTo: 0.7, fireEvery: 78, shots: 3, spread: 0.4, patrolScale: 1.5, stance: { kind: 'volley' } },
+      { upTo: 0.4, fireEvery: 66, shots: 3, spread: 0.7, patrolScale: 2.1, stance: { kind: 'volley' } },
+      { upTo: 0.15, fireEvery: 60, shots: 5, spread: 0.9, patrolScale: 2.8, stance: { kind: 'volley' } },
     ],
   },
   /**
@@ -463,10 +547,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
     patrol: 0.16,
     shot: 'flak',
     phases: [
-      { upTo: 1, fireEvery: 54, shots: 3, spread: 0.7, patrolScale: 1 },
-      { upTo: 0.7, fireEvery: 42, shots: 5, spread: 1, patrolScale: 1.2 },
-      { upTo: 0.4, fireEvery: 36, shots: 7, spread: 1.3, patrolScale: 1.4 },
-      { upTo: 0.15, fireEvery: 30, shots: 7, spread: 1.6, patrolScale: 1.6 },
+      { upTo: 1, fireEvery: 54, shots: 3, spread: 0.7, patrolScale: 1, stance: { kind: 'volley' } },
+      { upTo: 0.7, fireEvery: 42, shots: 5, spread: 1, patrolScale: 1.2, stance: { kind: 'volley' } },
+      { upTo: 0.4, fireEvery: 36, shots: 7, spread: 1.3, patrolScale: 1.4, stance: { kind: 'volley' } },
+      { upTo: 0.15, fireEvery: 30, shots: 7, spread: 1.6, patrolScale: 1.6, stance: { kind: 'volley' } },
     ],
   },
   /**
@@ -496,11 +580,27 @@ export const BOSSES: Record<BossKind, BossRow> = {
     patrol: 0.45,
     shot: 'spit',
     phases: [
-      { upTo: 1, fireEvery: 72, shots: 3, spread: 0.5, patrolScale: 1 },
-      { upTo: 0.8, fireEvery: 60, shots: 3, spread: 0.9, patrolScale: 1.3 },
-      { upTo: 0.6, fireEvery: 54, shots: 5, spread: 1.1, patrolScale: 1.6 },
-      { upTo: 0.4, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2 },
-      { upTo: 0.2, fireEvery: 36, shots: 7, spread: 1.6, patrolScale: 2.4 },
+      { upTo: 1, fireEvery: 72, shots: 3, spread: 0.5, patrolScale: 1, stance: { kind: 'volley' } },
+      { upTo: 0.8, fireEvery: 60, shots: 3, spread: 0.9, patrolScale: 1.3, stance: { kind: 'volley' } },
+      { upTo: 0.62, fireEvery: 54, shots: 5, spread: 1.1, patrolScale: 1.6, stance: { kind: 'volley' } },
+      /*
+        ⚠️ **THE UNCOIL, AND IT IS THIS LEVEL'S OWN IDEA WITH THE GAPS TAKEN OUT** — 0150. Level six
+        is about there being no gaps and the rake is what that means in one word; a curtain with no
+        hole in it is the same sentence with nothing left to dodge. It is the first attack in the game
+        the shield is FOR, and it costs exactly one of them.
+      */
+      { upTo: 0.46, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2, stance: { kind: 'overwhelm', gap: 4.5 } },
+      { upTo: 0.32, fireEvery: 36, shots: 7, spread: 1.6, patrolScale: 2.4, stance: { kind: 'volley' } },
+      /*
+        ⚠️ **THE EYE.** It has thrown everything it had and it stops: no fan, no rake, a hull still
+        crossing the lane at a rung under its opening speed, and three times the damage from every
+        pulse that lands. About 1.8 seconds at max weapons, which is a beat longer than the death it
+        runs into — `tests/level.test.ts` holds that floor against `BOSS_DEATH_STEPS`.
+
+        ⚠️ **The fan it is still carrying is written out and never thrown**, which is the stance
+        saying so rather than the row — see `BossStance`.
+      */
+      { upTo: 0.18, fireEvery: 30, shots: 7, spread: 1.6, patrolScale: 1.4, stance: { kind: 'bare', damageScale: 3 } },
     ],
   },
   /**
@@ -538,11 +638,26 @@ export const BOSSES: Record<BossKind, BossRow> = {
     patrol: 0.4,
     shot: 'lance',
     phases: [
-      { upTo: 1, fireEvery: 66, shots: 3, spread: 0.6, patrolScale: 1 },
-      { upTo: 0.8, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 1.4 },
-      { upTo: 0.6, fireEvery: 48, shots: 5, spread: 1.2, patrolScale: 1.8 },
-      { upTo: 0.35, fireEvery: 42, shots: 7, spread: 1.5, patrolScale: 2.2 },
-      { upTo: 0.15, fireEvery: 36, shots: 7, spread: 1.8, patrolScale: 2.8 },
+      { upTo: 1, fireEvery: 66, shots: 3, spread: 0.6, patrolScale: 1, stance: { kind: 'volley' } },
+      { upTo: 0.8, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 1.4, stance: { kind: 'volley' } },
+      { upTo: 0.62, fireEvery: 48, shots: 5, spread: 1.2, patrolScale: 1.8, stance: { kind: 'volley' } },
+      /*
+        ⚠️ **THE UNCOIL, TIGHTER THAN LEVEL SIX'S** — 0150, `gap: 4` against the chorus's 4.5. Both
+        are narrower than the ship can pass through **at the SMALLEST hurtbox the settings allow**,
+        which is the bound `tests/level.test.ts` holds: an assist may make this game easier and
+        `docs/decisions/0024-the-accessibility-floor-is-settings.md` permits that, but a player who
+        turned one on would otherwise never find out what a shield is for. What the difference buys is
+        the picture — the last boss in the game fills the lane solid.
+      */
+      { upTo: 0.44, fireEvery: 42, shots: 7, spread: 1.5, patrolScale: 2.2, stance: { kind: 'overwhelm', gap: 4 } },
+      { upTo: 0.3, fireEvery: 36, shots: 7, spread: 1.8, patrolScale: 2.8, stance: { kind: 'volley' } },
+      /*
+        ⚠️ **THE EYE, AND IT IS THE LAST THING THE AUTHORED RUN ASKS FOR.** The ring stops, the stalk
+        slows to half what it was chasing at, and the fight ends on a window the player has to be in
+        front of rather than on a health bar reaching zero — which is the word *interactive* in
+        `reports/the-boss-vocabulary-is-one-fan-2026-08-14.md` answered at its own end.
+      */
+      { upTo: 0.16, fireEvery: 30, shots: 7, spread: 1.8, patrolScale: 1.4, stance: { kind: 'bare', damageScale: 3 } },
     ],
   },
 };

@@ -200,6 +200,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **ALL SEVEN LEVELS ARE THEIR OWN COMPOSITION; three theme kinds renamed and one moved a level** | [0146](decisions/0146-three-more-places-and-two-after-them.md), [`five-places-measured`](../reports/five-places-measured-2026-08-13.md) |
 | **A PLACE IS A BALANCE, not a ±3 dB tint over one shared arrangement; no two places may be within 3 dB** | [0147](decisions/0147-a-place-is-a-balance.md) |
 | **a hull has an INTERIOR in `space`, baked into the same bitmap; and the art can be traced without a browser** | [0149](decisions/0149-a-hull-has-an-interior.md) |
+| **a phase can EMPTY the boss in one unavoidable curtain and then stand it open — the first moment the shield is FOR** | [0150](decisions/0150-the-uncoil-and-the-eye.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -740,7 +741,7 @@ three cloud routines could not push and the third rebuilt the second's work from
 
 | # | item | brief | state |
 |---|---|---|---|
-| 1 | **`overwhelm` + the bared-vulnerability window** — what makes a boss fight a fight rather than a damage race. Reuses the shield and bomb, which currently have no moment they are FOR. | [`the-boss-vocabulary-is-one-fan`](../reports/the-boss-vocabulary-is-one-fan-2026-08-14.md), ordering item 1 | **TODO** |
+| 1 | ~~**`overwhelm` + the bared-vulnerability window**~~ | [0150](decisions/0150-the-uncoil-and-the-eye.md) — **UNFLOWN**, and the three questions it cannot answer are in it | ✅ **DONE** |
 | 2 | **`lance`** — the telegraphed lock-on, the first attack the player is warned about. Needs a new drawing primitive, so [0036](decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md) governs it. | same report, ordering item 2 | **TODO** |
 | 3 | **`sweep` and `mine`** — a curtain that walks, and a second-order shot that detonates into a ring. Cheapest of the four. | same report, ordering item 3 | **TODO** |
 | — | the links guard that went red once inside `prove` and green everywhere since | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) — **owed a diagnosis, not a rerun** | **OPEN** |
@@ -782,6 +783,23 @@ cannot express at all.
 ⚠️ **DELIBERATELY NOT ACTED ON.** The player left for a day with *"if you're not sure on the music,
 kick on with the art styles and boss styling… we can go back to working on the music when I get
 back."* The arrangement half is safe and cheap and is the first thing to do on their return.
+
+### THE FIRST OF THE FOUR HAS LANDED — [0150](decisions/0150-the-uncoil-and-the-eye.md)
+
+⚠️ **`overwhelm` AND THE WINDOW ARE BUILT, ON THE CHORUS AND THE AXIS, AND NOBODY HAS FLOWN THEM.**
+Read 0150 before picking up queue item 2: it records three things the report asked for that it does
+differently, each for a measured reason, and the three questions a green suite cannot answer.
+
+⚠️ **THE ONE TO CARRY FORWARD IS WHAT THE PROBE FOUND.** The bare rows were first authored with a
+zeroed fan, and the probe that removes `stepBoss`'s early return left the suite GREEN — the boss was
+silent because the row said zero, not because the stance said stop. Two descriptions of one fact, and
+the zeros came out. [0019](decisions/0019-a-probe-must-be-seen-to-apply.md) doing the more valuable
+half of its job, again.
+
+⚠️ **AND [0124](decisions/0124-the-boss-is-a-boss.md)'s PHASE-LENGTH GUARD WAS MEASURING THE WRONG
+QUANTITY** on a phase with a damage multiplier on it — 5.3 seconds reported against 1.8 in the
+player's hands. That is [0027](decisions/0027-measure-the-picture-not-the-model.md) and it is the
+second one this project has found in its own guards rather than the predecessor's.
 
 ### AND THE BOSSES ARE ONE FAN, FOUR WAYS — [`the-boss-vocabulary-is-one-fan`](../reports/the-boss-vocabulary-is-one-fan-2026-08-14.md)
 

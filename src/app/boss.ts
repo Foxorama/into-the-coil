@@ -94,6 +94,81 @@ export function phaseFor(row: BossRow, health: number, full: number = row.health
 }
 
 /**
+ * How much of a hit lands on a boss standing in `phase` — 1 everywhere except the window.
+ *
+ * ⚠️ **A function of the PHASE and nothing else**, so it cannot disagree with the phase the boss is
+ * actually fighting in. `src/app/frame.ts` hands it straight to `collideInto` and `blastInto` as
+ * their `damageScale`, which is the argument those two already take for exactly this shape of thing —
+ * `src/sim/collide.ts` may import `brand` and nothing else and so cannot be told what a boss is.
+ */
+export function openBy(phase: BossPhase): number {
+  return phase.stance.kind === 'bare' ? phase.stance.damageScale : 1;
+}
+
+/**
+ * How far apart a curtain's shots actually stand, in world units, for a stance authoring `gap`.
+ *
+ * ⚠️ **`gap` is a CEILING on the spacing rather than the spacing**, because the curtain has to span
+ * the whole lane and 100 does not divide by every number a hand might pick. Rounding the count up and
+ * dividing the lane by it puts a shot exactly on each edge and leaves every hole the same width —
+ * where stepping outward by `gap` until the lane runs out leaves a wider one at whichever end the
+ * arithmetic stopped on, and a curtain with one wide hole in it is a fan.
+ *
+ * ⚠️ **Exported so that `tests/level.test.ts` can ask what the spacing IS** rather than restating this
+ * arithmetic and then agreeing with itself —
+ * `docs/decisions/0027-measure-the-picture-not-the-model.md`. What the guard compares it against is
+ * the ship's own radius and the bullet's, which this function has never heard of.
+ */
+export function curtainSpacing(gap: number): number {
+  return ACROSS_SPAN / Math.ceil(ACROSS_SPAN / gap);
+}
+
+/**
+ * The uncoil: one row of shots right across the lane, with no hole the ship can pass through.
+ *
+ * ── WHY IT IS THROWN HERE AND NOT BY THE VOLLEY GATE ────────────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0150-the-uncoil-and-the-eye.md`.** It is a MOMENT and not a cadence, and that
+ * is what makes it affordable: a phase is keyed to remaining health, so how long a player stands
+ * inside one is a function of their loadout. An unavoidable attack on `fireEvery` costs a player at
+ * the design loadout one shield and a player on the base weapon a dozen, and there is no gap between
+ * volleys that is right for both. Thrown once, as the phase turns over, it costs **exactly one hit to
+ * anybody** — which is what *"sized against the shield pool"* can mean when the pool is three.
+ *
+ * ⚠️ **It makes no sound of its own, deliberately.** It lands on the step the phase changes, and
+ * `src/app/frame.ts` already cues `bossPhase` there; two cues on one step against
+ * `docs/decisions/0104-the-gun-plays-a-figure.md`'s four-voice ceiling would let the cap choose which
+ * of them the player hears. The phase cue IS this attack's announcement, and the burst beside it is
+ * the picture — `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`.
+ *
+ * ⚠️ **Nothing allocates**, on this file's own terms.
+ */
+export function throwCurtain(
+  boss: Entity,
+  gap: number,
+  shots: Pool<Entity>,
+  bullet: ShotRow,
+  speed: number,
+  scrollPerStep: number,
+): void {
+  const spacing = curtainSpacing(gap);
+  // Back out of the spacing rather than repeating its `ceil`, so there is one description of how wide
+  // a hole this curtain leaves. The division is exact up to float noise and the round absorbs that.
+  const count = Math.round(ACROSS_SPAN / spacing);
+  // `<=` so the far edge gets one too: a curtain that stopped short of the lane's end would have its
+  // one dodgeable hole at exactly the place a cornered player is already flying.
+  for (let i = 0; i <= count; i++) {
+    const shot = shots.spawn();
+    // A curtain that will not fit is dropped rather than grown, exactly as `src/sim/pool.ts` says —
+    // and the pool is fifteen times a curtain, so this is the rule rather than a case.
+    if (shot === null) break;
+    reset(shot, boss.along, spacing * i, bullet);
+    shot.velAlong = -speed + scrollPerStep;
+    shot.velAcross = 0;
+  }
+}
+
+/**
  * One step of the boss: close on its station, slide across the lane, and fire the phase's volley.
  *
  * `patrolDirection` is carried by the caller — the boss reverses at the lane edges, and which way it
@@ -223,6 +298,27 @@ export function stepBoss(
       return never;
     }
   }
+
+  /*
+    ── THE ONE PHASE THAT DOES NOT SHOOT ───────────────────────────────────────────────────────────
+
+    ⚠️ **`docs/decisions/0150-the-uncoil-and-the-eye.md`.** Reported from play: *"the bosses need to be
+    more interactive with more varied attacks."*
+    `reports/the-boss-vocabulary-is-one-fan-2026-08-14.md` names the finisher as the half that word is
+    actually asking for — *"a phase that says stop shooting and open"* — and it is the only thing in
+    this file that makes a fight end on something other than a health bar reaching zero.
+
+    ⚠️ **THIS LINE IS THE WHOLE OF *it stops shooting*, and the table deliberately does not repeat
+    it.** A bare row still carries the fan it would have thrown; zeroing those numbers was the first
+    draft, and `scripts/probes/0150-the-uncoil-and-the-eye.mjs` records what it cost — the guard could
+    not tell whether the boss was silent because of this return or because the row happened to say
+    zero, so removing the return left the suite green. One description, and it is here.
+
+    ⚠️ **It still flies.** `docs/decisions/0061-a-boss-keeps-flying.md` is not suspended for the last
+    phase of a fight: a hull that stopped as well as stopped shooting would be a target rather than a
+    window, and the phase's own `patrolScale` is what says how much it has left.
+  */
+  if (phase.stance.kind === 'bare') return direction;
 
   boss.fireIn--;
   if (boss.fireIn > 0) return direction;
