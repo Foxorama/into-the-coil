@@ -360,27 +360,52 @@ export const LABYRINTH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>
     layer whose weight is under 130 Hz. Breath and stone chips are what a corridor has up there
     anyway, and the breath is the part that carries the picture: filtered noise with a rise and a
     fall, twice a bar, which is a person who is not getting enough air.
+
+    ⚠️ **EVERY ENVELOPE HERE WAS SHORTER THAN THE NUMBER BESIDE IT SAID**, which is
+    `docs/decisions/0152-a-layer-is-heard-in-the-sum.md`'s finding about Ember Nebula's ride arriving
+    at the layer that carries this place. The decay is `exp(-curve · u)` across `seconds`, so the real
+    length is about `seconds / curve`: the exhale read 200 ms and lasted **59**, the struck frame read
+    190 ms and rang for **43**. `docs/decisions/0154-the-mix-is-authored-as-intent.md`'s solve was
+    asking for a gain of **4.32** at `run` — past `MIX_CEILING`, and past what a gain can do, because
+    multiplying a thing that puts out nothing is 0152's own subject.
+
+    ⚠️ **+4.0 dB OF MATERIAL AND 3.5 dB OFF THE PEAK, WHICH IS THE WHOLE OF WHY IT FITS.**
+    `scripts/weigh-mix.mjs` had `approach` at **98.2%** of the clipping ceiling before any of this, so
+    a louder pulse had to be a longer one and not a bigger one. Three levers, none of them `gain` on
+    its own: the tails (above), `drive: 0.75` on the skin — `saturate` is normalised, so it buys RMS
+    at an unchanged peak — and 14 ms of attack, which walks the strike out of the collective onset
+    thirteen layers share on beat one. Solved: **4.32 → 2.44**, and `run`'s `margin` −5.5 → **+3.3**.
   */
   perc: [
     {
       // THE BREATH IN. Slow front, quick back — the opposite envelope to everything else here.
+      //
+      // ⚠️ **THE CHEAPEST PLACE IN THE LAYER TO PUT LEVEL, AND THE ONE THAT CARRIES THE PICTURE.**
+      // It is noise behind a 170 ms attack, so its loudest instant arrives long after the bar's, and
+      // noise does not stack with a downbeat the way a sine does — which is why this is the one voice
+      // here that got a plain `gain`.
       steps: [1, _, _, _, 0.7, _, _, _, 0.9, _, _, _, 0.74, _, _, 0.62],
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.34, gain: 0.09, attack: 0.16, curve: 2.6, lowFrom: 2600, lowTo: 900, highFrom: 520, q: 0.9 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.42, gain: 0.21, attack: 0.17, curve: 2.1, lowFrom: 2600, lowTo: 900, highFrom: 520, q: 0.9 },
     },
     {
       // THE BREATH OUT, a beat later and shorter. Two halves of one thing, and it is why they are
       // written as two voices rather than one pattern with a longer note in it.
+      //
+      // ⚠️ **SHORTER THAN THE BREATH IN AND NOT SHORTER THAN A BREATH.** At `curve: 3.4` over 0.2 s
+      // it was a 59 ms puff, which the ear files as a hi-hat; at 125 ms it is somebody emptying their
+      // lungs, and it is still the shorter of the two.
       steps: [_, _, 0.7, _, _, _, 0.6, _, _, _, 0.66, _, _, 0.58, _, _],
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.2, gain: 0.075, attack: 0.02, curve: 3.4, lowFrom: 1800, lowTo: 700, highFrom: 400, q: 0.9 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.3, gain: 0.175, attack: 0.024, curve: 2.4, lowFrom: 1800, lowTo: 700, highFrom: 400, q: 0.9 },
     },
     {
-      // Stone chips: sixteenths, dry, quiet, and the only continuous thing in the layer.
+      // Stone chips: sixteenths, dry, quiet, and the only continuous thing in the layer. 9 ms of
+      // decay where `curve: 7` over 0.03 s gave 4 — still a chip, and now a chip with a size.
       steps: [
         0.44, 0.24, 0.32, 0.26, 0.4, 0.24, 0.3, 0.26, 0.42, 0.24, 0.32, 0.26, 0.38, 0.26, 0.32, 0.28,
         0.44, 0.24, 0.32, 0.28, 0.4, 0.26, 0.3, 0.24, 0.42, 0.26, 0.32, 0.28, 0.38, 0.28, 0.34, 0.3,
@@ -390,19 +415,32 @@ export const LABYRINTH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.075, attack: 0.0008, curve: 7, lowFrom: 9000, highFrom: 3400 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.09, attack: 0.0008, curve: 5.4, lowFrom: 9000, highFrom: 3400 },
     },
     {
       /*
-        THE SKIN. A struck frame, 176 Hz falling to 104 — the low-mid a place made of breath and chips
-        would otherwise have nothing in at all. `src/content/nebula.ts` found that hole by
+        THE SKIN. A struck frame, 250 Hz falling to 170 — the low-mid a place made of breath and
+        chips would otherwise have nothing in at all. `src/content/nebula.ts` found that hole by
         measurement after the fact; this is the same lesson taken before it.
+
+        ⚠️ **IT RINGS, AND AT `curve: 4.4` OVER 0.19 s IT DID NOT.** 43 ms is under eight cycles of
+        its own fundamental — a frame that dead is a click with a pitch on it. At `2.4` over 0.58 s
+        it rings for 242, and the pattern is under two hits a bar: the closest pair is a beat apart,
+        so the most any strike lands on is a tail already down to a fifth of itself.
+
+        ⚠️ **AND IT WAS SWEEPING 176 → 104, WHICH SPENDS HALF THE NOTE IN THE WRONG BAND TWICE OVER.**
+        `lowmid` is 130–300 Hz (`tests/spectrum.ts`) and is the window this layer's margin is measured
+        in (`scripts/weigh-heard.mjs`); everything under 130 landed in `low`, where A-weighting
+        discounts it by another 8 dB **and** where `sub`, `engine`, `drive` and `stomp` are already
+        four low sines striking the same downbeat. Moved into the band it was written for, the same
+        amplitude buys margin instead of headroom — and `tests/themes.test.ts`'s rule that a layer at
+        −0.45 may not be low is satisfied by construction rather than by 20 dB of luck.
       */
       steps: [1, _, _, 0.62, _, 0.68, _, _, 0.86, _, _, 0.6, _, 0.7, _, 0.64],
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'sine', from: 176, to: 104, seconds: 0.19, gain: 0.3, attack: 0.001, curve: 4.4, drive: 0.2 },
+      note: { wave: 'sine', from: 250, to: 170, seconds: 0.58, gain: 0.185, attack: 0.014, curve: 2.4, drive: 0.75 },
     },
   ],
 
@@ -506,6 +544,16 @@ export const LABYRINTH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>
     `THEMES.labyrinth.air` rather than in this voice, because a longer note is sustain and sustain is
     not space — `docs/decisions/0136-the-place-has-a-room-and-an-arc.md` is where that distinction was
     finally made and it is the reason this layer sounds like it is coming from somewhere.
+
+    ⚠️ **THE BOX WAS 6 dB UNDER THE LAMENT ON BOTH RMS AND PEAK, WHICH IS NOT A TRANSIENT PROBLEM.**
+    `perc` and `crash` below are libelled by RMS — `docs/decisions/0140-no-layer-is-inaudible.md` —
+    and this one is not: its crest factor is the same 15 dB `lead`'s is, so it is simply quiet
+    material, and the solve was asking for a gain of 3.08 that `MIX_CEILING` would silently have
+    clamped to 2.6 (`docs/decisions/0154-the-mix-is-authored-as-intent.md`). **The weight goes on the
+    OCTAVE UNDER**, which is the voice that lives in `mid` — the band `call`'s margin is measured in —
+    so the tune gets a body rather than a brighter strike, and the glass stays glass. +5.9 dB of
+    material, solved **3.08 → 2.01**, and it is affordable because `call` closes at `surge`: the two
+    rungs it plays sit at 53% and 70% of the clipping ceiling where the four that follow sit at 93–98.
   */
   call: [
     {
@@ -514,16 +562,18 @@ export const LABYRINTH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>
       perBeat: 1,
       octave: 3,
       accents: [1, 0.72, 0.88, 0.7],
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 1.2, gain: 0.13, attack: 0.002, curve: 3.2, highFrom: 900 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 1.2, gain: 0.158, attack: 0.002, curve: 3.2, highFrom: 900 },
     },
     {
       // The octave under it, softer and slower to die: the part of a music box you feel in the box.
+      // ⚠️ It is no longer softer — it is the body, and a box you can only hear the strike of is the
+      // bell the voice below exists to prevent.
       steps: TURN,
       pitched: true,
       perBeat: 1,
       octave: 2,
       accents: [1, 0.72, 0.88, 0.7],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.5, gain: 0.088, attack: 0.006, curve: 2.2 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.8, gain: 0.155, attack: 0.006, curve: 1.9 },
     },
     {
       // The mechanism: the click of the comb before the note. Take it away and it is a bell.
@@ -531,12 +581,26 @@ export const LABYRINTH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.02, gain: 0.062, attack: 0.0004, curve: 9, lowFrom: 8000, highFrom: 3000 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.028, gain: 0.072, attack: 0.0004, curve: 7, lowFrom: 8000, highFrom: 3000 },
     },
   ],
 
   /*
     ── THE PURSUIT RIFF: what `push` opens, and the point the level stops being atmospheric ─────────
+
+    ⚠️ **AN EIGHTH THAT DIES IN A QUARTER OF ITS OWN SLOT IS NOT A RIFF, IT IS A HAT.** `curve: 3` over
+    `BEAT_SECONDS * 0.36` is 48 ms of note in a 200 ms step — so the thing that is supposed to stop
+    this level being atmospheric was arriving as four ticks a bar with silence between them, and the
+    solve wanted a gain of 3.05 to make silence audible.
+    `docs/decisions/0152-a-layer-is-heard-in-the-sum.md` has the arithmetic: the real length is
+    `seconds / curve` and the number beside it never was.
+
+    ⚠️ **AND EVERY `gain` BELOW WENT DOWN.** 83 ms joins the eighths into a line, `drive: 0.5` on the
+    saw is `saturate` doing what it is normalised to do — level in the body of the note and none at
+    the top of it — and 13 ms of attack keeps the riff's loudest instant off the beat-one pile-up that
+    `scripts/weigh-mix.mjs` measures. +1.7 dB of material for **less** peak than it shipped with, and
+    the solve reads **3.05 → 2.87**. `surge` is the tightest rung in the place at 98.4% of the ceiling,
+    and this layer is the reason it is not tighter.
   */
   hook: [
     {
@@ -545,7 +609,7 @@ export const LABYRINTH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>
       perBeat: 2,
       octave: 1,
       accents: [1, 0.7, 0.88, 0.68],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.36, gain: 0.175, attack: 0.005, curve: 3, lowFrom: 2000, lowTo: 820, q: 1.8, drive: 0.24 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.5, gain: 0.142, attack: 0.013, curve: 2.4, lowFrom: 2000, lowTo: 820, q: 1.8, drive: 0.5 },
     },
     {
       steps: PURSUIT,
@@ -553,7 +617,7 @@ export const LABYRINTH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>
       perBeat: 2,
       octave: 2,
       accents: [1, 0.7, 0.88, 0.68],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.3, gain: 0.076, attack: 0.006, curve: 3.6, lowFrom: 4200, lowTo: 2000, q: 1.5 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.42, gain: 0.0755, attack: 0.014, curve: 2.9, lowFrom: 4200, lowTo: 2000, q: 1.5 },
     },
     {
       // The stab at the top of every fourth bar — the one place the pursuit gets a look at you.
@@ -563,7 +627,7 @@ export const LABYRINTH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>
       pitched: true,
       perBeat: 2,
       octave: 2,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.7, gain: 0.092, attack: 0.002, curve: 2.4, highFrom: 2200 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.9, gain: 0.0915, attack: 0.002, curve: 2, highFrom: 2200 },
     },
   ],
 
@@ -682,22 +746,48 @@ export const LABYRINTH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>
     ⚠️ **A HIT AND NOT A SWELL, which is the opposite choice to Ember Nebula's.** A cathedral swells
     because there is somewhere for the sound to go; a corridor does not, so what arrives at `surge`
     here is an impact with a short tail on it — stone, and then nothing.
+
+    ⚠️ **AND IT WAS A POLITE ONE: 14 dB UNDER `stomp`'s PEAK AND 24 dB UNDER `sub`'s MATERIAL.** Two
+    events every four bars is the sparsest pattern in the place, so RMS libels it exactly as
+    `docs/decisions/0140-no-layer-is-inaudible.md` describes — but the PEAK agreed with the RMS here,
+    which is what separates this from `perc`: the door was genuinely being shut quietly. +6.2 dB, and
+    the solve reads **4.52 → 2.35**.
+
+    ⚠️ **IT IS OFF THE BEAT NOW, AND THAT IS WHY IT CAN BE LOUD.** On beat one it landed inside the
+    collective onset of thirteen layers — `scripts/weigh-mix.mjs` had `approach` at 98.2% of the
+    clipping ceiling **before** any of this, and every decibel added to the slam went straight into
+    that one millisecond. Moved to the middle of the bar it costs the ceiling almost nothing, and the
+    picture is better for it twice over: a door that shuts on the downbeat is a drum, and this place's
+    own `engine` already says why the interesting one is *"the sound that makes a listener look up,
+    which is the whole reason it is not on a grid anybody can follow."* Eighths, so it can sit in the
+    gap rather than on either side of it.
+
+    ⚠️ **THE TAIL IS WHERE THE REST OF THE MATERIAL WENT.** `curve: 3.4` over 0.85 s was 250 ms of
+    decay; the slam now runs 440, which is a stone corridor and not a swell —
+    `docs/decisions/0152-a-layer-is-heard-in-the-sum.md` for why the number beside `seconds` was never
+    the length.
   */
   crash: [
     {
-      steps: [1, _, _, _, _, _, _, _, 0.84, _, _, _, _, _, _, _],
+      steps: [
+        _, _, _, _, _, 1, _, _, _, _, _, _, _, _, _, _,
+        _, _, _, 0.84, _, _, _, _, _, _, _, _, _, _, _, _,
+      ],
       pitched: false,
-      perBeat: 1,
+      perBeat: 2,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.85, gain: 0.09, attack: 0.0012, curve: 3.4, lowFrom: 5200, lowTo: 900, highFrom: 300 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 1.15, gain: 0.145, attack: 0.0012, curve: 2.6, lowFrom: 5200, lowTo: 900, highFrom: 300 },
     },
     {
       // The ring the slam leaves in the metal of the door. It is the tail the corridor does not give.
-      steps: [7, _, _, _, _, _, _, _, 2, _, _, _, _, _, _, _],
+      steps: [
+        _, _, _, _, _, 7, _, _, _, _, _, _, _, _, _, _,
+        _, _, _, 2, _, _, _, _, _, _, _, _, _, _, _, _,
+      ],
       pitched: true,
-      perBeat: 1,
+      perBeat: 2,
       octave: 2,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.075, attack: 0.004, curve: 1.9, lowFrom: 3400, lowTo: 1400, q: 2.2 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 3.6, gain: 0.115, attack: 0.004, curve: 1.5, lowFrom: 3400, lowTo: 1400, q: 2.2 },
     },
   ],
 

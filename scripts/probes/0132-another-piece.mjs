@@ -23,10 +23,22 @@ export const PROBES = [
     */
     edit: {
       path: 'src/content/nebula.ts',
+      /*
+        ⚠️ THE ANCHOR MOVED AGAIN, and this time the code was right to move. The material pass of
+        2026-08-16 found this arp ringing 22 ms of a 100 ms sixteenth — 0152's defect — and lengthened
+        both voices (`seconds` 0.24/0.22 -> 0.34/0.32, `curve` 2.4/2.8 -> 1.2/1.3) with a little gain
+        behind them. `npm test` refused to run rather than report green over a probe that no longer
+        applies, which is 0019 doing its whole job for the third time this session.
+
+        ⚠️ IT ANCHORS ON ONE VOICE NOW, not on both. The old `find` spanned the whole pair — twenty
+        numbers, every one of them a thing a tuning pass is entitled to move — so it was guaranteed to
+        strand on the first person who touched the arp. The break is about REGISTER, and one rank
+        driven to a loud bottom-octave sine reaches the band rule on its own.
+      */
       find:
-        "      octave: 2,\n      accents: [1, 0.7, 0.84, 0.68],\n      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.24, gain: 0.05, attack: 0.004, curve: 2.4, lowFrom: 3400, lowTo: 2400, q: 1.2 },\n    },\n    {\n      steps: MIXTURE,\n      pitched: true,\n      perBeat: 4,\n      octave: 3,\n      accents: [1, 0.7, 0.84, 0.68],\n      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.22, gain: 0.024, attack: 0.005, curve: 2.8, lowFrom: 5400, lowTo: 3600, q: 1 },",
+        "      octave: 2,\n      accents: [1, 0.7, 0.84, 0.68],\n      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.34, gain: 0.072, attack: 0.004, curve: 1.2, lowFrom: 3400, lowTo: 2400, q: 1.2 },",
       replace:
-        "      octave: 0,\n      accents: [1, 0.7, 0.84, 0.68],\n      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.24, gain: 0.3, attack: 0.004, curve: 2.4 },\n    },\n    {\n      steps: MIXTURE,\n      pitched: true,\n      perBeat: 4,\n      octave: 0,\n      accents: [1, 0.7, 0.84, 0.68],\n      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.22, gain: 0.3, attack: 0.005, curve: 2.8 },",
+        "      octave: 0,\n      accents: [1, 0.7, 0.84, 0.68],\n      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.34, gain: 0.5, attack: 0.004, curve: 1.2 },",
     },
   },
   {

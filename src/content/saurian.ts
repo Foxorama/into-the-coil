@@ -764,6 +764,19 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
 
   /*
     ── THE RIDE: the offbeat crash-hat, which is the sound of a genre with no patience ─────────────
+
+    ⚠️ **THIS PLACE FOLLOWS ITS KIT AT `push` AND THE KIT WAS A TICK** —
+    `src/content/arrangement.ts` puts `ride` in `LEADS.saurian.push`, so it is the one thing the
+    listener is meant to track through the section the header calls *the floor arrives*. Solved
+    against that role it wanted **4.05×** the gain it ships at, which
+    `docs/decisions/0154-the-mix-is-authored-as-intent.md` is the whole argument for not granting:
+    `MIX_CEILING` is 2.6 and would have silently clamped it.
+
+    ⚠️ **AND THE ANSWER IS THE RING, NOT THE GAIN, BECAUSE THE BUDGET THAT BINDS HERE IS PEAK.** This
+    place ships at **99.5% of the clipping ceiling at `bossPeak`** — a raw sum of five drum attacks
+    landing on the same sample — so there is no level to give anything. A cymbal's audibility is its
+    DECAY, which costs energy and costs no peak at all: the attack, the band and the pattern below are
+    untouched and the gain comes **down**.
   */
   ride: [
     {
@@ -776,10 +789,21 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       pitched: false,
       perBeat: 4,
       octave: 0,
-      // ⚠️ 17 ms of decay where `curve: 9` over 0.028 s gave 3, and the gain comes down as the note
-      // grows — `docs/decisions/0152-a-layer-is-heard-in-the-sum.md` has the argument and the reason
-      // the attack and the band do not move. Six places carried this one line.
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.1, attack: 0.0004, curve: 4, lowFrom: 11000, highFrom: 5600 },
+      /*
+        ⚠️ **56 ms OF DECAY WHERE 0152 LEFT 17, AND 0152 LEFT 17 WHERE THE ORIGINAL HAD 3.** The
+        envelope is `exp(-curve × u)` across `seconds`, so the length a listener hears is about
+        `seconds / curve` and the energy is about `seconds / 2·curve` — three passes have now moved
+        this one line and each was reading `seconds` as though it were the note.
+
+        ⚠️ **A SIXTEENTH IS 100 ms AT 150 BPM, SO THIS IS THE FIRST VERSION THAT OVERLAPS ITSELF.**
+        That is what an open hat IS — the hits wash into one another and the wash is the sound of the
+        genre — and it is also where the energy comes from: broadband RMS is up **4.6 dB** while the
+        peak moves **0.3**, because `attack` and `gain` are the only things a peak reads and one of
+        them went down. `docs/decisions/0140-no-layer-is-inaudible.md` is why the peak is watched
+        separately: RMS counts the silence between hits and libels a transient by twenty decibels —
+        this layer reads −44.6 dBFS rms against −26.2 peak, and only one of those is what an ear gets.
+      */
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.19, gain: 0.095, attack: 0.0004, curve: 3.4, lowFrom: 11000, highFrom: 5600 },
     },
   ],
 
@@ -1044,17 +1068,43 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
     },
   ],
 
+  /*
+    ── THE LASERS: what the fight is ABOUT, which is a thing this layer was not built to be ─────────
+
+    ⚠️ **`LEADS.saurian.boss` IS `frenzy`, SO THIS IS THE PART** — `src/content/arrangement.ts`, and
+    `ROLE_MARGIN_DB.part` is *three decibels over everything else together*. Solved against that it
+    wanted **6.33×** its shipped gain, the worst deficit in the place and one `MIX_CEILING` could not
+    have expressed even if the boss had the headroom to play it.
+
+    ⚠️ **AND THE DEFECT IS THAT A PART IS A LINE AND THIS WAS A ROW OF DOTS.** Sixteenths are 100 ms
+    apart at 150 BPM and the note was `BEAT_SECONDS * 0.22` at `curve: 4.4` — about **20 ms of sound
+    in every 100**, so four fifths of the thing the listener is supposed to follow was silence. The
+    header above calls the boss *space laser dinosaur*; what it had was a laser you could count.
+
+    ⚠️ **A GATE RATHER THAN A LONGER DECAY, BECAUSE THE OVERLAP IS WHAT COSTS PEAK.** The first fix
+    here rang the notes into each other and put `bossPeak` at **104.3% of the clipping ceiling** — a
+    tail that reaches the next attack adds to it. `BEAT_SECONDS * 0.35` at `curve: 1.2` is a note that
+    holds its sixteenth and is nearly gone when the next one starts: **+5.7 dB of broadband energy for
+    0.9 dB of peak**, and the rests in the figure below are still rests.
+  */
   frenzy: [
     {
       /*
         THE LASERS. Sixteenths on a square wave, snapping between the fifth and the tritone with the
-        octave over them — eight bars, so the figure is longer than the four-bar phrase the listener
-        has been counting in and the fight stops fitting its own shape.
+        squeal two octaves over them — eight bars, so the figure is longer than the four-bar phrase
+        the listener has been counting in and the fight stops fitting its own shape.
 
-        ⚠️ **A pitched square with a fast decay IS the laser this game already fires** —
-        `src/content/cues.ts` builds the gun the same way, which is
-        `docs/decisions/0099-the-cues-are-in-the-key.md` arriving from the other side: the boss's music
-        and the player's weapons are the same instrument, in the same key, on the same grid.
+        ⚠️ **A pitched square IS the laser this game already fires** — `src/content/cues.ts` builds
+        the gun the same way, which is `docs/decisions/0099-the-cues-are-in-the-key.md` arriving from
+        the other side: the boss's music and the player's weapons are the same instrument, in the same
+        key, on the same grid. **What the gun does not have to be is the loudest thing in the mix**,
+        and that is the whole of why the envelope is a gate here and a blip there.
+
+        ⚠️ **THE FILTER NO LONGER CLOSES TO 1200 Hz, AND THAT WAS WORTH MORE THAN ANY GAIN.** A note
+        five times longer spends five times as long wherever the sweep leaves it, and 1200 Hz is
+        `mid` — the band `auraSlow`, `toll` and `drive` already fill at the boss, and the most crowded
+        one the fight has. Landing at 2000 puts the body in `himid` instead. Same peak, and the solved
+        gain fell from 2.9 to 2.4 on that one number.
       */
       steps: [
         7, _, 2, 7, 8, _, 7, _, 2, 7, _, 2, 7, 8, _, 7,
@@ -1070,7 +1120,7 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       perBeat: 4,
       octave: 1,
       accents: [1, 0.62, 0.86, 0.6],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.22, gain: 0.085, attack: 0.002, curve: 4.4, lowFrom: 3400, lowTo: 1200, q: 2.2, drive: 0.5 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.35, gain: 0.07, attack: 0.002, curve: 1.2, lowFrom: 3400, lowTo: 2000, q: 2.2, drive: 0.5 },
     },
     {
       steps: [
@@ -1085,12 +1135,40 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       ],
       pitched: true,
       perBeat: 4,
-      octave: 2,
+      /*
+        ⚠️ **THE SQUEAL, AND IT MOVED UP AN OCTAVE TO GET OUT OF THE FIGHT'S OWN TRAFFIC.** At
+        `octave: 2` this doubled the line where every other layer at the boss already lives; at 3 its
+        fundamental is 988–1760 Hz and its harmonics land in `hi`, which measures as **the emptiest
+        band the fight has** — the aura and the bell are the only things up there and neither is loud.
+        `docs/decisions/0152-a-layer-is-heard-in-the-sum.md`: a layer is masked by what shares its
+        window, so the cheapest decibel available is a window nobody is standing in.
+
+        ⚠️ **The lowpass opens with it**, or the octave would be thrown away by the filter that was
+        set for the register below.
+      */
+      octave: 3,
       accents: [1, 0.6, 0.84, 0.62],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.18, gain: 0.05, attack: 0.002, curve: 4.6, lowFrom: 5200, lowTo: 2200, q: 1.8, drive: 0.44 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.34, gain: 0.04, attack: 0.002, curve: 1.27, lowFrom: 9000, lowTo: 5200, q: 1.8, drive: 0.44 },
     },
   ],
 
+  /*
+    ── THE ROAR ─────────────────────────────────────────────────────────────────────────────────────
+
+    ⚠️ **THE COMMENT BELOW SAID *HELD NOTES* AND THE ENVELOPE WAS GONE IN A QUARTER OF THE NOTE.**
+    `BEAT_SECONDS * 0.98` at `curve: 1.9` is about 200 ms of audible sound in a figure that plays
+    every 800, so the roar the fiction describes as a lung was, in the material, four short barks a
+    bar. That is `docs/decisions/0152-a-layer-is-heard-in-the-sum.md`'s finding about Ember Nebula's
+    ride — *a "25 ms" note that was really 2.8* — happening in the one layer whose own documentation
+    named the defect.
+
+    ⚠️ **SO IT HOLDS NOW.** The note nearly fills the gap to the next one and the curve is flat enough
+    to still be sounding when it gets there: **+6.7 dB of energy for 5.4 dB of peak**, the only one of
+    this file's three fixes that spends real headroom — and it can, because the roar does not land
+    where the fight's five drums do. `docs/decisions/0154-the-mix-is-authored-as-intent.md` solved
+    this layer at **3.95×** its shipped gain to make it a counter-line; it now wants 2.1, and the
+    boss's raw sum went **down**, from 98.0% of the clipping ceiling to 95.8%.
+  */
   wraith: [
     {
       /*
@@ -1108,7 +1186,7 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       perBeat: 1,
       octave: 1,
       accents: [1, 0.7, 0.88, 0.66],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.98, gain: 0.07, attack: 0.05, curve: 1.9, lowFrom: 1900, lowTo: 640, q: 2.4, drive: 0.8 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.85, gain: 0.08, attack: 0.05, curve: 1.15, lowFrom: 1900, lowTo: 640, q: 2.4, drive: 0.8 },
     },
     {
       steps: [
@@ -1121,7 +1199,7 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       perBeat: 1,
       octave: 0,
       accents: [1, 0.7, 0.88, 0.66],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 1.02, gain: 0.05, attack: 0.06, curve: 1.8, lowFrom: 1200, lowTo: 480, q: 2, drive: 0.7 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.058, attack: 0.06, curve: 1.1, lowFrom: 1200, lowTo: 480, q: 2, drive: 0.7 },
     },
   ],
 
