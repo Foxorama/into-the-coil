@@ -169,9 +169,12 @@ export const TITLE_ARRANGEMENT: Readonly<Record<MusicRole, readonly MusicLayer[]
  * that place only — the choir you follow in Ember Nebula is a bed everywhere else, and that single
  * fact is what *"haunting hymns"* means as a mix rather than as a sentence.
  *
- * ⚠️ **IT IS ALSO WHAT KEEPS 0147's GUARD GREEN.** `apartBy` requires no two places within 3 dB of
- * each other's balance; a global arrangement with no deviations would make all seven identical and
- * fail it, which is the defect 0147 exists for arriving through its own replacement.
+ * ⚠️ **AND IT IS NOT WHAT KEEPS THE PLACES APART — `LEADS` ABOVE IS.** This paragraph used to say the
+ * promotions held 0147's `apartBy` guard green; they did not, and could not. Measured, a global
+ * arrangement with two promotions per place collapses the seven to **0.9–2.5 dB** where that guard
+ * required 3. `docs/decisions/0155-a-place-follows-its-own-instrument.md` retired the guard on its
+ * own stated condition and put the differentiation where a listener can hear it: **what you are
+ * following**. A promotion is colour on top of that, not the thing itself.
  */
 /*
   ⚠️ **A PROMOTION NAMES THE ROLE IT WANTS, RATHER THAN MOVING ONE NOTCH.** The first version stepped
@@ -180,6 +183,61 @@ export const TITLE_ARRANGEMENT: Readonly<Record<MusicRole, readonly MusicLayer[]
   Naming the destination is also the version a reader can check against the place's own header
   without counting.
 */
+/**
+ * What each place FOLLOWS, where it disagrees with the arrangement.
+ *
+ * ── THE ONE THING THAT MAKES TWO LEVELS DIFFERENT, AND IT IS NOT A GAIN ─────────────────────────
+ *
+ * ⚠️ **Reported 2026-08-16, and it is the oldest complaint this project has:** *"one of the big
+ * problems is every level sounds the same and that's what I've been trying to fix."*
+ *
+ * ⚠️ **[0147](../../docs/decisions/0147-a-place-is-a-balance.md) ANSWERED IT WITH 259 NUMBERS AND THE
+ * REPORT SURVIVED THEM.** Its guard demanded that no two places sit within 3 dB of each other's
+ * BALANCE; the seven shipped at 3.3–4.0 dB apart, satisfied it everywhere, and the player still hears
+ * one level. **A place differing in how loud its layers are is not a place that sounds different** —
+ * `docs/decisions/0155-a-place-follows-its-own-instrument.md` retires that guard and this replaces
+ * it.
+ *
+ * ⚠️ **WHAT A LISTENER ACTUALLY TRACKS IS THE PART**, and until now every place tracked the same one
+ * at the same moment: the hymn at `run`, the riff at `push`, the counter-melody at `surge`, the
+ * tritone from the approach on. Seven places, one subject each rung, differing only in timbre and
+ * level. **Here Ember Nebula follows its choir where The Black Heart follows its riff** — the same
+ * rung, a different thing to listen to, which is what *somewhere else in the galaxy* means.
+ *
+ * ⚠️ **A LEAD DISPLACES RATHER THAN ADDS.** `roleOf` demotes the arrangement's part to a counter-line
+ * wherever a place names its own, because one part per rung is what makes the solve satisfiable —
+ * the invariant the first arrangement broke and spent four hundred iterations failing to.
+ *
+ * ⚠️ **AND A PLACE NEED NOT DISAGREE.** An empty row is a place that plays the composition's own
+ * shape, which is what level one is for.
+ */
+export const LEADS: Record<ThemeKind, Partial<Record<MusicLevel, MusicLayer>>> = {
+  // The base composition. It IS the arrangement, so it never disagrees with it.
+  approach: {},
+  /*
+    *"Haunting hymns… pipe organs… hellish, discordant"* — the choir sings the level, the mixture
+    takes the push, and the thing that arrives in the fight is the howl rather than the tritone.
+  */
+  nebula: { run: 'chords', push: 'arp', approach: 'toll', boss: 'wraith' },
+  // *"The floor arrives… full hands-in-the-air… space laser dinosaur"* — bassline, kit, then lasers.
+  saurian: { run: 'groove', push: 'ride', surge: 'drive', approach: 'drive', boss: 'frenzy' },
+  // *"A corridor, and something breathing in it… the hound"* — footsteps, then the thing running.
+  labyrinth: { run: 'perc', push: 'ride', approach: 'toll', boss: 'stomp' },
+  // *"It rings… it cracks… the blizzard"* — glass, then the lead, then the weather.
+  rime: { run: 'chords', push: 'lead', surge: 'lead', boss: 'wraith' },
+  /*
+    *"Still water with something under it… it is coming up"* — the bottom leads, which nothing else
+    here does, and the thing rising takes over as it surfaces.
+
+    ⚠️ **IT SAID `surge: 'toll'` AND THE LADDER DOES NOT OPEN `toll` UNTIL `approach`**, so the place
+    was following silence for a whole section. Caught by `tests/arrangement.test.ts` on its first run
+    with this table — the same class as the four no-op promotions it caught on its last.
+  */
+  mire: { run: 'sub', push: 'groove', surge: 'drive', approach: 'toll', boss: 'toll' },
+  // *"The riff"*, *"the twin lead"*, *"inside it"* — the one place that follows what it is named for.
+  core: { run: 'engine', surge: 'lead', approach: 'counter', boss: 'drive' },
+};
+
 /*
   ⚠️ **A PROMOTION MAY NOT NAME `part`, AND THAT IS THE ARRANGEMENT'S ONE INVARIANT PROTECTED.**
   Exactly one thing is followed at a time; a place that could appoint a second would reintroduce the
@@ -241,6 +299,19 @@ export function roleOf(theme: ThemeKind | undefined, rung: MusicLevel, layer: Mu
   let base: MusicRole | null = null;
   for (const role of MUSIC_ROLES) if (at[role].includes(layer)) base = role;
   if (base === null) return null;
+
+  /*
+    ⚠️ **THE PLACE'S OWN LEAD DISPLACES THE ARRANGEMENT'S, AND THE DISPLACED ONE STEPS DOWN.** One
+    part per rung is the invariant that makes the solve satisfiable at all — so appointing a new one
+    has to demote the old one in the same breath, or the place would be over-determined exactly the
+    way the first arrangement was.
+  */
+  const lead = theme === undefined ? undefined : LEADS[theme][rung];
+  if (lead !== undefined) {
+    if (lead === layer) return 'part';
+    if (base === 'part') return 'counter';
+  }
+
   const lifted = theme === undefined ? undefined : PROMOTES[theme][layer];
   if (lifted === undefined) return base;
   return MUSIC_ROLES.indexOf(lifted) > MUSIC_ROLES.indexOf(base) ? lifted : base;

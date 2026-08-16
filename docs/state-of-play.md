@@ -677,14 +677,21 @@ direction to be wrong in.
 ⚠️ **[0154](decisions/0154-the-mix-is-authored-as-intent.md) IS THE MECHANISM AND IT IS NOT WIRED IN.**
 `MUSIC_LADDER` and `mixOf` still decide every gain the player hears. The arrangement solves every
 layer onto its role's target across all seven places and every rung — worst error 0.00 dB — and it
-**collapses the seven places to 0.9–2.5 dB apart** where
-[0147](decisions/0147-a-place-is-a-balance.md) requires 3.
+**collapsed the seven places to 0.9–2.5 dB apart** where
+[0147](decisions/0147-a-place-is-a-balance.md) required 3.
 [`the-arrangement-solves-and-the-places-collapse`](../reports/the-arrangement-solves-and-the-places-collapse-2026-08-16.md)
-has the table and the three candidate answers.
+has the table and the three candidates.
 
-⚠️ **THE FIRST MOVE IS AN EAR, NOT A DECISION.** `node scripts/hear-solved.mjs <place> --rung=<rung>`
-writes the shipped and the solved mix as stereo through the game's own bus. **`core --rung=surge` is
-the one to distrust** — its movements are the largest anywhere.
+⚠️ **THAT BLOCKER IS ANSWERED — [0155](decisions/0155-a-place-follows-its-own-instrument.md).** 0147's
+`apart` guard is **retired on the condition it wrote for itself**, and what replaces it is `LEADS`:
+each place names **what it follows** at each rung, which is the axis a listener uses. Every place now
+follows a different instrument, and the fights — five of seven were all following `dread` — differ
+too.
+
+⚠️ **THE FIRST MOVE IS STILL AN EAR.** `node scripts/hear.mjs --level=<kind> --solved` writes a whole
+level at the solved balance, level-matched against the shipped one;
+`node scripts/hear-solved.mjs <place> --rung=<rung>` does a single rung. **`core --rung=surge` is the
+one to distrust** — its movements are the largest anywhere.
 
 ### ⚠️ AND THE RULES IT REPLACES — THE PLAYER ASKED FOR THIS
 
