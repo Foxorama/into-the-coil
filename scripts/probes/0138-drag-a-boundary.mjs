@@ -26,8 +26,13 @@ export const PROBES = [
     guard: 'A DRAGGED BOUNDARY IS WHERE THE LADDER TURNS OVER, to the second the camera crosses it',
     edit: {
       path: 'rig/transport.ts',
-      find: '  at: SectionUnits = SECTION_UNITS,\n): Moment {\n  const level = LEVELS[kind];',
-      replace: '  at: SectionUnits = SECTION_UNITS,\n): Moment {\n  at = SECTION_UNITS;\n  const level = LEVELS[kind];',
+      /*
+        ⚠️ THE ANCHOR MOVED WITH 0154's SOLVED-MIX TOGGLE, which added a sixth parameter between `at`
+        and the body — caught by `npm test` rather than by inspection, which is 0019's whole subject.
+        It anchors on the body's first line now, so a seventh parameter will not strand it again.
+      */
+      find: '): Moment {\n  const level = LEVELS[kind];',
+      replace: '): Moment {\n  at = SECTION_UNITS;\n  const level = LEVELS[kind];',
     },
   },
   {

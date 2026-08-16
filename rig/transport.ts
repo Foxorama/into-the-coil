@@ -187,12 +187,33 @@ function markAt(marks: readonly RungMark[], second: number): number {
  * `scripts/hear.mjs --level` states it: the aura's nearness is a distance the player steers (0091),
  * so no rig has an honest value for it. The dashboard puts it on a slider instead of pretending.
  */
+/**
+ * A solved arrangement's gains, per rung — what
+ * `docs/decisions/0154-the-mix-is-authored-as-intent.md` produces.
+ *
+ * ⚠️ **THE SOLVE NEEDS BAKED AUDIO AND THIS FILE HAS NONE.** `rig/transport.ts` is the arithmetic of
+ * *what is sounding when*, guarded by `tests/dash.test.ts` and deliberately free of DSP — so the
+ * caller that owns the loops owns the solve, and this only ever chooses between two numbers.
+ */
+export type SolvedGains = Readonly<Partial<Record<MusicLevel, Readonly<Record<MusicLayer, number>>>>>;
+
 export function momentOf(
   kind: LevelKind,
   second: number,
   fightSeconds: number,
   nearnessInFight: number,
   at: SectionUnits = SECTION_UNITS,
+  /*
+    ⚠️ **A MIX HAS TO BE DRIVEN RATHER THAN DESCRIBED, WHICH IS WHAT THIS DASHBOARD IS FOR** —
+    `docs/decisions/0126-the-dashboard-is-the-instrument.md`. 0154 solved a mix that could only be
+    heard by rendering a file and opening it somewhere else, which is exactly the kind of instrument
+    this project keeps having to replace. `null` is the shipped mix and is the default, so every
+    existing caller is unchanged.
+
+    ⚠️ **THE AURA IS NEVER TAKEN FROM IT** — its gain is a distance the player steers (0091, 0107),
+    and the solve deliberately does not own it.
+  */
+  solved: SolvedGains | null = null,
 ): Moment {
   const level = LEVELS[kind];
   const theme = level.theme;
@@ -217,10 +238,20 @@ export function momentOf(
   const layers: LayerNow[] = [];
   let sounding = 0;
   for (const layer of MUSIC_LAYERS) {
-    const target = targetGain(theme, rung, layer, aura);
-    const previous = before === undefined ? 0 : targetGain(theme, before.rung, layer, auraBefore);
-    if (target > 0) sounding++;
     const follows = AURA_LAYERS.includes(layer);
+    /*
+      ⚠️ **THE SOLVED GAIN REPLACES THE SHIPPED ONE FOR EVERYTHING BUT THE AURA**, and the PREVIOUS
+      rung is resolved the same way — a moment that took its target from the solve and its previous
+      from the ladder would report every layer as *opening* or *quieter* for reasons that are an
+      artefact of the comparison rather than of the music.
+    */
+    const gainAt = (r: MusicLevel, a: number): number => {
+      const own = follows || solved === null ? undefined : solved[r]?.[layer];
+      return own ?? targetGain(theme, r, layer, a);
+    };
+    const target = gainAt(rung, aura);
+    const previous = before === undefined ? 0 : gainAt(before.rung, auraBefore);
+    if (target > 0) sounding++;
     layers.push({
       layer,
       target,

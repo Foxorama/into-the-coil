@@ -71,8 +71,14 @@ export const PROBES = [
     guard: 'EVERY LAYER’S TARGET IS THE ONE `levelWrites` WOULD SCHEDULE, to the last decimal',
     edit: {
       path: 'rig/transport.ts',
-      find: '    const target = targetGain(theme, rung, layer, aura);',
-      replace: '    const target = MUSIC_LADDER[rung][layer] * (AURA_LAYERS.includes(layer) ? aura : 1);',
+      /*
+        ⚠️ THE ANCHOR MOVED WITH 0154's SOLVED-MIX TOGGLE, and `npm test` refused rather than report
+        green over a probe that no longer applies — 0019. `targetGain` is now reached through
+        `gainAt`, which chooses between the shipped gain and the solved one. The break is the same
+        break, put back where the call actually lives.
+      */
+      find: '      return own ?? targetGain(theme, r, layer, a);',
+      replace: '      return own ?? MUSIC_LADDER[r][layer] * (AURA_LAYERS.includes(layer) ? a : 1);',
     },
   },
   {
