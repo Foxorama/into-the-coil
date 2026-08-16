@@ -273,13 +273,24 @@ heavier loadout shortens the fight without trivialising it.
 says how much boss is left, and whether that reads as progress is the first question a play-test of
 level one has to answer.
 
-⚠️ **AND A PHASE MAY NOW EMPTY THE BOSS OR OPEN IT** —
-[0150](decisions/0150-the-uncoil-and-the-eye.md), from *"the bosses need to be more interactive with
-more varied attacks."* Two of the Jörmungandr fight's five mechanisms that this game had no vocabulary
-for: an **uncoil** — one curtain right across the lane with no hole in it, thrown as the phase turns
-over — and a **bared window**, where the boss stops shooting and takes triple damage until it dies.
-**The uncoil is the first thing in this game a shield is FOR**, which is the half the word
-*interactive* was actually asking for. On the chorus and the axis, and on nothing else yet.
+⚠️ **AND A BOSS MAY NOW UNCOIL, OR OPEN** — [0150](decisions/0150-the-uncoil-and-the-eye.md) and
+[0151](decisions/0151-the-gap-you-have-to-reach.md), from *"the bosses need to be more interactive
+with more varied attacks."* Two of the Jörmungandr fight's five mechanisms this game had no vocabulary
+for: an **uncoil** — a curtain right across the lane with a single hole in it, thrown every 10% of
+health below half — and a **bared window**, where the boss stops shooting and takes triple damage
+until it dies. On the chorus and the axis, and on nothing else yet.
+
+⚠️ **The hole is in the SAME PLACE every time, and that is the whole of the challenge** — *"a static
+hole in the wall is a pattern the player needs to learn, a variable hole that spawns close to the ship
+negates the entire difficulty of the obstacle."* Where it may sit is a measurement: the curtain is in
+the air for 39–75 steps, in the worst of which the ship covers 59.5 units, so a hole has to be
+reachable from the far wall and nowhere further. **What the uncoil asks for is positioning, not a
+resource** — 0151 records that this leaves *"the shield has no moment it is FOR"* open again.
+
+⚠️ **AND DIFFICULTY IS MANAGED BY ONE QUESTION**, given 2026-08-16: *"the game is supposed to be hard
+and gets harder with each level. It's a short game so the replayability comes from the difficulty.
+Management of difficulty is **'is this unfair' OR 'is this a learnable strategy'**?"* A hard mechanism
+is kept when it is the second one and softened only when it is the first.
 
 Hazards are environmental and must be dealt with, not only dodged. Asteroids are the reference case:
 shoot one and the fragments become weapons that damage enemies — a hazard that stays playable under

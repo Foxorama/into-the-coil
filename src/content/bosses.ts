@@ -142,24 +142,18 @@ export type BossAttack =
 /**
  * Every way a boss can STAND in a phase. Closed.
  *
- * ── WHY A MOMENT IS NOT AN IDEA, WHICH IS WHY THIS IS NOT AN ARM OF `BossAttack` ─────────────────
+ * ⚠️ **IT HELD THREE ARMS AND NOW HOLDS TWO** — `docs/decisions/0151-the-gap-you-have-to-reach.md`.
+ * `overwhelm` was one of them for a day and is now `Uncoil` below, on the ROW: the play-test asked
+ * for a curtain that repeats *"at every 10% damage reduction below 50%"*, and a thing that happens at
+ * fixed fractions of a health bar is not a thing a phase can say. Every attempt to express it here
+ * merged the escalating fans underneath it into one phase, which is the escalation this table exists
+ * to carry.
  *
- * ⚠️ **`docs/decisions/0150-the-uncoil-and-the-eye.md`.** Reported from play: *"the bosses need to be
- * more interactive with more varied attacks."* `reports/the-boss-vocabulary-is-one-fan-2026-08-14.md`
- * proposed `overwhelm` alongside `sweep`, `lance` and `mine` as four arms of `BossAttack` — and three
- * of those four are IDEAS, things a whole boss can be built around. **`overwhelm` is not.** A barrage
- * sized against the shield pool is a *moment* in a fight, and a boss whose every volley was
- * unavoidable would not be a fight at all. `BossAttack` says what a boss IS; this says what a phase
- * DOES, which is the axis the report's own finisher — *"a phase that says stop shooting and open"* —
- * was already asking for.
- *
- * ⚠️ **`fireEvery`, `shots` and `spread` stay on the phase rather than moving into the arms.** Two of
- * the three arms fire a fan and use all three; `bare` fires nothing and carries zeros, which is a
- * TRUE statement about it rather than a field it ignores. The alternative — `shots` and `spread`
- * duplicated across two arms so that the third need not mention them — is more type and less
- * information.
+ * ⚠️ **`fireEvery`, `shots` and `spread` stay on the phase rather than moving into the arms.**
+ * `volley` fires a fan and uses all three; `bare` fires nothing and carries them anyway, which is
+ * what makes it hold to the same escalation rules as everything else — see below.
  */
-export const BOSS_STANCE_KINDS = ['volley', 'overwhelm', 'bare'] as const;
+export const BOSS_STANCE_KINDS = ['volley', 'bare'] as const;
 
 /** Derived from the list, so a stance cannot exist in the union and be missing from the switch. */
 export type BossStanceKind = (typeof BOSS_STANCE_KINDS)[number];
@@ -167,25 +161,6 @@ export type BossStanceKind = (typeof BOSS_STANCE_KINDS)[number];
 export type BossStance =
   /** The phase's fan, at the row's aim. What every phase in the game did. */
   | { kind: 'volley' }
-  /**
-   * The phase's fan — **and one curtain right across the lane on the step the phase opens**, with no
-   * gap in it wide enough for the ship to pass through. The uncoil.
-   *
-   * ⚠️ **ONE curtain per phase, not a cadence, and that bound is structural rather than tuned.** A
-   * phase is keyed to remaining health, so *how long the player is inside it* is a function of their
-   * loadout — an unavoidable attack on a CADENCE therefore costs a well-armed player one shield and a
-   * base-weapon player a dozen, and no `fireEvery` exists that is right for both. Thrown once, as the
-   * phase turns over, it costs exactly **one hit to anybody**, which is what *"sized against the
-   * shield pool"* has to mean when the pool is three
-   * (`docs/decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md`).
-   *
-   * ⚠️ **`gap` is a MAXIMUM spacing and not the spacing.** The curtain spans the whole lane, so the
-   * count is `ceil(ACROSS_SPAN / gap)` and the real spacing is the lane divided by it — which lands a
-   * shot exactly on each edge and leaves no wider hole at one end than at the other.
-   * `tests/level.test.ts` holds that the spacing is narrower than the ship can fit through, in world
-   * units, off the ship's own radius and the bullet's.
-   */
-  | { kind: 'overwhelm'; gap: number }
   /**
    * It stops shooting and opens. The eye.
    *
@@ -214,6 +189,74 @@ export type BossStance =
    * `docs/decisions/0148-a-place-has-its-own-notes.md` is the standing warning about.
    */
   | { kind: 'bare'; damageScale: number };
+
+/**
+ * The uncoil: a curtain right across the lane with one hole in it, thrown again and again as the
+ * boss's health falls.
+ *
+ * ── WHY IT IS ON THE ROW AND NOT ON A PHASE, AND WHY IT HAS A HOLE ──────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0151-the-gap-you-have-to-reach.md`.** Reported from play against 0150's
+ * version, which had no hole and was thrown once: *"it was good, but needed a way to dodge it and
+ * also needed to happen more than once per boss… needs to fire off at every 10% damage reduction
+ * below 50%."*
+ *
+ * ⚠️ **A trigger at fixed fractions of a health bar is not something a PHASE can say.** 0150 hung the
+ * curtain on a phase transition, and every way of expressing *every 10% below 50%* in the phase table
+ * merges the four escalating fans underneath it into one long phase. So the boss owns this and the
+ * phases are untouched by it.
+ *
+ * ⚠️ **AND THE HOLE IS IN A FIXED PLACE, WHICH IS THE WHOLE OF WHAT MAKES IT A CHALLENGE.** A first
+ * draft opened it near the ship, and that is the version the play-test refused: *"a static hole in the
+ * wall is a pattern the player needs to learn, a variable hole that spawns close to the ship negates
+ * the entire difficulty of the obstacle… there's not really a point in that wall challenge at all."*
+ * The player's own line for what is allowed to be hard is **is this unfair, or is this a learnable
+ * strategy** — and a wall whose hole is always in the same place is the second one.
+ *
+ * ⚠️ **WHERE IT MAY SIT IS A MEASUREMENT, AND IT IS THE ONLY THING THE FIRST DRAFT GOT RIGHT.** The
+ * curtain is in the air for 39 to 75 steps depending on the boss and the tier, and in the worst of
+ * those — the axis at `burn` — the ship covers **59.5 units** from a standing start at the lane edge.
+ * So a hole may be anywhere the ship can reach from the far wall in that time and nowhere else, which
+ * `tests/level.test.ts` drives from both edges at the real inertia rather than computing.
+ */
+export interface Uncoil {
+  /** Health fraction at or below which the boss starts throwing it. */
+  from: number;
+  /** Health lost between one curtain and the next, as a fraction of full health. */
+  every: number;
+  /**
+   * Maximum spacing between neighbouring shots, in world units.
+   *
+   * ⚠️ **A CEILING on the spacing and not the spacing.** The curtain spans the whole lane, so the
+   * count is `ceil(ACROSS_SPAN / gap)` and the real spacing is the lane divided by it — which lands a
+   * shot on each edge and leaves every hole the same width. Stepping outward by `gap` until the lane
+   * runs out leaves a wider one at whichever end the arithmetic stopped on, and a second hole nobody
+   * authored is the whole attack undone.
+   */
+  gap: number;
+  /**
+   * Where the hole opens, in world units across the lane. **The same place every time.**
+   *
+   * ⚠️ **IT DOES NOT FOLLOW THE SHIP, AND A DRAFT THAT DID WAS REFUSED FROM PLAY.** *"A variable hole
+   * that spawns close to the ship negates the entire difficulty of the obstacle."* This number is the
+   * pattern the player learns, and it is the only reason the wall is a challenge rather than a
+   * formality — `tests/level.test.ts` drives two curtains from two ship positions and refuses a hole
+   * that moved between them.
+   *
+   * ⚠️ **Bounded by what the ship can cross from the FAR WALL while the curtain is in the air**, which
+   * is what keeps it on the learnable side of the player's own line rather than the unfair one. At
+   * the hardest tier against the fastest bullet that is 59.5 units, so the band is narrow and the two
+   * bosses sit at different ends of it.
+   */
+  at: number;
+  /**
+   * How wide the hole is, in world units.
+   *
+   * ⚠️ **Wide enough to fly through at the STANDARD hurtbox**, which is the one number here that an
+   * assist may only ever improve — `docs/decisions/0024-the-accessibility-floor-is-settings.md`.
+   */
+  hole: number;
+}
 
 export interface BossPhase {
   /**
@@ -322,6 +365,14 @@ export interface BossRow extends Body {
   move: BossMove;
   /** How its volley is shaped. The phase still says how many shots and how wide. */
   attack: BossAttack;
+  /**
+   * The curtain it throws as its health falls, or `null` if it does not.
+   *
+   * ⚠️ **Required rather than optional**, on the same terms as `move` and `attack`: a boss without
+   * one is a decision somebody made, and `undefined` is a decision somebody forgot —
+   * `docs/decisions/0016-a-hub-enumerates-kinds.md`.
+   */
+  uncoil: Uncoil | null;
   /** Full health to empty. The first entry must cover a full-health boss. */
   phases: readonly BossPhase[];
 }
@@ -349,6 +400,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
   sentinel: {
     move: { kind: 'patrol' },
     attack: { kind: 'aimed' },
+    uncoil: null,
     sprite: SPRITE.boss,
     spriteHit: SPRITE.bossHit,
     radius: 11,
@@ -411,6 +463,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
   harrow: {
     move: { kind: 'stalk', agility: 0.24 },
     attack: { kind: 'spray' },
+    uncoil: null,
     sprite: SPRITE.boss2,
     spriteHit: SPRITE.boss2Hit,
     radius: 12.5,
@@ -462,6 +515,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
   lattice: {
     move: { kind: 'patrol' },
     attack: { kind: 'wall', gap: 15 },
+    uncoil: null,
     sprite: SPRITE.boss3,
     spriteHit: SPRITE.boss3Hit,
     radius: 11.5,
@@ -503,6 +557,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
   shoalMother: {
     move: { kind: 'bob', amplitude: 26, wavelength: 150 },
     attack: { kind: 'aimed' },
+    uncoil: null,
     sprite: SPRITE.boss4,
     spriteHit: SPRITE.boss4Hit,
     radius: 13,
@@ -536,6 +591,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
   redoubt: {
     move: { kind: 'patrol' },
     attack: { kind: 'ring' },
+    uncoil: null,
     sprite: SPRITE.boss5,
     spriteHit: SPRITE.boss5Hit,
     radius: 14,
@@ -569,6 +625,19 @@ export const BOSSES: Record<BossKind, BossRow> = {
   chorus: {
     move: { kind: 'bob', amplitude: 22, wavelength: 110 },
     attack: { kind: 'rake', turn: 0.55 },
+    /*
+      ⚠️ **THIS LEVEL'S OWN IDEA WITH ONE HOLE PUNCHED IN IT** — 0151. Level six is about there being
+      no gaps and the rake is what that means in one word; a curtain across the whole lane is the same
+      sentence, and the single hole is the answer the play-test asked for — *"it was good, but needed
+      a way to dodge it."*
+
+      ⚠️ **ITS HOLE IS HARD OVER TO ONE SIDE, AND ITS SLOW BULLET IS WHAT PAYS FOR THAT.** The `spit`
+      is in the air 58 to 75 steps, in which the ship crosses the whole playable lane — so this is the
+      one of the two that can put its hole a long committed journey away and still be reachable from
+      the far wall. Level six is about there being no gaps; the one gap it leaves is nowhere near the
+      middle.
+    */
+    uncoil: { from: 0.5, every: 0.1, gap: 4.5, at: 26, hole: 14 },
     sprite: SPRITE.boss6,
     spriteHit: SPRITE.boss6Hit,
     radius: 12.5,
@@ -583,13 +652,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       { upTo: 1, fireEvery: 72, shots: 3, spread: 0.5, patrolScale: 1, stance: { kind: 'volley' } },
       { upTo: 0.8, fireEvery: 60, shots: 3, spread: 0.9, patrolScale: 1.3, stance: { kind: 'volley' } },
       { upTo: 0.62, fireEvery: 54, shots: 5, spread: 1.1, patrolScale: 1.6, stance: { kind: 'volley' } },
-      /*
-        ⚠️ **THE UNCOIL, AND IT IS THIS LEVEL'S OWN IDEA WITH THE GAPS TAKEN OUT** — 0150. Level six
-        is about there being no gaps and the rake is what that means in one word; a curtain with no
-        hole in it is the same sentence with nothing left to dodge. It is the first attack in the game
-        the shield is FOR, and it costs exactly one of them.
-      */
-      { upTo: 0.46, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2, stance: { kind: 'overwhelm', gap: 4.5 } },
+      { upTo: 0.46, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2, stance: { kind: 'volley' } },
       { upTo: 0.32, fireEvery: 36, shots: 7, spread: 1.6, patrolScale: 2.4, stance: { kind: 'volley' } },
       /*
         ⚠️ **THE EYE.** It has thrown everything it had and it stops: no fan, no rake, a hull still
@@ -625,6 +688,17 @@ export const BOSSES: Record<BossKind, BossRow> = {
   axis: {
     move: { kind: 'stalk', agility: 0.2 },
     attack: { kind: 'ring' },
+    /*
+      ⚠️ **THE TIGHTEST CURTAIN, AND ITS HOLE IS NEAR THE MIDDLE BECAUSE IT HAS TO BE.** A `lance`
+      crosses the gap in 39 steps at the hardest tier where the chorus's `spit` takes 58, and 39 steps
+      buys the ship **59.5 units** from a standing start — so the last boss in the game is the one
+      whose hole has the least room to be anywhere. 58 leaves the far wall 52 units away against that
+      59.5, which is the margin, and `tests/level.test.ts` drives it from both edges.
+
+      ⚠️ **It is still the harder of the two and the numbers say why**: the player has 19 fewer steps
+      to read the curtain and cross to it, through a denser wall, from a hull that is chasing them.
+    */
+    uncoil: { from: 0.5, every: 0.1, gap: 4, at: 58, hole: 12 },
     sprite: SPRITE.boss7,
     spriteHit: SPRITE.boss7Hit,
     radius: 16,
@@ -641,15 +715,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       { upTo: 1, fireEvery: 66, shots: 3, spread: 0.6, patrolScale: 1, stance: { kind: 'volley' } },
       { upTo: 0.8, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 1.4, stance: { kind: 'volley' } },
       { upTo: 0.62, fireEvery: 48, shots: 5, spread: 1.2, patrolScale: 1.8, stance: { kind: 'volley' } },
-      /*
-        ⚠️ **THE UNCOIL, TIGHTER THAN LEVEL SIX'S** — 0150, `gap: 4` against the chorus's 4.5. Both
-        are narrower than the ship can pass through **at the SMALLEST hurtbox the settings allow**,
-        which is the bound `tests/level.test.ts` holds: an assist may make this game easier and
-        `docs/decisions/0024-the-accessibility-floor-is-settings.md` permits that, but a player who
-        turned one on would otherwise never find out what a shield is for. What the difference buys is
-        the picture — the last boss in the game fills the lane solid.
-      */
-      { upTo: 0.44, fireEvery: 42, shots: 7, spread: 1.5, patrolScale: 2.2, stance: { kind: 'overwhelm', gap: 4 } },
+      { upTo: 0.44, fireEvery: 42, shots: 7, spread: 1.5, patrolScale: 2.2, stance: { kind: 'volley' } },
       { upTo: 0.3, fireEvery: 36, shots: 7, spread: 1.8, patrolScale: 2.8, stance: { kind: 'volley' } },
       /*
         ⚠️ **THE EYE, AND IT IS THE LAST THING THE AUTHORED RUN ASKS FOR.** The ring stops, the stalk

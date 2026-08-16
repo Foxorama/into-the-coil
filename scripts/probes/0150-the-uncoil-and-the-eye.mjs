@@ -1,36 +1,23 @@
 // The breaks behind docs/decisions/0150-the-uncoil-and-the-eye.md.
 //
-// ⚠️ THE FIRST TWO ARE THE DESIGN AS THE REPORT PROPOSED IT, RESTORED —
-// `reports/the-boss-vocabulary-is-one-fan-2026-08-14.md` asked for a barrage and a window, and the
-// two ways of building them that this decision rejected both look completely correct on the page: a
-// curtain with a hole the ship fits through is a fan with extra bullets, and a window measured by the
-// band of health it covers is 5.3 seconds long and lasts 1.8.
+// ⚠️ THE FIRST IS THE DESIGN AS THE REPORT PROPOSED IT, RESTORED —
+// `reports/the-boss-vocabulary-is-one-fan-2026-08-14.md` asked for a barrage and a window, and a
+// window measured by the band of health it covers is 5.3 seconds long and lasts 1.8.
 //
-// ⚠️ AND THE LAST TWO ARE THE PICTURE. 0036 records three separate play reports of a model event with
-// no picture behind it being filed as a collision fault that did not exist, and a window is the first
+// ⚠️ AND THE REST ARE THE PICTURE. 0036 records three separate play reports of a model event with no
+// picture behind it being filed as a collision fault that did not exist, and a window is the first
 // thing in this game that is a STATE rather than a moment — it is on screen for seconds, so it is the
 // one this failure has the longest to happen in.
+//
+// ⚠️ **TWO PROBES WERE RETIRED FROM THIS FILE AND THEY ARE NOT LOST** —
+// `docs/decisions/0151-the-gap-you-have-to-reach.md`. Both were about `overwhelm`, the phase stance
+// 0150 hung the curtain on, and the play-test moved that mechanism onto the ROW: *"it needed a way to
+// dodge it and also needed to happen more than once per boss."* Their subjects live in
+// `scripts/probes/0151-the-gap-you-have-to-reach.mjs` — the spacing one INVERTED, because the claim
+// it defended was that no ship could pass, and the curtain now has a hole on purpose.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
-  {
-    decision: '0150',
-    suite: 'tests/level.test.ts',
-    /*
-      ⚠️ THE ONE THE WHOLE DECISION IS ABOUT. A curtain is undodgeable or it is nothing — it is the
-      only attack in the game a shield is FOR, and a hole the ship fits through turns *spend a shield*
-      into *find the gap*, which is what every other boss attack already is. The number moved here is
-      inside the bound by an eyelash at the smallest hurtbox the settings allow, which is exactly the
-      edit a hand makes when it wants a slightly prettier spacing.
-    */
-    broke: 'an uncoil widened just enough for the ship to fly between its shots',
-    guard: 'THE REPORTED ONE: an uncoil has no hole the ship can fly through, at any hurtbox',
-    edit: {
-      path: 'src/content/bosses.ts',
-      find: "stance: { kind: 'overwhelm', gap: 4.5 } }",
-      replace: "stance: { kind: 'overwhelm', gap: 5.5 } }",
-    },
-  },
   {
     decision: '0150',
     suite: 'tests/level.test.ts',
@@ -48,23 +35,6 @@ export const PROBES = [
       // The last boss's window. Its `upTo` is what makes the line unique — both are `damageScale: 3`.
       find: "      { upTo: 0.16, fireEvery: 30, shots: 7, spread: 1.8, patrolScale: 1.4, stance: { kind: 'bare', damageScale: 3 } },",
       replace: "      { upTo: 0.16, fireEvery: 30, shots: 7, spread: 1.8, patrolScale: 1.4, stance: { kind: 'bare', damageScale: 9 } },",
-    },
-  },
-  {
-    decision: '0150',
-    suite: 'tests/level.test.ts',
-    /*
-      ⚠️ THE CURTAIN NEVER THROWN, and it is the failure mode the *moment* design buys its bound with:
-      the attack does not come off the fire gate, so nothing in `stepBoss` would notice it missing. An
-      overwhelm phase whose curtain is not thrown is a perfectly ordinary volley phase, and the table
-      still says the boss has one.
-    */
-    broke: 'the uncoil stopped being thrown, so an overwhelm phase is a fan with a different name',
-    guard: 'THE OTHER REPORTED ONE: the uncoil is thrown, and the ship cannot get out of the way',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: "      if (stance.kind === 'overwhelm') {",
-      replace: "      if (stance.kind === 'overwhelm' && false) {",
     },
   },
   {

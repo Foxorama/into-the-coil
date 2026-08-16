@@ -200,7 +200,9 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **ALL SEVEN LEVELS ARE THEIR OWN COMPOSITION; three theme kinds renamed and one moved a level** | [0146](decisions/0146-three-more-places-and-two-after-them.md), [`five-places-measured`](../reports/five-places-measured-2026-08-13.md) |
 | **A PLACE IS A BALANCE, not a ±3 dB tint over one shared arrangement; no two places may be within 3 dB** | [0147](decisions/0147-a-place-is-a-balance.md) |
 | **a hull has an INTERIOR in `space`, baked into the same bitmap; and the art can be traced without a browser** | [0149](decisions/0149-a-hull-has-an-interior.md) |
-| **a phase can EMPTY the boss in one unavoidable curtain and then stand it open — the first moment the shield is FOR** | [0150](decisions/0150-the-uncoil-and-the-eye.md) |
+| ~~a phase can EMPTY the boss in one unavoidable curtain~~ — **the curtain half is superseded** | [0150](decisions/0150-the-uncoil-and-the-eye.md) → [0151](decisions/0151-the-gap-you-have-to-reach.md) |
+| **a boss stands OPEN at the end; and its curtain has one hole IN A FIXED PLACE, thrown every 10% below half** | [0150](decisions/0150-the-uncoil-and-the-eye.md), [0151](decisions/0151-the-gap-you-have-to-reach.md) |
+| **DIFFICULTY IS MANAGED BY *is this unfair* OR *is this a learnable strategy*** — the player's own rule, and it outranks the item it arrived with | [`the-uncoil-needed-a-gap`](../reports/the-uncoil-needed-a-gap-2026-08-16.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
 
@@ -742,9 +744,11 @@ three cloud routines could not push and the third rebuilt the second's work from
 | # | item | brief | state |
 |---|---|---|---|
 | 1 | ~~**`overwhelm` + the bared-vulnerability window**~~ | [0150](decisions/0150-the-uncoil-and-the-eye.md) — **UNFLOWN**, and the three questions it cannot answer are in it | ✅ **DONE** |
+| 1b | **THE IMPACT FLASH IS SATURATED: a boss's hull is lit on 65% of the steps of a fight at the design loadout.** Measured, not guessed. It makes the bared window invisible, makes [0035](decisions/0035-damage-is-legible-on-the-body-that-took-it.md) meaningless above the base weapon, and it is **every body in the game**, not just a boss. | [`the-uncoil-needed-a-gap`](../reports/the-uncoil-needed-a-gap-2026-08-16.md) item 2 | **TODO — DO THIS BEFORE 2** |
 | 2 | **`lance`** — the telegraphed lock-on, the first attack the player is warned about. Needs a new drawing primitive, so [0036](decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md) governs it. | same report, ordering item 2 | **TODO** |
 | 3 | **`sweep` and `mine`** — a curtain that walks, and a second-order shot that detonates into a ring. Cheapest of the four. | same report, ordering item 3 | **TODO** |
 | — | the links guard that went red once inside `prove` and green everywhere since | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) — **owed a diagnosis, not a rerun** | **OPEN** |
+| — | **AND IT IS NOW THREE GUARDS, ALL WALL-CLOCK, AND THE CAUSE IS MEASURED**: the suite oversubscribes its own worker pool. `npx vitest run` failed 2–4 of them on three runs; **`--maxWorkers=4` on the identical tree is 63/63 green, twice.** `main` failed the same set and MORE, so it is not a tree. ⚠️ **`npm run prove` CANNOT BE CAPPED FROM OUTSIDE** — `runSuite` passes no worker flag and `VITEST_MAX_THREADS` is ignored by vitest 4, so **the full local gate is unavailable on a loaded machine.** | [`the-uncoil-needed-a-gap`](../reports/the-uncoil-needed-a-gap-2026-08-16.md) | **OPEN — owed a decision about whether the cap lives in `vitest.config.ts` or in `runSuite`** |
 
 ⚠️ **THE MUSIC IS NOT IN THE QUEUE AND THAT IS DELIBERATE.** *"We can go back to working on the music
 when I get back"* — the `run` arrangement and the tempo question both want the player's ear, and the
@@ -784,11 +788,51 @@ cannot express at all.
 kick on with the art styles and boss styling… we can go back to working on the music when I get
 back."* The arrangement half is safe and cheap and is the first thing to do on their return.
 
+### ⚠️ AND IT HAS BEEN FLOWN — [`the-uncoil-needed-a-gap`](../reports/the-uncoil-needed-a-gap-2026-08-16.md), 2026-08-16
+
+⚠️ **THE UNCOIL WAS GOOD AND WANTED A GAP AND A REPEAT** — *"it was good, but needed a way to dodge it
+and also needed to happen more than once per boss… fire off at every 10% damage reduction below 50%."*
+Answered by [0151](decisions/0151-the-gap-you-have-to-reach.md), which moved the mechanism off the
+phase stance and onto the boss row.
+
+⚠️ **AND THE HOLE IS STATIC, BECAUSE THE FIRST ANSWER WAS WRONG AND WAS CAUGHT BEFORE IT SHIPPED** —
+*"a static hole in the wall is a pattern the player needs to learn, a variable hole that spawns close
+to the ship negates the entire difficulty of the obstacle."* The measurement behind that draft was
+right and the conclusion was not: it compared the curtain's flight against crossing the WHOLE lane,
+and a fixed hole is never a whole lane away. What the number bounds is **where a hole may sit**.
+
+⚠️ **AND THAT ROUND CARRIED THE PROJECT'S FIRST STATED RULE FOR DIFFICULTY, WHICH OUTRANKS THE ITEM IT
+ARRIVED WITH** — *"the game is supposed to be hard and gets harder with each level. It's a short game
+so the replayability comes from the difficulty. Management of difficulty is **'is this unfair' OR 'is
+this a learnable strategy'**?"* **Put a difficulty proposal to that test from now on.**
+
+⚠️ **AND THE UNCOIL HAS NO WARNING IN FRONT OF IT, WHICH THE SAME REPORT ASSUMES IT DOES** — *"an
+audible phase change cue and then a static wall"*. It fires at fixed health fractions rather than on a
+phase change, and nothing on screen says how much boss is left. **If the next play-test says it
+arrives unannounced, the answer is queue item 2's telegraph and not a number** —
+[0151](decisions/0151-the-gap-you-have-to-reach.md) says so.
+
+⚠️ **THE MORE VALUABLE HALF OF THAT REPORT IS ITEM 1b IN THE QUEUE ABOVE, AND IT IS NOT ABOUT
+BOSSES.** *"The boss sitting there basically white all the time"* measured out at **65% of the steps
+of a fight** with the hull lit, at the design loadout. It is why the bared window has no picture, and
+it is every body in the game.
+
+⚠️ **AND THE PLAYER DEFERRED THE ×3 WINDOW BY NAME AND SKETCHED ITS REPLACEMENT** — three windows at
+75/50/25 of *"2secs of free shooting"*. **That is a DURATION**, which is the first thing asked of this
+project that [0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md)'s health-keyed
+phase model cannot express. The report has why, and why that argument wants having once rather than
+mid-pass.
+
+⚠️ **AND WHAT THE SHIELD IS FOR IS OPEN AGAIN.** A dodgeable curtain is a movement demand, not a
+resource one, so the boss-vocabulary report's *"neither the shield nor the bomb has a moment it is
+FOR"* is unanswered. 0151 says so rather than pretending.
+
 ### THE FIRST OF THE FOUR HAS LANDED — [0150](decisions/0150-the-uncoil-and-the-eye.md)
 
-⚠️ **`overwhelm` AND THE WINDOW ARE BUILT, ON THE CHORUS AND THE AXIS, AND NOBODY HAS FLOWN THEM.**
-Read 0150 before picking up queue item 2: it records three things the report asked for that it does
-differently, each for a measured reason, and the three questions a green suite cannot answer.
+⚠️ **`overwhelm` AND THE WINDOW WERE BUILT ON THE CHORUS AND THE AXIS.** Read 0150 before picking up
+queue item 2: it records three things the report asked for that it does differently, each for a
+measured reason. ⚠️ **Its `overwhelm` stance is SUPERSEDED by
+[0151](decisions/0151-the-gap-you-have-to-reach.md)**; the bared window stands.
 
 ⚠️ **THE ONE TO CARRY FORWARD IS WHAT THE PROBE FOUND.** The bare rows were first authored with a
 zeroed fan, and the probe that removes `stepBoss`'s early return left the suite GREEN — the boss was
