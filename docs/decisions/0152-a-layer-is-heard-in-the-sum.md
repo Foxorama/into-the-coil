@@ -21,6 +21,33 @@ which.
 **A threshold is set only where the measured spread has a hole for it.** `down` has one and carries a
 flag the rung computes for itself; `margin` does not and carries none.
 
+**The rig renders the PLACE, at the gain the mixer uses.** `scripts/hear.mjs --solo` takes a
+`--theme` and asks `timeline.mjs`'s `targetGain` — the same function `rig/transport.ts` puts in the
+dashboard fader.
+
+## ⚠️ The instrument was broken in two ways, and both hid the thing being asked about
+
+Reported of Ember Nebula: *"arp is not audible at all."* Establishing whether that was a dead layer
+or a masked one needed one soloed file, and the mode that writes them could not produce it.
+
+- **`--solo` never took a theme.** It called `bakeLoops(SAMPLE_RATE)`, so it rendered **the base
+  composition** whatever place the report was about — and six of the seven places re-voice `arp`.
+- **It used `MUSIC_LADDER[rung][layer]` as the gain, never `mixOf`.** Ember Nebula takes `arp` to
+  **1.66** at `push` where the ladder alone says **0.64**, so the file written to answer *what does
+  this layer sound like* was **8 dB under what the game plays** — with the dashboard fader beside it
+  reading 1.66.
+
+⚠️ **`scripts/timeline.mjs` HAD ALREADY WRITTEN THE FINDING ON ITSELF**: *"the theme is in it, and no
+mode of the rig has ever applied one… without it every one of the seven levels renders as level one,
+which is 'the same music repeats level after level' reproduced inside the instrument built to answer
+it."* That comment was true when it was written and stayed true afterwards, because `--solo` was
+never changed to call the function it describes.
+
+⚠️ **AND THE VERDICT CHANGED THE DIAGNOSIS THE MOMENT THE FILE WAS RIGHT.** Handed the corrected
+render: *"solo-arp sounds great, but what I hear from the dashboard is solo-chords with a few other
+effects and no arp at all."* `arp` is **−37.1 dBFS rms / −23.1 peak** against `chords` at **−23.3 /
+−9.3** — 13.8 dB under on both, in overlapping registers. Not a dead layer; a buried one.
+
 ## ⚠️ The finding: every audio measurement in this repository is of a soloed layer
 
 `layerLevels` — the whole of 0140, and the basis of `weigh-audition`, `weigh-apart` and
