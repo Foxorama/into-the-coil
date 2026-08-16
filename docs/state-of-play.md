@@ -672,7 +672,35 @@ had noticed. What was corrected is **reasoning that would have bound the next ch
 capacities, they are blocking nothing, and a phone-sized floor under a desktop game is the safe
 direction to be wrong in.
 
-### ⚠️ START HERE FOR MUSIC: THE MATERIAL IS TOO QUIET TO CARRY THE ARRANGEMENT
+### ⚠️ START HERE FOR MUSIC: ONE PR IS BLOCKED ON A GUARD THAT STOPPED SEEING ITS SUBJECT
+
+⚠️ **[PR #199](https://github.com/Foxorama/into-the-coil/pull/199) is pushed, measured, green on every
+bound — and must not merge yet.** It is the last of the seven material passes (the base composition;
+the six places landed in #198). It takes the worst multiplier in the game from **16.67× to 3.46×** and
+puts **zero** solved gains past the desk ceiling, from nine.
+
+⚠️ **CI caught what three local runs could not.** `npm run prove`:
+
+> `0108  a pitched note's weight dropped on the way to the bake` — **the suite stayed GREEN. The guard
+> does not fire on the thing it exists to catch.**
+
+⚠️ **AND THE MATERIAL CHANGE IS RIGHT WHILE THE GUARD IS NOW WRONG.** `tests/music.test.ts` →
+*"and a PITCHED note has a weight too"* bakes `hook`, takes the **peak of a 40 ms window** at two
+sixteenths and compares them. #199 lengthens `hook`'s ring from about **12 ms to 110 ms** against a
+sixteenth of 100 — so **note 0's tail now rings through note 2's window** and the peak is a sum of two
+notes rather than the weight either was struck at. The accent is invisible to it, break or no break.
+
+⚠️ **THE FIX IS TO MEASURE THE INCREMENT AT THE ONSET rather than the absolute peak of a window that
+now contains a neighbour's tail** — the strike, not the sum. That changes what the guard asserts, so
+it needs its own probe seen to fail ([0005](decisions/0005-a-guard-must-be-seen-to-fail.md),
+[0019](decisions/0019-a-probe-must-be-seen-to-apply.md)) and should not be rushed to unblock a PR.
+
+⚠️ **THIS IS THE THIRD TIME IN ONE SESSION** that a probe's break stopped breaking —
+[0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md)'s *wrong quantity* branch.
+The other two were caught locally and re-cut; this one only CI saw, because the local suite was being
+starved by a dev server and its browser tests were failing first.
+
+### THE PASS THAT LANDED, AND WHAT IT FOUND
 
 ⚠️ **THE ORDER MATTERS AND IT IS NOT THE OBVIOUS ONE. Do not tune a mix until this is done.** Said
 2026-08-16: *"we have to go through and fix this up for all levels, and once all levels have all
