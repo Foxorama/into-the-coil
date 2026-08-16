@@ -672,7 +672,50 @@ had noticed. What was corrected is **reasoning that would have bound the next ch
 capacities, they are blocking nothing, and a phone-sized floor under a desktop game is the safe
 direction to be wrong in.
 
-### ⚠️ START HERE FOR MUSIC: THE REFACTOR IS BUILT, MEASURED, AND BLOCKED ON ONE THING
+### ⚠️ START HERE FOR MUSIC: THE MATERIAL IS TOO QUIET TO CARRY THE ARRANGEMENT
+
+⚠️ **THE ORDER MATTERS AND IT IS NOT THE OBVIOUS ONE. Do not tune a mix until this is done.** Said
+2026-08-16: *"we have to go through and fix this up for all levels, and once all levels have all
+sounds properly audible then I'll need to go through and relisten to all the levels because they're
+going to sound completely different."*
+
+⚠️ **THE FINDING: nine of ~600 solved gains ask for more than the desk can express**, and every one is
+a layer whose MATERIAL is 15–36 dB under its own place's loudest. Ember Nebula's `arp` wants **6.2×**;
+Rime Shelf's wants **16.7×**, three times the whole fader range. **A gain is not a loudness** —
+[0140](decisions/0140-no-layer-is-inaudible.md) — so no multiplier rescues material that thin, and
+amplifying it that hard amplifies its noise floor. It is `ride`'s defect
+([0152](decisions/0152-a-layer-is-heard-in-the-sum.md)) repeated across twenty-seven layer-places.
+
+⚠️ **THE FIX IS THE MATERIAL, ONE FILE PER PLACE** — voice `gain`, and the ENVELOPE where a note is
+too short to put energy out. The envelope is `exp(-curve × u)` across `seconds`, so a note's real
+length is about `seconds / curve`: 0152 found a *"25 ms"* ride that was really **2.8 ms** and had been
+"fixed" twice by raising its gain instead. **Check the envelope before reaching for the gain.**
+
+⚠️ **RMS LIBELS A TRANSIENT** — 0140 again. `ride`, `crash`, `perc` and `stomp` read far lower on RMS
+than an ear hears. Judge them on `peak` and `margin` from `scripts/weigh-heard.mjs`, not on RMS.
+
+**The measurement, per place** (`node scripts/weigh-solve.mjs <place>` after any change; the target is
+no layer wanting more than about **3.0×**, and `scripts/weigh-mix.mjs` must stay green throughout):
+
+| place | layers whose material cannot carry their role |
+|---|---|
+| base (`approach`, in `src/content/music.ts`) | `call` 9.7× · `hook` 7.9× · `counter` 5.9× · `frenzy` 4.4× · `dread` 4.3× · `arp` 3.1× |
+| nebula | `arp` 6.2× · `wraith` 4.3× · `frenzy` 4.2× · `call` 4.0× · `counter` 3.2× |
+| saurian | `frenzy` 6.3× · `ride` 4.0× · `wraith` 4.0× |
+| labyrinth | `crash` 4.5× · `perc` 4.3× · `call` 3.1× · `hook` 3.1× |
+| rime | **`arp` 16.7×** · `frenzy` 7.6× · `wraith` 4.4× · `hook` 3.4× |
+| mire | `arp` 4.9× · `groove` 4.2× · `dread` 3.1× |
+| core | `arp` 6.6× · `hook` 6.0× · `ride` 3.8× |
+
+⚠️ **THE BASE COMPOSITION IS LAST AND IS THE DANGEROUS ONE.** `src/content/music.ts` holds the layers
+the six places INHERIT where they do not re-voice, so a change there moves every place that shares
+one. Do it alone, after the six, and re-measure all seven.
+
+⚠️ **AND THEN THE WHOLE THING IS RE-HEARD.** Every level will sound different once this lands, so the
+tuning passes that come after it start from scratch — which is why no mix number should be argued
+before it is finished.
+
+### THE REFACTOR IS BUILT, MEASURED, AND STILL NOT WIRED IN
 
 ⚠️ **[0154](decisions/0154-the-mix-is-authored-as-intent.md) IS THE MECHANISM AND IT IS NOT WIRED IN.**
 `MUSIC_LADDER` and `mixOf` still decide every gain the player hears. The arrangement solves every
