@@ -1566,35 +1566,76 @@ describe('0108 — the bed is felt, the hands are on it, and the boss arrives', 
 
       ⚠️ **The bake, not the table** — the same lesson 0102's own accent guard records learning: its
       first version re-implemented the multiply and `npm run prove` reported STILL GREEN. `hook` is
-      baked alone and two of its own sixteenths are compared, which is a path only `renderNote` is on.
+      baked alone and its own sixteenths are compared, which is a path only `renderNote` is on.
+    */
+    /*
+      ⚠️ **A STRIKE IS AN INCREMENT AND NOT A PEAK, AND THIS GUARD MEASURED THE PEAK** —
+      `docs/decisions/0156-a-strike-is-an-increment.md`. It took the loudest sample of a forty
+      millisecond window at two sixteenths and compared them, which is the right quantity only while
+      a note has finished before the next one starts. `hook`'s ring went from about 12 ms to 110 ms
+      against a sixteenth of 100, so **the window at sixteenth 2 contains sixteenth 0's tail** and
+      its peak is a sum of two notes rather than the weight either was struck at. CI caught it: the
+      probe flattened every accent to 1 and **the suite stayed green**.
+
+      ⚠️ **Two things are measured differently now and BOTH were needed.** Subtracting what was
+      already ringing recovers the strike; averaging it over the whole loop recovers it *accurately*,
+      because two notes of the same pitch at different phases cancel by up to 15% one at a time. Over
+      256 sixteenths the estimate lands within 0.024 of the table's own weights — see 0156's table.
+
+      ⚠️ **AND IT IS ASSERTED AGAINST THE TABLE'S OWN NUMBER rather than against a threshold**, which
+      is the half that makes it a measurement. `< 0.95` would have gone on passing at 0.85; what is
+      required now is that the leaned-on sixteenth arrives at *the weight it was written at*.
     */
     const accented = MUSIC_LAYERS.filter((l) => MUSIC[l].some((v) => v.pitched && v.accents !== undefined));
     expect(accented.length, 'not one pitched voice in the whole piece is struck at more than one weight').toBeGreaterThan(3);
 
     const gallop = MUSIC.hook[0]!;
     expect(gallop.pitched, 'the hook is no longer the pitched gallop this is written against').toBe(true);
-    expect(gallop.accents?.[0], 'the hook’s downbeat is no longer its full stroke').toBe(1);
-    const lean = gallop.accents?.[2] ?? 1;
-    expect(lean, 'the hook’s third sixteenth is no longer the leaned-on one').toBeLessThan(1);
+    const accents = gallop.accents ?? [];
+    expect(accents[0], 'the hook’s downbeat is no longer its full stroke').toBe(1);
+    expect(gallop.steps[0], 'the hook’s downbeat is a rest, so there is nothing to measure against').not.toBe(null);
+    const leaned = accents.map((weight, slot) => ({ weight, slot })).filter(({ weight }) => weight < 1);
+    expect(leaned.length, 'the hook’s gallop leans on nothing, so every note is one weight again').toBeGreaterThan(0);
 
     const buffer = bakeLayer('hook', SAMPLE_RATE);
     const step = BEAT_SECONDS / gallop.perBeat;
-    /** The loudest sample in the forty milliseconds beginning at sixteenth `i`. */
-    const peakAt = (i: number): number => {
-      const from = Math.round(i * step * SAMPLE_RATE);
+    /** The loudest sample in `samples` beginning at `from`. */
+    const peakIn = (from: number, samples: number): number => {
       let peak = 0;
-      for (let s = from; s < from + Math.round(0.04 * SAMPLE_RATE) && s < buffer.length; s++) {
+      for (let s = Math.max(0, from); s < from + samples && s < buffer.length; s++) {
         peak = Math.max(peak, Math.abs(buffer[s]!));
       }
       return peak;
     };
-    const strong = peakAt(0);
-    const weak = peakAt(2);
-    expect(strong, 'the hook baked to silence, so this measured nothing').toBeGreaterThan(0);
-    expect(
-      weak / strong,
-      `the leaned-on sixteenth bakes at ${(weak / strong).toFixed(2)} of the downbeat, against ${lean} in the table`,
-    ).toBeLessThan(0.95);
+    /** 40 ms is past the 2 ms attack and short of the next sixteenth; 8 ms is a cycle of the ring. */
+    const STRIKE = Math.round(0.04 * SAMPLE_RATE);
+    const RINGING = Math.round(0.008 * SAMPLE_RATE);
+    /** What the note at sixteenth `i` ADDED, over whatever was still sounding when it landed. */
+    const riseAt = (i: number): number => {
+      const at = Math.round(i * step * SAMPLE_RATE);
+      return peakIn(at, STRIKE) - peakIn(at - RINGING, RINGING);
+    };
+    const rise = accents.map(() => ({ total: 0, struck: 0 }));
+    gallop.steps.forEach((semitone, i) => {
+      if (semitone === null) return;
+      const slot = rise[i % accents.length]!;
+      slot.total += riseAt(i);
+      slot.struck += 1;
+    });
+    const mean = (slot: number): number => {
+      const at = rise[slot]!;
+      return at.struck === 0 ? 0 : at.total / at.struck;
+    };
+    const full = mean(0);
+    expect(full, 'the hook baked to silence, so this measured nothing').toBeGreaterThan(0);
+    for (const { weight, slot } of leaned) {
+      if (rise[slot]!.struck === 0) continue;
+      const measured = mean(slot) / full;
+      expect(
+        Math.abs(measured - weight),
+        `sixteenth ${slot} is struck at ${measured.toFixed(3)} of the downbeat over ${rise[slot]!.struck} strokes, against ${weight} in the table`,
+      ).toBeLessThan(0.1);
+    }
   }, 30_000);
 
   it('THE COUNTERPOINT: something a level opens does not divide the beat the way the drums do', () => {

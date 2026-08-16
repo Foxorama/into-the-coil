@@ -71,6 +71,13 @@ export const PROBES = [
       written badly enough to miss the first time, arriving in the half of the piece 0102 could not
       reach at all.
     */
+    /*
+      ⚠️ THE GUARD THIS NAMES WAS REPAIRED BY 0156, AND THIS PROBE IS WHAT FOUND IT NEEDED REPAIRING.
+      `hook`'s ring went from about 12 ms to 110 ms against a sixteenth of 100, so the window the
+      guard took its peak from began containing the previous note's tail — and this break stopped
+      reddening anything. It is unchanged; what it aims at now measures the INCREMENT at each onset,
+      meaned over the whole loop. See docs/decisions/0156-a-strike-is-an-increment.md.
+    */
     broke: 'a pitched note’s weight dropped on the way to the bake, so the table lies about the sound',
     guard: 'and a PITCHED note has a weight too, which half the piece never had',
     edit: {
