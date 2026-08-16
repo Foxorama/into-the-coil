@@ -83,3 +83,66 @@ export function spectrum(samples: Float32Array, rate: number): number[] {
   const peak = Math.max(...bands, 1e-12);
   return bands.map((v) => v / peak);
 }
+
+// ── AND THE SAME QUESTION ASKED OF TWO DIFFERENT SIGNALS, WHICH `bandEnergy` CANNOT ANSWER ──────
+
+/**
+ * A-weighted RMS per band, measured with filters rather than with probes.
+ *
+ * ── WHY THIS IS NOT `bandEnergy`, AND THE MISTAKE THAT MADE IT NECESSARY ────────────────────────
+ *
+ * ⚠️ **`bandEnergy` SAMPLES SIX FREQUENCIES AND MULTIPLIES BY THE BANDWIDTH**, which is a density
+ * estimate — correct for a signal spread across the band, and badly wrong for one that is not. A
+ * tone lands between two probes and is counted at a fraction of its power; noise is seen by all six
+ * and is counted in full. **The wider the band, the bigger the error**, and `air` is 7,000 Hz wide
+ * against `sub`'s 35.
+ *
+ * ⚠️ **THAT IS HARMLESS EVERYWHERE IT IS ALREADY USED AND FATAL FOR THE NEW QUESTION.** Every
+ * existing caller asks for a RATIO WITHIN ONE SIGNAL — `spectrum` normalises by the signal's own
+ * loudest band, `rungShape` takes `low / total` and `high / total`. The bias is in the numerator and
+ * the denominator alike and it cancels. **Comparing two different layers to each other does not
+ * cancel it**, and the first attempt at `heardAt` put Ember Nebula's `ride` — a noise burst in the
+ * widest band there is — at the TOP of a ranking a listener had just put at the bottom.
+ *
+ * ⚠️ **A REAL BANDPASS HAS NO SUCH PREFERENCE.** Two cascaded biquads per band, RMS of what comes
+ * out, A-weighted at the band's own centre: a tone and a hiss of equal power in the band both measure
+ * their power, because the filter passes the whole band rather than seven points of it.
+ *
+ * ⚠️ **THE SKIRTS ARE 12 dB AN OCTAVE AND THAT IS LEFT DELIBERATELY SOFT.** A brick wall would be
+ * further from the ear, not closer — auditory filters leak, which is most of why masking exists at
+ * all. What this must not do is prefer one KIND of sound to another, and it does not.
+ *
+ * ⚠️ **`bandEnergy` IS NOT CHANGED**, because six guards are written over its numbers and every one
+ * of them is a ratio it answers correctly. Two functions is the honest outcome here: they measure
+ * different things and the comment above says which is for which.
+ */
+export function bandLevels(samples: Float32Array, rate: number): number[] {
+  const out: number[] = [];
+  for (const [lo, hi] of BANDS) {
+    // The geometric centre, because a band spanning an octave and a half is not centred on its mean.
+    const f0 = Math.sqrt(lo * hi);
+    const w0 = (2 * Math.PI * f0) / rate;
+    const alpha = Math.sin(w0) / (2 * (f0 / (hi - lo)));
+    // RBJ's constant-peak-gain bandpass, normalised by a0 so the difference equation is direct.
+    const a0 = 1 + alpha;
+    const b0 = alpha / a0;
+    const b2 = -alpha / a0;
+    const a1 = (-2 * Math.cos(w0)) / a0;
+    const a2 = (1 - alpha) / a0;
+
+    // Two passes of the same section — 12 dB an octave, and the state is per pass.
+    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    let u1 = 0, u2 = 0, v1 = 0, v2 = 0;
+    let sum = 0;
+    for (let i = 0; i < samples.length; i++) {
+      const x0 = samples[i]!;
+      const y0 = b0 * x0 + b2 * x2 - a1 * y1 - a2 * y2;
+      x2 = x1; x1 = x0; y2 = y1; y1 = y0;
+      const v0 = b0 * y0 + b2 * u2 - a1 * v1 - a2 * v2;
+      u2 = u1; u1 = y0; v2 = v1; v1 = v0;
+      sum += v0 * v0;
+    }
+    out.push(Math.sqrt(sum / samples.length) * aWeight(f0));
+  }
+  return out;
+}

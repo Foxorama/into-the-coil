@@ -50,6 +50,7 @@ import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { MASTER_GAIN, SAMPLE_RATE, cueSeconds, sampleCue, saturate, variantAt, velocitiesOf } from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { bakeLoops } from '../src/app/music.ts';
+import { THEME_KINDS } from '../src/content/themes.ts';
 import { PHRASE_SECONDS, BAR_SECONDS, LAYER_BARS, LAYER_PAN, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_DRIVE, MUSIC_GAIN, AURA_LAYERS, AURA_NEAR_UNITS, AURA_FAR_UNITS, STEPS_PER_BEAT } from '../src/content/music.ts';
 
 /*
@@ -238,14 +239,41 @@ if (args.has('solo')) {
     console.error(`unknown --rung=${rung}. Known: ${Object.keys(MUSIC_LADDER).join(', ')}`);
     process.exit(1);
   }
-  const loops = bakeLoops(SAMPLE_RATE);
+  /*
+    ⚠️ **A PLACE, BECAUSE THIS MODE COULD ONLY EVER HEAR LEVEL ONE AND THERE ARE SEVEN** —
+    `docs/decisions/0152-a-layer-is-heard-in-the-sum.md`. Reported: *"the dashboard shows me what is
+    supposedly playing… arp is not audible at all"*, of Ember Nebula. `bakeLoops` took no theme here,
+    so the one instrument built to isolate a layer rendered **the base composition's** arp whatever
+    place the report was about — and six of the seven places re-voice that layer.
+
+    ⚠️ **THAT IS THE DEFECT THIS MODE EXISTS TO END, ARRIVING INSIDE THE MODE ITSELF.** The comment
+    above is about a report naming a sound that nothing could name back; a soloed layer from the wrong
+    place is the same failure with an answer confident enough to act on.
+  */
+  const theme = args.get('theme');
+  if (theme !== undefined && !THEME_KINDS.includes(theme)) {
+    console.error(`unknown --theme=${theme}. Known: ${THEME_KINDS.join(', ')}`);
+    process.exit(1);
+  }
+  const loops = bakeLoops(SAMPLE_RATE, theme);
   const base = out.replace(/\.wav$/, '');
   // Two full phrases, so a layer whose loop is the phrase is heard coming round rather than guessed at.
   const length = Math.round(PHRASE_SECONDS * SAMPLE_RATE) * 2;
   const written = [];
   const silent = [];
   for (const layer of MUSIC_LAYERS) {
-    const gain = MUSIC_LADDER[rung][layer];
+    /*
+      ⚠️ **`targetGain` AND NOT `MUSIC_LADDER` ALONE, WHICH IS THE SAME DEFECT AGAIN ONE LINE DOWN.**
+      `scripts/timeline.mjs` says of it, in as many words, *"the theme is in it, and no mode of the
+      rig has ever applied one"* — and this mode still did not. Ember Nebula takes `arp` to **1.66**
+      at `push`, where the ladder alone says 0.64: **the file written to answer *what does this layer
+      sound like* was 8 dB under what the game plays**, and the dashboard fader beside it read 1.66.
+
+      ⚠️ **IT IS THE ONE DESCRIPTION THE DASHBOARD ALREADY USES** — `rig/transport.ts` calls this
+      same function — so a soloed file and the fader now agree by construction rather than by
+      inspection. `docs/decisions/0152-a-layer-is-heard-in-the-sum.md`.
+    */
+    const gain = targetGain(theme ?? 'approach', rung, layer, 1);
     if (gain <= 0) {
       silent.push(layer);
       continue;
@@ -265,7 +293,12 @@ if (args.has('solo')) {
       handed `level-solo-auraSlow.wav` and told it was *what is open at `run`* would be told a
       falsehood by the instrument built to stop them being told one.
     */
-    const how = AURA_LAYERS.includes(layer) ? `ceiling ${gain}, ×build — silent at level start` : `gain ${gain}`;
+    // ⚠️ The aura is written at FULL proximity now rather than at its ceiling, because `targetGain`
+    // takes the nearness as an argument and 1 is the only value that is a real moment of the game —
+    // the boss at arm's length. The label says so, which is what the paragraph above requires of it.
+    const how = AURA_LAYERS.includes(layer)
+      ? `${gain.toFixed(2)} at full proximity — quieter for all of the level before the fight`
+      : `gain ${gain.toFixed(2)}`;
     written.push(`${layer} (${LAYER_BARS[layer]} bars, ${(LAYER_BARS[layer] * BAR_SECONDS).toFixed(1)}s, ${how})`);
   }
   if (written.length === 0) {

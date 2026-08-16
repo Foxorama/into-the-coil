@@ -558,7 +558,31 @@ export const RIME_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.026, gain: 0.125, attack: 0.0004, curve: 9, lowFrom: 14000, highFrom: 7000 },
+      // ⚠️ 17 ms of decay where `curve: 9` over 0.026 s gave 3, and the gain comes down as the note
+      // grows — `docs/decisions/0152-a-layer-is-heard-in-the-sum.md` has the argument and the reason
+      // the attack and the band do not move. Six places carried this one line.
+      //
+      /*
+        ⚠️ **0.096 AND NOT THE 0.1 THE OTHER FIVE TOOK, BECAUSE THIS ONE IS THE BRIGHTEST AND IT IS
+        PINCHED FROM BOTH SIDES.** Rime's ride starts at 14 kHz where the rest start at 8–11, so the
+        same lengthening puts more of its energy above 300 Hz than anywhere else. Driven over
+        `weigh-mix`:
+
+        | gain | `rime/push` low share | quietest third |
+        |---|---|---|
+        | 0.100 | **28.0%** ✗ under the floor | −15.1 |
+        | **0.096** | **28.0%** ✓ | **−14.9** ✓ |
+        | 0.085 | 28.3% ✓ | **−15.0** ✗ under the floor |
+
+        ⚠️ **TWO BOUNDS MOVING IN OPPOSITE DIRECTIONS ON ONE NUMBER**, which is 0092's shape and the
+        reason this is written down rather than left as a value: 0147's low-share floor wants this
+        quieter and its whisper floor wants it louder, and the window between them is about 1.5 dB
+        wide. **A later hand raising this by ear will break one of the two, and the table says which.**
+
+        ⚠️ **THE BAND IS THIS PLACE'S CHARACTER AND DOES NOT PAY** — *it cracks… at a frequency far
+        above anything else in the mix* is the brief at the top of this file. The gain pays.
+      */
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.096, attack: 0.0004, curve: 4, lowFrom: 14000, highFrom: 7000 },
     },
   ],
 

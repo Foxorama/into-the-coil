@@ -22,11 +22,21 @@ export const PROBES = [
     guard: '0140 — NO LAYER A RUNG OPENS IS INAUDIBLE UNDER THE REST OF ITS OWN PLACE',
     edit: {
       path: 'src/content/nebula.ts',
-      find: "seconds: 0.025, gain: 0.125, attack: 0.0004",
-      // 0.05 was the shipped defect, and 0147 lifted this place’s `ride` from a mix of 0.66 to 2.1 —
-      // so the gain that used to be inaudible now clears the floor with room. The probe follows the
-      // mix, because the floor is about what comes OUT of a fader and not what goes into it.
-      replace: "seconds: 0.025, gain: 0.02, attack: 0.0004",
+      /*
+        ⚠️ **THE ANCHOR MOVED WITH THE VOICE, AND `npm run prove` IS WHY THIS WAS NOT SILENT** —
+        `docs/decisions/0152-a-layer-is-heard-in-the-sum.md` lengthened this note from 0.025 s at
+        curve 9 to 0.07 at curve 4, and the harness refused to run at all rather than reporting green
+        over a probe that no longer applies. That is 0019 doing its whole job.
+
+        ⚠️ **AND THE REPLACEMENT HAD TO MOVE TOO, WHICH IS THE PART A FIND-AND-REPLACE WOULD MISS.**
+        The energy of a note goes as `gain² × seconds / curve`, so the same envelope change that fixed
+        the defect made this voice about **6× louder at any gain** — 0.02 was inaudible under the old
+        2.8 ms envelope and is comfortably audible under the new 17 ms one. **A probe whose anchor
+        still matches but whose break no longer breaks is the failure 0019 cannot see**, and the only
+        thing that catches it is running the suite and watching the colour.
+      */
+      find: "seconds: 0.07, gain: 0.1, attack: 0.0004",
+      replace: "seconds: 0.07, gain: 0.006, attack: 0.0004",
     },
   },
   {

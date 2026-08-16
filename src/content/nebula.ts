@@ -737,7 +737,32 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
         voice tenfold and dropped the bell beside it — both deliberate, and neither was checked for
         what it left.
       */
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.025, gain: 0.125, attack: 0.0004, curve: 9, lowFrom: 11000, highFrom: 5600 },
+      /*
+        ── AND IT WAS STILL INAUDIBLE, BECAUSE THE LENGTH WAS NEVER THE LENGTH ─────────────────────
+
+        ⚠️ **`docs/decisions/0152-a-layer-is-heard-in-the-sum.md`.** Reported after 0140 had raised
+        the gain: *"I'm not hearing ride, hook or lead at all here."* `weigh-heard` puts it at
+        **−31.9 dB under the loudest layer at `push`**, ten decibels clear of the next quietest —
+        the exact condition 0140 is named for, surviving the fix 0140 made.
+
+        ⚠️ **`curve: 9` MEANS THIS NOTE WAS NEVER 25 MILLISECONDS LONG.** The envelope is
+        `exp(-curve × u)` across `seconds`, so the energy is gone in about `seconds / curve` —
+        **2.8 ms**, where the base composition's ride runs 100. **0140 multiplied a gain against a
+        note with no time to put it out**, and 0136 shortened `seconds` tenfold without touching the
+        curve that divides it, so what the ear lost was thirty-six-fold rather than ten.
+
+        ⚠️ **0136's *SHARP AND NOT SHIMMERING* IS NOT UNDONE, WHICH IS WHY THE ATTACK AND THE BAND DO
+        NOT MOVE.** What makes a tick sharp is its front edge and its brightness, not how fast it
+        collapses. 70 ms at curve 4 is gone in about 17 — **a fifth of the sixteenth it sits on, so
+        the strikes still separate with silence between them**, and a fifth of the 0.36 s bowed
+        cymbal 0136 wrote this voice to replace.
+
+        ⚠️ **AND THE GAIN COMES DOWN AS THE NOTE GROWS, so this is not 0140's move made twice.** A
+        gain alone would have needed 0.30 to buy what the envelope buys here, and a tick at 0.30 is a
+        click at the front of a section — the defect 0136 removed. The material is what was quiet,
+        exactly as the note above says; 0140 found the right sentence and changed the wrong number.
+      */
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.1, attack: 0.0004, curve: 4, lowFrom: 11000, highFrom: 5600 },
     },
   ],
 

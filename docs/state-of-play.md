@@ -660,6 +660,27 @@ not a report per item.
 
 ## What is next
 
+### ⚠️ START HERE FOR MUSIC: THE RULES ARE TO BE REFACTORED, AND THE PLAYER HAS ASKED FOR IT
+
+⚠️ **DO NOT TUNE A MIX NUMBER BEFORE READING THIS.** Said 2026-08-16, after
+[0152](decisions/0152-a-layer-is-heard-in-the-sum.md) landed: *"there's a whole bunch of rules and
+guardrails around the music that's causing a whole heap of boundaries and guidelines that keep
+causing problems… we'll need to refactor the whole music rules and definitions in the repo because
+it's messy, complicated and causing rework and restrictions that I don't want."*
+
+⚠️ **AND THE CAUSE IS NAMED, WHICH IS WHY THE REFACTOR IS NOT A TIDY-UP.** Same session: *"the reason
+music has taken so long is because of this problem, I keep asking for different things that already
+exist, but aren't hearable."* [0152](decisions/0152-a-layer-is-heard-in-the-sum.md) is what made that
+measurable; [`what-the-mix-buries`](../reports/what-the-mix-buries-2026-08-16.md) is the audit over
+all seven places and names the three layers that are on top of everything else.
+
+**Done, and needing no revisiting:** `ride`'s envelope in all six places that re-voice it, and the
+rig's `--solo`, which could only ever render level one and did it at the ladder's gain with no
+`mixOf`. Both are in 0152.
+
+**Deliberately left undone**, because every available lever is a number inside the rule set being
+refactored: `arp`, `hook`, and the bed that buries them.
+
 ### ⚠️ START HERE NEXT SESSION: ASK FOR THE FEEDBACK. IT EXISTS AND THIS FILE DOES NOT HAVE IT.
 
 ⚠️ **THE PLAYER HAS PLAYED ALL SEVEN AGAINST [0147](decisions/0147-a-place-is-a-balance.md) AND THE

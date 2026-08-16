@@ -40,4 +40,11 @@ docs/machine.md
 #
 # ⚠️ Added by 0095, which is the first change that made rendering the music a routine part of working
 # on it: the arc alone is four megabytes, and nothing had ever stopped it being committed.
-/cues-*.wav
+#
+# ⚠️ ANY NAME AND NOT `cues-*`, BECAUSE THE OLD PATTERN ONLY COVERED THE DEFAULT `--out`.
+# docs/decisions/0152-a-layer-is-heard-in-the-sum.md gave `--solo` a `--theme`, so the useful
+# invocation is now per-place — `--out=nebula.wav` writes thirteen `nebula-solo-*.wav` files that
+# `/cues-*.wav` does not match, and a routine `git add -A` would have committed 55 MB of them. The
+# rule was never about the word `cues`; nothing in this repository ships a .wav, because every sound
+# it makes is synthesised at boot.
+/*.wav
