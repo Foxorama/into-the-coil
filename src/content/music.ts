@@ -1278,12 +1278,40 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
     },
     {
       /*
-        THE DROP, on the bar line. Unpitched, because it SWEEPS — 75 Hz down to 34 — and a pitched
+        THE DROP, on the bar line. Unpitched, because it SWEEPS — 64 Hz down to 28 — and a pitched
         voice replaces `from` and `to` with one note. It is a second kick an octave under the first,
         and it is the single loudest thing below 60 Hz in the game.
 
         ⚠️ **On the bar and not on the beat.** Four of these a bar would be a continuous rumble, which
         is the thing `MAX_CUE_SECONDS` refuses for a cue and the same mistake here; one is an event.
+      */
+      /*
+        ── IT SWEPT 75 → 34 AND THE SENTENCE ABOVE WAS NOT TRUE OF IT ────────────────────────────
+
+        ⚠️ **`docs/decisions/0152-a-layer-is-heard-in-the-sum.md`'s fourth shape, in the numerator.**
+        *The single loudest thing below 60 Hz* started **above** the band and passed through it while
+        already decaying: at `curve: 2.4` the envelope is at a third by the time 75 Hz has fallen to
+        60, so the loudest quarter of this voice was spent in `low`, where the kick, the pad, the
+        aura and the bass line all live, and the band this layer exists for got the tail.
+
+        ⚠️ **It is the guard on the OTHER side of this pass that found it.** `tests/music.test.ts`'s
+        *the band a chest resolves is a real share of the mix* is `sub / hi`, A-weighted, and raising
+        `hook`, `arp` and `counter` to the audibility 0154's solve asks for necessarily fills `hi`.
+        Measured at `surge` with the material fixes in and this voice untouched: **0.195, red**. The
+        cheap answer would have been to dull the layers that had just been fixed; the honest one is
+        that the numerator had the same defect the denominator did.
+
+        ⚠️ **Starting inside the band is worth +1.7 dB of `sub` band energy AND takes the peak DOWN.**
+        `run` → `bossPeak` on the raw summed bus goes 66.3/82.4/84.2/93.4/95.7/95.9% of the clipping
+        ceiling to **65.8/80.9/82.7/90.8/92.6/92.8%** — because a sweep that begins lower is a longer
+        first half-cycle, so the instant the bar line stacks the kick, the toll and the aura onto it
+        is no longer the instant this is at full swing. `scripts/weigh-mix.mjs` reads it.
+
+        ⚠️ **AND IT IS A PHASE COINCIDENCE, WHICH IS WHY THE VALUE WAS SEARCHED RATHER THAN DERIVED.**
+        `from: 60` puts the boss rung at 101.3% and `from: 65` at 93.0%; the four numbers here were
+        chosen by driving `weigh-mix`'s own arithmetic over the range, exactly as
+        `docs/decisions/0114-the-fight-is-a-different-piece.md` chose `MUSIC_DRIVE`. A peak is an
+        instant, and nothing about an instant can be reasoned to from a decay constant.
       */
       /*
         ⚠️ **Sixteen bars now, and the second eight is NOT the first eight repeated** — 0113. This
@@ -1300,7 +1328,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'sine', from: 75, to: 34, seconds: 0.52, gain: 0.46, attack: 0.002, curve: 2.4, drive: 0.15 },
+      note: { wave: 'sine', from: 64, to: 28, seconds: 0.6, gain: 0.42, attack: 0.002, curve: 2.6, drive: 0.15 },
     },
     {
       /*
@@ -1770,6 +1798,21 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
     ⚠️ **EIGHT BARS, and it is the only rhythmic layer that is not two or four.** An arpeggio is the
     most repetitive thing in the piece — the same shape over and over is what an arpeggio IS — so it
     is the one layer where the loop length is doing the most work per second of buffer.
+
+    ── AND IT IS THE LAYER 0152 IS NAMED FOR, MEASURED IN THE FILE EVERY PLACE INHERITS FROM ───────
+
+    ⚠️ **`docs/decisions/0152-a-layer-is-heard-in-the-sum.md`.** *"It's arp that I've never heard in
+    game"* was said of Ember Nebula and fixed there; this is the same voice's ancestor, and 0154's
+    solve asked **3.07×** for it at `push` against a `margin` of **−7.7 dB**. It rang `0.2 × BEAT`
+    under `curve: 6` — about **53 ms of a 100 ms sixteenth**, so half of *something on every
+    sixteenth* was silence.
+
+    ⚠️ **The smallest fix of this pass, deliberately, because it is the layer with the least to give
+    back.** `arp`'s `heardAt` window is `hi` (`tests/pace.ts`), which is the denominator of
+    `tests/music.test.ts`'s chest guard — everything this layer gains, that ratio pays for. `0.3 ×
+    BEAT` at `curve: 3.6` is 133 ms, so each note now rings into the next and nothing more:
+    `margin` −7.7 → −4.0, the solve asks 2.34×, and the guard is 0.279 at `push` where it was 0.211.
+    The hat under it is untouched.
   */
   arp: [
     {
@@ -1799,7 +1842,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 4,
       octave: 2,
       accents: [1, 0.55, 0.72, 0.5],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.2, gain: 0.075, attack: 0.002, curve: 6, lowFrom: 3600, lowTo: 1400, q: 1.8 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.3, gain: 0.075, attack: 0.002, curve: 3.6, lowFrom: 3600, lowTo: 1400, q: 1.8 },
     },
     {
       /*
@@ -1863,6 +1906,31 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
     The progression turns major (C, F, G) under a fixed root-and-fifth voicing, and a root-and-fifth
     is the one voicing that is correct over both — which is exactly why the genre uses it.
   */
+  /*
+    ── AND IT WAS THE SAME 57 ms 0152 FOUND IN THE PLACE NAMED AFTER IT ────────────────────────────
+
+    ⚠️ **`docs/decisions/0152-a-layer-is-heard-in-the-sum.md`, first shape, in the base composition.**
+    `docs/decisions/0154-the-mix-is-authored-as-intent.md`'s solve asked **7.85×** for this layer at
+    `push` — the arrangement saying *this is the part* to material sitting **13.0 dB under** the mix
+    it plays in. The riff is written to sustain and rang `0.19 × BEAT` under `curve: 6.5`: about
+    **47 ms of a 200 ms eighth**, a 24% duty cycle. The commit that fixed this in `src/content/core.ts`
+    measured 57 ms of the same figure and called it *"a 29% duty cycle on the one figure in the piece
+    that is supposed to sustain"*; the file that place inherits from had it worse.
+
+    ⚠️ **THE ENVELOPE ALONE, AND EVERY FILTER AND DRIVE NUMBER IS UNTOUCHED — WHICH IS THE FINDING.**
+    The obvious reading is that a longer ring on a hard-driven saw fills the top of the mix, and
+    `tests/music.test.ts`'s `sub / hi` chest guard is exactly the thing that would catch it. Driven,
+    it is the other way round: at `push` and `surge` the guard reads **0.211 / 0.234** on the old
+    envelope and **0.279 / 0.265** on this one. A note that decays through its own downward sweep
+    spends its extra length at the DARK end of `lowFrom → lowTo`, so lengthening it moves the layer's
+    weight down a band while raising it. Closing `lowTo` to 560 on top of that made the guard **worse**
+    (0.193, red) and cost the margin as well — the ring is where the darkness comes from, and cutting
+    the ring to buy darkness spends the thing that was buying it.
+
+    ⚠️ **`margin` −13.0 → −3.1 at `push` and the solve asks 2.33× where it asked 7.85.** It is 0.55
+    of a beat under `curve: 2.0`, so each note is still at a third when the next lands and the gallop
+    rings through its own rests the way a distorted guitar's does. The accents keep the articulation.
+  */
 
   /*
     ── THE CALL — A TUNE AT `run`, WHICH IS THE ONE THING A LEVEL'S OPENING NEVER HAD ──────────────
@@ -1887,6 +1955,32 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
     a bar and a half in the middle of each phrase, which is what makes the next entry read as an
     entry.
   */
+  /*
+    ── AND IT WAS THE QUIETEST MELODIC VOICE IN THE FILE, PLAYING THE PART THE SOLVE CALLS THE TUNE ─
+
+    ⚠️ **`docs/decisions/0154-the-mix-is-authored-as-intent.md` asked 9.69× for it at `run`** — the
+    largest single ask left in the whole game after `src/content/`'s six places were re-voiced, and
+    `docs/decisions/0140-no-layer-is-inaudible.md` is the rule that says no multiplier rescues that.
+    `margin` was **−11.1 dB**: the one layer a level's first minute has to carry a tune, eleven
+    decibels under the bed it is carrying it over.
+
+    ⚠️ **TWO DEFECTS AT ONCE, AND THE SECOND IS THE ONE A COMPARISON FINDS.** The tune is written as
+    HALF notes — a strike every 0.8 s — and rang `0.86 × BEAT` under `curve: 2.2`, so it was silent
+    for the back half of every note it played. And at `gain: 0.115` it was the quietest pitched voice
+    in the composition: `counter`, which exists to ANSWER this line, is authored at 0.3 and `toll` at
+    0.46. A melody mixed at a third of its own accompaniment is not a balance an ear would have
+    chosen; nothing states it anywhere, and it is what the number was.
+
+    ⚠️ **The envelope carries 5.4 dB and the gain 5.4, which is the split the two defects imply.**
+    0152's order is envelope first, and here it genuinely only covers half: `2.1 × BEAT` at
+    `curve: 1.5` is legato — each note is still ringing when the next arrives, which is what a sung
+    line does and what the rests between phrases then MEAN. The remaining 5.4 dB is not a compensation
+    for a short note, it is the layer being given the level its neighbours were already written at.
+
+    ⚠️ **Out of it: `margin` −11.1 → +0.2 at `run`, and the solve asks 2.73× where it asked 9.69.**
+    The octave-under sine moves with it, on `docs/decisions/0089-a-cue-has-a-body.md`'s terms — a body
+    that stayed at 0.042 under a tune at 0.215 would have stopped being a body.
+  */
   call: [
     {
       /*
@@ -1906,7 +2000,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       // The phrase leans on its first note and lets the answer sit under it, so sixteen bars read as
       // four four-bar sentences rather than as sixty-four quarters.
       accents: [1, 0.72, 0.86, 0.66],
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.86, gain: 0.115, attack: 0.02, curve: 2.2, lowFrom: 2600, lowTo: 1200, q: 1.1 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.1, gain: 0.215, attack: 0.02, curve: 1.5, lowFrom: 2600, lowTo: 1200, q: 1.1 },
     },
     {
       /*
@@ -1924,7 +2018,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 1,
       octave: 1,
       accents: [1, 0.72, 0.86, 0.66],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.9, gain: 0.042, attack: 0.025, curve: 2 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 2.1, gain: 0.068, attack: 0.025, curve: 1.5 },
     },
   ],
 
@@ -2042,6 +2136,27 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
     note eight times a second. The dissonance belongs to the music, where it is a choice, and not to
     the effects, where it would be a mistake repeated for ever.
   */
+  /*
+    ── AND A CLUSTER THAT NEVER REACHES THE GAIN WRITTEN BESIDE IT IS NOT A CLUSTER ────────────────
+
+    ⚠️ **0152's SECOND shape — an attack that eats the note** — and it wanted **4.32×** at `boss`
+    against a `margin` of −8.9 dB. `attack: 0.5` over a note whose envelope is already `exp(-1.1u)`
+    means the ramp finishes at `u = 0.3`, where the decay has taken 28% away: **this voice peaked at
+    0.72 of its own gain and never once reached it**, and the octave under it at 0.78. The commit that
+    named this shape found `src/content/mire.ts`'s groove *"peaking at 20-44% of the gain written
+    beside it"*; this is the mild version of the same arithmetic, and it is the whole difference
+    between a swell and a fade-in.
+
+    ⚠️ **The attack is HALVED rather than removed, because the swell is the point.** 0.22 s still
+    takes an eighth of the note to arrive — a cluster that snapped on would be a stab, and the layer
+    exists to say *something is coming* over the twelve seconds of `approach`. What it now does is
+    arrive at 0.9 of its gain instead of 0.72, and `curve: 1.1 → 0.85` holds it there for the bar
+    rather than letting it sag under the boss kit that arrives on top of it.
+
+    ⚠️ **`margin` −8.9 → −5.2 at `boss` and the solve asks 2.83× where it asked 4.32.** The gain
+    carries 1.8 dB of that and the envelope 1.9; both voices move together, because the octave-under
+    is what keeps the minor second out of the mud (see below) and it cannot be left behind.
+  */
   dread: [
     {
       // Root and flat second, held together. Bar four drops to the tritone, which is the other
@@ -2051,7 +2166,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 0.25,
       octave: 1,
       accents: [1, 0.92, 0.96, 1],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.085, attack: 0.5, curve: 1.1, lowFrom: 420, lowTo: 900, q: 2.2 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.105, attack: 0.22, curve: 0.85, lowFrom: 420, lowTo: 900, q: 2.2 },
     },
     {
       // The octave under the root only — the flat second is left in the mid, where a minor second is
@@ -2060,7 +2175,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: true,
       perBeat: 0.25,
       octave: 0,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.12, attack: 0.42, curve: 1.05 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.145, attack: 0.2, curve: 0.85 },
     },
   ],
 
@@ -2083,6 +2198,31 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
     ⚠️ **Phrygian and the tritone again — root, flat second, tritone, root.** The brief's three
     ingredients in one repeating cell, at sixteenth speed, which is also the *"double speed"* the
     report asks the fight for: `stomp` doubles the drums and this doubles the note rate over them.
+
+    ── AND THE OCTAVE-UNDER IS THE ONLY VOICE THAT COULD BE LENGTHENED, WHICH A GUARD DECIDED ──────
+
+    ⚠️ **0154 asked 4.45× at `boss`, `margin` −10.2 dB** — the worst of the fight's three new layers,
+    and the ostinato the arrangement is built on. The obvious fix is the top voice: `0.22 × BEAT` at
+    `curve: 5.5` is 64 ms of a 100 ms sixteenth, and lengthening it is 0152's first shape exactly.
+
+    ⚠️ **IT IS ALSO WHAT `tests/music.test.ts`'s PAN GUARD REFUSES, AND THE REFUSAL IS A MEASUREMENT
+    RATHER THAN A TASTE.** *A layer whose weight is low is centred* — 0118 — and this layer sits at
+    +0.45. Its top voice is at `octave: 1`, so its root is **110 Hz**, which lands almost exactly on
+    one of `bandEnergy`'s `low` probes; sustaining it is sustaining a tone in the band the guard
+    measures. Driven: `0.28 × BEAT` takes the share below 130 Hz from 36% to **44%**, `0.3 × BEAT` to
+    47%, `0.38 × BEAT` to 54%, against a ceiling of 40%. There is no length of that voice that buys
+    the margin without making this a panned bass.
+
+    ⚠️ **SO THE LENGTH GOES INTO THE VOICE AN OCTAVE DOWN, WHICH IS THE OPPOSITE OF WHAT THAT READS
+    LIKE.** The lower voice is a saw at 55 Hz behind a lowpass, so what a longer note adds is its
+    HARMONIC series — 110, 165, 220 — spread across `lowmid` and `mid` rather than piled onto one
+    probe. Measured, `0.55 × BEAT` at `curve: 2.2` takes the layer up 5.6 dB and the share below
+    130 Hz **down** to 36.8%. `lowTo` rises 420 → 700 with the length, on the reason
+    `src/content/core.ts` states: a note that rings longer spends longer at the dark end of its own
+    sweep, and this one is the fight's bass line rather than its shadow.
+
+    ⚠️ **`margin` −10.2 → −5.8 and the solve asks 2.88× where it asked 4.45.** The top voice is
+    untouched — every number on it is the one that shipped.
   */
   frenzy: [
     {
@@ -2121,7 +2261,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 4,
       octave: 0,
       accents: [1, 0.6, 0.84, 0.62],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.26, gain: 0.1, attack: 0.003, curve: 4.5, lowFrom: 1200, lowTo: 420, q: 1.6, drive: 0.45 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.55, gain: 0.112, attack: 0.003, curve: 2.2, lowFrom: 1800, lowTo: 700, q: 1.6, drive: 0.45 },
     },
   ],
 
@@ -2191,6 +2331,24 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
 
     ⚠️ **Sixteen bars, so it turns with the progression's B-section** — `LAYER_BARS`' whole-multiple
     rule, and the reason a four-bar answer would be a wrong note for half of every phrase.
+
+    ── AND AN ANSWER THAT STOPS BEFORE THE QUESTION HAS FINISHED IS NOT AN ANSWER ──────────────────
+
+    ⚠️ **0154's solve asked 5.87× at `surge`, `margin` −5.8 dB** — the rung this layer arrives at, and
+    the one `docs/decisions/0120-a-rung-may-close-a-layer.md` built around it: `surge` shuts `call`
+    and opens this in the same breath, so *the ear is handed a different tune rather than another one
+    on top*. A replacement six decibels under the thing it replaced is a thinner arrangement, which is
+    the report 0120 exists to answer arriving through the material instead of through the table.
+
+    ⚠️ **`0.92 × BEAT` at `curve: 2` is a quarter note that is over before the beat is.** The line is
+    written in quarters with long rests — `call`'s rests, which is the whole idea — so every note had
+    a hole behind it as well as in front. At `1.8 × BEAT` under `curve: 1.5` the notes join, and a
+    line that joins is what *accompaniment* means; the rests between PHRASES are still there, and they
+    are the ones doing the work.
+
+    ⚠️ **Envelope 4.0 dB, gain 2.0** — 0.3 → 0.38 against `call`'s new 0.215, so the two melodies keep
+    the relationship the pattern was written for. Out of it: `margin` −5.8 → +0.5 and the solve asks
+    3.03× where it asked 5.87.
   */
   counter: [
     {
@@ -2208,7 +2366,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 1,
       octave: 1,
       accents: [0.86, 0.62, 1, 0.7],
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.92, gain: 0.3, attack: 0.03, curve: 2, lowFrom: 1900, lowTo: 850, q: 1.2 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 1.8, gain: 0.38, attack: 0.03, curve: 1.5, lowFrom: 1900, lowTo: 850, q: 1.2 },
     },
     {
       // A third above it, quiet — two notes make the line an accompaniment rather than a melody
@@ -2223,7 +2381,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 1,
       octave: 1,
       accents: [0.86, 0.62, 1, 0.7],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.86, gain: 0.05, attack: 0.035, curve: 2 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.7, gain: 0.064, attack: 0.035, curve: 1.5 },
     },
   ],
 
@@ -2258,7 +2416,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       // reads as a beat rather than as three numbers.
       accents: [1, 1, 0.76, 0.82],
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.19, gain: 0.16, attack: 0.002, curve: 6.5, lowFrom: 2600, lowTo: 780, q: 1.7, drive: 0.7 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.55, gain: 0.16, attack: 0.002, curve: 2.0, lowFrom: 2600, lowTo: 780, q: 1.7, drive: 0.7 },
     },
     {
       // The fifth over it. Two notes and no third is a power chord; adding the third is what would
@@ -2285,7 +2443,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 4,
       accents: [1, 1, 0.76, 0.82],
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.17, gain: 0.115, attack: 0.002, curve: 7, lowFrom: 2400, lowTo: 860, q: 1.6, drive: 0.6 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.5, gain: 0.115, attack: 0.002, curve: 2.2, lowFrom: 2400, lowTo: 860, q: 1.6, drive: 0.6 },
     },
   ],
 
