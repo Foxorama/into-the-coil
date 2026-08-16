@@ -695,6 +695,10 @@ Worst multiplier in the game **16.67× → 3.46×**; solved gains past the desk 
 condition the player set: *"once all levels have all sounds properly audible then I'll need to go
 through and relisten to all the levels."* **No mix number should be argued before that listen.**
 
+⚠️ **THE MATERIAL PASSES COST 32% OF THE BOOT-TIME BAKE AND IT IS OPEN** —
+[`the-prewarm-got-a-third-heavier`](../reports/the-prewarm-got-a-third-heavier-2026-08-17.md). A
+browser guard is what found it, and what it owes is named there rather than here.
+
 ### THE PASS THAT LANDED, AND WHAT IT FOUND
 
 ⚠️ **THE ORDER MATTERS AND IT IS NOT THE OBVIOUS ONE. Do not tune a mix until this is done.** Said
