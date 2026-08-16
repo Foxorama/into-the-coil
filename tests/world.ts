@@ -89,6 +89,7 @@ export function inertLevel(): {
   bossAcross: number;
   bossPatrol: number;
   bossPhaseAt: number;
+  bossUncoilAt: number;
   dyingIn: number;
   deathOffset: number;
   deathAcross: number;
@@ -145,6 +146,7 @@ export function inertLevel(): {
     bossAcross: ACROSS_SPAN / 2,
     bossPatrol: 1,
     bossPhaseAt: -1,
+    bossUncoilAt: 0,
     // Nothing is dying in a fixture that has not been driven yet — 0079.
     dyingIn: 0,
     deathOffset: SHIP_START_ALONG,
@@ -316,6 +318,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     bossAcross: ACROSS_SPAN / 2,
     bossPatrol: 1,
     bossPhaseAt: -1,
+    bossUncoilAt: 0,
     dyingIn: 0,
     deathOffset: SHIP_START_ALONG,
     deathAcross: ACROSS_SPAN / 2,

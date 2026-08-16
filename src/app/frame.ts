@@ -67,7 +67,7 @@ import { nextOnGrid } from '../content/music.ts';
 import { PICKUP_KINDS, type PickupKind, type PickupRow, type UpgradeKind, type Weapon } from '../content/pickups.ts';
 import { SPECIALS, pyreFor, type SpecialKind } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
-import { openBy, phaseFor, stepBoss, throwCurtain } from './boss.ts';
+import { openBy, phaseFor, stepBoss, throwCurtain, uncoilsBy } from './boss.ts';
 import type { Frame } from './loop.ts';
 
 /** How far in front of the ship a shot appears, in world units — clear of its own hurtbox. */
@@ -929,6 +929,19 @@ export interface World {
    * reference is the same class of thing one step further on.
    */
   bossPhaseAt: number;
+  /**
+   * How many uncoils the boss has thrown, counted off its health. `0` while there is no boss.
+   *
+   * ⚠️ **`docs/decisions/0151-the-gap-you-have-to-reach.md`, and it is `bossPhaseAt`'s twin for the
+   * same reason.** *"Fire off at every 10% damage reduction below 50%"* is derived from health by
+   * `uncoilsBy` and so has no moment at which it *happened*; the difference between two consecutive
+   * answers is the event, and this is what makes that difference exist.
+   *
+   * ⚠️ **A COUNT and not a health**, so it is monotone and cannot be argued with by a boss whose
+   * health moves for any other reason. A count that has been reached stays reached, including one the
+   * bared window swallowed.
+   */
+  bossUncoilAt: number;
   /**
    * The boss died, so the level is over.
    *
@@ -3056,27 +3069,58 @@ function driveBoss(w: World): void {
     if (w.bossPhaseAt >= 0) {
       burst(w, boss.along, boss.across, BURST.phase);
       w.onCue('bossPhase', boss.across);
-      /*
-        ── THE UNCOIL, THROWN ON THE STEP THE PHASE TURNS OVER ─────────────────────────────────────
-
-        ⚠️ **`docs/decisions/0150-the-uncoil-and-the-eye.md`.** It is here rather than behind
-        `stepBoss`'s fire gate because it is a MOMENT and not a cadence — `src/app/boss.ts` has the
-        argument, and the short of it is that a phase is keyed to health, so an unavoidable attack on
-        a `fireEvery` costs a well-armed player one shield and a base-weapon player a dozen.
-
-        ⚠️ **Inside the `bossPhaseAt >= 0` arm on purpose**, so it fires on a phase the boss ENTERED
-        and never on the one it arrived in. A curtain on the opening phase would land while the hull
-        is still crossing the screen, at a moment 0040's seven seconds of quiet exist to leave empty.
-
-        ⚠️ **It borrows this block's cue and adds none of its own** — 0104 allows four voices a step
-        and the cap, not this file, would decide which of two the player heard.
-      */
-      if (stance.kind === 'overwhelm') {
-        const bullet = SHOTS[w.bossRow.shot];
-        throwCurtain(boss, stance.gap, w.enemyShots, bullet, bullet.speed * w.difficulty.shotSpeed, w.scrollPerStep);
-      }
     }
     w.bossPhaseAt = phase;
+  }
+  /*
+    ── THE UNCOIL, AND IT IS ITS OWN CLOCK NOW ─────────────────────────────────────────────────────
+
+    ⚠️ **`docs/decisions/0151-the-gap-you-have-to-reach.md`.** 0150 hung this on the phase transition,
+    which threw it once a fight. Reported from play: *"it needed to happen more than once per boss…
+    fire off at every 10% damage reduction below 50%."* That is a trigger at fixed fractions of a
+    health bar, which no phase table can express without merging the four escalating fans underneath
+    it into one long phase — so the boss owns it and `uncoilsBy` counts it.
+
+    ⚠️ **Read and compared across steps, exactly as the phase above is**, and for the same reason: the
+    boss's health does not change inside `stepBoss`, so the difference between two consecutive answers
+    is the event and there is no moment the model has to store.
+
+    ⚠️ **Never while it is BARE.** The window is the boss having thrown everything it has; a curtain
+    out of an open hull would say the opposite in the one place the picture is trying hardest to say
+    something. The last notch of a fight therefore lands inside the window and is skipped, which is
+    why the two bosses that have one throw four curtains rather than five.
+
+    ⚠️ **It sounds as `bossShot` and adds no cue of its own.** It IS the boss shooting, and
+    `docs/decisions/0104-the-gun-plays-a-figure.md` allows four voices a step — a fourteenth `CueKind`
+    for a fifth arm of one boss's attack would spend the ceiling on a distinction the player is
+    already being shown twenty-odd bullets of.
+  */
+  const uncoil = w.bossRow.uncoil;
+  if (uncoil !== null) {
+    const notch = uncoilsBy(uncoil, boss.health, w.bossFullHealth);
+    if (notch > w.bossUncoilAt && stance.kind !== 'bare') {
+      const bullet = SHOTS[w.bossRow.shot];
+      throwCurtain(
+        boss,
+        uncoil,
+
+        w.enemyShots,
+        bullet,
+        bullet.speed * w.difficulty.shotSpeed,
+        w.scrollPerStep,
+      );
+      // Its own count and not `phase`'s, because the two are different events and
+      // `docs/decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md` says
+      // so: a phase change is the fight getting harder, and this is one attack arriving.
+      burst(w, boss.along, boss.across, BURST.uncoil);
+      w.onCue('bossShot', boss.across);
+    }
+    /*
+      ⚠️ **Advanced even on the step it was skipped**, or a boss that reached its window with a notch
+      owing would throw that curtain the moment anything else moved the count. A notch the window ate
+      is a notch spent.
+    */
+    if (notch > w.bossUncoilAt) w.bossUncoilAt = notch;
   }
   /*
     ── AND THE WINDOW IS A STATE RATHER THAN AN EVENT, SO THE PICTURE HAS TO KEEP SAYING IT ────────
@@ -3113,6 +3157,7 @@ function spawnBoss(w: World): void {
   boss.fireIn = nextOnGrid(w.steps, fireGapFor(w.bossRow.phases[0]!.fireEvery, w.difficulty));
   w.bossPatrol = 1;
   w.bossPhaseAt = -1;
+  w.bossUncoilAt = 0;
 }
 
 /**
@@ -3366,6 +3411,7 @@ function beginScript(w: World): void {
   w.clearedIn = 0;
   w.bossPatrol = 1;
   w.bossPhaseAt = -1;
+  w.bossUncoilAt = 0;
 }
 
 export function resetScene(w: World): void {

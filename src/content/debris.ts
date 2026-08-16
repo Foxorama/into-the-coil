@@ -103,6 +103,21 @@ export const BURST = {
    */
   phase: 14,
   /**
+   * Fragments when a boss throws an uncoil.
+   *
+   * ⚠️ **Its own number rather than `phase`'s, and the difference is the whole of
+   * `docs/decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md`.** A
+   * phase change is *the fight just got harder* and happens four or five times; an uncoil is *one
+   * attack is arriving now* and happens four times between them. Drawn at the same size, the player
+   * has two events and one picture.
+   *
+   * ⚠️ **Smaller than `phase`, because the attack is its own announcement.** Twenty-odd bullets
+   * appearing across the whole lane is not a thing that needs help being noticed; what this adds is
+   * the moment they LEAVE, at the hull, so the curtain has somewhere it came from —
+   * `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`.
+   */
+  uncoil: 9,
+  /**
    * Fragments per PULSE while a boss is BARE — and it stays bare until the fight ends.
    *
    * ⚠️ **`docs/decisions/0150-the-uncoil-and-the-eye.md`, and it is

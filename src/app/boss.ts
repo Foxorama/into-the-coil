@@ -23,7 +23,7 @@
 import { ACROSS_SPAN } from '../sim/camera.ts';
 import { type Entity, reset } from '../sim/entity.ts';
 import type { Pool } from '../sim/pool.ts';
-import type { BossPhase, BossRow } from '../content/bosses.ts';
+import type { BossPhase, BossRow, Uncoil } from '../content/bosses.ts';
 import type { CueKind } from '../content/cues.ts';
 import { type DifficultyRow, fireGapFor } from '../content/difficulty.ts';
 import type { ShotRow } from '../content/shots.ts';
@@ -124,45 +124,74 @@ export function curtainSpacing(gap: number): number {
 }
 
 /**
- * The uncoil: one row of shots right across the lane, with no hole the ship can pass through.
+ * How many curtains a boss at `health` should have thrown by now — the notch it has reached.
+ *
+ * ⚠️ **A COUNT DERIVED FROM HEALTH, not a timer and not a stored moment** — 0151, on the same terms
+ * `phaseFor` is written on. *"Every 10% damage reduction below 50%"* is `from` and `every`; what the
+ * caller stores is the last notch it acted on, and the difference between two consecutive answers is
+ * the event. Zero above `from`, so a boss that has not been hurt yet has thrown nothing.
+ *
+ * ⚠️ **`full` is an ARGUMENT for the reason `phaseFor` says**: a difficulty tier scales what the boss
+ * starts with, so dividing by the row would put a tougher boss past every notch at once and fire the
+ * whole set on the first hit.
+ */
+export function uncoilsBy(uncoil: Uncoil, health: number, full: number): number {
+  if (full <= 0 || uncoil.every <= 0) return 0;
+  const fallen = uncoil.from - health / full;
+  if (fallen < 0) return 0;
+  return Math.floor(fallen / uncoil.every) + 1;
+}
+
+/**
+ * The uncoil: one row of shots right across the lane with a single hole in it, at `uncoil.at`.
  *
  * ── WHY IT IS THROWN HERE AND NOT BY THE VOLLEY GATE ────────────────────────────────────────────
  *
- * ⚠️ **`docs/decisions/0150-the-uncoil-and-the-eye.md`.** It is a MOMENT and not a cadence, and that
- * is what makes it affordable: a phase is keyed to remaining health, so how long a player stands
- * inside one is a function of their loadout. An unavoidable attack on `fireEvery` costs a player at
- * the design loadout one shield and a player on the base weapon a dozen, and there is no gap between
- * volleys that is right for both. Thrown once, as the phase turns over, it costs **exactly one hit to
- * anybody** — which is what *"sized against the shield pool"* can mean when the pool is three.
+ * ⚠️ **It is an EVENT keyed to health, not a cadence** — 0151. What it costs a player is a function
+ * of how many notches their damage takes it through, which is the same for everybody; a `fireEvery`
+ * would bill a base-weapon player three times what it bills one at the design loadout, because a
+ * phase is keyed to health and they stand inside it three times as long.
  *
- * ⚠️ **It makes no sound of its own, deliberately.** It lands on the step the phase changes, and
- * `src/app/frame.ts` already cues `bossPhase` there; two cues on one step against
- * `docs/decisions/0104-the-gun-plays-a-figure.md`'s four-voice ceiling would let the cap choose which
- * of them the player hears. The phase cue IS this attack's announcement, and the burst beside it is
- * the picture — `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`.
+ * ⚠️ **THE HOLE IS IN THE SAME PLACE EVERY TIME, AND THE SHIP'S POSITION IS NOT AN INPUT HERE.** A
+ * draft took one and was refused from play: *"a variable hole that spawns close to the ship negates
+ * the entire difficulty of the obstacle… there's not really a point in that wall challenge at all."*
+ * The row's `at` is the pattern the player learns, and this function cannot see the ship at all —
+ * which is what makes *the wall does not move* true by construction rather than by care.
+ *
+ * ⚠️ **A shot is skipped rather than moved when it falls inside the hole**, exactly as the sower's
+ * and the `wall`'s out-of-lane slots are: shifting one to the hole's edge would make the opening
+ * narrower than the number authoring it says, which is a hole with a lie in it.
+ *
+ * ⚠️ **It makes no sound of its own, deliberately.** `src/app/frame.ts` cues `bossShot` beside it,
+ * and two cues on one step against `docs/decisions/0104-the-gun-plays-a-figure.md`'s four-voice
+ * ceiling would let the cap choose which of them the player hears.
  *
  * ⚠️ **Nothing allocates**, on this file's own terms.
  */
 export function throwCurtain(
   boss: Entity,
-  gap: number,
+  uncoil: Uncoil,
   shots: Pool<Entity>,
   bullet: ShotRow,
   speed: number,
   scrollPerStep: number,
 ): void {
-  const spacing = curtainSpacing(gap);
+  const spacing = curtainSpacing(uncoil.gap);
   // Back out of the spacing rather than repeating its `ceil`, so there is one description of how wide
   // a hole this curtain leaves. The division is exact up to float noise and the round absorbs that.
   const count = Math.round(ACROSS_SPAN / spacing);
-  // `<=` so the far edge gets one too: a curtain that stopped short of the lane's end would have its
-  // one dodgeable hole at exactly the place a cornered player is already flying.
+  const clear = uncoil.hole / 2;
+  // `<=` so the far edge gets one too: a curtain that stopped short of the lane's end would have a
+  // second opening at exactly the place a cornered player is already flying.
   for (let i = 0; i <= count; i++) {
+    const across = spacing * i;
+    // The authored hole, and the only one.
+    if (across > uncoil.at - clear && across < uncoil.at + clear) continue;
     const shot = shots.spawn();
     // A curtain that will not fit is dropped rather than grown, exactly as `src/sim/pool.ts` says —
     // and the pool is fifteen times a curtain, so this is the rule rather than a case.
     if (shot === null) break;
-    reset(shot, boss.along, spacing * i, bullet);
+    reset(shot, boss.along, across, bullet);
     shot.velAlong = -speed + scrollPerStep;
     shot.velAcross = 0;
   }

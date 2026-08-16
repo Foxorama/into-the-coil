@@ -641,6 +641,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     bossAcross: ACROSS_SPAN / 2,
     bossPatrol: 1,
     bossPhaseAt: -1,
+    bossUncoilAt: 0,
     // Nothing is dying at boot, and where the last ship died is not a question anybody has asked yet
     // — the middle of the lane is the honest blank, since it is where a ship starts. 0079.
     dyingIn: 0,

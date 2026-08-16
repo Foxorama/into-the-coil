@@ -6,7 +6,7 @@ import { FORMATIONS, FORMATION_KINDS, gapAcross } from '../src/content/formation
 import { BURST } from '../src/content/debris.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { INVULN_STEPS } from '../src/content/ships.ts';
-import { curtainSpacing, openBy, phaseFor } from '../src/app/boss.ts';
+import { curtainSpacing, openBy, phaseFor, uncoilsBy } from '../src/app/boss.ts';
 import { BOSS_ATTACK_KINDS, BOSS_MOVE_KINDS, BOSS_STANCE_KINDS } from '../src/content/bosses.ts';
 import { BOSS_DEATH_STEPS, GameFrame, SHIP_START_ALONG, advanceLevel, resetScene, respawn } from '../src/app/frame.ts';
 import { ASSIST_LADDER, DEFAULT_ASSISTS, tuningFor } from '../src/sim/assist.ts';
@@ -25,8 +25,8 @@ import { SCROLL_PER_STEP, SHIP_SPEED } from '../src/sim/flight.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { MAX_BARRELS, SPREAD_STEP, UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
-import { DIFFICULTIES } from '../src/content/difficulty.ts';
-import { SHIPS, fullHealthFor } from '../src/content/ships.ts';
+import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
+import { SHIPS } from '../src/content/ships.ts';
 import { BAR_SECONDS } from '../src/content/music.ts';
 
 /**
@@ -1348,43 +1348,243 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
     ...ASSIST_LADDER.hurtbox.map((h) => tuningFor({ ...DEFAULT_ASSISTS, hurtbox: h }).hurtbox),
   );
 
-  it('THE REPORTED ONE: an uncoil has no hole the ship can fly through, at any hurtbox', () => {
-    /*
-      ⚠️ **THE WHOLE CLAIM, AND IT IS GEOMETRY RATHER THAN A FEELING.** *"A barrage no pilot dodges:
-      your shields must absorb N strikes"* is the one thing in the predecessor's fight that gives a
-      hoarded resource a reason, and it is true only if the curtain is genuinely impassable. A ship
-      sitting exactly between two neighbours is `spacing / 2` from each, and it is touching them
-      whenever that is less than its radius plus the bullet's — so the curtain holds iff
-      `spacing < 2 × (shipRadius + shotRadius)`.
+  /** Every boss that throws a curtain, with its row — a claim about none of them is a claim about nothing. */
+  const uncoilers = BOSS_KINDS.filter((k) => BOSSES[k].uncoil !== null);
 
-      ⚠️ **At the SMALLEST hurtbox the settings allow, not at the standard one.**
-      `docs/decisions/0024-the-accessibility-floor-is-settings.md` permits an assist to make the game
-      easier and this would not break that rule — but a player who turned `forgiving` on would sail
-      through the one attack in the game that exists to teach them what a shield is for, and never
-      find out. Sizing against the smallest circle costs half a unit of spacing and nothing else.
+  /** A level that is nothing but the boss under test, so the fight is the only thing running. */
+  const solo = (boss: (typeof BOSS_KINDS)[number]) =>
+    ({ waves: [], pickups: [], bossAt: 200, boss, theme: 'approach' } as const);
+
+  /** Drive a fight until the boss is on station, then put it at `fraction` of its health. */
+  const fightAt = (boss: (typeof BOSS_KINDS)[number], fraction: number) => {
+    const { world } = playableWorld(solo(boss));
+    const frame = new GameFrame(world);
+    for (let i = 0; i < 960; i++) frame.step();
+    world.bossPool.at(0).health = world.bossFullHealth * fraction;
+    return { world, frame };
+  };
+
+  it('at least one boss in the game actually throws one', () => {
+    // 0005. Every assertion below walks `uncoilers`, and all of them pass vacuously over an empty set.
+    expect(uncoilers.length, 'no boss has an uncoil, so nothing below this line checks anything').toBeGreaterThan(0);
+  });
+
+  it('THE REPORTED ONE: an uncoil has exactly one hole, and the ship fits through it', () => {
+    /*
+      ⚠️ **THIS ASSERTION USED TO SAY THE OPPOSITE, AND THE PLAY-TEST IS WHY** —
+      `docs/decisions/0151-the-gap-you-have-to-reach.md`. 0150 held that the curtain had NO hole the
+      ship could pass through, which is what *"sized against the shield pool"* was read to mean. Flown:
+      *"it was good, but needed a way to dodge it."* So the claim inverts — one hole, wide enough —
+      and the two halves of it are what makes it one hole rather than two.
+
+      ⚠️ **Wide enough at the STANDARD hurtbox**, not the smallest. This is the one number an assist
+      may only ever improve, so it is sized for the player who has turned nothing on —
+      `docs/decisions/0024-the-accessibility-floor-is-settings.md`.
+
+      ⚠️ **And the curtain around it is tight enough at the SMALLEST hurtbox**, which is the other
+      direction and the reason the two bounds are not one: a spacing a `forgiving` ship could slip
+      between would be a curtain full of holes, and the authored one would mean nothing.
 
       ⚠️ **`curtainSpacing` is asked rather than restated.** `gap` is a ceiling on the spacing and not
-      the spacing, so a guard that recomputed it would be checking this file's arithmetic against
-      itself — which is the failure 0027 names. What it is compared against is the ship's radius and
-      the bullet's, neither of which `src/app/boss.ts` has ever heard of.
+      the spacing, so a guard that recomputed it would be checking `src/app/boss.ts`'s arithmetic
+      against itself — the failure `docs/decisions/0027-measure-the-picture-not-the-model.md` names.
+      What it is compared against is the ship's radius and the bullet's, which that file has never
+      heard of.
     */
-    const reach = SHIPS.proof.radius * smallestHurtbox;
-    let found = 0;
-    for (const kind of BOSS_KINDS) {
-      for (const phase of BOSSES[kind].phases) {
-        if (phase.stance.kind !== 'overwhelm') continue;
-        found++;
-        const spacing = curtainSpacing(phase.stance.gap);
-        const clears = 2 * (reach + SHOTS[BOSSES[kind].shot].radius);
-        expect(
-          spacing,
-          `${kind}'s uncoil stands its shots ${spacing.toFixed(2)} apart, and a ship ${reach.toFixed(2)} across ` +
-            `flies between them at anything over ${clears.toFixed(2)} — so it is a fan, not a barrage`,
-        ).toBeLessThan(clears);
-      }
+    for (const kind of uncoilers) {
+      const uncoil = BOSSES[kind].uncoil!;
+      const shot = SHOTS[BOSSES[kind].shot].radius;
+      const fits = 2 * (SHIPS.proof.radius + shot);
+      expect(
+        uncoil.hole,
+        `${kind}'s hole is ${uncoil.hole} across and a ship needs ${fits.toFixed(2)} to pass — it is not a way out`,
+      ).toBeGreaterThan(fits);
+
+      const spacing = curtainSpacing(uncoil.gap);
+      const slips = 2 * (SHIPS.proof.radius * smallestHurtbox + shot);
+      expect(
+        spacing,
+        `${kind}'s curtain stands its shots ${spacing.toFixed(2)} apart and a forgiving ship slips through ` +
+          `${slips.toFixed(2)} — so it has holes nobody authored`,
+      ).toBeLessThan(slips);
     }
-    // A geometric claim about a set nobody authored into is a claim about nothing — 0005.
-    expect(found, 'no boss in the game has an uncoil, so the assertion above checked nothing').toBeGreaterThan(0);
+  });
+
+  it('AND THE OTHER REPORTED ONE: the wall does not move, so it is a pattern to learn', () => {
+    /*
+      ⚠️ **THE DESIGN THIS GUARD EXISTS TO REFUSE WAS BUILT AND REJECTED FROM PLAY** —
+      `docs/decisions/0151-the-gap-you-have-to-reach.md`. A draft opened the hole near the ship, and
+      the verdict was: *"a static hole in the wall is a pattern the player needs to learn, a variable
+      hole that spawns close to the ship negates the entire difficulty of the obstacle… there's not
+      really a point in that wall challenge at all."*
+
+      ⚠️ **DRIVEN FROM TWO DIFFERENT SHIP POSITIONS, because that is the only way to ask it.** Every
+      table assertion about `at` is true of a hole that follows the player — the row still names one
+      number, and the curtain still leaves one opening. What tells the two designs apart is whether
+      the opening is in the same place when the ship is not.
+    */
+    for (const kind of uncoilers) {
+      const holes: number[] = [];
+      for (const park of [12, 82]) {
+        const { world, frame } = fightAt(kind, 0.52);
+        // Fly the ship to one end of the lane and leave it there.
+        world.input = {
+          contribute: (intent) => {
+            intent.along = 0;
+            intent.across = park < ACROSS_SPAN / 2 ? -1 : 1;
+          },
+          spend: () => {},
+          release: () => {},
+        };
+        for (let i = 0; i < 300; i++) {
+          world.ship.health = 1e6;
+          /*
+            ⚠️ The boss's health is held ABOVE the first notch while the ship flies into position, or
+            the player's own fire crosses it during the journey and the curtain under test is spent
+            before the measurement starts. The axis died to exactly that and reported *no curtain*.
+          */
+          world.bossPool.at(0).health = world.bossFullHealth * 0.52;
+          world.bossPool.at(0).fireIn = 9999;
+          frame.step();
+        }
+        world.enemyShots.clear();
+        // Cross the first notch, with the ordinary fan held off so the pool holds the curtain alone.
+        for (let i = 0; i < 3; i++) {
+          world.ship.health = 1e6;
+          world.bossPool.at(0).health = world.bossFullHealth * 0.49;
+          world.bossPool.at(0).fireIn = 9999;
+          frame.step();
+        }
+        const across: number[] = [];
+        for (let i = 0; i < world.enemyShots.size; i++) across.push(world.enemyShots.at(i).across);
+        across.sort((a, b) => a - b);
+        let middle = -1;
+        for (let i = 1; i < across.length; i++) {
+          if (across[i]! - across[i - 1]! > curtainSpacing(BOSSES[kind].uncoil!.gap) + 0.001) {
+            middle = (across[i]! + across[i - 1]!) / 2;
+          }
+        }
+        expect(middle, `${kind} threw no curtain with the ship parked near ${park}`).toBeGreaterThan(0);
+        holes.push(middle);
+      }
+      expect(
+        Math.abs(holes[0]! - holes[1]!),
+        `${kind}'s hole moved from ${holes[0]!.toFixed(1)} to ${holes[1]!.toFixed(1)} when the ship did — ` +
+          'a wall that follows the player is not a wall',
+      ).toBeLessThan(0.001);
+      expect(
+        Math.abs(holes[0]! - BOSSES[kind].uncoil!.at),
+        `${kind}'s hole landed at ${holes[0]!.toFixed(1)} and its row says ${BOSSES[kind].uncoil!.at}`,
+      ).toBeLessThan(curtainSpacing(BOSSES[kind].uncoil!.gap));
+    }
+  });
+
+  it('and it can be REACHED from the far wall, which is where a static hole may sit', () => {
+    /*
+      ⚠️ **THE FAIRNESS FLOOR, IN THE PLAYER'S OWN TERMS.** *"Management of difficulty is 'is this
+      unfair' OR 'is this a learnable strategy'."* A wall whose hole is always in the same place is
+      learnable; a hole the ship cannot physically get to from where the fight has put it is not, and
+      no amount of learning changes that. So this is the one thing the static design still has to be
+      held to, and it is what decides where a hole may be authored.
+
+      ⚠️ **DRIVEN, AT THE REAL INERTIA, AND THAT IS THE HALF ARITHMETIC CANNOT DO.** The ship has mass
+      (`docs/decisions/0037-the-ship-has-mass.md`) — it does not leave at `SHIP_SPEED`, it accelerates
+      to it — so `distance / SHIP_SPEED` is an answer about a ship this game does not have. This parks
+      the ship against the FAR wall, holds the stick over for exactly as long as a real curtain is in
+      the air, and asks whether it got to the near edge of the hole.
+
+      ⚠️ **At the HARDEST tier**, where the bullet is fastest and the window shortest — 39 steps for
+      the axis, in which the ship covers 59.5 units. That is the whole reason the two bosses' holes sit
+      at opposite ends of the band: the chorus's slower bullet buys it a hole hard over to one side.
+
+      ⚠️ **AND THE SHIP IS HELD OUT OF DANGER FOR THE MEASUREMENT.** A first draft did not, and the
+      fixture never dodges — so it died mid-run, respawned at the middle of the lane, and the distance
+      it appeared to cover was the respawn rather than the flight. It read as the ship travelling
+      further at a HARDER tier, which is the tell.
+    */
+    const hardest = DIFFICULTY_KINDS[DIFFICULTY_KINDS.length - 1]!;
+    for (const kind of uncoilers) {
+      const row = BOSSES[kind];
+      const uncoil = row.uncoil!;
+      // The far wall is whichever side of the lane the hole is not on.
+      const away = uncoil.at < ACROSS_SPAN / 2 ? 1 : -1;
+      const { world } = playableWorld(solo(kind), hardest);
+      const frame = new GameFrame(world);
+      for (let i = 0; i < 960; i++) frame.step();
+
+      const speed = SHOTS[row.shot].speed * DIFFICULTIES[hardest].shotSpeed;
+      const flight = Math.floor((world.bossPool.at(0).along - world.ship.along) / speed);
+
+      const hold = (dir: number, steps: number): void => {
+        world.input = {
+          contribute: (intent) => {
+            intent.along = 0;
+            intent.across = dir;
+          },
+          spend: () => {},
+          release: () => {},
+        };
+        for (let i = 0; i < steps; i++) {
+          world.ship.health = 1e6;
+          world.bossPool.at(0).fireIn = 9999;
+          frame.step();
+        }
+      };
+      // Hard against the far wall, then run for the hole for exactly the curtain's flight.
+      hold(away, 300);
+      const from = world.ship.across;
+      hold(-away, flight);
+      const reached = world.ship.across;
+      // The near edge of the hole is the first place that is safe to be.
+      const edge = uncoil.at + (away > 0 ? uncoil.hole / 2 : -uncoil.hole / 2);
+      const short = away > 0 ? reached - edge : edge - reached;
+      expect(
+        short,
+        `${kind}'s hole sits at ${uncoil.at}; from the far wall at ${from.toFixed(1)} the ship reaches ` +
+          `${reached.toFixed(1)} in the ${flight} steps the curtain is in the air, ${Math.abs(short).toFixed(1)} ` +
+          'short of its near edge — no amount of learning reaches that',
+      ).toBeLessThanOrEqual(0);
+    }
+  });
+
+  it('and it is thrown again and again, which is the half a phase could not say', () => {
+    /*
+      ⚠️ **Reported**: *"it needed to happen more than once per boss… fire off at every 10% damage
+      reduction below 50%."* 0150 hung the curtain on a phase transition and threw it once a fight.
+
+      ⚠️ **Counted off `uncoilsBy` rather than off the table**, so what is checked is the arithmetic
+      the game actually runs — and it is checked at the fraction the player named rather than at
+      whatever the row happens to author.
+    */
+    for (const kind of uncoilers) {
+      const uncoil = BOSSES[kind].uncoil!;
+      const full = 1000;
+      const notches: number[] = [];
+      for (let health = full; health >= 0; health--) {
+        const notch = uncoilsBy(uncoil, health, full);
+        if (notch > (notches[notches.length - 1] ?? 0)) notches.push(notch);
+      }
+      expect(notches.length, `${kind} uncoils ${notches.length} times, which is not *more than once*`).toBeGreaterThan(
+        1,
+      );
+      // Nothing before `from`, which is the *below 50%* half of the report.
+      expect(uncoilsBy(uncoil, full, full), `${kind} uncoils at full health`).toBe(0);
+      expect(uncoilsBy(uncoil, full * uncoil.from + 1, full), `${kind} uncoils above its own threshold`).toBe(0);
+    }
+  });
+
+  it('and the whole hole is inside the lane', () => {
+    /*
+      ⚠️ **A hole half off the edge of the world is a narrower hole than the row says**, and the row is
+      what every other assertion here is written against — including the one that says the ship fits
+      through it. It is also the shape a hand reaches for when it wants the pattern hard over to one
+      side, which is exactly what the chorus's is.
+    */
+    for (const kind of uncoilers) {
+      const uncoil = BOSSES[kind].uncoil!;
+      expect(uncoil.at - uncoil.hole / 2, `${kind}'s hole hangs off the near edge of the lane`).toBeGreaterThan(0);
+      expect(uncoil.at + uncoil.hole / 2, `${kind}'s hole hangs off the far edge of the lane`).toBeLessThan(ACROSS_SPAN);
+    }
   });
 
   it('and the window is the last thing a fight does, once', () => {
@@ -1395,10 +1595,10 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
       then carries on through, which is precisely what that rule exists to refuse and precisely the
       case it cannot state. So: a boss may bare itself once, at the end.
 
-      ⚠️ **And an uncoil is never the FIRST phase**, because the curtain is thrown on the step a phase
-      is ENTERED — `src/app/frame.ts` — and the opening phase is the one the boss arrives in. An
-      overwhelm authored there would never throw anything at all, which is a dead row that reads
-      exactly like a live one.
+      ⚠️ **AND A WINDOW STARTS BELOW THE UNCOIL'S OWN THRESHOLD**, so a boss that throws curtains gets
+      to throw at least one before it opens. A window that began above `from` would swallow every
+      notch of a mechanism the table says the boss has — silently, because `src/app/frame.ts` spends a
+      notch the window ate rather than saving it, and nothing else in the game would notice.
     */
     for (const kind of BOSS_KINDS) {
       const stances = BOSSES[kind].phases.map((p) => p.stance.kind);
@@ -1406,10 +1606,15 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
       expect(bares.length, `${kind} bares itself ${bares.length} times, and a window is a finisher`).toBeLessThan(2);
       if (bares.length === 1) {
         expect(stances[stances.length - 1], `${kind} goes on fighting after it has opened`).toBe('bare');
+        const uncoil = BOSSES[kind].uncoil;
+        if (uncoil !== null) {
+          const opensAt = BOSSES[kind].phases[stances.length - 1]!.upTo;
+          expect(
+            opensAt,
+            `${kind} opens at ${opensAt} and starts uncoiling at ${uncoil.from}, so the window eats every curtain`,
+          ).toBeLessThan(uncoil.from);
+        }
       }
-      const uncoils = stances.filter((s) => s === 'overwhelm');
-      expect(uncoils.length, `${kind} uncoils ${uncoils.length} times, and it has one thing to empty`).toBeLessThan(2);
-      expect(stances[0], `${kind} opens on an uncoil, so its curtain is never thrown`).not.toBe('overwhelm');
     }
   });
 
@@ -1463,90 +1668,55 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
     }
   });
 
-  /** A level that is nothing but the boss under test, so the fight is the only thing running. */
-  const solo = (boss: (typeof BOSS_KINDS)[number]) =>
-    ({ waves: [], pickups: [], bossAt: 200, boss, theme: 'approach' } as const);
-
-  /** Drive a fight until the boss is on station, then put it at `fraction` of its health. */
-  const fightAt = (boss: (typeof BOSS_KINDS)[number], fraction: number) => {
-    const { world } = playableWorld(solo(boss));
-    const frame = new GameFrame(world);
-    for (let i = 0; i < 960; i++) frame.step();
-    world.bossPool.at(0).health = world.bossFullHealth * fraction;
-    return { world, frame };
-  };
-
-  it('THE OTHER REPORTED ONE: the uncoil is thrown, and the ship cannot get out of the way', () => {
+  it('AND DRIVEN: a real fight throws real curtains, each with one hole in it', () => {
     /*
       ⚠️ **DRIVEN, on the terms this file already sets for a boss fight**: the real `GameFrame` over a
-      real `World` with no browser anywhere. What the table guard above proves is that the geometry
-      leaves no hole; what this proves is that the curtain is actually thrown, spans the lane, and
-      arrives — three things that are each true of nothing at all if `throwCurtain` is never reached.
+      real `World` with no browser anywhere. Everything above this is arithmetic over a table, and all
+      of it is true of a mechanism that is never reached — `uncoilsBy` can count perfectly while
+      `throwCurtain` is never called, and 0150 shipped with a probe proving exactly that shape of gap.
 
-      ⚠️ **The fixture never dodges** — `tests/world.ts` holds the ship on station — which is what
-      makes *how many hits did it cost* answerable. It is the same fixture the whole of this file's
-      fight coverage runs on.
+      ⚠️ **The HOLE is measured as the widest span between neighbours, in world units**, and compared
+      against the one the row authored. A curtain of the right number of bullets that all left from
+      the middle of the lane passes every count in this file and is a fan on screen —
+      `docs/decisions/0027-measure-the-picture-not-the-model.md`.
     */
-    const { world, frame } = fightAt('chorus', 0.5);
-    // Just above the uncoil's threshold, so the next hit crosses into it.
-    world.enemyShots.clear();
-    world.bossPool.at(0).health = world.bossFullHealth * 0.47;
-    let widest = 0;
-    for (let i = 0; i < 4 && world.enemyShots.size === 0; i++) {
-      world.bossPool.at(0).health = world.bossFullHealth * 0.45;
-      frame.step();
+    const { world, frame } = fightAt('chorus', 0.52);
+    const uncoil = BOSSES.chorus.uncoil!;
+    let thrown = 0;
+    let widestHole = 0;
+    // Walk the health down past four notches, clearing the field between each so a curtain is the
+    // only thing in the air when it is measured.
+    for (let notch = 0; notch < 4; notch++) {
+      world.enemyShots.clear();
+      const at = uncoil.from - uncoil.every * notch - 0.01;
+      for (let i = 0; i < 3; i++) {
+        world.bossPool.at(0).health = world.bossFullHealth * at;
+        // The ordinary fan silenced, so what is left in the pool is the curtain and nothing else.
+        world.bossPool.at(0).fireIn = 999;
+        frame.step();
+      }
+      if (world.enemyShots.size === 0) continue;
+      thrown++;
+      const across: number[] = [];
+      for (let i = 0; i < world.enemyShots.size; i++) across.push(world.enemyShots.at(i).across);
+      across.sort((a, b) => a - b);
+      // The lane edges count as walls, so the ends of the row are not holes.
+      expect(across[0], `curtain ${notch} started ${across[0]!.toFixed(1)} into the lane`).toBeLessThan(1);
+      expect(across[across.length - 1], `curtain ${notch} stopped short of the lane`).toBeGreaterThan(ACROSS_SPAN - 1);
+      let gaps = 0;
+      for (let i = 1; i < across.length; i++) {
+        const span = across[i]! - across[i - 1]!;
+        if (span <= curtainSpacing(uncoil.gap) + 0.001) continue;
+        gaps++;
+        if (span > widestHole) widestHole = span;
+      }
+      expect(gaps, `curtain ${notch} has ${gaps} holes in it, and an uncoil has exactly one`).toBe(1);
     }
-    expect(world.enemyShots.size, 'the uncoil threw nothing at all').toBeGreaterThan(10);
-    let lowest = ACROSS_SPAN;
-    for (let i = 0; i < world.enemyShots.size; i++) {
-      const across = world.enemyShots.at(i).across;
-      if (across < lowest) lowest = across;
-      if (across > widest) widest = across;
-    }
-    /*
-      ⚠️ **The SPAN, in world units, and not the count.** A curtain of the right number of bullets
-      that all left from the middle of the lane would pass every arithmetic guard in this file and be
-      a fan on screen — `docs/decisions/0027-measure-the-picture-not-the-model.md`.
-    */
-    expect(lowest, `the uncoil's nearest edge sat ${lowest.toFixed(1)} into the lane`).toBeLessThan(1);
-    expect(widest, `the uncoil's far edge stopped ${(ACROSS_SPAN - widest).toFixed(1)} short of the lane`).toBeGreaterThan(
-      ACROSS_SPAN - 1,
-    );
-  });
-
-  it('and it costs exactly one hit, however long the player takes to get there', () => {
-    /*
-      ⚠️ **THE BOUND THAT MADE THIS AFFORDABLE, AND IT IS THE REASON THE CURTAIN IS NOT ON A
-      CADENCE.** A phase is keyed to remaining health, so a base-weapon player stands inside one for
-      three times as long as a player at the design loadout — and an unavoidable attack on `fireEvery`
-      would bill them three times as many shields for the same phase. Thrown once, as the phase turns
-      over, it costs one hit to everybody. `MAX_SHIELDS` is three, so *"your shields must absorb N
-      strikes"* is answered with an N the pool can actually pay.
-
-      ⚠️ **Measured as HITS TAKEN by a ship that never moves**, which is the currency
-      `src/content/ships.ts` says the hull is counted in — not as bullets spawned.
-
-      ⚠️ **The phase's ORDINARY fan is silenced for the measurement, and it is the only way to ask
-      this question.** An uncoil phase still throws the row's attack; a fixture that never dodges
-      walks into that too, and the first draft of this guard read 2 and was measuring *a stationary
-      ship in a boss fight* rather than *what the curtain costs*. Holding `fireIn` off leaves exactly
-      one thing on the field that can reach the ship, which is the thing under test — the curtain
-      comes from the phase transition and not from the fire gate, so nothing about it is suppressed.
-    */
-    const { world, frame } = fightAt('chorus', 0.5);
-    // A full shell, so *how many hits did it cost* is answerable rather than *did it kill the ship*.
-    world.ship.health = fullHealthFor(world.shipRow);
-    world.bossPool.at(0).health = world.bossFullHealth * 0.47;
-    const before = world.ship.health;
-    // Long enough for the whole curtain to cross the lane and expire, with the boss held just inside
-    // the uncoil so no later phase can turn over and throw a second one.
-    for (let i = 0; i < 600; i++) {
-      world.bossPool.at(0).health = world.bossFullHealth * 0.45;
-      world.bossPool.at(0).fireIn = 999;
-      frame.step();
-    }
-    const lost = before - world.ship.health;
-    expect(lost, `the uncoil cost ${lost} of the ship's ${before} hits, and the shell only holds three`).toBe(1);
+    expect(thrown, `the fight threw ${thrown} curtains across four notches of health`).toBe(4);
+    expect(
+      widestHole,
+      `the widest hole measured ${widestHole.toFixed(1)} against the ${uncoil.hole} the row authors`,
+    ).toBeGreaterThanOrEqual(uncoil.hole - curtainSpacing(uncoil.gap));
   });
 
   it('and a bared boss throws nothing and dies faster for it', () => {
