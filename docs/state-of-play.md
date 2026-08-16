@@ -660,6 +660,18 @@ not a report per item.
 
 ## What is next
 
+### ⚠️ THE TARGET IS DESKTOP NOW — [0153](decisions/0153-desktop-is-the-target.md)
+
+⚠️ **The phone is a port that has not started, and may not be cited as a reason to make anything
+smaller, shorter or fewer.** Said 2026-08-16: *"the scope has changed to be desktop first… once we're
+in a good desktop place, we can then revisit what needs to happen to make it phone portable."*
+
+⚠️ **NO NUMBER MOVED, AND 0153 HAS WHY** — the phone had already stopped binding the music and nobody
+had noticed. What was corrected is **reasoning that would have bound the next change**.
+`tests/budget.test.ts` and `src/sim/collide.ts` are still phone-sized on purpose: those are gameplay
+capacities, they are blocking nothing, and a phone-sized floor under a desktop game is the safe
+direction to be wrong in.
+
 ### ⚠️ START HERE FOR MUSIC: THE RULES ARE TO BE REFACTORED, AND THE PLAYER HAS ASKED FOR IT
 
 ⚠️ **DO NOT TUNE A MIX NUMBER BEFORE READING THIS.** Said 2026-08-16, after

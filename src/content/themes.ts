@@ -31,6 +31,19 @@
  * `docs/decisions/0022-frame-rate-is-a-feature.md` sizes for, and not a thing to synthesise at a
  * level boundary either.
  *
+ * ⚠️ **BOTH HALVES OF THAT LAST SENTENCE ARE NOW FALSE, AND IT IS LEFT STANDING BECAUSE THE REASONING
+ * IS WRITTEN ONCE** — `docs/decisions/README.md`. The game has had seven per-place compositions since
+ * `docs/decisions/0146-three-more-places-and-two-after-them.md`, and
+ * `docs/decisions/0133-the-place-is-baked-at-the-boundary.md` synthesises one **at a level boundary**,
+ * which is precisely the thing it says is not a thing.
+ *
+ * ⚠️ **AND THE DEVICE IN IT IS NO LONGER THE ONE BEING SIZED FOR** —
+ * `docs/decisions/0153-desktop-is-the-target.md`. The phone is a port that has not started, so a
+ * comment citing it as a reason to make something smaller is stale by definition. **The live ceiling
+ * is `tests/sound.test.ts`'s 56 MB**, which is a desktop number that says so — and whose own
+ * condition for being raised again is the boundary bake rather than a bigger figure, which is an
+ * argument this decision does not retire because it was never a phone argument.
+ *
  * ⚠️ **What is free is the MIX.** A theme carries a gain multiplier per layer, applied over
  * `MUSIC_LADDER`'s own rung, so each level is a different arrangement of one set of material: the
  * same eleven loops, emphasised differently. Nothing is re-baked, nothing is allocated, and a level
