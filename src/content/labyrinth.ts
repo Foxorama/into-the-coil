@@ -603,7 +603,10 @@ export const LABYRINTH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.026, gain: 0.125, attack: 0.0004, curve: 8.5, lowFrom: 10000, highFrom: 4800 },
+      // ⚠️ 17 ms of decay where `curve: 8.5` over 0.026 s gave 3, and the gain comes down as the note
+      // grows — `docs/decisions/0152-a-layer-is-heard-in-the-sum.md` has the argument and the reason
+      // the attack and the band do not move. Six places carried this one line.
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.1, attack: 0.0004, curve: 4, lowFrom: 10000, highFrom: 4800 },
     },
   ],
 
