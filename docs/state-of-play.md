@@ -672,7 +672,21 @@ had noticed. What was corrected is **reasoning that would have bound the next ch
 capacities, they are blocking nothing, and a phone-sized floor under a desktop game is the safe
 direction to be wrong in.
 
-### ⚠️ START HERE FOR MUSIC: THE RULES ARE TO BE REFACTORED, AND THE PLAYER HAS ASKED FOR IT
+### ⚠️ START HERE FOR MUSIC: THE REFACTOR IS BUILT, MEASURED, AND BLOCKED ON ONE THING
+
+⚠️ **[0154](decisions/0154-the-mix-is-authored-as-intent.md) IS THE MECHANISM AND IT IS NOT WIRED IN.**
+`MUSIC_LADDER` and `mixOf` still decide every gain the player hears. The arrangement solves every
+layer onto its role's target across all seven places and every rung — worst error 0.00 dB — and it
+**collapses the seven places to 0.9–2.5 dB apart** where
+[0147](decisions/0147-a-place-is-a-balance.md) requires 3.
+[`the-arrangement-solves-and-the-places-collapse`](../reports/the-arrangement-solves-and-the-places-collapse-2026-08-16.md)
+has the table and the three candidate answers.
+
+⚠️ **THE FIRST MOVE IS AN EAR, NOT A DECISION.** `node scripts/hear-solved.mjs <place> --rung=<rung>`
+writes the shipped and the solved mix as stereo through the game's own bus. **`core --rung=surge` is
+the one to distrust** — its movements are the largest anywhere.
+
+### ⚠️ AND THE RULES IT REPLACES — THE PLAYER ASKED FOR THIS
 
 ⚠️ **DO NOT TUNE A MIX NUMBER BEFORE READING THIS.** Said 2026-08-16, after
 [0152](decisions/0152-a-layer-is-heard-in-the-sum.md) landed: *"there's a whole bunch of rules and
