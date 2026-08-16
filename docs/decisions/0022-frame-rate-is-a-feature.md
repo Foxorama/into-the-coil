@@ -5,6 +5,14 @@
 
 ## The target
 
+⚠️ **SUPERSEDED BY [0153](0153-desktop-is-the-target.md), 2026-08-16 — THIS SECTION AND *The budget*
+BELOW, AND NOTHING ELSE.** Desktop is now what every budget, ceiling and capacity is argued against,
+and the phone is a port that has not started. **Every rule under *The rules* still holds unchanged**,
+because not one of them is a phone concession: a fixed sim, baked art and a frame loop that does not
+allocate are correct on any machine, and the first is correctness rather than speed. The sentence
+this section already contained — *"desktop is the primary play target and is never the performance
+constraint"* — is why 0153 reads as a correction to the sizing rather than a reversal of the design.
+
 **A mid-range Android from 2021** — Snapdragon 695 / Dimensity 700 / Exynos 1280 class, 1080×2400.
 Chosen over a 2023 device deliberately: it buys a five-year support span instead of two, and the two
 generations are not far apart, because the binding constraint on both is **fill rate rather than

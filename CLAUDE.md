@@ -106,12 +106,15 @@ decision needs no rule.
 - **The sim steps at a fixed 60Hz and the renderer interpolates; art is baked to bitmaps and blitted;
   nothing allocates in the frame loop.** A sim stepped by wall-clock delta teleports bullets through
   the player on a dropped frame. Per-frame entity pools are mutable and are **not** reducer state —
-  0017 still holds over screens, run and settings. The budget is ~10ms on a 2021 mid-range Android,
-  and its guard counts draw calls and allocations rather than wall-clock, because CI is not that
-  phone. The frame loop is a **closed list of hot files** where allocating syntax fails a test; a line
-  that genuinely runs once carries `// @setup: <why>` above it. This is the one code convention
-  landed so far. — [0022](docs/decisions/0022-frame-rate-is-a-feature.md),
-  [0025](docs/decisions/0025-the-frame-budget-is-counted-not-timed.md)
+  0017 still holds over screens, run and settings. **Desktop is what every budget, ceiling and
+  capacity is argued against; the phone is a port that has not started and may not be cited as a
+  reason to make anything smaller.** The guard counts draw calls and allocations rather than
+  wall-clock, and that is *not* a phone rule — CI is not the target machine either. The frame loop is
+  a **closed list of hot files** where allocating syntax fails a test; a line that genuinely runs once
+  carries `// @setup: <why>` above it. This is the one code convention landed so far.
+  — [0022](docs/decisions/0022-frame-rate-is-a-feature.md),
+  [0025](docs/decisions/0025-the-frame-budget-is-counted-not-timed.md),
+  [0153](docs/decisions/0153-desktop-is-the-target.md)
 
 - **When a report survives a fix that measured green, go and measure the picture.** Everything this
   repository counts is a *model* quantity — draw calls, allocations, steps, world units — and the
