@@ -23,7 +23,9 @@ import {
   type MusicLevel,
 } from '../src/content/music.ts';
 import { mixOf, revoicedBy, voicesOf, type ThemeKind } from '../src/content/themes.ts';
-import { BANDS, bandEnergy } from './spectrum.ts';
+import { LAYER_PAN } from '../src/content/music.ts';
+import { panGains } from '../src/app/music.ts';
+import { BANDS, bandEnergy, bandLevels } from './spectrum.ts';
 
 /** Which bands are the bottom and the top, resolved once from the one table that names them. */
 /** The middle of each band, for the centre-of-mass. */
@@ -336,3 +338,153 @@ export function quietestThird(profile: Record<MusicLayer, number>): number {
  * than be widened.
  */
 export const AUDIBLE_FLOOR_DB = -33;
+
+// ── AND WHETHER A LAYER SURVIVES THE SUM, WHICH IS A DIFFERENT QUESTION ─────────────────────────
+
+/**
+ * What one layer has left after everything playing beside it, in the band it lives in and the ear it
+ * favours.
+ *
+ * ── EVERY MEASUREMENT ABOVE THIS LINE IS OF A SOLOED LAYER ──────────────────────────────────────
+ *
+ * ⚠️ **Reported 2026-08-16, of Ember Nebula at `push`:** *"I'm not hearing ride, hook or lead at all
+ * here when playing the entire sequence."* `layerLevels` puts `hook` at −11.0 dB and `lead` at −9.4 —
+ * mid-cluster, nowhere near `AUDIBLE_FLOOR_DB` — so the model has no complaint about two layers a
+ * listener says are not there.
+ *
+ * ⚠️ **AND IT CANNOT HAVE ONE, BECAUSE IT NEVER RENDERS THE MIX.** `loudestOf` takes each layer to the
+ * loudest gain ANY rung gives it and compares it to another layer at ITS loudest — an arrangement no
+ * rung plays. The comparison is broadband, so a layer buried in the one band it occupies scores on
+ * the energy it has everywhere else. And it is **mono**, so `LAYER_PAN` — the whole of
+ * `docs/decisions/0118-the-mix-has-a-width.md`, added expressly to stop layers masking each other —
+ * has never appeared in a number this repository prints.
+ *
+ * ⚠️ **MASKING IS WHAT *I CANNOT HEAR IT* MEANS ONCE A GAIN IS RULED OUT**, and 0118 said so: *"two
+ * sounds in the same frequency band had nothing to separate them but level — which is why the answer
+ * has been a gain six times running."* This is the quantity those six passes were tuning blind.
+ *
+ * ⚠️ **THE BEST WINDOW AND NOT THE AVERAGE ONE.** A listener picks a part out where it is clearest,
+ * not where it is typical — so a layer is credited with the single band-and-ear that flatters it
+ * most, and a layer that scores badly HERE has nowhere at all to be heard. The counterpart rule is
+ * that only bands the layer actually lives in count: within 12 dB of its own loudest band. Without
+ * that, a hiss with a millionth of its energy at 40 Hz would score `+∞` in a band nothing else uses.
+ *
+ * ⚠️ **POWER-SUMMED, because the layers are uncorrelated.** Adding amplitudes would say twelve layers
+ * at −20 dB bury one at 0, which is arithmetic about a single phase-locked tone rather than about a
+ * band of music.
+ *
+ * ⚠️ **`bandLevels` AND NOT `bandEnergy`, AND THE FIRST VERSION OF THIS USED THE WRONG ONE.** It put
+ * Ember Nebula's `ride` at the TOP of the ranking — a layer the report that produced this function
+ * names as inaudible — because `bandEnergy` estimates a density and a noise burst in the 7,000 Hz
+ * `air` band is the shape that flatters most. `tests/spectrum.ts` has the whole argument. **The
+ * measurement disagreeing with the ear was the measurement being wrong, and it was caught only
+ * because the ear had already spoken.**
+ *
+ * ⚠️ **`panGains` IS THE GAME'S, imported rather than restated** — `src/app/music.ts` keeps it for
+ * `scripts/hear.mjs` for exactly this reason, and a pan law is the fifth place
+ * `docs/decisions/0116-the-rig-plays-the-level.md`'s drift could happen.
+ *
+ * ⚠️ **IT IS STILL NOT A SUBSTITUTE FOR LISTENING**, on `tests/spectrum.ts`'s terms. Masking in an ear
+ * spreads upward across bands and this does not model that, so it is a floor under *nothing else is
+ * on top of it here*, not a claim that the layer is audible.
+ */
+export interface Heard {
+  layer: MusicLayer;
+  /** What this place takes it to AT THIS RUNG — not the loudest any rung ever does. */
+  gain: number;
+  /** dB under the loudest layer sounding at this rung, A-weighted over every band. */
+  down: number;
+  /** dB over everything else, in the best band it lives in, on the ear that favours it. */
+  margin: number;
+  /** Which band that was. */
+  band: string;
+  /** Which ear that was. */
+  ear: 'L' | 'R';
+  /**
+   * The single loudest layer sitting in that window, and how far over this one it is.
+   *
+   * ⚠️ **THE SUM IS WHAT MASKS AND ONE LAYER IS WHAT A HAND CAN MOVE**, which is why both are here.
+   * `margin` is against everything, because that is what masking is; this names the one to argue
+   * with. Where a window has a single dominant occupant the two nearly agree, and where they diverge
+   * the layer is being buried by a crowd and no single edit will free it.
+   */
+  by: MusicLayer;
+  /** How far `by` is over this layer in that window, in dB. Negative means nothing there is louder. */
+  byDb: number;
+}
+
+/**
+ * Every layer sounding at `rung`, by how much of it survives the rest of the mix — worst first.
+ *
+ * @param loops the baked composition for this place, on `layerLevels`' terms.
+ * @param bakes the band-energy cache `rungShape` uses, keyed identically so the two share it.
+ */
+export function heardAt(
+  theme: ThemeKind | undefined,
+  rung: MusicLevel,
+  loops: Record<MusicLayer, Float32Array>,
+  bakes: Map<string, number[]>,
+): Heard[] {
+  const nearness = rung === 'boss' || rung === 'bossPeak' ? 1 : AURA_LEVEL_CEILING;
+
+  /** Every sounding layer's A-weighted band energies, already at this rung's gain. */
+  const sounding: { layer: MusicLayer; gain: number; bands: number[] }[] = [];
+  for (const layer of MUSIC_LAYERS) {
+    const ceiling = FOLLOWS_THE_BOSS.includes(layer) ? nearness : 1;
+    const gain = MUSIC_LADDER[rung][layer] * mixOf(theme ?? 'approach', layer) * ceiling;
+    if (gain <= 0) continue;
+    /*
+      ⚠️ **A `heard/` PREFIX, BECAUSE THIS IS NOT THE MEASUREMENT `rungShape` CACHES.** Both walk the
+      same layers and both want a per-band figure, so sharing the map is worth it — but one holds
+      `bandEnergy` and the other `bandLevels`, and an unprefixed key would have each silently answer
+      with the other's numbers. A shared cache of two different quantities is one description too few.
+    */
+    const own = theme !== undefined && revoicedBy(theme).includes(layer);
+    const key = own ? `heard/${theme}/${layer}` : `heard//${layer}`;
+    let bands = bakes.get(key);
+    if (bands === undefined) {
+      bands = bandLevels(loops[layer]!, 44100);
+      bakes.set(key, bands);
+    }
+    sounding.push({ layer, gain, bands: bands.map((energy) => energy * gain) });
+  }
+
+  const power = (xs: number[]): number => Math.sqrt(xs.reduce((sum, x) => sum + x * x, 0));
+  const db = (a: number, b: number): number => (a <= 0 || b <= 0 ? -Infinity : 20 * Math.log10(a / b));
+  const loudest = Math.max(...sounding.map((s) => power(s.bands)), 1e-12);
+
+  const out: Heard[] = [];
+  for (const it of sounding) {
+    const ears = panGains(LAYER_PAN[it.layer]);
+    // Where this layer LIVES: within 12 dB of its own loudest band, and nowhere else counts.
+    const home = Math.max(...it.bands, 1e-12) / 4;
+    let margin = -Infinity;
+    let band = BANDS[0]![2];
+    let ear: 'L' | 'R' = 'L';
+    let by = it.layer;
+    let byDb = -Infinity;
+    it.bands.forEach((mine, i) => {
+      if (mine < home) return;
+      for (const side of ['left', 'right'] as const) {
+        const others = sounding.filter((other) => other.layer !== it.layer);
+        const rest = power(others.map((other) => other.bands[i]! * panGains(LAYER_PAN[other.layer])[side]));
+        const at = db(mine * ears[side], rest);
+        if (at > margin) {
+          margin = at;
+          band = BANDS[i]![2];
+          ear = side === 'left' ? 'L' : 'R';
+          // The loudest single occupant of the window this layer settled on — recomputed here rather
+          // than tracked per band, because only the winning window is ever reported.
+          let most = 0;
+          for (const other of others) {
+            const at2 = other.bands[i]! * panGains(LAYER_PAN[other.layer])[side];
+            if (at2 > most) { most = at2; by = other.layer; }
+          }
+          byDb = db(most, mine * ears[side]);
+        }
+      }
+    });
+    out.push({ layer: it.layer, gain: it.gain, down: db(power(it.bands), loudest), margin, band, ear, by, byDb });
+  }
+  return out.sort((a, b) => a.margin - b.margin);
+}
