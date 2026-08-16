@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 import {
+  DESK_CEILING,
+  LOUDEST_SHIPPED,
   SECTION_FLOOR_UNITS,
   SECTION_ORDER,
   UNITS_PER_SECOND,
@@ -641,5 +643,50 @@ describe('the rig is not in the game, and the game is not in the rig', () => {
     };
     walk('src');
     expect(offenders, `these import the dashboard: ${offenders.join(', ')}`).toEqual([]);
+  });
+
+  it('THE FADER REACHES WHAT THE MIXER ALREADY PLAYS, or maxing it turns the layer DOWN', () => {
+    /*
+      ⚠️ **THE REPORTED ONE.** Said of Ember Nebula, 2026-08-16: *"Listening with both arp sliders
+      maxed, I can still barely hear it."* `arp` ships at **1.66** at `push` there and the desk's
+      ceiling was a typed **1.50** — so dragging the fader to its top **cut the layer by 0.9 dB**
+      while the reader expected a boost, and the conclusion drawn from it was about the music.
+
+      ⚠️ **125 LAYER-RUNGS SHIPPED ABOVE IT**, the loudest 1.73× the fader's top. The constant's own
+      comment claimed it sat *"above the ladder's own top, on purpose"* — true of `MUSIC_LADDER`
+      alone, and false from the moment 0147 gave every place a multiplier. **It was right when it was
+      written and silently wrong afterwards, which is the failure 0126 exists against and the reason
+      this guard reads the constant out of the file rather than trusting a second copy of it.**
+
+      ⚠️ **THE FLOOR IS *reaches*, NOT *doubles*.** `rig/dash.ts` derives twice the loudest gain
+      because a desk has to be able to ask *what if this were twice as loud*; what must never be true
+      again is a fader that cannot express what the game already does.
+    */
+    let loudest = 0;
+    let who = '';
+    for (const rung of MUSIC_LEVELS) {
+      for (const theme of THEME_KINDS) {
+        for (const layer of MUSIC_LAYERS) {
+          const gain = MUSIC_LADDER[rung][layer] * mixOf(theme, layer);
+          if (gain > loudest) {
+            loudest = gain;
+            who = `${theme}/${rung}/${layer}`;
+          }
+        }
+      }
+    }
+    expect(loudest, 'no layer reaches anything, so this measured nothing').toBeGreaterThan(0);
+    /*
+      ⚠️ **THE CONSTANT IS IMPORTED, NOT RE-DERIVED.** A guard that recomputed the ceiling the way the
+      rig computes it would pass on any pair of matching formulas, including two that are both wrong —
+      which is `docs/decisions/0116-the-rig-plays-the-level.md`'s own finding about asserting on a
+      rig's source rather than its values. This walks the CONTENT tables and holds the rig's number
+      against them.
+    */
+    expect(
+      DESK_CEILING,
+      `the desk tops out at ${DESK_CEILING.toFixed(2)} and ${who} ships at ${loudest.toFixed(2)} — maxing that fader turns the layer DOWN`,
+    ).toBeGreaterThanOrEqual(loudest);
+    expect(LOUDEST_SHIPPED, 'the rig disagrees with the tables about the loudest gain').toBeCloseTo(loudest, 6);
   });
 });

@@ -52,6 +52,7 @@ import {
   dragSection,
   layerSpans,
   loudestGain,
+  DESK_CEILING,
   marksOf,
   momentOf,
   weaponAtTier,
@@ -586,8 +587,6 @@ interface LayerRow {
   tr: HTMLTableRowElement;
 }
 
-/** The most a layer may be pushed to on the desk. Above the ladder's own top, on purpose. */
-const DESK_CEILING = 1.5;
 const layerRows = {} as Record<MusicLayer, LayerRow>;
 
 {
