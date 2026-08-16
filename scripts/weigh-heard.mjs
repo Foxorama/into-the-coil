@@ -26,6 +26,12 @@
 // WHAT IT PRINTS
 //
 //   gain      what the place takes the layer to AT THIS RUNG — not the loudest any rung ever does.
+//   out/peak  what the layer actually puts out, in dBFS — the ONE absolute pair in the set. `down`,
+//             `margin`, 0140's floor and 0147's balances are all ratios, so a place could be
+//             internally perfect and inaudible throughout and every guard would stay green. A layer
+//             at −36 dBFS is quiet whatever else is playing. BOTH must be low before it is called
+//             quiet: RMS counts the silence between notes, so a transient reads far worse on it than
+//             an ear hears — 0140's rule, and the reason `ride` shows −54 rms against −31 peak.
 //   down      dB under the loudest layer sounding at this rung, A-weighted over every band. The
 //             quantity `weigh-audition` prints, restricted to an arrangement that actually plays.
 //   margin    dB over everything else, in the best band the layer lives in, on the ear that favours
@@ -84,7 +90,7 @@ for (const theme of places) {
     const rows = heardAt(theme, rung, loops, bakes);
     if (rows.length === 0) continue;
     console.log(`\n── ${rung} — ${rows.length} sounding ──────────────────────────────────`);
-    console.log('layer          gain     down    margin   window      under');
+    console.log('layer          gain      out    peak     down    margin   window      under');
     /*
       ⚠️ THE ONE THING FLAGGED IS A LAYER SITTING IN A HOLE IN ITS OWN RUNG'S `down` SPREAD — ten
       decibels clear of the next quietest, which is the shape 0140 found and the size it called a
@@ -96,7 +102,8 @@ for (const theme of places) {
     for (const row of rows) {
       const alone = row.down === chasm;
       console.log(
-        `${row.layer.padEnd(12)} ${row.gain.toFixed(2).padStart(6)}  ${row.down.toFixed(1).padStart(6)}  ` +
+        `${row.layer.padEnd(12)} ${row.gain.toFixed(2).padStart(6)}  ${row.out.toFixed(1).padStart(6)}  ` +
+          `${row.outPeak.toFixed(1).padStart(6)}  ${row.down.toFixed(1).padStart(6)}  ` +
           `${row.margin.toFixed(1).padStart(7)}   ${`${row.band} ${row.ear}`.padEnd(10)}` +
           // The sign is carried, because `under` going NEGATIVE is the interesting case: nothing in
           // the window is louder than this layer, which is what a layer with room around it looks like.

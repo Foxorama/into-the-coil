@@ -16,6 +16,7 @@
 import {
   AURA_LEVEL_CEILING,
   LAYER_BARS,
+  MUSIC_GAIN,
   MUSIC_LADDER,
   MUSIC_LAYERS,
   type MusicLayer,
@@ -394,6 +395,39 @@ export interface Heard {
   gain: number;
   /** dB under the loudest layer sounding at this rung, A-weighted over every band. */
   down: number;
+  /**
+   * What this layer actually puts out, in **dBFS** — its own RMS at this rung's gain through
+   * `MUSIC_GAIN`.
+   *
+   * ── EVERY OTHER NUMBER IN THIS FILE IS RELATIVE, AND THAT IS WHY NONE OF THEM CAN SAY *TOO QUIET* ─
+   *
+   * ⚠️ **Reported 2026-08-16:** *"either we need to work out a way to automatically detect that, or I
+   * need to go through each music segment and copy the output and say what's audible or not, but
+   * that's going to take a pretty long time over all 7 tracks."*
+   *
+   * ⚠️ **`down`, `margin`, `AUDIBLE_FLOOR_DB` AND 0147's WHOLE BALANCE ARE RATIOS**, so a place could
+   * be internally perfect and inaudible throughout, and every guard here would be green. This is the
+   * one absolute in the set: a layer at −36 dBFS is quiet **whatever else is playing**, and that is a
+   * fact a listener can be handed without soloing anything.
+   *
+   * ⚠️ **AND IT IS A UNIT THE PLAYER EXPERIENCES**, which
+   * `docs/decisions/0027-measure-the-picture-not-the-model.md` requires of at least one measurement
+   * per subject — the rest of this file is defined in terms of the mix it is measuring, and CLAUDE.md
+   * says a guard measuring a quantity defined by the constant it guards proves only that the code
+   * agrees with itself.
+   *
+   * ⚠️ **PRE-SHAPER, DELIBERATELY.** `saturate` acts on the summed bus, so putting it on one layer
+   * would report a number no layer ever has on its own. What this is, is the layer's contribution as
+   * it arrives at the shaper.
+   *
+   * ⚠️ **AND IT COMES WITH `outPeak`, ON 0140's OWN TERMS.** RMS counts the silence between notes, so
+   * a cymbal struck once a bar scores near nothing while being perfectly audible when it lands —
+   * `ride` reads 29 dB worse than `chords` on RMS and 15 dB worse on peak, and the second is the
+   * honest one for a transient. **A layer is only quiet when both say so.**
+   */
+  out: number;
+  /** The loudest single sample this layer contributes at this rung, in dBFS. See `out`. */
+  outPeak: number;
   /** dB over everything else, in the best band it lives in, on the ear that favours it. */
   margin: number;
   /** Which band that was. */
@@ -428,7 +462,7 @@ export function heardAt(
   const nearness = rung === 'boss' || rung === 'bossPeak' ? 1 : AURA_LEVEL_CEILING;
 
   /** Every sounding layer's A-weighted band energies, already at this rung's gain. */
-  const sounding: { layer: MusicLayer; gain: number; bands: number[] }[] = [];
+  const sounding: { layer: MusicLayer; gain: number; bands: number[]; rms: number; peak: number }[] = [];
   for (const layer of MUSIC_LAYERS) {
     const ceiling = FOLLOWS_THE_BOSS.includes(layer) ? nearness : 1;
     const gain = MUSIC_LADDER[rung][layer] * mixOf(theme ?? 'approach', layer) * ceiling;
@@ -446,7 +480,29 @@ export function heardAt(
       bands = bandLevels(loops[layer]!, 44100);
       bakes.set(key, bands);
     }
-    sounding.push({ layer, gain, bands: bands.map((energy) => energy * gain) });
+    // The layer's own RMS, cached beside its bands — one pass over the loop rather than one per rung.
+    const rmsKey = own ? `rms/${theme}/${layer}` : `rms//${layer}`;
+    let rmsOf = bakes.get(rmsKey);
+    if (rmsOf === undefined) {
+      const buffer = loops[layer]!;
+      let sum = 0;
+      let top = 0;
+      for (let i = 0; i < buffer.length; i++) {
+        const v = buffer[i]!;
+        sum += v * v;
+        const size = v < 0 ? -v : v;
+        if (size > top) top = size;
+      }
+      rmsOf = [Math.sqrt(sum / buffer.length), top];
+      bakes.set(rmsKey, rmsOf);
+    }
+    sounding.push({
+      layer,
+      gain,
+      bands: bands.map((energy) => energy * gain),
+      rms: rmsOf[0]! * gain * MUSIC_GAIN,
+      peak: rmsOf[1]! * gain * MUSIC_GAIN,
+    });
   }
 
   const power = (xs: number[]): number => Math.sqrt(xs.reduce((sum, x) => sum + x * x, 0));
@@ -484,7 +540,18 @@ export function heardAt(
         }
       }
     });
-    out.push({ layer: it.layer, gain: it.gain, down: db(power(it.bands), loudest), margin, band, ear, by, byDb });
+    out.push({
+      layer: it.layer,
+      gain: it.gain,
+      down: db(power(it.bands), loudest),
+      out: it.rms <= 0 ? -Infinity : 20 * Math.log10(it.rms),
+      outPeak: it.peak <= 0 ? -Infinity : 20 * Math.log10(it.peak),
+      margin,
+      band,
+      ear,
+      by,
+      byDb,
+    });
   }
   return out.sort((a, b) => a.margin - b.margin);
 }
