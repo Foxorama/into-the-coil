@@ -30,6 +30,7 @@ import { LEVELS, LEVEL_KINDS, type LevelKind } from '../src/content/levels.ts';
 import {
   LAYER_PAN,
   MUSIC_LAYERS,
+  MUSIC_LEVELS,
   SECTION_UNITS,
   type MusicLayer,
   type MusicLevel,
@@ -57,7 +58,16 @@ import {
   type Held,
   type LayerSpan,
   type Moment,
+  type SolvedGains,
 } from './transport.ts';
+/*
+  ⚠️ **THE SOLVE IS A SCRIPT AND THE DASHBOARD IS A BROWSER, AND THAT ARROW IS ALREADY IN USE.**
+  `scripts/hear.mjs` imports `rig/transport.ts`; this is the same edge the other way, and both are
+  rig-side — nothing under `src/` reaches either. What must not happen is TWO solves, which is why
+  this imports rather than reimplements: `docs/decisions/0029-the-tracked-record-is-the-record.md` in
+  arithmetic, the defect `scripts/weigh-audition.mjs` names about `tests/pace.ts`.
+*/
+import { profileOfLoops, rmsOfLoops, solveMix } from '../scripts/solve-mix.mjs';
 
 /** How long the boss is held for. A stated choice, exactly as `scripts/hear.mjs --level` states it. */
 const FIGHT_SECONDS = 45;
@@ -246,7 +256,25 @@ const totalOf = (k: LevelKind): number => LEVELS[k].bossAt / UNITS_PER_SECOND + 
  * asking about the shipped boundaries while the mixer follows the dragged ones is precisely the
  * *instrument disagreeing with the thing it measures* that 0126 exists against.
  */
-const now = (): Moment => momentOf(kind, second, FIGHT_SECONDS, auraNearness(gapUnits), sections);
+/**
+ * Whether the mixer is playing 0154's solved arrangement instead of `MUSIC_LADDER × mixOf`.
+ *
+ * ⚠️ **OFF IS THE SHIPPED MIX AND IS THE DEFAULT**, so the dashboard opens on the thing the game
+ * actually plays and the toggle is the experiment rather than the other way round.
+ */
+let solvedOn = false;
+
+const now = (): Moment =>
+  momentOf(
+    kind,
+    second,
+    FIGHT_SECONDS,
+    auraNearness(gapUnits),
+    sections,
+    // ⚠️ The readout and the mixer both come through here, so they cannot disagree about which mix is
+    // playing — which is the *instrument disagreeing with the thing it measures* 0126 exists against.
+    solvedOn ? solvedFor(LEVELS[kind].theme) : null,
+  );
 
 const clockText = (s: number): string => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
@@ -428,6 +456,47 @@ function loopsFor(theme: ThemeKind): Record<MusicLayer, Float32Array> | null {
   return own;
 }
 
+/**
+ * The solved arrangement's gains for a place, computed once and kept.
+ *
+ * ── THE MIX 0154 SOLVED COULD ONLY BE HEARD BY RENDERING A FILE ─────────────────────────────────
+ *
+ * ⚠️ **Asked, on being handed six rendered wavs:** *"How do I listen to `MUSIC_LADDER` and `mixOf`?
+ * Are they on my music dashboard to listen to?"* They **are** the dashboard — `targetGain` is exactly
+ * `MUSIC_LADDER × mixOf` — and the solved arrangement was the one thing that was not, which is the
+ * wrong way round for the instrument
+ * `docs/decisions/0126-the-dashboard-is-the-instrument.md` exists to be. A mix that can only be heard
+ * by opening a file somewhere else is a mix nobody will iterate on.
+ *
+ * ⚠️ **THE SOLVE OWNS DSP AND THIS FILE OWNS THE LOOPS**, which is why it happens here rather than in
+ * `rig/transport.ts` — that file is the arithmetic of *what is sounding when* and has no audio in it.
+ *
+ * ⚠️ **CACHED PER PLACE, because it costs about 400ms**: band profiles for twenty-three layers plus a
+ * few dozen fixed-point iterations a rung. Paid on the first press of the toggle, never in a frame.
+ *
+ * ⚠️ **AND IT WAITS FOR THE PREWARM**, exactly as `loopsFor` does — before the first press there is
+ * nothing baked to measure, and returning `null` leaves the mixer on the shipped gains rather than
+ * on silence.
+ */
+const solvedByPlace = new Map<ThemeKind, SolvedGains>();
+
+function solvedFor(theme: ThemeKind): SolvedGains | null {
+  const cached = solvedByPlace.get(theme);
+  if (cached !== undefined) return cached;
+  const loops = loopsFor(theme);
+  if (loops === null) return null;
+  const profile = profileOfLoops(loops);
+  const rms = rmsOfLoops(loops);
+  const gains: Partial<Record<MusicLevel, Record<MusicLayer, number>>> = {};
+  // ⚠️ `solve-mix.mjs` is JavaScript, so its return is untyped at this edge. The cast is the boundary
+  // and the only one — `SolvedGains` types every reader of the map.
+  for (const rung of MUSIC_LEVELS) {
+    gains[rung] = solveMix(theme, rung, loops, profile, rms).gains as Record<MusicLayer, number>;
+  }
+  solvedByPlace.set(theme, gains);
+  return gains;
+}
+
 function goToPlace(theme: ThemeKind): void {
   const music = out.music();
   const loops = loopsFor(theme);
@@ -472,6 +541,20 @@ scrub.addEventListener('input', () => {
 });
 el<HTMLInputElement>('cuesOn').addEventListener('change', (e) => {
   cuesOn = (e.target as HTMLInputElement).checked;
+});
+
+/*
+  ⚠️ **THE A/B 0154 COULD NOT OFFER.** Flipping this swaps every solved layer's gain for the
+  arrangement's; the aura, the ramps, the bar-line quantisation and the desk's own holds are all
+  untouched — so what changes between the two positions is the BALANCE and nothing else, which is the
+  only way a listener can attribute a difference to the change rather than to the rig.
+
+  ⚠️ **`afterDeskChange` IS WHAT PUTS IT ON THE AIR** — 0137: the mixer is following targets, and a
+  new set of them is exactly the kind of change that has to be pushed rather than waited for.
+*/
+el<HTMLInputElement>('solvedOn').addEventListener('change', (e) => {
+  solvedOn = (e.target as HTMLInputElement).checked;
+  afterDeskChange();
 });
 
 const bind = (id: string, outId: string, set: (v: number) => void, format = (v: number) => String(v)): void => {
