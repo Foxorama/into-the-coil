@@ -477,6 +477,28 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
 
   /*
     ── THE RIFF: what `push` opens, and it is the same chug an octave up with the third in it ──────
+
+    ⚠️ **THIS IS THE PLACE'S IDENTITY AND ONLY A DRONE, AN AURA AND THE RIDE MEASURED BELOW IT.** The
+    header above names `push` *the riff* and `surge` *the twin lead*; `heardAt` had it at **−34.8
+    dBFS rms / −18.5 peak at `surge`, 12.0 dB under the rest of its own band**, and
+    `docs/decisions/0154-the-mix-is-authored-as-intent.md`'s solve asked for **6.0× gain** to make it
+    the part it is authored as. A gain that large is the measurement saying the material is wrong, not
+    that the fader is.
+
+    ⚠️ **THE RIFF IS THE OPEN STRING AND `groove` IS THE MUTED ONE, AND BOTH WERE WRITTEN DEAD.** The
+    palm mute two layers up rings 32 ms of a 100 ms sixteenth, which is exactly right and is what a
+    palm mute *is*; this rang 57 ms of a 200 ms eighth — a 29% duty cycle on the one figure in the
+    piece that is supposed to sustain. The contrast the header describes, *a chugging low string
+    against a wide open chord above it*, needs the open one to be open. At 0.248 s under `curve: 1.35`
+    each note is still at a third when the next arrives, so the riff's own rests fill with ring the
+    way a distorted guitar's do, and the accents keep the articulation.
+
+    ⚠️ **THE ENVELOPE CARRIES 5.1 dB OF IT AND THE GAIN 2.7, WHICH IS THE ORDER THE CEILING FORCES.**
+    `scripts/weigh-mix.mjs` had this place at 93% of the clipping ceiling at `surge` and has it at 96%
+    now; decay length is the one lever that raises what a layer puts out without touching what it
+    peaks at, and there was a 3.2× of it available here. `lowTo` rises with the length for the reason
+    `arp` states. Out of it: **−27.1 rms / −13.6 peak at `surge`, `margin` −12.0 → −4.1**, and the
+    solve asks 2.12× there and 2.62× at `push` where it asked 6.01.
   */
   hook: [
     {
@@ -491,7 +513,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 2,
       octave: 1,
       accents: [1, 0.72, 0.9, 0.7],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.4, gain: 0.15, attack: 0.004, curve: 2.8, lowFrom: 2600, lowTo: 1100, q: 1.7, drive: 0.4 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.62, gain: 0.205, attack: 0.004, curve: 1.35, lowFrom: 2600, lowTo: 1500, q: 1.7, drive: 0.4 },
     },
     {
       steps: ROOT.flatMap((root, bar) => {
@@ -505,12 +527,35 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 2,
       octave: 2,
       accents: [1, 0.72, 0.9, 0.7],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.34, gain: 0.07, attack: 0.005, curve: 3.2, lowFrom: 4600, lowTo: 2200, q: 1.4, drive: 0.28 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.52, gain: 0.098, attack: 0.005, curve: 1.6, lowFrom: 4600, lowTo: 2700, q: 1.4, drive: 0.28 },
     },
   ],
 
   /*
     ── THE TREMOLO: the picking hand, and it is the sound the brief is named for ───────────────────
+
+    ⚠️ **A TREMOLO IS THE MOST SUSTAINED THING THIS GENRE HAS, AND THIS ONE WAS WRITTEN AS A CLICK.**
+    The sixteenth is 100 ms and the note was `seconds 0.17 × BEAT` under `curve: 4.4` — about 15 ms of
+    real sound, a 15% duty cycle. What identifies tremolo picking is that each pick rings into the
+    next so the *line* moves through a continuous wall; a hand playing sixteenths of silence is a
+    muted stab, which is `groove`'s job three layers up and not this one's. It measured **−41.5 dBFS
+    rms at `push`, 12.7 dB under everything else in its own band** — the one rung it sounds at, which
+    `docs/decisions/0152-a-layer-is-heard-in-the-sum.md` calls never heard at all.
+
+    ⚠️ **THE ENVELOPE FIRST AND THE GAIN SECOND, WHICH IS 0152's WHOLE LESSON.** Decay energy goes as
+    `seconds / curve`, so 0.168 s at 1.9 is **5.7× the material** the old 0.068 s at 4.4 had for +7.6
+    dB that costs the clipping ceiling nothing at all — the peak does not move. The gain then carries
+    the last ~2 dB rather than all ten of them. 0152 found a ride that had been *fixed* twice by
+    multiplying a tick; a layer that is 15% present cannot be raised into audibility, only into
+    loudness.
+
+    ⚠️ **AND `lowTo` COMES UP WITH THE LENGTH, because a longer note spends longer at the dark end of
+    its own sweep.** `heardAt` puts this layer's window in `hi`; ringing for 89 ms into a 1300 Hz
+    cutoff would have handed back in the band what the envelope won broadband. A distorted string
+    keeps its bite as it sustains, so the sweep now lands at 1500 and the octave above it at 2900.
+
+    ⚠️ **Out of it: −31.5 rms / −19.1 peak, `margin` −12.7 → −2.2, and a solve that asked 6.64×
+    asks 2.06×.** The layer that had *only one somewhere* now has it.
   */
   arp: [
     {
@@ -519,7 +564,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 4,
       octave: 1,
       accents: [1, 0.7, 0.86, 0.68],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.17, gain: 0.085, attack: 0.002, curve: 4.4, lowFrom: 2600, lowTo: 1300, q: 1.7, drive: 0.4 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.42, gain: 0.105, attack: 0.002, curve: 1.9, lowFrom: 2600, lowTo: 1500, q: 1.7, drive: 0.4 },
     },
     {
       steps: TREMOLO,
@@ -527,7 +572,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 4,
       octave: 2,
       accents: [1, 0.68, 0.84, 0.66],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.14, gain: 0.04, attack: 0.002, curve: 5, lowFrom: 5200, lowTo: 2600, q: 1.4 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.36, gain: 0.055, attack: 0.002, curve: 2.2, lowFrom: 5200, lowTo: 2900, q: 1.4 },
     },
   ],
 
@@ -545,10 +590,35 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: false,
       perBeat: 4,
       octave: 0,
-      // ⚠️ 17 ms of decay where `curve: 8` over 0.03 s gave 4, and the gain comes down as the note
-      // grows — `docs/decisions/0152-a-layer-is-heard-in-the-sum.md` has the argument and the reason
-      // the attack and the band do not move. Six places carried this one line.
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.1, attack: 0.0004, curve: 4, lowFrom: 11000, highFrom: 4800 },
+      /*
+        ⚠️ **17 ms WAS STILL A TICK, AND THIS PLACE STATES ITS OWN.** The line this replaces is the
+        base composition's, raised once by `docs/decisions/0152-a-layer-is-heard-in-the-sum.md` from
+        `curve: 8` over 0.03 s — 4 ms — to `curve: 4` over 0.07 s. Six places carry that one; The
+        Black Heart now carries its own, because it is the only place whose ride is *hammered on the
+        bell on every sixteenth* and it measured **−33.7 peak / −56.5 dBFS rms at `approach`** and
+        **the worst `down` of any layer at every one of the five rungs that open it** — 23 to 31 dB
+        under the loudest thing playing beside it.
+
+        ⚠️ **THE ENVELOPE AND NOT THE GAIN, WHICH IS THE MISTAKE 0152 CAUGHT BEING MADE TWICE.**
+        `seconds / curve` is the real length, so 0.16 s at 2.8 is **57 ms** where 0.07 at 4 was 17 —
+        3.3× the energy, +5.1 dB, and **the peak does not move by a decibel**. That matters here and
+        nowhere else in the file: `scripts/weigh-mix.mjs` has this place at 96% of the clipping
+        ceiling at `approach`, where the ride is open, so a gain that bought the same 5.1 dB would
+        have spent most of the remaining headroom on the one layer that needed it least.
+
+        ⚠️ **AND THE GAIN STILL MOVES, BECAUSE 0140 CONVICTS ON BOTH MEASURES.** A 57 ms ring at
+        −33.7 peak reads better on rms and is still a whisper on the transient a cymbal is mostly
+        made of, so 0.1 → 0.125 carries about 2 dB of peak with it. At 100 ms between sixteenths the
+        ring now overlaps the next stroke, which is a bell being hammered rather than a hat being
+        closed; the attack and the band are untouched for 0152's reason.
+
+        ⚠️ **AND IT IS DELIBERATELY SHORT OF WHAT THE SOLVE WOULD TAKE.** `weigh-solve` asked 3.83×
+        at `surge` and now asks 1.75, because a first pass at 0.2 s / 2.4 / 0.15 answered it at 1.21
+        and cost **0.5 points of the `under 300Hz` share at `push` and `approach`**, where the floor
+        is 28%. Broadband noise in the widest band there is buys margin cheaply and spends the band
+        balance dearly; this layer had the most room of the three to give back, so it gave it.
+      */
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.16, gain: 0.125, attack: 0.0004, curve: 2.8, lowFrom: 11000, highFrom: 4800 },
     },
   ],
 

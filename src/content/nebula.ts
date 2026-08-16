@@ -563,6 +563,18 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
     the layer where *haunting* actually lives, and the silence is most of it. The pair are one line an
     octave apart — a cantor and the room answering, which is the same doubling 0128 used and the only
     thing kept from it.
+
+    ⚠️ **AND IT WAS SUNG TOO QUIETLY TO BE THE HYMN.** Two voices spending **0.16 of gain between
+    them**, under a choir spending 0.63 across seven and an organ spending 0.31 across four — so
+    `docs/decisions/0154-the-mix-is-authored-as-intent.md` solved the counter-line it is authored as
+    to **4.0×**, against material sitting 16.6 dB under the loudest layer of the place. A multiplier
+    that size is the mix restating what the material failed to say.
+
+    ⚠️ **A SUNG NOTE ALSO DOES NOT DECAY LIKE A STRUCK ONE**, which is the same defect
+    `docs/decisions/0152-a-layer-is-heard-in-the-sum.md` found in `ride` and `arp`, one order of
+    magnitude smaller: at `curve` 1.2 the cantor was at a tenth of peak by the end of a note the
+    plainchant holds for two beats. `chords` two stops down already sings at 1.4 over four times the
+    length; under 1 this is one person holding a vowel, which is what the layer is for.
   */
   call: [
     {
@@ -571,7 +583,7 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       perBeat: 1,
       octave: 2,
       accents: [1, 0.74, 0.88, 0.7],
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 1.7, gain: 0.11, attack: 0.09, curve: 1.2, lowFrom: 2200, lowTo: 1100, q: 1 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 1.7, gain: 0.15, attack: 0.09, curve: 0.9, lowFrom: 2200, lowTo: 1100, q: 1 },
     },
     {
       steps: HYMN,
@@ -579,7 +591,7 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       perBeat: 1,
       octave: 1,
       accents: [1, 0.74, 0.88, 0.7],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.8, gain: 0.05, attack: 0.13, curve: 1.1 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.8, gain: 0.068, attack: 0.13, curve: 0.85 },
     },
   ],
 
@@ -676,6 +688,29 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
     },
   ],
 
+  /*
+    ⚠️ **THE ONE RANK IN THIS ORGAN THAT WAS BEING PLUCKED, AND IT IS THE LAYER NOBODY COULD HEAR.**
+    The header four stops up states the rule this voice broke — *every voice here has `curve` near or
+    below 1, so a note is at most halfway down when the next one starts: a pipe holds until the key
+    comes up.* The mixture ran **2.4 and 2.8** on a 96 ms note inside a 100 ms sixteenth, which is
+    `seconds / curve` of **40 and 31 ms** — under half its own grid, at 9% of peak when it stopped,
+    and then four milliseconds of silence. `docs/decisions/0152-a-layer-is-heard-in-the-sum.md` is
+    named for exactly this arithmetic on `ride`, seven layers up in this same file.
+
+    ⚠️ **AND IT IS THE LAYER 0152 IS ALSO NAMED FOR**: *"it's arp that I've never heard in game."*
+    The finding there was masking; the material under the masking measured **21.8 dB below the
+    loudest layer of its own place**, and `docs/decisions/0154-the-mix-is-authored-as-intent.md`
+    makes this the PART at `push` — the thing the listener follows. Solved against that role it
+    wanted **6.2×**, which is not a mix; it is a mix compensating for a note with no time to put its
+    energy out. 0140 made that trade twice on `ride` and the report survived both.
+
+    ⚠️ **THE NOTE NOW OUTLASTS ITS SLOT, WHICH IS WHAT MAKES A MIXTURE A CHORD RATHER THAN A LIST.**
+    At 0.34 of a beat each note is still sounding when the next begins, so root–third–fifth arrives
+    as the rank speaking; the truncation also lands underneath the following note rather than into
+    silence, where a cut at 30% of peak is a tick. **The envelope buys 4.1 dB and the gain 3.2**, so
+    this is not 0140's move made a third time — the material is what was quiet, and the solve now
+    wants 2.7× where it wanted 6.2.
+  */
   arp: [
     {
       steps: MIXTURE,
@@ -683,7 +718,7 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       perBeat: 4,
       octave: 2,
       accents: [1, 0.7, 0.84, 0.68],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.24, gain: 0.05, attack: 0.004, curve: 2.4, lowFrom: 3400, lowTo: 2400, q: 1.2 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.34, gain: 0.072, attack: 0.004, curve: 1.2, lowFrom: 3400, lowTo: 2400, q: 1.2 },
     },
     {
       steps: MIXTURE,
@@ -691,7 +726,7 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       perBeat: 4,
       octave: 3,
       accents: [1, 0.7, 0.84, 0.68],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.22, gain: 0.024, attack: 0.005, curve: 2.8, lowFrom: 5400, lowTo: 3600, q: 1 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.32, gain: 0.034, attack: 0.005, curve: 1.3, lowFrom: 5400, lowTo: 3600, q: 1 },
     },
   ],
 
@@ -774,6 +809,19 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
     a louder choir: it is **bowed strings**, a line that falls where the hymn rises, and a swell —
     three things nothing in the first two stages has done. `counter` and `crash` between them bring the
     +60 notes a bar 0125 asked for by name.
+
+    ⚠️ **A BOWED NOTE DOES NOT DECAY, AND ALL THREE OF THESE DID.** The line is written on beats one
+    and three, so each note owns two beats — and it was given 1.5 of them at `curve` 1.15, which puts
+    the section at a tenth of peak while the arm is still drawing. A bow holds its level until it
+    stops; the note now fills its slot and truncates under the next one instead of into a rest.
+    `docs/decisions/0152-a-layer-is-heard-in-the-sum.md`'s arithmetic on a string section rather than
+    on a tick: **+1.8 dB of material for no change of gain**, which is most of the 3.2×
+    `docs/decisions/0154-the-mix-is-authored-as-intent.md` had to solve to.
+
+    ⚠️ **AND THE TREMOLO WAS A TICK RATHER THAN A SCRUB** — `seconds / curve` of 31 ms inside a
+    100 ms sixteenth, on the one voice here whose entire job is that something is being bowed
+    *continuously*. It is worth about a tenth of a decibel and it is still wrong at 2.8: a quantity
+    that does not move the measurement can still be the wrong description of the instrument.
   */
   counter: [
     {
@@ -782,7 +830,7 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       perBeat: 1,
       octave: 1,
       accents: [0.88, 0.64, 1, 0.72],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.5, gain: 0.26, attack: 0.1, curve: 1.15, lowFrom: 1150, lowTo: 620, q: 1.1 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.26, attack: 0.1, curve: 1, lowFrom: 1150, lowTo: 620, q: 1.1 },
     },
     {
       steps: COUNTER,
@@ -790,7 +838,7 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       perBeat: 1,
       octave: 1,
       accents: [0.88, 0.64, 1, 0.72],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.5, gain: 0.16, attack: 0.13, curve: 1.1 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.16, attack: 0.13, curve: 0.95 },
     },
     {
       // The tremolo under the line — the surge's own fast texture, and the third one in the piece.
@@ -799,7 +847,7 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       perBeat: 4,
       octave: 1,
       accents: [1, 0.68, 0.86, 0.66],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.22, gain: 0.06, attack: 0.006, curve: 2.8, lowFrom: 1050, lowTo: 520, q: 1.2 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.22, gain: 0.06, attack: 0.006, curve: 1.6, lowFrom: 1050, lowTo: 520, q: 1.2 },
     },
   ],
 
@@ -1016,6 +1064,20 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
     },
   ],
 
+  /*
+    ⚠️ **THE POSSESSED MIXTURE HAD THE SHORTEST NOTES IN THE PIECE, AND IT IS STILL AN ORGAN.**
+    `curve` 4.2 and 4.0 over a 96 ms note is `seconds / curve` of **23 and 22 milliseconds** inside a
+    100 ms sixteenth — under a quarter of its own grid, gone long before the next note starts, which
+    is a chiptune blip and not a rank under pressure. `docs/decisions/0152-a-layer-is-heard-in-the-sum.md`
+    measured the identical mistake on `ride` in this file; the two voices below are the same stop as
+    `arp` and were decaying nearly twice as fast as it was.
+
+    ⚠️ **20.0 dB UNDER THE PLACE'S LOUDEST IS WHY THE SOLVE WANTED 4.2×** —
+    `docs/decisions/0154-the-mix-is-authored-as-intent.md` — and **not one decibel of the answer is a
+    gain**. The peak of a driven square is set by `drive`, which is applied to the waveform before the
+    envelope, so lengthening the note raises what the layer puts out without moving what it costs the
+    clipping ceiling at the boss, where the mix already runs at 90% of it.
+  */
   frenzy: [
     {
       /*
@@ -1037,7 +1099,7 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       perBeat: 4,
       octave: 0,
       accents: [1, 0.6, 0.84, 0.62],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.24, gain: 0.09, attack: 0.002, curve: 4.2, lowFrom: 2600, lowTo: 950, q: 2.2, drive: 0.55 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.3, gain: 0.09, attack: 0.002, curve: 1.6, lowFrom: 2600, lowTo: 950, q: 2.2, drive: 0.55 },
     },
     {
       steps: [
@@ -1054,10 +1116,34 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       perBeat: 4,
       octave: 1,
       accents: [1, 0.62, 0.86, 0.6],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.22, gain: 0.06, attack: 0.003, curve: 4, lowFrom: 3200, lowTo: 1400, q: 1.8, drive: 0.5 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.28, gain: 0.06, attack: 0.003, curve: 1.5, lowFrom: 3200, lowTo: 1400, q: 1.8, drive: 0.5 },
     },
   ],
 
+  /*
+    ⚠️ **IT SAID *HELD NOTES* AND HELD NOTHING.** The comment below is the specification — the
+    `chords` voice with the attack taken off and the drive put on — and `chords` sings at `curve` 1.4
+    across six beats. This screamed at 2.1 across 0.95 of a beat, inside a slot two beats wide:
+    `seconds / curve` of 181 ms in an 800 ms slot, down to a tenth of peak before it stopped. So the
+    scream was a stab, which is the defect `docs/decisions/0152-a-layer-is-heard-in-the-sum.md` is named for —
+    *the note was never as long as the number said* — arriving on the layer whose whole character is
+    that nobody breathes.
+
+    ⚠️ **19.6 dB UNDER THE PLACE'S LOUDEST, AND THE SOLVE WANTED 4.3× TO MAKE IT THE PART AT THE
+    BOSS** (`docs/decisions/0154-the-mix-is-authored-as-intent.md`). Holding the note is the whole
+    answer: **no gain moves**, so the boss's clipping headroom — already at 90% of the ceiling — is
+    untouched, and the overlap a longer note buys is the same overlap the choir header calls *the
+    reverb this project has no reverb for*: two voices a minor second apart, sustaining into each
+    other, which is what a scream coming apart actually is. At 2.4 beats over a slot of two it piles
+    up 1.2 deep, where `chords` — the voice this one is derived from — sings 1.5 deep.
+
+    ⚠️ **AND IT TOOK TWO PASSES, WHICH IS THE PART WORTH RECORDING.** The first held the note for 1.5
+    beats, bought 5.2 dB of material, and the solve still wanted **3.6×** — because `frenzy` beside it
+    had come up 5.6 dB in the same change, and this is the PART that has to stand over it. A margin is
+    a ratio against everything else sounding, so raising two layers of one rung is not two independent
+    fixes: 0152's *a layer is heard in the sum* holds over the repair exactly as it holds over the
+    defect, and the arithmetic that says so is `marginsOf` in `scripts/solve-mix.mjs`.
+  */
   wraith: [
     {
       /*
@@ -1075,7 +1161,7 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       perBeat: 1,
       octave: 1,
       accents: [1, 0.72, 0.9, 0.66],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.95, gain: 0.068, attack: 0.03, curve: 2.1, lowFrom: 2400, lowTo: 820, q: 2.6, drive: 0.8 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 2.4, gain: 0.068, attack: 0.03, curve: 0.75, lowFrom: 2400, lowTo: 820, q: 2.6, drive: 0.8 },
     },
     {
       steps: [
@@ -1088,7 +1174,7 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       perBeat: 1,
       octave: 0,
       accents: [1, 0.72, 0.9, 0.66],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1, gain: 0.048, attack: 0.04, curve: 1.9, lowFrom: 1600, lowTo: 580, q: 2, drive: 0.7 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.5, gain: 0.048, attack: 0.04, curve: 0.75, lowFrom: 1600, lowTo: 580, q: 2, drive: 0.7 },
     },
   ],
 

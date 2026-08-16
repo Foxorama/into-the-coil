@@ -473,6 +473,35 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
 
   /*
     ── THE SLUDGE: sixteenths with a soft front, from the opening ──────────────────────────────────
+
+    ⚠️ **ALL THREE VOICES WERE OVER BEFORE THEIR OWN ATTACK FINISHED, AND NOT ONE `gain` HERE MOVED
+    TO FIX IT** — `docs/decisions/0152-a-layer-is-heard-in-the-sum.md`. The envelope is
+    `exp(-curve·u)` across `seconds`, so a note's real length is about `seconds / curve`, and a
+    sixteenth at `BEAT_SECONDS` is 100 ms. The bottom voice was **37 ms under a 30 ms ramp**, the
+    middle one **27 ms under a 40 ms ramp**, the top one **19 ms under 30 ms** — so they peaked at
+    **44%, 22% and 20%** of the gain written beside them, and the bottom one's buffer ran out 4 ms
+    before the next note began. *A soft front* was costing the note the whole note, which is the
+    defect 0152 found as a "25 ms" ride that measured 2.8 ms and had been answered twice with gain.
+
+    ⚠️ **`seconds` AND `curve` ONLY, AND THE MATERIAL CAME UP 6.2 dB** — −12.6 dB under this place's
+    loudest layer to −6.4, so `scripts/weigh-solve.mjs` asks for **2.65 where it asked for 4.20**.
+    The three now peak at **71%, 48% and 53%**, and when the next sixteenth lands the bottom voice is
+    still at a third of itself and the two above it at a sixth and an eighth: the *long overlapping
+    tails* this file's header claims for the place, finally written into a note. **44% of `groove`
+    is under 130 Hz before the change and 44% after** — nothing was re-voiced, it was given time to
+    sound, and the swamp is the same colour it was.
+
+    ⚠️ **AND THE MASKING WENT WITH IT, WHICH NO GAIN WAS GOING TO BUY.** `scripts/weigh-heard.mjs`
+    had `groove` in `low L` with **`sub` +5.1 dB over it** at every rung it sounds — 0152's shape
+    exactly, a layer standing behind one specific other layer in one band. It reads `sub −0.9` now,
+    and `sub`'s own row names `groove` as the thing over IT. The bottom is still what this place is;
+    there are two things in it.
+
+    ⚠️ **THE COST IS AT `surge`, AND IT IS STATED RATHER THAN GLOSSED.** Sustained sixteenths in the
+    bottom octave take that rung from 84.3% of the clipping ceiling to **95.8%**, which makes it the
+    tightest rung mire has. The place's worst number still improves — `approach` was 96.7% — and the
+    `low` share moves 47.6% → 49.1% against a 55% ceiling, but a fourth voice down here would not
+    fit and should be argued for against these two numbers.
   */
   groove: [
     {
@@ -481,7 +510,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 4,
       octave: 0,
       accents: [1, 0.7, 0.88, 0.68],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.24, gain: 0.5, attack: 0.03, curve: 2.6 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.42, gain: 0.5, attack: 0.03, curve: 1.9 },
     },
     {
       steps: SLUDGE,
@@ -489,7 +518,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 4,
       octave: 0,
       accents: [1, 0.7, 0.88, 0.68],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.2, gain: 0.17, attack: 0.04, curve: 3, lowFrom: 560, lowTo: 260, q: 1.6, drive: 0.3 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.3, gain: 0.17, attack: 0.04, curve: 2.2, lowFrom: 560, lowTo: 260, q: 1.6, drive: 0.3 },
     },
     {
       steps: SLUDGE,
@@ -497,7 +526,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 4,
       octave: 1,
       accents: [1, 0.66, 0.84, 0.64],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.17, gain: 0.05, attack: 0.03, curve: 3.6, lowFrom: 1300, lowTo: 620, q: 1.5 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.28, gain: 0.05, attack: 0.03, curve: 2.4, lowFrom: 1300, lowTo: 620, q: 1.5 },
     },
   ],
 
@@ -566,6 +595,24 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
 
   /*
     ── THE BUBBLES: sixteenths that climb ──────────────────────────────────────────────────────────
+
+    ⚠️ **TWO TICKS, AT −27.3 dB, AND `push` IS THE ONLY RUNG THIS LAYER SOUNDS AT** — which is
+    `docs/decisions/0152-a-layer-is-heard-in-the-sum.md`'s Ember Nebula case arriving here intact:
+    a layer with one appearance that is buried during it *has never been heard at all*, and no
+    measurement that asks whether a layer is audible somewhere can find that. Real decay
+    (`seconds / curve`) was **22 ms and 13 ms** inside a 100 ms sixteenth; ten decibels under `hook`
+    and within two of `crash`; **−48.5 dBFS** at `push`, on the far side of the −36 that `tests/pace.ts`
+    calls quiet whatever else is playing.
+
+    ⚠️ **THE TWO VOICES ARE NOW NEAR ENOUGH EQUAL, AND THAT IS THE MASKING FIX RATHER THAN THE LEVEL
+    ONE.** Weight off the octave-2 tri and onto the octave-3 sine moves the layer's window out of
+    `mid L`, where `chords` sat **15.2 dB** over it, and into `himid L`, where **nothing in this
+    place is above it** (`lead −0.1`). Margin **−18.7 → −3.7**, out **−36.2 dBFS**, and
+    `scripts/weigh-solve.mjs` asks **0.92 where it asked 4.91**.
+
+    ⚠️ **73 AND 76 ms OF DECAY, WHICH IS A TAIL AND NOT A WASH.** Each bubble is still at a quarter
+    of itself when the next arrives, so the figure that climbs still articulates — the popping is
+    `perc`'s job, and a bubble that rings is not a bubble.
   */
   arp: [
     {
@@ -574,7 +621,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 4,
       octave: 2,
       accents: [1, 0.68, 0.86, 0.66],
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.2, gain: 0.075, attack: 0.006, curve: 3.6, lowFrom: 3000, lowTo: 1700, q: 1.4 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.42, gain: 0.11, attack: 0.006, curve: 2.3, lowFrom: 3000, lowTo: 1700, q: 1.4 },
     },
     {
       steps: BUBBLES,
@@ -582,7 +629,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 4,
       octave: 3,
       accents: [1, 0.66, 0.84, 0.64],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.15, gain: 0.042, attack: 0.005, curve: 4.6 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.42, gain: 0.105, attack: 0.005, curve: 2.2 },
     },
   ],
 
@@ -754,6 +801,27 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
 
   /*
     ── THE DREAD: the tritone, which the loop's last bar has been sounding all level ───────────────
+
+    ⚠️ **ITS MATERIAL WAS NEVER THE PROBLEM AND ITS BAND WAS.** −9.3 dB under this place's loudest
+    layer is mid-pack, and `scripts/weigh-solve.mjs` still wanted **3.13** — because `weigh-heard`
+    had it in `low R` with `sub` +2.5 dB over it, which is
+    `docs/decisions/0152-a-layer-is-heard-in-the-sum.md`'s *the layers that cannot be heard are not
+    the quiet ones, they are the ones standing behind a layer that is doing fine*. So the raise is on
+    the **saw** and not the sine: the voice band-passed 280→720 Hz is the only part of this layer
+    `sub` is not standing on, and the sine underneath it is the bottom this place is made of.
+
+    ⚠️ **AND `curve` IS THE LEVER, BECAUSE THE CLIPPING BOUND IS A PEAK AND THE MATERIAL ONE IS AN
+    RMS.** 1.05 → 0.85 over a `perBeat: 0.25` step leaves each note at **48% when the next arrives**
+    rather than 37%, so B and F overlap as a sounding tritone for a quarter of a second instead of
+    for eighty milliseconds — more of what this layer already is, bought in energy rather than in
+    amplitude. `weigh-solve` asks **2.40**, and `mire/approach` came **down** from 96.7% of the
+    clipping ceiling to 95.6%.
+
+    ⚠️ **AT `boss` AND `bossPeak` THE WINDOW IS NOW `mid R` WITH NOTHING OVER IT** (`toll −3.5`),
+    margin −5.2 → −1.0. **At `approach` it is still `low R` under `sub` +2.0, and that is barely
+    moved from +2.3** — margin −3.8 → −3.5, because at that rung `dread` has not left the band and
+    `sub` is not this layer's to move. Raising the sine instead would fight `sub` where `sub` lives
+    and spend the low share (`scripts/weigh-mix.mjs`) to do it.
   */
   dread: [
     {
@@ -762,7 +830,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 0.25,
       octave: 1,
       accents: [1, 0.92, 0.98, 1],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.1, attack: 0.5, curve: 1.05, lowFrom: 280, lowTo: 720, q: 2.6 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.14, attack: 0.5, curve: 0.85, lowFrom: 280, lowTo: 720, q: 2.6 },
     },
     {
       steps: [8, 2, 8, 2],
