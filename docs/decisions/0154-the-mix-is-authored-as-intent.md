@@ -98,6 +98,26 @@ Three candidates, none chosen, because the choice wants an ear:
    no longer true**, and it is possible the honest answer is that balance should be global and 0147's
    3 dB floor is now measuring the wrong thing.
 
+⚠️ **CANDIDATE 2 IS ALREADY REFUTED BY MEASUREMENT.** A per-place *contrast* — one number widening or
+narrowing the spacing between roles — does not help, and at three rungs is **worse**: `apartBy`
+normalises each layer against its own place's loudest, so a uniform widening comes back out in the
+wash.
+
+⚠️ **AND THE WAY IT FAILS IS THE ANSWER: 0147's GUARD HAS BECOME TAUTOLOGICAL.** The solve drives
+every layer to its role's target and hits it to **0.00 dB**, so two places with the same arrangement
+have **identical balance profiles by construction** — the 1.0–2.5 dB that remains is nothing but
+their differing promotions. `apartBy` was built to measure a balance that **emerged** from 428
+hand-set numbers; under an authored arrangement, balance is **specified**. The guard now asks whether
+two places were given different roles, which is a question about this table rather than about how
+they sound — and [0148](0148-a-place-has-its-own-notes.md) gave every place its own notes, mode and
+voicing, which is exactly what `apartBy` normalises away.
+
+⚠️ **THAT MAKES CANDIDATE 3 THE ONE THE MEASUREMENT POINTS AT, AND IT IS STILL NOT TAKEN.** Retiring a
+guard on the strength of an argument is precisely how the report it was written for comes back, and
+this is a model claim about a channel nothing can look at —
+[0027](0027-measure-the-picture-not-the-model.md). **The rendered files are the evidence that would
+settle it, and nobody has heard them.**
+
 ## Confirmed, not assumed
 
 - `node scripts/weigh-solve.mjs` — every place, every rung, **0 layers out of their role's spacing**,

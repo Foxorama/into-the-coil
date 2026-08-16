@@ -75,6 +75,44 @@ one table.
 than satisfying it, and the report that guard was written for is the one nobody wants to receive
 again. It wants an ear on the rendered files before anyone argues it on paper.
 
+## ⚠️ Candidate 2 is refuted, and the way it fails is the answer
+
+Driven: a per-place **contrast** — one number widening or narrowing the spacing between roles, so a
+stark place puts its part far over its bed and a dense one packs them close. Seven numbers against
+0147's 259, and a real character axis.
+
+| rung | shipped | global roles | + per-place contrast |
+|---|---|---|---|
+| run | 3.3 | 2.5 | **1.5** |
+| push | 4.0 | 1.7 | 2.0 |
+| surge | 3.8 | 1.0 | **0.8** |
+| approach | 4.0 | 0.9 | 1.0 |
+| boss | 3.5 | 1.3 | 1.4 |
+
+**It does not help, and at three rungs it is worse.** `apartBy` measures each layer's dB *under its
+own place's loudest*, so a uniform widening is largely normalised away again.
+
+⚠️ **AND THE REASON IS THAT 0147's GUARD HAS BECOME TAUTOLOGICAL.** The solve drives every layer to
+its role's target and hits it to **0.00 dB**. So two places with the same arrangement have, by
+construction, **identical balance profiles** — the 1.0–2.5 dB that remains is nothing but their
+differing promotions. `apartBy` was built to measure a balance that **emerged** from 428 hand-set
+numbers, and under an authored arrangement balance is **specified** rather than emergent. Asking
+whether two places have different balances now asks whether they were given different roles, which is
+a question about this table rather than about how they sound.
+
+⚠️ **SO CANDIDATE 3 IS THE ONE THE MEASUREMENT POINTS AT.** 0147's floor was written when six places
+shared one composition and balance was the only axis available.
+[0148](../docs/decisions/0148-a-place-has-its-own-notes.md) then gave every place its own notes, mode
+and voicing — **and `apartBy` normalises exactly those away.** The candidate is not *let the places
+sound alike*; it is that **the guard is now measuring the one axis on which they are deliberately the
+same**, and the axis on which they actually differ has its own guard already, in
+`scripts/weigh-notes.mjs` and 0148.
+
+⚠️ **THIS IS STILL NOT A DECISION.** Retiring a guard on the strength of an argument is precisely how
+the report it was written for comes back, and the argument above is a model claim about a channel
+that needs an ear. **The rendered files are the evidence that would settle it**, and nobody has heard
+them yet.
+
 ## What to listen to
 
 `node scripts/hear-solved.mjs <place> --rung=<rung>` writes the shipped and solved mixes as **stereo**
