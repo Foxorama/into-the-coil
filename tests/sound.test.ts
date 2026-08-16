@@ -559,7 +559,35 @@ describe('the cue table', () => {
           }
         }
         expect(compared, 'nothing was actually compared').toBeGreaterThan(SAMPLE_RATE * 30);
-      }, 30_000);
+        /*
+          ── THE TIMEOUT IS A HANG DETECTOR AND NOT A BUDGET, AND IT WAS SIZED AS THOUGH IT WERE ────
+
+          ⚠️ **`docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`, and this is
+          its *wrong quantity in the guard* branch rather than its *real intermittency* one.** At 30 s
+          this went RED on CI inside `npm run prove` while passing in `npm run check` **in the same
+          run** — 0044's named symptom exactly: *"only failed under the load of `npm run prove`
+          itself."*
+
+          ⚠️ **MEASURED, BECAUSE A RERUN IS NOT EVIDENCE.** The same test, on CI:
+
+          | branch | touched the audio | time |
+          |---|---|---|
+          | `the-gap-you-have-to-reach` (#189) | no | **22,632 ms** |
+          | `a-layer-is-heard-in-the-sum` (#190) | yes | **18,544 ms** |
+
+          **It has run at 60–75% of its own limit for at least two PRs and passed on luck.** The
+          branch it finally failed on is the one that made it FASTER.
+
+          ⚠️ **AND WIDENING IT DOES NOT WEAKEN WHAT IT PROVES, WHICH IS THE WHOLE DISTINCTION.** This
+          asserts two bakes are sample-identical; **no part of that claim is about time.** The limit
+          exists so a hang fails rather than sits, and the work is three full bakes — about 7 s each
+          on CI — plus 25 million comparisons. 0044's own subject, and the `SWEEP_MS` whose comment
+          forbids widening, are both cases where the DURATION IS THE SUBJECT. Here it is the valve.
+
+          ⚠️ **THE BASELINE IS IN THE TABLE SO DRIFT STAYS VISIBLE.** If this ever approaches 120 s
+          something has genuinely slowed down, and the number must not move again to hide it.
+        */
+      }, 120_000);
 
       it('THE COST MODEL: a layer the place does not state is the SAME array, not a copy', () => {
         /*
