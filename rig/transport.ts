@@ -45,7 +45,7 @@ import {
   type SectionUnits,
 } from '../src/content/music.ts';
 import { LEVELS, type LevelKind } from '../src/content/levels.ts';
-import { type ThemeKind } from '../src/content/themes.ts';
+import { THEME_KINDS, mixOf, type ThemeKind } from '../src/content/themes.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { UPGRADE_TIERS, weaponFor, type UpgradeKind, type Weapon } from '../src/content/pickups.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -196,6 +196,45 @@ function markAt(marks: readonly RungMark[], second: number): number {
  * caller that owns the loops owns the solve, and this only ever chooses between two numbers.
  */
 export type SolvedGains = Readonly<Partial<Record<MusicLevel, Readonly<Record<MusicLayer, number>>>>>;
+
+/**
+ * The loudest gain the game itself ever takes a layer to, over every place and every rung.
+ *
+ * ⚠️ **IT LIVES HERE RATHER THAN IN `rig/dash.ts` SO A GUARD CAN READ IT.** `dash.ts` needs a DOM and
+ * cannot be imported by a test; this file is the rig's arithmetic and `tests/dash.test.ts` already
+ * imports it. A constant a guard cannot reach is a constant that drifts — which is exactly what
+ * happened to the desk's ceiling.
+ */
+export const LOUDEST_SHIPPED = MUSIC_LEVELS.reduce(
+  (most, rung) =>
+    THEME_KINDS.reduce(
+      (m, theme) => MUSIC_LAYERS.reduce((n, layer) => Math.max(n, MUSIC_LADDER[rung][layer] * mixOf(theme, layer)), m),
+      most,
+    ),
+  0,
+);
+
+/**
+ * The most a layer may be pushed to on the desk — **derived, because the typed number was below the
+ * game's own gains and turned layers DOWN.**
+ *
+ * ── A FADER THAT CANNOT REACH WHAT THE MIXER ALREADY PLAYS ──────────────────────────────────────
+ *
+ * ⚠️ **Reported 2026-08-16, of Ember Nebula:** *"Listening with both arp sliders maxed, I can still
+ * barely hear it."* `arp` ships at **1.66** at `push` in that place and the ceiling was a typed
+ * **1.50** — so dragging the fader to its top **cut the layer by 0.9 dB** while the reader expected a
+ * boost, and the conclusion drawn from it was about the music.
+ *
+ * ⚠️ **IT WAS NOT ONE LAYER: 125 layer-rungs shipped above 1.50**, the loudest 1.73× the fader's top.
+ * The old comment claimed it sat *"above the ladder's own top, on purpose"* — true of `MUSIC_LADDER`
+ * alone, and false from the moment `docs/decisions/0147-a-place-is-a-balance.md` gave every place a
+ * multiplier. **Right when written, silently wrong afterwards, and guarded by nothing.**
+ *
+ * ⚠️ **TWICE THE LOUDEST, because a desk has to be able to ask *what if this were twice as loud*.**
+ * That is the only question it is for, and a fader that cannot express what the game already does
+ * cannot ask it.
+ */
+export const DESK_CEILING = 2 * LOUDEST_SHIPPED;
 
 export function momentOf(
   kind: LevelKind,

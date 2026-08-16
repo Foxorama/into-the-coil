@@ -165,4 +165,28 @@ export const PROBES = [
       replace: '      music?.gainOf(\'drone\');\n      music?.duck(amount);',
     },
   },
+  {
+    decision: '0126',
+    suite: 'tests/dash.test.ts',
+    /*
+      ⚠️ THE REPORTED ONE, PUT BACK. Said of Ember Nebula, 2026-08-16: "listening with both arp
+      sliders maxed, I can still barely hear it." `arp` ships at 1.66 at `push` there and the desk's
+      ceiling was a typed 1.50, so dragging the fader to its top CUT the layer by 0.9 dB while the
+      reader expected a boost — and the conclusion drawn from it was about the music.
+      125 layer-rungs shipped above that number, the loudest 1.73x the fader's top.
+
+      ⚠️ AND IT WAS RIGHT WHEN IT WAS WRITTEN. Its comment claimed it sat "above the ladder's own top,
+      on purpose", which was true of MUSIC_LADDER alone and false from the moment
+      docs/decisions/0147-a-place-is-a-balance.md gave every place a multiplier. A magic number that
+      goes stale under a decision made somewhere else is the exact drift 0126 exists against, and
+      nothing guarded it for four decisions.
+    */
+    broke: 'the desk’s ceiling typed below the game’s own gains, so maxing a fader turns the layer down',
+    guard: 'THE FADER REACHES WHAT THE MIXER ALREADY PLAYS, or maxing it turns the layer DOWN',
+    edit: {
+      path: 'rig/transport.ts',
+      find: 'export const DESK_CEILING = 2 * LOUDEST_SHIPPED;',
+      replace: 'export const DESK_CEILING = 1.5;',
+    },
+  },
 ];
