@@ -16,18 +16,17 @@
 //             ratio-to-the-base with.
 //   arc       run < push < surge, and boss > approach. The approach is NOT asserted to sum below
 //             the surge — tests/themes.test.ts has why that looked like 0136s drop and is not it.
-//   apart     no two places within 3 dB of each other's balance.
+
 //   whisper   no place's quietest third below -15 dB.
 
 import { bakeLoops } from '../src/app/music.ts';
 import { SAMPLE_RATE, saturate } from '../src/app/sound.ts';
 import { MUSIC_DRIVE, MUSIC_GAIN, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_LEVELS } from '../src/content/music.ts';
 import { THEME_KINDS, mixOf } from '../src/content/themes.ts';
-import { apartBy, profileOf, quietestThird, rungShape } from '../tests/pace.ts';
+import { profileOf, quietestThird, rungShape } from '../tests/pace.ts';
 
 const LOW_FLOOR = 0.28;
 const LOW_CEILING = 0.55;
-const APART_DB = 3;
 const WHISPER_DB = -15;
 /** `saturate(x, a) <= 1` exactly when `x <= 1`, so the whole clipping question is this number. */
 const RAW_CEILING = 1 / MUSIC_GAIN;
@@ -83,21 +82,24 @@ for (const theme of THEME_KINDS) {
   );
 }
 
+/*
+  ⚠️ THE `apart` BOUND IS GONE — docs/decisions/0155-a-place-follows-its-own-instrument.md. It
+  required no two places within 3 dB of each other's BALANCE; the seven shipped at 3.3-4.0 dB apart,
+  satisfying it at every rung, and the report never changed: "every level sounds the same and that's
+  what I've been trying to fix." What replaces it is in tests/arrangement.test.ts — no two places
+  FOLLOW the same instrument at every rung — together with 0148's guard over their notes.
+
+  ⚠️ THE QUIETEST THIRD STAYS, and the difference is worth naming: it asks whether a place keeps its
+  OWN character, which is a question about one place. `apart` asked whether two places differ on an
+  axis that 0154 now specifies rather than lets emerge.
+*/
 const profiles = new Map(THEME_KINDS.map((t) => [t, profileOf(t, loops.get(t))]));
-console.log('\nplace       quietest third   nearest other place');
+console.log('\nplace       quietest third');
 for (const theme of THEME_KINDS) {
   const third = quietestThird(profiles.get(theme));
-  let near = '';
-  let nearest = Infinity;
-  for (const other of THEME_KINDS) {
-    if (other === theme) continue;
-    const apart = apartBy(profiles.get(theme), profiles.get(other));
-    if (apart < nearest) { nearest = apart; near = other; }
-  }
   const flags = [];
   if (third < WHISPER_DB) { flags.push('WHISPER'); bad.push(`${theme} keeps its character at ${third.toFixed(1)} dB`); }
-  if (nearest < APART_DB) { flags.push('SAME'); bad.push(`${theme} and ${near} are ${nearest.toFixed(1)} dB apart`); }
-  console.log(`${theme.padEnd(11)} ${third.toFixed(1).padStart(9)} dB      ${near} ${nearest.toFixed(1)} dB  ${flags.join(' ')}`);
+  console.log(`${theme.padEnd(11)} ${third.toFixed(1).padStart(9)} dB   ${flags.join(' ')}`);
 }
 
 console.log(bad.length === 0 ? '\n✓ every bound is satisfied' : `\n✗ ${bad.length} to fix:\n  ${bad.join('\n  ')}`);

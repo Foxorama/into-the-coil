@@ -8,6 +8,18 @@ compositions and the player heard all five.
 > and very similar to the other levels, it didn't feel like I'd travelled somewhere else in the
 > galaxy."*
 
+⚠️ **ITS `apart` GUARD IS RETIRED — [0155](0155-a-place-follows-its-own-instrument.md), 2026-08-16 —
+ON THE CONDITION THIS DECISION ITSELF WROTE.** That guard's comment said: *"if a later round finds two
+places at 3.1 dB that still sound alike, this number is wrong and should MOVE rather than be worked
+around."* The seven shipped at **3.3–4.0 dB apart**, satisfying it at every rung, and the report never
+changed — *"every level sounds the same and that's what I've been trying to fix."*
+
+⚠️ **THE REST OF THIS DECISION STANDS, AND ITS CENTRAL FINDING IS WHY 0155 EXISTS.** The ±8 dB mix
+band and the whisper floor are intact, and *"the loud part of every place was a sub, a kick, a bass
+and a pad, and those are the same four sounds in all seven"* is exactly right. **What was wrong was
+the axis, not the observation**: the 259 numbers written to answer it bought a difference a guard
+could measure and an ear could not.
+
 ## The rule
 
 **A theme states a BALANCE, not a tint over a shared one.** `MIX_FLOOR` and `MIX_CEILING` go from

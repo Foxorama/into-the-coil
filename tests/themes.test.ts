@@ -30,7 +30,6 @@ import { addRoom, bakeLayer } from '../src/app/music.ts';
 import { BANDS, bandEnergy } from './spectrum.ts';
 import {
   AUDIBLE_FLOOR_DB,
-  apartBy,
   layerLevels,
   profileOf,
   quietestThird,
@@ -865,37 +864,33 @@ describe('0128 — a place plays its own material, and shares everything it does
     `docs/decisions/0120-a-rung-may-close-a-layer.md` made when it took 0090's additive rule away:
     more structure, not less.
   */
-  const PLACES_APART_DB = 3;
   const QUIETEST_THIRD_DB = -15;
 
-  it('0147 — NO TWO PLACES ARE THE SAME MIX, which is the reported defect stated as a number', () => {
-    /*
-      ⚠️ **THE REPORTED ONE, AND IT IS THE FIRST GUARD HERE THAT COMPARES TWO PLACES.** Everything
-      else in this file asks *is this place inside a bound* — a question seven identical arrangements
-      pass. `apartBy` asks the question the report asks.
+  /*
+    ── 0147's BALANCE FLOOR IS RETIRED, AND ITS OWN ESCAPE CLAUSE IS WHY ────────────────────────────
 
-      ⚠️ **THE THRESHOLD IS A HAND'S GUESS AGAINST A MEASURED SPREAD**, on
-      `docs/decisions/0140-no-layer-is-inaudible.md`'s terms. Before 0147 the seven sat at 1.9–6.0 dB
-      apart and the player called the closest three interchangeable and the furthest one *"really
-      nice"*. 3 dB is above the pairs that were reported as the same and below the ones that were not.
-      **If a later round finds two places at 3.1 dB that still sound alike, this number is wrong and
-      should MOVE rather than be worked around.**
-    */
-    const profiles = new Map(THEME_KINDS.map((theme) => [theme, profileOf(theme, placeLoops(theme))]));
-    const tooClose: string[] = [];
-    for (let i = 0; i < THEME_KINDS.length; i++) {
-      for (let j = i + 1; j < THEME_KINDS.length; j++) {
-        const a = THEME_KINDS[i]!;
-        const b = THEME_KINDS[j]!;
-        const apart = apartBy(profiles.get(a)!, profiles.get(b)!);
-        if (apart < PLACES_APART_DB) tooClose.push(`${a}/${b} ${apart.toFixed(1)} dB`);
-      }
-    }
-    expect(
-      tooClose,
-      `these places are the same mix with different notes in them: ${tooClose.join(', ')}`,
-    ).toEqual([]);
-  }, DSP_MS);
+    ⚠️ **`docs/decisions/0155-a-place-follows-its-own-instrument.md`.** The guard that stood here
+    required no two places within 3 dB of each other's BALANCE, and it wrote its own retirement
+    condition into its comment: *"If a later round finds two places at 3.1 dB that still sound alike,
+    this number is wrong and should MOVE rather than be worked around."*
+
+    ⚠️ **THAT CLAUSE HAS FIRED.** The seven ship at **3.3–4.0 dB apart**, satisfying it at every rung,
+    and the report is unchanged: *"one of the big problems is every level sounds the same and that's
+    what I've been trying to fix."* 0147 spent **259 hand-set numbers** buying a difference this guard
+    could see and a listener could not.
+
+    ⚠️ **AND THE FINDING IS STRONGER THAN *the number is wrong*: THE QUANTITY IS.**
+    `docs/decisions/0154-the-mix-is-authored-as-intent.md` makes balance **authored** rather than
+    emergent — every layer driven to its role's target to 0.00 dB — so two places with the same
+    arrangement have identical profiles **by construction**. Asking `apartBy` now asks whether two
+    places were given different roles, which is a question about a table rather than about a sound.
+
+    ⚠️ **IT IS REPLACED RATHER THAN DELETED**, which is the part that matters.
+    `tests/arrangement.test.ts` holds that no two places FOLLOW the same instrument at every rung —
+    what a listener actually tracks — and `0148 — NO TWO PLACES THAT CHOSE THEIR NOTES CHOSE THE SAME
+    ONES` above holds their material. Between them they cover the ground this guard was written for,
+    on two axes a player can hear and one they could not.
+  */
 
   it('0147 — AND NO PLACE KEEPS ITS CHARACTER IN A WHISPER', () => {
     /*

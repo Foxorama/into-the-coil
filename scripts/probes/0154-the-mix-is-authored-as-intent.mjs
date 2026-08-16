@@ -32,10 +32,19 @@ export const PROBES = [
     guard: 'THE PLACES DIFFER, and none of them appoints a second part',
     edit: {
       path: 'src/content/arrangement.ts',
-      // `lead` is already a counter-line at every rung that opens it, which is what made this the
-      // real defect in four places rather than a hypothetical one.
+      /*
+        ⚠️ **THIS BREAK USED TO BE `lead` AND 0155 NEUTRALISED IT, WHICH `npm run prove` CAUGHT AND
+        `0019` COULD NOT.** The anchor still matched and the edit still applied — but Rime Shelf now
+        FOLLOWS `lead` at `push` and `surge` (`LEADS`), so promoting it to a counter-line is a real
+        lift at those rungs and the guard correctly stayed green. **A probe whose break no longer
+        breaks proves nothing while looking exactly like one that does**, and only running the suite
+        and watching the colour can see it.
+
+        ⚠️ `drive` is a counter-line at every rung that opens it and is nobody's lead, so promoting it
+        to `counter` lifts nothing anywhere — which is the defect this guard exists for.
+      */
       find: "  rime: { chords: 'counter', crash: 'counter' },",
-      replace: "  rime: { lead: 'counter', crash: 'counter' },",
+      replace: "  rime: { drive: 'counter', crash: 'counter' },",
     },
   },
   {

@@ -15,6 +15,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ARRANGEMENT,
   MUSIC_ROLES,
+  LEADS,
   PROMOTES,
   ROLE_MARGIN_DB,
   TITLE_ARRANGEMENT,
@@ -99,6 +100,57 @@ describe('0154 — the mix is authored as intent', () => {
         expect(lifts, `${theme} promotes ${layer} and it changes nothing at any rung`).toBe(true);
       }
     }
+  });
+
+  it('0155 — A PLACE FOLLOWS ITS OWN INSTRUMENT, and it is still exactly one', () => {
+    /*
+      ⚠️ **THE REPLACEMENT FOR 0147's RETIRED BALANCE FLOOR** — 0155. What makes two levels different
+      is what the listener TRACKS, not how loud the layers are, and 0147 spent 259 numbers on the
+      second while the report survived them all.
+    */
+    for (const theme of THEME_KINDS) {
+      for (const [rung, lead] of Object.entries(LEADS[theme])) {
+        const level = rung as MusicLevel;
+        // A lead the ladder never opens is a place following silence.
+        expect(
+          MUSIC_LADDER[level][lead],
+          `${theme} follows ${lead} at ${rung} and the ladder never opens it there`,
+        ).toBeGreaterThan(0);
+        // And it has to actually be the part once named, with the displaced one stepping down.
+        expect(roleOf(theme, level, lead), `${theme}'s ${lead} is not the part at ${rung}`).toBe('part');
+        const parts = MUSIC_LAYERS.filter((l) => roleOf(theme, level, l) === 'part');
+        expect(parts, `${theme} follows ${parts.length} things at ${rung}`).toHaveLength(1);
+      }
+    }
+  });
+
+  it('and no two places follow the same thing all the way through, which is the whole point', () => {
+    /*
+      ⚠️ **THE DEFECT 0155 IS NAMED FOR, STATED AS A PROPERTY.** *"Every level sounds the same and
+      that's what I've been trying to fix."* Seven places that track the same instrument at every rung
+      are seven arrangements of one piece, whatever their gains say — which is exactly what 0147
+      measured as different and a player heard as identical.
+
+      ⚠️ **PAIRWISE AND NOT GLOBAL**, because the base composition is allowed to be the shape the
+      others deviate from: what must not happen is two PLACES being interchangeable.
+    */
+    const rungs = MUSIC_LEVELS.filter((r) => r !== 'calm' && r !== 'bossPeak');
+    const sameAll: string[] = [];
+    for (let i = 0; i < THEME_KINDS.length; i++) {
+      for (let j = i + 1; j < THEME_KINDS.length; j++) {
+        const a = THEME_KINDS[i]!;
+        const b = THEME_KINDS[j]!;
+        const differs = rungs.some((rung) => {
+          const lead = (t: typeof a) => MUSIC_LAYERS.find((l) => roleOf(t, rung, l) === 'part');
+          return lead(a) !== lead(b);
+        });
+        if (!differs) sameAll.push(`${a}/${b}`);
+      }
+    }
+    expect(
+      sameAll,
+      `these places follow the same instrument at every rung, so they are one arrangement: ${sameAll.join(', ')}`,
+    ).toEqual([]);
   });
 
   it('and the targets are ordered, because a role that is not above the one below it is not a role', () => {
