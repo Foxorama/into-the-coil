@@ -94,13 +94,45 @@ const { shipped, gains, offset } = solveMix(theme, rung, loops);
 const length = Math.round(seconds * SAMPLE_RATE);
 
 const base = resolve(root, `${theme}-${rung}`);
-writeFileSync(`${base}-shipped.wav`, wavOf(render(loops, shipped, length), SAMPLE_RATE, 2));
-writeFileSync(`${base}-solved.wav`, wavOf(render(loops, gains, length), SAMPLE_RATE, 2));
+const a = render(loops, shipped, length);
+const b = render(loops, gains, length);
+
+/*
+  ── THE TWO FILES ARE LEVEL-MATCHED ON THE RENDERED AUDIO, AND ESTIMATING IT WAS WRONG ───────────
+
+  ⚠️ **`solveMix` HOLDS THE SUMMED POWER OF THE LOOPS AND THAT IS NOT THE OUTPUT LEVEL.** A power sum
+  assumes the layers are uncorrelated; they are emphatically not — `sub`, `engine` and `groove` all
+  strike the same downbeat in the same key — so a bass-heavy mix sums far higher in AMPLITUDE than in
+  power. Held to 0.11 dB by the solve's own arithmetic, the rendered arc came out **8.7 dB apart**.
+
+  ⚠️ **AND AN UNMATCHED A/B IS WORSE THAN NO A/B**, because the quieter file is judged thin and the
+  verdict is about this script. Measuring the actual samples is the only honest way to match them,
+  and it costs one pass over audio that has already been rendered.
+
+  ⚠️ **THE DIFFERENCE IS REPORTED RATHER THAN HIDDEN.** If the solved balance genuinely needs a
+  master trim to reach the shipped loudness, that is a real finding about the change and belongs in
+  the output — it is a level question, separate from the balance being judged here.
+*/
+const rmsOf = (x) => {
+  let s = 0;
+  for (let i = 0; i < x.length; i++) s += x[i] * x[i];
+  return Math.sqrt(s / x.length);
+};
+const trim = rmsOf(a) / rmsOf(b);
+for (let i = 0; i < b.length; i++) b[i] *= trim;
+
+writeFileSync(`${base}-shipped.wav`, wavOf(a, SAMPLE_RATE, 2));
+writeFileSync(`${base}-solved.wav`, wavOf(b, SAMPLE_RATE, 2));
 
 const nearness = rung === 'boss' || rung === 'bossPeak' ? 1 : AURA_LEVEL_CEILING;
 console.log(`${theme} / ${rung} — ${seconds}s, stereo, through the game's bus`);
 console.log(`  ${base}-shipped.wav   MUSIC_LADDER x mixOf, aura at ${nearness}`);
 console.log(`  ${base}-solved.wav    the arrangement, anchored ${offset >= 0 ? '+' : ''}${offset.toFixed(1)} dB off the stated targets`);
+console.log(
+  `\nlevel-matched on the rendered audio: the solved mix was ${(-20 * Math.log10(trim)).toFixed(1)} dB ` +
+    `${trim > 1 ? 'quieter' : 'louder'} and has been trimmed to match. A master trim of that size is what ` +
+    `wiring this in would cost in loudness — a separate question from the balance.`,
+);
 console.log('\nthe layers that move most:');
 const moved = MUSIC_LAYERS.filter((l) => shipped[l] > 0)
   .map((l) => ({ l, db: 20 * Math.log10(gains[l] / shipped[l]) }))

@@ -22,6 +22,37 @@ export function profileOfLoops(loops) {
 }
 
 /**
+ * Every layer's plain broadband RMS — the quantity the OUTPUT is made of.
+ *
+ * ── AND THE A-WEIGHTED SUM IS NOT IT, WHICH WAS A REAL BUG WITH A CONFIDENT CLAIM ON TOP ────────
+ *
+ * ⚠️ **`solveMix` HELD THE RUNG'S LEVEL BY PRESERVING `Σ power(bandLevels)`, AND THAT IS A LOUDNESS
+ * ESTIMATE RATHER THAN A LEVEL.** A-weighting discounts the bottom octaves by twenty to thirty
+ * decibels, and the solve's largest single move is dropping the bed — `sub` by 9 dB, `engine` by 5.
+ * In A-weighted terms those layers barely count, so the sum looked preserved; **the rendered file was
+ * 8.76 dB quieter than the one it was supposed to be compared against.**
+ *
+ * ⚠️ **IT WAS ONLY CAUGHT BY RENDERING A WHOLE LEVEL AND MEASURING THE FILE**, which is
+ * `docs/decisions/0027-measure-the-picture-not-the-model.md` exactly: every number in the solve
+ * agreed with every other number in the solve, and the artefact disagreed with all of them. A mix
+ * change handed to a listener 8.76 dB down would have been judged as thin, and the judgement would
+ * have been about this function.
+ *
+ * ⚠️ **UNCORRELATED LAYERS ADD IN POWER**, so the summed level is `sqrt(Σ (rms × gain)²)` — which is
+ * what the loops actually are, being different material rather than copies of one signal.
+ */
+export function rmsOfLoops(loops) {
+  const out = {};
+  for (const l of MUSIC_LAYERS) {
+    const buffer = loops[l];
+    let sum = 0;
+    for (let i = 0; i < buffer.length; i++) sum += buffer[i] * buffer[i];
+    out[l] = Math.sqrt(sum / buffer.length);
+  }
+  return out;
+}
+
+/**
  * Every sounding layer's margin at `gains` — 0152's `heardAt` arithmetic over a profile map.
  *
  * ⚠️ **THE BEST WINDOW AND NOT THE AVERAGE ONE**, and only bands the layer lives in count. Both are
@@ -80,15 +111,16 @@ export function shippedAt(theme, rung) {
  * uniformly. `offset` reports that anchor. A part at +1.4 over counter-lines at −3.6 is the same
  * arrangement as +3 over −2, and judging the absolute value called twelve healthy layers wrong.
  */
-export function solveMix(theme, rung, loops, profile = profileOfLoops(loops)) {
+export function solveMix(theme, rung, loops, profile = profileOfLoops(loops), rms = rmsOfLoops(loops)) {
   const shipped = shippedAt(theme, rung);
   const gains = {};
   for (const l of MUSIC_LAYERS) gains[l] = shipped[l] > 0 ? (SOLVED_BY(l) ? 1 : shipped[l]) : 0;
 
-  const was = MUSIC_LAYERS.reduce((s, l) => s + (shipped[l] > 0 ? power(profile[l]) * shipped[l] : 0), 0);
+  // ⚠️ THE BROADBAND POWER AND NOT THE A-WEIGHTED SUM — `rmsOfLoops` has the bug this replaces.
+  const summed = (g) => Math.sqrt(MUSIC_LAYERS.reduce((s, l) => s + (g[l] > 0 ? (rms[l] * g[l]) ** 2 : 0), 0));
+  const was = summed(shipped);
   const renormalise = () => {
-    const now = MUSIC_LAYERS.reduce((s, l) => s + (gains[l] > 0 ? power(profile[l]) * gains[l] : 0), 0);
-    const scale = was / now;
+    const scale = was / summed(gains);
     for (const l of MUSIC_LAYERS) if (SOLVED_BY(l)) gains[l] *= scale;
   };
 

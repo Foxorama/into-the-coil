@@ -17,7 +17,7 @@
 //
 // Usage:  node scripts/hear.mjs [--out=cues.wav] [--gap=0.35] [--only=kill,blast]
 //                               [--music] [--play] [--solo [--rung=run]]
-//                               [--level=approach [--fight=45] [--gap-units=85]]
+//                               [--level=approach [--fight=45] [--gap-units=85] [--solved]]
 //
 // --level writes A WHOLE LEVEL — start to boss death, at the rungs a distance decides, the ramps the
 // mixer actually uses and the theme the level is in. It is the only mode that writes the SHAPE of a
@@ -51,6 +51,8 @@ import { MASTER_GAIN, SAMPLE_RATE, cueSeconds, sampleCue, saturate, variantAt, v
 import { makeRng } from '../src/sim/rng.ts';
 import { bakeLoops } from '../src/app/music.ts';
 import { THEME_KINDS } from '../src/content/themes.ts';
+import { SOLVED_BY } from '../src/content/arrangement.ts';
+import { profileOfLoops, solveMix } from './solve-mix.mjs';
 import { PHRASE_SECONDS, BAR_SECONDS, LAYER_BARS, LAYER_PAN, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_DRIVE, MUSIC_GAIN, AURA_LAYERS, AURA_NEAR_UNITS, AURA_FAR_UNITS, STEPS_PER_BEAT } from '../src/content/music.ts';
 
 /*
@@ -354,6 +356,18 @@ if (args.has('level')) {
   const at = (layer, i) => loops[layer][i % loops[layer].length];
 
   /*
+    ⚠️ **THE WHOLE LEVEL AT THE SOLVED BALANCE, WHICH IS THE ONLY WAY THE CHANGE CAN BE JUDGED.**
+    `scripts/hear-solved.mjs` renders one rung; six rounds of *"repetitive"* and *"goes nowhere"* are
+    about the ARC, and a mix change judged a rung at a time is judged on the wrong question — this
+    file's own argument for `--level` existing at all.
+  */
+  const solved = args.has('solved') ? {} : null;
+  if (solved !== null) {
+    const profile = profileOfLoops(loops);
+    for (const rung of Object.keys(MUSIC_LADDER)) solved[rung] = solveMix(theme, rung, loops, profile).gains;
+  }
+
+  /*
     ⚠️ **THE FIGHT'S GAP IS A STATED CHOICE AND NOT A MEASUREMENT**, so it is named here rather than
     left to look like one. The aura's nearness is a distance the PLAYER steers (0091), so a rig has
     no honest value for it — `--music`'s `-aura.wav` is the mode that sweeps the range. What this
@@ -400,8 +414,27 @@ if (args.has('level')) {
     const aura = auraAt(kind, second, nearnessInFight);
     // The loops begin at t = 0 here, so the anchor is zero and bar zero is the file's own start.
     for (const w of levelWrites(rung, theme, aura, 0, second, headingFor)) {
+      /*
+        ⚠️ **`--solved` SWAPS THE TARGET AND NOTHING ELSE** —
+        `docs/decisions/0154-the-mix-is-authored-as-intent.md`. The ramps, the bar-line quantisation
+        (0117), the camera walk and the aura all stay exactly as the mixer does them, so the file
+        differs from the shipped one **only in the balance**, which is the one thing being judged.
+
+        ⚠️ **THE AURA IS NEVER OVERRIDDEN**, because its target here is a live distance the walk is
+        computing per block — 0091 — and the solve deliberately does not own it.
+      */
+      /*
+        ⚠️ **`headingFor` KEEPS THE MIXER'S OWN VALUE, AND FEEDING THE SOLVED ONE BACK SILENCES THE
+        FILE.** `levelWrites` uses `headingFor` to decide whether a target has CHANGED — 0117 — so
+        storing the solved value there makes the mixer see a difference on *every block*, re-issue the
+        write, and re-quantise `at` to the next bar line each time. The ramp start is then always in
+        the future, `t >= r.at` is never true, and every gain sits at the `calm` value it was
+        initialised to. **The rendered arc came out 8.7 dB down and read as a mastering problem** —
+        the solve itself holds level to 0.11 dB per rung, which is what made it look like one.
+      */
       headingFor[w.layer] = w.target;
-      ramp[w.layer] = { at: w.at, target: w.target, tau: w.tau };
+      const target = solved !== null && SOLVED_BY(w.layer) ? solved[rung][w.layer] : w.target;
+      ramp[w.layer] = { at: w.at, target, tau: w.tau };
     }
     for (let n = 0; n < BLOCK && i + n < total; n++) {
       const t = (i + n) / SAMPLE_RATE;
