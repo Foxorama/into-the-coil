@@ -1343,6 +1343,31 @@ function frame(at: number): void {
   if (music !== null && unlocked) {
     const rungBefore = music.level();
     music.setLevel(moment.rung, moment.aura, moment.theme);
+    /*
+      ⚠️ **THE SOLVED MIX HAS TO BE WRITTEN OVER `setLevel`, AND THE FIRST VERSION OF THIS TOGGLE DID
+      NOT.** `setLevel` asks `levelWrites` for its own targets — `MUSIC_LADDER × mixOf`, the shipped
+      mix — and knows nothing about the solve. Handing the solved gains to `momentOf` therefore
+      changed **the readout and not one sample of audio**, which is the instrument disagreeing with
+      the thing it measures that `docs/decisions/0126-the-dashboard-is-the-instrument.md` exists
+      against. Reported as *"it's better, but I'm still not getting any arp"* — and the *better* was
+      the previous PR's ride and envelope work, not this toggle, which was doing nothing at all.
+
+      ⚠️ **ABSOLUTE, exactly as a desk hold is** — 0129 — and for the same reason: the value has to be
+      reachable whatever the rung says. A layer the desk is holding is left alone, because an explicit
+      fader outranks an experiment.
+
+      ⚠️ **AND ONLY WHEN IT HAS MOVED**, because `setLevel` runs every frame and re-arming a ramp sixty
+      times a second is a gain that never arrives — 0117's own trap, one file over.
+    */
+    if (solvedOn) {
+      for (const { layer, target, aura } of moment.layers) {
+        if (aura || holdOf(layer).gain !== null) continue;
+        const gain = music.gainOf(layer);
+        if (Math.abs(gain.value - target) <= 0.001) continue;
+        gain.cancelScheduledValues(0);
+        gain.setTargetAtTime(target, 0, HOLD_SECONDS);
+      }
+    }
     // A rung change re-writes every layer whose target moved, including the ones a solo is holding
     // down — so the pin is re-stated the moment the mixer has had its say, and never before it.
     if (rungBefore !== moment.rung || owed.size > 0) restate(moment);
