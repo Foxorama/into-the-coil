@@ -94,10 +94,26 @@ what moved most recently and back it out. `hook`'s envelope repair takes its sol
 7.85× to 2.33×, improves 0108's own chest-band guard from 0.2115 to 0.2790, and is *why* the note
 rings long enough to break the measurement. **The reading was wrong; the sound was not.**
 
+## ⚠️ And the new assertion has its own probe, aimed at what the threshold could never see
+
+`scripts/probes/0156-a-strike-is-an-increment.mjs` square-roots the accent on its way to the note —
+the standard "perceptual" correction, a one-token change, and wrong here because `accents` is
+documented as how hard a note is **struck** and the mix is solved against those numbers.
+
+| | old guard, `< 0.95` | 0156's guard, against the table |
+|---|---|---|
+| `Math.sqrt(accent)` | 0.777 — **green** | 0.894 and 0.944 against 0.76 and 0.82 — **red** |
+
+**0108's probe and this one are different failures.** That one throws the accent away entirely and is
+the extreme case; this one is a weight arriving at the wrong **size**, which `< 0.95` passes for any
+accent under about 0.95 whatever the material is doing. Halving the accent's depth rather than
+square-rooting it reads 0.782 on the old guard and is red on the new one too — measured, not assumed.
+
 ## Confirmed, not assumed
 
 - `node scripts/prove-guard.mjs 0108` — **7 of 7 red**, including *a pitched note's weight dropped on
   the way to the bake*, which is the one that did not fire before.
+- `node scripts/prove-guard.mjs 0156` — red on the guard it names.
 - Both bakes verified byte-identical across runs, so the statistic is deterministic and not sampled.
 - The window sweep above is measured rather than reasoned — six pairs, printed side by side.
 
