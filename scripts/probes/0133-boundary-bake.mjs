@@ -30,8 +30,11 @@ export const PROBES = [
     guard: 'and a run that leaves the place before its material arrives never hears it',
     edit: {
       path: 'src/app/sound.ts',
-      find: '  const step = (): void => {\n    if (stopped) return;\n    if (next >= jobs.length) {',
-      replace: '  const step = (): void => {\n    if (next >= jobs.length) {',
+      // ⚠️ RE-ANCHORED BY 0157, which put a slice between `stopped` and the end check. The break is
+      // unchanged — the cancel flag stops being read — and `npm run prove` refused the stale anchor
+      // rather than reporting green, which is the whole of what 0019 is for.
+      find: '  const step = (): void => {\n    if (stopped) return;\n    /*',
+      replace: '  const step = (): void => {\n    /*',
     },
   },
 ];

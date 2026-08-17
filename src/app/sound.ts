@@ -859,12 +859,8 @@ export function prewarmAudio(schedule: (run: () => void) => void = (run) => void
       deciding how much work to do before yielding, which is the one place a clock is the right
       instrument — a fixed job count would be a guess about a machine.
     */
-    const until = performance.now() + PREWARM_SLICE_MS;
-    while (pending !== null && pending.at < pending.jobs.length) {
-      pending.jobs[pending.at++]!();
-      if (performance.now() >= until) break;
-    }
     if (pending === null) return;
+    pending.at = sliceOf(pending.jobs, pending.at);
     if (pending.at >= pending.jobs.length) {
       prewarmed = { cues: pending.cues, loops: pending.loops };
       pending = null;
@@ -977,11 +973,20 @@ export function bakePlace(
   let stopped = false;
   const step = (): void => {
     if (stopped) return;
+    /*
+      ⚠️ **THE SAME SLICE THE PREWARM TAKES, AND THIS HAD THE SAME DEFECT** — 0157. One job per
+      `setTimeout` against a ~4 ms clamp, in the code that runs at every level BOUNDARY: 0133 needs
+      this finished before the boundary or the level arrives playing the piece it is leaving.
+      `sliceOf` is the one description of how much a slice does.
+
+      ⚠️ **The job list GROWS while it is walked** — a layer's job pushes that layer's notes — so the
+      end is `next >= jobs.length` re-read each time rather than a length captured up front.
+    */
+    next = sliceOf(jobs, next);
     if (next >= jobs.length) {
       ready(own);
       return;
     }
-    jobs[next++]!();
     schedule(step);
   };
   schedule(step);
@@ -989,6 +994,43 @@ export function bakePlace(
     stopped = true;
   };
 }
+
+/**
+ * Run jobs from `at` until the slice is spent, and say where it got to.
+ *
+ * ⚠️ **AT LEAST `PREWARM_SLICE_JOBS`, THEN UNTIL THE CLOCK SAYS STOP, AND BOTH HALVES ARE LOAD-BEARING.**
+ * The time budget is what makes a slice the right size on the machine it is actually running on. The
+ * job floor is what makes the *ratio* of yields to work a property of the code rather than of the
+ * machine — without it, a loaded CI box does one job per slice and is indistinguishable from the
+ * schedule 0157 removed, which is a guard that measures the runner
+ * (`docs/decisions/0025-the-frame-budget-is-counted-not-timed.md`).
+ *
+ * ⚠️ **The floor's worst case is bounded and small.** A note is about 30 ms at the very worst
+ * (`src/app/music.ts`) and averages nearer 1.2, so a floor of four is normally invisible and cannot
+ * exceed about 120 ms even if every job in it were the worst one in the piece.
+ */
+function sliceOf(jobs: (() => void)[], at: number): number {
+  const until = performance.now() + PREWARM_SLICE_MS;
+  let done = 0;
+  let next = at;
+  while (next < jobs.length) {
+    jobs[next++]!();
+    done++;
+    if (done >= PREWARM_SLICE_JOBS && performance.now() >= until) break;
+  }
+  return next;
+}
+
+/**
+ * The fewest jobs a slice does before its clock may stop it.
+ *
+ * ⚠️ **It exists so the guard can be written about the CODE rather than about the machine** — see
+ * `sliceOf`. `tests/sound.test.ts` asserts the slice count against `jobs / PREWARM_SLICE_JOBS`, which
+ * is an arithmetic bound that holds on any hardware; a guard written against elapsed time passed here
+ * and failed under `npm run prove`'s own parallel load, which is exactly
+ * `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`.
+ */
+export const PREWARM_SLICE_JOBS = 4;
 
 /**
  * The prewarmed set, or `null` if there is not one. **For `tests/sound.test.ts` and nothing else.**

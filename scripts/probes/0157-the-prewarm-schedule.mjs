@@ -20,8 +20,8 @@ export const PROBES = [
     guard: '0157 — a SLICE does many notes, because a browser clamps the gap between them',
     edit: {
       path: 'src/app/sound.ts',
-      find: '    const until = performance.now() + PREWARM_SLICE_MS;\n    while (pending !== null && pending.at < pending.jobs.length) {\n      pending.jobs[pending.at++]!();\n      if (performance.now() >= until) break;\n    }',
-      replace: '    if (pending !== null && pending.at < pending.jobs.length) {\n      pending.jobs[pending.at++]!();\n    }',
+      find: '    pending.at = sliceOf(pending.jobs, pending.at);',
+      replace: '    if (pending.at < pending.jobs.length) pending.jobs[pending.at++]!();',
     },
   },
   {
@@ -42,6 +42,27 @@ export const PROBES = [
       path: 'src/app/sound.ts',
       find: 'export function drainPrewarm(): void {\n  if (pending === null) return;',
       replace: 'export function drainPrewarm(): void {\n  if (pending !== null) return;\n  if (pending === null) return;',
+    },
+  },
+  {
+    decision: '0157',
+    suite: 'tests/sound.test.ts',
+    /*
+      ⚠️ THE SAME DEFECT IN THE OTHER BAKE, WHICH IS THE ONE THAT RUNS AT EVERY LEVEL BOUNDARY.
+      `bakePlace` had the identical one-job-per-timeout schedule, and 0133 needs it finished before
+      the boundary or a level arrives playing the piece it is leaving.
+
+      ⚠️ IT WAS AIMED AT THE BROWSER GUARD FIRST AND CAME BACK **STILL GREEN**, which is 0019 doing
+      its job. `tests/sound.browser.test.ts` counts buffers after a run starts, and level ONE's place
+      re-voices almost nothing — so its bake finishes inside the window however it is scheduled. The
+      guard it names now asks a place that really does re-voice, and counts slices against jobs.
+    */
+    broke: 'the place bake back to one note per timeout, so a level’s own material misses its boundary',
+    guard: '0157 — AND THE BOUNDARY BAKE TAKES THE SAME SLICE, because it is the one on a deadline',
+    edit: {
+      path: 'src/app/sound.ts',
+      find: '    next = sliceOf(jobs, next);\n    if (next >= jobs.length) {\n      ready(own);',
+      replace: '    if (next < jobs.length) jobs[next++]!();\n    if (next >= jobs.length) {\n      ready(own);',
     },
   },
 ];

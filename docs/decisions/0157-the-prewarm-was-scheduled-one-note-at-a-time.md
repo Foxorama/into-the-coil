@@ -74,6 +74,35 @@ and [`the-prewarm-got-a-third-heavier`](../../reports/the-prewarm-got-a-third-he
 is the separate question of whether that number is right. What was wrong was spending four times it in
 wall clock and then throwing the result away.
 
+## ⚠️ The same defect was in `bakePlace`, and a green guard was hiding a second bug
+
+`bakePlace` — the boundary bake, [0133](0133-the-place-is-baked-at-the-boundary.md) — had the
+**identical one-job-per-timeout schedule**. It is the code that has to finish before a level boundary
+or the level arrives playing the piece it is leaving. Both now take `sliceOf`, which is the one
+description of how much a slice does.
+
+⚠️ **AND `tests/sound.browser.test.ts` HAD BEEN GREEN FOR THE WRONG REASON SINCE 0133 LANDED.** It
+asserted that exactly `cues + music layers` buffers exist after the unlocking gesture — *"more than
+that is a synthesiser running during play"*. That held because **`bakePlace` returns immediately
+unless `prewarmed` is set**, and the prewarm took 12–20 seconds: **a run started inside that window
+got no place bake at all.** The guard was not proving *nothing else bakes*; it was proving *the place
+never arrives*.
+
+⚠️ **Nothing about the sound changed, which is why no play-test caught it.** Level one's theme IS the
+base composition, so the loops the place would have supplied are the ones already playing; and by the
+time a run reaches level two the prewarm has long finished. What was broken was the mechanism, in the
+only window where it could not be observed.
+
+## ⚠️ And the first version of this decision's own guard was wrong, in the way 0044 names
+
+The slice guard shipped as `slices < jobs`, which is true whenever any slice manages two jobs. Under
+`npm run prove`'s own parallel load **every job exceeded the 8 ms budget on its own**, so every slice
+did exactly one — and the guard went red on healthy code, measuring the runner rather than the
+schedule. `PREWARM_SLICE_JOBS` is the repair: a slice runs at least four jobs *before* its clock may
+stop it, so `slices <= ceil(jobs / 4)` is arithmetic about the code and holds on any machine.
+[0025](0025-the-frame-budget-is-counted-not-timed.md) is the rule this broke, and it was written down
+here rather than quietly fixed because the first version was reasoned about and shipped anyway.
+
 ## ⚠️ What is still true, and is now the honest case for a loading screen
 
 **Pressing instantly still costs 4.3 s**, and it always will: the audio cannot play before it has been

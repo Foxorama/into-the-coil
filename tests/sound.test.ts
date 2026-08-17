@@ -34,6 +34,7 @@ import {
   cueSeconds,
   drainPrewarm,
   makeSpeaker,
+  PREWARM_SLICE_JOBS,
   prewarmAudio,
   resetPrewarm,
   sampleCue,
@@ -46,7 +47,7 @@ import {
 import { bakeLoops, layerNotes, musicLevelFor, placeFor } from '../src/app/music.ts';
 import { UNITS_PER_SECOND, rungMarks, targetGain } from '../scripts/timeline.mjs';
 import { AURA_LAYERS, FIRE_GRID, MUSIC, MUSIC_LAYERS, secondsOfLayer, type MusicLayer } from '../src/content/music.ts';
-import { THEME_KINDS, revoicedBy } from '../src/content/themes.ts';
+import { THEME_KINDS, bakedBy, revoicedBy, type ThemeKind } from '../src/content/themes.ts';
 import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { MISSILE_BEAT_RATIO, fireEveryAt, missileEveryAt } from '../src/content/pickups.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -509,10 +510,13 @@ describe('the cue table', () => {
         gaps cost four times the work. Measured on the shipped build: a press at six seconds froze
         the main thread for **4,556 ms**, because the gesture found the prewarm unfinished.
 
-        ⚠️ **Held as SLICES PER JOB rather than as a duration**, which is the one form of this that
-        is not a clock assertion — `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md`.
-        What went wrong was the RATIO of yields to work, and that is what this counts. A slice that
-        does one job again fails here on any machine, fast or slow.
+        ⚠️ **Held against `PREWARM_SLICE_JOBS` rather than against elapsed time, and the first
+        version of this guard was WRONG for exactly the reason 0044 names.** It asserted only
+        `slices < jobs`, which is true whenever any slice manages two jobs — and under `npm run
+        prove`'s own parallel load every job exceeded the time budget on its own, so every slice did
+        one and the guard went red on healthy code. The floor makes the ratio a property of the code:
+        `sliceOf` runs at least four jobs before its clock may stop it, so this bound holds on any
+        machine and still fails on the one-job schedule 0157 removed.
       */
       resetPrewarm();
       let slices = 0;
@@ -533,8 +537,48 @@ describe('the cue table', () => {
       expect(
         slices,
         `the prewarm yielded ${slices} times for ${jobs} jobs, which is the one-note-per-timeout schedule 0157 removed`,
-      ).toBeLessThan(jobs);
+      ).toBeLessThanOrEqual(Math.ceil(jobs / PREWARM_SLICE_JOBS));
     });
+
+    it('0157 — AND THE BOUNDARY BAKE TAKES THE SAME SLICE, because it is the one on a deadline', () => {
+      /*
+        ⚠️ **`bakePlace` HAD THE IDENTICAL ONE-JOB-PER-TIMEOUT SCHEDULE** — 0157 — and it is the bake
+        with an actual deadline: 0133 needs it finished before the level boundary, or the level
+        arrives playing the piece it is leaving.
+
+        ⚠️ **HELD HERE RATHER THAN IN THE BROWSER, AND A PROBE IS WHY.** The obvious guard was
+        `tests/sound.browser.test.ts`'s buffer count, and slowing this schedule back down left it
+        **STILL GREEN** — because level one's place re-voices almost nothing, so its bake finishes
+        instantly however it is scheduled. `docs/decisions/0019-a-probe-must-be-seen-to-apply.md`
+        caught that; this asks a place that really does re-voice.
+      */
+      resetPrewarm();
+      prewarmAudio((run) => run());
+      expect(takePrewarmed(), 'no prewarm, so `bakePlace` returns without baking and this measures nothing').not.toBeNull();
+
+      const theme: ThemeKind = 'core';
+      const layers = bakedBy(theme);
+      expect(layers.length, 'the place this is written against no longer re-voices anything').toBeGreaterThan(8);
+      const jobs = layers.length + layers.reduce((n, layer) => n + layerNotes(layer, SAMPLE_RATE, theme).notes.length, 0);
+
+      let slices = 0;
+      let arrived = false;
+      bakePlace(
+        theme,
+        () => {
+          arrived = true;
+        },
+        (run) => {
+          slices++;
+          run();
+        },
+      );
+      expect(arrived, 'the place never finished baking, so the slice count below is of half a job list').toBe(true);
+      expect(
+        slices,
+        `the boundary bake yielded ${slices} times for ${jobs} jobs, which is the schedule 0157 removed`,
+      ).toBeLessThanOrEqual(Math.ceil(jobs / PREWARM_SLICE_JOBS));
+    }, 60_000);
 
     it('0157 — AND A PRESS FINISHES THE PREWARM RATHER THAN STARTING AGAIN', () => {
       /*
