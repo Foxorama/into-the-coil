@@ -696,6 +696,21 @@ and [0104](decisions/0104-the-gun-plays-a-figure.md). **Ask 1 has none, and it i
 THEM.** *"I haven't commented on boss aura's or game sfx/cues yet because we've been spending a lot
 of time just on the music."* Do not read the silence as a sign-off.
 
+### ⚠️ AND THE RUN-START FREEZE IS FOUND AND FIXED — [0157](decisions/0157-the-prewarm-was-scheduled-one-note-at-a-time.md)
+
+⚠️ **PRESSING START COST 4.6 SECONDS OF FROZEN MAIN THREAD AND IT WAS NOT THE MUSIC.** The prewarm
+scheduled **one note per `setTimeout`**, which a browser clamps to ~4 ms, so 3.6 s of synthesis took
+12–20 s of wall clock — and `prewarmed` is set by the *last* job, so a press inside that window read
+the set as *not started* and re-synthesised all of it. **A player who reads the title for six seconds
+now waits 277 ms where they waited 4564.**
+
+⚠️ **FOUR HYPOTHESES WERE MEASURED AND KILLED FIRST, AND 0157 LISTS THEM.** Read it before touching
+anything on the gesture path — three of the four were looking at the screen change, and `begin` is
+synchronous.
+
+⚠️ **A LOADING SCREEN IS STILL WANTED AND IS NOW HONEST.** Pressing instantly still costs 4.3 s
+because the audio cannot play before it is synthesised, and the player has already asked for one.
+
 ### ⚠️ THE ORDER OF EVERYTHING AFTER THIS IS THE PLAYER'S, GIVEN 2026-08-17
 
 **music → enemy spawn rates, gaps and bugs → sfx → boss uniqueness → boss auras → minibosses →

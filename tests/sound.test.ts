@@ -32,6 +32,7 @@ import {
   bakeCues,
   bakePlace,
   cueSeconds,
+  drainPrewarm,
   makeSpeaker,
   prewarmAudio,
   resetPrewarm,
@@ -42,7 +43,7 @@ import {
   velocitiesOf,
   type AudioOut,
 } from '../src/app/sound.ts';
-import { bakeLoops, musicLevelFor, placeFor } from '../src/app/music.ts';
+import { bakeLoops, layerNotes, musicLevelFor, placeFor } from '../src/app/music.ts';
 import { UNITS_PER_SECOND, rungMarks, targetGain } from '../scripts/timeline.mjs';
 import { AURA_LAYERS, FIRE_GRID, MUSIC, MUSIC_LAYERS, secondsOfLayer, type MusicLayer } from '../src/content/music.ts';
 import { THEME_KINDS, revoicedBy } from '../src/content/themes.ts';
@@ -499,6 +500,85 @@ describe('the cue table', () => {
       expect(takePrewarmed(), 'a prewarm survived a reset, so the cold path is unreachable').toBeNull();
       expect(bakeCues(SAMPLE_RATE).length, 'the cold bake produces nothing').toBe(CUE_KINDS.length);
     });
+
+    it('0157 — a SLICE does many notes, because a browser clamps the gap between them', () => {
+      /*
+        ⚠️ **THE PREWARM SPENT 12–20 SECONDS OF WALL CLOCK DOING 3.6 SECONDS OF SYNTHESIS** —
+        `docs/decisions/0157-the-prewarm-was-scheduled-one-note-at-a-time.md`. It scheduled **one
+        note per `setTimeout(run, 0)`**, and a browser clamps a nested timeout to about 4 ms, so the
+        gaps cost four times the work. Measured on the shipped build: a press at six seconds froze
+        the main thread for **4,556 ms**, because the gesture found the prewarm unfinished.
+
+        ⚠️ **Held as SLICES PER JOB rather than as a duration**, which is the one form of this that
+        is not a clock assertion — `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md`.
+        What went wrong was the RATIO of yields to work, and that is what this counts. A slice that
+        does one job again fails here on any machine, fast or slow.
+      */
+      resetPrewarm();
+      let slices = 0;
+      prewarmAudio((run) => {
+        slices++;
+        run();
+      });
+      const warm = takePrewarmed();
+      expect(warm, 'the prewarm did not finish, so this measured nothing').not.toBeNull();
+      /*
+        ⚠️ **The job count is asked of `layerNotes`, which is what BUILDS the jobs**, rather than
+        counted off the tables — a guard that re-derived it would be counting its own arithmetic and
+        would drift the day a rest moves. `notes` is the list; nothing here runs it.
+      */
+      const jobs =
+        warm!.cues.reduce((n, variants) => n + variants.length, 0) +
+        MUSIC_LAYERS.reduce((n, layer) => n + layerNotes(layer, SAMPLE_RATE).notes.length, 0);
+      expect(
+        slices,
+        `the prewarm yielded ${slices} times for ${jobs} jobs, which is the one-note-per-timeout schedule 0157 removed`,
+      ).toBeLessThan(jobs);
+    });
+
+    it('0157 — AND A PRESS FINISHES THE PREWARM RATHER THAN STARTING AGAIN', () => {
+      /*
+        ⚠️ **`prewarmed` is set on the LAST job, so 90% done read as NOT STARTED** and the gesture
+        re-synthesised all of it. That is the 4.6 seconds, and it is the half of 0157 that a player
+        actually feels: the schedule fix shortens the window, and this is what makes landing inside
+        the window cost only what is left.
+
+        ⚠️ **The drained set must be the set the prewarm would have finished with**, sample for
+        sample — the jobs are its own and run in its own order, which is the same property the
+        prewarmed-versus-cold guard above rests on. A drain that re-baked would pass a length check
+        and fail this one.
+      */
+      resetPrewarm();
+      prewarmAudio((run) => run());
+      const whole = takePrewarmed();
+      expect(whole, 'the prewarm did not finish, so there is nothing to compare against').not.toBeNull();
+
+      // Now start one and stop driving it partway, exactly as a press mid-prewarm finds it.
+      resetPrewarm();
+      let left = 12;
+      prewarmAudio((run) => {
+        if (left-- > 0) run();
+      });
+      expect(takePrewarmed(), 'twelve slices finished the whole prewarm, so this measured nothing').toBeNull();
+
+      drainPrewarm();
+      const drained = takePrewarmed();
+      expect(drained, 'a drain did not complete a prewarm that was in flight').not.toBeNull();
+      for (const layer of MUSIC_LAYERS) {
+        const a = whole!.loops[layer];
+        const b = drained!.loops[layer];
+        expect(b.length, `${layer} drained to a different length`).toBe(a.length);
+        let worst = 0;
+        for (let i = 0; i < a.length; i++) worst = Math.max(worst, Math.abs(a[i]! - b[i]!));
+        expect(worst, `${layer} drained to different samples, so a press does not get what it waited for`).toBe(0);
+      }
+      /*
+        ⚠️ **The default five seconds is not enough and that is the SUBJECT, not flake** — the same
+        reasoning the prewarmed-versus-cold guard above records. This drives the prewarm to
+        completion twice, and a whole prewarm is about four seconds of real synthesis.
+        `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`.
+      */
+    }, 60_000);
 
     describe('0133 — and a PLACE is baked at the boundary, on the same terms', () => {
       it('THE TRIGGER: the place baked is the one the RUN is heading for, not the one on the field', () => {
