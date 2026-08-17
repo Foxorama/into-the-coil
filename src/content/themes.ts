@@ -106,6 +106,14 @@ export const THEME_KINDS = ['approach', 'nebula', 'saurian', 'labyrinth', 'rime'
 /** Derived from the list, so a theme cannot exist in the union and be missing from the table. */
 export type ThemeKind = (typeof THEME_KINDS)[number];
 
+/**
+ * A place's own shape: which layers it opens at which rung, sparse all the way down.
+ *
+ * ⚠️ **NAMED so the rig can hold one and thread it** — 0163. An inline type on the field could not be
+ * referred to by `levelWrites`'s parameter or by the dashboard's edit map.
+ */
+export type ThemeLadder = Partial<Record<MusicLevel, Partial<Record<MusicLayer, number>>>>;
+
 export interface ThemeRow {
   /**
    * What the level break calls it — `docs/game.md`'s voice rule: what it is, never why it is good.
@@ -208,7 +216,7 @@ export interface ThemeRow {
    * holds, or drops away is an authoring judgement, and a guard over it would be the thing 0161 was
    * written to remove arriving one table over.
    */
-  ladder?: Partial<Record<MusicLevel, Partial<Record<MusicLayer, number>>>>;
+  ladder?: ThemeLadder;
   /**
    * The layers this place plays DIFFERENTLY, as a replacement for their voices.
    *
@@ -941,8 +949,19 @@ export function mixOf(theme: ThemeKind, layer: MusicLayer): number {
  * says; the nearness multiplier is a distance the player steers (0091) and the balance is the place's
  * own (0147). Folding either in would make one function that cannot be asked a simple question.
  */
-export function rungOf(theme: ThemeKind, rung: MusicLevel, layer: MusicLayer): number {
-  return rungIn(THEMES[theme].ladder, rung, layer);
+/**
+ * ⚠️ **`ladder` IS AN INPUT AND THE GAME NEVER PASSES ONE** — 0138's shape, applied to the other
+ * half of what a place is. The shipped game asks with three arguments and gets `THEMES[theme]`'s own;
+ * `rig/dash.ts` hands it whatever the desk has been edited to, and hears the mixer follow on the next
+ * tick. `tests/dash.test.ts` scans `src/` to keep it that way, exactly as it does for `sections`.
+ */
+export function rungOf(
+  theme: ThemeKind,
+  rung: MusicLevel,
+  layer: MusicLayer,
+  ladder: ThemeRow['ladder'] = THEMES[theme].ladder,
+): number {
+  return rungIn(ladder, rung, layer);
 }
 
 /**

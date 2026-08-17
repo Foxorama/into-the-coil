@@ -99,6 +99,16 @@
       }
       #strip .grip:hover::before, #strip .grip:focus-visible::before { width: 3px; left: 4px; background: var(--hot); }
       #strip .grip:focus-visible { outline: 1px solid var(--hot); outline-offset: -1px; }
+      /*
+        THE SCRIPT EDITOR — 0163. One row per entry, inline, because the panel it replaced was a
+        readout on one line and a script is short. `.warn` marks an entry that differs from what the
+        level ships, which is the same signal the readout carried before it could be edited.
+      */
+      #sections { display: inline-flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+      #sections .sec { display: inline-flex; gap: 3px; align-items: center; }
+      #sections .sec.warn > select, #sections .sec.warn > .at { color: var(--hot); border-color: var(--hot); }
+      #sections .at { width: 62px; }
+      #sections .sec > button { padding: 1px 6px; min-width: 0; line-height: 1.2; }
       .note { color: var(--dim); font-size: 11px; margin-top: 8px; }
       /*
         PAUSED IS A VISIBLE STATE, because the layer gains do not move when the loops stop. `setOn`
@@ -168,26 +178,33 @@
         </div>
         <div id="strip" style="margin-top: 8px"></div>
         <div class="row" style="margin-top: 6px">
-          <span class="dim">boundaries</span>
+          <span class="dim">this level's script</span>
           <span id="sections"></span>
-          <span class="dim">units back from the boss</span>
-          <button id="sectionsBack" disabled>put them back</button>
+          <span class="dim">units into the level</span>
+          <button id="sectionsBack" disabled>put it back</button>
         </div>
         <div class="note">
-          ⚠️ <b>Drag the blue lines on the strip</b> to move where <code>push</code>,
-          <code>surge</code> and <code>approach</code> open, and hear the ladder turn over where you
-          put them — through the game's own mixer, on its own 1.6&nbsp;second ramp, landing on the bar
-          line (0117). <b>← →</b> on a focused handle nudges <b>one bar</b>, which is the smallest
-          move that changes anything a listener can hear.
-          <br />⚠️ <b>They are ONE set for all seven levels, because the game's are.</b> The three are
-          distances measured back from whichever boss a level has, so dragging here is a proposal
-          about every level — the <b>copy this moment</b> button prints them as the constants they
-          would be pasted back into <code>src/content/music.ts</code> as.
-          <br />⚠️ <b>The other two boundaries deliberately have no handle.</b>
-          <code>approach</code>→<code>boss</code> is where the level's boss arrives, which is level
-          design rather than a music number; <code>boss</code>→<code>bossPeak</code> is keyed to the
-          boss's <b>health</b> and not to a clock, so a handle that moved it in time would be a
-          control over something time does not decide.
+          ⚠️ <b>This is the level's music script, and it is editable here</b> (0163). Change what a
+          section <b>is</b> with the dropdown, where it <b>opens</b> with the number or by dragging
+          the blue line on the strip, and <b>+</b> / <b>×</b> to add or remove one. Every edit reaches
+          the game's own mixer on the next tick, over its own 1.6&nbsp;second ramp, landing on the bar
+          line (0117). <b>← →</b> on a focused handle nudges <b>one bar</b>, the smallest move a
+          listener can hear.
+          <br />⚠️ <b>The order and the count are free</b> (0158). A level may open at
+          <code>surge</code> and drop away, name a section twice, or hold one arrangement for its
+          whole length — nothing asserts what shape a level's music should be (0161). The only bound
+          is that a section outlasts the ramp that opens it, or its arrival never finishes.
+          <br />⚠️ <b>It belongs to THIS level and no other.</b> Each level keeps its own edits while
+          you switch between them, and <b>copy this moment</b> prints the script as the
+          <code>sections:</code> array it would be pasted back into
+          <code>src/content/levels.ts</code> as, naming the level.
+          <br />⚠️ <b>The opening entry cannot be moved or removed</b> — a level's music starts where
+          the level starts — but it <b>can</b> be renamed, which is how a level opens at its loudest.
+          <br />⚠️ <b>The two boundaries after the script have no handle at all.</b> Where the boss
+          <b>arrives</b> is level design rather than a music number, and
+          <code>boss</code>→<code>bossPeak</code> is keyed to the boss's <b>health</b> and not to a
+          clock — so a handle that moved either in time would be a control over something time does
+          not decide.
         </div>
         <div class="row" style="margin-top: 8px">
           <button id="copy">📋 copy this moment</button>
@@ -202,13 +219,18 @@
           <button id="openAll">open everything</button>
           <button id="allOff">silence everything</button>
           <button id="release">hand it all back</button>
+          <button id="ladderBack" disabled>put this place's ladder back</button>
           <span class="dim">click a layer's name to solo it · <b id="heldCount">0</b> held</span>
         </div>
         <table id="layers">
           <thead>
             <tr>
               <th>layer</th><th>doing</th><th>target</th><th>live</th><th></th>
-              <th>gain</th><th colspan="2">pan</th><th></th>
+              <th>gain</th><th colspan="2">pan</th>
+              <th title="this place's own shape at the rung you are parked at — 0162, edited here by 0163">
+                ladder<span class="dim" id="ladderRung"></span>
+              </th>
+              <th></th>
             </tr>
           </thead>
           <tbody></tbody>

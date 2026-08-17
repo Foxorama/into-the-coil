@@ -99,8 +99,10 @@ export const PROBES = [
       // ⚠️ RE-ANCHORED BY 0162: the rung is read through `rungOf` now, because a place may open a
       // layer the shared ladder closes. The break is unchanged — the BALANCE dropped, so all seven
       // levels render at one place's mix.
-      find: '  return rungOf(theme, rung, layer) * mixOf(theme, layer) * ceiling;',
-      replace: '  return rungOf(theme, rung, layer) * ceiling;',
+      // ⚠️ RE-ANCHORED AGAIN BY 0163, which threads the desk's edited ladder through `targetGain`.
+      // The break is still the BALANCE dropped: all seven levels rendered at one place's mix.
+      find: '  return rungOf(theme, rung, layer, ladder) * mixOf(theme, layer) * ceiling;',
+      replace: '  return rungOf(theme, rung, layer, ladder) * ceiling;',
     },
   },
   {

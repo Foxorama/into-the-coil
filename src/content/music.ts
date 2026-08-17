@@ -625,7 +625,23 @@ export const BOSS_PEAK_HEALTH = 0.78;
  * distance does not decide — `docs/decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md`
  * refused a handle on exactly those two for the same reason.
  */
-export type SectionName = Extract<MusicLevel, 'run' | 'push' | 'surge' | 'approach'>;
+/**
+ * The four, as a LIST, because the dashboard has to offer them and a union cannot be iterated.
+ *
+ * ⚠️ **THE LIST IS THE DECLARATION AND THE UNION IS DERIVED FROM IT** —
+ * `docs/decisions/0016-a-hub-enumerates-kinds.md`'s own shape, and the reason round that way is that
+ * `docs/decisions/0163-the-script-is-edited-here.md` needs to build a `<select>` from it. A union
+ * written first and a list typed out beside it is two descriptions, and the second one goes stale
+ * the day a fifth name arrives.
+ */
+export const SECTION_NAMES = ['run', 'push', 'surge', 'approach'] as const;
+
+/**
+ * ⚠️ **STILL `MusicLevel`'s OWN NAMES, through `Extract`**, so the tie 0016 asks for survives the
+ * list being the declaration: a rung renamed in `MUSIC_LEVELS` makes this `never` and every script
+ * in `src/content/levels.ts` fails to compile, which is exactly what it did before.
+ */
+export type SectionName = Extract<MusicLevel, (typeof SECTION_NAMES)[number]>;
 
 /** One section of a level's music, and the level-local distance it opens at. */
 export interface SectionEntry {

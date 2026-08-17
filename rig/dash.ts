@@ -33,9 +33,11 @@ import {
   MUSIC_LEVELS,
   type MusicLayer,
   type MusicLevel,
+  SECTION_NAMES,
   type LevelSections,
+  type SectionName,
 } from '../src/content/music.ts';
-import { THEMES, bakedBy, revoicedBy, type ThemeKind } from '../src/content/themes.ts';
+import { THEMES, bakedBy, revoicedBy, rungOf, type ThemeKind, type ThemeLadder } from '../src/content/themes.ts';
 import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { SAMPLE_RATE, makeAudioOut, makeSpeaker, prewarmAudio, takePrewarmed } from '../src/app/sound.ts';
@@ -47,7 +49,10 @@ import {
   UNITS_PER_SECOND,
   cueLines,
   deskAlone,
+  addSectionAfter,
   dragSection,
+  removeSection,
+  retypeSection,
   layerSpans,
   loudestGain,
   DESK_CEILING,
@@ -245,6 +250,99 @@ function scriptOf(k: LevelKind): LevelSections {
 
 /** The current level's, held here so every read below stays one lookup rather than a map probe. */
 let sections: LevelSections = scriptOf(kind);
+
+/**
+ * The ladder being driven for each PLACE — its own until a layer is edited.
+ *
+ * ── THE OTHER HALF OF WHAT A LEVEL SOUNDS LIKE, AND IT WAS TYPED RATHER THAN DRIVEN ──────────────
+ *
+ * ⚠️ **`docs/decisions/0163-the-script-is-edited-here.md` over
+ * `docs/decisions/0162-a-place-has-its-own-ladder.md`.** The script says WHEN a section opens; the
+ * ladder says WHAT it opens. 0162 made the second one a place's own answer and left it as a table to
+ * type — so *"is level three's run too quiet"* still meant editing `src/content/themes.ts`,
+ * rebuilding and listening. `docs/decisions/0126-the-dashboard-is-the-instrument.md` is why that is
+ * not good enough on this channel.
+ *
+ * ⚠️ **PER PLACE AND NOT PER LEVEL, because a ladder belongs to a place** — two levels sharing a theme
+ * share its shape, exactly as they share its material and its balance. `edits` above is keyed by
+ * LEVEL because a script is a level's; this is keyed by theme.
+ *
+ * ⚠️ **IT IS THREADED, NEVER PATCHED INTO `THEMES`.** `setLevel` and `momentOf` both take it, so the
+ * audio and the readout move together — and the shipped game passes nothing, which `tests/dash.test.ts`
+ * scans for on 0138's own terms.
+ */
+const ladderEdits = new Map<ThemeKind, ThemeLadder>();
+
+/** The ladder this page is driving for `theme`: the place's own, or whatever it has been edited to. */
+function ladderOf(theme: ThemeKind): ThemeLadder | undefined {
+  return ladderEdits.get(theme) ?? THEMES[theme].ladder;
+}
+
+/** Whether `theme`'s ladder has been edited away from what it ships. */
+function ladderEdited(theme: ThemeKind): boolean {
+  return ladderEdits.has(theme);
+}
+
+/**
+ * The edited ladder as the `ladder:` block it would be pasted into `src/content/themes.ts` as.
+ *
+ * ⚠️ **ONLY THE RUNGS AND LAYERS THAT DIFFER FROM THE SHIPPED SHAPE**, because a place states what it
+ * leans on rather than the whole table twice — which is how `mix`, `voices` and `air` beside it already
+ * read, and the reason 0162 made the override sparse in the first place.
+ */
+function ladderLines(theme: ThemeKind): string[] {
+  const driven = ladderOf(theme) ?? {};
+  const rungs: string[] = [];
+  for (const rung of MUSIC_LEVELS) {
+    const changed = MUSIC_LAYERS.filter(
+      (layer) => rungOf(theme, rung, layer, driven) !== rungOf(theme, rung, layer, THEMES[theme].ladder),
+    );
+    if (changed.length === 0) continue;
+    const pairs = changed.map((layer) => `${layer}: ${rungOf(theme, rung, layer, driven).toFixed(2)}`).join(', ');
+    rungs.push(`      ${rung}: { ${pairs} },`);
+  }
+  if (rungs.length === 0) return [];
+  return [
+    `- **ladder** (place \`${theme}\`) — **EDITED**`,
+    '',
+    '```ts',
+    `${theme}: {\n    ladder: {\n${rungs.join('\n')}\n    },`,
+    '```',
+    '',
+  ];
+}
+
+/**
+ * Set one layer at one rung for one place, and let the mixer find out on the next tick.
+ *
+ * ⚠️ **AN EDIT IS RECORDED EVEN WHEN IT EQUALS THE SHIPPED VALUE**, because the alternative is a
+ * panel that silently forgets a number the moment you type the one that was already there — and then
+ * *put it back* has nothing to put back and the copy output says *shipped* while a field shows an
+ * edit. Reverting is what the button is for.
+ */
+function editLadder(theme: ThemeKind, rung: MusicLevel, layer: MusicLayer, value: number): void {
+  const before = ladderEdits.get(theme) ?? THEMES[theme].ladder ?? {};
+  const next: ThemeLadder = { ...before, [rung]: { ...(before[rung] ?? {}), [layer]: value } };
+  ladderEdits.set(theme, next);
+  drawSpans();
+  drawLadderState();
+}
+
+/** The header's rung label and whether the put-back is live. Cheap, and called on every edit. */
+function drawLadderState(): void {
+  el('ladderRung').textContent = ` at ${now().rung}`;
+  el<HTMLButtonElement>('ladderBack').disabled = !ladderEdited(LEVELS[kind].theme);
+}
+
+el<HTMLButtonElement>('ladderBack').addEventListener('click', () => {
+  /*
+    ⚠️ **PER PLACE, so putting Ember Nebula's shape back leaves the one you found for Rime Shelf
+    alone.** The whole point of keeping these per theme is that a session can work on more than one.
+  */
+  ladderEdits.delete(LEVELS[kind].theme);
+  drawSpans();
+  drawLadderState();
+});
 /**
  * Sim steps issued since the loops went on the air. Monotonic, and NOT a function of the scrub.
  *
@@ -293,6 +391,8 @@ const now = (): Moment =>
     // ⚠️ The readout and the mixer both come through here, so they cannot disagree about which mix is
     // playing — which is the *instrument disagreeing with the thing it measures* 0126 exists against.
     solvedOn ? solvedFor(LEVELS[kind].theme) : null,
+    // ⚠️ 0163: the same table `setLevel` is handed, for exactly the reason above.
+    ladderOf(LEVELS[kind].theme),
   );
 
 const clockText = (s: number): string => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -612,6 +712,7 @@ interface LayerRow {
   gain: HTMLInputElement;
   pan: HTMLInputElement;
   panOut: HTMLElement;
+  ladder: HTMLInputElement;
   follow: HTMLButtonElement;
   tr: HTMLTableRowElement;
 }
@@ -620,7 +721,7 @@ const layerRows = {} as Record<MusicLayer, LayerRow>;
 
 {
   const body = el<HTMLTableSectionElement>('layers').querySelector('tbody')!;
-  const spans = layerSpans(kind, FIGHT_SECONDS, sections);
+  const spans = layerSpans(kind, FIGHT_SECONDS, sections, ladderOf(LEVELS[kind].theme));
   for (const layer of MUSIC_LAYERS) {
     const span = spans.find((s) => s.layer === layer)!;
     const tr = document.createElement('tr');
@@ -634,6 +735,19 @@ const layerRows = {} as Record<MusicLayer, LayerRow>;
       `<td><input class="g" type="range" min="0" max="${Math.round(DESK_CEILING * 100)}" step="2" value="0" /></td>` +
       `<td><input class="p" type="range" min="-100" max="100" step="5" value="${Math.round(LAYER_PAN[layer] * 100)}" /></td>` +
       `<td class="dim panOut">${panText(LAYER_PAN[layer])}</td>` +
+      /*
+        ⚠️ **THE LADDER FOR THE RUNG THE TRANSPORT IS PARKED AT** — 0163. It is the place's own SHAPE
+        (0162): how far open this layer is at this rung, which is a different question from the fader
+        beside it. **The fader is a HOLD and this is the CONTENT** — 0129's absolute value is for
+        hearing a layer now; this is for saying what the level should do, and it is what *copy this
+        moment* prints as a `ladder:` block.
+
+        ⚠️ **IT FOLLOWS THE TRANSPORT RATHER THAN HAVING A RUNG PICKER OF ITS OWN.** The jump buttons
+        already park the transport on a rung and 0137 makes the desk sound while it stands still, so
+        *the rung you are sitting at* is a place you chose. A second selector would be a second thing
+        to keep in step with the strip.
+      */
+      `<td><input class="lad" type="number" min="0" step="0.02" title="how far open at the rung you are parked at" /></td>` +
       `<td><button class="fol" title="hand this layer back to the mixer">follow</button></td>`;
     const row: LayerRow = {
       move: tr.querySelector('.badge')!,
@@ -643,9 +757,20 @@ const layerRows = {} as Record<MusicLayer, LayerRow>;
       gain: tr.querySelector('.g')!,
       pan: tr.querySelector('.p')!,
       panOut: tr.querySelector('.panOut')!,
+      ladder: tr.querySelector('.lad')!,
       follow: tr.querySelector('.fol')!,
       tr,
     };
+    /*
+      ⚠️ **THE RUNG IS READ AT THE MOMENT OF THE EDIT AND NOT CAPTURED**, which is the bug 0158's
+      keyboard nudge already taught this file once: the transport moves, so a rung closed over at
+      build time would write the edit onto whichever rung the page happened to open at.
+    */
+    row.ladder.addEventListener('change', () => {
+      const value = Number(row.ladder.value);
+      if (!Number.isFinite(value) || value < 0) return;
+      editLadder(LEVELS[kind].theme, now().rung, layer, value);
+    });
     // Clicking the NAME solos — the fast gesture, kept from the first version because naming a
     // sound you can hear and cannot place is what the solo rig was built for (0113).
     tr.querySelector('.lay')!.addEventListener('click', () => solo(layer));
@@ -1044,11 +1169,16 @@ const head = document.createElement('div');
 head.className = 'head';
 
 /*
-  ── AND THE THREE BOUNDARIES ARE DRAGGED HERE ───────────────────────────────────────────────────
+  ── AND THE BOUNDARIES ARE DRAGGED HERE ─────────────────────────────────────────────────────────
 
   ⚠️ **`docs/decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md`.** Reported: *"I'd love
   it if we could make the run section that has the push, surge, approach sections slideable so that I
   can drag them to start sooner or end sooner and see what effect that has."*
+
+  ⚠️ **THERE ARE NO LONGER THREE OF THEM, WHICH IS WHY THE HEADING LOST THE NUMBER.** A script is any
+  length (0158) and `docs/decisions/0163-the-script-is-edited-here.md` lets one be added to and cut,
+  so the strip draws a grip per entry after the first. **Dragging is now one of four ways to change a
+  script** — the other three are in `drawSections`, because renaming a section is not a distance.
 
   ⚠️ **ONLY THREE OF THE FIVE MOVE, AND WHICH TWO DO NOT IS THE INTERESTING HALF.** `approach`→`boss`
   is where the level's boss ARRIVES — `bossAt` is level design and not a music number — and
@@ -1209,19 +1339,106 @@ function sectionText(): string {
   return `${kind}:\n  sections: [\n${rows}\n  ],`;
 }
 
+/**
+ * Apply an edit and redraw everything that has an opinion about the script.
+ *
+ * ⚠️ **THE MIXER NEEDS NO TELLING, EXACTLY AS A DRAG DOES NOT** — `frame` asks `now()` sixty times a
+ * second and hands the answer to `setLevel`, so a renamed or added section changes what the game's
+ * own mixer is told on the very next tick, over its own ramp, landing on the bar 0117 puts it on.
+ */
+function editScript(next: LevelSections): void {
+  if (next === sections) return;
+  sections = next;
+  edits.set(kind, sections);
+  drawStrip();
+  drawSpans();
+  drawSections();
+}
+
+/**
+ * The script, as a row per entry that can be edited.
+ *
+ * ── DRAGGING WAS NEVER GOING TO BE ENOUGH ───────────────────────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0163-the-script-is-edited-here.md`.** 0138 gave the strip handles and 0158
+ * made a script per level, and between them a boundary can be moved anywhere. **What neither can do
+ * is change WHICH SECTION IS FIRST** — and *"some levels kick right into a surge"* is exactly that.
+ * Until this panel, finding that shape by ear meant typing it into `src/content/levels.ts`,
+ * rebuilding and listening, which is the round trip 0126 exists to remove.
+ *
+ * ⚠️ **THE READOUT IS THE EDITOR AND NOT A SECOND VIEW OF IT.** A panel that showed the script and
+ * an editor that changed it would be two descriptions of one thing, and the one that drifts is
+ * always the one nobody is looking at.
+ */
 function drawSections(): void {
   const ships = LEVELS[kind].sections;
-  el('sections').innerHTML = sections
-    .map((e, i) => {
-      const was = ships[i];
-      const moved = was === undefined || was.at !== e.at || was.section !== e.section;
-      return (
-        `<b class="${moved ? 'warn' : ''}">${e.section}</b> ` +
-        `<span class="${moved ? 'warn' : 'dim'}">${e.at.toFixed(0)}</span>` +
-        (moved && was !== undefined ? `<span class="dim"> (ships ${was.section} ${was.at})</span>` : '')
-      );
-    })
-    .join('<span class="dim"> · </span>');
+  const host = el('sections');
+  host.replaceChildren();
+
+  sections.forEach((entry, i) => {
+    const was = ships[i];
+    const moved = was === undefined || was.at !== entry.at || was.section !== entry.section;
+    const row = document.createElement('span');
+    row.className = `sec${moved ? ' warn' : ''}`;
+
+    /*
+      ⚠️ **THE SELECT REACHES ENTRY `0`, WHICH EVERY OTHER CONTROL HERE REFUSES.** A level's music
+      starts where the level starts, so the opening entry cannot be moved or removed — but WHAT it
+      opens with is the whole point of the feature.
+    */
+    const pick = document.createElement('select');
+    pick.title = `what section ${i} opens`;
+    for (const name of SECTION_NAMES) {
+      const option = document.createElement('option');
+      option.value = name;
+      option.textContent = name;
+      option.selected = name === entry.section;
+      pick.append(option);
+    }
+    pick.addEventListener('change', () => editScript(retypeSection(sections, i, pick.value as SectionName)));
+
+    /*
+      ⚠️ **A NUMBER BESIDE THE HANDLE RATHER THAN INSTEAD OF IT.** The strip is how a value is FOUND
+      and this is how one is SAID — 0138's own note about the arrow keys is the same distinction, and
+      a level three minutes long is about six units a pixel.
+    */
+    const at = document.createElement('input');
+    at.type = 'number';
+    at.className = 'at';
+    at.value = String(Math.round(entry.at));
+    at.disabled = i === 0;
+    at.title = i === 0 ? 'a level’s music starts where the level starts' : `where section ${i} opens, in units`;
+    at.addEventListener('change', () => editScript(dragSection(sections, i, Number(at.value), LEVELS[kind].bossAt)));
+
+    const drop = document.createElement('button');
+    drop.type = 'button';
+    drop.textContent = '×';
+    drop.disabled = i === 0;
+    drop.title = i === 0 ? 'the opening section cannot be removed' : `remove section ${i}`;
+    drop.addEventListener('click', () => editScript(removeSection(sections, i)));
+
+    /*
+      ⚠️ **THE ADD BUTTON GREYS ITSELF OUT WHEN THERE IS NO ROOM**, because `addSectionAfter` refuses
+      rather than shuffling its neighbours — a click that silently moved boundaries the author did not
+      touch is worse than a button that says it cannot.
+    */
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.textContent = '+';
+    add.disabled = addSectionAfter(sections, i, LEVELS[kind].bossAt) === sections;
+    add.title = add.disabled ? 'no room for another section here' : `add a section after ${i}`;
+    add.addEventListener('click', () => editScript(addSectionAfter(sections, i, LEVELS[kind].bossAt)));
+
+    row.append(pick, at, drop, add);
+    if (moved && was !== undefined) {
+      const ship = document.createElement('span');
+      ship.className = 'dim';
+      ship.textContent = ` (ships ${was.section} ${was.at})`;
+      row.append(ship);
+    }
+    host.append(row);
+  });
+
   el<HTMLButtonElement>('sectionsBack').disabled = !dragged();
 }
 
@@ -1329,7 +1546,20 @@ function momentAsText(moment: Moment): string {
       the next session to work out which level that was and what it had been. Printed whether or not
       anything moved, because *nothing was dragged* is also a fact about the moment being reported.
     */
-    `- **sections** (level \`${kind}\`)${dragged() ? ' — **DRAGGED**' : ' (shipped)'}`,
+    /*
+      ⚠️ **EDITED RATHER THAN DRAGGED, WHICH IS 0163 ARRIVING IN THE ONE PLACE A WORD MATTERS.** A
+      script can now be renamed, added to and cut as well as dragged, so a report saying *DRAGGED*
+      would be describing one of four ways it might differ — and the next session reading the paste
+      would go looking for a boundary that moved.
+    */
+    /*
+      ⚠️ **THE LADDER GOES OUT AS THE `ladder:` BLOCK IT WOULD BE PASTED BACK AS** — 0163, on 0129's
+      rule that what comes out of the desk is what you paste. A place's shape found by ear is a
+      proposal about one row in `src/content/themes.ts`, and one that had to be read off a screenshot
+      and matched to a rung by guesswork would not become a change.
+    */
+    ...(ladderEdited(moment.theme) ? ladderLines(moment.theme) : []),
+    `- **sections** (level \`${kind}\`)${dragged() ? ' — **EDITED**' : ' (shipped)'}`,
     '',
     '```ts',
     sectionText(),
@@ -1409,7 +1639,7 @@ function frame(at: number): void {
   const music = out.music();
   if (music !== null && unlocked) {
     const rungBefore = music.level();
-    music.setLevel(moment.rung, moment.aura, moment.theme);
+    music.setLevel(moment.rung, moment.aura, moment.theme, ladderOf(moment.theme));
     /*
       ⚠️ **THE SOLVED MIX HAS TO BE WRITTEN OVER `setLevel`, AND THE FIRST VERSION OF THIS TOGGLE DID
       NOT.** `setLevel` asks `levelWrites` for its own targets — `MUSIC_LADDER × mixOf`, the shipped
@@ -1475,6 +1705,8 @@ function frame(at: number): void {
     moment.nextRung === null ? 'the level ends' : `${moment.nextRung} in ${moment.nextIn!.toFixed(1)}s`;
   el('sounding').textContent = String(moment.sounding);
   el('aura').textContent = moment.aura.toFixed(2);
+  el('ladderRung').textContent = ` at ${moment.rung}`;
+  el<HTMLButtonElement>('ladderBack').disabled = !ladderEdited(moment.theme);
   head.style.left = `${(second / total) * 100}%`;
 
   for (const layer of moment.layers) {
@@ -1486,6 +1718,23 @@ function frame(at: number): void {
     row.live.textContent = live.toFixed(2);
     row.bar.style.width = `${Math.min(100, live * 80)}%`;
     row.bar.parentElement!.classList.toggle('aura', layer.aura);
+    /*
+      ⚠️ **NOT WHILE IT HAS FOCUS, WHICH IS THE ONE THING A PER-FRAME REWRITE MUST NOT DO.** This runs
+      sixty times a second; writing `value` into the field somebody is typing in would eat the
+      keystroke and reset the caret. **The field is only refreshed when it is not being used** — which
+      is also how it picks up a change of rung, of level, and a *put it back*.
+    */
+    if (document.activeElement !== row.ladder) {
+      const place = moment.theme;
+      const shipped = rungOf(place, moment.rung, layer.layer, THEMES[place].ladder);
+      const driven = rungOf(place, moment.rung, layer.layer, ladderOf(place));
+      row.ladder.value = driven.toFixed(2);
+      row.ladder.classList.toggle('warn', driven !== shipped);
+      row.ladder.title =
+        driven === shipped
+          ? `${layer.layer} at ${moment.rung} in ${place} — what this place ships`
+          : `${layer.layer} at ${moment.rung} in ${place} — edited; this place ships ${shipped.toFixed(2)}`;
+    }
   }
 }
 

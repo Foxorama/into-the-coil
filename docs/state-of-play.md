@@ -176,6 +176,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **THE MUSIC FREE-RUNS ON THE AUDIO CLOCK — the sim no longer reaches it anywhere, and a tempo may move** | [0160](decisions/0160-the-music-free-runs.md) |
 | **THE SHAPE OF A LEVEL'S MUSIC IS NOT GUARDED — floors stay, shape does not get asserted** | [0161](decisions/0161-the-shape-of-a-level-is-not-guarded.md) |
 | **A PLACE HAS ITS OWN LADDER — it may open a layer the shared row closes, which `mix` could never do** | [0162](decisions/0162-a-place-has-its-own-ladder.md) |
+| **THE SCRIPT IS EDITED IN THE DASHBOARD — rename, move, add, remove, per level** | [0163](decisions/0163-the-script-is-edited-here.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
 | **a probe runs the test it NAMES, and a suite bakes the music once** | [0115](decisions/0115-a-probe-runs-its-own-guard.md) — amends 0054's *whole suite* clause |
 | **the rig plays a LEVEL, and the instrument is guarded like the game** | [0116](decisions/0116-the-rig-plays-the-level.md) |
@@ -674,11 +675,32 @@ is worse than no marker, because it reads exactly like a live one — the same f
 [0029](decisions/0029-the-tracked-record-is-the-record.md) names for a summary that drifts. **Retire
 this heading when it stops being true rather than adding another one below it.**
 
-**The work is: the dashboard's script editor, then tempo, then the score.** The section script has
-landed ([0158](decisions/0158-a-level-says-where-its-sections-open.md)) and so has the whole grid
-separation — the ladder ([0159](decisions/0159-the-two-clocks-come-apart.md)) and the clock
-([0160](decisions/0160-the-music-free-runs.md)). **Nothing now blocks a tempo that moves.**
-Everything under here is why.
+**The work is: a driving session, then authoring, then tempo.** Everything that had to be built
+before a level's music could be authored by ear is in —
+[0158](decisions/0158-a-level-says-where-its-sections-open.md) the script,
+[0159](decisions/0159-the-two-clocks-come-apart.md) and
+[0160](decisions/0160-the-music-free-runs.md) the grid,
+[0161](decisions/0161-the-shape-of-a-level-is-not-guarded.md) the guards that forbade variety,
+[0162](decisions/0162-a-place-has-its-own-ladder.md) a place's own layers, and
+[0163](decisions/0163-the-script-is-edited-here.md) the editor. **Nothing is authored yet, and that is
+the next thing that happens.** Everything under here is why.
+
+### ⚠️ START A DRIVING SESSION — `npm run dash`, AND THE PLAYER'S EAR IS THE INSTRUMENT
+
+⚠️ **EVERY MECHANISM IS BUILT AND NOTHING HAS BEEN CHOSEN.** All six decisions above landed
+provably neutral on purpose: not one changes a sound. What is missing is the musical judgement, and
+[0126](decisions/0126-the-dashboard-is-the-instrument.md) says where that happens.
+
+⚠️ **WHAT THE PANEL CAN NOW DO**: rename any section including the first (so a level opens at its
+loudest), move one, add one, remove one — per level, with **copy this moment** printing a pasteable
+`sections:` array. **AND A PLACE'S LADDER IS EDITABLE THERE TOO** — every layer row has a `ladder`
+field for the rung the transport is parked at, so *which layers a section opens* (0162) is driven
+rather than typed, and **copy this moment** prints it as a `ladder:` block for
+`src/content/themes.ts`. **Nothing about the music is typed-only any more.**
+
+⚠️ **AND WHAT THE PLAYER LIKES IS A GUIDELINE, NOT A TARGET** — music starts, changes, intensifies,
+shifts to boss music that separates the fight; *"the nebula is a good example… don't lock that into a
+rule."* **Explicitly NOT a 2:30–3:00 track escalating every few seconds.**
 
 ### THE SCORE IS BEING REWORKED, AND THE ORDER OF THE WHOLE PROJECT IS NAMED
 
