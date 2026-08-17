@@ -1554,10 +1554,11 @@ function bossJustDied(w: World): boolean {
  * `cadence` exactly when the remainder is zero, which is why it is written that way round rather than
  * as a ceiling.
  *
- * ⚠️ **`cadence` is trusted to be a positive integer**, because 0093's guards hold every rung of
- * every ladder to being one. A guard there is worth more than a branch here: this runs in the frame
- * loop, and `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md` is why it has no
- * defensive arm.
+ * ⚠️ **`cadence` is trusted to be a positive integer**, because `tests/pickups.test.ts` holds every
+ * rung of both ladders to being one — 0093's guard originally, kept and widened by
+ * `docs/decisions/0159-the-two-clocks-come-apart.md` when the divisor rule that made it free went
+ * away. A guard there is worth more than a branch here: this runs in the frame loop, and
+ * `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md` is why it has no defensive arm.
  */
 function stepsToGrid(now: number, cadence: number): number {
   return cadence - (now % cadence);
@@ -1580,9 +1581,17 @@ function fireShip(w: World): void {
     three steps behind the beat is a metronome in time and out of phase, and 50ms is exactly the
     offset the ear reads as *not quite on it*.
 
-    Every rung divides `STEPS_PER_BEAT` (0093, guarded), so landing on a multiple of the cadence from
-    the run's origin lands on a subdivision of the beat — at every tier, across every upgrade, and
-    after every death.
+    ⚠️ **AND WHAT IT BUYS IS NO LONGER MUSICAL** — `docs/decisions/0160-the-music-free-runs.md`. It
+    used to read *every rung divides `STEPS_PER_BEAT`, so a multiple of the cadence from the run's
+    origin lands on a subdivision of the beat*. That constant is gone
+    (`docs/decisions/0159-the-two-clocks-come-apart.md`) and the sentence with it.
+
+    ⚠️ **THE MECHANISM IS KEPT ON ITS OWN MERITS, WHICH IS THE INTERESTING PART.** What an absolute
+    reload actually gives is a gun whose phase does not move — the same rhythm at every tier, across
+    every upgrade and after every death, rather than one that resets to wherever the player happened
+    to die. That is a thing a player can learn, and it was true before anybody connected it to a
+    beat. **A mechanism can outlive the reason it was built for**; what must not outlive it is the
+    claim.
   */
   w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);
   const row = SHOTS[w.shipRow.shot];

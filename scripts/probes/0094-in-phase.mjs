@@ -60,57 +60,17 @@ export const PROBES = [
       replace: '    w.prevCameraAlong = w.cameraAlong;',
     },
   },
-  {
-    decision: '0094',
-    suite: 'tests/music.test.ts',
-    /*
-      ⚠️ THE WRAP REMOVED, so a drift of one whole loop is treated as a drift. It is the line most
-      likely to be deleted as pointless by somebody reading `rephaseIn` for the first time — the
-      music is a LOOP, so being exactly one behind is being in phase, sample for sample. Without it
-      a backgrounded tab returns with tens of seconds of "error" and the correction is a lurch.
-    */
-    broke: 'the loop wrap removed, so a whole loop of drift reads as drift and a returning tab lurches',
-    guard: 'THE TRICK: a whole loop of drift is no drift at all, so a backgrounded tab is a small correction',
-    edit: {
-      path: 'src/app/music.ts',
-      find: '  const error = drift - Math.round(drift / PHRASE_SECONDS) * PHRASE_SECONDS;',
-      replace: '  const error = drift;',
-    },
-  },
-  {
-    decision: '0094',
-    suite: 'tests/music.test.ts',
-    /*
-      ⚠️ THE CORRECTION TAKEN OFF THE LOOP BOUNDARY and applied where it was noticed. This is the
-      obvious simplification — the error is known, so shift by the error — and it restarts the loops
-      mid-phrase, cutting every tail that crosses the join. That is exactly the notch 0090's seam
-      guard exists to keep out of the BAKE, arriving at runtime instead, where no bake-time guard can
-      see it.
-    */
-    broke: 'the correction applied where it was noticed rather than at a loop boundary, cutting every tail',
-    guard: 'and the correction always lands on a loop boundary, because a loop has no other seam',
-    edit: {
-      path: 'src/app/music.ts',
-      find: '  let delay = PHRASE_SECONDS - (simElapsed % PHRASE_SECONDS);',
-      replace: '  let delay = 0;',
-    },
-  },
-  {
-    decision: '0094',
-    suite: 'tests/music.test.ts',
-    /*
-      ⚠️ THE SETTLING RULE REMOVED, which is the allocation ceiling as well as a correctness rule. A
-      driven sim races ahead of a standing audio clock and asks for a correction every frame; the
-      real loop does a milder version of it whenever `src/app/loop.ts` runs several steps in one
-      frame. `tests/sound.browser.test.ts` counted 37 source nodes where it expected 7 — which is how
-      this line came to exist.
-    */
-    broke: 'the settling rule removed, so a sim catching up asks for a correction every frame',
-    guard: 'and corrects nothing until the anchor has played a whole loop, which is the allocation ceiling',
-    edit: {
-      path: 'src/app/music.ts',
-      find: '  if (audioElapsed < PHRASE_SECONDS) return null;',
-      replace: '  if (audioElapsed < 0) return null;',
-    },
-  },
+  /*
+    ── THREE PROBES STOOD HERE AND 0160 RETIRED THEM WITH THEIR GUARDS ─────────────────────────
+
+    docs/decisions/0160-the-music-free-runs.md. They broke the loop wrap, the boundary landing and
+    the settling rule — all three inside rephaseIn, all three red on demand, and all three aimed at
+    guards that no longer exist. The function corrected the music towards the SIM step clock, and
+    docs/decisions/0159-the-two-clocks-come-apart.md stopped that being a clock the music shares.
+
+    ⚠️ THE THREE ABOVE SURVIVE BECAUSE THEIR SUBJECT IS THE GUN, NOT THE MUSIC: the reload landing
+    on its own cadence from the run origin, a death rejoining that lattice rather than restarting
+    it, and the sim clock counting only steps the game ran. None of them was ever a claim about a
+    beat, which is why 0159 left them standing and 0160 leaves them standing too.
+  */
 ];

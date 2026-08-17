@@ -1,4 +1,3 @@
-import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
 import { LEVELS, LEVEL_KINDS, type LevelKind } from '../src/content/levels.ts';
 import { BANDS, bandEnergy, spectrum } from './spectrum.ts';
 import { describe, expect, it } from 'vitest';
@@ -41,11 +40,9 @@ import {
   nextBarFrom,
   placeArrivesAt,
   SCHEDULE_AHEAD,
-  rephaseIn,
 } from '../src/app/music.ts';
 import { THEME_KINDS } from '../src/content/themes.ts';
 import { loopsAt } from './bakes.ts';
-import { MAX_STEPS } from '../src/app/loop.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { SAMPLE_RATE, sampleCue, saturate } from '../src/app/sound.ts';
 import { CUES } from '../src/content/cues.ts';
@@ -691,133 +688,21 @@ describe('how far up the ladder a run is', () => {
   });
 });
 
-describe('0094 — in time is not in phase, and the loops follow the sim', () => {
-  /*
-    `docs/decisions/0094-in-time-is-not-in-phase.md`. 0093 put every fire cadence on a musical
-    fraction of the beat; a cadence is a RATE, and what makes a metronome land on the beat is a
-    PHASE. This is the half that keeps them agreeing over the length of a level.
+/*
+  ── THE 0094 RE-PHASE SUITE STOOD HERE AND 0160 RETIRED IT WITH ITS SUBJECT ────────────────────
 
-    ⚠️ **The thing it exists for is dropped steps, not crystal drift.** `src/app/loop.ts` throws away
-    everything past `MAX_STEPS` rather than spiralling, which is 0022 working exactly as designed —
-    and every discarded step is a step the sim never ran while the audio clock kept going.
-  */
-  /** No notice required, so these read the policy rather than the scheduler's lead time. */
-  const NOW = 0;
-  /** Comfortably past the one-loop settling rule, so the tests below are about the error. */
-  const SETTLED = PHRASE_SECONDS * 3;
+  ⚠️ **docs/decisions/0160-the-music-free-runs.md.** Six tests over `rephaseIn` — the settling rule,
+  the loop wrap, the boundary landing, the notice window. Every one of them was
+  right about the function and the function is gone: it corrected the music towards the SIM's step
+  clock, which docs/decisions/0159-the-two-clocks-come-apart.md stopped being a clock the music
+  shares.
 
-  it('leaves the loops alone when nothing has drifted, which is almost every frame', () => {
-    expect(rephaseIn(SETTLED, SETTLED, NOW), 'a perfectly tracking sim was corrected anyway').toBeNull();
-    // And a millisecond either way is noise, not drift.
-    expect(rephaseIn(SETTLED + 0.001, SETTLED, NOW)).toBeNull();
-    expect(rephaseIn(SETTLED - 0.001, SETTLED, NOW)).toBeNull();
-  });
+  ⚠️ **THREE OF 0094's SIX PROBES SURVIVE AND THEY ARE THE ONES ABOUT THE GUN** — `stepsToGrid` and
+  the sim clock, which are gameplay and are untouched. The three about `rephaseIn` are retired in
+  scripts/probes/0094-in-time-is-not-in-phase.mjs, on 0159's rule: a probe whose guard has been
+  deleted cannot be re-anchored, only retired.
+*/
 
-  it('THE ONE IT EXISTS FOR: a hitch big enough to drop steps is corrected, in the player’s own units', () => {
-    /*
-      ⚠️ **Written from `MAX_STEPS` rather than from a number typed here** —
-      `docs/decisions/0027-measure-the-picture-not-the-model.md`. A frame that arrives late enough to
-      need more than `MAX_STEPS` steps has the excess DISCARDED, so the sim silently loses that much
-      time against the audio. This drives the smallest such event there is — one step over the cap —
-      and asserts it is caught.
-
-      ⚠️ **And the threshold is stated in the unit the ear uses**: the error the correction triggers on
-      must be smaller than a sixteenth-note triplet at the tempo the game plays, or the gun would be a
-      whole subdivision out before anything moved. That is what makes 50ms a number rather than a
-      taste.
-    */
-    const oneStep = 1 / STEPS_PER_SECOND;
-    /*
-      A frame arriving late enough to need `MAX_STEPS + 4` steps runs five and discards four, so the
-      sim loses four steps of time against the audio and never gets them back. On a 60Hz sim that is
-      a frame about 150ms long — an ordinary hitch on the phone 0022 sizes the budget for.
-    */
-    const needed = MAX_STEPS + 4;
-    const dropped = needed - MAX_STEPS;
-    expect(
-      rephaseIn(SETTLED + dropped * oneStep, SETTLED, NOW),
-      `${dropped} dropped steps went uncorrected, so a stuttering device drifts off the beat for good`,
-    ).not.toBeNull();
-
-    /*
-      ⚠️ **AND THE WORST TOLERATED ERROR IS STATED IN THE UNIT THE EAR USES.** However the threshold is
-      spelled, the loops must never be allowed to sit a whole subdivision out — at the weapon cap the
-      gun fires every sixteenth-note triplet, and an error that reaches that gap is a gun landing on
-      the wrong note rather than slightly beside the right one.
-    */
-    let worstTolerated = 0;
-    for (let ms = 1; ms <= 500; ms++) {
-      if (rephaseIn(SETTLED + ms / 1000, SETTLED, NOW) !== null) break;
-      worstTolerated = ms / 1000;
-    }
-    const shortestVolleyGap = (VOLLEY_CYCLE / 6) * oneStep;
-    expect(worstTolerated, 'every error is corrected, so the threshold is not doing anything').toBeGreaterThan(0);
-    expect(
-      worstTolerated,
-      `the loops may sit ${(worstTolerated * 1000).toFixed(0)}ms out against ${(shortestVolleyGap * 1000).toFixed(0)}ms between volleys at the cap`,
-    ).toBeLessThan(shortestVolleyGap);
-  });
-
-  it('and the correction always lands on a loop boundary, because a loop has no other seam', () => {
-    /*
-      ⚠️ **A loop restarted mid-phrase cuts every tail crossing the join**, which is precisely the
-      notch 0090's seam guard exists to keep out of the bake — it would be no better arriving at
-      runtime. At a boundary the loop was returning to zero anyway, so the correction moves only WHEN.
-    */
-    for (const position of [0, 0.3, 1.1, 2.9, 3.19]) {
-      const simElapsed = PHRASE_SECONDS * 4 + position;
-      const delay = rephaseIn(simElapsed + 0.4, simElapsed, NOW);
-      expect(delay, `no correction was offered at loop position ${position}`).not.toBeNull();
-      const landsAt = (simElapsed + delay!) % PHRASE_SECONDS;
-      expect(
-        Math.min(landsAt, PHRASE_SECONDS - landsAt),
-        `a correction at position ${position} lands ${landsAt.toFixed(3)}s into the loop, mid-phrase`,
-      ).toBeCloseTo(0, 6);
-    }
-  });
-
-  it('and never schedules one in the past, or with less notice than the scheduler needs', () => {
-    // Exactly on a boundary the answer is a whole loop away and not zero — a swap scheduled for now
-    // is a swap the audio thread has already gone past.
-    const onBoundary = PHRASE_SECONDS * 4;
-    expect(rephaseIn(onBoundary + 0.4, onBoundary, 0)).toBeCloseTo(PHRASE_SECONDS, 6);
-    for (const ahead of [0.06, 0.5, PHRASE_SECONDS * 1.5]) {
-      const delay = rephaseIn(PHRASE_SECONDS * 4 + 0.4, PHRASE_SECONDS * 4 + 0.01, ahead);
-      expect(delay, `a correction was offered with less than ${ahead}s notice`).toBeGreaterThanOrEqual(ahead);
-    }
-  });
-
-  it('THE TRICK: a whole loop of drift is no drift at all, so a backgrounded tab is a small correction', () => {
-    /*
-      ⚠️ **The music is a LOOP, so being one entire loop behind is audibly identical to being in
-      phase** — same samples, same instant. Without the wrap, a tab left alone for half a minute comes
-      back thirty seconds of error and the correction is a lurch; with it, the worst case anywhere is
-      half a loop.
-    */
-    const settled = PHRASE_SECONDS * 4;
-    expect(rephaseIn(settled + PHRASE_SECONDS, settled, NOW), 'a whole loop of drift was treated as drift').toBeNull();
-    expect(rephaseIn(settled + PHRASE_SECONDS * 9, settled, NOW), 'nine whole loops was treated as drift').toBeNull();
-    // And a long absence resolves to at most half a loop of real error, which is one correction.
-    const delay = rephaseIn(settled + 30, settled, NOW);
-    expect(delay, 'thirty seconds away produced no correction at all').not.toBeNull();
-    expect(delay!, 'the correction after a long absence is more than one loop away').toBeLessThanOrEqual(PHRASE_SECONDS);
-  });
-
-  it('and corrects nothing until the anchor has played a whole loop, which is the allocation ceiling', () => {
-    /*
-      ⚠️ **A rate limit as much as a rule, and a browser test is what put it here.** Every correction
-      re-anchors, so this is the ceiling on how often six source nodes can be created: once per loop,
-      worst case. `tests/sound.browser.test.ts` counted 37 sources where it expected 7 — a driven sim
-      races ahead of a standing audio clock, and the real loop can do a milder version of it by
-      running `MAX_STEPS` steps in one frame. **An error measured over less than a loop is measuring
-      the catch-up.**
-    */
-    for (const played of [0, 0.5, PHRASE_SECONDS - 0.001]) {
-      expect(rephaseIn(played, 0, NOW), `a correction was offered after only ${played}s of playback`).toBeNull();
-    }
-    expect(rephaseIn(PHRASE_SECONDS + 0.4, PHRASE_SECONDS, NOW), 'nothing is ever corrected at all').not.toBeNull();
-  });
-});
 
 describe('0095 — the level has a piece of its own, and it covers the band', () => {
   /*

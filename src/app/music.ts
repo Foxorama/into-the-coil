@@ -23,7 +23,6 @@
 
 import {
   BEAT_SECONDS,
-  PHRASE_SECONDS,
   BAR_SECONDS,
   secondsOfLayer,
   MUSIC_DRIVE,
@@ -48,7 +47,6 @@ import { sampleLayerInto, saturate } from './sound.ts';
 import { airOf, mixOf, voicesOf, type ThemeKind } from '../content/themes.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
-import { STEPS_PER_SECOND } from '../state/screens.ts';
 
 /**
  * One note of one voice, at `at` seconds into its layer's loop.
@@ -592,28 +590,23 @@ export function auraFor(build: number, nearness: number): number {
   return build > nearness ? build : nearness;
 }
 
-/**
- * How far the loops may fall out of phase with the sim before they are moved, in seconds.
- *
- * ── WHY THERE IS A THRESHOLD AT ALL RATHER THAN A CONTINUOUS SERVO ──────────────────────────────
- *
- * `docs/decisions/0094-in-time-is-not-in-phase.md`. The obvious build is a servo on `playbackRate`,
- * nudging the loops a fraction of a percent until the error is gone — no allocation, no seam, no
- * discontinuity anywhere. **It cannot correct the errors this game actually produces.** A trim small
- * enough to be inaudible as pitch is about 0.2%, which takes twenty-five seconds to absorb fifty
- * milliseconds; `src/app/loop.ts`'s `MAX_STEPS` is 5, so a single 200ms hitch throws away seven steps
- * and 117ms in one frame. The servo would spend its life behind.
- *
- * ⚠️ **So the correction is a JUMP, and the threshold is what keeps it rare.** 50ms is half a
- * sixteenth-note triplet at 150 BPM — the point at which a gun locked to the sim stops reading as
- * locked to the music. Below it nothing moves at all.
- *
- * ⚠️ **Crystal drift alone never reaches this and is not what it is for.** `AudioContext.currentTime`
- * and the display clock track the same system clock to within tens of parts per million: under ten
- * milliseconds across a three-minute level, a tenth of a sixteenth. **What this exists for is dropped
- * steps** — a sim that fell behind wall clock and, by 0022's design, does not try to catch up.
- */
-const REPHASE_SECONDS = 0.05;
+/*
+  ── THE RE-PHASE IS GONE, AND WITH IT THE LAST THING TYING THE MUSIC TO THE SIM ─────────────────
+
+  ⚠️ **docs/decisions/0160-the-music-free-runs.md.** `REPHASE_SECONDS` and `rephaseIn` stood here:
+  the arithmetic that moved the loops back into phase with the sim's step clock after
+  docs/decisions/0022-frame-rate-is-a-feature.md threw steps away. Both were correct and both were
+  measured; what they served was docs/decisions/0093-the-gun-is-on-the-grid.md's claim that the gun
+  and the music keep one clock, and docs/decisions/0159-the-two-clocks-come-apart.md ended that.
+
+  ⚠️ **A CORRECTION TOWARDS A CLOCK YOU NO LONGER SHARE IS NOT A CORRECTION.** The moment a level
+  authors a tempo, sim seconds and musical time stop being the same quantity — so a re-phase would
+  drag the music to match something with no relationship to it, on a schedule nobody could predict.
+
+  ⚠️ **AND THE AUDIO CLOCK IS THE BETTER ONE ANYWAY**, which is the half worth keeping in mind: it
+  does not drop steps. The music now free-runs on `AudioContext.currentTime`, which is the clock it
+  is actually played against, and `anchorAudio` is the only origin left.
+*/
 
 /**
  * How far ahead a re-phase must be scheduled, in seconds.
@@ -628,67 +621,15 @@ const REPHASE_SECONDS = 0.05;
  */
 export const SCHEDULE_AHEAD = 0.06;
 
-/**
- * Seconds until the loops should be restarted to put them back in phase with the sim, or `null` when
- * they are close enough to leave alone.
- *
- * ⚠️ **Pure, and separated from the browser for exactly the reason `musicLevelFor` is** — this is the
- * arithmetic most likely to be wrong and the only part a headless test can drive. `makeMusicOut`
- * below does nothing but ask this and act on the answer.
- *
- * ⚠️ **THE ERROR IS WRAPPED INTO HALF A LOOP EITHER WAY, AND THAT IS THE WHOLE TRICK.** The music is
- * a loop, so being one entire loop behind is *being in phase* — audibly identical, sample for sample.
- * Without the wrap, a backgrounded tab returns with an error of many seconds and the correction is a
- * lurch; with it, thirty seconds away is at worst 1.6 seconds out and usually far less.
- *
- * @param audioElapsed seconds of audio played since the loops were last anchored
- * @param simElapsed seconds the SIM has run since that same instant
- * @param minAhead the least notice the scheduler will accept
- */
-export function rephaseIn(audioElapsed: number, simElapsed: number, minAhead: number): number | null {
-  /*
-    ⚠️ **NOTHING IS CORRECTED UNTIL THE CURRENT ANCHOR HAS PLAYED A WHOLE LOOP, AND IT IS A RATE LIMIT
-    AS MUCH AS A RULE.** Each correction re-anchors, so this is also the ceiling on how often the swap
-    can happen: six source nodes per `PHRASE_SECONDS` at the very worst, which is the budget
-    [`the-gun-on-the-grid-mapped`](../../reports/the-gun-on-the-grid-mapped-2026-08-09.md) costed the
-    idea at before it was built.
-
-    ⚠️ **`tests/sound.browser.test.ts` is what put it here**, by counting source nodes and finding 37
-    where it expected 7. A test drives the sim as fast as it can while the audio clock stands still,
-    so the measured error grows without bound and every frame asks for a correction — and the real
-    game can do a milder version of the same thing, because `src/app/loop.ts` may run five steps in
-    one frame. **A phase error measured over less than a loop is measuring the catch-up**, not the
-    drift, and there is nothing to correct before the loop has been round once.
-  */
-  if (audioElapsed < PHRASE_SECONDS) return null;
-  const drift = audioElapsed - simElapsed;
-  const error = drift - Math.round(drift / PHRASE_SECONDS) * PHRASE_SECONDS;
-  if (Math.abs(error) <= REPHASE_SECONDS) return null;
-  /*
-    ⚠️ **The correction lands on a loop boundary of the SIM's, never wherever we happen to notice.**
-    A loop restarted mid-phrase cuts every tail crossing the join — which is the notch
-    `docs/decisions/0090-the-music-is-four-loops.md`'s seam guard exists to keep out of the bake, and
-    it would be no better arriving at runtime. At a boundary the loop was going back to zero anyway,
-    so all the correction moves is WHEN.
-
-    Never zero, on `stepsToGrid`'s reasoning in `src/app/frame.ts`: exactly on a boundary the answer
-    is a whole loop away, not now.
-  */
-  let delay = PHRASE_SECONDS - (simElapsed % PHRASE_SECONDS);
-  while (delay < minAhead) delay += PHRASE_SECONDS;
-  return delay;
-}
-
 /** What the shell drives. The one interface the browser half has to satisfy. */
 export interface MusicOut {
   /** Start the four loops, in sync. Idempotent — a second call is ignored. */
   start(): void;
-  /**
-   * Keep the loops in phase with the sim's own clock, given how many steps it has run.
-   *
-   * Called every frame and does nothing almost every time — 0094.
-   */
-  phaseTo(simSteps: number): void;
+  /*
+    ⚠️ **`phaseTo` STOOD HERE AND 0160 REMOVED IT.** It kept the loops in phase with the sim's own
+    step clock and was called every frame. What it was FOR was 0093's shared clock, and 0159 ended
+    that — `docs/decisions/0160-the-music-free-runs.md`.
+  */
   /**
    * Move to a level, with how near the boss is. A ramp, never a cut.
    *
@@ -1019,7 +960,6 @@ export function makeMusicOut(
   */
   const headingFor: Partial<Record<MusicLayer, number>> = {};
   /** Sim seconds at that same instant, or `null` until the first frame after a start. */
-  let anchorSim: number | null = null;
 
   const master = ctx.createGain();
   master.gain.value = MUSIC_GAIN;
@@ -1134,33 +1074,6 @@ export function makeMusicOut(
       */
       const when = ctx.currentTime + 0.05;
       swapTo(when);
-      // The sim's side of the anchor is not known until a frame reports it — 0094.
-      anchorSim = null;
-    },
-    /*
-      ⚠️ **IN TIME IS NOT IN PHASE, AND THIS IS THE HALF THAT IS NOT ARITHMETIC** — 0094. The gun runs
-      on the fixed-step clock and these loops on the `AudioContext`'s; two crystals agree closely
-      enough to ignore, and a sim that DROPS steps does not (`src/app/loop.ts` throws away everything
-      past `MAX_STEPS` rather than spiralling, which is 0022 working as designed and costs the phase).
-
-      ⚠️ **The sim is never told anything.** This reads `simSteps` out of the world and moves the
-      audio; nothing about the music reaches a step, which is the same direction `musicLevelFor` runs
-      in and the reason `docs/decisions/0024-the-accessibility-floor-is-settings.md` is not touched. A
-      player with the sound off flies exactly the same game.
-    */
-    phaseTo(simSteps: number): void {
-      if (!started || !on) return;
-      const simSeconds = simSteps / STEPS_PER_SECOND;
-      if (anchorSim === null) {
-        // The first frame after a start: the loops begin slightly in the future, so the sim instant
-        // that matches loop position zero is that far ahead of now.
-        anchorSim = simSeconds + (anchorAudio - ctx.currentTime);
-        return;
-      }
-      const delay = rephaseIn(ctx.currentTime - anchorAudio, simSeconds - anchorSim, SCHEDULE_AHEAD);
-      if (delay === null) return;
-      swapTo(ctx.currentTime + delay);
-      anchorSim = simSeconds + delay;
     },
     setLevel(level: MusicLevel, nearness: number, theme: ThemeKind): void {
       current = level;
@@ -1291,14 +1204,13 @@ export function makeMusicOut(
         `docs/decisions/0117-a-section-change-lands-on-the-beat.md` — nothing lands mid-bar — and
         costs at most 1.6 seconds instead of 25.6.
 
-        ⚠️ **`phaseTo`'s correction still uses the PHRASE and must.** There the piece is not changing:
-        a re-phase is a repair nobody should hear (0094), so it waits for the instant every layer is
-        back at the top anyway. Same call, two clocks, and the difference is whether the listener is
-        meant to notice.
+        ⚠️ **THE OTHER CALLER OF `swapTo` USED THE PHRASE AND IS GONE** —
+        `docs/decisions/0160-the-music-free-runs.md`. `phaseTo`'s correction was a repair nobody was
+        meant to hear (0094), so it waited for the instant every layer is back at the top anyway;
+        this one is meant to be noticed, so it takes the bar. **One call and one clock now**, and
+        the bar is the only answer left.
       */
       swapTo(placeArrivesAt(anchorAudio, ctx.currentTime, SCHEDULE_AHEAD));
-      // The sim's side of the anchor is re-learned on the next frame, exactly as a start does — 0094.
-      anchorSim = null;
     },
   };
 }

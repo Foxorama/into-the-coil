@@ -92,7 +92,8 @@ async function open(): Promise<Page> {
       to say where a cue went: a `StereoPannerNode` is its place, a `GainNode` is the master.
 
       ⚠️ **AND THE MUSIC MAKES BUFFER SOURCES TOO, WHICH THE FIRST DRAFT FORGOT.** Twenty-three of
-      them at every start and at every re-phase, each into its own layer gain — so this reported 23
+      them at every start and at every change of place, each into its own layer gain — so this
+      reported 23
       cues wired straight to the master on a completely correct build. **They are told apart by
       LENGTH, which is exact rather than a heuristic**: a cue is capped at `MAX_CUE_SECONDS` (2 s) and
       the shortest music loop is two bars, 3.2 s. The gap is not close.
