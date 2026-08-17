@@ -9,7 +9,8 @@ import {
   SECTION_FLOOR_UNITS,
   UNITS_PER_SECOND,
   cueLines,
-  deskAlone,
+  deskSounds,
+  deskTarget,
   addSectionAfter,
   dragSection,
   removeSection,
@@ -422,28 +423,48 @@ describe('0137 — the desk sounds while the level stands still', () => {
         for (const layer of MUSIC_LAYERS) {
           held.set(layer, { gain: layer === only ? loudestGain(theme, layer) : 0, pan: null });
         }
-        expect(deskAlone(held), `${theme}/${only} is auditioned and would still be silent`).toBe(true);
+        expect(deskSounds(held), `${theme}/${only} is auditioned and would still be silent`).toBe(true);
       }
     }
   });
 
-  it('AND ONE FADER ON ITS OWN DOES NOT, because everything else would follow the mixer', () => {
+  it('0165 — AND SO IS ONE FADER ON ITS OWN, which is the assertion this guard used to make backwards', () => {
     /*
-      ⚠️ **THIS IS THE GUARD THE OBVIOUS IMPLEMENTATION FAILS**, and it is the reason the condition
-      is not *something is held above zero*. A layer with no hold follows the ladder, so a transport
-      restarted for one dragged fader plays the whole piece — *"without affecting the current run of
-      the melody itself"* is the sentence that refuses it.
+      ⚠️ **THIS ASSERTION WAS `toBe(false)` AND ITS COMMENT WAS RIGHT ABOUT THE WRONG THING** —
+      `docs/decisions/0165-the-desk-sounds-what-you-raise.md`. It read: *"A layer with no hold follows
+      the ladder, so a transport restarted for one dragged fader plays the whole piece."* True of the
+      code as it stood, and an argument against **layers following while stopped** rather than against
+      putting the loops on the air — which is what `deskTarget` below now settles.
+
+      ⚠️ **AND THE COST OF HAVING IT BACKWARDS WAS THE MOST COMMON GESTURE ON A MIXER.** Driven in a
+      browser: stopped, one fader up, `GainNode` reading 1.55, sources stopped, nothing audible and a
+      readout saying otherwise. Reported as *"upping the gain does nothing to make it play"*.
     */
-    expect(deskAlone(desk({ drive: 0.9 })), 'one fader dragged up would start the whole piece').toBe(false);
+    expect(deskSounds(desk({ drive: 0.9 })), 'one fader dragged up is a thing to hear').toBe(true);
   });
 
   it('and a desk holding nothing, or holding everything at zero, is silence rather than air', () => {
-    expect(deskAlone(following), 'nothing is held, so the mixer owns the mix and there is nothing to audition').toBe(
-      false,
-    );
+    expect(deskSounds(following), 'nothing is held, so there is nothing the desk would sound').toBe(false);
     const silent = new Map<MusicLayer, Held>();
     for (const layer of MUSIC_LAYERS) silent.set(layer, { gain: 0, pan: null });
-    expect(deskAlone(silent), 'every layer is pinned at zero — there is nothing to hear').toBe(false);
+    expect(deskSounds(silent), 'every layer is pinned at zero — there is nothing to hear').toBe(false);
+  });
+
+  it('0165 — NOTHING FOLLOWS THE LEVEL WHILE THE LEVEL STANDS STILL, which is what makes the above safe', () => {
+    /*
+      ⚠️ **THE HALF THAT REPLACES 0137's REFUSAL.** `deskSounds` may only be *something is held above
+      zero* if an unheld layer is silent while stopped; otherwise 0137's objection stands and one
+      dragged fader starts the whole piece. The two assertions are one rule and are deliberately in
+      one test — splitting them would let a later change satisfy either alone.
+    */
+    const loud = { gain: 1.2, pan: null };
+    const free = { gain: null, pan: null };
+    expect(deskTarget(free, 0.86, true), 'walking, unheld: the level owns it').toBe(0.86);
+    expect(deskTarget(free, 0.86, false), 'stopped, unheld: the level is not playing').toBe(0);
+    expect(deskTarget(loud, 0.86, false), 'stopped, held: the desk owns it').toBe(1.2);
+    expect(deskTarget(loud, 0.86, true), 'walking, held: the desk still outranks the level — 0129').toBe(1.2);
+    // Zero is a value a desk may hold, and it is not the same as following.
+    expect(deskTarget({ gain: 0, pan: null }, 0.86, true), 'walking, pinned at zero: silent, not 0.86').toBe(0);
   });
 });
 

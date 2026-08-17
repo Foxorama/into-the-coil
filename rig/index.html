@@ -219,13 +219,15 @@
           <button id="openAll">open everything</button>
           <button id="allOff">silence everything</button>
           <button id="release">hand it all back</button>
+          <button id="everythingBack">everything back</button>
           <button id="ladderBack" disabled>put this place's ladder back</button>
           <span class="dim">click a layer's name to solo it · <b id="heldCount">0</b> held</span>
         </div>
         <table id="layers">
           <thead>
             <tr>
-              <th>layer</th><th>doing</th><th>target</th><th>live</th><th></th>
+              <th>layer</th><th title="hear this layer on its own, at the loudest this place takes it">alone</th>
+              <th>doing</th><th>target</th><th>live</th><th></th>
               <th>gain</th><th colspan="2">pan</th>
               <th title="this place's own shape at the rung you are parked at — 0162, edited here by 0163">
                 ladder<span class="dim" id="ladderRung"></span>
@@ -244,10 +246,18 @@
           and heard, which is the point. <b>follow</b> hands one layer back; <b>hand it all back</b>
           returns the lot. A held layer follows a rung change <b>immediately</b> rather than over the
           mixer's 1.6&nbsp;second ramp, so judge a transition with nothing held.
-          <br />⚠️ <b>With the transport stopped, the desk still sounds — once nothing is following
-          the mixer</b> (0137). <b>silence everything</b> and then raise the faders you want: the
-          level clock stays exactly where you stopped it, so the rung you are listening to cannot
-          move underneath you.
+          <br />⚠️ <b>Stopped means the LEVEL is not playing, and whatever you raise is</b> (0165).
+          Pause, then drag any fader: that layer sounds, on its own, and nothing follows the ladder
+          underneath it. The level clock stays exactly where you stopped it, so the rung you are
+          listening to cannot move. <b>This used to need three gestures</b> — silence everything,
+          find the fader, drag it — and one drag reading <code>1.55</code> into total silence is what
+          it did instead.
+          <br />⚠️ <b>alone</b> is the one-click version, per row: this layer at the loudest the
+          ladder ever takes it <i>here</i>, every other one at zero. Click it again, or
+          <b>everything back</b>, to hand the mixer its mix. It is this <b>place's</b> version of the
+          layer — Ember Nebula's <code>engine</code> is not level one's (0128) — and it is the game's
+          own mixer with faders moved rather than a second player, so the layer is exactly where the
+          bar says it is.
           <br />⚠️ <b>pan</b> starts where <code>LAYER_PAN</code> put it. The game's own limit is
           0.65 either side (0118) and the fader goes to 1.0 on purpose — past the limit is a question,
           not a setting.
@@ -292,33 +302,6 @@
           not an event at all.
           <br />⚠️ The gun can eat the voice budget, which is the real game and not a fault here — if
           an audition does not sound, untick <b>cues</b> in the header and click it again.
-        </div>
-      </section>
-
-      <section class="wide">
-        <h2>Every layer the music is made of — click one to hear it on its own</h2>
-        <div id="alone" class="row"></div>
-        <div class="note">
-          The twin of the panel above, for the other channel. One click puts <b>this layer alone</b>
-          on the desk at the loudest the ladder ever takes it here, and silences the other
-          twenty-two — so a layer this rung has CLOSED still sounds, which is the whole point.
-          <b>Click it again</b>, or <b>everything back</b>, to hand the mixer its mix back.
-          <br />⚠️ <b>It works with the transport STOPPED, and that is what it is for</b> (0137). The
-          loops have to be on the air for a fader to write into anything at all — a stopped dashboard
-          has stopped them outright rather than muted them (0119) — so this puts them back on and
-          <b>leaves the level clock exactly where it is</b>. The rung does not move, the guns do not
-          fire, and the header says <b>stopped · the desk is sounding</b>. Click it again to go back
-          to silence.
-          <br />⚠️ <b>A fader on its own will not do this and the reason is not an omission.</b> A
-          layer with no hold FOLLOWS the mixer, so putting the loops on the air for one dragged fader
-          would start the whole piece — which is the opposite of the ask. Press <b>silence
-          everything</b> first and then any fader is audible on its own; these buttons hold all
-          twenty-three in one click, which is why they need no second gesture.
-          <br />⚠️ <b>It is this PLACE's version of the layer</b>. Ember Nebula's <code>engine</code>
-          is not level one's, so the level selector decides what these buttons play (0128).
-          <br />⚠️ <b>In phase with the piece, because it never left it.</b> This is the game's own
-          mixer with faders moved, not a second player — so the layer is exactly where the bar says,
-          and the <b>live</b> column above still reads off the node.
         </div>
       </section>
 

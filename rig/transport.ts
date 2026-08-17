@@ -424,32 +424,55 @@ export interface Held {
 }
 
 /**
- * Whether the desk is the ONLY thing that would sound: every layer held, at least one above zero.
+ * What one layer sits at: its hold if it has one, the level's target if the transport is walking,
+ * and **silence** if it is not.
  *
- * ── THE CONDITION FOR PUTTING THE LOOPS BACK ON THE AIR WITH THE LEVEL STOPPED ──────────────────
+ * ── STOPPED MEANS THE LEVEL IS NOT PLAYING, AND THAT IS WHAT 0137 GOT WRONG ─────────────────────
  *
- * ⚠️ **`docs/decisions/0137-the-desk-sounds-while-the-level-stands-still.md`.** Reported: *"I need to
- * be able to pause the music and then play a particular sound… play sounds without affecting the
- * current run of the melody itself."*
+ * ⚠️ **`docs/decisions/0165-the-desk-sounds-what-you-raise.md`, amending
+ * `docs/decisions/0137-the-desk-sounds-while-the-level-stands-still.md`.** 0137 asked whether the
+ * desk was *the only thing that would sound* — every layer held, at least one above zero — and it
+ * explained why the obvious condition was refused:
  *
- * ⚠️ **IT IS NOT *SOMETHING IS HELD ABOVE ZERO*, AND THAT IS THE WHOLE OF THE ARGUMENT.** A layer
- * with no hold FOLLOWS the mixer, so a transport put back on the air for one dragged fader would
- * start the entire piece playing — the exact thing the report asked for the opposite of. An audition
- * holds all twenty-three (0130), so the reported gesture satisfies this in one click; `silence
- * everything` then a fader is the two-click route to the same state.
+ * > *"IT IS NOT `something is held above zero`, AND THAT IS THE WHOLE OF THE ARGUMENT. A layer with
+ * > no hold FOLLOWS the mixer, so a transport put back on the air for one dragged fader would start
+ * > the entire piece playing — the exact thing the report asked for the opposite of."*
+ *
+ * ⚠️ **THE ARGUMENT IS CORRECT AND IT IS AN ARGUMENT AGAINST A LAYER FOLLOWING WHILE STOPPED, NOT
+ * AGAINST THE CONDITION.** Fix the following and the condition is free. Reported 2026-08-18: *"I need
+ * to be able to play the individual items while it's paused… I can open everything, but following an
+ * individual item or upping the gain does nothing to make it play."* Driven in a browser, that is
+ * exactly right: stopped, one fader up, the layer's `GainNode` reads 1.55 and the sources are stopped
+ * (0119), so **the page reported a gain into silence** — the one direction 0126 exists to prevent,
+ * and the reason it went unnoticed is that greying the panel was thought to cover it.
+ *
+ * ⚠️ **SO THE THREE-GESTURE ROUTE IS GONE.** 0137's own answer was *"`silence everything` then a
+ * fader is the two-click route"*, plus finding the fader — for the single most common thing anybody
+ * does with a mixer. One drag now does it, and what makes that safe is this function: nothing
+ * follows while the level stands still, so a raised fader is the whole of what sounds.
+ */
+export function deskTarget(hold: Held, target: number, walking: boolean): number {
+  if (hold.gain !== null) return hold.gain;
+  return walking ? target : 0;
+}
+
+/**
+ * Whether anything at all would come out — the condition for putting the loops on the air.
+ *
+ * ⚠️ **`deskTarget` IS WHY THIS IS ALLOWED TO BE THIS SIMPLE.** With followers silent while stopped,
+ * *something is held above zero* and *something would sound* are the same statement, which is what
+ * 0137 could not say.
  *
  * ⚠️ **DERIVED FROM THE DESK RATHER THAN REMEMBERED**, on `aloneOn`'s own terms: a remembered *I am
  * listening* flag goes stale the instant a fader is dragged, and the page would then be making a
  * sound it had stopped describing.
  */
-export function deskAlone(held: ReadonlyMap<MusicLayer, Held>): boolean {
-  let audible = false;
+export function deskSounds(held: ReadonlyMap<MusicLayer, Held>): boolean {
   for (const layer of MUSIC_LAYERS) {
-    const gain = held.get(layer)?.gain ?? null;
-    if (gain === null) return false;
-    if (gain > 0) audible = true;
+    const gain = held.get(layer)?.gain;
+    if (gain !== undefined && gain !== null && gain > 0) return true;
   }
-  return audible;
+  return false;
 }
 
 // ── DRAGGING A SECTION BOUNDARY ─────────────────────────────────────────────────────────────────
