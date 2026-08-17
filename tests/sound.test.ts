@@ -538,7 +538,16 @@ describe('the cue table', () => {
         slices,
         `the prewarm yielded ${slices} times for ${jobs} jobs, which is the one-note-per-timeout schedule 0157 removed`,
       ).toBeLessThanOrEqual(Math.ceil(jobs / PREWARM_SLICE_JOBS));
-    });
+      /*
+        ⚠️ **The default five seconds is the SUBJECT, not flake, and this went red under `npm run
+        prove` for exactly that** — the same reasoning its two siblings record. Driving the prewarm to
+        completion is about four seconds of real synthesis on an idle machine and more under parallel
+        load, and `layerNotes` is walked for every layer on top.
+        `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md` — establish which
+        it is, and this is a guard whose subject costs seconds meeting a default sized for ones that
+        do not.
+      */
+    }, 60_000);
 
     it('0157 — AND THE BOUNDARY BAKE TAKES THE SAME SLICE, because it is the one on a deadline', () => {
       /*
