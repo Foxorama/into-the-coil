@@ -162,8 +162,26 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
       the one that gets missed is silent for the rest of the run. Counted from the two tables rather
       than written down as a number.
     */
-    expect(after.buffers, 'the cues and the music did not bake once on the unlocking gesture').toBe(
-      BAKED_BUFFERS,
+    /*
+      ── AND THE PLACE ARRIVES TOO, WHICH IT COULD NOT BEFORE 0157 ──────────────────────────────────
+
+      ⚠️ **THIS GUARD WAS GREEN FOR THE WRONG REASON AND ONLY 0157 COULD SHOW IT.** `bakePlace`
+      returns immediately unless `prewarmed` is set (`src/app/sound.ts` says so in its own header),
+      and the prewarm used to take 12–20 seconds of wall clock — so **a run started inside that window
+      got no place bake at all**, and this counted one set of loops because the second never happened.
+      Now the prewarm finishes in about its own synthesis time and a press finishes it outright, so
+      0133's boundary bake does what it says and brings the level's own material.
+
+      ⚠️ **One place, not a synthesiser** — which is the claim this test is actually making. The extra
+      buffers are exactly `MUSIC_LAYERS.length`, one per layer, once; `bakeIncomingPlace` is memoised
+      on the theme, so a second would mean the memo had stopped working. Still summed from the tables
+      rather than written down.
+
+      ⚠️ **It is level ONE's place, whose theme is the base composition**, so nothing about the SOUND
+      changed here — what changed is that the mechanism now runs. That is why no play-test caught it.
+    */
+    expect(after.buffers, 'the cues, the music and the level’s own place did not each bake once').toBe(
+      BAKED_BUFFERS + MUSIC_LAYERS.length,
     );
     expect(after.voices, 'a run played for a second and the game stayed silent').toBeGreaterThan(0);
     /*
@@ -207,6 +225,11 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
       ⚠️ **The two halves have to be checked together.** A build that never unlocked would pass
       "silent" perfectly, and be broken for everybody. So: the context is built and the cues are
       baked — the gesture did its work — and nothing comes out.
+
+      ⚠️ **The place is in the count here too, and for the same reason as the chain test above** —
+      0157. This run starts a level, so 0133's boundary bake brings that level's own material, which
+      it could not do while the prewarm was still walking. **Off does not skip the bake**, which is
+      the point of this test: silence is a gain, never an absence of material.
     */
     const page = await open();
     await page.click(soundOption('off'));
@@ -216,7 +239,7 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     expect(
       after.buffers,
       'pressing a setting did not unlock the context, so silence proves nothing',
-    ).toBe(BAKED_BUFFERS);
+    ).toBe(BAKED_BUFFERS + MUSIC_LAYERS.length);
     expect(after.voices, 'sound is off and the game played anyway').toBe(0);
     await page.context().close();
   });
