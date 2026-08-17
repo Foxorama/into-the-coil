@@ -46,7 +46,10 @@ export const PROBES = [
     guard: 'THE RUNG SEQUENCE IS THE GAME’S ANSWER, not a list the rig keeps',
     edit: {
       path: 'scripts/timeline.mjs',
-      find: '  return musicLevelFor(camera, bossAt, inFight, health, at);',
+      // ⚠️ THE ANCHOR MOVED WITH 0158's SIGNATURE — `bossAt` left the parameter list and the level's
+      // own script joined it. What the probe breaks is unchanged: the rig answering from a table of
+      // its own instead of asking the game.
+      find: '  return musicLevelFor(camera, inFight, sections, health);',
       replace: "  return inFight ? 'boss' : second > 40 ? 'surge' : 'run';",
     },
   },
@@ -58,18 +61,27 @@ export const PROBES = [
       does. Seven levels of different lengths would all report the same boundaries, and the mode
       built to show where a boundary lands would be showing where the rig put it.
     */
-    broke: 'the boss placed at one distance for every level, so all seven reach their rungs together',
-    guard: 'and a level of a different length reaches its rungs at different times',
+    broke: 'the rig answering level one for every level, so all seven reach their rungs together',
+    guard: 'and a level of a different length reaches its rungs at its OWN times',
     /*
       ⚠️ THE FIRST VERSION OF THIS PROBE BROKE `rungMarks`'s OWN `toBoss` AND REPORTED STILL GREEN.
       That local is only the loop's end; the rung comes from `rungAt`, which looks the level up again.
       A break has to be applied to the thing the guard actually reads — which is the half of 0019 that
       is about the BREAK rather than about the guard.
+
+      ⚠️ AND 0158 MADE THE SECOND VERSION STOP REACHING ITS GUARD, WHICH `prove-guard` CAUGHT AS A
+      WRONG TEST RATHER THAN AS A PASS. It fixed `bossAt` at 4270, because while the three distances
+      were measured BACK FROM THE BOSS that was the whole of what made two levels differ. A script is
+      level-local, so a wrong `bossAt` no longer moves a single section — it moves only where the
+      fight starts. **What now has to be broken is the script**, and fixing both is what makes every
+      level report level one's boundaries.
     */
     edit: {
       path: 'scripts/timeline.mjs',
-      find: 'export function rungAt(kind, second, fightSeconds, at = SECTION_UNITS) {\n  const { bossAt } = LEVELS[kind];',
-      replace: 'export function rungAt(kind, second, fightSeconds, at = SECTION_UNITS) {\n  const bossAt = 4270;',
+      find: 'export function rungAt(kind, second, fightSeconds, sections = LEVELS[kind].sections) {\n  const { bossAt } = LEVELS[kind];',
+      replace:
+        'export function rungAt(kind, second, fightSeconds, sections = LEVELS[kind].sections) {\n' +
+        '  sections = LEVELS.approach.sections;\n  const bossAt = 4270;',
     },
   },
   {

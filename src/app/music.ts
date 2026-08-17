@@ -32,7 +32,6 @@ import {
   MUSIC_LAYERS,
   MUSIC_ROOT,
   BOSS_PEAK_HEALTH,
-  SECTION_UNITS,
   AURA_LAYERS,
   LAYER_PAN,
   AURA_NEAR_UNITS,
@@ -43,7 +42,7 @@ import {
   type MusicLayer,
   type MusicLevel,
   type MusicVoice,
-  type SectionUnits,
+  type LevelSections,
 } from '../content/music.ts';
 import { sampleLayerInto, saturate } from './sound.ts';
 import { airOf, mixOf, voicesOf, type ThemeKind } from '../content/themes.ts';
@@ -394,30 +393,44 @@ export function placeFor(runLevel: number): ThemeKind {
 /**
  * How far up the ladder the run is.
  *
- * ── `at` IS AN INPUT AND THE GAME NEVER PASSES ONE ──────────────────────────────────────────────
+ * ── `sections` IS THE LEVEL'S OWN SCRIPT, AND IT HAS NO DEFAULT ─────────────────────────────────
  *
- * ⚠️ **`docs/decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md`.** The three distances
- * are the one thing in the music nobody has ever been able to move and hear at the same time: 0102
- * chose them, 0125 shifted all three, 0131 moved one, and each of those was a number typed into
- * `src/content/music.ts`, shipped, and judged a play-test later. The parameter is what lets
- * `rig/dash.ts` drag a boundary and hear the ladder turn over where it was dragged to.
+ * ⚠️ **`docs/decisions/0158-a-level-says-where-its-sections-open.md`.** It used to be three
+ * distances shared by all seven levels, with a global default this function supplied and
+ * `rig/dash.ts` overrode. There is no global answer any more — where a section opens is a thing a
+ * LEVEL says, exactly as `waves`, `pickups` and `bossAt` are — so the parameter is required, and a
+ * caller that forgets it fails to compile rather than quietly getting somebody else's shape.
  *
- * ⚠️ **IT IS AN ARGUMENT AND NOT A SECOND TABLE, WHICH IS THE WHOLE OF WHY IT IS SAFE.** The
- * arithmetic below stays the only description of where a rung begins; what moves is the number it is
- * handed. A rig that walked its own boundaries would be the drift
- * `docs/decisions/0116-the-rig-plays-the-level.md` is named for — and `tests/dash.test.ts`'s *THE
- * RUNG IS THE GAME'S ANSWER* is the guard that has been standing over exactly that since 0126.
+ * ⚠️ **THE ARITHMETIC BELOW IS STILL THE ONLY DESCRIPTION OF WHERE A RUNG BEGINS**, which is the
+ * whole of why threading a script is safe. What moves is the list it is handed. A rig that walked
+ * its own boundaries would be the drift `docs/decisions/0116-the-rig-plays-the-level.md` is named
+ * for — and `tests/dash.test.ts`'s *THE RUNG IS THE GAME'S ANSWER* has stood over exactly that since
+ * 0126.
  *
- * ⚠️ **NOTHING UNDER `src/` MAY PASS IT**, on the terms `gainOf` is held to by 0126: a shipped call
- * site that supplied its own distances would make the shape of a level decided in two places, and
- * `SECTION_UNITS` would stop being the whole story. `tests/dash.test.ts` scans for it.
+ * ⚠️ **AND WHAT `src/` MAY PASS IS THE LEVEL'S OWN `sections` AND NOTHING ELSE**, which is 0138's
+ * guard inverted rather than dropped. It could once be stated as *nobody passes a fifth argument*;
+ * now everybody must, so `tests/dash.test.ts` checks the EXPRESSION instead of counting — a shipped
+ * call site that built its own list would make the shape of a level decided in two places, and
+ * `src/content/levels.ts` would stop being the whole story.
+ *
+ * ⚠️ **`sections` COMES BEFORE `bossHealthLeft`, WHICH IS A CHANGE OF ORDER AND NOT ONLY OF TYPE.**
+ * The health is meaningful only while a boss is on the field and keeps its default; the script is
+ * meaningful always and cannot have one. Putting the required argument in front of the optional one
+ * is what lets the many call sites that are not about a fight go on saying nothing about health.
+ *
+ * ⚠️ **AND `bossAt` IS GONE FROM THE SIGNATURE, WHICH THE COMPILER FOUND RATHER THAN A HAND.** The
+ * old arithmetic measured every boundary BACK from the boss, so where the fight was is what anchored
+ * the sections; a script is level-local and anchors itself, and the fight's two rungs were always
+ * keyed to `bossOnField` and health rather than to a distance. The parameter went unread the moment
+ * the subtraction did, and an unused argument on the function that decides the shape of a level is
+ * the kind of thing that stays for a year. **Nothing about the answer changes** — a camera past the
+ * boss still gets the last section, exactly as a negative `toBoss` used to.
  */
 export function musicLevelFor(
   cameraAlong: number,
-  bossAt: number,
   bossOnField: boolean,
+  sections: LevelSections,
   bossHealthLeft = 1,
-  at: SectionUnits = SECTION_UNITS,
 ): MusicLevel {
   /*
     ⚠️ **THE FIGHT HAS TWO RUNGS NOW, AND THAT IS THE *dynamic climax* THE REPORT ASKED FOR** —
@@ -441,18 +454,49 @@ export function musicLevelFor(
     of every level was one arrangement over a four-bar loop. *"The ingame background music doesn't
     change and increase in tempo as you progress through the level"* is a description of this line.
 
-    ⚠️ **Distances, like `BOSS_APPROACH_UNITS` and like everything else this project paces**, so a
-    device that drops frames hears the same build and a retuned level carries it.
+    ⚠️ **Distances, like `bossAt` and like everything else this project paces**, so a device that
+    drops frames hears the same build and a retuned level carries it.
 
-    ⚠️ **Measured from the BOSS backwards rather than from the level's start forwards**, which is what
-    makes it work for a level of any length: what the player is progressing towards is the fight, and
-    a level authored longer simply spends longer at `run`.
+    ── AND THE LEVEL SAYS WHERE THEY ARE NOW ─────────────────────────────────────────────────────
+
+    ⚠️ **`docs/decisions/0158-a-level-says-where-its-sections-open.md`.** This used to test three
+    shared distances measured from the boss BACKWARDS, in a fixed order, which made *where the surge
+    opens* one answer for all seven levels. Reported: *"if we have the exact same timing for each for
+    each it's also going to be a limiter."*
+
+    ⚠️ **THE LAST ENTRY THE CAMERA HAS REACHED, WHICH IS WHY ORDER AND COUNT ARE FREE.** Nothing
+    here knows that `push` follows `run` or that there are four of them: a level may open at `surge`,
+    drop to `run` and climb again, and this reads it without a special case. The ladder was in this
+    comparison, and it is gone.
+
+    ⚠️ **A SCRIPT MUST BE ASCENDING AND `tests/level.test.ts` HOLDS THAT**, because a `break` on the
+    first entry the camera has NOT reached is what makes this a walk rather than a scan. An
+    out-of-order script would hide a section rather than reorder one — the same failure
+    `docs/decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md` clamped a drag against.
+
+    ⚠️ **`bossAt` IS STILL WHAT ENDS THE LAST SECTION AND IT IS NOT IN THE SCRIPT.** Where a boss
+    arrives is level design, not a music number — 0138 refused a handle on it for that reason, and a
+    script that could name it would be saying the same thing in two places.
   */
-  const toBoss = bossAt - cameraAlong;
-  if (toBoss <= at.approach) return 'approach';
-  if (toBoss <= at.surge) return 'surge';
-  if (toBoss <= at.push) return 'push';
-  return 'run';
+  /*
+    ⚠️ **`run` HERE IS UNREACHABLE FOR A REAL LEVEL AND IS NOT A POLICY.** `tests/level.test.ts`
+    holds that a script is non-empty and opens at `0`, so the first pass of the loop always replaces
+    this. It is what an empty script would return rather than a claim that a level starts at `run` —
+    which is exactly the claim 0158 removed.
+  */
+  /*
+    ⚠️ **INDEXED RATHER THAN `for…of`, WHICH IS ABOUT 0022 AND NOT ABOUT STYLE.** This is asked once
+    a frame by `src/app/mount.ts`, and a `for…of` allocates an iterator every time it is entered.
+    This file is not on `tests/budget.test.ts`'s hot list and would not be caught — which is the
+    reason to write it this way rather than the reason not to bother.
+  */
+  let section: MusicLevel = 'run';
+  for (let i = 0; i < sections.length; i++) {
+    const entry = sections[i]!;
+    if (entry.at > cameraAlong) break;
+    section = entry.section;
+  }
+  return section;
 }
 
 /**

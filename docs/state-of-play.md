@@ -171,6 +171,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a branch starts at `main` AND the next one waits — both halves checked** | [0033](decisions/0033-a-branch-starts-at-main.md), [0075](decisions/0075-the-serialisation-is-checked.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | **a strike is an INCREMENT, and a guard's validity can expire when material moves** | [0156](decisions/0156-a-strike-is-an-increment.md) |
+| **A LEVEL SAYS WHERE ITS SECTIONS OPEN — order, count and timing are the level's, and the three shared distances are gone** | [0158](decisions/0158-a-level-says-where-its-sections-open.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
 | **a probe runs the test it NAMES, and a suite bakes the music once** | [0115](decisions/0115-a-probe-runs-its-own-guard.md) — amends 0054's *whole suite* clause |
 | **the rig plays a LEVEL, and the instrument is guarded like the game** | [0116](decisions/0116-the-rig-plays-the-level.md) |
@@ -669,7 +670,9 @@ is worse than no marker, because it reads exactly like a live one — the same f
 [0029](decisions/0029-the-tracked-record-is-the-record.md) names for a summary that drifts. **Retire
 this heading when it stops being true rather than adding another one below it.**
 
-**The work is: the section script, then tempo, then the score.** Everything under here is why.
+**The work is: the dashboard's script editor, then tempo, then the score.** The section script itself
+has landed — [0158](decisions/0158-a-level-says-where-its-sections-open.md). Everything under here is
+why.
 
 ### THE SCORE IS BEING REWORKED, AND THE ORDER OF THE WHOLE PROJECT IS NAMED
 
@@ -706,61 +709,40 @@ and [0104](decisions/0104-the-gun-plays-a-figure.md). **Ask 1 has none, and it i
 THEM.** *"I haven't commented on boss aura's or game sfx/cues yet because we've been spending a lot
 of time just on the music."* Do not read the silence as a sign-off.
 
-### ⚠️ AND THE FIRST PIECE OF IT IS THE SECTION SCRIPT — DESIGNED, SIZED, NOT BUILT
+### ⚠️ AND THE FIRST PIECE OF IT IS BUILT — [0158](decisions/0158-a-level-says-where-its-sections-open.md)
 
-⚠️ **THE FOUR SECTIONS ARE THE SAME THREE DISTANCES FOR ALL SEVEN LEVELS, AND THE PLAYER HAS NAMED
-THAT AS A LIMITER**, 2026-08-17: *"can we rearrange the four sections? or have them different per
-level as well? some levels kick right into a surge etc, if we have the exact same timing for each for
-each it's also going to be a limiter."* The answer is yes and nothing about it is hard; it is **wide**.
+⚠️ **A LEVEL SAYS WHERE ITS SECTIONS OPEN, AND NOTHING A LISTENER CAN HEAR MOVED.** `sections` is a
+list on `LevelRow`; `PUSH_UNITS`, `SURGE_UNITS` and `BOSS_APPROACH_UNITS` are gone. **Order, count and
+timing are free** — a level may open at `surge`.
 
-**The shape.** A level's music becomes a script, exactly as its content already is
-([0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md)) — a `sections` list on
-`LevelRow`, ascending, first entry at `0`, in the same **level-local** distance space as `bossAt`
-([0100](decisions/0100-a-level-places-its-pickups-too.md)):
+⚠️ **THE SEED IS PROVABLY NEUTRAL, MEASURED RATHER THAN CLAIMED.** Every rung crossing of every level,
+crossed and heard, is byte-identical to the tree before it — 42 boundaries — and the new lookup was
+proved equivalent to the old one over 30,287 camera positions before a line of it was written. 0158
+has both.
 
-```ts
-sections: [
-  { at: 0,    section: 'surge' },   // a level MAY open at its loudest
-  { at: 900,  section: 'run' },     // and drop away
-  { at: 2400, section: 'push' },
-  { at: 3300, section: 'approach' },
-]
-```
+⚠️ **THE NEXT STEP IS THE DASHBOARD'S SCRIPT EDITOR, AND IT COMES BEFORE ANY AUTHORING.** Dragging
+cannot express the ask: *"some levels kick right into a surge"* is a change of **which section is
+first**, not of where a boundary sits. The panel needs to change an entry's section, add one and
+remove one. **Then a driving session, then the authored differences with their own play-test** — 0158
+says why that order and not another.
 
-⚠️ **Order, count and timing all become free, and the names stop being a ladder.** `run` / `push` /
-`surge` / `approach` stay a closed union so guards and the desk can key on them
-([0016](decisions/0016-a-hub-enumerates-kinds.md)), but nothing requires them in order or once each.
-**`boss` and `bossPeak` are untouched** — they are keyed to health, not distance, so the fight does
-not move.
+⚠️ **AND A DRIVE FOUND A BUG THE WHOLE SUITE WAS GREEN OVER** — a keyboard nudge that moved one bar
+however many times it was pressed, because the handler read a value captured before the redraw.
+[0027](decisions/0027-measure-the-picture-not-the-model.md)'s third catch of this project's own.
 
-⚠️ **SEED IT SO THE FIRST LANDING CHANGES NOTHING.** Today's boundaries are `bossAt` minus
-`PUSH_UNITS` 3021, `SURGE_UNITS` 1736 and `BOSS_APPROACH_UNITS` 643. Written out per level, that is:
+### ⚠️ TEMPO IS THE SECOND STEP AND IT RIDES THE SAME TABLE
 
-| level | `bossAt` | run | push | surge | approach |
-|---|---|---|---|---|---|
-| 1 | 4270 | 0 | 1249 | 2534 | 3627 |
-| 2 | 4320 | 0 | 1299 | 2584 | 3677 |
-| 3 | 4270 | 0 | 1249 | 2534 | 3627 |
-| 4 | 4240 | 0 | 1219 | 2504 | 3597 |
-| 5 | 4240 | 0 | 1219 | 2504 | 3597 |
-| 6 | 4340 | 0 | 1319 | 2604 | 3697 |
-| 7 | 4460 | 0 | 1439 | 2724 | 3817 |
+⚠️ **THE SECTION SCRIPT ITSELF IS BUILT** — [0158](decisions/0158-a-level-says-where-its-sections-open.md)
+has the shape, the seed, the two measurements that prove it neutral, and the five probes it
+re-anchored. **The design that used to sit here is in that decision and in
+`src/content/levels.ts`**; it is not repeated —
+[0029](decisions/0029-the-tracked-record-is-the-record.md).
 
-**Land the table first with those numbers and no sound moves**, which makes the diff provable; author
-the differences second, as their own change with their own play-test.
+⚠️ **AND THE THING TO DO BEFORE AUTHORING ANY DIFFERENCE IS THE DASHBOARD'S SCRIPT EDITOR**, which
+0158 deliberately left out so that the landing diff stayed provable. Dragging moves a boundary; the
+ask is about **which section is first**.
 
-⚠️ **THE SURFACE IS FOURTEEN FILES AND THE DASHBOARD IS THE AWKWARD ONE.** Sized rather than guessed —
-`rig/dash.ts`, `rig/transport.ts`, `scripts/hear.mjs`, `scripts/timeline.mjs`, `src/app/frame.ts`,
-`src/app/mount.ts`, `src/app/music.ts`, `src/content/music.ts`, `tests/dash.test.ts`,
-`tests/music.test.ts`, `tests/sound.test.ts`, and the probes for
-[0090](decisions/0090-the-music-is-four-loops.md),
-[0116](decisions/0116-the-rig-plays-the-level.md) and
-[0138](decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md).
-**0138's drag mechanism is built around exactly three named constants** and its *copy this moment*
-button prints them as the constants they would be pasted back as; that becomes a script per level, and
-it is the piece to design before typing.
-
-⚠️ **TEMPO RIDES THE SAME TABLE AND IS THE SECOND STEP, NOT THE FIRST.** A `bpm` per section is what
+⚠️ **TEMPO IS THE SECOND STEP, NOT THE FIRST.** A `bpm` per section is what
 makes *"a fast paced tempo melody that increases in tempo throughout the level"* a thing a level says
 — and the count of DISTINCT tempi in a level is the count of bakes it costs, which is why it belongs
 at the authoring site. **Read [0157](decisions/0157-the-prewarm-was-scheduled-one-note-at-a-time.md)
@@ -1043,7 +1025,8 @@ three cloud routines could not push and the third rebuilt the second's work from
 | 2 | **`lance`** — the telegraphed lock-on, the first attack the player is warned about. Needs a new drawing primitive, so [0036](decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md) governs it. | same report, ordering item 2 | **TODO** |
 | 3 | **`sweep` and `mine`** — a curtain that walks, and a second-order shot that detonates into a ring. Cheapest of the four. | same report, ordering item 3 | **TODO** |
 | — | the links guard that went red once inside `prove` and green everywhere since | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) — **owed a diagnosis, not a rerun** | **OPEN** |
-| — | **AND IT IS NOW THREE GUARDS, ALL WALL-CLOCK, AND THE CAUSE IS MEASURED**: the suite oversubscribes its own worker pool. `npx vitest run` failed 2–4 of them on three runs; **`--maxWorkers=4` on the identical tree is 63/63 green, twice.** `main` failed the same set and MORE, so it is not a tree. ⚠️ **`npm run prove` CANNOT BE CAPPED FROM OUTSIDE** — `runSuite` passes no worker flag and `VITEST_MAX_THREADS` is ignored by vitest 4, so **the full local gate is unavailable on a loaded machine.** | [`the-uncoil-needed-a-gap`](../reports/the-uncoil-needed-a-gap-2026-08-16.md) | **OPEN — owed a decision about whether the cap lives in `vitest.config.ts` or in `runSuite`** |
+| — | **AND IT IS NOW FIVE GUARDS, ALL WALL-CLOCK, AND THE CAUSE IS MEASURED**: the suite oversubscribes its own worker pool. `npx vitest run` failed 2–4 of them on three runs; **`--maxWorkers=4` on the identical tree is 64/64 files and 1063/1063 tests green.** `main` failed the same set and MORE, so it is not a tree. ⚠️ **`npm run prove` CANNOT BE CAPPED FROM OUTSIDE** — `runSuite` passes no worker flag and `VITEST_MAX_THREADS` is ignored by vitest 4, so **the full local gate is unavailable on a loaded machine.** | [`the-uncoil-needed-a-gap`](../reports/the-uncoil-needed-a-gap-2026-08-16.md) | **OPEN — owed a decision about whether the cap lives in `vitest.config.ts` or in `runSuite`** |
+| — | ⚠️ **AND TWO OF THE FIVE ARE DSP TIMEOUTS RATHER THAN BROWSER WALL-CLOCK, WHICH IS NEW.** *a level has more SUB than the title* carries an explicit `DSP_MS = 20_000`, and *prewarmed and cold bakes are the same samples* records in its own comment having timed out **once before** under full-suite load — [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) cited there by name. **Neither is a wrong quantity; both are budgets.** Measured 2026-08-17 while landing [0158](decisions/0158-a-level-says-where-its-sections-open.md): `npm run prove` baseline went RED on five, `main` under the *same harness* went RED on one of the same set, and both trees are green capped. ⚠️ **The bake got 32% heavier in [0157](decisions/0157-the-prewarm-was-scheduled-one-note-at-a-time.md)'s report and nothing re-sized these budgets after it** — that is the first thing to check when the cap decision is taken. | [`the-prewarm-got-a-third-heavier`](../reports/the-prewarm-got-a-third-heavier-2026-08-17.md) | **OPEN — and it is the same decision as the row above** |
 
 ⚠️ **THE MUSIC IS NOT IN THE QUEUE AND THAT IS DELIBERATE.** *"We can go back to working on the music
 when I get back"* — the `run` arrangement and the tempo question both want the player's ear, and the

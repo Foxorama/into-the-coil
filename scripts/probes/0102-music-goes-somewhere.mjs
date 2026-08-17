@@ -20,17 +20,20 @@ export const PROBES = [
       What it is not is a build.
     */
     broke: 'the level ladder collapsed back to one rung, which is how it shipped',
-    guard: 'and it climbs FOUR times inside a level, where it used to climb once',
+    guard: 'and every section of every level is a stretch of it rather than a flicker',
     edit: {
       path: 'src/app/music.ts',
       /*
-        ⚠️ **RE-ANCHORED BY 0138, WHICH TURNED THE THREE DISTANCES INTO A PARAMETER.** The claim is
-        untouched — a level that reaches one rung and stays there is still what this puts back — but
-        the comparisons now read `at.surge` rather than the constant, because `rig/dash.ts` drags
-        them. An anchor stranded by that rename would have gone quietly orphaned.
+        ⚠️ **RE-ANCHORED BY 0138, WHICH TURNED THE THREE DISTANCES INTO A PARAMETER**, and again by
+        0158, which turned the cascade of comparisons into a walk over the level's own script. The
+        claim is untouched across both — a level that reaches one rung and stays there is still what
+        this puts back — and the shape of the code it has to reach into has changed twice.
+
+        ⚠️ **THE BREAK IS NOW *STOP WALKING AFTER THE FIRST ENTRY***, which is the same collapse: the
+        camera never leaves the section the level opens at, however many the script names.
       */
-      find: '  if (toBoss <= at.surge) return \'surge\';\n  if (toBoss <= at.push) return \'push\';',
-      replace: '',
+      find: '    if (entry.at > cameraAlong) break;\n    section = entry.section;',
+      replace: '    break;',
     },
   },
   {

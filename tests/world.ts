@@ -27,6 +27,7 @@ import {
 import { makeCollected } from '../src/sim/collide.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../src/content/enemies.ts';
 import type { LevelRow } from '../src/content/levels.ts';
+import type { LevelSections } from '../src/content/music.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { SPECIAL_BINDINGS } from '../src/content/actions.ts';
 import { DEFAULT_ASSISTS, tuningFor } from '../src/sim/assist.ts';
@@ -42,6 +43,20 @@ import type { Surface } from '../src/render/surface.ts';
 import { viewOf } from '../src/sim/camera.ts';
 
 /**
+ * A music script that opens at `run` and never leaves it — what a fixture with no opinion uses.
+ *
+ * ⚠️ **`docs/decisions/0158-a-level-says-where-its-sections-open.md` made this a required field**,
+ * so every `LevelRow` fixture in the suite now has to say something about the music. This is the
+ * *nothing happens* answer, shared so that a fixture about bullets is not also a claim about where a
+ * surge opens — the same reasoning as `theme: 'approach'` below.
+ *
+ * ⚠️ **It is the ONE shape a script may have that the old three constants could not express**: a
+ * level that plays one section for its whole length. The seven shipped levels are the seed and are
+ * in `src/content/levels.ts`; nothing here is a copy of them.
+ */
+export const NO_SECTIONS: LevelSections = [{ at: 0, section: 'run' }];
+
+/**
  * A level that never spawns anything and whose boss never arrives.
  *
  * `Infinity` rather than a large number: a fixture that ran long enough to pass a big one would
@@ -51,6 +66,7 @@ export const NO_LEVEL: LevelRow = {
   waves: [],
   pickups: [],
   bossAt: Number.POSITIVE_INFINITY,
+  sections: NO_SECTIONS,
   boss: 'sentinel',
   // ⚠️ The theme that changes nothing — 0107. A fixture that leaned on a themed mix would be
   // measuring the theme as well as its own subject, and `approach` is the row authored to be neutral.

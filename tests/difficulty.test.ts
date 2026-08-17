@@ -22,7 +22,7 @@ import { livesFor } from '../src/state/slices/run.ts';
 import { GameFrame } from '../src/app/frame.ts';
 import type { LevelRow } from '../src/content/levels.ts';
 import { SHOTS } from '../src/content/shots.ts';
-import { playableWorld } from './world.ts';
+import { NO_SECTIONS, playableWorld } from './world.ts';
 
 /**
  * DIFFICULTY IS A TIER, AND THE EASY ONE IS THE CONTENT.
@@ -460,6 +460,7 @@ describe('the tier reaches the field, and not only the table', () => {
     waves: [{ at: 300, enemy: 'turret', formation: 'line', count: 3, lane: 50 }],
     pickups: [],
     bossAt: Number.POSITIVE_INFINITY,
+    sections: NO_SECTIONS,
     boss: 'sentinel',
     theme: 'approach',
   };
@@ -531,7 +532,7 @@ describe('the tier reaches the field, and not only the table', () => {
       The ship holds station and its auto-fire does the rest, so this is the same fight met by the
       same pilot doing the same thing, and the only difference is the tier.
     */
-    const bossOnly: LevelRow = { waves: [], pickups: [], bossAt: 300, boss: 'sentinel', theme: 'approach' };
+    const bossOnly: LevelRow = { waves: [], pickups: [], bossAt: 300, sections: NO_SECTIONS, boss: 'sentinel', theme: 'approach' };
     const killedAt = (tier: DifficultyKind): number => {
       const { world } = playableWorld(bossOnly, tier);
       const frame = new GameFrame(world);

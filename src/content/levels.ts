@@ -41,6 +41,7 @@ import type { FormationKind } from './formations.ts';
 import type { BossKind } from './bosses.ts';
 import type { PickupKind } from './pickups.ts';
 import type { ThemeKind } from './themes.ts';
+import type { LevelSections } from './music.ts';
 
 /**
  * Every level, **in the order a run plays them**.
@@ -144,6 +145,30 @@ export interface LevelRow {
   pickups: readonly PickupEntry[];
   /** Camera distance at which the boss arrives. Everything after it is the fight. */
   bossAt: number;
+  /**
+   * What the music DOES over this level, as a script — in order of `at`, ascending, opening at `0`.
+   *
+   * ⚠️ **`docs/decisions/0158-a-level-says-where-its-sections-open.md`.** Reported: *"can we
+   * rearrange the four sections? or have them different per level as well? some levels kick right
+   * into a surge etc, if we have the exact same timing for each for each it's also going to be a
+   * limiter."* Until 0158 this was three constants in `src/content/music.ts` measured back from
+   * whichever boss a level had, so all seven levels had the same shape by construction.
+   *
+   * ⚠️ **A LIST BESIDE `waves` AND `pickups` RATHER THAN A LADDER**, which is what makes order and
+   * count free: nothing requires the four names, requires them once, or requires them in order. A
+   * level may open at `surge` and drop away.
+   *
+   * ⚠️ **LEVEL-LOCAL, like `waves`, `pickups` and `bossAt`** —
+   * `docs/decisions/0100-a-level-places-its-pickups-too.md`, which is the decision written because
+   * every authored pickup in levels two to seven was placed in the wrong space and culled on the
+   * step it spawned. The origin is added by the caller, never here.
+   *
+   * ⚠️ **AND `bossAt` ENDS THE LAST SECTION, so a script never names the fight.** `boss` and
+   * `bossPeak` are keyed to the boss's HEALTH and not to a distance
+   * (`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`), so they are not things a
+   * script may open — `SectionName` excludes them at the type level.
+   */
+  sections: LevelSections;
   boss: BossKind;
   /**
    * Where this level IS — its backdrop and how it mixes the music.
@@ -1126,6 +1151,27 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       learns where the hull ends. `src/content/bosses.ts` says that is what it is for.
     */
     bossAt: 4270,
+    /*
+      ⚠️ **ALL SEVEN SCRIPTS ARE THE SEED AND NOT YET AN AUTHORING CHOICE** —
+      `docs/decisions/0158-a-level-says-where-its-sections-open.md`. Each is `bossAt` minus the three
+      constants 0158 deleted, so the landing moves nothing a listener can hear and the diff is
+      provable; the differences the ask is actually about are their own change, with their own
+      play-test. **A level edited away from this shape is doing the thing the mechanism is for** —
+      there is nothing to keep in step and no shared row to break.
+
+      ⚠️ **THIS ONE'S `surge` IS THE FIGURE 0131 BOUGHT AND IT IS WORTH NOT BREAKING BY ACCIDENT.**
+      2534 puts level one's crossing at **70.4 s, which is 44 bars exactly**, so the change is heard
+      at the instant the distance is passed rather than up to a bar later
+      (`docs/decisions/0131-the-surge-comes-sooner.md`). That was only ever true of one level while
+      the distance was shared; now it is a property of this script, and it is the one number here
+      that a play-test has already argued for.
+    */
+    sections: [
+      { at: 0, section: 'run' },
+      { at: 1249, section: 'push' },
+      { at: 2534, section: 'surge' },
+      { at: 3627, section: 'approach' },
+    ],
     boss: 'sentinel',
     theme: 'approach',
   },
@@ -1141,6 +1187,12 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     waves: DESCENT,
     pickups: DESCENT_PICKUPS,
     bossAt: 4320,
+    sections: [
+      { at: 0, section: 'run' },
+      { at: 1299, section: 'push' },
+      { at: 2584, section: 'surge' },
+      { at: 3677, section: 'approach' },
+    ],
     boss: 'harrow',
     theme: 'nebula',
   },
@@ -1155,6 +1207,12 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     waves: COILWARD,
     pickups: COILWARD_PICKUPS,
     bossAt: 4270,
+    sections: [
+      { at: 0, section: 'run' },
+      { at: 1249, section: 'push' },
+      { at: 2534, section: 'surge' },
+      { at: 3627, section: 'approach' },
+    ],
     boss: 'lattice',
     theme: 'saurian',
   },
@@ -1169,6 +1227,12 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     waves: SHOAL,
     pickups: SHOAL_PICKUPS,
     bossAt: 4240,
+    sections: [
+      { at: 0, section: 'run' },
+      { at: 1219, section: 'push' },
+      { at: 2504, section: 'surge' },
+      { at: 3597, section: 'approach' },
+    ],
     boss: 'shoalMother',
     theme: 'labyrinth',
   },
@@ -1183,6 +1247,12 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     waves: BATTERIES,
     pickups: BATTERIES_PICKUPS,
     bossAt: 4240,
+    sections: [
+      { at: 0, section: 'run' },
+      { at: 1219, section: 'push' },
+      { at: 2504, section: 'surge' },
+      { at: 3597, section: 'approach' },
+    ],
     boss: 'redoubt',
     theme: 'rime',
   },
@@ -1197,6 +1267,12 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     waves: GAUNTLET,
     pickups: GAUNTLET_PICKUPS,
     bossAt: 4340,
+    sections: [
+      { at: 0, section: 'run' },
+      { at: 1319, section: 'push' },
+      { at: 2604, section: 'surge' },
+      { at: 3697, section: 'approach' },
+    ],
     boss: 'chorus',
     theme: 'mire',
   },
@@ -1211,6 +1287,12 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     waves: EYE,
     pickups: EYE_PICKUPS,
     bossAt: 4460,
+    sections: [
+      { at: 0, section: 'run' },
+      { at: 1439, section: 'push' },
+      { at: 2724, section: 'surge' },
+      { at: 3817, section: 'approach' },
+    ],
     boss: 'axis',
     theme: 'core',
   },

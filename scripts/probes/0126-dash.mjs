@@ -28,7 +28,9 @@ export const PROBES = [
     guard: 'THE RUNG IS THE GAME’S ANSWER, never a table the dashboard keeps',
     edit: {
       path: 'rig/transport.ts',
-      find: '  const rung = rungAt(kind, second, fightSeconds, at);',
+      // ⚠️ RE-ANCHORED BY 0158: the argument is the level's own script now, not a shared set of
+      // three distances. What the probe breaks is unchanged.
+      find: '  const rung = rungAt(kind, second, fightSeconds, sections);',
       replace: "  const rung = second < 35 ? 'run' : second < 120 ? 'push' : 'boss';",
     },
   },

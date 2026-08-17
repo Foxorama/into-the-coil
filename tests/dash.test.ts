@@ -7,7 +7,6 @@ import {
   DESK_CEILING,
   LOUDEST_SHIPPED,
   SECTION_FLOOR_UNITS,
-  SECTION_ORDER,
   UNITS_PER_SECOND,
   cueLines,
   deskAlone,
@@ -23,15 +22,11 @@ import {
 import {
   AURA_LAYERS,
   BAR_SECONDS,
-  BOSS_APPROACH_UNITS,
   LAYER_BARS,
   MUSIC_LADDER,
   MUSIC_LAYERS,
   MUSIC_LEVELS,
-  PUSH_UNITS,
-  SECTION_UNITS,
   STEPS_PER_BEAT,
-  SURGE_UNITS,
   type MusicLayer,
 } from '../src/content/music.ts';
 import { THEME_KINDS, mixOf } from '../src/content/themes.ts';
@@ -87,7 +82,7 @@ describe('the dashboard answers the game’s questions', () => {
         expect(
           momentOf(kind, second, FIGHT, 0).rung,
           `${kind} at ${second.toFixed(1)}s: the dashboard and musicLevelFor disagree about the rung`,
-        ).toBe(musicLevelFor(camera, bossAt, inFight, health));
+        ).toBe(musicLevelFor(camera, inFight, LEVELS[kind].sections, health));
       }
     }
   });
@@ -412,13 +407,15 @@ describe('0138 — a section boundary is a distance you can drag', () => {
     /*
       ⚠️ **THE FIRST THING TO HOLD, BECAUSE EVERYTHING ELSE IN THIS FILE DEPENDS ON IT.** Nine
       assertions above call `momentOf` and `marksOf` with four arguments and mean *the game as
-      shipped*; a default that had drifted from `SECTION_UNITS` would make all of them quietly about
-      something else. And `SECTION_UNITS` is composed of the three constants rather than a copy of
-      them, which is what this compares against.
+      shipped*; a default that had drifted would make all of them quietly about something else.
+
+      ⚠️ **AND THE DEFAULT IS THE LEVEL'S OWN NOW, WHICH IS WHY THIS RUNS OVER ALL SEVEN** — 0158.
+      It used to be `SECTION_UNITS`, one answer for every level, so a single comparison stood for the
+      lot; a script is per level, so a default that read the wrong level's would be invisible to any
+      one of them.
     */
-    expect(SECTION_UNITS).toEqual({ push: PUSH_UNITS, surge: SURGE_UNITS, approach: BOSS_APPROACH_UNITS });
     for (const kind of LEVEL_KINDS) {
-      expect(marksOf(kind, FIGHT), `${kind}`).toEqual(marksOf(kind, FIGHT, SECTION_UNITS));
+      expect(marksOf(kind, FIGHT), `${kind}`).toEqual(marksOf(kind, FIGHT, LEVELS[kind].sections));
     }
   });
 
@@ -435,13 +432,17 @@ describe('0138 — a section boundary is a distance you can drag', () => {
       over that since 0126 and this is its dragged twin.
     */
     const kind = 'approach';
-    const { bossAt } = LEVELS[kind];
-    // Each one is a legal place for `surge` — between `approach` and `push`, a bar clear of both.
-    // Dragging it PAST a neighbour is a different claim and `NO DRAG CAN PUT THE THREE OUT OF ORDER`
-    // is where it is held; here the boundary is asked to land where it was put.
-    for (const surge of [2900, 2400, 1200, 750]) {
-      const at = { ...SECTION_UNITS, surge };
-      const crossesAt = (bossAt - surge) / UNITS_PER_SECOND;
+    const { bossAt, sections } = LEVELS[kind];
+    /*
+      ⚠️ **INDEX 2 IS `surge` AND THE DISTANCE IS NOW *INTO THE LEVEL* RATHER THAN *BACK FROM THE
+      BOSS*** — 0158. Each value below is a legal place for it: between `push` and `approach`, a bar
+      clear of both. Dragging it PAST a neighbour is a different claim and `NO DRAG CAN REORDER A
+      SCRIPT` is where that is held; here the boundary is asked to land where it was put.
+    */
+    for (const surge of [1400, 2000, 2534, 3400]) {
+      const at = dragSection(sections, 2, surge, bossAt);
+      expect(at[2]!.at, `surge asked for ${surge} was clamped, so this is not testing a landing`).toBe(surge);
+      const crossesAt = surge / UNITS_PER_SECOND;
       const mark = marksOf(kind, FIGHT, at).find((m) => m.rung === 'surge');
       expect(mark, `surge at ${surge} units never happens`).toBeDefined();
       // The camera is walked at a sixty-fourth of a second, so the mark is the first sample past it.
@@ -458,39 +459,52 @@ describe('0138 — a section boundary is a distance you can drag', () => {
       boundary while the passes table went on describing the shipped one would be answering the
       question with the old number still on screen.
     */
-    const wide = layerSpans('approach', FIGHT, { ...SECTION_UNITS, surge: 3000 }).find((s) => s.layer === 'counter')!;
-    const narrow = layerSpans('approach', FIGHT, { ...SECTION_UNITS, surge: 800 }).find((s) => s.layer === 'counter')!;
+    const { bossAt, sections } = LEVELS.approach;
+    // Earlier into the level is a LONGER surge now: the section runs from here to `approach`.
+    const wide = layerSpans('approach', FIGHT, dragSection(sections, 2, 1400, bossAt)).find((s) => s.layer === 'counter')!;
+    const narrow = layerSpans('approach', FIGHT, dragSection(sections, 2, 3400, bossAt)).find((s) => s.layer === 'counter')!;
     expect(narrow.longest, 'a surge dragged later gives counter less room, and the table has to say so').toBeLessThan(
       wide.longest,
     );
   });
 
-  it('NO DRAG CAN PUT THE THREE OUT OF ORDER, or make one shorter than the bar its ramp lands on', () => {
+  it('NO DRAG CAN REORDER A SCRIPT, move entry zero, or make a section shorter than its own ramp', () => {
     /*
-      ⚠️ **THEY ARE AN ORDERING AND NOT THREE NUMBERS.** `musicLevelFor` tests them in order, so
-      `push` dragged past `surge` does not make a long `push` — it deletes `surge` from the level
-      silently, and the strip would go on drawing a section the ladder no longer reaches.
+      ⚠️ **A SCRIPT IS AN ORDERING AND NOT A SET OF NUMBERS.** `musicLevelFor` walks it and breaks at
+      the first entry the camera has not reached, so an entry dragged past the next one does not make
+      a long section — it deletes the next one from the level silently, and the strip would go on
+      drawing a section the ladder no longer reaches.
 
       ⚠️ **AND THE FLOOR IS ONE BAR, IN THE PLAYER'S UNITS.** 0117 starts the ramp on the next bar
       line after the crossing, so a section narrower than a bar can be entered and left before its
       own ramp begins: two rung changes, nothing heard between them.
+
+      ⚠️ **ENTRY `0` IS THE THIRD CLAIM AND IT IS NEW** — 0158. A level's music starts where the
+      level starts, and a first entry dragged off `0` would leave the opening stretch answered by
+      `musicLevelFor`'s fallback rather than by the level's own script.
     */
-    const { bossAt } = LEVELS.approach;
-    for (const which of SECTION_ORDER) {
-      for (const units of [-9000, -1, 0, 40, 700, 1700, 3000, 6000, 99999]) {
-        const at = dragSection(SECTION_UNITS, which, units, bossAt);
+    const { bossAt, sections } = LEVELS.approach;
+    for (let index = 0; index < sections.length; index++) {
+      for (const units of [-9000, -1, 0, 40, 700, 1700, 3000, 4300, 6000, 99999]) {
+        const at = dragSection(sections, index, units, bossAt);
         // A bar of scroll is 57.6 units and binary floating point subtracts it to 57.59999999999991.
         const floor = SECTION_FLOOR_UNITS - 1e-6;
-        expect(at.approach, `${which} → ${units}`).toBeGreaterThanOrEqual(floor);
-        expect(at.surge - at.approach, `${which} → ${units}: surge on top of approach`).toBeGreaterThanOrEqual(floor);
-        expect(at.push - at.surge, `${which} → ${units}: push on top of surge`).toBeGreaterThanOrEqual(floor);
-        expect(at.push, `${which} → ${units}: push past the whole level`).toBeLessThanOrEqual(
+        const why = `entry ${index} → ${units}`;
+        expect(at.length, `${why} changed how many sections there are`).toBe(sections.length);
+        expect(at[0]!.at, `${why} moved the opening section off zero`).toBe(0);
+        for (let i = 1; i < at.length; i++) {
+          expect(at[i]!.at - at[i - 1]!.at, `${why}: entry ${i} sits on top of the one before it`).toBeGreaterThanOrEqual(
+            floor,
+          );
+        }
+        expect(at[at.length - 1]!.at, `${why}: the last section runs past the whole level`).toBeLessThanOrEqual(
           bossAt - SECTION_FLOOR_UNITS + 1e-6,
         );
-        // The two it was not asked to move are left exactly where they were.
-        for (const other of SECTION_ORDER) {
-          if (other !== which) expect(at[other], `${which} → ${units} moved ${other}`).toBe(SECTION_UNITS[other]);
-        }
+        // Every entry it was not asked to move is left exactly where it was, name and all.
+        at.forEach((entry, i) => {
+          expect(entry.section, `${why} renamed entry ${i}`).toBe(sections[i]!.section);
+          if (i !== index) expect(entry.at, `${why} moved entry ${i}`).toBe(sections[i]!.at);
+        });
       }
     }
   });
@@ -499,16 +513,23 @@ describe('0138 — a section boundary is a distance you can drag', () => {
     expect(SECTION_FLOOR_UNITS).toBeCloseTo(BAR_SECONDS * SCROLL_PER_STEP * STEPS_PER_SECOND, 10);
   });
 
-  it('NOTHING UNDER src/ PASSES ITS OWN SECTION DISTANCES — the shape of a level is decided in one place', () => {
+  it('EVERY CALL UNDER src/ PASSES THE LEVEL’S OWN SCRIPT — the shape of a level is decided in one place', () => {
     /*
-      ⚠️ **HELD ON `gainOf`'s OWN TERMS** (0126). The fifth parameter exists so `rig/dash.ts` can
-      drag a boundary; a shipped call site that supplied its own would make where a section begins a
-      thing decided in two places, and `SECTION_UNITS` would stop being the whole story of a level's
-      shape. Its own declaration in `src/app/music.ts` is the one permitted mention.
+      ⚠️ **HELD ON `gainOf`'s OWN TERMS** (0126), AND IT IS 0138's GUARD INVERTED RATHER THAN
+      DROPPED. While the three distances were shared and `musicLevelFor` defaulted them, the claim
+      could be *nobody under `src/` passes a fifth argument at all* — so this counted arguments.
+      0158 makes the script a required argument that every call site must supply, so counting proves
+      nothing and the EXPRESSION is what carries the claim: a shipped caller that built its own list
+      would make where a section begins a thing decided in two places, and `src/content/levels.ts`
+      would stop being the whole story of a level's shape.
 
-      ⚠️ **IT COUNTS ARGUMENTS RATHER THAN LOOKING FOR A WORD**, which is the distinction 0116 paid
-      for: a scan that only checked `SECTION_UNITS` appeared somewhere would be green over a file
+      ⚠️ **IT READS THE ARGUMENT RATHER THAN LOOKING FOR A WORD**, which is the distinction 0116 paid
+      for: a scan that only checked `sections` appeared somewhere in the file would be green over one
       that imported it and passed something else.
+
+      ⚠️ **AND IT IS A STRICTER CLAIM THAN THE ONE IT REPLACES.** *At most four arguments* was
+      satisfied by any call that stayed short; this names the only expression allowed, so a literal,
+      a local, or another level's row all fail.
     */
     const offenders: string[] = [];
     const walk = (dir: string): void => {
@@ -518,8 +539,12 @@ describe('0138 — a section boundary is a distance you can drag', () => {
         else if (entry.name.endsWith('.ts')) {
           const source = readFileSync(resolve(root, path), 'utf8');
           for (const args of callArgsOf(source, 'musicLevelFor')) {
-            // Its own declaration reads as five; every call site may name at most four.
-            if (args.length > 4 && path !== 'src/app/music.ts') offenders.push(`${path} (${args.length} arguments)`);
+            // Its own declaration reads as four named parameters; a call site names three or four.
+            if (path === 'src/app/music.ts') continue;
+            const script = args[2]?.trim() ?? '';
+            if (!/^[A-Za-z_$][\w$.]*\.sections$/.test(script)) {
+              offenders.push(`${path} (passes \`${script}\`)`);
+            }
           }
         }
       }

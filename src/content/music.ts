@@ -389,9 +389,14 @@ export const AURA_FAR_UNITS = 145;
  * needs to start about 15-30secs into the start of a level and then amp up until you beat the boss."*
  *
  * ⚠️ **720 UNITS IS TWENTY SECONDS**, at the 36 units a second the camera covers — the middle of the
- * range asked for, and a distance rather than a timer like everything else this project paces
- * (`BOSS_APPROACH_UNITS` has the argument). A level authored longer therefore spends longer building,
- * which is the behaviour a fixed timer would not have.
+ * range asked for, and a distance rather than a timer like everything else this project paces. A
+ * level authored longer therefore spends longer building, which is the behaviour a fixed timer would
+ * not have.
+ *
+ * ⚠️ **AND THAT IS STILL TRUE OF THE AURA WHERE IT STOPPED BEING TRUE OF THE SECTIONS** —
+ * `docs/decisions/0158-a-level-says-where-its-sections-open.md`. The build is measured from the
+ * level's start and runs to the boss, so it stretches with `bossAt`; a level's SECTIONS are now
+ * authored positions and do not. The two used to share the argument and no longer do.
  *
  * ⚠️ **THE CEILING IS 0.55 AND THE REASON IS THAT THE FIGHT MUST STILL HAVE SOMEWHERE TO GO.** If the
  * level-long build reached 1 the boss would arrive at the volume it had been at for a minute, and
@@ -593,55 +598,6 @@ export const MUSIC_GAIN = 0.46;
 export const MUSIC_DRIVE = 0.3;
 
 /**
- * How far into a level the music starts listening for the boss, in world units.
- *
- * ⚠️ **A distance rather than a timer**, like everything else this project paces — so it means the
- * same thing on a device that drops frames, and so a level that is retuned carries it. The approach
- * begins about twelve seconds of scroll before the boss arrives, which is long enough to be a build
- * and short enough that it is clearly about the boss rather than about the level.
- */
-export const BOSS_APPROACH_UNITS = 643;
-
-/**
- * How far from the boss the level's two middle rungs open, in world units.
- *
- * ── THE SHAPE OF A LEVEL, AS TWO DISTANCES ──────────────────────────────────────────────────────
- *
- * ⚠️ **`docs/decisions/0102-the-music-goes-somewhere.md`.** A level is about 6,350 units to its boss
- * and the camera covers 36 a second, so these divide a 176-second level into roughly a minute of
- * `run`, fifty seconds of `push`, fifty-five of `surge` and the twelve `BOSS_APPROACH_UNITS` already
- * bought. **Something changes about once a minute**, which is the pace a player notices without
- * being able to point at it.
- *
- * ⚠️ **Measured from the BOSS backwards, like `BOSS_APPROACH_UNITS`**, so a longer level spends
- * longer at `run` rather than compressing the build — and a level with no boss at all
- * (`Number.POSITIVE_INFINITY`, which is what a fixture uses) stays at `run` for ever, which is
- * correct rather than accidental.
- *
- * ⚠️ **Nothing asserts these values**, on `SHIP_SPEED`'s terms: they are a hand's guess at a pace
- * nobody has flown. What `tests/music.test.ts` holds is that they are ordered, that each is a real
- * stretch of seconds rather than a flicker, and that every rung is reachable.
- *
- * ── AND THEY HAVE BEEN FLOWN NOW, WHICH MOVED ONE OF THEM ───────────────────────────────────────
- *
- * ⚠️ **`docs/decisions/0131-the-surge-comes-sooner.md`.** Reported: *"we need to bring the surge
- * earlier by about 14.2 secs — bring it in after a downnote, it just needs to happen sooner."* So
- * `SURGE_UNITS` is 1736 where it was 1221: level one crosses it at **70.4 s** rather than 84.7, and
- * `push` gives up the fourteen seconds rather than the level getting longer.
- *
- * ⚠️ **ONLY ONE OF THE TWO MOVES, WHICH IS THE DIFFERENCE FROM
- * `docs/decisions/0125-the-build-starts-sooner.md`.** 0125 shifted all three distances by the same
- * 263 units because the ask was about *the changes*; this one names a section, so the spacing between
- * the rungs is deliberately not preserved.
- *
- * ⚠️ **70.4 s IS 44 BARS EXACTLY, AND THAT IS THE *downnote* HALF OF THE ASK.** 0117 already lands
- * the ramp on the next bar line whatever is crossed, so a rung change is never heard mid-bar; what
- * this buys on top is that level one's CROSSING is on a bar too, so the change is heard at the
- * instant the distance is passed rather than up to 1.6 s later. It can only ever be true of one
- * level — seven `bossAt` values share these two distances — and level one is the one every report has
- * been about.
- */
-/**
  * How much of a boss's health has to be gone before the music reaches its wall of sound.
  *
  * ⚠️ **Half, and it is a share rather than a phase** — 0111 gives each boss its own phase table, so
@@ -653,36 +609,60 @@ export const BOSS_APPROACH_UNITS = 643;
  */
 export const BOSS_PEAK_HEALTH = 0.78;
 
-export const PUSH_UNITS = 3021;
-export const SURGE_UNITS = 1736;
+/**
+ * A rung a level's script may open a section with.
+ *
+ * ⚠️ **`MusicLevel`'s OWN NAMES, through `Extract`**, so a rung renamed in `MUSIC_LEVELS` fails to
+ * compile here rather than leaving a script keyed on a string nobody answers to —
+ * `docs/decisions/0016-a-hub-enumerates-kinds.md`. It is a closed union so the desk and the guards
+ * can key on it, and **nothing else about it is a ladder**: 0158 makes order and count free, so a
+ * level may open at `surge`, drop to `run`, and reach `push` twice.
+ *
+ * ⚠️ **`calm` is not here and `boss`/`bossPeak` are not either.** `calm` is the title screen's, and
+ * the fight's two rungs are keyed to the boss's HEALTH rather than to a distance
+ * (`docs/decisions/0113-there-is-one-composition-and-seven-levels.md`), so neither is a thing a
+ * distance can open. A script that could name them would be offering a control over something a
+ * distance does not decide — `docs/decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md`
+ * refused a handle on exactly those two for the same reason.
+ */
+export type SectionName = Extract<MusicLevel, 'run' | 'push' | 'surge' | 'approach'>;
+
+/** One section of a level's music, and the level-local distance it opens at. */
+export interface SectionEntry {
+  /**
+   * Where it opens, in the same **level-local** distance space as `bossAt`
+   * — `docs/decisions/0100-a-level-places-its-pickups-too.md`.
+   */
+  readonly at: number;
+  readonly section: SectionName;
+}
 
 /**
- * Where a level's three middle rungs open, gathered as one thing.
+ * What a level's music DOES over its own length, as a script.
  *
- * ── WHY THE THREE DISTANCES NEEDED A NAME BETWEEN THEM ──────────────────────────────────────────
+ * ── THE THREE SHARED DISTANCES, AND WHY THEY ARE GONE ───────────────────────────────────────────
  *
- * ⚠️ **`docs/decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md`.** Reported, about the
- * dashboard: *"I'd love it if we could make the run section that has the push, surge, approach
- * sections slideable so that I can drag them to start sooner or end sooner and see what effect that
- * has."* Every previous answer to *where should `surge` open* — 0102, 0125, 0131 — was a number typed
- * into this file, shipped, and judged a play-test later; three rounds of that moved one constant.
+ * ⚠️ **`docs/decisions/0158-a-level-says-where-its-sections-open.md`.** Reported: *"can we rearrange
+ * the four sections? or have them different per level as well? some levels kick right into a surge
+ * etc, if we have the exact same timing for each for each it's also going to be a limiter."* This
+ * replaces `PUSH_UNITS`, `SURGE_UNITS` and `BOSS_APPROACH_UNITS` — three numbers measured back from
+ * the boss and shared by all seven levels. **Their arguments are not restated here**: 0102 chose
+ * them, 0125 shifted all three and 0131 moved one, and each of those decisions is where its own
+ * reasoning lives — `docs/decisions/0029-the-tracked-record-is-the-record.md`.
  *
- * ⚠️ **NOT ONE NUMBER IS RESTATED HERE, WHICH IS THE ONLY REASON THIS IS A GATHERING AND NOT A SECOND
- * COPY** — `docs/decisions/0029-the-tracked-record-is-the-record.md`. The three constants above stay
- * exactly where they were and keep every argument written over them; this composes them, so a hand
- * that retunes one retunes this by construction and there is nothing to keep in step.
+ * ⚠️ **AND IT GIVES UP 0102's SCALING ON PURPOSE, WHICH IS THE ONE THING TO KNOW BEFORE RETUNING A
+ * `bossAt`.** *"Measured from the boss backwards, so a longer level spends longer at `run`"* is no
+ * longer true: a script is level-local and ascending, so a level made longer now spends the extra
+ * time in its **last** section rather than its first. 0158 has the measurement that says this costs
+ * almost nothing — the seven `bossAt` values span 220 units, which is 6.1 seconds across the whole
+ * roster — and `tests/music.test.ts` holds every gap to a floor and a ceiling in seconds, over all
+ * seven levels rather than over level one.
  *
- * ⚠️ **AND THE KEYS ARE `MusicLevel`'s OWN, through `Extract`**, so a rung renamed in
- * `MUSIC_LEVELS` fails to compile here rather than leaving a record keyed on a string nobody
- * answers to — `docs/decisions/0016-a-hub-enumerates-kinds.md`.
+ * ⚠️ **ASCENDING, AND THE FIRST ENTRY IS AT `0`**, like `waves` and `pickups` beside it in
+ * `src/content/levels.ts`. `musicLevelFor` walks it in order and takes the last entry the camera has
+ * reached, so an out-of-order script would silently hide a section rather than reorder one.
  */
-export type SectionUnits = Readonly<Record<Extract<MusicLevel, 'push' | 'surge' | 'approach'>, number>>;
-
-export const SECTION_UNITS: SectionUnits = {
-  push: PUSH_UNITS,
-  surge: SURGE_UNITS,
-  approach: BOSS_APPROACH_UNITS,
-};
+export type LevelSections = readonly SectionEntry[];
 
 /**
  * The key. Every pitched note is a ratio off this, so the whole piece transposes from one number.
@@ -946,9 +926,13 @@ export interface MusicVoice {
   moment a level began until 430 units before the boss, so nine tenths of every level was one
   arrangement of three layers over a four-bar loop. There was nothing to *"progress"* through.
 
-  ⚠️ **`push` and `surge` are the two new ones and they are DISTANCES**, like `BOSS_APPROACH_UNITS`
-  and like everything else this project paces — so they mean the same thing on a device that drops
-  frames and they carry to a level that is retuned.
+  ⚠️ **`push` and `surge` are the two new ones and they are DISTANCES**, like `bossAt` and like
+  everything else this project paces — so they mean the same thing on a device that drops frames.
+
+  ⚠️ **AND WHERE EACH ONE OPENS IS THE LEVEL'S OWN ANSWER NOW** —
+  `docs/decisions/0158-a-level-says-where-its-sections-open.md`. This list is the closed union of
+  what a level's `sections` script may name (`SectionName` narrows it); it is **not** an order, and
+  nothing requires a level to reach these in this sequence or at all.
 */
 export const MUSIC_LEVELS = ['calm', 'run', 'push', 'surge', 'approach', 'boss', 'bossPeak'] as const;
 
@@ -2317,8 +2301,9 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
     ⚠️ **`docs/decisions/0114-the-fight-is-a-different-piece.md`.** Reported: *"the music that kicks
     in at 1.32 needs to kick in around 42 secs and then we need a different additional accompaniment
     kicking in around 1.32 on top of the current change in music."* Two asks in one sentence: move
-    what arrives, and then put something NEW where it used to be. The first is `PUSH_UNITS`; this is
-    the second.
+    what arrives, and then put something NEW where it used to be. The first is where `push` opens —
+    a level's own, since `docs/decisions/0158-a-level-says-where-its-sections-open.md`; this is the
+    second.
 
     ⚠️ **A COUNTER-MELODY AND NOT A THICKER `call`.** *"Additional accompaniment"* is a part, not a
     gain — so this is a line with its own shape that fits in `call`'s gaps. `call` states a phrase and
@@ -2486,10 +2471,12 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
     boss then added was one melody over a bed that had been getting fuller for three minutes. A rung
     that opens a bell over the last twelve seconds is what turns the next one into a release.
 
-    ⚠️ **A bell and not a riser, because a riser has a length and this has a distance.**
-    `BOSS_APPROACH_UNITS` is measured in world units and a player who backs off spends longer in it —
-    so anything shaped like a one-shot sweep would finish early and leave silence where the tension
-    was. A figure that repeats can be in the approach for as long as the approach lasts.
+    ⚠️ **A bell and not a riser, because a riser has a length and this has a distance.** The approach
+    runs from wherever the level's script opens it to wherever its boss is
+    (`docs/decisions/0158-a-level-says-where-its-sections-open.md`), both in world units, and a
+    player who backs off spends longer in it — so anything shaped like a one-shot sweep would finish
+    early and leave silence where the tension was. A figure that repeats can be in the approach for
+    as long as the approach lasts, **which is now a length each level chooses.**
   */
   toll: [
     {

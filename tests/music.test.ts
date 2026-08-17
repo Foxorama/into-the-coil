@@ -1,13 +1,10 @@
-import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
+import { LEVELS, LEVEL_KINDS, type LevelKind } from '../src/content/levels.ts';
 import { BANDS, bandEnergy, spectrum } from './spectrum.ts';
 import { describe, expect, it } from 'vitest';
 
 import {
   BAR_SECONDS,
   BEAT_SECONDS,
-  BOSS_APPROACH_UNITS,
-  PUSH_UNITS,
-  SURGE_UNITS,
   LAYER_BARS,
   PHRASE_SECONDS,
   TITLE_ONLY,
@@ -500,16 +497,77 @@ describe('how far up the ladder a run is', () => {
    */
   const BOSS_AT = LEVELS[LEVEL_KINDS[0]!]!.bossAt;
 
+  /** Level one's own script, which is what the assertions about a single level ask with. */
+  const ONE = LEVELS[LEVEL_KINDS[0]!]!.sections;
+
+  /** World units a second, derived from the two constants that decide it rather than typed. */
+  const PER_SECOND = SCROLL_PER_STEP * STEPS_PER_SECOND;
+
   it('is cruising while the boss is far away', () => {
-    expect(musicLevelFor(0, BOSS_AT, false)).toBe('run');
-    // ⚠️ 0102: `run` is the first minute rather than the whole level, so *far away* is now measured
-    // against `PUSH_UNITS`. A level with no boss at all stays here for ever, which is what a fixture
-    // with an infinite `bossAt` relies on.
-    expect(musicLevelFor(BOSS_AT - PUSH_UNITS - 1, BOSS_AT, false)).toBe('run');
-    expect(musicLevelFor(0, Number.POSITIVE_INFINITY, false)).toBe('run');
+    expect(musicLevelFor(0, false, ONE)).toBe('run');
+    // ⚠️ 0102: `run` is the first minute rather than the whole level, so *far away* is measured
+    // against where the second section opens. A script with one entry stays here for ever, which is
+    // what `tests/world.ts`'s `NO_SECTIONS` relies on.
+    expect(musicLevelFor(ONE[1]!.at - 1, false, ONE)).toBe('run');
+    expect(musicLevelFor(9_999_999, false, [{ at: 0, section: 'run' }])).toBe('run');
   });
 
-  it('0102 — and it climbs FOUR times inside a level, where it used to climb once', () => {
+  it('0158 — and EVERY level says for itself where its sections open, in SECONDS', () => {
+    /*
+      `docs/decisions/0158-a-level-says-where-its-sections-open.md`. Reported: *"can we rearrange the
+      four sections? or have them different per level as well? some levels kick right into a surge
+      etc, if we have the exact same timing for each for each it's also going to be a limiter."*
+
+      ⚠️ **THIS TABLE IS THE ONE THING IN THE SUITE THAT WOULD HAVE CAUGHT THE LANDING MOVING A
+      SOUND.** The seed was `bossAt` minus three shared constants, and the whole claim of that PR was
+      that no level's music changed — a claim nothing else here could have checked, because every
+      other guard is about the ladder's shape rather than about where a level reaches it.
+
+      ⚠️ **IT IS NOT A COPY OF `src/content/levels.ts`.** What is authored there is a DISTANCE; this
+      is the second a player hears the change, which is the authored number pushed through `bossAt`,
+      `SCROLL_PER_STEP` and `STEPS_PER_SECOND` and asked of `musicLevelFor` itself —
+      `docs/decisions/0027-measure-the-picture-not-the-model.md`. **Moving a boundary is meant to
+      fail this**, and the number it prints is the number to paste back after a play-test has argued
+      for it.
+    */
+    const OPENS_AT: Record<LevelKind, readonly (readonly [string, number])[]> = {
+      approach: [['run', 0.0], ['push', 34.69], ['surge', 70.39], ['approach', 100.75]],
+      descent: [['run', 0.0], ['push', 36.08], ['surge', 71.78], ['approach', 102.14]],
+      coilward: [['run', 0.0], ['push', 34.69], ['surge', 70.39], ['approach', 100.75]],
+      shoal: [['run', 0.0], ['push', 33.86], ['surge', 69.56], ['approach', 99.92]],
+      batteries: [['run', 0.0], ['push', 33.86], ['surge', 69.56], ['approach', 99.92]],
+      gauntlet: [['run', 0.0], ['push', 36.64], ['surge', 72.33], ['approach', 102.69]],
+      eye: [['run', 0.0], ['push', 39.97], ['surge', 75.67], ['approach', 106.03]],
+    };
+
+    for (const kind of LEVEL_KINDS) {
+      const { sections } = LEVELS[kind]!;
+      const expected = OPENS_AT[kind]!;
+      expect(sections.length, `${kind} has ${sections.length} sections and the table names ${expected.length}`).toBe(
+        expected.length,
+      );
+      sections.forEach((entry, i) => {
+        const [name, second] = expected[i]!;
+        expect(entry.section, `${kind} section ${i} is ${entry.section} and not ${name}`).toBe(name);
+        expect(entry.at / PER_SECOND, `${kind}'s ${name} opens at a different second`).toBeCloseTo(second, 1);
+        /*
+          ⚠️ **ASKED OF `musicLevelFor` AND NOT OF THE TABLE**, which is what makes this a check of
+          the lookup rather than of arithmetic this file did itself. On the unit the section opens
+          the answer is that section; one unit earlier it is the one before — the `<=` boundary,
+          held at both sides.
+        */
+        expect(musicLevelFor(entry.at, false, sections), `${kind} is not at ${name} where ${name} opens`).toBe(name);
+        if (i > 0) {
+          expect(
+            musicLevelFor(entry.at - 1, false, sections),
+            `${kind} reaches ${name} a unit early`,
+          ).toBe(expected[i - 1]![0]);
+        }
+      });
+    }
+  });
+
+  it('0102 — and every section of every level is a stretch of it rather than a flicker', () => {
     /*
       `docs/decisions/0102-the-music-goes-somewhere.md`. Reported twice: *"the ingame background music
       doesn't change and increase in tempo as you progress through the level"*, then *"still flat and
@@ -519,39 +577,78 @@ describe('how far up the ladder a run is', () => {
       four-bar loop — and every guard in this file was green over it, because they were all about the
       LADDER's shape and none of them about how much of a level any rung covers.
 
-      ⚠️ **Asserted in SECONDS, which is the unit the report is in.** *A distance of 4,200* is the
-      model talking to itself; what the player experiences is how long it is before something changes,
-      and nothing here reads `PUSH_UNITS` or `SURGE_UNITS` against itself —
-      `docs/decisions/0027-measure-the-picture-not-the-model.md`.
-    */
-    const at = (units: number): (typeof MUSIC_LEVELS)[number] => musicLevelFor(BOSS_AT - units, BOSS_AT, false);
-    expect(at(PUSH_UNITS)).toBe('push');
-    expect(at(SURGE_UNITS)).toBe('surge');
-    expect(at(BOSS_APPROACH_UNITS)).toBe('approach');
+      ⚠️ **IT RUNS OVER ALL SEVEN LEVELS NOW, WHERE IT RAN OVER ONE** — 0158. The three distances
+      were shared, so level one's spans were every level's spans and asking about one was asking
+      about all; a script is per level, so this is seven independent questions. **It is the guard
+      that catches a hand-authored four-second `push`** when the differences the ask is about start
+      being written.
 
-    /** How long the run spends at each rung, in seconds, from the level's start to its boss. */
-    const perSecond = SCROLL_PER_STEP * STEPS_PER_SECOND;
-    const spans = [
-      ['run', (BOSS_AT - PUSH_UNITS) / perSecond],
-      ['push', (PUSH_UNITS - SURGE_UNITS) / perSecond],
-      ['surge', (SURGE_UNITS - BOSS_APPROACH_UNITS) / perSecond],
-      ['approach', BOSS_APPROACH_UNITS / perSecond],
-    ] as const;
-    for (const [name, seconds] of spans) {
-      /*
-        ⚠️ **Ten seconds is the floor and it is not arbitrary**: `RAMP_SECONDS` is 1.6, so a rung
-        shorter than a handful of those is a gain ramp the player hears as a wobble rather than as a
-        change. A rung nobody spends time at is a rung that is not in the music.
-      */
-      expect(seconds, `the music spends ${seconds.toFixed(0)}s at ${name}, which is not a stretch of a level`).toBeGreaterThan(
-        10,
-      );
-      /*
-        ⚠️ **And the ceiling is what the report is about.** Before this, `run` covered 160 seconds of a
-        176-second level; anything over about a minute and a half is *a level with one arrangement in
-        it* however many rungs the table has.
-      */
-      expect(seconds, `the music spends ${seconds.toFixed(0)}s at ${name} without changing`).toBeLessThan(90);
+      ⚠️ **Asserted in SECONDS, which is the unit the report is in** —
+      `docs/decisions/0027-measure-the-picture-not-the-model.md`.
+
+      ⚠️ **AND THE CAMERA IS WALKED RATHER THAN THE TABLE READ, WHICH A PROBE IS WHAT FOUND.** The
+      first version of this computed each span from `entry.at` and `bossAt` and never asked
+      `musicLevelFor` anything — so `node scripts/prove-guard.mjs 0102`, which collapses the walk so
+      that a level never leaves the section it opens at, **left it green**. A guard about how long a
+      level spends at a rung has to measure what the game answers, not what the content says: the
+      table it was reading is the same table the assertion is about, which is precisely the shape
+      0027 says proves only that the code agrees with itself.
+    */
+    for (const kind of LEVEL_KINDS) {
+      const { sections, bossAt } = LEVELS[kind]!;
+      /** Every stretch the GAME answers, walked a unit at a time from the level's start to its boss. */
+      const walked: { section: string; from: number; to: number }[] = [];
+      for (let units = 0; units < bossAt; units++) {
+        const here = musicLevelFor(units, false, sections);
+        const last = walked[walked.length - 1];
+        if (last !== undefined && last.section === here) last.to = units;
+        else walked.push({ section: here, from: units, to: units });
+      }
+      expect(
+        walked.map((s) => s.section),
+        `${kind} reaches ${walked.length} sections and its script names ${sections.length}`,
+      ).toEqual(sections.map((e) => e.section));
+
+      walked.forEach((stretch, i) => {
+        const ends = i + 1 < walked.length ? walked[i + 1]!.from : bossAt;
+        const seconds = (ends - stretch.from) / PER_SECOND;
+        const where = `${kind}'s ${stretch.section}`;
+        /*
+          ⚠️ **Ten seconds is the floor and it is not arbitrary**: `RAMP_SECONDS` is 1.6, so a rung
+          shorter than a handful of those is a gain ramp the player hears as a wobble rather than as
+          a change. A rung nobody spends time at is a rung that is not in the music.
+        */
+        expect(seconds, `${where} lasts ${seconds.toFixed(0)}s, which is not a stretch of a level`).toBeGreaterThan(10);
+        /*
+          ⚠️ **And the ceiling is what the report is about.** Before 0102, `run` covered 160 seconds
+          of a 176-second level; anything over about a minute and a half is *a level with one
+          arrangement in it* however many sections the script has.
+        */
+        expect(seconds, `${where} lasts ${seconds.toFixed(0)}s without changing`).toBeLessThan(90);
+      });
+    }
+  });
+
+  it('0158 — and a script is ascending, opens at zero, and never names the fight', () => {
+    /*
+      ⚠️ **`musicLevelFor` BREAKS AT THE FIRST ENTRY THE CAMERA HAS NOT REACHED**, so an out-of-order
+      script does not reorder a level's music — it HIDES a section, silently, with every readout on
+      the dashboard still drawing the section the ladder no longer reaches. That is the failure
+      `docs/decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md` clamped a drag against,
+      and it is now a property of authored content as well as of a drag.
+
+      ⚠️ **AND OPENING AT `0` IS WHAT MAKES THE FALLBACK IN `musicLevelFor` UNREACHABLE.** That
+      function has to answer something before it has read an entry; a level whose first section
+      opened late would be answered by that line rather than by its own script.
+    */
+    for (const kind of LEVEL_KINDS) {
+      const { sections, bossAt } = LEVELS[kind]!;
+      expect(sections.length, `${kind} has no music script`).toBeGreaterThan(0);
+      expect(sections[0]!.at, `${kind}'s music does not start where the level does`).toBe(0);
+      for (let i = 1; i < sections.length; i++) {
+        expect(sections[i]!.at, `${kind}'s script is not ascending at entry ${i}`).toBeGreaterThan(sections[i - 1]!.at);
+      }
+      expect(sections[sections.length - 1]!.at, `${kind}'s last section opens at or past its boss`).toBeLessThan(bossAt);
     }
   });
 
@@ -561,11 +658,22 @@ describe('how far up the ladder a run is', () => {
       `docs/decisions/0027-measure-the-picture-not-the-model.md`. *A distance of 430* is the model
       talking to itself; what the player gets is a number of seconds of build before the fight, and at
       `SCROLL_PER_STEP` that is what this converts it to.
+
+      ⚠️ **THE BUILD IS THE LAST SECTION OF THE SCRIPT AND NOT A NAMED CONSTANT** — 0158. It was
+      `BOSS_APPROACH_UNITS`, one number for every level; it is now whatever each level's script puts
+      last, so this asks all seven.
     */
-    expect(musicLevelFor(BOSS_AT - BOSS_APPROACH_UNITS, BOSS_AT, false)).toBe('approach');
-    const seconds = BOSS_APPROACH_UNITS / SCROLL_PER_STEP / STEPS_PER_SECOND;
-    expect(seconds, `the build lasts ${seconds.toFixed(1)}s, which is not long enough to be one`).toBeGreaterThan(6);
-    expect(seconds, `the build lasts ${seconds.toFixed(1)}s, which is a level and not a build`).toBeLessThan(30);
+    for (const kind of LEVEL_KINDS) {
+      const { sections, bossAt } = LEVELS[kind]!;
+      const last = sections[sections.length - 1]!;
+      expect(musicLevelFor(last.at, false, sections)).toBe(last.section);
+      const seconds = (bossAt - last.at) / PER_SECOND;
+      expect(seconds, `${kind}'s build lasts ${seconds.toFixed(1)}s, which is not long enough to be one`).toBeGreaterThan(6);
+      expect(seconds, `${kind}'s build lasts ${seconds.toFixed(1)}s, which is a level and not a build`).toBeLessThan(30);
+      expect(seconds, `${kind}'s build is shorter than one bar of the thing it is building`).toBeGreaterThan(
+        BEAT_SECONDS * 4,
+      );
+    }
   });
 
   it('and goes to the boss the moment one is on the field, wherever the camera is', () => {
@@ -573,16 +681,13 @@ describe('how far up the ladder a run is', () => {
       ⚠️ **The boss level is keyed to the BOSS being there and not to a distance**, which is the half a
       threshold cannot do: a boss drifts (0061) and a fight lasts as long as it lasts, so the camera
       passes `bossAt` long before the fight is over.
-    */
-    expect(musicLevelFor(0, BOSS_AT, true)).toBe('boss');
-    expect(musicLevelFor(BOSS_AT + 4000, BOSS_AT, true)).toBe('boss');
-  });
 
-  it('and the build is longer than a cue, so it is a piece of music rather than a sting', () => {
-    const seconds = BOSS_APPROACH_UNITS / SCROLL_PER_STEP / STEPS_PER_SECOND;
-    expect(seconds, 'the approach is shorter than one bar of the thing it is building').toBeGreaterThan(
-      BEAT_SECONDS * 4,
-    );
+      ⚠️ **AND THAT IS WHY `bossAt` IS NO LONGER AN ARGUMENT AT ALL** — 0158. The old signature took
+      it to measure the sections back from it; the fight's two rungs never used it, and once the
+      script anchored itself the parameter went unread.
+    */
+    expect(musicLevelFor(0, true, ONE)).toBe('boss');
+    expect(musicLevelFor(BOSS_AT + 4000, true, ONE)).toBe('boss');
   });
 });
 

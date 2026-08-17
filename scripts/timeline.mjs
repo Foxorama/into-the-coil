@@ -18,7 +18,6 @@ import {
   MUSIC_LADDER,
   MUSIC_LAYERS,
   AURA_LAYERS,
-  SECTION_UNITS,
 } from '../src/content/music.ts';
 import { LEVELS } from '../src/content/levels.ts';
 import { mixOf } from '../src/content/themes.ts';
@@ -65,23 +64,25 @@ export function inBars(second) {
  * ⚠️ **The fight's health falls linearly, which is a SHAPE and not a claim about combat.** All it has
  * to do is cross `BOSS_PEAK_HEALTH` once, so `bossPeak` arrives where the game would put it.
  *
- * ⚠️ **`at` IS THE ONE INPUT THAT MAY BE DRIVEN, AND IT DEFAULTS TO THE GAME'S OWN** — 0138. The rig
- * hands it dragged distances; every other caller passes nothing and gets `SECTION_UNITS`, which is
- * what keeps this a walk of the game's camera rather than a table of the rig's.
+ * ⚠️ **`sections` IS THE ONE INPUT THAT MAY BE DRIVEN, AND IT DEFAULTS TO THE LEVEL'S OWN** — 0138,
+ * as 0158 leaves it. The rig hands it a dragged script; every other caller passes nothing and gets
+ * `LEVELS[kind].sections`, which is what keeps this a walk of the game's camera rather than a table
+ * of the rig's. **The default reads off `kind` now** — it used to be `SECTION_UNITS`, one answer for
+ * all seven levels, so it could be written without knowing which level was being asked about.
  *
  * @param {string} kind          a key of `LEVELS`
  * @param {number} fightSeconds  how long the boss is given
- * @param {{push: number, surge: number, approach: number}} [at]  where the middle rungs open
+ * @param {ReadonlyArray<{at: number, section: string}>} [sections]  the level's own music script
  * @param {number} [step]        the resolution the camera is sampled at, in seconds
  */
-export function rungMarks(kind, fightSeconds, at = SECTION_UNITS, step = 1 / 64) {
+export function rungMarks(kind, fightSeconds, sections = LEVELS[kind].sections, step = 1 / 64) {
   const { bossAt } = LEVELS[kind];
   const toBoss = bossAt / UNITS_PER_SECOND;
   const total = toBoss + fightSeconds;
   const marks = [];
   let last = null;
   for (let second = 0; second < total; second += step) {
-    const rung = rungAt(kind, second, fightSeconds, at);
+    const rung = rungAt(kind, second, fightSeconds, sections);
     if (rung !== last) {
       marks.push({ rung, second, ...inBars(second) });
       last = rung;
@@ -103,13 +104,13 @@ export function rungMarks(kind, fightSeconds, at = SECTION_UNITS, step = 1 / 64)
 }
 
 /** Which rung a level is on `second` seconds in. The single description `rungMarks` and the rig share. */
-export function rungAt(kind, second, fightSeconds, at = SECTION_UNITS) {
+export function rungAt(kind, second, fightSeconds, sections = LEVELS[kind].sections) {
   const { bossAt } = LEVELS[kind];
   const toBoss = bossAt / UNITS_PER_SECOND;
   const inFight = second >= toBoss;
   const camera = inFight ? bossAt : second * UNITS_PER_SECOND;
   const health = inFight ? Math.max(0, 1 - (second - toBoss) / fightSeconds) : 1;
-  return musicLevelFor(camera, bossAt, inFight, health, at);
+  return musicLevelFor(camera, inFight, sections, health);
 }
 
 /** How far through its level-long build the aura is, at `second`. 0107. */
