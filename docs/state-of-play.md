@@ -170,6 +170,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a level boundary is a change of script, not a change of scene** | [0076](decisions/0076-a-level-has-an-origin.md) |
 | **a branch starts at `main` AND the next one waits — both halves checked** | [0033](decisions/0033-a-branch-starts-at-main.md), [0075](decisions/0075-the-serialisation-is-checked.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
+| **a strike is an INCREMENT, and a guard's validity can expire when material moves** | [0156](decisions/0156-a-strike-is-an-increment.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
 | **a probe runs the test it NAMES, and a suite bakes the music once** | [0115](decisions/0115-a-probe-runs-its-own-guard.md) — amends 0054's *whole suite* clause |
 | **the rig plays a LEVEL, and the instrument is guarded like the game** | [0116](decisions/0116-the-rig-plays-the-level.md) |
@@ -672,33 +673,31 @@ had noticed. What was corrected is **reasoning that would have bound the next ch
 capacities, they are blocking nothing, and a phone-sized floor under a desktop game is the safe
 direction to be wrong in.
 
-### ⚠️ START HERE FOR MUSIC: ONE PR IS BLOCKED ON A GUARD THAT STOPPED SEEING ITS SUBJECT
+### ⚠️ START HERE FOR MUSIC: ALL SEVEN MATERIAL PASSES ARE IN, AND NOTHING HAS BEEN HEARD SINCE
 
-⚠️ **[PR #199](https://github.com/Foxorama/into-the-coil/pull/199) is pushed, measured, green on every
-bound — and must not merge yet.** It is the last of the seven material passes (the base composition;
-the six places landed in #198). It takes the worst multiplier in the game from **16.67× to 3.46×** and
-puts **zero** solved gains past the desk ceiling, from nine.
+⚠️ **THE BLOCKER IS GONE AND THE GUARD IS BETTER THAN IT WAS** —
+[0156](decisions/0156-a-strike-is-an-increment.md). 0108's pitched-weight guard measured the *peak* of
+a 40 ms window; the material pass lengthened `hook`'s ring past its own sixteenth, so that window
+contained the previous note's tail and the accent was invisible in it. It now measures **what each
+onset ADDED, meaned over the whole loop**, and asserts it against the table's own number.
 
-⚠️ **CI caught what three local runs could not.** `npm run prove`:
+⚠️ **THE HANDOVER'S PROPOSED FIX WAS NOT SUFFICIENT ON ITS OWN, AND 0156 HAS WHY.** *Measure the
+increment at the onset* one sixteenth at a time still reads 0.59 against 0.73 — both under the old
+threshold — because two notes of the same pitch **interfere** rather than add. Averaging over 256
+sixteenths is the half that makes the estimate a measurement.
 
-> `0108  a pitched note's weight dropped on the way to the bake` — **the suite stayed GREEN. The guard
-> does not fire on the thing it exists to catch.**
+⚠️ **`node scripts/prove-guard.mjs 0108` IS 7 OF 7 RED**, including the one that did not fire.
 
-⚠️ **AND THE MATERIAL CHANGE IS RIGHT WHILE THE GUARD IS NOW WRONG.** `tests/music.test.ts` →
-*"and a PITCHED note has a weight too"* bakes `hook`, takes the **peak of a 40 ms window** at two
-sixteenths and compares them. #199 lengthens `hook`'s ring from about **12 ms to 110 ms** against a
-sixteenth of 100 — so **note 0's tail now rings through note 2's window** and the peak is a sum of two
-notes rather than the weight either was struck at. The accent is invisible to it, break or no break.
+⚠️ **SO THE SEVEN MATERIAL PASSES ARE COMPLETE** — six places in #198, the base composition in #199.
+Worst multiplier in the game **16.67× → 3.46×**; solved gains past the desk ceiling **9 → 0**.
 
-⚠️ **THE FIX IS TO MEASURE THE INCREMENT AT THE ONSET rather than the absolute peak of a window that
-now contains a neighbour's tail** — the strike, not the sum. That changes what the guard asserts, so
-it needs its own probe seen to fail ([0005](decisions/0005-a-guard-must-be-seen-to-fail.md),
-[0019](decisions/0019-a-probe-must-be-seen-to-apply.md)) and should not be rushed to unblock a PR.
+⚠️ **AND THE NEXT THING IS AN EAR, NOT A NUMBER.** Every level sounds different now, which is the
+condition the player set: *"once all levels have all sounds properly audible then I'll need to go
+through and relisten to all the levels."* **No mix number should be argued before that listen.**
 
-⚠️ **THIS IS THE THIRD TIME IN ONE SESSION** that a probe's break stopped breaking —
-[0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md)'s *wrong quantity* branch.
-The other two were caught locally and re-cut; this one only CI saw, because the local suite was being
-starved by a dev server and its browser tests were failing first.
+⚠️ **THE MATERIAL PASSES COST 32% OF THE BOOT-TIME BAKE AND IT IS OPEN** —
+[`the-prewarm-got-a-third-heavier`](../reports/the-prewarm-got-a-third-heavier-2026-08-17.md). A
+browser guard is what found it, and what it owes is named there rather than here.
 
 ### THE PASS THAT LANDED, AND WHAT IT FOUND
 
@@ -727,7 +726,7 @@ no layer wanting more than about **3.0×**, and `scripts/weigh-mix.mjs` must sta
 
 | place | layers whose material cannot carry their role |
 |---|---|
-| base (`approach`, in `src/content/music.ts`) | `call` 9.7× · `hook` 7.9× · `counter` 5.9× · `frenzy` 4.4× · `dread` 4.3× · `arp` 3.1× |
+| ~~base (`approach`, in `src/content/music.ts`)~~ — **done, #199** | `call` 9.7× · `hook` 7.9× · `counter` 5.9× · `frenzy` 4.4× · `dread` 4.3× · `arp` 3.1× |
 | nebula | `arp` 6.2× · `wraith` 4.3× · `frenzy` 4.2× · `call` 4.0× · `counter` 3.2× |
 | saurian | `frenzy` 6.3× · `ride` 4.0× · `wraith` 4.0× |
 | labyrinth | `crash` 4.5× · `perc` 4.3× · `call` 3.1× · `hook` 3.1× |
@@ -735,13 +734,13 @@ no layer wanting more than about **3.0×**, and `scripts/weigh-mix.mjs` must sta
 | mire | `arp` 4.9× · `groove` 4.2× · `dread` 3.1× |
 | core | `arp` 6.6× · `hook` 6.0× · `ride` 3.8× |
 
-⚠️ **THE BASE COMPOSITION IS LAST AND IS THE DANGEROUS ONE.** `src/content/music.ts` holds the layers
-the six places INHERIT where they do not re-voice, so a change there moves every place that shares
-one. Do it alone, after the six, and re-measure all seven.
+⚠️ **THE BASE COMPOSITION WAS LAST AND WAS THE DANGEROUS ONE.** `src/content/music.ts` holds the
+layers the six places INHERIT where they do not re-voice — **and it turned out to be only `bass` and
+`beat`**: the places re-voice 21 of 23. #199 has the measurement.
 
-⚠️ **AND THEN THE WHOLE THING IS RE-HEARD.** Every level will sound different once this lands, so the
-tuning passes that come after it start from scratch — which is why no mix number should be argued
-before it is finished.
+⚠️ **AND THEN THE WHOLE THING IS RE-HEARD.** Every level sounds different now, so the tuning passes
+that come after this start from scratch — which is why no mix number should be argued before that
+listen happens.
 
 ### THE REFACTOR IS BUILT, MEASURED, AND STILL NOT WIRED IN
 

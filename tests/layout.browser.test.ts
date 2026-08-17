@@ -252,9 +252,35 @@ describe.runIf(chromePath)('a screen that cannot fit stays reachable', () => {
       guard written that way passes with the scroll container removed, which is exactly what
       `npm run prove` caught it doing. This is the gesture a player makes.
     */
+    /*
+      ⚠️ **WAITED FOR RATHER THAN SLEPT THROUGH, AND THAT IS 0044's *wrong quantity* AGAIN.** This
+      was `waitForTimeout(200)` and it went red once on CI and never once locally — *"a wheel over
+      the screen scrolled nothing"* on a build whose only change was material in
+      `src/content/music.ts`. The claim being made is **the container scrolls**; 200 ms of wall clock
+      was standing in for it, and `mount.ts` starts `prewarmAudio()` at boot with no gesture, so a
+      title screen is synthesising audio in `setTimeout` chunks for its first few seconds — 3.6s of
+      it after that material pass, against 2.7 before. A sleep that short is measuring how busy the
+      machine is.
+
+      ⚠️ **It does not weaken the assertion, which is why this is the repair and not a widened
+      timeout.** The wheel is still a real wheel, the scroll still has to actually happen, and the
+      three assertions below are unchanged — what moved is that the test now waits for the thing it
+      is about instead of guessing how long it takes. A container that does not scroll still fails,
+      five seconds later. `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`
+      is explicit that a rerun is not evidence.
+    */
     await page.mouse.move(IMPOSSIBLE.width / 2, IMPOSSIBLE.height / 2);
     await page.mouse.wheel(0, 400);
-    await page.waitForTimeout(200);
+    await page
+      .waitForFunction(
+        ({ p, from }: { p: string; from: number }) => {
+          const root = document.querySelector('.' + p.slice(0, -1));
+          return root instanceof HTMLElement && root.scrollTop > from;
+        },
+        { p: prefix, from: before!.at },
+        { timeout: 5_000 },
+      )
+      .catch(() => undefined);
 
     const reached = await page.evaluate((p: string) => {
       const root = document.querySelector('.' + p.slice(0, -1));
