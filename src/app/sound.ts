@@ -57,7 +57,15 @@ import {
 import { ACROSS_SPAN } from '../sim/camera.ts';
 import { makeMusicOut, bakeLoops, layerNotes, type MusicOut } from './music.ts';
 import { bakedBy, type ThemeKind } from '../content/themes.ts';
-import { FIRE_GRID, MUSIC_LAYERS, STEPS_PER_BEAT, type MusicLayer } from '../content/music.ts';
+import { MUSIC_LAYERS, type MusicLayer } from '../content/music.ts';
+/*
+  ⚠️ **THE CUE GRID COMES FROM THE GAMEPLAY CLOCK NOW, NOT FROM THE MUSIC** — 0159. `FIRE_GRID` and
+  the cycle below used to be `STEPS_PER_BEAT`-derived, so *the sixteenth a cue lands on* was a
+  statement about the beat. It is the same lattice at the same values; what it no longer claims is
+  that the music is on it. **Whether a cue should follow the tune is the open question 0159 hands
+  on**, and this import is where the answer will land.
+*/
+import { FIRE_GRID, VOLLEY_CYCLE } from '../content/cadence.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 
 /**
@@ -513,9 +521,13 @@ export interface Speaker {
  * inside one sixteenth genuinely land on the same slot and are struck the same, which is correct
  * rather than a rounding: they are one sixteenth, played twice.
  *
- * ⚠️ **`FIRE_GRID` is the unit and it is imported rather than restated.** It is the sixteenth every
- * cadence in the game is already snapped to (0096), so the accents and the shots divide the beat the
- * same way by construction — and a `figure` of four entries is exactly one beat.
+ * ⚠️ **`FIRE_GRID` is the unit and it is imported rather than restated.** It is the grid every
+ * cadence in the game is already snapped to (0096), so the accents and the shots divide the cycle
+ * the same way by construction — and a `figure` of four entries is exactly one `VOLLEY_CYCLE`.
+ *
+ * ⚠️ **THAT USED TO BE A CLAIM ABOUT A BEAT AND IS NOT ONE NOW** — 0159. The lattice and the values
+ * are unchanged; what is gone is the guarantee that the music divides its bar the same way. Today
+ * they still coincide, because the tempo has not moved yet.
  *
  * Exported for `tests/sound.test.ts`, which drives it directly.
  */
@@ -573,8 +585,8 @@ export function panBucket(pan: number): number {
 
 export function variantAt(count: number, step: number): number {
   if (count <= 1) return 0;
-  const sixteenth = Math.floor(((step % STEPS_PER_BEAT) + STEPS_PER_BEAT) % STEPS_PER_BEAT / FIRE_GRID);
-  return sixteenth % count;
+  const slot = Math.floor(((step % VOLLEY_CYCLE) + VOLLEY_CYCLE) % VOLLEY_CYCLE / FIRE_GRID);
+  return slot % count;
 }
 
 /**

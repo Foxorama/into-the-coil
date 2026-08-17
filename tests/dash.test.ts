@@ -26,9 +26,9 @@ import {
   MUSIC_LADDER,
   MUSIC_LAYERS,
   MUSIC_LEVELS,
-  STEPS_PER_BEAT,
   type MusicLayer,
 } from '../src/content/music.ts';
+import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
 import { THEME_KINDS, mixOf } from '../src/content/themes.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { auraBuild, auraFor, levelWrites, musicLevelFor } from '../src/app/music.ts';
@@ -265,7 +265,7 @@ describe('what plays over the top of it', () => {
     expect(cueLines(2, 'surge', 1.6).find((c) => c.kind === 'bossShot')!.sounds).toBe(false);
     const inFight = cueLines(2, 'bossPeak', 1.6).find((c) => c.kind === 'bossShot')!;
     expect(inFight.sounds).toBe(true);
-    expect(inFight.every! % STEPS_PER_BEAT, 'the boss fires off the beat').toBe(0);
+    expect(inFight.every! % VOLLEY_CYCLE, 'the boss fires off the beat').toBe(0);
   });
 
   it('a kill is scattered, because nothing in the game quantises one', () => {

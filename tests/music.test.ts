@@ -1,3 +1,4 @@
+import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
 import { LEVELS, LEVEL_KINDS, type LevelKind } from '../src/content/levels.ts';
 import { BANDS, bandEnergy, spectrum } from './spectrum.ts';
 import { describe, expect, it } from 'vitest';
@@ -44,7 +45,6 @@ import {
 } from '../src/app/music.ts';
 import { THEME_KINDS } from '../src/content/themes.ts';
 import { loopsAt } from './bakes.ts';
-import { STEPS_PER_BEAT } from '../src/content/music.ts';
 import { MAX_STEPS } from '../src/app/loop.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { SAMPLE_RATE, sampleCue, saturate } from '../src/app/sound.ts';
@@ -750,7 +750,7 @@ describe('0094 — in time is not in phase, and the loops follow the sim', () =>
       if (rephaseIn(SETTLED + ms / 1000, SETTLED, NOW) !== null) break;
       worstTolerated = ms / 1000;
     }
-    const shortestVolleyGap = (STEPS_PER_BEAT / 6) * oneStep;
+    const shortestVolleyGap = (VOLLEY_CYCLE / 6) * oneStep;
     expect(worstTolerated, 'every error is corrected, so the threshold is not doing anything').toBeGreaterThan(0);
     expect(
       worstTolerated,
@@ -988,7 +988,7 @@ describe('0095 — the level has a piece of its own, and it covers the band', ()
     const bedRms = Math.sqrt(bedSq / bed.length);
 
     // The gun at its fastest rung, laid down over the same stretch at the cadence the ladder reaches.
-    const fastest = Math.min(...SHIPS.proof.firePerBeat.map((_unused, tier) => fireEveryAt(SHIPS.proof, tier)));
+    const fastest = Math.min(...SHIPS.proof.fireEvery.map((_unused, tier) => fireEveryAt(SHIPS.proof, tier)));
     const shot = sampleCue(CUES.pulse, SAMPLE_RATE, makeRng('cues').stream('pulse'));
     const gun = new Float32Array(bed.length);
     const perStep = SAMPLE_RATE / STEPS_PER_SECOND;

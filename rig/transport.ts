@@ -42,12 +42,12 @@ import {
   MUSIC_LADDER,
   MUSIC_LAYERS,
   MUSIC_LEVELS,
-  STEPS_PER_BEAT,
   type MusicLayer,
   type MusicLevel,
   type LevelSections,
 } from '../src/content/music.ts';
 import { LEVELS, type LevelKind } from '../src/content/levels.ts';
+import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
 import { THEME_KINDS, mixOf, type ThemeKind } from '../src/content/themes.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { UPGRADE_TIERS, weaponFor, type UpgradeKind, type Weapon } from '../src/content/pickups.ts';
@@ -590,8 +590,8 @@ export function cueLines(tier: number, rung: MusicLevel, bodiesPerSecond: number
     { kind: 'threat', every: null, perSecond: bodiesPerSecond, sounds: bodiesPerSecond > 0 },
     {
       kind: 'bossShot',
-      every: inFight ? STEPS_PER_BEAT * 3 : null,
-      perSecond: inFight ? per(STEPS_PER_BEAT * 3) : 0,
+      every: inFight ? VOLLEY_CYCLE * 3 : null,
+      perSecond: inFight ? per(VOLLEY_CYCLE * 3) : 0,
       sounds: inFight,
     },
   ];

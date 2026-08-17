@@ -37,7 +37,7 @@ import {
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
 import { DEFAULT_SOUND, SOUND_KINDS } from '../content/sound.ts';
 import { DEFAULT_STYLE, STYLES, STYLE_KINDS } from '../content/styles.ts';
-import { nextOnGrid } from '../content/music.ts';
+import { nextOnGrid } from '../content/cadence.ts';
 import { auraBuild, auraFor, auraNearnessFor, musicLevelFor, placeFor } from './music.ts';
 import { bakePlace, makeAudioOut, makeSpeaker, prewarmAudio } from './sound.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';

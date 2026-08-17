@@ -57,7 +57,7 @@ export const PROBES = [
     broke: 'the spawn alignment rounded forward, so every body opens fire later than its own cadence',
     guard: 'and a body never waits LONGER than its own cadence to open fire',
     edit: {
-      path: 'src/content/music.ts',
+      path: 'src/content/cadence.ts',
       find: '  const base = gap - FIRE_GRID + (FIRE_GRID - (steps % FIRE_GRID));',
       replace: '  const base = gap + (FIRE_GRID - (steps % FIRE_GRID));',
     },

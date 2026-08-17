@@ -15,12 +15,12 @@ import {
 import { makeEntity, reset, stepEntities } from '../src/sim/entity.ts';
 import { Pool } from '../src/sim/pool.ts';
 import type { Entity } from '../src/sim/entity.ts';
+import { FIRE_GRID } from '../src/content/cadence.ts';
 import { DEFAULT_ORIGIN, LEVELS, LEVEL_KINDS, type LevelRow } from '../src/content/levels.ts';
 // The enemy table's own guards moved to `tests/pilots.test.ts` with 0073, which is where the motion
 // union and everything that reacts to the player is held.
 import { PLAYER_SHOT_LIFE } from '../src/content/pickups.ts';
 import { SHOTS } from '../src/content/shots.ts';
-import { FIRE_GRID } from '../src/content/music.ts';
 import { ENEMIES, shotsPerVolley } from '../src/content/enemies.ts';
 import { fireGapFor } from '../src/content/difficulty.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';

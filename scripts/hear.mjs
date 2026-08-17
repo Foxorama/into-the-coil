@@ -53,7 +53,7 @@ import { bakeLoops } from '../src/app/music.ts';
 import { THEME_KINDS } from '../src/content/themes.ts';
 import { SOLVED_BY } from '../src/content/arrangement.ts';
 import { profileOfLoops, solveMix } from './solve-mix.mjs';
-import { PHRASE_SECONDS, BAR_SECONDS, LAYER_BARS, LAYER_PAN, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_DRIVE, MUSIC_GAIN, AURA_LAYERS, AURA_NEAR_UNITS, AURA_FAR_UNITS, STEPS_PER_BEAT } from '../src/content/music.ts';
+import { PHRASE_SECONDS, BAR_SECONDS, LAYER_BARS, LAYER_PAN, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_DRIVE, MUSIC_GAIN, AURA_LAYERS, AURA_NEAR_UNITS, AURA_FAR_UNITS } from '../src/content/music.ts';
 
 /*
   ⚠️ **THE MUSIC BUS AS IT ACTUALLY LEAVES, AND THE RIG DID NOT HAVE IT FOR ONE COMMIT** —
@@ -88,6 +88,7 @@ import {
   panGains,
 } from '../src/app/music.ts';
 import { LEVEL_KINDS } from '../src/content/levels.ts';
+import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
 import { UNITS_PER_SECOND, auraAt, levelTimeline, rungAt, targetGain } from './timeline.mjs';
 import { UPGRADE_TIERS } from '../src/content/pickups.ts';
 /*
@@ -555,7 +556,7 @@ if (args.has('play')) {
    * about the RATIO and neither half alone can answer it.
    */
   const scene = (level, tier, bars) => {
-    const steps = bars * 4 * STEPS_PER_BEAT;
+    const steps = bars * 4 * VOLLEY_CYCLE;
     const length = Math.round(steps * perStep);
     /*
       ⚠️ **ONE DESCRIPTION OF WHAT A TIER IS, SHARED WITH THE DASHBOARD** —
@@ -584,10 +585,10 @@ if (args.has('play')) {
       number in this mode that is; what it is FOR is the placement, which is not a guess — nothing
       quantises these, so `scatter` picking the step is exactly as musical as the game is.
     */
-    for (let s = 0; s < steps; s += STEPS_PER_BEAT * 2) {
-      put(cues, 'kill', s + Math.floor(scatter.range(0, STEPS_PER_BEAT * 2)));
-      put(cues, 'hit', s + Math.floor(scatter.range(0, STEPS_PER_BEAT * 2)));
-      put(cues, 'threat', s + Math.floor(scatter.range(0, STEPS_PER_BEAT * 2)));
+    for (let s = 0; s < steps; s += VOLLEY_CYCLE * 2) {
+      put(cues, 'kill', s + Math.floor(scatter.range(0, VOLLEY_CYCLE * 2)));
+      put(cues, 'hit', s + Math.floor(scatter.range(0, VOLLEY_CYCLE * 2)));
+      put(cues, 'threat', s + Math.floor(scatter.range(0, VOLLEY_CYCLE * 2)));
     }
     /*
       ⚠️ **THE BOSS FIRES IN THE BOSS TAKES, AND UNTIL NOW IT DID NOT** — 0114. `bossShot` is the
@@ -600,7 +601,7 @@ if (args.has('play')) {
       the kills and hits above, which nothing snaps.
     */
     if (level === 'boss' || level === 'bossPeak') {
-      for (let s = 0; s < steps; s += STEPS_PER_BEAT * 3) put(cues, 'bossShot', s);
+      for (let s = 0; s < steps; s += VOLLEY_CYCLE * 3) put(cues, 'bossShot', s);
     }
     const mix = new Float32Array(length);
     for (let i = 0; i < length; i++) mix[i] = bed[i] + cues[i];

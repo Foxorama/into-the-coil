@@ -39,7 +39,7 @@
  * guards would then be checking one of them. Density is authored; toughness is a tier.
  */
 
-import { onFireGrid } from './music.ts';
+import { onFireGrid } from './cadence.ts';
 
 /**
  * Every tier, **easiest first**.

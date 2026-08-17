@@ -9,70 +9,23 @@
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
-  {
-    decision: '0093',
-    suite: 'tests/pickups.test.ts',
-    /*
-      ⚠️ THE LADDER PUT BACK OFF THE GRID, which is the defect exactly as it shipped — 9, 8, 7, 5, 4
-      steps, of which one divided the old beat and none divides this one. Written here as the
-      subdivisions that produce it, because that is the shape the ladder has now.
+  /*
+    ── THREE PROBES STOOD HERE AND 0159 RETIRED THEM WITH THE GUARDS THEY NAMED ──────────────────
 
-      The point of this probe is that it was INVISIBLE. Every guard over the weapon stayed green
-      through it for as long as the game has had a gun: the rungs were distinct, monotonic, inside
-      both floors and inside the pool. Nothing anywhere asked whether they were in time with
-      anything, because until this decision nothing had a reason to.
-    */
-    broke: 'the fire ladder authored off the beat again, so the gun walks on and off the music',
-    guard: 'and every rung is a whole number of steps AND a musical fraction of a beat',
-    edit: {
-      path: 'src/content/ships.ts',
-      find: '    firePerBeat: [3, 3, 4, 4, 6],',
-      replace: '    firePerBeat: [2.667, 3, 3.429, 4.8, 6],',
-    },
-  },
-  {
-    decision: '0093',
-    suite: 'tests/pickups.test.ts',
-    /*
-      ⚠️ A RUNG THAT DIVIDES THE BEAT BUT NOT THE LOOP. This is the failure the divisor check cannot
-      see and the reason the player-unit guard is written over a whole loop instead: five volleys to a
-      beat is a real musical value — a quintuplet — and it is on the grid by any reasonable reading.
-      It also does not close with a two-bar loop, so the gun and the music come back together every
-      FIVE loops rather than every one, and the phrase drifts inside itself.
+    ⚠️ docs/decisions/0159-the-two-clocks-come-apart.md. They broke: the fire ladder authored off the
+    beat, a rung that closes with the beat but not with the loop, and the tempo taken off the step
+    clock. All three were real and all three went red on demand; what they held is the COUPLING —
+    a cadence must divide a beat, and a beat must be a whole number of sim steps — and that is what
+    0159 removes on purpose.
 
-      ⚠️ It is a quintuplet rather than nonsense on purpose: the plausible mistake here is a ladder
-      authored by somebody who checked the beat and not the bar.
-    */
-    broke: 'a rung that closes with the beat but not with the loop, so the phrase drifts inside itself',
-    guard: 'THE ASK, in the unit the player hears: the gun closes with the music every single loop',
-    edit: {
-      path: 'src/content/music.ts',
-      find: 'export const STEPS_PER_BEAT = 24;',
-      replace: 'export const STEPS_PER_BEAT = 20;',
-    },
-  },
-  {
-    decision: '0093',
-    suite: 'tests/pickups.test.ts',
-    /*
-      ⚠️ THE TEMPO TAKEN OFF THE STEP CLOCK, which is 0090's own tempo and was correct until this
-      decision. 0.45s is 27 sim steps — a whole number, so it passes — and 0.4667s is 28.002, which is
-      not. The break is the general failure rather than the specific old value: a beat that is not a
-      whole number of steps is a gun that cannot be put in time at ANY cadence, because the gap
-      between volleys is counted in steps and nothing else.
+    ⚠️ A PROBE WHOSE GUARD HAS BEEN DELETED CANNOT BE RE-ANCHORED, ONLY RETIRED. Leaving one aimed
+    at a test that no longer exists is the orphan docs/decisions/0019-a-probe-must-be-seen-to-apply.md
+    is written about, wearing the disguise of a probe that used to work.
 
-      ⚠️ 0090's own probe breaks the same constant for a different reason — a loop length that does
-      not divide the sample rate. Two decisions, two failures, one number: worth knowing before
-      assuming one of them is a copy.
-    */
-    broke: 'the beat taken off the sim clock, so no cadence can be a whole number of steps',
-    guard: 'and the tempo is a whole number of sim steps, which is what makes any of it possible',
-    edit: {
-      path: 'src/content/music.ts',
-      find: 'export const BEAT_SECONDS = 0.4;',
-      replace: 'export const BEAT_SECONDS = 0.4667;',
-    },
-  },
+    ⚠️ THE TWO BELOW SURVIVE BECAUSE THEIR CLAIMS DO: the missile's counter-rhythm against the pulse,
+    and every tier of the barrel ladder buying something. Neither was ever a claim about the music.
+    The break that replaced the first of the three is in scripts/probes/0159-the-two-clocks-come-apart.mjs.
+  */
   {
     decision: '0093',
     suite: 'tests/pickups.test.ts',

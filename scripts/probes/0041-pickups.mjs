@@ -51,8 +51,8 @@ export const PROBES = [
       // authored past the floor* — which is the same failure the guard names, reached from content
       // instead of from arithmetic, and is the honest shape of it now that the rungs are a table.
       path: 'src/content/ships.ts',
-      find: '    firePerBeat: [3, 3, 4, 4, 6],',
-      replace: '    firePerBeat: [3, 3, 4, 4, 24],',
+      find: '    fireEvery: [8, 8, 6, 6, 4],',
+      replace: '    fireEvery: [8, 8, 6, 6, 1],',
     },
   },
   {

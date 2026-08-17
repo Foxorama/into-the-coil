@@ -40,7 +40,7 @@ export const PROBES = [
     broke: 'the slots counted off the wave rather than off the body’s own cadence',
     guard: '0098 — and a SHARE only ever delays a body, so nothing becomes dangerous sooner than it was',
     edit: {
-      path: 'src/content/music.ts',
+      path: 'src/content/cadence.ts',
       find: '  const slots = Math.max(1, Math.round(gap / FIRE_GRID));',
       replace: '  const slots = Math.max(1, Math.round(gap / FIRE_GRID)) * 2;',
     },
@@ -57,7 +57,7 @@ export const PROBES = [
     broke: 'the spread run backwards, so a formation opens fire sooner than it ever did',
     guard: '0098 — and a SHARE only ever delays a body, so nothing becomes dangerous sooner than it was',
     edit: {
-      path: 'src/content/music.ts',
+      path: 'src/content/cadence.ts',
       find: '  return base + Math.floor(wrapped * slots) * FIRE_GRID;',
       replace: '  return base - Math.floor(wrapped * slots) * FIRE_GRID;',
     },

@@ -43,8 +43,8 @@ export const PROBES = [
     guard: 'THE TIERS: each ladder is exactly UPGRADE_TIERS long',
     edit: {
       path: 'src/content/ships.ts',
-      find: '    missilePerBeat: [3, 3, 3, 4, 6],',
-      replace: '    missilePerBeat: [3, 3, 3, 3, 3],',
+      find: '    missileEvery: [8, 8, 8, 6, 4],',
+      replace: '    missileEvery: [8, 8, 8, 8, 8],',
     },
   },
   {

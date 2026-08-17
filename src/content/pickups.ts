@@ -24,17 +24,18 @@
 
 import type { Body } from '../sim/entity.ts';
 /*
-  ⚠️ **THE WEAPON IMPORTS THE TEMPO, AND THAT DIRECTION IS THE DECISION** —
-  `docs/decisions/0093-the-gun-is-on-the-grid.md`. A sibling import inside `content/` is ordinary
-  (this file already reads `ships`, `shots` and `specials`), but this one is worth a sentence: the gun
-  depends on the beat and not the other way round, so the music can be rewritten without touching a
-  balance number and the tempo cannot be changed without the ladder being re-checked against it.
+  ⚠️ **THE WEAPON NO LONGER IMPORTS THE TEMPO, AND THAT IS THE DECISION** —
+  `docs/decisions/0159-the-two-clocks-come-apart.md`. This file used to read `STEPS_PER_BEAT` out of
+  `./music.ts` and divide by it, on 0093's reasoning that *the gun depends on the beat and not the
+  other way round*. The direction was right and the dependency was the problem: it meant **the tempo
+  could not be changed without re-checking every fire rate**, and every fire rate had to be one of the
+  eight divisors of 24.
 
-  ⚠️ **It is a CONSTANT and not the music reaching into the sim.** A player with the sound off flies
-  exactly the same game — `docs/decisions/0024-the-accessibility-floor-is-settings.md` — because what
-  crosses here is an integer, not a setting and not a signal.
+  ⚠️ **Both files are now free of each other.** A cadence is sim steps; a beat is seconds. Whether
+  what the guns play should AGREE with what the music plays is a real question and it is asked
+  somewhere neither of these two files can answer it — 0159 says where.
 */
-import { STEPS_PER_BEAT } from './music.ts';
+
 import type { ShipRow } from './ships.ts';
 import { SHOTS } from './shots.ts';
 import type { SpecialKind } from './specials.ts';
@@ -321,7 +322,7 @@ export function tiersOf(upgrades: readonly UpgradeKind[], kind: UpgradeKind): nu
  * than a coincidence between two ladders, and that is only true if both are read the same way.
  *
  * ⚠️ **The LADDER is the argument now and it used to be `ship.firePerBeat` written inside.** The
- * missiles read the pulse's list until 2026-08-10 — see `missilePerBeat` on `ShipRow` for the bug
+ * missiles read the pulse's list until 2026-08-10 — see `missileEvery` on `ShipRow` for the bug
  * that came out of it — and the fix is two lists rather than two functions, because *a rung is a
  * subdivision of a beat* is the part that must not be written twice.
  *
@@ -330,14 +331,20 @@ export function tiersOf(upgrades: readonly UpgradeKind[], kind: UpgradeKind): nu
  * division, which is a `NaN` cadence and a gun that never fires again rather than an error anybody
  * would see.
  */
-function everyAt(perBeat: readonly number[], tier: number): number {
-  const rung = tier < 0 ? 0 : tier > perBeat.length - 1 ? perBeat.length - 1 : tier;
-  return STEPS_PER_BEAT / perBeat[rung]!;
+function everyAt(ladder: readonly number[], tier: number): number {
+  const rung = tier < 0 ? 0 : tier > ladder.length - 1 ? ladder.length - 1 : tier;
+  /*
+    ⚠️ **THE TABLE'S OWN NUMBER, WHERE THIS USED TO DIVIDE A MUSIC CONSTANT** —
+    `docs/decisions/0159-the-two-clocks-come-apart.md`. It was `STEPS_PER_BEAT / perBeat[rung]`, so
+    every cadence in the game was a musical fraction before it was a gameplay quantity and only the
+    eight divisors of 24 could be reached. The ladders now say what they mean.
+  */
+  return ladder[rung]!;
 }
 
 /** Steps between PULSE volleys for a ship at weapon tier `tier`. */
 export function fireEveryAt(ship: ShipRow, tier: number): number {
-  return everyAt(ship.firePerBeat, tier);
+  return everyAt(ship.fireEvery, tier);
 }
 
 /**
@@ -349,7 +356,7 @@ export function fireEveryAt(ship: ShipRow, tier: number): number {
  * *slower than the pulse* true at every rung by construction rather than by tuning.
  */
 export function missileEveryAt(ship: ShipRow, tier: number): number {
-  return everyAt(ship.missilePerBeat, tier);
+  return everyAt(ship.missileEvery, tier);
 }
 
 /**
@@ -695,7 +702,7 @@ export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weap
     ⚠️ **`rung` was not wrong; it was the only lever there was.** The missiles read the PULSE's
     cadence list, so a rate step could only land where the pulse's did — and with both rungs of rate
     taken, staggering the tubes was the only way to make all four tiers buy something. The ship row
-    now carries `missilePerBeat`, so the two ladders are independent and neither has to take turns.
+    now carries `missileEvery`, so the two ladders are independent and neither has to take turns.
 
     ⚠️ **A count, capped — not interpolated.** *"Max of two tubes"*
     (`docs/decisions/0083-two-ladders-of-four.md`) is a ceiling on a place on the hull, and the ask
@@ -710,14 +717,18 @@ export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weap
 
     `docs/decisions/0093-the-gun-is-on-the-grid.md`. The floors are unchanged and both are still
     floor rather than a target: `FASTEST_FIRE` is a legibility number (`src/app/frame.ts` needs the
-    impact flash to finish between hits). What changed is that a rung is now a fraction of a beat
-    rather than a point on a line, so **the gun is in time with the music at every tier instead of at
-    two of them** — and that the missile's own floor stopped being a constant, because a derived
-    cadence reaches its cap without one.
+    impact flash to finish between hits). What changed is that a rung is an authored number rather
+    than a point on a line — and that the missile's own floor stopped being a constant, because a
+    ladder reaches its cap without one.
 
-    ⚠️ **`tests/pickups.test.ts` holds every rung against `STEPS_PER_BEAT`**, so a ladder authored off
-    the grid fails rather than quietly going out of time — which is exactly how the old one was wrong
-    and nothing could see it.
+    ⚠️ **IT WAS *a fraction of a beat* UNTIL 0159 AND IS NOW SIMPLY A CADENCE** —
+    `docs/decisions/0159-the-two-clocks-come-apart.md`. 0093 put every rung on a subdivision so the
+    gun was in time with the music at every tier; that coupling is what capped a weapon's fire rate
+    at one of the eight divisors of 24, and it is gone.
+
+    ⚠️ **`tests/pickups.test.ts` holds every rung of BOTH ladders to a whole number of steps and to
+    never getting slower.** The divisor rule was providing both for free, which is the thing to look
+    for whenever a constraint is dropped.
   */
   const fireEvery = fireEveryAt(ship, gun);
   /*

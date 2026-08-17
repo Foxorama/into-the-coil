@@ -11,7 +11,7 @@ import {
   fireGapFor,
   toughnessFor,
 } from '../src/content/difficulty.ts';
-import { FIRE_GRID, STEPS_PER_BEAT, nextOnGrid } from '../src/content/music.ts';
+import { FIRE_GRID, VOLLEY_CYCLE, nextOnGrid } from '../src/content/cadence.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { phaseFor } from '../src/app/boss.ts';
@@ -107,7 +107,7 @@ describe('0096 — everything that shoots at the player plays along', () => {
       to be fine, which is how a spot check would miss it.
     */
     for (const gap of [FIRE_GRID, 48, 66, 78]) {
-      for (let steps = 0; steps < STEPS_PER_BEAT * 4; steps++) {
+      for (let steps = 0; steps < VOLLEY_CYCLE * 4; steps++) {
         const fires = steps + nextOnGrid(steps, gap);
         expect(fires % FIRE_GRID, `a body spawned at step ${steps} with a gap of ${gap} fires at ${fires}`).toBe(0);
       }
@@ -128,7 +128,7 @@ describe('0096 — everything that shoots at the player plays along', () => {
       is the direction. The test below is the half that still holds absolutely.
     */
     for (const gap of [FIRE_GRID, 48, 66, 78]) {
-      for (let steps = 0; steps < STEPS_PER_BEAT * 4; steps++) {
+      for (let steps = 0; steps < VOLLEY_CYCLE * 4; steps++) {
         const wait = nextOnGrid(steps, gap);
         expect(wait, `a body with a gap of ${gap} waits ${wait} steps at spawn, which is longer`).toBeLessThanOrEqual(
           gap,
@@ -152,7 +152,7 @@ describe('0096 — everything that shoots at the player plays along', () => {
       the floor inside `nextOnGrid` is where an off-by-one would live.
     */
     for (const gap of [FIRE_GRID, 48, 66, 78]) {
-      for (let steps = 0; steps < STEPS_PER_BEAT * 4; steps += 5) {
+      for (let steps = 0; steps < VOLLEY_CYCLE * 4; steps += 5) {
         const zero = nextOnGrid(steps, gap);
         for (let count = 1; count <= 8; count++) {
           for (let i = 0; i < count; i++) {
