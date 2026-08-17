@@ -86,7 +86,6 @@ import {
   auraNearness,
   levelWrites,
   panGains,
-  musicLevelFor,
 } from '../src/app/music.ts';
 import { LEVEL_KINDS } from '../src/content/levels.ts';
 import { UNITS_PER_SECOND, auraAt, levelTimeline, rungAt, targetGain } from './timeline.mjs';

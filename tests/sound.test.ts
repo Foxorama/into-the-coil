@@ -1999,7 +1999,7 @@ describe('0116 — the instrument is the game, and it is not a second copy of it
       it would go on passing the day a rung distance moved.
     */
     for (const kind of LEVEL_KINDS) {
-      const { bossAt } = LEVELS[kind];
+      const { bossAt, sections } = LEVELS[kind];
       for (const mark of rungMarks(kind, 45)) {
         const inFight = mark.second >= bossAt / UNITS_PER_SECOND;
         const camera = inFight ? bossAt : mark.second * UNITS_PER_SECOND;
@@ -2007,23 +2007,30 @@ describe('0116 — the instrument is the game, and it is not a second copy of it
         expect(
           mark.rung,
           `${kind} is reported as ${mark.rung} at ${mark.second.toFixed(2)}s, which is not where the game is`,
-        ).toBe(musicLevelFor(camera, bossAt, inFight, health));
+        ).toBe(musicLevelFor(camera, inFight, sections, health));
       }
     }
   });
 
-  it('and a level of a different length reaches its rungs at different times', () => {
+  it('and a level of a different length reaches its rungs at its OWN times', () => {
     /*
       ⚠️ **THE PROPERTY AN ARC WITH A TYPED ORDER CANNOT HAVE.** `hear.mjs --music` gives every rung
-      one phrase, so its boundaries are the same seven numbers whatever the level is. A level's are a
-      function of `bossAt`, and two levels with different bosses must therefore differ.
+      one phrase, so its boundaries are the same seven numbers whatever the level is.
+
+      ⚠️ **AND WHAT DECIDES A LEVEL'S OWN IS ITS SCRIPT NOW, NOT `bossAt`** —
+      `docs/decisions/0158-a-level-says-where-its-sections-open.md`. This used to read *a level's are
+      a function of `bossAt`, and two levels with different bosses must therefore differ*, which was
+      true while the three distances were measured back from the boss and sharing them was the only
+      option. It is false now: a script is level-local, so two levels could share a `bossAt` and still
+      differ, and could differ in `bossAt` and still open every section together. **The precondition
+      below moved with it** — what has to be different for this to assert anything is the SCRIPT.
     */
     const a = rungMarks('approach', 45).map((m) => m.second);
     const b = rungMarks('eye', 45).map((m) => m.second);
-    expect(LEVELS.eye.bossAt, 'the two levels chosen have the same bossAt, so this asserts nothing').not.toBe(
-      LEVELS.approach.bossAt,
+    expect(LEVELS.eye.sections, 'the two levels chosen ship the same script, so this asserts nothing').not.toEqual(
+      LEVELS.approach.sections,
     );
-    expect(a, 'two levels of different lengths reach their rungs at the same times').not.toEqual(b);
+    expect(a, 'two levels with different scripts reach their rungs at the same times').not.toEqual(b);
   });
 
   it('THE PLACE IS IN IT: two themes do not render the same gains', () => {

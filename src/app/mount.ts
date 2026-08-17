@@ -1183,8 +1183,20 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       state.screen.current === 'playing'
         ? musicLevelFor(
             world.cameraAlong - world.levelOrigin,
-            world.level.bossAt,
             world.bossPool.size > 0,
+            /*
+              ⚠️ **THE LEVEL'S OWN SCRIPT, AND IT IS THE ONLY THING `src/` MAY PASS HERE** — 0158.
+              Where a section opens stopped being three shared constants and became a thing a level
+              says, so this argument is required and `tests/dash.test.ts` checks that every call site
+              under `src/` passes exactly this expression: a shipped caller that built its own list
+              would make the shape of a level decided in two places.
+
+              ⚠️ **It pairs with the level-local camera above.** `world.cameraAlong` is the run's and
+              a script's `at` is the level's, which is why the origin comes off on the first argument
+              — `docs/decisions/0100-a-level-places-its-pickups-too.md` is the decision written
+              because that subtraction was missing somewhere else.
+            */
+            world.level.sections,
             /*
               ⚠️ **How much of the boss is left, as a share of what it started with** — 0113. The
               fight's second rung is keyed to this rather than to a clock, so the wall of sound lands

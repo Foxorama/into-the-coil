@@ -32,7 +32,7 @@ export const PROBES = [
         It anchors on the body's first line now, so a seventh parameter will not strand it again.
       */
       find: '): Moment {\n  const level = LEVELS[kind];',
-      replace: '): Moment {\n  at = SECTION_UNITS;\n  const level = LEVELS[kind];',
+      replace: '): Moment {\n  sections = LEVELS[kind].sections;\n  const level = LEVELS[kind];',
     },
   },
   {
@@ -46,13 +46,19 @@ export const PROBES = [
       rig's own marks come from the same broken set.
     */
     broke: 'a boundary clamped only against the level, so one can be dragged past another and delete a section',
-    guard: 'NO DRAG CAN PUT THE THREE OUT OF ORDER, or make one shorter than the bar its ramp lands on',
+    guard: 'NO DRAG CAN REORDER A SCRIPT, move entry zero, or make a section shorter than its own ramp',
     edit: {
+      /*
+        ⚠️ THE ANCHOR MOVED WITH 0158: three named keys clamped from the boss outwards became an index
+        into an ascending script. THE BREAK IS THE SAME MISTAKE — clamp against the level and nothing
+        else — and it is still what a first pass writes: keep it positive, keep it inside the level,
+        done. It lets an entry be dragged past the next one, and `musicLevelFor` then walks straight
+        over the section that follows while the strip goes on drawing it.
+      */
       path: 'rig/transport.ts',
-      find: "  if (which === 'approach') return { ...at, approach: clamp(floor, at.surge - floor) };\n" +
-        "  if (which === 'surge') return { ...at, surge: clamp(at.approach + floor, at.push - floor) };\n" +
-        '  return { ...at, push: clamp(at.surge + floor, bossAt - floor) };',
-      replace: '  return { ...at, [which]: clamp(floor, bossAt - floor) };',
+      find: '  const low = sections[index - 1]!.at + floor;\n' +
+        '  const high = (index + 1 < sections.length ? sections[index + 1]!.at : bossAt) - floor;',
+      replace: '  const low = floor;\n  const high = bossAt - floor;',
     },
   },
 ];

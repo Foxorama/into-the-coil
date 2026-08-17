@@ -17,17 +17,21 @@
  * instrument. `scripts/timeline.mjs` already owns the level walk, so this asks it rather than
  * walking a second camera of its own.
  *
- * ── AND `at` IS THREADED THROUGH EVERY ANSWER RATHER THAN READ FROM A MODULE ────────────────────
+ * ── AND `sections` IS THREADED THROUGH EVERY ANSWER RATHER THAN READ FROM A MODULE ──────────────
  *
- * ⚠️ **`docs/decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md`.** Every function below
- * that has an opinion about where a section begins takes the three distances as an argument and
- * defaults them to the game's own `SECTION_UNITS`. The dashboard hands it whatever the strip has been
- * dragged to; a test that passes nothing is asking about the shipped level, which is what almost all
- * of `tests/dash.test.ts` wants to know.
+ * ⚠️ **`docs/decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md`, as
+ * `docs/decisions/0158-a-level-says-where-its-sections-open.md` leaves it.** Every function below
+ * that has an opinion about where a section begins takes the level's SCRIPT as an argument. The
+ * dashboard hands it whatever the strip has been dragged to; a caller that passes nothing gets
+ * `LEVELS[kind].sections`, which is what almost all of `tests/dash.test.ts` wants to know.
+ *
+ * ⚠️ **THE DEFAULT IS THE LEVEL'S OWN AND NOT A SHARED SET, WHICH IS THE CHANGE.** It used to be
+ * `SECTION_UNITS` — one answer for all seven levels — so a default could be written without knowing
+ * which level was being asked about. Now it reads off `kind`, the parameter beside it.
  *
  * ⚠️ **IT IS STILL THE GAME'S ARITHMETIC AND NOT THE RIG'S** — `musicLevelFor` does the comparing,
- * here as everywhere. What is driveable is the NUMBER it compares against, and there is no branch in
- * this file that decides a rung.
+ * here as everywhere. What is driveable is the SCRIPT it walks, and there is no branch in this file
+ * that decides a rung.
  */
 
 import {
@@ -38,11 +42,10 @@ import {
   MUSIC_LADDER,
   MUSIC_LAYERS,
   MUSIC_LEVELS,
-  SECTION_UNITS,
   STEPS_PER_BEAT,
   type MusicLayer,
   type MusicLevel,
-  type SectionUnits,
+  type LevelSections,
 } from '../src/content/music.ts';
 import { LEVELS, type LevelKind } from '../src/content/levels.ts';
 import { THEME_KINDS, mixOf, type ThemeKind } from '../src/content/themes.ts';
@@ -82,10 +85,10 @@ export interface RungMark {
 const rungMarks = timeline.rungMarks as (
   kind: string,
   fightSeconds: number,
-  at?: SectionUnits,
+  sections?: LevelSections,
   step?: number,
 ) => RungMark[];
-const rungAt = timeline.rungAt as (kind: string, second: number, fightSeconds: number, at?: SectionUnits) => MusicLevel;
+const rungAt = timeline.rungAt as (kind: string, second: number, fightSeconds: number, sections?: LevelSections) => MusicLevel;
 const auraAt = timeline.auraAt as (kind: string, second: number, nearnessInFight: number) => number;
 const inBars = timeline.inBars as (second: number) => InBars;
 const targetGain = timeline.targetGain as (theme: ThemeKind, rung: MusicLevel, layer: MusicLayer, aura: number) => number;
@@ -101,8 +104,8 @@ export const UNITS_PER_SECOND = timeline.UNITS_PER_SECOND as number;
  * actually starts on. A dashboard that drew only the first would be showing the defect after it was
  * fixed, which is the mistake `scripts/timeline.mjs` records itself avoiding.
  */
-export function marksOf(kind: LevelKind, fightSeconds: number, at: SectionUnits = SECTION_UNITS): RungMark[] {
-  return rungMarks(kind, fightSeconds, at);
+export function marksOf(kind: LevelKind, fightSeconds: number, sections: LevelSections = LEVELS[kind].sections): RungMark[] {
+  return rungMarks(kind, fightSeconds, sections);
 }
 
 /**
@@ -241,7 +244,7 @@ export function momentOf(
   second: number,
   fightSeconds: number,
   nearnessInFight: number,
-  at: SectionUnits = SECTION_UNITS,
+  sections: LevelSections = LEVELS[kind].sections,
   /*
     ⚠️ **A MIX HAS TO BE DRIVEN RATHER THAN DESCRIBED, WHICH IS WHAT THIS DASHBOARD IS FOR** —
     `docs/decisions/0126-the-dashboard-is-the-instrument.md`. 0154 solved a mix that could only be
@@ -256,12 +259,12 @@ export function momentOf(
 ): Moment {
   const level = LEVELS[kind];
   const theme = level.theme;
-  const marks = rungMarks(kind, fightSeconds, at);
+  const marks = rungMarks(kind, fightSeconds, sections);
   const here = markAt(marks, second);
   const before = here > 0 ? marks[here - 1] : undefined;
   const next = marks[here + 1];
 
-  const rung = rungAt(kind, second, fightSeconds, at);
+  const rung = rungAt(kind, second, fightSeconds, sections);
   const aura = auraAt(kind, second, nearnessInFight);
   /*
     ⚠️ **The previous rung's targets are taken at the instant that rung STARTED, aura and all.** The
@@ -345,8 +348,8 @@ export interface LayerSpan {
   passes: number;
 }
 
-export function layerSpans(kind: LevelKind, fightSeconds: number, at: SectionUnits = SECTION_UNITS): LayerSpan[] {
-  const marks = rungMarks(kind, fightSeconds, at);
+export function layerSpans(kind: LevelKind, fightSeconds: number, sections: LevelSections = LEVELS[kind].sections): LayerSpan[] {
+  const marks = rungMarks(kind, fightSeconds, sections);
   const last = marks[marks.length - 1];
   const end = last === undefined ? 0 : last.second + last.lasts;
   const out: LayerSpan[] = [];
@@ -435,8 +438,14 @@ export function deskAlone(held: ReadonlyMap<MusicLayer, Held>): boolean {
   the drag itself is driven.
 */
 
-/** The three boundaries, from the boss outwards — which is the order they must keep. */
-export const SECTION_ORDER = ['approach', 'surge', 'push'] as const;
+/*
+  ⚠️ **`SECTION_ORDER` IS GONE, AND SO IS THE BUG IT CAUSED** — 0158. It listed the three boundaries
+  from the boss OUTWARDS, because that was the order the old clamp had to reason in: each distance
+  was bounded by the one nearer the boss. `rig/dash.ts` then had to reverse it to draw a strip that
+  reads left to right, and 0138 records the readout listing the three backwards until it was driven
+  in a browser — *"obvious in the browser, invisible in the module."* A script is already in the
+  order the strip draws it, so there is no second order to keep, and nothing left to reverse.
+*/
 
 /**
  * The shortest a section may be dragged, in world units: one bar of scroll.
@@ -452,28 +461,41 @@ export const SECTION_ORDER = ['approach', 'surge', 'push'] as const;
 export const SECTION_FLOOR_UNITS = BAR_SECONDS * UNITS_PER_SECOND;
 
 /**
- * Where a boundary lands when it is dragged to `units` from the boss, with the other two held.
+ * Where entry `index` of a script lands when it is dragged to `units` into the level.
  *
- * ⚠️ **CLAMPED AGAINST ITS NEIGHBOURS RATHER THAN AGAINST A RANGE**, because the three are an
- * ordering and not three independent numbers: `push` past `surge` does not make a long `push`, it
- * makes a `surge` that never happens and a strip that has stopped describing the ladder.
- * `musicLevelFor` tests them in order, so an out-of-order set silently deletes a rung.
+ * ⚠️ **CLAMPED AGAINST ITS NEIGHBOURS RATHER THAN AGAINST A RANGE**, because a script is an ordering
+ * and not a set of independent numbers: an entry dragged past the next one does not make a long
+ * section, it makes one that never happens and a strip that has stopped describing the ladder.
+ * `musicLevelFor` walks in order and breaks at the first entry the camera has not reached, so an
+ * out-of-order script silently HIDES a section.
  *
- * ⚠️ **`bossAt` is the outer bound and it is the LEVEL's**, not a constant here: `push` at more than
- * the whole level is a level that never plays `run`, and a level's length is the one quantity in
- * this that varies per place (0102's *measured from the boss backwards*).
+ * ⚠️ **ENTRY `0` DOES NOT MOVE.** A level's music starts where the level starts; a first entry at
+ * anything but `0` would leave the opening stretch with no section at all, and `musicLevelFor`'s
+ * fallback would answer for it — which is the one thing 0158 took out of that function.
+ *
+ * ⚠️ **`bossAt` IS THE OUTER BOUND AND IT IS THE LEVEL'S.** The last section runs until the boss
+ * arrives, and where that is is level design rather than a music number — 0138 refused a handle on
+ * it and 0158 keeps it out of the script for the same reason.
  */
 export function dragSection(
-  at: SectionUnits,
-  which: keyof SectionUnits,
+  sections: LevelSections,
+  index: number,
   units: number,
   bossAt: number,
-): SectionUnits {
+): LevelSections {
+  if (index <= 0 || index >= sections.length) return sections;
   const floor = SECTION_FLOOR_UNITS;
-  const clamp = (low: number, high: number): number => (units < low ? low : units > high ? high : units);
-  if (which === 'approach') return { ...at, approach: clamp(floor, at.surge - floor) };
-  if (which === 'surge') return { ...at, surge: clamp(at.approach + floor, at.push - floor) };
-  return { ...at, push: clamp(at.surge + floor, bossAt - floor) };
+  const low = sections[index - 1]!.at + floor;
+  const high = (index + 1 < sections.length ? sections[index + 1]!.at : bossAt) - floor;
+  /*
+    ⚠️ **A SCRIPT CAN BE PACKED TIGHTER THAN THE FLOOR ALLOWS, AND THEN `low` EXCEEDS `high`.** Seven
+    sections into a level that has room for five is a thing the panel can reach, and a clamp whose
+    bounds have crossed must not send the handle to the far side of its neighbour. Taking `low` in
+    that case pins the entry where it is being pushed FROM, which leaves the script ordered.
+  */
+  const landed = units < low ? low : units > high ? high : units;
+  const at = high < low ? low : landed;
+  return sections.map((entry, i) => (i === index ? { at, section: entry.section } : entry));
 }
 
 /**

@@ -8,7 +8,7 @@ import { ACROSS_SPAN, cullAlong, spawnAlong, viewOf } from '../src/sim/camera.ts
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { GameFrame, SHIP_START_ALONG } from '../src/app/frame.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
-import { playableWorld } from './world.ts';
+import { NO_SECTIONS, playableWorld } from './world.ts';
 import type { Entity } from '../src/sim/entity.ts';
 import type { World } from '../src/app/frame.ts';
 
@@ -55,6 +55,7 @@ function withOneEnemy(
     pickups: [],
     // Far beyond anything measured here, so a boss never joins a fight about one body's flying.
     bossAt: 1e9,
+    sections: NO_SECTIONS,
   };
   world.nextWave = 0;
   world.nextPickup = 0;
@@ -477,6 +478,7 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
           waves: [{ at: 200, enemy: kind, formation: 'line', count: 1, lane: 50 }],
           pickups: [],
           bossAt: Number.POSITIVE_INFINITY,
+          sections: NO_SECTIONS,
           boss: 'sentinel',
           theme: 'approach',
         });
@@ -522,6 +524,7 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
         waves: [{ at: 200, enemy: kind, formation: 'line', count: 1, lane: 50 }],
         pickups: [],
         bossAt: Number.POSITIVE_INFINITY,
+        sections: NO_SECTIONS,
         boss: 'sentinel',
         theme: 'approach',
       });
@@ -572,6 +575,7 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
         waves: [{ at: 200, enemy: kind, formation: 'column', count: 3, lane: 50 }],
         pickups: [],
         bossAt: Number.POSITIVE_INFINITY,
+        sections: NO_SECTIONS,
         boss: 'sentinel',
         theme: 'approach',
       });

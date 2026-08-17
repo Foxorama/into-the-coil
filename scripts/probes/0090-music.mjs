@@ -109,9 +109,20 @@ export const PROBES = [
     broke: 'the boss approach cut to a length that is a sting rather than a build',
     guard: 'and builds as the boss gets close, in SECONDS the player experiences',
     edit: {
-      path: 'src/content/music.ts',
-      find: 'export const BOSS_APPROACH_UNITS = 643;',
-      replace: 'export const BOSS_APPROACH_UNITS = 40;',
+      /*
+        ⚠️ THE ANCHOR MOVED WITH 0158, WHICH DELETED `BOSS_APPROACH_UNITS`. The build is no longer one
+        constant shared by seven levels — it is whatever each level's script puts last, so breaking it
+        means moving one level's last entry up against its boss. 4420 of 4460 leaves 40 units, which
+        is about a second: a cue, and a cue is `src/content/cues.ts`'s job.
+
+        ⚠️ AND IT IS `eye` RATHER THAN LEVEL ONE BECAUSE THE ANCHOR HAS TO BE UNIQUE. Levels one and
+        three share a `bossAt` and therefore ship identical scripts, so `{ at: 3627, … }` appears
+        twice and `planEdit` refuses it — correctly. The guard runs over all seven levels now, so any
+        one of them going wrong is enough to turn it red.
+      */
+      path: 'src/content/levels.ts',
+      find: "      { at: 3817, section: 'approach' },",
+      replace: "      { at: 4420, section: 'approach' },",
     },
   },
   {

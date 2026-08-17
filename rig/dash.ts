@@ -31,10 +31,9 @@ import {
   LAYER_PAN,
   MUSIC_LAYERS,
   MUSIC_LEVELS,
-  SECTION_UNITS,
   type MusicLayer,
   type MusicLevel,
-  type SectionUnits,
+  type LevelSections,
 } from '../src/content/music.ts';
 import { THEMES, bakedBy, revoicedBy, type ThemeKind } from '../src/content/themes.ts';
 import { CUES, CUE_KINDS } from '../src/content/cues.ts';
@@ -45,7 +44,6 @@ import { makeRng } from '../src/sim/rng.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import {
   SECTION_FLOOR_UNITS,
-  SECTION_ORDER,
   UNITS_PER_SECOND,
   cueLines,
   deskAlone,
@@ -217,18 +215,36 @@ function setHold(layer: MusicLayer, next: Held): void {
 }
 let unlocked = false;
 /**
- * Where this level's three middle rungs open, in world units back from its boss.
+ * The script being driven for each level — its own until it is dragged.
  *
- * ⚠️ **`docs/decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md`.** It starts at the
- * game's own `SECTION_UNITS` and every answer on this page is asked with it, so a boundary dragged on
- * the strip moves the rung the mixer is actually handed — the ladder turns over where it was dragged
- * to, over the game's own 1.6-second ramp, quantised to the bar exactly as 0117 says.
+ * ⚠️ **`docs/decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md`, as
+ * `docs/decisions/0158-a-level-says-where-its-sections-open.md` leaves it.** Every answer on this
+ * page is asked with the current level's entry, so a boundary dragged on the strip moves the rung
+ * the mixer is actually handed — the ladder turns over where it was dragged to, over the game's own
+ * 1.6-second ramp, quantised to the bar exactly as 0117 says.
  *
- * ⚠️ **IT IS ONE SET FOR ALL SEVEN LEVELS, BECAUSE THE GAME'S IS.** The three distances are measured
- * back from whichever boss the level has (0102), so they are not a property of a place — dragging on
- * level one's strip is a proposal about every level, and the panel says so.
+ * ⚠️ **IT IS ONE SCRIPT PER LEVEL NOW, AND 0138's OPPOSITE WAS TRUE.** That decision recorded *"one
+ * set for all seven levels, because the game's is"* — the three distances were measured back from
+ * whichever boss a level had, so dragging on level one's strip was a proposal about **every** level
+ * and the panel said so. 0158 makes the shape a thing a level owns, so a drag here is a proposal
+ * about **this** level and the panel has to say that instead. A tool that went on claiming the old
+ * thing would be teaching the wrong model of the game it is an instrument for.
+ *
+ * ⚠️ **AND THAT IS WHY IT IS A MAP RATHER THAN ONE VALUE.** 0138 could let a dragged set survive a
+ * change of level — *"a value chosen against level one can be looked at against Ember Nebula in one
+ * click"* — because there was one set. A script belongs to its level and cannot travel; keeping one
+ * per level is what stops switching level to hear something losing the edit you were in the middle
+ * of.
  */
-let sections: SectionUnits = SECTION_UNITS;
+const edits = new Map<LevelKind, LevelSections>();
+
+/** The script this page is currently driving: the level's own, or whatever it has been dragged to. */
+function scriptOf(k: LevelKind): LevelSections {
+  return edits.get(k) ?? LEVELS[k].sections;
+}
+
+/** The current level's, held here so every read below stays one lookup rather than a map probe. */
+let sections: LevelSections = scriptOf(kind);
 /**
  * Sim steps issued since the loops went on the air. Monotonic, and NOT a function of the scrub.
  *
@@ -517,11 +533,17 @@ levelSelect.addEventListener('change', () => {
   // Without this the fader keeps the last level's number over the new level's material.
   const only = aloneOn();
   if (only !== null) auditionOnly(only);
+  /*
+    ⚠️ **THE SCRIPT DOES NOT SURVIVE THE CHANGE NOW, AND 0138's DID** — 0158. The three distances
+    were shared, so a set chosen against level one could be *"looked at against Ember Nebula in one
+    click"*. A script belongs to its level and means nothing over another one, so this reads the
+    incoming level's — its own, or whatever that level was last dragged to, which is what `edits`
+    holds so that switching away to hear something does not throw an edit away.
+  */
+  sections = scriptOf(kind);
   drawSpans();
   drawStrip();
   drawPlace();
-  // The three distances are NOT a property of a place, so they survive the change — but the strip
-  // they are drawn on has a different length now, and the readout says which level they are over.
   drawSections();
 });
 
@@ -1029,14 +1051,20 @@ head.className = 'head';
   dragged either of those in TIME would be offering a control over something time does not decide.
 */
 
-/** Which boundary a pointer is currently holding, or `null`. */
-let dragging: keyof SectionUnits | null = null;
+/** Which entry of the script a pointer is currently holding, or `null`. */
+let dragging: number | null = null;
 
-/** Where a boundary would land if it were let go at `clientX`, in units back from the boss. */
+/**
+ * Where a boundary would land if it were let go at `clientX`, in units INTO the level.
+ *
+ * ⚠️ **FORWARD FROM THE LEVEL'S START, WHERE IT USED TO BE BACK FROM ITS BOSS** — 0158. It is the
+ * same pixel and the opposite arithmetic, and it is the one line on this page where getting the
+ * direction wrong would look like a working handle that ran the wrong way.
+ */
 function unitsAtClientX(x: number): number {
   const rect = strip.getBoundingClientRect();
   const fraction = rect.width === 0 ? 0 : (x - rect.left) / rect.width;
-  return LEVELS[kind].bossAt - fraction * totalOf(kind) * UNITS_PER_SECOND;
+  return fraction * totalOf(kind) * UNITS_PER_SECOND;
 }
 
 /**
@@ -1047,8 +1075,9 @@ function unitsAtClientX(x: number): number {
  * dragged boundary changes what the game's own mixer is told on the very next tick — over its own
  * 1.6-second ramp, landing on the bar line 0117 puts it on. Nothing here writes a gain.
  */
-function moveSection(which: keyof SectionUnits, units: number): void {
-  sections = dragSection(sections, which, units, LEVELS[kind].bossAt);
+function moveSection(index: number, units: number): void {
+  sections = dragSection(sections, index, units, LEVELS[kind].bossAt);
+  edits.set(kind, sections);
   drawStrip();
   drawSpans();
   drawSections();
@@ -1086,25 +1115,29 @@ function drawStrip(): void {
     strip.append(seg);
   }
   /*
-    ⚠️ **THE GRIP IS KEYED ON THE RUNG'S NAME AND NOT ON ITS INDEX**, because a boundary dragged far
-    enough removes a section from the strip altogether — `push` past the whole level leaves a level
-    that opens at `push` and never plays `run`, which is a real answer to a real question and not a
-    state to defend against. An index would silently hand the wrong handle to the wrong distance.
+    ⚠️ **THE GRIPS COME FROM THE SCRIPT AND NOT FROM THE MARKS, WHICH IS A CHANGE 0158 FORCES.** 0138
+    walked the marks and keyed each handle on its rung's NAME, because an index into a fixed set of
+    three would hand the wrong handle to the wrong distance once a boundary was dragged past its
+    neighbour. Neither works now: a script may name the same section twice, and `rungMarks` emits one
+    mark per CHANGE — so two adjacent entries naming the same rung produce one mark, and marks and
+    entries stop corresponding. Placing a grip per entry is exact whatever the script says, and the
+    index it carries is the index `dragSection` clamps.
+
+    ⚠️ **ENTRY `0` GETS NO GRIP.** A level's music starts where the level starts; there is nothing
+    to drag it to. That is the same refusal 0138 made for `approach`→`boss` and `boss`→`bossPeak` —
+    a handle over something a distance does not decide.
   */
-  for (const mark of marks) {
-    if (!(SECTION_ORDER as readonly string[]).includes(mark.rung)) continue;
-    const which = mark.rung as keyof SectionUnits;
+  for (let i = 1; i < sections.length; i++) {
+    const entry = sections[i]!;
     const grip = document.createElement('button');
     grip.className = 'grip';
     grip.type = 'button';
-    grip.style.left = `${(mark.second / total) * 100}%`;
-    grip.setAttribute(
-      'aria-label',
-      `${mark.rung} opens ${sections[which].toFixed(0)} units back from the boss — drag, or use the arrow keys`,
-    );
-    grip.title = `${mark.rung} opens ${sections[which].toFixed(0)} units back from the boss · drag me, or nudge a bar at a time with ← →`;
+    grip.style.left = `${(entry.at / UNITS_PER_SECOND / total) * 100}%`;
+    const says = `${entry.section} opens ${entry.at.toFixed(0)} units into ${kind}`;
+    grip.setAttribute('aria-label', `${says} — drag, or use the arrow keys`);
+    grip.title = `${says} · drag me, or nudge a bar at a time with ← →`;
     grip.addEventListener('pointerdown', (e) => {
-      dragging = which;
+      dragging = i;
       e.preventDefault();
     });
     /*
@@ -1119,8 +1152,20 @@ function drawStrip(): void {
       const step = e.key === 'ArrowLeft' ? -SECTION_FLOOR_UNITS : e.key === 'ArrowRight' ? SECTION_FLOOR_UNITS : 0;
       if (step === 0) return;
       e.preventDefault();
-      // Left on the strip is EARLIER in the level, which is FURTHER from the boss.
-      moveSection(which, sections[which] - step);
+      /*
+        ⚠️ **READ OFF `sections` AND NOT OFF THE CAPTURED `entry`, WHICH A DRIVE IS WHAT FOUND.**
+        `moveSection` calls `drawStrip`, which replaces every child of the strip — so the element
+        this listener is attached to is detached the instant it first fires, and the `entry` it
+        closed over is the value from before the move. Computing from it made a second press
+        recompute the same landing from the same stale number: **the handle moved one bar however
+        many times it was pressed.** Every guard in `tests/dash.test.ts` was green over that, because
+        they all call `dragSection` directly and none of them presses a key twice.
+
+        ⚠️ **0138 did not have this bug and did not have to think about it** — its handler indexed a
+        record by rung NAME, which is a live lookup by construction. An index into an array that is
+        rebuilt on every move is the thing that had to be read late rather than early.
+      */
+      moveSection(i, sections[i]!.at + step);
     });
     strip.append(grip);
   }
@@ -1130,49 +1175,52 @@ function drawStrip(): void {
 // ── WHERE THE BOUNDARIES ARE, AGAINST WHERE THEY SHIP ───────────────────────────────────────────
 
 /**
- * The three distances, printed as the constants they would be pasted back as.
+ * Whether this level's script has been dragged away from what it ships.
  *
- * ⚠️ **`PUSH_UNITS = 3021` AND NOT `push 3021`, WHICH IS 0129's RULE ABOUT THE DESK APPLIED HERE.**
- * A shape found by dragging is worth nothing if turning it into `src/content/music.ts` means reading
- * a number off a screenshot and guessing which constant it was. The shipped value travels beside it,
- * because *what did I change it from* is the other half of the report.
+ * ⚠️ **COMPARED BY VALUE AND NOT BY WHETHER AN EDIT EXISTS**, so dragging a handle out and back
+ * again correctly reads as *shipped*. The put-back button greys itself out on this, and 0138 drove
+ * exactly that: *"all three back to the shipped values and the button greyed itself out."*
  */
-const SECTION_CONSTANT: Readonly<Record<keyof SectionUnits, string>> = {
-  push: 'PUSH_UNITS',
-  surge: 'SURGE_UNITS',
-  approach: 'BOSS_APPROACH_UNITS',
-};
+function dragged(): boolean {
+  const ships = LEVELS[kind].sections;
+  if (sections.length !== ships.length) return true;
+  return sections.some((e, i) => e.at !== ships[i]!.at || e.section !== ships[i]!.section);
+}
 
 /**
- * The three in the order the STRIP draws them, which is the order a level reaches them.
+ * This level's script, printed as the TypeScript it would be pasted back as.
  *
- * ⚠️ **`SECTION_ORDER` runs the other way, from the boss outwards, because that is the order the
- * clamp has to reason in** — each boundary is bounded by the one nearer the boss. Printing that
- * order beside a strip that reads left to right made the readout disagree with the thing it labels,
- * which was obvious the moment it was driven and invisible before.
+ * ⚠️ **A `sections:` ARRAY AND NOT THREE NUMBERS, WHICH IS 0129's RULE ABOUT THE DESK FOLLOWING ITS
+ * SUBJECT.** 0138 printed `PUSH_UNITS = 3021 · SURGE_UNITS = 1736 · BOSS_APPROACH_UNITS = 643`,
+ * because that was what `src/content/music.ts` would have been edited to say. Those constants are
+ * gone; what a shape found by dragging is now a proposal about is one level's row in
+ * `src/content/levels.ts`, so that is what comes out — **naming the level**, because a script is no
+ * longer a proposal about all seven and a paste into the wrong row is now a thing that can happen.
  */
-const SECTION_ACROSS = [...SECTION_ORDER].reverse();
-
-const dragged = (): boolean => SECTION_ORDER.some((which) => sections[which] !== SECTION_UNITS[which]);
-
 function sectionText(): string {
-  return SECTION_ACROSS.map((which) => `${SECTION_CONSTANT[which]} = ${sections[which].toFixed(0)}`).join(' · ');
+  const rows = sections.map((e) => `    { at: ${e.at.toFixed(0)}, section: '${e.section}' },`).join('\n');
+  return `${kind}:\n  sections: [\n${rows}\n  ],`;
 }
 
 function drawSections(): void {
-  el('sections').innerHTML = SECTION_ACROSS.map((which) => {
-    const moved = sections[which] !== SECTION_UNITS[which];
-    return (
-      `<b class="${moved ? 'warn' : ''}">${which}</b> ` +
-      `<span class="${moved ? 'warn' : 'dim'}">${sections[which].toFixed(0)}</span>` +
-      (moved ? `<span class="dim"> (ships ${SECTION_UNITS[which]})</span>` : '')
-    );
-  }).join('<span class="dim"> · </span>');
+  const ships = LEVELS[kind].sections;
+  el('sections').innerHTML = sections
+    .map((e, i) => {
+      const was = ships[i];
+      const moved = was === undefined || was.at !== e.at || was.section !== e.section;
+      return (
+        `<b class="${moved ? 'warn' : ''}">${e.section}</b> ` +
+        `<span class="${moved ? 'warn' : 'dim'}">${e.at.toFixed(0)}</span>` +
+        (moved && was !== undefined ? `<span class="dim"> (ships ${was.section} ${was.at})</span>` : '')
+      );
+    })
+    .join('<span class="dim"> · </span>');
   el<HTMLButtonElement>('sectionsBack').disabled = !dragged();
 }
 
 el<HTMLButtonElement>('sectionsBack').addEventListener('click', () => {
-  sections = SECTION_UNITS;
+  edits.delete(kind);
+  sections = LEVELS[kind].sections;
   drawStrip();
   drawSpans();
   drawSections();
@@ -1268,18 +1316,30 @@ function momentAsText(moment: Moment): string {
       (silenced.size > 0 ? ` (silenced: ${[...silenced].join(', ')})` : '') +
       ` · **transport** ${walking ? 'walking' : onAir ? 'stopped, desk sounding' : 'stopped'}`,
     /*
-      ⚠️ **THE BOUNDARIES GO OUT AS CONSTANTS AND THE SHIPPED SET GOES WITH THEM** — 0138. A shape
-      found by dragging the strip is a proposal about `src/content/music.ts`, and a paste that said
-      *push 2400* would leave the next session to work out which of three constants that was and what
-      it had been. Printed whether or not anything moved, because *nothing was dragged* is also a
-      fact about the moment being reported.
+      ⚠️ **THE SCRIPT GOES OUT AS THE ROW IT WOULD BE PASTED INTO, AND THE SHIPPED ONE GOES WITH IT**
+      — 0138, following its subject into 0158. A shape found by dragging the strip is a proposal
+      about one level's row in `src/content/levels.ts`, and a paste that said *push 2400* would leave
+      the next session to work out which level that was and what it had been. Printed whether or not
+      anything moved, because *nothing was dragged* is also a fact about the moment being reported.
     */
-    `- **boundaries** ${sectionText()}` +
-      (dragged()
-        ? ` — **DRAGGED** (${SECTION_ACROSS.filter((w) => sections[w] !== SECTION_UNITS[w])
-            .map((w) => `${SECTION_CONSTANT[w]} ships ${SECTION_UNITS[w]}`)
-            .join(', ')})`
-        : ' (shipped)'),
+    `- **sections** (level \`${kind}\`)${dragged() ? ' — **DRAGGED**' : ' (shipped)'}`,
+    '',
+    '```ts',
+    sectionText(),
+    '```',
+    ...(dragged()
+      ? [
+          '',
+          `it ships:`,
+          '',
+          '```ts',
+          `${kind}:\n  sections: [\n` +
+            LEVELS[kind].sections.map((e) => `    { at: ${e.at}, section: '${e.section}' },`).join('\n') +
+            '\n  ],',
+          '```',
+        ]
+      : []),
+    '',
     only !== null
       ? `- **on the desk** \`${only}\` ALONE at ${(holdOf(only).gain ?? 0).toFixed(2)} — every other layer at zero`
       : `- **held on the desk** ${holds.length === 0 ? 'nothing — this is the mixer untouched' : holds.join(', ')}`,

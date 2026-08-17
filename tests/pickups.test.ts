@@ -30,7 +30,7 @@ import {
 import { GameFrame, SHIP_START_ALONG, scatterUpgrades } from '../src/app/frame.ts';
 import { initialState, reduce } from '../src/state/root.ts';
 import { DEFAULT_DIFFICULTY } from '../src/state/slices/run.ts';
-import { playableWorld } from './world.ts';
+import { NO_SECTIONS, playableWorld } from './world.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { Rng } from '../src/sim/rng.ts';
@@ -314,6 +314,7 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
       waves: [],
       pickups: [],
       bossAt: Number.POSITIVE_INFINITY,
+      sections: NO_SECTIONS,
       boss: 'sentinel',
       theme: 'approach',
     });
@@ -589,6 +590,7 @@ describe('collecting one, in the real frame', () => {
       waves: [],
       pickups: [{ at: 200, kind, lane: ACROSS_SPAN / 2 }],
       bossAt: Number.POSITIVE_INFINITY,
+      sections: NO_SECTIONS,
       boss: 'sentinel',
       theme: 'approach',
     });
@@ -751,6 +753,7 @@ describe('collecting one, in the real frame', () => {
         waves: [],
         pickups: [],
         bossAt: Number.POSITIVE_INFINITY,
+        sections: NO_SECTIONS,
         boss: 'sentinel',
       theme: 'approach',
       });
@@ -1246,6 +1249,7 @@ describe('collecting one, in the real frame', () => {
         waves: [],
         pickups: [200, 400, 600, 800, 1000, 1200].map((at) => ({ at, kind: 'weapon' as const, lane: ACROSS_SPAN / 2 })),
         bossAt: Number.POSITIVE_INFINITY,
+        sections: NO_SECTIONS,
         boss: 'sentinel',
       theme: 'approach',
       });
