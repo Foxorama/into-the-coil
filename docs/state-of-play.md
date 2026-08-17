@@ -696,6 +696,66 @@ and [0104](decisions/0104-the-gun-plays-a-figure.md). **Ask 1 has none, and it i
 THEM.** *"I haven't commented on boss aura's or game sfx/cues yet because we've been spending a lot
 of time just on the music."* Do not read the silence as a sign-off.
 
+### ⚠️ START HERE FOR THE SCORE: THE SECTION SCRIPT, DESIGNED AND NOT BUILT
+
+⚠️ **THE FOUR SECTIONS ARE THE SAME THREE DISTANCES FOR ALL SEVEN LEVELS, AND THE PLAYER HAS NAMED
+THAT AS A LIMITER**, 2026-08-17: *"can we rearrange the four sections? or have them different per
+level as well? some levels kick right into a surge etc, if we have the exact same timing for each for
+each it's also going to be a limiter."* The answer is yes and nothing about it is hard; it is **wide**.
+
+**The shape.** A level's music becomes a script, exactly as its content already is
+([0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md)) — a `sections` list on
+`LevelRow`, ascending, first entry at `0`, in the same **level-local** distance space as `bossAt`
+([0100](decisions/0100-a-level-places-its-pickups-too.md)):
+
+```ts
+sections: [
+  { at: 0,    section: 'surge' },   // a level MAY open at its loudest
+  { at: 900,  section: 'run' },     // and drop away
+  { at: 2400, section: 'push' },
+  { at: 3300, section: 'approach' },
+]
+```
+
+⚠️ **Order, count and timing all become free, and the names stop being a ladder.** `run` / `push` /
+`surge` / `approach` stay a closed union so guards and the desk can key on them
+([0016](decisions/0016-a-hub-enumerates-kinds.md)), but nothing requires them in order or once each.
+**`boss` and `bossPeak` are untouched** — they are keyed to health, not distance, so the fight does
+not move.
+
+⚠️ **SEED IT SO THE FIRST LANDING CHANGES NOTHING.** Today's boundaries are `bossAt` minus
+`PUSH_UNITS` 3021, `SURGE_UNITS` 1736 and `BOSS_APPROACH_UNITS` 643. Written out per level, that is:
+
+| level | `bossAt` | run | push | surge | approach |
+|---|---|---|---|---|---|
+| 1 | 4270 | 0 | 1249 | 2534 | 3627 |
+| 2 | 4320 | 0 | 1299 | 2584 | 3677 |
+| 3 | 4270 | 0 | 1249 | 2534 | 3627 |
+| 4 | 4240 | 0 | 1219 | 2504 | 3597 |
+| 5 | 4240 | 0 | 1219 | 2504 | 3597 |
+| 6 | 4340 | 0 | 1319 | 2604 | 3697 |
+| 7 | 4460 | 0 | 1439 | 2724 | 3817 |
+
+**Land the table first with those numbers and no sound moves**, which makes the diff provable; author
+the differences second, as their own change with their own play-test.
+
+⚠️ **THE SURFACE IS FOURTEEN FILES AND THE DASHBOARD IS THE AWKWARD ONE.** Sized rather than guessed —
+`rig/dash.ts`, `rig/transport.ts`, `scripts/hear.mjs`, `scripts/timeline.mjs`, `src/app/frame.ts`,
+`src/app/mount.ts`, `src/app/music.ts`, `src/content/music.ts`, `tests/dash.test.ts`,
+`tests/music.test.ts`, `tests/sound.test.ts`, and the probes for
+[0090](decisions/0090-the-music-is-four-loops.md),
+[0116](decisions/0116-the-rig-plays-the-level.md) and
+[0138](decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md).
+**0138's drag mechanism is built around exactly three named constants** and its *copy this moment*
+button prints them as the constants they would be pasted back as; that becomes a script per level, and
+it is the piece to design before typing.
+
+⚠️ **TEMPO RIDES THE SAME TABLE AND IS THE SECOND STEP, NOT THE FIRST.** A `bpm` per section is what
+makes *"a fast paced tempo melody that increases in tempo throughout the level"* a thing a level says
+— and the count of DISTINCT tempi in a level is the count of bakes it costs, which is why it belongs
+at the authoring site. **Read [0157](decisions/0157-the-prewarm-was-scheduled-one-note-at-a-time.md)
+first**: a bake is ~3.6 s of synthesis and the schedule that spends it is now `sliceOf`.
+
 ### ⚠️ AND THE RUN-START FREEZE IS FOUND AND FIXED — [0157](decisions/0157-the-prewarm-was-scheduled-one-note-at-a-time.md)
 
 ⚠️ **PRESSING START COST 4.6 SECONDS OF FROZEN MAIN THREAD AND IT WAS NOT THE MUSIC.** The prewarm
