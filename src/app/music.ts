@@ -44,7 +44,7 @@ import {
   type LevelSections,
 } from '../content/music.ts';
 import { sampleLayerInto, saturate } from './sound.ts';
-import { airOf, mixOf, voicesOf, type ThemeKind } from '../content/themes.ts';
+import { airOf, mixOf, rungOf, voicesOf, type ThemeKind } from '../content/themes.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 
@@ -908,7 +908,7 @@ export function levelWrites(
   const writes: RampWrite[] = [];
   for (const layer of MUSIC_LAYERS) {
     const aura = AURA_LAYERS.includes(layer);
-    const target = MUSIC_LADDER[level][layer] * mixOf(theme, layer) * (aura ? nearness : 1);
+    const target = rungOf(theme, level, layer) * mixOf(theme, layer) * (aura ? nearness : 1);
     if (!aura && lastTargets[layer] === target) continue;
     writes.push({ layer, target, at: aura ? now : bar, tau: (aura ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3 });
   }

@@ -20,7 +20,7 @@ import {
   AURA_LAYERS,
 } from '../src/content/music.ts';
 import { LEVELS } from '../src/content/levels.ts';
-import { mixOf } from '../src/content/themes.ts';
+import { mixOf, rungOf } from '../src/content/themes.ts';
 import { auraBuild, auraFor, musicLevelFor, nextBarFrom } from '../src/app/music.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -134,7 +134,7 @@ export function auraAt(kind, second, nearnessInFight) {
  */
 export function targetGain(theme, rung, layer, aura) {
   const ceiling = AURA_LAYERS.includes(layer) ? aura : 1;
-  return MUSIC_LADDER[rung][layer] * mixOf(theme, layer) * ceiling;
+  return rungOf(theme, rung, layer) * mixOf(theme, layer) * ceiling;
 }
 
 /** Everything a caller needs to render or report a level, gathered once. */

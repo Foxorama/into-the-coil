@@ -7,7 +7,7 @@
 
 import { panGains } from '../src/app/music.ts';
 import { AURA_LEVEL_CEILING, LAYER_PAN, MUSIC_LADDER, MUSIC_LAYERS } from '../src/content/music.ts';
-import { mixOf } from '../src/content/themes.ts';
+import { mixOf, rungOf } from '../src/content/themes.ts';
 import { ROLE_MARGIN_DB, SOLVED_BY, roleOf } from '../src/content/arrangement.ts';
 import { bandLevels } from '../tests/spectrum.ts';
 
@@ -86,7 +86,7 @@ export function shippedAt(theme, rung) {
   // ⚠️ The aura's row is a CEILING and not a gain — 0091, 0107.
   const nearness = rung === 'boss' || rung === 'bossPeak' ? 1 : AURA_LEVEL_CEILING;
   const out = {};
-  for (const l of MUSIC_LAYERS) out[l] = MUSIC_LADDER[rung][l] * mixOf(theme, l) * (SOLVED_BY(l) ? 1 : nearness);
+  for (const l of MUSIC_LAYERS) out[l] = rungOf(theme, rung, l) * mixOf(theme, l) * (SOLVED_BY(l) ? 1 : nearness);
   return out;
 }
 
