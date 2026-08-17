@@ -139,7 +139,7 @@ describe('a launcher is a position on the ship', () => {
       ⚠️ **The interpolation was not a mistuning, it was the only lever there was.** The missiles read
       the PULSE's cadence list, so a rate step could only land where the pulse's did; with both of
       those spent, staggering the tubes was the one way to make all four rungs buy something. The ship
-      row carries `missilePerBeat` now, so the tubes are a count that climbs straight — 1, then 2 —
+      row carries `missileEvery` now, so the tubes are a count that climbs straight — 1, then 2 —
       and the rate has the last two rungs to itself.
 
       ⚠️ **The FIRST tier is a tube, and that is 0056 surviving three taxonomy changes.** The base ship

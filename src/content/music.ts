@@ -683,118 +683,6 @@ export type LevelSections = readonly SectionEntry[];
 export { MUSIC_ROOT } from './cues.ts';
 
 /**
- * How many fixed sim steps there are to a beat.
- *
- * ── THIS IS THE WHOLE OF WHY THE TEMPO MOVED, AND IT IS NOT A MUSIC CONSTANT ────────────────────
- *
- * ⚠️ **`docs/decisions/0093-the-gun-is-on-the-grid.md`.** Asked for in play: *"we could almost make a
- * rhythm style game… what can we do so that as you pick up or lose power ups the music speeds up,
- * slows down etc and works in a beat to the rhythm of the fire?"* The player's auto-fire runs on the
- * fixed-step clock and never stops (`src/content/actions.ts` bans a fire action), so it is **a
- * metronome the player cannot switch off** — and putting it in time with the music means the gap
- * between volleys has to be a whole number of steps AND a musical fraction of a beat.
- *
- * ⚠️ **THAT IS ONLY POSSIBLE IF A BEAT IS A WHOLE NUMBER OF STEPS WITH USEFUL DIVISORS, AND 133⅓ BPM
- * WAS NOT.** 0090's beat was 0.45s, which is **27** steps, and 27 divides only by 3 and 9: a
- * three-rung fire ladder with a 3× hole in it. No amount of tuning the gun reaches a grid the music
- * is not on, which is the fact
- * [`the-gun-on-the-grid-mapped`](../../reports/the-gun-on-the-grid-mapped-2026-08-09.md) did not
- * state — it computed its grid at 100 BPM, which the music has never been at.
- *
- * ⚠️ **24 steps gives 24, 12, 8, 6, 4 and 3** — quarters, eighths, eighth-triplets, sixteenths,
- * sixteenth-triplets and thirty-seconds — and 3600/24 is **150 BPM**, which is where the genre the
- * play-test named actually sits. `src/content/pickups.ts` is what spends those divisors.
- *
- * ⚠️ **It cannot be derived from `STEPS_PER_SECOND` here**, because that lives in
- * `src/state/screens.ts` and `docs/decisions/0015-the-layer-ladder.md` points the arrow the other
- * way — `content` may not import `state`. `tests/music.test.ts` holds the two to each other instead,
- * which is the same cross-file check `tests/bombs.test.ts` makes for a blast's reach and its art.
- */
-export const STEPS_PER_BEAT = 24;
-
-/**
- * The grid every cadence that is not the player's own lands on, in sim steps.
- *
- * ── WHY THE ENEMIES GET A COARSER GRID THAN THE GUN ─────────────────────────────────────────────
- *
- * ⚠️ **`docs/decisions/0096-the-enemies-play-along.md`.** Asked for in play: *"it's going to be
- * tricky, but if we can balance the enemies and enemy fire into the rhythm as well that'd be sick."*
- * The player's gun is a LADDER — five authored rungs, each chosen to be a named note value
- * (`src/content/ships.ts`) — so it can sit on the exact subdivision a hand picked. An enemy's cadence
- * is a **tuned number** that a level designer reached by feel, and 0034's rule is that nothing may
- * assert on those values; snapping them to the nearest eighth would move some of them by 8%.
- *
- * ⚠️ **A sixteenth is 100ms and moves nothing by more than 50** — the three enemy rows move by 4%,
- * 0% and 3%, and every boss phase stays strictly faster than the one before it, which an eighth-note
- * grid did not manage for three of the seven. It is fine enough to be a rounding and coarse enough
- * that every shot lands somewhere a listener would call a beat.
- */
-export const FIRE_GRID = STEPS_PER_BEAT / 4;
-
-/**
- * The nearest cadence to `steps` that lands on the grid, never shorter than one grid unit.
- *
- * ⚠️ **THE ONE DESCRIPTION, and it is asked in two places that must agree** — the content tables
- * declare their cadences already snapped (guarded, so a hand cannot author one off the grid) and
- * `fireGapFor` snaps again after the difficulty multiplier, which is the step that would otherwise
- * quietly undo all of it: 0.7 of anything is rarely a multiple of anything.
- */
-export function onFireGrid(steps: number): number {
-  const snapped = Math.round(steps / FIRE_GRID) * FIRE_GRID;
-  return snapped < FIRE_GRID ? FIRE_GRID : snapped;
-}
-
-/**
- * Steps until a body with cadence `gap` should FIRST fire, so that the shot lands on the grid.
- *
- * ── A PERIOD ON THE GRID IS NOT THE SAME AS A SHOT ON THE GRID ──────────────────────────────────
- *
- * ⚠️ **`docs/decisions/0096-the-enemies-play-along.md`, and it is 0094's lesson arriving at the other
- * end of the field.** Snapping every cadence to a sixteenth makes each body keep a musical TEMPO;
- * where its shots actually land still depends on the step it happened to spawn on. A dozen bodies at
- * correct periods and arbitrary offsets is a smear, not a rhythm.
- *
- * ⚠️ **Quantised ONCE, at spawn, and relative for ever after.** Because `gap` is a whole number of
- * grid units, one alignment holds for the body's whole life — and because it is not re-aligned on
- * every shot, two enemies that spawned on different sixteenths stay on different sixteenths. That is
- * the difference between a pattern and a volley, and it is why the player's gun (0094) reloads
- * absolutely and an enemy does not: there is one ship and there are forty enemies.
- *
- * ── AND EVERY BODY IN A FORMATION SPAWNS ON THE SAME STEP, WHICH IS THE SENTENCE ABOVE FAILING ──
- *
- * ⚠️ **`docs/decisions/0098-a-wave-plays-a-figure.md`.** Reported from play against the build 0096
- * landed in: *"the enemies all fire at exactly the same time when they appear."* The paragraph above
- * is true of two enemies from two waves and false of five from one: `spawnWave` places a whole
- * formation inside one call, so `steps` and `gap` are the same number for every member and so is the
- * answer. **0096 aligned the phase and then handed every body the same one.**
- *
- * ⚠️ **`share` is where in its OWN cadence a body sits, in `[0, 1)`** — the caller's business, and
- * `src/app/frame.ts` derives it from the member's index and the wave's. A share of zero is byte for
- * byte what 0096 returned, which is why the boss and the seeded field can go on asking the old
- * question.
- *
- * ⚠️ **IT ONLY EVER DELAYS, AND THAT IS THE HALF THAT KEEPS 0096's BALANCE CLAIM.** 0096 refused a
- * forward rounding because *"every body on the field would open fire up to a grid unit LATE — a
- * change to how quickly a wave becomes dangerous."* A spread cannot be free of that: N bodies at one
- * cadence CANNOT be at N phases while all of them wait within one grid unit of it, so the two rules
- * are incompatible and this is the direction that makes nothing arrive sooner than it used to.
- *
- * Returns between `gap - FIRE_GRID + 1` and `2 × gap - FIRE_GRID`.
- */
-export function nextOnGrid(steps: number, gap: number, share = 0): number {
-  const base = gap - FIRE_GRID + (FIRE_GRID - (steps % FIRE_GRID));
-  /*
-    ⚠️ **The slots are the body's OWN cadence divided by the grid, never the wave's size.** A wave of
-    six turrets has eight sixteenths to sit in and a wave of six lancers has thirteen; spreading over
-    the count instead would put two bodies on one slot in the first case and leave five empty in the
-    second. `gap` is already a whole number of grid units (guarded), so this divides exactly.
-  */
-  const slots = Math.max(1, Math.round(gap / FIRE_GRID));
-  const wrapped = ((share % 1) + 1) % 1;
-  return base + Math.floor(wrapped * slots) * FIRE_GRID;
-}
-
-/**
  * The bar, in seconds, and how many of them a loop is.
  *
  * ⚠️ **THE LOOP LENGTH MUST BE A WHOLE NUMBER OF SAMPLES AT EVERY RATE IT IS BAKED AT.** A length
@@ -803,10 +691,23 @@ export function nextOnGrid(steps: number, gap: number, share = 0): number {
  * and eight beats is 3.2 seconds, which is exact at 44100, at 22050 and at 48000.
  * `tests/music.test.ts` holds it rather than this comment.
  *
- * ⚠️ **0.45 → 0.4, and it is `STEPS_PER_BEAT` above that decides it** rather than a taste about
- * tempo. Every note length written as a multiple of `BEAT_SECONDS` follows it; the handful written
+ * ⚠️ **IT IS THE MUSIC'S OWN NUMBER NOW, AND NOTHING IN THE SIM DECIDES IT** —
+ * `docs/decisions/0159-the-two-clocks-come-apart.md`. It used to be `STEPS_PER_BEAT / 60`: a beat
+ * had to be a whole number of sim steps so that the gun's cadence could be a musical fraction
+ * (`docs/decisions/0093-the-gun-is-on-the-grid.md`), which made **the tempo a hostage of the fire
+ * rates** — 24 steps a beat admits 150 BPM and 300 and nothing in between, so *"a fast paced tempo
+ * melody that INCREASES IN TEMPO throughout the level"* was not a thing this game could express at
+ * all.
+ *
+ * ⚠️ **0.4 IS UNCHANGED AND THAT IS DELIBERATE.** 0159 decouples and moves nothing, so the landing
+ * is silent and the diff is provable; a tempo that MOVES is the change after it, and it is the one
+ * that costs a re-bake (`docs/decisions/0157-the-prewarm-was-scheduled-one-note-at-a-time.md` has
+ * what a bake now costs and the scheduler that spends it).
+ *
+ * ⚠️ **Every note length written as a multiple of `BEAT_SECONDS` follows it**; the handful written
  * in absolute seconds — a kick's 0.26, a hat's 0.04 — deliberately do not, because a drum's decay is
- * a property of the drum and not of the tempo.
+ * a property of the drum and not of the tempo. **That distinction stops being cosmetic the moment
+ * the tempo moves**, and it is already correct.
  */
 export const BEAT_SECONDS = 0.4;
 export const LOOP_BARS = 2;

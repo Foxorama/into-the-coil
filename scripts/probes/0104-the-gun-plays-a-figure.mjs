@@ -50,7 +50,10 @@ export const PROBES = [
     guard: '0104 — strikes a cue by WHERE IN THE BEAT it lands, not by how many have gone before',
     edit: {
       path: 'src/app/sound.ts',
-      find: '  const sixteenth = Math.floor(((step % STEPS_PER_BEAT) + STEPS_PER_BEAT) % STEPS_PER_BEAT / FIRE_GRID);\n  return sixteenth % count;',
+      // ⚠️ RE-ANCHORED BY 0159, which moved the grid off the music: `STEPS_PER_BEAT` is
+      // `VOLLEY_CYCLE` and a *sixteenth* is a *slot*. Same lattice, same values, and the guard's
+      // claim is unchanged — a cue is struck by WHERE it lands, not by how many came before.
+      find: '  const slot = Math.floor(((step % VOLLEY_CYCLE) + VOLLEY_CYCLE) % VOLLEY_CYCLE / FIRE_GRID);\n  return slot % count;',
       replace: '  return step % count;',
     },
   },

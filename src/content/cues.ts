@@ -604,7 +604,7 @@ export const CUES: Record<CueKind, CueRow> = {
 
     ⚠️ **The counter-beat is what this cue is FOR** (`docs/decisions/0093-the-gun-is-on-the-grid.md`,
     5:1 against the pulse), and a counter-beat that overlaps itself is a texture. Shortened to fit,
-    like the pulse, and held against `missilePerBeat`'s own floor rather than against a number here.
+    like the pulse, and held against `missileEvery`'s own floor rather than against a number here.
 
     ⚠️ **No `figure`, and that is deliberate.** It fires once every five pulses, so successive
     missiles are far enough apart to be separate events already; an accent pattern over something

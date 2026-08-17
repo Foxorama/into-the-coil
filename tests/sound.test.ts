@@ -17,6 +17,7 @@ import {
   type CueKind,
 } from '../src/content/cues.ts';
 import { DEFAULT_SOUND, SOUNDS, SOUND_KINDS } from '../src/content/sound.ts';
+import { FIRE_GRID } from '../src/content/cadence.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { BEAT_SECONDS } from '../src/content/music.ts';
 import { DUCK_DOWN_SECONDS, DUCK_HOLD_SECONDS, DUCK_UP_SECONDS } from '../src/app/music.ts';
@@ -46,7 +47,7 @@ import {
 } from '../src/app/sound.ts';
 import { bakeLoops, layerNotes, musicLevelFor, placeFor } from '../src/app/music.ts';
 import { UNITS_PER_SECOND, rungMarks, targetGain } from '../scripts/timeline.mjs';
-import { AURA_LAYERS, FIRE_GRID, MUSIC, MUSIC_LAYERS, secondsOfLayer, type MusicLayer } from '../src/content/music.ts';
+import { AURA_LAYERS, MUSIC, MUSIC_LAYERS, secondsOfLayer, type MusicLayer } from '../src/content/music.ts';
 import { THEME_KINDS, bakedBy, revoicedBy, type ThemeKind } from '../src/content/themes.ts';
 import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { MISSILE_BEAT_RATIO, fireEveryAt, missileEveryAt } from '../src/content/pickups.ts';
@@ -1177,13 +1178,13 @@ describe('the synthesiser', () => {
       identical claim about the sound was never made, and it was false the whole time.
 
       ⚠️ **Driven off the SHIP'S LADDER rather than against a number typed here**, so a retuned
-      `firePerBeat` or `missilePerBeat` fails this rather than quietly reintroducing the drone —
+      `fireEvery` or `missileEvery` fails this rather than quietly reintroducing the drone —
       `docs/decisions/0027-measure-the-picture-not-the-model.md`, and the same cross-file shape
       `tests/bombs.test.ts` uses for a blast's reach and its art.
     */
     for (const ship of SHIP_KINDS) {
       const row = SHIPS[ship];
-      const fastest = Math.min(...row.firePerBeat.map((_unused, tier) => fireEveryAt(row, tier)));
+      const fastest = Math.min(...row.fireEvery.map((_unused, tier) => fireEveryAt(row, tier)));
       const gap = fastest / STEPS_PER_SECOND;
       expect(
         cueSeconds(CUES.pulse),
@@ -1192,7 +1193,7 @@ describe('the synthesiser', () => {
       ).toBeLessThanOrEqual(gap);
 
       const soonest = Math.min(
-        ...row.missilePerBeat.map((_unused, tier) => MISSILE_BEAT_RATIO * missileEveryAt(row, tier)),
+        ...row.missileEvery.map((_unused, tier) => MISSILE_BEAT_RATIO * missileEveryAt(row, tier)),
       );
       const missileGap = soonest / STEPS_PER_SECOND;
       expect(

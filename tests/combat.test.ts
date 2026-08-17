@@ -667,7 +667,7 @@ describe('0094 — the gun keeps a PHASE and not only a tempo', () => {
   it('and an UPGRADE moves the cadence without moving the phase, because every rung divides the beat', () => {
     /*
       ⚠️ **This is what 0093's divisor rule buys and it is worth stating as its own assertion.** The
-      rungs are 8, 6 and 4 steps and all three divide `STEPS_PER_BEAT`, so a multiple of any of them
+      rungs are 8, 6 and 4 steps and all three divide `VOLLEY_CYCLE`, so a multiple of any of them
       is a subdivision of the beat — the gun changes rate mid-level and never leaves the grid. A rung
       that divided nothing would pass every guard in 0093 except the divisor one and fail here.
     */

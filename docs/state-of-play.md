@@ -172,6 +172,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
 | **a strike is an INCREMENT, and a guard's validity can expire when material moves** | [0156](decisions/0156-a-strike-is-an-increment.md) |
 | **A LEVEL SAYS WHERE ITS SECTIONS OPEN — order, count and timing are the level's, and the three shared distances are gone** | [0158](decisions/0158-a-level-says-where-its-sections-open.md) |
+| **A CADENCE IS SIM STEPS AND A BEAT IS SECONDS — 0093's divisor rule is gone and a weapon may fire at any rate** | [0159](decisions/0159-the-two-clocks-come-apart.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
 | **a probe runs the test it NAMES, and a suite bakes the music once** | [0115](decisions/0115-a-probe-runs-its-own-guard.md) — amends 0054's *whole suite* clause |
 | **the rig plays a LEVEL, and the instrument is guarded like the game** | [0116](decisions/0116-the-rig-plays-the-level.md) |
@@ -670,9 +671,10 @@ is worse than no marker, because it reads exactly like a live one — the same f
 [0029](decisions/0029-the-tracked-record-is-the-record.md) names for a summary that drifts. **Retire
 this heading when it stops being true rather than adding another one below it.**
 
-**The work is: the dashboard's script editor, then tempo, then the score.** The section script itself
-has landed — [0158](decisions/0158-a-level-says-where-its-sections-open.md). Everything under here is
-why.
+**The work is: the phase lock, then the dashboard's script editor, then tempo, then the score.** The
+section script has landed ([0158](decisions/0158-a-level-says-where-its-sections-open.md)) and so has
+the ladder half of the grid ([0159](decisions/0159-the-two-clocks-come-apart.md)). Everything under
+here is why.
 
 ### THE SCORE IS BEING REWORKED, AND THE ORDER OF THE WHOLE PROJECT IS NAMED
 
@@ -730,7 +732,28 @@ says why that order and not another.
 however many times it was pressed, because the handler read a value captured before the redraw.
 [0027](decisions/0027-measure-the-picture-not-the-model.md)'s third catch of this project's own.
 
-### ⚠️ TEMPO IS THE SECOND STEP AND IT RIDES THE SAME TABLE
+### ⚠️ AND THE GRID IS COMING APART — [0159](decisions/0159-the-two-clocks-come-apart.md) IS HALF OF IT
+
+⚠️ **THE PLAYER DROPPED BOTH RULES BY NAME, 2026-08-17**: *"let's go ahead and drop the whole sim step
+rule and the gun fire ladder… the sim-step and gun ladder rules make no sense anyway when the plan has
+always been to add additional weapons in so we'd be struggling all over the place if we don't change
+our approach to that now."*
+
+⚠️ **0159 IS THE LADDER HALF AND IT HAS LANDED.** A cadence is sim steps, a beat is seconds, and
+neither knows the other's number. **266 resolved cadences identical to `main`** — the landing is
+silent and measured. `src/content/cadence.ts` is where the gameplay lattice lives now.
+
+⚠️ **THE CLOCK HALF IS NOT DONE AND MUST LAND BEFORE A TEMPO DOES.** `phaseTo` and the gun's grid
+alignment still tie the music's position to the sim's step count; they are harmless today and wrong
+the moment the tempo moves. 0159's *what is NOT in this change* has the detail.
+
+⚠️ **AND 0159 UN-DOES THE MUSICAL HALF OF 0096, 0098 AND 0104 ON A DELAY.** The enemies and the guns
+keep their rhythm and stop being locked to the tune — not today, because the two lattices still
+coincide, but the moment a level authors a tempo. **Re-weaving them is the player's own sequencing**:
+*"let's do music first and then afterwards we'll weave the weapon sounds either into or over it."*
+**Either** is the word to keep.
+
+### ⚠️ TEMPO RIDES THE SAME TABLE
 
 ⚠️ **THE SECTION SCRIPT ITSELF IS BUILT** — [0158](decisions/0158-a-level-says-where-its-sections-open.md)
 has the shape, the seed, the two measurements that prove it neutral, and the five probes it
@@ -774,7 +797,14 @@ repository. **Additional player weapons are LAST** — the arsenal is
 [0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md)'s and is still a list with
 nothing in it, and it stays that way until everything above it has landed.
 
-### ⚠️ AND ASK 1 RE-OPENS 0093, WHICH state-of-play HAS SAID WAS DUE SINCE THE SEVENTH PLAY-TEST
+### ~~⚠️ AND ASK 1 RE-OPENS 0093~~ — ASKED, ANSWERED AND HALF BUILT, 2026-08-17
+
+⚠️ **THE CONVERSATION DEFERRED FOUR TIMES HAS BEEN HAD AND THE PLAYER TOOK THE WIDER OPTION** — both
+rules dropped, not one. [0159](decisions/0159-the-two-clocks-come-apart.md) is the ladder half.
+**The arithmetic below is kept because it is why**, and because the divisor table is the clearest
+statement of what the old rule cost.
+
+### ~~THE ARITHMETIC THAT MADE IT NECESSARY~~
 
 ⚠️ **THE ARITHMETIC IS EXACT AND IT IS NOT A MATTER OF TASTE.** A cadence is authored as notes per
 beat and spent as `STEPS_PER_BEAT / perBeat`, so **every tempo the game can hold is one where that

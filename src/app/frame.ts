@@ -63,7 +63,7 @@ import { FORMATIONS, gapAcross } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
 import { type DifficultyRow, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
-import { nextOnGrid } from '../content/music.ts';
+import { nextOnGrid } from '../content/cadence.ts';
 import { PICKUP_KINDS, type PickupKind, type PickupRow, type UpgradeKind, type Weapon } from '../content/pickups.ts';
 import { SPECIALS, pyreFor, type SpecialKind } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
