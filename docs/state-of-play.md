@@ -758,6 +758,13 @@ each place names **what it follows** at each rung, which is the axis a listener 
 follows a different instrument, and the fights — five of seven were all following `dread` — differ
 too.
 
+⚠️ **AND THE BLOCKER ON WIRING IT IN IS NAMED AND MEASURED** —
+[`the-arrangement-holds-the-wrong-thing`](../reports/the-arrangement-holds-the-wrong-thing-2026-08-17.md).
+Reported of the dashboard's solved mix: *"the transitions between sections are now terrible."* The
+solve is doing exactly what it was told; **what is wrong is what it was told.** Three wrong answers
+are measured out of the way in there — read it before proposing a continuity fix, and note that the
+shipped game does not have this problem.
+
 ⚠️ **THE FIRST MOVE IS STILL AN EAR.** `node scripts/hear.mjs --level=<kind> --solved` writes a whole
 level at the solved balance, level-matched against the shipped one;
 `node scripts/hear-solved.mjs <place> --rung=<rung>` does a single rung. **`core --rung=surge` is the
