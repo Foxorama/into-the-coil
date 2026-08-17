@@ -670,6 +670,63 @@ describe('the rig is not in the game, and the game is not in the rig', () => {
     expect(offenders, `these import the dashboard: ${offenders.join(', ')}`).toEqual([]);
   });
 
+  it('0162 — NOTHING UNDER src/ OR rig/ READS THE SHARED LADDER, because a place may differ from it', () => {
+    /*
+      ⚠️ **HELD ON `gainOf`'s OWN TERMS** — 0126, and it is the third scan in this file for the same
+      reason. Eight things need *what is this layer doing at this rung of this level*, and every one of
+      them used to write `MUSIC_LADDER[rung][layer]` for itself. **That was safe while the answer was
+      the same everywhere.** `docs/decisions/0162-a-place-has-its-own-ladder.md` makes it per place, so
+      a call site that forgot is an instrument reporting a mix nobody hears — which
+      `docs/decisions/0116-the-rig-plays-the-level.md` has now been paid for twice.
+
+      ⚠️ **`rig/` IS SCANNED AS WELL AS `src/`, WHICH THE OTHER TWO SCANS DO NOT DO.** The mix and the
+      field are the shell's business and the dashboard is allowed its own opinion about a fader; *what
+      the ladder says* is not an opinion, and a coverage table read off the shared row would describe a
+      level nobody plays.
+
+      ⚠️ **`scripts/` IS DELIBERATELY NOT SCANNED, AND THE REASON IS A REAL ONE.** `scripts/hear.mjs`
+      has modes whose SUBJECT is the base composition — `--music` writes the shared ladder at every
+      rung with no place applied, which is the whole point of that mode. Forcing a themed read there
+      would make the tool answer a different question.
+    */
+    const offenders: string[] = [];
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(resolve(root, dir), { withFileTypes: true })) {
+        const path = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) walk(path);
+        else if (entry.name.endsWith('.ts')) {
+          // `rungOf`'s own declaration is the one permitted read, and it lives in this file.
+          if (path === 'src/content/themes.ts') continue;
+          // Comments blanked first — 0138's own lesson, and this file's subject is prose full of it.
+          if (/MUSIC_LADDER\s*\[/.test(bare(readFileSync(resolve(root, path), 'utf8')))) offenders.push(path);
+        }
+      }
+    };
+    walk('src');
+    walk('rig');
+    expect(
+      offenders,
+      `these read the shared ladder rather than the place's: ${offenders.join(', ')} — use rungOf`,
+    ).toEqual([]);
+
+    /*
+      ⚠️ **AND `rungOf` ROUTES BY THE PLACE IT WAS ASKED ABOUT, HELD AS A SCAN BECAUSE A VALUE CANNOT
+      SEE IT YET.** `node scripts/prove-guard.mjs 0162` replaced `THEMES[theme].ladder` with
+      `THEMES.approach.ladder` and every value-level assertion stayed GREEN — with all seven `ladder`
+      fields absent, reading the wrong place's table gives the right answer for all of them.
+
+      ⚠️ **IT IS THIN AND IT IS THE ONLY THING AVAILABLE, WHICH 0162 RECORDS AS A DEBT.** The moment
+      one place states a ladder, the honest version of this is a value comparison and this scan should
+      be replaced by it rather than kept alongside. Same species as 0158's `.sections` argument scan,
+      and it exists for the same reason: an expression is checkable when a number is not.
+    */
+    const themes = bare(readFileSync(resolve(root, 'src/content/themes.ts'), 'utf8'));
+    expect(
+      /return\s+rungIn\(\s*THEMES\[theme\]\.ladder\s*,/.test(themes),
+      '`rungOf` does not pass `THEMES[theme].ladder` — it is reading a place it was not asked about',
+    ).toBe(true);
+  });
+
   it('THE FADER REACHES WHAT THE MIXER ALREADY PLAYS, or maxing it turns the layer DOWN', () => {
     /*
       ⚠️ **THE REPORTED ONE.** Said of Ember Nebula, 2026-08-16: *"Listening with both arp sliders

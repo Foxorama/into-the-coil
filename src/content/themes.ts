@@ -71,7 +71,7 @@ import { CORE_VOICES } from './core.ts';
 import { SCALE } from './cues.ts';
 import { LABYRINTH_VOICES } from './labyrinth.ts';
 import { MIRE_VOICES } from './mire.ts';
-import { MUSIC, type MusicLayer, type MusicVoice } from './music.ts';
+import { MUSIC, MUSIC_LADDER, type MusicLayer, type MusicLevel, type MusicVoice } from './music.ts';
 import { NEBULA_VOICES } from './nebula.ts';
 import type { PaletteName } from './palette.ts';
 import { RIME_VOICES } from './rime.ts';
@@ -174,6 +174,41 @@ export interface ThemeRow {
    * arrangement the way they share a behaviour.
    */
   mix: Partial<Record<MusicLayer, number>>;
+  /**
+   * The rungs this place opens DIFFERENTLY, as a replacement for the shared ladder's own number.
+   *
+   * ── WHY `mix` COULD NOT DO THIS, AND WHY THE REASON IT COULD NOT HAS EXPIRED ────────────────────
+   *
+   * ⚠️ **`docs/decisions/0162-a-place-has-its-own-ladder.md`.** `mix` above is a MULTIPLIER, and its
+   * own doc says why: *"a theme cannot break the ladder's shape. 0090's rule is that the ladder only
+   * ever opens layers and 0102's is that every rung adds something."* **Both of those rules are
+   * gone** — `docs/decisions/0120-a-rung-may-close-a-layer.md` retired the first and
+   * `docs/decisions/0161-the-shape-of-a-level-is-not-guarded.md` the second — so the thing a
+   * multiplier was protecting no longer exists.
+   *
+   * ⚠️ **AND A MULTIPLIER CANNOT OPEN WHAT THE LADDER CLOSED, WHICH IS THE DEFECT.** `MUSIC_LADDER`'s
+   * `run` row has `arp`, `ride`, `hook`, `drive`, `counter` and `lead` all at **zero**, and any
+   * multiple of zero is zero. So *every* place opens a level with the same six fast layers shut,
+   * whatever it says in `mix` and whatever it re-voices. Reported against exactly that:
+   * *"still slow and melodic… more appropriate for a cthulhu-ian investigative game"*, and *"the run
+   * feels almost exactly the same"* — a literal description of one shared row that no amount of
+   * per-place writing could reach.
+   *
+   * ⚠️ **ABSENT MEANS THE SHARED LADDER, AND SPARSE ALL THE WAY DOWN.** A place states the rungs it
+   * differs on, and inside a rung only the layers it differs on — so a reader sees the difference
+   * rather than the table twice, exactly as `mix` and `voices` already work.
+   *
+   * ⚠️ **`mix` STILL APPLIES OVER THE TOP, AND THE TWO MEAN DIFFERENT THINGS.** This is the place's
+   * own SHAPE — which layers are open at which rung, and how far. `mix` is its BALANCE —
+   * `docs/decisions/0147-a-place-is-a-balance.md`. A place may state both, and the second multiplies
+   * the first.
+   *
+   * ⚠️ **NOTHING HERE IS GUARDED FOR SHAPE, ON 0161's TERMS.** What is held is that a stated layer
+   * and rung exist and that a value is inside the range the desk can express. Whether a place climbs,
+   * holds, or drops away is an authoring judgement, and a guard over it would be the thing 0161 was
+   * written to remove arriving one table over.
+   */
+  ladder?: Partial<Record<MusicLevel, Partial<Record<MusicLayer, number>>>>;
   /**
    * The layers this place plays DIFFERENTLY, as a replacement for their voices.
    *
@@ -884,4 +919,50 @@ export function bakedBy(theme: ThemeKind): MusicLayer[] {
 export function mixOf(theme: ThemeKind, layer: MusicLayer): number {
   const want = THEMES[theme].mix[layer] ?? 1;
   return want < MIX_FLOOR ? MIX_FLOOR : want > MIX_CEILING ? MIX_CEILING : want;
+}
+
+/**
+ * How far open `layer` is at `rung` IN THIS PLACE — the place's own number, or the shared ladder's.
+ *
+ * ── THE ONE DESCRIPTION, AND IT HAS TO BE, BECAUSE EIGHT THINGS ASK IT ──────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0162-a-place-has-its-own-ladder.md`.** The game, the rig, the dashboard, the
+ * WAV writer and three measuring scripts all need *what is this layer doing at this rung of this
+ * level*, and until now every one of them wrote `MUSIC_LADDER[rung][layer]` for itself. That was safe
+ * while the answer was the same everywhere; the moment a place may differ, a call site that forgot is
+ * an instrument reporting a mix nobody hears — which
+ * `docs/decisions/0116-the-rig-plays-the-level.md` has now been paid for twice.
+ *
+ * ⚠️ **`tests/music.test.ts` SCANS FOR A RAW `MUSIC_LADDER[` READ** outside this function, on the
+ * terms `gainOf` is held to by 0126. That is the guard that makes *one description* a fact rather
+ * than an intention.
+ *
+ * ⚠️ **THE AURA'S CEILING AND `mixOf` ARE DELIBERATELY NOT IN HERE.** This answers what the LADDER
+ * says; the nearness multiplier is a distance the player steers (0091) and the balance is the place's
+ * own (0147). Folding either in would make one function that cannot be asked a simple question.
+ */
+export function rungOf(theme: ThemeKind, rung: MusicLevel, layer: MusicLayer): number {
+  return rungIn(THEMES[theme].ladder, rung, layer);
+}
+
+/**
+ * The same lookup over a ladder handed in — which is how the override path is reachable at all.
+ *
+ * ⚠️ **IT EXISTS BECAUSE NO PLACE STATES A LADDER YET, AND A MECHANISM NO DATA EXERCISES IS GUARDED
+ * BY NOTHING.** `rungOf` reads `THEMES`, so with every `ladder` absent a version of it that ignored
+ * the override entirely would return the right answer for all seven places and every test would pass.
+ * That is `docs/decisions/0005-a-guard-must-be-seen-to-fail.md`'s subject reached from the other side:
+ * not a guard that cannot fail, but a code path nothing can drive.
+ *
+ * ⚠️ **PURE, AND SEPARATED FOR EXACTLY THE REASON `musicLevelFor` AND `rephaseIn` WERE** — the
+ * arithmetic most likely to be wrong is the part a headless test can hand its own table to.
+ * `tests/themes.test.ts` drives it with a synthetic place; `rungOf` above is the one reader of
+ * `THEMES`, and `tests/dash.test.ts` keeps it the one reader of `MUSIC_LADDER`.
+ */
+export function rungIn(
+  ladder: ThemeRow['ladder'],
+  rung: MusicLevel,
+  layer: MusicLayer,
+): number {
+  return ladder?.[rung]?.[layer] ?? MUSIC_LADDER[rung][layer];
 }

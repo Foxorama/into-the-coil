@@ -9,6 +9,8 @@ import {
   airOf,
   bakedBy,
   revoicedBy,
+  rungIn,
+  rungOf,
   scaleOf,
   voicesOf,
   type ThemeKind,
@@ -25,7 +27,7 @@ import {
   MUSIC_DRIVE,
   secondsOfLayer,
 } from '../src/content/music.ts';
-import { LAYER_PAN } from '../src/content/music.ts';
+import { LAYER_PAN, type MusicLevel } from '../src/content/music.ts';
 import { addRoom, bakeLayer } from '../src/app/music.ts';
 import { BANDS, bandEnergy } from './spectrum.ts';
 import {
@@ -978,5 +980,131 @@ describe('0128 — a place plays its own material, and shares everything it does
         ).toBeGreaterThan(0);
       }
     }
+  });
+});
+
+describe('0162 — a place has its own ladder, and only floors are held over it', () => {
+  /*
+    `docs/decisions/0162-a-place-has-its-own-ladder.md`. `mix` is a multiplier and any multiple of zero
+    is zero, so no place could open a layer the shared ladder closed — and `MUSIC_LADDER`'s `run` row
+    closes `arp`, `ride`, `hook`, `drive`, `counter` and `lead`. Every place opened a level with the
+    same six fast layers shut, which is what *"still slow and melodic"* and *"the run feels almost
+    exactly the same"* were describing.
+
+    ⚠️ **WHAT IS GUARDED HERE IS DELIBERATELY THIN** — `docs/decisions/0161-the-shape-of-a-level-is-not-guarded.md`.
+    A stated rung and layer must exist, and a value must be one the desk can express. **How a place
+    climbs, holds or drops away is an authoring judgement**, and a guard over it would be the thing
+    0161 was written to remove arriving one table over.
+  */
+  it('every rung and layer a place names is a real one, so a typo cannot be silently ignored', () => {
+    /*
+      ⚠️ **THE ONE FAILURE A SPARSE OVERRIDE INVITES.** `ladder?.[rung]?.[layer] ?? MUSIC_LADDER[...]`
+      falls back on ANY key it does not recognise, so `{ surge: { hooks: 0.8 } }` is not an error — it
+      is silence, in a place that reads as having been authored. The type catches it at compile time
+      and this catches it in a table that was cast or spread.
+    */
+    for (const theme of THEME_KINDS) {
+      const ladder = THEMES[theme].ladder ?? {};
+      for (const rung of Object.keys(ladder)) {
+        expect(MUSIC_LEVELS, `${theme} names a rung "${rung}" that is not in MUSIC_LEVELS`).toContain(rung);
+        for (const layer of Object.keys(ladder[rung as MusicLevel] ?? {})) {
+          expect(MUSIC_LAYERS, `${theme}'s ${rung} names a layer "${layer}" that is not in MUSIC_LAYERS`).toContain(
+            layer,
+          );
+        }
+      }
+    }
+  });
+
+  it('and every value a place states is one the mixer and the desk can both express', () => {
+    /*
+      ⚠️ **A FLOOR ON THE MECHANISM AND NOT ON THE MUSIC.** Zero is legal and meaningful — it is how a
+      place closes a layer the shared ladder opens, which `docs/decisions/0120-a-rung-may-close-a-layer.md`
+      made a thing a rung may do. What is refused is negative (a gain node cannot) and beyond what the
+      dashboard's fader can reach, because a value the desk cannot show is a value nobody can drive
+      back to — `docs/decisions/0129-the-desk-holds-a-value-not-a-multiplier.md`.
+    */
+    for (const theme of THEME_KINDS) {
+      const ladder = THEMES[theme].ladder ?? {};
+      for (const rung of Object.keys(ladder) as MusicLevel[]) {
+        for (const [layer, value] of Object.entries(ladder[rung] ?? {})) {
+          expect(value, `${theme}'s ${rung} ${layer} is negative`).toBeGreaterThanOrEqual(0);
+          expect(value, `${theme}'s ${rung} ${layer} is past what the desk can express`).toBeLessThanOrEqual(
+            MIX_CEILING,
+          );
+        }
+      }
+    }
+  });
+
+});
+
+describe('0162 — and the override path itself, driven with a table of its own', () => {
+  /*
+    ⚠️ **NO PLACE STATES A LADDER YET, WHICH IS WHY THIS IS HERE.** `rungOf` reads `THEMES`, so with
+    every `ladder` absent, a version that ignored the override entirely would answer correctly for all
+    seven places and the whole suite would stay green. `rungIn` takes the table as an argument so the
+    path is reachable — the same separation `musicLevelFor` has for `sections`, and for the same
+    reason: the arithmetic most likely to be wrong is the part a test must be able to hand its own
+    data to.
+  */
+  it('a place’s own number wins, and a layer it does not mention falls back to the shared ladder', () => {
+    /*
+      ⚠️ **THE DEFECT THIS EXISTS FOR IS THE ONE THAT MADE 0162 NECESSARY**: `MUSIC_LADDER.run.arp` is
+      zero, and `mix` is a multiplier, so no place could open it. Here a place opens it and the shared
+      row is left alone — which is the whole mechanism in two assertions.
+    */
+    const opened = { run: { arp: 0.71 } } as const;
+    expect(rungIn(opened, 'run', 'arp'), 'a place cannot open a layer the shared ladder closes').toBe(0.71);
+    expect(MUSIC_LADDER.run.arp, 'the shared row was mutated rather than overridden').toBe(0);
+    // A layer the place does not mention, at a rung it does: the shared ladder still answers.
+    expect(rungIn(opened, 'run', 'sub'), 'a sparse rung took the whole row over').toBe(MUSIC_LADDER.run.sub);
+    // A rung the place does not mention at all.
+    expect(rungIn(opened, 'surge', 'arp'), 'an override leaked into a rung it did not name').toBe(
+      MUSIC_LADDER.surge.arp,
+    );
+    // And absent entirely is the shared ladder, layer for layer — which is what makes 0162 land silent.
+    for (const rung of MUSIC_LEVELS) {
+      for (const layer of MUSIC_LAYERS) {
+        expect(rungIn(undefined, rung, layer), `${rung}/${layer} with no place ladder`).toBe(MUSIC_LADDER[rung][layer]);
+      }
+    }
+  });
+
+  it('and `rungOf` answers what `rungIn` answers, for all seven places at every rung', () => {
+    /*
+      ⚠️ **THIS CANNOT SEE A `rungOf` THAT ROUTES BY THE WRONG PLACE, AND A PROBE IS WHAT SAID SO.**
+      `node scripts/prove-guard.mjs 0162` replaced `THEMES[theme].ladder` with `THEMES.approach.ladder`
+      and this test **STAYED GREEN** — because every place's `ladder` is absent today, so every answer
+      is the shared ladder's and reading the wrong table is indistinguishable from reading the right
+      one. **The routing is guarded by a SOURCE SCAN instead**, in `tests/dash.test.ts`, and 0162
+      records the debt: the value-level version of this claim is unavailable until a place states a
+      ladder.
+
+      ⚠️ **WHAT IS LEFT IS STILL WORTH HAVING.** It joins the pure half to the shipped table — a
+      `rungOf` that dropped the lookup entirely and went straight to `MUSIC_LADDER` would pass, but one
+      that applied `mixOf`, or clamped, or reached for the aura would not.
+    */
+    for (const theme of THEME_KINDS) {
+      for (const rung of MUSIC_LEVELS) {
+        for (const layer of MUSIC_LAYERS) {
+          expect(rungOf(theme, rung, layer), `${theme}/${rung}/${layer}`).toBe(
+            rungIn(THEMES[theme].ladder, rung, layer),
+          );
+        }
+      }
+    }
+  });
+
+  it('and ZERO is a value a place may state, because closing a layer is a thing a rung may do', () => {
+    /*
+      ⚠️ **`?? ` AND NOT `||`, WHICH IS THE ONE-CHARACTER VERSION OF THIS WHOLE DECISION.** A place
+      that closes a layer states `0`, and `||` would treat that as *not stated* and fall through to the
+      shared ladder — so the place would be silently ignored exactly when it was trying to be quiet.
+      `docs/decisions/0120-a-rung-may-close-a-layer.md` made closing legal; this is the line that lets
+      a PLACE do it.
+    */
+    expect(MUSIC_LADDER.surge.counter, 'the shared ladder no longer opens this, so the test proves nothing').toBeGreaterThan(0);
+    expect(rungIn({ surge: { counter: 0 } }, 'surge', 'counter'), 'a place could not close a layer').toBe(0);
   });
 });

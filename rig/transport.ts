@@ -39,7 +39,6 @@ import {
   BAR_SECONDS,
   LAYER_BARS,
   LAYER_PAN,
-  MUSIC_LADDER,
   MUSIC_LAYERS,
   MUSIC_LEVELS,
   type MusicLayer,
@@ -48,7 +47,7 @@ import {
 } from '../src/content/music.ts';
 import { LEVELS, type LevelKind } from '../src/content/levels.ts';
 import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
-import { THEME_KINDS, mixOf, type ThemeKind } from '../src/content/themes.ts';
+import { THEME_KINDS, mixOf, rungOf, type ThemeKind } from '../src/content/themes.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { UPGRADE_TIERS, weaponFor, type UpgradeKind, type Weapon } from '../src/content/pickups.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -211,7 +210,7 @@ export type SolvedGains = Readonly<Partial<Record<MusicLevel, Readonly<Record<Mu
 export const LOUDEST_SHIPPED = MUSIC_LEVELS.reduce(
   (most, rung) =>
     THEME_KINDS.reduce(
-      (m, theme) => MUSIC_LAYERS.reduce((n, layer) => Math.max(n, MUSIC_LADDER[rung][layer] * mixOf(theme, layer)), m),
+      (m, theme) => MUSIC_LAYERS.reduce((n, layer) => Math.max(n, rungOf(theme, rung, layer) * mixOf(theme, layer)), m),
       most,
     ),
   0,
@@ -358,12 +357,18 @@ export function layerSpans(kind: LevelKind, fightSeconds: number, sections: Leve
     let open: number | null = null;
     for (const mark of marks) {
       /*
-        ⚠️ **The LADDER decides, not the theme and not the aura.** A theme multiplier scales a layer
+        ⚠️ **The LADDER decides, not the balance and not the aura.** A theme multiplier scales a layer
         and cannot silence one (`MIX_FLOOR` in `src/content/themes.ts`), and the aura's ceiling is a
         distance the player steers rather than a property of the level — so *is this layer in this
         section at all* is a question about the rung.
+
+        ⚠️ **AND THE RUNG IS THE PLACE'S OWN NOW** — `docs/decisions/0162-a-place-has-its-own-ladder.md`.
+        `MUSIC_LADDER[rung][layer]` was the whole answer while every place shared one shape; a place
+        may open a layer its neighbour closes, so a coverage table read off the shared row would
+        describe a level nobody plays. **This is the measurement a drag is FOR** (0126), so it being
+        about the wrong level is the one thing it cannot afford.
       */
-      const on = MUSIC_LADDER[mark.rung][layer] > 0;
+      const on = rungOf(LEVELS[kind].theme, mark.rung, layer) > 0;
       if (on && open === null) open = mark.second;
       if (!on && open !== null) {
         spans.push([open, mark.second]);

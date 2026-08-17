@@ -22,7 +22,7 @@
 import { bakeLoops } from '../src/app/music.ts';
 import { SAMPLE_RATE, saturate } from '../src/app/sound.ts';
 import { MUSIC_DRIVE, MUSIC_GAIN, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_LEVELS } from '../src/content/music.ts';
-import { THEME_KINDS, mixOf } from '../src/content/themes.ts';
+import { THEME_KINDS, mixOf, rungOf } from '../src/content/themes.ts';
 import { profileOf, quietestThird, rungShape } from '../tests/pace.ts';
 
 const LOW_FLOOR = 0.28;
@@ -42,7 +42,7 @@ for (const theme of THEME_KINDS) {
   const longest = Math.max(...buffers.map((b) => b.length));
   const rungs = MUSIC_LEVELS.map((level) => ({
     level,
-    gains: MUSIC_LAYERS.map((l) => MUSIC_LADDER[level][l] * mixOf(theme, l)),
+    gains: MUSIC_LAYERS.map((l) => rungOf(theme, level, l) * mixOf(theme, l)),
     raw: 0,
   }));
   const now = new Float64Array(MUSIC_LAYERS.length);
@@ -70,7 +70,7 @@ for (const theme of THEME_KINDS) {
 
 console.log('\nplace        run    push   surge  approa    boss   arc');
 for (const theme of THEME_KINDS) {
-  const at = (rung) => MUSIC_LAYERS.reduce((sum, l) => sum + MUSIC_LADDER[rung][l] * mixOf(theme, l), 0);
+  const at = (rung) => MUSIC_LAYERS.reduce((sum, l) => sum + rungOf(theme, rung, l) * mixOf(theme, l), 0);
   const [run, push, surge, approach, boss] = ['run', 'push', 'surge', 'approach', 'boss'].map(at);
   void surge;
   const flags = [];

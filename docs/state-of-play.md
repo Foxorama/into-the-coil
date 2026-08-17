@@ -175,6 +175,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **A CADENCE IS SIM STEPS AND A BEAT IS SECONDS — 0093's divisor rule is gone and a weapon may fire at any rate** | [0159](decisions/0159-the-two-clocks-come-apart.md) |
 | **THE MUSIC FREE-RUNS ON THE AUDIO CLOCK — the sim no longer reaches it anywhere, and a tempo may move** | [0160](decisions/0160-the-music-free-runs.md) |
 | **THE SHAPE OF A LEVEL'S MUSIC IS NOT GUARDED — floors stay, shape does not get asserted** | [0161](decisions/0161-the-shape-of-a-level-is-not-guarded.md) |
+| **A PLACE HAS ITS OWN LADDER — it may open a layer the shared row closes, which `mix` could never do** | [0162](decisions/0162-a-place-has-its-own-ladder.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
 | **a probe runs the test it NAMES, and a suite bakes the music once** | [0115](decisions/0115-a-probe-runs-its-own-guard.md) — amends 0054's *whole suite* clause |
 | **the rig plays a LEVEL, and the instrument is guarded like the game** | [0116](decisions/0116-the-rig-plays-the-level.md) |
@@ -734,6 +735,28 @@ says why that order and not another.
 ⚠️ **AND A DRIVE FOUND A BUG THE WHOLE SUITE WAS GREEN OVER** — a keyboard nudge that moved one bar
 however many times it was pressed, because the handler read a value captured before the redraw.
 [0027](decisions/0027-measure-the-picture-not-the-model.md)'s third catch of this project's own.
+
+### ⚠️ AND A PLACE HAS ITS OWN LADDER NOW — [0162](decisions/0162-a-place-has-its-own-ladder.md)
+
+⚠️ **THIS IS THE MECHANISM BEHIND *"the run feels almost exactly the same"*, AND THREE DECISIONS OF
+PER-PLACE WRITING COULD NOT REACH IT.** `MUSIC_LADDER`'s `run` row closes `arp`, `ride`, `hook`,
+`drive`, `counter` and `lead`; `mix` is a MULTIPLIER and any multiple of zero is zero. **So every place
+opened a level with the same six fast layers shut**, whatever it said in `mix` and whatever it
+re-voiced. A place may now state its own value for any layer at any rung.
+
+⚠️ **IT LANDS EMPTY AND IT IS MEASURED** — 147 rows of mixer gains byte-identical to before, every
+place at every rung at three aura distances. **Authoring the overrides is the next change and it wants
+an ear.**
+
+⚠️ **AND `mix`'s OWN STATED REASON FOR BEING A MULTIPLIER HAD EXPIRED**: it protected 0090's additive
+rule and 0102's escalation rule, retired by [0120](decisions/0120-a-rung-may-close-a-layer.md) and
+[0161](decisions/0161-the-shape-of-a-level-is-not-guarded.md). **A constraint outliving both of its
+reasons is the pattern of this whole week.**
+
+⚠️ **A GUARD WRITTEN THE SAME HOUR WAS VACUOUS AND A PROBE CAUGHT IT.** With every `ladder` absent,
+`rungOf` reading a FIXED place is indistinguishable from reading the right one — so the value-level
+check stayed green. It is a source scan for now, and **the debt is owed by the first authoring change**:
+when a place states a ladder, replace the scan with a value comparison.
 
 ### ⚠️ AND THE SHAPE OF A LEVEL'S MUSIC IS NOT GUARDED ANY MORE — [0161](decisions/0161-the-shape-of-a-level-is-not-guarded.md)
 

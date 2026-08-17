@@ -96,8 +96,11 @@ export const PROBES = [
     guard: 'THE PLACE IS IN IT: two themes do not render the same gains',
     edit: {
       path: 'scripts/timeline.mjs',
-      find: '  return MUSIC_LADDER[rung][layer] * mixOf(theme, layer) * ceiling;',
-      replace: '  return MUSIC_LADDER[rung][layer] * ceiling;',
+      // ⚠️ RE-ANCHORED BY 0162: the rung is read through `rungOf` now, because a place may open a
+      // layer the shared ladder closes. The break is unchanged — the BALANCE dropped, so all seven
+      // levels render at one place's mix.
+      find: '  return rungOf(theme, rung, layer) * mixOf(theme, layer) * ceiling;',
+      replace: '  return rungOf(theme, rung, layer) * ceiling;',
     },
   },
   {
