@@ -248,13 +248,15 @@ let sections: LevelSections = scriptOf(kind);
 /**
  * Sim steps issued since the loops went on the air. Monotonic, and NOT a function of the scrub.
  *
- * ⚠️ **This is what keeps the gun on the music's grid, and it is why the dashboard never calls
- * `phaseTo`.** 0094's re-phase exists for a sim that DROPPED steps — a game loop's backlog, thrown
- * away by `src/app/loop.ts` rather than spiralled through. This tool has no game loop: the count
- * below is derived from the same wall clock the `AudioContext` runs on, so the two track to within
- * tens of parts per million (0094 says so in as many words) and there is nothing to correct. What a
- * correction WOULD do here is move the bar grid up to a phrase into the future, which is exactly
- * the bug a scrub used to cause.
+ * ⚠️ **This is what paces the gun, and the dashboard never had to think about the music's phase** —
+ * the count below is derived from the same wall clock the `AudioContext` runs on, so the two track
+ * to within tens of parts per million and there was never anything here to correct.
+ *
+ * ⚠️ **AND THERE IS NOTHING TO CORRECT ANYWHERE NOW** —
+ * `docs/decisions/0160-the-music-free-runs.md`. This used to say *it is why the dashboard never
+ * calls `phaseTo`*, which was a real difference between the rig and the game: the shell re-phased
+ * every frame and this did not. **The shell has stopped too**, so the sentence describes both, and
+ * the rig's freedom from a whole class of scrub bug is now the game's as well.
  */
 let steps = 0;
 /** `performance.now()` at the instant the loops were started, or `null` before the first press. */
@@ -340,12 +342,17 @@ for (const [label, rung] of [
  * ── AND THE STEP CLOCK DOES NOT MOVE WITH IT, WHICH COST AN HOUR TO FIND ────────────────────────
  *
  * ⚠️ **THE FIRST VERSION RE-ANCHORED `steps` HERE AND IT BROKE EVERY RAMP AFTER A SCRUB.** A jump
- * makes the step clock disagree with the audio clock by however far you jumped; `phaseTo` reads that
- * as drift and corrects it the way 0094 says — by restarting the loop set at the next PHRASE
+ * makes the step clock disagree with the audio clock by however far you jumped; the re-phase 0094
+ * put in the shell read that as drift and corrected it by restarting the loop set at the next PHRASE
  * boundary, up to 25.6 seconds ahead. `anchorAudio` becomes that future instant, `nextBarFrom`
  * returns it for every subsequent write, and **the whole ladder freezes at whatever it was showing
  * until the anchor arrives.** Observed as: jump to `surge`, and the layers `surge` opens stay
  * silent while the readout insists they are at full.
+ *
+ * ⚠️ **THAT MECHANISM IS GONE AS OF `docs/decisions/0160-the-music-free-runs.md`**, so the trap it
+ * describes cannot be re-entered from the shell either. **The rule below still holds** — a scrub must
+ * not re-anchor the step clock — because the reason it holds is that `steps` is the gun's pacing and
+ * a jump did not move the gun.
  *
  * ⚠️ **So a scrub moves the LEVEL and never the clock.** The level position is what the slider is
  * about; the music has been playing continuously since the first press and nothing about looking at

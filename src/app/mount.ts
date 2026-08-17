@@ -1170,15 +1170,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     music.start();
     bakeIncomingPlace();
     /*
-      ⚠️ **EVERY FRAME, AND IT DOES NOTHING ALMOST EVERY TIME** — 0094. The gun is on the sim's step
-      grid and the music is on the audio clock; this is the only thing that keeps the two agreeing
-      after the sim has dropped steps, which `src/app/loop.ts` does on purpose past `MAX_STEPS`.
+      ⚠️ **`music.phaseTo(world.steps)` WAS THE LINE ABOVE THIS AND 0160 REMOVED IT.** It ran every
+      frame and did nothing almost every time: it kept the loops in phase with the sim's step clock
+      after `src/app/loop.ts` dropped steps past `MAX_STEPS`, which is 0022 working as designed.
 
-      ⚠️ **`world.steps` and not `state`** — the phase belongs to the run being stepped, not to the
-      screen. On a menu the world is not stepping, so the count holds and the music free-runs, which
-      is correct: there is no gun to be in phase with.
+      ⚠️ **IT WAS THE LAST PLACE THE SIM REACHED THE MUSIC.** 0094 put it here so the gun and the
+      loops would keep one clock; `docs/decisions/0159-the-two-clocks-come-apart.md` ended that, and
+      `docs/decisions/0160-the-music-free-runs.md` is why correcting towards a clock you no longer
+      share is worse than not correcting at all. **The music now free-runs on the audio clock**,
+      which is the one it is played against and the one that does not drop steps.
     */
-    music.phaseTo(world.steps);
     const level =
       state.screen.current === 'playing'
         ? musicLevelFor(
