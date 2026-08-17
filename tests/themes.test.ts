@@ -32,6 +32,8 @@ import { addRoom, bakeLayer } from '../src/app/music.ts';
 import { BANDS, bandEnergy } from './spectrum.ts';
 import {
   AUDIBLE_FLOOR_DB,
+  ROLE_FLOOR_DB,
+  adriftAt,
   layerLevels,
   profileOf,
   quietestThird,
@@ -850,6 +852,85 @@ describe('0128 — a place plays its own material, and shares everything it does
     expect(
       offenders,
       `these are opened by a rung and cannot be heard against the rest of the place: ${offenders.join(', ')}`,
+    ).toEqual([]);
+  }, DSP_MS);
+
+  /*
+    ── 0164: A ROLE IS A PROMISE, AND NINETY-ONE OF THEM ARE NOT KEPT ────────────────────────────
+
+    `docs/decisions/0164-a-role-is-a-promise-the-mix-has-to-keep.md`. Reported 2026-08-18, of the
+    dashboard: *"still getting sounds playing that I can't hear… it's probably not going to be just
+    the groove and not just on that level, but a whole bunch of sounds and a whole bunch of levels,
+    so if we can identify them all and fix them all, that'd be a lot better than me having to listen
+    to each individual segment and then listen to each individual item in each segment."*
+
+    ⚠️ **THE MEASUREMENT ALREADY EXISTED AND HAD NO THRESHOLD ON PURPOSE.**
+    `docs/decisions/0152-a-layer-is-heard-in-the-sum.md` built `margin` and refused to guard it, for
+    a reason written into `ROLE_MARGIN_DB`'s own comment: *"`drone` is the connective tissue and is
+    meant to sit under everything… a guard that says every layer must be audible would flag it every
+    time."* So the audit in `reports/what-the-mix-buries-2026-08-16.md` had to be read by a person
+    and acted on by hand, which is exactly the loop the report above asks to get out of.
+
+    ⚠️ **`docs/decisions/0154-the-mix-is-authored-as-intent.md` ANSWERED THE OBJECTION AND NOBODY
+    NOTICED.** Once every layer has a stated role at every rung, *is this audible* — which has no
+    single right answer over twenty-three layers — becomes *is this the thing the arrangement said it
+    was*, which has exactly one. `drone` is `air`, `air` wants −13 dB, and a `drone` at −13 now
+    passes a guard that a `drone` at −25 fails. **That distinction is the whole of what was missing**,
+    and it has been available since 0154 landed.
+
+    ⚠️ **IT ARRIVES WITH NINETY-ONE ENTRIES AND THAT IS THE POINT, NOT A CONCESSION.** Every one of
+    them is a layer the arrangement asked a listener to be able to do something with, which the mix
+    does not deliver — the list the report asks for, in the repository rather than in an ear. The
+    guard holds it in BOTH directions: nothing new may join it, and an entry that starts passing must
+    be deleted rather than left to rot. `reports/what-a-role-does-not-buy-2026-08-18.md` ranks them.
+
+    ⚠️ **AND IT IS NOT `MUSIC_LADDER × mixOf` BEING BAD AT ITS JOB — IT NEVER HAD THIS JOB.** The
+    ladder predates roles by fourteen decisions. 0154's solve reaches every one of these targets to
+    0.00 dB and cannot ship, because
+    `reports/the-arrangement-holds-the-wrong-thing-2026-08-17.md` found it lurches at every boundary.
+    This guard is what says how far the shipped mix is from the intent, while that is worked out.
+  */
+  const STILL_ADRIFT: Record<ThemeKind, readonly string[]> = {
+    approach: ['run/perc', 'push/hook', 'push/perc', 'surge/drive', 'surge/perc', 'approach/dread', 'approach/drive', 'approach/perc', 'boss/dread', 'boss/wraith', 'bossPeak/dread'],
+    nebula: ['push/perc', 'surge/drone', 'surge/perc', 'approach/drone', 'approach/perc', 'boss/dread', 'boss/drone', 'boss/perc', 'bossPeak/dread', 'bossPeak/drone', 'bossPeak/perc'],
+    saurian: ['push/call', 'push/drone', 'surge/drive', 'surge/drone', 'approach/dread', 'approach/drone', 'approach/toll', 'boss/dread', 'boss/drone', 'bossPeak/dread', 'bossPeak/drone'],
+    labyrinth: ['surge/drive', 'surge/drone', 'surge/hook', 'approach/chords', 'approach/drive', 'approach/drone', 'approach/toll', 'boss/drone', 'boss/frenzy', 'boss/stomp', 'boss/wraith', 'bossPeak/dread', 'bossPeak/drone', 'bossPeak/frenzy', 'bossPeak/wraith'],
+    rime: ['run/drone', 'push/drone', 'surge/drive', 'surge/drone', 'approach/dread', 'approach/drone', 'boss/dread', 'boss/drone', 'bossPeak/dread', 'bossPeak/drone'],
+    mire: ['run/call', 'run/sub', 'push/call', 'push/drone', 'push/perc', 'surge/crash', 'surge/drive', 'surge/drone', 'surge/perc', 'approach/crash', 'approach/drive', 'approach/perc', 'boss/drive', 'boss/drone', 'boss/perc', 'bossPeak/drive', 'bossPeak/drone', 'bossPeak/perc'],
+    core: ['push/hook', 'surge/lead', 'surge/perc', 'approach/perc', 'approach/toll', 'boss/dread', 'boss/drone', 'boss/frenzy', 'boss/toll', 'boss/wraith', 'bossPeak/dread', 'bossPeak/drone', 'bossPeak/frenzy', 'bossPeak/toll', 'bossPeak/wraith'],
+  };
+
+  it('0164 — NO LAYER SITS A WHOLE ROLE UNDER THE ONE THE ARRANGEMENT GAVE IT', () => {
+    const adrift = new Set<string>();
+    for (const theme of THEME_KINDS) {
+      const loops = placeLoops(theme);
+      // One band cache per place, shared across its rungs, on `heardAt`'s own terms.
+      const bakes = new Map<string, number[]>();
+      for (const rung of MUSIC_LEVELS) {
+        // The title screen is not a place and has no arrangement — `rolesAt` returns its own table.
+        if (rung === 'calm') continue;
+        for (const row of adriftAt(theme, rung, loops, bakes)) {
+          if (row.adrift < ROLE_FLOOR_DB) adrift.add(`${theme}/${rung}/${row.layer}`);
+        }
+      }
+    }
+
+    const allowed = new Set(THEME_KINDS.flatMap((theme) => STILL_ADRIFT[theme].map((at) => `${theme}/${at}`)));
+
+    /*
+      ⚠️ **BOTH DIRECTIONS, AND THE SECOND ONE IS WHAT MAKES THE LIST SHRINK.** A known-bad list that
+      only guards against additions is a list that stays the same length forever: a mix pass fixes a
+      layer, nobody deletes the line, and the next pass has no idea which of the ninety-one are still
+      real. Deleting the line IS the record that it was fixed —
+      `docs/decisions/0029-the-tracked-record-is-the-record.md`.
+    */
+    expect(
+      [...adrift].filter((at) => !allowed.has(at)).sort(),
+      'these layers are more than a whole role under what the arrangement asked of them, and are not on the known list',
+    ).toEqual([]);
+    expect(
+      [...allowed].filter((at) => !adrift.has(at)).sort(),
+      'these are on the known-adrift list and now clear the floor — delete them from STILL_ADRIFT',
     ).toEqual([]);
   }, DSP_MS);
 

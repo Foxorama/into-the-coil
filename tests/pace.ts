@@ -24,6 +24,13 @@ import {
   type MusicLevel,
 } from '../src/content/music.ts';
 import { mixOf, revoicedBy, voicesOf, type ThemeKind } from '../src/content/themes.ts';
+import {
+  MUSIC_ROLES,
+  type MusicRole,
+  ROLE_MARGIN_DB,
+  SOLVED_BY,
+  roleOf,
+} from '../src/content/arrangement.ts';
 import { LAYER_PAN } from '../src/content/music.ts';
 import { panGains } from '../src/app/music.ts';
 import { BANDS, bandEnergy, bandLevels } from './spectrum.ts';
@@ -554,4 +561,96 @@ export function heardAt(
     });
   }
   return out.sort((a, b) => a.margin - b.margin);
+}
+
+// ── AND WHETHER THAT IS THE FIGURE THE ARRANGEMENT ASKED FOR ────────────────────────────────────
+
+/**
+ * How far under its role's stated margin a layer may sit before it is doing a different job.
+ *
+ * ── DERIVED FROM `ROLE_MARGIN_DB`, WHICH IS WHY IT IS NOT A HAND'S GUESS ────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0164-a-role-is-a-promise-the-mix-has-to-keep.md`.**
+ * [0152](../docs/decisions/0152-a-layer-is-heard-in-the-sum.md) measured `margin` and **deliberately
+ * refused to put a threshold on it**, and its reason is written into `ROLE_MARGIN_DB`'s own comment:
+ * *"`drone` is the connective tissue and is meant to sit under everything… a guard that says every
+ * layer must be audible would flag it every time."* That objection is now answered.
+ * [0154](../docs/decisions/0154-the-mix-is-authored-as-intent.md) states what each layer's margin is
+ * **supposed** to be, per rung and per place, so the question stops being *is this audible* — which
+ * has no single right answer across twenty-three layers — and becomes *is this the thing the
+ * arrangement said it was*, which has exactly one.
+ *
+ * ⚠️ **AND THE FLOOR IS THE WIDEST STEP BETWEEN TWO ADJACENT ROLES**, computed here rather than
+ * typed: −13, −9, −6, −2, 3 — so five decibels. A layer further under its target than that is
+ * **demonstrably performing the role below the one it was given**, whatever the absolute number
+ * happens to be. `part` at −6 is a `pulse`; a `pulse` at −12 is below `air`.
+ *
+ * ⚠️ **THAT IS WHAT MAKES IT SURVIVE A RETUNE OF `ROLE_MARGIN_DB`, and it is the property
+ * `AUDIBLE_FLOOR_DB` above does not have.** −33 is a number read off one measured spread and its own
+ * comment says it *"should GO rather than be widened"* if the spread closes. This one has nothing to
+ * widen: move the role targets and the floor moves with them, because it was never about decibels —
+ * it is about whether the five roles still mean five different things.
+ *
+ * ⚠️ **IT IS STILL NOT A SUBSTITUTE FOR LISTENING**, on `heardAt`'s own terms, and the role targets it
+ * is measured against are a hand's guess that `ROLE_MARGIN_DB` marks as one. What this can say is that
+ * the mix is not delivering what the arrangement asked for — which is a statement about two tables
+ * disagreeing, and needs no ear at all.
+ */
+export const ROLE_FLOOR_DB = ((): number => {
+  const rungs = MUSIC_ROLES.map((role) => ROLE_MARGIN_DB[role]).sort((a, b) => a - b);
+  return -Math.max(...rungs.slice(1).map((margin, i) => margin - rungs[i]!));
+})();
+
+/** One layer at one rung, and the distance between what it is and what it was asked to be. */
+export interface Adrift {
+  layer: MusicLayer;
+  /** What the arrangement says this layer IS at this rung, in this place. */
+  role: MusicRole;
+  /** What it actually has, in the best band it lives in — `heardAt`'s own figure. */
+  margin: number;
+  /** What its role asks for. */
+  want: number;
+  /** `margin - want`. Negative is under; `ROLE_FLOOR_DB` is how far under is too far. */
+  adrift: number;
+  /** The single loudest layer in that window, and how far over this one it is. */
+  by: MusicLayer;
+  byDb: number;
+  band: string;
+}
+
+/**
+ * Every layer the arrangement gives a role to at `rung`, by how far it is from that role — worst
+ * first.
+ *
+ * ⚠️ **THE AURA IS SKIPPED, on `SOLVED_BY`'s own terms** — its gain is a distance the player steers
+ * (0091), so a target margin for it would be a claim about a quantity the mix does not own.
+ *
+ * ⚠️ **THE ARITHMETIC IS SHARED WITH `scripts/weigh-adrift.mjs`** rather than restated there, which
+ * is `weigh-rung.mjs`'s rule and 0029's reason: a printed figure that disagrees with an asserted one
+ * is the tracked record drifting inside one repository.
+ */
+export function adriftAt(
+  theme: ThemeKind | undefined,
+  rung: MusicLevel,
+  loops: Record<MusicLayer, Float32Array>,
+  bakes: Map<string, number[]>,
+): Adrift[] {
+  const out: Adrift[] = [];
+  for (const heard of heardAt(theme, rung, loops, bakes)) {
+    if (!SOLVED_BY(heard.layer)) continue;
+    const role = roleOf(theme, rung, heard.layer);
+    if (role === null) continue;
+    const want = ROLE_MARGIN_DB[role];
+    out.push({
+      layer: heard.layer,
+      role,
+      margin: heard.margin,
+      want,
+      adrift: heard.margin - want,
+      by: heard.by,
+      byDb: heard.byDb,
+      band: heard.band,
+    });
+  }
+  return out.sort((a, b) => a.adrift - b.adrift);
 }
