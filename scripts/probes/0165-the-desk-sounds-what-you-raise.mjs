@@ -10,6 +10,24 @@
 // the air is a DOM read of a Web Audio node; the only headless version is a source scan, which is the
 // failure `tests/dash.test.ts`'s own header records — "a spellcheck standing in for a property, and
 // it looked exactly like a guard." The decision has the argument and the driven evidence.
+//
+// ── THIS FILE REPLACES `scripts/probes/0137-desk-sounds-while-stopped.mjs`, WHICH IS DELETED ─────
+//
+// ⚠️ THAT FILE PLANTED "is anything held above zero?" AS THE OBVIOUS-AND-WRONG IMPLEMENTATION of the
+// air condition. 0165 makes that condition CORRECT — it is `deskSounds` — so its break stopped being
+// a break and its anchor stopped existing. `npm run prove` refused to run the suite rather than
+// reporting green, which is docs/decisions/0019-a-probe-must-be-seen-to-apply.md doing its whole job
+// on the day it was needed.
+//
+// ⚠️ IT WAS FIRST LEFT IN PLACE WITH AN EMPTY LIST, TO KEEP THE REASONING, AND `tests/prove-guard.test.ts`
+// REFUSED THAT — "every probe names the decision, the break and the guard it must redden", and a probe
+// file that exports nothing is a file claiming to prove something it does not. The rule is right and
+// the history belongs in prose: it is here, and in the decision.
+//
+// ⚠️ WHAT MADE THE OLD VERSION WRONG WAS NEVER THE CONDITION. It was that a layer with no hold went on
+// FOLLOWING the ladder into a stopped transport, so one dragged fader started the whole piece
+// underneath it. 0165 silences the followers instead, and the first probe below is 0137's own case
+// restored as the thing that must not come back.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [

@@ -102,6 +102,23 @@ once: *"`rig.includes('mixOf')` — and `npm run prove` reported STILL GREEN on 
 because deleting a call site leaves the import behind."* The rule underneath it, `deskTarget`, **is**
 guarded, and the column is verified by driving. A weaker guard here would be worse than none.
 
+## ⚠️ 0137's probe is deleted, and two guards insisted on it in turn
+
+Its break — *"the loops going back on the air for any held fader"* — is now **correct behaviour**, so
+the anchor stopped existing. `npm run prove` refused to run the suite rather than reporting green,
+which is [0019](0019-a-probe-must-be-seen-to-apply.md) doing its whole job on the day it was needed.
+
+⚠️ **IT WAS FIRST LEFT IN PLACE WITH AN EMPTY LIST TO KEEP THE REASONING, AND `tests/prove-guard.test.ts`
+REFUSED THAT** — *"every probe names the decision, the break and the guard it must redden"*. A probe
+file exporting nothing is a file claiming to prove something it does not, which is the same class of
+lie as the `live` column above. **The rule is right; the history belongs in prose**, and it is in
+`scripts/probes/0165-the-desk-sounds-what-you-raise.mjs`'s header and in this document.
+
+⚠️ **AND IT WAS CI THAT CAUGHT THE SECOND ONE, BECAUSE `npm run prove` DOES NOT RUN THE SUITE THAT
+HOLDS IT.** `prove` had already gone green over the empty file. `CLAUDE.md` warns *"`npm test` is not
+`npm run prove`"*; this is the same sentence read the other way, and the answer for a change that
+touches the probe set is `npm run check`.
+
 ## Confirmed, not assumed
 
 - The reported behaviour reproduced in a browser before anything was changed, and each of the four
