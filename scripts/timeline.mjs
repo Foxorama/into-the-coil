@@ -132,9 +132,9 @@ export function auraAt(kind, second, nearnessInFight) {
  * ⚠️ **The aura's row is a CEILING and not a gain** — 0091 — so it arrives multiplied rather than
  * stated, exactly as `makeMusicOut` does it.
  */
-export function targetGain(theme, rung, layer, aura) {
+export function targetGain(theme, rung, layer, aura, ladder) {
   const ceiling = AURA_LAYERS.includes(layer) ? aura : 1;
-  return rungOf(theme, rung, layer) * mixOf(theme, layer) * ceiling;
+  return rungOf(theme, rung, layer, ladder) * mixOf(theme, layer) * ceiling;
 }
 
 /** Everything a caller needs to render or report a level, gathered once. */

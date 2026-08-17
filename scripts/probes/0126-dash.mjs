@@ -79,7 +79,11 @@ export const PROBES = [
         `gainAt`, which chooses between the shipped gain and the solved one. The break is the same
         break, put back where the call actually lives.
       */
-      find: '      return own ?? targetGain(theme, r, layer, a);',
+      // ⚠️ AND RE-ANCHORED AGAIN BY 0163, which threads the desk's edited ladder through this call.
+      // The break is unchanged: the rig working the target out for itself instead of asking the
+      // mixer's own description — and it now also drops the edited ladder, which is the same defect
+      // one layer deeper.
+      find: '      return own ?? targetGain(theme, r, layer, a, ladder);',
       replace: '      return own ?? MUSIC_LADDER[r][layer] * (AURA_LAYERS.includes(layer) ? a : 1);',
     },
   },

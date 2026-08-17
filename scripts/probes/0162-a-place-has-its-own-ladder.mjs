@@ -65,8 +65,13 @@ export const PROBES = [
     guard: '0162 — NOTHING UNDER src/ OR rig/ READS THE SHARED LADDER, because a place may differ from it',
     edit: {
       path: 'src/content/themes.ts',
-      find: '  return rungIn(THEMES[theme].ladder, rung, layer);',
-      replace: "  return rungIn(THEMES.approach.ladder, rung, layer);",
+      /*
+        ⚠️ RE-ANCHORED BY 0163, WHICH MOVED THE ROUTING INTO A DEFAULT PARAMETER so the desk could hand
+        `rungOf` a ladder of its own. The claim is unchanged — the wrong place's table — and so is the
+        guard that catches it, which had to be re-aimed at the default for the same reason.
+      */
+      find: '  ladder: ThemeRow[\'ladder\'] = THEMES[theme].ladder,',
+      replace: "  ladder: ThemeRow['ladder'] = THEMES.approach.ladder,",
     },
   },
   {
@@ -82,7 +87,9 @@ export const PROBES = [
     guard: '0162 — NOTHING UNDER src/ OR rig/ READS THE SHARED LADDER, because a place may differ from it',
     edit: {
       path: 'rig/transport.ts',
-      find: '      const on = rungOf(LEVELS[kind].theme, mark.rung, layer) > 0;',
+      // ⚠️ RE-ANCHORED BY 0163: the coverage table now follows the desk's edited ladder as well as the
+      // place's own, so the call gained an argument. The break is the same — the shared row.
+      find: '      const on = rungOf(LEVELS[kind].theme, mark.rung, layer, ladder ?? THEMES[LEVELS[kind].theme].ladder) > 0;',
       replace: '      const on = MUSIC_LADDER[mark.rung][layer] > 0;',
     },
   },

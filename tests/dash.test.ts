@@ -10,7 +10,10 @@ import {
   UNITS_PER_SECOND,
   cueLines,
   deskAlone,
+  addSectionAfter,
   dragSection,
+  removeSection,
+  retypeSection,
   layerSpans,
   loudestGain,
   marksOf,
@@ -26,6 +29,8 @@ import {
   MUSIC_LADDER,
   MUSIC_LAYERS,
   MUSIC_LEVELS,
+  SECTION_NAMES,
+  type LevelSections,
   type MusicLayer,
 } from '../src/content/music.ts';
 import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
@@ -106,6 +111,51 @@ describe('the dashboard answers the game’s questions', () => {
         }
       }
     }
+  });
+
+  it('0163 — AN EDITED LADDER REACHES THE MIXER, because the readout and the write are one function', () => {
+    /*
+      ⚠️ **THIS IS WHAT STANDS IN FOR THE `live` COLUMN, AND IT IS STRONGER THAN ONE.** A live reading
+      is one layer at one second; this is every layer at seven seconds of seven levels, and it holds
+      the two things that must agree BY CONSTRUCTION rather than by comparison. `setLevel` does
+      nothing but write `levelWrites`' answers onto the gain nodes (0117), so a `momentOf` that equals
+      `levelWrites` **cannot** be showing a mix nobody hears.
+
+      ⚠️ **THE DRIVEN LADDER HAS TO GO THROUGH BOTH OR IT PROVES NOTHING.** 0154's solved-mix toggle
+      is the recorded instance of getting this wrong: it handed the solve to `momentOf` and not to
+      `setLevel`, so it changed *the readout and not one sample of audio*. The same mistake was
+      available here and this is the guard against it.
+
+      ⚠️ **`arp` AT `run` IS THE CASE 0162 EXISTS FOR** — zero in the shared ladder, and unreachable by
+      any multiplier — so an edit that opens it is the one a broken thread would silently drop.
+    */
+    const edited = { run: { arp: 0.7 }, surge: { counter: 0 } } as const;
+    for (const kind of LEVEL_KINDS) {
+      const theme = LEVELS[kind].theme;
+      for (const second of sampleSeconds(kind)) {
+        const moment = momentOf(kind, second, FIGHT, 0.5, LEVELS[kind].sections, null, edited);
+        const writes = levelWrites(moment.rung, theme, moment.aura, 0, 0, {}, edited);
+        for (const { layer, target } of moment.layers) {
+          const write = writes.find((w) => w.layer === layer);
+          expect(write, `${kind} at ${second.toFixed(1)}s: no write for ${layer}`).toBeDefined();
+          expect(target, `${kind} at ${second.toFixed(1)}s: ${layer} — readout and mixer disagree`).toBeCloseTo(
+            write!.target,
+            10,
+          );
+        }
+      }
+    }
+    /*
+      ⚠️ **AND THE EDIT ACTUALLY MOVES SOMETHING**, or the assertions above are two identical wrong
+      answers agreeing. `arp` opens where the shared ladder closes it, and `counter` closes where it
+      opens — both directions, because `??` and `||` differ only on the second one.
+    */
+    const at = (rung: 'run' | 'surge', layer: 'arp' | 'counter', ladder?: typeof edited): number =>
+      levelWrites(rung, 'approach', 0, 0, 0, {}, ladder).find((w) => w.layer === layer)!.target;
+    expect(at('run', 'arp'), 'the shared ladder already opens arp at run, so this proves nothing').toBe(0);
+    expect(at('run', 'arp', edited), 'an edit could not OPEN a layer the shared ladder closes').toBeGreaterThan(0);
+    expect(at('surge', 'counter'), 'the shared ladder already closes counter at surge').toBeGreaterThan(0);
+    expect(at('surge', 'counter', edited), 'an edit could not CLOSE a layer the shared ladder opens').toBe(0);
   });
 
   it('THE PLACE IS IN IT: two themes do not produce the same gains', () => {
@@ -513,6 +563,92 @@ describe('0138 — a section boundary is a distance you can drag', () => {
     expect(SECTION_FLOOR_UNITS).toBeCloseTo(BAR_SECONDS * SCROLL_PER_STEP * STEPS_PER_SECOND, 10);
   });
 
+  it('0163 — A RENAME MOVES NOTHING, and entry zero may be renamed because that is the whole feature', () => {
+    /*
+      ⚠️ **`docs/decisions/0163-the-script-is-edited-here.md`.** *"Some levels kick right into a
+      surge"* is a change of WHICH SECTION IS FIRST, which no drag can express — so a rename has to
+      reach entry 0, the one entry every other operation refuses to touch.
+
+      ⚠️ **AND IT NEEDS NO CLAMP**, which is worth asserting rather than assuming: the distances are
+      untouched, and 0158 freed the names of order entirely. A script may name `surge` first, twice,
+      or never.
+    */
+    const { sections } = LEVELS.approach;
+    for (let index = 0; index < sections.length; index++) {
+      for (const name of SECTION_NAMES) {
+        const out = retypeSection(sections, index, name);
+        expect(out[index]!.section, `entry ${index} did not become ${name}`).toBe(name);
+        expect(
+          out.map((e) => e.at),
+          `renaming entry ${index} to ${name} moved a distance`,
+        ).toEqual(sections.map((e) => e.at));
+        out.forEach((entry, i) => {
+          if (i !== index) expect(entry.section, `renaming entry ${index} changed entry ${i}`).toBe(sections[i]!.section);
+        });
+      }
+    }
+    // The opening section is renameable — a level that opens at its loudest is the point of 0163.
+    expect(retypeSection(sections, 0, 'surge')[0]!.section, 'a level cannot be made to open at surge').toBe('surge');
+  });
+
+  it('0163 — AN ADD LANDS MIDWAY AND REFUSES RATHER THAN SQUEEZING when there is no room', () => {
+    /*
+      ⚠️ **REFUSING IS THE DESIGNED ANSWER AND NOT A MISSING FEATURE.** The alternative to refusing is
+      shuffling the neighbours, which moves boundaries the author did not ask to move — silently, to
+      make room for one they did. **An unchanged script is what lets the panel grey the button out.**
+    */
+    const { bossAt, sections } = LEVELS.approach;
+    for (let index = 0; index < sections.length; index++) {
+      const out = addSectionAfter(sections, index, bossAt);
+      const next = index + 1 < sections.length ? sections[index + 1]!.at : bossAt;
+      const room = next - sections[index]!.at >= SECTION_FLOOR_UNITS * 2;
+      if (!room) {
+        expect(out, `entry ${index} had no room and the script changed anyway`).toEqual(sections);
+        continue;
+      }
+      expect(out.length, `entry ${index} did not gain a section`).toBe(sections.length + 1);
+      const added = out[index + 1]!;
+      expect(added.at, `the new entry is not between ${sections[index]!.at} and ${next}`).toBeGreaterThan(
+        sections[index]!.at,
+      );
+      expect(added.at, `the new entry is not between ${sections[index]!.at} and ${next}`).toBeLessThan(next);
+      // Ascending, and every gap still at least a floor — the same property a drag is held to.
+      for (let i = 1; i < out.length; i++) {
+        expect(out[i]!.at - out[i - 1]!.at, `adding after ${index} left entries ${i - 1} and ${i} too close`).toBeGreaterThanOrEqual(
+          SECTION_FLOOR_UNITS - 1e-6,
+        );
+      }
+    }
+    // A gap of exactly one floor has nowhere legal inside it, so the add is refused.
+    const tight = [{ at: 0, section: 'run' }, { at: SECTION_FLOOR_UNITS, section: 'push' }] as const;
+    expect(addSectionAfter(tight, 0, 4270), 'a one-floor gap was split anyway').toEqual(tight);
+  });
+
+  it('0163 — A REMOVE REFUSES ENTRY ZERO, because something has to answer for the opening stretch', () => {
+    /*
+      ⚠️ **OTHERWISE `musicLevelFor`'s FALLBACK ANSWERS**, which is the one thing 0158 took out of that
+      function. Every other entry may go, including the last — a level with one section is a level that
+      holds one arrangement, and `docs/decisions/0161-the-shape-of-a-level-is-not-guarded.md` is why
+      nothing objects to that.
+    */
+    const { sections } = LEVELS.approach;
+    expect(removeSection(sections, 0), 'the opening section was removed').toEqual(sections);
+    for (let index = 1; index < sections.length; index++) {
+      const out = removeSection(sections, index);
+      expect(out.length, `entry ${index} did not go`).toBe(sections.length - 1);
+      expect(out[0]!.at, 'the script no longer opens at zero').toBe(0);
+      expect(
+        out.map((e) => `${e.section}@${e.at}`),
+        `removing ${index} changed something else`,
+      ).toEqual(sections.filter((_, i) => i !== index).map((e) => `${e.section}@${e.at}`));
+    }
+    // Down to one entry, which is legal, and then it stops.
+    let down: LevelSections = sections;
+    while (down.length > 1) down = removeSection(down, down.length - 1);
+    expect(down.length, 'a script could not be reduced to a single section').toBe(1);
+    expect(removeSection(down, 0), 'the last section was removed, leaving nothing to answer').toEqual(down);
+  });
+
   it('EVERY CALL UNDER src/ PASSES THE LEVEL’S OWN SCRIPT — the shape of a level is decided in one place', () => {
     /*
       ⚠️ **HELD ON `gainOf`'s OWN TERMS** (0126), AND IT IS 0138's GUARD INVERTED RATHER THAN
@@ -720,10 +856,25 @@ describe('the rig is not in the game, and the game is not in the rig', () => {
       be replaced by it rather than kept alongside. Same species as 0158's `.sections` argument scan,
       and it exists for the same reason: an expression is checkable when a number is not.
     */
+    /*
+      ⚠️ **RE-AIMED BY 0163 AT THE DEFAULT PARAMETER, WHICH IS WHERE THE ROUTING CLAIM MOVED.**
+      `rungOf` took the ladder as an argument so the desk could drive one, so the body is now
+      `rungIn(ladder, …)` and the *which place* decision is the default: `= THEMES[theme].ladder`.
+      Same claim, one line over — and it is still a scan for the same reason 0162 recorded, that with
+      every shipped `ladder` absent a value comparison cannot tell the wrong place from the right one.
+    */
+    /*
+      ⚠️ **AND THE PATTERN DOES NOT MENTION THE PARAMETER'S TYPE, BECAUSE `bare` BLANKS IT.** The
+      declaration reads `ladder: ThemeRow['ladder'] = THEMES[theme].ladder`, and the blanking that
+      makes this scan safe against comments also empties that string literal — so a pattern spelling
+      the type out fails on a completely correct file. **The load-bearing half is the default**, and
+      that is all this matches. Found by the guard going red on its own subject, which is the
+      direction 0138 says a source scan should fail in.
+    */
     const themes = bare(readFileSync(resolve(root, 'src/content/themes.ts'), 'utf8'));
     expect(
-      /return\s+rungIn\(\s*THEMES\[theme\]\.ladder\s*,/.test(themes),
-      '`rungOf` does not pass `THEMES[theme].ladder` — it is reading a place it was not asked about',
+      /=\s*THEMES\[theme\]\.ladder\s*,/.test(themes),
+      '`rungOf` does not default to `THEMES[theme].ladder` — it is reading a place it was not asked about',
     ).toBe(true);
   });
 

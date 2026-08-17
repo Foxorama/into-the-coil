@@ -44,10 +44,11 @@ import {
   type MusicLayer,
   type MusicLevel,
   type LevelSections,
+  type SectionName,
 } from '../src/content/music.ts';
 import { LEVELS, type LevelKind } from '../src/content/levels.ts';
 import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
-import { THEME_KINDS, mixOf, rungOf, type ThemeKind } from '../src/content/themes.ts';
+import { THEMES, THEME_KINDS, mixOf, rungOf, type ThemeKind, type ThemeLadder } from '../src/content/themes.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { UPGRADE_TIERS, weaponFor, type UpgradeKind, type Weapon } from '../src/content/pickups.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -90,7 +91,13 @@ const rungMarks = timeline.rungMarks as (
 const rungAt = timeline.rungAt as (kind: string, second: number, fightSeconds: number, sections?: LevelSections) => MusicLevel;
 const auraAt = timeline.auraAt as (kind: string, second: number, nearnessInFight: number) => number;
 const inBars = timeline.inBars as (second: number) => InBars;
-const targetGain = timeline.targetGain as (theme: ThemeKind, rung: MusicLevel, layer: MusicLayer, aura: number) => number;
+const targetGain = timeline.targetGain as (
+  theme: ThemeKind,
+  rung: MusicLevel,
+  layer: MusicLayer,
+  aura: number,
+  ladder?: ThemeLadder,
+) => number;
 
 /** World units a second, derived by `scripts/timeline.mjs` from the two constants that decide it. */
 export const UNITS_PER_SECOND = timeline.UNITS_PER_SECOND as number;
@@ -255,6 +262,15 @@ export function momentOf(
     and the solve deliberately does not own it.
   */
   solved: SolvedGains | null = null,
+  /**
+   * The place's own SHAPE, as the desk has edited it — 0163 over 0162.
+   *
+   * ⚠️ **`undefined` IS THE PLACE'S OWN AND IS THE DEFAULT**, so every existing caller is unchanged
+   * and the readout is the shipped level until somebody edits one. It has to be threaded because the
+   * *target* column and the audio must agree: `setLevel` takes the same table, and a readout computed
+   * without it would be the instrument disagreeing with the thing it measures — 0116, twice paid for.
+   */
+  ladder: ThemeLadder | undefined = undefined,
 ): Moment {
   const level = LEVELS[kind];
   const theme = level.theme;
@@ -288,7 +304,7 @@ export function momentOf(
     */
     const gainAt = (r: MusicLevel, a: number): number => {
       const own = follows || solved === null ? undefined : solved[r]?.[layer];
-      return own ?? targetGain(theme, r, layer, a);
+      return own ?? targetGain(theme, r, layer, a, ladder);
     };
     const target = gainAt(rung, aura);
     const previous = before === undefined ? 0 : gainAt(before.rung, auraBefore);
@@ -347,7 +363,13 @@ export interface LayerSpan {
   passes: number;
 }
 
-export function layerSpans(kind: LevelKind, fightSeconds: number, sections: LevelSections = LEVELS[kind].sections): LayerSpan[] {
+export function layerSpans(
+  kind: LevelKind,
+  fightSeconds: number,
+  sections: LevelSections = LEVELS[kind].sections,
+  // ⚠️ 0163: an edited ladder opens layers the shipped one closes, so the coverage table follows it.
+  ladder: ThemeLadder | undefined = undefined,
+): LayerSpan[] {
   const marks = rungMarks(kind, fightSeconds, sections);
   const last = marks[marks.length - 1];
   const end = last === undefined ? 0 : last.second + last.lasts;
@@ -368,7 +390,7 @@ export function layerSpans(kind: LevelKind, fightSeconds: number, sections: Leve
         describe a level nobody plays. **This is the measurement a drag is FOR** (0126), so it being
         about the wrong level is the one thing it cannot afford.
       */
-      const on = rungOf(LEVELS[kind].theme, mark.rung, layer) > 0;
+      const on = rungOf(LEVELS[kind].theme, mark.rung, layer, ladder ?? THEMES[LEVELS[kind].theme].ladder) > 0;
       if (on && open === null) open = mark.second;
       if (!on && open !== null) {
         spans.push([open, mark.second]);
@@ -501,6 +523,70 @@ export function dragSection(
   const landed = units < low ? low : units > high ? high : units;
   const at = high < low ? low : landed;
   return sections.map((entry, i) => (i === index ? { at, section: entry.section } : entry));
+}
+
+/*
+  ── AND DRAGGING WAS NEVER GOING TO BE ENOUGH, WHICH IS THE WHOLE OF 0163 ────────────────────────
+
+  ⚠️ **`docs/decisions/0163-the-script-is-edited-here.md`.** Asked for, 2026-08-17: *"can we rearrange
+  the four sections? or have them different per level as well? some levels kick right into a surge
+  etc."* **A drag moves a boundary; *opens at surge* is a change of WHICH SECTION IS FIRST**, and no
+  amount of dragging reaches it. Until these three, finding that shape by ear meant typing it into
+  `src/content/levels.ts`, rebuilding and listening — the round trip
+  `docs/decisions/0126-the-dashboard-is-the-instrument.md` exists to remove.
+
+  ⚠️ **THEY LIVE HERE AND NOT IN `rig/dash.ts` FOR 0138's OWN REASON**: what an edit RESOLVES TO is
+  arithmetic a headless test can drive, and the pointer that triggers it is not. Every clamp below is
+  the one `dragSection` already applies, asked at a different moment.
+*/
+
+/**
+ * The script with entry `index` renamed. Nothing else moves.
+ *
+ * ⚠️ **A RENAME CANNOT BREAK AN ORDERING, WHICH IS WHY IT NEEDS NO CLAMP** — the distances are
+ * untouched, and 0158 made the NAMES free of order entirely. A script may name `surge` first, twice,
+ * or never. **Entry 0 is renameable and that is the point of the feature**: it is how a level opens
+ * at its loudest.
+ */
+export function retypeSection(sections: LevelSections, index: number, section: SectionName): LevelSections {
+  if (index < 0 || index >= sections.length) return sections;
+  return sections.map((entry, i) => (i === index ? { at: entry.at, section } : entry));
+}
+
+/**
+ * The script with a new entry after `index`, placed midway to whatever bounds it.
+ *
+ * ⚠️ **MIDWAY RATHER THAN AT A FIXED OFFSET**, because the gap it is going into is whatever the
+ * author has already made. A fixed step would land on top of the next entry in a tight script and
+ * leave a large gap barely divided in a loose one.
+ *
+ * ⚠️ **IT REFUSES RATHER THAN SQUEEZING WHEN THERE IS NO ROOM.** Two entries less than two floors
+ * apart have nowhere legal between them, and the alternative to refusing is shuffling neighbours —
+ * which would move boundaries the author did not ask to move, silently, to make room for one they
+ * did. **Returning the script unchanged is what lets the panel grey the button out** rather than
+ * accept a click that quietly rearranges the level.
+ */
+export function addSectionAfter(sections: LevelSections, index: number, bossAt: number): LevelSections {
+  if (index < 0 || index >= sections.length) return sections;
+  const here = sections[index]!;
+  const next = index + 1 < sections.length ? sections[index + 1]!.at : bossAt;
+  const at = Math.round((here.at + next) / 2);
+  if (at - here.at < SECTION_FLOOR_UNITS || next - at < SECTION_FLOOR_UNITS) return sections;
+  return [...sections.slice(0, index + 1), { at, section: here.section }, ...sections.slice(index + 1)];
+}
+
+/**
+ * The script with entry `index` gone.
+ *
+ * ⚠️ **ENTRY `0` IS REFUSED, AND SO IS EMPTYING THE SCRIPT.** A level's music starts where the level
+ * starts, so something has to answer for the opening stretch — otherwise `musicLevelFor`'s fallback
+ * does, which is the one thing 0158 took out of that function. Every other entry may go, including
+ * the last: a level with one section is a level that holds one arrangement, and 0161 is why nothing
+ * objects to that.
+ */
+export function removeSection(sections: LevelSections, index: number): LevelSections {
+  if (index <= 0 || index >= sections.length) return sections;
+  return sections.filter((_, i) => i !== index);
 }
 
 /**

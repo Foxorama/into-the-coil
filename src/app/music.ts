@@ -44,7 +44,7 @@ import {
   type LevelSections,
 } from '../content/music.ts';
 import { sampleLayerInto, saturate } from './sound.ts';
-import { airOf, mixOf, rungOf, voicesOf, type ThemeKind } from '../content/themes.ts';
+import { THEMES, airOf, mixOf, rungOf, voicesOf, type ThemeKind, type ThemeLadder } from '../content/themes.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 
@@ -635,7 +635,13 @@ export interface MusicOut {
    *
    * `nearness` scales the aura layers and is ignored by every other one — 0091.
    */
-  setLevel(level: MusicLevel, nearness: number, theme: ThemeKind): void;
+  /**
+   * Move to a level, with how near the boss is. A ramp, never a cut.
+   *
+   * ⚠️ **`ladder` IS THE RIG'S AND THE GAME NEVER PASSES ONE** — 0163. It is how the desk edits a
+   * place's own shape (0162) and hears the mixer follow, on 0138's terms for `sections`.
+   */
+  setLevel(level: MusicLevel, nearness: number, theme: ThemeKind, ladder?: ThemeLadder): void;
   /**
    * Push the bed down for a moment, so a cue landing on top of it has somewhere to land.
    *
@@ -894,6 +900,14 @@ export interface RampWrite {
  * bar and then resume, so the build would stair-step up in bar-sized steps. Writing only on a change
  * is what makes the quantised ramp a single smooth move — it is correctness, not a saving.
  *
+ * ⚠️ **`ladder` IS AN INPUT AND THE GAME NEVER PASSES ONE** —
+ * `docs/decisions/0163-the-script-is-edited-here.md`, on the terms
+ * `docs/decisions/0138-a-section-boundary-is-a-distance-you-can-drag.md` set for `sections`. A place's
+ * own shape ([0162](../../docs/decisions/0162-a-place-has-its-own-ladder.md)) is the other half of what
+ * a level sounds like, and it was typed rather than driven; this is what lets the desk edit it and hear
+ * the mixer follow on the next tick. **`tests/dash.test.ts` scans `src/` to keep the game from passing
+ * one**, because a shipped caller with its own shape would make a place decided in two places.
+ *
  * @param lastTargets what each layer was last told to head for, or `null` for a layer never written
  */
 export function levelWrites(
@@ -903,12 +917,13 @@ export function levelWrites(
   anchor: number,
   now: number,
   lastTargets: Partial<Record<MusicLayer, number>>,
+  ladder?: ThemeLadder,
 ): RampWrite[] {
   const bar = nextBarFrom(anchor, now);
   const writes: RampWrite[] = [];
   for (const layer of MUSIC_LAYERS) {
     const aura = AURA_LAYERS.includes(layer);
-    const target = rungOf(theme, level, layer) * mixOf(theme, layer) * (aura ? nearness : 1);
+    const target = rungOf(theme, level, layer, ladder ?? THEMES[theme].ladder) * mixOf(theme, layer) * (aura ? nearness : 1);
     if (!aura && lastTargets[layer] === target) continue;
     writes.push({ layer, target, at: aura ? now : bar, tau: (aura ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3 });
   }
@@ -950,6 +965,15 @@ export function makeMusicOut(
   let near = 0;
   /** Which place the run is in — 0107. Its mix rides over every rung. */
   let place: ThemeKind = 'approach';
+  /**
+   * The ladder override the last `setLevel` was given, or `undefined` for the place's own.
+   *
+   * ⚠️ **REMEMBERED FOR ONE CALLER: the re-write after a place swap** — `setLevel(current, near,
+   * place, shape)` below. Forgetting it there would have the desk's edit vanish the moment a level
+   * boundary re-bakes, which is a defect that only shows up in the rig and only after a switch.
+   * **The shipped game leaves it `undefined` for ever** — 0163.
+   */
+  let shape: ThemeLadder | undefined;
   /** Audio time at which loop position zero last began. Bar zero of the piece — 0117's grid. */
   let anchorAudio = 0;
   /*
@@ -1075,10 +1099,11 @@ export function makeMusicOut(
       const when = ctx.currentTime + 0.05;
       swapTo(when);
     },
-    setLevel(level: MusicLevel, nearness: number, theme: ThemeKind): void {
+    setLevel(level: MusicLevel, nearness: number, theme: ThemeKind, ladder?: ThemeLadder): void {
       current = level;
       near = nearness;
       place = theme;
+      shape = ladder;
       if (!on) return;
       /*
         ⚠️ **THE WHOLE DECISION IS `levelWrites` AND NONE OF IT IS HERE** — 0117. What to write, when
@@ -1092,7 +1117,7 @@ export function makeMusicOut(
         the bar grid is the music's own and a rephase (0094) moves both together.
       */
       const now = ctx.currentTime;
-      for (const { layer, target, at, tau } of levelWrites(level, theme, nearness, anchorAudio, now, headingFor)) {
+      for (const { layer, target, at, tau } of levelWrites(level, theme, nearness, anchorAudio, now, headingFor, ladder)) {
         headingFor[layer] = target;
         gains[layer].gain.cancelScheduledValues(now);
         gains[layer].gain.setTargetAtTime(target, at, tau);
@@ -1123,7 +1148,7 @@ export function makeMusicOut(
       // to hold, never the phase against the level.
       if (next) {
         this.start();
-        this.setLevel(current, near, place);
+        this.setLevel(current, near, place, shape);
         return;
       }
       /*
