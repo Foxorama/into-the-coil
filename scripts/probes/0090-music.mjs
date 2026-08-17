@@ -106,8 +106,15 @@ export const PROBES = [
       difference between music that builds and a warning noise: at 40 units the beat arrives about a
       second before the boss does, which is a cue, and a cue is `src/content/cues.ts`'s job.
     */
-    broke: 'the boss approach cut to a length that is a sting rather than a build',
-    guard: 'and builds as the boss gets close, in SECONDS the player experiences',
+    broke: 'a section cut shorter than the ramp that opens it, so its arrival never finishes',
+    /*
+      ⚠️ RE-AIMED BY 0161. This used to name *and builds as the boss gets close, in SECONDS the player
+      experiences*, which required the last section to last 6-30 seconds — and that guard is gone,
+      because it made every level end with a short build. **The break is unchanged and still red**: 40
+      units is 1.1 s, under the 1.6 s ramp, so the section's own arrival cannot complete and the
+      player hears a wobble rather than a change. That is the one bound 0161 kept.
+    */
+    guard: '0161 — every section a level names is one the game reaches, and outlasts its own ramp',
     edit: {
       /*
         ⚠️ THE ANCHOR MOVED WITH 0158, WHICH DELETED `BOSS_APPROACH_UNITS`. The build is no longer one

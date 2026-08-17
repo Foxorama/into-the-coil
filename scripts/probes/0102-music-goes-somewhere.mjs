@@ -20,7 +20,10 @@ export const PROBES = [
       What it is not is a build.
     */
     broke: 'the level ladder collapsed back to one rung, which is how it shipped',
-    guard: 'and every section of every level is a stretch of it rather than a flicker',
+    // ⚠️ THE GUARD WAS RENAMED BY 0161, which took the 10-second floor and the 90-second ceiling out
+    // of it. What still catches this break is the other half of the same test: a level that never
+    // leaves its opening section reaches ONE where its script names four.
+    guard: '0161 — every section a level names is one the game reaches, and outlasts its own ramp',
     edit: {
       path: 'src/app/music.ts',
       /*
@@ -36,45 +39,21 @@ export const PROBES = [
       replace: '    break;',
     },
   },
-  {
-    decision: '0102',
-    suite: 'tests/music.test.ts',
-    /*
-      ⚠️ THE RUNGS KEPT AND THE PACE TAKEN OUT, which is the edit that looks like a tidy-up: `arp` is
-      the busiest layer in the level's piece and closing it at `surge` leaves four rungs that each add
-      something. The build survives as a structure and stops being a build — *"no pace, no increased
-      tempo"* — and only a count of what is actually being struck can tell.
-    */
-    /*
-      ── RE-POINTED BY 0123, WHICH RETIRED THE CLAIM THIS WAS WRITTEN FOR ────────────────────────
+  /*
+    ── A PROBE STOOD HERE AND 0161 RETIRED IT WITH THE GUARD IT NAMED ──────────────────────────
 
-      ⚠️ **THIS PROBE USED TO CLOSE `arp` AND EXPECT *each rung strikes more notes a bar* TO REDDEN.**
-      That assertion is gone: monotonic density forced every rung to ADD, which is 0090's additive
-      rule one level down, and the player's own ranking of four section changes is the evidence
-      against it. What survived is the FLOOR — no rung is thinner than the level's opening — which is
-      what 0102's *"the music goes somewhere"* always meant.
+    docs/decisions/0161-the-shape-of-a-level-is-not-guarded.md. It broke *the level stripped back
+    below its own opening on the way to the boss* and aimed at the density guard, which is deleted:
+    both of its halves said a level may only ever get denser and every boss must be loud.
 
-      ⚠️ **SO THE BREAK IS NOW A LEVEL THAT THINS OUT ON THE WAY TO ITS BOSS**, which is the thing
-      that would actually make 0102's report true again. Re-anchored on the current `approach` row,
-      because a probe anchored on a row of twenty-three numbers is stranded by every mix pass — this
-      is the fourth time in two days.
-    */
-    broke: 'the level stripped back below its own opening on the way to the boss',
-    guard: 'and each rung strikes MORE NOTES A BAR than the one below, which is what *pace* is',
-    edit: {
-      path: 'src/content/music.ts',
-      /*
-        ⚠️ **THE BREAK MOVED DOWN A RUNG WITH THE LAYER, WHICH IS NOT THE SAME AS RE-ANCHORING IT.**
-        `docs/decisions/0104-the-gun-plays-a-figure.md` opened `arp` at `push` — the ask was that a
-        level never begins thinner than the title — so closing it at `surge` no longer takes the
-        sixteenths out of the piece, it only stops them getting louder. The rung where the layer now
-        ARRIVES is the one that has to be broken, or this probe would go on passing while standing
-        over a version of the ladder that no longer exists.
-      */
-      find: 'chords: 0.84, groove: 0, arp: 0, ride: 0.72,',
-      replace: 'chords: 0, groove: 0, arp: 0, ride: 0,',
-    },
-  },
+    ⚠️ THE BREAK IT PLANTED IS NOW A LEGAL AUTHORING CHOICE, which is the whole of why the guard
+    went. A level that thins out on the way to its boss is a level with a quiet approach, and that
+    is a thing a place may be.
+
+    ⚠️ THIS PROBE HAD BEEN RE-ANCHORED FOUR TIMES IN TWO DAYS by its own note, every time a mix pass
+    moved a row of twenty-three numbers. A guard that expensive to keep pointed at its subject was
+    telling us something about the guard.
+  */
   {
     decision: '0102',
     suite: 'tests/music.test.ts',
