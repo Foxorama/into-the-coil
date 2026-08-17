@@ -1,36 +1,22 @@
 // The break behind docs/decisions/0137-the-desk-sounds-while-the-level-stands-still.md.
 //
-// ⚠️ THE BREAK IS THE OBVIOUS IMPLEMENTATION, WHICH IS WHAT MAKES IT WORTH PLANTING. "Let the desk
-// put the loops back on the air" reads as "is anything held above zero?", and that is the version
-// anybody writes first — it is one line, it passes every hand-check somebody would do (click a layer,
-// hear it), and it is wrong in exactly the case the report was written about.
+// ⚠️ **RETIRED BY docs/decisions/0165-the-desk-sounds-what-you-raise.md, AND REPLACED RATHER THAN
+// DELETED.** This probe planted *"is anything held above zero?"* as the obvious-and-wrong
+// implementation of the air condition. 0165 makes that condition **correct** — it is `deskSounds` —
+// so the break is no longer a break and the anchor no longer exists. `npm run prove` refused to run
+// the suite over it rather than reporting green, which is
+// docs/decisions/0019-a-probe-must-be-seen-to-apply.md doing its whole job on the day it was needed.
 //
-// ⚠️ A LAYER WITH NO HOLD FOLLOWS THE MIXER. So under the broken version, dragging one fader up with
-// the transport stopped starts the entire piece playing underneath it — "play sounds without
-// affecting the current run of the melody itself", answered with the melody.
+// ⚠️ **WHAT MADE THE OLD VERSION WRONG WAS NEVER THE CONDITION.** It was that a layer with no hold
+// went on FOLLOWING the ladder into a stopped transport, so one dragged fader started the whole piece
+// underneath it. 0165 silences the followers instead, and the two probes in
+// `scripts/probes/0165-the-desk-sounds-what-you-raise.mjs` hold one half of that rule each — including
+// this file's own case, restored as the thing that must NOT come back.
 //
-// ⚠️ AND NOTHING ELSE IN THE SUITE CAN SEE IT. The audition guard is green either way, because an
-// audition holds all twenty-three and both versions call that audible; the difference only shows on
-// a desk that is holding SOME of the table, which is the state the guard below is written over.
+// ⚠️ **THE FILE STAYS BECAUSE THE REASONING IS THE RECORD** —
+// docs/decisions/0029-the-tracked-record-is-the-record.md. A deleted probe file is a decision nobody
+// can find the argument for; the empty list is what stops `prove` from running a break that no longer
+// breaks anything.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
-export const PROBES = [
-  {
-    decision: '0137',
-    suite: 'tests/dash.test.ts',
-    broke: 'the loops going back on the air for any held fader, so one drag restarts the whole piece',
-    guard: 'AND ONE FADER ON ITS OWN DOES NOT, because everything else would follow the mixer',
-    edit: {
-      path: 'rig/transport.ts',
-      find:
-        '  let audible = false;\n' +
-        '  for (const layer of MUSIC_LAYERS) {\n' +
-        '    const gain = held.get(layer)?.gain ?? null;\n' +
-        '    if (gain === null) return false;\n' +
-        '    if (gain > 0) audible = true;\n' +
-        '  }\n' +
-        '  return audible;',
-      replace: '  return MUSIC_LAYERS.some((layer) => (held.get(layer)?.gain ?? 0) > 0);',
-    },
-  },
-];
+export const PROBES = [];

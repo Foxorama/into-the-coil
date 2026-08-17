@@ -48,7 +48,8 @@ import {
   SECTION_FLOOR_UNITS,
   UNITS_PER_SECOND,
   cueLines,
-  deskAlone,
+  deskSounds,
+  deskTarget,
   addSectionAfter,
   dragSection,
   removeSection,
@@ -502,13 +503,20 @@ function togglePlay(): void {
   playButton.setAttribute('aria-pressed', String(walking));
   lastFrame = performance.now();
   /*
-    ⚠️ **PAUSE SILENCES THE MIXER EVEN WITH FADERS HELD, AND THAT IS DELIBERATE** — 0126's own
-    amendment. *"It stops the timer bar, but the music is still running in the browser"* is what a
-    pause that respected the desk would go back to being. A desk gesture AFTER the pause puts the
-    loops back on the air (`afterDeskChange`), which is 0137's whole subject; the ordering is the
-    rule, and the page prints which state it is in.
+    ⚠️ **PAUSE STOPS THE LEVEL, AND WHATEVER THE DESK IS HOLDING KEEPS SOUNDING** — 0165, amending
+    0126's own amendment. That amendment read *"pause silences the mixer even with faders held, and
+    that is deliberate"*, against the report *"it stops the timer bar, but the music is still running
+    in the browser"* — and it was the only way to answer that report while an unheld layer went on
+    following the ladder into a stopped transport. `deskTarget` removes the following, so pausing with
+    `groove` up now leaves `groove` playing and nothing else, which is the thing being asked for
+    rather than a compromise with it.
+
+    ⚠️ **AND THE RESTATE IS NOT OPTIONAL.** `setOnAir` returns early when the air state has not
+    changed, which is exactly the case here — paused with something held stays on the air — so the
+    followers would go on playing unless the gains are written again for the new `walking`.
   */
-  setOnAir(walking);
+  setOnAir(walking || deskSounds(held));
+  restate(now());
   drawTransport();
 }
 playButton.addEventListener('click', togglePlay);
@@ -634,6 +642,14 @@ function goToPlace(theme: ThemeKind): void {
 
 levelSelect.addEventListener('change', () => {
   kind = levelSelect.value as LevelKind;
+  /*
+    ⚠️ **A CHANGE OF LEVEL STOPS THE TRANSPORT AS WELL AS REWINDING IT** — 0165. Reported: *"it needs
+    to pause and reset the autoplay when changing tracks."* `seek(0)` was already here and only did
+    half the job: the walk carried on from zero, so the piece a listener switched to in order to hear
+    its opening had moved on by the time they had found the fader. **Choosing a level is choosing
+    something to listen to, not choosing to be somewhere in it.**
+  */
+  if (walking) togglePlay();
   seek(0);
   goToPlace(LEVELS[kind].theme);
   // An audition is *the loudest THIS PLACE takes it*, so a change of place re-states it — 0130.
@@ -714,6 +730,8 @@ interface LayerRow {
   panOut: HTMLElement;
   ladder: HTMLInputElement;
   follow: HTMLButtonElement;
+  /** The one-click audition — 0130's button, in the row it describes since 0165. */
+  solo: HTMLButtonElement;
   tr: HTMLTableRowElement;
 }
 
@@ -728,6 +746,15 @@ const layerRows = {} as Record<MusicLayer, LayerRow>;
     tr.title = `${layer} — a ${span.loopSeconds.toFixed(1)}s loop`;
     tr.innerHTML =
       `<td><b class="lay">${layer}</b></td>` +
+      /*
+        ⚠️ **THE AUDITION IS IN THE ROW NOW, AND THE PANEL IT CAME FROM IS GONE** — 0165. 0130 put
+        twenty-three buttons in their own section, and reported of it: *"there's a section for this
+        but it's completely separated and offscreen from the what is sounding section, so I have to
+        remember what is playing, scroll down, then click each item, then scroll back up."* A control
+        and the readout it moves have to be on one screen or the instrument is asking its user to hold
+        the state in their head — which is what an instrument is for.
+      */
+      `<td><button class="solo" aria-pressed="false" title="hear ${layer} on its own">alone</button></td>` +
       `<td><span class="badge"></span></td>` +
       `<td class="target">0.00</td>` +
       `<td class="live">0.00</td>` +
@@ -759,6 +786,7 @@ const layerRows = {} as Record<MusicLayer, LayerRow>;
       panOut: tr.querySelector('.panOut')!,
       ladder: tr.querySelector('.lad')!,
       follow: tr.querySelector('.fol')!,
+      solo: tr.querySelector('.solo')!,
       tr,
     };
     /*
@@ -809,7 +837,7 @@ function afterDeskChange(): void {
     muting them), and the level clock does not move to let that happen: the whole point is to hold
     the piece where it is and hear one part of it.
   */
-  setOnAir(walking || deskAlone(held));
+  setOnAir(walking || deskSounds(held));
   drawTransport();
   restate(now());
 }
@@ -895,25 +923,28 @@ function syncSliders(): void {
   faders costs nothing and cannot drift.
 */
 
+/*
+  ⚠️ **THE BUTTONS ARE THE DESK'S ROWS NOW, AND THE SECTION THEY LIVED IN IS DELETED** — 0165.
+  0130's own reasoning still holds word for word — it is the desk and not a second player, and moving
+  the mixer's faders is what makes it impossible to drift from the game. What changed is only WHERE
+  the twenty-three buttons are, and that turned out to matter as much as what they do: *"there's a
+  section for this but it's completely separated and offscreen from the what is sounding section."*
+
+  ⚠️ **THE MAP IS KEPT BECAUSE `drawHeld` READS IT**, and it is filled from the rows rather than from
+  a second list of layers — one enumeration, so a button and a row cannot come apart.
+*/
 const auditionButtons = {} as Record<MusicLayer, HTMLButtonElement>;
 
 {
-  const row = el('alone');
   const spans = layerSpans(kind, FIGHT_SECONDS, sections);
   for (const layer of MUSIC_LAYERS) {
     const span = spans.find((s) => s.layer === layer)!;
-    const button = document.createElement('button');
-    button.textContent = layer;
-    button.title = `${layer} — a ${span.loopSeconds.toFixed(1)}s loop`;
-    button.setAttribute('aria-pressed', 'false');
+    const button = layerRows[layer].solo;
+    button.title = `${layer} alone — a ${span.loopSeconds.toFixed(1)}s loop, at the loudest this place takes it`;
     button.addEventListener('click', () => auditionOnly(aloneOn() === layer ? null : layer));
-    row.append(button);
     auditionButtons[layer] = button;
   }
-  const back = document.createElement('button');
-  back.textContent = 'everything back';
-  back.addEventListener('click', () => auditionOnly(null));
-  row.append(back);
+  el<HTMLButtonElement>('everythingBack').addEventListener('click', () => auditionOnly(null));
 }
 
 /**
@@ -1026,11 +1057,25 @@ function restate(moment: Moment): void {
       pan.cancelScheduledValues(0);
       pan.setTargetAtTime(wantPan, 0, HOLD_SECONDS);
     }
-    if (hold.gain !== null) {
+    /*
+      ⚠️ **`deskTarget` IS THE WHOLE RULE AND IT LIVES IN `rig/transport.ts`** — 0165. What a layer
+      sits at is its hold, or the level's target while the transport walks, or **silence while it does
+      not**. The third clause is the new one and it is what lets `deskSounds` be *anything held above
+      zero*: with nothing following a stopped level, one raised fader is the whole of what sounds.
+
+      ⚠️ **`owed` NOW MEANS *the desk moved this off the level's target*, which is a wider claim than
+      it used to make** — a layer silenced by the stop is owed too, or resuming the walk would leave
+      it at zero for the rest of the rung. That is a real bug and it is the reason this is one branch
+      rather than two.
+    */
+    const want = deskTarget(hold, target, walking);
+    if (want !== target) {
       const gain = music.gainOf(layer);
-      gain.cancelScheduledValues(0);
-      // ⚠️ **ABSOLUTE, so a layer the rung has closed is reachable** — 0129, and the whole point.
-      gain.setTargetAtTime(hold.gain, 0, HOLD_SECONDS);
+      if (Math.abs(gain.value - want) > 0.001) {
+        gain.cancelScheduledValues(0);
+        // ⚠️ **ABSOLUTE, so a layer the rung has closed is reachable** — 0129, and the whole point.
+        gain.setTargetAtTime(want, 0, HOLD_SECONDS);
+      }
       owed.add(layer);
     } else if (owed.has(layer)) {
       const gain = music.gainOf(layer);
@@ -1518,7 +1563,9 @@ function momentAsText(moment: Moment): string {
   const only = aloneOn();
 
   const rows = sounding.map((l) => {
-    const live = music === null ? 0 : music.gainOf(l.layer).value;
+    // ⚠️ Off the air is zero here too, on the table's own terms — 0165. A pasted moment that claimed
+    // a gain nobody could hear is the same lie in the format that gets quoted back.
+    const live = music === null || !onAir ? 0 : music.gainOf(l.layer).value;
     const at = music === null ? l.pan : music.panOf(l.layer).value;
     const hold = holdOf(l.layer);
     return (
@@ -1714,7 +1761,17 @@ function frame(at: number): void {
     row.move.textContent = layer.move;
     row.move.className = `badge ${layer.move}`;
     row.target.textContent = layer.target.toFixed(2);
-    const live = music === null ? 0 : music.gainOf(layer.layer).value;
+    /*
+      ⚠️ **OFF THE AIR IS ZERO, AND READING THE `GainNode` THERE WAS A LIE THE PANEL TOLD FOR A
+      MONTH** — 0165. `setOn` stops the SOURCES rather than muting them (0119), so a gain is upstream
+      of whether anything is playing: stopped with one fader up, this column read `1.55` into total
+      silence. `drawTransport`'s own comment knew — *"the live column goes on reporting `sub 0.86`
+      into silence whenever the loops are off — that is what `mute` greys out"* — and greying a panel
+      is not the same as not printing a number. The column's promise is *"read off the mixer's own
+      `GainNode`, so it cannot disagree with what the speakers are doing"*, and this is what makes
+      that true rather than nearly true.
+    */
+    const live = music === null || !onAir ? 0 : music.gainOf(layer.layer).value;
     row.live.textContent = live.toFixed(2);
     row.bar.style.width = `${Math.min(100, live * 80)}%`;
     row.bar.parentElement!.classList.toggle('aura', layer.aura);
