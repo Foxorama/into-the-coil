@@ -661,6 +661,79 @@ not a report per item.
 
 ## What is next
 
+### ⚠️ START HERE: THE SCORE IS BEING REWORKED, AND THE ORDER OF THE WHOLE PROJECT IS NAMED
+
+⚠️ **THE PLAYER HAS OPENED THE WHOLE SCORE, INCLUDING THE PARTS NO ROUND HAS TOUCHED**, 2026-08-17:
+*"I'm honestly happy to rework the entire musical score, including boss aura's and boss music and
+melody."*
+
+⚠️ **AND THE ACCUMULATED RULES ARE NAMED AS THE PROBLEM, WITH THE CAUSE.** *"Essentially all the
+restrictions and setup and session changes happened because I didn't know what to ask for and it all
+piled on top of itself."* This is the second time that has been said — the first produced
+[0152](decisions/0152-a-layer-is-heard-in-the-sum.md) and the refactor — and it is now explicit that a
+music rule is **demotable rather than inherited**. A rule that only exists because an earlier round
+could not hear something is not evidence about this round.
+
+**The four asks, in the player's own words and in their order:**
+
+1. **A fast paced tempo melody that INCREASES IN TEMPO throughout the level.**
+2. **A different unique melody for each level** — *"we can smooth out the overall tone afterwards so
+   they fit the core game still."*
+3. **Bosses to have unique threatening music**, so the player feels they are entering a boss area,
+   **and the boss music starts before the boss appears.**
+4. **The sfx and cues to fit in with the music** — *"that's secondary and also needs to be worked
+   on."*
+
+⚠️ **THREE OF THE FOUR ALREADY HAVE MACHINERY AND ONE DOES NOT, WHICH IS THE WHOLE SEQUENCING
+QUESTION.** 2 is [0146](decisions/0146-three-more-places-and-two-after-them.md) and
+[0148](decisions/0148-a-place-has-its-own-notes.md); 3's *before it appears* is `approach`, which
+opens **17.9 s** ahead of the fight and already places `toll` there on purpose
+([0107](decisions/0107-a-level-is-a-place.md)); 4 is [0099](decisions/0099-the-cues-are-in-the-key.md)
+and [0104](decisions/0104-the-gun-plays-a-figure.md). **Ask 1 has none, and it is blocked by
+[0093](decisions/0093-the-gun-is-on-the-grid.md)** — see below.
+
+⚠️ **AND THE PLAYER HAS NOT COMMENTED ON AURAS OR CUES YET, WHICH IS NOT THE SAME AS BEING HAPPY WITH
+THEM.** *"I haven't commented on boss aura's or game sfx/cues yet because we've been spending a lot
+of time just on the music."* Do not read the silence as a sign-off.
+
+### ⚠️ THE ORDER OF EVERYTHING AFTER THIS IS THE PLAYER'S, GIVEN 2026-08-17
+
+**music → enemy spawn rates, gaps and bugs → sfx → boss uniqueness → boss auras → minibosses →
+updating the art throughout the entire game → additional player weapons.**
+
+⚠️ **It is a standing sequencing instruction, not a wish list**, and it outranks the queue any report
+below leaves behind. **Minibosses and an art pass are both new** and appear nowhere else in this
+repository. **Additional player weapons are LAST** — the arsenal is
+[0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md)'s and is still a list with
+nothing in it, and it stays that way until everything above it has landed.
+
+### ⚠️ AND ASK 1 RE-OPENS 0093, WHICH state-of-play HAS SAID WAS DUE SINCE THE SEVENTH PLAY-TEST
+
+⚠️ **THE ARITHMETIC IS EXACT AND IT IS NOT A MATTER OF TASTE.** A cadence is authored as notes per
+beat and spent as `STEPS_PER_BEAT / perBeat`, so **every tempo the game can hold is one where that
+division is a whole number** for all of `firePerBeat: [3, 3, 4, 4, 6]` and
+`missilePerBeat: [3, 3, 3, 4, 6]`, plus `FIRE_GRID = STEPS_PER_BEAT / 4`:
+
+| steps/beat | BPM | |
+|---|---|---|
+| 48 | 75.0 | holds |
+| 36 | 100.0 | holds |
+| **24** | **150.0** | **holds — what ships** |
+| 18 | 200.0 | **breaks** `perBeat 4` |
+| 16 | 225.0 | **breaks** `perBeat 3` and `perBeat 6` |
+| 12 | 300.0 | holds |
+
+⚠️ **SO THERE IS NOTHING BETWEEN 150 AND 300, AND *INCREASES IN TEMPO* CANNOT BE BUILT ON THIS GRID.**
+Either the gun's ladder is re-authored per rung — which moves fire rates and is
+[0084](decisions/0084-the-dial-is-the-level-and-the-guns.md)'s currency — or the whole-sim-step rule
+itself goes. **This is the conversation
+[0102](decisions/0102-the-music-goes-somewhere.md) said was next and it has been deferred four times.**
+
+⚠️ **AND A RE-BAKE IS THE HIDDEN COST OF ANY ANSWER.** Loops are baked at `BEAT_SECONDS` and played
+against `anchorAudio`; `playbackRate` would transpose them. A tempo that moves means baking again,
+and the bake is now **3.6 s** for the full set —
+[`the-prewarm-got-a-third-heavier`](../reports/the-prewarm-got-a-third-heavier-2026-08-17.md).
+
 ### ⚠️ THE TARGET IS DESKTOP NOW — [0153](decisions/0153-desktop-is-the-target.md)
 
 ⚠️ **The phone is a port that has not started, and may not be cited as a reason to make anything
