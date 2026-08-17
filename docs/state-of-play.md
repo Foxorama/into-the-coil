@@ -174,6 +174,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **A LEVEL SAYS WHERE ITS SECTIONS OPEN — order, count and timing are the level's, and the three shared distances are gone** | [0158](decisions/0158-a-level-says-where-its-sections-open.md) |
 | **A CADENCE IS SIM STEPS AND A BEAT IS SECONDS — 0093's divisor rule is gone and a weapon may fire at any rate** | [0159](decisions/0159-the-two-clocks-come-apart.md) |
 | **THE MUSIC FREE-RUNS ON THE AUDIO CLOCK — the sim no longer reaches it anywhere, and a tempo may move** | [0160](decisions/0160-the-music-free-runs.md) |
+| **THE SHAPE OF A LEVEL'S MUSIC IS NOT GUARDED — floors stay, shape does not get asserted** | [0161](decisions/0161-the-shape-of-a-level-is-not-guarded.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
 | **a probe runs the test it NAMES, and a suite bakes the music once** | [0115](decisions/0115-a-probe-runs-its-own-guard.md) — amends 0054's *whole suite* clause |
 | **the rig plays a LEVEL, and the instrument is guarded like the game** | [0116](decisions/0116-the-rig-plays-the-level.md) |
@@ -733,6 +734,33 @@ says why that order and not another.
 ⚠️ **AND A DRIVE FOUND A BUG THE WHOLE SUITE WAS GREEN OVER** — a keyboard nudge that moved one bar
 however many times it was pressed, because the handler read a value captured before the redraw.
 [0027](decisions/0027-measure-the-picture-not-the-model.md)'s third catch of this project's own.
+
+### ⚠️ AND THE SHAPE OF A LEVEL'S MUSIC IS NOT GUARDED ANY MORE — [0161](decisions/0161-the-shape-of-a-level-is-not-guarded.md)
+
+⚠️ **READ THIS BEFORE WRITING A GUARD ABOUT THE MUSIC.** Said 2026-08-17: *"don't lock that into a
+rule, it's a guideline if anything and if we lock it into a rule (which we have done already) then
+every level ends up sounding similar."* Four assertions removed, nothing put in their place: the last
+section's length, every section's length, no rung thinner than the opening, and the boss's density
+floor. **Each one made a musical opinion from one round true of all seven levels for ever.**
+
+⚠️ **TWO OF THE FOUR WERE ADDED THE SAME DAY, IN 0158 — the PR whose headline is *order, count and
+timing are free*.** The guard took back what the decision granted, in one diff, and nothing caught it.
+
+⚠️ **THE TRANSFERABLE PART IS ALREADY IN `CLAUDE.md` AND IS ABOUT CODE**: *"No counting guard… every
+one flagged its healthy file as loudly as its sick one."* That reasoning was worked out for line and
+`case` ceilings and **never transferred to music**, where every one of the four was a counting guard
+with a musical name.
+
+⚠️ **THE SORTING PRINCIPLE, WHICH IS DELIBERATELY NOT A RULE.** A **floor** is about whether sound
+works — nothing clips, no opened layer is inaudible, a loop is a whole number of samples, a section
+outlasts its own ramp. A **shape** is a musical opinion — how long, how busy, in what order. Floors
+stay; shape does not get asserted. 0161 says why writing that into `CLAUDE.md` would be the same
+mistake wearing a hat.
+
+⚠️ **WHAT THE PLAYER LIKES IS A GUIDELINE AND IS WORTH KNOWING**: music starts, changes, intensifies,
+then shifts to boss music that separates the fight from the level — *"the nebula is a good example,
+starts out with a chorus, escalates to organ music and loud pumping beats, shifts to a dante's inferno
+style boss fight."* **And explicitly NOT a 2:30–3:00 track that escalates every few seconds.**
 
 ### ⚠️ AND THE GRID IS COMING APART — [0159](decisions/0159-the-two-clocks-come-apart.md) IS HALF OF IT
 

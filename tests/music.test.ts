@@ -564,7 +564,7 @@ describe('how far up the ladder a run is', () => {
     }
   });
 
-  it('0102 — and every section of every level is a stretch of it rather than a flicker', () => {
+  it('0161 — every section a level names is one the game reaches, and outlasts its own ramp', () => {
     /*
       `docs/decisions/0102-the-music-goes-somewhere.md`. Reported twice: *"the ingame background music
       doesn't change and increase in tempo as you progress through the level"*, then *"still flat and
@@ -611,17 +611,27 @@ describe('how far up the ladder a run is', () => {
         const seconds = (ends - stretch.from) / PER_SECOND;
         const where = `${kind}'s ${stretch.section}`;
         /*
-          ⚠️ **Ten seconds is the floor and it is not arbitrary**: `RAMP_SECONDS` is 1.6, so a rung
-          shorter than a handful of those is a gain ramp the player hears as a wobble rather than as
-          a change. A rung nobody spends time at is a rung that is not in the music.
+          ── THE FLOOR IS ONE RAMP, AND THE CEILING IS GONE ──────────────────────────────────────
+
+          ⚠️ **`docs/decisions/0161-the-shape-of-a-level-is-not-guarded.md`.** This was *more than 10
+          seconds and less than 90*. The floor was a hand's guess at *long enough to be a section*
+          and the ceiling was a report from one round — *"the ingame background music doesn't
+          change"* — promoted to a constraint on all seven levels for ever.
+
+          ⚠️ **WHAT IS LEFT IS THE ONLY PART THAT IS ABOUT WHETHER SOUND WORKS.** A gain ramp takes
+          `RAMP_SECONDS`; a section shorter than one is a section whose own arrival never finishes,
+          so the player hears a wobble instead of a change. That is a floor under the MECHANISM and
+          it constrains nothing about the music — 0138 derives the same bound for a dragged boundary
+          and `docs/decisions/0117-a-section-change-lands-on-the-beat.md` is why.
+
+          ⚠️ **AND THERE IS DELIBERATELY NO CEILING.** A level may hold one section for its whole
+          length. Said 2026-08-17: *"if we lock it into a rule (which we have done already) then
+          every level ends up sounding similar."*
         */
-        expect(seconds, `${where} lasts ${seconds.toFixed(0)}s, which is not a stretch of a level`).toBeGreaterThan(10);
-        /*
-          ⚠️ **And the ceiling is what the report is about.** Before 0102, `run` covered 160 seconds
-          of a 176-second level; anything over about a minute and a half is *a level with one
-          arrangement in it* however many sections the script has.
-        */
-        expect(seconds, `${where} lasts ${seconds.toFixed(0)}s without changing`).toBeLessThan(90);
+        expect(
+          seconds,
+          `${where} lasts ${seconds.toFixed(1)}s, which is shorter than the ramp that opens it`,
+        ).toBeGreaterThan(RAMP_SECONDS);
       });
     }
   });
@@ -649,27 +659,36 @@ describe('how far up the ladder a run is', () => {
     }
   });
 
-  it('and builds as the boss gets close, in SECONDS the player experiences', () => {
+  it('and the last section is the one the boss interrupts, whatever length a level gives it', () => {
     /*
-      ⚠️ **The unit is what makes this assertion worth anything** —
-      `docs/decisions/0027-measure-the-picture-not-the-model.md`. *A distance of 430* is the model
-      talking to itself; what the player gets is a number of seconds of build before the fight, and at
-      `SCROLL_PER_STEP` that is what this converts it to.
+      ── THIS ASSERTED A LENGTH AND 0161 TOOK THE LENGTH OUT ─────────────────────────────────────
 
-      ⚠️ **THE BUILD IS THE LAST SECTION OF THE SCRIPT AND NOT A NAMED CONSTANT** — 0158. It was
-      `BOSS_APPROACH_UNITS`, one number for every level; it is now whatever each level's script puts
-      last, so this asks all seven.
+      ⚠️ **`docs/decisions/0161-the-shape-of-a-level-is-not-guarded.md`.** It required the last
+      section to last between **6 and 30 seconds** — which is *every level ends with a short build
+      before its boss*, written as a test. Landed in the same PR as
+      `docs/decisions/0158-a-level-says-where-its-sections-open.md`, whose own headline is that order,
+      count and timing are free. **The guard took back what the decision granted.**
+
+      ⚠️ **Said 2026-08-17, and it is the second time**: *"if we lock it into a rule (which we have
+      done already) then every level ends up sounding similar."* A level may now open at its loudest
+      and stay there, or spend two minutes arriving, or reach its boss with no build at all.
+
+      ⚠️ **WHAT IS KEPT IS THE WIRING AND NOT THE TASTE.** The last entry of a script is the section
+      the fight interrupts, and `musicLevelFor` has to answer it for every camera position from that
+      entry to `bossAt` — otherwise a level's final stretch is answered by something other than its
+      own script. That is a claim about the lookup, not about how long a build should be.
     */
     for (const kind of LEVEL_KINDS) {
       const { sections, bossAt } = LEVELS[kind]!;
       const last = sections[sections.length - 1]!;
-      expect(musicLevelFor(last.at, false, sections)).toBe(last.section);
-      const seconds = (bossAt - last.at) / PER_SECOND;
-      expect(seconds, `${kind}'s build lasts ${seconds.toFixed(1)}s, which is not long enough to be one`).toBeGreaterThan(6);
-      expect(seconds, `${kind}'s build lasts ${seconds.toFixed(1)}s, which is a level and not a build`).toBeLessThan(30);
-      expect(seconds, `${kind}'s build is shorter than one bar of the thing it is building`).toBeGreaterThan(
-        BEAT_SECONDS * 4,
-      );
+      expect(musicLevelFor(last.at, false, sections), `${kind} does not reach its last section`).toBe(last.section);
+      /*
+        ⚠️ **Every unit of it, not just its first**, because *the last section runs to the boss* is the
+        half a single sample cannot see: an off-by-one in the walk would show up here and nowhere else.
+      */
+      for (const at of [last.at, last.at + 1, Math.floor((last.at + bossAt) / 2), bossAt - 1, bossAt]) {
+        expect(musicLevelFor(at, false, sections), `${kind} leaves its last section at ${at}`).toBe(last.section);
+      }
     }
   });
 
@@ -1053,58 +1072,29 @@ describe('0102 — the music has accents, a bass line and a build', () => {
     }
   });
 
-  it('and each rung strikes MORE NOTES A BAR than the one below, which is what *pace* is', () => {
-    /*
-      ⚠️ **THE TEMPO DOES NOT CHANGE AND CANNOT** — `docs/decisions/0093-the-gun-is-on-the-grid.md`
-      fixes a beat at 24 sim steps, and the player's gun, every enemy's cadence and 0094's phase-lock
-      all ride it. A BPM ramp would take the whole game off the grid three decisions exist to put it
-      on. *"Increased tempo"* is answered by the rate of EVENTS, which is the same mechanism
-      `docs/decisions/0091-the-boss-has-an-aura.md` already calls *builds in tempo*.
+  /*
+    ── A DENSITY GUARD STOOD HERE AND 0161 DELETED IT, AFTER THREE RETREATS FROM ONE IDEA ────────
 
-      ⚠️ **NOTES A BAR, and NOT the finest subdivision available — a first draft used that and it was
-      the wrong quantity.** `engine` has sixteenth hats, so the finest subdivision in the piece is
-      already 4 at the opening of every level and stays 4 for ever; measured that way the boss is no
-      busier than the first bar, which is plainly false. What rises is how much is HAPPENING, and
-      that is a count.
+    docs/decisions/0161-the-shape-of-a-level-is-not-guarded.md. It began as *every rung strikes more
+    notes a bar than the one below* — a staircase. 0123 demoted it to a floor: no rung thinner than
+    the opening, plus a boss at least 1.5x as busy. Both halves are still SHAPE:
 
-      ⚠️ **Per bar rather than per loop**, because the layers are two, four and eight bars long and a
-      per-loop count would say an eight-bar layer is twice as busy as the same pattern written twice.
-    */
-    const perBar = (level: (typeof MUSIC_LEVELS)[number]): number =>
-      MUSIC_LAYERS.filter((l) => MUSIC_LADDER[level][l] > 0).reduce(
-        (sum, l) => sum + MUSIC[l].reduce((n, v) => n + v.steps.filter((s) => s !== null).length, 0) / LAYER_BARS[l],
-        0,
-      );
-    /*
-      ── IT WAS *MORE THAN THE ONE BELOW* AND THE PLAYER'S EARS SAID THAT IS THE WRONG SHAPE ───────
+      no rung thinner than the opening  ->  a level may only ever get denser
+      the boss is 1.5x the opening      ->  every boss is loud, and none is sparse and menacing
 
-      ⚠️ **`docs/decisions/0123-a-rung-changes-the-notes.md`.** Monotonic density forces every rung to
-      ADD net notes, so nothing can ever be taken away — **which is 0090's additive rule surviving one
-      level down**, in notes rather than in layers.
-      `docs/decisions/0120-a-rung-may-close-a-layer.md` removed it for layers and this reimposed it.
+    ⚠️ THE THREE RETREATS ARE THE FINDING. A guard walked back twice and still constraining the
+    thing the player keeps asking to vary is not a guard being refined, it is a guard that should
+    never have been a guard. Said 2026-08-17: *"if we lock it into a rule (which we have done
+    already) then every level ends up sounding similar."*
 
-      ⚠️ **What replaces it is a FLOOR rather than a staircase.** No rung is thinner than the level's
-      opening, so 0102's *the music goes somewhere* is kept as the thing it always meant — and a rung
-      is free to strip back on the way to the boss, which is what a build does.
-    */
-    const inLevel = CLIMBING;
-    const opening = perBar(inLevel[0]!);
-    for (let i = 1; i < inLevel.length; i++) {
-      const here = perBar(inLevel[i]!);
-      expect(
-        here,
-        `${inLevel[i]} strikes ${here.toFixed(0)} notes a bar against the level's opening ${opening.toFixed(0)} — ` +
-          'the piece has thinned out below where it started',
-      ).toBeGreaterThan(opening);
-    }
-    /*
-      ⚠️ **And the whole climb is worth having.** Each rung being *more* is satisfied by adding one
-      note four times; what the report is about is a level that arrives somewhere, so the boss has to
-      be half as busy again as the opening.
-    */
-    const climb = perBar(TOP) / perBar('run');
-    expect(climb, `the boss is only ${climb.toFixed(2)}× as busy as the opening of a level`).toBeGreaterThan(1.5);
-  });
+    ⚠️ AND NOTHING REPLACES IT, WHICH IS THE POINT. A vacuous assertion in its place would be worse
+    than deletion — docs/decisions/0005-a-guard-must-be-seen-to-fail.md. How busy a rung is remains
+    worth READING, and reading is a script's job: scripts/weigh-*.mjs is where a measurement lives
+    when it is not a promise about every level for ever.
+
+    ⚠️ ITS OWN OPENING COMMENT WAS ALSO WRONG TWICE OVER by the time it went — *the tempo does not
+    change and cannot* was 0093's, and 0159 and 0160 between them removed every reason it gave.
+  */
 });
 
 describe('the boss brings an aura with it', () => {
