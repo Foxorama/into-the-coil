@@ -661,7 +661,17 @@ not a report per item.
 
 ## What is next
 
-### ⚠️ START HERE: THE SCORE IS BEING REWORKED, AND THE ORDER OF THE WHOLE PROJECT IS NAMED
+### ⚠️ START HERE. THIS IS THE ONLY *START HERE* IN THIS FILE, AND THAT IS ON PURPOSE
+
+⚠️ **THERE WERE FIVE OF THEM AND TWO WERE STALE**, one still saying *ask for the feedback* three days
+after it was given and acted on across eleven decisions. A marker that survives the thing it points at
+is worse than no marker, because it reads exactly like a live one — the same failure
+[0029](decisions/0029-the-tracked-record-is-the-record.md) names for a summary that drifts. **Retire
+this heading when it stops being true rather than adding another one below it.**
+
+**The work is: the section script, then tempo, then the score.** Everything under here is why.
+
+### THE SCORE IS BEING REWORKED, AND THE ORDER OF THE WHOLE PROJECT IS NAMED
 
 ⚠️ **THE PLAYER HAS OPENED THE WHOLE SCORE, INCLUDING THE PARTS NO ROUND HAS TOUCHED**, 2026-08-17:
 *"I'm honestly happy to rework the entire musical score, including boss aura's and boss music and
@@ -696,7 +706,7 @@ and [0104](decisions/0104-the-gun-plays-a-figure.md). **Ask 1 has none, and it i
 THEM.** *"I haven't commented on boss aura's or game sfx/cues yet because we've been spending a lot
 of time just on the music."* Do not read the silence as a sign-off.
 
-### ⚠️ START HERE FOR THE SCORE: THE SECTION SCRIPT, DESIGNED AND NOT BUILT
+### ⚠️ AND THE FIRST PIECE OF IT IS THE SECTION SCRIPT — DESIGNED, SIZED, NOT BUILT
 
 ⚠️ **THE FOUR SECTIONS ARE THE SAME THREE DISTANCES FOR ALL SEVEN LEVELS, AND THE PLAYER HAS NAMED
 THAT AS A LIMITER**, 2026-08-17: *"can we rearrange the four sections? or have them different per
@@ -821,7 +831,7 @@ had noticed. What was corrected is **reasoning that would have bound the next ch
 capacities, they are blocking nothing, and a phone-sized floor under a desktop game is the safe
 direction to be wrong in.
 
-### ⚠️ START HERE FOR MUSIC: ALL SEVEN MATERIAL PASSES ARE IN, AND NOTHING HAS BEEN HEARD SINCE
+### ALL SEVEN MATERIAL PASSES ARE IN, AND NOTHING HAS BEEN HEARD SINCE
 
 ⚠️ **THE BLOCKER IS GONE AND THE GUARD IS BETTER THAN IT WAS** —
 [0156](decisions/0156-a-strike-is-an-increment.md). 0108's pitched-weight guard measured the *peak* of
@@ -939,7 +949,13 @@ rig's `--solo`, which could only ever render level one and did it at the ladder'
 **Deliberately left undone**, because every available lever is a number inside the rule set being
 refactored: `arp`, `hook`, and the bed that buries them.
 
-### ⚠️ START HERE NEXT SESSION: ASK FOR THE FEEDBACK. IT EXISTS AND THIS FILE DOES NOT HAVE IT.
+### ~~START HERE NEXT SESSION: ASK FOR THE FEEDBACK~~ — ANSWERED 2026-08-14, AND ACTED ON SINCE
+
+⚠️ **THE ASK WAS MADE AND THE FEEDBACK CAME.** Everything from
+[0147](decisions/0147-a-place-is-a-balance.md) to
+[0157](decisions/0157-the-prewarm-was-scheduled-one-note-at-a-time.md) is downstream of it. The
+section below is kept for the two queued passes it names, which are still the player's own words —
+**it is no longer where a session starts.**
 
 ⚠️ **THE PLAYER HAS PLAYED ALL SEVEN AGAINST [0147](decisions/0147-a-place-is-a-balance.md) AND THE
 VERDICT IS THE FIRST UNRESERVEDLY POSITIVE ONE THIS CHANNEL HAS HAD**, 2026-08-14: *"I've played
@@ -1039,7 +1055,11 @@ queue's: guards over the thing the item is about, probes seen to go RED via
 `node scripts/prove-guard.mjs <n>`, a decision in `docs/decisions/`, a rollback note on the PR, and
 `npm run prove` before pushing. **An item is not done because it works.**
 
-### ⚠️ START HERE NEXT SESSION: THE RUN IS A PAD AND A FLUTE, AND THE TEMPO QUESTION IS DUE
+### ~~START HERE NEXT SESSION~~ — THE RUN IS A PAD AND A FLUTE, AND THE TEMPO QUESTION IS NOW OPEN
+
+⚠️ **THE TEMPO QUESTION THIS SECTION SAID WAS DUE HAS BEEN ASKED AND ANSWERED BY THE PLAYER** — see
+*ASK 1 RE-OPENS 0093* above, which has the arithmetic. **This is no longer where a session starts**;
+what is still live in it is what `run` closes, which the score rework has to decide about.
 
 ⚠️ **THE TWELFTH PLAY-TEST OUTRANKS EVERYTHING BELOW IT** —
 [`the-twelfth-play-test`](../reports/the-twelfth-play-test-2026-08-14.md), given 2026-08-14 against
