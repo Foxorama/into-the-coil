@@ -35,7 +35,7 @@ import {
   type MusicLayer,
 } from '../src/content/music.ts';
 import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
-import { THEME_KINDS, mixOf } from '../src/content/themes.ts';
+import { THEME_KINDS, mixOf, rungOf } from '../src/content/themes.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { auraBuild, auraFor, levelWrites, musicLevelFor } from '../src/app/music.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
@@ -349,7 +349,14 @@ describe('0130 — a layer can be heard on its own', () => {
           only prove the loop runs. The aura's pair are at a boss at arm's length, which is the one
           reading of *loudest* available for a gain that is a distance the player steers (0091).
         */
-        const want = Math.max(...MUSIC_LEVELS.map((rung) => MUSIC_LADDER[rung][layer])) * mixOf(theme, layer);
+        /*
+          ⚠️ **THROUGH `rungOf` SINCE A PLACE STATES ITS OWN RUNGS** —
+          `docs/decisions/0172-a-place-opens-with-its-own-four.md`. `MUSIC_LADDER[rung][layer]` was a
+          faithful copy of what the desk does while every ladder was absent, and became a second
+          opinion the moment one was not. It is still composed from the TABLES rather than from
+          `targetGain`, which is what the paragraph above is about and is untouched by this.
+        */
+        const want = Math.max(...MUSIC_LEVELS.map((rung) => rungOf(theme, rung, layer))) * mixOf(theme, layer);
         expect(loudestGain(theme, layer), `${theme}/${layer}`).toBeCloseTo(want, 10);
       }
     }
@@ -921,7 +928,7 @@ describe('the rig is not in the game, and the game is not in the rig', () => {
     for (const rung of MUSIC_LEVELS) {
       for (const theme of THEME_KINDS) {
         for (const layer of MUSIC_LAYERS) {
-          const gain = MUSIC_LADDER[rung][layer] * mixOf(theme, layer);
+          const gain = rungOf(theme, rung, layer) * mixOf(theme, layer);
           if (gain > loudest) {
             loudest = gain;
             who = `${theme}/${rung}/${layer}`;

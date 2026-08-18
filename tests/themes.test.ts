@@ -65,6 +65,7 @@ import {
 import { PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SAMPLE_RATE, saturate } from '../src/app/sound.ts';
 import { loopsAt } from './bakes.ts';
+import { soundingAt } from './pace.ts';
 import { contrast } from './contrast.ts';
 
 /**
@@ -1146,10 +1147,24 @@ describe('0128 — a place plays its own material, and shares everything it does
 
     for (const rung of MUSIC_LEVELS) {
       for (const layer of MUSIC_LAYERS) {
-        expect(
-          cold[rung].gains[layer],
-          `${rung}/${layer}: a weight of zero must be the solve 0154 shipped`,
-        ).toBeCloseTo(perRung(rung)[layer], 6);
+        /*
+          ⚠️ **IN DECIBELS NOW, WHERE IT WAS SIX DECIMAL PLACES OF A GAIN** —
+          `docs/decisions/0172-a-place-opens-with-its-own-four.md`. The two solves are the same update
+          rule from different STARTING points — the paragraph above already says so — and what
+          separates them is only where four hundred iterations happen to stop. **That residue is a
+          property of the tree being solved**, so a digit count fitted to one tree fails on the next
+          one for a reason that is not a defect: it went from under 5e-7 to 7.0e-5 when seven places
+          got their own ladders, on a gain of 2.30.
+
+          ⚠️ **A HUNDREDTH OF A DECIBEL IS A BOUND THAT MEANS SOMETHING, AND A DECIMAL PLACE OF A GAIN
+          IS NOT.** `DUCK_FLOOR_DB` next door is one decibel because that is a level JND; this is
+          **two orders of magnitude under it**, and the worst residue in the tree is 5.9e-4 dB — a
+          further seventeen times below the bound. Same claim, stated in the units the claim is about.
+        */
+        const drift = Math.abs(20 * Math.log10(cold[rung].gains[layer] / perRung(rung)[layer]));
+        if (cold[rung].gains[layer] > 0 || perRung(rung)[layer] > 0) {
+          expect(drift, `${rung}/${layer}: a weight of zero must be the solve 0154 shipped`).toBeLessThan(0.01);
+        }
       }
     }
     const moved = MUSIC_LEVELS.filter((rung) =>
@@ -1546,5 +1561,60 @@ describe('0162 — and the override path itself, driven with a table of its own'
     */
     expect(MUSIC_LADDER.surge.counter, 'the shared ladder no longer opens this, so the test proves nothing').toBeGreaterThan(0);
     expect(rungIn({ surge: { counter: 0 } }, 'surge', 'counter'), 'a place could not close a layer').toBe(0);
+  });
+});
+
+/*
+  ── 0172: SEVEN PLACES, SEVEN OPENINGS ──────────────────────────────────────────────────────────
+
+  `docs/decisions/0172-a-place-opens-with-its-own-four.md`. Asked for 2026-08-18: *"actually having
+  the levels sound different — it'll need a bunch of different sounds and effects applying to each
+  level."*
+
+  ⚠️ **THE SENTENCE THIS IS THE NEGATION OF IS ONE `scripts/weigh-apart.mjs` HAS PRINTED SINCE
+  2026-08-13**: *"the top of every mix is a sub, a kick, a bass and a pad, which is the same four
+  sounds in all seven."* Measured on the shared ladder, **five of the seven** have literally the same
+  four layers loudest at `run`.
+
+  ⚠️ **IT IS A FLOOR AND NOT A SHAPE, WHICH IS THE DISTINCTION 0161 TURNS ON.** Nothing here says what
+  any level must open with, how busy it is, how long a section runs or in what order anything arrives.
+  What it refuses is two levels opening on the SAME four — which is the minimum content of *the levels
+  sound different* and is a property of the pair rather than an opinion about either one.
+
+  ⚠️ **AND IT IS MEASURED OFF THE BAKED AUDIO, NOT OFF THE TABLE** — `soundingAt` ranks by what a
+  layer puts out, so `docs/decisions/0140-no-layer-is-inaudible.md`'s *a gain is not a loudness* holds
+  here too. A place could state four different numbers and still be four identical sounds.
+*/
+describe('0172 — a place opens with its own four', () => {
+  it('THE REPORTED ONE: no two places have the same four layers on top at `run`', () => {
+    const top = new Map<ThemeKind, string>();
+    for (const theme of THEME_KINDS) {
+      const four = soundingAt(theme, 'run', loopsAt(SAMPLE_RATE, theme)).slice(0, 4);
+      expect(four.length, `${theme} sounds fewer than four layers at run`).toBe(4);
+      top.set(theme, [...four].sort().join(','));
+    }
+    const clashes: string[] = [];
+    for (const a of THEME_KINDS) {
+      for (const b of THEME_KINDS) {
+        if (THEME_KINDS.indexOf(b) <= THEME_KINDS.indexOf(a)) continue;
+        if (top.get(a) === top.get(b)) clashes.push(`${a} and ${b} both open on ${top.get(a)}`);
+      }
+    }
+    expect(clashes, 'two levels open on the same four sounds, which is what *it all sounds the same* means').toEqual([]);
+  });
+
+  it('and six of the seven state a `run` of their own, because level one is the one that changes nothing', () => {
+    /*
+      ⚠️ **THE COUNT IS THE ONE THING HERE THAT IS ABOUT THE MECHANISM RATHER THAN THE SOUND**, and it
+      is worth having for the reason `docs/decisions/0162-a-place-has-its-own-ladder.md` landed empty:
+      an override path no data reaches is guarded by nothing however green the suite is. Level one is
+      excluded by name — `docs/decisions/0128-a-place-plays-its-own-material.md`'s *"the theme that
+      changes nothing, so that the six below are read against something"*.
+    */
+    expect(THEMES.approach.ladder, 'level one states a ladder, so there is nothing to read the six against').toBeUndefined();
+    for (const theme of THEME_KINDS) {
+      if (theme === 'approach') continue;
+      expect(THEMES[theme].ladder?.run, `${theme} opens on the shared ladder like everything else`).toBeDefined();
+    }
   });
 });

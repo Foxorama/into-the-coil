@@ -2216,9 +2216,16 @@ describe('0171 — a section change is a build rather than a step', () => {
       minimum expressed against the clock: at 150 BPM a bar is 1.6 s, and `run → push` opens four
       layers over at least two of them in every place.
     */
+    /*
+      ⚠️ **HOW MANY LAYERS A BOUNDARY OPENS IS NOT ASSERTED, AND IT USED TO BE.** It was four in all
+      seven when this was written and it is four, five or six now —
+      `docs/decisions/0172-a-place-opens-with-its-own-four.md` gave each place its own `run` row, so
+      what arrives at `push` is a per-place fact. **That is a SHAPE and 0161 says not to guard it**;
+      the spread is the floor and is what the report was about.
+    */
     for (const theme of THEME_KINDS) {
       const build = buildsOf(theme).find((b) => b.from === 'run' && b.to === 'push')!;
-      expect(build.arrivals.length, `${theme} does not open four layers at push`).toBe(4);
+      expect(build.arrivals.length, `${theme} opens nothing at push`).toBeGreaterThan(1);
       expect(
         build.spread,
         `${theme}'s push arrives over ${build.spread.toFixed(2)}s, which is not long enough to be heard as a build`,

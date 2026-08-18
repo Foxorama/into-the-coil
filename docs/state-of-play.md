@@ -720,6 +720,14 @@ multiplier could reach them. **It makes the place vivid and moves it CLOSER to i
 `weigh-apart` has core-to-saurian at 3.1 dB against 4.0 — which is the clearest statement yet that
 differentiation is not a mix pass.
 
+⚠️ **AND SEVEN PLACES OPEN ON SEVEN DIFFERENT THINGS** —
+[0172](decisions/0172-a-place-opens-with-its-own-four.md), the authoring pass
+[0162](decisions/0162-a-place-has-its-own-ladder.md) built the mechanism for and left empty. **Five of
+the seven opened on literally the same four layers**, which is the sentence `weigh-apart` has printed
+since 2026-08-13. `node scripts/weigh-apart.mjs --rung=run` is the instrument — the old one averages
+the opening with the boss and moved 0.1 dB while every opening changed. Closest pair at `run` **2.4 →
+3.5 dB**; `surge` is where the places still converge and is where the next pass goes.
+
 ⚠️ **AND THE BOUNDARY IS A BUILD NOW** — [0171](decisions/0171-a-boundary-is-a-build.md), answering
 *"the push > run primarily but the other transitions for each individual level doesn't actually
 transition at the moment, it just jumps."* `run → push` opened **four layers on one downbeat** in all
