@@ -6,7 +6,7 @@
 // scripts/weigh-audition.mjs names about `tests/pace.ts`.
 
 import { panGains } from '../src/app/music.ts';
-import { AURA_LEVEL_CEILING, LAYER_PAN, MUSIC_LADDER, MUSIC_LAYERS } from '../src/content/music.ts';
+import { AURA_LEVEL_CEILING, LAYER_PAN, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_LEVELS } from '../src/content/music.ts';
 import { mixOf, rungOf } from '../src/content/themes.ts';
 import { ROLE_MARGIN_DB, SOLVED_BY, roleOf } from '../src/content/arrangement.ts';
 import { bandLevels } from '../tests/spectrum.ts';
@@ -111,10 +111,43 @@ export function shippedAt(theme, rung) {
  * uniformly. `offset` reports that anchor. A part at +1.4 over counter-lines at −3.6 is the same
  * arrangement as +3 over −2, and judging the absolute value called twelve healthy layers wrong.
  */
-export function solveMix(theme, rung, loops, profile = profileOfLoops(loops), rms = rmsOfLoops(loops)) {
+export function solveMix(
+  theme,
+  rung,
+  loops,
+  profile = profileOfLoops(loops),
+  rms = rmsOfLoops(loops),
+  previous = null,
+  weight = 0,
+) {
   const shipped = shippedAt(theme, rung);
   const gains = {};
-  for (const l of MUSIC_LAYERS) gains[l] = shipped[l] > 0 ? (SOLVED_BY(l) ? 1 : shipped[l]) : 0;
+  /*
+    ⚠️ **THE PREVIOUS RUNG IS THE STARTING POINT, NOT A COLD 1** — 0166. A layer the last rung already
+    placed starts where it was left, so the solver has to move it to disagree rather than to agree.
+    With `weight` at zero this is a different starting point for the same fixed point and the answer
+    is unchanged; what it buys is that the damped step now has somewhere to stop.
+  */
+  for (const l of MUSIC_LAYERS) {
+    if (shipped[l] <= 0) { gains[l] = 0; continue; }
+    if (!SOLVED_BY(l)) { gains[l] = shipped[l]; continue; }
+    gains[l] = previous !== null && previous[l] > 0 ? previous[l] : 1;
+  }
+
+  /*
+    ⚠️ **ANCHORED MEANS *OPEN ON BOTH SIDES*, AND DELIBERATELY SAYS NOTHING ABOUT THE ROLE** — 0166,
+    which is where this parts company with what
+    `reports/the-arrangement-holds-the-wrong-thing-2026-08-17.md` specified. That report asked for
+    continuity *"for any layer whose role has not changed"*, having measured that 46 of 57 lurches
+    were role-unchanged. Measured: that halves the COUNT and does not move the WORST ONE, which stays
+    at 17–18 dB at every weight — because a role change is a 5 dB change of TARGET producing an 18 dB
+    change of GAIN, margin being measured against a sum that moves at the same instant. rime's `lead`
+    at `surge→approach` is −17.9 dB, and it is a `part` becoming a `counter`.
+  */
+  const anchored = {};
+  for (const l of MUSIC_LAYERS) {
+    anchored[l] = previous !== null && SOLVED_BY(l) && shipped[l] > 0 && previous[l] > 0 && weight > 0;
+  }
 
   // ⚠️ THE BROADBAND POWER AND NOT THE A-WEIGHTED SUM — `rmsOfLoops` has the bug this replaces.
   const summed = (g) => Math.sqrt(MUSIC_LAYERS.reduce((s, l) => s + (g[l] > 0 ? (rms[l] * g[l]) ** 2 : 0), 0));
@@ -133,7 +166,16 @@ export function solveMix(theme, rung, loops, profile = profileOfLoops(loops), rm
       if (gains[l] <= 0 || !SOLVED_BY(l)) continue;
       const role = roleOf(theme, rung, l);
       if (role === null) continue;
-      const err = ROLE_MARGIN_DB[role] - m[l];
+      const marginErr = ROLE_MARGIN_DB[role] - m[l];
+      /*
+        ⚠️ **TWO ERRORS, BLENDED, AND THE SECOND ONE IS IN THE SAME UNITS AS THE FIRST.** `marginErr`
+        is how far this layer is from what its role asks; `holdErr` is how far its gain has travelled
+        from where the previous rung left it. Both are decibels, so `weight` is a straight *how much
+        of this step is spent not moving* — 0 is the independent solve and 1 never moves at all.
+      */
+      const holdErr = anchored[l] ? 20 * Math.log10(previous[l] / gains[l]) : 0;
+      const w = anchored[l] ? weight : 0;
+      const err = (1 - w) * marginErr + w * holdErr;
       if (Math.abs(err) > Math.abs(worst)) worst = err;
       // A quarter of the error, in dB. Damped because every gain is in every other layer's denominator.
       gains[l] *= Math.pow(10, (err * 0.25) / 20);
@@ -148,4 +190,55 @@ export function solveMix(theme, rung, loops, profile = profileOfLoops(loops), rm
   const offset = lead === undefined ? 0 : margins[lead] - ROLE_MARGIN_DB.part;
 
   return { shipped, gains, margins, offset, steps, worst, profile };
+}
+
+/**
+ * How much of each correction step is spent holding a gain where the previous rung left it.
+ *
+ * ── THE LARGEST WEIGHT THAT COSTS NOTHING, WHICH IS WHY IT IS NOT A TASTE ───────────────────────
+ *
+ * ⚠️ **`docs/decisions/0166-the-level-is-solved-as-one-trajectory.md`.** Reported: *"the gain is
+ * changing drastically between boundaries and it makes the music jumpy when transitioning between
+ * run, surge, approach etc."*
+ *
+ * ⚠️ **AT 0.40 THE TRAJECTORY BEATS THE INDEPENDENT SOLVE ON EVERY AXIS AND LOSES NOTHING.** Worst
+ * in-level boundary move 16.7 dB → **11.2**, moves of 6 dB or more 22 → **7**, and **not one layer
+ * goes under `ROLE_FLOOR_DB`** — 0.42 already puts two under, so this is the edge of free, measured
+ * to two decimal places rather than chosen. `reports/what-continuity-costs-2026-08-18.md` has the
+ * curve.
+ *
+ * ⚠️ **PAST IT THE TRADE IS REAL AND THERE IS NO KNEE**, so there is nothing here for a measurement
+ * to decide: every decibel of steadiness bought after 0.40 costs audibility, and w=0.65 is a 7.0 dB
+ * worst move with twelve layers back under the floor. **That is why the dashboard has a slider and
+ * this file has a default** — `docs/decisions/0126-the-dashboard-is-the-instrument.md`.
+ */
+export const HOLD_WEIGHT = 0.4;
+
+/**
+ * A whole level solved as ONE TRAJECTORY — each rung starting from the one before it.
+ *
+ * ── WHY EVERY CALLER USES THIS AND NONE CALLS `solveMix` PER RUNG ───────────────────────────────
+ *
+ * ⚠️ **A per-rung call is the independent solve by construction**, because `previous` is what carries
+ * the continuity. A script that looped rungs itself would print a mix the dashboard does not play,
+ * which is `docs/decisions/0029-the-tracked-record-is-the-record.md` happening in arithmetic and the
+ * exact defect `scripts/weigh-audition.mjs` names about `tests/pace.ts`. `solveMix` stays exported
+ * for the one caller that wants a single rung, and it takes the trajectory's own arguments.
+ *
+ * ⚠️ **`calm` IS SOLVED ON ITS OWN AND IS NOT THE HEAD OF THE CHAIN.** The title screen is not inside
+ * a level's arc — a player reaches `run` by pressing a button, not by crossing a section boundary —
+ * so anchoring `run` to the title's gains would hold a continuity across the one transition that is
+ * supposed to be a cut. `docs/decisions/0095-the-level-has-its-own-music.md` is why they are two
+ * pieces at all.
+ */
+export function solveLevel(theme, loops, profile = profileOfLoops(loops), rms = rmsOfLoops(loops), weight = HOLD_WEIGHT) {
+  const out = {};
+  let previous = null;
+  for (const rung of MUSIC_LEVELS) {
+    const chained = rung === 'calm' ? null : previous;
+    const solved = solveMix(theme, rung, loops, profile, rms, chained, weight);
+    out[rung] = solved;
+    if (rung !== 'calm') previous = solved.gains;
+  }
+  return out;
 }

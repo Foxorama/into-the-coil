@@ -25,7 +25,7 @@ import { SAMPLE_RATE } from '../src/app/sound.ts';
 import { MUSIC_LAYERS, MUSIC_LEVELS } from '../src/content/music.ts';
 import { MIX_CEILING, THEME_KINDS } from '../src/content/themes.ts';
 import { ROLE_MARGIN_DB, SOLVED_BY, roleOf } from '../src/content/arrangement.ts';
-import { marginsOf, profileOfLoops, solveMix } from './solve-mix.mjs';
+import { marginsOf, profileOfLoops, solveLevel } from './solve-mix.mjs';
 
 const args = process.argv.slice(2);
 const rungArg = args.find((a) => a.startsWith('--rung='))?.slice('--rung='.length);
@@ -40,9 +40,13 @@ for (const theme of themes) {
   const loops = bakeLoops(SAMPLE_RATE, theme);
   const profile = profileOfLoops(loops);
 
+  // ⚠️ **THE LEVEL, NOT THE RUNG** — 0166. A rung solved on its own is the independent solve, which
+  // is no longer what anything plays; printing it here would be this file disagreeing with the desk.
+  const level = solveLevel(theme, loops, profile);
+
   console.log(`\n══ ${theme} ═══════════════════════════════════════════════════════`);
   for (const rung of rungs) {
-    const { shipped, gains, margins, offset, steps } = solveMix(theme, rung, loops, profile);
+    const { shipped, gains, margins, offset, steps } = level[rung];
     const mNow = marginsOf(profile, shipped);
     console.log(`\n── ${rung} — ${steps} iterations, anchored ${offset >= 0 ? '+' : ''}${offset.toFixed(1)} dB ───────`);
     console.log('layer        role       now ->   new     margin now ->  new   want');

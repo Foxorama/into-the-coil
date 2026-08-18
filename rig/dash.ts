@@ -72,7 +72,7 @@ import {
   this imports rather than reimplements: `docs/decisions/0029-the-tracked-record-is-the-record.md` in
   arithmetic, the defect `scripts/weigh-audition.mjs` names about `tests/pace.ts`.
 */
-import { profileOfLoops, rmsOfLoops, solveMix } from '../scripts/solve-mix.mjs';
+import { HOLD_WEIGHT, profileOfLoops, rmsOfLoops, solveLevel } from '../scripts/solve-mix.mjs';
 
 /** How long the boss is held for. A stated choice, exactly as `scripts/hear.mjs --level` states it. */
 const FIGHT_SECONDS = 45;
@@ -382,6 +382,20 @@ const totalOf = (k: LevelKind): number => LEVELS[k].bossAt / UNITS_PER_SECOND + 
  */
 let solvedOn = false;
 
+/**
+ * How much of the solve is spent holding a gain where the previous rung left it — 0166.
+ *
+ * ⚠️ **A SLIDER RATHER THAN A CONSTANT, BECAUSE THE CURVE HAS NO KNEE.** Past `HOLD_WEIGHT` every
+ * decibel of steadiness costs audibility, and `reports/what-continuity-costs-2026-08-18.md` measured
+ * the whole frontier without finding a point a measurement could defend. That is exactly the shape of
+ * question `docs/decisions/0126-the-dashboard-is-the-instrument.md` says belongs on the desk: the
+ * default is the largest weight that costs nothing, and the rest is an ear's.
+ *
+ * ⚠️ **MOVING IT DROPS THE CACHE**, because the solve is per place and this changes every gain in it.
+ * It costs about 400 ms a place, which is a drag's worth of wait and not a frame's.
+ */
+let holdWeight = HOLD_WEIGHT;
+
 const now = (): Moment =>
   momentOf(
     kind,
@@ -620,11 +634,19 @@ function solvedFor(theme: ThemeKind): SolvedGains | null {
   const profile = profileOfLoops(loops);
   const rms = rmsOfLoops(loops);
   const gains: Partial<Record<MusicLevel, Record<MusicLayer, number>>> = {};
-  // ⚠️ `solve-mix.mjs` is JavaScript, so its return is untyped at this edge. The cast is the boundary
-  // and the only one — `SolvedGains` types every reader of the map.
-  for (const rung of MUSIC_LEVELS) {
-    gains[rung] = solveMix(theme, rung, loops, profile, rms).gains as Record<MusicLayer, number>;
-  }
+  /*
+    ⚠️ **THE WHOLE LEVEL IN ONE CALL, BECAUSE A RUNG NO LONGER HAS AN ANSWER OF ITS OWN** — 0166.
+    Each rung starts from where the one before it left every layer, so looping `solveMix` here would
+    silently be the independent solve — the mix whose boundaries were reported as *"jumpy"*.
+
+    ⚠️ `solve-mix.mjs` is JavaScript, so its return is untyped at this edge. The cast is the boundary
+    and the only one — `SolvedGains` types every reader of the map.
+  */
+  const level = solveLevel(theme, loops, profile, rms, holdWeight) as Record<
+    MusicLevel,
+    { gains: Record<MusicLayer, number> }
+  >;
+  for (const rung of MUSIC_LEVELS) gains[rung] = level[rung].gains;
   solvedByPlace.set(theme, gains);
   return gains;
 }
@@ -701,6 +723,26 @@ el<HTMLInputElement>('cuesOn').addEventListener('change', (e) => {
 el<HTMLInputElement>('solvedOn').addEventListener('change', (e) => {
   solvedOn = (e.target as HTMLInputElement).checked;
   afterDeskChange();
+});
+
+/*
+  ⚠️ **`change` AND NOT `input`, WHICH IS THE ONE THING THIS CONTROL MUST NOT GET WRONG** — 0166. A
+  re-solve is about 400 ms a place, and `input` fires on every pixel of a drag, so the obvious wiring
+  would recompute the whole arrangement forty times on the way to a value and lock the page doing it.
+  `change` fires once, when the handle is let go, which is also when a listener is ready to hear the
+  answer.
+*/
+el<HTMLInputElement>('holdWeight').addEventListener('change', (e) => {
+  holdWeight = Number((e.target as HTMLInputElement).value) / 100;
+  el('holdWeightOut').textContent = holdWeight.toFixed(2);
+  // Every gain in every place is a function of this, so nothing cached survives it.
+  solvedByPlace.clear();
+  afterDeskChange();
+});
+el<HTMLInputElement>('holdWeight').addEventListener('input', (e) => {
+  // The label follows the handle even though the solve does not — a slider with a stale number on it
+  // is a control that looks broken while it is working correctly.
+  el('holdWeightOut').textContent = (Number((e.target as HTMLInputElement).value) / 100).toFixed(2);
 });
 
 const bind = (id: string, outId: string, set: (v: number) => void, format = (v: number) => String(v)): void => {

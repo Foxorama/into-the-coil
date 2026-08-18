@@ -52,7 +52,7 @@ import { makeRng } from '../src/sim/rng.ts';
 import { bakeLoops } from '../src/app/music.ts';
 import { THEME_KINDS } from '../src/content/themes.ts';
 import { SOLVED_BY } from '../src/content/arrangement.ts';
-import { profileOfLoops, solveMix } from './solve-mix.mjs';
+import { profileOfLoops, solveLevel } from './solve-mix.mjs';
 import { PHRASE_SECONDS, BAR_SECONDS, LAYER_BARS, LAYER_PAN, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_DRIVE, MUSIC_GAIN, AURA_LAYERS, AURA_NEAR_UNITS, AURA_FAR_UNITS } from '../src/content/music.ts';
 
 /*
@@ -361,10 +361,16 @@ if (args.has('level')) {
     about the ARC, and a mix change judged a rung at a time is judged on the wrong question — this
     file's own argument for `--level` existing at all.
   */
+  /*
+    ⚠️ **THE WHOLE LEVEL AT ONCE, BECAUSE A RUNG IS NOT SOLVABLE ON ITS OWN ANY MORE** — 0166. Looping
+    `solveMix` per rung here would render the INDEPENDENT solve while the dashboard plays the
+    trajectory, which is a rendered file disagreeing with the instrument — and this file exists to be
+    listened to against that instrument.
+  */
   const solved = args.has('solved') ? {} : null;
   if (solved !== null) {
-    const profile = profileOfLoops(loops);
-    for (const rung of Object.keys(MUSIC_LADDER)) solved[rung] = solveMix(theme, rung, loops, profile).gains;
+    const level = solveLevel(theme, loops, profileOfLoops(loops));
+    for (const rung of Object.keys(MUSIC_LADDER)) solved[rung] = level[rung].gains;
   }
 
   /*

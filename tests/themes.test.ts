@@ -40,6 +40,15 @@ import {
   rungShape,
   underTheLoudest,
 } from './pace.ts';
+import { ROLE_MARGIN_DB, SOLVED_BY, roleOf } from '../src/content/arrangement.ts';
+/*
+  ⚠️ **A TEST IMPORTING A `scripts/` MODULE, AND IT IS THE RIGHT ARROW.** `solve-mix.mjs` is where the
+  solve LIVES — `rig/dash.ts` plays it and three scripts print it — so a second copy here would be
+  `docs/decisions/0029-the-tracked-record-is-the-record.md` happening in arithmetic, which is the
+  defect `scripts/weigh-audition.mjs` names about `tests/pace.ts`. The suite asserts over the code
+  that runs.
+*/
+import { HOLD_WEIGHT, marginsOf, profileOfLoops, rmsOfLoops, solveLevel, solveMix } from '../scripts/solve-mix.mjs';
 import { PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SAMPLE_RATE, saturate } from '../src/app/sound.ts';
 import { loopsAt } from './bakes.ts';
@@ -932,6 +941,163 @@ describe('0128 — a place plays its own material, and shares everything it does
       [...allowed].filter((at) => !adrift.has(at)).sort(),
       'these are on the known-adrift list and now clear the floor — delete them from STILL_ADRIFT',
     ).toEqual([]);
+  }, DSP_MS);
+
+  /*
+    ── 0166: THE LEVEL IS SOLVED AS ONE TRAJECTORY, AND 0.40 IS WHERE THAT IS FREE ────────────────
+
+    `docs/decisions/0166-the-level-is-solved-as-one-trajectory.md`. Reported: *"the gain is changing
+    drastically between boundaries and it makes the music jumpy when transitioning between run,
+    surge, approach etc."*
+
+    ⚠️ **THE DEFAULT WEIGHT IS THE ONLY PART OF THIS THAT A GUARD CAN DEFEND, AND IT IS THE PART THAT
+    WOULD OTHERWISE BE A TASTE.** How steady a boundary should be is an ear's question —
+    `reports/what-continuity-costs-2026-08-18.md` measured the whole frontier and found no knee in
+    it — but *how much steadiness is free* is arithmetic, and `HOLD_WEIGHT` is defined as exactly
+    that: the largest weight at which no layer falls under 0164's floor. Two assertions hold it, one
+    per direction, because a default at the edge of free is only meaningful if it is at the EDGE.
+  */
+  /*
+    ⚠️ **`solve-mix.mjs` IS JAVASCRIPT, SO ITS RETURNS ARRIVE UNTYPED**, exactly as they do at
+    `rig/dash.ts`'s own boundary. These two aliases are the cast, in one place, so no assertion below
+    is written against `any`.
+  */
+  type Solved = Record<MusicLevel, { gains: Record<MusicLayer, number> }>;
+  const marginsIn = marginsOf as (
+    profile: unknown,
+    gains: Record<MusicLayer, number>,
+  ) => Record<MusicLayer, number>;
+
+  it('0166 — THE SHIPPED HOLD WEIGHT COSTS NO AUDIBILITY, and a heavier one would', () => {
+    const adriftAtWeight = (weight: number): string[] => {
+      const out: string[] = [];
+      for (const theme of THEME_KINDS) {
+        const loops = placeLoops(theme);
+        const profile = profileOfLoops(loops);
+        const level = solveLevel(theme, loops, profile, rmsOfLoops(loops), weight) as Solved;
+        for (const rung of MUSIC_LEVELS) {
+          if (rung === 'calm') continue;
+          const margins = marginsIn(profile, level[rung].gains);
+          for (const layer of MUSIC_LAYERS) {
+            if (!SOLVED_BY(layer) || !(level[rung].gains[layer] > 0)) continue;
+            const role = roleOf(theme, rung, layer);
+            if (role === null) continue;
+            if (margins[layer] - ROLE_MARGIN_DB[role] < ROLE_FLOOR_DB) out.push(`${theme}/${rung}/${layer}`);
+          }
+        }
+      }
+      return out;
+    };
+
+    expect(
+      adriftAtWeight(HOLD_WEIGHT),
+      `the shipped hold weight puts these under 0164's floor, so it is no longer free`,
+    ).toEqual([]);
+
+    /*
+      ⚠️ **AND THE SECOND ONE IS WHY THIS IS NOT A NUMBER SOMEBODY LIKED.** A default that merely
+      *happens* to cost nothing says nothing about whether it is the right one; a default at the edge
+      of free is a claim, and this is it. Measured to two decimal places: 0.40 costs nothing and 0.42
+      puts two layers under. If a later mix pass moves that edge, this test says so rather than going
+      quietly on shipping the old number — `AUDIBLE_FLOOR_DB`'s comment is the same rule, one guard
+      over.
+    */
+    expect(
+      adriftAtWeight(HOLD_WEIGHT + 0.02).length,
+      'a heavier hold costs nothing either, so HOLD_WEIGHT is not at the edge of free and should move up',
+    ).toBeGreaterThan(0);
+  }, DSP_MS);
+
+  it('0166 — THE TRAJECTORY MOVES A BOUNDARY LESS THAN THE PER-RUNG SOLVE DOES, in every place', () => {
+    /*
+      ⚠️ **THIS IS THE DECISION'S ACTUAL CLAIM AND IT WAS THE ONE THING NOTHING ASSERTED** — found by
+      `npm run prove` reporting STILL GREEN over a probe that applied the previous report's own
+      proposal. Continuity held only where the ROLE is unchanged passes every other guard here: it
+      converges, it costs no audibility at 0.40, and it differs from a cold solve. What it does not do
+      is make a boundary quieter — the worst move goes from 16.7 dB to **18.1**, because the layers
+      left free are the ones changing role, and a 5 dB change of target is an 18 dB change of gain.
+
+      ⚠️ **RELATIVE, NOT A DECIBEL SOMEBODY CHOSE** — CLAUDE.md's *no counting guard*. The claim is
+      *steadier than what it replaces*, so what it is measured against is what it replaces. A floor of
+      *"under 12 dB"* would have to move every time the material does.
+
+      ⚠️ **`approach → boss` IS EXCLUDED, AND IT IS NOT AN EXEMPTION FOR CONVENIENCE.** That boundary
+      is the boss arriving; the shipped ladder moves the aura 7.1 dB there on purpose (0091), and the
+      previous report leaves *"whether approach→boss's lurches should be kept"* deliberately open. A
+      guard that flattened an event nobody complained about would be answering the wrong report.
+    */
+    const worstInLevel = (byRung: Record<MusicLevel, Record<MusicLayer, number>>): number => {
+      let worst = 0;
+      for (const [from, to] of [
+        ['run', 'push'],
+        ['push', 'surge'],
+        ['surge', 'approach'],
+      ] as const) {
+        for (const layer of MUSIC_LAYERS) {
+          if (!SOLVED_BY(layer)) continue;
+          const a = byRung[from][layer];
+          const b = byRung[to][layer];
+          if (!(a > 0) || !(b > 0)) continue;
+          worst = Math.max(worst, Math.abs(20 * Math.log10(b / a)));
+        }
+      }
+      return worst;
+    };
+    const gainsOf = (level: Solved): Record<MusicLevel, Record<MusicLayer, number>> =>
+      Object.fromEntries(MUSIC_LEVELS.map((rung) => [rung, level[rung].gains])) as Record<
+        MusicLevel,
+        Record<MusicLayer, number>
+      >;
+
+    for (const theme of THEME_KINDS) {
+      const loops = placeLoops(theme);
+      const profile = profileOfLoops(loops);
+      const rms = rmsOfLoops(loops);
+      const perRung = worstInLevel(gainsOf(solveLevel(theme, loops, profile, rms, 0) as Solved));
+      const held = worstInLevel(gainsOf(solveLevel(theme, loops, profile, rms, HOLD_WEIGHT) as Solved));
+      expect(
+        held,
+        `${theme}: the trajectory lurches ${held.toFixed(1)} dB where the per-rung solve lurches ` +
+          `${perRung.toFixed(1)} — holding gain continuous is not buying a steadier boundary`,
+      ).toBeLessThan(perRung);
+    }
+  }, DSP_MS);
+
+  it('0166 — AND A WEIGHT OF ZERO IS THE SOLVE THAT SHIPPED, so the chain is real rather than decorative', () => {
+    /*
+      ⚠️ **THE PROBE FOR *nothing is actually chained*.** Every number in this decision comes from
+      `previous` being threaded rung to rung; a `solveLevel` that ignored it would still converge,
+      still hit every role target, and still look right in every other assertion here. What it would
+      NOT do is differ from the per-rung solve at a non-zero weight — and it must EQUAL it at zero,
+      or the trajectory has changed something it was not supposed to.
+
+      ⚠️ **ONE PLACE, NAMED, AND THAT IS THE HONEST SCOPE.** The equality at zero is a property of the
+      solver rather than of a place — `anchored` is false throughout when `weight` is zero, so the
+      update rule is identical and only the starting point differs — and checking all seven costs
+      forty-nine extra solves for the same statement. `core` is the place with the most layers open at
+      once, so it is the one where a difference would show first.
+    */
+    const theme = 'core';
+    const loops = placeLoops(theme);
+    const profile = profileOfLoops(loops);
+    const rms = rmsOfLoops(loops);
+    const cold = solveLevel(theme, loops, profile, rms, 0) as Solved;
+    const held = solveLevel(theme, loops, profile, rms, HOLD_WEIGHT) as Solved;
+    const perRung = (rung: MusicLevel): Record<MusicLayer, number> =>
+      (solveMix(theme, rung, loops, profile, rms) as unknown as { gains: Record<MusicLayer, number> }).gains;
+
+    for (const rung of MUSIC_LEVELS) {
+      for (const layer of MUSIC_LAYERS) {
+        expect(
+          cold[rung].gains[layer],
+          `${rung}/${layer}: a weight of zero must be the solve 0154 shipped`,
+        ).toBeCloseTo(perRung(rung)[layer], 6);
+      }
+    }
+    const moved = MUSIC_LEVELS.filter((rung) =>
+      MUSIC_LAYERS.some((layer) => Math.abs(cold[rung].gains[layer] - held[rung].gains[layer]) > 0.01),
+    );
+    expect(moved.length, 'the hold weight changes nothing, so `previous` is not being threaded').toBeGreaterThan(0);
   }, DSP_MS);
 
   /*

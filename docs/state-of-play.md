@@ -179,6 +179,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **THE SCRIPT IS EDITED IN THE DASHBOARD — rename, move, add, remove, per level** | [0163](decisions/0163-the-script-is-edited-here.md) |
 | **A ROLE IS A PROMISE THE MIX HAS TO KEEP — the threshold 0152 refused, settable now that 0154 states the intent; 91 known offenders named and held** | [0164](decisions/0164-a-role-is-a-promise-the-mix-has-to-keep.md), [`what-a-role-does-not-buy`](../reports/what-a-role-does-not-buy-2026-08-18.md) |
 | **THE DESK SOUNDS WHAT YOU RAISE — stopped means the LEVEL is not playing, so one drag is audible; 0137 amended** | [0165](decisions/0165-the-desk-sounds-what-you-raise.md) |
+| **THE LEVEL IS SOLVED AS ONE TRAJECTORY — the boundary lurch, measured; 0.40 is the edge of free and the rest is a slider** | [0166](decisions/0166-the-level-is-solved-as-one-trajectory.md), [`what-continuity-costs`](../reports/what-continuity-costs-2026-08-18.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
 | **a probe runs the test it NAMES, and a suite bakes the music once** | [0115](decisions/0115-a-probe-runs-its-own-guard.md) — amends 0054's *whole suite* clause |
 | **the rig plays a LEVEL, and the instrument is guarded like the game** | [0116](decisions/0116-the-rig-plays-the-level.md) |
@@ -694,6 +695,12 @@ places, and they are held in `tests/themes.test.ts` so the list can only shrink.
 [`what-a-role-does-not-buy`](../reports/what-a-role-does-not-buy-2026-08-18.md) ranks them, and
 [`the-arrangement-holds-the-wrong-thing`](../reports/the-arrangement-holds-the-wrong-thing-2026-08-17.md)
 is the blocker on fixing them in one pass. **Read both before proposing a mix number.**
+
+⚠️ **AND THE BLOCKER IS ANSWERED** — [0166](decisions/0166-the-level-is-solved-as-one-trajectory.md).
+The solve is a trajectory now and `node scripts/weigh-trajectory.mjs` prints what continuity costs;
+the worst in-level boundary move is 11.2 dB against the per-rung solve's 16.7, at no cost in
+audibility. **It still does not ship** — the desk has a `steady` slider and the next decision is
+whether the ladder is replaced. That wants an ear on the weight first.
 
 ### ⚠️ START A DRIVING SESSION — `npm run dash`, AND THE PLAYER'S EAR IS THE INSTRUMENT
 
