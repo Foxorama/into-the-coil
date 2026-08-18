@@ -968,13 +968,62 @@ describe('0128 — a place plays its own material, and shares everything it does
     gains: Record<MusicLayer, number>,
   ) => Record<MusicLayer, number>;
 
+  /*
+    ⚠️ **THE BAND PROFILE AND THE RMS ARE CACHED BESIDE `placeLoops`, ON ITS OWN REASONING.**
+    `profileOfLoops` is twenty-three layers through two cascaded biquads each; the three guards below
+    want it for the same seven places, and computing it per call made this suite **28 seconds
+    heavier** — enough to redden `npm run prove`'s baseline on this machine, which is
+    `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md` arriving as *the work
+    genuinely grew* rather than as an intermittency.
+
+    ⚠️ **NOTHING MEASURED CHANGES**, on `placeLoops`' own terms: a profile read out of this map is the
+    same numbers a direct call returns, because the loops it is derived from are already cached and
+    the derivation is pure.
+  */
+  const solveInputs = new Map<
+    ThemeKind,
+    { profile: ReturnType<typeof profileOfLoops>; rms: ReturnType<typeof rmsOfLoops> }
+  >();
+  const inputsFor = (theme: ThemeKind) => {
+    let got = solveInputs.get(theme);
+    if (got === undefined) {
+      const loops = placeLoops(theme);
+      got = { profile: profileOfLoops(loops), rms: rmsOfLoops(loops) };
+      solveInputs.set(theme, got);
+    }
+    return got;
+  };
+
+  /*
+    ⚠️ **AND THE SOLVED LEVELS THEMSELVES, KEYED BY PLACE AND WEIGHT.** Two of the three guards want
+    `HOLD_WEIGHT` over all seven places, so without this the same fixed-point iteration runs twice for
+    every place — about four hundred milliseconds each, for an answer that cannot differ.
+  */
+  const solvedLevels = new Map<string, Solved>();
+  const levelAt = (theme: ThemeKind, weight: number): Solved => {
+    const key = `${theme}/${weight}`;
+    let got = solvedLevels.get(key);
+    if (got === undefined) {
+      const { profile, rms } = inputsFor(theme);
+      got = solveLevel(theme, placeLoops(theme), profile, rms, weight) as Solved;
+      solvedLevels.set(key, got);
+    }
+    return got;
+  };
+
   it('0166 — THE SHIPPED HOLD WEIGHT COSTS NO AUDIBILITY, and a heavier one would', () => {
-    const adriftAtWeight = (weight: number): string[] => {
+    /*
+      ⚠️ **`stopAtFirst` IS FOR THE SECOND ASSERTION AND CHANGES NOTHING IT CLAIMS.** *No layer is
+      adrift* has to walk all seven places; *some layer is adrift* is answered by the first one found,
+      and each place it can skip is a four-hundred-millisecond solve. The first assertion never passes
+      it, so the list it reports is still complete.
+    */
+    const adriftAtWeight = (weight: number, stopAtFirst = false): string[] => {
       const out: string[] = [];
       for (const theme of THEME_KINDS) {
-        const loops = placeLoops(theme);
-        const profile = profileOfLoops(loops);
-        const level = solveLevel(theme, loops, profile, rmsOfLoops(loops), weight) as Solved;
+        if (stopAtFirst && out.length > 0) break;
+        const { profile } = inputsFor(theme);
+        const level = levelAt(theme, weight);
         for (const rung of MUSIC_LEVELS) {
           if (rung === 'calm') continue;
           const margins = marginsIn(profile, level[rung].gains);
@@ -1003,7 +1052,7 @@ describe('0128 — a place plays its own material, and shares everything it does
       over.
     */
     expect(
-      adriftAtWeight(HOLD_WEIGHT + 0.02).length,
+      adriftAtWeight(HOLD_WEIGHT + 0.02, true).length,
       'a heavier hold costs nothing either, so HOLD_WEIGHT is not at the edge of free and should move up',
     ).toBeGreaterThan(0);
   }, DSP_MS);
@@ -1050,11 +1099,8 @@ describe('0128 — a place plays its own material, and shares everything it does
       >;
 
     for (const theme of THEME_KINDS) {
-      const loops = placeLoops(theme);
-      const profile = profileOfLoops(loops);
-      const rms = rmsOfLoops(loops);
-      const perRung = worstInLevel(gainsOf(solveLevel(theme, loops, profile, rms, 0) as Solved));
-      const held = worstInLevel(gainsOf(solveLevel(theme, loops, profile, rms, HOLD_WEIGHT) as Solved));
+      const perRung = worstInLevel(gainsOf(levelAt(theme, 0)));
+      const held = worstInLevel(gainsOf(levelAt(theme, HOLD_WEIGHT)));
       expect(
         held,
         `${theme}: the trajectory lurches ${held.toFixed(1)} dB where the per-rung solve lurches ` +
@@ -1079,10 +1125,9 @@ describe('0128 — a place plays its own material, and shares everything it does
     */
     const theme = 'core';
     const loops = placeLoops(theme);
-    const profile = profileOfLoops(loops);
-    const rms = rmsOfLoops(loops);
-    const cold = solveLevel(theme, loops, profile, rms, 0) as Solved;
-    const held = solveLevel(theme, loops, profile, rms, HOLD_WEIGHT) as Solved;
+    const { profile, rms } = inputsFor(theme);
+    const cold = levelAt(theme, 0);
+    const held = levelAt(theme, HOLD_WEIGHT);
     const perRung = (rung: MusicLevel): Record<MusicLayer, number> =>
       (solveMix(theme, rung, loops, profile, rms) as unknown as { gains: Record<MusicLayer, number> }).gains;
 
