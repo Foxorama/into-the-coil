@@ -50,7 +50,15 @@ import { ROLE_MARGIN_DB, SOLVED_BY, roleOf } from '../src/content/arrangement.ts
   defect `scripts/weigh-audition.mjs` names about `tests/pace.ts`. The suite asserts over the code
   that runs.
 */
-import { HOLD_WEIGHT, marginsOf, profileOfLoops, rmsOfLoops, solveLevel, solveMix } from '../scripts/solve-mix.mjs';
+import {
+  HOLD_WEIGHT,
+  marginsOf,
+  profileOfLoops,
+  rebasedLevel,
+  rmsOfLoops,
+  solveLevel,
+  solveMix,
+} from '../scripts/solve-mix.mjs';
 import { PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SAMPLE_RATE, saturate } from '../src/app/sound.ts';
 import { loopsAt } from './bakes.ts';
@@ -1194,6 +1202,42 @@ describe('0128 — a place plays its own material, and shares everything it does
       'a section change made these audibly quieter while it was opening new layers — a build only adds',
     ).toEqual([]);
   });
+
+  it('0167 — AND THE RE-BASED MIX IS ADDITIVE TOO, which is the only reason it exists', () => {
+    /*
+      `docs/decisions/0167-a-build-does-not-duck.md`. The third mix on the desk keeps the shipped
+      ladder's per-layer rung RATIOS and re-bases the balance onto the solve at one rung, so a boundary
+      moves exactly as the shipped ladder's does. **Additive by construction** — and *by construction*
+      is a claim, not a proof: the re-base multiplies each layer by a per-layer constant, which
+      preserves ratios only while that constant is the same on both sides of the boundary. Anything
+      that made it rung-dependent — a per-rung renormalise, most obviously, which is the first thing
+      anybody reaches for when they see the summed peak — silently puts the ducking back.
+
+      ⚠️ **AND THAT EXACT MISTAKE WAS MEASURED BEFORE THIS SHIPPED.** Holding each rung to the shipped
+      ladder's summed level costs 11 carried layers at `push`-based and 25 at `surge`-based, because
+      the scale factors differ either side of a change. The version on the desk deliberately does not
+      renormalise, and this is what keeps it that way.
+    */
+    const offenders: string[] = [];
+    for (const theme of THEME_KINDS) {
+      const loops = placeLoops(theme);
+      const { profile, rms } = inputsFor(theme);
+      const level = rebasedLevel(theme, loops, profile, rms, HOLD_WEIGHT) as Solved;
+      for (const [from, to] of [
+        ['run', 'push'],
+        ['push', 'surge'],
+        ['surge', 'approach'],
+      ] as const) {
+        for (const { layer, move } of carriedThrough(level[from].gains, level[to].gains)) {
+          if (move <= DUCK_FLOOR_DB) offenders.push(`${theme} ${from}→${to}: ${layer} ${move.toFixed(1)} dB`);
+        }
+      }
+    }
+    expect(
+      offenders,
+      'the re-based mix ducks a carried layer, which is the one thing it is for not doing',
+    ).toEqual([]);
+  }, DSP_MS);
 
   /*
     ── 0147: A PLACE IS A BALANCE, AND THESE ARE WHAT REPLACED THE ±3 dB BAND ─────────────────────

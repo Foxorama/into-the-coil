@@ -72,7 +72,7 @@ import {
   this imports rather than reimplements: `docs/decisions/0029-the-tracked-record-is-the-record.md` in
   arithmetic, the defect `scripts/weigh-audition.mjs` names about `tests/pace.ts`.
 */
-import { HOLD_WEIGHT, profileOfLoops, rmsOfLoops, solveLevel } from '../scripts/solve-mix.mjs';
+import { HOLD_WEIGHT, profileOfLoops, rebasedLevel, rmsOfLoops, solveLevel } from '../scripts/solve-mix.mjs';
 
 /** How long the boss is held for. A stated choice, exactly as `scripts/hear.mjs --level` states it. */
 const FIGHT_SECONDS = 45;
@@ -380,7 +380,22 @@ const totalOf = (k: LevelKind): number => LEVELS[k].bossAt / UNITS_PER_SECOND + 
  * ⚠️ **OFF IS THE SHIPPED MIX AND IS THE DEFAULT**, so the dashboard opens on the thing the game
  * actually plays and the toggle is the experiment rather than the other way round.
  */
-let solvedOn = false;
+/**
+ * Which mix the desk plays — 0167. Three, because there are three candidates and no winner.
+ *
+ * ⚠️ **`shipped` IS THE DEFAULT AND IS WHAT THE GAME USES.** `MUSIC_LADDER × mixOf`. Smooth
+ * boundaries, 91 layers under 0164's floor, and the only one that clears the clip ceiling.
+ *
+ * ⚠️ **`solved` IS 0154's ARRANGEMENT AS 0166 SOLVES IT.** Best balance there is — nothing adrift —
+ * and it makes 56 carried layers audibly quieter at a section change, which is the thing reported as
+ * *"a hard jump between sounds"*.
+ *
+ * ⚠️ **`rebased` IS THE SHIPPED LADDER'S MOTION CARRYING THE SOLVED BALANCE.** Additive at every
+ * boundary by construction, 44 adrift, headroom the same as the solve's. Half-fixed on audibility,
+ * which is a trade only an ear can make — hence three positions rather than a recommendation.
+ */
+type MixMode = 'shipped' | 'solved' | 'rebased';
+let mixMode: MixMode = 'shipped';
 
 /**
  * How much of the solve is spent holding a gain where the previous rung left it — 0166.
@@ -405,7 +420,7 @@ const now = (): Moment =>
     sections,
     // ⚠️ The readout and the mixer both come through here, so they cannot disagree about which mix is
     // playing — which is the *instrument disagreeing with the thing it measures* 0126 exists against.
-    solvedOn ? solvedFor(LEVELS[kind].theme) : null,
+    mixMode === 'shipped' ? null : gainsFor(LEVELS[kind].theme),
     // ⚠️ 0163: the same table `setLevel` is handed, for exactly the reason above.
     ladderOf(LEVELS[kind].theme),
   );
@@ -626,7 +641,7 @@ function loopsFor(theme: ThemeKind): Record<MusicLayer, Float32Array> | null {
  */
 const solvedByPlace = new Map<ThemeKind, SolvedGains>();
 
-function solvedFor(theme: ThemeKind): SolvedGains | null {
+function gainsFor(theme: ThemeKind): SolvedGains | null {
   const cached = solvedByPlace.get(theme);
   if (cached !== undefined) return cached;
   const loops = loopsFor(theme);
@@ -639,10 +654,17 @@ function solvedFor(theme: ThemeKind): SolvedGains | null {
     Each rung starts from where the one before it left every layer, so looping `solveMix` here would
     silently be the independent solve — the mix whose boundaries were reported as *"jumpy"*.
 
+    ⚠️ **AND `rebased` IS A THIRD TABLE OVER THE SAME LOOPS** — 0167. It re-bases the shipped ladder
+    onto the solve at one rung, so the boundaries move exactly as the shipped ladder's do. The cache
+    is keyed by place and cleared whenever the mode or the weight changes, because both change every
+    number in it.
+
     ⚠️ `solve-mix.mjs` is JavaScript, so its return is untyped at this edge. The cast is the boundary
     and the only one — `SolvedGains` types every reader of the map.
   */
-  const level = solveLevel(theme, loops, profile, rms, holdWeight) as Record<
+  const level = (mixMode === 'rebased'
+    ? rebasedLevel(theme, loops, profile, rms, holdWeight)
+    : solveLevel(theme, loops, profile, rms, holdWeight)) as Record<
     MusicLevel,
     { gains: Record<MusicLayer, number> }
   >;
@@ -720,8 +742,10 @@ el<HTMLInputElement>('cuesOn').addEventListener('change', (e) => {
   ⚠️ **`afterDeskChange` IS WHAT PUTS IT ON THE AIR** — 0137: the mixer is following targets, and a
   new set of them is exactly the kind of change that has to be pushed rather than waited for.
 */
-el<HTMLInputElement>('solvedOn').addEventListener('change', (e) => {
-  solvedOn = (e.target as HTMLInputElement).checked;
+el<HTMLSelectElement>('mixMode').addEventListener('change', (e) => {
+  mixMode = (e.target as HTMLSelectElement).value as MixMode;
+  // Each mode is a different table for the same place, so nothing computed for the last one survives.
+  solvedByPlace.clear();
   afterDeskChange();
 });
 
@@ -1627,7 +1651,14 @@ function momentAsText(moment: Moment): string {
       lines.map((c) => `${c.kind} ${c.every === null ? 'scattered' : `every ${c.every} steps`} (${c.perSecond.toFixed(2)}/s)`).join(', '),
     `- **boss gap** ${gapUnits} units · **cues** ${cuesOn ? 'on' : 'off'}` +
       (silenced.size > 0 ? ` (silenced: ${[...silenced].join(', ')})` : '') +
-      ` · **transport** ${walking ? 'walking' : onAir ? 'stopped, desk sounding' : 'stopped'}`,
+      ` · **transport** ${walking ? 'walking' : onAir ? 'stopped, desk sounding' : 'stopped'}` +
+    /*
+      ⚠️ **WHICH MIX IS PLAYING GOES IN THE PASTE** — 0167. Two moments were copied at the same
+      boundary, one per mix, and neither said which; the whole comparison rested on a fact the paste
+      did not carry and a covering note did. A readout that can be quoted has to be quotable alone.
+    */
+    ` · **mix** \`${mixMode}\`` +
+      (mixMode === 'shipped' ? ' (what the game plays)' : ` · steady ${holdWeight.toFixed(2)}`),
     /*
       ⚠️ **THE SCRIPT GOES OUT AS THE ROW IT WOULD BE PASTED INTO, AND THE SHIPPED ONE GOES WITH IT**
       — 0138, following its subject into 0158. A shape found by dragging the strip is a proposal
@@ -1745,7 +1776,7 @@ function frame(at: number): void {
       ⚠️ **AND ONLY WHEN IT HAS MOVED**, because `setLevel` runs every frame and re-arming a ramp sixty
       times a second is a gain that never arrives — 0117's own trap, one file over.
     */
-    if (solvedOn) {
+    if (mixMode !== 'shipped') {
       for (const { layer, target, aura } of moment.layers) {
         if (aura || holdOf(layer).gain !== null) continue;
         const gain = music.gainOf(layer);
