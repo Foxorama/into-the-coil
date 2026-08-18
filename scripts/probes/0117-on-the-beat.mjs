@@ -19,8 +19,8 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: every layer that carries the arrangement moves on a bar line',
     edit: {
       path: 'src/app/music.ts',
-      find: '    writes.push({ layer, target, at: aura ? now : bar, tau: (aura ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3 });',
-      replace: '    writes.push({ layer, target, at: now, tau: (aura ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3 });',
+      find: '    const write = { layer, target, at: aura ? now : bar, tau: (aura ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3 };',
+      replace: '    const write = { layer, target, at: now, tau: (aura ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3 };',
     },
   },
   {
@@ -36,8 +36,8 @@ export const PROBES = [
     guard: 'AND THE AURA IS NOT QUANTISED, because it is tracking something the player steers',
     edit: {
       path: 'src/app/music.ts',
-      find: '    writes.push({ layer, target, at: aura ? now : bar, tau: (aura ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3 });',
-      replace: '    writes.push({ layer, target, at: bar, tau: (aura ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3 });',
+      find: '    const write = { layer, target, at: aura ? now : bar, tau: (aura ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3 };',
+      replace: '    const write = { layer, target, at: bar, tau: (aura ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3 };',
     },
   },
   {

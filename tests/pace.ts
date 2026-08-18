@@ -30,8 +30,8 @@ import {
   SOLVED_BY,
   roleOf,
 } from '../src/content/arrangement.ts';
-import { LAYER_PAN } from '../src/content/music.ts';
-import { panGains } from '../src/app/music.ts';
+import { AURA_LAYERS, LAYER_PAN } from '../src/content/music.ts';
+import { levelWrites, panGains } from '../src/app/music.ts';
 import { BANDS, bandEnergy, bandLevels } from './spectrum.ts';
 
 /** Which bands are the bottom and the top, resolved once from the one table that names them. */
@@ -694,3 +694,69 @@ export function carriedThrough(
   }
   return out.sort((x, y) => x.move - y.move);
 }
+
+/**
+ * Every arrival at every rung change of one place, and how far into the boundary it lands.
+ *
+ * ── THE ONE DESCRIPTION `weigh-build.mjs` AND `tests/music.test.ts` BOTH ASK ────────────────────
+ *
+ * ⚠️ **`docs/decisions/0171-a-boundary-is-a-build.md`.** The arithmetic is `levelWrites`' and is not
+ * repeated here — this walks a place's rungs the way a run does, hands the previous rung's targets
+ * forward as `lastTargets`, and reports what came back. A printed figure that disagreed with an
+ * asserted one would be `docs/decisions/0029-the-tracked-record-is-the-record.md` happening in
+ * arithmetic, which is `scripts/weigh-audition.mjs`'s own standing rule.
+ *
+ * ⚠️ **`second` IS AGAINST THE BOUNDARY'S OWN DOWNBEAT AND NOT AGAINST THE CLOCK.** `levelWrites`
+ * quantises to `nextBarFrom`, so the absolute time depends on where in the bar the camera crossed;
+ * what a listener hears is the gap BETWEEN arrivals, and that is what this reports.
+ *
+ * ⚠️ **THE AURA IS SKIPPED.** It tracks a distance rather than a section — 0091 — and it is written
+ * on every frame rather than on a change, so it is not an arrival in any sense this measures.
+ */
+export interface Arrival {
+  layer: MusicLayer;
+  role: MusicRole | null;
+  second: number;
+}
+
+export interface BuildAt {
+  from: MusicLevel;
+  to: MusicLevel;
+  arrivals: Arrival[];
+  /** How long the whole build takes, first arrival to last, in seconds. */
+  spread: number;
+}
+
+export function buildsOf(theme: ThemeKind, from: readonly MusicLevel[] = WALKED): BuildAt[] {
+  const out: BuildAt[] = [];
+  const heading: Partial<Record<MusicLayer, number>> = {};
+  for (let i = 0; i < from.length; i++) {
+    const to = from[i]!;
+    const writes = levelWrites(to, theme, 0, 0, 0, heading);
+    const arrivals: Arrival[] = [];
+    for (const write of writes) {
+      const opening = write.target > 0 && (heading[write.layer] ?? 0) === 0;
+      if (opening && !AURA_LAYERS.includes(write.layer)) {
+        arrivals.push({ layer: write.layer, role: roleOf(theme, to, write.layer), second: write.at });
+      }
+    }
+    for (const write of writes) heading[write.layer] = write.target;
+    if (i === 0) continue;
+    arrivals.sort((a, b) => a.second - b.second || MUSIC_LAYERS.indexOf(a.layer) - MUSIC_LAYERS.indexOf(b.layer));
+    const spread = arrivals.length === 0 ? 0 : arrivals[arrivals.length - 1]!.second - arrivals[0]!.second;
+    out.push({ from: from[i - 1]!, to, arrivals, spread });
+  }
+  return out;
+}
+
+/**
+ * The rungs a run actually crosses, in order, starting from the title.
+ *
+ * ⚠️ **`calm` IS IN IT BECAUSE THE MUSIC DOES NOT STOP BETWEEN THE TITLE AND THE LEVEL** — 0119 stops
+ * the loops only when sound is turned off. So `calm → run` is a real boundary a player hears, and it
+ * is the one that opens the most layers of any in the game.
+ *
+ * ⚠️ **`bossPeak` IS NOT, because it opens nothing.** It is the fight with more of it — 0114 — and a
+ * boundary with no arrival has no build to measure.
+ */
+const WALKED: readonly MusicLevel[] = ['calm', 'run', 'push', 'surge', 'approach', 'boss'];

@@ -37,12 +37,16 @@ import {
   levelWrites,
   panGains,
   musicLevelFor,
+  BUILD_BARS,
+  entryBars,
   nextBarFrom,
   placeArrivesAt,
   SCHEDULE_AHEAD,
 } from '../src/app/music.ts';
 import { THEME_KINDS } from '../src/content/themes.ts';
 import { loopsAt } from './bakes.ts';
+import { buildsOf } from './pace.ts';
+import { MUSIC_ROLES } from '../src/content/arrangement.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { SAMPLE_RATE, sampleCue, saturate } from '../src/app/sound.ts';
 import { CUES } from '../src/content/cues.ts';
@@ -2170,5 +2174,154 @@ describe('0123 — a rung changes the notes, and that is what makes it a section
         `${layer} waits for bossPeak, so the fight does not open at full strength`,
       ).toBeGreaterThan(0);
     }
+  });
+});
+
+/*
+  ── 0171: A BOUNDARY IS A BUILD, AND FOR ITS WHOLE LIFE IT WAS A STEP ────────────────────────────
+
+  `docs/decisions/0171-a-boundary-is-a-build.md`. Reported 2026-08-18: *"the push > run primarily but
+  the other transitions for each individual level doesn't actually transition at the moment, it just
+  jumps."*
+
+  ⚠️ **EVERY EXISTING GUARD OVER A BOUNDARY IS GREEN ON A STEP, AND THERE ARE THREE OF THEM.** 0166
+  holds the MAGNITUDE of the worst move, 0167 holds that no carried layer DUCKS, and 0164 holds where
+  each layer sits once the rung has settled. All three are about levels; none has a time axis, so all
+  three were green over four layers landing on one downbeat. **A guard measuring a quantity defined in
+  terms of the constant it guards proves only that the code agrees with itself** — `CLAUDE.md`, and
+  this is the same warning one axis over.
+*/
+describe('0171 — a section change is a build rather than a step', () => {
+  it('THE REPORTED ONE: no boundary in any place delivers every arrival at one instant', () => {
+    const steps: string[] = [];
+    for (const theme of THEME_KINDS) {
+      for (const build of buildsOf(theme)) {
+        if (build.arrivals.length > 1 && build.spread === 0) steps.push(`${theme} ${build.from}→${build.to}`);
+      }
+    }
+    /*
+      ⚠️ **THE FLOOR, IN 0161's OWN SORTING.** *Two or more layers arrive together* is a fact about
+      whether a section change reads as an event at all — the thing this file's other music
+      assertions each got wrong by asserting a SHAPE. How long a build should be, and in what order,
+      is a musical opinion and is deliberately not asserted anywhere.
+    */
+    expect(steps, 'these boundaries open two or more layers on one downbeat, which is what *it jumps* means').toEqual([]);
+  });
+
+  it('AND THE ONE THE PLAYER COUNTS IN SECONDS: run → push spans more than three of them, in all seven', () => {
+    /*
+      ⚠️ **THE ASSERTION IN UNITS THE PLAYER EXPERIENCES**, which `CLAUDE.md` requires of every
+      subject and which a bar count is not — `BUILD_BARS` is defined in bars, so an assertion in bars
+      would be the code agreeing with itself. Three seconds is the reported boundary's own two-bar
+      minimum expressed against the clock: at 150 BPM a bar is 1.6 s, and `run → push` opens four
+      layers over at least two of them in every place.
+    */
+    for (const theme of THEME_KINDS) {
+      const build = buildsOf(theme).find((b) => b.from === 'run' && b.to === 'push')!;
+      expect(build.arrivals.length, `${theme} does not open four layers at push`).toBe(4);
+      expect(
+        build.spread,
+        `${theme}'s push arrives over ${build.spread.toFixed(2)}s, which is not long enough to be heard as a build`,
+      ).toBeGreaterThan(3);
+    }
+  });
+
+  it('and a build fits inside the section it opens, with the whole of that section left to play', () => {
+    /*
+      ⚠️ **A FLOOR AND NOT A SHAPE.** A build longer than its own section would be a section that
+      never finished arriving, which is the one way *slower* stops being *smoother*. The shortest
+      section in the game is the approach — `LEVELS` says how long, and it is read rather than typed.
+    */
+    const perSecond = SCROLL_PER_STEP * STEPS_PER_SECOND;
+    for (const kind of LEVEL_KINDS) {
+      const level = LEVELS[kind];
+      const script = level.sections;
+      for (const build of buildsOf(level.theme)) {
+        const opens = script.findIndex((entry) => entry.section === build.to);
+        if (opens < 1) continue;
+        const next = script[opens + 1]?.at ?? level.bossAt;
+        const seconds = (next - script[opens]!.at) / perSecond;
+        expect(
+          build.spread,
+          `${kind}'s ${build.to} is ${seconds.toFixed(1)}s long and its build takes ${build.spread.toFixed(2)}s`,
+        ).toBeLessThan(seconds / 2);
+      }
+    }
+  });
+
+  it('and the piece STARTS together, because a build needs something to build on', () => {
+    /*
+      ⚠️ **THE ONE CASE WHERE A STEP IS CORRECT.** With nothing sounding, the first write is the music
+      starting; staggering it would be four seconds of a game with no soundtrack, and
+      `docs/decisions/0157-the-prewarm-was-scheduled-one-note-at-a-time.md` is what a run start costs
+      already.
+    */
+    for (const theme of THEME_KINDS) {
+      const cold = levelWrites('push', theme, 0, 0, 0, {});
+      const at = new Set(cold.map((w) => w.at));
+      expect(at.size, `${theme} staggers a cold start, so the level opens over four seconds of nothing`).toBe(1);
+    }
+  });
+
+  it('and the arrivals go up the arrangement, so what a place asks you to FOLLOW lands last', () => {
+    /*
+      ⚠️ **THIS IS THE HALF THAT MAKES TWO PLACES DIFFERENT, and it costs nothing to state.** `roleOf`
+      reads `LEADS`, so the layer that lands last at a boundary is the one that place follows there —
+      `docs/decisions/0155-a-place-follows-its-own-instrument.md`'s differentiation spent on time
+      instead of on level. Ember Nebula's choir lands where The Black Heart's riff does.
+    */
+    /*
+      ⚠️ **ACROSS BARS AND NOT INSIDE ONE**, because the cap merges the front of a long build into one
+      downbeat and that bar therefore holds mixed roles by construction. What has to hold is that no
+      LATER bar carries a quieter role than an earlier one — the build only ever goes up.
+    */
+    for (const theme of THEME_KINDS) {
+      for (const build of buildsOf(theme)) {
+        let landed = -1;
+        let bar = -1;
+        let highest = -1;
+        for (const arrival of build.arrivals) {
+          if (arrival.second !== bar) {
+            bar = arrival.second;
+            landed = highest;
+          }
+          const at = arrival.role === null ? 0 : MUSIC_ROLES.indexOf(arrival.role);
+          expect(
+            at,
+            `${theme} ${build.from}→${build.to}: ${arrival.layer} (${arrival.role}) arrives a bar after a louder role`,
+          ).toBeGreaterThanOrEqual(landed);
+          if (at > highest) highest = at;
+        }
+      }
+    }
+  });
+
+  it('and every arrival lands on a downbeat, which is 0117 one bar down', () => {
+    for (const theme of THEME_KINDS) {
+      for (const build of buildsOf(theme)) {
+        for (const arrival of build.arrivals) {
+          const bars = arrival.second / BAR_SECONDS;
+          expect(
+            Math.abs(bars - Math.round(bars)),
+            `${theme} ${build.to}: ${arrival.layer} arrives ${arrival.second}s in, which is not a downbeat`,
+          ).toBeLessThan(1e-9);
+          expect(bars, `${theme} ${build.to}: ${arrival.layer} lands past the cap`).toBeLessThanOrEqual(BUILD_BARS + 1e-9);
+        }
+      }
+    }
+  });
+
+  it('and a rung whose arrivals all hold one role still builds, quietest first', () => {
+    /*
+      ⚠️ **THE CASE THAT WOULD OTHERWISE HAVE STAYED A STEP IN THREE PLACES.** `roleOf` demotes the
+      arrangement's part wherever a place names its own lead, so a boundary can open two counter-lines
+      and nothing else — Saurian Reach's `approach` is exactly that.
+    */
+    const bars = entryBars('saurian', 'approach', [
+      { layer: 'dread', target: 1 },
+      { layer: 'toll', target: 0.5 },
+    ]);
+    expect(bars.toll, 'the quieter arrival leads').toBe(0);
+    expect(bars.dread, 'and the louder one is what lands, a bar later').toBe(1);
   });
 });
