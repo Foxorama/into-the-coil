@@ -156,6 +156,12 @@
       </select></label>
       <label><input type="checkbox" id="cuesOn" checked /> cues</label>
       <label title="0154: every layer solved onto its role. The aura, ramps and holds are unchanged &mdash; only the balance moves."><input type="checkbox" id="solvedOn" /> solved mix</label>
+      <label
+        title="0166: how much of the solve is spent holding a gain where the previous rung left it. 0 is a rung at a time, which lurches; 0.40 is the most that costs no audibility; past that, steadier boundaries for layers going back under 0164's floor."
+        ><span class="dim">steady</span>
+        <input type="range" id="holdWeight" min="0" max="90" step="5" value="40" />
+        <b id="holdWeightOut">0.40</b></label
+      >
       <span id="status" class="dim">audio locked — a browser makes no sound before a gesture</span>
     </header>
 

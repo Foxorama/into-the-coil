@@ -29,7 +29,7 @@ import {
   MUSIC_LAYERS,
 } from '../src/content/music.ts';
 import { THEME_KINDS, mixOf } from '../src/content/themes.ts';
-import { solveMix } from './solve-mix.mjs';
+import { solveLevel } from './solve-mix.mjs';
 
 const args = process.argv.slice(2);
 const rung = args.find((a) => a.startsWith('--rung='))?.slice('--rung='.length) ?? 'push';
@@ -90,7 +90,9 @@ function render(loops, gains, length) {
 }
 
 const loops = bakeLoops(SAMPLE_RATE, theme);
-const { shipped, gains, offset } = solveMix(theme, rung, loops);
+// ⚠️ **THE LEVEL IS SOLVED AND THEN ONE RUNG IS TAKEN OUT OF IT** — 0166. A rung solved alone is the
+// independent solve; rendering that would hand a listener a file the dashboard does not play.
+const { shipped, gains, offset } = solveLevel(theme, loops)[rung];
 const length = Math.round(seconds * SAMPLE_RATE);
 
 const base = resolve(root, `${theme}-${rung}`);
