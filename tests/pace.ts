@@ -654,3 +654,50 @@ export function adriftAt(
   }
   return out.sort((a, b) => a.adrift - b.adrift);
 }
+
+/**
+ * How far a layer already sounding may fall when a section boundary opens new ones, in dB.
+ *
+ * ── A LEVEL JND, WHICH IS THE UNIT THE COMPLAINT WAS MADE IN ────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0167-a-build-does-not-duck.md`.** Reported, of the solved mix against the
+ * shipped one at the same boundary: *"the border change is way worse… every change for every level is
+ * now a hard jump between sounds whereas pre-solved-mix the change was a lot smoother and balanced."*
+ *
+ * ⚠️ **ONE DECIBEL IS ROUGHLY THE SMALLEST LEVEL CHANGE A LISTENER NOTICES**, so this is not a
+ * threshold read off a spread — it is the point at which the thing being forbidden becomes a thing
+ * that can be heard. CLAUDE.md requires at least one assertion per subject written in units the
+ * player experiences, and every other number in this file is a ratio against the mix it is measuring.
+ *
+ * ⚠️ **THE SHIPPED LADDER CLEARS IT BY 0.74 dB AND HAS ALWAYS DONE**, which is the part worth
+ * knowing: across all seven places and all three in-level boundaries its largest reduction of a
+ * carried layer is **0.26 dB** — `drone`, and two others under 0.21. A section change in this game
+ * has been purely additive since it existed, and nothing wrote that down.
+ *
+ * ⚠️ **`docs/decisions/0166-…`'s GUARD IS GREEN OVER THE DEFECT THIS ONE CATCHES.** That one measures
+ * the MAGNITUDE of the worst boundary move; at the reported boundary the worst move is 2.9 dB and the
+ * complaint is that four of seven carried layers went the wrong WAY while four new ones opened
+ * loudly. Two guards over one boundary, and they are not the same question.
+ */
+export const DUCK_FLOOR_DB = -1;
+
+/**
+ * Every layer that is sounding on both sides of a rung change, and how far it moved.
+ *
+ * ⚠️ **A LAYER THAT OPENS OR CLOSES IS NOT A DUCK AND IS SKIPPED.** Closing one is a thing a rung may
+ * do — `docs/decisions/0120-a-rung-may-close-a-layer.md` — and opening one is what a build IS. What
+ * this is about is the layers that carry on through the change.
+ */
+export function carriedThrough(
+  from: Readonly<Record<MusicLayer, number>>,
+  to: Readonly<Record<MusicLayer, number>>,
+): { layer: MusicLayer; move: number }[] {
+  const out: { layer: MusicLayer; move: number }[] = [];
+  for (const layer of MUSIC_LAYERS) {
+    const a = from[layer];
+    const b = to[layer];
+    if (!(a > 0) || !(b > 0)) continue;
+    out.push({ layer, move: 20 * Math.log10(b / a) });
+  }
+  return out.sort((x, y) => x.move - y.move);
+}

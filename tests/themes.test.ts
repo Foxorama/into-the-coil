@@ -32,7 +32,9 @@ import { addRoom, bakeLayer } from '../src/app/music.ts';
 import { BANDS, bandEnergy } from './spectrum.ts';
 import {
   AUDIBLE_FLOOR_DB,
+  DUCK_FLOOR_DB,
   ROLE_FLOOR_DB,
+  carriedThrough,
   adriftAt,
   layerLevels,
   profileOf,
@@ -1144,6 +1146,54 @@ describe('0128 — a place plays its own material, and shares everything it does
     );
     expect(moved.length, 'the hold weight changes nothing, so `previous` is not being threaded').toBeGreaterThan(0);
   }, DSP_MS);
+
+  it('0167 — A BUILD DOES NOT DUCK: nothing already sounding gets audibly quieter when a section opens', () => {
+    /*
+      `docs/decisions/0167-a-build-does-not-duck.md`. Reported, of the solved mix against the shipped
+      one at the same boundary with the desk untouched in both: *"the border change is way worse…
+      every change for every level is now a hard jump between sounds whereas pre-solved-mix the change
+      was a lot smoother and balanced."*
+
+      ⚠️ **THIS IS A PROPERTY `MUSIC_LADDER` HAS ALWAYS HAD AND NOBODY WROTE DOWN.** At every in-level
+      boundary in every place, every layer that carries through either holds or gets louder, and new
+      layers arrive on top. The largest reduction anywhere is `drone` at **−0.26 dB**. That is what a
+      section change has sounded like for the whole life of this composition, and it survived eight
+      mix decisions by accident rather than by rule.
+
+      ⚠️ **THE SOLVED MIX BREAKS IT 56 TIMES, WORST −11.2 dB**, and that is the blocker on shipping it
+      — recorded here as a test rather than as a paragraph.
+      `reports/a-build-does-not-duck-2026-08-18.md` prices the three fixes that were measured and
+      refused; `node scripts/weigh-boundary.mjs --solved` is the same arithmetic, printed.
+
+      ⚠️ **`approach → boss` IS NOT AN IN-LEVEL BOUNDARY AND IS EXCLUDED.** The boss arriving is an
+      event and is *supposed* to reorganise the mix; 0091 moves the aura 7.1 dB there on purpose.
+      This is about the three changes a player crosses while flying the same stretch of level.
+    */
+    const offenders: string[] = [];
+    for (const theme of THEME_KINDS) {
+      for (const [from, to] of [
+        ['run', 'push'],
+        ['push', 'surge'],
+        ['surge', 'approach'],
+      ] as const) {
+        const before = {} as Record<MusicLayer, number>;
+        const after = {} as Record<MusicLayer, number>;
+        for (const layer of MUSIC_LAYERS) {
+          before[layer] = rungOf(theme, from, layer) * mixOf(theme, layer);
+          after[layer] = rungOf(theme, to, layer) * mixOf(theme, layer);
+        }
+        for (const { layer, move } of carriedThrough(before, after)) {
+          if (move <= DUCK_FLOOR_DB) {
+            offenders.push(`${theme} ${from}→${to}: ${layer} ${move.toFixed(1)} dB`);
+          }
+        }
+      }
+    }
+    expect(
+      offenders,
+      'a section change made these audibly quieter while it was opening new layers — a build only adds',
+    ).toEqual([]);
+  });
 
   /*
     ── 0147: A PLACE IS A BALANCE, AND THESE ARE WHAT REPLACED THE ±3 dB BAND ─────────────────────
