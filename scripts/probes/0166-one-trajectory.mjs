@@ -69,7 +69,7 @@ export const PROBES = [
     guard: '0166 — THE SHIPPED HOLD WEIGHT COSTS NO AUDIBILITY, and a heavier one would',
     edit: {
       path: 'scripts/solve-mix.mjs',
-      find: 'export const HOLD_WEIGHT = 0.4;',
+      find: 'export const HOLD_WEIGHT = 0.28;',
       replace: 'export const HOLD_WEIGHT = 0.55;',
     },
   },

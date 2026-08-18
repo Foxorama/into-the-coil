@@ -434,6 +434,21 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     },
     voices: NEBULA_VOICES,
     /*
+      ⚠️ **THERE IS NO KIT IN A CATHEDRAL, AND FOR ITS WHOLE LIFE THIS PLACE HAD ONE** —
+      `docs/decisions/0172-a-place-opens-with-its-own-four.md`. The shared ladder's `run` row is the
+      same seven layers in all seven places, and `mix` is a MULTIPLIER, so *"a choir, an organ, and
+      what the fire does to both"* opened over a drum kit and a bassline like everything else.
+
+      ⚠️ **`perc` IS CLOSED AND `groove` IS HALVED, so the choir is what the level opens with.**
+      What arrives afterwards is the floor, which is the arc this place's own header describes:
+      the cathedral first, the furnace under it.
+    */
+    ladder: {
+      run: { perc: 0, groove: 0.7, chords: 1, call: 0.72, arp: 0.5 },
+      push: { perc: 0.42, groove: 1.02, chords: 0.98, call: 0.74, arp: 0.72 },
+      surge: { perc: 0.6, chords: 0.94, hook: 0.82 },
+    },
+    /*
       ⚠️ **THE ROOM IS THE PLACE, AND THE BOSS IS WHERE IT STOPS** — 0136. Asked for: *"more reverb…
       suitably awe inspiring to match the Pillars of Creation"*, and then *"the boss needs to drop
       from the high octaves down into the lower tones of hellfire and menace."*
@@ -509,6 +524,20 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       dread: 0.8,
     },
     voices: SAURIAN_VOICES,
+    /*
+      ⚠️ **A FLOOR OPENS WITH HATS AND WITHOUT A PAD, AND THE SHARED LADDER HAS IT THE OTHER WAY UP** —
+      `docs/decisions/0172-a-place-opens-with-its-own-four.md`. `MUSIC_LADDER.run` closes `ride` and
+      opens `chords`; *"the floor arrives… full hands-in-the-air"* is exactly the opposite pair, and
+      no multiplier could say it because any multiple of zero is zero.
+
+      ⚠️ **THIS IS 0162's HEADLINE CASE.** `ride` at `run` is a layer the shared ladder does not open
+      at all, in the one place whose brief is a dancefloor.
+    */
+    ladder: {
+      run: { chords: 0, ride: 0.42, groove: 0.95, perc: 0.8 },
+      push: { chords: 0.34, ride: 0.8, groove: 1.05, perc: 0.86 },
+      surge: { ride: 0.75, groove: 1.08, perc: 0.88 },
+    },
     /*
       ⚠️ **THE NATURAL MINOR PLUS A RAISED SEVENTH, WHICH IS THE ONLY MODE IN THE GAME THAT IS NOT
       THE NATURAL MINOR** — `docs/decisions/0148-a-place-has-its-own-notes.md`. G# is the third of the
@@ -592,6 +621,17 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     },
     voices: LABYRINTH_VOICES,
     /*
+      ⚠️ **A CORRIDOR IS WHAT IS NOT IN IT** — `docs/decisions/0172-a-place-opens-with-its-own-four.md`.
+      *"A corridor, and something breathing in it"*: this place opens on footsteps, a breath and a
+      drone, and the pad and the bassline that every other level opens with are both shut. It follows
+      `perc` at `run` and now there is room to hear it.
+    */
+    ladder: {
+      run: { chords: 0, groove: 0.45, sub: 0.6, perc: 0.98, engine: 0.62, ride: 0.4, call: 0.4 },
+      push: { chords: 0.4, groove: 0.6, ride: 0.72, perc: 0.92 },
+      surge: { perc: 0.9 },
+    },
+    /*
       ⚠️ **THIS IS THE FIRST PLACE THAT USES `air` BY WITHHOLDING IT** — 0136 gave a place a room and
       the interesting thing to do with one is to take it away. Almost everything here is close enough
       to touch; the music box and the horn are not, so they read as coming from elsewhere in the maze.
@@ -670,6 +710,18 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     },
     voices: RIME_VOICES,
     /*
+      ⚠️ **THE ONE PLACE WITH NO BOTTOM, AND `sub` IS THE LOUDEST LAYER IN ALL SEVEN** —
+      `docs/decisions/0172-a-place-opens-with-its-own-four.md`, and it is the most direct answer
+      available to `weigh-apart`'s standing finding. *"It rings… it cracks… the blizzard"* is glass
+      and air; the shelf is a thin, high, cold thing until something breaks, and `sub` arriving at
+      `push` IS the crack.
+    */
+    ladder: {
+      run: { sub: 0, groove: 0, chords: 1.02, call: 0.76, perc: 0.5, arp: 0.45 },
+      push: { sub: 1.06, groove: 0.92, chords: 0.98, call: 0.78, arp: 0.52 },
+      surge: { chords: 0.9 },
+    },
+    /*
       ⚠️ **A LOT OF ROOM, AND IT IS THE ONE PLACE WHERE THAT IS LITERAL RATHER THAN FIGURATIVE.** An
       ice shelf is a flat hard surface under an open sky and it is the only environment in this game
       that would genuinely have a long reflection. The floor stays dry — 0136's own rule, because a
@@ -742,6 +794,17 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     },
     voices: MIRE_VOICES,
     /*
+      ⚠️ **STILL WATER IS A BOTTOM AND ALMOST NOTHING ELSE** —
+      `docs/decisions/0172-a-place-opens-with-its-own-four.md`. *"Still water with something under
+      it… it is coming up"*: the one place that FOLLOWS its sub, opening with a kit and a bassline
+      over the top of it, which is the arrangement arguing with the brief. Both are shut and what
+      surfaces afterwards is the level.
+    */
+    ladder: {
+      run: { perc: 0.32, groove: 0, engine: 0.5, chords: 0.58, sub: 1, arp: 0.4 },
+      push: { perc: 0.62, groove: 0.55, arp: 0.6 },
+    },
+    /*
       ⚠️ **HUMID RATHER THAN LARGE.** A swamp has no reflections — it is full of things that absorb —
       so the room here is short and on the layers that are supposed to be far away rather than on the
       ones nearby. It is the middle setting between Ember Nebula's cathedral and The Labyrinth's
@@ -804,6 +867,20 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       auraFast: 1.014,
     },
     voices: CORE_VOICES,
+    /*
+      ⚠️ **THE BLACK HEART HAS NO HYMN, AND IT HAD THE SAME ONE AS EVERY OTHER PLACE** —
+      `docs/decisions/0172-a-place-opens-with-its-own-four.md`. `call` is the melodic thing a level
+      opens with (0113) and this place opens on a riff instead; `chords` is the pad that a wall of
+      guitars is recorded without, which `air` already says here — *"reverb on a wall of guitars is
+      mud"* — and which the ladder went on opening anyway.
+
+      ⚠️ **AND `drive` ARRIVES AT `run`, WHERE THE SHARED LADDER HOLDS IT TO `surge`.** Guitars in
+      the third minute is not a metal track; it is a metal track's bridge.
+    */
+    ladder: {
+      run: { chords: 0, call: 0, drive: 0.55, engine: 1, perc: 0.7, groove: 0.6 },
+      push: { chords: 0.36, drive: 0.7, hook: 0.78 },
+    },
     /*
       ⚠️ **ALMOST NONE, AND IT IS THE ONLY PLACE THAT EARNS THAT BY BEING LOUD RATHER THAN BY BEING
       SMALL.** This genre is recorded close and dry on purpose: reverb on a wall of guitars is mud,

@@ -208,11 +208,18 @@ export function solveMix(
  * curve.
  *
  * ⚠️ **PAST IT THE TRADE IS REAL AND THERE IS NO KNEE**, so there is nothing here for a measurement
- * to decide: every decibel of steadiness bought after 0.40 costs audibility, and w=0.65 is a 7.0 dB
- * worst move with twelve layers back under the floor. **That is why the dashboard has a slider and
- * this file has a default** — `docs/decisions/0126-the-dashboard-is-the-instrument.md`.
+ * to decide: every decibel of steadiness bought after the edge costs audibility, and w=0.65 was a
+ * 7.0 dB worst move with twelve layers back under the floor. **That is why the dashboard has a slider
+ * and this file has a default** — `docs/decisions/0126-the-dashboard-is-the-instrument.md`.
+ *
+ * ⚠️ **IT WAS 0.40 AND THE EDGE MOVED TO 0.28** —
+ * `docs/decisions/0172-a-place-opens-with-its-own-four.md`. Seven authored ladders changed what each
+ * place is solving, and at 0.30 `core/push/perc` goes under `ROLE_FLOOR_DB` where nothing did before.
+ * **This is the guard doing exactly what its own comment said it would**: *"if a later mix pass moves
+ * that edge, this test says so rather than going quietly on shipping the old number."* The trajectory
+ * solve does not ship — 0166 — so what this costs today is research headroom and not a sound.
  */
-export const HOLD_WEIGHT = 0.4;
+export const HOLD_WEIGHT = 0.28;
 
 /**
  * A whole level solved as ONE TRAJECTORY — each rung starting from the one before it.

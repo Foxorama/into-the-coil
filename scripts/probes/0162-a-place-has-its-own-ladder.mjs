@@ -49,7 +49,7 @@ export const PROBES = [
   },
   {
     decision: '0162',
-    suite: 'tests/dash.test.ts',
+    suite: 'tests/themes.test.ts',
     /*
       ⚠️ `rungOf` READING THE WRONG PLACE'S TABLE, AND THIS PROBE IS THE REASON THE GUARD IS A SCAN.
       It was first aimed at a value comparison over all seven places at every rung — and **reported
@@ -57,12 +57,14 @@ export const PROBES = [
       the right answer for all of them. The harness caught a vacuous guard that had been written the
       same hour, which is docs/decisions/0019-a-probe-must-be-seen-to-apply.md earning its place again.
 
-      ⚠️ IT BECOMES A REAL DEFECT THE INSTANT THE FIRST OVERRIDE IS AUTHORED, and would present as
-      *the level I edited did not change and a different one did*. 0162 records the debt: when a place
-      states a ladder, this should be re-aimed at a value and the scan retired.
+      ⚠️ AND THE DEBT IS PAID — docs/decisions/0172-a-place-opens-with-its-own-four.md. Six places
+      state a ladder now, so `rungOf` reading a fixed one gives a DIFFERENT number and the value
+      comparison this was first aimed at goes red. **The suite it names is themes rather than dash,
+      and the scan stays** — it is the guard for the case this break cannot reach, which is a call
+      site that never asks `rungOf` at all.
     */
     broke: 'the themed lookup reading one fixed place’s ladder rather than the one it was asked about',
-    guard: '0162 — NOTHING UNDER src/ OR rig/ READS THE SHARED LADDER, because a place may differ from it',
+    guard: 'and `rungOf` answers what `rungIn` answers, for all seven places at every rung',
     edit: {
       path: 'src/content/themes.ts',
       /*

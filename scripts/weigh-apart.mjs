@@ -27,7 +27,52 @@ import { bakeLoops } from '../src/app/music.ts';
 import { SAMPLE_RATE } from '../src/app/sound.ts';
 import { MUSIC_LAYERS } from '../src/content/music.ts';
 import { THEME_KINDS } from '../src/content/themes.ts';
-import { layerLevels, underTheLoudest } from '../tests/pace.ts';
+import { apartBy, layerLevels, profileAt, soundingAt, underTheLoudest } from '../tests/pace.ts';
+
+// ⚠️ --rung IS THE HALF THIS FILE COULD NOT SEE, AND FOR TWO DECISIONS IT DID NOT KNOW IT.
+// docs/decisions/0172-a-place-opens-with-its-own-four.md. Everything below the flag runs on
+// `layerLevels`, which takes each layer to the loudest gain ANY rung gives it — an arrangement no
+// rung plays, and one the FIGHT dominates, because the fight is where nearly every layer peaks.
+// Seven authored `run` rows moved that table by 0.1 dB and moved every one of the seven openings.
+//
+// ⚠️ AND THE OPENING IS WHERE THE COMPLAINT LIVES. "The run feels almost exactly the same", "still
+// slow and melodic" and "every level sounds the same" are all about the first minute — a third of a
+// level, and the only part heard before a player decides where they are.
+//
+// Usage:  node scripts/weigh-apart.mjs --rung=run [--bare]
+//         --bare drops every place's own ladder, so the two runs are the before and the after.
+const RUNG = (process.argv.find((a) => a.startsWith('--rung=')) ?? '').slice(7);
+if (RUNG) {
+  const BARE = process.argv.includes('--bare') ? {} : undefined;
+  const baked = new Map(THEME_KINDS.map((t) => [t, bakeLoops(SAMPLE_RATE, t)]));
+  const rows = new Map(THEME_KINDS.map((t) => [t, profileAt(t, RUNG, baked.get(t), BARE)]));
+  console.log(`── what each place has on top at ${RUNG}${BARE ? ', every place on the shared ladder' : ''} ──`);
+  for (const theme of THEME_KINDS) {
+    console.log(`  ${theme.padEnd(10)} ${soundingAt(theme, RUNG, baked.get(theme), BARE).slice(0, 5).join(', ')}`);
+  }
+  console.log(`\n── how far apart at ${RUNG}, in dB RMS over the profile. 0 is the same mix ──`);
+  console.log('        ' + THEME_KINDS.map((t) => t.slice(0, 6).padStart(7)).join(''));
+  let closest = Infinity;
+  let sum = 0;
+  let pairs = 0;
+  for (const a of THEME_KINDS) {
+    const cells = THEME_KINDS.map((b) => {
+      if (a === b) return '      —';
+      const d = apartBy(rows.get(a), rows.get(b));
+      if (THEME_KINDS.indexOf(b) > THEME_KINDS.indexOf(a)) {
+        if (d < closest) closest = d;
+        sum += d;
+        pairs++;
+      }
+      return d.toFixed(1).padStart(7);
+    });
+    console.log(a.slice(0, 7).padEnd(8) + cells.join(''));
+  }
+  console.log(`\n  closest pair ${closest.toFixed(1)} dB · mean ${(sum / pairs).toFixed(2)} dB over ${pairs} pairs`);
+  console.log('\n⚠️ THE CLOSEST PAIR IS THE NUMBER. A mean can be pulled up by one distant place while the two');
+  console.log('a player calls interchangeable sit on top of each other, which is what 0147 measured.');
+  process.exit(0);
+}
 
 /** Every place's profile: dB under its own loudest layer, per layer, on the better of the two measures. */
 const profiles = new Map();

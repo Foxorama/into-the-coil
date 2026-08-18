@@ -22,7 +22,7 @@ import {
   MUSIC_ROOT,
   type MusicLevel,
 } from '../src/content/music.ts';
-import { mixOf, notesPerBar, revoicedBy, voicesOf, type ThemeKind } from '../src/content/themes.ts';
+import { mixOf, notesPerBar, revoicedBy, rungOf, voicesOf, THEMES, type ThemeKind, type ThemeRow } from '../src/content/themes.ts';
 import {
   MUSIC_ROLES,
   type MusicRole,
@@ -114,7 +114,14 @@ export function rungShape(
   let total = 0;
   for (const layer of MUSIC_LAYERS) {
     const ceiling = FOLLOWS_THE_BOSS.includes(layer) ? nearness : 1;
-    const gain = MUSIC_LADDER[rung][layer] * mixOf(theme ?? 'approach', layer) * ceiling;
+    /*
+      ⚠️ **THROUGH `rungOf`, AND IT READ `MUSIC_LADDER` DIRECTLY UNTIL A PLACE STATED A LADDER** —
+      `docs/decisions/0172-a-place-opens-with-its-own-four.md`, the same defect as `loudestOf` below
+      and found the same way. `paceAt` in `src/content/themes.ts` has routed through `rungOf` since
+      0168, so **the desk and this disagreed by 27 notes a bar at Ember Nebula's `run`** the instant a
+      ladder existed — and 0168's own guard, which exists to hold the two together, is what said so.
+    */
+    const gain = rungOf(theme ?? 'approach', rung, layer) * mixOf(theme ?? 'approach', layer) * ceiling;
     if (gain <= 0) continue;
     notes += notesPerBar(theme, layer);
     const where = pitchOf(theme, layer);
@@ -198,14 +205,28 @@ export interface LayerLevel {
   peak: number;
 }
 
-/** The loudest gain a place ever takes a layer to, over every rung. Mirrors `rig/transport.ts`. */
+/**
+ * The loudest gain a place ever takes a layer to, over every rung. Mirrors `rig/transport.ts`.
+ *
+ * ⚠️ **THROUGH `rungOf` AND NOT `MUSIC_LADDER`, AND IT READ THE SHARED TABLE DIRECTLY FOR TWO
+ * DECISIONS.** `docs/decisions/0162-a-place-has-its-own-ladder.md` gave a place its own rungs and this
+ * function went on reading the one every place shares — so `weigh-apart`, `weigh-audition` and 0147's
+ * balance guards were all structurally blind to the one lever built to answer *"every level sounds the
+ * same"*. **The comment above claimed it mirrored the rig, and the rig was right**: `loudestGain` in
+ * `rig/transport.ts` has gone through `targetGain` → `rungOf` since the day it was written.
+ *
+ * ⚠️ **IT WAS INVISIBLE FOR EXACTLY THE REASON 0162's OWN GUARD WAS VACUOUS.** With every `ladder`
+ * absent, reading the wrong table and the right one give the same answer — so nothing could tell them
+ * apart until a place stated one, which is the debt 0162 recorded and
+ * `docs/decisions/0172-a-place-opens-with-its-own-four.md` is paying.
+ */
 function loudestOf(theme: ThemeKind | undefined, layer: MusicLayer): number {
   let most = 0;
   for (const rung of Object.keys(MUSIC_LADDER) as MusicLevel[]) {
     const ceiling = FOLLOWS_THE_BOSS.includes(layer) ? AURA_LEVEL_CEILING : 1;
     // `undefined` is *the base composition* and level one is the place that plays it unmixed —
     // the same reading `rungShape` above takes, rather than a second opinion about what no theme means.
-    const at = MUSIC_LADDER[rung][layer] * mixOf(theme ?? 'approach', layer) * ceiling;
+    const at = rungOf(theme ?? 'approach', rung, layer) * mixOf(theme ?? 'approach', layer) * ceiling;
     if (at > most) most = at;
   }
   return most;
@@ -760,3 +781,65 @@ export function buildsOf(theme: ThemeKind, from: readonly MusicLevel[] = WALKED)
  * boundary with no arrival has no build to measure.
  */
 const WALKED: readonly MusicLevel[] = ['calm', 'run', 'push', 'surge', 'approach', 'boss'];
+
+/**
+ * A place's balance AT ONE RUNG — the same quantity `profileOf` reports, taken at the gains a
+ * section actually plays rather than at each layer's loudest.
+ *
+ * ── THE INSTRUMENT `weigh-apart` COULD NOT BE, AND THE REASON IS STRUCTURAL ─────────────────────
+ *
+ * ⚠️ **`docs/decisions/0172-a-place-opens-with-its-own-four.md`.** `profileOf` runs on `loudestOf`,
+ * which takes each layer to the loudest gain ANY rung gives it — an arrangement no rung plays, and
+ * one dominated by the fight, because the fight is where nearly every layer peaks. **So a change to
+ * what a level OPENS with is invisible to it.** Seven authored `run` rows moved the apart table by
+ * 0.1 dB and moved every one of the seven openings.
+ *
+ * ⚠️ **AND *THE OPENING* IS WHERE THE COMPLAINT LIVES.** *"The run feels almost exactly the same"*,
+ * *"still slow and melodic"*, *"every level sounds the same"* — all three are about the first minute,
+ * which is a third of a level and the only part a player hears before deciding where they are. A
+ * measure that averages it with the boss is measuring the wrong section.
+ *
+ * ⚠️ **A LAYER THE RUNG DOES NOT OPEN IS `-Infinity`**, exactly as in `profileOf`, so `apartBy` skips
+ * it — which means **closing a layer registers as a difference only through the layers left**. That is
+ * the honest reading: two places differ by what you can hear, not by what they have shut.
+ */
+export function profileAt(
+  theme: ThemeKind,
+  rung: MusicLevel,
+  loops: Record<MusicLayer, Float32Array>,
+  ladder: ThemeRow['ladder'] = THEMES[theme].ladder,
+): Record<MusicLayer, number> {
+  const levels: LayerLevel[] = [];
+  for (const layer of MUSIC_LAYERS) {
+    const buffer = loops[layer];
+    let sum = 0;
+    let peak = 0;
+    for (let i = 0; i < buffer.length; i++) {
+      const v = buffer[i]!;
+      sum += v * v;
+      const size = v < 0 ? -v : v;
+      if (size > peak) peak = size;
+    }
+    const ceiling = FOLLOWS_THE_BOSS.includes(layer) ? AURA_LEVEL_CEILING : 1;
+    const gain = rungOf(theme, rung, layer, ladder) * mixOf(theme, layer) * ceiling;
+    levels.push({ layer, gain, rms: Math.sqrt(sum / buffer.length) * gain, peak: peak * gain });
+  }
+  levels.sort((a, b) => b.rms - a.rms);
+  const out = {} as Record<MusicLayer, number>;
+  for (const layer of MUSIC_LAYERS) {
+    const under = underTheLoudest(levels, layer);
+    out[layer] = Math.max(under.rms, under.peak);
+  }
+  return out;
+}
+
+/** Which layers a place actually sounds at a rung, loudest first — the four at the top of the mix. */
+export function soundingAt(
+  theme: ThemeKind,
+  rung: MusicLevel,
+  loops: Record<MusicLayer, Float32Array>,
+  ladder: ThemeRow['ladder'] = THEMES[theme].ladder,
+): MusicLayer[] {
+  const row = profileAt(theme, rung, loops, ladder);
+  return MUSIC_LAYERS.filter((l) => Number.isFinite(row[l])).sort((a, b) => row[b] - row[a]);
+}
