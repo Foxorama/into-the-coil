@@ -38,6 +38,32 @@ afterAll(async () => {
 /** The page-global the stub reads. Named so a failure in the console points at this file. */
 const PAD_STATE = '__itcTestPad';
 
+/**
+ * How long a press may take to raise the playing HUD, in ms.
+ *
+ * ── A NUMBER SET FROM A MEASUREMENT, AFTER THE OLD ONE FAILED ON CI ─────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0169-a-browser-budget-is-measured.md`.** Three tests on this page waited
+ * `10_000` for this, and all three are the ones that go red under load — twice locally with a dev
+ * server running, and once on CI, on a run with **713 s of test CPU inside 251 s of wall clock**.
+ *
+ * ⚠️ **THE TRANSITION TAKES 4.2 SECONDS AND NOBODY HAD MEASURED IT.** Timed on an idle machine:
+ * `goto → canvas` **505 ms**, `canvas → title` **59 ms**, `press → HUD` **4199 ms**. Ten seconds is
+ * 2.4× a four-second transition on a runner that is routinely three times oversubscribed, which is
+ * not a budget — it is a coin toss that had come up heads for a while.
+ *
+ * ⚠️ **AND THE 4.2 SECONDS IS THE PREWARM, WHICH IS THE PART WORTH KNOWING.** A press finishes the
+ * bake it did not have time to do at boot — `docs/decisions/0157-the-prewarm-was-scheduled-one-note-at-a-time.md`
+ * and 0102's *the bake happens before the press*. On a machine that boots in half a second almost none
+ * of it is done, so the press pays for nearly all of it.
+ *
+ * ⚠️ **SO THIS IS NOT A TIMEOUT WIDENED UNTIL IT WENT QUIET**, which is what
+ * `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md` forbids: 30 s is seven
+ * times the measured cost, it is the same shape as `open`'s 15 s over a 0.5 s boot, and if the
+ * transition genuinely stops happening the test still fails in half a minute rather than hanging.
+ */
+const HUD_MS = 30_000;
+
 async function open(): Promise<Page> {
   browser ??= await launchChromium({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
@@ -102,7 +128,7 @@ describe.runIf(chromePath)('a gamepad can press a button on a screen', () => {
     expect(await shown(page, '.' + prefixFor('title').slice(0, -1)), 'the title screen is not up').toBe(true);
 
     await setPad(page, [0, 0], [MENU_CONFIRM_BUTTONS[0]!]);
-    await page.waitForSelector('.itc-playing-hud-shown', { timeout: 10_000 });
+    await page.waitForSelector('.itc-playing-hud-shown', { timeout: HUD_MS });
     await setPad(page, [0, 0], []);
 
     expect(await shown(page, '.' + prefixFor('title').slice(0, -1)), 'the title screen stayed up').toBe(false);
@@ -163,7 +189,7 @@ describe.runIf(chromePath)('a press belongs to one screen', () => {
     */
     const page = await open();
     await setPad(page, [0, 0], [MENU_CONFIRM_BUTTONS[0]!]);
-    await page.waitForSelector('.itc-playing-hud-shown', { timeout: 10_000 });
+    await page.waitForSelector('.itc-playing-hud-shown', { timeout: HUD_MS });
 
     /*
       ⚠️ **WAITING FOR A STEP, NOT FOR AN ELEMENT — and the first version of this test got that
@@ -212,7 +238,7 @@ describe.runIf(chromePath)('the run-over screen gives up on its own', () => {
     */
     const page = await open();
     await setPad(page, [0, 0], [MENU_CONFIRM_BUTTONS[0]!]);
-    await page.waitForSelector('.itc-playing-hud-shown', { timeout: 10_000 });
+    await page.waitForSelector('.itc-playing-hud-shown', { timeout: HUD_MS });
     // Full forward on the stick: the ship flies up-lane into everything the level sends, which
     // spends its lives on contact damage without needing to aim at anything.
     await setPad(page, [1, 0], []);

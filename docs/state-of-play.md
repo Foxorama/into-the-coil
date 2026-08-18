@@ -181,6 +181,8 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **THE DESK SOUNDS WHAT YOU RAISE — stopped means the LEVEL is not playing, so one drag is audible; 0137 amended** | [0165](decisions/0165-the-desk-sounds-what-you-raise.md) |
 | **THE LEVEL IS SOLVED AS ONE TRAJECTORY — the boundary lurch, measured; 0.40 is the edge of free and the rest is a slider** | [0166](decisions/0166-the-level-is-solved-as-one-trajectory.md), [`what-continuity-costs`](../reports/what-continuity-costs-2026-08-18.md) |
 | **A BUILD DOES NOT DUCK — a section change adds and never rebalances; the shipped ladder always did, the solve breaks it 56 times** | [0167](decisions/0167-a-build-does-not-duck.md), [`a-build-does-not-duck`](../reports/a-build-does-not-duck-2026-08-18.md) |
+| **THE PACE IS ON THE DESK — notes/bar per rung, live; every place drops 17–28% at `approach` and the arc says so while you edit it** | [0168](decisions/0168-the-pace-is-on-the-desk.md) |
+| **A BROWSER BUDGET IS MEASURED — 10 s for a 4.2 s transition was a coin toss; the press pays for the prewarm** | [0169](decisions/0169-a-browser-budget-is-measured.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
 | **a probe runs the test it NAMES, and a suite bakes the music once** | [0115](decisions/0115-a-probe-runs-its-own-guard.md) — amends 0054's *whole suite* clause |
 | **the rig plays a LEVEL, and the instrument is guarded like the game** | [0116](decisions/0116-the-rig-plays-the-level.md) |

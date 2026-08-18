@@ -15,7 +15,6 @@
 
 import {
   AURA_LEVEL_CEILING,
-  LAYER_BARS,
   MUSIC_GAIN,
   MUSIC_LADDER,
   MUSIC_LAYERS,
@@ -23,7 +22,7 @@ import {
   MUSIC_ROOT,
   type MusicLevel,
 } from '../src/content/music.ts';
-import { mixOf, revoicedBy, voicesOf, type ThemeKind } from '../src/content/themes.ts';
+import { mixOf, notesPerBar, revoicedBy, voicesOf, type ThemeKind } from '../src/content/themes.ts';
 import {
   MUSIC_ROLES,
   type MusicRole,
@@ -85,13 +84,7 @@ export function pitchOf(theme: ThemeKind | undefined, layer: MusicLayer): number
  * tempo cannot change (0093) and that what rises when a listener says *faster* is the RATE OF EVENTS.
  * This counts them.
  */
-export function notesPerBar(theme: ThemeKind | undefined, layer: MusicLayer): number {
-  let notes = 0;
-  for (const voice of voicesOf(theme, layer)) {
-    for (const step of voice.steps) if (step !== null && step !== undefined) notes++;
-  }
-  return notes / LAYER_BARS[layer];
-}
+export { notesPerBar };
 
 /**
  * What a rung is: how fast, and how the energy splits.

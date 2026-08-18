@@ -37,7 +37,7 @@ import {
   type LevelSections,
   type SectionName,
 } from '../src/content/music.ts';
-import { THEMES, bakedBy, revoicedBy, rungOf, type ThemeKind, type ThemeLadder } from '../src/content/themes.ts';
+import { THEMES, bakedBy, paceAt, revoicedBy, rungOf, type ThemeKind, type ThemeLadder } from '../src/content/themes.ts';
 import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { SAMPLE_RATE, makeAudioOut, makeSpeaker, prewarmAudio, takePrewarmed } from '../src/app/sound.ts';
@@ -396,6 +396,9 @@ const totalOf = (k: LevelKind): number => LEVELS[k].bossAt / UNITS_PER_SECOND + 
  */
 type MixMode = 'shipped' | 'solved' | 'rebased';
 let mixMode: MixMode = 'shipped';
+
+/** The rungs a level walks, in order — the arc `paceAt` is printed across. `calm` is the title. */
+const FIGHT_RUNGS = MUSIC_LEVELS.filter((r) => r !== 'calm' && r !== 'bossPeak');
 
 /**
  * How much of the solve is spent holding a gain where the previous rung left it — 0166.
@@ -1649,6 +1652,14 @@ function momentAsText(moment: Moment): string {
       ` · aura ${moment.aura.toFixed(2)} · ${moment.sounding} of ${MUSIC_LAYERS.length} sounding`,
     `- **over it** tier ${tier} — ` +
       lines.map((c) => `${c.kind} ${c.every === null ? 'scattered' : `every ${c.every} steps`} (${c.perSecond.toFixed(2)}/s)`).join(', '),
+    /*
+      ⚠️ **THE PACE ARC GOES IN THE PASTE** — 0168. *"Approach slows down the beat"* is a claim about
+      the whole level, so a moment copied at one rung cannot carry it. This is the one figure here
+      that describes the level rather than the instant.
+    */
+    `- **pace** ` +
+      FIGHT_RUNGS.map((r) => `${r} ${Math.round(paceAt(moment.theme, r, ladderOf(moment.theme)))}`).join(' · ') +
+      ` notes/bar`,
     `- **boss gap** ${gapUnits} units · **cues** ${cuesOn ? 'on' : 'off'}` +
       (silenced.size > 0 ? ` (silenced: ${[...silenced].join(', ')})` : '') +
       ` · **transport** ${walking ? 'walking' : onAir ? 'stopped, desk sounding' : 'stopped'}` +
@@ -1817,6 +1828,27 @@ function frame(at: number): void {
   scrub.value = String(Math.round((second / total) * 1000));
   el('clock').textContent = `${clockText(second)} / ${clockText(total)}`;
   el('rung').textContent = moment.rung;
+  /*
+    ⚠️ **THE PACE ARC, LIVE, BECAUSE THE REPORT ABOUT IT COULD NOT BE ACTED ON FROM A TABLE** — 0168.
+    Reported after playing all seven levels: *"approach slows down the beat instead of
+    maintaining/increasing… same thing on all levels."* Exactly right, and measured: every place drops
+    **17–28%** in notes a bar at `approach`, because the rung closes `groove` and `hook` — both dense —
+    and opens `toll` and `dread`, both held.
+
+    ⚠️ **IT IS NOT GUARDED AND WILL NOT BE.** `docs/decisions/0161-the-shape-of-a-level-is-not-guarded.md`
+    settled that a level's SHAPE is the author's and floors are the guard's. So this is a readout: the
+    arc is printed beside the rung, it is computed from the ladder the desk is driving (0163), and
+    dragging a layer open at `approach` moves it while you watch.
+
+    ⚠️ **PURE CONTENT, so it can run in a frame.** `paceAt` counts non-null steps; every other figure
+    on this panel is DSP and this one is arithmetic over the patterns.
+  */
+  const ladder = ladderOf(moment.theme);
+  const arc = FIGHT_RUNGS.map((rung) => paceAt(moment.theme, rung, ladder));
+  el('pace').textContent = String(Math.round(paceAt(moment.theme, moment.rung, ladder)));
+  el('paceArc').textContent = arc
+    .map((n, i) => `${Math.round(n)}${i < arc.length - 1 ? (arc[i + 1]! < n ? ' ↓ ' : ' ↑ ') : ''}`)
+    .join('');
   el('theme').textContent = THEMES[moment.theme].title;
   el('camera').textContent = moment.camera.toFixed(0);
   el('bar').textContent = String(Math.floor(moment.bars));

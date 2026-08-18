@@ -71,7 +71,15 @@ import { CORE_VOICES } from './core.ts';
 import { SCALE } from './cues.ts';
 import { LABYRINTH_VOICES } from './labyrinth.ts';
 import { MIRE_VOICES } from './mire.ts';
-import { MUSIC, MUSIC_LADDER, type MusicLayer, type MusicLevel, type MusicVoice } from './music.ts';
+import {
+  LAYER_BARS,
+  MUSIC,
+  MUSIC_LADDER,
+  MUSIC_LAYERS,
+  type MusicLayer,
+  type MusicLevel,
+  type MusicVoice,
+} from './music.ts';
 import { NEBULA_VOICES } from './nebula.ts';
 import type { PaletteName } from './palette.ts';
 import { RIME_VOICES } from './rime.ts';
@@ -984,4 +992,56 @@ export function rungIn(
   layer: MusicLayer,
 ): number {
   return ladder?.[rung]?.[layer] ?? MUSIC_LADDER[rung][layer];
+}
+
+/**
+ * How many notes a bar a layer's pattern sounds — the quantity a listener calls PACE.
+ *
+ * ── IT LIVED IN `tests/pace.ts` AND THE DESK NEEDED IT ──────────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0168-the-pace-is-on-the-desk.md`.** Reported after playing all seven levels on
+ * the re-based mix: *"approach slows down the beat instead of maintaining/increasing… same thing on
+ * all levels."* Measured, that is exact and universal — every place drops **17–28%** in notes a bar
+ * at `approach`, because the rung closes `groove` and `hook` (both dense) and opens `toll` and
+ * `dread` (both held).
+ *
+ * ⚠️ **IT IS PURE CONTENT AND COSTS NOTHING**, which is why it can be on a readout that redraws
+ * sixty times a second: counting non-null steps in a pattern is not DSP, and every other number the
+ * mix panel shows is.
+ *
+ * ⚠️ **IT MOVED HERE RATHER THAN BEING COPIED**, on
+ * `docs/decisions/0029-the-tracked-record-is-the-record.md`'s terms — `tests/pace.ts` imports it,
+ * `rig/transport.ts` imports it, and a second count of the same steps is how the printed figure and
+ * the asserted one drift apart. `themes.ts` is where it belongs because `voicesOf` is the thing that
+ * knows which pattern a place actually plays.
+ */
+export function notesPerBar(theme: ThemeKind | undefined, layer: MusicLayer): number {
+  let notes = 0;
+  for (const voice of voicesOf(theme, layer)) {
+    for (const step of voice.steps) if (step !== null && step !== undefined) notes++;
+  }
+  return notes / LAYER_BARS[layer];
+}
+
+/**
+ * The pace of a whole rung: every layer the rung opens, counted.
+ *
+ * ⚠️ **THE LADDER IS AN ARGUMENT SO AN EDITED ONE MOVES IT** — 0163. The point of putting this on the
+ * desk is that dragging a layer open at `approach` changes the number while you watch, which is what
+ * turns *"it slows down"* into something you can fix without a round trip.
+ */
+export function paceAt(theme: ThemeKind, rung: MusicLevel, ladder?: ThemeRow['ladder']): number {
+  let notes = 0;
+  for (const layer of MUSIC_LAYERS) {
+    /*
+      ⚠️ **THROUGH `rungOf` AND NOT `rungIn`, WHICH IS ONE ROUTER RATHER THAN TWO** — and the first
+      version of this got it wrong in a way `npm run prove` caught. Defaulting the ladder here meant a
+      second `= THEMES[theme].ladder` in this file, and 0162's routing guard is a SOURCE SCAN for that
+      expression: with two of them, the probe that rewrites `rungOf`'s left the other one satisfying
+      the scan, and a guard that had gone red for two decisions went quietly green. `rungOf` owns the
+      theme-to-ladder decision; everything else asks it.
+    */
+    if (rungOf(theme, rung, layer, ladder) > 0) notes += notesPerBar(theme, layer);
+  }
+  return notes;
 }
