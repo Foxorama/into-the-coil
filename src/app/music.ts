@@ -45,6 +45,7 @@ import {
 } from '../content/music.ts';
 import { sampleLayerInto, saturate } from './sound.ts';
 import { THEMES, airOf, mixOf, rungOf, voicesOf, type ThemeKind, type ThemeLadder } from '../content/themes.ts';
+import { MUSIC_ROLES, roleOf } from '../content/arrangement.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 
@@ -874,6 +875,81 @@ export interface RampWrite {
 }
 
 /**
+ * The most bars a build may span, counting from the boundary's own downbeat.
+ *
+ * ── A BOUNDARY WAS A STEP, AND A STEP IS WHAT *IT JUMPS* MEANS ──────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0171-a-boundary-is-a-build.md`.** Reported: *"the push > run primarily but the
+ * other transitions for each individual level doesn't actually transition at the moment, it just
+ * jumps."* `run → push` opens `arp`, `ride`, `hook` and `lead` — **four layers on one downbeat, at
+ * one instant, over one ramp**. `RAMP_SECONDS` makes each of them a 1.6-second approach and does
+ * nothing at all about their all being the same 1.6 seconds: four simultaneous fades read as one
+ * event, and one event that adds four parts is a step however smoothly each part gets there.
+ *
+ * ⚠️ **THE FIX IS NOT A LONGER RAMP AND THAT IS THE WHOLE POINT.** Doubling `RAMP_SECONDS` makes the
+ * same step slower; it does not make it a build. What a build IS, is arrivals in an order — and the
+ * order is not a new opinion, because `ARRANGEMENT` has stated every layer's role at every rung since
+ * `docs/decisions/0164-a-role-is-a-promise-the-mix-has-to-keep.md` and `MUSIC_ROLES` is written
+ * quietest-first. **A build is the arrivals landing in the order they are already listed in.**
+ *
+ * ⚠️ **A BAR APIECE, BECAUSE AN ENTRY LANDS ON A DOWNBEAT OR IT IS NOT AN ENTRY.**
+ * `docs/decisions/0117-a-section-change-lands-on-the-beat.md` is the same argument at the boundary
+ * itself: *"a change heard away from the beat is not heard as a change."* A half-bar stagger would
+ * put half the arrivals on a backbeat, which is the failure 0117 exists for, one bar down.
+ *
+ * ⚠️ **THREE, WHICH IS FOUR BARS OF BUILD AND 6.4 SECONDS.** The shortest section in the game is the
+ * approach at **17.9 s**, so a build that ran the length of its own section is the one way *slower*
+ * stops being *smoother*; `tests/music.test.ts` holds it under half of every section it opens. The
+ * cap is what makes `calm → run` — seven arrivals, the most of any boundary — land its bed together
+ * and then enter over four bars, rather than trickling in for ten seconds while the player flies.
+ */
+export const BUILD_BARS = 3;
+
+/**
+ * Which bar of the build each arriving layer lands on, counting from the boundary's own downbeat.
+ *
+ * ⚠️ **ONE ARRIVAL A BAR, IN THE ARRANGEMENT'S OWN ORDER.** Quietest role first, and inside a role
+ * the quieter layer first — which is the order the mix already states, so nothing here is a new
+ * musical opinion. `MUSIC_ROLES` is written quietest-first for exactly this reading.
+ *
+ * ⚠️ **GROUPING BY ROLE INSTEAD WAS TRIED AND IT LEFT FIVE BOUNDARIES AS STEPS.** It is the more
+ * obviously musical rule — *the whole pulse arrives together* — and it fails wherever a place's own
+ * lead displaces the arrangement's: `roleOf` demotes the displaced part to a counter-line, so Saurian
+ * Reach's `push` opens `arp`, `hook` and `lead` as three counter-lines and delivers three of its four
+ * arrivals on one downbeat. **A rule that is a build in four places and a step in three is not a
+ * rule**, and the guard that caught it is the one written in seconds.
+ *
+ * ⚠️ **WHERE THERE ARE MORE ARRIVALS THAN BARS, THE EARLIEST SHARE THE DOWNBEAT.** `calm → run` opens
+ * seven layers; one a bar would be a level whose bed was still arriving eleven seconds in. The bed
+ * lands together and the parts enter over the four bars after it, which is what the cap is for and
+ * the only thing it does.
+ *
+ * ⚠️ **A LAYER THE ARRANGEMENT DOES NOT NAME AT THIS RUNG SORTS AS `air`.** That is unreachable today
+ * — `tests/arrangement.test.ts` holds every sounding layer to exactly one role — and it is a place's
+ * own `ladder` ([0162](../../docs/decisions/0162-a-place-has-its-own-ladder.md)) that could open one,
+ * so the fallback is the conservative half rather than a crash.
+ */
+export function entryBars(
+  theme: ThemeKind,
+  level: MusicLevel,
+  arriving: readonly Pick<RampWrite, 'layer' | 'target'>[],
+): Partial<Record<MusicLayer, number>> {
+  const rank = (layer: MusicLayer): number => MUSIC_ROLES.indexOf(roleOf(theme, level, layer) ?? 'air');
+  const order = [...arriving].sort(
+    (a, b) =>
+      rank(a.layer) - rank(b.layer) ||
+      a.target - b.target ||
+      MUSIC_LAYERS.indexOf(a.layer) - MUSIC_LAYERS.indexOf(b.layer),
+  );
+  const bars: Partial<Record<MusicLayer, number>> = {};
+  // Counted back from the last arrival, so the cap eats into the FRONT of the build and the thing
+  // the place asks you to follow always lands on the last bar of it.
+  const shared = order.length - 1 > BUILD_BARS ? order.length - 1 - BUILD_BARS : 0;
+  for (let i = 0; i < order.length; i++) bars[order[i]!.layer] = i > shared ? i - shared : 0;
+  return bars;
+}
+
+/**
  * Every gain that has to move, and when — the whole of what a change of rung does.
  *
  * ── A SECTION CHANGE LANDS ON A DOWNBEAT, AND NOT ONE EVER HAS ─────────────────────────────────
@@ -920,12 +996,44 @@ export function levelWrites(
   ladder?: ThemeLadder,
 ): RampWrite[] {
   const bar = nextBarFrom(anchor, now);
+  const shape = ladder ?? THEMES[theme].ladder;
   const writes: RampWrite[] = [];
+  const opening: RampWrite[] = [];
+  /*
+    ⚠️ **NOTHING SOUNDING MEANS NOTHING TO BUILD ON, AND THE PIECE STARTS TOGETHER.** A build is
+    heard against what is already there; with the mixer cold — a first gesture, or `setOn` having
+    forgotten every destination — the first write IS the music starting, and staggering it would be
+    four seconds of the game having no soundtrack. This is the only condition, and it is a property
+    of `lastTargets` rather than of the rung, so nothing has to be told which boundary it is at.
+  */
+  let standing = false;
+  for (const layer of MUSIC_LAYERS) {
+    if ((lastTargets[layer] ?? 0) > 0) {
+      standing = true;
+      break;
+    }
+  }
   for (const layer of MUSIC_LAYERS) {
     const aura = AURA_LAYERS.includes(layer);
-    const target = rungOf(theme, level, layer, ladder ?? THEMES[theme].ladder) * mixOf(theme, layer) * (aura ? nearness : 1);
+    const target = rungOf(theme, level, layer, shape) * mixOf(theme, layer) * (aura ? nearness : 1);
     if (!aura && lastTargets[layer] === target) continue;
-    writes.push({ layer, target, at: aura ? now : bar, tau: (aura ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3 });
+    const write = { layer, target, at: aura ? now : bar, tau: (aura ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3 };
+    if (!aura && target > 0 && (lastTargets[layer] ?? 0) === 0) opening.push(write);
+    writes.push(write);
+  }
+  /*
+    ⚠️ **ONLY THE ARRIVALS ARE MOVED, AND THE DEPARTURES DELIBERATELY ARE NOT.**
+    `docs/decisions/0120-a-rung-may-close-a-layer.md`: *"a rung that closes a layer as it opens two is
+    a change of arrangement rather than a thicker one."* A closing layer that waited for the build
+    would still be playing under the parts that replaced it, which is the opposite of the change the
+    rung is making — so it leaves on the downbeat and the room it leaves is what the build walks into.
+    A bed that merely gets louder moves on the downbeat too: it is the boundary, not an arrival.
+  */
+  if (!standing || opening.length < 2) return writes;
+  const bars = entryBars(theme, level, opening);
+  for (const write of opening) {
+    const late = bars[write.layer] ?? 0;
+    if (late > 0) write.at = bar + late * BAR_SECONDS;
   }
   return writes;
 }

@@ -720,6 +720,13 @@ multiplier could reach them. **It makes the place vivid and moves it CLOSER to i
 `weigh-apart` has core-to-saurian at 3.1 dB against 4.0 — which is the clearest statement yet that
 differentiation is not a mix pass.
 
+⚠️ **AND THE BOUNDARY IS A BUILD NOW** — [0171](decisions/0171-a-boundary-is-a-build.md), answering
+*"the push > run primarily but the other transitions for each individual level doesn't actually
+transition at the moment, it just jumps."* `run → push` opened **four layers on one downbeat** in all
+seven places and every guard over it was green, because 0164, 0166 and 0167 are all about level and
+none of them has a time axis. `node scripts/weigh-build.mjs` is the one that does. **The order is
+per-place for free** — what lands last at a boundary is what that place follows there.
+
 ### ⚠️ START A DRIVING SESSION — `npm run dash`, AND THE PLAYER'S EAR IS THE INSTRUMENT
 
 ⚠️ **EVERY MECHANISM IS BUILT AND NOTHING HAS BEEN CHOSEN.** All six decisions above landed
