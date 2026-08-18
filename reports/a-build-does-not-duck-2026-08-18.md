@@ -35,7 +35,7 @@ the instant four new parts enter.
 | | carried layers that get quieter | worst reduction | boundaries that stay additive |
 |---|---|---|---|
 | shipped ladder | **0** by any audible amount | **−0.26 dB** | **21 of 21** |
-| solved mix | **76** | **−11.2 dB** | 3 of 21 |
+| solved mix | **56** | **−11.2 dB** | 3 of 21 |
 
 The shipped ladder's three reductions anywhere in a level are `drone` −0.26, `chords` −0.20 and `sub`
 −0.17 dB — all well under a level JND. **A section change in this game has always been purely
@@ -65,7 +65,7 @@ them. The shipped ladder has no level constraint at all: it adds, and the sum la
 
 | | carried layers ducked | adrift under 0164's floor | worst raw gain sum (ceiling **2.17**) |
 |---|---|---|---|
-| *today* | 76 | 0 | 2.17 |
+| *today* | 56 | 0 | 2.17 |
 | clamp carried layers inside the solve | 0 | 37 | **28.7** |
 | lift the whole rung so nothing falls | **0** | **0** | **117** |
 | shipped ladder's motion, solve's balance | **0** | 44 | 18–20 |
@@ -93,16 +93,43 @@ One of three things has to give:
 2. **the bed ducks** — the solve's answer, and its price is this report;
 3. **the ceiling rises** — 6 to 10 dB per boundary, which there is no headroom for.
 
-⚠️ **A FOURTH IS NOT ON THIS LIST AND MAY BE THE REAL ONE.** The arrivals need gains of 2.2 and more
-to reach an ordinary margin because **their material is quiet** — which is
-[0140](../docs/decisions/0140-no-layer-is-inaudible.md)'s finding, *a gain is not a loudness*, arriving
-one layer up. `perc` at 2.72 and `call` at 2.73 are already past `MIX_CEILING`. Louder material would
-buy the same margins for less level, and would relieve all three of the above at once. That is a
-content change and is not priced here.
+## ⚠️ The fourth option, priced — and it does not work
+
+The arrivals need gains past `MIX_CEILING` because **their material is quiet**:
+
+| layer | mean solved gain | peak |
+|---|---|---|
+| `wraith` | 2.65 | 4.46 |
+| `frenzy` | 2.55 | 4.04 |
+| `hook` | 2.06 | 2.64 |
+| `arp` | 1.94 | 2.43 |
+| `dread` | 1.92 | 2.90 |
+| `call` | 1.77 | 2.73 |
+| `counter` | 1.53 | 2.85 |
+
+That is [0140](../docs/decisions/0140-no-layer-is-inaudible.md)'s *a gain is not a loudness* one layer
+up, and the obvious reading is that louder material buys the same margin for less level and relieves
+all three constraints at once.
+
+**Lifting those seven layers' material by 6 dB:**
+
+| | ducked | adrift | past `MIX_CEILING` | worst raw sum |
+|---|---|---|---|---|
+| as it is | 56 | 0 | 23 | 20.47 |
+| material +6 dB | **52** | 2 | **25** | 20.31 |
+
+⚠️ **IT RELIEVES NOTHING, AND THE REASON IS WHAT THE SOLVE IS FOR.** It targets BALANCE and
+renormalises to hold each rung's summed level, so a louder layer needs less gain and contributes
+exactly the same amount — **material loudness cancels out of a balance**. It moves the gain number
+and not the mix. The ceiling violations get marginally *worse*, because the renormalise lifts
+everything else into the level the louder layers no longer need.
+
+⚠️ **THIS REPORT ASSERTED IT BEFORE CHECKING IT.** The check took twenty minutes and it is left in,
+refuted, because it is the first idea anybody has on reading the three refusals above.
 
 ## What is fixed here
 
 **Only the guard.** No mix number moves. The property the shipped ladder has always had is now
 written down and held: at an in-level boundary, no layer sounding on both sides may fall by a decibel
-or more. It is green on `MUSIC_LADDER` with 0.74 dB to spare and red on the solved mix in 76 places,
+or more. It is green on `MUSIC_LADDER` with 0.74 dB to spare and red on the solved mix in 56 places,
 which is the blocker on shipping it recorded as a test rather than as a paragraph.

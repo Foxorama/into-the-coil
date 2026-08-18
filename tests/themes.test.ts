@@ -1160,7 +1160,7 @@ describe('0128 — a place plays its own material, and shares everything it does
       section change has sounded like for the whole life of this composition, and it survived eight
       mix decisions by accident rather than by rule.
 
-      ⚠️ **THE SOLVED MIX BREAKS IT 76 TIMES, WORST −11.2 dB**, and that is the blocker on shipping it
+      ⚠️ **THE SOLVED MIX BREAKS IT 56 TIMES, WORST −11.2 dB**, and that is the blocker on shipping it
       — recorded here as a test rather than as a paragraph.
       `reports/a-build-does-not-duck-2026-08-18.md` prices the three fixes that were measured and
       refused; `node scripts/weigh-boundary.mjs --solved` is the same arithmetic, printed.

@@ -43,7 +43,7 @@ Over all seven places and all three in-level boundaries:
 | | carried layers made quieter | worst | boundaries left additive |
 |---|---|---|---|
 | shipped ladder | **0** audibly | **−0.26 dB** | **21 of 21** |
-| solved mix | **76** | **−11.2 dB** | 3 of 21 |
+| solved mix | **56** | **−11.2 dB** | 3 of 21 |
 
 At `surge → approach` the solve takes **all ten** carried layers down, 1.7 to 5.3 dB, while two open.
 
@@ -65,7 +65,7 @@ this sequence that a measurement agreed with itself while a listener did not.
 
 | | ducked | adrift (0164) | worst raw gain sum, ceiling **2.17** |
 |---|---|---|---|
-| *today's solve* | 76 | 0 | 2.17 |
+| *today’s solve* | 56 | 0 | 2.17 |
 | clamp carried layers inside the solve | 0 | 37 | **28.7** |
 | lift the whole rung until nothing falls | **0** | **0** | **117** |
 | shipped ladder's motion, solve's balance | **0** | 44 | 18–20 |
@@ -89,11 +89,28 @@ One of three has to give:
 2. **the bed ducks** — the solve's answer, priced at this report;
 3. **the ceiling rises** — no headroom.
 
-⚠️ **A FOURTH IS NOT ON THE LIST AND IS PROBABLY THE REAL ONE.** The arrivals need gains of 2.2 and
-more to reach an ordinary margin **because their material is quiet** —
-[0140](0140-no-layer-is-inaudible.md)'s *a gain is not a loudness*, one layer up. `perc` at 2.72 and
-`call` at 2.73 are already past `MIX_CEILING`. Louder material buys the same margin for less level and
-relieves all three at once. That is a content change and is not priced here.
+⚠️ **A FOURTH LOOKED LIKE THE REAL ONE AND IS REFUTED.** The arrivals need gains past `MIX_CEILING` to
+reach an ordinary margin **because their material is quiet** — `wraith` averages 2.65, `frenzy` 2.55,
+`hook` 2.06 — which is [0140](0140-no-layer-is-inaudible.md)'s *a gain is not a loudness* one layer
+up. The obvious reading is that louder material buys the same margin for less level and relieves all
+three constraints at once.
+
+**Measured, it relieves none of them.** Lifting the seven loudest-gain layers' material by 6 dB:
+
+| | ducked | adrift | past `MIX_CEILING` | worst raw sum |
+|---|---|---|---|---|
+| as it is | 56 | 0 | 23 | 20.47 |
+| material +6 dB | **52** | 2 | **25** | 20.31 |
+
+⚠️ **AND THE REASON IS THE ONE THING THE SOLVE IS FOR.** It targets BALANCE, and renormalises to hold
+the rung's summed level — so a louder layer needs less gain and contributes exactly the same amount.
+**Material loudness cancels out of a balance.** It moves the gain NUMBER and not the mix, and the
+`MIX_CEILING` violations get slightly worse rather than better, because the renormalise lifts
+everything else to fill the level the louder layers no longer need.
+
+⚠️ **THIS DOCUMENT ASSERTED IT BEFORE CHECKING IT, AND THE CHECK TOOK TWENTY MINUTES.** CLAUDE.md: an
+assumption is discharged or owed and never merely labelled. It is left in, refuted, because the next
+person to look at this will have the same idea.
 
 ## What this is not
 
