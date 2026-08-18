@@ -638,6 +638,28 @@ export function makeRoomImpulse(rate: number, rng: Rng): [Float32Array, Float32A
       const at = Math.round((EARLY[e]! + (c === 0 ? 0 : 0.0019)) * rate);
       if (at < length) line[at] = line[at]! + (c === 0 ? 1 : -1) * (0.62 - e * 0.1);
     }
+    /*
+      ⚠️ **NORMALISED, AND THE FIRST VERSION WAS NOT** —
+      `docs/decisions/0174-a-send-has-to-mean-something.md`. Reported on the first listen: *"the enemy
+      death sounds like it's happening inside a tin can, it doesn't fit an explosion or a gamey sound
+      at all."* Measured, the wet was **15.7 dB over the dry peak on `blast`, 17.6 on `death` and 18.4
+      on `bossDown`** — every explosion in the game was mostly reverb.
+
+      ⚠️ **`normalize = false` MEANS THE LEVEL IS AUTHORED, AND 0173 SAID SO AND THEN DID NOT AUTHOR
+      IT.** A convolution sums the whole impulse per input sample, so a 1.1-second full-amplitude noise
+      buffer has an enormous integrated gain — `CUE_ROOM_GAIN` and every `air` were chosen against a
+      scale nobody had measured. **The tail LENGTH was measured and length is insensitive to level**,
+      which is how a guard, a decision and a confirmation table all went green over an 18 dB error.
+
+      ⚠️ **SCALED BY `1 / sqrt(sum of squares)`, WHICH IS THE ONE FACTOR THAT MAKES `air` READABLE.** A
+      convolution's RMS gain over broadband input is the impulse's root energy, so this makes
+      `air × CUE_ROOM_GAIN == 1` mean *the wet is as loud as the dry* — and every value in `CUES` then
+      means the share of itself it looks like it means.
+    */
+    let energy = 0;
+    for (let i = 0; i < length; i++) energy += line[i]! * line[i]!;
+    const scale = energy > 0 ? 1 / Math.sqrt(energy) : 0;
+    for (let i = 0; i < length; i++) line[i] = line[i]! * scale;
   }
   return out;
 }

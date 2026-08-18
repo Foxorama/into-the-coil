@@ -2346,3 +2346,78 @@ function ringsFor(a: Float32Array): number {
   for (let i = a.length - 1; i >= 0; i--) if (Math.abs(a[i]!) > floor) return (i * THIN) / SAMPLE_RATE;
   return 0;
 }
+
+/*
+  ── 0174: A SEND HAS TO MEAN SOMETHING ──────────────────────────────────────────────────────────
+
+  `docs/decisions/0174-a-send-has-to-mean-something.md`. Reported on the first listen of 0173:
+  *"the enemy death sounds like it's happening inside a tin can, it doesn't fit an explosion or a
+  gamey sound at all."*
+
+  ⚠️ **THE WET WAS LOUDER THAN THE DRY, BY UP TO 9 dB OF ENERGY AND 18 OF PEAK.** `normalize = false`
+  hands the impulse's level to the author and 0173 said so and then did not author it: a 1.1-second
+  full-amplitude noise buffer has an enormous integrated gain, and every `air` was chosen against a
+  scale nobody had measured.
+
+  ⚠️ **AND 0173's OWN GUARDS WERE GREEN OVER IT, WHICH IS THE PART WORTH KEEPING.** They measured the
+  tail's LENGTH, its stereo width and its decay — three properties, none of them level. A guard can
+  be right about everything it measures and silent about the one thing that matters.
+*/
+describe('0174 — a send has to mean something', () => {
+  const impulse = makeRoomImpulse(SAMPLE_RATE, makeRng('room'));
+
+  it('THE REPORTED ONE: no cue is quieter than its own reverb', () => {
+    /*
+      ⚠️ **THE FLOOR IS *the room is under the sound*, WHICH IS NOT A TASTE.** How wet a cue should be
+      is an ear's question and is not asserted anywhere; that the direct sound is the loud one is what
+      separates a room from a barrel, and it is the thing a listener reported.
+
+      ⚠️ **ENERGY AND NOT RMS, because the wet buffer is LONGER than the dry one** — a mean over its
+      own length divides by the tail it just added, which flatters the number by exactly the ratio of
+      the two lengths. That error was made and caught while measuring this.
+    */
+    for (const kind of CUE_KINDS) {
+      const air = CUES[kind].air;
+      if (air === undefined) continue;
+      const dry = sampleCue(CUES[kind], SAMPLE_RATE, makeRng('cues').stream(kind));
+      const wet = onlyRoom(dry, impulse[0]!, air * CUE_ROOM_GAIN);
+      const over = 10 * Math.log10(energyOf(wet) / energyOf(thin(dry)));
+      expect(over, `${kind}'s room carries ${over.toFixed(1)} dB against the cue itself`).toBeLessThan(-6);
+    }
+  }, 30_000);
+
+  it('and the impulse carries unit energy, which is what makes `air` a share of the dry', () => {
+    /*
+      ⚠️ **THIS IS THE LINE THAT MAKES EVERY NUMBER IN `CUES` READABLE.** A convolution's gain over
+      broadband input is the impulse's root energy, so normalising to one means `air * CUE_ROOM_GAIN`
+      of 1 is *as loud as the dry* and 0.3 is a share of it. Without it the table is a set of numbers
+      against an unstated scale, which is `docs/decisions/0140-no-layer-is-inaudible.md`'s *a gain is
+      not a loudness* one bus over.
+    */
+    for (let c = 0; c < 2; c++) {
+      let energy = 0;
+      for (const v of impulse[c]!) energy += v * v;
+      expect(energy, `channel ${c} carries ${energy.toFixed(3)} rather than unit energy`).toBeCloseTo(1, 3);
+    }
+  });
+});
+
+/** Just the room's contribution — the wet path on its own, with no dry mixed back in. */
+function onlyRoom(dry: Float32Array, room: Float32Array, wet: number): Float32Array {
+  const a = thin(dry);
+  const b = thin(room);
+  const out = new Float32Array(a.length + b.length);
+  for (let i = 0; i < a.length; i++) {
+    const v = a[i]!;
+    if (v === 0) continue;
+    for (let j = 0; j < b.length; j++) out[i + j] = out[i + j]! + v * b[j]! * wet;
+  }
+  return out;
+}
+
+/** Total energy, which is the only fair comparison between two buffers of different lengths. */
+function energyOf(a: Float32Array): number {
+  let sum = 0;
+  for (const v of a) sum += v * v;
+  return sum;
+}
