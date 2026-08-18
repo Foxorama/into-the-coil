@@ -29,7 +29,7 @@
 
 import { bakeLoops } from '../src/app/music.ts';
 import { SAMPLE_RATE } from '../src/app/sound.ts';
-import { MUSIC_LAYERS, MUSIC_LEVELS } from '../src/content/music.ts';
+import { MUSIC_GAIN, MUSIC_LAYERS, MUSIC_LEVELS } from '../src/content/music.ts';
 import { THEME_KINDS } from '../src/content/themes.ts';
 import { ROLE_MARGIN_DB, SOLVED_BY, roleOf } from '../src/content/arrangement.ts';
 import { ROLE_FLOOR_DB } from '../tests/pace.ts';
@@ -50,7 +50,30 @@ const IN_LEVEL = [
 ];
 const db = (x) => 20 * Math.log10(x);
 
-function score(theme, byRung, profile) {
+/**
+ * The peak of the SUMMED WAVEFORM at a rung — the only headroom measure that means anything here.
+ *
+ * ⚠️ **NOT THE SUM OF THE GAINS, WHICH IS WHAT 0167 REACHED FOR FIRST.** The shipped ladder reads
+ * 17.96 on that against the same 2.17 ceiling while clipping nothing, because a sum of gains assumes
+ * every layer peaks on the same sample and they do not. `tests/themes.test.ts`'s clip guard and
+ * `scripts/weigh-mix.mjs` both walk the waveform; so does this, and two of 0167's three refusals were
+ * argued from the wrong one before it did.
+ */
+function summedPeak(loops, gains) {
+  const buffers = MUSIC_LAYERS.map((l) => loops[l]);
+  const g = MUSIC_LAYERS.map((l) => (gains[l] > 0 ? gains[l] : 0));
+  const longest = Math.max(...buffers.map((b) => b.length));
+  let peak = 0;
+  for (let i = 0; i < longest; i++) {
+    let sum = 0;
+    for (let l = 0; l < buffers.length; l++) sum += buffers[l][i % buffers[l].length] * g[l];
+    const size = sum < 0 ? -sum : sum;
+    if (size > peak) peak = size;
+  }
+  return peak;
+}
+
+function score(theme, byRung, profile, loops) {
   let worstLurch = 0;
   let big = 0;
   let drift = 0;
@@ -80,24 +103,29 @@ function score(theme, byRung, profile) {
       if (off < ROLE_FLOOR_DB) adrift++;
     }
   }
-  return { worstLurch, big, drift: drift / n, adrift };
+  let peak = 0;
+  for (const rung of MUSIC_LEVELS) if (rung !== 'calm') peak = Math.max(peak, summedPeak(loops, byRung[rung]));
+  return { worstLurch, big, drift: drift / n, adrift, peak };
 }
 
 const totals = new Map();
 const add = (name, s) => {
-  const t = totals.get(name) ?? { lurch: 0, big: 0, drift: 0, adrift: 0, n: 0 };
+  const t = totals.get(name) ?? { lurch: 0, big: 0, drift: 0, adrift: 0, peak: 0, n: 0 };
   t.lurch = Math.max(t.lurch, s.worstLurch);
   t.big += s.big;
   t.drift += s.drift;
   t.adrift += s.adrift;
+  t.peak = Math.max(t.peak, s.peak);
   t.n++;
   totals.set(name, t);
 };
 
-const HEAD = '                     worst lurch   moves>=6dB   mean drift   adrift';
+const CEILING = 1 / MUSIC_GAIN;
+const HEAD = '                     worst lurch   moves>=6dB   mean drift   adrift   summed peak';
 const line = (name, s) =>
   `${name.padEnd(20)} ${s.worstLurch.toFixed(1).padStart(9)} dB ${String(s.big).padStart(12)} ` +
-  `${s.drift.toFixed(2).padStart(12)} ${String(s.adrift).padStart(8)}`;
+  `${s.drift.toFixed(2).padStart(12)} ${String(s.adrift).padStart(8)}   ` +
+  `${s.peak.toFixed(2).padStart(6)}${s.peak > CEILING ? ' OVER' : '     '}`;
 
 for (const theme of themes) {
   const loops = bakeLoops(SAMPLE_RATE, theme);
@@ -107,13 +135,13 @@ for (const theme of themes) {
   const shipped = {};
   for (const rung of MUSIC_LEVELS) shipped[rung] = shippedAt(theme, rung);
 
-  const rows = [['shipped ladder', score(theme, shipped, profile)]];
+  const rows = [['shipped ladder', score(theme, shipped, profile, loops)]];
   for (const w of WEIGHTS) {
     const level = solveLevel(theme, loops, profile, rms, w);
     const byRung = {};
     for (const rung of MUSIC_LEVELS) byRung[rung] = level[rung].gains;
     const name = w === 0 ? 'solve, per rung' : `trajectory w=${w.toFixed(2)}`;
-    rows.push([w === HOLD_WEIGHT ? `${name}  ←` : name, score(theme, byRung, profile)]);
+    rows.push([w === HOLD_WEIGHT ? `${name}  ←` : name, score(theme, byRung, profile, loops)]);
   }
 
   console.log(`\n══ ${theme} ${'═'.repeat(Math.max(0, 56 - theme.length))}`);
@@ -127,7 +155,7 @@ for (const theme of themes) {
 console.log(`\n══ all ${themes.length} place(s) ${'═'.repeat(44)}`);
 console.log(HEAD);
 for (const [name, t] of totals) {
-  console.log(line(name, { worstLurch: t.lurch, big: t.big, drift: t.drift / t.n, adrift: t.adrift }));
+  console.log(line(name, { worstLurch: t.lurch, big: t.big, drift: t.drift / t.n, adrift: t.adrift, peak: t.peak }));
 }
 console.log(
   `\n← is the shipped default, ${HOLD_WEIGHT.toFixed(2)} — the largest weight at which NOTHING goes\n` +

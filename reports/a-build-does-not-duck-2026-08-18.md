@@ -63,12 +63,21 @@ them. The shipped ladder has no level constraint at all: it adds, and the sum la
 
 ## ⚠️ Three fixes, priced, and none of them ships
 
-| | carried layers ducked | adrift under 0164's floor | worst raw gain sum (ceiling **2.17**) |
+| | carried layers ducked | adrift under 0164's floor | worst summed peak (ceiling **2.17**) |
 |---|---|---|---|
-| *today* | 56 | 0 | 2.17 |
-| clamp carried layers inside the solve | 0 | 37 | **28.7** |
-| lift the whole rung so nothing falls | **0** | **0** | **117** |
-| shipped ladder's motion, solve's balance | **0** | 44 | 18–20 |
+| shipped ladder | 0 | 91 | **2.15** — under, in all seven places |
+| *today's solve* | 56 | **0** | 2.53 — over in five of seven |
+| clamp carried layers inside the solve | 0 | 37 | the solve does not converge |
+| lift the whole rung so nothing falls | **0** | **0** | **16.04** — 17 dB over |
+| shipped ladder's motion, solve's balance | **0** | 44 | 2.51 — over in four of seven |
+
+⚠️ **THE HEADROOM COLUMN IS THE PEAK OF THE SUMMED WAVEFORM.** An earlier version of this table used
+the sum of the *gains*, on which the shipped ladder reads **17.96** — eight times the same ceiling,
+while sounding perfectly fine, because a sum of gains assumes every layer peaks on the same sample and
+they do not. `tests/themes.test.ts`'s clip guard and `scripts/weigh-mix.mjs` both walk the waveform.
+Two of the three refusals below were written against the wrong quantity; both survive the right one,
+and the third — re-basing — turns out to be **cheaper than it looked**.
+
 
 **The clamp ratchets.** A floored layer can only rise, the renormalise pushes everything else down,
 the margin step pushes it back, and four hundred iterations later the level has run away.
@@ -76,11 +85,19 @@ the margin step pushes it back, and four hundred iterations later the level has 
 **The lift is correct and unaffordable.** `solveMix`'s own comment supplies the lever — *"margins are
 ratios, so scaling every gain together cannot move one"* — so lifting a whole rung until nothing falls
 costs **nothing** in balance or audibility. It needs **6 to 10 dB per boundary**, compounding down the
-chain, against a ceiling that is already met.
+chain, and lands the summed peak at **16.04** against 2.17 — 17 dB over, where the shipped ladder sits
+at 2.15.
 
 **Re-basing works and costs audibility.** Keeping the shipped ladder's per-layer rung ratios and
 re-basing the balance onto the solve is additive by construction — and puts 44 layers back under
-0164's floor, against the solve's 0 and the shipped ladder's 91.
+0164's floor, against the solve's 0 and the shipped ladder's 91. Its headroom is the solve's — 2.51
+against 2.53 — so it costs nothing there that is not already being paid. **It is the only candidate
+that gets the direction right at a price anything currently played also pays.**
+
+⚠️ **AND THE SOLVE ALREADY FAILS THE CLIP GUARD, WHICH NOTHING HAD RECORDED.** `tests/themes.test.ts`'s
+*no theme at any rung drives the bus past full scale* runs over `MUSIC_LADDER` only. The shipped
+ladder clears 2.17 in all seven places; the solved mix peaks at **2.53** in five of seven and the
+re-based one at 2.51 in four. That is a second, independent blocker on either coming off the toggle.
 
 ## ⚠️ The finding: the arrangement is asking for more than the mix can pay for
 
@@ -113,7 +130,7 @@ all three constraints at once.
 
 **Lifting those seven layers' material by 6 dB:**
 
-| | ducked | adrift | past `MIX_CEILING` | worst raw sum |
+| | ducked | adrift | past `MIX_CEILING` | summed peak |
 |---|---|---|---|---|
 | as it is | 56 | 0 | 23 | 20.47 |
 | material +6 dB | **52** | 2 | **25** | 20.31 |
