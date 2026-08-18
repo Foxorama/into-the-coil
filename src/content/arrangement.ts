@@ -235,7 +235,7 @@ export const LEADS: Record<ThemeKind, Partial<Record<MusicLevel, MusicLayer>>> =
   */
   mire: { run: 'sub', push: 'groove', surge: 'drive', approach: 'toll', boss: 'toll' },
   // *"The riff"*, *"the twin lead"*, *"inside it"* — the one place that follows what it is named for.
-  core: { run: 'engine', surge: 'lead', approach: 'counter', boss: 'drive' },
+  core: { run: 'engine', surge: 'lead', approach: 'counter', boss: 'frenzy' },
 };
 
 /*

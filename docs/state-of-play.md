@@ -712,6 +712,14 @@ done it once. `node scripts/weigh-boundary.mjs --solved` shows it. Three fixes a
 in [`a-build-does-not-duck`](../reports/a-build-does-not-duck-2026-08-18.md); the live question is
 whether the arriving layers need LOUDER MATERIAL rather than more gain — measured, and REFUTED: material loudness cancels out of a balance.
 
+⚠️ **AND THE FIRST AUTHORING CHANGE SINCE ALL OF THAT HAS LANDED** —
+[0170](decisions/0170-a-place-is-audible-in-its-own-fight.md), answering *"the black heart should be a
+dark symphonic metal track so I don't think we have good level sound differentiation yet."* The howl
+and the tremolo the place is named for sat **17 and 19 dB down in its own boss fight**, and no
+multiplier could reach them. **It makes the place vivid and moves it CLOSER to its neighbours** —
+`weigh-apart` has core-to-saurian at 3.1 dB against 4.0 — which is the clearest statement yet that
+differentiation is not a mix pass.
+
 ### ⚠️ START A DRIVING SESSION — `npm run dash`, AND THE PLAYER'S EAR IS THE INSTRUMENT
 
 ⚠️ **EVERY MECHANISM IS BUILT AND NOTHING HAS BEEN CHOSEN.** All six decisions above landed

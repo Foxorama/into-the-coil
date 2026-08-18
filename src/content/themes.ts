@@ -569,7 +569,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       here, which is the opposite of every other place in the game.
     */
     mix: {
-      call: 2.6,
+      call: 1.85,
       counter: 2.4,
       perc: 2.35,
       engine: 1.8,
@@ -791,11 +791,11 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       wraith: 1.755,
       lead: 1.4,
       drive: 1.17,
-      call: 2.6,
+      call: 1.85,
       engine: 1.15,
       drone: 1.15,
       ride: 1.17,
-      crash: 0.897,
+      crash: 0.70,
       sub: 0.585,
       perc: 1.25,
       toll: 0.624,

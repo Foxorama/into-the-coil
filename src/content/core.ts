@@ -698,7 +698,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 1.2, gain: 0.09, attack: 0.001, curve: 2.6, lowFrom: 15000, lowTo: 4200, highFrom: 2200 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 1.2, gain: 0.16, attack: 0.001, curve: 2.6, lowFrom: 15000, lowTo: 4200, highFrom: 2200 },
     },
     {
       // The gong under it: a black hole's crash is not a cymbal, it is a mass being struck.
@@ -706,7 +706,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: true,
       perBeat: 1,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.085, attack: 0.02, curve: 1.3, lowFrom: 900, lowTo: 400, q: 2.2, drive: 0.4 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.15, attack: 0.02, curve: 1.3, lowFrom: 900, lowTo: 400, q: 2.2, drive: 0.4 },
     },
   ],
 
@@ -897,7 +897,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 4,
       octave: 1,
       accents: [1, 0.64, 0.86, 0.62],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.18, gain: 0.09, attack: 0.002, curve: 4.4, lowFrom: 2600, lowTo: 1000, q: 2, drive: 0.55 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.18, gain: 0.27, attack: 0.002, curve: 4.4, lowFrom: 2600, lowTo: 1000, q: 2, drive: 0.55 },
     },
     {
       // The octave over it, thinner and brighter, which is how two guitars playing one riff sound.
@@ -915,7 +915,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 4,
       octave: 2,
       accents: [1, 0.62, 0.84, 0.6],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.15, gain: 0.045, attack: 0.002, curve: 5, lowFrom: 5200, lowTo: 2400, q: 1.6, drive: 0.4 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.15, gain: 0.15, attack: 0.002, curve: 5, lowFrom: 5200, lowTo: 2400, q: 1.6, drive: 0.4 },
     },
   ],
 
@@ -941,7 +941,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 1,
       octave: 0,
       accents: [1, 0.7, 0.88, 0.66],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1, gain: 0.075, attack: 0.03, curve: 1.9, lowFrom: 1100, lowTo: 420, q: 2.4, drive: 0.85 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1, gain: 0.23, attack: 0.03, curve: 1.9, lowFrom: 1100, lowTo: 420, q: 2.4, drive: 0.85 },
     },
     {
       steps: [
@@ -954,7 +954,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 1,
       octave: 1,
       accents: [1, 0.7, 0.88, 0.66],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 1.05, gain: 0.05, attack: 0.04, curve: 1.8, lowFrom: 1800, lowTo: 700, q: 2.2, drive: 0.75 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 1.05, gain: 0.17, attack: 0.04, curve: 1.8, lowFrom: 1800, lowTo: 700, q: 2.2, drive: 0.75 },
     },
   ],
 
