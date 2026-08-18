@@ -242,3 +242,62 @@ export function solveLevel(theme, loops, profile = profileOfLoops(loops), rms = 
   }
   return out;
 }
+
+/**
+ * Which rung the re-based mix takes its balance from.
+ *
+ * ⚠️ **`push` BECAUSE IT COSTS THE LEAST, MEASURED**: re-basing on `run` leaves 79 layers under
+ * 0164's floor and on `surge` 45, against **44** here. It is also the middle of a level, which is
+ * where a balance chosen for the whole of one should be read.
+ */
+export const REBASE_RUNG = 'push';
+
+/**
+ * The shipped ladder's MOTION carrying the solve's BALANCE — the third mix.
+ *
+ * ── WHY THIS EXISTS AND WHAT IT IS FOR ──────────────────────────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0167-a-build-does-not-duck.md`.** The shipped ladder never makes a carried
+ * layer audibly quieter at a section boundary — 0 of 21, worst 0.26 dB — and the solve does it 56
+ * times, up to 11.2 dB. Reported: *"every change for every level is now a hard jump between sounds
+ * whereas pre-solved-mix the change was a lot smoother and balanced."*
+ *
+ * ⚠️ **THE ADDITIVITY IS A PROPERTY OF THE LADDER'S PER-LAYER RATIOS, NOT OF ITS BALANCE.** So keep
+ * the ratios exactly and re-base each layer so that at `REBASE_RUNG` the mix IS the solved one:
+ *
+ *     out[rung][layer] = shipped[rung][layer] × (solved[ref][layer] / shipped[ref][layer])
+ *
+ * Every boundary then moves exactly as the shipped ladder moves — **additive by construction** — and
+ * the balance at the reference rung is the solve's to the last decimal.
+ *
+ * ⚠️ **IT IS A THIRD OPTION AND NOT A CONCLUSION.** Measured: 0 ducked (solve 56), 44 layers under
+ * 0164's floor (solve 0, shipped ladder 91), summed peak 2.51 (solve 2.53, shipped 2.15, ceiling
+ * 2.17). It is the only candidate that gets the boundary direction right at a headroom cost the solve
+ * is already paying — and it is half-fixed on audibility, which is a trade an ear has to make. The
+ * desk plays all three for that reason.
+ *
+ * ⚠️ **THE LEVEL IS DELIBERATELY NOT RENORMALISED.** Holding each rung to the shipped ladder's summed
+ * level puts the ducking back — 11 carried layers at `push`-based, because the per-rung scale factors
+ * differ either side of a boundary. Additive is the property being bought here; loudness is what it
+ * is bought with, and `summedPeak` is where that shows.
+ */
+export function rebasedLevel(theme, loops, profile = profileOfLoops(loops), rms = rmsOfLoops(loops), weight = HOLD_WEIGHT) {
+  const solved = solveLevel(theme, loops, profile, rms, weight);
+  const at = solved[REBASE_RUNG].gains;
+  const shippedThere = shippedAt(theme, REBASE_RUNG);
+
+  const scale = {};
+  for (const l of MUSIC_LAYERS) {
+    scale[l] = shippedThere[l] > 0 && at[l] > 0 ? at[l] / shippedThere[l] : 1;
+  }
+
+  const out = {};
+  for (const rung of MUSIC_LEVELS) {
+    const shipped = shippedAt(theme, rung);
+    const gains = {};
+    // ⚠️ The aura is never re-based, on `SOLVED_BY`'s own terms — its gain is a distance (0091).
+    for (const l of MUSIC_LAYERS) gains[l] = SOLVED_BY(l) ? shipped[l] * scale[l] : shipped[l];
+    out[rung] = { gains, shipped };
+  }
+  return out;
+}

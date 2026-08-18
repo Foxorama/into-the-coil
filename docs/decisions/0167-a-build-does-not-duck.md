@@ -158,3 +158,37 @@ probes hold the **direction**, at two different boundaries, which is the part th
 |---|---|
 | mire's sub ducked at push to make room for the four layers that open there | `0167 — A BUILD DOES NOT DUCK: nothing already sounding gets audibly quieter when a section opens` |
 | engine ducked at `approach`, so the last in-level boundary is the one that regresses | `0167 — A BUILD DOES NOT DUCK: nothing already sounding gets audibly quieter when a section opens` |
+
+## ⚠️ Amended 2026-08-18: the third mix is on the desk
+
+Asked, on being handed the three-way table above: *"yeah chuck it on the dashboard and let's have a
+listen."*
+
+The header's **mix** picker now has three positions rather than a `solved mix` checkbox —
+`shipped`, `solved`, `re-based` — and `scripts/solve-mix.mjs` grows `rebasedLevel`. Nothing about
+what the game plays changes; `shipped` is still the default and still what `src/` uses.
+
+⚠️ **`re-based` IS ADDITIVE BY CONSTRUCTION, AND *by construction* IS A CLAIM.** It multiplies each
+layer by a per-layer constant, which preserves the shipped ladder's boundary ratios **only while that
+constant is the same on both sides**. A per-rung renormalise — the first thing anybody reaches for on
+seeing the 2.51 summed peak — makes it rung-dependent and quietly puts the ducking back: 11 carried
+layers at `push`-based, 25 at `surge`-based. Measured before this shipped, guarded after it, and
+probed.
+
+⚠️ **THE REFERENCE RUNG IS `push` BECAUSE IT COSTS THE LEAST**: 44 layers under 0164's floor, against
+79 re-based on `run` and 45 on `surge`.
+
+⚠️ **AND THE PASTE NOW SAYS WHICH MIX IT IS.** Two moments were copied at the same boundary, one per
+mix, and neither carried that fact — the entire comparison rested on a covering note. *copy this
+moment* prints `**mix** \`solved\` · steady 0.40` beside the transport.
+
+Driven at `run` with the transport parked, the same eight layers:
+
+| | `sub` | `engine` | `chords` | `perc` | `call` | `groove` |
+|---|---|---|---|---|---|---|
+| solved | 0.29 | 0.34 | 0.49 | 2.72 | 2.73 | 1.23 |
+| re-based | 0.18 | 0.31 | 0.66 | 2.22 | 1.78 | 1.13 |
+
+and into `push` the re-based mix moves **every one of them up** — 0.23, 0.33, 0.67, 2.55, 1.95, 1.33 —
+where the solve takes `sub`, `perc` and `call` down. That is the whole difference, audible on a
+switch.
