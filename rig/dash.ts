@@ -1071,6 +1071,23 @@ function auditionOnly(only: MusicLayer | null): void {
  */
 const HOLD_SECONDS = 0.03;
 
+/**
+ * The non-shipped modes' own targets, as the table `setLevel` schedules from.
+ *
+ * ⚠️ **THE AURA IS LEFT OUT ON PURPOSE** — 0091, and `SOLVED_BY` excludes it by name. Its gain is a
+ * distance the player is steering, so no solver produces one and `levelWrites` has to keep computing
+ * it from `nearness` every frame.
+ *
+ * ⚠️ **AND IT IS `momentOf`'s OWN ANSWER, WHICH IS WHAT MAKES THE READOUT HONEST** — 0126. The number
+ * printed in the table and the number scheduled onto the node are now one value read once, rather
+ * than two computations that agree until one of them is edited.
+ */
+function solvedTargets(moment: Moment): Partial<Record<MusicLayer, number>> {
+  const out: Partial<Record<MusicLayer, number>> = {};
+  for (const { layer, target, aura } of moment.layers) if (!aura) out[layer] = target;
+  return out;
+}
+
 /*
   ⚠️ **THERE IS NO *only write when it moved* SHORTCUT HERE, AND THE AURA IS WHY.** `levelWrites`
   skips a layer whose target has not moved — except the two aura layers, which it writes on EVERY
@@ -1770,32 +1787,36 @@ function frame(at: number): void {
   const music = out.music();
   if (music !== null && unlocked) {
     const rungBefore = music.level();
-    music.setLevel(moment.rung, moment.aura, moment.theme, ladderOf(moment.theme));
     /*
       ⚠️ **THE SOLVED MIX HAS TO BE WRITTEN OVER `setLevel`, AND THE FIRST VERSION OF THIS TOGGLE DID
       NOT.** `setLevel` asks `levelWrites` for its own targets — `MUSIC_LADDER × mixOf`, the shipped
-      mix — and knows nothing about the solve. Handing the solved gains to `momentOf` therefore
+      mix — and knew nothing about the solve. Handing the solved gains to `momentOf` therefore
       changed **the readout and not one sample of audio**, which is the instrument disagreeing with
       the thing it measures that `docs/decisions/0126-the-dashboard-is-the-instrument.md` exists
-      against. Reported as *"it's better, but I'm still not getting any arp"* — and the *better* was
-      the previous PR's ride and envelope work, not this toggle, which was doing nothing at all.
+      against. Reported as *"it's better, but I'm still not getting any arp"*.
 
-      ⚠️ **ABSOLUTE, exactly as a desk hold is** — 0129 — and for the same reason: the value has to be
-      reachable whatever the rung says. A layer the desk is holding is left alone, because an explicit
-      fader outranks an experiment.
+      ⚠️ **AND THE FIX FOR THAT PUT THE TARGETS ON THE NODES DIRECTLY, WHICH MADE EVERY BOUNDARY IN
+      EVERY NON-SHIPPED MODE A CUT** — `docs/decisions/0175-an-experiment-arrives-the-way-the-game-does.md`.
+      It wrote `setTargetAtTime(target, 0, HOLD_SECONDS)` **after** `setLevel` had scheduled its own:
+      at `time 0` rather than the next downbeat, over **30 ms** rather than `RAMP_SECONDS`' 1600, and
+      with 0171's per-layer build discarded along with them. Reported: *"the shipped version has really
+      smooth blending, the re-based still has a hard cut line when going from run > push."* **The cut
+      was the write path and not the mix**, which is the same failure as the paragraph above wearing
+      the opposite sign — an instrument that cannot be listened to for the thing it is measuring.
 
-      ⚠️ **AND ONLY WHEN IT HAS MOVED**, because `setLevel` runs every frame and re-arming a ramp sixty
-      times a second is a gain that never arrives — 0117's own trap, one file over.
+      ⚠️ **SO THE TABLE GOES IN RATHER THAN OVER.** `levelWrites` takes the gains it is to schedule,
+      and an experiment therefore arrives on the downbeat, over the mixer's own ramp, built in the
+      arrangement's own order — exactly the way the game does. A held layer is untouched because
+      `restate` runs on the same rung change and puts the pin back the moment the mixer has had its
+      say, which is already how `shipped` behaves and is what the line below has always done.
     */
-    if (mixMode !== 'shipped') {
-      for (const { layer, target, aura } of moment.layers) {
-        if (aura || holdOf(layer).gain !== null) continue;
-        const gain = music.gainOf(layer);
-        if (Math.abs(gain.value - target) <= 0.001) continue;
-        gain.cancelScheduledValues(0);
-        gain.setTargetAtTime(target, 0, HOLD_SECONDS);
-      }
-    }
+    music.setLevel(
+      moment.rung,
+      moment.aura,
+      moment.theme,
+      ladderOf(moment.theme),
+      mixMode === 'shipped' ? undefined : solvedTargets(moment),
+    );
     // A rung change re-writes every layer whose target moved, including the ones a solo is holding
     // down — so the pin is re-stated the moment the mixer has had its say, and never before it.
     if (rungBefore !== moment.rung || owed.size > 0) restate(moment);

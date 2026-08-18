@@ -46,6 +46,14 @@ import {
 import { THEME_KINDS } from '../src/content/themes.ts';
 import { loopsAt } from './bakes.ts';
 import { buildsOf } from './pace.ts';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { resolve, dirname } from 'node:path';
+import { mixOf, rungOf, type ThemeKind } from '../src/content/themes.ts';
+import type { MusicLevel } from '../src/content/music.ts';
+
+/** The repository root, for the one guard here that reads a file rather than a value. */
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 import { MUSIC_ROLES } from '../src/content/arrangement.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { SAMPLE_RATE, sampleCue, saturate } from '../src/app/sound.ts';
@@ -2330,5 +2338,120 @@ describe('0171 — a section change is a build rather than a step', () => {
     ]);
     expect(bars.toll, 'the quieter arrival leads').toBe(0);
     expect(bars.dread, 'and the louder one is what lands, a bar later').toBe(1);
+  });
+});
+
+/*
+  ── 0175: AN EXPERIMENT ARRIVES THE WAY THE GAME DOES ────────────────────────────────────────────
+
+  `docs/decisions/0175-an-experiment-arrives-the-way-the-game-does.md`. Reported: *"the shipped
+  version has really smooth blending, the re-based still has a hard cut line when going from run >
+  push etc. It sounds like they applied to shipped, but we've got a re-based solution happening to get
+  a bunch of additional sounds happening."*
+
+  ⚠️ **THE CUT WAS THE WRITE PATH AND NOT THE MIX.** `rig/dash.ts` called `setLevel` and then wrote
+  the solved targets straight onto the gain nodes at `time 0` over `HOLD_SECONDS` — 30 ms, off the
+  bar — so every non-`shipped` mode discarded 0117's downbeat and 0171's build together. **Both of
+  those decisions' guards were green throughout**, because both run over `levelWrites` and the
+  dashboard was going around it.
+*/
+describe('0175 — an experiment arrives the way the game does', () => {
+  const solved = (theme: ThemeKind, rung: MusicLevel): Partial<Record<MusicLayer, number>> => {
+    const out: Partial<Record<MusicLayer, number>> = {};
+    // Deliberately NOT the shipped values — a table that happened to match would prove nothing.
+    for (const layer of MUSIC_LAYERS) {
+      if (AURA_LAYERS.includes(layer)) continue;
+      const shipped = rungOf(theme, rung, layer) * mixOf(theme, layer);
+      out[layer] = shipped > 0 ? shipped * 1.37 : 0;
+    }
+    return out;
+  };
+
+  it('THE REPORTED ONE: a handed-in table lands on the same bars as the shipped one', () => {
+    /*
+      ⚠️ **THE SET OF ARRIVAL TIMES IS THE WHOLE CLAIM.** The gains differ — that is what auditioning
+      a solve IS — and when each of them arrives must not. Compared as a set per layer, so a build
+      that changed order would be caught too.
+    */
+    for (const theme of THEME_KINDS) {
+      let shippedLast: Partial<Record<MusicLayer, number>> = {};
+      let solvedLast: Partial<Record<MusicLayer, number>> = {};
+      for (const rung of ['run', 'push', 'surge', 'approach', 'boss'] as MusicLevel[]) {
+        const a = levelWrites(rung, theme, 0, 0, 0, shippedLast);
+        const b = levelWrites(rung, theme, 0, 0, 0, solvedLast, undefined, solved(theme, rung));
+        const when = (w: typeof a): string =>
+          w
+            .filter((x) => !AURA_LAYERS.includes(x.layer))
+            .map((x) => `${x.layer}@${x.at.toFixed(3)}/${x.tau.toFixed(3)}`)
+            .sort()
+            .join(' ');
+        expect(when(b), `${theme} ${rung}: the solved table arrives on a different clock`).toBe(when(a));
+        for (const w of a) shippedLast[w.layer] = w.target;
+        for (const w of b) solvedLast[w.layer] = w.target;
+      }
+    }
+  });
+
+  it('and the table it is handed is the one it schedules, aura excepted', () => {
+    const table = solved('core', 'push');
+    const writes = levelWrites('push', 'core', 0, 0, 0, { drone: 0.01 }, undefined, table);
+    for (const { layer, target } of writes) {
+      if (AURA_LAYERS.includes(layer)) continue;
+      expect(target, `${layer} was scheduled at the ladder's value rather than the one handed in`).toBe(table[layer]);
+    }
+  });
+
+  it('and the aura is still computed from nearness, because no solver produces one', () => {
+    /*
+      ⚠️ **0091, and `SOLVED_BY` excludes the pair by name.** The aura's gain is a distance the player
+      is steering; a handed-in table that silenced it would make the boss stop approaching.
+    */
+    /*
+      ⚠️ **THE TABLE HERE STATES THE AURA ON PURPOSE, AND THE FIRST VERSION DID NOT.** `solved` above
+      skips the pair the way `solvedTargets` does, so a guard built on it never reached the clause it
+      was testing — `npm run prove` reported STILL GREEN on the break, which is
+      `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` catching a vacuous guard written the same
+      hour. What defends the aura is `levelWrites`' own `aura ? undefined`, so the test has to hand it
+      something to ignore.
+    */
+    const table = { ...solved('core', 'boss'), auraSlow: 0.9, auraFast: 0.9 };
+    const near = levelWrites('boss', 'core', 1, 0, 0, {}, undefined, table);
+    const far = levelWrites('boss', 'core', 0, 0, 0, {}, undefined, table);
+    for (const layer of AURA_LAYERS) {
+      const a = near.find((w) => w.layer === layer)!.target;
+      const b = far.find((w) => w.layer === layer)!.target;
+      expect(a, `${layer} ignores nearness once a table is handed in`).toBeGreaterThan(b);
+    }
+  });
+
+  it('and the dashboard does not write a music gain behind the mixer’s back', () => {
+    /*
+      ⚠️ **A SOURCE SCAN, AND IT IS THE ONLY THING THAT COULD HAVE CAUGHT THE ORIGINAL.** The defect
+      was a correct value written at the wrong TIME through a legitimate API, so no value-level guard
+      over `levelWrites` could see it — the dashboard simply was not calling it.
+      `restate` is the one writer a desk is allowed: an explicit fader or a solo pin (0129, 0165),
+      which is the user's own hand and outranks the mixer by design.
+
+      ⚠️ **WHERE, NOT HOW MANY.** The first version of this counted call sites and put the ceiling at
+      two. There are three, all of them `restate`'s own — a pan, a held gain and a release — so a
+      count would have gone red on correct code and stayed green on a fourth writer added inside the
+      same function. The question is whose hand it is, not how many fingers.
+    */
+    const lines = readFileSync(resolve(root, 'rig/dash.ts'), 'utf8').split('\n');
+    let inside = '';
+    const strays: string[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const declared = /^(?:function|const) (\w+)/.exec(lines[i]!);
+      if (declared !== null) inside = declared[1]!;
+      const line = lines[i]!;
+      if (/\.setTargetAtTime\(/.test(line) && !/^\s*[/*]/.test(line) && inside !== 'restate') {
+        strays.push(`${inside === '' ? 'top level' : inside}:${i + 1}`);
+      }
+    }
+    expect(
+      strays,
+      'these write a music gain outside restate — an experiment going around the mixer arrives off ' +
+        'the bar and over 30 ms, which is the cut 0175 exists for',
+    ).toEqual([]);
   });
 });

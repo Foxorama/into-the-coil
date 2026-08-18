@@ -746,6 +746,41 @@ number: either the arrangement goes per-place, or it gains *name it if the rung 
 `node -e` over `roleOf` reproduces the list; it is not guarded, because a guard would have to pick
 the answer.
 
+⚠️ **AND `npm run prove` DISAGREES WITH ITSELF BETWEEN CI AND THIS MACHINE, WHICH IS UNEXPLAINED
+AND IS THE MOST IMPORTANT THING ON THIS PAGE.** 0134's first probe — *the undercurrent held instead of
+running* — was reported **red on its own guard** by CI at 05c4e16, and reports **wrong test** here on
+a tree `git diff` says is byte-identical. Established rather than rerun, per
+[0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md):
+
+- the quantity is **not** intermittent. With that break Ember Nebula sits at **111 notes a bar against
+  a 106.5 floor** — measured twice, and the guard run filtered and alone passes here every time.
+- so the pace guard genuinely does not fire on that tree, and CI said it did.
+- `verdictOf` calls a probe red when **any failed test TITLE contains the guard's name**, and the run
+  is already filtered to that title — so anything that fails the named test counts, including a
+  failure that is not the assertion.
+- **no timeout appears in the CI log**, so the obvious explanation is not supported and no other has
+  been found.
+
+⚠️ **THE PROBE ITSELF IS FIXED AND THAT IS NOT THE SAME THING.** It is re-aimed at `arp`, which
+[0172](decisions/0172-a-place-opens-with-its-own-four.md) opened at Ember Nebula's `run` and which now
+carries the pace there; the break lands the place at **83.7%** against the floor, with six points of
+margin rather than four the wrong way. **What is not fixed is a guard-of-guards that answers
+differently in two places**, and until that is understood every *seen red* in this repository is worth
+slightly less than it says.
+
+⚠️ **AND THE FIRST LISTEN FOUND TWO THINGS, BOTH OF THEM MINE, BOTH NOW FIXED.**
+[0174](decisions/0174-a-send-has-to-mean-something.md): 0173's cue room shipped **un-normalised**, so
+the wet was **7.8 to 9.0 dB of energy ABOVE the dry** on every explosion — *"the enemy death sounds
+like it's happening inside a tin can."* All three of 0173's guards were green, because all three
+measured the tail's length, width and decay and none of them measured its LEVEL.
+[0175](decisions/0175-an-experiment-arrives-the-way-the-game-does.md): the desk's non-`shipped` modes
+wrote their targets onto the gain nodes **after** `setLevel`, at `time 0` over 30 ms — so 0117's
+downbeat and 0171's build were discarded together and **every boundary in every mode but `shipped`
+has been a cut since 0154's toggle was built.** ⚠️ **THAT PARTLY RE-OPENS
+[0167](decisions/0167-a-build-does-not-duck.md)**: its 56 ducked layers are real and its report was
+taken in a mode whose every boundary was a 30 ms cut whatever the gains said, so how much of the
+reported *jump* was the duck is now an open question a listen can answer.
+
 ⚠️ **AND THE CUES HAVE A ROOM AT LAST** — [0173](decisions/0173-a-cue-happens-somewhere.md),
 answering *"they're still the old mono sounds and haven't been reworked as stereo sounds with deep
 bass, reverb and actually decent sound."* Every cue in the game played into an anechoic chamber; the

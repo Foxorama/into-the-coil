@@ -15,12 +15,38 @@ export const PROBES = [
   {
     decision: '0134',
     suite: 'tests/themes.test.ts',
-    broke: 'the undercurrent held instead of running, which is the pace the report was written about',
+    /*
+      ⚠️ RE-AIMED BY 0172, AND THE REASON IS THE INTERESTING PART. This broke the UNDERCURRENT — the
+      held pedal the report was written about — and `npm run prove` reported *went red, but on the
+      wrong test*: with the pedal held, Ember Nebula sits at 93.9% of the base composition's pace
+      against a 90% floor, so 0134's own guard correctly does not fire and two others do.
+
+      ⚠️ THE PLACE GOT FASTER UNDERNEATH ITS OWN PROBE. docs/decisions/0172-a-place-opens-with-its-own-four.md
+      opens `arp` at Ember Nebula's `run` — the mixture, 32 notes a bar, the largest single
+      contributor there — expressly so the place could lose its kit and keep its pace. **That is the
+      guard's subject being satisfied a different way**, which makes the old break insufficient rather
+      than wrong.
+
+      ⚠️ SO THE BREAK MOVES TO THE LAYER THAT NOW CARRIES THE PACE, which is the same claim aimed at
+      the same rung: a fast layer becoming a slow one. It is the second time a probe in this file has
+      been re-anchored for exactly this reason — the note under the next one records the first.
+    */
+    broke: 'the mixture held instead of running, which is the pace the report was written about',
     guard: '0134 — NO PLACE IS SUBSTANTIALLY SLOWER THAN THE BASE COMPOSITION, at any rung',
     edit: {
       path: 'src/content/nebula.ts',
-      find: '  return [root, root + 12, fifth, root, root, fifth, root + 12, fifth];',
-      replace: '  return [root, _, _, _, _, _, fifth, _];',
+      find: `  return [
+    root, third, fifth, third,
+    root + 12, third, fifth, root + 12,
+    fifth, third, root, third,
+    fifth, root + 12, fifth, third,
+  ];`,
+      replace: `  return [
+    root, null, null, null,
+    null, null, null, null,
+    null, null, null, null,
+    null, null, null, null,
+  ];`,
     },
   },
   {
