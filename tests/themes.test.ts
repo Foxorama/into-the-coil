@@ -919,7 +919,7 @@ describe('0128 — a place plays its own material, and shares everything it does
     labyrinth: ['surge/drive', 'surge/drone', 'surge/hook', 'approach/chords', 'approach/drive', 'approach/drone', 'approach/toll', 'boss/drone', 'boss/frenzy', 'boss/stomp', 'boss/wraith', 'bossPeak/dread', 'bossPeak/drone', 'bossPeak/frenzy', 'bossPeak/wraith'],
     rime: ['run/drone', 'push/drone', 'surge/drive', 'surge/drone', 'approach/dread', 'approach/drone', 'boss/dread', 'boss/drone', 'bossPeak/dread', 'bossPeak/drone'],
     mire: ['run/call', 'run/sub', 'push/call', 'push/drone', 'push/perc', 'surge/crash', 'surge/drive', 'surge/drone', 'surge/perc', 'approach/crash', 'approach/drive', 'approach/perc', 'boss/drive', 'boss/drone', 'boss/perc', 'bossPeak/drive', 'bossPeak/drone', 'bossPeak/perc'],
-    core: ['push/hook', 'surge/lead', 'surge/perc', 'approach/perc', 'approach/toll', 'boss/dread', 'boss/drone', 'boss/frenzy', 'boss/toll', 'boss/wraith', 'bossPeak/dread', 'bossPeak/drone', 'bossPeak/frenzy', 'bossPeak/toll', 'bossPeak/wraith'],
+    core: ['push/hook', 'surge/lead', 'surge/perc', 'approach/perc', 'approach/toll', 'boss/dread', 'boss/drone', 'boss/frenzy', 'boss/toll', 'bossPeak/dread', 'bossPeak/drone', 'bossPeak/toll'],
   };
 
   it('0164 — NO LAYER SITS A WHOLE ROLE UNDER THE ONE THE ARRANGEMENT GAVE IT', () => {
