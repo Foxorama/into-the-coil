@@ -69,9 +69,14 @@ export const PROBES = [
         ⚠️ RE-ANCHORED BY 0163, WHICH MOVED THE ROUTING INTO A DEFAULT PARAMETER so the desk could hand
         `rungOf` a ladder of its own. The claim is unchanged — the wrong place's table — and so is the
         guard that catches it, which had to be re-aimed at the default for the same reason.
+
+        ⚠️ AND RE-ANCHORED AGAIN BY 0168, WHICH GAVE `paceAt` THE SAME DEFAULT. Two functions now take
+        a place's ladder the same way, so the line alone matches twice and `npm run prove` refused to
+        run rather than applying it to whichever came first — 0019. The parameter above it is what
+        makes this `rungOf`'s.
       */
-      find: '  ladder: ThemeRow[\'ladder\'] = THEMES[theme].ladder,',
-      replace: "  ladder: ThemeRow['ladder'] = THEMES.approach.ladder,",
+      find: '  layer: MusicLayer,\n  ladder: ThemeRow[\'ladder\'] = THEMES[theme].ladder,',
+      replace: "  layer: MusicLayer,\n  ladder: ThemeRow['ladder'] = THEMES.approach.ladder,",
     },
   },
   {

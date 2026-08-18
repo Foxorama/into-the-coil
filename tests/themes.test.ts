@@ -6,6 +6,8 @@ import {
   THEMES,
   THEME_KINDS,
   mixOf,
+  notesPerBar,
+  paceAt,
   airOf,
   bakedBy,
   revoicedBy,
@@ -18,6 +20,7 @@ import {
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import {
   BEAT_SECONDS,
+  LAYER_BARS,
   MUSIC,
   MUSIC_LADDER,
   MUSIC_LAYERS,
@@ -1237,6 +1240,57 @@ describe('0128 — a place plays its own material, and shares everything it does
       offenders,
       'the re-based mix ducks a carried layer, which is the one thing it is for not doing',
     ).toEqual([]);
+  }, DSP_MS);
+
+  it('0168 — THE DESK’S PACE IS THE GUARD’S PACE, layer for layer and rung for rung', () => {
+    /*
+      `docs/decisions/0168-the-pace-is-on-the-desk.md`. The header prints notes-a-bar per rung so the
+      reported *"approach slows down the beat"* can be fixed by dragging a ladder field instead of by
+      a round trip. That is only worth anything if the number is the one `rungShape` counts — this
+      file's whole subject is the rig answering the game's questions with the game's answers.
+
+      ⚠️ **`notesPerBar` MOVED INTO `src/content/themes.ts` RATHER THAN BEING COPIED**, so there is one
+      count of the steps. This asserts the SUM over a rung, which is the part the desk computes for
+      itself: `paceAt` walks the ladder and `rungShape` walks the gains, and a layer opened by one and
+      not the other is exactly how the readout would start lying.
+
+      ⚠️ **THE ARC IS NOT ASSERTED AND WILL NOT BE** —
+      `docs/decisions/0161-the-shape-of-a-level-is-not-guarded.md`. Every place drops 17–28% at
+      `approach` today; that is the author's to change, and a guard over it would be this project
+      forbidding its own next edit.
+    */
+    const bakes = new Map<string, number[]>();
+    for (const theme of THEME_KINDS) {
+      const loops = placeLoops(theme);
+      for (const rung of MUSIC_LEVELS) {
+        expect(
+          paceAt(theme, rung),
+          `${theme}/${rung}: the desk's pace and rungShape's disagree`,
+        ).toBeCloseTo(rungShape(theme, rung, loops, bakes).notes, 9);
+      }
+    }
+
+    /*
+      ⚠️ **AND THE COUNT ITSELF, BECAUSE THE COMPARISON ABOVE CANNOT SEE IT.** `paceAt` and `rungShape`
+      both call `notesPerBar`, so a bug INSIDE it moves both sides equally and the equality holds —
+      `npm run prove` found exactly that, reporting STILL GREEN over a probe that counted rests as
+      notes. The assertion above proves the WIRING; this proves the COUNTING.
+
+      ⚠️ **A REST IS `null` AND THE ROOT IS `0`** — 0102, emphatically, because zero is the most common
+      note there is. So `if (step)` instead of `if (step !== null)` counts every rest and drops every
+      root at once, and the total stays plausible. This is hand-counted against a pattern with both in
+      it, which is the only thing that catches it.
+    */
+    const steps = MUSIC.groove.flatMap((voice) => [...voice.steps]);
+    const byHand = steps.filter((s) => s !== null && s !== undefined).length;
+    const rests = steps.filter((s) => s === null).length;
+    const roots = steps.filter((s) => s === 0).length;
+    expect(rests, 'this pattern has no rests, so it cannot catch a rest counted as a note').toBeGreaterThan(0);
+    expect(roots, 'this pattern has no root, so it cannot catch the root being dropped').toBeGreaterThan(0);
+    expect(
+      notesPerBar(undefined, 'groove') * LAYER_BARS.groove,
+      'notesPerBar disagrees with counting the steps by hand',
+    ).toBeCloseTo(byHand, 9);
   }, DSP_MS);
 
   /*
