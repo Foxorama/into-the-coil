@@ -181,8 +181,15 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
       ⚠️ **It is level ONE's place, whose theme is the base composition**, so nothing about the SOUND
       changed here — what changed is that the mechanism now runs. That is why no play-test caught it.
     */
+    /*
+      ⚠️ **AND ONE MORE FOR THE ROOM** — `docs/decisions/0173-a-cue-happens-somewhere.md`. The cue
+      bus's impulse response is a buffer like any other and is built on the same gesture, once, out
+      of the same context. **It is the +1 and it is written as one rather than folded into a
+      constant**, because the whole value of this assertion is that every term in it names something.
+    */
+    const ROOM_IMPULSE = 1;
     expect(after.buffers, 'the cues, the music and the level’s own place did not each bake once').toBe(
-      BAKED_BUFFERS + MUSIC_LAYERS.length,
+      BAKED_BUFFERS + MUSIC_LAYERS.length + ROOM_IMPULSE,
     );
     expect(after.voices, 'a run played for a second and the game stayed silent').toBeGreaterThan(0);
     /*
@@ -240,7 +247,10 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     expect(
       after.buffers,
       'pressing a setting did not unlock the context, so silence proves nothing',
-    ).toBe(BAKED_BUFFERS + MUSIC_LAYERS.length);
+      // ⚠️ **The room's impulse is built with the context and not with the setting** — 0173. Silence
+      // is a gain here, and material that only existed when sound was ON is material that has to be
+      // synthesised on the press that turns it back on. That is the whole subject of this test.
+    ).toBe(BAKED_BUFFERS + MUSIC_LAYERS.length + 1);
     expect(after.voices, 'sound is off and the game played anyway').toBe(0);
     await page.context().close();
   });

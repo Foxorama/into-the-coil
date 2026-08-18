@@ -553,6 +553,97 @@ export interface Speaker {
 export const PAN_BUCKETS = 9;
 
 /**
+ * How long the cue room's tail is, in seconds.
+ *
+ * ── EVERY SOUND IN THIS GAME HAPPENED IN AN ANECHOIC CHAMBER ────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0173-a-cue-happens-somewhere.md`.** Reported 2026-08-18: *"the cues and sfx
+ * need to be reworked as we haven't touched them since we spent all the time on the music and they're
+ * still the old mono sounds and haven't been reworked as stereo sounds with deep bass, reverb and
+ * actually decent sound."*
+ *
+ * ⚠️ **THE MUSIC HAS HAD A ROOM SINCE 0136 AND THE CUES NEVER DID**, which is the whole of why they
+ * sound like they were made somewhere else — `src/app/music.ts`'s own header says the two channels
+ * come out of one instrument so that exactly this does not happen, and the reverb was the one part of
+ * the instrument the cues could not reach. A cue was a dry mono buffer into a fixed panner: correct
+ * position, no space at all.
+ *
+ * ⚠️ **1.1 SECONDS IS A HALL AND NOT A CATHEDRAL.** The music's own room is about two seconds
+ * (`addRoom`, three combs at 0.8 feedback), and that is a place a chord can hang in. A cue is
+ * information — `docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md` for the ear — so
+ * its tail has to be gone before the next one matters. `FASTEST_FIRE` is 0.067 s, and the pulse
+ * states no room at all for that reason.
+ */
+export const CUE_ROOM_SECONDS = 1.1;
+
+/**
+ * How dark the tail gets, as the lowpass the impulse is drawn behind, in Hz at the head and the end.
+ *
+ * ⚠️ **AIR ABSORBS TREBLE AND A TAIL THAT DOES NOT IS A SPRING** — the same sentence `ROOM_DAMP` in
+ * `src/app/music.ts` is written under, and the same reason. What differs is the destination: a cue
+ * room is small and bright at the front, so it starts higher and lands lower.
+ */
+const CUE_ROOM_TOP = 7200;
+const CUE_ROOM_END = 900;
+
+/** How much of the wet path reaches the master. A cue's own `air` is the send; this is the return. */
+export const CUE_ROOM_GAIN = 0.5;
+
+/**
+ * A stereo room, drawn once — the impulse the cue bus is convolved with.
+ *
+ * ── THE WIDTH IS THE TAIL, AND THAT IS WHY THIS IS NOT A CHANGE TO THE BUFFERS ──────────────────
+ *
+ * ⚠️ **THE TWO CHANNELS ARE DRAWN FROM INDEPENDENT NOISE**, so the tail is decorrelated and the room
+ * is genuinely wide where the dry sound is a point. **That is what *stereo* has to mean for a cue**:
+ * the position of the event is information the player uses to dodge —
+ * `docs/decisions/0127-a-cue-has-a-place.md` — so widening the DRY signal would be
+ * spending a fact to buy a feeling. The dry stays where it happened and the room is everywhere, which
+ * is also what happens in a room.
+ *
+ * ⚠️ **IT IS A CONVOLUTION ON A BUS RATHER THAN A BAKE INTO EVERY BUFFER**, and the difference is
+ * per-sounding cost. `addRoom` is a post-pass over a loop baked once a level; a cue is baked once and
+ * PLAYED ten times a second, so a wet tail baked into the buffer would lengthen every one of them and
+ * cost the same convolution again at every sounding. One `ConvolverNode` for the whole channel is the
+ * same arithmetic done once. **The buffers are untouched and still mono**, so nothing that measures a
+ * cue had to change.
+ *
+ * ⚠️ **EARLY REFLECTIONS FIRST, AND THEY ARE WHAT SAYS *SMALL*.** An exponential noise tail on its
+ * own is a plate; a handful of discrete taps in the first thirty milliseconds is what an ear reads as
+ * walls at a distance. They are at prime-ish spacings so they do not stack into a pitch.
+ *
+ * ⚠️ **SEEDED, ON ITS OWN STREAM** — `docs/decisions/0021-one-stream-per-concern.md`. A room drawn
+ * from the cue stream would move every cue's noise the day its length changed.
+ */
+export function makeRoomImpulse(rate: number, rng: Rng): [Float32Array, Float32Array] {
+  rateCeiling = rate;
+  const length = Math.max(1, Math.round(CUE_ROOM_SECONDS * rate));
+  const out: [Float32Array, Float32Array] = [new Float32Array(length), new Float32Array(length)];
+  // Prime-ish, in seconds, so no two taps land on a common multiple and ring.
+  const EARLY: readonly number[] = [0.0071, 0.0113, 0.0173, 0.0229, 0.0293];
+  for (let c = 0; c < 2; c++) {
+    const line = out[c]!;
+    const damp = makeFilter();
+    // @setup: one generator per channel, drawn once at unlock.
+    const stream = rng.stream(c === 0 ? 'left' : 'right');
+    for (let i = 0; i < length; i++) {
+      const u = i / length;
+      // Exponential, so the tail reads as a decay rather than as a fade — and it reaches -60 dB at
+      // the end of the buffer rather than being cut off there.
+      const decay = Math.pow(10, -3 * u);
+      const cutoff = CUE_ROOM_TOP * Math.pow(CUE_ROOM_END / CUE_ROOM_TOP, u);
+      line[i] = damp(stream.range(-1, 1) * decay, cutoff, 0.7).low;
+    }
+    for (let e = 0; e < EARLY.length; e++) {
+      const at = Math.round((EARLY[e]! + (c === 0 ? 0 : 0.0019)) * rate);
+      if (at < length) line[at] = line[at]! + (c === 0 ? 1 : -1) * (0.62 - e * 0.1);
+    }
+  }
+  return out;
+}
+
+
+/**
  * Where a cue sits in the field, from the `across` coordinate of the thing that made it.
  *
  * ⚠️ **THE SINGLE DESCRIPTION, AND THE CALL SITES DELIBERATELY DO NOT DO THIS ARITHMETIC.** Seventeen
@@ -1086,6 +1177,21 @@ export function makeAudioOut(): WebAudioOut {
     the reason `tests/budget.test.ts` names this file cold.
   */
   let places: StereoPannerNode[] = [];
+  /**
+   * One send per cue kind, into the one room — `docs/decisions/0173-a-cue-happens-somewhere.md`.
+   *
+   * ⚠️ **PER KIND AND NOT PER VOICE, WHICH IS THE WHOLE REASON THIS IS AFFORDABLE.** A `GainNode` per
+   * sounding would be a second allocation on the one path `tests/budget.test.ts` names this file cold
+   * for, and it names exactly one: *"it allocates one single-use audio source per voice because the
+   * platform has no other way to play a buffer."* Fourteen gains built with the context keep that
+   * sentence true — `PAN_BUCKETS` above is the same argument for the same reason.
+   *
+   * ⚠️ **SO THE WET IS NOT POSITIONED, AND THAT IS CORRECT RATHER THAN A SAVING.** The dry signal goes
+   * to its own panner and carries the fact the player dodges on (0127); the tail arrives from
+   * everywhere, which is what a tail does in a room.
+   */
+  let sends: GainNode[] = [];
+
 
   return {
     ready(): boolean {
@@ -1123,6 +1229,39 @@ export function makeAudioOut(): WebAudioOut {
           place.connect(master);
           places.push(place);
         }
+        /*
+          ⚠️ **THE ROOM, BUILT ONCE AND NEVER TOUCHED AGAIN** — 0173. `normalize = false` because the
+          impulse's level is authored: the browser's default rescales an impulse to unit power, which
+          would make `CUE_ROOM_GAIN` mean something different on every engine and the tail's own decay
+          unreadable from the code that draws it.
+        */
+        /*
+          ⚠️ **AT `ctx.sampleRate` AND NOT AT `SAMPLE_RATE`, WHICH IS THE ONE THING A CONVOLVER MAKES
+          FATAL.** Every other buffer in this file is created at the bake rate and RESAMPLED by the
+          source node if the device disagrees — 44.1 kHz material on a 48 kHz context plays a hair
+          slow and nobody has ever noticed. **A `ConvolverNode` throws instead**: *"the buffer sample
+          rate of 44100 does not match the context rate of 48000"*, on the gesture, which takes the
+          whole speaker down. Found by `tests/*.browser.test.ts` on the first run, and by nothing
+          else — the headless guards bake at a rate they choose and never build a graph.
+        */
+        // @setup: one convolver, one return gain and fourteen sends at context creation.
+        const room = ctx.createConvolver();
+        room.normalize = false;
+        const impulse = makeRoomImpulse(ctx.sampleRate, makeRng('room'));
+        const tail = ctx.createBuffer(2, impulse[0].length, ctx.sampleRate);
+        tail.getChannelData(0).set(impulse[0]);
+        tail.getChannelData(1).set(impulse[1]);
+        room.buffer = tail;
+        const wet = ctx.createGain();
+        wet.gain.value = CUE_ROOM_GAIN;
+        room.connect(wet);
+        wet.connect(master);
+        sends = CUE_KINDS.map((kind) => {
+          const send = ctx!.createGain();
+          send.gain.value = CUES[kind].air ?? 0;
+          send.connect(room);
+          return send;
+        });
         /*
           ⚠️ **FINISH THE PREWARM RATHER THAN RACE IT** — 0157. This is the gesture, and the two
           reads below are the only places the cold path is taken. A prewarm in flight has already
@@ -1169,6 +1308,13 @@ export function makeAudioOut(): WebAudioOut {
       // Into its PLACE rather than straight at the master — 0127. The panner is already wired to the
       // master, so the bus and every gain on it are unchanged.
       source.connect(place);
+      /*
+        ⚠️ **AND INTO ITS SEND, WHICH IS ONE EXTRA `connect` AND NO EXTRA NODE** — 0173. A dry cue is
+        a cue in an anechoic chamber, which is what every one of them was. The gain is the row's own
+        `air`, set once at unlock, so a cue that states none never reaches the room at all.
+      */
+      const send = sends[index];
+      if (send !== undefined && send.gain.value > 0) source.connect(send);
       source.start();
     },
     duck(amount: number): void {
@@ -1186,6 +1332,13 @@ export function makeAudioOut(): WebAudioOut {
       music = null;
       buffers = [];
       places = [];
+      /*
+        ⚠️ **AND THE SENDS, WHICH IS THE HALF THAT WOULD HAVE THROWN RATHER THAN LEAKED** — 0173. Every
+        other line here drops a reference; this one drops a node belonging to a CLOSED context, and
+        `source.connect` across two contexts is an `InvalidAccessError` rather than silence. `places`
+        is the same shape and has always been cleared here for the same reason.
+      */
+      sends = [];
     },
   };
 }

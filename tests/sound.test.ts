@@ -24,8 +24,10 @@ import { DUCK_DOWN_SECONDS, DUCK_HOLD_SECONDS, DUCK_UP_SECONDS } from '../src/ap
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import {
+  CUE_ROOM_GAIN,
   MAX_CUE_SAMPLES,
   MAX_VOICES,
+  makeRoomImpulse,
   PAN_BUCKETS,
   SAMPLE_RATE,
   panBucket,
@@ -2186,3 +2188,161 @@ describe('0127 — a cue has a place', () => {
     ).toEqual([]);
   });
 });
+
+/*
+  ── 0173: A CUE HAPPENS SOMEWHERE, AND UNTIL NOW NONE OF THEM DID ────────────────────────────────
+
+  `docs/decisions/0173-a-cue-happens-somewhere.md`. Reported 2026-08-18: *"the cues and sfx need to be
+  reworked as we haven't touched them since we spent all the time on the music and they're still the
+  old mono sounds and haven't been reworked as stereo sounds with deep bass, reverb and actually decent
+  sound."*
+
+  ⚠️ **THE MUSIC HAS HAD A ROOM SINCE 0136 AND THE CUES NEVER DID.** `src/app/music.ts`'s own header
+  says the two channels come out of one instrument *"which is what stops the soundtrack sounding like
+  it was made somewhere else"* — and the reverb was the one part of that instrument only one of them
+  could reach.
+*/
+describe('0173 — a cue happens somewhere', () => {
+  const impulse = makeRoomImpulse(SAMPLE_RATE, makeRng('room'));
+
+  it('THE STEREO ONE: the two sides of the room are drawn from different noise', () => {
+    /*
+      ⚠️ **THIS IS WHAT *STEREO* HAS TO MEAN FOR A CUE, AND IT IS NOT THE DRY SIGNAL.** Where the
+      event happened is information the player dodges on — `docs/decisions/0127-a-cue-has-a-place.md` —
+      so widening the dry sound would spend a fact to buy a feeling. **The width is the tail**, and a
+      tail is only wide if its two sides are uncorrelated: two identical channels are a mono sound
+      played twice, however many speakers it reaches.
+    */
+    expect(impulse.length, 'the room is not two channels').toBe(2);
+    let sxy = 0;
+    let sxx = 0;
+    let syy = 0;
+    for (let i = 0; i < impulse[0]!.length; i++) {
+      sxy += impulse[0]![i]! * impulse[1]![i]!;
+      sxx += impulse[0]![i]! ** 2;
+      syy += impulse[1]![i]! ** 2;
+    }
+    const correlation = sxy / Math.sqrt(sxx * syy);
+    expect(
+      Math.abs(correlation),
+      `the room's two sides correlate at ${correlation.toFixed(3)}, so the tail is a centred echo rather than a width`,
+    ).toBeLessThan(0.15);
+  });
+
+  it('and it is a decay rather than a burst of noise, and it does not end in a click', () => {
+    /*
+      ⚠️ **A FLOOR AND NOT A SHAPE.** How large the room is, how bright, how long — all taste. That it
+      DECAYS, and that the buffer ends near zero rather than being cut off, is whether it works: an
+      impulse with a step at its end convolves that step into every sound it touches.
+    */
+    const tenth = Math.floor(impulse[0]!.length / 10);
+    const energy = (from: number, to: number): number => {
+      let sum = 0;
+      for (let i = from; i < to; i++) sum += impulse[0]![i]! ** 2;
+      return sum / (to - from);
+    };
+    const fall = 10 * Math.log10(energy(0, tenth) / energy(impulse[0]!.length - tenth, impulse[0]!.length));
+    expect(fall, `the room falls only ${fall.toFixed(1)} dB from head to tail, which is a wash and not a room`).toBeGreaterThan(40);
+    for (let c = 0; c < 2; c++) {
+      expect(Math.abs(impulse[c]![impulse[c]!.length - 1]!), 'the impulse ends on a step, which clicks').toBeLessThan(0.01);
+    }
+  });
+
+  it('THE ONE IN UNITS THE PLAYER HEARS: the blast rings for at least a third of a second longer', () => {
+    /*
+      ⚠️ **MEASURED BY CONVOLVING, NOT BY READING THE TABLE.** `air` is a send gain and a gain is not a
+      loudness (0140); what a player gets is the sound arriving late, and the only way to know how much
+      later is to do the arithmetic the browser is going to do. The blast is the cue the player paid a
+      charge for — 0053 — and is where a room is most obviously the thing they bought.
+    */
+    const dry = sampleCue(CUES.blast, SAMPLE_RATE, makeRng('cues').stream('blast'));
+    const wet = withRoom(dry, impulse[0]!, (CUES.blast.air ?? 0) * CUE_ROOM_GAIN);
+    // ⚠️ Both sides thinned, or the comparison is between two different clocks.
+    const added = ringsFor(wet) - ringsFor(thin(dry));
+    expect(added, `the room adds only ${(added * 1000).toFixed(0)} ms to the blast`).toBeGreaterThan(0.33);
+  }, 30_000);
+
+  it('and the four cues on the weapon cadence are DRY, because a tail cannot outlast its own repeat', () => {
+    /*
+      ⚠️ **THE ROOM IS 1.1 SECONDS AND THE GUN FIRES EVERY 0.067**, so a wet gun is a gun smeared into
+      a wash. It is 0104's own argument — that decision shortened the pulse's LAYERS against
+      `FASTEST_FIRE` for exactly this reason — and it applies to the missile on the same ladder, to the
+      enemy shot that answers it, and to the hit that lands at the end of it.
+
+      ⚠️ **AND `hit` WAS WET UNTIL IT WAS MEASURED.** At `air: 0.14` — the smallest value in the table —
+      the room took its tail from 56 ms to **743 ms**, because a cue with a small peak has its -40 dB
+      point pushed LATER by a tail, not earlier. A quiet send is not a short one.
+    */
+    const STREAMS: CueKind[] = ['pulse', 'missile', 'threat', 'hit'];
+    for (const kind of STREAMS) {
+      expect(CUES[kind].air, `${kind} rides the fire cadence and states a room`).toBeUndefined();
+    }
+    for (const kind of CUE_KINDS) {
+      if (STREAMS.includes(kind)) continue;
+      expect(CUES[kind].air, `${kind} is an event and has no room at all`).toBeGreaterThan(0);
+    }
+  });
+
+  it('and every room a cue states is a share of itself, which is what a send is', () => {
+    for (const kind of CUE_KINDS) {
+      const air = CUES[kind].air;
+      if (air === undefined) continue;
+      expect(air, `${kind} sends more than its whole self to the room`).toBeLessThanOrEqual(1);
+      expect(air, `${kind} states a negative send, which a gain node cannot be`).toBeGreaterThan(0);
+    }
+  });
+});
+
+/**
+ * How much both signals are thinned before the convolution below.
+ *
+ * ── A DIRECT CONVOLUTION AT FULL RATE IS TWO BILLION MULTIPLIES, AND CI SAID SO ─────────────────
+ *
+ * ⚠️ **IT PASSED HERE IN 2.35 s AND TIMED OUT ON THE RUNNER AT FIVE.** A one-second cue against a
+ * 1.1-second impulse is 44,100 x 48,510; the naive form is O(n.m) and this is the worst pair in the
+ * table. Two is 4x less work and the same answer.
+ *
+ * ⚠️ **TWO AND NOT MORE, BECAUSE THE ANSWER MOVES AND IT WAS MEASURED MOVING.** A decimation aliases,
+ * and while that does not change which BAND energy is in, it does change which sample is the peak —
+ * and the peak sets the floor this measurement crosses. The room's contribution to the blast, by
+ * thinning factor:
+ *
+ *     1 → 476 ms (2352 ms to compute)    8 → 449 ms (37 ms)
+ *     2 → 476 ms  (602 ms)              16 → 339 ms  (9 ms)
+ *     4 → 450 ms  (146 ms)              32 → 324 ms  (3 ms)
+ *
+ * **Only 2 is exact.** The first draft of this used 32 with a comment claiming the figures were
+ * identical to the millisecond, which was written without checking and was wrong by 152 ms —
+ * `CLAUDE.md`'s *an assumption is discharged or owed and never merely labelled*, inside a guard.
+ */
+const THIN = 2;
+
+/** Every `THIN`th sample, which is all the arithmetic below needs. */
+function thin(a: Float32Array): Float32Array {
+  const out = new Float32Array(Math.ceil(a.length / THIN));
+  for (let i = 0; i < out.length; i++) out[i] = a[i * THIN]!;
+  return out;
+}
+
+/** One channel of the room, convolved into a dry cue at `wet`, with the dry kept — what the bus does. */
+function withRoom(dry: Float32Array, room: Float32Array, wet: number): Float32Array {
+  const a = thin(dry);
+  const b = thin(room);
+  const out = new Float32Array(a.length + b.length);
+  for (let i = 0; i < a.length; i++) {
+    const v = a[i]!;
+    if (v === 0) continue;
+    for (let j = 0; j < b.length; j++) out[i + j] = out[i + j]! + v * b[j]! * wet;
+  }
+  for (let i = 0; i < a.length; i++) out[i] = out[i]! + a[i]!;
+  return out;
+}
+
+/** How long a cue is audible for, in seconds — the last moment it is within 40 dB of its own peak. */
+function ringsFor(a: Float32Array): number {
+  let peak = 0;
+  for (const v of a) peak = Math.max(peak, Math.abs(v));
+  const floor = peak / 100;
+  for (let i = a.length - 1; i >= 0; i--) if (Math.abs(a[i]!) > floor) return (i * THIN) / SAMPLE_RATE;
+  return 0;
+}

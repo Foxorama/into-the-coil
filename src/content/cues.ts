@@ -291,6 +291,29 @@ export interface CueRow {
    * ever had the body, unfiltered, which is the whole of what was wrong with it.
    */
   layers: readonly CueLayer[];
+  /**
+   * How much of this cue is sent to the room, as a share of the dry signal.
+   *
+   * ── THE CHANNEL THE MUSIC HAS HAD SINCE 0136 AND THE CUES NEVER DID ─────────────────────────────
+   *
+   * ⚠️ **`docs/decisions/0173-a-cue-happens-somewhere.md`.** Reported: *"they're still the old mono
+   * sounds and haven't been reworked as stereo sounds with deep bass, reverb and actually decent
+   * sound."* Every cue in this game has been played into an anechoic chamber: a dry mono buffer, a
+   * fixed panner, and nothing between it and the master. `src/app/music.ts`'s own header says the two
+   * channels come out of one instrument *"which is what stops the soundtrack sounding like it was made
+   * somewhere else"* — and the room was the one part of the instrument only one of them could reach.
+   *
+   * ⚠️ **ABSENT MEANS DRY, AND THE MOST FREQUENT SOUND IN THE GAME IS DRY ON PURPOSE.** The pulse
+   * fires every 0.067 s at the cap (`FASTEST_FIRE`), which is shorter than any tail worth having, so
+   * a wet gun is a gun smeared into a wash. It is the same argument 0104 shortened the cue's own
+   * layers with: a cue is information, and information that outlasts its own repetition is noise.
+   *
+   * ⚠️ **IT IS A SEND AND NOT A SETTING**, so it scales with what the cue already is rather than
+   * replacing it — a quiet cue in a big room is still quiet. The return is `CUE_ROOM_GAIN` and the
+   * tail is `CUE_ROOM_SECONDS`, both in `src/app/sound.ts`, because they are properties of the room
+   * rather than of any sound in it.
+   */
+  air?: number;
   /** Peak amplitude of the whole cue before the master gain, in `[0, 1]`. */
   gain: number;
   /**
@@ -612,6 +635,8 @@ export const CUES: Record<CueKind, CueRow> = {
   */
   missile: {
     twin: 'missile-appears',
+    // ⚠️ DRY, and it is the fourth of the four. `missilePerBeat` reaches six, so a launch can
+    // repeat every 0.067 s — the same arithmetic that keeps the gun dry, one weapon over.
     hold: 3,
     gain: 0.24,
     glue: 0.08,
@@ -653,6 +678,9 @@ export const CUES: Record<CueKind, CueRow> = {
    */
   threat: {
     twin: 'threat-appears',
+    // ⚠️ DRY, on the gun's own reasoning. An enemy shot rides the enemy fire cadence and a lane can
+    // hold several shooters, so this is the second-most repeated sound in the game — and its whole
+    // job is saying WHERE, which a tail arriving from everywhere works against.
     hold: 4,
     gain: 0.229,
     glue: 0.1,
@@ -674,6 +702,10 @@ export const CUES: Record<CueKind, CueRow> = {
    */
   hit: {
     twin: 'impact-flash',
+    // ⚠️ DRY, and it was the tightest wet in the table until it was measured: at `air: 0.14` the
+    // room took its tail from 56 ms to 743 ms, because a small peak makes a -40 dB tail LONGER
+    // rather than shorter. A hit lands once per connecting bullet — it is the gun's rate again —
+    // and 0035's rule for the eye is the rule here: two hits must not draw one picture.
     hold: 2,
     gain: 0.283,
     glue: 0.08,
@@ -711,6 +743,9 @@ export const CUES: Record<CueKind, CueRow> = {
    */
   kill: {
     twin: 'debris-burst',
+    // Something came apart, and debris arrives from the walls. It is the loudest thing that happens
+    // often, so this is the one row where the trade between BIG and SMEARED is live.
+    air: 0.3,
     // ⚠️ **The reported one.** *"Enemy explosions should pulse with the beat"* — 0104, and this is the
     // most repeated of the six that now do.
     onGrid: true,
@@ -831,6 +866,8 @@ export const CUES: Record<CueKind, CueRow> = {
    */
   bossShot: {
     twin: 'threat-appears',
+    // Bigger than a threat because the thing that fired it is, and there is only ever one boss.
+    air: 0.22,
     onGrid: true,
     hold: 8,
     gain: 0.42,
@@ -856,6 +893,8 @@ export const CUES: Record<CueKind, CueRow> = {
   },
   bossPhase: {
     twin: 'phase-burst',
+    // The room is how a phase reads as an EVENT rather than as another hit.
+    air: 0.55,
     // Between a kill's 0.18 and the boss's own 0.42: rarer than one and smaller than the other.
     duck: 0.3,
     onGrid: true,
@@ -890,6 +929,8 @@ export const CUES: Record<CueKind, CueRow> = {
    */
   bossDown: {
     twin: 'boss-burst',
+    // The wettest in the game. The fight is over and the place is what is left.
+    air: 0.75,
     // +11.4 dB, once a level, and the loudest thing the game ever does. The deepest duck there is.
     duck: 0.42,
     // The loudest event in the game, so the one it costs most to have land off the grid — 0104.
@@ -913,6 +954,8 @@ export const CUES: Record<CueKind, CueRow> = {
   /** A bomb was thrown. Rising, because the thing it turns into has not happened yet — 0053. */
   bomb: {
     twin: 'bomb-appears',
+    // A press and its consequence — 0104. Only the consequence gets the room.
+    air: 0.25,
     hold: 6,
     gain: 0.310,
     glue: 0.08,
@@ -935,6 +978,8 @@ export const CUES: Record<CueKind, CueRow> = {
    */
   blast: {
     twin: 'blast-ring',
+    // The player paid a charge for this; the room is part of what they bought.
+    air: 0.62,
     // +10.7 dB, and the player paid a charge for it — 0053.
     duck: 0.34,
     /*
@@ -966,6 +1011,8 @@ export const CUES: Record<CueKind, CueRow> = {
    */
   shield: {
     twin: 'shell-mark',
+    // Rising, and the tail is what carries the rise past its own 0.2 s.
+    air: 0.34,
     onGrid: true,
     hold: 6,
     gain: 0.323,
@@ -985,6 +1032,8 @@ export const CUES: Record<CueKind, CueRow> = {
   /** The run lost a ship. Falling, long, and the only cue with nothing above it in the mix. */
   death: {
     twin: 'ship-burst',
+    // It does not resolve (see the layers) and now it does not stop, either.
+    air: 0.7,
     // +11.1 dB. The run just lost a ship; the track getting out of the way is the point.
     duck: 0.4,
     /*
@@ -1022,6 +1071,8 @@ export const CUES: Record<CueKind, CueRow> = {
    */
   pickup: {
     twin: 'pickup-taken',
+    // A small bright thing in a large dark place.
+    air: 0.3,
     onGrid: true,
     hold: 4,
     gain: 0.296,
@@ -1049,6 +1100,8 @@ export const CUES: Record<CueKind, CueRow> = {
    */
   chime: {
     twin: 'chooser-fill',
+    // It has no position — the one cue that is ALL room and no field.
+    air: 0.5,
     hold: 6,
     gain: 0.296,
     glue: 0.06,

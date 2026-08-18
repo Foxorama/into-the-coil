@@ -720,6 +720,13 @@ multiplier could reach them. **It makes the place vivid and moves it CLOSER to i
 `weigh-apart` has core-to-saurian at 3.1 dB against 4.0 — which is the clearest statement yet that
 differentiation is not a mix pass.
 
+⚠️ **AND THE BOUNDARY IS A BUILD NOW** — [0171](decisions/0171-a-boundary-is-a-build.md), answering
+*"the push > run primarily but the other transitions for each individual level doesn't actually
+transition at the moment, it just jumps."* `run → push` opened **four layers on one downbeat** in all
+seven places and every guard over it was green, because 0164, 0166 and 0167 are all about level and
+none of them has a time axis. `node scripts/weigh-build.mjs` is the one that does. **The order is
+per-place for free** — what lands last at a boundary is what that place follows there.
+
 ⚠️ **AND SEVEN PLACES OPEN ON SEVEN DIFFERENT THINGS** —
 [0172](decisions/0172-a-place-opens-with-its-own-four.md), the authoring pass
 [0162](decisions/0162-a-place-has-its-own-ladder.md) built the mechanism for and left empty. **Five of
@@ -728,12 +735,26 @@ since 2026-08-13. `node scripts/weigh-apart.mjs --rung=run` is the instrument �
 the opening with the boss and moved 0.1 dB while every opening changed. Closest pair at `run` **2.4 →
 3.5 dB**; `surge` is where the places still converge and is where the next pass goes.
 
-⚠️ **AND THE BOUNDARY IS A BUILD NOW** — [0171](decisions/0171-a-boundary-is-a-build.md), answering
-*"the push > run primarily but the other transitions for each individual level doesn't actually
-transition at the moment, it just jumps."* `run → push` opened **four layers on one downbeat** in all
-seven places and every guard over it was green, because 0164, 0166 and 0167 are all about level and
-none of them has a time axis. `node scripts/weigh-build.mjs` is the one that does. **The order is
-per-place for free** — what lands last at a boundary is what that place follows there.
+⚠️ **AND 0172 OPENED A HOLE IN 0164, WHICH IS THE FIRST THING TO LOOK AT.** `ARRANGEMENT` is
+GLOBAL — one role per layer per rung, for all seven places — and a place may now open a layer its rung
+does not name. **Seven layer-rungs currently sound with no role at all**: `nebula/run/arp`,
+`saurian/run/ride`, `labyrinth/run/ride`, `rime/run/arp`, `mire/run/arp`, `core/run/drive` and
+`core/push/drive`. `roleOf` returns `null`, so `adriftAt` skips them and
+[0164](decisions/0164-a-role-is-a-promise-the-mix-has-to-keep.md)'s promise does not cover them —
+**nothing checks whether any of those seven can be heard.** The fix is a design question and not a
+number: either the arrangement goes per-place, or it gains *name it if the rung opens it* semantics.
+`node -e` over `roleOf` reproduces the list; it is not guarded, because a guard would have to pick
+the answer.
+
+⚠️ **AND THE CUES HAVE A ROOM AT LAST** — [0173](decisions/0173-a-cue-happens-somewhere.md),
+answering *"they're still the old mono sounds and haven't been reworked as stereo sounds with deep
+bass, reverb and actually decent sound."* Every cue in the game played into an anechoic chamber; the
+music has had a room since 0136. **The width is the TAIL and not the dry signal** — 0127's position is
+a fact the player dodges on. Four cues stay dry because they ride the weapon cadence. ⚠️ **The *deep
+bass* half is measured and REFRAMED**: whole-buffer averages say every cue is under 4% below 120 Hz,
+and the best-window measure says `death`, `bossDown` and `blast` reach 10–16% — **at the end of a
+sweep**. The open question is whether it arrives early enough to be felt, and that wants an ear.
+⚠️ **And `air` is typed rather than dragged**, which is the state the ladder was in this morning.
 
 ### ⚠️ START A DRIVING SESSION — `npm run dash`, AND THE PLAYER'S EAR IS THE INSTRUMENT
 
