@@ -557,8 +557,6 @@ export interface Speaker {
   play(kind: CueKind, across?: number): void;
   /** Whether the player wants sound at all. */
   setOn(on: boolean): void;
-  /** How many voices started on the current step — the counted budget, for the guard to read. */
-  voices(): number;
 }
 
 /**
@@ -769,7 +767,6 @@ export function makeSpeaker(out: AudioOut): Speaker {
   let clock = 0;
   /** The SIM's step count, which is the clock the music is in phase with — 0104. */
   let beat = 0;
-  let voices = 0;
   let on = true;
   /**
    * The step each cue last sounded on, by index. Pre-filled with a number far enough below zero that
@@ -811,18 +808,20 @@ export function makeSpeaker(out: AudioOut): Speaker {
   // @setup: one array for the speaker's lifetime, written in place beside `waiting`.
   const waitingPan = new Float32Array(CUE_KINDS.length);
 
-  /** Sound `index` now, if the hold and the cap allow it. The last gate before the browser. */
+  /** Sound `index` now, if the hold allows it. The last gate before the browser. */
   const emit = (index: number, pan: number): void => {
     if (clock - (lastAt[index] ?? 0) < CUES[CUE_KINDS[index]!]!.hold) return;
     if (!out.ready()) return;
     lastAt[index] = clock;
-    voices++;
     out.sound(index, variantAt(variantsOf[index] ?? 1, beat), pan);
     /*
       ⚠️ **AFTER the cue is known to have sounded, never when it was asked for** — 0104. A cue the
-      hold or the cap refused is a cue the player never hears, and ducking the music for it would be
-      the track getting out of the way of nothing. It is the same rule `voices` follows one line up,
-      for the same reason.
+      hold refused is a cue the player never hears, and ducking the music for it would be the track
+      getting out of the way of nothing.
+
+      ⚠️ **THE VOICE CAP WAS THE OTHER REFUSAL AND 0183 REMOVED IT**, along with the counter that fed
+      it: nothing read the count once the cap was gone, and a tally kept for a guard that no longer
+      asks is the shape this file has just spent a decision deleting.
     */
     const depth = CUES[CUE_KINDS[index]!]!.duck;
     if (depth !== undefined) out.duck(depth);
@@ -833,7 +832,6 @@ export function makeSpeaker(out: AudioOut): Speaker {
       clock++;
       // The world's own count when there is a world, and the speaker's own when there is not.
       beat = beatStep ?? beat + 1;
-      voices = 0;
       /*
         ⚠️ **The flush is BEFORE anything this step asks for**, which is what keeps a queued cue from
         losing its slot to one that arrived later. A cue that waited a sixteenth has already paid for
@@ -851,16 +849,15 @@ export function makeSpeaker(out: AudioOut): Speaker {
       const index = indexOf[kind];
       const pan = panFor(across);
       /*
-        ⚠️ **`voices` counts what SOUNDED, never what was asked for**, and that is the load-bearing
-        part rather than the order of the two checks below. A cap that counted drops would let four
-        retriggers of one held cue fill the step's budget and lock out the different cues behind them
-        — the cap causing precisely the failure it exists to prevent.
+        ⚠️ **A HELD REPEAT IS A NO-OP AND NEVER A SIDE EFFECT**, which is what survives 0183 of the
+        paragraph that stood here. It was about a cap that counted drops rather than soundings — four
+        retriggers of one held cue filling the step's budget and locking out the cues behind them —
+        and there is no budget to eat any more. What is still true, and still guarded, is that a cue
+        the hold refuses moves nothing: not `lastAt`, not the duck, not the grid's waiting flag.
 
-        ⚠️ **An earlier draft of this comment claimed the ORDER mattered and it does not**: whichever
-        check runs first, a held repeat returns before `voices` moves. `npm run prove` reported STILL
-        GREEN on a probe that swapped them, which is
+        ⚠️ **An earlier draft claimed the ORDER of the checks mattered and it does not.**
+        `npm run prove` reported STILL GREEN on a probe that swapped them, which is
         `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` catching a guard standing over nothing.
-        The order below is cheap-first and that is all it is.
       */
       /*
         ⚠️ **A GRIDDED CUE WAITS AND IS NOT DROPPED** — 0104. It is marked and sounds at the next
@@ -882,9 +879,6 @@ export function makeSpeaker(out: AudioOut): Speaker {
     },
     setOn(next: boolean): void {
       on = next;
-    },
-    voices(): number {
-      return voices;
     },
   };
 }
