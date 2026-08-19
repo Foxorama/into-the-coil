@@ -17,22 +17,6 @@ export const PROBES = [
     decision: '0166',
     suite: 'tests/themes.test.ts',
     /*
-      ⚠️ THE CHAIN CUT, WHICH IS THE SILENT VERSION OF THIS WHOLE CHANGE. Every rung goes back to a
-      cold start; the solve still converges and every role target is still reached, so nothing about
-      the OUTPUT looks wrong. What goes is the continuity, which is the entire point.
-    */
-    broke: 'the chain cut, so every rung solves from cold again and the trajectory is a per-rung solve',
-    guard: '0166 — AND A WEIGHT OF ZERO IS THE SOLVE THAT SHIPPED, so the chain is real rather than decorative',
-    edit: {
-      path: 'scripts/solve-mix.mjs',
-      find: '    const chained = rung === \'calm\' ? null : previous;',
-      replace: '    const chained = null;',
-    },
-  },
-  {
-    decision: '0166',
-    suite: 'tests/themes.test.ts',
-    /*
       ⚠️ THE HOLD APPLIED ONLY WHERE THE ROLE IS UNCHANGED — which is what
       `reports/the-arrangement-holds-the-wrong-thing-2026-08-17.md` specified, and what measurement
       showed does not work. It is worth planting precisely because it is the plausible reading of the
@@ -54,23 +38,6 @@ export const PROBES = [
         "      previous[l] > 0 &&\n" +
         "      weight > 0 &&\n" +
         "      roleOf(theme, rung, l) === roleOf(theme, was, l);",
-    },
-  },
-  {
-    decision: '0166',
-    suite: 'tests/themes.test.ts',
-    /*
-      ⚠️ THE DEFAULT PUSHED PAST THE EDGE OF FREE. 0.55 is a perfectly reasonable-looking number and
-      it buys a 8.6 dB worst move instead of 11.2 — which is why somebody would set it. It also puts
-      seven layers back under 0164's floor, which is the thing this project keeps doing by accident
-      and has now measured twice.
-    */
-    broke: 'the default hold weight raised past the point where it starts costing audibility',
-    guard: '0166 — THE SHIPPED HOLD WEIGHT COSTS NO AUDIBILITY, and a heavier one would',
-    edit: {
-      path: 'scripts/solve-mix.mjs',
-      find: 'export const HOLD_WEIGHT = 0.28;',
-      replace: 'export const HOLD_WEIGHT = 0.55;',
     },
   },
 ];

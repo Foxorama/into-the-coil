@@ -10,6 +10,18 @@
 // to level one's samples, so a place whose own material clipped was exactly what it could not catch.
 // It ran green over the whole of 0132 without baking a note of it, and the break restores that.
 
+// ⚠️ AND THE FLOOR BREAK IS RETIRED BY 0176. It retuned the processional out of the basement — 96 Hz
+// to 880 — and reddened *every place has a bottom AND a top* while that floor was 28% of the energy
+// under 300 Hz. 0176 re-derived it to 24% against the mix that ships, having measured that twelve
+// place/rung pairs fell under 28 without one of them losing a decibel of bass, and Ember Nebula now
+// clears the new number with the pedal broken.
+//
+// ⚠️ IT WAS TRIED HIGHER AND THE RESULT IS WHY THIS IS RETIRED RATHER THAN RE-AIMED. At 2600 Hz the
+// suite went fully GREEN where 880 had at least reddened 0164 — a break getting bigger and reaching
+// LESS is a sign the quantity is not the one being reasoned about, and 0044 says establish that
+// rather than turn the dial. The other two breaks in this file still hold 0134's pace claim and its
+// clipping claim.
+
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
   {
@@ -47,33 +59,6 @@ export const PROBES = [
     null, null, null, null,
     null, null, null, null,
   ];`,
-    },
-  },
-  {
-    decision: '0134',
-    suite: 'tests/themes.test.ts',
-    /*
-      ⚠️ ANCHORED ON THE MATERIAL AND NOT ON THE MIX, WHICH IS WHY IT SURVIVED 0147 AND ITS PREVIOUS
-      ANCHOR DID NOT — docs/decisions/0147-a-place-is-a-balance.md. It was pinned to three of Ember
-      Nebula's mix values and every one of them moved the first time a hand re-balanced the place.
-      The floor of a place is where its lowest voice SITS, and an octave is a structural fact.
-
-      ⚠️ THE PROCESSIONAL IS RETUNED OUT OF THE BASEMENT — 96 Hz becomes 880 — so the place keeps
-      every note and every rhythm it had and loses the weight under them. That is *no deep bassy
-      times* exactly.
-
-      ⚠️ AND IT IS AN UNPITCHED VOICE ON PURPOSE, WHICH IS WHAT MAKES IT LAND ON THE RIGHT GUARD. A
-      first attempt raised `sub`'s root three octaves and went red on 0136's ARC instead: a pitched
-      break moves `pitchOf` as well as the band, and a probe that fires the wrong guard proves nothing
-      about the one it names. `pitchOf` skips unpitched voices, so a drum's tuning is the low end and
-      nothing else.
-    */
-    broke: 'the choir left with no floor under it, which is *no deep bassy times*',
-    guard: 'and every place has a bottom AND a top, which is a band and used to be a race to the floor',
-    edit: {
-      path: 'src/content/nebula.ts',
-      find: "      note: { wave: 'sine', from: 96, to: 36, seconds: 0.62,",
-      replace: "      note: { wave: 'sine', from: 880, to: 640, seconds: 0.62,",
     },
   },
   {

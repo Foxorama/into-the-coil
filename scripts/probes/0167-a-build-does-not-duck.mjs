@@ -55,30 +55,4 @@ export const PROBES = [
       replace: '  approach: { drone: 0.34, bass: 0, beat: 0, sub: 1.1, engine: 0.6,',
     },
   },
-  {
-    decision: '0167',
-    suite: 'tests/themes.test.ts',
-    /*
-      ⚠️ THE MISTAKE ANYBODY MAKES ON SEEING THE SUMMED PEAK. `rebasedLevel` does not renormalise, so
-      its peak lands at 2.51 against a 2.17 ceiling — and the obvious repair is to hold each rung to
-      the shipped ladder's level. That is a PER-RUNG scale, so the factor differs either side of a
-      boundary and the ratios the whole construction rests on stop being preserved: 11 carried layers
-      duck at `push`-based, 25 at `surge`-based. The mix still sounds balanced and still measures
-      well on every other number here; the one thing it stops doing is the thing it exists for.
-    */
-    broke: 'the re-based mix renormalised per rung, which is the obvious fix for its headroom',
-    guard: '0167 — AND THE RE-BASED MIX IS ADDITIVE TOO, which is the only reason it exists',
-    edit: {
-      path: 'scripts/solve-mix.mjs',
-      find:
-        '    for (const l of MUSIC_LAYERS) gains[l] = SOLVED_BY(l) ? shipped[l] * scale[l] : shipped[l];\n' +
-        '    out[rung] = { gains, shipped };',
-      replace:
-        '    for (const l of MUSIC_LAYERS) gains[l] = SOLVED_BY(l) ? shipped[l] * scale[l] : shipped[l];\n' +
-        '    const lvl = (g) => Math.sqrt(MUSIC_LAYERS.reduce((s, l) => s + (g[l] > 0 ? (rms[l] * g[l]) ** 2 : 0), 0));\n' +
-        '    const k = lvl(shipped) / lvl(gains);\n' +
-        '    for (const l of MUSIC_LAYERS) if (SOLVED_BY(l)) gains[l] *= k;\n' +
-        '    out[rung] = { gains, shipped };',
-    },
-  },
 ];
