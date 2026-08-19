@@ -8,9 +8,9 @@
 // ⚠️ AND THE THING THEY CANNOT PROVE IS NAMED HERE RATHER THAN LEFT UNSAID, on 0115's precedent.
 // `runSuite` carrying the failure MESSAGE out of the JSON report is not reachable from a unit test:
 // it is not exported, and it needs a real vitest run to have a report to parse. What stands in for a
-// probe is that dropping it is self-announcing — a message of `''` makes `raisedInTheSuite` false for
+// probe is that dropping it is self-announcing — a message of `''` makes `isAVerdict` false for
 // every failure, so the very next `npm run prove` reports NEVER REACHED ITS CLAIM on all six hundred
-// and seventy-nine probes rather than on none. Loud, and the wrong way round from the class 0005 is
+// and eighty-six probes rather than on none. Loud, and the wrong way round from the class 0005 is
 // about.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
@@ -28,7 +28,7 @@ export const PROBES = [
     guard: 'THE ONE THIS IS FOR: a guard that timed out is NOT a guard that was seen to fail',
     edit: {
       path: 'scripts/prove-guard.mjs',
-      find: "  return mine.some((f) => raisedInTheSuite(f.message)) ? 'red' : 'NEVER REACHED ITS CLAIM';",
+      find: "  return mine.some((f) => isAVerdict(f.message)) ? 'red' : 'NEVER REACHED ITS CLAIM';",
       replace: "  return mine.length > 0 ? 'red' : 'NEVER REACHED ITS CLAIM';",
     },
   },
@@ -41,9 +41,9 @@ export const PROBES = [
       `it(...)` declaration, so the suite IS named — at the bottom. `findLast` restores that mistake
       exactly, and nothing else in the file moves.
 
-      ⚠️ IT ONLY REDDENS ONE OF THE FOUR GUARDS, WHICH IS THE POINT. An assertion and a fixture throw
-      are raised in the suite at both ends of their stacks, so they read the same either way; the
-      timeout is the only case the two rules disagree about, and it is the case this exists for.
+      ⚠️ IT ONLY REDDENS ONE GUARD, WHICH IS THE POINT. Every other failure shape has our own code at
+      both ends of its stack, so it reads the same either way; the timeout is the only case the two
+      rules disagree about, and it is the case this exists for.
     */
     broke: 'the throw site read as the whole stack, which is the rule a timeout defeats',
     guard: 'and the difference is WHERE IT WAS THROWN, because a timeout names the suite too',
@@ -51,6 +51,25 @@ export const PROBES = [
       path: 'scripts/prove-guard.mjs',
       find: "  const frame = message.split('\\n').find((line) => line.trim().startsWith('at '));",
       replace: "  const frame = message.split('\\n').findLast((line) => line.trim().startsWith('at '));",
+    },
+  },
+  {
+    decision: '0177',
+    suite: 'tests/prove-guard.test.ts',
+    /*
+      ⚠️ THE WIDER RULE A REAL RUN REFUTED, RESTORED EXACTLY. *Not thrown in `node_modules`* is the
+      obvious way to say "our code decided", and it calls FOUR probes that have always worked
+      proofless (0024 twice, 0072, 0154) — because `.not.toContain` raises inside `@vitest/expect`,
+      not at the line that called it. Only the RUNNER stopping the test is not a verdict; every other
+      library is one the test called on purpose. The tidier rule is the one that had to be measured,
+      which is 0027 arriving inside the harness.
+    */
+    broke: 'every library counted as machinery, so an assertion chai threw is not the guard speaking',
+    guard: 'and an ASSERTION is a verdict wherever chai threw it, which is not where the guard is',
+    edit: {
+      path: 'scripts/prove-guard.mjs',
+      find: "  return !frame.replaceAll('\\\\', '/').includes('@vitest/runner');",
+      replace: "  return !frame.replaceAll('\\\\', '/').includes('node_modules');",
     },
   },
   {

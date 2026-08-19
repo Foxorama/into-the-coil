@@ -12,11 +12,13 @@ It answers the item the previous session left at the top of `docs/state-of-play.
 
 ## The rules
 
-**A probe's `red` means the named test reached a verdict.** A failure raised by the machinery around
-the test — a timeout, a crash, an unhandled rejection — is a fourth outcome, `NEVER REACHED ITS
-CLAIM`, and it fails `npm run prove` rather than passing as proof.
+**A probe's `red` means the named test reached a verdict.** One thing is not a verdict — **the runner
+aborting the test** — and it is a fourth outcome, `NEVER REACHED ITS CLAIM`, which fails `npm run
+prove` rather than passing as proof.
 
-**The verdict is the throw site: the FIRST frame, not the stack.**
+**Everything else is.** An assertion, a fixture refusing, a module throwing, a browser wait giving up:
+the test executed and arrived somewhere. Chai and Playwright are libraries the test *called*; the
+runner is the thing that *stops* it.
 
 **Every probe's line in the log carries what its guard said.** One line, and it is the quantity rather
 than the verdict.
@@ -63,41 +65,82 @@ reporter — not written from memory:
 `error.stack || error.message`.** The stack exists, so the message is never reached. Grepping a CI log
 for `timeout` will not find a timeout in this repository, and never would have.
 
-## ⚠️ THE FIRST VERSION OF THE RULE WAS WRONG, AND THE MEASUREMENT IS WHY IT DID NOT SHIP
+## ⚠️ TWO WIDER RULES WERE WRITTEN FIRST AND A REAL RUN REFUTED BOTH
 
-*The failure's stack names the suite* is the obvious rule. It is also wrong: a timed-out test's stack
-**still carries the frame for its own `it(...)` declaration**, so the suite is named — at the bottom.
+Neither could have been refuted on paper. **A rule about failure shapes, checked against the shapes
+its author imagined, agrees with itself** — [0027](0027-measure-the-picture-not-the-model.md),
+arriving inside the proof harness. What settled it was running all 686 probes and reading the eight
+that came back.
+
+**First: *the failure's stack names the suite*.** Wrong — a timed-out test's stack **still carries the
+frame for its own `it(...)` declaration**, so the suite is named, at the bottom:
 
 ```
 Error: STACK_TRACE_ERROR
-    at task (file:///…/node_modules/@vitest/runner/dist/chunk-artifact.js:1784:27)
+    at task (file:///…/node_modules/@vitest/runner/…:1784:27)
     …
     at C:/into-the-coil/tests/themes.test.ts:738:3          ← the it(), not the throw
 ```
 
-⚠️ **This is [0027](0027-measure-the-picture-not-the-model.md) inside the proof harness**: a rule
-about a quantity, checked against the constant it was derived from, agreeing with itself. What caught
-it was staging a real timeout and reading the bytes. `tests/prove-guard.test.ts` now holds that stack
-verbatim, with the assertion `expect(TIMEOUT).toContain('tests/themes.test.ts')` above the one that
-matters, so the wrong rule cannot come back looking reasonable.
+**Second: *the throw site is not in `node_modules`*.** Also wrong, and it called **four working probes
+proofless** — 0024 twice, 0072, 0154 — because `.not.toContain` raises inside `@vitest/expect` rather
+than at the line that called it. It would have done the same to every Playwright wait in the suite.
 
-## ⚠️ And *the assertion specifically* is a different rule, not a tidier one
+`tests/prove-guard.test.ts` holds all three stacks verbatim, transcribed off real runs rather than
+written, each with the assertion that refutes the rule it defeats.
 
-`AssertionError:` on the first line is simpler than parsing a frame and states a stronger claim — *the
-guard's own `expect` fired*. It was refused. **Sixteen places under `tests/` refuse by throwing** —
-*"the ship never died — the fixture is not measuring what it says it is"* — and a fixture's refusal is
-the suite reaching a verdict about the world, which is the thing being asked about. Reading those as
-*never reached its claim* would have turned working probes red for being right.
+## ⚠️ Eight probes came back, and they split three ways
 
-The limit, stated rather than hidden: **a `beforeAll` that throws is raised in the suite too**, and
-would still read as `red`. Nothing in this repository has one.
+| what came back | how many | what it is |
+|---|---|---|
+| `AssertionError`, thrown inside `@vitest/expect` | 4 | the guard firing — **red** |
+| `ReferenceError`, thrown in `src/` or `rig/` | 3 | our code deciding — **red**, and see below |
+| `Error: STACK_TRACE_ERROR`, thrown in `@vitest/runner` | **1** | the runner giving up — **the catch** |
+
+⚠️ **THE THREE `ReferenceError`s ARE A WEAKER RED AND THEY ARE NAMED HERE RATHER THAN FIXED.** 0090,
+0126 and 0135 each break a file into throwing — `PHRASE_SECONDS is not defined` — so the module dies
+*before* the guard asserts. That is our code deciding rather than the runner giving up, so it passes;
+but it proves the break makes something explode, not that the guard discriminates. **They now print
+that sentence on every run**, which is what makes them a list somebody can work rather than a worry.
+
+The other limit, stated rather than hidden: **this names one package path**. A vitest that
+restructured its internals would start counting timeouts as red again and say nothing, which is the
+direction that costs — so `tests/prove-guard.test.ts` pins `@vitest/runner`'s existence on disk.
+
+## ⚠️ The one catch was real, and the cause was in the guard rather than the probe
+
+0031's *the resize path left ungated* has been reporting `red` for as long as it has existed, and the
+guard was never asked: the test died on vitest's own 30-second timeout. Established rather than
+rerun, per [0044](0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) — **run alone, off the
+load of a full `prove`, with its five siblings all reddening on assertions, it still hung.**
+
+⚠️ **`page.waitForFunction(fn, arg, options)` TAKES THE OPTIONS THIRD.** All three waits in
+`tests/orientation.browser.test.ts` passed `{ timeout: 5_000 }` in the `arg` slot, where it is handed
+to the predicate and ignored. Every one ran to Playwright's **30-second default**, which is also that
+test's own `}, 30_000)` — so vitest won the race by eleven milliseconds, and a deadline the suite
+states in three places had never once been enforced.
+
+| | before | after |
+|---|---|---|
+| the guard green | 5.5 s | 5.5 s |
+| the guard with the break in | **30.0 s, vitest timeout** | **10.4 s, `page.waitForFunction: Timeout 5000ms exceeded`** |
+
+⚠️ **AND THE BREAK IS SMALLER THAN IT WAS.** `if (false) { setPlayable(false); return; }` dropped the
+early RETURN as well as the gate, so a rotation fell through to `bakeAtlas` for a view nobody will
+see — `onResize`'s own comment calls that *"the one expensive thing a resize can do"*. That was my
+first explanation for the hang and it was **wrong**: dropping the resize listener entirely hung it
+too, which is what pointed at the deadline. The break is now `setPlayable(true)`: the claim by itself.
 
 ## ⚠️ What this does NOT do, and the sentence is load-bearing
 
 **It does not explain the disagreement at `05c4e16`.** That evidence is gone — it was never written
 down. What this changes is that the next one is a diff instead of a dead end: six hundred and
-seventy-nine lines of *what the guard actually said* land in every CI log, so two machines that
+eighty-six lines of *what the guard actually said* land in every CI log, so two machines that
 disagree can be compared on the quantity rather than on the verdict.
+
+⚠️ **It does make the leading candidate concrete, though.** One probe in this repository was already
+passing on a runner timeout, found on the first run of the new arm. Whatever happened at `05c4e16`,
+*a `red` that is a timeout* is no longer a hypothesis about this harness.
 
 ⚠️ **The probe at the centre of it is already re-aimed and that was always a separate thing** —
 [0172](0172-a-place-opens-with-its-own-four.md) opened `arp` at Ember Nebula's `run` and the place got
@@ -126,7 +169,12 @@ which imports the verdict as a pure function.
 |---|---|
 | the verdict check dropped, so any failure with the right title counts as the guard firing | `THE ONE THIS IS FOR: a guard that timed out is NOT a guard that was seen to fail` |
 | the throw site read as the whole stack, which is the rule a timeout defeats | `and the difference is WHERE IT WAS THROWN, because a timeout names the suite too` |
+| every library counted as machinery, so an assertion chai threw is not the guard speaking | `and an ASSERTION is a verdict wherever chai threw it, which is not where the guard is` |
 | the fourth arm reached without asking whose failure it is, so another test's timeout answers for this guard | `and the arms stay in this order: no such guard, not this guard, no verdict, red` |
+
+⚠️ **The second and third rows are the two refuted rules, restored exactly** — `find` → `findLast`,
+and `@vitest/runner` → `node_modules`. A mistake that a real run had to catch is worth a probe, not a
+paragraph.
 
 ⚠️ **One thing here is NOT probed and it is named rather than left as a gap**, on 0115's precedent:
 `runSuite` carrying the message out of the report is not reachable from a unit test — it is not
@@ -138,6 +186,7 @@ rather than on none. Loud, and the wrong way round from the class 0005 is about.
 ## Rollback
 
 Nothing shipped moves: no storage key, no save field, no service-worker cache prefix, no origin, and
-no file under `src/`. This is `scripts/prove-guard.mjs`, its suite and its probes. Reverting the commit
-restores the previous verdict exactly, at the cost of `red` going back to meaning *some failure with
-the right title*.
+**no file under `src/`**. This is `scripts/prove-guard.mjs`, its suite, two probe files and one browser
+test's argument order. Reverting the commit restores the previous verdict exactly, at the cost of
+`red` going back to meaning *some failure with the right title* — and of 0031's mid-run rotation guard
+going back to never being asked.

@@ -199,6 +199,7 @@ describe.runIf(chromePath)('the orientation gate', () => {
         const gate = document.querySelector('[data-itc-rotate]');
         return gate instanceof HTMLElement && getComputedStyle(gate).display !== 'none';
       },
+      null,
       { timeout: 5_000 },
     );
 
@@ -241,6 +242,7 @@ describe.runIf(chromePath)('the orientation gate', () => {
         const gate = document.querySelector('[data-itc-rotate]');
         return gate instanceof HTMLElement && getComputedStyle(gate).display !== 'none';
       },
+      null,
       { timeout: 5_000 },
     );
     expect(await canvasShown(page)).toBe(false);
@@ -258,6 +260,7 @@ describe.runIf(chromePath)('the orientation gate', () => {
         const gate = document.querySelector('[data-itc-rotate]');
         return gate instanceof HTMLElement && getComputedStyle(gate).display === 'none';
       },
+      null,
       { timeout: 5_000 },
     );
     expect(await canvasShown(page)).toBe(true);

@@ -141,42 +141,51 @@ export function firstLine(message) {
 }
 
 /**
- * Whether a failure was raised by the SUITE'S OWN CODE, rather than by the machinery around it.
+ * Whether a failure is a VERDICT — this repository's own code deciding — rather than the harness
+ * around it giving up.
  *
- * ⚠️ **THE THROW SITE, WHICH IS THE FIRST FRAME AND NOT THE STACK.** A timed-out test's stack DOES
- * name the suite — measured, on vitest 4.1.10 — because the frame for its own `it(...)` declaration
- * is still on it. *Anywhere in the stack* was the first version of this rule and it read a timeout
- * as a real red. What separates them is where the error was THROWN:
+ * ⚠️ **ONE THING IS NOT A VERDICT AND IT IS THE RUNNER ABORTING THE TEST.** Everything else — an
+ * assertion, a fixture refusing, a module throwing, a browser wait giving up — is the test executing
+ * and arriving somewhere. The runner's timeout is the test being *stopped*, and it is the only
+ * failure a probe can collect without its guard ever having been asked.
  *
  * ```
- *   AssertionError: expected 1 to be greater than or equal to 2
- *       at C:/into-the-coil/tests/themes.test.ts:3:48          ← the guard's own expect
+ *   AssertionError: … expected [ Array(7) ] to not include 'motion'
+ *       at Proxy.<anonymous> (file:///…/node_modules/@vitest/expect/…)     ← chai, which the test CALLED
+ *   ReferenceError: PHRASE_SECONDS is not defined
+ *       at placeArrivesAt (…/w5/src/app/music.ts:855:53)                   ← our code, which decided
  *   Error: the bomb never went off — the fixture is not measuring what it says it is
- *       at C:/into-the-coil/tests/bombs.test.ts:41:9           ← the suite refusing, also a verdict
+ *       at boom (…/tests/bombs.test.ts:41:9)                               ← the suite refusing
  *   Error: STACK_TRACE_ERROR
- *       at task (file:///…/node_modules/@vitest/runner/…)      ← a timeout, and NOT a verdict
+ *       at task (file:///…/node_modules/@vitest/runner/…)                  ← the runner, and NOT a verdict
  * ```
+ *
+ * ⚠️ **TWO WIDER RULES WERE WRITTEN FIRST AND A REAL RUN OF ALL 686 PROBES REFUTED BOTH.** *Anywhere
+ * in the stack names the suite* reads a timeout as red, because a timed-out test still carries the
+ * frame for its own `it(...)` declaration. *The throw site is not in `node_modules`* calls four
+ * working probes proofless — `.not.toContain` raises inside `@vitest/expect`, not at the line that
+ * called it — and would have done the same to every Playwright wait. **A rule about failure shapes,
+ * checked against the shapes its author imagined, agrees with itself**:
+ * `docs/decisions/0027-measure-the-picture-not-the-model.md`, arriving inside the proof harness.
  *
  * ⚠️ **`STACK_TRACE_ERROR` IS WHAT A TIMEOUT LOOKS LIKE HERE**, and it is why reading the CI log for
  * the word *timeout* found nothing: vitest puts *Test timed out in 60000ms* on `error.message` and
  * the JSON reporter prints `error.stack || error.message`, so the message never appears at all.
  *
- * ⚠️ **AND *THE ASSERTION SPECIFICALLY* WAS CONSIDERED AND REFUSED.** `AssertionError:` is a simpler
- * test and a stronger claim, and it would reclassify the SIXTEEN places in `tests/` that refuse by
- * throwing — *"the ship never died — the fixture is not measuring what it says it is"*. A fixture's
- * refusal is the suite reaching a verdict about the world, which is exactly what this is asking.
- *
- * The limit, stated rather than hidden: a `beforeAll` that throws is raised in the suite too, and
- * would still read as `red`. Nothing in this repository has one.
+ * The limits, stated rather than hidden. **This names a package path**, so a vitest that restructures
+ * its internals would make timeouts count as red again and say nothing — `tests/prove-guard.test.ts`
+ * pins `@vitest/runner`'s existence on disk for that reason. A `beforeAll` that throws is our code
+ * and still reads as `red`; nothing here has one. And a `ReferenceError` from `src/` is a verdict
+ * that proves nothing about the guard aimed at — weaker than an assertion, which is why the message
+ * is now printed beside every `red` rather than swallowed.
  *
  * @param {string} message
  * @returns {boolean}
  */
-export function raisedInTheSuite(message) {
+export function isAVerdict(message) {
   const frame = message.split('\n').find((line) => line.trim().startsWith('at '));
   if (frame === undefined) return false;
-  const path = frame.replaceAll('\\', '/');
-  return path.includes('/tests/') && !path.includes('node_modules');
+  return !frame.replaceAll('\\', '/').includes('@vitest/runner');
 }
 
 /**
@@ -211,7 +220,7 @@ export function verdictOf(named, guard) {
   if (named.ran === 0) return 'NO SUCH GUARD';
   const mine = named.failed.filter((f) => f.title.includes(guard));
   if (mine.length === 0) return 'NOT THIS GUARD';
-  return mine.some((f) => raisedInTheSuite(f.message)) ? 'red' : 'NEVER REACHED ITS CLAIM';
+  return mine.some((f) => isAVerdict(f.message)) ? 'red' : 'NEVER REACHED ITS CLAIM';
 }
 
 // ── Probes ───────────────────────────────────────────────────────────────────────────────────────
@@ -592,7 +601,7 @@ async function main(filter) {
                 hundred and seventy-nine of these in a CI log make the next disagreement between two
                 machines a diff, where this one was a dead end.
               */
-              said = ` — ${firstLine(mine.find((f) => raisedInTheSuite(f.message))?.message ?? '')}`;
+              said = ` — ${firstLine(mine.find((f) => isAVerdict(f.message))?.message ?? '')}`;
               rows.push(`| ${probe.broke} | \`${probe.guard}\` |`);
             } else if (verdict === 'NEVER REACHED ITS CLAIM') {
               failures.push(

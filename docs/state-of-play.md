@@ -780,6 +780,18 @@ that the next disagreement is a diff — every probe's line now carries what its
 timeout can no longer answer for an assertion. **The one inference to un-learn:** *no timeout appears
 in the CI log* was true and meant nothing, because a timeout's message never reaches the log at all.
 
+⚠️ **AND THE FIRST RUN OF IT CAUGHT ONE, WHICH MAKES THE CANDIDATE CONCRETE.** 0031's mid-run rotation
+probe had been reporting `red` on a **vitest timeout** since it was written; the cause was
+`page.waitForFunction(fn, arg, options)` taking its options THIRD, so three waits in
+`tests/orientation.browser.test.ts` stated a 5-second deadline that was never once enforced. **A `red`
+that is a timeout is no longer a hypothesis about this harness.**
+
+⚠️ **AND THREE PROBES REDDEN ON A `ReferenceError` FROM `src/`, WHICH IS THE NEXT THING TO WORK** —
+0090, 0126 and 0135. Each break leaves the module throwing, so the guard never asserts; that passes,
+because our code deciding is not the runner giving up, and it proves less than the decision's table
+claims. They print the sentence on every run now. [0177](decisions/0177-a-red-is-a-verdict.md) has
+the reasoning.
+
 ⚠️ **THE PROBE ITSELF WAS RE-AIMED SEPARATELY AND THAT WAS ALWAYS A DIFFERENT THING.** It points at
 `arp`, which [0172](decisions/0172-a-place-opens-with-its-own-four.md) opened at Ember Nebula's `run`
 and which now carries the pace there; the break lands the place at **83.7%** against the floor.

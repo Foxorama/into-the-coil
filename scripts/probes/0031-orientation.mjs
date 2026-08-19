@@ -56,12 +56,32 @@ export const PROBES = [
   {
     decision: '0031',
     suite: 'tests/orientation.browser.test.ts',
+    /*
+      ⚠️ THIS PROBE IS WHY docs/decisions/0177-a-red-is-a-verdict.md EXISTS, AND THE CAUSE WAS IN THE
+      GUARD. Whatever was broken here, the test died on vitest's own 30-second timeout **without the
+      guard ever being asked**, and reported `red` — indistinguishable from the assertion firing, for
+      as long as this probe has existed. 0177's fourth arm is what finally said so.
+
+      ⚠️ THE REASON WAS A SILENTLY IGNORED OPTION, NOT THE BREAK. `page.waitForFunction(fn, arg,
+      options)` takes the options THIRD, and all three waits in this suite passed `{ timeout: 5_000 }`
+      in the `arg` slot — handed to the predicate, which ignores it. Every one of them ran to
+      Playwright's 30-second default, which is also this test's own `}, 30_000)`, so vitest won the
+      race by eleven milliseconds and the deadline the suite states was never once enforced. Fixed
+      there; green is 5.5s and the break now fails at 10.4s saying *page.waitForFunction: Timeout
+      5000ms exceeded*, at the line that wrote it.
+
+      ⚠️ AND THE BREAK IS THE GATE RATHER THAN THE CONDITION, which is a smaller claim than it was.
+      `if (false) { … }` dropped the early RETURN as well, so a rotation fell through to `bakeAtlas`
+      for a view nobody will see — `onResize`'s own comment calls that *"the one expensive thing a
+      resize can do"*. `setPlayable(true)` is the claim by itself: a rotation mid-run reaches the view
+      ungated.
+    */
     broke: 'the resize path left ungated, so rotating MID-RUN reaches the view a fresh load cannot',
     guard: 'gates on a rotation INTO portrait, mid-run — the way a player actually meets this',
     edit: {
       path: 'src/app/mount.ts',
       find: "    if (next.alongAxis !== 'x') {\n      setPlayable(false);\n      return;\n    }",
-      replace: "    if (false) {\n      setPlayable(false);\n      return;\n    }",
+      replace: "    if (next.alongAxis !== 'x') {\n      setPlayable(true);\n      return;\n    }",
     },
   },
   {
