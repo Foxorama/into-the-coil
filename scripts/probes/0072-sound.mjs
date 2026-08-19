@@ -60,8 +60,11 @@ export const PROBES = [
       path: 'src/app/sound.ts',
       // ⚠️ Re-anchored by 0104: the two gates moved out of `play` into `emit`, because a gridded cue
       // has to be asked the same questions at the moment it SOUNDS rather than when it was asked for.
-      find: '    if (clock - (lastAt[index] ?? 0) < CUES[CUE_KINDS[index]!]!.hold) return;\n    if (voices >= MAX_VOICES) return;',
-      replace: '    voices++;\n    if (clock - (lastAt[index] ?? 0) < CUES[CUE_KINDS[index]!]!.hold) return;\n    if (voices > MAX_VOICES) return;',
+      // ⚠️ RE-ANCHORED BY 0183, WHICH DELETED THE CAP THIS BREAK USED TO DEFEAT. The claim survives
+      // one refusal down: a held repeat must be a no-op. Counting the ASK rather than the SOUNDING is
+      // still the mistake, and it is now visible in the duck rather than in a lost slot.
+      find: '    if (clock - (lastAt[index] ?? 0) < CUES[CUE_KINDS[index]!]!.hold) return;\n    if (!out.ready()) return;\n    lastAt[index] = clock;',
+      replace: '    lastAt[index] = clock;\n    if (clock - (lastAt[index] ?? 0) < CUES[CUE_KINDS[index]!]!.hold) return;\n    if (!out.ready()) return;',
     },
   },
   {

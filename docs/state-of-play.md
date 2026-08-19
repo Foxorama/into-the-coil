@@ -801,6 +801,21 @@ boundary in any place, `MAX_VOICES` = 4 silently dropping a fifth cue on a step,
 `AURA_LEVEL_CEILING` = 0.55, and the low band's own ceiling forbidding a deliberately bass-led place.
 Each has a real argument behind it and none has had an ear on it.
 
+⚠️ **AND THREE MORE CEILINGS ARE OFF, EACH A DIFFERENT WAY** —
+[0183](decisions/0183-a-cue-is-limited-rather-than-refused.md), answering *"let's remove the max
+voices, aura level ceiling and the low band ceiling and keep the no-hard-cut for now."* **A removal is
+only free when something else already measures the property**, which is what separates this from 0182:
+`MAX_VOICES` is replaced by a limiter on the cue bus, `AURA_LEVEL_CEILING` by a per-place field, and
+the low ceiling by nothing at all. **Every cue the game asks for is now heard.**
+
+⚠️ **AND THE SEVEN AURA VALUES ARE THE ONE THING IN IT THAT CHANGES A SOUND** — 0.40 at Rime Shelf to
+0.60 at three places, a hand's first authoring with **no ear on it**. The guards say it broke nothing
+(`weigh-adrift` unmoved at 54); nothing says it is right. `npm run dash`.
+
+⚠️ **AND `scripts/weigh-mix.mjs` HAD DRIFTED FROM ITS OWN GUARDS AND IS FIXED** — it read the low
+floor 0176 replaced, printed verdicts for guards 0182 deleted, and called a raw-sum proxy the clip
+guard's arithmetic. [0116](decisions/0116-the-rig-plays-the-level.md)'s subject, found on the way past.
+
 ⚠️ **AND THERE IS NO MISSILE-IMPACT CUE, WHICH MAY BE WHAT THAT HALF OF THE REPORT MEANT.**
 `CUE_KINDS` has `missile` for the launch, and a missile that destroys something plays `kill`. A
 distinct impact sound is a new row plus a caller in `src/app/frame.ts` — a feature, not a re-voice,

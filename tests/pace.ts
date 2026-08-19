@@ -14,7 +14,6 @@
  */
 
 import {
-  AURA_LEVEL_CEILING,
   MUSIC_GAIN,
   MUSIC_LADDER,
   MUSIC_LAYERS,
@@ -22,7 +21,20 @@ import {
   MUSIC_ROOT,
   type MusicLevel,
 } from '../src/content/music.ts';
-import { mixOf, notesPerBar, revoicedBy, rungOf, voicesOf, THEMES, type ThemeKind, type ThemeRow } from '../src/content/themes.ts';
+import { auraCeilingOf, mixOf, notesPerBar, revoicedBy, rungOf, voicesOf, THEMES, type ThemeKind, type ThemeRow } from '../src/content/themes.ts';
+
+/**
+ * The aura ceiling for a place, or for the base composition, which is not one.
+ *
+ * ⚠️ **0183 MADE THE CEILING A PLACE'S OWN AND SOME OF THIS FILE MEASURES THE BASE**, which has no
+ * theme at all — `rungShape(undefined, …)` is the piece every place is read against. Level one is
+ * *"the theme that changes nothing"*, so its number is what the base stands for, and saying so here
+ * once beats seven call sites each picking a fallback.
+ */
+function auraCeilingIn(theme: ThemeKind | undefined): number {
+  return auraCeilingOf(theme ?? 'approach');
+}
+
 import {
   MUSIC_ROLES,
   type MusicRole,
@@ -104,7 +116,7 @@ export function rungShape(
   loops: Record<MusicLayer, Float32Array>,
   bakes: Map<string, number[]>,
 ): { notes: number; low: number; high: number; centre: number; pitch: number } {
-  const nearness = rung === 'boss' || rung === 'bossPeak' ? 1 : AURA_LEVEL_CEILING;
+  const nearness = rung === 'boss' || rung === 'bossPeak' ? 1 : auraCeilingIn(theme);
   let notes = 0;
   let low = 0;
   let high = 0;
@@ -223,7 +235,7 @@ export interface LayerLevel {
 function loudestOf(theme: ThemeKind | undefined, layer: MusicLayer): number {
   let most = 0;
   for (const rung of Object.keys(MUSIC_LADDER) as MusicLevel[]) {
-    const ceiling = FOLLOWS_THE_BOSS.includes(layer) ? AURA_LEVEL_CEILING : 1;
+    const ceiling = FOLLOWS_THE_BOSS.includes(layer) ? auraCeilingIn(theme) : 1;
     // `undefined` is *the base composition* and level one is the place that plays it unmixed —
     // the same reading `rungShape` above takes, rather than a second opinion about what no theme means.
     const at = rungOf(theme ?? 'approach', rung, layer) * mixOf(theme ?? 'approach', layer) * ceiling;
@@ -480,7 +492,7 @@ export function heardAt(
   loops: Record<MusicLayer, Float32Array>,
   bakes: Map<string, number[]>,
 ): Heard[] {
-  const nearness = rung === 'boss' || rung === 'bossPeak' ? 1 : AURA_LEVEL_CEILING;
+  const nearness = rung === 'boss' || rung === 'bossPeak' ? 1 : auraCeilingIn(theme);
 
   /** Every sounding layer's A-weighted band energies, already at this rung's gain. */
   const sounding: { layer: MusicLayer; gain: number; bands: number[]; rms: number; peak: number }[] = [];
@@ -820,7 +832,7 @@ export function profileAt(
       const size = v < 0 ? -v : v;
       if (size > peak) peak = size;
     }
-    const ceiling = FOLLOWS_THE_BOSS.includes(layer) ? AURA_LEVEL_CEILING : 1;
+    const ceiling = FOLLOWS_THE_BOSS.includes(layer) ? auraCeilingIn(theme) : 1;
     const gain = rungOf(theme, rung, layer, ladder) * mixOf(theme, layer) * ceiling;
     levels.push({ layer, gain, rms: Math.sqrt(sum / buffer.length) * gain, peak: peak * gain });
   }

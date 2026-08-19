@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  auraCeilingOf,
   THEMES,
   THEME_KINDS,
   mixOf,
@@ -29,7 +30,7 @@ import {
   MUSIC_DRIVE,
   secondsOfLayer,
 } from '../src/content/music.ts';
-import { AURA_LAYERS, AURA_LEVEL_CEILING, LAYER_PAN, type MusicLevel } from '../src/content/music.ts';
+import { AURA_LAYERS, LAYER_PAN, type MusicLevel } from '../src/content/music.ts';
 import { addRoom, bakeLayer } from '../src/app/music.ts';
 import { BANDS, bandEnergy } from './spectrum.ts';
 import {
@@ -276,7 +277,8 @@ describe('a theme mixes the music and cannot break it', () => {
           also gave the aura pair their full row at every rung, where 0091 makes that gain a ceiling
           scaled by how near the boss is.
         */
-        const nearness = level === 'boss' || level === 'bossPeak' ? 1 : AURA_LEVEL_CEILING;
+        // ⚠️ THE PLACE'S OWN CEILING SINCE 0183 — a constant here would model a level nobody plays.
+        const nearness = level === 'boss' || level === 'bossPeak' ? 1 : auraCeilingOf(theme);
         for (const [l, layer] of MUSIC_LAYERS.entries()) {
           const ceiling = AURA_LAYERS.includes(layer) ? nearness : 1;
           const gain = rungOf(theme, level, layer) * mixOf(theme, layer) * ceiling;
@@ -710,9 +712,23 @@ describe('0128 — a place plays its own material, and shares everything it does
     within four points of the shipped music has no setting at which it is measuring the thing it is
     named for.
   */
-  /** The band a place's bottom lives in — 0147 turned 0134's ratio-to-the-base into an absolute. */
+  /**
+   * How much of a place has to be under 300 Hz. A floor, and it stopped being a band.
+   *
+   * ⚠️ **THE CEILING WAS 0.55 AND IT IS GONE** —
+   * `docs/decisions/0183-a-cue-is-limited-rather-than-refused.md`, asked for by name. It was written
+   * to stop *more bass* being the answer to every question, which is a real failure and is not a
+   * property of any one place: what it actually forbade was **a place that is deliberately bass-led**,
+   * and 0181 had just been handed *"deeper eurobeat notes"* about the place nearest it.
+   *
+   * ⚠️ **WHAT IT WAS PROTECTING IS HELD BY THE TWO GUARDS THAT MEASURE PLACES AGAINST EACH OTHER** —
+   * `no two places are within 3 dB of each other's profile` and 0172's `no two places have the same
+   * four layers on top at run`. Seven bass-led places would fail both. One is now allowed to be.
+   *
+   * ⚠️ **THE FLOOR STAYS AND IS THE HALF WITH A REPORT BEHIND IT** — *"very high on the treble with
+   * no deep bassy times"*, 0134, re-derived against the shipped mix by 0176 and leaned on by 0181.
+   */
   const LOW_FLOOR = 0.24;
-  const LOW_CEILING = 0.55;
   /** One bake map across both guards below — the second asks the same forty-four questions. */
   const paceBakes = new Map<string, number[]>();
   /*
@@ -723,7 +739,7 @@ describe('0128 — a place plays its own material, and shares everything it does
     place's material differs at all — 0146 has why that one could not go on baking its own.
   */
 
-  it('and every place has a bottom AND a top, which is a band and used to be a race to the floor', () => {
+  it('and every place has a BOTTOM, which used to be a band and is a floor again', () => {
     /*
       ⚠️ **THE SHARE UNDER 300 Hz, AS AN ABSOLUTE BAND — AND IT WAS A RATIO AGAINST THE BASE** —
       `docs/decisions/0147-a-place-is-a-balance.md`. 0134 wrote it as *at least 90% of the base's own
@@ -781,11 +797,6 @@ describe('0128 — a place plays its own material, and shares everything it does
           `${theme} puts ${(here * 100).toFixed(1)}% of its energy under 300Hz at ${rung} — a place that ` +
             `thin at the bottom reads as treble whatever it plays`,
         ).toBeGreaterThanOrEqual(LOW_FLOOR);
-        expect(
-          here,
-          `${theme} puts ${(here * 100).toFixed(1)}% of its energy under 300Hz at ${rung} — a place that ` +
-            `bottom-heavy has answered every question with the same sub, which is what makes seven of them one`,
-        ).toBeLessThanOrEqual(LOW_CEILING);
       }
     }
   }, DSP_MS);

@@ -119,7 +119,7 @@ export function auraAt(kind, second, nearnessInFight) {
   const toBoss = bossAt / UNITS_PER_SECOND;
   const inFight = second >= toBoss;
   const camera = inFight ? bossAt : second * UNITS_PER_SECOND;
-  return auraFor(auraBuild(camera, bossAt), inFight ? nearnessInFight : 0);
+  return auraFor(auraBuild(camera, bossAt, LEVELS[kind].theme), inFight ? nearnessInFight : 0);
 }
 
 /**

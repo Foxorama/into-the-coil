@@ -37,14 +37,22 @@ import {
   AURA_FAR_UNITS,
   AURA_CURVE,
   AURA_ONSET_UNITS,
-  AURA_LEVEL_CEILING,
   type MusicLayer,
   type MusicLevel,
   type MusicVoice,
   type LevelSections,
 } from '../content/music.ts';
 import { sampleLayerInto, saturate } from './sound.ts';
-import { THEMES, airOf, mixOf, rungOf, voicesOf, type ThemeKind, type ThemeLadder } from '../content/themes.ts';
+import {
+  THEMES,
+  airOf,
+  auraCeilingOf,
+  mixOf,
+  rungOf,
+  voicesOf,
+  type ThemeKind,
+  type ThemeLadder,
+} from '../content/themes.ts';
 import { MUSIC_ROLES, roleOf } from '../content/arrangement.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
@@ -565,13 +573,17 @@ export function auraNearnessFor(bossAlong: number, bossRadius: number, shipAlong
  *
  * ⚠️ **`Number.POSITIVE_INFINITY` is a level with no boss** — what a fixture uses — and it yields
  * zero for ever, which is correct rather than accidental.
+ *
+ * ⚠️ **THE CEILING IS THE PLACE'S AND WAS A CONSTANT** — 0183. It takes a `theme` for that reason
+ * alone, and it is not optional: a default would be the retired `AURA_LEVEL_CEILING` reached a
+ * longer way round, and a caller that forgot would report a build no level performs.
  */
-export function auraBuild(cameraAlong: number, bossAt: number): number {
+export function auraBuild(cameraAlong: number, bossAt: number, theme: ThemeKind): number {
   const from = AURA_ONSET_UNITS;
   if (!Number.isFinite(bossAt) || cameraAlong <= from || bossAt <= from) return 0;
   const through = (cameraAlong - from) / (bossAt - from);
   const clamped = through < 0 ? 0 : through > 1 ? 1 : through;
-  return clamped * AURA_LEVEL_CEILING;
+  return clamped * auraCeilingOf(theme);
 }
 
 /**

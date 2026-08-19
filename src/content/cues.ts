@@ -476,7 +476,7 @@ export const CUE_PAN_LIMIT = 0.5;
 */
 
 /**
- * ⚠️ **EVERY GAIN IS WELL UNDER 1 AND THAT IS THE POINT.** Up to `MAX_VOICES` cues can sound on one
+ * ⚠️ **EVERY GAIN IS WELL UNDER 1 AND THAT IS THE POINT.** Any number of cues can sound on one
  * step (`src/app/sound.ts`), and digital audio clips hard rather than compressing — so the row's gain
  * is its share of the mix and not its loudness. The master gain is the other half.
  *

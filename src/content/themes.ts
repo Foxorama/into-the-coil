@@ -306,6 +306,19 @@ export interface ThemeRow {
    * the cues are still in A, every place is still rooted on A, and nothing here transposes.
    */
   scale?: readonly number[];
+  /**
+   * How far the LEVEL's own build may open this place's aura, before a boss is anywhere near.
+   *
+   * ⚠️ **REQUIRED, BECAUSE THE ALTERNATIVE IS THE WALL WEARING A DEFAULT** — 0183. This was
+   `AURA_LEVEL_CEILING` in `src/content/music.ts`, one number for all seven places, and a field with
+   * a fallback would be the same number reached a longer way round. Every place states its own, and
+   `tests/themes.test.ts` holds that they are not all the same.
+   *
+   * ⚠️ **1 IS LEGAL AND IS A REAL CHOICE**: the dread arrives with the level rather than with the
+   * boss, and the fight's proximity has nothing left to add — which is
+   `scripts/probes/0091-aura.mjs`'s break, and is now a thing a place may be rather than a defect.
+   */
+  aura: number;
 }
 
 /*
@@ -346,6 +359,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     title: 'The Approach',
     space: { vivid: '#0b0b14', 'high-contrast': '#000000' },
     nebula: { vivid: '#2b3352', 'high-contrast': '#1c1c28' },
+    // The reference, and the number every place used to be — 0183. Level one changes nothing.
+    aura: 0.55,
     mix: {
       call: 1.6,
       hook: 1.9,
@@ -381,6 +396,12 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     title: 'Ember Nebula',
     space: { vivid: '#140b16', 'high-contrast': '#050008' },
     nebula: { vivid: '#5c2a4a', 'high-contrast': '#2a1626' },
+    /*
+      ⚠️ **HIGHER THAN THE REFERENCE, BECAUSE THE PLACE IS A BUILD.** A cathedral in a furnace
+      escalates to organ and pumping beats and hands over to a Dante's-inferno fight; the dread
+      belongs in the escalation rather than only in the arrival.
+    */
+    aura: 0.6,
     /*
       ⚠️ **THE MIX LEANS ON THE FLOOR NOW AND IT USED TO LEAN ON THE CHOIR** — 0134. Reported: *"it's
       very high on the treble with no deep bassy times."* Measured, the place ran **28.6% of its
@@ -482,6 +503,11 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     title: 'Saurian Belt',
     space: { vivid: '#121006', 'high-contrast': '#040300' },
     nebula: { vivid: '#4a4418', 'high-contrast': '#241f0c' },
+    /*
+      ⚠️ **LOWER, BECAUSE A DANCEFLOOR DOES NOT DO SLOW DREAD.** The place is a run; what it wants is
+      for the fight to be the arrival, not for a shadow to lengthen across the whole level.
+    */
+    aura: 0.45,
     mix: {
       groove: 2.2,
       ride: 2.2,
@@ -574,6 +600,11 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     space: { vivid: '#0e0a14', 'high-contrast': '#030006' },
     nebula: { vivid: '#3a2a52', 'high-contrast': '#1d1428' },
     /*
+      ⚠️ **THE HIGHEST BUT ONE, AND THE FICTION IS THE ARGUMENT.** A labyrinth is the place where the
+      thing hunting you is already there; the aura is what says so long before it is on the field.
+    */
+    aura: 0.6,
+    /*
       ⚠️ **THE MIX LEANS ON THE THINGS A BODY MAKES.** The breath, the footfall and the heartbeat are
       the picture; the pad is the wall they happen against and is deliberately the quietest thing
       here, which is the opposite of every other place in the game.
@@ -661,6 +692,11 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     space: { vivid: '#08131a', 'high-contrast': '#000408' },
     nebula: { vivid: '#1e4a5c', 'high-contrast': '#0e2e3a' },
     /*
+      ⚠️ **THE LOWEST.** Ice is still, and the shelf's threat is the one that arrives without warning.
+      A build that spends the level would spend the only surprise the place has.
+    */
+    aura: 0.4,
+    /*
       ⚠️ **THE MIX LEANS ON THE GLASS AND KEEPS THE FLOOR IT NEEDS.** The old row pulled the low end
       out from under a shared composition to make it read as thin and bright; this place states its
       own material and does not need that — what it needs is for the bell, the frost and the singing
@@ -745,6 +781,11 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     space: { vivid: '#0b1206', 'high-contrast': '#010500' },
     nebula: { vivid: '#3a5418', 'high-contrast': '#1c2a0c' },
     /*
+      ⚠️ **HIGH, BECAUSE THE MIRE SEEPS.** The one place whose whole character is that it reaches you
+      before you reach it.
+    */
+    aura: 0.58,
+    /*
       ⚠️ **THE MIX PUTS THE TUNE UNDER THE PAD, WHICH IS THE ONE ROW HERE THAT IS DELIBERATELY WRONG
       BY THE USUAL RULE.** Every other place lifts `call` so the melody is legible; this one holds it
       level with the chords, because the picture is a thing singing from under the water and a melody
@@ -820,6 +861,12 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     title: 'The Black Heart',
     space: { vivid: '#10050f', 'high-contrast': '#040003' },
     nebula: { vivid: '#5a1e3c', 'high-contrast': '#2c0c1c' },
+    /*
+      ⚠️ **THE HIGHEST, BECAUSE HERE THE AURA IS THE PLACE.** The Black Heart is what the run has been
+      travelling towards; 0170 already made it audible in its own fight, and this is the other half —
+      it is audible on the way in.
+    */
+    aura: 0.6,
     /*
       ⚠️ **THE DRONE IS THE SUBJECT AND THE ROW ALREADY SAID SO.** It has leant on this layer since
       the theme table existed; `src/content/core.ts` is what finally makes that a statement about the
@@ -1132,6 +1179,18 @@ export const REBASE: Record<ThemeKind, Partial<Record<MusicLayer, number>>> = {
  * difference without a word. **What bounds this product is the bus**, and the clip guard drives it
  * through the real shaper at every place and every rung.
  */
+/**
+ * How far the level's own build may open this place's aura — the place's own number.
+ *
+ * ⚠️ **ONE DESCRIPTION, ON `rungOf`'s OWN TERMS** — 0162. The game, the rig, the dashboard and four
+ * measuring scripts all need *how loud may the dread get here*, and while the answer was a constant
+ * every one of them imported it. A place may differ now, so a call site that reads a number instead
+ * is an instrument reporting a level nobody hears.
+ */
+export function auraCeilingOf(theme: ThemeKind): number {
+  return THEMES[theme].aura;
+}
+
 export function mixOf(theme: ThemeKind, layer: MusicLayer): number {
   return (THEMES[theme].mix[layer] ?? 1) * (REBASE[theme][layer] ?? 1);
 }
