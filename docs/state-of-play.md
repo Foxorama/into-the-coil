@@ -189,6 +189,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a break has to be able to RUN in the file it lands in — three probes named an identifier their target cannot see** | [0178](decisions/0178-a-break-has-to-be-able-to-run.md) |
 | **AN EXPLOSION ENDS LOW — the enemy death's centre of gravity ROSE 22.5 dB, and no cue guard has a time axis** | [0179](decisions/0179-an-explosion-ends-low.md) |
 | **The Black Heart turns sooner — its opening is halved and the two middle sections take it** | [0180](decisions/0180-the-black-heart-gets-there-sooner.md) |
+| **Saurian has a floor tom, AND ITS BOTTOM IS OCCUPIED BY A PAD — `chords` sits 7.6 dB over `sub` in `sub`'s own window** | [0181](decisions/0181-the-floor-has-a-bottom.md) |
 | **the rig plays a LEVEL, and the instrument is guarded like the game** | [0116](decisions/0116-the-rig-plays-the-level.md) |
 | **a section change lands on a DOWNBEAT, and not one ever had** | [0117](decisions/0117-a-section-change-lands-on-the-beat.md) |
 | **the mix has a WIDTH, and the low end does not use it** | [0118](decisions/0118-the-mix-has-a-width.md) |
@@ -771,6 +772,14 @@ every other explosion falls 7 to 13. Eighty-four guards were green over it, beca
 time axis — 0171's sentence, one channel over. `pulse`, `missile`, `kill` and `blast` all moved;
 `bomb` deliberately did not. **The verdict is an ear**: `node scripts/hear.mjs
 --only=pulse,missile,kill,bomb,blast`.
+
+⚠️ **AND THE NEXT SOUND QUESTION IS A DECISION SOMEBODY HAS TO MAKE BY EAR, NOT A NUMBER** —
+[0181](decisions/0181-the-floor-has-a-bottom.md). Saurian asked for *"deeper eurobeat notes"* and the
+measurement says the place is within two points of the low-end floor at `push` and `approach` —
+**because its supersaw pad is standing in the bottom**, 7.6 dB over `sub` in `sub`'s own window with no
+highpass at all. A new drum moves that by 0.004 and then starves `drive`. **The two levers that would
+work are a re-voice of the place's signature pad and a change to 0176's approved balance**, and both
+want the ear that gave the first verdict. `npm run dash`.
 
 ⚠️ **AND THERE IS NO MISSILE-IMPACT CUE, WHICH MAY BE WHAT THAT HALF OF THE REPORT MEANT.**
 `CUE_KINDS` has `missile` for the launch, and a missile that destroys something plays `kill`. A
