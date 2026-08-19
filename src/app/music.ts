@@ -642,22 +642,15 @@ export interface MusicOut {
    * ⚠️ **`ladder` IS THE RIG'S AND THE GAME NEVER PASSES ONE** — 0163. It is how the desk edits a
    * place's own shape (0162) and hears the mixer follow, on 0138's terms for `sections`.
    */
-  /**
-   * ⚠️ **`gains` IS THE RIG'S TOO, AND IT IS WHY THE SOLVED MIX USED TO CUT** —
-   * `docs/decisions/0175-an-experiment-arrives-the-way-the-game-does.md`. The desk's non-shipped
-   * modes wrote their own targets straight onto the gain nodes AFTER calling this, at `time 0` over
-   * 30 ms — so they threw away 0117's downbeat and 0171's build together, and every boundary in
-   * every mode but `shipped` was a cut. Handing the table IN means an experiment arrives exactly the
-   * way the game does, which is the only way a listen can be about the mix rather than about the
-   * write path.
-   */
-  setLevel(
-    level: MusicLevel,
-    nearness: number,
-    theme: ThemeKind,
-    ladder?: ThemeLadder,
-    gains?: Partial<Record<MusicLayer, number>>,
-  ): void;
+  /*
+    ⚠️ **`gains` STOOD HERE FOR ONE DAY AND WENT WITH THE TOGGLE IT WAS BUILT FOR** —
+    `docs/decisions/0176-the-re-based-mix-is-the-mix.md`. 0175 added it so the desk's non-shipped
+    modes could arrive on the downbeat over the mixer's own ramp instead of cutting in 30 ms; the
+    modes are gone, the balance they chose is in `THEMES`, and a parameter with no caller is a branch
+    no data reaches — which is the state 0162's ladder landed in and its own probe header calls
+    guarded by nothing. **The finding stands and the mechanism does not need to.**
+  */
+  setLevel(level: MusicLevel, nearness: number, theme: ThemeKind, ladder?: ThemeLadder): void;
   /**
    * Push the bed down for a moment, so a cue landing on top of it has somewhere to land.
    *
@@ -1009,7 +1002,6 @@ export function levelWrites(
   now: number,
   lastTargets: Partial<Record<MusicLayer, number>>,
   ladder?: ThemeLadder,
-  gains?: Partial<Record<MusicLayer, number>>,
 ): RampWrite[] {
   const bar = nextBarFrom(anchor, now);
   const shape = ladder ?? THEMES[theme].ladder;
@@ -1031,14 +1023,7 @@ export function levelWrites(
   }
   for (const layer of MUSIC_LAYERS) {
     const aura = AURA_LAYERS.includes(layer);
-    /*
-      ⚠️ **A HANDED-IN GAIN REPLACES THE LADDER AND NEVER THE AURA** — 0175. The aura is a distance
-      the player steers (0091), so it is not part of any arrangement a solver produces and
-      `SOLVED_BY` excludes it by name. Everything else is whatever table the caller is auditioning.
-    */
-    const stated = aura ? undefined : gains?.[layer];
-    const target =
-      stated ?? rungOf(theme, level, layer, shape) * mixOf(theme, layer) * (aura ? nearness : 1);
+    const target = rungOf(theme, level, layer, shape) * mixOf(theme, layer) * (aura ? nearness : 1);
     if (!aura && lastTargets[layer] === target) continue;
     const write = { layer, target, at: aura ? now : bar, tau: (aura ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3 };
     if (!aura && target > 0 && (lastTargets[layer] ?? 0) === 0) opening.push(write);
@@ -1105,12 +1090,6 @@ export function makeMusicOut(
    * **The shipped game leaves it `undefined` for ever** — 0163.
    */
   let shape: ThemeLadder | undefined;
-  /*
-    ⚠️ **KEPT SO A RE-STATE USES THE SAME TABLE** — 0175. `setOn` re-states the level from these
-    fields, and a re-state that forgot the desk was auditioning a solve would hand the loops back to
-    `MUSIC_LADDER × mixOf` the moment sound was switched off and on.
-  */
-  let stated: Partial<Record<MusicLayer, number>> | undefined;
   /** Audio time at which loop position zero last began. Bar zero of the piece — 0117's grid. */
   let anchorAudio = 0;
   /*
@@ -1241,15 +1220,11 @@ export function makeMusicOut(
       nearness: number,
       theme: ThemeKind,
       ladder?: ThemeLadder,
-      // ⚠️ NOT `gains` — that name is the record of `GainNode`s this closure already owns, and a
-      // parameter shadowing it compiles to a mixer writing numbers onto numbers.
-      solved?: Partial<Record<MusicLayer, number>>,
     ): void {
       current = level;
       near = nearness;
       place = theme;
       shape = ladder;
-      stated = solved;
       if (!on) return;
       /*
         ⚠️ **THE WHOLE DECISION IS `levelWrites` AND NONE OF IT IS HERE** — 0117. What to write, when
@@ -1263,7 +1238,7 @@ export function makeMusicOut(
         the bar grid is the music's own and a rephase (0094) moves both together.
       */
       const now = ctx.currentTime;
-      for (const { layer, target, at, tau } of levelWrites(level, theme, nearness, anchorAudio, now, headingFor, ladder, solved)) {
+      for (const { layer, target, at, tau } of levelWrites(level, theme, nearness, anchorAudio, now, headingFor, ladder)) {
         headingFor[layer] = target;
         gains[layer].gain.cancelScheduledValues(now);
         gains[layer].gain.setTargetAtTime(target, at, tau);
@@ -1294,7 +1269,7 @@ export function makeMusicOut(
       // to hold, never the phase against the level.
       if (next) {
         this.start();
-        this.setLevel(current, near, place, shape, stated);
+        this.setLevel(current, near, place, shape);
         return;
       }
       /*

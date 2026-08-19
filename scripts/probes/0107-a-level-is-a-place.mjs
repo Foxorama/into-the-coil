@@ -95,8 +95,11 @@ export const PROBES = [
     guard: 'and every theme actually sounds different from the one that changes nothing',
     edit: {
       path: 'src/content/themes.ts',
-      find: '  const want = THEMES[theme].mix[layer] ?? 1;',
-      replace: '  const want = 1;',
+      // ⚠️ RE-AIMED BY 0176: `mixOf` is the hand's tint TIMES the solved balance now, so blanking the
+      // row alone left `REBASE` still telling the seven places apart and the guard correctly silent.
+      // *The mix table stopped being read* has to mean the product.
+      find: '  return tint * (REBASE[theme][layer] ?? 1);',
+      replace: '  return 1;',
     },
   },
   {

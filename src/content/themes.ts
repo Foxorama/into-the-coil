@@ -1009,9 +1009,150 @@ export function bakedBy(theme: ThemeKind): MusicLayer[] {
   return [...new Set([...revoicedBy(theme), ...withAir])];
 }
 
+/**
+ * The solved balance, as a scale over each place's hand-authored `mix`.
+ *
+ * ── THE MIX THAT SHIPPED FOR ITS WHOLE LIFE WAS THE ONE NOBODY CHOSE ────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0176-the-re-based-mix-is-the-mix.md`.** Reported after driving all three on the
+ * desk: *"re-based now sounds and blends incredibly well, let's make that the released version of the
+ * sound."* Until now the game played `MUSIC_LADDER × mix` and the desk could audition two other
+ * balances it could not ship; this is the one that won, folded into the table it was always a
+ * multiplier over.
+ *
+ * ⚠️ **IT IS EXACTLY A PER-LAYER, PER-PLACE SCALE, AND THAT IS WHY THIS IS A TABLE AND NOT A
+ * SOLVER.** `rebasedLevel`'s whole definition is
+ * `out[rung][layer] = shipped[rung][layer] × (solved[push][layer] / shipped[push][layer])` — the rung
+ * cancels, so the entire third mix is 161 numbers. Folding them here reproduces
+ * `scripts/solve-mix.mjs`'s output to **8.9e-16**, over every place, rung and layer: the game plays
+ * the balance the player approved and runs no solver to do it.
+ *
+ * ⚠️ **SO THE SOLVER IS NOW A RESEARCH TOOL AND NOT A DEPENDENCY.** `scripts/solve-mix.mjs` produced
+ * these numbers and is how they would be produced again; nothing under `src/` calls it, and a
+ * four-hundred-iteration solve is not something a run start can afford — 0157 is what that costs.
+ *
+ * ⚠️ **AND IT IS DELIBERATELY NOT BOUNDED BY `MIX_CEILING`.** That band is what a HAND may tint by,
+ * and it is still enforced on `mix` above; this is a measured balance and its values run from 0.16 to
+ * 12.19 — `labyrinth/ride` wants twelve because its material is twenty-odd decibels under everything
+ * around it, which is [0140](../../docs/decisions/0140-no-layer-is-inaudible.md)'s *a gain is not a
+ * loudness* stated as a number. Clamping it would be the wall that says nothing, which 0164's own
+ * header records `arp` being driven into twice.
+ *
+ * ⚠️ **A LAYER THIS TABLE DOES NOT NAME IS UNSCALED**, which is what the aura pair and every layer the
+ * solve left alone are. `SOLVED_BY` excludes the aura by name — its gain is a distance the player
+ * steers (0091) — so a scale for it would be an arrangement decision about a thing that is not part of
+ * the arrangement.
+ *
+ * ⚠️ **AT `HOLD_WEIGHT` 0.28 AND `REBASE_RUNG` `push`**, which are the desk's own defaults and
+ * therefore what was driven. A different `steady` slider is a different table, and re-generating is
+ * `node scripts/solve-mix.mjs`'s job rather than a hand's.
+ */
+export const REBASE: Record<ThemeKind, Partial<Record<MusicLayer, number>>> = {
+  approach: {
+    drone: 1.4957,
+    sub: 0.28208,
+    engine: 0.42064,
+    perc: 3.6912,
+    chords: 0.82295,
+    groove: 0.86114,
+    arp: 1.8882,
+    ride: 0.51678,
+    call: 1.6842,
+    hook: 1.8632,
+    lead: 1.5213,
+  },
+  nebula: {
+    drone: 1.6196,
+    sub: 0.50587,
+    engine: 0.84205,
+    perc: 7.567,
+    chords: 0.83217,
+    groove: 1.228,
+    arp: 1.5104,
+    ride: 1.135,
+    call: 1.9278,
+    hook: 1.5917,
+    lead: 0.98103,
+  },
+  saurian: {
+    drone: 1.6407,
+    sub: 0.4566,
+    engine: 1.2134,
+    perc: 1.3219,
+    chords: 2.1301,
+    groove: 0.6834,
+    arp: 2.1317,
+    ride: 3.8308,
+    call: 2.4772,
+    hook: 1.2412,
+    lead: 1.3597,
+  },
+  labyrinth: {
+    drone: 1.1521,
+    sub: 0.32361,
+    engine: 0.40784,
+    perc: 0.75512,
+    chords: 4.7711,
+    groove: 1.6007,
+    arp: 2.2725,
+    ride: 6.5873,
+    call: 1.162,
+    hook: 2.8866,
+    lead: 1.3064,
+  },
+  rime: {
+    drone: 1.7862,
+    sub: 0.27473,
+    engine: 0.65264,
+    perc: 1.0859,
+    chords: 1.1921,
+    groove: 0.33877,
+    arp: 2.0289,
+    ride: 0.82378,
+    call: 0.84375,
+    hook: 1.6515,
+    lead: 2.5729,
+  },
+  mire: {
+    drone: 1.1996,
+    sub: 0.57934,
+    engine: 0.51716,
+    perc: 2.1322,
+    chords: 0.28424,
+    groove: 1.6518,
+    arp: 1.7602,
+    ride: 0.49169,
+    call: 2.7104,
+    hook: 0.7005,
+    lead: 0.5387,
+  },
+  core: {
+    drone: 0.86653,
+    sub: 0.31815,
+    engine: 0.80713,
+    perc: 1.1821,
+    chords: 1.5292,
+    groove: 0.5598,
+    arp: 1.3852,
+    ride: 1.9256,
+    call: 1.7566,
+    hook: 1.8996,
+    drive: 0.86169,
+    lead: 1.3825,
+  },
+};
+
+/**
+ * What this place multiplies the shared ladder by — the hand's colour, times the solved balance.
+ *
+ * ⚠️ **THE CLAMP IS ON THE HAND AND NOT ON THE PRODUCT** — 0176. `MIX_CEILING` bounds what a tint
+ * may be worth, which is a statement about authoring; `REBASE` is a measurement and is bounded by
+ * what the bus can carry, which `tests/themes.test.ts` holds directly.
+ */
 export function mixOf(theme: ThemeKind, layer: MusicLayer): number {
   const want = THEMES[theme].mix[layer] ?? 1;
-  return want < MIX_FLOOR ? MIX_FLOOR : want > MIX_CEILING ? MIX_CEILING : want;
+  const tint = want < MIX_FLOOR ? MIX_FLOOR : want > MIX_CEILING ? MIX_CEILING : want;
+  return tint * (REBASE[theme][layer] ?? 1);
 }
 
 /**
