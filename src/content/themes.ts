@@ -543,8 +543,38 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     ladder: {
       run: { chords: 0, ride: 0.42, groove: 0.95, perc: 0.8 },
       push: { chords: 0.34, ride: 0.8, groove: 1.05, perc: 0.86 },
-      surge: { ride: 0.75, groove: 1.08, perc: 0.88 },
+      surge: { ride: 0.75, groove: 1.08, perc: 0.88, drive: 1.45 },
+      approach: { toll: 1.6, dread: 1.5, drive: 1.55 },
+      boss: { dread: 1.7 },
+      bossPeak: { dread: 2.4, drone: 1.25 },
     },
+    /*
+      ── THE THREE RUNGS ABOVE `surge` ARE 0185's, AND THEY ARE THE JURASSIC HALF ───────────────────
+
+      ⚠️ **`docs/decisions/0185-the-belt-gets-its-bottom.md`.** The brief is *a mix up of modern
+      eurobeat and older style jurassic inspired music*, and the measurement said the ancient half was
+      not in the mix: `toll` nearly ten decibels under its role at `approach`, `dread` nine, and
+      `drive` — the eurobeat lead — six under at `surge`. **Five of Saurian Belt's six known-adrift
+      entries were the two halves of its own brief.**
+
+      ⚠️ **IN THE LADDER AND NOT IN `mix`, WHICH IS THE POINT.** `mix` is one number per layer for the
+      whole place, so lifting `drive` for `surge` would lift it in the fight as well and take the
+      arrival off something else — measured, and it did: at `mix.drive` 1.7 the boss lost `frenzy`
+      and `wraith`. A rung-shaped problem takes 0162's rung-shaped lever, and
+      `docs/decisions/0176-the-re-based-mix-is-the-mix.md`'s approved balance is left alone.
+
+      ⚠️ **AND THE KIT IS NOT THINNED AT `approach`, BECAUSE 0167 REFUSES IT.** The obvious eurobeat
+      move is the breakdown before the drop, and the first version of this dropped `engine` to 0.9
+      there. `docs/decisions/0167-a-build-does-not-duck.md` failed it on the spot: **a boundary only
+      ever adds**, and a carried layer getting quieter is a duck whatever it is in aid of. What
+      replaces it is the bell and the dread coming UP to meet the kit, which is the same intent and
+      the only version the arrangement permits.
+
+      ⚠️ **`drone` AT `bossPeak` IS THE ONE ENTRY THAT IS BOOKKEEPING RATHER THAN MUSIC.** Lifting
+      `dread` to 2.4 put `drone` — the `air` role, and *meant* to sit under everything — 5.3 dB past
+      0164's floor; 1.25 puts it back. It is the cost of the layer above it moving, named rather than
+      absorbed.
+    */
     /*
       ⚠️ **THE NATURAL MINOR PLUS A RAISED SEVENTH, WHICH IS THE ONLY MODE IN THE GAME THAT IS NOT
       THE NATURAL MINOR** — `docs/decisions/0148-a-place-has-its-own-notes.md`. G# is the third of the

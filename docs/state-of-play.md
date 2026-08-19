@@ -833,6 +833,27 @@ been a tuning pass against a phantom.** Re-measure before proposing any mix numb
 **`scripts/` is still unscanned and 0184 names that as a debt** — one read in `hear.mjs` was wrong and
 was fixed by hand.
 
+⚠️ **AND SAURIAN BELT HAS BEEN WORKED ON, WHICH IS THE FIRST PER-LEVEL PASS 0176 ASKED FOR** —
+[0185](decisions/0185-the-belt-gets-its-bottom.md), answering *"make saurian a eurobeat style with some
+deep bassy drums so we can get a mix up of modern eurobeat and older style jurassic inspired music."*
+**Its known-adrift list is six entries to one.** The lever was the one
+[0181](decisions/0181-the-floor-has-a-bottom.md) priced and handed back: the supersaw pad's sub-octave
+was standing in the kick's window with no highpass at all, and 0181's ceiling on the floor tom turned
+out to be a property of the pad rather than of the drum.
+
+⚠️ **FIVE OF THE SIX WERE THE TWO HALVES OF THE PLACE'S OWN BRIEF** — `toll` and `dread` for the
+ancient half, `drive` for the floor. They are lifted in the LADDER and not in `mix`, because `mix` is
+one number for the whole place and lifting `drive` for `surge` cost the boss `frenzy` and `wraith`
+when it was tried.
+
+⚠️ **AND 0167 REFUSED THE OBVIOUS GENRE MOVE, CORRECTLY.** The eurobeat breakdown before the drop is a
+DUCK, and a boundary only ever adds. The bell and the dread come up to meet the kit instead. A real
+breakdown needs `RUNG_CLOSES` and is a different decision.
+
+⚠️ **THE NUMBER TO WATCH IS `weigh-apart --rung=run` AT 3.2 dB** — Saurian Belt and The Black Heart,
+against 0147's 3.0 floor. Deeper bottoms are a thing both places have. **The Black Heart is the
+obvious next place and this is the constraint it hits first.**
+
 ⚠️ **AND THERE IS NO MISSILE-IMPACT CUE, WHICH MAY BE WHAT THAT HALF OF THE REPORT MEANT.**
 `CUE_KINDS` has `missile` for the launch, and a missile that destroys something plays `kill`. A
 distinct impact sound is a new row plus a caller in `src/app/frame.ts` — a feature, not a re-voice,
