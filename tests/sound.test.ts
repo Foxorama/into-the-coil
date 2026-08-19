@@ -1,4 +1,4 @@
-import { BANDS, spectrum } from './spectrum.ts';
+import { BANDS, centroid, spectrum } from './spectrum.ts';
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -1087,6 +1087,44 @@ describe('the synthesiser', () => {
 
   /** The cues the report is about: *"more bass-y, more boomy/explosiony"*. */
   const EXPLOSIONS = ['kill', 'blast', 'bossDown', 'death'] as const;
+
+  /*
+    ⚠️ **THE ONE THE OTHER THREE COULD NOT SEE** — `docs/decisions/0179-an-explosion-ends-low.md`.
+    Reported from play: *"missile explosions don't really sound like explosions now either and similar
+    with enemy death explosions."* The `kill` cue's centre of gravity **ROSE from 266 Hz to 3534 Hz**
+    — it ended as a bright hiss climbing — where every other explosion in the table falls 7 to 12 dB.
+
+    ⚠️ **ALL EIGHTY-FOUR GUARDS IN THIS FILE WERE GREEN OVER IT, AND EACH FOR A GOOD REASON.** 0089's
+    asks whether the body HAS a falling lowpass — it does, and the body was over at 0.17 s while the
+    cue ran to 0.36. The shed guard asks about spread and the one below it about which band is
+    loudest; both are measured over the WHOLE cue, so a bright ending averages away. **Not one of them
+    has a time axis**, which is the same hole `docs/decisions/0171-a-boundary-is-a-build.md` found in
+    the music's three mix guards, one channel over.
+
+    ⚠️ **THREE DECIBELS, AND IT IS A MARGIN BECAUSE A BARE DIRECTION TEST WAS SEEN NOT TO FIRE.** The
+    first version asked only that the tail be lower than the onset, and `npm run prove` reported
+    STILL GREEN on one of its own two probes: with the low voice lengthened, restoring the shipped
+    streak still left the cue falling — by **1.9 dB**, which is flat. The bound is read off the two
+    measurements that bracket it (1.9 nearly-flat against the fix's 5.2) with the other three
+    explosions at 11 to 13, exactly as `docs/decisions/0102-the-music-goes-somewhere.md`'s sub floor
+    was read off a pulse with and without its sub — `docs/decisions/0140-no-layer-is-inaudible.md`.
+  */
+  const FALL_DB = 3;
+
+  it('0179 — THE REPORTED ONE: an explosion ENDS LOWER THAN IT STARTED, which none of the above sees', () => {
+    for (const kind of EXPLOSIONS) {
+      const samples = sampleCue(CUES[kind], SAMPLE_RATE, makeRng('cues').stream(kind));
+      const seconds = cueSeconds(CUES[kind]);
+      const onset = centroid(samples, 0, Math.min(0.025, seconds / 3), SAMPLE_RATE);
+      const tail = centroid(samples, (seconds * 2) / 3, seconds, SAMPLE_RATE);
+      const fall = 20 * Math.log10(tail / onset);
+      expect(
+        fall,
+        `${kind} starts at ${onset.toFixed(0)}Hz and ends at ${tail.toFixed(0)}Hz, a fall of ` +
+          `${fall.toFixed(1)}dB — an explosion leaves its top behind, and this one does not`,
+      ).toBeLessThanOrEqual(-FALL_DB);
+    }
+  });
 
   it('THE SHED: an explosion is spread across the spectrum rather than humped in the middle', () => {
     for (const kind of EXPLOSIONS) {

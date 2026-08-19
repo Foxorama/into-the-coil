@@ -579,10 +579,10 @@ export const CUES: Record<CueKind, CueRow> = {
       // The chunk. A saturated square behind a falling filter is where *meaty* lives.
       // G3 → E2: the seventh into the fifth, so the most frequent sound in the game is never the
       // root and never fights the bass for it.
-      { wave: 'square', from: inKey(13), to: inKey(4), seconds: 0.048, gain: 0.85, attack: 0.001, curve: 6, lowFrom: 1700, lowTo: 320, q: 1.1, drive: 0.55 },
+      { wave: 'square', from: inKey(13), to: inKey(4), seconds: 0.048, gain: 0.95, attack: 0.001, curve: 6, lowFrom: 1500, lowTo: 250, q: 1.5, drive: 0.72 },
       // C3 → A1. The tail lands on the ROOT, which is what makes ten of these a second read as a
       // pulse in the music rather than as ten interruptions of it.
-      { wave: 'sine', from: inKey(9), to: inKey(0), seconds: 0.058, gain: 0.7, attack: 0.001, curve: 5 },
+      { wave: 'sine', from: inKey(9), to: inKey(0), seconds: 0.058, gain: 0.72, attack: 0.001, curve: 5, drive: 0.26 },
       /*
         ── THE SUB, AND THE PULSE HAD NONE ────────────────────────────────────────────────────────
 
@@ -609,7 +609,7 @@ export const CUES: Record<CueKind, CueRow> = {
         64ms-longer-than-the-gap sustain under a gun that fires every 67ms. Three and a half cycles
         at the root is still weight; a hundred and ten milliseconds of it was a drone.
       */
-      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.064, gain: 0.5, attack: 0.002, curve: 4 },
+      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.064, gain: 0.58, attack: 0.002, curve: 4, drive: 0.2 },
     ],
   },
   /**
@@ -643,7 +643,7 @@ export const CUES: Record<CueKind, CueRow> = {
     layers: [
       // The motor lighting.
       { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.5, attack: 0.0006, curve: 7, lowFrom: 7000, lowTo: 3000, highFrom: 1100 },
-      { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.6, attack: 0.004, curve: 3.2, lowFrom: 2400, lowTo: 600, highFrom: 130, highTo: 60, q: 0.7 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.66, attack: 0.004, curve: 3.2, lowFrom: 2400, lowTo: 440, highFrom: 130, highTo: 46, q: 0.7, drive: 0.14 },
       { wave: 'noise', from: 0, to: 0, seconds: 0.3, gain: 0.09, attack: 0.02, curve: 2.6, lowFrom: 9000, highFrom: 1500, highTo: 900 },
       // The launch, at a pitch a speaker can actually reproduce — see 0089 on why 30 Hz is not it.
       // A3 → C2: the root falling to the minor third, which is the interval that says *minor* in one
@@ -779,7 +779,14 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'noise', from: 0, to: 0, seconds: 0.022, gain: 0.5, attack: 0.00015, curve: 13, lowFrom: 11000, lowTo: 2600, highFrom: 1000 },
       // BODY — noise between a highpass that takes out the box and a lowpass that falls. Half the
       // length it was, and the highpass holds it above the band `sub` now occupies.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.17, gain: 0.9, attack: 0.002, curve: 4.5, lowFrom: 2400, lowTo: 620, highFrom: 150, highTo: 90, q: 0.8, drive: 0.3 },
+      /*
+        ⚠️ **THE FALL IS DEEPER AND THE LENGTH IS UNTOUCHED, WHICH IS 0109's BOUND READ EXACTLY** —
+        `docs/decisions/0179-an-explosion-ends-low.md`. 620 → 430 Hz and a highpass reaching 62 Hz
+        rather than 90, with more saturation under it. What 0109 refused was a long body at two a
+        second; **this is the same 0.17 s spending its length lower down**, which is the one axis that
+        decision left open.
+      */
+      { wave: 'noise', from: 0, to: 0, seconds: 0.17, gain: 0.98, attack: 0.002, curve: 4.5, lowFrom: 2400, lowTo: 430, highFrom: 150, highTo: 62, q: 0.8, drive: 0.34 },
       /*
         DEBRIS — quieter, and the part that carries the top.
 
@@ -801,7 +808,18 @@ export const CUES: Record<CueKind, CueRow> = {
         every `debris-burst` cue: 0.4 s at 150 BPM, and the rule that a punctuation mark is shorter
         than the beat it lands on is untouched.
       */
-      { wave: 'noise', from: 0, to: 0, seconds: 0.36, gain: 0.15, attack: 0.012, curve: 3, lowFrom: 7000, highFrom: 1500, highTo: 800 },
+      /*
+        ⚠️ **AND THE STREAK DARKENS NOW, WHICH IS WHAT MADE THE WHOLE CUE END BRIGHTER THAN IT
+        STARTED** — `docs/decisions/0179-an-explosion-ends-low.md`. This layer had a highpass that
+        fell and **no `lowTo` at all**, so it held 7 kHz flat for 0.36 s over a body that was gone at
+        0.17 — measured, the cue's centroid ROSE from 266 Hz to 3534 Hz, where every other explosion
+        in the table falls 7 to 12 dB.
+
+        ⚠️ **0144's streak is not being taken back.** The layer keeps its length, its gain and its
+        highpass, so a chain of these still overlaps as a top rather than as mud; what changes is that
+        the top now decays like everything else instead of being the last thing left.
+      */
+      { wave: 'noise', from: 0, to: 0, seconds: 0.36, gain: 0.15, attack: 0.012, curve: 3, lowFrom: 7000, lowTo: 2400, highFrom: 1500, highTo: 800 },
       /*
         G3 → B1, and G2 → B1 under it. It HANGS on the seventh: a kill is the most repeated event in
         a level and there are always more coming, so the one thing it must not do is sound final.
@@ -823,7 +841,14 @@ export const CUES: Record<CueKind, CueRow> = {
         gain moves only enough to keep that ratio where 0109 measured it.
       */
       { wave: 'sine', from: inKey(13), to: inKey(1), seconds: 0.17, gain: 1.72, attack: 0.0005, curve: 5, drive: 0.3 },
-      { wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.21, gain: 0.95, attack: 0.001, curve: 4.2 },
+      /*
+        ⚠️ **0.21 → 0.30 s, AND IT IS PITCHED RATHER THAN NOISE, WHICH IS THE WHOLE OF WHY IT IS
+        ALLOWED** — 0179. The cue is 0.36 s long and had nothing at the bottom past 0.21, so its last
+        third was debris alone. What 0109 removed at two a second was a long NOISE body, which
+        overlaps into mud; a low sine on a scale tone overlaps into a note, and this one is already
+        on the seventh with the voice above it.
+      */
+      { wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.3, gain: 0.9, attack: 0.001, curve: 3.4 },
     ],
   },
   /**
@@ -993,7 +1018,7 @@ export const CUES: Record<CueKind, CueRow> = {
     glue: 0.14,
     layers: [
       { wave: 'noise', from: 0, to: 0, seconds: 0.035, gain: 0.33, attack: 0.0004, curve: 7, lowFrom: 5800, lowTo: 2100, highFrom: 650 },
-      { wave: 'noise', from: 0, to: 0, seconds: 0.8, gain: 1.05, attack: 0.004, curve: 2.5, lowFrom: 2000, lowTo: 380, highFrom: 100, highTo: 42, q: 0.7, drive: 0.4 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.8, gain: 1.05, attack: 0.004, curve: 2.5, lowFrom: 2000, lowTo: 300, highFrom: 100, highTo: 34, q: 0.7, drive: 0.52 },
       { wave: 'noise', from: 0, to: 0, seconds: 0.95, gain: 0.06, attack: 0.02, curve: 2.2, lowFrom: 6200, highFrom: 1200, highTo: 650 },
       // F3 → A1, and F2 → A0 under it. It RESOLVES to the root, like the boss does — the two events
       // in the game the player caused on purpose and paid for are the two that land home.

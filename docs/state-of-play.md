@@ -761,12 +761,18 @@ floor, `rime/push` on the bottom floor, `saurian/push→surge` and `rime/approac
 *"there's still a few elements that are incredibly quiet or inaudible… we can start working on them
 separately per level now."* **The Coil Labyrinth holds 19 of the 54.**
 
-⚠️ **AND THE CUES ARE THE NEXT REPORT, UNTOUCHED SO FAR**: *"player gun-fire could be a bit more
-throatier with a bit more impact… missile explosions don't really sound like explosions now either and
-similar with enemy death explosions and probably the player bomb."* That is `pulse`, `missile`, `kill`
-and `bomb`/`blast` in `src/content/cues.ts`, and it is MATERIAL rather than mix —
-[0173](decisions/0173-a-cue-happens-somewhere.md) deliberately changed no layer, gain, filter or
-envelope.
+⚠️ **AND THE CUE REPORT IS ANSWERED, WITH ONE MEASURED DEFECT BEHIND IT** —
+[0179](decisions/0179-an-explosion-ends-low.md). `node scripts/weigh-cue.mjs` is the instrument 0027
+owed this channel, and on its first run **the enemy death's centre of gravity ROSE 22.5 dB** where
+every other explosion falls 7 to 13. Eighty-four guards were green over it, because none of them has a
+time axis — 0171's sentence, one channel over. `pulse`, `missile`, `kill` and `blast` all moved;
+`bomb` deliberately did not. **The verdict is an ear**: `node scripts/hear.mjs
+--only=pulse,missile,kill,bomb,blast`.
+
+⚠️ **AND THERE IS NO MISSILE-IMPACT CUE, WHICH MAY BE WHAT THAT HALF OF THE REPORT MEANT.**
+`CUE_KINDS` has `missile` for the launch, and a missile that destroys something plays `kill`. A
+distinct impact sound is a new row plus a caller in `src/app/frame.ts` — a feature, not a re-voice,
+and not done.
 
 ⚠️ **AND `npm run prove` DISAGREED WITH ITSELF BETWEEN CI AND THIS MACHINE, WHICH IS ANSWERED AS FAR
 AS IT CAN BE** — [0177](decisions/0177-a-red-is-a-verdict.md). 0134's first probe was reported **red**

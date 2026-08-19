@@ -35,8 +35,8 @@ export const PROBES = [
     guard: '0144 — A CHAIN OF DEATHS STREAKS IN THE TOP, and the band 0109 shortened stays short',
     edit: {
       path: 'src/content/cues.ts',
-      find: "{ wave: 'noise', from: 0, to: 0, seconds: 0.17, gain: 0.9, attack: 0.002, curve: 4.5, lowFrom: 2400, lowTo: 620, highFrom: 150, highTo: 90, q: 0.8, drive: 0.3 },",
-      replace: "{ wave: 'noise', from: 0, to: 0, seconds: 0.38, gain: 0.9, attack: 0.002, curve: 4.5, lowFrom: 2400, lowTo: 620, highFrom: 150, highTo: 90, q: 0.8, drive: 0.3 },",
+      find: "{ wave: 'noise', from: 0, to: 0, seconds: 0.17, gain: 0.98, attack: 0.002, curve: 4.5, lowFrom: 2400, lowTo: 430, highFrom: 150, highTo: 62, q: 0.8, drive: 0.34 },",
+      replace: "{ wave: 'noise', from: 0, to: 0, seconds: 0.38, gain: 0.98, attack: 0.002, curve: 4.5, lowFrom: 2400, lowTo: 430, highFrom: 150, highTo: 62, q: 0.8, drive: 0.34 },",
     },
   },
   {
