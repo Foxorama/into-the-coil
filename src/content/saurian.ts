@@ -482,6 +482,60 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       octave: 0,
       note: { wave: 'sine', from: 196, to: 88, seconds: 0.26, gain: 0.44, attack: 0.002, curve: 3.6, drive: 0.28 },
     },
+    {
+      /*
+        ── THE FLOOR TOM: the deep fast drum, and it plays where the kick is NOT ────────────────────
+
+        ⚠️ **`docs/decisions/0181-the-floor-has-a-bottom.md`.** Asked for: *"some deep fast drum beats
+        instead of the higher notes we've got a lot of."* Measured, that is not a preference — this
+        place holds **0.255** of its energy under 300 Hz at `push` against a floor of 0.24, where the
+        base composition holds 0.378. It is within two points of the bound at exactly the rungs a
+        dancefloor should be driving hardest.
+
+        ⚠️ **IT IS IN `engine` BECAUSE `perc` MAY NOT BE LOW, WHICH IS A RULE AND NOT A PREFERENCE.**
+        `perc` sits at −0.45 and `docs/decisions/0118-the-mix-has-a-width.md` refuses a placed layer
+        whose weight is under 130 Hz — the note above this list says so about the rattles. `engine` is
+        centred, and it is already where the low half of the kit lives.
+
+        ⚠️ **EVERY HIT LANDS WHERE THE KICK HAS NOTHING, AND THAT IS THE FILE'S OWN LESSON.** `sub`'s
+        four-on-the-floor records what happened when two low transients shared a sixteenth: *"the boss
+        mix clipping at 1.004 of full scale"*. Its three variants strike {0,4,8,11,12}, {0,4,7,8,11,12,15}
+        and {0,14,15}; this strikes 2, 5, 6, 9, 10 and 13, which is disjoint from all three. **The
+        genre's own reason is the same as the arithmetic's**: the drop between kicks is where a floor
+        tom belongs.
+
+        ⚠️ **SHORTER THAN THE LOG DRUM AND LOWER, so it drives rather than booms.** 0.18 s at 150 →
+        44 Hz is gone before the next sixteenth arrives; the log drum above is 0.26 s at 196 → 88 and
+        is a different instrument doing a different job.
+
+        ⚠️ **0.32 IS A CEILING AND NOT A CHOICE, AND IT IS WHY THIS LAYER CANNOT ANSWER THE WHOLE
+        REPORT.** Past it, `tests/themes.test.ts` reports `saurian/approach/drive` more than a whole
+        role under what the arrangement asked — measured at 0.45 and 0.62, passing at 0.32 and 0.22.
+        The place's bottom is a fixed allocation and a new layer spends other layers' room; what this
+        buys is **+0.004** of the share under 300 Hz. See 0181 for where the depth actually is.
+
+        ⚠️ **AND IT HAS NO `drive`, WHICH IS `docs/decisions/0179-an-explosion-ends-low.md`'s LESSON
+        ARRIVING IN THE MUSIC.** Saturating it put harmonics in the LOWMID and the guard named the
+        victim exactly — `drive` masked by `engine −1.9 (lowmid)` — on a layer whose own sweep tops
+        out at 150 Hz. Squashing a low sine does not make it deeper; it makes it wider.
+      */
+      /*
+        ⚠️ **SIXTY-FOUR STEPS, BECAUSE `engine` IS A FOUR-BAR LAYER** — `LAYER_BARS`. Written at
+        thirty-two, `tests/themes.test.ts` reported *"saurian/engine voice 4 spans 3.20s inside a 6.4s
+        layer — the rest of the layer is silence"*, which is 0095's guard doing exactly its job on a
+        pattern that would otherwise have played for half the loop and left a hole in the other half.
+      */
+      steps: [
+        _, _, 0.7, _, _, _, 0.62, _, _, 0.58, 0.66, _, _, 0.6, _, _,
+        _, _, 0.72, _, _, 0.64, 0.6, _, _, _, 0.68, _, _, 0.58, _, _,
+        _, _, 0.7, _, _, _, 0.64, _, _, 0.6, 0.66, _, _, 0.62, _, _,
+        _, _, 0.74, _, _, 0.66, 0.62, _, _, 0.6, 0.7, _, _, 0.64, _, _,
+      ],
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 150, to: 44, seconds: 0.18, gain: 0.32, attack: 0.0015, curve: 3.2 },
+    },
   ],
 
   /*
