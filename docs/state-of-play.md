@@ -854,6 +854,28 @@ breakdown needs `RUNG_CLOSES` and is a different decision.
 against 0147's 3.0 floor. Deeper bottoms are a thing both places have. **The Black Heart is the
 obvious next place and this is the constraint it hits first.**
 
+⚠️ **AND THE THIRD AXIS A PLACE CAN BE THE SAME ON IS GESTURE** —
+[0186](decisions/0186-a-place-has-its-own-gesture.md), answering *"the chords and groove are pretty
+similar to ember nebula… here are two of the same songs with a slightly different background beat."*
+`weigh-apart` said 5.7 dB and `weigh-notes` said Saurian is the only place with a G#, and **the ear was
+still right**: both places held `chords` for three to four beats, struck it 0.9 times a bar and
+bottomed at 82 Hz. `node scripts/weigh-gesture.mjs` is the instrument that says so. **Saurian's chord
+is a gate now and its known-adrift list is EMPTY** — the first place with nothing under its role.
+
+⚠️ **AND THE NUMBER THAT IS NOT ABOUT SAURIAN: NINE OF TWENTY-THREE SLOTS ARE FILLED THE SAME WAY BY
+BOTH PLACES** — `bass`, `beat`, `drive`, `dread`, `auraSlow`, `drone`, `stomp`, `lead`, `perc`. Neither
+place inherited them; both wrote their own and arrived at the same instrument, because **the slot's
+name, pan, bar length and role tell every author what to write.** The player named the consequence in
+the same session: *"these are the exact kind of similarity issues that are blocking some of the
+differences I want on different levels."*
+
+⚠️ **SO THE NEXT PIECE OF WORK IS PER-PLACE SLOTS, AND IT IS NOT STARTED.** The shape proposed and not
+yet chosen: keep `MUSIC_LAYERS` closed ([0016](decisions/0016-a-hub-enumerates-kinds.md)) and add a
+few slots with **no identity of their own**, whose pan, bar length and role each place declares — the
+shape `ladder` already has since [0162](decisions/0162-a-place-has-its-own-ladder.md). `LAYER_PAN`,
+`LAYER_BARS` and `ARRANGEMENT` are global `Record`s today and are what it costs. **Ask before
+building: the count is a guess.**
+
 ⚠️ **AND THERE IS NO MISSILE-IMPACT CUE, WHICH MAY BE WHAT THAT HALF OF THE REPORT MEANT.**
 `CUE_KINDS` has `missile` for the launch, and a missile that destroys something plays `kill`. A
 distinct impact sound is a new row plus a caller in `src/app/frame.ts` — a feature, not a re-voice,

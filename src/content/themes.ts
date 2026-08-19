@@ -542,11 +542,11 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     */
     ladder: {
       run: { chords: 0, ride: 0.42, groove: 0.95, perc: 0.8 },
-      push: { chords: 0.34, ride: 0.8, groove: 1.05, perc: 0.86 },
-      surge: { ride: 0.75, groove: 1.08, perc: 0.88, drive: 1.45 },
-      approach: { toll: 1.6, dread: 1.5, drive: 1.55 },
+      push: { chords: 1.5, ride: 0.8, groove: 1.05, perc: 0.86 },
+      surge: { chords: 1.7, ride: 0.75, groove: 1.08, perc: 0.88, drive: 1.45 },
+      approach: { chords: 1.7, toll: 1.6, dread: 1.5, drive: 1.55 },
       boss: { dread: 1.7 },
-      bossPeak: { dread: 2.4, drone: 1.25 },
+      bossPeak: { dread: 2.9, drone: 1.25 },
     },
     /*
       ── THE THREE RUNGS ABOVE `surge` ARE 0185's, AND THEY ARE THE JURASSIC HALF ───────────────────
