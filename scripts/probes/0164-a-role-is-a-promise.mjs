@@ -46,8 +46,11 @@ export const PROBES = [
     guard: '0164 — NO LAYER SITS A WHOLE ROLE UNDER THE ONE THE ARRANGEMENT GAVE IT',
     edit: {
       path: 'tests/themes.test.ts',
-      find: "    approach: ['run/perc',",
-      replace: "    approach: ['run/chords', 'run/perc',",
+      // ⚠️ RE-ANCHORED BY 0176: the re-based mix took the list from 88 entries to 54, so the row this
+      // planted a stale line into is a different row. The break is unchanged — a layer comfortably
+      // OVER its role, listed as though it were under one.
+      find: "    approach: ['approach/dread',",
+      replace: "    approach: ['run/chords', 'approach/dread',",
     },
   },
   {

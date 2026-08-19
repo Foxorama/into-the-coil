@@ -63,7 +63,6 @@ import {
   type Held,
   type LayerSpan,
   type Moment,
-  type SolvedGains,
 } from './transport.ts';
 /*
   ⚠️ **THE SOLVE IS A SCRIPT AND THE DASHBOARD IS A BROWSER, AND THAT ARROW IS ALREADY IN USE.**
@@ -72,7 +71,6 @@ import {
   this imports rather than reimplements: `docs/decisions/0029-the-tracked-record-is-the-record.md` in
   arithmetic, the defect `scripts/weigh-audition.mjs` names about `tests/pace.ts`.
 */
-import { HOLD_WEIGHT, profileOfLoops, rebasedLevel, rmsOfLoops, solveLevel } from '../scripts/solve-mix.mjs';
 
 /** How long the boss is held for. A stated choice, exactly as `scripts/hear.mjs --level` states it. */
 const FIGHT_SECONDS = 45;
@@ -374,28 +372,19 @@ const totalOf = (k: LevelKind): number => LEVELS[k].bossAt / UNITS_PER_SECOND + 
  * asking about the shipped boundaries while the mixer follows the dragged ones is precisely the
  * *instrument disagreeing with the thing it measures* that 0126 exists against.
  */
-/**
- * Whether the mixer is playing 0154's solved arrangement instead of `MUSIC_LADDER × mixOf`.
- *
- * ⚠️ **OFF IS THE SHIPPED MIX AND IS THE DEFAULT**, so the dashboard opens on the thing the game
- * actually plays and the toggle is the experiment rather than the other way round.
- */
-/**
- * Which mix the desk plays — 0167. Three, because there are three candidates and no winner.
- *
- * ⚠️ **`shipped` IS THE DEFAULT AND IS WHAT THE GAME USES.** `MUSIC_LADDER × mixOf`. Smooth
- * boundaries, 91 layers under 0164's floor, and the only one that clears the clip ceiling.
- *
- * ⚠️ **`solved` IS 0154's ARRANGEMENT AS 0166 SOLVES IT.** Best balance there is — nothing adrift —
- * and it makes 56 carried layers audibly quieter at a section change, which is the thing reported as
- * *"a hard jump between sounds"*.
- *
- * ⚠️ **`rebased` IS THE SHIPPED LADDER'S MOTION CARRYING THE SOLVED BALANCE.** Additive at every
- * boundary by construction, 44 adrift, headroom the same as the solve's. Half-fixed on audibility,
- * which is a trade only an ear can make — hence three positions rather than a recommendation.
- */
-type MixMode = 'shipped' | 'solved' | 'rebased';
-let mixMode: MixMode = 'shipped';
+/*
+  ── THE DESK PLAYS THE GAME'S MIX, AND THERE IS ONLY ONE ────────────────────────────────────────
+
+  ⚠️ **`docs/decisions/0176-the-re-based-mix-is-the-mix.md`.** This held a three-way toggle —
+  `shipped`, `solved`, `rebased` — because 0167 had three candidates and no winner. It has a winner:
+  *"re-based now sounds and blends incredibly well, let's make that the released version of the sound
+  … we can just keep the good version now."* The balance is folded into `THEMES`' own `mix`, so
+  `shipped` **is** the re-based mix and the other two positions were the experiment that chose it.
+
+  ⚠️ **THE `steady` SLIDER GOES WITH IT.** `HOLD_WEIGHT` is the weight `REBASE` was generated at;
+  moving it here would re-solve a mix that is already the solve, which is a second-order question and
+  not a listening one. `scripts/solve-mix.mjs` is where it lives now.
+*/
 
 /** The rungs a level walks, in order — the arc `paceAt` is printed across. `calm` is the title. */
 const FIGHT_RUNGS = MUSIC_LEVELS.filter((r) => r !== 'calm' && r !== 'bossPeak');
@@ -412,8 +401,6 @@ const FIGHT_RUNGS = MUSIC_LEVELS.filter((r) => r !== 'calm' && r !== 'bossPeak')
  * ⚠️ **MOVING IT DROPS THE CACHE**, because the solve is per place and this changes every gain in it.
  * It costs about 400 ms a place, which is a drag's worth of wait and not a frame's.
  */
-let holdWeight = HOLD_WEIGHT;
-
 const now = (): Moment =>
   momentOf(
     kind,
@@ -423,7 +410,8 @@ const now = (): Moment =>
     sections,
     // ⚠️ The readout and the mixer both come through here, so they cannot disagree about which mix is
     // playing — which is the *instrument disagreeing with the thing it measures* 0126 exists against.
-    mixMode === 'shipped' ? null : gainsFor(LEVELS[kind].theme),
+    // ⚠️ 0176: one mix, so there is no candidate table to hand in and nothing to disagree about.
+    null,
     // ⚠️ 0163: the same table `setLevel` is handed, for exactly the reason above.
     ladderOf(LEVELS[kind].theme),
   );
@@ -642,39 +630,6 @@ function loopsFor(theme: ThemeKind): Record<MusicLayer, Float32Array> | null {
  * nothing baked to measure, and returning `null` leaves the mixer on the shipped gains rather than
  * on silence.
  */
-const solvedByPlace = new Map<ThemeKind, SolvedGains>();
-
-function gainsFor(theme: ThemeKind): SolvedGains | null {
-  const cached = solvedByPlace.get(theme);
-  if (cached !== undefined) return cached;
-  const loops = loopsFor(theme);
-  if (loops === null) return null;
-  const profile = profileOfLoops(loops);
-  const rms = rmsOfLoops(loops);
-  const gains: Partial<Record<MusicLevel, Record<MusicLayer, number>>> = {};
-  /*
-    ⚠️ **THE WHOLE LEVEL IN ONE CALL, BECAUSE A RUNG NO LONGER HAS AN ANSWER OF ITS OWN** — 0166.
-    Each rung starts from where the one before it left every layer, so looping `solveMix` here would
-    silently be the independent solve — the mix whose boundaries were reported as *"jumpy"*.
-
-    ⚠️ **AND `rebased` IS A THIRD TABLE OVER THE SAME LOOPS** — 0167. It re-bases the shipped ladder
-    onto the solve at one rung, so the boundaries move exactly as the shipped ladder's do. The cache
-    is keyed by place and cleared whenever the mode or the weight changes, because both change every
-    number in it.
-
-    ⚠️ `solve-mix.mjs` is JavaScript, so its return is untyped at this edge. The cast is the boundary
-    and the only one — `SolvedGains` types every reader of the map.
-  */
-  const level = (mixMode === 'rebased'
-    ? rebasedLevel(theme, loops, profile, rms, holdWeight)
-    : solveLevel(theme, loops, profile, rms, holdWeight)) as Record<
-    MusicLevel,
-    { gains: Record<MusicLayer, number> }
-  >;
-  for (const rung of MUSIC_LEVELS) gains[rung] = level[rung].gains;
-  solvedByPlace.set(theme, gains);
-  return gains;
-}
 
 function goToPlace(theme: ThemeKind): void {
   const music = out.music();
@@ -745,32 +700,8 @@ el<HTMLInputElement>('cuesOn').addEventListener('change', (e) => {
   ⚠️ **`afterDeskChange` IS WHAT PUTS IT ON THE AIR** — 0137: the mixer is following targets, and a
   new set of them is exactly the kind of change that has to be pushed rather than waited for.
 */
-el<HTMLSelectElement>('mixMode').addEventListener('change', (e) => {
-  mixMode = (e.target as HTMLSelectElement).value as MixMode;
-  // Each mode is a different table for the same place, so nothing computed for the last one survives.
-  solvedByPlace.clear();
-  afterDeskChange();
-});
 
-/*
-  ⚠️ **`change` AND NOT `input`, WHICH IS THE ONE THING THIS CONTROL MUST NOT GET WRONG** — 0166. A
-  re-solve is about 400 ms a place, and `input` fires on every pixel of a drag, so the obvious wiring
-  would recompute the whole arrangement forty times on the way to a value and lock the page doing it.
-  `change` fires once, when the handle is let go, which is also when a listener is ready to hear the
-  answer.
-*/
-el<HTMLInputElement>('holdWeight').addEventListener('change', (e) => {
-  holdWeight = Number((e.target as HTMLInputElement).value) / 100;
-  el('holdWeightOut').textContent = holdWeight.toFixed(2);
-  // Every gain in every place is a function of this, so nothing cached survives it.
-  solvedByPlace.clear();
-  afterDeskChange();
-});
-el<HTMLInputElement>('holdWeight').addEventListener('input', (e) => {
-  // The label follows the handle even though the solve does not — a slider with a stale number on it
-  // is a control that looks broken while it is working correctly.
-  el('holdWeightOut').textContent = (Number((e.target as HTMLInputElement).value) / 100).toFixed(2);
-});
+
 
 const bind = (id: string, outId: string, set: (v: number) => void, format = (v: number) => String(v)): void => {
   const input = el<HTMLInputElement>(id);
@@ -1071,22 +1002,6 @@ function auditionOnly(only: MusicLayer | null): void {
  */
 const HOLD_SECONDS = 0.03;
 
-/**
- * The non-shipped modes' own targets, as the table `setLevel` schedules from.
- *
- * ⚠️ **THE AURA IS LEFT OUT ON PURPOSE** — 0091, and `SOLVED_BY` excludes it by name. Its gain is a
- * distance the player is steering, so no solver produces one and `levelWrites` has to keep computing
- * it from `nearness` every frame.
- *
- * ⚠️ **AND IT IS `momentOf`'s OWN ANSWER, WHICH IS WHAT MAKES THE READOUT HONEST** — 0126. The number
- * printed in the table and the number scheduled onto the node are now one value read once, rather
- * than two computations that agree until one of them is edited.
- */
-function solvedTargets(moment: Moment): Partial<Record<MusicLayer, number>> {
-  const out: Partial<Record<MusicLayer, number>> = {};
-  for (const { layer, target, aura } of moment.layers) if (!aura) out[layer] = target;
-  return out;
-}
 
 /*
   ⚠️ **THERE IS NO *only write when it moved* SHORTCUT HERE, AND THE AURA IS WHY.** `levelWrites`
@@ -1685,8 +1600,7 @@ function momentAsText(moment: Moment): string {
       boundary, one per mix, and neither said which; the whole comparison rested on a fact the paste
       did not carry and a covering note did. A readout that can be quoted has to be quotable alone.
     */
-    ` · **mix** \`${mixMode}\`` +
-      (mixMode === 'shipped' ? ' (what the game plays)' : ` · steady ${holdWeight.toFixed(2)}`),
+    ' · **mix** `the game’s own` — 0176, and there is only one',
     /*
       ⚠️ **THE SCRIPT GOES OUT AS THE ROW IT WOULD BE PASTED INTO, AND THE SHIPPED ONE GOES WITH IT**
       — 0138, following its subject into 0158. A shape found by dragging the strip is a proposal
@@ -1810,13 +1724,7 @@ function frame(at: number): void {
       `restate` runs on the same rung change and puts the pin back the moment the mixer has had its
       say, which is already how `shipped` behaves and is what the line below has always done.
     */
-    music.setLevel(
-      moment.rung,
-      moment.aura,
-      moment.theme,
-      ladderOf(moment.theme),
-      mixMode === 'shipped' ? undefined : solvedTargets(moment),
-    );
+    music.setLevel(moment.rung, moment.aura, moment.theme, ladderOf(moment.theme));
     // A rung change re-writes every layer whose target moved, including the ones a solo is holding
     // down — so the pin is re-stated the moment the mixer has had its say, and never before it.
     if (rungBefore !== moment.rung || owed.size > 0) restate(moment);

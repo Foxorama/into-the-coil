@@ -155,21 +155,6 @@
         <option value="4">4×</option>
       </select></label>
       <label><input type="checkbox" id="cuesOn" checked /> cues</label>
-      <label
-        title="which mix the desk plays. shipped = MUSIC_LADDER x mixOf, what the game uses. solved = 0154/0166's arrangement, best balance and it ducks the bed at every boundary. re-based = the shipped ladder's motion carrying the solved balance, additive by construction (0167)."
-        ><span class="dim">mix</span>
-        <select id="mixMode">
-          <option value="shipped" selected>shipped</option>
-          <option value="solved">solved</option>
-          <option value="rebased">re-based</option>
-        </select></label
-      >
-      <label
-        title="0166: how much of the solve is spent holding a gain where the previous rung left it. 0 is a rung at a time, which lurches; 0.40 is the most that costs no audibility; past that, steadier boundaries for layers going back under 0164's floor."
-        ><span class="dim">steady</span>
-        <input type="range" id="holdWeight" min="0" max="90" step="5" value="40" />
-        <b id="holdWeightOut">0.40</b></label
-      >
       <span id="status" class="dim">audio locked — a browser makes no sound before a gesture</span>
     </header>
 

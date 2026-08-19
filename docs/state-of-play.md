@@ -746,6 +746,27 @@ number: either the arrangement goes per-place, or it gains *name it if the rung 
 `node -e` over `roleOf` reproduces the list; it is not guarded, because a guard would have to pick
 the answer.
 
+⚠️ **THE MIX QUESTION IS ANSWERED AND THE ANSWER SHIPPED** —
+[0176](decisions/0176-the-re-based-mix-is-the-mix.md). Driven on the desk: *"re-based now sounds and
+blends incredibly well, let's make that the released version of the sound."* The whole third mix turned
+out to be **161 numbers** — `rebasedLevel`'s rung cancels — so it folds into `THEMES`' own `mix` and
+reproduces the solver to **8.9e-16**. **88 layers under 0164's floor became 54**, boundaries are
+additive by construction, and the desk is one mode with no `steady` slider. 0166's two solver guards,
+0175's `gains` parameter and the three-way toggle are all retired with their reasons.
+
+⚠️ **AND FOUR GUARDS NOW CARRY NAMED EXCEPTIONS RATHER THAN A LOWERED BAR** — `mire` on the whisper
+floor, `rime/push` on the bottom floor, `saurian/push→surge` and `rime/approach→boss` on the climb.
+**Each is deleted when its place is worked on.** That is the per-level pass the player asked for:
+*"there's still a few elements that are incredibly quiet or inaudible… we can start working on them
+separately per level now."* **The Coil Labyrinth holds 19 of the 54.**
+
+⚠️ **AND THE CUES ARE THE NEXT REPORT, UNTOUCHED SO FAR**: *"player gun-fire could be a bit more
+throatier with a bit more impact… missile explosions don't really sound like explosions now either and
+similar with enemy death explosions and probably the player bomb."* That is `pulse`, `missile`, `kill`
+and `bomb`/`blast` in `src/content/cues.ts`, and it is MATERIAL rather than mix —
+[0173](decisions/0173-a-cue-happens-somewhere.md) deliberately changed no layer, gain, filter or
+envelope.
+
 ⚠️ **AND `npm run prove` DISAGREES WITH ITSELF BETWEEN CI AND THIS MACHINE, WHICH IS UNEXPLAINED
 AND IS THE MOST IMPORTANT THING ON THIS PAGE.** 0134's first probe — *the undercurrent held instead of
 running* — was reported **red on its own guard** by CI at 05c4e16, and reports **wrong test** here on
