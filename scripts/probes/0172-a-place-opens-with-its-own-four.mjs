@@ -31,8 +31,11 @@ export const PROBES = [
     guard: '0168 — THE DESK’S PACE IS THE GUARD’S PACE, layer for layer and rung for rung',
     edit: {
       path: 'tests/pace.ts',
-      find: "    const gain = rungOf(theme ?? 'approach', rung, layer) * mixOf(theme ?? 'approach', layer) * ceiling;",
-      replace: "    const gain = MUSIC_LADDER[rung][layer] * mixOf(theme ?? 'approach', layer) * ceiling;",
+      // ⚠️ RE-ANCHORED BY 0184, WHICH HOISTED THIS LINE OUT OF `rungShape` AND `heardAt` INTO ONE
+      // `gainIn`. The claim is unchanged and is now made in one place instead of two — which is the
+      // whole of 0184: the copy this probe was pointed at had been corrected and the other had not.
+      find: "  return rungOf(theme ?? 'approach', rung, layer) * mixOf(theme ?? 'approach', layer) * ceiling;",
+      replace: "  return MUSIC_LADDER[rung][layer] * mixOf(theme ?? 'approach', layer) * ceiling;",
     },
   },
   {
