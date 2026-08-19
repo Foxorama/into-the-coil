@@ -59,10 +59,16 @@ export const PROBES = [
     */
     broke: 'any red taken as proof, so a break that reddens the wrong test passes',
     guard: 'and a guard that fires is the only thing that passes',
+    /*
+      ⚠️ RE-ANCHORED BY 0177 AND IT IS THE SAME BREAK. The line this used to name folded into a
+      `filter`, because the verdict now has to look at the failures belonging to this guard TWICE —
+      once to know there are any, once to ask whether one of them is a verdict. Dropping the filter
+      is still exactly "anything red counts", one `.filter` away instead of one `.some` away.
+    */
     edit: {
       path: 'scripts/prove-guard.mjs',
-      find: "  return named.failed.some((t) => t.includes(guard)) ? 'red' : 'NOT THIS GUARD';",
-      replace: "  return named.failed.length > 0 ? 'red' : 'NOT THIS GUARD';",
+      find: '  const mine = named.failed.filter((f) => f.title.includes(guard));',
+      replace: '  const mine = named.failed;',
     },
   },
 ];

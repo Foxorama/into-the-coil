@@ -1,8 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { anchorFailures, asPattern, drift, planEdit, verdictOf, verifyApplied } from '../scripts/prove-guard.mjs';
+import {
+  anchorFailures,
+  asPattern,
+  drift,
+  firstLine,
+  planEdit,
+  isAVerdict,
+  verdictOf,
+  verifyApplied,
+} from '../scripts/prove-guard.mjs';
 
 /**
  * THE HARNESS THAT PROVES THE GUARDS IS ITSELF A GUARD.
@@ -288,6 +297,12 @@ describe('the probe set stays honest', () => {
 describe('0115 — a probe runs the guard it names, and not the suite around it', () => {
   const probeFiles = readdirSync(resolve(root, 'scripts/probes')).filter((f) => f.endsWith('.mjs'));
 
+  /** A failure of the ordinary kind: the guard's own `expect` fired. 0177's shape, at 0115's arms. */
+  const assertion = (title: string) => ({
+    title,
+    message: 'AssertionError: expected 1 to be 2\n    at C:/into-the-coil/tests/themes.test.ts:745:9',
+  });
+
   /*
     ⚠️ **`-t` IS A REGEX AND A GUARD TITLE IS PROSE.** The verdict compares titles with
     `String.includes`, so a guard is a literal substring; vitest's `--testNamePattern` is not, and the
@@ -335,9 +350,135 @@ describe('0115 — a probe runs the guard it names, and not the suite around it'
   });
 
   it('and a guard that fires is the only thing that passes', () => {
-    expect(verdictOf({ ran: 1, failed: ['the boss mix does not clip'] }, 'does not clip')).toBe('red');
+    expect(verdictOf({ ran: 1, failed: [assertion('the boss mix does not clip')] }, 'does not clip')).toBe('red');
     expect(verdictOf({ ran: 1, failed: [] }, 'does not clip')).toBe('NOT THIS GUARD');
     // Red on something else is NOT a pass, and the caller re-runs the suite to say what.
-    expect(verdictOf({ ran: 2, failed: ['some other test'] }, 'does not clip')).toBe('NOT THIS GUARD');
+    expect(verdictOf({ ran: 2, failed: [assertion('some other test')] }, 'does not clip')).toBe('NOT THIS GUARD');
+  });
+});
+
+/*
+  ⚠️ **`docs/decisions/0177-a-red-is-a-verdict.md`, AND IT IS 0115'S EMPTY-RUN ARM ONE STEP FURTHER.**
+  That one exists because *zero failures is what a green suite reports too*; this exists because **a failed
+  title is what a timed-out or crashed test reports too** — and `npm run prove` said `red` about one
+  of those on CI while this machine said `WRONG TEST` about a byte-identical tree, with no record
+  anywhere of which it had been.
+
+  ⚠️ **THE FIXTURES BELOW ARE TRANSCRIBED FROM A REAL RUN, NOT WRITTEN.** vitest 4.1.10, staged in
+  `tests/` and read back out of the JSON reporter. A hand-written timeout would have said
+  *Test timed out in 300ms*, which is on `error.message`; the reporter prints `error.stack || message`
+  and the stack of a timeout is the literal string below.
+*/
+describe('0177 — a red is a verdict, and not any failure with the right name', () => {
+  const ASSERTION =
+    'AssertionError: expected 1 to be greater than or equal to 2\n' +
+    '    at C:/into-the-coil/tests/themes.test.ts:745:9';
+  const FIXTURE =
+    'Error: the bomb never went off — the fixture is not measuring what it says it is\n' +
+    '    at boom (C:/into-the-coil/tests/bombs.test.ts:41:9)\n' +
+    '    at C:/into-the-coil/tests/bombs.test.ts:60:3';
+  const TIMEOUT =
+    'Error: STACK_TRACE_ERROR\n' +
+    '    at task (file:///C:/into-the-coil/node_modules/@vitest/runner/dist/chunk-artifact.js:1784:27)\n' +
+    '    at C:/into-the-coil/tests/themes.test.ts:738:3';
+  // 0024's own probe, off the run that refuted clause 2 alone: `.not.toContain` raises inside chai.
+  const ASSERTION_IN_LIB =
+    "AssertionError: motion is presentation and must not change the model: expected [ Array(7) ] to not include 'motion'\n" +
+    '    at Proxy.<anonymous> (file:///C:/into-the-coil/node_modules/@vitest/expect/dist/index.js:1319:15)\n' +
+    '    at C:/Users/foxor/AppData/Local/Temp/itc-prove-6WIE4a/w5/tests/assist.test.ts:139:89';
+  // 0135's own probe, off the same run: the break names an identifier `src/app/music.ts` does not have.
+  const SRC_CRASH =
+    'ReferenceError: PHRASE_SECONDS is not defined\n' +
+    '    at placeArrivesAt (C:/Users/foxor/AppData/Local/Temp/itc-prove-6WIE4a/w5/src/app/music.ts:855:53)\n' +
+    '    at C:/Users/foxor/AppData/Local/Temp/itc-prove-6WIE4a/w5/tests/music.test.ts:1758:20';
+
+  it('THE ONE THIS IS FOR: a guard that timed out is NOT a guard that was seen to fail', () => {
+    expect(verdictOf({ ran: 1, failed: [{ title: 'the pace holds', message: TIMEOUT }] }, 'the pace holds')).toBe(
+      'NEVER REACHED ITS CLAIM',
+    );
+  });
+
+  /*
+    ⚠️ **THE FRAME, NOT THE STACK — AND THE FIRST VERSION OF THIS RULE GOT IT WRONG.** A timed-out
+    test's stack still carries the frame for its own `it(...)` declaration, so *the suite is named
+    anywhere in the stack* reads a timeout as a real red. `TIMEOUT` above names `themes.test.ts` on
+    its last line for exactly that reason, and this is the assertion that would have caught it.
+  */
+  it('and the difference is WHERE IT WAS THROWN, because a timeout names the suite too', () => {
+    expect(TIMEOUT).toContain('tests/themes.test.ts');
+    expect(isAVerdict(TIMEOUT)).toBe(false);
+    expect(isAVerdict(ASSERTION)).toBe(true);
+  });
+
+  /*
+    ⚠️ **A REAL RUN OF ALL 686 PROBES REFUTED THE WIDER RULE, AND THIS IS THE CASE THAT DID IT.**
+    *The throw site is not in `node_modules`* called FOUR working probes proofless — 0024 twice, 0072
+    and 0154 — because `.not.toContain` raises inside `@vitest/expect` and not at the line that called
+    it. Chai is a library the test CALLED; the runner is the thing that stops it, and only the second
+    of those is not a verdict.
+  */
+  it('and an ASSERTION is a verdict wherever chai threw it, which is not where the guard is', () => {
+    expect(ASSERTION_IN_LIB).toContain('node_modules/@vitest/expect');
+    expect(isAVerdict(ASSERTION_IN_LIB)).toBe(true);
+  });
+
+  /*
+    ⚠️ **AND IT IS `src/` AS MUCH AS `tests/`, FROM THE SAME RUN.** Three probes break a file into
+    throwing — `ReferenceError: PHRASE_SECONDS is not defined` — and the module dies before the guard
+    asserts. That is still this repository deciding rather than the runner giving up, so it is a red;
+    **it is a weaker one than an assertion**, which is why the message now prints beside it. The
+    sixteen fixtures under `tests/` that refuse by throwing are the same case.
+  */
+  it('and code of ours that throws HAS decided, whether it is in src/ or in tests/', () => {
+    expect(isAVerdict(SRC_CRASH)).toBe(true);
+    expect(isAVerdict(FIXTURE)).toBe(true);
+    expect(verdictOf({ ran: 1, failed: [{ title: 'the bomb clears the screen', message: FIXTURE }] }, 'the bomb')).toBe(
+      'red',
+    );
+  });
+
+  /*
+    ⚠️ **THE TRIPWIRE UNDER THE ONE PACKAGE PATH THIS RULE NAMES.** `isAVerdict` excludes
+    `@vitest/runner` by name, so a vitest that restructured its internals would silently start
+    counting timeouts as real reds again — quiet, and in the direction that costs. This is the
+    cheapest thing that goes loud when that day comes.
+  */
+  it('and the one package path the rule names is still where the runner lives', () => {
+    expect(existsSync(resolve(root, 'node_modules/@vitest/runner'))).toBe(true);
+    expect(TIMEOUT).toContain('@vitest/runner');
+  });
+
+  it('and the arms stay in this order: no such guard, not this guard, no verdict, red', () => {
+    // An empty run outranks everything — 0115's arm, and it must not be reachable past this one.
+    expect(verdictOf({ ran: 0, failed: [{ title: 'the pace holds', message: TIMEOUT }] }, 'the pace holds')).toBe(
+      'NO SUCH GUARD',
+    );
+    // A different test timing out is NOT this guard, and must not be read as this guard's non-verdict.
+    expect(verdictOf({ ran: 2, failed: [{ title: 'something else', message: TIMEOUT }] }, 'the pace holds')).toBe(
+      'NOT THIS GUARD',
+    );
+    // One verdict among the failures is enough, whichever order they arrive in.
+    expect(
+      verdictOf(
+        {
+          ran: 2,
+          failed: [
+            { title: 'the pace holds, at any rung', message: TIMEOUT },
+            { title: 'the pace holds, at any rung', message: ASSERTION },
+          ],
+        },
+        'the pace holds',
+      ),
+    ).toBe('red');
+  });
+
+  /*
+    ⚠️ **THE LINE THAT GOES IN THE LOG, AND THE POINT IS THAT IT IS THE QUANTITY.** 679 of these in a
+    CI run make the next two-machine disagreement a diff. This one was a dead end because `red` was
+    the entire record.
+  */
+  it('and what the log keeps is what the guard SAID, not that it spoke', () => {
+    expect(firstLine(ASSERTION)).toBe('AssertionError: expected 1 to be greater than or equal to 2');
+    expect(firstLine('')).toBe('');
   });
 });
