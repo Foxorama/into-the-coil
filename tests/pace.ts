@@ -35,6 +35,38 @@ function auraCeilingIn(theme: ThemeKind | undefined): number {
   return auraCeilingOf(theme ?? 'approach');
 }
 
+/**
+ * What this place takes `layer` to at `rung` — the ladder, the balance and the aura's ceiling.
+ *
+ * ── ONE DESCRIPTION, BECAUSE TWO IDENTICAL COPIES DISAGREED FOR FOUR DAYS ──────────────────────
+ *
+ * ⚠️ **`docs/decisions/0184-the-measurement-reads-the-place.md`.** This expression was written out
+ * twice, character for character, in `rungShape` and in `heardAt`.
+ * `docs/decisions/0172-a-place-opens-with-its-own-four.md` corrected the first to route through
+ * `rungOf` and left the second reading `MUSIC_LADDER[rung][layer]` — and the second is the one
+ * under 0164's role floor, `weigh-adrift` and `weigh-heard`, which is every mix decision since.
+ *
+ * ⚠️ **SO THE FIX IS THE HOIST AND NOT THE ONE-LINE CORRECTION.** A defect that arrived because a
+ * line was written twice is not repaired by making the copy agree; it is repaired by there being
+ * one. `rungOf`'s own header says exactly that about the game's eight readers, and this file did
+ * not take the lesson when it was written.
+ *
+ * ⚠️ **`undefined` IS *the base composition*, AND LEVEL ONE IS THE PLACE THAT PLAYS IT UNMIXED** —
+ * the reading both copies already took, now taken once. Level one states no ladder, so `rungOf`
+ * hands back the shared row for it exactly.
+ *
+ * ⚠️ **`loudestOf` BELOW IS DELIBERATELY NOT ROUTED THROUGH THIS, AND THE REASON IS A DIFFERENCE
+ * RATHER THAN AN OVERSIGHT.** It applies the aura's ceiling at EVERY rung where this applies it at
+ * none of `boss` and `bossPeak`; folding them together would silently move what an audition is
+ * measured against. 0184 has the measurement and hands the question on rather than answering it in a
+ * decision about something else.
+ */
+function gainIn(theme: ThemeKind | undefined, rung: MusicLevel, layer: MusicLayer): number {
+  const nearness = rung === 'boss' || rung === 'bossPeak' ? 1 : auraCeilingIn(theme);
+  const ceiling = FOLLOWS_THE_BOSS.includes(layer) ? nearness : 1;
+  return rungOf(theme ?? 'approach', rung, layer) * mixOf(theme ?? 'approach', layer) * ceiling;
+}
+
 import {
   MUSIC_ROLES,
   type MusicRole,
@@ -116,7 +148,6 @@ export function rungShape(
   loops: Record<MusicLayer, Float32Array>,
   bakes: Map<string, number[]>,
 ): { notes: number; low: number; high: number; centre: number; pitch: number } {
-  const nearness = rung === 'boss' || rung === 'bossPeak' ? 1 : auraCeilingIn(theme);
   let notes = 0;
   let low = 0;
   let high = 0;
@@ -125,7 +156,6 @@ export function rungShape(
   let pitched = 0;
   let total = 0;
   for (const layer of MUSIC_LAYERS) {
-    const ceiling = FOLLOWS_THE_BOSS.includes(layer) ? nearness : 1;
     /*
       ⚠️ **THROUGH `rungOf`, AND IT READ `MUSIC_LADDER` DIRECTLY UNTIL A PLACE STATED A LADDER** —
       `docs/decisions/0172-a-place-opens-with-its-own-four.md`, the same defect as `loudestOf` below
@@ -133,7 +163,7 @@ export function rungShape(
       0168, so **the desk and this disagreed by 27 notes a bar at Ember Nebula's `run`** the instant a
       ladder existed — and 0168's own guard, which exists to hold the two together, is what said so.
     */
-    const gain = rungOf(theme ?? 'approach', rung, layer) * mixOf(theme ?? 'approach', layer) * ceiling;
+    const gain = gainIn(theme, rung, layer);
     if (gain <= 0) continue;
     notes += notesPerBar(theme, layer);
     const where = pitchOf(theme, layer);
@@ -492,13 +522,18 @@ export function heardAt(
   loops: Record<MusicLayer, Float32Array>,
   bakes: Map<string, number[]>,
 ): Heard[] {
-  const nearness = rung === 'boss' || rung === 'bossPeak' ? 1 : auraCeilingIn(theme);
 
   /** Every sounding layer's A-weighted band energies, already at this rung's gain. */
   const sounding: { layer: MusicLayer; gain: number; bands: number[]; rms: number; peak: number }[] = [];
   for (const layer of MUSIC_LAYERS) {
-    const ceiling = FOLLOWS_THE_BOSS.includes(layer) ? nearness : 1;
-    const gain = MUSIC_LADDER[rung][layer] * mixOf(theme ?? 'approach', layer) * ceiling;
+    /*
+      ⚠️ **THROUGH `gainIn`, AND IT READ `MUSIC_LADDER[rung][layer]` FOR FOUR DAYS** — 0184. Six of
+      seven places have stated their own ladder since
+      `docs/decisions/0162-a-place-has-its-own-ladder.md`, and **65 gains differ from the shared
+      row**: seven layers a place OPENS were inaudible here, and eight a place CLOSES were masking
+      layers they do not sound beside. **Six of the fifty-four known-adrift entries were phantoms.**
+    */
+    const gain = gainIn(theme, rung, layer);
     if (gain <= 0) continue;
     /*
       ⚠️ **A `heard/` PREFIX, BECAUSE THIS IS NOT THE MEASUREMENT `rungShape` CACHES.** Both walk the

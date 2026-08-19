@@ -990,14 +990,20 @@ describe('0128 — a place plays its own material, and shares everything it does
     `reports/the-arrangement-holds-the-wrong-thing-2026-08-17.md` found it lurches at every boundary.
     This guard is what says how far the shipped mix is from the intent, while that is worked out.
   */
+  /*
+    ⚠️ **SIX ENTRIES CAME OFF THIS LIST WITHOUT A NOTE BEING PLAYED DIFFERENTLY** — 0184. They were
+    never adrift: `heardAt` read the shared ladder, so it had `chords` sounding at a `run` that
+    closes it and `ride` silent at a `run` that opens it. **Every one of the six is at `run` or
+    `push`**, which is exactly where the six places state a ladder.
+  */
   const STILL_ADRIFT: Record<ThemeKind, readonly string[]> = {
     approach: ['approach/dread', 'approach/drive', 'boss/dread', 'boss/wraith', 'bossPeak/dread', 'surge/drive'],
     nebula: ['approach/toll', 'boss/dread', 'boss/wraith', 'bossPeak/dread'],
-    saurian: ['approach/dread', 'approach/toll', 'boss/dread', 'bossPeak/dread', 'run/groove', 'surge/drive'],
-    labyrinth: ['approach/drive', 'approach/drone', 'approach/sub', 'approach/toll', 'boss/drone', 'boss/frenzy', 'boss/stomp', 'boss/sub', 'boss/wraith', 'bossPeak/drone', 'bossPeak/frenzy', 'bossPeak/sub', 'bossPeak/wraith', 'push/drone', 'push/sub', 'run/sub', 'surge/drive', 'surge/drone', 'surge/sub'],
+    saurian: ['approach/dread', 'approach/toll', 'boss/dread', 'bossPeak/dread', 'surge/drive'],
+    labyrinth: ['approach/drive', 'approach/drone', 'approach/sub', 'approach/toll', 'boss/drone', 'boss/frenzy', 'boss/stomp', 'boss/sub', 'boss/wraith', 'bossPeak/drone', 'bossPeak/frenzy', 'bossPeak/sub', 'bossPeak/wraith', 'surge/drive', 'surge/drone', 'surge/sub'],
     rime: ['approach/dread', 'boss/wraith', 'bossPeak/dread'],
-    mire: ['boss/ride', 'bossPeak/ride', 'run/sub', 'surge/drive', 'surge/hook'],
-    core: ['approach/toll', 'boss/dread', 'boss/drone', 'boss/frenzy', 'boss/sub', 'boss/toll', 'bossPeak/dread', 'bossPeak/drone', 'bossPeak/sub', 'bossPeak/toll', 'run/engine'],
+    mire: ['boss/ride', 'bossPeak/ride', 'surge/drive', 'surge/hook'],
+    core: ['approach/toll', 'boss/dread', 'boss/drone', 'boss/frenzy', 'boss/sub', 'boss/toll', 'bossPeak/dread', 'bossPeak/drone', 'bossPeak/sub', 'bossPeak/toll'],
   };
 
   it('0164 — NO LAYER SITS A WHOLE ROLE UNDER THE ONE THE ARRANGEMENT GAVE IT', () => {

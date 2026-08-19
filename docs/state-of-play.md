@@ -816,6 +816,23 @@ the low ceiling by nothing at all. **Every cue the game asks for is now heard.**
 floor 0176 replaced, printed verdicts for guards 0182 deleted, and called a raw-sum proxy the clip
 guard's arithmetic. [0116](decisions/0116-the-rig-plays-the-level.md)'s subject, found on the way past.
 
+⚠️ **AND THE INSTRUMENT UNDER EVERY MIX DECISION SINCE 0162 WAS READING THE WRONG LADDER** —
+[0184](decisions/0184-the-measurement-reads-the-place.md). `heardAt` in `tests/pace.ts` — the
+arithmetic behind [0164](decisions/0164-a-role-is-a-promise-the-mix-has-to-keep.md)'s role floor,
+`weigh-adrift` and `weigh-heard` — read `MUSIC_LADDER` where six of seven places state their own.
+**65 gains differ; six of the fifty-four known-adrift entries were phantoms.** The list is 48.
+
+⚠️ **IT WAS FOUND BY THE SAURIAN PASS AND STOPPED IT.** `weigh-adrift` blamed `chords` for burying
+`groove` at Saurian's `run`, where 0172's own authoring CLOSES `chords`. **The next edit would have
+been a tuning pass against a phantom.** Re-measure before proposing any mix number written between
+2026-08-16 and now.
+
+⚠️ **AND THE LINE WAS WRITTEN TWICE, WHICH IS THE TRANSFERABLE HALF.**
+[0172](decisions/0172-a-place-opens-with-its-own-four.md) found this exact defect, fixed the copy in
+`rungShape`, wrote the paragraph, and did not look for the other one. It is one `gainIn` now.
+**`scripts/` is still unscanned and 0184 names that as a debt** — one read in `hear.mjs` was wrong and
+was fixed by hand.
+
 ⚠️ **AND THERE IS NO MISSILE-IMPACT CUE, WHICH MAY BE WHAT THAT HALF OF THE REPORT MEANT.**
 `CUE_KINDS` has `missile` for the launch, and a missile that destroys something plays `kill`. A
 distinct impact sound is a new row plus a caller in `src/app/frame.ts` — a feature, not a re-voice,

@@ -848,10 +848,20 @@ describe('the rig is not in the game, and the game is not in the rig', () => {
       the ladder says* is not an opinion, and a coverage table read off the shared row would describe a
       level nobody plays.
 
-      ⚠️ **`scripts/` IS DELIBERATELY NOT SCANNED, AND THE REASON IS A REAL ONE.** `scripts/hear.mjs`
-      has modes whose SUBJECT is the base composition — `--music` writes the shared ladder at every
-      rung with no place applied, which is the whole point of that mode. Forcing a themed read there
-      would make the tool answer a different question.
+      ⚠️ **AND `tests/pace.ts` IS SCANNED NOW, BECAUSE IT WAS THE ONE THAT MATTERED** —
+      `docs/decisions/0184-the-measurement-reads-the-place.md`. This scan walked where the GAME reads
+      the ladder and never where the MEASUREMENT does, and `heardAt` — the arithmetic under 0164's
+      role floor, `weigh-adrift` and `weigh-heard` — read the shared row for four days. **It is
+      named as one file rather than as a directory**: the rest of `tests/` is full of guards whose
+      SUBJECT is the shared ladder (0090's additive rule, the arrangement's coverage, `rungIn`'s own
+      fallback), and scanning the directory would flag twenty correct lines to catch one wrong one.
+
+      ⚠️ **`scripts/` IS STILL NOT SCANNED, AND THAT EXCLUSION IS NOW A DEBT RATHER THAN A DESIGN.**
+      `scripts/hear.mjs` has modes whose SUBJECT is the base composition — `--music` writes the
+      shared ladder at every rung with no place applied, which is the whole point of that mode — and it
+      also had **one read that was simply wrong**, in a mode that resolves every gain through the place
+      and then counted with the shared row. 0184 fixed it **by hand**, which is what an unscanned
+      directory costs.
     */
     const offenders: string[] = [];
     const walk = (dir: string): void => {
@@ -868,6 +878,14 @@ describe('the rig is not in the game, and the game is not in the rig', () => {
     };
     walk('src');
     walk('rig');
+    /*
+      ⚠️ **ONE FILE FROM `tests/`, AND `walk` CANNOT EXPRESS THAT** — 0184. It takes a directory and
+      recurses; the claim here is about a single shared measurement library, so it is checked
+      directly. A guard that had to grow a directory-walker to say *this one file* would be a guard
+      built for a rule nobody stated.
+    */
+    const MEASUREMENT = 'tests/pace.ts';
+    if (/MUSIC_LADDER\s*\[/.test(bare(readFileSync(resolve(root, MEASUREMENT), 'utf8')))) offenders.push(MEASUREMENT);
     expect(
       offenders,
       `these read the shared ladder rather than the place's: ${offenders.join(', ')} — use rungOf`,

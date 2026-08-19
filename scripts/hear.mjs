@@ -50,7 +50,7 @@ import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { MASTER_GAIN, SAMPLE_RATE, cueSeconds, sampleCue, saturate, variantAt, velocitiesOf } from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { bakeLoops } from '../src/app/music.ts';
-import { THEME_KINDS } from '../src/content/themes.ts';
+import { THEME_KINDS, rungOf } from '../src/content/themes.ts';
 import { SOLVED_BY } from '../src/content/arrangement.ts';
 import { profileOfLoops, solveLevel } from './solve-mix.mjs';
 import { PHRASE_SECONDS, BAR_SECONDS, LAYER_BARS, LAYER_PAN, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_DRIVE, MUSIC_GAIN, AURA_LAYERS, AURA_NEAR_UNITS, AURA_FAR_UNITS } from '../src/content/music.ts';
@@ -307,7 +307,12 @@ if (args.has('solo')) {
     console.error(`every layer is silent at ${rung}`);
     process.exit(1);
   }
-  const heard = written.length - MUSIC_LAYERS.filter((l) => AURA_LAYERS.includes(l) && MUSIC_LADDER[rung][l] > 0).length;
+  // ⚠️ THROUGH rungOf SINCE 0184. This mode already resolves every GAIN through the place — see
+  // targetGain above — and then counted with the shared row, so a place that opens a layer the shared
+  // ladder closes was written to disk and left out of its own tally.
+  const heard =
+    written.length -
+    MUSIC_LAYERS.filter((l) => AURA_LAYERS.includes(l) && rungOf(theme ?? 'approach', rung, l) > 0).length;
   console.log(`solo at rung "${rung}" — ${heard} layers actually sounding, ${written.length} written:`);
   for (const line of written) console.log(`  ${base}-solo-${line}`);
   if (silent.length > 0) console.log(`silent at ${rung}, not written: ${silent.join(', ')}`);
