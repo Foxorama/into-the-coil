@@ -999,7 +999,13 @@ describe('0128 — a place plays its own material, and shares everything it does
   const STILL_ADRIFT: Record<ThemeKind, readonly string[]> = {
     approach: ['approach/dread', 'approach/drive', 'boss/dread', 'boss/wraith', 'bossPeak/dread', 'surge/drive'],
     nebula: ['approach/toll', 'boss/dread', 'boss/wraith', 'bossPeak/dread'],
-    saurian: ['approach/dread', 'approach/toll', 'boss/dread', 'bossPeak/dread', 'surge/drive'],
+    /*
+      ⚠️ **SIX ENTRIES TO ONE, AND THIS IS WHAT 0176 MEANT BY *deleted when its place is worked on*** —
+      `docs/decisions/0185-the-belt-gets-its-bottom.md`. `approach/dread`, `approach/toll`,
+      `boss/dread` and `surge/drive` all clear the floor now; `run/groove` was never adrift at all
+      and went with `docs/decisions/0184-the-measurement-reads-the-place.md`.
+    */
+    saurian: ['bossPeak/dread'],
     labyrinth: ['approach/drive', 'approach/drone', 'approach/sub', 'approach/toll', 'boss/drone', 'boss/frenzy', 'boss/stomp', 'boss/sub', 'boss/wraith', 'bossPeak/drone', 'bossPeak/frenzy', 'bossPeak/sub', 'bossPeak/wraith', 'surge/drive', 'surge/drone', 'surge/sub'],
     rime: ['approach/dread', 'boss/wraith', 'bossPeak/dread'],
     mire: ['boss/ride', 'bossPeak/ride', 'surge/drive', 'surge/hook'],

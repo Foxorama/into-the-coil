@@ -407,7 +407,12 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'sine', from: 132, to: 32, seconds: 0.42, gain: 0.4, attack: 0.002, curve: 2.4, drive: 0.3 },
+      /*
+        ⚠️ **BIGGER AND DEEPER BECAUSE THE PAD MOVED OFF IT** — 0185. 0.4 → 0.5, 32 → 30 Hz, 0.42 →
+        0.46 s. Every one of those was available before and none of them would have been heard:
+        `sub` measured **17 dB down** at `push` with the pad over it.
+      */
+      note: { wave: 'sine', from: 132, to: 30, seconds: 0.46, gain: 0.5, attack: 0.002, curve: 2.4, drive: 0.3 },
     },
     {
       // THE OFFBEAT STAB — the half of the floor that is a hole rather than a note. `OFFBEAT` has it.
@@ -416,7 +421,9 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       perBeat: 2,
       octave: 0,
       accents: [1, 0.86, 0.94, 0.84],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.34, gain: 0.24, attack: 0.004, curve: 3.6, lowFrom: 900, lowTo: 260, q: 1.5, drive: 0.3 },
+      // ⚠️ 0.24 → 0.30 — 0185. The bass placement IS the hi-NRG signature (the note at the head of
+      // this file), so the layer that carries it takes its share of the room the pad gave up.
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.34, gain: 0.3, attack: 0.004, curve: 3.6, lowFrom: 900, lowTo: 260, q: 1.5, drive: 0.3 },
     },
   ],
 
@@ -534,7 +541,18 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'sine', from: 150, to: 44, seconds: 0.18, gain: 0.32, attack: 0.0015, curve: 3.2 },
+      /*
+        ⚠️ **0.32 → 0.44, AND 0181's CEILING WAS NOT A PROPERTY OF THIS DRUM** — 0185. That decision
+        measured 0.32 as the point past which `saurian/approach/drive` went a whole role adrift, and
+        called it *"a ceiling and not a choice."* **It was a ceiling on the drum only while the pad was
+        in the way**: with `chords` out of the `low` window this sits at 0.44 with `drive` clear —
+        and `drive` is lifted at its own rungs in `src/content/themes.ts` besides.
+
+        ⚠️ **STILL NO `drive` ON IT**, which is 0179's lesson and is unchanged: squashing a low sine
+        does not make it deeper, it makes it wider, and the harmonics land in the lowmid where this
+        place is already crowded.
+      */
+      note: { wave: 'sine', from: 150, to: 42, seconds: 0.2, gain: 0.44, attack: 0.0015, curve: 3.2 },
     },
   ],
 
@@ -667,13 +685,30 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.26, gain: 0.07, attack: 0.004, curve: 4, lowFrom: 2200, lowTo: 900, q: 1.6 },
     },
     {
-      // The bottom of the pad, an octave under the roots and filtered nearly flat: what makes the
-      // chord felt rather than only heard.
+      /*
+        ── THE PAD LET GO OF THE BOTTOM, AND THAT IS THE WHOLE OF 0185 ──────────────────────────────
+
+        ⚠️ **`docs/decisions/0185-the-belt-gets-its-bottom.md`**, answering *"make saurian a eurobeat
+        style with some deep bassy drums so we can get a mix up of modern eurobeat and older style
+        jurassic inspired music."* This was a triangle at **octave 0, gain 0.34, with no highpass at
+        all**, and it used to say *what makes the chord felt rather than only heard*.
+
+        ⚠️ **`docs/decisions/0181-the-floor-has-a-bottom.md` MEASURED WHAT THAT COST AND COULD NOT
+        FIX IT.** The pad sat **7.6 dB over `sub` in `sub`'s own window** and 12.1 over `drone`;
+        `chords` was the loudest layer in the place by seven decibels with a measured centroid of
+        **108 Hz**. A chord pad was standing where the kick lives, which is why 0181's new floor tom
+        moved the place's bottom by **0.004** and it said so: *"there is no room at the bottom."*
+
+        ⚠️ **UP AN OCTAVE, HALVED, AND HIGHPASSED AT 200 Hz.** `chords`' window moves from `low` to
+        `himid` and the layer gives up about 6 dB. **The six saw voices above are untouched** — what
+        goes is the sub-octave doubling, not the supersaw the genre is made of. A eurobeat pad does
+        not own the bottom; the kick and the bass do, and the three notes below take it.
+      */
       steps: ROOT,
       pitched: true,
       perBeat: 0.25,
-      octave: 0,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.34, attack: 0.12, curve: 1.2, lowFrom: 520, lowTo: 300, q: 0.9 },
+      octave: 1,
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.16, attack: 0.12, curve: 1.2, lowFrom: 620, lowTo: 380, q: 0.9, highFrom: 200 },
     },
   ],
 
