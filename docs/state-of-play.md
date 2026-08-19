@@ -185,6 +185,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **A BROWSER BUDGET IS MEASURED — 10 s for a 4.2 s transition was a coin toss; the press pays for the prewarm** | [0169](decisions/0169-a-browser-budget-is-measured.md) |
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
 | **a probe runs the test it NAMES, and a suite bakes the music once** | [0115](decisions/0115-a-probe-runs-its-own-guard.md) — amends 0054's *whole suite* clause |
+| **a probe's `red` is a VERDICT — a timeout or a crash reports the same failed title, and every probe's line now carries what its guard said** | [0177](decisions/0177-a-red-is-a-verdict.md) |
 | **the rig plays a LEVEL, and the instrument is guarded like the game** | [0116](decisions/0116-the-rig-plays-the-level.md) |
 | **a section change lands on a DOWNBEAT, and not one ever had** | [0117](decisions/0117-a-section-change-lands-on-the-beat.md) |
 | **the mix has a WIDTH, and the low end does not use it** | [0118](decisions/0118-the-mix-has-a-width.md) |
@@ -767,27 +768,21 @@ and `bomb`/`blast` in `src/content/cues.ts`, and it is MATERIAL rather than mix 
 [0173](decisions/0173-a-cue-happens-somewhere.md) deliberately changed no layer, gain, filter or
 envelope.
 
-⚠️ **AND `npm run prove` DISAGREES WITH ITSELF BETWEEN CI AND THIS MACHINE, WHICH IS UNEXPLAINED
-AND IS THE MOST IMPORTANT THING ON THIS PAGE.** 0134's first probe — *the undercurrent held instead of
-running* — was reported **red on its own guard** by CI at 05c4e16, and reports **wrong test** here on
-a tree `git diff` says is byte-identical. Established rather than rerun, per
-[0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md):
+⚠️ **AND `npm run prove` DISAGREED WITH ITSELF BETWEEN CI AND THIS MACHINE, WHICH IS ANSWERED AS FAR
+AS IT CAN BE** — [0177](decisions/0177-a-red-is-a-verdict.md). 0134's first probe was reported **red**
+by CI at 05c4e16 and **wrong test** here on a byte-identical tree. **The reason was unrecoverable by
+construction**: `red` meant *some failure with the right title*, and every path to which one it had
+been was discarded unread. 0177 has the three places it was dropped, the four failure shapes measured
+off vitest's own reporter, and the rule that was nearly shipped instead.
 
-- the quantity is **not** intermittent. With that break Ember Nebula sits at **111 notes a bar against
-  a 106.5 floor** — measured twice, and the guard run filtered and alone passes here every time.
-- so the pace guard genuinely does not fire on that tree, and CI said it did.
-- `verdictOf` calls a probe red when **any failed test TITLE contains the guard's name**, and the run
-  is already filtered to that title — so anything that fails the named test counts, including a
-  failure that is not the assertion.
-- **no timeout appears in the CI log**, so the obvious explanation is not supported and no other has
-  been found.
+⚠️ **IT DOES NOT EXPLAIN 05c4e16 AND SAYS SO.** That evidence was never written down. What changed is
+that the next disagreement is a diff — every probe's line now carries what its guard said — and that a
+timeout can no longer answer for an assertion. **The one inference to un-learn:** *no timeout appears
+in the CI log* was true and meant nothing, because a timeout's message never reaches the log at all.
 
-⚠️ **THE PROBE ITSELF IS FIXED AND THAT IS NOT THE SAME THING.** It is re-aimed at `arp`, which
-[0172](decisions/0172-a-place-opens-with-its-own-four.md) opened at Ember Nebula's `run` and which now
-carries the pace there; the break lands the place at **83.7%** against the floor, with six points of
-margin rather than four the wrong way. **What is not fixed is a guard-of-guards that answers
-differently in two places**, and until that is understood every *seen red* in this repository is worth
-slightly less than it says.
+⚠️ **THE PROBE ITSELF WAS RE-AIMED SEPARATELY AND THAT WAS ALWAYS A DIFFERENT THING.** It points at
+`arp`, which [0172](decisions/0172-a-place-opens-with-its-own-four.md) opened at Ember Nebula's `run`
+and which now carries the pace there; the break lands the place at **83.7%** against the floor.
 
 ⚠️ **AND THE FIRST LISTEN FOUND TWO THINGS, BOTH OF THEM MINE, BOTH NOW FIXED.**
 [0174](decisions/0174-a-send-has-to-mean-something.md): 0173's cue room shipped **un-normalised**, so

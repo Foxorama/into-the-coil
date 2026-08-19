@@ -130,6 +130,56 @@ export function asPattern(title) {
 }
 
 /**
+ * @typedef {object} Failure
+ * @property {string} title     the failing test's title
+ * @property {string} message   its first failure message — vitest's `error.stack || error.message`
+ */
+
+/** A failure message's headline, which is the sentence the guard wrote. Empty for an empty message. */
+export function firstLine(message) {
+  return message.split('\n')[0].trim();
+}
+
+/**
+ * Whether a failure was raised by the SUITE'S OWN CODE, rather than by the machinery around it.
+ *
+ * ⚠️ **THE THROW SITE, WHICH IS THE FIRST FRAME AND NOT THE STACK.** A timed-out test's stack DOES
+ * name the suite — measured, on vitest 4.1.10 — because the frame for its own `it(...)` declaration
+ * is still on it. *Anywhere in the stack* was the first version of this rule and it read a timeout
+ * as a real red. What separates them is where the error was THROWN:
+ *
+ * ```
+ *   AssertionError: expected 1 to be greater than or equal to 2
+ *       at C:/into-the-coil/tests/themes.test.ts:3:48          ← the guard's own expect
+ *   Error: the bomb never went off — the fixture is not measuring what it says it is
+ *       at C:/into-the-coil/tests/bombs.test.ts:41:9           ← the suite refusing, also a verdict
+ *   Error: STACK_TRACE_ERROR
+ *       at task (file:///…/node_modules/@vitest/runner/…)      ← a timeout, and NOT a verdict
+ * ```
+ *
+ * ⚠️ **`STACK_TRACE_ERROR` IS WHAT A TIMEOUT LOOKS LIKE HERE**, and it is why reading the CI log for
+ * the word *timeout* found nothing: vitest puts *Test timed out in 60000ms* on `error.message` and
+ * the JSON reporter prints `error.stack || error.message`, so the message never appears at all.
+ *
+ * ⚠️ **AND *THE ASSERTION SPECIFICALLY* WAS CONSIDERED AND REFUSED.** `AssertionError:` is a simpler
+ * test and a stronger claim, and it would reclassify the SIXTEEN places in `tests/` that refuse by
+ * throwing — *"the ship never died — the fixture is not measuring what it says it is"*. A fixture's
+ * refusal is the suite reaching a verdict about the world, which is exactly what this is asking.
+ *
+ * The limit, stated rather than hidden: a `beforeAll` that throws is raised in the suite too, and
+ * would still read as `red`. Nothing in this repository has one.
+ *
+ * @param {string} message
+ * @returns {boolean}
+ */
+export function raisedInTheSuite(message) {
+  const frame = message.split('\n').find((line) => line.trim().startsWith('at '));
+  if (frame === undefined) return false;
+  const path = frame.replaceAll('\\', '/');
+  return path.includes('/tests/') && !path.includes('node_modules');
+}
+
+/**
  * What a filtered run of the named guard proves, before the diagnostic is fetched.
  *
  * ⚠️ **A PURE FUNCTION FOR THE REASON `drift` AND `planEdit` ARE ONES.** The verdict used to be three
@@ -147,13 +197,21 @@ export function asPattern(title) {
  * somewhere else is a question about the forty-seven tests this run did not execute, so it is the
  * caller's job to go and ask it — and only on the path where somebody will read the answer.
  *
- * @param {{failed: string[], ran: number}} named   the filtered run's result
- * @param {string} guard                            the probe's guard title
- * @returns {'red' | 'NO SUCH GUARD' | 'NOT THIS GUARD'}
+ * ⚠️ **`NEVER REACHED ITS CLAIM` IS 0115'S EMPTY-RUN ARM ONE STEP FURTHER, AND IT IS
+ * `docs/decisions/0177-a-red-is-a-verdict.md`.** `ran === 0` exists because *zero failures is what a green suite reports too*; this exists because
+ * **a failed title is what a timed-out or crashed test reports too.** The guard's own claim never got
+ * evaluated, and the verdict said `red` — which is the one word this harness spends its whole
+ * existence earning.
+ *
+ * @param {{failed: Failure[], ran: number}} named   the filtered run's result
+ * @param {string} guard                             the probe's guard title
+ * @returns {'red' | 'NO SUCH GUARD' | 'NOT THIS GUARD' | 'NEVER REACHED ITS CLAIM'}
  */
 export function verdictOf(named, guard) {
   if (named.ran === 0) return 'NO SUCH GUARD';
-  return named.failed.some((t) => t.includes(guard)) ? 'red' : 'NOT THIS GUARD';
+  const mine = named.failed.filter((f) => f.title.includes(guard));
+  if (mine.length === 0) return 'NOT THIS GUARD';
+  return mine.some((f) => raisedInTheSuite(f.message)) ? 'red' : 'NEVER REACHED ITS CLAIM';
 }
 
 // ── Probes ───────────────────────────────────────────────────────────────────────────────────────
@@ -364,10 +422,18 @@ export function drift(before, after) {
 // ── Running the suite ────────────────────────────────────────────────────────────────────────────
 
 /**
- * Run test files in one tree and resolve to the NAMES of the tests that failed.
+ * Run test files in one tree and resolve to the tests that failed, each with the reason it gave.
  *
  * The JSON reporter rather than the human one on purpose: reading pass/fail out of formatted console
  * output is a second description of vitest's result, and the kind that rots quietly.
+ *
+ * ⚠️ **THE MESSAGE IS CARRIED, AND IT USED TO BE DROPPED ON THE FLOOR TWICE OVER** —
+ * `docs/decisions/0177-a-red-is-a-verdict.md`. The child's stdout and stderr are accumulated into
+ * `out` below and read on exactly one path, the `produced no report` throw; and this parse took
+ * `t.status` and `t.title` while the report beside them held `failureMessages`. So a probe's `red`
+ * was recorded as the word `red` and nothing else, and **why the guard failed was unrecoverable from
+ * the CI log by construction** — which is how *"no timeout appears in the log"* came to be read as
+ * evidence that there was none.
  *
  * ── `only` IS THE GUARD'S OWN TITLE, AND IT IS THE WHOLE OF WHY THIS RUN IS SHORT ────────────────
  *
@@ -407,7 +473,7 @@ function runSuite(suites, cwd, report, only) {
       for (const file of parsed.testResults ?? []) {
         for (const t of file.assertionResults ?? []) {
           if (t.status !== 'skipped') ran++;
-          if (t.status === 'failed') failed.push(t.title);
+          if (t.status === 'failed') failed.push({ title: t.title, message: t.failureMessages?.[0] ?? '' });
         }
       }
       done({ failed, ran });
@@ -467,7 +533,14 @@ async function main(filter) {
     if (baseline.failed.length) {
       console.log('RED');
       console.error(
-        `\nThese are already failing before a single probe has been applied:\n  ${baseline.failed.join('\n  ')}\n\n` +
+        /*
+          ⚠️ **THE WHOLE MESSAGE HERE, AND ONE LINE PER PROBE BELOW** — 0177. This is a hard stop
+          rather than a row in a table of 679, so the sentence that matters is worth the space: the
+          first failure this printed was a link guard whose *which citation* is on line three.
+        */
+        `\nThese are already failing before a single probe has been applied:\n  ${baseline.failed
+          .map((f) => `${f.title}\n    ${f.message.split('\n').join('\n    ')}`)
+          .join('\n  ')}\n\n` +
           'Every probe over those suites would report `red` and prove NOTHING — a break cannot be ' +
           'shown to have caused a failure that was there first. Fix them, then prove.',
       );
@@ -505,12 +578,28 @@ async function main(filter) {
           const label = `${probe.decision}  ${probe.broke}`;
           let undo = null;
           let verdict = 'red';
+          let said = '';
           try {
             undo = apply(probe, tree);
             const named = await runSuite([probe.suite], tree, report, asPattern(probe.guard));
             verdict = verdictOf(named, probe.guard);
+            const mine = named.failed.filter((f) => f.title.includes(probe.guard));
             if (verdict === 'red') {
+              /*
+                ⚠️ **WHAT THE GUARD SAID, ON THE RECORD, FOR EVERY PROBE** —
+                `docs/decisions/0177-a-red-is-a-verdict.md`. One line, and it is the QUANTITY rather
+                than the verdict: *nebula plays 111 notes a bar at run where the base plays 118*. Six
+                hundred and seventy-nine of these in a CI log make the next disagreement between two
+                machines a diff, where this one was a dead end.
+              */
+              said = ` — ${firstLine(mine.find((f) => raisedInTheSuite(f.message))?.message ?? '')}`;
               rows.push(`| ${probe.broke} | \`${probe.guard}\` |`);
+            } else if (verdict === 'NEVER REACHED ITS CLAIM') {
+              failures.push(
+                `${label}\n    the guard's test FAILED WITHOUT MAKING ITS CLAIM — nothing in ${probe.suite} threw this:\n` +
+                  `    ${mine.map((f) => f.message).join('\n').split('\n').join('\n    ')}\n` +
+                  '    A timeout or a crash reports the same failed title an assertion does. NOTHING WAS PROVEN.',
+              );
             } else if (verdict === 'NO SUCH GUARD') {
               failures.push(
                 `${label}\n    no test in ${probe.suite} is named: ${probe.guard}\n` +
@@ -533,7 +622,7 @@ async function main(filter) {
                 failures.push(
                   `${label}\n    went red, but on the wrong test.\n` +
                     `    expected a failure containing: ${probe.guard}\n` +
-                    `    got: ${whole.failed.join(' | ')}`,
+                    `    got: ${whole.failed.map((f) => `${f.title} — ${firstLine(f.message)}`).join('\n         ')}`,
                 );
                 verdict = 'WRONG TEST';
               }
@@ -550,7 +639,7 @@ async function main(filter) {
             }
           }
           const n = String(++finished).padStart(String(probes.length).length);
-          console.log(`[${n}/${probes.length}] ${label} ... ${verdict}`);
+          console.log(`[${n}/${probes.length}] ${label} ... ${verdict}${said}`);
         }
       }),
     );
