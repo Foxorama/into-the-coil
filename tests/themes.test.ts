@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  MIX_CEILING,
-  MIX_FLOOR,
   THEMES,
   THEME_KINDS,
   mixOf,
@@ -156,24 +154,20 @@ describe('every level is somewhere, and no two of the seven are the same place',
 });
 
 describe('a theme mixes the music and cannot break it', () => {
-  it('keeps every multiplier inside the band the mix can pay for', () => {
-    /*
-      ⚠️ **A floor as well as a ceiling, and the floor is the one that is easy to miss.** A multiplier
-      of zero would CLOSE a layer the ladder had opened — which breaks 0090's *the ladder only ever
-      opens layers* and 0102's *every rung adds something* from a table whose subject is colour, and
-      neither of those guards reads this file.
-    */
-    for (const theme of THEME_KINDS) {
-      for (const [layer, value] of Object.entries(THEMES[theme].mix)) {
-        expect(value, `${theme} scales ${layer} to ${value}, which is outside the band`).toBeGreaterThanOrEqual(
-          MIX_FLOOR,
-        );
-        expect(value, `${theme} scales ${layer} to ${value}, which is outside the band`).toBeLessThanOrEqual(
-          MIX_CEILING,
-        );
-      }
-    }
-  });
+  /*
+    ── THE BAND GUARD IS GONE AND NOTHING REPLACES IT ────────────────────────────────────────────
+
+    ⚠️ **`docs/decisions/0182-a-mix-number-has-no-band.md`.** It held every entry in every `mix`
+    between 0.22 and 2.6, and the reason it gave for each end is now held by something that measures
+    a listener rather than a number: the ceiling by the clip guard immediately below, which drives
+    the real shaper; the floor by
+    `docs/decisions/0162-a-place-has-its-own-ladder.md`, which made closing a layer a sentence a
+    place says outright instead of a thing a multiplier of zero did behind the ladder's back.
+
+    ⚠️ **AND IT WAS THE ONE GUARD IN THIS FILE WHOSE OWN SUBJECT WAS A WALL.** `src/content/arrangement.ts`
+    recorded it biting silently in 0154 and it stayed for six weeks; three entries sat exactly on 2.6
+    the day it came off.
+  */
 
   it('and no theme at any rung drives the bus past full scale', () => {
     /*
@@ -286,7 +280,8 @@ describe('a theme mixes the music and cannot break it', () => {
         for (const [l, layer] of MUSIC_LAYERS.entries()) {
           const ceiling = AURA_LAYERS.includes(layer) ? nearness : 1;
           const gain = rungOf(theme, level, layer) * mixOf(theme, layer) * ceiling;
-          // `mixOf` clamps to `MIX_FLOOR` and is never zero, so a zero here is the LADDER closing it.
+          // A zero here is a layer this place does not sound — the ladder closing it (0120), or the
+          // place's own `mix` stating zero, which 0182 made a sentence a hand may write.
           if (gain === 0) continue;
           live.push(l);
           gains.push(gain);
@@ -381,12 +376,12 @@ describe('a theme mixes the music and cannot break it', () => {
     }
   });
 
-  it('and the clamp agrees with the guard, so a bad row cannot merely be quietly fixed', () => {
+  it('and an unstated layer is left alone, times the balance the player chose', () => {
     /*
-      ⚠️ **`mixOf` clamps and this file refuses**, and the pair is deliberate: the clamp is what stops
-      a typo clipping the bus in a build, and the assertion is what tells somebody. A clamp alone would
-      make a wrong number invisible for ever, which is the shape
-      `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` is about.
+      ⚠️ **THERE IS NO CLAMP LEFT TO AGREE WITH, AND THIS GUARD USED TO BE NAMED AFTER IT** — 0182.
+      What it asserted was that `mixOf`'s silent clamp and this file's loud refusal drew the same band;
+      with the band gone, the half worth keeping is that **the product is the hand's row times
+      `REBASE`** — which is the whole of 0176 and the thing a break can still remove.
     */
     /*
       ⚠️ **AGAINST THE HAND'S TINT AND NOT AGAINST `mixOf`, SINCE 0176.** `mixOf` is the tint times
@@ -395,29 +390,22 @@ describe('a theme mixes the music and cannot break it', () => {
       measurement and not a typo. What this guard is for is a **typo in a hand-written row** reaching
       the bus, and that is still exactly what it catches.
     */
-    const tint = (theme: ThemeKind, layer: MusicLayer): number => {
-      const want = THEMES[theme].mix[layer] ?? 1;
-      return want < MIX_FLOOR ? MIX_FLOOR : want > MIX_CEILING ? MIX_CEILING : want;
-    };
+    const tint = (theme: ThemeKind, layer: MusicLayer): number => THEMES[theme].mix[layer] ?? 1;
     expect(tint('approach' as ThemeKind, 'drone'), 'an unstated layer is not left alone').toBe(1);
     expect(
       mixOf('approach' as ThemeKind, 'drone'),
       'and the re-base is applied on top of it, which is the whole of 0176',
     ).toBeCloseTo(tint('approach' as ThemeKind, 'drone') * (REBASE.approach.drone ?? 1), 12);
     /*
-      ⚠️ **THE BAND IS THE TINT'S AND NOT THE PRODUCT'S** — 0176, and the paragraph above says why.
-      `REBASE` is a measured balance whose values run to 12.19; what `MIX_FLOOR` and `MIX_CEILING`
-      promise is a bound on what a HAND may write in a row, and that is what is checked.
+      ⚠️ **AND WHAT IS LEFT IS THE MECHANISM AND NOT A BAND** — 0182. A gain node cannot take a
+      negative and a `NaN` from a mistyped row would silence a layer without a word; **how loud is a
+      musical judgement** and the bus is what bounds it, which the clip guard above measures directly.
     */
     for (const theme of THEME_KINDS) {
       for (const layer of MUSIC_LAYERS) {
-        const value = tint(theme, layer);
-        expect(value, `${theme}/${layer} resolved outside the band the clamp promises`).toBeGreaterThanOrEqual(
-          MIX_FLOOR,
-        );
-        expect(value, `${theme}/${layer} resolved outside the band the clamp promises`).toBeLessThanOrEqual(
-          MIX_CEILING,
-        );
+        const value = mixOf(theme, layer);
+        expect(Number.isFinite(value), `${theme}/${layer} resolves to ${value}, which is not a gain`).toBe(true);
+        expect(value, `${theme}/${layer} resolves negative, which a gain node cannot take`).toBeGreaterThanOrEqual(0);
       }
     }
   });
@@ -700,28 +688,28 @@ describe('0128 — a place plays its own material, and shares everything it does
     green. `docs/decisions/0102-the-music-goes-somewhere.md` had already settled that the rate of
     events IS what a listener calls pace, so this was measurable the whole time.
 
-    ⚠️ **THE FLOORS ARE PROPORTIONS OF THE BASE COMPOSITION, WHICH IS WHAT MAKES THEM STRUCTURAL
-    RATHER THAN TUNED.** `docs/decisions/0034-a-threat-is-absolute-and-a-pool-is-the-pairing.md` says
-    nothing asserts on a tuned value, and neither of these does: what is asserted is that a place is
-    not substantially thinner or brighter than the piece every other level plays, which is
-    `docs/decisions/0104-the-gun-plays-a-figure.md`'s *the title is the minimum base level we build
-    upon* pointed at places instead of at rungs.
+    ⚠️ **AND THE PACE HALF IS GONE, WHILE THE BOTTOM HALF STAYS** — 0182. *A proportion of the base
+    composition* was called STRUCTURAL RATHER THAN TUNED, and it is the shape 0147 had already caught
+    one axis over: **a floor everything is measured against is a target, and a target is a sameness.**
+    0134's own low-band floor was a ratio-to-the-base and 0147 replaced it with an absolute band for
+    exactly this reason; the pace floor was left as a ratio and nobody noticed the pair.
 
-    ⚠️ **THE BOUND WAS 0.85 AND THE PROBE IS WHY IT IS NOT** —
-    `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` doing the more valuable half of its job.
-    At 0.85 both breaks below reported **STILL GREEN**: holding the undercurrent still leaves 88% of
-    the pace, and pulling the whole floor out of the mix still leaves 88% of the bottom. A bound that
-    only fires on a catastrophe is a bound nobody is near, which is the shape of guard this project
-    keeps finding in itself.
+    ⚠️ **WHAT IT FORBADE IS A SPARSE PLACE.** At 0.9 no level may play more than a tenth fewer notes a
+    bar than level one, at any rung — so *slow and enormous* and *sparse and menacing* were illegal
+    everywhere, which is `docs/decisions/0161-the-shape-of-a-level-is-not-guarded.md`'s subject in the
+    one guard that decision did not reach. Its own note conceded the case and called failing it *the
+    outcome to want*.
 
-    ⚠️ **0.9 IS TIGHT AND THE MARGIN IS STATED RATHER THAN GLOSSED.** Today's thinnest readings are
-    **0.94** for pace (at `boss`) and **0.93** for the bottom (at `approach`), so there are three or
-    four points in hand — less than is comfortable, and the alternative was a guard that did not
-    fire. The shipped defect this exists for was at **0.52** and **0.79**. A place that genuinely
-    wants to be a tenth thinner than level one at some rung will fail here and the argument for it
-    gets made, which is the outcome to want.
+    ⚠️ **THE BOTTOM HALF IS A BAND AND IS NOT THAT SHAPE**, which is why it survives here: it fixes
+    both ends, couples nothing to the base, and `docs/decisions/0181-the-floor-has-a-bottom.md` leaned
+    on it three days ago to tell an ear it was right.
+
+    ⚠️ **AND ITS LAST TUNING PASS IS THE THIRD SIGNAL.** The bound was 0.85, where both of its probes
+    reported STILL GREEN, and was tightened to 0.9 with today's thinnest reading at **0.94** — four
+    points in hand, *"less than is comfortable"*, said in the file. A guard that is either vacuous or
+    within four points of the shipped music has no setting at which it is measuring the thing it is
+    named for.
   */
-  const PACE_FLOOR = 0.9;
   /** The band a place's bottom lives in — 0147 turned 0134's ratio-to-the-base into an absolute. */
   const LOW_FLOOR = 0.24;
   const LOW_CEILING = 0.55;
@@ -734,22 +722,6 @@ describe('0128 — a place plays its own material, and shares everything it does
     declared at the head of this `describe` and is now shared with the guard that measures whether a
     place's material differs at all — 0146 has why that one could not go on baking its own.
   */
-
-  it('0134 — NO PLACE IS SUBSTANTIALLY SLOWER THAN THE BASE COMPOSITION, at any rung', () => {
-    const bakes = paceBakes;
-    for (const rung of MUSIC_LEVELS) {
-      const base = rungShape(undefined, rung, placeLoops(), bakes).notes;
-      if (base <= 0) continue;
-      for (const theme of THEME_KINDS) {
-        const here = rungShape(theme, rung, placeLoops(theme), bakes).notes;
-        expect(
-          here / base,
-          `${theme} plays ${here.toFixed(0)} notes a bar at ${rung} where the base plays ${base.toFixed(0)} — ` +
-            `${((here / base) * 100).toFixed(0)}% of the pace the game is played at`,
-        ).toBeGreaterThanOrEqual(PACE_FLOOR);
-      }
-    }
-  }, DSP_MS);
 
   it('and every place has a bottom AND a top, which is a band and used to be a race to the floor', () => {
     /*
@@ -1329,11 +1301,13 @@ describe('0128 — a place plays its own material, and shares everything it does
     level 4, 5, 6 were pretty bland and very similar to the other levels, it didn't feel like I'd
     travelled somewhere else in the galaxy."*
 
-    ⚠️ **`MIX_FLOOR` AND `MIX_CEILING` WERE WHAT KEPT THE MIX SAFE AND THEY ARE NOW ±8 dB.** What a
-    narrow band bought was *no theme can break the ladder*; what it cost was *no theme can state a
-    balance*. The three guards below hold the first without buying the second, which is the trade
-    `docs/decisions/0120-a-rung-may-close-a-layer.md` made when it took 0090's additive rule away:
-    more structure, not less.
+    ⚠️ **`MIX_FLOOR` AND `MIX_CEILING` WERE WHAT KEPT THE MIX SAFE, THEN THEY WERE ±8 dB, AND NOW
+    THERE IS NO BAND AT ALL** — 0182. What a narrow band bought was *no theme can break the ladder*;
+    what it cost was *no theme can state a balance*. The guards below hold the first without buying
+    the second, which is the trade `docs/decisions/0120-a-rung-may-close-a-layer.md` made when it took
+    0090's additive rule away: more structure, not less. **Widening the band twice and then deleting
+    it is the same finding arriving three times** — 0161's *a guard that keeps having to be relaxed to
+    let the work through is not being refined*.
   */
   const QUIETEST_THIRD_DB = -15;
 
@@ -1400,80 +1374,34 @@ describe('0128 — a place plays its own material, and shares everything it does
     ).toEqual([]);
   }, DSP_MS);
 
-  it('0147 — AND A WIDER BAND STILL CANNOT FLATTEN THE LADDER, at any place', () => {
-    /*
-      ⚠️ **THE PROPERTY THE ±3 dB BAND WAS PROTECTING, HELD DIRECTLY.** 0102 bought four climbs and a
-      theme with ±8 dB of authority could sell one back — by leaning on a layer `run` opens and away
-      from one `surge` does, which no existing guard reads. `tests/music.test.ts` holds this over the
-      LADDER; this holds it over the ladder as each place actually plays it.
+  /*
+    ── THE CLIMB GUARD IS GONE, AND IT IS 0161's TABLE ONE AXIS OVER ──────────────────────────────
 
-      ⚠️ **Summed over the layers rather than measured off the audio**, because the claim is about the
-      arrangement and not about the samples: a rung that opens more gain than the one below it is a
-      rung that arrives, whatever the material under it happens to be.
-    */
-    /*
-      ⚠️ **THE ARC IS `run < push < surge`, A DROP, AND THEN THE FIGHT — AND THE FIRST DRAFT OF THIS
-      GUARD ASSERTED A STRAIGHT CLIMB THAT THE BASE LADDER ITSELF DOES NOT HAVE.** `approach` closes
-      `groove` and `hook` (`RUNG_CLOSES`) and opens a bell and a tritone; it sums BELOW `surge` in
-      `MUSIC_LADDER` by design, and `docs/decisions/0136-the-place-has-a-room-and-an-arc.md` calls
-      that drop by name — *"Up, Up, Up, drop, sharp Down for the boss."*
+    ⚠️ **`docs/decisions/0182-a-mix-number-has-no-band.md`.** It asserted, for all seven places, that
+    the SUM OF GAINS at `push` exceeds `run`, `surge` exceeds `push`, and the fight exceeds
+    `approach`. `docs/decisions/0161-the-shape-of-a-level-is-not-guarded.md` deleted *no rung is
+    thinner than the level's opening* and *the boss is ≥1.5× as busy as the opening* eight days
+    earlier; **this is the same two claims counted in gain instead of in notes**, and it survived
+    because it was written in another file under another decision's name.
 
-      ⚠️ **A guard that the shipped design fails is a guard measuring the wrong quantity**, which is
-      `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md` arriving at the
-      moment of writing rather than three weeks later. What is held is the shape the ladder actually
-      has: the three climbs, and a fight that is bigger than the hush before it.
-    */
-    /*
-      ⚠️ **THROUGH `rungOf` AND WITH THE AURA'S CEILING, AND IT HAD NEITHER** — 0176. `MUSIC_LADDER`
-      read directly is the **fifth** reader blind to a place's own ladder, after `loudestOf`,
-      `rungShape`, the audition guard and the clip guard. Corrected, two of twenty-one climbs fail
-      where the uncorrected version reported one.
-    */
-    const at = (theme: ThemeKind, rung: (typeof MUSIC_LEVELS)[number]): number => {
-      const nearness = rung === 'boss' || rung === 'bossPeak' ? 1 : AURA_LEVEL_CEILING;
-      return MUSIC_LAYERS.reduce(
-        (sum, layer) =>
-          sum + rungOf(theme, rung, layer) * mixOf(theme, layer) * (AURA_LAYERS.includes(layer) ? nearness : 1),
-        0,
-      );
-    };
-    const climbs: [(typeof MUSIC_LEVELS)[number], (typeof MUSIC_LEVELS)[number]][] = [
-      ['run', 'push'],
-      ['push', 'surge'],
-      ['approach', 'boss'],
-    ];
-    for (const theme of THEME_KINDS) {
-      /*
-        ⚠️ **ONE PLACE AND ONE STEP ARE OWED** — 0176. The re-based balance lifts Saurian Reach's `push`
-        to **21.72** against its `surge`'s **21.56**, so that one rung does not add. Every other place
-        and every other step still climbs, and the entry carries the pair rather than the guard being
-        weakened for all seven.
+    ⚠️ **IT HAD TWO NAMED EXCEPTIONS AND ITS OWN COMMENT SAID WHY THEY WERE NOT ALARMS** — *"it is a
+    sum of gains and not a loudness… what a listener has, at a boundary that opens `counter`, `crash`
+    and `drive`, is 0171's build; what this counts is whether the numbers happen to total more."* A
+    guard that has to explain that its own red is not a defect is
+    `docs/decisions/0027-measure-the-picture-not-the-model.md`'s model quantity that stopped tracking
+    the thing it stood for.
 
-        ⚠️ **IT IS A SUM OF GAINS AND NOT A LOUDNESS**, which is why this is an exception and not an
-        alarm — 0140. What a listener has, at a boundary that opens `counter`, `crash` and `drive`, is
-        0171's build; what this counts is whether the numbers happen to total more.
-      */
-      const OWED_CLIMB: readonly string[] = ['saurian/push→surge', 'rime/approach→boss'];
-      for (const [below, here] of climbs) {
-        if (OWED_CLIMB.includes(`${theme}/${below}→${here}`)) continue;
-        expect(
-          at(theme, here),
-          `${theme} opens ${at(theme, here).toFixed(2)} at ${here} against ${at(theme, below).toFixed(2)} at ${below} — a rung that does not arrive`,
-        ).toBeGreaterThan(at(theme, below));
-      }
-    }
-    /*
-      ⚠️ **AND THE DROP INTO `approach` IS DELIBERATELY NOT ASSERTED HERE, HAVING BEEN WRITTEN AND
-      DELETED.** A gain sum that falls at `approach` looks like
-      `docs/decisions/0136-the-place-has-a-room-and-an-arc.md`'s *drop* and is not it: 0136's arc is
-      about **where the notes sit**, which `pitchOf` measures and a sum of gains cannot see. The base
-      ladder clears a gain-sum version by 1.3%, which is a knife-edge nobody chose — so asserting it
-      would have been fitting a bound to an accident and then tuning five places against it.
+    ⚠️ **AND IT HAD NO PROBE, SO IT HAS ONLY EVER BEEN GREEN** —
+    `docs/decisions/0005-a-guard-must-be-seen-to-fail.md`.
 
-      ⚠️ **What the hush before the fight actually IS, is `RUNG_CLOSES` taking `groove` and `hook`
-      away** — an arrangement change, held by `tests/music.test.ts` over the ladder itself.
-    */
-  });
+    ⚠️ **WHAT HOLDS THE ARRIVAL NOW MEASURES A LISTENER AND HAS A TIME AXIS**:
+    `docs/decisions/0171-a-boundary-is-a-build.md` (a boundary is a build, and the arrivals go up the
+    arrangement), `docs/decisions/0164-a-role-is-a-promise-the-mix-has-to-keep.md` (a layer performs
+    the role it was given), `docs/decisions/0140-no-layer-is-inaudible.md`, and
+    `docs/decisions/0123-a-rung-changes-the-notes.md` (a rung replaces a real share of what is
+    playing). **A level that drops into its surge, or brings a sparse and quiet boss, is now a thing a
+    place may be** — which is what the ask was.
+  */
 
   it('AND AN OVERRIDE MAY NOT SILENCE A LAYER THE LADDER OPENS', () => {
     // An empty voice array is a layer the ladder still raises a gain on and which makes no sound —
@@ -1526,18 +1454,26 @@ describe('0162 — a place has its own ladder, and only floors are held over it'
     /*
       ⚠️ **A FLOOR ON THE MECHANISM AND NOT ON THE MUSIC.** Zero is legal and meaningful — it is how a
       place closes a layer the shared ladder opens, which `docs/decisions/0120-a-rung-may-close-a-layer.md`
-      made a thing a rung may do. What is refused is negative (a gain node cannot) and beyond what the
-      dashboard's fader can reach, because a value the desk cannot show is a value nobody can drive
-      back to — `docs/decisions/0129-the-desk-holds-a-value-not-a-multiplier.md`.
+      made a thing a rung may do. What is refused is a value a gain node cannot take.
+    */
+    /*
+      ⚠️ **AND THE CEILING HALF WAS `MIX_CEILING`, WHICH IS NOT WHAT THE DESK CAN EXPRESS** — 0182.
+      It claimed to hold *a value the desk cannot show is a value nobody can drive back to*
+      (`docs/decisions/0129-the-desk-holds-a-value-not-a-multiplier.md`) and asserted **2.6** against a
+      fader that reaches `DESK_CEILING` — **21.94**, twice the loudest gain the game itself takes a
+      layer to. A wall eight times tighter than the reason it gave, on a table whose largest entry is
+      1.08. The honest version of that claim is circular — `DESK_CEILING` is derived from this
+      product's own maximum — so what is left is the mechanism.
     */
     for (const theme of THEME_KINDS) {
       const ladder = THEMES[theme].ladder ?? {};
       for (const rung of Object.keys(ladder) as MusicLevel[]) {
         for (const [layer, value] of Object.entries(ladder[rung] ?? {})) {
           expect(value, `${theme}'s ${rung} ${layer} is negative`).toBeGreaterThanOrEqual(0);
-          expect(value, `${theme}'s ${rung} ${layer} is past what the desk can express`).toBeLessThanOrEqual(
-            MIX_CEILING,
-          );
+          expect(
+            Number.isFinite(value),
+            `${theme}'s ${rung} ${layer} is ${value}, which is not a gain a mixer can set`,
+          ).toBe(true);
         }
       }
     }

@@ -264,10 +264,15 @@ describe('four loops that cannot drift', () => {
   ⚠️ **So the shape has three parts now, and every one of them is checked** — this is more structure
   than the single additive rule it replaces, not less:
 
-    CLIMBING   run -> approach   additive, exactly as 0090 requires. Unchanged.
+    CLIMBING   run -> approach   the level's own piece — still the subject of the guards below.
     the seam   approach -> boss  a CHANGE OF PIECE. `LEVEL_ONLY` closes and the arrangement thins,
                                  on precisely 0095's argument for the title's seam.
-    FIGHT      boss -> bossPeak  the climax. Strictly up on every axis an ear can hear.
+    the fight  boss -> bossPeak  the climax, held by what an ear integrates rather than by a sum.
+
+  ⚠️ **AND *STRICTLY UP ON EVERY AXIS* IS NO LONGER ASSERTED AS A SUM OF GAINS** — 0182. What made
+  the two rows above a guard was that each totalled more than the one below it, and 0114 had already
+  retired that proxy for the fight because the fight closes six layers and is louder anyway. The
+  climax is held by the RMS guard, which integrates the way an ear does.
 
   ⚠️ **The TOP of the ladder is `bossPeak` and it used to be `boss`.** A guard that still reads
   `boss` as the loudest rung would now be measuring the sparse arrival and passing, which is the
@@ -275,8 +280,6 @@ describe('four loops that cannot drift', () => {
 */
 /** The level's own piece, which climbs additively. */
 const CLIMBING = MUSIC_LEVELS.filter((l) => l !== 'calm' && l !== 'boss' && l !== 'bossPeak');
-/** The fight, which is a different piece and climbs on its own terms. */
-const FIGHT = MUSIC_LEVELS.filter((l) => l === 'boss' || l === 'bossPeak');
 /** The loudest rung there is — named once, so a guard cannot go on believing it is `boss`. */
 const TOP = MUSIC_LEVELS[MUSIC_LEVELS.length - 1]!;
 
@@ -453,38 +456,23 @@ describe('the ladder is additive, which is what the ask describes', () => {
     expect(open.length, 'the calm level is silent, so the music stops between levels').toBeGreaterThan(0);
   });
 
-  it('and the level climbs to its own top, which is what a sum of gains can honestly say', () => {
-    /*
-      ── THIS COMPARED THE BOSS AGAINST EVERY RUNG AND THE SUM STOPPED MEANING LOUDNESS ─────────────
+  /*
+    ── AND THE CLIMB OVER THE LADDER IS GONE TOO ─────────────────────────────────────────────────
 
-      ⚠️ **`docs/decisions/0114-the-fight-is-a-different-piece.md`.** A sum of gains is a proxy for
-      loudness that holds **only while layers are added**. The fight now CLOSES six harmonic layers
-      and plays what is left much louder, so it sums to 12.7 against `approach`'s 13.6 while being
-      audibly the loudest thing in the game — measured through the bus shaper, which is the guard
-      immediately below this one.
+    ⚠️ **`docs/decisions/0182-a-mix-number-has-no-band.md`.** *The level climbs to its own top* summed
+    `MUSIC_LADDER`'s gains and required each rung of `CLIMBING` to total more than the one below, and
+    the fight's peak to total more than its arrival. Its twin over the seven places went in the same
+    diff, and the argument is in `tests/themes.test.ts` where that one stood: it is
+    `docs/decisions/0161-the-shape-of-a-level-is-not-guarded.md`'s deleted density guard counted in
+    gain, and it had never been seen to fail.
 
-      ⚠️ **So this keeps the claim it can still support and hands the other to a better instrument.**
-      Across `CLIMBING` the ladder is additive and a sum is a fair proxy; the fight's loudness is
-      `tests/music.test.ts`'s RMS guard, which integrates the way an ear does.
-      `docs/decisions/0027-measure-the-picture-not-the-model.md` is the rule — a model quantity that
-      has stopped tracking the thing it stood for is worse than no guard, because it still passes.
-    */
-    const total = (level: (typeof MUSIC_LEVELS)[number]): number =>
-      MUSIC_LAYERS.reduce((sum, l) => sum + MUSIC_LADDER[level][l], 0);
-    for (let i = 1; i < CLIMBING.length; i++) {
-      expect(
-        total(CLIMBING[i]!),
-        `${CLIMBING[i]} sums to no more than ${CLIMBING[i - 1]}, so the level stops climbing`,
-      ).toBeGreaterThan(total(CLIMBING[i - 1]!));
-    }
-    /*
-      ⚠️ **AND THE FIGHT'S OWN CLIMB, which is the half this file would otherwise have lost.** Sparse
-      arrival, wall of sound: the peak has to sum above the arrival even though both are a different
-      piece from the level.
-    */
-    expect(FIGHT.length, 'the fight is not two rungs, so there is no climax to check').toBe(2);
-    expect(total(FIGHT[1]!), 'the fight does not climb: its peak sums no higher than its arrival').toBeGreaterThan(total(FIGHT[0]!));
-  });
+    ⚠️ **ITS OWN HEADER HAD ALREADY CONCEDED THE HALF THAT MATTERED** — 0114 took the fight out of it
+    because *"a sum of gains is a proxy for loudness that holds only while layers are added"*, and the
+    fight now closes six harmonic layers and is audibly the loudest thing in the game while summing
+    below `approach`. **The proxy was retired for one rung and kept for the rest**, and what it was a
+    proxy for is measured directly by the RMS guard below and by 0171's build.
+  */
+
 });
 
 describe('how far up the ladder a run is', () => {

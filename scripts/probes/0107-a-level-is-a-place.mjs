@@ -55,28 +55,20 @@ export const PROBES = [
       replace: "    space: { vivid: '#3c4a20', 'high-contrast': '#040300' },",
     },
   },
-  {
-    decision: '0107',
-    suite: 'tests/themes.test.ts',
-    /*
-      ⚠️ A THEME THAT CLOSES A LAYER OUTRIGHT. Zero is the obvious way to say *this place does not use
-      that layer* — and it breaks 0102's *every rung adds something* from a table whose subject is
-      colour, which that guard never reads. A place leans; it does not remove.
+  /*
+    ── A THEME THAT CLOSES A LAYER OUTRIGHT IS RETIRED, BECAUSE IT IS NOW A LEGAL SENTENCE ─────────
 
-      ⚠️ ANCHORED ON A CONSTANT'S NAME AND NOT ON A NUMBER, WHICH IS THIS PROBE'S SECOND RE-ANCHORING
-      — docs/decisions/0147-a-place-is-a-balance.md. It was pinned to `arp: 1.24` and went orphaned on
-      the very next tuning pass, exactly as 0146 had just written down about two other probes and then
-      re-pinned this one to a number anyway. `voices: SAURIAN_VOICES` is a symbol; a mix value is a
-      thing a hand is expected to move.
-    */
-    broke: 'a theme silencing a layer outright, so the ladder stops being additive from a colour table',
-    guard: 'keeps every multiplier inside the band the mix can pay for',
-    edit: {
-      path: 'src/content/themes.ts',
-      find: '    },\n    voices: SAURIAN_VOICES,',
-      replace: '      beat: 0,\n    },\n    voices: SAURIAN_VOICES,',
-    },
-  },
+    ⚠️ docs/decisions/0182-a-mix-number-has-no-band.md. This break wrote `beat: 0` into a place's mix
+    and fired `keeps every multiplier inside the band the mix can pay for`. Both are gone. The claim
+    it made — *a place leans; it does not remove* — stopped being true at
+    docs/decisions/0162-a-place-has-its-own-ladder.md, which made closing a layer a thing a place
+    states outright; the mix floor was guarding a second spelling of it and nothing else.
+
+    ⚠️ RETIRED RATHER THAN RE-AIMED, ON 0161's PRECEDENT. That decision retired 0102's density probe
+    with its guard, for the same reason: the break describes an authoring choice now, and a probe
+    pointed at a legal choice is theatre. The other four breaks in this file are untouched.
+  */
+
   {
     decision: '0107',
     suite: 'tests/themes.test.ts',
@@ -98,7 +90,10 @@ export const PROBES = [
       // ⚠️ RE-AIMED BY 0176: `mixOf` is the hand's tint TIMES the solved balance now, so blanking the
       // row alone left `REBASE` still telling the seven places apart and the guard correctly silent.
       // *The mix table stopped being read* has to mean the product.
-      find: '  return tint * (REBASE[theme][layer] ?? 1);',
+      //
+      // ⚠️ AND RE-ANCHORED BY 0182, WHICH TOOK THE CLAMP OUT FROM BETWEEN THE TWO FACTORS. The line is
+      // the same product with no `tint` local in front of it; the break is unchanged.
+      find: '  return (THEMES[theme].mix[layer] ?? 1) * (REBASE[theme][layer] ?? 1);',
       replace: '  return 1;',
     },
   },

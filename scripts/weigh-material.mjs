@@ -4,7 +4,7 @@
 //
 // ⚠️ IT EXISTS BECAUSE docs/decisions/0167-a-build-does-not-duck.md ASSERTED THE ANSWER BEFORE
 // CHECKING IT. Three fixes for the boundary ducking are measured and refused there; the fourth — the
-// arrivals need gains past MIX_CEILING because their material is quiet, so make the material louder —
+// arrivals need gains past MIX_CEILING (retired by 0182) because their material is quiet, so make the material louder —
 // was written down as "probably the real one" on the strength of it being obvious. It is not the real
 // one, and this is what says so.
 //
@@ -20,7 +20,11 @@
 import { bakeLoops } from '../src/app/music.ts';
 import { SAMPLE_RATE } from '../src/app/sound.ts';
 import { MUSIC_GAIN, MUSIC_LAYERS, MUSIC_LEVELS } from '../src/content/music.ts';
-import { THEME_KINDS, MIX_CEILING } from '../src/content/themes.ts';
+import { THEME_KINDS } from '../src/content/themes.ts';
+
+// ⚠️ THE WALL THAT WAS — docs/decisions/0182-a-mix-number-has-no-band.md deleted the constant. This
+// script's whole subject is what a solve wanted and could not say, so the old ceiling is its unit.
+const MIX_CEILING = 2.6;
 import { ROLE_MARGIN_DB, SOLVED_BY, roleOf } from '../src/content/arrangement.ts';
 import { ROLE_FLOOR_DB, DUCK_FLOOR_DB } from '../tests/pace.ts';
 import { HOLD_WEIGHT, marginsOf, profileOfLoops, rmsOfLoops, solveLevel } from './solve-mix.mjs';

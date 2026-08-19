@@ -379,10 +379,14 @@ export function layerSpans(
     let open: number | null = null;
     for (const mark of marks) {
       /*
-        ⚠️ **The LADDER decides, not the balance and not the aura.** A theme multiplier scales a layer
-        and cannot silence one (`MIX_FLOOR` in `src/content/themes.ts`), and the aura's ceiling is a
-        distance the player steers rather than a property of the level — so *is this layer in this
-        section at all* is a question about the rung.
+        ⚠️ **The LADDER decides, not the balance and not the aura.** The aura's ceiling is a distance
+        the player steers rather than a property of the level, and a theme multiplier is a colour over
+        a rung — so *is this layer in this section at all* is a question about the rung.
+
+        ⚠️ **AND IT USED TO SAY *a multiplier CANNOT silence a layer*, WHICH WAS `MIX_FLOOR`** — 0182
+        deleted that floor, so a `mix` of zero is now a sentence a place may write. Reading the ladder
+        is still right and is now the narrower claim: a layer a place has zeroed is silent in every
+        section, which a coverage table over sections is not the instrument for.
 
         ⚠️ **AND THE RUNG IS THE PLACE'S OWN NOW** — `docs/decisions/0162-a-place-has-its-own-ladder.md`.
         `MUSIC_LADDER[rung][layer]` was the whole answer while every place shared one shape; a place
