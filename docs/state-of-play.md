@@ -786,11 +786,13 @@ probe had been reporting `red` on a **vitest timeout** since it was written; the
 `tests/orientation.browser.test.ts` stated a 5-second deadline that was never once enforced. **A `red`
 that is a timeout is no longer a hypothesis about this harness.**
 
-⚠️ **AND THREE PROBES REDDEN ON A `ReferenceError` FROM `src/`, WHICH IS THE NEXT THING TO WORK** —
-0090, 0126 and 0135. Each break leaves the module throwing, so the guard never asserts; that passes,
-because our code deciding is not the runner giving up, and it proves less than the decision's table
-claims. They print the sentence on every run now. [0177](decisions/0177-a-red-is-a-verdict.md) has
-the reasoning.
+⚠️ **AND SIX PROBES REDDENED ON A CRASH RATHER THAN AN ASSERTION — THREE ARE FIXED AND THREE ARE
+NEXT** — [0178](decisions/0178-a-break-has-to-be-able-to-run.md). 0090, 0126 and 0135 named an
+identifier their target file cannot see, so the module threw and the guard never asserted; 0135's had
+never once produced the 25.6 seconds its own decision is about. **0053 twice and 0072 are the other
+kind**: the break applies, and the code crashes downstream. 0178 has the counted population — 673
+assertions, 6 crashes — and names **the one comparison in `verdictOf` that closes the class**, which
+cannot be added until those three are re-aimed.
 
 ⚠️ **THE PROBE ITSELF WAS RE-AIMED SEPARATELY AND THAT WAS ALWAYS A DIFFERENT THING.** It points at
 `arp`, which [0172](decisions/0172-a-place-opens-with-its-own-four.md) opened at Ember Nebula's `run`

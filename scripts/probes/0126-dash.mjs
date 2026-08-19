@@ -83,8 +83,23 @@ export const PROBES = [
       // The break is unchanged: the rig working the target out for itself instead of asking the
       // mixer's own description — and it now also drops the edited ladder, which is the same defect
       // one layer deeper.
+      /*
+        ⚠️ AND RE-AIMED AGAIN BY 0177, WHICH FOUND THAT IT HAD NEVER APPLIED. `MUSIC_LADDER` is not
+        among `rig/transport.ts`'s imports, so the break threw `ReferenceError: MUSIC_LADDER is not
+        defined` and the test died on that, **without the guard ever asserting** — reported as `red`,
+        indistinguishable from the assertion firing.
+
+        ⚠️ THE BREAK IS THE SAME BREAK, WRITTEN OUT OF WHAT THIS FILE HAS: `rungOf` is the ladder's own
+        reader and is already imported. Reaching the rung straight off it is precisely the rig working
+        the target out for itself — no `mixOf`, so no place's own balance.
+
+        ⚠️ AND INDEXING THE LADDER BY HAND WAS TRIED FIRST AND CRASHED, which is 0177's own lesson
+        arriving twice in one sitting. `ThemeRow.ladder` is OPTIONAL — 0162 gives a place its own
+        ladder and not every place has one — so `THEMES[theme].ladder[r]` is `TypeError: Cannot read
+        properties of undefined`. `rungOf` defaults that argument and `rungIn` tolerates it.
+      */
       find: '      return own ?? targetGain(theme, r, layer, a, ladder);',
-      replace: '      return own ?? MUSIC_LADDER[r][layer] * (AURA_LAYERS.includes(layer) ? a : 1);',
+      replace: '      return own ?? rungOf(theme, r, layer, ladder) * (AURA_LAYERS.includes(layer) ? a : 1);',
     },
   },
   {
