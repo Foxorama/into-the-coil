@@ -1287,11 +1287,20 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     waves: EYE,
     pickups: EYE_PICKUPS,
     bossAt: 4460,
+    /*
+      ⚠️ **DRIVEN ON THE DESK AND PASTED BACK, WHICH IS WHAT `docs/decisions/0163-the-script-is-edited-here.md`
+      IS FOR** — `docs/decisions/0180-the-black-heart-gets-there-sooner.md`. The four boundaries are a
+      hand's, dragged on the handles 0138 built and read off the dashboard's own **EDITED** block.
+
+      ⚠️ **THE OPENING IS HALVED AND THE MIDDLE TAKES IT.** 40.0s → 20.7s of `run`, with `push` and
+      `surge` going 35.7 → 44.9 and 30.4 → 45.2. `bossAt` does not move, so the level is the same
+      length and only where it turns has changed.
+    */
     sections: [
       { at: 0, section: 'run' },
-      { at: 1439, section: 'push' },
-      { at: 2724, section: 'surge' },
-      { at: 3817, section: 'approach' },
+      { at: 744, section: 'push' },
+      { at: 2360, section: 'surge' },
+      { at: 3986, section: 'approach' },
     ],
     boss: 'axis',
     theme: 'core',

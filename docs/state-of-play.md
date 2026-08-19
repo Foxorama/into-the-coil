@@ -186,6 +186,9 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a probe runs on a disposable copy, and copies run in parallel** | [0054](decisions/0054-the-proof-runs-beside-the-work-not-on-it.md) |
 | **a probe runs the test it NAMES, and a suite bakes the music once** | [0115](decisions/0115-a-probe-runs-its-own-guard.md) — amends 0054's *whole suite* clause |
 | **a probe's `red` is a VERDICT — a timeout or a crash reports the same failed title, and every probe's line now carries what its guard said** | [0177](decisions/0177-a-red-is-a-verdict.md) |
+| **a break has to be able to RUN in the file it lands in — three probes named an identifier their target cannot see** | [0178](decisions/0178-a-break-has-to-be-able-to-run.md) |
+| **AN EXPLOSION ENDS LOW — the enemy death's centre of gravity ROSE 22.5 dB, and no cue guard has a time axis** | [0179](decisions/0179-an-explosion-ends-low.md) |
+| **The Black Heart turns sooner — its opening is halved and the two middle sections take it** | [0180](decisions/0180-the-black-heart-gets-there-sooner.md) |
 | **the rig plays a LEVEL, and the instrument is guarded like the game** | [0116](decisions/0116-the-rig-plays-the-level.md) |
 | **a section change lands on a DOWNBEAT, and not one ever had** | [0117](decisions/0117-a-section-change-lands-on-the-beat.md) |
 | **the mix has a WIDTH, and the low end does not use it** | [0118](decisions/0118-the-mix-has-a-width.md) |

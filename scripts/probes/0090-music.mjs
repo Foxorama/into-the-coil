@@ -140,9 +140,15 @@ export const PROBES = [
         three share a `bossAt` and therefore ship identical scripts, so `{ at: 3627, … }` appears
         twice and `planEdit` refuses it — correctly. The guard runs over all seven levels now, so any
         one of them going wrong is enough to turn it red.
+
+        ⚠️ AND IT MOVED AGAIN WITH `docs/decisions/0180-the-black-heart-gets-there-sooner.md`, WHICH IS
+        THE COST OF ANCHORING ON AN AUTHORED NUMBER. 3817 → 3986: `eye`'s script is a hand's now and
+        will move again whenever the desk says so. The break is unchanged — 4420 of 4460 still leaves
+        40 units, still 1.1 s, still under the 1.6 s ramp — and re-anchoring is a two-second failure
+        the pre-flight reports before a tree is copied, which is the trade 0079 argued for.
       */
       path: 'src/content/levels.ts',
-      find: "      { at: 3817, section: 'approach' },",
+      find: "      { at: 3986, section: 'approach' },",
       replace: "      { at: 4420, section: 'approach' },",
     },
   },
