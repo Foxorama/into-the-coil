@@ -94,8 +94,22 @@ export const PROBES = [
       // ⚠️ Re-anchored by docs/decisions/0102-the-music-goes-somewhere.md, which turned the single
       // return below into a cascade of four. The break is unchanged and is now the one line it always
       // was about: what decides the boss level.
+      /*
+        ⚠️ RE-AIMED BY 0177, AND 0158 IS WHAT LEFT IT BEHIND. The break named `bossAt`, and that
+        decision took it out of `musicLevelFor`'s signature — the guard's own comment says so:
+        *"AND THAT IS WHY `bossAt` IS NO LONGER AN ARGUMENT AT ALL"*. So the module threw
+        `ReferenceError: bossAt is not defined` and the test died on that, **without the guard ever
+        asserting**. It reported `red`, which is what a working probe reports.
+
+        ⚠️ THE CLAIM IS UNCHANGED: a DISTANCE deciding the boss rung rather than a boss being there.
+        What moved is which distance, because there is no longer a `bossAt` to name — it is now the
+        start of the last section the level scripts, which is the nearest thing in scope and is
+        exactly the *"threshold the camera passes in the opening seconds of the fight"* the comment
+        above is about.
+      */
       find: "  if (bossOnField) return bossHealthLeft <= BOSS_PEAK_HEALTH ? 'bossPeak' : 'boss';",
-      replace: "  if (cameraAlong >= bossAt) return bossHealthLeft <= BOSS_PEAK_HEALTH ? 'bossPeak' : 'boss';",
+      replace:
+        "  if (cameraAlong >= (sections.at(-1)?.at ?? Infinity)) return bossHealthLeft <= BOSS_PEAK_HEALTH ? 'bossPeak' : 'boss';",
     },
   },
   {
