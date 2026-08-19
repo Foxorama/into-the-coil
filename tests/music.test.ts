@@ -544,7 +544,9 @@ describe('how far up the ladder a run is', () => {
       shoal: [['run', 0.0], ['push', 33.86], ['surge', 69.56], ['approach', 99.92]],
       batteries: [['run', 0.0], ['push', 33.86], ['surge', 69.56], ['approach', 99.92]],
       gauntlet: [['run', 0.0], ['push', 36.64], ['surge', 72.33], ['approach', 102.69]],
-      eye: [['run', 0.0], ['push', 39.97], ['surge', 75.67], ['approach', 106.03]],
+      // ⚠️ 0180 — driven on the desk. 39.97 → 20.67, and `push` and `surge` take what the opening
+      // gave up. This is the number this guard printed, pasted back, which is what its note says to do.
+      eye: [['run', 0.0], ['push', 20.67], ['surge', 65.56], ['approach', 110.72]],
     };
 
     for (const kind of LEVEL_KINDS) {
