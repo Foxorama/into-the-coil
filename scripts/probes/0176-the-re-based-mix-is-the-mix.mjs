@@ -28,11 +28,14 @@ export const PROBES = [
     decision: '0176',
     suite: 'tests/themes.test.ts',
     broke: 'the solved balance dropped, so the game plays the mix the player did not choose',
-    guard: 'and the clamp agrees with the guard, so a bad row cannot merely be quietly fixed',
+    // ⚠️ RE-ANCHORED BY 0182: the clamp is gone, so the guard is no longer named after agreeing
+    // with it. Its subject — the product is the hand's row TIMES `REBASE` — is what this break
+    // removes, and that is unchanged.
+    guard: 'and an unstated layer is left alone, times the balance the player chose',
     edit: {
       path: 'src/content/themes.ts',
-      find: '  return tint * (REBASE[theme][layer] ?? 1);',
-      replace: '  return tint;',
+      find: '  return (THEMES[theme].mix[layer] ?? 1) * (REBASE[theme][layer] ?? 1);',
+      replace: '  return THEMES[theme].mix[layer] ?? 1;',
     },
   },
   {
@@ -42,10 +45,13 @@ export const PROBES = [
     guard: '0164 — NO LAYER SITS A WHOLE ROLE UNDER THE ONE THE ARRANGEMENT GAVE IT',
     edit: {
       path: 'src/content/themes.ts',
-      find: '  return tint * (REBASE[theme][layer] ?? 1);',
+      find: '  return (THEMES[theme].mix[layer] ?? 1) * (REBASE[theme][layer] ?? 1);',
+      // ⚠️ THE BAND IS TYPED HERE NOW, BECAUSE 0182 DELETED THE CONSTANTS. The break is what it
+      // always was — the balance clamped at the old ceiling — and the point it makes is the one
+      // that ended the wall: 2.6 against a re-base running to 12.19 re-buries what 0164 counts.
       replace:
-        '  const all = tint * (REBASE[theme][layer] ?? 1);\n' +
-        '  return all < MIX_FLOOR ? MIX_FLOOR : all > MIX_CEILING ? MIX_CEILING : all;',
+        '  const all = (THEMES[theme].mix[layer] ?? 1) * (REBASE[theme][layer] ?? 1);\n' +
+        '  return all < 0.22 ? 0.22 : all > 2.6 ? 2.6 : all;',
     },
   },
   {

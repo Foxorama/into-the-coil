@@ -17,13 +17,18 @@
 //   role      what the layer is at that rung, with the place's promotion applied.
 //   now/new   the gain that ships, and the one the arrangement solves to.
 //   margin    what each produces, measured by 0152's `heardAt` arithmetic.
-//   over      a solved gain MIX_CEILING would have silently clamped — a mix the old rules could not
-//             express at all.
+//   over      a solved gain the retired MIX_CEILING would have silently clamped — a mix the old
+//             rules could not express at all. docs/decisions/0182-a-mix-number-has-no-band.md took
+//             the wall away; the column stays because it is the argument that ended it.
 
 import { bakeLoops } from '../src/app/music.ts';
 import { SAMPLE_RATE } from '../src/app/sound.ts';
 import { MUSIC_LAYERS, MUSIC_LEVELS } from '../src/content/music.ts';
-import { MIX_CEILING, THEME_KINDS } from '../src/content/themes.ts';
+import { THEME_KINDS } from '../src/content/themes.ts';
+
+// ⚠️ THE WALL THAT WAS, TYPED HERE BECAUSE 0182 DELETED IT. A number that is history rather than a
+// bound belongs in the report that is about it, not in the content the game reads.
+const MIX_CEILING = 2.6;
 import { ROLE_MARGIN_DB, SOLVED_BY, roleOf } from '../src/content/arrangement.ts';
 import { marginsOf, profileOfLoops, solveLevel } from './solve-mix.mjs';
 

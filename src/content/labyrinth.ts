@@ -366,7 +366,8 @@ export const LABYRINTH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>
     at the layer that carries this place. The decay is `exp(-curve · u)` across `seconds`, so the real
     length is about `seconds / curve`: the exhale read 200 ms and lasted **59**, the struck frame read
     190 ms and rang for **43**. `docs/decisions/0154-the-mix-is-authored-as-intent.md`'s solve was
-    asking for a gain of **4.32** at `run` — past `MIX_CEILING`, and past what a gain can do, because
+    asking for a gain of **4.32** at `run` — past `MIX_CEILING` as it then was (0182 retired it), and
+    past what a gain can do, because
     multiplying a thing that puts out nothing is 0152's own subject.
 
     ⚠️ **+4.0 dB OF MATERIAL AND 3.5 dB OFF THE PEAK, WHICH IS THE WHOLE OF WHY IT FITS.**

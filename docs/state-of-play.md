@@ -781,6 +781,26 @@ highpass at all. A new drum moves that by 0.004 and then starves `drive`. **The 
 work are a re-voice of the place's signature pad and a change to 0176's approved balance**, and both
 want the ear that gave the first verdict. `npm run dash`.
 
+⚠️ **AND THE WALLS ROUND THE MIX ARE DOWN** — [0182](decisions/0182-a-mix-number-has-no-band.md),
+answering *"are we still having guards or blockers or restrictions limiting sound for no discernable
+quality reason… let's remove them so we can get proper sound variability."* `MIX_FLOOR`,
+`MIX_CEILING`, `mixOf`'s silent clamp, the pace floor and both climb sums are gone. **It is
+[0161](decisions/0161-the-shape-of-a-level-is-not-guarded.md)'s own table eight days later in gain**
+— the two claims 0161 deleted in notes had survived in another file under another decision's name.
+**No sound moves**: all 161 `mixOf` values are bit-identical, which is also the honest limit of it —
+a removal unblocks the authoring pass, it does not perform one. The 54 layers `weigh-adrift` names
+are still 54.
+
+⚠️ **AND WHAT WAS DELIBERATELY LEFT IS THE LIST TO ARGUE WITH NEXT.** 0182 keeps every floor about
+whether sound *works* — clipping, [0140](decisions/0140-no-layer-is-inaudible.md),
+[0164](decisions/0164-a-role-is-a-promise-the-mix-has-to-keep.md)'s role promise,
+[0171](decisions/0171-a-boundary-is-a-build.md)'s build,
+[0147](decisions/0147-a-place-is-a-balance.md)'s low band and whisper floor. **Four are judgement
+calls a driving session should settle rather than a diff**: 0171 forbidding a hard CUT at any
+boundary in any place, `MAX_VOICES` = 4 silently dropping a fifth cue on a step,
+`AURA_LEVEL_CEILING` = 0.55, and the low band's own ceiling forbidding a deliberately bass-led place.
+Each has a real argument behind it and none has had an ear on it.
+
 ⚠️ **AND THERE IS NO MISSILE-IMPACT CUE, WHICH MAY BE WHAT THAT HALF OF THE REPORT MEANT.**
 `CUE_KINDS` has `missile` for the launch, and a missile that destroys something plays `kill`. A
 distinct impact sound is a new row plus a caller in `src/app/frame.ts` — a feature, not a re-voice,

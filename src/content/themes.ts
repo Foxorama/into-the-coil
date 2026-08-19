@@ -308,45 +308,25 @@ export interface ThemeRow {
   scale?: readonly number[];
 }
 
-/**
- * The lowest a theme may scale a layer to, and the highest.
- *
- * ⚠️ **The floor is not zero.** A theme that silenced a layer the rung had opened would break both
- * *the ladder only opens layers* (0090) and *every rung adds something* (0102) from a table whose
- * subject is colour and mix — and it would do it invisibly, because the ladder's own guards read
- * `MUSIC_LADDER` and never see this. Half is a lean, not a removal.
- *
- * ⚠️ **The ceiling is what the mix's headroom can pay for.** `MUSIC_GAIN` sits under a measured peak
- * (0092, 0104) and a theme is a multiplier on top of it, so `tests/music.test.ts` drives every theme
- * at every rung through the shaper and refuses one that clips.
- */
 /*
-  ── THE BAND WAS ±3 dB, AND THAT IS WHY SEVEN PLACES SOUNDED LIKE ONE ────────────────────────────
+  ── THERE IS NO BAND ON WHAT A PLACE MAY STATE, AND THERE WAS ONE FOR SIX WEEKS ──────────────────
 
-  ⚠️ **`docs/decisions/0147-a-place-is-a-balance.md`.** Reported, having heard all five of 0146's new
-  places: *"level 3 sounds incredibly similar to level 2… level 4, 5, 6 were pretty bland and very
-  similar to the other levels, it didn't feel like I'd travelled somewhere else in the galaxy."*
+  ⚠️ **`docs/decisions/0182-a-mix-number-has-no-band.md`.** `MIX_FLOOR` was 0.22, `MIX_CEILING` was
+  2.6, and `mixOf` clamped to them WITHOUT SAYING SO. Reported: *"the music is restricted and has
+  been for ages with gains, sound limits and all sorts of what seem like artificial restrictions."*
 
-  ⚠️ **MEASURED WITH `node scripts/weigh-apart.mjs`, THE SEVEN PLACES SIT 1.9 TO 6.0 dB APART**, and
-  the three the report names as interchangeable are the three closest pairs in the table. `sub` is the
-  loudest layer in **all seven**; the top of every mix is a sub, a kick, a bass and a pad; and every
-  layer that carries a place's brief — the lasers, the roar, the music box, the twin lead, the hydra —
-  is in the bottom third of its own mix at −15 to −30 dB.
+  ⚠️ **THE HEADER THAT USED TO SIT HERE HAD ALREADY RECORDED THE DEFECT AND KEPT THE WALL.**
+  `src/content/arrangement.ts` says it in one line — *"the rule set forbade its own answer… `arp`
+  reads exactly 2.60 in two places because somebody drove it into the wall and the wall said
+  nothing."* Three entries were still sitting on it the day it came off.
 
-  ⚠️ **AT ±3 dB A THEME CANNOT STATE A BALANCE, IT CAN ONLY TINT ONE.** `MUSIC_LADDER` is a single
-  arrangement and every place was a small nudge over it, so the arrangement won — which is
-  `docs/decisions/0113-there-is-one-composition-and-seven-levels.md`'s own failure arriving one level
-  up: 0128 and 0132 fixed the MATERIAL and left the BALANCE shared.
-
-  ⚠️ **WHAT REPLACES THE NARROW BAND IS MORE GUARDS, NOT FEWER** — the same trade
-  `docs/decisions/0120-a-rung-may-close-a-layer.md` made when it took 0090's additive rule away.
-  `tests/themes.test.ts` now holds, per place: the bus does not clip at any rung; **every rung is
-  louder than the one below**; no layer a rung opens is inaudible; **no place's quietest third is a
-  whisper**; and **no two places are within 3 dB of each other's profile**. Those are properties of
-  the thing the report is about. A ±3 dB window was a property of nothing.
+  ⚠️ **AND EVERY REASON IT GAVE IS NOW HELD BY SOMETHING THAT MEASURES A LISTENER.** The ceiling said
+  *the mix's headroom cannot pay for more*; the clip guard drives every place at every rung through
+  the real shaper and says so directly. The floor said *a theme must not silence a layer the rung
+  opened*; `docs/decisions/0162-a-place-has-its-own-ladder.md` made closing a layer a thing a place
+  states outright, so the floor was guarding a second spelling of a legal sentence.
 */
-export const MIX_FLOOR = 0.22;
-export const MIX_CEILING = 2.6;
+
 
 /**
  * Every theme. One per level, in order.
@@ -407,9 +387,10 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       energy under 300 Hz at `surge` against level one's 40.0%**, and the fix is two-sided: the
       material grew a running pedal, and this table stopped pushing the organ's top rank over it.
 
-      ⚠️ **`groove` is at the ceiling on purpose.** It is the undercurrent, it is centred, and
-      `MIX_CEILING` is what a multiplier may spend — a place whose whole complaint was the bottom is
-      the place that should be spending it there.
+      ⚠️ **`groove` is high on purpose.** It is the undercurrent, it is centred, and a place whose
+      whole complaint was the bottom is the place that should be spending its authority there. **It
+      used to read *at the ceiling*, and 0182 took the ceiling away** — 2.6 is now a number somebody
+      chose rather than the largest one they were allowed to write.
     */
     mix: {
       chords: 2.3,
@@ -1031,12 +1012,12 @@ export function bakedBy(theme: ThemeKind): MusicLayer[] {
  * these numbers and is how they would be produced again; nothing under `src/` calls it, and a
  * four-hundred-iteration solve is not something a run start can afford — 0157 is what that costs.
  *
- * ⚠️ **AND IT IS DELIBERATELY NOT BOUNDED BY `MIX_CEILING`.** That band is what a HAND may tint by,
- * and it is still enforced on `mix` above; this is a measured balance and its values run from 0.16 to
- * 12.19 — `labyrinth/ride` wants twelve because its material is twenty-odd decibels under everything
- * around it, which is [0140](../../docs/decisions/0140-no-layer-is-inaudible.md)'s *a gain is not a
- * loudness* stated as a number. Clamping it would be the wall that says nothing, which 0164's own
- * header records `arp` being driven into twice.
+ * ⚠️ **IT IS NOT BOUNDED, AND NEITHER IS `mix` ANY MORE** — 0182. This is a measured balance and its
+ * values run from 0.16 to 12.19 — `labyrinth/ride` wants twelve because its material is twenty-odd
+ * decibels under everything around it, which is
+ * [0140](../../docs/decisions/0140-no-layer-is-inaudible.md)'s *a gain is not a loudness* stated as a
+ * number. Clamping it would be the wall that says nothing, which 0164's own header records `arp`
+ * being driven into twice — **and the band over `mix` above was that wall, so it went too.**
  *
  * ⚠️ **A LAYER THIS TABLE DOES NOT NAME IS UNSCALED**, which is what the aura pair and every layer the
  * solve left alone are. `SOLVED_BY` excludes the aura by name — its gain is a distance the player
@@ -1145,14 +1126,14 @@ export const REBASE: Record<ThemeKind, Partial<Record<MusicLayer, number>>> = {
 /**
  * What this place multiplies the shared ladder by — the hand's colour, times the solved balance.
  *
- * ⚠️ **THE CLAMP IS ON THE HAND AND NOT ON THE PRODUCT** — 0176. `MIX_CEILING` bounds what a tint
- * may be worth, which is a statement about authoring; `REBASE` is a measurement and is bounded by
- * what the bus can carry, which `tests/themes.test.ts` holds directly.
+ * ⚠️ **THERE IS NO CLAMP, AND THE ONE THERE WAS SAID NOTHING WHEN IT BIT** — 0182. 0176 moved the
+ * band off the product and onto the hand, which was the right half of the fix and left the wall
+ * standing: a tint of 2.9 still became 2.6, still read as 2.9 in the table, and still lost the
+ * difference without a word. **What bounds this product is the bus**, and the clip guard drives it
+ * through the real shaper at every place and every rung.
  */
 export function mixOf(theme: ThemeKind, layer: MusicLayer): number {
-  const want = THEMES[theme].mix[layer] ?? 1;
-  const tint = want < MIX_FLOOR ? MIX_FLOOR : want > MIX_CEILING ? MIX_CEILING : want;
-  return tint * (REBASE[theme][layer] ?? 1);
+  return (THEMES[theme].mix[layer] ?? 1) * (REBASE[theme][layer] ?? 1);
 }
 
 /**

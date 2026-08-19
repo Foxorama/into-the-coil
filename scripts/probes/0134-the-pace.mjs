@@ -24,43 +24,25 @@
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
-  {
-    decision: '0134',
-    suite: 'tests/themes.test.ts',
-    /*
-      ⚠️ RE-AIMED BY 0172, AND THE REASON IS THE INTERESTING PART. This broke the UNDERCURRENT — the
-      held pedal the report was written about — and `npm run prove` reported *went red, but on the
-      wrong test*: with the pedal held, Ember Nebula sits at 93.9% of the base composition's pace
-      against a 90% floor, so 0134's own guard correctly does not fire and two others do.
+  /*
+    ── THE PACE BREAK IS RETIRED WITH THE GUARD IT FIRED ───────────────────────────────────────────
 
-      ⚠️ THE PLACE GOT FASTER UNDERNEATH ITS OWN PROBE. docs/decisions/0172-a-place-opens-with-its-own-four.md
-      opens `arp` at Ember Nebula's `run` — the mixture, 32 notes a bar, the largest single
-      contributor there — expressly so the place could lose its kit and keep its pace. **That is the
-      guard's subject being satisfied a different way**, which makes the old break insufficient rather
-      than wrong.
+    ⚠️ docs/decisions/0182-a-mix-number-has-no-band.md deleted `NO PLACE IS SUBSTANTIALLY SLOWER THAN
+    THE BASE COMPOSITION`, which held every place within a tenth of level one's notes a bar at every
+    rung. A ratio against the base makes the base a target, which is exactly what
+    docs/decisions/0147-a-place-is-a-balance.md found and fixed for this file's OTHER floor — the low
+    band, which became an absolute band and survives.
 
-      ⚠️ SO THE BREAK MOVES TO THE LAYER THAT NOW CARRIES THE PACE, which is the same claim aimed at
-      the same rung: a fast layer becoming a slow one. It is the second time a probe in this file has
-      been re-anchored for exactly this reason — the note under the next one records the first.
-    */
-    broke: 'the mixture held instead of running, which is the pace the report was written about',
-    guard: '0134 — NO PLACE IS SUBSTANTIALLY SLOWER THAN THE BASE COMPOSITION, at any rung',
-    edit: {
-      path: 'src/content/nebula.ts',
-      find: `  return [
-    root, third, fifth, third,
-    root + 12, third, fifth, root + 12,
-    fifth, third, root, third,
-    fifth, root + 12, fifth, third,
-  ];`,
-      replace: `  return [
-    root, null, null, null,
-    null, null, null, null,
-    null, null, null, null,
-    null, null, null, null,
-  ];`,
-    },
-  },
+    ⚠️ AND THIS PROBE'S OWN HISTORY IS PART OF THE ARGUMENT. It was re-anchored twice in two days,
+    the second time because docs/decisions/0172-a-place-opens-with-its-own-four.md made the place
+    faster underneath it, and the bound itself was moved from 0.85 to 0.9 because at 0.85 both breaks
+    reported STILL GREEN. docs/decisions/0161-the-shape-of-a-level-is-not-guarded.md: a guard that
+    keeps having to be relaxed — or tightened onto the shipped music — is not being refined.
+
+    ⚠️ THE CLIPPING BREAK BELOW IS UNTOUCHED, and it is the half of 0134 that is about whether the
+    sound works rather than about what shape it has.
+  */
+
   {
     decision: '0134',
     suite: 'tests/themes.test.ts',

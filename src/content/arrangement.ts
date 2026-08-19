@@ -17,10 +17,16 @@
  * always another layer or another gain — which is how twenty-three layers and four hundred numbers
  * happened.
  *
- * ⚠️ **AND THE RULE SET FORBADE ITS OWN ANSWER.** `MIX_CEILING` is 2.6 and `mixOf` silently CLAMPS to
- * it. Solved, the layers the player could not hear want **2.9 to 5.9** — so the table could say one
- * thing and the mixer play another, with nothing reporting the difference. `arp` reads exactly 2.60
+ * ⚠️ **AND THE RULE SET FORBADE ITS OWN ANSWER.** `MIX_CEILING` was 2.6 and `mixOf` silently CLAMPED
+ * to it. Solved, the layers the player could not hear want **2.9 to 5.9** — so the table could say one
+ * thing and the mixer play another, with nothing reporting the difference. `arp` read exactly 2.60
  * in two places because somebody drove it into the wall and the wall said nothing.
+ *
+ * ⚠️ **THIS PARAGRAPH WAS WRITTEN ON 2026-08-16 AND THE WALL CAME DOWN ON 2026-08-19** —
+ * `docs/decisions/0182-a-mix-number-has-no-band.md`. Three days, three decisions and one player report
+ * later: *"the music is restricted and has been for ages with gains, sound limits and all sorts of
+ * what seem like artificial restrictions."* **Naming a defect is not fixing it**, and this file is
+ * where the naming happened.
  *
  * ── WHAT IS AUTHORED HERE, AND WHAT IS DERIVED ──────────────────────────────────────────────────
  *
