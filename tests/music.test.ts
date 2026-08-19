@@ -19,7 +19,6 @@ import {
   AURA_LAYERS,
   AURA_NEAR_UNITS,
   AURA_FAR_UNITS,
-  AURA_LEVEL_CEILING,
   AURA_ONSET_UNITS,
   RUNG_CLOSES,
   LAYER_PAN,
@@ -43,7 +42,7 @@ import {
   placeArrivesAt,
   SCHEDULE_AHEAD,
 } from '../src/app/music.ts';
-import { THEME_KINDS } from '../src/content/themes.ts';
+import { auraCeilingOf, rungOf, THEME_KINDS } from '../src/content/themes.ts';
 import { loopsAt } from './bakes.ts';
 import { buildsOf } from './pace.ts';
 import { readFileSync } from 'node:fs';
@@ -1174,13 +1173,37 @@ describe('the boss brings an aura with it', () => {
         level reached; at a ceiling of 1 it has 14% left, which is the boss arriving at a volume the
         player has been sitting in for a minute.
       */
-      const levelPeak = MUSIC_LADDER.approach[layer] * AURA_LEVEL_CEILING;
-      const fightPeak = MUSIC_LADDER.boss[layer];
-      expect(
-        fightPeak / levelPeak,
-        `${layer} reaches ${levelPeak.toFixed(2)} on the level's own build and a fight tops out at ` +
-          `${fightPeak.toFixed(2)} — the boss arrives at a volume the level was already at`,
-      ).toBeGreaterThan(1.8);
+      /*
+        ⚠️ **PER PLACE SINCE 0183, AND THIS IS NOW THE BOUND ON WHAT A PLACE MAY STATE.** The ceiling
+        was a constant and is `THEMES[place].aura`; the ratio is the same claim asked seven times,
+        and it is the reason an aura of 1 is legal in the type and refused here. Today's spread is
+        0.40 to 0.60 against a limit of about 0.63 — **stated rather than glossed**, because a place
+        driven past it will fail here and the argument for a louder fight row gets made, which
+        `docs/decisions/0162-a-place-has-its-own-ladder.md` already permits.
+      */
+      for (const theme of THEME_KINDS) {
+        const levelPeak = rungOf(theme, 'approach', layer) * auraCeilingOf(theme);
+        const fightPeak = rungOf(theme, 'boss', layer);
+        expect(
+          fightPeak / levelPeak,
+          `${theme}'s ${layer} reaches ${levelPeak.toFixed(2)} on the level's own build and its fight tops ` +
+            `out at ${fightPeak.toFixed(2)} — the boss arrives at a volume the level was already at`,
+        ).toBeGreaterThan(1.8);
+      }
+    }
+  });
+
+  it('0183 — AND NO TWO PLACES CARRY THE SAME AMOUNT OF THE BOSS ON THE WAY IN', () => {
+    /*
+      ⚠️ **A MECHANISM NO DATA EXERCISES IS GUARDED BY NOTHING**, which is `rungIn`'s own header one
+      table over. 0183 took `AURA_LEVEL_CEILING` off `src/content/music.ts` and gave every place its
+      own; seven identical values would be the constant reached a longer way round, and every reader
+      below could have gone on importing a number with all seven guards green.
+    */
+    const stated = THEME_KINDS.map((theme) => auraCeilingOf(theme));
+    expect(new Set(stated).size, `the seven places state ${new Set(stated).size} distinct aura ceilings, so the field is a constant`).toBeGreaterThan(3);
+    for (const theme of THEME_KINDS) {
+      expect(auraCeilingOf(theme), `${theme} builds no aura at all before its boss`).toBeGreaterThan(0);
     }
   });
 
@@ -1209,23 +1232,32 @@ describe('the boss brings an aura with it', () => {
       neither is derived from the constant under test.
     */
     const at = (seconds: number): number => seconds * SCROLL_PER_STEP * STEPS_PER_SECOND;
-    expect(auraBuild(0, bossAt), 'a level opens with the boss already audible').toBe(0);
-    expect(auraBuild(at(15), bossAt), 'the build had already started fifteen seconds in').toBe(0);
-    expect(auraBuild(at(30), bossAt), 'the build had still not started thirty seconds in').toBeGreaterThan(0);
-    expect(auraBuild(bossAt, bossAt), 'the build does not reach its ceiling by the boss').toBeCloseTo(
-      AURA_LEVEL_CEILING,
-      5,
-    );
-    // It climbs the whole way rather than arriving early and sitting there.
-    const third = auraBuild(AURA_ONSET_UNITS + (bossAt - AURA_ONSET_UNITS) / 3, bossAt);
-    const twoThirds = auraBuild(AURA_ONSET_UNITS + (2 * (bossAt - AURA_ONSET_UNITS)) / 3, bossAt);
-    expect(twoThirds, 'the build flattens out before the boss').toBeGreaterThan(third);
+    /*
+      ⚠️ **DRIVEN OVER ALL SEVEN PLACES SINCE 0183**, because the ceiling it climbs to is the place's
+      own. One theme here would hold the shape for one place and say nothing about the other six.
+    */
+    for (const theme of THEME_KINDS) {
+      expect(auraBuild(0, bossAt, theme), `${theme} opens with the boss already audible`).toBe(0);
+      expect(auraBuild(at(15), bossAt, theme), `${theme}'s build had already started fifteen seconds in`).toBe(0);
+      expect(
+        auraBuild(at(30), bossAt, theme),
+        `${theme}'s build had still not started thirty seconds in`,
+      ).toBeGreaterThan(0);
+      expect(auraBuild(bossAt, bossAt, theme), `${theme}'s build does not reach its ceiling by the boss`).toBeCloseTo(
+        auraCeilingOf(theme),
+        5,
+      );
+      // It climbs the whole way rather than arriving early and sitting there.
+      const third = auraBuild(AURA_ONSET_UNITS + (bossAt - AURA_ONSET_UNITS) / 3, bossAt, theme);
+      const twoThirds = auraBuild(AURA_ONSET_UNITS + (2 * (bossAt - AURA_ONSET_UNITS)) / 3, bossAt, theme);
+      expect(twoThirds, `${theme}'s build flattens out before the boss`).toBeGreaterThan(third);
+    }
     /*
       ⚠️ **A level with no boss builds nothing** — `Number.POSITIVE_INFINITY` is what a fixture uses,
       and a fixture that quietly grew a rising aura would be measuring this decision in every other
       suite in the repository.
     */
-    expect(auraBuild(9999, Number.POSITIVE_INFINITY), 'a level with no boss built dread anyway').toBe(0);
+    expect(auraBuild(9999, Number.POSITIVE_INFINITY, 'approach'), 'a level with no boss built dread anyway').toBe(0);
   });
 
   it('0107 — and the two claims on the aura are combined by a MAXIMUM, never a sum', () => {

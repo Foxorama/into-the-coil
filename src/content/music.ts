@@ -398,19 +398,22 @@ export const AURA_FAR_UNITS = 145;
  * level's start and runs to the boss, so it stretches with `bossAt`; a level's SECTIONS are now
  * authored positions and do not. The two used to share the argument and no longer do.
  *
- * ⚠️ **THE CEILING IS 0.55 AND THE REASON IS THAT THE FIGHT MUST STILL HAVE SOMEWHERE TO GO.** If the
- * level-long build reached 1 the boss would arrive at the volume it had been at for a minute, and
+ * ⚠️ **THE CEILING IS A PLACE'S OWN NOW, AND IT WAS ONE NUMBER FOR ALL SEVEN** —
+ * `docs/decisions/0183-a-cue-is-limited-rather-than-refused.md`. `AURA_LEVEL_CEILING` stood here at
+ * 0.55; what a place states is `THEMES[place].aura`, read through `auraCeilingOf`.
+ *
+ * ⚠️ **WHAT THE NUMBER IS FOR HAS NOT CHANGED, WHICH IS WHY IT IS A FIELD AND NOT A DELETION.** If
+ * the level-long build reaches 1 the boss arrives at the volume it had been at for a minute, and
  * `docs/decisions/0091-the-boss-has-an-aura.md`'s whole subject — *as it gets closer to the player* —
- * would have nothing left to say. At 0.55 the level climbs to just over half and the fight's own
- * proximity carries the rest, so the two mechanisms are a build and a modulation rather than two
- * claims on one gain.
+ * has nothing left to say. **That is not a hypothesis: `scripts/probes/0091-aura.mjs` has driven it
+ * to 1 and reddened the guard since 0107.** A place that wants its dread to arrive early may now say
+ * so; what is gone is one hand's answer standing for seven places.
  *
  * ⚠️ **AND THE TWO ARE COMBINED WITH A MAXIMUM, NEVER A SUM.** A sum would put the aura past its
  * ceiling the moment a player closed on a boss at the end of a long level, which is exactly the
  * headroom `tests/music.test.ts` measures. `auraFor` is the one description.
  */
 export const AURA_ONSET_UNITS = 720;
-export const AURA_LEVEL_CEILING = 0.55;
 
 /**
  * The exponent the aura's ramp is raised to. Above 1 the movement crowds towards the near end.

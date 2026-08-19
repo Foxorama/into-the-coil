@@ -1068,14 +1068,21 @@ const DELIBERATELY_COLD: Record<string, string> = {
     pool to take it from. The scan would not SEE that — `ctx.createBufferSource()` is a call, not a
     `new` — so listing the file as hot would report clean while it allocated per shot, which is worse
     than not listing it. The allocation is bounded instead, by the voice cap, and counted:
-    `tests/sound.test.ts` asserts that at most `MAX_VOICES` start on one step. That is
+    `tests/sound.test.ts` asserts the bound. That is
     `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md`'s own move applied to the budget
     it did not anticipate — `docs/decisions/0072-a-cue-is-baked-and-played.md`.
+
+    ⚠️ **THE BOUND IS DERIVED NOW AND IT USED TO BE `MAX_VOICES` = 4** —
+    `docs/decisions/0183-a-cue-is-limited-rather-than-refused.md`. It is `CUE_KINDS.length`, because
+    no cue's `hold` is under two steps and a kind that sounded this step cannot sound again on it.
+    **A derived bound moves when the table does**, which a typed one never did: the cap was chosen
+    when there were fewer rows and nothing would have told anybody.
   */
   'src/app/sound.ts':
     'reached from a step, and it allocates one single-use audio source per voice because the platform ' +
-    'has no other way to play a buffer. Bounded by MAX_VOICES rather than by this scan, which cannot ' +
-    'see a factory call — and the cap is asserted in tests/sound.test.ts.',
+    'has no other way to play a buffer. Bounded by CUE_KINDS.length — every hold is at least two ' +
+    'steps, so a kind sounds once per step — rather than by this scan, which cannot see a factory ' +
+    'call. 0183.',
 };
 
 interface AllocationRow {

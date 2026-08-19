@@ -21,14 +21,13 @@ import { fileURLToPath } from 'node:url';
 import { bakeLoops, panGains } from '../src/app/music.ts';
 import { MASTER_GAIN, SAMPLE_RATE, saturate } from '../src/app/sound.ts';
 import {
-  AURA_LEVEL_CEILING,
   LAYER_PAN,
   MUSIC_DRIVE,
   MUSIC_GAIN,
   MUSIC_LADDER,
   MUSIC_LAYERS,
 } from '../src/content/music.ts';
-import { THEME_KINDS, mixOf } from '../src/content/themes.ts';
+import { auraCeilingOf, THEME_KINDS, mixOf } from '../src/content/themes.ts';
 import { solveLevel } from './solve-mix.mjs';
 
 const args = process.argv.slice(2);
@@ -126,7 +125,7 @@ for (let i = 0; i < b.length; i++) b[i] *= trim;
 writeFileSync(`${base}-shipped.wav`, wavOf(a, SAMPLE_RATE, 2));
 writeFileSync(`${base}-solved.wav`, wavOf(b, SAMPLE_RATE, 2));
 
-const nearness = rung === 'boss' || rung === 'bossPeak' ? 1 : AURA_LEVEL_CEILING;
+const nearness = rung === 'boss' || rung === 'bossPeak' ? 1 : auraCeilingOf(theme);
 console.log(`${theme} / ${rung} — ${seconds}s, stereo, through the game's bus`);
 console.log(`  ${base}-shipped.wav   MUSIC_LADDER x mixOf, aura at ${nearness}`);
 console.log(`  ${base}-solved.wav    the arrangement, anchored ${offset >= 0 ? '+' : ''}${offset.toFixed(1)} dB off the stated targets`);

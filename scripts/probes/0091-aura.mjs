@@ -95,10 +95,16 @@ export const PROBES = [
     */
     broke: 'the level-long build allowed to reach the top, so the boss arrives at a volume it was already at',
     guard: '0107 — and nothing but a BOSS ever takes it to the top, though the level may raise it',
+    /*
+      ⚠️ RE-ANCHORED BY 0183, WHICH MADE THE CEILING A PLACE'S OWN. It was a constant in
+      src/content/music.ts and is now THEMES[place].aura; the break is the identical edit one table
+      over — the level-long build allowed all the way to 1 — and it lands on level one, the place
+      whose whole job is to be the one that changes nothing.
+    */
     edit: {
-      path: 'src/content/music.ts',
-      find: 'export const AURA_LEVEL_CEILING = 0.55;',
-      replace: 'export const AURA_LEVEL_CEILING = 1;',
+      path: 'src/content/themes.ts',
+      find: "    // The reference, and the number every place used to be — 0183. Level one changes nothing.\n    aura: 0.55,",
+      replace: "    // The reference, and the number every place used to be — 0183. Level one changes nothing.\n    aura: 1,",
     },
   },
 ];

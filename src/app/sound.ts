@@ -40,9 +40,14 @@
  * ⚠️ **This file is reached from a step and it allocates, and `tests/budget.test.ts` lists it as
  * deliberately cold with that reason.** A one-shot `AudioBufferSourceNode` is the platform's only way
  * to play a buffer — it cannot be pooled, because the spec forbids restarting one. So the allocation
- * is not removable, and it is bounded instead: at most `MAX_VOICES` per fixed step, asserted. That is
- * `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md`'s own move — count the thing, do not
- * time it — applied to the one budget it did not anticipate.
+ * is not removable, and it is bounded instead.
+ *
+ * ⚠️ **THE BOUND IS DERIVED NOW AND IT USED TO BE TYPED** —
+ * `docs/decisions/0183-a-cue-is-limited-rather-than-refused.md`. `MAX_VOICES` was 4 and a fifth cue
+ * on a step was DROPPED. What bounds the allocation instead is `hold`: every cue's is at least two
+ * steps, so a kind sounds at most once per step and the ceiling is `CUE_KINDS.length` — **counted
+ * from the table rather than chosen**, which is
+ * `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md`'s move done properly.
  */
 
 import {
@@ -105,24 +110,24 @@ declare global {
  */
 export const SAMPLE_RATE = 44100;
 
-/**
- * How many cues may START on one fixed step.
- *
- * ⚠️ **This is the frame budget's audio twin and it is the honest guard in this file.** Every voice
- * is one unavoidable allocation and one more thing in the mix; four is enough for the densest real
- * instant in the game — a bomb going off among a volley, killing two things and taking a shield —
- * and it is a hard ceiling rather than a target. Past it the extra cues are DROPPED, not queued: a
- * queued cue arrives after the thing it was about, which is worse than silence.
- *
- * ⚠️ **Dropping is the same choice `src/sim/pool.ts` makes for a spawn**, and it is safe for the same
- * reason: every cue has a visual twin (`src/content/cues.ts`), so a dropped one loses emphasis and
- * never loses information. That is 0024's *no information by audio alone* doing work it was not
- * obviously written for.
- */
-export const MAX_VOICES = 4;
+/*
+  ── `MAX_VOICES` WAS 4 AND A FIFTH CUE ON A STEP WAS DROPPED ─────────────────────────────────────
+
+  ⚠️ **`docs/decisions/0183-a-cue-is-limited-rather-than-refused.md`**, answering *"let's remove the
+  max voices."* It called itself *the frame budget's audio twin* and it was doing two jobs: bounding
+  the allocation, and keeping the summed cues inside full scale. **Neither one needed a number.**
+
+  ⚠️ **THE ALLOCATION IS BOUNDED BY `hold`, WHICH ALREADY EXISTED.** No cue's hold is under two
+  steps, so a kind sounds at most once per step and the worst case is `CUE_KINDS.length` — a bound
+  read off the table rather than typed over it, and one that moves when the table does.
+
+  ⚠️ **AND THE LEVEL IS BOUNDED BY `CUE_LIMIT` BELOW**, which is a shaper on the bus rather than a
+  refusal at the gate. A cap silences an event that happened; a limiter plays every one of them and
+  leans on the loud instant, which is what a mix bus is for.
+*/
 
 /**
- * The share of full scale the CUES get, so `MAX_VOICES` at once cannot clip.
+ * The share of full scale the CUES get, under the bus limiter that catches what it does not.
  *
  * ⚠️ **0.55 → 0.45 → 0.40, and the SECOND move is the one that matters** —
  * `docs/decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md`. The first was measured and
@@ -133,9 +138,13 @@ export const MAX_VOICES = 4;
  * ⚠️ **The cues stay ahead of the music PERCEPTUALLY and no longer do at the peak, which is the
  * distinction 0092 draws.** `docs/decisions/0024-the-accessibility-floor-is-settings.md` makes every
  * cue information — a shield taken, a hit that did not land — and the music is not. But a cue is a
- * transient against a sustained bed: `MAX_VOICES` of the loudest cues at once is a rare instant and
- * the music's peak is every kick, so holding the first above the second buys nothing the player can
- * hear and costs the thing they asked for twice.
+ * transient against a sustained bed: four of the loudest cues at once is a rare instant and the
+ * music's peak is every kick, so holding the first above the second buys nothing the player can hear
+ * and costs the thing they asked for twice.
+ *
+ * ⚠️ **AND IT IS NO LONGER THE WHOLE STORY** — 0183. This is what the cues are scaled BY; `CUE_LIMIT`
+ * is what catches the instant that scaling was never going to cover, which is what let the voice cap
+ * go. The number here has not moved and is still the one two reports settled.
  *
  * ⚠️ **EXPORTED FOR `scripts/hear.mjs`, WHICH IS THE ONLY THING THAT MAY READ IT.** The rig mixes
  * cues against music to hear the balance the player hears; a `0.4` typed into the rig would be a
@@ -271,6 +280,52 @@ export function saturate(x: number, amount: number): number {
   if (amount <= 0) return x;
   const k = 1 + amount * 6;
   return Math.tanh(x * k) / Math.tanh(k);
+}
+
+/**
+ * How many points the limiter's curve is sampled at.
+ *
+ * ⚠️ **Odd, so that zero is a sample and not an interpolation between two.** An even count puts the
+ * origin between points and the browser's linear read makes silence a hair off silence.
+ */
+const CURVE_POINTS = 1025;
+
+/**
+ * The threshold the cue bus runs clean up to, as a share of full scale.
+ *
+ * ⚠️ **0.8 IS WHERE THE FIFTH CUE IS**, which is the number this replaces. Post-`MASTER_GAIN` the
+ * loudest cue peaks at 0.19 and the four loudest sum to 0.71, so **everything the retired
+ * `MAX_VOICES` used to allow passes through untouched** — the shaper is identity below here. What it
+ * catches is the instant a cap would have silenced.
+ */
+export const CUE_LIMIT = 0.8;
+
+/**
+ * A soft limiter: identity up to `threshold`, then a knee that cannot reach full scale.
+ *
+ * ── WHY NOT `saturate`, WHICH IS RIGHT THERE ────────────────────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0183-a-cue-is-limited-rather-than-refused.md`.** `saturate` is normalised at
+ * unity and is therefore an **upward** compressor — its slope at zero is `k / tanh(k)`, which at the
+ * music bus's own drive is **2.82**. That is the property the music wants and the exact opposite of
+ * what a cue bus needs: it would lift every quiet cue by 9 dB and rewrite a balance
+ * `docs/decisions/0092-the-mix-is-a-hand-and-the-aura-was-a-curve.md` took two reports to settle.
+ *
+ * ⚠️ **SO THE KNEE STARTS AT A THRESHOLD AND THE BOTTOM IS LEFT ALONE.** Below `threshold` this
+ * returns `x`; above it the remaining headroom is spent asymptotically, so **no sum of cues reaches
+ * 1** however many land at once.
+ *
+ * ⚠️ **STATELESS AND DETERMINISTIC, ON `saturate`'s OWN ARGUMENT.** A `DynamicsCompressorNode` has an
+ * attack and a release that a headless guard cannot model, so the guard holding the bus would have to
+ * be weakened to admit one. This is a `WaveShaperNode` curve in the browser and the identical
+ * arithmetic in the test.
+ */
+export function limit(x: number, threshold: number): number {
+  const sign = x < 0 ? -1 : 1;
+  const size = x < 0 ? -x : x;
+  if (size <= threshold) return x;
+  const room = 1 - threshold;
+  return sign * (threshold + room * Math.tanh((size - threshold) / room));
 }
 
 /**
@@ -461,8 +516,9 @@ export interface AudioOut {
    * has allowed it.
    *
    * ⚠️ **`velocity` indexes the row's baked variants and is not a gain** — 0104. A gain would be a
-   * `GainNode` per voice, which is a second allocation on a path `MAX_VOICES` exists to bound; the
-   * weights are baked instead, so an accented shot costs exactly what an unaccented one does.
+   * `GainNode` per voice, which is a second allocation on the one path in this file that allocates
+   * at all; the weights are baked instead, so an accented shot costs exactly what an unaccented one
+   * does. **0183 took the voice cap off this path and that makes the saving matter more, not less.**
    */
   sound(index: number, velocity: number, pan: number): void;
   /**
@@ -501,8 +557,6 @@ export interface Speaker {
   play(kind: CueKind, across?: number): void;
   /** Whether the player wants sound at all. */
   setOn(on: boolean): void;
-  /** How many voices started on the current step — the counted budget, for the guard to read. */
-  voices(): number;
 }
 
 /**
@@ -713,7 +767,6 @@ export function makeSpeaker(out: AudioOut): Speaker {
   let clock = 0;
   /** The SIM's step count, which is the clock the music is in phase with — 0104. */
   let beat = 0;
-  let voices = 0;
   let on = true;
   /**
    * The step each cue last sounded on, by index. Pre-filled with a number far enough below zero that
@@ -755,19 +808,20 @@ export function makeSpeaker(out: AudioOut): Speaker {
   // @setup: one array for the speaker's lifetime, written in place beside `waiting`.
   const waitingPan = new Float32Array(CUE_KINDS.length);
 
-  /** Sound `index` now, if the hold and the cap allow it. The last gate before the browser. */
+  /** Sound `index` now, if the hold allows it. The last gate before the browser. */
   const emit = (index: number, pan: number): void => {
     if (clock - (lastAt[index] ?? 0) < CUES[CUE_KINDS[index]!]!.hold) return;
-    if (voices >= MAX_VOICES) return;
     if (!out.ready()) return;
     lastAt[index] = clock;
-    voices++;
     out.sound(index, variantAt(variantsOf[index] ?? 1, beat), pan);
     /*
       ⚠️ **AFTER the cue is known to have sounded, never when it was asked for** — 0104. A cue the
-      hold or the cap refused is a cue the player never hears, and ducking the music for it would be
-      the track getting out of the way of nothing. It is the same rule `voices` follows one line up,
-      for the same reason.
+      hold refused is a cue the player never hears, and ducking the music for it would be the track
+      getting out of the way of nothing.
+
+      ⚠️ **THE VOICE CAP WAS THE OTHER REFUSAL AND 0183 REMOVED IT**, along with the counter that fed
+      it: nothing read the count once the cap was gone, and a tally kept for a guard that no longer
+      asks is the shape this file has just spent a decision deleting.
     */
     const depth = CUES[CUE_KINDS[index]!]!.duck;
     if (depth !== undefined) out.duck(depth);
@@ -778,7 +832,6 @@ export function makeSpeaker(out: AudioOut): Speaker {
       clock++;
       // The world's own count when there is a world, and the speaker's own when there is not.
       beat = beatStep ?? beat + 1;
-      voices = 0;
       /*
         ⚠️ **The flush is BEFORE anything this step asks for**, which is what keeps a queued cue from
         losing its slot to one that arrived later. A cue that waited a sixteenth has already paid for
@@ -796,16 +849,15 @@ export function makeSpeaker(out: AudioOut): Speaker {
       const index = indexOf[kind];
       const pan = panFor(across);
       /*
-        ⚠️ **`voices` counts what SOUNDED, never what was asked for**, and that is the load-bearing
-        part rather than the order of the two checks below. A cap that counted drops would let four
-        retriggers of one held cue fill the step's budget and lock out the different cues behind them
-        — the cap causing precisely the failure it exists to prevent.
+        ⚠️ **A HELD REPEAT IS A NO-OP AND NEVER A SIDE EFFECT**, which is what survives 0183 of the
+        paragraph that stood here. It was about a cap that counted drops rather than soundings — four
+        retriggers of one held cue filling the step's budget and locking out the cues behind them —
+        and there is no budget to eat any more. What is still true, and still guarded, is that a cue
+        the hold refuses moves nothing: not `lastAt`, not the duck, not the grid's waiting flag.
 
-        ⚠️ **An earlier draft of this comment claimed the ORDER mattered and it does not**: whichever
-        check runs first, a held repeat returns before `voices` moves. `npm run prove` reported STILL
-        GREEN on a probe that swapped them, which is
+        ⚠️ **An earlier draft claimed the ORDER of the checks mattered and it does not.**
+        `npm run prove` reported STILL GREEN on a probe that swapped them, which is
         `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` catching a guard standing over nothing.
-        The order below is cheap-first and that is all it is.
       */
       /*
         ⚠️ **A GRIDDED CUE WAITS AND IS NOT DROPPED** — 0104. It is marked and sounds at the next
@@ -827,9 +879,6 @@ export function makeSpeaker(out: AudioOut): Speaker {
     },
     setOn(next: boolean): void {
       on = next;
-    },
-    voices(): number {
-      return voices;
     },
   };
 }
@@ -1232,7 +1281,24 @@ export function makeAudioOut(): WebAudioOut {
         ctx = new Ctor();
         master = ctx.createGain();
         master.gain.value = MASTER_GAIN;
-        master.connect(ctx.destination);
+        /*
+          ⚠️ **THE BUS CANNOT CLIP, WHICH IS WHAT LET THE VOICE CAP GO** — 0183. Every cue and the
+          room's return arrive at `master`; this sits between it and the speaker, so it is the LAST
+          thing in the chain and the only place a total can be bounded. Below `CUE_LIMIT` it is
+          identity, so nothing the old cap allowed is touched.
+
+          ⚠️ **THE CURVE IS SAMPLED ONCE AND IS DEFINED OVER [-1, 1]**, which is the whole domain a
+          `WaveShaperNode` reads — 0176's third break is about a guard that forgot the browser clamps
+          outside it. Here the clamp is the backstop rather than the mechanism: the knee has already
+          taken anything that large below full scale.
+        */
+        // @setup: one shaper and one curve at context creation, read by the audio thread thereafter.
+        const ceiling = ctx.createWaveShaper();
+        const curve = new Float32Array(CURVE_POINTS);
+        for (let i = 0; i < CURVE_POINTS; i++) curve[i] = limit((i / (CURVE_POINTS - 1)) * 2 - 1, CUE_LIMIT);
+        ceiling.curve = curve;
+        master.connect(ceiling);
+        ceiling.connect(ctx.destination);
         /*
           The bake, and it happens exactly once — this is `bakeAtlas`'s moment for the other channel.
           It is on the gesture rather than at boot because a buffer needs a context to live in, and
@@ -1323,7 +1389,7 @@ export function makeAudioOut(): WebAudioOut {
         ⚠️ **THE ONE UNAVOIDABLE ALLOCATION, and the reason this file is on the cold list with its
         reason written out.** A `BufferSourceNode` is single-use by specification — `start()` may be
         called once and the node cannot be rewound — so there is no pool to take it from. What bounds
-        it is `MAX_VOICES`, checked by the speaker before this is ever reached.
+        it is `CUE_KINDS.length`, which `hold` gives and 0183 has the arithmetic for.
       */
       const source = ctx.createBufferSource();
       source.buffer = buffer;

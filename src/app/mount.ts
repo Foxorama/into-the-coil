@@ -1238,7 +1238,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       the same branch `level` above takes.
     */
     const build =
-      state.screen.current === 'playing' ? auraBuild(world.cameraAlong - world.levelOrigin, world.level.bossAt) : 0;
+      state.screen.current === 'playing'
+        ? auraBuild(world.cameraAlong - world.levelOrigin, world.level.bossAt, world.level.theme)
+        : 0;
     const nearness = auraFor(
       build,
       boss === null ? 0 : auraNearnessFor(boss.along, boss.radius, world.ship.along, world.ship.radius),

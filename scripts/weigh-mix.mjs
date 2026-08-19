@@ -7,17 +7,18 @@
 // thirty-second run per single number, and each fix moved a bound the previous run had not reached
 // yet — six rounds of whack-a-mole before this existed and none after it.
 //
-// ⚠️ THE ARITHMETIC IS THE GUARD'S, NOT A SECOND OPINION. Every bound below is computed the way
-// tests/themes.test.ts computes it, from tests/pace.ts and the game's own `saturate`; what this adds
-// is that it prints ALL of them instead of throwing on the first.
+// ⚠️ TWO OF THE BOUNDS ARE THE GUARD'S AND ONE COLUMN IS A PROXY, AND THAT USED TO BE UNSAID.
+// `low` and `whisper` are computed the way tests/themes.test.ts computes them, from tests/pace.ts;
+// what this adds is that it prints ALL of them instead of throwing on the first. `HOT` is a raw-sum
+// reading and is NOT the clip guard — the note on RAW_CEILING says why.
 //
-//   clip      the summed bus through the shaper, per rung. The ceiling is a raw sum of 1/MUSIC_GAIN.
-//   low       the share of energy under 300 Hz, per rung, against the band 0147 replaced 0134's
-//             ratio-to-the-base with.
-//   arc       run < push < surge, and boss > approach. The approach is NOT asserted to sum below
-//             the surge — tests/themes.test.ts has why that looked like 0136s drop and is not it.
-
+//   HOT       how close the raw summed peak sails to 1/MUSIC_GAIN. A ranking, never a verdict:
+//             the guard drives real samples through the shaper WITH the browser's clamp and passes
+//             rungs this reads over 100%.
+//   low       the share of energy under 300 Hz, per rung, against 0147's floor as 0176 re-derived it.
 //   whisper   no place's quietest third below -15 dB.
+//
+// ⚠️ THE ARC TABLE WAS HERE AND ITS GUARD WAS DELETED BY 0182 — see the note where it stood.
 
 import { bakeLoops } from '../src/app/music.ts';
 import { SAMPLE_RATE, saturate } from '../src/app/sound.ts';
@@ -25,10 +26,25 @@ import { MUSIC_DRIVE, MUSIC_GAIN, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_LEVELS } fro
 import { THEME_KINDS, mixOf, rungOf } from '../src/content/themes.ts';
 import { profileOf, quietestThird, rungShape } from '../tests/pace.ts';
 
-const LOW_FLOOR = 0.28;
-const LOW_CEILING = 0.55;
+// ⚠️ 0.24 AND IT READ 0.28 UNTIL 0183 — 0176 re-derived the guard's floor against the mix that ships
+// and this instrument kept the old one, so it reported eleven THIN rungs the suite is green over.
+// That is docs/decisions/0116-the-rig-plays-the-level.md's own failure: an instrument describing a
+// game nobody plays. Kept equal to tests/themes.test.ts's LOW_FLOOR by hand, and named here so the
+// next person to move one knows there are two.
+const LOW_FLOOR = 0.24;
+// ⚠️ NOT A BOUND ANY MORE — docs/decisions/0183-a-cue-is-limited-rather-than-refused.md removed the
+// ceiling from tests/themes.test.ts. It is kept here as a READING, because a place that is suddenly
+// half low end is worth seeing on the way past even when nothing refuses it.
+const LOW_WATCH = 0.55;
 const WHISPER_DB = -15;
-/** `saturate(x, a) <= 1` exactly when `x <= 1`, so the whole clipping question is this number. */
+/**
+ * ⚠️ A RAW-SUM PROXY, AND NOT WHAT tests/themes.test.ts MEASURES — say so rather than imply it.
+ *
+ * The guard drives the summed bus through the real shaper WITH the browser's [-1, 1] clamp (0176's
+ * third break) and asks whether a SAMPLE passes full scale. This sums peak gains against a raw
+ * ceiling, which is strictly more pessimistic: it reads CLIP on rungs the guard passes. Useful for
+ * ranking how close a place is sailing; never a verdict.
+ */
 const RAW_CEILING = 1 / MUSIC_GAIN;
 
 const bad = [];
@@ -59,28 +75,25 @@ for (const theme of THEME_KINDS) {
     const low = rungShape(theme, rung.level, loops.get(theme), bakes).low;
     const share = rung.raw / RAW_CEILING;
     const flags = [];
-    if (share > 1) { flags.push('CLIP'); bad.push(`${theme}/${rung.level} clips at ${(share * 100).toFixed(1)}% of the ceiling`); }
+    if (share > 1) flags.push('HOT');
     if (low > 0 && low < LOW_FLOOR) { flags.push('THIN'); bad.push(`${theme}/${rung.level} is ${(low * 100).toFixed(1)}% low, under the ${LOW_FLOOR * 100}% floor`); }
-    if (low > LOW_CEILING) { flags.push('MUDDY'); bad.push(`${theme}/${rung.level} is ${(low * 100).toFixed(1)}% low, over the ${LOW_CEILING * 100}% ceiling`); }
+    if (low > LOW_WATCH) flags.push('LOW-LED');
     console.log(
       `${theme.padEnd(11)} ${rung.level.padEnd(10)} ${rung.raw.toFixed(3).padStart(7)}   ${(share * 100).toFixed(1).padStart(7)}%   ${(low * 100).toFixed(1).padStart(9)}%  ${flags.join(' ')}`,
     );
   }
 }
 
-console.log('\nplace        run    push   surge  approa    boss   arc');
-for (const theme of THEME_KINDS) {
-  const at = (rung) => MUSIC_LAYERS.reduce((sum, l) => sum + rungOf(theme, rung, l) * mixOf(theme, l), 0);
-  const [run, push, surge, approach, boss] = ['run', 'push', 'surge', 'approach', 'boss'].map(at);
-  void surge;
-  const flags = [];
-  if (!(push > run)) { flags.push('push≤run'); bad.push(`${theme}: push does not arrive`); }
-  if (!(surge > push)) { flags.push('surge≤push'); bad.push(`${theme}: surge does not arrive`); }
-  if (!(boss > approach)) { flags.push('boss≤approach'); bad.push(`${theme}: the fight does not arrive`); }
-  console.log(
-    `${theme.padEnd(11)} ${[run, push, surge, approach, boss].map((v) => v.toFixed(2).padStart(6)).join(' ')}   ${flags.join(' ') || 'ok'}`,
-  );
-}
+/*
+  ── THE ARC TABLE IS GONE, BECAUSE ITS GUARD IS ──────────────────────────────────────────────────
+
+  ⚠️ docs/decisions/0182-a-mix-number-has-no-band.md deleted `A WIDER BAND STILL CANNOT FLATTEN THE
+  LADDER` and `the level climbs to its own top`. This printed the same sums with the same verdicts —
+  push≤run, surge does not arrive, the fight does not arrive — so leaving it would be an instrument
+  reporting failures nothing holds, which is the one thing a measuring script must never do.
+
+  ⚠️ WHAT A BOUNDARY DOES IS `node scripts/weigh-build.mjs` now (0171), which has a time axis.
+*/
 
 /*
   ⚠️ THE `apart` BOUND IS GONE — docs/decisions/0155-a-place-follows-its-own-instrument.md. It

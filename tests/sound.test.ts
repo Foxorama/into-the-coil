@@ -26,7 +26,9 @@ import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import {
   CUE_ROOM_GAIN,
   MAX_CUE_SAMPLES,
-  MAX_VOICES,
+  CUE_LIMIT,
+  MASTER_GAIN,
+  limit,
   makeRoomImpulse,
   PAN_BUCKETS,
   SAMPLE_RATE,
@@ -931,19 +933,71 @@ describe('the cue table', () => {
     }
   });
 
-  it('mixes so that MAX_VOICES of the loudest cues cannot clip', () => {
+  it('0183 — EVERY CUE IN THE TABLE AT ONCE STAYS INSIDE FULL SCALE, which is what let the cap go', () => {
     /*
-      ⚠️ **The arithmetic the master gain exists for, asserted rather than assumed.** Digital audio
-      clips hard — it does not compress — so the worst case is not "loud", it is a crunch on the one
-      step the game is at its busiest. The four loudest rows sounding together is that step.
+      ⚠️ **THE WORST CASE IS NOW THE WHOLE TABLE AND IT USED TO BE FOUR ROWS** —
+      `docs/decisions/0183-a-cue-is-limited-rather-than-refused.md`. Digital audio clips hard, so the
+      question a cap was answering is real; what changed is that the answer is a shaper on the bus
+      rather than a refusal at the gate, and the bound it has to survive is therefore **every kind
+      sounding on one step** — which `hold` says is the true maximum, since no cue's is under two.
     */
-    const loudest = CUE_KINDS.map((k) => CUES[k].gain)
+    const everything = CUE_KINDS.reduce((sum, k) => sum + CUES[k].gain, 0);
+    expect(
+      everything * MASTER_GAIN,
+      'the whole table at once no longer exceeds full scale, so this guard is measuring nothing',
+    ).toBeGreaterThan(1);
+    // With the browser's clamp, as above: the shaper sees 1 and answers `limit(1)`.
+    const shaped = (x: number): number => limit(x < -1 ? -1 : x > 1 ? 1 : x, CUE_LIMIT);
+    expect(
+      shaped(everything * MASTER_GAIN),
+      `all ${CUE_KINDS.length} kinds at once reach ${(everything * MASTER_GAIN).toFixed(2)} and the bus does not bring it inside full scale`,
+    ).toBeLessThan(1);
+  });
+
+  it('and the loudest instant the retired cap allowed passes through UNTOUCHED', () => {
+    /*
+      ⚠️ **THE HALF THAT MAKES IT A LIMITER RATHER THAN A COMPRESSOR.** 0183 refuses `saturate` for
+      this bus because it is normalised at unity and lifts everything under it; the property that
+      replaces *and it does not change the mix* is that the shaper is **identity** below
+      `CUE_LIMIT`. Four loudest rows at once is the densest instant the old `MAX_VOICES` permitted,
+      and it has to come out the other side bit-identical.
+    */
+    const four = CUE_KINDS.map((k) => CUES[k].gain)
       .sort((a, b) => b - a)
-      .slice(0, MAX_VOICES)
+      .slice(0, 4)
       .reduce((sum, gain) => sum + gain, 0);
-    // The master gain is not exported as a number to compare against on purpose — what matters is
-    // that the sum of the peaks is a value a master under 1 can bring inside full scale.
-    expect(loudest, 'four cues at once already exceed full scale before the master gain').toBeLessThan(2);
+    const level = four * MASTER_GAIN;
+    expect(level, 'four cues at once already clear the limiter threshold, so nothing is left alone').toBeLessThan(
+      CUE_LIMIT,
+    );
+    expect(limit(level, CUE_LIMIT), 'the shaper moved a level it is meant to pass').toBe(level);
+    expect(limit(-level, CUE_LIMIT), 'the shaper is not symmetric, so it is a DC offset').toBe(-level);
+  });
+
+  it('and nothing the shaper can be handed reaches full scale, however loud the sum', () => {
+    /*
+      ⚠️ **MODELLED WITH THE BROWSER'S OWN CLAMP, WHICH IS 0176's THIRD BREAK ONE BUS OVER.** A
+      `WaveShaperNode`'s curve is defined over [-1, 1] and the engine clamps anything outside it
+      before reading — so the loudest sample that can LEAVE this bus is `limit(1)`, whatever arrives.
+      A guard calling `limit` unclamped would be measuring a shaper the game does not have, which is
+      exactly the mistake 0176 caught on the music bus.
+    */
+    const shaped = (x: number): number => limit(x < -1 ? -1 : x > 1 ? 1 : x, CUE_LIMIT);
+    for (const level of [1, 2, 8, 64, 1000]) {
+      expect(shaped(level), `a sum of ${level} leaves the bus at full scale or past it`).toBeLessThan(1);
+      expect(shaped(-level), `a sum of -${level} leaves the bus at full scale or past it`).toBeGreaterThan(-1);
+    }
+    // ⚠️ AND THE PURE FUNCTION IS BOUNDED TOO, so the claim does not rest on the clamp alone.
+    for (const level of [1, 8, 1e6]) {
+      expect(limit(level, CUE_LIMIT), 'the curve itself passes full scale').toBeLessThanOrEqual(1);
+    }
+    // And it is monotonic, because a limiter that folds back is a ring modulator.
+    let last = -1;
+    for (let i = 0; i <= 200; i++) {
+      const here = limit(i / 100, CUE_LIMIT);
+      expect(here, 'the curve is not monotonic, so a louder sum comes out quieter').toBeGreaterThan(last);
+      last = here;
+    }
   });
 });
 
@@ -1419,14 +1473,18 @@ describe('the speaker decides WHEN, and it is the half that is arithmetic', () =
     const { out, ducked, heard } = recorder();
     const speaker = makeSpeaker(out);
     speaker.step();
-    // Four different cues fill the cap; the fifth and sixth are refused. `hit` and `threat` carry no
-    // duck at all, so what lands in `ducked` can only come from the two that do.
+    /*
+      ⚠️ **RE-AIMED BY 0183: THE CAP IS GONE, SO THE REFUSAL THIS RIDES ON IS THE `hold`.** It used
+      to fill four slots and check that the fifth ducked nothing. `hold` is the refusal that remains
+      and is the one that always mattered — a retrigger inside a cue's own hold is a cue the player
+      never hears, and ducking for it is the track getting out of the way of nothing.
+    */
     speaker.play('bomb');
     speaker.play('hit');
     speaker.play('threat');
-    speaker.play('chime');
-    speaker.play('missile');
-    expect(heard.length, 'the cap did not refuse anything, so this measures nothing').toBe(MAX_VOICES);
+    speaker.play('bomb');
+    speaker.play('bomb');
+    expect(heard.length, 'the hold did not refuse anything, so this measures nothing').toBe(3);
     expect(ducked, 'the music ducked for a cue nobody heard').toEqual([]);
 
     /*
@@ -1499,38 +1557,61 @@ describe('the speaker decides WHEN, and it is the half that is arithmetic', () =
     expect(heard, 'a cue with no onGrid was made to wait for the grid anyway').toEqual([indexOf('hit')]);
   });
 
-  it('starts at most MAX_VOICES on one step, which is the frame budget’s audio twin', () => {
+  it('0183 — EVERY CUE ASKED FOR ON A STEP IS HEARD, because nothing is refused for being fifth', () => {
+    /*
+      ⚠️ **THE REPORTED ONE.** *"Let's remove the max voices."* Fourteen kinds asked for on one step
+      used to produce four soundings and ten silences, and the ten were events the game had decided
+      were worth telling the player about.
+    */
+    /*
+      ⚠️ **DRIVEN ACROSS THE GRID, BECAUSE EIGHT OF THE FOURTEEN WAIT FOR IT** — 0104. A gridded cue
+      is asked for on one step and sounds on the next sixteenth; counting on the asking step alone
+      would report six and read as the cap still holding. What is asserted is that **every kind asked
+      for is heard**, not that they all land on the same step.
+    */
     const { out, heard } = recorder();
     const speaker = makeSpeaker(out);
     speaker.step();
     for (const kind of CUE_KINDS) speaker.play(kind);
-    expect(heard.length, 'the voice cap did not hold, so a busy step allocates without limit').toBe(MAX_VOICES);
+    speaker.step(FIRE_GRID);
+    expect(heard.length, 'something is still refusing cues on a busy step').toBe(CUE_KINDS.length);
   });
 
-  it('and the cap counts per step rather than for ever', () => {
+  it('and the allocation is still BOUNDED, because a hold says a kind sounds once per step', () => {
+    /*
+      ⚠️ **THIS IS WHAT REPLACES THE CAP IN `tests/budget.test.ts`'s REASONING** — 0183. The file is
+      deliberately cold and allocates one single-use source per voice, so *how many voices can a step
+      start* has to have an answer. It is `CUE_KINDS.length`, and it is **derived**: no row's `hold`
+      is under two steps, so a kind that sounded this step cannot sound again on it.
+
+      ⚠️ **HELD OVER THE TABLE RATHER THAN OVER THE NUMBER**, so a fifteenth row with a `hold` of
+      zero fails here rather than quietly unbounding the allocation.
+    */
+    for (const kind of CUE_KINDS) {
+      expect(
+        CUES[kind].hold,
+        `${kind} may retrigger inside one step, so a step's voice count is unbounded`,
+      ).toBeGreaterThan(1);
+    }
     const { out, heard } = recorder();
     const speaker = makeSpeaker(out);
     speaker.step();
-    for (const kind of CUE_KINDS) speaker.play(kind);
-    speaker.step();
-    // ⚠️ `bomb` rather than `death`, and 0104 is why: a gridded cue would wait for the sixteenth
-    // instead of sounding on this step, so the drive would be measuring the grid and not the cap.
-    speaker.play('bomb');
-    expect(heard.length, 'the cap leaked across a step boundary').toBe(MAX_VOICES + 1);
+    for (let i = 0; i < 40; i++) for (const kind of CUE_KINDS) speaker.play(kind);
+    speaker.step(FIRE_GRID);
+    expect(heard.length, 'forty rounds of every cue started more voices than there are kinds').toBe(CUE_KINDS.length);
   });
 
   it('does not let a cue held back spend the step’s budget anyway', () => {
     /*
-      ⚠️ **The failure: the cap counting DROPS rather than voices.** Four retriggers of one held cue
-      would then fill the step's budget and lock out the different cues behind them — the voice cap
-      causing precisely the failure it was added to prevent, and doing it only on the busiest steps.
+      ⚠️ **RETAINED THROUGH 0183, AND ITS SUBJECT IS NARROWER NOW.** It was written about the voice
+      cap counting DROPS rather than voices — four retriggers of one held cue filling the step's
+      budget and locking out the cues behind them. With the cap gone there is no budget to eat, and
+      what is left is the claim underneath it: **a held repeat is a no-op and never a side effect.**
 
-      ⚠️ **This test replaced one asserting the two checks happen in a particular ORDER, and the
-      probe is why.** Breaking the order on purpose left the suite green, correctly: whichever check
-      runs first, a held repeat returns before `voices` moves, so the ordering cannot be observed. The
-      claim was false, the comment in `src/app/sound.ts` said it anyway, and what is actually
-      load-bearing is this — `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` catching a guard
-      that fires on nothing.
+      ⚠️ **IT REPLACED ONE ASSERTING THE TWO CHECKS HAPPEN IN A PARTICULAR ORDER, AND THE PROBE IS
+      WHY.** Breaking the order on purpose left the suite green, correctly — the claim was false and
+      the comment in `src/app/sound.ts` said it anyway.
+      `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` catching a guard that fires on nothing.
     */
     /*
       ⚠️ **All four are cues 0104 left OFF the grid, and that is deliberate.** The claim is about what
@@ -1542,13 +1623,12 @@ describe('the speaker decides WHEN, and it is the half that is arithmetic', () =
     const speaker = makeSpeaker(out);
     speaker.step();
     speaker.play('hit');
-    for (let i = 0; i < MAX_VOICES + 4; i++) speaker.play('hit');
-    // Every one of these is a different cue, so all of them are inside the cap — unless the
-    // repeats above were counted.
+    for (let i = 0; i < 8; i++) speaker.play('hit');
+    // Every one of these is a different cue and every one has to be heard, in this order.
     speaker.play('threat');
     speaker.play('bomb');
     speaker.play('chime');
-    expect(heard, 'repeats of one cue ate the budget three different cues needed').toEqual([
+    expect(heard, 'a held repeat did something other than nothing').toEqual([
       indexOf('hit'),
       indexOf('threat'),
       indexOf('bomb'),

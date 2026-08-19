@@ -194,7 +194,7 @@ describe('the dashboard answers the game’s questions', () => {
       expect(early.layers.find((l) => l.layer === layer)!.target, `${layer} sounds before the build starts`).toBe(0);
     }
     const late = momentOf('approach', 110, FIGHT, 0);
-    const build = auraFor(auraBuild(late.camera, LEVELS.approach.bossAt), 0);
+    const build = auraFor(auraBuild(late.camera, LEVELS.approach.bossAt, LEVELS.approach.theme), 0);
     expect(late.aura, 'the dashboard’s aura is not the mixer’s').toBeCloseTo(build, 10);
     expect(build, 'the level’s own build never rises').toBeGreaterThan(0);
   });
