@@ -20,8 +20,8 @@ export const PROBES = [
     guard: '0104 — THE REPORTED ONE: an auto-weapon’s cue finishes before its own next volley',
     edit: {
       path: 'src/content/cues.ts',
-      find: "      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.064, gain: 0.5, attack: 0.002, curve: 4 },",
-      replace: "      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.11, gain: 0.5, attack: 0.002, curve: 4 },",
+      find: "      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.064, gain: 0.58, attack: 0.002, curve: 4, drive: 0.2 },",
+      replace: "      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.11, gain: 0.58, attack: 0.002, curve: 4, drive: 0.2 },",
     },
   },
   {

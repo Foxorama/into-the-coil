@@ -146,3 +146,38 @@ export function bandLevels(samples: Float32Array, rate: number): number[] {
   }
   return out;
 }
+
+/**
+ * The centre of gravity of a window's spectrum, in Hz.
+ *
+ * ⚠️ **UNWEIGHTED, AND IT IS THE ONE MEASURE HERE THAT IS.** A-weighting models what a human hears as
+ * LOUD, which is the right question for *is this layer audible* and the wrong one for *where has the
+ * energy gone*: it discounts the bottom by about thirty decibels, so an explosion whose whole point is
+ * that it ends low would measure as barely moving. `bandEnergy` above answers the first question.
+ *
+ * ⚠️ **A Goertzel sweep rather than a transform** — 48 log-spaced probes from 30 Hz to 12 kHz is
+ * enough to place a centre of gravity, and it keeps this file free of an FFT nothing else here needs.
+ *
+ * `docs/decisions/0179-an-explosion-ends-low.md` is what it was written for.
+ */
+export function centroid(samples: Float32Array, from: number, to: number, rate: number): number {
+  const lo = Math.max(0, Math.floor(from * rate));
+  const hi = Math.min(samples.length, Math.ceil(to * rate));
+  if (hi - lo < 64) return 0;
+  let num = 0;
+  let den = 0;
+  for (let k = 0; k < 48; k++) {
+    const f = 30 * Math.pow(12000 / 30, k / 47);
+    const c = 2 * Math.cos((2 * Math.PI * f) / rate);
+    let s1 = 0;
+    let s2 = 0;
+    for (let i = lo; i < hi; i++) {
+      const s = samples[i]! + c * s1 - s2;
+      s2 = s1;
+      s1 = s;
+    }
+    num += f * Math.sqrt(Math.max(0, s1 * s1 + s2 * s2 - c * s1 * s2));
+    den += Math.sqrt(Math.max(0, s1 * s1 + s2 * s2 - c * s1 * s2));
+  }
+  return den > 0 ? num / den : 0;
+}

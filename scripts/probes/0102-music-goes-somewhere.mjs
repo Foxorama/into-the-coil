@@ -132,7 +132,7 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0104, which SHORTENED this layer from 0.11s to 0.064 rather than removing
       // it: the sub is what stops the pulse being tinny and its LENGTH is what made the gun a drone.
       // The break is still the whole layer going away, which is what 0102 put here.
-      find: '      { wave: \'sine\', from: inKey(2), to: inKey(-7), seconds: 0.064, gain: 0.5, attack: 0.002, curve: 4 },',
+      find: '      { wave: \'sine\', from: inKey(2), to: inKey(-7), seconds: 0.064, gain: 0.58, attack: 0.002, curve: 4, drive: 0.2 },',
       replace: '',
     },
   },
