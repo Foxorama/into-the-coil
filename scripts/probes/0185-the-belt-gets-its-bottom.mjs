@@ -48,7 +48,7 @@ export const PROBES = [
       find:
         "      approach: { chords: 1.7, toll: 1.6, dread: 1.5, drive: 1.55 },\n" +
         "      boss: { dread: 1.7 },\n" +
-        "      bossPeak: { dread: 2.9, drone: 1.25 },",
+        "      bossPeak: { dread: 2.9, drone: 1.25, sub: 1.499 },",
       replace: '',
     },
   },

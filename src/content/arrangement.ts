@@ -71,8 +71,13 @@ export type MusicRole = (typeof MUSIC_ROLES)[number];
  *
  * ⚠️ **A HAND'S GUESS, MARKED AS ONE, on `AUDIBLE_FLOOR_DB`'s terms.** What is defensible is the
  * ORDER and the SPACING: a part above everything, a counter-line just under it, a pulse you can pick
- * out when you attend to it, a bed you feel, and air you never notice. The absolute values want an
- * ear and have not had one yet.
+ * out when you attend to it, a bed you feel, and air you never notice.
+ *
+ * ⚠️ **THE VALUES HAVE STILL NOT HAD AN EAR AND THE TABLE BELOW HAS** —
+ * `docs/decisions/0187-the-kick-is-the-pulse.md`. Reported: *"sub and engine in a lot of places are
+ * barely audible."* Nothing was adrift, because `ARRANGEMENT` said the kick and the kit were a
+ * **bed** — *a bed you feel* — so the mix was faithfully delivering an arrangement that asked for
+ * exactly what the player could not hear. **The five numbers here did not move; what a layer IS did.**
  *
  * ⚠️ **`air` IS NOT A FAILURE STATE, WHICH IS THE DISTINCTION NOTHING HERE HAS EVER HAD.** `drone` is
  * the connective tissue and is *meant* to sit under everything —
@@ -110,45 +115,63 @@ export const ROLE_MARGIN_DB: Record<MusicRole, number> = {
  * layer named exactly once, so a layer a rung opens cannot be silently left out of the mix's
  * intentions.
  */
+/*
+  ── `sub` AND `engine` ARE THE PULSE AT EVERY RUNG, AND THEY WERE THE BED ──────────────────────────
+
+  ⚠️ **`docs/decisions/0187-the-kick-is-the-pulse.md`**, answering *"sub and engine in a lot of places
+  are barely audible as well."* Every guard was green: a `bed` is a layer you feel rather than notice,
+  so the mix was keeping a promise nobody wanted it to keep.
+
+  ⚠️ **AND THREE PLACES HAD ALREADY WORKED AROUND IT BY HAND**, which is the part worth transferring.
+  `PROMOTES` below had Saurian Belt lifting `engine` out of the bed, The Black Heart lifting `engine`,
+  and The Toxic Mire lifting **both** — its comment reads *"the whole bottom steps up out of the
+  bed."* **A workaround written three times is a table that is wrong**, and making it global turned
+  all three into no-ops that `tests/arrangement.test.ts` caught on the next run.
+
+  ⚠️ **WHAT IT COST IS FOURTEEN LIFTS ACROSS FIVE PLACES**, in `src/content/themes.ts`: The Labyrinth
+  needed `sub` more than doubled at `surge`, `approach` and `boss`; The Black Heart needed it 2.4×
+  in the fight. **The guard is the forcing function** — 0164 fails until the mix delivers what the
+  arrangement now claims, which is what a role is for.
+*/
 export const ARRANGEMENT: Record<Exclude<MusicLevel, 'calm' | 'bossPeak'>, Readonly<Record<MusicRole, readonly MusicLayer[]>>> = {
   // The hymn, over a bed. The one melodic thing in a level's opening — 0113.
   run: {
     part: ['call'],
     counter: [],
-    pulse: ['perc'],
-    bed: ['sub', 'engine', 'chords', 'groove'],
+    pulse: ['sub', 'engine', 'perc'],
+    bed: ['chords', 'groove'],
     air: ['drone'],
   },
   // The riff arrives and the hymn steps under it; the mixture and the lead answer.
   push: {
     part: ['hook'],
     counter: ['arp', 'lead', 'call'],
-    pulse: ['perc', 'ride'],
-    bed: ['sub', 'engine', 'chords', 'groove'],
+    pulse: ['sub', 'engine', 'perc', 'ride'],
+    bed: ['chords', 'groove'],
     air: ['drone'],
   },
   // The counter-melody takes over — 0120's `surge` closes `call` and `arp` to make room for it.
   surge: {
     part: ['counter'],
     counter: ['hook', 'lead', 'drive'],
-    pulse: ['perc', 'ride', 'crash'],
-    bed: ['sub', 'engine', 'chords', 'groove'],
+    pulse: ['sub', 'engine', 'perc', 'ride', 'crash'],
+    bed: ['chords', 'groove'],
     air: ['drone'],
   },
   // The tritone is the subject from here on. 0120's `approach` closes `groove` and `hook`.
   approach: {
     part: ['dread'],
     counter: ['counter', 'lead', 'drive', 'toll'],
-    pulse: ['perc', 'ride', 'crash'],
-    bed: ['sub', 'engine', 'chords'],
+    pulse: ['sub', 'engine', 'perc', 'ride', 'crash'],
+    bed: ['chords'],
     air: ['drone'],
   },
   // The fight: a different piece — 0114 — and the sparsest bed in the game under it.
   boss: {
     part: ['dread'],
     counter: ['drive', 'toll', 'frenzy', 'wraith'],
-    pulse: ['perc', 'ride', 'crash', 'stomp'],
-    bed: ['sub', 'engine'],
+    pulse: ['sub', 'engine', 'perc', 'ride', 'crash', 'stomp'],
+    bed: [],
     air: ['drone'],
   },
 };
@@ -263,16 +286,26 @@ export const PROMOTES: Record<ThemeKind, Partial<Record<MusicLayer, Exclude<Musi
     ⚠️ **IT SAID `arp: 'counter'` AND THAT WAS A NO-OP**, caught by `tests/arrangement.test.ts` on its
     first run: `arp` is already a counter-line at `push`, which is the only rung that opens it. A
     promotion that promotes nothing is a line of documentation wearing a mix decision's clothes.
+
+    ⚠️ **AND `engine: 'pulse'` WENT THE SAME WAY FOR THE OPPOSITE REASON** — 0187 made it true of every
+    place, so the line this place wrote for itself became the arrangement's own. The same guard caught
+    it, which is twice this table has been told it was documenting rather than deciding.
   */
-  saurian: { engine: 'pulse', groove: 'counter' },
+  saurian: { groove: 'counter' },
   // *"A corridor, and something breathing in it"* — the pulse IS the place.
   labyrinth: { perc: 'counter', ride: 'counter' },
   // *"It rings… it cracks"* — the glass is a line rather than a pad, and the crack steps out of the kit.
   rime: { chords: 'counter', crash: 'counter' },
-  // *"Still water with something under it"* — the whole bottom steps up out of the bed.
-  mire: { sub: 'pulse', engine: 'pulse' },
+  /*
+    *"Still water with something under it"* — and its promotion is EMPTY now, which is the finding
+    rather than a loss. It read `{ sub: 'pulse', engine: 'pulse' }`, and 0187 made that true of every
+    place: **three places had already promoted the kick or the kit out of the bed by hand**, which is
+    the same conclusion the report reached by ear. A workaround written three times is a table that
+    is wrong.
+  */
+  mire: {},
   // *"The riff"* — the metal kit is forward, which is what makes this place the loud one.
-  core: { engine: 'pulse', stomp: 'counter' },
+  core: { stomp: 'counter' },
 };
 
 /**

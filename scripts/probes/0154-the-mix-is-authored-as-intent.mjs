@@ -54,8 +54,11 @@ export const PROBES = [
     guard: 'names every layer the rung actually sounds, exactly once',
     edit: {
       path: 'src/content/arrangement.ts',
-      find: "    pulse: ['perc', 'ride'],\n    bed: ['sub', 'engine', 'chords', 'groove'],\n    air: ['drone'],\n  },\n  // The counter-melody takes over",
-      replace: "    pulse: ['perc'],\n    bed: ['sub', 'engine', 'chords', 'groove'],\n    air: ['drone'],\n  },\n  // The counter-melody takes over",
+      // ⚠️ RE-ANCHORED BY 0187, which moved `sub` and `engine` out of the bed and into the pulse.
+      // The break is unchanged: a layer the ladder opens with nothing in the arrangement saying what
+      // it is for.
+      find: "    pulse: ['sub', 'engine', 'perc', 'ride'],\n    bed: ['chords', 'groove'],\n    air: ['drone'],\n  },\n  // The counter-melody takes over",
+      replace: "    pulse: ['sub', 'engine', 'perc'],\n    bed: ['chords', 'groove'],\n    air: ['drone'],\n  },\n  // The counter-melody takes over",
     },
   },
   {

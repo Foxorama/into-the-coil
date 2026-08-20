@@ -996,6 +996,11 @@ describe('0128 — a place plays its own material, and shares everything it does
     closes it and `ride` silent at a `run` that opens it. **Every one of the six is at `run` or
     `push`**, which is exactly where the six places state a ladder.
   */
+  /*
+    ⚠️ **FIVE MORE CAME OFF WITH 0187, AND THE ROLE THEY CLEAR IS STRICTER THAN THE ONE THEY FAILED.**
+    `labyrinth/surge/sub`, `labyrinth/approach/sub`, `labyrinth/boss/sub`, `core/boss/sub` and
+    `core/bossPeak/sub` were adrift of `bed` and now clear `pulse`, which is three decibels harder.
+  */
   const STILL_ADRIFT: Record<ThemeKind, readonly string[]> = {
     approach: ['approach/dread', 'approach/drive', 'boss/dread', 'boss/wraith', 'bossPeak/dread', 'surge/drive'],
     nebula: ['approach/toll', 'boss/dread', 'boss/wraith', 'bossPeak/dread'],
@@ -1006,10 +1011,10 @@ describe('0128 — a place plays its own material, and shares everything it does
       and went with `docs/decisions/0184-the-measurement-reads-the-place.md`.
     */
     saurian: [],
-    labyrinth: ['approach/drive', 'approach/drone', 'approach/sub', 'approach/toll', 'boss/drone', 'boss/frenzy', 'boss/stomp', 'boss/sub', 'boss/wraith', 'bossPeak/drone', 'bossPeak/frenzy', 'bossPeak/sub', 'bossPeak/wraith', 'surge/drive', 'surge/drone', 'surge/sub'],
+    labyrinth: ['approach/drive', 'approach/drone', 'approach/toll', 'boss/drone', 'boss/frenzy', 'boss/stomp', 'boss/wraith', 'bossPeak/drone', 'bossPeak/frenzy', 'bossPeak/sub', 'bossPeak/wraith', 'surge/drive', 'surge/drone'],
     rime: ['approach/dread', 'boss/wraith', 'bossPeak/dread'],
     mire: ['boss/ride', 'bossPeak/ride', 'surge/drive', 'surge/hook'],
-    core: ['approach/toll', 'boss/dread', 'boss/drone', 'boss/frenzy', 'boss/sub', 'boss/toll', 'bossPeak/dread', 'bossPeak/drone', 'bossPeak/sub', 'bossPeak/toll'],
+    core: ['approach/toll', 'boss/dread', 'boss/drone', 'boss/frenzy', 'boss/toll', 'bossPeak/dread', 'bossPeak/drone', 'bossPeak/toll'],
   };
 
   it('0164 — NO LAYER SITS A WHOLE ROLE UNDER THE ONE THE ARRANGEMENT GAVE IT', () => {

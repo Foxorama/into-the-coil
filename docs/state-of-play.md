@@ -876,6 +876,30 @@ shape `ladder` already has since [0162](decisions/0162-a-place-has-its-own-ladde
 `LAYER_BARS` and `ARRANGEMENT` are global `Record`s today and are what it costs. **Ask before
 building: the count is a guess.**
 
+⚠️ **AND THE ARRANGEMENT SAID THE DRUMS WERE FURNITURE** —
+[0187](decisions/0187-the-kick-is-the-pulse.md), answering *"sub and engine in a lot of places are
+barely audible as well."* Every guard was green because `ARRANGEMENT` called them a `bed` — *a bed you
+feel* — so the mix was keeping a promise nobody wanted kept. **`sub` and `engine` are `pulse` now**,
+which cost fourteen lifts across five places and deleted five known-adrift entries.
+
+⚠️ **THREE PLACES HAD ALREADY WORKED AROUND IT BY HAND, AND THAT IS THE TRANSFERABLE HALF.**
+`PROMOTES` had Saurian, Core and Mire each lifting the kick or the kit out of the bed — Mire's comment
+reads *"the whole bottom steps up out of the bed."* **A workaround written three times is a table that
+is wrong**, and no guard reads three deviations as evidence about the default.
+
+⚠️ **AND THE SUSTAINED PILE IS MEASURED, REAL, AND NOT FIXED.** Six to eight sustained voices under
+160 Hz sound at once in every place; Saurian Belt is at 3–4 after 0185/0186 and is the place the player
+says works. Capping `drone` and `auraSlow` bought the kick 1.0–1.7 dB **and put `drone` 25 entries
+adrift of its own `air` role.** Filtering is the wrong lever; each layer's job needs re-deciding.
+**Start from 0187's measurement, not from the idea.**
+
+⚠️ **AND THE NEXT THING THE PLAYER ASKED FOR IS PER-PLACE LAYER SLOTS, AGREED AND NOT STARTED** —
+*"can we add different layers? these are the exact kind of similarity issues that are blocking some of
+the differences I want on different levels."* The shape proposed: keep `MUSIC_LAYERS` closed
+([0016](decisions/0016-a-hub-enumerates-kinds.md)) and add a few slots with **no identity of their
+own**, whose pan, bar length and role each place declares. `LAYER_PAN`, `LAYER_BARS` and `ARRANGEMENT`
+are global `Record`s and are what it costs. **The count is a guess — ask.**
+
 ⚠️ **AND THERE IS NO MISSILE-IMPACT CUE, WHICH MAY BE WHAT THAT HALF OF THE REPORT MEANT.**
 `CUE_KINDS` has `missile` for the launch, and a missile that destroys something plays `kill`. A
 distinct impact sound is a new row plus a caller in `src/app/frame.ts` — a feature, not a re-voice,
