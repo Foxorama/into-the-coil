@@ -350,6 +350,18 @@ export interface ThemeRow {
  * `tests/palette.test.ts` holds that as a contrast floor per ink per palette. What a theme moves is
  * the HUE of the dark, which is enough to say *somewhere else* and cannot cost a bullet its edge.
  */
+/*
+  ── FOURTEEN OF THE LADDER ENTRIES BELOW ARE 0187's, AND THEY ARE ALL `sub` OR `engine` ─────────────
+
+  ⚠️ **`docs/decisions/0187-the-kick-is-the-pulse.md`.** `ARRANGEMENT` moved the kick and the kit out
+  of the bed and into the pulse, and 0164's floor then refused the mix until it delivered — fourteen
+  lifts across five places, computed from the deficit rather than guessed, converged in one pass.
+
+  ⚠️ **THEY ARE PER RUNG BECAUSE THE PROBLEM IS**: `run` and `push` were already inside the new role
+  everywhere, and every failure was at `surge` and above, where the layers pile up. A place-wide
+  `mix` lift would have raised the kick in the two rungs that did not need it —
+  `docs/decisions/0162-a-place-has-its-own-ladder.md`'s lever, for the third decision running.
+*/
 export const THEMES: Record<ThemeKind, ThemeRow> = {
   /**
    * Level one. The void as it has always been — this is the theme that changes nothing, so that the
@@ -449,6 +461,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       run: { perc: 0, groove: 0.7, chords: 1, call: 0.72, arp: 0.5 },
       push: { perc: 0.42, groove: 1.02, chords: 0.98, call: 0.74, arp: 0.72 },
       surge: { perc: 0.6, chords: 0.94, hook: 0.82 },
+      boss: { sub: 1.293 },
+      bossPeak: { sub: 1.331 },
     },
     /*
       ⚠️ **THE ROOM IS THE PLACE, AND THE BOSS IS WHERE IT STOPS** — 0136. Asked for: *"more reverb…
@@ -546,7 +560,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       surge: { chords: 1.7, ride: 0.75, groove: 1.08, perc: 0.88, drive: 1.45 },
       approach: { chords: 1.7, toll: 1.6, dread: 1.5, drive: 1.55 },
       boss: { dread: 1.7 },
-      bossPeak: { dread: 2.9, drone: 1.25 },
+      bossPeak: { dread: 2.9, drone: 1.25, sub: 1.499 },
     },
     /*
       ── THE THREE RUNGS ABOVE `surge` ARE 0185's, AND THEY ARE THE JURASSIC HALF ───────────────────
@@ -671,7 +685,10 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     ladder: {
       run: { chords: 0, groove: 0.45, sub: 0.6, perc: 0.98, engine: 0.62, ride: 0.4, call: 0.4 },
       push: { chords: 0.4, groove: 0.6, ride: 0.72, perc: 0.92 },
-      surge: { perc: 0.9 },
+      surge: { perc: 0.9, sub: 2.025, engine: 1.398 },
+      approach: { sub: 2.29, engine: 1.285 },
+      boss: { sub: 2.253 },
+      bossPeak: { sub: 2.285, dread: 1.9 },
     },
     /*
       ⚠️ **THIS IS THE FIRST PLACE THAT USES `air` BY WITHHOLDING IT** — 0136 gave a place a room and
@@ -767,6 +784,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       run: { sub: 0, groove: 0, chords: 1.02, call: 0.76, perc: 0.5, arp: 0.45 },
       push: { sub: 1.06, groove: 0.92, chords: 0.98, call: 0.78, arp: 0.52 },
       surge: { chords: 0.9 },
+      bossPeak: { engine: 1.262 },
     },
     /*
       ⚠️ **A LOT OF ROOM, AND IT IS THE ONE PLACE WHERE THAT IS LITERAL RATHER THAN FIGURATIVE.** An
@@ -938,6 +956,10 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     ladder: {
       run: { chords: 0, call: 0, drive: 0.55, engine: 1, perc: 0.7, groove: 0.6 },
       push: { chords: 0.36, drive: 0.7, hook: 0.78 },
+      surge: { sub: 1.235 },
+      approach: { sub: 1.45 },
+      boss: { sub: 2.668 },
+      bossPeak: { sub: 2.773 },
     },
     /*
       ⚠️ **ALMOST NONE, AND IT IS THE ONLY PLACE THAT EARNS THAT BY BEING LOUD RATHER THAN BY BEING
