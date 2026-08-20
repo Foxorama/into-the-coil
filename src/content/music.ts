@@ -74,7 +74,43 @@ export const MUSIC_LAYERS = [
   'wraith',
   'auraSlow',
   'auraFast',
+  /*
+    ── FOUR SLOTS THAT ARE NOTHING UNTIL A PLACE SAYS WHAT THEY ARE ──────────────────────────────
+
+    ⚠️ **`docs/decisions/0188-a-place-owns-four-slots.md`**, answering *"can we add different layers?
+    these are the exact kind of similarity issues that are blocking some of the differences I want on
+    different levels."*
+
+    ⚠️ **THE NINETEEN ABOVE HAVE AN IDENTITY AND THAT IS WHAT WAS MEASURED.** `node
+    scripts/weigh-gesture.mjs` says **nine of twenty-three slots are filled the same way** by Ember
+    Nebula and Saurian Belt — same strike rate, same note length, same lowest note. Neither place
+    inherited them; each wrote its own and arrived at the same instrument, because a slot called
+    `drone`, panned centre, four bars long and given the `air` role can only be one thing.
+
+    ⚠️ **SO THESE FOUR CARRY NO NAME, NO PAN, NO LENGTH AND NO ROLE.** A place states all four or the
+    slot is silent — `tests/themes.test.ts` holds that. Saurian Belt's `ownA` and Rime Shelf's are
+    not variations of one instrument; they are different instruments that share a slot in a closed
+    union, which is
+    `docs/decisions/0016-a-hub-enumerates-kinds.md`'s rule kept and its cost paid somewhere else.
+
+    ⚠️ **FOUR, AND THE CEILING IS WHY IT IS NOT MORE.** `tests/sound.test.ts` holds the resident audio
+    under 56 MB and twenty-three layers is 48.0. Four four-bar slots is **52.5 MB**; four eight-bar
+    slots is 57.0 and does not fit. That guard's own note says a change wanting more than 56 MB wants
+    the boundary-baking mechanism instead, and this one does not.
+  */
+  'ownA',
+  'ownB',
+  'ownC',
+  'ownD',
 ] as const;
+
+/**
+ * The slots a PLACE gives an identity to, and which are nothing without one — 0188.
+ *
+ * ⚠️ **CLOSED AND DERIVED FROM THE LIST ABOVE**, so a fifth cannot be added by writing it in one
+ * table and forgetting the other four it has to appear in.
+ */
+export const OWN_LAYERS: readonly MusicLayer[] = ['ownA', 'ownB', 'ownC', 'ownD'];
 
 export type MusicLayer = (typeof MUSIC_LAYERS)[number];
 
@@ -238,6 +274,16 @@ export const LAYER_BARS: Record<MusicLayer, number> = {
   counter: 16,
   auraSlow: 2,
   auraFast: 2,
+  /*
+    ⚠️ **AN OWN SLOT'S LENGTH IS THE PLACE'S, AND THIS IS THE FALLBACK** — 0188. Four bars is what
+    fits: `tests/sound.test.ts`'s resident ceiling is 56 MB, twenty-three layers is 48.0, and four
+    four-bar slots is 52.5. A place may state its own and the guard measures the WORST place rather
+    than the base, so a sixteen-bar own layer fails there and the argument gets made.
+  */
+  ownA: 4,
+  ownB: 4,
+  ownC: 4,
+  ownD: 4,
 };
 
 /**
@@ -299,6 +345,15 @@ export const LAYER_PAN: Record<MusicLayer, number> = {
   wraith: -0.25,
   auraSlow: -0.6,
   auraFast: 0.6,
+  /*
+    ⚠️ **CENTRED IS THE FALLBACK AND NOT THE ANSWER** — 0188. A place that opens an own slot states
+    where it sits; centre is what a slot nobody has claimed is worth. **The low-end rule still
+    applies**: a place that puts its weight under 130 Hz and pans it fails 0118 like any other layer.
+  */
+  ownA: 0,
+  ownB: 0,
+  ownC: 0,
+  ownD: 0,
 };
 
 /** The widest a layer may sit. Not 1, and the reason is on `LAYER_PAN`. */
@@ -1000,20 +1055,42 @@ export type MusicLevel = (typeof MUSIC_LEVELS)[number];
   an arrival is that something changed BEFORE it; a bell over the last twelve seconds of the level is
   what makes the boss's own rung a release rather than a step.
 */
+/*
+  ⚠️ **THE FOUR OWN SLOTS ARE ZERO IN EVERY ROW, AND THAT IS THE MECHANISM** — 0188. The shared
+  ladder never opens one, so a slot sounds only where a place opens it in its own `ladder`
+  (`docs/decisions/0162-a-place-has-its-own-ladder.md`). **The base composition has no own layers**,
+  which is what makes them a place's rather than a default nobody chose.
+*/
 export const MUSIC_LADDER: Record<MusicLevel, Record<MusicLayer, number>> = {
-  calm: { drone: 0.55, bass: 0.7, beat: 0.5, sub: 0, engine: 0, perc: 0, chords: 0, groove: 0, arp: 0, ride: 0, call: 0, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
-  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, ride: 0, call: 0.62, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.5, auraFast: 0.28 },
-  push: { drone: 0.34, bass: 0, beat: 0, sub: 1.06, engine: 0.96, perc: 0.76, chords: 0.87, groove: 0.94, arp: 0.64, ride: 0.58, call: 0.68, hook: 0.64, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0.7, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.62, auraFast: 0.4 },
-  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.86, groove: 0.94, arp: 0, ride: 0.68, call: 0, hook: 0.74, drive: 0.78, toll: 0, crash: 0.9, dread: 0, lead: 0.78, counter: 1.05, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },
-  approach: { drone: 0.34, bass: 0, beat: 0, sub: 1.1, engine: 1.02, perc: 0.86, chords: 0.84, groove: 0, arp: 0, ride: 0.72, call: 0, hook: 0, drive: 0.84, toll: 0.86, crash: 0.92, dread: 1, lead: 0.82, counter: 1.08, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.88, auraFast: 0.72 },
-  boss: { drone: 0.36, bass: 0, beat: 0, sub: 1.12, engine: 1.12, perc: 0.96, chords: 0, groove: 0, arp: 0, ride: 0.9, call: 0, hook: 0, drive: 0.94, toll: 0.92, crash: 0.94, dread: 1.02, lead: 0, counter: 0, stomp: 0.92, frenzy: 0.86, wraith: 0.8, auraSlow: 1, auraFast: 0.9 },
-  bossPeak: { drone: 0.3, bass: 0, beat: 0, sub: 1.12, engine: 1.1, perc: 0.95, chords: 0, groove: 0, arp: 0, ride: 0.9, call: 0, hook: 0, drive: 0.95, toll: 0.9, crash: 0.94, dread: 1, lead: 0, counter: 0, stomp: 0.97, frenzy: 0.92, wraith: 0.92, auraSlow: 1.02, auraFast: 0.94 },
+  calm: { drone: 0.55, bass: 0.7, beat: 0.5, sub: 0, engine: 0, perc: 0, chords: 0, groove: 0, arp: 0, ride: 0, call: 0, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },
+  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, ride: 0, call: 0.62, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.5, auraFast: 0.28, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },
+  push: { drone: 0.34, bass: 0, beat: 0, sub: 1.06, engine: 0.96, perc: 0.76, chords: 0.87, groove: 0.94, arp: 0.64, ride: 0.58, call: 0.68, hook: 0.64, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0.7, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.62, auraFast: 0.4, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },
+  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.86, groove: 0.94, arp: 0, ride: 0.68, call: 0, hook: 0.74, drive: 0.78, toll: 0, crash: 0.9, dread: 0, lead: 0.78, counter: 1.05, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },
+  approach: { drone: 0.34, bass: 0, beat: 0, sub: 1.1, engine: 1.02, perc: 0.86, chords: 0.84, groove: 0, arp: 0, ride: 0.72, call: 0, hook: 0, drive: 0.84, toll: 0.86, crash: 0.92, dread: 1, lead: 0.82, counter: 1.08, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.88, auraFast: 0.72, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },
+  boss: { drone: 0.36, bass: 0, beat: 0, sub: 1.12, engine: 1.12, perc: 0.96, chords: 0, groove: 0, arp: 0, ride: 0.9, call: 0, hook: 0, drive: 0.94, toll: 0.92, crash: 0.94, dread: 1.02, lead: 0, counter: 0, stomp: 0.92, frenzy: 0.86, wraith: 0.8, auraSlow: 1, auraFast: 0.9, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },
+  bossPeak: { drone: 0.3, bass: 0, beat: 0, sub: 1.12, engine: 1.1, perc: 0.95, chords: 0, groove: 0, arp: 0, ride: 0.9, call: 0, hook: 0, drive: 0.95, toll: 0.9, crash: 0.94, dread: 1, lead: 0, counter: 0, stomp: 0.97, frenzy: 0.92, wraith: 0.92, auraSlow: 1.02, auraFast: 0.94, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },
 };
 
 /** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */
 const _ = null;
 
 export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
+  /*
+    ── THE FOUR OWN SLOTS, EMPTY, AND EMPTY IS THE POINT ─────────────────────────────────────────
+
+    ⚠️ **0188.** Every other entry in this table is the base composition's version of a layer, which a
+    place may re-voice. These four have no base version: a slot with a default instrument is a slot
+    with an identity, and an identity is what
+    `node scripts/weigh-gesture.mjs` measured nine of the twenty-three sharing.
+
+    ⚠️ **AN EMPTY ARRAY IS SAFE BECAUSE THE LADDER CLOSES THEM EVERYWHERE.** `MUSIC_LADDER` is zero
+    for all four at every rung, so nothing ever asks the base for these notes; a place that opens one
+    states its voices in its own `voices` table or `tests/themes.test.ts` refuses it.
+  */
+  ownA: [],
+  ownB: [],
+  ownC: [],
+  ownD: [],
   /*
     THE DRONE — always sounding, and the whole of what *"backgroundy"* means. One long note a bar,
     behind a filter low enough that it never competes with anything; the second bar drops to the

@@ -274,6 +274,48 @@ export const LEADS: Record<ThemeKind, Partial<Record<MusicLevel, MusicLayer>>> =
   a **counter-line** or a **pulse** — which is what *"a corridor, and something breathing in it"*
   actually means as a mix. `tests/arrangement.test.ts` refuses a `part` here.
 */
+/**
+ * What each place's OWN layers are, per rung. The role the shared arrangement cannot state.
+ *
+ * ── WHY THIS TABLE EXISTS AND WHY IT IS ONLY FOR THE FOUR ──────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0188-a-place-owns-four-slots.md`**, answering *"can we add different layers?
+ * these are the exact kind of similarity issues that are blocking some of the differences I want on
+ * different levels."*
+ *
+ * ⚠️ **`ARRANGEMENT` IS GLOBAL AND CANNOT NAME THESE.** It says what `drone` is because `drone` is
+ * the same instrument in all seven places — which is the defect `node scripts/weigh-gesture.mjs`
+ * measures, and the reason the four own slots carry no identity at all. Saurian Belt's `ownA` and
+ * Rime Shelf's are not two versions of one thing.
+ *
+ * ⚠️ **A SLOT THAT SOUNDS WITHOUT A ROLE IS OUTSIDE 0164, WHICH IS THE ONLY REASON THIS IS REQUIRED
+ * RATHER THAN OPTIONAL.** `roleOf` returns `null` for a layer the arrangement does not name and
+ * `adriftAt` skips those, so an own layer with no role would be a layer whose audibility nothing
+ * checks — which is the state
+ * `docs/decisions/0172-a-place-opens-with-its-own-four.md` left seven layer-rungs in and
+ * `docs/state-of-play.md` has been flagging since. **`tests/themes.test.ts` refuses it.**
+ *
+ * ⚠️ **IT IS NOT A SECOND `PROMOTES`.** That table lifts a SHARED layer and only ever lifts; this one
+ * answers for a layer the shared table has no opinion about, and the guard holds it to the four own
+ * slots alone. A place quietly demoting `sub` here would be
+ * `docs/decisions/0187-the-kick-is-the-pulse.md` undone in a table nobody reads.
+ */
+export const OWN_ROLES: Record<ThemeKind, Partial<Record<MusicLevel, Partial<Record<MusicLayer, MusicRole>>>>> = {
+  approach: {},
+  nebula: {},
+  /*
+    ⚠️ **THE RAPTOR CALL IS A COUNTER-LINE AND NOT A PART**, which is the arithmetic and the music
+    agreeing. One `part` per rung is the invariant that makes the solve satisfiable at all, and at
+    `surge` this place already follows `counter`; what the call does is answer over the floor, twice
+    in four bars. `src/content/saurian.ts` has what it is.
+  */
+  saurian: { surge: { ownA: 'counter' }, approach: { ownA: 'counter' } },
+  labyrinth: {},
+  rime: {},
+  mire: {},
+  core: {},
+};
+
 export const PROMOTES: Record<ThemeKind, Partial<Record<MusicLayer, Exclude<MusicRole, 'part'>>>> = {
   // The base composition, which level one plays unmixed and which every promotion is measured against.
   approach: {},
@@ -333,6 +375,15 @@ export function rolesAt(rung: MusicLevel): Readonly<Record<MusicRole, readonly M
  * two wins and `tests/arrangement.test.ts` holds that it is a real lift.
  */
 export function roleOf(theme: ThemeKind | undefined, rung: MusicLevel, layer: MusicLayer): MusicRole | null {
+  /*
+    ⚠️ **A PLACE'S OWN SLOT IS ANSWERED HERE AND NOWHERE ELSE** — 0188. `ARRANGEMENT` is global and
+    cannot name a layer whose identity differs per place, so the four own slots take their role from
+    the place. **First, because there is nothing below it to fall back to**: the shared table has no
+    entry for them and never will.
+  */
+  const own = theme === undefined ? undefined : OWN_ROLES[theme][rung]?.[layer];
+  if (own !== undefined) return own;
+
   const at = rolesAt(rung);
   if (at === null) return null;
   let base: MusicRole | null = null;
