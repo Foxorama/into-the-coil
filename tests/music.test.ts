@@ -3,6 +3,7 @@ import { BANDS, bandEnergy, spectrum } from './spectrum.ts';
 import { describe, expect, it } from 'vitest';
 
 import {
+  OWN_LAYERS,
   BAR_SECONDS,
   BEAT_SECONDS,
   LAYER_BARS,
@@ -161,8 +162,20 @@ describe('four loops that cannot drift', () => {
       ladder would still climb, the gains would still ramp, and one quarter of the music would be
       gone with every other guard green.
     */
+    /*
+      ⚠️ **THE FOUR OWN SLOTS ARE SKIPPED, AND HAVING NOTHING IS WHAT THEY ARE FOR** —
+      `docs/decisions/0188-a-place-owns-four-slots.md`. Every other layer here is the base
+      composition's version of something a place may re-voice; `ownA`–`ownD` have no base version at
+      all, because **a slot with a default instrument is a slot with an identity** — which is the
+      defect `node scripts/weigh-gesture.mjs` measures nine of the twenty-three sharing.
+
+      ⚠️ **IT IS SAFE BECAUSE TWO OTHER THINGS HOLD, NOT BECAUSE IT IS PROMISED.** `MUSIC_LADDER`
+      closes all four at every rung, so the base never sounds one; and `tests/themes.test.ts` refuses
+      a place that OPENS one without stating its voices. The silence cannot reach a player.
+    */
     const loops = loopsAt(SAMPLE_RATE);
     for (const layer of MUSIC_LAYERS) {
+      if (OWN_LAYERS.includes(layer)) continue;
       let peak = 0;
       for (const s of loops[layer]) peak = Math.max(peak, Math.abs(s));
       expect(peak, `${layer} baked to silence`).toBeGreaterThan(0.01);
@@ -1428,8 +1441,23 @@ describe('the patterns are playable', () => {
     }
   });
 
-  it('and every layer has something in it', () => {
+  it('and every layer has something in it, unless it is a slot a place fills', () => {
+    /*
+      ⚠️ **THE FOUR OWN SLOTS ARE SKIPPED, AND HAVING NOTHING IS WHAT THEY ARE FOR** —
+      `docs/decisions/0188-a-place-owns-four-slots.md`. Every other layer here is the base
+      composition's version of something a place may re-voice; `ownA`–`ownD` have no base version at
+      all, because **a slot with a default instrument is a slot with an identity** — which is the
+      defect `node scripts/weigh-gesture.mjs` measures nine of the twenty-three sharing.
+
+      ⚠️ **IT IS SAFE BECAUSE TWO OTHER THINGS HOLD, NOT BECAUSE IT IS PROMISED.** `MUSIC_LADDER`
+      closes all four at every rung, so the base never sounds one; and `tests/themes.test.ts` refuses
+      a place that OPENS one without stating its voices. The silence cannot reach a player.
+    */
     for (const layer of MUSIC_LAYERS) {
+      if (OWN_LAYERS.includes(layer)) {
+        expect(MUSIC[layer].length, `${layer} is an own slot and the base states voices for it`).toBe(0);
+        continue;
+      }
       expect(MUSIC[layer].length, `${layer} has no voices`).toBeGreaterThan(0);
       const notes = MUSIC[layer].reduce((sum, v) => sum + v.steps.filter((s) => s !== null).length, 0);
       expect(notes, `${layer} is all rests`).toBeGreaterThan(0);

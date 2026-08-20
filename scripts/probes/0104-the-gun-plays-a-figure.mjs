@@ -188,8 +188,8 @@ export const PROBES = [
     guard: 'THE LEVEL: there is something in the low end that MOVES, at every rung above the opening',
     edit: {
       path: 'src/content/music.ts',
-      find: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, ride: 0, call: 0.62, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.5, auraFast: 0.28 },',
-      replace: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0, arp: 0, ride: 0, call: 0.62, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.5, auraFast: 0.28 },',
+      find: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, ride: 0, call: 0.62, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.5, auraFast: 0.28, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },',
+      replace: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0, arp: 0, ride: 0, call: 0.62, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.5, auraFast: 0.28, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },',
     },
   },
   {
@@ -202,7 +202,7 @@ export const PROBES = [
     guard: 'opens a layer at every step and never opens one twice',
     edit: {
       path: 'src/content/music.ts',
-      find: '  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.86, groove: 0.94, arp: 0, ride: 0.68, call: 0, hook: 0.74, drive: 0.78, toll: 0, crash: 0.9, dread: 0, lead: 0.78, counter: 1.05, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },',
+      find: '  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.86, groove: 0.94, arp: 0, ride: 0.68, call: 0, hook: 0.74, drive: 0.78, toll: 0, crash: 0.9, dread: 0, lead: 0.78, counter: 1.05, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },',
       /*
         ⚠️ **`drive` IS CLOSED HERE TOO, AND THAT IS 0113 CHANGING WHAT THIS PROBE HAS TO SAY.**
         `docs/decisions/0113-there-is-one-composition-and-seven-levels.md` moved `drive` down from
@@ -215,7 +215,7 @@ export const PROBES = [
         layers have to be closed to produce it, and that is a fact about the ladder rather than about
         the guard — so the fix is here and not in `tests/music.test.ts`.
       */
-      replace: '  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.86, groove: 0.94, arp: 0.7, ride: 0.68, call: 0, hook: 0, drive: 0.78, toll: 0, crash: 0.9, dread: 0, lead: 0, counter: 1.05, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55 },',
+      replace: '  surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.86, groove: 0.94, arp: 0.7, ride: 0.68, call: 0, hook: 0, drive: 0.78, toll: 0, crash: 0.9, dread: 0, lead: 0, counter: 1.05, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },',
     },
   },
 ];

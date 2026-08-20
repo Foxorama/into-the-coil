@@ -43,8 +43,14 @@ export const PROBES = [
     guard: 'THE PLACES DIFFER, and none of them appoints a second part',
     edit: {
       path: 'src/content/arrangement.ts',
-      find: '  mire: {},',
-      replace: "  mire: { sub: 'pulse', engine: 'pulse' },",
+      // ⚠️ RE-ANCHORED BY 0188, which gave OWN_ROLES a `mire: {}` of its own. The neighbour makes
+      // it unique — PROMOTES is the table whose emptiness is this decision's finding.
+      find: '  mire: {},\n  // *"The riff"*',
+      // ⚠️ THE COMMENT GOES BACK, AND LEAVING IT OUT COST A WHOLE `prove` RUN. The find spans the
+      // line after `mire`, so a replacement that stops at the brace leaves the rest of that comment
+      // dangling as code — the module does not parse, no test is collected, and the harness reports
+      // "the test was renamed" about a test that is exactly where it was.
+      replace: "  mire: { sub: 'pulse', engine: 'pulse' },\n  // *\"The riff\"*",
     },
   },
 ];

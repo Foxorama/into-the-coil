@@ -24,6 +24,7 @@ import {
   type Held,
 } from '../rig/transport.ts';
 import {
+  OWN_LAYERS,
   AURA_LAYERS,
   BAR_SECONDS,
   LAYER_BARS,
@@ -35,7 +36,7 @@ import {
   type MusicLayer,
 } from '../src/content/music.ts';
 import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
-import { THEME_KINDS, mixOf, rungOf } from '../src/content/themes.ts';
+import { voicesOf, THEME_KINDS, mixOf, rungOf } from '../src/content/themes.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { auraBuild, auraFor, levelWrites, musicLevelFor } from '../src/app/music.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
@@ -372,6 +373,15 @@ describe('0130 — a layer can be heard on its own', () => {
     */
     for (const theme of THEME_KINDS) {
       for (const layer of MUSIC_LAYERS) {
+      /*
+        ⚠️ **AN OWN SLOT THIS PLACE HAS NOT FILLED IS NOT A LAYER** —
+        `docs/decisions/0188-a-place-owns-four-slots.md`. The four carry no instrument until a place
+        states one, so *every layer is reachable* means every layer that exists HERE. A place that
+        does fill one is held exactly like the other nineteen, which is what makes this a skip rather
+        than a hole: `voicesOf` is the test, so the moment Saurian Belt states `ownA` the desk has
+        to reach it.
+      */
+      if (OWN_LAYERS.includes(layer) && voicesOf(theme, layer).length === 0) continue;
         expect(loudestGain(theme, layer), `${theme}/${layer} cannot be heard on the desk at all`).toBeGreaterThan(0);
       }
     }
@@ -390,6 +400,14 @@ describe('0130 — a layer can be heard on its own', () => {
       8,
     );
     for (const layer of closedDuringRun) {
+      /*
+        ⚠️ **AN OWN SLOT EMBER NEBULA HAS NOT FILLED IS NOT A LAYER IT CAN AUDITION** —
+        `docs/decisions/0188-a-place-owns-four-slots.md`. The four are closed at every rung of the
+        shared ladder, so they land in `closedDuringRun` like the other fourteen — but a place that
+        states no voices for one has nothing to hear. `voicesOf` is the test, so the day this place
+        fills a slot the desk has to reach it.
+      */
+      if (OWN_LAYERS.includes(layer) && voicesOf('nebula', layer).length === 0) continue;
       expect(loudestGain('nebula', layer), `${layer} is closed at run and the audition cannot reach it`).toBeGreaterThan(
         0,
       );
@@ -426,6 +444,14 @@ describe('0137 — the desk sounds while the level stands still', () => {
     */
     for (const theme of THEME_KINDS) {
       for (const only of MUSIC_LAYERS) {
+        /*
+          ⚠️ **AN OWN SLOT THIS PLACE HAS NOT FILLED IS NOT A LAYER IT CAN AUDITION** —
+          `docs/decisions/0188-a-place-owns-four-slots.md`. The four carry no instrument until a
+          place states one, so *all twenty-three, in all seven places* means every layer that exists
+          HERE. `voicesOf` is the test, so the moment a place fills a slot the desk has to reach it
+          exactly like the other nineteen.
+        */
+        if (OWN_LAYERS.includes(only) && voicesOf(theme, only).length === 0) continue;
         const held = new Map<MusicLayer, Held>();
         for (const layer of MUSIC_LAYERS) {
           held.set(layer, { gain: layer === only ? loudestGain(theme, layer) : 0, pan: null });

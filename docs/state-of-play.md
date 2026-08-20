@@ -686,15 +686,31 @@ is worse than no marker, because it reads exactly like a live one — the same f
 [0029](decisions/0029-the-tracked-record-is-the-record.md) names for a summary that drifts. **Retire
 this heading when it stops being true rather than adding another one below it.**
 
-**The work is: a driving session, then authoring, then tempo.** Everything that had to be built
-before a level's music could be authored by ear is in —
-[0158](decisions/0158-a-level-says-where-its-sections-open.md) the script,
-[0159](decisions/0159-the-two-clocks-come-apart.md) and
-[0160](decisions/0160-the-music-free-runs.md) the grid,
-[0161](decisions/0161-the-shape-of-a-level-is-not-guarded.md) the guards that forbade variety,
-[0162](decisions/0162-a-place-has-its-own-ladder.md) a place's own layers, and
-[0163](decisions/0163-the-script-is-edited-here.md) the editor. **Nothing is authored yet, and that is
-the next thing that happens.** Everything under here is why.
+**THE WORK IS A DRIVING SESSION. EVERYTHING ELSE IS WAITING ON AN EAR.** Between 2026-08-19 and
+2026-08-20, **seven decisions landed on the sound** and every one of them was either a wall coming
+down or a defect the player reported. `npm run dash`.
+
+```
+0182  the mix walls              MIX_FLOOR/MIX_CEILING, the pace floor, both climb sums — gone
+0183  three ceilings             MAX_VOICES → a bus limiter; the aura ceiling → per place; the low ceiling → nothing
+0184  the measurement            heardAt read the shared ladder — six of 54 adrift entries were phantoms
+0185  Saurian's bottom           the pad was standing on the kick; six adrift entries to one
+0186  Saurian's gesture          the chord is a gate, not a pad; nine of 23 slots still shared with Nebula
+0187  the kick is the pulse      the arrangement called the drums a BED; three places had worked around it by hand
+0188  four own slots             a place can have an instrument no other place has — Saurian has the first
+```
+
+⚠️ **WHAT THE PLAYER HAS SAID, IN ORDER, AND WHAT IS STILL OPEN.** *"The background beat of saurian
+belt sounds pretty good now"* — 0185 landed. *"The chords and groove are pretty similar to ember
+nebula"* — 0186. *"Sub and engine in a lot of places are barely audible"* — 0187. **Nothing since 0186
+has been heard.** The aura ceilings (0183), Saurian's gated chord (0186), the lifted kick (0187) and
+the raptor call (0188) are all unheard, and three of the four change what a level sounds like.
+
+⚠️ **AND THE ONE MEASUREMENT THAT NOW MATTERS MOST IS `node scripts/weigh-gesture.mjs`** — 0186's
+instrument. It says **nine of twenty-three slots are filled the same way** by Ember Nebula and
+Saurian Belt: same strike rate, same note length, same lowest note. Neither place inherited them;
+both authored their own and arrived at the same instrument. **That is the sameness the player keeps
+reporting**, and 0188's four own slots are the first thing that can do something about it.
 
 ⚠️ **AND THE MIX IS NOW MEASURED AGAINST THE ARRANGEMENT RATHER THAN AGAINST AN EAR** —
 [0164](decisions/0164-a-role-is-a-promise-the-mix-has-to-keep.md). `node scripts/weigh-adrift.mjs`
@@ -899,6 +915,23 @@ the differences I want on different levels."* The shape proposed: keep `MUSIC_LA
 ([0016](decisions/0016-a-hub-enumerates-kinds.md)) and add a few slots with **no identity of their
 own**, whose pan, bar length and role each place declares. `LAYER_PAN`, `LAYER_BARS` and `ARRANGEMENT`
 are global `Record`s and are what it costs. **The count is a guess — ask.**
+
+⚠️ **AND A PLACE CAN OWN AN INSTRUMENT NOW** — [0188](decisions/0188-a-place-owns-four-slots.md),
+answering *"can we add different layers? these are the exact kind of similarity issues that are
+blocking some of the differences I want on different levels."* Four slots — `ownA`–`ownD` — with **no
+name, no instrument and no role**, closed in the shared ladder and empty in the base composition. A
+place that opens one states its voices and its role in `OWN_ROLES`, or `tests/themes.test.ts` refuses
+it. **Saurian Belt has the first: a raptor call, and it is the only pitch-bend in the whole score.**
+
+⚠️ **PAN AND BAR LENGTH ARE STILL GLOBAL AND THAT IS DELIBERATE.** `LAYER_PAN` is a property of the
+LAYER — *"a place may change what a layer plays and not where it is"* — with a guard behind it and
+Ember Nebula's cathedral bell as the story. Own slots are centred and four bars. **A place that wants
+its own instrument off to one side has to argue with that rule, not route around it.**
+
+⚠️ **AND FOUR IS THE NUMBER BECAUSE OF THE RESIDENT CEILING.** `tests/sound.test.ts` holds the loops
+under 56 MB; twenty-three layers is 48.0 and four four-bar slots is **52.5**. Four EIGHT-bar slots is
+57.0 and does not fit. That guard's own note says a change wanting more than 56 MB wants the
+boundary-baking mechanism instead — **so a fifth slot, or a longer one, is that conversation.**
 
 ⚠️ **AND THERE IS NO MISSILE-IMPACT CUE, WHICH MAY BE WHAT THAT HALF OF THE REPORT MEANT.**
 `CUE_KINDS` has `missile` for the launch, and a missile that destroys something plays `kill`. A

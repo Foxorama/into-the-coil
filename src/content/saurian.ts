@@ -340,6 +340,54 @@ const TREMOLO: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
  */
 export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   /*
+    ── THE RAPTOR CALL — the first layer in this game that exists in one place only ────────────────
+
+    ⚠️ **`docs/decisions/0188-a-place-owns-four-slots.md`**, answering *"can we add different layers?
+    these are the exact kind of similarity issues that are blocking some of the differences I want on
+    different levels."* `ownA` has no name, no length and no role of its own; **this is what makes
+    it one**, and no other place's `ownA` is related to it in any way.
+
+    ⚠️ **IT IS THE HALF OF THE BRIEF A GATED CHORD CANNOT CARRY.** The file's own header splits
+    *ancient* and *eurobeat* by register — the primeval material melodic and on top, the machine
+    underneath. `docs/decisions/0186-a-place-has-its-own-gesture.md` turned the chord into a
+    machine, which is right and takes one of the melodic parts away. This is the thing that answers
+    it back.
+
+    ⚠️ **UNPITCHED, BECAUSE A SHRIEK IS A GLIDE AND A PITCHED VOICE CANNOT GLIDE.** `from` and `to`
+    are a sweep for an unpitched voice — the same mechanism every cue in the game uses — so this is
+    the one thing in the music that bends. **Nothing else in any place does**, which is most of why
+    it reads as another instrument rather than another patch.
+
+    ⚠️ **RARE, ON `STABS`' OWN ARGUMENT**: *a hit that happens every bar is a part, and a hit that
+    happens once a phrase is an event.* Twice in four bars, off the beat, and never on the downbeat
+    the kick owns.
+  */
+  ownA: [
+    {
+      // The call: 1180 → 430 Hz in 180 ms, which is a descending screech rather than a note.
+      steps: [_, _, _, _, _, 0.92, _, _, _, _, _, _, _, _, 0.78, _, _, _, _, _, _, _, _, _, _, 1, _, _, _, _, 0.7, _],
+      pitched: false,
+      perBeat: 2,
+      octave: 0,
+      /*
+        ⚠️ **LOUD MATERIAL AT A MODEST MULTIPLIER, WHICH IS 0140's OWN LESSON.** Written at 0.2 the
+        call needed **4.2** from the ladder to reach its role, and a multiplier that large on a bright
+        layer pulled the place's share under 300 Hz to 23.5% — under 0147's floor, on a level whose
+        whole recent history is its bottom. A gain is not a loudness: the fix is the voice, not the
+        fader.
+      */
+      note: { wave: 'saw', from: 1180, to: 430, seconds: 0.18, gain: 0.62, attack: 0.004, curve: 3.4, lowFrom: 5200, lowTo: 1600, q: 1.6, drive: 0.3 },
+    },
+    {
+      // The breath under it — a short noise chirp on the same strikes, so the call has a throat.
+      steps: [_, _, _, _, _, 0.8, _, _, _, _, _, _, _, _, 0.66, _, _, _, _, _, _, _, _, _, _, 0.88, _, _, _, _, 0.6, _],
+      pitched: false,
+      perBeat: 2,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.11, gain: 0.28, attack: 0.006, curve: 4.2, lowFrom: 3600, lowTo: 900, highFrom: 700 },
+    },
+  ],
+  /*
     ── THE TAR: what is under the whole level, and it is older than the beat ────────────────────────
 
     ⚠️ **The root and the fifth, alternating by the bar**, so the pad says nothing about a progression

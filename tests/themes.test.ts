@@ -19,6 +19,7 @@ import {
 } from '../src/content/themes.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import {
+  OWN_LAYERS,
   BEAT_SECONDS,
   LAYER_BARS,
   MUSIC,
@@ -45,7 +46,7 @@ import {
   rungShape,
   underTheLoudest,
 } from './pace.ts';
-import { SOLVED_BY } from '../src/content/arrangement.ts';
+import { roleOf, OWN_ROLES, SOLVED_BY } from '../src/content/arrangement.ts';
 /*
   ⚠️ **A TEST IMPORTING A `scripts/` MODULE, AND IT IS THE RIGHT ARROW.** `solve-mix.mjs` is where the
   solve LIVES — `rig/dash.ts` plays it and three scripts print it — so a second copy here would be
@@ -1440,6 +1441,78 @@ describe('0128 — a place plays its own material, and shares everything it does
           voicesOf(theme, layer).length,
           `${theme} states an empty ${layer}; to remove a layer, close it in the ladder`,
         ).toBeGreaterThan(0);
+      }
+    }
+  });
+});
+
+describe('0188 — a place owns four slots, and a slot it opens is a layer like any other', () => {
+  /*
+    `docs/decisions/0188-a-place-owns-four-slots.md`. The four carry no name, no instrument and no
+    role, so everything a shared layer gets from its own table a place has to state here — and the
+    only thing worth guarding is that it stated ALL of it. A slot half-declared is worse than one
+    nobody touched: it sounds, and nothing checks it.
+  */
+  it('THE ONE THAT CANNOT BE RECOVERED FROM: a slot a place OPENS has voices and a role at that rung', () => {
+    /*
+      ⚠️ **THE ROLE IS THE HALF THAT WOULD BE INVISIBLE.** `roleOf` returns `null` for a layer the
+      arrangement does not name and `adriftAt` skips those, so an own layer without one is a layer
+      whose audibility 0164 never asks about — which is the state
+      `docs/decisions/0172-a-place-opens-with-its-own-four.md` left seven layer-rungs in.
+    */
+    for (const theme of THEME_KINDS) {
+      for (const layer of OWN_LAYERS) {
+        const opensAt = MUSIC_LEVELS.filter((rung) => rungOf(theme, rung, layer) > 0);
+        if (opensAt.length === 0) continue;
+        expect(
+          voicesOf(theme, layer).length,
+          `${theme} opens ${layer} at ${opensAt.join(', ')} and states no voices for it — the slot has no instrument`,
+        ).toBeGreaterThan(0);
+        for (const rung of opensAt) {
+          expect(
+            roleOf(theme, rung, layer),
+            `${theme} opens ${layer} at ${rung} and OWN_ROLES does not say what it is — 0164 cannot see it`,
+          ).not.toBeNull();
+        }
+      }
+    }
+  });
+
+  it('and a slot nobody opens states nothing, so the mechanism is not a default in disguise', () => {
+    for (const theme of THEME_KINDS) {
+      for (const layer of OWN_LAYERS) {
+        if (MUSIC_LEVELS.some((rung) => rungOf(theme, rung, layer) > 0)) continue;
+        expect(voicesOf(theme, layer).length, `${theme} states ${layer} and never opens it`).toBe(0);
+      }
+    }
+  });
+
+  it('AND AT LEAST ONE PLACE ACTUALLY FILLS ONE, or this whole mechanism is guarded by nothing', () => {
+    /*
+      ⚠️ **`rungIn`'s OWN LESSON, ONE TABLE OVER.** With every slot empty, a version of `roleOf` that
+      ignored `OWN_ROLES` entirely would return the right answer for all seven places and every
+      assertion above would pass.
+    */
+    const filled = THEME_KINDS.flatMap((theme) =>
+      OWN_LAYERS.filter((layer) => voicesOf(theme, layer).length > 0).map((layer) => `${theme}/${layer}`),
+    );
+    expect(filled.length, 'no place fills an own slot, so 0188 is a mechanism no data exercises').toBeGreaterThan(0);
+  });
+
+  it('and OWN_ROLES names only own slots, because it is not a second PROMOTES', () => {
+    /*
+      ⚠️ **A PLACE DEMOTING `sub` HERE WOULD BE 0187 UNDONE IN A TABLE NOBODY READS.** `PROMOTES` lifts
+      a shared layer and only ever lifts; this one answers for a layer the shared table has no opinion
+      about, and the difference has to be held rather than intended.
+    */
+    for (const theme of THEME_KINDS) {
+      for (const rung of Object.keys(OWN_ROLES[theme]) as MusicLevel[]) {
+        for (const layer of Object.keys(OWN_ROLES[theme][rung] ?? {}) as MusicLayer[]) {
+          expect(
+            OWN_LAYERS.includes(layer),
+            `${theme} gives ${layer} a role at ${rung} in OWN_ROLES — that table is for the four own slots`,
+          ).toBe(true);
+        }
       }
     }
   });

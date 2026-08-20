@@ -46,7 +46,7 @@ export const PROBES = [
       // ⚠️ RE-ANCHORED BY 0186, which raised `dread` at `bossPeak` and added `chords` to two rows.
       // The break is unchanged — the place's own rungs above `surge` taken away.
       find:
-        "      approach: { chords: 1.7, toll: 1.6, dread: 1.5, drive: 1.55 },\n" +
+        "      approach: { chords: 1.7, toll: 1.6, dread: 1.5, drive: 1.55, ownA: 1.48, sub: 1.5, engine: 1.35 },\n" +
         "      boss: { dread: 1.7 },\n" +
         "      bossPeak: { dread: 2.9, drone: 1.25, sub: 1.499 },",
       replace: '',
