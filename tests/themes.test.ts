@@ -1005,7 +1005,7 @@ describe('0128 — a place plays its own material, and shares everything it does
       `boss/dread` and `surge/drive` all clear the floor now; `run/groove` was never adrift at all
       and went with `docs/decisions/0184-the-measurement-reads-the-place.md`.
     */
-    saurian: ['bossPeak/dread'],
+    saurian: [],
     labyrinth: ['approach/drive', 'approach/drone', 'approach/sub', 'approach/toll', 'boss/drone', 'boss/frenzy', 'boss/stomp', 'boss/sub', 'boss/wraith', 'bossPeak/drone', 'bossPeak/frenzy', 'bossPeak/sub', 'bossPeak/wraith', 'surge/drive', 'surge/drone', 'surge/sub'],
     rime: ['approach/dread', 'boss/wraith', 'bossPeak/dread'],
     mire: ['boss/ride', 'bossPeak/ride', 'surge/drive', 'surge/hook'],

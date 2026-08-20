@@ -18,26 +18,18 @@
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
-  {
-    decision: '0185',
-    suite: 'tests/themes.test.ts',
-    /*
-      ⚠️ THE PAD BACK IN THE BOTTOM. `chords` returns to the `low` window as the loudest layer in the
-      place, and the layers it was sitting on go back under — which is the measurement 0181 took and
-      the reason a new drum moved the place by 0.004.
-    */
-    broke: 'the pad back in the bottom, where it was standing on the kick and the sub',
-    guard: '0164 — NO LAYER SITS A WHOLE ROLE UNDER THE ONE THE ARRANGEMENT GAVE IT',
-    edit: {
-      path: 'src/content/saurian.ts',
-      find:
-        "      octave: 1,\n" +
-        "      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.16, attack: 0.12, curve: 1.2, lowFrom: 620, lowTo: 380, q: 0.9, highFrom: 200 },",
-      replace:
-        "      octave: 0,\n" +
-        "      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.34, attack: 0.12, curve: 1.2, lowFrom: 520, lowTo: 300, q: 0.9 },",
-    },
-  },
+  /*
+    ── THE PAD BREAK IS RETIRED, BECAUSE THE VOICE IT BROKE NO LONGER EXISTS ──────────────────────
+
+    ⚠️ docs/decisions/0186-a-place-has-its-own-gesture.md replaced Saurian Belt's held pad with a
+    gate, so *the pad back in the bottom* has nothing left to point at: there is no sustained
+    sub-octave triangle in this place any more.
+
+    ⚠️ THE CLAIM IS NOT LOST, IT MOVED ONE FILE OVER. 0186's second break removes the highpass from
+    the one sustained voice that survives and reddens the same guard — which is the same sentence
+    about the same defect, aimed at the code that can still commit it.
+  */
+
   {
     decision: '0185',
     suite: 'tests/themes.test.ts',
@@ -51,10 +43,12 @@ export const PROBES = [
     guard: '0164 — NO LAYER SITS A WHOLE ROLE UNDER THE ONE THE ARRANGEMENT GAVE IT',
     edit: {
       path: 'src/content/themes.ts',
+      // ⚠️ RE-ANCHORED BY 0186, which raised `dread` at `bossPeak` and added `chords` to two rows.
+      // The break is unchanged — the place's own rungs above `surge` taken away.
       find:
-        "      approach: { toll: 1.6, dread: 1.5, drive: 1.55 },\n" +
-        '      boss: { dread: 1.7 },\n' +
-        '      bossPeak: { dread: 2.4, drone: 1.25 },',
+        "      approach: { chords: 1.7, toll: 1.6, dread: 1.5, drive: 1.55 },\n" +
+        "      boss: { dread: 1.7 },\n" +
+        "      bossPeak: { dread: 2.9, drone: 1.25 },",
       replace: '',
     },
   },

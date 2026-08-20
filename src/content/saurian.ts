@@ -273,6 +273,35 @@ const RIFF: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
 });
 
 /**
+ * THE GATE — the chord chopped into sixteenths instead of held, and it is what makes this place a
+ * different SONG from Ember Nebula rather than a different arrangement of one.
+ *
+ * ⚠️ **Reported 2026-08-20, of the two levels back to back:** *"the chords and groove are pretty
+ * similar to ember nebula, there's not a lot of differentiation… they're obviously different, but the
+ * audible sounds are 'here are two of the same songs with a slightly different background beat'."*
+ *
+ * ⚠️ **AND THE TWO PLACES HELD THE SAME SHAPE, WHICH IS WHAT WAS MEASURED.** Both `chords` struck
+ * about **0.9 times a bar**, held each chord for **three to four beats**, and bottomed at **82 Hz**.
+ * Different notes, different waves, one gesture — and neither `weigh-apart` (balance) nor
+ * `weigh-notes` (pitch classes) can see a gesture.
+ * `docs/decisions/0186-a-place-has-its-own-gesture.md` has the argument.
+ *
+ * ⚠️ **THE POSITIONS AVOID THE KICK, WHICH IS THIS FILE'S OWN LESSON TWICE OVER.** `sub`'s
+ * four-on-the-floor strikes {0,4,8,11,12} and the pickup bars add 7 and 15; this strikes **1, 3, 5, 7,
+ * 9, 13 and 14**, so the chord lands in the holes the floor leaves. That is the same arithmetic
+ * `docs/decisions/0181-the-floor-has-a-bottom.md` placed the floor tom by, and the same one the
+ * offbeat bass was already written from.
+ */
+const GATE: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
+  const third = THIRD[bar]!;
+  const fifth = FIFTH[bar]!;
+  return [
+    _, root, _, fifth, _, third, _, root,
+    _, fifth, _, _, _, root, fifth, _,
+  ];
+});
+
+/**
  * THE STABS — the top of the chord, four times in sixteen bars, on the bar each phrase turns on.
  *
  * ⚠️ **Rare and high rather than frequent and loud**, on `src/content/nebula.ts`'s own terms: a hit
@@ -620,95 +649,76 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
     filter sweeping down is the single most recognisable gesture in the genre and it is what a listener
     hears as *the pad is breathing*.
   */
+  /*
+    ── THE CHORD IS GATED, NOT HELD, AND THAT IS THE WHOLE OF 0186 ──────────────────────────────────
+
+    ⚠️ **`docs/decisions/0186-a-place-has-its-own-gesture.md`**, answering *"it's the chords and
+    groove that need to shift for the saurian belt… rather than a higher octave bounce around it needs
+    a lower octave fast paced drum tone for the chords and beat."*
+
+    ⚠️ **WHAT STOOD HERE WAS SEVEN VOICES OF SUSTAINED PAD**, five of them saws holding for 4.4 beats
+    with the filter open to 2600 Hz — bright, floating, and struck 0.9 times a bar. **Ember Nebula's
+    `chords` is the same gesture with a triangle in front of it**, which is what the report is about.
+
+    ⚠️ **A HI-NRG CHORD IS A STAB AND NOT A PAD.** The genre's chord part is the thing being chopped
+    against the floor, not the thing floating over it — so the gate below runs sixteenths at 44 ms with
+    the filter down at 620 → 240 Hz. **Dark and fast where it used to be bright and long.**
+
+    ⚠️ **IT CANNOT TAKE THE BOTTOM, AND THAT IS A RULE RATHER THAN A CHOICE.** `chords` sits at +0.2
+    and `docs/decisions/0118-the-mix-has-a-width.md` refuses a panned layer whose weight is under
+    130 Hz. So the *depth* the report asks for lives in `groove` below, which is centred — the same
+    split 0181 made when the floor tom could not go in `perc`.
+
+    ⚠️ **ONE SUSTAINED VOICE SURVIVES, HIGHPASSED AND QUIET.** With the pad gone entirely the harmony
+    disappears between stabs and the place reads as drums with a riff over it. This is the glue, at a
+    third of the old level and with nothing under 190 Hz.
+  */
   chords: [
     {
-      steps: ROOT,
+      /*
+        THE GATE. Root and fifth alternating on the sixteenths the kick leaves open — the part a
+        listener hears as *the chords* now, and it is a rhythm before it is a harmony.
+      */
+      steps: GATE,
       pitched: true,
       octave: 1,
-      perBeat: 0.25,
-      accents: [1, 0.86, 0.92, 0.84, 0.96, 0.88, 1, 0.82],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.115, attack: 0.16, curve: 1.5, lowFrom: 2600, lowTo: 700, q: 1.4 },
+      perBeat: 4,
+      accents: [1, 0.72, 0.9, 0.7, 0.96, 0.74, 0.88, 0.68],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.11, gain: 0.17, attack: 0.003, curve: 5, lowFrom: 620, lowTo: 240, q: 1.3, drive: 0.3 },
     },
     {
-      // The root again, sharp. A pad is where a detune is most audible and least in the way — it is
-      // holding for four beats, so the beating has time to be heard as movement.
-      steps: ROOT,
+      // The same gate, sixteen cents sharp. A supersaw is a detune, and a gated one keeps it —
+      // `cents` at the head of this file has why this is not an octave stack.
+      steps: GATE,
       pitched: true,
       octave: 1 + cents(16),
-      perBeat: 0.25,
-      accents: [1, 0.86, 0.92, 0.84, 0.96, 0.88, 1, 0.82],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.09, attack: 0.18, curve: 1.5, lowFrom: 2500, lowTo: 690, q: 1.4 },
-    },
-    {
-      steps: FIFTH,
-      pitched: true,
-      octave: 1,
-      perBeat: 0.25,
-      accents: [1, 0.86, 0.92, 0.84, 0.96, 0.88, 1, 0.82],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.085, attack: 0.2, curve: 1.5, lowFrom: 2400, lowTo: 660, q: 1.5 },
+      perBeat: 4,
+      accents: [1, 0.72, 0.9, 0.7, 0.96, 0.74, 0.88, 0.68],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.11, gain: 0.12, attack: 0.003, curve: 5, lowFrom: 590, lowTo: 225, q: 1.3, drive: 0.3 },
     },
     {
       /*
-        THE THIRD, AND IT IS THE VOICE THE WHOLE PLACE TURNS ON. On twelve bars in sixteen it is a
-        diatonic third; on bars 8, 12 and 16 `THIRD` hands it a G# and the chord under the level
-        becomes E major — `docs/decisions/0148-a-place-has-its-own-notes.md`. Nothing else has to
-        change for that to happen, which is the argument for hoisting the progression: the cadence
-        arrives in the pad, the arp, the riff and the bass on the same bar because all four read the
-        same array.
+        THE THIRD, AND IT IS STILL THE VOICE THE WHOLE PLACE TURNS ON. On bars 8, 12 and 16 `THIRD`
+        hands it a G# and the chord under the level becomes E major —
+        `docs/decisions/0148-a-place-has-its-own-notes.md`. Gating the chord changes how often that
+        cadence is struck and not what it is.
       */
-      steps: THIRD,
+      steps: THIRD.flatMap((third, bar) => [_, third, _, _, _, third, _, FIFTH[bar]!, _, third, _, _, _, third, _, _]),
+      pitched: true,
+      octave: 1,
+      perBeat: 4,
+      accents: [0.94, 0.7, 1, 0.68],
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.09, gain: 0.1, attack: 0.002, curve: 6, lowFrom: 900, lowTo: 380, q: 1.5, drive: 0.24 },
+    },
+    {
+      // THE GLUE — the only thing left holding, so the harmony does not vanish between stabs. A third
+      // of the old pad's level, and highpassed so it cannot walk back into the bottom 0185 cleared.
+      steps: ROOT,
       pitched: true,
       octave: 2,
       perBeat: 0.25,
-      accents: [0.94, 0.84, 1, 0.82, 0.92, 0.88, 0.96, 0.8],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.08, attack: 0.24, curve: 1.5, lowFrom: 3400, lowTo: 1100, q: 1.4 },
-    },
-    {
-      steps: THIRD,
-      pitched: true,
-      octave: 2 - cents(16),
-      perBeat: 0.25,
-      accents: [0.94, 0.84, 1, 0.82, 0.92, 0.88, 0.96, 0.8],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.06, attack: 0.26, curve: 1.5, lowFrom: 3300, lowTo: 1080, q: 1.4 },
-    },
-    {
-      /*
-        THE STAB. Eighths on the offbeat, short, and it is what turns a held chord into a part —
-        `src/content/nebula.ts` calls its own version *the voice that stops being a bong* and this is
-        the same job done with a saw instead of a triangle.
-      */
-      steps: ROOT.flatMap((root, bar) => [_, FIFTH[bar]!, _, root + 12, _, THIRD[bar]! + 12, _, FIFTH[bar]!]),
-      pitched: true,
-      perBeat: 2,
-      octave: 1,
-      accents: [1, 0.72, 0.88, 0.7],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.26, gain: 0.07, attack: 0.004, curve: 4, lowFrom: 2200, lowTo: 900, q: 1.6 },
-    },
-    {
-      /*
-        ── THE PAD LET GO OF THE BOTTOM, AND THAT IS THE WHOLE OF 0185 ──────────────────────────────
-
-        ⚠️ **`docs/decisions/0185-the-belt-gets-its-bottom.md`**, answering *"make saurian a eurobeat
-        style with some deep bassy drums so we can get a mix up of modern eurobeat and older style
-        jurassic inspired music."* This was a triangle at **octave 0, gain 0.34, with no highpass at
-        all**, and it used to say *what makes the chord felt rather than only heard*.
-
-        ⚠️ **`docs/decisions/0181-the-floor-has-a-bottom.md` MEASURED WHAT THAT COST AND COULD NOT
-        FIX IT.** The pad sat **7.6 dB over `sub` in `sub`'s own window** and 12.1 over `drone`;
-        `chords` was the loudest layer in the place by seven decibels with a measured centroid of
-        **108 Hz**. A chord pad was standing where the kick lives, which is why 0181's new floor tom
-        moved the place's bottom by **0.004** and it said so: *"there is no room at the bottom."*
-
-        ⚠️ **UP AN OCTAVE, HALVED, AND HIGHPASSED AT 200 Hz.** `chords`' window moves from `low` to
-        `himid` and the layer gives up about 6 dB. **The six saw voices above are untouched** — what
-        goes is the sub-octave doubling, not the supersaw the genre is made of. A eurobeat pad does
-        not own the bottom; the kick and the bass do, and the three notes below take it.
-      */
-      steps: ROOT,
-      pitched: true,
-      perBeat: 0.25,
-      octave: 1,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.16, attack: 0.12, curve: 1.2, lowFrom: 620, lowTo: 380, q: 0.9, highFrom: 200 },
+      accents: [1, 0.86, 0.92, 0.84, 0.96, 0.88, 1, 0.82],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.05, attack: 0.3, curve: 1.4, lowFrom: 2200, lowTo: 900, q: 1.2, highFrom: 190 },
     },
   ],
 
@@ -720,6 +730,19 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
     pressure. Take the third away and the line is felt and cannot be followed, which is the exact
     failure `src/content/nebula.ts`'s pedalboard was written to fix.
   */
+  /*
+    ── AND THE BASS IS A DRUM NOW, WHICH IS THE OTHER HALF OF THE REPORT ────────────────────────────
+
+    ⚠️ **0186.** *"A lower octave fast paced drum tone for the chords and beat."* `groove` is centred,
+    so unlike `chords` it is allowed the bottom — and it already ran twice Ember Nebula's rate. What
+    it did not have was a **transient**: 0.20 of a beat with a 3 ms attack is a note, and a drum is the
+    same pitch with the front end sharpened and the tail cut.
+
+    ⚠️ **AND THE THUMP IS A FOURTH VOICE RATHER THAN A SHORTER THIRD.** An unpitched sweep doubling
+    the line is what makes a bass read as a kit rather than as a synth, and it strikes only where
+    `sub`'s four-on-the-floor does not — 0181's arithmetic, and the reason this file's own header
+    says the drop between kicks is where a low drum belongs.
+  */
   groove: [
     {
       steps: OCTAVES,
@@ -727,7 +750,7 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       perBeat: 4,
       octave: 0,
       accents: [1, 0.7, 0.88, 0.68],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.2, gain: 0.58, attack: 0.003, curve: 3.2 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.16, gain: 0.58, attack: 0.0015, curve: 4.2 },
     },
     {
       steps: OCTAVES,
@@ -735,7 +758,7 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       perBeat: 4,
       octave: 0,
       accents: [1, 0.7, 0.88, 0.68],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.18, gain: 0.2, attack: 0.003, curve: 4, lowFrom: 760, lowTo: 320, q: 1.4, drive: 0.34 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.15, gain: 0.2, attack: 0.0015, curve: 4.6, lowFrom: 760, lowTo: 320, q: 1.4, drive: 0.34 },
     },
     {
       steps: OCTAVES,
@@ -743,7 +766,19 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       perBeat: 4,
       octave: 1,
       accents: [1, 0.66, 0.84, 0.64],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.15, gain: 0.055, attack: 0.003, curve: 5, lowFrom: 1600, lowTo: 700, q: 1.5 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.13, gain: 0.055, attack: 0.002, curve: 5.4, lowFrom: 1600, lowTo: 700, q: 1.5 },
+    },
+    {
+      /*
+        THE THUMP — an unpitched sweep on the sixteenths the kick leaves open, which is what turns a
+        sixteenth bass line into a fast low drum. 118 → 46 Hz in 90 ms: gone before the next sixteenth
+        arrives, and never on top of the four-on-the-floor.
+      */
+      steps: ROOT.flatMap(() => [_, 1, _, 0.82, _, 0.9, _, 0.78, _, 0.94, _, _, _, 0.86, 0.8, _]),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 118, to: 46, seconds: 0.09, gain: 0.3, attack: 0.0012, curve: 3.4 },
     },
   ],
 
