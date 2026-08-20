@@ -52,7 +52,7 @@ import {
 import { bakeLoops, layerNotes, musicLevelFor, placeFor } from '../src/app/music.ts';
 import { UNITS_PER_SECOND, rungMarks, targetGain } from '../scripts/timeline.mjs';
 import { AURA_LAYERS, MUSIC, MUSIC_LAYERS, secondsOfLayer, type MusicLayer } from '../src/content/music.ts';
-import { THEME_KINDS, bakedBy, revoicedBy, type ThemeKind } from '../src/content/themes.ts';
+import { rungOf, THEME_KINDS, bakedBy, revoicedBy, type ThemeKind } from '../src/content/themes.ts';
 import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { MISSILE_BEAT_RATIO, fireEveryAt, missileEveryAt } from '../src/content/pickups.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -2160,12 +2160,31 @@ describe('0116 — the instrument is the game, and it is not a second copy of it
       the seven levels renders identically — which is *"the same music repeats level after level"*
       reproduced inside the instrument built to answer it, and it would look completely correct.
     */
-    const differs = MUSIC_LAYERS.filter(
+    /*
+      ⚠️ **HELD OVER THE LAYERS WHOSE LADDERS AGREE, BECAUSE OTHERWISE IT IS NOT ABOUT THE BALANCE** —
+      `docs/decisions/0187-the-kick-is-the-pulse.md`. This compared the two places outright, and
+      `npm run prove` reported 0116's break **STILL GREEN** the day The Black Heart gained a `boss`
+      row of its own: with the ladders differing, the two render differently whether the balance is
+      applied or not, and the guard passes on the wrong evidence.
+
+      ⚠️ **SO THE SET IS THE LAYERS THE TWO PLACES OPEN IDENTICALLY**, where the only thing left that
+      can separate them is `mixOf`. That is the claim this guard is named for, and it is now the
+      claim it makes. `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` found it, in the
+      direction that catches a guard rotting under a change that had nothing to do with it.
+    */
+    const shared = MUSIC_LAYERS.filter(
+      (layer) => rungOf('core', 'boss', layer) === rungOf('approach', 'boss', layer) && rungOf('core', 'boss', layer) > 0,
+    );
+    expect(
+      shared.length,
+      'the two places no longer open a single layer alike at the boss, so this guard cannot isolate the balance',
+    ).toBeGreaterThan(0);
+    const differs = shared.filter(
       (layer) => targetGain('core', 'boss', layer, 1) !== targetGain('approach', 'boss', layer, 1),
     );
     expect(
       differs.length,
-      'The Core and The Approach render byte-identical gains at the boss, so the theme is not applied',
+      'The Core and The Approach render byte-identical gains for every layer they open alike, so the theme is not applied',
     ).toBeGreaterThan(0);
   });
 

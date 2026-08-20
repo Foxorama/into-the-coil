@@ -121,6 +121,24 @@ which is its own decision and not a line in this one.
 Both breaks that ship are about what the role change **cost**: the fourteen lifts that make the claim
 true, and the per-place workaround it made redundant.
 
+## ⚠️ And it rotted a guard that had nothing to do with it
+
+`npm run prove` reported [0116](0116-the-rig-plays-the-level.md)'s break — *the theme multiplier
+dropped, so all seven levels render as level one* — as **STILL GREEN**.
+
+The guard behind it compares The Black Heart against The Approach at the boss and asks whether they
+render different gains. **The fourteen lifts gave Core a `boss` ladder row of its own**, so from that
+moment the two places differed whether the balance was applied or not, and the guard began passing on
+the wrong evidence. It would have gone on passing for ever, over a rig that had stopped applying the
+mix.
+
+⚠️ **CORRECTED TO COMPARE ONLY THE LAYERS THE TWO PLACES OPEN IDENTICALLY**, where the sole remaining
+thing that can separate them is `mixOf`. That is the claim it is named for and now the claim it makes.
+
+⚠️ **THIS IS THE THIRD GAP OF THE SAME SPECIES IN ONE DAY** — 0164 is one-directional, the pan guard
+bakes the base composition, and this one rotted under data that moved beneath it.
+[0019](0019-a-probe-must-be-seen-to-apply.md) found two of the three; a diff found none of them.
+
 ## ⚠️ This is a model and the verdict is an ear
 
 [0027](0027-measure-the-picture-not-the-model.md). What is claimed is that the arrangement now says
