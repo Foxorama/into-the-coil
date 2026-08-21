@@ -208,25 +208,78 @@ const HANDS: readonly (number | null)[] = [
 ];
 
 /**
- * THE OCTAVE BASS — sixteen notes a bar, root and octave, and it never stops.
+ * THE JUNGLE BASS — three notes a bar, held, and it is what `groove` plays instead of sixteenths.
  *
- * ⚠️ **THIS IS THE ONE SOUND THE BRIEF NAMES BY GENRE AND IT IS A PLACEMENT, NOT A TIMBRE.** A
- * eurobeat bassline is continuous sixteenths alternating a root with its octave; what makes it drive
- * is that it is the same note twice and the ear stops hearing pitch and starts hearing *rate*. The
- * fifth arrives once a bar, on the fourth beat, which is the only place the line says anything.
+ * ⚠️ **THE OCTAVE BASS IS GONE AND IT WAS THIS PLACE'S OWN SIGNATURE**, so the reason is worth
+ * having in one line: driven on the desk, the player closed `groove` outright and opened the base
+ * composition's `bass` over the top of it — *"this is what I want the saurian level to sound
+ * like, eurobeat styling with a junglebeat overtone."* Continuous sixteenths are the thing a
+ * junglebeat is NOT: the break is the busy part and the bass under it holds.
+ * `docs/decisions/0189-a-place-is-what-it-does-not-play.md`.
  *
- * ⚠️ **Derived from the progression rather than typed**, like everything else here: two hundred and
- * fifty-six numbers that have to agree with sixteen others is the thing that goes wrong silently.
+ * ⚠️ **HELD RATHER THAN STRUCK, WHICH IS THE WHOLE DIFFERENCE.** `OCTAVES` hopped sixteen times a
+ * bar and never said a note; this states the root, pushes it once, and answers with the fifth on
+ * the bar each phrase turns on. What fills the bar is `ownB`'s ghosts, not the bass.
+ *
+ * ⚠️ **AND THE PLACE STILL HAS ITS SIXTEENTHS** — `arp` at `push` and `sub`'s offbeat stab.
+ * The eurobeat floor is intact; what changed is which layer is the busy one.
+ *
+ * ⚠️ **Derived from the progression rather than typed**, for the reason every other pattern in this
+ * file is: a hundred and twenty-eight numbers that have to agree with sixteen others is the thing
+ * that goes wrong silently.
  */
-const OCTAVES: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
+const JUNGLE: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
   const fifth = FIFTH[bar]!;
-  return [
-    root, root + 12, root, root + 12,
-    root, root + 12, root, root + 12,
-    root, root + 12, root, root + 12,
-    fifth, fifth + 12, root, root + 12,
-  ];
+  return bar % 4 === 3
+    ? [root, _, _, root, _, _, fifth, _]
+    : bar % 2 === 1
+      ? [root, _, _, root, _, _, root, _]
+      : [root, _, _, _, root, _, _, _];
 });
+
+/**
+ * THE BREAK — the loud strokes of `ownB`, and there is no kick in it.
+ *
+ * ⚠️ **THE FLOOR IS EUROBEAT AND THE BREAK IS THE OVERTONE, WHICH IS A DIVISION OF LABOUR RATHER
+ * THAN A BLEND.** A jungle break brings its own kick, and this place already has one:
+ * `sub`'s four-on-the-floor, which is the half of the brief that has never been in doubt. Two kicks
+ * on different grids is not two genres at once, it is a fight — so what `ownB` plays is the SNARE
+ * half of a break and nothing else, and the two interlock the way `sub` and `OFFBEAT` do.
+ *
+ * ⚠️ **BARS ONE AND THREE LOCK WITH THE CLAP; BARS TWO AND FOUR DO NOT.** `engine`'s clap is on two
+ * and four of every bar. A snare that agreed with it four times over is a backbeat and not a break —
+ * so the displaced strokes land on the *a* of three and the *and* of three, which is the one gesture
+ * that separates a chopped break from a drum machine playing harder.
+ *
+ * ⚠️ **AND THE FOURTH BAR RUNS ON**, three sixteenths climbing into the downbeat, because a break is
+ * a thing a person played and the roll is where that is audible.
+ */
+const BREAK: readonly (number | null)[] = [
+  _, _, _, _, 1, _, _, _, _, _, _, _, 0.9, _, _, _,
+  _, _, _, _, 0.94, _, _, _, _, _, _, 0.88, _, _, _, _,
+  _, _, _, _, 1, _, _, _, _, _, _, _, 0.92, _, _, _,
+  _, _, _, _, 0.96, _, _, _, _, _, 0.9, _, _, 0.42, 0.62, 0.74,
+];
+
+/**
+ * THE GHOSTS — the quiet strokes, and they are a SEPARATE VOICE rather than small numbers.
+ *
+ * ⚠️ **A GHOST IS A DIFFERENT SOUND AND NOT A QUIETER ONE.** `accents` and a low velocity scale one
+ * timbre, which is a snare played softly; what a chopped break actually contains is strokes from a
+ * different part of the sample — shorter, thinner, and with the body filtered off. That is why this
+ * is fifteen numbers in its own voice and not fifteen more entries in `BREAK`.
+ *
+ * ⚠️ **IT IS ALSO 0102's FINDING SPENT ON THE OTHER AXIS.** That decision gave every drum a velocity
+ * because *"identical repetition at a fixed interval is the definition of a metronome"*; a break made
+ * of one timbre at two volumes is the same defect one level up, and it is what a row of velocities
+ * cannot fix.
+ */
+const GHOSTS: readonly (number | null)[] = [
+  _, _, 0.26, _, _, _, _, 0.3, _, _, 0.24, _, _, _, _, 0.28,
+  _, 0.22, _, _, _, _, 0.26, _, _, _, _, _, _, 0.24, _, 0.3,
+  _, _, 0.26, _, _, _, _, 0.28, _, 0.24, _, _, _, _, 0.3, _,
+  _, 0.22, _, 0.26, _, _, _, _, _, _, _, _, _, _, _, _,
+];
 
 /**
  * THE OFFBEAT — the stab that lands where the kick does not, eight to a bar with four of them silent.
@@ -387,6 +440,52 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       note: { wave: 'noise', from: 0, to: 0, seconds: 0.11, gain: 0.28, attack: 0.006, curve: 4.2, lowFrom: 3600, lowTo: 900, highFrom: 700 },
     },
   ],
+  /*
+    ── THE BREAK — the second own slot, and it is the junglebeat the brief asks for ────────────────
+
+    ⚠️ **`docs/decisions/0189-a-place-is-what-it-does-not-play.md`**, answering *"this is what I want
+    the saurian level to sound like, eurobeat styling with a junglebeat overtone."*
+
+    ⚠️ **IT IS AN OWN SLOT AND NOT `beat`, WHICH IS A BOOKKEEPING CHOICE WITH ONE REAL CONSEQUENCE.**
+    The desk state this answers had `beat` — the title's kit — open at 1.62. `ARRANGEMENT` is global
+    and its fight rungs do not name `beat`, so a place opening it sounds a layer `roleOf` returns
+    `null` for and `docs/decisions/0164-a-role-is-a-promise-the-mix-has-to-keep.md` therefore does not
+    cover: **nothing would check that it can be heard.** `docs/decisions/0188-a-place-owns-four-slots.md`
+    built `OWN_ROLES` for exactly this, one commit earlier. The sound is the one that was driven; the
+    slot is the one that has a promise attached to it.
+
+    ⚠️ **AND FOUR BARS IS WHAT MAKES IT A BREAK RATHER THAN A PATTERN.** `beat` is two. A break that
+    says the same bar twice is a drum machine with a swing setting; the displacement in bars two and
+    four is the entire content, and it needs four bars to be a displacement of something.
+
+    ⚠️ **NO KICK AND NO HATS.** `BREAK` above has why: `sub` has the floor and `engine` has the
+    sixteenths, and this is the only layer in the place whose job is the backbeat.
+  */
+  ownB: [
+    {
+      /*
+        THE STROKE — a noise burst with a body on it, and the body is where a snare lives. 4200 Hz
+        falling to 1600 with the bottom opened to 400 is the band `src/content/music.ts`'s own
+        backbeat found; what is different here is the length, because a break's snare RINGS and a
+        drum machine's does not.
+      */
+      steps: BREAK,
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.185, gain: 0.265, attack: 0.0008, curve: 5.2, lowFrom: 4400, lowTo: 1600, highFrom: 380, q: 0.8 },
+    },
+    {
+      // THE GHOST — shorter, thinner, and with the body filtered off. A third of the length and half
+      // the band, which is what makes it read as a different stroke rather than as a quiet one.
+      steps: GHOSTS,
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.058, gain: 0.26, attack: 0.0005, curve: 7.5, lowFrom: 7200, lowTo: 2800, highFrom: 1300, q: 0.9 },
+    },
+  ],
+
   /*
     ── THE TAR: what is under the whole level, and it is older than the beat ────────────────────────
 
@@ -671,12 +770,38 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
         THE SKIN. A hand drum with a real body on it — 190 Hz falling to 110, which is the low-mid a
         place made of rattles and hats otherwise has nothing in. `src/content/nebula.ts` found the same
         hole by measurement and this is that lesson taken before the report rather than after it.
+
+        ⚠️ **IT WAS ON THE BEAT, WHICH IS WHERE THE KICK IS** — 0189, and it is this file's own
+        lesson arriving for the third time. `sub`'s comment says *the kick has the downbeat to
+        itself* and `groove`'s thump says *never on top of the four-on-the-floor*; this voice landed
+        on every beat it played, one octave up from the kick.
+
+        ⚠️ **AND MOVING IT IS NOT WHAT FIXED THE CLIPPING, WHICH IS WORTH MORE THAN THE MOVE.** The
+        desk put this layer at 3.21 and the bus reached the shaper's clamp on **0.46%** of samples at
+        `bossPeak`, fifty times any other place. Dropping `perc` altogether took that to zero, so
+        the ablation named this layer correctly — and **re-placing it bought 0.02 of those points.**
+        What bought the rest was the ENVELOPE below and the boss ladder above: 1 ms → 4 ms of attack
+        with the saturation up, and a `boss` row that stopped lifting the bed. Measured both ways
+        round: putting the pattern back on the beat with this envelope reads **0.019%**, and keeping
+        this pattern with the old envelope reads **0.055%**.
+
+        ⚠️ **SO THE PLACEMENT IS KEPT BECAUSE IT IS RIGHT AND NOT BECAUSE IT PAID**, which is the
+        honest version and the one `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` asks for.
+        The beats are the kick and the offbeats are `OFFBEAT`'s stab: a hi-NRG bar has no eighth
+        left in it, and a hand drum belongs on the *e* and the *a* anyway — the floor keeps time and
+        the skin answers it. **The probe for the clamp points at the envelope, because that is the
+        line that moves the number.**
       */
-      steps: [1, _, 0.64, _, 0.72, _, _, 0.68, 0.88, _, 0.6, _, 0.76, _, 0.66, 0.62],
+      steps: [
+        _, _, _, 1, _, 0.6, _, _, _, _, _, 0.72, _, _, _, 0.66,
+        _, _, _, 0.88, _, _, _, 0.64, _, 0.58, _, _, _, _, _, 0.7,
+        _, _, _, 0.94, _, 0.62, _, _, _, _, _, 0.68, _, _, _, 0.6,
+        _, _, _, 0.9, _, _, _, 0.66, _, 0.6, _, 0.72, _, _, _, 0.74,
+      ],
       pitched: false,
-      perBeat: 1,
+      perBeat: 4,
       octave: 0,
-      note: { wave: 'sine', from: 188, to: 106, seconds: 0.22, gain: 0.38, attack: 0.001, curve: 4.2, drive: 0.2 },
+      note: { wave: 'sine', from: 188, to: 106, seconds: 0.22, gain: 0.34, attack: 0.004, curve: 4.2, drive: 0.42 },
     },
     {
       // A tooth on a tooth: the highest thing in the place, four times a phrase, and nothing else
@@ -771,62 +896,72 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
   ],
 
   /*
-    ── THE BASS: sixteen notes a bar, and it is the thing the level runs on ─────────────────────────
+    ── THE BASS: three notes a bar, HELD, and it is the thing the break rides over ─────────────────
 
-    ⚠️ **THREE VOICES ON ONE LINE, WHICH IS HOW A BASS GETS BIG WITHOUT GETTING LOUD.** A sine for the
-    weight, a driven saw for the teeth, and an octave up so the FIGURE is audible rather than only the
-    pressure. Take the third away and the line is felt and cannot be followed, which is the exact
-    failure `src/content/nebula.ts`'s pedalboard was written to fix.
-  */
-  /*
-    ── AND THE BASS IS A DRUM NOW, WHICH IS THE OTHER HALF OF THE REPORT ────────────────────────────
+    ⚠️ **THIS SLOT WAS THE OCTAVE BASS AND THE PLAYER CLOSED IT ON THE DESK** —
+    `docs/decisions/0189-a-place-is-what-it-does-not-play.md`. What is here is the layer they opened
+    instead, in the slot that can carry it: `groove` is sixteen bars, so it can state a progression
+    that turns four times, and it is centred, so it is allowed the bottom. The base composition's
+    `bass` is two bars and an A-rooted riff — 0095 closed it in every level for exactly that reason,
+    and it would have been a wrong note here the moment anything harmonic came back.
 
-    ⚠️ **0186.** *"A lower octave fast paced drum tone for the chords and beat."* `groove` is centred,
-    so unlike `chords` it is allowed the bottom — and it already ran twice Ember Nebula's rate. What
-    it did not have was a **transient**: 0.20 of a beat with a 3 ms attack is a note, and a drum is the
-    same pitch with the front end sharpened and the tail cut.
+    ⚠️ **A REESE, WHICH IS TWO DETUNED SAWS AND IS THE SOUND THE BRIEF NAMES.** `cents` is already in
+    this file for `hook`'s supersaw and the trick is the same one an octave down: two saws eleven
+    cents apart beat against each other slowly, and that slow beat under a held note is what a jungle
+    bass IS. A single saw is a synth bass; the pair is the genre.
 
-    ⚠️ **AND THE THUMP IS A FOURTH VOICE RATHER THAN A SHORTER THIRD.** An unpitched sweep doubling
-    the line is what makes a bass read as a kit rather than as a synth, and it strikes only where
-    `sub`'s four-on-the-floor does not — 0181's arithmetic, and the reason this file's own header
-    says the drop between kicks is where a low drum belongs.
+    ⚠️ **±11 AND NOT ±14.** `hook` sits two octaves up where the beat rate is four times faster. At
+    this register ±14 cents is a wobble you can count, which reads as an unstable note rather than as
+    width — the same argument `cents` makes at the head of this file, arriving at a different number
+    because the register is different.
+
+    ⚠️ **HELD FOR A BEAT AND A HALF, AND THE HOLD IS THE POINT.** `OCTAVES` struck sixteen times a
+    bar; this strikes three. What fills the space is `ownB`, and a bass that also filled it would be
+    the two loudest things in the place playing the same rhythm — which is the defect this file's own
+    header describes `sub` and `OFFBEAT` avoiding, one register up.
   */
   groove: [
     {
-      steps: OCTAVES,
+      // THE WEIGHT. A sine with no filter on it, because the fundamental is the whole job — and it
+      // is the one voice here `sub`'s kick has to make room for rather than the other way round.
+      steps: JUNGLE,
       pitched: true,
-      perBeat: 4,
+      perBeat: 2,
       octave: 0,
-      accents: [1, 0.7, 0.88, 0.68],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.16, gain: 0.58, attack: 0.0015, curve: 4.2 },
+      accents: [1, 0.84],
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.5, gain: 0.44, attack: 0.024, curve: 1.5 },
     },
     {
-      steps: OCTAVES,
+      // THE REESE, flat. Filtered low and driven, so what comes through is the beating rather than
+      // the saw — a bright reese under a break is mud, and it is the one mistake this timbre makes.
+      steps: JUNGLE,
       pitched: true,
-      perBeat: 4,
-      octave: 0,
-      accents: [1, 0.7, 0.88, 0.68],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.15, gain: 0.2, attack: 0.0015, curve: 4.6, lowFrom: 760, lowTo: 320, q: 1.4, drive: 0.34 },
+      perBeat: 2,
+      octave: 0 - cents(11),
+      accents: [1, 0.84],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.4, gain: 0.085, attack: 0.009, curve: 1.7, lowFrom: 430, lowTo: 190, q: 2.2, drive: 0.3 },
     },
     {
-      steps: OCTAVES,
+      // Sharp.
+      steps: JUNGLE,
       pitched: true,
-      perBeat: 4,
-      octave: 1,
-      accents: [1, 0.66, 0.84, 0.64],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.13, gain: 0.055, attack: 0.002, curve: 5.4, lowFrom: 1600, lowTo: 700, q: 1.5 },
+      perBeat: 2,
+      octave: 0 + cents(11),
+      accents: [1, 0.84],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.4, gain: 0.085, attack: 0.008, curve: 1.7, lowFrom: 415, lowTo: 184, q: 2.2, drive: 0.3 },
     },
     {
       /*
-        THE THUMP — an unpitched sweep on the sixteenths the kick leaves open, which is what turns a
-        sixteenth bass line into a fast low drum. 118 → 46 Hz in 90 ms: gone before the next sixteenth
-        arrives, and never on top of the four-on-the-floor.
+        THE FRONT — a short click an octave up, so the line can be FOLLOWED and not only felt. Three
+        held notes a bar with no transient is a pad; this is what makes each one an event, and it is
+        the same fix `src/content/nebula.ts`'s pedalboard needed for the same reason.
       */
-      steps: ROOT.flatMap(() => [_, 1, _, 0.82, _, 0.9, _, 0.78, _, 0.94, _, _, _, 0.86, 0.8, _]),
-      pitched: false,
-      perBeat: 4,
-      octave: 0,
-      note: { wave: 'sine', from: 118, to: 46, seconds: 0.09, gain: 0.3, attack: 0.0012, curve: 3.4 },
+      steps: JUNGLE,
+      pitched: true,
+      perBeat: 2,
+      octave: 1,
+      accents: [1, 0.8],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.12, gain: 0.05, attack: 0.002, curve: 5.4, lowFrom: 1500, lowTo: 660, q: 1.5 },
     },
   ],
 
@@ -1110,12 +1245,24 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.19, gain: 0.06, attack: 0.003, curve: 3.4, lowFrom: 3000, lowTo: 1500, q: 1.8 },
     },
     {
-      // The thud under it, so `approach` has a floor when `groove` closes.
-      steps: [1, _, 0.72, _, 0.9, _, 0.7, 0.66, 1, _, 0.74, _, 0.88, _, 0.72, 0.82],
+      /*
+        THE THUD under it, so `approach` has a floor when `groove` closes.
+
+        ⚠️ **AND IT WAS ON THE BEAT TOO** — 0189, the same placement fault as `perc`'s skin. It was
+        written when `drive` opened at `surge`; the desk opens it at `run`, so a low sweep doubling
+        the four-on-the-floor now runs for the whole level instead of the last third of it. **A
+        defect a rung was hiding is still a defect** — and, exactly as with the skin, the move is
+        worth almost nothing to the clamp and the envelope beside it is worth 0.011 points. Both are
+        here; only one of them is a mix fix.
+      */
+      steps: [
+        _, _, _, 1, _, _, _, 0.72, _, _, _, 0.9, _, 0.7, _, 0.66,
+        _, _, _, 1, _, _, _, 0.74, _, _, _, 0.88, _, 0.72, _, 0.82,
+      ],
       pitched: false,
-      perBeat: 2,
+      perBeat: 4,
       octave: 0,
-      note: { wave: 'sine', from: 172, to: 58, seconds: 0.28, gain: 0.45, attack: 0.001, curve: 3.4, drive: 0.28 },
+      note: { wave: 'sine', from: 172, to: 58, seconds: 0.28, gain: 0.42, attack: 0.0035, curve: 3.4, drive: 0.42 },
     },
   ],
 

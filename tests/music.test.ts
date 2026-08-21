@@ -787,8 +787,29 @@ describe('0095 — the level has a piece of its own, and it covers the band', ()
     across a 6.4-second phrase is tens of millions of multiplies, and shortening the window or
     dropping bands would measure something other than the music. Twenty seconds is what real DSP
     costs; the default five is a bound written for tests that do arithmetic.
+
+    ── 20 s → 60 s, AND `docs/decisions/0044` IS WHY IT IS WRITTEN DOWN RATHER THAN NUDGED ────────
+
+    ⚠️ **IT WENT INTERMITTENT UNDER THE WHOLE SUITE AND PASSED THREE TIMES OUT OF THREE ALONE**, on a
+    byte-identical tree — which `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`
+    says is a finding rather than a flake, and names the two things it can be. **This is the second:
+    a wall clock standing in for a quantity that is not time.** `mixAt` bakes the BASE composition
+    and sums it against `MUSIC_LADDER`; every number in it is deterministic, so the assertion cannot
+    disagree with itself. The only thing that varied is how long four workers took to get here.
+
+    ⚠️ **AND THE TREE GOT MORE EXPENSIVE**, which is the honest half:
+    `docs/decisions/0189-a-place-is-what-it-does-not-play.md` gave Saurian Belt a break in `ownB`
+    and moved `perc`'s hand drum onto sixteenths, so the places other files bake cost more and this
+    file's own budget was what gave way first. **It is 5.9 s alone against 20**, so the margin was
+    never as wide as the number looked.
+
+    ⚠️ **WIDENING IT DOES NOT WEAKEN WHAT IT PROVES**, and that distinction is the repository's own —
+    `tests/sound.test.ts` made the identical argument when its bake-identity guard went 60 s → 120 s.
+    **No part of this claim is about time**: the same samples, the same bands, the same comparison
+    against the title. The limit exists so a hang fails rather than sits. If this ever approaches
+    60 s something has genuinely slowed down, and the number must not move again to hide it.
   */
-  const DSP_MS = 20_000;
+  const DSP_MS = 60_000;
 
   it('THE SHED, one octave wider: a level is spread across the spectrum rather than humped in the middle', () => {
     /*

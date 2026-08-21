@@ -52,8 +52,12 @@ export const PROBES = [
     guard: 'an audition is the LOUDEST this place ever takes the layer, off the game’s own tables',
     edit: {
       path: 'tests/dash.test.ts',
-      find: '        const want = Math.max(...MUSIC_LEVELS.map((rung) => rungOf(theme, rung, layer))) * mixOf(theme, layer);',
-      replace: '        const want = Math.max(...MUSIC_LEVELS.map((rung) => MUSIC_LADDER[rung][layer])) * mixOf(theme, layer);',
+      // ⚠️ RE-ANCHORED BY 0189, which split this expectation in two so it could state the fallback
+      // for a layer the place closes at every rung. The break is unchanged — the guard composing
+      // its answer from the shared row — and it still reddens on `perc`, which Saurian Belt takes
+      // to 2.21 where the shared ladder's loudest is 0.96.
+      find: '        const own = Math.max(...MUSIC_LEVELS.map((rung) => rungOf(theme, rung, layer)));',
+      replace: '        const own = Math.max(...MUSIC_LEVELS.map((rung) => rungIn(undefined, rung, layer)));',
     },
   },
 ];

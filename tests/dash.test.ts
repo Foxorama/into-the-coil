@@ -36,7 +36,7 @@ import {
   type MusicLayer,
 } from '../src/content/music.ts';
 import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
-import { voicesOf, THEME_KINDS, mixOf, rungOf } from '../src/content/themes.ts';
+import { voicesOf, THEME_KINDS, mixOf, rungIn, rungOf } from '../src/content/themes.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { auraBuild, auraFor, levelWrites, musicLevelFor } from '../src/app/music.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
@@ -357,7 +357,22 @@ describe('0130 — a layer can be heard on its own', () => {
           opinion the moment one was not. It is still composed from the TABLES rather than from
           `targetGain`, which is what the paragraph above is about and is untouched by this.
         */
-        const want = Math.max(...MUSIC_LEVELS.map((rung) => rungOf(theme, rung, layer))) * mixOf(theme, layer);
+        /*
+          ⚠️ **AND A PLACE MAY CLOSE A LAYER AT EVERY RUNG, WHICH MAKES *the loudest this place takes
+          it* ZERO** — `docs/decisions/0189-a-place-is-what-it-does-not-play.md`. Saurian Belt closes
+          six. The audition then hands back silence for exactly the layers a session working on that
+          place needs to hear, which is 0129's own defect — *"trim × 0 is 0, so the layers the ladder
+          has closed were unreachable, and those are exactly the ones worth auditioning"* — one table
+          later. `loudestGain` falls back to the SHARED ladder at this place's colour, and this is
+          that rule written out rather than the function's own arithmetic repeated.
+
+          ⚠️ **THE TWO BRANCHES ARE BOTH DRIVEN BY REAL DATA**, which is what keeps this a guard: six
+          places reach the first and Saurian Belt's six closed layers reach the second.
+          `node scripts/prove-guard.mjs 0189-audition` deletes the fallback and watches this go red.
+        */
+        const own = Math.max(...MUSIC_LEVELS.map((rung) => rungOf(theme, rung, layer)));
+        const shared = Math.max(...MUSIC_LEVELS.map((rung) => rungIn(undefined, rung, layer)));
+        const want = (own > 0 ? own : shared) * mixOf(theme, layer);
         expect(loudestGain(theme, layer), `${theme}/${layer}`).toBeCloseTo(want, 10);
       }
     }

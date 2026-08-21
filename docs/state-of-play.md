@@ -687,7 +687,7 @@ is worse than no marker, because it reads exactly like a live one — the same f
 this heading when it stops being true rather than adding another one below it.**
 
 **THE WORK IS A DRIVING SESSION. EVERYTHING ELSE IS WAITING ON AN EAR.** Between 2026-08-19 and
-2026-08-20, **seven decisions landed on the sound** and every one of them was either a wall coming
+2026-08-21, **eight decisions landed on the sound** and every one of them was either a wall coming
 down or a defect the player reported. `npm run dash`.
 
 ```
@@ -698,19 +698,29 @@ down or a defect the player reported. `npm run dash`.
 0186  Saurian's gesture          the chord is a gate, not a pad; nine of 23 slots still shared with Nebula
 0187  the kick is the pulse      the arrangement called the drums a BED; three places had worked around it by hand
 0188  four own slots             a place can have an instrument no other place has — Saurian has the first
+0189  a place is what it does    Saurian closes six layers; the axis six decisions of measurement could not see
+      NOT play
 ```
 
 ⚠️ **WHAT THE PLAYER HAS SAID, IN ORDER, AND WHAT IS STILL OPEN.** *"The background beat of saurian
 belt sounds pretty good now"* — 0185 landed. *"The chords and groove are pretty similar to ember
-nebula"* — 0186. *"Sub and engine in a lot of places are barely audible"* — 0187. **Nothing since 0186
-has been heard.** The aura ceilings (0183), Saurian's gated chord (0186), the lifted kick (0187) and
-the raptor call (0188) are all unheard, and three of the four change what a level sounds like.
+nebula"* — 0186. *"Sub and engine in a lot of places are barely audible"* — 0187. Then a desk state
+and a brief — *"eurobeat styling with a junglebeat overtone"* — which is
+[0189](decisions/0189-a-place-is-what-it-does-not-play.md). **Nothing since 0186 has been heard.** The
+aura ceilings (0183), the lifted kick (0187), the raptor call (0188) and the whole of 0189 are all
+unheard, and every one of them changes what a level sounds like.
 
-⚠️ **AND THE ONE MEASUREMENT THAT NOW MATTERS MOST IS `node scripts/weigh-gesture.mjs`** — 0186's
-instrument. It says **nine of twenty-three slots are filled the same way** by Ember Nebula and
-Saurian Belt: same strike rate, same note length, same lowest note. Neither place inherited them;
-both authored their own and arrived at the same instrument. **That is the sameness the player keeps
-reporting**, and 0188's four own slots are the first thing that can do something about it.
+⚠️ **AND THE PLAYER CORRECTED THE PROJECT'S IDEA OF SAMENESS, WHICH IS 0189's SUBJECT** —
+*"the manual adjustments I made… make saurian sound completely different to every other level, so
+there's a marked difference in what you consider 'sameness' and what I consider 'sameness'."*
+**Read [0189](decisions/0189-a-place-is-what-it-does-not-play.md) before proposing any further
+differentiation work**: six decisions moved timbre and the report outlived all six.
+
+⚠️ **AND `node scripts/weigh-gesture.mjs` IS THE INSTRUMENT THAT CANNOT SEE IT.** 0186's, and it
+still says **nine of twenty-three slots are filled the same way** by Ember Nebula and Saurian Belt.
+It compares layers two places BOTH open, so a place that differs by what it closes is invisible to
+it — [0189](decisions/0189-a-place-is-what-it-does-not-play.md) has the argument. The number is a
+true reading of a question that turned out not to be the one being asked.
 
 ⚠️ **AND THE MIX IS NOW MEASURED AGAINST THE ARRANGEMENT RATHER THAN AGAINST AN EAR** —
 [0164](decisions/0164-a-role-is-a-promise-the-mix-has-to-keep.md). `node scripts/weigh-adrift.mjs`
@@ -885,12 +895,10 @@ name, pan, bar length and role tell every author what to write.** The player nam
 the same session: *"these are the exact kind of similarity issues that are blocking some of the
 differences I want on different levels."*
 
-⚠️ **SO THE NEXT PIECE OF WORK IS PER-PLACE SLOTS, AND IT IS NOT STARTED.** The shape proposed and not
-yet chosen: keep `MUSIC_LAYERS` closed ([0016](decisions/0016-a-hub-enumerates-kinds.md)) and add a
-few slots with **no identity of their own**, whose pan, bar length and role each place declares — the
-shape `ladder` already has since [0162](decisions/0162-a-place-has-its-own-ladder.md). `LAYER_PAN`,
-`LAYER_BARS` and `ARRANGEMENT` are global `Record`s today and are what it costs. **Ask before
-building: the count is a guess.**
+⚠️ **THAT WAS ANSWERED BY [0188](decisions/0188-a-place-owns-four-slots.md) AND THEN OVERTAKEN BY
+[0189](decisions/0189-a-place-is-what-it-does-not-play.md).** Four own slots exist; Saurian Belt fills two of them.
+**But the differentiation the player actually reports came from closing six layers rather than from
+adding any**, which is the sentence to carry forward.
 
 ⚠️ **AND THE ARRANGEMENT SAID THE DRUMS WERE FURNITURE** —
 [0187](decisions/0187-the-kick-is-the-pulse.md), answering *"sub and engine in a lot of places are
@@ -909,13 +917,6 @@ says works. Capping `drone` and `auraSlow` bought the kick 1.0–1.7 dB **and pu
 adrift of its own `air` role.** Filtering is the wrong lever; each layer's job needs re-deciding.
 **Start from 0187's measurement, not from the idea.**
 
-⚠️ **AND THE NEXT THING THE PLAYER ASKED FOR IS PER-PLACE LAYER SLOTS, AGREED AND NOT STARTED** —
-*"can we add different layers? these are the exact kind of similarity issues that are blocking some of
-the differences I want on different levels."* The shape proposed: keep `MUSIC_LAYERS` closed
-([0016](decisions/0016-a-hub-enumerates-kinds.md)) and add a few slots with **no identity of their
-own**, whose pan, bar length and role each place declares. `LAYER_PAN`, `LAYER_BARS` and `ARRANGEMENT`
-are global `Record`s and are what it costs. **The count is a guess — ask.**
-
 ⚠️ **AND A PLACE CAN OWN AN INSTRUMENT NOW** — [0188](decisions/0188-a-place-owns-four-slots.md),
 answering *"can we add different layers? these are the exact kind of similarity issues that are
 blocking some of the differences I want on different levels."* Four slots — `ownA`–`ownD` — with **no
@@ -927,6 +928,25 @@ it. **Saurian Belt has the first: a raptor call, and it is the only pitch-bend i
 LAYER — *"a place may change what a layer plays and not where it is"* — with a guard behind it and
 Ember Nebula's cathedral bell as the story. Own slots are centred and four bars. **A place that wants
 its own instrument off to one side has to argue with that rule, not route around it.**
+
+⚠️ **AND SAURIAN BELT NOW CLOSES SIX LAYERS, WHICH IS THE AXIS NONE OF THE ABOVE WAS MEASURING** —
+[0189](decisions/0189-a-place-is-what-it-does-not-play.md), answering *"this is what I want the saurian level to
+sound like, eurobeat styling with a junglebeat overtone"* and the correction that followed it. **Read
+the decision before proposing differentiation work of any kind.** `drone`, `chords`, `call`,
+`lead`, `counter` and `ride` are shut; `groove` is re-voiced as a jungle bass and `ownB` is a
+break. 0185's octave bass and 0186's gated chord are both silent in the place they were written for,
+and the player chose that with both named.
+
+⚠️ **THREE THINGS THE DESK ASKED FOR DID NOT SHIP, AND ONE OF THEM IS THE NEXT ARGUMENT.** `arp`
+receding at `surge` is a duck and [0167](decisions/0167-a-build-does-not-duck.md) refuses it — the
+second time this place has hit that wall. **`perc` panned R 0.50 is refused by `LAYER_PAN` being
+global**, and it is the loudest layer in the place sitting hard left with `arp`. That is a real
+complaint about the field, and the paragraph two above is the rule it has to argue with.
+
+⚠️ **AND THE CLIP GUARD IS THE ONE TO WATCH ON THE NEXT SAURIAN PASS.** The driven levels clamped
+**0.46%** of samples at `bossPeak` against a guard of 0.05%; it ships at **0.0405%**, which is a
+thinner margin than anything else in the game. [0189](decisions/0189-a-place-is-what-it-does-not-play.md) has what
+moved it and what did not — the placement fix that measured green is the part worth reading.
 
 ⚠️ **AND FOUR IS THE NUMBER BECAUSE OF THE RESIDENT CEILING.** `tests/sound.test.ts` holds the loops
 under 56 MB; twenty-three layers is 48.0 and four four-bar slots is **52.5**. Four EIGHT-bar slots is

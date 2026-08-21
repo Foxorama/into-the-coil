@@ -24,7 +24,16 @@ export const PROBES = [
     guard: 'THE ONE THAT CANNOT BE RECOVERED FROM: a slot a place OPENS has voices and a role at that rung',
     edit: {
       path: 'src/content/arrangement.ts',
-      find: "  saurian: { surge: { ownA: 'counter' }, approach: { ownA: 'counter' } },",
+      // Re-anchored by 0189, which opened `ownB` at every rung and gave it a role at each.
+      find:
+        "  saurian: {\n" +
+        "    run: { ownB: 'pulse' },\n" +
+        "    push: { ownA: 'counter', ownB: 'pulse' },\n" +
+        "    surge: { ownA: 'counter', ownB: 'pulse' },\n" +
+        "    approach: { ownA: 'counter', ownB: 'pulse' },\n" +
+        "    boss: { ownB: 'pulse' },\n" +
+        "    bossPeak: { ownB: 'pulse' },\n" +
+        "  },",
       replace: '  saurian: {},',
     },
   },
@@ -56,12 +65,22 @@ export const PROBES = [
     broke: 'no place filling a slot, so the whole mechanism is guarded by nothing',
     guard: 'AND AT LEAST ONE PLACE ACTUALLY FILLS ONE, or this whole mechanism is guarded by nothing',
     edit: {
-      path: 'src/content/saurian.ts',
-      // ⚠️ THE SAME EDIT AS THE BREAK ABOVE, NAMING THE OTHER GUARD IT REDDENS. One identifier takes
-      // the instrument out of the slot, and two separate claims fail: the slot is opened with nothing
-      // in it, and no place fills one at all.
-      find: '  ownA: [',
-      replace: '  ownAUnused: [',
+      path: 'src/content/themes.ts',
+      /*
+        ⚠️ IT WAS THE SAME ONE-IDENTIFIER EDIT AS THE BREAK ABOVE AND 0189 MADE IT A WRONG TEST.
+        Renaming `ownA` used to leave zero filled slots in the whole game; Saurian Belt fills
+        `ownB` as well now — the jungle break — so the claim *no place fills one* stayed TRUE, this
+        guard stayed GREEN, and `npm run prove` reported the break landing on somebody else's
+        assertion. **A probe can be stranded by a decision that never touches it**, which is
+        docs/decisions/0019-a-probe-must-be-seen-to-apply.md's subject reached from a third side: the
+        anchor still applied, the code still broke, and the claim quietly stopped being about it.
+
+        ⚠️ SO IT TAKES THE WHOLE TABLE AWAY RATHER THAN ONE SLOT, which is the only edit that still
+        makes the sentence false — and it is a plausible one: a place's `voices` line is one
+        identifier, and dropping it is how a place goes back to the base composition by accident.
+      */
+      find: '    voices: SAURIAN_VOICES,',
+      replace: '    voices: {},',
     },
   },
 ];

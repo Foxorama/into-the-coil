@@ -48,7 +48,7 @@ import {
 } from '../src/content/music.ts';
 import { LEVELS, type LevelKind } from '../src/content/levels.ts';
 import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
-import { THEMES, THEME_KINDS, mixOf, rungOf, type ThemeKind, type ThemeLadder } from '../src/content/themes.ts';
+import { THEMES, THEME_KINDS, mixOf, rungIn, rungOf, type ThemeKind, type ThemeLadder } from '../src/content/themes.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { UPGRADE_TIERS, weaponFor, type UpgradeKind, type Weapon } from '../src/content/pickups.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -640,11 +640,44 @@ export function removeSection(sections: LevelSections, index: number): LevelSect
  * the place's multiplier and the aura's ceiling, exactly as `targetGain` composes them. A flat 0.8
  * would have been simpler and would make every layer sound equally important, which is a lie about
  * a mix.
+ *
+ * ── AND A PLACE MAY NOW CLOSE A LAYER AT EVERY RUNG, WHICH HANDED BACK SILENCE ──────────────────
+ *
+ * ⚠️ **`docs/decisions/0189-a-place-is-what-it-does-not-play.md`.** Saurian Belt closes six layers
+ * outright. Over its own ladder the loudest `chords` is taken at is **zero**, so the one-click
+ * audition — the button 0130 exists to provide — was silent for exactly the six layers a session
+ * working on that place most needs to hear.
+ *
+ * ⚠️ **IT IS 0129's OWN DEFECT, ONE TABLE LATER.** That decision made a hold absolute because
+ * *"trim × 0 is 0, so the fourteen layers the ladder has closed at any given rung were unreachable,
+ * and those are exactly the ones worth auditioning."* The same sentence is true of a layer a PLACE
+ * closes, and the fix has to be the same shape: reach past the zero rather than accept it.
+ *
+ * ⚠️ **THE FALLBACK IS THE SHARED LADDER AND NOT A NUMBER**, which keeps 0130's rule intact — it is
+ * still composed from the game's own tables, and it answers the question the button asks: *what
+ * would this layer sound like here.* The place's own multiplier still applies, so an audition of
+ * `chords` in Saurian Belt is Saurian Belt's supersaw at Saurian Belt's colour.
  */
 export function loudestGain(theme: ThemeKind, layer: MusicLayer): number {
   let most = 0;
   for (const rung of MUSIC_LEVELS) {
     const at = targetGain(theme, rung, layer, 1);
+    if (at > most) most = at;
+  }
+  if (most > 0) return most;
+  /*
+    ⚠️ **THROUGH `rungIn` WITH NO LADDER, WHICH IS THE SANCTIONED WAY TO SAY *the shared row*.**
+    `targetGain` cannot be asked for it — it routes through `rungOf`, the one reader of `THEMES`
+    (0162), which would answer zero again — and a raw `MUSIC_LADDER[…]` here is refused by
+    `tests/dash.test.ts`, whose scan covers `rig/` as well as `src/`. That guard is about reading
+    the shared row where the PLACE's was meant; this wants the shared row on purpose, and 0162 has a
+    function that says so.
+
+    ⚠️ **The aura pair cannot reach here**: their gain is a distance the player steers (0091), so
+    `targetGain` above already takes them at a boss at arm's length and neither is ever zero.
+  */
+  for (const rung of MUSIC_LEVELS) {
+    const at = rungIn(undefined, rung, layer) * mixOf(theme, layer);
     if (at > most) most = at;
   }
   return most;
