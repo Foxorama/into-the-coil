@@ -46,13 +46,12 @@ export const PROBES = [
       // ⚠️ RE-ANCHORED BY 0186, which raised `dread` at `bossPeak` and added `chords` to two rows.
       // The break is unchanged — the place's own rungs above `surge` taken away.
       find:
-        // Re-anchored again by 0189, which rewrote every row of this ladder. The break is the
-        // same one across all three decisions: the rungs above `surge` taken away, so the shared
-        // row answers for `toll`, `dread` and `drive` and the brief's two halves go back under
-        // the kit.
-        "      approach: { drone: 0, chords: 0, lead: 0, counter: 0, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, ownB: 1.62, ownA: 1, arp: 0.9, toll: 1.6, dread: 1.7 },\n" +
-        "      boss: { drone: 0, ride: 0, sub: 1.5, engine: 1.68, perc: 2.21, drive: 1.25, ownB: 1.62, toll: 1.35, dread: 1.6, frenzy: 1.1, wraith: 1.2, stomp: 0.95 },\n" +
-        "      bossPeak: { drone: 0, ride: 0, sub: 1.6, engine: 1.68, perc: 2.21, drive: 1.25, ownB: 1.62, toll: 1.35, dread: 1.85, frenzy: 1.2, wraith: 1.3, stomp: 1 },",
+        // Re-anchored a third time by 0191, which put the player's own desk state back into every
+        // row. The break has survived all four: the rungs above `surge` taken away, so the shared
+        // row answers for `toll`, `dread` and `drive`.
+        "      approach: { drone: 0, chords: 0, lead: 0, counter: 0, groove: 0, bass: 1.62, beat: 1.62, ride: 0.42, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, ownA: 1, arp: 0.9, toll: 1.6, dread: 1.7 },\n" +
+        "      boss: { drone: 0, bass: 1.62, beat: 1.62, ride: 0.42, sub: 1.5, engine: 1.68, perc: 2.21, drive: 1.25, toll: 1.35, dread: 1.6, frenzy: 1.1, wraith: 1.2, stomp: 0.95 },\n" +
+        "      bossPeak: { drone: 0, bass: 1.62, beat: 1.62, ride: 0.42, sub: 1.6, engine: 1.68, perc: 2.21, drive: 1.25, toll: 1.35, dread: 1.85, frenzy: 1.2, wraith: 1.3, stomp: 1 },",
       replace: '',
     },
   },

@@ -701,6 +701,7 @@ down or a defect the player reported. `npm run dash`.
 0189  a place is what it does    Saurian closes six layers; the axis six decisions of measurement could not see
       NOT play
 0190  a place owns what it kills  cues were one flat table with no idea what a theme was
+0191  a place sits somewhere      0189 shipped the wrong track; the two mechanisms that made it wrong
 ```
 
 ⚠️ **WHAT THE PLAYER HAS SAID, IN ORDER, AND WHAT IS STILL OPEN.** *"The background beat of saurian
@@ -929,6 +930,23 @@ it. **Saurian Belt has the first: a raptor call, and it is the only pitch-bend i
 LAYER — *"a place may change what a layer plays and not where it is"* — with a guard behind it and
 Ember Nebula's cathedral bell as the story. Own slots are centred and four bars. **A place that wants
 its own instrument off to one side has to argue with that rule, not route around it.**
+
+⚠️ **AND 0189 SHIPPED THE WRONG TRACK, WHICH IS THE FIRST THING TO READ** — [0191](decisions/0191-a-place-sits-somewhere.md).
+Reported: *"the dashboard saurian level is not what I was after at all… the changes with chords and
+groove just bring it back to the sameness of the previous levels."* **`chords` was not the cause and
+`groove` was** — the player closed it and 0189 opened it, moving their sound out of `bass` and
+`beat`, which no other place sounds, into the slot all seven open. **It did that to keep a guard
+green**, and 0189's own text says it was the second decision to step around that guard.
+
+⚠️ **SO TWO MECHANISMS LANDED WITH THE REVERT.** `ARRANGEMENT` may name a layer ANY place opens, so
+the two that make this level different can have roles at all; and a place states a `trim` — one
+number over everything it plays — so a mix can be moved off the bus without touching a ratio. **Read
+[0191](decisions/0191-a-place-sits-somewhere.md) before proposing anything about Saurian Belt.**
+
+⚠️ **AND ITS KNOWN-ADRIFT LIST IS THIRTEEN WHERE 0186 GOT IT TO ZERO.** That is a verdict rather than
+a regression: the mix is the player's, their bass is the loudest thing in three bands, and *"ship it
+as I drove it"* was the answer when the numbers were put to them. **The four `sub` entries are the
+first to delete if the kick is ever reported missing.**
 
 ⚠️ **AND SAURIAN BELT NOW CLOSES SIX LAYERS, WHICH IS THE AXIS NONE OF THE ABOVE WAS MEASURING** —
 [0189](decisions/0189-a-place-is-what-it-does-not-play.md), answering *"this is what I want the saurian level to

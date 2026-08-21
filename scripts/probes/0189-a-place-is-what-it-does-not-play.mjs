@@ -84,7 +84,8 @@ export const PROBES = [
     guard: 'and no theme at any rung drives the bus past full scale',
     edit: {
       path: 'src/content/themes.ts',
-      find: '      bossPeak: { drone: 0, ride: 0, sub: 1.6, engine: 1.68, perc: 2.21, drive: 1.25, ownB: 1.62, toll: 1.35, dread: 1.85, frenzy: 1.2, wraith: 1.3, stomp: 1 },',
+      // Re-anchored by 0191, which restored the player's driven state to every row.
+      find: '      bossPeak: { sub: 1.331 },',
       replace: '      bossPeak: { drone: 0, ride: 0, sub: 2.3, engine: 1.72, perc: 2.26, drive: 1.62, ownB: 1.76, toll: 1.5, dread: 4.2, frenzy: 1.6, wraith: 1.7, stomp: 2 },',
     },
   },

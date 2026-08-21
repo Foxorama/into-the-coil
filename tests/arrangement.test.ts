@@ -23,7 +23,7 @@ import {
   SOLVED_BY,
 } from '../src/content/arrangement.ts';
 import { MUSIC_LADDER, MUSIC_LAYERS, MUSIC_LEVELS, type MusicLevel } from '../src/content/music.ts';
-import { THEME_KINDS } from '../src/content/themes.ts';
+import { THEME_KINDS, rungOf } from '../src/content/themes.ts';
 
 describe('0154 — the mix is authored as intent', () => {
   it('THE ONE THAT CANNOT BE RECOVERED FROM: exactly one layer is followed at a rung', () => {
@@ -56,11 +56,36 @@ describe('0154 — the mix is authored as intent', () => {
       for (const layer of sounds) {
         expect(named, `${rung} sounds ${layer} and the arrangement does not say what it is for`).toContain(layer);
       }
+      /*
+        ── AND *THE LADDER* MEANS ANY PLACE'S NOW, NOT THE SHARED ROW ────────────────────────────
+
+        ⚠️ **`docs/decisions/0191-the-arrangement-names-what-any-place-opens.md`.** This read
+        `MUSIC_LADDER` and was correct while every place played the shared shape. Since
+        `docs/decisions/0162-a-place-has-its-own-ladder.md` a place may open a layer the shared row
+        closes — and this assertion then made it **impossible to give that layer a role**, because the
+        shared row answers zero. A layer with no role is outside
+        `docs/decisions/0164-a-role-is-a-promise-the-mix-has-to-keep.md` entirely: nothing checks it
+        can be heard.
+
+        ⚠️ **IT COST A LEVEL, WHICH IS WHY IT IS BEING FIXED RATHER THAN ROUTED AROUND.** 0189 wanted
+        Saurian Belt to open `bass` and `beat` — the two layers no other place sounds, and the whole
+        of what made that level sound different — and moved the sound into `groove` and an own slot
+        instead, precisely to keep this assertion green. `groove` is the slot all seven places open,
+        so the level came back sounding like the others. **Reported:** *"the changes with chords and
+        groove just bring it back to the sameness of the previous levels."*
+
+        ⚠️ **WHAT IS KEPT IS THE CLAIM AND NOT THE TABLE IT READ.** A role for a layer NOBODY ever
+        opens is still refused — that is the defect this guard exists for, and it is what
+        `openSomewhere` still asserts. What is admitted is a role for a layer exactly one place
+        opens, which is what a per-place ladder means.
+      */
       for (const layer of named) {
+        const openSomewhere =
+          MUSIC_LADDER[rung][layer] > 0 || THEME_KINDS.some((theme) => rungOf(theme, rung, layer) > 0);
         expect(
-          MUSIC_LADDER[rung][layer],
-          `the arrangement gives ${layer} a role at ${rung} and the ladder never opens it there`,
-        ).toBeGreaterThan(0);
+          openSomewhere,
+          `the arrangement gives ${layer} a role at ${rung} and no place opens it there`,
+        ).toBe(true);
       }
     }
   });
@@ -111,10 +136,17 @@ describe('0154 — the mix is authored as intent', () => {
     for (const theme of THEME_KINDS) {
       for (const [rung, lead] of Object.entries(LEADS[theme])) {
         const level = rung as MusicLevel;
-        // A lead the ladder never opens is a place following silence.
+        /*
+          ⚠️ **A lead the ladder never opens is a place following silence** — and *the ladder* is THIS
+          PLACE'S, which is 0191 correcting the same read one assertion above. The shared row is not
+          the authority on what Saurian Belt opens and has not been since
+          `docs/decisions/0162-a-place-has-its-own-ladder.md`; asking it here would refuse a place the
+          right to follow the very layer that makes it different, and asking it in a place that CLOSES
+          its lead would pass one that is following silence for real.
+        */
         expect(
-          MUSIC_LADDER[level][lead],
-          `${theme} follows ${lead} at ${rung} and the ladder never opens it there`,
+          rungOf(theme, level, lead),
+          `${theme} follows ${lead} at ${rung} and does not open it there`,
         ).toBeGreaterThan(0);
         // And it has to actually be the part once named, with the displaced one stepping down.
         expect(roleOf(theme, level, lead), `${theme}'s ${lead} is not the part at ${rung}`).toBe('part');

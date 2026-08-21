@@ -21,7 +21,11 @@ export const PROBES = [
     guard: 'THE ONE THAT CANNOT BE RECOVERED FROM: exactly one layer is followed at a rung',
     edit: {
       path: 'src/content/arrangement.ts',
-      find: "    part: ['hook'],\n    counter: ['arp', 'lead', 'call'],",
+      // Re-anchored by 0191, which named `bass` in every fight rung so a layer only one place
+      // opens can have a role at all. The break is unchanged: a second thing named as the part.
+      find:
+        "    part: ['hook'],\n" +
+        "    counter: ['arp', 'lead', 'call', 'bass'],",
       replace: "    part: ['hook', 'arp'],\n    counter: ['lead', 'call'],",
     },
   },
@@ -57,7 +61,13 @@ export const PROBES = [
       // ⚠️ RE-ANCHORED BY 0187, which moved `sub` and `engine` out of the bed and into the pulse.
       // The break is unchanged: a layer the ladder opens with nothing in the arrangement saying what
       // it is for.
-      find: "    pulse: ['sub', 'engine', 'perc', 'ride'],\n    bed: ['chords', 'groove'],\n    air: ['drone'],\n  },\n  // The counter-melody takes over",
+      // Re-anchored by 0191 — `beat` and `crash` joined this row for the same reason.
+      find:
+        "    pulse: ['sub', 'engine', 'perc', 'ride', 'beat', 'crash'],\n" +
+        "    bed: ['chords', 'groove'],\n" +
+        "    air: ['drone'],\n" +
+        "  },\n" +
+        "  // The counter-melody takes over",
       replace: "    pulse: ['sub', 'engine', 'perc'],\n    bed: ['chords', 'groove'],\n    air: ['drone'],\n  },\n  // The counter-melody takes over",
     },
   },

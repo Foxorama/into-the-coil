@@ -93,7 +93,7 @@ export const PROBES = [
       //
       // ⚠️ AND RE-ANCHORED BY 0182, WHICH TOOK THE CLAMP OUT FROM BETWEEN THE TWO FACTORS. The line is
       // the same product with no `tint` local in front of it; the break is unchanged.
-      find: '  return (THEMES[theme].mix[layer] ?? 1) * (REBASE[theme][layer] ?? 1);',
+      find: '  return (THEMES[theme].mix[layer] ?? 1) * (REBASE[theme][layer] ?? 1) * (THEMES[theme].trim ?? 1);',
       replace: '  return 1;',
     },
   },

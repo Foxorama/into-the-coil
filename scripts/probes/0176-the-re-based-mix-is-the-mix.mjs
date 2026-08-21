@@ -34,7 +34,7 @@ export const PROBES = [
     guard: 'and an unstated layer is left alone, times the balance the player chose',
     edit: {
       path: 'src/content/themes.ts',
-      find: '  return (THEMES[theme].mix[layer] ?? 1) * (REBASE[theme][layer] ?? 1);',
+      find: '  return (THEMES[theme].mix[layer] ?? 1) * (REBASE[theme][layer] ?? 1) * (THEMES[theme].trim ?? 1);',
       replace: '  return THEMES[theme].mix[layer] ?? 1;',
     },
   },
@@ -45,7 +45,7 @@ export const PROBES = [
     guard: '0164 — NO LAYER SITS A WHOLE ROLE UNDER THE ONE THE ARRANGEMENT GAVE IT',
     edit: {
       path: 'src/content/themes.ts',
-      find: '  return (THEMES[theme].mix[layer] ?? 1) * (REBASE[theme][layer] ?? 1);',
+      find: '  return (THEMES[theme].mix[layer] ?? 1) * (REBASE[theme][layer] ?? 1) * (THEMES[theme].trim ?? 1);',
       // ⚠️ THE BAND IS TYPED HERE NOW, BECAUSE 0182 DELETED THE CONSTANTS. The break is what it
       // always was — the balance clamped at the old ceiling — and the point it makes is the one
       // that ended the wall: 2.6 against a re-base running to 12.19 re-buries what 0164 counts.
