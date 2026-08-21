@@ -95,6 +95,29 @@ refused because it is already open at their `run` and making it an arrival would
 there, and `crash` was taken because it is additive, touches nothing below it, and a crash on the drop
 is the most eurobeat gesture there is.
 
+## ⚠️ Two probes rotted on this, in two ways neither of them is about
+
+⚠️ **[0189](0189-a-place-is-what-it-does-not-play.md)'S ENVELOPE BREAK IS RETIRED, AND `trim` IS WHAT
+RETIRED IT.** Putting the hand drum's 1 ms attack and its old saturation back used to carry
+`bossPeak` past the clip guard; with the whole place 1.4 dB down it no longer does, and
+`npm run prove` said **STILL GREEN**. The material change stands — a softer attack under two kicks is
+right whether or not a guard is watching — but the claim that it is what keeps the bus inside full
+scale is no longer true.
+
+⚠️ **AND THE CASCADE BREAK WAS REPAIRED ONTO THE WRONG LEVEL.** Re-anchoring it used a regex for the
+first `bossPeak:` row in `src/content/themes.ts`, which is **Ember Nebula's**. The probe rewrote a
+place this decision is not about, the clip guard went red, and the run reported a pass. **Right guard,
+wrong subject** — which is precisely what 0190 records about 0089 firing on a cue's crack instead of
+its body, committed here while repairing an anchor and caught only because the failure named a theme
+that had no business being in it.
+
+⚠️ **THAT IS THREE ROT MODES IN TWO DAYS AND NONE OF THEM MOVED THE CODE THE PROBE POINTS AT** —
+0188's went stale when a later decision filled a second own slot, 0186's when a later decision closed
+the layer it was about, 0189's when a later decision made its quantity comfortable.
+`tests/prove-guard.test.ts` checks that an anchor is present and unique and cannot see any of them.
+**Only the full `npm run prove` can**, which is the argument for running it before every push rather
+than trusting the suite.
+
 ## What this reverts
 
 The jungle bassline, the `ownB` break and the raptor call 0189 added at `push` are **deleted**;

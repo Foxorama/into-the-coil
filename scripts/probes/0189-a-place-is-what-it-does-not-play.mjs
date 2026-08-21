@@ -33,33 +33,28 @@ export const PROBES = [
       replace: '  return most;',
     },
   },
-  {
-    decision: '0189',
-    suite: 'tests/themes.test.ts',
-    /*
-      ⚠️ THE HAND DRUM'S ENVELOPE PUT BACK, AND IT IS THE LINE THAT MOVES THE NUMBER. The first
-      version of this probe re-placed the drum ON THE BEAT as well — the defect the decision's own
-      comment describes — and the suite STAYED GREEN, which is how the split below came to be
-      measured at all. Re-placing it is worth 0.02 of the 0.41 points; this envelope is worth 0.011
-      on its own and is what carries `bossPeak` past the guard.
+  /*
+    ── THE ENVELOPE BREAK IS RETIRED, AND WHAT RETIRED IT IS A LATER DECISION'S FIX ───────────────
 
-      ⚠️ SO THE PROBE POINTS AT THE FIX RATHER THAN AT THE STORY, which is the whole of
-      docs/decisions/0019-a-probe-must-be-seen-to-apply.md. A break aimed at the sentence a decision
-      is proudest of, that reddens nothing, is worse than no probe: it reports that the guard is
-      watching something it is not.
+    ⚠️ docs/decisions/0191-a-place-sits-somewhere.md gave this place a `trim` — the whole of Saurian
+    Belt 1.4 dB down — so the bus has headroom the envelope used to be buying. Putting the hand drum's
+    1 ms attack and its old saturation back now reads **under** the clip guard rather than over it,
+    and `npm run prove` reported STILL GREEN on the run after 0191 landed.
 
-      ⚠️ AND IT IS THE UNIT A LISTENER IS IN — docs/decisions/0027-measure-the-picture-not-the-model.md.
-      The guard reads the share of SAMPLES pushed past full scale, which is heard as the drums
-      flattening, rather than a model quantity defined in terms of the constant it guards.
-    */
-    broke: "the hand drum's attack and saturation put back, so its transients reach the shaper's clamp",
-    guard: 'and no theme at any rung drives the bus past full scale',
-    edit: {
-      path: 'src/content/saurian.ts',
-      find: "note: { wave: 'sine', from: 188, to: 106, seconds: 0.22, gain: 0.34, attack: 0.004, curve: 4.2, drive: 0.42 },",
-      replace: "note: { wave: 'sine', from: 188, to: 106, seconds: 0.22, gain: 0.38, attack: 0.001, curve: 4.2, drive: 0.2 },",
-    },
-  },
+    ⚠️ THE MATERIAL CHANGE STANDS AND IS NOT REVERTED WITH THE PROBE. A softer attack on a hand drum
+    under two kicks is right whether or not a guard is watching; what is gone is the claim that this
+    line is what keeps the bus inside full scale, because it is not any more.
+
+    ⚠️ AND IT IS THE THIRD WAY A PROBE HAS ROTTED IN TWO DAYS, WHICH IS WORTH THE COUNT. 0188's went
+    stale because a later decision filled a second slot; 0186's because a later decision closed the
+    layer it was about; this one because a later decision made its quantity comfortable. **None of
+    the three moved the code the probe points at.** docs/decisions/0019-a-probe-must-be-seen-to-apply.md
+    catches all three and only on the full run.
+
+    ⚠️ WHAT 0189 STILL OWNS IS THE CASCADE BREAK BELOW, which reddens the same guard by the same
+    arithmetic and is the half that was always the bigger of the two.
+  */
+
   {
     decision: '0189',
     suite: 'tests/themes.test.ts',
@@ -85,7 +80,14 @@ export const PROBES = [
     edit: {
       path: 'src/content/themes.ts',
       // Re-anchored by 0191, which restored the player's driven state to every row.
-      find: '      bossPeak: { sub: 1.331 },',
+      /*
+        ⚠️ RE-ANCHORED BY 0191, AND THE FIRST ATTEMPT AT IT POINTED AT THE WRONG PLACE. A regex for
+        the first `bossPeak:` row in the file matches EMBER NEBULA's, so the break rewrote a level
+        this decision is not about — and it went red anyway, on the right guard, for a reason that
+        proves nothing. That is the failure this decision's own text describes about 0089 firing on
+        the wrong layer, committed while repairing an anchor.
+      */
+      find: 'bossPeak: { drone: 0, bass: 1.62, beat: 1.62, ride: 0.42, sub: 1.6, engine: 1.68, perc: 2.21, drive: 1.25, toll: 1.35, dread: 1.85, frenzy: 1.2, wraith: 1.3, stomp: 1 },',
       replace: '      bossPeak: { drone: 0, ride: 0, sub: 2.3, engine: 1.72, perc: 2.26, drive: 1.62, ownB: 1.76, toll: 1.5, dread: 4.2, frenzy: 1.6, wraith: 1.7, stomp: 2 },',
     },
   },
