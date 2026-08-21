@@ -524,7 +524,21 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     aura: 0.45,
     mix: {
       groove: 2.2,
-      ride: 2.2,
+      /*
+        ⚠️ **2.2 → 0.4, AND IT IS THE ONE `mix` NUMBER 0189 MOVES** —
+        `docs/decisions/0189-a-place-is-what-it-does-not-play.md`. This was **8.43×** after the
+        re-base, the largest multiplier in the game, and it was that large for one reason: `ride` was
+        what this place FOLLOWED at `push` (`LEADS`), so 0164's role floor demanded the loudest hat
+        in any level. The desk closed it to a whisper and gave `push` to `arp`; a lead's multiplier
+        left on a layer that is no longer the lead is a number with no argument behind it.
+
+        ⚠️ **IN `mix` RATHER THAN IN THE LADDER, WHICH IS 0185's REASONING RUNNING THE OTHER WAY.**
+        That decision put its lifts in the ladder because `mix` is one number for the whole place and
+        lifting `drive` for `surge` cost the boss. This is the case that argument does not cover:
+        the change is wanted at **every** rung, and expressing it in the ladder means five entries of
+        0.076 — a value no reader can weigh against the 1.6s around it.
+      */
+      ride: 0.4,
       arp: 2.55,
       hook: 2.45,
       drive: 1.3,
@@ -555,12 +569,12 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       at all, in the one place whose brief is a dancefloor.
     */
     ladder: {
-      run: { chords: 0, ride: 0.42, groove: 0.95, perc: 0.8 },
-      push: { chords: 1.5, ride: 0.8, groove: 1.05, perc: 0.86 },
-      surge: { chords: 1.7, ride: 0.75, groove: 1.08, perc: 0.88, drive: 1.45, ownA: 1.35 },
-      approach: { chords: 1.7, toll: 1.6, dread: 1.5, drive: 1.55, ownA: 1.48, sub: 1.5, engine: 1.35 },
-      boss: { dread: 1.7 },
-      bossPeak: { dread: 2.9, drone: 1.25, sub: 1.499 },
+      run: { drone: 0, chords: 0, call: 0, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, groove: 1.078, drive: 1.25, ownB: 1.62 },
+      push: { drone: 0, chords: 0, call: 0, lead: 0, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, groove: 1.078, drive: 1.25, ownB: 1.62, arp: 0.832, hook: 0.42, ownA: 0.9 },
+      surge: { drone: 0, chords: 0, lead: 0, counter: 0, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, groove: 1.078, drive: 1.25, ownB: 1.62, arp: 0.832, hook: 0.954, ownA: 1 },
+      approach: { drone: 0, chords: 0, lead: 0, counter: 0, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, ownB: 1.62, ownA: 1, arp: 0.9, toll: 1.6, dread: 1.7 },
+      boss: { drone: 0, ride: 0, sub: 1.5, engine: 1.68, perc: 2.21, drive: 1.25, ownB: 1.62, toll: 1.35, dread: 1.6, frenzy: 1.1, wraith: 1.2, stomp: 0.95 },
+      bossPeak: { drone: 0, ride: 0, sub: 1.6, engine: 1.68, perc: 2.21, drive: 1.25, ownB: 1.62, toll: 1.35, dread: 1.85, frenzy: 1.2, wraith: 1.3, stomp: 1 },
     },
     /*
       ── THE THREE RUNGS ABOVE `surge` ARE 0185's, AND THEY ARE THE JURASSIC HALF ───────────────────

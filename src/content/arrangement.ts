@@ -248,8 +248,21 @@ export const LEADS: Record<ThemeKind, Partial<Record<MusicLevel, MusicLayer>>> =
     takes the push, and the thing that arrives in the fight is the howl rather than the tritone.
   */
   nebula: { run: 'chords', push: 'arp', approach: 'toll', boss: 'wraith' },
-  // *"The floor arrives… full hands-in-the-air… space laser dinosaur"* — bassline, kit, then lasers.
-  saurian: { run: 'groove', push: 'ride', surge: 'drive', approach: 'drive', boss: 'frenzy' },
+  /*
+    *"The floor arrives… full hands-in-the-air… space laser dinosaur"* — bassline, then the arp, then
+    the riff.
+
+    ⚠️ **`push` FOLLOWED `ride` AND `surge` FOLLOWED `drive`, AND NEITHER SURVIVES THE DESK** —
+    `docs/decisions/0189-a-place-is-what-it-does-not-play.md`. The hats are a whisper now and the
+    riff is what `surge` opens; a place that goes on naming a layer it has closed to 0.64 is
+    `LEADS`' own documented failure — *"a lead the ladder never opens is a place following silence"* —
+    one notch quieter and therefore not caught by that guard.
+
+    ⚠️ **`run` IS UNCHANGED AND THE MATERIAL UNDER IT IS NOT.** `groove` is the jungle bass now
+    rather than the octave bass, which is the same sentence about the level — *what you follow first
+    here is the bottom* — with a different instrument saying it.
+  */
+  saurian: { run: 'groove', push: 'arp', surge: 'hook', approach: 'drive', boss: 'frenzy', bossPeak: 'frenzy' },
   // *"A corridor, and something breathing in it… the hound"* — footsteps, then the thing running.
   labyrinth: { run: 'perc', push: 'ride', approach: 'toll', boss: 'stomp' },
   // *"It rings… it cracks… the blizzard"* — glass, then the lead, then the weather.
@@ -309,7 +322,25 @@ export const OWN_ROLES: Record<ThemeKind, Partial<Record<MusicLevel, Partial<Rec
     `surge` this place already follows `counter`; what the call does is answer over the floor, twice
     in four bars. `src/content/saurian.ts` has what it is.
   */
-  saurian: { surge: { ownA: 'counter' }, approach: { ownA: 'counter' } },
+  /*
+    ⚠️ **`ownB` IS A `pulse` AT EVERY RUNG THE PLACE SOUNDS IT, WHICH IS FIVE** — 0189. It is the
+    backbeat: a layer you keep time by rather than one you follow, which is what `pulse` means and
+    is the role `beat` carries in `TITLE_ARRANGEMENT` for the same reason.
+
+    ⚠️ **AND IT IS WHY THE BREAK IS HERE RATHER THAN IN `beat`.** `ARRANGEMENT` is global and its
+    fight rungs name neither `bass` nor `beat`, so a place opening one sounds a layer `roleOf`
+    answers `null` for — outside 0164 entirely, with nothing checking it can be heard. That is the
+    hole `docs/decisions/0172-a-place-opens-with-its-own-four.md` left in seven layer-rungs and
+    `docs/state-of-play.md` has been flagging since; 0189 does not widen it.
+  */
+  saurian: {
+    run: { ownB: 'pulse' },
+    push: { ownA: 'counter', ownB: 'pulse' },
+    surge: { ownA: 'counter', ownB: 'pulse' },
+    approach: { ownA: 'counter', ownB: 'pulse' },
+    boss: { ownB: 'pulse' },
+    bossPeak: { ownB: 'pulse' },
+  },
   labyrinth: {},
   rime: {},
   mire: {},
