@@ -15,7 +15,13 @@
 // ⚠️ IT FAILS LOUD, per the note in scripts/trace-frame.mjs: a tool whose only job is to produce an
 // artefact for a human must exit non-zero when it produces nothing.
 //
-// Usage:  node scripts/hear.mjs [--out=cues.wav] [--gap=0.35] [--only=kill,blast]
+// Usage:  node scripts/hear.mjs [--out=cues.wav] [--gap=0.35] [--only=kill,blast] [--place=saurian]
+//
+// ⚠️ --place IS OWED BY docs/decisions/0190-a-place-owns-what-it-kills.md AND WAS NEARLY LEFT OUT.
+// A place may re-voice seven of the fourteen cues, and this script read the flat `CUES` table — so
+// the first hand-authored cue in the game would have been audible to the test suite and to nothing a
+// person can run. docs/decisions/0184-the-measurement-reads-the-place.md is the record of what an
+// instrument reading the wrong table costs: six mix decisions made against a phantom.
 //                               [--music] [--play] [--solo [--rung=run]]
 //                               [--level=approach [--fight=45] [--gap-units=85] [--solved]]
 //
@@ -50,7 +56,7 @@ import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { MASTER_GAIN, SAMPLE_RATE, cueSeconds, sampleCue, saturate, variantAt, velocitiesOf } from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { bakeLoops } from '../src/app/music.ts';
-import { THEME_KINDS, rungOf } from '../src/content/themes.ts';
+import { THEME_KINDS, cueRowOf, rungOf } from '../src/content/themes.ts';
 import { SOLVED_BY } from '../src/content/arrangement.ts';
 import { profileOfLoops, solveLevel } from './solve-mix.mjs';
 import { PHRASE_SECONDS, BAR_SECONDS, LAYER_BARS, LAYER_PAN, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_DRIVE, MUSIC_GAIN, AURA_LAYERS, AURA_NEAR_UNITS, AURA_FAR_UNITS } from '../src/content/music.ts';
@@ -101,6 +107,16 @@ import { weaponAtTier } from '../rig/transport.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 
 const args = new Map(process.argv.slice(2).map((a) => a.replace(/^--/, '').split('=')));
+/*
+  ⚠️ THE PLACE, OR `undefined` FOR THE BASE COMPOSITION — 0190. `undefined` is not a fallback here,
+  it is the mode this script has always had: what every level shares, which is still what six of the
+  seven play.
+*/
+const place = args.get('place');
+if (place !== undefined && !THEME_KINDS.includes(place)) {
+  console.error(`unknown --place. Known: ${THEME_KINDS.join(', ')}`);
+  process.exit(1);
+}
 const root = fileURLToPath(new URL('..', import.meta.url));
 const out = resolve(root, args.get('out') ?? 'cues.wav');
 const gap = Number(args.get('gap') ?? 0.35);
@@ -534,7 +550,9 @@ if (args.has('play')) {
   */
   const baked = {};
   for (const kind of CUE_KINDS) {
-    baked[kind] = velocitiesOf(CUES[kind]).map((v) => sampleCue(CUES[kind], SAMPLE_RATE, makeRng('cues').stream(kind), v));
+    // ⚠️ THROUGH `cueRowOf` SINCE A PLACE MAY RE-VOICE A CUE — 0190, on 0184's terms.
+    const row = cueRowOf(place, kind);
+    baked[kind] = velocitiesOf(row).map((v) => sampleCue(row, SAMPLE_RATE, makeRng('cues').stream(kind), v));
   }
   const base = out.replace(/\.wav$/, '');
   const perStep = SAMPLE_RATE / STEPS_PER_SECOND;
@@ -668,7 +686,7 @@ let peak = 0;
 
 console.log(`cue           layers  seconds  gain  hold  twin`);
 for (const kind of kinds) {
-  const row = CUES[kind];
+  const row = cueRowOf(place, kind);
   // The same stream the game bakes this cue from — one per kind, per decision 0021.
   const samples = sampleCue(row, SAMPLE_RATE, makeRng('cues').stream(kind));
   for (const s of samples) peak = Math.max(peak, Math.abs(s));

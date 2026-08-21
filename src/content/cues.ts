@@ -124,6 +124,41 @@ export const CUE_KINDS = [
 export type CueKind = (typeof CUE_KINDS)[number];
 
 /**
+ * The cues a PLACE may re-voice. Seven of the fourteen, and the line between them is whose sound it is.
+ *
+ * ── EVERY LEVEL'S ENEMY DIED IDENTICALLY, AND NOTHING IN THIS FILE KNEW WHAT A PLACE WAS ────────
+ *
+ * ⚠️ **`docs/decisions/0190-a-place-owns-what-it-kills.md`**, answering *"I'll also need… different
+ * sounding enemy deaths per level and different attacks etc per level."* This file had **zero**
+ * references to a theme: `CUES` is one flat table, `bakeCues` took a rate and nothing else, and a
+ * drifter dying in Rime Shelf made the same noise as one dying in the Saurian Belt.
+ *
+ * ⚠️ **THE SHIP IS THE CONSTANT AND THE PLACE IS WHAT CHANGES AROUND IT**, which is the rule this
+ * list is. `pulse`, `missile`, `bomb`, `shield`, `death`, `pickup` and `chime` are the
+ * player's own and sound the same everywhere: a gun whose report changed with the biome would make
+ * the one instrument the player carries between places into a property of the place.
+ * `docs/decisions/0093-the-gun-is-on-the-grid.md` and
+ * `docs/decisions/0104-the-gun-plays-a-figure.md` both treat the gun as fixed, and this keeps them
+ * true. **What is here is everything that belongs to something the level owns.**
+ *
+ * ⚠️ **AND A PLACE STATES `layers` RATHER THAN A ROW, WHICH IS WHY THERE IS NO GUARD BELOW IT.**
+ * `twin`, `air`, `hold`, `duck`, `figure`, `gain` and `glue` are not what a Saurian enemy
+ * death SOUNDS like — they are what a cue is for, how it behaves on the grid, and how much room it
+ * is in. Making the override a voice list rather than a row makes changing them **unrepresentable**
+ * instead of refused, which is `docs/decisions/0016-a-hub-enumerates-kinds.md`'s own preference and
+ * one fewer table to keep honest.
+ */
+export const PLACE_CUES: readonly CueKind[] = [
+  'threat',
+  'hit',
+  'kill',
+  'blast',
+  'bossShot',
+  'bossPhase',
+  'bossDown',
+];
+
+/**
  * Every picture a cue is allowed to be the twin of. Closed, and that is the whole of its value.
  *
  * ⚠️ **A closed union rather than a string, so the compiler asks the question 0024 wanted asked.**

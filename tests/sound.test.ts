@@ -52,7 +52,7 @@ import {
 import { bakeLoops, layerNotes, musicLevelFor, placeFor } from '../src/app/music.ts';
 import { UNITS_PER_SECOND, rungMarks, targetGain } from '../scripts/timeline.mjs';
 import { AURA_LAYERS, MUSIC, MUSIC_LAYERS, secondsOfLayer, type MusicLayer } from '../src/content/music.ts';
-import { rungOf, THEME_KINDS, bakedBy, revoicedBy, type ThemeKind } from '../src/content/themes.ts';
+import { rungOf, THEME_KINDS, bakedBy, cueLayersOf, cueRowOf, cuedBy, revoicedBy, type ThemeKind } from '../src/content/themes.ts';
 import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { MISSILE_BEAT_RATIO, fireEveryAt, missileEveryAt } from '../src/content/pickups.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -681,7 +681,7 @@ describe('the cue table', () => {
         */
         warm();
         let handed: Record<MusicLayer, Float32Array> | null = null;
-        bakePlace('nebula', (loops) => {
+        bakePlace('nebula', ({ loops }) => {
           handed = loops;
         }, (run) => run());
         expect(handed, 'the place never finished, so this measured nothing').not.toBeNull();
@@ -727,6 +727,37 @@ describe('the cue table', () => {
         */
       }, 120_000);
 
+      it('0190 — AND THE BOUNDARY BAKE HANDS OVER THE PLACE’S OWN CUES, sharing the rest', () => {
+        /*
+          ⚠️ **`docs/decisions/0190-a-place-owns-what-it-kills.md`.** `bakePlace` walks the music and
+          the cues in ONE job list and hands both over together, because a boundary that swapped the
+          soundtrack and left the enemy deaths behind would be a place half arriving.
+
+          ⚠️ **THE SHARING IS THE ASSERTION AND NOT AN OPTIMISATION.** `setCues` decides what to
+          re-create by comparing references, so a cue this place does not re-voice has to come back as
+          the SAME `Float32Array[]` the prewarm made — not an equal one. Six places out of seven state
+          no cues at all, and for them a level boundary must cost fourteen comparisons and no
+          allocation.
+        */
+        warm();
+        const base = takePrewarmed()!.cues;
+        let handed: Float32Array[][] | null = null;
+        bakePlace('saurian', ({ cues }) => {
+          handed = cues;
+        }, (run) => run());
+        expect(handed, 'the place never finished, so this measured nothing').not.toBeNull();
+        const own = cuedBy('saurian');
+        expect(own.length, 'Saurian Belt states no cues, so this measures the fallback twice').toBeGreaterThan(0);
+        for (const [index, kind] of CUE_KINDS.entries()) {
+          if (own.includes(kind)) {
+            expect(handed![index], `${kind} came back as the base's array`).not.toBe(base[index]);
+            expect(handed![index]!.length, `${kind} baked no variants`).toBe(base[index]!.length);
+          } else {
+            expect(handed![index], `${kind} was copied rather than shared`).toBe(base[index]);
+          }
+        }
+      }, 30_000);
+
       it('THE COST MODEL: a layer the place does not state is the SAME array, not a copy', () => {
         /*
           ⚠️ **THIS IS THE 56 MB CEILING, WRITTEN AS AN IDENTITY CHECK.**
@@ -738,7 +769,7 @@ describe('the cue table', () => {
         warm();
         const base = takePrewarmed()!.loops;
         let handed: Record<MusicLayer, Float32Array> | null = null;
-        bakePlace('nebula', (loops) => {
+        bakePlace('nebula', ({ loops }) => {
           handed = loops;
         }, (run) => run());
         const own = revoicedBy('nebula');
@@ -774,7 +805,7 @@ describe('the cue table', () => {
         warm();
         const base = takePrewarmed()!.loops;
         let handed: Record<MusicLayer, Float32Array> | null = null;
-        bakePlace(silent!, (loops) => {
+        bakePlace(silent!, ({ loops }) => {
           handed = loops;
         }, (run) => run());
         for (const layer of MUSIC_LAYERS) expect(handed![layer]).toBe(base[layer]);
@@ -903,9 +934,23 @@ describe('the cue table', () => {
       hand — `docs/decisions/0027-measure-the-picture-not-the-model.md`, in the one channel it names
       as having nothing to look at.
     */
+    /*
+      ⚠️ **AND OVER EVERY PLACE, NOT ONLY THE BASE TABLE** —
+      `docs/decisions/0190-a-place-owns-what-it-kills.md`. A place may re-voice `kill`, `blast` and
+      `bossDown`, and this guard read `CUES` — so the first hand-authored cue in the game would have
+      been the only explosion in it that nothing checked. `undefined` is the base composition and is
+      a real case rather than a defensive one: six places state no cues and resolve to it.
+
+      ⚠️ **IT CAUGHT SOMETHING ON ITS FIRST RUN, WHICH IS THE POINT OF WIDENING IT.** Saurian Belt's
+      death was authored with a pitched THROAT and no noise body; the clauses below all passed
+      against its four-millisecond SNAP, because a crack is short, filtered and high-passed too.
+      `src/content/saurian.ts` has the fix and the reason it is material rather than a guard change.
+    */
+    for (const theme of [undefined, ...THEME_KINDS] as const)
     for (const kind of ['missile', 'kill', 'blast', 'bossDown', 'death'] as const) {
-      const layers = CUES[kind].layers;
-      expect(layers.length, `${kind} is not built out of layers, so it cannot have a body`).toBeGreaterThan(2);
+      const where = theme === undefined ? kind : `${theme}/${kind}`;
+      const layers = cueLayersOf(theme, kind);
+      expect(layers.length, `${where} is not built out of layers, so it cannot have a body`).toBeGreaterThan(2);
       /*
         ⚠️ **THE BODY IS THE LOUDEST NOISE LAYER, AND NAMING IT TOOK TWO GOES.** The guard first read
         *some filtered noise layer has a highpass*, and `npm run prove` reported STILL GREEN when the
@@ -918,18 +963,18 @@ describe('the cue table', () => {
         it and the debris is a whisper after it, and that ordering holds for all four.
       */
       const noise = layers.filter((l) => l.wave === 'noise');
-      expect(noise.length, `${kind} has no noise in it, so it has no body at all`).toBeGreaterThan(0);
+      expect(noise.length, `${where} has no noise in it, so it has no body at all`).toBeGreaterThan(0);
       const body = noise.reduce((a, b) => (b.gain > a.gain ? b : a));
-      expect(body.lowFrom, `${kind}'s body is unfiltered, which is a hiss and not an explosion`).toBeDefined();
+      expect(body.lowFrom, `${where}'s body is unfiltered, which is a hiss and not an explosion`).toBeDefined();
       // A falling cutoff over noise IS an explosion. A rising one is a whoosh, and a flat one a hiss.
       expect(
         body.lowTo !== undefined && body.lowTo < body.lowFrom!,
-        `${kind}'s body does not darken as it decays, which is what an explosion does`,
+        `${where}'s body does not darken as it decays, which is what an explosion does`,
       ).toBe(true);
       // And the box is taken out, which is what "a tin shed heard from outside" was.
-      expect(body.highFrom, `${kind}'s body keeps the 130-300Hz band that reads as boxy`).toBeDefined();
+      expect(body.highFrom, `${where}'s body keeps the 130-300Hz band that reads as boxy`).toBeDefined();
       const low = layers.filter((l) => l.wave === 'sine' && l.from <= 220 && (l.to || l.from) <= 220);
-      expect(low.length, `${kind} has nothing low under it, so there is no boom to feel`).toBeGreaterThan(0);
+      expect(low.length, `${where} has nothing low under it, so there is no boom to feel`).toBeGreaterThan(0);
     }
   });
 
@@ -1166,15 +1211,23 @@ describe('the synthesiser', () => {
   const FALL_DB = 3;
 
   it('0179 — THE REPORTED ONE: an explosion ENDS LOWER THAN IT STARTED, which none of the above sees', () => {
+    /*
+      ⚠️ **EVERY PLACE, FOR 0190's REASON AND ONE OF ITS OWN.** A place's explosion is the case most
+      likely to break this: 0179's defect was an enemy death whose centre of gravity ROSE, and a hand
+      authoring a new one has no way to see that quantity while writing the numbers.
+    */
+    for (const theme of [undefined, ...THEME_KINDS] as const)
     for (const kind of EXPLOSIONS) {
-      const samples = sampleCue(CUES[kind], SAMPLE_RATE, makeRng('cues').stream(kind));
-      const seconds = cueSeconds(CUES[kind]);
+      const where = theme === undefined ? kind : `${theme}/${kind}`;
+      const row = cueRowOf(theme, kind);
+      const samples = sampleCue(row, SAMPLE_RATE, makeRng('cues').stream(kind));
+      const seconds = cueSeconds(row);
       const onset = centroid(samples, 0, Math.min(0.025, seconds / 3), SAMPLE_RATE);
       const tail = centroid(samples, (seconds * 2) / 3, seconds, SAMPLE_RATE);
       const fall = 20 * Math.log10(tail / onset);
       expect(
         fall,
-        `${kind} starts at ${onset.toFixed(0)}Hz and ends at ${tail.toFixed(0)}Hz, a fall of ` +
+        `${where} starts at ${onset.toFixed(0)}Hz and ends at ${tail.toFixed(0)}Hz, a fall of ` +
           `${fall.toFixed(1)}dB — an explosion leaves its top behind, and this one does not`,
       ).toBeLessThanOrEqual(-FALL_DB);
     }

@@ -65,6 +65,7 @@
  * than all seven notes between them.
  */
 
+import { inKey, type CueKind, type CueLayer } from './cues.ts';
 import { BEAT_SECONDS, type MusicLayer, type MusicVoice } from './music.ts';
 
 /** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */
@@ -383,6 +384,105 @@ const TREMOLO: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
     fifth, root + 12, fifth, root + 12,
   ];
 });
+
+/**
+ * WHAT DIES HERE, AND WHAT SHOOTS AT YOU — Saurian Belt's own cues.
+ *
+ * ── EVERY LEVEL'S ENEMY DIED IDENTICALLY UNTIL NOW ──────────────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0190-a-place-owns-what-it-kills.md`**, answering *"different sounding enemy
+ * deaths per level and different attacks etc per level."* `src/content/cues.ts` had no idea what a
+ * place was; this is the first table that does.
+ *
+ * ⚠️ **THE TWO HALVES ARE THE SAME REGISTER SPLIT THE MUSIC USES**, which is what makes the place one
+ * thing rather than a soundtrack with sound effects over it. The header at the top of this file says
+ * *everything that carries the floor is bone dry* and the room goes to *the material that is supposed
+ * to be coming from somewhere else*; a death here is a body, close and dry, and the thing that shot
+ * at it is further away.
+ *
+ * ⚠️ **AND IT IS `layers` RATHER THAN A ROW**, so the grid, the hold, the duck and the room send are
+ * all still the base's. A Saurian kill lands on the same sixteenth, collapses on the same flam and
+ * ducks the music by the same depth as every other kill in the game — 0104 and 0179 are untouched.
+ * What changed is what it is made of.
+ */
+export const SAURIAN_CUES: Partial<Record<CueKind, readonly CueLayer[]>> = {
+  /*
+    ── THE DEATH: a bone snap and a throat, where the base has a spark and a box ────────────────────
+
+    ⚠️ **FOUR LAYERS, WHICH IS THE BASE'S OWN RECIPE AND NOT A DEPARTURE FROM IT** — a CRACK so it
+    starts rather than fades in, a BODY, a DEBRIS tail, and a BOOM into the floor.
+    `docs/decisions/0089-a-cue-has-a-body.md` is why the shape is kept; what is re-voiced is every
+    number in it.
+
+    ⚠️ **THE CRACK IS WOOD AND NOT A SPARK.** The base opens its lowpass to **11 kHz**, which is the
+    band the music leaves emptiest and is exactly right for a machine coming apart. A thing made of
+    bone is 3 kHz and under: the same few milliseconds, two and a half octaves down, and the
+    difference is audible before the body arrives.
+
+    ⚠️ **THE BODY IS PITCHED, WHICH NO OTHER EXPLOSION IN THE GAME IS.** Every `kill`, `blast` and
+    `bomb` in `src/content/cues.ts` is filtered NOISE — that is what an explosion is. A throat is
+    not: it is a note that collapses. A saw falling a ninth in 190 ms with the filter closing behind
+    it is a roar being cut off, and it is the one gesture here a listener will name.
+    `docs/decisions/0099-the-cues-are-in-the-key.md` still holds — `inKey` places both ends of the
+    fall on degrees of this place's own scale, so a chain of deaths is in tune with the floor.
+
+    ⚠️ **AND THE DEBRIS IS DRY AND SHORT WHERE THE BASE'S IS LONG.**
+    `docs/decisions/0144-a-chain-of-deaths-is-a-cymbal-streak.md` lengthened that layer to 0.36 s on
+    purpose, so *"a chain of deaths sounds like a sharp cymbal streak."* **That is a machine's
+    answer and this place is not one**: what overlaps here is a rattle rather than a cymbal, so the
+    length comes back and the top comes down. The streak is not lost — 0144's mechanism is the
+    high-pass and the overlap, and both are still here an octave lower.
+
+    ⚠️ **THE BOOM IS THE ONE LAYER THAT IS NEARLY THE BASE'S, AND THAT IS 0179 BEING OBEYED.**
+    `docs/decisions/0179-an-explosion-ends-low.md` requires an explosion's centre of gravity to
+    FALL — it caught the enemy death RISING 22.5 dB where every other one falls 7 to 13. A woodier
+    crack and a shorter tail both take energy off the top, which moves that figure the right way; the
+    low sweep is what guarantees it rather than merely helping, so it is left alone.
+  */
+  kill: [
+    // THE SNAP — bone, not spark. Milliseconds, and it is over before the throat opens.
+    { wave: 'noise', from: 0, to: 0, seconds: 0.02, gain: 0.42, attack: 0.00015, curve: 13, lowFrom: 3000, lowTo: 900, highFrom: 700 },
+    /*
+      THE BODY — and it is NOISE, which the first draft of this cue got wrong.
+
+      ⚠️ **THE THROAT BELOW WAS THE ONLY THING CARRYING THIS CUE AND `docs/decisions/0089-a-cue-has-a-body.md`
+      COULD NOT SEE IT.** That guard reads *the loudest noise layer* and asks whether it darkens and
+      whether the box is out of it; with no noise body it read the four-millisecond SNAP instead —
+      which satisfies every clause by accident, because a crack is also short, filtered and
+      high-passed. **The cue would have shipped green on an assertion about a layer it is not
+      about.** Written down because a probe cannot catch this one: the guard fires on the wrong part
+      rather than not firing, which is 0027's distinction in the cue channel.
+
+      ⚠️ **AND IT IS BETTER MATERIAL, WHICH IS WHY IT IS A FIX AND NOT A CONCESSION.** A thing made of
+      meat coming apart is a thump and a roar, not a roar alone. This is the thump: darkening,
+      high-passed off the box, saturated, and the loudest thing in the cue.
+    */
+    { wave: 'noise', from: 0, to: 0, seconds: 0.155, gain: 0.92, attack: 0.002, curve: 4.8, lowFrom: 2100, lowTo: 380, highFrom: 140, highTo: 58, q: 0.8, drive: 0.36 },
+    // THE THROAT — the roar, cut off. A ninth down in 190 ms with the filter closing behind it.
+    { wave: 'saw', from: inKey(19), to: inKey(5), seconds: 0.19, gain: 0.5, attack: 0.004, curve: 4.2, lowFrom: 1900, lowTo: 320, q: 2.2, drive: 0.42 },
+    // THE RATTLE — the debris, dry and low. 0144's overlap, an octave under 0144's cymbal.
+    { wave: 'noise', from: 0, to: 0, seconds: 0.2, gain: 0.18, attack: 0.001, curve: 5, lowFrom: 4200, lowTo: 1400, highFrom: 800, at: 0.02 },
+    // THE THUMP — 0179's fall, and the one layer that is the base's argument rather than this file's.
+    { wave: 'sine', from: 150, to: 34, seconds: 0.28, gain: 0.66, attack: 0.002, curve: 3.4, drive: 0.3 },
+  ],
+  /*
+    ── THE THREAT: a spit, where the base has a laser ───────────────────────────────────────────────
+
+    ⚠️ **THE BASE IS TWO FALLING TONES AND THAT IS A GUN.** A saw and a sine both sweeping down is the
+    oldest laser there is and it is right for six places out of seven. What shoots at you here is
+    alive, so the tone goes under a hiss instead of standing on its own.
+
+    ⚠️ **IT IS STILL TWO LAYERS AND STILL FALLS**, because `threat` is the one cue the player has to
+    read while looking somewhere else — it is *a shot exists now*, and a sound that took longer to say
+    so would arrive after the picture. `hold: 4` is the base's and is untouched.
+  */
+  threat: [
+    // THE HISS — the spit itself, a band falling fast.
+    { wave: 'noise', from: 0, to: 0, seconds: 0.075, gain: 0.5, attack: 0.0008, curve: 6, lowFrom: 5200, lowTo: 1500, highFrom: 900 },
+    // THE THROAT UNDER IT — in key, so a field full of them is still in the music.
+    { wave: 'saw', from: inKey(22), to: inKey(9), seconds: 0.085, gain: 0.4, attack: 0.001, curve: 5.5, lowFrom: 2200, lowTo: 620, q: 2.4, drive: 0.25 },
+  ],
+};
 
 /**
  * Everything Saurian Belt plays instead of the base composition.

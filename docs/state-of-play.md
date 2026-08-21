@@ -700,6 +700,7 @@ down or a defect the player reported. `npm run dash`.
 0188  four own slots             a place can have an instrument no other place has — Saurian has the first
 0189  a place is what it does    Saurian closes six layers; the axis six decisions of measurement could not see
       NOT play
+0190  a place owns what it kills  cues were one flat table with no idea what a theme was
 ```
 
 ⚠️ **WHAT THE PLAYER HAS SAID, IN ORDER, AND WHAT IS STILL OPEN.** *"The background beat of saurian
@@ -947,6 +948,26 @@ complaint about the field, and the paragraph two above is the rule it has to arg
 **0.46%** of samples at `bossPeak` against a guard of 0.05%; it ships at **0.0405%**, which is a
 thinner margin than anything else in the game. [0189](decisions/0189-a-place-is-what-it-does-not-play.md) has what
 moved it and what did not — the placement fix that measured green is the part worth reading.
+
+⚠️ **AND THE CUES ARE PER-PLACE NOW, WHICH THEY HAVE NEVER BEEN** — [0190](decisions/0190-a-place-owns-what-it-kills.md),
+answering *"different sounding enemy deaths per level and different attacks etc per level."*
+`src/content/cues.ts` had **zero** references to a theme. `PLACE_CUES` is the seven a place may
+re-voice; the ship's own seven are not in it, and a place states `layers` rather than a row so
+`hold`, `duck`, `figure` and the room send cannot move.
+
+⚠️ **SAURIAN BELT IS THE ONLY PLACE THAT STATES ONE, AND ITS DEATH IS THE ONLY PITCHED EXPLOSION IN
+THE GAME.** `node scripts/hear.mjs --only=kill,threat --place=saurian` writes the WAV.
+
+⚠️ **AND THE CUE GUARDS READ `CUES` UNTIL NOW, SO THE NEWEST AUDIO WAS THE ONLY AUDIO NOTHING
+CHECKED.** 0089's body guard and 0179's fall guard loop over places, and the first run caught this
+cue's body being a layer it is not about. **`scripts/weigh-cue.mjs` still takes no place and that is
+the named debt** — 0179's own instrument cannot be pointed at the newest explosion in the game.
+
+⚠️ **AND THE DASHBOARD STILL CANNOT DRIVE A CUE.** Its whole cue panel is an on/off button per kind —
+no fader, no audition, no paste. **That is the next piece of work and it is the player's own
+sequencing**: the content went first, so Saurian Belt's death is the first cue in the game authored
+against guards and never heard by a person before it shipped, which is
+[0126](decisions/0126-the-dashboard-is-the-instrument.md) the wrong way round.
 
 ⚠️ **AND FOUR IS THE NUMBER BECAUSE OF THE RESIDENT CEILING.** `tests/sound.test.ts` holds the loops
 under 56 MB; twenty-three layers is 48.0 and four four-bar slots is **52.5**. Four EIGHT-bar slots is

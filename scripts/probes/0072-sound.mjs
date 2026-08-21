@@ -121,7 +121,13 @@ export const PROBES = [
     guard: 'takes its stream from the cue’s NAME, so a thirteenth row cannot change the twelve above it',
     edit: {
       path: 'src/app/sound.ts',
-      find: 'return CUE_KINDS.map((kind) => velocitiesOf(CUES[kind]).map((v) => sampleCue(CUES[kind], rate, root.stream(kind), v)));',
+      // Re-anchored by 0190, which routed the bake through `cueRowOf` so a place may re-voice a cue.
+      // The break is unchanged: the stream taken by POSITION rather than by name.
+      find:
+        "  return CUE_KINDS.map((kind) => {\n" +
+        "    const row = cueRowOf(theme, kind);\n" +
+        "    return velocitiesOf(row).map((v) => sampleCue(row, rate, root.stream(kind), v));\n" +
+        "  });",
       replace: 'return CUE_KINDS.map((kind, i) => sampleCue(CUES[kind], rate, root.stream(String(i))));',
     },
   },

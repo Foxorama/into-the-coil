@@ -61,7 +61,7 @@ import {
 } from '../content/cues.ts';
 import { ACROSS_SPAN } from '../sim/camera.ts';
 import { makeMusicOut, bakeLoops, layerNotes, type MusicOut } from './music.ts';
-import { bakedBy, type ThemeKind } from '../content/themes.ts';
+import { bakedBy, cueRowOf, cuedBy, type ThemeKind } from '../content/themes.ts';
 import { MUSIC_LAYERS, type MusicLayer } from '../content/music.ts';
 /*
   ⚠️ **THE CUE GRID COMES FROM THE GAMEPLAY CLOCK NOW, NOT FROM THE MUSIC** — 0159. `FIRE_GRID` and
@@ -480,11 +480,25 @@ export function cueSeconds(row: CueRow): number {
  * arrangement `src/content/sprites.ts` was rewritten into after three hand-kept descriptions of one
  * order made every entity in the game draw as the wrong thing.
  */
-export function bakeCues(rate: number = SAMPLE_RATE): Float32Array[][] {
+/*
+  ⚠️ **AND IT TAKES A PLACE NOW** — `docs/decisions/0190-a-place-owns-what-it-kills.md`. `cueRowOf`
+  is the one description of *what does this cue sound like here*; a place that states no cues gets a
+  set byte-identical to the base's, which is what makes 0190 land silent everywhere but Saurian Belt.
+
+  ⚠️ **THE STREAM IS NAMED BY THE CUE AND NOT BY THE PLACE, WHICH IS DELIBERATE AND IS 0021 READ
+  EXACTLY.** *One stream per concern* — the concern is *this cue's noise*, so Saurian Belt's `kill`
+  draws the same numbers the base's does. Two places' versions of a cue are the same sound made of
+  different parts, not two different rolls, and a per-place seed would make a re-voice move a
+  waveform it did not touch.
+*/
+export function bakeCues(rate: number = SAMPLE_RATE, theme?: ThemeKind): Float32Array[][] {
   // Its own root, so a cosmetic roll anywhere else in the game cannot move a waveform, and vice
   // versa — `docs/decisions/0021-one-stream-per-concern.md`.
   const root = makeRng('cues');
-  return CUE_KINDS.map((kind) => velocitiesOf(CUES[kind]).map((v) => sampleCue(CUES[kind], rate, root.stream(kind), v)));
+  return CUE_KINDS.map((kind) => {
+    const row = cueRowOf(theme, kind);
+    return velocitiesOf(row).map((v) => sampleCue(row, rate, root.stream(kind), v));
+  });
 }
 
 /**
@@ -899,6 +913,18 @@ export interface WebAudioOut extends AudioOut {
    * silent for the rest of the run. See docs/decisions/0090-the-music-is-four-loops.md.
    */
   music(): MusicOut | null;
+  /**
+   * Take the place's own cue set — 0190, and it is `MusicOut.setLoops` one channel over.
+   *
+   * ⚠️ **COMPARED BY IDENTITY, WHICH IS WHY SIX PLACES PAY NOTHING.** `bakePlace` hands back the
+   * SAME `Float32Array[]` for every cue the place does not re-voice, so this re-creates an
+   * `AudioBuffer` only where the audio actually changed. A place that states no cues at all costs
+   * fourteen reference comparisons at a boundary and no allocation.
+   *
+   * ⚠️ **SILENT BEFORE THE FIRST GESTURE**, exactly as `sound` and `duck` are: with no context there
+   * is nothing to build a buffer in, and the unlock reads the prewarm for itself.
+   */
+  setCues(samples: Float32Array[][]): void;
 }
 
 /**
@@ -1127,13 +1153,39 @@ let warming = false;
  */
 export function bakePlace(
   theme: ThemeKind,
-  ready: (loops: Record<MusicLayer, Float32Array>) => void,
+  ready: (baked: { loops: Record<MusicLayer, Float32Array>; cues: Float32Array[][] }) => void,
   schedule: (run: () => void) => void = (run) => void setTimeout(run, 0),
 ): () => void {
   const base = prewarmed?.loops;
-  if (base === undefined) return () => {};
+  const baseCues = prewarmed?.cues;
+  if (base === undefined || baseCues === undefined) return () => {};
   const own = { ...base } as Record<MusicLayer, Float32Array>;
+  /*
+    ⚠️ **THE CUE SET IS COPIED ONE LEVEL DEEP AND THE VARIANT ARRAYS ARE SHARED** — 0190, on exactly
+    the terms the paragraph above states for `loops`. A cue this place does not re-voice comes back
+    as the SAME `Float32Array[]`, and `setCues` compares by identity — so six places pay nothing at
+    a boundary and the seventh pays for two cues.
+  */
+  const ownCues = baseCues.slice();
   const jobs: (() => void)[] = [];
+  /*
+    ⚠️ **ONE JOB PER VARIANT RATHER THAN PER CUE**, which is 0102's own rule about the prewarm arriving
+    one channel over: `kill` bakes at four velocities, and a single job that did all four would be the
+    longest thing in this list. `sliceOf` can only stop between jobs.
+  */
+  for (const kind of cuedBy(theme)) {
+    const index = CUE_KINDS.indexOf(kind);
+    const row = cueRowOf(theme, kind);
+    const variants = velocitiesOf(row);
+    // @setup: the place's own array for this cue, filled by the jobs below rather than shared.
+    const made: Float32Array[] = [];
+    ownCues[index] = made;
+    for (const velocity of variants) {
+      jobs.push(() => {
+        made.push(sampleCue(row, SAMPLE_RATE, cueStreams.stream(kind), velocity));
+      });
+    }
+  }
   // ⚠️  and not  — a place may state a ROOM for a layer it shares the notes of,
   // and that layer's buffer is different too (0136). Sharing the dry array would drop the room.
   for (const layer of bakedBy(theme)) {
@@ -1158,7 +1210,7 @@ export function bakePlace(
     */
     next = sliceOf(jobs, next);
     if (next >= jobs.length) {
-      ready(own);
+      ready({ loops: own, cues: ownCues });
       return;
     }
     schedule(step);
@@ -1240,6 +1292,13 @@ export function makeAudioOut(): WebAudioOut {
   let ctx: AudioContext | null = null;
   let master: GainNode | null = null;
   let buffers: AudioBuffer[][] = [];
+  /*
+    ⚠️ **WHAT THE BUFFERS WERE BUILT FROM, KEPT SO A SWAP CAN BE A COMPARISON** — 0190. `setCues` is
+    called at every level boundary and the answer is *nothing changed* for six places out of seven;
+    holding the source arrays is what lets it know that without re-creating fourteen `AudioBuffer`s
+    to find out. The same shape `MusicOut` keeps for `setLoops`.
+  */
+  let cueSamples: Float32Array[][] = [];
   let music: MusicOut | null = null;
   /*
     ⚠️ **THE FIELD, AS A FIXED SET OF PLACES RATHER THAN A NODE PER SOUND** — 0127. `PAN_BUCKETS`
@@ -1358,6 +1417,7 @@ export function makeAudioOut(): WebAudioOut {
         */
         drainPrewarm();
         const samples = prewarmed?.cues ?? bakeCues(SAMPLE_RATE);
+        cueSamples = samples;
         buffers = samples.map((variants) =>
           variants.map((data) => {
             const buffer = ctx!.createBuffer(1, data.length, SAMPLE_RATE);
@@ -1413,12 +1473,27 @@ export function makeAudioOut(): WebAudioOut {
     music(): MusicOut | null {
       return music;
     },
+    setCues(samples: Float32Array[][]): void {
+      if (ctx === null) return;
+      for (let index = 0; index < samples.length; index++) {
+        const variants = samples[index]!;
+        if (variants === cueSamples[index]) continue;
+        buffers[index] = variants.map((data) => {
+          const buffer = ctx!.createBuffer(1, data.length, SAMPLE_RATE);
+          // `getChannelData().set` rather than `copyToChannel`, on the unlock path's own terms.
+          buffer.getChannelData(0).set(data);
+          return buffer;
+        });
+      }
+      cueSamples = samples;
+    },
     release(): void {
       void ctx?.close();
       ctx = null;
       master = null;
       music = null;
       buffers = [];
+      cueSamples = [];
       places = [];
       /*
         ⚠️ **AND THE SENDS, WHICH IS THE HALF THAT WOULD HAVE THROWN RATHER THAN LEAKED** — 0173. Every

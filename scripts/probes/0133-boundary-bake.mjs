@@ -18,9 +18,13 @@ export const PROBES = [
     guard: 'THE COST MODEL: a layer the place does not state is the SAME array, not a copy',
     edit: {
       path: 'src/app/sound.ts',
-      find: '  const own = { ...base } as Record<MusicLayer, Float32Array>;\n  const jobs: (() => void)[] = [];',
+      // Re-anchored by 0190, which put the place's own CUE set between these two lines.
+      // Re-anchored by 0190. The line below is followed by the place's own CUE set now, so the two
+      // are no longer adjacent; one line is unique on its own and the break is unchanged — every
+      // shared layer deep-copied, which is what `setLoops`' identity comparison exists to avoid.
+      find: '  const own = { ...base } as Record<MusicLayer, Float32Array>;',
       replace:
-        '  const own = {} as Record<MusicLayer, Float32Array>;\n  for (const layer of MUSIC_LAYERS) own[layer] = Float32Array.from(base[layer]);\n  const jobs: (() => void)[] = [];',
+        '  const own = {} as Record<MusicLayer, Float32Array>;\n  for (const layer of MUSIC_LAYERS) own[layer] = Float32Array.from(base[layer]);',
     },
   },
   {

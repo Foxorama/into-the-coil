@@ -1154,13 +1154,22 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     stopBaking?.();
     bakingTheme = theme;
-    stopBaking = bakePlace(theme, (loops) => {
+    stopBaking = bakePlace(theme, ({ loops, cues }) => {
       /*
         ⚠️ **Asked for again at the moment it is handed over, not captured.** The context can be built
         or torn down while a bake walks, and a `MusicOut` closed over here would be one the player is
         no longer listening to.
       */
       audioOut.music()?.setLoops(loops);
+      /*
+        ⚠️ **AND THE CUES ARRIVE ON THE SAME BAKE** — 0190. They are handed over together because they
+        were baked together: a boundary that swapped the music and left the enemy deaths behind would
+        be a place half arriving, and the two lists come out of one job walk in `bakePlace`.
+
+        ⚠️ **ON `audioOut` RATHER THAN THROUGH `music()`**, because a cue is not the music — the same
+        line `duck` is drawn on, one direction over.
+      */
+      audioOut.setCues(cues);
     });
   };
 
