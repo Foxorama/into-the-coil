@@ -61,7 +61,7 @@ export const PROBES = [
     guard: '0157 — AND THE BOUNDARY BAKE TAKES THE SAME SLICE, because it is the one on a deadline',
     edit: {
       path: 'src/app/sound.ts',
-      find: '    next = sliceOf(jobs, next);\n    if (next >= jobs.length) {\n      ready(own);',
+      find: '    next = sliceOf(jobs, next);\n    if (next >= jobs.length) {\n      ready({ loops: own, cues: ownCues });',
       replace: '    if (next < jobs.length) jobs[next++]!();\n    if (next >= jobs.length) {\n      ready(own);',
     },
   },

@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
+import { CUES, CUE_KINDS, PLACE_CUES, type CueKind } from '../src/content/cues.ts';
 import {
   auraCeilingOf,
+  cueLayersOf,
+  cueRowOf,
+  cuedBy,
   THEMES,
   THEME_KINDS,
   mixOf,
@@ -1580,6 +1584,123 @@ describe('0162 — a place has its own ladder, and only floors are held over it'
     }
   });
 
+});
+
+describe('0190 — a place owns what it kills, and the ship is the constant', () => {
+  /*
+    `docs/decisions/0190-a-place-owns-what-it-kills.md`, answering *"I'll also need… different
+    sounding enemy deaths per level and different attacks etc per level."*
+  */
+  it('THE RULE: a place may only re-voice a cue that belongs to something the level owns', () => {
+    /*
+      ⚠️ **THE PLAYER'S GUN IS NOT THE PLACE'S**, and this is the whole of `PLACE_CUES`.
+      `docs/decisions/0093-the-gun-is-on-the-grid.md` and
+      `docs/decisions/0104-the-gun-plays-a-figure.md` both treat the ship's own sounds as fixed; a
+      biome that changed what the player's pulse sounds like would make the one instrument carried
+      between places a property of the place. It is a list rather than a rule in prose for exactly
+      the reason `TITLE_ONLY` and `LEVEL_ONLY` are.
+    */
+    for (const theme of THEME_KINDS) {
+      for (const kind of Object.keys(THEMES[theme].cues ?? {}) as CueKind[]) {
+        expect(
+          PLACE_CUES.includes(kind),
+          `${theme} re-voices ${kind}, which is the player's own and sounds the same everywhere`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('and a cue a place states actually has something in it', () => {
+    /*
+      ⚠️ **AN EMPTY ARRAY IS A CUE THE BAKE STILL WALKS AND WHICH MAKES NO SOUND** — the same defect
+      `voices` is held against one channel over, and the same fix: to remove a cue, do not state it.
+      A place that stated `kill: []` would have a silent enemy death and every guard above would be
+      green about it, because they all read a list that is legitimately allowed to be short.
+    */
+    for (const theme of THEME_KINDS) {
+      for (const kind of cuedBy(theme)) {
+        expect(
+          cueLayersOf(theme, kind).length,
+          `${theme} states an empty ${kind}; to leave a cue alone, do not name it`,
+        ).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('AND AT LEAST ONE PLACE ACTUALLY RE-VOICES ONE, or this is a mechanism no data exercises', () => {
+    /*
+      ⚠️ **0162's OWN LESSON, THIRD TABLE.** With every `cues` field absent, a version of
+      `cueLayersOf` that ignored the place entirely would answer correctly for all seven and the
+      whole suite would stay green — which is
+      `docs/decisions/0005-a-guard-must-be-seen-to-fail.md` reached from the side where the guard
+      cannot fail because no data reaches it. `docs/decisions/0188-a-place-owns-four-slots.md` needed
+      the identical assertion for the identical reason.
+    */
+    const stated = THEME_KINDS.flatMap((theme) => cuedBy(theme).map((kind) => `${theme}/${kind}`));
+    expect(stated.length, 'no place re-voices a cue, so 0190 is a mechanism nothing drives').toBeGreaterThan(0);
+  });
+
+  it('and the base composition still answers for every cue the place is silent about', () => {
+    /*
+      ⚠️ **THE FALLBACK IS THE WHOLE OF WHY 0190 LANDS SILENT**, and it is asserted by IDENTITY rather
+      than by value: `bakePlace` hands `setCues` the same `Float32Array[]` for an unchanged cue and
+      the swap is a reference comparison, so *equal* is not good enough — it has to be the same array
+      the base table holds, or six places pay for a bake at every boundary.
+    */
+    for (const theme of THEME_KINDS) {
+      const own = cuedBy(theme);
+      for (const kind of CUE_KINDS) {
+        if (own.includes(kind)) continue;
+        expect(cueLayersOf(theme, kind), `${theme}/${kind} is not the base's own list`).toBe(CUES[kind].layers);
+        expect(cueRowOf(theme, kind), `${theme}/${kind} is not the base's own row`).toBe(CUES[kind]);
+      }
+    }
+  });
+
+  it('THE ONE THAT CANNOT BE RECOVERED FROM: a cue a place states is the cue the place gets', () => {
+    /*
+      ⚠️ **NOTHING ELSE CATCHES A FALLBACK THAT IGNORES THE PLACE, AND THAT IS NOT OBVIOUS.** Every
+      other assertion here would stay GREEN if `cueLayersOf` returned `CUES[kind].layers`
+      unconditionally: `cuedBy` reads the TABLE, the empty check reads the table, and the widened
+      cue guards in `tests/sound.test.ts` would simply measure the base's cue seven times and pass.
+      **A place would state its own enemy death and silently not have one.**
+
+      ⚠️ **IT IS 0162's `rungIn` ARGUMENT IN A THIRD TABLE.** That decision separated the lookup so
+      the override path was reachable at all, *"not a guard that cannot fail, but a code path nothing
+      can drive"*; this is the assertion that drives it. Asserted by IDENTITY, so a fallback that
+      copied the right values by another road would still be the wrong function.
+    */
+    const stated = THEME_KINDS.flatMap((theme) => cuedBy(theme).map((kind) => [theme, kind] as const));
+    expect(stated.length, 'nothing states a cue, so this assertion is about nothing').toBeGreaterThan(0);
+    for (const [theme, kind] of stated) {
+      expect(cueLayersOf(theme, kind), `${theme}/${kind} falls back to the base and should not`).toBe(
+        THEMES[theme].cues?.[kind],
+      );
+      expect(cueRowOf(theme, kind).layers, `${theme}/${kind}'s row carries the base's layers`).toBe(
+        THEMES[theme].cues?.[kind],
+      );
+    }
+  });
+
+  it('and a re-voiced cue keeps the base row’s behaviour, because it cannot state it', () => {
+    /*
+      ⚠️ **UNREPRESENTABLE RATHER THAN REFUSED**, which is why this reads a composed row instead of
+      scanning a table for forbidden keys. `hold` is a flam, `duck` is the music getting out of the
+      way, `figure` is the grid and `twin` is 0024's unconditional tier — none of them is what a
+      Saurian enemy death sounds like, and a place states `layers` so it cannot reach any of them.
+    */
+    for (const theme of THEME_KINDS) {
+      for (const kind of cuedBy(theme)) {
+        const row = cueRowOf(theme, kind);
+        expect(row.twin, `${theme}/${kind} moved its twin`).toBe(CUES[kind].twin);
+        expect(row.hold, `${theme}/${kind} moved its hold`).toBe(CUES[kind].hold);
+        expect(row.duck, `${theme}/${kind} moved its duck`).toBe(CUES[kind].duck);
+        expect(row.air, `${theme}/${kind} moved its room send`).toBe(CUES[kind].air);
+        expect(row.figure, `${theme}/${kind} moved its figure`).toBe(CUES[kind].figure);
+        expect(row.onGrid, `${theme}/${kind} moved itself off the grid`).toBe(CUES[kind].onGrid);
+      }
+    }
+  });
 });
 
 describe('0162 — and the override path itself, driven with a table of its own', () => {

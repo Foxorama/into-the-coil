@@ -68,7 +68,7 @@
  */
 
 import { CORE_VOICES } from './core.ts';
-import { SCALE } from './cues.ts';
+import { CUES, SCALE, type CueKind, type CueLayer, type CueRow } from './cues.ts';
 import { LABYRINTH_VOICES } from './labyrinth.ts';
 import { MIRE_VOICES } from './mire.ts';
 import {
@@ -83,7 +83,7 @@ import {
 import { NEBULA_VOICES } from './nebula.ts';
 import type { PaletteName } from './palette.ts';
 import { RIME_VOICES } from './rime.ts';
-import { SAURIAN_VOICES } from './saurian.ts';
+import { SAURIAN_CUES, SAURIAN_VOICES } from './saurian.ts';
 
 /**
  * Every theme, in the order the run meets them. Closed —
@@ -250,6 +250,22 @@ export interface ThemeRow {
    * re-voiced. The two are independent and both are multipliers over the same rung.
    */
   voices?: Partial<Record<MusicLayer, readonly MusicVoice[]>>;
+  /**
+   * The cues this place sounds DIFFERENTLY, as a replacement for their layers.
+   *
+   * ⚠️ **`docs/decisions/0190-a-place-owns-what-it-kills.md`**, and it is `voices` one channel over
+   * on purpose — same shape, same fallback, same *a place states what it differs on and nothing
+   * else*. A cue this table does not name is the base composition's, byte for byte.
+   *
+   * ⚠️ **`layers` AND NOT A WHOLE `CueRow`.** What a place owns is the SOUND; `twin`, `hold`,
+   * `duck`, `figure`, `air`, `gain` and `glue` are what the cue is for and how it behaves, and
+   * every one of them is read somewhere this table cannot reach — the hot path, the accessibility
+   * tier, the grid. `PLACE_CUES` in `src/content/cues.ts` has the argument.
+   *
+   * ⚠️ **AND ONLY `PLACE_CUES` MAY APPEAR HERE** — `tests/themes.test.ts` refuses the rest. The
+   * player's gun sounding different per biome is a design statement nobody has made.
+   */
+  cues?: Partial<Record<CueKind, readonly CueLayer[]>>;
   /**
    * How much room this place has, per layer. `0` is none and `1` is a cathedral.
    *
@@ -559,6 +575,12 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       dread: 0.8,
     },
     voices: SAURIAN_VOICES,
+    /*
+      ⚠️ **THE FIRST PLACE IN THE GAME WITH ITS OWN CUES** — 0190. A bone snap and a throat where the
+      base has a spark and a box, and a spit where it has a laser. `src/content/saurian.ts` has what
+      they are and why the other twelve are left alone.
+    */
+    cues: SAURIAN_CUES,
     /*
       ⚠️ **A FLOOR OPENS WITH HATS AND WITHOUT A PAD, AND THE SHARED LADDER HAS IT THE OTHER WAY UP** —
       `docs/decisions/0172-a-place-opens-with-its-own-four.md`. `MUSIC_LADDER.run` closes `ride` and
@@ -1029,6 +1051,54 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
 export function voicesOf(theme: ThemeKind | undefined, layer: MusicLayer): readonly MusicVoice[] {
   if (theme === undefined) return MUSIC[layer];
   return THEMES[theme].voices?.[layer] ?? MUSIC[layer];
+}
+
+/**
+ * What `kind` is made of IN THIS PLACE — the place's own layers, or the base composition's.
+ *
+ * ⚠️ **`voicesOf` one channel over** — `docs/decisions/0190-a-place-owns-what-it-kills.md`. It is
+ * the one description of *what does an enemy dying here sound like*, and it exists as a function
+ * rather than as a lookup for the reason 0162 gives about `rungOf`: the bake, the WAV rig, the
+ * dashboard and two measuring scripts all need the answer, and a call site that read `CUES[kind]`
+ * for itself would be an instrument reporting a sound nobody hears.
+ *
+ * ⚠️ **`undefined` IS THE BASE COMPOSITION AND IT IS A REAL CALLER**, not a defensive default:
+ * `scripts/hear.mjs` writes the base cue set, and the title screen sounds before a place is chosen.
+ */
+export function cueLayersOf(theme: ThemeKind | undefined, kind: CueKind): readonly CueLayer[] {
+  if (theme === undefined) return CUES[kind].layers;
+  return THEMES[theme].cues?.[kind] ?? CUES[kind].layers;
+}
+
+/**
+ * The whole row as this place sounds it — the base's behaviour with the place's voice in it.
+ *
+ * ⚠️ **COMPOSED HERE SO NOTHING ELSE DOES IT TWICE.** `sampleCue` and `cueSeconds` both want a
+ * `CueRow`, and a second `{ ...CUES[kind], layers }` written at a call site is how the bake and the
+ * guard end up measuring different lengths of the same cue.
+ *
+ * ⚠️ **IT ALLOCATES, SO IT IS A BAKE-TIME FUNCTION AND NOTHING ELSE** —
+ * `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md`. The speaker's hot path reads
+ * `hold` and `duck` off `CUES` directly and must go on doing so; those two are the same in every
+ * place BY CONSTRUCTION, because a place states layers and cannot state them.
+ */
+export function cueRowOf(theme: ThemeKind | undefined, kind: CueKind): CueRow {
+  const layers = cueLayersOf(theme, kind);
+  return layers === CUES[kind].layers ? CUES[kind] : { ...CUES[kind], layers };
+}
+
+/**
+ * Which cues this place has to BAKE for itself — the ones whose audio differs from the base.
+ *
+ * ⚠️ **`revoicedBy`'s twin, and it needs no `bakedBy` beside it.** A music layer has a second
+ * reason to be re-baked — the place's own room (0136) — so `bakedBy` is a wider set than
+ * `revoicedBy`. A cue's room is a SEND on a node the place does not touch, so here the two sets are
+ * the same one and there is only one function.
+ */
+export function cuedBy(theme: ThemeKind): CueKind[] {
+  const own = THEMES[theme].cues;
+  if (own === undefined) return [];
+  return (Object.keys(own) as CueKind[]).filter((kind) => own[kind] !== undefined);
 }
 
 /**
