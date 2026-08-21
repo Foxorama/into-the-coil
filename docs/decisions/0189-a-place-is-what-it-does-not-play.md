@@ -130,6 +130,18 @@ so both breaks stay green however the fader is written. `node scripts/prove-guar
 and said so. They are not re-aimed at another place — that would be a different decision's probe
 wearing this one's number, which is the reasoning 0185's own file used one decision earlier.
 
+⚠️ **AND A PROBE CAN BE STRANDED BY A DECISION THAT NEVER TOUCHES IT.** `npm run prove` came back
+**697 of 698 red and one WRONG TEST**: [0188](0188-a-place-owns-four-slots.md)'s third break renames
+`ownA` out of Saurian Belt, and it used to leave **zero** filled own slots in the whole game. This
+decision fills `ownB` as well, so *no place fills one* stayed TRUE, that guard stayed GREEN, and the
+break landed on somebody else's assertion.
+
+⚠️ **THE ANCHOR STILL APPLIED AND THE CODE STILL BROKE, WHICH IS WHY NOTHING CAUGHT IT EARLIER.**
+`tests/prove-guard.test.ts` checks that a probe's `find` is present and unique; it was both. **What
+went stale was the claim, not the string** — [0019](0019-a-probe-must-be-seen-to-apply.md)'s subject
+reached from a third side, and only the full run can see it. The break takes Saurian Belt's whole
+`voices` table away now, which is the only edit that still makes the sentence false.
+
 ## ⚠️ The headline break has no probe, and that is stated rather than covered
 
 *A place is what it does not play* is an authoring change, and
