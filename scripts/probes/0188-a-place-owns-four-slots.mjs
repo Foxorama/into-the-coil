@@ -24,16 +24,9 @@ export const PROBES = [
     guard: 'THE ONE THAT CANNOT BE RECOVERED FROM: a slot a place OPENS has voices and a role at that rung',
     edit: {
       path: 'src/content/arrangement.ts',
-      // Re-anchored by 0189, which opened `ownB` at every rung and gave it a role at each.
-      find:
-        "  saurian: {\n" +
-        "    run: { ownB: 'pulse' },\n" +
-        "    push: { ownA: 'counter', ownB: 'pulse' },\n" +
-        "    surge: { ownA: 'counter', ownB: 'pulse' },\n" +
-        "    approach: { ownA: 'counter', ownB: 'pulse' },\n" +
-        "    boss: { ownB: 'pulse' },\n" +
-        "    bossPeak: { ownB: 'pulse' },\n" +
-        "  },",
+      // Re-anchored by 0189 and again by 0191, which deleted the break `ownB` held and left this
+      // place with the one own slot it started with.
+      find: "  saurian: { surge: { ownA: 'counter' }, approach: { ownA: 'counter' } },",
       replace: '  saurian: {},',
     },
   },

@@ -267,6 +267,27 @@ export interface ThemeRow {
    */
   cues?: Partial<Record<CueKind, readonly CueLayer[]>>;
   /**
+   * How loud this place sits against the other six. One number over everything it plays.
+   *
+   * ── THE ONE THING A PLACE COULD NOT SAY, AND IT COST A UNIFORM EDIT OF TWENTY-FOUR NUMBERS ──────
+   *
+   * ⚠️ **`docs/decisions/0191-a-place-sits-somewhere.md`.** Saurian Belt's driven mix runs the bus
+   * into the shaper's clamp on **0.13%** of samples at `surge` against a guard of 0.05%, and the fix
+   * that costs nothing musically is **the whole place 1.4 dB down**: every ratio the player drove is
+   * preserved exactly and the only thing that changes is where the place sits.
+   *
+   * ⚠️ **AND THERE WAS NO WAY TO WRITE THAT.** `mix` is per LAYER, so a uniform trim meant scaling
+   * every entry — twenty existing ones plus four layers that had none, because a layer this place had
+   * never sounded has no multiplier to scale. Twenty-four numbers, none of them legible afterwards:
+   * a reader sees `groove: 1.87` and cannot tell it is 2.2 with a trim on it, which is exactly the
+   * illegibility `docs/decisions/0182-a-mix-number-has-no-band.md` deleted a clamp for causing.
+   *
+   * ⚠️ **IT IS NOT A CEILING AND NOTHING IS CLAMPED TO IT** — 0182 again. What bounds the product is
+   * still the bus, and the clip guard still drives the real shaper at every place and every rung.
+   * This is a hand saying *this place is loud*, in the one place that sentence belongs.
+   */
+  trim?: number;
+  /**
    * How much room this place has, per layer. `0` is none and `1` is a cathedral.
    *
    * ── SPACE IS NOT SUSTAIN, AND THIS PROJECT HAD ONLY EVER HAD SUSTAIN ────────────────────────────
@@ -538,6 +559,14 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       for the fight to be the arrival, not for a shadow to lengthen across the whole level.
     */
     aura: 0.45,
+    /*
+      ⚠️ **1.4 dB DOWN, AND IT IS THE WHOLE PLACE** — 0191. Driven on the desk, this level's mix
+      clamped **0.13%** of samples at `surge` against a guard of 0.05% — the base composition's kit
+      and bass are open here at 1.62 where the title screen plays them at 0.5, over a floor that
+      already has its own kick. **The ratios are the player's and are untouched**; what moved is where
+      the place sits, which is the one change that costs nothing musically.
+    */
+    trim: 0.85,
     mix: {
       groove: 2.2,
       /*
@@ -591,12 +620,12 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       at all, in the one place whose brief is a dancefloor.
     */
     ladder: {
-      run: { drone: 0, chords: 0, call: 0, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, groove: 1.078, drive: 1.25, ownB: 1.62 },
-      push: { drone: 0, chords: 0, call: 0, lead: 0, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, groove: 1.078, drive: 1.25, ownB: 1.62, arp: 0.832, hook: 0.42, ownA: 0.9 },
-      surge: { drone: 0, chords: 0, lead: 0, counter: 0, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, groove: 1.078, drive: 1.25, ownB: 1.62, arp: 0.832, hook: 0.954, ownA: 1 },
-      approach: { drone: 0, chords: 0, lead: 0, counter: 0, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, ownB: 1.62, ownA: 1, arp: 0.9, toll: 1.6, dread: 1.7 },
-      boss: { drone: 0, ride: 0, sub: 1.5, engine: 1.68, perc: 2.21, drive: 1.25, ownB: 1.62, toll: 1.35, dread: 1.6, frenzy: 1.1, wraith: 1.2, stomp: 0.95 },
-      bossPeak: { drone: 0, ride: 0, sub: 1.6, engine: 1.68, perc: 2.21, drive: 1.25, ownB: 1.62, toll: 1.35, dread: 1.85, frenzy: 1.2, wraith: 1.3, stomp: 1 },
+      run: { drone: 0, chords: 0, call: 0, groove: 0, bass: 1.62, beat: 1.62, ride: 0.42, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25 },
+      push: { drone: 0, chords: 0, call: 0, lead: 0, groove: 0, bass: 1.62, beat: 1.62, ride: 0.42, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, arp: 0.832, hook: 0.105, crash: 0.62 },
+      surge: { drone: 0, chords: 0, lead: 0, counter: 0, groove: 0, bass: 1.62, beat: 1.62, ride: 0.42, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, arp: 0.832, hook: 0.954, ownA: 1 },
+      approach: { drone: 0, chords: 0, lead: 0, counter: 0, groove: 0, bass: 1.62, beat: 1.62, ride: 0.42, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, ownA: 1, arp: 0.9, toll: 1.6, dread: 1.7 },
+      boss: { drone: 0, bass: 1.62, beat: 1.62, ride: 0.42, sub: 1.5, engine: 1.68, perc: 2.21, drive: 1.25, toll: 1.35, dread: 1.6, frenzy: 1.1, wraith: 1.2, stomp: 0.95 },
+      bossPeak: { drone: 0, bass: 1.62, beat: 1.62, ride: 0.42, sub: 1.6, engine: 1.68, perc: 2.21, drive: 1.25, toll: 1.35, dread: 1.85, frenzy: 1.2, wraith: 1.3, stomp: 1 },
     },
     /*
       ── THE THREE RUNGS ABOVE `surge` ARE 0185's, AND THEY ARE THE JURASSIC HALF ───────────────────
@@ -1328,7 +1357,12 @@ export function auraCeilingOf(theme: ThemeKind): number {
 }
 
 export function mixOf(theme: ThemeKind, layer: MusicLayer): number {
-  return (THEMES[theme].mix[layer] ?? 1) * (REBASE[theme][layer] ?? 1);
+  /*
+    ⚠️ **`trim` IS THE PLACE'S OWN LEVEL AND IT MULTIPLIES EVERYTHING** — 0191. It is here rather
+    than in `rungOf` for the reason `rungOf`'s own header gives about `mixOf`: that function answers
+    what the LADDER says, and how loud a place sits is a balance rather than a shape.
+  */
+  return (THEMES[theme].mix[layer] ?? 1) * (REBASE[theme][layer] ?? 1) * (THEMES[theme].trim ?? 1);
 }
 
 /**

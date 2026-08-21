@@ -137,40 +137,40 @@ export const ARRANGEMENT: Record<Exclude<MusicLevel, 'calm' | 'bossPeak'>, Reado
   // The hymn, over a bed. The one melodic thing in a level's opening — 0113.
   run: {
     part: ['call'],
-    counter: [],
-    pulse: ['sub', 'engine', 'perc'],
+    counter: ['bass'],
+    pulse: ['sub', 'engine', 'perc', 'beat'],
     bed: ['chords', 'groove'],
     air: ['drone'],
   },
   // The riff arrives and the hymn steps under it; the mixture and the lead answer.
   push: {
     part: ['hook'],
-    counter: ['arp', 'lead', 'call'],
-    pulse: ['sub', 'engine', 'perc', 'ride'],
+    counter: ['arp', 'lead', 'call', 'bass'],
+    pulse: ['sub', 'engine', 'perc', 'ride', 'beat', 'crash'],
     bed: ['chords', 'groove'],
     air: ['drone'],
   },
   // The counter-melody takes over — 0120's `surge` closes `call` and `arp` to make room for it.
   surge: {
     part: ['counter'],
-    counter: ['hook', 'lead', 'drive'],
-    pulse: ['sub', 'engine', 'perc', 'ride', 'crash'],
+    counter: ['hook', 'lead', 'drive', 'bass'],
+    pulse: ['sub', 'engine', 'perc', 'ride', 'crash', 'beat'],
     bed: ['chords', 'groove'],
     air: ['drone'],
   },
   // The tritone is the subject from here on. 0120's `approach` closes `groove` and `hook`.
   approach: {
     part: ['dread'],
-    counter: ['counter', 'lead', 'drive', 'toll'],
-    pulse: ['sub', 'engine', 'perc', 'ride', 'crash'],
+    counter: ['counter', 'lead', 'drive', 'toll', 'bass'],
+    pulse: ['sub', 'engine', 'perc', 'ride', 'crash', 'beat'],
     bed: ['chords'],
     air: ['drone'],
   },
   // The fight: a different piece — 0114 — and the sparsest bed in the game under it.
   boss: {
     part: ['dread'],
-    counter: ['drive', 'toll', 'frenzy', 'wraith'],
-    pulse: ['sub', 'engine', 'perc', 'ride', 'crash', 'stomp'],
+    counter: ['drive', 'toll', 'frenzy', 'wraith', 'bass'],
+    pulse: ['sub', 'engine', 'perc', 'ride', 'crash', 'stomp', 'beat'],
     bed: [],
     air: ['drone'],
   },
@@ -262,7 +262,7 @@ export const LEADS: Record<ThemeKind, Partial<Record<MusicLevel, MusicLayer>>> =
     rather than the octave bass, which is the same sentence about the level — *what you follow first
     here is the bottom* — with a different instrument saying it.
   */
-  saurian: { run: 'groove', push: 'arp', surge: 'hook', approach: 'drive', boss: 'frenzy', bossPeak: 'frenzy' },
+  saurian: { run: 'bass', push: 'arp', surge: 'hook', approach: 'drive', boss: 'frenzy', bossPeak: 'frenzy' },
   // *"A corridor, and something breathing in it… the hound"* — footsteps, then the thing running.
   labyrinth: { run: 'perc', push: 'ride', approach: 'toll', boss: 'stomp' },
   // *"It rings… it cracks… the blizzard"* — glass, then the lead, then the weather.
@@ -333,14 +333,7 @@ export const OWN_ROLES: Record<ThemeKind, Partial<Record<MusicLevel, Partial<Rec
     hole `docs/decisions/0172-a-place-opens-with-its-own-four.md` left in seven layer-rungs and
     `docs/state-of-play.md` has been flagging since; 0189 does not widen it.
   */
-  saurian: {
-    run: { ownB: 'pulse' },
-    push: { ownA: 'counter', ownB: 'pulse' },
-    surge: { ownA: 'counter', ownB: 'pulse' },
-    approach: { ownA: 'counter', ownB: 'pulse' },
-    boss: { ownB: 'pulse' },
-    bossPeak: { ownB: 'pulse' },
-  },
+  saurian: { surge: { ownA: 'counter' }, approach: { ownA: 'counter' } },
   labyrinth: {},
   rime: {},
   mire: {},

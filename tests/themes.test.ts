@@ -1010,12 +1010,40 @@ describe('0128 — a place plays its own material, and shares everything it does
     approach: ['approach/dread', 'approach/drive', 'boss/dread', 'boss/wraith', 'bossPeak/dread', 'surge/drive'],
     nebula: ['approach/toll', 'boss/dread', 'boss/wraith', 'bossPeak/dread'],
     /*
-      ⚠️ **SIX ENTRIES TO ONE, AND THIS IS WHAT 0176 MEANT BY *deleted when its place is worked on*** —
-      `docs/decisions/0185-the-belt-gets-its-bottom.md`. `approach/dread`, `approach/toll`,
-      `boss/dread` and `surge/drive` all clear the floor now; `run/groove` was never adrift at all
-      and went with `docs/decisions/0184-the-measurement-reads-the-place.md`.
+      ── EMPTY, THEN THIRTEEN, AND THE THIRTEEN ARE A VERDICT RATHER THAN A REGRESSION ─────────────
+
+      ⚠️ **`docs/decisions/0191-a-place-sits-somewhere.md`.** This list went to zero under
+      `docs/decisions/0186-a-place-has-its-own-gesture.md` and is thirteen now, and the reason is not
+      that the mix got worse: **it is that the mix is the player's.** Driven on the desk, Saurian Belt
+      opens `bass` and `beat` — the base composition's riff and kit, which no other place sounds at
+      all — at **1.62**, where the title screen plays them at 0.5. That bass is the loudest thing in
+      the place in three bands, and what it sits on top of is what this list is.
+
+      ⚠️ **IT WAS PUT TO THE PLAYER WITH THE NUMBERS AND THE ANSWER WAS *ship it as I drove it*.** The
+      alternative offered was lifting `sub` about 4 dB so the kick reads under the bassline, which
+      would have cost four of these entries; it was refused, and a refusal by the ear that has to live
+      with the level is the verdict `docs/decisions/0027-measure-the-picture-not-the-model.md` says
+      this channel is decided by.
+
+      ⚠️ **WHAT THIS COSTS IS STATED RATHER THAN HIDDEN.** `sub` at 11–12 dB under a `pulse` means the
+      four-on-the-floor is not felt as a pulse; `ride` at 0.64 is a whisper by intent; `hook` at
+      `push` is 0.32 and is meant to be. **0164 will not flag any of them again in this place**, which
+      is the real price — a list is a decision to stop asking. The four entries `sub` accounts for are
+      the ones to delete first if the kick is ever reported.
+
+      ⚠️ **AND `approach/drive` IS THE ONE ENTRY HERE THAT IS NOT THE PLAYER'S.** `drive` is what this
+      place FOLLOWS at `approach` and it is 6.5 dB under a `part`, beaten by `engine` in the lowmid.
+      It is on the list because the pass that would fix it is a mix pass on a level nobody has driven
+      past `surge` yet, and doing it blind is what this whole decision is a correction of.
     */
-    saurian: [],
+    saurian: [
+      'run/sub',
+      'push/hook', 'push/sub',
+      'surge/ride', 'surge/sub',
+      'approach/sub', 'approach/drive', 'approach/dread',
+      'boss/dread', 'boss/ride', 'boss/sub',
+      'bossPeak/ride', 'bossPeak/dread',
+    ],
     labyrinth: ['approach/drive', 'approach/drone', 'approach/toll', 'boss/drone', 'boss/frenzy', 'boss/stomp', 'boss/wraith', 'bossPeak/drone', 'bossPeak/frenzy', 'bossPeak/sub', 'bossPeak/wraith', 'surge/drive', 'surge/drone'],
     rime: ['approach/dread', 'boss/wraith', 'bossPeak/dread'],
     mire: ['boss/ride', 'bossPeak/ride', 'surge/drive', 'surge/hook'],
