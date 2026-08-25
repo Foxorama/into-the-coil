@@ -914,7 +914,22 @@ describe('the cue table', () => {
       */
       const bytes = MUSIC_LAYERS.reduce((sum, layer) => sum + secondsOfLayer(layer) * SAMPLE_RATE * 4, 0);
       const mb = bytes / 1e6;
-      expect(mb, `the loops are ${mb.toFixed(1)} MB resident, which is past what a desktop should hold for a backdrop`).toBeLessThan(56);
+      /*
+        ⚠️ **THIS IS A BUDGET AND THE MESSAGE SAYS SO** —
+        `docs/decisions/0192-a-guard-holds-an-invariant.md`. A budget fails hard like an invariant and
+        is unlike one in the way that matters: **somebody owns it and may re-choose it.** The number
+        is already deciding musical structure — `docs/decisions/0188-a-place-owns-four-slots.md` gives
+        a place four four-bar slots rather than five, or four eight-bar ones, because 52.5 fits and
+        57.0 does not — so a red here is a design conversation and not a defect, and it should read
+        like one rather than like a law.
+      */
+      expect(
+        mb,
+        `the loops are ${mb.toFixed(1)} MB resident against a BUDGET of 56 MB — this is not a defect, it is a ` +
+          'limit somebody chose. Raising the number is the wrong move twice over (0153: desktop is the target, ' +
+          'so this is not a phone argument; and the third raise must not be a number). What a change wanting ' +
+          'more should buy is the boundary bake — docs/decisions/0133-the-place-is-baked-at-the-boundary.md.',
+      ).toBeLessThan(56);
     });
   });
 

@@ -1,11 +1,11 @@
 // The breaks behind docs/decisions/0172-a-place-opens-with-its-own-four.md.
 //
-// ⚠️ THE FIRST ONE IS THE STATE THE GAME SHIPPED IN, AND IT IS THE ONE `weigh-apart` HAS BEEN
-// DESCRIBING SINCE 2026-08-13. With the override ignored, every place is back on the shared `run`
-// row and FIVE of the seven have literally the same four layers loudest — a sub, a kick, a bass and
-// a pad. Every other guard in the repository is green over that, which is the whole finding.
+// ⚠️ THE ONE THAT WAS FIRST HERE IS RETIRED — docs/decisions/0192-a-guard-holds-an-invariant.md.
+// *No two places open on the same four* is what this decision is FOR, and it is still the thing to
+// watch — but two places that open alike and diverge later is a legal shape for a level to have, so it
+// is a claim rather than a law. `tests/authored.test.ts` measures it and prints it.
 //
-// ⚠️ THE SECOND IS THE DEFECT THIS DECISION FOUND RATHER THAN THE ONE IT FIXED. `rungShape` read
+// ⚠️ THE FIRST REMAINING ONE IS THE DEFECT THIS DECISION FOUND RATHER THAN THE ONE IT FIXED. `rungShape` read
 // `MUSIC_LADDER` directly while `paceAt` read the place's own ladder, so the desk and the guard
 // disagreed by 27 notes a bar at Ember Nebula's `run` the instant an override existed — and could
 // not have disagreed by anything before that. It is `loudestOf`'s twin, and 0168's own guard, which
@@ -13,17 +13,6 @@
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
-  {
-    decision: '0172',
-    suite: 'tests/themes.test.ts',
-    broke: 'every place back on the shared `run` row, which is five of seven opening on the same four sounds',
-    guard: 'THE REPORTED ONE: no two places have the same four layers on top at `run`',
-    edit: {
-      path: 'src/content/themes.ts',
-      find: '  return ladder?.[rung]?.[layer] ?? MUSIC_LADDER[rung][layer];',
-      replace: '  return MUSIC_LADDER[rung][layer];',
-    },
-  },
   {
     decision: '0172',
     suite: 'tests/themes.test.ts',
