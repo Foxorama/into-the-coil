@@ -68,7 +68,6 @@ import {
 import { PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SAMPLE_RATE, saturate } from '../src/app/sound.ts';
 import { loopsAt } from './bakes.ts';
-import { soundingAt } from './pace.ts';
 import { contrast } from './contrast.ts';
 
 /**
@@ -591,35 +590,6 @@ describe('0128 — a place plays its own material, and shares everything it does
       const scale = scaleOf(theme);
       expect(scale.includes(0), `${theme} does not sound its own root`).toBe(true);
       expect(scale.includes(7), `${theme} does not sound the fifth the cues glide to`).toBe(true);
-    }
-  });
-
-  it('0148 — NO TWO PLACES THAT CHOSE THEIR NOTES CHOSE THE SAME ONES', () => {
-    /*
-      ⚠️ **THE DEFECT 0148 IS NAMED FOR, AS FAR AS IT CAN HONESTLY BE STATED TODAY.** `weigh-notes`
-      measured two distinct pitch-class sets across seven places and the report called them
-      interchangeable. The guard this wants to be — *no two places share a mode* — **is one the
-      shipped design fails**, because five of the seven still state none and default to `SCALE`.
-
-      ⚠️ **SO IT IS WRITTEN OVER THE PLACES THAT OPTED IN, AND IT IS VACUOUS UNTIL A SECOND ONE
-      DOES.** `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md` and
-      `docs/decisions/0147-a-place-is-a-balance.md`'s own deleted guard are why: a bound the design
-      fails is not a bound, and asserting the version this wants would mean either five stated modes
-      no material plays — a declaration that is a lie — or a red suite.
-
-      ⚠️ **WHAT IT GENUINELY CATCHES IS THE NEXT PLACE COPYING THIS ONE'S**, which is the exact shape
-      of the failure 0148 exists to answer. `docs/decisions/0148-a-place-has-its-own-notes.md` records
-      levels 4 to 7 as owed, and this goes red rather than quiet if two of them arrive as twins.
-    */
-    const chose = THEME_KINDS.filter((theme) => THEMES[theme].scale !== undefined);
-    const seen = new Map<string, ThemeKind>();
-    for (const theme of chose) {
-      const key = [...scaleOf(theme)].sort((a, b) => a - b).join(',');
-      const twin = seen.get(key);
-      expect(twin, `${theme} chose the same notes as ${twin} — neither is anywhere the other is not`).toBe(
-        undefined,
-      );
-      seen.set(key, theme);
     }
   });
 
@@ -1220,54 +1190,6 @@ describe('0128 — a place plays its own material, and shares everything it does
   }, DSP_MS);
 
 
-  it('0167 — A BUILD DOES NOT DUCK: nothing already sounding gets audibly quieter when a section opens', () => {
-    /*
-      `docs/decisions/0167-a-build-does-not-duck.md`. Reported, of the solved mix against the shipped
-      one at the same boundary with the desk untouched in both: *"the border change is way worse…
-      every change for every level is now a hard jump between sounds whereas pre-solved-mix the change
-      was a lot smoother and balanced."*
-
-      ⚠️ **THIS IS A PROPERTY `MUSIC_LADDER` HAS ALWAYS HAD AND NOBODY WROTE DOWN.** At every in-level
-      boundary in every place, every layer that carries through either holds or gets louder, and new
-      layers arrive on top. The largest reduction anywhere is `drone` at **−0.26 dB**. That is what a
-      section change has sounded like for the whole life of this composition, and it survived eight
-      mix decisions by accident rather than by rule.
-
-      ⚠️ **THE SOLVED MIX BREAKS IT 56 TIMES, WORST −11.2 dB**, and that is the blocker on shipping it
-      — recorded here as a test rather than as a paragraph.
-      `reports/a-build-does-not-duck-2026-08-18.md` prices the three fixes that were measured and
-      refused; `node scripts/weigh-boundary.mjs --solved` is the same arithmetic, printed.
-
-      ⚠️ **`approach → boss` IS NOT AN IN-LEVEL BOUNDARY AND IS EXCLUDED.** The boss arriving is an
-      event and is *supposed* to reorganise the mix; 0091 moves the aura 7.1 dB there on purpose.
-      This is about the three changes a player crosses while flying the same stretch of level.
-    */
-    const offenders: string[] = [];
-    for (const theme of THEME_KINDS) {
-      for (const [from, to] of [
-        ['run', 'push'],
-        ['push', 'surge'],
-        ['surge', 'approach'],
-      ] as const) {
-        const before = {} as Record<MusicLayer, number>;
-        const after = {} as Record<MusicLayer, number>;
-        for (const layer of MUSIC_LAYERS) {
-          before[layer] = rungOf(theme, from, layer) * mixOf(theme, layer);
-          after[layer] = rungOf(theme, to, layer) * mixOf(theme, layer);
-        }
-        for (const { layer, move } of carriedThrough(before, after)) {
-          if (move <= DUCK_FLOOR_DB) {
-            offenders.push(`${theme} ${from}→${to}: ${layer} ${move.toFixed(1)} dB`);
-          }
-        }
-      }
-    }
-    expect(
-      offenders,
-      'a section change made these audibly quieter while it was opening new layers — a build only adds',
-    ).toEqual([]);
-  });
-
   it('0167 — AND THE RE-BASED MIX IS ADDITIVE TOO, which is the only reason it exists', () => {
     /*
       `docs/decisions/0167-a-build-does-not-duck.md`. The third mix on the desk keeps the shipped
@@ -1823,23 +1745,6 @@ describe('0162 — and the override path itself, driven with a table of its own'
   here too. A place could state four different numbers and still be four identical sounds.
 */
 describe('0172 — a place opens with its own four', () => {
-  it('THE REPORTED ONE: no two places have the same four layers on top at `run`', () => {
-    const top = new Map<ThemeKind, string>();
-    for (const theme of THEME_KINDS) {
-      const four = soundingAt(theme, 'run', loopsAt(SAMPLE_RATE, theme)).slice(0, 4);
-      expect(four.length, `${theme} sounds fewer than four layers at run`).toBe(4);
-      top.set(theme, [...four].sort().join(','));
-    }
-    const clashes: string[] = [];
-    for (const a of THEME_KINDS) {
-      for (const b of THEME_KINDS) {
-        if (THEME_KINDS.indexOf(b) <= THEME_KINDS.indexOf(a)) continue;
-        if (top.get(a) === top.get(b)) clashes.push(`${a} and ${b} both open on ${top.get(a)}`);
-      }
-    }
-    expect(clashes, 'two levels open on the same four sounds, which is what *it all sounds the same* means').toEqual([]);
-  });
-
   it('and six of the seven state a `run` of their own, because level one is the one that changes nothing', () => {
     /*
       ⚠️ **THE COUNT IS THE ONE THING HERE THAT IS ABOUT THE MECHANISM RATHER THAN THE SOUND**, and it

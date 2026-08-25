@@ -1,17 +1,15 @@
 // The breaks behind docs/decisions/0148-a-place-has-its-own-notes.md.
 //
-// ⚠️ THE FIRST ONE IS THE HALF OF THE OLD GUARD THAT WAS ALWAYS RIGHT, AND IT IS THE ONE THAT MAKES
+// ⚠️ THE REMAINING FIRST ONE IS THE HALF OF THE OLD GUARD THAT WAS ALWAYS RIGHT, AND IT IS THE ONE THAT MAKES
 // 0148 SAFE AT ALL. A place may now state a mode; it may not state a key. The cues are baked once, in
 // A (0099), so a place whose scale does not contain its own root puts the player's gun a semitone
 // from the level for three minutes. Nothing enforced this before, because nothing needed to — every
 // place was hard-coded to the one scale that trivially contained it.
 //
-// ⚠️ THE SECOND IS THE DEFECT 0148 IS NAMED FOR, AS FAR AS IT CAN BE STATED WHILE FIVE PLACES STILL
-// SHARE A MODE. Two places that choose the same notes are differentiated by rhythm, balance and
-// timbre alone — which is the combination the report calls interchangeable. It goes red on a twin and
-// stays quiet on a place that has not chosen yet, and `tests/themes.test.ts` says why that compromise
-// rather than the stronger version: the stronger one is a bound the shipped design fails, which 0044
-// says is not a bound.
+// ⚠️ THE SECOND IS RETIRED, AND IT IS THE CLEANEST CASE 0192 HAS. That guard could only ever be
+// written over the two places that opted in — its own comment said the version it wanted was *"a bound
+// the shipped design fails"*. As an advisory it states the whole claim over all seven and names the
+// six still on the default, which is a better artefact than the compromise it replaces.
 //
 // ⚠️ THE THIRD IS THE ONE THAT WOULD HAVE CAUGHT THE ORIGINAL DEFECT, and it is the reason the old
 // guard is loosened rather than deleted. A place still means its notes: `scaleOf` is what a voice is
@@ -34,17 +32,6 @@ export const PROBES = [
       path: 'src/content/themes.ts',
       find: 'scale: [0, 2, 3, 5, 7, 8, 10, 11],',
       replace: 'scale: [6, 2, 3, 5, 7, 8, 10, 11],',
-    },
-  },
-  {
-    decision: '0148',
-    suite: 'tests/themes.test.ts',
-    broke: 'a second place choosing the notes Saurian Belt already chose',
-    guard: '0148 — NO TWO PLACES THAT CHOSE THEIR NOTES CHOSE THE SAME ONES',
-    edit: {
-      path: 'src/content/themes.ts',
-      find: '    voices: NEBULA_VOICES,',
-      replace: '    voices: NEBULA_VOICES,\n    scale: [0, 2, 3, 5, 7, 8, 10, 11],',
     },
   },
   {

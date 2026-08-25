@@ -34,6 +34,15 @@ decision needs no rule.
   `npm run prove` refuses to run the suite until it has read the file back and seen it change.
   — [0005](docs/decisions/0005-a-guard-must-be-seen-to-fail.md),
   [0019](docs/decisions/0019-a-probe-must-be-seen-to-apply.md)
+- **A guard holds an invariant, a budget says what it costs, and a taste is advisory.** Before
+  writing one, answer: *name a change to the content that would redden this and be CORRECT.* No such
+  change — invariant, fails hard. One that costs a measured resource — a budget: fails hard, and the
+  message names who owns the number. One that costs only an opinion — a taste: it goes in
+  `tests/authored.ts`, is printed every run, and can never fail a suite. **A red guard is never
+  answered by changing the work to suit it** — fix the defect, change the guard and say why, or
+  delete it. **Demoting a guard takes one edit and a reason; promoting one takes a decision**, because
+  the opposite asymmetry is why they pile up.
+  — [0192](docs/decisions/0192-a-guard-holds-an-invariant.md)
 - **An intermittent guard has found something, and "flaky" is not what it found.** A rerun is not
   evidence. Establish which it is — a real intermittency in the code, or a wrong quantity in the
   guard — then delete it, fix it, or leave it red. The one this rule is named for was reading wall

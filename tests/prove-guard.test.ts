@@ -212,6 +212,18 @@ const WITHOUT_PROBES: Record<string, string> = {
   // what was measured in 2026-08 and stays; what cannot be re-run is a break against code that is no
   // longer in the repository. Repointing them at anything would be theatre — 0019's STILL GREEN.
   '0052': 'superseded by 0082, which removed the cycle its probes broke; the table records what was measured and there is no longer any code to break',
+  // The fourth exemption that is not a hole, and the first one a DEMOTION produced.
+  // docs/decisions/0192-a-guard-holds-an-invariant.md moved 0167's *a build does not duck* into
+  // `tests/authored.ts`, where it is measured on every run and cannot fail one. A probe proves a
+  // guard goes red; an advisory has no red to go, so probing it would be
+  // docs/decisions/0019-a-probe-must-be-seen-to-apply.md's STILL GREEN by construction. What is
+  // proven instead is the mechanism under it, by `scripts/probes/0192-a-guard-holds-an-invariant.mjs`
+  // — including that an unmet claim does not throw, which is the property this exemption rests on.
+  // ⚠️ 0167's OTHER guard — that the re-based mix is additive — is arithmetic rather than taste and
+  // stays hard. It has NEVER had a probe: both of 0167's broke the duck guard. That is a pre-existing
+  // hole this exemption inherits rather than creates, and 0192 names it as a debt found on the way
+  // past rather than quietly covering it with this sentence.
+  '0167': 'its duck guard is advisory under 0192 and has no red to prove; the mechanism that replaces the proof is probed under 0192, and the additive half stayed hard but was never probed by either of the two this file removed',
 };
 
 describe('the probe set stays honest', () => {

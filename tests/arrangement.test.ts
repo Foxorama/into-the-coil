@@ -156,35 +156,6 @@ describe('0154 — the mix is authored as intent', () => {
     }
   });
 
-  it('and no two places follow the same thing all the way through, which is the whole point', () => {
-    /*
-      ⚠️ **THE DEFECT 0155 IS NAMED FOR, STATED AS A PROPERTY.** *"Every level sounds the same and
-      that's what I've been trying to fix."* Seven places that track the same instrument at every rung
-      are seven arrangements of one piece, whatever their gains say — which is exactly what 0147
-      measured as different and a player heard as identical.
-
-      ⚠️ **PAIRWISE AND NOT GLOBAL**, because the base composition is allowed to be the shape the
-      others deviate from: what must not happen is two PLACES being interchangeable.
-    */
-    const rungs = MUSIC_LEVELS.filter((r) => r !== 'calm' && r !== 'bossPeak');
-    const sameAll: string[] = [];
-    for (let i = 0; i < THEME_KINDS.length; i++) {
-      for (let j = i + 1; j < THEME_KINDS.length; j++) {
-        const a = THEME_KINDS[i]!;
-        const b = THEME_KINDS[j]!;
-        const differs = rungs.some((rung) => {
-          const lead = (t: typeof a) => MUSIC_LAYERS.find((l) => roleOf(t, rung, l) === 'part');
-          return lead(a) !== lead(b);
-        });
-        if (!differs) sameAll.push(`${a}/${b}`);
-      }
-    }
-    expect(
-      sameAll,
-      `these places follow the same instrument at every rung, so they are one arrangement: ${sameAll.join(', ')}`,
-    ).toEqual([]);
-  });
-
   it('and the targets are ordered, because a role that is not above the one below it is not a role', () => {
     /*
       ⚠️ **THE SPACING IS WHAT THE SOLVE HOLDS** — an anchor shifts the whole set when the aura is loud,

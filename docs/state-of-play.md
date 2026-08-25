@@ -686,6 +686,20 @@ is worse than no marker, because it reads exactly like a live one — the same f
 [0029](decisions/0029-the-tracked-record-is-the-record.md) names for a summary that drifts. **Retire
 this heading when it stops being true rather than adding another one below it.**
 
+⚠️ **AND THE GUARDS NO LONGER GET A VOTE ON THE MUSIC** —
+[0192](decisions/0192-a-guard-holds-an-invariant.md), answering *"a guard will get written and then
+I'll be fighting it for ages instead of benefitting from good safe guards that prevent regressions."*
+**A guard holds an invariant, a budget says what it costs, and a taste is advisory** — the admission
+test is *name a change to the content that would redden this and be CORRECT.* Four claims moved to
+`tests/authored.ts`, where they are measured and printed every run and can never fail one; three of
+the four were *the levels must differ* stated as law, and `0167-duck` is the one that refused the
+eurobeat breakdown twice. **Nothing red went green**: the demotion ships no sound change.
+
+⚠️ **AND THE TWO RULES UNDER IT ARE THE ONES THAT CHANGE HOW A SESSION BEHAVES.** A red guard is
+never answered by bending the work to suit it — the sequence
+[0191](decisions/0191-a-place-sits-somewhere.md) records. And **demoting a guard is one edit and a
+reason where promoting one is a decision**, which inverts the asymmetry that built the pile.
+
 **THE WORK IS A DRIVING SESSION. EVERYTHING ELSE IS WAITING ON AN EAR.** Between 2026-08-19 and
 2026-08-21, **eight decisions landed on the sound** and every one of them was either a wall coming
 down or a defect the player reported. `npm run dash`.
