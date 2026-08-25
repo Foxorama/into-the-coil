@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Into the Coil — sprite sheet</title>
+    <!--
+      docs/decisions/0193-the-sheet-is-the-instrument.md.
+
+      ⚠️ DEV ONLY, AND IT IS NOT IN THE BUILD. `vite.config.ts` has one entry — the root
+      `index.html` — so `vite build` never sees this page, and
+      docs/decisions/0003-single-file-build.md's closed sidecar list is untouched. `npm run sheet`
+      serves it; nothing ships it. The same terms as the sound dashboard, which
+      docs/decisions/0126-the-dashboard-is-the-instrument.md set.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #e8e9f2;
+        --dim: #8b90a8;
+        --line: #262a3d;
+        --panel: #14161f;
+        --back: #0b0c12;
+        --hot: #ff7a4d;
+        --cool: #4dd0ff;
+        --bad: #ff6b8a;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--back);
+        color: var(--ink);
+        font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      h1 { font-size: 14px; margin: 0; letter-spacing: 0.08em; text-transform: uppercase; }
+      header {
+        display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+        padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--panel);
+        position: sticky; top: 0; z-index: 2;
+      }
+      label { color: var(--dim); }
+      button, select {
+        font: inherit; color: var(--ink); background: #1d2130;
+        border: 1px solid var(--line); border-radius: 3px; padding: 3px 8px; cursor: pointer;
+      }
+      button:hover, select:hover { border-color: var(--cool); }
+      button[aria-pressed='true'] { background: var(--cool); color: #04121a; border-color: var(--cool); }
+      #summary { color: var(--dim); }
+      #summary.bad { color: var(--bad); font-weight: 700; }
+      .note { padding: 8px 14px; color: var(--dim); border-bottom: 1px solid var(--line); }
+      #sheet {
+        display: grid; gap: 10px; padding: 14px;
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      }
+      .card {
+        border: 1px solid var(--line); border-radius: 5px; padding: 8px;
+        background: rgba(10, 12, 18, 0.55); display: flex; flex-direction: column; gap: 6px;
+      }
+      .card.same { border-color: var(--bad); }
+      .name { font-weight: 700; letter-spacing: 0.04em; }
+      .art {
+        display: flex; gap: 10px; align-items: center; justify-content: center;
+        min-height: 76px; padding: 8px; border-radius: 3px; overflow: auto;
+      }
+      .meta, .diff { color: var(--dim); font-size: 11px; }
+      .diff.bad { color: var(--bad); font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Sprite sheet</h1>
+      <label>palette <select id="palette"></select></label>
+      <label>place <select id="theme"></select></label>
+      <label>viewport <select id="viewport"></select></label>
+      <label>zoom <select id="zoom"></select></label>
+      <button id="identical" aria-pressed="false">identical pairs only</button>
+      <span id="summary"></span>
+    </header>
+    <p class="note">
+      Every bitmap <code>bakeAtlas</code> produces, at the resolution the game bakes it — a kind and
+      its hurt twin side by side, on the place's own backdrop. The verdict is your eye; nothing on
+      this page is a guard.
+    </p>
+    <div id="sheet"></div>
+    <script type="module" src="./sheet-page.ts"></script>
+  </body>
+</html>

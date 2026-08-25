@@ -686,6 +686,25 @@ is worse than no marker, because it reads exactly like a live one — the same f
 [0029](decisions/0029-the-tracked-record-is-the-record.md) names for a summary that drifts. **Retire
 this heading when it stops being true rather than adding another one below it.**
 
+⚠️ **AND THE ART CHANNEL HAS AN INSTRUMENT BEFORE ITS FIRST TUNING PASS** —
+[0193](decisions/0193-the-sheet-is-the-instrument.md). `npm run sheet`: every bitmap
+`bakeAtlas` produces, at the resolution the game bakes it, on the place's own backdrop, with a kind
+and its hurt twin side by side. **58 kinds, 40 rows, zero identical pairs** — the five-bosses-never-hurt
+defect [`where-the-art-ceiling-is`](../reports/where-the-art-ceiling-is-2026-08-14.md) records is
+fixed, and this is now what would notice the next one.
+
+⚠️ **TWO FINDINGS ON ITS FIRST RUN, AND NEITHER IS ACTED ON.** `charger` changes **5.4%** of its
+pixels when hit against a next-lowest of 12.4 and a boss range of 17–38 —
+[0035](decisions/0035-damage-is-legible-on-the-body-that-took-it.md) is what it bears on. And **a
+16:10 screen bakes every sprite a third smaller than a 16:9 one** (7.19 px/unit against 10.79),
+because [0023](decisions/0023-the-long-axis-is-the-scroll-axis.md)'s lookahead clamp buys the extra
+span out of scale — **the binding legibility case is the narrow laptop, not the ultrawide**, and
+nothing had ever printed it.
+
+⚠️ **`variant` IS THE NEXT ART PR AND IS DELIBERATELY NOT IN THIS ONE.** Fourteen `SpriteKind`s
+still stand up for seven bosses; the survey prices it and says why a pipeline refactor must not ride
+along with a visual change.
+
 ⚠️ **AND THE GUARDS NO LONGER GET A VOTE ON THE MUSIC** —
 [0192](decisions/0192-a-guard-holds-an-invariant.md), answering *"a guard will get written and then
 I'll be fighting it for ages instead of benefitting from good safe guards that prevent regressions."*

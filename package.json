@@ -15,7 +15,8 @@
     "prove": "node scripts/prove-guard.mjs",
     "trace": "npm run build && node scripts/trace-frame.mjs",
     "tidy": "node scripts/tidy.mjs",
-    "check": "npm run typecheck && npm test && npm run build"
+    "check": "npm run typecheck && npm test && npm run build",
+    "sheet": "vite --open /rig/sheet.html"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",
