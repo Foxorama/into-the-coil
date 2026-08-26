@@ -686,6 +686,30 @@ is worse than no marker, because it reads exactly like a live one — the same f
 [0029](decisions/0029-the-tracked-record-is-the-record.md) names for a summary that drifts. **Retire
 this heading when it stops being true rather than adding another one below it.**
 
+⚠️ **AND THE BACKDROP IS A PLACE'S NOW, WHICH WAS THE BIGGEST HALF OF THE BRIEF** —
+[0195](decisions/0195-a-place-has-its-own-sky.md). `makeRng('sky')` took **no theme**, so every level
+drew the same stars in the same places and `THEMES` changed two hex values over the top — *"a slight
+hue change on each level"* was the mechanism, exactly. Seven fields now: 153 fine motes at The Toxic
+Mire against 27 marks at The Black Heart, 38.6-unit streaks at The Coil Labyrinth, shards tilted −0.85
+rad at Rime Shelf, fourteen clouds at Ember Nebula against two at the Labyrinth.
+
+⚠️ **A PLACE MAY THIN ITS SKY AND MAY NEVER THICKEN IT, AND A GUARD DECIDED THAT.** A first draft
+scaled marks up for tumbling rock; `tests/budget.test.ts` measured `skyNear` at **40% of a bullet** and
+reddened. [0069](decisions/0069-the-sky-is-behind-the-game.md)'s bound lives on the shared constants,
+so `size` is clamped at 1 and the other six axes are where a place differs. **The re-bake is 1.6–3.2 ms
+against a 16.7 ms frame**, once, at a boundary — measured, not assumed.
+
+⚠️ **AND `npm run prove` CAUGHT THIS DECISION'S OWN HEADLINE GUARD DOING NOTHING.** The first
+fingerprint included radius and length, so restoring the shared stream **stayed green** — a place also
+scales the count, so the strings differed anyway and the guard had never tested its own subject. It
+compares **positions only** now, pairwise, as the leading run two places agree on.
+[0019](decisions/0019-a-probe-must-be-seen-to-apply.md), on a guard written the same hour as its
+mechanism.
+
+⚠️ **WHAT IS STILL OWED ON THE BACKDROP IS A DIFFERENT KIND OF MARK.** A place varies count, size,
+tilt, streak length and cloud; it does not yet draw structure, ash or an actual shard. That is a second
+pass on the same mechanism and wants an eye on this one first.
+
 ⚠️ **AND THE ART IS BEING BUILT NOW, IN THREE PARTS, AND THE FIRST HAS LANDED** —
 [0194](decisions/0194-a-hull-has-a-livery.md), answering *"I want fun quirky graphics like we have in
 The Far Carry for the spaceships and weapons… for the enemies I want fun level specific art and a

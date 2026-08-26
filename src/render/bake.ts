@@ -20,6 +20,7 @@
  */
 
 import type { DecorInk, Palette } from '../content/palette.ts';
+import type { ThemeKind } from '../content/themes.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { makeRng } from '../sim/rng.ts';
 
@@ -62,6 +63,14 @@ export type Pen = Pick<
 
 export interface Atlas {
   readonly view: SpriteView;
+  /**
+   * The place its sky was baked for — 0195.
+   *
+   * ⚠️ **HERE FOR THE REASON `pixelsPerUnit` IS HERE: so staleness is a question with an answer.** A
+   * level boundary changes the place, and an atlas that could not say which place it belongs to would
+   * go on showing the last one's sky until a rotation happened to re-bake it.
+   */
+  readonly theme: ThemeKind;
   /** Baked bitmaps, indexed by `SPRITE`. */
   readonly bitmaps: readonly CanvasImageSource[];
   /** World extent per bitmap, in the same order. */
@@ -85,8 +94,19 @@ export function viewFor(alongAxis: 'x' | 'y'): SpriteView {
  * The threshold is a quarter. Below that the difference is a bitmap scaled by up to 25%, which on
  * these shapes is invisible; above it, edges start to look soft.
  */
-export function atlasIsStale(atlas: Atlas, view: SpriteView, pixelsPerUnit: number): boolean {
+export function atlasIsStale(
+  atlas: Atlas,
+  view: SpriteView,
+  pixelsPerUnit: number,
+  theme: ThemeKind = 'approach',
+): boolean {
   if (atlas.view !== view) return true;
+  /*
+    ⚠️ **A PLACE CHANGE IS ALWAYS STALE, WITH NO TOLERANCE BAND** — 0195. The resolution test below
+    forgives a quarter, because a re-bake for a 3% DPI wobble is memory churn for a picture nobody can
+    see. A place is not a quantity: the sky either belongs to this level or it belongs to the last one.
+  */
+  if (atlas.theme !== theme) return true;
   if (!Number.isFinite(pixelsPerUnit) || pixelsPerUnit <= 0) return false;
   return Math.abs(pixelsPerUnit - atlas.pixelsPerUnit) > atlas.pixelsPerUnit * 0.25;
 }
@@ -216,7 +236,14 @@ const SKY_STARS = { skyFar: 90, skyNear: 90, skyRush: 10 };
  * whole of why a layer moving at 0.85 is still a background: `tests/budget.test.ts` holds both that
  * ladder and the aspect ratio that stops a streak degenerating into a dot.
  */
-const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.24 };
+/*
+  ⚠️ **EXPORTED BY 0195, so the clamp on a place's `size` can be stated as the claim it actually is.**
+  The comment above already argues that this number's whole point is being readable against
+  `SHOTS.pulse.radius` by a person and by a test. What `tests/sky.test.ts` asserts is not this
+  constant — it is that no place's field draws past it, whatever `SKY_STYLE_OF` says, which is a claim
+  about the clamp and reddens when the clamp goes.
+*/
+export const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.24 };
 
 /**
  * How long a `skyRush` streak is, in world units — the range one is drawn between.
@@ -818,7 +845,13 @@ export const ACCENT_OF: Record<SpriteKind, Accent | null> = {
  * Everything is expressed as a fraction of `size` so a bake at any resolution is the same picture —
  * which is what lets the atlas be re-baked larger on a high-DPI screen without a second set of art.
  */
-export function drawKind(ctx: Pen, kind: SpriteKind, palette: Palette, size: number): void {
+export function drawKind(
+  ctx: Pen,
+  kind: SpriteKind,
+  palette: Palette,
+  size: number,
+  theme: ThemeKind = 'approach',
+): void {
   const half = size / 2;
   const r = size * 0.42;
   ctx.fillStyle = palette[INK_OF[kind]];
@@ -1364,7 +1397,7 @@ export function drawKind(ctx: Pen, kind: SpriteKind, palette: Palette, size: num
     case 'skyFar':
     case 'skyNear':
     case 'skyRush':
-      drawSky(ctx, kind, size);
+      drawSky(ctx, kind, size, theme);
       return;
     case 'skyNebula':
       /*
@@ -1373,7 +1406,7 @@ export function drawKind(ctx: Pen, kind: SpriteKind, palette: Palette, size: num
         like on the title screen and on any level that has not said otherwise, so the layer is never
         missing and never a hole in the atlas.
       */
-      drawNebula(ctx, palette.sky, size);
+      drawNebula(ctx, palette.sky, size, theme);
       return;
     /*
       ── THE EDGE OF THE PLAYER'S BOX ────────────────────────────────────────────────────────────
@@ -1527,6 +1560,16 @@ export interface SkyStar {
    * would mean `tests/budget.test.ts` walking two lists and, on the day a third form arrives, three.
    */
   len: number;
+  /**
+   * Which way the mark lies, in radians, where `0` is along the tile's `+x`.
+   *
+   * ⚠️ **THE THIRD FORM 0097 SAID WOULD COST A THIRD LIST, AND IT DOES NOT** —
+   * `docs/decisions/0195-a-place-has-its-own-sky.md`. A dot is `len: 0` and ignores this; a streak
+   * lies along `+x` at `0` exactly as it always has; a **shard** is the same streak turned. So the
+   * one loop `tests/budget.test.ts` walks still measures every mark in the sky, and the property it
+   * measures — how big a mark is — is unchanged by which way the mark points.
+   */
+  angle: number;
 }
 
 /** Every layer the sky is made of, and the only kinds `skyField` will answer for. */
@@ -1545,9 +1588,86 @@ export type SkyKind = 'skyFar' | 'skyNear' | 'skyRush';
  * rotation and may allocate freely. This is the only place in the project where a per-star loop, and
  * an array of them, is affordable; it is exactly why the sky is baked rather than drawn.
  */
-export function skyField(kind: SkyKind, size: number): { alpha: number; stars: SkyStar[] } {
+/**
+ * What one place's sky is made of.
+ *
+ * `docs/decisions/0195-a-place-has-its-own-sky.md`.
+ *
+ * ⚠️ **ASKED FOR:** *"a level specific backdrop instead of the same starry canvas and a slight hue
+ * change on each level."* The complaint was exactly right and it was a description of the code:
+ * `makeRng('sky')` took **no theme**, so every level in the game had **the same stars in the same
+ * places**, and `THEMES` changed two hex values over the top of them.
+ *
+ * ⚠️ **A MULTIPLIER ON THE SHARED FIELD RATHER THAN A SECOND ONE**, which is
+ * `docs/decisions/0128-a-place-plays-its-own-material.md`'s shape one channel over: the ceilings that
+ * make a sky safe to look at — `docs/decisions/0069-the-sky-is-behind-the-game.md`'s bullet bound and
+ * `docs/decisions/0106-a-mark-thinner-than-a-pixel-is-not-drawn.md`'s floor — are properties of the
+ * BASE numbers, so a place that scales them is still measured against both. **Every guard over the
+ * sky now runs seven times.**
+ */
+export interface SkyStyle {
+  /** How many marks, against the shared count. */
+  readonly density: number;
+  /**
+   * How big the biggest mark is, against the shared ceiling — **at most 1**, and clamped rather than
+   * trusted.
+   *
+   * ⚠️ **A PLACE MAY THIN ITS SKY AND MAY NEVER THICKEN IT, AND A GUARD FOUND THAT OUT.**
+   * `docs/decisions/0069-the-sky-is-behind-the-game.md` bounds a sky mark against the smallest thing
+   * that can kill the player, and the bound is on `SKY_MAX_STAR_UNITS`. A first draft let a place
+   * scale it past 1 for tumbling rock; `tests/budget.test.ts` measured `skyNear` at **0.36 units — 40%
+   * of a bullet** — and reddened. **So the ceiling stays a property of the shared numbers**, which is
+   * what makes *every guard over the sky now runs seven times* a true sentence rather than a hope.
+   *
+   * ⚠️ **AND THE AXES A PLACE ACTUALLY DIFFERS ON ARE THE OTHER FOUR.** Density, tilt, length and
+   * cloud are all free of that bound, because none of them makes a mark more like a bullet.
+   */
+  readonly size: number;
+  /** How far a mark lies over, in radians. `0` is the shared horizontal streak. */
+  readonly tilt: number;
+  /** How much of the mark's length survives — `0` turns every streak into a dot. */
+  readonly length: number;
+  /** How many nebula clouds, against the shared seven. */
+  readonly clouds: number;
+  /** How big they are, and how strongly they read. */
+  readonly cloudSize: number;
+  readonly cloudAlpha: number;
+}
+
+/**
+ * The seven, and every row is an idea about what the place is made of rather than a tint.
+ *
+ * ⚠️ **NAMED FOR WHAT THE PLAYER IS FLYING THROUGH**, because that is the only thing that makes this
+ * different from a hue: The Approach is open space and keeps the shared field exactly; Ember Nebula is
+ * cloud and little else; Saurian Belt is tumbling rock; The Coil Labyrinth is long structure streaking
+ * past; Rime Shelf is a field of tilted ice shards; The Toxic Mire is dense fine motes; The Black
+ * Heart is nearly empty, because nothing survives near it.
+ */
+export const SKY_STYLE_OF: Record<ThemeKind, SkyStyle> = {
+  approach: { density: 1, size: 1, tilt: 0, length: 1, clouds: 1, cloudSize: 1, cloudAlpha: 1 },
+  nebula: { density: 0.5, size: 0.95, tilt: 0, length: 0.65, clouds: 2, cloudSize: 1.4, cloudAlpha: 1.7 },
+  saurian: { density: 0.75, size: 1, tilt: 0.45, length: 0.3, clouds: 0.7, cloudSize: 0.95, cloudAlpha: 0.9 },
+  labyrinth: { density: 0.55, size: 0.8, tilt: 0, length: 2.1, clouds: 0.35, cloudSize: 0.65, cloudAlpha: 0.6 },
+  rime: { density: 1.2, size: 1, tilt: -0.85, length: 0.55, clouds: 0.6, cloudSize: 1.1, cloudAlpha: 0.75 },
+  mire: { density: 1.7, size: 0.55, tilt: 0.2, length: 0.2, clouds: 1.5, cloudSize: 0.8, cloudAlpha: 1.35 },
+  core: { density: 0.3, size: 0.85, tilt: 0, length: 1.5, clouds: 0.5, cloudSize: 1.6, cloudAlpha: 1.15 },
+};
+
+export function skyField(
+  kind: SkyKind,
+  size: number,
+  theme: ThemeKind = 'approach',
+): { alpha: number; stars: SkyStar[] } {
+  const style = SKY_STYLE_OF[theme];
+  /*
+    ⚠️ **THE STREAM IS KEYED BY THE PLACE, AND THAT ONE STRING IS MOST OF THIS DECISION.** Without it
+    every level in the game drew the same stars in the same places —
+    `docs/decisions/0021-one-stream-per-concern.md` gives each concern its own generator, and *the
+    sky* was one concern where it is seven. Everything else here is a number; this is the part that
+    makes the field a different field.
+  */
   // @setup: one generator per bake, and its own stream so a star cannot move a spawn.
-  const rng = makeRng('sky').stream(kind);
+  const rng = makeRng('sky').stream(`${theme}/${kind}`);
   const margin = size * 0.06;
   const span = size - margin * 2;
   /*
@@ -1556,7 +1676,7 @@ export function skyField(kind: SkyKind, size: number): { alpha: number; stars: S
     `SKY_MAX_STAR_UNITS` can then be read against `SHOTS.pulse.radius` by a person and by a test.
   */
   const perUnit = size / SPRITE_EXTENT[kind];
-  const biggest = perUnit * SKY_MAX_STAR_UNITS[kind];
+  const biggest = perUnit * SKY_MAX_STAR_UNITS[kind] * Math.min(1, style.size);
   /*
     ⚠️ **Only the fastest layer is smeared, and the length is a WORLD quantity like the thickness
     is** — 0097. A streak measured as a fraction of the tile would mean something different the day
@@ -1564,8 +1684,9 @@ export function skyField(kind: SkyKind, size: number): { alpha: number; stars: S
   */
   const streak = kind === 'skyRush';
   const stars: SkyStar[] = [];
-  for (let i = 0; i < SKY_STARS[kind]; i++) {
-    const len = streak ? perUnit * rng.range(SKY_STREAK_UNITS.from, SKY_STREAK_UNITS.to) : 0;
+  const count = Math.max(1, Math.round(SKY_STARS[kind] * style.density));
+  for (let i = 0; i < count; i++) {
+    const len = streak ? perUnit * rng.range(SKY_STREAK_UNITS.from, SKY_STREAK_UNITS.to) * style.length : 0;
     /*
       ⚠️ **A streak's whole LENGTH is inside the margin, not just its start.** The margin exists so
       nothing is cut by a tile seam (0065); a mark with extent has to fit, and one that ran off the
@@ -1573,11 +1694,21 @@ export function skyField(kind: SkyKind, size: number): { alpha: number; stars: S
       fastest depth in the game. It costs at most thirteen units of the eighty-eight a start may
       land in.
     */
+    /*
+      ⚠️ **THE MARGIN IS TAKEN AGAINST THE MARK'S OWN REACH, WHICH A TILT CHANGES.** A horizontal
+      streak reaches `len` along `+x` and nothing in `y`; a tilted one reaches `len·cos` and
+      `len·sin`. Fitting it inside the seam margin is the same claim 0065 has always made here, asked
+      of both axes instead of one — and a tilt that pushed a mark over a tile edge would put a hard-cut
+      line at the same place every few seconds, which is the thing the margin exists to prevent.
+    */
+    const reachX = Math.abs(Math.cos(style.tilt)) * len;
+    const reachY = Math.abs(Math.sin(style.tilt)) * len;
     stars.push({
-      x: margin + rng.range(0, span - len),
-      y: margin + rng.range(0, span),
+      x: margin + rng.range(0, Math.max(0, span - reachX)),
+      y: margin + rng.range(0, Math.max(0, span - reachY)),
       r: biggest * rng.range(0.5, 1),
       len,
+      angle: style.tilt,
     });
   }
   return { alpha: SKY_ALPHA[kind], stars };
@@ -1646,12 +1777,14 @@ export interface NebulaCloud {
  * constant it came from proves only that the code agrees with itself
  * (`docs/decisions/0027-measure-the-picture-not-the-model.md`).
  */
-export function nebulaField(size: number): NebulaCloud[] {
+export function nebulaField(size: number, theme: ThemeKind = 'approach'): NebulaCloud[] {
+  const style = SKY_STYLE_OF[theme];
   // @setup: one generator per bake, and its own stream so a cloud cannot move a star.
-  const rng = makeRng('sky').stream('nebula');
+  const rng = makeRng('sky').stream(`${theme}/nebula`);
   const perUnit = size / SPRITE_EXTENT.skyNebula;
   const clouds: NebulaCloud[] = [];
-  for (let i = 0; i < NEBULA_CLOUDS; i++) {
+  const clouds_ = Math.max(1, Math.round(NEBULA_CLOUDS * style.clouds));
+  for (let i = 0; i < clouds_; i++) {
     /*
       ⚠️ **A cloud may hang off the tile's edge, which is the opposite of every other sky field's
       rule.** A MARK cut by a seam is a hard edge arriving on a schedule; a gradient cut by one is
@@ -1661,8 +1794,14 @@ export function nebulaField(size: number): NebulaCloud[] {
     clouds.push({
       x: rng.range(0, size),
       y: rng.range(0, size),
-      r: perUnit * rng.range(NEBULA_UNITS.from, NEBULA_UNITS.to),
-      alpha: rng.range(NEBULA_ALPHA.from, NEBULA_ALPHA.to),
+      r: perUnit * rng.range(NEBULA_UNITS.from, NEBULA_UNITS.to) * style.cloudSize,
+      /*
+        ⚠️ **CLAMPED TO THE SHARED CEILING, for `size`'s own reason one section up.** 0112 lets the sky
+        draw something bigger than a bullet ONLY because it has no edge and is faint; a place that
+        scaled the alpha past that would be a wall of colour the game is played on, which
+        `tests/themes.test.ts`'s *a backdrop is a dark* refuses one layer down.
+      */
+      alpha: Math.min(NEBULA_ALPHA.to, rng.range(NEBULA_ALPHA.from, NEBULA_ALPHA.to) * style.cloudAlpha),
     });
   }
   return clouds;
@@ -1675,8 +1814,8 @@ export function nebulaField(size: number): NebulaCloud[] {
  * shape with no boundary anywhere in it — which is the property the amendment rests on. A
  * `filter: blur()` would be a boundary softened by an amount that varies with the bake resolution.
  */
-function drawNebula(ctx: Pen, colour: string, size: number): void {
-  for (const cloud of nebulaField(size)) {
+function drawNebula(ctx: Pen, colour: string, size: number, theme: ThemeKind): void {
+  for (const cloud of nebulaField(size, theme)) {
     const fill = ctx.createRadialGradient(cloud.x, cloud.y, 0, cloud.x, cloud.y, cloud.r);
     fill.addColorStop(0, colour);
     fill.addColorStop(1, 'transparent');
@@ -1708,14 +1847,14 @@ function drawNebula(ctx: Pen, colour: string, size: number): void {
  * `setAtlas`, which is the path that exists for a rotation. This is the narrow case, and it is the
  * only sprite in the atlas whose ink is not final — `INK_OF` says so.
  */
-export function bakeNebula(atlas: Atlas, colour: string, pixelsPerUnit: number): void {
+export function bakeNebula(atlas: Atlas, colour: string, pixelsPerUnit: number, theme: ThemeKind = 'approach'): void {
   const size = bakeSize(SPRITE_EXTENT.skyNebula, pixelsPerUnit);
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext('2d');
   if (ctx === null) return;
-  drawNebula(ctx, colour, size);
+  drawNebula(ctx, colour, size, theme);
   (atlas.bitmaps as CanvasImageSource[])[SPRITE.skyNebula] = canvas;
 }
 
@@ -1728,8 +1867,8 @@ export function bakeNebula(atlas: Atlas, colour: string, pixelsPerUnit: number):
  * nothing and cannot be forgotten. Size alone put the stars below a bullet; the alpha is what puts
  * them behind the game.
  */
-function drawSky(ctx: Pen, kind: SkyKind, size: number): void {
-  const field = skyField(kind, size);
+function drawSky(ctx: Pen, kind: SkyKind, size: number, theme: ThemeKind): void {
+  const field = skyField(kind, size, theme);
   ctx.globalAlpha = field.alpha;
   /*
     ⚠️ **A capped line and a filled disc are the same mark at two lengths** — 0097. `lineCap: 'round'`
@@ -1751,14 +1890,20 @@ function drawSky(ctx: Pen, kind: SkyKind, size: number): void {
     ctx.beginPath();
     ctx.lineWidth = star.r * 2;
     ctx.moveTo(star.x, star.y);
-    ctx.lineTo(star.x + star.len, star.y);
+    ctx.lineTo(star.x + Math.cos(star.angle) * star.len, star.y + Math.sin(star.angle) * star.len);
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
 }
 
 /** One sprite, drawn into its own offscreen canvas at the resolution it will be blitted at. */
-function bakeOne(kind: SpriteKind, palette: Palette, view: SpriteView, pixelsPerUnit: number): HTMLCanvasElement {
+function bakeOne(
+  kind: SpriteKind,
+  palette: Palette,
+  view: SpriteView,
+  pixelsPerUnit: number,
+  theme: ThemeKind,
+): HTMLCanvasElement {
   /*
     Clamped so a zero-sized viewport or an absurd DPI cannot ask for a 0px or a 4096px sprite.
 
@@ -1782,7 +1927,7 @@ function bakeOne(kind: SpriteKind, palette: Palette, view: SpriteView, pixelsPer
     ctx.rotate(-Math.PI / 2);
     ctx.translate(-size / 2, -size / 2);
   }
-  drawKind(ctx, kind, palette, size);
+  drawKind(ctx, kind, palette, size, theme);
   return canvas;
 }
 
@@ -1803,10 +1948,16 @@ function bakeOne(kind: SpriteKind, palette: Palette, view: SpriteView, pixelsPer
  * This file is on `tests/budget.test.ts`'s DELIBERATELY_COLD list: it allocates freely because it
  * runs at load and on rotation, never in a frame. Two `map`s here cost nothing.
  */
-export function bakeAtlas(palette: Palette, view: SpriteView, pixelsPerUnit: number): Atlas {
+export function bakeAtlas(
+  palette: Palette,
+  view: SpriteView,
+  pixelsPerUnit: number,
+  theme: ThemeKind = 'approach',
+): Atlas {
   return {
     view,
-    bitmaps: SPRITE_KINDS.map((kind) => bakeOne(kind, palette, view, pixelsPerUnit)),
+    theme,
+    bitmaps: SPRITE_KINDS.map((kind) => bakeOne(kind, palette, view, pixelsPerUnit, theme)),
     extents: SPRITE_KINDS.map((kind) => SPRITE_EXTENT[kind]),
     pixelsPerUnit,
   };

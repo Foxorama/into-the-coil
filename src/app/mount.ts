@@ -1126,9 +1126,28 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (want === shownSpace) return;
     shownSpace = want;
     surface.setSpace(want);
+    /*
+      ── AND THE SKY ITSELF BELONGS TO THE PLACE NOW — 0195 ────────────────────────────────────────
+
+      ⚠️ **THIS IS WHERE THE BACKDROP WAS ALREADY A PLACE'S, AND IT WAS ONLY EVER TWO COLOURS.**
+      Reported: *"a level specific backdrop instead of the same starry canvas and a slight hue change
+      on each level."* `skyField` took no theme, so all seven levels drew **the same stars in the same
+      places** and this function tinted them. The atlas is re-baked when the place changes, so what
+      moves is the field rather than the hue.
+
+      ⚠️ **IT RIDES THE FUNCTION THAT ALREADY RUNS ON A BACKDROP CHANGE**, rather than a second watcher:
+      one comparison a step, and `atlasIsStale` answers it. A re-bake is 58 bitmaps and it happens at a
+      level boundary, which is exactly what
+      `docs/decisions/0133-the-place-is-baked-at-the-boundary.md` established for the other channel.
+    */
+    const place: ThemeKind = state.screen.current === 'playing' ? world.level.theme : 'approach';
+    if (atlasIsStale(atlas, atlas.view, view.scale * dpr, place)) {
+      atlas = bakeAtlas(colours, atlas.view, view.scale * dpr, place);
+      surface.setAtlas(atlas);
+    }
     const clouds =
       state.screen.current === 'playing' ? THEMES[world.level.theme].nebula[palette] : PALETTES[palette].sky;
-    bakeNebula(atlas, clouds, view.scale * dpr);
+    bakeNebula(atlas, clouds, view.scale * dpr, place);
   };
 
   /**
@@ -1524,8 +1543,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const nextDpr = fitCanvas(canvas, ctx, width, height);
     const wantView = viewFor(next.alongAxis);
     const wantResolution = next.scale * nextDpr;
-    if (atlasIsStale(atlas, wantView, wantResolution)) {
-      atlas = bakeAtlas(colours, wantView, wantResolution);
+    if (atlasIsStale(atlas, wantView, wantResolution, atlas.theme)) {
+      atlas = bakeAtlas(colours, wantView, wantResolution, atlas.theme);
       surface.setAtlas(atlas);
     }
     view = next;
