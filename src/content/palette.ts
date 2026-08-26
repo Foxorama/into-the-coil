@@ -45,7 +45,30 @@ export type Ink =
   | 'bullet'
   | 'hazard'
   | 'pickup'
-  | 'impact';
+  | 'impact'
+  | DecorInk;
+
+/**
+ * The inks that carry NO meaning, and exist so a hull can have a cockpit.
+ *
+ * `docs/decisions/0194-a-hull-has-a-livery.md`.
+ *
+ * ⚠️ **THE WHOLE POINT IS THAT THEY MEAN NOTHING**, which is
+ * `docs/decisions/0149-a-hull-has-an-interior.md`'s own argument for `space` — *"`space` means
+ * nothing, which is exactly what decoration should mean"* — carried to three more colours so the
+ * decoration can be something other than a hole. `docs/decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md`
+ * is about what the player must TELL APART; a canopy is not one of those things.
+ *
+ * ⚠️ **AND THEY ARE HELD TO A DIFFERENT RULE THAN THE REST.** A meaningful ink must clear WCAG AA
+ * against the void, because it is found against the void. A decorative one is **never drawn against
+ * the void** — it is laid over a hull that has already cleared that bar — so the floor it is held to
+ * is the opposite one: it must be far from every ink that DOES mean something, or a cockpit reads as
+ * a pickup for the eighth of a second that costs a life. `tests/palette.test.ts` holds both.
+ */
+export type DecorInk = 'glass' | 'flame' | 'trim';
+
+/** Closed, and derived from nothing — the three names above, written once for the guards. */
+export const DECOR_INKS: readonly DecorInk[] = ['glass', 'flame', 'trim'];
 
 export type Palette = Record<Ink, string>;
 
@@ -64,6 +87,21 @@ export const PALETTES: Record<PaletteName, Palette> = {
     // Near-white and deliberately the brightest thing in the palette: a flash reads as an impact
     // because it is momentarily louder than everything around it, not because of its hue.
     impact: '#fff4e6',
+    /*
+      ── THE THREE THAT MEAN NOTHING — 0194 ────────────────────────────────────────────────────────
+
+      ⚠️ **ALL THREE ARE DARKER THAN EVERY HULL THEY ARE DRAWN ON, AND THAT IS THE DESIGN.** A
+      decoration that is BRIGHTER than its hull is a thing on the screen; one that is darker is a
+      detail in an object. It is also what keeps them away from `pickup` and `impact`, which are the
+      two the player is scanning for.
+    */
+    // A deep cold blue: a canopy, a viewport, a lit screen seen from outside.
+    glass: '#12314a',
+    // A banked ember. Deliberately far below `bullet` in lightness — an exhaust must never read as
+    // something that has been fired.
+    flame: '#8f2f10',
+    // Slate. Panel lines, keels, the seam down a hull.
+    trim: '#37445c',
   },
   /**
    * Maximum separation on the luminance channel, which is the one that survives every kind of
@@ -86,6 +124,17 @@ export const PALETTES: Record<PaletteName, Palette> = {
     hazard: '#ff00ff',
     pickup: '#ffffff',
     impact: '#ffffff',
+    /*
+      ⚠️ **DECORATION IS THE VOID HERE, WHICH IS THE SETTING DOING ITS JOB RATHER THAN A GAP** —
+      `docs/decisions/0024-the-accessibility-floor-is-settings.md`: *there is one game and it is the
+      loud one, and accessibility is knobs over that default.* On high contrast every livery mark
+      collapses to the same hole `docs/decisions/0149-a-hull-has-an-interior.md` already punched, so
+      **this palette's art is byte-identical to what it was before 0194** and the separation the
+      player chose this palette FOR is spent on nothing decorative.
+    */
+    glass: '#000000',
+    flame: '#000000',
+    trim: '#000000',
   },
 };
 

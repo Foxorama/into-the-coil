@@ -65,7 +65,7 @@ import {
   rmsOfLoops,
   solveLevel,
 } from '../scripts/solve-mix.mjs';
-import { PALETTES, type PaletteName } from '../src/content/palette.ts';
+import { DECOR_INKS, PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SAMPLE_RATE, saturate } from '../src/app/sound.ts';
 import { loopsAt } from './bakes.ts';
 import { contrast } from './contrast.ts';
@@ -123,6 +123,17 @@ describe('every level is somewhere, and no two of the seven are the same place',
         const backdrop = THEMES[theme].space[name];
         for (const [ink, colour] of Object.entries(PALETTES[name])) {
           if (ink === 'space' || ink === 'sky') continue;
+          /*
+            ⚠️ **A DECORATIVE INK IS NEVER DRAWN ON A BACKDROP** —
+            `docs/decisions/0194-a-hull-has-a-livery.md`. `glass`, `flame` and `trim` are laid over a
+            hull that has already cleared this floor, inside the same bitmap; there is no cell of this
+            cross-product where one of them meets a backdrop. Holding them to it would demand a canopy
+            as loud as the ship it is a window in, which is the opposite of what a canopy is.
+
+            ⚠️ **THE RULE THAT REPLACES IT IS IN `tests/palette.test.ts`**: a decorative ink must be
+            far from every ink that MEANS something, so a canopy cannot be read as a pickup.
+          */
+          if ((DECOR_INKS as readonly string[]).includes(ink)) continue;
           const ratio = contrast(colour, backdrop);
           expect(
             ratio,

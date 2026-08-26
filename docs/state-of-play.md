@@ -686,6 +686,28 @@ is worse than no marker, because it reads exactly like a live one — the same f
 [0029](decisions/0029-the-tracked-record-is-the-record.md) names for a summary that drifts. **Retire
 this heading when it stops being true rather than adding another one below it.**
 
+⚠️ **AND THE ART IS BEING BUILT NOW, IN THREE PARTS, AND THE FIRST HAS LANDED** —
+[0194](decisions/0194-a-hull-has-a-livery.md), answering *"I want fun quirky graphics like we have in
+The Far Carry for the spaceships and weapons… for the enemies I want fun level specific art and a
+level specific backdrop instead of the same starry canvas and a slight hue change on each level."*
+
+⚠️ **THE THREE ARE SEPARATE BECAUSE THE BLOCKERS ARE SEPARATE.** 1 — `drawKind` filled ONE ink, so
+quirk was impossible: **done**, decoration is now `glass`/`flame`/`trim` and the ships, the bomb and
+the pickups wear a livery. 2 — there is no `variant`, so an enemy is one silhouette everywhere:
+**next**. 3 — `makeRng('sky')` takes **no theme**, so every level has literally identical star and
+cloud positions and only two hex values change: **last, and the largest**.
+
+⚠️ **THE SHOTS DELIBERATELY GET NOTHING, AND [0193](decisions/0193-the-sheet-is-the-instrument.md) IS
+WHY.** A `bullet` is 13 px whole at the binding viewport, so a mark on one is forbidden by
+[0106](decisions/0106-a-mark-thinner-than-a-pixel-is-not-drawn.md). **The instrument decided it rather
+than a guess**, one PR after it was built.
+
+⚠️ **AND THE SHEET CAUGHT WHAT NO GUARD COULD: A MARK THAT PASSES EVERY GUARD AND IS INVISIBLE.** The
+keel was drawn under the canopy and the engine core and measured **ten pixels on the whole ship** with
+the suite green. Ink order is the fix and it is also the right picture — a panel line is painted last.
+**That a mark survives to the bitmap is measured on the sheet and not guarded**, per
+[0192](decisions/0192-a-guard-holds-an-invariant.md).
+
 ⚠️ **AND THE ART CHANNEL HAS AN INSTRUMENT BEFORE ITS FIRST TUNING PASS** —
 [0193](decisions/0193-the-sheet-is-the-instrument.md). `npm run sheet`: every bitmap
 `bakeAtlas` produces, at the resolution the game bakes it, on the place's own backdrop, with a kind
