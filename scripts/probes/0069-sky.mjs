@@ -35,7 +35,10 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: no star is drawn as big as the smallest thing that can kill the player',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  const biggest = perUnit * SKY_MAX_STAR_UNITS[kind];',
+      // ⚠️ RE-ANCHORED BY 0195, which gave the line a per-place clamp on the end. The break is
+      // unchanged: the ceiling written as a fraction of the TILE rather than as a world quantity, which
+      // is the form that hid the defect this decision is named for.
+      find: '  const biggest = perUnit * SKY_MAX_STAR_UNITS[kind] * Math.min(1, style.size);',
       replace: "  const biggest = size * (kind === 'skyNear' ? 0.012 : 0.006);",
     },
   },

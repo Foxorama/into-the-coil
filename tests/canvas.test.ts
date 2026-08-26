@@ -16,6 +16,9 @@ import { MAX_DPR, renderScale } from '../src/render/canvas.ts';
 /** An atlas with no bitmaps in it. Everything asserted below is metadata. */
 const atlasAt = (view: 'side' | 'top', pixelsPerUnit: number): Atlas => ({
   view,
+  // 0195 — every atlas belongs to a place. Nothing here asserts about one; the base composition's
+  // own place is the honest stand-in.
+  theme: 'approach',
   bitmaps: [],
   extents: [],
   pixelsPerUnit,

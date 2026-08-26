@@ -32,6 +32,7 @@ import { type Entity, makeEntity, reset, stepEntities } from '../src/sim/entity.
 import { Pool } from '../src/sim/pool.ts';
 import { paintScene } from '../src/render/scene.ts';
 import { bakeSize, nebulaField, skyField, type SkyKind } from '../src/render/bake.ts';
+import { THEME_KINDS } from '../src/content/themes.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { sprite } from './bodies.ts';
 import { CAPACITY, SKY } from '../src/app/mount.ts';
@@ -245,10 +246,17 @@ describe('the sky goes past twice as fast as it shipped, and the parallax surviv
    * How thick `kind`'s thickest mark is drawn, in world units, read off what `skyField` actually
    * bakes rather than off the constant behind it — 0027, and `skyField`'s own reason for existing.
    */
+  /*
+    ⚠️ **OVER EVERY PLACE, AND THAT IS 0195's WHOLE COST.** `skyField` took no theme, so one reading
+    answered for the entire game. A place now scales the mark size, so the ceiling has to be asked of
+    the LOUDEST of the seven — a bound checked against one place is a bound six places are not held to.
+  */
   const thickestOf = (kind: SkyKind): number =>
     Math.max(
-      ...skyField(kind, bakeSize(SPRITE_EXTENT[kind], 6)).stars.map(
-        (star) => star.r / (bakeSize(SPRITE_EXTENT[kind], 6) / SPRITE_EXTENT[kind]),
+      ...THEME_KINDS.flatMap((theme) =>
+        skyField(kind, bakeSize(SPRITE_EXTENT[kind], 6), theme).stars.map(
+          (star) => star.r / (bakeSize(SPRITE_EXTENT[kind], 6) / SPRITE_EXTENT[kind]),
+        ),
       ),
     );
 
@@ -413,7 +421,11 @@ describe('the sky goes past twice as fast as it shipped, and the parallax surviv
       `NEBULA_ALPHA`, which is the number under test.
     */
     const faintestField = Math.min(
-      ...(['skyFar', 'skyNear', 'skyRush'] as const).map((kind) => skyField(kind, bakeSize(SPRITE_EXTENT[kind], 6)).alpha),
+      ...THEME_KINDS.flatMap((theme) =>
+        (['skyFar', 'skyNear', 'skyRush'] as const).map(
+          (kind) => skyField(kind, bakeSize(SPRITE_EXTENT[kind], 6), theme).alpha,
+        ),
+      ),
     );
     const boldest = Math.max(...clouds.map((c) => c.alpha));
     expect(
@@ -587,7 +599,23 @@ describe('the sky costs a fixed number of calls, whatever the camera is doing', 
   describe('and it stays behind the game', () => {
     /** Every tile, back to front, at the resolution it bakes at on an ordinary screen. */
     const KINDS: readonly SkyKind[] = ['skyFar', 'skyNear', 'skyRush'];
-    const FIELDS = KINDS.map((kind) => skyField(kind, bakeSize(SPRITE_EXTENT[kind], 6)));
+    /*
+      ⚠️ **THE PLACE THAT PAINTS THE MOST, NOT THE ONE THAT SHIPS FIRST** — 0195. Density, mark size
+      and streak length are all per-place now, so `skyFar` in The Toxic Mire is a different field from
+      `skyFar` in The Black Heart. Every claim below is a CEILING, so the honest reading is the worst
+      of the seven; taking the base composition's would leave six places unmeasured.
+    */
+    const worstOf = (kind: SkyKind) => {
+      const size = bakeSize(SPRITE_EXTENT[kind], 6);
+      const per = size / SPRITE_EXTENT[kind];
+      const area = (f: { stars: { r: number; len: number }[]; alpha: number }): number =>
+        f.alpha *
+        f.stars.reduce((sum, st) => sum + (Math.PI * st.r * st.r + 2 * st.r * st.len) / (per * per), 0);
+      return THEME_KINDS.map((theme) => skyField(kind, size, theme)).reduce((a, b) =>
+        area(a) >= area(b) ? a : b,
+      );
+    };
+    const FIELDS = KINDS.map((kind) => worstOf(kind));
     const FAR = FIELDS[0]!;
     const NEAR = FIELDS[1]!;
     const RUSH = FIELDS[2]!;
