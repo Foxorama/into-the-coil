@@ -152,6 +152,34 @@ function clearance(hull: Pass, accent: Pass): number {
  */
 const CLEARANCE_PX = 2.5;
 
+/**
+ * Every kind that wears an interior, which is no longer only the bosses — 0194.
+ *
+ * ⚠️ **DERIVED FROM `ACCENT_OF` RATHER THAN LISTED**, so a livery authored tomorrow is measured by
+ * every guard below without anybody remembering to add it. That is the whole failure
+ * `docs/decisions/0016-a-hub-enumerates-kinds.md` is about, and this file used to hold a list of seven.
+ */
+const ACCENTED: readonly SpriteKind[] = SPRITE_KINDS.filter((kind) => ACCENT_OF[kind] !== null);
+
+/**
+ * The hull pass and every ink group over it, flattened into one.
+ *
+ * ⚠️ **THE ACCENT IS N PASSES NOW AND IT USED TO BE EXACTLY ONE** — 0194 groups the shapes by ink and
+ * fills once per group, so `passes[1]` is only the first colour. Every claim in this file is about
+ * *the marks on the hull*, not about which colour they are, so they are measured together — and a
+ * livery that put a canopy over the edge in its third ink would otherwise have gone unmeasured.
+ */
+function hullAndAccent(kind: SpriteKind): { hull: Pass; accent: Pass } {
+  const passes = trace(kind).passes;
+  const hull = passes[0];
+  if (hull === undefined) throw new Error(`${kind} draws nothing`);
+  const rest = passes.slice(1);
+  return {
+    hull,
+    accent: { subpaths: rest.flatMap((pass) => pass.subpaths), rule: rest[0]?.rule ?? 'evenodd' },
+  };
+}
+
 describe('a hull has an interior', () => {
   it('THE REPORTED ONE: every boss is drawn in two inks, and the file offered one', () => {
     /*
@@ -184,9 +212,9 @@ describe('a hull has an interior', () => {
 
   it('and the interior stays inside the hull, with room to spare, in CSS pixels of a 1280×720 screen', () => {
     const measured: string[] = [];
-    for (const kind of BOSS_HULLS) {
-      const [hull, accent] = trace(kind).passes;
-      const gap = clearance(hull!, accent!);
+    for (const kind of ACCENTED) {
+      const { hull, accent } = hullAndAccent(kind);
+      const gap = clearance(hull, accent);
       measured.push(`${kind}: ${gap.toFixed(2)}px`);
       expect(
         gap,
@@ -207,10 +235,10 @@ describe('a hull has an interior', () => {
       is the property those three files depend on, and a future accent that is legal on a hull with a
       wide margin would still be illegal if it grew the box.
     */
-    for (const kind of BOSS_HULLS) {
-      const [hull, accent] = trace(kind).passes;
-      const outer = boundsOf(hull!);
-      const inner = boundsOf(accent!);
+    for (const kind of ACCENTED) {
+      const { hull, accent } = hullAndAccent(kind);
+      const outer = boundsOf(hull);
+      const inner = boundsOf(accent);
       expect(inner.minX, `the ${kind}'s interior reaches past the front of its own hull`).toBeGreaterThan(outer.minX);
       expect(inner.minY, `the ${kind}'s interior reaches past the top of its own hull`).toBeGreaterThan(outer.minY);
       expect(inner.maxX, `the ${kind}'s interior reaches past the back of its own hull`).toBeLessThan(outer.maxX);
@@ -225,8 +253,8 @@ describe('a hull has an interior', () => {
       baked below a pixel and vanished. An accent is decoration, so nothing announces it if it fails;
       it would simply not be there, and the boss would be the flat ink the report is about.
     */
-    for (const kind of BOSS_HULLS) {
-      const accent = trace(kind).passes[1]!;
+    for (const kind of ACCENTED) {
+      const { accent } = hullAndAccent(kind);
       for (const subpath of accent.subpaths) {
         const box = boundsOf({ subpaths: [subpath], rule: accent.rule });
         const thinnest = Math.min(box.maxX - box.minX, box.maxY - box.minY);
@@ -252,7 +280,7 @@ describe('a hull has an interior', () => {
       the thing space is measured against. What is asserted here is only the half neither covers: that
       no accented hull is itself drawn in `space`, which would be one ink on one ink.
     */
-    for (const kind of BOSS_HULLS) {
+    for (const kind of ACCENTED) {
       expect(INK_OF[kind], `the ${kind} is drawn in an ink its interior would not be told apart from`).not.toBe(
         'space',
       );

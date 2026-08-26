@@ -19,7 +19,7 @@
  * frame, and it cannot reach this.
  */
 
-import type { Palette } from '../content/palette.ts';
+import type { DecorInk, Palette } from '../content/palette.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { makeRng } from '../sim/rng.ts';
 
@@ -532,9 +532,28 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
 */
 
 /** One piece of an accent, in fractions of the hull radius `r`, measured from the sprite's centre. */
+/**
+ * ⚠️ **`ink` IS OPTIONAL AND ITS ABSENCE IS `space`** —
+ * `docs/decisions/0194-a-hull-has-a-livery.md`. Every accent authored under
+ * `docs/decisions/0149-a-hull-has-an-interior.md` omits it and is therefore **bit-identical** to what
+ * it baked before: one path, one `evenodd` fill, one hole. What the field buys is a mark that is a
+ * COCKPIT rather than a hole, without a second mechanism, a second containment rule or a second
+ * bounds guard — `tests/accents.test.ts` is written over the shapes and does not care what colour
+ * they are.
+ */
 export type AccentShape =
-  | { readonly kind: 'poly'; readonly points: readonly (readonly [number, number])[] }
-  | { readonly kind: 'disc'; readonly x: number; readonly y: number; readonly r: number };
+  | {
+      readonly kind: 'poly';
+      readonly points: readonly (readonly [number, number])[];
+      readonly ink?: DecorInk | 'space';
+    }
+  | {
+      readonly kind: 'disc';
+      readonly x: number;
+      readonly y: number;
+      readonly r: number;
+      readonly ink?: DecorInk | 'space';
+    };
 
 /**
  * The interior of one hull: shapes filled in `palette.space` over the hull, inside the same bitmap.
@@ -546,7 +565,13 @@ export type AccentShape =
 export type Accent = readonly AccentShape[];
 
 /** A rectangular mark: a keel, a spine, a streak, an armour band. Corners in `r` from the centre. */
-const box = (x0: number, y0: number, x1: number, y1: number): AccentShape => ({
+const box = (
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  ink?: DecorInk | 'space',
+): AccentShape => ({
   kind: 'poly',
   points: [
     [x0, y0],
@@ -554,6 +579,7 @@ const box = (x0: number, y0: number, x1: number, y1: number): AccentShape => ({
     [x1, y1],
     [x0, y1],
   ],
+  ...(ink === undefined ? {} : { ink }),
 });
 
 /** A round mark: a cockpit, a node, an eye, a pupil. */
@@ -624,6 +650,81 @@ const BOSS7_EYE: Accent = [
  * mush; `reports/enemy-silhouettes-2026-08-05.md` measured what survives twenty pixels and it was
  * outlines, not detail. The day an enemy earns one, it is a row here and nothing else moves.
  */
+
+/*
+  ── THE LIVERIES — 0194 ─────────────────────────────────────────────────────────────────────────
+
+  ⚠️ **ASKED FOR:** *"I want fun quirky graphics like we have in The Far Carry for the spaceships and
+  weapons."* The predecessor's `src/render/shipArt.ts` builds every craft from
+  `{ body, glass, flame, accent }` — a body colour, a windscreen, an exhaust and a trim stripe — and
+  that is the whole of why its fleet reads as characterful where one flat ink does not. **Opened for a
+  named reason and one named file**, per `CLAUDE.md`.
+
+  ⚠️ **WHAT DOES NOT CROSS IS THE EXHAUST HANGING OFF THE BACK.** Every mark here is INSIDE the hull,
+  because `docs/decisions/0149-a-hull-has-an-interior.md` makes the silhouette's outer bounds what
+  collision, the extents and 0101's screen share are all written against. A flame trailing behind the
+  ship would grow the box. What stands in for it is an engine core forward of the tail notch.
+*/
+
+/** The player's wedge: a keel down the spine, a canopy on it, and an engine core behind that. */
+const SHIP_LIVERY: Accent = [
+  box(0.06, -0.075, 0.48, 0.075, 'trim'),
+  { kind: 'disc', x: 0.2, y: 0, r: 0.18, ink: 'glass' },
+  box(-0.18, -0.115, 0.02, 0.115, 'flame'),
+];
+
+/*
+  ⚠️ **A TIER ADDS AN ENGINE, WHICH IS THE ONE THING THAT GROWS WITH THE LADDER.** 0081's rule for
+  these three hulls is *the same ship, further along* — the nose is untouched at every tier and the
+  fins are what change. The livery follows that: same keel, same canopy, one more core.
+*/
+const SHIP_MK2_LIVERY: Accent = [
+  ...SHIP_LIVERY,
+  /*
+    ⚠️ **ON THE CENTRELINE, BECAUSE THE FINS CUT HOLES EITHER SIDE OF IT.** `drawFins` adds its pair
+    as separate sub-paths filled `evenodd` WITH the wedge, so wherever a fin overlaps the hull the
+    two cancel and the result is a gap the sky shows through. A tier mark outboard of the keel was
+    measured at **−1.34 px** — over a hole rather than over ink — which is exactly the distinction
+    `clearance` samples a grid to catch.
+
+    ⚠️ **AND FORWARD RATHER THAN AFT, BECAUSE THE WAIST NOTCH IS THE OTHER TIGHT SPOT.** The wedge is
+    concave at `W(-0.3, 0)`; a mark on the spine behind the canopy measured **1.48 px** from that
+    vertex, which is 0.07 of the hull radius. Forward of the canopy the hull is solid and the only
+    edge is the nose.
+  */
+  { kind: 'disc', x: 0.46, y: 0, r: 0.1, ink: 'glass' },
+];
+
+const SHIP_MK3_LIVERY: Accent = [
+  ...SHIP_MK2_LIVERY,
+  box(0.02, -0.22, 0.16, -0.08, 'trim'),
+  box(0.02, 0.08, 0.16, 0.22, 'trim'),
+];
+
+/** The bomb: a lit core inside a casing, which is what a thing about to go off looks like. */
+const BOMB_LIVERY: Accent = [
+  { kind: 'disc', x: 0, y: 0.06, r: 0.3, ink: 'glass' },
+  { kind: 'disc', x: 0, y: 0.06, r: 0.14, ink: 'flame' },
+];
+
+/** The weapon pickup's arrow: a shaft down the middle and a lit head. */
+const PICKUP_WEAPON_LIVERY: Accent = [
+  box(-0.08, -0.085, 0.35, 0.085, 'trim'),
+  { kind: 'disc', x: 0.14, y: 0, r: 0.18, ink: 'glass' },
+];
+
+/** The missile pickup's chevron, marked the way its own arrow points. */
+const PICKUP_MISSILE_LIVERY: Accent = [
+  box(-0.09, -0.5, 0.09, 0.05, 'trim'),
+  { kind: 'disc', x: 0, y: -0.28, r: 0.17, ink: 'glass' },
+];
+
+/** The shield pickup: a band across the face and a boss at its centre. */
+const PICKUP_SHIELD_LIVERY: Accent = [
+  box(-0.5, -0.34, 0.5, -0.155, 'trim'),
+  { kind: 'disc', x: 0, y: 0.1, r: 0.22, ink: 'glass' },
+];
+
 export const ACCENT_OF: Record<SpriteKind, Accent | null> = {
   /*
     ── THE SEVEN INTERIORS ─────────────────────────────────────────────────────────────────────────
@@ -665,12 +766,12 @@ export const ACCENT_OF: Record<SpriteKind, Accent | null> = {
     would be a mark under a pixel at the size it ships, which
     `docs/decisions/0106-a-mark-thinner-than-a-pixel-is-not-drawn.md` is the whole of.
   */
-  ship: null,
-  shipHit: null,
-  shipMk2: null,
-  shipMk2Hit: null,
-  shipMk3: null,
-  shipMk3Hit: null,
+  ship: SHIP_LIVERY,
+  shipHit: SHIP_LIVERY,
+  shipMk2: SHIP_MK2_LIVERY,
+  shipMk2Hit: SHIP_MK2_LIVERY,
+  shipMk3: SHIP_MK3_LIVERY,
+  shipMk3Hit: SHIP_MK3_LIVERY,
   drifter: null,
   drifterHit: null,
   lancer: null,
@@ -692,7 +793,7 @@ export const ACCENT_OF: Record<SpriteKind, Accent | null> = {
   lance: null,
   flak: null,
   missile: null,
-  bomb: null,
+  bomb: BOMB_LIVERY,
   blast: null,
   blastHalf: null,
   blastWide: null,
@@ -700,10 +801,10 @@ export const ACCENT_OF: Record<SpriteKind, Accent | null> = {
   shieldOrb: null,
   debris: null,
   lifeIcon: null,
-  pickupWeapon: null,
-  pickupMissile: null,
-  pickupShield: null,
-  pickupBomb: null,
+  pickupWeapon: PICKUP_WEAPON_LIVERY,
+  pickupMissile: PICKUP_MISSILE_LIVERY,
+  pickupShield: PICKUP_SHIELD_LIVERY,
+  pickupBomb: BOMB_LIVERY,
   skyFar: null,
   skyNear: null,
   skyRush: null,
@@ -1326,9 +1427,27 @@ export function drawKind(ctx: Pen, kind: SpriteKind, palette: Palette, size: num
   */
   const accent = ACCENT_OF[kind];
   if (accent === null) return;
-  ctx.fillStyle = palette.space;
+  /*
+    ── ONE PATH PER INK, IN THE ORDER THE INKS ARE LISTED — 0194 ─────────────────────────────────
+
+    ⚠️ **A SINGLE `evenodd` FILL PER INK RATHER THAN PER ACCENT, WHICH IS WHY THE ORDER IS FIXED
+    AND NOT THE TABLE'S.** `evenodd` cancels overlapping sub-paths inside ONE fill; grouping by ink
+    keeps that true within a colour and lets two colours overlap normally, which is what a canopy
+    sitting on a trim line has to do. Every 0149 accent names no ink, so it lands in the `space`
+    group alone and is drawn by exactly the code that drew it before.
+
+    ⚠️ **THE LOOP IS OVER A CONSTANT LIST AND ALLOCATES NOTHING PER SHAPE**, because this runs inside
+    the bake and `docs/decisions/0022-frame-rate-is-a-feature.md` counts allocations — the bake is not
+    the frame loop, but a per-shape array here would be the habit arriving one file away from where it
+    is banned.
+  */
+  for (const layer of ACCENT_INK_ORDER) {
+  let drew = false;
+  ctx.fillStyle = palette[layer];
   ctx.beginPath();
   for (const shape of accent) {
+    if ((shape.ink ?? 'space') !== layer) continue;
+    drew = true;
     switch (shape.kind) {
       case 'poly': {
         let first = true;
@@ -1352,8 +1471,27 @@ export function drawKind(ctx: Pen, kind: SpriteKind, palette: Palette, size: num
       }
     }
   }
-  ctx.fill('evenodd');
+  if (drew) ctx.fill('evenodd');
+  }
 }
+
+/**
+ * The order livery inks are laid down in, void first.
+ *
+ * ⚠️ **A CLOSED LIST AND NOT `Object.keys`**, so the day a fourth decorative ink is added somebody
+ * has to decide where in the stack it goes rather than inheriting whatever order a record happened to
+ * iterate in. `space` is first because it is a hole: anything painted after it sits ON the hull
+ * rather than in the gap.
+ *
+ * ⚠️ **`trim` IS LAST, AND IT WAS SECOND UNTIL THE SHEET SAID SO.** With the keel painted before the
+ * canopy and the engine core, the sheet measured **ten pixels of `trim` on the whole ship** — the
+ * spine was drawn and then covered by the two marks sitting on it, so a mark that passed every
+ * thickness and clearance guard was invisible in the picture. A panel line is the thing you paint ON
+ * a hull last, over the canopy frame, which is also what makes it read as a panel line.
+ * `docs/decisions/0027-measure-the-picture-not-the-model.md` — and the instrument that caught it is
+ * two decisions old.
+ */
+const ACCENT_INK_ORDER: readonly ('space' | DecorInk)[] = ['space', 'glass', 'flame', 'trim'];
 
 /**
  * A mirrored pair of swept fins at `spanY` of the hull's radius, trailing towards −x.
