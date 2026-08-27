@@ -401,7 +401,17 @@ describe('the sky goes past twice as fast as it shipped, and the parallax surviv
     const cloud = SKY.find((layer) => layer.sprite === SPRITE.skyNebula);
     expect(cloud, 'the sky has no weather in it, so this measured nothing').toBeDefined();
     const size = bakeSize(SPRITE_EXTENT.skyNebula, 6);
-    const clouds = nebulaField(size);
+    /*
+      ⚠️ **EVERY PLACE, AND `npm run prove` INSISTED.** This read `nebulaField(size)` — The Approach
+      alone, seven clouds — and 0112's own probe (*the weather shrunk towards a bullet's size*) came
+      back **STILL GREEN** once 0196 reordered the draws: with a floor of four units and seven samples,
+      the chance every one of them happens to land above the bound is about one in four. **A guard on a
+      sampled minimum is a guard that fails a coin toss**, which is
+      `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md` seen before it
+      becomes an intermittency. Seven places is forty-odd clouds, and it is also the honest claim:
+      the bound is on every place's weather rather than on level one's.
+    */
+    const clouds = THEME_KINDS.flatMap((theme) => nebulaField(size, theme));
     expect(clouds.length, 'the nebula tile is empty').toBeGreaterThan(2);
 
     /*
@@ -608,9 +618,9 @@ describe('the sky costs a fixed number of calls, whatever the camera is doing', 
     const worstOf = (kind: SkyKind) => {
       const size = bakeSize(SPRITE_EXTENT[kind], 6);
       const per = size / SPRITE_EXTENT[kind];
-      const area = (f: { stars: { r: number; len: number }[]; alpha: number }): number =>
+      const area = (f: { stars: { r: number; len: number; dim: number }[]; alpha: number }): number =>
         f.alpha *
-        f.stars.reduce((sum, st) => sum + (Math.PI * st.r * st.r + 2 * st.r * st.len) / (per * per), 0);
+        f.stars.reduce((sum, st) => sum + (st.dim * (Math.PI * st.r * st.r + 2 * st.r * st.len)) / (per * per), 0);
       return THEME_KINDS.map((theme) => skyField(kind, size, theme)).reduce((a, b) =>
         area(a) >= area(b) ? a : b,
       );
@@ -633,14 +643,23 @@ describe('the sky costs a fixed number of calls, whatever the camera is doing', 
      * ⚠️ **A streak is a capped line and its area is not `πr²`** — 0097. The old form of this
      * helper summed discs, and against a layer of lines it would have reported about a fiftieth of
      * what is on the screen, which is a guard measuring a quantity the picture does not have.
+     *
+     * ⚠️ **AND EACH MARK'S OWN `dim` IS COUNTED, WHICH `npm run prove` INSISTED ON** — 0196. A place
+     * may take a mark BELOW its layer's alpha for depth, and this summed as though every mark sat at
+     * the layer's ceiling. The probe that turns `dim` into a LIFT came back STILL GREEN against every
+     * budget in this file, because none of them could see per-mark alpha at all — so the axis 0196
+     * added was, for one commit, a way to brighten the sky past a ceiling nobody was measuring.
      */
-    const ink = (kind: SkyKind, field: { alpha: number; stars: { r: number; len: number }[] }): number => {
+    const ink = (
+      kind: SkyKind,
+      field: { alpha: number; stars: { r: number; len: number; dim: number }[] },
+    ): number => {
       const p = perUnit(kind);
       return (
         field.alpha *
         field.stars.reduce((total, star) => {
           const r = star.r / p;
-          return total + Math.PI * r * r + 2 * r * (star.len / p);
+          return total + star.dim * (Math.PI * r * r + 2 * r * (star.len / p));
         }, 0)
       );
     };
