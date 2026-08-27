@@ -1570,6 +1570,13 @@ export interface SkyStar {
    * measures — how big a mark is — is unchanged by which way the mark points.
    */
   angle: number;
+  /**
+   * How much of its layer's alpha this mark gets, 0 to 1 — 0196.
+   *
+   * ⚠️ **A REDUCTION AND NEVER A LIFT**, so the layer alpha stays the ceiling every guard is written
+   * against. What it buys is depth: a field where every mark is the same brightness is a texture.
+   */
+  dim: number;
 }
 
 /** Every layer the sky is made of, and the only kinds `skyField` will answer for. */
@@ -1627,6 +1634,36 @@ export interface SkyStyle {
   readonly tilt: number;
   /** How much of the mark's length survives — `0` turns every streak into a dot. */
   readonly length: number;
+  /**
+   * How much the marks CLUMP, 0 (evenly scattered) to 1 (in knots).
+   *
+   * ⚠️ **THE ONE AXIS WITH REAL CHARACTER AND NO PRICE** — 0196. A field of evenly-scattered dots and
+   * a field of the same dots in drifts read as two different places, and clustering is a statement
+   * about POSITION: it adds no ink, touches no alpha, and cannot move a single contrast ratio. Every
+   * other way of making a backdrop richer spends the budget `tests/themes.test.ts` guards.
+   */
+  readonly clump: number;
+  /**
+   * How much a mark may be dimmed against its layer's own alpha, 0 (all equal) to 1 (down to nothing).
+   *
+   * ⚠️ **DOWNWARD ONLY, WHICH IS WHAT MAKES IT FREE.** A field where every mark is the same brightness
+   * is a texture; one where they vary has depth. Varying UP would push a star toward the ink
+   * `src/content/palette.ts` holds below every meaningful colour, so the range is a reduction and the
+   * layer alpha stays the ceiling.
+   */
+  readonly dim: number;
+  /**
+   * How far a cloud's soft focus sits from its centre, as a fraction of its radius.
+   *
+   * ⚠️ **AN OFFSET GRADIENT FOCUS, WHICH IS THE ONLY ASYMMETRIC EDGELESS SHAPE `Pen` CAN DRAW.**
+   * `createRadialGradient` takes two circles; moving the inner one off-centre gives a cloud that piles
+   * up on one side and trails off the other — weather with a direction — while every pixel of it is
+   * still a gradient to transparent, which is the whole of what
+   * `docs/decisions/0112-the-sky-has-weather.md` permits something bigger than a bullet to be.
+   *
+   * ⚠️ **AND IT COSTS NO ALPHA.** The peak is unchanged; where the peak SITS moves.
+   */
+  readonly drift: number;
   /** How many nebula clouds, against the shared seven. */
   readonly clouds: number;
   /** How big they are, and how strongly they read. */
@@ -1644,13 +1681,20 @@ export interface SkyStyle {
  * Heart is nearly empty, because nothing survives near it.
  */
 export const SKY_STYLE_OF: Record<ThemeKind, SkyStyle> = {
-  approach: { density: 1, size: 1, tilt: 0, length: 1, clouds: 1, cloudSize: 1, cloudAlpha: 1 },
-  nebula: { density: 0.5, size: 0.95, tilt: 0, length: 0.65, clouds: 2, cloudSize: 1.4, cloudAlpha: 1.7 },
-  saurian: { density: 0.75, size: 1, tilt: 0.45, length: 0.3, clouds: 0.7, cloudSize: 0.95, cloudAlpha: 0.9 },
-  labyrinth: { density: 0.55, size: 0.8, tilt: 0, length: 2.1, clouds: 0.35, cloudSize: 0.65, cloudAlpha: 0.6 },
-  rime: { density: 1.2, size: 1, tilt: -0.85, length: 0.55, clouds: 0.6, cloudSize: 1.1, cloudAlpha: 0.75 },
-  mire: { density: 1.7, size: 0.55, tilt: 0.2, length: 0.2, clouds: 1.5, cloudSize: 0.8, cloudAlpha: 1.35 },
-  core: { density: 0.3, size: 0.85, tilt: 0, length: 1.5, clouds: 0.5, cloudSize: 1.6, cloudAlpha: 1.15 },
+  // Open space, evenly scattered, weather with no direction to it. The one every other place deviates from.
+  approach: { density: 1, size: 1, tilt: 0, length: 1, clump: 0, dim: 0.15, drift: 0, clouds: 1, cloudSize: 1, cloudAlpha: 1 },
+  // Cloud and little else, piled up and lit from one side.
+  nebula: { density: 0.5, size: 0.95, tilt: 0, length: 0.65, clump: 0.35, dim: 0.5, drift: 0.55, clouds: 2, cloudSize: 1.4, cloudAlpha: 1.7 },
+  // Tumbling rock: knots of debris with clear lanes between them.
+  saurian: { density: 0.75, size: 1, tilt: 0.45, length: 0.3, clump: 0.8, dim: 0.55, drift: 0.35, clouds: 0.7, cloudSize: 0.95, cloudAlpha: 0.9 },
+  // Long structure going past. Almost nothing clumps in a corridor.
+  labyrinth: { density: 0.55, size: 0.8, tilt: 0, length: 2.1, clump: 0.1, dim: 0.65, drift: 0.2, clouds: 0.35, cloudSize: 0.65, cloudAlpha: 0.6 },
+  // A shelf of ice: shards in drifts, all lying the same way, and very little variation in them.
+  rime: { density: 1.2, size: 1, tilt: -0.85, length: 0.55, clump: 0.6, dim: 0.2, drift: 0.15, clouds: 0.6, cloudSize: 1.1, cloudAlpha: 0.75 },
+  // Dense fine motes, evenly suspended, in thick banks of haze.
+  mire: { density: 1.7, size: 0.55, tilt: 0.2, length: 0.2, clump: 0.25, dim: 0.7, drift: 0.7, clouds: 1.5, cloudSize: 0.8, cloudAlpha: 1.35 },
+  // Nearly empty, and what is left is being drawn one way.
+  core: { density: 0.3, size: 0.85, tilt: 0, length: 1.5, clump: 0.45, dim: 0.4, drift: 0.85, clouds: 0.5, cloudSize: 1.6, cloudAlpha: 1.15 },
 };
 
 export function skyField(
@@ -1658,7 +1702,29 @@ export function skyField(
   size: number,
   theme: ThemeKind = 'approach',
 ): { alpha: number; stars: SkyStar[] } {
-  const style = SKY_STYLE_OF[theme];
+  return fieldOf(kind, size, theme, SKY_STYLE_OF[theme]);
+}
+
+/**
+ * The field a place would draw IF it had the given style — the same arithmetic, with the row handed in.
+ *
+ * ⚠️ **IT EXISTS SO A GUARD CAN HOLD THE STYLE EQUAL AND ASK WHETHER THE PLACE STILL MATTERS**, which
+ * is the only way to test that the stream is keyed by the place. `npm run prove` found that out:
+ * 0195's own probe — *the stream keyed by the layer alone* — went **STILL GREEN** the moment
+ * `docs/decisions/0196-the-backdrop-is-rounded-out.md` added `clump`, because two places with
+ * different clumping put their marks in different spots whether or not they share a generator. **A
+ * guard that compares output can always be satisfied by a style difference.** With the style pinned,
+ * the only thing left that can move a mark is the seed.
+ *
+ * ⚠️ **NOT A SECOND IMPLEMENTATION** — `skyField` is one line on top of it, which is what keeps this
+ * from being `docs/decisions/0029-the-tracked-record-is-the-record.md` happening in arithmetic.
+ */
+export function fieldOf(
+  kind: SkyKind,
+  size: number,
+  theme: ThemeKind,
+  style: SkyStyle,
+): { alpha: number; stars: SkyStar[] } {
   /*
     ⚠️ **THE STREAM IS KEYED BY THE PLACE, AND THAT ONE STRING IS MOST OF THIS DECISION.** Without it
     every level in the game drew the same stars in the same places —
@@ -1685,6 +1751,26 @@ export function skyField(
   const streak = kind === 'skyRush';
   const stars: SkyStar[] = [];
   const count = Math.max(1, Math.round(SKY_STARS[kind] * style.density));
+  /*
+    ── THE KNOTS A CLUMPED FIELD IS DRAWN AROUND — 0196 ──────────────────────────────────────────
+
+    ⚠️ **DRAWN FIRST, FROM THE SAME STREAM, SO A PLACE'S FIELD IS STILL ONE DETERMINISTIC ANSWER.** A
+    mark lands somewhere between where it would have gone and its knot; `clump` is how far along that
+    line, and at `0` the knot is ignored and the field is an even scatter.
+
+    ⚠️ **AND THAT IS NOT THE SAME AS *UNCHANGED*, WHICH A FIRST DRAFT OF THIS PARAGRAPH CLAIMED.**
+    Drawing the knots consumes fourteen values before the first mark, and each mark now draws its own
+    `dim` — so **every place's positions moved**, The Approach included. Nothing guards position
+    stability across versions and nothing should; what would have been wrong is the comment, which is
+    the failure `reports/two-weeks-on-one-channel-2026-08-25.md` names about reasoning that migrates
+    into source headers and drifts there.
+
+    ⚠️ **SEVEN KNOTS RATHER THAN A NUMBER PER PLACE**, because a count is a second axis nobody asked
+    for: what a player reads is *clumped or not*, and the pattern of the knots is the seed's business.
+  */
+  const KNOTS = 7;
+  const knots: { x: number; y: number }[] = [];
+  for (let k = 0; k < KNOTS; k++) knots.push({ x: rng.range(0, span), y: rng.range(0, span) });
   for (let i = 0; i < count; i++) {
     const len = streak ? perUnit * rng.range(SKY_STREAK_UNITS.from, SKY_STREAK_UNITS.to) * style.length : 0;
     /*
@@ -1703,12 +1789,29 @@ export function skyField(
     */
     const reachX = Math.abs(Math.cos(style.tilt)) * len;
     const reachY = Math.abs(Math.sin(style.tilt)) * len;
+    const spanX = Math.max(0, span - reachX);
+    const spanY = Math.max(0, span - reachY);
+    let x = rng.range(0, spanX);
+    let y = rng.range(0, spanY);
+    if (style.clump > 0) {
+      const knot = knots[Math.floor(rng.range(0, KNOTS)) % KNOTS];
+      if (knot !== undefined) {
+        /*
+          ⚠️ **PULLED TOWARDS THE KNOT AND THEN CLAMPED BACK INSIDE THE MARGIN**, because a knot near an
+          edge would otherwise drag marks over the tile seam — the hard-cut line 0065's margin exists
+          to prevent, arriving on a schedule at the fastest depth in the game.
+        */
+        x = Math.max(0, Math.min(spanX, x + (knot.x - x) * style.clump));
+        y = Math.max(0, Math.min(spanY, y + (knot.y - y) * style.clump));
+      }
+    }
     stars.push({
-      x: margin + rng.range(0, Math.max(0, span - reachX)),
-      y: margin + rng.range(0, Math.max(0, span - reachY)),
+      x: margin + x,
+      y: margin + y,
       r: biggest * rng.range(0.5, 1),
       len,
       angle: style.tilt,
+      dim: 1 - rng.range(0, Math.max(0, Math.min(1, style.dim))),
     });
   }
   return { alpha: SKY_ALPHA[kind], stars };
@@ -1767,6 +1870,16 @@ export interface NebulaCloud {
   y: number;
   r: number;
   alpha: number;
+  /**
+   * Where the cloud's soft focus sits, in the same pixels — 0196.
+   *
+   * ⚠️ **THE INNER CIRCLE OF THE GRADIENT, AND THE ONLY ASYMMETRY `Pen` CAN EXPRESS.** Offsetting it
+   * gives weather that piles up on one side and trails off the other, with no edge anywhere in it,
+   * which is the condition `docs/decisions/0112-the-sky-has-weather.md` puts on anything this size.
+   * **The peak alpha does not move** — only where the peak is.
+   */
+  fx: number;
+  fy: number;
 }
 
 /**
@@ -1791,9 +1904,15 @@ export function nebulaField(size: number, theme: ThemeKind = 'approach'): Nebula
       already down at a fraction of its own alpha out there, and the tile repeats — so what the player
       sees is the same cloud continuing. There is no margin here on purpose.
     */
+    const cx = rng.range(0, size);
+    const cy = rng.range(0, size);
+    const lean = rng.range(0, Math.PI * 2);
+    const reach = Math.max(0, Math.min(0.9, style.drift));
     clouds.push({
-      x: rng.range(0, size),
-      y: rng.range(0, size),
+      x: cx,
+      y: cy,
+      fx: cx + Math.cos(lean) * reach * perUnit * NEBULA_UNITS.from,
+      fy: cy + Math.sin(lean) * reach * perUnit * NEBULA_UNITS.from,
       r: perUnit * rng.range(NEBULA_UNITS.from, NEBULA_UNITS.to) * style.cloudSize,
       /*
         ⚠️ **CLAMPED TO THE SHARED CEILING, for `size`'s own reason one section up.** 0112 lets the sky
@@ -1816,7 +1935,18 @@ export function nebulaField(size: number, theme: ThemeKind = 'approach'): Nebula
  */
 function drawNebula(ctx: Pen, colour: string, size: number, theme: ThemeKind): void {
   for (const cloud of nebulaField(size, theme)) {
-    const fill = ctx.createRadialGradient(cloud.x, cloud.y, 0, cloud.x, cloud.y, cloud.r);
+    /*
+      ⚠️ **THE INNER CIRCLE IS OFFSET AND ITS RADIUS IS STILL ZERO** — 0196. A zero-radius inner circle
+      is what makes the falloff start at full strength from a point; moving that point off centre leans
+      the whole cloud without putting a boundary anywhere in it.
+
+      ⚠️ **TWO STOPS, AT 0 AND 1, AND `tests/sky.test.ts` HOLDS THAT.** The cover arithmetic the
+      contrast guard rests on models this falloff as linear in distance, which is exactly what a canvas
+      interpolates between two stops. A third stop, or a stop moved off 0 or 1, would make that model
+      wrong in the direction that lets a backdrop eat an ink — so the shape of this gradient is guarded
+      rather than assumed.
+    */
+    const fill = ctx.createRadialGradient(cloud.fx, cloud.fy, 0, cloud.x, cloud.y, cloud.r);
     fill.addColorStop(0, colour);
     fill.addColorStop(1, 'transparent');
     ctx.globalAlpha = cloud.alpha;
@@ -1847,6 +1977,61 @@ function drawNebula(ctx: Pen, colour: string, size: number, theme: ThemeKind): v
  * `setAtlas`, which is the path that exists for a rotation. This is the narrow case, and it is the
  * only sprite in the atlas whose ink is not final — `INK_OF` says so.
  */
+/**
+ * The most cloud that lands on any one point of a place's nebula tile, 0 to 1.
+ *
+ * `docs/decisions/0196-the-backdrop-is-rounded-out.md`.
+ *
+ * ⚠️ **THE HOLE THIS EXISTS TO CLOSE.** `tests/themes.test.ts` holds every ink to WCAG AA against a
+ * place's backdrop — against `THEMES[theme].space`, the BARE colour. **The clouds are drawn on top of
+ * that and nothing had ever counted them.** Measured when this was written: clouds OVERLAP, so the
+ * accumulated alpha reaches **0.41 at Ember Nebula** where the per-cloud ceiling is 0.22, and the
+ * worst ink loses **0.96 of its ratio** — leaving 0.54 over a floor
+ * `docs/decisions/0024-the-accessibility-floor-is-settings.md` says a level may never spend.
+ *
+ * ⚠️ **THE FALLOFF IS MODELLED AS LINEAR IN DISTANCE, WHICH IS WHAT A TWO-STOP GRADIENT IS.** That is
+ * an assumption about `drawNebula` rather than about the canvas, and it is the one thing here that
+ * could silently stop being true — so `tests/sky.test.ts` asserts that gradient still has exactly two
+ * stops, at 0 and 1. **Naming what would invalidate a measurement is the whole of
+ * `docs/decisions/0027-measure-the-picture-not-the-model.md`.**
+ *
+ * ⚠️ **AND THE ALTERNATIVE WAS MEASURED AND REFUSED.** A bound that gave every overlapping cloud its
+ * FULL alpha at the sample point needs no model at all — and reads **0.63** at Ember Nebula, which
+ * puts the worst ink at 4.43 and fails a floor the shipped game does not actually breach. It is
+ * unreachable by construction: it asks five cloud centres to coincide. A guard that cannot be
+ * satisfied by correct content is a guard that gets switched off.
+ */
+export function cloudCover(size: number, theme: ThemeKind, step = 4): number {
+  const clouds = nebulaField(size, theme);
+  const at = (x: number, y: number): number => {
+    let cover = 0;
+    for (const cloud of clouds) {
+      const d = Math.hypot(x - cloud.x, y - cloud.y);
+      if (d < cloud.r) cover = 1 - (1 - cover) * (1 - cloud.alpha * (1 - d / cloud.r));
+    }
+    return cover;
+  };
+  let worst = 0;
+  /*
+    ⚠️ **EVERY CLOUD CENTRE IS SAMPLED AS WELL AS THE GRID, AND A GUARD FOUND OUT WHY.** A cloud's peak
+    is exactly at its own centre, and a grid at any step can miss it — the first version read The
+    Approach at **0.203** where its loudest single cloud is **0.205**, which is a cover that understates
+    the sky by less than a percent and in the one direction that matters. The centres are where the
+    peaks are, so they are read directly and the grid is what catches a PILE between them.
+  */
+  for (const cloud of clouds) {
+    const cover = at(cloud.x, cloud.y);
+    if (cover > worst) worst = cover;
+  }
+  for (let x = 0; x < size; x += step) {
+    for (let y = 0; y < size; y += step) {
+      const cover = at(x, y);
+      if (cover > worst) worst = cover;
+    }
+  }
+  return worst;
+}
+
 export function bakeNebula(atlas: Atlas, colour: string, pixelsPerUnit: number, theme: ThemeKind = 'approach'): void {
   const size = bakeSize(SPRITE_EXTENT.skyNebula, pixelsPerUnit);
   const canvas = document.createElement('canvas');
@@ -1881,6 +2066,8 @@ function drawSky(ctx: Pen, kind: SkyKind, size: number, theme: ThemeKind): void 
   ctx.strokeStyle = ctx.fillStyle;
   ctx.lineCap = 'round';
   for (const star of field.stars) {
+    // 0196 — the layer's alpha is the ceiling and a mark may only sit under it.
+    ctx.globalAlpha = field.alpha * star.dim;
     if (star.len <= 0) {
       ctx.beginPath();
       ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);

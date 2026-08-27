@@ -686,6 +686,26 @@ is worse than no marker, because it reads exactly like a live one — the same f
 [0029](decisions/0029-the-tracked-record-is-the-record.md) names for a summary that drifts. **Retire
 this heading when it stops being true rather than adding another one below it.**
 
+⚠️ **AND ROUNDING IT OUT FOUND AN ACCESSIBILITY HOLE, WHICH IS WHY IT CAME BEFORE THE ENEMIES** —
+[0196](decisions/0196-the-backdrop-is-rounded-out.md). `tests/themes.test.ts` held every ink against
+the **bare** backdrop; the clouds are drawn on top of it and **overlap**, so cover reaches **0.41** at
+Ember Nebula against a per-cloud cap of 0.22, and the worst ink loses **0.96** of its ratio. Floor is
+4.5, worst cell had **0.36** of headroom, unguarded. `cloudCover` closes it.
+
+⚠️ **AND THE WORST INK IS `enemy` IN ALL FOURTEEN CELLS — READ THAT BEFORE AUTHORING ENEMY ART.**
+Ember Nebula and The Toxic Mire are where a place's own enemy has the least room, because that is where
+its sky is thickest.
+
+⚠️ **THE THREE AXES THAT ROUND IT OUT ARE CHOSEN FOR COSTING NO CONTRAST**: `clump` (position only),
+`dim` (a reduction), `drift` (an offset gradient focus — the only asymmetric edgeless shape `Pen` can
+draw). Saurian Belt's nearest-neighbour drops 28.1 → **18.3**.
+
+⚠️ **AND `npm run prove` REDDENED FOUR TIMES AGAINST THIS DECISION'S OWN GUARDS.** A guard cannot see
+its own measurement understating; the guard written to fix that caught the measurement missing cloud
+centres; and `dim` was unguarded twice, because every budget in `tests/budget.test.ts` is a COMPARISON
+and a lift moves both sides. **Read 0196's own probe section before writing a guard over an absolute
+ceiling.**
+
 ⚠️ **AND THE BACKDROP IS A PLACE'S NOW, WHICH WAS THE BIGGEST HALF OF THE BRIEF** —
 [0195](decisions/0195-a-place-has-its-own-sky.md). `makeRng('sky')` took **no theme**, so every level
 drew the same stars in the same places and `THEMES` changed two hex values over the top — *"a slight

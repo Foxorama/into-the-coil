@@ -21,11 +21,22 @@ import {
   SKY_STYLE_OF,
   atlasIsStale,
   bakeSize,
+  cloudCover,
+  fieldOf,
   nebulaField,
   skyField,
   type SkyKind,
 } from '../src/render/bake.ts';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
+
 import { SPRITE_EXTENT } from '../src/content/sprites.ts';
+import { DECOR_INKS, PALETTES, type PaletteName } from '../src/content/palette.ts';
+import { THEMES } from '../src/content/themes.ts';
+import { contrast } from './contrast.ts';
+
+const root = fileURLToPath(new URL('..', import.meta.url));
 import { THEME_KINDS, type ThemeKind } from '../src/content/themes.ts';
 
 /** The three star layers, at the resolution `tests/budget.test.ts` reads them at. */
@@ -48,7 +59,20 @@ const sizeOf = (kind: SkyKind): number => bakeSize(SPRITE_EXTENT[kind], 6);
  * change them.
  */
 function placesOf(kind: SkyKind, theme: ThemeKind): string[] {
-  return skyField(kind, sizeOf(kind), theme).stars.map((s) => `${s.x.toFixed(3)},${s.y.toFixed(3)}`);
+  /*
+    ⚠️ **THE STYLE IS PINNED TO ONE ROW, AND `npm run prove` IS WHY — THE SECOND TIME.** With each
+    place's own style, this comparison went **STILL GREEN** against the probe that restores the shared
+    stream, because `docs/decisions/0196-the-backdrop-is-rounded-out.md`'s `clump` moves marks around
+    on its own: two places clumping differently land in different spots whether or not they share a
+    generator. **A guard that compares output can always be satisfied by a style difference.**
+
+    ⚠️ **HOLDING THE ROW EQUAL LEAVES THE SEED AS THE ONLY THING THAT CAN MOVE A MARK**, which is
+    exactly the property being claimed. The Approach's row is the one pinned because it is the base
+    composition every other place deviates from.
+  */
+  return fieldOf(kind, sizeOf(kind), theme, SKY_STYLE_OF.approach).stars.map(
+    (s) => `${s.x.toFixed(3)},${s.y.toFixed(3)}`,
+  );
 }
 
 /** How many leading marks two places put in exactly the same spot. */
@@ -57,6 +81,140 @@ function sharedRun(a: string[], b: string[]): number {
   while (n < a.length && n < b.length && a[n] === b[n]) n++;
   return n;
 }
+
+/** sRGB blend of two hexes, which is what a gradient over a backdrop actually produces. */
+function over(base: string, top: string, alpha: number): string {
+  const parse = (h: string): number[] => {
+    const m = /^#(..)(..)(..)$/.exec(h);
+    if (m === null) throw new Error(`not a hex colour: ${h}`);
+    return [1, 2, 3].map((i) => parseInt(m[i]!, 16));
+  };
+  const [a, b] = [parse(base), parse(top)];
+  return `#${a.map((v, i) => Math.round(v + (b[i]! - v) * alpha).toString(16).padStart(2, '0')).join('')}`;
+}
+
+describe('0196 — the clouds are counted against the accessibility floor', () => {
+  it('THE HOLE: every ink clears WCAG AA against the backdrop WITH THE CLOUDS ON IT', () => {
+    /*
+      ⚠️ **`tests/themes.test.ts` HELD THIS AGAINST THE BARE BACKDROP AND THE CLOUDS ARE DRAWN ON TOP
+      OF IT.** `docs/decisions/0024-the-accessibility-floor-is-settings.md` bans a level from silently
+      overriding an accessibility choice, and a nebula is a level's cosmetic laid over the colour every
+      ink was checked against. **Measured when this was written: the clouds OVERLAP**, so the
+      accumulated alpha reaches 0.41 at Ember Nebula against a per-cloud ceiling of 0.22, and the worst
+      ink there loses **0.96** of its ratio.
+
+      ⚠️ **THE WORST INK IS `enemy` IN ALL FOURTEEN CELLS**, which is the one that matters most for what
+      comes next: a place's own enemy art has the least room exactly where its sky is thickest.
+    */
+    const size = bakeSize(SPRITE_EXTENT.skyNebula, 6);
+    const worst: string[] = [];
+    for (const theme of THEME_KINDS) {
+      const cover = cloudCover(size, theme);
+      for (const name of Object.keys(PALETTES) as PaletteName[]) {
+        const backdrop = over(THEMES[theme].space[name], THEMES[theme].nebula[name], cover);
+        for (const [ink, colour] of Object.entries(PALETTES[name])) {
+          if (ink === 'space' || ink === 'sky') continue;
+          if ((DECOR_INKS as readonly string[]).includes(ink)) continue;
+          const ratio = contrast(colour, backdrop);
+          worst.push(`${theme}/${name}/${ink} ${ratio.toFixed(2)}`);
+          expect(
+            ratio,
+            `${ink} sits at ${ratio.toFixed(2)}:1 on ${theme}'s ${name} backdrop once its clouds are ` +
+              `counted (cover ${cover.toFixed(3)}, blended ${backdrop}) — a level has spent an ` +
+              'accessibility choice the player made',
+          ).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    }
+    expect(worst.length, 'nothing was measured').toBeGreaterThan(0);
+  });
+
+  it('and the cover COUNTS THE PILE, because a guard cannot see its own measurement understating', () => {
+    /*
+      ⚠️ **THE GUARD ABOVE CANNOT CATCH ITS OWN INPUT BEING WRONG, AND `npm run prove` SAID SO.** A
+      probe that made `cloudCover` take the loudest single cloud instead of accumulating the pile came
+      back **STILL GREEN** — under-counting the cover makes the backdrop look CLEANER, so the contrast
+      check passes with room to spare. A measurement that understates is invisible to everything
+      written on top of it.
+
+      ⚠️ **SO THE ACCUMULATION IS ASSERTED DIRECTLY, AGAINST THE ONLY THING THAT DISTINGUISHES IT.**
+      Clouds overlap, so the cover at a place with piled weather must exceed the loudest single cloud
+      in it — at Ember Nebula the pile reaches **0.41** where no one cloud passes 0.22. With the
+      accumulation removed the two numbers are equal by construction, which is the shape of the defect.
+    */
+    const size = bakeSize(SPRITE_EXTENT.skyNebula, 6);
+    const piled = THEME_KINDS.filter((theme) => nebulaField(size, theme).length > 4);
+    expect(piled.length, 'no place has enough clouds to pile, so this proves nothing').toBeGreaterThan(0);
+    let anyDeeper = false;
+    for (const theme of piled) {
+      const loudest = Math.max(...nebulaField(size, theme).map((c) => c.alpha));
+      const cover = cloudCover(size, theme);
+      expect(
+        cover,
+        `${theme}'s cover is ${cover.toFixed(3)} against its loudest single cloud at ${loudest.toFixed(3)} — ` +
+          'the pile is not being counted, and every contrast reading taken from it is optimistic',
+      ).toBeGreaterThanOrEqual(loudest - 1e-9);
+      if (cover > loudest + 0.02) anyDeeper = true;
+    }
+    expect(
+      anyDeeper,
+      'no place anywhere stacks clouds deeper than its loudest one, so the accumulation is untested',
+    ).toBe(true);
+  });
+
+  it('THE CEILING: a mark may be dimmer than its layer and never brighter', () => {
+    /*
+      ⚠️ **ASSERTED DIRECTLY, BECAUSE EVERY EXISTING BUDGET IS A COMPARISON AND A LIFT MOVES BOTH SIDES.**
+      `npm run prove` turned `dim` into a lift and `tests/budget.test.ts` stayed **green twice** — first
+      because none of its helpers could see per-mark alpha at all, and then, once they could, because
+      *the near layer is quieter than the far one* scales both layers by the same distribution and the
+      ratio is unchanged. A relative guard cannot see an absolute ceiling move.
+
+      ⚠️ **AND THE CEILING IS WHAT MAKES `dim` FREE.** Every screen-share and legibility number in this
+      project is written against `SKY_ALPHA`; a mark above it is sky the player has to check, and
+      `src/content/palette.ts` holds the sky ink below every colour that means something precisely so
+      they never have to.
+    */
+    for (const theme of THEME_KINDS) {
+      for (const layer of LAYERS) {
+        for (const star of skyField(layer, sizeOf(layer), theme).stars) {
+          expect(
+            star.dim,
+            `${theme}'s ${layer} has a mark at ${star.dim.toFixed(2)} of its layer's alpha — above 1 is a ` +
+              'star brighter than the ceiling every sky budget is measured against',
+          ).toBeLessThanOrEqual(1);
+          expect(star.dim, `${theme}'s ${layer} has a mark dimmed out of existence`).toBeGreaterThan(0);
+        }
+      }
+    }
+  });
+
+  it('and the gradient is still two stops, or the arithmetic above is wrong in the dangerous direction', () => {
+    /*
+      ⚠️ **THE ONE ASSUMPTION `cloudCover` MAKES, HELD RATHER THAN TRUSTED.** It models a cloud's
+      falloff as linear in distance, which is what a canvas interpolates between a stop at 0 and a stop
+      at 1. A third stop, or either stop moved, makes the model wrong — and wrong in the direction that
+      lets a backdrop eat an ink, because the guard above would keep passing.
+
+      ⚠️ **A SOURCE SCAN, WHICH IS THE WEAKEST KIND OF GUARD AND THE ONLY ONE AVAILABLE.** The falloff
+      lives inside the browser's gradient implementation; nothing in a headless suite can read it.
+      `tests/one-description.test.ts` ranks this third of three and says why it is sometimes the only
+      option.
+    */
+    const src = readFileSync(resolve(root, 'src/render/bake.ts'), 'utf8');
+    const body = src.slice(src.indexOf('function drawNebula'), src.indexOf('function bakeOne'));
+    const stops = [...body.matchAll(/addColorStop\(([^,]+),/g)].map((m) => m[1]!.trim());
+    expect(
+      stops,
+      `drawNebula has ${stops.length} colour stops (${stops.join(', ')}) — cloudCover models the falloff ` +
+        'as linear between exactly two, at 0 and 1, and the contrast guard rests on that',
+    ).toEqual(['0', '1']);
+    expect(
+      body,
+      'the inner circle of the gradient has a radius, so the falloff no longer starts from a point',
+    ).toContain('cloud.fy, 0,');
+  });
+});
 
 describe('0195 — a place has its own sky', () => {
   it('THE REPORTED ONE: no two places draw the same stars in the same places', () => {
