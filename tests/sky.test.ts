@@ -34,7 +34,7 @@ import { resolve } from 'node:path';
 import { SPRITE_EXTENT } from '../src/content/sprites.ts';
 import { DECOR_INKS, PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { THEMES } from '../src/content/themes.ts';
-import { contrast } from './contrast.ts';
+import { GAMEPLAY_FLOOR, contrast } from './contrast.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 import { THEME_KINDS, type ThemeKind } from '../src/content/themes.ts';
@@ -122,7 +122,14 @@ describe('0196 — the clouds are counted against the accessibility floor', () =
             `${ink} sits at ${ratio.toFixed(2)}:1 on ${theme}'s ${name} backdrop once its clouds are ` +
               `counted (cover ${cover.toFixed(3)}, blended ${backdrop}) — a level has spent an ` +
               'accessibility choice the player made',
-          ).toBeGreaterThanOrEqual(4.5);
+            /*
+              ⚠️ **THE GAMEPLAY FLOOR — 0198, one day after this guard was written.** 0196 measured what
+              the clouds cost and chose its three axes to spend none of it; the report on that pass was
+              *"nothing interesting or different about the levels."* **The floor picked the axes and the
+              axes were the ones nobody can see.** The AA bar is now advisory and this holds the bar that
+              is about the game working.
+            */
+          ).toBeGreaterThanOrEqual(GAMEPLAY_FLOOR);
         }
       }
     }

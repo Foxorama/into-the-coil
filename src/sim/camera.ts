@@ -291,5 +291,54 @@ export const ROAM_MAX = ACROSS_SPAN + FLANK_MARGIN;
  * ⚠️ It is measured from the CAMERA rather than from the ship, because the ship moves and a spawn
  * rule that followed it would let a player standing forward drag their own ambushes in front of
  * them.
+ *
+ * ── ⚠️ AND THE SENTENCE ABOVE ABOUT *THE PLAYER'S OWN CAP* WAS FALSE — 0197 ─────────────────────
+ *
+ * ⚠️ **THE PLAYER'S CAP IS `PLAYER_LEAD`, WHICH IS 167.1, AND THIS IS 120.** Reported a second time:
+ * *"enemies still enter the screen space within 50% of the left side of the screen which gives the
+ * player no way to interact with them."* **The entry point is 47.1 units INSIDE the player's box** —
+ * so a player pushed forward is ahead of where flankers appear, they materialise behind the ship, and
+ * the ship fires forward. `docs/decisions/0197-a-wave-arrives-as-a-wave.md`.
+ *
+ * ⚠️ **THE PARAGRAPH ABOVE IS WHY IT SURVIVED A FIRST REPORT.** Believing 120 was the player's limit
+ * made *nothing ever appears behind them* look guaranteed, so the previous round read the complaint as
+ * a problem about TIME and slowed the crossing instead. **It was never a guarantee.**
+ *
+ * ⚠️ **SO THIS IS A FLOOR NOW RATHER THAN THE ANSWER**, and `flankAlongFor` is the answer: never
+ * behind the ship, never nearer than this, and never further than the view can show. The refusal
+ * above still stands for the LOWER bound — a player at the back cannot pull ambushes forward — and
+ * what changes is only that a player at the FRONT stops having them appear behind.
  */
 export const FLANK_ALONG = MAX_ALONG_SPAN / 2;
+
+/**
+ * How much clear air a flanker enters ahead of the ship, in world units.
+ *
+ * ⚠️ **A REACTION DISTANCE AND NOT A MARGIN.** At `SCROLL_PER_STEP` the world moves under the ship at
+ * a known rate; 24 units is about four tenths of a second of it, which is the shortest gap the
+ * eleventh play-test called readable for a body arriving across the lane.
+ */
+export const FLANK_CLEAR_AIR = 24;
+
+/**
+ * Where a flanker actually enters, given the camera, the ship and the view.
+ *
+ * ⚠️ **THREE BOUNDS, AND EACH IS A DIFFERENT PROMISE.** Never nearer the camera than `FLANK_ALONG`
+ * (0048's ask, and the refusal that keeps a player at the back from dragging ambushes forward); never
+ * within `FLANK_CLEAR_AIR` of the ship (0197's report — the one that was missing); and never past what
+ * this device can show, because a body that enters off screen is
+ * `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`'s own failure.
+ *
+ * ⚠️ **THE CEILING IS `MAX_ALONG_SPAN` AND NOT THIS DEVICE'S VIEW, WHICH IS THE OPPOSITE OF THE
+ * SNIPING RULE AND IS RIGHT FOR THE OPPOSITE REASON.** On a 16:9 view the player's box is **94% of the
+ * whole screen**, so clamping to what that device can show puts the entry 29 units BEHIND a ship at its
+ * cap — the bug, still there, on the commonest monitor in the world. A flanker placed just past the
+ * leading edge slides in within half a second exactly as a lead wave does, and
+ * `docs/decisions/0059-the-lane-is-the-players-box.md` already stops a body that is entirely off screen
+ * from firing. **The thing that must not happen is being SHOT at from off screen, not arriving from
+ * there.**
+ */
+export function flankAlongFor(shipAlong: number, cameraAlong: number, _alongSpan: number): number {
+  const ahead = shipAlong - cameraAlong + FLANK_CLEAR_AIR;
+  return Math.min(Math.max(FLANK_ALONG, ahead), MAX_ALONG_SPAN);
+}

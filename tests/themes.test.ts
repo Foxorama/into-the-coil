@@ -68,7 +68,7 @@ import {
 import { DECOR_INKS, PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SAMPLE_RATE, saturate } from '../src/app/sound.ts';
 import { loopsAt } from './bakes.ts';
-import { contrast } from './contrast.ts';
+import { GAMEPLAY_FLOOR, contrast } from './contrast.ts';
 
 /**
  * A LEVEL IS A PLACE — `docs/decisions/0107-a-level-is-a-place.md`.
@@ -138,7 +138,14 @@ describe('every level is somewhere, and no two of the seven are the same place',
           expect(
             ratio,
             `${ink} sits at ${ratio.toFixed(2)}:1 on ${theme}'s ${name} backdrop, which is below the floor`,
-          ).toBeGreaterThanOrEqual(4.5);
+            /*
+              ⚠️ **THE GAMEPLAY FLOOR, NOT WCAG AA — 0198.** The accessibility pass runs after the game;
+              until it does, *can the player pick this out at all* is what fails a build and *does it
+              clear AA* is measured by `tests/authored.test.ts` and reported. 0024's unconditional tier
+              is untouched: what moved is a number, not the rule that a level may never silently
+              override a choice the player made.
+            */
+          ).toBeGreaterThanOrEqual(GAMEPLAY_FLOOR);
         }
       }
     }

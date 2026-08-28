@@ -142,6 +142,28 @@ export function gapAcross(radius: number): number {
 }
 
 /**
+ * Where the `index`th member of a FLANKING wave enters, along the edge it comes in from.
+ *
+ * `docs/decisions/0197-a-wave-arrives-as-a-wave.md`.
+ *
+ * ⚠️ **A FLANKER SPREADS ALONG THE AXIS IT ENTERS ON, AND NO FORMATION CAN SAY THAT.** Every member
+ * of a flanking wave shares one `across` — the edge — so the formation's across offset has nowhere to
+ * go, and a `line`'s along offset is `() => 0`. **The result was every body of a flanking line at one
+ * point: 300 across the game**, reported as *"it looks like one enemy when it's actually 5."*
+ *
+ * ⚠️ **AND SUMMING THE TWO OFFSETS IS NOT A SPACING RULE**, which the first fix found out: a `vee`'s
+ * along step is 14 and its across step is `2r + 1`, so at a warden's gap of 9 two members land **5
+ * units** apart against a diameter of 8. This cannot collide by construction — the gap is a diameter
+ * plus one, which is 0143's own answer applied to the axis a flanker actually spreads on.
+ *
+ * ⚠️ **THE FORMATION IS NOT DISCARDED.** It still decides each member's target LANE, which is what
+ * they steer to once they are in. What it stops deciding is the entry spacing, which it never could.
+ */
+export function streamOffset(index: number, radius: number): number {
+  return index * gapAcross(radius);
+}
+
+/**
  * World units between neighbours, along it.
  *
  * ⚠️ **MEASURED AND DELIBERATELY LEFT AT 14** — 0121. It was changed to 10 on the same report as

@@ -16,12 +16,19 @@ export const PROBES = [
       contrast — before this guard, tests/themes.test.ts checked every ink against the BARE backdrop
       and a nebula could be turned up to anything without a single test moving.
     */
+    /*
+      ⚠️ THE BREAK GOT BIGGER WHEN THE FLOOR MOVED, WHICH IS THE PROBE FOLLOWING ITS GUARD.
+      docs/decisions/0198-the-accessibility-pass-comes-after-the-game.md dropped this guard from WCAG
+      AA to the gameplay floor, and 0.3–0.55 alpha then landed at 3.96 — a real failure of the old bar
+      and a pass of the new one, so the probe came back STILL GREEN. **A demotion that leaves a probe
+      un-re-aimed is a guard nobody has proven at its new threshold.**
+    */
     broke: 'the clouds turned up until a place eats an ink the player has to find',
     guard: 'THE HOLE: every ink clears WCAG AA against the backdrop WITH THE CLOUDS ON IT',
     edit: {
       path: 'src/render/bake.ts',
       find: 'const NEBULA_ALPHA = { from: 0.1, to: 0.22 };',
-      replace: 'const NEBULA_ALPHA = { from: 0.3, to: 0.55 };',
+      replace: 'const NEBULA_ALPHA = { from: 0.62, to: 0.95 };',
     },
   },
   {

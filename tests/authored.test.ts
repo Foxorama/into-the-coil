@@ -34,6 +34,21 @@ import { MUSIC_LAYERS, MUSIC_LEVELS, type MusicLayer, type MusicLevel } from '..
 import { THEMES, THEME_KINDS, mixOf, rungOf, scaleOf, type ThemeKind } from '../src/content/themes.ts';
 import { roleOf } from '../src/content/arrangement.ts';
 import { DUCK_FLOOR_DB, carriedThrough, soundingAt } from './pace.ts';
+import { AA_FLOOR, contrast } from './contrast.ts';
+import { DECOR_INKS, PALETTES, type PaletteName } from '../src/content/palette.ts';
+import { SPRITE_EXTENT } from '../src/content/sprites.ts';
+import { bakeSize, cloudCover } from '../src/render/bake.ts';
+
+/** sRGB blend, which is what a gradient over a backdrop produces — the same one `tests/sky.test.ts` uses. */
+function over(base: string, top: string, alpha: number): string {
+  const parse = (h: string): number[] => {
+    const m = /^#(..)(..)(..)$/.exec(h);
+    if (m === null) throw new Error(`not a hex colour: ${h}`);
+    return [1, 2, 3].map((i) => parseInt(m[i]!, 16));
+  };
+  const [a, b] = [parse(base), parse(top)];
+  return `#${a.map((v, i) => Math.round(v + (b[i]! - v) * alpha).toString(16).padStart(2, '0')).join('')}`;
+}
 import { loopsAt } from './bakes.ts';
 import { SAMPLE_RATE } from '../src/app/sound.ts';
 
@@ -109,11 +124,52 @@ function measureFour(): void {
   observe('0172-four', found.length === 0, found);
 }
 
+/**
+ * 0198 — the three WCAG floors the accessibility pass will restore.
+ *
+ * ⚠️ **DEFERRED IS NOT UNMEASURED.** `docs/decisions/0198-the-accessibility-pass-comes-after-the-game.md`
+ * moves the pass after the game; the suites hold `GAMEPLAY_FLOOR` and these hold the AA bar, so what
+ * the pass has to fix is a list that is already written rather than an audit it has to start.
+ */
+function measureAA(): void {
+  const inks = (name: PaletteName): [string, string][] =>
+    (Object.entries(PALETTES[name]) as [string, string][]).filter(
+      ([ink]) => ink !== 'space' && ink !== 'sky' && !(DECOR_INKS as readonly string[]).includes(ink),
+    );
+
+  const space: string[] = [];
+  const backdrop: string[] = [];
+  const weather: string[] = [];
+  const size = bakeSize(SPRITE_EXTENT.skyNebula, 6);
+
+  for (const name of Object.keys(PALETTES) as PaletteName[]) {
+    for (const [ink, colour] of inks(name)) {
+      const r = contrast(colour, PALETTES[name].space);
+      if (r < AA_FLOOR) space.push(`${name}/${ink} ${r.toFixed(2)}`);
+    }
+    for (const theme of THEME_KINDS) {
+      const bare = THEMES[theme].space[name];
+      const cover = cloudCover(size, theme);
+      const withWeather = over(bare, THEMES[theme].nebula[name], cover);
+      for (const [ink, colour] of inks(name)) {
+        const b = contrast(colour, bare);
+        if (b < AA_FLOOR) backdrop.push(`${theme}/${name}/${ink} ${b.toFixed(2)}`);
+        const w = contrast(colour, withWeather);
+        if (w < AA_FLOOR) weather.push(`${theme}/${name}/${ink} ${w.toFixed(2)}`);
+      }
+    }
+  }
+  observe('0198-aa-space', space.length === 0, space);
+  observe('0198-aa-backdrop', backdrop.length === 0, backdrop);
+  observe('0198-aa-clouds', weather.length === 0, weather);
+}
+
 function measureAll(): void {
   measureNotes();
   measureLead();
   measureDuck();
   measureFour();
+  measureAA();
 }
 
 /**

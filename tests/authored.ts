@@ -28,7 +28,15 @@ import type { ThemeKind } from '../src/content/themes.ts';
  * failure `.github/workflows/hotspots.yml` names about a weekly report. One register, printed in
  * full on every run, met and unmet together, is what stops this from being a place guards go to die.
  */
-export const AUTHORED_IDS = ['0148-notes', '0155-lead', '0167-duck', '0172-four'] as const;
+export const AUTHORED_IDS = [
+  '0148-notes',
+  '0155-lead',
+  '0167-duck',
+  '0172-four',
+  '0198-aa-space',
+  '0198-aa-backdrop',
+  '0198-aa-clouds',
+] as const;
 
 export type AuthoredId = (typeof AUTHORED_IDS)[number];
 
@@ -60,6 +68,33 @@ export const AUTHORED: Record<AuthoredId, AuthoredClaim> = {
     claim: 'nothing already sounding gets audibly quieter when a section opens',
     correctly: 'a breakdown before a drop, which is a duck and is the genre move Saurian Belt has now asked for twice',
     decision: '0167-a-build-does-not-duck',
+  },
+  /*
+    ── THE THREE WCAG FLOORS 0198 DEFERS ─────────────────────────────────────────────────────────
+
+    ⚠️ **DEMOTED RATHER THAN DELETED, WHICH IS WHAT MAKES THE PASS POSSIBLE.**
+    `docs/decisions/0198-the-accessibility-pass-comes-after-the-game.md` moves the accessibility pass
+    after the game — and a deferral that stops measuring is a cancellation with better manners. These
+    keep being read on every run, so the pass starts from a list rather than from a fresh audit.
+
+    ⚠️ **WHAT STAYED HARD IS THE GAMEPLAY FLOOR, AND IT IS A DIFFERENT NUMBER FOR A DIFFERENT REASON.**
+    An ink the player genuinely cannot pick out is a bug for everybody; 4.5:1 is WCAG AA, which is a
+    bar about *every* player. The suites hold the first at `GAMEPLAY_FLOOR` and report the second here.
+  */
+  '0198-aa-space': {
+    claim: 'every ink clears WCAG AA against the void',
+    correctly: 'a bold place authored before the accessibility pass, which 0198 explicitly permits until it runs',
+    decision: '0198-the-accessibility-pass-comes-after-the-game',
+  },
+  '0198-aa-backdrop': {
+    claim: "every ink clears WCAG AA against every place's backdrop",
+    correctly: 'a backdrop authored for character first, with the contrast pass still to come',
+    decision: '0198-the-accessibility-pass-comes-after-the-game',
+  },
+  '0198-aa-clouds': {
+    claim: 'every ink clears WCAG AA against a backdrop with its weather on it',
+    correctly: 'weather thick enough to read as weather, which is the whole of what 0196 measured and could not spend',
+    decision: '0198-the-accessibility-pass-comes-after-the-game',
   },
   '0172-four': {
     claim: 'no two places open on the same four sounds at `run`',
