@@ -27,3 +27,23 @@ export function contrast(a: string, b: string): number {
   const [x, y] = [luminance(a), luminance(b)];
   return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
 }
+
+/**
+ * WCAG AA for graphical objects — the bar the accessibility pass restores.
+ *
+ * `docs/decisions/0198-the-accessibility-pass-comes-after-the-game.md` defers it: it is measured on
+ * every run through `tests/authored.ts` and cannot fail a suite until the pass runs.
+ */
+export const AA_FLOOR = 4.5;
+
+/**
+ * The bar that is NOT deferred: can the player pick this out at all.
+ *
+ * ⚠️ **A DIFFERENT NUMBER FOR A DIFFERENT QUESTION, AND THAT IS THE WHOLE OF 0198.** An ink nobody can
+ * see is a bug for everybody and stays a hard failure; 4.5:1 is a bar about *every* player and waits
+ * for the pass. **3.0 is the step at which two large shapes side by side stop being one shape** —
+ * `tests/palette.test.ts`'s own `SEPARATED` reasoning, which sets 1.6 for two inks that must be told
+ * apart and is deliberately lower because those are compared to each other rather than found against a
+ * ground.
+ */
+export const GAMEPLAY_FLOOR = 3;

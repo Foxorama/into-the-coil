@@ -223,6 +223,12 @@ const WITHOUT_PROBES: Record<string, string> = {
   // stays hard. It has NEVER had a probe: both of 0167's broke the duck guard. That is a pre-existing
   // hole this exemption inherits rather than creates, and 0192 names it as a debt found on the way
   // past rather than quietly covering it with this sentence.
+  // The fifth exemption that is not a hole, and the second one a DEMOTION produced.
+  // docs/decisions/0198-the-accessibility-pass-comes-after-the-game.md changes WHEN a pass happens and
+  // WHICH column a rule sits in. There is no file to break that would make a suite refuse a sequencing
+  // choice — 0044's own shape, one channel over. What backs it instead is that every floor it defers is
+  // now a measured claim in tests/authored.ts, printed on every run, and those carry 0192's probes.
+  '0198': 'its subject is when a pass runs and which column a rule sits in, and no edit to any file can stage that; what backs it is that every deferred floor is a measured claim in tests/authored.ts, with 0192 probes behind the mechanism',
   '0167': 'its duck guard is advisory under 0192 and has no red to prove; the mechanism that replaces the proof is probed under 0192, and the additive half stayed hard but was never probed by either of the two this file removed',
 };
 

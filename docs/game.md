@@ -360,6 +360,23 @@ Owed a decision, and a test.
 
 Decided — [0024](decisions/0024-the-accessibility-floor-is-settings.md).
 
+⚠️ **AND THE PASS COMES AFTER THE GAME, WHICH IS A DECISION THAT WAS MADE AND NEVER WRITTEN DOWN.**
+Given 2026-08-25: *"I thought I changed the accessibility rules so that we're going to make the game
+first and then run the accessibility pass afterwards. The accessibility pass has been as restrictive
+as the other guards and not in a good way."*
+
+⚠️ **IT WAS NOT IN THIS FILE, NOT IN 0024, AND NOT IN `docs/state-of-play.md`**, so every session
+since has gone on enforcing the old rule — which is
+[0029](decisions/0029-the-tracked-record-is-the-record.md) exactly: a decision that lives only in chat
+did not happen. **Three art decisions were authored against a floor the player had already lifted.**
+
+⚠️ **WHAT IS DEFERRED AND WHAT IS NOT IS THE WHOLE OF IT** —
+[0198](decisions/0198-the-accessibility-pass-comes-after-the-game.md). Deferred: the WCAG contrast
+floors, the second palette, and every guard that refuses a colour for being hard to read. **Not
+deferred: anything that is GAMEPLAY legibility** — a sky mark the size of a bullet, an enemy that
+cannot be told from a pickup, a flash that hides the field. Those are not accessibility rules wearing
+a different hat; they are the game working.
+
 **There is one game, and it is the loud one.** Accessibility is knobs over that default, never
 restraint of it. Unconditional and not switchable off: colour never carries meaning alone, every cue
 has a visual twin, a flash-intensity cap, actions-not-keys input, an interactive first stage.

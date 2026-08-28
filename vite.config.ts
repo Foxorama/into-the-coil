@@ -162,5 +162,24 @@ export default defineConfig({
     // dist out from under a sibling's read — a race that only fires sometimes. See
     // tests/globalSetup.ts, and tests/build.test.ts which enforces the rule.
     globalSetup: ['tests/globalSetup.ts'],
+    /*
+      ── A BROWSER LAUNCH IS NOT A UNIT TEST'S HOOK — 0199 ─────────────────────────────────────────
+
+      ⚠️ **MEASURED RATHER THAN RAISED UNTIL IT PASSED.** vitest's default hook budget is 10 s. A
+      single browser suite launches Chromium, builds nothing and finishes its hook in well under that
+      — `tests/boot.browser.test.ts` alone is **5.69 s end to end**. Nine of them start at once, on a
+      machine that also has the author's own browser open, and seven of the nine crossed 10 s.
+
+      ⚠️ **IT IS A WALL-CLOCK BUDGET ON A LAUNCH, WHICH IS EXACTLY WHAT
+      `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md` IS NAMED FOR** — the
+      guard that only failed under the load of `npm run prove` itself. A rerun is not evidence; the
+      suite was timed alone and under load before this number moved.
+
+      ⚠️ **AND THE THING IT MUST NOT DO IS HIDE A HANG.** 60 s is six times the measured cost of the
+      slowest single launch, so a browser that never comes up still fails inside a minute rather than
+      holding a CI job. The per-TEST budgets are untouched: those are the ones that catch a page which
+      boots and then does nothing.
+    */
+    hookTimeout: 60_000,
   },
 });

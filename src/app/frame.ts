@@ -24,7 +24,7 @@
 
 import {
   ACROSS_SPAN,
-  FLANK_ALONG,
+  flankAlongFor,
   FLANK_MARGIN,
   ROAM_MAX,
   ROAM_MIN,
@@ -59,7 +59,7 @@ import type { ShipRow } from '../content/ships.ts';
 import { INVULN_STEPS, SHIELD_MARK, hullFor, shieldsOf } from '../content/ships.ts';
 import { SHOTS } from '../content/shots.ts';
 import { BURST, DEBRIS } from '../content/debris.ts';
-import { FORMATIONS, gapAcross } from '../content/formations.ts';
+import { FORMATIONS, gapAcross, streamOffset } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
 import { type DifficultyRow, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
@@ -2183,7 +2183,9 @@ function spawnWave(w: World, index: number): void {
   */
   // ⚠️ The authored place is in LEVEL coordinates — 0076. A flanking wave is placed against the
   // camera instead and so needs no origin: its `at` decides only WHEN, never where.
-  const along = flanking ? w.cameraAlong + FLANK_ALONG : wave.at + w.levelOrigin;
+  const along = flanking
+    ? flankAlongFor(w.ship.along, w.cameraAlong, w.view.alongSpan) + w.cameraAlong
+    : wave.at + w.levelOrigin;
   // Which side it comes in from, as a sign on `across`. −1 enters from the acrossMinus edge.
   const side = origin === 'acrossPlus' ? 1 : -1;
   const entryAcross = side < 0 ? -FLANK_MARGIN : ACROSS_SPAN + FLANK_MARGIN;
@@ -2202,9 +2204,31 @@ function spawnWave(w: World, index: number): void {
       ⚠️ **A flanker's formation offset is applied ALONG rather than across at the entry point.** The
       members leave the edge in a stream at their own target lanes; spreading them across the lane
       before they had entered it would put half the wave on screen already.
+
+      ⚠️ **AND IT IS THE WHOLE OFFSET NOW, NOT THE ALONG HALF OF IT — 0197.** Reported from play:
+      *"some enemies spawn all on top of each other so it looks like one enemy when it's actually 5."*
+      A `line`'s `alongOffset` is `() => 0` and a flanker's `across` is the same edge for every
+      member — so **every body in a flanking line spawned at one point**, and a flanking `vee` stacked
+      them in pairs. **300 bodies across the game.** The paragraph above described a stream the data
+      could not express: the offset that spreads a line is its ACROSS one, and at the entry point that
+      is the axis the stream runs along.
     */
     const across = flanking ? entryAcross : target;
-    reset(e, along + formation.alongOffset(i, wave.count), across, row, kind);
+    /*
+      ⚠️ **A FLANKER'S STREAM IS THE GAP TIMES THE INDEX, AND NOTHING TO DO WITH THE FORMATION.** The
+      first fix summed the two offsets, which took the 300 stacked bodies down to 35 and left a real
+      case standing: a `vee`'s along step is 14 and its across step is `2r + 1`, so at a warden's gap of
+      9 the second member's total lands **5 units** from the third's against a diameter of 8. **A sum of
+      two geometries is not a spacing rule.** `i × gapAcross` is `docs/decisions/0143-a-wave-is-spaced-by-the-body-it-is-made-of.md`'s
+      own answer applied to the axis a flanker actually spreads on, and it cannot collide by
+      construction: the gap is a diameter plus one.
+
+      ⚠️ **THE FORMATION IS NOT DISCARDED** — it still decides each member's target LANE through
+      `target`, which is what they steer to once they are in. What it stops deciding is the entry
+      spacing, which it was never able to express.
+    */
+    const stream = flanking ? streamOffset(i, row.radius) : formation.alongOffset(i, wave.count);
+    reset(e, along + stream, across, row, kind);
     if (flanking) {
       // The turn: cross at a fixed rate until the authored lane, then slow to the roam and carry on.
       // `steerEnemies` is where that second half happens.

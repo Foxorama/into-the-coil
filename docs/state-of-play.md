@@ -686,6 +686,104 @@ is worse than no marker, because it reads exactly like a live one — the same f
 [0029](decisions/0029-the-tracked-record-is-the-record.md) names for a summary that drifts. **Retire
 this heading when it stops being true rather than adding another one below it.**
 
+⚠️ **AND IT HAS BEEN RETIRED ONCE, ON 2026-08-25, WHICH IS THE PROOF THE INSTRUCTION WORKS.** It said
+*the work is a driving session, everything else is waiting on an ear* for six days after the channel
+moved. **The work is ART AND GAME now.** The music is not finished and is not the thing being asked
+for.
+
+---
+
+## ⚠️ THE THREE THINGS THE NEXT SESSION DOES, IN THIS ORDER
+
+**1 — THE WAVE WIDTHS. The oldest live play report and the only one still unfixed.**
+
+*"The grouping of enemies in level 1 is still split with certain groups, which upsets the sound when
+you kill 1-2, then have to fly across the screen to kill the other 2-3 in that group."*
+
+**Measured:** the gun's fan is **19.75 units** at engagement range; **50 of level one's 69 waves are
+wider than that.** The first wave in the game is a `drifter ×5` line at **24.8**.
+[0121](decisions/0121-a-wave-dies-together.md) changed the *gap* and **nobody changed the counts**, so
+the fix never reached the content. **492 waves across seven levels.**
+
+⚠️ **IT IS NOT A MECHANICAL CAP.** Shrinking counts cuts density, and density was asked for twice —
+`docs/game.md`'s *"reduce the level length without reducing enemy count"*. A wave that loses members
+wants a second wave, not fewer bodies. **That is level design, and it is the decision to write.**
+
+**2 — BIG BACKGROUND OBJECTS. The answer to the backdrop report, and it has to argue with two rules.**
+
+Asked for, 2026-08-25: planets, wreckage, ice walls, cavern structure — per place.
+
+⚠️ **[0069](decisions/0069-the-sky-is-behind-the-game.md) AND
+[0112](decisions/0112-the-sky-has-weather.md) FORBID IT TODAY**, and the argument to make is written
+down rather than left to be rediscovered: 0069's reason is *a mark that looks like a bullet and moves
+like the world is confusable with a threat*, and **a planet is not confusable with a bullet at any
+size.** The rule was written when the only thing in the sky was a dot. **It has to become a rule about
+what can be MISTAKEN for a threat, not about how big anything may be.** That is a real argument and not
+a bypass; make it in a decision before writing the geometry.
+
+⚠️ **AND [0198](decisions/0198-the-accessibility-pass-comes-after-the-game.md) IS WHAT MAKES IT
+POSSIBLE.** The contrast floors that would have refused a bold backdrop are advisory now.
+
+**3 — ENEMY VARIANTS. Last, because it depends on what the backgrounds become.**
+
+Asked for: *"fun level specific art"*, and *"we'll possibly need to add more or different enemies per
+level as required so that they match well."*
+
+⚠️ **THE CONSTRAINT TO AUTHOR AGAINST IS ALREADY MEASURED** — 0196. `enemy` is the worst ink in all
+fourteen place-palette cells, and **Ember Nebula and The Toxic Mire have about a third of the headroom
+the other five do**, because their weather is thickest. There is no `variant` parameter yet:
+`drawKind` takes `(kind, palette, size, theme)` and an enemy is one silhouette everywhere.
+
+---
+
+## ⚠️ WHAT THIS SESSION GOT WRONG, BECAUSE IT IS THE MOST TRANSFERABLE THING IN IT
+
+⚠️ **THE BACKDROP PASS OPTIMISED WHAT IT COULD MEASURE AND THE PICTURE DID NOT MOVE.** 0196 chose its
+three axes **because they cost no contrast** and wrote that down as a virtue. The report:
+*"they might be numerically different in the background, but visually there's nothing interesting or
+different about the levels."*
+
+⚠️ **IT IS [0027](decisions/0027-measure-the-picture-not-the-model.md) HAPPENING ON THE ART CHANNEL,
+TWO DAYS AFTER [`two-weeks-on-one-channel`](../reports/two-weeks-on-one-channel-2026-08-25.md) WAS
+WRITTEN ABOUT IT HAPPENING ON THE MUSIC ONE.** Nine axes over two primitives is still dots and lines.
+**Before the next art pass, say what the player will SEE differently — in a sentence, without a
+number — and check that sentence afterwards.**
+
+⚠️ **AND A DECISION THAT LIVED ONLY IN CHAT DID NOT HAPPEN.** The accessibility deferral had been
+decided and was in no file, so every session went on enforcing the old rule and it shaped three art
+decisions. [0029](decisions/0029-the-tracked-record-is-the-record.md) is the rule; **0198 is what it
+costs to find out late.**
+
+⚠️ **AND THE BACKDROP PASS WAS REPORTED AS A FAILURE, WITH THE CAUSE NAMED** —
+*"the backgrounds aren't actually really any different visually. They might be numerically different
+in the background, but visually there's nothing interesting or different about the levels."*
+[0196](decisions/0196-the-backdrop-is-rounded-out.md) chose its three axes **because they cost no
+contrast**, and [0198](decisions/0198-the-accessibility-pass-comes-after-the-game.md) is why that was
+the wrong constraint: **the floor picked the axes and the axes were the ones nobody can see.** The next
+backdrop pass is **big background objects** — planets, wreckage, ice walls, cavern structure — which
+[0069](decisions/0069-the-sky-is-behind-the-game.md) and
+[0112](decisions/0112-the-sky-has-weather.md) currently forbid and which has to argue with both.
+
+⚠️ **THE ACCESSIBILITY PASS COMES AFTER THE GAME, AND THAT WAS DECIDED A WHILE AGO AND NEVER WRITTEN
+DOWN** — [0198](decisions/0198-the-accessibility-pass-comes-after-the-game.md). It was not in
+`docs/game.md`, not in 0024, not here, so **every session since went on enforcing the old rule** and it
+shaped three art decisions. The WCAG floors are demoted to `tests/authored.ts` — measured and printed
+every run, never failing a build. **Gameplay legibility is NOT deferred**: a sky mark the size of a
+bullet still fails hard, on every palette.
+
+⚠️ **AND TWO SPAWN DEFECTS FROM THE SAME PLAY SESSION ARE FIXED** —
+[0197](decisions/0197-a-wave-arrives-as-a-wave.md). **300 bodies across the game entered inside another
+body** — a flanking `line` has no along offset, so every member spawned at one point. And the flanker
+entry sat **47.1 units inside the player's box**: `PLAYER_LEAD` is 167.1 and the entry was a flat 120,
+while `src/sim/camera.ts` called that *"the player's own cap"*. **The wrong comment is why the first
+report was answered by slowing the crossing instead.**
+
+⚠️ **THE THIRD REPORT FROM THAT SESSION IS STILL OPEN AND IS THE NEXT PIECE OF GAME WORK.** *"The
+grouping of enemies in level 1 is still split."* The gun's fan is **19.75 units** and **50 of level
+one's 69 waves are wider than that** — the first wave is a `drifter ×5` at 24.8.
+[0121](decisions/0121-a-wave-dies-together.md) changed the gap and nobody changed the counts, so the
+fix never reached the content. **492 waves, its own decision.**
+
 ⚠️ **AND ROUNDING IT OUT FOUND AN ACCESSIBILITY HOLE, WHICH IS WHY IT CAME BEFORE THE ENEMIES** —
 [0196](decisions/0196-the-backdrop-is-rounded-out.md). `tests/themes.test.ts` held every ink against
 the **bare** backdrop; the clouds are drawn on top of it and **overlap**, so cover reaches **0.41** at

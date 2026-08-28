@@ -5,6 +5,8 @@ import {
   ACROSS_CULL_MIN,
   ACROSS_SPAN,
   FLANK_ALONG,
+  FLANK_CLEAR_AIR,
+  flankAlongFor,
   MAX_ALONG_SPAN,
   MIN_ASPECT,
   ROAM_MAX,
@@ -22,6 +24,8 @@ import { DEFAULT_ORIGIN, LEVELS, LEVEL_KINDS, type LevelRow } from '../src/conte
 import { PLAYER_SHOT_LIFE } from '../src/content/pickups.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { ENEMIES, shotsPerVolley } from '../src/content/enemies.ts';
+import { streamOffset } from '../src/content/formations.ts';
+import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../src/sim/flight.ts';
 import { fireGapFor } from '../src/content/difficulty.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { GameFrame } from '../src/app/frame.ts';
@@ -671,6 +675,104 @@ describe('a pickup wanders', () => {
         expect(item.across, 'a pickup drifted out of the dodge lane').toBeGreaterThanOrEqual(0);
         expect(item.across, 'a pickup drifted out of the dodge lane').toBeLessThanOrEqual(ACROSS_SPAN);
       }
+    }
+  });
+});
+
+/**
+ * A WAVE ARRIVES AS A WAVE — `docs/decisions/0197-a-wave-arrives-as-a-wave.md`.
+ *
+ * ⚠️ **THREE REPORTS FROM ONE PLAY SESSION, AND ALL THREE WERE ABOUT THE SPAWN.** *"Some enemies
+ * spawn all on top of each other so it looks like one enemy when it's actually 5"*, and *"enemies
+ * still enter the screen space within 50% of the left side of the screen which gives the player no
+ * way to interact with them."* Both were true of every level and no guard could see either, because
+ * nothing in this file had ever asked where two bodies of one wave are relative to EACH OTHER, or
+ * where a flanker is relative to the SHIP.
+ */
+describe('0197 — a wave arrives as a wave', () => {
+  it('THE REPORTED ONE: no two bodies of a flanking wave enter inside each other', () => {
+    /*
+      ⚠️ **300 BODIES ACROSS THE GAME, AND THE COMMENT SAID OTHERWISE.** A flanker's `across` is the
+      edge it enters from — the same value for every member — and a `line`'s `alongOffset` is `() => 0`,
+      so every body in a flanking line spawned at ONE POINT. `frame.ts` said the members *"leave the
+      edge in a stream at their own target lanes"*; the data could not express a stream.
+
+      ⚠️ **AND THE FIRST FIX LEFT 35 STANDING**, which is why this is written over the spacing rather
+      than over the formation: summing the two offsets put a `vee`'s members 5 units apart at a warden's
+      9-unit gap, against a diameter of 8. **A sum of two geometries is not a spacing rule.**
+    */
+    const offenders: string[] = [];
+    for (const level of LEVEL_KINDS) {
+      for (const wave of LEVELS[level].waves) {
+        if ((wave.origin ?? DEFAULT_ORIGIN) === 'lead') continue;
+        const row = ENEMIES[wave.enemy];
+        for (let i = 0; i < wave.count; i++) {
+          for (let j = i + 1; j < wave.count; j++) {
+            // Read off the game's own spacing rather than re-derived here — 0027.
+            const apart = Math.abs(streamOffset(i, row.radius) - streamOffset(j, row.radius));
+            if (apart < row.radius * 2) {
+              offenders.push(`${level} ${wave.enemy}×${wave.count} at ${wave.at}: ${apart.toFixed(1)} apart`);
+            }
+          }
+        }
+      }
+    }
+    expect(
+      offenders.slice(0, 8),
+      `these bodies enter inside another and read as one enemy (${offenders.length} in all)`,
+    ).toEqual([]);
+  });
+
+  it('THE OTHER REPORTED ONE: a flanker never enters behind the ship', () => {
+    /*
+      ⚠️ **THE ENTRY WAS 47.1 UNITS INSIDE THE PLAYER'S BOX AND `src/sim/camera.ts` CALLED IT *THE
+      PLAYER'S OWN CAP*.** The cap is `PLAYER_LEAD` at 167.1; the entry was a flat 120. So a player
+      pushed forward was ahead of where flankers appear, they arrived behind the ship, and the ship
+      fires forward.
+
+      ⚠️ **AND THE WRONG COMMENT IS WHY IT SURVIVED A FIRST REPORT.** Believing 120 was the limit made
+      *nothing ever appears behind them* look guaranteed, so the previous round read the complaint as a
+      problem about TIME and slowed the crossing instead. It was never a guarantee.
+    */
+    for (const [w, h] of [
+      [1280, 800],
+      [1920, 1080],
+      [2560, 1080],
+      [3440, 1440],
+    ] as const) {
+      const view = viewOf(w, h);
+      // Every position the ship can legally hold, in the camera's frame.
+      for (let ship = PLAYER_ALONG_MARGIN; ship <= PLAYER_LEAD; ship += 4) {
+        const entry = flankAlongFor(ship, 0, view.alongSpan);
+        expect(
+          entry,
+          `at ${w}×${h} a ship at ${ship.toFixed(1)} gets a flanker at ${entry.toFixed(1)} — behind it, ` +
+            'where the gun does not point',
+        ).toBeGreaterThanOrEqual(ship + FLANK_CLEAR_AIR - 1e-9);
+      }
+    }
+  });
+
+  it('and 0048 is kept: a player at the back cannot pull their ambushes forward', () => {
+    /*
+      ⚠️ **THE REFUSAL THIS CHANGE HAD TO ARGUE WITH, HELD RATHER THAN DROPPED.**
+      `docs/decisions/0048-a-threat-may-arrive-from-the-side.md` measures the entry from the CAMERA so
+      that a ship standing forward cannot drag its own ambushes in front of it. What 0197 changes is
+      only the upper end: `FLANK_ALONG` is a FLOOR now, so a player at the back sees exactly what they
+      saw before.
+    */
+    const view = viewOf(1920, 1080);
+    expect(flankAlongFor(PLAYER_ALONG_MARGIN, 0, view.alongSpan), 'the floor moved').toBe(FLANK_ALONG);
+  });
+
+  it('and a flanker still arrives from beyond the leading edge rather than on top of it', () => {
+    // The ceiling is MAX_ALONG_SPAN, so an entry is never absurdly far out; 0059 already stops a body
+    // that is entirely off screen from firing, which is the thing that must not happen.
+    for (const ship of [PLAYER_ALONG_MARGIN, 90, PLAYER_LEAD]) {
+      const entry = flankAlongFor(ship, 0, 178);
+      expect(entry, 'a flanker is placed past the horizon the game spawns against').toBeLessThanOrEqual(
+        MAX_ALONG_SPAN,
+      );
     }
   });
 });

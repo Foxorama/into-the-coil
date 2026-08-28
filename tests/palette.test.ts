@@ -18,7 +18,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { contrast, luminance } from './contrast.ts';
+import { GAMEPLAY_FLOOR, contrast, luminance } from './contrast.ts';
 import { DECOR_INKS, DEFAULT_PALETTE, type Ink, type Palette, type PaletteName, PALETTES } from '../src/content/palette.ts';
 
 const NAMES = Object.keys(PALETTES) as PaletteName[];
@@ -89,8 +89,15 @@ const MUST_NOT_BE_CONFUSED: { a: Ink; b: Ink; cost: string }[] = [
   { a: 'enemy', b: 'pickup', cost: 'the same mistake with a ship instead of a bullet' },
 ];
 
-/** WCAG AA for graphical objects. Below this an ink is not reliably visible against space. */
-const LEGIBLE = 4.5;
+/**
+ * The floor an ink must clear against the void — **the gameplay one, not WCAG AA** — 0198.
+ *
+ * ⚠️ **AA IS DEFERRED AND STILL MEASURED.** `docs/decisions/0198-the-accessibility-pass-comes-after-the-game.md`
+ * moves the accessibility pass after the game; the 4.5 bar is read on every run by
+ * `tests/authored.test.ts` and reported, so the pass starts from a list. What stays hard here is
+ * whether the player can pick the ink out at all, which is a bug for everybody.
+ */
+const LEGIBLE = GAMEPLAY_FLOOR;
 
 /**
  * The floor between two inks that must be told apart. Not 4.5 — these are large shapes side by side
