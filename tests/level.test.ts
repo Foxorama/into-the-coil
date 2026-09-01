@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import { LEVELS, LEVEL_KINDS, type WaveEntry } from '../src/content/levels.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
-import { FORMATIONS, FORMATION_KINDS, gapAcross } from '../src/content/formations.ts';
+import {
+  ENGAGE_RANGE,
+  FORMATIONS,
+  FORMATION_KINDS,
+  VOLLEY_SPAN,
+  abreastCap,
+  gapAcross,
+} from '../src/content/formations.ts';
 import { BURST } from '../src/content/debris.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { INVULN_STEPS } from '../src/content/ships.ts';
@@ -47,11 +54,13 @@ import { BAR_SECONDS } from '../src/content/music.ts';
 function membersOf(wave: WaveEntry): { along: number; across: number }[] {
   const formation = FORMATIONS[wave.formation];
   const out: { along: number; across: number }[] = [];
+  // The wave's own body decides its spacing — 0143, and a wave is a single kind. Both offsets take
+  // it now, because 0202 derives how deep a wave is from how wide its bodies are.
+  const gap = gapAcross(ENEMIES[wave.enemy].radius);
   for (let i = 0; i < wave.count; i++) {
     out.push({
-      along: wave.at + formation.alongOffset(i, wave.count),
-      // The wave's own body decides its spacing — 0143, and a wave is a single kind.
-      across: wave.lane + formation.acrossOffset(i, wave.count, gapAcross(ENEMIES[wave.enemy].radius)),
+      along: wave.at + formation.alongOffset(i, wave.count, gap),
+      across: wave.lane + formation.acrossOffset(i, wave.count, gap),
     });
   }
   return out;
@@ -185,8 +194,11 @@ describe('an authored level is a script the spawner can actually run', () => {
     // formation's own depth is the one thing that can reach back out of it.
     for (const kind of LEVEL_KINDS) {
       for (const wave of LEVELS[kind].waves) {
-        const formation = FORMATIONS[wave.formation];
-        const depth = Math.abs(formation.alongOffset(wave.count - 1, wave.count) - formation.alongOffset(0, wave.count));
+        // ⚠️ MAX MINUS MIN OVER EVERY MEMBER, not last minus first. 0202 folds a wide wave into
+        // ranks, so the deepest member is no longer the last one — a vee's point is its shallowest
+        // and sits in the middle of its rank. The old subtraction read a vee's two arms, which are
+        // the same depth, and would now report a two-rank wave as flat.
+        const depth = Math.max(...membersOf(wave).map((m) => m.along)) - Math.min(...membersOf(wave).map((m) => m.along));
         expect(depth, `${kind}'s wave at ${wave.at} is deeper than the view`).toBeLessThan(MAX_ALONG_SPAN);
         expect(wave.count, `${kind} has a wave of ${wave.count}`).toBeGreaterThan(0);
       }
@@ -1177,8 +1189,20 @@ describe('0121 — a wave is close enough to die together', () => {
    * ([0105](../docs/decisions/0105-a-body-is-on-screen-long-enough-to-answer.md)) and the box is about
    * 157 deep, so anywhere from a few units to well over a hundred is reachable. Fifty is the middle of
    * where a player who is pressing forward meets one.
+   *
+   * ⚠️ **IT IS `ENGAGE_RANGE` NOW AND NOT A SECOND COPY OF IT** —
+   * [0202](../docs/decisions/0202-a-wave-is-as-wide-as-the-volley.md). This file derived the fan and
+   * named the range months before `src/content/formations.ts` needed either, and when the source
+   * finally did, the honest move was to promote these rather than write them twice.
+   * `docs/decisions/0029-the-tracked-record-is-the-record.md`: a second copy drifts.
    */
-  const ENGAGED_AT = 50;
+  const ENGAGED_AT = ENGAGE_RANGE;
+
+  it('the source and this file agree about the fan, which is the point of importing it', () => {
+    // Cheap, and it is the one assertion that would catch the promotion above being undone by a
+    // future edit that re-typed either number locally.
+    expect(volleyWidth(ENGAGED_AT)).toBeCloseTo(VOLLEY_SPAN, 10);
+  });
 
   it('THE REPORTED ONE: a volley reaches three abreast, where it used to reach two', () => {
     /*
@@ -1187,22 +1211,32 @@ describe('0121 — a wave is close enough to die together', () => {
       quantity it guards. A bound on `ACROSS_GAP` would prove the constant equals itself; this asks
       how many things one trigger pull can reach.
     */
-    const line = FORMATIONS.line;
     const width = volleyWidth(ENGAGED_AT);
     /*
       ⚠️ **HELD FOR EVERY KIND NOW, WHICH IS WHAT 0143 CHANGED** — the gap is the wave's own body
       rather than one constant sized for the widest enemy in the game, so *three abreast* is seven
       separate claims and the widest of them is the one that used to be the only one.
     */
+    /*
+      ⚠️ **`abreastCap` AND NOT A SPAN SUBTRACTION, SINCE 0202.** This read
+      `acrossOffset(count - 1) - acrossOffset(0)`, which was the span while every wave was one rank
+      and is NOT the span now that a wide one folds: member `count - 1` sits in the LAST rank, so the
+      subtraction silently compares two different rows and reports a fold as narrow. It would have
+      answered *yes, a volley reaches four wardens* — 9 units — where the truth is three abreast and
+      one behind. A guard reading the wrong quantity is
+      `docs/decisions/0027-measure-the-picture-not-the-model.md`, and this is the shape a probe cannot
+      catch, because the break and the guard would share an author.
+    */
     for (const kind of ENEMY_KINDS) {
       const gap = gapAcross(ENEMIES[kind].radius);
-      const span = (count: number): number =>
-        Math.abs(line.acrossOffset(count - 1, count, gap) - line.acrossOffset(0, count, gap));
+      const abreast = abreastCap(gap);
       expect(
-        span(3),
-        `three abreast ${kind}s span ${span(3).toFixed(1)} units and a volley is ${width.toFixed(1)} wide at ` +
-          `${ENGAGED_AT} — a wave still dies one at a time, which is what the report is about`,
-      ).toBeLessThanOrEqual(width);
+        abreast,
+        `a volley ${width.toFixed(1)} wide at ${ENGAGED_AT} reaches only ${abreast} ${kind}s abreast at a ` +
+          `gap of ${gap.toFixed(1)} — a wave still dies one at a time, which is what the report is about`,
+      ).toBeGreaterThanOrEqual(3);
+      // And the cap is honest: that many really do fit inside the fan.
+      expect((abreast - 1) * gap).toBeLessThanOrEqual(width);
     }
   });
 
@@ -1216,12 +1250,10 @@ describe('0121 — a wave is close enough to die together', () => {
       ⚠️ **Named as a count and not as a gap**, on the same terms as the guard above: a bound on the
       spacing would prove the arithmetic equals itself.
     */
-    const line = FORMATIONS.line;
-    const width = volleyWidth(ENGAGED_AT);
-    const reaches = (kind: (typeof ENEMY_KINDS)[number], count: number): boolean => {
-      const gap = gapAcross(ENEMIES[kind].radius);
-      return Math.abs(line.acrossOffset(count - 1, count, gap) - line.acrossOffset(0, count, gap)) <= width;
-    };
+    // ⚠️ `abreastCap` since 0202, for the reason given in the guard above: the span subtraction
+    // reads across two ranks once a wave folds, and would call every kind a four.
+    const reaches = (kind: (typeof ENEMY_KINDS)[number], count: number): boolean =>
+      abreastCap(gapAcross(ENEMIES[kind].radius)) >= count;
     const four = ENEMY_KINDS.filter((k) => reaches(k, 4));
     expect(
       four,
@@ -1229,6 +1261,38 @@ describe('0121 — a wave is close enough to die together', () => {
     ).not.toEqual([]);
     // The drifter is the one the report named, by its silhouette: *"grouped tighter for diamonds"*.
     expect(reaches('drifter', 4), 'a volley still reaches only three drifters').toBe(true);
+  });
+
+  it('0202 — EVERY WAVE IN THE GAME fits inside one volley, which 324 of them did not', () => {
+    /*
+      ⚠️ **THE ONE THE OTHER TWO COULD NOT SEE.** The two guards above ask what a volley reaches for a
+      given BODY. Neither of them ever looked at a wave a level actually authored, so both were green
+      across 492 waves of which **324 were wider than the fan and 209 could not have been fixed by any
+      spacing at all** — the hulls intersect before they fit. 0121 and 0143 both measured green and the
+      report came back twice, which is
+      `docs/decisions/0027-measure-the-picture-not-the-model.md` exactly: the model was right about
+      the thing it was measuring and nobody measured the picture.
+
+      ⚠️ **AN INVARIANT, NOT A BUDGET** — `docs/decisions/0192-a-guard-holds-an-invariant.md`. Name a
+      change to the content that would redden this and be correct: there is none. A wave wider than
+      the volley cannot be killed as a group, and killing a group as a group is what
+      `docs/decisions/0109-a-death-is-a-drum.md` spends the whole percussion layer on.
+    */
+    const width = volleyWidth(ENGAGED_AT);
+    const tooWide: string[] = [];
+    for (const kind of LEVEL_KINDS) {
+      for (const wave of LEVELS[kind].waves) {
+        const across = membersOf(wave).map((m) => m.across);
+        const span = Math.max(...across) - Math.min(...across);
+        if (span > width + 1e-9) {
+          tooWide.push(`${kind} @${wave.at} ${wave.enemy}×${wave.count} ${wave.formation} spans ${span.toFixed(1)}`);
+        }
+      }
+    }
+    expect(
+      tooWide,
+      `these waves are wider than the ${width.toFixed(2)}-unit volley, so they cannot die together`,
+    ).toEqual([]);
   });
 
   it('and they still do not overlap, which is what stops it going tighter', () => {
@@ -1278,7 +1342,11 @@ describe('0121 — a wave is close enough to die together', () => {
       rather than tuning anyway.
     */
     const column = FORMATIONS.column;
-    const gap = Math.abs(column.alongOffset(1, 2) - column.alongOffset(0, 2));
+    // A column ignores the across gap — it is single file, so 0202's cap never applies to it. The
+    // argument is passed because the signature takes one, and a real body's gap is used rather than
+    // a zero so this reads as the call the frame makes.
+    const across = gapAcross(ENEMIES.drifter.radius);
+    const gap = Math.abs(column.alongOffset(1, 2, across) - column.alongOffset(0, 2, across));
     const beats = gap / (SCROLL_PER_STEP * STEPS_PER_SECOND) / (BAR_SECONDS / 4);
     expect(
       beats,

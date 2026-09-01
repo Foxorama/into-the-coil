@@ -226,6 +226,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **A VERDICT IS AN EXIT CODE — a piped workflow step sets `pipefail` and a guard holds it; the rest of that family was already inside `prove`** | [0199](decisions/0199-a-verdict-is-an-exit-code.md) |
 | **source and docs are written with an editor, never a shell — and this one has NO guard, by an argument rather than an oversight** | [0200](decisions/0200-the-tool-that-edits-must-not-lose-what-it-edits.md) |
 | **the merge ritual is a tracked file, and `.claude/` was untracked entirely** | [0201](decisions/0201-the-ritual-is-tracked-or-it-is-not-followed.md) |
+| **A WAVE IS AS WIDE AS THE VOLLEY — it folds into ranks at the fan's width; 324 of 492 waves were wider and 0 are, with no count changed** | [0202](decisions/0202-a-wave-is-as-wide-as-the-volley.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were
@@ -698,19 +699,30 @@ for.
 
 ## ⚠️ THE THREE THINGS THE NEXT SESSION DOES, IN THIS ORDER
 
-**1 — THE WAVE WIDTHS. The oldest live play report and the only one still unfixed.**
+**1 — THE WAVE WIDTHS. Shipped as [0202](decisions/0202-a-wave-is-as-wide-as-the-volley.md), and
+what is left is an EAR.**
 
 *"The grouping of enemies in level 1 is still split with certain groups, which upsets the sound when
 you kill 1-2, then have to fly across the screen to kill the other 2-3 in that group."*
 
-**Measured:** the gun's fan is **19.75 units** at engagement range; **50 of level one's 69 waves are
-wider than that.** The first wave in the game is a `drifter ×5` line at **24.8**.
-[0121](decisions/0121-a-wave-dies-together.md) changed the *gap* and **nobody changed the counts**, so
-the fix never reached the content. **492 waves across seven levels.**
+**324 of 492 waves were wider than the volley; 0 are now**, with no count changed and no clear air
+spent — a formation folds into ranks at `abreastCap(gap)` instead of spreading across its whole
+count. The instrument is `scripts/weigh-wave.mjs`.
 
-⚠️ **IT IS NOT A MECHANICAL CAP.** Shrinking counts cuts density, and density was asked for twice —
-`docs/game.md`'s *"reduce the level length without reducing enemy count"*. A wave that loses members
-wants a second wave, not fewer bodies. **That is level design, and it is the decision to write.**
+⚠️ **PLAY-TESTED ON THE BRANCH PREVIEW, 2026-09-01, AND THE VERDICT WAS *"probably need to tweak it
+later but it's good for now."*** So this item is **closed on the report it was opened for** — the
+third fix is the one that held — and what remains is a tuning intention with no defect attached to
+it. It is not a live report and must not be read as one.
+
+⚠️ **THE TWEAK, WHEN IT COMES, IS ONE FUNCTION.** `abreastCap` in `src/content/formations.ts` decides
+how many go abreast, and `scripts/weigh-wave.mjs` shows any change to it across all 492 waves before
+it ships. **Nothing is authored per wave**, which is what makes a retune cheap and is the reason
+0202 chose derived depth over new formation kinds.
+
+⚠️ **AND THE FAN IS THE FOUR-BARREL FAN.** Barrels run 1 → `MAX_BARRELS` across the upgrade tiers, so
+the opening minute of level one has no fan at all and never did, at any spacing. If the report
+survives 0202, **look there before looking at the geometry again** — 0202 names it as the thing no
+decision had ever said out loud.
 
 **2 — BIG BACKGROUND OBJECTS. The answer to the backdrop report, and it has to argue with two rules.**
 
