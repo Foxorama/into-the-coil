@@ -440,6 +440,32 @@ describe('0203 — the sky may hold a landmark, and the rule is a band', () => {
     }
   });
 
+  it('0204 — the landmark is re-baked at the boundary wherever the weather is', () => {
+    /*
+      ⚠️ **AN INVARIANT, AND IT IS THE DEFECT 0204 EXISTS FOR.** A palette is per style and knows
+      nothing about a place, so a landmark that is never re-coloured wears `#2a2c44` — cold blue-grey
+      — in every place in the game. That is what shipped in 0203 and it read as grey rock standing in
+      Ember Nebula's maroon.
+
+      `docs/decisions/0192-a-guard-holds-an-invariant.md`: name a content change that would redden
+      this and be correct. Dropping the landmark's re-bake while keeping the weather's is never
+      correct — the two colours come from one source and describe one place.
+
+      A source scan rather than a render, because `bakeLandmark` needs a DOM canvas and this suite
+      runs in node. It holds the pairing, which is the thing that was missing; the drawing itself is
+      a taste and 0204 says why it is not guarded.
+    */
+    const mount = readFileSync(resolve(root, 'src/app/mount.ts'), 'utf8');
+    const nebula = mount.indexOf('bakeNebula(atlas');
+    const landmark = mount.indexOf('bakeLandmark(atlas');
+    expect(nebula, 'mount no longer re-bakes the weather at the boundary').toBeGreaterThan(-1);
+    expect(
+      landmark,
+      'the weather is re-baked in the place’s colour and the landmark is not — it will be cold grey ' +
+        'in every place, which is exactly the defect 0204 was written for',
+    ).toBeGreaterThan(-1);
+  });
+
   it('THE ASK, AS A NUMBER: the Pillars arrive exactly where the organ opens', () => {
     /*
       ⚠️ **THE WHOLE POINT OF THE FEATURE, AND IT IS ONE EQUALITY.** Asked for by name: *"when the
