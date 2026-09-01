@@ -709,11 +709,15 @@ you kill 1-2, then have to fly across the screen to kill the other 2-3 in that g
 spent — a formation folds into ranks at `abreastCap(gap)` instead of spreading across its whole
 count. The instrument is `scripts/weigh-wave.mjs`.
 
-⚠️ **THE MODEL IS GREEN AND THE PICTURE IS NOT YET JUDGED**, which is
-[0027](decisions/0027-measure-the-picture-not-the-model.md)'s whole subject and the reason the two
-previous fixes did not hold. **The next thing that happens to this item is one play-test**, on the
-question 0202 actually claims: does a group die together, and do the drums land together. A static
-shot could not settle it — the run had moved past the wave both times.
+⚠️ **PLAY-TESTED ON THE BRANCH PREVIEW, 2026-09-01, AND THE VERDICT WAS *"probably need to tweak it
+later but it's good for now."*** So this item is **closed on the report it was opened for** — the
+third fix is the one that held — and what remains is a tuning intention with no defect attached to
+it. It is not a live report and must not be read as one.
+
+⚠️ **THE TWEAK, WHEN IT COMES, IS ONE FUNCTION.** `abreastCap` in `src/content/formations.ts` decides
+how many go abreast, and `scripts/weigh-wave.mjs` shows any change to it across all 492 waves before
+it ships. **Nothing is authored per wave**, which is what makes a retune cheap and is the reason
+0202 chose derived depth over new formation kinds.
 
 ⚠️ **AND THE FAN IS THE FOUR-BARREL FAN.** Barrels run 1 → `MAX_BARRELS` across the upgrade tiers, so
 the opening minute of level one has no fan at all and never did, at any spacing. If the report
