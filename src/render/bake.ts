@@ -872,7 +872,7 @@ export const ACCENT_OF: Record<SpriteKind, Accent | null> = {
  * `docs/decisions/0027-measure-the-picture-not-the-model.md` in one image, since every number about
  * it was already correct.
  */
-function drawLandmark(ctx: Pen, ink: string, size: number, theme: ThemeKind): void {
+function drawLandmark(ctx: Pen, ink: string, space: string, size: number, theme: ThemeKind): void {
   if (theme !== 'nebula') return; // No landmark authored for this place yet — 0203 lands one at a time.
 
   /*
@@ -892,14 +892,51 @@ function drawLandmark(ctx: Pen, ink: string, size: number, theme: ThemeKind): vo
     { base: 0.73, width: 0.08, height: 0.46, lean: 0.02 },
   ];
 
-  // The gas the columns stand in: a wide, very faint wash so the silhouette has something to be a
-  // silhouette against. Well under the per-cloud alpha ceiling the nebula guard already holds.
-  const glow = ctx.createRadialGradient(size * 0.42, size * 0.5, 0, size * 0.42, size * 0.5, size * 0.6);
-  glow.addColorStop(0, ink);
-  glow.addColorStop(1, 'transparent');
-  ctx.globalAlpha = 0.13;
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, size, size);
+  /*
+    ── THE GAS FIRST, AND THE COLUMNS ARE PUNCHED OUT OF IT ────────────────────────────────────────
+
+    ⚠️ **THE FIRST VERSION HAD THIS BACKWARDS AND THE SHOT RIG SHOWED IT.** The columns were drawn in
+    sky ink over Ember Nebula's deep maroon, so they came out LIGHTER than the field behind them —
+    cold grey rock floating on a smooth wash. The Eagle Nebula's entire signature is the opposite:
+    dark dust silhouetted against bright gas, and the pillars are holes in the light rather than
+    objects in front of it.
+
+    So the gas is drawn in the sky ink and the columns are filled in `space` — the background colour
+    — which makes them read as cut out of the glow. Against bare space they vanish, which is correct:
+    a pillar with no gas behind it is not visible in the real object either.
+
+    Three lobes rather than one wash, because a single radial gradient is a smudge and reads as a
+    lens flare. Overlapping lobes give the mass an edge in places and none in others, which is what
+    makes it gas.
+  */
+  const lobes: readonly { x: number; y: number; r: number; a: number }[] = [
+    /*
+      ⚠️ **EVERY RADIUS FITS INSIDE THE SPRITE, AND THE FIRST SET DID NOT.** A radial gradient fades
+      to transparent at `r`, but `fillRect` clips it at the tile's edge — so a lobe wider than its
+      own distance from the edge ends on a straight vertical line, and the shot rig showed exactly
+      that: a faint rectangle around the gas, in open space, at the sprite's boundary. The rule is
+      `r <= min(x, 1 - x)`, and it is the kind of defect no number in this file would ever have
+      reported.
+    */
+    { x: 0.46, y: 0.62, r: 0.44, a: 0.95 },
+    { x: 0.68, y: 0.42, r: 0.3, a: 0.75 },
+    { x: 0.28, y: 0.38, r: 0.26, a: 0.6 },
+  ];
+  for (const lobe of lobes) {
+    const glow = ctx.createRadialGradient(
+      size * lobe.x,
+      size * lobe.y,
+      size * lobe.r * 0.12,
+      size * lobe.x,
+      size * lobe.y,
+      size * lobe.r,
+    );
+    glow.addColorStop(0, ink);
+    glow.addColorStop(1, 'transparent');
+    ctx.globalAlpha = lobe.a;
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, size, size);
+  }
 
   for (const column of columns) {
     // The feet sit just off the bottom edge and the tips reach up: -y is up, across the lane.
@@ -920,8 +957,9 @@ function drawLandmark(ctx: Pen, ink: string, size: number, theme: ThemeKind): vo
       [mid - tipHalf + drift, tip],
     ];
 
-    ctx.globalAlpha = 0.62;
-    ctx.fillStyle = ink;
+    // Opaque, and in the SPACE colour: the column is a hole in the gas, not a shape on top of it.
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = space;
     ctx.beginPath();
     ctx.moveTo(windward[0]![0], windward[0]![1]);
     for (let i = 1; i < windward.length; i++) ctx.lineTo(windward[i]![0], windward[i]![1]);
@@ -935,9 +973,10 @@ function drawLandmark(ctx: Pen, ink: string, size: number, theme: ThemeKind): vo
     ctx.closePath();
     ctx.fill();
 
-    // A rim on the windward edge, brighter than the body, so the column has a lit side.
-    ctx.globalAlpha = 0.9;
-    ctx.lineWidth = Math.max(1, size * 0.007);
+    // A rim on the windward edge — the gas lit up where it meets the dust. It is the only bright
+    // thing on the column and is what stops the silhouette reading as a flat cut-out.
+    ctx.globalAlpha = 0.85;
+    ctx.lineWidth = Math.max(1, size * 0.01);
     ctx.strokeStyle = ink;
     ctx.beginPath();
     ctx.moveTo(windward[0]![0], windward[0]![1]);
@@ -1502,7 +1541,15 @@ export function drawKind(
       drawSky(ctx, kind, size, theme);
       return;
     case 'landmark':
-      drawLandmark(ctx, palette.sky, size, theme);
+      /*
+        ⚠️ **Baked in the palette's own sky ink, and a level replaces it** — exactly as `skyNebula`
+        is, and for the same reason. A palette is per STYLE and knows nothing about a place, so this
+        is what a landmark looks like before any level has said otherwise; `bakeLandmark` writes the
+        place's own gas colour over it at the boundary. Ember Nebula's ember against the generic
+        blue-grey is the whole difference between dust in light and cold rock, and the shot rig is
+        what showed it.
+      */
+      drawLandmark(ctx, palette.sky, palette.space, size, theme);
       return;
     case 'skyNebula':
       /*
@@ -2146,6 +2193,35 @@ export function bakeNebula(atlas: Atlas, colour: string, pixelsPerUnit: number, 
   if (ctx === null) return;
   drawNebula(ctx, colour, size, theme);
   (atlas.bitmaps as CanvasImageSource[])[SPRITE.skyNebula] = canvas;
+}
+
+/**
+ * Re-bake the landmark in the place's own gas colour — 0203, on `bakeNebula`'s exact terms.
+ *
+ * ⚠️ **A PALETTE IS PER STYLE AND KNOWS NOTHING ABOUT A PLACE**, so the atlas bake gives every
+ * landmark the generic `sky` ink — `#2a2c44`, a cold blue-grey. Against Ember Nebula's deep maroon
+ * that read as grey rock rather than as dust in glowing gas, which is
+ * `docs/decisions/0027-measure-the-picture-not-the-model.md` again: the geometry was right and the
+ * relationship between the object and its background was wrong, and only the rig showed it.
+ *
+ * `space` is passed rather than taken from a palette because the columns are punched out of the gas
+ * in the background colour — they are holes in the light, not shapes on top of it.
+ */
+export function bakeLandmark(
+  atlas: Atlas,
+  gas: string,
+  space: string,
+  pixelsPerUnit: number,
+  theme: ThemeKind = 'approach',
+): void {
+  const size = bakeSize(SPRITE_EXTENT.landmark, pixelsPerUnit);
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (ctx === null) return;
+  drawLandmark(ctx, gas, space, size, theme);
+  (atlas.bitmaps as CanvasImageSource[])[SPRITE.landmark] = canvas;
 }
 
 /**

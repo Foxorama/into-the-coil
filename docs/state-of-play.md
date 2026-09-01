@@ -227,6 +227,8 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **source and docs are written with an editor, never a shell — and this one has NO guard, by an argument rather than an oversight** | [0200](decisions/0200-the-tool-that-edits-must-not-lose-what-it-edits.md) |
 | **the merge ritual is a tracked file, and `.claude/` was untracked entirely** | [0201](decisions/0201-the-ritual-is-tracked-or-it-is-not-followed.md) |
 | **A WAVE IS AS WIDE AS THE VOLLEY — it folds into ranks at the fan's width; 324 of 492 waves were wider and 0 are, with no count changed** | [0202](decisions/0202-a-wave-is-as-wide-as-the-volley.md) |
+| **THE SKY MAY HOLD A LANDMARK — 0069's ceiling is a BAND now, and the Pillars arrive where Ember Nebula's organ opens** | [0203](decisions/0203-the-rule-was-never-about-size.md) |
+| **A LANDMARK IS LIT BY ITS PLACE — re-baked in the place's gas colour at the boundary; three defects found by the rig and none by a guard** | [0204](decisions/0204-a-landmark-is-lit-by-the-place-it-stands-in.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were
@@ -724,7 +726,25 @@ the opening minute of level one has no fan at all and never did, at any spacing.
 survives 0202, **look there before looking at the geometry again** — 0202 names it as the thing no
 decision had ever said out loud.
 
-**2 — BIG BACKGROUND OBJECTS. The answer to the backdrop report, and it has to argue with two rules.**
+**2 — BIG BACKGROUND OBJECTS. ⚠️ THE ARGUMENT IS MADE AND EMBER NEBULA IS DONE. WHAT IS NEXT IS A WAY
+TO LOOK AT THE OTHER SIX.**
+
+[0203](decisions/0203-the-rule-was-never-about-size.md) turned 0069's ceiling into a band and placed
+the Pillars where Ember Nebula's organ opens;
+[0204](decisions/0204-a-landmark-is-lit-by-the-place-it-stands-in.md) lit them with the place's own
+gas. **Six places have no landmark and draw nothing** — deliberately, because *"none of those
+elements are transposable"* and a shared placeholder is 0196's failure spelled differently.
+
+⚠️ **AND THE NEXT THING IS THE TOOL, ASKED FOR IN THE SAME BREATH:** *"let's get the level 2 backdrop
+looking good, then we'll work on how to easily test the others."* Every shot of the Pillars was taken
+by temporarily moving the landmark AND the theme onto level one, because level two is behind a boss
+fight. That works once and does not scale to six places plus seven boss backdrops — and 0204 names
+three defects that only a picture caught, so making pictures cheap is the lever, not a nicety.
+
+**Still owed for Ember Nebula:** the Eagle Nebula *field* itself. The Pillars are drawn; the weather
+behind them is still the generic cloud layer, and making it read as that nebula is its own drawing.
+
+The original argument, kept because the reasoning is what transfers:
 
 Asked for, 2026-08-25: planets, wreckage, ice walls, cavern structure — per place.
 
