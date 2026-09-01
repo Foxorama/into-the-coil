@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Into the Coil — the bench</title>
+    <!--
+      docs/decisions/0205-the-bench-jumps-to-where-the-thing-is.md.
+
+      ⚠️ DEV ONLY, AND IT IS NOT IN THE BUILD. `vite.config.ts` has one entry — the root
+      `index.html` — so `vite build` never sees this page, exactly as the sound dashboard is never
+      seen. docs/decisions/0003-single-file-build.md's closed sidecar list is untouched.
+      `npm run bench` serves it; nothing ships it.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #e8e9f2;
+        --dim: #8b90a8;
+        --line: #262a3d;
+        --panel: #14161f;
+        --back: #0b0c12;
+        --hot: #ff7a4d;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--back);
+        color: var(--ink);
+        font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+        display: grid;
+        grid-template-rows: auto 1fr;
+        height: 100vh;
+      }
+      header {
+        border-bottom: 1px solid var(--line);
+        padding: 0.6rem 0.9rem;
+        display: flex;
+        gap: 1.2rem;
+        align-items: center;
+        flex-wrap: wrap;
+        background: var(--panel);
+      }
+      h1 { font-size: 13px; margin: 0; color: var(--hot); letter-spacing: 0.08em; }
+      label { display: flex; gap: 0.4rem; align-items: center; color: var(--dim); }
+      select, button { background: var(--back); color: var(--ink); border: 1px solid var(--line); padding: 0.2rem 0.5rem; font: inherit; }
+      button { cursor: pointer; }
+      button:hover { border-color: var(--hot); }
+      input[type='range'] { width: 22rem; accent-color: var(--hot); }
+      #where { color: var(--ink); min-width: 15rem; }
+      #stage { min-height: 0; display: grid; place-items: stretch; }
+      #stage > canvas { width: 100%; height: 100%; }
+      #note { color: var(--dim); padding: 0.4rem 0.9rem; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>THE BENCH</h1>
+      <label>level <select id="level"></select></label>
+      <label>
+        along
+        <input id="along" type="range" min="0" max="4000" step="10" value="0" />
+      </label>
+      <label><input id="hold" type="checkbox" /> hold</label>
+      <span id="where">—</span>
+    </header>
+    <div id="stage"></div>
+    <div id="note"></div>
+    <script type="module" src="./bench.ts"></script>
+  </body>
+</html>

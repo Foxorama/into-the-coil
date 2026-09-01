@@ -130,6 +130,7 @@ export function paintScene(
   sky: Sky = NO_SKY,
   bound: Bound | null = null,
   landmarks: Landmarks = NO_LANDMARKS,
+  levelOrigin = 0,
 ): void {
   surface.clear();
   /*
@@ -139,7 +140,7 @@ export function paintScene(
     parallax inversion and reads as the object being stuck to the glass. Behind everything, moving
     least, is the one arrangement that says *far away* twice.
   */
-  paintLandmarks(surface, view, cameraAlong, landmarks);
+  paintLandmarks(surface, view, cameraAlong, landmarks, levelOrigin);
   paintSky(surface, view, cameraAlong, sky);
   /*
     ⚠️ **BEHIND EVERY BODY AND IN FRONT OF THE SKY.** It is a piece of information about the rules
@@ -214,7 +215,13 @@ function paintBound(surface: Surface, view: View, bound: Bound | null): void {
  * `tests/budget.test.ts` scans this file. A level places one or two of these, so the loop is over a
  * list shorter than the sky's.
  */
-function paintLandmarks(surface: Surface, view: View, cameraAlong: number, landmarks: Landmarks): void {
+function paintLandmarks(
+  surface: Surface,
+  view: View,
+  cameraAlong: number,
+  landmarks: Landmarks,
+  levelOrigin: number,
+): void {
   for (let i = 0; i < landmarks.length; i++) {
     const mark = landmarks[i]!;
     const half = mark.extent / 2;
@@ -225,7 +232,19 @@ function paintLandmarks(surface: Surface, view: View, cameraAlong: number, landm
       travel to cross — about a minute at 0.08, which is what makes it read as distance rather than
       as something going past.
     */
-    const inView = view.alongSpan + half - (cameraAlong - mark.at) * mark.depth;
+    /*
+      ⚠️ **`levelOrigin` IS SUBTRACTED, AND LEAVING IT OUT SHIPPED IN 0203.** `at` is level-LOCAL, the
+      same axis `waves` and `bossAt` use, while `cameraAlong` runs across the whole run — so comparing
+      them directly puts Ember Nebula's Pillars at absolute 1299, which is somewhere in the middle of
+      LEVEL ONE.
+
+      ⚠️ **AND EVERY TEST OF IT PASSED, BECAUSE LEVEL ONE'S ORIGIN IS ZERO.** Every shot in 0203 and
+      0204 was taken by temporarily moving the landmark onto level one, where local and absolute are
+      the same number. The bench found it in two minutes by standing on level two —
+      `docs/decisions/0205-the-bench-jumps-to-where-the-thing-is.md`.
+    */
+    const local = cameraAlong - levelOrigin;
+    const inView = view.alongSpan + half - (local - mark.at) * mark.depth;
     // Not yet arrived, or fully gone. Both are the common case for most of a level.
     if (inView > view.alongSpan + half || inView < -half) continue;
     surface.blit(mark.sprite, screenX(view, inView, mark.lane), screenY(view, inView, mark.lane), view.scale);

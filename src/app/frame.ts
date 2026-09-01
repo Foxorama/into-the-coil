@@ -1529,7 +1529,7 @@ export class GameFrame implements Frame {
     // The camera is interpolated on the same alpha as everything it gets subtracted from. Passing
     // the stepped value here is what made a ship holding station exactly still judder on screen.
     const camera = w.prevCameraAlong + (w.cameraAlong - w.prevCameraAlong) * alpha;
-    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.bound, w.landmarks);
+    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.bound, w.landmarks, w.levelOrigin);
   }
 }
 

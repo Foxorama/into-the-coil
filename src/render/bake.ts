@@ -2051,10 +2051,19 @@ export function nebulaField(size: number, theme: ThemeKind = 'approach'): Nebula
   const clouds_ = Math.max(1, Math.round(NEBULA_CLOUDS * style.clouds));
   for (let i = 0; i < clouds_; i++) {
     /*
-      ⚠️ **A cloud may hang off the tile's edge, which is the opposite of every other sky field's
-      rule.** A MARK cut by a seam is a hard edge arriving on a schedule; a gradient cut by one is
-      already down at a fraction of its own alpha out there, and the tile repeats — so what the player
-      sees is the same cloud continuing. There is no margin here on purpose.
+      ⚠️ **A cloud may hang off the tile's edge, and `drawNebula` WRAPS IT ROUND — 0206.**
+
+      This used to say the cut was harmless: *"a gradient cut by [a seam] is already down at a
+      fraction of its own alpha out there, and the tile repeats — so what the player sees is the same
+      cloud continuing."* **The second half of that is false, and it is the seam the player reported.**
+      Tiling repeats the SAME BITMAP: the part of a cloud hanging off the right edge is discarded, and
+      what appears at the left edge of the next tile is that same tile's left edge, not the rest of
+      the cloud. So a cloud whose centre is near an edge ends on a straight vertical cut, at whatever
+      alpha it happened to have there — which for a centre just inside the edge is most of it.
+
+      Positions stay marginless on purpose, because a margin would push every cloud towards the middle
+      and band the sky. The fix is at the drawing end, where the cloud is also drawn at ±`size` so the
+      half that leaves one edge arrives at the other.
     */
     const cx = rng.range(0, size);
     const cy = rng.range(0, size);
@@ -2098,14 +2107,33 @@ function drawNebula(ctx: Pen, colour: string, size: number, theme: ThemeKind): v
       wrong in the direction that lets a backdrop eat an ink — so the shape of this gradient is guarded
       rather than assumed.
     */
-    const fill = ctx.createRadialGradient(cloud.fx, cloud.fy, 0, cloud.x, cloud.y, cloud.r);
-    fill.addColorStop(0, colour);
-    fill.addColorStop(1, 'transparent');
-    ctx.globalAlpha = cloud.alpha;
-    ctx.fillStyle = fill;
-    ctx.beginPath();
-    ctx.arc(cloud.x, cloud.y, cloud.r, 0, Math.PI * 2);
-    ctx.fill();
+    /*
+      ⚠️ **NINE PLACES, AND EIGHT OF THEM ARE ALMOST ALWAYS SKIPPED — 0206.** A tile is only seamless
+      if what leaves one edge arrives at the opposite one, so every cloud is offered at its own
+      position and at ±`size` on each axis. The `continue` drops any copy whose disc does not reach
+      the tile at all, which is every copy of every cloud that is not near an edge.
+
+      **Both axes, not just the tiling one.** `paintSky` repeats along the scroll axis only, but the
+      atlas is rotated as a whole for the top view (`bakeOne`), so which sprite axis is the scrolling
+      one depends on a setting this function cannot see. Wrapping both costs bake time — this file is
+      on `tests/budget.test.ts`'s DELIBERATELY_COLD list — and cannot be got wrong later.
+    */
+    for (const dx of [-size, 0, size]) {
+      for (const dy of [-size, 0, size]) {
+        const x = cloud.x + dx;
+        const y = cloud.y + dy;
+        if (x + cloud.r < 0 || x - cloud.r > size) continue;
+        if (y + cloud.r < 0 || y - cloud.r > size) continue;
+        const fill = ctx.createRadialGradient(cloud.fx + dx, cloud.fy + dy, 0, x, y, cloud.r);
+        fill.addColorStop(0, colour);
+        fill.addColorStop(1, 'transparent');
+        ctx.globalAlpha = cloud.alpha;
+        ctx.fillStyle = fill;
+        ctx.beginPath();
+        ctx.arc(x, y, cloud.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
   }
   ctx.globalAlpha = 1;
 }

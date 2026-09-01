@@ -64,8 +64,12 @@ export const PROBES = [
     guard: 'and the gradient is still two stops',
     edit: {
       path: 'src/render/bake.ts',
-      find: "    fill.addColorStop(0, colour);\n    fill.addColorStop(1, 'transparent');",
-      replace: "    fill.addColorStop(0, colour);\n    fill.addColorStop(0.7, colour);\n    fill.addColorStop(1, 'transparent');",
+      // ⚠️ Re-anchored by 0206, which put the cloud draw inside a wrap loop and re-indented it. The
+      // break is the same one it has always been: a third stop the cover arithmetic cannot model.
+      find: "        fill.addColorStop(0, colour);\n        fill.addColorStop(1, 'transparent');",
+      replace:
+        "        fill.addColorStop(0, colour);\n        fill.addColorStop(0.7, colour);\n" +
+        "        fill.addColorStop(1, 'transparent');",
     },
   },
   {
