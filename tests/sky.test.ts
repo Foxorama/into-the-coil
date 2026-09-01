@@ -220,10 +220,22 @@ describe('0196 — the clouds are counted against the accessibility floor', () =
       `drawNebula has ${stops.length} colour stops (${stops.join(', ')}) — cloudCover models the falloff ` +
         'as linear between exactly two, at 0 and 1, and the contrast guard rests on that',
     ).toEqual(['0', '1']);
+    /*
+      ⚠️ **THE THIRD ARGUMENT, NOT A LITERAL SUBSTRING — re-anchored by 0206.** This read
+      `cloud.fy, 0,`, which pinned the inner radius by pinning the two characters in front of it. The
+      wrap added `+ dy` to the focus point, so the anchor stopped matching while the invariant it
+      guards was untouched: the falloff still starts from a point.
+
+      What it means is *`createRadialGradient`'s inner radius is zero*, and it now says that. A guard
+      whose anchor is more specific than its claim reddens on edits that are correct, which is the
+      half of `docs/decisions/0192-a-guard-holds-an-invariant.md` about changing a guard and saying
+      why.
+    */
+    const inner = /createRadialGradient\([^,]+,[^,]+,\s*0\s*,/.test(body);
     expect(
-      body,
+      inner,
       'the inner circle of the gradient has a radius, so the falloff no longer starts from a point',
-    ).toContain('cloud.fy, 0,');
+    ).toBe(true);
   });
 });
 
@@ -438,6 +450,39 @@ describe('0203 — the sky may hold a landmark, and the rule is a band', () => {
         ).toBeLessThan(slowestField);
       }
     }
+  });
+
+  it('0206 — a cloud that crosses the tile’s edge is drawn on both sides of it', () => {
+    /*
+      ⚠️ **THE MECHANISM, NOT THE APPEARANCE, AND THE DIFFERENCE IS STATED RATHER THAN BLURRED.**
+      *Is there a visible seam* has no content change that would redden a guard and be correct —
+      0204 gives the same reason for not guarding the drawing. What CAN be held is the arithmetic:
+      every cloud whose disc crosses an edge must be drawn again one tile over, or the half that
+      leaves is simply discarded and the tile ends on a straight line.
+
+      This reads `drawNebula`'s own wrap offsets out of the source rather than re-deriving them,
+      because a second copy of the rule is the drift
+      `docs/decisions/0029-the-tracked-record-is-the-record.md` refuses.
+    */
+    const bake = readFileSync(resolve(root, 'src/render/bake.ts'), 'utf8');
+    const wraps = bake.includes('for (const dx of [-size, 0, size])') &&
+      bake.includes('for (const dy of [-size, 0, size])');
+    expect(
+      wraps,
+      'drawNebula no longer wraps its clouds, so a cloud crossing the tile edge is cut off there — ' +
+        'the seam 0206 was written for, which no contents guard can see',
+    ).toBe(true);
+
+    // And the clouds still have no margin, which is the half of the old comment that was right.
+    const size = bakeSize(SPRITE_EXTENT.skyNebula, 6);
+    const crossing = THEME_KINDS.filter((theme) =>
+      nebulaField(size, theme).some((c) => c.x - c.r < 0 || c.x + c.r > size || c.y - c.r < 0 || c.y + c.r > size),
+    );
+    expect(
+      crossing,
+      'no cloud in any place reaches a tile edge — the wrap is now guarding nothing, which means the ' +
+        'placement has quietly grown a margin and the sky is banding towards the middle instead',
+    ).not.toEqual([]);
   });
 
   it('0204 — the landmark is re-baked at the boundary wherever the weather is', () => {

@@ -54,7 +54,7 @@ import {
   wearHull,
   type World,
 } from './frame.ts';
-import { makeLifecycle } from './lifecycle.ts';
+import { makeLifecycle, type Lifecycle } from './lifecycle.ts';
 import { SCREENS, STEPS_PER_SECOND, type Screen, type SettingName } from '../state/screens.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { makeChrome } from './chrome.ts';
@@ -334,6 +334,38 @@ export interface Mounted {
   stop(): void;
   /** The canvas that was created, so a caller can label or style it. */
   canvas: HTMLCanvasElement;
+  /**
+   * The live objects, for the rig — and for nothing else.
+   *
+   * ⚠️ **THIS IS 0116's ARGUMENT AND NOT A CONVENIENCE.**
+   * `docs/decisions/0116-the-rig-plays-the-level.md` exists because a rig that rebuilt the game
+   * drifted from it twice, and the cheapest way not to drift is not to have a second copy. A picture
+   * rig that assembled its own `World` would be exactly that copy, one channel over from the WAV rig
+   * that already did it.
+   *
+   * ⚠️ **THE GAME ITSELF MUST NEVER READ THIS.** `index.html` calls `mount` and uses `canvas` and
+   * `stop`; everything below is reached only from `rig/`, which
+   * `docs/decisions/0003-single-file-build.md` keeps out of the build entirely. `tests/dash.test.ts`
+   * holds that separation.
+   */
+  rig: RigHandles;
+}
+
+/**
+ * What a rig page needs to drive the real game: the field, the store, and the run's own verbs.
+ *
+ * Named as a group rather than spread across `Mounted` so the one sentence above covers all of it,
+ * and so a reader of `Mounted` can see at a glance which half ships and which half is a tool.
+ */
+export interface RigHandles {
+  /** The live field — entity pools, the level script, the camera. */
+  world: World;
+  /** The store's dispatch, so a rig changes screens the way the shell does. */
+  dispatch: (action: Action) => void;
+  /** The current state, read fresh — a captured slice would be one dispatch stale. */
+  stateOf: () => State;
+  /** Begin, continue, advance — the same verbs the shell drives. */
+  lifecycle: Lifecycle;
 }
 
 /**
@@ -1605,6 +1637,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
 
   return {
     canvas,
+    rig: { world, dispatch, stateOf: () => state, lifecycle },
     stop(): void {
       window.removeEventListener('resize', onResize);
       window.removeEventListener('pointerdown', unlock, { capture: true });
