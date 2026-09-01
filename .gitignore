@@ -48,3 +48,21 @@ docs/machine.md
 # rule was never about the word `cues`; nothing in this repository ships a .wav, because every sound
 # it makes is synthesised at boot.
 /*.wav
+
+# Claude Code's configuration, split by what it describes — see
+# docs/decisions/0201-the-ritual-is-tracked-or-it-is-not-followed.md.
+#
+# `.claude/skills/` and `.claude/settings.json` are about THE PROJECT and are tracked, for the same
+# reason CLAUDE.md is: a clone needs them. The two below are about THIS MACHINE and are not.
+#
+# ⚠️ THEY WERE PREVIOUSLY EXCLUDED THROUGH `.git/info/exclude`, WHICH IS ITSELF UNTRACKED, so a clone
+# inherited the hazard without the guard. `settings.local.json` carries a snapshot of this machine's
+# whole `PATH` (docs/machine.md explains why it has to), and nothing tracked stopped a routine
+# `git add -A` from committing it.
+.claude/settings.local.json
+.claude/launch.json
+
+# What the typecheck hook in `.claude/settings.json` writes its exit code to. It is the ONLY evidence
+# that hook ran at all — a hook that silently never fires reports exactly what a passing one does,
+# which is 0199 wearing a different hat — but it is a local log, not a record of the project.
+.claude/typecheck.log

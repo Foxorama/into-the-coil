@@ -1,0 +1,30 @@
+{
+  "$comment": [
+    "Tracked, per docs/decisions/0201-the-ritual-is-tracked-or-it-is-not-followed.md.",
+    "The machine-specific settings live in settings.local.json, which the tracked .gitignore ignores.",
+    "",
+    "The hook typechecks after every edit - measured at 811ms on this tree before it was chosen,",
+    "against an edit loop where the same error otherwise surfaces minutes later inside npm run check.",
+    "",
+    "IT APPENDS ITS EXIT CODE TO .claude/typecheck.log AND THAT IS THE ONLY EVIDENCE IT RAN.",
+    "node is not on the Bash PATH here, and docs/machine.md records a whole class of failure found",
+    "only by a log the failing process wrote itself, after four correct-sounding theories had been",
+    "shipped. A hook believed rather than read is 0199 in a new costume.",
+    "",
+    "To remove it, delete the hooks block."
+  ],
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 60,
+            "command": "export PATH=\"/c/Users/foxor/AppData/Local/gf-node/node-v24.17.0-win-x64:$PATH\"; out=$(npm run typecheck 2>&1); ec=$?; printf '%s typecheck exit=%s\\n' \"$(date -Iseconds)\" \"$ec\" >> .claude/typecheck.log; if [ \"$ec\" -ne 0 ]; then printf '%s\\n' \"$out\" | tail -30; fi; exit $ec"
+          }
+        ]
+      }
+    ]
+  }
+}

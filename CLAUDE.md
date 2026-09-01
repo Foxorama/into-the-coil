@@ -34,6 +34,22 @@ decision needs no rule.
   `npm run prove` refuses to run the suite until it has read the file back and seen it change.
   — [0005](docs/decisions/0005-a-guard-must-be-seen-to-fail.md),
   [0019](docs/decisions/0019-a-probe-must-be-seen-to-apply.md)
+- **A verdict is an exit code, and a pipe throws it away.** A tracked shell step that pipes sets
+  `set -o pipefail`, and a guard holds it. A check that reports success over zero work — command not
+  found, suite skipped, no assertions collected — has not reported success. The rest of that family
+  is already held inside `npm run prove`, so this rule is one sentence wide on purpose.
+  — [0199](docs/decisions/0199-a-verdict-is-an-exit-code.md)
+- **Source and docs are written with an editor, never a shell.** No heredoc, `node -e` or `sed` for
+  anything holding a backtick or a backslash; an edit anchors on an exact unique string, never a
+  pattern. A command that can destroy another session's work — force-push, branch delete,
+  `worktree remove` — lists what would be lost and stops for an answer, because the checkout is
+  shared and the session is not. **No guard holds any of this**, and the decision names why rather
+  than leaving it to be rediscovered.
+  — [0200](docs/decisions/0200-the-tool-that-edits-must-not-lose-what-it-edits.md)
+- **The merge ritual is a tracked file, not a memory.** `.claude/skills/` and `.claude/settings.json`
+  describe the project and are tracked; `settings.local.json` and `launch.json` describe this machine
+  and are not. The ritual originates nothing — every step cites the decision it comes from.
+  — [0201](docs/decisions/0201-the-ritual-is-tracked-or-it-is-not-followed.md)
 - **A guard holds an invariant, a budget says what it costs, and a taste is advisory.** Before
   writing one, answer: *name a change to the content that would redden this and be CORRECT.* No such
   change — invariant, fails hard. One that costs a measured resource — a budget: fails hard, and the
