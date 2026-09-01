@@ -51,7 +51,8 @@ import type { Intent } from '../sim/intent.ts';
 import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
 import type { Pool } from '../sim/pool.ts';
-import { paintScene, type Bound, type Sky } from '../render/scene.ts';
+import { paintScene, type Bound, type Landmarks, type Sky } from '../render/scene.ts';
+import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
@@ -660,6 +661,14 @@ export interface World {
    * of bodies would come out of the pools that hold bullets.
    */
   sky: Sky;
+  /**
+   * The place's landmarks — 0203. Rebuilt at a level boundary, never in a frame.
+   *
+   * ⚠️ **PER LEVEL, WHERE `sky` IS PER MOUNT**, and that is the difference between a field and a
+   * placed object: the sky is the same four tiled layers all run and only its baked colours change,
+   * while what landmarks exist and where they sit is a property of the level script.
+   */
+  landmarks: Landmarks;
   /**
    * The edge of the player's box, drawn — or `null` for a scene that does not show one.
    *
@@ -1520,7 +1529,7 @@ export class GameFrame implements Frame {
     // The camera is interpolated on the same alpha as everything it gets subtracted from. Passing
     // the stepped value here is what made a ship holding station exactly still judder on screen.
     const camera = w.prevCameraAlong + (w.cameraAlong - w.prevCameraAlong) * alpha;
-    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.bound);
+    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.bound, w.landmarks);
   }
 }
 
@@ -3323,8 +3332,28 @@ export function respawn(w: World): void {
  * `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md` amended it — so they live in
  * `src/state/` and this cannot reach them even by accident.
  */
+/**
+ * The level's landmark entries, as the painter's own type — 0203.
+ *
+ * ⚠️ **A LEVEL BOUNDARY IS NOT A FRAME.** This allocates, which is why it is here and not in
+ * `paintLandmarks`: `startLevel` and `advanceLevel` run once per level, and
+ * `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md` scans this file for exactly this
+ * syntax inside the loop. A level places one or two.
+ */
+function landmarksFor(level: LevelRow): Landmarks {
+  // @setup: a level boundary is not a frame — startLevel and advanceLevel call this once per level
+  return level.landmarks.map((entry) => ({
+    sprite: SPRITE.landmark,
+    extent: SPRITE_EXTENT.landmark,
+    at: entry.at,
+    lane: entry.lane,
+    depth: entry.depth,
+  }));
+}
+
 export function startLevel(w: World, level: LevelRow): void {
   w.level = level;
+  w.landmarks = landmarksFor(level);
   /*
     ⚠️ **ZERO, and it is not a default — it is what this function MEANS.** `startLevel` is the run
     beginning: the camera goes to zero, the field is swept, and `src/app/lifecycle.ts` dispatches
@@ -3377,6 +3406,7 @@ export function startLevel(w: World, level: LevelRow): void {
  */
 export function advanceLevel(w: World, level: LevelRow, levelIndex: number): void {
   w.level = level;
+  w.landmarks = landmarksFor(level);
   /*
     ⚠️ **REQUIRED rather than defaulted, because this is the parameter the dial is made of** —
     `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md`. A default here would be a level

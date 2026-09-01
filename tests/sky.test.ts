@@ -32,6 +32,10 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 import { SPRITE_EXTENT } from '../src/content/sprites.ts';
+import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
+import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
+import { SHOTS } from '../src/content/shots.ts';
+import { SKY } from '../src/app/mount.ts';
 import { DECOR_INKS, PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { THEMES } from '../src/content/themes.ts';
 import { GAMEPLAY_FLOOR, contrast } from './contrast.ts';
@@ -365,5 +369,92 @@ describe('0195 — a place has its own sky', () => {
         `${theme} is the base composition's sky on every axis (${same.join(', ')}) — it has no sky of its own`,
       ).toBeLessThan(axes.length);
     }
+  });
+});
+
+/*
+  ── 0203: A LANDMARK IS OUTSIDE THE BAND, BEHIND EVERYTHING, AND ARRIVES WITH THE ORGAN ───────────
+
+  `docs/decisions/0203-the-rule-was-never-about-size.md` replaced 0069's size CEILING with a
+  forbidden BAND, on the argument that 0069's stated reason was always about confusability and only
+  looked like a size because the sky held nothing but dots when it was written.
+*/
+describe('0203 — the sky may hold a landmark, and the rule is a band', () => {
+  /** The smallest and largest things that can kill the player, as diameters in world units. */
+  const smallestThreat = Math.min(...Object.values(SHOTS).map((row) => row.radius)) * 2;
+  const largestThreat = Math.max(...ENEMY_KINDS.map((kind) => ENEMIES[kind].radius)) * 2;
+
+  it('the band is derived from what can kill you, not typed', () => {
+    // If a new body or shot moves either end, the band moves with it and the guard below re-ranks.
+    expect(smallestThreat).toBeCloseTo(1.8, 6);
+    expect(largestThreat).toBeCloseTo(8, 6);
+  });
+
+  it('THE REPORTED ONE: a landmark is far too big to be a body, in the units a player sees', () => {
+    /*
+      ⚠️ **THE FLOOR, WHICH 0069's CEILING NEVER HAD.** The old rule was one-sided — nothing above a
+      bullet — so a landmark could only ever have been refused. A band has to say how far ABOVE the
+      largest thing that can hurt you an object must be before it stops being mistakable for one, and
+      twice is the margin 0203 argues for.
+    */
+    expect(
+      SPRITE_EXTENT.landmark,
+      `a landmark is ${SPRITE_EXTENT.landmark} units across against a largest threat of ${largestThreat} — ` +
+        'inside the band, so a player could read it as a body',
+    ).toBeGreaterThan(largestThreat * 2);
+  });
+
+  it('and the star fields are still far too small to be one, which is 0069 unchanged', () => {
+    /*
+      ⚠️ **THE BOTTOM OF THE BAND IS THE SMALLEST THREAT ITSELF, AND THE FIRST DRAFT PUT IT AT HALF
+      THAT.** At half a bullet the guard reddened `skyFar`, whose largest mark is 1.2 units across —
+      shipped, correct, and refused by a bound this session invented. That is the failure `CLAUDE.md`
+      names for counting guards: *every one flagged its healthy file as loudly as its sick one.*
+
+      The bottom of the band is not a new number at all. It is 0069's own sentence — *nothing the
+      background draws is as big as the smallest thing that can kill the player* — and 0203 only ever
+      claimed to add a TOP to it.
+    */
+    for (const layer of ['skyFar', 'skyNear', 'skyRush'] as const) {
+      expect(
+        SKY_MAX_STAR_UNITS[layer] * 2,
+        `${layer}'s largest mark is inside the band and could be read as a shot`,
+      ).toBeLessThan(smallestThreat);
+    }
+  });
+
+  it('a landmark is the slowest thing on screen, so it cannot be parallax-inverted', () => {
+    /*
+      0203 kept 0112's *slower* clause and struck only *no edge*. `src/render/scene.ts` paints
+      landmarks BEFORE the sky for this reason: the slowest-moving thing drawn in front of faster
+      ones reads as stuck to the glass.
+    */
+    const slowestField = Math.min(...SKY.map((layer) => layer.depth));
+    for (const kind of LEVEL_KINDS) {
+      for (const mark of LEVELS[kind].landmarks) {
+        expect(
+          mark.depth,
+          `${kind}'s landmark at ${mark.at} moves at ${mark.depth} against the slowest field's ${slowestField}`,
+        ).toBeLessThan(slowestField);
+      }
+    }
+  });
+
+  it('THE ASK, AS A NUMBER: the Pillars arrive exactly where the organ opens', () => {
+    /*
+      ⚠️ **THE WHOLE POINT OF THE FEATURE, AND IT IS ONE EQUALITY.** Asked for by name: *"when the
+      massive pipe organ kicks in music wise we see the pillars of god going past."*
+      `src/content/nebula.ts` puts the pipe organ on `push`; this reads where `push` opens rather
+      than comparing two literals, so moving the section moves the landmark and a drifted pair
+      reddens here — `docs/decisions/0029-the-tracked-record-is-the-record.md`.
+    */
+    const nebulaLevel = LEVEL_KINDS.map((kind) => LEVELS[kind]).find((level) => level.theme === 'nebula');
+    expect(nebulaLevel, 'no level uses the nebula place').toBeDefined();
+    const push = nebulaLevel!.sections.find((entry) => entry.section === 'push');
+    expect(push, 'Ember Nebula has no push section, which is where its organ opens').toBeDefined();
+    expect(
+      nebulaLevel!.landmarks.map((mark) => mark.at),
+      `the Pillars must arrive at ${push!.at}, where the organ does`,
+    ).toContain(push!.at);
   });
 });

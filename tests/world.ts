@@ -65,6 +65,7 @@ export const NO_SECTIONS: LevelSections = [{ at: 0, section: 'run' }];
 export const NO_LEVEL: LevelRow = {
   waves: [],
   pickups: [],
+  landmarks: [],
   bossAt: Number.POSITIVE_INFINITY,
   sections: NO_SECTIONS,
   boss: 'sentinel',
@@ -258,6 +259,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
   const world: World = {
     layers: [debris, blasts, bossPool, enemies, enemyShots, playerShots, missiles, bombs, shieldOrbs, shipPool],
     sky: [],
+    landmarks: [],
     bound: null,
     shipPool,
     shieldOrbs,

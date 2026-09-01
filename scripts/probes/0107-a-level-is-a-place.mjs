@@ -20,8 +20,9 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: every level names a theme, and the run does not repeat one',
     edit: {
       path: 'src/content/levels.ts',
-      find: "    boss: 'harrow',\n    theme: 'nebula',",
-      replace: "    boss: 'harrow',\n    theme: 'approach',",
+      // ⚠️ Re-anchored by 0203, which put Ember Nebula's landmarks between the boss and the theme.
+      find: "    theme: 'nebula',",
+      replace: "    theme: 'approach',",
     },
   },
   {

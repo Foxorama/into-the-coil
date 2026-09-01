@@ -83,9 +83,11 @@ export const PROBES = [
       path: 'src/app/frame.ts',
       // The import line gained the sky's type when 0065 landed and the box's when 0074 did; the
       // break is the same one it has always been.
-      find: "import { paintScene, type Bound, type Sky } from '../render/scene.ts';",
+      // ⚠️ Re-anchored by 0203, which added `Landmarks` to this import. The break is the same one it
+      // has always been; only the line it hangs on moved.
+      find: "import { paintScene, type Bound, type Landmarks, type Sky } from '../render/scene.ts';",
       replace:
-        "import { paintScene, type Bound, type Sky } from '../render/scene.ts';\n" +
+        "import { paintScene, type Bound, type Landmarks, type Sky } from '../render/scene.ts';\n" +
         "import { bakeAtlas } from '../render/bake.ts';",
     },
   },

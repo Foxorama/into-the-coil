@@ -328,6 +328,7 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
     const { world } = playableWorld({
       waves: [],
       pickups: [],
+      landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
       sections: NO_SECTIONS,
       boss: 'sentinel',
@@ -604,6 +605,7 @@ describe('collecting one, in the real frame', () => {
     return playableWorld({
       waves: [],
       pickups: [{ at: 200, kind, lane: ACROSS_SPAN / 2 }],
+      landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
       sections: NO_SECTIONS,
       boss: 'sentinel',
@@ -767,6 +769,7 @@ describe('collecting one, in the real frame', () => {
       const built = playableWorld({
         waves: [],
         pickups: [],
+        landmarks: [],
         bossAt: Number.POSITIVE_INFINITY,
         sections: NO_SECTIONS,
         boss: 'sentinel',
@@ -1263,6 +1266,7 @@ describe('collecting one, in the real frame', () => {
       const { world } = playableWorld({
         waves: [],
         pickups: [200, 400, 600, 800, 1000, 1200].map((at) => ({ at, kind: 'weapon' as const, lane: ACROSS_SPAN / 2 })),
+        landmarks: [],
         bossAt: Number.POSITIVE_INFINITY,
         sections: NO_SECTIONS,
         boss: 'sentinel',
