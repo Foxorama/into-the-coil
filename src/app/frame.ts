@@ -2199,7 +2199,8 @@ function spawnWave(w: World, index: number): void {
       single kind, so this costs one multiply and allocates nothing: `gapAcross` returns a number and
       `docs/decisions/0022-frame-rate-is-a-feature.md` bans anything else on the spawn path.
     */
-    const target = wave.lane + formation.acrossOffset(i, wave.count, gapAcross(row.radius));
+    const gap = gapAcross(row.radius);
+    const target = wave.lane + formation.acrossOffset(i, wave.count, gap);
     /*
       ⚠️ **A flanker's formation offset is applied ALONG rather than across at the entry point.** The
       members leave the edge in a stream at their own target lanes; spreading them across the lane
@@ -2227,7 +2228,7 @@ function spawnWave(w: World, index: number): void {
       `target`, which is what they steer to once they are in. What it stops deciding is the entry
       spacing, which it was never able to express.
     */
-    const stream = flanking ? streamOffset(i, row.radius) : formation.alongOffset(i, wave.count);
+    const stream = flanking ? streamOffset(i, row.radius) : formation.alongOffset(i, wave.count, gap);
     reset(e, along + stream, across, row, kind);
     if (flanking) {
       // The turn: cross at a fixed rate until the authored lane, then slow to the roam and carry on.

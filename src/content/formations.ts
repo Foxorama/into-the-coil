@@ -16,6 +16,8 @@
  * without knowing where it is.
  */
 
+import { MAX_BARRELS, SPREAD_STEP } from './pickups.ts';
+
 /** Every formation. Closed. */
 export const FORMATION_KINDS = ['line', 'column', 'vee'] as const;
 
@@ -23,8 +25,15 @@ export const FORMATION_KINDS = ['line', 'column', 'vee'] as const;
 export type FormationKind = (typeof FORMATION_KINDS)[number];
 
 export interface FormationRow {
-  /** World units along, relative to where the level placed the wave. */
-  alongOffset(index: number, count: number): number;
+  /**
+   * World units along, relative to where the level placed the wave.
+   *
+   * ⚠️ **IT TAKES `gap` BECAUSE DEPTH IS DERIVED FROM WIDTH** —
+   * `docs/decisions/0202-a-wave-is-as-wide-as-the-volley.md`. How many members go abreast depends on
+   * the body's gap, so where the second rank sits depends on it too. The two offsets used to be
+   * independent and no longer are.
+   */
+  alongOffset(index: number, count: number, gap: number): number;
   /**
    * World units across, relative to the lane position the level authored.
    *
@@ -188,20 +197,99 @@ export function streamOffset(index: number, radius: number): number {
  */
 const ALONG_GAP = 14;
 
+/**
+ * How far ahead a wave is typically engaged, in world units.
+ *
+ * ⚠️ **IT WAS PROSE IN A COMMENT AND IS NOW A NUMBER WITH A NAME.** Every existing table in this file
+ * compares against *"a 19.75 volley"*, and 19.75 is the fan at fifty units — but fifty appeared only
+ * inside the sentence *"the 50 units a wave is typically engaged at"*, in a comment, with nothing
+ * holding it. `docs/decisions/0202-a-wave-is-as-wide-as-the-volley.md` promotes it, because a
+ * geometry that decides where every enemy in the game stands may not rest on an unnamed assumption.
+ *
+ * ⚠️ **IT IS AN ASSUMPTION AND IS LABELLED AS ONE.** Nothing measures where the player actually
+ * opens fire; `scripts/weigh-wave.mjs` prints the fan at 30 through 70 so the sensitivity is visible
+ * rather than hidden. If a play-test ever says the fan is wrong, this is the number to move, and
+ * moving it re-ranks every wave in the game by construction.
+ */
+export const ENGAGE_RANGE = 50;
+
+/**
+ * The width of a full volley at `ENGAGE_RANGE`, in world units — about 19.75.
+ *
+ * ⚠️ **DERIVED FROM THE TWO CONSTANTS THAT DRAW THE FAN, NEVER TYPED.**
+ * `docs/decisions/0027-measure-the-picture-not-the-model.md`: a quantity defined in terms of the
+ * constant it is checked against proves only that the code agrees with itself. `SPREAD_STEP` and
+ * `MAX_BARRELS` are what the gun actually fires, so if either moves this moves with it and every
+ * formation re-ranks.
+ *
+ * ⚠️ **IT IS THE FOUR-BARREL FAN.** Barrels run 1 → `MAX_BARRELS` across the upgrade tiers, so a
+ * player early in level one has no fan at all. This is the fully-upgraded gun, which makes it a
+ * generous target rather than a wrong one — a wave that fits here fits for everyone who has the gun
+ * the game is balanced around.
+ */
+export const VOLLEY_SPAN = 2 * ENGAGE_RANGE * Math.tan(((MAX_BARRELS - 1) * SPREAD_STEP) / 2);
+
+/**
+ * The most members that may stand abreast at `gap` and still fit inside one volley.
+ *
+ * ⚠️ **THIS IS THE WHOLE OF 0202.** 0121 tightened the gap to what the widest body allows and 0143
+ * made it the wave's own; the report survived both, because **neither of them touched how many go
+ * side by side.** At a drifter's gap of 6.2 a five-abreast line spans 24.8 against a fan of 19.75,
+ * and closing that by spacing needs a gap of 4.94 against a body 5.2 wide — the hulls intersect
+ * before they fit. Width had run out of room; depth had not.
+ *
+ * Returns at least 1, so a body wider than the whole fan still produces single file rather than a
+ * division that never terminates.
+ */
+export function abreastCap(gap: number): number {
+  const fits = 1 + Math.floor(VOLLEY_SPAN / gap);
+  return fits < 1 ? 1 : fits;
+}
+
+/**
+ * How many members share the rank that `index` falls in.
+ *
+ * A trailing rank is short — six at a cap of four is 4 + 2 — and the short rank is centred on its
+ * own size rather than the full one, so it reads as deliberate instead of as a row missing its right
+ * half.
+ *
+ * ⚠️ **PLAIN NUMBERS, NO OBJECT.** The obvious shape returns `{rank, slot, size}` and allocates on
+ * the spawn path, which `docs/decisions/0022-frame-rate-is-a-feature.md` bans outright and
+ * `tests/budget.test.ts` scans the caller for. The repetition below is that ban, paid.
+ */
+function rankSize(index: number, count: number, cap: number): number {
+  const remaining = count - Math.floor(index / cap) * cap;
+  return remaining < cap ? remaining : cap;
+}
+
 export const FORMATIONS: Record<FormationKind, FormationRow> = {
   /**
    * Abreast: all at the same distance, spread across the lane. A wall that arrives at once, so the
    * player picks a gap before it gets there.
    */
   line: {
-    alongOffset: () => 0,
-    acrossOffset: (index, count, gap) => centred(index, count) * gap,
+    /**
+     * ⚠️ **NO LONGER ALWAYS ZERO.** A line that overflows the fan folds into a second rank one
+     * `ALONG_GAP` behind — which is 0.97 of a beat at 36 units a second, so the second rank arrives
+     * on the beat after the first rather than anywhere. That relation is `ALONG_GAP`'s own reason for
+     * being 14 (0121), and folding a rank is the first thing that has ever depended on it twice.
+     */
+    alongOffset: (index, _count, gap) => Math.floor(index / abreastCap(gap)) * ALONG_GAP,
+    acrossOffset: (index, count, gap) => {
+      const cap = abreastCap(gap);
+      return centred(index % cap, rankSize(index, count, cap)) * gap;
+    },
   },
   /**
    * Single file: one lane, arriving one after another. The formation that makes a turret dangerous —
    * it holds the player on a line for as long as the column takes to pass.
    */
   column: {
+    /**
+     * ⚠️ **UNTOUCHED BY 0202, AND THAT IS THE POINT.** A column is already single file: its across
+     * span is zero at any count, so it fits inside any fan and has nothing to fold. The cap is not
+     * applied here rather than being applied and happening to do nothing.
+     */
     alongOffset: (index) => index * ALONG_GAP,
     acrossOffset: () => 0,
   },
@@ -210,7 +298,23 @@ export const FORMATIONS: Record<FormationKind, FormationRow> = {
    * on both sides rather than a straight one — the player who takes it has to keep moving.
    */
   vee: {
-    alongOffset: (index, count) => Math.abs(centred(index, count)) * ALONG_GAP,
-    acrossOffset: (index, count, gap) => centred(index, count) * gap,
+    /**
+     * ⚠️ **THE WEDGE IS PER RANK, AND THE RANKS DO NOT INTERLEAVE.** A vee's own members already sit
+     * at different depths — the point is nearest — so a second rank laid at one `ALONG_GAP` would
+     * land inside the first one's arms. The stride is the deepest a full rank can reach,
+     * `((cap - 1) / 2) × ALONG_GAP`, plus one more gap of clearance: `((cap + 1) / 2) × ALONG_GAP`.
+     *
+     * The result is a wedge of wedges rather than one wide wedge, which is the variety half of what
+     * this change was asked for.
+     */
+    alongOffset: (index, count, gap) => {
+      const cap = abreastCap(gap);
+      const withinRank = Math.abs(centred(index % cap, rankSize(index, count, cap))) * ALONG_GAP;
+      return withinRank + Math.floor(index / cap) * ((cap + 1) / 2) * ALONG_GAP;
+    },
+    acrossOffset: (index, count, gap) => {
+      const cap = abreastCap(gap);
+      return centred(index % cap, rankSize(index, count, cap)) * gap;
+    },
   },
 };
