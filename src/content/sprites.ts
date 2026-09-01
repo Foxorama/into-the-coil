@@ -367,6 +367,25 @@ export const SPRITE_KINDS = [
   */
   'skyNebula',
   /*
+    ── AND A FIFTH THAT IS NOT A FIELD AT ALL, BUT ONE OBJECT AT ONE PLACE ─────────────────────────
+
+    `docs/decisions/0203-the-rule-was-never-about-size.md`. Reported from play: *"visually there's
+    nothing interesting or different about the levels"*, and asked for: *"I want to see the eagle
+    nebula in a scrolling background and when the massive pipe organ kicks in music wise we see the
+    pillars of god going past."*
+
+    ⚠️ **THE FOUR ABOVE ARE TILED AND HAVE NO POSITION.** `extent` is a repeat period, so a field
+    cannot be anywhere in particular — and *"when the organ kicks in"* is a statement about a
+    POSITION. A landmark is placed against the level's own distance axis, the one `waves`, `bossAt`
+    and `sections` already use, which is what lets the Pillars arrive with the organ without the sky
+    ever reading the audio clock (`docs/decisions/0160-the-music-free-runs.md`).
+
+    ⚠️ **ONE SLOT, SEVEN COMPLETELY DIFFERENT DRAWINGS.** `drawKind` already takes the theme, so this
+    is a role rather than a shape: *"none of those elements are transposable to a different level"*.
+    Seven sprite kinds would bake seven large bitmaps at boot for the one level that uses each.
+  */
+  'landmark',
+  /*
     ── THE EDGE OF THE PLAYER'S BOX, WHICH WAS A WALL WITH NOTHING DRAWN ON IT ─────────────────────
 
     Reported from play: *"the hard block on the player movement was a problem because there was no
@@ -616,6 +635,16 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     `src/render/bake.ts`'s `bakeNebula`.
   */
   skyNebula: ACROSS_SPAN * 2,
+  /*
+    ⚠️ **THREE QUARTERS OF THE LANE, AND THE NUMBER IS A LEGIBILITY FLOOR RATHER THAN A TASTE** —
+    `docs/decisions/0203-the-rule-was-never-about-size.md`. That decision replaces 0069's ceiling
+    with a forbidden BAND: nothing the sky draws may sit between half the smallest thing that can
+    kill the player (a `pulse`, 1.8 across) and twice the largest (a `warden`, 8) — so 0.9 to 16.
+
+    A landmark has to clear 16 by enough that no drawing inside it can land back in the band, and 75
+    is four and a half times the top of it. `tests/sky.test.ts` holds the band, not this number.
+  */
+  landmark: ACROSS_SPAN * 0.75,
   /*
     ⚠️ **The TILING PERIOD of the dash, exactly as a sky tile's extent is.** Ten units is a mark and
     a gap, so the boundary is ten dashes down a hundred-unit lane — legible as a line at a glance and

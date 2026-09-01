@@ -364,7 +364,15 @@ describe('an interior costs nothing to draw', () => {
     // second fill without saying so here first.
     for (const kind of SPRITE_KINDS) {
       if (ACCENT_OF[kind] !== null) continue;
-      if (kind.startsWith('sky') || kind === 'bound') continue; // these return before the fill
+      /*
+        These return before the fill at the bottom of `drawKind` and paint their own way.
+
+        ⚠️ **`landmark` JOINS THEM BY 0203 AND IS NOT A `sky*` NAME**, which is the whole reason it
+        has to be listed rather than caught by the prefix: it is a backdrop by role and not by
+        spelling. A prefix test would have let a real hull grow a second fill the moment somebody
+        named one `skySomething`, and it would have refused this one for being named honestly.
+      */
+      if (kind.startsWith('sky') || kind === 'bound' || kind === 'landmark') continue;
       expect(trace(kind).passes.length, `${kind} has no interior in the table but bakes two fills`).toBe(1);
     }
   });

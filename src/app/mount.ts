@@ -583,6 +583,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       ⚠️ **Built HERE, once**, because this file may allocate and `src/render/scene.ts` may not.
     */
     sky: SKY,
+    /*
+      ⚠️ **EMPTY AT MOUNT AND FILLED BY `startLevel`** — 0203. The sky is per mount because it is the
+      same four tiled layers all run; what landmarks exist is a property of the level script, so the
+      only honest value here is none. A title screen has no level and therefore no landmarks.
+    */
+    landmarks: [],
     // The picture of the wall the ship meets going forward — 0074. Always drawn: it is a property
     // of the playfield rather than of a screen, and a boundary that appeared only while playing
     // would be a thing the player first meets at the moment it is already stopping them.

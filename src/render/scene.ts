@@ -69,6 +69,39 @@ export interface SkyLayer {
 export type Sky = readonly SkyLayer[];
 
 /**
+ * One placed landmark — `docs/decisions/0203-the-rule-was-never-about-size.md`.
+ *
+ * ⚠️ **A `SkyLayer` HAS NO POSITION AND THIS IS THE WHOLE DIFFERENCE.** `extent` up there is a repeat
+ * period, so a field is everywhere and nowhere. *"When the massive pipe organ kicks in music wise we
+ * see the pillars of god going past"* is a statement about a position, and needs a type that has one.
+ */
+export interface Landmark {
+  /** The baked bitmap, as an index into the atlas. */
+  sprite: number;
+  /**
+   * The camera position at which it first comes into view, in world units.
+   *
+   * ⚠️ **WHERE IT APPEARS, NOT WHERE IT IS CENTRED**, and the difference is the entire ask. A
+   * landmark is the slowest thing on screen, so at `depth` 0.08 it takes about a minute to cross —
+   * centring it on the organ's bar would have it already on screen from before the level started,
+   * and *"when the organ kicks in we SEE the pillars"* would be false. Authored as the moment it
+   * arrives, it is true by construction.
+   */
+  at: number;
+  /** Where across the lane its centre sits, 0 to 100. */
+  lane: number;
+  /** How far it moves per unit of camera travel. Below every field's, so it is furthest away. */
+  depth: number;
+  /** Its own width in world units, so the painter knows when it has fully arrived and fully gone. */
+  extent: number;
+}
+
+/** Every landmark this level places. Empty for a place whose landmark is not authored yet. */
+export type Landmarks = readonly Landmark[];
+
+const NO_LANDMARKS: Landmarks = [];
+
+/**
  * The edge of the player's box, as a mark to tile down the lane and where to put it.
  *
  * ⚠️ **`inView` is a distance from the camera's trailing edge, not a world position, and that is the
@@ -96,8 +129,17 @@ export function paintScene(
   alpha: number,
   sky: Sky = NO_SKY,
   bound: Bound | null = null,
+  landmarks: Landmarks = NO_LANDMARKS,
 ): void {
   surface.clear();
+  /*
+    ⚠️ **BEFORE THE SKY, BECAUSE IT IS SLOWER THAN THE SKY.** A landmark's `depth` is below every
+    field's — 0203 kept 0112's *slower* clause and struck only *no edge* — so drawing it after the
+    star fields would put the slowest-moving thing on screen in front of faster ones, which is
+    parallax inversion and reads as the object being stuck to the glass. Behind everything, moving
+    least, is the one arrangement that says *far away* twice.
+  */
+  paintLandmarks(surface, view, cameraAlong, landmarks);
   paintSky(surface, view, cameraAlong, sky);
   /*
     ⚠️ **BEHIND EVERY BODY AND IN FRONT OF THE SKY.** It is a piece of information about the rules
@@ -164,6 +206,32 @@ function paintBound(surface: Surface, view: View, bound: Bound | null): void {
  *
  * ⚠️ **Nothing allocates.** A modulo, a divide, a ceiling and a loop over numbers.
  */
+/**
+ * Every landmark that is currently in view, at its own parallax rate.
+ *
+ * ⚠️ **NO ALLOCATION AND NO SORT.** `docs/decisions/0022-frame-rate-is-a-feature.md` and
+ * `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md` — this runs every frame, and
+ * `tests/budget.test.ts` scans this file. A level places one or two of these, so the loop is over a
+ * list shorter than the sky's.
+ */
+function paintLandmarks(surface: Surface, view: View, cameraAlong: number, landmarks: Landmarks): void {
+  for (let i = 0; i < landmarks.length; i++) {
+    const mark = landmarks[i]!;
+    const half = mark.extent / 2;
+    /*
+      `at` is where the camera is when the landmark's leading edge touches the far side of the view,
+      so at `cameraAlong === mark.at` it sits exactly one view-span ahead and enters. From there it
+      drifts back at `depth` times the camera's rate, taking `view.alongSpan / depth` units of camera
+      travel to cross — about a minute at 0.08, which is what makes it read as distance rather than
+      as something going past.
+    */
+    const inView = view.alongSpan + half - (cameraAlong - mark.at) * mark.depth;
+    // Not yet arrived, or fully gone. Both are the common case for most of a level.
+    if (inView > view.alongSpan + half || inView < -half) continue;
+    surface.blit(mark.sprite, screenX(view, inView, mark.lane), screenY(view, inView, mark.lane), view.scale);
+  }
+}
+
 function paintSky(surface: Surface, view: View, cameraAlong: number, sky: Sky): void {
   for (let i = 0; i < sky.length; i++) {
     const layer = sky[i]!;

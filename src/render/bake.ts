@@ -513,6 +513,9 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
     final.
   */
   skyNebula: 'sky',
+  // A landmark is sky ink like every other backdrop mark — 0069's *the sky is behind the game* is
+  // untouched by 0203, which moved only what may be drawn, never what it is drawn in.
+  landmark: 'sky',
   /*
     ⚠️ **The PLAYER's ink, because the thing it marks is the player's box and nothing else's.**
     Enemies, bullets and pickups all cross this line freely — `src/sim/flight.ts` clamps the ship and
@@ -836,6 +839,8 @@ export const ACCENT_OF: Record<SpriteKind, Accent | null> = {
   skyNear: null,
   skyRush: null,
   skyNebula: null,
+  // A landmark draws its own interior in `drawLandmark` — the accent pass is for hulls.
+  landmark: null,
   bound: null,
 };
 
@@ -845,6 +850,103 @@ export const ACCENT_OF: Record<SpriteKind, Accent | null> = {
  * Everything is expressed as a fraction of `size` so a bake at any resolution is the same picture —
  * which is what lets the atlas be re-baked larger on a high-DPI screen without a second set of art.
  */
+/**
+ * A place's landmark — the one object in its sky that is a THING rather than a texture.
+ *
+ * `docs/decisions/0203-the-rule-was-never-about-size.md`. One sprite slot, and the theme decides what
+ * is drawn in it: *"none of those elements are transposable to a different level"*. A theme with no
+ * landmark authored yet draws nothing and its levels place none, so the slot is never a hole and
+ * never a placeholder shape that would read as *the same object tinted* — which is
+ * `docs/decisions/0196-the-backdrop-is-rounded-out.md`'s exact failure.
+ *
+ * ⚠️ **ONE INK, AT VARYING ALPHA, AND THE SILHOUETTE CARRIES THE IDENTITY.**
+ * `docs/decisions/0097-the-sky-has-layers-and-the-tubes-have-sides.md` and
+ * `docs/decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md` both say a
+ * thing is told apart by shape and never by colour. The Pillars are one of the most recognisable
+ * silhouettes there is, which is why they survive being drawn in a single sky ink.
+ *
+ * ⚠️ **THE COLUMNS RISE ALONG -y, ACROSS THE LANE, AND THE FIRST DRAFT HAD THEM ALONG +x.** The game
+ * is a horizontal scroller: +x is the direction of travel, so pillars grown towards +x lay flat and
+ * came out of the shot rig as three grey banners sliding in edge-on. A column has to stand
+ * perpendicular to the way the player is going or it is not reading as a column at all — which is
+ * `docs/decisions/0027-measure-the-picture-not-the-model.md` in one image, since every number about
+ * it was already correct.
+ */
+function drawLandmark(ctx: Pen, ink: string, size: number, theme: ThemeKind): void {
+  if (theme !== 'nebula') return; // No landmark authored for this place yet — 0203 lands one at a time.
+
+  /*
+    ── THE PILLARS OF CREATION ─────────────────────────────────────────────────────────────────────
+
+    Asked for by name: *"when the massive pipe organ kicks in music wise we see the pillars of god
+    going past."* Three columns of dust, tallest on the left, each tapering upward and ending in the
+    blunt fingers the real object is known for.
+
+    The coordinates are hand-authored rather than drawn from the sky's RNG, because this is a
+    specific object and not a field of marks — `fieldOf`'s streams exist so that two starfields differ,
+    and there is only ever one of these.
+  */
+  const columns: readonly { base: number; width: number; height: number; lean: number }[] = [
+    { base: 0.34, width: 0.15, height: 0.92, lean: 0.04 },
+    { base: 0.56, width: 0.11, height: 0.68, lean: -0.03 },
+    { base: 0.73, width: 0.08, height: 0.46, lean: 0.02 },
+  ];
+
+  // The gas the columns stand in: a wide, very faint wash so the silhouette has something to be a
+  // silhouette against. Well under the per-cloud alpha ceiling the nebula guard already holds.
+  const glow = ctx.createRadialGradient(size * 0.42, size * 0.5, 0, size * 0.42, size * 0.5, size * 0.6);
+  glow.addColorStop(0, ink);
+  glow.addColorStop(1, 'transparent');
+  ctx.globalAlpha = 0.13;
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, size, size);
+
+  for (const column of columns) {
+    // The feet sit just off the bottom edge and the tips reach up: -y is up, across the lane.
+    const foot = size * 0.97;
+    const tip = foot - size * column.height;
+    const mid = size * column.base;
+    const halfWidth = (size * column.width) / 2;
+    // Narrower at the top than the bottom — the taper is what makes a column read as a column.
+    const tipHalf = halfWidth * 0.42;
+    const drift = size * column.lean;
+    const rise = foot - tip;
+
+    // The windward edge, kept as its own list so the body and the rim cannot disagree about it.
+    const windward: readonly [number, number][] = [
+      [mid - halfWidth, foot],
+      [mid - halfWidth * 0.78 + drift * 0.5, foot - rise * 0.45],
+      [mid - halfWidth * 0.52 + drift * 0.8, foot - rise * 0.72],
+      [mid - tipHalf + drift, tip],
+    ];
+
+    ctx.globalAlpha = 0.62;
+    ctx.fillStyle = ink;
+    ctx.beginPath();
+    ctx.moveTo(windward[0]![0], windward[0]![1]);
+    for (let i = 1; i < windward.length; i++) ctx.lineTo(windward[i]![0], windward[i]![1]);
+    // The blunt fingers at the top, which are the thing that makes it THESE pillars.
+    ctx.lineTo(mid - tipHalf * 0.2 + drift, tip - size * 0.035);
+    ctx.lineTo(mid + tipHalf * 0.35 + drift, tip + size * 0.01);
+    ctx.lineTo(mid + tipHalf + drift, tip - size * 0.02);
+    // And back down the lee side, which is smoother — the columns are lit from one side.
+    ctx.lineTo(mid + halfWidth * 0.82 + drift * 0.6, foot - rise * 0.6);
+    ctx.lineTo(mid + halfWidth, foot);
+    ctx.closePath();
+    ctx.fill();
+
+    // A rim on the windward edge, brighter than the body, so the column has a lit side.
+    ctx.globalAlpha = 0.9;
+    ctx.lineWidth = Math.max(1, size * 0.007);
+    ctx.strokeStyle = ink;
+    ctx.beginPath();
+    ctx.moveTo(windward[0]![0], windward[0]![1]);
+    for (let i = 1; i < windward.length; i++) ctx.lineTo(windward[i]![0], windward[i]![1]);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
 export function drawKind(
   ctx: Pen,
   kind: SpriteKind,
@@ -1398,6 +1500,9 @@ export function drawKind(
     case 'skyNear':
     case 'skyRush':
       drawSky(ctx, kind, size, theme);
+      return;
+    case 'landmark':
+      drawLandmark(ctx, palette.sky, size, theme);
       return;
     case 'skyNebula':
       /*

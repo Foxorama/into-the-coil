@@ -524,7 +524,7 @@ describe('a boss fight can reach all of its phases', () => {
    */
   describe('and it can be fought, start to finish, with nothing but the base weapon', () => {
     /** A level that is nothing but its boss, so the fight is the only thing under test. */
-    const soloBoss = { waves: [], pickups: [], bossAt: 200, sections: NO_SECTIONS, boss: 'sentinel' as const, theme: 'approach' as const };
+    const soloBoss = { waves: [], pickups: [], landmarks: [], bossAt: 200, sections: NO_SECTIONS, boss: 'sentinel' as const, theme: 'approach' as const };
 
     it('arrives, closes on its station, and then holds it', () => {
       const { world } = playableWorld(soloBoss);
@@ -990,7 +990,7 @@ describe('a death costs the ship and not the level', () => {
  * change moves it.
  */
 function bossFight(kind: (typeof BOSS_KINDS)[number]): { world: ReturnType<typeof playableWorld>['world']; frame: GameFrame } {
-  const { world } = playableWorld({ waves: [], pickups: [], bossAt: 200, sections: NO_SECTIONS, boss: kind, theme: 'approach' });
+  const { world } = playableWorld({ waves: [], pickups: [], landmarks: [], bossAt: 200, sections: NO_SECTIONS, boss: kind, theme: 'approach' });
   const frame = new GameFrame(world);
   world.ship.health = 1e9;
   /*
@@ -1421,7 +1421,7 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
 
   /** A level that is nothing but the boss under test, so the fight is the only thing running. */
   const solo = (boss: (typeof BOSS_KINDS)[number]) =>
-    ({ waves: [], pickups: [], bossAt: 200, sections: NO_SECTIONS, boss, theme: 'approach' } as const);
+    ({ waves: [], pickups: [], landmarks: [], bossAt: 200, sections: NO_SECTIONS, boss, theme: 'approach' } as const);
 
   /** Drive a fight until the boss is on station, then put it at `fraction` of its health. */
   const fightAt = (boss: (typeof BOSS_KINDS)[number], fraction: number) => {

@@ -477,6 +477,7 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
         const { world } = playableWorld({
           waves: [{ at: 200, enemy: kind, formation: 'line', count: 1, lane: 50 }],
           pickups: [],
+          landmarks: [],
           bossAt: Number.POSITIVE_INFINITY,
           sections: NO_SECTIONS,
           boss: 'sentinel',
@@ -523,6 +524,7 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
       const { world } = playableWorld({
         waves: [{ at: 200, enemy: kind, formation: 'line', count: 1, lane: 50 }],
         pickups: [],
+        landmarks: [],
         bossAt: Number.POSITIVE_INFINITY,
         sections: NO_SECTIONS,
         boss: 'sentinel',
@@ -574,6 +576,7 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
       const { world } = playableWorld({
         waves: [{ at: 200, enemy: kind, formation: 'column', count: 3, lane: 50 }],
         pickups: [],
+        landmarks: [],
         bossAt: Number.POSITIVE_INFINITY,
         sections: NO_SECTIONS,
         boss: 'sentinel',

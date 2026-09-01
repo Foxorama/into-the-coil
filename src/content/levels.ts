@@ -121,9 +121,45 @@ export interface PickupEntry {
   lane: number;
 }
 
+/**
+ * One of a place's landmarks, and where along the level it goes past.
+ *
+ * `docs/decisions/0203-the-rule-was-never-about-size.md`. Every sky layer before this was a TILED
+ * FIELD — `extent` is a repeat period, so a field has no position and cannot be anywhere in
+ * particular. *"When the massive pipe organ kicks in music wise we see the pillars of god going
+ * past"* is a statement about a position, so it needs one.
+ *
+ * ⚠️ **`at` IS THE SAME AXIS `waves`, `bossAt` AND `sections` USE**, which is the whole reason the ask
+ * is reachable without touching the music. Ember Nebula's organ opens at `push`; level two's `push`
+ * is at 1299; so the Pillars are an entry at 1299 and *"the pillars arrive with the organ"* is
+ * **authored, not synchronised**. `docs/decisions/0160-the-music-free-runs.md` took the sim out of
+ * the music entirely, and a runtime hook from the sky to the audio clock would put it back.
+ * `tests/sky.test.ts` asserts the two numbers are equal.
+ */
+export interface LandmarkEntry {
+  /** World units from the level's start, exactly as a wave's `at` is. */
+  at: number;
+  /** Where across the lane its centre sits, 0 to 100. */
+  lane: number;
+  /**
+   * How far it moves per unit of camera travel — below every field's, so it is furthest away.
+   *
+   * ⚠️ **0203 KEPT 0112's *slower* CLAUSE AND STRUCK ONLY *no edge*.** A landmark that moved at a
+   * field's rate would be a large object going past at the speed of the things that can kill you,
+   * which is 0069's actual concern stated properly.
+   */
+  depth: number;
+}
+
 export interface LevelRow {
   /** In order of `at`, ascending. `tests/level.test.ts` holds that, because the spawner assumes it. */
   waves: readonly WaveEntry[];
+  /**
+   * The place's landmarks, in order of `at`. Empty for a place whose landmark is not authored yet —
+   * 0203 lands them one at a time, because *"none of those elements are transposable"* and a shared
+   * placeholder shape is exactly 0196's failure spelled differently.
+   */
+  landmarks: readonly LandmarkEntry[];
   /**
    * What is lying about, in order of `at`.
    *
@@ -1173,6 +1209,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       { at: 3627, section: 'approach' },
     ],
     boss: 'sentinel',
+    landmarks: [],
     theme: 'approach',
   },
   /**
@@ -1194,6 +1231,26 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       { at: 3677, section: 'approach' },
     ],
     boss: 'harrow',
+    /*
+      ⚠️ **1299 IS `push`, WHICH IS WHERE THE ORGAN OPENS** — `src/content/nebula.ts`'s ladder puts
+      the pipe organ on `push`, and this level's `sections` opens `push` at 1299. Asked for by name:
+      *"when the massive pipe organ kicks in music wise we see the pillars of god going past."*
+
+      **The two numbers are the same number on purpose, and `tests/sky.test.ts` holds them equal** —
+      typing 1299 twice is the drift `docs/decisions/0029-the-tracked-record-is-the-record.md` is
+      about, so the guard reads the section list rather than this literal.
+
+      ⚠️ **`lane: 72` AND THE NUMBER CAME OUT OF THE SHOT RIG, NOT OUT OF A CALCULATION.** At 30 the
+      sprite spans lane −7.5 to 67.5, so the columns' feet stopped in mid-air on a hard horizontal
+      cut two thirds down the screen — correct in every model quantity and obviously wrong in the
+      picture (`docs/decisions/0027-measure-the-picture-not-the-model.md`). At 72 the feet run off
+      the bottom of the frame and they read as planted.
+
+      `depth: 0.08` is under the nebula layer's 0.09, which is the slowest field — 0203's *a landmark
+      is the slowest thing on screen*. It also sets how long they take to cross: about a minute, so
+      they are gone before the boss.
+    */
+    landmarks: [{ at: 1299, lane: 72, depth: 0.08 }],
     theme: 'nebula',
   },
   /**
@@ -1214,6 +1271,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       { at: 3627, section: 'approach' },
     ],
     boss: 'lattice',
+    landmarks: [],
     theme: 'saurian',
   },
   /**
@@ -1234,6 +1292,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       { at: 3597, section: 'approach' },
     ],
     boss: 'shoalMother',
+    landmarks: [],
     theme: 'labyrinth',
   },
   /**
@@ -1254,6 +1313,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       { at: 3597, section: 'approach' },
     ],
     boss: 'redoubt',
+    landmarks: [],
     theme: 'rime',
   },
   /**
@@ -1274,6 +1334,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       { at: 3697, section: 'approach' },
     ],
     boss: 'chorus',
+    landmarks: [],
     theme: 'mire',
   },
   /**
@@ -1303,6 +1364,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       { at: 3986, section: 'approach' },
     ],
     boss: 'axis',
+    landmarks: [],
     theme: 'core',
   },
 };
