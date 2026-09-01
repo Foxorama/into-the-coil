@@ -223,6 +223,9 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **DIFFICULTY IS MANAGED BY *is this unfair* OR *is this a learnable strategy*** — the player's own rule, and it outranks the item it arrived with | [`the-uncoil-needed-a-gap`](../reports/the-uncoil-needed-a-gap-2026-08-16.md) |
 | **a press belongs to one screen; a released stick is not an ask** | [0055](decisions/0055-a-press-belongs-to-one-screen.md) |
 | the class prefix rule, on the trigger 0017 named | [0017](decisions/0017-the-state-is-slices.md), [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md) |
+| **A VERDICT IS AN EXIT CODE — a piped workflow step sets `pipefail` and a guard holds it; the rest of that family was already inside `prove`** | [0199](decisions/0199-a-verdict-is-an-exit-code.md) |
+| **source and docs are written with an editor, never a shell — and this one has NO guard, by an argument rather than an oversight** | [0200](decisions/0200-the-tool-that-edits-must-not-lose-what-it-edits.md) |
+| **the merge ritual is a tracked file, and `.claude/` was untracked entirely** | [0201](decisions/0201-the-ritual-is-tracked-or-it-is-not-followed.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were
