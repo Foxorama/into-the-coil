@@ -1998,6 +1998,37 @@ describe('0118 — the mix has a width, and the low end does not use it', () => 
     expect(Math.abs(lean), `the mix leans ${lean.toFixed(2)} to one side`).toBeLessThan(0.6);
   });
 
+  it('0209 — every rig render that carries the music is written in stereo', () => {
+    /*
+      ⚠️ **THE LAW ABOVE WAS GUARDED AND THE INSTRUMENT THREW IT AWAY ANYWAY.** `panGains` is held to
+      equal power across the whole sweep, `LAYER_PAN` is held not to lean — and four of the five modes
+      in `scripts/hear.mjs` summed the layers to ONE number before writing. Every guard about the
+      width was green while the only files a person can actually listen to were mono.
+
+      ⚠️ **INCLUDING `--play`, WHOSE ENTIRE PURPOSE IS THE TWO CHANNELS TOGETHER.** Its own header
+      says it exists because *"the game sound effects don't blend in with the music at all"* — a claim
+      about music and cues in the same air — and it rendered both folded to the middle, which is the
+      one arrangement in which everything maximally collides. Four mix passes were judged on it.
+
+      `docs/decisions/0027-measure-the-picture-not-the-model.md`: a guard on the model is not a guard
+      on the instrument, and this repository has now found that inside `hear.mjs` three times — the
+      missing bus shaper, the two reference levels, and the width.
+
+      ⚠️ **THE CUE CATALOGUE IS THE ONE DELIBERATE MONO.** `--out=cues.wav` plays each cue alone to
+      say what it IS; position is not part of a timbre and nothing is competing with it there. Named
+      rather than exempted by accident.
+    */
+    const src = readFileSync(resolve(root, 'scripts/hear.mjs'), 'utf8');
+    const writes = [...src.matchAll(/writeFileSync\([^\n]*wavOf\(([^\n]*)\)\);/g)].map((m) => m[1]!);
+    expect(writes.length, 'no renders found — the scan is reading the wrong file').toBeGreaterThan(5);
+    const mono = writes.filter((w) => !/,\s*2\s*$/.test(w.trim()));
+    expect(
+      mono.length,
+      `these renders are still mono: ${mono.join(' | ')} — the music is panned and a mono file cannot ` +
+        'show it, which is what 0209 was written for',
+    ).toBe(1);
+  });
+
   it('THE LAW: a layer does not get quieter as it crosses the middle', () => {
     /*
       ⚠️ **EQUAL POWER, NOT EQUAL AMPLITUDE, AND THE RIG IS WHY THIS IS A FUNCTION AT ALL.** The game's
