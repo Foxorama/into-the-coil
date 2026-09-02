@@ -53,7 +53,7 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 import { CUES, CUE_KINDS } from '../src/content/cues.ts';
-import { MASTER_GAIN, SAMPLE_RATE, cueSeconds, sampleCue, saturate, variantAt, velocitiesOf } from '../src/app/sound.ts';
+import { MASTER_GAIN, SAMPLE_RATE, cueSeconds, panFor, sampleCue, saturate, variantAt, velocitiesOf } from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { bakeLoops } from '../src/app/music.ts';
 import { THEME_KINDS, cueRowOf, rungOf } from '../src/content/themes.ts';
@@ -94,6 +94,7 @@ import {
   panGains,
 } from '../src/app/music.ts';
 import { LEVEL_KINDS } from '../src/content/levels.ts';
+import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
 import { UNITS_PER_SECOND, auraAt, levelTimeline, rungAt, targetGain } from './timeline.mjs';
 import { UPGRADE_TIERS } from '../src/content/pickups.ts';
@@ -136,6 +137,45 @@ if (kinds.length === 0) {
  * scale rather than a limiter — and the clamp below is a guard against that assertion being wrong,
  * not a normal path.
  */
+/**
+ * Each music layer's pan gains, once — `docs/decisions/0209-the-rig-hears-in-stereo.md`.
+ *
+ * ⚠️ **`panGains` IS THE MIXER'S OWN LAW, NOT A COPY OF IT.** `src/app/music.ts` exports it for
+ * exactly this reason: a rig that re-derived equal-power panning would drift from the
+ * `StereoPannerNode`s the player actually hears, which is the drift 0116 exists to refuse.
+ */
+const PAN_OF = {};
+for (const layer of MUSIC_LAYERS) PAN_OF[layer] = panGains(LAYER_PAN[layer]);
+
+/**
+ * The music bed as an interleaved stereo buffer, at whatever gain each layer holds at each sample.
+ *
+ * ⚠️ **THIS EXISTS BECAUSE FOUR MODES SUMMED THE LAYERS TO ONE NUMBER AND `--level` DID NOT.**
+ * `docs/decisions/0118-the-mix-has-a-width.md` gave every layer a position, and every render except
+ * `--level` then threw it away — including `--play`, whose entire purpose is judging the music and
+ * the cues TOGETHER. One helper rather than a fifth copy of the same loop is
+ * `docs/decisions/0126-the-dashboard-is-the-instrument.md`'s *one description* applied here.
+ *
+ * ⚠️ **THE SHAPER IS PER CHANNEL, AND THAT IS NOT A DETAIL.** A `WaveShaperNode` on a stereo bus
+ * shapes each side on its own; one curve over a mono sum and then split is a different sound. It was
+ * already argued once, in `--level`, and is now argued in one place instead of two.
+ */
+function bedStereo(length, at, gainAt, layers = MUSIC_LAYERS) {
+  const track = new Float32Array(length * 2);
+  for (let i = 0; i < length; i++) {
+    let left = 0;
+    let right = 0;
+    for (const layer of layers) {
+      const v = at(layer, i) * gainAt(layer, i);
+      left += v * PAN_OF[layer].left;
+      right += v * PAN_OF[layer].right;
+    }
+    track[i * 2] = Math.max(-1, Math.min(1, busOf(left)));
+    track[i * 2 + 1] = Math.max(-1, Math.min(1, busOf(right)));
+  }
+  return track;
+}
+
 function wavOf(samples, rate, channels = 1) {
   const header = Buffer.alloc(44);
   const body = Buffer.alloc(samples.length * 2);
@@ -179,53 +219,47 @@ if (args.has('music')) {
   */
   const length = Math.round(PHRASE_SECONDS * SAMPLE_RATE);
   const at = (layer, i) => loops[layer][i % loops[layer].length];
-  const mix = (level, repeats) => {
-    const out = new Float32Array(length * repeats);
-    for (let i = 0; i < out.length; i++) {
-      let v = 0;
-      for (const layer of MUSIC_LAYERS) v += at(layer, i) * MUSIC_LADDER[level][layer];
-      out[i] = Math.max(-1, Math.min(1, busOf(v)));
-    }
-    return out;
-  };
+  /*
+    One rung, in the width the player hears it in — 0209, replacing a mono sum.
+
+    ⚠️ **`repeats` IS CARRIED AND WAS ALMOST DROPPED.** The mono version took it and was called with
+    2, so each rung wrote two phrases; the first stereo version took only a level and silently halved
+    every file. Nothing would have failed — a 25.6s file where a 51.2s one used to be is a shorter
+    listen, not an error, and the only way it surfaced was reading the durations back.
+  */
+  const mixWide = (level, repeats) =>
+    bedStereo(length * repeats, at, (layer) => MUSIC_LADDER[level][layer]);
   const order = ['run', 'run', 'approach', 'approach', 'boss', 'boss', 'boss'];
-  const arc = new Float32Array(length * order.length);
   // The ramp the gain nodes do, at the same time constant `src/app/music.ts` gives them.
   const ramp = Math.round(1.6 * SAMPLE_RATE);
-  for (let i = 0; i < arc.length; i++) {
+  // 0209: stereo, like everything else the bed is rendered into now.
+  const arc = bedStereo(length * order.length, at, (layer, i) => {
     const slot = Math.floor(i / length);
     const into = i - slot * length;
     const from = MUSIC_LADDER[order[slot]];
     const to = MUSIC_LADDER[order[Math.min(order.length - 1, slot + 1)]];
     const t = into > length - ramp ? (into - (length - ramp)) / ramp : 0;
-    let v = 0;
-    for (const layer of MUSIC_LAYERS) v += at(layer, i) * (from[layer] + (to[layer] - from[layer]) * t);
-    arc[i] = Math.max(-1, Math.min(1, busOf(v)));
-  }
+    return from[layer] + (to[layer] - from[layer]) * t;
+  });
   const base = out.replace(/\.wav$/, '');
   for (const level of Object.keys(MUSIC_LADDER)) {
-    writeFileSync(`${base}-${level}.wav`, wavOf(mix(level, 2), SAMPLE_RATE));
+    writeFileSync(`${base}-${level}.wav`, wavOf(mixWide(level, 2), SAMPLE_RATE, 2));
   }
-  writeFileSync(`${base}-arc.wav`, wavOf(arc, SAMPLE_RATE));
+  writeFileSync(`${base}-arc.wav`, wavOf(arc, SAMPLE_RATE, 2));
 
   /*
     THE AURA CLOSING IN — decision 0091, and the one thing the ladder's own levels cannot show. Every
     other file this writes is a STEP; the aura is a continuous quantity, so what has to be heard is a
     boss walking from the far end of its range to the near end while everything else holds still.
   */
-  const close = new Float32Array(length * 4);
-  for (let i = 0; i < close.length; i++) {
-    const t = i / close.length;
+  const closeLength = length * 4;
+  const close = bedStereo(closeLength, at, (layer, i) => {
+    const t = i / closeLength;
     const gap = AURA_FAR_UNITS + 10 - t * (AURA_FAR_UNITS + 10 - AURA_NEAR_UNITS);
-    const near = auraNearness(gap);
-    let v = 0;
-    for (const layer of MUSIC_LAYERS) {
-      const ceiling = MUSIC_LADDER.boss[layer];
-      v += at(layer, i) * (AURA_LAYERS.includes(layer) ? ceiling * near : ceiling);
-    }
-    close[i] = Math.max(-1, Math.min(1, busOf(v)));
-  }
-  writeFileSync(`${base}-aura.wav`, wavOf(close, SAMPLE_RATE));
+    const ceiling = MUSIC_LADDER.boss[layer];
+    return AURA_LAYERS.includes(layer) ? ceiling * auraNearness(gap) : ceiling;
+  });
+  writeFileSync(`${base}-aura.wav`, wavOf(close, SAMPLE_RATE, 2));
   console.log(`music: ${MUSIC_LAYERS.length} loops, a ${PHRASE_SECONDS}s phrase, ${Object.keys(MUSIC_LADDER).length} levels`);
   console.log(`wrote ${base}-{${Object.keys(MUSIC_LADDER).join(',')},arc}.wav`);
   process.exit(0);
@@ -296,12 +330,18 @@ if (args.has('solo')) {
       silent.push(layer);
       continue;
     }
-    const solo = new Float32Array(length);
     const loop = loops[layer];
-    // The same bus the mix goes through, so a layer heard here is the layer heard in the game —
-    // `busOf` is shared with `--music` and `--play` for the reason stated on it.
-    for (let i = 0; i < length; i++) solo[i] = Math.max(-1, Math.min(1, busOf(loop[i % loop.length] * gain)));
-    writeFileSync(`${base}-solo-${layer}.wav`, wavOf(solo, SAMPLE_RATE));
+    /*
+      The same bus the mix goes through, so a layer heard here is the layer heard in the game —
+      `busOf` is shared with `--music` and `--play` for the reason stated on it.
+
+      ⚠️ **AND AT ITS OWN POSITION — 0209.** A layer's pan is part of what it sounds like, and this
+      mode exists so a sound a player can hear and cannot name can be named. Folded to the middle,
+      the one thing a listener has to locate it by is thrown away — which is the same defect
+      `--play` had, one layer down.
+    */
+    const solo = bedStereo(length, (_l, i) => loop[i % loop.length], () => gain, [layer]);
+    writeFileSync(`${base}-solo-${layer}.wav`, wavOf(solo, SAMPLE_RATE, 2));
     /*
       ⚠️ **THE AURA'S ROW IS A CEILING AND NOT A GAIN, AND SAYING *gain* HERE WOULD BE THE EXACT
       DEFECT THIS MODE EXISTS TO END.** `src/app/music.ts` multiplies these two by `auraFor(build,
@@ -569,12 +609,31 @@ if (args.has('play')) {
    * ⚠️ `variantAt` is the speaker's own function rather than a copy of its arithmetic, so an accent
    * pattern that moved would move here too.
    */
-  const put = (into, kind, step) => {
+  /**
+   * One cue, at its own place in the field — 0209.
+   *
+   * ⚠️ **`across` IS WHERE IT HAPPENED AND THE RIG USED TO HAVE NO OPINION ABOUT IT.** The game pans
+   * every cue through `panFor` into one of `PAN_BUCKETS` (`src/app/sound.ts`), so a kill on the left
+   * of the lane arrives on the left. This mode existed to answer *"the game sound effects don't blend
+   * in with the music"* — a question about two channels together — and rendered BOTH of them folded
+   * to the middle, which is the one arrangement in which everything maximally collides.
+   *
+   * ⚠️ **THE POSITIONS ARE DRAWN, AND THAT IS A STATED MODEL RATHER THAN A MEASUREMENT.** Nothing
+   * here knows where an enemy was; what is known is that they are spread across the lane, so the
+   * scatter stream places them. Centre — `undefined` — is kept for the ship's own gun, which is where
+   * the player's shots actually come from.
+   */
+  const put = (into, kind, step, across) => {
     const start = Math.round(step * perStep);
     const data = baked[kind][variantAt(baked[kind].length, Math.round(step))];
+    const g = panGains(panFor(across));
+    const frames = into.length / 2;
     for (let i = 0; i < data.length; i++) {
       const j = start + i;
-      if (j >= 0 && j < into.length) into[j] += data[i] * MASTER_GAIN;
+      if (j >= 0 && j < frames) {
+        into[j * 2] += data[i] * MASTER_GAIN * g.left;
+        into[j * 2 + 1] += data[i] * MASTER_GAIN * g.right;
+      }
     }
   };
 
@@ -595,17 +654,17 @@ if (args.has('play')) {
       same bed while both look right. `docs/decisions/0083-two-ladders-of-four.md` is the fact.
     */
     const weapon = weaponAtTier(tier);
-    const bed = new Float32Array(length);
-    const cues = new Float32Array(length);
-    // The bed, at the mixer's own two gains.
-    for (let i = 0; i < length; i++) {
-      let v = 0;
-      for (const layer of MUSIC_LAYERS) v += at(layer, i) * MUSIC_LADDER[level][layer];
-      // `busOf` carries MASTER_GAIN now, so applying it again here would render the bed twice as
-      // quiet as the game does — which is exactly the two-reference-levels bug one mode up.
-      bed[i] = busOf(v);
-    }
+    /*
+      The bed, at the mixer's own two gains, and IN ITS OWN WIDTH — 0209.
+
+      `busOf` carries MASTER_GAIN now, so applying it again here would render the bed twice as quiet
+      as the game does — which is exactly the two-reference-levels bug one mode up.
+    */
+    const bed = bedStereo(length, at, (layer) => MUSIC_LADDER[level][layer]);
+    const cues = new Float32Array(length * 2);
     // The gun and the tubes, on their grids. One cue per volley, never one per barrel.
+    // The ship's own gun and tubes have no `across`: they come from where the player is, which is
+    // the middle of the field as far as the cue bus is concerned.
     for (let s = 0; s < steps; s += weapon.fireEvery) put(cues, 'pulse', s);
     if (weapon.launchers > 0) for (let s = 0; s < steps; s += weapon.missileEvery) put(cues, 'missile', s);
     /*
@@ -615,9 +674,10 @@ if (args.has('play')) {
       quantises these, so `scatter` picking the step is exactly as musical as the game is.
     */
     for (let s = 0; s < steps; s += VOLLEY_CYCLE * 2) {
-      put(cues, 'kill', s + Math.floor(scatter.range(0, VOLLEY_CYCLE * 2)));
-      put(cues, 'hit', s + Math.floor(scatter.range(0, VOLLEY_CYCLE * 2)));
-      put(cues, 'threat', s + Math.floor(scatter.range(0, VOLLEY_CYCLE * 2)));
+      // 0209: and each one somewhere in the lane, because that is where the thing that made it was.
+      put(cues, 'kill', s + Math.floor(scatter.range(0, VOLLEY_CYCLE * 2)), scatter.range(0, ACROSS_SPAN));
+      put(cues, 'hit', s + Math.floor(scatter.range(0, VOLLEY_CYCLE * 2)), scatter.range(0, ACROSS_SPAN));
+      put(cues, 'threat', s + Math.floor(scatter.range(0, VOLLEY_CYCLE * 2)), scatter.range(0, ACROSS_SPAN));
     }
     /*
       ⚠️ **THE BOSS FIRES IN THE BOSS TAKES, AND UNTIL NOW IT DID NOT** — 0114. `bossShot` is the
@@ -632,8 +692,9 @@ if (args.has('play')) {
     if (level === 'boss' || level === 'bossPeak') {
       for (let s = 0; s < steps; s += VOLLEY_CYCLE * 3) put(cues, 'bossShot', s);
     }
-    const mix = new Float32Array(length);
-    for (let i = 0; i < length; i++) mix[i] = bed[i] + cues[i];
+    // Interleaved, so the sum is over both channels — 0209.
+    const mix = new Float32Array(length * 2);
+    for (let i = 0; i < mix.length; i++) mix[i] = bed[i] + cues[i];
     return { mix, bed, cues };
   };
 
@@ -668,7 +729,7 @@ if (args.has('play')) {
     const { mix, bed, cues } = scene(level, tier, 4);
     const all = measure(mix);
     const ratio = 20 * Math.log10(measure(bed).rms / measure(cues).rms);
-    writeFileSync(`${base}-play-${level}-${tier}.wav`, wavOf(mix, SAMPLE_RATE));
+    writeFileSync(`${base}-play-${level}-${tier}.wav`, wavOf(mix, SAMPLE_RATE, 2));
     console.log(
       `${what.padEnd(21)} ${level.padEnd(9)} ${String(tier).padStart(4)}  ` +
         `${all.peak.toFixed(3)}  ${all.rms.toFixed(4)}  ${String(all.clipped).padStart(4)}  ` +
