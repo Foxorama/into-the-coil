@@ -16,8 +16,20 @@ export const PROBES = [
     suite: 'tests/layout.browser.test.ts',
     // The reported bug itself: the key stacked above the tiers, so six things run down the axis that
     // has 375 pixels of it. Looks perfect on a laptop.
+    /*
+      ⚠️ **RE-ANCHORED BY 0210, AND THE MOVE IS THE INTERESTING PART.** This expected the failure on
+      *the phone this bug was reported from* — 812x375. It no longer lands there: 0210 gave the title
+      screen a two-column grid below 460px tall, so the screen is compact enough that stacking its
+      BODY no longer overflows that device on its own.
+      **The break is still caught**, one assertion over: the panel ends up centred off the top, where
+      nothing can scroll to it. So the guard still fires on the thing this probe exists to catch, and
+      what changed is which of the layout guard's claims notices first.
+      ⚠️ It is re-anchored rather than made bigger on purpose. Widening the break until it reddened
+      the original assertion again would be tuning the PROBE to the answer, which is the shape
+      docs/decisions/0044 refuses.
+    */
     broke: 'the title screen stacked down the short axis again, instead of across the long one',
-    guard: 'the phone this bug was reported from',
+    guard: 'keeps its first line on the display and its last control one scroll away',
     edit: {
       path: 'src/app/chrome.ts',
       find: '  grid-template-columns: minmax(0, 7fr) minmax(0, 11fr);',

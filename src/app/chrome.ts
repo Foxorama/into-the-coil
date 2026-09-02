@@ -546,7 +546,18 @@ ${each('-action-cursor')} {
     step further rather than a new one.
   */
   .itc-title-panel { gap: min(0.6rem, 1.6cqh); }
-  .itc-title-heading { font-size: clamp(1rem, min(5cqw, 6cqh), 2.2rem); }
+  /*
+    ⚠️ **THE HEADING IS DELIBERATELY NOT OVERRIDDEN HERE, AND IT WAS AT FIRST.**
+    docs/decisions/0049 has a probe that breaks the heading's own rule — typesetting it at a fixed
+    size instead of a fraction of the box — and expects the layout guard to catch it. An override in
+    this block WINS ON EVERY SHORT SCREEN, which is exactly where that guard measures, so the probe's
+    break stopped having any effect and the suite **stayed green over it**. npm run prove said so:
+    *the guard does not fire on the thing it exists to catch.*
+
+    A rule that shadows another rule on the only devices a guard tests has disabled that guard, and
+    nothing about writing it looks like disabling a guard. The grid above is what buys the space
+    instead.
+  */
   /*
     ⚠️ **AND THE MUSIC ROOM TIGHTENS FURTHER, BECAUSE IT HAS NINE CONTROLS TO THE TITLE'S FOUR.** At
     18ch a 667px-wide phone fits four to a row, which is three rows plus a heading, and *Back* landed
