@@ -16,8 +16,10 @@ export const PROBES = [
     guard: 'a cloud that crosses the tile’s edge is drawn on both sides of it',
     edit: {
       path: 'src/render/bake.ts',
-      find: '    for (const dx of [-size, 0, size]) {',
-      replace: '    for (const dx of [0]) {',
+      // ⚠️ Re-anchored by 0207, which gave the dust lanes a wrap loop of their own — so the `dx` line
+      // alone stopped being unique. The `dy` line below it belongs to the CLOUD loop and nothing else.
+      find: '    for (const dx of [-size, 0, size]) {\n      for (const dy of [-size, 0, size]) {',
+      replace: '    for (const dx of [0]) {\n      for (const dy of [-size, 0, size]) {',
     },
   },
 ];

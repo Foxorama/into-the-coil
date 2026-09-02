@@ -229,6 +229,9 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **A WAVE IS AS WIDE AS THE VOLLEY — it folds into ranks at the fan's width; 324 of 492 waves were wider and 0 are, with no count changed** | [0202](decisions/0202-a-wave-is-as-wide-as-the-volley.md) |
 | **THE SKY MAY HOLD A LANDMARK — 0069's ceiling is a BAND now, and the Pillars arrive where Ember Nebula's organ opens** | [0203](decisions/0203-the-rule-was-never-about-size.md) |
 | **A LANDMARK IS LIT BY ITS PLACE — re-baked in the place's gas colour at the boundary; three defects found by the rig and none by a guard** | [0204](decisions/0204-a-landmark-is-lit-by-the-place-it-stands-in.md) |
+| **THE BENCH JUMPS TO WHERE THE THING IS — `npm run bench`, a level select and a scrub bar over the real game; it found two bugs before its own decision was written** | [0205](decisions/0205-the-bench-jumps-to-where-the-thing-is.md) |
+| **THE TILE WRAPS ROUND — the seam, reported three times; the comment saying no margin was needed was half right and wholly wrong** | [0206](decisions/0206-the-tile-wraps-round.md) |
+| **THE EAGLE HAS LANES — dark dust over the gas; density was never the problem and no axis 0196 had could make an edge** | [0207](decisions/0207-the-eagle-has-lanes.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were
@@ -741,8 +744,10 @@ by temporarily moving the landmark AND the theme onto level one, because level t
 fight. That works once and does not scale to six places plus seven boss backdrops — and 0204 names
 three defects that only a picture caught, so making pictures cheap is the lever, not a nicety.
 
-**Still owed for Ember Nebula:** the Eagle Nebula *field* itself. The Pillars are drawn; the weather
-behind them is still the generic cloud layer, and making it read as that nebula is its own drawing.
+**Ember Nebula is DONE** — [0207](decisions/0207-the-eagle-has-lanes.md) gave its weather dark dust
+lanes, which is what the Pillars' own sentence looks like at the scale of the sky. Density was never
+the problem: that place already had the thickest clouds in the game and still read as a smooth wash,
+because soft gradients are fog at any setting and **no axis 0196 had could produce an edge.**
 
 The original argument, kept because the reasoning is what transfers:
 

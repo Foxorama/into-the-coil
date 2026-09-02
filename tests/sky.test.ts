@@ -22,6 +22,7 @@ import {
   atlasIsStale,
   bakeSize,
   cloudCover,
+  dustLanes,
   fieldOf,
   nebulaField,
   skyField,
@@ -464,9 +465,22 @@ describe('0203 — the sky may hold a landmark, and the rule is a band', () => {
       because a second copy of the rule is the drift
       `docs/decisions/0029-the-tracked-record-is-the-record.md` refuses.
     */
+    /*
+      ⚠️ **SCOPED TO THE CLOUD LOOP, AND THE FIRST VERSION SCANNED THE WHOLE FILE.** `npm run prove`
+      caught it the moment 0207 gave the dust lanes a wrap loop of their own: with two wraps in the
+      file, breaking the CLOUD one left the string present in the LANE one and this guard stayed
+      green over exactly the defect it names. A guard that asks *does this text appear anywhere* is
+      answering a different question from the one it claims —
+      `docs/decisions/0027-measure-the-picture-not-the-model.md` one layer down, and the probe is
+      what said so.
+    */
     const bake = readFileSync(resolve(root, 'src/render/bake.ts'), 'utf8');
-    const wraps = bake.includes('for (const dx of [-size, 0, size])') &&
-      bake.includes('for (const dy of [-size, 0, size])');
+    const clouds = bake.slice(
+      bake.indexOf('for (const cloud of nebulaField'),
+      bake.indexOf('THE DUST, AFTER THE GAS'),
+    );
+    const wraps = clouds.includes('for (const dx of [-size, 0, size])') &&
+      clouds.includes('for (const dy of [-size, 0, size])');
     expect(
       wraps,
       'drawNebula no longer wraps its clouds, so a cloud crossing the tile edge is cut off there — ' +
@@ -483,6 +497,33 @@ describe('0203 — the sky may hold a landmark, and the rule is a band', () => {
       'no cloud in any place reaches a tile edge — the wrap is now guarding nothing, which means the ' +
         'placement has quietly grown a margin and the sky is banding towards the middle instead',
     ).not.toEqual([]);
+  });
+
+  it('0207 — a dust lane arrives where it left, or the seam is back', () => {
+    /*
+      ⚠️ **STRICTER THAN 0206's WRAP, AND THE DIFFERENCE IS THE WHOLE BUG.** A cloud is a disc, so
+      drawing it again at ±size carries its own shape with it. A lane crosses the ENTIRE tile, so the
+      copy one tile over only joins up if the lane ARRIVES at the right edge where it LEFT the left
+      one. Get that wrong and 0206's seam is back in a new costume — a dark band with a step in it,
+      arriving on a schedule.
+
+      `docs/decisions/0192-a-guard-holds-an-invariant.md`: name a content change that would redden
+      this and be correct. A lane whose ends disagree is never correct, at any width or wander.
+    */
+    const size = bakeSize(SPRITE_EXTENT.skyNebula, 6);
+    const lanes = dustLanes(size, 'nebula');
+    expect(lanes, 'Ember Nebula has no dust lanes, so its weather is a smooth wash again').not.toEqual([]);
+    for (const lane of lanes) {
+      const first = lane.points[0]!;
+      const last = lane.points[lane.points.length - 1]!;
+      expect(last[1], `a lane starts at y=${first[1]} and ends at y=${last[1]} — it steps at the seam`).toBeCloseTo(
+        first[1]!,
+        6,
+      );
+      // And it spans the tile, or wrapping it end to end is meaningless.
+      expect(first[0]).toBeCloseTo(0, 6);
+      expect(last[0]).toBeCloseTo(size, 6);
+    }
   });
 
   it('0204 — the landmark is re-baked at the boundary wherever the weather is', () => {
