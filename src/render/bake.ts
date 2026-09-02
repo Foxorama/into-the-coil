@@ -1558,7 +1558,7 @@ export function drawKind(
         like on the title screen and on any level that has not said otherwise, so the layer is never
         missing and never a hole in the atlas.
       */
-      drawNebula(ctx, palette.sky, size, theme);
+      drawNebula(ctx, palette.sky, palette.space, size, theme);
       return;
     /*
       ── THE EDGE OF THE PLAYER'S BOX ────────────────────────────────────────────────────────────
@@ -2094,7 +2094,42 @@ export function nebulaField(size: number, theme: ThemeKind = 'approach'): Nebula
  * shape with no boundary anywhere in it — which is the property the amendment rests on. A
  * `filter: blur()` would be a boundary softened by an amount that varies with the bake resolution.
  */
-function drawNebula(ctx: Pen, colour: string, size: number, theme: ThemeKind): void {
+/**
+ * The dark dust lanes that thread through a place's gas — 0207.
+ *
+ * ⚠️ **PERIODIC ACROSS THE TILE, WHICH IS STRICTER THAN 0206's WRAP.** A cloud is a disc: drawing it
+ * again at ±`size` is enough, because the copy carries its own shape with it. A lane crosses the
+ * whole tile, so wrapping alone is not enough — it also has to ARRIVE at the right edge where it
+ * LEFT the left one. `y` at `x = size` is forced equal to `y` at `x = 0`, and without that the seam
+ * 0206 was written for comes straight back in a new costume.
+ *
+ * ⚠️ **The lanes are what make it THIS nebula rather than gas.** Soft overlapping gradients read as
+ * fog at any density — Ember Nebula already had the thickest weather in the game
+ * (`SKY_STYLE_OF.nebula`) and still looked like a smooth wash. What the eye reads as a nebula is dark
+ * dust in front of light, which is the same sentence the Pillars are drawn from.
+ */
+export function dustLanes(size: number, theme: ThemeKind): { points: number[][]; width: number }[] {
+  if (theme !== 'nebula') return []; // Authored per place — 0203's rule, one place at a time.
+  const rng = makeRng('sky').stream(`${theme}/lanes`);
+  const lanes: { points: number[][]; width: number }[] = [];
+  for (let i = 0; i < 3; i += 1) {
+    const start = rng.range(0.15, 0.85) * size;
+    const points: number[][] = [];
+    const steps = 8;
+    // The wander is generated first so the last point can be made to equal the first.
+    const drift: number[] = [];
+    for (let s = 0; s <= steps; s += 1) drift.push(rng.range(-0.09, 0.09) * size);
+    let y = start;
+    for (let s = 0; s <= steps; s += 1) {
+      points.push([(s / steps) * size, s === steps ? start : y]);
+      y += drift[s]!;
+    }
+    lanes.push({ points, width: rng.range(0.05, 0.11) * size });
+  }
+  return lanes;
+}
+
+function drawNebula(ctx: Pen, colour: string, space: string, size: number, theme: ThemeKind): void {
   for (const cloud of nebulaField(size, theme)) {
     /*
       ⚠️ **THE INNER CIRCLE IS OFFSET AND ITS RADIUS IS STILL ZERO** — 0196. A zero-radius inner circle
@@ -2133,6 +2168,33 @@ function drawNebula(ctx: Pen, colour: string, size: number, theme: ThemeKind): v
         ctx.arc(x, y, cloud.r, 0, Math.PI * 2);
         ctx.fill();
       }
+    }
+  }
+
+  /*
+    ── THE DUST, AFTER THE GAS ─────────────────────────────────────────────────────────────────────
+
+    ⚠️ **IN THE SPACE COLOUR, ON TOP, EXACTLY AS THE PILLARS ARE — 0204.** Dust is a hole in the
+    light, not a shape in front of it, and drawing the two the same way is what makes the near view
+    and the wide view read as the same object.
+
+    ⚠️ **WRAPPED IN x ONLY, BECAUSE A LANE RUNS ALONG THE TILING AXIS.** The lanes are authored across
+    the tile and made periodic in `dustLanes`, so the ±`size` copies join end to end. A `dy` copy
+    would be a second lane at a random height rather than the same lane continuing, which is the
+    opposite of what 0206 asks for.
+  */
+  ctx.strokeStyle = space;
+  ctx.lineCap = 'round';
+  for (const lane of dustLanes(size, theme)) {
+    ctx.lineWidth = lane.width;
+    ctx.globalAlpha = 0.55;
+    for (const dx of [-size, 0, size]) {
+      ctx.beginPath();
+      ctx.moveTo(lane.points[0]![0]! + dx, lane.points[0]![1]!);
+      for (let i = 1; i < lane.points.length; i += 1) {
+        ctx.lineTo(lane.points[i]![0]! + dx, lane.points[i]![1]!);
+      }
+      ctx.stroke();
     }
   }
   ctx.globalAlpha = 1;
@@ -2212,14 +2274,20 @@ export function cloudCover(size: number, theme: ThemeKind, step = 4): number {
   return worst;
 }
 
-export function bakeNebula(atlas: Atlas, colour: string, pixelsPerUnit: number, theme: ThemeKind = 'approach'): void {
+export function bakeNebula(
+  atlas: Atlas,
+  colour: string,
+  space: string,
+  pixelsPerUnit: number,
+  theme: ThemeKind = 'approach',
+): void {
   const size = bakeSize(SPRITE_EXTENT.skyNebula, pixelsPerUnit);
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext('2d');
   if (ctx === null) return;
-  drawNebula(ctx, colour, size, theme);
+  drawNebula(ctx, colour, space, size, theme);
   (atlas.bitmaps as CanvasImageSource[])[SPRITE.skyNebula] = canvas;
 }
 

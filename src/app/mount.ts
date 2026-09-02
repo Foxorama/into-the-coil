@@ -1185,7 +1185,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     }
     const clouds =
       state.screen.current === 'playing' ? THEMES[world.level.theme].nebula[palette] : PALETTES[palette].sky;
-    bakeNebula(atlas, clouds, view.scale * dpr, place);
+    bakeNebula(atlas, clouds, colours.space, view.scale * dpr, place);
     // The landmark takes the same gas colour as the weather — 0203. One place, one colour, so the
     // pillars are lit by the nebula they stand in rather than by a palette that never heard of it.
     bakeLandmark(atlas, clouds, colours.space, view.scale * dpr, place);
