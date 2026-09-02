@@ -2129,6 +2129,54 @@ export function dustLanes(size: number, theme: ThemeKind): { points: number[][];
   return lanes;
 }
 
+/**
+ * The growth that hangs down into The Toxic Mire — 0208.
+ *
+ * ⚠️ **IT HANGS RATHER THAN RISES, AND THAT IS THE PLACE'S OWN SENTENCE.** `THEMES.mire` says *"the
+ * mire SEEPS — the one place whose whole character is that it reaches you before you reach it"*, and
+ * its mix is built around *"a thing singing from under the water"*. Growth reaching DOWN at the
+ * player is that in one shape; the Pillars rise, so the two places cannot be confused for each
+ * other's art, which is what *"none of those elements are transposable"* asks for.
+ *
+ * ⚠️ **A FROND IS A LOCAL OBJECT, SO 0206's WRAP IS ENOUGH AND 0207's PERIODICITY IS NOT NEEDED.** A
+ * dust lane crosses the whole tile and therefore has to arrive where it left; a frond is rooted in
+ * one spot and hangs a short way, so the copy at ±`size` carries its whole shape with it exactly as a
+ * cloud's does. The difference is stated because getting it backwards in either direction is a seam.
+ *
+ * ⚠️ **DARK, WHICH IS NOT A TASTE HERE.** `docs/decisions/0196-the-backdrop-is-rounded-out.md`
+ * measured The Toxic Mire and Ember Nebula at about a third of the contrast headroom the other five
+ * places have, because their weather is thickest. Dust in the space colour SPENDS none and buys some
+ * back; a bright structure in the same place would have had to argue with the gameplay floor.
+ */
+export function hangingFronds(size: number, theme: ThemeKind): { points: number[][]; width: number }[] {
+  if (theme !== 'mire') return []; // Authored per place — 0203's rule, one place at a time.
+  const rng = makeRng('sky').stream(`${theme}/fronds`);
+  const fronds: { points: number[][]; width: number }[] = [];
+  for (let i = 0; i < 10; i += 1) {
+    /*
+      Rooted just off the lane's top edge. The tile is twice the lane across and blitted centred, so
+      tile `y` 0.25 to 0.75 is the lane itself — 0.12 puts the root out of sight and the frond
+      reaches into view, which is what makes it read as coming from somewhere rather than starting.
+    */
+    const x = rng.range(0, 1) * size;
+    const reach = rng.range(0.28, 0.55) * size;
+    const points: number[][] = [];
+    const steps = 6;
+    /*
+      ⚠️ **THE SWAY ACCUMULATES AND IS NOT RE-DRAWN EACH STEP**, so a frond leans and keeps leaning
+      rather than jittering about its root. A per-step random offset reads as a zigzag; a random
+      WALK reads as something hanging in a current, which is the difference between weed and wire.
+    */
+    let sway = 0;
+    for (let s = 0; s <= steps; s += 1) {
+      sway += rng.range(-0.05, 0.05) * size;
+      points.push([x + sway, 0.12 * size + (s / steps) * reach]);
+    }
+    fronds.push({ points, width: rng.range(0.012, 0.032) * size });
+  }
+  return fronds;
+}
+
 function drawNebula(ctx: Pen, colour: string, space: string, size: number, theme: ThemeKind): void {
   for (const cloud of nebulaField(size, theme)) {
     /*
@@ -2195,6 +2243,35 @@ function drawNebula(ctx: Pen, colour: string, space: string, size: number, theme
         ctx.lineTo(lane.points[i]![0]! + dx, lane.points[i]![1]!);
       }
       ctx.stroke();
+    }
+  }
+
+  /*
+    ── AND THE GROWTH THAT HANGS INTO IT ───────────────────────────────────────────────────────────
+
+    ⚠️ **TAPERED SEGMENT BY SEGMENT, BECAUSE A `Pen` HAS NO VARIABLE-WIDTH STROKE.** A frond that is
+    the same thickness at its tip as at its root reads as a wire. Each segment is stroked at its own
+    width, narrowing towards the end, which is the cheapest thing that reads as growth — and it costs
+    bake time only.
+
+    ⚠️ **WRAPPED IN x LIKE A CLOUD AND NOT MADE PERIODIC LIKE A LANE — 0206 and 0207 respectively.**
+    A frond is local: it is rooted in one spot and hangs a short way, so the copy one tile over
+    carries its whole shape. Only a structure that CROSSES the tile has to arrive where it left.
+  */
+  ctx.strokeStyle = space;
+  ctx.lineCap = 'round';
+  for (const frond of hangingFronds(size, theme)) {
+    ctx.globalAlpha = 0.6;
+    for (const dx of [-size, 0, size]) {
+      for (let i = 1; i < frond.points.length; i += 1) {
+        // Full width at the root, almost nothing at the tip — a frond that keeps its thickness all
+        // the way down reads as a wire, and the taper is the whole of what makes it growth.
+        ctx.lineWidth = Math.max(0.5, frond.width * (1 - (i / frond.points.length) * 0.94));
+        ctx.beginPath();
+        ctx.moveTo(frond.points[i - 1]![0]! + dx, frond.points[i - 1]![1]!);
+        ctx.lineTo(frond.points[i]![0]! + dx, frond.points[i]![1]!);
+        ctx.stroke();
+      }
     }
   }
   ctx.globalAlpha = 1;

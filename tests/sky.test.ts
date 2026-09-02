@@ -23,6 +23,7 @@ import {
   bakeSize,
   cloudCover,
   dustLanes,
+  hangingFronds,
   fieldOf,
   nebulaField,
   skyField,
@@ -523,6 +524,49 @@ describe('0203 — the sky may hold a landmark, and the rule is a band', () => {
       // And it spans the tile, or wrapping it end to end is meaningless.
       expect(first[0]).toBeCloseTo(0, 6);
       expect(last[0]).toBeCloseTo(size, 6);
+    }
+  });
+
+  it('0208 — a frond is LOCAL, which is what makes 0206’s wrap enough for it', () => {
+    /*
+      ⚠️ **THE INVARIANT IS WHICH SEAM RULE APPLIES, AND THERE ARE NOW TWO.** 0206 wraps a cloud at
+      ±size, which works because a disc carries its whole shape with it. 0207 additionally forces a
+      dust lane to ARRIVE where it LEFT, because a lane crosses the entire tile and a wrap alone
+      leaves a step in it.
+
+      A frond takes the first rule and not the second — it is rooted in one spot and hangs a short
+      way. **That is only true while it stays local.** A frond that wandered as wide as the tile
+      would need 0207's treatment and would not be getting it, and the failure is a seam that nobody
+      would connect to a sway constant.
+
+      `docs/decisions/0192-a-guard-holds-an-invariant.md`: a frond as wide as its own tile is never
+      correct under the rule it is drawn by.
+    */
+    const size = bakeSize(SPRITE_EXTENT.skyNebula, 6);
+    const fronds = hangingFronds(size, 'mire');
+    expect(fronds, 'The Toxic Mire has no growth, so its weather is a smooth green wash again').not.toEqual([]);
+    for (const frond of fronds) {
+      const xs = frond.points.map((p) => p[0]!);
+      const spread = Math.max(...xs) - Math.min(...xs);
+      expect(
+        spread,
+        `a frond wanders ${spread.toFixed(0)} of a ${size} tile — past half it is a tile-crossing ` +
+          'structure wearing a local one’s wrap, and 0207’s periodicity would be owed instead',
+      ).toBeLessThan(size / 2);
+    }
+  });
+
+  it('0203 — a place’s structure is its own, and is not handed to the other six', () => {
+    /*
+      *"None of those elements are transposable to a different level so we need to uniquely craft the
+      backdrop for each level."* The two authored so far must not leak into each other or into the
+      five still unwritten — a shared structure across places is
+      `docs/decisions/0196-the-backdrop-is-rounded-out.md`'s failure spelled differently.
+    */
+    const size = bakeSize(SPRITE_EXTENT.skyNebula, 6);
+    for (const theme of THEME_KINDS) {
+      if (theme !== 'nebula') expect(dustLanes(size, theme), `${theme} has Ember Nebula's dust lanes`).toEqual([]);
+      if (theme !== 'mire') expect(hangingFronds(size, theme), `${theme} has The Toxic Mire's growth`).toEqual([]);
     }
   });
 
