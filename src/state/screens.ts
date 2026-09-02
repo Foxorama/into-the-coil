@@ -20,9 +20,11 @@ import { GAME_TITLE } from '../brand.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
 import { SOUNDS, SOUND_KINDS } from '../content/sound.ts';
 import { STYLES, STYLE_KINDS } from '../content/styles.ts';
+// 0210: the music room's buttons ARE the place table — `state` sits above `content` on 0015's ladder.
+import { THEMES, THEME_KINDS } from '../content/themes.ts';
 
 /** Every screen, in no particular order — nothing indexes this list by position. Closed. */
-export const SCREEN_KINDS = ['title', 'playing', 'gameOver', 'cleared', 'victory'] as const;
+export const SCREEN_KINDS = ['title', 'playing', 'gameOver', 'cleared', 'victory', 'music'] as const;
 
 /**
  * Where the player is. Derived from the list, so a screen cannot exist in the union and be missing
@@ -204,7 +206,16 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    */
   title: {
     heading: GAME_TITLE,
-    actions: DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })),
+    /*
+      ⚠️ **THE TIERS FIRST AND THE MUSIC ROOM LAST, AND THE ORDER IS LOAD-BEARING** — 0210.
+      `src/app/mount.ts` narrows the index it is handed against `DIFFICULTY_KINDS`, so anything
+      appended past the end of that table is not a tier and is routed as such. Putting the music room
+      first would silently make it a difficulty.
+    */
+    actions: [
+      ...DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })),
+      { label: 'Music', hint: '' },
+    ],
     /*
       ⚠️ **THE FIRST SETTING, AND IT IS ON THE TITLE SCREEN RATHER THAN BEHIND ONE** —
       `docs/decisions/0070-a-style-is-a-setting-and-the-first-one.md`. A settings screen is real and
@@ -321,4 +332,32 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    * rather than the end of the game — and the wording says only what is true.
    */
   victory: { heading: 'Coil cleared', actions: [{ label: 'Again', hint: '' }], choices: [], steps: false, dims: true, timeout: null },
+  /*
+    ── THE MUSIC ROOM — `docs/decisions/0210-the-title-plays-the-music.md` ──────────────────────────
+
+    Asked for: *"a menu option to the start screen for music that allows a user to select a level and
+    play the music, or play all, which runs through the music from level to level and then restarts
+    at level 1."*
+
+    ⚠️ **BUILT BY WALKING `THEME_KINDS`, SO THE BUTTONS ARE THE TABLE.** The same argument the tiers
+    and the style options make one screen up: a place added to `src/content/themes.ts` appears here
+    without anybody remembering to come and add it, and the order is the table's order, which is the
+    order a run meets them in.
+
+    ⚠️ **`steps: false`.** Nothing is simulated here — no run exists, the camera does not move, and
+    the only thing happening is the mixer. A screen that stepped would be a run the player did not
+    start, which is the loss `title` deliberately took.
+  */
+  music: {
+    heading: 'Music',
+    actions: [
+      ...THEME_KINDS.map((kind) => ({ label: THEMES[kind].title, hint: '' })),
+      { label: 'Play all', hint: 'each place in turn, then round again' },
+      { label: 'Back', hint: '' },
+    ],
+    choices: [],
+    steps: false,
+    dims: true,
+    timeout: null,
+  },
 };

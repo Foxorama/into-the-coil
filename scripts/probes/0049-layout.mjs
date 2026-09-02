@@ -16,8 +16,20 @@ export const PROBES = [
     suite: 'tests/layout.browser.test.ts',
     // The reported bug itself: the key stacked above the tiers, so six things run down the axis that
     // has 375 pixels of it. Looks perfect on a laptop.
+    /*
+      ⚠️ **RE-ANCHORED BY 0210, AND THE MOVE IS THE INTERESTING PART.** This expected the failure on
+      *the phone this bug was reported from* — 812x375. It no longer lands there: 0210 gave the title
+      screen a two-column grid below 460px tall, so the screen is compact enough that stacking its
+      BODY no longer overflows that device on its own.
+      **The break is still caught**, one assertion over: the panel ends up centred off the top, where
+      nothing can scroll to it. So the guard still fires on the thing this probe exists to catch, and
+      what changed is which of the layout guard's claims notices first.
+      ⚠️ It is re-anchored rather than made bigger on purpose. Widening the break until it reddened
+      the original assertion again would be tuning the PROBE to the answer, which is the shape
+      docs/decisions/0044 refuses.
+    */
     broke: 'the title screen stacked down the short axis again, instead of across the long one',
-    guard: 'the phone this bug was reported from',
+    guard: 'keeps its first line on the display and its last control one scroll away',
     edit: {
       path: 'src/app/chrome.ts',
       find: '  grid-template-columns: minmax(0, 7fr) minmax(0, 11fr);',
@@ -38,11 +50,24 @@ export const PROBES = [
       stylesheet, and the demonstration is the declaration that can actually be seen to matter.
     */
     broke: 'the heading typeset at a fixed size rather than as a fraction of the box it has to fit',
-    // ⚠️ The FIT test does not fire on this and the no-scrolling one does, which is worth knowing:
-    // what a too-large heading pushes past the bottom edge first is the panel's own padding, and
-    // padding is not a box any assertion about boxes can see. The screen has stopped fitting well
-    // before anything on it has left the display.
-    guard: 'needs no scrolling on any of them',
+    /*
+      ⚠️ **RE-ANCHORED BY 0210 ONTO A GUARD THAT MEASURES THE SIZE RATHER THAN THE OVERFLOW.** This
+      used to point at the no-scrolling assertion, and the note here read: *the FIT test does not fire
+      on this and the no-scrolling one does — what a too-large heading pushes past the bottom edge
+      first is the panel's own padding.* Both were true while the title screen was tight.
+
+      0210 gave that screen about 97 pixels of headroom, and **a fixed heading then FITS** — so every
+      overflow assertion went green over a break that is exactly as wrong as it always was. This probe
+      is what found it: *the suite stayed GREEN, the guard does not fire on the thing it exists to
+      catch.*
+
+      ⚠️ **THE FIX WAS A BETTER GUARD, NOT A BIGGER BREAK.** 3.5rem is the clamp's own maximum — the
+      desktop size worn on a phone — so it is the honest hazard and inflating it would be tuning the
+      probe to the answer (docs/decisions/0044). What changed is what is measured: the heading's
+      COMPUTED SIZE on two boxes of different heights, which is the property 0049 states, rather than
+      the overflow that used to be its symptom.
+    */
+    guard: 'the heading is a fraction of the box',
     edit: {
       path: 'src/app/chrome.ts',
       find: '.itc-title-heading { font-size: clamp(1.25rem, min(6cqw, 9cqh), 3.5rem);',

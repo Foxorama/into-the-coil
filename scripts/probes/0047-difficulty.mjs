@@ -77,9 +77,12 @@ export const PROBES = [
     guard: 'offers every tier, in the table order, easiest first',
     edit: {
       path: 'src/state/screens.ts',
-      find: '    actions: DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })),',
+      // ⚠️ Re-anchored by 0210, which appended the music room after the tiers so the map is now one
+      // entry in a list rather than the whole `actions` array. The break is the same one it has
+      // always been: the tiers in the wrong order, which reads hardest-first to a player.
+      find: '      ...DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })),',
       replace:
-        '    actions: DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })).reverse(),',
+        '      ...DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })).reverse(),',
     },
   },
   {

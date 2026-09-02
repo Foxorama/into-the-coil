@@ -69,7 +69,42 @@ export const SETTING_ATTR = 'data-itc-setting';
  * ids, nothing that could reach outside this overlay — the page is also hosting a canvas and, on
  * itch.io, an iframe inside somebody else's document.
  */
-const STYLE = `
+/**
+ * The screens that draw an overlay panel, and therefore need styling.
+ *
+ * ⚠️ **DERIVED, AND IT WAS EIGHT HAND-WRITTEN LISTS UNTIL 0210.** Every selector below used to name
+ * the four screens explicitly — `.itc-title, .itc-gameover, .itc-cleared, .itc-victory` — in eight
+ * places. Adding a fifth screen produced one that **routed correctly, mounted correctly, reported
+ * itself shown, and was completely invisible**, because `display: none` is the default and the rule
+ * that lifts it did not name it. Nothing failed; there was simply nothing on the screen.
+ *
+ * `playing` is the one screen with no heading and no controls — it IS the game — so the predicate is
+ * what a panel is rather than a list of which screens have one.
+ */
+const PANELLED: readonly Screen[] = (Object.keys(SCREENS) as Screen[]).filter(
+  (screen) => SCREENS[screen].heading !== '' || SCREENS[screen].actions.length > 0,
+);
+
+/**
+ * `.itc-title-action, .itc-gameover-action, …` — one selector list, for any part of a panel.
+ *
+ * ⚠️ **THROUGH `prefixFor`, AND THE FIRST DRAFT INTERPOLATED THE SCREEN NAME RAW.** That emitted
+ * `.itc-gameOver-shown` while the DOM carries `itc-gameover-shown` — a capital in the middle of a
+ * class, matching nothing, on the one screen whose name is camelCase. **`tests/chrome.test.ts` caught
+ * it on the first run**, which is the prefix rule earning its keep against the very refactor that
+ * was meant to make screens safer to add.
+ */
+const each = (part = ''): string => PANELLED.map((screen) => `.${prefixFor(screen).slice(0, -1)}${part}`).join(', ');
+
+/**
+ * ⚠️ **EXPORTED SINCE 0210, AND IT IS A CONTRACT WITH `tests/chrome.test.ts` RATHER THAN A CONVENIENCE.**
+ * The guards used to regex this literal out of the source file. That worked while every selector was
+ * spelled out; the moment `${each()}` interpolated one, a source scan started reading the template
+ * hole instead of the classes — **so the prefix guard would have gone on passing over a stylesheet it
+ * could no longer see.** A guard that reads source cannot follow a template, and the fix is to hand
+ * it the evaluated string, on the same terms `prefixFor` is exported.
+ */
+export const STYLE = `
 /*
   ⚠️ **THE OVERLAY IS A SCROLL CONTAINER AND A QUERY CONTAINER, AND BOTH ARE LOAD-BEARING.**
   Decision 0049. It is a query container so every size below can be a fraction of THIS BOX rather
@@ -81,14 +116,14 @@ const STYLE = `
   written on this element resolves against its own nearest ANCESTOR container, which is the page.
   Everything sized against the short axis therefore lives on the panel below.
 */
-.itc-title, .itc-gameover, .itc-cleared, .itc-victory {
+${each()} {
   position: absolute;
   inset: 0;
   display: none;
   overflow: auto;
   container-type: size;
 }
-.itc-title-shown, .itc-gameover-shown, .itc-cleared-shown, .itc-victory-shown { display: flex; }
+${each('-shown')} { display: flex; }
 /*
   ── A SCREEN THAT DOES NOT DIM ──────────────────────────────────────────────────────────────────
 
@@ -111,7 +146,7 @@ const STYLE = `
   the heading was off the top of the screen and the third tier was off the bottom. Auto margins
   distribute POSITIVE free space only, so an overflowing panel falls back to the top and scrolls.
 */
-.itc-title-panel, .itc-gameover-panel, .itc-cleared-panel, .itc-victory-panel {
+${each('-panel')} {
   margin: auto;
   display: flex;
   flex-direction: column;
@@ -138,7 +173,7 @@ const STYLE = `
   font: 600 clamp(0.85rem, 5.4cqh, 1.25rem)/1.35 system-ui, sans-serif;
 }
 .itc-title-heading { font-size: clamp(1.25rem, min(6cqw, 9cqh), 3.5rem); letter-spacing: 0.02em; margin: 0; }
-.itc-gameover-heading, .itc-cleared-heading, .itc-victory-heading {
+.itc-gameover-heading, .itc-cleared-heading, .itc-victory-heading, .itc-music-heading {
   font-size: clamp(1.1rem, min(5cqw, 8cqh), 2.75rem);
   margin: 0;
 }
@@ -177,13 +212,53 @@ const STYLE = `
   gap: min(0.4rem, 1.2cqh) min(2.5rem, 4cqw);
   width: 100%;
 }
-.itc-title-choices, .itc-gameover-choices, .itc-cleared-choices, .itc-victory-choices {
+${each('-choices')} {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: min(1.5rem, 3.5cqh);
 }
-.itc-title-action, .itc-gameover-action, .itc-cleared-action, .itc-victory-action {
+/*
+  ── THE MUSIC ROOM WRAPS, BECAUSE NINE CONTROLS DO NOT STACK — 0210 ─────────────────────────────
+
+  ⚠️ **NO BACKTICKS IN THIS COMMENT, AND THE FIRST DRAFT HAD THREE.** The stylesheet is a JS template
+  literal, so a backtick in a CSS comment closes it and the file stops parsing — which is exactly the
+  hazard decision 0200 is about, met inside
+  the file rather than in a shell.
+
+  ⚠️ **the layout guard REFUSED THE COLUMN ON EVERY DEVICE IT CHECKS**, down to the
+  480×320 landscape phone and up to a 1280×720 laptop. Seven places, *Play all* and *Back* in one
+  column is taller than any of them, and that guard's own words are *scrolling is the net and not the
+  design* — the overlay scrolls so nothing is ever lost, not so a screen can be built too tall.
+
+  A wrapping row costs nothing on a wide screen and is the whole fix on a short one. The buttons are
+  narrower here than on the title screen for the same reason: a place's name is two or three words,
+  where a tier's is a sentence with a hint under it.
+*/
+/*
+  ── AND THE TITLE WRAPS ON A SHORT SCREEN, FOR THE SAME REASON — 0210 ───────────────────────────
+
+  ⚠️ **THE FOURTH CONTROL IS WHAT COST THIS.** Three tiers fitted a 480x320 landscape phone with the
+  cq-clamped type and gaps this file already uses; a fourth did not, on four of the six devices
+  the layout guard checks. Dropping the hint was tried first and was not enough — the
+  button itself is the height, not its second line.
+
+  ⚠️ **A CONTAINER QUERY AND NOT A MEDIA QUERY, AND IT IS THE FIRST IN THE FILE.** Decision 0049 put
+  container-type: size on the overlay precisely so the chrome is authored against THE BOX THE PLAYER
+  IS LOOKING AT rather than the viewport — on a page that embeds the game those are different
+  numbers, and a media query would answer for the wrong one.
+
+  460px is above every phone height the guard checks and below the tablet, so a desktop is untouched.
+*/
+.itc-music-choices {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: min(0.6rem, 2cqh) min(0.6rem, 1.5cqw);
+  max-width: min(100%, 60ch);
+}
+.itc-music-action { width: min(100%, 18ch); }
+${each('-action')} {
   font: inherit;
   padding: 0.55em 1em;
   border-radius: 0.4em;
@@ -197,7 +272,7 @@ const STYLE = `
   running on after it — three tiers whose names wrap into each other is a choice nobody can read at a
   glance, and the choice is the whole screen.
 */
-.itc-title-action-hint {
+.itc-title-action-hint, .itc-music-action-hint {
   display: block;
   font-size: 0.62em;
   font-weight: 400;
@@ -215,7 +290,7 @@ const STYLE = `
   drawing a button the width of a table.
 */
 .itc-title-action { width: min(100%, 32ch); }
-.itc-title-action:hover, .itc-gameover-action:hover, .itc-cleared-action:hover, .itc-victory-action:hover {
+${each('-action:hover')} {
   background: rgba(255, 255, 255, 0.12);
 }
 /*
@@ -236,14 +311,8 @@ const STYLE = `
   string; and the prefix guard reads every dotted token in this block as a CSS class, so a path with
   an extension on it fails as an unprefixed class name. Both were hit while writing this comment.
 */
-.itc-title-action:focus-visible,
-.itc-gameover-action:focus-visible,
-.itc-cleared-action:focus-visible,
-.itc-victory-action:focus-visible,
-.itc-title-action-cursor,
-.itc-gameover-action-cursor,
-.itc-cleared-action-cursor,
-.itc-victory-action-cursor {
+${each('-action:focus-visible')},
+${each('-action-cursor')} {
   outline: 3px solid currentColor;
   outline-offset: 3px;
 }
@@ -458,6 +527,94 @@ const STYLE = `
 }
 .itc-playing-strip-band:last-child { border-bottom: none; }
 .itc-playing-strip-icon { display: block; width: 1.6em; height: 1.6em; }
+@container (max-height: 460px) {
+  /*
+    Two columns for four controls, on the same argument the music room's three make below: a wrap
+    decided by a ch width is decided by the runner's font, and this one only passed CI by luck.
+  */
+  .itc-title-choices {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: min(0.6rem, 2cqh) min(0.6rem, 1.5cqw);
+    max-width: min(100%, 64ch);
+  }
+  .itc-title-action { width: 100%; }
+  /*
+    The wrap alone left the settings row 8px off a 480x320 and 2px off a 667x375 — measured, not
+    guessed. The panel's own gap and the heading are the two things above it with any give, and both
+    are already authored against the short axis, so tightening them here is the same argument one
+    step further rather than a new one.
+  */
+  .itc-title-panel { gap: min(0.6rem, 1.6cqh); }
+  /*
+    ⚠️ **THE TIER HINTS GO, AND IT BUYS FORTY PIXELS WHERE FOURTEEN WERE NEEDED.** That margin is the
+    point: CI failed here by 14px while this machine passed, because the runner resolves a wider font
+    and the same layout comes out taller. Shaving exactly 14px would have been tuning to a font I
+    cannot see, and the next round would have been another 4-minute CI run to find out.
+
+    ⚠️ **The LABEL is the choice and the hint is elaboration**, which is what makes this a responsive
+    adaptation rather than a loss: *Legendary Pilot* still says which tier it is. The product definition's voice
+    rule — say the one thing and stop — points the same way on the one screen with no room for the
+    second thing. The hints are still in the table, still read by the tests that hold every tier says
+    what it is, and still shown on every device with the height for them.
+  */
+  .itc-title-action-hint { display: none; }
+  /*
+    ⚠️ **THE HEADING IS DELIBERATELY NOT OVERRIDDEN HERE, AND IT WAS AT FIRST.**
+    docs/decisions/0049 has a probe that breaks the heading's own rule — typesetting it at a fixed
+    size instead of a fraction of the box — and expects the layout guard to catch it. An override in
+    this block WINS ON EVERY SHORT SCREEN, which is exactly where that guard measures, so the probe's
+    break stopped having any effect and the suite **stayed green over it**. npm run prove said so:
+    *the guard does not fire on the thing it exists to catch.*
+
+    A rule that shadows another rule on the only devices a guard tests has disabled that guard, and
+    nothing about writing it looks like disabling a guard. The grid above is what buys the space
+    instead.
+  */
+  /*
+    ⚠️ **AND THE MUSIC ROOM TIGHTENS FURTHER, BECAUSE IT HAS NINE CONTROLS TO THE TITLE'S FOUR.** At
+    18ch a 667px-wide phone fits four to a row, which is three rows plus a heading, and *Back* landed
+    26px below the fold. Narrower buttons put five to a row and bring it back inside.
+  */
+  .itc-music-panel { gap: min(0.6rem, 1.6cqh); }
+  .itc-music-heading { font-size: clamp(0.9rem, min(4.5cqw, 5.5cqh), 1.8rem); }
+  /*
+    ⚠️ **A GRID WITH A FIXED COLUMN COUNT, BECAUSE A ch-WIDTH WRAP IS NOT PORTABLE.** The first
+    version sized these buttons in ch and let flex decide how many fitted a row. That passed here and
+    FAILED IN CI BY 64 PIXELS — a headless runner resolves a different font, ch is a font metric, and
+    a wider one puts fewer buttons on a row and adds whole rows. Nine controls over three columns is
+    three rows on any font, which is the only version of this that is the same everywhere.
+
+    ⚠️ **AND IT IS THE SECOND TIME THIS SESSION A LOCAL GREEN WAS NOT A GREEN.** The lesson is the
+    one decision 0199 is about, one layer out: a check that passes on one machine has told you about
+    that machine.
+  */
+  .itc-music-choices {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    max-width: min(100%, 72ch);
+  }
+  /*
+    ⚠️ **nowrap IS THE OTHER HALF OF MAKING THIS PORTABLE.** Fixing the column count fixes how many
+    ROWS there are; it does not fix how tall a row is, because a wider font can wrap a place's name
+    onto a second line inside its own button and double it. One line per button, clipped inside the
+    button if it must be, keeps the height a property of the layout rather than of the runner.
+  */
+  .itc-music-action {
+    width: 100%;
+    font-size: clamp(0.55rem, min(2.4cqw, 3.4cqh), 0.95rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /*
+    The last 15px on a 480x320, and it comes out of the buttons' own padding rather than anything
+    the player reads. 0.55em to 0.35em is four pixels a button at this type size, over four buttons
+    plus the settings row below them. The touch target stays above the floor because the border and
+    the line box carry most of the height.
+  */
+  ${each('-action')} { padding: 0.35em 0.8em; }
+}
 `;
 
 /** A screen's overlay, the controls on it, and whatever else it has to say. */

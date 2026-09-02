@@ -565,7 +565,20 @@ describe('the title screen is the choice', () => {
       them in any other order would mislead a player who reasonably reads top-to-bottom as gentlest-
       to-worst.
     */
-    expect(SCREENS.title.actions.map((a) => a.label)).toEqual(DIFFICULTY_KINDS.map((k) => DIFFICULTIES[k].title));
+    /*
+      ⚠️ **THE TIERS ARE THE LEADING ACTIONS, NOT ALL OF THEM — 0210.** The music room is appended
+      after them, and `src/app/mount.ts` routes by exactly that: an index the difficulty table does
+      not cover is the button that is not a tier. Asserting the whole list would have made adding any
+      non-tier control to this screen a test change rather than a design decision — but asserting
+      only membership would let the music room be inserted FIRST, which would silently make it a
+      difficulty. The leading slice is the claim that matters.
+    */
+    const tiers = DIFFICULTY_KINDS.map((k) => DIFFICULTIES[k].title);
+    expect(SCREENS.title.actions.slice(0, tiers.length).map((a) => a.label)).toEqual(tiers);
+    expect(
+      SCREENS.title.actions.slice(tiers.length).map((a) => a.label),
+      'a control on the title screen past the tiers is routed as "not a tier" by mount',
+    ).not.toContain(tiers[0]);
   });
 
   it('and says which is which, because the titles do not', () => {

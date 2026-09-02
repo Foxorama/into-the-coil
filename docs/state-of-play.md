@@ -233,6 +233,8 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **THE TILE WRAPS ROUND — the seam, reported three times; the comment saying no margin was needed was half right and wholly wrong** | [0206](decisions/0206-the-tile-wraps-round.md) |
 | **THE EAGLE HAS LANES — dark dust over the gas; density was never the problem and no axis 0196 had could make an edge** | [0207](decisions/0207-the-eagle-has-lanes.md) |
 | **THE MIRE REACHES DOWN — growth hanging into the lane, and TWO SEAM RULES now exist: a structure takes a cloud's or a lane's depending on whether it crosses the tile** | [0208](decisions/0208-the-mire-reaches-down.md) |
+| **THE RIG HEARS IN STEREO — four of five modes folded a panned mix to mono, `--play` included; every guard about the width was green** | [0209](decisions/0209-the-rig-hears-in-stereo.md) |
+| **THE TITLE PLAYS THE MUSIC — a music room on the start screen; the fifth screen mounted INVISIBLE because the stylesheet named its four by hand** | [0210](decisions/0210-the-title-plays-the-music.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were
