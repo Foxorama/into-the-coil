@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
-import { prefixFor } from '../src/app/chrome.ts';
+import { STYLE, prefixFor } from '../src/app/chrome.ts';
 import { SCREENS, SCREEN_KINDS, type Screen } from '../src/state/screens.ts';
 
 /**
@@ -43,8 +43,16 @@ const source = readFileSync(resolve(root, CHROME), 'utf8');
  * the pattern deliberately does not try to parse CSS — it looks for the one token that makes a class
  * a class.
  */
-function classesInStyle(src: string): string[] {
-  const style = /const STYLE = `([\s\S]*?)`;/.exec(src)?.[1] ?? '';
+/*
+  ⚠️ **IT TAKES THE STYLESHEET, NOT THE SOURCE — 0210.** This used to regex `const STYLE = \`…\`` out
+  of the file, which worked while every selector was spelled out. The moment one was interpolated, a
+  source scan started reading the template hole instead of the classes, and **this guard would have
+  gone on passing over a stylesheet it could no longer see** — weaker, silently, with nothing red.
+
+  `chrome.ts` exports the evaluated string for exactly this. A guard that reads source cannot follow
+  a template.
+*/
+function classesInStyle(style: string): string[] {
   return [...new Set([...style.matchAll(/\.([A-Za-z][\w-]*)/g)].map((m) => m[1]!))];
 }
 
@@ -70,8 +78,7 @@ function literalClasses(src: string): string[] {
  * claim — a closer followed by an opener balances and is entirely broken. The walk answers the
  * question the CSS parser actually asks, which is *am I inside a comment right now*.
  */
-function commentFaults(src: string): string[] {
-  const style = /const STYLE = `([\s\S]*?)`;/.exec(src)?.[1] ?? '';
+function commentFaults(style: string): string[] {
   const out: string[] = [];
   let at = 0;
   let open = -1;
@@ -109,7 +116,7 @@ function isNamespaced(name: string): boolean {
 
 describe('every screen owns its class prefix', () => {
   it("every screen's chrome namespaces its classes", () => {
-    const strays = [...classesInStyle(source), ...literalClasses(source)].filter((c) => !isNamespaced(c));
+    const strays = [...classesInStyle(STYLE), ...literalClasses(source)].filter((c) => !isNamespaced(c));
     expect(
       strays,
       `these class names are not namespaced to a screen: ${strays.join(', ')}\n` +
@@ -123,7 +130,7 @@ describe('every screen owns its class prefix', () => {
     // The failure this catches: a screen added to `SCREENS` with a heading and no stylesheet, which
     // renders as unstyled text in the top-left corner and looks like a broken build rather than a
     // missing rule.
-    const styled = classesInStyle(source);
+    const styled = classesInStyle(STYLE);
     const missing = SCREEN_KINDS.filter((screen) => {
       const row = SCREENS[screen];
       if (row.heading.length === 0 && row.actions.length === 0) return false;
@@ -147,10 +154,10 @@ describe('every screen owns its class prefix', () => {
    * catch, so a typo'd pattern fails HERE rather than in six months.
    */
   it('the extractors find what they claim to find', () => {
-    expect(classesInStyle(source).length, 'the stylesheet scan found no classes — the pattern is broken').toBeGreaterThan(
+    expect(classesInStyle(STYLE).length, 'the stylesheet scan found no classes — the pattern is broken').toBeGreaterThan(
       4,
     );
-    expect(classesInStyle('const STYLE = `\n.hud { color: red; }\n.itc-title-heading { margin: 0; }\n`;')).toEqual([
+    expect(classesInStyle('\n.hud { color: red; }\n.itc-title-heading { margin: 0; }\n')).toEqual([
       'hud',
       'itc-title-heading',
     ]);
@@ -176,7 +183,7 @@ describe('every screen owns its class prefix', () => {
    * catches the whole class in a string scan, which is what it deserves.
    */
   it('every comment in the stylesheet is opened and closed, so no rule can be eaten by prose', () => {
-    expect(commentFaults(source), 'the stylesheet has a comment the CSS parser will not survive').toEqual([]);
+    expect(commentFaults(STYLE), 'the stylesheet has a comment the CSS parser will not survive').toEqual([]);
   });
 
   it('the comment scan finds the two ways a stylesheet comment breaks', () => {
@@ -203,5 +210,32 @@ describe('every screen owns its class prefix', () => {
     const gameOver: Screen = 'gameOver';
     expect(prefixFor(gameOver)).toBe('itc-gameover-');
     expect(prefixFor('title')).toBe('itc-title-');
+  });
+
+  it('0210 — every screen with a panel is styled, or it mounts INVISIBLE and nothing fails', () => {
+    /*
+      ⚠️ **THIS IS THE DEFECT 0210 HIT, AND IT REPORTED SUCCESS THE WHOLE TIME.** The stylesheet named
+      its four screens explicitly, in eight separate selector lists. Adding a fifth produced a screen
+      that routed correctly, mounted correctly, set its own `-shown` class, and **drew nothing** —
+      because `display: none` is the default and the rule that lifts it did not name it. The console
+      was clean, the DOM said the screen was shown, and the player saw an empty page.
+
+      ⚠️ **NO TEST COULD HAVE CAUGHT IT AND NONE DID.** `tests/chrome.test.ts` held the prefix rule,
+      which was satisfied; the browser tests drive the screens that existed. What was missing is the
+      only thing that matters here: **is there a rule that makes this screen visible.**
+
+      `docs/decisions/0192-a-guard-holds-an-invariant.md`: a panelled screen with no `-shown` rule is
+      never correct, at any styling.
+    */
+    const styled = STYLE;
+    for (const screen of SCREEN_KINDS) {
+      const row = SCREENS[screen];
+      if (row.heading === '' && row.actions.length === 0) continue; // `playing` IS the game.
+      expect(
+        styled.includes(`.${prefixFor(screen)}shown`),
+        `${screen} draws a panel and the stylesheet has no .${prefixFor(screen)}shown rule — it will ` +
+          'mount, report itself shown, and be invisible, which is exactly what 0210 shipped into',
+      ).toBe(true);
+    }
   });
 });

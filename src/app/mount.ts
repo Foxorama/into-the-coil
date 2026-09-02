@@ -11,7 +11,7 @@
  */
 
 import { PALETTES, type PaletteName } from '../content/palette.ts';
-import { THEMES, type ThemeKind } from '../content/themes.ts';
+import { THEMES, THEME_KINDS, type ThemeKind } from '../content/themes.ts';
 import { ACROSS_SPAN, MAX_ALONG_SPAN, type View, viewOf } from '../sim/camera.ts';
 import { type Entity, makeEntity, reset } from '../sim/entity.ts';
 import { Pool } from '../sim/pool.ts';
@@ -39,6 +39,8 @@ import { DEFAULT_SOUND, SOUND_KINDS } from '../content/sound.ts';
 import { DEFAULT_STYLE, STYLES, STYLE_KINDS } from '../content/styles.ts';
 import { nextOnGrid } from '../content/cadence.ts';
 import { auraBuild, auraFor, auraNearnessFor, musicLevelFor, placeFor } from './music.ts';
+// 0210: the music room holds each place for one loop before moving on.
+import { PHRASE_SECONDS } from '../content/music.ts';
 import { bakePlace, makeAudioOut, makeSpeaker, prewarmAudio } from './sound.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
@@ -1017,7 +1019,19 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     else if (screen === 'gameOver') lifecycle.resume();
     // `DIFFICULTY_KINDS` IS the order the title screen's buttons were built in
     // (`src/state/screens.ts` walks it), so the control's index reads straight off it.
-    else if (screen === 'title') lifecycle.begin(DIFFICULTY_KINDS[index] ?? DIFFICULTY_KINDS[0]!);
+    /*
+      `DIFFICULTY_KINDS` IS the order the title screen's buttons were built in
+      (`src/state/screens.ts` walks it), so the control's index reads straight off it.
+
+      ⚠️ **PAST THE END OF THAT TABLE IS NOT A TIER — 0210.** The music room is appended after the
+      tiers, so an index the difficulty table does not cover is the one button that is not one. The
+      old line used `?? DIFFICULTY_KINDS[0]` and would have started a run on the easiest tier instead.
+    */
+    else if (screen === 'title') {
+      const tier = DIFFICULTY_KINDS[index];
+      if (tier === undefined) dispatch({ slice: 'screen', type: 'show', screen: 'music' });
+      else lifecycle.begin(tier);
+    } else if (screen === 'music') onMusicRoom(index);
     else dispatch({ slice: 'screen', type: 'show', screen: 'title' });
   },
   /*
@@ -1203,8 +1217,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * one identical and does nothing. Six of the seven places are in that state today, and the title
    * screen is too.
    */
-  const bakeIncomingPlace = (): void => {
-    const theme = placeFor(state.run.level);
+  /*
+    ⚠️ **THE PLACE IS A PARAMETER SINCE 0210, DEFAULTING TO THE RUN'S.** The music room auditions a
+    place with no run in progress, so `placeFor(state.run.level)` is the right answer for a run and
+    the wrong one for a listener. Everything else about the bake — stopping the one in flight, the
+    guard against re-baking what is already loaded — is unchanged and now serves both callers.
+  */
+  const bakeIncomingPlace = (want?: ThemeKind): void => {
+    const theme = want ?? placeFor(state.run.level);
     if (theme === bakingTheme) return;
     /*
       ⚠️ **The one in flight is stopped rather than left to finish.** A run that clears two levels
@@ -1233,11 +1253,68 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     });
   };
 
+  /*
+    ── THE MUSIC ROOM — `docs/decisions/0210-the-title-plays-the-music.md` ─────────────────────────
+
+    ⚠️ **A LOCAL AND NOT A SLICE, AND THAT IS AN ARGUMENT RATHER THAN A SHORTCUT.**
+    `docs/decisions/0017-the-state-is-slices.md` holds the run, the screens and the settings — things
+    a save has to survive and a seeded test has to compare. Which place a listener is auditioning is
+    none of those: it is gone the moment they leave, it is not part of a run, and `shownTheme` and
+    `shownNearness` beside it are locals for the same reason.
+  */
+  let audition: ThemeKind | null = null;
+  let roundRobin: ReturnType<typeof setInterval> | null = null;
+
+  /** The rung the room plays. `run` is what a level spends most of its length at. */
+  const AUDITION_RUNG = 'run' as const;
+
+  const stopRoundRobin = (): void => {
+    if (roundRobin === null) return;
+    clearInterval(roundRobin);
+    roundRobin = null;
+  };
+
+  /**
+   * A control in the music room was pressed.
+   *
+   * ⚠️ **`THEME_KINDS` IS the order the buttons were built in** (`src/state/screens.ts` walks it), so
+   * the index reads straight off it — the same narrowing the tiers and the style options already do,
+   * and the reason nothing here casts a string into a `ThemeKind`.
+   */
+  function onMusicRoom(index: number): void {
+    const place = THEME_KINDS[index];
+    if (place !== undefined) {
+      stopRoundRobin();
+      audition = place;
+      return;
+    }
+    // Past the places: play-all, then back. Two buttons, in the order the row lists them.
+    if (index === THEME_KINDS.length) {
+      stopRoundRobin();
+      audition = THEME_KINDS[0]!;
+      /*
+        ⚠️ **ONE PHRASE EACH, AND IT WRAPS** — asked for as *"runs through the music from level to
+        level and then restarts at level 1"*. `PHRASE_SECONDS` is the loop's own length, so a place
+        is heard whole rather than cut mid-figure, and the modulo is what makes it round again rather
+        than stop at the seventh.
+      */
+      roundRobin = setInterval(() => {
+        const at = audition === null ? 0 : THEME_KINDS.indexOf(audition);
+        audition = THEME_KINDS[(at + 1) % THEME_KINDS.length]!;
+      }, PHRASE_SECONDS * 1000);
+      return;
+    }
+    stopRoundRobin();
+    audition = null;
+    dispatch({ slice: 'screen', type: 'show', screen: 'title' });
+  }
+
   const applyMusicLevel = (): void => {
     const music = audioOut.music();
     if (music === null) return;
     music.start();
-    bakeIncomingPlace();
+    // 0210: the room's place if one is being auditioned, the run's otherwise.
+    bakeIncomingPlace(audition ?? undefined);
     /*
       ⚠️ **`music.phaseTo(world.steps)` WAS THE LINE ABOVE THIS AND 0160 REMOVED IT.** It ran every
       frame and did nothing almost every time: it kept the loops in phase with the sim's step clock
@@ -1280,7 +1357,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
               ? world.bossPool.at(0).health / world.bossFullHealth
               : 1,
           )
-        : 'calm';
+        : /*
+            ⚠️ **THE MUSIC ROOM OVERRIDES THE OFF-RUN RUNG — 0210.** Everything outside a run plays
+            `calm`, which is the title screen's bed and is deliberately almost nothing. A listener who
+            picked a place wants to hear the place, so the room asks for the rung a level spends most
+            of its length at.
+          */
+          audition !== null
+          ? AUDITION_RUNG
+          : 'calm';
     /*
       THE AURA — `docs/decisions/0091-the-boss-has-an-aura.md`, and it is the one thing here that
       changes every step rather than at a boundary.
@@ -1328,7 +1413,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       `advanceLevel` keeps the camera (0076), so `musicLevelFor` can answer the same rung on both
       sides of it.
     */
-    const theme = state.screen.current === 'playing' ? world.level.theme : 'approach';
+    // 0210: and the room's place, when one is being auditioned.
+    const theme = state.screen.current === 'playing' ? world.level.theme : (audition ?? 'approach');
     if (level !== music.level() || theme !== shownTheme || Math.abs(nearness - shownNearness) > AURA_STEP) {
       shownNearness = nearness;
       shownTheme = theme;

@@ -278,9 +278,15 @@ describe('a screen that expires presses its own control, and says how long it wa
       `playing` timing out would end a run nobody lost, and `title` has nothing to press for the
       player: a run cannot begin without a tier being chosen (0047).
     */
+    /*
+      ⚠️ **`music` JOINS THEM — 0210.** The music room has nothing to press FOR the player either: a
+      listener is listening, and a screen that timed out from under them would stop the thing they
+      opened it to hear. It is the same argument `title` makes one line up, which is why it belongs in
+      this list rather than needing a new one.
+    */
     const waiting = SCREEN_KINDS.filter((s: Screen) => SCREENS[s].timeout === null);
     expect(waiting.sort(), 'a screen that should wait for a hand expires by itself').toEqual(
-      ['playing', 'title', 'victory'].sort(),
+      ['music', 'playing', 'title', 'victory'].sort(),
     );
   });
 
