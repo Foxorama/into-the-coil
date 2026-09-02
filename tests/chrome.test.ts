@@ -212,6 +212,31 @@ describe('every screen owns its class prefix', () => {
     expect(prefixFor('title')).toBe('itc-title-');
   });
 
+  it('0210 — the stylesheet carries no backtick, because it IS a template literal', () => {
+    /*
+      ⚠️ **HIT TWICE IN ONE SESSION, IN THIS FILE, WITH THE WARNING ALREADY WRITTEN IN IT.** The
+      stylesheet is a JS template literal, so a backtick anywhere inside it — including in a CSS
+      comment quoting a property name — closes the string and the file stops parsing. It is not a
+      subtle failure once it happens; it is a subtle failure to NOTICE, because the error is a
+      TypeScript syntax complaint about a line thirty lines further down, and the CSS looks fine.
+
+      `docs/decisions/0200-the-tool-that-edits-must-not-lose-what-it-edits.md` is the rule about
+      tools that eat backticks. This is the same hazard with no tool involved at all — the file eats
+      its own — and a comment saying *do not do this* did not stop it happening a second time twenty
+      minutes later. That is what a guard is for.
+
+      ⚠️ It reads the EVALUATED string, so it can only be reached when the file already parses. That
+      is the honest limit: this cannot fail the build faster than the compiler does. What it does is
+      make the reason unmissable the moment somebody removes a backtick to get it compiling again and
+      wonders whether that was the right fix.
+    */
+    expect(
+      STYLE.includes('`'),
+      'the stylesheet contains a backtick — it is a template literal, so that closes it and the file ' +
+        'stops parsing somewhere unrelated. Quote CSS in the comments without backticks.',
+    ).toBe(false);
+  });
+
   it('0210 — every screen with a panel is styled, or it mounts INVISIBLE and nothing fails', () => {
     /*
       ⚠️ **THIS IS THE DEFECT 0210 HIT, AND IT REPORTED SUCCESS THE WHOLE TIME.** The stylesheet named

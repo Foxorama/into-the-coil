@@ -528,14 +528,17 @@ ${each('-action-cursor')} {
 .itc-playing-strip-band:last-child { border-bottom: none; }
 .itc-playing-strip-icon { display: block; width: 1.6em; height: 1.6em; }
 @container (max-height: 460px) {
+  /*
+    Two columns for four controls, on the same argument the music room's three make below: a wrap
+    decided by a ch width is decided by the runner's font, and this one only passed CI by luck.
+  */
   .itc-title-choices {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: min(0.6rem, 2cqh) min(0.6rem, 1.5cqw);
     max-width: min(100%, 64ch);
   }
-  .itc-title-action { width: min(100%, 26ch); }
+  .itc-title-action { width: 100%; }
   /*
     The wrap alone left the settings row 8px off a 480x320 and 2px off a 667x375 — measured, not
     guessed. The panel's own gap and the heading are the two things above it with any give, and both
@@ -551,8 +554,35 @@ ${each('-action-cursor')} {
   */
   .itc-music-panel { gap: min(0.6rem, 1.6cqh); }
   .itc-music-heading { font-size: clamp(0.9rem, min(4.5cqw, 5.5cqh), 1.8rem); }
-  .itc-music-action { width: min(100%, 13ch); }
-  .itc-music-choices { max-width: min(100%, 72ch); }
+  /*
+    ⚠️ **A GRID WITH A FIXED COLUMN COUNT, BECAUSE A ch-WIDTH WRAP IS NOT PORTABLE.** The first
+    version sized these buttons in ch and let flex decide how many fitted a row. That passed here and
+    FAILED IN CI BY 64 PIXELS — a headless runner resolves a different font, ch is a font metric, and
+    a wider one puts fewer buttons on a row and adds whole rows. Nine controls over three columns is
+    three rows on any font, which is the only version of this that is the same everywhere.
+
+    ⚠️ **AND IT IS THE SECOND TIME THIS SESSION A LOCAL GREEN WAS NOT A GREEN.** The lesson is the
+    one decision 0199 is about, one layer out: a check that passes on one machine has told you about
+    that machine.
+  */
+  .itc-music-choices {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    max-width: min(100%, 72ch);
+  }
+  /*
+    ⚠️ **nowrap IS THE OTHER HALF OF MAKING THIS PORTABLE.** Fixing the column count fixes how many
+    ROWS there are; it does not fix how tall a row is, because a wider font can wrap a place's name
+    onto a second line inside its own button and double it. One line per button, clipped inside the
+    button if it must be, keeps the height a property of the layout rather than of the runner.
+  */
+  .itc-music-action {
+    width: 100%;
+    font-size: clamp(0.55rem, min(2.4cqw, 3.4cqh), 0.95rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   /*
     The last 15px on a 480x320, and it comes out of the buttons' own padding rather than anything
     the player reads. 0.55em to 0.35em is four pixels a button at this type size, over four buttons
