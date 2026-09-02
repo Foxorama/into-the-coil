@@ -232,6 +232,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **THE BENCH JUMPS TO WHERE THE THING IS — `npm run bench`, a level select and a scrub bar over the real game; it found two bugs before its own decision was written** | [0205](decisions/0205-the-bench-jumps-to-where-the-thing-is.md) |
 | **THE TILE WRAPS ROUND — the seam, reported three times; the comment saying no margin was needed was half right and wholly wrong** | [0206](decisions/0206-the-tile-wraps-round.md) |
 | **THE EAGLE HAS LANES — dark dust over the gas; density was never the problem and no axis 0196 had could make an edge** | [0207](decisions/0207-the-eagle-has-lanes.md) |
+| **THE MIRE REACHES DOWN — growth hanging into the lane, and TWO SEAM RULES now exist: a structure takes a cloud's or a lane's depending on whether it crosses the tile** | [0208](decisions/0208-the-mire-reaches-down.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were
@@ -744,10 +745,23 @@ by temporarily moving the landmark AND the theme onto level one, because level t
 fight. That works once and does not scale to six places plus seven boss backdrops — and 0204 names
 three defects that only a picture caught, so making pictures cheap is the lever, not a nicety.
 
-**Ember Nebula is DONE** — [0207](decisions/0207-the-eagle-has-lanes.md) gave its weather dark dust
-lanes, which is what the Pillars' own sentence looks like at the scale of the sky. Density was never
-the problem: that place already had the thickest clouds in the game and still read as a smooth wash,
-because soft gradients are fog at any setting and **no axis 0196 had could produce an edge.**
+**TWO OF SEVEN PLACES ARE DONE.** Ember Nebula ([0207](decisions/0207-the-eagle-has-lanes.md)) has
+dark dust lanes; The Toxic Mire ([0208](decisions/0208-the-mire-reaches-down.md)) has growth hanging
+into the lane. **The two thinnest-headroom places are the ones done**, which was deliberate — 0196
+measured them at about a third of the others', so the hard constraint was met at place two rather
+than place six.
+
+⚠️ **DENSITY WAS NEVER THE PROBLEM, TWICE.** Both were already among the thickest weather in the game
+and both read as fog with blobs. **Every axis `SkyStyle` has moves a blob**, and a pile of blobs has
+no structure at any setting. A place needs a PRIMITIVE, not another slider — that is the finding to
+carry into the remaining five, and it is why 0196's pass could not have worked however it was tuned.
+
+⚠️ **AND BOTH ARE DARK STRUCTURE OVER LIGHT GAS, WHICH THE OTHER FIVE INHERIT.** Not a taste: in the
+places with the least headroom a bright structure would have to argue with the gameplay floor 0198
+did not defer.
+
+⚠️ **THE THIRD PLACE PROMOTES THE TWO THEME-GATED FUNCTIONS TO A `Record<ThemeKind, …>`** — 0016's
+shape. Deliberately not built at two, where a table is a guess about the other five.
 
 The original argument, kept because the reasoning is what transfers:
 
