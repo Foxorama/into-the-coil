@@ -2095,86 +2095,340 @@ export function nebulaField(size: number, theme: ThemeKind = 'approach'): Nebula
  * `filter: blur()` would be a boundary softened by an amount that varies with the bake resolution.
  */
 /**
- * The dark dust lanes that thread through a place's gas — 0207.
+ * One dark mark in a place's weather — 0211.
  *
- * ⚠️ **PERIODIC ACROSS THE TILE, WHICH IS STRICTER THAN 0206's WRAP.** A cloud is a disc: drawing it
- * again at ±`size` is enough, because the copy carries its own shape with it. A lane crosses the
- * whole tile, so wrapping alone is not enough — it also has to ARRIVE at the right edge where it
- * LEFT the left one. `y` at `x = size` is forced equal to `y` at `x = 0`, and without that the seam
- * 0206 was written for comes straight back in a new costume.
+ * ⚠️ **THE THREE SEAM RULES ARE A FIELD NOW, NOT THREE ARGUMENTS IN THREE COMMENTS.** 0206 wraps a
+ * cloud at ±size; 0207 additionally forces a dust lane to ARRIVE where it LEFT, because a lane spans
+ * the tile; 0208 says a frond takes a cloud's rule *and only while it stays local*. Three places, three
+ * prose arguments, and the fourth author would have had to rediscover which applied.
  *
- * ⚠️ **The lanes are what make it THIS nebula rather than gas.** Soft overlapping gradients read as
- * fog at any density — Ember Nebula already had the thickest weather in the game
- * (`SKY_STYLE_OF.nebula`) and still looked like a smooth wash. What the eye reads as a nebula is dark
- * dust in front of light, which is the same sentence the Pillars are drawn from.
+ * `crosses` states it once. `paintStructure` obeys it, and `tests/sky.test.ts` holds it for every
+ * place at once — so a new structure cannot get the wrong rule by not knowing there were two.
  */
-export function dustLanes(size: number, theme: ThemeKind): { points: number[][]; width: number }[] {
-  if (theme !== 'nebula') return []; // Authored per place — 0203's rule, one place at a time.
-  const rng = makeRng('sky').stream(`${theme}/lanes`);
-  const lanes: { points: number[][]; width: number }[] = [];
-  for (let i = 0; i < 3; i += 1) {
-    const start = rng.range(0.15, 0.85) * size;
-    const points: number[][] = [];
+export interface StructureMark {
+  /** Points in tile pixels, in order. */
+  points: number[][];
+  /** Stroke width in pixels, or 0 to fill the closed shape instead. */
+  width: number;
+  /** How dark it sits over the gas. */
+  alpha: number;
+  /**
+   * Whether it spans the tile and must therefore be PERIODIC — its last point's `y` equal to its
+   * first's. A mark that crosses and is not periodic steps at every join, which is 0206's seam
+   * wearing a new costume; a local mark that pretends to cross costs nothing but is a lie.
+   */
+  crosses: boolean;
+  /** Narrow the stroke from the first point to the last, for anything that grows. */
+  taper: boolean;
+  /**
+   * Draw in the place's GAS colour rather than in `space` — a lit thing rather than a silhouette.
+   *
+   * ⚠️ **DARK-OVER-LIGHT IS A CONTRAST RULE AND NOT A HOUSE STYLE, WHICH THIS IS THE PROOF OF.**
+   * 0207 and 0208 both drew in `space` because `docs/decisions/0196-the-backdrop-is-rounded-out.md`
+   * measured Ember Nebula and The Toxic Mire at about a third of the headroom the others have, and a
+   * bright structure there would argue with the gameplay floor. The Approach has the most room of the
+   * seven and the thinnest gas — so a silhouette has nothing to be a silhouette against, and its
+   * horizon came out invisible in the bench before this field existed.
+   *
+   * A place may be lit only where the contrast guard says it can afford to be, which is the same
+   * measurement making the opposite call rather than an exception to it.
+   */
+  lit: boolean;
+}
+
+
+/**
+ * A wandering line across the whole tile, ending where it began.
+ *
+ * The shared shape behind Ember Nebula's dust and The Labyrinth's corridor walls — one crosses in
+ * dark dust and the other in long structure, and both are *a line that must arrive where it left*.
+ */
+function crossing(size: number, stream: string, count: number, wander: number, from: number, to: number): StructureMark[] {
+  const rng = makeRng('sky').stream(stream);
+  const out: StructureMark[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const start = rng.range(0.12, 0.88) * size;
     const steps = 8;
-    // The wander is generated first so the last point can be made to equal the first.
-    const drift: number[] = [];
-    for (let s = 0; s <= steps; s += 1) drift.push(rng.range(-0.09, 0.09) * size);
+    const points: number[][] = [];
     let y = start;
     for (let s = 0; s <= steps; s += 1) {
+      // ⚠️ The last point is forced back to `start`, which is the whole of 0207.
       points.push([(s / steps) * size, s === steps ? start : y]);
-      y += drift[s]!;
+      y += rng.range(-wander, wander) * size;
     }
-    lanes.push({ points, width: rng.range(0.05, 0.11) * size });
+    out.push({ points, width: rng.range(from, to) * size, alpha: 0.55, crosses: true, taper: false, lit: false });
   }
-  return lanes;
+  return out;
 }
 
 /**
- * The growth that hangs down into The Toxic Mire — 0208.
+ * Every place's own structure, and what makes it that place rather than gas.
  *
- * ⚠️ **IT HANGS RATHER THAN RISES, AND THAT IS THE PLACE'S OWN SENTENCE.** `THEMES.mire` says *"the
- * mire SEEPS — the one place whose whole character is that it reaches you before you reach it"*, and
- * its mix is built around *"a thing singing from under the water"*. Growth reaching DOWN at the
- * player is that in one shape; the Pillars rise, so the two places cannot be confused for each
- * other's art, which is what *"none of those elements are transposable"* asks for.
+ * ⚠️ **A `Record` OVER THE CLOSED UNION, WHICH IS WHAT 0208 SAID THE THIRD PLACE WOULD OWE.** Two
+ * theme-gated functions, each returning `[]` for every place but its own, was honest at two and a
+ * guess about the other five. At seven it is `docs/decisions/0016-a-hub-enumerates-kinds.md`'s shape:
+ * a place is a row, behaviour rides the row, and nothing switches on a name.
  *
- * ⚠️ **A FROND IS A LOCAL OBJECT, SO 0206's WRAP IS ENOUGH AND 0207's PERIODICITY IS NOT NEEDED.** A
- * dust lane crosses the whole tile and therefore has to arrive where it left; a frond is rooted in
- * one spot and hangs a short way, so the copy at ±`size` carries its whole shape with it exactly as a
- * cloud's does. The difference is stated because getting it backwards in either direction is a seam.
+ * ⚠️ **DARK OVER LIGHT GAS, EVERY ONE OF THEM, AND THAT IS A MEASUREMENT RATHER THAN A HOUSE STYLE.**
+ * `docs/decisions/0196-the-backdrop-is-rounded-out.md` measured Ember Nebula and The Toxic Mire at
+ * about a third of the contrast headroom the other five have. A bright structure in either would have
+ * had to argue with the gameplay floor
+ * `docs/decisions/0198-the-accessibility-pass-comes-after-the-game.md` did not defer; dust in the
+ * space colour spends none of it. Doing the two thin places first is what surfaced the rule for the
+ * five that followed.
  *
- * ⚠️ **DARK, WHICH IS NOT A TASTE HERE.** `docs/decisions/0196-the-backdrop-is-rounded-out.md`
- * measured The Toxic Mire and Ember Nebula at about a third of the contrast headroom the other five
- * places have, because their weather is thickest. Dust in the space colour SPENDS none and buys some
- * back; a bright structure in the same place would have had to argue with the gameplay floor.
+ * ⚠️ **AND SEVEN DIFFERENT SHAPES, NOT ONE SHAPE SEVEN TIMES.** *"None of those elements are
+ * transposable to a different level."* Each row below is read from that place's own character in
+ * `SKY_STYLE_OF` and `THEMES` before any geometry was written, which is what stopped this becoming
+ * 0196's *nine axes over two primitives* again.
  */
-export function hangingFronds(size: number, theme: ThemeKind): { points: number[][]; width: number }[] {
-  if (theme !== 'mire') return []; // Authored per place — 0203's rule, one place at a time.
-  const rng = makeRng('sky').stream(`${theme}/fronds`);
-  const fronds: { points: number[][]; width: number }[] = [];
-  for (let i = 0; i < 10; i += 1) {
-    /*
-      Rooted just off the lane's top edge. The tile is twice the lane across and blitted centred, so
-      tile `y` 0.25 to 0.75 is the lane itself — 0.12 puts the root out of sight and the frond
-      reaches into view, which is what makes it read as coming from somewhere rather than starting.
-    */
-    const x = rng.range(0, 1) * size;
-    const reach = rng.range(0.28, 0.55) * size;
+export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> = {
+  /*
+    ── THE APPROACH: THE WORLD BEING LEFT ──────────────────────────────────────────────────────────
+
+    *"Open space, evenly scattered, weather with no direction to it. The one every other place
+    deviates from."* It is the way IN, so its structure is the one thing a departure has: **a limb of
+    the world behind you**, low and enormous and going nowhere.
+
+    ⚠️ **ONE MARK, AND THAT IS THE POINT.** The first level is the baseline the other six deviate
+    from, so a busy sky here would spend the contrast between *ordinary space* and everywhere after
+    it. A single arc says *somewhere* without saying *strange*.
+  */
+  approach: (size) => {
     const points: number[][] = [];
-    const steps = 6;
+    // A shallow arc across the bottom of the tile: a horizon far enough away to be nearly flat.
     /*
-      ⚠️ **THE SWAY ACCUMULATES AND IS NOT RE-DRAWN EACH STEP**, so a frond leans and keeps leaning
-      rather than jittering about its root. A per-step random offset reads as a zigzag; a random
-      WALK reads as something hanging in a current, which is the difference between weed and wire.
+      ⚠️ **TILE y 0.25 TO 0.75 IS THE LANE, AND THE FIRST DRAFT PUT THIS AT 0.86.** The weather tile is
+      twice the lane across and blitted centred, so its y runs from lane −50 to lane 150 — and 0.86 of
+      it is lane 122, well below anything the player can see. The horizon was drawn correctly, every
+      guard passed, and the screen was unchanged. Found in the bench, which is the third time in this
+      arc a number that was right in the model was off the picture.
     */
-    let sway = 0;
-    for (let s = 0; s <= steps; s += 1) {
-      sway += rng.range(-0.05, 0.05) * size;
-      points.push([x + sway, 0.12 * size + (s / steps) * reach]);
+    for (let i = 0; i <= 24; i += 1) {
+      const t = i / 24;
+      points.push([t * size, size * (0.68 + 0.05 * Math.cos((t - 0.5) * Math.PI))]);
     }
-    fronds.push({ points, width: rng.range(0.012, 0.032) * size });
+    // Closed just past the lane's far edge so it fills as a body rather than stroking as a wire.
+    points.push([size, size * 0.8], [0, size * 0.8]);
+    // ⚠️ LIT, not dark — The Approach's gas is the thinnest of the seven, so a silhouette here has
+    // nothing to be a silhouette against. Its headroom is what pays for that.
+    return [{ points, width: 0, alpha: 0.34, crosses: true, taper: false, lit: true }];
+  },
+
+  /*
+    ── EMBER NEBULA: DUST IN FRONT OF LIGHT — 0207 ────────────────────────────────────────────────
+    The Pillars' own sentence at the scale of the sky, which is what makes the near view and the wide
+    view read as one object.
+  */
+  nebula: (size) => crossing(size, 'nebula/lanes', 3, 0.05, 0.05, 0.11),
+
+  /*
+    ── SAURIAN BELT: TUMBLING ROCK ────────────────────────────────────────────────────────────────
+
+    *"Tumbling rock: knots of debris with clear lanes between them."* So: angular chunks, gathered in
+    knots, with air between the knots. Local objects — 0208's rule, not 0207's — because a rock
+    carries its whole shape to the copy one tile over.
+  */
+  saurian: (size) => {
+    const rng = makeRng('sky').stream('saurian/rocks');
+    const out: StructureMark[] = [];
+    for (let knot = 0; knot < 4; knot += 1) {
+      const cx = rng.range(0.1, 0.9) * size;
+      const cy = rng.range(0.15, 0.85) * size;
+      for (let i = 0; i < 5; i += 1) {
+        const x = cx + rng.range(-0.09, 0.09) * size;
+        const y = cy + rng.range(-0.09, 0.09) * size;
+        const r = rng.range(0.012, 0.05) * size;
+        const points: number[][] = [];
+        // ⚠️ Five to seven sides at uneven radii: a rock, and deliberately not a disc — a disc at this
+        // size is a bullet's silhouette, which 0203's band is about.
+        const sides = 5 + Math.floor(rng.range(0, 3));
+        for (let s = 0; s < sides; s += 1) {
+          const a = (s / sides) * Math.PI * 2 + rng.range(-0.3, 0.3);
+          const rr = r * rng.range(0.6, 1);
+          points.push([x + Math.cos(a) * rr, y + Math.sin(a) * rr]);
+        }
+        out.push({ points, width: 0, alpha: 0.62, crosses: false, taper: false, lit: false });
+      }
+    }
+    return out;
+  },
+
+  /*
+    ── THE LABYRINTH: LONG STRUCTURE GOING PAST ───────────────────────────────────────────────────
+
+    *"Long structure going past. Almost nothing clumps in a corridor."* Walls, then — running the way
+    the player is running, which is the one direction a corridor has. They cross the tile, so they
+    take 0207's rule: heavy, straight-ish, and periodic.
+  */
+  labyrinth: (size) => {
+    /*
+      ⚠️ **A DARK BODY WITH A LIT EDGE, WHICH IS THE PILLARS' OWN LANGUAGE — 0204.** The first version
+      was dark alone and came out INVISIBLE in the bench: The Labyrinth has the thinnest gas of the
+      seven (`SKY_STYLE_OF.labyrinth` is `clouds: 0.35, cloudAlpha: 0.6`), so a silhouette had nothing
+      to be a silhouette against.
+
+      ⚠️ **A RIM RATHER THAN A LIT BODY, AND THAT IS A CONTRAST DECISION.** Making the whole wall lit
+      would spend headroom across its entire area; a one-line edge spends almost none and is what
+      makes the dark shape legible. It is also what a corridor wall looks like with a light on it.
+    */
+    const walls = crossing(size, 'labyrinth/walls', 4, 0.018, 0.03, 0.075);
+    const out: StructureMark[] = [];
+    for (const wall of walls) {
+      out.push(wall);
+      out.push({
+        points: wall.points.map((p) => [p[0]!, p[1]! - wall.width * 0.5]),
+        width: Math.max(1, size * 0.004),
+        alpha: 0.45,
+        crosses: true,
+        taper: false,
+        lit: true,
+      });
+    }
+    return out;
+  },
+
+  /*
+    ── RIME SHELF: SHARDS ALL LYING ONE WAY ───────────────────────────────────────────────────────
+
+    *"A shelf of ice: shards in drifts, all lying the same way, and very little variation in them."*
+    The lean is SHARED, which is the whole character — a drift is a hundred things agreeing. Local
+    marks, so 0208's rule.
+  */
+  rime: (size) => {
+    const rng = makeRng('sky').stream('rime/shards');
+    // ⚠️ ONE lean for every shard in the place, drawn once outside the loop. Drawing it per shard
+    // would be a field of splinters, which is what a shelf of ice is not.
+    const lean = -0.72;
+    const out: StructureMark[] = [];
+    for (let drift = 0; drift < 5; drift += 1) {
+      const cx = rng.range(0.05, 0.95) * size;
+      const cy = rng.range(0.1, 0.9) * size;
+      for (let i = 0; i < 6; i += 1) {
+        const x = cx + rng.range(-0.11, 0.11) * size;
+        const y = cy + rng.range(-0.07, 0.07) * size;
+        const len = rng.range(0.05, 0.12) * size;
+        out.push({
+          points: [
+            [x, y],
+            [x + Math.cos(lean) * len, y + Math.sin(lean) * len],
+          ],
+          width: rng.range(0.006, 0.016) * size,
+          alpha: 0.5,
+          crosses: false,
+          taper: true,
+          lit: false,
+        });
+      }
+    }
+    return out;
+  },
+
+  /*
+    ── THE TOXIC MIRE: GROWTH THAT REACHES DOWN — 0208 ────────────────────────────────────────────
+    *"The mire SEEPS — the one place whose whole character is that it reaches you before you reach
+    it."* It hangs where the Pillars rise, so the two cannot be mistaken for each other's art.
+  */
+  mire: (size) => {
+    const rng = makeRng('sky').stream('mire/fronds');
+    const out: StructureMark[] = [];
+    for (let i = 0; i < 10; i += 1) {
+      const x = rng.range(0, 1) * size;
+      const reach = rng.range(0.28, 0.55) * size;
+      const points: number[][] = [];
+      let sway = 0;
+      for (let s = 0; s <= 6; s += 1) {
+        // A random WALK rather than a per-step offset: a frond leans and keeps leaning, which is what
+        // hangs in a current instead of zigzagging.
+        sway += rng.range(-0.05, 0.05) * size;
+        points.push([x + sway, 0.12 * size + (s / 6) * reach]);
+      }
+      out.push({ points, width: rng.range(0.012, 0.032) * size, alpha: 0.6, crosses: false, taper: true, lit: false });
+    }
+    return out;
+  },
+
+  /*
+    ── THE BLACK HEART: EVERYTHING DRAWN ONE WAY ──────────────────────────────────────────────────
+
+    *"Nearly empty, and what is left is being drawn one way."* So the structure is not an object at
+    all — it is the DIRECTION. Streaks of what is left, tapering as they are pulled towards a point
+    off the lane, and nearly nothing of them.
+
+    ⚠️ **THE SPARSEST OF THE SEVEN ON PURPOSE.** It is the last place and its character is absence;
+    a busy sky here would say *another nebula*. What tells the player where they are is that the few
+    marks left all agree about where they are going.
+  */
+  core: (size) => {
+    const rng = makeRng('sky').stream('core/infall');
+    const out: StructureMark[] = [];
+    // The point everything is drawn towards, off the tile so the convergence never resolves on screen.
+    const toX = size * 1.35;
+    const toY = size * 0.5;
+    for (let i = 0; i < 9; i += 1) {
+      const x = rng.range(0, 0.8) * size;
+      const y = rng.range(0.05, 0.95) * size;
+      const pull = rng.range(0.1, 0.26);
+      out.push({
+        points: [
+          [x, y],
+          [x + (toX - x) * pull, y + (toY - y) * pull],
+        ],
+        width: rng.range(0.008, 0.022) * size,
+        alpha: 0.55,
+        crosses: false,
+        taper: true,
+        lit: false,
+      });
+    }
+    return out;
+  },
+};
+
+/**
+ * Paint a place's structure over its gas, obeying each mark's own seam rule.
+ *
+ * ⚠️ **ONE PAINTER FOR SEVEN PLACES, AND IT IS WHERE THE SEAM RULES ACTUALLY LIVE.** Every mark is
+ * drawn again at ±`size` on the tiling axis so what leaves one edge arrives at the other (0206); a
+ * mark that `crosses` was built periodic so those copies join end to end (0207); a mark that does not
+ * cross carries its whole shape with it, which is why the wrap alone is enough for it (0208).
+ *
+ * ⚠️ **IN THE SPACE COLOUR, ALWAYS.** Dust is a hole in the light rather than a shape in front of it
+ * — 0204 — and drawing all seven places the same way is what makes the near view and the wide view of
+ * any of them read as one object.
+ */
+function paintStructure(ctx: Pen, gas: string, space: string, size: number, theme: ThemeKind): void {
+  const marks = STRUCTURE_OF[theme](size);
+  ctx.lineCap = 'round';
+  for (const mark of marks) {
+    // 0211: a lit mark is drawn in the place's own gas, a dark one is a hole punched in it.
+    const ink = mark.lit ? gas : space;
+    ctx.fillStyle = ink;
+    ctx.strokeStyle = ink;
+    ctx.globalAlpha = mark.alpha;
+    for (const dx of [-size, 0, size]) {
+      if (mark.width === 0) {
+        ctx.beginPath();
+        ctx.moveTo(mark.points[0]![0]! + dx, mark.points[0]![1]!);
+        for (let i = 1; i < mark.points.length; i += 1) ctx.lineTo(mark.points[i]![0]! + dx, mark.points[i]![1]!);
+        ctx.closePath();
+        ctx.fill();
+        continue;
+      }
+      for (let i = 1; i < mark.points.length; i += 1) {
+        // A taper is drawn segment by segment because a Pen has no variable-width stroke, and a mark
+        // that keeps its thickness to the tip reads as a wire rather than as something growing.
+        ctx.lineWidth = mark.taper
+          ? Math.max(0.5, mark.width * (1 - (i / mark.points.length) * 0.9))
+          : mark.width;
+        ctx.beginPath();
+        ctx.moveTo(mark.points[i - 1]![0]! + dx, mark.points[i - 1]![1]!);
+        ctx.lineTo(mark.points[i]![0]! + dx, mark.points[i]![1]!);
+        ctx.stroke();
+      }
+    }
   }
-  return fronds;
+  ctx.globalAlpha = 1;
 }
 
 function drawNebula(ctx: Pen, colour: string, space: string, size: number, theme: ThemeKind): void {
@@ -2220,60 +2474,14 @@ function drawNebula(ctx: Pen, colour: string, space: string, size: number, theme
   }
 
   /*
-    ── THE DUST, AFTER THE GAS ─────────────────────────────────────────────────────────────────────
+    ── AND THE PLACE'S OWN STRUCTURE, OVER THE GAS — 0211 ──────────────────────────────────────────
 
-    ⚠️ **IN THE SPACE COLOUR, ON TOP, EXACTLY AS THE PILLARS ARE — 0204.** Dust is a hole in the
-    light, not a shape in front of it, and drawing the two the same way is what makes the near view
-    and the wide view read as the same object.
-
-    ⚠️ **WRAPPED IN x ONLY, BECAUSE A LANE RUNS ALONG THE TILING AXIS.** The lanes are authored across
-    the tile and made periodic in `dustLanes`, so the ±`size` copies join end to end. A `dy` copy
-    would be a second lane at a random height rather than the same lane continuing, which is the
-    opposite of what 0206 asks for.
+    Two hand-rolled blocks lived here, one for Ember Nebula's dust and one for The Toxic Mire's
+    growth, each with its own copy of the wrap and its own argument about which seam rule applied.
+     is the one painter for all seven, and the rule each mark takes is a field on the
+    mark rather than a paragraph above the loop.
   */
-  ctx.strokeStyle = space;
-  ctx.lineCap = 'round';
-  for (const lane of dustLanes(size, theme)) {
-    ctx.lineWidth = lane.width;
-    ctx.globalAlpha = 0.55;
-    for (const dx of [-size, 0, size]) {
-      ctx.beginPath();
-      ctx.moveTo(lane.points[0]![0]! + dx, lane.points[0]![1]!);
-      for (let i = 1; i < lane.points.length; i += 1) {
-        ctx.lineTo(lane.points[i]![0]! + dx, lane.points[i]![1]!);
-      }
-      ctx.stroke();
-    }
-  }
-
-  /*
-    ── AND THE GROWTH THAT HANGS INTO IT ───────────────────────────────────────────────────────────
-
-    ⚠️ **TAPERED SEGMENT BY SEGMENT, BECAUSE A `Pen` HAS NO VARIABLE-WIDTH STROKE.** A frond that is
-    the same thickness at its tip as at its root reads as a wire. Each segment is stroked at its own
-    width, narrowing towards the end, which is the cheapest thing that reads as growth — and it costs
-    bake time only.
-
-    ⚠️ **WRAPPED IN x LIKE A CLOUD AND NOT MADE PERIODIC LIKE A LANE — 0206 and 0207 respectively.**
-    A frond is local: it is rooted in one spot and hangs a short way, so the copy one tile over
-    carries its whole shape. Only a structure that CROSSES the tile has to arrive where it left.
-  */
-  ctx.strokeStyle = space;
-  ctx.lineCap = 'round';
-  for (const frond of hangingFronds(size, theme)) {
-    ctx.globalAlpha = 0.6;
-    for (const dx of [-size, 0, size]) {
-      for (let i = 1; i < frond.points.length; i += 1) {
-        // Full width at the root, almost nothing at the tip — a frond that keeps its thickness all
-        // the way down reads as a wire, and the taper is the whole of what makes it growth.
-        ctx.lineWidth = Math.max(0.5, frond.width * (1 - (i / frond.points.length) * 0.94));
-        ctx.beginPath();
-        ctx.moveTo(frond.points[i - 1]![0]! + dx, frond.points[i - 1]![1]!);
-        ctx.lineTo(frond.points[i]![0]! + dx, frond.points[i]![1]!);
-        ctx.stroke();
-      }
-    }
-  }
+  paintStructure(ctx, colour, space, size, theme);
   ctx.globalAlpha = 1;
 }
 

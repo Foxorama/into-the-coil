@@ -22,8 +22,7 @@ import {
   atlasIsStale,
   bakeSize,
   cloudCover,
-  dustLanes,
-  hangingFronds,
+  STRUCTURE_OF,
   fieldOf,
   nebulaField,
   skyField,
@@ -500,75 +499,107 @@ describe('0203 — the sky may hold a landmark, and the rule is a band', () => {
     ).not.toEqual([]);
   });
 
-  it('0207 — a dust lane arrives where it left, or the seam is back', () => {
+  it('0207 + 0208 — every mark takes the seam rule it declares, in every place', () => {
     /*
-      ⚠️ **STRICTER THAN 0206's WRAP, AND THE DIFFERENCE IS THE WHOLE BUG.** A cloud is a disc, so
-      drawing it again at ±size carries its own shape with it. A lane crosses the ENTIRE tile, so the
-      copy one tile over only joins up if the lane ARRIVES at the right edge where it LEFT the left
-      one. Get that wrong and 0206's seam is back in a new costume — a dark band with a step in it,
-      arriving on a schedule.
+      ⚠️ **THREE DECISIONS' WORTH OF SEAM RULES, HELD ONCE FOR ALL SEVEN PLACES.** They used to be
+      three tests over two theme-gated functions, and the fourth author would have had to work out
+      which rule applied to whatever they were adding:
 
-      `docs/decisions/0192-a-guard-holds-an-invariant.md`: name a content change that would redden
-      this and be correct. A lane whose ends disagree is never correct, at any width or wander.
+        0206  a cloud is wrapped at ±size, because the copy carries its own shape
+        0207  a mark that SPANS the tile must additionally arrive where it left, or it steps
+        0208  a mark that does not span it takes the cloud's rule — and only while it stays local
+
+      `StructureMark.crosses` states which, and this holds both halves against it. A structure added
+      for one of the five places authored in 0211 cannot get the wrong rule by not knowing there were
+      two, which is exactly what two functions in two files could not prevent.
+
+      `docs/decisions/0192-a-guard-holds-an-invariant.md`: name a change that would redden this and be
+      correct. A crossing mark whose ends disagree is never correct; nor is a local one as wide as its
+      own tile, because the wrap it is drawn with cannot cover it.
     */
     const size = bakeSize(SPRITE_EXTENT.skyNebula, 6);
-    const lanes = dustLanes(size, 'nebula');
-    expect(lanes, 'Ember Nebula has no dust lanes, so its weather is a smooth wash again').not.toEqual([]);
-    for (const lane of lanes) {
-      const first = lane.points[0]!;
-      const last = lane.points[lane.points.length - 1]!;
-      expect(last[1], `a lane starts at y=${first[1]} and ends at y=${last[1]} — it steps at the seam`).toBeCloseTo(
-        first[1]!,
-        6,
-      );
-      // And it spans the tile, or wrapping it end to end is meaningless.
-      expect(first[0]).toBeCloseTo(0, 6);
-      expect(last[0]).toBeCloseTo(size, 6);
+    let checked = 0;
+    for (const theme of THEME_KINDS) {
+      for (const mark of STRUCTURE_OF[theme](size)) {
+        checked += 1;
+        const xs = mark.points.map((p: number[]) => p[0]!);
+        if (mark.crosses) {
+          /*
+            ⚠️ **THE TWO EDGES MUST AGREE, WHICH IS NOT THE SAME AS FIRST-POINT-EQUALS-LAST.** The
+            first draft compared those two and reddened The Approach's horizon, which is periodic:
+            a FILLED crossing shape closes along an edge, so its last point is a corner rather than
+            the far end of the line. What tiling actually requires is that whatever the mark does at
+            `x = 0` it also does at `x = size` — so the set of heights it touches on one edge is the
+            set it touches on the other, however many points that takes.
+          */
+          const edge = (at: number): string =>
+            mark.points
+              .filter((p: number[]) => Math.abs(p[0]! - at) < 0.5)
+              .map((p: number[]) => p[1]!.toFixed(3))
+              .sort()
+              .join(',');
+          const left = edge(0);
+          const right = edge(size);
+          expect(left.length, `${theme} has a crossing mark that never reaches x=0`).toBeGreaterThan(0);
+          expect(
+            right,
+            `${theme} has a crossing mark that leaves at heights [${left}] and arrives at [${right}] — ` +
+              'it steps at every tile join, which is the seam 0206 was written for',
+          ).toBe(left);
+        } else {
+          const spread = Math.max(...xs) - Math.min(...xs);
+          expect(
+            spread,
+            `${theme} has a local mark spanning ${spread.toFixed(0)} of a ${size} tile — past half it ` +
+              'is a tile-crossing structure wearing a local one’s wrap, and 0207’s rule is owed instead',
+          ).toBeLessThan(size / 2);
+        }
+      }
     }
+    expect(checked, 'no marks were checked — the table is empty or the scan is broken').toBeGreaterThan(20);
   });
 
-  it('0208 — a frond is LOCAL, which is what makes 0206’s wrap enough for it', () => {
-    /*
-      ⚠️ **THE INVARIANT IS WHICH SEAM RULE APPLIES, AND THERE ARE NOW TWO.** 0206 wraps a cloud at
-      ±size, which works because a disc carries its whole shape with it. 0207 additionally forces a
-      dust lane to ARRIVE where it LEFT, because a lane crosses the entire tile and a wrap alone
-      leaves a step in it.
-
-      A frond takes the first rule and not the second — it is rooted in one spot and hangs a short
-      way. **That is only true while it stays local.** A frond that wandered as wide as the tile
-      would need 0207's treatment and would not be getting it, and the failure is a seam that nobody
-      would connect to a sway constant.
-
-      `docs/decisions/0192-a-guard-holds-an-invariant.md`: a frond as wide as its own tile is never
-      correct under the rule it is drawn by.
-    */
-    const size = bakeSize(SPRITE_EXTENT.skyNebula, 6);
-    const fronds = hangingFronds(size, 'mire');
-    expect(fronds, 'The Toxic Mire has no growth, so its weather is a smooth green wash again').not.toEqual([]);
-    for (const frond of fronds) {
-      const xs = frond.points.map((p) => p[0]!);
-      const spread = Math.max(...xs) - Math.min(...xs);
-      expect(
-        spread,
-        `a frond wanders ${spread.toFixed(0)} of a ${size} tile — past half it is a tile-crossing ` +
-          'structure wearing a local one’s wrap, and 0207’s periodicity would be owed instead',
-      ).toBeLessThan(size / 2);
-    }
-  });
-
-  it('0203 — a place’s structure is its own, and is not handed to the other six', () => {
+  it('0211 — every place has a structure of its own, and no two places share one', () => {
     /*
       *"None of those elements are transposable to a different level so we need to uniquely craft the
-      backdrop for each level."* The two authored so far must not leak into each other or into the
-      five still unwritten — a shared structure across places is
-      `docs/decisions/0196-the-backdrop-is-rounded-out.md`'s failure spelled differently.
+      backdrop for each level."*
+
+      ⚠️ **TWO CLAIMS, AND THE SECOND IS THE ONE 0196 FAILED.** Every place having SOMETHING is easy
+      and was true of the old blob axes too; what was reported was that the somethings were the same
+      something. So this also compares the places against each other — a place whose marks are
+      identical in shape and count to another's is the *numerically different, visually the same*
+      failure arriving through a table instead of through a slider.
     */
     const size = bakeSize(SPRITE_EXTENT.skyNebula, 6);
+    const shapes = new Map<string, ThemeKind[]>();
     for (const theme of THEME_KINDS) {
-      if (theme !== 'nebula') expect(dustLanes(size, theme), `${theme} has Ember Nebula's dust lanes`).toEqual([]);
-      if (theme !== 'mire') expect(hangingFronds(size, theme), `${theme} has The Toxic Mire's growth`).toEqual([]);
+      const marks = STRUCTURE_OF[theme](size);
+      expect(marks.length, `${theme} draws no structure of its own — its weather is a smooth wash`).toBeGreaterThan(0);
+      /*
+        ⚠️ **PER MARK, BY ITS ACTUAL COORDINATES, AND THE FIRST VERSION COUNTED SHAPES INSTEAD.** It
+        fingerprinted each place as *how many marks, crossing or local, filled or stroked, how many
+        points* — and `npm run prove` handed Ember Nebula The Labyrinth's own wall generator and the
+        guard **stayed green**, because The Labyrinth also emits a lit rim per wall and the totals
+        therefore differed. Two places were drawing byte-identical walls and the guard was looking at
+        how many of them there were.
+
+        A mark's coordinates are what the player sees. Two places sharing a generator produce the same
+        numbers from the same stream, so a shared signature IS the duplication — and it catches it
+        however many other marks either place happens to add.
+      */
+      for (const mark of marks) {
+        const key = mark.points.map((p: number[]) => `${p[0]!.toFixed(2)},${p[1]!.toFixed(2)}`).join('|');
+        shapes.set(key, [...(shapes.get(key) ?? []), theme]);
+      }
     }
+    const shared = [...shapes.values()].filter((places) => new Set(places).size > 1);
+    expect(
+      shared.map((p) => [...new Set(p)].join(' = ')),
+      'these places draw the same marks in the same places as each other — a shared generator is ' +
+        '0196’s "numerically different, visually the same" arriving through a table',
+    ).toEqual([]);
   });
+
 
   it('0204 — the landmark is re-baked at the boundary wherever the weather is', () => {
     /*

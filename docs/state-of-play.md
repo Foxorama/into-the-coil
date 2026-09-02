@@ -235,6 +235,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **THE MIRE REACHES DOWN — growth hanging into the lane, and TWO SEAM RULES now exist: a structure takes a cloud's or a lane's depending on whether it crosses the tile** | [0208](decisions/0208-the-mire-reaches-down.md) |
 | **THE RIG HEARS IN STEREO — four of five modes folded a panned mix to mono, `--play` included; every guard about the width was green** | [0209](decisions/0209-the-rig-hears-in-stereo.md) |
 | **THE TITLE PLAYS THE MUSIC — a music room on the start screen; the fifth screen mounted INVISIBLE because the stylesheet named its four by hand** | [0210](decisions/0210-the-title-plays-the-music.md) |
+| **EVERY PLACE HAS ITS OWN STRUCTURE — all seven authored, and the three seam rules became a field on the mark instead of three arguments in three comments** | [0211](decisions/0211-every-place-has-its-own-structure.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were
@@ -747,11 +748,14 @@ by temporarily moving the landmark AND the theme onto level one, because level t
 fight. That works once and does not scale to six places plus seven boss backdrops — and 0204 names
 three defects that only a picture caught, so making pictures cheap is the lever, not a nicety.
 
-**TWO OF SEVEN PLACES ARE DONE.** Ember Nebula ([0207](decisions/0207-the-eagle-has-lanes.md)) has
-dark dust lanes; The Toxic Mire ([0208](decisions/0208-the-mire-reaches-down.md)) has growth hanging
-into the lane. **The two thinnest-headroom places are the ones done**, which was deliberate — 0196
-measured them at about a third of the others', so the hard constraint was met at place two rather
-than place six.
+**ALL SEVEN PLACES ARE DONE** — [0211](decisions/0211-every-place-has-its-own-structure.md). A lit
+horizon, dust lanes, tumbling rock, corridor walls with lit edges, aligned ice shards, hanging growth,
+and converging infall. Each read from that place's own one-line character in `SKY_STYLE_OF` BEFORE any
+geometry was written, which is what stopped it becoming one shape seven times.
+
+⚠️ **WHAT IS OWED IS A PLAY-TEST ON THE SEQUENCE, NOT ON ANY ONE PLACE.** *"Each level is a deeper
+step further into the galaxy"* is a claim about seven skies IN ORDER, and nothing here has been seen
+in order by anybody — every one was judged alone, at a fixed camera, in the bench.
 
 ⚠️ **DENSITY WAS NEVER THE PROBLEM, TWICE.** Both were already among the thickest weather in the game
 and both read as fog with blobs. **Every axis `SkyStyle` has moves a blob**, and a pile of blobs has
