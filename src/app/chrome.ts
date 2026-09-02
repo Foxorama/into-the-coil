@@ -547,6 +547,19 @@ ${each('-action-cursor')} {
   */
   .itc-title-panel { gap: min(0.6rem, 1.6cqh); }
   /*
+    ⚠️ **THE TIER HINTS GO, AND IT BUYS FORTY PIXELS WHERE FOURTEEN WERE NEEDED.** That margin is the
+    point: CI failed here by 14px while this machine passed, because the runner resolves a wider font
+    and the same layout comes out taller. Shaving exactly 14px would have been tuning to a font I
+    cannot see, and the next round would have been another 4-minute CI run to find out.
+
+    ⚠️ **The LABEL is the choice and the hint is elaboration**, which is what makes this a responsive
+    adaptation rather than a loss: *Legendary Pilot* still says which tier it is. The product definition's voice
+    rule — say the one thing and stop — points the same way on the one screen with no room for the
+    second thing. The hints are still in the table, still read by the tests that hold every tier says
+    what it is, and still shown on every device with the height for them.
+  */
+  .itc-title-action-hint { display: none; }
+  /*
     ⚠️ **THE HEADING IS DELIBERATELY NOT OVERRIDDEN HERE, AND IT WAS AT FIRST.**
     docs/decisions/0049 has a probe that breaks the heading's own rule — typesetting it at a fixed
     size instead of a fraction of the box — and expects the layout guard to catch it. An override in

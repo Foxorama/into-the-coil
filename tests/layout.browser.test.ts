@@ -180,6 +180,46 @@ describe.runIf(chromePath)('every screen fits the screen it is drawn on', () => 
     });
   }
 
+  it('0049 — the heading is a fraction of the box, measured as a SIZE and not as an overflow', async () => {
+    /*
+      ⚠️ **THE OVERFLOW ASSERTIONS STOPPED BEING ABLE TO SEE THIS, AND `npm run prove` IS WHAT SAID
+      SO.** 0049's heading probe replaces the clamp with a flat `3.5rem` — the desktop size worn on a
+      phone, which is the real hazard and not an invented one. That used to push the title screen past
+      the bottom edge, so the no-scrolling assertion caught it.
+
+      Then 0210 gave the title screen room: the tier hints go on a short screen, which bought about
+      97 pixels of headroom where 14 were needed. **A fixed heading now FITS**, so every overflow
+      assertion went green over a break that is still exactly as wrong as it ever was, and the probe
+      reported *the guard does not fire on the thing it exists to catch.*
+
+      ⚠️ **MAKING THE SCREEN ROOMIER MADE THE GUARD BLIND, WHICH IS A THING THAT CAN HAPPEN TO ANY
+      GUARD THAT MEASURES A CONSEQUENCE.** The rule 0049 states is *the chrome is authored against the
+      short axis* — a heading that is a FRACTION OF ITS BOX. Overflow was only ever the symptom that
+      the fraction was missing, and a symptom can be cured without curing the cause. This measures the
+      property: the same heading, on two boxes of different heights, must come out at two different
+      sizes. `docs/decisions/0027-measure-the-picture-not-the-model.md`, aimed at a guard rather than
+      at the code.
+    */
+    const sizeAt = async (width: number, height: number): Promise<number> => {
+      const page = await open({ width, height });
+      await showOnly(page, 'title');
+      const size = await page.evaluate(() => {
+        const heading = document.querySelector('.itc-title-heading');
+        return heading === null ? -1 : parseFloat(getComputedStyle(heading).fontSize);
+      });
+      await page.context().close();
+      return size;
+    };
+    const small = await sizeAt(480, 320);
+    const large = await sizeAt(1280, 720);
+    expect(small, 'no heading was found to measure').toBeGreaterThan(0);
+    expect(
+      large,
+      `the title heading is ${small}px on a 480x320 and ${large}px on a 1280x720 — it is not a ` +
+        'fraction of the box it has to fit, so it is typeset for one screen and cropped on the rest',
+    ).toBeGreaterThan(small + 1);
+  });
+
   it('needs no scrolling on any of them, because scrolling is the net and not the design', async () => {
     /*
       ⚠️ **The distinction the scroll container makes it possible to miss.** A screen that overflows

@@ -50,11 +50,24 @@ export const PROBES = [
       stylesheet, and the demonstration is the declaration that can actually be seen to matter.
     */
     broke: 'the heading typeset at a fixed size rather than as a fraction of the box it has to fit',
-    // ⚠️ The FIT test does not fire on this and the no-scrolling one does, which is worth knowing:
-    // what a too-large heading pushes past the bottom edge first is the panel's own padding, and
-    // padding is not a box any assertion about boxes can see. The screen has stopped fitting well
-    // before anything on it has left the display.
-    guard: 'needs no scrolling on any of them',
+    /*
+      ⚠️ **RE-ANCHORED BY 0210 ONTO A GUARD THAT MEASURES THE SIZE RATHER THAN THE OVERFLOW.** This
+      used to point at the no-scrolling assertion, and the note here read: *the FIT test does not fire
+      on this and the no-scrolling one does — what a too-large heading pushes past the bottom edge
+      first is the panel's own padding.* Both were true while the title screen was tight.
+
+      0210 gave that screen about 97 pixels of headroom, and **a fixed heading then FITS** — so every
+      overflow assertion went green over a break that is exactly as wrong as it always was. This probe
+      is what found it: *the suite stayed GREEN, the guard does not fire on the thing it exists to
+      catch.*
+
+      ⚠️ **THE FIX WAS A BETTER GUARD, NOT A BIGGER BREAK.** 3.5rem is the clamp's own maximum — the
+      desktop size worn on a phone — so it is the honest hazard and inflating it would be tuning the
+      probe to the answer (docs/decisions/0044). What changed is what is measured: the heading's
+      COMPUTED SIZE on two boxes of different heights, which is the property 0049 states, rather than
+      the overflow that used to be its symptom.
+    */
+    guard: 'the heading is a fraction of the box',
     edit: {
       path: 'src/app/chrome.ts',
       find: '.itc-title-heading { font-size: clamp(1.25rem, min(6cqw, 9cqh), 3.5rem);',
