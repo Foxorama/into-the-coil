@@ -784,7 +784,25 @@ a bypass; make it in a decision before writing the geometry.
 ⚠️ **AND [0198](decisions/0198-the-accessibility-pass-comes-after-the-game.md) IS WHAT MAKES IT
 POSSIBLE.** The contrast floors that would have refused a bold backdrop are advisory now.
 
-**3 — ENEMY VARIANTS. Last, because it depends on what the backgrounds become.**
+**3 — ENEMY VARIANTS. ⚠️ ATTEMPTED, MEASURED AND ABANDONED — READ THE REPORT BEFORE RE-OPENING IT.**
+
+[`enemy-livery-2026-09-02`](../reports/enemy-livery-2026-09-02.md). A per-place mark INSIDE each hull
+works on three of the eight bodies and has nowhere to go on the other five: the weaver is 5.9 CSS
+pixels wide, the charger about 3, and the turret and warden are hollow at the centre. **The property
+that makes an enemy legible at twenty pixels is the property that leaves it nothing to decorate** —
+the same decision seen from two sides, and `enemy-silhouettes-2026-08-05` is the play-test that made
+it so.
+
+⚠️ **THE NEXT THING TO TRY IS A PER-PLACE ENEMY INK**, which the flat hulls can carry at any size and
+which fits 0081 rather than fighting it: shape says what a thing is, colour says where you are. It was
+not done unasked because it is a DIFFERENT ANSWER from the one requested — *stained glass* and
+*feathered dinosaurs* are illustration and a tint is not — and because `enemy` is the worst ink in all
+fourteen cells, so the two thin-headroom places would take the smallest move.
+
+**Not recommended:** changing the outer silhouette per place. It delivers the brief literally and
+re-opens a bug a play-test already found.
+
+The original note, kept because the constraint it names is still the one that matters:
 
 Asked for: *"fun level specific art"*, and *"we'll possibly need to add more or different enemies per
 level as required so that they match well."*
