@@ -762,6 +762,22 @@ Fixing them is their own ladders and a conversation about how loud a place shoul
 ⚠️ **AND THE LABYRINTH OPENS QUIETER THAN THE TITLE SCREEN** — its `calm → run` is **−0.5 dB**. Found
 while writing 0218's guard, unexplained, and nobody has reported it.
 
+⚠️ **AND THE BAND WAS THE ANSWER, ON THE FIFTH PASS** —
+[0219](decisions/0219-range-and-clean-stop-being-one-knob.md). The music bus has a compressor now, and
+`run` takes half its headroom up to `push`. The Approach's band is **2.3 dB** where it was 3.8, and the
+distortion at `push` improved as a side effect. ⚠️ **THREE PLACES ARE STILL WIDE AND ARE NOT GUARDED**
+— The Toxic Mire 4.4, The Black Heart 4.8, The Labyrinth 7.4 dB — and `tests/music.test.ts`'s `mixAt`
+does not model the compressor, so every guard built on it now measures a bus one node short of the
+shipped one. `scripts/weigh-clean.mjs` is the instrument.
+
+⚠️ **THE BACKGROUNDS WERE ATTACKED ON 2026-09-03 — [0220](decisions/0220-a-place-is-somewhere-you-are.md).**
+Five of the seven places redrawn from one report: Ember Nebula denser and its Pillars knotted, lit and
+five columns deep; Saurian Belt and Rime Shelf standing on ground; The Black Heart's landmark **is** a
+beating heart; The Labyrinth is a corridor the ship is inside rather than four walls beside it.
+**What is owed is an eye** — nearly all of it is taste, and the instrument is `scripts/shot-place.mjs`,
+which puts every place on screen at three camera positions without flying there. ⚠️ **The two places
+NOT touched are The Approach and The Toxic Mire**, deliberately: neither was in the report.
+
 ⚠️ **THE STEREO REPORT IS OPEN AND HAS NOT BEEN LOOKED AT.** Given in the same breath as the
 distortion one: *"I'm a little dubious on everything being stereo as listening to with headphones,
 some of the tracks are one ear only and aren't stereo, in some cases it's good, but in other cases it

@@ -149,6 +149,16 @@ export interface LandmarkEntry {
    * which is 0069's actual concern stated properly.
    */
   depth: number;
+  /**
+   * How far the camera travels for one beat of it, in world units. `0` for a landmark that is still.
+   *
+   * ⚠️ **IN WORLD UNITS AND NOT IN SECONDS, WHICH IS 0034 RATHER THAN A SHORTCUT.** *"Every speed is
+   * in the camera's frame"* — everything else about a landmark (`at`, `depth`, `extent`) is measured
+   * against camera travel, and a beat measured against a wall clock would be the one quantity in this
+   * type that a paused, scrubbed or re-scaled camera desynchronises. It also keeps the renderer free
+   * of a clock it does not otherwise have: `paintLandmarks` already knows where the camera is.
+   */
+  beat: number;
 }
 
 export interface LevelRow {
@@ -1250,7 +1260,9 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       is the slowest thing on screen*. It also sets how long they take to cross: about a minute, so
       they are gone before the boss.
     */
-    landmarks: [{ at: 1299, lane: 72, depth: 0.08 }],
+    // ⚠️ `beat: 0` — the Pillars are rock and the only moving thing in them is the streamers off the
+    // tips, which are baked. A landmark beats only where the place is named after something alive.
+    landmarks: [{ at: 1299, lane: 72, depth: 0.08, beat: 0 }],
     theme: 'nebula',
   },
   /**
@@ -1364,7 +1376,19 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       { at: 3986, section: 'approach' },
     ],
     boss: 'axis',
-    landmarks: [],
+    /*
+      ⚠️ **THE HEART ARRIVES WITH `surge`, ON THE PILLARS' OWN REASONING.** *"black heart needs to be a
+      beating black heart."* 0203 tied Ember Nebula's landmark to the bar its music opens on rather
+      than to a number someone liked; the same argument puts this one where The Black Heart's ladder
+      turns, and `sections` above is where that is read from. It is the last thing the player flies
+      past before the last boss in the game.
+
+      ⚠️ **`beat: 96` IS 2.7 SECONDS OF CAMERA TRAVEL**, which is a resting pulse at about 22 a
+      minute — slow, because it is enormous and a long way off, and a heart the size of a moon that
+      beat at 70 would read as a strobe. `SCROLL_PER_STEP * STEPS_PER_SECOND` is the conversion and it
+      is the same one `rig/bench.ts` prints its readout in.
+    */
+    landmarks: [{ at: 2360, lane: 46, depth: 0.07, beat: 96 }],
     theme: 'core',
   },
 };

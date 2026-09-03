@@ -403,6 +403,35 @@ function manifest(treeRoot) {
 }
 
 /**
+ * Each disposable tree, paired with the manifest of what THAT tree was copied as.
+ *
+ * ⚠️ **ONE MANIFEST PER TREE, AND IT USED TO BE ONE FOR ALL OF THEM.** The old line was
+ * `const pristine = manifest(trees[0])`, on the reasoning that six copies of one tree are one tree.
+ * They are not, quite: **the copies are taken one after another, so anything that changes in the
+ * source between the first and the last is drift in five trees that no probe put there.**
+ *
+ * ⚠️ **FOUND BY IT HAPPENING, AND THE RITUAL WALKS YOU INTO IT.** `.claude/typecheck.log` is appended
+ * to by this repository's own PostToolUse hook on every edit, and `.claude/skills/ship/SKILL.md` says
+ * *"start it at commit time in the background"* — so a session that edits anything while `prove`
+ * copies gets five workers reported as *did not come back to what it was copied as*, over a
+ * gitignored log, with every one of 774 probes red. **A false verdict from a check whose whole job is
+ * to be the verdict** — `docs/decisions/0199-a-verdict-is-an-exit-code.md`.
+ *
+ * ⚠️ **AND THE PROSE AT THE TOP OF THIS FILE WAS ALREADY RIGHT**: the restore is checked *"by
+ * comparing the whole tree to the copy it started as"*. That is now what it does.
+ *
+ * `take` is injectable so the pairing can be proved without six real copies on disk —
+ * `tests/prove-guard.test.ts`. It is the same narrowing `Pen` makes in `src/render/bake.ts`.
+ *
+ * @param {string[]} paths
+ * @param {(treeRoot: string) => Map<string, string>} [take]
+ * @returns {{ path: string, pristine: Map<string, string> }[]}
+ */
+export function fingerprintTrees(paths, take = manifest) {
+  return paths.map((path) => ({ path, pristine: take(path) }));
+}
+
+/**
  * How a tree differs from the one it was copied as.
  *
  * This is what replaces *"and the suite is green again afterwards"*, and it is a stronger claim: the
@@ -562,15 +591,14 @@ async function main(filter) {
       Math.min(Number(process.env.PROVE_WORKERS) || availableParallelism() - 1, 6, probes.length),
     );
     process.stdout.write(`Copying ${workers} disposable ${workers === 1 ? 'tree' : 'trees'} to prove in ... `);
-    const trees = [];
+    const paths = [];
     for (let i = 0; i < workers; i++) {
       const work = join(base, `w${i}`);
       makeTree(work);
-      trees.push(work);
+      paths.push(work);
     }
-    // One manifest for all of them: they are copies of the same tree, taken before anything ran.
-    const pristine = manifest(trees[0]);
-    console.log(`done (${pristine.size} files each)`);
+    const trees = fingerprintTrees(paths);
+    console.log(`done (${trees[0]?.pristine.size ?? 0} files each)`);
 
     const rows = [];
     const failures = [];
@@ -579,7 +607,7 @@ async function main(filter) {
     let finished = 0;
 
     await Promise.all(
-      trees.map(async (tree, w) => {
+      trees.map(async ({ path: tree }, w) => {
         const report = join(base, `w${w}.json`);
         while (true) {
           const probe = queue[taken++];
@@ -660,7 +688,7 @@ async function main(filter) {
       what makes this the check that has to hold.
     */
     for (const [w, tree] of trees.entries()) {
-      const changed = drift(pristine, manifest(tree));
+      const changed = drift(tree.pristine, manifest(tree.path));
       if (changed.length) {
         failures.push(`worker ${w}'s tree did not come back to what it was copied as:\n    ${changed.join('\n    ')}`);
       }

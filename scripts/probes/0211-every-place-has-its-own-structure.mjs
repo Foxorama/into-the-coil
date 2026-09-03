@@ -46,8 +46,23 @@ export const PROBES = [
     guard: 'every place has a structure of its own',
     edit: {
       path: 'src/render/bake.ts',
-      find: "  nebula: (size) => crossing(size, 'nebula/lanes', 3, 0.05, 0.05, 0.11),",
-      replace: "  nebula: (size) => crossing(size, 'labyrinth/walls', 4, 0.018, 0.03, 0.075),",
+      /*
+        ⚠️ RE-ANCHORED, AND THE DIRECTION OF THE THEFT HAD TO REVERSE — 0220. The old break pointed
+        Ember Nebula's lanes at `'labyrinth/walls'`, because both places drew with `crossing` and
+        swapping the stream was enough to make them one drawing. **The Labyrinth is a sum of sines
+        now** and calls `crossing` at all — so that edit would have left the two places drawing
+        different things and the guard GREEN, which is the exact shape of a probe that has stopped
+        proving anything. It is the failure `tests/prove-guard.test.ts` catches by refusing a stranded
+        anchor, and re-pointing the anchor without re-reading the break is how a probe survives that
+        check while quietly meaning nothing.
+
+        So the theft runs the other way: The Labyrinth is handed Ember Nebula's three lanes, by that
+        place's own stream and numbers, and the two rows then emit byte-identical marks.
+      */
+      find: "    const rng = makeRng('sky').stream('labyrinth/paths');\n    const out: StructureMark[] = [];",
+      replace:
+        "    const rng = makeRng('sky').stream('labyrinth/paths');\n" +
+        "    const out: StructureMark[] = crossing(size, { stream: 'nebula/lanes', count: 3, wander: 0.05, from: 0.05, to: 0.11 });",
     },
   },
 ];
