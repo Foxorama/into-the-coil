@@ -131,7 +131,8 @@ export const PROBES = [
     guard: 'and the shaper has not flattened the ladder it is meant to make room for',
     edit: {
       path: 'src/content/music.ts',
-      find: 'export const MUSIC_DRIVE = 0.3;',
+      // 0217 took the drive to 0.15; the break is unchanged and only the anchor moved.
+      find: 'export const MUSIC_DRIVE = 0.15;',
       replace: 'export const MUSIC_DRIVE = 40;',
     },
   },

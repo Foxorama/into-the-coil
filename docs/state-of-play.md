@@ -241,6 +241,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **A GRID IS NOT A LIST — the pad collapsed both axes on a once-true argument, so nine tiles navigated as nine items** | [0214](decisions/0214-a-grid-is-not-a-list.md) |
 | **A TRANSITION IS A SHAPE — every ramp was the same length whatever the move, so the biggest arrivals landed as steps; five of seven places had it** | [0215](decisions/0215-a-transition-is-a-shape-not-an-instant.md) |
 | **THE MENU SAYS WHAT IS PLAYING — Play all was working and was reported broken, because the nine buttons never moved while everything smaller did** | [0216](decisions/0216-the-menu-says-what-is-playing.md) |
+| **THE BUS IS A COLOUR AND IT WAS TOO THICK — the drive halved; it was never clipping, and level cannot see saturation** | [0217](decisions/0217-the-bus-is-a-colour-and-it-was-too-thick.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were
@@ -737,6 +738,20 @@ read as steps the next move is the **ladder** rather than the ramps: those bound
 
 ⚠️ **`scripts/weigh-arc.mjs` IS THE INSTRUMENT FOR ALL OF IT**, and it reads the walk both surfaces
 share — so it is one report about the game and about the music room at once.
+
+⚠️ **AND THE BUS WAS THINNED ON 2026-09-03 — [0217](decisions/0217-the-bus-is-a-colour-and-it-was-too-thick.md).**
+Reported as distortion; it was never clipping. `MUSIC_DRIVE` went 0.3 → 0.15, which is **4–6 dB
+cleaner everywhere** and **about 2.4 dB quieter**. ⚠️ **0114 raised that constant because the fight was
+*"too subdued and quiet against the game sfx"*, so that report may return — and if it does,
+`MUSIC_GAIN` is where it is answered now, not the shaper.** `scripts/weigh-clean.mjs` is the
+instrument.
+
+⚠️ **THE STEREO REPORT IS OPEN AND HAS NOT BEEN LOOKED AT.** Given in the same breath as the
+distortion one: *"I'm a little dubious on everything being stereo as listening to with headphones,
+some of the tracks are one ear only and aren't stereo, in some cases it's good, but in other cases it
+comes off a little weird."* The subject is `LAYER_PAN` and
+[0209](decisions/0209-the-rig-hears-in-stereo.md) — which found four of five rig modes folding a
+panned mix to mono, so **the instrument's own history here is of measuring the wrong channel**.
 
 ⚠️ **AND THE SECOND ANSWER IS THE ONE TO LISTEN FOR HARDEST.** The room is now the only place in the
 game where a place's whole arc plays with no gunfire over it and no ducking — so a build that does

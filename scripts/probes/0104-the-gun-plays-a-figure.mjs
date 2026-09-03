@@ -165,7 +165,8 @@ export const PROBES = [
     guard: '0104 — THE REPORTED ONE: the bed is not quieter than the gun playing over it',
     edit: {
       path: 'src/content/music.ts',
-      find: 'export const MUSIC_DRIVE = 0.3;',
+      // 0217 took the drive to 0.15; the break is unchanged and only the anchor moved.
+      find: 'export const MUSIC_DRIVE = 0.15;',
       replace: 'export const MUSIC_DRIVE = 0;',
     },
   },

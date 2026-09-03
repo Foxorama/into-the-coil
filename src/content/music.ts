@@ -653,7 +653,35 @@ export const MUSIC_GAIN = 0.46;
   the rung were multiplying the same idea; the theme gives way, exactly as `nebula` and `forge` did
   when the boss rung took over the bass.
 */
-export const MUSIC_DRIVE = 0.3;
+/*
+  ── 0.3 → 0.15, AND THE THING IT BOUGHT IS THE THING IT COST ────────────────────────────────────
+
+  ⚠️ **`docs/decisions/0217-the-bus-is-a-colour-and-it-was-too-thick.md`.** Reported: *"the approach
+  compared to ember nebula sounds distorted a bit and some of the boss music has similar distortion,
+  it just doesn't sound crystal clear and clean."*
+
+  ⚠️ **IT IS NOT CLIPPING, AND THAT WAS CHECKED FIRST.** `tests/themes.test.ts` walks every place at
+  every rung with the browser's clamp modelled and reports the share of samples flattened: **0.0089%**
+  at worst, one sample in eleven thousand, each 0.054 dB out. What a listener is hearing is the
+  saturation itself, working hardest where the mix is loudest — which is exactly why the places and
+  rungs named in the report are the loud ones.
+
+  ⚠️ **MEASURED WITH `scripts/weigh-clean.mjs`**, as the share of the output no single gain explains:
+  the loud rungs sit at **−13 to −16 dB** at 0.3 and **−17 to −21 dB** at 0.15. The Approach at `push`
+  — the exact comparison the report makes against Ember Nebula — moves from −16.6 to −21.1.
+
+  ⚠️ **AND IT COSTS THE LOUDNESS 0114 BOUGHT, WHICH IS THE HONEST HALF.** The table above measures
+  `run` RMS at 0.376 for 0.3 and 0.285 for 0.15 — about **2.4 dB** — and 0114 raised this constant
+  precisely because *"the boss music was better, but too subdued and quiet against the game sfx"*.
+  That report may come back; `MUSIC_GAIN` is where it would be answered, and the shaper is no longer
+  the thing standing in for it. **The clean-versus-loud trade was put to the player and this is the
+  answer they chose.**
+
+  ⚠️ **THE DYNAMICS IMPROVE, WHICH IS THE ONE THING THAT GETS BETTER FOR FREE.** The same table:
+  boss-over-run is **+1.7 dB at 0.3 and +2.1 dB at 0.15**, because a shaper on a summed bus takes the
+  arrival away first. 0108 chose 0.22 on that column and 0114 spent it again for level.
+*/
+export const MUSIC_DRIVE = 0.15;
 
 /**
  * How much of a boss's health has to be gone before the music reaches its wall of sound.

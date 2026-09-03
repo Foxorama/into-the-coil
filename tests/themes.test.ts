@@ -310,7 +310,18 @@ describe('a theme mixes the music and cannot break it', () => {
           live.push(l);
           gains.push(gain);
         }
-        return { level, live, gains, peak: 0, clamped: 0, walked: 0 };
+        // 0217: the three sums the distortion measure needs, carried in the same row.
+        return {
+          level,
+          live,
+          gains,
+          peak: 0,
+          clamped: 0,
+          walked: 0,
+          dirtyDotClean: 0,
+          cleanDotClean: 0,
+          dirtyDotDirty: 0,
+        };
       });
       // @setup: one scratch row of layer values, refilled per sample rather than allocated per sample.
       const now = new Float64Array(MUSIC_LAYERS.length);
@@ -335,8 +346,26 @@ describe('a theme mixes the music and cannot break it', () => {
           const driven = sum * MUSIC_GAIN;
           if (Math.abs(driven) > 1) rung.clamped++;
           rung.walked++;
-          const shaped = Math.abs(saturate(driven < -1 ? -1 : driven > 1 ? 1 : driven, MUSIC_DRIVE));
+          const held = driven < -1 ? -1 : driven > 1 ? 1 : driven;
+          const signed = saturate(held, MUSIC_DRIVE);
+          const shaped = Math.abs(signed);
           if (shaped > rung.peak) rung.peak = shaped;
+          /*
+            ── HOW MUCH OF THE OUTPUT NO GAIN EXPLAINS — 0217 ────────────────────────────────────
+
+            ⚠️ **THE QUANTITY A LEVEL METER CANNOT SEE, ACCUMULATED IN THE WALK THAT IS ALREADY
+            HAPPENING.** The clamp share above answers *is anything flattened* and its answer is
+            0.0089% at worst — so it was green while a listener reported *"it just doesn't sound
+            crystal clear and clean"*. Both are true: the bus was not clipping, it was SATURATING, and
+            saturation shows up in what the shaper adds rather than in what it caps.
+
+            ⚠️ **THREE DOT PRODUCTS AND NO SECOND PASS.** The best single multiplier is
+            `<dirty,clean>/<clean,clean>` and the residual energy is `<dirty,dirty> − a·<dirty,clean>`,
+            so the whole measure rides this loop for three multiply-adds a sample.
+          */
+          rung.dirtyDotClean += signed * driven;
+          rung.cleanDotClean += driven * driven;
+          rung.dirtyDotDirty += signed * signed;
         }
       }
       for (const rung of rungs) {
@@ -361,6 +390,26 @@ describe('a theme mixes the music and cannot break it', () => {
           rung.clamped / Math.max(1, rung.walked),
           `${theme} at ${rung.level} drives ${((rung.clamped / Math.max(1, rung.walked)) * 100).toFixed(4)}% of its samples into the shaper's clamp`,
         ).toBeLessThan(0.0005);
+        /*
+          ⚠️ **AND HOW DIRTY IT IS, WHICH IS THE ONE THE REPORT WAS ABOUT** — 0217. Reported: *"the
+          approach compared to ember nebula sounds distorted a bit and some of the boss music has
+          similar distortion, it just doesn't sound crystal clear and clean."* At `MUSIC_DRIVE` 0.3
+          the loud rungs sat at **−13 to −16 dB** and every one of them passed both assertions above.
+
+          ⚠️ **THE CEILING IS SET FROM THE MEASURED SPREAD AFTER THE FIX, NOT FROM A TASTE.** At 0.15
+          the dirtiest rung in the game is Saurian Belt's `surge` at −16.8 dB, so −16 is just past the
+          worst thing that ships. It holds the bus at the colour that was chosen and would go red on a
+          drive raised back towards 0.3 — which is precisely the change that produced the report.
+        */
+        const fit = rung.cleanDotClean > 0 ? rung.dirtyDotClean / rung.cleanDotClean : 0;
+        const residual = Math.max(0, rung.dirtyDotDirty - fit * rung.dirtyDotClean);
+        const dirty =
+          rung.dirtyDotDirty <= 0 || residual <= 0 ? -Infinity : 10 * Math.log10(residual / rung.dirtyDotDirty);
+        expect(
+          dirty,
+          `${theme} at ${rung.level} is ${dirty.toFixed(1)} dB dirty — the bus is saturating hard ` +
+            'enough to hear, which is what "doesn\'t sound crystal clear and clean" is',
+        ).toBeLessThan(-16);
       }
     }
     /*
