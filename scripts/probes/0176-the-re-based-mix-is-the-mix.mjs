@@ -61,8 +61,13 @@ export const PROBES = [
     guard: 'and no theme at any rung drives the bus past full scale',
     edit: {
       path: 'tests/themes.test.ts',
-      find: '          const shaped = Math.abs(saturate(driven < -1 ? -1 : driven > 1 ? 1 : driven, MUSIC_DRIVE));',
-      replace: '          const shaped = Math.abs(saturate(driven, MUSIC_DRIVE));',
+      /*
+        ⚠️ Re-anchored by 0217, which split the clamp onto its own line so the distortion measure
+        could read the SIGNED shaped value. The break is unchanged — the clamp is removed and the
+        shaper becomes one the browser does not have — and it now takes the line that does the clamp.
+      */
+      find: '          const held = driven < -1 ? -1 : driven > 1 ? 1 : driven;',
+      replace: '          const held = driven;',
     },
   },
 ];
