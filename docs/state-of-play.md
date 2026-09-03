@@ -242,6 +242,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **A TRANSITION IS A SHAPE — every ramp was the same length whatever the move, so the biggest arrivals landed as steps; five of seven places had it** | [0215](decisions/0215-a-transition-is-a-shape-not-an-instant.md) |
 | **THE MENU SAYS WHAT IS PLAYING — Play all was working and was reported broken, because the nine buttons never moved while everything smaller did** | [0216](decisions/0216-the-menu-says-what-is-playing.md) |
 | **THE BUS IS A COLOUR AND IT WAS TOO THICK — the drive halved; it was never clipping, and level cannot see saturation** | [0217](decisions/0217-the-bus-is-a-colour-and-it-was-too-thick.md) |
+| **PUSH IS AN ENTRANCE — one boundary carried 88% of a level's climb, so the music went background to foreground in one step at 41 seconds** | [0218](decisions/0218-push-is-an-entrance-not-the-climb.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were
@@ -745,6 +746,20 @@ cleaner everywhere** and **about 2.4 dB quieter**. ⚠️ **0114 raised that con
 *"too subdued and quiet against the game sfx"*, so that report may return — and if it does,
 `MUSIC_GAIN` is where it is answered now, not the shaper.** `scripts/weigh-clean.mjs` is the
 instrument.
+
+⚠️ **AND THE 41-SECOND REPORT CAME BACK A THIRD TIME, WHICH IS THE ONE TO WATCH** —
+[0218](decisions/0218-push-is-an-entrance-not-the-climb.md). 0215 measured the RATE of the rise and
+halved it; the report was about the LEVEL. Measured through the shaper, The Approach's `push` carried
+**3.6 dB of a 4.1 dB climb** — one boundary doing 88% of the level, then flat for two minutes. It is
+2.9 now, with `surge` a real step for the first time.
+
+⚠️ **THREE PLACES ARE STILL LOUDER AT THAT BOUNDARY AND NONE HAS BEEN REPORTED**: The Toxic Mire 4.4,
+The Black Heart 5.2, The Labyrinth 5.2 dB. **They climb by carried layers being turned up rather than
+by parts arriving**, so 0218's rule barely moves them — the same distinction 0215 found the hard way.
+Fixing them is their own ladders and a conversation about how loud a place should sit.
+
+⚠️ **AND THE LABYRINTH OPENS QUIETER THAN THE TITLE SCREEN** — its `calm → run` is **−0.5 dB**. Found
+while writing 0218's guard, unexplained, and nobody has reported it.
 
 ⚠️ **THE STEREO REPORT IS OPEN AND HAS NOT BEEN LOOKED AT.** Given in the same breath as the
 distortion one: *"I'm a little dubious on everything being stereo as listening to with headphones,

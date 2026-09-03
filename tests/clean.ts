@@ -78,6 +78,22 @@ export interface DriveAt {
   out: number;
   /** How much of the output no single gain explains, in dB below the output. Less negative is dirtier. */
   distortion: number;
+  /**
+   * What the rung sums to THROUGH the shaper, in dB — the loudness a listener actually gets.
+   *
+   * ── THE ARC MEASURES THE BUS BEFORE THE SHAPER, AND THAT IS NOT WHAT ANYBODY HEARS ─────────────
+   *
+   * ⚠️ **`tests/arc.ts` says so out loud** — *"the bus's `saturate` curve is not applied, so a jump
+   * measured here is an upper bound"* — which was the safe direction for a guard about something
+   * being too loud and is the **wrong** direction for a guard about a contrast between two rungs. A
+   * shaper compresses the loud rung more than the quiet one, so the gap a player hears is always
+   * SMALLER than the gap the arc reports, and by an amount that changes with `MUSIC_DRIVE`.
+   *
+   * ⚠️ **WHICH MEANS 0217 MOVED EVERY CONTRAST IN THE GAME AND NOTHING MEASURED IT.** Halving the
+   * drive was measured as *boss-over-run +1.7 → +2.1 dB* and recorded as a gain; the same arithmetic
+   * applies to `run → push`, where it is the thing that was reported.
+   */
+  rms: number;
 }
 
 /**
@@ -155,12 +171,14 @@ export function driveAt(
     cleanDotClean += clean * clean;
     dirtyDotDirty += dirty * dirty;
   }
+  // The output's own RMS, which is `dirtyDotDirty` already accumulated — no second walk.
+  const rms = 10 * Math.log10(dirtyDotDirty / length);
 
   const fit = cleanDotClean > 0 ? dirtyDotClean / cleanDotClean : 0;
   const residual = Math.max(0, dirtyDotDirty - fit * dirtyDotClean);
   const distortion =
     dirtyDotDirty <= 0 || residual <= 0 ? -Infinity : 10 * Math.log10(residual / dirtyDotDirty);
-  return { theme, rung, peak, out, distortion };
+  return { theme, rung, peak, out, distortion, rms };
 }
 
 /**
