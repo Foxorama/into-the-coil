@@ -596,6 +596,27 @@ ${each('-action-cursor')} {
   opacity: 1;
 }
 /*
+  ── WHICH PLACE IS PLAYING — decision 0216, and no extension on that path ────────────────────────
+
+  ⚠️ **THE SAME FILL A CHOSEN SETTING TAKES**, because it is the same question asked of a different
+  row: *which of these is on*. A player who has learned that a filled button is the live one on the
+  title screen reads this without being taught it twice.
+
+  ⚠️ **AND IT MUST NOT BE THE FOCUS RING.** The ring is an outline and says *this is what a press
+  would do*; the fill says *this is what you are hearing*. During Play all the two are usually on the
+  same button and have to stay legible together — which is why one is an outline and the other a
+  background rather than both being colour.
+
+  ⚠️ **IT SITS DOWN HERE, AFTER the shared action rule, AND THAT IS THE WHOLE REASON IT WORKS.** That
+  rule sets background: transparent at the same specificity, so written next to the music room's own
+  block it lost on source order and the button did not fill — visibly nothing, exactly the failure
+  0210 recorded twice while fitting the title screen. Caught by looking at the screen.
+*/
+.itc-music-action-playing {
+  background: var(--itc-ink);
+  color: var(--itc-void);
+}
+/*
   ── THE FACE, WHICH IS THE UI HALF OF A STYLE ───────────────────────────────────────────────────
 
   Decision 0070: the ask is *"Retro UI / Modern UI"*, and a style that changed only the background
@@ -832,6 +853,30 @@ export interface NowPlaying {
   marks: readonly { at: number; label: string }[] | null;
   /** The place *Play all* moves to next, or `null` when one place is looping on its own. */
   next: string | null;
+  /**
+   * Which control is the place being played, as an index into the screen's own controls.
+   *
+   * ── THE MENU SAID NOTHING, AND THAT READ AS THE MUSIC SAYING NOTHING ────────────────────────────
+   *
+   * ⚠️ **`docs/decisions/0216-the-menu-says-what-is-playing.md`.** Reported: *"it now just repeats the
+   * same track and the focused level never changes with regards to the menu to indicate which track is
+   * playing… I know the play bar works properly, but it looks buggy if the menu doesn't change the
+   * focus along with the level track."* **Play all was advancing correctly the whole time** — the
+   * readout, the backdrop and the mix all followed it — and the nine buttons underneath, which are
+   * the biggest thing on the screen, never moved. A screen where the largest element contradicts the
+   * smallest is a screen that reads as broken.
+   */
+  control: number | null;
+  /**
+   * Whether the focus ring should move to that control as well as the mark.
+   *
+   * ⚠️ **THE MARK IS ALWAYS RIGHT AND THE FOCUS IS A COURTESY**, which is why they are two fields. A
+   * cursor that jumped while somebody was navigating would take the menu away from them mid-press —
+   * and `activate` presses whatever the ring is on, so a jump between a press being decided and
+   * landing would start a place they did not choose. `src/app/mount.ts` stops asking the moment the
+   * player moves the focus themselves.
+   */
+  follow: boolean;
 }
 
 /**
@@ -1705,6 +1750,10 @@ export function makeChrome(
       if (parts === undefined || parts === null) return;
       if (now === null) {
         parts.root.hidden = true;
+        // 0216: and nothing is playing, so nothing is marked. Left on, it would claim a place is.
+        for (const control of panels.music?.controls ?? []) {
+          control.classList.remove(prefixFor('music') + 'action-playing');
+        }
         /*
           ⚠️ **The drawn place is forgotten as well as hidden**, or a listener who leaves the room and
           comes back to the SAME place gets the ticks that were already there — which is correct today
@@ -1714,6 +1763,20 @@ export function makeChrome(
         return;
       }
       parts.root.hidden = false;
+      /*
+        ⚠️ **THE MARK IS ON THE BUTTON, WHICH IS WHERE THE PLAYER IS LOOKING** — 0216. It is the same
+        mechanism `setChoice` uses for a setting, because it is the same question: *which of these is
+        on*. Toggled over every control rather than only the playing one, so leaving a place marked is
+        not a state this can get into.
+      */
+      const controls = panels.music?.controls ?? [];
+      for (let i = 0; i < controls.length; i++) {
+        controls[i]!.classList.toggle(prefixFor('music') + 'action-playing', i === now.control);
+      }
+      if (now.follow && now.control !== null && now.control !== focused && shownScreen === 'music') {
+        focused = now.control;
+        paintFocus();
+      }
       parts.place.textContent = now.place;
       parts.section.textContent = now.section;
       const percent = (now.through < 0 ? 0 : now.through > 1 ? 1 : now.through) * 100;

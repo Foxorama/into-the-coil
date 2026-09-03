@@ -1309,6 +1309,18 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   let auditionAlong = 0;
   /** Whether the walk moves to the next place when it ends, or rounds again on this one. */
   let auditionAll = false;
+  /*
+    ── WHETHER THE FOCUS RING STILL BELONGS TO THE WALK — 0216 ─────────────────────────────────────
+
+    ⚠️ **THE MARK IS ALWAYS RIGHT; THE RING IS ONLY LENT.** Asked for as *"the menu doesn't change the
+    focus along with the level track"*, and moving a cursor under somebody's hands is the one way that
+    could go wrong: `chrome.activate` presses whatever the ring is on, so a jump between a press being
+    decided and it landing would start a place the player did not choose.
+
+    ⚠️ **SO IT IS LENT UNTIL THEY TAKE IT BACK.** Pressing a control hands the ring to the walk; the
+    first deliberate MOVE takes it back, and Play all goes on marking the right button either way.
+  */
+  let focusFollowsWalk = false;
 
   /*
     ⚠️ **THE RUN'S CAMERA IS BORROWED AND PUT BACK, WHICH IS CHEAPER THAN A SECOND DRAW PATH.**
@@ -1499,6 +1511,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const place = THEME_KINDS[index];
     if (place !== undefined) {
       auditionAll = false;
+      // 0216: pressing a place hands the ring to the walk — which is where it already is.
+      focusFollowsWalk = true;
       beginAudition(place);
       return;
     }
@@ -1513,6 +1527,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         browser dropped. There is one clock now and it is the one the player is watching.
       */
       auditionAll = true;
+      /*
+        ⚠️ **AND THIS IS THE CASE THE REPORT WAS ABOUT** — 0216. The ring is on *Play all* when it is
+        pressed, so without this the cursor sits on a button that is not a place for the whole run and
+        the menu never says which of the nine is sounding.
+      */
+      focusFollowsWalk = true;
       beginAudition(THEME_KINDS[0]!);
       return;
     }
@@ -1640,6 +1660,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         selected"*. A single place loops, so there is no next.
       */
       next: auditionAll ? THEMES[THEME_KINDS[(THEME_KINDS.indexOf(place) + 1) % THEME_KINDS.length]!].title : null,
+      /*
+        ⚠️ **`THEME_KINDS` IS the order the buttons were built in**, which `onMusicRoom` already reads
+        the other way round — `src/state/screens.ts` walks that table to make the row, so the index of
+        a place IS the index of its control. A place added to the table gets marked without anybody
+        remembering, and nothing here counts buttons.
+      */
+      control: THEME_KINDS.indexOf(place),
+      follow: focusFollowsWalk,
     });
   };
 
@@ -1820,8 +1848,17 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       *silent only where the browser genuinely forbids it*.
     */
     if (menuAsk.move !== 0 || menuAsk.confirm) audioOut.unlock();
-    // 0214: the axis goes with the direction. The chrome resolves it against its own layout.
-    if (menuAsk.move !== 0) chrome.move(menuAsk.move, menuAsk.axis);
+    /*
+      0214: the axis goes with the direction. The chrome resolves it against its own layout.
+
+      ⚠️ **AND A DELIBERATE MOVE TAKES THE RING BACK FROM THE WALK** — 0216. This is the one place a
+      player's own navigation is heard, so it is the one place that can tell *they moved it* from *the
+      music moved it*.
+    */
+    if (menuAsk.move !== 0) {
+      focusFollowsWalk = false;
+      chrome.move(menuAsk.move, menuAsk.axis);
+    }
     /*
       ⚠️ **No `return` needed any more, and the countdown is no longer here.** `activate` changes the
       screen underneath, and counting the new screen's first step down would have spent a step of a

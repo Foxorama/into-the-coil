@@ -240,6 +240,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **THE ROOM IS A FLYTHROUGH — the boot field was on screen because no screen had ever both shown it and moved; the ship flies the level now and dust goes past it** | [0213](decisions/0213-the-room-is-a-flythrough.md) |
 | **A GRID IS NOT A LIST — the pad collapsed both axes on a once-true argument, so nine tiles navigated as nine items** | [0214](decisions/0214-a-grid-is-not-a-list.md) |
 | **A TRANSITION IS A SHAPE — every ramp was the same length whatever the move, so the biggest arrivals landed as steps; five of seven places had it** | [0215](decisions/0215-a-transition-is-a-shape-not-an-instant.md) |
+| **THE MENU SAYS WHAT IS PLAYING — Play all was working and was reported broken, because the nine buttons never moved while everything smaller did** | [0216](decisions/0216-the-menu-says-what-is-playing.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were

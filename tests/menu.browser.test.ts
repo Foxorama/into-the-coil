@@ -387,6 +387,46 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
 
     await nudge(page, MENU_DPAD_BUTTONS.up);
     expect(await focused(page), 'up did not come back to the row above').toBe(first);
+
+    /*
+      ── AND THE RING IS LENT TO THE WALK, NOT TAKEN BY IT — 0216 ─────────────────────────────────
+
+      ⚠️ **A CURSOR THAT MOVED UNDER SOMEBODY'S HANDS WOULD BE WORSE THAN ONE THAT NEVER MOVED.**
+      `activate` presses whatever the ring is on, so a jump between a press being decided and it
+      landing starts a place the player did not choose. The rule is that the first deliberate move
+      takes the ring back, and **the mark keeps following either way** — which is what makes lending
+      it safe at all.
+
+      ⚠️ **ON THIS PAGE RATHER THAN ITS OWN, AND THAT IS A COST DECISION STATED RATHER THAN HIDDEN.**
+      A second `open()` is a second context, a second page load and a second audio prewarm — measured
+      at about **94 seconds of test CPU**, which pushed two bake-heavy unit tests in
+      `tests/music.test.ts` and `tests/sound.test.ts` past their 30-second timeouts. They run in 8–11 s
+      alone; the suite is deliberately oversubscribed (0169 measured 713 s of CPU inside 251 s of wall
+      clock) and this change had eaten the margin. **The subject is adjacent** — both halves are about
+      the focus ring on this exact screen — so it rides the page that is already open.
+    */
+    await page.getByRole('button', { name: /^Play all/ }).click();
+    const playing = '.' + prefixFor('music') + 'action-playing';
+    const cursor = '.' + prefixFor('music') + 'action-cursor';
+    await page.locator(playing).waitFor({ state: 'attached', timeout: 30_000 });
+    expect(await focused(page), 'the ring did not go to the place Play all opened on').toBe(first);
+
+    // One deliberate push. Where it lands is 0214's business; that it is no longer the walk's is this.
+    await nudge(page, MENU_DPAD_BUTTONS.right);
+    const moved = await focused(page);
+    expect(moved, 'the push did not move the ring at all').not.toBe(first);
+
+    /*
+      ⚠️ **SEEK TO THE END SO THE WALK HANDS OVER**, which is the moment the ring would be taken back
+      if it were ever going to be. The mark must move; the cursor must not.
+    */
+    await page.locator('.' + prefixFor('music') + 'now-bar').focus();
+    await page.keyboard.press('End');
+    await expect.poll(() => page.locator(playing).textContent()).toBe(THEMES[THEME_KINDS[1]!].title);
+    expect(
+      await page.locator(cursor).textContent(),
+      'the walk took the focus ring back after the player had moved it',
+    ).toBe(moved);
     await page.context().close();
   });
 
