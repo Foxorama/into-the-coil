@@ -237,6 +237,8 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **THE TITLE PLAYS THE MUSIC — a music room on the start screen; the fifth screen mounted INVISIBLE because the stylesheet named its four by hand** | [0210](decisions/0210-the-title-plays-the-music.md) |
 | **EVERY PLACE HAS ITS OWN STRUCTURE — all seven authored, and the three seam rules became a field on the mark instead of three arguments in three comments** | [0211](decisions/0211-every-place-has-its-own-structure.md) |
 | **THE ROOM WALKS THE LEVEL — the music room played one fixed rung on a premise that had stopped being true, and 0210's *what is owed* came back as a report** | [0212](decisions/0212-the-room-walks-the-level.md) |
+| **THE ROOM IS A FLYTHROUGH — the boot field was on screen because no screen had ever both shown it and moved; the ship flies the level now and dust goes past it** | [0213](decisions/0213-the-room-is-a-flythrough.md) |
+| **A GRID IS NOT A LIST — the pad collapsed both axes on a once-true argument, so nine tiles navigated as nine items** | [0214](decisions/0214-a-grid-is-not-a-list.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were
@@ -716,6 +718,12 @@ found the room playing one fixed rung — 8–9 layers against a run's 12–15, 
 it walk the level instead. **Every figure in that decision is a model quantity and none of them can
 hear.** What was reported is that two things sounded different; what is claimed is that they no
 longer do.
+
+⚠️ **THE SOUND HALF WAS ANSWERED — *"the music seems good"*, 2026-09-03 — AND WHAT IS LEFT IS AN
+EYE.** [0213](decisions/0213-the-room-is-a-flythrough.md) put the ship and a dust field in the room's
+background; whether 48 motes is dust or drizzle and whether a twelve-second weave reads as flying or
+as drifting are tastes, and `ATTRACT_MOTES` and the two wavelengths in `src/app/attract.ts` are three
+numbers with nothing asserted on any of them.
 
 ⚠️ **AND THE SECOND ANSWER IS THE ONE TO LISTEN FOR HARDEST.** The room is now the only place in the
 game where a place's whole arc plays with no gunfire over it and no ducking — so a build that does

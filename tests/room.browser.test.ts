@@ -3,8 +3,10 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
-import { prefixFor } from '../src/app/chrome.ts';
+import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { SCREENS } from '../src/state/screens.ts';
+// 0213: the sky is turned off so that ink in the lane means an entity and nothing else.
+import { STYLE_KINDS } from '../src/content/styles.ts';
 import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
 import { MUSIC_LEVEL_LABEL } from '../src/content/music.ts';
 
@@ -92,6 +94,8 @@ async function open(): Promise<Page> {
 
 const MUSIC = '.' + prefixFor('music').slice(0, -1);
 const NOW = '.' + prefixFor('music') + 'now';
+/** Which style option is the one with no sky. Read off the table, never counted by hand. */
+const RETRO = STYLE_KINDS.indexOf('retro');
 
 /**
  * Press a control on the shown screen by its visible label.
@@ -370,4 +374,119 @@ describe.runIf(chromePath)('the music room walks the level it is auditioning', (
     expect(await patch(page), 'the room kept the camera it borrowed — the title is drawn from it').toBe(title);
     await page.context().close();
   });
+});
+
+/**
+ * THE FLYTHROUGH — `docs/decisions/0213-the-room-is-a-flythrough.md`.
+ *
+ * Reported 2026-09-03: *"the initial background screen has a bunch of enemies showing that scroll
+ * off-screen and then there's no enemies at all showing again… can we do something fun… and remove
+ * the enemies from that starting screen."*
+ */
+describe.runIf(chromePath)('the room flies the level rather than showing the boot field', () => {
+  it('opens on an empty lane, and keeps something in it for a whole walk', async () => {
+    const page = await open();
+
+    /*
+      ⚠️ **THE STAR FIELD IS TURNED OFF FIRST, AND WITHOUT THAT THIS GUARD IS VACUOUS.** The first
+      version counted lit pixels across the playfield and **stayed green with the whole mote field
+      deleted** — because what it was counting was the sky. `npm run prove` is what said so, which is
+      the entire reason 0005 exists. Retro is *the game before the sky*
+      (`docs/decisions/0070-a-style-is-a-setting-and-the-first-one.md`), so with it on, ink in the
+      lane is **entities and nothing else**.
+    */
+    await page.locator(`[${SETTING_ATTR}="style"] .${prefixFor('title')}option >> nth=${RETRO}`).click();
+    await press(page, 'Music');
+
+    /*
+      ⚠️ **A BAND WITH NO PANEL IN IT, NO SHIP, AND NOT THE BOX EDGE EITHER.** The ship holds station
+      at `SHIP_START_ALONG`, a fixed fifth along the camera's frame; the panel is centred; and
+      `docs/decisions/0074-the-box-is-drawn.md`'s dashed wall is drawn at the leading edge **on every
+      screen, always**. The first draft of this band ran to 1250 and included that wall, so it
+      **stayed green with the whole mote field deleted** — the second time in this one test that a
+      count of lit pixels turned out to be counting furniture. 950 to 1140 is dust or nothing.
+    */
+    const dust = (): Promise<number> =>
+      page.evaluate(() => {
+        const canvas = document.querySelector('#app canvas');
+        if (!(canvas instanceof HTMLCanvasElement)) return 0;
+        const out = document.createElement('canvas');
+        out.width = 190;
+        out.height = 600;
+        const ctx = out.getContext('2d');
+        ctx?.drawImage(canvas, 950, 60, 190, 600, 0, 0, 190, 600);
+        const data = ctx?.getImageData(0, 0, 190, 600).data;
+        if (data === undefined) return 0;
+        let lit = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i]! + data[i + 1]! + data[i + 2]! > 150) lit++;
+        }
+        return lit;
+      });
+
+    const opened = await dust();
+    await press(page, THEMES.approach.title);
+    await waitForWalk(page);
+    const early = await dust();
+
+    /*
+      ⚠️ **THE DEFECT WAS *AND THEN THERE'S NO ENEMIES AT ALL SHOWING AGAIN*, so the reading that
+      matters is at the END of a stretch of walking**, not at the start. The seeded field emptied over
+      about ten seconds; a field that wrapped incorrectly would empty over a similar stretch and look
+      identical for the first frame.
+    */
+    await page.locator(NOW + '-bar').focus();
+    await page.keyboard.press('End');
+    await page.waitForTimeout(1_000);
+    const late = await dust();
+
+    expect(opened, 'the room opens on an empty lane — there is no dust in it at all').toBeGreaterThan(0);
+    expect(early, 'the lane has no dust in it as the walk starts').toBeGreaterThan(0);
+    expect(
+      late,
+      'the lane emptied out over the walk, which is the reported defect with different bodies in it',
+    ).toBeGreaterThan(0);
+    await page.context().close();
+  });
+
+  /*
+    ⚠️ **THE ONE CONSTRAINT THE ASK CAME WITH**: *"if we can do both without the ship getting hit by
+    debris and exploding"*. It is guaranteed structurally — the room is `steps: false`, so
+    `src/app/frame.ts` returns before `stepEntities` and before `collide` — and this is what says so
+    out loud. **A run's HUD is the only place health is visible**, so what is checked is that the room
+    never puts one up: a ship taking damage on this screen would be a run happening.
+  */
+  it('cannot hurt the ship, because it never runs a step to hurt it in', async () => {
+    expect(SCREENS.music.steps, 'the music room began simulating — the dust can now hit the ship').toBe(false);
+    const page = await open();
+    await press(page, 'Music');
+    await press(page, THEMES.mire.title);
+    await waitForWalk(page);
+    await page.locator(NOW + '-bar').focus();
+    await page.keyboard.press('End');
+    await page.waitForTimeout(1_000);
+    expect(
+      await page.locator('.itc-playing-hud-shown').count(),
+      'the run readout is up on the music screen — something is being simulated',
+    ).toBe(0);
+    expect(await page.locator(NOW).isVisible(), 'the walk stopped, which is what a death would look like').toBe(
+      true,
+    );
+    await page.context().close();
+  });
+
+  /*
+    ⚠️ **THERE IS NO GUARD HERE FOR *the picture is the same however the camera reached this
+    position*, AND IT WAS WRITTEN AND DELETED TWICE.** As a unit test it reads `f(4321)` twice and is
+    a tautology (`tests/attract.test.ts` says so where it would have lived). As a browser test —
+    seek to 40%, seek away, seek back, compare the pixels — **it passed, and its green was luck**: the
+    walk advances 36 units a second between the two captures, so the comparison is a race that the
+    slow parallax layers happen to win. `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`
+    is explicit that a rerun is not evidence, and a guard that is green because a sub-pixel difference
+    rounded the right way is one that will go red for a reason nobody can act on.
+
+    **What holds the claim instead is the shape of the code**: `src/app/attract.ts` exports pure
+    functions of the camera and the room keeps no position but `auditionAlong`. That is a weaker
+    guarantee than a test and it is the honest one available.
+  */
 });

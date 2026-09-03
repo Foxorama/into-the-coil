@@ -89,8 +89,27 @@ export const MENU_REVERSE = 0.6;
 
 /** What the pad asked of a menu this step. Written into by `read`; owned by the caller. */
 export interface MenuAsk {
-  /** Focus movement: −1 for the previous control, 1 for the next, 0 for none. An EDGE, not a level. */
+  /** Focus movement: −1 for back or up, 1 for on or down, 0 for none. An EDGE, not a level. */
   move: number;
+  /**
+   * Which axis `move` came from — `docs/decisions/0214-a-grid-is-not-a-list.md`.
+   *
+   * ── THIS FILE THREW IT AWAY, AND A GRID IS WHERE THAT STARTED COSTING SOMETHING ────────────────
+   *
+   * ⚠️ **BOTH AXES WERE COLLAPSED TO ±1 ON PURPOSE, AND THE REASON HAS EXPIRED.** The note above
+   * `dominant` said it: *"a column of buttons wants up and down; a row of them wants left and right;
+   * and the player does not know which one the chrome laid out."* That is a true statement about a
+   * screen which is a column OR a row, and every screen was one until the music room
+   * ([0210](../../docs/decisions/0210-the-title-plays-the-music.md)) laid nine controls out as a
+   * **grid**. On a grid the two axes mean different things, and a reader that cannot tell them apart
+   * makes a nine-tile square behave like a nine-item list — reported as exactly that.
+   *
+   * ⚠️ **THE RESOLUTION OF A DIAGONAL DOES NOT MOVE.** `dominant` already picked one axis and threw
+   * the other away; this carries which one it picked, so nothing about *what counts as a push*
+   * changes. The chrome then decides what the axis MEANS, because the chrome is what laid the
+   * controls out — which is the half the old note was right about.
+   */
+  axis: 'x' | 'y';
   /** Whether a confirm button was pressed this step. An edge, for the same reason. */
   confirm: boolean;
 }
@@ -98,7 +117,7 @@ export interface MenuAsk {
 /** The one allocation a caller makes. Built at boot, overwritten every step forever after. */
 export function makeMenuAsk(): MenuAsk {
   // @setup: one ask, built when the shell wires the chrome.
-  return { move: 0, confirm: false };
+  return { move: 0, axis: 'y', confirm: false };
 }
 
 export interface MenuSource {
@@ -149,6 +168,8 @@ export function attachMenuPad(options: MenuPadOptions = {}): MenuSource {
     direction is a new ask and the player has every reason to expect it to be heard.
   */
   let heldMove = 0;
+  // 0214: the axis that direction came from, so a roll from right to down is two asks and not one.
+  let heldAxis: 'x' | 'y' = 'y';
   let heldConfirm = false;
   // @setup: whether the next read is only learning what is already held. See `spend`.
   let spending = false;
@@ -157,6 +178,9 @@ export function attachMenuPad(options: MenuPadOptions = {}): MenuSource {
     read(ask: MenuAsk): void {
       const pads = readPads();
       let move = 0;
+      // 0214: which axis `move` came from. `y` until something says otherwise, because a screen that
+      // is a column is what every screen was and is what the fallback below still has to serve.
+      let axis: 'x' | 'y' = 'y';
       /*
         @setup-free: how HARD the strongest pad is being pushed, 0…1.
 
@@ -187,19 +211,40 @@ export function attachMenuPad(options: MenuPadOptions = {}): MenuSource {
         */
         const x = pad.axes[PAD_AXIS_X] ?? 0;
         const y = pad.axes[PAD_AXIS_Y] ?? 0;
-        const dominant = Math.abs(y) >= Math.abs(x) ? y : x;
+        const vertical = Math.abs(y) >= Math.abs(x);
+        const dominant = vertical ? y : x;
         const push = Math.abs(dominant);
         if (push > strength) strength = push;
-        if (dominant <= -PAD_DEADZONE) move = -1;
-        else if (dominant >= PAD_DEADZONE) move = 1;
+        // 0214: the axis is carried out as well as the direction. `dominant` already chose it.
+        if (dominant <= -PAD_DEADZONE) {
+          move = -1;
+          axis = vertical ? 'y' : 'x';
+        } else if (dominant >= PAD_DEADZONE) {
+          move = 1;
+          axis = vertical ? 'y' : 'x';
+        }
 
         // The D-pad is a switch, so it asks at full strength — it has no spring to ring past centre
         // and no rest position to drift from, which is what both thresholds below exist to survive.
-        if (down(pad, MENU_DPAD_BUTTONS.up) || down(pad, MENU_DPAD_BUTTONS.left)) {
+        //
+        // ⚠️ **FOUR BRANCHES SINCE 0214 AND IT WAS TWO.** `up` and `left` both meant −1, which on a
+        // column is the same answer and on a grid is two different ones. The D-pad is the control a
+        // hand actually reaches for in a menu, so it is the one where a grid read as a list first.
+        if (down(pad, MENU_DPAD_BUTTONS.up)) {
           move = -1;
+          axis = 'y';
           strength = 1;
-        } else if (down(pad, MENU_DPAD_BUTTONS.down) || down(pad, MENU_DPAD_BUTTONS.right)) {
+        } else if (down(pad, MENU_DPAD_BUTTONS.down)) {
           move = 1;
+          axis = 'y';
+          strength = 1;
+        } else if (down(pad, MENU_DPAD_BUTTONS.left)) {
+          move = -1;
+          axis = 'x';
+          strength = 1;
+        } else if (down(pad, MENU_DPAD_BUTTONS.right)) {
+          move = 1;
+          axis = 'x';
           strength = 1;
         }
 
@@ -222,8 +267,16 @@ export function attachMenuPad(options: MenuPadOptions = {}): MenuSource {
         ⚠️ **A reversal is heard only if it is pushed as hard as `MENU_REVERSE`**, because a released
         stick springs past centre and the old rule counted that as a deliberate change of mind.
       */
-      const heard = move !== 0 && move !== heldMove && (heldMove === 0 || strength >= MENU_REVERSE);
+      /*
+        ⚠️ **THE HELD STATE IS A DIRECTION AND AN AXIS SINCE 0214, AND ONE OF THOSE ALONE IS A LOST
+        INPUT.** `right` and `down` are both `+1`; with only the number remembered, a hand that rolls
+        from one to the other meets a reader that already holds `+1` and **the second push is
+        swallowed entirely**. On a column that could never happen, because the two were the same ask.
+      */
+      const heard =
+        move !== 0 && (move !== heldMove || axis !== heldAxis) && (heldMove === 0 || strength >= MENU_REVERSE);
       ask.move = heard && !spending ? move : 0;
+      ask.axis = axis;
       ask.confirm = confirm && !heldConfirm && !spending;
       /*
         ⚠️ **`heldMove` is cleared by the RELEASE THRESHOLD ABOVE AND BY NOTHING ELSE.** Clearing it
@@ -237,7 +290,10 @@ export function attachMenuPad(options: MenuPadOptions = {}): MenuSource {
         recording the overshoot's direction would make the player's next genuine push that way read
         as already-held and be swallowed — a spurious move traded for a missing one.
       */
-      if (heard || spending) heldMove = move;
+      if (heard || spending) {
+        heldMove = move;
+        heldAxis = axis;
+      }
       heldConfirm = confirm;
       spending = false;
     },
@@ -252,6 +308,7 @@ export function attachMenuPad(options: MenuPadOptions = {}): MenuSource {
     },
     release(): void {
       heldMove = 0;
+      heldAxis = 'y';
       heldConfirm = false;
     },
   };

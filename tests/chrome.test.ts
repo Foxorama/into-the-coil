@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
-import { STYLE, prefixFor } from '../src/app/chrome.ts';
+import { STYLE, prefixFor, spatially, type ControlBox } from '../src/app/chrome.ts';
 import { SCREENS, SCREEN_KINDS, type Screen } from '../src/state/screens.ts';
 
 /**
@@ -262,5 +262,74 @@ describe('every screen owns its class prefix', () => {
           'mount, report itself shown, and be invisible, which is exactly what 0210 shipped into',
       ).toBe(true);
     }
+  });
+});
+
+/**
+ * A GRID IS NOT A LIST — `docs/decisions/0214-a-grid-is-not-a-list.md`.
+ *
+ * ⚠️ **THESE ARE LAYOUTS THE GAME DOES NOT CURRENTLY HAVE, WHICH IS THE POINT OF THEM BEING HERE.**
+ * `tests/menu.browser.test.ts` drives the real music room and the real title screen, and between them
+ * they exercise the grid and the wrap. **They cannot reach the `null` fallback at all**: the title
+ * looks like a column and carries a settings row, so something always lies to either side of
+ * something. A branch nothing can drive is guarded by nothing, so `spatially` takes rects.
+ */
+describe('a push is resolved against where the controls actually are', () => {
+  /** A box of a fixed size, centred on a point. Boxes are all this function makes. */
+  const box = (x: number, y: number, w = 100, h = 40): ControlBox => ({
+    left: x - w / 2,
+    right: x + w / 2,
+    top: y - h / 2,
+    bottom: y + h / 2,
+    width: w,
+    height: h,
+  });
+
+  /** Three across and three down, in reading order — the music room's shape. */
+  const grid: ControlBox[] = [];
+  for (let row = 0; row < 3; row++) for (let col = 0; col < 3; col++) grid.push(box(col * 120, row * 60));
+
+  it('moves DOWN into the next row rather than one along the list', () => {
+    expect(spatially(grid, 0, 1, 'y'), 'down from the top-left is not the control beneath it').toBe(3);
+    expect(spatially(grid, 4, -1, 'y'), 'up from the middle is not the control above it').toBe(1);
+  });
+
+  it('moves ACROSS one column at a time', () => {
+    expect(spatially(grid, 0, 1, 'x')).toBe(1);
+    expect(spatially(grid, 1, -1, 'x')).toBe(0);
+  });
+
+  /*
+    ⚠️ **THE WRAP IS DOWN THE SAME LINE AND NOT ROUND THE LIST.** Down from the bottom row should be
+    the top of that COLUMN; a list step would be the control after it in reading order, which is a
+    diagonal the player did not ask for. This is the assertion that separates the two.
+  */
+  it('wraps down its own line rather than round the list', () => {
+    expect(spatially(grid, 6, 1, 'y'), 'down from the bottom-left did not wrap to the top of its column').toBe(0);
+    expect(spatially(grid, 2, 1, 'x'), 'right from the end of a row did not wrap to the start of it').toBe(0);
+  });
+
+  /*
+    ⚠️ **THE FALLBACK, AND THIS IS THE ONLY THING THAT CAN REACH IT.** A pure column has nothing to
+    either side, so the answer is *the layout has no opinion* and `move` takes the list step 0046
+    shipped. Returning something here would be a horizontal push that jumps the focus vertically.
+  */
+  it('has no answer for an axis the layout does not use, which is what lets the list step stand', () => {
+    const column = [box(0, 0), box(0, 60), box(0, 120)];
+    expect(spatially(column, 0, 1, 'x'), 'a column answered a horizontal push').toBeNull();
+    expect(spatially(column, 1, -1, 'x'), 'a column answered a horizontal push').toBeNull();
+    expect(spatially(column, 0, 1, 'y'), 'a column stopped answering the axis it is laid out on').toBe(1);
+  });
+
+  /*
+    ⚠️ **A ROW WHOSE BOXES ARE DIFFERENT HEIGHTS IS THE NORMAL CASE, NOT AN EDGE ONE.** *Play all*
+    carries a two-line hint, so it is taller than its neighbours and their centres do not share a `y`.
+    Without the tolerance, *down* from the control above a short one finds the tall one's centre
+    already below it and the bottom row becomes unreachable from that column.
+  */
+  it('treats a row of unequal boxes as a row', () => {
+    const ragged = [box(0, 0), box(120, 6, 100, 52), box(240, 0)];
+    expect(spatially(ragged, 0, 1, 'x'), 'a taller neighbour stopped being on the same row').toBe(1);
+    expect(spatially(ragged, 1, 1, 'x')).toBe(2);
   });
 });

@@ -50,7 +50,14 @@ export const PROBES = [
         reversals, and the lazy version of that is *"require a trip through the centre"*, which is
         exactly this break.
       */
-      find: '      const heard = move !== 0 && move !== heldMove && (heldMove === 0 || strength >= MENU_REVERSE);',
+      /*
+        ⚠️ Re-expressed AGAIN when 0214 gave the held state an axis as well as a direction. The break
+        is unchanged — it is still *require a trip through the centre* — and what moved is that the
+        condition compares two things now, so the line it anchors on is two lines wide.
+      */
+      find:
+        '      const heard =\n' +
+        '        move !== 0 && (move !== heldMove || axis !== heldAxis) && (heldMove === 0 || strength >= MENU_REVERSE);',
       replace: '      const heard = move !== 0 && heldMove === 0;',
     },
   },

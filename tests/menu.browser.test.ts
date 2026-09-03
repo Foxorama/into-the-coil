@@ -4,7 +4,9 @@ import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
-import { MENU_CONFIRM_BUTTONS } from '../src/app/menu.ts';
+import { MENU_CONFIRM_BUTTONS, MENU_DPAD_BUTTONS } from '../src/app/menu.ts';
+// 0214: the room's controls are the place table, and the grid is what the D-pad has to read.
+import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
 import { SCREENS, STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { SPECIALS } from '../src/content/specials.ts';
 
@@ -312,6 +314,100 @@ describe.runIf(chromePath)('the level break is a banner rather than a wall', () 
     expect(s.events, 'the break would swallow every drag the player makes').toBe('none');
     expect(s.buttonEvents, 'Onward cannot be pressed by the hand that wants to skip the break').toBe('auto');
     expect(s.top, 'the banner sits over the middle of the playfield, which is where the ship is').toBeLessThan(0.5);
+    await page.context().close();
+  });
+});
+
+/**
+ * A GRID IS NOT A LIST — `docs/decisions/0214-a-grid-is-not-a-list.md`.
+ *
+ * Reported 2026-09-03: *"the menu itself is arranged in a nine-tile square layout order, but is
+ * functionally an up/down menu on controller, not an up/down/left/right menu."*
+ *
+ * ⚠️ **A BROWSER TEST BECAUSE THE ANSWER IS A LAYOUT.** `tests/menu.test.ts` can prove the reader
+ * reports an axis; only an engine that has actually laid nine buttons out in three columns can say
+ * what *down* lands on. The chrome resolves the move against `getBoundingClientRect`, so this is the
+ * one place the feature exists at all — and the wrapping row means **how many are in a row is a fact
+ * about the viewport**, which nothing headless has.
+ */
+describe.runIf(chromePath)('the music room reads as the grid it is drawn as', () => {
+  /** Which control the focus ring is on, by its label. */
+  const focused = (page: Page): Promise<string> =>
+    page.evaluate(
+      (selector: string) => (document.querySelector(selector)?.textContent ?? '').trim(),
+      '.' + prefixFor('music') + 'action-cursor',
+    );
+
+  /** Push the D-pad for a moment and let go — one edge, which is what the reader hears. */
+  async function nudge(page: Page, button: number): Promise<void> {
+    await setPad(page, [0, 0], [button]);
+    await page.waitForTimeout(120);
+    await setPad(page, [0, 0], []);
+    await page.waitForTimeout(120);
+  }
+
+  it('moves DOWN a column and RIGHT along a row, rather than one step either way', async () => {
+    const page = await open();
+    await page.getByRole('button', { name: /^Music/ }).click();
+    await page.waitForSelector('.' + prefixFor('music').slice(0, -1) + '-shown', { timeout: 15_000 });
+
+    /*
+      ⚠️ **THE EXPECTED LANDINGS ARE READ OFF THE LAYOUT, NOT TYPED.** `THEME_KINDS` is the order the
+      buttons are built in and the grid is three wide, so *right* is the next kind and *down* is the
+      one three along — and a place added to `src/content/themes.ts` moves both without editing this.
+      A typed pair of names would be the second description of the table that
+      `docs/decisions/0016-a-hub-enumerates-kinds.md` bans.
+    */
+    const first = THEMES[THEME_KINDS[0]!].title;
+    const toTheRight = THEMES[THEME_KINDS[1]!].title;
+    const below = THEMES[THEME_KINDS[3]!].title;
+
+    const columns = await page.evaluate((selector: string) => {
+      const boxes = [...document.querySelectorAll(selector)].map((el) => el.getBoundingClientRect());
+      const top = Math.min(...boxes.map((b) => b.top));
+      return boxes.filter((b) => Math.abs(b.top - top) < 4).length;
+    }, '.' + prefixFor('music') + 'action');
+    expect(columns, 'the room is not laid out three across, so this test is about a different grid').toBe(3);
+
+    expect(await focused(page), 'the room does not open on its first control').toBe(first);
+
+    await nudge(page, MENU_DPAD_BUTTONS.right);
+    expect(await focused(page), 'right did not move along the row').toBe(toTheRight);
+
+    await nudge(page, MENU_DPAD_BUTTONS.left);
+    expect(await focused(page), 'left did not come back along the row').toBe(first);
+
+    /*
+      ⚠️ **THIS IS THE REPORTED BUG IN ONE ASSERTION.** Before 0214 the D-pad's `down` was the same
+      ±1 as its `right`, so this landed on the control beside the first one rather than under it —
+      a nine-tile square behaving as a nine-item list.
+    */
+    await nudge(page, MENU_DPAD_BUTTONS.down);
+    expect(await focused(page), 'down moved along the row instead of into the next one').toBe(below);
+
+    await nudge(page, MENU_DPAD_BUTTONS.up);
+    expect(await focused(page), 'up did not come back to the row above').toBe(first);
+    await page.context().close();
+  });
+
+  /*
+    ⚠️ **AND THE TITLE SCREEN IS A COLUMN, WHICH IS THE HALF THE OLD RULE WAS RIGHT ABOUT.** *"A menu
+    that only answers one axis is a menu that feels broken on whichever screen picked the other"* —
+    so a push the layout has no opinion about must still move the focus. That is the fallback, and it
+    is the thing most likely to be lost by a change that only thinks about grids.
+  */
+  it('still steps a column when the layout has no answer for the axis', async () => {
+    const page = await open();
+    const opened = await page.evaluate(
+      (selector: string) => (document.querySelector(selector)?.textContent ?? '').trim(),
+      '.' + prefixFor('title') + 'action-cursor',
+    );
+    await nudge(page, MENU_DPAD_BUTTONS.right);
+    const moved = await page.evaluate(
+      (selector: string) => (document.querySelector(selector)?.textContent ?? '').trim(),
+      '.' + prefixFor('title') + 'action-cursor',
+    );
+    expect(moved, 'right did nothing on a column — a whole axis of the pad is dead here').not.toBe(opened);
     await page.context().close();
   });
 });
