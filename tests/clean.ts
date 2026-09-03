@@ -37,6 +37,7 @@
 import { bakeLayer } from '../src/app/music.ts';
 import { SAMPLE_RATE, saturate } from '../src/app/sound.ts';
 import {
+  MUSIC_COMPRESSOR,
   MUSIC_DRIVE,
   MUSIC_GAIN,
   MUSIC_LAYERS,
@@ -45,6 +46,7 @@ import {
   type MusicLevel,
 } from '../src/content/music.ts';
 import { auraCeilingOf, mixOf, revoicedBy, rungOf, type ThemeKind } from '../src/content/themes.ts';
+import { compressBuffer } from './compress.ts';
 
 /** Which layers the aura scales, so a fight is measured at the loudness a fight reaches. */
 const FOLLOWS_THE_BOSS: readonly MusicLayer[] = ['auraSlow', 'auraFast'];
@@ -119,6 +121,7 @@ export function driveAt(
   */
   trim = 1,
   drive = MUSIC_DRIVE,
+  comp = MUSIC_COMPRESSOR,
 ): DriveAt {
   const length = Math.round(PHRASE_SECONDS * rate);
   const nearness = rung === 'boss' || rung === 'bossPeak' ? 1 : auraCeilingOf(theme);
@@ -147,13 +150,26 @@ export function driveAt(
     the same walk as the peaks. The best multiplier is `<dirty,clean>/<clean,clean>` and the residual
     energy is `<dirty,dirty> - a<dirty,clean>`, which needs nothing the loop has not already added up.
   */
+  /*
+    ⚠️ **THE SUM IS BUILT BEFORE IT IS MEASURED, BECAUSE A COMPRESSOR HAS A MEMORY** — 0219. The bus
+    is wired master → compressor → shaper, and the compressor's detector is a one-pole follower over
+    the signal, so there is no way to evaluate it a sample at a time without the sample before it.
+    That is the whole of what 0104 meant by *"a function of the signal's history"*, and it costs one
+    buffer rather than a weakened assertion.
+  */
+  const mixed = new Float32Array(length);
   for (let i = 0; i < length; i++) {
     let sum = 0;
     for (let l = 0; l < buffers.length; l++) {
       const buffer = buffers[l]!;
       sum += buffer[i % buffer.length]! * weights[l]!;
     }
-    const clean = sum * MUSIC_GAIN;
+    mixed[i] = sum * MUSIC_GAIN;
+  }
+  compressBuffer(mixed, rate, comp);
+
+  for (let i = 0; i < length; i++) {
+    const clean = mixed[i]!;
     /*
       ⚠️ **CLAMPED FIRST, BECAUSE THAT IS WHAT A `WaveShaperNode` DOES** — 0176, and the first draft
       of this file got it wrong exactly as the guard 0176 fixed had. The curve is defined over [-1, 1]
