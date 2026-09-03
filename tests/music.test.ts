@@ -39,6 +39,7 @@ import {
   panGains,
   musicLevelFor,
   BUILD_BARS,
+  RAMP_SPREAD,
   entryBars,
   nextBarFrom,
   placeArrivesAt,
@@ -1894,8 +1895,20 @@ describe('0117 — a section change lands on a downbeat, and not one ever has', 
       expect(w.at, `${w.layer} was quantised — it must follow the boss, not the bar`).toBe(now);
       expect(w.tau, `${w.layer} ramps at a level change's rate`).toBeCloseTo(AURA_RAMP_SECONDS / 3, 12);
     }
+    /*
+      ⚠️ **A BAND SINCE 0215, AND IT WAS ONE VALUE.** Every non-aura write used to take exactly
+      `RAMP_SECONDS`, and this asserted that — correctly, right up until
+      `docs/decisions/0215-a-transition-is-a-shape-not-an-instant.md` made a move's ramp as long as
+      the move is big. **What the test is actually about is unchanged**: the aura follows the boss and
+      everything else follows the bar. The equality was incidental to that and is now false, so what
+      is held is the range those ramps may take — which still fails loudly if a level change starts
+      ramping at the aura's rate, and still fails if a ramp escapes the build it belongs to.
+    */
     for (const w of writes.filter((x) => !AURA_LAYERS.includes(x.layer))) {
-      expect(w.tau, `${w.layer} does not ramp at a level change's rate`).toBeCloseTo(RAMP_SECONDS / 3, 12);
+      expect(w.tau, `${w.layer} ramps faster than a level change`).toBeGreaterThanOrEqual(RAMP_SECONDS / 3 - 1e-12);
+      expect(w.tau, `${w.layer} ramps for longer than the build it lands in`).toBeLessThanOrEqual(
+        (RAMP_SECONDS * RAMP_SPREAD) / 3 + 1e-12,
+      );
     }
   });
 

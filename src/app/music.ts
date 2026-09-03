@@ -902,6 +902,36 @@ export interface MusicOut {
 export const RAMP_SECONDS = 1.6;
 
 /**
+ * How far a layer's own gain must move to earn the longest ramp, in dB — and the longest is
+ * `RAMP_SPREAD` times the shortest.
+ *
+ * ── A MOVE'S RAMP IS AS LONG AS THE MOVE IS BIG — 0215 ──────────────────────────────────────────
+ *
+ * ⚠️ **EVERY WRITE TOOK `RAMP_SECONDS` WHATEVER IT WAS DOING.** A layer opening from silence and a
+ * layer nudging up a fifth of a decibel were given the same 1.6 seconds, and **equal time over
+ * unequal distance is unequal rate** — which is the thing an ear calls a jump. Reported of The
+ * Approach: *"at 41sec in, the volume increases a bit too loudly… too big a jump from the transition
+ * to the spike."*
+ *
+ * ⚠️ **AND THE SPIKES THAT SURVIVED THE FIRST FIX WERE NOT ARRIVALS AT ALL.**
+ * `scripts/weigh-arc.mjs --writes=surge` on The Labyrinth's `push → surge`: **seven already-sounding
+ * layers rise on one downbeat**, `chords` by 6.6 dB and `sub` by 5.6. Scaling only arrivals could
+ * never have reached them, and two rounds of tuning went into a constant that was not the cause
+ * before `--writes` was written to say so. **This scales every move, which is why it does.**
+ *
+ * ⚠️ **6 dB IS A DOUBLING OF AMPLITUDE**, the point at which a layer is plainly doing something
+ * rather than settling, and anything past it is already the longest ramp. **`RAMP_SPREAD` was swept
+ * over all seven places** on `docs/decisions/0102-the-music-goes-somewhere.md`'s terms for a paced
+ * number, rather than fitted to the one place that was reported.
+ *
+ * ⚠️ **A LAYER STILL STARTS WHEN IT STARTED.** Only how long it takes to get there changes, so
+ * `docs/decisions/0171-a-boundary-is-a-build.md`'s ordering and
+ * `docs/decisions/0117-a-section-change-lands-on-the-beat.md`'s downbeat are both untouched — what a
+ * listener hears is a swell where there was a step.
+ */
+export const RAMP_FULL_AT_DB = 6;
+
+/**
  * How many points the music bus's transfer curve is sampled at.
  *
  * ⚠️ **A `WaveShaperNode` interpolates between neighbouring points**, so what this decides is how
@@ -1065,6 +1095,45 @@ export interface RampWrite {
 export const BUILD_BARS = 3;
 
 /**
+ * How many times `RAMP_SECONDS` the longest move takes — 0215.
+ *
+ * ⚠️ **DERIVED, AND IT WAS A SWEPT NUMBER FIRST.** Values from 2 to 5 were measured over all seven
+ * places with `scripts/weigh-arc.mjs`. Five bought almost nothing over four and made an opening an
+ * **eight-second fade**, which stops being an arrival at all and undercuts 0171's whole point; then
+ * the value that worked turned out to be a quantity already in this file.
+ *
+ * ⚠️ **NO MOVE TAKES LONGER THAN THE BUILD IT LANDS IN.** `BUILD_BARS` caps a build three bars past
+ * the downbeat, so a build is four bars wide; a ramp that outran it would still be climbing when the
+ * next section's arrivals began. Written this way, retuning `BUILD_BARS` carries the ramps with it —
+ * the drift `docs/decisions/0184-the-measurement-reads-the-place.md` is named for, avoided by having
+ * one number rather than two that must agree.
+ *
+ * ⚠️ **IT SITS HERE RATHER THAN BESIDE `RAMP_SECONDS` BECAUSE IT READS `BUILD_BARS`**, and a module
+ * constant cannot be used above its own declaration. The compiler said so; the alternative was
+ * copying the four.
+ */
+export const RAMP_SPREAD = ((BUILD_BARS + 1) * BAR_SECONDS) / RAMP_SECONDS;
+
+/**
+ * How many times `RAMP_SECONDS` a move from `was` to `target` takes.
+ *
+ * ⚠️ **IN dB OF THE LAYER'S OWN GAIN, WHICH IS THE ONE COMPARABLE MEASURE AVAILABLE HERE.**
+ * `docs/decisions/0140-no-layer-is-inaudible.md` is why a raw gain difference will not do — the
+ * faders span 7 dB and what comes out of them spans 38, so `ride` at 8.77 and `sub` at 0.17 are not
+ * on one scale. **A ratio is**: a layer that doubles its own output has done the same-sized thing
+ * whichever layer it is, and that is what a ramp should be paid out against.
+ *
+ * ⚠️ **AN OPENING OR A CLOSING IS THE LONGEST MOVE THERE IS**, because a ratio to silence has no
+ * finite value. Both take the full spread — and a closing then has its own, longer rule applied over
+ * the top, because it has a build to cross rather than a distance to travel.
+ */
+export function rampScaleOf(was: number, target: number): number {
+  const moveDb = was <= 0 || target <= 0 ? Number.POSITIVE_INFINITY : Math.abs(20 * Math.log10(target / was));
+  const share = Math.min(1, moveDb / RAMP_FULL_AT_DB);
+  return 1 + share * (RAMP_SPREAD - 1);
+}
+
+/**
  * Which bar of the build each arriving layer lands on, counting from the boundary's own downbeat.
  *
  * ⚠️ **ONE ARRIVAL A BAR, IN THE ARRANGEMENT'S OWN ORDER.** Quietest role first, and inside a role
@@ -1172,28 +1241,82 @@ export function levelWrites(
       break;
     }
   }
+  const closing: RampWrite[] = [];
   for (const layer of MUSIC_LAYERS) {
     const aura = AURA_LAYERS.includes(layer);
     const target = rungOf(theme, level, layer, shape) * mixOf(theme, layer) * (aura ? nearness : 1);
     if (!aura && lastTargets[layer] === target) continue;
     const write = { layer, target, at: aura ? now : bar, tau: (aura ? AURA_RAMP_SECONDS : RAMP_SECONDS) / 3 };
-    if (!aura && target > 0 && (lastTargets[layer] ?? 0) === 0) opening.push(write);
+    const was = lastTargets[layer] ?? 0;
+    /*
+      ── WHAT COUNTS AS AN ARRIVAL — 0215 ────────────────────────────────────────────────────────
+
+      ⚠️ **A LAYER THAT GETS 6.6 dB LOUDER IS AN ARRIVAL, AND THE OLD CONDITION SAID IT WAS NOT.**
+      Only a layer opening from silence joined the build; everything else moved on the downbeat, with
+      the line below this block calling that out as deliberate: *"a bed that merely gets louder moves
+      on the downbeat too: it is the boundary, not an arrival."*
+
+      ⚠️ **MEASURED, THAT IS WHERE THE REMAINING SPIKES WERE.** `scripts/weigh-arc.mjs --writes=surge`
+      on The Labyrinth's `push → surge`: **seven carried layers rise together on one downbeat**, led by
+      `chords` at +6.6 dB and `sub` at +5.6 — and not one of them was in the build, so lengthening
+      arrival ramps did nothing to it at any value. Two rounds of tuning went into a constant that was
+      not the cause, which is what `--writes` was added to stop.
+
+      ⚠️ **THIS IS 0171 EXTENDED RATHER THAN CONTRADICTED.** Its rule is *one event that adds four
+      parts is a step however smoothly each part gets there*, and its answer is arrivals in role
+      order. A layer doubling its own contribution is such a part. What still moves on the downbeat is
+      what 0171 always meant by *the boundary* — a nudge, not an entry.
+    */
+    if (!aura) write.tau = (RAMP_SECONDS * rampScaleOf(was, target)) / 3;
+    if (!aura && target > 0 && was === 0) opening.push(write);
+    if (!aura && target === 0 && was > 0) closing.push(write);
     writes.push(write);
   }
   /*
-    ⚠️ **ONLY THE ARRIVALS ARE MOVED, AND THE DEPARTURES DELIBERATELY ARE NOT.**
+    ⚠️ **ONLY THE ARRIVALS ARE MOVED, AND THE DEPARTURES ARE MOVED DIFFERENTLY.**
     `docs/decisions/0120-a-rung-may-close-a-layer.md`: *"a rung that closes a layer as it opens two is
     a change of arrangement rather than a thicker one."* A closing layer that waited for the build
     would still be playing under the parts that replaced it, which is the opposite of the change the
-    rung is making — so it leaves on the downbeat and the room it leaves is what the build walks into.
-    A bed that merely gets louder moves on the downbeat too: it is the boundary, not an arrival.
+    rung is making — so it still LEAVES ON THE DOWNBEAT, ahead of every arrival. What 0215 changed is
+    only how long it takes to go: see the fade below.
   */
   if (!standing || opening.length < 2) return writes;
   const bars = entryBars(theme, level, opening);
+  let last = 0;
   for (const write of opening) {
     const late = bars[write.layer] ?? 0;
     if (late > 0) write.at = bar + late * BAR_SECONDS;
+    if (late > last) last = late;
   }
+  /*
+    ── AND A DEPARTURE TAKES AS LONG AS THE ARRIVALS IT IS MAKING ROOM FOR — 0215 ──────────────────
+
+    ⚠️ **0120's RULE IS KEPT AND ITS TIMING IS NOT.** *"A closing layer that waited for the build
+    would still be playing under the parts that replaced it"* — so a departure still **begins on the
+    downbeat**, ahead of every arrival, and the rung still changes the arrangement rather than
+    thickening it. What changes is that it now FADES across the build instead of finishing before it
+    starts.
+
+    ⚠️ **THE HOLE WAS MEASURED AND IT IS THE OTHER HALF OF THE REPORT.** Departures took
+    `RAMP_SECONDS` from the downbeat while arrivals staggered out to four bars past it, so the mix
+    lost everything at once and got it back over five seconds. `scripts/weigh-arc.mjs` found that dip
+    on **five of the seven places**, worst at The Toxic Mire's `surge → approach` at **−4.9 dB**, which
+    is the *"weird drops later"* the report predicted before anybody had looked.
+
+    ⚠️ **THE SPAN IS THE BUILD'S OWN AND IS NOT A NEW NUMBER.** It is the last arrival's bar plus the
+    ramp that arrival takes — so a boundary that opens nothing keeps the old behaviour exactly, and a
+    boundary whose build gets longer or shorter carries its departures with it. Nothing here has to be
+    kept in step by hand.
+  */
+  /*
+    ⚠️ **THE LONGER OF THE TWO, AND WRITING IT AS AN OVERRIDE WAS A BUG I SHIPPED INTO THE MEASURE.**
+    A closing is a move to silence, so `rampScaleOf` already gives it the full spread; assigning the
+    build's span on top made the fade **shorter** wherever the build was under four bars, and The
+    Toxic Mire's hole got deeper rather than shallower. The rule is *a departure lasts at least as
+    long as the arrivals it makes room for* — a floor, never a ceiling.
+  */
+  const spread = last * BAR_SECONDS + RAMP_SECONDS;
+  for (const write of closing) write.tau = Math.max(write.tau, spread / 3);
   return writes;
 }
 

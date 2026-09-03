@@ -239,6 +239,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **THE ROOM WALKS THE LEVEL — the music room played one fixed rung on a premise that had stopped being true, and 0210's *what is owed* came back as a report** | [0212](decisions/0212-the-room-walks-the-level.md) |
 | **THE ROOM IS A FLYTHROUGH — the boot field was on screen because no screen had ever both shown it and moved; the ship flies the level now and dust goes past it** | [0213](decisions/0213-the-room-is-a-flythrough.md) |
 | **A GRID IS NOT A LIST — the pad collapsed both axes on a once-true argument, so nine tiles navigated as nine items** | [0214](decisions/0214-a-grid-is-not-a-list.md) |
+| **A TRANSITION IS A SHAPE — every ramp was the same length whatever the move, so the biggest arrivals landed as steps; five of seven places had it** | [0215](decisions/0215-a-transition-is-a-shape-not-an-instant.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were
@@ -724,6 +725,17 @@ EYE.** [0213](decisions/0213-the-room-is-a-flythrough.md) put the ship and a dus
 background; whether 48 motes is dust or drizzle and whether a twelve-second weave reads as flying or
 as drifting are tastes, and `ATTRACT_MOTES` and the two wavelengths in `src/app/attract.ts` are three
 numbers with nothing asserted on any of them.
+
+⚠️ **AND THE TRANSITIONS WERE THEN RETUNED, WHICH IS A SECOND EAR OWED** —
+[0215](decisions/0215-a-transition-is-a-shape-not-an-instant.md). Every one-bar rise across all seven
+places is roughly halved and every hole is gone. **The three still over 1.5 dB a bar are the ones to
+listen to** — The Labyrinth, The Toxic Mire and The Black Heart, all at `run → push`. If those still
+read as steps the next move is the **ladder** rather than the ramps: those boundaries are worth 4 to
+5 dB and no amount of timing makes a 5 dB step gentle. That is a change to
+[0136](decisions/0136-the-place-has-a-room-and-an-arc.md)'s arc and therefore a decision, not a tweak.
+
+⚠️ **`scripts/weigh-arc.mjs` IS THE INSTRUMENT FOR ALL OF IT**, and it reads the walk both surfaces
+share — so it is one report about the game and about the music room at once.
 
 ⚠️ **AND THE SECOND ANSWER IS THE ONE TO LISTEN FOR HARDEST.** The room is now the only place in the
 game where a place's whole arc plays with no gunfire over it and no ducking — so a build that does
