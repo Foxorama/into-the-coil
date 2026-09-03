@@ -176,7 +176,13 @@ function hullAndAccent(kind: SpriteKind): { hull: Pass; accent: Pass } {
   const rest = passes.slice(1);
   return {
     hull,
-    accent: { subpaths: rest.flatMap((pass) => pass.subpaths), rule: rest[0]?.rule ?? 'evenodd' },
+    // ⚠️ `alpha` is carried through rather than defaulted: a `Pass` grew one in 0221 and an accent
+    // synthesised at full opacity would be a claim about the drawing that this file never checked.
+    accent: {
+      subpaths: rest.flatMap((pass) => pass.subpaths),
+      rule: rest[0]?.rule ?? 'evenodd',
+      alpha: rest[0]?.alpha ?? 1,
+    },
   };
 }
 
@@ -256,7 +262,7 @@ describe('a hull has an interior', () => {
     for (const kind of ACCENTED) {
       const { accent } = hullAndAccent(kind);
       for (const subpath of accent.subpaths) {
-        const box = boundsOf({ subpaths: [subpath], rule: accent.rule });
+        const box = boundsOf({ subpaths: [subpath], rule: accent.rule, alpha: accent.alpha });
         const thinnest = Math.min(box.maxX - box.minX, box.maxY - box.minY);
         const why = `a mark on the ${kind} is ${thinnest.toFixed(2)}px across, so it is not drawn`;
         expect(thinnest, why).toBeGreaterThanOrEqual(2.5);

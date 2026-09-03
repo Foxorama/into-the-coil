@@ -16,39 +16,20 @@
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
-  {
-    decision: '0220',
-    suite: 'tests/places.test.ts',
-    /*
-      ⚠️ THE ONE THE DECISION IS NAMED FOR. A skyline authored below the lane is the exact defect The
-      Approach shipped with — correct in every model quantity, and simply not on the screen. Nothing
-      about `0.9` looks wrong: it is a horizon low in its tile, which is where a horizon goes.
-    */
-    broke: 'a planet’s skyline authored below the lane, where the tile is but the player is not',
-    guard: 'Saurian Belt and Rime Shelf have a skyline',
-    edit: {
-      path: 'src/render/bake.ts',
-      find: '      { y: 0.6, relief: 0.022, alpha: 0.45, crest: 0.26, teeth: 26 },',
-      replace: '      { y: 0.9, relief: 0.022, alpha: 0.45, crest: 0.26, teeth: 26 },',
-    },
-  },
-  {
-    decision: '0220',
-    suite: 'tests/places.test.ts',
-    /*
-      ⚠️ THE DISTANCE CUES PULLED APART, WHICH IS 0196's FAILURE AT THE SCALE OF ONE PLACE. Three
-      ridges at three heights with the same brightness is *numerically different, visually the same* —
-      it passes every claim about a horizon being on the screen and reads as a pattern rather than as
-      ground.
-    */
-    broke: 'the far ridge lit as brightly as the near one, so distance stops being said twice',
-    guard: 'the ground RECEDES',
-    edit: {
-      path: 'src/render/bake.ts',
-      find: '      { y: 0.6, relief: 0.022, alpha: 0.45, crest: 0.26, teeth: 26 },',
-      replace: '      { y: 0.6, relief: 0.022, alpha: 0.45, crest: 0.5, teeth: 26 },',
-    },
-  },
+  /*
+    ⚠️ TWO PROBES USED TO STAND HERE AND 0221 DELETED WHAT THEY BROKE. They aimed at Saurian Belt's
+    ridges inside `STRUCTURE_OF` — *a skyline authored below the lane* and *the far ridge lit as
+    brightly as the near one* — and that place's ground is `GROUND_OF` now, drawn opaque in its own
+    layer, because painting it into the weather tile put both star fields in front of it.
+
+    ⚠️ THE GUARDS THEY BROKE WENT WITH IT, AND THAT IS THE HONEST OUTCOME RATHER THAN A LOSS. A probe
+    whose anchor is gone can be re-pointed at whatever looks similar — which is exactly how a probe
+    survives `tests/prove-guard.test.ts` and stops proving anything (0220's own 0211 re-anchor is the
+    worked example). The claims themselves are re-made against the new layer in
+    `scripts/probes/0221-a-planet-is-not-a-space.mjs`, where *on the lane* is now about a mass rather
+    than about a crest line. `docs/decisions/0192-a-guard-holds-an-invariant.md`: **demoting a guard
+    takes one edit and a reason.**
+  */
   {
     decision: '0220',
     suite: 'tests/places.test.ts',

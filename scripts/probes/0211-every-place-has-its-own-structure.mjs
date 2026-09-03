@@ -30,7 +30,9 @@ export const PROBES = [
     guard: 'every mark takes the seam rule it declares',
     edit: {
       path: 'src/render/bake.ts',
-      find: '        sway += rng.range(-0.05, 0.05) * size;',
+      // ⚠️ RE-ANCHORED BY 0221: the mire's fronds hang from a canopy now and were retuned with it.
+      // The break is the same one — a local mark wandering wider than the wrap that draws it.
+      find: '        sway += rng.range(-0.04, 0.04) * size;',
       replace: '        sway += rng.range(-0.5, 0.5) * size;',
     },
   },

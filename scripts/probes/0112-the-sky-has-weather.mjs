@@ -80,8 +80,15 @@ export const PROBES = [
     guard: 'moves both layers twice as fast as they shipped, which is what was asked for',
     edit: {
       path: 'src/app/mount.ts',
-      find: '  { sprite: SPRITE.skyNebula, extent: SPRITE_EXTENT.skyNebula, depth: 0.09 },\n',
-      replace: '',
+      /*
+        ⚠️ RE-ANCHORED BY 0221: there are TWO sky arrays now and the weather line is in both, so this
+        anchor stopped being unique. The line after it is `skyFar`, which a planet's sky does not have
+        — so the pair names `SKY` and nothing else, and the break is unchanged.
+      */
+      find:
+        '  { sprite: SPRITE.skyNebula, extent: SPRITE_EXTENT.skyNebula, depth: 0.09 },\n' +
+        '  { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.33 },',
+      replace: '  { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.33 },',
     },
   },
 ];

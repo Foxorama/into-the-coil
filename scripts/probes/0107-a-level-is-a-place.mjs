@@ -38,8 +38,11 @@ export const PROBES = [
     guard: 'and every backdrop keeps every ink legible, in every palette',
     edit: {
       path: 'src/content/themes.ts',
-      find: "    space: { vivid: '#0b1206', 'high-contrast': '#010500' },",
-      replace: "    space: { vivid: '#0b1206', 'high-contrast': '#6a7a40' },",
+      // ⚠️ RE-ANCHORED BY 0221: The Toxic Mire is a planet now and its backdrop is the air between a
+      // canopy and a pool rather than a void. The break is unchanged — high contrast handed a colour
+      // authored for the vivid palette, which is a place overriding a choice the player made.
+      find: "    space: { vivid: '#111a08', 'high-contrast': '#040701' },",
+      replace: "    space: { vivid: '#111a08', 'high-contrast': '#6a7a40' },",
     },
   },
   {
@@ -52,8 +55,16 @@ export const PROBES = [
     guard: 'and a backdrop is a dark, because the void is what everything is found against',
     edit: {
       path: 'src/content/themes.ts',
-      find: "    space: { vivid: '#121006', 'high-contrast': '#040300' },",
-      replace: "    space: { vivid: '#3c4a20', 'high-contrast': '#040300' },",
+      /*
+        ⚠️ RE-ANCHORED BY 0221, AND THE BREAK HAD TO GET BRIGHTER. Saurian Belt's backdrop is a blue
+        sky now rather than a near-black — measured at `enemy` 4.07:1 against a floor of 3, which is
+        the bluest a place can afford. `#3c4a20` was a brightening when the baseline was `#121006` and
+        is a DARKENING now, so the old replacement would have left the guard green while looking like
+        the same probe. **Re-pointing an anchor without re-reading the break is how a probe survives
+        `tests/prove-guard.test.ts` and stops proving anything** — 0220's own worked example.
+      */
+      find: "    space: { vivid: '#16305a', 'high-contrast': '#050b16' },",
+      replace: "    space: { vivid: '#7f9fd8', 'high-contrast': '#050b16' },",
     },
   },
   /*

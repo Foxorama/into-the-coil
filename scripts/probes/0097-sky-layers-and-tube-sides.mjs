@@ -28,8 +28,12 @@ export const PROBES = [
       // ⚠️ Re-anchored on 2026-08-10: the streak layer crossed into the FOREGROUND at 1.61
       // (`docs/decisions/0103-the-fast-layer-is-in-front.md`). Same break, and it now costs strictly
       // more — without it the sky is not only two layers of dots, it is entirely behind the game.
-      find: '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.7 },',
-      replace: '',
+      // ⚠️ Re-anchored again by 0221: the streak layer is in BOTH sky arrays now, so the line before
+      // it — `skyNear`, which a planet's sky does not have — is what makes this name `SKY` alone.
+      find:
+        '  { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.825 },\n' +
+        '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.7 },',
+      replace: '  { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.825 },',
     },
   },
   {

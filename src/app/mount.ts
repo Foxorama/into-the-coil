@@ -17,7 +17,7 @@ import { type Entity, makeEntity, reset } from '../sim/entity.ts';
 import { Pool } from '../sim/pool.ts';
 import { makeCollected, makeDeaths } from '../sim/collide.ts';
 import { makeRng } from '../sim/rng.ts';
-import { atlasIsStale, bakeAtlas, bakeLandmark, bakeNebula, viewFor } from '../render/bake.ts';
+import { atlasIsStale, bakeAtlas, bakeGround, bakeLandmark, bakeNebula, viewFor } from '../render/bake.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
 // 0212: the room borrows the run's landmarks and has to hand back exactly what it took.
 import type { Landmarks } from '../render/scene.ts';
@@ -324,6 +324,46 @@ export const SKY = [
   { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.825 },
   { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.7 },
 ];
+
+/**
+ * The sky of a place that has land under it — `docs/decisions/0221-a-planet-is-not-a-space.md`.
+ *
+ * Reported: *"the planets still have the starry space backdrop visible, ground features need be
+ * properly have nothing behind them and the sky in the background needs to match the sky."*
+ *
+ * ⚠️ **THE TWO STAR FIELDS ARE GONE, AND THAT IS THE FIRST HALF OF THE REPORT ANSWERED BY DELETION.**
+ * `skyFar` and `skyNear` are fields of dots — they are stars, and you cannot see stars from under a
+ * daylit sky. Every attempt to fix *"the starry space backdrop is visible"* by drawing something over
+ * them is a worse version of not drawing them.
+ *
+ * ⚠️ **THE GROUND IS LAST, AND ITS `depth` HAS NOTHING TO DO WITH THAT.** Order in this array decides
+ * what covers what; `depth` decides how fast it goes past. A mountain range is far away AND in front
+ * of everything behind it, and those are separate facts. 0.45 is between the weather it stands under
+ * and the game — slow enough to read as distance, fast enough not to be another cloud.
+ *
+ * ⚠️ **AND `skyRush` STAYS, DOING A DIFFERENT JOB.** It is the only layer of streaks in the game, and
+ * over a planet the same bitmap is driving snow, blown ash or spores rather than stars going past at
+ * speed. Keeping it is what stops a planet's sky being motionless — the weather at 0.09 and the
+ * ground at 0.45 are both slow, and 0112's whole finding was that what reads as speed is the SPREAD
+ * of rates rather than the largest of them.
+ */
+export const SKY_ON_A_PLANET = [
+  { sprite: SPRITE.skyNebula, extent: SPRITE_EXTENT.skyNebula, depth: 0.09 },
+  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.7 },
+  { sprite: SPRITE.skyGround, extent: SPRITE_EXTENT.skyGround, depth: 0.45 },
+];
+
+/**
+ * Which sky a place has. `null` — the title screen and the music room's own backdrop — is space.
+ *
+ * ⚠️ **ONE FUNCTION SO THE TWO CALLERS CANNOT DISAGREE.** The style chooser turns the sky off (Retro)
+ * and the level boundary changes the place, and before 0221 only the first of those touched
+ * `world.sky` — because there was only one sky. A second array means both have to route through the
+ * same answer or a level boundary silently reinstates the star fields a planet just removed.
+ */
+export function skyFor(place: ThemeKind | null): typeof SKY {
+  return place !== null && THEMES[place].ground !== null ? SKY_ON_A_PLANET : SKY;
+}
 
 /**
  * How many bodies the opening field is seeded with, so the first frame is not empty.
@@ -1098,9 +1138,34 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     ⚠️ **Called at boot as well as on a change**, or the chooser opens with nothing marked and the
     default is a thing the player can only discover by pressing something.
   */
+  /*
+    ⚠️ **WHICH PLACE IS ACTUALLY ON THE SCREEN, AND IT IS NOT DERIVABLE WHERE IT IS NEEDED** — 0221.
+    `applySky` runs from the style chooser, which knows nothing about levels and cannot call
+    `placeOnScreen()` — that reads the run, and the chooser is reachable from the title screen and
+    from the music room. This is the same memo `shownSpace` is, carrying the answer rather than the
+    colour it produced.
+
+    ⚠️ **DECLARED HERE AND NOT BESIDE `shownSpace`, WHICH IS WHERE IT BELONGS BY SUBJECT.** `applyStyle`
+    is called at boot, four hundred lines above that pairing, so a `let` next to its twin is in the
+    temporal dead zone when the chooser first reads it — `Cannot access 'bakedPlace' before
+    initialization`, and a blank canvas. The same trap 0216 hit with `onSeek`, which is the second time
+    in this file that *where a thing belongs* and *where a thing may be declared* have disagreed.
+  */
+  let bakedPlace: ThemeKind | null = null;
+
+  /*
+    ⚠️ **THE SKY IS TWO DECISIONS NOW AND THEY ARE TAKEN IN ONE PLACE** — 0221. Retro says whether
+    there is a sky at all; the place says which one. Before this there was only ever one array, so the
+    style chooser owned `world.sky` outright — and a level boundary that reinstated the star fields a
+    planet had just removed would have been a one-line omission with no way to notice it.
+  */
+  const applySky = (): void => {
+    world.sky = STYLES[state.settings.style].sky ? skyFor(bakedPlace) : NO_SKY;
+  };
+
   const applyStyle = (): void => {
     const row = STYLES[state.settings.style];
-    world.sky = row.sky ? SKY : NO_SKY;
+    applySky();
     chrome.setFace(row.face);
     chrome.setChoice('style', STYLE_KINDS.indexOf(state.settings.style));
   };
@@ -1213,6 +1278,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     if (want === shownSpace) return;
     shownSpace = want;
+    bakedPlace = place;
     surface.setSpace(want);
     /*
       ── AND THE SKY ITSELF BELONGS TO THE PLACE NOW — 0195 ────────────────────────────────────────
@@ -1236,10 +1302,40 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       surface.setAtlas(atlas);
     }
     const clouds = place === null ? PALETTES[palette].sky : THEMES[place].nebula[palette];
-    bakeNebula(atlas, clouds, colours.space, view.scale * dpr, backdrop);
+    /*
+      ⚠️ **WHAT A DARK STRUCTURE MARK IS DRAWN IN, AND IT USED TO BE THE PALETTE'S VOID** — 0221.
+      `paintStructure` draws an unlit mark as *a hole in the gas*, which means the backdrop's own
+      colour; it was handed `colours.space`, the PALETTE's, which for the four places in space is
+      within a few percent of the theme's and was therefore never wrong enough to see.
+
+      ⚠️ **ON A PLANET IT IS WRONG BY THE WHOLE SKY.** Saurian Belt's backdrop is now a blue at
+      `#16305a` and a hole punched in near-black read as a rock, which is right by luck for the belt
+      overhead and wrong for anything meant to be a gap. So a place with land uses **the colour of its
+      land**: a silhouette over a planet is made of the same stuff the ground is, which is both true
+      and the reason it is dark.
+    */
+    const silhouette = place === null ? colours.space : (THEMES[place].ground ?? THEMES[place].space)[palette];
+    bakeNebula(atlas, clouds, silhouette, view.scale * dpr, backdrop);
     // The landmark takes the same gas colour as the weather — 0203. One place, one colour, so the
     // pillars are lit by the nebula they stand in rather than by a palette that never heard of it.
     bakeLandmark(atlas, clouds, colours.space, view.scale * dpr, backdrop);
+    /*
+      ⚠️ **THE LAND IS LIT BY ITS OWN SKY, WHICH IS 0204's RULE WITH THE SECOND COLOUR CHANGED** —
+      0221. A landmark is punched out of the GAS because it stands in gas; ground is a silhouette
+      against the SKY, because that is what a horizon is, and every lit edge on it is the sky showing
+      over the top of the rock. Passing the cloud colour here would light a mountain range with the
+      weather in front of it.
+
+      A place with no land returns immediately inside `bakeGround` — see there for why the stale
+      bitmap is left alone rather than cleared.
+    */
+    const land = place === null ? null : THEMES[place].ground;
+    // `clouds` is the place's gas, which is the brightest colour it has and the one its haze is made
+    // of — so a pool and the air over it are lit by one thing rather than by two.
+    if (land !== null) bakeGround(atlas, land[palette], want, clouds, view.scale * dpr, backdrop);
+    // ⚠️ **AND THE SKY ITSELF CHANGES SHAPE, not just its colours**: a planet has no star fields.
+    // Routed through `applySky` so the style chooser's Retro-off and this cannot disagree.
+    applySky();
   };
 
   /**

@@ -367,7 +367,28 @@ export const SPRITE_KINDS = [
   */
   'skyNebula',
   /*
-    ── AND A FIFTH THAT IS NOT A FIELD AT ALL, BUT ONE OBJECT AT ONE PLACE ─────────────────────────
+    ── AND A FIFTH THAT IS OPAQUE, WHICH NOTHING IN THE SKY HAS EVER BEEN ──────────────────────────
+
+    `docs/decisions/0221-a-planet-is-not-a-space.md`. Reported: *"the planets still have the starry
+    space backdrop visible, ground features need be properly have nothing behind them."*
+
+    ⚠️ **THE OTHER FOUR ARE TRANSPARENT BY CONSTRUCTION AND THIS ONE MUST NOT BE.** Every sky sprite
+    up to here is marks or gas over whatever was drawn before it, and 0220 put a planet's ridges among
+    them — so the ground was a translucent shape with the star fields, which are drawn AFTER it,
+    shining through. *Nothing behind it* is not a tuning of that; it is the opposite of it.
+
+    ⚠️ **AND IT IS THE ONLY SKY SPRITE DRAWN IN FRONT OF THE STAR FIELDS.** Order in `SKY` decides
+    what covers what, and it is independent of `depth` — a mountain range is far away AND in front of
+    the stars. `docs/decisions/0069-the-sky-is-behind-the-game.md` is untouched: it is still behind
+    every body, every shot and the box.
+
+    ⚠️ **ONE SLOT, THREE DRAWINGS, AND FOUR PLACES THAT DRAW NOTHING IN IT** — `landmark`'s own
+    argument one entry down. A place in space bakes an empty tile and never blits it, because `SKY`
+    is chosen per place rather than per game.
+  */
+  'skyGround',
+  /*
+    ── AND A SIXTH THAT IS NOT A FIELD AT ALL, BUT ONE OBJECT AT ONE PLACE ─────────────────────────
 
     `docs/decisions/0203-the-rule-was-never-about-size.md`. Reported from play: *"visually there's
     nothing interesting or different about the levels"*, and asked for: *"I want to see the eagle
@@ -635,6 +656,17 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     `src/render/bake.ts`'s `bakeNebula`.
   */
   skyNebula: ACROSS_SPAN * 2,
+  /*
+    ⚠️ **THE SAME TWO HUNDRED UNITS AS THE WEATHER, AND FOR A DIFFERENT REASON.** The cloud tile is
+    that wide so a player never sees the same cloud twice; the ground is that wide because a horizon
+    that repeats every screen is a wallpaper, and the eye finds a repeat in a SKYLINE far faster than
+    it finds one in a smudge. Eleven seconds of camera at 0.45 is about twenty-five seconds of
+    flying, which is most of a section.
+
+    ⚠️ **And it means tile y 0.25 to 0.75 is the lane here too**, which is the trap 0220 walked into
+    three times: the tile is twice the lane and blitted centred, so half of it is off the screen.
+  */
+  skyGround: ACROSS_SPAN * 2,
   /*
     ⚠️ **THREE QUARTERS OF THE LANE, AND THE NUMBER IS A LEGIBILITY FLOOR RATHER THAN A TASTE** —
     `docs/decisions/0203-the-rule-was-never-about-size.md`. That decision replaces 0069's ceiling

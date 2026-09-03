@@ -770,6 +770,21 @@ distortion at `push` improved as a side effect. ⚠️ **THREE PLACES ARE STILL 
 does not model the compressor, so every guard built on it now measures a bus one node short of the
 shipped one. `scripts/weigh-clean.mjs` is the instrument.
 
+⚠️ **AND THE PLANETS BECAME PLANETS ON 2026-09-04 — [0221](decisions/0221-a-planet-is-not-a-space.md).**
+0220 drew a planet's ground into the WEATHER tile, which is drawn behind both star fields — so the
+report came back as three faults with one cause: *"the planets still have the starry space backdrop
+visible, ground features need be properly have nothing behind them and the sky in the background needs
+to match the sky."* A place with land now has its own sky array: no star fields, an opaque ground layer
+drawn last, and a `space` colour that is a sky. Saurian Belt is blue, Rime Shelf is austere, and The
+Toxic Mire is a planet with a canopy over a corridor over its pools.
+
+⚠️ **TWO OF THAT REPORT'S FIVE ASKS ARE STILL OPEN AND ARE THE NEXT TWO PIECES OF ART WORK.**
+**Saurian Belt's volcanoes** — *"exploding volcanoes adding volcanic effects at some points in the
+level"* — are `LANDMARK_OF.saurian` plus `landmarks` entries, on the Pillars' own terms. **Depth for
+the four places in space** — *"like the music setting screen how we added the debris"* — is a baked
+tile and not the room's motes: those borrow the `debris` ENTITY pool, which is free with no game
+running and is not available in one, because `CAPACITY` totals 0022's worst case of 500 exactly.
+
 ⚠️ **THE BACKGROUNDS WERE ATTACKED ON 2026-09-03 — [0220](decisions/0220-a-place-is-somewhere-you-are.md).**
 Five of the seven places redrawn from one report: Ember Nebula denser and its Pillars knotted, lit and
 five columns deep; Saurian Belt and Rime Shelf standing on ground; The Black Heart's landmark **is** a

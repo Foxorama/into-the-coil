@@ -67,8 +67,14 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: retro is the game before the sky, and the sky actually goes',
     edit: {
       path: 'src/app/mount.ts',
-      find: '    world.sky = row.sky ? SKY : NO_SKY;',
-      replace: '    world.sky = SKY;',
+      /*
+        ⚠️ RE-ANCHORED BY 0221. The style chooser used to own `world.sky` outright, because there was
+        one sky; a place with land now has a different one, so both decisions are taken in `applySky`
+        and this line moved into it. **The break is unchanged** — the style is resolved and never
+        reaches the world, so retro dispatches perfectly and draws the sky anyway.
+      */
+      find: '    world.sky = STYLES[state.settings.style].sky ? skyFor(bakedPlace) : NO_SKY;',
+      replace: '    world.sky = skyFor(bakedPlace);',
     },
   },
   {
