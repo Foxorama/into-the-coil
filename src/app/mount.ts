@@ -19,11 +19,13 @@ import { makeCollected, makeDeaths } from '../sim/collide.ts';
 import { makeRng } from '../sim/rng.ts';
 import { atlasIsStale, bakeAtlas, bakeLandmark, bakeNebula, viewFor } from '../render/bake.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
+// 0212: the room borrows the run's landmarks and has to hand back exactly what it took.
+import type { Landmarks } from '../render/scene.ts';
 import { SPECIAL_BINDINGS } from '../content/actions.ts';
 import { SPECIALS } from '../content/specials.ts';
 import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../content/enemies.ts';
-import { LEVELS } from '../content/levels.ts';
+import { LEVELS, type LevelRow } from '../content/levels.ts';
 import { BOSSES } from '../content/bosses.ts';
 import {
   PICKUPS,
@@ -38,9 +40,21 @@ import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
 import { DEFAULT_SOUND, SOUND_KINDS } from '../content/sound.ts';
 import { DEFAULT_STYLE, STYLES, STYLE_KINDS } from '../content/styles.ts';
 import { nextOnGrid } from '../content/cadence.ts';
-import { auraBuild, auraFor, auraNearnessFor, musicLevelFor, placeFor } from './music.ts';
-// 0210: the music room holds each place for one loop before moving on.
-import { PHRASE_SECONDS } from '../content/music.ts';
+// 0212: the last five are the music room's walk — it asks the same questions a run asks.
+import {
+  auditionAura,
+  auditionLength,
+  auditionRung,
+  auraBuild,
+  auraFor,
+  auraNearnessFor,
+  levelOfPlace,
+  musicLevelFor,
+  placeFor,
+  UNITS_PER_SECOND,
+} from './music.ts';
+// 0212: the words the room's readout puts a rung in — the composer's own, not a second set.
+import { MUSIC_LEVEL_LABEL } from '../content/music.ts';
 import { bakePlace, makeAudioOut, makeSpeaker, prewarmAudio } from './sound.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
@@ -50,6 +64,7 @@ import {
   GameFrame,
   SHIP_START_ALONG,
   detonateArsenal,
+  landmarksFor,
   launchSpecial,
   respawn,
   scatterUpgrades,
@@ -1050,7 +1065,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // The second setting, and it is one more line here because 0070 built the mechanism rather than
     // the style. `SOUND_KINDS` IS the order `src/state/screens.ts` built the options in.
     else if (name === 'sound') dispatch({ slice: 'settings', type: 'sound', sound: SOUND_KINDS[index] ?? DEFAULT_SOUND });
-  });
+  },
+  /*
+    THE MUSIC ROOM'S BAR WAS DRAGGED — 0212.
+
+    ⚠️ **A FRACTION OF THE WALK, AND THE CHROME DOES NOT KNOW WHAT A WALK IS.** It reads a position
+    off its own box and hands over 0 to 1; `onSeek` below turns that into world units against the
+    level being auditioned. A chrome that dealt in units would need the level, which is the shell's.
+  */
+  onSeek);
   for (const element of chrome.elements) host.appendChild(element);
 
   /*
@@ -1159,12 +1182,18 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * or who chose silence on the title screen — and a backdrop folded into it would leave those
    * players in level one's void for the whole run.
    *
-   * ⚠️ **Everything not in a level gets the palette's own `space`**, which is what the title, the
-   * level break and the run-over screen have always been drawn on. A place belongs to a level.
+   * ⚠️ **Everything not in a place gets the palette's own `space`**, which is what the title, the
+   * level break and the run-over screen have always been drawn on.
+   *
+   * ⚠️ **AND *IN A PLACE* STOPPED MEANING *IN A RUN* WITH 0212.** This asked `screen === 'playing'`
+   * in three lines, which was one question wearing three copies; the music room is somewhere without
+   * being a run, so what each line actually wants is *which place is on screen* and `null` for none.
+   * A backdrop that stayed keyed on the run would have left the room auditioning Ember Nebula over
+   * the title screen's empty void.
    */
   const applyPlace = (): void => {
-    const want =
-      state.screen.current === 'playing' ? THEMES[world.level.theme].space[palette] : PALETTES[palette].space;
+    const place = placeOnScreen();
+    const want = place === null ? PALETTES[palette].space : THEMES[place].space[palette];
     /*
       ⚠️ **THE WEATHER IS RE-BAKED HERE AND THE BACKDROP IS A PROPERTY WRITE, WHICH IS THE WHOLE
       DIFFERENCE IN COST** — `docs/decisions/0112-the-sky-has-weather.md`. One canvas the size of two
@@ -1192,17 +1221,18 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       level boundary, which is exactly what
       `docs/decisions/0133-the-place-is-baked-at-the-boundary.md` established for the other channel.
     */
-    const place: ThemeKind = state.screen.current === 'playing' ? world.level.theme : 'approach';
-    if (atlasIsStale(atlas, atlas.view, view.scale * dpr, place)) {
-      atlas = bakeAtlas(colours, atlas.view, view.scale * dpr, place);
+    // ⚠️ `approach` for *nowhere*, which is the base composition's own place and is what the title
+    // screen has always drawn — 0212 changed which question is asked, not this answer.
+    const backdrop: ThemeKind = place ?? 'approach';
+    if (atlasIsStale(atlas, atlas.view, view.scale * dpr, backdrop)) {
+      atlas = bakeAtlas(colours, atlas.view, view.scale * dpr, backdrop);
       surface.setAtlas(atlas);
     }
-    const clouds =
-      state.screen.current === 'playing' ? THEMES[world.level.theme].nebula[palette] : PALETTES[palette].sky;
-    bakeNebula(atlas, clouds, colours.space, view.scale * dpr, place);
+    const clouds = place === null ? PALETTES[palette].sky : THEMES[place].nebula[palette];
+    bakeNebula(atlas, clouds, colours.space, view.scale * dpr, backdrop);
     // The landmark takes the same gas colour as the weather — 0203. One place, one colour, so the
     // pillars are lit by the nebula they stand in rather than by a palette that never heard of it.
-    bakeLandmark(atlas, clouds, colours.space, view.scale * dpr, place);
+    bakeLandmark(atlas, clouds, colours.space, view.scale * dpr, backdrop);
   };
 
   /**
@@ -1263,15 +1293,80 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     `shownNearness` beside it are locals for the same reason.
   */
   let audition: ThemeKind | null = null;
-  let roundRobin: ReturnType<typeof setInterval> | null = null;
+  /*
+    ⚠️ **THE LEVEL IS HELD BESIDE THE PLACE RATHER THAN LOOKED UP EVERY STEP**, because the walk asks
+    for its `sections`, its `bossAt` and its `landmarks` on the same tick and `levelOfPlace` is a scan.
+  */
+  let auditionLevel: LevelRow | null = null;
+  /** Where the room's camera has got to, in the level's own units. The one number the room owns. */
+  let auditionAlong = 0;
+  /** Whether the walk moves to the next place when it ends, or rounds again on this one. */
+  let auditionAll = false;
 
-  /** The rung the room plays. `run` is what a level spends most of its length at. */
-  const AUDITION_RUNG = 'run' as const;
+  /*
+    ⚠️ **THE RUN'S CAMERA IS BORROWED AND PUT BACK, WHICH IS CHEAPER THAN A SECOND DRAW PATH.**
+    `src/render/scene.ts` already takes the camera, the landmarks and the origin as arguments — the
+    room does not need a painter of its own, it needs those three to say where it is. What it must
+    not do is leave them changed: `docs/decisions/0068-a-run-over-is-a-continue.md`'s resume
+    deliberately does not come through `startLevel`, so a camera left at the room's position would be
+    a resumed run that opens somewhere it never was.
 
-  const stopRoundRobin = (): void => {
-    if (roundRobin === null) return;
-    clearInterval(roundRobin);
-    roundRobin = null;
+    ⚠️ **`null` MEANS *NOT IN THE ROOM*, so the restore cannot run twice** and a second entry cannot
+    save the room's own numbers over the run's.
+  */
+  let borrowed: { camera: number; prev: number; origin: number; landmarks: Landmarks } | null = null;
+
+  /**
+   * Which place is on screen, or `null` for the empty void the title has always been drawn on.
+   *
+   * ⚠️ **ONE QUESTION, ASKED BY THE BACKDROP, THE ATLAS, THE WEATHER, THE MIX AND THE READOUT** —
+   * 0212. It was `state.screen.current === 'playing'` written out five times, which was fine while a
+   * place could only be somewhere a run was.
+   */
+  function placeOnScreen(): ThemeKind | null {
+    return state.screen.current === 'playing' ? world.level.theme : audition;
+  }
+
+  /** Put the run's camera back exactly as the room found it. A no-op unless the room borrowed it. */
+  const releaseCamera = (): void => {
+    if (borrowed === null) return;
+    world.cameraAlong = borrowed.camera;
+    world.prevCameraAlong = borrowed.prev;
+    world.levelOrigin = borrowed.origin;
+    world.landmarks = borrowed.landmarks;
+    borrowed = null;
+  };
+
+  /**
+   * Point the walk at a place and start it from the top.
+   *
+   * ⚠️ **THE CAMERA GOES TO ZERO AND SO DOES THE INTERPOLATION**, which is the difference between a
+   * place starting and a place being jumped to. `src/app/frame.ts` draws
+   * `prevCameraAlong + (cameraAlong - prevCameraAlong) * alpha`, so leaving the previous value where
+   * it was would smear a whole level's worth of travel across one frame.
+   */
+  const beginAudition = (place: ThemeKind, from = 0): void => {
+    audition = place;
+    auditionLevel = levelOfPlace(place);
+    auditionAlong = from;
+    /*
+      ⚠️ **A place with no level walks nowhere rather than crashing.** Unreachable today —
+      `tests/music.test.ts` holds that every place is played by one — and this is the conservative
+      half, on `levelOfPlace`'s own terms.
+    */
+    if (auditionLevel === null) return;
+    if (borrowed === null) {
+      borrowed = {
+        camera: world.cameraAlong,
+        prev: world.prevCameraAlong,
+        origin: world.levelOrigin,
+        landmarks: world.landmarks,
+      };
+    }
+    world.levelOrigin = 0;
+    world.landmarks = landmarksFor(auditionLevel);
+    world.cameraAlong = from;
+    world.prevCameraAlong = from;
   };
 
   /**
@@ -1284,30 +1379,144 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   function onMusicRoom(index: number): void {
     const place = THEME_KINDS[index];
     if (place !== undefined) {
-      stopRoundRobin();
-      audition = place;
+      auditionAll = false;
+      beginAudition(place);
       return;
     }
     // Past the places: play-all, then back. Two buttons, in the order the row lists them.
     if (index === THEME_KINDS.length) {
-      stopRoundRobin();
-      audition = THEME_KINDS[0]!;
       /*
-        ⚠️ **ONE PHRASE EACH, AND IT WRAPS** — asked for as *"runs through the music from level to
-        level and then restarts at level 1"*. `PHRASE_SECONDS` is the loop's own length, so a place
-        is heard whole rather than cut mid-figure, and the modulo is what makes it round again rather
-        than stop at the seventh.
+        ⚠️ **THE WALK'S OWN END IS WHAT ADVANCES IT, AND THIS WAS A `setInterval`** — 0212. Asked for
+        as *"runs through the music from level to level and then restarts at level 1"*, and a timer
+        answered it by holding each place for one `PHRASE_SECONDS`. **A second clock is a second
+        opinion about where the music has got to**: the timer ran on wall time, the walk runs on the
+        step the music is already in phase with, and the two would part company on any frame the
+        browser dropped. There is one clock now and it is the one the player is watching.
       */
-      roundRobin = setInterval(() => {
-        const at = audition === null ? 0 : THEME_KINDS.indexOf(audition);
-        audition = THEME_KINDS[(at + 1) % THEME_KINDS.length]!;
-      }, PHRASE_SECONDS * 1000);
+      auditionAll = true;
+      beginAudition(THEME_KINDS[0]!);
       return;
     }
-    stopRoundRobin();
+    auditionAll = false;
     audition = null;
+    auditionLevel = null;
+    releaseCamera();
     dispatch({ slice: 'screen', type: 'show', screen: 'title' });
   }
+
+  /**
+   * Move the room's camera one step, and round the walk over when it reaches the end.
+   *
+   * ⚠️ **ON `onTick` AND NOT ON A TIMER**, which is what makes the picture, the mix and the readout
+   * one thing: the sky the player is watching, the rung the mixer is at and the position on the bar
+   * are all this number.
+   *
+   * ⚠️ **`while` RATHER THAN `if`, AND IT IS NOT DEFENSIVE.** A seek can land past the end of a
+   * shorter place's walk when *Play all* moves on, and a single subtraction would leave the position
+   * still past it.
+   */
+  const stepAudition = (): void => {
+    if (auditionLevel === null || audition === null) return;
+    auditionAlong += SCROLL_PER_STEP;
+    let length = auditionLength(auditionLevel);
+    while (auditionAlong >= length) {
+      if (!auditionAll) {
+        auditionAlong -= length;
+        break;
+      }
+      const at = THEME_KINDS.indexOf(audition);
+      beginAudition(THEME_KINDS[(at + 1) % THEME_KINDS.length]!, auditionAlong - length);
+      if (auditionLevel === null) return;
+      length = auditionLength(auditionLevel);
+    }
+    world.prevCameraAlong = world.cameraAlong;
+    world.cameraAlong = auditionAlong;
+  };
+
+  /**
+   * The player dragged the bar. `through` is a fraction of the walk.
+   *
+   * ⚠️ **BOTH CAMERA VALUES, for `beginAudition`'s reason** — a seek is a jump, and an interpolation
+   * across it is a frame of the whole level going past at once.
+   */
+  /*
+    ⚠️ **A `function` AND NOT A `const`, WHICH IS THE SAME REASON `onMusicRoom` IS ONE.** `makeChrome`
+    is called some four hundred lines above this and is handed both; a const arrow would be in its
+    temporal dead zone at that moment and the boot would throw. The declaration hoists.
+  */
+  function onSeek(through: number): void {
+    if (auditionLevel === null) return;
+    const length = auditionLength(auditionLevel);
+    auditionAlong = (through < 0 ? 0 : through > 1 ? 1 : through) * length;
+    world.cameraAlong = auditionAlong;
+    world.prevCameraAlong = auditionAlong;
+  }
+
+  /**
+   * Where the ticks on the bar go — one per section the level opens, plus the fight.
+   *
+   * ⚠️ **THE LEVEL'S OWN SCRIPT, SO THE MARKS CANNOT DISAGREE WITH THE MUSIC.** These are the same
+   * `sections` entries `auditionRung` walks, divided by the same `auditionLength` the bar is drawn
+   * against — a hand-placed tick would be `docs/decisions/0116-the-rig-plays-the-level.md`'s drift
+   * happening on a progress bar.
+   *
+   * ⚠️ **`bossAt` IS A MARK AND IS NOT IN THE SCRIPT**, which is 0138's rule showing through: where
+   * the fight begins is level design rather than a music number, so it is added here rather than
+   * found in the list.
+   */
+  const marksOf = (level: LevelRow): { at: number; label: string }[] => {
+    const length = auditionLength(level);
+    const marks = level.sections.map((entry) => ({
+      at: entry.at / length,
+      label: MUSIC_LEVEL_LABEL[entry.section],
+    }));
+    marks.push({ at: level.bossAt / length, label: MUSIC_LEVEL_LABEL.boss });
+    return marks;
+  };
+
+  /*
+    ⚠️ **THE READOUT IS PUSHED ON A CHANGE OF WHAT IT DISPLAYS, NOT EVERY STEP**, which is the
+    contract every other `chrome.set*` already keeps. A walk is about three minutes, so a thousandth
+    of it is a fifth of a second — six writes a second, and a bar that moves about a pixel at a time
+    on a desktop. Gating on the whole second instead would make the fill visibly hop.
+  */
+  let shownWalk = -1;
+  let shownPlace: ThemeKind | null = null;
+  const showNowPlaying = (): void => {
+    const walking = state.screen.current === 'music' && auditionLevel !== null && audition !== null;
+    if (!walking) {
+      if (shownWalk === -1 && shownPlace === null) return;
+      shownWalk = -1;
+      shownPlace = null;
+      chrome.setNowPlaying(null);
+      return;
+    }
+    const level = auditionLevel!;
+    const place = audition!;
+    const length = auditionLength(level);
+    const through = length > 0 ? auditionAlong / length : 0;
+    const tick = Math.round(through * 1000);
+    if (tick === shownWalk && place === shownPlace) return;
+    const moved = place !== shownPlace;
+    shownWalk = tick;
+    shownPlace = place;
+    chrome.setNowPlaying({
+      place: THEMES[place].title,
+      section: MUSIC_LEVEL_LABEL[auditionRung(level, auditionAlong)],
+      through,
+      at: auditionAlong / UNITS_PER_SECOND,
+      of: length / UNITS_PER_SECOND,
+      // ⚠️ Rebuilt only when the PLACE changes: the ticks are a property of the level and redrawing
+      // them six times a second would be six DOM rebuilds a second of a row that never moves.
+      marks: moved ? marksOf(level) : null,
+      /*
+        ⚠️ **`null` UNLESS *Play all* IS RUNNING**, which is the whole of what the readout is for on
+        that button — asked for as *"an indication of which track is being played when play all is
+        selected"*. A single place loops, so there is no next.
+      */
+      next: auditionAll ? THEMES[THEME_KINDS[(THEME_KINDS.indexOf(place) + 1) % THEME_KINDS.length]!].title : null,
+    });
+  };
 
   const applyMusicLevel = (): void => {
     const music = audioOut.music();
@@ -1358,13 +1567,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
               : 1,
           )
         : /*
-            ⚠️ **THE MUSIC ROOM OVERRIDES THE OFF-RUN RUNG — 0210.** Everything outside a run plays
-            `calm`, which is the title screen's bed and is deliberately almost nothing. A listener who
-            picked a place wants to hear the place, so the room asks for the rung a level spends most
-            of its length at.
+            ⚠️ **THE MUSIC ROOM OVERRIDES THE OFF-RUN RUNG — 0210, AND 0212 CHANGED WHAT IT OVERRIDES
+            IT WITH.** Everything outside a run plays `calm`, which is the title screen's bed and is
+            deliberately almost nothing. 0210 answered *a listener who picked a place wants to hear
+            the place* with one fixed rung, on the stated ground that it was **"the rung a level
+            spends most of its length at"** — which `scripts/weigh-room.mjs` measured at **17–30%**,
+            and which cost the room `lead`, `hook`, `dread`, `toll`, `crash` and seven more layers it
+            never once opened. The room walks the level now, and this line asks the walk.
           */
-          audition !== null
-          ? AUDITION_RUNG
+          auditionLevel !== null
+          ? auditionRung(auditionLevel, auditionAlong)
           : 'calm';
     /*
       THE AURA — `docs/decisions/0091-the-boss-has-an-aura.md`, and it is the one thing here that
@@ -1395,10 +1607,20 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       state.screen.current === 'playing'
         ? auraBuild(world.cameraAlong - world.levelOrigin, world.level.bossAt, world.level.theme)
         : 0;
-    const nearness = auraFor(
-      build,
-      boss === null ? 0 : auraNearnessFor(boss.along, boss.radius, world.ship.along, world.ship.radius),
-    );
+    /*
+      ⚠️ **AND THE ROOM HAS AN AURA NOW, WHICH IS 0212 AND NOT AN EXTRA** — the aura is 0107's *"amp
+      up until you beat the boss"*, so a room that left it at zero would audition a place with the one
+      thing in the music that goes anywhere taken out of it. `auditionAura` is the run's own
+      `auraBuild` and `auraFor` over the walk's position; what it supplies is the second argument,
+      because a room has no hulls to measure the gap between.
+    */
+    const nearness =
+      auditionLevel !== null && audition !== null && state.screen.current !== 'playing'
+        ? auditionAura(auditionLevel, audition, auditionAlong)
+        : auraFor(
+            build,
+            boss === null ? 0 : auraNearnessFor(boss.along, boss.radius, world.ship.along, world.ship.radius),
+          );
     /*
       ⚠️ **Re-issued whenever the LEVEL changes or the aura has moved enough to hear**, rather than
       every step. `setTargetAtTime` is cheap and re-issuing it at the same target is free, but
@@ -1515,8 +1737,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       the world's number over is what makes an accent land where the bar says.
     */
     speaker.step(world.steps);
+    /*
+      ⚠️ **BEFORE BOTH, BECAUSE BOTH READ IT** — 0212. `applyPlace` bakes the sky the walk is moving
+      through and `applyMusicLevel` asks the walk which rung it has reached; a camera moved after them
+      would put the picture and the mix one step behind the position the readout is already showing.
+    */
+    stepAudition();
     applyPlace();
     applyMusicLevel();
+    showNowPlaying();
     if (timeoutLeft <= 0) return;
     timeoutLeft--;
     tickTimer();

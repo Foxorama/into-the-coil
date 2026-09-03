@@ -17,7 +17,9 @@ export const PROBES = [
     guard: 'the landmark is re-baked at the boundary wherever the weather is',
     edit: {
       path: 'src/app/mount.ts',
-      find: '    bakeLandmark(atlas, clouds, colours.space, view.scale * dpr, place);',
+      // ⚠️ `place` became `backdrop` with 0212, when the music room made *which place is on screen*
+      // a question a run is no longer the only answer to. The break is unchanged; only the name is.
+      find: '    bakeLandmark(atlas, clouds, colours.space, view.scale * dpr, backdrop);',
       replace: '',
     },
   },

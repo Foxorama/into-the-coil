@@ -5,6 +5,9 @@ import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
 import { SCREENS, SCREEN_KINDS, type Screen } from '../src/state/screens.ts';
+// 0212: the music room's readout is the one part of a screen that appears after the screen does.
+import { MUSIC_LEVELS, MUSIC_LEVEL_LABEL } from '../src/content/music.ts';
+import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
 
 /**
  * EVERY SCREEN FITS THE SCREEN IT IS DRAWN ON.
@@ -94,6 +97,62 @@ async function showOnly(page: Page, screen: Screen): Promise<void> {
       names: DRAWN.map((s) => prefixFor(s).slice(0, -1)),
       wanted: prefixFor(screen).slice(0, -1),
     },
+  );
+  if (screen === 'music') await fillTheRoom(page);
+}
+
+/**
+ * Put the music room into its TALLEST and WIDEST state — 0212.
+ *
+ * ── A SCREEN THAT GROWS AFTER IT IS SHOWN, WHICH NOTHING HERE HAD SEEN BEFORE ───────────────────
+ *
+ * ⚠️ **`showOnly` ADDS A CLASS AND THE READOUT IS `hidden`, SO THIS GUARD WAS MEASURING THE ROOM
+ * WITH ITS READOUT MISSING.** The room opens with nothing playing and grows a five-line block the
+ * moment a place is pressed — a name, a bar, a legend and a clock — and every viewport below was
+ * being checked against the short version. **That is the same shape as 0210's own bug**: a thing in
+ * the DOM, correctly hidden, that the guard could not see and therefore reported on happily.
+ *
+ * ⚠️ **THE WIDEST CONTENT AND NOT WHATEVER IS PLAYING**, which is what a layout guard wants. The
+ * longest place title, the longest rung label and the longest *next* line are read off the content
+ * tables, so a place renamed to something long fails here rather than on somebody's phone.
+ *
+ * ⚠️ **WRITTEN INTO THE DOM RATHER THAN PRESSED THROUGH THE APP, AND THAT IS A REAL COST.** Pressing
+ * a place would exercise the shell's own push — but it also pays 0169's four-second prewarm, six
+ * times over, in a suite that already runs six full page loads here. `tests/room.browser.test.ts`
+ * drives the real path and asserts the real strings; this one is about boxes, and it takes the same
+ * shortcut `showOnly` above already takes for every other screen.
+ */
+async function fillTheRoom(page: Page): Promise<void> {
+  const longest = (all: readonly string[]): string => all.reduce((a, b) => (b.length > a.length ? b : a), '');
+  const place = longest(THEME_KINDS.map((kind) => THEMES[kind].title));
+  await page.evaluate(
+    ({ prefix, place, section }: { prefix: string; place: string; section: string }) => {
+      const root = document.querySelector('.' + prefix + 'now');
+      if (!(root instanceof HTMLElement)) throw new Error('the music room has no readout to fill');
+      root.hidden = false;
+      const write = (part: string, text: string): void => {
+        const el = root.querySelector('.' + prefix + part);
+        if (el instanceof HTMLElement) el.textContent = text;
+      };
+      write('now-place', place);
+      write('now-section', section);
+      write('now-at', '2:51');
+      write('now-of', '2:51');
+      write('now-next', `next: ${place}`);
+      // Five names under the bar, which is what every level's script plus the fight comes to.
+      const legend = root.querySelector('.' + prefix + 'now-legend');
+      if (legend instanceof HTMLElement) {
+        legend.replaceChildren();
+        for (let i = 0; i < 5; i++) {
+          const name = document.createElement('span');
+          name.className = prefix + 'now-name';
+          name.textContent = section;
+          name.style.left = `${i * 25}%`;
+          legend.appendChild(name);
+        }
+      }
+    },
+    { prefix: prefixFor('music'), place, section: longest(MUSIC_LEVELS.map((rung) => MUSIC_LEVEL_LABEL[rung])) },
   );
 }
 

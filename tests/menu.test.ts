@@ -12,6 +12,8 @@ import {
 import { PAD_AXIS_X, PAD_AXIS_Y, PAD_DEADZONE } from '../src/app/pad.ts';
 import { SCREENS, SCREEN_KINDS, STEPS_PER_SECOND, type Screen } from '../src/state/screens.ts';
 import { GameFrame } from '../src/app/frame.ts';
+// 0212: a screen that does not dim has to carry its own legibility, and that lives in the stylesheet.
+import { STYLE } from '../src/app/chrome.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
 
 /**
@@ -344,19 +346,58 @@ describe('a screen says whether it stops the world and whether it hides it', () 
     expect(SCREENS.cleared.dims, 'the level break paints over the sky it is a banner on').toBe(false);
   });
 
-  it('and it is the only screen with chrome on it that does either', () => {
-    /*
-      ⚠️ **`steps` and `dims` were one thing until this screen wanted them apart**, and holding that
-      here is what stops them quietly becoming one thing again. Every OTHER screen with something to
-      say stops the world and hides it; `playing` has nothing to say at all.
-    */
+  /*
+    ⚠️ **`steps` and `dims` WERE ONE THING UNTIL `cleared` WANTED THEM APART, AND `music` TOOK THE
+    OTHER HALF** — `docs/decisions/0212-the-room-walks-the-level.md`. The level break flies the world
+    on and does not paint over it; the music room paints over nothing while stepping nothing, because
+    what moves behind it is a camera rather than a simulation. **Two screens, two different pairs**,
+    which is the whole reason these are two flags.
+
+    ⚠️ **A LIST WITH A REASON PER ENTRY, AND THAT IS THE GUARD.** *Name a change to the content that
+    would redden this and be CORRECT* — a new screen deciding not to dim is exactly that change, and
+    it should stop here until somebody has said what is behind it. The alternative, deriving *does
+    something move behind this* from the row, is a second copy of the two flags.
+  */
+  const SHOWS_THE_SCENE: Partial<Record<Screen, string>> = {
+    cleared: 'a banner over a run that is still flying — 0063',
+    music: 'a window onto the place being auditioned, walking past — 0212',
+  };
+
+  it('and the screens that show the scene through them are the two that say so', () => {
     for (const screen of SCREEN_KINDS) {
       const row = SCREENS[screen];
       const hasChrome = row.heading.length > 0 || row.actions.length > 0;
-      if (!hasChrome || screen === 'cleared') continue;
+      if (!hasChrome) continue;
+      const shows = SHOWS_THE_SCENE[screen];
+      expect(
+        row.dims,
+        shows === undefined
+          ? `${screen} has chrome on it and does not hide the scene — say what is behind it in SHOWS_THE_SCENE, or dim it`
+          : `${screen} is meant to show the scene through it (${shows}) and is painting over it`,
+      ).toBe(shows === undefined);
+      // `cleared` is still the only one that leaves the SIMULATION running: 0212 moved a camera, and
+      // the music room's own header is explicit that those are not the same claim.
+      if (screen === 'cleared') continue;
       expect(row.steps, `${screen} has chrome on it and leaves the world running`).toBe(false);
-      expect(row.dims, `${screen} has chrome on it and does not hide the scene`).toBe(true);
     }
+  });
+
+  /*
+    ⚠️ **AND A SCREEN THAT DOES NOT DIM HAS TO CARRY ITS OWN LEGIBILITY.** The dim is what made every
+    other panel readable for free — `src/app/chrome.ts` sets the space colour inline on any screen
+    whose row says so — so the moment a screen opts out, the words are on a moving star field. The
+    music room's panel gets a backing; `cleared` gets `pointer-events: none` and is one line of text
+    that is deliberately allowed to be on the sky.
+
+    **This is the assertion that would catch the CSS being deleted while `dims: false` stayed**, which
+    is the shape of 0210's own invisible-screen bug seen from the other side.
+  */
+  it('the music room, which does not dim, gives its panel a backing of its own', () => {
+    expect(SCREENS.music.dims, 'the room stopped showing the place and this guard is now vacuous').toBe(false);
+    expect(
+      /\.itc-music-panel\s*\{[^}]*background:/.test(STYLE),
+      'the music room does not dim and its panel has no background — the readout is on the star field',
+    ).toBe(true);
   });
 
   it('a countdown gets a step whether or not the simulation took it', () => {

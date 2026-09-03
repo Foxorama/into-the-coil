@@ -37,6 +37,7 @@ import {
   AURA_FAR_UNITS,
   AURA_CURVE,
   AURA_ONSET_UNITS,
+  PHRASE_SECONDS,
   type MusicLayer,
   type MusicLevel,
   type MusicVoice,
@@ -54,8 +55,22 @@ import {
   type ThemeLadder,
 } from '../content/themes.ts';
 import { MUSIC_ROLES, roleOf } from '../content/arrangement.ts';
-import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
+import { LEVELS, LEVEL_KINDS, type LevelRow } from '../content/levels.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
+/*
+  ⚠️ **THE ROOM'S CAMERA MOVES AT THE GAME'S OWN RATE, AND THESE TWO CONSTANTS ARE THAT CLAIM** —
+  0212. A walk at any other speed would put every build at a moment the player has never heard it
+  arrive, which is the reported defect rebuilt out of a different part: the arrangement is authored
+  in bars and the sections in units, and only one ratio holds the two together.
+*/
+import { SCROLL_PER_STEP } from '../sim/flight.ts';
+/*
+  ⚠️ **`STEPS_PER_SECOND` AND NOT `1000 / STEP_MS`, WHICH IS ARITHMETIC AND NOT PEDANTRY.**
+  `src/app/loop.ts` states the step as `1000 / 60` ms, so dividing back out lands on 59.99999999999999
+  and the room walks at 35.99999999999999 units a second — right to eleven places and not equal to
+  anything. The whole number is the one description; the millisecond is derived from it.
+*/
+import { STEPS_PER_SECOND } from '../state/screens.ts';
 
 /**
  * One note of one voice, at `at` seconds into its layer's loop.
@@ -395,6 +410,130 @@ export function addRoom(buffer: Float32Array, rate: number, wet: number): void {
 export function placeFor(runLevel: number): ThemeKind {
   const index = runLevel < 0 ? 0 : runLevel > LEVEL_KINDS.length - 1 ? LEVEL_KINDS.length - 1 : runLevel;
   return LEVELS[LEVEL_KINDS[index]!].theme;
+}
+
+/*
+  ── THE MUSIC ROOM WALKS A LEVEL — `docs/decisions/0212-the-room-walks-the-level.md` ─────────────
+
+  ⚠️ **THE ROOM PLAYED ONE RUNG AND A LEVEL WALKS FOUR, AND `scripts/weigh-room.mjs` IS WHY THAT IS
+  KNOWN.** Reported 2026-09-03, of the room 0210 shipped the day before: *"why the ingame music
+  sounds different from the music that plays in the music menu section."* Measured across all seven
+  places: the room sounded **8–9 layers against a run's 12–15**, never once opened `lead` — the layer
+  the arrangement defines as *the thing you follow* — and **71% of a level's travel** sat at a
+  balance 1.9 dB or more from what the room auditioned, which is 0147's own reading for two places a
+  play-test called interchangeable. Three cases were past its 6.0 dB *different worlds* mark.
+
+  ⚠️ **AND THE CAUSE WAS A SENTENCE THAT OUTLIVED ITS FACT.** 0210 justified the fixed rung as *"the
+  rung a level spends most of its length at"*, which `musicLevelFor`'s own note records as true —
+  *"about 160 seconds of a 176-second level"* — until
+  `docs/decisions/0158-a-level-says-where-its-sections-open.md` gave every level a four-entry script.
+  `run` is now 17–30% of a level. **The fix is not a different constant**: a room that names any rung
+  is a second opinion about the shape of a level, and this one was wrong within a fortnight of being
+  written. The room asks the same question a run asks, over a camera of its own.
+*/
+
+/**
+ * How far the walk travels during the fight, in world units.
+ *
+ * ── A FIGHT HAS NO LENGTH, WHICH IS THE ONE THING THE WALK CANNOT READ OFF A LEVEL ──────────────
+ *
+ * ⚠️ **EVERY OTHER BOUNDARY IN THE ROOM IS A DISTANCE THE LEVEL ITSELF STATES** — `sections` and
+ * `bossAt`, exactly as a run reads them. A boss is beaten in time and by damage, so there is no
+ * distance to borrow and this is the one number the room invents. It is marked as such rather than
+ * hidden among the level's own.
+ *
+ * ⚠️ **TWO PHRASES, WHICH IS ONE EACH FOR THE FIGHT'S TWO RUNGS** —
+ * `docs/decisions/0113-there-is-one-composition-and-seven-levels.md` split the fight at
+ * `BOSS_PEAK_HEALTH`, and `PHRASE_SECONDS` is the length at which every layer's pattern has come
+ * round, so a rung held for less than one is a rung the player has not heard all of.
+ */
+/**
+ * How far the world goes past in one second, in units.
+ *
+ * ⚠️ **THE ONE PLACE THE TWO CLOCKS THIS PROJECT PACES IN ARE MULTIPLIED TOGETHER.** Sections are
+ * distances (0102) and the arrangement is bars (0090); every readout that puts a level on a clock —
+ * the room's bar, `scripts/weigh-room.mjs`'s timings — needs this ratio, and three copies of it is
+ * three chances to be reading a retuned scroll speed against an old one.
+ */
+export const UNITS_PER_SECOND = SCROLL_PER_STEP * STEPS_PER_SECOND;
+
+export const AUDITION_FIGHT_UNITS = PHRASE_SECONDS * 2 * UNITS_PER_SECOND;
+
+/**
+ * How far the room's camera travels through one place, in world units.
+ *
+ * ⚠️ **`bossAt` AND NOT THE LAST SECTION'S `at`.** Where the fight begins is what ends the last
+ * section — `musicLevelFor` says so and 0138 refused to let a script name it — so the walk ends
+ * where the level does and then holds for the fight.
+ */
+export function auditionLength(level: LevelRow): number {
+  return level.bossAt + AUDITION_FIGHT_UNITS;
+}
+
+/**
+ * Which level plays this place, so the walk reads that level's own script.
+ *
+ * ⚠️ **THE FIRST, AND TWO LEVELS MAY SHARE A PLACE.** `src/content/levels.ts` says so in as many
+ * words — *"Two levels sharing a theme"* is allowed — and if that ever happens the room auditions
+ * the earlier one, which is the one the player meets first. `null` for a place no level plays, which
+ * is unreachable today and is the conservative half rather than a crash.
+ */
+export function levelOfPlace(theme: ThemeKind): LevelRow | null {
+  for (const kind of LEVEL_KINDS) if (LEVELS[kind].theme === theme) return LEVELS[kind];
+  return null;
+}
+
+/**
+ * How far up the ladder the ROOM's camera has got — and it is `musicLevelFor` that answers.
+ *
+ * ⚠️ **THE WHOLE POINT IS THAT THIS FUNCTION DECIDES NOTHING.** It converts a position into the two
+ * arguments a run supplies from the field — *is a boss on it* and *how much of it is left* — and
+ * hands them to the one function that knows what a rung is. A room with its own ladder would be the
+ * defect 0212 was written about, rebuilt one layer up: `tests/music.test.ts` holds that the walk and
+ * a run agree at every boundary of every level, and it can only hold that because there is one
+ * answer to agree with.
+ *
+ * ⚠️ **WHAT THE ROOM SUPPLIES IS A HEALTH CURVE, AND IT IS A MODEL OF A FIGHT RATHER THAN A FIGHT** —
+ * nobody is shooting. The boss loses its first slice over one phrase and the remainder over the
+ * next, so the curve crosses `BOSS_PEAK_HEALTH` at the halfway mark and **each of the fight's two
+ * rungs is heard whole**, which is the whole reason the fight is two phrases long.
+ *
+ * ⚠️ **A STRAIGHT LINE FROM 1 TO 0 WAS THE FIRST DRAFT AND IT GAVE `boss` ELEVEN SECONDS.**
+ * `BOSS_PEAK_HEALTH` is 0.78, not the half its own header still says it is, so a linear fall crosses
+ * it a fifth of the way in — and the arrival the room exists to let somebody hear was over before a
+ * single layer's pattern had come round. **The defect was in the curve, not in the constant**, and
+ * this is the one place in the walk where the room states a shape of its own rather than reading a
+ * level's.
+ */
+export function auditionRung(level: LevelRow, along: number): MusicLevel {
+  const fought = along - level.bossAt;
+  if (fought < 0) return musicLevelFor(along, false, level.sections);
+  const raw = fought / AUDITION_FIGHT_UNITS;
+  const through = raw > 1 ? 1 : raw;
+  const health =
+    through < 0.5
+      ? 1 - (1 - BOSS_PEAK_HEALTH) * (through / 0.5)
+      : BOSS_PEAK_HEALTH * (1 - (through - 0.5) / 0.5);
+  return musicLevelFor(along, true, level.sections, health);
+}
+
+/**
+ * What the aura is doing at a point in the walk — the level's build, or the fight's closing.
+ *
+ * ⚠️ **`auraBuild` AND `auraFor` ARE THE RUN'S OWN**, so the twenty seconds a level opens with
+ * (0043) are silent here too and the climb is the one 0107 asked for. What the room supplies is the
+ * second argument: a run reads the gap between two hulls, and the room has no hulls.
+ *
+ * ⚠️ **CLOSING LINEARLY IS A CLAIM AND IT IS STATED RATHER THAN TUNED.** A fight ends with the boss
+ * directly in front of the player, so the nearness ends at 1; how it gets there is a thing a player
+ * steers and a room cannot know. `auraFor` takes the louder of the two, so for most of the fight the
+ * level's own build is what is heard and this only takes over at the end — which is the same order a
+ * run hears them in.
+ */
+export function auditionAura(level: LevelRow, theme: ThemeKind, along: number): number {
+  const fought = along - level.bossAt;
+  const closing = fought <= 0 ? 0 : fought / AUDITION_FIGHT_UNITS;
+  return auraFor(auraBuild(along, level.bossAt, theme), closing > 1 ? 1 : closing);
 }
 
 /**
