@@ -27,6 +27,7 @@ import {
   secondsOfLayer,
   MUSIC_DRIVE,
   MUSIC_GAIN,
+  MUSIC_COMPRESSOR,
   MUSIC_LADDER,
   MUSIC_LAYERS,
   MUSIC_ROOT,
@@ -1416,7 +1417,29 @@ export function makeMusicOut(
     noise floor — and `docs/decisions/0022-frame-rate-is-a-feature.md`'s budget is a mid-range phone.
   */
   shaper.oversample = 'none';
-  master.connect(shaper);
+  /*
+    ── AND A COMPRESSOR IN FRONT OF IT — 0219 ────────────────────────────────────────────────────
+
+    ⚠️ **BEFORE THE SHAPER AND NOT AFTER, WHICH IS WHAT MAKES THIS TWO FIXES.** The compressor takes
+    the range out; the shaper then colours a signal whose level barely moves instead of one that
+    swings four decibels. Ordered the other way the shaper would still be doing the squashing on the
+    loud rungs — which is 0217's report — and the compressor would only be tidying up after it.
+
+    ⚠️ **CREATED ONCE WITH THE CONTEXT**, on the shaper's own terms: 0025 counts allocations in the
+    frame loop and this is not in one.
+
+    ⚠️ **THE PARAMETERS ARE CONTENT AND NOT WRITTEN HERE.** `MUSIC_COMPRESSOR` carries them and the
+    argument for each; this file is the wiring. `tests/compress.ts` models the static half of the
+    same table, which is how the range claim is guarded at all.
+  */
+  const squeeze = ctx.createDynamicsCompressor();
+  squeeze.threshold.value = MUSIC_COMPRESSOR.threshold;
+  squeeze.knee.value = MUSIC_COMPRESSOR.knee;
+  squeeze.ratio.value = MUSIC_COMPRESSOR.ratio;
+  squeeze.attack.value = MUSIC_COMPRESSOR.attack;
+  squeeze.release.value = MUSIC_COMPRESSOR.release;
+  master.connect(squeeze);
+  squeeze.connect(shaper);
   shaper.connect(destination);
 
   for (const layer of MUSIC_LAYERS) {

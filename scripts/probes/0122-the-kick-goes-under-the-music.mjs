@@ -52,7 +52,7 @@ export const PROBES = [
     guard: 'AND THE LAYER THE PLAYER HAD NEVER HEARD IS WITHIN REACH OF THE ONE THEY HAD',
     edit: {
       path: 'src/content/music.ts',
-      find: 'chords: 0.86, groove: 0.8, arp: 0, ride: 0, call: 0.62,',
+      find: 'chords: 0.86, groove: 0.87, arp: 0, ride: 0, call: 0.65,',
       replace: 'chords: 0.86, groove: 0.2, arp: 0, ride: 0, call: 0.62,',
     },
   },

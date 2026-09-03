@@ -40,6 +40,7 @@ import { addRoom, bakeLayer } from '../src/app/music.ts';
 import { BANDS, bandEnergy } from './spectrum.ts';
 // 0218: the through-shaper loudness, which is the only place a CONTRAST between rungs can be read.
 import { driveAt } from './clean.ts';
+import { LEVEL_BAND_DB } from './compress.ts';
 import {
   AUDIBLE_FLOOR_DB,
   DUCK_FLOOR_DB,
@@ -485,9 +486,36 @@ const ARC_RATE = 22050;
       **+0.5 dB** — `push` was the climb and the three rungs after it were decoration, which is
       0136's *"Up, Up, Up"* measuring as *up, flat*.
     */
+    /*
+      ⚠️ **0.5 AND IT WAS 1.0, BECAUSE 0219 PUT A 2:1 COMPRESSOR ABOVE −18 dB IN FRONT OF THE SHAPER.**
+      Everything above that threshold is halved at the speaker, so **the step is the same size in the
+      ladder and half the size in the ear** — measured, this went 1.2 dB to 0.66. Rebasing the floor
+      is not weakening the claim: what 0218 holds is that `surge` is a real move rather than half a
+      decibel of decoration, and half of a halved band is the same claim in the new units.
+    */
     expect(at('surge') - at('push'), 'push → surge is not a step — push is still the whole climb').toBeGreaterThan(
-      1,
+      0.5,
     );
+
+    /*
+      ── AND THE WHOLE BAND, WHICH IS THE UNIT THE ASK WAS MADE IN — 0219 ─────────────────────────
+
+      ⚠️ **Reported as** *"the volume is decent for the intro section and then requires a volume control
+      down for later sections"* — a statement about the spread a player has to accommodate with **one
+      setting of their speaker**, not about any boundary. Every earlier guard here holds a step; this
+      holds the band, and it is the one the compressor was added for.
+
+      ⚠️ **THREE PLACES ARE OVER IT AND ARE NOT GUARDED**: The Labyrinth 7.4 dB, The Black Heart 4.8,
+      The Toxic Mire 4.4. Their ladders climb that far on their own, and a ceiling wide enough to admit
+      them would hold nothing — the same reason 0218 names one place rather than inventing a rule the
+      content cannot keep.
+    */
+    const band = Math.max(at('push'), at('surge'), at('approach'), at('boss')) - at('run');
+    expect(
+      band,
+      `The Approach runs ${band.toFixed(1)} dB from its background to its loudest — one speaker ` +
+        'setting has to cover all of it',
+    ).toBeLessThan(LEVEL_BAND_DB);
   }, 180_000);
 
   it('and every theme actually sounds different from the one that changes nothing', () => {

@@ -41,7 +41,7 @@ export const PROBES = [
     guard: 'AND THE FLOOR IS STILL THE SUB LAYER, not the kick’s tail',
     edit: {
       path: 'src/content/music.ts',
-      find: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86,',
+      find: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.96,',
       replace: '  run: { drone: 0.34, bass: 0, beat: 0, sub: 0,',
     },
   },

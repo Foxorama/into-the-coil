@@ -243,6 +243,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **THE MENU SAYS WHAT IS PLAYING — Play all was working and was reported broken, because the nine buttons never moved while everything smaller did** | [0216](decisions/0216-the-menu-says-what-is-playing.md) |
 | **THE BUS IS A COLOUR AND IT WAS TOO THICK — the drive halved; it was never clipping, and level cannot see saturation** | [0217](decisions/0217-the-bus-is-a-colour-and-it-was-too-thick.md) |
 | **PUSH IS AN ENTRANCE — one boundary carried 88% of a level's climb, so the music went background to foreground in one step at 41 seconds** | [0218](decisions/0218-push-is-an-entrance-not-the-climb.md) |
+| **RANGE AND CLEAN STOP BEING ONE KNOB — a compressor on the music bus; 0104 refused one and its reason was about the guard, not the compressor** | [0219](decisions/0219-range-and-clean-stop-being-one-knob.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were

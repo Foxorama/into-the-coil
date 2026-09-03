@@ -684,6 +684,74 @@ export const MUSIC_GAIN = 0.46;
 export const MUSIC_DRIVE = 0.15;
 
 /**
+ * The music bus's compressor — `docs/decisions/0219-range-and-clean-stop-being-one-knob.md`.
+ *
+ * ── WHY THIS EXISTS AND WHY 0104 REFUSED IT ────────────────────────────────────────────────────
+ *
+ * ⚠️ **Asked for after four passes at the same six seconds**: *"I'm after a more smoother volume tone
+ * overall and I can adjust speaker volume… the volume is decent for the intro section and then
+ * requires a volume control down for later sections."* Plus, from the day before, *"it just doesn't
+ * sound crystal clear and clean."* **Those two were one knob until now**: `saturate` narrows the range
+ * by squashing, so every decibel of range it took out arrived as distortion, and 0217 halved it for
+ * cleanliness and widened every contrast in the game as a side effect nobody had measured.
+ *
+ * ⚠️ **0104 REFUSED A COMPRESSOR AND ITS REASON WAS EXACT**: *"a compressor has an attack and a
+ * release, so it is a function of the signal's history; `tests/music.test.ts` sums the layers sample
+ * by sample and could not model one, which would have meant weakening the assertion that holds the
+ * mix."* That objection stands. **What answers it is a split rather than a rebuttal.**
+ *
+ * ⚠️ **THE STATIC CURVE SETS THE RANGE AND THE ENVELOPE SETS THE FEEL, AND ONLY ONE OF THEM IS
+ * GUARDED.** A compressor's threshold, knee and ratio are a pure function of input level — the Web
+ * Audio spec defines them as one — and **that is what decides how far apart two rungs end up**. The
+ * attack and release decide how it gets there. So `tests/compress.ts` models the curve exactly, the
+ * range guard asserts on it, and **nothing asserts on the envelope** — which is honest, because
+ * nothing in the range claim depends on it.
+ *
+ * ⚠️ **AND THE SHAPER STAYS.** It is the colour ([0104](../../docs/decisions/0104-the-gun-plays-a-figure.md))
+ * and it now sits AFTER the compressor, so it is driven at a level that barely moves instead of one
+ * that swings four decibels — which is the second reason this is cleaner and not only smoother.
+ */
+export const MUSIC_COMPRESSOR = {
+  /*
+    ⚠️ **BELOW BOTH ENDS OF THE BAND, WHICH IS THE ONLY PLACE A COMPRESSOR NARROWS ANYTHING.** −6 was
+    tried first, on the reasoning that a threshold at the quiet end leaves the quiet end alone — and it
+    **changed the band by nothing**: at −6 the detector barely crossed the threshold at any rung, so
+    every rung passed through equally and the measurement read 3.8 dB before and 3.8 dB after.
+
+    ⚠️ **A RATIO ONLY DOES WORK ON WHAT IS ABOVE IT, AND IT NARROWS A RANGE ONLY WHERE BOTH ENDS ARE.**
+    At −18 the quiet end sits just above and the loud end well above, so the loud end is pulled down
+    further than the quiet one — which is the whole mechanism. Measured on The Approach: **3.8 dB of
+    band becomes 2.3, and `run` gives up 0.6 dB** doing it.
+
+    ⚠️ **AND THAT 0.6 dB IS WHY IT IS NOT LOWER.** −22 buys another 0.3 dB of band and costs 2.1 dB of
+    level, which is the *"never hear the really quiet parts"* half of the same report arriving by a
+    different route.
+  */
+  threshold: -18,
+  /*
+    ⚠️ **2:1, WHICH HALVES THE RANGE ABOVE THE THRESHOLD AND IS THE WHOLE ASK.** *"A more smoother
+    volume tone overall"* measured as a band: The Approach ran 3.8 dB from `run` to its loudest, and
+    half of that is the target. Higher ratios flatten the arc 0136 authored; this is the gentlest one
+    that does the job.
+  */
+  ratio: 2,
+  /*
+    ⚠️ **A WIDE KNEE, BECAUSE A RUNG CHANGE MUST NOT BE HEARD AS THE COMPRESSOR NOTICING IT.** Six
+    decibels of knee means the ratio arrives gradually across the range the rungs actually live in,
+    so what a listener hears is a smaller step rather than a step plus a gain-riding artefact.
+  */
+  knee: 6,
+  /*
+    ⚠️ **THE ENVELOPE IS THE PART NO GUARD HOLDS, AND THESE ARE HANDS' NUMBERS SAID TO BE SO.** Fast
+    enough to catch a rung arriving on a downbeat and slow enough not to pump against the kick, which
+    is `docs/decisions/0104-the-gun-plays-a-figure.md`'s own concern about a bus that breathes. They
+    are the two values to move if the mix sounds like it is being ridden.
+  */
+  attack: 0.02,
+  release: 0.25,
+} as const;
+
+/**
  * How much of a boss's health has to be gone before the music reaches its wall of sound.
  *
  * ⚠️ **Half, and it is a share rather than a phase** — 0111 gives each boss its own phase table, so
@@ -1118,7 +1186,35 @@ export const MUSIC_LEVEL_LABEL: Record<MusicLevel, string> = {
 */
 export const MUSIC_LADDER: Record<MusicLevel, Record<MusicLayer, number>> = {
   calm: { drone: 0.55, bass: 0.7, beat: 0.5, sub: 0, engine: 0, perc: 0, chords: 0, groove: 0, arp: 0, ride: 0, call: 0, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },
-  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, ride: 0, call: 0.62, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.5, auraFast: 0.28, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },
+  /*
+    ── `run` AND `push` SHARE THEIR BED — 0219 ───────────────────────────────────────────────────
+
+    ⚠️ **Asked for after three answers that all made the climb SMOOTHER and none of it QUIETER**:
+    *"can we raise the volume of the first section instead? I'm after a more smoother volume tone
+    overall and I can adjust speaker volume… the volume is decent for the intro section and then
+    requires a volume control down for later sections."*
+
+    ⚠️ **RAISING THE BOTTOM IS THE ONLY DIRECTION THAT NARROWS THE RANGE WITHOUT LOSING ANYTHING.**
+    Lowering the top was built and reverted: trimming `push` and above while leaving `run` alone
+    **ducks every carried layer**, which `docs/decisions/0167-a-build-does-not-duck.md` forbids
+    and 0215's hole guard caught; and lowering the master takes the quiet end down with it, which is
+    the other half of the same report — *"we're going to just never hear the really quiet parts."*
+
+    ⚠️ **EACH CARRIED LAYER TAKES HALF ITS ROOM UP TO `push`**, which is as far as the ladder's own
+    guards allow. Measured per layer the room was 0.0 to 1.9 dB — `drone` and `chords` had none and
+    `sub` had the most — so this is not a uniform lift but the shape the ladder already implied.
+
+    ⚠️ **TAKING ALL OF IT WAS TRIED FIRST AND THREE GUARDS REFUSED IT, CORRECTLY.** With the bed
+    equalised, `push` arrived **0.16 dB** over `run` on the base composition against 0108's floor of
+    1.02 — *the shaper has eaten the climb* — and `saurian`'s `bass` fell a whole role under what the
+    arrangement asks of it. **A rung that arrives at the same loudness is not a rung**, and narrowing
+    the range cannot go so far that the ladder stops being one.
+
+    ⚠️ **AND THE AURA IS DELIBERATELY NOT TOUCHED.** It is the only layer here whose whole job is to
+    climb — 0107's *"amp up until you beat the boss"* — and a guard says so in as many words: raising
+    it at `run` made `push` no louder than the rung below and *the build goes backwards*.
+  */
+  run: { drone: 0.34, bass: 0, beat: 0, sub: 0.96, engine: 0.93, perc: 0.71, chords: 0.86, groove: 0.87, arp: 0, ride: 0, call: 0.65, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.5, auraFast: 0.28, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },
   /*
     ── `push` IS AN ENTRANCE, AND IT WAS THE WHOLE CLIMB — 0218 ───────────────────────────────────
 
