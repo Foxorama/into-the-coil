@@ -21,6 +21,9 @@ import { atlasIsStale, bakeAtlas, bakeLandmark, bakeNebula, viewFor } from '../r
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
 // 0212: the room borrows the run's landmarks and has to hand back exactly what it took.
 import type { Landmarks } from '../render/scene.ts';
+// 0213: the music room's flythrough — the ship flying the level, and the dust going past it.
+import { MOTE_BAND, makeMotes, moteAcross, moteAlong, weaveAcross, type Mote } from './attract.ts';
+import { DEBRIS } from '../content/debris.ts';
 import { SPECIAL_BINDINGS } from '../content/actions.ts';
 import { SPECIALS } from '../content/specials.ts';
 import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
@@ -1044,8 +1047,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     else if (screen === 'title') {
       const tier = DIFFICULTY_KINDS[index];
-      if (tier === undefined) dispatch({ slice: 'screen', type: 'show', screen: 'music' });
-      else lifecycle.begin(tier);
+      if (tier === undefined) {
+        // 0213: the field is swept and the dust is dealt as the room OPENS, because the enemies were
+        // visible before anything was pressed — which is what the report is about.
+        enterRoom();
+        dispatch({ slice: 'screen', type: 'show', screen: 'music' });
+      } else lifecycle.begin(tier);
     } else if (screen === 'music') onMusicRoom(index);
     else dispatch({ slice: 'screen', type: 'show', screen: 'title' });
   },
@@ -1316,6 +1323,23 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   let borrowed: { camera: number; prev: number; origin: number; landmarks: Landmarks } | null = null;
 
+  /*
+    ── THE FLYTHROUGH — `docs/decisions/0213-the-room-is-a-flythrough.md` ──────────────────────────
+
+    ⚠️ **THE ROOM SHOWED THE SEEDED FIELD, AND `seedField`'s WHOLE JOB IS TO BE SEEN ONCE.** Twelve
+    bodies are dealt at boot *"so the first frame is not empty"*; every screen before 0212 either
+    dimmed over them or stepped past them, so nobody had ever watched them leave. The room does
+    neither — it does not dim and it does not spawn — so a listener saw a dozen enemies drift off and
+    then two minutes of nothing.
+
+    ⚠️ **Reported as such**: *"a bunch of enemies showing that scroll off-screen and then there's no
+    enemies at all showing again."* What replaces them is the ship flying the level and a field of
+    dust, and `src/app/attract.ts` has the arithmetic and the argument for it being pure.
+  */
+  let motes: Mote[] | null = null;
+  /** What the ship was doing before the room borrowed it, on the camera's own terms. */
+  let borrowedShip: { along: number; across: number; prevAlong: number; prevAcross: number } | null = null;
+
   /**
    * Which place is on screen, or `null` for the empty void the title has always been drawn on.
    *
@@ -1335,6 +1359,93 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     world.levelOrigin = borrowed.origin;
     world.landmarks = borrowed.landmarks;
     borrowed = null;
+    if (borrowedShip !== null) {
+      world.ship.along = borrowedShip.along;
+      world.ship.across = borrowedShip.across;
+      world.ship.prevAlong = borrowedShip.prevAlong;
+      world.ship.prevAcross = borrowedShip.prevAcross;
+      borrowedShip = null;
+    }
+    /*
+      ⚠️ **THE DUST GOES AND THE SWEPT FIELD DOES NOT COME BACK, AND ONLY ONE OF THOSE IS A CHOICE.**
+      The motes are the room's and are cleared with it. The seeded bodies are gone for good — they
+      exist to prove the first frame draws, that has happened by the time anybody reaches this menu,
+      and a run sweeps the field through `startLevel` regardless (0067).
+    */
+    motes = null;
+    debris.clear();
+  };
+
+  /**
+   * Open the room: sweep whatever the boot left on the field, and deal the dust.
+   *
+   * ⚠️ **ON ENTERING THE SCREEN AND NOT ON PRESSING A PLACE**, because the enemies were visible the
+   * moment the room opened — that is what was reported. The walk has not started here, so what this
+   * leaves is a still frame of the ship in an empty lane, which is the room before anything plays.
+   *
+   * ⚠️ **THE POOLS ARE CLEARED RATHER THAN THE FIELD BEING RE-SEEDED EMPTY.** `beginScript` would do
+   * most of this and would also reset `nextWave`, `weaponsOffered` and the boss latches — run state,
+   * which the room has no business touching. Clearing what is DRAWN is the whole of what the room
+   * needs, and `src/app/frame.ts` re-establishes all of it at `startLevel`.
+   */
+  const enterRoom = (): void => {
+    enemies.clear();
+    enemyShots.clear();
+    playerShots.clear();
+    missiles.clear();
+    bombs.clear();
+    blasts.clear();
+    pickupPool.clear();
+    bossPool.clear();
+    shieldOrbs.clear();
+    debris.clear();
+    // Its own named stream, per 0021: dealing the dust must not move any draw the game makes.
+    motes = makeMotes(makeRng('music-room').stream('motes'));
+    for (let i = 0; i < motes.length; i++) {
+      const mote = debris.spawn();
+      if (mote === null) break;
+      reset(mote, 0, 0, DEBRIS);
+    }
+    placeFlythrough(world.cameraAlong, world.cameraAlong);
+  };
+
+  /**
+   * Put the ship and every mote where this camera position says they are.
+   *
+   * ⚠️ **BOTH CAMERA VALUES, AND THAT IS WHERE THE SMOOTHNESS COMES FROM.** `src/render/scene.ts`
+   * interpolates every entity between `prev` and `now`; because `src/app/attract.ts` is a pure
+   * function of the camera, asking it twice is all the interpolation this needs — and on a seek the
+   * caller passes the same number twice, so the picture arrives rather than smearing across a frame.
+   *
+   * ⚠️ **`prevAlong` IS SET AND `velAlong` IS NOT.** A velocity is what a step would integrate, and
+   * nothing here steps; writing one would be state that never moves and the first reader to trust it
+   * would be wrong.
+   */
+  const placeFlythrough = (camera: number, prevCamera: number): void => {
+    if (motes === null) return;
+    const ship = world.ship;
+    ship.prevAlong = prevCamera + SHIP_START_ALONG;
+    ship.prevAcross = weaveAcross(prevCamera);
+    ship.along = camera + SHIP_START_ALONG;
+    ship.across = weaveAcross(camera);
+    const count = debris.size < motes.length ? debris.size : motes.length;
+    for (let i = 0; i < count; i++) {
+      const entity = debris.at(i);
+      const mote = motes[i]!;
+      const was = moteAlong(mote, prevCamera);
+      const now = moteAlong(mote, camera);
+      /*
+        ⚠️ **A WRAP IS DRAWN AS A JUMP, NOT AS A STREAK.** When a mote crosses the back of the band it
+        is re-placed at the front, so the previous position is a whole band away and the interpolation
+        would draw it sliding the length of the level in one frame. Collapsing `prev` onto `now` for
+        that one frame is a mote appearing where it appears, which is what it is.
+      */
+      const wrapped = (now - was) * (now - was) > MOTE_BAND * MOTE_BAND * 0.25;
+      entity.prevAlong = wrapped ? now : was;
+      entity.prevAcross = wrapped ? moteAcross(mote, now) : moteAcross(mote, was);
+      entity.along = now;
+      entity.across = moteAcross(mote, now);
+    }
   };
 
   /**
@@ -1361,6 +1472,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         prev: world.prevCameraAlong,
         origin: world.levelOrigin,
         landmarks: world.landmarks,
+      };
+      // 0213: and the ship, which the flythrough flies. Saved with the camera because it is put back
+      // with the camera — a run resumed after a visit must find its ship where it left it.
+      borrowedShip = {
+        along: world.ship.along,
+        across: world.ship.across,
+        prevAlong: world.ship.prevAlong,
+        prevAcross: world.ship.prevAcross,
       };
     }
     world.levelOrigin = 0;
@@ -1431,6 +1550,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     }
     world.prevCameraAlong = world.cameraAlong;
     world.cameraAlong = auditionAlong;
+    // 0213: the ship and the dust ride the same camera, so all three are one number.
+    placeFlythrough(world.cameraAlong, world.prevCameraAlong);
   };
 
   /**
@@ -1450,6 +1571,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     auditionAlong = (through < 0 ? 0 : through > 1 ? 1 : through) * length;
     world.cameraAlong = auditionAlong;
     world.prevCameraAlong = auditionAlong;
+    // 0213: the same position twice, so the flythrough ARRIVES rather than smearing a level's worth
+    // of travel across one interpolated frame. That the picture can do this is why it is a pure
+    // function of the camera at all.
+    placeFlythrough(auditionAlong, auditionAlong);
   }
 
   /**
@@ -1695,7 +1820,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       *silent only where the browser genuinely forbids it*.
     */
     if (menuAsk.move !== 0 || menuAsk.confirm) audioOut.unlock();
-    if (menuAsk.move !== 0) chrome.move(menuAsk.move);
+    // 0214: the axis goes with the direction. The chrome resolves it against its own layout.
+    if (menuAsk.move !== 0) chrome.move(menuAsk.move, menuAsk.axis);
     /*
       ⚠️ **No `return` needed any more, and the countdown is no longer here.** `activate` changes the
       screen underneath, and counting the new screen's first step down would have spent a step of a

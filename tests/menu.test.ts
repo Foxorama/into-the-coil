@@ -55,7 +55,9 @@ function drive(frames: readonly (Gamepad | null)[][]): MenuAsk[] {
   const out: MenuAsk[] = [];
   for (frame = 0; frame < frames.length; frame++) {
     source.read(ask);
-    out.push({ move: ask.move, confirm: ask.confirm });
+    // ⚠️ COPIED rather than pushed by reference — `read` overwrites one caller-owned object, so a
+    // list of references is a list of the LAST frame repeated. 0214 added `axis` to what is copied.
+    out.push({ move: ask.move, axis: ask.axis, confirm: ask.confirm });
   }
   return out;
 }
@@ -203,6 +205,49 @@ describe('both axes move the focus, and the larger deflection wins', () => {
     expect(drive([[pad(AXES(0, 0), [MENU_DPAD_BUTTONS.left])]])[0]!.move).toBe(-1);
     expect(drive([[pad(AXES(0, 0), [MENU_DPAD_BUTTONS.right])]])[0]!.move).toBe(1);
   });
+
+  /*
+    ── AND WHICH AXIS IT CAME FROM — `docs/decisions/0214-a-grid-is-not-a-list.md` ─────────────────
+
+    ⚠️ **THE DIRECTION WAS ALL THAT CAME OUT, AND ON A GRID THAT IS HALF AN ANSWER.** Reported of the
+    music room: *"arranged in a nine-tile square layout order, but is functionally an up/down menu on
+    controller."* The reader still resolves a diagonal to ONE push — nothing above changes — it just
+    no longer throws away which one it picked.
+  */
+  it('says which axis the push came from', () => {
+    expect(drive([[pad(AXES(0, 1))]])[0]!.axis, 'a vertical stick reported a horizontal push').toBe('y');
+    expect(drive([[pad(AXES(1, 0))]])[0]!.axis, 'a horizontal stick reported a vertical push').toBe('x');
+    /*
+      ⚠️ **ALL FOUR, AND THE FIRST VERSION CHECKED TWO.** `npm run prove` broke `left` alone and this
+      stayed green — the D-pad is four separate branches now and a guard over half of them is a guard
+      over the half that happens to be right. 0005's own subject, found by the harness rather than by
+      reading.
+    */
+    expect(drive([[pad(AXES(0, 0), [MENU_DPAD_BUTTONS.up])]])[0]!.axis).toBe('y');
+    expect(drive([[pad(AXES(0, 0), [MENU_DPAD_BUTTONS.down])]])[0]!.axis).toBe('y');
+    expect(drive([[pad(AXES(0, 0), [MENU_DPAD_BUTTONS.left])]])[0]!.axis).toBe('x');
+    expect(drive([[pad(AXES(0, 0), [MENU_DPAD_BUTTONS.right])]])[0]!.axis).toBe('x');
+    // The diagonal resolves to one axis, on the same terms the direction does.
+    expect(drive([[pad(AXES(0.5, -0.9))]])[0]!.axis, 'the smaller axis was reported').toBe('y');
+  });
+
+  /*
+    ⚠️ **THE INPUT THIS WOULD HAVE SWALLOWED, AND IT IS THE REASON THE HELD STATE CARRIES THE AXIS.**
+    `right` and `down` are both `+1`. With only the number remembered, a hand rolling from one to the
+    other meets a reader that already holds `+1` and the second push is **never heard at all** — a
+    dead control rather than a wrong one, which is worse and harder to report. On a column the two
+    were the same ask, so this could not happen before there was a grid.
+
+    ⚠️ **AT FULL DEFLECTION, so `MENU_REVERSE` is satisfied** — what is being tested is the axis
+    memory, not the flick threshold, and mixing the two would leave it unclear which one failed.
+  */
+  it('hears a roll from one axis to the other as a second ask', () => {
+    const rolled = drive([[pad(AXES(1, 0))], [pad(AXES(1, 0))], [pad(AXES(0, 1))]]);
+    expect(rolled[0]!.move, 'the first push was not heard').toBe(1);
+    expect(rolled[1]!.move, 'a held stick asked twice').toBe(0);
+    expect(rolled[2]!.move, 'rolling from right to down was swallowed as an already-held direction').toBe(1);
+    expect(rolled[2]!.axis, 'the second push kept the first one\'s axis').toBe('y');
+  });
 });
 
 describe('confirm is a press and never a hold', () => {
@@ -248,7 +293,13 @@ describe('a disconnected or absent pad asks for nothing', () => {
 
   it('ignores a pad that reports itself disconnected', () => {
     const gone = { ...pad(AXES(0, 1), [0]), connected: false } as Gamepad;
-    expect(drive([[gone]])[0]).toEqual({ move: 0, confirm: false });
+    /*
+      ⚠️ **`axis` IS ASSERTED EVEN THOUGH `move` IS ZERO, and that is the point of asserting the
+      whole ask** — 0214. A direction of none still carries an axis, and the reader must not report
+      the axis of a pad it decided to ignore. `y` is the resting value, and this pad is pushing `y`;
+      the assertion that matters is `move`, and this one holds the shape around it.
+    */
+    expect(drive([[gone]])[0]).toEqual({ move: 0, axis: 'y', confirm: false });
   });
 });
 

@@ -273,6 +273,19 @@ ${each('-choices')} {
 .itc-music-panel {
   background: color-mix(in srgb, var(--itc-void) 78%, transparent);
   border-radius: 0.6em;
+  /*
+    ⚠️ **CAPPED, BECAUSE THE PANEL WAS 1280 WIDE OVER ABOUT 480 OF CONTENT** — 0213. On every other
+    screen that costs nothing, because every other screen paints over the scene anyway. Here the
+    backing IS the thing between the player and the flythrough, so a panel two and a half times wider
+    than its content hides two and a half times as much of the picture.
+
+    ⚠️ **A LENGTH AND NOT fit-content, WHICH WAS TRIED FIRST AND RESOLVED TO 1216px.** The readout and
+    the button box both size themselves with a percentage of this element, so its max-content is
+    indefinite and fit-content has nothing to shrink to. **66ch is the widest thing in it** — the
+    choices box caps at 60ch and the padding is the rest — so this states the same width those two
+    already agree on rather than a new opinion about it.
+  */
+  max-width: min(100%, 66ch);
 }
 /*
   The place, the section it has reached, and how far through it is. One block so the gap rules above
@@ -866,7 +879,13 @@ export interface Chrome {
    * ⚠️ **Wraps, and does not clamp.** A ring of controls has no end to get stuck against, which is
    * what a player pushing a stick expects; a clamp makes the last control feel broken.
    */
-  move(delta: number): void;
+  /**
+   * Move the focus by one control in `axis` — 0214.
+   *
+   * ⚠️ **The axis says which way the player pushed; the CHROME says what that means**, because the
+   * chrome is what laid the controls out. `src/app/menu.ts` deliberately stops at the direction.
+   */
+  move(delta: number, axis?: 'x' | 'y'): void;
   /** Press the focused control, exactly as a click would. */
   activate(): void;
   /**
@@ -925,6 +944,99 @@ export interface Chrome {
 function hasChrome(screen: Screen): boolean {
   const row = SCREENS[screen];
   return row.heading.length > 0 || row.actions.length > 0;
+}
+
+/**
+ * Which control a push in `axis` lands on, or `null` for *the layout has no answer* — 0214.
+ *
+ * ⚠️ **BOXES IN AND AN INDEX OUT, RATHER THAN ELEMENTS, AND THE REASON IS `null`.** The fallback
+ * this returns `null` for is **unreachable on every screen the game currently has**: the title looks
+ * like a column but carries a settings row, so something always lies to either side of something.
+ * A branch no data can drive is guarded by nothing —
+ * `docs/decisions/0005-a-guard-must-be-seen-to-fail.md` reached from the other side, and the same
+ * argument `rungIn` in `src/content/themes.ts` was split out for. Taking rects lets
+ * `tests/chrome.test.ts` hand it a column that does not exist yet and check the answer.
+ *
+ * ⚠️ **PURE, so the DOM read stays at the one call site.** `move` maps its controls to rects and this
+ * decides; nothing here can accidentally re-measure a layout mid-decision.
+ *
+ * ── THE RULE IS: THE NEAREST ONE THAT WAY, ELSE WRAP DOWN THE SAME LINE, ELSE NOTHING ───────────
+ *
+ * ⚠️ **`null` IS THE ANSWER FOR A COLUMN ASKED TO GO RIGHT, AND IT IS NOT A FAILURE.** Every control
+ * on the title screen shares an x, so nothing lies right of anything; the caller then takes the list
+ * step it always took, which is the behaviour
+ * [0046](../../docs/decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md) shipped and the
+ * thing the old *both axes move the focus* note was protecting. **A player pushing a direction that
+ * the layout has no opinion about still gets a move**, which is the whole of why that note existed.
+ *
+ * ⚠️ **THE WRAP IS DOWN THE SAME LINE, NOT ROUND THE LIST.** Pressing down on the bottom row of a
+ * grid should reach the top of that column; a list step would reach the control after it, which is
+ * the next row's first — a diagonal the player did not ask for. Only when the axis is genuinely
+ * empty does this give up and let the caller walk the list.
+ *
+ * ⚠️ **CENTRES, AND A TOLERANCE OF HALF THE SMALLER BOX.** Two controls on the same row rarely share
+ * an exact y — a taller label makes one box grow — so *is this one below me* has to allow for a few
+ * pixels of difference or the bottom row of a grid becomes unreachable from one of its columns.
+ */
+export interface ControlBox {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+  width: number;
+  height: number;
+}
+
+export function spatially(
+  boxes: readonly ControlBox[],
+  from: number,
+  delta: number,
+  axis: 'x' | 'y',
+): number | null {
+  const here = boxes[from];
+  if (here === undefined) return null;
+  const mid = (box: ControlBox): { x: number; y: number } => ({
+    x: (box.left + box.right) / 2,
+    y: (box.top + box.bottom) / 2,
+  });
+  const at = mid(here);
+  const along = (box: ControlBox): number => (axis === 'x' ? mid(box).x : mid(box).y);
+  const across = (box: ControlBox): number => (axis === 'x' ? mid(box).y : mid(box).x);
+  const atAlong = axis === 'x' ? at.x : at.y;
+  const atAcross = axis === 'x' ? at.y : at.x;
+  const slack = Math.min(here.width, here.height) / 2;
+
+  let best: number | null = null;
+  let bestScore = Number.POSITIVE_INFINITY;
+  let wrap: number | null = null;
+  let wrapScore = Number.NEGATIVE_INFINITY;
+  for (let i = 0; i < boxes.length; i++) {
+    if (i === from) continue;
+    const box = boxes[i]!;
+    const step = (along(box) - atAlong) * delta;
+    const drift = Math.abs(across(box) - atAcross);
+    if (step > slack) {
+      /*
+        ⚠️ **DISTANCE FIRST AND ALIGNMENT SECOND, weighted so a near miss beats a far match.** The
+        alignment term is what makes *down* land in the same column rather than on whichever control
+        happens to be closest in a straight line, and the factor keeps it from reaching two rows away
+        to find a better-aligned one.
+      */
+      const score = step + drift * 2;
+      if (score < bestScore) {
+        bestScore = score;
+        best = i;
+      }
+    } else if (step < -slack) {
+      // The furthest the other way, best aligned — the far end of this line, for the wrap.
+      const score = -step - drift * 2;
+      if (score > wrapScore) {
+        wrapScore = score;
+        wrap = i;
+      }
+    }
+  }
+  return best ?? wrap;
 }
 
 /** `m:ss`. A walk is minutes long, and 170.6 is not a thing anybody reads off a bar. */
@@ -1523,13 +1635,36 @@ export function makeChrome(
       focused = 0;
       paintFocus();
     },
-    move(delta: number): void {
+    move(delta: number, axis: 'x' | 'y' = 'y'): void {
       const panel = shownScreen === null ? undefined : panels[shownScreen];
       const count = panel?.controls.length ?? 0;
       if (count === 0) return;
+      /*
+        ⚠️ **THE MOVE IS RESOLVED AGAINST WHERE THE CONTROLS ACTUALLY ARE** —
+        `docs/decisions/0214-a-grid-is-not-a-list.md`. This was `focused + delta`, which is a list
+        walk, and it is right for a column and right for a row and wrong for the music room's nine
+        tiles: *"the menu itself is arranged in a nine-tile square layout order, but is functionally
+        an up/down menu on controller."*
+
+        ⚠️ **OFF THE BOXES AND NOT OFF A DECLARED COLUMN COUNT.** The room's controls are a wrapping
+        row on a wide screen and an explicit three-column grid on a short one, so **how many are in a
+        row is a fact about the viewport** rather than about the screen. A number the chrome was told
+        would be wrong on one of those two, and a screen re-laid-out in an art pass would break it
+        silently. The rects are what the player is looking at.
+
+        ⚠️ **A LAYOUT READ IS AFFORDABLE HERE AND NOWHERE NEAR A FRAME.** This runs on a press —
+        0022's budget is about the frame loop, and `tests/budget.test.ts` keeps this file off the hot
+        list precisely so the chrome may do DOM work when a player asks for something.
+      */
+      const next = spatially(
+        panel!.controls.map((control) => control.getBoundingClientRect()),
+        focused,
+        delta,
+        axis,
+      );
       // `+ count` before the modulo: JavaScript's `%` keeps the sign of the left operand, so a
       // backwards move off the first control would land on −1 and focus nothing.
-      focused = (focused + delta + count) % count;
+      focused = next === null ? (focused + delta + count) % count : next;
       paintFocus();
     },
     activate(): void {
