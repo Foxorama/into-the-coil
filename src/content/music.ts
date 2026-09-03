@@ -1119,7 +1119,27 @@ export const MUSIC_LEVEL_LABEL: Record<MusicLevel, string> = {
 export const MUSIC_LADDER: Record<MusicLevel, Record<MusicLayer, number>> = {
   calm: { drone: 0.55, bass: 0.7, beat: 0.5, sub: 0, engine: 0, perc: 0, chords: 0, groove: 0, arp: 0, ride: 0, call: 0, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },
   run: { drone: 0.34, bass: 0, beat: 0, sub: 0.86, engine: 0.9, perc: 0.66, chords: 0.86, groove: 0.8, arp: 0, ride: 0, call: 0.62, hook: 0, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.5, auraFast: 0.28, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },
-  push: { drone: 0.34, bass: 0, beat: 0, sub: 1.06, engine: 0.96, perc: 0.76, chords: 0.87, groove: 0.94, arp: 0.64, ride: 0.58, call: 0.68, hook: 0.64, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0.7, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.62, auraFast: 0.4, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },
+  /*
+    ── `push` IS AN ENTRANCE, AND IT WAS THE WHOLE CLIMB — 0218 ───────────────────────────────────
+
+    ⚠️ **Reported twice, the second time in the words that identified it**: *"it's background music up
+    till that point and then at around that point it loudly increases to foreground music volume."*
+    Measured through the shaper, The Approach ran `run` −13.7, `push` −10.1, `surge` −9.5 — so
+    **`push` carried 3.6 dB of a 4.1 dB climb and everything after it was flat.** The level went from
+    background to full in one boundary at 41 seconds, which is what a listener called foreground.
+
+    ⚠️ **THE THREE LAYERS THAT CONTINUE INTO `surge` NOW ARRIVE AT 70% OF THEIR `surge` VALUE**, which
+    is a rule rather than three tuned numbers: `ride` 0.68→0.48, `hook` 0.74→0.52, `lead` 0.78→0.55.
+    A part enters, and then it grows. **`arp` is untouched at 0.64** because `surge` closes it — it
+    lives only here, so arriving at a fraction of a value it never reaches would be arriving quiet
+    for no reason.
+
+    ⚠️ **AND IT BUYS THE SECOND STEP BACK.** `docs/decisions/0136-the-place-has-a-room-and-an-arc.md`
+    authored *"Up, Up, Up, drop, sharp Down"*; measured, the arc was **up, flat, slightly down**.
+    The Approach now reads +2.6 at `push` and +4.1 at `surge`, so `push → surge` is a real move for
+    the first time rather than half a decibel.
+  */
+  push: { drone: 0.34, bass: 0, beat: 0, sub: 1.06, engine: 0.96, perc: 0.76, chords: 0.87, groove: 0.94, arp: 0.64, ride: 0.48, call: 0.68, hook: 0.52, drive: 0, toll: 0, crash: 0, dread: 0, lead: 0.55, counter: 0, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.62, auraFast: 0.4, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },
   surge: { drone: 0.33, bass: 0, beat: 0, sub: 1.04, engine: 1, perc: 0.82, chords: 0.86, groove: 0.94, arp: 0, ride: 0.68, call: 0, hook: 0.74, drive: 0.78, toll: 0, crash: 0.9, dread: 0, lead: 0.78, counter: 1.05, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.75, auraFast: 0.55, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },
   approach: { drone: 0.34, bass: 0, beat: 0, sub: 1.1, engine: 1.02, perc: 0.86, chords: 0.84, groove: 0, arp: 0, ride: 0.72, call: 0, hook: 0, drive: 0.84, toll: 0.86, crash: 0.92, dread: 1, lead: 0.82, counter: 1.08, stomp: 0, frenzy: 0, wraith: 0, auraSlow: 0.88, auraFast: 0.72, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },
   boss: { drone: 0.36, bass: 0, beat: 0, sub: 1.12, engine: 1.12, perc: 0.96, chords: 0, groove: 0, arp: 0, ride: 0.9, call: 0, hook: 0, drive: 0.94, toll: 0.92, crash: 0.94, dread: 1.02, lead: 0, counter: 0, stomp: 0.92, frenzy: 0.86, wraith: 0.8, auraSlow: 1, auraFast: 0.9, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },

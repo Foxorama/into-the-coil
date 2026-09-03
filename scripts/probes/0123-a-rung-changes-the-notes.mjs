@@ -30,8 +30,9 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: every rung replaces a real share of what is playing',
     edit: {
       path: 'src/content/music.ts',
-      find: 'arp: 0.64, ride: 0.58, call: 0.68, hook: 0.64,',
-      replace: 'arp: 0, ride: 0.58, call: 0.68, hook: 0,',
+      // 0218 took push's continuing layers to 70% of surge; the break is unchanged, the anchor moved.
+      find: 'arp: 0.64, ride: 0.48, call: 0.68, hook: 0.52,',
+      replace: 'arp: 0, ride: 0.48, call: 0.68, hook: 0,',
     },
   },
   {

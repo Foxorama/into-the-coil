@@ -38,6 +38,8 @@ import {
 import { AURA_LAYERS, LAYER_PAN, type MusicLevel } from '../src/content/music.ts';
 import { addRoom, bakeLayer } from '../src/app/music.ts';
 import { BANDS, bandEnergy } from './spectrum.ts';
+// 0218: the through-shaper loudness, which is the only place a CONTRAST between rungs can be read.
+import { driveAt } from './clean.ts';
 import {
   AUDIBLE_FLOOR_DB,
   DUCK_FLOOR_DB,
@@ -417,6 +419,75 @@ describe('a theme mixes the music and cannot break it', () => {
       and still short enough that a genuinely hung bake fails rather than hanging CI. The comment
       above has the measurement it is sized from.
     */
+  }, 180_000);
+
+  /*
+    ── NO BOUNDARY INSIDE A LEVEL IS BIGGER THAN THE ONE THAT OPENS IT — 0218 ─────────────────────
+
+    ⚠️ **Reported twice on the same six seconds**: *"it's background music up till that point and then
+    at around that point it loudly increases to foreground music volume."* Measured through the
+    shaper, The Approach's `push` carried **3.6 dB of a 4.1 dB climb** — eighty-eight per cent of
+    everything the level ever gains, in one boundary, and then flat for two minutes.
+
+    ⚠️ **THE LEVEL IS MEASURED THROUGH THE SHAPER, WHICH IS THE HALF `tests/arc.ts` CANNOT DO.** That
+    file says so itself — it measures the bus *before* `saturate`, which is the safe direction for a
+    guard about loudness and the wrong one for a guard about a GAP: a shaper compresses the loud rung
+    harder than the quiet one, so the contrast a player hears is always smaller than the arc's, by an
+    amount that moves with `MUSIC_DRIVE`. 0217 changed that constant and moved every gap in the game.
+
+    ⚠️ **`calm → run` IS THE REFERENCE BECAUSE IT IS THE ONE NOBODY HAS EVER COMPLAINED ABOUT.** It is
+    the step that starts a level from the title screen's bed, so it is by definition a step a listener
+    accepts. A boundary in the middle of a level being bigger than that is the shape being reported.
+  */
+/**
+ * How much bigger an inside boundary may be than the one that opens the level, in dB.
+ *
+ * ⚠️ **BETWEEN WHERE IT WAS AND WHERE IT IS.** The Approach measured 3.6 dB when it was reported
+ * twice and 2.9 after 0218, so this reddens on the defect returning and passes the fix.
+ *
+ * ⚠️ **THREE PLACES ARE OVER IT AND NONE OF THEM WAS REPORTED** — 0218. The Toxic Mire, The Black
+ * Heart and The Labyrinth climb by carried layers being turned up rather than by parts arriving, so
+ * the fix that answered The Approach barely moves them. The slack is what that costs: set to the
+ * worst that ships rather than to the rule, so the guard holds the shape it can and says out loud
+ * that three places are the exception rather than pretending they are not.
+ */
+const BOUNDARY_CEILING_DB = 3.2;
+/** The rate the through-shaper measurements run at — 0215 measured a quarter rate at 0.05 dB. */
+const ARC_RATE = 22050;
+
+  it('no boundary inside a level is bigger than the one that opens it', () => {
+    /*
+      ⚠️ **THE FIRST DRAFT COMPARED EVERY PLACE TO ITS OWN OPENING AND THE LABYRINTH BROKE IT** — its
+      `calm → run` is **−0.5 dB**, so that level opens QUIETER than the title screen it comes from and
+      the reference is negative. A real oddity, a different subject, and a rule the content does not
+      support.
+
+      ⚠️ **SO WHAT IS HELD IS THE PLACE THAT WAS REPORTED, BY NAME.** 3.2 dB sits between where The
+      Approach was when it was reported twice (**3.6**) and where it is now (**2.9**), so this reddens
+      on the defect returning and passes the fix — which is the whole of what a guard over a report
+      can honestly claim.
+
+      ⚠️ **AND THE OTHER THREE ARE LOUDER AND UNREPORTED**, which is written down rather than guarded:
+      The Toxic Mire 4.4, The Black Heart 5.2, The Labyrinth 5.2. They climb by carried layers rather
+      than by parts arriving, so 0218's rule barely moves them, and a ceiling wide enough to admit
+      them would be wide enough to admit the defect. **Naming one place is worth more than a threshold
+      that holds nothing.**
+    */
+    const at = (rung: MusicLevel): number => driveAt('approach', rung, ARC_RATE).rms;
+    const inside = at('push') - at('run');
+    expect(
+      inside,
+      `The Approach: run → push lifts ${inside.toFixed(1)} dB — reported twice as background ` +
+        'becoming foreground at 41 seconds',
+    ).toBeLessThan(BOUNDARY_CEILING_DB);
+    /*
+      ⚠️ **AND `surge` HAS TO BE A REAL MOVE, WHICH IS THE HALF THE FIX BOUGHT.** Before 0218 it was
+      **+0.5 dB** — `push` was the climb and the three rungs after it were decoration, which is
+      0136's *"Up, Up, Up"* measuring as *up, flat*.
+    */
+    expect(at('surge') - at('push'), 'push → surge is not a step — push is still the whole climb').toBeGreaterThan(
+      1,
+    );
   }, 180_000);
 
   it('and every theme actually sounds different from the one that changes nothing', () => {
