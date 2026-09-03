@@ -513,6 +513,15 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
     final.
   */
   skyNebula: 'sky',
+  /*
+    ⚠️ **`space`, AND IT IS THE ONLY SPRITE IN THE ATLAS DRAWN IN THE BACKDROP'S OWN COLOUR** — 0221.
+    Every other sky sprite is a mark ON the backdrop; a planet's ground is a mass that REPLACES it,
+    and the placeholder for a place that has not said otherwise is *the same colour as the void*,
+    which draws as nothing at all. `bakeGround` overwrites it at a level boundary with the theme's
+    own `ground`, exactly as `bakeNebula` does for the weather — so, like `skyNebula`, the entry here
+    is what it looks like before a level has spoken.
+  */
+  skyGround: 'space',
   // A landmark is sky ink like every other backdrop mark — 0069's *the sky is behind the game* is
   // untouched by 0203, which moved only what may be drawn, never what it is drawn in.
   landmark: 'sky',
@@ -839,6 +848,8 @@ export const ACCENT_OF: Record<SpriteKind, Accent | null> = {
   skyNear: null,
   skyRush: null,
   skyNebula: null,
+  // The ground draws its own everything in `drawGround` — the accent pass is for hulls.
+  skyGround: null,
   // A landmark draws its own interior in `drawLandmark` — the accent pass is for hulls.
   landmark: null,
   bound: null,
@@ -1301,6 +1312,350 @@ function drawHeart(ctx: Pen, ink: string, space: string, size: number): void {
   trace();
   ctx.stroke();
   ctx.globalAlpha = 1;
+}
+
+/**
+ * The land a place stands on, or `null` for a place in space.
+ *
+ * `docs/decisions/0221-a-planet-is-not-a-space.md`. Reported: *"the planets still have the starry
+ * space backdrop visible, ground features need be properly have nothing behind them and the sky in
+ * the background needs to match the sky."*
+ *
+ * ⚠️ **OPAQUE, AND THAT IS THE WHOLE DIFFERENCE FROM `STRUCTURE_OF`.** 0220 put a planet's ridges in
+ * the structure table, which paints marks at an alpha onto the WEATHER tile — and the weather tile is
+ * drawn first, so the star fields came down through the mountains. *Nothing behind it* is not a
+ * heavier alpha; it is a different layer, drawn last, filled solid.
+ *
+ * ⚠️ **AND IT MUST AGREE WITH `THEMES[theme].ground` EXACTLY.** A place with a row here and no colour
+ * draws its land in whatever the last place left behind; a place with a colour and no row draws
+ * nothing and loses its star fields as well, so it is simply empty. `tests/places.test.ts` holds the
+ * two lists equal — 0220's `LANDMARK_OF` hole, which is now a shape this file has twice.
+ *
+ * ⚠️ **TILE y 0.25 TO 0.75 IS THE LANE**, exactly as it is for the weather: `SPRITE_EXTENT.skyGround`
+ * is twice `ACROSS_SPAN` and blitted centred, so half of what is drawn here is off the screen. It has
+ * caught this repository three times and every horizon below is written against it.
+ */
+/**
+ * ⚠️ **THREE COLOURS, AND THE THIRD ONE IS A LIGHT SOURCE.** `land` and `sky` are the two a horizon
+ * needs — a silhouette and what it is a silhouette against. The Toxic Mire needs a third: *"the toxic
+ * pools below"* have to GLOW, and its sky is a murk deliberately darker than anything, so drawing
+ * water in it gives a black pool in a black bank. `glow` is the place's own gas — the brightest colour
+ * it has, and the one its haze is already made of, so the pools and the air over them are lit by one
+ * thing rather than by two.
+ */
+export type GroundArt = (ctx: Pen, land: string, sky: string, glow: string, size: number) => void;
+
+export const GROUND_OF: Record<ThemeKind, GroundArt | null> = {
+  approach: null,
+  nebula: null,
+  saurian: (ctx, land, sky, _glow, size) => drawRidges(ctx, land, sky, size),
+  labyrinth: null,
+  rime: (ctx, land, sky, _glow, size) => drawShelf(ctx, land, sky, size),
+  mire: (ctx, land, sky, glow, size) => drawEnclosure(ctx, land, sky, glow, size),
+  core: null,
+};
+
+function drawGround(ctx: Pen, land: string, sky: string, glow: string, size: number, theme: ThemeKind): void {
+  GROUND_OF[theme]?.(ctx, land, sky, glow, size);
+}
+
+/**
+ * Where the lane starts and ends inside a tile that is twice as tall as it — the visible band.
+ *
+ * ⚠️ **EXPORTED, BECAUSE THE NUMBER HAD ALREADY BEEN WRITTEN DOWN TWICE.** `tests/places.test.ts`
+ * carried its own `0.25` to convert a tile fraction into a lane position, which is the second copy
+ * `docs/decisions/0029-the-tracked-record-is-the-record.md` is about — and this particular number has
+ * caught the repository three times (The Approach's horizon at 0.86, the Pillars' feet at 0.97, and
+ * Saurian Belt's first ridges). A constant that two files disagree about would be the fourth.
+ */
+export const LANE_TOP = 0.25;
+export const LANE_BOTTOM = 0.75;
+/**
+ * A tile fraction as a position across the lane, 0 to `ACROSS_SPAN`.
+ *
+ * Derived from the tile's own extent rather than from `ACROSS_SPAN`, because the band above is only
+ * the middle half BECAUSE the tile is twice the lane — so a tile that changed width would move this
+ * without anybody having to remember to.
+ */
+export function laneAt(fraction: number): number {
+  return (fraction - LANE_TOP) * SPRITE_EXTENT.skyGround;
+}
+
+/**
+ * Fill a skyline, opaquely, from a run of heights down to the bottom of the tile.
+ *
+ * ⚠️ **DOWN TO 1, NOT TO A NUMBER THAT LOOKED FAR ENOUGH.** 0220's ridges closed at tile 0.84 because
+ * that was comfortably past the lane — and it is, until the tile is blitted a fraction of a pixel
+ * out or a device widens the lane, at which point there is a hairline of sky under a mountain. A
+ * ground that ends anywhere is a ground with an edge.
+ */
+function fillTo(ctx: Pen, colour: string, crest: readonly number[][], size: number, downward: boolean): void {
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = colour;
+  ctx.beginPath();
+  ctx.moveTo(crest[0]![0]!, crest[0]![1]!);
+  for (let i = 1; i < crest.length; i += 1) ctx.lineTo(crest[i]![0]!, crest[i]![1]!);
+  const edge = downward ? size : 0;
+  ctx.lineTo(crest[crest.length - 1]![0]!, edge);
+  ctx.lineTo(crest[0]![0]!, edge);
+  ctx.closePath();
+  ctx.fill();
+}
+
+/**
+ * A run of heights across the whole tile, ending where it began so the tile joins.
+ *
+ * @param jag How far a point may sit from the base, as a fraction of the tile.
+ */
+function skyline(
+  size: number,
+  stream: string,
+  base: number,
+  jag: number,
+  steps: number,
+  bias: 'even' | 'down' = 'even',
+): number[][] {
+  const rng = makeRng('sky').stream(stream);
+  const out: number[][] = [];
+  for (let s = 0; s <= steps; s += 1) {
+    // ⚠️ Sampled around `base` rather than walked from the last point: a walk drifts, and a drifting
+    // horizon is a hill. Rock against a sky is peaks that all return to the same level. 0207's rule
+    // is met by forcing the ends, which is why they are drawn from `base` exactly.
+    let off = rng.range(-jag, jag);
+    /*
+      ⚠️ **SQUARED AND ONE-SIDED, WHICH IS WHAT MAKES SOMETHING HANG RATHER THAN UNDULATE.** A uniform
+      draw puts most samples in the middle of its range, so an evenly-sampled edge is busy everywhere
+      and extreme nowhere. Squaring pushes the mass towards zero and leaves the occasional long reach,
+      which is the difference between *a bumpy ceiling* and *things hanging off one*.
+    */
+    if (bias === 'down') off = ((off / jag) ** 2) * jag;
+    const y = s === 0 || s === steps ? base : base + off;
+    out.push([(s / steps) * size, y * size]);
+  }
+  return out;
+}
+
+/**
+ * ── SAURIAN BELT: A RANGE UNDER A BLUE SKY ────────────────────────────────────────────────────────
+ *
+ * Three ridgelines, opaque, each nearer and lower and lighter-edged than the one behind it. 0220 drew
+ * these as structure marks and this is the same silhouette with the light taken out from behind it.
+ *
+ * ⚠️ **THE FAR RANGE IS DRAWN IN A COLOUR MIXED TOWARDS THE SKY, WHICH IS THE ONLY REAL DEPTH CUE
+ * THERE IS HERE.** Air between you and a mountain is what makes a distant one pale — and it is the
+ * one cue that survives everything being opaque, since alpha is no longer available to say *far*.
+ * Three flat silhouettes in one colour is a stencil; three in three tones is a landscape.
+ */
+function drawRidges(ctx: Pen, land: string, sky: string, size: number): void {
+  const RANGES = [
+    { base: 0.6, jag: 0.026, haze: 0.55, steps: 26, lit: 0.3 },
+    { base: 0.655, jag: 0.04, haze: 0.28, steps: 19, lit: 0.45 },
+    { base: 0.715, jag: 0.055, haze: 0, steps: 14, lit: 0.6 },
+  ];
+  for (const range of RANGES) {
+    const crest = skyline(size, `saurian/range${range.steps}`, range.base, range.jag, range.steps);
+    fillTo(ctx, mix(land, sky, range.haze), crest, size, true);
+    // The sun catching the tops. Drawn in the sky's own colour, which is where the light is coming
+    // from — the crest is literally the sky showing over the edge of the rock.
+    ctx.globalAlpha = range.lit;
+    ctx.strokeStyle = sky;
+    ctx.lineCap = 'round';
+    ctx.lineWidth = Math.max(1, size * 0.0035);
+    ctx.beginPath();
+    ctx.moveTo(crest[0]![0]!, crest[0]![1]!);
+    for (let i = 1; i < crest.length; i += 1) ctx.lineTo(crest[i]![0]!, crest[i]![1]!);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * ── RIME SHELF: AUSTERE ───────────────────────────────────────────────────────────────────────────
+ *
+ * Asked for: *"rime shelf needs to be icy and austere."*
+ *
+ * ⚠️ **AUSTERE IS A COUNT BEFORE IT IS A SHAPE, AND THE COUNT GOES DOWN.** 0220 gave this place three
+ * terraces of stepped tables and it came out BUSY — a skyline with a corner every twentieth of a tile
+ * reads as a city. An ice shelf is one long flat line with almost nothing happening on it, and what
+ * makes it cold is the emptiness rather than a feature that says *ice*.
+ *
+ * So: **two** terraces, not three; long runs, not short ones; and the only relief is the occasional
+ * pressure ridge where the sheet has buckled.
+ */
+function drawShelf(ctx: Pen, land: string, sky: string, size: number): void {
+  const TERRACES = [
+    { base: 0.62, run: 0.34, drop: 0.014, haze: 0.42, lit: 0.4 },
+    { base: 0.7, run: 0.26, drop: 0.02, haze: 0, lit: 0.62 },
+  ];
+  for (const terrace of TERRACES) {
+    const rng = makeRng('sky').stream(`rime/shelf${Math.round(terrace.run * 100)}`);
+    const edges: number[] = [0];
+    while (edges[edges.length - 1]! < 1) {
+      edges.push(Math.min(1, edges[edges.length - 1]! + rng.range(terrace.run * 0.7, terrace.run * 1.5)));
+    }
+    const heights = edges.slice(0, -1).map(() => terrace.base + rng.range(-terrace.drop, terrace.drop));
+    const last = heights.length - 1;
+    // The first table starts level with the seam and the last ends there — 0207, in a stepped profile.
+    heights[0] = terrace.base;
+    heights[last] = terrace.base;
+    const crest: number[][] = [];
+    for (let i = 0; i < heights.length; i += 1) {
+      // Two points per table and none between: the vertical between them is the cliff face.
+      crest.push([edges[i]! * size, heights[i]! * size], [edges[i + 1]! * size, heights[i]! * size]);
+    }
+    fillTo(ctx, mix(land, sky, terrace.haze), crest, size, true);
+    ctx.globalAlpha = terrace.lit;
+    ctx.strokeStyle = sky;
+    ctx.lineCap = 'butt';
+    ctx.lineWidth = Math.max(1, size * 0.004);
+    ctx.beginPath();
+    ctx.moveTo(crest[0]![0]!, crest[0]![1]!);
+    for (let i = 1; i < crest.length; i += 1) ctx.lineTo(crest[i]![0]!, crest[i]![1]!);
+    ctx.stroke();
+    /*
+      The one thing that happens on an ice sheet: a pressure ridge, where two plates have met and
+      buckled. **Two of them per terrace**, because three would be a feature and one would be a
+      mistake.
+    */
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = mix(land, sky, terrace.haze);
+    for (let i = 0; i < 2; i += 1) {
+      const at = rng.range(0.1, 0.85) * size;
+      const wide = rng.range(0.05, 0.1) * size;
+      const tall = rng.range(0.02, 0.038) * size;
+      const foot = terrace.base * size;
+      ctx.beginPath();
+      ctx.moveTo(at - wide, foot);
+      ctx.lineTo(at - wide * 0.25, foot - tall);
+      ctx.lineTo(at + wide * 0.2, foot - tall * 0.72);
+      ctx.lineTo(at + wide, foot);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * ── THE TOXIC MIRE: A CORRIDOR BETWEEN A CANOPY AND THE POOLS ─────────────────────────────────────
+ *
+ * Asked for: *"toxic mire is also a planet, but needs an overhanging canopy so that it feels like
+ * you're flying through a tight narrow corridor above the toxic pools below and beneath the
+ * overhanging canopy above."*
+ *
+ * ⚠️ **THE ONLY GROUND IN THE GAME WITH TWO SURFACES, AND THE SUBJECT IS THE GAP.** Both are drawn
+ * from the same table with the fill going opposite ways — a canopy is a floor upside down, and
+ * writing it as one is what keeps the two agreeing about how wide the corridor between them is.
+ *
+ * ⚠️ **AND THE GAP IS MEASURED AGAINST THE SHIP, NOT AGAINST ITSELF.** `tests/places.test.ts` holds
+ * it. *"Tight"* is a feeling and *"a passage the ship cannot fly down"* is a bug, and only one of
+ * those two has a number.
+ */
+function drawEnclosure(ctx: Pen, land: string, sky: string, glow: string, size: number): void {
+  /*
+    ⚠️ **BOTH EDGES SIT WELL INSIDE THE LANE**, which is what makes this place feel enclosed at all.
+    The canopy hangs to tile 0.4 — lane 30 — and the pools rise to 0.66, lane 82. Everything the game
+    does happens in the 52 lane units between them, against a ship 7 across.
+  */
+  /*
+    ⚠️ **THE CANOPY HANGS, WHICH IS NOT THE SAME AS BEING JAGGED.** A skyline sampled evenly around a
+    base is a mountain range upside down — the bench showed a smooth hill, and *"overhanging"* was
+    nowhere in it. `hang` biases every sample downward and squares it, so the edge sits near its base
+    most of the way across and drops a long way in a few places: a roof with things coming off it.
+  */
+  const canopy = skyline(size, 'mire/canopy', 0.4, 0.075, 24, 'down');
+  const pools = skyline(size, 'mire/pools', 0.66, 0.022, 14);
+
+  fillTo(ctx, land, canopy, size, false);
+  fillTo(ctx, land, pools, size, true);
+
+  /*
+    ── THE SHADOW UNDER THE ROOF ───────────────────────────────────────────────────────────────────
+
+    ⚠️ **WITHOUT IT THE CORRIDOR IS A FLAT GREEN BAND AND READS AS A WALL, NOT AS AIR.** The bench
+    showed exactly that: a solid slab of murk between two dark edges, with nothing saying which way is
+    up. Four bands of the land colour fading downward from the canopy put the darkness where a roof
+    puts it, and the pools below then read as the only light in the place.
+
+    ⚠️ **BANDS AND NOT A GRADIENT, BECAUSE `Pen` IS FIFTEEN MEMBERS AND `createLinearGradient` IS NOT
+    ONE.** Four rectangles at falling alpha is a gradient anybody can see the seams of at close range
+    and nobody can at a tile's scale; widening a type that exists to be narrow, so that a shadow can be
+    one call instead of four, is the trade `drawPillars`' streamers already declined.
+  */
+  ctx.fillStyle = land;
+  for (let i = 0; i < 6; i += 1) {
+    ctx.globalAlpha = 0.42 * (1 - i / 6);
+    const from = (0.4 + i * 0.04) * size;
+    ctx.fillRect(0, from, size, 0.041 * size);
+  }
+
+  /*
+    ── AND THE POOLS ARE LIT AND THE CANOPY IS NOT ─────────────────────────────────────────────────
+
+    Which is the whole reading of the place: the light is coming from BELOW, off something that should
+    not be glowing, and the roof over it is a silhouette. It is also the only way two surfaces of one
+    colour tell each other apart at a glance.
+  */
+  const rng = makeRng('sky').stream('mire/slicks');
+  /*
+    The pools themselves, and they are the light source. **Drawn before the shoreline**, so the
+    shoreline closes over their far edge and they sit IN the ground rather than on it.
+  */
+  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = glow;
+  for (let i = 0; i < 6; i += 1) {
+    const at = rng.range(0.02, 0.84) * size;
+    const wide = rng.range(0.07, 0.15) * size;
+    const deep = rng.range(0.018, 0.042) * size;
+    const top = (0.665 + rng.range(0.005, 0.045)) * size;
+    ctx.beginPath();
+    ctx.moveTo(at, top);
+    ctx.lineTo(at + wide, top);
+    ctx.lineTo(at + wide * 0.8, top + deep);
+    ctx.lineTo(at + wide * 0.15, top + deep);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.globalAlpha = 0.85;
+  ctx.strokeStyle = glow;
+  ctx.lineCap = 'round';
+  ctx.lineWidth = Math.max(1, size * 0.007);
+  ctx.beginPath();
+  ctx.moveTo(pools[0]![0]!, pools[0]![1]!);
+  for (let i = 1; i < pools.length; i += 1) ctx.lineTo(pools[i]![0]!, pools[i]![1]!);
+  ctx.stroke();
+
+  /*
+    ⚠️ **AND THE UNDERSIDE OF THE CANOPY CATCHES IT, WHICH IS WHAT PUTS THE TWO IN ONE ROOM.** Light
+    from below on the roof above is the single mark that says these are two faces of one enclosure
+    rather than a floor and an unrelated ceiling. It is fainter than the water it is coming from,
+    because it is a reflection of it.
+  */
+  ctx.globalAlpha = 0.26;
+  ctx.lineWidth = Math.max(1, size * 0.005);
+  ctx.beginPath();
+  ctx.moveTo(canopy[0]![0]!, canopy[0]![1]!);
+  for (let i = 1; i < canopy.length; i += 1) ctx.lineTo(canopy[i]![0]!, canopy[i]![1]!);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  // Unused here, and named rather than dropped: the mire's murk is the AIR, not a thing to draw with.
+  void sky;
+}
+
+/**
+ * One colour moved `by` of the way towards another, as a hex string.
+ *
+ * ⚠️ **NEEDED BECAUSE THE GROUND IS OPAQUE AND THEREFORE HAS NO ALPHA TO SAY *FAR* WITH.** Every
+ * other depth cue in this file is a `globalAlpha`; a solid silhouette in front of a star field cannot
+ * use one without stars coming through it, which is the entire defect 0221 is about. Aerial haze is
+ * what distance actually looks like, and it is a colour rather than a transparency.
+ */
+function mix(from: string, to: string, by: number): string {
+  if (by <= 0) return from;
+  const read = (hex: string): number[] => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const [a, b] = [read(from), read(to)];
+  return `#${a.map((v, i) => Math.round(v + (b[i]! - v) * by).toString(16).padStart(2, '0')).join('')}`;
 }
 
 export function drawKind(
@@ -1876,6 +2231,16 @@ export function drawKind(
         missing and never a hole in the atlas.
       */
       drawNebula(ctx, palette.sky, palette.space, size, theme);
+      return;
+    case 'skyGround':
+      /*
+        ⚠️ **The title screen has no ground, and neither does any place in space** — 0221. A place
+        with land replaces this bitmap at the level boundary through `bakeGround`, in the theme's own
+        `ground` and `space`; a place without land never blits it at all, because `SKY` is chosen per
+        place. Drawn here in the palette's own space colour so that the placeholder is invisible
+        rather than a grey slab, on `skyNebula`'s own terms one case up.
+      */
+      drawGround(ctx, palette.space, palette.space, palette.sky, size, theme);
       return;
     /*
       ── THE EDGE OF THE PLAYER'S BOX ────────────────────────────────────────────────────────────
@@ -2662,59 +3027,15 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
   saurian: (size) => {
     const out: StructureMark[] = [];
     /*
-      ⚠️ **RECEDING ON THREE AXES AT ONCE, WHICH IS WHAT MAKES IT GROUND RATHER THAN THREE LINES.**
-      The far ridge is higher, smoother, fainter and its crest is dimmer; the near one is lower,
-      jagged, heavy and brightly lit. Any one of those alone reads as a repeated motif — 0196's
-      *numerically different, visually the same* — and the four together read as distance.
-    */
-    const RIDGES = [
-      { y: 0.6, relief: 0.022, alpha: 0.45, crest: 0.26, teeth: 26 },
-      { y: 0.655, relief: 0.036, alpha: 0.64, crest: 0.38, teeth: 19 },
-      { y: 0.715, relief: 0.05, alpha: 0.88, crest: 0.5, teeth: 14 },
-    ];
-    // Closed below the lane so each ridge fills as a body — The Approach's own move, and the reason
-    // a horizon is a filled shape here and a stroke everywhere else.
-    const under = size * 0.84;
-    for (const ridge of RIDGES) {
-      const rng = makeRng('sky').stream(`saurian/ridge${ridge.teeth}`);
-      const start = ridge.y * size;
-      const crest: number[][] = [];
-      for (let s = 0; s <= ridge.teeth; s += 1) {
-        /*
-          ⚠️ Sampled independently of the last point rather than walked from it. A random WALK drifts,
-          and a drifting horizon is a hill; rock read against the sky is a line of peaks that all
-          return to the same level, which is what an independent draw around `start` gives.
-          The last point is forced back to `start`, which is 0207.
-        */
-        const y = s === 0 || s === ridge.teeth ? start : start + rng.range(-ridge.relief, ridge.relief) * size;
-        crest.push([(s / ridge.teeth) * size, y]);
-      }
-      out.push({
-        points: [...crest, [size, under], [0, under]],
-        width: 0,
-        alpha: ridge.alpha,
-        crosses: true,
-        taper: false,
-        lit: false,
-      });
-      /*
-        A lit crest line on the skyline — the sun catching the tops. **Saurian Belt has the headroom
-        for this and Ember Nebula does not**, which is 0211's contrast measurement making the opposite
-        call rather than an exception to it.
-      */
-      out.push({
-        points: crest,
-        width: Math.max(1, size * 0.0035),
-        alpha: ridge.crest,
-        crosses: true,
-        taper: false,
-        lit: true,
-      });
-    }
+      ⚠️ **THE RIDGES USED TO BE HERE AND THEY ARE `GROUND_OF.saurian` NOW — 0221.** They were three
+      filled structure marks at 0.45, 0.64 and 0.88 alpha, painted onto the weather tile, which is
+      drawn FIRST — so both star fields came down through the mountains and the ridges read as
+      translucent bands rather than as land. *"Ground features need be properly have nothing behind
+      them"* is not an alpha this table can reach: it is a different layer, drawn last, opaque.
 
-    /*
-      And the belt itself, now overhead. Local objects — 0208's rule, not 0207's — because a rock
-      carries its whole shape to the copy one tile over.
+      What is left here is the belt itself, overhead, which is the only thing in this place that was
+      ever really weather. Local objects — 0208's rule, not 0207's — because a rock carries its whole
+      shape to the copy one tile over.
     */
     const rng = makeRng('sky').stream('saurian/rocks');
     for (let knot = 0; knot < 3; knot += 1) {
@@ -2896,73 +3217,14 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
   rime: (size) => {
     const out: StructureMark[] = [];
     /*
-      ── THE SHELF, WHICH IS A THING THE NAME ALREADY SAID ───────────────────────────────────────
+      ⚠️ **THE SHELF USED TO BE HERE AND IT IS `GROUND_OF.rime` NOW — 0221**, on Saurian Belt's own
+      terms one row up: three terraces painted onto the weather tile had both star fields shining
+      through them. It also came back with the report *"icy and austere"*, and austere is a COUNT
+      before it is a shape — three terraces of stepped tables at a corner every twentieth of a tile
+      read as a city skyline. There are two now, with long runs and almost nothing on them.
 
-      *"rime shelf need[s] to be [a] planetary backdrop[] where the level is based on a planet."*
-      Saurian Belt's answer is a range of peaks; this is the same idea and must not be the same
-      geometry, so it is what an ice shelf actually is: **flat tables with sheer faces between them.**
-
-      ⚠️ **A PLATEAU PROFILE, NOT A JAGGED ONE, AND THE DIFFERENCE IS THE WHOLE POINT.** Rock read
-      against the sky is peaks; ice read against the sky is a level line that steps. Two places both
-      given *a horizon* is exactly 0211's failure — a shared shape in different numbers — and the
-      guard that catches it compares coordinates, which two generators this different cannot collide
-      in.
+      What is left here is what actually blows through the air over an ice sheet.
     */
-    const TERRACES = [
-      { y: 0.585, drop: 0.026, alpha: 0.4, crest: 0.4, run: 0.16 },
-      { y: 0.645, drop: 0.038, alpha: 0.6, crest: 0.55, run: 0.13 },
-      { y: 0.71, drop: 0.05, alpha: 0.85, crest: 0.72, run: 0.1 },
-    ];
-    const under = size * 0.84;
-    for (const terrace of TERRACES) {
-      const rng = makeRng('sky').stream(`rime/terrace${Math.round(terrace.run * 100)}`);
-      const start = terrace.y * size;
-      /*
-        The x where each table ends. Built first so the LAST table's height can be forced back to the
-        first's — 0207 in a profile that is two points wide at every step it takes.
-      */
-      const edges: number[] = [0];
-      while (edges[edges.length - 1]! < size) {
-        edges.push(Math.min(size, edges[edges.length - 1]! + rng.range(terrace.run * 0.6, terrace.run * 1.6) * size));
-      }
-      const heights = edges.slice(0, -1).map(() => start + rng.range(-terrace.drop, terrace.drop) * size);
-      /*
-        ⚠️ **EVERY TABLE LEANS A LITTLE, AND DEAD LEVEL ONES CAME OUT AS A CIRCUIT BOARD.** The first
-        version held each plateau at a constant height, which draws a right angle at every step and a
-        perfectly horizontal line between them — the bench showed something closer to a wiring diagram
-        than to ice. A tilt of under a hundredth of the tile is invisible as a slope and is the whole
-        difference between *a shelf* and *a schematic*.
-      */
-      const last = heights.length - 1;
-      const tilts = heights.map(() => (heights.length > 1 ? rng.range(-0.009, 0.009) * size : 0));
-      // The first table STARTS level with the seam and the last one ENDS there — 0207, in a profile
-      // that is two points wide at every step it takes.
-      heights[0] = start;
-      heights[last] = start - tilts[last]!;
-      const profile: number[][] = [];
-      for (let i = 0; i < heights.length; i += 1) {
-        // Two points per table and none between: the vertical between them IS the cliff face.
-        profile.push([edges[i]!, heights[i]!], [edges[i + 1]!, heights[i]! + tilts[i]!]);
-      }
-      out.push({
-        points: [...profile, [size, under], [0, under]],
-        width: 0,
-        alpha: terrace.alpha,
-        crosses: true,
-        taper: false,
-        lit: false,
-      });
-      // ⚠️ **BRIGHTER THAN SAURIAN BELT'S CRESTS, because this one is ice and that one is rock.** The
-      // lit edge is the only place in either where the material itself is stated rather than implied.
-      out.push({
-        points: profile,
-        width: Math.max(1, size * 0.004),
-        alpha: terrace.crest,
-        crosses: true,
-        taper: false,
-        lit: true,
-      });
-    }
 
     const rng = makeRng('sky').stream('rime/shards');
     // ⚠️ ONE lean for every shard in the place, drawn once outside the loop. Drawing it per shard
@@ -2986,7 +3248,15 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
           alpha: 0.5,
           crosses: false,
           taper: true,
-          lit: false,
+          /*
+            ⚠️ **LIT, AND IT IS THE ONLY FIELD OF MARKS IN THE GAME THAT IS** — 0221. Every structure
+            mark everywhere else is a hole in the light; blowing ice over a pale sky is the opposite,
+            and drawn dark it came out of the bench as a field of black scratches across the one place
+            whose backdrop is bright. `lit` already exists for exactly this and 0211 said in as many
+            words that it is a contrast measurement rather than a house style — Rime Shelf has more
+            headroom than any other place now, and this is what it is for.
+          */
+          lit: true,
         });
       }
     }
@@ -3001,18 +3271,26 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
   mire: (size) => {
     const rng = makeRng('sky').stream('mire/fronds');
     const out: StructureMark[] = [];
-    for (let i = 0; i < 10; i += 1) {
+    for (let i = 0; i < 12; i += 1) {
       const x = rng.range(0, 1) * size;
-      const reach = rng.range(0.28, 0.55) * size;
+      const reach = rng.range(0.1, 0.26) * size;
       const points: number[][] = [];
       let sway = 0;
       for (let s = 0; s <= 6; s += 1) {
         // A random WALK rather than a per-step offset: a frond leans and keeps leaning, which is what
         // hangs in a current instead of zigzagging.
-        sway += rng.range(-0.05, 0.05) * size;
-        points.push([x + sway, 0.12 * size + (s / 6) * reach]);
+        sway += rng.range(-0.04, 0.04) * size;
+        /*
+          ⚠️ **HUNG FROM THE CANOPY, WHICH DID NOT EXIST WHEN THIS WAS WRITTEN — 0221.** They started
+          at tile 0.12 and reached down to 0.67, which is a curtain across most of the lane hanging
+          from nothing. `GROUND_OF.mire` now puts a solid canopy at 0.4, so a frond that begins above
+          it is inside a roof and one that begins below it is floating. They start AT the canopy and
+          reach a little way past it into the corridor — which is the same *"reaches you before you
+          reach it"* the place has always been about, with something to reach from.
+        */
+        points.push([x + sway, 0.4 * size + (s / 6) * reach]);
       }
-      out.push({ points, width: rng.range(0.012, 0.032) * size, alpha: 0.6, crosses: false, taper: true, lit: false });
+      out.push({ points, width: rng.range(0.01, 0.026) * size, alpha: 0.6, crosses: false, taper: true, lit: false });
     }
     return out;
   },
@@ -3262,6 +3540,34 @@ export function bakeNebula(
   if (ctx === null) return;
   drawNebula(ctx, colour, space, size, theme);
   (atlas.bitmaps as CanvasImageSource[])[SPRITE.skyNebula] = canvas;
+}
+
+/**
+ * Re-bake the ground in the place's own land colour — 0221, on `bakeNebula`'s exact terms.
+ *
+ * ⚠️ **A NO-OP FOR A PLACE IN SPACE, AND THAT COSTS NOTHING BECAUSE THE LAYER IS NEVER BLITTED.**
+ * `skyFor` leaves `skyGround` out of the sky of a place whose `ground` is `null`, so the stale bitmap
+ * from the last planet sits in the atlas unread until the next planet overwrites it. The alternative
+ * — clearing it at every boundary — is a full-tile canvas operation to make an invisible thing
+ * invisible.
+ */
+export function bakeGround(
+  atlas: Atlas,
+  land: string,
+  sky: string,
+  glow: string,
+  pixelsPerUnit: number,
+  theme: ThemeKind = 'approach',
+): void {
+  if (GROUND_OF[theme] === null) return;
+  const size = bakeSize(SPRITE_EXTENT.skyGround, pixelsPerUnit);
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (ctx === null) return;
+  drawGround(ctx, land, sky, glow, size, theme);
+  (atlas.bitmaps as CanvasImageSource[])[SPRITE.skyGround] = canvas;
 }
 
 /**

@@ -35,7 +35,18 @@ import { bakeSize, nebulaField, skyField, type SkyKind } from '../src/render/bak
 import { THEME_KINDS } from '../src/content/themes.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { sprite } from './bodies.ts';
-import { CAPACITY, SKY } from '../src/app/mount.ts';
+import { CAPACITY, SKY, SKY_ON_A_PLANET } from '../src/app/mount.ts';
+
+/**
+ * Every sky a place can have — 0221.
+ *
+ * ⚠️ **THERE ARE TWO NOW, AND EVERY RULE IN THIS FILE WAS WRITTEN WHEN THERE WAS ONE.** A place with
+ * land drops both star fields and gains an opaque ground layer, so a claim checked against `SKY`
+ * alone is a claim about four of the seven places. The ones that have to hold for both are 0069's
+ * *nothing crosses in front of the game but the streaks*, 0065's fixed blit count, and the tiling
+ * coverage; the ones about the two star FIELDS stay on `SKY`, because a planet does not have them.
+ */
+const SKIES = [SKY, SKY_ON_A_PLANET];
 import { BURST } from '../src/content/debris.ts';
 import { MAX_SHIELDS } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';
@@ -469,21 +480,31 @@ describe('the sky goes past twice as fast as it shipped, and the parallax surviv
       ⚠️ **Held as a COUNT and as a KIND, because the two fail differently.** A second streak layer is
       a curtain; a dot layer moved across is 0069. Neither implies the other.
     */
-    const inFront = SKY.filter((layer) => layer.depth > 1);
-    expect(inFront.length, 'more than one sky layer is in front of the game, which is a curtain').toBeLessThan(2);
-    for (const layer of inFront) {
-      expect(
-        SPRITE_KINDS[layer.sprite],
-        'a layer made of DOTS was put in front of the game, where a dot is a thing to be dodged',
-      ).toBe('skyRush');
+    /*
+      ⚠️ **BOTH SKIES, SINCE 0221.** There are two arrays now — a place with land has no star fields
+      and carries an opaque ground layer instead — and **the second one was written after this guard
+      and would not have been seen by it.** 0069 is a rule about what may be drawn in front of the
+      game; a rule that only inspects the sky three of the seven places use is not that rule.
+    */
+    for (const sky of SKIES) {
+      const inFront = sky.filter((layer) => layer.depth > 1);
+      expect(inFront.length, 'more than one sky layer is in front of the game, which is a curtain').toBeLessThan(2);
+      for (const layer of inFront) {
+        expect(
+          SPRITE_KINDS[layer.sprite],
+          'a layer made of DOTS was put in front of the game, where a dot is a thing to be dodged',
+        ).toBe('skyRush');
+      }
     }
     /*
       ⚠️ **AND A LAYER AT EXACTLY 1 IS THE WORST PLACE THERE IS**, which is asserted here rather than
       left to the clearance: a mark of no size at all would satisfy `|depth − 1| > 0` and sit exactly
       on the rate of every bullet on the screen. 0065's absolute survives as this, one step over.
     */
-    for (let i = 0; i < SKY.length; i++) {
-      expect(SKY[i]!.depth, `sky layer ${i} moves at exactly the world's rate, so nothing separates it`).not.toBe(1);
+    for (const sky of SKIES) {
+      for (let i = 0; i < sky.length; i++) {
+        expect(sky[i]!.depth, `sky layer ${i} moves at exactly the world's rate, so nothing separates it`).not.toBe(1);
+      }
     }
   });
 });
@@ -505,13 +526,17 @@ describe('the sky costs a fixed number of calls, whatever the camera is doing', 
       the screen once per tile. Ten thousand units of camera is more than a level.
     */
     const view = viewOf(1920, 1080);
-    const counts = new Set<number>();
-    for (let camera = 0; camera < 10_000; camera += 37) {
-      const surface = new CountingSurface();
-      paintScene(surface, view, [], camera, 0.5, SKY);
-      counts.add(surface.blits);
+    // Both skies — 0221. A planet's has a layer the other does not, and the modulo this is about is
+    // per layer, so a sky nobody walks here is a sky where a seam could cross the screen unnoticed.
+    for (const sky of SKIES) {
+      const counts = new Set<number>();
+      for (let camera = 0; camera < 10_000; camera += 37) {
+        const surface = new CountingSurface();
+        paintScene(surface, view, [], camera, 0.5, sky);
+        counts.add(surface.blits);
+      }
+      expect([...counts], `the sky's cost varies with the camera: ${[...counts].join(', ')}`).toHaveLength(1);
     }
-    expect([...counts], `the sky's cost varies with the camera: ${[...counts].join(', ')}`).toHaveLength(1);
   });
 
   it('and the same number on every device the clamp allows', () => {
@@ -547,7 +572,9 @@ describe('the sky costs a fixed number of calls, whatever the camera is doing', 
     */
     for (const view of [viewOf(1500, 1000), viewOf(1920, 1080), viewOf(2400, 1000)]) {
       for (const camera of [0, 13, 49.5, 99.9, 100, 100.1, 1234.5]) {
-        for (const layer of SKY) {
+        // Every layer of every sky — 0221. A ground tile that fell a tile short would be a strip of
+        // bare sky at the bottom of the world, once per tile, for ever.
+        for (const layer of SKIES.flat()) {
           const surface = new SpanSurface();
           paintScene(surface, view, [], camera, 0.5, [layer]);
           // The tiles have to reach from at or before the trailing edge to at or past the far one.

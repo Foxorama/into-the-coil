@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
-import { SPRITE, SPRITE_EXTENT } from '../src/content/sprites.ts';
-import { THEME_KINDS, type ThemeKind } from '../src/content/themes.ts';
+import { PALETTES, type PaletteName } from '../src/content/palette.ts';
+import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
 import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
-import { LANDMARK_OF, STRUCTURE_OF, bakeSize, paintStructure } from '../src/render/bake.ts';
+import { GROUND_OF, LANDMARK_OF, STRUCTURE_OF, bakeSize, laneAt, paintStructure } from '../src/render/bake.ts';
+import { skyFor } from '../src/app/mount.ts';
 import { paintScene, type Landmark } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
+import { luminance } from './contrast.ts';
 import { tracingPen } from './paths.ts';
 
 /**
@@ -33,96 +36,232 @@ import { tracingPen } from './paths.ts';
  * (`docs/decisions/0027-measure-the-picture-not-the-model.md`).
  */
 
-/** The top of the band the player can see — the weather tile is twice the lane and drawn centred. */
-const LANE_TOP = 0.25;
-
-/** Tile fraction to lane, so every number a guard prints is one the player could point at. */
-const lane = (fraction: number): number => (fraction - LANE_TOP) * 2 * ACROSS_SPAN;
+/**
+ * Tile fraction to lane, so every number a guard prints is one the player could point at.
+ *
+ * ⚠️ **`laneAt` AND `LANE_TOP` COME FROM `src/render/bake.ts` SINCE 0221**, where they were already
+ * written down. This file carried its own `0.25` and its own arithmetic — a second copy of the one
+ * number that has caught this repository four times, which is the drift
+ * `docs/decisions/0029-the-tracked-record-is-the-record.md` is about arriving in the guard that exists
+ * to catch it.
+ */
+const lane = laneAt;
 
 const tileSize = (): number => bakeSize(SPRITE_EXTENT.skyNebula, 6);
 
-describe('0220 — a planetary place has ground, and ground is on the screen', () => {
+describe('0221 — a planet is not a space', () => {
   /*
-    ⚠️ **THE THIRD TIME THE SAME TRAP HAS BEEN WALKED INTO, WHICH IS WHY IT IS NOW A GUARD.** The
-    weather tile is `ACROSS_SPAN * 2` and blitted centred, so its y runs from lane −100 to lane 200
-    and only the middle half is on the screen. The Approach's horizon was authored at tile 0.86 —
-    lane 122 — and every guard passed while the screen was unchanged; the Pillars' far columns were
-    given feet at 0.97 and were drawn entirely below the frame. Both were found by looking.
+    Reported: *"the planets still have the starry space backdrop visible, ground features need be
+    properly have nothing behind them and the sky in the background needs to match the sky."*
 
-    0192: name a change that would redden this and be correct. Moving a planet's skyline off the lane
-    is never correct — the place is *"based on a planet"*, and a planet you cannot see is the sky it
-    replaced.
+    ⚠️ **THREE FAULTS WITH ONE CAUSE, AND 0220's OWN GUARDS COULD NOT SEE ANY OF THEM.** They measured
+    where a skyline sat and how its ridges receded — both true of ground painted into the WEATHER tile
+    at an alpha, with two star fields drawn on top of it afterwards. **A guard on the right quantity
+    in the wrong layer is still green.** What is below is about the layer.
   */
-  const GROUND: readonly ThemeKind[] = ['saurian', 'rime'];
+  const planets = THEME_KINDS.filter((theme) => THEMES[theme].ground !== null);
 
-  it('THE REPORTED ONE: Saurian Belt and Rime Shelf have a skyline, and it is in the bottom half of the lane', () => {
-    const size = tileSize();
-    for (const theme of GROUND) {
-      /*
-        The skyline is the LIT crest — the one mark of a ground that is meant to be seen against the
-        sky, and the one the player reads the horizon off. A dark body below it can hang off the
-        bottom of the world; the line cannot.
-      */
-      const crests = STRUCTURE_OF[theme](size).filter((mark) => mark.lit && mark.crosses);
+  it('THE HOLE THE TWO TABLES OPEN: a place has land in `THEMES` exactly when it draws land', () => {
+    /*
+      ⚠️ **THE SAME SHAPE AS 0220's LANDMARK GUARD, AND THE SECOND TIME THIS FILE HAS NEEDED IT.**
+      `THEMES[theme].ground` decides whether a place gets a ground layer and loses its star fields;
+      `GROUND_OF[theme]` decides what is drawn in it. A place with the colour and no drawing keeps its
+      empty tile AND loses its stars, which is a place with nothing in the sky at all; a place with the
+      drawing and no colour paints its land in whatever the last planet left behind.
+    */
+    for (const theme of THEME_KINDS) {
+      const colour = THEMES[theme].ground !== null;
+      const drawing = GROUND_OF[theme] !== null;
       expect(
-        crests.length,
-        `${theme} draws no lit crossing mark — it has no skyline, so it is not standing on anything`,
-      ).toBeGreaterThanOrEqual(2);
-      for (const crest of crests) {
-        const heights = crest.points.map((p) => lane(p[1]! / size));
-        /*
-          ⚠️ **THE CREST'S HIGHEST POINT, AND MOST OF ITS LENGTH — NOT EVERY POINT.** The first draft
-          asserted every point was on the lane and reddened on Saurian Belt's near ridge at lane 102,
-          which is CORRECT: the nearest ground runs off the bottom of the frame, exactly as the
-          Pillars' feet do, and a ridge forbidden to do that is a ridge with no relief. What is never
-          correct is a skyline the player cannot see, so the claim is that its top is well inside the
-          lane and that the line does not spend most of its length below the world.
-        */
-        const top = Math.min(...heights);
+        drawing,
+        `${theme} ${colour ? 'has a ground colour and draws no ground' : 'draws ground and has no ground colour'}` +
+          ' — the two tables have to name the same places or a planet is empty or uncoloured',
+      ).toBe(colour);
+    }
+    expect(planets.length, 'no place has land, so none of this is exercised').toBe(3);
+  });
+
+  it('THE REPORTED ONE: a planet has no field of stars in its sky', () => {
+    /*
+      *"the planets still have the starry space backdrop visible."*
+
+      ⚠️ **ANSWERED BY DELETION, WHICH IS WHY IT NEEDS A GUARD AT ALL.** `skyFar` and `skyNear` are
+      fields of dots — they are stars, and there is nothing to draw over them that is better than not
+      drawing them. A change that quietly puts either back reads as *the sky got its depth back* and is
+      the exact thing that was reported.
+    */
+    for (const theme of planets) {
+      const kinds = skyFor(theme).map((layer) => SPRITE_KINDS[layer.sprite]);
+      expect(
+        kinds,
+        `${theme} is a planet and its sky still carries ${kinds.join(', ')} — a field of dots under a ` +
+          'daylit sky is the starry backdrop that was reported',
+      ).not.toContain('skyFar');
+      expect(kinds).not.toContain('skyNear');
+      expect(kinds, `${theme} draws no ground layer at all`).toContain('skyGround');
+    }
+    for (const theme of THEME_KINDS.filter((t) => THEMES[t].ground === null)) {
+      const kinds = skyFor(theme).map((layer) => SPRITE_KINDS[layer.sprite]);
+      expect(kinds, `${theme} is in space and lost its star fields`).toContain('skyFar');
+      expect(kinds, `${theme} is in space and drew ground anyway`).not.toContain('skyGround');
+    }
+  });
+
+  it('and the ground is drawn LAST, because order is what puts a thing in front', () => {
+    /*
+      ⚠️ **ORDER AND `depth` ARE INDEPENDENT, AND CONFLATING THEM IS HOW THIS BROKE.** A mountain range
+      is far away — slow — AND in front of everything behind it. `paintScene` walks the array in order
+      and that is the only thing deciding what covers what; putting the ground anywhere but last means
+      something is drawn over the land, which is the report.
+    */
+    for (const theme of planets) {
+      const sky = skyFor(theme);
+      expect(
+        SPRITE_KINDS[sky[sky.length - 1]!.sprite],
+        `${theme} draws something after its ground, so that something is in front of a planet`,
+      ).toBe('skyGround');
+    }
+  });
+
+  it('THE OTHER HALF OF THE REPORT: the ground is OPAQUE, so there is nothing behind it', () => {
+    /*
+      *"ground features need be properly have nothing behind them."*
+
+      ⚠️ **ONE NUMBER, AND NOTHING ELSE IN THIS FILE IS ABOUT IT.** 0220's ridges were structure marks
+      at 0.45, 0.64 and 0.88 — every claim about their shape and position was true, and they were
+      see-through. `tests/paths.ts` grew an `alpha` on a pass for this and for nothing else.
+
+      ⚠️ **THE BODY, NOT EVERY MARK.** A crest line at 0.4 and a shadow band at 0.3 are lighting and
+      are supposed to be translucent; what has to be solid is the mass — so the claim is that each
+      planet lays down at least one fill at full alpha that spans the whole tile.
+    */
+    const size = 240;
+    for (const theme of planets) {
+      const { pen, trace } = tracingPen();
+      GROUND_OF[theme]!(pen, '#101010', '#405060', '#80a040', size);
+      /*
+        ⚠️ **THE MASSES, WHICH ARE THE OPAQUE FILLS THAT REACH A TILE EDGE.** The first draft asserted
+        that EVERY opaque fill spans the tile and reddened on Rime Shelf's pressure ridges — which are
+        opaque and 35 pixels wide and entirely correct: they are features standing ON the shelf, not
+        the shelf. What has to cross the tile is whatever is claiming to run off the top or the bottom
+        of the world, because that is the thing a seam would show a gap in.
+      */
+      const masses = trace.passes.filter((pass) => {
+        if (pass.alpha < 1) return false;
+        const ys = pass.subpaths.flat().map((p) => p[1]);
+        return Math.min(...ys) <= 0.5 || Math.max(...ys) >= size - 0.5;
+      });
+      expect(
+        masses.length,
+        `${theme}'s ground has no fully opaque mass running off the edge of the world — every surface in ` +
+          'it is see-through, which is the defect 0220 shipped: ridges with the star fields through them',
+      ).toBeGreaterThan(0);
+      for (const pass of masses) {
+        const xs = pass.subpaths.flat().map((p) => p[0]);
+        const spread = Math.max(...xs) - Math.min(...xs);
         expect(
-          top,
-          `${theme}'s skyline tops out at lane ${top.toFixed(0)} — above the middle of the lane it is not ` +
-            'ground any more, it is a band across the game',
-        ).toBeGreaterThan(ACROSS_SPAN * 0.4);
-        expect(
-          top,
-          `${theme}'s skyline tops out at lane ${top.toFixed(0)}, and the lane ends at ${ACROSS_SPAN} — ` +
-            'a horizon off the screen is the defect The Approach shipped with and the Pillars’ feet repeated',
-        ).toBeLessThan(ACROSS_SPAN * 0.95);
-        const seen = heights.filter((at) => at < ACROSS_SPAN).length / heights.length;
-        expect(
-          seen,
-          `only ${(seen * 100).toFixed(0)}% of ${theme}'s skyline is on the screen — the rest of it is ` +
-            'below the world, which is a horizon that has been authored and not drawn',
-        ).toBeGreaterThan(0.75);
+          spread,
+          `${theme} has an opaque mass spanning ${spread.toFixed(0)} of a ${size} tile — a surface that ` +
+            'does not cross the tile leaves a gap at the seam that the sky shows through',
+        ).toBeCloseTo(size, 0);
       }
     }
   });
 
-  it('and the ground RECEDES, so it is a surface and not three lines at three heights', () => {
+  it('and a planet’s skyline is on the lane, which is the trap this repository keeps falling into', () => {
     /*
-      ⚠️ **THE ONE THAT CANNOT BE SATISFIED BY MOVING A NUMBER.** A place could pass the guard above
-      with three identical ridges stacked up, which is 0196's *numerically different, visually the
-      same* in a new costume. What makes a ground read as ground is that the further one is HIGHER and
-      FAINTER at once — two signals agreeing, which is 0081's rule applied to distance.
+      ⚠️ **THE FOURTH TIME.** The Approach's horizon at tile 0.86, the Pillars' feet at 0.97, Saurian
+      Belt's first ridges — and the ground tile is `ACROSS_SPAN * 2` and blitted centred exactly as the
+      weather tile is, so half of what is drawn in it is off the screen. Ported here from 0220's
+      structure-table version, which now measures a table these places no longer use.
     */
-    const size = tileSize();
-    for (const theme of GROUND) {
-      const crests = STRUCTURE_OF[theme](size)
-        .filter((mark) => mark.lit && mark.crosses)
-        .map((mark) => ({
-          top: Math.min(...mark.points.map((p) => p[1]!)) / size,
-          alpha: mark.alpha,
-        }))
-        .sort((a, b) => a.top - b.top);
-      for (let i = 1; i < crests.length; i += 1) {
+    const size = 240;
+    for (const theme of planets) {
+      const { pen, trace } = tracingPen();
+      GROUND_OF[theme]!(pen, '#101010', '#405060', '#80a040', size);
+      const edges = trace.passes
+        .filter((pass) => {
+          if (pass.alpha < 1) return false;
+          const ys = pass.subpaths.flat().map((p) => p[1]);
+          return Math.min(...ys) <= 0.5 || Math.max(...ys) >= size - 0.5;
+        })
+        .map((pass) => pass.subpaths.flat().map((p) => laneAt(p[1] / size)))
+        // The mass runs off the frame by design; what has to be visible is the edge nearest the middle.
+        .map((heights) => heights.filter((at) => at > 0 && at < ACROSS_SPAN));
+      expect(
+        edges.every((visible) => visible.length > 0),
+        `${theme} has an opaque mass with no part of its edge on the lane — it is entirely above or ` +
+          'below the screen, which is a horizon that has been authored and not drawn',
+      ).toBe(true);
+    }
+  });
+
+  it('and land is DARKER than the sky over it, which is what a horizon is', () => {
+    /*
+      ⚠️ **AND IT IS ALSO THE ACCESSIBILITY FLOOR, WHICH IS THE HALF THAT MAKES IT AN INVARIANT.** A
+      silhouette is what a horizon looks like, so this is a taste; the bottom of the screen staying the
+      darkest part of it is not. `tests/sky.test.ts` measures every ink against the place's `space`,
+      and a planet now covers a third of the screen with something that guard has never heard of —
+      ground brighter than the sky would put the game's worst contrast somewhere nothing is checking.
+    */
+    for (const theme of planets) {
+      for (const name of Object.keys(PALETTES) as PaletteName[]) {
+        const land = THEMES[theme].ground![name];
+        const sky = THEMES[theme].space[name];
         expect(
-          crests[i]!.alpha,
-          `${theme}'s ridge at lane ${lane(crests[i]!.top).toFixed(0)} is no brighter than the one behind it ` +
-            `at lane ${lane(crests[i - 1]!.top).toFixed(0)} — the nearer ground has to be the louder one`,
-        ).toBeGreaterThan(crests[i - 1]!.alpha);
+          luminance(land),
+          `${theme}'s land (${land}) is not darker than its sky (${sky}) — the horizon is inverted, and ` +
+            'the darkest part of the screen is no longer the part with no game in it',
+        ).toBeLessThan(luminance(sky));
       }
     }
+  });
+
+  it('THE ASK, IN LANE UNITS: The Toxic Mire’s corridor is tight and the ship fits down it', () => {
+    /*
+      *"needs an overhanging canopy so that it feels like you're flying through a tight narrow corridor
+      above the toxic pools below and beneath the overhanging canopy above."*
+
+      ⚠️ **TWO CLAIMS THAT PULL AGAINST EACH OTHER, WHICH IS WHY BOTH ARE HERE.** *Tight* is what was
+      asked for and *the player cannot fly down it* is a bug — and the lane is a fixed 100 units that
+      the ship uses all of (`docs/decisions/0023-the-long-axis-is-the-scroll-axis.md`), so the corridor
+      cannot actually be narrow in the way a wall is. It is measured against the ship at both ends:
+      wide enough to fly, narrow enough that the place is an enclosure rather than a sky.
+    */
+    const size = 240;
+    const { pen, trace } = tracingPen();
+    GROUND_OF.mire!(pen, '#101010', '#405060', '#80a040', size);
+    const solid = trace.passes.filter((pass) => {
+      if (pass.alpha < 1) return false;
+      const ys = pass.subpaths.flat().map((p) => p[1]);
+      return Math.min(...ys) <= 0.5 || Math.max(...ys) >= size - 0.5;
+    });
+    expect(solid.length, 'the mire draws one surface, not two — there is no corridor').toBe(2);
+
+    // The canopy is whichever mass reaches the top of the tile; the pools are the other one.
+    const spans = solid.map((pass) => pass.subpaths.flat().map((p) => laneAt(p[1] / size)));
+    const [roof, floor] = spans[0]!.some((at) => at < 0) ? [spans[0]!, spans[1]!] : [spans[1]!, spans[0]!];
+    const hangsTo = Math.max(...roof);
+    const risesTo = Math.min(...floor);
+    const gap = risesTo - hangsTo;
+    const ship = SPRITE_EXTENT.ship;
+    expect(
+      gap,
+      `the mire's corridor is ${gap.toFixed(0)} lane units at its tightest against a ship ${ship} across — ` +
+        'a passage the player cannot be inside is not a corridor, it is a wall',
+    ).toBeGreaterThan(ship * 3);
+    /*
+      ⚠️ **0.55 AND NOT 0.72, BECAUSE `npm run prove` SAID SO.** The first ceiling was three quarters
+      of the lane and the probe for it — the canopy lifted to tile 0.27 — came back **STILL GREEN**:
+      the gap only reached 59 of a permitted 72, so a canopy raised half way out of the frame was
+      inside the bound. The corridor measures 33 today, so 55 leaves it two thirds of its own width to
+      move in and still catches a roof that has stopped being one.
+    */
+    expect(
+      gap,
+      `the mire's corridor is ${gap.toFixed(0)} of ${ACROSS_SPAN} lane units — nothing is overhanging ` +
+        'anything, which is a sky with a floor rather than the enclosure that was asked for',
+    ).toBeLessThan(ACROSS_SPAN * 0.55);
   });
 });
 

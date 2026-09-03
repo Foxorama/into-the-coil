@@ -41,12 +41,31 @@ export interface Pass {
   readonly subpaths: readonly (readonly Point[])[];
   /** The fill rule it was filled under, which is `evenodd` everywhere in `bake.ts`. */
   readonly rule: CanvasFillRule;
+  /**
+   * The `globalAlpha` in force when it was filled.
+   *
+   * ⚠️ **ADDED FOR A CLAIM THAT IS ABOUT OPACITY AND NOTHING ELSE** — 0221. A planet's ground has to
+   * have *"nothing behind it"*, which is not a shape, a position or a size: it is one number, and
+   * without it here the only way to check it is to read the source and believe it.
+   */
+  readonly alpha: number;
+}
+
+/** One `fillRect()`: its rectangle and the alpha it was laid down at. */
+export interface Rect {
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+  readonly alpha: number;
 }
 
 /** What a trace answers. `passes[0]` is the hull; a second pass is an accent. */
 export interface Trace {
   readonly passes: readonly Pass[];
   readonly strokes: number;
+  /** Every `fillRect`, in order. Empty for everything but a planet's ground. */
+  readonly rects: readonly Rect[];
 }
 
 /**
@@ -64,6 +83,7 @@ const ARC_SEGMENTS = 128;
 /** A pen that records, and the trace it is filling in. */
 export function tracingPen(): { pen: Pen; trace: Trace } {
   const passes: Pass[] = [];
+  const rects: Rect[] = [];
   let subpaths: Point[][] = [];
   let current: Point[] | null = null;
   let strokes = 0;
@@ -128,13 +148,15 @@ export function tracingPen(): { pen: Pen; trace: Trace } {
       current = null;
     },
     fill(rule?: CanvasFillRule): void {
-      passes.push({ subpaths: subpaths.map((s) => [...s]), rule: rule ?? 'nonzero' });
+      passes.push({ subpaths: subpaths.map((s) => [...s]), rule: rule ?? 'nonzero', alpha: pen.globalAlpha });
     },
     stroke(): void {
       strokes++;
     },
-    fillRect(): void {
-      // Only `bound` uses it, and it returns before the fill this trace is about.
+    fillRect(x: number, y: number, w: number, h: number): void {
+      // `bound` returns before the fill this trace is about; a planet's ground uses it for the
+      // shadow under its canopy, which is a claim about alpha rather than about a silhouette.
+      rects.push({ x, y, w, h, alpha: pen.globalAlpha });
     },
     createRadialGradient(): CanvasGradient {
       // Only the nebula uses it. A trace of the sky is not a thing anything asks for.
@@ -150,6 +172,9 @@ export function tracingPen(): { pen: Pen; trace: Trace } {
       },
       get strokes(): number {
         return strokes;
+      },
+      get rects(): readonly Rect[] {
+        return rects;
       },
     },
   };

@@ -64,8 +64,14 @@ export const PROBES = [
     guard: 'is never at the world’s own rate, on whichever side of the game it sits',
     edit: {
       path: 'src/app/mount.ts',
-      find: '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.7 },',
-      replace: '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 1.02 },',
+      // ⚠️ RE-ANCHORED BY 0221: the streak layer is in both sky arrays now, so the line before it —
+      // `skyNear`, which a planet does not have — is what makes this name `SKY` and nothing else.
+      find:
+        '  { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.825 },\n' +
+        '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.7 },',
+      replace:
+        '  { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.825 },\n' +
+        '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 1.02 },',
     },
   },
   {
@@ -81,8 +87,13 @@ export const PROBES = [
     guard: 'and only the streak layer may be in FRONT of the game, and only one of them',
     edit: {
       path: 'src/app/mount.ts',
-      find: '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.7 },',
-      replace: '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 1 },',
+      // ⚠️ RE-ANCHORED BY 0221, on the probe above's own terms.
+      find:
+        '  { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.825 },\n' +
+        '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.7 },',
+      replace:
+        '  { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.825 },\n' +
+        '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 1 },',
     },
   },
 ];

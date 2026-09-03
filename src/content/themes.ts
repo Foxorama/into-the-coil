@@ -162,6 +162,34 @@ export interface ThemeRow {
    */
   nebula: Record<PaletteName, string>;
   /**
+   * The colour of the land, per palette — and `null` for a place that is in space.
+   *
+   * ⚠️ **THIS FIELD IS WHAT MAKES A PLACE A PLANET, AND IT DECIDES THREE THINGS AT ONCE.**
+   * `docs/decisions/0221-a-planet-is-not-a-space.md`. Reported: *"the planets still have the starry
+   * space backdrop visible, ground features need be properly have nothing behind them and the sky in
+   * the background needs to match the sky."* Three separate faults with one cause — 0220 drew ground
+   * into the WEATHER tile, which is drawn behind the star fields, so the ridges were translucent
+   * marks with stars shining through them under a sky that was still the void.
+   *
+   * So a place with land gets:
+   *
+   *   · **an opaque ground tile, drawn in front of everything else in the sky** — nothing behind it
+   *   · **no star fields at all**, because you cannot see stars from under a daytime sky
+   *   · **a `space` colour that is a SKY**, since that is now what is above the horizon
+   *
+   * ⚠️ **ONE FIELD RATHER THAN A FLAG AND A TABLE**, because two would drift. `src/render/bake.ts`'s
+   * `GROUND_OF` says what a place's land LOOKS like and this says what colour it is; a place with one
+   * and not the other draws a silhouette in nothing or a colour on nothing, and
+   * `tests/places.test.ts` holds the two lists equal. It is the same hole 0220's `LANDMARK_OF` opened
+   * and the same guard closing it.
+   *
+   * ⚠️ **AND IT IS DARKER THAN THE SKY ABOVE IT, ALWAYS.** Ground read against a sky is a silhouette
+   * — that is what a horizon IS — and it is also what keeps the accessibility floor: the bottom of the
+   * screen stays the darkest thing on it, so the inks a player has to find are never harder to see
+   * down there than up here.
+   */
+  ground: Record<PaletteName, string> | null;
+  /**
    * How this place mixes the music, as a multiplier over `MUSIC_LADDER`'s own rung.
    *
    * ⚠️ **A MULTIPLIER rather than a ladder, so a theme cannot break the ladder's shape.** 0090's rule
@@ -408,6 +436,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     title: 'The Approach',
     space: { vivid: '#0b0b14', 'high-contrast': '#000000' },
     nebula: { vivid: '#2b3352', 'high-contrast': '#1c1c28' },
+    // In space. Its one horizon arc is a limb of the world being LEFT, seen from off it — 0211.
+    ground: null,
     // The reference, and the number every place used to be — 0183. Level one changes nothing.
     aura: 0.55,
     mix: {
@@ -445,6 +475,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     title: 'Ember Nebula',
     space: { vivid: '#140b16', 'high-contrast': '#050008' },
     nebula: { vivid: '#5c2a4a', 'high-contrast': '#2a1626' },
+    ground: null, // In space, and the Pillars are the proof: they are a thing you fly PAST.
     /*
       ⚠️ **HIGHER THAN THE REFERENCE, BECAUSE THE PLACE IS A BUILD.** A cathedral in a furnace
       escalates to organ and pumping beats and hands over to a Dante's-inferno fight; the dread
@@ -552,8 +583,21 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
    */
   saurian: {
     title: 'Saurian Belt',
-    space: { vivid: '#121006', 'high-contrast': '#040300' },
-    nebula: { vivid: '#4a4418', 'high-contrast': '#241f0c' },
+    /*
+      ⚠️ **A SKY, AND IT IS THE BLUEST ONE THE FLOOR ALLOWS.** Asked for: *"saurian needs blue
+      skies."* `space` is the colour every ink's contrast is measured against
+      (`tests/sky.test.ts`, `docs/decisions/0198-the-accessibility-pass-comes-after-the-game.md`), so
+      *blue sky* and *daylight* are two different asks and only the first one is available: measured,
+      `enemy` sits at **6.09:1** on the old near-black and at **4.07:1** on this, against a floor of
+      3. A daylight blue takes it under. **This is a dark game by construction** — 0024, *there is one
+      game and it is the loud one* — and what a night-blue buys is that the place stops being the
+      void, which is what was actually reported.
+    */
+    space: { vivid: '#16305a', 'high-contrast': '#050b16' },
+    // Cloud in a sky rather than gas in a void: warmer and lighter than the blue it hangs in.
+    nebula: { vivid: '#6a6a48', 'high-contrast': '#2a2a1c' },
+    // Rock in shadow, well under its own sky — a horizon is a silhouette or it is not a horizon.
+    ground: { vivid: '#0a1220', 'high-contrast': '#000208' },
     /*
       ⚠️ **LOWER, BECAUSE A DANCEFLOOR DOES NOT DO SLOW DREAD.** The place is a run; what it wants is
       for the fight to be the arrival, not for a shadow to lengthen across the whole level.
@@ -708,6 +752,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     title: 'The Labyrinth',
     space: { vivid: '#0e0a14', 'high-contrast': '#030006' },
     nebula: { vivid: '#3a2a52', 'high-contrast': '#1d1428' },
+    ground: null, // A corridor in space. It has walls, and a wall is not a horizon.
     /*
       ⚠️ **THE HIGHEST BUT ONE, AND THE FICTION IS THE ARGUMENT.** A labyrinth is the place where the
       thing hunting you is already there; the aura is what says so long before it is on the field.
@@ -801,8 +846,19 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
    */
   rime: {
     title: 'Rime Shelf',
-    space: { vivid: '#08131a', 'high-contrast': '#000408' },
-    nebula: { vivid: '#1e4a5c', 'high-contrast': '#0e2e3a' },
+    /*
+      ⚠️ **AUSTERE IS THE WORD, AND IT IS A COLOUR DECISION BEFORE IT IS A COUNT.** Asked for: *"rime
+      shelf needs to be icy and austere."* A flat colourless steel-blue with nothing warm anywhere in
+      it — the sky over an ice sheet has no weather in it and no sunset, and what makes a place austere
+      is that there is nothing to look at rather than that there is something bleak to look at.
+      `enemy` sits at **3.70:1** here against a floor of 3, which is the palest of the three planets and
+      is the point.
+    */
+    space: { vivid: '#1a3a50', 'high-contrast': '#040d16' },
+    // Ice haze, barely separable from the sky it hangs in. Austerity is a small number here.
+    nebula: { vivid: '#3f6478', 'high-contrast': '#16303c' },
+    // The shelf: blue-white shadow. Nearly the darkest ground of the three, under the palest sky.
+    ground: { vivid: '#0b1a26', 'high-contrast': '#000308' },
     /*
       ⚠️ **THE LOWEST.** Ice is still, and the shelf's threat is the one that arrives without warning.
       A build that spends the level would spend the only surprise the place has.
@@ -891,8 +947,28 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
    */
   mire: {
     title: 'The Toxic Mire',
-    space: { vivid: '#0b1206', 'high-contrast': '#010500' },
-    nebula: { vivid: '#3a5418', 'high-contrast': '#1c2a0c' },
+    /*
+      ⚠️ **THE DIMMEST OF THE THREE PLANETS, AND ON PURPOSE.** Asked for: *"toxic mire is also a
+      planet, but needs an overhanging canopy so that it feels like you're flying through a tight
+      narrow corridor above the toxic pools below and beneath the overhanging canopy above."* Almost
+      none of this place's sky is visible — the canopy takes the top of the screen and the pools take
+      the bottom — so a bright one would only show through the gaps and read as holes in a roof.
+      What little of it there is is a sick yellow-green murk hanging between the two.
+    */
+    /*
+      ⚠️ **DARKENED FROM `#1c2a10` AFTER THE BENCH, AND THE REASON IS THAT IT IS AIR.** At the first
+      value the murk between the canopy and the pools came out as a solid green slab with a dark frame
+      round it — the shot showed a wall, not a corridor. Every other place's `space` is something you
+      are looking THROUGH at nothing; here it is something you are looking through at a roof and a
+      floor, and it has to be darker than both the things it separates are lit by or it competes with
+      them.
+    */
+    space: { vivid: '#111a08', 'high-contrast': '#040701' },
+    // Spore haze, and it is the thing that is actually visible here rather than the sky behind it.
+    nebula: { vivid: '#5a7a24', 'high-contrast': '#2a3a10' },
+    // ⚠️ **ONE COLOUR FOR BOTH THE CANOPY AND THE POOLS**, because they are one enclosure and the
+    // corridor between them is the subject. Two tones would read as a floor and a separate ceiling.
+    ground: { vivid: '#080f04', 'high-contrast': '#000200' },
     /*
       ⚠️ **HIGH, BECAUSE THE MIRE SEEPS.** The one place whose whole character is that it reaches you
       before you reach it.
@@ -974,6 +1050,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     title: 'The Black Heart',
     space: { vivid: '#10050f', 'high-contrast': '#040003' },
     nebula: { vivid: '#5a1e3c', 'high-contrast': '#2c0c1c' },
+    ground: null, // Nothing to stand on. The place's whole character is absence — 0211.
     /*
       ⚠️ **THE HIGHEST, BECAUSE HERE THE AURA IS THE PLACE.** The Black Heart is what the run has been
       travelling towards; 0170 already made it audible in its own fight, and this is the other half —
