@@ -25,6 +25,7 @@ import {
   LAYER_PAN,
   PAN_LIMIT,
   type MusicLayer,
+  type MusicLevel,
 } from '../src/content/music.ts';
 import {
   AURA_RAMP_SECONDS,
@@ -42,6 +43,13 @@ import {
   nextBarFrom,
   placeArrivesAt,
   SCHEDULE_AHEAD,
+  // 0212: the music room's walk.
+  AUDITION_FIGHT_UNITS,
+  UNITS_PER_SECOND,
+  auditionAura,
+  auditionLength,
+  auditionRung,
+  levelOfPlace,
 } from '../src/app/music.ts';
 import { auraCeilingOf, rungOf, THEME_KINDS } from '../src/content/themes.ts';
 import { loopsAt } from './bakes.ts';
@@ -2501,5 +2509,136 @@ describe('0175 — the desk does not write a music gain behind the mixer’s bac
       'these write a music gain outside restate — an experiment going around the mixer arrives off ' +
         'the bar and over 30 ms, which is the cut 0175 exists for',
     ).toEqual([]);
+  });
+});
+
+/**
+ * THE MUSIC ROOM WALKS THE LEVEL.
+ *
+ * `docs/decisions/0212-the-room-walks-the-level.md`. Reported 2026-09-03: *"why the ingame music
+ * sounds different from the music that plays in the music menu section."*
+ *
+ * ⚠️ **THE DEFECT WAS A ROOM WITH AN OPINION OF ITS OWN**, so every guard here is a form of one
+ * sentence: *the room does not decide anything a level has already decided.* A room that grew a
+ * second ladder, a second set of boundaries or a second idea of how fast the world goes past would
+ * redden something below, and that is what makes them invariants rather than a description of the
+ * code as it stands.
+ */
+describe('the music room auditions a level rather than a rung', () => {
+  it('every place is played by a level, so every button has a walk behind it', () => {
+    for (const theme of THEME_KINDS) {
+      const level = levelOfPlace(theme);
+      expect(level, `${theme} is a place no level plays — its button would audition nothing`).not.toBeNull();
+      expect(level!.theme, `levelOfPlace(${theme}) returned a level of some other place`).toBe(theme);
+    }
+  });
+
+  /*
+    ⚠️ **THE ONE GUARD THIS WHOLE DECISION IS ABOUT.** `auditionRung` exists to convert a position
+    into the arguments a run supplies from the field; if it ever answers something `musicLevelFor`
+    would not, the room is back to having its own ladder and the report comes back.
+
+    ⚠️ **AT AND AROUND EVERY BOUNDARY, NOT AT SAMPLES.** A walk that agreed everywhere except one
+    unit either side of a section change would sound right for 118 seconds and wrong at the four
+    moments the player is listening hardest.
+  */
+  it('agrees with a run at every section boundary of every level, on both sides of it', () => {
+    for (const kind of LEVEL_KINDS) {
+      const level = LEVELS[kind];
+      for (const entry of level.sections) {
+        for (const at of [entry.at - 1, entry.at, entry.at + 1]) {
+          if (at < 0 || at >= level.bossAt) continue;
+          expect(
+            auditionRung(level, at),
+            `${kind} at ${at}: the room and a run disagree about which rung this is`,
+          ).toBe(musicLevelFor(at, false, level.sections));
+        }
+      }
+    }
+  });
+
+  it('reaches every rung a level names, and then both rungs of the fight', () => {
+    for (const kind of LEVEL_KINDS) {
+      const level = LEVELS[kind];
+      const reached = new Set<MusicLevel>();
+      // A unit at a time: the walk moves 0.6 of one per step, so nothing can be stepped over.
+      for (let along = 0; along <= auditionLength(level); along++) reached.add(auditionRung(level, along));
+      for (const entry of level.sections) {
+        expect([...reached], `${kind}: the walk never reaches ${entry.section}, which its script opens`).toContain(
+          entry.section,
+        );
+      }
+      expect([...reached], `${kind}: the walk never reaches the fight`).toContain('boss');
+      expect([...reached], `${kind}: the walk never reaches the fight's second rung`).toContain('bossPeak');
+    }
+  });
+
+  /*
+    ⚠️ **IN SECONDS, WHICH IS CLAUDE.md's *AT LEAST ONE ASSERTION IN UNITS THE PLAYER EXPERIENCES*.**
+    `AUDITION_FIGHT_UNITS` is defined as two phrases, so a guard written in units would be checking
+    that the constant equals itself — 0027's own subject. What is actually being held is that a
+    listener hears each of the fight's two rungs for long enough that every layer's pattern has come
+    round, and `PHRASE_SECONDS` is the definition of long enough.
+
+    ⚠️ **THE FIRST DRAFT GAVE `boss` ELEVEN SECONDS AND THIS IS THE GUARD THAT WOULD HAVE SAID SO.**
+    A straight health line from 1 to 0 crosses `BOSS_PEAK_HEALTH` — which is 0.78, not the half its
+    own header claims — a fifth of the way in. It was caught by reading a printout instead.
+  */
+  it('holds each rung of the fight for a whole phrase, in seconds', () => {
+    for (const kind of LEVEL_KINDS) {
+      const level = LEVELS[kind];
+      const held = new Map<MusicLevel, number>();
+      const length = auditionLength(level);
+      for (let along = level.bossAt; along <= length; along++) {
+        const rung = auditionRung(level, along);
+        held.set(rung, (held.get(rung) ?? 0) + 1 / UNITS_PER_SECOND);
+      }
+      for (const rung of ['boss', 'bossPeak'] as const) {
+        expect(
+          held.get(rung) ?? 0,
+          `${kind}: the room holds ${rung} for under a phrase, so a listener never hears all of it`,
+        ).toBeGreaterThanOrEqual(PHRASE_SECONDS);
+      }
+    }
+  });
+
+  /*
+    ⚠️ **THE AURA IS THE ONE THING IN THE MUSIC THAT GOES ANYWHERE** — 0107's *"amp up until you beat
+    the boss"* — so a room that left it flat would audition every place with its shape removed. This
+    holds the shape rather than any value: silent through the opening 0043 reserves, climbing, and at
+    the top by the end of the fight.
+  */
+  it('climbs the aura across the walk, and is silent for the opening a level reserves', () => {
+    for (const kind of LEVEL_KINDS) {
+      const level = LEVELS[kind];
+      expect(auditionAura(level, level.theme, 0), `${kind}: the room opens under a dread`).toBe(0);
+      expect(
+        auditionAura(level, level.theme, AURA_ONSET_UNITS),
+        `${kind}: the aura starts before the opening stretch is over`,
+      ).toBe(0);
+      const atBoss = auditionAura(level, level.theme, level.bossAt);
+      expect(atBoss, `${kind}: the aura has not climbed by the time the fight starts`).toBeGreaterThan(0);
+      expect(
+        auditionAura(level, level.theme, auditionLength(level)),
+        `${kind}: the aura does not reach its loudest by the end of the fight`,
+      ).toBeGreaterThanOrEqual(atBoss);
+    }
+  });
+
+  /*
+    ⚠️ **THE ROOM MOVES AT THE GAME'S RATE, AND A SECOND RATIO WOULD BE A SECOND `hear.mjs`** —
+    `docs/decisions/0116-the-rig-plays-the-level.md` is the decision about a number restated where it
+    is also measured. Every build in the arrangement is authored in BARS and every boundary in UNITS;
+    the only thing holding those together is this ratio, so a room that walked at its own speed would
+    put every arrival at a moment nobody has ever heard it arrive.
+  */
+  it('walks at the rate the world goes past a run', () => {
+    expect(UNITS_PER_SECOND, 'the room and the run disagree about how fast the world goes past').toBe(
+      SCROLL_PER_STEP * STEPS_PER_SECOND,
+    );
+    expect(
+      AUDITION_FIGHT_UNITS / UNITS_PER_SECOND,
+      'the fight is not two phrases long, which is what makes each of its rungs hearable',
+    ).toBeCloseTo(PHRASE_SECONDS * 2, 6);
   });
 });

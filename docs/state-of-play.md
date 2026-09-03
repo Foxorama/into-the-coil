@@ -236,6 +236,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **THE RIG HEARS IN STEREO — four of five modes folded a panned mix to mono, `--play` included; every guard about the width was green** | [0209](decisions/0209-the-rig-hears-in-stereo.md) |
 | **THE TITLE PLAYS THE MUSIC — a music room on the start screen; the fifth screen mounted INVISIBLE because the stylesheet named its four by hand** | [0210](decisions/0210-the-title-plays-the-music.md) |
 | **EVERY PLACE HAS ITS OWN STRUCTURE — all seven authored, and the three seam rules became a field on the mark instead of three arguments in three comments** | [0211](decisions/0211-every-place-has-its-own-structure.md) |
+| **THE ROOM WALKS THE LEVEL — the music room played one fixed rung on a premise that had stopped being true, and 0210's *what is owed* came back as a report** | [0212](decisions/0212-the-room-walks-the-level.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were
@@ -704,6 +705,24 @@ this heading when it stops being true rather than adding another one below it.**
 moved. **The work is ART AND GAME now.** The music is not finished and is not the thing being asked
 for.
 
+⚠️ **AND ONE THING IS WAITING ON AN EAR, WHICH IS NOT THE SAME AS BEING NEXT.** It is written here
+rather than as a fourth item below, because *this* is the file's one marker and
+[0029](decisions/0029-the-tracked-record-is-the-record.md)'s own note above says a second one reads
+exactly like a live one.
+
+**Does the music room sound like the game yet?** [0212](decisions/0212-the-room-walks-the-level.md)
+found the room playing one fixed rung — 8–9 layers against a run's 12–15, `lead` never opened at all,
+71% of a level's travel at a balance further from the room than one place is from another — and made
+it walk the level instead. **Every figure in that decision is a model quantity and none of them can
+hear.** What was reported is that two things sounded different; what is claimed is that they no
+longer do.
+
+⚠️ **AND THE SECOND ANSWER IS THE ONE TO LISTEN FOR HARDEST.** The room is now the only place in the
+game where a place's whole arc plays with no gunfire over it and no ducking — so a build that does
+not land, or a rung that does not read as a change, is **audible there and nowhere else**. That is a
+better instrument than it was asked to be, and it may report on the composition rather than on the
+room.
+
 ---
 
 ## ⚠️ THE THREE THINGS THE NEXT SESSION DOES, IN THIS ORDER
@@ -756,6 +775,12 @@ geometry was written, which is what stopped it becoming one shape seven times.
 ⚠️ **WHAT IS OWED IS A PLAY-TEST ON THE SEQUENCE, NOT ON ANY ONE PLACE.** *"Each level is a deeper
 step further into the galaxy"* is a claim about seven skies IN ORDER, and nothing here has been seen
 in order by anybody — every one was judged alone, at a fixed camera, in the bench.
+
+⚠️ **AND THE TOOL FOR IT EXISTS NOW, BY ACCIDENT** — [0212](decisions/0212-the-room-walks-the-level.md).
+The music room walks each place's own level at the run's own scroll rate, so *Play all* is **seven
+skies in the run's order, scrolling, for about twenty minutes**, with a seek bar to jump within one.
+That was built to fix the music and it answers this too. It is not the whole ask — there is no ship
+and no fight in it — but *have these been seen in order by anybody* stops being a no.
 
 ⚠️ **DENSITY WAS NEVER THE PROBLEM, TWICE.** Both were already among the thickest weather in the game
 and both read as fog with blobs. **Every axis `SkyStyle` has moves a blob**, and a pile of blobs has

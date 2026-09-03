@@ -914,6 +914,33 @@ export const MUSIC_LEVELS = ['calm', 'run', 'push', 'surge', 'approach', 'boss',
 export type MusicLevel = (typeof MUSIC_LEVELS)[number];
 
 /**
+ * What to CALL a rung where a player can read it — `docs/decisions/0212-the-room-walks-the-level.md`.
+ *
+ * ── FIVE OF THE SEVEN ARE THE KEY ITSELF, AND THAT IS THE ARGUMENT FOR THE TABLE ────────────────
+ *
+ * ⚠️ **A `Record` OVER THE CLOSED UNION RATHER THAN A CAPITALISE** — 0016. `bossPeak` is the one
+ * that cannot be shown as it is spelled, and a function that special-cased it would be a table with
+ * one row hidden inside an `if`. Written out, a rung added to `MUSIC_LEVELS` fails to compile until
+ * somebody has decided what a player should see, which is the whole mechanism.
+ *
+ * ⚠️ **THESE ARE THE COMPOSER'S OWN WORDS AND NOT NEW ONES.** `run`, `push`, `surge` and `approach`
+ * are what every header in `src/content/` already calls them and what
+ * `docs/decisions/0102-the-music-goes-somewhere.md` named them; inventing a second, friendlier set
+ * for the UI would put the thing on screen and the thing in the tables one rename apart.
+ */
+export const MUSIC_LEVEL_LABEL: Record<MusicLevel, string> = {
+  calm: 'Calm',
+  run: 'Run',
+  push: 'Push',
+  surge: 'Surge',
+  approach: 'Approach',
+  boss: 'Boss',
+  // ⚠️ **The one rung whose name is not a word.** 0113's second fight rung — the wall of sound that
+  // lands when the fight is half won — and *Peak* is what `rig/dash.ts`'s own control already calls it.
+  bossPeak: 'Boss — peak',
+};
+
+/**
  * What each level has open, per layer.
  *
  * ⚠️ **The drone comes DOWN for the boss**, which is the only place the ladder is not monotonic and

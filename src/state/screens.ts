@@ -344,9 +344,11 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     without anybody remembering to come and add it, and the order is the table's order, which is the
     order a run meets them in.
 
-    ⚠️ **`steps: false`.** Nothing is simulated here — no run exists, the camera does not move, and
-    the only thing happening is the mixer. A screen that stepped would be a run the player did not
-    start, which is the loss `title` deliberately took.
+    ⚠️ **`steps: false`, AND THE CAMERA MOVES ANYWAY SINCE 0212.** Nothing is SIMULATED here — no
+    ship, no bodies, no collisions, and no run the player did not start, which is the loss `title`
+    deliberately took. What moves is a camera walking the place's own level, which is what makes the
+    room play the same music a run does: `docs/decisions/0212-the-room-walks-the-level.md` has why
+    those are different things, and `src/app/mount.ts` drives it off `onTick` rather than off `step`.
   */
   music: {
     heading: 'Music',
@@ -357,7 +359,18 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     ],
     choices: [],
     steps: false,
-    dims: true,
+    /*
+      ⚠️ **THE ONLY PANELLED SCREEN THAT DOES NOT DIM, AND IT IS THE WHOLE FEATURE — 0212.** Asked
+      for as *"a scrolling background to match the level/sound being played"*. A dim paints the space
+      colour over the scene (`src/app/chrome.ts` sets it inline), so the room would be auditioning a
+      place with a lid on it. `.itc-music-panel` gives the words their own translucent backing, which
+      is the half of a dim that was ever doing work here.
+
+      ⚠️ **`dims: false` DOES NOT MEAN `pointer-events: none`.** That is `cleared`'s rule and it is on
+      `.itc-cleared` by name, because a level break is a banner over a run the player is still flying
+      and this is a screen they are pressing buttons on.
+    */
+    dims: false,
     timeout: null,
   },
 };

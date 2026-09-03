@@ -3340,7 +3340,9 @@ export function respawn(w: World): void {
  * `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md` scans this file for exactly this
  * syntax inside the loop. A level places one or two.
  */
-function landmarksFor(level: LevelRow): Landmarks {
+// ⚠️ **EXPORTED SINCE 0212**: the music room walks a level's landmarks past without starting one, and
+// a second `.map` in the shell would be a second description of what a landmark entry becomes.
+export function landmarksFor(level: LevelRow): Landmarks {
   // @setup: a level boundary is not a frame — startLevel and advanceLevel call this once per level
   return level.landmarks.map((entry) => ({
     sprite: SPRITE.landmark,

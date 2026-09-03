@@ -258,6 +258,125 @@ ${each('-choices')} {
   max-width: min(100%, 60ch);
 }
 .itc-music-action { width: min(100%, 18ch); }
+/*
+  ── THE NOW PLAYING READOUT — decision 0212, and no extension on that path ──────────────────────
+  (0210's own note: the prefix scanner reads every dotted token in this template as a class name.)
+
+  ⚠️ **THE MUSIC ROOM IS THE ONE SCREEN THAT DOES NOT DIM, AND THAT IS THE FEATURE.** Every other
+  panelled screen paints the space colour over the scene; this one is a window onto the place being
+  auditioned, scrolling past at the rate a run would. So the panel needs a backing of its own or the
+  words sit on a moving star field and cannot be read — which is what a dim used to do for free.
+
+  ⚠️ **A translucent backing and not the space colour at full strength.** The point of the screen is
+  that you can see where you are; a solid box is the dim back again with extra steps.
+*/
+.itc-music-panel {
+  background: color-mix(in srgb, var(--itc-void) 78%, transparent);
+  border-radius: 0.6em;
+}
+/*
+  The place, the section it has reached, and how far through it is. One block so the gap rules above
+  space it like any other part of the panel.
+*/
+.itc-music-now {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: min(0.4rem, 1.2cqh);
+  width: min(100%, 44ch);
+}
+/*
+  ⚠️ **AN AUTHOR display BEATS THE hidden ATTRIBUTE, AND THE ROOM OPENED WITH AN EMPTY BAR ON IT.**
+  hidden is a User Agent rule of display: none, so the flex above outranks it on specificity alone and
+  the readout was visible before anything was playing — an outlined bar under the heading, reading
+  nothing. Caught by looking at the screen; no guard here could have, because the element was in the
+  DOM, was marked hidden, and said so to everything that asked.
+*/
+.itc-music-now[hidden] { display: none; }
+.itc-music-now-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1ch;
+}
+.itc-music-now-place { font-weight: 700; }
+/*
+  ⚠️ **The rung is what the MIXER is doing, so it is the thing that changes without being pressed.**
+  It gets the emphasis a label does not: the place is chosen and stays, the section arrives.
+*/
+.itc-music-now-section {
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+/*
+  ⚠️ **THE BAR TAKES THE POINTER AND THE ARROW KEYS, AND IT IS NOT IN THE PAD'S CONTROL RING.**
+  decision 0046 makes the ring a ring of buttons; a slider in it would answer a stick press by seeking
+  rather than by moving on, and every place on this screen is already reachable by a button. The seek
+  is the convenience, not the way through the screen.
+*/
+.itc-music-now-bar {
+  position: relative;
+  height: 0.75em;
+  border: 2px solid currentColor;
+  border-radius: 0.4em;
+  cursor: pointer;
+  overflow: hidden;
+  touch-action: none;
+}
+.itc-music-now-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  background: currentColor;
+  opacity: 0.55;
+}
+/*
+  One tick per section the level opens, plus the fight. Absolutely placed off the same fraction the
+  fill is, so the boundary the player can see is the boundary the mixer moves on.
+*/
+.itc-music-now-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: currentColor;
+  opacity: 0.9;
+}
+/*
+  The section names under the bar. Absolutely placed so they cannot make the row taller than one line
+  however many there are, and hidden on a short screen by the block at the end of this sheet.
+*/
+.itc-music-now-legend {
+  position: relative;
+  height: 1.1em;
+  font-size: 0.62em;
+  opacity: 0.72;
+}
+.itc-music-now-name {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.itc-music-now-time {
+  display: flex;
+  justify-content: space-between;
+  gap: 1ch;
+  font-size: 0.7em;
+  opacity: 0.8;
+  font-variant-numeric: tabular-nums;
+}
+/*
+  ⚠️ **What is coming, and it is EMPTY unless Play all is running.** Asked for as an indication of
+  which track is playing when play all is selected; a single place loops, so there is no next and the
+  middle of the row stays blank rather than saying so.
+*/
+.itc-music-now-next {
+  opacity: 0.9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 ${each('-action')} {
   font: inherit;
   padding: 0.55em 1em;
@@ -614,6 +733,14 @@ ${each('-action-cursor')} {
     the line box carry most of the height.
   */
   ${each('-action')} { padding: 0.35em 0.8em; }
+  /*
+    ⚠️ **THE LEGEND IS THE FIRST THING TO GO ON A SHORT SCREEN, AND THE BAR IS THE LAST** — 0212, on
+    the same ladder the padding above comes off. Five section names under a bar 300px wide are five
+    names that overlap each other; what the readout is FOR survives without them, because the head
+    already says which section is playing and the ticks still say where the boundaries are.
+  */
+  .itc-music-now-legend { display: none; }
+  .itc-music-now { width: 100%; }
 }
 `;
 
@@ -640,6 +767,58 @@ interface Panel {
    * second description this file already refuses elsewhere.
    */
   options: Partial<Readonly<Record<SettingName, readonly HTMLButtonElement[]>>>;
+  /** The music room's readout — 0212. `null` on every other screen, which is all of them. */
+  now: NowPlayingParts | null;
+}
+
+/**
+ * The elements the room's readout writes into, held so `setNowPlaying` never queries the DOM.
+ *
+ * ⚠️ **Looked up once at boot, exactly as `controls` and `timer` are.** This is written about six
+ * times a second while a walk is running, and a `querySelector` per write would be a lookup per
+ * write of a tree that has not changed since it was built.
+ */
+interface NowPlayingParts {
+  root: HTMLElement;
+  place: HTMLElement;
+  section: HTMLElement;
+  bar: HTMLElement;
+  fill: HTMLElement;
+  legend: HTMLElement;
+  at: HTMLElement;
+  next: HTMLElement;
+  of: HTMLElement;
+  /** The place whose ticks are currently drawn, so a row that has not changed is not rebuilt. */
+  drawnFor: string;
+}
+
+/**
+ * What the music room is playing right now — `docs/decisions/0212-the-room-walks-the-level.md`.
+ *
+ * ⚠️ **PUSHED, LIKE EVERY OTHER READOUT ON THIS INTERFACE.** The chrome holds no opinion about where
+ * a walk has got to; `src/app/mount.ts` owns the position and hands over what to draw, on the same
+ * terms `setHud` and `setChoice` already state.
+ */
+export interface NowPlaying {
+  /** The place, in `src/content/themes.ts`'s own words. */
+  place: string;
+  /** The rung it has reached, in `MUSIC_LEVEL_LABEL`'s. */
+  section: string;
+  /** How far through the walk, 0 to 1 — where the fill ends and the position reads. */
+  through: number;
+  /** Seconds into the walk, and how long the whole of it is. */
+  at: number;
+  of: number;
+  /**
+   * Where each section opens, as a fraction — or `null` to keep the ticks that are already drawn.
+   *
+   * ⚠️ **`null` IS THE COMMON CASE AND IS NOT AN OMISSION.** The ticks are a property of the level,
+   * so they change when the place does and at no other time; rebuilding six of them six times a
+   * second would be the only per-frame DOM work on this interface.
+   */
+  marks: readonly { at: number; label: string }[] | null;
+  /** The place *Play all* moves to next, or `null` when one place is looping on its own. */
+  next: string | null;
 }
 
 /**
@@ -725,6 +904,13 @@ export interface Chrome {
    * a page it does not own (0003) and a rule on `body` would reach past the game.
    */
   setFace(face: 'pixel' | 'clean'): void;
+  /**
+   * Say what the music room is playing and how far through it is — 0212. `null` hides the readout.
+   *
+   * Called on a change of what it displays rather than per frame, on `setTimer`'s own terms: the
+   * caller decides the resolution, and today that is a thousandth of a walk.
+   */
+  setNowPlaying(now: NowPlaying | null): void;
   /** Drop every listener. */
   release(): void;
 }
@@ -741,6 +927,164 @@ function hasChrome(screen: Screen): boolean {
   return row.heading.length > 0 || row.actions.length > 0;
 }
 
+/** `m:ss`. A walk is minutes long, and 170.6 is not a thing anybody reads off a bar. */
+function clockOf(seconds: number): string {
+  const whole = seconds < 0 ? 0 : Math.floor(seconds);
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
+}
+
+/**
+ * How far a step of the arrow keys moves the walk, as a fraction of it.
+ *
+ * ⚠️ **A twentieth, which is about nine seconds of a three-minute walk** — small enough to land
+ * inside a section and large enough that crossing one does not take twenty presses. A fixed number of
+ * SECONDS would move a different distance per place, and a walk is a position rather than a clock.
+ */
+const SEEK_STEP = 0.05;
+
+/**
+ * The music room's readout — 0212.
+ *
+ * ⚠️ **BUILT ONCE AT BOOT, LIKE EVERY OTHER PART OF THE CHROME**, which is why it may allocate
+ * freely: `makeChrome` runs from `src/app/mount.ts` and that file is on `tests/budget.test.ts`'s
+ * deliberately-cold list.
+ *
+ * ⚠️ **THE BAR IS A `slider` AND NOT A `<button>`, WHICH KEEPS IT OUT OF THE PAD'S RING ON PURPOSE.**
+ * `docs/decisions/0046-a-pad-is-a-first-class-way-to-press-a-button.md` makes `move` and `activate`
+ * a ring of controls to press; a slider in that ring would answer a stick with a seek. Every place on
+ * this screen is reachable by a button, so the seek is the convenience rather than the way through.
+ */
+function buildNowPlaying(
+  prefix: string,
+  onSeek: (through: number) => void,
+  listeners: (() => void)[],
+): NowPlayingParts {
+  const make = (part: string, tag = 'div'): HTMLElement => {
+    const el = document.createElement(tag);
+    el.className = prefix + part;
+    return el;
+  };
+  const root = make('now');
+  /*
+    ⚠️ **HIDDEN UNTIL SOMETHING IS PLAYING**, because the room opens with nothing selected and a bar
+    reading 0:00 / 0:00 under an empty place name is a readout claiming to be a readout.
+  */
+  root.hidden = true;
+
+  const head = make('now-head');
+  const place = make('now-place', 'span');
+  const section = make('now-section', 'span');
+  head.append(place, section);
+
+  const bar = make('now-bar');
+  bar.setAttribute('role', 'slider');
+  bar.setAttribute('tabindex', '0');
+  bar.setAttribute('aria-label', 'Position in the level');
+  bar.setAttribute('aria-valuemin', '0');
+  bar.setAttribute('aria-valuemax', '100');
+  const fill = make('now-fill');
+  bar.appendChild(fill);
+
+  const legend = make('now-legend');
+
+  const time = make('now-time');
+  const at = make('now-at', 'span');
+  const next = make('now-next', 'span');
+  const of = make('now-of', 'span');
+  time.append(at, next, of);
+
+  root.append(head, bar, legend, time);
+
+  /*
+    ⚠️ **THE FRACTION IS READ OFF THE BAR'S OWN BOX RATHER THAN OFF THE PANEL'S.** The overlay is a
+    scroll container (0049), so a page scrolled by a pixel makes a `clientX` measured against anything
+    else wrong by a pixel — and `getBoundingClientRect` is the one reading that already accounts for
+    it. It is called on a drag rather than in a frame, which is what makes a layout read affordable.
+  */
+  const seekTo = (clientX: number): void => {
+    const box = bar.getBoundingClientRect();
+    if (box.width <= 0) return;
+    onSeek((clientX - box.left) / box.width);
+  };
+  /*
+    ── THE DRAG, AND THE ORDER OF THESE TWO LINES IS A BUG THAT WAS ALREADY WRITTEN ────────────────
+
+    ⚠️ **POINTER CAPTURE, SO A DRAG THAT LEAVES THE BAR IS STILL A DRAG.** Without it the scrub stops
+    the moment the finger strays above the bar — which on a 12px-tall control is most drags — and the
+    player is left holding a pointer that does nothing.
+
+    ⚠️ **BUT THE SEEK HAPPENS FIRST, BECAUSE `setPointerCapture` CAN THROW AND WOULD TAKE THE SEEK
+    WITH IT.** It raises `NotFoundError` for a `pointerId` that is not an active pointer, and the
+    first draft called it on the line above the seek — so any input that produced one would make a
+    press on the bar do nothing at all, and throw where nobody is looking. **No observed failure came
+    from this**: it was found by reading the order while chasing a seek that turned out to be a race
+    in the test. It is written down because *the enhancement ate the feature* is a shape worth
+    recognising, not because it fired.
+
+    ⚠️ **AND THE DRAG DOES NOT DEPEND ON THE CAPTURE EITHER.** `dragging` is this file's own latch;
+    capture is what keeps the events arriving at the bar when it works, and its absence costs a drag
+    that leaves the element rather than the whole control.
+  */
+  let dragging = false;
+  const down = (event: PointerEvent): void => {
+    dragging = true;
+    seekTo(event.clientX);
+    try {
+      bar.setPointerCapture(event.pointerId);
+    } catch {
+      // No capture: the window listeners below are what carry the drag instead.
+    }
+    event.preventDefault();
+  };
+  const move = (event: PointerEvent): void => {
+    if (!dragging) return;
+    seekTo(event.clientX);
+  };
+  /*
+    ⚠️ **ON THE WINDOW, BECAUSE A RELEASE OFF THE BAR IS THE COMMON CASE.** A `pointerup` the bar
+    never hears leaves `dragging` true, and the next pointer to cross the control would seek without
+    anybody pressing anything.
+  */
+  const up = (): void => {
+    dragging = false;
+  };
+  /*
+    ⚠️ **ARROWS, HOME AND END — the same keys a range input answers**, so the seek is reachable
+    without a pointer. `aria-valuenow` is written by `setNowPlaying`, so what is announced is the
+    position the walk actually reached rather than the one that was asked for.
+  */
+  const key = (event: KeyboardEvent): void => {
+    const now = Number(bar.getAttribute('aria-valuenow') ?? '0') / 100;
+    const to =
+      event.key === 'ArrowRight' || event.key === 'ArrowUp'
+        ? now + SEEK_STEP
+        : event.key === 'ArrowLeft' || event.key === 'ArrowDown'
+          ? now - SEEK_STEP
+          : event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? 1
+              : null;
+    if (to === null) return;
+    onSeek(to);
+    event.preventDefault();
+  };
+  bar.addEventListener('pointerdown', down);
+  bar.addEventListener('pointermove', move);
+  bar.addEventListener('keydown', key);
+  window.addEventListener('pointerup', up);
+  window.addEventListener('pointercancel', up);
+  listeners.push(() => {
+    bar.removeEventListener('pointerdown', down);
+    bar.removeEventListener('pointermove', move);
+    bar.removeEventListener('keydown', key);
+    window.removeEventListener('pointerup', up);
+    window.removeEventListener('pointercancel', up);
+  });
+
+  return { root, place, section, bar, fill, legend, at, next, of, drawnFor: '' };
+}
+
 /**
  * Build every screen's chrome. `onAction` is fired with the screen whose control was pressed.
  *
@@ -751,6 +1095,8 @@ export function makeChrome(
   colours: Palette,
   onAction: (screen: Screen, index: number) => void,
   onChoice: (name: SettingName, index: number) => void,
+  // 0212: the music room's seek. A fraction of the walk, and the shell decides what that means.
+  onSeek: (through: number) => void,
 ): Chrome {
   const style = document.createElement('style');
   style.textContent = STYLE;
@@ -831,6 +1177,9 @@ export function makeChrome(
     const settingsBox = document.createElement('div');
     settingsBox.className = prefix + 'settings-box';
 
+    // 0212: the music room's readout, and `null` on every other screen.
+    const nowPlaying = screen === 'music' ? buildNowPlaying(prefix, onSeek, listeners) : null;
+
     /*
       ⚠️ **THE KEY, ON THE TITLE SCREEN ONLY, AND IT IS THE UPGRADES AND NOT THE ENEMIES.** Asked for
       in play: *"on the intro starting screen we need a quick user key of what each upgrade does. We
@@ -879,6 +1228,18 @@ export function makeChrome(
       body.append(column, choices, settingsBox);
       panel.appendChild(body);
     } else {
+      /*
+        ── THE MUSIC ROOM'S READOUT, ABOVE ITS BUTTONS — 0212 ───────────────────────────────────────
+
+        ⚠️ **ABOVE, BECAUSE IT IS WHAT THE BUTTONS DID.** A player presses a place and then looks for
+        what happened; below the nine controls it would be under the fold on the short screens
+        decision 0049 is about, and the answer to *which one is playing* would be the thing furthest
+        from the thing that asked.
+
+        ⚠️ **Built for this screen only, on the same terms the pickup key is built for the title.**
+        Every other panelled screen gets `now: null` and never learns this exists.
+      */
+      if (nowPlaying !== null) panel.appendChild(nowPlaying.root);
       panel.appendChild(choices);
       panel.appendChild(settingsBox);
     }
@@ -991,7 +1352,7 @@ export function makeChrome(
       panel.appendChild(timer);
     }
 
-    panels[screen] = { root, controls, timer, options };
+    panels[screen] = { root, controls, timer, options, now: nowPlaying };
     elements.push(root);
   }
 
@@ -1203,6 +1564,59 @@ export function makeChrome(
       }
       hud.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
       strip.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
+    },
+    setNowPlaying(now: NowPlaying | null): void {
+      const parts = panels.music?.now;
+      if (parts === undefined || parts === null) return;
+      if (now === null) {
+        parts.root.hidden = true;
+        /*
+          ⚠️ **The drawn place is forgotten as well as hidden**, or a listener who leaves the room and
+          comes back to the SAME place gets the ticks that were already there — which is correct today
+          and stops being correct the moment a level's script can change between visits.
+        */
+        parts.drawnFor = '';
+        return;
+      }
+      parts.root.hidden = false;
+      parts.place.textContent = now.place;
+      parts.section.textContent = now.section;
+      const percent = (now.through < 0 ? 0 : now.through > 1 ? 1 : now.through) * 100;
+      parts.fill.style.width = `${percent.toFixed(1)}%`;
+      parts.bar.setAttribute('aria-valuenow', percent.toFixed(0));
+      /*
+        ⚠️ **The bar's spoken value is the PLACE and the SECTION, not a percentage.** A screen reader
+        announcing "62" says nothing about where that is; this is the one control on the screen whose
+        number is meaningless without the thing it is a number of.
+      */
+      parts.bar.setAttribute('aria-valuetext', `${now.section}, ${clockOf(now.at)} of ${clockOf(now.of)}`);
+      parts.at.textContent = clockOf(now.at);
+      parts.of.textContent = clockOf(now.of);
+      parts.next.textContent = now.next === null ? '' : `next: ${now.next}`;
+      // The ticks are the level's, so they are redrawn when the level is — see `NowPlaying.marks`.
+      if (now.marks === null || parts.drawnFor === now.place) return;
+      parts.drawnFor = now.place;
+      parts.bar.replaceChildren(parts.fill);
+      parts.legend.replaceChildren();
+      for (const mark of now.marks) {
+        const at = `${(mark.at * 100).toFixed(1)}%`;
+        /*
+          ⚠️ **The tick at zero is skipped and the name at zero is not.** A boundary drawn on the
+          bar's own left border is a thicker border rather than a mark; the label still belongs under
+          it, because the first section is a section like any other.
+        */
+        if (mark.at > 0) {
+          const tick = document.createElement('div');
+          tick.className = prefixFor('music') + 'now-tick';
+          tick.style.left = at;
+          parts.bar.appendChild(tick);
+        }
+        const name = document.createElement('span');
+        name.className = prefixFor('music') + 'now-name';
+        name.textContent = mark.label;
+        name.style.left = at;
+        parts.legend.appendChild(name);
+      }
     },
     release(): void {
       for (const drop of listeners) drop();
