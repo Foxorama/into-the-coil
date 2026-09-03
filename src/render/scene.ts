@@ -94,6 +94,42 @@ export interface Landmark {
   depth: number;
   /** Its own width in world units, so the painter knows when it has fully arrived and fully gone. */
   extent: number;
+  /**
+   * How far the camera travels for one beat of it, in world units. `0` for a landmark that is still.
+   *
+   * ⚠️ **A LANDMARK IS THE ONLY BAKED THING IN THE GAME THAT MOVES, AND IT MOVES BY ITS SCALE.** The
+   * atlas is bitmaps and nothing in `src/render/` animates one; *"a beating black heart"* needs the
+   * object to change between frames, and the two ways to get that are a second baked frame — a whole
+   * sprite slot, a whole second drawing to keep in step with the first — or the one number `blit`
+   * already takes. It swells and settles; that IS a beat.
+   *
+   * ⚠️ **DRIVEN BY THE CAMERA, WHICH IS 0034's *every speed is in the camera's frame*.** There is no
+   * clock in this file and adding one would give the renderer state; `cameraAlong` is already an
+   * argument, already monotonic, and already what every other number on this type is measured
+   * against.
+   */
+  beat: number;
+}
+
+/** How much bigger a landmark gets at the top of its beat. */
+const BEAT_SWELL = 0.055;
+
+/**
+ * The shape of one beat, over a phase from 0 to 1.
+ *
+ * ⚠️ **TWO THUMPS AND THEN NOTHING, BECAUSE ONE THUMP IS A PULSING LIGHT AND NOT A HEART.** The
+ * *lub-dub* is the whole recognisable signature — a strong contraction, a weaker one close behind it,
+ * and then a long rest that is most of the cycle. A single sine would read as breathing.
+ *
+ * ⚠️ **IT REACHES ZERO AT BOTH ENDS OF THE PHASE, WHICH IS WHAT MAKES IT LOOP WITHOUT A STEP.** Both
+ * triangles are clear of the wrap, so the value at phase 1 is the value at phase 0 — a discontinuity
+ * here would be the object jumping a size every cycle, forever, which is the kind of thing that gets
+ * reported as a rendering bug rather than as a tuning one.
+ */
+function beatAt(phase: number): number {
+  const lub = Math.max(0, 1 - Math.abs(phase - 0.07) / 0.07);
+  const dub = Math.max(0, 1 - Math.abs(phase - 0.27) / 0.06);
+  return lub + dub * 0.55;
 }
 
 /** Every landmark this level places. Empty for a place whose landmark is not authored yet. */
@@ -247,7 +283,22 @@ function paintLandmarks(
     const inView = view.alongSpan + half - (local - mark.at) * mark.depth;
     // Not yet arrived, or fully gone. Both are the common case for most of a level.
     if (inView > view.alongSpan + half || inView < -half) continue;
-    surface.blit(mark.sprite, screenX(view, inView, mark.lane), screenY(view, inView, mark.lane), view.scale);
+    /*
+      ⚠️ **THE DOUBLE MODULO IS DEFENCE, NOT A FIX, AND SAYING SO IS THE POINT.** `%` keeps the sign of
+      its left operand, so a negative `local - mark.at` would run the beat backwards and then jump —
+      the hazard `paintSky` carries the same guard for. **It cannot happen today**: `at` is where the
+      landmark ARRIVES, and the `continue` above skips anything that has not, so by the time this line
+      runs the difference is never negative. That was measured rather than assumed —
+      `tests/places.test.ts` tried to assert the sign across the arrival and found nothing was drawn
+      there at all.
+
+      It stays because the alternative is a beat whose correctness depends on a CULLING condition four
+      lines up agreeing with it, which is the kind of coupling that survives every test and breaks the
+      day someone widens the view or gives a landmark a negative `at`.
+    */
+    const swell =
+      mark.beat > 0 ? 1 + BEAT_SWELL * beatAt(((((local - mark.at) / mark.beat) % 1) + 1) % 1) : 1;
+    surface.blit(mark.sprite, screenX(view, inView, mark.lane), screenY(view, inView, mark.lane), view.scale * swell);
   }
 }
 

@@ -3350,6 +3350,7 @@ export function landmarksFor(level: LevelRow): Landmarks {
     at: entry.at,
     lane: entry.lane,
     depth: entry.depth,
+    beat: entry.beat,
   }));
 }
 

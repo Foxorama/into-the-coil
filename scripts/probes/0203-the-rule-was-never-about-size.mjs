@@ -44,8 +44,10 @@ export const PROBES = [
     guard: 'a landmark is the slowest thing on screen',
     edit: {
       path: 'src/content/levels.ts',
-      find: '    landmarks: [{ at: 1299, lane: 72, depth: 0.08 }],',
-      replace: '    landmarks: [{ at: 1299, lane: 72, depth: 0.2 }],',
+      // Re-anchored when the entry gained `beat` — 0220. The invariant is unchanged; the line it
+      // lives on grew a field.
+      find: '    landmarks: [{ at: 1299, lane: 72, depth: 0.08, beat: 0 }],',
+      replace: '    landmarks: [{ at: 1299, lane: 72, depth: 0.2, beat: 0 }],',
     },
   },
 ];

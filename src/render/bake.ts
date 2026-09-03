@@ -873,8 +873,35 @@ export const ACCENT_OF: Record<SpriteKind, Accent | null> = {
  * it was already correct.
  */
 function drawLandmark(ctx: Pen, ink: string, space: string, size: number, theme: ThemeKind): void {
-  if (theme !== 'nebula') return; // No landmark authored for this place yet — 0203 lands one at a time.
+  LANDMARK_OF[theme]?.(ctx, ink, space, size);
+}
 
+/**
+ * What each place's landmark is, or `null` where none is authored.
+ *
+ * ⚠️ **A TABLE AT TWO, WHERE `if (theme !== 'nebula') return` WAS HONEST AT ONE.** 0203 landed the
+ * Pillars behind an early return and said so — *"0203 lands one at a time"* — which is the right shape
+ * for a slot with one occupant and the wrong one for a slot with two, because the second entry is
+ * where a place starts being able to get the wrong drawing by not being mentioned.
+ * `docs/decisions/0016-a-hub-enumerates-kinds.md`: a `Record` over the closed union, so a new place is
+ * a compile error rather than a silently empty sky, and `null` is a decision that has been taken
+ * rather than a case nobody wrote.
+ */
+// ⚠️ **EXPORTED FOR THE GUARD THAT HOLDS THE HOLE THIS TABLE OPENS** — 0220. A `null` row is a
+// decision; a LEVEL that places a landmark into a `null` row is a silent empty blit, every frame, in
+// exactly the right place. `tests/places.test.ts` compares the two lists, which it cannot do from
+// outside the module.
+export const LANDMARK_OF: Record<ThemeKind, ((ctx: Pen, ink: string, space: string, size: number) => void) | null> = {
+  approach: null,
+  nebula: (ctx, ink, space, size) => drawPillars(ctx, ink, space, size),
+  saurian: null,
+  labyrinth: null,
+  rime: null,
+  mire: null,
+  core: (ctx, ink, space, size) => drawHeart(ctx, ink, space, size),
+};
+
+function drawPillars(ctx: Pen, ink: string, space: string, size: number): void {
   /*
     ── THE PILLARS OF CREATION ─────────────────────────────────────────────────────────────────────
 
@@ -886,10 +913,41 @@ function drawLandmark(ctx: Pen, ink: string, space: string, size: number, theme:
     specific object and not a field of marks — `fieldOf`'s streams exist so that two starfields differ,
     and there is only ever one of these.
   */
-  const columns: readonly { base: number; width: number; height: number; lean: number }[] = [
-    { base: 0.34, width: 0.15, height: 0.92, lean: 0.04 },
-    { base: 0.56, width: 0.11, height: 0.68, lean: -0.03 },
-    { base: 0.73, width: 0.08, height: 0.46, lean: 0.02 },
+  /*
+    ⚠️ **FOUR COLUMNS NOW, AND THE FOURTH IS THE DEPTH.** *"the pillars of god need a lot more
+    character and depth to them."* The three 0203 authored are unchanged — they are the silhouette the
+    place is already recognised by. What is added is one standing BEHIND them: `far`, which is drawn
+    first and at 0.6 alpha, so the gas shows through it.
+
+    ⚠️ **AND PARTIAL ALPHA IS THE ONLY DEPTH CUE AVAILABLE HERE.** A landmark is two colours — the
+    place's gas and the place's space (0204) — so there is no third tone to put a distant object in,
+    and 0081 forbids telling two things apart by colour anyway. A hole punched at 0.6 through the
+    light IS a hole further back in the light, which is what atmospheric depth is in the real object.
+  */
+  /*
+    ⚠️ **`foot` IS PER COLUMN, AND WITHOUT IT A SHORT COLUMN IS AN INVISIBLE ONE.** The landmark is 75
+    units square and sits at lane 72, so its bottom eleventh is off the lane entirely — which is
+    correct for the tall three, whose feet should be lost in the bank they grow out of, and fatal for
+    anything short. The first pair of far columns were `height: 0.28` standing on the shared `0.97`,
+    which put them entirely below the screen; the bench showed three columns where five were drawn.
+
+    **And it is also the depth cue**, which is why it is not simply a fix. A thing further away stands
+    HIGHER in a view with a horizon, so the two behind stand higher AND smaller AND fainter — three
+    agreeing signals rather than one, which is 0081's rule applied to distance instead of to identity.
+  */
+  const columns: readonly {
+    base: number;
+    width: number;
+    height: number;
+    lean: number;
+    foot: number;
+    far: boolean;
+  }[] = [
+    { base: 0.84, width: 0.05, height: 0.3, lean: -0.02, foot: 0.74, far: true },
+    { base: 0.19, width: 0.042, height: 0.24, lean: 0.03, foot: 0.71, far: true },
+    { base: 0.34, width: 0.15, height: 0.92, lean: 0.04, foot: 0.97, far: false },
+    { base: 0.56, width: 0.11, height: 0.68, lean: -0.03, foot: 0.94, far: false },
+    { base: 0.73, width: 0.08, height: 0.46, lean: 0.02, foot: 0.88, far: false },
   ];
 
   /*
@@ -918,9 +976,21 @@ function drawLandmark(ctx: Pen, ink: string, space: string, size: number, theme:
       `r <= min(x, 1 - x)`, and it is the kind of defect no number in this file would ever have
       reported.
     */
-    { x: 0.46, y: 0.62, r: 0.44, a: 0.95 },
+    /*
+      ⚠️ **THE RULE IS `r <= min(x, 1 - x, y, 1 - y)` AND IT WAS WRITTEN AS THE x HALF ONLY.**
+      `fillRect` clips at all four edges, not two — and the first lobe was `y: 0.62, r: 0.44`, which is
+      0.06 of a tile past the bottom. It ended on a straight horizontal line at about 13% alpha,
+      underneath the columns' feet, which is why five months of shots did not report it. The `r` values
+      below are the largest each centre can carry; nothing else about the gas moved.
+    */
+    { x: 0.46, y: 0.6, r: 0.4, a: 0.95 },
     { x: 0.68, y: 0.42, r: 0.3, a: 0.75 },
     { x: 0.28, y: 0.38, r: 0.26, a: 0.6 },
+    // Added with the columns: a hot core high between the two tallest, and two soft flanks that give
+    // the mass an edge in places and none in others — 0203's own reason for there being more than one.
+    { x: 0.44, y: 0.28, r: 0.2, a: 0.85 },
+    { x: 0.8, y: 0.68, r: 0.17, a: 0.5 },
+    { x: 0.15, y: 0.7, r: 0.14, a: 0.45 },
   ];
   for (const lobe of lobes) {
     const glow = ctx.createRadialGradient(
@@ -938,9 +1008,25 @@ function drawLandmark(ctx: Pen, ink: string, space: string, size: number, theme:
     ctx.fillRect(0, 0, size, size);
   }
 
+  /*
+    ── AND THE COLUMNS ─────────────────────────────────────────────────────────────────────────────
+
+    ⚠️ **THE EDGE IS SAMPLED AND KNOBBED RATHER THAN NAMED IN FOUR POINTS.** 0203's version was a
+    four-point windward edge and a three-point lee, which is a smooth wedge — the report was that it
+    wants *character*, and character in this object is the lumpiness: the knots of denser dust that
+    survive being eaten away while the gas around them does not. So the edge is walked in eight steps
+    with a bump at each, from a seeded stream so the bake is the same picture every time.
+
+    ⚠️ **THE BUMPS ARE ONE-SIDED.** `-0.12` to `+0.34` of a half-width — a knot sticks OUT into the
+    light much further than a hollow eats in, because the hollow is what the light is doing. A
+    symmetric jitter came out as a wobbly line rather than a knotted one.
+  */
+  const rng = makeRng('sky').stream('nebula/pillars');
+  const EDGE_STEPS = 8;
+
   for (const column of columns) {
-    // The feet sit just off the bottom edge and the tips reach up: -y is up, across the lane.
-    const foot = size * 0.97;
+    // The feet sit low and the tips reach up: -y is up, across the lane.
+    const foot = size * column.foot;
     const tip = foot - size * column.height;
     const mid = size * column.base;
     const halfWidth = (size * column.width) / 2;
@@ -949,40 +1035,271 @@ function drawLandmark(ctx: Pen, ink: string, space: string, size: number, theme:
     const drift = size * column.lean;
     const rise = foot - tip;
 
-    // The windward edge, kept as its own list so the body and the rim cannot disagree about it.
-    const windward: readonly [number, number][] = [
-      [mid - halfWidth, foot],
-      [mid - halfWidth * 0.78 + drift * 0.5, foot - rise * 0.45],
-      [mid - halfWidth * 0.52 + drift * 0.8, foot - rise * 0.72],
-      [mid - tipHalf + drift, tip],
-    ];
+    /*
+      The half-width at height `t`, tapering to the tip and flaring back out over the bottom quarter.
+      **The flare is the plinth**: a pillar of this kind does not stand on the ground, it grows out of
+      the bank it is the last of, and a column that meets its own foot at a constant width reads as a
+      post that was put there.
+    */
+    const spanAt = (t: number): number =>
+      (halfWidth + (tipHalf - halfWidth) * t) * (1 + 0.4 * Math.max(0, 1 - t * 4));
 
-    // Opaque, and in the SPACE colour: the column is a hole in the gas, not a shape on top of it.
-    ctx.globalAlpha = 1;
+    // The windward edge, kept as its own list so the body, the lit face and the rim cannot disagree.
+    const windward: [number, number][] = [];
+    for (let s = 0; s <= EDGE_STEPS; s += 1) {
+      const t = s / EDGE_STEPS;
+      // The ends are left clean: a knob on the foot is a rock, and a knob on the tip fights the fingers.
+      const knob = s === 0 || s === EDGE_STEPS ? 0 : rng.range(-0.16, 0.5) * halfWidth;
+      windward.push([mid - spanAt(t) - knob + drift * t, foot - rise * t]);
+    }
+
+    const trace = (): void => {
+      ctx.beginPath();
+      ctx.moveTo(windward[0]![0], windward[0]![1]);
+      for (let i = 1; i < windward.length; i++) ctx.lineTo(windward[i]![0], windward[i]![1]);
+    };
+
+    // A hole in the gas, not a shape on top of it — and a PARTIAL hole for the two standing behind.
+    ctx.globalAlpha = column.far ? 0.6 : 1;
     ctx.fillStyle = space;
-    ctx.beginPath();
-    ctx.moveTo(windward[0]![0], windward[0]![1]);
-    for (let i = 1; i < windward.length; i++) ctx.lineTo(windward[i]![0], windward[i]![1]);
-    // The blunt fingers at the top, which are the thing that makes it THESE pillars.
-    ctx.lineTo(mid - tipHalf * 0.2 + drift, tip - size * 0.035);
-    ctx.lineTo(mid + tipHalf * 0.35 + drift, tip + size * 0.01);
-    ctx.lineTo(mid + tipHalf + drift, tip - size * 0.02);
+    trace();
+    /*
+      The blunt fingers at the top, which are the thing that makes it THESE pillars. **Two fingers and
+      a notch between them**, drawn tall enough to survive the object being three hundred pixels of
+      screen: 0203's version reached up a flat `size * 0.035` and read as a point once the column was
+      tapered, which is the one part of the silhouette a viewer already has a picture of.
+    */
+    const reach = tipHalf * 1.4;
+    ctx.lineTo(mid - tipHalf * 0.75 + drift, tip - reach);
+    ctx.lineTo(mid - tipHalf * 0.15 + drift, tip - reach * 0.85);
+    ctx.lineTo(mid + tipHalf * 0.05 + drift, tip + reach * 0.35);
+    ctx.lineTo(mid + tipHalf * 0.6 + drift, tip - reach * 0.7);
+    ctx.lineTo(mid + tipHalf + drift, tip + reach * 0.1);
     // And back down the lee side, which is smoother — the columns are lit from one side.
-    ctx.lineTo(mid + halfWidth * 0.82 + drift * 0.6, foot - rise * 0.6);
-    ctx.lineTo(mid + halfWidth, foot);
+    for (let s = EDGE_STEPS; s >= 0; s -= 1) {
+      const t = s / EDGE_STEPS;
+      ctx.lineTo(mid + spanAt(t) * 0.88 + drift * t * 0.6, foot - rise * t);
+    }
     ctx.closePath();
     ctx.fill();
 
-    // A rim on the windward edge — the gas lit up where it meets the dust. It is the only bright
-    // thing on the column and is what stops the silhouette reading as a flat cut-out.
-    ctx.globalAlpha = 0.85;
-    ctx.lineWidth = Math.max(1, size * 0.01);
+    /*
+      ⚠️ **THE LIT FACE, WHICH IS WHAT MAKES THE COLUMN A SOLID RATHER THAN A CUT-OUT.** Gas ink at a
+      tenth, stroked along a line offset a little way INSIDE the windward edge — so the column runs
+      light where it turns towards the star and dark through its core. A rim alone draws the outline
+      of a hole; this is the only mark in the object that says there is something between its two
+      edges.
+
+      It is drawn at a fraction of a half-width and therefore stays inside the body it is shading,
+      which is why it needs no clip — a clip here would be a third state for `Pen` to carry.
+    */
+    ctx.globalAlpha = column.far ? 0.07 : 0.18;
     ctx.strokeStyle = ink;
+    ctx.lineWidth = halfWidth * 0.55;
     ctx.beginPath();
-    ctx.moveTo(windward[0]![0], windward[0]![1]);
-    for (let i = 1; i < windward.length; i++) ctx.lineTo(windward[i]![0], windward[i]![1]);
+    for (let s = 0; s <= EDGE_STEPS; s += 1) {
+      const t = s / EDGE_STEPS;
+      const x = windward[s]![0]! + spanAt(t) * 0.45;
+      if (s === 0) ctx.moveTo(x, windward[s]![1]!);
+      else ctx.lineTo(x, windward[s]![1]!);
+    }
+    ctx.stroke();
+
+    // A rim on the windward edge — the gas lit up where it meets the dust. It is the brightest thing
+    // on the column and is what stops the silhouette reading as a flat cut-out.
+    ctx.globalAlpha = column.far ? 0.4 : 0.85;
+    ctx.lineWidth = Math.max(1, size * (column.far ? 0.005 : 0.01));
+    trace();
+    ctx.stroke();
+
+    /*
+      ── THE STREAMERS ────────────────────────────────────────────────────────────────────────────
+
+      Gas boiling off the tips and being carried away leeward. **It is the one part of this object
+      that is in motion**, and it is what the columns are FOR: the whole shape is the leftover of
+      something being blown apart from above.
+
+      Drawn in gas ink and fading out, so they read as light rather than as more dust — the opposite
+      of everything else here, which is why they are the last thing drawn.
+
+      ⚠️ **THE ARC IS SAMPLED INTO `lineTo` RATHER THAN DRAWN WITH A CURVE VERB.** `Pen` is fifteen
+      members on purpose — it is what lets `tests/paths.ts` implement one and read back where the ink
+      actually went — and `quadraticCurveTo` is not among them. Widening a type that exists to be
+      narrow, so that three wisps can be one call each instead of six, is the wrong trade.
+    */
+    if (!column.far) {
+      ctx.lineWidth = Math.max(1, size * 0.004);
+      ctx.globalAlpha = 0.3;
+      for (let i = 0; i < 3; i += 1) {
+        const from = mid + rng.range(-0.6, 0.9) * tipHalf + drift;
+        const reach = rng.range(0.06, 0.15) * size;
+        ctx.beginPath();
+        ctx.moveTo(from, tip);
+        for (let s = 1; s <= 6; s += 1) {
+          const t = s / 6;
+          // One quadratic, evaluated: the control point is leeward and low, so the wisp leaves the
+          // tip going up and is bent away — which is the direction the light is coming from.
+          const cx = from + reach * 0.4;
+          const cy = tip - reach * 0.7;
+          const x = (1 - t) * (1 - t) * from + 2 * (1 - t) * t * cx + t * t * (from + reach * 1.4);
+          const y = (1 - t) * (1 - t) * tip + 2 * (1 - t) * t * cy + t * t * (tip - reach);
+          ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * The Black Heart's landmark — the thing the place is named after, finally on screen.
+ *
+ * Asked for by name: *"black heart needs to be a beating black heart."*
+ *
+ * ⚠️ **IT IS THE PILLARS' OWN CONSTRUCTION AND NOT A SECOND STYLE.** Lobes of gas, a silhouette
+ * punched out of them in the space colour, and a lit rim on the side the light is on
+ * ([0204](docs/decisions/0204-a-landmark-is-lit-by-the-place-it-stands-in.md)). What makes it a
+ * different object is the shape and the fact that it MOVES; a second visual language for the second
+ * landmark would be `docs/decisions/0196-the-backdrop-is-rounded-out.md`'s failure with the axes
+ * pointing the other way.
+ *
+ * ⚠️ **THE OUTLINE IS THE VALENTINE CURVE, AND THAT IS DELIBERATE RATHER THAN LAZY.** 0203 chose the
+ * Pillars because *"one of the most recognisable silhouettes there is"* survives being drawn in a
+ * single ink at any size, which is the whole reason a landmark can be flat. The same argument picks
+ * this outline over an anatomical one: at a fifth of a screen, through gas, moving, an anatomically
+ * correct heart is a lump. **What stops it reading as a sticker is everything else** — it is drawn as
+ * a hole rather than a fill, it is off-vertical, it has vessels coming out of it, and it beats.
+ */
+function drawHeart(ctx: Pen, ink: string, space: string, size: number): void {
+  /*
+    ⚠️ **THE GAS IS BEHIND IT AND IT IS A RING, NOT A DISC.** The Black Heart is the last place and its
+    character is absence — `SKY_STYLE_OF.core` is the sparsest sky in the game. A filled glow here
+    would make it the brightest thing in the level; three lobes arranged AROUND the silhouette leave
+    the middle dark, so what the player sees is a hole with light escaping past its edges.
+
+    Every radius obeys `r <= min(x, 1 - x, y, 1 - y)`, which is the rule the Pillars' gas learned the
+    hard way: `fillRect` clips a radial gradient at all four edges, and a lobe wider than its own
+    distance from one of them ends on a straight line.
+  */
+  const lobes: readonly { x: number; y: number; r: number; a: number }[] = [
+    // ⚠️ Raised from a first pass at 0.5/0.4/0.34, where the bench showed a heart outlined in the
+    // dark with nothing behind it. **The whole construction is a hole in light**, so if the light is
+    // not there the silhouette is a line drawing — which is 0204's defect with the two inks swapped.
+    { x: 0.5, y: 0.26, r: 0.25, a: 0.85 },
+    { x: 0.25, y: 0.6, r: 0.25, a: 0.65 },
+    { x: 0.76, y: 0.62, r: 0.24, a: 0.55 },
+  ];
+  for (const lobe of lobes) {
+    const glow = ctx.createRadialGradient(
+      size * lobe.x,
+      size * lobe.y,
+      size * lobe.r * 0.12,
+      size * lobe.x,
+      size * lobe.y,
+      size * lobe.r,
+    );
+    glow.addColorStop(0, ink);
+    glow.addColorStop(1, 'transparent');
+    ctx.globalAlpha = lobe.a;
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, size, size);
+  }
+
+  /*
+    ⚠️ **LEANING, AND THE UPRIGHT VERSION IS THE ONE THAT LOOKS LIKE AN EMOJI.** A real heart sits at
+    an angle in the chest; a symmetrical one sits on a greetings card. The lean is applied as a
+    rotation of the sampled curve rather than a canvas transform, because `Pen` is fifteen members and
+    `rotate` is not one of them — the same trade the Pillars' streamers make.
+  */
+  const cx = size * 0.5;
+  const cy = size * 0.47;
+  const k = size * 0.0185;
+  const lean = 0.22;
+  const cosL = Math.cos(lean);
+  const sinL = Math.sin(lean);
+  const POINTS = 96;
+  const outline: number[][] = [];
+  for (let i = 0; i < POINTS; i += 1) {
+    const t = (i / POINTS) * Math.PI * 2;
+    const s = Math.sin(t);
+    const px = 16 * s * s * s;
+    // ⚠️ NEGATED, because canvas y runs DOWN and this curve is written with y running up. Drawn
+    // unnegated it is a heart standing on its head, which is the kind of thing only a picture reports.
+    const py = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+    outline.push([cx + (px * cosL - py * sinL) * k, cy + (px * sinL + py * cosL) * k]);
+  }
+
+  const trace = (): void => {
+    ctx.beginPath();
+    ctx.moveTo(outline[0]![0]!, outline[0]![1]!);
+    for (let i = 1; i < outline.length; i += 1) ctx.lineTo(outline[i]![0]!, outline[i]![1]!);
+    ctx.closePath();
+  };
+
+  /*
+    ── THE VESSELS ─────────────────────────────────────────────────────────────────────────────────
+
+    Four of them, off the top, bending away and thinning as they go. **They are drawn BEFORE the body
+    so the body closes over their roots** — a tube that meets the heart on a visible seam reads as a
+    pipe bolted to it, and this thing has to look grown.
+  */
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = space;
+  ctx.lineCap = 'round';
+  const vessels: readonly { from: number; sweep: number; reach: number; width: number }[] = [
+    // The reaches stop short of the sprite's top edge: a vessel cut off by the tile boundary is a
+    // straight line across the sky, which is the failure the Pillars' gas lobes were fixed for.
+    { from: -0.42, sweep: -0.55, reach: 0.24, width: 0.05 },
+    { from: -0.14, sweep: -0.12, reach: 0.3, width: 0.062 },
+    { from: 0.16, sweep: 0.3, reach: 0.27, width: 0.045 },
+    { from: 0.42, sweep: 0.75, reach: 0.2, width: 0.034 },
+  ];
+  for (const vessel of vessels) {
+    const rootX = cx + vessel.from * size * 0.3;
+    const rootY = cy - size * 0.18;
+    for (let s = 0; s < 5; s += 1) {
+      // Segment by segment, because a vessel narrows and `Pen` has no variable-width stroke — the
+      // same reason `paintStructure` keeps its per-segment loop for a taper and for nothing else.
+      const a = s / 5;
+      const b = (s + 1) / 5;
+      const at = (u: number): number[] => [
+        rootX + Math.sin(u * vessel.sweep * Math.PI) * size * vessel.reach * 0.7,
+        rootY - u * size * vessel.reach,
+      ];
+      ctx.lineWidth = Math.max(1, size * vessel.width * (1 - a * 0.75));
+      ctx.beginPath();
+      ctx.moveTo(at(a)[0]!, at(a)[1]!);
+      ctx.lineTo(at(b)[0]!, at(b)[1]!);
+      ctx.stroke();
+    }
+  }
+
+  // The body: a hole in the light, opaque, exactly as a Pillar is.
+  ctx.fillStyle = space;
+  trace();
+  ctx.fill();
+
+  /*
+    ⚠️ **THE CHAMBERS ARE DRAWN INSIDE AND THEY ARE WHAT KEEPS IT FROM BEING A CARD.** Two arcs of gas
+    at a tenth, following the two lobes — the muscle catching the light from behind. Without them the
+    silhouette is a flat symbol; with them it has an inside, which is
+    `docs/decisions/0149-a-hull-has-an-interior.md`'s claim applied to something that is not a hull.
+  */
+  ctx.strokeStyle = ink;
+  ctx.globalAlpha = 0.13;
+  ctx.lineWidth = size * 0.028;
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.arc(cx + side * size * 0.115 - sinL * size * 0.05, cy - size * 0.06, size * 0.12, 0, Math.PI * 2);
     ctx.stroke();
   }
+
+  // And the rim, on the side the gas is thickest — the light getting past the edge of the hole.
+  ctx.globalAlpha = 0.8;
+  ctx.lineWidth = Math.max(1, size * 0.009);
+  trace();
+  ctx.stroke();
   ctx.globalAlpha = 1;
 }
 
@@ -2138,25 +2455,56 @@ export interface StructureMark {
 
 
 /**
+ * What a run of crossing lines is: how many, how much they wander, and how heavy they sit.
+ *
+ * ⚠️ **AN OBJECT RATHER THAN SEVEN POSITIONAL ARGUMENTS, WHICH IS WHAT ASKING FOR MORE DETAIL COST.**
+ * The first version took `(size, stream, count, wander, from, to)` and every call site read as six
+ * bare numbers. Ember Nebula now draws two runs — heavy lanes and fine filaments — that differ in
+ * `alpha` and `steps` as well, and `crossing(size, 'nebula/filaments', 9, 0.08, 0.006, 0.02, 0.4, 14)`
+ * is a line nobody can check by reading.
+ */
+interface Crossing {
+  /** The RNG stream. Two runs that share one draw the same lines, which 0211's guard calls a defect. */
+  stream: string;
+  count: number;
+  /** How far a step may wander from the last, as a fraction of the tile. */
+  wander: number;
+  /** The narrowest and the widest stroke, as fractions of the tile. */
+  from: number;
+  to: number;
+  /** How dark it sits over the gas. Defaults to the weight the heavy lanes were written at. */
+  alpha?: number;
+  /** How many segments the line is drawn in — more segments is a finer, more restless wander. */
+  steps?: number;
+}
+
+/**
  * A wandering line across the whole tile, ending where it began.
  *
  * The shared shape behind Ember Nebula's dust and The Labyrinth's corridor walls — one crosses in
  * dark dust and the other in long structure, and both are *a line that must arrive where it left*.
  */
-function crossing(size: number, stream: string, count: number, wander: number, from: number, to: number): StructureMark[] {
-  const rng = makeRng('sky').stream(stream);
+function crossing(size: number, spec: Crossing): StructureMark[] {
+  const rng = makeRng('sky').stream(spec.stream);
+  const steps = spec.steps ?? 8;
   const out: StructureMark[] = [];
-  for (let i = 0; i < count; i += 1) {
+  for (let i = 0; i < spec.count; i += 1) {
     const start = rng.range(0.12, 0.88) * size;
-    const steps = 8;
     const points: number[][] = [];
     let y = start;
     for (let s = 0; s <= steps; s += 1) {
       // ⚠️ The last point is forced back to `start`, which is the whole of 0207.
       points.push([(s / steps) * size, s === steps ? start : y]);
-      y += rng.range(-wander, wander) * size;
+      y += rng.range(-spec.wander, spec.wander) * size;
     }
-    out.push({ points, width: rng.range(from, to) * size, alpha: 0.55, crosses: true, taper: false, lit: false });
+    out.push({
+      points,
+      width: rng.range(spec.from, spec.to) * size,
+      alpha: spec.alpha ?? 0.55,
+      crosses: true,
+      taper: false,
+      lit: false,
+    });
   }
   return out;
 }
@@ -2219,26 +2567,164 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
     ── EMBER NEBULA: DUST IN FRONT OF LIGHT — 0207 ────────────────────────────────────────────────
     The Pillars' own sentence at the scale of the sky, which is what makes the near view and the wide
     view read as one object.
+
+    ⚠️ **THREE RUNS AT THREE WEIGHTS, BECAUSE THE REPORT WAS ABOUT DENSITY AND NOT ABOUT SHAPE.**
+    *"ember nebula is looking good, but it needs a lot more detail throughout the level."* The three
+    heavy lanes are kept exactly as 0207 wrote them — they are what the place already reads as — and
+    what is added underneath them is finer and fainter, so the picture gains texture without gaining a
+    second silhouette to compete with the Pillars.
+
+    ⚠️ **AND ALL OF IT IS DARK, WHICH IS WHY THERE CAN BE THIS MUCH OF IT.** 0196 measured Ember
+    Nebula at about a third of the contrast headroom the other five places have, and 0211 concluded
+    from that measurement that nothing here may be lit. **A dark mark spends none of it** — it darkens
+    the ground the bright inks are read against, which moves every ratio the right way. So the budget
+    that forbids one lit filament permits nineteen dark ones, and the depth has to come from WEIGHT
+    (0.55 → 0.40 → 0.70) rather than from light.
   */
-  nebula: (size) => crossing(size, 'nebula/lanes', 3, 0.05, 0.05, 0.11),
+  nebula: (size) => {
+    // The lanes 0207 authored, untouched: the same stream, the same numbers, the same three lines.
+    const lanes = crossing(size, { stream: 'nebula/lanes', count: 3, wander: 0.05, from: 0.05, to: 0.11 });
+    /*
+      Fine dust threaded between them — thinner, fainter, and far more restless (14 segments against
+      the lanes' 8), so it reads as the same material at a smaller scale rather than as more lanes.
+    */
+    const filaments = crossing(size, {
+      stream: 'nebula/filaments',
+      count: 9,
+      wander: 0.028,
+      from: 0.002,
+      to: 0.007,
+      alpha: 0.32,
+      steps: 14,
+    });
+    /*
+      ── THE GLOBULES ────────────────────────────────────────────────────────────────────────────
+
+      The dark knots that sit in a nebula's lanes — the same material the Pillars are, at the size
+      the sky can carry. **The heaviest marks in the place at 0.7**, which is what puts them in front
+      of everything else here.
+
+      ⚠️ **STRETCHED ALONG x, AND THAT IS NOT A ROUNDING OF SAURIAN BELT'S ROCKS.** A rock there is an
+      angular polygon at even radii; this is a soft ellipse drawn out 2.4× the way the gas is flowing,
+      so the two read as *debris* and *dust* rather than as one generator in two colours — 0211's
+      second claim, which is the one 0196 failed.
+    */
+    const rng = makeRng('sky').stream('nebula/globules');
+    const knots: StructureMark[] = [];
+    for (let knot = 0; knot < 5; knot += 1) {
+      const cx = rng.range(0.1, 0.9) * size;
+      const cy = rng.range(0.14, 0.86) * size;
+      for (let i = 0; i < 4; i += 1) {
+        const x = cx + rng.range(-0.05, 0.05) * size;
+        const y = cy + rng.range(-0.035, 0.035) * size;
+        /*
+          ⚠️ **A FRACTION OF A TILE IS NOT A SIZE UNTIL THE TILE IS A NUMBER, AND THE FIRST DRAFT
+          MISSED BY 4×.** `SPRITE_EXTENT.skyNebula` is `ACROSS_SPAN * 2` — 200 world units, about a
+          screen wide — so `0.03` of it is 6 units, and stretched 2.4× along the flow that is a 92-pixel
+          slab. The bench showed exactly that: angular masses across half the screen, and the warm glow
+          the place is recognised by eaten by them. At `0.011` a globule is about 20 pixels, which is a
+          knot in the dust.
+        */
+        const r = rng.range(0.004, 0.011) * size;
+        const lean = rng.range(-0.25, 0.25);
+        const points: number[][] = [];
+        // Nine sides at gently uneven radii: soft, not faceted. A globule has no edges.
+        for (let s = 0; s < 9; s += 1) {
+          const a = (s / 9) * Math.PI * 2;
+          const rr = r * rng.range(0.82, 1.18);
+          const dx = Math.cos(a) * rr * 2.4;
+          const dy = Math.sin(a) * rr;
+          points.push([x + dx - dy * lean, y + dy + dx * lean]);
+        }
+        knots.push({ points, width: 0, alpha: 0.55, crosses: false, taper: false, lit: false });
+      }
+    }
+    return [...filaments, ...knots, ...lanes];
+  },
 
   /*
-    ── SAURIAN BELT: TUMBLING ROCK ────────────────────────────────────────────────────────────────
+    ── SAURIAN BELT: A WORLD BELOW, AND THE BELT IS WHAT IS ABOVE IT ──────────────────────────────
 
-    *"Tumbling rock: knots of debris with clear lanes between them."* So: angular chunks, gathered in
-    knots, with air between the knots. Local objects — 0208's rule, not 0207's — because a rock
-    carries its whole shape to the copy one tile over.
+    *"saurian and rime shelf need to be planetary backdrops where the level is based on a planet, not
+    that the planet is in the background."*
+
+    ⚠️ **SO THE HORIZON IS THE SUBJECT AND THE ROCKS BECOME THE WEATHER.** 0211 read this place as
+    *"tumbling rock: knots of debris with clear lanes between them"* and drew the debris, which is a
+    belt seen from inside it — the report is that the player should be flying OVER something. Three
+    ridgelines fill the bottom of the lane; the rocks stay, halved in number and lifted well above the
+    skyline, so what they now mean is *this world has a belt* rather than *this place is one*.
+
+    ⚠️ **TILE y 0.25 TO 0.75 IS THE LANE — the same trap The Approach's horizon fell into.** The
+    weather tile is twice the lane across and blitted centred, so anything below 0.75 is below the
+    screen. The three crests sit at 0.60, 0.655 and 0.715: lane 70, 81 and 93, which is the bottom
+    quarter of what the player can see.
   */
   saurian: (size) => {
-    const rng = makeRng('sky').stream('saurian/rocks');
     const out: StructureMark[] = [];
-    for (let knot = 0; knot < 4; knot += 1) {
+    /*
+      ⚠️ **RECEDING ON THREE AXES AT ONCE, WHICH IS WHAT MAKES IT GROUND RATHER THAN THREE LINES.**
+      The far ridge is higher, smoother, fainter and its crest is dimmer; the near one is lower,
+      jagged, heavy and brightly lit. Any one of those alone reads as a repeated motif — 0196's
+      *numerically different, visually the same* — and the four together read as distance.
+    */
+    const RIDGES = [
+      { y: 0.6, relief: 0.022, alpha: 0.45, crest: 0.26, teeth: 26 },
+      { y: 0.655, relief: 0.036, alpha: 0.64, crest: 0.38, teeth: 19 },
+      { y: 0.715, relief: 0.05, alpha: 0.88, crest: 0.5, teeth: 14 },
+    ];
+    // Closed below the lane so each ridge fills as a body — The Approach's own move, and the reason
+    // a horizon is a filled shape here and a stroke everywhere else.
+    const under = size * 0.84;
+    for (const ridge of RIDGES) {
+      const rng = makeRng('sky').stream(`saurian/ridge${ridge.teeth}`);
+      const start = ridge.y * size;
+      const crest: number[][] = [];
+      for (let s = 0; s <= ridge.teeth; s += 1) {
+        /*
+          ⚠️ Sampled independently of the last point rather than walked from it. A random WALK drifts,
+          and a drifting horizon is a hill; rock read against the sky is a line of peaks that all
+          return to the same level, which is what an independent draw around `start` gives.
+          The last point is forced back to `start`, which is 0207.
+        */
+        const y = s === 0 || s === ridge.teeth ? start : start + rng.range(-ridge.relief, ridge.relief) * size;
+        crest.push([(s / ridge.teeth) * size, y]);
+      }
+      out.push({
+        points: [...crest, [size, under], [0, under]],
+        width: 0,
+        alpha: ridge.alpha,
+        crosses: true,
+        taper: false,
+        lit: false,
+      });
+      /*
+        A lit crest line on the skyline — the sun catching the tops. **Saurian Belt has the headroom
+        for this and Ember Nebula does not**, which is 0211's contrast measurement making the opposite
+        call rather than an exception to it.
+      */
+      out.push({
+        points: crest,
+        width: Math.max(1, size * 0.0035),
+        alpha: ridge.crest,
+        crosses: true,
+        taper: false,
+        lit: true,
+      });
+    }
+
+    /*
+      And the belt itself, now overhead. Local objects — 0208's rule, not 0207's — because a rock
+      carries its whole shape to the copy one tile over.
+    */
+    const rng = makeRng('sky').stream('saurian/rocks');
+    for (let knot = 0; knot < 3; knot += 1) {
       const cx = rng.range(0.1, 0.9) * size;
-      const cy = rng.range(0.15, 0.85) * size;
+      // Above the skyline, and by enough that a rock never reads as sitting on the ground.
+      const cy = rng.range(0.28, 0.5) * size;
       for (let i = 0; i < 5; i += 1) {
         const x = cx + rng.range(-0.09, 0.09) * size;
-        const y = cy + rng.range(-0.09, 0.09) * size;
-        const r = rng.range(0.012, 0.05) * size;
+        const y = cy + rng.range(-0.07, 0.07) * size;
+        const r = rng.range(0.012, 0.04) * size;
         const points: number[][] = [];
         // ⚠️ Five to seven sides at uneven radii: a rock, and deliberately not a disc — a disc at this
         // size is a bullet's silhouette, which 0203's band is about.
@@ -2263,27 +2749,139 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
   */
   labyrinth: (size) => {
     /*
-      ⚠️ **A DARK BODY WITH A LIT EDGE, WHICH IS THE PILLARS' OWN LANGUAGE — 0204.** The first version
-      was dark alone and came out INVISIBLE in the bench: The Labyrinth has the thinnest gas of the
-      seven (`SKY_STYLE_OF.labyrinth` is `clouds: 0.35, cloudAlpha: 0.6`), so a silhouette had nothing
-      to be a silhouette against.
+      ⚠️ **A DARK BODY WITH A LIT EDGE, WHICH IS THE PILLARS' OWN LANGUAGE — 0204.** 0211's first
+      version was dark alone and came out INVISIBLE in the bench: The Labyrinth has the thinnest gas of
+      the seven (`SKY_STYLE_OF.labyrinth` is `clouds: 0.35, cloudAlpha: 0.6`), so a silhouette had
+      nothing to be a silhouette against. A rim rather than a lit body, because a lit body would spend
+      headroom across its whole area where a one-line edge spends almost none — and because that is
+      what a corridor wall looks like with a light on it.
 
-      ⚠️ **A RIM RATHER THAN A LIT BODY, AND THAT IS A CONTRAST DECISION.** Making the whole wall lit
-      would spend headroom across its entire area; a one-line edge spends almost none and is what
-      makes the dark shape legible. It is also what a corridor wall looks like with a light on it.
+      ── A CHANNEL, NOT FOUR LOOSE LINES ─────────────────────────────────────────────────────────
+
+      *"the labyrinth needs to be a branching twisting path the player is flying through."*
+
+      ⚠️ **THE WORD THAT CHANGED THE GEOMETRY IS *THROUGH*.** 0211 read this place as *"long structure
+      going past"* and drew four independent walls, which is scenery beside the player. A path you fly
+      THROUGH has two sides, and the two have to agree — so a channel is authored as a **centreline
+      and a gap**, and the walls are what that pair implies. Their lit rims then face inward, because
+      the light in a corridor is in the corridor.
+
+      ⚠️ **AND THE CENTRELINE IS A SUM OF SINES RATHER THAN A RANDOM WALK, WHICH IS WHAT MAKES IT
+      TWIST AT ALL.** `crossing` walks and then forces its last point back to the first, so every unit
+      of drift is repaid in one final segment: the wander that reads as a twist is exactly the wander
+      that reads as a diagonal at the tile join. Raising it to 0.032 was tried and the bench showed
+      zigzag ridgelines with a kink at the seam. Sines whose periods divide the tile are periodic **by
+      construction** — 0207 discharged by arithmetic instead of by a correction — so the amplitude can
+      be whatever the picture wants.
     */
-    const walls = crossing(size, 'labyrinth/walls', 4, 0.018, 0.03, 0.075);
+    const rng = makeRng('sky').stream('labyrinth/paths');
     const out: StructureMark[] = [];
-    for (const wall of walls) {
-      out.push(wall);
+    const SAMPLES = 32;
+    const WALL = 0.055;
+    const rim = (points: number[][], toward: number, alpha: number, crosses: boolean): StructureMark => ({
+      points: points.map((p) => [p[0]!, p[1]! + toward * WALL * size * 0.5]),
+      width: Math.max(1, size * 0.004),
+      alpha,
+      crosses,
+      taper: false,
+      lit: true,
+    });
+
+    /*
+      ⚠️ **ONE CHANNEL, CENTRED ON THE LANE, AND TWO OF THEM WAS THE FIRST DRAFT'S MISTAKE.** Tile y
+      0.25 to 0.75 is the lane, so a pair of narrow channels at 0.36 and 0.63 put their walls at lanes
+      22 and 76 — and the ship, which flies in the middle, was **between** them rather than in either.
+      The bench showed four wavy lines and a player in open space, which is *going past* again.
+
+      Centred at 0.5 with a gap of about a quarter of the tile, the walls sit at roughly lane 24 and
+      76 and the player is inside. That is what *through* means.
+    */
+    const swing = rng.range(0.03, 0.05);
+    const ripple = rng.range(0.012, 0.024);
+    const phase = rng.range(0, Math.PI * 2);
+    const turns = 1 + Math.floor(rng.range(0, 2));
+    const gap = 0.26;
+    const channel = {
+      gap,
+      at: (t: number): number =>
+        0.5 + swing * Math.sin(Math.PI * 2 * turns * t + phase) + ripple * Math.sin(Math.PI * 2 * (turns + 2) * t),
+      // The channel breathes: it pinches and opens out, which is what stops it reading as a pipe.
+      widthAt: (t: number): number => gap * (1 + 0.22 * Math.sin(Math.PI * 2 * t + phase)),
+    };
+
+    for (const side of [-1, 1]) {
+      const wall: number[][] = [];
+      for (let s = 0; s <= SAMPLES; s += 1) {
+        const t = s / SAMPLES;
+        wall.push([t * size, (channel.at(t) + (side * channel.widthAt(t)) / 2) * size]);
+      }
+      /*
+        ⚠️ **THE WALL IS DRAWN TWICE, DARK AND THEN FAINTLY LIT, BECAUSE HERE THE DARK ONE IS
+        INVISIBLE.** A structure mark's body is the SPACE colour — a hole in the gas — and The
+        Labyrinth's gas is the thinnest of the seven, so there is nothing for that hole to be a hole
+        in: every version of this place from 0211 onward has been read entirely off its rims. That is
+        why 0211's walls looked like wires, and it is why a wall's THICKNESS has never once been on
+        screen.
+
+        A tenth of the gas colour over the body puts it there. It is the same headroom argument the
+        rim already won — this place has room where Ember Nebula does not — spent on the face of the
+        wall instead of only on its edge.
+      */
+      out.push({ points: wall, width: WALL * size, alpha: 0.62, crosses: true, taper: false, lit: false });
       out.push({
-        points: wall.points.map((p) => [p[0]!, p[1]! - wall.width * 0.5]),
-        width: Math.max(1, size * 0.004),
-        alpha: 0.45,
+        points: wall.map((p) => [p[0]!, p[1]! + side * WALL * size * 0.28]),
+        width: WALL * size * 0.9,
+        alpha: 0.1,
         crosses: true,
         taper: false,
         lit: true,
       });
+      // ⚠️ `-side` — the rim is on the face that looks INTO the channel. Both rims on the same side
+      // reads as two pipes lying next to each other, which is what the first draft of this drew.
+      out.push(rim(wall, -side, 0.55, true));
+    }
+
+    /*
+      ── THE BRANCHES ────────────────────────────────────────────────────────────────────────────
+
+      Two kinds, because *branching* means two different things in a corridor and only one of them is
+      a fork:
+
+        · an **island** — a spine down the middle that the channel parts around and closes over
+        · a **side passage** — a way out through a wall, running off past the top or the bottom
+
+      ⚠️ **LOCAL MARKS, AND THEY HAVE TO BE.** A branch that spanned the tile would be another wall;
+      one spanning more than half of it cannot be covered by the wrap `paintStructure` draws local
+      marks with, which is 0208's rule and the thing its guard measures. Both below are about a fifth
+      of a tile, which on this screen is already a long way to fly.
+    */
+    const from = rng.range(0.08, 0.5);
+    const run = rng.range(0.15, 0.22);
+    const lift = rng.range(0.3, 0.45) * gap * (rng.range(0, 1) < 0.5 ? -1 : 1);
+    const island: number[][] = [];
+    for (let s = 0; s <= 10; s += 1) {
+      const t = from + (s / 10) * run;
+      // A lens rather than a half-sine: it comes to a point at both ends, which is what a splitter is.
+      island.push([t * size, (channel.at(t) + Math.sin((s / 10) * Math.PI) * lift) * size]);
+    }
+    out.push({ points: island, width: WALL * size * 0.55, alpha: 0.55, crosses: false, taper: true, lit: false });
+    out.push(rim(island, lift > 0 ? -0.55 : 0.55, 0.42, false));
+
+    /*
+      And two ways out of it, one through each wall, leaning off towards wherever else this place goes.
+      **They leave and do not come back**, which is the half of *branching* an island cannot say.
+    */
+    for (const side of [-1, 1]) {
+      const mouth = rng.range(0.15, 0.7);
+      const pass: number[][] = [];
+      for (let s = 0; s <= 8; s += 1) {
+        const t = mouth + (s / 8) * 0.13;
+        const wall = channel.at(t) + (side * channel.widthAt(t)) / 2;
+        // Away from the channel, steepening — a passage seen edge-on from inside the one you are in.
+        pass.push([t * size, (wall + side * 0.13 * (s / 8) * (s / 8)) * size]);
+      }
+      out.push({ points: pass, width: WALL * size * 0.5, alpha: 0.5, crosses: false, taper: false, lit: false });
+      out.push(rim(pass, -side * 0.5, 0.34, false));
     }
     return out;
   },
@@ -2296,17 +2894,88 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
     marks, so 0208's rule.
   */
   rime: (size) => {
+    const out: StructureMark[] = [];
+    /*
+      ── THE SHELF, WHICH IS A THING THE NAME ALREADY SAID ───────────────────────────────────────
+
+      *"rime shelf need[s] to be [a] planetary backdrop[] where the level is based on a planet."*
+      Saurian Belt's answer is a range of peaks; this is the same idea and must not be the same
+      geometry, so it is what an ice shelf actually is: **flat tables with sheer faces between them.**
+
+      ⚠️ **A PLATEAU PROFILE, NOT A JAGGED ONE, AND THE DIFFERENCE IS THE WHOLE POINT.** Rock read
+      against the sky is peaks; ice read against the sky is a level line that steps. Two places both
+      given *a horizon* is exactly 0211's failure — a shared shape in different numbers — and the
+      guard that catches it compares coordinates, which two generators this different cannot collide
+      in.
+    */
+    const TERRACES = [
+      { y: 0.585, drop: 0.026, alpha: 0.4, crest: 0.4, run: 0.16 },
+      { y: 0.645, drop: 0.038, alpha: 0.6, crest: 0.55, run: 0.13 },
+      { y: 0.71, drop: 0.05, alpha: 0.85, crest: 0.72, run: 0.1 },
+    ];
+    const under = size * 0.84;
+    for (const terrace of TERRACES) {
+      const rng = makeRng('sky').stream(`rime/terrace${Math.round(terrace.run * 100)}`);
+      const start = terrace.y * size;
+      /*
+        The x where each table ends. Built first so the LAST table's height can be forced back to the
+        first's — 0207 in a profile that is two points wide at every step it takes.
+      */
+      const edges: number[] = [0];
+      while (edges[edges.length - 1]! < size) {
+        edges.push(Math.min(size, edges[edges.length - 1]! + rng.range(terrace.run * 0.6, terrace.run * 1.6) * size));
+      }
+      const heights = edges.slice(0, -1).map(() => start + rng.range(-terrace.drop, terrace.drop) * size);
+      /*
+        ⚠️ **EVERY TABLE LEANS A LITTLE, AND DEAD LEVEL ONES CAME OUT AS A CIRCUIT BOARD.** The first
+        version held each plateau at a constant height, which draws a right angle at every step and a
+        perfectly horizontal line between them — the bench showed something closer to a wiring diagram
+        than to ice. A tilt of under a hundredth of the tile is invisible as a slope and is the whole
+        difference between *a shelf* and *a schematic*.
+      */
+      const last = heights.length - 1;
+      const tilts = heights.map(() => (heights.length > 1 ? rng.range(-0.009, 0.009) * size : 0));
+      // The first table STARTS level with the seam and the last one ENDS there — 0207, in a profile
+      // that is two points wide at every step it takes.
+      heights[0] = start;
+      heights[last] = start - tilts[last]!;
+      const profile: number[][] = [];
+      for (let i = 0; i < heights.length; i += 1) {
+        // Two points per table and none between: the vertical between them IS the cliff face.
+        profile.push([edges[i]!, heights[i]!], [edges[i + 1]!, heights[i]! + tilts[i]!]);
+      }
+      out.push({
+        points: [...profile, [size, under], [0, under]],
+        width: 0,
+        alpha: terrace.alpha,
+        crosses: true,
+        taper: false,
+        lit: false,
+      });
+      // ⚠️ **BRIGHTER THAN SAURIAN BELT'S CRESTS, because this one is ice and that one is rock.** The
+      // lit edge is the only place in either where the material itself is stated rather than implied.
+      out.push({
+        points: profile,
+        width: Math.max(1, size * 0.004),
+        alpha: terrace.crest,
+        crosses: true,
+        taper: false,
+        lit: true,
+      });
+    }
+
     const rng = makeRng('sky').stream('rime/shards');
     // ⚠️ ONE lean for every shard in the place, drawn once outside the loop. Drawing it per shard
     // would be a field of splinters, which is what a shelf of ice is not.
     const lean = -0.72;
-    const out: StructureMark[] = [];
     for (let drift = 0; drift < 5; drift += 1) {
       const cx = rng.range(0.05, 0.95) * size;
-      const cy = rng.range(0.1, 0.9) * size;
+      // Blowing above the shelf rather than scattered through the whole tile — the shelf is the ground
+      // now, and a shard drawn below its skyline is buried in it.
+      const cy = rng.range(0.28, 0.53) * size;
       for (let i = 0; i < 6; i += 1) {
         const x = cx + rng.range(-0.11, 0.11) * size;
-        const y = cy + rng.range(-0.07, 0.07) * size;
+        const y = cy + rng.range(-0.06, 0.06) * size;
         const len = rng.range(0.05, 0.12) * size;
         out.push({
           points: [
@@ -2397,7 +3066,10 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
  * — 0204 — and drawing all seven places the same way is what makes the near view and the wide view of
  * any of them read as one object.
  */
-function paintStructure(ctx: Pen, gas: string, space: string, size: number, theme: ThemeKind): void {
+// ⚠️ **EXPORTED SO A `Pen` CAN COUNT WHAT IT DRAWS** — 0220. The claim below about a non-tapered mark
+// being ONE path is about this function and not about `STRUCTURE_OF`, and `tests/paths.ts` is the
+// instrument that can read it: it is the same narrowing `drawKind` already made for 0149.
+export function paintStructure(ctx: Pen, gas: string, space: string, size: number, theme: ThemeKind): void {
   const marks = STRUCTURE_OF[theme](size);
   ctx.lineCap = 'round';
   for (const mark of marks) {
@@ -2415,12 +3087,28 @@ function paintStructure(ctx: Pen, gas: string, space: string, size: number, them
         ctx.fill();
         continue;
       }
+      /*
+        ⚠️ **A MARK THAT DOES NOT TAPER IS ONE PATH, AND DRAWING IT AS N WAS A REAL DEFECT.** Every
+        stroked mark used to be laid down segment by segment — the loop below, unconditionally — which
+        at a round `lineCap` means each join is covered TWICE and composites its alpha against itself.
+        On a thin rim that is invisible, which is why it has survived from 0211; on anything wide it is
+        a string of beads down the middle of the mark, and the bench showed exactly that the moment
+        The Labyrinth's wall faces were drawn at a tenth of the gas.
+
+        It is also three fewer canvas calls per join. The per-segment loop stays for the thing it was
+        written for and says so: `Pen` has no variable-width stroke, so a taper has to be one.
+      */
+      if (!mark.taper) {
+        ctx.lineWidth = mark.width;
+        ctx.beginPath();
+        ctx.moveTo(mark.points[0]![0]! + dx, mark.points[0]![1]!);
+        for (let i = 1; i < mark.points.length; i += 1) ctx.lineTo(mark.points[i]![0]! + dx, mark.points[i]![1]!);
+        ctx.stroke();
+        continue;
+      }
       for (let i = 1; i < mark.points.length; i += 1) {
-        // A taper is drawn segment by segment because a Pen has no variable-width stroke, and a mark
-        // that keeps its thickness to the tip reads as a wire rather than as something growing.
-        ctx.lineWidth = mark.taper
-          ? Math.max(0.5, mark.width * (1 - (i / mark.points.length) * 0.9))
-          : mark.width;
+        // A mark that keeps its thickness to the tip reads as a wire rather than as something growing.
+        ctx.lineWidth = Math.max(0.5, mark.width * (1 - (i / mark.points.length) * 0.9));
         ctx.beginPath();
         ctx.moveTo(mark.points[i - 1]![0]! + dx, mark.points[i - 1]![1]!);
         ctx.lineTo(mark.points[i]![0]! + dx, mark.points[i]![1]!);

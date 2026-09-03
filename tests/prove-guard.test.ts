@@ -6,6 +6,7 @@ import {
   anchorFailures,
   asPattern,
   drift,
+  fingerprintTrees,
   firstLine,
   planEdit,
   isAVerdict,
@@ -177,6 +178,44 @@ describe('a worker tree is known to come back to what it was copied as', () => {
     const after = new Map(before);
     after.delete('src/app/frame.ts');
     expect(drift(before, after)).toEqual(['src/app/frame.ts — GONE']);
+  });
+
+  it('THE ONE THAT MADE A CLEAN RUN REPORT FAILURE: each tree is judged against ITS OWN copy', () => {
+    /*
+      ⚠️ **SIX COPIES OF ONE TREE ARE NOT ONE TREE, BECAUSE THEY ARE TAKEN ONE AFTER ANOTHER.** The
+      runner used to fingerprint `trees[0]` and judge all six against it, which is exactly right for
+      six simultaneous copies and wrong for six sequential ones: anything that changes in the source
+      between the first and the last is drift in five trees that no probe put there.
+
+      ⚠️ **AND THIS REPOSITORY GUARANTEES SOMETHING CHANGES.** `.claude/typecheck.log` is appended to
+      by its own PostToolUse hook on every edit, and `.claude/skills/ship/SKILL.md` says to start
+      `prove` *"at commit time in the background"* — so the ritual walks you into it. Observed:
+      **774 probes red, five workers reported as not restored, and an exit code of 1** over a
+      gitignored log. `docs/decisions/0199-a-verdict-is-an-exit-code.md` is about a verdict thrown
+      away by a pipe; this is one manufactured by the check that IS the verdict.
+
+      0192: name a change that would redden this and be correct. Fingerprinting once and reusing it is
+      never correct — it is the assumption, stated, that the source cannot move mid-copy.
+    */
+    const seen: string[] = [];
+    // A source that changes between copies, which is the only condition that distinguishes the two.
+    const take = (path: string): Map<string, string> => {
+      seen.push(path);
+      return new Map([['.claude/typecheck.log', `hash-${seen.length}`]]);
+    };
+    const trees = fingerprintTrees(['/w0', '/w1', '/w2'], take);
+    expect(seen, 'the manifest was not taken once per tree').toEqual(['/w0', '/w1', '/w2']);
+    for (const tree of trees) {
+      expect(
+        drift(tree.pristine, take(tree.path)).length === 0,
+        `${tree.path} is being judged against another tree's copy — a file that moved between two ` +
+          'copies is reported as a probe that did not restore, and the whole run reports failure',
+      ).toBe(false);
+      // What matters is that each tree kept its OWN fingerprint, not a shared one.
+      expect(drift(tree.pristine, new Map(tree.pristine))).toEqual([]);
+    }
+    const hashes = trees.map((tree) => tree.pristine.get('.claude/typecheck.log'));
+    expect(new Set(hashes).size, 'every tree carries the same fingerprint — it was taken once').toBe(3);
   });
 });
 
