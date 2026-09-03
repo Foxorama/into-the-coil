@@ -1525,7 +1525,24 @@ describe('0108 — the bed is felt, the hands are on it, and the boss arrives', 
     return Math.sqrt(sum / s.length);
   };
 
-  const DSP_MS = 30_000;
+  /*
+    ⚠️ **60 s, AND IT WAS 30 — THE SAME MOVE THE BLOCK ABOVE ALREADY MADE, FOR THE SAME REASON.**
+    That one's note is the argument in full: *"no part of this claim is about time… the only thing
+    that varied is how long four workers took to get here"*, and `tests/sound.test.ts` made it again
+    going 60 → 120. **This block was left on 30 and nobody had measured it since.**
+
+    ⚠️ **8.4 s ALONE, AGAINST 30.** `mixAt` sums twenty-three layers across a whole phrase — 1.13
+    million samples times twenty-three, per rung — and this suite is deliberately oversubscribed:
+    `docs/decisions/0169-a-browser-budget-is-measured.md` measured **713 s of test CPU inside 251 s of
+    wall clock**. Three and a half times the solo cost is not a budget on a tree that runs four
+    workers deep; it is a coin toss, and it came up heads until the tree got about a third more
+    expensive.
+
+    ⚠️ **AND THE LIMIT STILL DOES ITS JOB.** It exists so a hang fails rather than sits, and 60 s is
+    seven times the measured cost — the ratio 0169 set for the browser side. **If this ever approaches
+    60 s something has genuinely slowed down, and the number must not move again to hide it.**
+  */
+  const DSP_MS = 60_000;
   const SUB = BANDS.findIndex(([, , name]) => name === 'sub');
 
   it('THE REPORTED ONE: the band a chest resolves is a real share of the mix, not a corner of it', () => {

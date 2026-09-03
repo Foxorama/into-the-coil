@@ -250,6 +250,21 @@ describe.runIf(chromePath)('the music room walks the level it is auditioning', (
     );
 
     /*
+      ── THE MENU SAYS WHICH PLACE IS PLAYING — 0216 ──────────────────────────────────────────────
+
+      ⚠️ **THE REPORT WAS *"it now just repeats the same track"* AND PLAY ALL WAS WORKING.** The
+      readout, the backdrop and the mix all followed the handover; the nine buttons underneath — the
+      biggest thing on the screen — never moved, so the screen read as stuck. **A screen whose largest
+      element contradicts its smallest reads as broken**, which is why this is asserted on the BUTTON
+      rather than on the readout that was already right.
+    */
+    const playing = '.' + prefixFor('music') + 'action-playing';
+    expect(await page.locator(playing).count(), 'no place is marked as playing').toBe(1);
+    expect(await page.locator(playing).textContent(), 'the marked button is not the place the readout names').toBe(
+      THEMES[THEME_KINDS[0]!].title,
+    );
+
+    /*
       ── THE POINTER HALF OF THE SEEK, AND IT IS THE ONE A LISTENER ACTUALLY USES ─────────────────
 
       ⚠️ **THE FIRST DRAFT OF THIS FILE TESTED ONLY THE KEYBOARD, AND THAT IS THE GAP THAT MATTERS.**
@@ -310,6 +325,20 @@ describe.runIf(chromePath)('the music room walks the level it is auditioning', (
     );
 
     /*
+      ⚠️ **AND THE MARK MOVED WITH IT, WHICH IS THE WHOLE OF 0216.** The handover was already correct
+      when it was reported as broken — what was missing is this line's subject. **The mark and the
+      focus ring are asserted separately**: the mark is always right, the ring is only lent, and a
+      change that dropped one while keeping the other would be half the fix.
+    */
+    await expect
+      .poll(() => page.locator('.' + prefixFor('music') + 'action-playing').textContent())
+      .toBe(THEMES[THEME_KINDS[1]!].title);
+    expect(
+      await page.locator('.' + prefixFor('music') + 'action-cursor').textContent(),
+      'the focus ring did not follow the walk onto the next place',
+    ).toBe(THEMES[THEME_KINDS[1]!].title);
+
+    /*
       And a single place loops rather than moving on, so it has nothing to announce.
 
       ⚠️ **THE PLACE IS WAITED FOR RATHER THAN ASSUMED**, because the readout is pushed on the next
@@ -363,6 +392,15 @@ describe.runIf(chromePath)('the music room walks the level it is auditioning', (
     await page.waitForTimeout(500);
     await press(page, 'Back');
     expect(await page.locator(NOW).isVisible(), 'the readout is still up after leaving the room').toBe(false);
+    /*
+      0216: and nothing claims to be playing once nothing is. A mark left on is a lie about the room.
+
+      ⚠️ **POLLED, BECAUSE THE READOUT IS PUSHED ON A TICK AND NOT ON THE PRESS** — that is the
+      contract every `chrome.set*` keeps. Read straight after the click this raced the next frame, and
+      the `isVisible` check above it passed **for the wrong reason**: by then the whole screen is
+      hidden, so it would have been false whether or not anything had been cleared.
+    */
+    await expect.poll(() => page.locator('.' + prefixFor('music') + 'action-playing').count()).toBe(0);
     await page.waitForTimeout(500);
 
     /*
