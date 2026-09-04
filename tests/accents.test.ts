@@ -1,9 +1,20 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { INK_OF, drawKind } from '../src/render/bake.ts';
+
+/*
+  ⚠️ **FILE-LEVEL, BECAUSE THE WORK IS SEVEN PLACES DEEP NOW AND THE DEFAULT IS A WALL CLOCK.** The
+  containment claim samples every mark on every body in every place at a pixel a step; alone it takes
+  under a second and inside `npm run check`, beside sixty other suites, it took eight — and vitest's
+  five-second default called that a failure. `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`:
+  a guard that reddens under load is reading the clock where it means work. The work is deterministic;
+  the clock is not the measurement.
+*/
+vi.setConfig({ testTimeout: 60_000 });
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/sprites.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
+import { THEME_KINDS, type ThemeKind } from '../src/content/themes.ts';
 import { viewOf } from '../src/sim/camera.ts';
 import { inside, tracingPen, type Pass, type Point } from './paths.ts';
 
@@ -76,15 +87,22 @@ const cssSize = (kind: SpriteKind): number => SPRITE_EXTENT[kind] * DESKTOP.scal
 /** The palette the game opens in. */
 const INK = PALETTES[DEFAULT_PALETTE];
 
-/** Trace one kind at a stated size. `passes[0]` is the hull; the rest is paint. */
-function traceAt(kind: SpriteKind, size: number): ReturnType<typeof tracingPen>['trace'] {
+/** Trace one kind at a stated size, in a place. `passes[0]` is the hull; the rest is paint. */
+function traceAt(kind: SpriteKind, size: number, theme: ThemeKind = 'approach'): ReturnType<typeof tracingPen>['trace'] {
   const { pen, trace } = tracingPen();
-  drawKind(pen, kind, INK, size);
+  drawKind(pen, kind, INK, size, theme);
   return trace;
 }
 
-/** Trace one kind at the size it is drawn on a 1280×720 screen. */
-const trace = (kind: SpriteKind): ReturnType<typeof tracingPen>['trace'] => traceAt(kind, cssSize(kind));
+/**
+ * Trace one kind at the size it is drawn on a 1280×720 screen, in a place.
+ *
+ * ⚠️ **IN EVERY PLACE, SINCE 0228.** An enemy's paint is its place's — a different motif on a
+ * different skin in each of the seven — so a mark that fits at The Approach says nothing about
+ * Saurian Belt's scales. Every claim below runs over `THEME_KINDS`.
+ */
+const trace = (kind: SpriteKind, theme: ThemeKind = 'approach'): ReturnType<typeof tracingPen>['trace'] =>
+  traceAt(kind, cssSize(kind), theme);
 
 /** How far a point is from the nearest edge of a pass, in the pass's own pixels. Unsigned. */
 function distanceToEdge(pass: Pass, [px, py]: Point): number {
@@ -196,9 +214,9 @@ const SOLID = 0.9;
  */
 const REACH = 1.16;
 
-/** The hull pass and every mark painted over it. */
-function hullAndPaint(kind: SpriteKind): { hull: Pass; paint: readonly Pass[] } {
-  const passes = trace(kind).passes;
+/** The hull pass and every mark painted over it, in a place. */
+function hullAndPaint(kind: SpriteKind, theme: ThemeKind = 'approach'): { hull: Pass; paint: readonly Pass[] } {
+  const passes = trace(kind, theme).passes;
   const hull = passes[0];
   if (hull === undefined) throw new Error(`${kind} draws nothing`);
   return { hull, paint: passes.slice(1) };
@@ -214,39 +232,43 @@ describe('0227 — a sprite is painted, and the paint stays on the hull', () => 
       written against. A solid mark over the edge is a body bigger than the thing it collides as.
     */
     const measured: string[] = [];
-    for (const kind of BODIES) {
-      const { hull, paint } = hullAndPaint(kind);
-      paint.forEach((mark, i) => {
-        if (mark.alpha < SOLID) return;
-        const gap = clearance(hull, mark);
-        if (!Number.isFinite(gap)) return;
-        measured.push(`${kind}#${i + 1}: ${gap.toFixed(2)}px`);
-        const floor = mark.colour === INK.space ? HOLE_CLEARANCE_PX : 0;
-        expect(
-          gap,
-          `mark ${i + 1} on the ${kind} (${mark.colour}) comes within ${gap.toFixed(2)}px of the outside of its hull ` +
-            `against a floor of ${floor} (${measured.slice(-6).join(', ')}) — a negative number means it is over ` +
-            'the edge or over a hole, and either way the silhouette the player reads is not the one the file draws',
-        ).toBeGreaterThanOrEqual(floor);
-      });
+    for (const theme of THEME_KINDS) {
+      for (const kind of BODIES) {
+        const { hull, paint } = hullAndPaint(kind, theme);
+        paint.forEach((mark, i) => {
+          if (mark.alpha < SOLID) return;
+          const gap = clearance(hull, mark);
+          if (!Number.isFinite(gap)) return;
+          measured.push(`${kind}#${i + 1}: ${gap.toFixed(2)}px`);
+          const floor = mark.colour === INK.space ? HOLE_CLEARANCE_PX : 0;
+          expect(
+            gap,
+            `mark ${i + 1} on the ${kind} at ${theme} (${mark.colour}) comes within ${gap.toFixed(2)}px of the outside ` +
+              `of its hull against a floor of ${floor} (${measured.slice(-6).join(', ')}) — a negative number means it ` +
+              'is over the edge or over a hole, and either way the silhouette the player reads is not the one the file draws',
+          ).toBeGreaterThanOrEqual(floor);
+        });
+      }
     }
   });
 
   it('and a translucent mark — a plume, a halo — stays inside the sprite’s own box', () => {
-    for (const kind of BODIES) {
-      const { paint } = hullAndPaint(kind);
-      const half = cssSize(kind) / 2;
-      const r = cssSize(kind) * 0.42;
-      paint.forEach((mark, i) => {
-        if (mark.alpha >= SOLID) return;
-        const box = boundsOf(mark);
-        const reach = Math.max(half - box.minX, box.maxX - half, half - box.minY, box.maxY - half) / r;
-        expect(
-          reach,
-          `translucent mark ${i + 1} on the ${kind} reaches ${reach.toFixed(2)} of the drawing radius, ` +
-            `past the ${REACH} where the next bitmap begins`,
-        ).toBeLessThanOrEqual(REACH);
-      });
+    for (const theme of THEME_KINDS) {
+      for (const kind of BODIES) {
+        const { paint } = hullAndPaint(kind, theme);
+        const half = cssSize(kind) / 2;
+        const r = cssSize(kind) * 0.42;
+        paint.forEach((mark, i) => {
+          if (mark.alpha >= SOLID) return;
+          const box = boundsOf(mark);
+          const reach = Math.max(half - box.minX, box.maxX - half, half - box.minY, box.maxY - half) / r;
+          expect(
+            reach,
+            `translucent mark ${i + 1} on the ${kind} at ${theme} reaches ${reach.toFixed(2)} of the drawing radius, ` +
+              `past the ${REACH} where the next bitmap begins`,
+          ).toBeLessThanOrEqual(REACH);
+        });
+      }
     }
   });
 
@@ -259,19 +281,21 @@ describe('0227 — a sprite is painted, and the paint stays on the hull', () => 
 
       ⚠️ **Solid marks only.** A glow's edge is the gradient's fade and has no width to measure.
     */
-    for (const kind of BODIES) {
-      const { paint } = hullAndPaint(kind);
-      paint.forEach((mark, i) => {
-        if (mark.alpha < SOLID) return;
-        for (const subpath of mark.subpaths) {
-          const box = boundsOf({ subpaths: [subpath], rule: mark.rule, alpha: mark.alpha, colour: mark.colour });
-          const thinnest = Math.min(box.maxX - box.minX, box.maxY - box.minY);
-          expect(
-            thinnest,
-            `mark ${i + 1} on the ${kind} is ${thinnest.toFixed(2)}px across on a 1280×720 screen, so it is not drawn`,
-          ).toBeGreaterThanOrEqual(2.5);
-        }
-      });
+    for (const theme of THEME_KINDS) {
+      for (const kind of BODIES) {
+        const { paint } = hullAndPaint(kind, theme);
+        paint.forEach((mark, i) => {
+          if (mark.alpha < SOLID) return;
+          for (const subpath of mark.subpaths) {
+            const box = boundsOf({ subpaths: [subpath], rule: mark.rule, alpha: mark.alpha, colour: mark.colour });
+            const thinnest = Math.min(box.maxX - box.minX, box.maxY - box.minY);
+            expect(
+              thinnest,
+              `mark ${i + 1} on the ${kind} at ${theme} is ${thinnest.toFixed(2)}px across on a 1280×720 screen, so it is not drawn`,
+            ).toBeGreaterThanOrEqual(2.5);
+          }
+        });
+      }
     }
   });
 
@@ -283,18 +307,20 @@ describe('0227 — a sprite is painted, and the paint stays on the hull', () => 
       one exception being the seven bosses' carved interiors, which 0149 put on both and which are
       holes rather than paint.
     */
-    for (const kind of BODIES) {
+    for (const theme of THEME_KINDS) {
+      for (const kind of BODIES) {
       if (!kind.endsWith('Hit')) continue;
       const base = kind.slice(0, -3) as SpriteKind;
-      const { hull, paint } = hullAndPaint(kind);
-      const { hull: baseHull } = hullAndPaint(base);
+      const { hull, paint } = hullAndPaint(kind, theme);
+      const { hull: baseHull } = hullAndPaint(base, theme);
       expect(JSON.stringify(hull.subpaths), `${kind} is a different shape from ${base}, so a flash changes the silhouette`).toBe(
         JSON.stringify(baseHull.subpaths),
       );
       for (const mark of paint) {
-        expect(mark.colour, `${kind} carries paint (${mark.colour}) on its flash, so a hit reads as a paler ${base}`).toBe(
+        expect(mark.colour, `${kind} at ${theme} carries paint (${mark.colour}) on its flash, so a hit reads as a paler ${base}`).toBe(
           INK.space,
         );
+      }
       }
     }
   });

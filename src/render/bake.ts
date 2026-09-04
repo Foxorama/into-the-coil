@@ -20,7 +20,7 @@
  */
 
 import type { Palette } from '../content/palette.ts';
-import type { ThemeKind } from '../content/themes.ts';
+import { foeOf, type FoeSkin, type ThemeKind } from '../content/themes.ts';
 import { LANDMARK_SLOTS, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 
@@ -1973,6 +1973,585 @@ export function mix(from: string, to: string, by: number): string {
   return `#${a.map((v, i) => Math.round(v + (b[i]! - v) * by).toString(16).padStart(2, '0')).join('')}`;
 }
 
+/*
+  ── THE ENEMIES, PAINTED IN THEIR PLACE — 0228 ──────────────────────────────────────────────────
+
+  `docs/decisions/0228-an-enemy-wears-its-place.md`. Asked for: *"detailed sprites for each level…
+  enemies."* Every silhouette below is exactly the one 0081 and 0098 chose against the others, and
+  every extent is where it was; what changes is that a body is sealed in its PLACE's hull colour and
+  then painted — an underside in shadow, a lit strip, an eye that looks back down the lane, and a motif
+  the place puts on everything it sends: rivets, embers, scales, circuitry, facets, spots, veins.
+
+  ⚠️ **THE MOTIF IS THE HALF THAT SAYS *WHERE*, AND IT IS CLIPPED BY ARITHMETIC RATHER THAN BY
+  `clip()`.** Each kind names a BELLY — a polygon well inside its own hull — and a motif's marks are
+  scattered on a seeded grid and kept only where every corner is inside it. `ctx.clip()` cannot be
+  broken on purpose, so a guard over it could never be seen to fail (0005); a mark kept by a test is
+  a mark `tests/accents.test.ts` can measure. Every motif mark is at least 0.16 of the radius across,
+  which is 0106's floor on the smallest enemy.
+*/
+
+/** A polygon well inside a hull, that a motif may be scattered over. In fractions of `r`. */
+type Belly = readonly Pt[];
+
+/** Whether a point is inside a simple polygon, by ray casting. Cold code, for the motif's clip. */
+function within(belly: Belly, x: number, y: number): boolean {
+  let inside = false;
+  for (let i = 0, j = belly.length - 1; i < belly.length; j = i++) {
+    const [ax, ay] = belly[i]!;
+    const [bx, by] = belly[j]!;
+    if (ay > y !== by > y && x < ((bx - ax) * (y - ay)) / (by - ay) + ax) inside = !inside;
+  }
+  return inside;
+}
+
+/** Whether every corner of a mark is inside the belly. */
+function fits(belly: Belly, points: readonly Pt[]): boolean {
+  return points.every(([x, y]) => within(belly, x, y));
+}
+
+/** The belly's bounding box, so a grid can be laid over it. */
+function boundsOfBelly(belly: Belly): { x0: number; y0: number; x1: number; y1: number } {
+  let x0 = Number.POSITIVE_INFINITY;
+  let y0 = Number.POSITIVE_INFINITY;
+  let x1 = Number.NEGATIVE_INFINITY;
+  let y1 = Number.NEGATIVE_INFINITY;
+  for (const [x, y] of belly) {
+    x0 = Math.min(x0, x);
+    y0 = Math.min(y0, y);
+    x1 = Math.max(x1, x);
+    y1 = Math.max(y1, y);
+  }
+  return { x0, y0, x1, y1 };
+}
+
+/** A square mark of half-width `h` at `(x, y)`, as a polygon. */
+const square = (x: number, y: number, h: number): Pt[] => [
+  [x - h, y - h],
+  [x + h, y - h],
+  [x + h, y + h],
+  [x - h, y + h],
+];
+
+/** A diamond of half-width `h` at `(x, y)`. */
+const diamond = (x: number, y: number, h: number): Pt[] => [
+  [x - h, y],
+  [x, y - h],
+  [x + h, y],
+  [x, y + h],
+];
+
+/**
+ * A place's motif, scattered over a belly on a seeded grid and kept only where it fits.
+ *
+ * ⚠️ **SEVEN ARMS OVER A CLOSED UNION, WITH A `never` ARM**, so an eighth place has to say what it
+ * puts on its enemies before it can bake — `docs/decisions/0016-a-hub-enumerates-kinds.md`.
+ */
+function motif(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, belly: Belly, seed: string): void {
+  const rng = makeRng('art').stream(`${theme}/${seed}`);
+  const { x0, y0, x1, y1 } = boundsOfBelly(belly);
+  // Close enough that a five-unit belly carries a few marks, far enough that two never touch.
+  const pitch = 0.24;
+  for (let gy = y0; gy <= y1; gy += pitch) {
+    for (let gx = x0; gx <= x1; gx += pitch) {
+      const x = gx + rng.range(-0.06, 0.06);
+      const y = gy + rng.range(-0.06, 0.06);
+      switch (theme) {
+        case 'approach': {
+          // Rivets: a dark stud on every panel.
+          if (!fits(belly, square(x, y, 0.09))) break;
+          disc(ctx, f, skin.plate, x, y, 0.09);
+          break;
+        }
+        case 'nebula': {
+          // Embers: lit specks, as if the hull were still cooling.
+          if (rng.range(0, 1) < 0.35) break;
+          if (!fits(belly, square(x, y, 0.09))) break;
+          disc(ctx, f, skin.lit, x, y, 0.09);
+          break;
+        }
+        case 'saurian': {
+          // Scales: a chevron per cell, pointing down the lane.
+          const scale: Pt[] = [
+            [x - 0.12, y - 0.1],
+            [x + 0.02, y],
+            [x - 0.12, y + 0.1],
+            [x, y + 0.1],
+            [x + 0.14, y],
+            [x, y - 0.1],
+          ];
+          if (!fits(belly, scale)) break;
+          poly(ctx, f, skin.plate, scale);
+          break;
+        }
+        case 'labyrinth': {
+          // Circuitry: a lit trace and a pad, on alternate cells.
+          const trace: Pt[] = rng.range(0, 1) < 0.5 ? square(x, y, 0.09) : [
+            [x - 0.16, y - 0.08],
+            [x + 0.16, y - 0.08],
+            [x + 0.16, y + 0.08],
+            [x - 0.16, y + 0.08],
+          ];
+          if (!fits(belly, trace)) break;
+          poly(ctx, f, skin.lit, trace);
+          break;
+        }
+        case 'rime': {
+          // Facets: a lighter triangle per cell, so the hull reads as cut ice.
+          const facet: Pt[] = [
+            [x - 0.14, y + 0.1],
+            [x + 0.02, y - 0.12],
+            [x + 0.14, y + 0.08],
+          ];
+          if (!fits(belly, facet)) break;
+          poly(ctx, f, shade(skin.hull, 0.35), facet);
+          break;
+        }
+        case 'mire': {
+          // Spots: a dark ring with a lit centre, which is what a spore sac looks like.
+          if (rng.range(0, 1) < 0.3) break;
+          if (!fits(belly, square(x, y, 0.14))) break;
+          disc(ctx, f, skin.plate, x, y, 0.14);
+          disc(ctx, f, skin.lit, x, y, 0.085);
+          break;
+        }
+        case 'core': {
+          // Veins: lit diamonds joined down the grid, so the body reads as something with a pulse.
+          if (!fits(belly, diamond(x, y, 0.12))) break;
+          poly(ctx, f, skin.lit, diamond(x, y, 0.12));
+          break;
+        }
+        default: {
+          const never: never = theme;
+          throw new Error(`no motif for ${String(never)}`);
+        }
+      }
+    }
+  }
+}
+
+/** The underside in shadow: a polygon in the plate colour. */
+const plate = (ctx: Pen, f: Frame, skin: FoeSkin, points: readonly Pt[]): void => poly(ctx, f, skin.plate, points);
+
+/** A lit strip. */
+const lit = (ctx: Pen, f: Frame, skin: FoeSkin, points: readonly Pt[]): void => poly(ctx, f, skin.lit, points);
+
+/** An eye: a dark socket and the eye colour inside it, looking down the lane. */
+function eye(ctx: Pen, f: Frame, skin: FoeSkin, x: number, y: number, radius: number): void {
+  disc(ctx, f, shade(skin.plate, -0.5), x, y, radius);
+  disc(ctx, f, skin.eye, x - radius * 0.15, y, radius * 0.62);
+}
+
+/*
+  ── THE BELLIES AND THE PAINT, PER KIND ─────────────────────────────────────────────────────────
+
+  Every number is a fraction of `r`, inside the hull the same arm draws, and `tests/accents.test.ts`
+  measures each one against the trace on a 1280×720 screen. The smallest enemy is the weaver at 5
+  units, whose radius is 15 CSS pixels there; 0106's 2.5 px is therefore 0.17 of its radius, and
+  nothing painted on it is thinner.
+*/
+
+const DRIFTER_BELLY: Belly = [
+  [-0.55, 0.05],
+  [-0.05, -0.45],
+  [0.55, 0.05],
+  [0.05, 0.55],
+];
+
+function paintDrifter(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  plate(ctx, f, skin, [
+    [-0.9, 0.06],
+    [0.9, 0.06],
+    [0, 0.94],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.86, -0.04],
+    [-0.06, -0.84],
+    [0.06, -0.72],
+    [-0.66, -0.02],
+  ]);
+  motif(ctx, f, skin, theme, DRIFTER_BELLY, 'drifter');
+  eye(ctx, f, skin, -0.28, 0, 0.17);
+}
+
+const LANCER_BELLY: Belly = [
+  [-0.3, 0.06],
+  [0.58, -0.4],
+  [0.58, 0.72],
+];
+
+function paintLancer(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  plate(ctx, f, skin, [
+    [-0.86, 0.06],
+    [0.62, 0.06],
+    [0.62, 0.88],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.9, -0.03],
+    [0.6, -0.86],
+    [0.62, -0.7],
+    [-0.66, -0.03],
+  ]);
+  motif(ctx, f, skin, theme, LANCER_BELLY, 'lancer');
+  eye(ctx, f, skin, -0.4, 0, 0.16);
+}
+
+function paintWeaver(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  plate(ctx, f, skin, [
+    [0.02, -0.92],
+    [0.19, -0.92],
+    [0.19, 0.92],
+    [0.02, 0.92],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.19, -0.9],
+    [-0.02, -0.9],
+    [-0.02, -0.4],
+    [-0.19, -0.4],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.19, 0.4],
+    [-0.02, 0.4],
+    [-0.02, 0.9],
+    [-0.19, 0.9],
+  ]);
+  motif(ctx, f, skin, theme, [
+    [-0.14, -0.7],
+    [0.14, -0.7],
+    [0.14, 0.7],
+    [-0.14, 0.7],
+  ], 'weaver');
+  eye(ctx, f, skin, 0, 0, 0.16);
+}
+
+const TURRET_BELLY: Belly = [
+  [-0.4, -0.5],
+  [0.15, -0.42],
+  [0.34, 0],
+  [0.15, 0.42],
+  [-0.4, 0.5],
+];
+
+function paintTurret(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  plate(ctx, f, skin, [
+    [-0.5, 0.06],
+    [0.4, 0.06],
+    [0.28, 0.5],
+    [0, 0.8],
+    [-0.5, 0.92],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.5, -0.9],
+    [-0.33, -0.9],
+    [-0.33, 0.9],
+    [-0.5, 0.9],
+  ]);
+  motif(ctx, f, skin, theme, TURRET_BELLY, 'turret');
+  eye(ctx, f, skin, -0.18, 0, 0.2);
+}
+
+function paintCharger(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  plate(ctx, f, skin, [
+    [-0.8, 0.02],
+    [0.84, 0.02],
+    [0.84, 0.19],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.8, -0.02],
+    [0.84, -0.19],
+    [0.84, -0.04],
+  ]);
+  motif(ctx, f, skin, theme, [
+    [0.1, -0.1],
+    [0.7, -0.15],
+    [0.7, 0.15],
+    [0.1, 0.1],
+  ], 'charger');
+  // A lamp rather than an eye: the needle is too thin at its nose for a socket and a pupil both.
+  disc(ctx, f, skin.eye, -0.1, 0, 0.09);
+}
+
+/** Points along an arc of a ring between two radii, as a closed polygon — a sector of a band. */
+function sector(r0: number, r1: number, a0: number, a1: number, steps = 12): Pt[] {
+  const out: Pt[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const a = a0 + ((a1 - a0) * i) / steps;
+    out.push([Math.cos(a) * r1, Math.sin(a) * r1]);
+  }
+  for (let i = steps; i >= 0; i--) {
+    const a = a0 + ((a1 - a0) * i) / steps;
+    out.push([Math.cos(a) * r0, Math.sin(a) * r0]);
+  }
+  return out;
+}
+
+function paintWarden(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  // The lower half of the ring in shadow, the upper-front quarter lit.
+  plate(ctx, f, skin, sector(0.5, 0.94, 0.05, Math.PI - 0.05));
+  lit(ctx, f, skin, sector(0.5, 0.66, Math.PI + 0.15, Math.PI * 1.5 - 0.1));
+  motif(ctx, f, skin, theme, sector(0.56, 0.9, Math.PI * 1.05, Math.PI * 1.95, 16), 'warden');
+  // Three eyes on the front of the ring, so the aperture looks back.
+  eye(ctx, f, skin, -0.72, 0, 0.13);
+  eye(ctx, f, skin, -0.36, -0.62, 0.11);
+  eye(ctx, f, skin, -0.36, 0.62, 0.11);
+}
+
+function paintSpinner(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  plate(ctx, f, skin, [
+    [-0.26, 0.32],
+    [0.26, 0.32],
+    [0.26, 0.94],
+    [-0.26, 0.94],
+  ]);
+  plate(ctx, f, skin, [
+    [0.32, -0.26],
+    [0.94, -0.26],
+    [0.94, 0.26],
+    [0.32, 0.26],
+  ]);
+  for (const [x0, y0, x1, y1] of [
+    [-0.94, -0.24, -0.76, 0.24],
+    [-0.24, -0.94, 0.24, -0.76],
+  ] as const) {
+    lit(ctx, f, skin, [
+      [x0, y0],
+      [x1, y0],
+      [x1, y1],
+      [x0, y1],
+    ]);
+  }
+  motif(ctx, f, skin, theme, square(0, 0, 0.27), 'spinner');
+  eye(ctx, f, skin, 0, 0, 0.2);
+}
+
+function paintSower(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  plate(ctx, f, skin, [
+    [-0.72, 0.1],
+    [0.52, 0.82],
+    [0.8, 0.54],
+    [-0.02, 0.09],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.9, -0.02],
+    [0.5, -0.84],
+    [0.6, -0.72],
+    [-0.62, -0.02],
+  ]);
+  eye(ctx, f, skin, -0.58, 0, 0.14);
+  motif(ctx, f, skin, theme, [
+    [0.2, -0.68],
+    [0.62, -0.62],
+    [0.58, -0.36],
+    [0.1, -0.44],
+  ], 'sower');
+}
+/*
+  ── THE BOSSES, PAINTED IN THEIR PLACE — 0228 ───────────────────────────────────────────────────
+
+  A boss is fought in exactly one place (`src/content/levels.ts` names one per level), so its arm
+  paints in whatever skin the atlas was baked for: the same plate, lit and eye the place's enemies
+  wear, at four to six times the size. 0149's carved interiors stay as the holes they were; where one
+  of them is an EYE it is painted in the eye colour inside the hole, so the boss looks back in the
+  place's own light.
+*/
+
+function paintBoss(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  // The hexagonal hull: its lower half in shadow, its prow lit, rivets or scales across the back.
+  plate(ctx, f, skin, [
+    [-0.4, 0.08],
+    [0.94, 0.42],
+    [0.48, 0.9],
+    [-0.52, 0.76],
+    [-0.42, 0.44],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.94, 0],
+    [-0.44, -0.42],
+    [-0.5, -0.74],
+    [-0.36, -0.66],
+    [-0.34, -0.4],
+    [-0.8, 0],
+  ]);
+  // Either side of the keel, which is a carved hole and stays one — 0149's mark is not painted over.
+  motif(ctx, f, skin, theme, [
+    [0.05, -0.85],
+    [0.5, -0.85],
+    [0.9, -0.42],
+    [0.9, -0.2],
+    [0.05, -0.2],
+  ], 'boss');
+  motif(ctx, f, skin, theme, [
+    [0.05, 0.2],
+    [0.9, 0.2],
+    [0.9, 0.42],
+    [0.5, 0.85],
+    [0.05, 0.85],
+  ], 'boss-low');
+  disc(ctx, f, skin.eye, -0.32, 0, 0.09);
+}
+
+function paintBoss2(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  // The three prongs: the lower prong and the body's underside in shadow, the tips lit.
+  plate(ctx, f, skin, [
+    [-0.24, 0.34],
+    [0.12, 0.72],
+    [0.88, 0.32],
+    [0.88, 0.12],
+    [-0.1, 0.12],
+  ]);
+  plate(ctx, f, skin, [
+    [-0.5, 0.86],
+    [0.1, 0.72],
+    [-0.28, 0.4],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.94, -0.12],
+    [-0.94, 0.12],
+    [-0.78, 0.1],
+    [-0.78, -0.1],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.52, -0.9],
+    [-0.36, -0.86],
+    [-0.2, -0.5],
+    [-0.29, -0.46],
+  ]);
+  motif(ctx, f, skin, theme, [
+    [0, -0.7],
+    [0.85, -0.3],
+    [0.85, -0.12],
+    [0, -0.12],
+  ], 'boss2');
+  disc(ctx, f, skin.eye, -0.05, -0.45, 0.07);
+  disc(ctx, f, skin.eye, -0.05, 0.45, 0.07);
+}
+
+function paintBoss3(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  // The lattice: the two lower struts in shadow, the two forward struts lit at their outer edges.
+  plate(ctx, f, skin, [
+    [-0.88, 0.06],
+    [-0.44, 0.06],
+    [-0.02, 0.4],
+    [-0.02, 0.76],
+  ]);
+  plate(ctx, f, skin, [
+    [0.02, 0.4],
+    [0.44, 0.06],
+    [0.88, 0.06],
+    [0.02, 0.76],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.92, -0.02],
+    [-0.04, -0.78],
+    [-0.04, -0.62],
+    [-0.76, -0.02],
+  ]);
+  motif(ctx, f, skin, theme, [
+    [0.08, -0.72],
+    [0.86, -0.06],
+    [0.62, -0.06],
+    [0.08, -0.5],
+  ], 'boss3');
+  for (const y of [-0.32, 0.32]) {
+    disc(ctx, f, skin.eye, 0.38, y, 0.055);
+    disc(ctx, f, skin.eye, -0.38, y, 0.055);
+  }
+}
+
+function paintBoss4(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  // The shoal mother: the lower flank in shadow, the nose lit, scales across the back.
+  // Under the lowest streak and above the highest, so the three carved streaks stay the holes
+  // 0149 cut; the motif rides the fins, which is the one part of this hull with no hole in it.
+  plate(ctx, f, skin, [
+    [-0.45, 0.42],
+    [0.5, 0.42],
+    [0.45, 0.49],
+    [-0.25, 0.58],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.94, 0],
+    [-0.32, -0.56],
+    [-0.2, -0.46],
+    [-0.76, 0],
+  ]);
+  motif(ctx, f, skin, theme, [
+    [0.6, -0.5],
+    [0.9, -0.8],
+    [0.8, -0.3],
+  ], 'boss4');
+  motif(ctx, f, skin, theme, [
+    [0.6, 0.5],
+    [0.9, 0.8],
+    [0.8, 0.3],
+  ], 'boss4-low');
+  disc(ctx, f, skin.eye, -0.6, -0.16, 0.08);
+  disc(ctx, f, skin.eye, -0.6, 0.16, 0.08);
+}
+
+function paintBoss5(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  // The redoubt: the lower slab in shadow, the face lit between the ports, plating across the back.
+  plate(ctx, f, skin, [
+    [-0.68, 0.62],
+    [0.3, 0.62],
+    [0.3, 0.9],
+    [-0.68, 0.9],
+  ]);
+  plate(ctx, f, skin, [
+    [-0.9, 0.06],
+    [-0.4, 0.06],
+    [-0.4, 0.5],
+    [-0.9, 0.36],
+  ]);
+  // Two lit seams across the stepped face, between the ports — the face is only the middle of
+  // the slab, from ±0.55 at its root to ±0.4 at its front.
+  for (const y of [-0.25, 0.25]) {
+    lit(ctx, f, skin, [
+      [0.72, y - 0.07],
+      [0.94, y - 0.05],
+      [0.94, y + 0.05],
+      [0.72, y + 0.07],
+    ]);
+  }
+  motif(ctx, f, skin, theme, [
+    [-0.68, -0.9],
+    [0.3, -0.9],
+    [0.3, -0.62],
+    [-0.68, -0.62],
+  ], 'boss5');
+  // A lamp beside each port, on the slab: the ports themselves are holes and stay holes.
+  for (const y of [-0.5, 0, 0.5]) disc(ctx, f, skin.eye, 0.14, y, 0.08);
+}
+
+function paintBoss6(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  // The chorus: the spine is a hole where it crosses the lobes, so the paint stays on the lobes'
+  // outer halves — the lower lobe's far side in shadow, the upper's in light.
+  plate(ctx, f, skin, [
+    [0.24, 0.72],
+    [0.5, 0.84],
+    [0.56, 0.66],
+    [0.36, 0.64],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.24, -0.72],
+    [-0.5, -0.84],
+    [-0.56, -0.66],
+    [-0.36, -0.64],
+  ]);
+  motif(ctx, f, skin, theme, [
+    [0.3, -0.72],
+    [0.5, -0.86],
+    [0.58, -0.64],
+    [0.4, -0.62],
+  ], 'boss6');
+  for (const y of [-0.62, 0, 0.62]) disc(ctx, f, skin.eye, -0.46, y, 0.06);
+}
+
+function paintBoss7(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  // The axis: the outer ring's lower half in shadow, its front lit, the motif round the back.
+  plate(ctx, f, skin, sector(0.7, 0.96, 0.15, Math.PI - 0.15));
+  lit(ctx, f, skin, sector(0.7, 0.82, Math.PI + 0.3, Math.PI * 1.5 + 0.2));
+  motif(ctx, f, skin, theme, sector(0.72, 0.94, -0.6, 0.6, 10), 'boss7');
+  disc(ctx, f, skin.eye, 0, 0, 0.1);
+}
 export function drawKind(
   ctx: Pen,
   kind: SpriteKind,
@@ -1991,6 +2570,13 @@ export function drawKind(
     holds it.
   */
   const hurt = kind.endsWith('Hit');
+  /*
+    ⚠️ **THE PLACE'S SKIN, FOR THE BODIES THE PLACE SENDS** — 0228. An enemy or a boss is sealed in
+    `skin.hull` rather than in `INK_OF`'s `enemy`, unless it is hurt: a flash is the flash ink whatever
+    the place, so a hit reads the same in every level. `INK_OF` still says what the kind IS, which is
+    what `tests/legibility.test.ts` reads; `tests/foes.test.ts` holds the hull to the same floors.
+  */
+  const skin = hurt ? null : foeOf(theme, palette);
   ctx.fillStyle = palette[INK_OF[kind]];
   ctx.strokeStyle = palette.space;
   ctx.lineWidth = Math.max(1, size * 0.04);
@@ -2041,7 +2627,10 @@ export function drawKind(
       ctx.lineTo(half + r, half);
       ctx.lineTo(half, half + r);
       ctx.closePath();
-      break;
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintDrifter(ctx, f, skin, theme);
+      return;
     case 'lancer':
     case 'lancerHit':
       /*
@@ -2065,7 +2654,10 @@ export function drawKind(
       ctx.lineTo(half + r * 0.7, half - r * 0.95);
       ctx.lineTo(half + r * 0.7, half + r * 0.95);
       ctx.closePath();
-      break;
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintLancer(ctx, f, skin, theme);
+      return;
     case 'weaver':
     case 'weaverHit':
       /*
@@ -2074,7 +2666,10 @@ export function drawKind(
         from the charger's needle, which is the same primitive lying the other way.
       */
       ctx.rect(half - r * 0.22, half - r, r * 0.44, r * 2);
-      break;
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintWeaver(ctx, f, skin, theme);
+      return;
     case 'turret':
     case 'turretHit': {
       /*
@@ -2087,7 +2682,10 @@ export function drawKind(
       ctx.lineTo(half - r * 0.55, half + r);
       ctx.arc(half - r * 0.55, half, r, Math.PI / 2, -Math.PI / 2, true);
       ctx.closePath();
-      break;
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintTurret(ctx, f, skin, theme);
+      return;
     }
     case 'charger':
     case 'chargerHit':
@@ -2101,7 +2699,10 @@ export function drawKind(
       ctx.lineTo(half + r * 0.9, half - r * 0.22);
       ctx.lineTo(half + r * 0.9, half + r * 0.22);
       ctx.closePath();
-      break;
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintCharger(ctx, f, skin, theme);
+      return;
     case 'boss':
     case 'bossHit': {
       /*
@@ -2121,8 +2722,10 @@ export function drawKind(
       ctx.lineTo(half - r * 0.55, half + r * 0.8);
       ctx.lineTo(half - r * 0.45, half + r * 0.45);
       ctx.closePath();
+      if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       carve(ctx, f, palette.space, BOSS_KEEL);
+      if (skin !== null) paintBoss(ctx, f, skin, theme);
       return;
     }
     case 'spinner':
@@ -2150,7 +2753,10 @@ export function drawKind(
       ctx.lineTo(half - r, half - r * 0.3);
       ctx.lineTo(half - r * 0.3, half - r * 0.3);
       ctx.closePath();
-      break;
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintSpinner(ctx, f, skin, theme);
+      return;
     case 'sower':
     case 'sowerHit':
       /*
@@ -2170,7 +2776,10 @@ export function drawKind(
       ctx.lineTo(half + r, half + r * 0.55);
       ctx.lineTo(half + r * 0.55, half + r * 0.9);
       ctx.closePath();
-      break;
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintSower(ctx, f, skin, theme);
+      return;
     case 'warden':
     case 'wardenHit':
       /*
@@ -2182,7 +2791,10 @@ export function drawKind(
       ctx.arc(half, half, r, 0, Math.PI * 2);
       ctx.moveTo(half + r * 0.45, half);
       ctx.arc(half, half, r * 0.45, 0, Math.PI * 2);
-      break;
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintWarden(ctx, f, skin, theme);
+      return;
     case 'boss2':
     case 'boss2Hit': {
       /*
@@ -2203,8 +2815,10 @@ export function drawKind(
       ctx.lineTo(half - r * 0.25, half + r * 0.3);
       ctx.lineTo(half - r, half + r * 0.16);
       ctx.closePath();
+      if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       carve(ctx, f, palette.space, BOSS2_SPINE);
+      if (skin !== null) paintBoss2(ctx, f, skin, theme);
       return;
     }
     /*
@@ -2231,8 +2845,10 @@ export function drawKind(
       ctx.lineTo(half + r * 0.42, half);
       ctx.lineTo(half, half + r * 0.36);
       ctx.closePath();
+      if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       carve(ctx, f, palette.space, BOSS3_NODES);
+      if (skin !== null) paintBoss3(ctx, f, skin, theme);
       return;
     case 'boss4':
     case 'boss4Hit':
@@ -2249,8 +2865,10 @@ export function drawKind(
       ctx.lineTo(half + r * 0.55, half + r * 0.5);
       ctx.lineTo(half - r * 0.3, half + r * 0.62);
       ctx.closePath();
+      if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       carve(ctx, f, palette.space, BOSS4_STREAKS);
+      if (skin !== null) paintBoss4(ctx, f, skin, theme);
       return;
     case 'boss5':
     case 'boss5Hit':
@@ -2273,8 +2891,10 @@ export function drawKind(
         ctx.moveTo(half + r * 0.62, y);
         ctx.arc(half + r * 0.45, y, r * 0.17, 0, Math.PI * 2);
       }
+      if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       carve(ctx, f, palette.space, BOSS5_BANDS);
+      if (skin !== null) paintBoss5(ctx, f, skin, theme);
       return;
     case 'boss6':
     case 'boss6Hit':
@@ -2290,8 +2910,10 @@ export function drawKind(
       ctx.lineTo(half + r * 0.18, half + r);
       ctx.lineTo(half - r * 0.18, half + r);
       ctx.closePath();
+      if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       carve(ctx, f, palette.space, BOSS6_EYES);
+      if (skin !== null) paintBoss6(ctx, f, skin, theme);
       return;
     case 'boss7':
     case 'boss7Hit':
@@ -2302,8 +2924,10 @@ export function drawKind(
       ctx.arc(half, half, r * 0.66, 0, Math.PI * 2);
       ctx.moveTo(half + r * 0.3, half);
       ctx.arc(half, half, r * 0.3, 0, Math.PI * 2);
+      if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       carve(ctx, f, palette.space, BOSS7_EYE);
+      if (skin !== null) paintBoss7(ctx, f, skin, theme);
       return;
     case 'bullet':
       /*

@@ -81,7 +81,7 @@ import {
   type MusicVoice,
 } from './music.ts';
 import { NEBULA_VOICES } from './nebula.ts';
-import type { PaletteName } from './palette.ts';
+import type { Palette, PaletteName } from './palette.ts';
 import { RIME_VOICES } from './rime.ts';
 import { SAURIAN_CUES, SAURIAN_VOICES } from './saurian.ts';
 
@@ -210,6 +210,28 @@ export interface ThemeRow {
    * down there than up here.
    */
   ground: Record<PaletteName, string> | null;
+  /**
+   * What the place's enemies and its boss are painted in — 0228.
+   *
+   * ⚠️ **A SKIN AND NOT A ROSTER, BECAUSE EVERY LEVEL USES NEARLY ALL EIGHT KINDS.** Asked for:
+   * *"detailed sprites for each level… enemies."* `src/content/levels.ts` sends drifters, lancers,
+   * weavers, turrets and chargers to every one of the seven places and the other three to most; a
+   * new enemy per level would be a new behaviour per level, which is content nobody asked for. What
+   * a place hands its enemies is a LIVERY over the silhouette each already has — the silhouette
+   * still says what a body does (0081), and the skin says where it is.
+   *
+   * ⚠️ **THE HULL IS `enemy` FOR THIS PLACE, AND IT IS HELD TO `enemy`'S TWO FLOORS.**
+   * `tests/foes.test.ts` measures it against this place's own backdrop at the gameplay floor, and
+   * against the pickup and player inks at the separation floor — the two confusions
+   * `tests/palette.test.ts` names as costing a life. **What shoots back is still the `enemy` ink
+   * everywhere**: a bullet is a mark the player must not touch, and *pink will hurt you* is one rule
+   * across the run.
+   *
+   * ⚠️ **ONE ROW AND NOT ONE PER PALETTE**, unlike every colour above it, and the high-contrast
+   * palette is why: on that palette every decorative ink is the void, and a skin is decoration.
+   * `foeOf` reads that property off the palette and hands back the flat skin.
+   */
+  foe: FoeSkin;
   /**
    * How this place mixes the music, as a multiplier over `MUSIC_LADDER`'s own rung.
    *
@@ -448,6 +470,18 @@ export interface ThemeRow {
   `mix` lift would have raised the kick in the two rungs that did not need it —
   `docs/decisions/0162-a-place-has-its-own-ladder.md`'s lever, for the third decision running.
 */
+/** What a place's enemies are painted in — `ThemeRow.foe` has the argument. */
+export interface FoeSkin {
+  /** The hull — what the silhouette is sealed in. Held against the backdrop. */
+  hull: string;
+  /** The underside and the panels: darker than the hull, always. */
+  plate: string;
+  /** Lit strips and lamps: lighter than the hull, always, and never the pickup ink. */
+  lit: string;
+  /** The eye, the canopy, the core: the one mark that looks back down the lane. */
+  eye: string;
+}
+
 export const THEMES: Record<ThemeKind, ThemeRow> = {
   /**
    * Level one. The void as it has always been — this is the theme that changes nothing, so that the
@@ -463,6 +497,13 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     glow: { vivid: '#3f7a86', 'high-contrast': '#243c42' },
     // In space. Its one horizon arc is a limb of the world being LEFT, seen from off it — 0211.
     ground: null,
+    /*
+      ── WHAT ITS ENEMIES WEAR — 0228 ──────────────────────────────────────────────────────────────
+
+      Raiders: steel-grey hulls with the `enemy` ink for their lamps, so the first place teaches the
+      colour the bullets keep for the whole run on the thing that fires them; a red eye; rivets.
+    */
+    foe: { hull: '#9a9a9a', plate: '#4c4c56', lit: '#ff7286', eye: '#ff4040' },
     // The reference, and the number every place used to be — 0183. Level one changes nothing.
     aura: 0.55,
     mix: {
@@ -504,6 +545,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     // a furnace is the one place where two colours at once is the literal subject.
     glow: { vivid: '#c25a2a', 'high-contrast': '#5c2a12' },
     ground: null, // In space, and the Pillars are the proof: they are a thing you fly PAST.
+    // Moths in an ember cloud: the ember's own orange, scorched dark underneath, a black eye, embers.
+    foe: { hull: '#f57a2a', plate: '#8a3a12', lit: '#ffe08a', eye: '#2a0a14' },
     /*
       ⚠️ **HIGHER THAN THE REFERENCE, BECAUSE THE PLACE IS A BUILD.** A cathedral in a furnace
       escalates to organ and pumping beats and hands over to a Dante's-inferno fight; the dread
@@ -630,6 +673,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     glow: { vivid: '#a87c2e', 'high-contrast': '#4a3a18' },
     // Rock in shadow, well under its own sky — a horizon is a silhouette or it is not a horizon.
     ground: { vivid: '#0a1220', 'high-contrast': '#000208' },
+    // Reptiles: olive hide, bone along the edges, an amber eye, and scales for the motif.
+    foe: { hull: '#7f9a2e', plate: '#4a5c18', lit: '#e8d8a8', eye: '#ffb020' },
     /*
       ⚠️ **LOWER, BECAUSE A DANCEFLOOR DOES NOT DO SLOW DREAD.** The place is a run; what it wants is
       for the fight to be the arrival, not for a shadow to lengthen across the whole level.
@@ -788,6 +833,9 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     // faces, so the accent is literally the lighting of the passage the player flies down.
     glow: { vivid: '#b45ac0', 'high-contrast': '#4a1440' },
     ground: null, // A corridor in space. It has walls, and a wall is not a horizon.
+    // Machines in a lit corridor: verdigris, oiled dark in the seams, the corridor's own violet on
+    // the traces, a red eye, and circuitry for the motif.
+    foe: { hull: '#3aa08a', plate: '#1c5a4c', lit: '#e070f0', eye: '#ff3030' },
     /*
       ⚠️ **THE HIGHEST BUT ONE, AND THE FICTION IS THE ARGUMENT.** A labyrinth is the place where the
       thing hunting you is already there; the aura is what says so long before it is on the field.
@@ -897,6 +945,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     glow: { vivid: '#3d8f78', 'high-contrast': '#2a5a4a' },
     // The shelf: blue-white shadow. Nearly the darkest ground of the three, under the palest sky.
     ground: { vivid: '#0b1a26', 'high-contrast': '#000308' },
+    // Cut ice: blue through the block, frost on the facets, a warm eye in a cold thing.
+    foe: { hull: '#5c9ad0', plate: '#2a4a80', lit: '#d8f4ff', eye: '#ff5a7a' },
     /*
       ⚠️ **THE LOWEST.** Ice is still, and the shelf's threat is the one that arrives without warning.
       A build that spends the level would spend the only surprise the place has.
@@ -1010,6 +1060,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     // ⚠️ **ONE COLOUR FOR BOTH THE CANOPY AND THE POOLS**, because they are one enclosure and the
     // corridor between them is the subject. Two tones would read as a floor and a separate ceiling.
     ground: { vivid: '#080f04', 'high-contrast': '#000200' },
+    // Grown, not built: bruise-purple, toxic yellow where it leaks, a blank white eye, and spores.
+    foe: { hull: '#b85cd0', plate: '#5a2a70', lit: '#e6ff4a', eye: '#ffffff' },
     /*
       ⚠️ **HIGH, BECAUSE THE MIRE SEEPS.** The one place whose whole character is that it reaches you
       before you reach it.
@@ -1095,6 +1147,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     // to be the brightest thing in the game — which is what an accretion edge looks like.
     glow: { vivid: '#8ac0e8', 'high-contrast': '#1c3a52' },
     ground: null, // Nothing to stand on. The place's whole character is absence — 0211.
+    // Flesh and obsidian: blood-red, the place's ice-blue in the veins, a yellow eye.
+    foe: { hull: '#d0303c', plate: '#5a0a14', lit: '#8ac0e8', eye: '#ffd23f' },
     /*
       ⚠️ **THE HIGHEST, BECAUSE HERE THE AURA IS THE PLACE.** The Black Heart is what the run has been
       travelling towards; 0170 already made it audible in its own fight, and this is the other half —
@@ -1179,6 +1233,24 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     },
   },
 };
+
+/**
+ * What a place's enemies are painted in, on a given palette — 0228.
+ *
+ * ⚠️ **THE FLAT SKIN FOR A PALETTE WHOSE DECORATION IS THE VOID, READ OFF THE PALETTE AND NOT ITS
+ * NAME.** `src/content/palette.ts` makes the high-contrast palette's `glass`, `flame` and `trim` the
+ * void on purpose — *"the separation the player chose this palette FOR is spent on nothing
+ * decorative"* — and a skin is decoration. So the rule is stated over that property, the way
+ * `docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md` says a guard about a layer is written
+ * over the property and never the name: any palette that declares its decoration void gets NO skin —
+ * `null`, so the arm seals the hull in the `enemy` ink and paints nothing, exactly the picture it had.
+ */
+export function foeOf(theme: ThemeKind, palette: Palette): FoeSkin | null {
+  if (palette.glass === palette.space && palette.trim === palette.space) {
+    return null;
+  }
+  return THEMES[theme].foe;
+}
 
 /**
  * What `layer` is scaled by in `theme`. The single description of *a theme's mix is a multiplier*.
