@@ -796,11 +796,21 @@ hex, so three passes of *more detail* could never answer *more colour*. A place 
 **accent** now; every lit edge takes the accent and a third of the clouds do too. The hue separation is
 guarded as an angle, because *a bit different* is not a claim.
 
-⚠️ **SAURIAN BELT'S VOLCANOES ARE THE ONE ASK LEFT FROM THAT REPORT** — *"exploding volcanoes adding
-volcanic effects at some points in the level"*. They are `LANDMARK_OF.saurian` plus `landmarks`
-entries, on the Pillars' own terms, and *at some points in the level* is a position, which is what 0203
-built the slot for. **A planet has no landmark yet, so the ink `bakeLandmark` is handed is worth
-checking**: it takes the place's GAS, and a volcano on a planet wants its rock.
+⚠️ **AND THE VOLCANOES LANDED ON 2026-09-04 — [0224](decisions/0224-the-mountain-is-awake.md)**, which
+closes the 2026-09-03 backgrounds report entirely. Saurian Belt places **three**, one on each of its
+section boundaries — the first level to place more than one landmark, which is what 0203 built the slot
+for. A landmark is handed the place's accent and its silhouette colour now, because two were enough
+while every landmark was made of gas and a volcano is rock under a blue sky.
+
+⚠️ **AND A LANDMARK HAS THREE CASTINGS NOW — [0225](decisions/0225-a-landmark-is-not-a-carbon-copy.md)**,
+asked for the moment 0224 reported that its three volcanoes were identical. **A seed on the entry
+cannot work**: the entry is read in the frame and the drawing happens once per level at bake time, and
+the atlas is a fixed array of bitmaps. Three slots are baked from three seeds at the boundary and an
+entry names one with `variant`. It costs 4.5MB and it is `landmark`'s own trade one level down.
+
+⚠️ **A SEED THAT ONLY MOVES THE DETAILS IS NOT ENOUGH**, which the bench showed: keyed on the jitter
+alone, two castings read as the same mountain venting differently. Height, base, crater and the flank
+exponent all move, and the flank is the one the eye reads as *a different mountain*.
 
 ⚠️ **THE BACKGROUNDS WERE ATTACKED ON 2026-09-03 — [0220](decisions/0220-a-place-is-somewhere-you-are.md).**
 Five of the seven places redrawn from one report: Ember Nebula denser and its Pillars knotted, lit and

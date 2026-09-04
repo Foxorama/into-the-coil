@@ -159,6 +159,23 @@ export interface LandmarkEntry {
    * of a clock it does not otherwise have: `paintLandmarks` already knows where the camera is.
    */
   beat: number;
+  /**
+   * Which casting of the place's landmark this is — 0, 1 or 2.
+   *
+   * ⚠️ **A LANDMARK IS A BAKED BITMAP, SO A LEVEL THAT PLACES THREE PLACES THE SAME ONE THREE TIMES**
+   * — `docs/decisions/0225-a-landmark-is-not-a-carbon-copy.md`. Asked for: *"lets go and add that seed
+   * to the landmarks and levels… to make the levels more interesting rather than carbon copies."*
+   * 0224 gave Saurian Belt three volcanoes and they came out identical, with two usually on screen
+   * together.
+   *
+   * ⚠️ **AND IT IS AN INDEX RATHER THAN A FREE SEED, WHICH IS THE THING WORTH KNOWING.** A seed on the
+   * entry would have to be honoured at DRAW time, and the drawing happens once per level at bake time
+   * — so a free seed means baking per entry, and the atlas is a fixed array of bitmaps
+   * (`docs/decisions/0065-the-sky-is-baked-and-blitted.md`). Three castings are baked from three seeds
+   * at the boundary and an entry names one. It is the same trade `landmark` itself made: one slot,
+   * seven completely different drawings, chosen by the place rather than by the sprite table.
+   */
+  variant: 0 | 1 | 2;
 }
 
 export interface LevelRow {
@@ -1262,7 +1279,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     */
     // ⚠️ `beat: 0` — the Pillars are rock and the only moving thing in them is the streamers off the
     // tips, which are baked. A landmark beats only where the place is named after something alive.
-    landmarks: [{ at: 1299, lane: 72, depth: 0.08, beat: 0 }],
+    landmarks: [{ at: 1299, lane: 72, depth: 0.08, beat: 0, variant: 0 }],
     theme: 'nebula',
   },
   /**
@@ -1283,7 +1300,33 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       { at: 3627, section: 'approach' },
     ],
     boss: 'lattice',
-    landmarks: [],
+    /*
+      ⚠️ **THREE, AND THIS IS THE FIRST LEVEL TO PLACE MORE THAN ONE** —
+      `docs/decisions/0224-the-mountain-is-awake.md`. Asked for: *"exploding volcanoes adding volcanic
+      effects at some points in the level."* **Points, plural**, is the whole reason the slot exists:
+      0203 made a landmark the one thing in the sky that can be somewhere in particular, and until now
+      every place that used it used it once.
+
+      ⚠️ **ONE PER SECTION AFTER THE FIRST, SO THE LEVEL ESCALATES WITH ITS OWN MUSIC.** 1249, 2534 and
+      3627 are `push`, `surge` and `approach` — read off `sections` above rather than typed twice, the
+      way the Pillars are tied to Ember Nebula's organ. Each arrives a little before its boundary,
+      because `at` is when a landmark's leading edge ENTERS and it takes most of a minute to cross.
+
+      ⚠️ **`lane: 68` PUTS THE FEET ON THE NEAR RIDGE.** The sprite is 75 units and centred, so it spans
+      lane 30 to 105; the cone's base sits at 0.78 of it — lane 89 — which is between Saurian Belt's
+      middle and near ridgelines (81 and 93). A volcano floating above its own horizon is the defect
+      0203 found with the Pillars' feet, and the number comes off the shot rig rather than a calculation.
+
+      ⚠️ **`beat: 190` IS A SLOW SWELL, NOT A HEARTBEAT.** About five seconds of camera travel — the
+      same machinery The Black Heart uses (0220), at a period long enough that it reads as a mountain
+      breathing rather than as one pulsing. `depth: 0.07` keeps it under the slowest field, which is
+      0203's *a landmark is the slowest thing on screen*.
+    */
+    landmarks: [
+      { at: 1249, lane: 56, depth: 0.07, beat: 190, variant: 0 },
+      { at: 2534, lane: 74, depth: 0.075, beat: 190, variant: 1 },
+      { at: 3627, lane: 50, depth: 0.065, beat: 190, variant: 2 },
+    ],
     theme: 'saurian',
   },
   /**
@@ -1388,7 +1431,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       beat at 70 would read as a strobe. `SCROLL_PER_STEP * STEPS_PER_SECOND` is the conversion and it
       is the same one `rig/bench.ts` prints its readout in.
     */
-    landmarks: [{ at: 2360, lane: 46, depth: 0.07, beat: 96 }],
+    landmarks: [{ at: 2360, lane: 46, depth: 0.07, beat: 96, variant: 0 }],
     theme: 'core',
   },
 };

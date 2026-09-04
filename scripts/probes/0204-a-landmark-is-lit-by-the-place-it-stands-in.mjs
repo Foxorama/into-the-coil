@@ -17,9 +17,14 @@ export const PROBES = [
     guard: 'the landmark is re-baked at the boundary wherever the weather is',
     edit: {
       path: 'src/app/mount.ts',
-      // ⚠️ `place` became `backdrop` with 0212, when the music room made *which place is on screen*
-      // a question a run is no longer the only answer to. The break is unchanged; only the name is.
-      find: '    bakeLandmark(atlas, clouds, colours.space, view.scale * dpr, backdrop);',
+      /*
+        ⚠️ `place` became `backdrop` with 0212, when the music room made *which place is on screen* a
+        question a run is no longer the only answer to; and the call grew the place's ACCENT and its
+        SILHOUETTE colour with 0224, because two colours were enough while every landmark was made of
+        gas and a volcano is rock under a blue sky. **The break is unchanged through both**: the
+        landmark is never re-coloured, so it wears the palette rather than the place.
+      */
+      find: '    bakeLandmark(atlas, clouds, accent, silhouette, view.scale * dpr, backdrop);',
       replace: '',
     },
   },

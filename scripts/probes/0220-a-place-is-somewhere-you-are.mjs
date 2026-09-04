@@ -89,8 +89,8 @@ export const PROBES = [
     guard: 'The Black Heart’s landmark changes size',
     edit: {
       path: 'src/content/levels.ts',
-      find: '    landmarks: [{ at: 2360, lane: 46, depth: 0.07, beat: 96 }],',
-      replace: '    landmarks: [{ at: 2360, lane: 46, depth: 0.07, beat: 0 }],',
+      find: '    landmarks: [{ at: 2360, lane: 46, depth: 0.07, beat: 96, variant: 0 }],',
+      replace: '    landmarks: [{ at: 2360, lane: 46, depth: 0.07, beat: 0, variant: 0 }],',
     },
   },
   {
@@ -140,7 +140,7 @@ export const PROBES = [
     guard: 'no level places a landmark in a place that draws none',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  nebula: (ctx, ink, space, size) => drawPillars(ctx, ink, space, size),',
+      find: '  nebula: (ctx, ink, _glow, space, size, seed) => drawPillars(ctx, ink, space, size, seed),',
       replace: '  nebula: null,',
     },
   },

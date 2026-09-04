@@ -4,10 +4,18 @@ import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { PALETTES, type PaletteName } from '../src/content/palette.ts';
-import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { LANDMARK_SLOTS, SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { THEMES, THEME_KINDS, type ThemeKind } from '../src/content/themes.ts';
 import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
-import { GROUND_OF, LANDMARK_OF, STRUCTURE_OF, bakeSize, laneAt, nebulaField, paintStructure } from '../src/render/bake.ts';
+import {
+  GROUND_OF,
+  LANDMARK_OF,
+  STRUCTURE_OF,
+  bakeSize,
+  laneAt,
+  nebulaField,
+  paintStructure,
+} from '../src/render/bake.ts';
 import { skyFor } from '../src/app/mount.ts';
 import { paintScene, type Landmark } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
@@ -509,6 +517,161 @@ describe('0220 — a landmark is drawn where a level places one', () => {
     }
     const drawn = THEME_KINDS.filter((theme) => LANDMARK_OF[theme] !== null);
     expect(drawn.length, 'no place draws a landmark at all, so the slot is dead').toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('0224 — the mountain is awake', () => {
+  /*
+    Asked for: *"saurian needs blue skies, but exploding volcanoes adding volcanic effects at some
+    points in the level."*
+
+    ⚠️ **POINTS, PLURAL, IS THE HALF THAT NEEDED THE SLOT.** 0203 built a landmark to be the one thing
+    in the sky that can be somewhere in particular, and every place that has used it since has used it
+    once. Saurian Belt places three.
+  */
+  const saurian = LEVEL_KINDS.map((kind) => LEVELS[kind]).find((level) => level.theme === 'saurian');
+
+  it('THE ASK, AS POSITIONS: a volcano arrives on each of the level’s own section boundaries', () => {
+    /*
+      ⚠️ **READ OFF `sections` RATHER THAN COMPARED TO LITERALS**, which is the Pillars' own rule: Ember
+      Nebula's landmark is tied to where its organ opens, so moving the section moves the landmark and a
+      drifted pair reddens. Three volcanoes on three boundaries means the level escalates with its own
+      music rather than beside it.
+    */
+    expect(saurian, 'no level uses Saurian Belt').toBeDefined();
+    const opens = saurian!.sections.map((entry) => entry.at).filter((at) => at > 0);
+    expect(
+      saurian!.landmarks.map((mark) => mark.at),
+      `Saurian Belt's volcanoes must arrive where its sections do (${opens.join(', ')}) — *at some ` +
+        'points in the level* is a statement about position, and a landmark is the only thing in the ' +
+        'sky that has one',
+    ).toEqual(opens);
+    expect(saurian!.landmarks.length, 'this is meant to be the first level to place more than one').toBeGreaterThan(1);
+  });
+
+  it('THE ONE THE BENCH FOUND: a landmark on a planet has its feet IN the ground', () => {
+    /*
+      ⚠️ **A MOUNTAIN THAT STOPS SHORT OF ITS OWN HORIZON IS HANGING IN THE AIR.** On a planet the
+      ground layer is painted LAST (0221) and a landmark is painted FIRST, so the ground is what a
+      volcano's base disappears behind — and the first draft's cone ended at lane 76 with the ridges
+      starting at 81. Drawn correctly, sized correctly, floating.
+
+      ⚠️ **IN LANE UNITS, AGAINST THE PLACE'S OWN GROUND** — 0027. Both numbers come out of the drawings
+      rather than out of the constants behind them: the foot from tracing the landmark, the skyline from
+      tracing the ground. A guard comparing the two literals would prove they had been typed to agree.
+    */
+    for (const kind of LEVEL_KINDS) {
+      const level = LEVELS[kind];
+      if (level.landmarks.length === 0 || THEMES[level.theme].ground === null) continue;
+      const size = 240;
+      const land = tracingPen();
+      GROUND_OF[level.theme]!(land.pen, '#101010', '#405060', '#80a040', size);
+      const skyline = Math.min(
+        ...land.trace.passes.filter((pass) => pass.alpha >= 1).flatMap((pass) => pass.subpaths.flat().map((p) => p[1])),
+      );
+
+      for (const mark of level.landmarks) {
+        /*
+          ⚠️ **TRACED PER ENTRY SINCE 0225, BECAUSE THE CASTINGS ARE DIFFERENT SHAPES.** This used to
+          trace the drawing once and reuse the answer for every entry, which was true while a place had
+          one landmark bitmap. Three castings have three different feet, and the one that hangs in the
+          air is whichever entry pairs a high `lane` with a short casting — a pairing that only exists
+          per entry.
+        */
+        const shape = tracingPen();
+        LANDMARK_OF[level.theme]!(shape.pen, '#404040', '#c0a040', '#101010', size, mark.variant);
+        const lowest = Math.max(...shape.trace.passes.flatMap((pass) => pass.subpaths.flat().map((p) => p[1])));
+        // The sprite is `SPRITE_EXTENT.landmark` across and blitted CENTRED on its lane.
+        const foot = mark.lane - SPRITE_EXTENT.landmark / 2 + (lowest / size) * SPRITE_EXTENT.landmark;
+        const ground = laneAt(skyline / size);
+        expect(
+          foot,
+          `${kind}'s landmark at ${mark.at} has its foot at lane ${foot.toFixed(0)} and the ground ` +
+            `starts at lane ${ground.toFixed(0)} — it stops short of its own horizon, which draws as a ` +
+            'mountain hanging in the air',
+        ).toBeGreaterThan(ground);
+      }
+    }
+  });
+});
+
+describe('0225 — a landmark is not a carbon copy', () => {
+  /*
+    Asked for: *"lets go and add that seed to the landmarks and levels, it sounds like it's going to be
+    needed to make the levels more interesting rather than carbon copies."*
+
+    ⚠️ **A LANDMARK IS A BAKED BITMAP, SO A LEVEL THAT PLACES THREE PLACES THE SAME ONE THREE TIMES.**
+    0224 gave Saurian Belt three volcanoes and they came out identical — necessarily — with two of the
+    three usually on screen together.
+  */
+  const size = 240;
+
+  /** Every point a drawing puts down, as one string, so two castings can be compared by what they are. */
+  function castingOf(theme: ThemeKind, seed: number): string {
+    const { pen, trace } = tracingPen();
+    LANDMARK_OF[theme]!(pen, '#404040', '#c0a040', '#101010', size, seed);
+    return trace.passes.flatMap((pass) => pass.subpaths.flat().map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`)).join('|');
+  }
+
+  it('THE REPORTED ONE: every casting of a landmark is a different drawing', () => {
+    /*
+      ⚠️ **EVERY PLACE THAT DRAWS ONE, NOT ONLY THE PLACE THAT PLACES THREE.** A drawing that ignores
+      its seed produces three identical castings, and it will do it silently in whichever place nobody
+      is looking at — The Black Heart places one landmark today and would be the obvious one to skip.
+      **The claim is about the machinery, so it is held everywhere the machinery runs.**
+    */
+    let checked = 0;
+    for (const theme of THEME_KINDS) {
+      if (LANDMARK_OF[theme] === null) continue;
+      const castings = [0, 1, 2].map((seed) => castingOf(theme, seed));
+      for (let i = 0; i < castings.length; i += 1) {
+        for (let j = i + 1; j < castings.length; j += 1) {
+          checked += 1;
+          expect(
+            castings[i] === castings[j],
+            `${theme}'s castings ${i} and ${j} are the same drawing — the seed reached the table and ` +
+              'not the pen, so a level placing three places one object three times',
+          ).toBe(false);
+        }
+      }
+    }
+    expect(checked, 'no place draws a landmark, so none of this is exercised').toBeGreaterThan(0);
+  });
+
+  it('and a level that places more than one uses more than one of them', () => {
+    /*
+      ⚠️ **THE HALF THE DRAWING CANNOT ENFORCE.** Three distinct castings are no use to a level that
+      names the same one three times, and `variant: 0` is what a copied line says. This is the claim the
+      report actually made: not *castings exist* but *the levels are not carbon copies*.
+    */
+    for (const kind of LEVEL_KINDS) {
+      const marks = LEVELS[kind].landmarks;
+      if (marks.length < 2) continue;
+      const used = new Set(marks.map((mark) => mark.variant));
+      expect(
+        used.size,
+        `${kind} places ${marks.length} landmarks and uses ${used.size} casting(s) — two of them are ` +
+          'usually on screen together, so the same one twice is the carbon copy that was reported',
+      ).toBe(marks.length);
+    }
+  });
+
+  it('and every slot the table offers is actually baked, or an entry draws nothing', () => {
+    /*
+      ⚠️ **THE HOLE A FIXED SET OF SLOTS OPENS.** `variant` indexes `LANDMARK_SLOTS`; a variant past the
+      end of it is `undefined`, which is a sprite index of nothing — an entry that blits an empty
+      bitmap at exactly the right place for a whole level, which is 0220's landmark hole in its third
+      costume. The type says `0 | 1 | 2` and this says the table agrees with the type.
+    */
+    expect(LANDMARK_SLOTS.length, 'the slot table and the variant type disagree').toBe(3);
+    for (const kind of LEVEL_KINDS) {
+      for (const mark of LEVELS[kind].landmarks) {
+        expect(
+          LANDMARK_SLOTS[mark.variant],
+          `${kind} places a landmark at variant ${mark.variant}, which is not a slot`,
+        ).toBeDefined();
+      }
+    }
   });
 });
 
