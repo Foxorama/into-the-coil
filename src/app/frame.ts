@@ -37,22 +37,24 @@ import {
   collectInto,
   collideInto,
   collideIntoOne,
+  nearestFrom,
+  strike,
   type Collected,
   type Deaths,
 } from '../sim/collide.ts';
-import { type Entity, reset, stepEntities } from '../sim/entity.ts';
+import { type Body, type Entity, reset, stepEntities } from '../sim/entity.ts';
 // `SCROLL_PER_STEP` for `PICKUP_SLOW_AT`, which is a distance derived from a duration — 0087. Every
 // other speed in this file rides `w.scrollPerStep`, which is the same number reachable from a world.
 // `PLAYER_ALONG_MARGIN` and `PLAYER_LEAD` are the two ends of the player's box, imported rather than
 // restated so a scattered pickup's wall and the ship's own clamp are one number — 0100, and the same
 // reason `src/app/mount.ts` imports `PLAYER_LEAD` for the mark that draws it (0074).
-import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, SCROLL_PER_STEP, flyShip, holdStation } from '../sim/flight.ts';
+import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, flyShip, holdStation } from '../sim/flight.ts';
 import { BURN_ASK, EASE_ASK, EXHAUST, PULSE_STEPS, SWAY, THRUST } from '../content/exhaust.ts';
 import type { Intent } from '../sim/intent.ts';
 import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
 import type { Pool } from '../sim/pool.ts';
-import { paintScene, type Bound, type Landmarks, type Sky } from '../render/scene.ts';
+import { BOLT_STEPS, paintBolts, paintScene, type Bound, type Landmarks, type Sky } from '../render/scene.ts';
 import { LANDMARK_SLOTS, SPRITE_EXTENT } from '../content/sprites.ts';
 import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
@@ -66,14 +68,24 @@ import { DEFAULT_ORIGIN, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
 import { type DifficultyRow, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
 import { nextOnGrid } from '../content/cadence.ts';
-import { PICKUP_KINDS, type PickupKind, type PickupRow, type UpgradeKind, type Weapon } from '../content/pickups.ts';
+import {
+  PICKUP_CYCLE_STEPS,
+  PICKUP_KINDS,
+  PICKUP_REPEATS,
+  type PickupKind,
+  type PickupRow,
+  type UpgradeKind,
+  type Weapon,
+} from '../content/pickups.ts';
+import { WEAPONS, WEAPON_KINDS, type FlightKind } from '../content/weapons.ts';
+import { MISSILES, MISSILE_KINDS } from '../content/missiles.ts';
 import { SPECIALS, pyreFor, type SpecialKind } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
 import { openBy, phaseFor, stepBoss, throwCurtain, uncoilsBy } from './boss.ts';
 import type { Frame } from './loop.ts';
 
 /** How far in front of the ship a shot appears, in world units — clear of its own hurtbox. */
-const MUZZLE_ALONG = 3;
+export const MUZZLE_ALONG = 3;
 
 /**
  * Two pi, hoisted.
@@ -155,6 +167,31 @@ const CIRCLE_FLOOR = 10;
  * to turn taking one into a reflex. At 0.22 it crosses the lane in about seven seconds.
  */
 const PICKUP_DRIFT = 0.22;
+
+/**
+ * How fast a waiting pickup wanders the length of the box, in world units per step — 0233.
+ *
+ * ⚠️ **A little faster than the across drift, because the box is longer than the lane is wide** —
+ * about 156 units end to end against a 100-unit lane — and *"bounce off all the screen walls"* is a
+ * thing the player has to SEE inside the wait. At 0.28 a pickup crosses the box in a little over
+ * eight seconds and turns at the back wall inside its wait.
+ *
+ * ⚠️ **AND UNDER HALF THE SCROLL RATE, WHICH IS 0087's GUARD AND NOT A TASTE.** `tests/pickups.test.ts`
+ * reads *the pickup stopped running away* as *moving at under half the rate it approached at*, in
+ * the player's units; a wander at or above 0.3 is a pickup that never slowed down. It was 0.45 for
+ * an afternoon, and that guard is what said so.
+ */
+const PICKUP_WANDER = 0.28;
+
+/**
+ * How far before a wall of the box a wandering pickup turns, in world units — 0233.
+ *
+ * ⚠️ **The ease's own stopping distance, so the turn finishes AT the wall rather than past it.** The
+ * heading flips and the velocity follows it at `PICKUP_EASE`, which takes about a dozen steps to
+ * reverse — measured at seven units of overshoot with the flip on the wall itself, which is seven
+ * units of a pickup sitting where the ship cannot reach. Turning early is what makes the wall a wall.
+ */
+const PICKUP_TURN_ROOM = 8;
 
 /**
  * How much of the gap to its target a pickup's `along` speed closes each step.
@@ -331,30 +368,19 @@ const SCATTER_SPREAD_MIN = 0.7;
  */
 const SCATTER_SPREAD_MAX = 1.3;
 
-/**
- * What share of the scroll rate a slowed pickup keeps closing at, so it never parks.
- *
- * ── THE STATION WAS THE BARRIER, AND EASING ONTO IT DID NOT HELP ────────────────────────────────
- *
- * `docs/decisions/0087-a-pickup-never-parks.md`. Reported from play, about the build
- * `docs/decisions/0077-a-pickup-arrives-rather-than-stopping.md` landed in: *"pickups come up fast,
- * still hit the middle barrier and then float a bit."*
- *
- * ⚠️ **0077 fixed the impact and left the wall.** It made the velocity change take three quarters of
- * a second instead of one step — which was real, and which the guards measure — but every pickup
- * still ended up **stopped dead at the same place on the screen**, 100 units ahead of the camera on
- * every device. A shared line that everything arrives at and holds is a barrier whether a body
- * reaches it abruptly or gracefully, and 56% of the way up the view is *the middle of the screen*.
- *
- * ⚠️ **So a waiting pickup keeps coming.** Its target is a fraction of the scroll rate below the
- * camera's own, which in the camera's frame is *still closing, slowly*. There is no place on the
- * screen where pickups stop, because they do not stop.
- *
- * ⚠️ **0.35, and the ceiling is a guard rather than a taste.** `tests/pickups.test.ts` reads *the
- * pickup stopped running away* as **under half the rate it approached at**, written in the player's
- * units and naming no constant here. A share at or above 0.5 is a pickup that never slowed down.
- */
-const PICKUP_CLOSE_SHARE = 0.35;
+/*
+  ── `PICKUP_CLOSE_SHARE` WAS HERE, AND 0233's WANDER IS WHAT REPLACED IT ─────────────────────────
+
+  It was 0.35: the share of the scroll rate a slowed pickup kept closing at, so it never parked —
+  `docs/decisions/0087-a-pickup-never-parks.md`'s answer to *"pickups come up fast, still hit the
+  middle barrier and then float a bit."* The station was the barrier, and a pickup that kept coming
+  slowly was the fix.
+
+  ⚠️ **A pickup that wanders the box cannot park either, and the wander is a stronger statement of
+  the same thing.** `PICKUP_WANDER` is the closing rate now — held under half the scroll rate by the
+  same guard 0087 named — and where the wait begins is the front wall of the box rather than a
+  distance derived from a share. 0087's rule stands; its number is gone.
+*/
 
 /**
  * Where a pickup stops running away and begins its slow close, in world units ahead of the camera.
@@ -412,8 +438,13 @@ const PICKUP_CLOSE_SHARE = 0.35;
  * of *long enough* is *longer than the pickup itself waits to be taken*. Two independent constants
  * agreeing, which `docs/decisions/0027-measure-the-picture-not-the-model.md` allows and a guard
  * written in terms of one of them would not be.
+ *
+ * ⚠️ **420 → 600, so the wander reaches the back wall and turns inside the wait** — 0233. At a
+ * wander held under half the scroll rate, the box takes a little over eight seconds to cross, and a
+ * seven-second wait was a pickup that left on the way to its first turn. Ten seconds is the floor;
+ * a cycling pickup waits the longer of this and its repetitions (`lingerFor`).
  */
-export const PICKUP_LINGER_STEPS = 420;
+export const PICKUP_LINGER_STEPS = 600;
 
 /**
  * How much wider than the hull the ship's reach is when COLLECTING, as a multiple of its radius.
@@ -604,14 +635,16 @@ const SHIELD_SPIN = 0.02;
 export const SHIP_START_ALONG = 40;
 
 /**
- * Where a pickup stops running away and begins its slow close — the declaration for the comment
- * three hundred lines above, which is where it belongs among the other pickup constants.
+ * Where a pickup stops running away and begins its wander: the front wall of the player's box, less
+ * the room a turn takes — 0233.
  *
- * `SHIP_START_ALONG + PICKUP_LINGER_STEPS × PICKUP_CLOSE_SHARE × SCROLL_PER_STEP` — the distance a
- * waiting pickup covers before its wait runs out, measured back from the ship.
- * `docs/decisions/0087-a-pickup-never-parks.md`.
+ * ⚠️ **It was `SHIP_START_ALONG + PICKUP_LINGER_STEPS × PICKUP_CLOSE_SHARE × SCROLL_PER_STEP`** — the
+ * distance a slowly closing pickup covered before its wait ran out, so that its journey ended at the
+ * ship (0087). A pickup that wanders the box has no one place its journey ends, so the honest answer
+ * to *where does the wait begin* is *where the box begins*: the same wall the wander turns at, which
+ * is the only line on the screen that means anything to the player here.
  */
-const PICKUP_SLOW_AT = SHIP_START_ALONG + PICKUP_LINGER_STEPS * PICKUP_CLOSE_SHARE * SCROLL_PER_STEP;
+const PICKUP_SLOW_AT = PLAYER_LEAD - PICKUP_TURN_ROOM;
 
 /**
  * How long a body shows a hit it survived, in steps — four, about 67ms.
@@ -720,6 +753,13 @@ export interface World {
    * other one.
    */
   missiles: Pool<Entity>;
+  /**
+   * Every link of chain lightning on screen — 0233. A link is an entity at its landing point that
+   * lives `BOLT_STEPS` and is stroked by `paintBolts`; it is in no collision pairing, because its
+   * damage was landed by hand on the step it was fired. Its own pool for the reason the missiles
+   * have one: a bolt that the pulse's pool refused would be a hit the picture never mentioned (0036).
+   */
+  bolts: Pool<Entity>;
   enemyShots: Pool<Entity>;
   /**
    * Fragments. In no collision pairing, which is what makes them cosmetic in fact.
@@ -759,6 +799,12 @@ export interface World {
    * different death.
    */
   scatterRng: Rng;
+  /**
+   * The arc's own stream — 0021, one stream per concern. It seeds a link's jag and picks where on a
+   * boss a jumping bolt lands; a bolt that rolled on the spawn stream would move a wave by one enemy
+   * every time it fired.
+   */
+  arcRng: Rng;
   view: View;
   surface: Surface;
   /** The spawn stream, named per 0021 — a cosmetic roll added later must not move a wave. */
@@ -868,7 +914,7 @@ export interface World {
    * `src/state/`'s business — an extra life and an upgrade land in different fields and are cleared
    * by different events.
    */
-  onPickup: (kind: PickupKind) => void;
+  onPickup: (kind: PickupKind, face: number) => void;
   /**
    * The ship's health as the chrome last drew it.
    *
@@ -1273,6 +1319,8 @@ export class GameFrame implements Frame {
     stepEntities(w.bombs, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
     stepEntities(w.blasts, w.cameraAlong);
     stepEntities(w.missiles, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
+    // A link rides the camera and retires on its own lifetime; the cull is a formality it never reaches.
+    stepEntities(w.bolts, w.cameraAlong);
     stepEntities(w.enemyShots, w.cameraAlong);
     // Before the pool steps, because `stepEntities` derives `sprite` from `spriteBase` — a page
     // turned after it would be drawn one step late.
@@ -1446,7 +1494,9 @@ export class GameFrame implements Frame {
       // At the SHIP, because that is where a pickup is taken — 0127. `Collected` logs the kind and
       // not a position, and the position that matters is the one the player is at anyway.
       w.onCue('pickup', w.ship.across);
-      w.onPickup(kind);
+      // And the FACE it was showing — 0233. Which gun a weapon pickup was offering is decided on
+      // the step it is taken, and `collectInto` logged it beside the kind for exactly this line.
+      w.onPickup(kind, w.collected.face[i]!);
     }
 
     // Every enemy that died this step leaves something behind. The positions were recorded by the
@@ -1558,6 +1608,9 @@ export class GameFrame implements Frame {
     // the stepped value here is what made a ship holding station exactly still judder on screen.
     const camera = w.prevCameraAlong + (w.cameraAlong - w.prevCameraAlong) * alpha;
     paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.bound, w.landmarks, w.levelOrigin);
+    // After everything, so a bolt is over what it struck — 0233. The landing sparks are entities in
+    // `layers` and were blitted above; this strokes the lines between them.
+    paintBolts(w.surface, w.view, w.bolts, camera, alpha);
   }
 }
 
@@ -1608,9 +1661,178 @@ function stepsToGrid(now: number, cadence: number): number {
  * no `fire` and there must never be one — the base weapon fires itself, and what the player spends
  * is the arsenal. This is that rule as four lines of code.
  */
+/**
+ * Which cue a flight makes when it fires.
+ *
+ * ⚠️ **A switch with a `never` arm, and exported so a test can ask it** — 0016's fifth defeat used
+ * as the guard. The cue is not on the weapon row because `tests/sound.test.ts` holds that every cue
+ * is played by the frame, by name, and a name read out of a content table is a cue nothing in this
+ * file can be seen to play.
+ */
+export function cueOfFlight(flight: FlightKind): CueKind {
+  switch (flight) {
+    case 'straight':
+      return 'pulse';
+    case 'chain':
+      return 'arc';
+    default: {
+      const unhandled: never = flight;
+      return unhandled;
+    }
+  }
+}
+
 function fireShip(w: World): void {
   w.fireIn--;
   if (w.fireIn > 0) return;
+  /*
+    ⚠️ **THE FLIGHT DECIDES, AND A NAME NEVER DOES** — 0233, on 0016's terms. A weapon kind is a row;
+    what the frame switches on is the closed union of ways a shot can travel, so a third gun that
+    flies like the pulse is a row and nothing here.
+  */
+  switch (w.weapon.flight) {
+    case 'straight':
+      firePulse(w);
+      return;
+    case 'chain':
+      fireArc(w);
+      return;
+    default: {
+      const unhandled: never = w.weapon.flight;
+      return unhandled;
+    }
+  }
+}
+
+/**
+ * Chain lightning — `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
+ *
+ * Asked for: *"a chain lightning gun, that jumps to more targets and gets more powerful with each
+ * upgrade… for single target bosses it needs to arc and bounce and jump around to hit different
+ * parts of the boss."*
+ *
+ * ── RESOLVED ON THE STEP IT FIRES, AND THE PICTURE IS WHAT OUTLIVES IT ─────────────────────────
+ *
+ * ⚠️ **Hitscan, not a body.** There is nothing to sweep: from the nose, the nearest body in reach
+ * is struck; from that body, the nearest body in reach that is not already lit; and so on for
+ * `links`. Each strike is `collide.ts`'s own arrival — damage, death, flash — landed by hand, so a
+ * bolt's hit and a pulse's hit are one description. What is spawned is the PICTURE: one entity per
+ * link, at the landing point, carrying where it came from, alive for `BOLT_STEPS`.
+ *
+ * ⚠️ **THE BOSS IS THE EXCEPTION TO *not already lit*, AND THAT IS THE ASK.** A boss is one body
+ * with one radius (`src/content/bosses.ts` has no parts), so *hit different parts of it* is a
+ * picture: when the nearest thing in reach is the boss and the chain has links left, each further
+ * link lands on a fresh point inside its disc, rolled on the arc's own stream. Each of those is a
+ * strike, so the bolt is worth the same against one big thing as against several small ones —
+ * which is the balance a gun that cannot miss has to keep.
+ *
+ * ⚠️ **NO TARGET IS STILL A VOLLEY.** A dry bolt goes straight ahead for part of its reach and hits
+ * nothing, and the discharge cue sounds without the strike's — so a player who has just switched
+ * guns sees the gun working before anything is in front of it, and a gun that fires itself does not
+ * go silent when the lane is empty. The pulse does the same thing with bullets.
+ *
+ * ⚠️ **The pool refusing a link drops the picture and not the hit.** Damage was landed before the
+ * spawn, on `firePulse`'s own terms about a volley the pool cuts short: the model is right and the
+ * picture is one link shorter, which is the failure 0036 names and the reason the pool is sized so
+ * it cannot happen at any tier — `tests/weapons.test.ts` fires the cap for fifteen seconds.
+ */
+function fireArc(w: World): void {
+  const row = SHOTS[WEAPONS[w.weapon.kind].shot];
+  // On the grid, like the pulse — 0094: the same phase at every tier and after every death.
+  w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);
+  w.onCue('arc', w.ship.across);
+  let fromAlong = w.ship.along + MUZZLE_ALONG;
+  let fromAcross = w.ship.across;
+  let struck = false;
+  // Once a chain has reached the boss it stays on the boss: the rest of its links jump around the
+  // hull rather than back out to something small behind it.
+  let onBoss = false;
+  for (let link = 0; link < w.weapon.links; link++) {
+    let toAlong: number;
+    let toAcross: number;
+    const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, w.weapon.reach, true);
+    const boss = w.bossPool.size > 0 ? nearestFrom(w.bossPool, fromAlong, fromAcross, w.weapon.reach, false) : -1;
+    if (enemy >= 0 && (boss < 0 || nearer(w.enemies.at(enemy), w.bossPool.at(0), fromAlong, fromAcross))) {
+      const target = w.enemies.at(enemy);
+      toAlong = target.along;
+      toAcross = target.across;
+      strike(w.enemies, enemy, w.weapon.damage, IMPACT_FLASH_STEPS, w.deaths);
+    } else if (boss >= 0) {
+      const target = w.bossPool.at(boss);
+      /*
+        A fresh point inside the boss for every link after the first, so the chain jumps around the
+        hull rather than striking one point four times — and the first link lands on the hull's
+        nearest edge, which is where a bolt from outside would arrive.
+      */
+      if (onBoss) {
+        const angle = w.arcRng.range(0, Math.PI * 2);
+        const depth = w.arcRng.range(0.25, 0.85) * target.radius;
+        toAlong = target.along + Math.cos(angle) * depth;
+        toAcross = target.across + Math.sin(angle) * depth;
+      } else {
+        const dAlong = target.along - fromAlong;
+        const dAcross = target.across - fromAcross;
+        const gap = Math.sqrt(dAlong * dAlong + dAcross * dAcross);
+        const edge = gap > 0 ? (gap - target.radius * 0.6) / gap : 0;
+        toAlong = fromAlong + dAlong * edge;
+        toAcross = fromAcross + dAcross * edge;
+      }
+      onBoss = true;
+      // The boss's own window scales a bolt as it scales a bullet — 0150. Read here rather than
+      // remembered, on the collision section's own argument.
+      const open = openBy(phaseFor(w.bossRow, target.health, w.bossFullHealth));
+      strike(w.bossPool, boss, w.weapon.damage * open, IMPACT_FLASH_STEPS, w.deaths);
+    } else if (link === 0) {
+      // Dry: nothing in reach. The bolt goes ahead and lands on nothing.
+      toAlong = fromAlong + w.weapon.reach * DRY_BOLT_SHARE;
+      toAcross = fromAcross;
+    } else {
+      break;
+    }
+    if (!struck && (enemy >= 0 || boss >= 0)) {
+      struck = true;
+      w.onCue('zap', toAcross);
+    }
+    spawnLink(w, row, fromAlong, fromAcross, toAlong, toAcross);
+    // A body the strike killed is gone from its pool; the next link still jumps from where it was.
+    fromAlong = toAlong;
+    fromAcross = toAcross;
+  }
+}
+
+/** Whether `a`'s edge is nearer a point than `b`'s edge is. The tie goes to the enemy. */
+function nearer(a: Entity, b: Entity, along: number, across: number): boolean {
+  const aAlong = a.along - along;
+  const aAcross = a.across - across;
+  const bAlong = b.along - along;
+  const bAcross = b.across - across;
+  return Math.sqrt(aAlong * aAlong + aAcross * aAcross) - a.radius <= Math.sqrt(bAlong * bAlong + bAcross * bAcross) - b.radius;
+}
+
+/** How much of its reach a dry bolt shows. Less than all of it, so a miss does not look like a range. */
+const DRY_BOLT_SHARE = 0.55;
+
+/** One link's picture: an entity at the landing point, carrying its start, riding the camera. */
+function spawnLink(w: World, row: Body, fromAlong: number, fromAcross: number, toAlong: number, toAcross: number): void {
+  const link = w.bolts.spawn();
+  if (link === null) return;
+  reset(link, toAlong, toAcross, row);
+  link.velAlong = w.scrollPerStep;
+  link.fromAlong = fromAlong - toAlong;
+  link.fromAcross = fromAcross - toAcross;
+  link.lifeFor = BOLT_STEPS;
+  // The jag's seed — `paintBolts` hashes it, so two links never flicker in step.
+  link.spin = w.arcRng.int(0, 0x7fffffff);
+}
+
+/**
+ * The pulse, and every other gun that fires a body in flight.
+ *
+ * ⚠️ **No input is read here and there is no action for it.** `src/content/actions.ts` says there is
+ * no `fire` and there must never be one — the base weapon fires itself, and what the player spends
+ * is the arsenal. This is that rule as four lines of code.
+ */
+function firePulse(w: World): void {
   /*
     ⚠️ **RELOADED TO THE GRID AND NOT TO THE CADENCE, WHICH IS THE HALF 0093 COULD NOT DO** — 0094.
     `w.fireIn = w.weapon.fireEvery` puts the next volley a correct interval after this one, so the gun
@@ -1631,7 +1853,7 @@ function fireShip(w: World): void {
     claim.
   */
   w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);
-  const row = SHOTS[w.shipRow.shot];
+  const row = SHOTS[WEAPONS[w.weapon.kind].shot];
   /*
     The volley, fanned about the nose. One barrel takes the nose exactly; `spread` is the TOTAL angle
     across the fan, so the step between neighbours is `spread / (shots - 1)` — the same arithmetic
@@ -1654,7 +1876,7 @@ function fireShip(w: World): void {
       loop but gated on the first barrel, so a volley the pool refused entirely is silent, which is
       the same rule every other cue in this file follows.
     */
-    if (i === 0) w.onCue('pulse', w.ship.across);
+    if (i === 0) w.onCue(cueOfFlight(w.weapon.flight), w.ship.across);
     const angle = first + step * i;
     reset(shot, w.ship.along + MUZZLE_ALONG, w.ship.across, row);
     shot.velAlong = Math.cos(angle) * row.speed + w.scrollPerStep;
@@ -1798,7 +2020,7 @@ function fireMissiles(w: World): void {
   // ACROSS the beat rather than on it, which is the counter-beat. A counter-beat at a random phase is
   // just a second thing that is nearly right.
   w.missileIn = stepsToGrid(w.steps, w.weapon.missileEvery);
-  const row = SHOTS[w.shipRow.missile];
+  const row = SHOTS[MISSILES[w.weapon.missile].shot];
   for (let i = 0; i < w.weapon.launchers; i++) {
     const missile = w.missiles.spawn();
     // A volley one tube short is dropped rather than grown — `src/sim/pool.ts` has the argument.
@@ -2672,6 +2894,25 @@ function steerEnemies(w: World): void {
 function driftPickups(w: World): void {
   for (let i = w.pickups.size - 1; i >= 0; i--) {
     const item = w.pickups.at(i);
+    /*
+      ── THE CYCLE — 0233 ─────────────────────────────────────────────────────────────────────────
+
+      A pickup with more than one face turns to the next every `PICKUP_CYCLE_STEPS`, and the face it
+      is showing is what the player gets. `faceIn` is zero on a pickup with one face, so this is a
+      compare and nothing else for the shield and the bomb.
+
+      ⚠️ **`spriteBase` and not `sprite`**, because `stepEntities` derives the drawn sprite from
+      `spriteBase` on the step after this — the same rule `turnFlares` follows for a page turned.
+      `spriteHit` follows it too, or a pickup would flash back to its first face, which no pickup
+      does today and which would be a lie the day one did.
+    */
+    if (item.faceIn > 0 && --item.faceIn === 0) {
+      const faces = w.pickupRows[item.kind]!.faces;
+      item.face = item.face + 1 >= faces.length ? 0 : item.face + 1;
+      item.spriteBase = faces[item.face]!;
+      item.spriteHit = item.spriteBase;
+      item.faceIn = PICKUP_CYCLE_STEPS;
+    }
     if (item.across - item.radius <= 0) item.velAcross = Math.abs(item.velAcross);
     else if (item.across + item.radius >= ACROSS_SPAN) item.velAcross = -Math.abs(item.velAcross);
     /*
@@ -2794,12 +3035,37 @@ function driftPickups(w: World): void {
       `tests/pickups.test.ts` reported as *waiting further out than the ship can fly*, from a place it
       was only passing through.
     */
-    if (item.along - w.cameraAlong > PICKUP_SLOW_AT) {
+    const inView = item.along - w.cameraAlong;
+    if (inView > PICKUP_SLOW_AT) {
       item.velAlong += (0 - item.velAlong) * PICKUP_EASE;
       continue;
     }
+    /*
+      ── AND ONCE IT HAS ARRIVED IT WANDERS THE BOX, TURNING AT ITS ENDS — 0233 ──────────────────
+
+      Asked for: *"they need to hang around and bounce off all the screen walls long enough that
+      the player can see at least 2 repetitions of each weapon."* The across walls it already had;
+      this is the along pair, and the walls are the player's box (`PLAYER_ALONG_MARGIN` to
+      `PLAYER_LEAD`) rather than the screen's edge, for 0100's reason: past the box is on the screen
+      and out of reach, and a pickup that bounced off the screen would spend a third of its wait
+      where the ship cannot go.
+
+      ⚠️ **`spin` IS THE HEADING, AND THE WALL FLIPS THE HEADING RATHER THAN THE VELOCITY.** The
+      velocity is eased toward a target (0077), so flipping it directly would be fighting the ease —
+      the pickup would be pulled straight back into the wall. Flipping which way the target points
+      lets the ease carry it round, which is a turn rather than a bounce, and reads as a thing
+      changing its mind rather than a thing hitting glass. Zero means *not yet arrived*, and the
+      first arrival heads back down the view, which is the direction it was already going.
+
+      ⚠️ **The bob stays on top**, so it never holds one line — 0087's rule, and the wander is a
+      second reason it cannot park.
+    */
+    if (item.spin === 0) item.spin = -1;
+    if (inView <= PLAYER_ALONG_MARGIN + PICKUP_TURN_ROOM) item.spin = 1;
+    else if (inView >= PLAYER_LEAD - PICKUP_TURN_ROOM) item.spin = -1;
     const target =
-      w.scrollPerStep * (1 - PICKUP_CLOSE_SHARE) +
+      w.scrollPerStep +
+      item.spin * PICKUP_WANDER +
       PICKUP_BOB_SPEED * Math.sin(w.cameraAlong / PICKUP_BOB_UNITS + item.bobPhase);
     item.velAlong += (target - item.velAlong) * PICKUP_EASE;
   }
@@ -2891,6 +3157,13 @@ function scatterRing(w: World, upgrades: readonly UpgradeKind[], count: number):
     // and a player with more upgrades than the pool has slots has had a very good run.
     if (item === null) return;
     reset(item, along, w.deathAcross, row, kind);
+    /*
+      ⚠️ **A SCATTERED PIECE STARTS ON THE FACE THE PLAYER JUST LOST** — 0233. What a death throws
+      back is what it took (0066), and what it took was a gun of a particular kind; a piece that
+      came up showing the other gun would be offering the player a switch they did not ask for at
+      the one moment they are trying to recover. It cycles from there like any other.
+    */
+    startCycle(item, row, upgrades[i] === 'weapon' ? WEAPON_KINDS.indexOf(w.weapon.kind) : MISSILE_KINDS.indexOf(w.weapon.missile));
     /*
       THE RING — an angle per piece, evenly spaced and then jittered.
 
@@ -2992,7 +3265,38 @@ function spawnPickup(w: World, index: number): void {
     ⚠️ **Nothing allocates**: a subtraction, a divide and a `Math.max`.
   */
   const approach = (entry.at - w.cameraAlong - PICKUP_SLOW_AT) / w.scrollPerStep;
-  item.holdFor = PICKUP_LINGER_STEPS + Math.max(0, Math.round(approach));
+  item.holdFor = lingerFor(row) + Math.max(0, Math.round(approach));
+  startCycle(item, row, index % row.faces.length);
+}
+
+/**
+ * How long a pickup of `row` waits once it has arrived — 0233.
+ *
+ * ⚠️ **The longer of the two promises.** 0064's seven seconds is the floor every pickup has; a
+ * cycling pickup also owes `PICKUP_REPEATS` full turns of its faces, so the player sees every gun
+ * at least twice before it leaves — and a third gun lengthens the wait on its own, because the
+ * promise is counted in repetitions.
+ */
+function lingerFor(row: PickupRow): number {
+  const cycles = PICKUP_REPEATS * row.faces.length * PICKUP_CYCLE_STEPS;
+  return cycles > PICKUP_LINGER_STEPS ? cycles : PICKUP_LINGER_STEPS;
+}
+
+/**
+ * Put a pickup on `face` and, if it has more than one, start it turning.
+ *
+ * ⚠️ **An authored pickup starts on a face chosen by its INDEX, not on the first**, on the drift's
+ * own argument: a level is authored, so two pickups near each other must visibly differ on every
+ * run rather than on most of them — and two weapon pickups side by side showing the same gun at
+ * the same moment would read as one offer twice.
+ */
+function startCycle(item: Entity, row: PickupRow, face: number): void {
+  if (row.faces.length < 2) return;
+  item.face = face;
+  item.spriteBase = row.faces[face]!;
+  item.spriteHit = item.spriteBase;
+  item.sprite = item.spriteBase;
+  item.faceIn = PICKUP_CYCLE_STEPS;
 }
 
 /**
@@ -3353,7 +3657,9 @@ function spawnBoss(w: World): void {
  * times a second to answer a question that changes a few times a run.
  */
 export function wearHull(w: World): void {
-  const hull = hullFor(w.weapon.tier);
+  // The kind AND the tier — 0233. The ship wears what it is carrying, and what it is carrying is
+  // both how much and which.
+  const hull = hullFor(w.weapon.kind, w.weapon.tier);
   w.ship.spriteBase = hull.base;
   w.ship.spriteHit = hull.hit;
   // `sprite` is derived by `stepEntities`, but the frame between now and the next step draws from it.
@@ -3388,6 +3694,8 @@ export function respawn(w: World): void {
   */
   w.playerShots.clear();
   w.missiles.clear();
+  // A bolt is the ship's too, and one that outlived its ship would be a strike from nowhere.
+  w.bolts.clear();
   /*
     ⚠️ **A bomb in the air is lost with the ship that threw it, and its blast with it.** The charge
     was spent, which is 0039's rule about what a death costs read at its smallest scale — and a blast

@@ -16,6 +16,8 @@ import {
 
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { SHIPS } from '../src/content/ships.ts';
+import { WEAPONS } from '../src/content/weapons.ts';
+import { MISSILES } from '../src/content/missiles.ts';
 import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
@@ -59,7 +61,7 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
     ship opens on is a hand's job. What is held is that every rung, whatever it is, lands on the beat.
   */
   /** Every rung of the pulse's ladder, in steps between volleys. */
-  const RUNGS = Array.from({ length: UPGRADE_TIERS + 1 }, (_, tier) => fireEveryAt(SHIPS.proof, tier));
+  const RUNGS = Array.from({ length: UPGRADE_TIERS + 1 }, (_, tier) => fireEveryAt(WEAPONS.pulse,tier));
 
   /*
     ── TWO GUARDS ABOUT THE MUSIC USED TO LIVE HERE AND 0159 DELETED THEM ─────────────────────────
@@ -98,8 +100,8 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
     */
     const perSecond = (steps: number): number => STEPS_PER_SECOND / steps;
     const ladders = [
-      ['pulse', SHIPS.proof.fireEvery],
-      ['missile', SHIPS.proof.missileEvery],
+      ['pulse', WEAPONS.pulse.fireEvery],
+      ['missile', MISSILES.straight.missileEvery],
     ] as const;
     for (const [name, ladder] of ladders) {
       for (let tier = 0; tier < ladder.length; tier++) {
@@ -128,11 +130,11 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
       `FASTEST_FIRE` is legibility (`src/app/frame.ts` needs the impact flash to finish between hits)
       and `MAX_BARRELS` is the pool budget.
     */
-    expect(SHIPS.proof.fireEvery.length, 'the cadence ladder is not one rung per tier').toBe(UPGRADE_TIERS + 1);
-    expect(SHIPS.proof.barrels.length, 'the barrel ladder is not one rung per tier').toBe(UPGRADE_TIERS + 1);
+    expect(WEAPONS.pulse.fireEvery.length, 'the cadence ladder is not one rung per tier').toBe(UPGRADE_TIERS + 1);
+    expect(WEAPONS.pulse.barrels.length, 'the barrel ladder is not one rung per tier').toBe(UPGRADE_TIERS + 1);
     for (let tier = 0; tier < RUNGS.length; tier++) {
       expect(RUNGS[tier], `tier ${tier} outruns the impact flash`).toBeGreaterThanOrEqual(FASTEST_FIRE);
-      expect(SHIPS.proof.barrels[tier], `tier ${tier} asks for more barrels than the pool budgets`).toBeLessThanOrEqual(
+      expect(WEAPONS.pulse.barrels[tier], `tier ${tier} asks for more barrels than the pool budgets`).toBeLessThanOrEqual(
         MAX_BARRELS,
       );
     }
@@ -178,7 +180,7 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
         Number.isInteger(cycles),
         `at tier ${tier} a missile leaves every ${cycles} cycles exactly, which is ON the lattice rather than across it`,
       ).toBe(false);
-      ratios.push(weapon.missileEvery / fireEveryAt(SHIPS.proof, tier));
+      ratios.push(weapon.missileEvery / fireEveryAt(WEAPONS.pulse,tier));
       expect(weapon.missileEvery, `at tier ${tier} the second weapon fires as often as the first`).toBeGreaterThan(
         weaponFor(SHIPS.proof, Array.from({ length: tier }, () => 'weapon' as const)).fireEvery,
       );
@@ -212,7 +214,7 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
     for (let tier = 0; tier < RUNGS.length; tier++) {
       const missiles = Array.from({ length: tier }, () => 'missile' as const);
       const missileEvery = weaponFor(SHIPS.proof, missiles).missileEvery;
-      const pulseEvery = fireEveryAt(SHIPS.proof, tier);
+      const pulseEvery = fireEveryAt(WEAPONS.pulse,tier);
       // Both are whole steps, so the instant they next share is their least common multiple.
       const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
       const together = (missileEvery * pulseEvery) / gcd(missileEvery, pulseEvery);
@@ -273,8 +275,8 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
     );
 
     let state = reduce(initialState, { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY });
-    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'weapon' });
-    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'weapon' });
+    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' });
+    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' });
     expect(state.run.upgrades, 'the run kept one rapid where two were taken').toEqual(['weapon', 'weapon']);
   });
 
@@ -378,8 +380,8 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
     // the base weapon is what an empty list resolves to.
     const base = weaponFor(SHIPS.proof, []);
     // 0093: the base cadence is rung 0 of the ship's own ladder rather than a field beside it.
-    expect(base.fireEvery).toBe(fireEveryAt(SHIPS.proof, 0));
-    expect(base.shots).toBe(SHIPS.proof.barrels[0]);
+    expect(base.fireEvery).toBe(fireEveryAt(WEAPONS.pulse,0));
+    expect(base.shots).toBe(WEAPONS.pulse.barrels[0]);
   });
 });
 
@@ -1148,7 +1150,13 @@ describe('collecting one, in the real frame', () => {
         drawing that reverted, drifted or picked up a neighbour's row would be invisible in a still and
         obvious in play. Nothing else in the suite watches one sprite over a whole lifetime.
       */
-      const { world } = onePickup('weapon');
+      /*
+        ⚠️ **A ONE-FACED PICKUP, since 0233.** The weapon pickup cycles now — that is the design, and
+        `tests/weapons.test.ts` holds the cycle — so the property this watches is asked of the shield,
+        which has one face and must never be drawn as anything else. The weapon's half of the same
+        property is below: whatever it is drawn as is one of ITS OWN faces, never a neighbour's row.
+      */
+      const { world } = onePickup('shield');
       const frame = new GameFrame(world);
       while (world.pickups.size === 0) frame.step();
       const item = world.pickups.at(0);
@@ -1161,6 +1169,21 @@ describe('collecting one, in the real frame', () => {
         expect(item.sprite, 'an authored pickup changed what it was drawn as').toBe(drawn);
       }
       expect(steps, 'the pickup never reached the field, so nothing was watched').toBeGreaterThan(100);
+
+      const cycling = onePickup('weapon');
+      const turning = new GameFrame(cycling.world);
+      while (cycling.world.pickups.size === 0) turning.step();
+      const turned = cycling.world.pickups.at(0);
+      let watched = 0;
+      while (cycling.world.pickups.size > 0 && watched < 2000) {
+        turning.step();
+        watched++;
+        if (cycling.world.pickups.size === 0) break;
+        expect(PICKUPS.weapon.faces, 'a weapon pickup was drawn as something that is not one of its faces').toContain(
+          turned.sprite,
+        );
+      }
+      expect(watched, 'the weapon pickup never reached the field').toBeGreaterThan(100);
     });
   });
 
@@ -1178,6 +1201,13 @@ describe('collecting one, in the real frame', () => {
     /** Where a pickup is on screen, in world units ahead of the camera, over its whole life. */
     function trackOffset(steps: number): { world: ReturnType<typeof playableWorld>['world']; offsets: number[] } {
       const { world } = onePickup('weapon');
+      /*
+        ⚠️ **NO SHIP, since 0233.** The wait is a wander of the whole box now, so a pickup comes down
+        to where the fixture parks the ship and is TAKEN there — which ends the wait these tests are
+        measuring a third of the way through it. The pool is the gate (0079): with the ship released
+        nothing collects, and the wander runs its whole course.
+      */
+      world.shipPool.clear();
       const frame = new GameFrame(world);
       const offsets: number[] = [];
       for (let i = 0; i < steps; i++) {
@@ -1362,7 +1392,7 @@ describe('collecting one, in the real frame', () => {
 
         ⚠️ **The tolerance is real and is stated in the lane's units.** A lag approaches its target
         and never quite reaches it, so the pickup gives up about seven units of the journey to the
-        ease — and nothing here names `PICKUP_EASE`, `PICKUP_CLOSE_SHARE` or `PICKUP_SLOW_AT`.
+        ease — and nothing here names `PICKUP_EASE`, `PICKUP_WANDER` or `PICKUP_SLOW_AT`.
       */
       const { offsets } = trackOffset(1400);
       let low = Infinity;
@@ -1377,10 +1407,20 @@ describe('collecting one, in the real frame', () => {
         band,
         `the pickup's wait covered ${band.toFixed(1)} units, which is a station and not a journey`,
       ).toBeGreaterThan(ACROSS_SPAN / 2);
+      /*
+        ⚠️ **AND IT WANDERS THE WHOLE BOX NOW, since 0233 — so *ends at the ship* became *reaches the
+        ship and never leaves the box*.** Asked for: *"bounce off all the screen walls."* The walls are
+        the player's box (0100), so the nearest the pickup comes is at least as near as where the ship
+        flies, and never nearer than the back of the box — where the ship could not follow.
+      */
       expect(
-        Math.abs(low - SHIP_START_ALONG),
-        `the pickup's journey ended ${low.toFixed(1)} out, and the ship flies at ${SHIP_START_ALONG}`,
-      ).toBeLessThan(ACROSS_SPAN / 6);
+        low,
+        `the pickup's journey came no nearer than ${low.toFixed(1)}, and the ship flies at ${SHIP_START_ALONG}`,
+      ).toBeLessThanOrEqual(SHIP_START_ALONG);
+      expect(
+        low,
+        `the pickup wandered to ${low.toFixed(1)}, behind the back of the box at ${PLAYER_ALONG_MARGIN}`,
+      ).toBeGreaterThanOrEqual(PLAYER_ALONG_MARGIN - ACROSS_SPAN / 20);
     });
 
     it('waits long enough to be crossed the whole lane for', () => {

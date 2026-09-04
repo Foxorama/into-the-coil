@@ -3,7 +3,7 @@
  *
  * `docs/decisions/0022-frame-rate-is-a-feature.md` starts on Canvas2D and keeps a WebGL backend a
  * swap rather than a rewrite. That is true exactly as long as this file stays the only implementation
- * of `Surface` and `Surface` stays two verbs wide.
+ * of `Surface` and `Surface` stays three verbs wide — a clear, a blit and a bolt (0233).
  *
  * ⚠️ **This file IS on the hot list.** `blit` runs five hundred times a frame; every line below runs
  * with it.
@@ -32,6 +32,8 @@ export class CanvasSurface implements Surface {
   private width = 0;
   private height = 0;
   private space = '#000000';
+  private boltGlow = '#ffffff';
+  private boltCore = '#ffffff';
 
   constructor(private readonly ctx: CanvasRenderingContext2D, atlas: Atlas) {
     this.atlas = atlas;
@@ -57,12 +59,22 @@ export class CanvasSurface implements Surface {
    * engine has: no re-bake, no allocation, and nothing that could hitch at a level boundary
    * `docs/decisions/0076-a-level-has-an-origin.md` says keeps the scene.
    *
-   * ⚠️ **NOT on the `Surface` interface**, which is deliberately *clear and blit* and nothing else —
-   * `src/render/surface.ts` has the argument. This is the canvas backend's own, exactly as `setSize`
-   * and `setAtlas` are.
+   * ⚠️ **NOT on the `Surface` interface**, which is deliberately *clear, blit and bolt* and nothing
+   * else — `src/render/surface.ts` has the argument. This is the canvas backend's own, exactly as
+   * `setSize` and `setAtlas` are.
    */
   setSpace(space: string): void {
     this.space = space;
+  }
+
+  /**
+   * The two inks a bolt is stroked in — a wide translucent glow and a thin bright core — set with the
+   * palette rather than passed per call, on `setSpace`'s terms: a colour is a property of the palette
+   * the page is showing, and a string per stroke per frame would be a hash lookup on the hot path.
+   */
+  setBolt(glow: string, core: string): void {
+    this.boltGlow = glow;
+    this.boltCore = core;
   }
 
   clear(): void {
@@ -76,5 +88,35 @@ export class CanvasSurface implements Surface {
     const size = this.atlas.extents[sprite]! * scale;
     const half = size / 2;
     this.ctx.drawImage(bitmap, x - half, y - half, size, size);
+  }
+
+  /**
+   * One bolt: the same polyline stroked twice, wide and faint under thin and bright.
+   *
+   * ⚠️ **TWO STROKES AND NO `shadowBlur`.** A canvas shadow is a per-draw Gaussian over the path's
+   * bounding box, which is the one Canvas2D call that is genuinely expensive and the one this
+   * backend must never make sixty times a second. A translucent wide stroke under a thin opaque one
+   * is what a glow looks like at the size a bolt is drawn, and it costs two path strokes.
+   *
+   * ⚠️ **Nothing here allocates**: `beginPath`, `moveTo`, `lineTo` and `stroke` write into the
+   * context's own path, and the points are the caller's buffer.
+   */
+  bolt(points: Float32Array, count: number, width: number, alpha: number): void {
+    if (count < 2) return;
+    const ctx = this.ctx;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(points[0]!, points[1]!);
+    for (let i = 1; i < count; i++) ctx.lineTo(points[i * 2]!, points[i * 2 + 1]!);
+    ctx.globalAlpha = alpha * 0.35;
+    ctx.strokeStyle = this.boltGlow;
+    ctx.lineWidth = width * 3;
+    ctx.stroke();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = this.boltCore;
+    ctx.lineWidth = width;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
   }
 }

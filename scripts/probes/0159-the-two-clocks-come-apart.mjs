@@ -31,7 +31,8 @@ export const PROBES = [
     broke: 'the fire ladder authored so an upgrade slows the gun down',
     guard: 'every rung is a whole number of steps, and the ladder never gets SLOWER',
     edit: {
-      path: 'src/content/ships.ts',
+      // ⚠️ Re-anchored by 0233: the ladder is the weapon kind's now, not the ship's.
+      path: 'src/content/weapons.ts',
       find: '    fireEvery: [8, 8, 6, 6, 4],',
       replace: '    fireEvery: [8, 8, 6, 6, 7],',
     },
@@ -51,7 +52,8 @@ export const PROBES = [
     broke: 'a cadence authored as a fraction of a step, which the fixed-step clock rounds away',
     guard: 'every rung is a whole number of steps, and the ladder never gets SLOWER',
     edit: {
-      path: 'src/content/ships.ts',
+      // ⚠️ Re-anchored by 0233: the ladder is the missile kind's now, not the ship's.
+      path: 'src/content/missiles.ts',
       find: '    missileEvery: [8, 8, 8, 6, 4],',
       replace: '    missileEvery: [8, 8, 8, 6, 4.5],',
     },

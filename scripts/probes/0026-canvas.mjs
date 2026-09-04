@@ -87,9 +87,10 @@ export const PROBES = [
       // break is the same one it has always been.
       // ⚠️ Re-anchored by 0203, which added `Landmarks` to this import. The break is the same one it
       // has always been; only the line it hangs on moved.
-      find: "import { paintScene, type Bound, type Landmarks, type Sky } from '../render/scene.ts';",
+      // ⚠️ Re-anchored by 0233, which added the bolt painter and its lifetime to this import.
+      find: "import { BOLT_STEPS, paintBolts, paintScene, type Bound, type Landmarks, type Sky } from '../render/scene.ts';",
       replace:
-        "import { paintScene, type Bound, type Landmarks, type Sky } from '../render/scene.ts';\n" +
+        "import { BOLT_STEPS, paintBolts, paintScene, type Bound, type Landmarks, type Sky } from '../render/scene.ts';\n" +
         "import { bakeAtlas } from '../render/bake.ts';",
     },
   },

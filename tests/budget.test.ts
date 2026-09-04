@@ -68,8 +68,16 @@ const FRAMES = 600;
 class CountingSurface implements Surface {
   blits = 0;
   clears = 0;
+  /** Bolts are counted beside the blits, never inside them — `src/render/surface.ts`, 0233. */
+  bolts = 0;
   clear(): void {
     this.clears++;
+  }
+  bolt(points: Float32Array, count: number): void {
+    this.bolts++;
+    for (let i = 0; i < count * 2; i++) {
+      if (!Number.isFinite(points[i])) throw new Error(`bolt through a non-finite point at ${i}`);
+    }
   }
   blit(_sprite: number, x: number, y: number, _scale: number): void {
     this.blits++;
@@ -89,6 +97,7 @@ class SpanSurface implements Surface {
   left = Number.POSITIVE_INFINITY;
   right = Number.NEGATIVE_INFINITY;
   clear(): void {}
+  bolt(): void {}
   blit(sprite: number, x: number, _y: number, scale: number): void {
     const half = (SPRITE_EXTENT[SPRITE_KINDS[sprite]!] * scale) / 2;
     if (x - half < this.left) this.left = x - half;

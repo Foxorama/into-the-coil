@@ -22,8 +22,10 @@ export const PROBES = [
     guard: 'THE ASK: every volley lands on a multiple of its own cadence, counted from the run’s origin',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);\n  const row = SHOTS[w.shipRow.shot];',
-      replace: '  w.fireIn = w.weapon.fireEvery;\n  const row = SHOTS[w.shipRow.shot];',
+      // ⚠️ Re-anchored by 0233: the shot row is the weapon kind's. The arc reloads on the same grid
+      // with its row read first, so this pair of lines is `firePulse`'s alone.
+      find: '  w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);\n  const row = SHOTS[WEAPONS[w.weapon.kind].shot];',
+      replace: '  w.fireIn = w.weapon.fireEvery;\n  const row = SHOTS[WEAPONS[w.weapon.kind].shot];',
     },
   },
   {

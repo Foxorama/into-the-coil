@@ -37,8 +37,10 @@ export const PROBES = [
     guard: 'says one thing per volley and not one per barrel',
     edit: {
       path: 'src/app/frame.ts',
-      find: "    if (i === 0) w.onCue('pulse', w.ship.across);",
-      replace: "    w.onCue('pulse', w.ship.across);",
+      // ⚠️ Re-anchored by 0233: the cue is the flight's, asked of `cueOfFlight`, since the same
+      // barrel loop fires every gun that flies a body.
+      find: "    if (i === 0) w.onCue(cueOfFlight(w.weapon.flight), w.ship.across);",
+      replace: "    w.onCue(cueOfFlight(w.weapon.flight), w.ship.across);",
     },
   },
   {

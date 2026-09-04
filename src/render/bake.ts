@@ -23,6 +23,7 @@ import type { Palette } from '../content/palette.ts';
 import { foeOf, type FoeSkin, type ThemeKind } from '../content/themes.ts';
 import { LANDMARK_SLOTS, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
+import type { WeaponKind } from '../content/weapons.ts';
 
 /** Side profile for a horizontally scrolling screen, top-down for a vertical one. */
 export type SpriteView = 'side' | 'top';
@@ -401,6 +402,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   lifeIcon: 'pickup',
   pickupWeapon: 'pickup',
   pickupMissile: 'pickup',
+  // The weapon pickup's other face — the same pickup, so the same ink. 0233.
+  pickupArc: 'pickup',
   pickupShield: 'pickup',
   /*
     ⚠️ **THE PICKUP INK OVER THE BOMB'S OWN SILHOUETTE, and the ink is doing the whole job here.**
@@ -438,6 +441,9 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // The player's own ink, because a shield IS the player — it is the last thing between a hit and
   // the hull, and a shell drawn in the pickup ink would read as something to fly into.
   shieldOrb: 'player',
+  // Where a bolt lands: the impact ink, because a landing IS an impact and it is the brightest ink
+  // there is — the bolt's core is stroked in the same one. 0233.
+  arcNode: 'impact',
   /*
     THE HURT SILHOUETTES: the SAME shape in a different ink.
 
@@ -465,6 +471,13 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   shipMk2Hit: 'hazard',
   shipMk3: 'player',
   shipMk3Hit: 'hazard',
+  // The arc's hulls are the same ship carrying a different gun — 0233 — so the same two inks again.
+  shipArc: 'player',
+  shipArcHit: 'hazard',
+  shipArcMk2: 'player',
+  shipArcMk2Hit: 'hazard',
+  shipArcMk3: 'player',
+  shipArcMk3Hit: 'hazard',
   drifterHit: 'impact',
   lancerHit: 'impact',
   weaverHit: 'impact',
@@ -948,7 +961,42 @@ const SHIP_CORE: readonly Pt[] = [
  * `tier` adds the pods' and canards' own marks, so an upgrade is a louder ship and not only a wider
  * one — `docs/game.md`: *"every upgrade changes how the ship looks on screen."*
  */
-function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number): void {
+/*
+  ── THE ARC'S NOSE — 0233 ─────────────────────────────────────────────────────────────────────────
+
+  Asked for: *"each new weapon needs thematically change the style of the ship so you have a visual
+  indicator of the weapon equipped."* A ship carrying the arc wears a two-pronged coil at the nose,
+  with a spark across the gap; its pods carry coil bands where the pulse's carry a muzzle. The prongs
+  are SILHOUETTE — 0081's rule that what the player must tell apart is told apart by more than ink —
+  and each shares the hull's own nose edge and no area, on the pods' `evenodd` terms.
+
+  ⚠️ **The tip stays inside the box.** The hull is drawn at the bare ship's size in a wider box
+  (`src/content/sprites.ts`), and at 7/7.8 of the box a prong reaching 1.06 of the hull's radius
+  lands at 0.95 of the box, stroke included. `tests/accents.test.ts` measures every mark's size on
+  the play-test screen; a prong is well above its floor.
+*/
+const SHIP_PRONG: readonly Pt[] = [
+  [1, 0],
+  [0.72, -0.14],
+  [0.86, -0.3],
+  [1.06, -0.2],
+];
+
+/** The spark between the prongs: a zigzag strip in the impact ink, the width of a coil's gap. */
+const SHIP_SPARK: readonly Pt[] = [
+  [0.96, -0.2],
+  [1.0, -0.08],
+  [0.94, 0.02],
+  [1.02, 0.11],
+  [0.96, 0.2],
+  [0.91, 0.19],
+  [0.97, 0.11],
+  [0.89, 0.02],
+  [0.95, -0.08],
+  [0.91, -0.19],
+];
+
+function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, weapon: WeaponKind): void {
   const body = palette.player;
   const dark = shade(body, -0.32);
   const light = shade(body, 0.5);
@@ -962,11 +1010,41 @@ function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number): void {
     [-0.1, 0.07],
     [-0.34, 0.07],
   ]);
-  poly(ctx, f, light, [
-    [0.94, 0],
-    [0.72, -0.09],
-    [0.72, 0.09],
-  ]);
+  if (weapon === 'arc') {
+    // The coil: a glass core at the nose where the light was, a dark band down each prong so it
+    // reads as a fitted part, and the spark across the gap in the one ink brighter than the hull.
+    disc(ctx, f, palette.glass, 0.8, 0, 0.11);
+    for (const side of [1, -1] as const) {
+      poly(ctx, f, dark, [
+        [0.8, -0.13 * side],
+        [0.88, -0.27 * side],
+        [1.0, -0.21 * side],
+        [0.9, -0.1 * side],
+      ]);
+    }
+    poly(ctx, f, palette.impact, SHIP_SPARK, 0.9);
+    // Two coil bands across each wing panel, lit — the arc's livery where the pulse has none.
+    for (const side of [1, -1] as const) {
+      poly(ctx, f, palette.impact, [
+        [-0.34, -0.56 * side],
+        [-0.28, -0.56 * side],
+        [-0.4, -0.84 * side],
+        [-0.46, -0.84 * side],
+      ], 0.7);
+      poly(ctx, f, palette.impact, [
+        [-0.5, -0.5 * side],
+        [-0.44, -0.5 * side],
+        [-0.56, -0.78 * side],
+        [-0.62, -0.78 * side],
+      ], 0.7);
+    }
+  } else {
+    poly(ctx, f, light, [
+      [0.94, 0],
+      [0.72, -0.09],
+      [0.72, 0.09],
+    ]);
+  }
   poly(ctx, f, palette.glass, SHIP_CANOPY);
   poly(ctx, f, shade(palette.glass, 0.55), SHIP_CANOPY_LIGHT);
   for (const side of [SHIP_NACELLE, mirrored(SHIP_NACELLE)]) poly(ctx, f, palette.flame, side);
@@ -982,13 +1060,29 @@ function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number): void {
         [-0.72, -1.02 * side],
         [-0.46, -1.02 * side],
       ]);
-      // And a lit muzzle at its front: the pod is a gun, and a gun shows where it fires from.
-      poly(ctx, f, palette.hazard, [
-        [-0.3, (tip + 0.04) * side],
-        [-0.46, (tip + 0.04) * side],
-        [-0.48, (tip + 0.2) * side],
-        [-0.34, (tip + 0.2) * side],
-      ]);
+      if (weapon === 'arc') {
+        // A coil band across the pod rather than a muzzle: the pod is a capacitor, not a gun.
+        poly(ctx, f, palette.impact, [
+          [-0.36, (tip + 0.06) * side],
+          [-0.3, (tip + 0.06) * side],
+          [-0.34, (tip + 0.3) * side],
+          [-0.4, (tip + 0.3) * side],
+        ], 0.8);
+        poly(ctx, f, palette.impact, [
+          [-0.6, (tip + 0.06) * side],
+          [-0.54, (tip + 0.06) * side],
+          [-0.58, (tip + 0.3) * side],
+          [-0.64, (tip + 0.3) * side],
+        ], 0.8);
+      } else {
+        // And a lit muzzle at its front: the pod is a gun, and a gun shows where it fires from.
+        poly(ctx, f, palette.hazard, [
+          [-0.3, (tip + 0.04) * side],
+          [-0.46, (tip + 0.04) * side],
+          [-0.48, (tip + 0.2) * side],
+          [-0.34, (tip + 0.2) * side],
+        ]);
+      }
     }
   }
   if (tier >= 2) {
@@ -2944,7 +3038,7 @@ export function drawKind(
     case 'shipHit':
       trace(ctx, f, SHIP_HULL);
       seal(ctx);
-      if (!hurt) paintShip(ctx, f, palette, 0);
+      if (!hurt) paintShip(ctx, f, palette, 0, 'pulse');
       return;
     /*
       ── THE SAME FIGHTER, WITH MORE OF IT — 0081 ────────────────────────────────────────────────
@@ -2965,7 +3059,7 @@ export function drawKind(
       trace(ctx, fh, SHIP_POD);
       trace(ctx, fh, mirrored(SHIP_POD));
       seal(ctx);
-      if (!hurt) paintShip(ctx, fh, palette, 1);
+      if (!hurt) paintShip(ctx, fh, palette, 1, 'pulse');
       return;
     }
     case 'shipMk3':
@@ -2977,7 +3071,51 @@ export function drawKind(
       trace(ctx, fh, SHIP_CANARD);
       trace(ctx, fh, mirrored(SHIP_CANARD));
       seal(ctx);
-      if (!hurt) paintShip(ctx, fh, palette, 2);
+      if (!hurt) paintShip(ctx, fh, palette, 2, 'pulse');
+      return;
+    }
+    /*
+      ── THE SAME THREE HULLS, CARRYING THE ARC — 0233 ───────────────────────────────────────────
+
+      Each tier is the pulse's tier with the nose forked: two prongs sharing the hull's own nose
+      edges, on the pods' `evenodd` terms, and `paintShip` painting the coil where the pulse's
+      light was. The box is wider than the pulse's at the same tier (`src/content/sprites.ts`) and
+      the hull is drawn at the bare ship's size inside it, so the hurtbox is exactly the pulse's.
+    */
+    case 'shipArc':
+    case 'shipArcHit': {
+      const fh: Frame = { half, r: r * (SPRITE_EXTENT.ship / SPRITE_EXTENT.shipArc) };
+      trace(ctx, fh, SHIP_HULL);
+      trace(ctx, fh, SHIP_PRONG);
+      trace(ctx, fh, mirrored(SHIP_PRONG));
+      seal(ctx);
+      if (!hurt) paintShip(ctx, fh, palette, 0, 'arc');
+      return;
+    }
+    case 'shipArcMk2':
+    case 'shipArcMk2Hit': {
+      const fh: Frame = { half, r: r * (SPRITE_EXTENT.ship / SPRITE_EXTENT.shipArcMk2) };
+      trace(ctx, fh, SHIP_HULL);
+      trace(ctx, fh, SHIP_PRONG);
+      trace(ctx, fh, mirrored(SHIP_PRONG));
+      trace(ctx, fh, SHIP_POD);
+      trace(ctx, fh, mirrored(SHIP_POD));
+      seal(ctx);
+      if (!hurt) paintShip(ctx, fh, palette, 1, 'arc');
+      return;
+    }
+    case 'shipArcMk3':
+    case 'shipArcMk3Hit': {
+      const fh: Frame = { half, r: r * (SPRITE_EXTENT.ship / SPRITE_EXTENT.shipArcMk3) };
+      trace(ctx, fh, SHIP_HULL);
+      trace(ctx, fh, SHIP_PRONG);
+      trace(ctx, fh, mirrored(SHIP_PRONG));
+      trace(ctx, fh, SHIP_POD_MK3);
+      trace(ctx, fh, mirrored(SHIP_POD_MK3));
+      trace(ctx, fh, SHIP_CANARD);
+      trace(ctx, fh, mirrored(SHIP_CANARD));
+      seal(ctx);
+      if (!hurt) paintShip(ctx, fh, palette, 2, 'arc');
       return;
     }
     case 'drifter':
@@ -3669,6 +3807,59 @@ export function drawKind(
       ]);
       disc(ctx, f, palette.glass, 0.14, 0, 0.18);
       disc(ctx, f, shade(palette.glass, 0.5), 0.18, -0.04, 0.08);
+      return;
+    }
+    case 'pickupArc': {
+      /*
+        A BOLT — the weapon pickup's other face, 0233.
+
+        ⚠️ **The one glyph for lightning that needs no teaching**, and the one shape in the atlas with
+        two opposed points and a waist, so it is off the chevron (one point, notched tail) and off
+        the shield (flat top) at pickup size. One simple polygon: the classic seven-point bolt has
+        no self-intersection, so `evenodd` has nothing to cancel.
+
+        ⚠️ **Drawn along the lane like the chevron**, top-left to bottom-right, so the two faces of
+        one pickup share an axis and read as the same object turning rather than as two objects.
+      */
+      ctx.moveTo(half - r * 0.15, half - r);
+      ctx.lineTo(half + r * 0.55, half - r);
+      ctx.lineTo(half + r * 0.12, half - r * 0.2);
+      ctx.lineTo(half + r * 0.62, half - r * 0.2);
+      ctx.lineTo(half - r * 0.55, half + r);
+      ctx.lineTo(half - r * 0.15, half + r * 0.15);
+      ctx.lineTo(half - r * 0.62, half + r * 0.15);
+      ctx.closePath();
+      seal(ctx);
+      // The lower half in shadow, so the bolt has a lit edge and an underside like the chevron.
+      poly(ctx, f, shade(palette.pickup, -0.28), [
+        [0.5, -0.2],
+        [-0.55, 1],
+        [-0.15, 0.15],
+        [-0.05, 0.15],
+      ]);
+      // A glass core at the waist and a light on it — 0194's livery, painted rather than tabled.
+      // Inside the band between the two zags, which `tests/accents.test.ts` measures in pixels.
+      disc(ctx, f, palette.glass, -0.06, -0.05, 0.16);
+      disc(ctx, f, shade(palette.glass, 0.5), -0.1, -0.09, 0.075);
+      return;
+    }
+    case 'arcNode': {
+      /*
+        WHERE A BOLT LANDS — a four-pointed spark in the impact ink, 0233. The bolt itself is stroked
+        between two of these by `src/render/scene.ts`; this is the bitmap at each end, so a chain
+        reads as *hits* rather than as a line.
+      */
+      ctx.moveTo(half + r, half);
+      ctx.lineTo(half + r * 0.28, half - r * 0.28);
+      ctx.lineTo(half, half - r);
+      ctx.lineTo(half - r * 0.28, half - r * 0.28);
+      ctx.lineTo(half - r, half);
+      ctx.lineTo(half - r * 0.28, half + r * 0.28);
+      ctx.lineTo(half, half + r);
+      ctx.lineTo(half + r * 0.28, half + r * 0.28);
+      ctx.closePath();
+      seal(ctx);
+      glow(ctx, f, palette.impact, 0, 0, 0.55, 0.8);
       return;
     }
     case 'pickupMissile': {

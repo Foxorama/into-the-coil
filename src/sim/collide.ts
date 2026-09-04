@@ -229,12 +229,18 @@ export interface Collected {
   count: number;
   /** The `kind` each collected entity carried — opaque here, an index the composer owns. */
   kind: number[];
+  /**
+   * Which face each one was showing when it was taken — 0233. A cycling pickup is one of several
+   * things and the step it is taken decides which; the loop that reads this log is what hands the
+   * shell the face rather than the row.
+   */
+  face: number[];
 }
 
 /** A log big enough for `capacity` collections in one step. Built once, at boot. */
 export function makeCollected(capacity: number): Collected {
   // @setup: one log, built when the world is composed and reused every step forever.
-  return { count: 0, kind: new Array<number>(capacity).fill(0) };
+  return { count: 0, kind: new Array<number>(capacity).fill(0), face: new Array<number>(capacity).fill(0) };
 }
 
 /**
@@ -256,10 +262,70 @@ export function collectInto(pickups: Pool<Entity>, target: Entity, targetRadiusS
     if (!overlaps(pickup, target, targetRadiusScale)) continue;
     if (out.count < out.kind.length) {
       out.kind[out.count] = pickup.kind;
+      out.face[out.count] = pickup.face;
       out.count++;
     }
     pickups.releaseAt(i);
   }
+}
+
+/**
+ * The index of the nearest body in `targets` within `reach` of a point, or -1.
+ *
+ * ── A BOLT IS AIMED BY THE MODEL, AND THIS IS THE AIM ────────────────────────────────────────────
+ *
+ * `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`. Chain lightning has no body in
+ * flight to sweep, so it cannot use `overlaps`: it asks, on the step it fires, what is nearest to
+ * the nose and then what is nearest to that, `links` times. Distance is measured to the target's
+ * EDGE rather than its centre, so a big body close by is nearer than a small one whose centre
+ * happens to be closer — which is what *nearest* means to a player looking at the screen.
+ *
+ * ⚠️ **A body still flashing from a hit is skipped when `skipFlashing` is set**, and that is how a
+ * chain avoids landing twice on one body: `strike` below writes the flash, so the next link's search
+ * cannot find what the last link hit. It is the same field the picture reads (0035), which makes
+ * *already hit this volley* and *drawn as just hit* one fact. A caller that wants to land on the same
+ * body again — a bolt jumping around a single boss — passes `false`.
+ *
+ * ⚠️ **Allocation-free and bounded by the pool**, on `collideInto`'s terms: a scan, a compare, an
+ * index. Reach is compared squared so there is no square root in the loop.
+ */
+export function nearestFrom(targets: Pool<Entity>, along: number, across: number, reach: number, skipFlashing: boolean): number {
+  let best = -1;
+  let bestGap = reach;
+  for (let i = targets.size - 1; i >= 0; i--) {
+    const target = targets.at(i);
+    if (target.invulnFor > 0) continue;
+    if (skipFlashing && target.flashFor > 0) continue;
+    const dAlong = target.along - along;
+    const dAcross = target.across - across;
+    const gap = Math.sqrt(dAlong * dAlong + dAcross * dAcross) - target.radius;
+    if (gap > bestGap) continue;
+    bestGap = gap;
+    best = i;
+  }
+  return best;
+}
+
+/**
+ * One hit landed by hand on `targets[index]`, on exactly `collideInto`'s terms for what a hit is:
+ * damage off the health, the target retired and logged if that emptied it, flashed if it did not.
+ * Returns whether it was killed.
+ *
+ * ⚠️ **THE SAME RULES AS A SHOT ARRIVING, WITH NO SHOT.** A bolt is resolved on the step it fires,
+ * so there is no body to sweep and nothing to consume — but what a hit DOES to the thing it hits
+ * must not be described twice, or the arc's hits and the pulse's would drift apart the first time
+ * either moved. This is the arrival half of `collideInto`, exported so `src/app/frame.ts` can land
+ * a link without re-stating it.
+ */
+export function strike(targets: Pool<Entity>, index: number, damage: number, flashSteps: number, deaths: Deaths | null): boolean {
+  const target = targets.at(index);
+  target.health -= damage;
+  if (target.health <= 0) {
+    killed(targets, index, deaths);
+    return true;
+  }
+  target.flashFor = flashSteps;
+  return false;
 }
 
 /**

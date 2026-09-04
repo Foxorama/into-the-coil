@@ -208,6 +208,115 @@ export function paintScene(
 // @setup: one empty array for the lifetime of the module.
 const NO_SKY: Sky = [];
 
+/*
+  ── THE BOLT: THE ONE THING IN THE GAME THAT IS STROKED RATHER THAN BLITTED ─────────────────────
+
+  `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`. A link of chain lightning is an
+  entity at its landing point carrying where it started (`fromAlong`, `fromAcross` on `Entity`), and
+  what the player sees is a jagged line between the two, re-jagged every couple of frames so it
+  flickers, with a short twig off its side. None of that can be a bitmap: the two ends are wherever
+  the model put them, and `blit` cannot rotate.
+
+  ⚠️ **EVERY NUMBER HERE IS IN WORLD UNITS AND IS SCALED AT THE SURFACE** — 0023, nothing is authored
+  in screen space. The width is a fraction of a lane unit, the jag is a fraction of the link's own
+  length, and both are multiplied by `view.scale` on the way out.
+
+  ⚠️ **THE JAG IS A HASH, NOT A STREAM.** A `Rng` here would be a cosmetic roll consuming a stream
+  every frame (0021), and a painter that draws twice per step — interpolation — would advance it
+  twice. A hash of the link's seed, the vertex and the page is the same picture however many times
+  it is asked for, which is what a painter has to be.
+*/
+
+/** Steps a link stays on screen after it has landed. Short: lightning is a flash, not a beam. */
+export const BOLT_STEPS = 8;
+/** Vertices on a link, both ends included. */
+const BOLT_VERTICES = 9;
+/** Vertices on the twig that branches off a link. */
+const TWIG_VERTICES = 3;
+/** Stroke width of the core, in world units. The glow under it is three times this. */
+const BOLT_WIDTH = 0.5;
+/** How far a vertex may sit off the straight line, as a fraction of the link's length. */
+const BOLT_JAG = 0.16;
+/** And an absolute ceiling on that, in world units, so a long link is not a wide one. */
+const BOLT_JAG_MAX = 3;
+/** The twig's length as a fraction of its link's. */
+const TWIG_SHARE = 0.3;
+/** Frames a jag pattern is held for before the next one — a flicker at half the frame rate. */
+const BOLT_PAGE_STEPS = 2;
+
+// @setup: one buffer each for the module's lifetime, refilled per link and read before the call returns.
+const LINK = new Float32Array(BOLT_VERTICES * 2);
+// @setup: the twig's own, for the same reason and lifetime.
+const TWIG = new Float32Array(TWIG_VERTICES * 2);
+
+/** A number in [-1, 1] from three integers, the same every time it is asked. */
+function jag(seed: number, vertex: number, page: number): number {
+  let h = (Math.imul(seed, 374761393) + Math.imul(vertex, 668265263) + Math.imul(page, 2246822519)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h ^= h >>> 16;
+  return (h & 0xffff) / 0x7fff - 1;
+}
+
+/**
+ * Every live link, stroked. Called after `paintScene`, so a bolt is over everything it struck.
+ *
+ * ⚠️ **One `bolt` call per link and one per twig, and `tests/budget.test.ts` counts them** — a bolt
+ * is not hidden inside a blit's count and cannot be, which is the whole of why `Surface` grew a verb
+ * rather than a polygon.
+ */
+export function paintBolts(surface: Surface, view: View, bolts: Pool<Entity>, cameraAlong: number, alpha: number): void {
+  const count = bolts.size;
+  for (let i = 0; i < count; i++) {
+    const e = bolts.at(i);
+    const endAlong = e.prevAlong + (e.along - e.prevAlong) * alpha;
+    const endAcross = e.prevAcross + (e.across - e.prevAcross) * alpha;
+    const length = Math.sqrt(e.fromAlong * e.fromAlong + e.fromAcross * e.fromAcross);
+    if (length <= 0) continue;
+    // The unit normal to the link, in world units — what a vertex is pushed along.
+    const nAlong = -e.fromAcross / length;
+    const nAcross = e.fromAlong / length;
+    const amp = BOLT_JAG * length > BOLT_JAG_MAX ? BOLT_JAG_MAX : BOLT_JAG * length;
+    const page = Math.floor(e.lifeFor / BOLT_PAGE_STEPS);
+    const seed = e.spin;
+    const last = BOLT_VERTICES - 1;
+    for (let v = 0; v <= last; v++) {
+      const t = v / last;
+      // Pinned at both ends, so the bolt leaves the nose and arrives on the body exactly.
+      const off = v === 0 || v === last ? 0 : jag(seed, v, page) * amp;
+      const along = endAlong + e.fromAlong * (1 - t) + nAlong * off;
+      const across = endAcross + e.fromAcross * (1 - t) + nAcross * off;
+      const inView = along - cameraAlong;
+      LINK[v * 2] = screenX(view, inView, across);
+      LINK[v * 2 + 1] = screenY(view, inView, across);
+    }
+    // Fades over its life: a flash, brightest the step it lands.
+    const fade = e.lifeFor / BOLT_STEPS;
+    surface.bolt(LINK, BOLT_VERTICES, BOLT_WIDTH * view.scale, fade);
+    /*
+      The twig: from a vertex a third to two thirds along, out to the side the hash says, and on
+      again at half the length. Two segments, so it forks rather than spikes.
+    */
+    const from = 3 + ((seed + page) & 3);
+    const side = jag(seed, from + 17, page) < 0 ? -1 : 1;
+    const t0 = from / last;
+    const rootAlong = endAlong + e.fromAlong * (1 - t0) + nAlong * jag(seed, from, page) * amp;
+    const rootAcross = endAcross + e.fromAcross * (1 - t0) + nAcross * jag(seed, from, page) * amp;
+    const reach = TWIG_SHARE * length;
+    for (let v = 0; v < TWIG_VERTICES; v++) {
+      const s = v / (TWIG_VERTICES - 1);
+      const out = side * reach * s;
+      const back = -e.fromAlong / length;
+      const backAcross = -e.fromAcross / length;
+      const along = rootAlong + nAlong * out + back * reach * s * 0.5 + nAlong * jag(seed, v + 40, page) * amp * s;
+      const across = rootAcross + nAcross * out + backAcross * reach * s * 0.5 + nAcross * jag(seed, v + 40, page) * amp * s;
+      const inView = along - cameraAlong;
+      TWIG[v * 2] = screenX(view, inView, across);
+      TWIG[v * 2 + 1] = screenY(view, inView, across);
+    }
+    surface.bolt(TWIG, TWIG_VERTICES, BOLT_WIDTH * 0.6 * view.scale, fade * 0.8);
+  }
+}
+
 /**
  * The edge of the player's box: one dash per tiling period, straight down the lane.
  *

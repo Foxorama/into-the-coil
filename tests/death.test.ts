@@ -7,7 +7,8 @@ import { DEBRIS_BY_KIND } from '../src/content/debris.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
-import { PICKUPS, PICKUP_KINDS, UPGRADE_KINDS } from '../src/content/pickups.ts';
+import { PICKUPS, PICKUP_KINDS } from '../src/content/pickups.ts';
+import { SHIPS } from '../src/content/ships.ts';
 import { PYRES, pyreFor } from '../src/content/specials.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
@@ -59,6 +60,7 @@ class Recorder implements Surface {
   blit(sprite: number, x: number, y: number): void {
     this.blits.push({ sprite, x, y });
   }
+  bolt(): void {}
 }
 
 /** A world with no level in it, so nothing arrives except what a test puts there. */
@@ -237,7 +239,9 @@ describe('the ship comes apart, and the player watches it happen', () => {
     const built = shell(NO_LEVEL);
     built.dispatch({ slice: 'run', type: 'begin', difficulty: TIER });
     for (let i = 0; i < 8; i++) {
-      for (const upgrade of UPGRADE_KINDS) built.dispatch({ slice: 'run', type: 'upgraded', upgrade });
+      // One of each ladder, on the base kinds — the ship the run opened with, upgraded.
+      built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: SHIPS.proof.weapon });
+      built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'missile', kind: SHIPS.proof.missile });
     }
     built.dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
     killShip(built.world, built.frame);

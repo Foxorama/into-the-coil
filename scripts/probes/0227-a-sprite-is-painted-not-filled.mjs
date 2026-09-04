@@ -56,8 +56,9 @@ export const PROBES = [
     guard: 'and a hurt twin is the hull flat in its flash ink',
     edit: {
       path: 'src/render/bake.ts',
-      find: '      seal(ctx);\n      if (!hurt) paintShip(ctx, f, palette, 0);\n      return;',
-      replace: '      seal(ctx);\n      paintShip(ctx, f, palette, 0);\n      return;',
+      // ⚠️ Re-anchored by 0233: the painter takes the weapon the hull is carrying.
+      find: "      seal(ctx);\n      if (!hurt) paintShip(ctx, f, palette, 0, 'pulse');\n      return;",
+      replace: "      seal(ctx);\n      paintShip(ctx, f, palette, 0, 'pulse');\n      return;",
     },
   },
   {

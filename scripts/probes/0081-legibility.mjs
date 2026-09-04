@@ -95,11 +95,12 @@ export const PROBES = [
     */
     edit: {
       path: 'src/app/frame.ts',
+      // ⚠️ Re-anchored by 0233: the hull is looked up by the weapon kind as well as the tier.
       find:
-        '  const hull = hullFor(w.weapon.tier);\n' +
+        '  const hull = hullFor(w.weapon.kind, w.weapon.tier);\n' +
         '  w.ship.spriteBase = hull.base;\n' +
         '  w.ship.spriteHit = hull.hit;',
-      replace: '  const hull = hullFor(0);\n  void hull;',
+      replace: '  const hull = hullFor(w.weapon.kind, 0);\n  void hull;',
     },
   },
   {

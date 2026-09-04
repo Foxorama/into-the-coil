@@ -19,7 +19,8 @@ export const PROBES = [
       // against that list. `npm run prove` reported STILL GREEN within the hour of the change.
       // The BREAK is unchanged — the shipped bug was a volley wider than the pool can hold — and it
       // is now spelled where the barrels actually come from.
-      path: 'src/content/ships.ts',
+      // ⚠️ Re-anchored by 0233: the ladder is the weapon kind's now, not the ship's.
+      path: 'src/content/weapons.ts',
       find: '    barrels: [1, 2, 3, 4, 4],',
       replace: '    barrels: [1, 2, 3, 4, 40],',
     },

@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
-import { PICKUPS, PICKUP_KINDS } from '../src/content/pickups.ts';
+import { PICKUPS, PICKUP_KINDS, faceOf } from '../src/content/pickups.ts';
 import { MAX_SHIELDS } from '../src/content/ships.ts';
 import { TAP_STRIP } from '../src/app/touch.ts';
 
@@ -62,9 +62,17 @@ describe.runIf(chromePath)('the title screen says what a pickup is for', () => {
     */
     const page = await open();
     const text = (await page.textContent('.' + prefixFor('title') + 'key')) ?? '';
+    /*
+      ⚠️ **EVERY FACE, since 0233.** A cycling pickup is several offers wearing one silhouette in
+      turn, and the key names each — the gun rather than the pickup — so a player knows the shape
+      is good before they cross a lane for it. `faceOf` is the row's own answer for each face.
+    */
     for (const kind of PICKUP_KINDS) {
-      expect(text, `the key does not name ${kind}`).toContain(PICKUPS[kind].label);
-      expect(text, `the key does not say what ${kind} does`).toContain(PICKUPS[kind].hint);
+      PICKUPS[kind].faces.forEach((_sprite, face) => {
+        const said = faceOf(kind, face);
+        expect(text, `the key does not name face ${face} of ${kind}`).toContain(said.label);
+        expect(text, `the key does not say what face ${face} of ${kind} does`).toContain(said.hint);
+      });
     }
     await page.context().close();
   });
@@ -92,7 +100,9 @@ describe.runIf(chromePath)('the title screen says what a pickup is for', () => {
       });
     }, '.' + prefixFor('title') + 'key-icon');
 
-    expect(icons.length, 'the key has no icons at all').toBe(PICKUP_KINDS.length);
+    // One icon per FACE, since 0233 — a cycling pickup shows each of its glyphs.
+    const faces = PICKUP_KINDS.reduce((sum, kind) => sum + PICKUPS[kind].faces.length, 0);
+    expect(icons.length, 'the key has no icons at all').toBe(faces);
     for (const icon of icons) {
       expect(icon.canvas, 'a key icon is not a baked sprite').toBe(true);
       expect(icon.inked, 'a key icon was baked empty').toBeGreaterThan(0);

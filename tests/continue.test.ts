@@ -193,8 +193,8 @@ describe('a run over is a continue', () => {
     const built = shell();
     built.lifecycle.begin(TIER);
     intoAFight(built);
-    built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'weapon' });
-    built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'weapon' });
+    built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' });
+    built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' });
     /*
       ⚠️ **Banked past the starting kit, or the restock below cannot be seen** —
       `docs/decisions/0085-a-death-does-not-cost-the-bombs.md`. Until 0085 every death restocked the

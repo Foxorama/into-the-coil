@@ -64,13 +64,14 @@ import {
   rungIn,
   type ThemeKind,
 } from '../src/content/themes.ts';
-import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { MISSILE_BEAT_RATIO, fireEveryAt, missileEveryAt } from '../src/content/pickups.ts';
+import { WEAPONS, WEAPON_KINDS } from '../src/content/weapons.ts';
+import { MISSILES, MISSILE_KINDS } from '../src/content/missiles.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { SCREENS } from '../src/state/screens.ts';
 import { initialState, reduce, type Action } from '../src/state/root.ts';
-import { GameFrame, SHIP_START_ALONG } from '../src/app/frame.ts';
+import { GameFrame, SHIP_START_ALONG, cueOfFlight } from '../src/app/frame.ts';
 import { playableWorld } from './world.ts';
 
 /**
@@ -1312,7 +1313,8 @@ describe('the synthesiser', () => {
       of its loudest band and 0.008 with its sub layer deleted — an order of magnitude apart, and the
       bound is between them rather than beside either.
     */
-    for (const kind of ['pulse', 'missile'] as const) {
+    // And the arc, since 0233 — the third of the player's own weapons, held to the same floor.
+    for (const kind of ['pulse', 'missile', 'arc'] as const) {
       const bands = spectrum(sampleCue(CUES[kind], SAMPLE_RATE, makeRng('cues').stream(kind)), SAMPLE_RATE);
       const sub = bands[0]!;
       const shape = bands.map((v, i) => `${BANDS[i]![2]} ${v.toFixed(3)}`).join(', ');
@@ -1355,23 +1357,31 @@ describe('the synthesiser', () => {
       `docs/decisions/0027-measure-the-picture-not-the-model.md`, and the same cross-file shape
       `tests/bombs.test.ts` uses for a blast's reach and its art.
     */
-    for (const ship of SHIP_KINDS) {
-      const row = SHIPS[ship];
+    /*
+      ⚠️ **EVERY GUN AND EVERY TUBE, since 0233.** The ladders are the kind's rather than the ship's,
+      and each gun has its own cue — `cueOfFlight` is the frame's own mapping, so a third gun
+      added with a cue that overlaps its own cadence fails here without anybody extending a list.
+    */
+    for (const kind of WEAPON_KINDS) {
+      const row = WEAPONS[kind];
+      const cue = cueOfFlight(row.flight);
       const fastest = Math.min(...row.fireEvery.map((_unused, tier) => fireEveryAt(row, tier)));
       const gap = fastest / STEPS_PER_SECOND;
       expect(
-        cueSeconds(CUES.pulse),
-        `the ${ship} pulse sounds for ${cueSeconds(CUES.pulse).toFixed(3)}s and fires every ${gap.toFixed(3)}s at its ` +
+        cueSeconds(CUES[cue]),
+        `the ${kind} sounds for ${cueSeconds(CUES[cue]).toFixed(3)}s and fires every ${gap.toFixed(3)}s at its ` +
           `fastest rung, so the gun never stops making a noise`,
       ).toBeLessThanOrEqual(gap);
-
+    }
+    for (const kind of MISSILE_KINDS) {
+      const row = MISSILES[kind];
       const soonest = Math.min(
         ...row.missileEvery.map((_unused, tier) => MISSILE_BEAT_RATIO * missileEveryAt(row, tier)),
       );
       const missileGap = soonest / STEPS_PER_SECOND;
       expect(
         cueSeconds(CUES.missile),
-        `the ${ship} missile sounds for ${cueSeconds(CUES.missile).toFixed(3)}s and launches every ` +
+        `the ${kind} missile sounds for ${cueSeconds(CUES.missile).toFixed(3)}s and launches every ` +
           `${missileGap.toFixed(3)}s at its fastest rung, so the counter-beat overlaps itself`,
       ).toBeLessThanOrEqual(missileGap);
     }
@@ -2407,9 +2417,12 @@ describe('0127 — a cue has a place', () => {
     const offenders: string[] = [];
     for (const file of ['src/app/frame.ts', 'src/app/boss.ts']) {
       const source = readFileSync(resolve(root, file), 'utf8');
-      for (const match of source.matchAll(/onCue\(\s*'([a-zA-Z]+)'\s*([,)])/g)) {
-        const kind = match[1]!;
-        if (match[2] === ')' && !CENTRED.includes(kind)) offenders.push(`${file}: ${kind}`);
+      // A literal name, or the flight's own cue asked of `cueOfFlight` — 0233. The second form is
+      // the one call site that fires more than one gun, and a scan that could not see it would let
+      // exactly that site forget its place.
+      for (const match of source.matchAll(/onCue\(\s*(?:'([a-zA-Z]+)'|(cueOfFlight\([^)]*\)))\s*([,)])/g)) {
+        const kind = match[1] ?? match[2]!;
+        if (match[3] === ')' && !CENTRED.includes(kind)) offenders.push(`${file}: ${kind}`);
       }
     }
     expect(
@@ -2493,7 +2506,7 @@ describe('0173 — a cue happens somewhere', () => {
     expect(added, `the room adds only ${(added * 1000).toFixed(0)} ms to the blast`).toBeGreaterThan(0.33);
   }, 30_000);
 
-  it('and the four cues on the weapon cadence are DRY, because a tail cannot outlast its own repeat', () => {
+  it('and the cues on the weapon cadence are DRY, because a tail cannot outlast its own repeat', () => {
     /*
       ⚠️ **THE ROOM IS 1.1 SECONDS AND THE GUN FIRES EVERY 0.067**, so a wet gun is a gun smeared into
       a wash. It is 0104's own argument — that decision shortened the pulse's LAYERS against
@@ -2504,7 +2517,9 @@ describe('0173 — a cue happens somewhere', () => {
       the room took its tail from 56 ms to **743 ms**, because a cue with a small peak has its -40 dB
       point pushed LATER by a tail, not earlier. A quiet send is not a short one.
     */
-    const STREAMS: CueKind[] = ['pulse', 'missile', 'threat', 'hit'];
+    // And the arc's two, since 0233: the discharge rides the arc's cadence and the strike lands on
+    // the same step, so both are the gun's rate again.
+    const STREAMS: CueKind[] = ['pulse', 'missile', 'threat', 'hit', 'arc', 'zap'];
     for (const kind of STREAMS) {
       expect(CUES[kind].air, `${kind} rides the fire cadence and states a room`).toBeUndefined();
     }

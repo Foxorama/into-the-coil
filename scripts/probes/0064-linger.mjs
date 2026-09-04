@@ -25,8 +25,11 @@ export const PROBES = [
     */
     edit: {
       path: 'src/app/frame.ts',
-      find: '      w.scrollPerStep * (1 - PICKUP_CLOSE_SHARE) +',
-      replace: '      0 +',
+      // ⚠️ Re-anchored by 0233: the wait is a wander of the box now, and holding station is the
+      // scroll rate plus a heading. Zeroing both is the wait removed — a body with no speed of its
+      // own falls back through the view.
+      find: '      w.scrollPerStep +\n      item.spin * PICKUP_WANDER +',
+      replace: '      0 +\n      0 * item.spin * PICKUP_WANDER +',
     },
   },
   {
@@ -43,7 +46,13 @@ export const PROBES = [
     */
     broke: 'the wait cut below a crossing, so a pickup can only be taken by a player already beside it',
     guard: 'waits long enough to be crossed the whole lane for',
-    edit: { path: 'src/app/frame.ts', find: 'const PICKUP_LINGER_STEPS = 420;', replace: 'const PICKUP_LINGER_STEPS = 90;' },
+    // ⚠️ Re-anchored by 0233: the wait is the longer of the floor and a cycling pickup's turns, so a
+    // floor cut on its own is covered by the turns. The break is the whole wait cut, in `lingerFor`.
+    edit: {
+      path: 'src/app/frame.ts',
+      find: '  return cycles > PICKUP_LINGER_STEPS ? cycles : PICKUP_LINGER_STEPS;',
+      replace: '  return 90 + 0 * cycles;',
+    },
   },
   {
     decision: '0064',
@@ -94,7 +103,8 @@ export const PROBES = [
     */
     edit: {
       path: 'src/app/frame.ts',
-      find: 'const PICKUP_SLOW_AT = SHIP_START_ALONG + PICKUP_LINGER_STEPS * PICKUP_CLOSE_SHARE * SCROLL_PER_STEP;',
+      // ⚠️ Re-anchored by 0233: the wait begins at the front wall of the box now.
+      find: 'const PICKUP_SLOW_AT = PLAYER_LEAD - PICKUP_TURN_ROOM;',
       replace: 'const PICKUP_SLOW_AT = 200;',
     },
   },

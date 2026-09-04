@@ -31,7 +31,7 @@
 
 import { SCREENS, type Screen, type SettingName } from '../state/screens.ts';
 import type { Palette } from '../content/palette.ts';
-import { PICKUPS, PICKUP_KINDS } from '../content/pickups.ts';
+import { PICKUPS, PICKUP_KINDS, faceOf } from '../content/pickups.ts';
 import { SPRITE } from '../content/sprites.ts';
 import { bakeAtlas } from '../render/bake.ts';
 // The strip's width, from the file that hit-tests it. One number, or the picture and the hit region
@@ -1355,18 +1355,28 @@ export function makeChrome(
       key.className = prefix + 'key';
       for (const pickup of PICKUP_KINDS) {
         const row = PICKUPS[pickup];
-        const icon = iconOf(row.sprite);
-        icon.className = prefix + 'key-icon';
-        // Decorative: the name beside it is the accessible text, and a screen reader announcing
-        // "canvas" before every row would be noise rather than information.
-        icon.setAttribute('aria-hidden', 'true');
-        const name = document.createElement('span');
-        name.className = prefix + 'key-name';
-        name.textContent = row.label;
-        const hint = document.createElement('span');
-        hint.className = prefix + 'key-hint';
-        hint.textContent = row.hint;
-        key.append(icon, name, hint);
+        /*
+          ⚠️ **ONE ROW PER FACE, since 0233.** A cycling pickup is several offers wearing one
+          silhouette in turn, and the key exists so a player knows a shape is good before they cross
+          a lane for it — so every face gets its glyph and its own name, read off the kind's row via
+          `faceOf`, rather than the pickup's row once. A shield and a bomb have one face and get one
+          line, exactly as before.
+        */
+        row.faces.forEach((sprite, face) => {
+          const said = faceOf(pickup, face);
+          const icon = iconOf(sprite);
+          icon.className = prefix + 'key-icon';
+          // Decorative: the name beside it is the accessible text, and a screen reader announcing
+          // "canvas" before every row would be noise rather than information.
+          icon.setAttribute('aria-hidden', 'true');
+          const name = document.createElement('span');
+          name.className = prefix + 'key-name';
+          name.textContent = said.label;
+          const hint = document.createElement('span');
+          hint.className = prefix + 'key-hint';
+          hint.textContent = said.hint;
+          key.append(icon, name, hint);
+        });
       }
       const column = document.createElement('div');
       column.className = prefix + 'column';

@@ -105,7 +105,9 @@ decision needs no rule.
   — [0015](docs/decisions/0015-the-layer-ladder.md)
 - **A hub enumerates kinds, never instances.** Content is rows in a `Record<Kind, Row>` over a
   closed union, in `src/content/`; behaviour rides the row; a registry is an explicit list of
-  imports. The table is the guard, so the five ways of defeating it — auto-discovery,
+  imports. **A weapon is a kind**: its ladders, its pickup face and its hulls ride its row, and the
+  frame switches on how it flies, never on its name —
+  [0233](docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md). The table is the guard, so the five ways of defeating it — auto-discovery,
   `Record<string, …>`, `any`, `@ts-ignore`, a `switch` with no `never` arm — are held by a test.
   — [0016](docs/decisions/0016-a-hub-enumerates-kinds.md)
 - **The state is slices, and a slice does not import a sibling.** The root composes
@@ -136,10 +138,13 @@ decision needs no rule.
   reason to make anything smaller.** The guard counts draw calls and allocations rather than
   wall-clock, and that is *not* a phone rule — CI is not the target machine either. The frame loop is
   a **closed list of hot files** where allocating syntax fails a test; a line that genuinely runs once
-  carries `// @setup: <why>` above it. This is the one code convention landed so far.
+  carries `// @setup: <why>` above it. This is the one code convention landed so far. **The one thing
+  that is stroked rather than blitted is a bolt** — a shape not known until the frame it is drawn on —
+  and it is its own verb on the surface, counted beside the blits and never inside them.
   — [0022](docs/decisions/0022-frame-rate-is-a-feature.md),
   [0025](docs/decisions/0025-the-frame-budget-is-counted-not-timed.md),
-  [0153](docs/decisions/0153-desktop-is-the-target.md)
+  [0153](docs/decisions/0153-desktop-is-the-target.md),
+  [0233](docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md)
 
 - **When a report survives a fix that measured green, go and measure the picture.** Everything this
   repository counts is a *model* quantity — draw calls, allocations, steps, world units — and the

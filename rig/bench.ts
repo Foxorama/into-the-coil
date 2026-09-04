@@ -27,6 +27,7 @@ import { mount } from '../src/app/mount.ts';
 import { advanceLevel } from '../src/app/frame.ts';
 import { LEVELS, LEVEL_KINDS, type LevelKind } from '../src/content/levels.ts';
 import { THEMES } from '../src/content/themes.ts';
+import { WEAPON_KINDS, type WeaponKind } from '../src/content/weapons.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 
@@ -108,6 +109,21 @@ along.addEventListener('input', () => {
 */
 lifecycle.begin('savior');
 dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
+
+/*
+  ── THE GUN, FROM THE QUERY — 0233 ──────────────────────────────────────────────────────────────
+
+  `?weapon=arc&tier=3` fits the arc at three rungs before the level is put on the field, through the
+  same `upgraded` action a pickup dispatches — so the hull, the ladder and the cue are the game's own
+  and not a copy. A weapon is a kind now and a bench that could only fly the base gun could not show
+  the other one at all; this is the bench jumping to where the thing is, one axis over.
+*/
+const query = new URLSearchParams(location.search);
+const fitted = query.get('weapon');
+if (fitted !== null && (WEAPON_KINDS as readonly string[]).includes(fitted)) {
+  const rungs = Math.max(1, Number(query.get('tier') ?? '1'));
+  for (let i = 0; i < rungs; i++) dispatch({ slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: fitted as WeaponKind });
+}
 along.max = String(Math.ceil(LEVELS[LEVEL_KINDS[0]!].bossAt));
 goTo(LEVEL_KINDS[0]!, 0);
 

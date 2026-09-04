@@ -42,7 +42,8 @@ export const PROBES = [
     broke: 'the missile rate ladder flattened, so the last two tiers resolve to the same ship',
     guard: 'THE TIERS: each ladder is exactly UPGRADE_TIERS long',
     edit: {
-      path: 'src/content/ships.ts',
+      // ⚠️ Re-anchored by 0233: the ladder is the missile kind's now, not the ship's.
+      path: 'src/content/missiles.ts',
       find: '    missileEvery: [8, 8, 8, 6, 4],',
       replace: '    missileEvery: [8, 8, 8, 8, 8],',
     },
@@ -83,8 +84,9 @@ export const PROBES = [
     guard: 'fires one missile per launcher, and stops at two tubes',
     edit: {
       path: 'src/content/pickups.ts',
-      find: '  const launchers = tubes > MAX_LAUNCHERS ? MAX_LAUNCHERS : tubes;',
-      replace: '  const launchers = tubes > MAX_LAUNCHERS - 1 ? MAX_LAUNCHERS - 1 : tubes;',
+      // ⚠️ Re-anchored by 0233: the tube count is read off the missile kind's ladder first.
+      find: '  const launchers = tubesAt > MAX_LAUNCHERS ? MAX_LAUNCHERS : tubesAt;',
+      replace: '  const launchers = tubesAt > MAX_LAUNCHERS - 1 ? MAX_LAUNCHERS - 1 : tubesAt;',
     },
   },
   {
@@ -103,9 +105,10 @@ export const PROBES = [
     guard: 'an upgrade pickup taken at its cap becomes a bomb charge',
     edit: {
       path: 'src/content/pickups.ts',
-      find: '  return effect === \'upgrade\' && isUpgrade(kind) && !upgradeGrows(upgrades, kind) ? \'special\' : effect;',
-      replace:
-        '  return effect === \'upgrade\' && isUpgrade(kind) && upgrades.length >= UPGRADE_TIERS ? \'special\' : effect;',
+      // ⚠️ Re-anchored by 0233: the narrowing is the last line of `effectOf` now, and it asks the
+      // loadout. The break is the same — the whole list where the kind's own ladder should be.
+      find: "  return upgradeGrows(loadout.upgrades, kind) ? 'upgrade' : 'special';",
+      replace: "  return loadout.upgrades.length < UPGRADE_TIERS ? 'upgrade' : 'special';",
     },
   },
   {

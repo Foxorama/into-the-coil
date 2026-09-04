@@ -17,76 +17,41 @@
  */
 
 import type { Body } from '../sim/entity.ts';
-import type { ShotKind } from './shots.ts';
 import { SPRITE } from './sprites.ts';
+import type { WeaponKind } from './weapons.ts';
+import type { MissileKind } from './missiles.ts';
 
 /** Every flyable ship. Closed, and one entry long until the roster is played rather than designed. */
 export type ShipKind = 'proof';
 
 export interface ShipRow extends Body {
   /**
-   * Sim steps between this ship's pulse volleys, at each weapon tier. One entry per rung, so its
-   * length is `UPGRADE_TIERS + 1`.
+   * The gun this ship opens a run with, and goes back to on a death.
    *
-   * ── IT WAS `firePerBeat` AND A BEAT DECIDED WHAT A GUN COULD DO ────────────────────────────────
+   * ── THE LADDERS WERE HERE, AND 0233 MOVED THEM ONTO THE KIND ────────────────────────────────────
    *
-   * ⚠️ **`docs/decisions/0159-the-two-clocks-come-apart.md`.** This held volleys PER BEAT and
-   * `weaponFor` divided `STEPS_PER_BEAT` by it, so a cadence had to divide 24 — **eight legal fire
-   * rates for every weapon this game will ever have**, and the eight were chosen by a music
-   * constant. The values here are what that division already produced; what is gone is the rule.
+   * `fireEvery`, `barrels` and `missileEvery` lived on this row from 0093 to 0233, on the argument
+   * *a ship is where a weapon's character lives* — kept so that the chunky alternative the play-test
+   * asked to have on record could be a second ship. **A weapon is a kind now**
+   * (`src/content/weapons.ts`), and the character is the kind's: the chunky gun is a second row
+   * there, and a ship names which row it starts on. Nothing about the numbers moved; what moved is
+   * whose they are. `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
    *
-   * ⚠️ **A LIST RATHER THAN A CURVE, AND THAT PART SURVIVES ON ITS OWN MERITS.** It replaced
-   * `rung(ship.fireEvery, FASTEST_FIRE, tier)` — a straight line from a base to a floor — because
-   * the rungs of a gun are not evenly spaced and a designer wants to say each one. `rung` is kept
-   * for the launchers, where the quantity really is a count.
-   *
-   * ⚠️ **AND IT IS ON THE ROW BECAUSE A SHIP IS WHERE A WEAPON'S CHARACTER LIVES.** The play-test
-   * asked for the alternative to be kept: *"keep the chunky slower fire rate on record, we could use
-   * that for a different ship later."* **This field is what makes spending it a table edit** rather
-   * than a rewrite of `weaponFor`.
+   * ⚠️ **The BASE, not the fitted one.** Which gun the ship is carrying right now is the run's
+   * (`src/state/slices/run.ts`), because it changes when a pickup of another kind is taken and is
+   * lost on a death — exactly as the upgrade list is. This is what an empty run resolves to.
    */
-  fireEvery: readonly number[];
+  weapon: WeaponKind;
   /**
-   * Sim steps between missile volleys, at each MISSILE tier. Same length as `fireEvery`.
-   *
-   * ── THE MISSILES USED TO READ THE PULSE'S LADDER, AND THAT IS WHY THE SECOND TUBE WAS LATE ──────
-   *
-   * ⚠️ **Reported from play, 2026-08-10: *"missile tubes don't get a second firing till like the 3rd
-   * upgrade — upgrades for missiles should be 1 tube, 2 tubes, faster fire rate."*** Both halves of
-   * that were one cause. `weaponFor` asked `fireEveryAt(ship, tubes)` — the PULSE's list, indexed by
-   * the missile tier — so the two ladders had to share their rungs, and the only way to make every
-   * missile tier buy something was to stagger the tubes against the rate: `rung(0, 2, tier)` gives
-   * 0, **1, 1, 2**, 2, which puts the second tube on the third pickup exactly as reported.
-   *
-   * ⚠️ **With a list of its own the two stop having to take turns.** The tubes can climb 0, 1, 2, 2,
-   * 2 and the rate can hold, hold, then step twice — which is the ask read literally, and every rung
-   * still changes something (`docs/game.md`).
-   *
-   * ⚠️ **THE 5:1 COUNTER-BEAT IS STILL `MISSILE_BEAT_RATIO × ` this** rather than a second tuned
-   * number, which is the one relationship in the two ladders that 0159 leaves exactly as it was:
-   * it is a ratio between two of the ship's own cadences and never was a musical claim.
-   */
-  missileEvery: readonly number[];
-  /** How many barrels fire at once, at each weapon tier. Same length as `fireEvery`. */
-  barrels: readonly number[];
-  /** The base weapon. */
-  shot: ShotKind;
-  /**
-   * The second auto-weapon, and the steps between its volleys.
+   * The second auto-weapon this ship opens with.
    *
    * ⚠️ **On the ROW beside the first, because `docs/game.md` says the ship owns its base weapon** —
    * and a missile is a base weapon rather than an arsenal entry: it fires itself, it needs no input,
    * and `src/content/actions.ts`'s *there is no `fire` action and there must never be one* covers
-   * every auto-weapon rather than only the pulse. A second ship that carries a different missile, or
-   * none at all, is a table edit.
-   *
-   * ⚠️ **`missileEvery` is GONE and the missile's cadence is derived** —
-   * `docs/decisions/0093-the-gun-is-on-the-grid.md`. It is `MISSILE_BEAT_RATIO` times whatever the
-   * pulse fires at on the same rung, which is the 5:1 cross-rhythm the play-test heard and nobody
-   * had chosen. Written as its own number it was free to drift off that ratio, and across the old
-   * five tiers it already had — 5.00, 4.88, 4.71, 5.20, 5.00.
+   * every auto-weapon rather than only the pulse. A second ship that carries a different missile is a
+   * table edit; its ladders are `src/content/missiles.ts`'s, on the same terms as the gun's.
    */
-  missile: ShotKind;
+  missile: MissileKind;
 }
 
 /** Written out rather than derived, so the table below cannot quietly lose a row. */
@@ -104,22 +69,38 @@ export const SHIP_KINDS: readonly ShipKind[] = ['proof'];
  * flashing as the tier-0 hull on every hit, which is a silhouette changing at the one moment the
  * player is least able to read it.
  */
-const HULLS: readonly { base: number; hit: number }[] = [
-  { base: SPRITE.ship, hit: SPRITE.shipHit },
-  { base: SPRITE.shipMk2, hit: SPRITE.shipMk2Hit },
-  { base: SPRITE.shipMk3, hit: SPRITE.shipMk3Hit },
-];
+/**
+ * ⚠️ **A LADDER PER WEAPON KIND SINCE 0233, AND THE TIERS ARE THE SAME THREE.** Asked for: *"each
+ * new weapon needs thematically change the style of the ship so you have a visual indicator of the
+ * weapon equipped."* The tier says how much kit the ship carries and the kind says what the kit IS,
+ * and both have to show — so the table is two-dimensional and every cell is its own bake, because
+ * a blit is one bitmap per entity (`src/render/surface.ts`). `tests/weapons.test.ts` holds every
+ * kind to three tiers, three twins, and widening boxes, on 0229's terms.
+ */
+const HULLS: Record<WeaponKind, readonly { base: number; hit: number }[]> = {
+  pulse: [
+    { base: SPRITE.ship, hit: SPRITE.shipHit },
+    { base: SPRITE.shipMk2, hit: SPRITE.shipMk2Hit },
+    { base: SPRITE.shipMk3, hit: SPRITE.shipMk3Hit },
+  ],
+  arc: [
+    { base: SPRITE.shipArc, hit: SPRITE.shipArcHit },
+    { base: SPRITE.shipArcMk2, hit: SPRITE.shipArcMk2Hit },
+    { base: SPRITE.shipArcMk3, hit: SPRITE.shipArcMk3Hit },
+  ],
+};
 
 /**
- * Which hull a ship carrying `tier` upgrades' worth of kit is drawn as.
+ * Which hull a ship carrying `weapon` and `tier` upgrades' worth of kit is drawn as.
  *
  * ⚠️ **Clamped rather than trusted.** `weaponFor` already clamps, so this can only fire if the two
  * ever disagree — and the failure it prevents is an `undefined` reaching `Entity.sprite`, which is a
  * blit of nothing rather than an error anybody would see.
  */
-export function hullFor(tier: number): { base: number; hit: number } {
-  const rung = tier < 0 ? 0 : tier > HULLS.length - 1 ? HULLS.length - 1 : Math.floor(tier);
-  return HULLS[rung] ?? HULLS[0]!;
+export function hullFor(weapon: WeaponKind, tier: number): { base: number; hit: number } {
+  const ladder = HULLS[weapon];
+  const rung = tier < 0 ? 0 : tier > ladder.length - 1 ? ladder.length - 1 : Math.floor(tier);
+  return ladder[rung] ?? ladder[0]!;
 }
 
 export const SHIPS: Record<ShipKind, ShipRow> = {
@@ -144,57 +125,20 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     health: 1,
     damage: 0,
     /*
-      ── THE LADDER, IN SIM STEPS ─────────────────────────────────────────────────────────────────
+      ── THE LADDERS WERE HERE — 0233 MOVED THEM ONTO THE KINDS ──────────────────────────────────
 
-      ⚠️ **`docs/decisions/0159-the-two-clocks-come-apart.md`. These are the numbers the gun has been
-      firing at all along**, written down directly instead of arrived at by dividing a music
-      constant. It was `firePerBeat: [3, 3, 4, 4, 6]` and `STEPS_PER_BEAT / perBeat`, which is these
-      five numbers exactly — **nothing about the gun changes here.**
+      `fireEvery: [8, 8, 6, 6, 4]`, `barrels: [1, 2, 3, 4, 4]` and `missileEvery: [8, 8, 8, 6, 4]`
+      are `WEAPONS.pulse`'s and `MISSILES.straight`'s now (`src/content/weapons.ts`,
+      `src/content/missiles.ts`), unchanged. What this row says is which kind the ship opens on.
 
-      ⚠️ **WHAT CHANGES IS WHAT MAY BE AUTHORED NEXT.** The old form could only express cadences that
-      divide 24: eight legal rates for every weapon this game will ever have, picked from the
-      divisors of a number chosen for the music. Said 2026-08-17: *"the sim-step and gun ladder rules
-      make no sense anyway when the plan has always been to add additional weapons in so we'd be
-      struggling all over the place if we don't change our approach to that now."* A rung of 7 steps
-      is now a thing a hand may simply write.
-
-      ⚠️ **THE RATE STEPS TWICE AND THE BARRELS STEP FOUR TIMES, AND THAT IS NOW A CHOICE RATHER THAN
-      A CONSTRAINT.** Under 0093 there were only three usable subdivisions in the span the ladder
-      occupies, so two of the four upgrades COULD NOT buy rate and the barrels had to carry them.
-      Nothing forces that any more — `docs/game.md` still says every rung must change something, and
-      the rate is now free to be one of the things that does.
-
-      ⚠️ **AND THE ALTERNATIVE IS STILL RECORDED RATHER THAN BUILT**, asked for during 0093: *"keep
-      the chunky slower fire rate on record, we could use that for a different ship later."* In these
-      units it is `fireEvery: [12, 8, 8, 6, 6]` with `barrels: [2, 3, 4, 5, 6]` — a gun that opens
-      slow and wide and never reaches the fastest rung. It is a second SHIP rather than a retune of
-      this one.
+      ⚠️ **AND THE CHUNKY ALTERNATIVE IS STILL RECORDED RATHER THAN BUILT**, asked for during 0093:
+      *"keep the chunky slower fire rate on record, we could use that for a different ship later."*
+      It is `fireEvery: [12, 8, 8, 6, 6]` with `barrels: [2, 3, 4, 5, 6]` — a gun that opens slow
+      and wide and never reaches the fastest rung — and since 0233 it is a second WEAPON KIND that a
+      second ship would open on, rather than a retune of this one.
     */
-    fireEvery: [8, 8, 6, 6, 4],
-    /*
-      ── THE MISSILES: TUBE, TUBE, THEN RATE ──────────────────────────────────────────────────────
-
-      ⚠️ **Reported from play: *"upgrades for missiles should be 1 tube, 2 tubes, faster fire rate."***
-      The first two rungs hold the base cadence and buy a launcher each; the last two hold the tubes
-      at the cap and buy the rate. Every rung still changes something, which is `docs/game.md`'s rule
-      and is what the old staggered arrangement was paying for.
-
-      ⚠️ **The floor and the ceiling are BOTH unchanged**, which is what makes this a re-ordering
-      rather than a buff. Tier 0 is still eight steps to a pulse volley and tier 4 is still four, so
-      `MISSILE_BEAT_RATIO` still reaches 20 steps at the cap and the missile pool's worst case — two
-      launchers at the fastest cadence — is the number it always was.
-
-      ⚠️ **What DOES move is the middle, and it moves in the player's favour on purpose**: two tubes
-      arrive one pickup earlier and the first rate step arrives one later. That is the trade the ask
-      names, and it is a trade rather than a gift.
-
-      ⚠️ **IN SIM STEPS SINCE 0159, and this is the same ladder** — it was `[3, 3, 3, 4, 6]` divided
-      into 24, which is these five numbers.
-    */
-    missileEvery: [8, 8, 8, 6, 4],
-    barrels: [1, 2, 3, 4, 4],
-    shot: 'pulse',
-    missile: 'missile',
+    weapon: 'pulse',
+    missile: 'straight',
   },
 };
 

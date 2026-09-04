@@ -25,18 +25,16 @@ export const PROBES = [
       replace: '    item.velAlong = target;',
     },
   },
-  {
-    decision: '0077',
-    suite: 'tests/pickups.test.ts',
-    /*
-      ⚠️ THE OTHER HALF OF THE SAME REPORT — *"and slide up/down it before continuing on."* A pickup
-      that has stopped running away still traces a straight line for the whole seven seconds unless
-      something curves it, and a line down an edge that is not drawn is what an edge looks like.
-    */
-    broke: 'the bob removed, so a waiting pickup tracks one line for seven seconds',
-    guard: 'wanders along the lane while it waits, rather than tracking one line',
-    edit: { path: 'src/app/frame.ts', find: 'const PICKUP_BOB_SPEED = 0.4;', replace: 'const PICKUP_BOB_SPEED = 0;' },
-  },
+  /*
+    ── THE BOB PROBE WAS HERE, AND 0233 RETIRED IT ────────────────────────────────────────────────
+
+    It set `PICKUP_BOB_SPEED` to 0 — *"the bob removed, so a waiting pickup tracks one line for seven
+    seconds"* — and its guard was *wanders along the lane while it waits, rather than tracking one
+    line*. Since 0233 a waiting pickup wanders the whole box on a heading of its own, so the bob is no
+    longer what keeps it off one line and the guard stays green without it: the probe went STILL
+    GREEN, which is 0019's verdict. The bob stays in the picture; what it was guarding is now the
+    wander's, held by `tests/weapons.test.ts`.
+  */
   {
     decision: '0077',
     suite: 'tests/pickups.test.ts',
@@ -75,7 +73,9 @@ export const PROBES = [
     suite: 'tests/missiles.test.ts',
     // ⚠️ THE THIRD REPORTED ONE, restored exactly: 0051's cap, left behind by 0056's base of zero.
     broke: 'the launcher cap returned to three, which is a rung the ask does not have',
-    guard: 'fires one missile per launcher, and stops at two tubes',
+    // ⚠️ Re-aimed by 0233: the tube count is the missile kind's own ladder now, so a cap raised on
+    // its own is the cap and the ladder disagreeing — THE FLOORS is the guard that sees that.
+    guard: 'THE FLOORS: the last tier lands exactly on them',
     edit: { path: 'src/content/pickups.ts', find: 'const MAX_LAUNCHERS = 2;', replace: 'const MAX_LAUNCHERS = 3;' },
   },
   {

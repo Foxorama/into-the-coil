@@ -22,13 +22,14 @@ export const PROBES = [
     guard: 'and the wait is a journey that ends where the ship flies',
     edit: {
       path: 'src/app/frame.ts',
-      find: 'const PICKUP_CLOSE_SHARE = 0.35;',
-      replace: 'const PICKUP_CLOSE_SHARE = 0;',
+      // ⚠️ Re-aimed by 0233: the closing share is gone and the wander is the closing rate. A wander
+      // of zero is the same break — a waiting pickup holding station on one line.
+      find: 'const PICKUP_WANDER = 0.28;',
+      replace: 'const PICKUP_WANDER = 0;',
     },
   },
   {
     decision: '0087',
-    suite: 'tests/pickups.test.ts',
     /*
       ⚠️ THE DESTINATION UNPICKED, AND THE JOURNEY LEFT INTACT. `PICKUP_SLOW_AT` is derived so that a
       pickup nobody touches arrives at the ship's own place in the camera's frame exactly as its wait
@@ -36,11 +37,17 @@ export const PROBES = [
       to be. The pickup still slows, still closes, still bobs — it simply ends its wait somewhere
       arbitrary, which nothing but a guard on the destination can see.
     */
-    broke: 'the station typed rather than derived, so the wait ends nowhere in particular',
-    guard: 'and the wait is a journey that ends where the ship flies',
+    broke: 'the station typed rather than derived, so the wait begins nowhere in particular',
+    // ⚠️ Re-aimed by 0233 at the guard that can see it: the wait is a wander of the box now, and
+    // where it begins is the front wall — a typed distance is a wander that starts in the middle
+    // of the screen, which only a guard on the wander's own extent notices.
+    suite: 'tests/weapons.test.ts',
+    guard: 'wanders the whole box',
     edit: {
       path: 'src/app/frame.ts',
-      find: 'const PICKUP_SLOW_AT = SHIP_START_ALONG + PICKUP_LINGER_STEPS * PICKUP_CLOSE_SHARE * SCROLL_PER_STEP;',
+      // ⚠️ Re-anchored by 0233: the wait begins at the front wall of the box now, and a typed number
+      // is a wander that begins in the middle of the screen.
+      find: 'const PICKUP_SLOW_AT = PLAYER_LEAD - PICKUP_TURN_ROOM;',
       replace: 'const PICKUP_SLOW_AT = 100;',
     },
   },
@@ -58,7 +65,10 @@ export const PROBES = [
       to come forward, which is the thing 0077's guard is about and the thing nothing else can see.
     */
     broke: 'the bob’s phase taken from a field that drifts, so the wander runs at a quarter of its period',
-    guard: 'wanders along the lane while it waits, rather than tracking one line',
+    // ⚠️ Re-aimed by 0233: over a pickup that wanders the box, a bob running off `across` no longer
+    // shortens the wander — it makes the pickup too fast to count as waiting at all, which is the
+    // guard 0064 wrote in the player's units.
+    guard: 'THE REPORTED ONE: it stops running away',
     edit: {
       path: 'src/app/frame.ts',
       find: '      PICKUP_BOB_SPEED * Math.sin(w.cameraAlong / PICKUP_BOB_UNITS + item.bobPhase);',
@@ -83,8 +93,9 @@ export const PROBES = [
     guard: 'waits somewhere the ship can actually fly to',
     edit: {
       path: 'src/app/frame.ts',
+      // ⚠️ Re-anchored by 0233, which reads the distance into a local the wander also uses.
       find:
-        '    if (item.along - w.cameraAlong > PICKUP_SLOW_AT) {\n' +
+        '    if (inView > PICKUP_SLOW_AT) {\n' +
         '      item.velAlong += (0 - item.velAlong) * PICKUP_EASE;\n' +
         '      continue;\n' +
         '    }\n',

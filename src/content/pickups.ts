@@ -40,6 +40,8 @@ import type { ShipRow } from './ships.ts';
 import { SHOTS } from './shots.ts';
 import type { SpecialKind } from './specials.ts';
 import { SPRITE } from './sprites.ts';
+import { WEAPONS, WEAPON_KINDS, type FlightKind, type WeaponKind, type WeaponRow } from './weapons.ts';
+import { MISSILES, MISSILE_KINDS, type GuidanceKind, type MissileKind, type MissileRow } from './missiles.ts';
 
 /**
  * Every pickup in the game. Closed.
@@ -127,7 +129,46 @@ export interface PickupRow extends Body {
    */
   hint: string;
   effect: PickupEffect;
+  /**
+   * What it looks like, in cycle order — one sprite per thing it can be offering.
+   *
+   * ── A PICKUP CYCLES BETWEEN KINDS, AND A FACE IS WHICH ONE IT IS SHOWING ────────────────────────
+   *
+   * `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`. Asked for: *"the weapon power
+   * ups need to cycle between the weapons with about a 2sec time… so that they can make a choice and
+   * collect that weapon upgrade."* The weapon pickup's faces are the guns and the missile pickup's
+   * are the tubes, in the order their tables list them; a shield and a bomb have one face each and
+   * never turn.
+   *
+   * ⚠️ **`sprite` is `faces[0]`, held by `tests/weapons.test.ts` rather than derived**, because the
+   * `Body` a pickup is spawned from is what `reset` copies and the title screen's key reads — and
+   * a first face that differed from the row's own sprite would be a pickup that changed on the step
+   * after it appeared.
+   *
+   * ⚠️ **This is the cycle 0082 removed, one level down** — between kinds of ONE ladder rather than
+   * between a gun and a shield, which is the version 0083 said was coming and the argument against
+   * 0052 always allowed: a player watching the faces turn is choosing a gun, not gambling a shield.
+   */
+  faces: readonly number[];
 }
+
+/**
+ * Sim steps a cycling pickup shows each face for. *"About a 2sec time."*
+ *
+ * ⚠️ **Steps rather than seconds, because the cycle is a thing the player reads off the field and
+ * the field steps at 60Hz** — 0022. Two seconds is long enough to read a glyph at pickup size and
+ * decide; a face that turned faster would be a coin the player could not call.
+ */
+export const PICKUP_CYCLE_STEPS = 120;
+
+/**
+ * How many full cycles a pickup stays for, at least. *"Long enough that the player can see at least
+ * 2 repetitions of each weapon so that they can make a choice."*
+ *
+ * `src/app/frame.ts` sizes the wait from this and the face count, so a third weapon kind lengthens
+ * the wait on its own — the promise is about repetitions and not about seconds.
+ */
+export const PICKUP_REPEATS = 2;
 
 export const PICKUPS: Record<PickupKind, PickupRow> = {
   /**
@@ -155,6 +196,8 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     label: 'Weapon',
     hint: 'Guns up a tier',
     effect: 'upgrade',
+    // Every gun, in the guns' own order — 0233. The title screen's key lists each face by name.
+    faces: WEAPON_KINDS.map((k) => WEAPONS[k].pickup),
   },
   /**
    * THE MISSILES, AND EVERY REPEAT RAISES TUBES AND RATE TOGETHER.
@@ -178,6 +221,7 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     label: 'Missiles',
     hint: 'Tubes up a tier',
     effect: 'upgrade',
+    faces: MISSILE_KINDS.map((k) => MISSILES[k].pickup),
   },
   /**
    * One more hit that never reaches the hull.
@@ -200,6 +244,7 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     label: 'Shield',
     hint: 'One hit absorbed',
     effect: 'shield',
+    faces: [SPRITE.pickupShield],
   },
   /**
    * CHARGES FOR THE ARSENAL — the first pickup the player has to decide when to use.
@@ -225,8 +270,47 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     // the day that row is tuned, the title screen goes on telling the player the old one.
     hint: 'Charges to spend',
     effect: 'special',
+    faces: [SPRITE.pickupBomb],
   },
 };
+
+/**
+ * What a ship is carrying: the two ladders and which kind each one is fitted with.
+ *
+ * ⚠️ **The run slice's own shape, named here so content can read it without importing state** —
+ * `src/state/slices/run.ts` satisfies it structurally, and `weaponFor` and `effectOf` take it rather
+ * than four loose arguments that have to be passed in the right order.
+ */
+export interface Loadout {
+  upgrades: readonly UpgradeKind[];
+  weapon: WeaponKind;
+  missile: MissileKind;
+}
+
+/**
+ * The gun a weapon pickup showing `face` is offering, and the tube a missile pickup is offering.
+ *
+ * ⚠️ **Clamped onto the list rather than trusted**, on `everyAt`'s terms: a face past the end can
+ * only arrive if a pickup's entity and its row ever disagree, and the failure it prevents is an
+ * `undefined` reaching the reducer as a weapon kind.
+ */
+export function weaponFaceOf(face: number): WeaponKind {
+  return WEAPON_KINDS[face < 0 ? 0 : face >= WEAPON_KINDS.length ? WEAPON_KINDS.length - 1 : face]!;
+}
+
+export function missileFaceOf(face: number): MissileKind {
+  return MISSILE_KINDS[face < 0 ? 0 : face >= MISSILE_KINDS.length ? MISSILE_KINDS.length - 1 : face]!;
+}
+
+/**
+ * What a pickup showing `face` is called and what it does — for the title screen's key, which lists
+ * every face of a cycling pickup rather than the row once.
+ */
+export function faceOf(kind: PickupKind, face: number): { label: string; hint: string } {
+  if (kind === 'weapon') return WEAPONS[weaponFaceOf(face)];
+  if (kind === 'missile') return MISSILES[missileFaceOf(face)];
+  return PICKUPS[kind];
+}
 
 /**
  * Every pickup whose effect is an entry in the ship's upgrade list.
@@ -342,9 +426,9 @@ function everyAt(ladder: readonly number[], tier: number): number {
   return ladder[rung]!;
 }
 
-/** Steps between PULSE volleys for a ship at weapon tier `tier`. */
-export function fireEveryAt(ship: ShipRow, tier: number): number {
-  return everyAt(ship.fireEvery, tier);
+/** Steps between volleys of `weapon` at tier `tier`. */
+export function fireEveryAt(weapon: WeaponRow, tier: number): number {
+  return everyAt(weapon.fireEvery, tier);
 }
 
 /**
@@ -355,8 +439,8 @@ export function fireEveryAt(ship: ShipRow, tier: number): number {
  * (`docs/decisions/0093-the-gun-is-on-the-grid.md`), and keeping the ratio outside this is what keeps
  * *slower than the pulse* true at every rung by construction rather than by tuning.
  */
-export function missileEveryAt(ship: ShipRow, tier: number): number {
-  return everyAt(ship.missileEvery, tier);
+export function missileEveryAt(missile: MissileRow, tier: number): number {
+  return everyAt(missile.missileEvery, tier);
 }
 
 /**
@@ -417,9 +501,17 @@ export function upgradeGrows(upgrades: readonly UpgradeKind[], kind: UpgradeKind
  * in the player's hand and not about the ship as a whole — a resolved `Weapon` cannot answer it,
  * because a maxed pulse and an empty missile rack look the same to it from one side.
  */
-export function effectOf(kind: PickupKind, upgrades: readonly UpgradeKind[]): PickupEffect {
+/*
+  ⚠️ **AND THE FACE, SINCE 0233.** A weapon pickup offering a gun the ship is not carrying is an
+  upgrade whatever the ladder says, because taking it SWITCHES — the ladder it lands on is a fresh
+  one (`src/state/slices/run.ts`). Only a pickup offering the gun already fitted can be full.
+*/
+export function effectOf(kind: PickupKind, face: number, loadout: Loadout): PickupEffect {
   const effect = PICKUPS[kind].effect;
-  return effect === 'upgrade' && isUpgrade(kind) && !upgradeGrows(upgrades, kind) ? 'special' : effect;
+  if (effect !== 'upgrade' || !isUpgrade(kind)) return effect;
+  if (kind === 'weapon' && weaponFaceOf(face) !== loadout.weapon) return 'upgrade';
+  if (kind === 'missile' && missileFaceOf(face) !== loadout.missile) return 'upgrade';
+  return upgradeGrows(loadout.upgrades, kind) ? 'upgrade' : 'special';
 }
 
 /**
@@ -494,6 +586,19 @@ export interface Weapon {
    * lives.
    */
   tier: number;
+  /**
+   * Which gun and which tube this is — 0233. The hull is a function of `kind` and `tier` together
+   * (`hullFor` in `src/content/ships.ts`), and the frame switches on `flight` and `guidance`, never
+   * on either name.
+   */
+  kind: WeaponKind;
+  missile: MissileKind;
+  flight: FlightKind;
+  guidance: GuidanceKind;
+  /** How many targets one bolt lands on. One for a weapon that does not chain. */
+  links: number;
+  /** How far one bolt can jump, in world units. Zero for a weapon that does not chain. */
+  reach: number;
 }
 
 /**
@@ -647,7 +752,12 @@ export const PLAYER_SHOT_LIFE = 80;
  * from a saved run, and so a death clearing the list restores the base weapon with no second
  * description of what the base weapon was.
  */
-export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weapon {
+export function weaponFor(
+  ship: ShipRow,
+  upgrades: readonly UpgradeKind[],
+  weapon: WeaponKind = ship.weapon,
+  missile: MissileKind = ship.missile,
+): Weapon {
   /*
     ── TWO LADDERS, EACH A PURE FUNCTION OF ITS OWN TIER — AND IT WAS A LOOP ──────────────────────
 
@@ -661,10 +771,17 @@ export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weap
     build. A tier is now a count, `tiersOf` clamps it, and everything below is arithmetic on that —
     so a saved run carrying twenty weapons resolves to exactly the same ship as one carrying four.
 
-    ⚠️ **`damage` is a `const` and that is the max-speed nerf.** Both damage numbers used to climb
-    without a ceiling once every hardpoint and both cadences were capped — see `damage` on the
-    `Weapon` interface for what replaced the rule that put them there.
+    ⚠️ **AND THE LADDERS ARE THE KIND'S, SINCE 0233.** `weapon` and `missile` default to the ship's
+    base kinds, so `weaponFor(ship, [])` is still the one description of what an unupgraded ship
+    fires; the run slice passes the kinds it has fitted. The same list resolves to a different ship
+    under a different kind, which is the whole of what switching guns means.
+
+    ⚠️ **`damage` is a ladder CAPPED at its last rung and that is the max-speed nerf kept.** The
+    pulse's weight ladder is ones — see `damage` on the `Weapon` interface for what replaced the rule
+    that let it climb without a ceiling. A bolt's climbs, and stops.
   */
+  const gunRow = WEAPONS[weapon];
+  const tubeRow = MISSILES[missile];
   const gun = tiersOf(upgrades, 'weapon');
   const tubes = tiersOf(upgrades, 'missile');
 
@@ -672,25 +789,14 @@ export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weap
     ⚠️ **Barrels run 1 → `MAX_BARRELS` across four tiers, so one of the four buys rate alone.** Four
     is a pool budget rather than a taste — `barrels × PLAYER_SHOT_LIFE / FASTEST_FIRE ≤ pool`, and
     five barrels is exactly 100 against a pool of 100. The ask's *four tiers* and the pool's *four
-    barrels* are different fours, and `rung` is what lets both be true.
+    barrels* are different fours.
 
-    ⚠️ **Launchers run 0 → `MAX_LAUNCHERS` across the same four**, so two of the missile tiers buy
-    rate alone. A ship starts at zero tubes
-    (`docs/decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md`), and rounding
-    puts the first tube on tier 1 — so the first missile pickup is still the second weapon ARRIVING,
-    which is the thing 0056 must not lose.
-  */
-  /*
-    ⚠️ **THE BARRELS ARE A LIST ON THE SHIP AND THEY WERE `rung(1, MAX_BARRELS, gun)`** —
+    ⚠️ **THE BARRELS ARE A LIST ON THE KIND AND THEY WERE `rung(1, MAX_BARRELS, gun)`** —
     `docs/decisions/0093-the-gun-is-on-the-grid.md`. Interpolation gave 1, 2, 3, 3, 4, which was fine
-    while the rate moved at every tier and is not now: the rate can only step where the beat has a
-    subdivision, so tiers 2 and 3 share one — and with the old barrels they would have shared a
-    weapon entirely. `docs/game.md`'s *every upgrade is worth taking* is what the fourth barrel buys.
-
-    ⚠️ **`rung` is KEPT for the launchers**, and the difference is the point: a launcher is a place on
-    the hull and a count really does interpolate. A cadence is a note value and does not.
+    while the rate moved at every tier and is not now. `docs/game.md`'s *every upgrade is worth
+    taking* is what the fourth barrel buys.
   */
-  const shots = ship.barrels[gun] ?? ship.barrels[ship.barrels.length - 1]!;
+  const shots = everyAt(gunRow.barrels, gun);
   /*
     ── ONE TUBE, THEN TWO, AND IT WAS `rung(0, MAX_LAUNCHERS, tubes)` ─────────────────────────────
 
@@ -699,18 +805,13 @@ export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weap
     count evenly across `UPGRADE_TIERS`, so 0 → 2 over four rungs rounds to 0, **1, 1, 2**, 2 and the
     second tube waited for the third pickup.
 
-    ⚠️ **`rung` was not wrong; it was the only lever there was.** The missiles read the PULSE's
-    cadence list, so a rate step could only land where the pulse's did — and with both rungs of rate
-    taken, staggering the tubes was the only way to make all four tiers buy something. The ship row
-    now carries `missileEvery`, so the two ladders are independent and neither has to take turns.
-
     ⚠️ **A count, capped — not interpolated.** *"Max of two tubes"*
     (`docs/decisions/0083-two-ladders-of-four.md`) is a ceiling on a place on the hull, and the ask
-    reads the rungs off directly: one tube, then two, then the cap holds while the rate climbs.
-    `docs/decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md`'s *a ship starts
-    with none* is the tier-0 entry and is untouched.
+    reads the rungs off directly: one tube, then two, then the cap holds while the rate climbs. The
+    list is the missile kind's own since 0233, and the cap still stands over whatever it says.
   */
-  const launchers = tubes > MAX_LAUNCHERS ? MAX_LAUNCHERS : tubes;
+  const tubesAt = everyAt(tubeRow.launchers, tubes);
+  const launchers = tubesAt > MAX_LAUNCHERS ? MAX_LAUNCHERS : tubesAt;
 
   /*
     ── EACH CADENCE IS A NOTE VALUE, AND BOTH USED TO BE INTERPOLATED TO A FLOOR ──────────────────
@@ -718,30 +819,25 @@ export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weap
     `docs/decisions/0093-the-gun-is-on-the-grid.md`. The floors are unchanged and both are still
     floor rather than a target: `FASTEST_FIRE` is a legibility number (`src/app/frame.ts` needs the
     impact flash to finish between hits). What changed is that a rung is an authored number rather
-    than a point on a line — and that the missile's own floor stopped being a constant, because a
-    ladder reaches its cap without one.
+    than a point on a line.
 
     ⚠️ **IT WAS *a fraction of a beat* UNTIL 0159 AND IS NOW SIMPLY A CADENCE** —
-    `docs/decisions/0159-the-two-clocks-come-apart.md`. 0093 put every rung on a subdivision so the
-    gun was in time with the music at every tier; that coupling is what capped a weapon's fire rate
-    at one of the eight divisors of 24, and it is gone.
+    `docs/decisions/0159-the-two-clocks-come-apart.md`.
 
-    ⚠️ **`tests/pickups.test.ts` holds every rung of BOTH ladders to a whole number of steps and to
+    ⚠️ **`tests/pickups.test.ts` holds every rung of EVERY ladder to a whole number of steps and to
     never getting slower.** The divisor rule was providing both for free, which is the thing to look
     for whenever a constraint is dropped.
   */
-  const fireEvery = fireEveryAt(ship, gun);
+  const fireEvery = fireEveryAt(gunRow, gun);
   /*
-    ⚠️ **DERIVED FROM THE PULSE, WHICH MAKES THE 5:1 CROSS-RHYTHM DELIBERATE.** It was an accident and
-    the play-test heard it: *"the missile fire provided a great counter-beat."* Five against a beat
-    divided in three, four or six is a counter-beat by construction, and it held at 5.00, 4.88, 4.71,
-    5.20 and 5.00 across the old tiers purely because two independent interpolations happened to start
-    five apart. Written down, it cannot drift.
+    ⚠️ **DERIVED FROM A NOTE VALUE, WHICH MAKES THE 5:1 CROSS-RHYTHM DELIBERATE.** It was an accident
+    and the play-test heard it: *"the missile fire provided a great counter-beat."* Written down, it
+    cannot drift.
   */
-  const missileEvery = MISSILE_BEAT_RATIO * missileEveryAt(ship, tubes);
+  const missileEvery = MISSILE_BEAT_RATIO * missileEveryAt(tubeRow, tubes);
 
-  const damage = SHOTS[ship.shot].damage;
-  const missileDamage = SHOTS[ship.missile].damage;
+  const damage = SHOTS[gunRow.shot].damage * everyAt(gunRow.weight, gun);
+  const missileDamage = SHOTS[tubeRow.shot].damage;
   return {
     fireEvery,
     shots,
@@ -750,6 +846,12 @@ export function weaponFor(ship: ShipRow, upgrades: readonly UpgradeKind[]): Weap
     missileEvery,
     launchers,
     missileDamage,
+    kind: weapon,
+    missile,
+    flight: gunRow.flight,
+    guidance: tubeRow.guidance,
+    links: everyAt(gunRow.links, gun),
+    reach: gunRow.reach,
     /*
       ⚠️ **Counted over the two LADDERS rather than over the raw list** — 0081's rule, 0083's
       arithmetic. A player who spends four upgrades on missiles has upgraded exactly as much as one

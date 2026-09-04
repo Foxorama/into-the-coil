@@ -29,6 +29,7 @@ import { SPRITE } from './sprites.ts';
 /** Every shot in the game. Closed. */
 export type ShotKind =
   | 'pulse'
+  | 'arc'
   | 'spit'
   | 'lance'
   | 'flak'
@@ -62,6 +63,7 @@ export interface ShotRow extends Body {
 /** Written out rather than derived, so the table below cannot quietly lose a row. */
 export const SHOT_KINDS: readonly ShotKind[] = [
   'pulse',
+  'arc',
   'spit',
   'lance',
   'flak',
@@ -93,6 +95,20 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
   // ⚠️ `spriteHit` is the same bitmap, and that is honest rather than lazy: a shot has one health,
   // so it never survives a hit and never flashes. There is no second silhouette to draw.
   pulse: { sprite: SPRITE.bullet, spriteHit: SPRITE.bullet, radius: 0.9, health: 1, damage: 1, speed: 2.6 },
+  /**
+   * One link of chain lightning — `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
+   *
+   * ⚠️ **`speed` is 0 because a bolt does not travel: it is resolved on the step it fires.** The row
+   * is what a link is WORTH and what its landing looks like — `sprite` is the spark blitted where the
+   * bolt lands, and the bolt itself is stroked between two points by `src/render/scene.ts`, which is
+   * the one thing in the game that is not a bitmap. `radius` is the spark's hurtbox band and nothing
+   * else: a link is in no collision pairing, because `src/app/frame.ts` lands it by hand.
+   *
+   * ⚠️ **`damage` is one link at weight one.** What a bolt is worth at a tier is this times the
+   * weapon's `weight` ladder (`src/content/weapons.ts`), so it stays a relationship to the pulse —
+   * one link is one pulse — rather than a number tuned beside it.
+   */
+  arc: { sprite: SPRITE.arcNode, spriteHit: SPRITE.arcNode, radius: 1, health: 1, damage: 1, speed: 0 },
   /**
    * What an enemy sends back. **Slower than the ship**, which is the whole of what makes it
    * dodgeable rather than a coin flip: a player who reacts can always leave the line it is on.

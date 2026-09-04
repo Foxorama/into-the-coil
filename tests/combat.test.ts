@@ -35,6 +35,7 @@ import { makeRng } from '../src/sim/rng.ts';
 import { BURST } from '../src/content/debris.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyRow } from '../src/content/enemies.ts';
 import { INVULN_STEPS, MAX_SHIELDS, SHIPS } from '../src/content/ships.ts';
+import { CAPACITY } from '../src/app/mount.ts';
 import { weaponFor } from '../src/content/pickups.ts';
 import { SHOT_KINDS, SHOTS } from '../src/content/shots.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
@@ -435,6 +436,8 @@ function firingAt(row: EnemyRow, distance: number): World {
     deaths: makeDeaths(8),
     hits: makeDeaths(8),
     burstRng: makeRng('combat').stream('burst'),
+    arcRng: makeRng('combat').stream('arc'),
+    bolts: new Pool<Entity>(CAPACITY.bolts, makeEntity),
     scatterRng: makeRng('combat').stream('scatter'),
     view: viewOf(VIEWPORT.width, VIEWPORT.height),
     surface: BLIND,
@@ -478,7 +481,7 @@ function holding(across: number): InputSource {
 }
 
 /** A surface that draws nothing. The dodge is a model question; the units it is reported in are not. */
-const BLIND: Surface = { clear(): void {}, blit(): void {} };
+const BLIND: Surface = { clear(): void {}, blit(): void {}, bolt(): void {} };
 
 /**
  * The proof scene with one lancer, placed `distance` units ahead of the ship and `lane` units off
@@ -533,6 +536,8 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
     deaths: makeDeaths(8),
     hits: makeDeaths(8),
     burstRng: makeRng('combat').stream('burst'),
+    arcRng: makeRng('combat').stream('arc'),
+    bolts: new Pool<Entity>(CAPACITY.bolts, makeEntity),
     scatterRng: makeRng('combat').stream('scatter'),
     view: viewOf(VIEWPORT.width, VIEWPORT.height),
     surface: BLIND,
@@ -1222,6 +1227,7 @@ describe('layers are drawn in the order they are given', () => {
       blit(spriteIndex: number): void {
         order.push(spriteIndex);
       },
+      bolt(): void {},
     };
     const back = new Pool<Entity>(2, makeEntity);
     const front = new Pool<Entity>(1, makeEntity);

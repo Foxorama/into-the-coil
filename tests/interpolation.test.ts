@@ -14,6 +14,7 @@ import type { InputSource } from '../src/app/input.ts';
 import { DEFAULT_ASSISTS, tuningFor } from '../src/sim/assist.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { MAX_SHIELDS, SHIPS } from '../src/content/ships.ts';
+import { CAPACITY } from '../src/app/mount.ts';
 import { SPRITE } from '../src/content/sprites.ts';
 import { inertLevel } from './world.ts';
 
@@ -44,6 +45,7 @@ class RecordingSurface implements Surface {
   blit(sprite: number, x: number, y: number): void {
     this.blits.push({ sprite, x, y });
   }
+  bolt(): void {}
 }
 
 const NO_INPUT: InputSource = { contribute(): void {}, spend(): void {}, release(): void {} };
@@ -109,6 +111,8 @@ function stationKeepingWorld(surface: Surface): World {
     deaths: makeDeaths(8),
     hits: makeDeaths(8),
     burstRng: makeRng('interp').stream('burst'),
+    arcRng: makeRng('interp').stream('arc'),
+    bolts: new Pool<Entity>(CAPACITY.bolts, makeEntity),
     scatterRng: makeRng('interp').stream('scatter'),
     view: viewOf(1280, 720),
     surface,
