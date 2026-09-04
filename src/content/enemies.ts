@@ -14,9 +14,26 @@
 import type { Body } from '../sim/entity.ts';
 import type { ShotKind } from './shots.ts';
 import { SPRITE } from './sprites.ts';
+import type { ThemeKind } from './themes.ts';
 
 /** Every enemy in the game. Closed. */
-export type EnemyKind = 'drifter' | 'lancer' | 'weaver' | 'turret' | 'charger' | 'warden' | 'spinner' | 'sower';
+export type EnemyKind =
+  | 'drifter'
+  | 'lancer'
+  | 'weaver'
+  | 'turret'
+  | 'charger'
+  | 'warden'
+  | 'spinner'
+  | 'sower'
+  // The seven signatures, one per place — 0232. `SIGNATURE_OF` below says whose is whose.
+  | 'picket'
+  | 'moth'
+  | 'raptor'
+  | 'sentry'
+  | 'shard'
+  | 'spore'
+  | 'gaze';
 
 /**
  * Every way a body can SHOOT. Closed.
@@ -300,7 +317,41 @@ export interface EnemyRow extends Body {
 }
 
 /** Written out rather than derived, so the table below cannot quietly lose a row. */
-export const ENEMY_KINDS: readonly EnemyKind[] = ['drifter', 'lancer', 'weaver', 'turret', 'charger', 'warden', 'spinner', 'sower'];
+export const ENEMY_KINDS: readonly EnemyKind[] = [
+  'drifter',
+  'lancer',
+  'weaver',
+  'turret',
+  'charger',
+  'warden',
+  'spinner',
+  'sower',
+  'picket',
+  'moth',
+  'raptor',
+  'sentry',
+  'shard',
+  'spore',
+  'gaze',
+];
+
+/**
+ * Which enemy kind is a place's own — `docs/decisions/0232-each-place-has-its-own-enemy.md`.
+ *
+ * ⚠️ **ONE PER PLACE, SENT BY THAT PLACE'S LEVEL AND BY NO OTHER.** *"Each level needs its own brand
+ * of unique enemy to flavour that world."* The eight kinds above are the game's vocabulary and every
+ * level draws on most of it; a signature is a body the player meets in one place and nowhere else.
+ * `tests/signature.test.ts` holds the pairing both ways, over the levels' own wave lists.
+ */
+export const SIGNATURE_OF: Record<ThemeKind, EnemyKind> = {
+  approach: 'picket',
+  nebula: 'moth',
+  saurian: 'raptor',
+  labyrinth: 'sentry',
+  rime: 'shard',
+  mire: 'spore',
+  core: 'gaze',
+};
 
 export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   /**
@@ -638,5 +689,114 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     // It goes where the wall will be. A weave means the hole travels across the lane between volleys,
     // so *the gap is in front of it* stays true and stops being a place the player can just park.
     motion: { kind: 'weave', amplitude: 12, wavelength: 150 },
+  },
+  /*
+    ── THE SIGNATURE ENEMIES: ONE PER PLACE — 0232 ──────────────────────────────────────────────
+
+    *"Each level needs its own brand of unique enemy to flavour that world."* The eight kinds above
+    are the game's vocabulary and every level draws on most of it; each of these seven is sent by ONE
+    place and no other, so a level has a body the player meets nowhere else. Every one is a new
+    silhouette against the eight, on `reports/enemy-silhouettes-2026-08-05.md`'s terms — a primitive
+    and an axis that survive twenty pixels — and every one that fires has a bullet-and-pattern
+    signature no other kind sends (`tests/legibility.test.ts`).
+  */
+  picket: {
+    sprite: SPRITE.picket,
+    spriteHit: SPRITE.picketHit,
+    radius: 3.0,
+    health: 2,
+    damage: 2,
+    closing: 0.2,
+    fireEvery: 108,
+    shot: 'spit',
+    /*
+      THE APPROACH'S OWN: a three-bladed picket that holds its line and throws a two-shot spread.
+      The first thing in the run that fires more than one bullet at once, at the slowest rate any
+      shooter has — a lesson in reading a spread before Ember Nebula's moths throw three.
+    */
+    attack: { kind: 'spray', shots: 2, spread: 0.55 },
+    motion: { kind: 'drift', roam: 0.2 },
+  },
+  moth: {
+    sprite: SPRITE.moth,
+    spriteHit: SPRITE.mothHit,
+    radius: 3.4,
+    health: 2,
+    damage: 2,
+    closing: 0.26,
+    fireEvery: 96,
+    shot: 'lance',
+    // EMBER NEBULA'S OWN: wide wings, a deep slow weave, and a fan of three darts — embers off a moth.
+    attack: { kind: 'spray', shots: 3, spread: 0.7 },
+    motion: { kind: 'weave', amplitude: 22, wavelength: 170 },
+  },
+  raptor: {
+    sprite: SPRITE.raptor,
+    spriteHit: SPRITE.raptorHit,
+    radius: 3.0,
+    health: 2,
+    damage: 2,
+    closing: 0.34,
+    fireEvery: 0,
+    shot: 'spit',
+    attack: { kind: 'aimed' },
+    // SAURIAN BELT'S OWN: a crescent of jaw that hunts harder than a lancer and never fires — it bites.
+    // The one two-hit body in the game with no gun, so what it costs is being caught.
+    motion: { kind: 'hunt', agility: 0.5 },
+  },
+  sentry: {
+    sprite: SPRITE.sentry,
+    spriteHit: SPRITE.sentryHit,
+    radius: 3.6,
+    health: 3,
+    damage: 2,
+    closing: 0,
+    fireEvery: 90,
+    shot: 'flak',
+    // THE LABYRINTH'S OWN: a block that holds station in the corridor and throws two slabs abreast —
+    // a wall of the heavy shot, which only a sower's darts had made before.
+    attack: { kind: 'wall', shots: 2, gap: 15 },
+    motion: { kind: 'drift', roam: 0.1 },
+  },
+  shard: {
+    sprite: SPRITE.shard,
+    spriteHit: SPRITE.shardHit,
+    radius: 3.2,
+    health: 3,
+    damage: 2,
+    closing: 0.18,
+    fireEvery: 78,
+    shot: 'spit',
+    // RIME SHELF'S OWN: a crystal that circles close and sheds three squares in a turning spiral.
+    attack: { kind: 'spiral', shots: 3, turn: 0.3 },
+    motion: { kind: 'circle', agility: 0.4, radius: 22 },
+  },
+  spore: {
+    sprite: SPRITE.spore,
+    spriteHit: SPRITE.sporeHit,
+    radius: 4.0,
+    health: 3,
+    damage: 2,
+    closing: 0.12,
+    fireEvery: 0,
+    shot: 'spit',
+    attack: { kind: 'aimed' },
+    // THE TOXIC MIRE'S OWN: a sac that drifts in slow and loops once — a mine the size of a warden,
+    // that takes three hits and never fires. What it asks of the player is room.
+    motion: { kind: 'loop', turns: 1 },
+  },
+  gaze: {
+    sprite: SPRITE.gaze,
+    spriteHit: SPRITE.gazeHit,
+    radius: 3.6,
+    health: 4,
+    damage: 2,
+    closing: 0.16,
+    fireEvery: 90,
+    shot: 'flak',
+    // THE BLACK HEART'S OWN: an eye that hunts slowly and throws the heavy slab straight at you. The
+    // only aimed flak in the game, from the only body that looks back.
+    attack: { kind: 'aimed' },
+    motion: { kind: 'hunt', agility: 0.28 },
   },
 };

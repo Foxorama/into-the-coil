@@ -473,6 +473,21 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   wardenHit: 'impact',
   spinnerHit: 'impact',
   sowerHit: 'impact',
+  // The signatures, on the same terms as the eight — 0232.
+  picket: 'enemy',
+  picketHit: 'impact',
+  moth: 'enemy',
+  mothHit: 'impact',
+  raptor: 'enemy',
+  raptorHit: 'impact',
+  sentry: 'enemy',
+  sentryHit: 'impact',
+  shard: 'enemy',
+  shardHit: 'impact',
+  spore: 'enemy',
+  sporeHit: 'impact',
+  gaze: 'enemy',
+  gazeHit: 'impact',
   bossHit: 'impact',
   boss2Hit: 'impact',
   /*
@@ -2614,6 +2629,286 @@ function paintBoss7(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
   motif(ctx, f, skin, theme, sector(0.72, 0.94, -0.6, 0.6, 10), 'boss7');
   disc(ctx, f, skin.eye, 0, 0, 0.1);
 }
+/*
+  ── THE SIGNATURE ENEMIES' HULLS AND PAINT — 0232 ───────────────────────────────────────────────
+
+  One per place. Every hull below is a closed polygon in the sprite's frame, facing −x; every paint
+  is the place's skin on the same terms as the eight shared kinds — a plate, a lit strip, an eye, and
+  the place's motif in a belly — so a signature enemy is unmistakably the place's own and is still
+  painted by the same hand.
+*/
+
+/** The Approach's picket: a Y, one blade down the lane and two swept back. */
+const PICKET_HULL: readonly Pt[] = [
+  [-1, -0.16],
+  [-0.3, -0.12],
+  [0.45, -0.98],
+  [0.72, -0.82],
+  [0.18, 0],
+  [0.72, 0.82],
+  [0.45, 0.98],
+  [-0.3, 0.12],
+  [-1, 0.16],
+];
+
+function paintPicket(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  plate(ctx, f, skin, [
+    [-0.3, 0.02],
+    [0.16, 0.02],
+    [0.62, 0.8],
+    [0.48, 0.88],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.94, -0.1],
+    [-0.3, -0.06],
+    [-0.3, 0.06],
+    [-0.94, 0.1],
+  ]);
+  motif(ctx, f, skin, theme, [
+    [-0.2, -0.08],
+    [0.14, -0.02],
+    [0.14, 0.02],
+    [-0.2, 0.08],
+  ], 'picket');
+  eye(ctx, f, skin, -0.1, 0, 0.14);
+}
+
+/** Ember Nebula's moth: a thin body with two wide wings. */
+const MOTH_HULL: readonly Pt[] = [
+  [-1, 0],
+  [-0.4, -0.18],
+  [-0.1, -0.5],
+  [0.3, -1],
+  [0.8, -0.86],
+  [0.4, -0.3],
+  [0.9, -0.08],
+  [0.9, 0.08],
+  [0.4, 0.3],
+  [0.8, 0.86],
+  [0.3, 1],
+  [-0.1, 0.5],
+  [-0.4, 0.18],
+];
+
+function paintMoth(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  // The lower wing in shadow, an eyespot on each wing, and the body lit down its spine.
+  plate(ctx, f, skin, [
+    [-0.06, 0.5],
+    [0.32, 0.92],
+    [0.72, 0.82],
+    [0.4, 0.34],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.92, -0.02],
+    [-0.36, -0.1],
+    [0.6, -0.06],
+    [0.6, 0.06],
+    [-0.36, 0.1],
+    [-0.92, 0.02],
+  ]);
+  motif(ctx, f, skin, theme, [
+    [0.02, -0.5],
+    [0.36, -0.86],
+    [0.66, -0.78],
+    [0.42, -0.36],
+  ], 'moth');
+  eye(ctx, f, skin, 0.44, -0.66, 0.12);
+  eye(ctx, f, skin, 0.44, 0.66, 0.12);
+}
+
+/** Saurian Belt's raptor: a crescent, horns down the lane. */
+const RAPTOR_HULL: readonly Pt[] = [
+  [-1, -0.62],
+  [-0.62, -0.92],
+  [0.2, -1],
+  [0.8, -0.7],
+  [1, -0.1],
+  [0.86, 0.5],
+  [0.4, 0.9],
+  [-0.2, 0.96],
+  [-0.9, 0.7],
+  [-0.4, 0.5],
+  [0.2, 0.3],
+  [0.42, -0.1],
+  [0.2, -0.46],
+  [-0.4, -0.5],
+];
+
+function paintRaptor(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  plate(ctx, f, skin, [
+    [0.44, 0.02],
+    [0.9, 0.02],
+    [0.78, 0.5],
+    [0.36, 0.84],
+    [-0.14, 0.88],
+    [-0.28, 0.6],
+    [0.2, 0.36],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.92, -0.64],
+    [-0.6, -0.84],
+    [0.16, -0.9],
+    [0.14, -0.74],
+    [-0.5, -0.66],
+    [-0.8, -0.61],
+  ]);
+  motif(ctx, f, skin, theme, [
+    [0.5, -0.5],
+    [0.9, -0.5],
+    [0.9, 0.3],
+    [0.5, 0.3],
+  ], 'raptor');
+  eye(ctx, f, skin, 0.0, -0.72, 0.14);
+}
+
+/** The Labyrinth's sentry: a block with a slot in its face. */
+const SENTRY_HULL: readonly Pt[] = [
+  [-0.95, -0.95],
+  [0.95, -0.95],
+  [0.95, 0.95],
+  [-0.95, 0.95],
+  [-0.95, 0.24],
+  [-0.5, 0.24],
+  [-0.5, -0.24],
+  [-0.95, -0.24],
+];
+
+function paintSentry(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  plate(ctx, f, skin, [
+    [-0.88, 0.32],
+    [0.88, 0.32],
+    [0.88, 0.88],
+    [-0.88, 0.88],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.44, -0.2],
+    [-0.2, -0.2],
+    [-0.2, 0.2],
+    [-0.44, 0.2],
+  ]);
+  motif(ctx, f, skin, theme, [
+    [-0.1, -0.86],
+    [0.86, -0.86],
+    [0.86, 0.24],
+    [-0.1, 0.24],
+  ], 'sentry');
+  eye(ctx, f, skin, -0.62, -0.6, 0.14);
+}
+
+/** Rime Shelf's shard: a long hexagon, pointed both ways. */
+const SHARD_HULL: readonly Pt[] = [
+  [-1, 0],
+  [-0.4, -0.5],
+  [0.4, -0.5],
+  [1, 0],
+  [0.4, 0.5],
+  [-0.4, 0.5],
+];
+
+function paintShard(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  plate(ctx, f, skin, [
+    [-0.9, 0.04],
+    [0.9, 0.04],
+    [0.36, 0.44],
+    [-0.36, 0.44],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.92, -0.02],
+    [-0.4, -0.44],
+    [-0.2, -0.44],
+    [-0.7, -0.02],
+  ]);
+  motif(ctx, f, skin, theme, [
+    [-0.3, -0.4],
+    [0.3, -0.4],
+    [0.3, -0.06],
+    [-0.3, -0.06],
+  ], 'shard');
+  eye(ctx, f, skin, -0.42, 0, 0.13);
+}
+
+/** The Toxic Mire's spore: a lumpy sac. */
+const SPORE_HULL: readonly Pt[] = [
+  [-1, -0.1],
+  [-0.86, -0.56],
+  [-0.5, -0.86],
+  [-0.06, -1],
+  [0.4, -0.9],
+  [0.82, -0.56],
+  [1, -0.06],
+  [0.9, 0.44],
+  [0.56, 0.84],
+  [0.1, 1],
+  [-0.4, 0.9],
+  [-0.8, 0.6],
+  [-0.96, 0.24],
+];
+
+function paintSpore(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  plate(ctx, f, skin, [
+    [-0.86, 0.3],
+    [0.84, 0.3],
+    [0.5, 0.76],
+    [0.1, 0.9],
+    [-0.4, 0.8],
+    [-0.74, 0.56],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.84, -0.5],
+    [-0.5, -0.76],
+    [-0.1, -0.88],
+    [-0.14, -0.7],
+    [-0.46, -0.6],
+    [-0.7, -0.36],
+  ]);
+  motif(ctx, f, skin, theme, [
+    [-0.6, -0.4],
+    [0.6, -0.4],
+    [0.6, 0.2],
+    [-0.6, 0.2],
+  ], 'spore');
+  eye(ctx, f, skin, -0.5, 0, 0.16);
+}
+
+/** The Black Heart's gaze: a lens, pointed across the lane, with a pupil. */
+const GAZE_HULL: readonly Pt[] = [
+  [0, -1],
+  [-0.5, -0.66],
+  [-0.78, -0.24],
+  [-0.78, 0.24],
+  [-0.5, 0.66],
+  [0, 1],
+  [0.5, 0.66],
+  [0.78, 0.24],
+  [0.78, -0.24],
+  [0.5, -0.66],
+];
+
+function paintGaze(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  plate(ctx, f, skin, [
+    [0.06, 0.06],
+    [0.7, 0.24],
+    [0.46, 0.62],
+    [0.02, 0.9],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.7, -0.24],
+    [-0.46, -0.6],
+    [-0.02, -0.9],
+    [-0.06, -0.66],
+    [-0.36, -0.44],
+    [-0.56, -0.16],
+  ]);
+  motif(ctx, f, skin, theme, [
+    [-0.4, 0.3],
+    [0.4, 0.3],
+    [0.3, 0.6],
+    [-0.3, 0.6],
+  ], 'gaze');
+  // The pupil: a big socket and the eye colour in it, dead centre, looking down the lane.
+  disc(ctx, f, shade(skin.plate, -0.5), 0, 0, 0.34);
+  disc(ctx, f, skin.eye, -0.08, 0, 0.2);
+}
 export function drawKind(
   ctx: Pen,
   kind: SpriteKind,
@@ -3243,6 +3538,77 @@ export function drawKind(
       }
       return;
     }
+    /*
+      ── THE SIGNATURE ENEMIES, ONE PER PLACE — 0232 ────────────────────────────────────────────
+
+      Seven silhouettes against the eight that exist, each a primitive and an axis that survive
+      twenty pixels (`reports/enemy-silhouettes-2026-08-05.md`), and each painted in its own place's
+      skin like everything else the place sends. What tells each from its neighbours is written on
+      its arm, because a pair that reads alike costs a play-test.
+    */
+    case 'picket':
+    case 'picketHit':
+      // A Y: three blades at 120°, one pointing down the lane. The only three-armed thing in the
+      // game — the spinner has four, and a drifter's diamond has none.
+      trace(ctx, f, PICKET_HULL);
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintPicket(ctx, f, skin, theme);
+      return;
+    case 'moth':
+    case 'mothHit':
+      // Two wings on a body: the widest thing across the lane that is not a bar, and the only
+      // silhouette with two lobes side by side.
+      trace(ctx, f, MOTH_HULL);
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintMoth(ctx, f, skin, theme);
+      return;
+    case 'raptor':
+    case 'raptorHit':
+      // A crescent with its horns down the lane: the only concave FRONT in the game. The sower's
+      // chevron is open at the back; this is open at the front, where the jaws are.
+      trace(ctx, f, RAPTOR_HULL);
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintRaptor(ctx, f, skin, theme);
+      return;
+    case 'sentry':
+    case 'sentryHit':
+      // A block with a slot in its face: square, three times a spit's size, and notched where it
+      // fires from. The turret is round-backed; this has corners everywhere.
+      trace(ctx, f, SENTRY_HULL);
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintSentry(ctx, f, skin, theme);
+      return;
+    case 'shard':
+    case 'shardHit':
+      // A crystal: a long hexagon pointed both ways. Told from the charger's needle by having a
+      // waist, and from the drifter's diamond by being twice as long as it is deep.
+      trace(ctx, f, SHARD_HULL);
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintShard(ctx, f, skin, theme);
+      return;
+    case 'spore':
+    case 'sporeHit':
+      // A sac: a lumpy round mass with no hole and no corners. The warden is a ring and the turret a
+      // half-disc; this is the only full round body, and it is a mine.
+      trace(ctx, f, SPORE_HULL);
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintSpore(ctx, f, skin, theme);
+      return;
+    case 'gaze':
+    case 'gazeHit':
+      // A lens: pointed at both ends across the lane, with a pupil. The one body that is wider
+      // across than along and comes to a point — a weaver's bar has no points.
+      trace(ctx, f, GAZE_HULL);
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintGaze(ctx, f, skin, theme);
+      return;
     case 'lifeIcon': {
       /*
         A PLUS. The one glyph that means *more of something* without any game having to teach it,
