@@ -52,7 +52,7 @@ import {
   auditionRung,
   levelOfPlace,
 } from '../src/app/music.ts';
-import { auraCeilingOf, rungOf, THEME_KINDS } from '../src/content/themes.ts';
+import { auraCeilingOf, rungIn, THEMES, THEME_KINDS } from '../src/content/themes.ts';
 import { loopsAt } from './bakes.ts';
 import { buildsOf } from './pace.ts';
 import { readFileSync } from 'node:fs';
@@ -302,7 +302,7 @@ describe('four loops that cannot drift', () => {
 /** The level's own piece, which climbs additively. */
 const CLIMBING = MUSIC_LEVELS.filter((l) => l !== 'calm' && l !== 'boss' && l !== 'bossPeak');
 /** The loudest rung there is — named once, so a guard cannot go on believing it is `boss`. */
-const TOP = MUSIC_LEVELS[MUSIC_LEVELS.length - 1]!;
+// `TOP` stood here for the guard that held the fight louder than the opening; 0226 retired it.
 
 describe('the ladder is additive, which is what the ask describes', () => {
   /**
@@ -1225,8 +1225,14 @@ describe('the boss brings an aura with it', () => {
         `docs/decisions/0162-a-place-has-its-own-ladder.md` already permits.
       */
       for (const theme of THEME_KINDS) {
-        const levelPeak = rungOf(theme, 'approach', layer) * auraCeilingOf(theme);
-        const fightPeak = rungOf(theme, 'boss', layer);
+        /*
+          ⚠️ **THE BARE LADDER, SINCE 0226.** The hold lowers a whole rung to keep the level at one
+          loudness, and it lowers the fight's rung a little more than the approach's; what this guard
+          holds is the aura ROW's shape — how much further *"amp up until you beat the boss"* has to
+          go inside the arrangement — and a level scale over the rung is not part of that shape.
+        */
+        const levelPeak = rungIn(THEMES[theme].ladder, 'approach', layer) * auraCeilingOf(theme);
+        const fightPeak = rungIn(THEMES[theme].ladder, 'boss', layer);
         expect(
           fightPeak / levelPeak,
           `${theme}'s ${layer} reaches ${levelPeak.toFixed(2)} on the level's own build and its fight tops ` +
@@ -1519,12 +1525,6 @@ describe('0108 — the bed is felt, the hands are on it, and the boss arrives', 
     return out;
   }
 
-  const rms = (s: Float32Array): number => {
-    let sum = 0;
-    for (const v of s) sum += v * v;
-    return Math.sqrt(sum / s.length);
-  };
-
   /*
     ⚠️ **60 s, AND IT WAS 30 — THE SAME MOVE THE BLOCK ABOVE ALREADY MADE, FOR THE SAME REASON.**
     That one's note is the argument in full: *"no part of this claim is about time… the only thing
@@ -1749,21 +1749,24 @@ describe('0108 — the bed is felt, the hands are on it, and the boss arrives', 
     ).toBeGreaterThan(0);
   });
 
-  it('THE BOSS ARRIVES: it opens more than one new thing, and it is louder in the unit an ear integrates', () => {
+  it('THE BOSS ARRIVES: it opens more than one new thing', () => {
     /*
       ⚠️ **Reported as *"the boss music isn't increasing proportionally"*, and it is 0107's success
       producing the complaint.** That decision gave the level four rungs to climb; the fight's rung
       gained `lead` and about five percent on eight gains. A ladder whose last step is its smallest is
       not a ladder that arrives.
 
-      ⚠️ **TWO CLAIMS, BECAUSE EITHER ALONE IS SATISFIABLE BY THE STATE BEING FIXED.** One new layer
-      at a nudge in gain passes a *something is added* test; a rung merely turned up passes a loudness
-      test. What an arrival is, is both.
+      ── THE LOUDNESS HALF STOOD HERE AND 0226 RETIRED IT ────────────────────────────────────────
 
-      ⚠️ **The loudness half is RMS over a phrase and NOT the sum of the table's gains**, which is the
-      quantity 0104's guard already found wanting: the shaper on the bus compresses a louder rung
-      towards the one below it, so a boss that is +4 dB in the table can be +1 dB in the room. This is
-      measured after the shaper, which is where the player is.
+      ⚠️ **THIS GUARD HELD TWO CLAIMS, AND THE SECOND WAS THAT THE FIGHT IS LOUDER THAN THE OPENING.**
+      `docs/decisions/0226-the-level-holds-one-loudness.md`: a level now holds one loudness from
+      `run` to the end of the fight, in the listener's unit, through the shipped bus — the sixth
+      report on the same stretch of The Approach said *"the volume should be consistent for each
+      track for the level"*, and *"then stays at that high level"* was the fight. What an arrival is,
+      is a change of ARRANGEMENT: 0123 found that *loudness does not predict a section*, and the half
+      kept here is the half that measures that. The guard beside this one — *every rung is louder
+      than the one below, after the shaper* — held the same climb over the bare composition and went
+      with it; `tests/themes.test.ts` holds the opposite over every place.
     */
     const openAt = (level: (typeof MUSIC_LEVELS)[number]): MusicLayer[] =>
       MUSIC_LAYERS.filter((l) => MUSIC_LADDER[level][l] > 0);
@@ -1772,32 +1775,7 @@ describe('0108 — the bed is felt, the hands are on it, and the boss arrives', 
       arriving.length,
       `the boss opens ${arriving.length} thing(s) the approach did not (${arriving.join(', ') || 'none'})`,
     ).toBeGreaterThan(1);
-
-    const over = 20 * Math.log10(rms(mixAt(TOP)) / rms(mixAt('run')));
-    expect(
-      over,
-      `the fight is ${over.toFixed(1)}dB over the opening of the level, measured after the bus shaper`,
-    ).toBeGreaterThan(1.5);
-  }, DSP_MS);
-
-  it('and the shaper has not flattened the ladder it is meant to make room for', () => {
-    /*
-      ⚠️ **THE OTHER DIRECTION, AND `MUSIC_DRIVE` IS THE LEVER THAT WOULD DO IT.** `saturate` cannot
-      return past 1 whatever it is handed, so the clipping guards stay green over a bus driven until
-      every rung is one level — 0104 wrote a probe for exactly that and pointed it at the peak. This
-      is the assertion that probe wanted: **every rung is measurably louder than the one below it**,
-      in RMS, after the shaper.
-    */
-    const inLevel = CLIMBING;
-    for (let i = 1; i < inLevel.length; i++) {
-      const here = rms(mixAt(inLevel[i]!));
-      const below = rms(mixAt(inLevel[i - 1]!));
-      expect(
-        here / below,
-        `${inLevel[i]} is ${(20 * Math.log10(here / below)).toFixed(2)}dB over ${inLevel[i - 1]} — the shaper has eaten the climb`,
-      ).toBeGreaterThan(1.02);
-    }
-  }, DSP_MS);
+  });
 });
 
 /**

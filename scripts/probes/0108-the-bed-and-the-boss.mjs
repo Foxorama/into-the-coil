@@ -112,7 +112,8 @@ export const PROBES = [
       layer the approach had, and still adds a melody — and the arrival is a nudge.
     */
     broke: 'the boss’s kit closed, so its rung opens one layer against the level’s four',
-    guard: 'THE BOSS ARRIVES: it opens more than one new thing, and it is louder in the unit an ear integrates',
+    // 0226 retired the loudness half of this guard's title along with its claim.
+    guard: 'THE BOSS ARRIVES: it opens more than one new thing',
     edit: {
       path: 'src/content/music.ts',
       find: 'stomp: 0.92, frenzy: 0.86, wraith: 0.8, auraSlow: 1, auraFast: 0.9, ownA: 0, ownB: 0, ownC: 0, ownD: 0 },',
@@ -121,14 +122,18 @@ export const PROBES = [
   },
   {
     decision: '0108',
-    suite: 'tests/music.test.ts',
+    suite: 'tests/themes.test.ts',
     /*
       ⚠️ THE BUS DRIVEN UNTIL THE LADDER IS ONE LEVEL. 0104 wrote a probe for this and pointed it at
       the clipping assertion, which cannot see it: `saturate` never returns past 1 whatever it is
-      handed, so a bus squashed flat clips nothing. This is the guard that probe wanted.
+      handed, so a bus squashed flat clips nothing.
+
+      ⚠️ 0226 RETIRED THE GUARD THIS AIMED AT — *every rung louder than the one below* — and the hold
+      is what catches the same break now: `LEVEL_HOLD` is solved at the shipped drive, so a bus
+      squashed flat under it leaves every held rung QUIETER than its run by the whole hold.
     */
     broke: 'the music bus driven flat, so every rung of the ladder arrives at the same loudness',
-    guard: 'and the shaper has not flattened the ladder it is meant to make room for',
+    guard: 'every rung of a place holds its run loudness',
     edit: {
       path: 'src/content/music.ts',
       // 0217 took the drive to 0.15; the break is unchanged and only the anchor moved.

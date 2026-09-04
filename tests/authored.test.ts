@@ -31,7 +31,7 @@ import {
   unmet,
 } from './authored.ts';
 import { MUSIC_LAYERS, MUSIC_LEVELS, type MusicLayer, type MusicLevel } from '../src/content/music.ts';
-import { THEMES, THEME_KINDS, mixOf, rungOf, scaleOf, type ThemeKind } from '../src/content/themes.ts';
+import { THEMES, THEME_KINDS, holdOf, mixOf, rungOf, scaleOf, type ThemeKind } from '../src/content/themes.ts';
 import { roleOf } from '../src/content/arrangement.ts';
 import { DUCK_FLOOR_DB, carriedThrough, soundingAt } from './pace.ts';
 import { AA_FLOOR, contrast } from './contrast.ts';
@@ -103,8 +103,10 @@ function measureDuck(): void {
         before[layer] = rungOf(theme, from, layer) * mixOf(theme, layer);
         after[layer] = rungOf(theme, to, layer) * mixOf(theme, layer);
       }
+      // 0226: the hold lowers the whole rung; what is observed is a layer falling RELATIVE to its rung.
+      const held = 20 * Math.log10(holdOf(theme, to) / holdOf(theme, from));
       for (const { layer, move } of carriedThrough(before, after)) {
-        if (move <= DUCK_FLOOR_DB) found.push(`${theme} ${from}→${to}: ${layer} ${move.toFixed(1)} dB`);
+        if (move - held <= DUCK_FLOOR_DB) found.push(`${theme} ${from}→${to}: ${layer} ${(move - held).toFixed(1)} dB`);
       }
     }
   }

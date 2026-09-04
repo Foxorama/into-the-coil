@@ -469,10 +469,13 @@ if (args.has('level')) {
   */
   const held = {};
   const ramp = {};
+  const queue = {};
+  const cleared = new Set();
   const headingFor = {};
   for (const layer of MUSIC_LAYERS) {
     held[layer] = targetGain(theme, 'calm', layer, 0);
     ramp[layer] = { at: 0, target: held[layer], tau: RAMP_SECONDS / 3 };
+    queue[layer] = [];
   }
 
   for (let i = 0; i < total; i += BLOCK) {
@@ -501,13 +504,26 @@ if (args.has('level')) {
       */
       headingFor[w.layer] = w.target;
       const target = solved !== null && SOLVED_BY(w.layer) ? solved[rung][w.layer] : w.target;
-      ramp[w.layer] = { at: w.at, target, tau: w.tau };
+      /*
+        ⚠️ **QUEUED, NOT REPLACED — 0226.** A falling layer now carries one write per arrival, in time
+        order, and the mixer cancels once per layer before scheduling them all; keeping only the last
+        here would render the bed dropping at the final arrival alone, which is a file that does not
+        sound like the game. The first write for a layer in one call clears what was pending, exactly
+        as `cancelScheduledValues` does, and each one starts when its own `at` comes round.
+      */
+      if (!cleared.has(w.layer)) {
+        queue[w.layer].length = 0;
+        cleared.add(w.layer);
+      }
+      queue[w.layer].push({ at: w.at, target, tau: w.tau });
     }
+    cleared.clear();
     for (let n = 0; n < BLOCK && i + n < total; n++) {
       const t = (i + n) / SAMPLE_RATE;
       let left = 0;
       let right = 0;
       for (const layer of MUSIC_LAYERS) {
+        while (queue[layer].length > 0 && t >= queue[layer][0].at) ramp[layer] = queue[layer].shift();
         const r = ramp[layer];
         /*
           ⚠️ **`setTargetAtTime` HOLDS UNTIL ITS START TIME AND THEN APPROACHES**, which is the whole

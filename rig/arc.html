@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Into the Coil — the picture</title>
+    <link rel="icon" href="data:," />
+    <!--
+      docs/decisions/0226-the-level-holds-one-loudness.md.
+
+      ⚠️ DEV ONLY, AND IT IS NOT IN THE BUILD, on rig/index.html's terms: `vite.config.ts` has one
+      entry and this is not it. `node scripts/weigh-picture.mjs` drives this page headless; nothing
+      ships it.
+
+      What it does that no test can: renders a whole level through the browser's OWN
+      DynamicsCompressorNode and WaveShaperNode — the graph `makeMusicOut` builds, not a model of it —
+      and reports what comes out, second by second, in the unit a listener uses.
+    -->
+    <style>
+      body { margin: 0; background: #0b0c12; color: #e8e9f2; font: 13px/1.45 ui-monospace, Consolas, monospace; }
+      main { padding: 16px; }
+      pre { margin: 0; white-space: pre; }
+      .dim { color: #8b90a8; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <pre id="out" class="dim">rendering…</pre>
+    </main>
+    <script type="module" src="/rig/arc.ts"></script>
+  </body>
+</html>

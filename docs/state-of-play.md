@@ -244,6 +244,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **THE BUS IS A COLOUR AND IT WAS TOO THICK — the drive halved; it was never clipping, and level cannot see saturation** | [0217](decisions/0217-the-bus-is-a-colour-and-it-was-too-thick.md) |
 | **PUSH IS AN ENTRANCE — one boundary carried 88% of a level's climb, so the music went background to foreground in one step at 41 seconds** | [0218](decisions/0218-push-is-an-entrance-not-the-climb.md) |
 | **RANGE AND CLEAN STOP BEING ONE KNOB — a compressor on the music bus; 0104 refused one and its reason was about the guard, not the compressor** | [0219](decisions/0219-range-and-clean-stop-being-one-knob.md) |
+| **THE LEVEL HOLDS ONE LOUDNESS — the sixth report on the same six seconds; the climb is gone, the compressor's makeup gain is divided out, and the sound has a picture instrument in the browser's own nodes** | [0226](decisions/0226-the-level-holds-one-loudness.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were
@@ -335,9 +336,16 @@ date and is exactly what a play-test is for.
 
 ## What the play-test has answered
 
-⚠️ **THE MUSIC IS THE LIVE CHANNEL AND [0114](decisions/0114-the-fight-is-a-different-piece.md) IS
-WHERE IT GOT TO.** Read it before touching a rung: 0090's additive ladder is superseded, the fight is
-a different piece with its own two rungs, and the level runs 42s / 92s / 10.6s-before-the-boss.
+⚠️ **THE MUSIC IS THE LIVE CHANNEL AND [0226](decisions/0226-the-level-holds-one-loudness.md) IS
+WHERE IT GOT TO, ON 2026-09-04.** Read it before touching a rung or a bus constant: a level holds one
+loudness from `run` to the end of the fight, `LEVEL_HOLD` is solved and not typed, and **a sound
+report is answered by `node scripts/weigh-picture.mjs` first** — the model's instruments were correct
+five times on the same six seconds and the picture was two nodes away from them. What is owed there is
+a listen and the tempo, in its own words.
+
+⚠️ **[0114](decisions/0114-the-fight-is-a-different-piece.md) IS WHERE IT WAS BEFORE THAT.** 0090's
+additive ladder is superseded, the fight is a different piece with its own two rungs, and the level
+runs 42s / 92s / 10.6s-before-the-boss.
 
 ⚠️ **AND THE FIRST ANSWER TO `surge` THAT IS NOT A GAIN HAS LANDED, UNFLOWN** —
 [0117](decisions/0117-a-section-change-lands-on-the-beat.md). It changes no gain, no rung and no

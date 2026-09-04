@@ -1477,6 +1477,47 @@ export function auraCeilingOf(theme: ThemeKind): number {
   return THEMES[theme].aura;
 }
 
+/**
+ * What brings each rung of a place back to its `run` loudness — a scale over the whole rung.
+ *
+ * ── A LEVEL HOLDS ONE LOUDNESS, AND THE LADDER CLIMBS UNDER IT ──────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0226-the-level-holds-one-loudness.md`.** Six reports on the same stretch of The
+ * Approach, and the sixth said what the first five had been circling: *"the tempo should be
+ * increasing, but the volume should be consistent for each track for the level."* Every answer before
+ * it made the climb gentler, evener or narrower; none of them asked whether there should be one.
+ * 0123 had already found that *loudness does not predict a section* — a rung is a change of NOTES —
+ * so the climb was decoration that read as somebody turning the knob up.
+ *
+ * ⚠️ **A SCALE OVER THE RUNG, NOT A RE-BALANCE, WHICH IS WHY 0167 SURVIVES THIS.** That decision
+ * forbade paying for arrivals out of the carried layers because the solved mix did it *per layer*
+ * and the border became *"a hard jump between sounds"*. Every ratio inside a rung is untouched here;
+ * the whole rung is lower by one number, paced across the build by `levelWrites`, so the arrangement
+ * changes and the level does not.
+ *
+ * ⚠️ **SOLVED IN THE LISTENER'S UNIT, THROUGH THE SHIPPED BUS.** `node scripts/solve-hold.mjs` finds,
+ * for each place and rung, the scale at which `tests/clean.ts`'s `loud` — K-weighted, after the
+ * compressor and the shaper — equals the same place's `run`, and prints this table. `run` is the
+ * reference because it is the section the report called *"decent"* and every later one *"too loud"*.
+ *
+ * ⚠️ **A RUNG THIS TABLE DOES NOT NAME IS UNSCALED.** `calm` is the title's and is not a level's
+ * rung; `run` is the reference and is 1 by construction.
+ */
+export const LEVEL_HOLD: Record<ThemeKind, Partial<Record<MusicLevel, number>>> = {
+  approach: { push: 0.6744, surge: 0.5683, approach: 0.6979, boss: 0.6191, bossPeak: 0.6191 },
+  nebula: { push: 0.8072, surge: 0.8282, approach: 0.7474, boss: 0.692, bossPeak: 0.6802 },
+  saurian: { push: 0.9579, surge: 0.8644, approach: 0.8793, boss: 0.8072, bossPeak: 0.7867 },
+  labyrinth: { push: 0.5399, surge: 0.3386, approach: 0.3149, boss: 0.3565, bossPeak: 0.3017 },
+  rime: { push: 0.692, surge: 0.5881, approach: 0.6034, boss: 0.8107, bossPeak: 0.8003 },
+  mire: { push: 0.6244, surge: 0.4511, approach: 0.5085, boss: 0.4789, bossPeak: 0.4789 },
+  core: { push: 0.4688, surge: 0.4176, approach: 0.4472, boss: 0.423, bossPeak: 0.4105 },
+};
+
+/** The hold on `rung` in `theme` — `1` where the table says nothing. */
+export function holdOf(theme: ThemeKind, rung: MusicLevel): number {
+  return LEVEL_HOLD[theme][rung] ?? 1;
+}
+
 export function mixOf(theme: ThemeKind, layer: MusicLayer): number {
   /*
     ⚠️ **`trim` IS THE PLACE'S OWN LEVEL AND IT MULTIPLIES EVERYTHING** — 0191. It is here rather
@@ -1518,7 +1559,13 @@ export function rungOf(
   layer: MusicLayer,
   ladder: ThemeRow['ladder'] = THEMES[theme].ladder,
 ): number {
-  return rungIn(ladder, rung, layer);
+  /*
+    ⚠️ **THE HOLD IS MULTIPLIED IN HERE AND NOT IN `mixOf`, AGAINST THIS FUNCTION'S OWN HEADER** —
+    0226. `mixOf` is per LAYER and the hold is per RUNG: a scale that depends on where the level is
+    belongs with the answer to *what is this layer doing at this rung*, and eight callers ask that
+    question here. `rungIn` below stays the bare ladder, which is what a solver has to see.
+  */
+  return rungIn(ladder, rung, layer) * holdOf(theme, rung);
 }
 
 /**

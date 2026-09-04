@@ -20,7 +20,13 @@ export const PROBES = [
       call site suggests that the size of a move should decide anything about its timing.
     */
     broke: 'every move back on one ramp length, so the biggest arrivals land as steps',
-    guard: 'never climbs more in one bar than the arrangement itself asks for',
+    /*
+      ⚠️ RE-AIMED BY 0226. With every rung held to one loudness there is no climb for a fast arrival
+      to step up to — the bed steps down in the same arrivals' own ramps, so the sum barely moves —
+      and what this break produces instead is departures gone in half a second under a four-bar
+      build. That is the hole guard's subject, and it is the one that goes red.
+    */
+    guard: 'never shortens a departure to fit a short build',
     edit: {
       path: 'src/app/music.ts',
       find: '    if (!aura) write.tau = (RAMP_SECONDS * rampScaleOf(was, target)) / 3;',
@@ -39,8 +45,10 @@ export const PROBES = [
     guard: 'is never quieter than both the rung it left and the rung it is reaching',
     edit: {
       path: 'src/app/music.ts',
-      find: '  for (const write of closing) write.tau = Math.max(write.tau, spread / 3);',
-      replace: '  for (const write of closing) write.tau = RAMP_SECONDS / 3;',
+      // 0226 replaced the fade with one step per arrival; the same defect is every step landing on
+      // the downbeat, so what leaves is gone before what replaces it has begun.
+      find: '      staged.push({ layer: write.layer, target, at: step.at, tau: step.tau });',
+      replace: '      staged.push({ layer: write.layer, target, at: bar, tau: RAMP_SECONDS / 3 });',
     },
   },
   {
@@ -56,8 +64,10 @@ export const PROBES = [
     guard: 'never shortens a departure to fit a short build',
     edit: {
       path: 'src/app/music.ts',
-      find: '  for (const write of closing) write.tau = Math.max(write.tau, spread / 3);',
-      replace: '  for (const write of closing) write.tau = spread / 3;',
+      // 0226: a departure's steps take each arrival's own ramp; a step on a short ramp is the same
+      // defect — the fade shortened to something other than the build it is making room for.
+      find: '      staged.push({ layer: write.layer, target, at: step.at, tau: step.tau });',
+      replace: '      staged.push({ layer: write.layer, target, at: step.at, tau: RAMP_SECONDS / 3 });',
     },
   },
   {
