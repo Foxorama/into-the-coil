@@ -191,6 +191,12 @@ The fight's −1.7 is the last five seconds of `boss` in a walk where the aura i
   reported row*. The second measured **+0.45 LU** against a first draft of the band at 0.5 and walked
   through; the band is 0.25, which the solve's 0.02 leaves room for and a ladder edited without a
   re-solve does not.
+- **Probes the hold's headroom stranded**: the loudest sample reaching the shaper anywhere is now
+  **0.969** of full scale (Saurian Belt, `surge`), so 0176's *shaper without the clamp* and 0191's
+  *trim dropped* no longer drive anything past it and are retired with that number in their files;
+  0189's *boss bed lifted* is re-aimed at the hold guard, which reddens first on a row edited under a
+  solved hold. 0116's two-place guard compares with a tolerance now, because `(x · h) / h` is not `x`
+  in floating point and the balance dropped on purpose measured as one part in 10¹⁶ of difference.
 - **Probes retired**: 0219's *compressor bypassed* and *detector removed*. Measured, the compressor
   moves the held band by 0.17 LU at most — the range is content now, and a break the tree cannot see
   is what [0005](0005-a-guard-must-be-seen-to-fail.md) says not to keep. Its *threshold at −6* is

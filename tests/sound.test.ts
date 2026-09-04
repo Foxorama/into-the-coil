@@ -2266,11 +2266,16 @@ describe('0116 — the instrument is the game, and it is not a second copy of it
       shared.length,
       'the two places no longer open a single layer alike at the boss, so this guard cannot isolate the balance',
     ).toBeGreaterThan(0);
-    const differs = shared.filter(
-      (layer) =>
-        targetGain('core', 'boss', layer, 1) / holdOf('core', 'boss') !==
-        targetGain('approach', 'boss', layer, 1) / holdOf('approach', 'boss'),
-    );
+    /*
+      ⚠️ **A TOLERANCE AND NOT `!==`, BECAUSE `(x · h) / h` IS NOT `x` IN FLOATING POINT.** With the
+      balance dropped on purpose the two places differ by one part in 10¹⁶ from the hold going in and
+      out again, and `npm run prove` reported 0116's break STILL GREEN on exactly that.
+    */
+    const differs = shared.filter((layer) => {
+      const core = targetGain('core', 'boss', layer, 1) / holdOf('core', 'boss');
+      const approach = targetGain('approach', 'boss', layer, 1) / holdOf('approach', 'boss');
+      return Math.abs(core - approach) > 1e-9 * Math.max(core, approach);
+    });
     expect(
       differs.length,
       'The Core and The Approach render byte-identical gains for every layer they open alike, so the theme is not applied',
