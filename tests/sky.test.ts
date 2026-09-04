@@ -40,7 +40,7 @@ import { SHOTS } from '../src/content/shots.ts';
 import { SKY } from '../src/app/mount.ts';
 import { DECOR_INKS, PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { THEMES } from '../src/content/themes.ts';
-import { GAMEPLAY_FLOOR, contrast } from './contrast.ts';
+import { GAMEPLAY_FLOOR, contrast, luminance } from './contrast.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 import { THEME_KINDS, type ThemeKind } from '../src/content/themes.ts';
@@ -88,6 +88,21 @@ function sharedRun(a: string[], b: string[]): number {
   return n;
 }
 
+/**
+ * The louder of a place's two gas colours — 0223.
+ *
+ * ⚠️ **A PLACE HAS TWO NOW, AND THE FLOOR IS ABOUT THE WORST CASE.** `nebula` is the body and `glow`
+ * is the accent every lit edge is drawn in; a third of the clouds take the accent too. Blending the
+ * backdrop against the body alone would measure the half of the sky that is cheaper, which is the
+ * exact shape of the hole 0222 found in `cloudCover` — a measurement that understates is invisible to
+ * everything built on it.
+ */
+function loudest(theme: ThemeKind, name: PaletteName): string {
+  const body = THEMES[theme].nebula[name];
+  const accent = THEMES[theme].glow[name];
+  return luminance(accent) > luminance(body) ? accent : body;
+}
+
 /** sRGB blend of two hexes, which is what a gradient over a backdrop actually produces. */
 function over(base: string, top: string, alpha: number): string {
   const parse = (h: string): number[] => {
@@ -117,7 +132,7 @@ describe('0196 — the clouds are counted against the accessibility floor', () =
     for (const theme of THEME_KINDS) {
       const cover = cloudCover(size, theme);
       for (const name of Object.keys(PALETTES) as PaletteName[]) {
-        const backdrop = over(THEMES[theme].space[name], THEMES[theme].nebula[name], cover);
+        const backdrop = over(THEMES[theme].space[name], loudest(theme, name), cover);
         for (const [ink, colour] of Object.entries(PALETTES[name])) {
           if (ink === 'space' || ink === 'sky') continue;
           if ((DECOR_INKS as readonly string[]).includes(ink)) continue;
@@ -167,7 +182,7 @@ describe('0196 — the clouds are counted against the accessibility floor', () =
     for (const theme of THEME_KINDS) {
       const cover = skyCover(size, theme);
       for (const name of Object.keys(PALETTES) as PaletteName[]) {
-        const backdrop = over(THEMES[theme].space[name], THEMES[theme].nebula[name], cover);
+        const backdrop = over(THEMES[theme].space[name], loudest(theme, name), cover);
         for (const [ink, colour] of Object.entries(PALETTES[name])) {
           if (ink === 'space' || ink === 'sky') continue;
           if ((DECOR_INKS as readonly string[]).includes(ink)) continue;

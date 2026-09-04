@@ -5,9 +5,9 @@ import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
-import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
+import { THEMES, THEME_KINDS, type ThemeKind } from '../src/content/themes.ts';
 import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
-import { GROUND_OF, LANDMARK_OF, STRUCTURE_OF, bakeSize, laneAt, paintStructure } from '../src/render/bake.ts';
+import { GROUND_OF, LANDMARK_OF, STRUCTURE_OF, bakeSize, laneAt, nebulaField, paintStructure } from '../src/render/bake.ts';
 import { skyFor } from '../src/app/mount.ts';
 import { paintScene, type Landmark } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
@@ -509,6 +509,131 @@ describe('0220 — a landmark is drawn where a level places one', () => {
     }
     const drawn = THEME_KINDS.filter((theme) => LANDMARK_OF[theme] !== null);
     expect(drawn.length, 'no place draws a landmark at all, so the slot is dead').toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('0223 — a place has a palette, not a colour', () => {
+  /*
+    Reported: *"the backgrounds are looking good, but they're still a solo colour. saurian is green,
+    nebula is purple. give me vibrant living levels, not static basic backdrops."*
+
+    ⚠️ **AND IT WAS A DESCRIPTION OF THE CODE.** Every cloud, crest, rim and wall face in a place came
+    out of `THEMES[theme].nebula` — one hex. A place could be thicker or thinner, busier or emptier,
+    and never **varied**, because everything lit in it was the same colour. 0220 and 0221 and 0222 all
+    added structure to places that were still monochrome by construction.
+  */
+
+  /** A colour's hue in degrees, 0 to 360. `null` for a grey, which has no hue to compare. */
+  function hueOf(hex: string): number | null {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255) as [number, number, number];
+    const [hi, lo] = [Math.max(r, g, b), Math.min(r, g, b)];
+    if (hi - lo < 0.02) return null;
+    const d = hi - lo;
+    const h = hi === r ? ((g - b) / d + 6) % 6 : hi === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return h * 60;
+  }
+
+  /** The smaller angle between two hues, 0 to 180. */
+  function apart(a: number, b: number): number {
+    const d = Math.abs(a - b) % 360;
+    return d > 180 ? 360 - d : d;
+  }
+
+  it('THE REPORTED ONE: a place’s accent is a different HUE, not a lighter shade of its body', () => {
+    /*
+      ⚠️ **THE DIFFERENCE BETWEEN THIS AND A BRIGHTNESS CLAIM IS THE WHOLE REPORT.** A tint of the body
+      colour reads as *the same place, brighter* — which is what every place already was, since a
+      cloud at 0.2 alpha and one at 0.4 are the same hue at two weights. Two hues read as **two things
+      happening at once**, which is what a sky with weather in it looks like.
+
+      0192: name a change that would redden this and be correct. Making an accent a tint of its body is
+      never correct — it is the *"solo colour"* that was reported, arriving through a table that now has
+      room for a second one.
+    */
+    /*
+      ⚠️ **THE VIVID PALETTE ONLY, AND HIGH CONTRAST IS HELD ON LUMINANCE INSTEAD.** That palette is
+      *"maximum separation on the luminance channel, which is the one that survives every kind of
+      colour blindness"* (`src/content/palette.ts`) — it is desaturated **by design**, so its colours
+      sit near grey and their hues are numerically unstable: a two-step difference in a channel swings
+      the angle by tens of degrees. Demanding hue variety there would be demanding the one thing that
+      palette exists to give up, which is 0024's *no assist may make the game harder* pointing at a
+      guard instead of at a setting.
+    */
+    for (const theme of THEME_KINDS) {
+      const body = hueOf(THEMES[theme].nebula.vivid);
+      const accent = hueOf(THEMES[theme].glow.vivid);
+      expect(body, `${theme}'s body colour is a grey — a place with no hue cannot have an accent`).not.toBeNull();
+      expect(accent, `${theme}'s accent is a grey`).not.toBeNull();
+      const gap = apart(body!, accent!);
+      expect(
+        gap,
+        `${theme}'s accent (${THEMES[theme].glow.vivid}) sits ${gap.toFixed(0)}° from its body ` +
+          `(${THEMES[theme].nebula.vivid}) — under 25° that is the same colour at a different weight, ` +
+          'which is the solo colour that was reported',
+      ).toBeGreaterThan(25);
+    }
+    // And high contrast still has two TONES, which is the same claim on the channel that palette uses.
+    for (const theme of THEME_KINDS) {
+      const body = luminance(THEMES[theme].nebula['high-contrast']);
+      const accent = luminance(THEMES[theme].glow['high-contrast']);
+      expect(
+        Math.abs(accent - body) / Math.max(accent, body, 0.0001),
+        `${theme}'s high-contrast accent is the same brightness as its body — that palette trades hue ` +
+          'for luminance, so a second colour there has to be a second TONE or it is not a second colour',
+      ).toBeGreaterThan(0.15);
+    }
+  });
+
+  it('and the clouds actually MIX, because two colours in a table is not two colours on a screen', () => {
+    /*
+      ⚠️ **THE TABLE CAN HOLD TWO COLOURS AND THE SKY STILL DRAW ONE.** `NebulaCloud.glow` is what
+      decides, per cloud, which of the pair it takes — and a place whose roll never comes up, or whose
+      field is one cloud, is a place with an accent nobody sees. **Both have to appear in every
+      place**, and *several of each*: one accent cloud in a field of twenty is a smudge, not a mix.
+
+      ⚠️ **AND MIXING IS THE POINT RATHER THAN A NICETY.** Split by layer, two colours are two flat
+      sheets; split per cloud they OVERLAP, and where a body cloud crosses an accent one the gradient
+      between them is a third colour neither table contains. That is what a sky with weather in it
+      looks like and it is why the flag is on the cloud.
+    */
+    const size = tileSize();
+    for (const theme of THEME_KINDS) {
+      const field = nebulaField(size, theme);
+      const accent = field.filter((cloud) => cloud.glow).length;
+      expect(
+        Math.min(accent, field.length - accent),
+        `${theme} draws ${accent} of ${field.length} clouds in its accent — a place with none of one ` +
+          'of its two colours has one colour, which is what was reported',
+        /*
+          ⚠️ **ONE OF EACH, AND THE FIRST DRAFT ASKED FOR TWO.** It reddened on The Labyrinth, which
+          carries **two clouds** — `SKY_STYLE_OF.labyrinth` is `clouds: 0.35` because 0211 made it the
+          emptiest sky of the seven on purpose, and *"almost nothing clumps in a corridor"* is still
+          true. A bound that a correct place cannot meet is one that gets switched off; the mix that
+          matters there is on its wall rims, which are all accent, and this holds the clouds.
+        */
+      ).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it('and no two places share an accent, so a palette belongs to a place', () => {
+    /*
+      ⚠️ **0195's CLAIM, ONE TABLE ALONG.** *"A level specific backdrop instead of the same starry
+      canvas and a slight hue change on each level"* was answered for the star fields and for the
+      structure; a second colour that seven places shared would put the same light on all of them and
+      be the same failure in a new column.
+    */
+    const seen = new Map<string, ThemeKind[]>();
+    for (const theme of THEME_KINDS) {
+      const hue = hueOf(THEMES[theme].glow.vivid);
+      for (const [other, hues] of seen) {
+        expect(
+          apart(hue!, Number(other)) > 12,
+          `${theme} and ${hues.join(', ')} light themselves with the same colour — a place's accent is ` +
+            'the one thing on its screen that says which place it is',
+        ).toBe(true);
+      }
+      seen.set(String(hue), [...(seen.get(String(hue)) ?? []), theme]);
+    }
   });
 });
 

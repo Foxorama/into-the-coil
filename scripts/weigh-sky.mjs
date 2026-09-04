@@ -14,7 +14,7 @@ import { PALETTES, DECOR_INKS } from '../src/content/palette.ts';
 import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
 import { SPRITE_EXTENT } from '../src/content/sprites.ts';
 import { bakeSize, cloudCover, skyCover } from '../src/render/bake.ts';
-import { contrast, GAMEPLAY_FLOOR, AA_FLOOR } from '../tests/contrast.ts';
+import { contrast, luminance, GAMEPLAY_FLOOR, AA_FLOOR } from '../tests/contrast.ts';
 
 const size = bakeSize(SPRITE_EXTENT.skyNebula, 6);
 
@@ -38,7 +38,12 @@ for (const theme of THEME_KINDS) {
   const clouds = cloudCover(size, theme);
   const all = skyCover(size, theme);
   for (const name of Object.keys(PALETTES)) {
-    const backdrop = over(THEMES[theme].space[name], THEMES[theme].nebula[name], all);
+    // ⚠️ THE LOUDER OF THE PLACE'S TWO GAS COLOURS — 0223. Blending against the body alone measures
+    // the half of the sky that is cheaper, which is 0222's own finding about `cloudCover` repeated.
+    const body = THEMES[theme].nebula[name];
+    const accent = THEMES[theme].glow[name];
+    const loud = luminance(accent) > luminance(body) ? accent : body;
+    const backdrop = over(THEMES[theme].space[name], loud, all);
     let worst = { ink: '', ratio: Infinity };
     for (const ink of counted) {
       const ratio = contrast(PALETTES[name][ink], backdrop);

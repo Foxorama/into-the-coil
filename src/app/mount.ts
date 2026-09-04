@@ -1329,7 +1329,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         : THEMES[place].ground !== null
           ? THEMES[place].ground![palette]
           : mix(THEMES[place].space[palette], '#000000', 0.5);
-    bakeNebula(atlas, clouds, silhouette, view.scale * dpr, backdrop);
+    /*
+      ⚠️ **THE PLACE'S SECOND COLOUR, AND EVERY LIT EDGE IN IT IS DRAWN IN THIS** — 0223. A third of
+      the clouds take it too, so where a body-coloured cloud crosses an accent one the gradient between
+      them is a third colour neither table contains.
+    */
+    const accent = place === null ? PALETTES[palette].sky : THEMES[place].glow[palette];
+    bakeNebula(atlas, clouds, accent, silhouette, view.scale * dpr, backdrop);
     // The landmark takes the same gas colour as the weather — 0203. One place, one colour, so the
     // pillars are lit by the nebula they stand in rather than by a palette that never heard of it.
     bakeLandmark(atlas, clouds, colours.space, view.scale * dpr, backdrop);

@@ -1348,9 +1348,16 @@ export type GroundArt = (ctx: Pen, land: string, sky: string, glow: string, size
 export const GROUND_OF: Record<ThemeKind, GroundArt | null> = {
   approach: null,
   nebula: null,
-  saurian: (ctx, land, sky, _glow, size) => drawRidges(ctx, land, sky, size),
+  /*
+    ⚠️ **THE CRESTS TAKE THE PLACE'S ACCENT AND NOT ITS SKY — 0223.** A skyline lit in the colour of
+    the sky behind it is the sky showing over the edge of the rock, which is true and is also **one
+    colour touching itself**: the bench showed a blue range under a blue sky with a blue rim, and
+    *"they're still a solo colour"* is exactly that. Lit in the accent, a ridge is the sun on it and the
+    place has three colours on screen at once — sky, rock, and the light.
+  */
+  saurian: (ctx, land, sky, glow, size) => drawRidges(ctx, land, sky, glow, size),
   labyrinth: null,
-  rime: (ctx, land, sky, _glow, size) => drawShelf(ctx, land, sky, size),
+  rime: (ctx, land, sky, glow, size) => drawShelf(ctx, land, sky, glow, size),
   mire: (ctx, land, sky, glow, size) => drawEnclosure(ctx, land, sky, glow, size),
   core: null,
 };
@@ -1446,7 +1453,7 @@ function skyline(
  * one cue that survives everything being opaque, since alpha is no longer available to say *far*.
  * Three flat silhouettes in one colour is a stencil; three in three tones is a landscape.
  */
-function drawRidges(ctx: Pen, land: string, sky: string, size: number): void {
+function drawRidges(ctx: Pen, land: string, sky: string, glow: string, size: number): void {
   const RANGES = [
     { base: 0.6, jag: 0.026, haze: 0.55, steps: 26, lit: 0.3 },
     { base: 0.655, jag: 0.04, haze: 0.28, steps: 19, lit: 0.45 },
@@ -1458,7 +1465,7 @@ function drawRidges(ctx: Pen, land: string, sky: string, size: number): void {
     // The sun catching the tops. Drawn in the sky's own colour, which is where the light is coming
     // from — the crest is literally the sky showing over the edge of the rock.
     ctx.globalAlpha = range.lit;
-    ctx.strokeStyle = sky;
+    ctx.strokeStyle = glow;
     ctx.lineCap = 'round';
     ctx.lineWidth = Math.max(1, size * 0.0035);
     ctx.beginPath();
@@ -1482,7 +1489,7 @@ function drawRidges(ctx: Pen, land: string, sky: string, size: number): void {
  * So: **two** terraces, not three; long runs, not short ones; and the only relief is the occasional
  * pressure ridge where the sheet has buckled.
  */
-function drawShelf(ctx: Pen, land: string, sky: string, size: number): void {
+function drawShelf(ctx: Pen, land: string, sky: string, glow: string, size: number): void {
   const TERRACES = [
     { base: 0.62, run: 0.34, drop: 0.014, haze: 0.42, lit: 0.4 },
     { base: 0.7, run: 0.26, drop: 0.02, haze: 0, lit: 0.62 },
@@ -1505,7 +1512,7 @@ function drawShelf(ctx: Pen, land: string, sky: string, size: number): void {
     }
     fillTo(ctx, mix(land, sky, terrace.haze), crest, size, true);
     ctx.globalAlpha = terrace.lit;
-    ctx.strokeStyle = sky;
+    ctx.strokeStyle = glow;
     ctx.lineCap = 'butt';
     ctx.lineWidth = Math.max(1, size * 0.004);
     ctx.beginPath();
@@ -2230,7 +2237,7 @@ export function drawKind(
         like on the title screen and on any level that has not said otherwise, so the layer is never
         missing and never a hole in the atlas.
       */
-      drawNebula(ctx, palette.sky, palette.space, size, theme);
+      drawNebula(ctx, palette.sky, palette.sky, palette.space, size, theme);
       return;
     case 'skyGround':
       /*
@@ -2714,6 +2721,22 @@ export interface NebulaCloud {
    */
   fx: number;
   fy: number;
+  /**
+   * Which of the place's two gas colours it is drawn in — `false` for the body, `true` for the glow.
+   *
+   * ⚠️ **A PLACE HAD EXACTLY ONE COLOUR UNTIL NOW, AND THAT IS WHY IT READ AS ONE** —
+   * `docs/decisions/0223-a-place-has-a-palette.md`. Reported: *"the backgrounds are looking good, but
+   * they're still a solo colour. saurian is green, nebula is purple. give me vibrant living levels,
+   * not static basic backdrops."* Every cloud, every lit crest, every rim in a place came out of
+   * `THEMES[theme].nebula` — a single hex — so a place could be denser or thinner but never
+   * **varied**, and no amount of structure fixes that.
+   *
+   * ⚠️ **PER CLOUD RATHER THAN PER PLACE OR PER LAYER, WHICH IS THE ONLY VERSION THAT MIXES.** Two
+   * colours split by layer gives two flat sheets; split by cloud they overlap, and where a warm cloud
+   * crosses a cold one the gradient between them is a third colour neither table contains. That is
+   * what a real nebula is, and it costs one boolean.
+   */
+  glow: boolean;
 }
 
 /**
@@ -2764,6 +2787,18 @@ export function nebulaField(size: number, theme: ThemeKind = 'approach'): Nebula
         `tests/themes.test.ts`'s *a backdrop is a dark* refuses one layer down.
       */
       alpha: Math.min(NEBULA_ALPHA.to, rng.range(NEBULA_ALPHA.from, NEBULA_ALPHA.to) * style.cloudAlpha),
+      /*
+        ⚠️ **A THIRD, AND NOT A HALF.** An even split makes two colours of equal weight, which reads as
+        *this place cannot decide* rather than as a place with an accent — the body colour has to stay
+        the one the place is recognised by.
+
+        ⚠️ **AND WALKED RATHER THAN ROLLED, BECAUSE A ROLL CAN COME UP EMPTY.** `rng.range(0, 1) < 0.34`
+        gave **Saurian Belt none at all** — it carries five clouds, and a third of five is a coin that
+        can miss five times. A place whose accent never appears is a place with one colour, which is
+        the report. Every third cloud takes it, so a field of two has one and a field of twenty has
+        seven, and no place can be unlucky. `makeMotes` walks its index for the same reason.
+      */
+      glow: i % 3 === 1,
     });
   }
   return clouds;
@@ -3535,12 +3570,24 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
 // ⚠️ **EXPORTED SO A `Pen` CAN COUNT WHAT IT DRAWS** — 0220. The claim below about a non-tapered mark
 // being ONE path is about this function and not about `STRUCTURE_OF`, and `tests/paths.ts` is the
 // instrument that can read it: it is the same narrowing `drawKind` already made for 0149.
-export function paintStructure(ctx: Pen, gas: string, space: string, size: number, theme: ThemeKind): void {
+// ⚠️ **IT NO LONGER TAKES THE PLACE'S BODY COLOUR AT ALL, AND THAT IS THE CHANGE RATHER THAN AN
+// OVERSIGHT** — 0223. A mark here is either a hole in the gas (`space`) or an edge lit by the place
+// (`glow`); the body colour is what the CLOUDS are, and no mark in this function was ever drawn in it
+// once the accent existed. A parameter kept for symmetry would be a colour nobody uses.
+export function paintStructure(ctx: Pen, glow: string, space: string, size: number, theme: ThemeKind): void {
   const marks = STRUCTURE_OF[theme](size);
   ctx.lineCap = 'round';
   for (const mark of marks) {
-    // 0211: a lit mark is drawn in the place's own gas, a dark one is a hole punched in it.
-    const ink = mark.lit ? gas : space;
+    /*
+      0211: a lit mark is drawn in the place's own gas, a dark one is a hole punched in it.
+
+      ⚠️ **AND IT IS THE GLOW RATHER THAN THE BODY SINCE 0223, WHICH IS WHERE MOST OF THE COLOUR
+      LANDS.** Every lit thing in a place is an EDGE — a crest on a skyline, a rim on a hulk, the face
+      of a corridor wall — so this one line puts the second colour on the outline of everything the
+      place is made of. A cloud in the accent colour is a patch of hue somewhere; an edge in it is hue
+      wherever the eye is already looking, which is what *"vibrant"* actually asks for.
+    */
+    const ink = mark.lit ? glow : space;
     ctx.fillStyle = ink;
     ctx.strokeStyle = ink;
     ctx.globalAlpha = mark.alpha;
@@ -3585,7 +3632,7 @@ export function paintStructure(ctx: Pen, gas: string, space: string, size: numbe
   ctx.globalAlpha = 1;
 }
 
-function drawNebula(ctx: Pen, colour: string, space: string, size: number, theme: ThemeKind): void {
+function drawNebula(ctx: Pen, colour: string, glow: string, space: string, size: number, theme: ThemeKind): void {
   for (const cloud of nebulaField(size, theme)) {
     /*
       ⚠️ **THE INNER CIRCLE IS OFFSET AND ITS RADIUS IS STILL ZERO** — 0196. A zero-radius inner circle
@@ -3616,7 +3663,10 @@ function drawNebula(ctx: Pen, colour: string, space: string, size: number, theme
         if (x + cloud.r < 0 || x - cloud.r > size) continue;
         if (y + cloud.r < 0 || y - cloud.r > size) continue;
         const fill = ctx.createRadialGradient(cloud.fx + dx, cloud.fy + dy, 0, x, y, cloud.r);
-        fill.addColorStop(0, colour);
+        // ⚠️ **STILL EXACTLY TWO STOPS, AT 0 AND 1** — 0196's cover arithmetic models the falloff as
+        // linear between them and `tests/sky.test.ts` scans this function for it. What 0223 changed is
+        // WHICH colour sits at stop 0, never how many there are.
+        fill.addColorStop(0, cloud.glow ? glow : colour);
         fill.addColorStop(1, 'transparent');
         ctx.globalAlpha = cloud.alpha;
         ctx.fillStyle = fill;
@@ -3635,7 +3685,7 @@ function drawNebula(ctx: Pen, colour: string, space: string, size: number, theme
      is the one painter for all seven, and the rule each mark takes is a field on the
     mark rather than a paragraph above the loop.
   */
-  paintStructure(ctx, colour, space, size, theme);
+  paintStructure(ctx, glow, space, size, theme);
   ctx.globalAlpha = 1;
 }
 
@@ -3813,6 +3863,7 @@ function insidePolygon(points: readonly number[][], x: number, y: number): boole
 export function bakeNebula(
   atlas: Atlas,
   colour: string,
+  glow: string,
   space: string,
   pixelsPerUnit: number,
   theme: ThemeKind = 'approach',
@@ -3823,7 +3874,7 @@ export function bakeNebula(
   canvas.height = size;
   const ctx = canvas.getContext('2d');
   if (ctx === null) return;
-  drawNebula(ctx, colour, space, size, theme);
+  drawNebula(ctx, colour, glow, space, size, theme);
   (atlas.bitmaps as CanvasImageSource[])[SPRITE.skyNebula] = canvas;
 }
 
