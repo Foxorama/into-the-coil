@@ -789,6 +789,13 @@ the detail; the four places in space gained hulks; and 0203's forbidden band is 
 counts clouds; 0220 and 0221 both recorded that structure and ground go uncounted and neither closed
 it. `skyCover` does, and **the debt that gets written down twice is the one that bites**.
 
+⚠️ **AND A PLACE GOT A PALETTE ON 2026-09-04 — [0223](decisions/0223-a-place-has-a-palette.md).**
+*"They're still a solo colour. saurian is green, nebula is purple. Give me vibrant living levels."*
+**That was a description of the code**: every cloud, crest, rim and wall face in a place came out of one
+hex, so three passes of *more detail* could never answer *more colour*. A place has a body and an
+**accent** now; every lit edge takes the accent and a third of the clouds do too. The hue separation is
+guarded as an angle, because *a bit different* is not a claim.
+
 ⚠️ **SAURIAN BELT'S VOLCANOES ARE THE ONE ASK LEFT FROM THAT REPORT** — *"exploding volcanoes adding
 volcanic effects at some points in the level"*. They are `LANDMARK_OF.saurian` plus `landmarks`
 entries, on the Pillars' own terms, and *at some points in the level* is a position, which is what 0203

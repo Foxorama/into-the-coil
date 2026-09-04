@@ -162,6 +162,27 @@ export interface ThemeRow {
    */
   nebula: Record<PaletteName, string>;
   /**
+   * The place's second colour: its accent, and what every LIT edge in it is drawn in.
+   *
+   * ⚠️ **A PLACE HAD ONE COLOUR AND THAT IS WHY IT READ AS ONE** —
+   * `docs/decisions/0223-a-place-has-a-palette.md`. Reported: *"the backgrounds are looking good, but
+   * they're still a solo colour. saurian is green, nebula is purple. give me vibrant living levels,
+   * not static basic backdrops."* Every cloud, crest, rim and wall face came out of `nebula` — one
+   * hex — so a place could be thicker or thinner and never **varied**. No amount of structure fixes
+   * that, because the structure was the same colour as the gas.
+   *
+   * ⚠️ **IT IS A DIFFERENT HUE AND NOT A LIGHTER SHADE, WHICH IS THE WHOLE DIFFERENCE.** A tint of the
+   * body colour reads as *the same place, brighter*; a neighbouring hue reads as **two things
+   * happening at once**, which is what a sky with weather in it looks like.
+   * `tests/themes.test.ts` holds the separation as an angle, because *a bit different* is not a claim.
+   *
+   * ⚠️ **AND IT IS THE EXPENSIVE ONE.** It is brighter than the body by design, and
+   * `docs/decisions/0222-the-background-is-not-black.md` measured what brightness in the sky costs:
+   * every lit mark in a place is now drawn in this, so the accessibility floor is checked against
+   * **this** colour rather than against `nebula`, whichever of the two is louder.
+   */
+  glow: Record<PaletteName, string>;
+  /**
    * The colour of the land, per palette — and `null` for a place that is in space.
    *
    * ⚠️ **THIS FIELD IS WHAT MAKES A PLACE A PLANET, AND IT DECIDES THREE THINGS AT ONCE.**
@@ -436,6 +457,10 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     title: 'The Approach',
     space: { vivid: '#0b0b14', 'high-contrast': '#000000' },
     nebula: { vivid: '#2b3352', 'high-contrast': '#1c1c28' },
+    // ⚠️ A COLD BLUE BODY AND A WARM TEAL EDGE. The Approach is the baseline every other place
+    // deviates from, so it takes the narrowest hue step of the seven — enough that a rim is not the
+    // cloud it sits on, and not enough to say anything about the place.
+    glow: { vivid: '#3f7a86', 'high-contrast': '#243c42' },
     // In space. Its one horizon arc is a limb of the world being LEFT, seen from off it — 0211.
     ground: null,
     // The reference, and the number every place used to be — 0183. Level one changes nothing.
@@ -475,6 +500,9 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     title: 'Ember Nebula',
     space: { vivid: '#140b16', 'high-contrast': '#050008' },
     nebula: { vivid: '#5c2a4a', 'high-contrast': '#2a1626' },
+    // ⚠️ MAROON GAS AND AN EMBER EDGE, WHICH IS THE PLACE'S OWN NAME. The widest step of the seven:
+    // a furnace is the one place where two colours at once is the literal subject.
+    glow: { vivid: '#c25a2a', 'high-contrast': '#5c2a12' },
     ground: null, // In space, and the Pillars are the proof: they are a thing you fly PAST.
     /*
       ⚠️ **HIGHER THAN THE REFERENCE, BECAUSE THE PLACE IS A BUILD.** A cathedral in a furnace
@@ -595,7 +623,11 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     */
     space: { vivid: '#16305a', 'high-contrast': '#050b16' },
     // Cloud in a sky rather than gas in a void: warmer and lighter than the blue it hangs in.
-    nebula: { vivid: '#6a6a48', 'high-contrast': '#2a2a1c' },
+    nebula: { vivid: '#5a6478', 'high-contrast': '#2a2e34' },
+    // ⚠️ THE ONE THE REPORT NAMED: *"saurian is green"*. Olive dust under a blue sky, with a warm
+    // sunlit edge on every crest and rock — so the place is a blue sky, an olive haze and a gold rim
+    // rather than one green.
+    glow: { vivid: '#a87c2e', 'high-contrast': '#4a3a18' },
     // Rock in shadow, well under its own sky — a horizon is a silhouette or it is not a horizon.
     ground: { vivid: '#0a1220', 'high-contrast': '#000208' },
     /*
@@ -752,6 +784,9 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     title: 'The Labyrinth',
     space: { vivid: '#0e0a14', 'high-contrast': '#030006' },
     nebula: { vivid: '#3a2a52', 'high-contrast': '#1d1428' },
+    // ⚠️ VIOLET STONE AND A COLD CYAN LIGHT IN THE CORRIDOR. The lit edges here are the walls' inner
+    // faces, so the accent is literally the lighting of the passage the player flies down.
+    glow: { vivid: '#b45ac0', 'high-contrast': '#4a1440' },
     ground: null, // A corridor in space. It has walls, and a wall is not a horizon.
     /*
       ⚠️ **THE HIGHEST BUT ONE, AND THE FICTION IS THE ARGUMENT.** A labyrinth is the place where the
@@ -857,6 +892,9 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     space: { vivid: '#1a3a50', 'high-contrast': '#040d16' },
     // Ice haze, barely separable from the sky it hangs in. Austerity is a small number here.
     nebula: { vivid: '#3f6478', 'high-contrast': '#16303c' },
+    // ⚠️ STEEL HAZE AND A PALE GREEN AURORA. Austere does not mean colourless — an ice sheet's one
+    // spectacle is the light in the sky over it, and it is the only warmth this place gets.
+    glow: { vivid: '#3d8f78', 'high-contrast': '#2a5a4a' },
     // The shelf: blue-white shadow. Nearly the darkest ground of the three, under the palest sky.
     ground: { vivid: '#0b1a26', 'high-contrast': '#000308' },
     /*
@@ -966,6 +1004,9 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     space: { vivid: '#111a08', 'high-contrast': '#040701' },
     // Spore haze, and it is the thing that is actually visible here rather than the sky behind it.
     nebula: { vivid: '#5a7a24', 'high-contrast': '#2a3a10' },
+    // ⚠️ SPORE HAZE AND THE POOLS' OWN SICK YELLOW. The pools are the light source here (0221), so the
+    // accent is what is coming off them and the haze is what it is lighting.
+    glow: { vivid: '#4ad85a', 'high-contrast': '#1c5a22' },
     // ⚠️ **ONE COLOUR FOR BOTH THE CANOPY AND THE POOLS**, because they are one enclosure and the
     // corridor between them is the subject. Two tones would read as a floor and a separate ceiling.
     ground: { vivid: '#080f04', 'high-contrast': '#000200' },
@@ -1050,6 +1091,9 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     title: 'The Black Heart',
     space: { vivid: '#10050f', 'high-contrast': '#040003' },
     nebula: { vivid: '#5a1e3c', 'high-contrast': '#2c0c1c' },
+    // ⚠️ DEEP RED AND A HOT WHITE-PINK RIM. The last place is nearly empty, so what little is lit has
+    // to be the brightest thing in the game — which is what an accretion edge looks like.
+    glow: { vivid: '#8ac0e8', 'high-contrast': '#1c3a52' },
     ground: null, // Nothing to stand on. The place's whole character is absence — 0211.
     /*
       ⚠️ **THE HIGHEST, BECAUSE HERE THE AURA IS THE PLACE.** The Black Heart is what the run has been

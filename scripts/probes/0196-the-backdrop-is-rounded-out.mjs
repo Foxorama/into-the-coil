@@ -71,9 +71,11 @@ export const PROBES = [
       path: 'src/render/bake.ts',
       // ⚠️ Re-anchored by 0206, which put the cloud draw inside a wrap loop and re-indented it. The
       // break is the same one it has always been: a third stop the cover arithmetic cannot model.
-      find: "        fill.addColorStop(0, colour);\n        fill.addColorStop(1, 'transparent');",
+      // ⚠️ Re-anchored by 0223: which colour sits at stop 0 is now a choice between the place's two
+      // gas colours. **How many stops there are is untouched**, which is the whole of this break.
+      find: "        fill.addColorStop(0, cloud.glow ? glow : colour);\n        fill.addColorStop(1, 'transparent');",
       replace:
-        "        fill.addColorStop(0, colour);\n        fill.addColorStop(0.7, colour);\n" +
+        "        fill.addColorStop(0, cloud.glow ? glow : colour);\n        fill.addColorStop(0.7, colour);\n" +
         "        fill.addColorStop(1, 'transparent');",
     },
   },
