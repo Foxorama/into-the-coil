@@ -34,7 +34,7 @@ shooters as it held over five.
 
 **The waves were re-authored by rule rather than by hand.** In each level, every fourth wave of the
 signature's own class — firing or not — became the signature, sorted by arrival, skipping the waves
-[0113](0113-the-level-has-a-tune.md) notes and, in The Approach, the run-up
+[0113](0113-there-is-one-composition-and-seven-levels.md) notes and, in The Approach, the run-up
 [0086](0086-the-teeth-wait-for-the-gun.md) protects. Every wave keeps its shape and its arrival;
 [0231](0231-a-level-is-a-mix.md)'s mix guard holds over the result because a signature replaces a
 wave of its own class.
