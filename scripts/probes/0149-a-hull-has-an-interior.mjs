@@ -68,8 +68,11 @@ export const PROBES = [
     guard: 'and every boss is painted, and no two wear the same paint',
     edit: {
       path: 'src/render/bake.ts',
-      find: '      seal(ctx);\n      carve(ctx, f, palette.space, BOSS3_NODES);\n      return;',
-      replace: '      seal(ctx);\n      return;',
+      // ⚠️ Re-anchored by 0228, which paints the boss in its place after the carve.
+      find:
+        '      carve(ctx, f, palette.space, BOSS3_NODES);\n' +
+        '      if (skin !== null) paintBoss3(ctx, f, skin, theme);\n      return;',
+      replace: '      return;',
     },
   },
   {
@@ -85,9 +88,10 @@ export const PROBES = [
     guard: 'and a hurt twin is the hull flat in its flash ink',
     edit: {
       path: 'src/render/bake.ts',
-      find: '      seal(ctx);\n      carve(ctx, f, palette.space, BOSS5_BANDS);\n      return;',
+      // ⚠️ Re-anchored by 0228, which paints the boss in its place after the carve.
+      find: '      if (skin !== null) paintBoss5(ctx, f, skin, theme);\n      return;',
       replace:
-        '      seal(ctx);\n      carve(ctx, f, palette.space, BOSS5_BANDS);\n' +
+        '      if (skin !== null) paintBoss5(ctx, f, skin, theme);\n' +
         '      if (hurt) disc(ctx, f, palette.glass, 0, 0, 0.2);\n      return;',
     },
   },

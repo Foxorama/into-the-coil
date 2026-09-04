@@ -85,8 +85,16 @@ function render(): void {
   const palette = PALETTES[state.palette];
   const backdrop = THEMES[state.theme].space[state.palette];
 
-  // The game's own bake, at the game's own resolution. One call, 58 bitmaps.
-  const atlas = bakeAtlas(palette, 'side', scale);
+  /*
+    The game's own bake, at the game's own resolution, FOR THE PLACE CHOSEN. One call, every bitmap.
+
+    ⚠️ **THE PLACE WAS NOT PASSED, AND THE SHEET SHOWED LEVEL ONE UNDER EVERY BACKDROP** — found by
+    0228, whose skins are per place and came out identical in all seven. `bakeAtlas` defaults its
+    theme to `approach`, so since 0195 the sky tiles here were The Approach's on every place too, and
+    nothing said so: the backdrop changed and the bake did not. 0116's rule — the rig plays the
+    level — arriving on the sheet.
+  */
+  const atlas = bakeAtlas(palette, 'side', scale, state.theme);
 
   const host = $('sheet');
   host.textContent = '';

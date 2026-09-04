@@ -246,6 +246,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **RANGE AND CLEAN STOP BEING ONE KNOB — a compressor on the music bus; 0104 refused one and its reason was about the guard, not the compressor** | [0219](decisions/0219-range-and-clean-stop-being-one-knob.md) |
 | **THE LEVEL HOLDS ONE LOUDNESS — the sixth report on the same six seconds; the climb is gone, the compressor's makeup gain is divided out, and the sound has a picture instrument in the browser's own nodes** | [0226](decisions/0226-the-level-holds-one-loudness.md) |
 | **A SPRITE IS PAINTED, NOT FILLED — the accent table is gone, an arm paints any shade of any ink over a sealed hull, the guards read the trace; a death is a fireball and a missile lands with a spark** | [0227](decisions/0227-a-sprite-is-painted-not-filled.md) |
+| **AN ENEMY WEARS ITS PLACE — a skin and a motif per place over the silhouettes the levels already send; the bosses too; and the sheet had baked level one under every backdrop since 0195** | [0228](decisions/0228-an-enemy-wears-its-place.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were
@@ -813,10 +814,17 @@ sprite to one ink and a stencil is gone; the ship, its three tiers, every shot t
 pickups and the shell are painted; a death is a fireball and a missile lands with a spark. The eyes
 are `node scripts/shot-sheet.mjs <kind>` against `npm run sheet`.
 
-⚠️ **THE ENEMIES AND THE BOSSES ARE DELIBERATELY STILL FLAT, AND ARE THE NEXT PR.** 0227 names why a
-pipeline change and the enemy skins do not ride together. What they get is a skin per PLACE over the
-silhouette each already has — every level uses nearly all eight kinds, so *"detailed sprites for each
-level"* is a livery the place hands its enemies, not a roster per level.
+⚠️ **AND THE ENEMIES AND BOSSES WEAR THEIR PLACE — [0228](decisions/0228-an-enemy-wears-its-place.md).**
+A skin per PLACE — hull, plate, lit strip, eye — and a motif the place puts on everything it sends,
+over the silhouette each kind already has; every level uses nearly all eight kinds, so *"detailed
+sprites for each level"* is a livery the place hands its enemies, not a roster per level. **What is
+owed is an eye on the game**: every skin was judged on `scripts/shot-sheet.mjs` against its own void,
+and whether Rime Shelf's blue enemies read against a blue sky in motion is a play-test question.
+**The enemy bullets are the one thing in a place still in one flat ink, on purpose** — *pink will hurt
+you* is one rule across the run.
+
+⚠️ **AND THE SHEET HAD BEEN SHOWING LEVEL ONE UNDER EVERY BACKDROP SINCE 0195**, which 0228 found on
+its first shot and fixed: `rig/sheet-page.ts` never passed the chosen place to the bake.
 
 ⚠️ **AND THE VOLCANOES LANDED ON 2026-09-04 — [0224](decisions/0224-the-mountain-is-awake.md)**, which
 closes the 2026-09-03 backgrounds report entirely. Saurian Belt places **three**, one on each of its
