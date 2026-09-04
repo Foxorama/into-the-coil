@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
+import { SHOTS } from '../src/content/shots.ts';
 import { PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
@@ -508,6 +510,122 @@ describe('0220 — a landmark is drawn where a level places one', () => {
     const drawn = THEME_KINDS.filter((theme) => LANDMARK_OF[theme] !== null);
     expect(drawn.length, 'no place draws a landmark at all, so the slot is dead').toBeGreaterThanOrEqual(2);
   });
+});
+
+describe('0222 — the forbidden band applies to STRUCTURE, which it never did', () => {
+  const smallestThreat = Math.min(...Object.values(SHOTS).map((row) => row.radius)) * 2;
+  const largestThreat = Math.max(...ENEMY_KINDS.map((kind) => ENEMIES[kind].radius)) * 2;
+  /** Tile pixels to world units, for a tile that is `SPRITE_EXTENT.skyNebula` units across. */
+  const size = 600;
+  const units = (px: number): number => (px / size) * SPRITE_EXTENT.skyNebula;
+
+  it('THE HOLE: no compact structure mark is the size of something that can kill you', () => {
+    /*
+      ⚠️ **0203's BAND HAS ONLY EVER BEEN CHECKED AGAINST LANDMARKS AND THE STAR FIELDS.** It says
+      nothing the sky draws may sit between the smallest thing that can kill the player and twice the
+      largest — and `STRUCTURE_OF` arrived in 0211, a year of decisions later, drawing shapes nobody
+      measured against it. **Found by looking for it while sizing this pass's debris**: Saurian Belt's
+      belt rocks are 2.4 to 8 units across against a bullet's 1.8, sitting squarely in the band, and
+      Ember Nebula's globules reach 2.2.
+
+      ⚠️ **COMPACT MARKS ONLY, AND THAT IS 0112's OWN REASONING RATHER THAN AN EXEMPTION.** *"What
+      makes something confusable is a hard edge at a bullet's scale, not area."* A corridor wall
+      eleven units thick and a whole tile long is not mistakable for a body — nothing about it reads
+      as a discrete object — and neither is a frond or an infall streak. What is mistakable is a
+      **compact** shape at a body's size, so the band is held against those and the aspect ratio is
+      what separates the two.
+    */
+    for (const theme of THEME_KINDS) {
+      for (const mark of STRUCTURE_OF[theme](size)) {
+        // A streak, a wall, a lane or a frond: manifestly not a body, whatever its width.
+        if (!compact(mark)) continue;
+        const across = units(extentOf(mark));
+        const why =
+          `${theme} draws a compact mark ${across.toFixed(1)} units across, between a bullet at ` +
+          `${smallestThreat} and twice the largest body at ${largestThreat * 2} — inside the band, so a ` +
+          'player can read a piece of the backdrop as a thing that can kill them';
+        expect(across < smallestThreat || across > largestThreat * 2, why).toBe(true);
+      }
+    }
+  });
+
+  /**
+   * How wide a mark is at its widest, in tile pixels.
+   *
+   * ⚠️ **A STROKE'S ASPECT IS ITS LENGTH OVER ITS WIDTH, AND A BOUNDING BOX GETS IT WRONG.** The first
+   * version measured the box for everything, and a Toxic Mire frond — a wandering line fifty units
+   * long and five wide — has a nearly square box, so it was counted as a **compact fifty-unit
+   * object** and satisfied the *something is above the band* claim on its own. A fill is an area and
+   * a box is right for it; a stroke is a line with a thickness and it is not.
+   */
+  function extentOf(mark: { points: number[][]; width: number }): number {
+    const xs = mark.points.map((p) => p[0]!);
+    const ys = mark.points.map((p) => p[1]!);
+    return Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) + mark.width;
+  }
+
+  function compact(mark: { points: number[][]; width: number }): boolean {
+    if (mark.width === 0) {
+      const xs = mark.points.map((p) => p[0]!);
+      const ys = mark.points.map((p) => p[1]!);
+      const wide = Math.max(...xs) - Math.min(...xs);
+      const tall = Math.max(...ys) - Math.min(...ys);
+      return Math.max(wide, tall) <= Math.min(wide, tall) * 3;
+    }
+    let along = 0;
+    for (let i = 1; i < mark.points.length; i += 1) {
+      along += Math.hypot(mark.points[i]![0]! - mark.points[i - 1]![0]!, mark.points[i]![1]! - mark.points[i - 1]![1]!);
+    }
+    return along <= mark.width * 3;
+  }
+
+  it('and something is actually IN the far half of it, or the band is only a ceiling again', () => {
+    /*
+      ⚠️ **THE HALF THAT MAKES THIS A BAND RATHER THAN 0069's OLD ONE-SIDED RULE.** Every mark could
+      satisfy the guard above by being tiny, which is what the sky was before 0203 — and *"a plain
+      black background is a plain boring game"* is a report about exactly that. A hulk over twice the
+      largest body is the only large shape the rules permit, so at least one place has to draw one or
+      the far end of the band is decoration.
+    */
+    const hulks = THEME_KINDS.flatMap((theme) =>
+      STRUCTURE_OF[theme](size).filter((mark) => compact(mark) && units(extentOf(mark)) > largestThreat * 2),
+    );
+    expect(
+      hulks.length,
+      'no place draws anything above the band — the sky is all dust and no objects, which is the ' +
+        'plain background that was reported',
+    ).toBeGreaterThan(0);
+  });
+
+  it('a hulk has an edge, or it is a hole in a light that is not there', () => {
+    /*
+      ⚠️ **THE FAILURE NO SIZE, POSITION OR COUNT GUARD CAN CATCH.** A dark structure mark is a hole in
+      the gas, and The Approach's gas is the thinnest of the seven — the first hulks were the right
+      shapes, in the right places, at the right sizes, and were **invisible**. 0220 found the same thing
+      about The Labyrinth's corridor walls and answered it the same way: a dark body with one lit edge,
+      which is the Pillars' own language.
+
+      Held as a pairing: every dark mark above the band shares its outline with a lit one. That is what
+      *has an edge* means in a table of marks.
+    */
+    for (const theme of THEME_KINDS) {
+      const marks = STRUCTURE_OF[theme](size);
+      const rims = marks.filter((mark) => mark.lit && !mark.crosses).map((mark) => key(mark.points));
+      for (const mark of marks) {
+        if (mark.lit || !compact(mark) || units(extentOf(mark)) <= largestThreat * 2) continue;
+        expect(
+          rims.some((rim) => rim.startsWith(key(mark.points))),
+          `${theme} draws a body above the band with no lit edge on it — in a place with thin gas that ` +
+            'is a hole in a light that is not there, and it draws as nothing at all',
+        ).toBe(true);
+      }
+    }
+  });
+
+  /** A mark's outline as a string, so a body and its rim can be compared by what they trace. */
+  function key(points: readonly number[][]): string {
+    return points.map((p) => `${p[0]!.toFixed(1)},${p[1]!.toFixed(1)}`).join('|');
+  }
 });
 
 describe('0220 — a mark that does not taper is one path', () => {

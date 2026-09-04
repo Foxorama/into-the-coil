@@ -80,7 +80,28 @@ export const PALETTES: Record<PaletteName, Palette> = {
     sky: '#2a2c44',
     player: '#7ae7ff',
     ally: '#c9a7ff',
-    enemy: '#ff4d6d',
+    /*
+      ⚠️ **BRIGHTENED FROM `#ff4d6d`, AND IT IS WHAT PAYS FOR THE BACKGROUND** —
+      `docs/decisions/0222-the-background-is-not-black.md`. Asked for: *"we can also highlight and
+      brighten important objects while also filling the background with detail… a plain black
+      background is a plain boring game."* Those are one trade rather than two requests: detail is
+      bought with cover, cover costs contrast, and **`enemy` is the worst ink in all fourteen
+      place-by-palette cells**, so it alone decides how much background the game can afford.
+
+      Measured with `scripts/weigh-sky.mjs`, worst ratio across all seven places against a floor of 3,
+      and how much more cover the tightest place could then carry:
+
+        `#ff4d6d`  3.11  → **+0.06**   the sky is full, and Rime Shelf was UNDER the floor at 2.67
+        `#ff667f`  3.55  → +0.27
+        **`#ff7286`  3.83  → +0.40**
+        `#ff8093`  4.17  → +0.51       and visibly pink rather than red
+
+      ⚠️ **THE HUE IS THE THING BEING SPENT, WHICH IS WHY THIS IS NOT SIMPLY THE BRIGHTEST OPTION.**
+      Every step towards white buys background and costs the colour the player has learned means
+      *this can kill you*. `#ff7286` is a lift that still reads as the same red at a glance and buys
+      two thirds of what going full pink would.
+    */
+    enemy: '#ff7286',
     bullet: '#ff9f1c',
     hazard: '#ffd23f',
     pickup: '#d9ffd0',

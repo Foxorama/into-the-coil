@@ -17,7 +17,7 @@ import { type Entity, makeEntity, reset } from '../sim/entity.ts';
 import { Pool } from '../sim/pool.ts';
 import { makeCollected, makeDeaths } from '../sim/collide.ts';
 import { makeRng } from '../sim/rng.ts';
-import { atlasIsStale, bakeAtlas, bakeGround, bakeLandmark, bakeNebula, viewFor } from '../render/bake.ts';
+import { atlasIsStale, bakeAtlas, bakeGround, bakeLandmark, bakeNebula, mix, viewFor } from '../render/bake.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
 // 0212: the room borrows the run's landmarks and has to hand back exactly what it took.
 import type { Landmarks } from '../render/scene.ts';
@@ -1314,7 +1314,21 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       land**: a silhouette over a planet is made of the same stuff the ground is, which is both true
       and the reason it is dark.
     */
-    const silhouette = place === null ? colours.space : (THEMES[place].ground ?? THEMES[place].space)[palette];
+    /*
+      ⚠️ **AND IN SPACE IT IS DARKER THAN THE VOID, WHICH IS NOT THE SAME AS BEING THE VOID** — 0222.
+      0221 handed a place in space its own `space` colour, so a dark mark was exactly the backdrop and
+      therefore invisible wherever there was no gas behind it — The Approach's first hulks were drawn
+      correctly, in the right places, at the right sizes, and could not be seen at all. **A body does
+      not merely fail to add light; it blocks what little there is.** Half way to black is enough to
+      make a silhouette a silhouette without making the game darker: it only ever applies inside a
+      mark, and the backdrop it sits on is untouched.
+    */
+    const silhouette =
+      place === null
+        ? colours.space
+        : THEMES[place].ground !== null
+          ? THEMES[place].ground![palette]
+          : mix(THEMES[place].space[palette], '#000000', 0.5);
     bakeNebula(atlas, clouds, silhouette, view.scale * dpr, backdrop);
     // The landmark takes the same gas colour as the weather — 0203. One place, one colour, so the
     // pillars are lit by the nebula they stand in rather than by a palette that never heard of it.
