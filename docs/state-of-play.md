@@ -248,6 +248,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **A SPRITE IS PAINTED, NOT FILLED — the accent table is gone, an arm paints any shade of any ink over a sealed hull, the guards read the trace; a death is a fireball and a missile lands with a spark** | [0227](decisions/0227-a-sprite-is-painted-not-filled.md) |
 | **AN ENEMY WEARS ITS PLACE — a skin and a motif per place over the silhouettes the levels already send; the bosses too; and the sheet had baked level one under every backdrop since 0195** | [0228](decisions/0228-an-enemy-wears-its-place.md) |
 | **THE PICTURE ANSWERS THE REPORT — debris over the bodies so a fireball is seen, bursts half again as big, enemy bullets lit, a tier is a wider sprite, and the Black Heart is an organ** | [0229](decisions/0229-the-picture-answers-the-report.md) |
+| **THE SHIP FLIES — the exhaust is an entity that follows the ship: burns on a hard push, eases on a pull, pulses on the step clock, and hangs against the across velocity** | [0230](decisions/0230-the-ship-flies.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were
@@ -834,10 +835,12 @@ ship engines need to be pulsing ion thrusters that burn when you hard push… th
 waves, they're grouped up into non-firing and firing waves… the sprites need to be more unique per
 level and each level needs its own brand of unique enemy… a pulsing black 'heart' not a love heart."*
 [0229](decisions/0229-the-picture-answers-the-report.md) answers the fireball, the bullets, the tiers
-and the heart. **Still owed from that list, in this order:** the thrusters (a feel change, and the
-first thing the ship does that is not a sprite swap), the wave interleaving (measured: The Approach
-runs twelve non-firing waves in a row, the batteries level twenty-nine firing), and a signature enemy
-per place with per-place hull variants. *"Music is good now."*
+and the heart. [0230](decisions/0230-the-ship-flies.md) answers the thrusters: the flame is an
+entity, and what is owed is an eye on the feel — `SWAY`, `PULSE_STEPS` and `BURN_ASK` in
+`src/content/exhaust.ts` are the knobs, and banking is deliberately not in it. **Still owed from that
+list, in this order:** the wave interleaving (measured: The Approach runs twelve non-firing waves in
+a row, the batteries level twenty-nine firing), and a signature enemy per place with per-place hull
+variants. *"Music is good now."*
 
 ⚠️ **AND THE VOLCANOES LANDED ON 2026-09-04 — [0224](decisions/0224-the-mountain-is-awake.md)**, which
 closes the 2026-09-03 backgrounds report entirely. Saurian Belt places **three**, one on each of its

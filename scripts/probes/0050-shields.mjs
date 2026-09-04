@@ -148,7 +148,8 @@ export const PROBES = [
       path: 'src/app/mount.ts',
       // The subtrahends grow as pools are added — 0066 took four more for the scatter — and the
       // break is the same one: a pool that pays for itself out of nothing.
-      find: '  debris: 200 - MAX_SHIELDS - 24 - 8 - 4,',
+      // And 0230 took one more for the exhaust.
+      find: '  debris: 200 - MAX_SHIELDS - 1 - 24 - 8 - 4,',
       replace: '  debris: 200 - MAX_SHIELDS - 24,',
     },
   },

@@ -17,12 +17,14 @@ export const PROBES = [
       solid slab hanging off the back of a silhouette every extent and every pairing were written
       against, and on the sheet it looks like a slightly longer exhaust.
     */
-    broke: 'the ship’s exhaust plume drawn solid, so a translucent mark outside the hull becomes a solid one',
+    // ⚠️ Re-aimed by 0230, which made the ship's plume an entity: the missile's plume is the one
+    // still painted past a hull, and it is the same break.
+    broke: 'the missile’s exhaust plume drawn solid, so a translucent mark outside the hull becomes a solid one',
     guard: 'THE 0149 ONE: every solid mark on a body is inside its hull',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  for (const side of [SHIP_PLUME, mirrored(SHIP_PLUME)]) poly(ctx, f, palette.bullet, side, 0.55);',
-      replace: '  for (const side of [SHIP_PLUME, mirrored(SHIP_PLUME)]) poly(ctx, f, palette.bullet, side, 1);',
+      find: '        [-1.16, 0.16],\n        [-0.78, 0.02],\n      ], 0.6);',
+      replace: '        [-1.16, 0.16],\n        [-0.78, 0.02],\n      ], 1);',
     },
   },
   {

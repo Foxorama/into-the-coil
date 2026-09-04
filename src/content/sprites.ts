@@ -363,6 +363,23 @@ export const SPRITE_KINDS = [
   'spark0',
   'spark1',
   /*
+    ── THE SHIP'S EXHAUST, WHICH IS AN ENTITY AND NOT A MARK ON THE HULL — 0230 ────────────────────
+
+    *"Ship engines need to be pulsing ion thrusters that burn when you hard push to the right and
+    that sway up, down, forward and reverse in response to movement, as it doesn't feel like I'm
+    flying, it feels like I'm just moving a thing around."* A plume baked onto the hull is the same
+    plume at every speed. This is a flame that FOLLOWS the ship — one entity in its own pool, placed
+    at the tail every step by `src/app/frame.ts`, drawn under the hull — and what it is drawn as is
+    decided by what the player is asking for: two idle frames that alternate on the step clock, two
+    burning ones for a hard push, and a dim one for reverse. Where it sits across the lane trails
+    against the ship's own sideways velocity, which is the sway.
+  */
+  'thrustIdle0',
+  'thrustIdle1',
+  'thrustBurn0',
+  'thrustBurn1',
+  'thrustEase',
+  /*
     ── THE SKY, AND IT IS TWO SPRITES RATHER THAN A THOUSAND ENTITIES ─────────────────────────────
 
     Asked for in play: *"needs a starry background or a background of some kind."*
@@ -743,6 +760,16 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // Under a burst's first frame at both, and the second is the flash spreading and going.
   spark0: 3.2,
   spark1: 5.5,
+  /*
+    ⚠️ **THE FLAME'S ROOT IS AT THE SPRITE'S FORWARD EDGE AND THE TIP AT ITS BACK** — 0230 — so the
+    extent is how long the flame is, and `src/content/exhaust.ts`'s `trail` is where its centre sits
+    behind the ship so that the root meets the tail. A burn is nearly twice an idle.
+  */
+  thrustIdle0: 4,
+  thrustIdle1: 4,
+  thrustBurn0: 7,
+  thrustBurn1: 7,
+  thrustEase: 3,
   /*
     ⚠️ **`ACROSS_SPAN`, which makes one tile exactly as tall as the lane** — so the sky tiles along
     the scroll axis and along it only, and no seam ever runs across the short axis of the screen. It

@@ -95,6 +95,7 @@ function stationKeepingWorld(surface: Surface): World {
     landmarks: [],
     shipPool,
     shieldOrbs: new Pool<Entity>(MAX_SHIELDS, makeEntity),
+    exhaust: new Pool<Entity>(1, makeEntity),
     missiles: new Pool<Entity>(8, makeEntity),
     bombs: new Pool<Entity>(4, makeEntity),
     blasts: new Pool<Entity>(4, makeEntity),

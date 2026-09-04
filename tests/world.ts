@@ -235,6 +235,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
   */
   const shipPool = new Pool<Entity>(CAPACITY.ship, makeEntity);
   const shieldOrbs = new Pool<Entity>(CAPACITY.shieldOrbs, makeEntity);
+  const exhaust = new Pool<Entity>(CAPACITY.exhaust, makeEntity);
   const enemies = new Pool<Entity>(CAPACITY.enemies, makeEntity);
   const playerShots = new Pool<Entity>(CAPACITY.playerShots, makeEntity);
   const missiles = new Pool<Entity>(CAPACITY.missiles, makeEntity);
@@ -258,12 +259,13 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
 
   const world: World = {
     // The game's own order — `src/app/mount.ts` — with the pickups left out, because this fixture has none.
-    layers: [blasts, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, shieldOrbs, shipPool],
+    layers: [blasts, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, exhaust, shieldOrbs, shipPool],
     sky: [],
     landmarks: [],
     bound: null,
     shipPool,
     shieldOrbs,
+    exhaust,
     enemies,
     playerShots,
     missiles,
