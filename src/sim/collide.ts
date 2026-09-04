@@ -147,6 +147,16 @@ export function collideInto(
     if (target.invulnFor > 0) continue;
     for (let s = shots.size - 1; s >= 0; s--) {
       const shot = shots.at(s);
+      /*
+        ⚠️ **A SHOT THAT SURVIVES ITS ARRIVALS LANDS ONCE PER IMPACT FLASH** —
+        `docs/decisions/0234-a-blade-circles-the-ship.md`. A blade with health to spare that overlaps
+        a body on twenty consecutive steps is twenty arrivals under the rule below; the flash the
+        last arrival wrote is what says *already landed*, and it is the same field the picture reads
+        (0035), so *hit* and *drawn as hit* stay one fact. A shot with one health is unchanged: it is
+        spent by its first arrival, flashing target or not — `tests/combat.test.ts` holds that a
+        mid-flash pulse still counts.
+      */
+      if (shot.health > 1 && target.flashFor > 0) continue;
       if (!overlaps(shot, target, targetRadiusScale)) continue;
       target.health -= shot.damage * damageScale;
       /*
@@ -162,7 +172,13 @@ export function collideInto(
         hits.across[hits.count] = shot.across;
         hits.count++;
       }
-      shots.releaseAt(s);
+      /*
+        ⚠️ **AN ARRIVAL COSTS A SHOT ONE HEALTH, AND A SHOT WITH ONE IS GONE** — 0234. Every shot
+        before the blade had one, so this is the release that was always here, written as what it
+        always meant; a blade has `BLADE_EDGE` and goes on to the next body.
+      */
+      shot.health -= 1;
+      if (shot.health <= 0) shots.releaseAt(s);
       if (target.health <= 0) {
         killed(targets, t, deaths);
         destroyed++;

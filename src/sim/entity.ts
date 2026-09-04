@@ -258,6 +258,20 @@ export interface Entity extends Body {
    */
   fromAlong: number;
   fromAcross: number;
+  /**
+   * A blade's place on its spiral about the ship — the angle it is at, how far out it is, how much
+   * it turns a step and how much further out it goes a step —
+   * `docs/decisions/0234-a-blade-circles-the-ship.md`.
+   *
+   * ⚠️ **The turn and the growth are COPIED ONTO THE BLADE when it is thrown**, not read off the
+   * fitted weapon each step: a player who takes another gun with blades in the air keeps the blades
+   * they threw, and a blade that read the pulse's row would stop dead in its ring. Zero for anything
+   * that is not a blade.
+   */
+  orbitAngle: number;
+  orbitRadius: number;
+  orbitTurn: number;
+  orbitGrow: number;
 }
 
 /** A blank entity. Called only while a pool is being constructed. */
@@ -291,6 +305,10 @@ export function makeEntity(): Entity {
     faceIn: 0,
     fromAlong: 0,
     fromAcross: 0,
+    orbitAngle: 0,
+    orbitRadius: 0,
+    orbitTurn: 0,
+    orbitGrow: 0,
   };
 }
 
@@ -329,6 +347,10 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.faceIn = 0;
   e.fromAlong = 0;
   e.fromAcross = 0;
+  e.orbitAngle = 0;
+  e.orbitRadius = 0;
+  e.orbitTurn = 0;
+  e.orbitGrow = 0;
 }
 
 /**

@@ -30,6 +30,7 @@ import { SPRITE } from './sprites.ts';
 export type ShotKind =
   | 'pulse'
   | 'arc'
+  | 'shuriken'
   | 'spit'
   | 'lance'
   | 'flak'
@@ -64,6 +65,7 @@ export interface ShotRow extends Body {
 export const SHOT_KINDS: readonly ShotKind[] = [
   'pulse',
   'arc',
+  'shuriken',
   'spit',
   'lance',
   'flak',
@@ -87,6 +89,14 @@ export const SHOT_KINDS: readonly ShotKind[] = [
  */
 const BLAST_RADIUS = 34;
 
+/**
+ * How many arrivals a shuriken survives — 0234. Named, because it is the one `health` in this
+ * table that is not a one, and `tests/combat.test.ts` reads the rule off the row rather than off
+ * this number: a shot with one health is spent by arriving, and a shot with more is spent by its
+ * own clock and lands once per impact flash on whatever it crosses.
+ */
+export const BLADE_EDGE = 12;
+
 export const SHOTS: Record<ShotKind, ShotRow> = {
   /**
    * The player's auto-fire. Fast, small, and cheap to survive being wrong about — it is the shot
@@ -109,6 +119,26 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * one link is one pulse — rather than a number tuned beside it.
    */
   arc: { sprite: SPRITE.arcNode, spriteHit: SPRITE.arcNode, radius: 1, health: 1, damage: 1, speed: 0 },
+  /**
+   * A blade that circles the ship — `docs/decisions/0234-a-blade-circles-the-ship.md`.
+   *
+   * ⚠️ **`health` IS HOW MANY BODIES IT CAN LAND ON BEFORE IT IS BLUNT, and it is the first shot
+   * with more than one.** `src/sim/collide.ts` spends a shot one health per arrival; a pulse has one
+   * and is gone, and this has `BLADE_EDGE` and goes on. Its own clock (`orbit`, on the weapon row)
+   * is what usually ends it — twelve is more bodies than a spiral crosses — so the number is a
+   * ceiling on what one blade may be worth against a wall of drifters, not a life.
+   *
+   * ⚠️ **`speed` is how fast the spiral OPENS, in world units per step**, outward from the ship: the
+   * one direction a shot that circles has of its own. Which way round it goes is the weapon row's
+   * `turn`, and where it is each step is the ship's — `steerBlades` in `src/app/frame.ts`.
+   *
+   * ⚠️ **`spriteHit` IS THE OTHER TURN OF THE STAR, AND THAT IS NOT A FLASH.** A blade never
+   * flashes — what it survives is arriving, not being hit, and nothing in the game shoots it — so
+   * the slot 0035 gives every body for its hurt twin is free, and `steerBlades` in
+   * `src/app/frame.ts` swaps the two every few steps to spin it. `blit` cannot rotate; two bitmaps
+   * an eighth of a turn apart are what a spinning shuriken is.
+   */
+  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 1.4, health: BLADE_EDGE, damage: 1, speed: 0.28 },
   /**
    * What an enemy sends back. **Slower than the ship**, which is the whole of what makes it
    * dodgeable rather than a coin flip: a player who reacts can always leave the line it is on.

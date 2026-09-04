@@ -406,6 +406,7 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   pickupMissile: 'pickup',
   // The weapon pickup's other face — the same pickup, so the same ink. 0233.
   pickupArc: 'pickup',
+  pickupShuriken: 'pickup',
   pickupShield: 'pickup',
   /*
     ⚠️ **THE PICKUP INK OVER THE BOMB'S OWN SILHOUETTE, and the ink is doing the whole job here.**
@@ -446,6 +447,9 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // Where a bolt lands: the impact ink, because a landing IS an impact and it is the brightest ink
   // there is — the bolt's core is stroked in the same one. 0233.
   arcNode: 'impact',
+  // A blade is a thing the player fired, in the bullet ink like the pulse and the missile — 0234.
+  shuriken: 'bullet',
+  shurikenTurn: 'bullet',
   /*
     THE HURT SILHOUETTES: the SAME shape in a different ink.
 
@@ -480,6 +484,13 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   shipArcMk2Hit: 'hazard',
   shipArcMk3: 'player',
   shipArcMk3Hit: 'hazard',
+  // And the shuriken's — 0234.
+  shipStar: 'player',
+  shipStarHit: 'hazard',
+  shipStarMk2: 'player',
+  shipStarMk2Hit: 'hazard',
+  shipStarMk3: 'player',
+  shipStarMk3Hit: 'hazard',
   drifterHit: 'impact',
   lancerHit: 'impact',
   weaverHit: 'impact',
@@ -1039,6 +1050,53 @@ const SHIP_SPARK: readonly Pt[] = [
   [0.91, -0.19],
 ];
 
+/*
+  ── THE SHURIKEN'S BLADES — 0234 ──────────────────────────────────────────────────────────────────
+
+  A ship carrying the shuriken launcher wears a blade on each wingtip — and, once it has pods, on
+  each pod's outer edge instead, because a fin on the wing and a pod on the same edge would overlap
+  and cancel under `evenodd` (0194's trap). Each shares its host's outer edge and no area.
+*/
+const SHIP_FIN: readonly Pt[] = [
+  [-0.42, -0.95],
+  [-0.72, -0.95],
+  [-0.64, -1.2],
+  [-0.3, -1.1],
+];
+
+const SHIP_FIN_MK2: readonly Pt[] = [
+  [-0.26, -1.32],
+  [-0.9, -1.32],
+  [-0.74, -1.44],
+  [-0.2, -1.42],
+];
+
+const SHIP_FIN_MK3: readonly Pt[] = [
+  [-0.14, -1.48],
+  [-0.96, -1.48],
+  [-0.78, -1.6],
+  [-0.08, -1.58],
+];
+
+/** A four-bladed star, hooked — the shuriken's own silhouette, traced at `scale` of the frame. */
+function traceStar(ctx: Pen, f: Frame, scale: number, phase: number): void {
+  for (let k = 0; k < 4; k++) {
+    const a = phase + (k * Math.PI) / 2;
+    const tipX = Math.cos(a) * scale;
+    const tipY = Math.sin(a) * scale;
+    // The trailing root sits further round than the leading one, which is the hook.
+    const leadX = Math.cos(a - 0.2) * scale * 0.34;
+    const leadY = Math.sin(a - 0.2) * scale * 0.34;
+    const trailX = Math.cos(a + 0.7) * scale * 0.38;
+    const trailY = Math.sin(a + 0.7) * scale * 0.38;
+    if (k === 0) ctx.moveTo(f.half + leadX * f.r, f.half + leadY * f.r);
+    else ctx.lineTo(f.half + leadX * f.r, f.half + leadY * f.r);
+    ctx.lineTo(f.half + tipX * f.r, f.half + tipY * f.r);
+    ctx.lineTo(f.half + trailX * f.r, f.half + trailY * f.r);
+  }
+  ctx.closePath();
+}
+
 function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, weapon: WeaponKind): void {
   const body = palette.player;
   const dark = shade(body, -0.32);
@@ -1087,6 +1145,25 @@ function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, weapon: W
       [0.72, -0.09],
       [0.72, 0.09],
     ]);
+  }
+  if (weapon === 'shuriken') {
+    // A star on the keel behind the canopy, in the trim ink with a lit centre, and a dark edge along
+    // each blade so the fin reads as ground steel rather than as more wing.
+    ctx.fillStyle = palette.trim;
+    ctx.beginPath();
+    traceStar(ctx, { half: f.half - 0.26 * f.r, r: f.r }, 0.2, Math.PI / 4);
+    ctx.fill('evenodd');
+    disc(ctx, f, shade(palette.glass, 0.5), -0.26, 0, 0.07);
+    const fin = tier >= 2 ? SHIP_FIN_MK3 : tier >= 1 ? SHIP_FIN_MK2 : SHIP_FIN;
+    for (const side of [1, -1] as const) {
+      poly(ctx, f, dark, [
+        [fin[1]![0], fin[1]![1] * side],
+        [fin[2]![0], fin[2]![1] * side],
+        [fin[3]![0], fin[3]![1] * side],
+        [fin[3]![0] - 0.1, (fin[3]![1] + 0.08) * side],
+        [fin[2]![0] + 0.06, (fin[2]![1] + 0.08) * side],
+      ]);
+    }
   }
   poly(ctx, f, palette.glass, SHIP_CANOPY);
   poly(ctx, f, shade(palette.glass, 0.55), SHIP_CANOPY_LIGHT);
@@ -3161,6 +3238,43 @@ export function drawKind(
       if (!hurt) paintShip(ctx, fh, palette, 2, 'arc');
       return;
     }
+    // ── AND CARRYING THE SHURIKEN LAUNCHER — 0234: a blade on each wingtip, then on each pod. ──
+    case 'shipStar':
+    case 'shipStarHit': {
+      const fh: Frame = { half, r: r * (SPRITE_EXTENT.ship / SPRITE_EXTENT.shipStar) };
+      trace(ctx, fh, SHIP_HULL);
+      trace(ctx, fh, SHIP_FIN);
+      trace(ctx, fh, mirrored(SHIP_FIN));
+      seal(ctx);
+      if (!hurt) paintShip(ctx, fh, palette, 0, 'shuriken');
+      return;
+    }
+    case 'shipStarMk2':
+    case 'shipStarMk2Hit': {
+      const fh: Frame = { half, r: r * (SPRITE_EXTENT.ship / SPRITE_EXTENT.shipStarMk2) };
+      trace(ctx, fh, SHIP_HULL);
+      trace(ctx, fh, SHIP_POD);
+      trace(ctx, fh, mirrored(SHIP_POD));
+      trace(ctx, fh, SHIP_FIN_MK2);
+      trace(ctx, fh, mirrored(SHIP_FIN_MK2));
+      seal(ctx);
+      if (!hurt) paintShip(ctx, fh, palette, 1, 'shuriken');
+      return;
+    }
+    case 'shipStarMk3':
+    case 'shipStarMk3Hit': {
+      const fh: Frame = { half, r: r * (SPRITE_EXTENT.ship / SPRITE_EXTENT.shipStarMk3) };
+      trace(ctx, fh, SHIP_HULL);
+      trace(ctx, fh, SHIP_POD_MK3);
+      trace(ctx, fh, mirrored(SHIP_POD_MK3));
+      trace(ctx, fh, SHIP_FIN_MK3);
+      trace(ctx, fh, mirrored(SHIP_FIN_MK3));
+      trace(ctx, fh, SHIP_CANARD);
+      trace(ctx, fh, mirrored(SHIP_CANARD));
+      seal(ctx);
+      if (!hurt) paintShip(ctx, fh, palette, 2, 'shuriken');
+      return;
+    }
     case 'drifter':
     case 'drifterHit':
       // A diamond: symmetrical, pointing nowhere, which is exactly what a drifter does. It holds its
@@ -3853,6 +3967,38 @@ export function drawKind(
       ]);
       disc(ctx, fg, palette.glass, 0.14, 0, 0.18);
       disc(ctx, fg, shade(palette.glass, 0.5), 0.18, -0.04, 0.08);
+      return;
+    }
+    case 'pickupShuriken': {
+      /*
+        A HOOKED FOUR-BLADED STAR WITH A HOLE — the weapon pickup's third face, 0234. The hook is
+        what keeps it off the arc's landing spark (a straight four-pointed star, a third the size),
+        and the hole is what keeps it off every other pickup at pickup size.
+
+        Glyph at three quarters of the box and a bubble round it, on the arc face's terms — 0236.
+      */
+      const fg: Frame = { half, r: r * PICKUP_GLYPH };
+      traceStar(ctx, fg, 1, 0);
+      ring(ctx, fg, 0, 0, 0.16);
+      seal(ctx);
+      bubble(ctx, f, palette);
+      // The trailing edge of each blade in shadow, so it has a lit face and a ground one.
+      for (let k = 0; k < 4; k++) {
+        const a = (k * Math.PI) / 2;
+        poly(ctx, fg, shade(palette.pickup, -0.28), [
+          [Math.cos(a) * 0.96, Math.sin(a) * 0.96],
+          [Math.cos(a + 0.7) * 0.36, Math.sin(a + 0.7) * 0.36],
+          [Math.cos(a + 0.45) * 0.34, Math.sin(a + 0.45) * 0.34],
+        ]);
+      }
+      return;
+    }
+    case 'shuriken':
+    case 'shurikenTurn': {
+      // The blade itself, in flight: the same hooked star, an eighth of a turn apart between the two.
+      traceStar(ctx, f, 1, kind === 'shuriken' ? 0 : Math.PI / 4);
+      seal(ctx);
+      disc(ctx, f, shade(palette.bullet, -0.35), 0, 0, 0.14);
       return;
     }
     case 'pickupArc': {

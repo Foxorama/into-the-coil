@@ -108,6 +108,7 @@ export const CUE_KINDS = [
   'missile',
   'arc',
   'zap',
+  'throw',
   'threat',
   'hit',
   'kill',
@@ -175,6 +176,8 @@ export const TWIN_KINDS = [
   'missile-appears',
   /** A bolt of chain lightning is stroked from the nose to what it struck — 0233. */
   'bolt-appears',
+  /** A blade leaves the ship and starts its spiral — 0234. */
+  'blade-appears',
   /** An enemy's shot appears on the field — `fireEnemies`. */
   'threat-appears',
   /** A body flashes its hit sprite for `IMPACT_FLASH_STEPS` — 0035. */
@@ -809,6 +812,34 @@ export const CUES: Record<CueKind, CueRow> = {
       // the weight the report was missing.
       { wave: 'sine', from: inKey(9), to: inKey(0), seconds: 0.12, gain: 0.8, attack: 0.001, curve: 4, drive: 0.3 },
       { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.16, gain: 0.7, attack: 0.004, curve: 3.5, drive: 0.2 },
+    ],
+  },
+  /**
+   * A shuriken leaving the ship — `docs/decisions/0234-a-blade-circles-the-ship.md`.
+   *
+   * A THROW, not a shot: a short whoosh of air with a metal ring on top of it, and the sub every
+   * player weapon has (0102). Where the pulse clicks and the arc crackles, this swings — noise
+   * through a band that rises and then falls is a thing passing the ear, which is what a blade
+   * leaving the hand does. Dry, and shorter than its own fastest cadence (fifteen steps, a quarter
+   * of a second), on 0104's terms.
+   *
+   * ⚠️ **The ring is a triangle three octaves over the root, falling a tone** — the metal of the
+   * thing rather than the air it moves, and the one part that says *blade* and not *gust*.
+   */
+  throw: {
+    twin: 'blade-appears',
+    hold: 3,
+    gain: 0.25,
+    glue: 0.1,
+    layers: [
+      // The swing: air through a band that opens and closes over a tenth of a second.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.12, gain: 0.7, attack: 0.02, curve: 3.5, lowFrom: 2600, lowTo: 900, highFrom: 380, highTo: 220, q: 1.1 },
+      // The edge: a brighter, shorter hiss on the front of it.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.04, gain: 0.4, attack: 0.001, curve: 7, highFrom: 3000, lowFrom: 9000, lowTo: 4000 },
+      // The ring: metal, falling a tone.
+      { wave: 'tri', from: inKey(22), to: inKey(21), seconds: 0.09, gain: 0.32, attack: 0.001, curve: 5 },
+      // The sub — the pulse's own, so the three guns share a bottom.
+      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.06, gain: 0.5, attack: 0.002, curve: 4, drive: 0.2 },
     ],
   },
   threat: {

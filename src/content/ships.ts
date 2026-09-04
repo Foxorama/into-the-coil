@@ -88,6 +88,11 @@ const HULLS: Record<WeaponKind, readonly { base: number; hit: number }[]> = {
     { base: SPRITE.shipArcMk2, hit: SPRITE.shipArcMk2Hit },
     { base: SPRITE.shipArcMk3, hit: SPRITE.shipArcMk3Hit },
   ],
+  shuriken: [
+    { base: SPRITE.shipStar, hit: SPRITE.shipStarHit },
+    { base: SPRITE.shipStarMk2, hit: SPRITE.shipStarMk2Hit },
+    { base: SPRITE.shipStarMk3, hit: SPRITE.shipStarMk3Hit },
+  ],
 };
 
 /**

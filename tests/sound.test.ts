@@ -1316,7 +1316,7 @@ describe('the synthesiser', () => {
       bound is between them rather than beside either.
     */
     // And the arc, since 0233 — the third of the player's own weapons, held to the same floor.
-    for (const kind of ['pulse', 'missile', 'arc'] as const) {
+    for (const kind of ['pulse', 'missile', 'arc', 'throw'] as const) {
       const bands = spectrum(sampleCue(CUES[kind], SAMPLE_RATE, makeRng('cues').stream(kind)), SAMPLE_RATE);
       const sub = bands[0]!;
       const shape = bands.map((v, i) => `${BANDS[i]![2]} ${v.toFixed(3)}`).join(', ');
@@ -2524,7 +2524,7 @@ describe('0173 — a cue happens somewhere', () => {
     */
     // And the arc's two, since 0233: the discharge rides the arc's cadence and the strike lands on
     // the same step, so both are the gun's rate again.
-    const STREAMS: CueKind[] = ['pulse', 'missile', 'threat', 'hit', 'arc', 'zap'];
+    const STREAMS: CueKind[] = ['pulse', 'missile', 'threat', 'hit', 'arc', 'zap', 'throw'];
     for (const kind of STREAMS) {
       expect(CUES[kind].air, `${kind} rides the fire cadence and states a room`).toBeUndefined();
     }
