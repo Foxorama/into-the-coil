@@ -33,7 +33,7 @@ import type { ShotKind } from './shots.ts';
  * pickup entity is an index into this list, so the title screen's key, the pickup's faces and the
  * run slice all read one order. Moving a kind here moves it everywhere at once, which is the point.
  */
-export const WEAPON_KINDS = ['pulse', 'arc'] as const;
+export const WEAPON_KINDS = ['pulse', 'arc', 'shuriken'] as const;
 
 /** Derived from the list, so a kind cannot exist in the union and be missing from the table. */
 export type WeaponKind = (typeof WEAPON_KINDS)[number];
@@ -49,8 +49,11 @@ export type WeaponKind = (typeof WEAPON_KINDS)[number];
  *   **straight**  a body spawned into `playerShots` at `speed`, fanned across the barrels
  *   **chain**     hitscan. The step it fires it finds a target in `reach`, lands, and jumps `links`
  *                 times to the next nearest; what the player sees is a bolt, drawn for a few steps
+ *   **orbit**     a body spawned into `playerShots` that circles the SHIP in a widening spiral for
+ *                 `orbit` steps and is spent by its own clock rather than by arriving — it lands on
+ *                 everything it crosses, once per impact flash. 0234
  */
-export type FlightKind = 'straight' | 'chain';
+export type FlightKind = 'straight' | 'chain' | 'orbit';
 
 export interface WeaponRow {
   /** What the player would call it. Terse, per `docs/game.md`'s voice rule. */
@@ -97,6 +100,23 @@ export interface WeaponRow {
    * `tests/weapons.test.ts` as *climbs at every rung* rather than as the fraction.
    */
   reach: readonly number[];
+  /**
+   * Steps an `orbit` shot flies before its own clock spends it, one entry per rung — the length of
+   * the spiral. Zeros for a weapon whose shots are spent by arriving.
+   *
+   * ⚠️ **A LADDER, because it is the thing an upgrade buys** — *"upgrades make the shuriken's arc
+   * last longer, so it ends up with a bigger spiral."* The spiral's radius is `speed × orbit`, so a
+   * longer life IS a wider ring, and the row says how long rather than how wide.
+   */
+  orbit: readonly number[];
+  /**
+   * Radians an `orbit` shot turns about the ship per step. Zero for every other flight.
+   *
+   * ⚠️ **In the camera's frame, like every speed** — the ship flies in it and the shot circles the
+   * ship. A turn of 0.11 is a revolution every fifty-seven steps, about a second, which is slow
+   * enough to read as a thing circling and fast enough that a blade sweeps a body twice.
+   */
+  turn: number;
   /** The face the weapon pickup shows when it is offering this kind — an index into the atlas. */
   pickup: number;
 }
@@ -119,6 +139,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     links: [1, 1, 1, 1, 1],
     weight: [1, 1, 1, 1, 1],
     reach: [0, 0, 0, 0, 0],
+    orbit: [0, 0, 0, 0, 0],
+    turn: 0,
     pickup: SPRITE.pickupWeapon,
   },
   /**
@@ -147,6 +169,38 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     weight: [1, 1, 1, 2, 2],
     // A fifth further at every rung — 0236. The cap reaches two thirds of the narrowest view.
     reach: [55, 66, 79, 95, 114],
+    orbit: [0, 0, 0, 0, 0],
+    turn: 0,
     pickup: SPRITE.pickupArc,
+  },
+  /**
+   * The shuriken launcher — `docs/decisions/0234-a-blade-circles-the-ship.md`. Asked for: *"it fires
+   * shurikens that circle around the ship in an increasingly large arc and hits everything that it
+   * comes into contact with on that arc. Upgrades make the shuriken's arc last longer, so it ends
+   * up with a bigger spiral and increase the shuriken fire rate."*
+   *
+   * ⚠️ **The slowest cadence in the game and the only shot that is not spent by arriving.** A blade
+   * lives `orbit` steps and lands on everything it crosses, so its worth is the sweep and not the
+   * shot: at the cap a blade every quarter-second, each alive for two seconds — eight blades
+   * ringing the ship at once. `tests/weapons.test.ts` fires the cap for fifteen seconds and holds the
+   * pool.
+   *
+   * ⚠️ **The spiral opens from the ship outward**, so a blade starts inside the pulse's range and
+   * ends near the edge of it: a gun that guards the ship first and reaches later, which is the
+   * opposite of the pulse and the arc and is what makes it a third gun rather than a third shape.
+   */
+  shuriken: {
+    label: 'Shuriken',
+    hint: 'Blades ring the ship',
+    shot: 'shuriken',
+    flight: 'orbit',
+    fireEvery: [30, 26, 22, 18, 15],
+    barrels: [1, 1, 1, 1, 1],
+    links: [1, 1, 1, 1, 1],
+    weight: [1, 1, 1, 1, 1],
+    reach: [0, 0, 0, 0, 0],
+    orbit: [60, 75, 90, 105, 120],
+    turn: 0.11,
+    pickup: SPRITE.pickupShuriken,
   },
 };

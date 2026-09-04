@@ -38,6 +38,7 @@ import { INVULN_STEPS, MAX_SHIELDS, SHIPS } from '../src/content/ships.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import { weaponFor } from '../src/content/pickups.ts';
 import { SHOT_KINDS, SHOTS } from '../src/content/shots.ts';
+import { WEAPONS, WEAPON_KINDS } from '../src/content/weapons.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { GameFrame, SHIP_START_ALONG, respawn, type World } from '../src/app/frame.ts';
 import { STEP_MS } from '../src/app/loop.ts';
@@ -1013,10 +1014,22 @@ describe('damage is legible on the body that took it', () => {
     expect(connections + 1, 'the enemy took more connecting shots than it has health').toBe(ENEMIES.lancer.health);
   });
 
-  it('a shot never flashes, because it does not survive being one', () => {
-    // Not a special case in the code, and worth pinning as a consequence rather than a rule: a shot
-    // has one health, so `collideInto` releases it rather than reaching the flash at all.
+  it('a shot never flashes: one health is spent by arriving, and only a blade has more', () => {
+    /*
+      Not a special case in the code, and worth pinning as a consequence rather than a rule: a shot
+      has one health, so `collideInto` releases it rather than reaching the flash at all.
+
+      ⚠️ **EXCEPT THE SHOT AN `orbit` WEAPON THROWS, since 0234.** A blade is spent by its own clock
+      and lands on everything it crosses, so it carries more than one health — and it still never
+      flashes, because nothing shoots it: its hurt slot is its other turn. Read off the weapon table
+      rather than off a name, so a second orbiting gun is covered the day it is a row.
+    */
+    const blades = new Set(WEAPON_KINDS.filter((k) => WEAPONS[k].flight === 'orbit').map((k) => WEAPONS[k].shot));
     for (const kind of SHOT_KINDS) {
+      if (blades.has(kind)) {
+        expect(SHOTS[kind].health, `${kind} is a blade with nothing to survive an arrival on`).toBeGreaterThan(1);
+        continue;
+      }
       expect(SHOTS[kind].health, `${kind} survives a hit, which would need a hit sprite of its own`).toBe(1);
     }
   });

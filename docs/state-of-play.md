@@ -118,6 +118,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **two upgrade ladders of four tiers; nine pickups a level, of four kinds** | [0083](decisions/0083-two-ladders-of-four.md) |
 | **a weapon is a kind; the weapon pickup cycles; the arc is chain lightning; the ship wears its gun** | [0233](decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md) |
 | **the guns' first play-test, answered: a three-second face, a scatter that flies, a reach ladder, a strike that explodes, bubbles on the pickups** | [0236](decisions/0236-the-guns-answer-the-first-play-test.md), [`the-guns-played`](../reports/the-guns-played-2026-09-05.md) |
+| **the shuriken: a blade circles the ship, spent by its own clock, landing once per flash** | [0234](decisions/0234-a-blade-circles-the-ship.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -733,10 +734,9 @@ for.
 weapon is a row on, the cycling pickup, and the chain lightning gun. **The next two are rows on that
 axis, one PR each, in the order asked:**
 
-1. **The shuriken launcher** — a third `WeaponKind` with an `orbit` flight: shurikens circle the ship
-   in a widening spiral and hit everything on the arc; a tier lengthens the spiral and quickens the
-   rate. Its own hull family, pickup face and cue. The spinning blade and *hits everything it touches
-   without being spent* are the two things `src/sim/collide.ts` does not do yet.
+1. ~~**The shuriken launcher**~~ — landed as [0234](decisions/0234-a-blade-circles-the-ship.md): a
+   third `WeaponKind` with the `orbit` flight, a shot spent by its own clock that lands once per
+   impact flash, its own hulls, face and `throw` cue.
 2. **Homing missiles** — a second `MissileKind` with a `homing` guidance: a little less damage than
    the straight missile, turning toward the nearest body from the moment it leaves the tube, any
    direction. The missile pickup already cycles; a second row is what gives it something to cycle to.
@@ -744,8 +744,12 @@ axis, one PR each, in the order asked:**
 **0233 was played the day it was built and [0236](decisions/0236-the-guns-answer-the-first-play-test.md)
 answers every item of [`the-guns-played`](../reports/the-guns-played-2026-09-05.md)** — the verdict
 was *"cool… but it adds a huge degree of difficulty now"*, and the seven items are each a model
-quantity answered by a model change. **What is owed is another play**, on the branch preview, and
-an ear on `arc` and `zap` as they are now (`scripts/hear.mjs --only=arc,zap` writes them).
+quantity answered by a model change. **0234 has not been played at all.** What is owed is another
+play, on the branch preview, of the arc as 0236 left it and the shuriken as 0234 built it; an ear on
+`arc`, `zap` and `throw` as they are now (`scripts/hear.mjs --only=arc,zap,throw` writes them); and
+an eye on the ring of blades in motion at the camera the game ships — every claim about it is a
+model quantity. The balance of a gun that cannot miss and a gun that sweeps is a hand's, and their
+ladders are starting points. The bench takes `?weapon=arc` and `?weapon=shuriken` with `&tier=N`.
 
 ⚠️ **AND ONE THING IS WAITING ON AN EAR, WHICH IS NOT THE SAME AS BEING NEXT.** It is written here
 rather than as a fourth item below, because *this* is the file's one marker and

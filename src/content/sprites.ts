@@ -87,6 +87,18 @@ export const SPRITE_KINDS = [
   'shipArcMk2Hit',
   'shipArcMk3',
   'shipArcMk3Hit',
+  /*
+    ── AND WEARING THE SHURIKEN LAUNCHER — 0234 ───────────────────────────────────────────────────
+
+    The same three hulls a third time: blade-tipped wings and a star on the keel, on 0233's terms
+    (one bake per combination of tier and gun, because a blit is one bitmap).
+  */
+  'shipStar',
+  'shipStarHit',
+  'shipStarMk2',
+  'shipStarMk2Hit',
+  'shipStarMk3',
+  'shipStarMk3Hit',
   'drifter',
   'drifterHit',
   'lancer',
@@ -340,6 +352,8 @@ export const SPRITE_KINDS = [
     different offer, and a face that changed size would read as a different pickup arriving.
   */
   'pickupArc',
+  // The weapon pickup's third face — a four-bladed star with a hole, the shuriken's own glyph. 0234.
+  'pickupShuriken',
   /*
     ⚠️ **A HERALDIC SHIELD, and it is the one pickup whose meaning a player already owns.** The other
     three are arbitrary glyphs the game has to teach — a plus, a holed square, a hexagon — and the
@@ -392,6 +406,16 @@ export const SPRITE_KINDS = [
     the game that is not baked, because its shape is not known until the frame it is drawn on.
   */
   'arcNode',
+  /*
+    ── THE BLADE, IN TWO TURNS — 0234 ─────────────────────────────────────────────────────────────
+
+    A four-bladed star in the bullet ink, and the same star an eighth of a turn round. `blit` cannot
+    rotate, so a shuriken that visibly SPINS is two bitmaps the frame alternates between every few
+    steps (`steerBlades` in `src/app/frame.ts`) — the same page-turning a flare does, on a body that
+    lives two seconds rather than a fifth of one.
+  */
+  'shuriken',
+  'shurikenTurn',
   'debris',
   /*
     ── A DEATH IS A FIREBALL, AND A FIREBALL IS FOUR BITMAPS ───────────────────────────────────────
@@ -656,6 +680,13 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   shipArcMk2Hit: 9,
   shipArcMk3: 10.2,
   shipArcMk3Hit: 10.2,
+  // The blade tips reach a little past the wingtips, so the box grows as the arc's did — 0234.
+  shipStar: 7.6,
+  shipStarHit: 7.6,
+  shipStarMk2: 9,
+  shipStarMk2Hit: 9,
+  shipStarMk3: 10,
+  shipStarMk3Hit: 10,
   drifter: 5.5,
   drifterHit: 5.5,
   /*
@@ -825,6 +856,7 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   pickupWeapon: 8,
   // The same pickup, offering the other gun — the same size on purpose. 0233.
   pickupArc: 8,
+  pickupShuriken: 8,
   pickupMissile: 7.33,
   pickupShield: 6.67,
   pickupBomb: 5.87,
@@ -844,6 +876,10 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // A landing spark: bigger than a bullet and smaller than the missile, so a chain of them reads
   // as hits rather than as a stream. Twice the `arc` row's hurtbox radius, like every shot.
   arcNode: 2.4,
+  // A blade: bigger than the pulse and the missile, because it is the one shot the player has to
+  // read the PATH of. Twice the `shuriken` row's hurtbox radius, like every shot.
+  shuriken: 3.2,
+  shurikenTurn: 3.2,
   // Small: a fragment reads as a piece of something, and eight of them at enemy size is a wall.
   debris: 1.4,
   /*

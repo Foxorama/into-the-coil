@@ -15,8 +15,10 @@ export const PROBES = [
     edit: {
       path: 'src/sim/collide.ts',
       // The `shots` release above it is what keeps this unique — `blastInto` ends the same way.
-      find: '      shots.releaseAt(s);\n      if (target.health <= 0) {\n        killed(targets, t, deaths);\n        destroyed++;\n        break;\n      }',
-      replace: '      shots.releaseAt(s);\n      if (target.health <= 0) {\n        killed(targets, t, deaths);\n        destroyed++;\n        break;\n      }\n      continue;',
+      // ⚠️ Re-anchored by 0234: an arrival costs a shot one health now, and the release is the
+      // shot running out. The break is the same — the flash never reached on a survivor.
+      find: '      if (shot.health <= 0) shots.releaseAt(s);\n      if (target.health <= 0) {\n        killed(targets, t, deaths);\n        destroyed++;\n        break;\n      }',
+      replace: '      if (shot.health <= 0) shots.releaseAt(s);\n      if (target.health <= 0) {\n        killed(targets, t, deaths);\n        destroyed++;\n        break;\n      }\n      continue;',
     },
   },
   {

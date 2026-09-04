@@ -1299,6 +1299,8 @@ export class GameFrame implements Frame {
       fireMissiles(w);
     }
     steerMissiles(w);
+    // After the ship has flown this step, so a blade circles where the ship now is — 0234.
+    steerBlades(w);
     steerEnemies(w);
     driftPickups(w);
     fireEnemies(w);
@@ -1354,7 +1356,15 @@ export class GameFrame implements Frame {
     const inFlight = w.playerShots.size + w.missiles.size;
     let killedByShots = 0;
     w.hits.count = 0;
-    killedByShots += collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
+    /*
+      ⚠️ **THE PULSE'S PAIRING LOGS ITS HITS ONLY WHEN THE GUN IS THE BLADE** — 0234. A pulse's
+      arrival is told by the flash on the body and is counted below from the pool shrinking; a blade
+      is not spent by arriving, so neither tells anyone it landed. The log gives the landing a spark
+      (0227) and a place for the `hit` cue — and it is `null` for the pulse so the pulse's picture
+      does not gain sparks it never had.
+    */
+    const bladeHits = w.weapon.flight === 'orbit' ? w.hits : null;
+    killedByShots += collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, bladeHits);
     killedByShots += collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits);
     // The boss is its own pairing rather than another enemy, and the reason is the pool: it is the
     // only body in the game that must survive a hundred and fifty hits, so it cannot share a pool
@@ -1375,7 +1385,9 @@ export class GameFrame implements Frame {
       to *how open is it*, and 0053 says the bomb is the first thing the player spends.
     */
     const open = w.bossPool.size > 0 ? openBy(phaseFor(w.bossRow, w.bossPool.at(0).health, w.bossFullHealth)) : 1;
-    killedByShots += collideInto(w.playerShots, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.deaths);
+    killedByShots += collideInto(w.playerShots, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.deaths, bladeHits);
+    // What the blades landed this step, before the missiles add theirs — the `hit` cue reads it.
+    const bites = bladeHits === null ? 0 : w.hits.count;
     killedByShots += collideInto(w.missiles, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.deaths, w.hits);
     // An area rather than an arrival: everything inside it, once, and nothing consumes it.
     blastInto(w.blasts, w.enemies, 1, IMPACT_FLASH_STEPS, w.deaths);
@@ -1390,7 +1402,8 @@ export class GameFrame implements Frame {
       arrivals as well as deaths, which is a pool the whole game would pay for so that one cue could
       be placed. Centred, deliberately, and `tests/sound.test.ts` names it.
     */
-    if (w.playerShots.size + w.missiles.size < inFlight - killedByShots) w.onCue('hit');
+    // Or a blade bit something, which the pool arithmetic cannot see because a blade is not spent — 0234.
+    if (w.playerShots.size + w.missiles.size < inFlight - killedByShots || bites > 0) w.onCue('hit');
     /*
       The debris burst's twin, and it is skipped on the one step the boss dies.
 
@@ -1678,6 +1691,8 @@ export function cueOfFlight(flight: FlightKind): CueKind {
       return 'pulse';
     case 'chain':
       return 'arc';
+    case 'orbit':
+      return 'throw';
     default: {
       const unhandled: never = flight;
       return unhandled;
@@ -1700,9 +1715,86 @@ function fireShip(w: World): void {
     case 'chain':
       fireArc(w);
       return;
+    case 'orbit':
+      throwBlade(w);
+      return;
     default: {
       const unhandled: never = w.weapon.flight;
       return unhandled;
+    }
+  }
+}
+
+/**
+ * The `kind` a blade carries in `playerShots`, so `steerBlades` can tell it from a pulse that was in
+ * the air when the player switched guns. Every other player shot carries zero.
+ */
+const BLADE_KIND = 1;
+
+/** How far from the ship's centre a blade starts its spiral, in world units. Just clear of the hull. */
+const BLADE_START = 3;
+
+/** Steps a blade shows each of its two turns for. A quarter-turn every eight steps reads as a spin. */
+const BLADE_TURN_STEPS = 4;
+
+/**
+ * A shuriken thrown — `docs/decisions/0234-a-blade-circles-the-ship.md`.
+ *
+ * ⚠️ **INTO THE PULSE'S POOL, because a ship carries one gun** — the same argument that took the
+ * bolts' slots out of it (0233). What tells a blade from a pulse afterwards is `BLADE_KIND`, and
+ * what tells the pool a blade is not spent by arriving is its health (`src/sim/collide.ts`).
+ *
+ * ⚠️ **It starts ahead of the nose and turns the same way every time**, so successive blades are a
+ * cadence apart on the same spiral — at `turn` radians a step and thirty steps a throw they leave
+ * more than half a turn apart, which spreads a ring of them without a roll. The spawn stream is not
+ * consulted, on `spawnWave`'s argument: what a gun does is authored, not dealt.
+ */
+function throwBlade(w: World): void {
+  const row = SHOTS[WEAPONS[w.weapon.kind].shot];
+  // On the grid, like every gun — 0094.
+  w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);
+  const blade = w.playerShots.spawn();
+  if (blade === null) return;
+  w.onCue('throw', w.ship.across);
+  reset(blade, w.ship.along + BLADE_START, w.ship.across, row, BLADE_KIND);
+  blade.velAlong = w.scrollPerStep;
+  blade.damage = w.weapon.damage;
+  blade.lifeFor = w.weapon.orbit;
+  blade.orbitAngle = 0;
+  blade.orbitRadius = BLADE_START;
+  blade.orbitTurn = w.weapon.turn;
+  blade.orbitGrow = row.speed;
+}
+
+/**
+ * Every blade in the air, moved to its next place on its spiral about the ship.
+ *
+ * ⚠️ **The VELOCITY is set and `stepEntities` integrates it**, rather than the position being
+ * written here, so `prev` is what the painter interpolates from and the swept collision sees the
+ * whole of a fast outer arc — a blade at the end of its spiral covers four units a step, which is
+ * more than its own hurtbox, and `overlaps` sweeps the step for exactly that.
+ *
+ * ⚠️ **About where the ship IS, not where it was thrown from.** The ship flies inside the ring; a
+ * ring pinned to the throw would be left behind at the scroll rate and read as a thing dropped.
+ *
+ * ⚠️ **And it spins by swapping its two turns** — the row's `sprite` and `spriteHit` are the star
+ * and the star an eighth of a turn round (`src/content/shots.ts`), and a blade never flashes, so
+ * the swap is what the next `stepEntities` draws.
+ */
+function steerBlades(w: World): void {
+  for (let i = w.playerShots.size - 1; i >= 0; i--) {
+    const b = w.playerShots.at(i);
+    if (b.kind !== BLADE_KIND) continue;
+    b.orbitAngle += b.orbitTurn;
+    b.orbitRadius += b.orbitGrow;
+    const along = w.ship.along + Math.cos(b.orbitAngle) * b.orbitRadius;
+    const across = w.ship.across + Math.sin(b.orbitAngle) * b.orbitRadius;
+    b.velAlong = along - b.along;
+    b.velAcross = across - b.across;
+    if (b.lifeFor % BLADE_TURN_STEPS === 0) {
+      const turned = b.spriteBase;
+      b.spriteBase = b.spriteHit;
+      b.spriteHit = turned;
     }
   }
 }
