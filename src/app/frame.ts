@@ -47,6 +47,7 @@ import { type Entity, reset, stepEntities } from '../sim/entity.ts';
 // restated so a scattered pickup's wall and the ship's own clamp are one number — 0100, and the same
 // reason `src/app/mount.ts` imports `PLAYER_LEAD` for the mark that draws it (0074).
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, SCROLL_PER_STEP, flyShip, holdStation } from '../sim/flight.ts';
+import { BURN_ASK, EASE_ASK, EXHAUST, PULSE_STEPS, SWAY, THRUST } from '../content/exhaust.ts';
 import type { Intent } from '../sim/intent.ts';
 import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
@@ -696,6 +697,15 @@ export interface World {
    * anywhere in `src/render/` about what a ship is wearing.
    */
   shieldOrbs: Pool<Entity>;
+  /**
+   * The ship's exhaust: one entity, placed at the tail every step — 0230.
+   *
+   * ⚠️ **A pool of one rather than a field on the ship, because a painter is handed pools.**
+   * `paintScene` blits what is in a layer; a flame that was a property of the ship would need the
+   * painter to know what a ship is, which `src/render/scene.ts` refuses. Drawn directly under the
+   * ship, so the root of the flame is behind the hull.
+   */
+  exhaust: Pool<Entity>;
   enemies: Pool<Entity>;
   /** What the player fired. Separate from `enemyShots` because the PAIRING is the collision guard. */
   playerShots: Pool<Entity>;
@@ -1477,6 +1487,9 @@ export class GameFrame implements Frame {
     // takes health off a released ship any more, so this is the belt to that gate's braces — and it
     // is worth having, because the failure is a run that empties itself in under a second.
     if (flying && w.ship.health <= 0) wreckShip(w);
+    // After the wreck check, so the flame goes out on the step the hull does and not one later —
+    // 0230. It reads the pool rather than `flying`, which was true at the top of this step.
+    stepExhaust(w);
 
     /*
       The level script.
@@ -1906,6 +1919,47 @@ function stepShields(w: World): void {
     orb.along = w.ship.along + Math.cos(angle) * SHIELD_ORBIT;
     orb.across = w.ship.across + Math.sin(angle) * SHIELD_ORBIT;
   }
+}
+
+/**
+ * The ship's exhaust: lit while the ship flies, out when it does not, and shaped by the ask — 0230.
+ *
+ * ⚠️ **THE STATE IS THE INTENT AND THE SWAY IS THE VELOCITY, AND THAT SPLIT IS THE FEEL.** What the
+ * engines are DOING is what the player asked for this step — a hard push forward burns even against
+ * the front of the box, where the velocity is clamped to nothing. Where the flame HANGS is where the
+ * ship is actually going: it trails against the across velocity, so a climb hangs the flame below
+ * the tail and a stop swings it back, on the same lag `FLIGHT_RESPONSE` gives the hull.
+ *
+ * ⚠️ **Carried by hand, exactly as the shell is**: nothing else steps this pool, and the renderer
+ * interpolates from `prevAlong`. Nothing allocates — a row lookup, an integer divide and six writes.
+ */
+function stepExhaust(w: World): void {
+  const flying = w.shipPool.size > 0;
+  if (!flying) {
+    // A wreck has no engines. The flame goes out on the step the hull does.
+    if (w.exhaust.size > 0) w.exhaust.releaseAt(0);
+    return;
+  }
+  let flame: Entity;
+  if (w.exhaust.size > 0) {
+    flame = w.exhaust.at(0);
+  } else {
+    const lit = w.exhaust.spawn();
+    if (lit === null) return;
+    reset(lit, w.ship.along, w.ship.across, EXHAUST);
+    flame = lit;
+  }
+  const ask = w.intent.along;
+  const row = ask > BURN_ASK ? THRUST.burn : ask < EASE_ASK ? THRUST.ease : THRUST.idle;
+  const page = Math.floor(w.steps / PULSE_STEPS) % row.frames.length;
+  const sprite = row.frames[page]!;
+  flame.spriteBase = sprite;
+  flame.spriteHit = sprite;
+  flame.sprite = sprite;
+  flame.prevAlong = flame.along;
+  flame.prevAcross = flame.across;
+  flame.along = w.ship.along - row.trail;
+  flame.across = w.ship.across - w.ship.velAcross * SWAY;
 }
 
 /**

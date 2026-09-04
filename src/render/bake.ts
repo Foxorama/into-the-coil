@@ -507,6 +507,13 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   burst3: 'flame',
   spark0: 'impact',
   spark1: 'bullet',
+  // The exhaust is the palette's fire on the same terms as a burst — 0230: the flame is the
+  // exhaust ink, its heart the hazard ink, its core the flash. None of it means anything.
+  thrustIdle0: 'flame',
+  thrustIdle1: 'flame',
+  thrustBurn0: 'flame',
+  thrustBurn1: 'flame',
+  thrustEase: 'flame',
   /*
     ⚠️ **The one ink that is not meant to be found.** `src/content/palette.ts` records it: every other
     role is something the player has to be able to pick out, and the sky is the thing they are all
@@ -919,22 +926,9 @@ const SHIP_CORE: readonly Pt[] = [
   [-0.77, -0.15],
 ];
 
-/** The plume, trailing past the tail. Translucent, so it may leave the hull and stays in the box. */
-const SHIP_PLUME: readonly Pt[] = [
-  [-0.78, -0.3],
-  [-1.15, -0.25],
-  [-1.15, -0.17],
-  [-0.78, -0.12],
-];
-
-const SHIP_PLUME_HOT: readonly Pt[] = [
-  [-0.78, -0.27],
-  [-1.02, -0.22],
-  [-0.78, -0.15],
-];
-
 /**
- * The fighter's paint, over a sealed hull: panels, keel, canopy, engines and their plumes.
+ * The fighter's paint, over a sealed hull: panels, keel, canopy and engines. The plume is an
+ * entity of its own since 0230 — `src/content/exhaust.ts`.
  *
  * `tier` adds the pods' and canards' own marks, so an upgrade is a louder ship and not only a wider
  * one — `docs/game.md`: *"every upgrade changes how the ship looks on screen."*
@@ -943,9 +937,8 @@ function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number): void {
   const body = palette.player;
   const dark = shade(body, -0.32);
   const light = shade(body, 0.5);
-  // The plumes first, so the housing sits over their roots rather than under them.
-  for (const side of [SHIP_PLUME, mirrored(SHIP_PLUME)]) poly(ctx, f, palette.bullet, side, 0.55);
-  for (const side of [SHIP_PLUME_HOT, mirrored(SHIP_PLUME_HOT)]) poly(ctx, f, palette.hazard, side, 0.6);
+  // ⚠️ No plume on the hull since 0230: the exhaust is an entity that follows the ship, and a flame
+  // baked here would be a second, still one under the one that moves.
   for (const side of [SHIP_WING_PANEL, mirrored(SHIP_WING_PANEL)]) poly(ctx, f, dark, side);
   // The keel, behind the canopy, in the trim ink — the seam down the hull.
   poly(ctx, f, palette.trim, [
@@ -3166,6 +3159,87 @@ export function drawKind(
       for (let i = 0; i < 5; i++) {
         const a = rng.range(0, Math.PI * 2);
         disc(ctx, f, palette.hazard, Math.cos(a) * 1.05, Math.sin(a) * 1.05, 0.1, 0.85);
+      }
+      return;
+    }
+    /*
+      ── THE EXHAUST — 0230 ──────────────────────────────────────────────────────────────────────
+
+      Two flames, one per nacelle, with their roots at the sprite's forward edge and their tips at
+      its back. No hull and no outline, on the burst's own terms: fire has no edge. The two idle
+      frames and the two burning frames differ in length and in where the flicker is, so alternating
+      them on the step clock reads as a flame that is alive; the ease frame is a wisp.
+
+      ⚠️ **THE NACELLES ARE 0.62 UNITS OFF THE CENTRELINE ON THE HULL**, and each kind's box is a
+      different size, so the offset is stated in units and divided by the kind's own radius here.
+    */
+    case 'thrustIdle0':
+    case 'thrustIdle1': {
+      const flick = kind === 'thrustIdle1';
+      const y = 0.62 / (SPRITE_EXTENT[kind] * 0.42);
+      for (const side of [1, -1] as const) {
+        glow(ctx, f, palette.hazard, 0.55, y * side, 0.5, 0.6);
+        poly(ctx, f, palette.bullet, [
+          [0.92, (y - 0.19) * side],
+          [0.3, (y - 0.16) * side],
+          [flick ? -0.35 : -0.55, y * side],
+          [0.3, (y + 0.16) * side],
+          [0.92, (y + 0.19) * side],
+        ], 0.8);
+        poly(ctx, f, palette.hazard, [
+          [0.92, (y - 0.11) * side],
+          [0.4, (y - 0.09) * side],
+          [flick ? 0.05 : -0.1, y * side],
+          [0.4, (y + 0.09) * side],
+          [0.92, (y + 0.11) * side],
+        ], 0.85);
+        disc(ctx, f, palette.impact, 0.76, y * side, 0.11, 0.85);
+      }
+      return;
+    }
+    case 'thrustBurn0':
+    case 'thrustBurn1': {
+      const flick = kind === 'thrustBurn1';
+      const y = 0.62 / (SPRITE_EXTENT[kind] * 0.42);
+      for (const side of [1, -1] as const) {
+        glow(ctx, f, palette.hazard, 0.4, y * side, 0.6, 0.7);
+        poly(ctx, f, palette.bullet, [
+          [0.94, (y - 0.17) * side],
+          [0.3, (y - 0.15) * side],
+          [-0.3, (y - 0.1) * side],
+          [flick ? -1.0 : -0.85, (y + (flick ? 0.02 : -0.03)) * side],
+          [-0.3, (y + 0.1) * side],
+          [0.3, (y + 0.15) * side],
+          [0.94, (y + 0.17) * side],
+        ], 0.85);
+        poly(ctx, f, palette.hazard, [
+          [0.94, (y - 0.1) * side],
+          [0.2, (y - 0.08) * side],
+          [flick ? -0.55 : -0.42, y * side],
+          [0.2, (y + 0.08) * side],
+          [0.94, (y + 0.1) * side],
+        ], 0.9);
+        poly(ctx, f, palette.impact, [
+          [0.94, (y - 0.05) * side],
+          [0.5, (y - 0.04) * side],
+          [flick ? -0.05 : 0.1, y * side],
+          [0.5, (y + 0.04) * side],
+          [0.94, (y + 0.05) * side],
+        ], 0.9);
+      }
+      return;
+    }
+    case 'thrustEase': {
+      const y = 0.62 / (SPRITE_EXTENT[kind] * 0.42);
+      for (const side of [1, -1] as const) {
+        glow(ctx, f, palette.flame, 0.7, y * side, 0.4, 0.5);
+        poly(ctx, f, palette.flame, [
+          [0.92, (y - 0.14) * side],
+          [0.5, (y - 0.1) * side],
+          [0.2, y * side],
+          [0.5, (y + 0.1) * side],
+          [0.92, (y + 0.14) * side],
+        ], 0.6);
       }
       return;
     }

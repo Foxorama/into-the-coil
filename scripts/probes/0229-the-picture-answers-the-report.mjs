@@ -19,8 +19,9 @@ export const PROBES = [
     guard: 'is drawn over the bodies and under every shot — 0229',
     edit: {
       path: 'src/app/mount.ts',
-      find: '    layers: [blasts, pickupPool, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, shieldOrbs, shipPool],',
-      replace: '    layers: [debris, blasts, pickupPool, bossPool, enemies, enemyShots, playerShots, missiles, bombs, shieldOrbs, shipPool],',
+      // ⚠️ Re-anchored by 0230, which put the exhaust in the order.
+      find: '    layers: [blasts, pickupPool, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, exhaust, shieldOrbs, shipPool],',
+      replace: '    layers: [debris, blasts, pickupPool, bossPool, enemies, enemyShots, playerShots, missiles, bombs, exhaust, shieldOrbs, shipPool],',
     },
   },
   {
@@ -35,8 +36,9 @@ export const PROBES = [
     guard: 'is drawn over the bodies and under every shot — 0229',
     edit: {
       path: 'src/app/mount.ts',
-      find: '    layers: [blasts, pickupPool, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, shieldOrbs, shipPool],',
-      replace: '    layers: [blasts, pickupPool, bossPool, enemies, enemyShots, debris, playerShots, missiles, bombs, shieldOrbs, shipPool],',
+      // ⚠️ Re-anchored by 0230, which put the exhaust in the order.
+      find: '    layers: [blasts, pickupPool, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, exhaust, shieldOrbs, shipPool],',
+      replace: '    layers: [blasts, pickupPool, bossPool, enemies, enemyShots, debris, playerShots, missiles, bombs, exhaust, shieldOrbs, shipPool],',
     },
   },
   {

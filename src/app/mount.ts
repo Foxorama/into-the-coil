@@ -132,13 +132,15 @@ import { runLoop } from './loop.ts';
 export const CAPACITY = {
   ship: 1,
   shieldOrbs: MAX_SHIELDS,
+  // The ship's exhaust — 0230. One, out of the particle share, on the shell's own terms.
+  exhaust: 1,
   enemies: 40,
   playerShots: 100,
   missiles: 24,
   bombs: 4,
   blasts: 4,
   enemyShots: 150,
-  debris: 200 - MAX_SHIELDS - 24 - 8 - 4,
+  debris: 200 - MAX_SHIELDS - 1 - 24 - 8 - 4,
   boss: 1,
   /*
     ⚠️ **TWELVE, AND IT WAS EIGHT.** A death now throws every upgrade it took back onto the field
@@ -524,6 +526,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const colours = PALETTES[palette];
   const shipPool = new Pool<Entity>(CAPACITY.ship, makeEntity);
   const shieldOrbs = new Pool<Entity>(CAPACITY.shieldOrbs, makeEntity);
+  const exhaust = new Pool<Entity>(CAPACITY.exhaust, makeEntity);
   const enemies = new Pool<Entity>(CAPACITY.enemies, makeEntity);
   const playerShots = new Pool<Entity>(CAPACITY.playerShots, makeEntity);
   const missiles = new Pool<Entity>(CAPACITY.missiles, makeEntity);
@@ -666,7 +669,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // meant to be able to pick out of a screen full of the lighter one.
     // The blast sits under everything it is doing damage to, so the player can see what is inside
     // it — including their own ship, which is the one thing they need to be looking at.
-    layers: [blasts, pickupPool, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, shieldOrbs, shipPool],
+    // The exhaust sits under the shell and the ship — 0230 — so the root of the flame is behind the
+    // hull, and the shell's own rule (nothing between a ship and its marks) still holds.
+    layers: [blasts, pickupPool, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, exhaust, shieldOrbs, shipPool],
     /*
       THE SKY, back to front — `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
 
@@ -690,6 +695,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     bound: BOUND,
     shipPool,
     shieldOrbs,
+    exhaust,
     enemies,
     playerShots,
     missiles,

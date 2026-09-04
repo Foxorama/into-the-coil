@@ -52,6 +52,12 @@ const DESKTOP = viewOf(1280, 720);
 
 /** Kinds that are drawn without a hull, and are therefore not measured against one. */
 const HULLLESS: readonly SpriteKind[] = [
+  // The exhaust is a flame with no hull, on the burst's own terms — 0230.
+  'thrustIdle0',
+  'thrustIdle1',
+  'thrustBurn0',
+  'thrustBurn1',
+  'thrustEase',
   'skyFar',
   'skyNear',
   'skyRush',
