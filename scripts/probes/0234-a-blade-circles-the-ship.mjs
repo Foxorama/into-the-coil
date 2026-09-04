@@ -117,4 +117,22 @@ export const PROBES = [
       replace: '    pickup: SPRITE.pickupArc,',
     },
   },
+  {
+    decision: '0234',
+    suite: 'tests/pickups.test.ts',
+    /*
+      ⚠️ THE GUARD 0234 OWED TO 0087, seen red from its other side. A third weapon face lengthened
+      the wait and 0087's bob probe went STILL GREEN against the guard 0233 had aimed it at, so the
+      bob's rhythm is held in seconds now — and the floor of that guard is what the 0087 probe
+      reddens. This is the ceiling: a bob authored quick and strong enough to survive the ease is a
+      shiver, and a pickup that shivers is not the thing 0087 describes.
+    */
+    broke: 'the bob authored five times as quick and eight times as strong, so a waiting pickup shivers',
+    guard: 'and the bob is a bob and not a shiver',
+    edit: {
+      path: 'src/app/frame.ts',
+      find: '      PICKUP_BOB_SPEED * Math.sin(w.cameraAlong / PICKUP_BOB_UNITS + item.bobPhase);',
+      replace: '      PICKUP_BOB_SPEED * 8 * Math.sin(w.cameraAlong / 3 + item.bobPhase);',
+    },
+  },
 ];

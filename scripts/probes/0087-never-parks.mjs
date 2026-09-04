@@ -65,10 +65,12 @@ export const PROBES = [
       to come forward, which is the thing 0077's guard is about and the thing nothing else can see.
     */
     broke: 'the bob’s phase taken from a field that drifts, so the wander runs at a quarter of its period',
-    // ⚠️ Re-aimed by 0233: over a pickup that wanders the box, a bob running off `across` no longer
-    // shortens the wander — it makes the pickup too fast to count as waiting at all, which is the
-    // guard 0064 wrote in the player's units.
-    guard: 'THE REPORTED ONE: it stops running away',
+    // ⚠️ Re-aimed by 0233 at 0064's *it stops running away*, and that caught it by a sixth of a
+    // second. Re-aimed again by 0234: a third weapon face lengthened the wait and the margin went the
+    // other way (STILL GREEN), so the guard is now the bob's own rhythm in seconds — the ease smears
+    // a phase that runs off `across` to nearly nothing, and the pickup turns back only where the
+    // wander does.
+    guard: 'and the bob is a bob and not a shiver',
     edit: {
       path: 'src/app/frame.ts',
       find: '      PICKUP_BOB_SPEED * Math.sin(w.cameraAlong / PICKUP_BOB_UNITS + item.bobPhase);',

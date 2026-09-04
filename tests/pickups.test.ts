@@ -1384,6 +1384,51 @@ describe('collecting one, in the real frame', () => {
       expect(low).toBeLessThan(high);
     });
 
+    it('and the bob is a bob and not a shiver: it turns back along the lane about once a second', () => {
+      /*
+        ── THE BOB'S RHYTHM, IN SECONDS ──────────────────────────────────────────────────────────────
+
+        ⚠️ **A guard 0234 owed to 0087.** 0087's first draft ran the bob's phase off `across`, a field
+        that drifts, so the bob ran off the pickup's own sideways wander rather than off the camera —
+        several times faster than authored while it crossed the lane. The probe that keeps that
+        draft out (`scripts/probes/0087-a-pickup-never-parks.mjs`) was aimed by 0233 at *it stops
+        running away*, and that guard caught it by a margin of a sixth of a second. A third weapon
+        face lengthened the wait (`lingerFor` is repeats × faces × cycle) and the margin went the
+        other way: `npm run prove` reported STILL GREEN.
+        `docs/decisions/0234-a-blade-circles-the-ship.md`.
+
+        ⚠️ **So the bob's rhythm is held in the player's units, and nothing here reads
+        `PICKUP_BOB_UNITS` or `PICKUP_BOB_SPEED`.** What is counted is how often the pickup turns
+        back along the lane while it waits — the bob's authored period is a couple of seconds, so it
+        turns back about once a second. Off `across` the phase runs five times faster and the ease
+        (`PICKUP_EASE`) smears an oscillation that quick to nearly nothing, so the pickup turns back
+        only where the wander itself turns: a few times in a whole wait. The authored rhythm sits
+        between the two edges (the decision has the figures), and a bob outside them is not a bob —
+        too slow reads as a line (0087's own defect), too fast as a shiver.
+      */
+      const { offsets } = trackOffset(1400);
+      let start = -1;
+      for (let i = 1; i < offsets.length; i++) {
+        if (waiting(offsets, i)) {
+          start = i;
+          break;
+        }
+      }
+      expect(start, 'the pickup never began its wait').toBeGreaterThan(0);
+      let turns = 0;
+      let heading = 0;
+      for (let i = start; i < offsets.length; i++) {
+        const delta = offsets[i]! - offsets[i - 1]!;
+        const sign = delta > 0 ? 1 : delta < 0 ? -1 : 0;
+        if (sign !== 0 && heading !== 0 && sign !== heading) turns++;
+        if (sign !== 0) heading = sign;
+      }
+      const seconds = (offsets.length - start) / STEPS_PER_SECOND;
+      const perSecond = turns / seconds;
+      expect(perSecond, `the pickup turned back ${turns} times in ${seconds.toFixed(1)}s, which is a line and not a bob`).toBeGreaterThan(0.4);
+      expect(perSecond, `the pickup turned back ${turns} times in ${seconds.toFixed(1)}s, which is a shiver and not a bob`).toBeLessThan(2);
+    });
+
     it('and the wait is a journey that ends where the ship flies', () => {
       /*
         ── THE CEILING ON THE BAND BECAME A FLOOR UNDER IT ──────────────────────────────────────────

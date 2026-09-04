@@ -59,6 +59,26 @@ its ring for two seconds. Copied at the throw, they finish what they started.
 there; under `evenodd` the overlap cancels (0194). The fin moves to the pod's outer edge once there
 is a pod.
 
+## A guard this decision owed to 0087
+
+A third weapon face made the weapon pickup's wait longer — `lingerFor` is repeats × faces × cycle —
+and `npm run prove` reported STILL GREEN for 0087's *the bob's phase taken from a field that
+drifts*. 0233 had aimed that probe at 0064's *it stops running away*, which caught it by a sixth of
+a second (0.83 s against a floor of 1 s); a longer wait gave the broken bob room to clear the floor.
+Per [0019](0019-a-probe-must-be-seen-to-apply.md) the answer is a guard that fires on the thing the
+probe breaks, in the player's units — `and the bob is a bob and not a shiver` in
+`tests/pickups.test.ts` counts how often a waiting pickup turns back along the lane:
+
+| the bob | turns back per second |
+|---|---|
+| as authored | 0.68 |
+| phase off `across` (0087's first draft) — the ease smears it to nearly nothing | 0.27 |
+| five times as quick and eight times as strong | 3.07 |
+
+The floor is 0.4 and the ceiling 2. Both edges have been seen red: the 0087 probe reddens the
+floor, and a probe here reddens the ceiling. Neither edge names `PICKUP_BOB_UNITS` or
+`PICKUP_BOB_SPEED`.
+
 ## What is owed
 
 - **An eye on the ring in motion**, at the shipped camera: whether eight blades read as a ring or as
@@ -87,3 +107,7 @@ the collision; nothing persisted.
 | the last rung of the spiral authored past what the pool can hold | `never fills with blades` |
 | the shuriken's first hull made the pulse's | `THE HULLS: every gun has its own` |
 | the shuriken's pickup face given the arc's bolt | `THE FACES: the weapon pickup offers every gun` |
+| the bob authored five times as quick and eight times as strong | `and the bob is a bob and not a shiver` |
+
+And `node scripts/prove-guard.mjs 0087`, re-aimed: *the bob's phase taken from a field that drifts*
+→ `and the bob is a bob and not a shiver`.
