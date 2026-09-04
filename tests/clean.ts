@@ -45,8 +45,9 @@ import {
   type MusicLayer,
   type MusicLevel,
 } from '../src/content/music.ts';
-import { auraCeilingOf, mixOf, revoicedBy, rungOf, type ThemeKind } from '../src/content/themes.ts';
+import { THEMES, auraCeilingOf, mixOf, revoicedBy, rungIn, rungOf, type ThemeKind } from '../src/content/themes.ts';
 import { compressBuffer } from './compress.ts';
+import { loudnessOf } from './loudness.ts';
 
 /** Which layers the aura scales, so a fight is measured at the loudness a fight reaches. */
 const FOLLOWS_THE_BOSS: readonly MusicLayer[] = ['auraSlow', 'auraFast'];
@@ -96,6 +97,16 @@ export interface DriveAt {
    * applies to `run → push`, where it is the thing that was reported.
    */
   rms: number;
+  /**
+   * The same signal's K-weighted loudness, in LUFS — `tests/loudness.ts`.
+   *
+   * ⚠️ **THE UNIT THE SIXTH REPORT WAS MADE IN, AND THE FIRST FIVE ANSWERS WERE NOT** —
+   * `docs/decisions/0226-the-level-holds-one-loudness.md`. `rms` weighs `sub` as heavily as `lead`;
+   * an ear does not, and `run → push` is four bright parts arriving over a bass-heavy bed, so this is
+   * the number that moves when a listener says the volume went up. `rms` stays beside it because
+   * the clipping and distortion claims are about the signal, not about the ear.
+   */
+  loud: number;
 }
 
 /**
@@ -123,13 +134,38 @@ export function driveAt(
   drive = MUSIC_DRIVE,
   comp = MUSIC_COMPRESSOR,
 ): DriveAt {
-  const length = Math.round(PHRASE_SECONDS * rate);
+  return driveGains(theme, rung, gainsAt(theme, rung, trim), rate, drive, comp);
+}
+
+/**
+ * Every layer's gain at one rung of one place, as the mixer would set it once the ramps settle.
+ *
+ * ⚠️ **`held` IS WHAT `scripts/solve-hold.mjs` TURNS OFF** — 0226. `rungOf` answers with the place's
+ * hold already multiplied in, which is what every guard should measure; the solver has to see the
+ * ladder BEFORE the hold to find the hold, so it asks for the bare row. Nothing shipped passes
+ * `false`.
+ */
+export function gainsAt(theme: ThemeKind, rung: MusicLevel, trim = 1, held = true): Record<MusicLayer, number> {
   const nearness = rung === 'boss' || rung === 'bossPeak' ? 1 : auraCeilingOf(theme);
   const gains = {} as Record<MusicLayer, number>;
   for (const layer of MUSIC_LAYERS) {
     const ceiling = FOLLOWS_THE_BOSS.includes(layer) ? nearness : 1;
-    gains[layer] = rungOf(theme, rung, layer) * mixOf(theme, layer) * ceiling * trim;
+    const row = held ? rungOf(theme, rung, layer) : rungIn(THEMES[theme].ladder, rung, layer);
+    gains[layer] = row * mixOf(theme, layer) * ceiling * trim;
   }
+  return gains;
+}
+
+/** `driveAt` over gains handed in — the half a solver can drive without editing the tree under it. */
+export function driveGains(
+  theme: ThemeKind,
+  rung: MusicLevel,
+  gains: Readonly<Record<MusicLayer, number>>,
+  rate = SAMPLE_RATE,
+  drive = MUSIC_DRIVE,
+  comp = MUSIC_COMPRESSOR,
+): DriveAt {
+  const length = Math.round(PHRASE_SECONDS * rate);
 
   /*
     ⚠️ **THE BUFFERS ARE HOISTED, AND THE FIRST DRAFT LOOKED THEM UP PER LAYER PER SAMPLE.** That is a
@@ -179,6 +215,8 @@ export function driveAt(
     */
     const held = clean < -1 ? -1 : clean > 1 ? 1 : clean;
     const dirty = saturate(held, drive);
+    // The buffer becomes the shaper's OUTPUT in place, which is what the loudness below is of.
+    mixed[i] = dirty;
     const size = clean < 0 ? -clean : clean;
     if (size > peak) peak = size;
     const loud = dirty < 0 ? -dirty : dirty;
@@ -189,12 +227,13 @@ export function driveAt(
   }
   // The output's own RMS, which is `dirtyDotDirty` already accumulated — no second walk.
   const rms = 10 * Math.log10(dirtyDotDirty / length);
+  const loud = loudnessOf(mixed, rate);
 
   const fit = cleanDotClean > 0 ? dirtyDotClean / cleanDotClean : 0;
   const residual = Math.max(0, dirtyDotDirty - fit * dirtyDotClean);
   const distortion =
     dirtyDotDirty <= 0 || residual <= 0 ? -Infinity : 10 * Math.log10(residual / dirtyDotDirty);
-  return { theme, rung, peak, out, distortion, rms };
+  return { theme, rung, peak, out, distortion, rms, loud };
 }
 
 /**

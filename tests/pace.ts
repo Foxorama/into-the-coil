@@ -21,7 +21,7 @@ import {
   MUSIC_ROOT,
   type MusicLevel,
 } from '../src/content/music.ts';
-import { auraCeilingOf, mixOf, notesPerBar, revoicedBy, rungOf, voicesOf, THEMES, type ThemeKind, type ThemeRow } from '../src/content/themes.ts';
+import { auraCeilingOf, mixOf, notesPerBar, revoicedBy, rungIn, rungOf, voicesOf, THEMES, type ThemeKind, type ThemeRow } from '../src/content/themes.ts';
 
 /**
  * The aura ceiling for a place, or for the base composition, which is not one.
@@ -268,7 +268,16 @@ function loudestOf(theme: ThemeKind | undefined, layer: MusicLayer): number {
     const ceiling = FOLLOWS_THE_BOSS.includes(layer) ? auraCeilingIn(theme) : 1;
     // `undefined` is *the base composition* and level one is the place that plays it unmixed —
     // the same reading `rungShape` above takes, rather than a second opinion about what no theme means.
-    const at = rungOf(theme ?? 'approach', rung, layer) * mixOf(theme ?? 'approach', layer) * ceiling;
+    /*
+      ⚠️ **THE BARE LADDER, SINCE 0226.** Every question asked over this — audible at all (0140), a
+      role's margin (0164), a third of a place not a whisper (0147) — is *can this be heard against
+      the rest of what is playing*, and what is playing is one rung. The hold lowers a whole rung by
+      one number, so inside any rung it changes no ratio; across rungs it would compare a fight-only
+      layer, held, against a bed layer at `run`, unheld — two levels no listener ever hears together.
+      `rungIn` is the arrangement; `rungOf` is the arrangement at the level the rung is played at.
+    */
+    const place = theme ?? 'approach';
+    const at = rungIn(THEMES[place].ladder, rung, layer) * mixOf(place, layer) * ceiling;
     if (at > most) most = at;
   }
   return most;

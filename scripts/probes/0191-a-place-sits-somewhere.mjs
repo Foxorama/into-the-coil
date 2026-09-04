@@ -48,25 +48,16 @@ export const PROBES = [
       replace: '          MUSIC_LADDER[level][lead],',
     },
   },
-  {
-    decision: '0191',
-    suite: 'tests/themes.test.ts',
-    /*
-      ⚠️ THE PLACE'S OWN LEVEL DROPPED OUT OF THE PRODUCT. `trim` is the whole of how this level stops
-      driving the bus into the clamp — 0.13% of samples at `surge` against a guard of 0.05% — without
-      moving a single ratio the player drove. Taking it out is one `?? 1` and it is invisible in a
-      diff of an expression that already has two of them.
+  /*
+    ── A SECOND PROBE STOOD HERE AND 0226 RETIRED IT ───────────────────────────────────────────────
 
-      ⚠️ AND THE GUARD IT REDDENS IS IN THE UNIT A LISTENER IS IN — the share of samples pushed past
-      full scale, which is heard as the mix flattening, rather than a model quantity defined in terms
-      of the constant it guards. docs/decisions/0027-measure-the-picture-not-the-model.md.
-    */
-    broke: 'the place’s own level dropped out of the mix, so its balance drives the bus into the clamp',
-    guard: 'and no theme at any rung drives the bus past full scale',
-    edit: {
-      path: 'src/content/themes.ts',
-      find: '  return (THEMES[theme].mix[layer] ?? 1) * (REBASE[theme][layer] ?? 1) * (THEMES[theme].trim ?? 1);',
-      replace: '  return (THEMES[theme].mix[layer] ?? 1) * (REBASE[theme][layer] ?? 1);',
-    },
-  },
+    ⚠️ "THE PLACE'S OWN LEVEL DROPPED OUT OF THE MIX" took `trim` out of `mixOf` and expected Saurian
+    Belt's `surge` to drive the bus past full scale on 0.13% of samples, as it did the day 0191 was
+    written. Under docs/decisions/0226-the-level-holds-one-loudness.md that rung is held 1.3 dB down
+    and its loudest sample reaches **0.969** of full scale with the trim in; without it the share past
+    the clamp stays under the guard's 0.05%, and `npm run prove` reported STILL GREEN. The trim's
+    claim survives — *this place is loud*, a hand's level over the whole place — but its role as the
+    thing between Saurian Belt and the clamp is the hold's now, and a break the tree cannot see is
+    what docs/decisions/0005-a-guard-must-be-seen-to-fail.md says not to keep.
+  */
 ];

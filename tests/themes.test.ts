@@ -20,6 +20,7 @@ import {
   voicesOf,
   type ThemeKind,
   REBASE,
+  holdOf,
 } from '../src/content/themes.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import {
@@ -40,7 +41,8 @@ import { addRoom, bakeLayer } from '../src/app/music.ts';
 import { BANDS, bandEnergy } from './spectrum.ts';
 // 0218: the through-shaper loudness, which is the only place a CONTRAST between rungs can be read.
 import { driveAt } from './clean.ts';
-import { LEVEL_BAND_DB } from './compress.ts';
+// 0226: the listener's unit, and the check that the filter design is the standard's.
+import { kWeighting } from './loudness.ts';
 import {
   AUDIBLE_FLOOR_DB,
   DUCK_FLOOR_DB,
@@ -423,100 +425,89 @@ describe('a theme mixes the music and cannot break it', () => {
   }, 180_000);
 
   /*
-    ── NO BOUNDARY INSIDE A LEVEL IS BIGGER THAN THE ONE THAT OPENS IT — 0218 ─────────────────────
+    ── A LEVEL HOLDS ONE LOUDNESS — 0226 ──────────────────────────────────────────────────────────
 
-    ⚠️ **Reported twice on the same six seconds**: *"it's background music up till that point and then
-    at around that point it loudly increases to foreground music volume."* Measured through the
-    shaper, The Approach's `push` carried **3.6 dB of a 4.1 dB climb** — eighty-eight per cent of
-    everything the level ever gains, in one boundary, and then flat for two minutes.
+    ⚠️ **SIX REPORTS ON THE SAME STRETCH OF THE APPROACH, AND THIS IS THE GUARD THAT STOPPED HOLDING
+    THE CLIMB.** 0215 held its rate, 0218 its evenness, 0219 its band — each measured through the
+    shaper, each correct, each answered by the next report. The sixth said the premise: *"the tempo
+    should be increasing, but the volume should be consistent for each track for the level."* What
+    stood here — *no boundary inside a level is bigger than the one that opens it* — asked the climb
+    to be well-shaped; this asks it not to be a climb.
 
-    ⚠️ **THE LEVEL IS MEASURED THROUGH THE SHAPER, WHICH IS THE HALF `tests/arc.ts` CANNOT DO.** That
-    file says so itself — it measures the bus *before* `saturate`, which is the safe direction for a
-    guard about loudness and the wrong one for a guard about a GAP: a shaper compresses the loud rung
-    harder than the quiet one, so the contrast a player hears is always smaller than the arc's, by an
-    amount that moves with `MUSIC_DRIVE`. 0217 changed that constant and moved every gap in the game.
-
-    ⚠️ **`calm → run` IS THE REFERENCE BECAUSE IT IS THE ONE NOBODY HAS EVER COMPLAINED ABOUT.** It is
-    the step that starts a level from the title screen's bed, so it is by definition a step a listener
-    accepts. A boundary in the middle of a level being bigger than that is the shape being reported.
+    ⚠️ **THE UNIT IS LUFS AND THE CHAIN IS THE SHIPPED ONE.** `driveAt` sums the real loops through
+    the compressor and the shaper and K-weights the result; `LEVEL_HOLD` in `src/content/themes.ts`
+    is solved against that same function, so what is asserted is that the solve still describes the
+    tree — a ladder row, a mix multiplier or a bus constant edited under it reddens this until the
+    hold is re-solved.
   */
 /**
- * How much bigger an inside boundary may be than the one that opens the level, in dB.
+ * How far any rung may sit from its place's `run`, in LU.
  *
- * ⚠️ **BETWEEN WHERE IT WAS AND WHERE IT IS.** The Approach measured 3.6 dB when it was reported
- * twice and 2.9 after 0218, so this reddens on the defect returning and passes the fix.
- *
- * ⚠️ **THREE PLACES ARE OVER IT AND NONE OF THEM WAS REPORTED** — 0218. The Toxic Mire, The Black
- * Heart and The Labyrinth climb by carried layers being turned up rather than by parts arriving, so
- * the fix that answered The Approach barely moves them. The slack is what that costs: set to the
- * worst that ships rather than to the rule, so the guard holds the shape it can and says out loud
- * that three places are the exception rather than pretending they are not.
+ * ⚠️ **A QUARTER OF A DECIBEL, AND IT WAS HALF UNTIL A PROBE WALKED THROUGH IT.** The solve lands
+ * within 0.02, so the slack is for the model moving under it by less than an ear can find. At 0.5,
+ * 0218's break — `push`'s `ride` and `hook` put back at the row that was reported twice — measured
+ * **+0.45 LU** and the suite stayed green; the thing this guard exists for is a ladder edited without
+ * the hold being re-solved, and that is what such an edit measures as. A whole decibel would admit a
+ * step a listener can name.
  */
-const BOUNDARY_CEILING_DB = 3.2;
+const HOLD_BAND_DB = 0.25;
 /** The rate the through-shaper measurements run at — 0215 measured a quarter rate at 0.05 dB. */
 const ARC_RATE = 22050;
 
-  it('no boundary inside a level is bigger than the one that opens it', () => {
+  it('every rung of a place holds its run loudness, in the listener’s unit, through the shipped bus', () => {
     /*
-      ⚠️ **THE FIRST DRAFT COMPARED EVERY PLACE TO ITS OWN OPENING AND THE LABYRINTH BROKE IT** — its
-      `calm → run` is **−0.5 dB**, so that level opens QUIETER than the title screen it comes from and
-      the reference is negative. A real oddity, a different subject, and a rule the content does not
-      support.
+      ⚠️ **EVERY PLACE AND EVERY RUNG, BECAUSE THE RULE IS NOT ABOUT ONE LEVEL ANY MORE.** 0218 and
+      0219 named The Approach because their ceilings could not admit the three places that climbed
+      further without admitting the defect; a hold has no such problem — a place that climbs seven
+      decibels on its own is held by a bigger number, not exempted. *"Happens in the approach and in
+      other levels as well"* is the report this answers.
 
-      ⚠️ **SO WHAT IS HELD IS THE PLACE THAT WAS REPORTED, BY NAME.** 3.2 dB sits between where The
-      Approach was when it was reported twice (**3.6**) and where it is now (**2.9**), so this reddens
-      on the defect returning and passes the fix — which is the whole of what a guard over a report
-      can honestly claim.
+      ⚠️ **`loud` AND NOT `rms`.** The parts `push` opens are bright and dense over a bass-heavy bed;
+      unweighted RMS moved 2.6 dB across the reported stretch and a listener called it the knob being
+      turned up. K-weighted, through the compressor and the shaper, is the closest a number gets to
+      that sentence — `tests/loudness.ts` has the filters and the table they reproduce.
 
-      ⚠️ **AND THE OTHER THREE ARE LOUDER AND UNREPORTED**, which is written down rather than guarded:
-      The Toxic Mire 4.4, The Black Heart 5.2, The Labyrinth 5.2. They climb by carried layers rather
-      than by parts arriving, so 0218's rule barely moves them, and a ceiling wide enough to admit
-      them would be wide enough to admit the defect. **Naming one place is worth more than a threshold
-      that holds nothing.**
+      ⚠️ **THE FIGHT RUNGS ARE HELD TOO.** *"Then stays at that high level"* is the fight; 0108's *the
+      boss arrives* is kept in the half that opens new things, below in `tests/music.test.ts`, and
+      not in the half that made it louder.
     */
-    const at = (rung: MusicLevel): number => driveAt('approach', rung, ARC_RATE).rms;
-    const inside = at('push') - at('run');
+    const offenders: string[] = [];
+    const said: string[] = [];
+    for (const theme of THEME_KINDS) {
+      const run = driveAt(theme, 'run', ARC_RATE).loud;
+      for (const rung of MUSIC_LEVELS) {
+        if (rung === 'calm' || rung === 'run') continue;
+        const over = driveAt(theme, rung, ARC_RATE).loud - run;
+        said.push(`${theme}/${rung} ${over >= 0 ? '+' : ''}${over.toFixed(2)}`);
+        if (Math.abs(over) > HOLD_BAND_DB) offenders.push(`${theme} ${rung} sits ${over.toFixed(2)} LU from its run`);
+      }
+    }
     expect(
-      inside,
-      `The Approach: run → push lifts ${inside.toFixed(1)} dB — reported twice as background ` +
-        'becoming foreground at 41 seconds',
-    ).toBeLessThan(BOUNDARY_CEILING_DB);
-    /*
-      ⚠️ **AND `surge` HAS TO BE A REAL MOVE, WHICH IS THE HALF THE FIX BOUGHT.** Before 0218 it was
-      **+0.5 dB** — `push` was the climb and the three rungs after it were decoration, which is
-      0136's *"Up, Up, Up"* measuring as *up, flat*.
-    */
-    /*
-      ⚠️ **0.5 AND IT WAS 1.0, BECAUSE 0219 PUT A 2:1 COMPRESSOR ABOVE −18 dB IN FRONT OF THE SHAPER.**
-      Everything above that threshold is halved at the speaker, so **the step is the same size in the
-      ladder and half the size in the ear** — measured, this went 1.2 dB to 0.66. Rebasing the floor
-      is not weakening the claim: what 0218 holds is that `surge` is a real move rather than half a
-      decibel of decoration, and half of a halved band is the same claim in the new units.
-    */
-    expect(at('surge') - at('push'), 'push → surge is not a step — push is still the whole climb').toBeGreaterThan(
-      0.5,
-    );
+      offenders,
+      `a level's loudness moves with its rung — reported six times as the volume going up at 41 ` +
+        `seconds. node scripts/solve-hold.mjs re-solves LEVEL_HOLD. ${said.join(', ')}`,
+    ).toEqual([]);
+  }, 600_000);
 
+  it('the K-weighting designed for a rate reproduces the standard’s table at 48 kHz', () => {
     /*
-      ── AND THE WHOLE BAND, WHICH IS THE UNIT THE ASK WAS MADE IN — 0219 ─────────────────────────
-
-      ⚠️ **Reported as** *"the volume is decent for the intro section and then requires a volume control
-      down for later sections"* — a statement about the spread a player has to accommodate with **one
-      setting of their speaker**, not about any boundary. Every earlier guard here holds a step; this
-      holds the band, and it is the one the compressor was added for.
-
-      ⚠️ **THREE PLACES ARE OVER IT AND ARE NOT GUARDED**: The Labyrinth 7.4 dB, The Black Heart 4.8,
-      The Toxic Mire 4.4. Their ladders climb that far on their own, and a ceiling wide enough to admit
-      them would hold nothing — the same reason 0218 names one place rather than inventing a rule the
-      content cannot keep.
+      ⚠️ **THE DESIGN IS A DERIVATION AND THIS IS WHAT MAKES IT ONE.** BS.1770 tabulates its two
+      filters at 48 kHz only; `tests/loudness.ts` designs them for any rate from the parameters the
+      reference implementations use. If the design is right it reproduces the table to the places the
+      table is printed to, and if it is not, every `loud` in the suite is a number with a name.
     */
-    const band = Math.max(at('push'), at('surge'), at('approach'), at('boss')) - at('run');
-    expect(
-      band,
-      `The Approach runs ${band.toFixed(1)} dB from its background to its loudest — one speaker ` +
-        'setting has to cover all of it',
-    ).toBeLessThan(LEVEL_BAND_DB);
-  }, 180_000);
+    const [shelf, pass] = kWeighting(48000);
+    expect(shelf.b0).toBeCloseTo(1.53512485958697, 6);
+    expect(shelf.b1).toBeCloseTo(-2.69169618940638, 6);
+    expect(shelf.b2).toBeCloseTo(1.19839281085285, 6);
+    expect(shelf.a1).toBeCloseTo(-1.69065929318241, 6);
+    expect(shelf.a2).toBeCloseTo(0.73248077421585, 6);
+    expect(pass.b0).toBe(1);
+    expect(pass.b1).toBe(-2);
+    expect(pass.b2).toBe(1);
+    expect(pass.a1).toBeCloseTo(-1.99004745483398, 6);
+    expect(pass.a2).toBeCloseTo(0.99007225036621, 6);
+  });
 
   it('and every theme actually sounds different from the one that changes nothing', () => {
     /*
@@ -1381,8 +1372,18 @@ describe('0128 — a place plays its own material, and shares everything it does
         ['push', 'surge'],
         ['surge', 'approach'],
       ] as const) {
+        /*
+          ⚠️ **MEASURED AGAINST THE RUNG'S OWN HOLD** — 0226. `LEVEL_HOLD` lowers a whole rung by one
+          number, so every carried layer falls by exactly that at a boundary that opens parts. What
+          0167 forbids is a layer paying for the arrivals — falling RELATIVE to the rung it is in —
+          and that is what is left once the hold is divided out. A per-layer renormalise would still
+          show up here, which is the mistake this guard was written against.
+        */
+        const held = 20 * Math.log10(holdOf(theme, to) / holdOf(theme, from));
         for (const { layer, move } of carriedThrough(level[from].gains, level[to].gains)) {
-          if (move <= DUCK_FLOOR_DB) offenders.push(`${theme} ${from}→${to}: ${layer} ${move.toFixed(1)} dB`);
+          if (move - held <= DUCK_FLOOR_DB) {
+            offenders.push(`${theme} ${from}→${to}: ${layer} ${(move - held).toFixed(1)} dB under its rung`);
+          }
         }
       }
     }
@@ -1865,11 +1866,17 @@ describe('0162 — and the override path itself, driven with a table of its own'
       `rungOf` that dropped the lookup entirely and went straight to `MUSIC_LADDER` would pass, but one
       that applied `mixOf`, or clamped, or reached for the aura would not.
     */
+    /*
+      ⚠️ **TIMES THE RUNG'S HOLD, SINCE 0226.** `rungOf` is the bare ladder scaled by the place's hold
+      for that rung, and `rungIn` stays the bare ladder — so what this joins is the pure lookup, the
+      shipped table and the one multiplier a rung carries, and nothing else. A `rungOf` that applied
+      `mixOf`, or the aura, or a second hold, still fails here.
+    */
     for (const theme of THEME_KINDS) {
       for (const rung of MUSIC_LEVELS) {
         for (const layer of MUSIC_LAYERS) {
           expect(rungOf(theme, rung, layer), `${theme}/${rung}/${layer}`).toBe(
-            rungIn(THEMES[theme].ladder, rung, layer),
+            rungIn(THEMES[theme].ladder, rung, layer) * holdOf(theme, rung),
           );
         }
       }

@@ -99,19 +99,12 @@ export function compressBuffer(buffer: Float32Array, rate: number, comp = MUSIC_
   }
 }
 
-/**
- * How wide a level's loudness may run, from its background to its loudest rung, in dB.
- *
- * ── THE ASK, IN THE UNIT THE ASK WAS MADE IN ───────────────────────────────────────────────────
- *
- * ⚠️ **Reported as** *"the volume is decent for the intro section and then requires a volume control
- * down for later sections"* — which is a statement about a BAND, not about a boundary. Every previous
- * guard on this subject held a step (0215's rate, 0218's evenness); this holds the whole spread a
- * player has to accommodate with one setting of their speaker.
- *
- * ⚠️ **2.5 dB IS HALF OF WHAT THE APPROACH RAN AT AND A LITTLE OVER.** It measured 3.8 dB from `run`
- * to its loudest before the compressor. A 2:1 ratio above a threshold near `run` halves what is above
- * it, so the target follows from the ratio rather than being a second opinion about it — and the
- * slack is because a place's own material decides how much of its range sits above the threshold.
- */
-export const LEVEL_BAND_DB = 2.5;
+/*
+  ── `LEVEL_BAND_DB` STOOD HERE AND 0226 RETIRED IT ──────────────────────────────────────────────
+
+  ⚠️ **2.5 dB was how wide a level's loudness was allowed to run, and the answer became zero.**
+  `docs/decisions/0226-the-level-holds-one-loudness.md`: every rung of a place is held to its `run`
+  loudness in the listener's unit, and `tests/themes.test.ts` asserts that directly, so a ceiling on
+  the band has nothing left to hold. The compressor above stays — it is what keeps the hold's cost in
+  gain smaller than its effect on the ear, which `scripts/solve-hold.mjs`'s bisection is for.
+*/

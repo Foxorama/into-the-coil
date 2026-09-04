@@ -24,6 +24,11 @@
 // `setTargetAtTime` performs, so the staggered arrivals of docs/decisions/0171 are in the curve
 // rather than smoothed away by sampling.
 //
+// ⚠️ K-WEIGHTED SINCE 0226, SO THE COLUMN READS IN LU. Each layer's level is its K-weighted RMS
+// (tests/loudness.ts) rather than its plain one, because the layers a boundary eases are the low end
+// and an unweighted sum reported a hole a third larger than the ear meets. It is still a model: the
+// picture is `node scripts/weigh-picture.mjs`, out of the browser's own graph.
+//
 // ⚠️ THE SUM IS INCOHERENT AND THE BUS SHAPER IS NOT IN IT. Layers are summed in POWER, which is the
 // standard model for unrelated material and is what `tests/pace.ts` already treats a mix as. The
 // `saturate` curve on the music bus compresses peaks, so **the real jump is no larger than the one

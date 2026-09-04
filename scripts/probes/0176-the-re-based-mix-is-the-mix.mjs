@@ -54,20 +54,16 @@ export const PROBES = [
         '  return all < 0.22 ? 0.22 : all > 2.6 ? 2.6 : all;',
     },
   },
-  {
-    decision: '0176',
-    suite: 'tests/themes.test.ts',
-    broke: 'the shaper modelled without the browser’s clamp, which is a shaper the game does not have',
-    guard: 'and no theme at any rung drives the bus past full scale',
-    edit: {
-      path: 'tests/themes.test.ts',
-      /*
-        ⚠️ Re-anchored by 0217, which split the clamp onto its own line so the distortion measure
-        could read the SIGNED shaped value. The break is unchanged — the clamp is removed and the
-        shaper becomes one the browser does not have — and it now takes the line that does the clamp.
-      */
-      find: '          const held = driven < -1 ? -1 : driven > 1 ? 1 : driven;',
-      replace: '          const held = driven;',
-    },
-  },
+  /*
+    ── A THIRD PROBE STOOD HERE AND 0226 RETIRED IT ────────────────────────────────────────────────
+
+    ⚠️ "THE SHAPER MODELLED WITHOUT THE BROWSER'S CLAMP" removed the `[-1, 1]` clamp from
+    tests/themes.test.ts's peak measure and expected *no theme drives the bus past full scale* to go
+    red. It cannot any more: docs/decisions/0226-the-level-holds-one-loudness.md holds every rung to
+    its `run`, and the loudest sample reaching the shaper anywhere in the game is now **0.969** —
+    Saurian Belt's `surge` — so a clamp that never engages is a clamp whose absence measures as
+    nothing. The model still clamps, and the reason it must is still 0176's; what is gone is the
+    headroom that let a probe show it. A probe whose break the tree cannot see is what
+    docs/decisions/0005-a-guard-must-be-seen-to-fail.md says not to keep.
+  */
 ];

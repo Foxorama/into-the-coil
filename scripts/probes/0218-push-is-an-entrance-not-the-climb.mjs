@@ -20,7 +20,8 @@ export const PROBES = [
       summed through the shaper over a place's own material, is one boundary doing the whole level.
     */
     broke: 'push arriving at its surge value again, so one boundary carries the whole climb',
-    guard: 'no boundary inside a level is bigger than the one that opens it',
+    // 0226 replaced the boundary guard with the hold: the same break now moves `push` off its run.
+    guard: 'every rung of a place holds its run loudness',
     edit: {
       path: 'src/content/music.ts',
       find: 'arp: 0.64, ride: 0.48, call: 0.68, hook: 0.52,',

@@ -1243,6 +1243,8 @@ export function levelWrites(
     }
   }
   const closing: RampWrite[] = [];
+  /** Carried layers turned DOWN at this boundary — the hold making room for what arrives (0226). */
+  const easing: RampWrite[] = [];
   for (const layer of MUSIC_LAYERS) {
     const aura = AURA_LAYERS.includes(layer);
     const target = rungOf(theme, level, layer, shape) * mixOf(theme, layer) * (aura ? nearness : 1);
@@ -1271,6 +1273,18 @@ export function levelWrites(
     if (!aura) write.tau = (RAMP_SECONDS * rampScaleOf(was, target)) / 3;
     if (!aura && target > 0 && was === 0) opening.push(write);
     if (!aura && target === 0 && was > 0) closing.push(write);
+    /*
+      ── A CARRIED LAYER MAKING ROOM IS PACED LIKE A DEPARTURE — 0226 ─────────────────────────────
+
+      ⚠️ **THE HOLD TURNS A CARRIED LAYER DOWN AS PARTS ARRIVE, AND ON THE DOWNBEAT THAT IS A HOLE.**
+      `LEVEL_HOLD` brings every rung back to `run`'s loudness, so at a boundary that opens parts the
+      bed steps down by the hold's ratio while the arrivals stagger in over the build. Taken at
+      `rampScaleOf`'s pace a two-decibel move is settled inside two seconds and the last arrival lands
+      five later — the mix would dip and refill, which is 0215's *"weird drops"* by another route.
+      So a layer that continues and falls is collected here and, below, takes one step per arrival,
+      exactly as a departure does; the sum then holds while the arrangement changes under it.
+    */
+    if (!aura && target > 0 && was > 0 && target < was) easing.push(write);
     writes.push(write);
   }
   /*
@@ -1283,41 +1297,60 @@ export function levelWrites(
   */
   if (!standing || opening.length < 2) return writes;
   const bars = entryBars(theme, level, opening);
-  let last = 0;
   for (const write of opening) {
     const late = bars[write.layer] ?? 0;
     if (late > 0) write.at = bar + late * BAR_SECONDS;
-    if (late > last) last = late;
   }
   /*
-    ── AND A DEPARTURE TAKES AS LONG AS THE ARRIVALS IT IS MAKING ROOM FOR — 0215 ──────────────────
+    ── A DEPARTURE USED TO FADE ACROSS THE BUILD — 0215, SUPERSEDED BELOW ─────────────────────────
 
-    ⚠️ **0120's RULE IS KEPT AND ITS TIMING IS NOT.** *"A closing layer that waited for the build
-    would still be playing under the parts that replaced it"* — so a departure still **begins on the
-    downbeat**, ahead of every arrival, and the rung still changes the arrangement rather than
-    thickening it. What changes is that it now FADES across the build instead of finishing before it
-    starts.
-
-    ⚠️ **THE HOLE WAS MEASURED AND IT IS THE OTHER HALF OF THE REPORT.** Departures took
-    `RAMP_SECONDS` from the downbeat while arrivals staggered out to four bars past it, so the mix
-    lost everything at once and got it back over five seconds. `scripts/weigh-arc.mjs` found that dip
-    on **five of the seven places**, worst at The Toxic Mire's `surge → approach` at **−4.9 dB**, which
-    is the *"weird drops later"* the report predicted before anybody had looked.
-
-    ⚠️ **THE SPAN IS THE BUILD'S OWN AND IS NOT A NEW NUMBER.** It is the last arrival's bar plus the
-    ramp that arrival takes — so a boundary that opens nothing keeps the old behaviour exactly, and a
-    boundary whose build gets longer or shorter carries its departures with it. Nothing here has to be
-    kept in step by hand.
+    ⚠️ **0120's RULE IS KEPT AND ITS TIMING HAS MOVED TWICE.** *"A closing layer that waited for the
+    build would still be playing under the parts that replaced it"* — so a departure begins on the
+    downbeat, ahead of every arrival. 0215 measured the hole a `RAMP_SECONDS` departure left under a
+    four-bar build — worst at The Toxic Mire's `surge → approach` at −4.9 dB — and had it fade over
+    the build's span instead. 0226 measured the hole THAT left, and what follows replaces the fade.
   */
   /*
-    ⚠️ **THE LONGER OF THE TWO, AND WRITING IT AS AN OVERRIDE WAS A BUG I SHIPPED INTO THE MEASURE.**
-    A closing is a move to silence, so `rampScaleOf` already gives it the full spread; assigning the
-    build's span on top made the fade **shorter** wherever the build was under four bars, and The
-    Toxic Mire's hole got deeper rather than shallower. The rule is *a departure lasts at least as
-    long as the arrivals it makes room for* — a floor, never a ceiling.
+    ── WHAT GOES DOWN GOES DOWN IN THE ARRIVALS' OWN STEPS — 0226 ─────────────────────────────────
+
+    ⚠️ **ONE FADE CANNOT MAKE ROOM FOR FOUR ARRIVALS.** A departure fading from the downbeat over the
+    build's span was 0215's answer to a hole, and it left one: it is half gone one bar in, when a
+    quarter of what replaces it has begun. The hold made the same shape louder — a bed easing down by
+    four decibels while `groove` arrives three bars later is a dip a listener can name — and no single
+    `setTargetAtTime`, started anywhere at any speed, follows a staircase.
+
+    ⚠️ **SO A LAYER THAT FALLS TAKES ONE STEP PER ARRIVAL, WHEN THAT ARRIVAL LANDS, BY ITS SHARE.** The
+    move is split in POWER across the arrivals in proportion to each one's own power — the sum of the
+    squares of the targets — so the bed gives up what each part brings, as it brings it, at that
+    part's own ramp. The last step lands exactly on the target, so nothing here can drift the mix.
+    Arrivals sharing a downbeat share a step. What remains true from 0120 and 0215 is that a
+    departure BEGINS on the downbeat, with the first arrival, ahead of everything.
+
+    ⚠️ **A GAIN IS NOT A LOUDNESS AND THIS USES GAINS AS SHARES ANYWAY**, which is worth saying out
+    loud: the shares decide only WHEN the room is made, never how much, and the targets carry the
+    re-based balance 0176 solved for audibility, which is the closest thing to loudness the shell has
+    without a bake in its hands. `tests/transition.test.ts` measures the hole that results.
   */
-  const spread = last * BAR_SECONDS + RAMP_SECONDS;
-  for (const write of closing) write.tau = Math.max(write.tau, spread / 3);
+  const steps = [...opening].sort((a, b) => a.at - b.at);
+  let arriving = 0;
+  for (const step of steps) arriving += step.target * step.target;
+  for (const write of [...closing, ...easing]) {
+    const was = lastTargets[write.layer] ?? 0;
+    const end = write.target * write.target;
+    let power = was * was;
+    const drop = power - end;
+    const staged: RampWrite[] = [];
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i]!;
+      power -= (drop * step.target * step.target) / arriving;
+      const next = steps[i + 1];
+      // Arrivals on one downbeat are one step; the last step lands on the target itself.
+      if (next !== undefined && next.at === step.at) continue;
+      const target = next === undefined ? write.target : Math.sqrt(power > 0 ? power : 0);
+      staged.push({ layer: write.layer, target, at: step.at, tau: step.tau });
+    }
+    writes.splice(writes.indexOf(write), 1, ...staged);
+  }
   return writes;
 }
 
@@ -1438,8 +1471,23 @@ export function makeMusicOut(
   squeeze.ratio.value = MUSIC_COMPRESSOR.ratio;
   squeeze.attack.value = MUSIC_COMPRESSOR.attack;
   squeeze.release.value = MUSIC_COMPRESSOR.release;
+  /*
+    ── AND THE NODE'S OWN MAKEUP GAIN, DIVIDED BACK OUT — 0226 ───────────────────────────────────
+
+    ⚠️ **THE BROWSER'S COMPRESSOR LIFTS EVERYTHING BELOW ITS KNEE BY `MUSIC_COMPRESSOR.makeup`
+    DECIBELS**, by specification, and 0219 wired it in against a model with no such lift in it. Every
+    instrument this project has agreed with itself and the speaker got 4.5 dB more music than any of
+    them said, over a cue bus that got none. `src/content/music.ts` has the measurement; this gain is
+    what makes the shipped bus the measured one again.
+
+    ⚠️ **ONE MORE `@setup` NODE AT CONTEXT CREATION** — 0025 counts allocations in the frame loop and
+    this is not in one.
+  */
+  const undo = ctx.createGain();
+  undo.gain.value = Math.pow(10, -MUSIC_COMPRESSOR.makeup / 20);
   master.connect(squeeze);
-  squeeze.connect(shaper);
+  squeeze.connect(undo);
+  undo.connect(shaper);
   shaper.connect(destination);
 
   for (const layer of MUSIC_LAYERS) {
@@ -1535,9 +1583,19 @@ export function makeMusicOut(
         the bar grid is the music's own and a rephase (0094) moves both together.
       */
       const now = ctx.currentTime;
+      /*
+        ⚠️ **CANCELLED ONCE PER LAYER, BECAUSE A LAYER MAY NOW CARRY SEVERAL WRITES** — 0226. A
+        falling layer takes one step per arrival, in time order; cancelling before every write would
+        throw away the steps already scheduled for the same parameter. The last write for a layer is
+        its target, which is what `headingFor` ends up holding.
+      */
+      const cancelled: Partial<Record<MusicLayer, true>> = {};
       for (const { layer, target, at, tau } of levelWrites(level, theme, nearness, anchorAudio, now, headingFor, ladder)) {
         headingFor[layer] = target;
-        gains[layer].gain.cancelScheduledValues(now);
+        if (cancelled[layer] === undefined) {
+          gains[layer].gain.cancelScheduledValues(now);
+          cancelled[layer] = true;
+        }
         gains[layer].gain.setTargetAtTime(target, at, tau);
       }
     },

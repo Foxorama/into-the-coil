@@ -38,6 +38,7 @@ import {
 import { SAMPLE_RATE } from '../src/app/sound.ts';
 import { AURA_LAYERS, BAR_SECONDS, MUSIC_LAYERS, type MusicLayer, type MusicLevel } from '../src/content/music.ts';
 import { revoicedBy, type ThemeKind } from '../src/content/themes.ts';
+import { kWeighted } from './loudness.ts';
 
 /**
  * How big a move, inside one sample, this calls sudden — in dB.
@@ -95,7 +96,14 @@ function rmsOf(theme: ThemeKind, rate = SAMPLE_RATE): Record<MusicLayer, number>
     const key = `${own.includes(layer) ? theme : ''}/${layer}@${rate}`;
     let value = rmsCache.get(key);
     if (value === undefined) {
-      const buffer = bakeLayer(layer, rate, own.includes(layer) ? theme : undefined);
+      /*
+        ⚠️ **K-WEIGHTED, SINCE 0226.** Each layer's level here is what it contributes to the sum a
+        listener weighs, not to a meter: `sub` and `drone` dominate an unweighted power sum and are
+        exactly the layers the hold eases at a boundary, so the unweighted arc reported a hole where
+        the ear meets a dip a third the size. `tests/loudness.ts` is the same weighting `driveAt`
+        measures the settled rungs with, so a hole and a hold are now in one unit.
+      */
+      const buffer = kWeighted(bakeLayer(layer, rate, own.includes(layer) ? theme : undefined), rate);
       let sum = 0;
       for (let i = 0; i < buffer.length; i++) sum += buffer[i]! * buffer[i]!;
       value = Math.sqrt(sum / buffer.length);
@@ -187,6 +195,10 @@ export function arcOf(theme: ThemeKind, step = 0.2, rate = SAMPLE_RATE): ArcAt[]
     }
 
     /*
+      ⚠️ **K-WEIGHTED PER LAYER SINCE 0226**, so `db` here is closer to LU than to dBFS: `rmsOf`
+      weighs each layer's material with the standard's filters before it is squared, and the hole
+      and rise below are read in the unit the hold is solved in.
+
       ⚠️ **SUMMED IN POWER, WHICH IS THE MODEL AND IS SAID SO OUT LOUD.** Unrelated material adds
       incoherently, which is the assumption `tests/pace.ts` already makes about a mix, and the bus's
       `saturate` curve is not applied — so a jump measured here is an **upper bound** on the one a

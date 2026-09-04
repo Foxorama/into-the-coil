@@ -76,7 +76,13 @@ export const PROBES = [
       requires the old one to stop"*, not the old one to get louder.
     */
     broke: 'the boss bed lifted over `surge`, so the role floor drags every layer above it up with it',
-    guard: 'and no theme at any rung drives the bus past full scale',
+    /*
+      ⚠️ RE-AIMED BY 0226. With every rung held to its `run`, a lifted boss bed no longer reaches the
+      clamp — the loudest sample anywhere is 0.969 of full scale — but it is a ladder row edited
+      under a solved hold, and that is what the hold guard is for: it went red on this break before
+      the clamp guard was even reached, on exactly the rung this edit lifts.
+    */
+    guard: 'every rung of a place holds its run loudness',
     edit: {
       path: 'src/content/themes.ts',
       // Re-anchored by 0191, which restored the player's driven state to every row.

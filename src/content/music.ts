@@ -749,6 +749,25 @@ export const MUSIC_COMPRESSOR = {
   */
   attack: 0.02,
   release: 0.25,
+  /*
+    ── THE MAKEUP GAIN THE BROWSER ADDS, AND NO MODEL KNEW — 0226 ─────────────────────────────────
+
+    ⚠️ **A `DynamicsCompressorNode` IS NOT A COMPRESSOR; IT IS A COMPRESSOR PLUS A FIXED LIFT.** The
+    Web Audio specification has the node apply makeup gain of `(1 / curve(1.0))^0.6`, and every
+    browser descends from the one WebKit kernel that does. At this threshold and ratio that is
+    **+4.5 dB on everything below the knee**, measured on a 1 kHz sine through Chromium's own node by
+    `node scripts/weigh-picture.mjs` — so from the day 0219 landed the whole music bus sat four and a
+    half decibels above every number `tests/compress.ts`, `tests/clean.ts` and `scripts/hear.mjs` had
+    for it, and above the cue bus, which passes through no such node. *"Drowns out the bullets and
+    game SFX"* is that lift, and the sixth report on one stretch of one level is what it took to
+    render the picture instead of the model.
+
+    ⚠️ **`makeMusicOut` DIVIDES IT BACK OUT**, with a gain after the node, so the bus the player hears
+    is the bus the model measures. The number is content because it is a property of the settings
+    above — change the threshold or the ratio and it moves — and `tests/picture.browser.test.ts` reads
+    it back from a real node, which is the only place it can be read.
+  */
+  makeup: 4.5,
 } as const;
 
 /**

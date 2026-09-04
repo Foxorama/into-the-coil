@@ -52,7 +52,18 @@ import {
 import { bakeLoops, layerNotes, musicLevelFor, placeFor } from '../src/app/music.ts';
 import { UNITS_PER_SECOND, rungMarks, targetGain } from '../scripts/timeline.mjs';
 import { AURA_LAYERS, MUSIC, MUSIC_LAYERS, secondsOfLayer, type MusicLayer } from '../src/content/music.ts';
-import { rungOf, THEME_KINDS, bakedBy, cueLayersOf, cueRowOf, cuedBy, revoicedBy, type ThemeKind } from '../src/content/themes.ts';
+import {
+  THEMES,
+  THEME_KINDS,
+  bakedBy,
+  cueLayersOf,
+  cueRowOf,
+  cuedBy,
+  holdOf,
+  revoicedBy,
+  rungIn,
+  type ThemeKind,
+} from '../src/content/themes.ts';
 import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { MISSILE_BEAT_RATIO, fireEveryAt, missileEveryAt } from '../src/content/pickups.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -2240,16 +2251,31 @@ describe('0116 — the instrument is the game, and it is not a second copy of it
       claim it makes. `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` found it, in the
       direction that catches a guard rotting under a change that had nothing to do with it.
     */
+    /*
+      ⚠️ **THE BARE LADDER PICKS THE SET AND THE HOLD IS DIVIDED OUT OF THE COMPARISON** — 0226. Each
+      place holds its `boss` rung by its own number, so `rungOf` never agrees across two places any
+      more and the raw render always differs; both would let this guard pass on the wrong evidence,
+      which is 0187's finding again one multiplier over. What is isolated is still `mixOf` alone.
+    */
     const shared = MUSIC_LAYERS.filter(
-      (layer) => rungOf('core', 'boss', layer) === rungOf('approach', 'boss', layer) && rungOf('core', 'boss', layer) > 0,
+      (layer) =>
+        rungIn(THEMES.core.ladder, 'boss', layer) === rungIn(THEMES.approach.ladder, 'boss', layer) &&
+        rungIn(THEMES.core.ladder, 'boss', layer) > 0,
     );
     expect(
       shared.length,
       'the two places no longer open a single layer alike at the boss, so this guard cannot isolate the balance',
     ).toBeGreaterThan(0);
-    const differs = shared.filter(
-      (layer) => targetGain('core', 'boss', layer, 1) !== targetGain('approach', 'boss', layer, 1),
-    );
+    /*
+      ⚠️ **A TOLERANCE AND NOT `!==`, BECAUSE `(x · h) / h` IS NOT `x` IN FLOATING POINT.** With the
+      balance dropped on purpose the two places differ by one part in 10¹⁶ from the hold going in and
+      out again, and `npm run prove` reported 0116's break STILL GREEN on exactly that.
+    */
+    const differs = shared.filter((layer) => {
+      const core = targetGain('core', 'boss', layer, 1) / holdOf('core', 'boss');
+      const approach = targetGain('approach', 'boss', layer, 1) / holdOf('approach', 'boss');
+      return Math.abs(core - approach) > 1e-9 * Math.max(core, approach);
+    });
     expect(
       differs.length,
       'The Core and The Approach render byte-identical gains for every layer they open alike, so the theme is not applied',
