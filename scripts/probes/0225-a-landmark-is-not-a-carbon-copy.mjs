@@ -37,8 +37,10 @@ export const PROBES = [
     guard: 'every casting of a landmark is a different drawing',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  const lean = rng.range(0.14, 0.3);',
-      replace: '  const lean = 0.22;',
+      // ⚠️ Re-anchored by 0229, which redrew the heart as an organ: the seed moves its apex and its
+      // fullness now rather than a lean, and the break takes both.
+      find: '  const droop = rng.range(0.0, 0.08);\n  const fullness = rng.range(-0.04, 0.05);',
+      replace: '  const droop = 0.04;\n  const fullness = 0;',
     },
   },
   {

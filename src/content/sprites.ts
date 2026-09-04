@@ -547,10 +547,18 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     picking things up, which is the opposite of a reward. What grows is how much of the box the
     silhouette fills. 0081.
   */
-  shipMk2: 7,
-  shipMk2Hit: 7,
-  shipMk3: 7,
-  shipMk3Hit: 7,
+  /*
+    ⚠️ **A TIER IS A BIGGER SHIP, IN WORLD UNITS — 0229.** *"We lost the ship upgrade graphics in the
+    graphics upgrade."* 0227's pods and canards were authored inside the same 7-unit box as the bare
+    hull and came out at three and four pixels on a 1280×720 screen — correct by every guard, and
+    invisible. A part that has to be seen needs room, and the room is the extent: each tier's box is
+    wider than the last, and the parts fill what it gains. The hurtbox does not move
+    (`src/content/ships.ts`); what grows is what the player is shown they are carrying.
+  */
+  shipMk2: 8.2,
+  shipMk2Hit: 8.2,
+  shipMk3: 9.4,
+  shipMk3Hit: 9.4,
   drifter: 5.5,
   drifterHit: 5.5,
   /*
@@ -720,13 +728,21 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     Debris is drawn first, under everything, so nothing here can cover a body; the size is what keeps
     the sky visible through it.
   */
-  burst0: 3.5,
-  burst1: 6,
-  burst2: 8,
-  burst3: 9,
-  // Under a missile's own extent at the first frame, and the second is the flash spreading and going.
-  spark0: 2.6,
-  spark1: 4.2,
+  /*
+    ⚠️ **HALF AGAIN THE SIZE THEY SHIPPED AT, AND DRAWN OVER THE BODIES NOW** — 0229. *"The fireball
+    definitely didn't look like a fireball because I didn't know there was a fireball in game."* At
+    3.5 to 9 units under everything alive, a drifter's death was smaller than the drifter and behind
+    its neighbours. The flash is now the size of the body and the fire outgrows it; the smoke is
+    under a small boss and the frames hold half again as long. The ceiling is the smallest boss:
+    `tests/flares.test.ts`.
+  */
+  burst0: 5,
+  burst1: 9,
+  burst2: 12,
+  burst3: 14,
+  // Under a burst's first frame at both, and the second is the flash spreading and going.
+  spark0: 3.2,
+  spark1: 5.5,
   /*
     ⚠️ **`ACROSS_SPAN`, which makes one tile exactly as tall as the lane** — so the sky tiles along
     the scroll axis and along it only, and no seam ever runs across the short axis of the screen. It

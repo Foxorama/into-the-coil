@@ -94,11 +94,13 @@ const SPARK_FRAMES: readonly number[] = [SPRITE.spark0, SPRITE.spark1];
 export const DEBRIS_ROWS: Record<DebrisKind, DebrisRow> = {
   shard: { body: DEBRIS, frames: [SPRITE.debris], hold: 0 },
   /**
-   * A body coming apart: flash, fireball, ring, smoke. Sixteen steps, which is about a quarter of a
+   * A body coming apart: flash, fireball, ring, smoke. Twenty-four steps, which is four tenths of a
    * second — over before the last shard is, so the shards are the tail of it rather than the other
    * way round.
    */
-  burst: { body: flare(BURST_FRAMES), frames: BURST_FRAMES, hold: 4 },
+  // ⚠️ Six a frame, from four — 0229. Sixteen steps was a blink nobody reported seeing; twenty-four is
+  // 0.4 s, which is still shorter than the shortest shard.
+  burst: { body: flare(BURST_FRAMES), frames: BURST_FRAMES, hold: 6 },
   /**
    * A missile landing on something that survived it: a flash, and the flash going. Eight steps.
    *

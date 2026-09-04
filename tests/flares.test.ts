@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { CAPACITY } from '../src/app/mount.ts';
 import { GameFrame } from '../src/app/frame.ts';
@@ -145,17 +148,48 @@ describe('a flare is a row, and the rows are sound', () => {
   });
 
   it('a burst is never as big as a boss and a spark is never as big as a burst', () => {
-    // Under everything, and never able to hide a body: the biggest frame stays under the biggest
-    // enemy, so a fireball can cover a shot's worth of sky and no more.
+    /*
+      ⚠️ **THE CEILING MOVED FROM THE BIGGEST ENEMY TO THE SMALLEST BOSS — 0229.** Under the enemies
+      a fireball smaller than an enemy was never seen; over them (`src/app/mount.ts`) it may outgrow
+      the body it came from, and what it may never do is be mistaken for a boss arriving.
+    */
     const biggest = (kind: 'burst' | 'spark'): number =>
       Math.max(...DEBRIS_ROWS[kind].frames.map((s) => SPRITE_EXTENT[SPRITE_KINDS[s]!]));
-    expect(biggest('burst')).toBeLessThan(SPRITE_EXTENT.warden);
+    const smallestBoss = Math.min(
+      ...SPRITE_KINDS.filter((k) => /^boss\d?$/.test(k)).map((k) => SPRITE_EXTENT[k]),
+    );
+    expect(biggest('burst')).toBeLessThan(smallestBoss);
+    expect(biggest('burst'), 'a fireball smaller than the biggest enemy is the one nobody saw').toBeGreaterThan(SPRITE_EXTENT.warden);
     expect(biggest('spark')).toBeLessThan(SPRITE_EXTENT[SPRITE_KINDS[DEBRIS_ROWS.burst.frames[0]!]!] * 2);
     for (let i = 0; i < DEBRIS_ROWS.spark.frames.length; i++) {
       const spark = SPRITE_EXTENT[SPRITE_KINDS[DEBRIS_ROWS.spark.frames[i]!]!];
       const burst = SPRITE_EXTENT[SPRITE_KINDS[DEBRIS_ROWS.burst.frames[i]!]!];
       expect(spark, `spark frame ${i} is as big as the burst’s, so a hit and a death read alike`).toBeLessThan(burst);
     }
+  });
+
+  it('is drawn over the bodies and under every shot — 0229', () => {
+    /*
+      ⚠️ **THE REPORT WAS *I DIDN'T KNOW THERE WAS A FIREBALL IN GAME*.** It was drawn first, under
+      everything; a fireball behind the bodies beside it is not a fireball. Over a body it reads as
+      that body going up; over a bullet it would hide the one thing the player cannot lose track of,
+      so every shot stays above it. Read off the game's own draw order in `src/app/mount.ts`, which
+      is composed inside `mount` and cannot be built without a document.
+    */
+    const source = readFileSync(resolve(fileURLToPath(new URL('.', import.meta.url)), '../src/app/mount.ts'), 'utf8');
+    const match = /layers: \[([^\]]+)\]/.exec(source);
+    expect(match, 'mount.ts no longer composes its draw order as one array literal').not.toBeNull();
+    const order = match![1]!.split(',').map((s) => s.trim());
+    const at = (name: string): number => {
+      const i = order.indexOf(name);
+      expect(i, `${name} is not in the draw order`).toBeGreaterThanOrEqual(0);
+      return i;
+    };
+    expect(at('debris'), 'debris is drawn under the enemies, so a fireball is behind the body beside it').toBeGreaterThan(at('enemies'));
+    expect(at('debris'), 'debris is drawn under the boss').toBeGreaterThan(at('bossPool'));
+    expect(at('debris'), 'debris is drawn over enemy fire, so a fireball can hide a bullet').toBeLessThan(at('enemyShots'));
+    expect(at('debris'), 'debris is drawn over the player’s fire').toBeLessThan(at('playerShots'));
+    expect(at('debris'), 'debris is drawn over the ship').toBeLessThan(at('shipPool'));
   });
 
   it('leaves room in the debris pool for the fireballs a boss beat lights beside its shards', () => {

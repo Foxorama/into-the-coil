@@ -257,7 +257,8 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
   const cues: CueKind[] = [];
 
   const world: World = {
-    layers: [debris, blasts, bossPool, enemies, enemyShots, playerShots, missiles, bombs, shieldOrbs, shipPool],
+    // The game's own order — `src/app/mount.ts` — with the pickups left out, because this fixture has none.
+    layers: [blasts, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, shieldOrbs, shipPool],
     sky: [],
     landmarks: [],
     bound: null,
