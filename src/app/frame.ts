@@ -26,6 +26,7 @@ import {
   ACROSS_SPAN,
   flankAlongFor,
   FLANK_MARGIN,
+  MAX_ALONG_SPAN,
   ROAM_MAX,
   ROAM_MIN,
   cullPlayerShotAlong,
@@ -2199,7 +2200,54 @@ function fireMissiles(w: World): void {
     */
     missile.velAcross = LAUNCHER_POP_SPEED * side;
     missile.steerAcross = w.ship.across + LAUNCHER_POP * side;
+    // How hard it hunts, copied onto the missile — zero for a straight one, and `steerMissiles`
+    // reads it rather than the fitted tubes so a switch mid-flight changes nothing in the air. 0235.
+    missile.seekTurn = w.weapon.seek;
   }
+}
+
+/**
+ * How far a seeker looks for something to hunt, in world units: the whole of the widest view and
+ * the lane beside it, so *nearest* means *nearest on the screen* and never a body the player cannot
+ * see. Nothing beyond the view is a target, on 0048's promise that you can shoot what you can see.
+ */
+const SEEK_REACH = MAX_ALONG_SPAN + ACROSS_SPAN;
+
+/**
+ * One homing missile turned toward the nearest body — 0235.
+ *
+ * ⚠️ **THE HEADING TURNS AND THE SPEED DOES NOT.** A missile's own motion is its velocity less the
+ * scroll rate (0034: every speed is in the camera's frame); that vector is rotated toward the target
+ * by at most `seekTurn` and put back at the length it had, so a seeker coming about is the same
+ * missile pointed elsewhere and not a slower one. The pop it left the tube with is its first heading,
+ * which is why a pair of seekers fan before they converge.
+ *
+ * ⚠️ **NEAREST EACH STEP, NOT LOCKED AT LAUNCH.** A pool swaps its last slot into a released one, so
+ * an index kept across steps would follow the wrong body the moment anything died; the search is
+ * bounded and allocation-free, and *nearest* changing under a missile is what a hunt looks like.
+ * The boss counts, on the same edge-distance the arc uses.
+ */
+function seek(w: World, m: Entity): void {
+  const enemy = nearestFrom(w.enemies, m.along, m.across, SEEK_REACH, false);
+  const boss = w.bossPool.size > 0 ? nearestFrom(w.bossPool, m.along, m.across, SEEK_REACH, false) : -1;
+  let target: Entity;
+  if (enemy >= 0 && (boss < 0 || nearer(w.enemies.at(enemy), w.bossPool.at(0), m.along, m.across))) target = w.enemies.at(enemy);
+  else if (boss >= 0) target = w.bossPool.at(boss);
+  else return;
+  const ownAlong = m.velAlong - w.scrollPerStep;
+  const ownAcross = m.velAcross;
+  const speed = Math.sqrt(ownAlong * ownAlong + ownAcross * ownAcross);
+  if (speed <= 0) return;
+  const heading = Math.atan2(ownAcross, ownAlong);
+  const wanted = Math.atan2(target.across - m.across, target.along - m.along);
+  let delta = wanted - heading;
+  if (delta > Math.PI) delta -= Math.PI * 2;
+  else if (delta < -Math.PI) delta += Math.PI * 2;
+  if (delta > m.seekTurn) delta = m.seekTurn;
+  else if (delta < -m.seekTurn) delta = -m.seekTurn;
+  const turned = heading + delta;
+  m.velAlong = Math.cos(turned) * speed + w.scrollPerStep;
+  m.velAcross = Math.sin(turned) * speed;
 }
 
 /**
@@ -2213,6 +2261,11 @@ function fireMissiles(w: World): void {
 function steerMissiles(w: World): void {
   for (let i = w.missiles.size - 1; i >= 0; i--) {
     const m = w.missiles.at(i);
+    // A seeker keeps its pop as its first heading and hunts from there — 0235. It never straightens.
+    if (m.seekTurn > 0) {
+      seek(w, m);
+      continue;
+    }
     if (m.velAcross === 0) continue;
     if (m.velAcross > 0 ? m.across >= m.steerAcross : m.across <= m.steerAcross) {
       m.across = m.steerAcross;

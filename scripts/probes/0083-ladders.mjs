@@ -44,8 +44,10 @@ export const PROBES = [
     edit: {
       // ⚠️ Re-anchored by 0233: the ladder is the missile kind's now, not the ship's.
       path: 'src/content/missiles.ts',
-      find: '    missileEvery: [8, 8, 8, 6, 4],',
-      replace: '    missileEvery: [8, 8, 8, 8, 8],',
+      // ⚠️ Re-anchored by 0235: the seeker shares the ladder, so the straight row's `seek: 0` two
+      // lines down is what makes this the straight missile's.
+      find: '    missileEvery: [8, 8, 8, 6, 4],\n    launchers: [0, 1, 2, 2, 2],\n    seek: 0,',
+      replace: '    missileEvery: [8, 8, 8, 8, 8],\n    launchers: [0, 1, 2, 2, 2],\n    seek: 0,',
     },
   },
   {

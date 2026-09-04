@@ -404,6 +404,7 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   lifeIcon: 'pickup',
   pickupWeapon: 'pickup',
   pickupMissile: 'pickup',
+  pickupSeeker: 'pickup',
   // The weapon pickup's other face — the same pickup, so the same ink. 0233.
   pickupArc: 'pickup',
   pickupShuriken: 'pickup',
@@ -419,6 +420,7 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   pickupBomb: 'pickup',
   // The bullet ink, because it is a bullet. What separates it from the pulse is shape and size.
   missile: 'bullet',
+  seeker: 'bullet',
   bomb: 'bullet',
   /*
     ⚠️ **THE HAZARD INK, WHICH THE PLAYER'S OWN WEAPONS DO NOT USE — and that is the point.** A bomb's
@@ -4057,6 +4059,63 @@ export function drawKind(
       glow(ctx, f, palette.impact, 0, 0, 0.55, 0.8);
       return;
     }
+    case 'pickupSeeker': {
+      /*
+        THE MISSILE PICKUP'S OTHER FACE — 0235: the same chevron across the lane, with a reticle
+        through its heart. The hole is what tells the two faces apart at pickup size, and a ring is
+        what *homing* looks like before anybody is taught it.
+
+        Glyph at three quarters of the box and a bubble round it, on the missile face's terms — 0236.
+      */
+      const fg: Frame = { half, r: r * PICKUP_GLYPH };
+      const g = fg.r;
+      ctx.moveTo(half, half - g);
+      ctx.lineTo(half + g * 0.85, half + g * 0.2);
+      ctx.lineTo(half + g * 0.85, half + g);
+      ctx.lineTo(half, half + g * 0.25);
+      ctx.lineTo(half - g * 0.85, half + g);
+      ctx.lineTo(half - g * 0.85, half + g * 0.2);
+      ctx.closePath();
+      // The hole sits up in the apex, where the chevron is solid across, clear of the shadowed arm.
+      ring(ctx, fg, 0, -0.52, 0.13);
+      seal(ctx);
+      bubble(ctx, f, palette);
+      poly(ctx, fg, shade(palette.pickup, -0.28), [
+        [-0.16, -0.64],
+        [-0.7, 0.16],
+        [-0.7, 0.72],
+        [-0.1, 0.14],
+      ]);
+      band(ctx, fg, palette.glass, 0, -0.52, 0.21, 0.16);
+      return;
+    }
+    case 'seeker':
+      /*
+        THE HOMING MISSILE — 0235: a dart with swept-back fins and an eye at the nose. Off the
+        straight missile by the fins (swept where the missile's tail is notched) and by the eye,
+        which is a mark the missile does not carry; the same size, because it is the same weight of
+        thing leaving the same tube.
+      */
+      ctx.moveTo(half + r, half);
+      ctx.lineTo(half - r * 0.2, half - r * 0.42);
+      ctx.lineTo(half - r * 0.62, half - r * 0.3);
+      ctx.lineTo(half - r, half - r * 0.72);
+      ctx.lineTo(half - r * 0.7, half);
+      ctx.lineTo(half - r, half + r * 0.72);
+      ctx.lineTo(half - r * 0.62, half + r * 0.3);
+      ctx.lineTo(half - r * 0.2, half + r * 0.42);
+      ctx.closePath();
+      seal(ctx);
+      poly(ctx, f, shade(palette.bullet, -0.32), [
+        [0.8, 0.04],
+        [-0.22, 0.4],
+        [-0.62, 0.28],
+        [-0.66, 0.04],
+      ]);
+      // Back from the nose, where the dart is deep enough to hold an eye this size.
+      disc(ctx, f, palette.glass, 0.3, 0, 0.18);
+      disc(ctx, f, shade(palette.glass, 0.6), 0.33, -0.03, 0.13);
+      return;
     case 'pickupMissile': {
       /*
         THE WEAPON'S CHEVRON, TURNED A QUARTER TURN TO POINT UP THE SCREEN.

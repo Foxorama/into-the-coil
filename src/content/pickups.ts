@@ -608,6 +608,8 @@ export interface Weapon {
   /** Steps an orbiting shot lives, and radians it turns about the ship per step — 0234. Zero otherwise. */
   orbit: number;
   turn: number;
+  /** The most a missile turns toward its target per step, in radians — 0235. Zero for one that flies straight. */
+  seek: number;
 }
 
 /**
@@ -863,6 +865,7 @@ export function weaponFor(
     reach: everyAt(gunRow.reach, gun),
     orbit: everyAt(gunRow.orbit, gun),
     turn: gunRow.turn,
+    seek: tubeRow.seek,
     /*
       ⚠️ **Counted over the two LADDERS rather than over the raw list** — 0081's rule, 0083's
       arithmetic. A player who spends four upgrades on missiles has upgraded exactly as much as one

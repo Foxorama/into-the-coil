@@ -216,9 +216,13 @@ The missile pickup cycles the same way over the tubes.
 | **arc** | chain lightning: from the nose to the nearest body in reach, then the next; on a lone boss it jumps around the hull. Cannot miss, cannot reach | a link, a fire-rate step, and weight |
 | **shuriken** | blades the size of the ship that spiral out from it to the edge of the screen and vanish there, landing on everything they cross once per impact flash; not spent by arriving — [0234](decisions/0234-a-blade-circles-the-ship.md), [0237](decisions/0237-the-blades-answer-the-first-play-test.md) | more of a turn before the edge **and** a fire-rate step |
 
-The rest of the vocabulary is unbuilt: homing rockets, multi-tag tracking specials, piercing shots,
-faster engines, orbiting mines that are half shield and half weapon. Nothing triggers a special except
-the bomb.
+| tube | what it does | a tier buys |
+|---|---|---|
+| **missiles** | fly the lane from the wings; three pulses each | a tube **and** a rate step, max 2 tubes |
+| **seekers** | hunt the nearest body on the screen from the moment they leave the tube, any direction; two pulses each — [0235](decisions/0235-a-seeker-hunts-the-nearest-body.md) | the same |
+
+The rest of the vocabulary is unbuilt: multi-tag tracking specials, piercing shots, faster engines,
+orbiting mines that are half shield and half weapon. Nothing triggers a special except the bomb.
 
 ⚠️ **There are no extra lives to find, and a run's complement can only go down** — 0082, on the
 grounds that a shield is the better version of the same promise: it stops the death, so it keeps the

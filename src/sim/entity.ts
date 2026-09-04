@@ -272,6 +272,12 @@ export interface Entity extends Body {
   orbitRadius: number;
   orbitTurn: number;
   orbitGrow: number;
+  /**
+   * The most a homing missile turns toward its target per step, in radians — 0235. Copied onto the
+   * missile when it is launched, so a player who switches tubes keeps the missiles in the air, and
+   * zero means *flies straight*, which is every other body.
+   */
+  seekTurn: number;
 }
 
 /** A blank entity. Called only while a pool is being constructed. */
@@ -309,6 +315,7 @@ export function makeEntity(): Entity {
     orbitRadius: 0,
     orbitTurn: 0,
     orbitGrow: 0,
+    seekTurn: 0,
   };
 }
 
@@ -351,6 +358,7 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.orbitRadius = 0;
   e.orbitTurn = 0;
   e.orbitGrow = 0;
+  e.seekTurn = 0;
 }
 
 /**
