@@ -755,8 +755,17 @@ export const CUES: Record<CueKind, CueRow> = {
       // The crack. A driven saw falling a fifth, second degree to fifth: the interval the threat
       // cue's zap already falls, one gun over.
       { wave: 'saw', from: inKey(22), to: inKey(18), seconds: 0.05, gain: 0.55, attack: 0.001, curve: 7, lowFrom: 2400, lowTo: 700, q: 1.4, drive: 0.6 },
-      // The sub — the pulse's own, so the two guns share a bottom. C3 → A1.
-      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.06, gain: 0.55, attack: 0.002, curve: 4, drive: 0.2 },
+      /*
+        ── THE THUNDER, WHICH THE FIRST PLAY-TEST ASKED FOR — 0236 ──────────────────────────────
+
+        *"The lightning noise needs to have an additional bit of bass on it, it sounds sparky, but
+        not lightningy."* Sparky is the coil above; lightning is the air under it. Two layers where
+        there was one sub: a low rumble of noise held under 200 Hz, and the sub itself twice as
+        loud and half again as long — still inside the arc's fastest cadence (eight steps), which
+        `tests/sound.test.ts` holds, and heavier at the bottom than the pulse, which it also holds.
+      */
+      { wave: 'noise', from: 0, to: 0, seconds: 0.11, gain: 0.6, attack: 0.004, curve: 4, lowFrom: 260, lowTo: 90, highFrom: 40, q: 0.8, drive: 0.3 },
+      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.09, gain: 1, attack: 0.002, curve: 3.5, drive: 0.3 },
     ],
   },
   /**
@@ -773,22 +782,33 @@ export const CUES: Record<CueKind, CueRow> = {
    * arc rather than as the pulse's tick under a different gun. Held like the hit so a chain of four
    * is one strike, which is what a chain sounds like: one crack, several sparks.
    */
+  /*
+    ⚠️ **AN IMPACT NOW, AND IT WAS A TICK — 0236.** Reported from the first play-test: *"need an
+    impact/explosion sound when enemies get hit by lightning — currently there's no impact noise and
+    it feels weird."* There was one, and it was the hit's size: 80 ms under a discharge on the same
+    step, which the ear folded into it. This is built on the kill's recipe instead — a crack, a body
+    of noise under a falling filter, and a thump to the root — at a fifth of a second, so a strike is
+    a thing that happened to the body and not a click on the gun.
+  */
   zap: {
     twin: 'impact-flash',
     hold: 2,
-    gain: 0.3,
-    glue: 0.1,
+    gain: 0.42,
+    glue: 0.12,
     layers: [
-      // The snap: white, bright, and over before the coil below has started to fall.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.014, gain: 0.6, attack: 0.0002, curve: 11, highFrom: 1800, lowFrom: 11000, lowTo: 4000 },
-      // The crack of held noise — the same coil as the discharge, struck harder and falling faster.
-      { wave: 'noise', from: 4200, to: 700, seconds: 0.055, gain: 0.6, attack: 0.0006, curve: 7, lowFrom: 5500, lowTo: 1200, highFrom: 320, q: 1, drive: 0.3 },
+      // The snap: white, bright, and over before the body below has started to fall.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.018, gain: 0.6, attack: 0.0002, curve: 11, highFrom: 1800, lowFrom: 11000, lowTo: 4000 },
+      // The crack of held noise — the coil, struck.
+      { wave: 'noise', from: 4200, to: 700, seconds: 0.06, gain: 0.55, attack: 0.0006, curve: 7, lowFrom: 5500, lowTo: 1200, highFrom: 320, q: 1, drive: 0.3 },
+      // The body: noise under a filter falling from the middle to the bottom — what an explosion IS.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.19, gain: 0.7, attack: 0.003, curve: 4.5, lowFrom: 1800, lowTo: 160, highFrom: 120, highTo: 50, q: 0.8, drive: 0.25 },
       // The ping: a triangle four octaves over the root, falling a major third, so the strike has a
       // top the hit does not.
-      { wave: 'tri', from: inKey(28), to: inKey(26), seconds: 0.035, gain: 0.22, attack: 0.0005, curve: 7 },
-      // The thump: the third falling to the root an octave down, which is the gesture every
-      // explosion here ends with — 0179.
-      { wave: 'sine', from: inKey(9), to: inKey(0), seconds: 0.08, gain: 0.7, attack: 0.001, curve: 5, drive: 0.3 },
+      { wave: 'tri', from: inKey(28), to: inKey(26), seconds: 0.035, gain: 0.2, attack: 0.0005, curve: 7 },
+      // The thump: the third falling to the root, then an octave under it — 0179's gesture, and
+      // the weight the report was missing.
+      { wave: 'sine', from: inKey(9), to: inKey(0), seconds: 0.12, gain: 0.8, attack: 0.001, curve: 4, drive: 0.3 },
+      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.16, gain: 0.7, attack: 0.004, curve: 3.5, drive: 0.2 },
     ],
   },
   threat: {

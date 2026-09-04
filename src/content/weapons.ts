@@ -82,15 +82,21 @@ export interface WeaponRow {
    */
   weight: readonly number[];
   /**
-   * How far a bolt can jump, in world units — from the nose to the first target and from each target
-   * to the next. Zero for a weapon that does not chain.
+   * How far a bolt can jump, in world units, one entry per rung — from the nose to the first target
+   * and from each target to the next. Zeros for a weapon that does not chain.
    *
    * ⚠️ **In the lane's own units and well under the view**, because a bolt that reached the leading
    * edge would be a gun that never has to aim. It is the whole of what makes the arc a different
    * weapon rather than a better one: the pulse reaches the edge of the screen and can miss; the arc
    * cannot miss and cannot reach.
+   *
+   * ⚠️ **A LADDER SINCE 0236, AND IT WAS ONE NUMBER.** Reported from the first play-test: *"the
+   * reach of the lightning needs to be extended by about 20% per power up tier, the chain is good,
+   * but the initial hit requires you to be way too close to bosses and enemies. you can't
+   * effectively dodge."* Each rung reaches a fifth further than the one before, held by
+   * `tests/weapons.test.ts` as *climbs at every rung* rather than as the fraction.
    */
-  reach: number;
+  reach: readonly number[];
   /** The face the weapon pickup shows when it is offering this kind — an index into the atlas. */
   pickup: number;
 }
@@ -112,7 +118,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     barrels: [1, 2, 3, 4, 4],
     links: [1, 1, 1, 1, 1],
     weight: [1, 1, 1, 1, 1],
-    reach: 0,
+    reach: [0, 0, 0, 0, 0],
     pickup: SPRITE.pickupWeapon,
   },
   /**
@@ -139,7 +145,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     barrels: [1, 1, 1, 1, 1],
     links: [1, 2, 3, 4, 4],
     weight: [1, 1, 1, 2, 2],
-    reach: 55,
+    // A fifth further at every rung — 0236. The cap reaches two thirds of the narrowest view.
+    reach: [55, 66, 79, 95, 114],
     pickup: SPRITE.pickupArc,
   },
 };

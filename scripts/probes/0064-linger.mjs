@@ -83,8 +83,11 @@ export const PROBES = [
     */
     edit: {
       path: 'src/app/frame.ts',
-      find: '      const drift = item.lifeFor > 0 ? w.scrollPerStep : 0;',
-      replace: '      const drift = w.scrollPerStep;',
+      // ⚠️ Re-anchored by 0236: a scattered piece carries the same wait now, so the leaving branch
+      // has one target, zero. The break is that target made the camera's own rate — a pickup that
+      // holds station for ever once its wait is over.
+      find: '      item.velAlong += (0 - item.velAlong) * PICKUP_EASE;\n      continue;\n    }\n    item.holdFor--;',
+      replace: '      item.velAlong += (w.scrollPerStep - item.velAlong) * PICKUP_EASE;\n      continue;\n    }\n    item.holdFor--;',
     },
   },
   {

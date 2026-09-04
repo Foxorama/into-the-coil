@@ -51,6 +51,8 @@ function over(base: string, top: string, alpha: number): string {
 }
 import { loopsAt } from './bakes.ts';
 import { SAMPLE_RATE } from '../src/app/sound.ts';
+import { PICKUP_CYCLE_STEPS } from '../src/content/pickups.ts';
+import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 
 /** The three changes a player crosses while flying the same stretch of level — 0167's own exclusion. */
 const IN_LEVEL = [
@@ -127,6 +129,15 @@ function measureFour(): void {
 }
 
 /**
+ * 0236 — a cycling pickup shows each face for three seconds. The player's number, from the guns'
+ * first play-test: *"the rotation needs to be 1sec longer."* Nothing breaks at two, so it is a taste.
+ */
+function measureCycle(): void {
+  const seconds = PICKUP_CYCLE_STEPS / STEPS_PER_SECOND;
+  observe('0236-cycle', seconds >= 3, seconds >= 3 ? [] : [`a face is shown for ${seconds.toFixed(1)}s`]);
+}
+
+/**
  * 0198 — the three WCAG floors the accessibility pass will restore.
  *
  * ⚠️ **DEFERRED IS NOT UNMEASURED.** `docs/decisions/0198-the-accessibility-pass-comes-after-the-game.md`
@@ -172,6 +183,7 @@ function measureAll(): void {
   measureDuck();
   measureFour();
   measureAA();
+  measureCycle();
 }
 
 /**

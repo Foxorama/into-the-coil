@@ -298,19 +298,22 @@ const GOLDEN_ANGLE = 2.399963229728653;
 const SCATTER_SPEED = 0.66;
 
 /**
- * How long a scattered upgrade stays on the field, in steps — five seconds.
+ * How long a scattered upgrade flies its throw before it joins the wait, in steps.
  *
- * ⚠️ **A SHORT timer and it is the ask's own word**: *"enough time to grab some, but maybe not all."*
- * A respawned ship is invulnerable for two seconds (`RESPAWN_INVULN_STEPS`), so five is that window
- * plus three seconds of flying — long enough to cross the lane twice at `SHIP_SPEED` and nowhere near
- * long enough to collect a full loadout.
+ * ── `SCATTER_STEPS` WAS HERE: A SHORT TIMER, AND 0236 RETIRED IT ────────────────────────────────
  *
- * ⚠️ **It used to be what made a scattered pickup NON-CYCLING as well**, which was the other half of
- * the ask: a lifetime is the one thing an authored pickup never has, so `lifeFor > 0` IS *this is a
- * scattered one*, with no flag and no second field. Nothing cycles since 0082, so that half of the ask
- * is now true of every pickup in the game and this field only says *when it goes*.
+ * It was 300 — five seconds, *"enough time to grab some, but maybe not all"* (0066). Reported from
+ * the first play-test with the guns: *"it's too punishing now on death with rotation and weapons…
+ * they need to last as long as regular power ups."* A death now costs the gun as well as the rungs
+ * (0233) and the pieces that come back cycle, so a player recovering a loadout has three things to
+ * time at once; five seconds was sized for one. A scattered piece carries `lingerFor` like any other.
+ *
+ * ⚠️ **What is left is the FLIGHT: three quarters of a second at `SCATTER_SPEED`**, bouncing off the
+ * box, before the wander takes it. Long enough that eight pieces are visibly eight headings —
+ * *"they just explode up and down now"* was the along half being eased away inside a second — and
+ * short enough that none of them is far from where the ship died when the wait begins.
  */
-const SCATTER_STEPS = 300;
+const SCATTER_FLIGHT = 45;
 
 /*
   ── `SCATTER_KEPT` WAS HERE AND IT LASTED ONE PLAY-TEST ──────────────────────────────────────────
@@ -1783,9 +1786,18 @@ function fireArc(w: World): void {
       const open = openBy(phaseFor(w.bossRow, target.health, w.bossFullHealth));
       strike(w.bossPool, boss, w.weapon.damage * open, IMPACT_FLASH_STEPS, w.deaths);
     } else if (link === 0) {
-      // Dry: nothing in reach. The bolt goes ahead and lands on nothing.
+      /*
+        Dry: nothing in reach. The bolt goes ahead, lands on nothing, and THAT IS THE VOLLEY.
+
+        ⚠️ **A dry link does not move the chain's origin** — 0236. It did: the next link searched
+        from the dry bolt's end, half a reach further up the lane, so a gun with nothing in reach
+        found a body a reach and a half away. The longer reach 0236 authored is what made it
+        visible; `tests/weapons.test.ts` fires dry at a body just past reach and counts its health.
+      */
       toAlong = fromAlong + w.weapon.reach * DRY_BOLT_SHARE;
       toAcross = fromAcross;
+      spawnLink(w, row, fromAlong, fromAcross, toAlong, toAcross);
+      break;
     } else {
       break;
     }
@@ -2940,28 +2952,29 @@ function driftPickups(w: World): void {
       DEPARTURE from it. Reversing the whole velocity would fire the pickup backwards through the
       world at the scroll rate as well, which is a piece leaving the screen rather than turning round.
 
-      ⚠️ **Scattered pieces only, and `lifeFor` is what says so.** An authored pickup whose wait has
-      run out is MEANT to fall back through the view and leave —
+      ⚠️ **Scattered pieces in FLIGHT only, and `turnsLeft` is what says so** (0236). An authored
+      pickup whose wait has run out is MEANT to fall back through the view and leave —
       `docs/decisions/0064-a-pickup-waits-to-be-taken.md`, and `driftPickups` eases it to a target of
-      zero for exactly that reason. Bouncing it here would make every pickup in the game immortal.
+      zero for exactly that reason. Bouncing it here would make every pickup in the game immortal; a
+      waiting pickup turns at the same walls by its heading, further down.
     */
-    if (item.lifeFor > 0) {
+    /*
+      ⚠️ **THE THROW IS A FLIGHT OF ITS OWN, since 0236, and `turnsLeft` counts it.** Reported from
+      the first play-test: *"on death, the power ups needs to scatter more to the 8 directions -> they
+      just explode up and down now."* They were thrown in eight directions and the along half was
+      eased away inside a second, so what the eye kept was the across half: a fan. A scattered piece
+      now flies its throw out for `SCATTER_FLIGHT` steps, bouncing off the box's ends and the lane's
+      walls, and only then joins the wait every other pickup has — and it keeps that wait, which is
+      the other half of the report: *"they need to last as long as regular power ups."*
+    */
+    if (item.turnsLeft > 0) {
+      item.turnsLeft--;
       const inView = item.along - w.cameraAlong;
       const departure = item.velAlong - w.scrollPerStep;
       if (inView <= PLAYER_ALONG_MARGIN) item.velAlong = w.scrollPerStep + Math.abs(departure);
       else if (inView >= PLAYER_LEAD) item.velAlong = w.scrollPerStep - Math.abs(departure);
+      continue;
     }
-    /*
-      ⚠️ **A scattered pickup that runs out of time leaves a burst**, because
-      `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` is named for
-      exactly this: the model resolves *that one is gone now* and, without this, the picture says
-      nothing — a pickup the player was flying towards simply is not there any more, which reads as a
-      collection that failed rather than as a clock that ran out.
-
-      ⚠️ **On the step BEFORE `stepEntities` retires it**, which is the same shape `stepBombs` uses for
-      a fuse: after the release the slot belongs to whatever spawns next, so its position is gone.
-    */
-    if (item.lifeFor === 1) burst(w, item.along, item.across, BURST.shield);
     /*
       THE WAIT — `docs/decisions/0064-a-pickup-waits-to-be-taken.md`.
 
@@ -2977,20 +2990,12 @@ function driftPickups(w: World): void {
     */
     if (item.holdFor <= 0) {
       /*
-        ⚠️ **A SCATTERED piece lands here, and `lifeFor` is what says so** — it carries no `holdFor`.
-        `scatterUpgrades` throws it in two axes and this is what
-        spends the `along` half: the excursion is `speed ÷ PICKUP_EASE`, about 11 world units, after
-        which it is holding station and bouncing across for the rest of its five seconds. That is the
-        whole of why `docs/decisions/0066-a-death-scatters-what-it-took.md`'s objection to throwing
-        along — *"off the front or the back of the screen inside two seconds"* — no longer applies.
-
-        ⚠️ **The two targets are different and both are 0034's frame.** A scattered piece holds the
-        distance the ship died at, so its target is the camera's own rate; an authored pickup whose
-        wait has run out is meant to leave, so its target is zero — a body with no speed of its own
-        falls back through the view.
+        The wait is over, so it leaves: its target is zero — a body with no speed of its own falls
+        back through the view, which is 0034's frame. A scattered piece used to land here on a
+        timer of its own; since 0236 it carries the same wait as an authored one and leaves the same
+        way.
       */
-      const drift = item.lifeFor > 0 ? w.scrollPerStep : 0;
-      item.velAlong += (drift - item.velAlong) * PICKUP_EASE;
+      item.velAlong += (0 - item.velAlong) * PICKUP_EASE;
       continue;
     }
     item.holdFor--;
@@ -3182,7 +3187,9 @@ function scatterRing(w: World, upgrades: readonly UpgradeKind[], count: number):
     const speed = SCATTER_SPEED * w.scatterRng.range(SCATTER_SPREAD_MIN, SCATTER_SPREAD_MAX);
     item.velAcross = Math.sin(angle) * speed;
     item.velAlong = w.scrollPerStep + Math.cos(angle) * speed;
-    item.lifeFor = SCATTER_STEPS;
+    // The throw is a flight, and then the wait every pickup has — 0236. `driftPickups` has both.
+    item.turnsLeft = SCATTER_FLIGHT;
+    item.holdFor = lingerFor(row);
   }
 }
 

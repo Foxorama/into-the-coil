@@ -158,8 +158,14 @@ export interface PickupRow extends Body {
  * ⚠️ **Steps rather than seconds, because the cycle is a thing the player reads off the field and
  * the field steps at 60Hz** — 0022. Two seconds is long enough to read a glyph at pickup size and
  * decide; a face that turned faster would be a coin the player could not call.
+ *
+ * ⚠️ **THREE SECONDS, AND IT WAS TWO — the first play-test's own number.** Reported 2026-09-05:
+ * *"the rotation needs to be 1sec longer, it takes too long to fly to the pickup and it changes just
+ * before you grab it to the wrong weapon all the time."* A face has to outlast the crossing a player
+ * makes for it, from wherever they were when they chose; two seconds was the time to read it and not
+ * the time to reach it. `docs/decisions/0236-the-guns-answer-the-first-play-test.md`.
  */
-export const PICKUP_CYCLE_STEPS = 120;
+export const PICKUP_CYCLE_STEPS = 180;
 
 /**
  * How many full cycles a pickup stays for, at least. *"Long enough that the player can see at least
@@ -851,7 +857,7 @@ export function weaponFor(
     flight: gunRow.flight,
     guidance: tubeRow.guidance,
     links: everyAt(gunRow.links, gun),
-    reach: gunRow.reach,
+    reach: everyAt(gunRow.reach, gun),
     /*
       ⚠️ **Counted over the two LADDERS rather than over the raw list** — 0081's rule, 0083's
       arithmetic. A player who spends four upgrades on missiles has upgraded exactly as much as one

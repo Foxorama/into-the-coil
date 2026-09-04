@@ -117,6 +117,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a pickup is rare, and says what it is** | [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) |
 | **two upgrade ladders of four tiers; nine pickups a level, of four kinds** | [0083](decisions/0083-two-ladders-of-four.md) |
 | **a weapon is a kind; the weapon pickup cycles; the arc is chain lightning; the ship wears its gun** | [0233](decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md) |
+| **the guns' first play-test, answered: a three-second face, a scatter that flies, a reach ladder, a strike that explodes, bubbles on the pickups** | [0236](decisions/0236-the-guns-answer-the-first-play-test.md), [`the-guns-played`](../reports/the-guns-played-2026-09-05.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -740,10 +741,11 @@ axis, one PR each, in the order asked:**
    the straight missile, turning toward the nearest body from the moment it leaves the tube, any
    direction. The missile pickup already cycles; a second row is what gives it something to cycle to.
 
-**What 0233 owes before either is worth much:** an ear on `arc` and `zap` (`scripts/hear.mjs
---only=arc,zap` writes them) and an eye on the bolt in motion at the camera the game ships — every
-claim about both is a model quantity. **Play it on the branch preview first**; the balance of a gun
-that cannot miss is a hand's, and its ladders are starting points.
+**0233 was played the day it was built and [0236](decisions/0236-the-guns-answer-the-first-play-test.md)
+answers every item of [`the-guns-played`](../reports/the-guns-played-2026-09-05.md)** — the verdict
+was *"cool… but it adds a huge degree of difficulty now"*, and the seven items are each a model
+quantity answered by a model change. **What is owed is another play**, on the branch preview, and
+an ear on `arc` and `zap` as they are now (`scripts/hear.mjs --only=arc,zap` writes them).
 
 ⚠️ **AND ONE THING IS WAITING ON AN EAR, WHICH IS NOT THE SAME AS BEING NEXT.** It is written here
 rather than as a fourth item below, because *this* is the file's one marker and

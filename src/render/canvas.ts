@@ -34,6 +34,7 @@ export class CanvasSurface implements Surface {
   private space = '#000000';
   private boltGlow = '#ffffff';
   private boltCore = '#ffffff';
+  private boltDark = '#000000';
 
   constructor(private readonly ctx: CanvasRenderingContext2D, atlas: Atlas) {
     this.atlas = atlas;
@@ -72,9 +73,10 @@ export class CanvasSurface implements Surface {
    * palette rather than passed per call, on `setSpace`'s terms: a colour is a property of the palette
    * the page is showing, and a string per stroke per frame would be a hash lookup on the hot path.
    */
-  setBolt(glow: string, core: string): void {
+  setBolt(glow: string, core: string, dark: string): void {
     this.boltGlow = glow;
     this.boltCore = core;
+    this.boltDark = dark;
   }
 
   clear(): void {
@@ -91,24 +93,34 @@ export class CanvasSurface implements Surface {
   }
 
   /**
-   * One bolt: the same polyline stroked twice, wide and faint under thin and bright.
+   * One bolt: the same polyline stroked three times — a dark halo, a wide faint glow, a thin bright
+   * core. A single point is a dot: the round cap does the drawing.
    *
-   * ⚠️ **TWO STROKES AND NO `shadowBlur`.** A canvas shadow is a per-draw Gaussian over the path's
+   * ⚠️ **THREE STROKES AND NO `shadowBlur`.** A canvas shadow is a per-draw Gaussian over the path's
    * bounding box, which is the one Canvas2D call that is genuinely expensive and the one this
-   * backend must never make sixty times a second. A translucent wide stroke under a thin opaque one
-   * is what a glow looks like at the size a bolt is drawn, and it costs two path strokes.
+   * backend must never make sixty times a second. Translucent wide strokes under a thin opaque one
+   * are what a glow looks like at the size a bolt is drawn, and they cost three path strokes.
+   *
+   * ⚠️ **THE DARK HALO IS THE FIRST PLAY-TEST'S — 0236.** *"It needs some bright points and a bit of
+   * a darker glow around it."* A bolt over a busy sky had nothing to stand against; the halo is the
+   * space colour at half alpha, twice the glow's width, and it is what gives the glow an edge.
    *
    * ⚠️ **Nothing here allocates**: `beginPath`, `moveTo`, `lineTo` and `stroke` write into the
    * context's own path, and the points are the caller's buffer.
    */
   bolt(points: Float32Array, count: number, width: number, alpha: number): void {
-    if (count < 2) return;
+    if (count < 1) return;
     const ctx = this.ctx;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
     ctx.moveTo(points[0]!, points[1]!);
+    if (count === 1) ctx.lineTo(points[0]!, points[1]!);
     for (let i = 1; i < count; i++) ctx.lineTo(points[i * 2]!, points[i * 2 + 1]!);
+    ctx.globalAlpha = alpha * 0.5;
+    ctx.strokeStyle = this.boltDark;
+    ctx.lineWidth = width * 6;
+    ctx.stroke();
     ctx.globalAlpha = alpha * 0.35;
     ctx.strokeStyle = this.boltGlow;
     ctx.lineWidth = width * 3;

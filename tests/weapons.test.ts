@@ -44,6 +44,7 @@ import { reset } from '../src/sim/entity.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../src/sim/flight.ts';
 import { screenX, screenY, type Surface } from '../src/render/surface.ts';
+import { STROKES_PER_LINK } from '../src/render/scene.ts';
 import { NO_LEVEL, NO_SECTIONS, playableWorld } from './world.ts';
 
 const NEVER = Number.MAX_SAFE_INTEGER;
@@ -473,7 +474,7 @@ describe('0233 — the arc is chain lightning', () => {
     expect(body.health).toBe(99 - world.weapon.damage);
   });
 
-  it('and at the cap the bolt pool never fills, and the picture is counted as a bolt and a twig per link', () => {
+  it('and at the cap the bolt pool never fills, and the picture is counted per link', () => {
     const { world, frame } = armed('arc', UPGRADE_TIERS);
     world.fireIn = world.weapon.fireEvery;
     let peak = 0;
@@ -495,7 +496,7 @@ describe('0233 — the arc is chain lightning', () => {
       if (world.bolts.size > 0 && checked < 20) {
         strokes = 0;
         frame.draw(0.5);
-        expect(strokes, 'a link is not stroked as one bolt and one twig').toBe(world.bolts.size * 2);
+        expect(strokes, 'a link is not stroked as its stated number of bolt calls').toBe(world.bolts.size * STROKES_PER_LINK);
         checked++;
       }
     }

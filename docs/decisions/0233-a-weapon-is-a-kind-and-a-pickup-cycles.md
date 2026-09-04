@@ -114,7 +114,7 @@ nothing persists it yet; no storage key, no schema, no cache prefix moved.
 
 | broken on purpose | went red |
 |---|---|
-| the arc's last rung authored so it changes nothing about the ship | `every rung changes the ship` |
+| the pulse's third rung authored so it changes nothing about the gun (re-aimed by 0236: the arc's reach is a ladder, so its rungs cannot be emptied by one edit) | `every rung changes the ship` |
 | the arc's pickup face given the pulse's chevron | `THE FACES: the weapon pickup offers every gun` |
 | the arc's first hull made the pulse's | `THE HULLS: every gun has its own` |
 | the switch removed from `effectOf` | `THE SWITCH: another gun is an upgrade` |

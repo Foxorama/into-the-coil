@@ -1212,7 +1212,9 @@ describe('the synthesiser', () => {
   // measure for the music. One description, not two — the helper is imported at the top of the file.
 
   /** The cues the report is about: *"more bass-y, more boomy/explosiony"*. */
-  const EXPLOSIONS = ['kill', 'blast', 'bossDown', 'death'] as const;
+  // And the arc's strike, since 0236 — *"need an impact/explosion sound when enemies get hit by
+  // lightning"* — which is held to everything an explosion is held to here.
+  const EXPLOSIONS = ['kill', 'blast', 'bossDown', 'death', 'zap'] as const;
 
   /*
     ⚠️ **THE ONE THE OTHER THREE COULD NOT SEE** — `docs/decisions/0179-an-explosion-ends-low.md`.
@@ -1326,9 +1328,12 @@ describe('the synthesiser', () => {
       be able to pick out of a screen full of the lighter one. A pulse given more bottom than the
       missile would answer this report by breaking that one.
     */
-    const weight = (kind: 'pulse' | 'missile'): number =>
+    const weight = (kind: 'pulse' | 'missile' | 'arc'): number =>
       spectrum(sampleCue(CUES[kind], SAMPLE_RATE, makeRng('cues').stream(kind)), SAMPLE_RATE)[0]!;
     expect(weight('missile'), 'the pulse is heavier at the bottom than the missile').toBeGreaterThan(weight('pulse'));
+    // And the arc is heavier than the pulse too, since 0236: *"it sounds sparky, but not lightningy"*
+    // was the coil with no thunder under it, and thunder is a bottom.
+    expect(weight('arc'), 'the arc has no more bottom than the pulse').toBeGreaterThan(weight('pulse'));
   });
 
   it('0104 — THE REPORTED ONE: an auto-weapon’s cue finishes before its own next volley', () => {

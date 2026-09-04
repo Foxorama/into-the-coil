@@ -44,7 +44,9 @@ export const PROBES = [
       the code 0066 argued for at length and shipped.
     */
     broke: 'the along throw removed, so a death scatters along one line again',
-    guard: 'is thrown in both axes, and the along half is spent rather than carried',
+    // ⚠️ Re-aimed by 0236: with the throw a flight, a scatter with no along half comes to rest on
+    // one line — which is what 0100's guard on the ring measures first.
+    guard: '0100 — and the piece is still THROWN',
     edit: {
       path: 'src/app/frame.ts',
       find: '    item.velAlong = w.scrollPerStep + Math.cos(angle) * speed;',
