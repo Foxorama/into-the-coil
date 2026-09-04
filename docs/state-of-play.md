@@ -249,6 +249,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **AN ENEMY WEARS ITS PLACE — a skin and a motif per place over the silhouettes the levels already send; the bosses too; and the sheet had baked level one under every backdrop since 0195** | [0228](decisions/0228-an-enemy-wears-its-place.md) |
 | **THE PICTURE ANSWERS THE REPORT — debris over the bodies so a fireball is seen, bursts half again as big, enemy bullets lit, a tier is a wider sprite, and the Black Heart is an organ** | [0229](decisions/0229-the-picture-answers-the-report.md) |
 | **THE SHIP FLIES — the exhaust is an entity that follows the ship: burns on a hard push, eases on a pull, pulses on the step clock, and hangs against the across velocity** | [0230](decisions/0230-the-ship-flies.md) |
+| **A LEVEL IS A MIX — no more than three waves of one class in a row, in every level, sorted by arrival; the shoal ran seventeen non-firing and the batteries twenty-nine firing** | [0231](decisions/0231-a-level-is-a-mix.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were
@@ -837,10 +838,11 @@ level and each level needs its own brand of unique enemy… a pulsing black 'hea
 [0229](decisions/0229-the-picture-answers-the-report.md) answers the fireball, the bullets, the tiers
 and the heart. [0230](decisions/0230-the-ship-flies.md) answers the thrusters: the flame is an
 entity, and what is owed is an eye on the feel — `SWAY`, `PULSE_STEPS` and `BURN_ASK` in
-`src/content/exhaust.ts` are the knobs, and banking is deliberately not in it. **Still owed from that
-list, in this order:** the wave interleaving (measured: The Approach runs twelve non-firing waves in
-a row, the batteries level twenty-nine firing), and a signature enemy per place with per-place hull
-variants. *"Music is good now."*
+`src/content/exhaust.ts` are the knobs, and banking is deliberately not in it.
+[0231](decisions/0231-a-level-is-a-mix.md) answers the wave spacing: every level is held to three
+waves of one class in a row, and **the two levels that changed most — the shoal and the batteries —
+are owed an eye**, because the shoal fires more than it did and the batteries less. **Still owed from
+that list:** a signature enemy per place. *"Music is good now."*
 
 ⚠️ **AND THE VOLCANOES LANDED ON 2026-09-04 — [0224](decisions/0224-the-mountain-is-awake.md)**, which
 closes the 2026-09-03 backgrounds report entirely. Saurian Belt places **three**, one on each of its
