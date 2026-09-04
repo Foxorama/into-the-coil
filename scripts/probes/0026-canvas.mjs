@@ -70,7 +70,9 @@ export const PROBES = [
     guard: 'clears WCAG AA against the background',
     edit: {
       path: 'src/content/palette.ts',
-      find: "    enemy: '#ff4d6d',",
+      // ⚠️ Re-anchored by 0222, which brightened `enemy` to buy the background its detail. The break
+      // is unchanged: an ink taken below AA against the void is one the player cannot reliably find.
+      find: "    enemy: '#ff7286',",
       replace: "    enemy: '#241016',",
     },
   },

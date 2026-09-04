@@ -778,12 +778,22 @@ to match the sky."* A place with land now has its own sky array: no star fields,
 drawn last, and a `space` colour that is a sky. Saurian Belt is blue, Rime Shelf is austere, and The
 Toxic Mire is a planet with a canopy over a corridor over its pools.
 
-⚠️ **TWO OF THAT REPORT'S FIVE ASKS ARE STILL OPEN AND ARE THE NEXT TWO PIECES OF ART WORK.**
-**Saurian Belt's volcanoes** — *"exploding volcanoes adding volcanic effects at some points in the
-level"* — are `LANDMARK_OF.saurian` plus `landmarks` entries, on the Pillars' own terms. **Depth for
-the four places in space** — *"like the music setting screen how we added the debris"* — is a baked
-tile and not the room's motes: those borrow the `debris` ENTITY pool, which is free with no game
-running and is not available in one, because `CAPACITY` totals 0022's worst case of 500 exactly.
+⚠️ **AND THE BACKGROUND STOPPED BEING BLACK ON 2026-09-04 — [0222](decisions/0222-the-background-is-not-black.md).**
+*"We can also highlight and brighten important objects while also filling the background with detail…
+a plain black background is a plain boring game."* **Those are one trade rather than two requests**,
+and the instrument for it is `scripts/weigh-sky.mjs`. `enemy` was brightened to `#ff7286` to pay for
+the detail; the four places in space gained hulks; and 0203's forbidden band is finally checked against
+`STRUCTURE_OF`, which it never was — Saurian Belt had been drawing body-sized debris since 0211.
+
+⚠️ **AND IT FOUND RIME SHELF UNDER THE ACCESSIBILITY FLOOR, SHIPPED THE DAY BEFORE.** `cloudCover`
+counts clouds; 0220 and 0221 both recorded that structure and ground go uncounted and neither closed
+it. `skyCover` does, and **the debt that gets written down twice is the one that bites**.
+
+⚠️ **SAURIAN BELT'S VOLCANOES ARE THE ONE ASK LEFT FROM THAT REPORT** — *"exploding volcanoes adding
+volcanic effects at some points in the level"*. They are `LANDMARK_OF.saurian` plus `landmarks`
+entries, on the Pillars' own terms, and *at some points in the level* is a position, which is what 0203
+built the slot for. **A planet has no landmark yet, so the ink `bakeLandmark` is handed is worth
+checking**: it takes the place's GAS, and a volcano on a planet wants its rock.
 
 ⚠️ **THE BACKGROUNDS WERE ATTACKED ON 2026-09-03 — [0220](decisions/0220-a-place-is-somewhere-you-are.md).**
 Five of the seven places redrawn from one report: Ember Nebula denser and its Pillars knotted, lit and

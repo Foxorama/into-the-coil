@@ -1651,7 +1651,7 @@ function drawEnclosure(ctx: Pen, land: string, sky: string, glow: string, size: 
  * use one without stars coming through it, which is the entire defect 0221 is about. Aerial haze is
  * what distance actually looks like, and it is a colour rather than a transparency.
  */
-function mix(from: string, to: string, by: number): string {
+export function mix(from: string, to: string, by: number): string {
   if (by <= 0) return from;
   const read = (hex: string): number[] => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
   const [a, b] = [read(from), read(to)];
@@ -2844,6 +2844,83 @@ interface Crossing {
 }
 
 /**
+ * A run of large tumbling bodies, well above the size anything in the game can be.
+ *
+ * `docs/decisions/0222-the-background-is-not-black.md`. Reported: *"all the space levels need more
+ * 'depth' to them, like the music setting screen how we added the debris… a plain black background is
+ * a plain boring game."*
+ *
+ * ⚠️ **THE BAND SAYS DEBRIS IS EITHER A SPECK OR A HULK, AND NOTHING IN BETWEEN.** 0203 forbids the
+ * sky anything between a bullet (1.8 units) and twice the largest body (16) — a compact shape in there
+ * is confusable with a threat. The music room's motes sit squarely in that gap, which is free there
+ * because no game is running and is not available in one. So the mid-sized chunk that would be the
+ * obvious answer is the one thing that cannot be drawn, and the depth has to come from the two ends:
+ * **specks under 1.8, and hulks over 16.**
+ *
+ * ⚠️ **AND THE HULKS ARE WHAT MAKE THE FAR END OF THE BAND MEAN ANYTHING.** Until this, every place
+ * satisfied 0203 by drawing nothing large at all — which is 0069's old one-sided ceiling wearing a
+ * band's clothes, and *"a plain black background"* is the report that produces.
+ *
+ * ⚠️ **DARK, ALWAYS, WHICH IS WHY THEY ARE FREE.** A hulk is a hole in the light: it darkens the
+ * ground the bright inks are read against, so it costs nothing against the accessibility floor and
+ * `skyCover` does not count it. Twenty of these are cheaper than one lit crest.
+ */
+function hulks(
+  size: number,
+  spec: { stream: string; count: number; from: number; to: number; sides: number; rough: number; alpha: number },
+): StructureMark[] {
+  const rng = makeRng('sky').stream(spec.stream);
+  const out: StructureMark[] = [];
+  /*
+    ⚠️ **THE SMALLEST ONE HAS TO CLEAR THE BAND, AND A RADIUS IS NOT A WIDTH.** The first set were
+    authored as radii and the guard caught The Approach's at **15.6 units against a floor of 16** —
+    because a hulk is squashed to 0.72 on one axis and every vertex is pulled in by up to `rough`, so
+    its box is `2r(1 − rough)(0.72)` at worst rather than `2r`. That is three multiplications between
+    the number in the table and the number a player sees, which is `docs/decisions/0027`'s subject in
+    miniature. **`from` is raised until the worst case clears**, per place, because `rough` differs.
+  */
+  for (let i = 0; i < spec.count; i += 1) {
+    const r = rng.range(spec.from, spec.to) * size;
+    // Kept a radius clear of the tile edge: a hulk is a LOCAL mark, and 0208's wrap can only carry it
+    // if it fits — a shape wider than half its own tile is a crossing structure in a local one's coat.
+    const x = rng.range(r / size, 1 - r / size) * size;
+    const y = rng.range(0.12, 0.88) * size;
+    const lean = rng.range(0, Math.PI);
+    const points: number[][] = [];
+    for (let s = 0; s < spec.sides; s += 1) {
+      const a = (s / spec.sides) * Math.PI * 2 + rng.range(-spec.rough, spec.rough);
+      const rr = r * rng.range(1 - spec.rough, 1);
+      // Leaned, so a place's hulks are not all the same object at the same angle.
+      const dx = Math.cos(a) * rr;
+      const dy = Math.sin(a) * rr * 0.72;
+      points.push([x + dx * Math.cos(lean) - dy * Math.sin(lean), y + dx * Math.sin(lean) + dy * Math.cos(lean)]);
+    }
+    out.push({ points, width: 0, alpha: spec.alpha, crosses: false, taper: false, lit: false });
+    /*
+      ⚠️ **AND A LIT RIM, WITHOUT WHICH A HULK IS NOTHING AT ALL.** A dark mark is a hole in the gas,
+      and The Approach's gas is thin — so the first set of these were drawn perfectly, in the right
+      places, at the right sizes, and were **invisible** against a near-black backdrop. That is
+      0220's finding about The Labyrinth's corridor walls arriving in a second place, and the answer
+      is the same one the Pillars use: a dark body with one bright edge.
+
+      ⚠️ **A HAIRLINE, BECAUSE THIS IS THE HALF THAT COSTS CONTRAST.** The body is free — it darkens
+      the ground the bright inks are read against — and the rim is gas, which is the only thing
+      `skyCover` counts. A closed outline four thousandths of a tile wide spends almost nothing and is
+      the whole difference between an object and an absence.
+    */
+    out.push({
+      points: [...points, points[0]!],
+      width: Math.max(1, size * 0.004),
+      alpha: spec.alpha * 0.55,
+      crosses: false,
+      taper: false,
+      lit: true,
+    });
+  }
+  return out;
+}
+
+/**
  * A wandering line across the whole tile, ending where it began.
  *
  * The shared shape behind Ember Nebula's dust and The Labyrinth's corridor walls — one crosses in
@@ -2925,7 +3002,17 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
     points.push([size, size * 0.8], [0, size * 0.8]);
     // ⚠️ LIT, not dark — The Approach's gas is the thinnest of the seven, so a silhouette here has
     // nothing to be a silhouette against. Its headroom is what pays for that.
-    return [{ points, width: 0, alpha: 0.34, crosses: true, taper: false, lit: true }];
+    /*
+      ⚠️ **TWO HULKS, AND THE PLACE IS STILL THE SPARSEST OF THE SEVEN** — 0222. 0211 gave this one
+      mark on purpose: *"a busy sky here would spend the contrast between ordinary space and everywhere
+      after it."* That argument is about BUSYNESS and it survives — two dark bodies is not busy, and
+      *"a plain black background is a plain boring game"* was reported about all four places in space
+      including this one. It keeps the fewest of anything and it is no longer empty.
+    */
+    return [
+      { points, width: 0, alpha: 0.34, crosses: true, taper: false, lit: true },
+      ...hulks(size, { stream: 'approach/hulks', count: 2, from: 0.072, to: 0.105, sides: 9, rough: 0.2, alpha: 0.4 }),
+    ];
   },
 
   /*
@@ -2991,20 +3078,52 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
           knot in the dust.
         */
         const r = rng.range(0.004, 0.011) * size;
-        const lean = rng.range(-0.25, 0.25);
+        /*
+          ⚠️ **THE LEAN HAD TO COME DOWN WHEN THE STRETCH WENT UP, AND THAT IS NOT OBVIOUS.** A
+          globule is drawn long and then rotated, and a rotated long shape has a **squarer bounding
+          box** — at ±0.25 the 3.6× stretch came back out of the box as an aspect near two, which is
+          compact, which puts it in 0203's band. The guard caught it after the stretch was already
+          fixed, which is the whole reason a guard measures the drawing and not the intention.
+        */
+        const lean = rng.range(-0.1, 0.1);
         const points: number[][] = [];
         // Nine sides at gently uneven radii: soft, not faceted. A globule has no edges.
         for (let s = 0; s < 9; s += 1) {
           const a = (s / 9) * Math.PI * 2;
           const rr = r * rng.range(0.82, 1.18);
-          const dx = Math.cos(a) * rr * 2.4;
+          /*
+            ⚠️ **DRAWN OUT TO 3.6× FROM 2.4×, AND IT IS THE FORBIDDEN BAND RATHER THAN A TASTE** —
+            0222. At 2.4 a globule's box is barely two and a half times as long as it is deep, which
+            makes it a **compact** shape about six units across — inside 0203's band, where a piece of
+            the backdrop can be read as a body. Nothing had ever checked `STRUCTURE_OF` against that
+            band; the guard that does is new in the same pass that needed to know how big debris is
+            allowed to be.
+
+            **Longer is also the better drawing.** These are knots in a flow, and a flow draws things
+            out — a rounder one reads as a pebble, which is the thing the band is objecting to.
+          */
+          const dx = Math.cos(a) * rr * 3.6;
           const dy = Math.sin(a) * rr;
           points.push([x + dx - dy * lean, y + dy + dx * lean]);
         }
         knots.push({ points, width: 0, alpha: 0.55, crosses: false, taper: false, lit: false });
       }
     }
-    return [...filaments, ...knots, ...lanes];
+    /*
+      ⚠️ **AND THREE HULKS, WHICH IS THE ONLY LARGE THING THE RULES ALLOW** — 0222. Dark bodies in the
+      gas, twenty-odd units across, at the slowest rate in the place: what reads as depth is having
+      something at a scale nothing else on the screen is at. Ember Nebula can carry the most of them
+      because it has the most gas for them to be silhouettes against.
+    */
+    return [...filaments, ...knots, ...lanes, ...hulks(size, {
+      stream: 'nebula/hulks',
+      count: 3,
+      from: 0.074,
+      to: 0.11,
+      sides: 11,
+      rough: 0.22,
+      alpha: 0.55,
+    })];
   },
 
   /*
@@ -3037,18 +3156,39 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
       ever really weather. Local objects — 0208's rule, not 0207's — because a rock carries its whole
       shape to the copy one tile over.
     */
-    const rng = makeRng('sky').stream('saurian/rocks');
+    /*
+      ⚠️ **THE BELT IS FOUR HULKS AND A DRIFT OF SPECKS NOW, AND IT USED TO BE THE THING 0203 FORBIDS**
+      — 0222. These were five-to-seven-sided rocks at `0.012` to `0.04` of a 200-unit tile: **2.4 to 8
+      world units across, against a bullet at 1.8 and a body at up to 8.** Their own comment claimed
+      the polygon was *"deliberately not a disc — a disc at this size is a bullet's silhouette, which
+      0203's band is about"*, and the band is about SIZE. Nothing had ever checked `STRUCTURE_OF`
+      against it, so a place has been drawing body-sized debris in the sky since 0211.
+
+      A belt is better for the fix, too. Real ones are a few big bodies and a great deal of dust, and
+      the two ends of the band are exactly those.
+    */
+    for (const hulk of hulks(size, {
+      stream: 'saurian/belt',
+      count: 4,
+      from: 0.087,
+      to: 0.128,
+      sides: 7,
+      rough: 0.34,
+      alpha: 0.62,
+    })) {
+      out.push(hulk);
+    }
+    const rng = makeRng('sky').stream('saurian/dust');
     for (let knot = 0; knot < 3; knot += 1) {
       const cx = rng.range(0.1, 0.9) * size;
-      // Above the skyline, and by enough that a rock never reads as sitting on the ground.
+      // Above the skyline, and by enough that a speck never reads as sitting on the ground.
       const cy = rng.range(0.28, 0.5) * size;
-      for (let i = 0; i < 5; i += 1) {
+      for (let i = 0; i < 7; i += 1) {
         const x = cx + rng.range(-0.09, 0.09) * size;
         const y = cy + rng.range(-0.07, 0.07) * size;
-        const r = rng.range(0.012, 0.04) * size;
+        // Under a bullet at 1.8 units — `0.004` of a 200-unit tile is 0.8, and the widest is 1.6.
+        const r = rng.range(0.002, 0.004) * size;
         const points: number[][] = [];
-        // ⚠️ Five to seven sides at uneven radii: a rock, and deliberately not a disc — a disc at this
-        // size is a bullet's silhouette, which 0203's band is about.
         const sides = 5 + Math.floor(rng.range(0, 3));
         for (let s = 0; s < sides; s += 1) {
           const a = (s / sides) * Math.PI * 2 + rng.range(-0.3, 0.3);
@@ -3204,6 +3344,25 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
       out.push({ points: pass, width: WALL * size * 0.5, alpha: 0.5, crosses: false, taper: false, lit: false });
       out.push(rim(pass, -side * 0.5, 0.34, false));
     }
+    /*
+      ⚠️ **AND WHAT THE CORRIDOR IS BUILT OUT OF, WHICH IS THE PLACE'S OWN VERSION OF A HULK** — 0222.
+      Not tumbling rock: blocks, squarer and more regular than anywhere else's, because a labyrinth is
+      a made thing. Seven sides at low roughness against Saurian Belt's five at high is the difference
+      between masonry and a boulder, and 0211's guard compares coordinates rather than intentions —
+      two places with the same generator and different streams still draw different marks, and these
+      draw a different SHAPE as well.
+    */
+    for (const block of hulks(size, {
+      stream: 'labyrinth/blocks',
+      count: 3,
+      from: 0.063,
+      to: 0.095,
+      sides: 7,
+      rough: 0.08,
+      alpha: 0.6,
+    })) {
+      out.push(block);
+    }
     return out;
   },
 
@@ -3244,8 +3403,20 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
             [x, y],
             [x + Math.cos(lean) * len, y + Math.sin(lean) * len],
           ],
-          width: rng.range(0.006, 0.016) * size,
-          alpha: 0.5,
+          /*
+            ⚠️ **THINNER AND FAINTER THAN 0221 SHIPPED THEM, AND IT IS A MEASUREMENT RATHER THAN A
+            TASTE — 0222.** At `0.006–0.016` of a 200-unit tile these were **1.2 to 3.2 world units
+            wide**, over a bullet's 1.8, and at 0.5 alpha in the gas colour over the palest sky in the
+            game. `scripts/weigh-sky.mjs` read Rime Shelf at **0.516 cover and `enemy` at 2.67:1
+            against a floor of 3** — the one place in the game that was under it, shipped the day
+            before by the decision that made these lit.
+
+            `cloudCover` could not see it: it counts clouds, and 0220 and 0221 both wrote down that
+            structure goes uncounted. **This is the pass that spends that headroom, so it is the pass
+            that had to measure it.**
+          */
+          width: rng.range(0.004, 0.008) * size,
+          alpha: 0.28,
           crosses: false,
           taper: true,
           /*
@@ -3327,6 +3498,23 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
         taper: true,
         lit: false,
       });
+    }
+    /*
+      ⚠️ **AND TWO THINGS BIG ENOUGH TO BE GOING IN, WHICH IS THE PLACE'S WHOLE SUBJECT** — 0222.
+      *"Everything drawn one way"* is a direction and nothing was ever being drawn — the streaks are
+      the motion of an absence. Two hulks give the infall something to be happening TO, and they are
+      the faintest in the game because this place's character is that there is nearly nothing left.
+    */
+    for (const falling of hulks(size, {
+      stream: 'core/falling',
+      count: 2,
+      from: 0.082,
+      to: 0.115,
+      sides: 8,
+      rough: 0.3,
+      alpha: 0.42,
+    })) {
+      out.push(falling);
     }
     return out;
   },
@@ -3494,16 +3682,27 @@ function drawNebula(ctx: Pen, colour: string, space: string, size: number, theme
  * unreachable by construction: it asks five cloud centres to coincide. A guard that cannot be
  * satisfied by correct content is a guard that gets switched off.
  */
+/**
+ * How much cloud lands on one point, accumulated the way a canvas accumulates it.
+ *
+ * ⚠️ **ONE DESCRIPTION, AND IT WAS BRIEFLY TWO.** `skyCover` needs exactly this arithmetic and 0222
+ * first copied it — which `npm run prove` reported immediately, because 0196's probe anchors on the
+ * accumulation line and there were suddenly two of them. A second copy of a measurement is the drift
+ * `tests/one-description.test.ts` exists for, and a duplicated anchor is that drift arriving where it
+ * can be seen.
+ */
+function cloudsAt(clouds: readonly { x: number; y: number; r: number; alpha: number }[], x: number, y: number): number {
+  let cover = 0;
+  for (const cloud of clouds) {
+    const d = Math.hypot(x - cloud.x, y - cloud.y);
+    if (d < cloud.r) cover = 1 - (1 - cover) * (1 - cloud.alpha * (1 - d / cloud.r));
+  }
+  return cover;
+}
+
 export function cloudCover(size: number, theme: ThemeKind, step = 4): number {
   const clouds = nebulaField(size, theme);
-  const at = (x: number, y: number): number => {
-    let cover = 0;
-    for (const cloud of clouds) {
-      const d = Math.hypot(x - cloud.x, y - cloud.y);
-      if (d < cloud.r) cover = 1 - (1 - cover) * (1 - cloud.alpha * (1 - d / cloud.r));
-    }
-    return cover;
-  };
+  const at = (x: number, y: number): number => cloudsAt(clouds, x, y);
   let worst = 0;
   /*
     ⚠️ **EVERY CLOUD CENTRE IS SAMPLED AS WELL AS THE GRID, AND A GUARD FOUND OUT WHY.** A cloud's peak
@@ -3523,6 +3722,92 @@ export function cloudCover(size: number, theme: ThemeKind, step = 4): number {
     }
   }
   return worst;
+}
+
+/**
+ * The most GAS that lands on any one point of a place's sky — clouds and lit structure together.
+ *
+ * `docs/decisions/0222-the-background-is-not-black.md`.
+ *
+ * ⚠️ **`cloudCover` COUNTS CLOUDS, AND THE SKY STOPPED BEING ONLY CLOUDS IN 0211.** Structure marks
+ * arrived that year and a lit one is drawn in the same gas colour a cloud is, on top of it; 0220 added
+ * lit crests and wall faces, and 0221 added a whole ground layer. **Both of those decisions recorded
+ * the gap and neither closed it** — *"what would actually check it is `cloudCover` accumulating
+ * `STRUCTURE_OF`'s lit marks by their covered area alongside the clouds"* — and this is the change
+ * that finally spends the headroom that measurement was protecting, so it is also the change that has
+ * to know how much there is.
+ *
+ * ⚠️ **ONLY THE LIT MARKS, AND THE DARK ONES ARE FREE — THAT IS AN ARGUMENT, NOT AN OMISSION.** Every
+ * ink this is measured for is bright (`player` `#7ae7ff`, `enemy` `#ff4d6d`, and so on through
+ * `PALETTES`; the one dim ink, `sky`, is excluded from the floor by name). A mark drawn in the SPACE
+ * colour makes the backdrop darker, which moves every one of those ratios **up**. Counting them would
+ * be modelling a cost that does not exist, and the guard would then refuse detail that is free.
+ *
+ * ⚠️ **AND THE GROUND IS NOT COUNTED EITHER, FOR A DIFFERENT REASON.** It does not tint the backdrop —
+ * it REPLACES it, opaquely — so where there is ground the contrast is against `THEMES[].ground`
+ * outright, and 0221 already holds that darker than the sky in every palette. Two separate backdrops,
+ * each held where it applies, rather than one blend that is true of neither.
+ */
+export function skyCover(size: number, theme: ThemeKind, share = 0.005, step = 4): number {
+  const clouds = nebulaField(size, theme);
+  const marks = STRUCTURE_OF[theme](size).filter((mark) => mark.lit);
+
+  /** How much gas one lit mark lays on a point: its own alpha inside it, nothing outside. */
+  const markAt = (mark: StructureMark, x: number, y: number): number => {
+    if (mark.width === 0) return insidePolygon(mark.points, x, y) ? mark.alpha : 0;
+    const reach = mark.width / 2;
+    for (let i = 1; i < mark.points.length; i += 1) {
+      if (nearSegment(mark.points[i - 1]!, mark.points[i]!, x, y) <= reach) return mark.alpha;
+    }
+    return 0;
+  };
+
+  const at = (x: number, y: number): number => {
+    let cover = cloudsAt(clouds, x, y);
+    for (const mark of marks) {
+      const a = markAt(mark, x, y);
+      if (a > 0) cover = 1 - (1 - cover) * (1 - a);
+    }
+    return cover;
+  };
+
+  /*
+    ⚠️ **A SHARE OF THE AREA, AND NOT THE LOUDEST POINT — WHICH IS THE OPPOSITE OF `cloudCover` AND
+    THE MEASUREMENT IS WHY.** A cloud is forty units across, so its peak is a REGION and a worst-point
+    is honest about it; that is 0196's model and it is untouched. A lit structure mark is a few pixels
+    wide, and four of them crossing composite to **0.94 over an area the size of a full stop.**
+    Measured on Rime Shelf: peak 0.938, **0.32% of the tile above 0.7 and 0.00% above 0.9.** Taking
+    that peak as *how bright the sky is* condemns a place for a coincidence, which is word for word
+    what 0196 refused when it rejected a full-alpha bound — *"a guard that cannot be satisfied by
+    correct content is a guard that gets switched off."*
+
+    So this reports **the brightest level at least `share` of the tile reaches**. At half a percent a
+    cloud's plateau still counts in full and four crossing hairlines do not.
+  */
+  const samples: number[] = [];
+  for (let x = 0; x < size; x += step) for (let y = 0; y < size; y += step) samples.push(at(x, y));
+  samples.sort((a, b) => b - a);
+  return samples[Math.min(samples.length - 1, Math.floor(samples.length * share))] ?? 0;
+}
+
+/** Distance from a point to a segment. Squared internally; the root is taken once at the end. */
+function nearSegment(a: number[], b: number[], x: number, y: number): number {
+  const dx = b[0]! - a[0]!;
+  const dy = b[1]! - a[1]!;
+  const len = dx * dx + dy * dy;
+  const t = len === 0 ? 0 : Math.max(0, Math.min(1, ((x - a[0]!) * dx + (y - a[1]!) * dy) / len));
+  return Math.hypot(x - (a[0]! + t * dx), y - (a[1]! + t * dy));
+}
+
+/** Even-odd containment, which is the rule `paintStructure` fills a closed mark under. */
+function insidePolygon(points: readonly number[][], x: number, y: number): boolean {
+  let inside = false;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+    const [xi, yi] = [points[i]![0]!, points[i]![1]!];
+    const [xj, yj] = [points[j]![0]!, points[j]![1]!];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
 }
 
 export function bakeNebula(

@@ -22,6 +22,7 @@ import {
   atlasIsStale,
   bakeSize,
   cloudCover,
+  skyCover,
   STRUCTURE_OF,
   fieldOf,
   nebulaField,
@@ -139,6 +140,49 @@ describe('0196 — the clouds are counted against the accessibility floor', () =
       }
     }
     expect(worst.length, 'nothing was measured').toBeGreaterThan(0);
+  });
+
+  it('every ink clears the floor against the backdrop WITH EVERYTHING THE SKY DRAWS ON IT', () => {
+    /*
+      ⚠️ **THE GUARD ABOVE COUNTS CLOUDS, AND THE SKY STOPPED BEING ONLY CLOUDS IN 0211** —
+      `docs/decisions/0222-the-background-is-not-black.md`. Structure marks arrived that year; a LIT one
+      is drawn in the same gas colour a cloud is, on top of it. 0220 added lit crests and wall faces
+      and wrote the gap down; 0221 added a whole ground layer and wrote it down again. **Neither closed
+      it, because neither needed the headroom.**
+
+      ⚠️ **MEASURED THE MOMENT SOMETHING DID: RIME SHELF WAS UNDER THE FLOOR AT 2.67:1.** Shipped the
+      day before by the decision that made its blowing ice lit — correctly, since drawn dark it was
+      black scratches over the palest sky in the game — at 0.5 alpha and up to 3.2 units wide. Every
+      guard in the repository was green.
+
+      ⚠️ **AND `skyCover` IS A SHARE OF AREA WHERE `cloudCover` IS A PEAK, WHICH IS NOT AN
+      INCONSISTENCY.** A cloud is forty units across, so its peak IS a region. A lit structure mark is
+      a few pixels wide, and four crossing composite to 0.94 over an area the size of a full stop —
+      Rime reads peak 0.938 with **0.00% of its tile above 0.9**. 0196 refused a bound of that shape in
+      as many words: *"a guard that cannot be satisfied by correct content is a guard that gets
+      switched off."*
+    */
+    const size = bakeSize(SPRITE_EXTENT.skyNebula, 6);
+    let checked = 0;
+    for (const theme of THEME_KINDS) {
+      const cover = skyCover(size, theme);
+      for (const name of Object.keys(PALETTES) as PaletteName[]) {
+        const backdrop = over(THEMES[theme].space[name], THEMES[theme].nebula[name], cover);
+        for (const [ink, colour] of Object.entries(PALETTES[name])) {
+          if (ink === 'space' || ink === 'sky') continue;
+          if ((DECOR_INKS as readonly string[]).includes(ink)) continue;
+          checked += 1;
+          const ratio = contrast(colour, backdrop);
+          expect(
+            ratio,
+            `${ink} sits at ${ratio.toFixed(2)}:1 on ${theme}'s ${name} backdrop once EVERYTHING the sky ` +
+              `draws is counted (cover ${cover.toFixed(3)}, blended ${backdrop}) — the clouds guard above ` +
+              'reads this place as clear, which is how Rime Shelf shipped under the floor',
+          ).toBeGreaterThanOrEqual(GAMEPLAY_FLOOR);
+        }
+      }
+    }
+    expect(checked, 'nothing was measured').toBeGreaterThan(0);
   });
 
   it('and the cover COUNTS THE PILE, because a guard cannot see its own measurement understating', () => {

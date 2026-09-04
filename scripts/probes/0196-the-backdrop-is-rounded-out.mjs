@@ -44,10 +44,15 @@ export const PROBES = [
     guard: 'and the cover COUNTS THE PILE, because a guard cannot see its own measurement understating',
     edit: {
       path: 'src/render/bake.ts',
-      // ⚠️ RE-ANCHORED when `cloudCover` grew a centre pass. The break is unchanged: the pile
-      // replaced by the loudest cloud in it.
-      find: '      if (d < cloud.r) cover = 1 - (1 - cover) * (1 - cloud.alpha * (1 - d / cloud.r));',
-      replace: '      if (d < cloud.r) cover = Math.max(cover, cloud.alpha * (1 - d / cloud.r));',
+      /*
+        ⚠️ RE-ANCHORED TWICE. Once when `cloudCover` grew a centre pass, and again by 0222 when the
+        accumulation moved into `cloudsAt` — it was briefly copied into `skyCover`, which made this
+        anchor ambiguous, and the fix was to have one description of it rather than two. **The break
+        is unchanged in both**: the pile replaced by the loudest cloud in it, and it now costs strictly
+        more, because both covers read through this line.
+      */
+      find: '    if (d < cloud.r) cover = 1 - (1 - cover) * (1 - cloud.alpha * (1 - d / cloud.r));',
+      replace: '    if (d < cloud.r) cover = Math.max(cover, cloud.alpha * (1 - d / cloud.r));',
     },
   },
   {
