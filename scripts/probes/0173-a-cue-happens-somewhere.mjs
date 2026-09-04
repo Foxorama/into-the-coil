@@ -43,7 +43,8 @@ export const PROBES = [
       which shortened this cue's LAYERS against the same number.
     */
     broke: 'the gun given a room, at sixteen soundings to one tail',
-    guard: 'and the four cues on the weapon cadence are DRY, because a tail cannot outlast its own repeat',
+    // ⚠️ Re-named by 0233: the guard covers every cue on the weapon cadence now, not four.
+    guard: 'and the cues on the weapon cadence are DRY, because a tail cannot outlast its own repeat',
     edit: {
       path: 'src/content/cues.ts',
       find: "  pulse: {\n    twin: 'shot-appears',",
