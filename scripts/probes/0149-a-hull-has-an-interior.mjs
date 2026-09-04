@@ -7,6 +7,13 @@
 // page. `reports/where-the-art-ceiling-is-2026-08-14.md` names the second as a distinct effect:
 // *"a hole is transparent and shows the sky through it; a `space` fill is opaque void."*
 //
+// ⚠️ RE-AIMED BY docs/decisions/0227-a-sprite-is-painted-not-filled.md, which took the table these
+// used to break away and left the marks as drawings. Every break here is the same break — the same
+// number moved the same way — landing in the arm that now paints it; and the guard that catches it
+// is the same claim, measured off the trace rather than off `ACCENT_OF`. One probe went with the
+// table: *a default interior for kinds that declared none* has no rule left to offend, because any
+// kind may be painted now.
+//
 // ⚠️ THE LAST ONE DOES NOT REDDEN THIS CHANGE'S OWN SUITE, ON PURPOSE. What holds the blit count is
 // `tests/budget.test.ts`, which has counted it since 0022; the report said so, and the honest way to
 // discharge that is to break the thing it claims to catch rather than to write a second copy of it —
@@ -18,79 +25,87 @@ export const PROBES = [
     decision: '0149',
     suite: 'tests/accents.test.ts',
     /*
-      ⚠️ THE FIRST OF THE TWO THE REPORT ASKED FOR: an accent that leaves its hull. `boss6` is the
-      tightest of the seven at 5.2 CSS pixels of clearance, and pushing its eyes out to the lobes'
-      own radius is the edit a hand makes when it wants the marks *further forward* — the numbers stay
-      plausible, every other guard stays green, and the silhouette the player reads grows three bites
-      out of its leading edge.
+      ⚠️ AN EYE MOVED OUT THROUGH THE LOBE. `boss6` is three overlapping circles and a bar whose
+      overlaps cancel, so the outer lobes are thinner than they look, and −0.62 was chosen against a
+      measurement (5.2 CSS pixels of clearance, the tightest of the seven). Two tenths further out and
+      the eye is over the edge — and on the page, where a hand would check it, it looks like an eye
+      near the edge of a lobe.
     */
-    broke: 'an accent pushed out to the edge of the hull, so three marks hang off the silhouette',
-    guard: 'and the interior stays inside the hull, with room to spare, in CSS pixels of a 1280×720 screen',
+    broke: 'a boss’s eye moved out through its lobe, so the interior pokes out of the silhouette',
+    guard: 'THE 0149 ONE: every solid mark on a body is inside its hull',
     edit: {
       path: 'src/render/bake.ts',
-      find: 'const BOSS6_EYES: Accent = [dot(-0.46, -0.62, 0.095), dot(-0.46, 0, 0.095), dot(-0.46, 0.62, 0.095)];',
-      replace: 'const BOSS6_EYES: Accent = [dot(-0.62, -0.62, 0.095), dot(-0.62, 0, 0.095), dot(-0.62, 0.62, 0.095)];',
+      find: 'const BOSS6_EYES: readonly Mark[] = [dot(-0.46, -0.62, 0.095), dot(-0.46, 0, 0.095), dot(-0.46, 0.62, 0.095)];',
+      replace: 'const BOSS6_EYES: readonly Mark[] = [dot(-0.46, -0.82, 0.095), dot(-0.46, 0, 0.095), dot(-0.46, 0.82, 0.095)];',
     },
   },
   {
     decision: '0149',
     suite: 'tests/accents.test.ts',
     /*
-      ⚠️ THE SECOND, AND IT IS A DIFFERENT FAILURE WEARING THE SAME NUMBERS. `boss7` is a ringed eye:
-      solid to 0.30, a hole from 0.30 to 0.66, solid again to the rim. A pupil grown to 0.55 is still
-      well inside the hull's bounds, still nowhere near the outline, and still entirely inside the
-      sprite — and it fills in the hole with opaque void, which turns the one round hull in the game
-      from a ring into a disc. Bounds alone cannot see it; only a grid over the mark can.
+      ⚠️ A MARK LAID ACROSS A HOLE. `boss7` is three rings and the gap between the outer two is sky;
+      a pupil at 0.48 sits squarely in it. Its outline is inside the hull's outer edge on every side,
+      so a bounds check would pass it — only sampling the interior of the mark against the hull's own
+      fill rule can see that it is painting opaque void over a gap the sky was showing through.
     */
-    broke: 'an accent grown across the hole the hull cut on purpose, so a ring bakes as a disc',
-    guard: 'and the interior stays inside the hull, with room to spare, in CSS pixels of a 1280×720 screen',
+    broke: 'a boss’s mark laid across one of its holes, so a gap becomes opaque void',
+    guard: 'THE 0149 ONE: every solid mark on a body is inside its hull',
     edit: {
       path: 'src/render/bake.ts',
-      find: 'const BOSS7_EYE: Accent = [\n  dot(0, 0, 0.16),',
-      replace: 'const BOSS7_EYE: Accent = [\n  dot(0, 0, 0.55),',
+      find: 'const BOSS7_EYE: readonly Mark[] = [\n  dot(0, 0, 0.16),',
+      replace: 'const BOSS7_EYE: readonly Mark[] = [\n  dot(0.48, 0, 0.16),',
     },
   },
   {
     decision: '0149',
     suite: 'tests/accents.test.ts',
     /*
-      ⚠️ THE SHIPPED GAME, RESTORED FOR ONE BOSS — which is the state every hull was in before this
-      change and the state a new one would be authored into by copying a neighbouring row. One flat
-      ink and an outline is what `reports/where-the-art-ceiling-is-2026-08-14.md` is about.
+      ⚠️ THE REPORT'S OWN FINDING, PUT BACK: one boss with no paint on it. On the sheet it is a hull in
+      one flat ink — exactly what every hull was before 0149, and exactly what a reader would not
+      notice was missing.
     */
-    broke: 'one boss handed back its flat fill, so it is the ceiling the report measured again',
-    guard: 'THE REPORTED ONE: every boss is drawn in two inks, and the file offered one',
-    edit: { path: 'src/render/bake.ts', find: '  boss3: BOSS3_NODES,', replace: '  boss3: null,' },
-  },
-  {
-    decision: '0149',
-    suite: 'tests/accents.test.ts',
-    /*
-      ⚠️ THE HURT SILHOUETTE LEFT BEHIND, which is EXACTLY the shape of the defect this file's own
-      table was written next to: `boss3Hit` through `boss7Hit` were authored beside their hulls rather
-      than with the other hurt sprites, five bosses shipped with no hit interaction at all, and every
-      guard was green. A hull and its hurt sprite share a `case` arm, so an accent on one and not the
-      other puts the SHAPE back in play and a flash stops reading as one object being hurt.
-    */
-    broke: 'a hurt boss left without the interior its hull has, so a flash changes the silhouette',
-    guard: 'and a hurt boss carries the same interior, so a flash is still one object being hurt',
-    edit: { path: 'src/render/bake.ts', find: '  boss3Hit: BOSS3_NODES,', replace: '  boss3Hit: null,' },
-  },
-  {
-    decision: '0149',
-    suite: 'tests/accents.test.ts',
-    /*
-      ⚠️ AN ACCENT AUTHORED BELOW A PIXEL, which is `docs/decisions/0106-a-mark-thinner-than-a-pixel-is-not-drawn.md`
-      arriving on a new axis. Decoration announces nothing when it fails: the marks would simply not
-      be there and the boss would be flat again, with no error and no report — the sky reached exactly
-      this state and it took a play-test to find it.
-    */
-    broke: 'an accent authored too small to draw, so it is absent rather than wrong',
-    guard: 'and no mark on one is too thin to be drawn at all',
+    broke: 'a boss painted with nothing, so it is one flat ink again',
+    guard: 'and every boss is painted, and no two wear the same paint',
     edit: {
       path: 'src/render/bake.ts',
-      find: 'const BOSS3_NODES: Accent = [\n  dot(0.38, -0.32, 0.09),',
-      replace: 'const BOSS3_NODES: Accent = [\n  dot(0.38, -0.32, 0.004),',
+      find: '      seal(ctx);\n      carve(ctx, f, palette.space, BOSS3_NODES);\n      return;',
+      replace: '      seal(ctx);\n      return;',
+    },
+  },
+  {
+    decision: '0149',
+    suite: 'tests/accents.test.ts',
+    /*
+      ⚠️ THE HURT TWIN GIVEN PAINT OF ITS OWN. A boss and its hit sprite share a `case` arm so that a
+      flash reads as *that thing being hurt* rather than as a second object; a mark in a colour on the
+      twin is a second object appearing at the worst possible moment. `tests/legibility.test.ts` holds
+      the ink; this holds what is painted over it.
+    */
+    broke: 'a hurt boss painted differently from its own hull, so a flash changes the picture',
+    guard: 'and a hurt twin is the hull flat in its flash ink',
+    edit: {
+      path: 'src/render/bake.ts',
+      find: '      seal(ctx);\n      carve(ctx, f, palette.space, BOSS5_BANDS);\n      return;',
+      replace:
+        '      seal(ctx);\n      carve(ctx, f, palette.space, BOSS5_BANDS);\n' +
+        '      if (hurt) disc(ctx, f, palette.glass, 0, 0, 0.2);\n      return;',
+    },
+  },
+  {
+    decision: '0149',
+    suite: 'tests/accents.test.ts',
+    /*
+      ⚠️ A NODE THINNED BELOW A PIXEL. Every number in the table is a fraction of the hull radius, so a
+      mark that looks fine on a 400px trace can be nothing at all on a 1280×720 screen — which is the
+      exact failure docs/decisions/0106-a-mark-thinner-than-a-pixel-is-not-drawn.md records the sky
+      having. The guard measures at the size the game bakes at, and only there.
+    */
+    broke: 'a boss’s node made too small to bake, so the interior is there in the table and not on the screen',
+    guard: 'and no solid mark on a body is too thin to be drawn at all',
+    edit: {
+      path: 'src/render/bake.ts',
+      find: 'const BOSS3_NODES: readonly Mark[] = [\n  dot(0.38, -0.32, 0.09),',
+      replace: 'const BOSS3_NODES: readonly Mark[] = [\n  dot(0.38, -0.32, 0.01),',
     },
   },
   {
@@ -104,7 +119,7 @@ export const PROBES = [
       is precisely why the guard compares the hull pass and not the finished bitmap.
     */
     broke: 'a boss given another boss’s hull, so only their interiors tell the two apart',
-    guard: 'THE 0081 ONE: no two boss hulls are the same drawing once the interiors are taken off',
+    guard: 'THE 0081 ONE: no two boss hulls are the same drawing once the paint is taken off',
     edit: {
       path: 'src/render/bake.ts',
       find:
@@ -132,24 +147,6 @@ export const PROBES = [
         '      ctx.lineTo(half + r * 0.42, half);\n' +
         '      ctx.lineTo(half, half + r * 0.36);\n' +
         '      ctx.closePath();\n',
-    },
-  },
-  {
-    decision: '0149',
-    suite: 'tests/accents.test.ts',
-    /*
-      ⚠️ THE SECOND PASS MADE UNCONDITIONAL, by the most reasonable-looking edit available: a default
-      for the kinds that have not asked for one. Every enemy in the game is five to nine world units,
-      so what it actually produces is a mark under a pixel on every body on screen — and the table
-      stops being the description of which kinds have an interior, which is the whole of what
-      `docs/decisions/0016-a-hub-enumerates-kinds.md` buys.
-    */
-    broke: 'a default interior for kinds that declared none, so the table stops deciding anything',
-    guard: 'and a kind with no interior is drawn exactly as it was',
-    edit: {
-      path: 'src/render/bake.ts',
-      find: '  const accent = ACCENT_OF[kind];',
-      replace: '  const accent = ACCENT_OF[kind] ?? BOSS_KEEL;',
     },
   },
   {

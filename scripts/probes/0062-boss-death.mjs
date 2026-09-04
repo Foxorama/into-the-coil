@@ -47,8 +47,10 @@ export const PROBES = [
     guard: 'where the player watched it die',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      w.cameraAlong + w.bossOffset + w.burstRng.range(-spread, spread),',
-      replace: '      w.bossOffset + w.burstRng.range(-spread, spread),',
+      // ⚠️ Anchored on the burst's own call since 0227 lit a fireball off the same offset one call
+      // down; the shards are what the guard measures, and they are the break.
+      find: '    burst(\n      w,\n      w.cameraAlong + w.bossOffset + w.burstRng.range(-spread, spread),',
+      replace: '    burst(\n      w,\n      w.bossOffset + w.burstRng.range(-spread, spread),',
     },
   },
   {

@@ -245,6 +245,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **PUSH IS AN ENTRANCE — one boundary carried 88% of a level's climb, so the music went background to foreground in one step at 41 seconds** | [0218](decisions/0218-push-is-an-entrance-not-the-climb.md) |
 | **RANGE AND CLEAN STOP BEING ONE KNOB — a compressor on the music bus; 0104 refused one and its reason was about the guard, not the compressor** | [0219](decisions/0219-range-and-clean-stop-being-one-knob.md) |
 | **THE LEVEL HOLDS ONE LOUDNESS — the sixth report on the same six seconds; the climb is gone, the compressor's makeup gain is divided out, and the sound has a picture instrument in the browser's own nodes** | [0226](decisions/0226-the-level-holds-one-loudness.md) |
+| **A SPRITE IS PAINTED, NOT FILLED — the accent table is gone, an arm paints any shade of any ink over a sealed hull, the guards read the trace; a death is a fireball and a missile lands with a spark** | [0227](decisions/0227-a-sprite-is-painted-not-filled.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were
@@ -804,6 +805,19 @@ hex, so three passes of *more detail* could never answer *more colour*. A place 
 **accent** now; every lit edge takes the accent and a third of the clouds do too. The hue separation is
 guarded as an angle, because *a bit different* is not a claim.
 
+⚠️ **AND THE SKIN STARTED GOING ON, ON 2026-09-04 — [0227](decisions/0227-a-sprite-is-painted-not-filled.md).**
+Asked for: *"the basic stuff that is being held by accessibility requirements needs to go, I want
+detailed sprites for each level, the player ship, weapon fire, missiles, missile explosions, enemies,
+enemies exploding etc. Time to actually put a real skin on the game."* The pipeline that held every
+sprite to one ink and a stencil is gone; the ship, its three tiers, every shot the player fires, the
+pickups and the shell are painted; a death is a fireball and a missile lands with a spark. The eyes
+are `node scripts/shot-sheet.mjs <kind>` against `npm run sheet`.
+
+⚠️ **THE ENEMIES AND THE BOSSES ARE DELIBERATELY STILL FLAT, AND ARE THE NEXT PR.** 0227 names why a
+pipeline change and the enemy skins do not ride together. What they get is a skin per PLACE over the
+silhouette each already has — every level uses nearly all eight kinds, so *"detailed sprites for each
+level"* is a livery the place hands its enemies, not a roster per level.
+
 ⚠️ **AND THE VOLCANOES LANDED ON 2026-09-04 — [0224](decisions/0224-the-mountain-is-awake.md)**, which
 closes the 2026-09-03 backgrounds report entirely. Saurian Belt places **three**, one on each of its
 section boundaries — the first level to place more than one landmark, which is what 0203 built the slot
@@ -1059,6 +1073,10 @@ quirk was impossible: **done**, decoration is now `glass`/`flame`/`trim` and the
 the pickups wear a livery. 2 — there is no `variant`, so an enemy is one silhouette everywhere:
 **next**. 3 — `makeRng('sky')` takes **no theme**, so every level has literally identical star and
 cloud positions and only two hex values change: **last, and the largest**.
+
+⚠️ **AND THEN THE LIVERY TABLE ITSELF WAS THE CEILING** —
+[0227](decisions/0227-a-sprite-is-painted-not-filled.md). A mark could be one of four inks and
+nothing else: no shade, no glow, no plume. It is gone; a sprite is painted.
 
 ⚠️ **THE SHOTS DELIBERATELY GET NOTHING, AND [0193](decisions/0193-the-sheet-is-the-instrument.md) IS
 WHY.** A `bullet` is 13 px whole at the binding viewport, so a mark on one is forbidden by

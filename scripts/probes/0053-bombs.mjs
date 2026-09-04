@@ -62,9 +62,10 @@ export const PROBES = [
       // ⚠️ Re-anchored when the pairings started summing what they destroyed — decision 0072, which
       // needed a survived hit to be tellable from a kill. The break is unchanged: the bomb, added to
       // a pairing it must never be in.
-      find: '    killedByShots += collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths);',
+      // ⚠️ And re-anchored again by 0227, which handed the missile pairing its hits log.
+      find: '    killedByShots += collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits);',
       replace:
-        '    killedByShots += collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths);\n' +
+        '    killedByShots += collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits);\n' +
         '    killedByShots += collideInto(w.bombs, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths);',
     },
   },

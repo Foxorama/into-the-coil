@@ -82,7 +82,8 @@ export function overlaps(a: Entity, b: Entity, radiusScaleB: number): boolean {
 }
 
 /**
- * Where things died this step, so a caller can put something there.
+ * Where things died this step, so a caller can put something there — and, handed to `collideInto`
+ * as its `hits`, where shots landed.
  *
  * ⚠️ **An out-parameter rather than a return value, and it is pre-allocated at boot.** A collision
  * that returned an array of positions would allocate on the densest step of the game, which is the
@@ -138,6 +139,7 @@ export function collideInto(
   damageScale: number,
   flashSteps: number,
   deaths: Deaths | null,
+  hits: Deaths | null = null,
 ): number {
   let destroyed = 0;
   for (let t = targets.size - 1; t >= 0; t--) {
@@ -147,6 +149,19 @@ export function collideInto(
       const shot = shots.at(s);
       if (!overlaps(shot, target, targetRadiusScale)) continue;
       target.health -= shot.damage * damageScale;
+      /*
+        ⚠️ **WHERE THE SHOT LANDED, FOR A CALLER THAT WANTS TO PUT SOMETHING THERE** — 0227. The same
+        log shape as `deaths`, and optional for the same reason the pulse pairing does not pass one:
+        a pulse's arrival is already told by the flash on the body, and a missile's is not told by
+        anything (`docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md` covers the body
+        and nothing else). Read before the release, exactly as `killed` reads its target — a released
+        slot is the next thing `spawn` hands out.
+      */
+      if (hits !== null && hits.count < hits.along.length) {
+        hits.along[hits.count] = shot.along;
+        hits.across[hits.count] = shot.across;
+        hits.count++;
+      }
       shots.releaseAt(s);
       if (target.health <= 0) {
         killed(targets, t, deaths);

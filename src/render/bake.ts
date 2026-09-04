@@ -8,21 +8,21 @@
  * sprite's; and the art is still a function of the palette, which is what makes 0024's high-contrast
  * and colour-blind palettes a re-bake rather than a second art pass.
  *
- * ⚠️ **The shapes here are placeholders. The pipeline is not.** `view` is a real argument and the
- * seam it opens is real — `docs/game.md` calls two views per entity the single largest art cost in
- * the project. What is temporary is that these particular shapes are rotations of one another; a
- * real side profile and a real top-down are different drawings, and the day they arrive nothing
- * outside this file changes.
+ * ⚠️ **A sprite is PAINTED here, since `docs/decisions/0227-a-sprite-is-painted-not-filled.md`.**
+ * The hull is a path sealed in its ink, and the arm then paints on it in any shade of any palette
+ * ink — the helpers under THE PAINT below are the whole vocabulary. `view` is still a real argument
+ * and the seam it opens is still real: a real top-down is a different drawing, and the day it
+ * arrives nothing outside this file changes.
  *
  * ⚠️ **This file is NOT on the hot list, and must never be called from a frame.** It allocates
  * freely, because it runs at load and on rotation. `src/app/frame.ts` is the file that runs every
  * frame, and it cannot reach this.
  */
 
-import type { DecorInk, Palette } from '../content/palette.ts';
+import type { Palette } from '../content/palette.ts';
 import type { ThemeKind } from '../content/themes.ts';
 import { LANDMARK_SLOTS, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
-import { makeRng } from '../sim/rng.ts';
+import { makeRng, type Rng } from '../sim/rng.ts';
 
 /** Side profile for a horizontally scrolling screen, top-down for a vertical one. */
 export type SpriteView = 'side' | 'top';
@@ -495,6 +495,19 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // Fragments are the impact itself, so they are the impact ink; they carry no identity of their own.
   debris: 'impact',
   /*
+    ⚠️ **A BURST'S INK IS WHAT IT IS MOSTLY MADE OF, AND NONE OF IT MEANS ANYTHING** — 0227. The
+    frames paint themselves from four palette inks (see their arms), so the entry here is the one the
+    sheet reports and nothing reads to draw. The flash is the impact ink because it IS one; the fire
+    is the bullet ink because that is the palette's orange; the smoke is the exhaust ink taken most of
+    the way to black.
+  */
+  burst0: 'impact',
+  burst1: 'bullet',
+  burst2: 'bullet',
+  burst3: 'flame',
+  spark0: 'impact',
+  spark1: 'bullet',
+  /*
     ⚠️ **The one ink that is not meant to be found.** `src/content/palette.ts` records it: every other
     role is something the player has to be able to pick out, and the sky is the thing they are all
     picked out against. A starfield in `pickup` or `ally` would be a screen full of things that look
@@ -537,82 +550,184 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
 };
 
 /*
-  ══ THE INTERIOR ═════════════════════════════════════════════════════════════════════════════════
+  ══ THE PAINT ════════════════════════════════════════════════════════════════════════════════════
 
-  ⚠️ **ONE INK PER SPRITE WAS THE ART CEILING, AND IT WAS STRUCTURAL RATHER THAN A MATTER OF TASTE** —
-  `reports/where-the-art-ceiling-is-2026-08-14.md`, and `docs/decisions/0149-a-hull-has-an-interior.md`
-  is the change. `drawKind` set ONE `fillStyle` and ended every arm at a single fill, so a hull could
-  not have a cockpit, a vent, a gun port or a lit core: there was nowhere for a second colour to come
-  from. The silhouettes were never the placeholder. The fill was.
+  ⚠️ **ONE INK PER SPRITE WAS THE ART CEILING, AND THE CEILING WAS THE FUNCTION** —
+  `reports/where-the-art-ceiling-is-2026-08-14.md`. `drawKind` set ONE `fillStyle`, ended every arm at
+  a single fill, and `docs/decisions/0149-a-hull-has-an-interior.md` and
+  `docs/decisions/0194-a-hull-has-a-livery.md` each opened it one notch: a table of marks in `space`,
+  then the same table in three more inks. Two decisions, two tables, and a sprite was still a
+  silhouette with a stencil over it.
 
-  ⚠️ **`space`, AND THE TWO OBVIOUS CHOICES ARE BOTH WRONG.** `impact` is the hit-flash ink, so a
-  permanently impact-coloured core would muddy the one piece of feedback
-  `docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md` exists for; `hazard` means *this
-  will hurt you*. `space` means nothing, which is exactly what decoration should mean —
-  `docs/decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md` is about
-  what the player must TELL APART, and a vent is not one of those things.
+  ⚠️ **`docs/decisions/0227-a-sprite-is-painted-not-filled.md` TAKES THE TABLE AWAY.** A sprite is a
+  DRAWING: the hull is a path filled in the kind's ink and sealed with the outline, and then the arm
+  paints whatever it likes on top of it — panels, a canopy, an engine and its plume, a core, a halo —
+  in whatever colour it likes, through the helpers below. The colours are still the palette's, mixed
+  (`shade`), so a re-bake on the high-contrast palette is still the same drawing in that palette's
+  terms; nothing here names a hex.
 
-  ⚠️ **AND IT ADDS NO CONTRAST PAIR, WHICH IS A DIFFERENT CLAIM FROM THE REPORT'S.**
-  `reports/where-the-art-ceiling-is-2026-08-14.md` credits `tests/themes.test.ts` with holding this;
-  that file explicitly SKIPS `space` — `if (ink === 'space' || ink === 'sky') continue`, because its
-  subject is a backdrop and space is what a backdrop is measured against. The guard that actually
-  applies is `tests/palette.test.ts`'s *every ink is legible against space*, and it applies because an
-  accent is never drawn on the backdrop: it sits on the hull, so its pair is `space` against the
-  hull's own ink — **the outline's pair, already on screen around every sprite in the game.** No
-  palette moves and no new contrast is asked for.
+  ⚠️ **WHAT IS HELD DID NOT MOVE, AND IT IS HELD OVER THE DRAWING RATHER THAN OVER A TABLE.**
+  `tests/accents.test.ts` traces every fill through `tests/paths.ts` and asks the same three questions
+  0149 asked of its table: an opaque mark stays inside the hull, so collision, the extents and 0101's
+  screen share are still claims about the silhouette; a mark is at least 2.5 CSS pixels on the screen
+  the play-tests are given on (0106); and a translucent mark — a plume, a halo — may leave the hull but
+  never the sprite's own box. **A guard over a table proves the table; a guard over the trace proves
+  the picture** — 0027, on the art channel.
 
-  ⚠️ **IT IS NOT AN `evenodd` HOLE.** A hole is transparent and shows the sky through it; this is
-  opaque void painted over the hull. Both are wanted, for different pictures, and the accents below
-  are deliberately kept off the holes the hulls already have — `boss3`'s lattice, `boss5`'s ports,
-  `boss7`'s ring — because filling one in would take a hole away rather than add a mark.
-
-  ⚠️ **IT COSTS NOTHING AT RUNTIME.** It is the same bitmap, so the same blit:
-  `docs/decisions/0022-frame-rate-is-a-feature.md` and
-  `docs/decisions/0025-the-frame-budget-is-counted-not-timed.md` count draw calls and allocations,
-  not path segments, and this file is on `tests/budget.test.ts`'s deliberately-cold list.
+  ⚠️ **THE HIGH-CONTRAST PALETTE IS STILL THE FLAT ONE.** Every decorative colour below is a shade of a
+  palette ink, and on that palette `glass`, `flame` and `trim` are the void
+  (`src/content/palette.ts`), so a canopy is a hole and an exhaust is nothing — which is 0024's *knobs
+  over the loud default* doing exactly what the player turned it for.
 */
 
-/** One piece of an accent, in fractions of the hull radius `r`, measured from the sprite's centre. */
-/**
- * ⚠️ **`ink` IS OPTIONAL AND ITS ABSENCE IS `space`** —
- * `docs/decisions/0194-a-hull-has-a-livery.md`. Every accent authored under
- * `docs/decisions/0149-a-hull-has-an-interior.md` omits it and is therefore **bit-identical** to what
- * it baked before: one path, one `evenodd` fill, one hole. What the field buys is a mark that is a
- * COCKPIT rather than a hole, without a second mechanism, a second containment rule or a second
- * bounds guard — `tests/accents.test.ts` is written over the shapes and does not care what colour
- * they are.
- */
-export type AccentShape =
-  | {
-      readonly kind: 'poly';
-      readonly points: readonly (readonly [number, number])[];
-      readonly ink?: DecorInk | 'space';
-    }
-  | {
-      readonly kind: 'disc';
-      readonly x: number;
-      readonly y: number;
-      readonly r: number;
-      readonly ink?: DecorInk | 'space';
-    };
+/** The frame a sprite is drawn in: its centre, and the radius every coordinate is a fraction of. */
+interface Frame {
+  readonly half: number;
+  readonly r: number;
+}
+
+/** A point in a sprite's own frame — fractions of `r`, +x forward, +y down the screen. */
+type Pt = readonly [number, number];
+
+/** A hex colour with an alpha, for the transparent end of a glow. */
+function rgba(hex: string, alpha: number): string {
+  const read = (i: number): number => parseInt(hex.slice(i, i + 2), 16);
+  return `rgba(${read(1)}, ${read(3)}, ${read(5)}, ${alpha})`;
+}
 
 /**
- * The interior of one hull: shapes filled in `palette.space` over the hull, inside the same bitmap.
+ * A palette ink pushed towards white (`by` > 0) or black (`by` < 0).
  *
- * ⚠️ **In units of `r` rather than pixels**, for the reason every other number in this file is a
- * fraction of `size`: a bake at any resolution has to be the same picture, so a high-DPI re-bake is
- * not a second set of art.
+ * ⚠️ **THIS IS THE ONLY WAY A DRAWING GETS A COLOUR THE PALETTE DOES NOT NAME.** A shade of a role is
+ * still that role — a darker `player` is the ship's own underside, and a lighter `bullet` is the hot
+ * heart of the ship's own shot. A hex typed into an arm would be a colour the high-contrast palette
+ * could not answer, which is the failure `src/content/palette.ts` opens with.
  */
-export type Accent = readonly AccentShape[];
+export function shade(hex: string, by: number): string {
+  return mix(hex, by < 0 ? '#000000' : '#ffffff', Math.abs(by));
+}
+
+/** The same points, reflected across the sprite's centreline. */
+function mirrored(points: readonly Pt[]): Pt[] {
+  return points.map(([x, y]) => [x, -y] as const);
+}
+
+/** Add one closed sub-path to the current path, in frame coordinates. Fills nothing. */
+function trace(ctx: Pen, f: Frame, points: readonly Pt[]): void {
+  points.forEach(([x, y], i) => {
+    if (i === 0) ctx.moveTo(f.half + x * f.r, f.half + y * f.r);
+    else ctx.lineTo(f.half + x * f.r, f.half + y * f.r);
+  });
+  ctx.closePath();
+}
+
+/** Add a circle to the current path, opened at its own start so no stray line joins it. */
+function ring(ctx: Pen, f: Frame, x: number, y: number, radius: number): void {
+  ctx.moveTo(f.half + (x + radius) * f.r, f.half + y * f.r);
+  ctx.arc(f.half + x * f.r, f.half + y * f.r, radius * f.r, 0, Math.PI * 2);
+}
+
+/**
+ * Fill and outline whatever path the arm has built: the hull, sealed.
+ *
+ * ⚠️ **THE HULL IS FINISHED BEFORE ANY MARK GOES ON IT, AND THAT ORDER IS THE WHOLE MECHANISM.** The
+ * fill and the stroke are the silhouette; everything painted afterwards sits on top and can move
+ * neither the outline nor the collision box. `tests/paths.ts` records this as the first pass of the
+ * trace, and every containment claim in `tests/accents.test.ts` is measured against it.
+ */
+function seal(ctx: Pen): void {
+  ctx.fill('evenodd');
+  ctx.stroke();
+}
+
+/** A filled polygon on the sprite, in one colour. `evenodd`, so a hole is one more sub-path. */
+function poly(ctx: Pen, f: Frame, colour: string, points: readonly Pt[], alpha = 1): void {
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = colour;
+  ctx.beginPath();
+  trace(ctx, f, points);
+  ctx.fill('evenodd');
+  ctx.globalAlpha = 1;
+}
+
+/** A filled circle on the sprite. */
+function disc(ctx: Pen, f: Frame, colour: string, x: number, y: number, radius: number, alpha = 1): void {
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = colour;
+  ctx.beginPath();
+  ring(ctx, f, x, y, radius);
+  ctx.fill('evenodd');
+  ctx.globalAlpha = 1;
+}
+
+/** A band between two radii — a halo, a shockwave's inner rim, a smoke ring. */
+function band(ctx: Pen, f: Frame, colour: string, x: number, y: number, outer: number, inner: number, alpha = 1): void {
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = colour;
+  ctx.beginPath();
+  ring(ctx, f, x, y, outer);
+  ring(ctx, f, x, y, inner);
+  ctx.fill('evenodd');
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * A soft light: solid at its centre, gone at its edge.
+ *
+ * ⚠️ **ALWAYS TRANSLUCENT, AND THE ALPHA IS WHAT THE GUARD READS.** A gradient's own fade is invisible
+ * to `tests/paths.ts`, which records a fill as its path and the `globalAlpha` it was laid down at.
+ * A glow filled at full alpha would be measured as an opaque disc and refused for leaving the hull,
+ * so it is drawn under one — which is also what a glow IS. The ceiling is 0.85; `tests/accents.test.ts`
+ * treats anything at or above 0.9 as solid.
+ */
+function glow(ctx: Pen, f: Frame, colour: string, x: number, y: number, radius: number, alpha = 0.7): void {
+  const cx = f.half + x * f.r;
+  const cy = f.half + y * f.r;
+  const light = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * f.r);
+  light.addColorStop(0, colour);
+  light.addColorStop(0.45, rgba(colour, 0.6));
+  light.addColorStop(1, rgba(colour, 0));
+  ctx.globalAlpha = Math.min(alpha, 0.85);
+  ctx.fillStyle = light;
+  ctx.beginPath();
+  ring(ctx, f, x, y, radius);
+  ctx.fill('evenodd');
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * A ragged circle: `count` points around `(x, y)` at a radius jittered between `from` and `to`.
+ *
+ * ⚠️ **SEEDED, PER `docs/decisions/0021-one-stream-per-concern.md`**, so a fireball is the same
+ * fireball on every machine and after every re-bake, and adding one can never move a wave.
+ */
+function ragged(rng: Rng, x: number, y: number, from: number, to: number, count: number): Pt[] {
+  const out: Pt[] = [];
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2;
+    const rad = rng.range(from, to);
+    out.push([x + Math.cos(a) * rad, y + Math.sin(a) * rad]);
+  }
+  return out;
+}
+
+/*
+  ── THE INTERIORS THE BOSSES ALREADY HAD — 0149 ────────────────────────────────────────────────
+
+  ⚠️ **CARRIED ACROSS AS DRAWINGS RATHER THAN AS A TABLE, AND THEY ARE THE SAME MARKS.** 0149 put a
+  cockpit, a spine, four nodes, three streaks, two bands, three eyes and a pupil on the seven bosses,
+  in `space`, and measured every one of them in CSS pixels. Each is now painted by its own arm through
+  `carve`, from the same numbers; what went is only the table that stood between the arm and the
+  mark. The bosses' own redrawing is `docs/decisions/0228-an-enemy-wears-its-place.md`'s.
+*/
+
+/** One piece of an interior, in fractions of the hull radius `r`, measured from the sprite's centre. */
+type Mark =
+  | { readonly kind: 'poly'; readonly points: readonly Pt[] }
+  | { readonly kind: 'disc'; readonly x: number; readonly y: number; readonly r: number };
 
 /** A rectangular mark: a keel, a spine, a streak, an armour band. Corners in `r` from the centre. */
-const box = (
-  x0: number,
-  y0: number,
-  x1: number,
-  y1: number,
-  ink?: DecorInk | 'space',
-): AccentShape => ({
+const box = (x0: number, y0: number, x1: number, y1: number): Mark => ({
   kind: 'poly',
   points: [
     [x0, y0],
@@ -620,31 +735,40 @@ const box = (
     [x1, y1],
     [x0, y1],
   ],
-  ...(ink === undefined ? {} : { ink }),
 });
 
 /** A round mark: a cockpit, a node, an eye, a pupil. */
-const dot = (x: number, y: number, r: number): AccentShape => ({ kind: 'disc', x, y, r });
+const dot = (x: number, y: number, r: number): Mark => ({ kind: 'disc', x, y, r });
 
-/*
-  ── THE NUMBERS, AND WHAT HOLDS THEM ───────────────────────────────────────────────────────────
-
-  ⚠️ **EVERY ONE OF THESE IS A CLAIM ABOUT WHERE THE HULL IS SOLID, AND A HAND CANNOT CHECK IT.**
-  The hulls are drawn imperatively a few hundred lines below, three of them are filled `evenodd` with
-  holes in them, and `boss6` is three overlapping circles and a bar whose overlaps CANCEL — so
-  *is this point on the hull* is arithmetic, not a look at the file. `tests/accents.test.ts` traces
-  the real drawing and answers it, in CSS pixels of the screen the play-tests are given on;
-  `scripts/probes/0149-a-hull-has-an-interior.mjs` is what says that guard fires.
-*/
+/** Paint a set of marks in one colour, as one `evenodd` fill, so two that overlap cancel. */
+function carve(ctx: Pen, f: Frame, colour: string, marks: readonly Mark[]): void {
+  ctx.fillStyle = colour;
+  ctx.beginPath();
+  for (const mark of marks) {
+    switch (mark.kind) {
+      case 'poly':
+        trace(ctx, f, mark.points);
+        break;
+      case 'disc':
+        ring(ctx, f, mark.x, mark.y, mark.r);
+        break;
+      default: {
+        const never: never = mark;
+        throw new Error(`unbaked mark: ${JSON.stringify(never)}`);
+      }
+    }
+  }
+  ctx.fill('evenodd');
+}
 
 /** A cockpit behind the notched prow, then a keel back to the stern. The hull's own solidity. */
-const BOSS_KEEL: Accent = [dot(-0.3, 0, 0.14), box(-0.1, -0.1, 0.78, 0.1)];
+const BOSS_KEEL: readonly Mark[] = [dot(-0.3, 0, 0.14), box(-0.1, -0.1, 0.78, 0.1)];
 
 /** The spine, and the roots of the two outer prongs sitting on it. The hull's own openness. */
-const BOSS2_SPINE: Accent = [box(-0.15, -0.09, 0.85, 0.09), dot(-0.05, -0.45, 0.11), dot(-0.05, 0.45, 0.11)];
+const BOSS2_SPINE: readonly Mark[] = [box(-0.15, -0.09, 0.85, 0.09), dot(-0.05, -0.45, 0.11), dot(-0.05, 0.45, 0.11)];
 
 /** A node in each of the four struts, off the hole rather than over it. The hull as a frame. */
-const BOSS3_NODES: Accent = [
+const BOSS3_NODES: readonly Mark[] = [
   dot(0.38, -0.32, 0.09),
   dot(0.38, 0.32, 0.09),
   dot(-0.38, -0.32, 0.09),
@@ -652,20 +776,20 @@ const BOSS3_NODES: Accent = [
 ];
 
 /** Three streaks along the body, which is the one hull that reads as moving while it stands still. */
-const BOSS4_STREAKS: Accent = [
+const BOSS4_STREAKS: readonly Mark[] = [
   box(-0.35, -0.36, 0.45, -0.24),
   box(-0.35, -0.06, 0.45, 0.06),
   box(-0.35, 0.24, 0.45, 0.36),
 ];
 
 /** Two bands across the slab, forward of the ports rather than through them. The hull as a wall. */
-const BOSS5_BANDS: Accent = [box(-0.62, -0.78, -0.46, 0.78), box(-0.3, -0.78, -0.14, 0.78)];
+const BOSS5_BANDS: readonly Mark[] = [box(-0.62, -0.78, -0.46, 0.78), box(-0.3, -0.78, -0.14, 0.78)];
 
 /** An eye in each lobe, all three on the player's side. Three things that turned out to be one. */
-const BOSS6_EYES: Accent = [dot(-0.46, -0.62, 0.095), dot(-0.46, 0, 0.095), dot(-0.46, 0.62, 0.095)];
+const BOSS6_EYES: readonly Mark[] = [dot(-0.46, -0.62, 0.095), dot(-0.46, 0, 0.095), dot(-0.46, 0.62, 0.095)];
 
 /** A pupil in the core, and four marks around the outer ring. The one round hull, looking back. */
-const BOSS7_EYE: Accent = [
+const BOSS7_EYE: readonly Mark[] = [
   dot(0, 0, 0.16),
   dot(0.83, 0, 0.095),
   dot(-0.83, 0, 0.095),
@@ -673,191 +797,177 @@ const BOSS7_EYE: Accent = [
   dot(0, 0.83, 0.095),
 ];
 
-/**
- * Which kinds have an interior, and what it is.
- *
- * ⚠️ **A `Record` OVER THE WHOLE UNION RATHER THAN A SPARSE MAP, AND THAT IS NOT CEREMONY** — the
- * defect this table is written next to is a table that said nothing. Five bosses shipped with no hit
- * interaction at all because `boss3Hit` through `boss7Hit` were authored beside their own hulls and
- * inherited the wrong ink, and a MISSING entry is a type error while a wrong one is not
- * (`tests/legibility.test.ts` carries the post-mortem). Keyed on `SpriteKind`, an eighth boss cannot
- * be added without someone writing down whether it has an interior — which is
- * `docs/decisions/0016-a-hub-enumerates-kinds.md`'s whole claim, and the reason the forty-four
- * `null`s below are the guard rather than noise.
- *
- * ⚠️ **THE SEVEN BOSSES ONLY, AND THAT IS THE SCOPE ON PURPOSE.** A boss is 26 to 38 world units —
- * four to six times anything else on screen — which is the same licence `drawKind` already gives
- * their silhouettes for being complicated. An enemy is five to nine units and an interior on one is
- * mush; `reports/enemy-silhouettes-2026-08-05.md` measured what survives twenty pixels and it was
- * outlines, not detail. The day an enemy earns one, it is a row here and nothing else moves.
- */
-
 /*
-  ── THE LIVERIES — 0194 ─────────────────────────────────────────────────────────────────────────
+  ── THE SHIP — 0227 ────────────────────────────────────────────────────────────────────────────
 
   ⚠️ **ASKED FOR:** *"I want fun quirky graphics like we have in The Far Carry for the spaceships and
-  weapons."* The predecessor's `src/render/shipArt.ts` builds every craft from
-  `{ body, glass, flame, accent }` — a body colour, a windscreen, an exhaust and a trim stripe — and
-  that is the whole of why its fleet reads as characterful where one flat ink does not. **Opened for a
-  named reason and one named file**, per `CLAUDE.md`.
+  weapons."* The predecessor's `src/render/shipArt.ts` — opened for that named reason and that one
+  file — builds every craft from a body, a windscreen, an exhaust and a trim stripe, with a dark
+  outline round the lot. That recipe is what this hull is painted with.
 
-  ⚠️ **WHAT DOES NOT CROSS IS THE EXHAUST HANGING OFF THE BACK.** Every mark here is INSIDE the hull,
-  because `docs/decisions/0149-a-hull-has-an-interior.md` makes the silhouette's outer bounds what
-  collision, the extents and 0101's screen share are all written against. A flame trailing behind the
-  ship would grow the box. What stands in for it is an engine core forward of the tail notch.
+  ⚠️ **THE SILHOUETTE IS STILL A WEDGE WITH A CONCAVE TAIL**, which is what tells it from the lancer's
+  triangle at twenty pixels (`reports/enemy-silhouettes-2026-08-05.md`), and the nose is still the one
+  point the player aims with. What changed is that it has WINGS now — swept, with a trailing edge —
+  and an engine housing either side of the notch, so the wedge reads as a fighter rather than as an
+  arrowhead.
+
+  ⚠️ **A TIER ADDS A PART, AND THE PART TOUCHES THE HULL WITHOUT OVERLAPPING IT.** 0081's fins were
+  drawn as sub-paths outside the wedge and filled `evenodd` with it; anywhere they crossed the hull
+  cancelled to a hole, which is the trap 0194 measured at **−1.34 px**. A pod sits on the wingtip and
+  a canard on the leading edge, each sharing an edge with the hull and no area, so the fill rule has
+  nothing to cancel and the outline runs round both — which also draws the panel line between them.
 */
 
-/** The player's wedge: a keel down the spine, a canopy on it, and an engine core behind that. */
-const SHIP_LIVERY: Accent = [
-  box(0.06, -0.075, 0.48, 0.075, 'trim'),
-  { kind: 'disc', x: 0.2, y: 0, r: 0.18, ink: 'glass' },
-  box(-0.18, -0.115, 0.02, 0.115, 'flame'),
+/** The upper half of the fighter, nose first. The lower half is its mirror. */
+const SHIP_UPPER: readonly Pt[] = [
+  [1, 0],
+  [0.72, -0.14],
+  [0.34, -0.26],
+  [0, -0.34],
+  [-0.15, -0.48],
+  [-0.42, -0.95],
+  [-0.72, -0.95],
+  [-0.55, -0.42],
+  [-0.78, -0.3],
+  [-0.78, -0.12],
+  [-0.42, 0],
+];
+
+/** The whole hull: the upper half forward, the lower half back, one closed path. */
+const SHIP_HULL: readonly Pt[] = [...SHIP_UPPER, ...mirrored(SHIP_UPPER).slice(1, -1).reverse()];
+
+/** A wingtip pod, the second tier's addition. Its base lies exactly on the wingtip edge. */
+const SHIP_POD: readonly Pt[] = [
+  [-0.44, -0.95],
+  [-0.36, -1.13],
+  [-0.78, -1.13],
+  [-0.7, -0.95],
+];
+
+/** A canard on the leading edge, the third tier's. Both base points sit on one hull edge. */
+const SHIP_CANARD: readonly Pt[] = [
+  [0.6, -0.178],
+  [0.5, -0.48],
+  [0.3, -0.48],
+  [0.38, -0.247],
 ];
 
 /*
-  ⚠️ **A TIER ADDS AN ENGINE, WHICH IS THE ONE THING THAT GROWS WITH THE LADDER.** 0081's rule for
-  these three hulls is *the same ship, further along* — the nose is untouched at every tier and the
-  fins are what change. The livery follows that: same keel, same canopy, one more core.
+  ⚠️ **NO MARK BELOW 0.12 OF `r`.** The ship is 7 units, which at the 1280×720 the play-tests are given
+  on is a hull radius of about 21 CSS pixels; 0106's floor of 2.5 pixels is therefore an eighth of the
+  radius, and `tests/accents.test.ts` measures every opaque mark below against it. The engine core is
+  0.13 wide for exactly that reason.
 */
-const SHIP_MK2_LIVERY: Accent = [
-  ...SHIP_LIVERY,
-  /*
-    ⚠️ **ON THE CENTRELINE, BECAUSE THE FINS CUT HOLES EITHER SIDE OF IT.** `drawFins` adds its pair
-    as separate sub-paths filled `evenodd` WITH the wedge, so wherever a fin overlaps the hull the
-    two cancel and the result is a gap the sky shows through. A tier mark outboard of the keel was
-    measured at **−1.34 px** — over a hole rather than over ink — which is exactly the distinction
-    `clearance` samples a grid to catch.
 
-    ⚠️ **AND FORWARD RATHER THAN AFT, BECAUSE THE WAIST NOTCH IS THE OTHER TIGHT SPOT.** The wedge is
-    concave at `W(-0.3, 0)`; a mark on the spine behind the canopy measured **1.48 px** from that
-    vertex, which is 0.07 of the hull radius. Forward of the canopy the hull is solid and the only
-    edge is the nose.
-  */
-  { kind: 'disc', x: 0.46, y: 0, r: 0.1, ink: 'glass' },
+/** The wing's inboard panel, in the hull's own shadow. */
+const SHIP_WING_PANEL: readonly Pt[] = [
+  [-0.2, -0.5],
+  [-0.44, -0.88],
+  [-0.66, -0.88],
+  [-0.52, -0.46],
 ];
 
-const SHIP_MK3_LIVERY: Accent = [
-  ...SHIP_MK2_LIVERY,
-  box(0.02, -0.22, 0.16, -0.08, 'trim'),
-  box(0.02, 0.08, 0.16, 0.22, 'trim'),
+const SHIP_CANOPY: readonly Pt[] = [
+  [0.42, -0.05],
+  [0.3, -0.2],
+  [0.02, -0.26],
+  [-0.12, -0.16],
+  [-0.12, 0.16],
+  [0.02, 0.26],
+  [0.3, 0.2],
+  [0.42, 0.05],
 ];
 
-/** The bomb: a lit core inside a casing, which is what a thing about to go off looks like. */
-const BOMB_LIVERY: Accent = [
-  { kind: 'disc', x: 0, y: 0.06, r: 0.3, ink: 'glass' },
-  { kind: 'disc', x: 0, y: 0.06, r: 0.14, ink: 'flame' },
+const SHIP_CANOPY_LIGHT: readonly Pt[] = [
+  [0.36, -0.06],
+  [0.26, -0.16],
+  [0.06, -0.2],
+  [0, -0.12],
 ];
 
-/** The weapon pickup's arrow: a shaft down the middle and a lit head. */
-const PICKUP_WEAPON_LIVERY: Accent = [
-  box(-0.08, -0.085, 0.35, 0.085, 'trim'),
-  { kind: 'disc', x: 0.14, y: 0, r: 0.18, ink: 'glass' },
+/** The engine housing either side of the notch, in the exhaust's own colour. */
+const SHIP_NACELLE: readonly Pt[] = [
+  [-0.74, -0.28],
+  [-0.52, -0.28],
+  [-0.52, -0.14],
+  [-0.74, -0.14],
 ];
 
-/** The missile pickup's chevron, marked the way its own arrow points. */
-const PICKUP_MISSILE_LIVERY: Accent = [
-  box(-0.09, -0.5, 0.09, 0.05, 'trim'),
-  { kind: 'disc', x: 0, y: -0.28, r: 0.17, ink: 'glass' },
+/** The hot core in the housing. */
+const SHIP_CORE: readonly Pt[] = [
+  [-0.77, -0.27],
+  [-0.64, -0.27],
+  [-0.64, -0.15],
+  [-0.77, -0.15],
 ];
 
-/** The shield pickup: a band across the face and a boss at its centre. */
-const PICKUP_SHIELD_LIVERY: Accent = [
-  box(-0.5, -0.34, 0.5, -0.155, 'trim'),
-  { kind: 'disc', x: 0, y: 0.1, r: 0.22, ink: 'glass' },
+/** The plume, trailing past the tail. Translucent, so it may leave the hull and stays in the box. */
+const SHIP_PLUME: readonly Pt[] = [
+  [-0.78, -0.3],
+  [-1.15, -0.25],
+  [-1.15, -0.17],
+  [-0.78, -0.12],
 ];
 
-export const ACCENT_OF: Record<SpriteKind, Accent | null> = {
-  /*
-    ── THE SEVEN INTERIORS ─────────────────────────────────────────────────────────────────────────
+const SHIP_PLUME_HOT: readonly Pt[] = [
+  [-0.78, -0.27],
+  [-1.02, -0.22],
+  [-0.78, -0.15],
+];
 
-    Each says the same thing its hull already says, louder. Not a new idea per boss — the hulls are
-    seven ideas already and a second one laid over the first is two objects, which is the failure the
-    HURT SILHOUETTES block below is written about from the other direction.
-
-    ⚠️ **What each mark IS is written once, on the constant above, and not again here.** Two prose
-    descriptions of one drawing is the second copy `docs/decisions/0029-the-tracked-record-is-the-record.md`
-    is about, and this table is where a reader would come to edit the numbers.
-
-    ⚠️ **A hull and its hurt sprite share an accent, exactly as they share a `case` arm.** The accent
-    is in `space` either way, so what changes when a boss is hit is the hull ink around it — the flash
-    still reads as *that thing being hurt* rather than as a second object appearing.
-  */
-
-  boss: BOSS_KEEL,
-  bossHit: BOSS_KEEL,
-  boss2: BOSS2_SPINE,
-  boss2Hit: BOSS2_SPINE,
-  boss3: BOSS3_NODES,
-  boss3Hit: BOSS3_NODES,
-  boss4: BOSS4_STREAKS,
-  boss4Hit: BOSS4_STREAKS,
-  boss5: BOSS5_BANDS,
-  boss5Hit: BOSS5_BANDS,
-  boss6: BOSS6_EYES,
-  boss6Hit: BOSS6_EYES,
-  boss7: BOSS7_EYE,
-  boss7Hit: BOSS7_EYE,
-
-  /*
-    ── AND EVERYTHING ELSE, WHICH IS FORTY-FOUR KINDS AND ONE REASON ───────────────────────────────
-
-    Too small for an interior, or not a body at all. The ships, the eight enemies and their hurt
-    silhouettes are five to nine world units; the bullets, the pickups, the blasts and the debris are
-    smaller again; the sky, the nebula and the box edge return before the fill this rides on. Each
-    would be a mark under a pixel at the size it ships, which
-    `docs/decisions/0106-a-mark-thinner-than-a-pixel-is-not-drawn.md` is the whole of.
-  */
-  ship: SHIP_LIVERY,
-  shipHit: SHIP_LIVERY,
-  shipMk2: SHIP_MK2_LIVERY,
-  shipMk2Hit: SHIP_MK2_LIVERY,
-  shipMk3: SHIP_MK3_LIVERY,
-  shipMk3Hit: SHIP_MK3_LIVERY,
-  drifter: null,
-  drifterHit: null,
-  lancer: null,
-  lancerHit: null,
-  weaver: null,
-  weaverHit: null,
-  turret: null,
-  turretHit: null,
-  charger: null,
-  chargerHit: null,
-  warden: null,
-  wardenHit: null,
-  spinner: null,
-  spinnerHit: null,
-  sower: null,
-  sowerHit: null,
-  bullet: null,
-  spit: null,
-  lance: null,
-  flak: null,
-  missile: null,
-  bomb: BOMB_LIVERY,
-  blast: null,
-  blastHalf: null,
-  blastWide: null,
-  blastWidest: null,
-  shieldOrb: null,
-  debris: null,
-  lifeIcon: null,
-  pickupWeapon: PICKUP_WEAPON_LIVERY,
-  pickupMissile: PICKUP_MISSILE_LIVERY,
-  pickupShield: PICKUP_SHIELD_LIVERY,
-  pickupBomb: BOMB_LIVERY,
-  skyFar: null,
-  skyNear: null,
-  skyRush: null,
-  skyNebula: null,
-  // The ground draws its own everything in `drawGround` — the accent pass is for hulls.
-  skyGround: null,
-  // A landmark draws its own interior in `drawLandmark` — the accent pass is for hulls.
-  landmark: null,
-  landmarkB: null,
-  landmarkC: null,
-  bound: null,
-};
+/**
+ * The fighter's paint, over a sealed hull: panels, keel, canopy, engines and their plumes.
+ *
+ * `tier` adds the pods' and canards' own marks, so an upgrade is a louder ship and not only a wider
+ * one — `docs/game.md`: *"every upgrade changes how the ship looks on screen."*
+ */
+function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number): void {
+  const body = palette.player;
+  const dark = shade(body, -0.32);
+  const light = shade(body, 0.5);
+  // The plumes first, so the housing sits over their roots rather than under them.
+  for (const side of [SHIP_PLUME, mirrored(SHIP_PLUME)]) poly(ctx, f, palette.bullet, side, 0.55);
+  for (const side of [SHIP_PLUME_HOT, mirrored(SHIP_PLUME_HOT)]) poly(ctx, f, palette.hazard, side, 0.6);
+  for (const side of [SHIP_WING_PANEL, mirrored(SHIP_WING_PANEL)]) poly(ctx, f, dark, side);
+  // The keel, behind the canopy, in the trim ink — the seam down the hull.
+  poly(ctx, f, palette.trim, [
+    [-0.34, -0.07],
+    [-0.1, -0.07],
+    [-0.1, 0.07],
+    [-0.34, 0.07],
+  ]);
+  poly(ctx, f, light, [
+    [0.94, 0],
+    [0.72, -0.09],
+    [0.72, 0.09],
+  ]);
+  poly(ctx, f, palette.glass, SHIP_CANOPY);
+  poly(ctx, f, shade(palette.glass, 0.55), SHIP_CANOPY_LIGHT);
+  for (const side of [SHIP_NACELLE, mirrored(SHIP_NACELLE)]) poly(ctx, f, palette.flame, side);
+  for (const side of [SHIP_CORE, mirrored(SHIP_CORE)]) poly(ctx, f, palette.hazard, side);
+  if (tier >= 1) {
+    // A stripe down each pod, in the trim ink, so the pod reads as a fitted part.
+    for (const side of [1, -1] as const) {
+      poly(ctx, f, palette.trim, [
+        [-0.45, -1.115 * side],
+        [-0.69, -1.115 * side],
+        [-0.68, -0.985 * side],
+        [-0.46, -0.985 * side],
+      ]);
+    }
+  }
+  if (tier >= 2) {
+    // The canards' leading edges lit, in the hull's own light.
+    for (const side of [1, -1] as const) {
+      poly(ctx, f, light, [
+        [0.56, -0.24 * side],
+        [0.49, -0.44 * side],
+        [0.4, -0.44 * side],
+        [0.45, -0.26 * side],
+      ]);
+    }
+  }
+}
 
 /**
  * Draw one kind into a square canvas, pointing along +x, filling most of it.
@@ -1872,50 +1982,56 @@ export function drawKind(
 ): void {
   const half = size / 2;
   const r = size * 0.42;
+  const f: Frame = { half, r };
+  /*
+    ⚠️ **A HURT TWIN IS THE HULL, FLAT, IN THE FLASH INK — AND NOTHING PAINTED ON IT.** 0035's rule is
+    *the SAME shape in a different ink*: a flash has to read as *that thing being hurt* rather than as a
+    second object, and a white silhouette with every panel still on it is a paler ship, not a hit. The
+    suffix is the convention `rig/sheet.ts` already derives the twin from, and `tests/sheet.test.ts`
+    holds it.
+  */
+  const hurt = kind.endsWith('Hit');
   ctx.fillStyle = palette[INK_OF[kind]];
   ctx.strokeStyle = palette.space;
   ctx.lineWidth = Math.max(1, size * 0.04);
+  ctx.globalAlpha = 1;
   ctx.beginPath();
   switch (kind) {
     case 'ship':
     case 'shipHit':
-      // A wedge, nose towards +x. One shape, two inks — see `INK_OF`.
-      ctx.moveTo(half + r, half);
-      ctx.lineTo(half - r * 0.7, half - r * 0.8);
-      ctx.lineTo(half - r * 0.3, half);
-      ctx.lineTo(half - r * 0.7, half + r * 0.8);
-      ctx.closePath();
-      break;
+      trace(ctx, f, SHIP_HULL);
+      seal(ctx);
+      if (!hurt) paintShip(ctx, f, palette, 0);
+      return;
     /*
-      ── THE SAME WEDGE, WITH MORE OF IT — 0081 ──────────────────────────────────────────────────
+      ── THE SAME FIGHTER, WITH MORE OF IT — 0081 ────────────────────────────────────────────────
 
-      Each tier keeps the hull above and adds a pair of swept fins outside it, so what the player
-      reads is *the same ship, further along* rather than *a different ship*. The fins are drawn as
-      separate sub-paths and filled `evenodd` with the hull, exactly as every holed silhouette in this
-      file is — they are outside the wedge, so they add to it rather than cutting into it.
+      Each tier keeps the hull above and adds a part outside it, so what the player reads is *the
+      same ship, further along* rather than *a different ship*. A pod on each wingtip, then a canard
+      on each leading edge. Each shares an edge with the hull and no area, so `evenodd` unites them
+      and the outline runs round the lot — see the SHIP block above.
 
       ⚠️ **The nose is untouched at every tier.** It is the one part of this silhouette the player
       aims with, and it is what makes the three read as one object.
     */
     case 'shipMk2':
     case 'shipMk2Hit':
-      ctx.moveTo(half + r, half);
-      ctx.lineTo(half - r * 0.7, half - r * 0.8);
-      ctx.lineTo(half - r * 0.3, half);
-      ctx.lineTo(half - r * 0.7, half + r * 0.8);
-      ctx.closePath();
-      drawFins(ctx, half, r, 0.62);
-      break;
+      trace(ctx, f, SHIP_HULL);
+      trace(ctx, f, SHIP_POD);
+      trace(ctx, f, mirrored(SHIP_POD));
+      seal(ctx);
+      if (!hurt) paintShip(ctx, f, palette, 1);
+      return;
     case 'shipMk3':
     case 'shipMk3Hit':
-      ctx.moveTo(half + r, half);
-      ctx.lineTo(half - r * 0.7, half - r * 0.8);
-      ctx.lineTo(half - r * 0.3, half);
-      ctx.lineTo(half - r * 0.7, half + r * 0.8);
-      ctx.closePath();
-      drawFins(ctx, half, r, 0.62);
-      drawFins(ctx, half, r, 0.95);
-      break;
+      trace(ctx, f, SHIP_HULL);
+      trace(ctx, f, SHIP_POD);
+      trace(ctx, f, mirrored(SHIP_POD));
+      trace(ctx, f, SHIP_CANARD);
+      trace(ctx, f, mirrored(SHIP_CANARD));
+      seal(ctx);
+      if (!hurt) paintShip(ctx, f, palette, 2);
+      return;
     case 'drifter':
     case 'drifterHit':
       // A diamond: symmetrical, pointing nowhere, which is exactly what a drifter does. It holds its
@@ -2005,7 +2121,9 @@ export function drawKind(
       ctx.lineTo(half - r * 0.55, half + r * 0.8);
       ctx.lineTo(half - r * 0.45, half + r * 0.45);
       ctx.closePath();
-      break;
+      seal(ctx);
+      carve(ctx, f, palette.space, BOSS_KEEL);
+      return;
     }
     case 'spinner':
     case 'spinnerHit':
@@ -2085,7 +2203,9 @@ export function drawKind(
       ctx.lineTo(half - r * 0.25, half + r * 0.3);
       ctx.lineTo(half - r, half + r * 0.16);
       ctx.closePath();
-      break;
+      seal(ctx);
+      carve(ctx, f, palette.space, BOSS2_SPINE);
+      return;
     }
     /*
       ── THE FIVE LATER HULLS ────────────────────────────────────────────────────────────────────
@@ -2111,7 +2231,9 @@ export function drawKind(
       ctx.lineTo(half + r * 0.42, half);
       ctx.lineTo(half, half + r * 0.36);
       ctx.closePath();
-      break;
+      seal(ctx);
+      carve(ctx, f, palette.space, BOSS3_NODES);
+      return;
     case 'boss4':
     case 'boss4Hit':
       // A SHOAL MOTHER: a blunt teardrop trailing four fins. Level four is about speed, and this is
@@ -2127,7 +2249,9 @@ export function drawKind(
       ctx.lineTo(half + r * 0.55, half + r * 0.5);
       ctx.lineTo(half - r * 0.3, half + r * 0.62);
       ctx.closePath();
-      break;
+      seal(ctx);
+      carve(ctx, f, palette.space, BOSS4_STREAKS);
+      return;
     case 'boss5':
     case 'boss5Hit':
       // A REDOUBT: a squat slab with a stepped face, and the widest hull so far. Level five is about
@@ -2149,7 +2273,9 @@ export function drawKind(
         ctx.moveTo(half + r * 0.62, y);
         ctx.arc(half + r * 0.45, y, r * 0.17, 0, Math.PI * 2);
       }
-      break;
+      seal(ctx);
+      carve(ctx, f, palette.space, BOSS5_BANDS);
+      return;
     case 'boss6':
     case 'boss6Hit':
       // A CHORUS: three stacked lobes on one spine, so it reads as several things that turned out to
@@ -2164,7 +2290,9 @@ export function drawKind(
       ctx.lineTo(half + r * 0.18, half + r);
       ctx.lineTo(half - r * 0.18, half + r);
       ctx.closePath();
-      break;
+      seal(ctx);
+      carve(ctx, f, palette.space, BOSS6_EYES);
+      return;
     case 'boss7':
     case 'boss7Hit':
       // AN AXIS: a ringed eye. The biggest hull in the game and the only round one, because the last
@@ -2174,10 +2302,21 @@ export function drawKind(
       ctx.arc(half, half, r * 0.66, 0, Math.PI * 2);
       ctx.moveTo(half + r * 0.3, half);
       ctx.arc(half, half, r * 0.3, 0, Math.PI * 2);
-      break;
+      seal(ctx);
+      carve(ctx, f, palette.space, BOSS7_EYE);
+      return;
     case 'bullet':
+      /*
+        The pulse: a disc, and now a BOLT — a halo round it and a white-hot heart in it. The
+        silhouette is untouched, because a disc against a square, a dash and a slab is the whole of
+        how the player tells their own fire from what shoots back (0081, 0098); what changed is that
+        it is lit.
+      */
       ctx.arc(half, half, r * 0.8, 0, Math.PI * 2);
-      break;
+      seal(ctx);
+      glow(ctx, f, palette.bullet, 0, 0, 1.15, 0.55);
+      disc(ctx, f, shade(palette.bullet, 0.65), 0, 0, 0.4);
+      return;
     case 'spit':
       /*
         A SQUARE — corners against the pulse's disc, and the last primitive left that survives fifteen
@@ -2220,6 +2359,88 @@ export function drawKind(
       ctx.lineTo(half - r, half + r * 0.2);
       ctx.closePath();
       break;
+    /*
+      ── THE BANG — 0227 ─────────────────────────────────────────────────────────────────────────
+
+      Four frames of a body coming apart, walked by `src/app/frame.ts` off a debris entity's own
+      clock. No hull and no outline: fire has no edge, and a dark rim round a fireball is a sticker.
+      Everything here is the palette's own fire — `bullet` is the flame, `hazard` its heart, `impact`
+      the flash, and smoke is the exhaust ink taken most of the way to black — so the high-contrast
+      palette gets an explosion in its own terms.
+
+      ⚠️ **THE FLASH IS SMALLER THAN THE BODY AND THE SMOKE IS BARELY BIGGER**, and both are drawn
+      under everything (`src/app/mount.ts` puts debris first). A burst may never hide a bullet.
+    */
+    case 'burst0':
+      glow(ctx, f, palette.hazard, 0, 0, 1.1, 0.75);
+      disc(ctx, f, palette.impact, 0, 0, 0.55);
+      return;
+    case 'burst1': {
+      const rng = makeRng('art').stream('burst1');
+      glow(ctx, f, palette.bullet, 0, 0, 1.15, 0.6);
+      poly(ctx, f, palette.bullet, ragged(rng, 0, 0, 0.72, 1, 14));
+      poly(ctx, f, palette.hazard, ragged(rng, 0.04, 0.02, 0.42, 0.62, 11));
+      disc(ctx, f, palette.impact, 0.03, 0, 0.28);
+      for (let i = 0; i < 6; i++) {
+        const a = rng.range(0, Math.PI * 2);
+        const d = rng.range(0.85, 1.1);
+        disc(ctx, f, palette.hazard, Math.cos(a) * d, Math.sin(a) * d, 0.09);
+      }
+      return;
+    }
+    case 'burst2': {
+      const rng = makeRng('art').stream('burst2');
+      const smoke = shade(palette.flame, -0.55);
+      // The ring: a ragged outer edge with a ragged hole, so the sky shows through the middle.
+      ctx.globalAlpha = 0.92;
+      ctx.fillStyle = palette.bullet;
+      ctx.beginPath();
+      trace(ctx, f, ragged(rng, 0, 0, 0.9, 1.06, 16));
+      trace(ctx, f, ragged(rng, 0, 0, 0.5, 0.62, 12));
+      ctx.fill('evenodd');
+      ctx.globalAlpha = 1;
+      band(ctx, f, palette.hazard, 0, 0, 0.72, 0.56, 0.7);
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2 + rng.range(-0.3, 0.3);
+        const d = rng.range(0.72, 0.9);
+        disc(ctx, f, smoke, Math.cos(a) * d, Math.sin(a) * d, rng.range(0.2, 0.3), 0.5);
+      }
+      for (let i = 0; i < 7; i++) {
+        const a = rng.range(0, Math.PI * 2);
+        const d = rng.range(1.02, 1.14);
+        disc(ctx, f, palette.hazard, Math.cos(a) * d, Math.sin(a) * d, 0.07, 0.85);
+      }
+      return;
+    }
+    case 'burst3': {
+      const rng = makeRng('art').stream('burst3');
+      const smoke = shade(palette.flame, -0.6);
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2 + rng.range(-0.25, 0.25);
+        const d = rng.range(0.6, 0.86);
+        disc(ctx, f, smoke, Math.cos(a) * d, Math.sin(a) * d, rng.range(0.3, 0.4), 0.42);
+      }
+      for (let i = 0; i < 5; i++) {
+        const a = rng.range(0, Math.PI * 2);
+        const d = rng.range(0.5, 0.95);
+        disc(ctx, f, palette.flame, Math.cos(a) * d, Math.sin(a) * d, 0.08, 0.6);
+      }
+      return;
+    }
+    // A missile landing: the flash, then the flash going. Under a missile's own size at the first.
+    case 'spark0':
+      glow(ctx, f, palette.hazard, 0, 0, 1.1, 0.75);
+      disc(ctx, f, palette.impact, 0, 0, 0.5);
+      return;
+    case 'spark1': {
+      const rng = makeRng('art').stream('spark1');
+      band(ctx, f, palette.bullet, 0, 0, 0.9, 0.62, 0.8);
+      for (let i = 0; i < 5; i++) {
+        const a = rng.range(0, Math.PI * 2);
+        disc(ctx, f, palette.hazard, Math.cos(a) * 1.05, Math.sin(a) * 1.05, 0.1, 0.85);
+      }
+      return;
+    }
     case 'lifeIcon': {
       /*
         A PLUS. The one glyph that means *more of something* without any game having to teach it,
@@ -2263,7 +2484,24 @@ export function drawKind(
       ctx.lineTo(half - r, half + r * 0.85);
       ctx.lineTo(half - r * 0.2, half + r * 0.85);
       ctx.closePath();
-      break;
+      seal(ctx);
+      // The lower arm in shadow, so the chevron has a top and an underside.
+      poly(ctx, f, shade(palette.pickup, -0.28), [
+        [0.72, 0.1],
+        [-0.16, 0.7],
+        [-0.72, 0.7],
+        [-0.14, 0.1],
+      ]);
+      // A shaft down the middle and a lit head — 0194's livery, painted rather than tabled.
+      poly(ctx, f, palette.trim, [
+        [-0.08, -0.085],
+        [0.35, -0.085],
+        [0.35, 0.085],
+        [-0.08, 0.085],
+      ]);
+      disc(ctx, f, palette.glass, 0.14, 0, 0.18);
+      disc(ctx, f, shade(palette.glass, 0.5), 0.18, -0.04, 0.08);
+      return;
     }
     case 'pickupMissile': {
       /*
@@ -2287,12 +2525,32 @@ export function drawKind(
       ctx.lineTo(half - r * 0.85, half + r);
       ctx.lineTo(half - r * 0.85, half + r * 0.2);
       ctx.closePath();
-      break;
+      seal(ctx);
+      // The trailing arm in shadow — the same underside the weapon chevron has, turned with it.
+      poly(ctx, f, shade(palette.pickup, -0.28), [
+        [-0.1, -0.72],
+        [-0.7, 0.16],
+        [-0.7, 0.72],
+        [-0.1, 0.14],
+      ]);
+      poly(ctx, f, palette.trim, [
+        [-0.09, -0.5],
+        [0.09, -0.5],
+        [0.09, 0.05],
+        [-0.09, 0.05],
+      ]);
+      disc(ctx, f, palette.glass, 0, -0.28, 0.17);
+      disc(ctx, f, shade(palette.glass, 0.5), -0.04, -0.32, 0.085);
+      return;
     }
     case 'missile':
       /*
         A dart: a long point forward, a notched tail. The notch is what keeps it from reading as a
         triangle at twenty pixels — the same lesson the lancer's silhouette cost.
+
+        Painted as a missile now: a lit warhead, an underside in shadow, and a plume out of the notch.
+        At 3.4 units it is the smallest thing in the game to carry a mark, so the marks are three, and
+        each is a quarter of the hull wide.
       */
       ctx.moveTo(half + r, half);
       ctx.lineTo(half - r * 0.4, half - r * 0.55);
@@ -2301,7 +2559,25 @@ export function drawKind(
       ctx.lineTo(half - r, half + r * 0.2);
       ctx.lineTo(half - r * 0.4, half + r * 0.55);
       ctx.closePath();
-      break;
+      seal(ctx);
+      poly(ctx, f, palette.hazard, [
+        [-0.78, -0.02],
+        [-1.16, -0.16],
+        [-1.16, 0.16],
+        [-0.78, 0.02],
+      ], 0.6);
+      poly(ctx, f, shade(palette.bullet, -0.32), [
+        [0.82, 0.03],
+        [-0.38, 0.48],
+        [-0.9, 0.17],
+        [-0.72, 0.03],
+      ]);
+      poly(ctx, f, shade(palette.bullet, 0.6), [
+        [0.94, 0],
+        [0.45, -0.2],
+        [0.45, 0.2],
+      ]);
+      return;
     /*
       ⚠️ **ONE DRAWING, TWO KINDS, AND IT IS THE ONLY SHARED SILHOUETTE OUTSIDE THE PYRE'S RUNGS.**
       `bomb` is what leaves the ship; `pickupBomb` is what is lying in the lane waiting to be
@@ -2311,7 +2587,7 @@ export function drawKind(
       ground is the thing on the button* costs no teaching at all.
     */
     case 'pickupBomb':
-    case 'bomb':
+    case 'bomb': {
       /*
         A disc with a spike at the TOP — a bomb with a fuse. The spike is what stops it reading as a
         large pulse at twenty pixels: the lesson the lancer's silhouette cost, applied to the player's
@@ -2335,7 +2611,15 @@ export function drawKind(
       ctx.arc(half, half, r * 0.6, Math.PI * 1.35, Math.PI * 1.65, true);
       ctx.lineTo(half, half - r);
       ctx.closePath();
-      break;
+      seal(ctx);
+      const casing = palette[INK_OF[kind]];
+      // The casing's underside in shadow, then the lit core 0194 gave it, then the fuse burning.
+      disc(ctx, f, shade(casing, -0.3), 0.08, 0.16, 0.42);
+      disc(ctx, f, palette.glass, 0, 0.06, 0.3);
+      disc(ctx, f, palette.flame, 0, 0.06, 0.14);
+      glow(ctx, f, palette.hazard, 0, -0.9, 0.24, 0.8);
+      return;
+    }
     // The pyre's rungs are the SAME drawing at a different extent — 0079. Four bitmaps, one shape.
     case 'blastHalf':
     case 'blastWide':
@@ -2360,7 +2644,11 @@ export function drawKind(
       ctx.arc(half, half, edge, 0, Math.PI * 2);
       ctx.moveTo(half + edge * 0.74, half);
       ctx.arc(half, half, edge * 0.74, 0, Math.PI * 2);
-      break;
+      seal(ctx);
+      // A hot inner rim, translucent, inside the hole — the shockwave has a front and a wake.
+      const inner = edge / r;
+      band(ctx, f, shade(palette.hazard, 0.45), 0, 0, inner * 0.74, inner * 0.64, 0.4);
+      return;
     }
     case 'pickupShield': {
       /*
@@ -2385,17 +2673,36 @@ export function drawKind(
       ctx.lineTo(half - r * 0.85, half + r * 0.25);
       ctx.lineTo(half - r * 0.85, half - r);
       ctx.closePath();
-      break;
+      seal(ctx);
+      // The right half in shadow, so the face is curved; a band across it and a boss at its centre.
+      poly(ctx, f, shade(palette.pickup, -0.28), [
+        [0.04, -0.9],
+        [0.75, -0.9],
+        [0.75, 0.2],
+        [0.04, 0.88],
+      ]);
+      poly(ctx, f, palette.trim, [
+        [-0.5, -0.34],
+        [0.5, -0.34],
+        [0.5, -0.155],
+        [-0.5, -0.155],
+      ]);
+      disc(ctx, f, palette.glass, 0, 0.1, 0.22);
+      disc(ctx, f, shade(palette.glass, 0.5), -0.06, 0.04, 0.09);
+      return;
     }
     case 'shieldOrb':
       /*
         A ring. Two circles wound the same way and filled `evenodd`, which is how the hole survives
-        being two pixels across.
+        being two pixels across. Lit from inside now, so the shell reads as three beads rather than
+        three hoops.
       */
       ctx.arc(half, half, r, 0, Math.PI * 2);
       ctx.moveTo(half + r * 0.45, half);
       ctx.arc(half, half, r * 0.45, 0, Math.PI * 2);
-      break;
+      seal(ctx);
+      glow(ctx, f, palette.player, 0, 0, 0.5, 0.7);
+      return;
     /*
       ── THE SKY, AND IT IS THE ONE DRAWING THAT RETURNS EARLY ───────────────────────────────────────
 
@@ -2483,113 +2790,13 @@ export function drawKind(
       throw new Error(`unbaked sprite kind: ${String(never)}`);
     }
   }
-  ctx.fill('evenodd');
-  ctx.stroke();
   /*
-    ── THE SECOND PASS ─────────────────────────────────────────────────────────────────────────────
-
-    ⚠️ **THE HULL IS FINISHED BEFORE THIS RUNS, AND THAT ORDER IS THE WHOLE MECHANISM.** The fill and
-    the stroke above are the silhouette; what follows is opaque `space` laid over it, so nothing here
-    can move the outer bounds, the collision box or
-    `docs/decisions/0101-the-sky-is-a-hurry-and-the-boss-holds-back.md`'s screen share. Drawn into the
-    same path, or before the stroke, it would be part of the outline instead of inside it.
-
-    ⚠️ **`ctx.clip()` WOULD MAKE THIS TRUE BY CONSTRUCTION AND IS DELIBERATELY NOT USED.** A clip to
-    the hull cannot be broken on purpose, so a guard over it could never be seen to fail —
-    `docs/decisions/0005-a-guard-must-be-seen-to-fail.md` says that is a guard nobody has the right to
-    trust. Containment is a claim about the numbers in `ACCENT_OF`, held by `tests/accents.test.ts`
-    and proved red by `scripts/probes/0149-a-hull-has-an-interior.mjs`.
-
-    ⚠️ **`evenodd` again, so an accent may have a hole in it too** — and so two overlapping shapes in
-    one accent cancel rather than merge, which is the same rule the hulls are filled under and one
-    fewer thing for a reader of this file to hold.
+    ⚠️ **THE ARMS THAT `break` ARE THE ONES STILL WAITING TO BE PAINTED** — the eight enemies and the
+    three enemy bullets, which `docs/decisions/0228-an-enemy-wears-its-place.md` redraws per place.
+    They are a silhouette in one ink with the outline round it, exactly as every sprite was before
+    0227, and they arrive here to be sealed.
   */
-  const accent = ACCENT_OF[kind];
-  if (accent === null) return;
-  /*
-    ── ONE PATH PER INK, IN THE ORDER THE INKS ARE LISTED — 0194 ─────────────────────────────────
-
-    ⚠️ **A SINGLE `evenodd` FILL PER INK RATHER THAN PER ACCENT, WHICH IS WHY THE ORDER IS FIXED
-    AND NOT THE TABLE'S.** `evenodd` cancels overlapping sub-paths inside ONE fill; grouping by ink
-    keeps that true within a colour and lets two colours overlap normally, which is what a canopy
-    sitting on a trim line has to do. Every 0149 accent names no ink, so it lands in the `space`
-    group alone and is drawn by exactly the code that drew it before.
-
-    ⚠️ **THE LOOP IS OVER A CONSTANT LIST AND ALLOCATES NOTHING PER SHAPE**, because this runs inside
-    the bake and `docs/decisions/0022-frame-rate-is-a-feature.md` counts allocations — the bake is not
-    the frame loop, but a per-shape array here would be the habit arriving one file away from where it
-    is banned.
-  */
-  for (const layer of ACCENT_INK_ORDER) {
-  let drew = false;
-  ctx.fillStyle = palette[layer];
-  ctx.beginPath();
-  for (const shape of accent) {
-    if ((shape.ink ?? 'space') !== layer) continue;
-    drew = true;
-    switch (shape.kind) {
-      case 'poly': {
-        let first = true;
-        for (const [x, y] of shape.points) {
-          if (first) ctx.moveTo(half + x * r, half + y * r);
-          else ctx.lineTo(half + x * r, half + y * r);
-          first = false;
-        }
-        ctx.closePath();
-        break;
-      }
-      case 'disc':
-        // The `moveTo` is the arc's own start point, so the sub-path opens there rather than being
-        // joined to the last one by a stray line — the same pairing every ring in this file uses.
-        ctx.moveTo(half + (shape.x + shape.r) * r, half + shape.y * r);
-        ctx.arc(half + shape.x * r, half + shape.y * r, shape.r * r, 0, Math.PI * 2);
-        break;
-      default: {
-        const never: never = shape;
-        throw new Error(`unbaked accent shape: ${JSON.stringify(never)}`);
-      }
-    }
-  }
-  if (drew) ctx.fill('evenodd');
-  }
-}
-
-/**
- * The order livery inks are laid down in, void first.
- *
- * ⚠️ **A CLOSED LIST AND NOT `Object.keys`**, so the day a fourth decorative ink is added somebody
- * has to decide where in the stack it goes rather than inheriting whatever order a record happened to
- * iterate in. `space` is first because it is a hole: anything painted after it sits ON the hull
- * rather than in the gap.
- *
- * ⚠️ **`trim` IS LAST, AND IT WAS SECOND UNTIL THE SHEET SAID SO.** With the keel painted before the
- * canopy and the engine core, the sheet measured **ten pixels of `trim` on the whole ship** — the
- * spine was drawn and then covered by the two marks sitting on it, so a mark that passed every
- * thickness and clearance guard was invisible in the picture. A panel line is the thing you paint ON
- * a hull last, over the canopy frame, which is also what makes it read as a panel line.
- * `docs/decisions/0027-measure-the-picture-not-the-model.md` — and the instrument that caught it is
- * two decisions old.
- */
-const ACCENT_INK_ORDER: readonly ('space' | DecorInk)[] = ['space', 'glass', 'flame', 'trim'];
-
-/**
- * A mirrored pair of swept fins at `spanY` of the hull's radius, trailing towards −x.
- *
- * ⚠️ **A helper rather than the same six lines twice, and it is the only one in this file** — the
- * upgraded hulls differ from each other by *how many pairs*, so writing the pair out per tier would
- * make *another pair* a copy-paste rather than a call. `drawKind` stays the place that says which
- * shape a kind is; this says what one piece of that shape is.
- *
- * `bake.ts` is on `tests/budget.test.ts`'s deliberately-cold list, so a call per bake costs nothing.
- */
-function drawFins(ctx: Pen, half: number, r: number, spanY: number): void {
-  for (const side of [-1, 1]) {
-    ctx.moveTo(half - r * 0.15, half + r * spanY * side * 0.55);
-    ctx.lineTo(half + r * 0.1, half + r * spanY * side);
-    ctx.lineTo(half - r * 0.62, half + r * spanY * side);
-    ctx.lineTo(half - r * 0.78, half + r * spanY * side * 0.5);
-    ctx.closePath();
-  }
+  seal(ctx);
 }
 
 /** One star, in tile pixels: where it goes, how big it is, and how far it is smeared. */

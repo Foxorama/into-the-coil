@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { CAPACITY } from '../src/app/mount.ts';
 import { GameFrame, detonateArsenal, respawn, scatterUpgrades, type World } from '../src/app/frame.ts';
 import { makeLifecycle } from '../src/app/lifecycle.ts';
+import { DEBRIS_BY_KIND } from '../src/content/debris.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
@@ -199,6 +200,14 @@ describe('the ship comes apart, and the player watches it happen', () => {
       for (let i = 0; i < built.world.debris.size; i++) {
         const piece = built.world.debris.at(i);
         if (piece.prevAlong !== piece.along) continue;
+        /*
+          ⚠️ **A FLARE HOLDS STATION IN THE WORLD, SO *HAS NOT MOVED* NO LONGER MEANS *JUST SPAWNED*
+          FOR IT** — 0227. It is spawned in the camera's frame exactly as a shard is, and then sits
+          where it went off while the camera moves on, which is what a fireball does. The one step it
+          is measured on is the step it was lit: its life is still the whole of its frames.
+        */
+        const row = DEBRIS_BY_KIND[piece.kind]!;
+        if (row.hold > 0 && piece.lifeFor !== row.frames.length * row.hold) continue;
         pulses++;
         worst = Math.max(worst, Math.abs(piece.along - built.world.cameraAlong - offset));
       }
