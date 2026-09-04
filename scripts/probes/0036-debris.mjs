@@ -12,9 +12,13 @@ export const PROBES = [
     suite: 'tests/combat.test.ts',
     broke: 'a death leaving nothing behind, so the screen cannot tell dying from vanishing',
     guard: 'an enemy that dies leaves fragments where it died',
+    // ⚠️ Both lines since 0227, which lights a fireball at the same point: with the shards alone
+    // taken away the fireball is still something left behind, and the guard was right to stay green.
     edit: {
       path: 'src/app/frame.ts',
-      find: '      burst(w, w.deaths.along[i]!, w.deaths.across[i]!, BURST.enemy);',
+      find:
+        "      burst(w, w.deaths.along[i]!, w.deaths.across[i]!, BURST.enemy);\n" +
+        "      flare(w, w.deaths.along[i]!, w.deaths.across[i]!, 'burst');",
       replace: '      if (i < 0) burst(w, w.deaths.along[i]!, w.deaths.across[i]!, BURST.enemy);',
     },
   },
