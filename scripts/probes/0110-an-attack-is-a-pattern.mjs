@@ -10,16 +10,19 @@ export const PROBES = [
     decision: '0110',
     suite: 'tests/pilots.test.ts',
     /*
-      ⚠️ THE REPORTED ONE. The turret put back on an aimed shot, which tips the roster back to a
-      majority that points at the player. It is the edit a later hand makes for a good reason —
-      *"a turret that misses is not a turret"* — and it is the whole of what the report is about.
+      ⚠️ THE REPORTED ONE. It was *the turret put back on an aimed shot*, which tipped a roster of
+      five shooters back to a majority that points at the player — and 0232 doubled the roster, so
+      the turret alone no longer tips it: seven of ten still send a pattern with the turret aimed.
+      That is worth knowing about the field. What reaches the guard now is the four patterned
+      signatures leaving the roster, which puts the six that remain at three and three — the edit a
+      hand makes trimming the kinds list without reading what each kind sends.
     */
-    broke: 'the turret aimed at the ship again, so most of what shoots points at the player',
+    broke: 'the four patterned signatures dropped from the roster, so half of what shoots points at the player',
     guard: 'THE REPORTED ONE: most of what shoots is not aimed at the player',
     edit: {
       path: 'src/content/enemies.ts',
-      find: "    attack: { kind: 'spray', shots: 3, spread: 0.85 },",
-      replace: "    attack: { kind: 'aimed' },",
+      find: "  'picket',\n  'moth',\n  'raptor',\n  'sentry',\n  'shard',\n  'spore',\n  'gaze',\n];",
+      replace: "  'raptor',\n  'spore',\n  'gaze',\n];",
     },
   },
   {
