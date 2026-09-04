@@ -11,13 +11,15 @@ export const PROBES = [
   {
     decision: '0233',
     suite: 'tests/weapons.test.ts',
-    // The arc's last rung buying nothing: the rate held where the links and the weight already have.
-    broke: 'the arc’s last rung authored so it changes nothing about the ship',
+    // A rung buying nothing. ⚠️ Re-aimed by 0236: the arc's reach became a ladder, so every one of
+    // its rungs now buys reach whatever else is flattened; the pulse's third rung buys only its
+    // fourth barrel, and the barrel held is the rung that changes nothing.
+    broke: 'the pulse’s third rung authored so it changes nothing about the gun',
     guard: 'every rung changes the ship',
     edit: {
       path: 'src/content/weapons.ts',
-      find: '    fireEvery: [12, 12, 10, 10, 8],',
-      replace: '    fireEvery: [12, 12, 10, 10, 10],',
+      find: '    barrels: [1, 2, 3, 4, 4],',
+      replace: '    barrels: [1, 2, 3, 3, 4],',
     },
   },
   {

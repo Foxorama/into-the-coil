@@ -59,8 +59,11 @@ export const PROBES = [
     guard: '0100 — THE REPORTED ONE: a scatter never leaves a piece where the ship cannot reach it',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    if (item.lifeFor > 0) {\n      const inView = item.along - w.cameraAlong;',
-      replace: '    if (false) {\n      const inView = item.along - w.cameraAlong;',
+      // ⚠️ Re-anchored by 0236: the bounce lives in the throw's flight now, which `turnsLeft`
+      // counts. The break is the two walls taken out of the flight; the flight still runs its
+      // course, so a piece thrown backward crosses the margin and keeps going.
+      find: '      if (inView <= PLAYER_ALONG_MARGIN) item.velAlong = w.scrollPerStep + Math.abs(departure);\n      else if (inView >= PLAYER_LEAD) item.velAlong = w.scrollPerStep - Math.abs(departure);\n      continue;',
+      replace: '      void inView;\n      void departure;\n      continue;',
     },
   },
   {

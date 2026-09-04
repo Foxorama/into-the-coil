@@ -107,7 +107,9 @@ function scattered(world: World): Entity[] {
   const out: Entity[] = [];
   for (let i = 0; i < world.pickups.size; i++) {
     const item = world.pickups.at(i);
-    if (item.lifeFor > 0) out.push(item);
+    // A scattered piece is on its wait like any other since 0236 — `holdFor` is its clock now,
+    // where `lifeFor` used to be its short timer.
+    if (item.holdFor > 0) out.push(item);
   }
   return out;
 }
@@ -304,14 +306,14 @@ describe('a run over is a continue', () => {
     const built = ranOut();
     const before = scattered(built.world);
     expect(before.length, 'the last death scattered nothing, so this measures nothing').toBeGreaterThan(0);
-    const life = before.reduce((total, item) => total + item.lifeFor, 0);
+    const life = before.reduce((total, item) => total + item.holdFor, 0);
 
     built.lifecycle.resume();
     const after = scattered(built.world);
     expect(after.length, 'the continue swept away what the deaths handed back').toBe(before.length);
     expect(
-      after.reduce((total, item) => total + item.lifeFor, 0),
-      'the continue spent the scatter’s timer on the pause',
+      after.reduce((total, item) => total + item.holdFor, 0),
+      'the continue spent the scatter’s wait on the pause',
     ).toBe(life);
   });
 

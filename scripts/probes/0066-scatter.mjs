@@ -50,12 +50,16 @@ export const PROBES = [
       along half decays back to the camera's rate. Take the decay away and 0066's original objection
       comes true exactly as it was written.
     */
-    broke: 'the along throw left undecayed, so the scatter leaves the screen before it can be reached',
-    guard: 'is thrown in both axes, and the along half is spent rather than carried',
+    // ⚠️ Re-aimed by 0236: the throw is a flight now, ended by `turnsLeft` running out, and a
+    // piece is bounded by the box's walls while it flies. The decay that used to answer 0066's
+    // objection is gone; what answers it is the flight ENDING. A flight that never ends is a piece
+    // bouncing for ever, never waiting and never leaving — which is the guard on the wait.
+    broke: 'the flight never ending, so a scattered piece bounces for ever and never joins the wait',
+    guard: 'stays as long as an authored pickup does, and then leaves the same way',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      const drift = item.lifeFor > 0 ? w.scrollPerStep : 0;',
-      replace: '      const drift = item.lifeFor > 0 ? item.velAlong : 0;',
+      find: '      item.turnsLeft--;\n      const inView = item.along - w.cameraAlong;',
+      replace: '      const inView = item.along - w.cameraAlong;',
     },
   },
   {
@@ -79,11 +83,12 @@ export const PROBES = [
   {
     decision: '0066',
     suite: 'tests/pickups.test.ts',
-    // The timer removed. *"A short timer so there's enough time to grab some, but maybe not all"* —
-    // without it a death hands the whole loadout back and costs the player nothing at all.
-    broke: 'the short timer removed, so a death costs the player nothing',
-    guard: 'is gone on a short timer, and says so when it goes',
-    edit: { path: 'src/app/frame.ts', find: '    item.lifeFor = SCATTER_STEPS;', replace: '    void SCATTER_STEPS;' },
+    // ⚠️ Re-aimed by 0236. The timer this broke is gone — *"they need to last as long as regular
+    // power ups"* — and a scattered piece carries `lingerFor` like an authored one. The break that
+    // is left is the opposite of the old one: the wait typed short for the scatter alone.
+    broke: 'the scatter given a wait of its own, shorter than an authored pickup’s',
+    guard: 'stays as long as an authored pickup does, and then leaves the same way',
+    edit: { path: 'src/app/frame.ts', find: '    item.holdFor = lingerFor(row);\n  }\n}', replace: '    item.holdFor = 60;\n  }\n}' },
   },
   {
     decision: '0066',

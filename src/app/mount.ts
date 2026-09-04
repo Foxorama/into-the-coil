@@ -665,7 +665,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   surface.setSize(viewportWidth(host), viewportHeight(host), colours.space);
   // A bolt glows in the player's ink with an impact-white core — 0233. The player's, because it is
   // the player's weapon; the core is the brightest ink there is, because lightning is.
-  surface.setBolt(colours.player, colours.impact);
+  surface.setBolt(colours.player, colours.impact, colours.space);
 
   const world: World = {
     /*

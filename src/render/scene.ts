@@ -243,6 +243,21 @@ const BOLT_JAG_MAX = 3;
 const TWIG_SHARE = 0.3;
 /** Frames a jag pattern is held for before the next one — a flicker at half the frame rate. */
 const BOLT_PAGE_STEPS = 2;
+/**
+ * Bright points along a link: every `BOLT_DOT_EVERY`th vertex, as a dot wider than the core — 0236.
+ * *"It needs some bright points"*: a stroke of one width reads as a wire, and lightning is not a wire.
+ */
+const BOLT_DOT_EVERY = 3;
+/** The dot's width, as a multiple of the core's. */
+const BOLT_DOT_WIDTH = 1.9;
+/**
+ * How many `bolt` calls one link costs: its stroke, its twig, and its dots. `tests/weapons.test.ts`
+ * counts them against this, so the picture's cost is a stated number and not an accident.
+ */
+export const STROKES_PER_LINK = 2 + Math.floor((BOLT_VERTICES - 2) / BOLT_DOT_EVERY);
+
+// @setup: one dot's worth of buffer for the module's lifetime.
+const DOT = new Float32Array(2);
 
 // @setup: one buffer each for the module's lifetime, refilled per link and read before the call returns.
 const LINK = new Float32Array(BOLT_VERTICES * 2);
@@ -292,6 +307,12 @@ export function paintBolts(surface: Surface, view: View, bolts: Pool<Entity>, ca
     // Fades over its life: a flash, brightest the step it lands.
     const fade = e.lifeFor / BOLT_STEPS;
     surface.bolt(LINK, BOLT_VERTICES, BOLT_WIDTH * view.scale, fade);
+    // The bright points: a dot on every third inner vertex, over the stroke — 0236.
+    for (let v = BOLT_DOT_EVERY; v < last; v += BOLT_DOT_EVERY) {
+      DOT[0] = LINK[v * 2]!;
+      DOT[1] = LINK[v * 2 + 1]!;
+      surface.bolt(DOT, 1, BOLT_WIDTH * BOLT_DOT_WIDTH * view.scale, fade);
+    }
     /*
       The twig: from a vertex a third to two thirds along, out to the side the hash says, and on
       again at half the length. Two segments, so it forks rather than spikes.

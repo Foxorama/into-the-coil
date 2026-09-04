@@ -50,6 +50,8 @@ export type Pen = Pick<
   | 'lineWidth'
   | 'lineCap'
   | 'globalAlpha'
+  // For a pickup's bubble, which is painted BEHIND a glyph already sealed — 0236.
+  | 'globalCompositeOperation'
   | 'beginPath'
   | 'moveTo'
   | 'lineTo'
@@ -736,6 +738,47 @@ function glow(ctx: Pen, f: Frame, colour: string, x: number, y: number, radius: 
  * ⚠️ **SEEDED, PER `docs/decisions/0021-one-stream-per-concern.md`**, so a fireball is the same
  * fireball on every machine and after every re-bake, and adding one can never move a wave.
  */
+/**
+ * What share of a pickup's box its glyph takes; the rest is the bubble — 0236.
+ *
+ * ⚠️ **The extents in `src/content/sprites.ts` are the glyphs' old sizes divided by this**, so the
+ * glyph on the screen is exactly the size it was and the bubble is added around it rather than
+ * taken out of it. The painter scales the arm's own drawing about the centre, which is what lets
+ * five arms that draw in `half` and `r` keep drawing in `half` and `r`.
+ */
+const PICKUP_GLYPH = 0.75;
+
+/** The bubble's outer edge, in the frame's `r`. Inside the box: `1.14 × 0.42` of the size. */
+const PICKUP_HALO = 1.14;
+
+/**
+ * A pickup's bubble: a soft glow and a thin ring in the pickup ink, painted BEHIND the glyph the arm
+ * has already sealed, in the box's own full frame.
+ *
+ * ── A PICKUP HAS TO BE TOLD FROM AN ENEMY AT A GLANCE, AND INK ALONE WAS NOT DOING IT — 0236 ────
+ *
+ * Reported: *"all the power ups need a glow or bubble/circle or something around them, they're hard
+ * to distinguish from enemies now."* Since 0222 the background carries hulks and cover in the same
+ * lightness band as the pickup ink, and since 0233 a pickup's silhouette CHANGES while it waits;
+ * what does not change, and what no enemy has, is a bubble. The ring is a shape and not an ink, so
+ * 0024's rule that colour never carries meaning alone still holds.
+ *
+ * ⚠️ **AFTER THE SEAL AND UNDERNEATH IT, which `destination-over` is for.** The first thing an arm
+ * seals is the hull — `tests/accents.test.ts` reads the first pass as the silhouette every mark is
+ * measured against — so the bubble cannot be painted first without becoming the hull. It is painted
+ * second, behind, and the pen is put back to `source-over` before the livery.
+ *
+ * ⚠️ **Translucent, both of them, so they are not solid marks outside the hull** — the rule the
+ * same guard holds over every body, and the one the missile's plume already lives under at 0.6.
+ * The glow peaks at 0.42 and the ring is 0.5.
+ */
+function bubble(ctx: Pen, f: Frame, palette: Palette): void {
+  ctx.globalCompositeOperation = 'destination-over';
+  band(ctx, f, palette.pickup, 0, 0, PICKUP_HALO, PICKUP_HALO - 0.07, 0.5);
+  glow(ctx, f, palette.pickup, 0, 0, PICKUP_HALO, 0.42);
+  ctx.globalCompositeOperation = 'source-over';
+}
+
 function ragged(rng: Rng, x: number, y: number, from: number, to: number, count: number): Pt[] {
   const out: Pt[] = [];
   for (let i = 0; i < count; i++) {
@@ -3783,30 +3826,33 @@ export function drawKind(
         chevron with the gap cut out of its TAIL, which needs no fill rule at all — the notch is also
         what keeps it off the lancer, the one enemy silhouette that also comes to a forward point.
       */
-      ctx.moveTo(half + r, half);
-      ctx.lineTo(half - r * 0.2, half - r * 0.85);
-      ctx.lineTo(half - r, half - r * 0.85);
-      ctx.lineTo(half - r * 0.25, half);
-      ctx.lineTo(half - r, half + r * 0.85);
-      ctx.lineTo(half - r * 0.2, half + r * 0.85);
+      const fg: Frame = { half, r: r * PICKUP_GLYPH };
+      const g = fg.r;
+      ctx.moveTo(half + g, half);
+      ctx.lineTo(half - g * 0.2, half - g * 0.85);
+      ctx.lineTo(half - g, half - g * 0.85);
+      ctx.lineTo(half - g * 0.25, half);
+      ctx.lineTo(half - g, half + g * 0.85);
+      ctx.lineTo(half - g * 0.2, half + g * 0.85);
       ctx.closePath();
       seal(ctx);
+      bubble(ctx, f, palette);
       // The lower arm in shadow, so the chevron has a top and an underside.
-      poly(ctx, f, shade(palette.pickup, -0.28), [
+      poly(ctx, fg, shade(palette.pickup, -0.28), [
         [0.72, 0.1],
         [-0.16, 0.7],
         [-0.72, 0.7],
         [-0.14, 0.1],
       ]);
       // A shaft down the middle and a lit head — 0194's livery, painted rather than tabled.
-      poly(ctx, f, palette.trim, [
+      poly(ctx, fg, palette.trim, [
         [-0.08, -0.085],
         [0.35, -0.085],
         [0.35, 0.085],
         [-0.08, 0.085],
       ]);
-      disc(ctx, f, palette.glass, 0.14, 0, 0.18);
-      disc(ctx, f, shade(palette.glass, 0.5), 0.18, -0.04, 0.08);
+      disc(ctx, fg, palette.glass, 0.14, 0, 0.18);
+      disc(ctx, fg, shade(palette.glass, 0.5), 0.18, -0.04, 0.08);
       return;
     }
     case 'pickupArc': {
@@ -3821,17 +3867,20 @@ export function drawKind(
         ⚠️ **Drawn along the lane like the chevron**, top-left to bottom-right, so the two faces of
         one pickup share an axis and read as the same object turning rather than as two objects.
       */
-      ctx.moveTo(half - r * 0.15, half - r);
-      ctx.lineTo(half + r * 0.55, half - r);
-      ctx.lineTo(half + r * 0.12, half - r * 0.2);
-      ctx.lineTo(half + r * 0.62, half - r * 0.2);
-      ctx.lineTo(half - r * 0.55, half + r);
-      ctx.lineTo(half - r * 0.15, half + r * 0.15);
-      ctx.lineTo(half - r * 0.62, half + r * 0.15);
+      const fg: Frame = { half, r: r * PICKUP_GLYPH };
+      const g = fg.r;
+      ctx.moveTo(half - g * 0.15, half - g);
+      ctx.lineTo(half + g * 0.55, half - g);
+      ctx.lineTo(half + g * 0.12, half - g * 0.2);
+      ctx.lineTo(half + g * 0.62, half - g * 0.2);
+      ctx.lineTo(half - g * 0.55, half + g);
+      ctx.lineTo(half - g * 0.15, half + g * 0.15);
+      ctx.lineTo(half - g * 0.62, half + g * 0.15);
       ctx.closePath();
       seal(ctx);
+      bubble(ctx, f, palette);
       // The lower half in shadow, so the bolt has a lit edge and an underside like the chevron.
-      poly(ctx, f, shade(palette.pickup, -0.28), [
+      poly(ctx, fg, shade(palette.pickup, -0.28), [
         [0.5, -0.2],
         [-0.55, 1],
         [-0.15, 0.15],
@@ -3839,8 +3888,8 @@ export function drawKind(
       ]);
       // A glass core at the waist and a light on it — 0194's livery, painted rather than tabled.
       // Inside the band between the two zags, which `tests/accents.test.ts` measures in pixels.
-      disc(ctx, f, palette.glass, -0.06, -0.05, 0.16);
-      disc(ctx, f, shade(palette.glass, 0.5), -0.1, -0.09, 0.075);
+      disc(ctx, fg, palette.glass, -0.06, -0.05, 0.16);
+      disc(ctx, fg, shade(palette.glass, 0.5), -0.1, -0.09, 0.1);
       return;
     }
     case 'arcNode': {
@@ -3877,29 +3926,32 @@ export function drawKind(
         the most strongly asymmetric shape in the atlas and 40px of it is unambiguous. And it is not
         rotation alone: 5.5 units against the weapon's 6.
       */
-      ctx.moveTo(half, half - r);
-      ctx.lineTo(half + r * 0.85, half + r * 0.2);
-      ctx.lineTo(half + r * 0.85, half + r);
-      ctx.lineTo(half, half + r * 0.25);
-      ctx.lineTo(half - r * 0.85, half + r);
-      ctx.lineTo(half - r * 0.85, half + r * 0.2);
+      const fg: Frame = { half, r: r * PICKUP_GLYPH };
+      const g = fg.r;
+      ctx.moveTo(half, half - g);
+      ctx.lineTo(half + g * 0.85, half + g * 0.2);
+      ctx.lineTo(half + g * 0.85, half + g);
+      ctx.lineTo(half, half + g * 0.25);
+      ctx.lineTo(half - g * 0.85, half + g);
+      ctx.lineTo(half - g * 0.85, half + g * 0.2);
       ctx.closePath();
       seal(ctx);
+      bubble(ctx, f, palette);
       // The trailing arm in shadow — the same underside the weapon chevron has, turned with it.
-      poly(ctx, f, shade(palette.pickup, -0.28), [
+      poly(ctx, fg, shade(palette.pickup, -0.28), [
         [-0.1, -0.72],
         [-0.7, 0.16],
         [-0.7, 0.72],
         [-0.1, 0.14],
       ]);
-      poly(ctx, f, palette.trim, [
+      poly(ctx, fg, palette.trim, [
         [-0.09, -0.5],
         [0.09, -0.5],
         [0.09, 0.05],
         [-0.09, 0.05],
       ]);
-      disc(ctx, f, palette.glass, 0, -0.28, 0.17);
-      disc(ctx, f, shade(palette.glass, 0.5), -0.04, -0.32, 0.085);
+      disc(ctx, fg, palette.glass, 0, -0.28, 0.17);
+      disc(ctx, fg, shade(palette.glass, 0.5), -0.04, -0.32, 0.1);
       return;
     }
     case 'missile':
@@ -3967,16 +4019,21 @@ export function drawKind(
         the picture had not. The disc is now 0.6r and the spike reaches r over a narrower base, so it
         is a fuse rather than a bump.
       */
-      ctx.arc(half, half, r * 0.6, Math.PI * 1.35, Math.PI * 1.65, true);
-      ctx.lineTo(half, half - r);
+      // The bubble on the one lying in the lane, and not on the one just thrown — 0236. The thrown
+      // bomb keeps the whole frame; the pickup draws the same bomb in the smaller one.
+      const fg: Frame = kind === 'pickupBomb' ? { half, r: r * PICKUP_GLYPH } : f;
+      const g = fg.r;
+      ctx.arc(half, half, g * 0.6, Math.PI * 1.35, Math.PI * 1.65, true);
+      ctx.lineTo(half, half - g);
       ctx.closePath();
       seal(ctx);
+      if (kind === 'pickupBomb') bubble(ctx, f, palette);
       const casing = palette[INK_OF[kind]];
       // The casing's underside in shadow, then the lit core 0194 gave it, then the fuse burning.
-      disc(ctx, f, shade(casing, -0.3), 0.08, 0.16, 0.42);
-      disc(ctx, f, palette.glass, 0, 0.06, 0.3);
-      disc(ctx, f, palette.flame, 0, 0.06, 0.14);
-      glow(ctx, f, palette.hazard, 0, -0.9, 0.24, 0.8);
+      disc(ctx, fg, shade(casing, -0.3), 0.08, 0.16, 0.42);
+      disc(ctx, fg, palette.glass, 0, 0.06, 0.3);
+      disc(ctx, fg, palette.flame, 0, 0.06, 0.14);
+      glow(ctx, fg, palette.hazard, 0, -0.9, 0.24, 0.8);
       return;
     }
     // The pyre's rungs are the SAME drawing at a different extent — 0079. Four bitmaps, one shape.
@@ -4026,28 +4083,31 @@ export function drawKind(
         here is a body with a heading; if portrait ever returns, `bakeOne`'s `top` rotation will turn
         this one the wrong way and it will need its own arm.
       */
-      ctx.moveTo(half + r * 0.85, half - r);
-      ctx.lineTo(half + r * 0.85, half + r * 0.25);
-      ctx.lineTo(half, half + r);
-      ctx.lineTo(half - r * 0.85, half + r * 0.25);
-      ctx.lineTo(half - r * 0.85, half - r);
+      const fg: Frame = { half, r: r * PICKUP_GLYPH };
+      const g = fg.r;
+      ctx.moveTo(half + g * 0.85, half - g);
+      ctx.lineTo(half + g * 0.85, half + g * 0.25);
+      ctx.lineTo(half, half + g);
+      ctx.lineTo(half - g * 0.85, half + g * 0.25);
+      ctx.lineTo(half - g * 0.85, half - g);
       ctx.closePath();
       seal(ctx);
+      bubble(ctx, f, palette);
       // The right half in shadow, so the face is curved; a band across it and a boss at its centre.
-      poly(ctx, f, shade(palette.pickup, -0.28), [
+      poly(ctx, fg, shade(palette.pickup, -0.28), [
         [0.04, -0.9],
         [0.75, -0.9],
         [0.75, 0.2],
         [0.04, 0.88],
       ]);
-      poly(ctx, f, palette.trim, [
+      poly(ctx, fg, palette.trim, [
         [-0.5, -0.34],
         [0.5, -0.34],
         [0.5, -0.155],
         [-0.5, -0.155],
       ]);
-      disc(ctx, f, palette.glass, 0, 0.1, 0.22);
-      disc(ctx, f, shade(palette.glass, 0.5), -0.06, 0.04, 0.09);
+      disc(ctx, fg, palette.glass, 0, 0.1, 0.22);
+      disc(ctx, fg, shade(palette.glass, 0.5), -0.06, 0.04, 0.11);
       return;
     }
     case 'shieldOrb':

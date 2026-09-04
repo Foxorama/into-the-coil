@@ -36,6 +36,7 @@ export const AUTHORED_IDS = [
   '0198-aa-space',
   '0198-aa-backdrop',
   '0198-aa-clouds',
+  '0236-cycle',
 ] as const;
 
 export type AuthoredId = (typeof AUTHORED_IDS)[number];
@@ -100,6 +101,11 @@ export const AUTHORED: Record<AuthoredId, AuthoredClaim> = {
     claim: 'no two places open on the same four sounds at `run`',
     correctly: 'two places that open alike and diverge later, which is a legal shape for a level to have',
     decision: '0172-a-place-opens-with-its-own-four',
+  },
+  '0236-cycle': {
+    claim: 'a cycling pickup shows each face for at least three seconds',
+    correctly: 'a shorter turn a later play-test prefers, once more faces make a long wait too long',
+    decision: '0236-the-guns-answer-the-first-play-test',
   },
 };
 

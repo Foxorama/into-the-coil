@@ -109,6 +109,9 @@ export function tracingPen(): { pen: Pen; trace: Trace } {
     lineWidth: 0,
     lineCap: 'butt',
     globalAlpha: 1,
+    // Recorded and not applied: a mark painted `destination-over` is still a mark, at its own alpha,
+    // and the containment guards read alpha rather than order — 0236.
+    globalCompositeOperation: 'source-over',
 
     beginPath(): void {
       subpaths = [];

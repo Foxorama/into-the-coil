@@ -814,12 +814,20 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     Growing one of these without growing its radius would draw a target the player can touch and not
     collect, which is the same lie with the sign reversed.
   */
-  pickupWeapon: 6,
+  /*
+    ⚠️ **EACH A THIRD WIDER THAN ITS GLYPH, AND THE THIRD IS THE BUBBLE — 0236.** Reported from the
+    first play-test: *"all the power ups need a glow or bubble/circle or something around them,
+    they're hard to distinguish from enemies now."* The glyph is drawn at three quarters of the box
+    (`PICKUP_GLYPH` in `src/render/bake.ts`) — 6, 6, 5.5, 5 and 4.4 units, exactly what they were —
+    and the room the box gained is a glow and a ring in the pickup ink. The hurtbox is the row's and
+    did not move; `tests/pickups.test.ts` still holds every face under the biggest enemy.
+  */
+  pickupWeapon: 8,
   // The same pickup, offering the other gun — the same size on purpose. 0233.
-  pickupArc: 6,
-  pickupMissile: 5.5,
-  pickupShield: 5,
-  pickupBomb: 4.4,
+  pickupArc: 8,
+  pickupMissile: 7.33,
+  pickupShield: 6.67,
+  pickupBomb: 5.87,
   /*
     ⚠️ **Small enough to read as the ship's, not as a body of its own.** Three of these orbit a
     7-unit ship at a 5.6-unit radius; at enemy size they would be a formation flying with the player

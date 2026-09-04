@@ -35,7 +35,8 @@ export interface Surface {
   blit(sprite: number, x: number, y: number, scale: number): void;
   /**
    * Stroke a polyline through the first `count` points of `points` — `x0, y0, x1, y1, …` in CSS
-   * pixels — `width` pixels wide at `alpha`, in the bolt ink the backend was given.
+   * pixels — `width` pixels wide at `alpha`, in the bolt ink the backend was given. A `count` of
+   * one is a dot of that width: the bright points on a bolt (0236).
    *
    * ⚠️ **The points are the caller's buffer and are read before this returns**, never kept. A
    * backend that wanted to keep them would be allocating per frame, which is the thing the seam

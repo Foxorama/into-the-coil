@@ -30,7 +30,7 @@ import {
   SCROLL_PER_STEP,
   SHIP_SPEED,
 } from '../src/sim/flight.ts';
-import { GameFrame, SHIP_START_ALONG, scatterUpgrades } from '../src/app/frame.ts';
+import { GameFrame, PICKUP_LINGER_STEPS, SHIP_START_ALONG, scatterUpgrades } from '../src/app/frame.ts';
 import { initialState, reduce } from '../src/state/root.ts';
 import { DEFAULT_DIFFICULTY } from '../src/state/slices/run.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
@@ -1052,7 +1052,7 @@ describe('collecting one, in the real frame', () => {
       );
     });
 
-    it('is thrown in both axes, and the along half is spent rather than carried', () => {
+    it('is thrown in both axes, flies its throw out, and then waits like any other', () => {
       /*
         ⚠️ **0066 REFUSED THIS AND 0077 TAKES IT**, so both halves are held here. 0066's objection was
         that a piece thrown along *"would be off the front or the back of the screen inside two
@@ -1066,51 +1066,65 @@ describe('collecting one, in the real frame', () => {
           it MOVES along, visibly             — or the ring is a fan again
           it settles, and stays settled       — or it is drifting out slowly instead of quickly
       */
+      /*
+        ⚠️ **AND THE THROW IS A FLIGHT NOW — 0236.** The decay that answered 0066 eased the along half
+        away inside a second, and the first play-test saw exactly that: *"they just explode up and
+        down now."* A piece flies its throw out for `SCATTER_FLIGHT` steps, bouncing inside the box,
+        and only then joins the wait. The three claims stand; the middle one got bigger.
+      */
       const { world } = died(['weapon', 'weapon', 'weapon', 'weapon']);
+      // No ship: the pieces come back through where it respawned and a parked ship would take them.
+      world.shipPool.clear();
       const frame = new GameFrame(world);
       const start: number[] = [];
       for (let i = 0; i < world.pickups.size; i++) start.push(world.pickups.at(i).along - world.cameraAlong);
 
       let furthest = 0;
       for (let i = 0; i < 120; i++) frame.step();
-      const settled: number[] = [];
       for (let i = 0; i < world.pickups.size; i++) {
         const onScreen = world.pickups.at(i).along - world.cameraAlong;
-        settled.push(onScreen);
         furthest = Math.max(furthest, Math.abs(onScreen - start[i]!));
       }
-      expect(furthest, 'nothing was thrown along at all — the scatter is still a line').toBeGreaterThan(2);
+      expect(furthest, 'nothing was thrown along at all — the scatter is still a line').toBeGreaterThan(8);
       expect(furthest, `a piece was thrown ${furthest.toFixed(1)} units along, which is off the screen`).toBeLessThan(
-        ACROSS_SPAN / 4,
+        ACROSS_SPAN / 2,
       );
 
-      // And it has stopped. A piece still moving at 120 steps is leaving, just slowly.
-      for (let i = 0; i < 130; i++) frame.step();
-      for (let i = 0; i < world.pickups.size; i++) {
-        const drift = Math.abs(world.pickups.at(i).along - world.cameraAlong - settled[i]!);
-        expect(drift, 'a scattered piece never stopped, so it is drifting out of the view').toBeLessThan(2);
+      // And then it is a waiting pickup like any other: on screen and inside the box, for as long
+      // as an authored one waits — the same claim 0064's guards make about those.
+      for (let i = 0; i < 400; i++) {
+        frame.step();
+        if (i % 50 !== 0) continue;
+        for (let p = 0; p < world.pickups.size; p++) {
+          const inView = world.pickups.at(p).along - world.cameraAlong;
+          expect(inView, `a scattered piece is behind the box on step ${i + 120}`).toBeGreaterThan(PLAYER_ALONG_MARGIN - ACROSS_SPAN / 10);
+          expect(inView, `a scattered piece is past the box on step ${i + 120}`).toBeLessThan(PLAYER_LEAD + ACROSS_SPAN / 10);
+        }
       }
+      expect(world.pickups.size, 'the scatter left inside the wait an authored pickup gets').toBe(4);
     });
 
-    it('is gone on a short timer, and says so when it goes', () => {
+    it('stays as long as an authored pickup does, and then leaves the same way', () => {
       /*
-        ⚠️ *"A short timer so there's enough time to grab some, but maybe not all."* Both halves: it
-        expires, and the expiry is an EVENT the picture mentions —
-        `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`, which is named
-        for three cases where the model resolved something and the screen said nothing.
+        ── IT WAS *gone on a short timer*, AND 0236 RETIRED THE TIMER ─────────────────────────────
 
-        In seconds, per 0027, and as a band rather than a value: long enough to cross the lane, short
-        enough that a full loadout cannot be recovered by flying calmly from one to the next.
+        0066's *"a short timer so there's enough time to grab some, but maybe not all"* was sized
+        for a death that cost rungs; since 0233 it costs the gun too and the pieces cycle, and the
+        first play-test said so: *"it's too punishing now on death with rotation and weapons… they
+        need to last as long as regular power ups."* A scattered piece carries the same wait an
+        authored one does and leaves by falling back through the view, which is an event the picture
+        already tells (0036) — the burst it used to leave went with the timer.
       */
       const { world } = died(['weapon']);
+      world.shipPool.clear();
       const frame = new GameFrame(world);
-      world.debris.clear();
       let steps = 0;
-      for (; steps < 1800 && world.pickups.size > 0; steps++) frame.step();
+      for (; steps < 3000 && world.pickups.size > 0; steps++) frame.step();
       const seconds = steps / STEPS_PER_SECOND;
-      expect(seconds, `the scatter lasted ${seconds.toFixed(1)}s`).toBeGreaterThan(ACROSS_SPAN / SHIP_SPEED / 60);
-      expect(seconds, `the scatter lasted ${seconds.toFixed(1)}s, which is not a short timer`).toBeLessThan(10);
-      expect(world.debris.size, 'a scattered pickup vanished with nothing to say it had').toBeGreaterThan(0);
+      expect(seconds, `the scatter lasted ${seconds.toFixed(1)}s, which is shorter than a pickup waits`).toBeGreaterThan(
+        PICKUP_LINGER_STEPS / STEPS_PER_SECOND,
+      );
+      expect(steps, 'the scatter never left').toBeLessThan(3000);
     });
 
     it('never asks the pool for more than it has, however long the run was', () => {
