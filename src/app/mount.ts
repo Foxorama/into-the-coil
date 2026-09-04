@@ -650,20 +650,23 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       it, and the SHIP last — the player must never lose their own ship in a crowd, and at 150 enemy
       bullets a crowd is the normal state. `src/render/scene.ts` walks this array in order.
     */
-    // Debris first, so fragments sit UNDER everything still alive. An explosion that draws over a
-    // bullet hides the one thing on screen the player cannot afford to lose track of.
-    // ⚠️ The boss sits directly above the debris and BELOW everything else. It is four times the
-    // size of anything on screen, so drawing it over the enemies and shots would hide exactly the
-    // things the player cannot afford to lose track of while fighting it.
-    // Pickups sit just above the debris and below every threat: the player must never lose a bullet
-    // behind the thing they are flying towards.
+    // ⚠️ DEBRIS OVER THE BODIES AND UNDER EVERY SHOT — 0229. It was first, under everything, and
+    // the fireball 0227 lit was reported as never seen: a body's own explosion drawn under the bodies
+    // beside it, at a size smaller than they are. A fireball over a body it came out of reads as that
+    // body going up; over a bullet it would hide the one thing on screen the player cannot afford to
+    // lose track of, so every shot is still above it.
+    // ⚠️ The boss sits BELOW everything but the blasts and the pickups. It is four times the size of
+    // anything on screen, so drawing it over the enemies and shots would hide exactly the things the
+    // player cannot afford to lose track of while fighting it.
+    // Pickups sit below every threat: the player must never lose a bullet behind the thing they are
+    // flying towards.
     // The shell sits directly under the ship: the marks are the ship's, so nothing may come
     // between them, and a bullet passing over one has visibly passed over it.
     // Missiles sit directly above the pulses: they are the heavier stream and the one the player is
     // meant to be able to pick out of a screen full of the lighter one.
     // The blast sits under everything it is doing damage to, so the player can see what is inside
     // it — including their own ship, which is the one thing they need to be looking at.
-    layers: [debris, blasts, pickupPool, bossPool, enemies, enemyShots, playerShots, missiles, bombs, shieldOrbs, shipPool],
+    layers: [blasts, pickupPool, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, shieldOrbs, shipPool],
     /*
       THE SKY, back to front — `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
 

@@ -286,6 +286,22 @@ describe('the ship wears what it is carrying', () => {
     expect(bases.size, 'two hull tiers are drawn as the same ship').toBe(MAX_HULL_TIER + 1);
   });
 
+  it('0229 — a hull tier is a wider sprite than the one before it', () => {
+    /*
+      ⚠️ **"WE LOST THE SHIP UPGRADE GRAPHICS IN THE GRAPHICS UPGRADE."** 0227's pods and canards
+      were authored inside the bare hull's own 7-unit box and came out four pixels tall. A tier's
+      parts are drawn in the hull's radius, so the room they have is the extent — a number here, not
+      a fraction in a drawing. Each tier's box is wider than the last; the hurtbox does not move.
+    */
+    for (let tier = 1; tier <= MAX_HULL_TIER; tier++) {
+      const wider = SPRITE_EXTENT[SPRITE_KINDS[hullFor(tier).base]!];
+      const narrower = SPRITE_EXTENT[SPRITE_KINDS[hullFor(tier - 1).base]!];
+      expect(wider, `hull tier ${tier} has no more room than tier ${tier - 1}, so its parts have nowhere to be seen`).toBeGreaterThan(
+        narrower,
+      );
+    }
+  });
+
   it('and every tier has its own hit silhouette, so a flash never changes the shape', () => {
     // `stepEntities` derives `sprite` from `spriteBase` AND `spriteHit`, so a tier without its own
     // twin flashes back to the tier-0 hull — a silhouette changing at the worst possible moment.

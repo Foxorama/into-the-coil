@@ -836,19 +836,37 @@ const SHIP_UPPER: readonly Pt[] = [
 /** The whole hull: the upper half forward, the lower half back, one closed path. */
 const SHIP_HULL: readonly Pt[] = [...SHIP_UPPER, ...mirrored(SHIP_UPPER).slice(1, -1).reverse()];
 
+/*
+  ── THE TIERS, AND THEY ARE BIG NOW — 0229 ──────────────────────────────────────────────────────
+
+  *"We lost the ship upgrade graphics in the graphics upgrade."* 0227 fitted the pods and canards into
+  the bare hull's own box, so a pod was 3.8 pixels tall on the screen the play-tests are given on. A
+  tier's sprite is a wider box now (`src/content/sprites.ts`), the HULL is drawn at the bare ship's
+  own size inside it, and the parts fill the room the box gained — every coordinate below is still in
+  the hull's radius, and a pod reaches a third of a hull past the wingtip.
+*/
+
 /** A wingtip pod, the second tier's addition. Its base lies exactly on the wingtip edge. */
 const SHIP_POD: readonly Pt[] = [
-  [-0.44, -0.95],
-  [-0.36, -1.13],
-  [-0.78, -1.13],
-  [-0.7, -0.95],
+  [-0.4, -0.95],
+  [-0.26, -1.32],
+  [-0.9, -1.32],
+  [-0.74, -0.95],
+];
+
+/** The third tier's pod: longer, and it carries a lit muzzle. */
+const SHIP_POD_MK3: readonly Pt[] = [
+  [-0.36, -0.95],
+  [-0.14, -1.48],
+  [-0.96, -1.48],
+  [-0.76, -0.95],
 ];
 
 /** A canard on the leading edge, the third tier's. Both base points sit on one hull edge. */
 const SHIP_CANARD: readonly Pt[] = [
   [0.6, -0.178],
-  [0.5, -0.48],
-  [0.3, -0.48],
+  [0.52, -0.72],
+  [0.22, -0.72],
   [0.38, -0.247],
 ];
 
@@ -946,24 +964,39 @@ function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number): void {
   for (const side of [SHIP_NACELLE, mirrored(SHIP_NACELLE)]) poly(ctx, f, palette.flame, side);
   for (const side of [SHIP_CORE, mirrored(SHIP_CORE)]) poly(ctx, f, palette.hazard, side);
   if (tier >= 1) {
-    // A stripe down each pod, in the trim ink, so the pod reads as a fitted part.
+    const pod = tier >= 2 ? SHIP_POD_MK3 : SHIP_POD;
+    const tip = pod[1]![1];
     for (const side of [1, -1] as const) {
-      poly(ctx, f, palette.trim, [
-        [-0.45, -1.115 * side],
-        [-0.69, -1.115 * side],
-        [-0.68, -0.985 * side],
-        [-0.46, -0.985 * side],
+      // A dark band down each pod, so the pod reads as a fitted part rather than a second wing.
+      poly(ctx, f, dark, [
+        [-0.44, (tip + 0.06) * side],
+        [-0.76, (tip + 0.06) * side],
+        [-0.72, -1.02 * side],
+        [-0.46, -1.02 * side],
+      ]);
+      // And a lit muzzle at its front: the pod is a gun, and a gun shows where it fires from.
+      poly(ctx, f, palette.hazard, [
+        [-0.3, (tip + 0.04) * side],
+        [-0.46, (tip + 0.04) * side],
+        [-0.48, (tip + 0.2) * side],
+        [-0.34, (tip + 0.2) * side],
       ]);
     }
   }
   if (tier >= 2) {
-    // The canards' leading edges lit, in the hull's own light.
+    // The canards' leading edges lit, in the hull's own light, and a trim seam down each.
     for (const side of [1, -1] as const) {
       poly(ctx, f, light, [
-        [0.56, -0.24 * side],
-        [0.49, -0.44 * side],
-        [0.4, -0.44 * side],
+        [0.57, -0.24 * side],
+        [0.5, -0.66 * side],
+        [0.4, -0.66 * side],
         [0.45, -0.26 * side],
+      ]);
+      poly(ctx, f, palette.trim, [
+        [0.4, -0.3 * side],
+        [0.34, -0.62 * side],
+        [0.27, -0.62 * side],
+        [0.36, -0.3 * side],
       ]);
     }
   }
@@ -1467,7 +1500,9 @@ function drawVolcano(ctx: Pen, glow: string, dark: string, size: number, seed: n
 /**
  * The Black Heart's landmark — the thing the place is named after, finally on screen.
  *
- * Asked for by name: *"black heart needs to be a beating black heart."*
+ * Asked for by name: *"black heart needs to be a beating black heart."* And then, of the first one:
+ * *"the heart on level 7 is a very adorable love heart, but we need a pulsing black 'heart' not a
+ * love heart."* — 0229.
  *
  * ⚠️ **IT IS THE PILLARS' OWN CONSTRUCTION AND NOT A SECOND STYLE.** Lobes of gas, a silhouette
  * punched out of them in the space colour, and a lit rim on the side the light is on
@@ -1476,12 +1511,13 @@ function drawVolcano(ctx: Pen, glow: string, dark: string, size: number, seed: n
  * landmark would be `docs/decisions/0196-the-backdrop-is-rounded-out.md`'s failure with the axes
  * pointing the other way.
  *
- * ⚠️ **THE OUTLINE IS THE VALENTINE CURVE, AND THAT IS DELIBERATE RATHER THAN LAZY.** 0203 chose the
- * Pillars because *"one of the most recognisable silhouettes there is"* survives being drawn in a
- * single ink at any size, which is the whole reason a landmark can be flat. The same argument picks
- * this outline over an anatomical one: at a fifth of a screen, through gas, moving, an anatomically
- * correct heart is a lump. **What stops it reading as a sticker is everything else** — it is drawn as
- * a hole rather than a fill, it is off-vertical, it has vessels coming out of it, and it beats.
+ * ⚠️ **AN ORGAN, NOT A VALENTINE.** 0220 chose the card curve on 0203's argument that a recognisable
+ * silhouette survives being flat, and the report is that it was recognised — as a greetings card.
+ * The outline is a hand-drawn mass now: a big left ventricle coming to an apex low and to one side,
+ * a smaller right one beside it, two atria bulging on top, and an aorta arching up and over with the
+ * great vessels beside it. Asymmetric in every axis, which is the whole difference; the lean the
+ * curve used to need is in the shape itself. What stops it being a lump at a fifth of a screen is
+ * the same three things as before: it is a hole in light, it has a lit rim and a sheen, and it beats.
  */
 function drawHeart(ctx: Pen, ink: string, space: string, size: number, seed: number): void {
   /*
@@ -1495,9 +1531,6 @@ function drawHeart(ctx: Pen, ink: string, space: string, size: number, seed: num
     distance from one of them ends on a straight line.
   */
   const lobes: readonly { x: number; y: number; r: number; a: number }[] = [
-    // ⚠️ Raised from a first pass at 0.5/0.4/0.34, where the bench showed a heart outlined in the
-    // dark with nothing behind it. **The whole construction is a hole in light**, so if the light is
-    // not there the silhouette is a line drawing — which is 0204's defect with the two inks swapped.
     { x: 0.5, y: 0.26, r: 0.25, a: 0.85 },
     { x: 0.25, y: 0.6, r: 0.25, a: 0.65 },
     { x: 0.76, y: 0.62, r: 0.24, a: 0.55 },
@@ -1519,105 +1552,141 @@ function drawHeart(ctx: Pen, ink: string, space: string, size: number, seed: num
   }
 
   /*
-    ⚠️ **LEANING, AND THE UPRIGHT VERSION IS THE ONE THAT LOOKS LIKE AN EMOJI.** A real heart sits at
-    an angle in the chest; a symmetrical one sits on a greetings card. The lean is applied as a
-    rotation of the sampled curve rather than a canvas transform, because `Pen` is fifteen members and
-    `rotate` is not one of them — the same trade the Pillars' streamers make.
-  */
-  const cx = size * 0.5;
-  const cy = size * 0.47;
-  const k = size * 0.0185;
-  /*
-    ⚠️ **THE LEAN IS SEEDED SINCE 0225, THOUGH THIS PLACE ONLY EVER CASTS ONE.** Every landmark drawing
-    takes the casting index, and every one has to USE it — a drawing that ignores its seed produces
-    three identical castings, which is the defect 0225 exists to remove arriving through the one place
-    nobody was looking at. It costs a few degrees of tilt here and the guard is the same for all three.
+    ⚠️ **THE SEED MOVES THE MUSCLE, NOT ONLY THE TILT — 0225.** Every landmark drawing takes the
+    casting index and has to use it; here it sets how far the apex hangs and how full the right side
+    is, so the three castings are three hearts rather than one heart leaning three ways.
   */
   const rng = makeRng('sky').stream(`core/heart${seed}`);
-  const lean = rng.range(0.14, 0.3);
-  const cosL = Math.cos(lean);
-  const sinL = Math.sin(lean);
-  const POINTS = 96;
-  const outline: number[][] = [];
-  for (let i = 0; i < POINTS; i += 1) {
-    const t = (i / POINTS) * Math.PI * 2;
-    const s = Math.sin(t);
-    const px = 16 * s * s * s;
-    // ⚠️ NEGATED, because canvas y runs DOWN and this curve is written with y running up. Drawn
-    // unnegated it is a heart standing on its head, which is the kind of thing only a picture reports.
-    const py = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
-    outline.push([cx + (px * cosL - py * sinL) * k, cy + (px * sinL + py * cosL) * k]);
-  }
+  const droop = rng.range(0.0, 0.08);
+  const fullness = rng.range(-0.04, 0.05);
+  const cx = size * 0.5;
+  const cy = size * 0.5;
+  const k = size * 0.3;
+  /*
+    The outline, clockwise from the apex, in a frame where +y is DOWN — a chest seen from the front
+    with the apex at the lower left. Every point is a hand's guess at a muscle and none is a curve.
+  */
+  const body: readonly Pt[] = [
+    [-0.34, 0.98 + droop],
+    [-0.62, 0.72],
+    [-0.84, 0.36],
+    [-0.9, -0.04],
+    [-0.8, -0.34],
+    [-0.6, -0.52],
+    [-0.38, -0.5],
+    [-0.22, -0.6],
+    [-0.02, -0.5],
+    [0.14, -0.62],
+    [0.4, -0.64],
+    [0.66, -0.5],
+    [0.82 + fullness, -0.22],
+    [0.86 + fullness, 0.14],
+    [0.74, 0.48],
+    [0.5, 0.74],
+    [0.16, 0.9],
+  ];
+  const at = ([x, y]: Pt): [number, number] => [cx + x * k, cy + y * k];
 
-  const trace = (): void => {
+  const traceBody = (): void => {
     ctx.beginPath();
-    ctx.moveTo(outline[0]![0]!, outline[0]![1]!);
-    for (let i = 1; i < outline.length; i += 1) ctx.lineTo(outline[i]![0]!, outline[i]![1]!);
+    body.forEach((p, i) => {
+      const [x, y] = at(p);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
     ctx.closePath();
   };
 
   /*
-    ── THE VESSELS ─────────────────────────────────────────────────────────────────────────────────
+    ── THE GREAT VESSELS ───────────────────────────────────────────────────────────────────────────
 
-    Four of them, off the top, bending away and thinning as they go. **They are drawn BEFORE the body
-    so the body closes over their roots** — a tube that meets the heart on a visible seam reads as a
-    pipe bolted to it, and this thing has to look grown.
+    An aorta rising from the middle and arching over to the right, a pulmonary trunk beside it and a
+    vena cava on the left, each thinning as it goes. **Drawn BEFORE the body so the body closes over
+    their roots** — a tube that meets the heart on a visible seam reads as a pipe bolted to it, and
+    this thing has to look grown. The reaches stop short of the sprite's top edge: a vessel cut off by
+    the tile boundary is a straight line across the sky.
   */
   ctx.globalAlpha = 1;
   ctx.strokeStyle = space;
   ctx.lineCap = 'round';
-  const vessels: readonly { from: number; sweep: number; reach: number; width: number }[] = [
-    // The reaches stop short of the sprite's top edge: a vessel cut off by the tile boundary is a
-    // straight line across the sky, which is the failure the Pillars' gas lobes were fixed for.
-    { from: -0.42, sweep: -0.55, reach: 0.24, width: 0.05 },
-    { from: -0.14, sweep: -0.12, reach: 0.3, width: 0.062 },
-    { from: 0.16, sweep: 0.3, reach: 0.27, width: 0.045 },
-    { from: 0.42, sweep: 0.75, reach: 0.2, width: 0.034 },
+  const vessels: readonly { path: readonly Pt[]; width: number }[] = [
+    // The aorta: up, over, and down the far side.
+    { path: [[-0.02, -0.45], [0.02, -0.85], [0.22, -1.08], [0.5, -1.06], [0.66, -0.9]], width: 0.17 },
+    // The pulmonary trunk, crossing behind the aorta's root.
+    { path: [[0.2, -0.5], [0.3, -0.8], [0.52, -0.9]], width: 0.11 },
+    // The vena cava, straight up off the right atrium — the player's left.
+    { path: [[-0.5, -0.4], [-0.56, -0.8], [-0.52, -1.05]], width: 0.12 },
   ];
   for (const vessel of vessels) {
-    const rootX = cx + vessel.from * size * 0.3;
-    const rootY = cy - size * 0.18;
-    for (let s = 0; s < 5; s += 1) {
-      // Segment by segment, because a vessel narrows and `Pen` has no variable-width stroke — the
-      // same reason `paintStructure` keeps its per-segment loop for a taper and for nothing else.
-      const a = s / 5;
-      const b = (s + 1) / 5;
-      const at = (u: number): number[] => [
-        rootX + Math.sin(u * vessel.sweep * Math.PI) * size * vessel.reach * 0.7,
-        rootY - u * size * vessel.reach,
-      ];
-      ctx.lineWidth = Math.max(1, size * vessel.width * (1 - a * 0.75));
+    const segments = vessel.path.length - 1;
+    for (let s = 0; s < segments; s++) {
+      // Segment by segment, because a vessel narrows and `Pen` has no variable-width stroke.
+      ctx.lineWidth = Math.max(1, k * vessel.width * (1 - (s / segments) * 0.45));
       ctx.beginPath();
-      ctx.moveTo(at(a)[0]!, at(a)[1]!);
-      ctx.lineTo(at(b)[0]!, at(b)[1]!);
+      const [x0, y0] = at(vessel.path[s]!);
+      const [x1, y1] = at(vessel.path[s + 1]!);
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
       ctx.stroke();
     }
   }
 
   // The body: a hole in the light, opaque, exactly as a Pillar is.
   ctx.fillStyle = space;
-  trace();
+  traceBody();
   ctx.fill();
 
   /*
-    ⚠️ **THE CHAMBERS ARE DRAWN INSIDE AND THEY ARE WHAT KEEPS IT FROM BEING A CARD.** Two arcs of gas
-    at a tenth, following the two lobes — the muscle catching the light from behind. Without them the
-    silhouette is a flat symbol; with them it has an inside, which is
-    `docs/decisions/0149-a-hull-has-an-interior.md`'s claim applied to something that is not a hull.
+    ── THE SURFACE ─────────────────────────────────────────────────────────────────────────────────
+
+    The furrow between the two ventricles, and the coronary vessels branching off it — thin lines of
+    the gas colour at a low alpha, which is muscle catching the light from behind. Without them the
+    silhouette is a flat shape; with them it has an inside.
   */
   ctx.strokeStyle = ink;
-  ctx.globalAlpha = 0.13;
-  ctx.lineWidth = size * 0.028;
-  for (const side of [-1, 1]) {
+  ctx.globalAlpha = 0.16;
+  ctx.lineWidth = Math.max(1, k * 0.045);
+  const furrows: readonly (readonly Pt[])[] = [
+    [[0.02, -0.4], [-0.06, 0.1], [-0.2, 0.5], [-0.3, 0.86]],
+    [[-0.06, 0.1], [-0.38, 0.06], [-0.6, 0.22]],
+    [[-0.2, 0.5], [0.1, 0.42], [0.36, 0.5]],
+    [[0.34, -0.3], [0.5, 0.0], [0.56, 0.36]],
+  ];
+  for (const furrow of furrows) {
     ctx.beginPath();
-    ctx.arc(cx + side * size * 0.115 - sinL * size * 0.05, cy - size * 0.06, size * 0.12, 0, Math.PI * 2);
+    furrow.forEach((p, i) => {
+      const [x, y] = at(p);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
     ctx.stroke();
   }
 
+  // The sheen: the left ventricle's flank, where the light behind it grazes the muscle.
+  ctx.globalAlpha = 0.1;
+  ctx.fillStyle = ink;
+  const sheen: readonly Pt[] = [
+    [-0.7, 0.2],
+    [-0.8, -0.1],
+    [-0.66, -0.36],
+    [-0.5, -0.3],
+    [-0.56, 0.1],
+    [-0.5, 0.46],
+  ];
+  ctx.beginPath();
+  sheen.forEach((p, i) => {
+    const [x, y] = at(p);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fill();
+
   // And the rim, on the side the gas is thickest — the light getting past the edge of the hole.
+  ctx.strokeStyle = ink;
   ctx.globalAlpha = 0.8;
   ctx.lineWidth = Math.max(1, size * 0.009);
-  trace();
+  traceBody();
   ctx.stroke();
   ctx.globalAlpha = 1;
 }
@@ -2601,23 +2670,28 @@ export function drawKind(
       aims with, and it is what makes the three read as one object.
     */
     case 'shipMk2':
-    case 'shipMk2Hit':
-      trace(ctx, f, SHIP_HULL);
-      trace(ctx, f, SHIP_POD);
-      trace(ctx, f, mirrored(SHIP_POD));
+    case 'shipMk2Hit': {
+      // The hull at the bare ship's own size, in a wider box; the pods take the room — 0229.
+      const fh: Frame = { half, r: r * (SPRITE_EXTENT.ship / SPRITE_EXTENT.shipMk2) };
+      trace(ctx, fh, SHIP_HULL);
+      trace(ctx, fh, SHIP_POD);
+      trace(ctx, fh, mirrored(SHIP_POD));
       seal(ctx);
-      if (!hurt) paintShip(ctx, f, palette, 1);
+      if (!hurt) paintShip(ctx, fh, palette, 1);
       return;
+    }
     case 'shipMk3':
-    case 'shipMk3Hit':
-      trace(ctx, f, SHIP_HULL);
-      trace(ctx, f, SHIP_POD);
-      trace(ctx, f, mirrored(SHIP_POD));
-      trace(ctx, f, SHIP_CANARD);
-      trace(ctx, f, mirrored(SHIP_CANARD));
+    case 'shipMk3Hit': {
+      const fh: Frame = { half, r: r * (SPRITE_EXTENT.ship / SPRITE_EXTENT.shipMk3) };
+      trace(ctx, fh, SHIP_HULL);
+      trace(ctx, fh, SHIP_POD_MK3);
+      trace(ctx, fh, mirrored(SHIP_POD_MK3));
+      trace(ctx, fh, SHIP_CANARD);
+      trace(ctx, fh, mirrored(SHIP_CANARD));
       seal(ctx);
-      if (!hurt) paintShip(ctx, f, palette, 2);
+      if (!hurt) paintShip(ctx, fh, palette, 2);
       return;
+    }
     case 'drifter':
     case 'drifterHit':
       // A diamond: symmetrical, pointing nowhere, which is exactly what a drifter does. It holds its
@@ -2948,7 +3022,17 @@ export function drawKind(
         diamond and the two would read alike the moment either was small.
       */
       ctx.rect(half - r * 0.72, half - r * 0.72, r * 1.44, r * 1.44);
-      break;
+      seal(ctx);
+      /*
+        ⚠️ **PAINTED NOW, ON THE PULSE'S OWN TERMS** — 0229: *"enemy bullets need to be tailored
+        graphically."* A halo in the enemy ink and a white-hot heart, so the square is a plasma cube
+        rather than a pink tile; the silhouette, the size and the ink are exactly where 0081 and 0098
+        put them, because those are the whole of how the three are told apart from the pulse and from
+        each other.
+      */
+      glow(ctx, f, palette.enemy, 0, 0, 1.15, 0.5);
+      disc(ctx, f, shade(palette.enemy, 0.7), 0, 0, 0.36);
+      return;
     case 'lance':
       /*
         A DASH: a bar lying ALONG the way it travels, twice as long as it is deep — 0098. The lancer's
@@ -2959,7 +3043,17 @@ export function drawKind(
         size. It is not the charger's needle either, which is a triangle with a nose.
       */
       ctx.rect(half - r, half - r * 0.34, r * 2, r * 0.68);
-      break;
+      seal(ctx);
+      // A hot core down the dash and a halo trailing off its back: the fast one, lit along its path.
+      glow(ctx, f, palette.enemy, 0, 0, 1.1, 0.5);
+      // At 1.9 units the dash is six pixels deep on a 1280×720 screen, so its core is most of it.
+      poly(ctx, f, shade(palette.enemy, 0.7), [
+        [-0.5, -0.23],
+        [0.85, -0.23],
+        [0.85, 0.23],
+        [-0.5, 0.23],
+      ]);
+      return;
     case 'flak':
       /*
         A SLAB: the widest bullet in the game and the only one with a bevel — a square with its
@@ -2974,7 +3068,17 @@ export function drawKind(
       ctx.lineTo(half - r * 0.5, half + r * 0.8);
       ctx.lineTo(half - r * 0.8, half);
       ctx.closePath();
-      break;
+      seal(ctx);
+      // The slow, fat one: a dark bevel on its lower half and a hot core, so it reads as a mass.
+      poly(ctx, f, shade(palette.enemy, -0.35), [
+        [-0.72, 0.06],
+        [0.72, 0.06],
+        [0.46, 0.72],
+        [-0.46, 0.72],
+      ]);
+      glow(ctx, f, palette.enemy, 0, 0, 1.12, 0.45);
+      disc(ctx, f, shade(palette.enemy, 0.7), 0, -0.04, 0.3);
+      return;
     case 'debris':
       // A shard: small, angular, and deliberately NOT a disc, so a fragment is never mistaken for a
       // bullet at the one moment the screen is busiest.
