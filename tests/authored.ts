@@ -37,6 +37,7 @@ export const AUTHORED_IDS = [
   '0198-aa-backdrop',
   '0198-aa-clouds',
   '0236-cycle',
+  '0237-blade',
 ] as const;
 
 export type AuthoredId = (typeof AUTHORED_IDS)[number];
@@ -106,6 +107,11 @@ export const AUTHORED: Record<AuthoredId, AuthoredClaim> = {
     claim: 'a cycling pickup shows each face for at least three seconds',
     correctly: 'a shorter turn a later play-test prefers, once more faces make a long wait too long',
     decision: '0236-the-guns-answer-the-first-play-test',
+  },
+  '0237-blade': {
+    claim: 'a blade is drawn as big as the ship that threw it',
+    correctly: 'a smaller star, once a dozen of them at the cap are judged to bury the lane',
+    decision: '0237-the-blades-answer-the-first-play-test',
   },
 };
 

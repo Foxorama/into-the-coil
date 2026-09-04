@@ -214,7 +214,7 @@ The missile pickup cycles the same way over the tubes.
 |---|---|---|
 | **pulse** | the base weapon: fast, small, reaches the edge of the screen and can miss | a barrel **and** a fire-rate step |
 | **arc** | chain lightning: from the nose to the nearest body in reach, then the next; on a lone boss it jumps around the hull. Cannot miss, cannot reach | a link, a fire-rate step, and weight |
-| **shuriken** | blades that circle the ship in a widening spiral and land on everything they cross, once per impact flash; spent by their own clock, not by arriving — [0234](decisions/0234-a-blade-circles-the-ship.md) | a longer spiral **and** a fire-rate step |
+| **shuriken** | blades the size of the ship that spiral out from it to the edge of the screen and vanish there, landing on everything they cross once per impact flash; not spent by arriving — [0234](decisions/0234-a-blade-circles-the-ship.md), [0237](decisions/0237-the-blades-answer-the-first-play-test.md) | more of a turn before the edge **and** a fire-rate step |
 
 The rest of the vocabulary is unbuilt: homing rockets, multi-tag tracking specials, piercing shots,
 faster engines, orbiting mines that are half shield and half weapon. Nothing triggers a special except

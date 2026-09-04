@@ -138,6 +138,15 @@ function measureCycle(): void {
 }
 
 /**
+ * 0237 — a blade is drawn as big as the ship. The player's number, from the blades' first play-test:
+ * *"shuriken stars need to be a lot bigger."* Nothing breaks at half the size, so it is a taste.
+ */
+function measureBlade(): void {
+  const share = SPRITE_EXTENT.shuriken / SPRITE_EXTENT.shipStar;
+  observe('0237-blade', share >= 0.9, share >= 0.9 ? [] : [`a blade is ${(share * 100).toFixed(0)}% of the ship`]);
+}
+
+/**
  * 0198 — the three WCAG floors the accessibility pass will restore.
  *
  * ⚠️ **DEFERRED IS NOT UNMEASURED.** `docs/decisions/0198-the-accessibility-pass-comes-after-the-game.md`
@@ -184,6 +193,7 @@ function measureAll(): void {
   measureFour();
   measureAA();
   measureCycle();
+  measureBlade();
 }
 
 /**

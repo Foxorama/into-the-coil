@@ -101,12 +101,15 @@ export interface WeaponRow {
    */
   reach: readonly number[];
   /**
-   * Steps an `orbit` shot flies before its own clock spends it, one entry per rung — the length of
-   * the spiral. Zeros for a weapon whose shots are spent by arriving.
+   * Steps an `orbit` shot takes to spiral out to the lane's half-width, one entry per rung — how
+   * tightly the spiral is wound. Zeros for a weapon whose shots are spent by arriving.
    *
    * ⚠️ **A LADDER, because it is the thing an upgrade buys** — *"upgrades make the shuriken's arc
-   * last longer, so it ends up with a bigger spiral."* The spiral's radius is `speed × orbit`, so a
-   * longer life IS a wider ring, and the row says how long rather than how wide.
+   * last longer, so it ends up with a bigger spiral."* Since 0237 every spiral ends at the edge of
+   * the screen, so what a rung buys is turns before it gets there: more steps to the half-width is
+   * a slower opening, and a slower opening is more of a turn per unit out and a longer arc swept.
+   * The row says how long; the screen says how wide. Until 0237 this was a clock that spent the
+   * blade wherever it was, and the spiral's width was the shot's speed times it.
    */
   orbit: readonly number[];
   /**
@@ -180,14 +183,21 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
    * up with a bigger spiral and increase the shuriken fire rate."*
    *
    * ⚠️ **The slowest cadence in the game and the only shot that is not spent by arriving.** A blade
-   * lives `orbit` steps and lands on everything it crosses, so its worth is the sweep and not the
-   * shot: at the cap a blade every quarter-second, each alive for two seconds — eight blades
-   * ringing the ship at once. `tests/weapons.test.ts` fires the cap for fifteen seconds and holds the
-   * pool.
+   * lives until it leaves the screen and lands on everything it crosses, so its worth is the sweep
+   * and not the shot: at the cap a blade every quarter-second, each in the air for nearly three
+   * seconds — a dozen blades spiralling out from the ship at once. `tests/blades.test.ts` fires the
+   * cap for fifteen seconds and holds the pool.
    *
-   * ⚠️ **The spiral opens from the ship outward**, so a blade starts inside the pulse's range and
-   * ends near the edge of it: a gun that guards the ship first and reaches later, which is the
-   * opposite of the pulse and the arc and is what makes it a third gun rather than a third shape.
+   * ⚠️ **The spiral opens from the ship to the edge of the screen and the blade is gone there** —
+   * `docs/decisions/0237-the-blades-answer-the-first-play-test.md`, from the first play: *"spiral
+   * outwards from ship to edge of the screen and then disappear like a reverse whirlpool effect."*
+   * A gun that guards the ship first and reaches the edge later, which is the opposite of the pulse
+   * and the arc and is what makes it a third gun rather than a third shape.
+   *
+   * ⚠️ **`orbit` is how tightly the spiral is wound**: steps to the lane's half-width. A rung buys a
+   * slower opening, which at a fixed `turn` is more turns before the edge — about one and a half at
+   * the first rung and three at the cap, held by `tests/blades.test.ts` as *more* and never as the
+   * count.
    */
   shuriken: {
     label: 'Shuriken',
@@ -199,7 +209,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     links: [1, 1, 1, 1, 1],
     weight: [1, 1, 1, 1, 1],
     reach: [0, 0, 0, 0, 0],
-    orbit: [60, 75, 90, 105, 120],
+    orbit: [70, 100, 130, 160, 190],
     turn: 0.11,
     pickup: SPRITE.pickupShuriken,
   },

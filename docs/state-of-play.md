@@ -119,6 +119,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a weapon is a kind; the weapon pickup cycles; the arc is chain lightning; the ship wears its gun** | [0233](decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md) |
 | **the guns' first play-test, answered: a three-second face, a scatter that flies, a reach ladder, a strike that explodes, bubbles on the pickups** | [0236](decisions/0236-the-guns-answer-the-first-play-test.md), [`the-guns-played`](../reports/the-guns-played-2026-09-05.md) |
 | **the shuriken: a blade circles the ship, spent by its own clock, landing once per flash** | [0234](decisions/0234-a-blade-circles-the-ship.md) |
+| **the blades' first play-test, answered: a star the size of the ship, a spiral that ends at the edge of the screen** | [0237](decisions/0237-the-blades-answer-the-first-play-test.md), [`the-blades-played`](../reports/the-blades-played-2026-09-05.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -744,12 +745,15 @@ axis, one PR each, in the order asked:**
 **0233 was played the day it was built and [0236](decisions/0236-the-guns-answer-the-first-play-test.md)
 answers every item of [`the-guns-played`](../reports/the-guns-played-2026-09-05.md)** — the verdict
 was *"cool… but it adds a huge degree of difficulty now"*, and the seven items are each a model
-quantity answered by a model change. **0234 has not been played at all.** What is owed is another
-play, on the branch preview, of the arc as 0236 left it and the shuriken as 0234 built it; an ear on
-`arc`, `zap` and `throw` as they are now (`scripts/hear.mjs --only=arc,zap,throw` writes them); and
-an eye on the ring of blades in motion at the camera the game ships — every claim about it is a
-model quantity. The balance of a gun that cannot miss and a gun that sweeps is a hand's, and their
-ladders are starting points. The bench takes `?weapon=arc` and `?weapon=shuriken` with `&tier=N`.
+quantity answered by a model change. **0234 was played the same way and
+[0237](decisions/0237-the-blades-answer-the-first-play-test.md) answers both items of
+[`the-blades-played`](../reports/the-blades-played-2026-09-05.md)** — a star the size of the ship,
+and a spiral that ends at the edge of the screen instead of on a clock. What is owed is another
+play, on the branch preview, of the blades as 0237 left them; an ear on `arc`, `zap` and `throw`
+as they are now (`scripts/hear.mjs --only=arc,zap,throw` writes them); and an eye on the whirlpool
+in motion at the camera the game ships — every claim about it is a model quantity. The balance of
+a gun that cannot miss and a gun that sweeps is a hand's, and their ladders are starting points.
+The bench takes `?weapon=arc` and `?weapon=shuriken` with `&tier=N`.
 
 ⚠️ **AND ONE THING IS WAITING ON AN EAR, WHICH IS NOT THE SAME AS BEING NEXT.** It is written here
 rather than as a fourth item below, because *this* is the file's one marker and

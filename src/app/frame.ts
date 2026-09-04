@@ -1734,6 +1734,16 @@ const BLADE_KIND = 1;
 /** How far from the ship's centre a blade starts its spiral, in world units. Just clear of the hull. */
 const BLADE_START = 3;
 
+/**
+ * How far out a spiral is authored to reach in the weapon row's `orbit` steps: the lane's half-width,
+ * which is the nearest the edge of the screen can be to a ship in the middle of it —
+ * `docs/decisions/0237-the-blades-answer-the-first-play-test.md`.
+ *
+ * ⚠️ **Where a spiral actually ENDS is the edge of the screen, wherever the ship is**, and it is
+ * `steerBlades` that ends it there. This number only says how tightly the spiral is wound.
+ */
+const BLADE_REACH = ACROSS_SPAN / 2;
+
 /** Steps a blade shows each of its two turns for. A quarter-turn every eight steps reads as a spin. */
 const BLADE_TURN_STEPS = 4;
 
@@ -1759,11 +1769,17 @@ function throwBlade(w: World): void {
   reset(blade, w.ship.along + BLADE_START, w.ship.across, row, BLADE_KIND);
   blade.velAlong = w.scrollPerStep;
   blade.damage = w.weapon.damage;
-  blade.lifeFor = w.weapon.orbit;
+  /*
+    ⚠️ **NO CLOCK — 0237.** Until then a blade lived `orbit` steps and stopped wherever that left it,
+    which played as *"spiral outwards from ship to edge of the screen and then disappear like a
+    reverse whirlpool effect"* — the ask. The edge of the screen is what ends a blade now
+    (`steerBlades`), and `lifeFor` at zero is `stepEntities`'s *never*.
+  */
+  blade.lifeFor = 0;
   blade.orbitAngle = 0;
   blade.orbitRadius = BLADE_START;
   blade.orbitTurn = w.weapon.turn;
-  blade.orbitGrow = row.speed;
+  blade.orbitGrow = BLADE_REACH / w.weapon.orbit;
 }
 
 /**
@@ -1789,9 +1805,25 @@ function steerBlades(w: World): void {
     b.orbitRadius += b.orbitGrow;
     const along = w.ship.along + Math.cos(b.orbitAngle) * b.orbitRadius;
     const across = w.ship.across + Math.sin(b.orbitAngle) * b.orbitRadius;
+    /*
+      ⚠️ **GONE THE STEP IT LEAVES THE SCREEN, AND NOT BEFORE — 0237.** A spiral wider than the lane
+      would leave by one edge and come back in by another, and a blade that is off the screen is off
+      the game. The margin is its own drawn half-size, so it is gone when the last of it is, not
+      while half of it still shows. The along edges are the view's own (`w.view.alongSpan`), which is
+      the one quantity here that varies by device — 0023 — and it is the screen the ask names.
+    */
+    if (
+      across < -b.radius ||
+      across > ACROSS_SPAN + b.radius ||
+      along < w.cameraAlong - b.radius ||
+      along > w.cameraAlong + w.view.alongSpan + b.radius
+    ) {
+      w.playerShots.releaseAt(i);
+      continue;
+    }
     b.velAlong = along - b.along;
     b.velAcross = across - b.across;
-    if (b.lifeFor % BLADE_TURN_STEPS === 0) {
+    if (w.steps % BLADE_TURN_STEPS === 0) {
       const turned = b.spriteBase;
       b.spriteBase = b.spriteHit;
       b.spriteHit = turned;
