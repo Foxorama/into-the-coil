@@ -54,12 +54,14 @@ export const PROBES = [
       decision to put marks on a hull that is not a boss, so it is the first time it has been asked
       about a wedge.
     */
+    // ⚠️ Re-aimed by 0227: the keel is painted in the ship's arm now rather than tabled, and the
+    // guard reads the trace rather than the table. The break is the same break.
     broke: 'a livery mark run out past the hull it is drawn on',
-    guard: 'and the interior stays inside the hull, with room to spare',
+    guard: 'THE 0149 ONE: every solid mark on a body is inside its hull',
     edit: {
       path: 'src/render/bake.ts',
-      find: "  box(0.06, -0.075, 0.48, 0.075, 'trim'),",
-      replace: "  box(0.06, -0.075, 0.95, 0.075, 'trim'),",
+      find: '    [-0.34, -0.07],\n    [-0.1, -0.07],\n    [-0.1, 0.07],\n    [-0.34, 0.07],',
+      replace: '    [-0.34, -0.07],\n    [1.1, -0.07],\n    [1.1, 0.07],\n    [-0.34, 0.07],',
     },
   },
   {

@@ -49,6 +49,14 @@ export interface Pass {
    * without it here the only way to check it is to read the source and believe it.
    */
   readonly alpha: number;
+  /**
+   * The `fillStyle` in force when it was filled: a hex string, or `'gradient'` for a glow.
+   *
+   * ⚠️ **ADDED FOR 0227, WHICH LETS AN ARM PAINT IN ANY COLOUR.** A mark in the void's own colour is
+   * a hole in the picture and is held to 0149's room-to-spare floor; a mark in any other colour is
+   * paint on the hull and only has to stay on it. Telling the two apart is one string.
+   */
+  readonly colour: string;
 }
 
 /** One `fillRect()`: its rectangle and the alpha it was laid down at. */
@@ -148,7 +156,12 @@ export function tracingPen(): { pen: Pen; trace: Trace } {
       current = null;
     },
     fill(rule?: CanvasFillRule): void {
-      passes.push({ subpaths: subpaths.map((s) => [...s]), rule: rule ?? 'nonzero', alpha: pen.globalAlpha });
+      passes.push({
+        subpaths: subpaths.map((s) => [...s]),
+        rule: rule ?? 'nonzero',
+        alpha: pen.globalAlpha,
+        colour: typeof pen.fillStyle === 'string' ? pen.fillStyle : 'gradient',
+      });
     },
     stroke(): void {
       strokes++;

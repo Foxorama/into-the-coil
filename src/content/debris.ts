@@ -40,6 +40,80 @@ export const DEBRIS: Body = {
   damage: 0,
 };
 
+/*
+  ── A DEATH IS A FIREBALL AS WELL AS SHARDS — 0227 ─────────────────────────────────────────────
+
+  `docs/decisions/0227-a-sprite-is-painted-not-filled.md`. Asked for: *"enemies exploding… missile
+  explosions."* The shards above were the whole picture of a death — diagnostic before decorative, as
+  this file says — and they stay, because a ragged tail of fragments is still the clock a death is
+  read by. A FLARE is what goes off at the same point: one debris entity walked through a short list
+  of frames by its own `lifeFor`, drawn under everything else.
+
+  ⚠️ **IT IS DEBRIS, IN THE DEBRIS POOL, AND IN NO PAIRING.** Same budget, same cull, same rule that
+  a burst which will not fit is dropped rather than grown. What makes it a fireball rather than a
+  shard is the row below, which the frame reads off the entity's `kind` — the same opaque index every
+  enemy carries, pointing into a list this table owns.
+
+  ⚠️ **A FRAME HOLDS FOR A WHOLE NUMBER OF STEPS, AND THE LIFE IS THE PRODUCT.** `src/app/frame.ts`
+  derives which frame from what is left of `lifeFor`, so the walk needs no field of its own: a
+  fireball spawned at `frames.length × hold` shows every frame once, in order, and retires itself on
+  the step after the last — which is `stepEntities`'s own rule for a lifetime reaching zero.
+*/
+
+/** What a debris entity can be: the shard, and the two flares. Closed, per 0016. */
+export const DEBRIS_KINDS = ['shard', 'burst', 'spark'] as const;
+
+export type DebrisKind = (typeof DEBRIS_KINDS)[number];
+
+export interface DebrisRow {
+  /** The body it is spawned as. Its `sprite` is the first frame. */
+  body: Body;
+  /** The bitmaps it is drawn as, in order, as indices into the atlas. */
+  frames: readonly number[];
+  /**
+   * Steps each frame is held for, or `0` for a kind that never turns a page.
+   *
+   * ⚠️ **Zero means NO WALK, which is what a shard is** — it lives on the random life `BURST` gives
+   * it and shows one bitmap throughout. A flare's life is `frames.length × hold`, set at spawn.
+   */
+  hold: number;
+}
+
+/** A frame list as a body: the first frame, no reach, no health worth taking. */
+const flare = (frames: readonly number[]): Body => ({
+  sprite: frames[0]!,
+  spriteHit: frames[0]!,
+  radius: 0,
+  health: 1,
+  damage: 0,
+});
+
+const BURST_FRAMES: readonly number[] = [SPRITE.burst0, SPRITE.burst1, SPRITE.burst2, SPRITE.burst3];
+const SPARK_FRAMES: readonly number[] = [SPRITE.spark0, SPRITE.spark1];
+
+export const DEBRIS_ROWS: Record<DebrisKind, DebrisRow> = {
+  shard: { body: DEBRIS, frames: [SPRITE.debris], hold: 0 },
+  /**
+   * A body coming apart: flash, fireball, ring, smoke. Sixteen steps, which is about a quarter of a
+   * second — over before the last shard is, so the shards are the tail of it rather than the other
+   * way round.
+   */
+  burst: { body: flare(BURST_FRAMES), frames: BURST_FRAMES, hold: 4 },
+  /**
+   * A missile landing on something that survived it: a flash, and the flash going. Eight steps.
+   *
+   * ⚠️ **Shorter and smaller than a burst at every frame** (`src/content/sprites.ts`), so a hit that
+   * was survived and a body that was not never read alike.
+   */
+  spark: { body: flare(SPARK_FRAMES), frames: SPARK_FRAMES, hold: 4 },
+};
+
+/** The index a debris entity's `kind` carries for each row — `DEBRIS_KINDS`'s own order. */
+export const DEBRIS_KIND: Record<DebrisKind, number> = { shard: 0, burst: 1, spark: 2 };
+
+/** Every row, in `kind` order, so the frame can index it by the number on the entity. */
+export const DEBRIS_BY_KIND: readonly DebrisRow[] = DEBRIS_KINDS.map((kind) => DEBRIS_ROWS[kind]);
+
 /**
  * How a burst is shaped.
  *

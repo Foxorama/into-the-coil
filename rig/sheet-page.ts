@@ -13,8 +13,7 @@
  * apart from the game had a verdict taken from it twice.
  */
 
-import { bakeAtlas } from '../src/render/bake.ts';
-import { ACCENT_OF, INK_OF } from '../src/render/bake.ts';
+import { INK_OF, bakeAtlas } from '../src/render/bake.ts';
 import { PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { THEMES, THEME_KINDS, type ThemeKind } from '../src/content/themes.ts';
@@ -148,12 +147,9 @@ function render(): void {
 
     const meta = document.createElement('div');
     meta.className = 'meta';
-    const bits = [
-      `${SPRITE_EXTENT[row.kind]}u`,
-      `${size}px`,
-      INK_OF[row.kind],
-      ACCENT_OF[row.kind] === null ? '' : 'accent',
-    ].filter(Boolean);
+    // What the sheet can say about a kind without opening the drawing: its size, and the ink its
+    // hull is sealed in. What is painted on it is the picture beside this line — 0227.
+    const bits = [`${SPRITE_EXTENT[row.kind]}u`, `${size}px`, INK_OF[row.kind]];
     meta.textContent = bits.join(' · ');
     card.append(meta);
 

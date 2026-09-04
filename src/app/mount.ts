@@ -695,6 +695,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     enemyShots,
     debris,
     deaths: makeDeaths(CAPACITY.enemies),
+    hits: makeDeaths(CAPACITY.missiles),
     // Its own stream per 0021: a fragment's direction is the most cosmetic roll in the game and it
     // must not be able to move a wave by one enemy.
     burstRng: makeRng('proof-scene').stream('burst'),

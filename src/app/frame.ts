@@ -59,7 +59,7 @@ import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
 import type { ShipRow } from '../content/ships.ts';
 import { INVULN_STEPS, SHIELD_MARK, hullFor, shieldsOf } from '../content/ships.ts';
 import { SHOTS } from '../content/shots.ts';
-import { BURST, DEBRIS } from '../content/debris.ts';
+import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
@@ -721,6 +721,14 @@ export interface World {
   /** Where enemies died this step, so a burst can be put there. Reused, never rebuilt. */
   deaths: Deaths;
   /**
+   * Where the ship's MISSILES landed this step, so a spark can be put there — 0227.
+   *
+   * ⚠️ **The missiles' and not the pulses'.** A pulse landing is told by the flash on the body it
+   * hit; a missile is worth three of them and until now landed exactly the same way. Sized to the
+   * missile pool, because no more than every missile in flight can land in one step.
+   */
+  hits: Deaths;
+  /**
    * The burst stream, and it is SEPARATE from `rng` on purpose.
    *
    * `docs/decisions/0021-one-stream-per-concern.md`: one shared generator couples every draw to
@@ -1256,6 +1264,9 @@ export class GameFrame implements Frame {
     stepEntities(w.blasts, w.cameraAlong);
     stepEntities(w.missiles, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
     stepEntities(w.enemyShots, w.cameraAlong);
+    // Before the pool steps, because `stepEntities` derives `sprite` from `spriteBase` — a page
+    // turned after it would be drawn one step late.
+    turnFlares(w);
     stepEntities(w.debris, w.cameraAlong);
 
     /*
@@ -1281,8 +1292,9 @@ export class GameFrame implements Frame {
     */
     const inFlight = w.playerShots.size + w.missiles.size;
     let killedByShots = 0;
+    w.hits.count = 0;
     killedByShots += collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
-    killedByShots += collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths);
+    killedByShots += collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits);
     // The boss is its own pairing rather than another enemy, and the reason is the pool: it is the
     // only body in the game that must survive a hundred and fifty hits, so it cannot share a pool
     // with things that are released after one.
@@ -1303,7 +1315,7 @@ export class GameFrame implements Frame {
     */
     const open = w.bossPool.size > 0 ? openBy(phaseFor(w.bossRow, w.bossPool.at(0).health, w.bossFullHealth)) : 1;
     killedByShots += collideInto(w.playerShots, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.deaths);
-    killedByShots += collideInto(w.missiles, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.deaths);
+    killedByShots += collideInto(w.missiles, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.deaths, w.hits);
     // An area rather than an arrival: everything inside it, once, and nothing consumes it.
     blastInto(w.blasts, w.enemies, 1, IMPACT_FLASH_STEPS, w.deaths);
     blastInto(w.blasts, w.bossPool, open, IMPACT_FLASH_STEPS, w.deaths);
@@ -1431,7 +1443,10 @@ export class GameFrame implements Frame {
     // collision because a released slot is the next thing `spawn` hands out.
     for (let i = 0; i < w.deaths.count; i++) {
       burst(w, w.deaths.along[i]!, w.deaths.across[i]!, BURST.enemy);
+      flare(w, w.deaths.along[i]!, w.deaths.across[i]!, 'burst');
     }
+    // And every missile that landed this step, killing or not, sparks where it hit — 0227.
+    for (let i = 0; i < w.hits.count; i++) flare(w, w.hits.along[i]!, w.hits.across[i]!, 'spark');
 
     /*
       The shell, after every collision that could have spent one and before the death check that
@@ -2138,6 +2153,51 @@ function fireEnemies(w: World): void {
  * ⚠️ Nothing allocates: the angle and the speed are numbers, and `Math.cos`/`Math.sin` return
  * numbers. There is no vector and no array of fragments.
  */
+/**
+ * Light one flare at a point: a fireball for a death, a spark for a missile landing — 0227.
+ *
+ * ⚠️ **One entity, holding station in the world where the thing was.** The shards it sits under fly
+ * outward; the flare is the point they flew from, and it goes out on its own clock. Dropped rather
+ * than grown when the pool is full, on the same terms as a burst.
+ */
+function flare(w: World, along: number, across: number, kind: DebrisKind): void {
+  const piece = w.debris.spawn();
+  if (piece === null) return;
+  const row = DEBRIS_ROWS[kind];
+  reset(piece, along, across, row.body, DEBRIS_KIND[kind]);
+  piece.lifeFor = row.frames.length * row.hold;
+}
+
+/**
+ * Turn every flare to the frame its remaining life says it is on.
+ *
+ * ⚠️ **Before `stepEntities`, which derives `sprite` from `spriteBase` every step** — a page turned
+ * afterwards would be drawn a step late. The arithmetic runs the frames forward as `lifeFor` runs
+ * down: the first frame while `lifeFor` is in its first `hold` steps, the last on the last.
+ *
+ * ⚠️ **THE WALK IS OFFSET BY ONE AT EACH END, AND `tests/flares.test.ts` IS WHAT SAID SO.** A flare
+ * is lit AFTER the pools have stepped, so it is drawn on its first frame once before its clock has
+ * run at all; and its last step of life is the one `stepEntities` releases it on, before it is drawn.
+ * So the page turns two steps of life early — `lifeFor - 2` rather than `lifeFor - 1` — and every
+ * frame is then on screen for exactly `hold` steps, the first and the last included.
+ *
+ * ⚠️ **Nothing allocates and nothing branches per kind.** A row lookup by the index the entity
+ * carries, an integer divide, and two writes. A shard's `hold` is zero and it is skipped.
+ */
+function turnFlares(w: World): void {
+  const count = w.debris.size;
+  for (let i = 0; i < count; i++) {
+    const e = w.debris.at(i);
+    const row = DEBRIS_BY_KIND[e.kind];
+    if (row === undefined || row.hold === 0 || e.lifeFor <= 0) continue;
+    const last = row.frames.length - 1;
+    const page = last - Math.floor((e.lifeFor - 2) / row.hold);
+    const sprite = row.frames[page < 0 ? 0 : page > last ? last : page]!;
+    e.spriteBase = sprite;
+    e.spriteHit = sprite;
+  }
+}
+
 function burst(w: World, along: number, across: number, count: number): void {
   for (let i = 0; i < count; i++) {
     const piece = w.debris.spawn();
@@ -2913,6 +2973,14 @@ function stepBossDeath(w: World): void {
       w.bossAcross + w.burstRng.range(-spread, spread),
       BURST.boss,
     );
+    // And a fireball with each pulse, somewhere else on the hull — 0227. A boss goes up in a chain
+    // of them over the beat rather than in one, which is what a hull that size coming apart is.
+    flare(
+      w,
+      w.cameraAlong + w.bossOffset + w.burstRng.range(-spread, spread),
+      w.bossAcross + w.burstRng.range(-spread, spread),
+      'burst',
+    );
   }
   // The one report, at the end of the beat. `bossBeaten` already latched, so this happens once.
   if (w.clearedIn === 0) w.onCleared();
@@ -2947,6 +3015,7 @@ function wreckShip(w: World): void {
   w.deathOffset = w.ship.along - w.cameraAlong;
   w.deathAcross = w.ship.across;
   burst(w, w.ship.along, w.ship.across, BURST.ship);
+  flare(w, w.ship.along, w.ship.across, 'burst');
   // Beside the burst, which is the picture it is the twin of. The ship coming apart and the ship
   // being heard to come apart are one event and are written on one line apart.
   w.onCue('death', w.ship.across);
@@ -2993,6 +3062,13 @@ function stepShipDeath(w: World): void {
       w.cameraAlong + w.deathOffset + w.burstRng.range(-spread, spread),
       w.deathAcross + w.burstRng.range(-spread, spread),
       BURST.dying,
+    );
+    // And a fireball with each pulse, off the same stream, so the wreck keeps going up — 0227.
+    flare(
+      w,
+      w.cameraAlong + w.deathOffset + w.burstRng.range(-spread, spread),
+      w.deathAcross + w.burstRng.range(-spread, spread),
+      'burst',
     );
   }
   /*

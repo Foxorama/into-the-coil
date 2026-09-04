@@ -327,6 +327,42 @@ export const SPRITE_KINDS = [
   'shieldOrb',
   'debris',
   /*
+    ── A DEATH IS A FIREBALL, AND A FIREBALL IS FOUR BITMAPS ───────────────────────────────────────
+
+    `docs/decisions/0227-a-sprite-is-painted-not-filled.md`. Asked for: *"enemies exploding… missile
+    explosions… time to actually put a real skin on the game."* Until now a death was eight shards
+    and nothing else — `src/content/debris.ts` says so itself: *"diagnostic before it is decorative"*.
+    The shards stay, because they are the clock the player reads a death by; this is the bang.
+
+    ⚠️ **FOUR KINDS AND NOT ONE, BECAUSE THE ATLAS IS BITMAPS AND NOTHING IN `render/` ANIMATES
+    ONE.** A landmark beats by its blit scale (`src/render/scene.ts`) and that is the only motion a
+    baked thing has. An explosion has to CHANGE — flash, fireball, ring, smoke — so it is four
+    drawings, and `src/app/frame.ts` walks a debris entity through them by its own `lifeFor`. The
+    frame is what a sprite swap already was for the hit flash (`src/sim/entity.ts`), applied to a
+    clock instead of an event.
+
+    ⚠️ **EACH FRAME IS ITS OWN EXTENT, WHICH IS WHAT MAKES IT GROW.** `blit` draws a bitmap at the
+    extent the atlas recorded for it (`src/render/surface.ts`), so *the same sprite, bigger* is not a
+    thing the painter can be asked for — the pyre's four rings are four kinds for the same reason.
+  */
+  'burst0',
+  'burst1',
+  'burst2',
+  'burst3',
+  /*
+    ── AND A MISSILE LANDS WITH A SPARK, WHICH IS TWO MORE ─────────────────────────────────────────
+
+    A missile is worth three pulses (`src/content/shots.ts`) and until now it arrived exactly as a
+    pulse did: the target went white for four steps. The spark is what says *that was the heavy one*,
+    at the point it landed rather than on the body that took it — the second channel
+    `docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md` left open.
+
+    ⚠️ **SMALLER THAN A DEATH AT EVERY FRAME**, so the two never read alike: a spark is a hit that was
+    survived, and a burst is a body that was not.
+  */
+  'spark0',
+  'spark1',
+  /*
     ── THE SKY, AND IT IS TWO SPRITES RATHER THAN A THOUSAND ENTITIES ─────────────────────────────
 
     Asked for in play: *"needs a starry background or a background of some kind."*
@@ -676,6 +712,21 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   shieldOrb: 3,
   // Small: a fragment reads as a piece of something, and eight of them at enemy size is a wall.
   debris: 1.4,
+  /*
+    ⚠️ **EACH FRAME LARGER THAN THE LAST, AND THE LAST IS ABOUT AN ENEMY'S SIZE.** The flash is
+    smaller than the body it comes out of; the smoke is a little bigger than it was. An explosion
+    that outgrew the thing it came from would hide whatever is behind it — and the one thing
+    `src/render/scene.ts` is absolute about is that the player never loses a bullet behind something.
+    Debris is drawn first, under everything, so nothing here can cover a body; the size is what keeps
+    the sky visible through it.
+  */
+  burst0: 3.5,
+  burst1: 6,
+  burst2: 8,
+  burst3: 9,
+  // Under a missile's own extent at the first frame, and the second is the flash spreading and going.
+  spark0: 2.6,
+  spark1: 4.2,
   /*
     ⚠️ **`ACROSS_SPAN`, which makes one tile exactly as tall as the lane** — so the sky tiles along
     the scroll axis and along it only, and no seam ever runs across the short axis of the screen. It

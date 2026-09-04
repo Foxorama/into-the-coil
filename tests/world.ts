@@ -272,6 +272,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     enemyShots,
     debris,
     deaths: makeDeaths(CAPACITY.enemies),
+    hits: makeDeaths(CAPACITY.missiles),
     burstRng: makeRng('test').stream('burst'),
     scatterRng: makeRng('test').stream('scatter'),
     view: viewOf(1280, 720),
