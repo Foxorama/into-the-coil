@@ -129,6 +129,36 @@ export const SPRITE_KINDS = [
   'sower',
   'sowerHit',
   /*
+    ── THE SIGNATURE ENEMIES, ONE PER PLACE — 0232 ────────────────────────────────────────────────
+
+    *"Each level needs its own brand of unique enemy to flavour that world."* Seven silhouettes
+    against the eight above, each a primitive and an axis that survive twenty pixels, and each sent
+    by one place's level only — `src/content/enemies.ts`'s `SIGNATURE_OF`. What tells each from its
+    neighbours is written on its arm in `src/render/bake.ts`:
+
+      picket   a Y, one blade down the lane       — the only three-armed thing
+      moth     two wings on a body                — the only two lobes side by side
+      raptor   a crescent, horns down the lane    — the only concave FRONT
+      sentry   a block with a slot in its face    — corners everywhere, and a notch
+      shard    a long hexagon, pointed both ways  — a waist, which a needle has not
+      spore    a lumpy sac                        — the only full round body
+      gaze     a lens with a pupil                — wider across than along, and pointed
+  */
+  'picket',
+  'picketHit',
+  'moth',
+  'mothHit',
+  'raptor',
+  'raptorHit',
+  'sentry',
+  'sentryHit',
+  'shard',
+  'shardHit',
+  'spore',
+  'sporeHit',
+  'gaze',
+  'gazeHit',
+  /*
     ⚠️ **One boss silhouette, and the phases are NOT drawn.** Three sprites for three phases was the
     first plan and it is rejected: what a phase changes is what the boss DOES — its rate, its spread,
     how it moves — and that is legible in motion, at full frame rate, without a second art pass.
@@ -612,6 +642,22 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // Two health, so between the lancer's and the turret's.
   sower: 7.5,
   sowerHit: 7.5,
+  // The signatures, in the band the shared kinds occupy — 0232. The spore is the widest, because a
+  // mine is a thing to steer around and it shows how much room it wants.
+  picket: 7,
+  picketHit: 7,
+  moth: 8.5,
+  mothHit: 8.5,
+  raptor: 7.5,
+  raptorHit: 7.5,
+  sentry: 7,
+  sentryHit: 7,
+  shard: 7.5,
+  shardHit: 7.5,
+  spore: 9,
+  sporeHit: 9,
+  gaze: 7.5,
+  gazeHit: 7.5,
   /*
     ⚠️ **26, against a hard ceiling of 80.** `src/sim/camera.ts` puts `EDGE_MARGIN` at 40 and says in
     the same breath that it is *"the largest half-extent any entity may be authored at"* — so a boss

@@ -250,6 +250,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **THE PICTURE ANSWERS THE REPORT — debris over the bodies so a fireball is seen, bursts half again as big, enemy bullets lit, a tier is a wider sprite, and the Black Heart is an organ** | [0229](decisions/0229-the-picture-answers-the-report.md) |
 | **THE SHIP FLIES — the exhaust is an entity that follows the ship: burns on a hard push, eases on a pull, pulses on the step clock, and hangs against the across velocity** | [0230](decisions/0230-the-ship-flies.md) |
 | **A LEVEL IS A MIX — no more than three waves of one class in a row, in every level, sorted by arrival; the shoal ran seventeen non-firing and the batteries twenty-nine firing** | [0231](decisions/0231-a-level-is-a-mix.md) |
+| **EACH PLACE HAS ITS OWN ENEMY — seven new kinds, one per place, sent by that place's level and no other: picket, moth, raptor, sentry, shard, spore, gaze** | [0232](decisions/0232-each-place-has-its-own-enemy.md) |
 
 ⚠️ **Flight is closed and content may now be authored against it.** `SHIP_SPEED`, `SCROLL_PER_STEP`,
 `FLIGHT_RESPONSE` and `DRAG_GAIN` were each played on real hardware and three of the four were
@@ -841,8 +842,18 @@ entity, and what is owed is an eye on the feel — `SWAY`, `PULSE_STEPS` and `BU
 `src/content/exhaust.ts` are the knobs, and banking is deliberately not in it.
 [0231](decisions/0231-a-level-is-a-mix.md) answers the wave spacing: every level is held to three
 waves of one class in a row, and **the two levels that changed most — the shoal and the batteries —
-are owed an eye**, because the shoal fires more than it did and the batteries less. **Still owed from
-that list:** a signature enemy per place. *"Music is good now."*
+are owed an eye**, because the shoal fires more than it did and the batteries less.
+[0232](decisions/0232-each-place-has-its-own-enemy.md) answers the last item: seven signature kinds,
+one per place, each a new silhouette and — for the five that fire — a bullet-and-pattern no other
+kind sends. **Every one of the seven is owed an eye in its place, in motion**; every silhouette was
+judged on the sheet against its own backdrop and none has been flown against. **The seven-item list
+from 2026-09-04 is answered end to end**, and the next play-test is the first that can say whether
+it was answered well. *"Music is good now."*
+
+⚠️ **PER-PLACE VARIANTS OF THE SHARED SILHOUETTES ARE DELIBERATELY NOT DONE.** The report's *"the
+sprites need to be more unique per level"* is answered by a new body per place, not by reshaping the
+eight the places share; spines, shards and bulbs on a drifter per place is the next art decision if
+the seven are not enough — 0232 says so in its *what is owed*.
 
 ⚠️ **AND THE VOLCANOES LANDED ON 2026-09-04 — [0224](decisions/0224-the-mountain-is-awake.md)**, which
 closes the 2026-09-03 backgrounds report entirely. Saurian Belt places **three**, one on each of its
