@@ -128,9 +128,14 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * is what usually ends it — twelve is more bodies than a spiral crosses — so the number is a
    * ceiling on what one blade may be worth against a wall of drifters, not a life.
    *
-   * ⚠️ **`speed` is how fast the spiral OPENS, in world units per step**, outward from the ship: the
-   * one direction a shot that circles has of its own. Which way round it goes is the weapon row's
-   * `turn`, and where it is each step is the ship's — `steerBlades` in `src/app/frame.ts`.
+   * ⚠️ **`speed` is ZERO, because how fast the spiral opens is the weapon row's `orbit` ladder and
+   * not the shot's** — 0237. A blade has no speed of its own: which way round it goes is the row's
+   * `turn`, how fast it opens is the rung, and where it is each step is the ship's — `steerBlades`
+   * in `src/app/frame.ts`. Until 0237 this was 0.28 units a step and the spiral's width was
+   * `speed × orbit`; now the spiral's width is the screen's, wherever the ship is.
+   *
+   * ⚠️ **`radius` 3.5 — a star the size of the ship, since 0237.** Played at 1.4: *"shuriken stars
+   * need to be a lot bigger."* The hurtbox is the sweep, so a bigger blade is a wider sweep too.
    *
    * ⚠️ **`spriteHit` IS THE OTHER TURN OF THE STAR, AND THAT IS NOT A FLASH.** A blade never
    * flashes — what it survives is arriving, not being hit, and nothing in the game shoots it — so
@@ -138,7 +143,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * `src/app/frame.ts` swaps the two every few steps to spin it. `blit` cannot rotate; two bitmaps
    * an eighth of a turn apart are what a spinning shuriken is.
    */
-  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 1.4, health: BLADE_EDGE, damage: 1, speed: 0.28 },
+  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 3.5, health: BLADE_EDGE, damage: 1, speed: 0 },
   /**
    * What an enemy sends back. **Slower than the ship**, which is the whole of what makes it
    * dodgeable rather than a coin flip: a player who reacts can always leave the line it is on.

@@ -876,10 +876,11 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // A landing spark: bigger than a bullet and smaller than the missile, so a chain of them reads
   // as hits rather than as a stream. Twice the `arc` row's hurtbox radius, like every shot.
   arcNode: 2.4,
-  // A blade: bigger than the pulse and the missile, because it is the one shot the player has to
-  // read the PATH of. Twice the `shuriken` row's hurtbox radius, like every shot.
-  shuriken: 3.2,
-  shurikenTurn: 3.2,
+  // A blade: the size of the ship, since 0237 — played at 3.2, *"shuriken stars need to be a lot
+  // bigger"*. It is the one shot the player has to read the PATH of, and the path runs to the edge
+  // of the screen. Twice the `shuriken` row's hurtbox radius, like every shot.
+  shuriken: 7,
+  shurikenTurn: 7,
   // Small: a fragment reads as a piece of something, and eight of them at enemy size is a wall.
   debris: 1.4,
   /*
