@@ -20,8 +20,9 @@ export const PROBES = [
     edit: {
       path: 'src/app/mount.ts',
       // ⚠️ Re-anchored by 0230, which put the exhaust in the order.
-      find: '    layers: [blasts, pickupPool, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, exhaust, shieldOrbs, shipPool],',
-      replace: '    layers: [debris, blasts, pickupPool, bossPool, enemies, enemyShots, playerShots, missiles, bombs, exhaust, shieldOrbs, shipPool],',
+      // ⚠️ Re-anchored by 0233: the bolts joined the order, between the bombs and the exhaust.
+      find: '    layers: [blasts, pickupPool, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],',
+      replace: '    layers: [debris, blasts, pickupPool, bossPool, enemies, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],',
     },
   },
   {
@@ -37,8 +38,9 @@ export const PROBES = [
     edit: {
       path: 'src/app/mount.ts',
       // ⚠️ Re-anchored by 0230, which put the exhaust in the order.
-      find: '    layers: [blasts, pickupPool, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, exhaust, shieldOrbs, shipPool],',
-      replace: '    layers: [blasts, pickupPool, bossPool, enemies, enemyShots, debris, playerShots, missiles, bombs, exhaust, shieldOrbs, shipPool],',
+      // ⚠️ Re-anchored by 0233: the bolts joined the order, between the bombs and the exhaust.
+      find: '    layers: [blasts, pickupPool, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],',
+      replace: '    layers: [blasts, pickupPool, bossPool, enemies, enemyShots, debris, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],',
     },
   },
   {

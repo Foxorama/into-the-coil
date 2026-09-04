@@ -104,8 +104,10 @@ export const PROBES = [
         already says `upgrade`, so the extra term looks redundant right up until the player's weapon is
         full.
       */
-      find: "  return effect === 'upgrade' && isUpgrade(kind) && !upgradeGrows(upgrades, kind) ? 'special' : effect;",
-      replace: '  void upgrades;\n  return effect;',
+      // ⚠️ Re-anchored by 0233: the narrowing is the last line of `effectOf` now. The break is the
+      // same — the cap never consulted, so the row's general answer is the whole answer.
+      find: "  return upgradeGrows(loadout.upgrades, kind) ? 'upgrade' : 'special';",
+      replace: "  return 'upgrade';",
     },
   },
   /*

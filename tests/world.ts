@@ -202,6 +202,7 @@ export function pickupParts(): {
 class NullSurface implements Surface {
   clear(): void {}
   blit(): void {}
+  bolt(): void {}
 }
 
 /**
@@ -226,6 +227,8 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
   wrecks: { count: number };
   cleared: { count: number };
   taken: PickupKind[];
+  /** The face each taken pickup was showing, beside `taken` — 0233. */
+  faces: number[];
   cues: CueKind[];
 } {
   /*
@@ -239,6 +242,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
   const enemies = new Pool<Entity>(CAPACITY.enemies, makeEntity);
   const playerShots = new Pool<Entity>(CAPACITY.playerShots, makeEntity);
   const missiles = new Pool<Entity>(CAPACITY.missiles, makeEntity);
+  const bolts = new Pool<Entity>(CAPACITY.bolts, makeEntity);
   const bombs = new Pool<Entity>(CAPACITY.bombs, makeEntity);
   const blasts = new Pool<Entity>(CAPACITY.blasts, makeEntity);
   const enemyShots = new Pool<Entity>(CAPACITY.enemyShots, makeEntity);
@@ -255,11 +259,12 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
   const wrecks = { count: 0 };
   const cleared = { count: 0 };
   const taken: PickupKind[] = [];
+  const faces: number[] = [];
   const cues: CueKind[] = [];
 
   const world: World = {
     // The game's own order — `src/app/mount.ts` — with the pickups left out, because this fixture has none.
-    layers: [blasts, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, exhaust, shieldOrbs, shipPool],
+    layers: [blasts, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
     sky: [],
     landmarks: [],
     bound: null,
@@ -269,6 +274,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     enemies,
     playerShots,
     missiles,
+    bolts,
     bombs,
     blasts,
     onSpecial: (): void => {},
@@ -278,6 +284,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     hits: makeDeaths(CAPACITY.missiles),
     burstRng: makeRng('test').stream('burst'),
     scatterRng: makeRng('test').stream('scatter'),
+    arcRng: makeRng('test').stream('arc'),
     view: viewOf(1280, 720),
     surface: new NullSurface(),
     rng: makeRng('test').stream('spawns'),
@@ -356,12 +363,13 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     weapon: weaponFor(shipRow, []),
     shownHealth: shipRow.health,
     onHealth: (): void => {},
-    onPickup: (kind: PickupKind): void => {
+    onPickup: (kind: PickupKind, face: number): void => {
       taken.push(kind);
+      faces.push(face);
     },
     onCue: (kind: CueKind): void => {
       cues.push(kind);
     },
   };
-  return { world, deaths, wrecks, cleared, taken, cues };
+  return { world, deaths, wrecks, cleared, taken, faces, cues };
 }

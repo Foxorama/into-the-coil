@@ -94,8 +94,10 @@ export const PROBES = [
     guard: 'travels with a run and survives everything that happens during one',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '        upgrades: [...state.upgrades, action.upgrade],\n        difficulty: state.difficulty,',
-      replace: "        upgrades: [...state.upgrades, action.upgrade],\n        difficulty: 'legendary',",
+      // ⚠️ Re-anchored by 0233: the `upgraded` arm carries the fitted kinds now, so the line before
+      // its `difficulty` is the missile's.
+      find: "        missile: action.upgrade === 'missile' ? action.kind : state.missile,\n        difficulty: state.difficulty,",
+      replace: "        missile: action.upgrade === 'missile' ? action.kind : state.missile,\n        difficulty: 'legendary',",
     },
   },
 ];

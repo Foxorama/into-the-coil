@@ -14,6 +14,19 @@
 import { SPECIALS, type SpecialKind } from '../../content/specials.ts';
 import { type UpgradeKind } from '../../content/pickups.ts';
 import { DIFFICULTIES, type DifficultyKind } from '../../content/difficulty.ts';
+import { SHIPS } from '../../content/ships.ts';
+import type { WeaponKind } from '../../content/weapons.ts';
+import type { MissileKind } from '../../content/missiles.ts';
+
+/**
+ * The ship a run is flown in, and therefore the kinds an empty run resolves to — 0233.
+ *
+ * ⚠️ **One ship, named once.** `docs/game.md`'s roster is a table with one row, and the day it has
+ * two the run will carry a `ship` field and this becomes `SHIPS[state.ship]`; until then a constant
+ * beside the reducer is the honest shape, on `src/content/ships.ts`'s own refusal to invent a
+ * roster for content that does not exist.
+ */
+const BASE_SHIP = SHIPS.proof;
 
 /**
  * The tier a run that has not begun is carrying.
@@ -113,6 +126,17 @@ export interface RunState {
    * could undo, and a death has to undo it.
    */
   upgrades: readonly UpgradeKind[];
+  /**
+   * Which gun and which tube the upgrades are on — 0233.
+   *
+   * ⚠️ **In the RUN, beside the list, because a death takes them with it.** A weapon pickup of a
+   * kind the ship is not carrying switches the gun and starts its ladder again at one rung, so
+   * *which gun* is a thing the list alone cannot say and the save has to hold; `lifeLost` puts both
+   * back to the ship's base kinds on the same line it empties the list.
+   * `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
+   */
+  weapon: WeaponKind;
+  missile: MissileKind;
 }
 
 export type RunAction =
@@ -121,7 +145,13 @@ export type RunAction =
   | { slice: 'run'; type: 'lifeLost' }
   | { slice: 'run'; type: 'took'; special: SpecialKind }
   | { slice: 'run'; type: 'spent'; slot: number }
-  | { slice: 'run'; type: 'upgraded'; upgrade: UpgradeKind }
+  /*
+    ⚠️ **AN UPGRADE NAMES ITS KIND SINCE 0233.** The pickup that was taken was showing one face of
+    its ladder, and the face is which gun or which tube it was offering; a reducer that only heard
+    *weapon* could not tell a fifth pulse from a first arc.
+  */
+  | { slice: 'run'; type: 'upgraded'; upgrade: 'weapon'; kind: WeaponKind }
+  | { slice: 'run'; type: 'upgraded'; upgrade: 'missile'; kind: MissileKind }
   | { slice: 'run'; type: 'levelCleared' };
 
 /**
@@ -136,6 +166,8 @@ export const initialRun: RunState = {
   level: 0,
   arsenal: [],
   upgrades: [],
+  weapon: BASE_SHIP.weapon,
+  missile: BASE_SHIP.missile,
   difficulty: DEFAULT_DIFFICULTY,
 };
 
@@ -147,6 +179,8 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         level: 0,
         arsenal: startingArsenal(),
         upgrades: [],
+        weapon: BASE_SHIP.weapon,
+        missile: BASE_SHIP.missile,
         difficulty: action.difficulty,
       };
     case 'continued':
@@ -182,6 +216,8 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         level: state.level,
         arsenal: startingArsenal(),
         upgrades: [],
+        weapon: BASE_SHIP.weapon,
+        missile: BASE_SHIP.missile,
         difficulty: state.difficulty,
       };
     case 'lifeLost':
@@ -222,6 +258,9 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
             level: state.level,
             arsenal: state.arsenal,
             upgrades: [],
+            // The base kinds come back with the base weapon — 0233. A death costs the gun too.
+            weapon: BASE_SHIP.weapon,
+            missile: BASE_SHIP.missile,
             difficulty: state.difficulty,
           };
     case 'took': {
@@ -241,6 +280,8 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         level: state.level,
         arsenal,
         upgrades: state.upgrades,
+        weapon: state.weapon,
+        missile: state.missile,
         difficulty: state.difficulty,
       };
     }
@@ -261,6 +302,8 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         level: state.level,
         arsenal: state.arsenal.map((e, i) => (i === action.slot ? { kind: e.kind, charges: e.charges - 1 } : e)),
         upgrades: state.upgrades,
+        weapon: state.weapon,
+        missile: state.missile,
         difficulty: state.difficulty,
       };
     }
@@ -286,14 +329,34 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
       continue**, which is deliberate and temporary. The day that stops being free is the day this
       needs an answer, and 0082 says so rather than leaving it to be rediscovered.
     */
-    case 'upgraded':
+    case 'upgraded': {
+      /*
+        ── A DIFFERENT KIND STARTS THE LADDER AGAIN — 0233 ────────────────────────────────────────
+
+        Asked for: *"if they collect a different weapon upgrade power up, they start from level one
+        with that weapon upgrade."* Level one is ONE rung: the pickup that switched the gun is the
+        first upgrade of the new one, so the list keeps the other ladder's entries and holds exactly
+        one of this one. The hull tier follows the list (`weaponFor`), so a ship that switches guns
+        is drawn a tier or two smaller — which is the cost of switching made visible, and the
+        thing that stops the cycle reading as a free re-roll.
+
+        ⚠️ **The same kind is the old rule, untouched**: one more entry, and `tiersOf` clamps it.
+      */
+      const fitted = action.upgrade === 'weapon' ? state.weapon : state.missile;
+      const upgrades =
+        action.kind === fitted
+          ? [...state.upgrades, action.upgrade]
+          : [...state.upgrades.filter((u) => u !== action.upgrade), action.upgrade];
       return {
         lives: state.lives,
         level: state.level,
         arsenal: state.arsenal,
-        upgrades: [...state.upgrades, action.upgrade],
+        upgrades,
+        weapon: action.upgrade === 'weapon' ? action.kind : state.weapon,
+        missile: action.upgrade === 'missile' ? action.kind : state.missile,
         difficulty: state.difficulty,
       };
+    }
     case 'levelCleared':
       /*
         ⚠️ **Lives and arsenal are untouched, and that is the whole of what "carry forward" means.**
@@ -311,6 +374,8 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         level: state.level + 1,
         arsenal: state.arsenal.map((entry) => ({ kind: entry.kind, charges: entry.charges + 1 })),
         upgrades: state.upgrades,
+        weapon: state.weapon,
+        missile: state.missile,
         difficulty: state.difficulty,
       };
     default: {

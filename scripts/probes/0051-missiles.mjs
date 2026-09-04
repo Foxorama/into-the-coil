@@ -123,8 +123,9 @@ export const PROBES = [
         the gun's TIER rather than the gun's list, or it would be caught by the compiler instead of by
         the guard and prove nothing about the separation.
       */
-      find: '  const missileEvery = MISSILE_BEAT_RATIO * missileEveryAt(ship, tubes);',
-      replace: '  const missileEvery = MISSILE_BEAT_RATIO * missileEveryAt(ship, gun);',
+      // ⚠️ Re-anchored by 0233: the ladder read is the missile kind's row rather than the ship's.
+      find: '  const missileEvery = MISSILE_BEAT_RATIO * missileEveryAt(tubeRow, tubes);',
+      replace: '  const missileEvery = MISSILE_BEAT_RATIO * missileEveryAt(tubeRow, gun);',
     },
   },
   {
@@ -142,7 +143,10 @@ export const PROBES = [
       counted.
     */
     broke: 'the launcher cap dropped, so a long run reaches a rung the ask does not have',
-    guard: 'fires one missile per launcher, and stops at two tubes',
+    // ⚠️ Re-aimed by 0233: the tube count is the missile kind's own ladder now and the cap is the
+    // ceiling it is held against — so a cap that moves without the ladder is caught by THE FLOORS
+    // (the two disagree) rather than by a ship growing a third tube, which the ladder never says.
+    guard: 'THE FLOORS: the last tier lands exactly on them',
     edit: {
       path: 'src/content/pickups.ts',
       /*

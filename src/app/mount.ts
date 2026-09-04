@@ -35,7 +35,8 @@ import {
   PICKUP_KINDS,
   WEAPON_OVERFLOW,
   effectOf,
-  isUpgrade,
+  missileFaceOf,
+  weaponFaceOf,
   type PickupKind,
   weaponFor,
 } from '../content/pickups.ts';
@@ -135,12 +136,29 @@ export const CAPACITY = {
   // The ship's exhaust — 0230. One, out of the particle share, on the shell's own terms.
   exhaust: 1,
   enemies: 40,
-  playerShots: 100,
+  /*
+    ⚠️ **EIGHTY-EIGHT, AND IT WAS A HUNDRED — the bolts came out of it, 0233.** A ship carries ONE
+    gun, so the pulse's pool and the arc's are never full at once; the twelve the bolts took are the
+    share the pulse gives up for the gun that replaces it. The arithmetic that has to close is
+    `MAX_BARRELS × PLAYER_SHOT_LIFE / FASTEST_FIRE ≤ pool` — 80 against 88 — and
+    `tests/pickups.test.ts` drives the strongest loadout for fifteen seconds to see the pool never
+    fill. The particle share was the other candidate and cannot pay: `tests/flares.test.ts` has a
+    boss and a ship dying in the same second spending it to within a fragment.
+  */
+  playerShots: 88,
   missiles: 24,
   bombs: 4,
   blasts: 4,
   enemyShots: 150,
   debris: 200 - MAX_SHIELDS - 1 - 24 - 8 - 4,
+  /*
+    ⚠️ **TWELVE, OUT OF THE PULSE'S SHARE — 0233.** A link of chain lightning is a picture that lives
+    `BOLT_STEPS` (eight) and the arc's ladder reaches four links every eight steps, so two volleys
+    overlap for exactly one step: eight links, and twelve leaves a margin the way the shell and the
+    bombs have one. `tests/weapons.test.ts` fires the cap for fifteen seconds to see the pool never
+    fill. See `playerShots` for why it is that share and not the particles'.
+  */
+  bolts: 12,
   boss: 1,
   /*
     ⚠️ **TWELVE, AND IT WAS EIGHT.** A death now throws every upgrade it took back onto the field
@@ -536,6 +554,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const debris = new Pool<Entity>(CAPACITY.debris, makeEntity);
   const bossPool = new Pool<Entity>(CAPACITY.boss, makeEntity);
   const pickupPool = new Pool<Entity>(CAPACITY.pickups, makeEntity);
+  const bolts = new Pool<Entity>(CAPACITY.bolts, makeEntity);
 
   /** Pickup rows in `PICKUP_KINDS` order, and the reverse lookup, built the same way enemies are. */
   const pickupRows = PICKUP_KINDS.map((k) => PICKUPS[k]);
@@ -644,6 +663,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   let atlas = bakeAtlas(colours, viewFor(view.alongAxis), view.scale * dpr);
   const surface = new CanvasSurface(ctx, atlas);
   surface.setSize(viewportWidth(host), viewportHeight(host), colours.space);
+  // A bolt glows in the player's ink with an impact-white core — 0233. The player's, because it is
+  // the player's weapon; the core is the brightest ink there is, because lightning is.
+  surface.setBolt(colours.player, colours.impact);
 
   const world: World = {
     /*
@@ -671,7 +693,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // it — including their own ship, which is the one thing they need to be looking at.
     // The exhaust sits under the shell and the ship — 0230 — so the root of the flame is behind the
     // hull, and the shell's own rule (nothing between a ship and its marks) still holds.
-    layers: [blasts, pickupPool, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, exhaust, shieldOrbs, shipPool],
+    // The bolts' landing sparks sit with the other things the ship fires, under the shell and the
+    // ship — 0233. The line between the sparks is stroked over every layer by `paintBolts`; what
+    // must stay on top is the ship itself, and 0050's rule that nothing comes between it and its marks.
+    layers: [blasts, pickupPool, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
     /*
       THE SKY, back to front — `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
 
@@ -711,6 +736,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // Its own stream per 0021, and NOT `burst`'s: what a death costs is which pieces the player can
     // reach, so a fragment's direction must not be able to deal a different scatter — 0077.
     scatterRng: makeRng('proof-scene').stream('scatter'),
+    arcRng: makeRng('proof-scene').stream('arc'),
     view,
     surface,
     // One named stream, per docs/decisions/0021-one-stream-per-concern.md, so a cosmetic roll added
@@ -757,6 +783,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     deathAcross: ACROSS_SPAN / 2,
     nextPickup: 0,
     pickups: pickupPool,
+    bolts,
     pickupRows,
     pickupKinds,
     collected: makeCollected(CAPACITY.pickups),
@@ -971,7 +998,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const next = reduce(state, action);
     if (next === state) return;
     const moved = next.screen !== state.screen;
-    const rearmed = next.run.upgrades !== state.run.upgrades;
+    // The list, or either KIND — 0233. `upgraded` replaces the list on a switch too, so the first
+    // test would do alone; the other two are the claim written out rather than relied on.
+    const rearmed =
+      next.run.upgrades !== state.run.upgrades || next.run.weapon !== state.run.weapon || next.run.missile !== state.run.missile;
     const runChanged = next.run !== state.run;
     /*
       ⚠️ **Per FIELD rather than per slice, and it stopped being the same question at the second
@@ -991,7 +1021,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       (`tests/run.test.ts` holds that), which is what makes `!==` the whole test.
     */
     if (rearmed) {
-      world.weapon = weaponFor(shipRow, state.run.upgrades);
+      world.weapon = weaponFor(shipRow, state.run.upgrades, state.run.weapon, state.run.missile);
       /*
         ⚠️ **THE HULL FOLLOWS THE WEAPON, which is the whole of `docs/game.md`'s *every upgrade
         changes how the ship looks on screen*** — 0081. Reported from play as the fifth defect:
@@ -2125,7 +2155,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     launchSpecial(world, entry.kind);
   };
 
-  world.onPickup = (kind: PickupKind): void => {
+  world.onPickup = (kind: PickupKind, face: number): void => {
     /*
       ⚠️ **`effectOf` and not `PICKUPS[kind].effect`, and the difference is the max-speed nerf.** A
       weapon pickup taken by a ship whose weapon can no longer grow reports itself as a `special`, so
@@ -2142,7 +2172,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       times, so *is this pickup still worth taking* is a question about the kind in the player's hand
       — a resolved weapon cannot tell a maxed pulse from an empty missile rack.
     */
-    const effect = effectOf(kind, state.run.upgrades);
+    // And the FACE — 0233. The run slice is the loadout, structurally; a pickup offering a gun the
+    // ship is not carrying is an upgrade whatever the fitted gun's ladder says.
+    const effect = effectOf(kind, face, state.run);
     /*
       A SPECIAL — charges into the arsenal, and it is the `took` action finally cashing.
       `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md`.
@@ -2177,9 +2209,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       ⚠️ **Capped here.** `MAX_SHIELDS` is the shell the player can read at a glance, and a fourth
       mark would have nowhere to be drawn — `src/content/ships.ts`.
     */ else if (effect === 'shield') world.ship.health = Math.min(world.ship.health + 1, fullHealthFor(shipRow));
-    // `isUpgrade` rather than a ternary on one name: the ternary was correct for exactly as long as
-    // there were two upgrades, and the pickup above is not one — `src/content/pickups.ts`.
-    else if (isUpgrade(kind)) dispatch({ slice: 'run', type: 'upgraded', upgrade: kind });
+    /*
+      ⚠️ **ONE ARM PER UPGRADE KIND, since 0233, because each names its own kind of face.** This
+      was one `isUpgrade(kind)` arm dispatching the pickup's name; an `upgraded` action now says
+      WHICH gun or WHICH tube, and the two unions are different, so the narrowing has to be by name.
+      `tests/shields.test.ts` still holds `UPGRADE_KINDS` to the table's `effect: 'upgrade'` rows,
+      and the reducer's action union fails to compile for a kind added there and not here.
+    */
+    else if (kind === 'weapon') dispatch({ slice: 'run', type: 'upgraded', upgrade: kind, kind: weaponFaceOf(face) });
+    else if (kind === 'missile') dispatch({ slice: 'run', type: 'upgraded', upgrade: kind, kind: missileFaceOf(face) });
   };
 
   /** Re-measure, re-fit and — only if the orientation or resolution actually moved — re-bake. */

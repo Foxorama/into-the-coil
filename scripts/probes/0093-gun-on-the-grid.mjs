@@ -68,7 +68,8 @@ export const PROBES = [
     broke: 'the barrels interpolated again, so the tier that cannot buy rate buys nothing at all',
     guard: 'THE TIERS: each ladder is exactly UPGRADE_TIERS long, and every tier changes something',
     edit: {
-      path: 'src/content/ships.ts',
+      // ⚠️ Re-anchored by 0233: the ladder is the weapon kind's now, not the ship's.
+      path: 'src/content/weapons.ts',
       find: '    barrels: [1, 2, 3, 4, 4],',
       replace: '    barrels: [1, 2, 3, 3, 4],',
     },

@@ -202,12 +202,22 @@ what makes bombs uncapped. That is how *every upgrade is worth taking* survives 
 0082 it became unbounded damage instead, which was the reported defect: *"when you get max speed
 nothing is a challenge, bosses die in less a second."*
 
-⚠️ **Weapons and missiles are separate kinds because different weapon TYPES are coming**, and that is
-where a cycling pickup returns — alternating between two guns rather than between a gun and a shield.
+⚠️ **A weapon is a kind, and the weapon pickup cycles between the guns** —
+[0233](decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md). Each gun carries its own four-tier
+ladder, its own pickup face and its own three hulls, so **the ship wears the gun it is carrying**. A
+weapon pickup turns to the next gun every two seconds, waits long enough to show every gun twice, and
+wanders the player's box while it does; what the player is handed is the face it was showing.
+**Taking a different gun starts that gun's ladder at one rung** and leaves the missile ladder alone.
+The missile pickup cycles the same way over the tubes.
 
-The rest of the vocabulary is unbuilt: homing rockets, multi-tag tracking specials, piercing shots,
-faster engines, orbiting mines that are half shield and half weapon. Nothing triggers a special except
-the bomb.
+| gun | what it does | a tier buys |
+|---|---|---|
+| **pulse** | the base weapon: fast, small, reaches the edge of the screen and can miss | a barrel **and** a fire-rate step |
+| **arc** | chain lightning: from the nose to the nearest body in reach, then the next; on a lone boss it jumps around the hull. Cannot miss, cannot reach | a link, a fire-rate step, and weight |
+
+The rest of the vocabulary is unbuilt: a shuriken launcher, homing rockets, multi-tag tracking
+specials, piercing shots, faster engines, orbiting mines that are half shield and half weapon.
+Nothing triggers a special except the bomb.
 
 ⚠️ **There are no extra lives to find, and a run's complement can only go down** — 0082, on the
 grounds that a shield is the better version of the same promise: it stops the death, so it keeps the

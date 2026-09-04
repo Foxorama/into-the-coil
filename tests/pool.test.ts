@@ -27,6 +27,7 @@ class RecordingSurface implements Surface {
     this.x = x;
     this.y = y;
   }
+  bolt(): void {}
 }
 
 const pooled = (capacity: number): Pool<Entity> => new Pool<Entity>(capacity, makeEntity);

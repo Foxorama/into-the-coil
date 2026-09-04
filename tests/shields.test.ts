@@ -10,6 +10,7 @@ import {
   UPGRADE_KINDS,
   UPGRADE_TIERS,
   effectOf,
+  type Loadout,
   isUpgrade,
   type PickupKind,
   type UpgradeKind,
@@ -443,12 +444,19 @@ describe('a pickup says which field it lands in', () => {
       that always said `special` would make the weapons un-upgradable and still pass a test of *the
       last one is a bomb*.
     */
+    /*
+      ⚠️ **ON THE BASE KINDS' OWN FACE, since 0233.** `effectOf` takes the face the pickup was showing
+      and the loadout it lands on; face 0 is the base gun and the base tube, so these are the
+      questions this test always asked — a pickup of the FITTED kind at its cap. A pickup of another
+      kind is never capped, and `tests/weapons.test.ts` holds that half.
+    */
+    const fitted = (upgrades: readonly UpgradeKind[]): Loadout => ({ upgrades, weapon: SHIPS.proof.weapon, missile: SHIPS.proof.missile });
     for (const kind of UPGRADE_KINDS) {
-      expect(effectOf(kind, []), `a ship with nothing on it was refused a ${kind}`).toBe('upgrade');
+      expect(effectOf(kind, 0, fitted([])), `a ship with nothing on it was refused a ${kind}`).toBe('upgrade');
 
       const capped: UpgradeKind[] = [];
       for (let i = 0; i < UPGRADE_TIERS; i++) capped.push(kind);
-      expect(effectOf(kind, capped), `a ${kind} at its cap is still filed as an upgrade`).toBe('special');
+      expect(effectOf(kind, 0, fitted(capped)), `a ${kind} at its cap is still filed as an upgrade`).toBe('special');
 
       /*
         ⚠️ **THE CROSS-CHECK: the OTHER ladder is untouched by this one being full.** This is the
@@ -456,7 +464,7 @@ describe('a pickup says which field it lands in', () => {
       */
       for (const other of UPGRADE_KINDS) {
         if (other === kind) continue;
-        expect(effectOf(other, capped), `a full ${kind} ladder turned a ${other} pickup into a bomb`).toBe('upgrade');
+        expect(effectOf(other, 0, fitted(capped)), `a full ${kind} ladder turned a ${other} pickup into a bomb`).toBe('upgrade');
       }
     }
 
@@ -474,7 +482,7 @@ describe('a pickup says which field it lands in', () => {
         const next = weaponFor(SHIPS.proof, [...carried, kind]);
         const grew = JSON.stringify(next) !== JSON.stringify(now);
         expect(
-          effectOf(kind, carried),
+          effectOf(kind, 0, fitted(carried)),
           `at ${n} ${kind}s the next one ${grew ? 'does' : 'does not'} change the ship, and the effect disagrees`,
         ).toBe(grew ? 'upgrade' : 'special');
       }
@@ -497,7 +505,8 @@ describe('a pickup says which field it lands in', () => {
     for (let i = 0; i < UPGRADE_TIERS; i++) for (const k of UPGRADE_KINDS) everything.push(k);
     for (const kind of PICKUP_KINDS) {
       for (const carried of [[], everything]) {
-        expect(named.has(effectOf(kind, carried)), `${kind} can report an effect no row in the table names`).toBe(true);
+        const loadout: Loadout = { upgrades: carried, weapon: SHIPS.proof.weapon, missile: SHIPS.proof.missile };
+        expect(named.has(effectOf(kind, 0, loadout)), `${kind} can report an effect no row in the table names`).toBe(true);
       }
     }
   });

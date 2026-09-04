@@ -237,6 +237,27 @@ export interface Entity extends Body {
    * tuned by a hand.
    */
   firePhase: number;
+  /**
+   * Which of its row's faces a cycling pickup is showing, and steps until it turns to the next —
+   * `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
+   *
+   * ⚠️ **ON THE ENTITY, which is exactly what 0052's cycle refused and 0082 deleted.** That cycle
+   * was keyed to the CAMERA so the field would carry no state and a level author could say what a
+   * pickup was; this one is per pickup because the ask is per pickup — *"at least 2 repetitions of
+   * each weapon"* from the moment it appears — and because what it cycles between are kinds of one
+   * ladder, which a level author never chose between anyway. `faceIn` at zero is a pickup that does
+   * not turn, which is every pickup with one face.
+   */
+  face: number;
+  faceIn: number;
+  /**
+   * Where a bolt STARTS, as an offset from where it lands — 0233. A link of chain lightning is an
+   * entity at its landing point, drawn as a stroke from `along + fromAlong, across + fromAcross` to
+   * `along, across`; keeping the start as an offset means the whole link rides the camera and
+   * interpolates as one thing. Zero for everything that is not a bolt.
+   */
+  fromAlong: number;
+  fromAcross: number;
 }
 
 /** A blank entity. Called only while a pool is being constructed. */
@@ -266,6 +287,10 @@ export function makeEntity(): Entity {
     spin: 0,
     bobPhase: 0,
     firePhase: 0,
+    face: 0,
+    faceIn: 0,
+    fromAlong: 0,
+    fromAcross: 0,
   };
 }
 
@@ -300,6 +325,10 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.spin = 0;
   e.bobPhase = 0;
   e.firePhase = 0;
+  e.face = 0;
+  e.faceIn = 0;
+  e.fromAlong = 0;
+  e.fromAcross = 0;
 }
 
 /**

@@ -69,6 +69,7 @@ import { fireEveryAt } from '../src/content/pickups.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
+import { WEAPONS } from '../src/content/weapons.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 
 /**
@@ -934,7 +935,8 @@ describe('0095 — the level has a piece of its own, and it covers the band', ()
     const bedRms = Math.sqrt(bedSq / bed.length);
 
     // The gun at its fastest rung, laid down over the same stretch at the cadence the ladder reaches.
-    const fastest = Math.min(...SHIPS.proof.fireEvery.map((_unused, tier) => fireEveryAt(SHIPS.proof, tier)));
+    const gunRow = WEAPONS[SHIPS.proof.weapon];
+    const fastest = Math.min(...gunRow.fireEvery.map((_unused, tier) => fireEveryAt(gunRow, tier)));
     const shot = sampleCue(CUES.pulse, SAMPLE_RATE, makeRng('cues').stream('pulse'));
     const gun = new Float32Array(bed.length);
     const perStep = SAMPLE_RATE / STEPS_PER_SECOND;

@@ -46,8 +46,8 @@ function armed(): State {
     PLAY,
     { slice: 'run', type: 'took', special: 'bomb' },
     { slice: 'run', type: 'took', special: 'mines' },
-    { slice: 'run', type: 'upgraded', upgrade: 'weapon' },
-    { slice: 'run', type: 'upgraded', upgrade: 'weapon' },
+    { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' },
+    { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' },
   );
 }
 

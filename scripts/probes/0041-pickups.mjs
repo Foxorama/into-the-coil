@@ -50,7 +50,8 @@ export const PROBES = [
       // is no longer a term in an expression that can be edited. The break is now *the ladder
       // authored past the floor* — which is the same failure the guard names, reached from content
       // instead of from arithmetic, and is the honest shape of it now that the rungs are a table.
-      path: 'src/content/ships.ts',
+      // ⚠️ Re-anchored by 0233: the ladder is the weapon kind's now, not the ship's.
+      path: 'src/content/weapons.ts',
       find: '    fireEvery: [8, 8, 6, 6, 4],',
       replace: '    fireEvery: [8, 8, 6, 6, 1],',
     },
@@ -64,8 +65,10 @@ export const PROBES = [
     guard: 'stacks — the second of a kind is not swallowed by the first',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '        upgrades: [...state.upgrades, action.upgrade],',
-      replace: '        upgrades: state.upgrades.includes(action.upgrade) ? state.upgrades : [...state.upgrades, action.upgrade],',
+      // ⚠️ Re-anchored by 0233: the arm is a ternary now — the same kind appends, another kind
+      // starts the ladder again — and the break is the appending half deduplicated.
+      find: '          ? [...state.upgrades, action.upgrade]',
+      replace: '          ? (state.upgrades.includes(action.upgrade) ? state.upgrades : [...state.upgrades, action.upgrade])',
     },
   },
   {
@@ -86,8 +89,9 @@ export const PROBES = [
       // ⚠️ Anchored on the UPGRADES line rather than on the whole returned literal, which is what it
       // was and what went stale the day 0053 turned the arm into a multi-line object. The twelve-space
       // indent is the `lifeLost` arm; `begin` has the same field at eight.
-      find: '            upgrades: [],\n            difficulty: state.difficulty,',
-      replace: '            upgrades: state.upgrades,\n            difficulty: state.difficulty,',
+      // ⚠️ Re-anchored by 0233: the base kinds go back on the line after this one.
+      find: '            upgrades: [],\n            // The base kinds come back',
+      replace: '            upgrades: state.upgrades,\n            // The base kinds come back',
     },
   },
   {

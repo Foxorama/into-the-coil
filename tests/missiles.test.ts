@@ -3,6 +3,7 @@ import { ACROSS_SPAN, MAX_ASPECT, viewOf } from '../src/sim/camera.ts';
 import { reset } from '../src/sim/entity.ts';
 import { GameFrame, type World } from '../src/app/frame.ts';
 import { SHIPS } from '../src/content/ships.ts';
+import { MISSILES } from '../src/content/missiles.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { SPRITE, SPRITE_EXTENT } from '../src/content/sprites.ts';
@@ -13,7 +14,7 @@ import {
   MISSILE_BEAT_RATIO,
   UPGRADE_KINDS,
   UPGRADE_TIERS,
-  fireEveryAt,
+  missileEveryAt,
   weaponFor,
   type UpgradeKind,
 } from '../src/content/pickups.ts';
@@ -489,8 +490,9 @@ describe('the upgrades reach the weapon rather than the wrong one', () => {
     const base = weaponFor(SHIPS.proof, []);
     expect(base.launchers, 'the base ship still carries a launcher of its own').toBe(0);
     // 0093: the missile's cadence is derived from the pulse's, so the base is the ratio at tier 0.
-    expect(base.missileEvery).toBe(MISSILE_BEAT_RATIO * fireEveryAt(SHIPS.proof, 0));
-    expect(base.missileDamage).toBe(SHOTS[SHIPS.proof.missile].damage);
+    // 0233: the note value is the missile KIND's own ladder at rung 0, not the pulse's.
+    expect(base.missileEvery).toBe(MISSILE_BEAT_RATIO * missileEveryAt(MISSILES[SHIPS.proof.missile], 0));
+    expect(base.missileDamage).toBe(SHOTS[MISSILES[SHIPS.proof.missile].shot].damage);
   });
 
   it('fires nothing at all until a launcher is found', () => {

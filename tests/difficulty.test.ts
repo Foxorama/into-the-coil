@@ -428,7 +428,7 @@ describe('a tier is a property of the run, and never an assist', () => {
       can take is walked, so a new one that forgets to carry the field fails here.
     */
     const during: Action[] = [
-      { slice: 'run', type: 'upgraded', upgrade: 'weapon' },
+      { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' },
       // ⚠️ `gainedLife` was here and 0082 deleted the action — nothing grants a life any more.
       // `src/state/slices/run.ts` has why, and what it leaves owed to 0039.
       { slice: 'run', type: 'took', special: 'bomb' },

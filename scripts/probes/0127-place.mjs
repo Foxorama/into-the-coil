@@ -112,8 +112,9 @@ export const PROBES = [
     guard: 'EVERY CUE THE GAME FIRES SAYS WHERE IT HAPPENED, and the one that cannot is named',
     edit: {
       path: 'src/app/frame.ts',
-      find: "    if (i === 0) w.onCue('pulse', w.ship.across);",
-      replace: "    if (i === 0) w.onCue('pulse');",
+      // ⚠️ Re-anchored by 0233: the cue is the flight's, asked of `cueOfFlight`.
+      find: "    if (i === 0) w.onCue(cueOfFlight(w.weapon.flight), w.ship.across);",
+      replace: "    if (i === 0) w.onCue(cueOfFlight(w.weapon.flight));",
     },
   },
 ];

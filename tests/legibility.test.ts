@@ -51,6 +51,7 @@ class Recorder implements Surface {
   blit(sprite: number, x: number, y: number): void {
     this.blits.push({ sprite, x, y });
   }
+  bolt(): void {}
 }
 
 describe('the shot that kills you is not the shot you kill with', () => {
@@ -237,8 +238,8 @@ describe('every body that can be hurt is drawn as hurt', () => {
     // The hull ladder, which is three more pairs nothing else here reaches — 0081.
     ...Array.from({ length: MAX_HULL_TIER + 1 }, (_unused, tier) => ({
       what: `hull tier ${tier}`,
-      base: hullFor(tier).base,
-      hit: hullFor(tier).hit,
+      base: hullFor('pulse', tier).base,
+      hit: hullFor('pulse', tier).hit,
     })),
   ];
 
@@ -282,7 +283,7 @@ describe('the ship wears what it is carrying', () => {
       on screen"* — and the ship had one silhouette from the first pickup to the last.
     */
     const bases = new Set<number>();
-    for (let tier = 0; tier <= MAX_HULL_TIER; tier++) bases.add(hullFor(tier).base);
+    for (let tier = 0; tier <= MAX_HULL_TIER; tier++) bases.add(hullFor('pulse', tier).base);
     expect(bases.size, 'two hull tiers are drawn as the same ship').toBe(MAX_HULL_TIER + 1);
   });
 
@@ -294,8 +295,8 @@ describe('the ship wears what it is carrying', () => {
       a fraction in a drawing. Each tier's box is wider than the last; the hurtbox does not move.
     */
     for (let tier = 1; tier <= MAX_HULL_TIER; tier++) {
-      const wider = SPRITE_EXTENT[SPRITE_KINDS[hullFor(tier).base]!];
-      const narrower = SPRITE_EXTENT[SPRITE_KINDS[hullFor(tier - 1).base]!];
+      const wider = SPRITE_EXTENT[SPRITE_KINDS[hullFor('pulse', tier).base]!];
+      const narrower = SPRITE_EXTENT[SPRITE_KINDS[hullFor('pulse', tier - 1).base]!];
       expect(wider, `hull tier ${tier} has no more room than tier ${tier - 1}, so its parts have nowhere to be seen`).toBeGreaterThan(
         narrower,
       );
@@ -306,7 +307,7 @@ describe('the ship wears what it is carrying', () => {
     // `stepEntities` derives `sprite` from `spriteBase` AND `spriteHit`, so a tier without its own
     // twin flashes back to the tier-0 hull — a silhouette changing at the worst possible moment.
     for (let tier = 0; tier <= MAX_HULL_TIER; tier++) {
-      const hull = hullFor(tier);
+      const hull = hullFor('pulse', tier);
       expect(hull.hit, `hull tier ${tier} flashes as itself, so a hit is invisible`).not.toBe(hull.base);
       expect(SPRITE_EXTENT[SPRITE_KINDS[hull.hit]!], `hull tier ${tier} changes size when it is hit`).toBe(
         SPRITE_EXTENT[SPRITE_KINDS[hull.base]!],
@@ -425,7 +426,7 @@ describe('the ship wears what it is carrying', () => {
       recorder.blits.some((b) => b.sprite === SPRITE.ship),
       'the ship is still drawn as a bare hull after two upgrades',
     ).toBe(false);
-    expect(recorder.blits.some((b) => b.sprite === hullFor(1).base), 'the upgraded hull was never drawn').toBe(true);
+    expect(recorder.blits.some((b) => b.sprite === hullFor('pulse', 1).base), 'the upgraded hull was never drawn').toBe(true);
 
     // A death empties the upgrade list (0039), so the hull goes back with the weapon.
     built.world.weapon = weaponFor(built.world.shipRow, []);

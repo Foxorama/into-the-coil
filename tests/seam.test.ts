@@ -36,6 +36,7 @@ class Recorder implements Surface {
   blit(sprite: number, x: number, y: number): void {
     this.blits.push({ sprite, x, y });
   }
+  bolt(): void {}
 }
 
 /** A world part-way through level one, with a recorder for a canvas. */

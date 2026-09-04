@@ -79,8 +79,9 @@ export const PROBES = [
     guard: 'is drawn under the shell and the ship and over every shot, and every thrust row has frames and a trail',
     edit: {
       path: 'src/app/mount.ts',
-      find: 'bombs, exhaust, shieldOrbs, shipPool],',
-      replace: 'bombs, shieldOrbs, shipPool, exhaust],',
+      // ⚠️ Re-anchored by 0233: the bolts sit between the bombs and the exhaust now.
+      find: 'bolts, exhaust, shieldOrbs, shipPool],',
+      replace: 'bolts, shieldOrbs, shipPool, exhaust],',
     },
   },
 ];

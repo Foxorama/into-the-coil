@@ -89,8 +89,10 @@ export const PROBES = [
     guard: 'no hot file allocates',
     edit: {
       path: 'src/render/scene.ts',
-      find: '    const inView = along - cameraAlong;',
-      replace: '    const inView = along - cameraAlong;\n    const point = { x: 0, y: 0, ...e };',
+      // ⚠️ Re-anchored by 0233: `paintBolts` computes the same `inView` twice more, so the blit
+      // line beside it is what makes this the entity loop's own copy.
+      find: '      const inView = along - cameraAlong;\n      surface.blit(e.sprite,',
+      replace: '      const inView = along - cameraAlong;\n      const point = { x: 0, y: 0, ...e };\n      surface.blit(e.sprite,',
     },
   },
   {

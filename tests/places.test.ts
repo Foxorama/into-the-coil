@@ -345,6 +345,7 @@ describe('0220 — the heart beats', () => {
     blit(sprite: number, _x: number, _y: number, scale: number): void {
       this.blits.push({ sprite, scale });
     }
+    bolt(): void {}
   }
 
   const view = viewOf(1280, 640);

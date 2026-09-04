@@ -116,6 +116,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | ~~a pickup is two things, and the camera says which~~ — **superseded** | [0052](decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md) → [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) |
 | **a pickup is rare, and says what it is** | [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) |
 | **two upgrade ladders of four tiers; nine pickups a level, of four kinds** | [0083](decisions/0083-two-ladders-of-four.md) |
+| **a weapon is a kind; the weapon pickup cycles; the arc is chain lightning; the ship wears its gun** | [0233](decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -725,6 +726,24 @@ this heading when it stops being true rather than adding another one below it.**
 *the work is a driving session, everything else is waiting on an ear* for six days after the channel
 moved. **The work is ART AND GAME now.** The music is not finished and is not the thing being asked
 for.
+
+⚠️ **THE WORK IS THE NEW WEAPONS, SINCE 2026-09-05.** The player asked for three, in order, and
+[0233](decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md) landed the first — the axis every
+weapon is a row on, the cycling pickup, and the chain lightning gun. **The next two are rows on that
+axis, one PR each, in the order asked:**
+
+1. **The shuriken launcher** — a third `WeaponKind` with an `orbit` flight: shurikens circle the ship
+   in a widening spiral and hit everything on the arc; a tier lengthens the spiral and quickens the
+   rate. Its own hull family, pickup face and cue. The spinning blade and *hits everything it touches
+   without being spent* are the two things `src/sim/collide.ts` does not do yet.
+2. **Homing missiles** — a second `MissileKind` with a `homing` guidance: a little less damage than
+   the straight missile, turning toward the nearest body from the moment it leaves the tube, any
+   direction. The missile pickup already cycles; a second row is what gives it something to cycle to.
+
+**What 0233 owes before either is worth much:** an ear on `arc` and `zap` (`scripts/hear.mjs
+--only=arc,zap` writes them) and an eye on the bolt in motion at the camera the game ships — every
+claim about both is a model quantity. **Play it on the branch preview first**; the balance of a gun
+that cannot miss is a hand's, and its ladders are starting points.
 
 ⚠️ **AND ONE THING IS WAITING ON AN EAR, WHICH IS NOT THE SAME AS BEING NEXT.** It is written here
 rather than as a fourth item below, because *this* is the file's one marker and
@@ -1715,9 +1734,14 @@ updating the art throughout the entire game → additional player weapons.**
 
 ⚠️ **It is a standing sequencing instruction, not a wish list**, and it outranks the queue any report
 below leaves behind. **Minibosses and an art pass are both new** and appear nowhere else in this
-repository. **Additional player weapons are LAST** — the arsenal is
-[0043](decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md)'s and is still a list with
-nothing in it, and it stays that way until everything above it has landed.
+repository.
+
+⚠️ **AND THE PLAYER MOVED THE WEAPONS UP ON 2026-09-05, BY ASKING FOR THEM** — *"let's work on new
+weapons"*, with the chain lightning gun, a shuriken launcher and homing missiles specified in that
+order. The last line of the instruction above is therefore spent, not overruled: it was the player's
+sequencing and the player re-sequenced it. [0233](decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md)
+is the first of the three, and it is the AXIS the other two are rows on. **Minibosses and the art pass
+are still owed and still nowhere else.**
 
 ### ~~⚠️ AND ASK 1 RE-OPENS 0093~~ — ASKED, ANSWERED AND HALF BUILT, 2026-08-17
 

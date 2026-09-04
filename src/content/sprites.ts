@@ -68,6 +68,25 @@ export const SPRITE_KINDS = [
   'shipMk2Hit',
   'shipMk3',
   'shipMk3Hit',
+  /*
+    ── THE SAME THREE HULLS, WEARING THE ARC — 0233 ───────────────────────────────────────────────
+
+    Asked for: *"each new weapon needs thematically change the style of the ship so you have a visual
+    indicator of the weapon equipped."* A weapon is a kind now (`src/content/weapons.ts`) and the
+    ship wears the kind it carries at every tier: the nose becomes a two-pronged coil with a spark
+    across it, and the pods carry coil bands where the pulse's pods carry a muzzle.
+
+    ⚠️ **Three MORE hulls rather than a nose drawn over the three that exist**, because `blit` is one
+    bitmap per entity (`src/render/surface.ts`) — there is no compositing at draw time, so every
+    combination of tier and weapon that can be on screen is its own bake. A hurt twin each, on the
+    same terms as the pulse's hulls.
+  */
+  'shipArc',
+  'shipArcHit',
+  'shipArcMk2',
+  'shipArcMk2Hit',
+  'shipArcMk3',
+  'shipArcMk3Hit',
   'drifter',
   'drifterHit',
   'lancer',
@@ -313,6 +332,15 @@ export const SPRITE_KINDS = [
   */
   'pickupMissile',
   /*
+    ── THE WEAPON PICKUP'S SECOND FACE — 0233 ─────────────────────────────────────────────────────
+
+    The weapon pickup cycles between the guns (`src/content/weapons.ts`), and each gun has a face:
+    the chevron is the pulse's, and this is the arc's — a bolt, the one glyph for lightning that
+    needs no teaching. The same extent as the chevron, because it is the same pickup showing a
+    different offer, and a face that changed size would read as a different pickup arriving.
+  */
+  'pickupArc',
+  /*
     ⚠️ **A HERALDIC SHIELD, and it is the one pickup whose meaning a player already owns.** The other
     three are arbitrary glyphs the game has to teach — a plus, a holed square, a hexagon — and the
     title screen's key is how it teaches them. This one does not need teaching, which is worth more
@@ -355,6 +383,15 @@ export const SPRITE_KINDS = [
     `docs/decisions/0024-the-accessibility-floor-is-settings.md`.
   */
   'shieldOrb',
+  /*
+    ── WHERE A BOLT LANDS — 0233 ──────────────────────────────────────────────────────────────────
+
+    The spark at the end of each link of chain lightning: a four-pointed star in the impact ink,
+    blitted at the landing point while the bolt is stroked behind it. It is the one bitmap the arc
+    weapon has, and `src/content/shots.ts`'s `arc` row names it; the bolt itself is the one thing in
+    the game that is not baked, because its shape is not known until the frame it is drawn on.
+  */
+  'arcNode',
   'debris',
   /*
     ── A DEATH IS A FIREBALL, AND A FIREBALL IS FOUR BITMAPS ───────────────────────────────────────
@@ -606,6 +643,19 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   shipMk2Hit: 8.2,
   shipMk3: 9.4,
   shipMk3Hit: 9.4,
+  /*
+    ⚠️ **EACH A LITTLE WIDER THAN THE PULSE'S HULL AT THE SAME TIER, AND THE HULL INSIDE IS THE SAME
+    SIZE** — 0233, on 0229's terms. The coil's prongs reach past the nose, so the box grows to hold
+    them and the hull is drawn at the bare ship's own size inside it; the hurtbox does not move. The
+    tiers still climb, so 0229's rule — a tier is a wider sprite than the one before it — holds
+    along the arc's ladder as it holds along the pulse's.
+  */
+  shipArc: 7.8,
+  shipArcHit: 7.8,
+  shipArcMk2: 9,
+  shipArcMk2Hit: 9,
+  shipArcMk3: 10.2,
+  shipArcMk3Hit: 10.2,
   drifter: 5.5,
   drifterHit: 5.5,
   /*
@@ -765,6 +815,8 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     collect, which is the same lie with the sign reversed.
   */
   pickupWeapon: 6,
+  // The same pickup, offering the other gun — the same size on purpose. 0233.
+  pickupArc: 6,
   pickupMissile: 5.5,
   pickupShield: 5,
   pickupBomb: 4.4,
@@ -781,6 +833,9 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     model was correct at 2.2.
   */
   shieldOrb: 3,
+  // A landing spark: bigger than a bullet and smaller than the missile, so a chain of them reads
+  // as hits rather than as a stream. Twice the `arc` row's hurtbox radius, like every shot.
+  arcNode: 2.4,
   // Small: a fragment reads as a piece of something, and eight of them at enemy size is a wall.
   debris: 1.4,
   /*

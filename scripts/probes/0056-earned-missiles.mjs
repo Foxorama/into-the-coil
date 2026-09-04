@@ -21,8 +21,9 @@ export const PROBES = [
     */
     edit: {
       path: 'src/content/pickups.ts',
-      find: '  const launchers = tubes > MAX_LAUNCHERS ? MAX_LAUNCHERS : tubes;',
-      replace: '  const launchers = tubes + 1 > MAX_LAUNCHERS ? MAX_LAUNCHERS : tubes + 1;',
+      // ⚠️ Re-anchored by 0233: the tube count is read off the missile kind's ladder first.
+      find: '  const launchers = tubesAt > MAX_LAUNCHERS ? MAX_LAUNCHERS : tubesAt;',
+      replace: '  const launchers = tubesAt + 1 > MAX_LAUNCHERS ? MAX_LAUNCHERS : tubesAt + 1;',
     },
   },
   {

@@ -3,11 +3,22 @@
  *
  * `docs/decisions/0022-frame-rate-is-a-feature.md` starts on Canvas2D and keeps a WebGL backend a
  * swap rather than a rewrite. This interface is what makes that true: **model and state in, pixels
- * out**, and the only verb is a blit. A backend that can clear and blit is a backend.
+ * out**, and the verbs are a blit and a bolt. A backend that can clear, blit and stroke a polyline
+ * is a backend.
  *
  * ⚠️ **`blit` is the unit the frame budget is counted in**, so the interface must not grow a verb
  * that hides work. A `drawPolygon` here would be a per-frame path fill wearing an interface, and the
  * counting guard would report one call for it — see 0025.
+ *
+ * ── AND `bolt` IS THE ONE VERB THAT IS NOT A BITMAP, COUNTED ON ITS OWN ─────────────────────────
+ *
+ * `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`. Chain lightning is a line between
+ * two points the model chose on the step it fired, jagged differently on every frame — a shape that
+ * is not known until the frame it is drawn on, which is the one thing a bake cannot hold. The
+ * paragraph above refuses a polygon because it would HIDE work behind a blit's count; a bolt is
+ * counted as a bolt, and `tests/budget.test.ts` counts it beside the blits rather than inside them.
+ * It is a stroke of a dozen vertices, not a fill, and it allocates nothing: the vertices arrive in a
+ * typed array the scene owns.
  */
 
 import { type View } from '../sim/camera.ts';
@@ -22,6 +33,15 @@ export interface Surface {
    * five hundred times a frame and a string key is a hash lookup each time.
    */
   blit(sprite: number, x: number, y: number, scale: number): void;
+  /**
+   * Stroke a polyline through the first `count` points of `points` — `x0, y0, x1, y1, …` in CSS
+   * pixels — `width` pixels wide at `alpha`, in the bolt ink the backend was given.
+   *
+   * ⚠️ **The points are the caller's buffer and are read before this returns**, never kept. A
+   * backend that wanted to keep them would be allocating per frame, which is the thing the seam
+   * exists to prevent.
+   */
+  bolt(points: Float32Array, count: number, width: number, alpha: number): void;
 }
 
 /**

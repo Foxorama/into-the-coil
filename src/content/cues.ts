@@ -106,6 +106,8 @@ export function inKey(degree: number): number {
 export const CUE_KINDS = [
   'pulse',
   'missile',
+  'arc',
+  'zap',
   'threat',
   'hit',
   'kill',
@@ -171,6 +173,8 @@ export const TWIN_KINDS = [
   'shot-appears',
   /** A missile leaves a launcher, popping out before it straightens — 0051. */
   'missile-appears',
+  /** A bolt of chain lightning is stroked from the nose to what it struck — 0233. */
+  'bolt-appears',
   /** An enemy's shot appears on the field — `fireEnemies`. */
   'threat-appears',
   /** A body flashes its hit sprite for `IMPACT_FLASH_STEPS` — 0035. */
@@ -711,6 +715,82 @@ export const CUES: Record<CueKind, CueRow> = {
    * screen is exciting or exhausting. It is a play-test number on
    * `docs/decisions/0037-the-ship-has-mass.md`'s terms and nothing asserts it.
    */
+  /**
+   * Chain lightning leaving the nose — `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
+   *
+   * Asked for: *"an appropriate lightning sound when it fires and when it hits enemies that also
+   * fits into the game sounds -> this is probably the most tricky bit."* Two cues, because the two
+   * events are at two places: this is the DISCHARGE at the ship, and `zap` is the STRIKE at what it
+   * hit. A bolt is resolved on the step it fires, so a hit sounds on the same step as the shot — and
+   * a bolt that found nothing sounds only this one, which is what a dry discharge is.
+   *
+   * ⚠️ **AN ELECTRIC SOUND IS SAMPLE-AND-HOLD NOISE, AND THAT IS THE FIELD `CueLayer` ALREADY HAS.**
+   * `from` on a `noise` layer is the hold rate — a chiptune noise channel's period — and a rate that
+   * sweeps from a few kilohertz down through a few hundred is the *bzzt* of a coil, where white
+   * noise is a hiss. The rest is the pulse's own recipe: a click on top, a driven tone for the
+   * crack, and the sub the player asked every one of their weapons to have (0102) — held by
+   * `tests/sound.test.ts` for this row as it is for the pulse's.
+   *
+   * ⚠️ **SHORTER THAN ITS OWN FASTEST CADENCE**, on 0104's terms: the arc's ladder reaches eight
+   * steps, which is 0.133 s, and this is under it with room — a discharge that overlapped the next
+   * would be a drone, which is the worst thing a weapon that fires itself can sound like.
+   *
+   * ⚠️ **IN THE KEY, like everything else** — 0099. The crack falls a fifth, from the second degree
+   * to the fifth an octave down, and the sub is the pulse's own sub, so the two guns sit on the same
+   * bottom.
+   */
+  arc: {
+    twin: 'bolt-appears',
+    hold: 2,
+    gain: 0.26,
+    glue: 0.12,
+    figure: [1, 0.7, 0.86, 0.7],
+    layers: [
+      // The click. On top, and gone in ten milliseconds — the front edge of a spark.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.01, gain: 0.5, attack: 0.0004, curve: 9, highFrom: 2500, lowFrom: 12000, lowTo: 6000 },
+      // The coil: sample-and-hold noise falling through the kilohertz, which is the whole of what
+      // says *electricity* rather than *explosion*. The lowpass chases it down so the tail is a buzz
+      // and not a crackle in the top octave.
+      { wave: 'noise', from: 3200, to: 450, seconds: 0.085, gain: 0.72, attack: 0.001, curve: 5, lowFrom: 7000, lowTo: 1600, highFrom: 600, q: 1.2, drive: 0.35 },
+      // The crack. A driven saw falling a fifth, second degree to fifth: the interval the threat
+      // cue's zap already falls, one gun over.
+      { wave: 'saw', from: inKey(22), to: inKey(18), seconds: 0.05, gain: 0.55, attack: 0.001, curve: 7, lowFrom: 2400, lowTo: 700, q: 1.4, drive: 0.6 },
+      // The sub — the pulse's own, so the two guns share a bottom. C3 → A1.
+      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.06, gain: 0.55, attack: 0.002, curve: 4, drive: 0.2 },
+    ],
+  },
+  /**
+   * Chain lightning landing — the other half of the ask above, at the body that took it.
+   *
+   * ⚠️ **PLACED AT THE TARGET, NOT AT THE SHIP** — 0127. `fireArc` in `src/app/frame.ts` hands over
+   * the first struck body's `across`, so a bolt that jumped across the lane sounds from where it
+   * landed while the discharge sounds from the nose. Two places for one event is what a bolt
+   * looks like too.
+   *
+   * ⚠️ **SHARPER AND LOWER THAN `hit`, because it is not `hit`.** A pulse landing is the gun's own
+   * rate again and stays a tick; a strike is once per volley and can afford a body — a fast crack
+   * of held noise and a thump that falls to the root, so the strike reads as the heavy end of the
+   * arc rather than as the pulse's tick under a different gun. Held like the hit so a chain of four
+   * is one strike, which is what a chain sounds like: one crack, several sparks.
+   */
+  zap: {
+    twin: 'impact-flash',
+    hold: 2,
+    gain: 0.3,
+    glue: 0.1,
+    layers: [
+      // The snap: white, bright, and over before the coil below has started to fall.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.014, gain: 0.6, attack: 0.0002, curve: 11, highFrom: 1800, lowFrom: 11000, lowTo: 4000 },
+      // The crack of held noise — the same coil as the discharge, struck harder and falling faster.
+      { wave: 'noise', from: 4200, to: 700, seconds: 0.055, gain: 0.6, attack: 0.0006, curve: 7, lowFrom: 5500, lowTo: 1200, highFrom: 320, q: 1, drive: 0.3 },
+      // The ping: a triangle four octaves over the root, falling a major third, so the strike has a
+      // top the hit does not.
+      { wave: 'tri', from: inKey(28), to: inKey(26), seconds: 0.035, gain: 0.22, attack: 0.0005, curve: 7 },
+      // The thump: the third falling to the root an octave down, which is the gesture every
+      // explosion here ends with — 0179.
+      { wave: 'sine', from: inKey(9), to: inKey(0), seconds: 0.08, gain: 0.7, attack: 0.001, curve: 5, drive: 0.3 },
+    ],
+  },
   threat: {
     twin: 'threat-appears',
     // ⚠️ DRY, on the gun's own reasoning. An enemy shot rides the enemy fire cadence and a lane can
