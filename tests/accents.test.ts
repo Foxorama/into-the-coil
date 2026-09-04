@@ -378,7 +378,11 @@ describe('an interior costs nothing to draw', () => {
         spelling. A prefix test would have let a real hull grow a second fill the moment somebody
         named one `skySomething`, and it would have refused this one for being named honestly.
       */
-      if (kind.startsWith('sky') || kind === 'bound' || kind === 'landmark') continue;
+      // ⚠️ **ALL THREE CASTINGS SINCE 0225**, and they are listed rather than matched on a prefix for
+      // the reason above: `landmarkB` is a backdrop by role, and a `startsWith('landmark')` would let a
+      // real hull through the day somebody names one after a place.
+      if (kind.startsWith('sky') || kind === 'bound') continue;
+      if (kind === 'landmark' || kind === 'landmarkB' || kind === 'landmarkC') continue;
       expect(trace(kind).passes.length, `${kind} has no interior in the table but bakes two fills`).toBe(1);
     }
   });

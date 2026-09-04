@@ -407,6 +407,32 @@ export const SPRITE_KINDS = [
   */
   'landmark',
   /*
+    ── AND THE SAME SLOT TWICE MORE, BECAUSE ONE BITMAP IS ONE OBJECT ──────────────────────────────
+
+    `docs/decisions/0225-a-landmark-is-not-a-carbon-copy.md`. Asked for: *"lets go and add that seed to
+    the landmarks and levels, it sounds like it's going to be needed to make the levels more
+    interesting rather than carbon copies."*
+
+    ⚠️ **A LANDMARK IS A BAKED BITMAP, AND A LEVEL THAT PLACES THREE PLACES THE SAME ONE THREE TIMES.**
+    0224 gave Saurian Belt three volcanoes and they came out identical — necessarily, because every
+    entry blits `SPRITE.landmark`. Two of the three are usually on screen together, so what a player
+    sees is one mountain and its clone.
+
+    ⚠️ **A SEED CANNOT FIX THAT ON ITS OWN, WHICH IS THE THING WORTH KNOWING.** The obvious change is a
+    seed on the ENTRY — and the entry is read in the frame, while the drawing happens once per level at
+    bake time. A per-entry seed would mean baking per entry, and the atlas is a fixed array of bitmaps
+    (`docs/decisions/0065-the-sky-is-baked-and-blitted.md`) with no room for a variable number. So the
+    seed picks from a fixed set of pre-baked castings instead: **three slots, baked from three seeds,
+    and an entry names one.**
+
+    ⚠️ **THREE, AND THE NUMBER IS A MEMORY BUDGET RATHER THAN A TASTE.** A landmark is 75 units square
+    and bakes at up to ten pixels a unit — 2.25MB each, so this costs **4.5MB** on top of the sky's
+    existing 44. Three is enough that a level placing three never repeats one and cheap enough not to
+    be an argument; a fourth is available for the price of saying so.
+  */
+  'landmarkB',
+  'landmarkC',
+  /*
     ── THE EDGE OF THE PLAYER'S BOX, WHICH WAS A WALL WITH NOTHING DRAWN ON IT ─────────────────────
 
     Reported from play: *"the hard block on the player movement was a problem because there was no
@@ -451,6 +477,19 @@ function blitIndices<K extends string>(kinds: readonly K[]): Record<K, number> {
 
 /** The index a painter blits by. A number, because this is read five hundred times a frame. */
 export const SPRITE: Record<SpriteKind, number> = blitIndices(SPRITE_KINDS);
+
+/**
+ * The atlas slots a landmark can be cast into. A `LandmarkEntry.variant` indexes this — 0225.
+ *
+ * ⚠️ **HERE AND NOT IN `src/render/bake.ts`, BECAUSE THE FRAME MAY NOT REACH THE BAKER.** It was
+ * written next to the baking it drives, `src/app/frame.ts` imported it to turn a variant into a
+ * sprite, and `tests/budget.test.ts`'s *the frame cannot reach the baker* went red immediately — the
+ * guard 0026 put there so that art can never be redrawn during play. **A table of sprite kinds is
+ * content**, which is where the import arrow already allowed it to be
+ * (`docs/decisions/0015-the-layer-ladder.md`), and the failure was the layer ladder catching a
+ * shortcut rather than a table in the wrong file.
+ */
+export const LANDMARK_SLOTS = [SPRITE.landmark, SPRITE.landmarkB, SPRITE.landmarkC] as const;
 
 /**
  * How big each kind is, in WORLD units across — so its screen size falls out of the camera.
@@ -677,6 +716,10 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     is four and a half times the top of it. `tests/sky.test.ts` holds the band, not this number.
   */
   landmark: ACROSS_SPAN * 0.75,
+  // The three castings are the same object at three seeds, so they are the same size by definition —
+  // 0225. A variant that was a different size would be a different KIND, which is what the theme is.
+  landmarkB: ACROSS_SPAN * 0.75,
+  landmarkC: ACROSS_SPAN * 0.75,
   /*
     ⚠️ **The TILING PERIOD of the dash, exactly as a sky tile's extent is.** Ten units is a mark and
     a gap, so the boundary is ten dashes down a hundred-unit lane — legible as a line at a glance and

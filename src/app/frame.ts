@@ -52,7 +52,7 @@ import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
 import type { Pool } from '../sim/pool.ts';
 import { paintScene, type Bound, type Landmarks, type Sky } from '../render/scene.ts';
-import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
+import { LANDMARK_SLOTS, SPRITE_EXTENT } from '../content/sprites.ts';
 import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
@@ -3345,7 +3345,10 @@ export function respawn(w: World): void {
 export function landmarksFor(level: LevelRow): Landmarks {
   // @setup: a level boundary is not a frame — startLevel and advanceLevel call this once per level
   return level.landmarks.map((entry) => ({
-    sprite: SPRITE.landmark,
+    // ⚠️ **WHICH CASTING, AND IT IS THE ONLY PLACE THE VARIANT BECOMES A SPRITE** — 0225. Three slots
+    // are baked from three seeds at the boundary; an entry names one, and everything downstream of
+    // here is a sprite index like any other.
+    sprite: LANDMARK_SLOTS[entry.variant],
     extent: SPRITE_EXTENT.landmark,
     at: entry.at,
     lane: entry.lane,

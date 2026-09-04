@@ -21,7 +21,7 @@
 
 import type { DecorInk, Palette } from '../content/palette.ts';
 import type { ThemeKind } from '../content/themes.ts';
-import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
+import { LANDMARK_SLOTS, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { makeRng } from '../sim/rng.ts';
 
 /** Side profile for a horizontally scrolling screen, top-down for a vertical one. */
@@ -525,6 +525,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // A landmark is sky ink like every other backdrop mark — 0069's *the sky is behind the game* is
   // untouched by 0203, which moved only what may be drawn, never what it is drawn in.
   landmark: 'sky',
+  landmarkB: 'sky',
+  landmarkC: 'sky',
   /*
     ⚠️ **The PLAYER's ink, because the thing it marks is the player's box and nothing else's.**
     Enemies, bullets and pickups all cross this line freely — `src/sim/flight.ts` clamps the ship and
@@ -852,6 +854,8 @@ export const ACCENT_OF: Record<SpriteKind, Accent | null> = {
   skyGround: null,
   // A landmark draws its own interior in `drawLandmark` — the accent pass is for hulls.
   landmark: null,
+  landmarkB: null,
+  landmarkC: null,
   bound: null,
 };
 
@@ -883,9 +887,25 @@ export const ACCENT_OF: Record<SpriteKind, Accent | null> = {
  * `docs/decisions/0027-measure-the-picture-not-the-model.md` in one image, since every number about
  * it was already correct.
  */
-function drawLandmark(ctx: Pen, ink: string, space: string, size: number, theme: ThemeKind): void {
-  LANDMARK_OF[theme]?.(ctx, ink, space, size);
+/**
+ * ⚠️ **`seed` IS WHICH CASTING THIS IS, AND IT IS AN INDEX RATHER THAN A FREE NUMBER** — 0225. A
+ * landmark is a baked bitmap, so a level that places three places the same one three times; the fix is
+ * three slots baked from three seeds, and this is which of them is being drawn. Every drawing keys its
+ * RNG stream on it, so the three castings differ in every hand-rolled detail without differing in what
+ * they ARE.
+ */
+function drawLandmark(
+  ctx: Pen,
+  ink: string,
+  glow: string,
+  space: string,
+  size: number,
+  theme: ThemeKind,
+  seed: number,
+): void {
+  LANDMARK_OF[theme]?.(ctx, ink, glow, space, size, seed);
 }
+
 
 /**
  * What each place's landmark is, or `null` where none is authored.
@@ -902,17 +922,30 @@ function drawLandmark(ctx: Pen, ink: string, space: string, size: number, theme:
 // decision; a LEVEL that places a landmark into a `null` row is a silent empty blit, every frame, in
 // exactly the right place. `tests/places.test.ts` compares the two lists, which it cannot do from
 // outside the module.
-export const LANDMARK_OF: Record<ThemeKind, ((ctx: Pen, ink: string, space: string, size: number) => void) | null> = {
+/**
+ * ⚠️ **THREE COLOURS, AND THE THIRD ONE IS WHY A PLANET COULD NOT HAVE HAD A LANDMARK BEFORE** —
+ * `docs/decisions/0224-the-mountain-is-awake.md`. `ink` is the place's gas and `space` is its
+ * backdrop, which is exactly what the two objects authored so far are made of: the Pillars and the
+ * heart are both **gas**, punched out of light. **A volcano is rock**, and it is on a planet whose
+ * backdrop is a blue sky — so drawn in those two colours it is a maroon smudge in daylight.
+ *
+ * `glow` is the place's accent (0223), which is what everything lit in it is already drawn in — and a
+ * volcano is the one object in the game whose subject IS the light coming out of it.
+ */
+export const LANDMARK_OF: Record<
+  ThemeKind,
+  ((ctx: Pen, ink: string, glow: string, space: string, size: number, seed: number) => void) | null
+> = {
   approach: null,
-  nebula: (ctx, ink, space, size) => drawPillars(ctx, ink, space, size),
-  saurian: null,
+  nebula: (ctx, ink, _glow, space, size, seed) => drawPillars(ctx, ink, space, size, seed),
+  saurian: (ctx, _ink, glow, space, size, seed) => drawVolcano(ctx, glow, space, size, seed),
   labyrinth: null,
   rime: null,
   mire: null,
-  core: (ctx, ink, space, size) => drawHeart(ctx, ink, space, size),
+  core: (ctx, ink, _glow, space, size, seed) => drawHeart(ctx, ink, space, size, seed),
 };
 
-function drawPillars(ctx: Pen, ink: string, space: string, size: number): void {
+function drawPillars(ctx: Pen, ink: string, space: string, size: number, seed: number): void {
   /*
     ── THE PILLARS OF CREATION ─────────────────────────────────────────────────────────────────────
 
@@ -1032,7 +1065,7 @@ function drawPillars(ctx: Pen, ink: string, space: string, size: number): void {
     light much further than a hollow eats in, because the hollow is what the light is doing. A
     symmetric jitter came out as a wobbly line rather than a knotted one.
   */
-  const rng = makeRng('sky').stream('nebula/pillars');
+  const rng = makeRng('sky').stream(`nebula/pillars${seed}`);
   const EDGE_STEPS = 8;
 
   for (const column of columns) {
@@ -1164,6 +1197,164 @@ function drawPillars(ctx: Pen, ink: string, space: string, size: number): void {
 }
 
 /**
+ * Saurian Belt's landmark — a mountain that is doing something.
+ *
+ * Asked for: *"saurian needs blue skies, but exploding volcanoes adding volcanic effects at some
+ * points in the level."* `docs/decisions/0224-the-mountain-is-awake.md`.
+ *
+ * ⚠️ **THE FIRST LANDMARK THAT IS NOT MADE OF GAS, AND THE FIRST ON A PLANET.** The Pillars and the
+ * heart are both holes punched in light, drawn in the backdrop colour with the place's gas behind
+ * them — which works because both stand in gas. A volcano stands on **rock**, under a **blue sky**,
+ * and the thing worth looking at is the light coming OUT of it. So it inverts the construction the
+ * other two share: a solid dark body, and the glow on top of it rather than behind.
+ *
+ * ⚠️ **AND *"AT SOME POINTS IN THE LEVEL"* IS A POSITION, WHICH IS WHAT THE SLOT WAS BUILT FOR.**
+ * `docs/decisions/0203-the-rule-was-never-about-size.md` made a landmark the one thing in the sky that
+ * can be somewhere; Saurian Belt places **three**, which is the first level to place more than one.
+ */
+function drawVolcano(ctx: Pen, glow: string, dark: string, size: number, seed: number): void {
+  /*
+    ⚠️ **THE BASE SITS LOW IN THE SPRITE AND THE PLUME FILLS THE TOP TWO THIRDS.** A mountain is
+    mostly the thing above it: a cone drawn to fill the tile is a triangle, and a cone in the bottom
+    third with a column of ash over it is an eruption. `at: 0.78` of the sprite, which at `lane: 68`
+    puts the feet on the near ridge and the plume across the sky above it.
+  */
+  /*
+    ⚠️ **THE FOOT IS BELOW THE TILE'S LANE ON PURPOSE, BECAUSE THE GROUND IS DRAWN OVER IT.** On a
+    planet the ground layer is painted LAST (0221), so a volcano whose base stops short of the
+    ridgelines is a mountain hanging in the air — the bench showed exactly that. At `0.92` the cone
+    runs off the bottom of its own sprite and the near ridge closes over it, which is what *standing
+    on something* looks like when the something is drawn in front.
+  */
+  /*
+    ⚠️ **THE SEED SHAPES THE MOUNTAIN AND NOT ONLY ITS SMOKE, WHICH IS THE DIFFERENCE BETWEEN THREE
+    CASTINGS AND ONE** — 0225. The first version keyed only the RNG-driven details on it: the plume's
+    jitter, where the lava wandered, where the bombs went. Two of them on screen together read as **the
+    same mountain venting differently**, which is the report with an extra step in it. Height, width,
+    crater and flank all move now, so the three are three mountains.
+
+    ⚠️ **AND THE FLANK EXPONENT IS THE ONE THAT MATTERS MOST.** It is what makes a cone a cone rather
+    than a pyramid or a funnel — 1.05 is nearly straight-sided and 1.3 is a steep-shouldered stratocone,
+    and the eye reads the difference as two mountains long before it reads a change in height.
+  */
+  const rng = makeRng('sky').stream(`saurian/volcano${seed}`);
+  const foot = size * 0.92;
+  const peak = size * rng.range(0.26, 0.36);
+  const mid = size * 0.5;
+  const half = size * rng.range(0.28, 0.38);
+  const crater = size * rng.range(0.038, 0.062);
+  const flank = rng.range(1.05, 1.3);
+
+  /*
+    ── THE ASH, FIRST AND FURTHEST BACK ────────────────────────────────────────────────────────────
+
+    ⚠️ **PUFFS AND NOT A POLYGON, AND THE POLYGON WAS THE FIRST DRAFT.** A column that widens as it
+    rises is what a plume DOES, and drawn as one filled shape it came out of the bench as an **anvil
+    with a flat top** — because a path up one side and down the other joins its two ends with a
+    straight line, and the one edge nobody authored is the one at the top where the eye goes. Ash
+    billows; nine overlapping discs of falling opacity billow and a trapezoid cannot.
+
+    Drawn in the dark before the cone, so the cone closes over their roots and the two are one object.
+  */
+  ctx.fillStyle = dark;
+  for (let s = 0; s < 9; s += 1) {
+    const t = s / 8;
+    // Squared, so the column is still tight just above the crater and wide by the top of the tile.
+    const spread = t * t;
+    ctx.globalAlpha = 0.62 * (1 - t * 0.55);
+    ctx.beginPath();
+    ctx.arc(
+      mid + rng.range(-0.05, 0.05) * size * (0.3 + spread),
+      peak - t * size * 0.27,
+      size * (0.045 + spread * 0.15),
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+  }
+
+  /*
+    ── THE CONE ────────────────────────────────────────────────────────────────────────────────────
+
+    ⚠️ **CONCAVE FLANKS, WHICH IS THE ONE THING THAT MAKES IT A VOLCANO AND NOT A HILL.** A straight
+    line from foot to crater is a pyramid; a real cone is steep at the top and flares out at the
+    bottom, and the eye knows the difference without being able to say why. `t ** 1.6` is that flare.
+  */
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  ctx.moveTo(mid - half, foot);
+  for (let s = 1; s <= 8; s += 1) {
+    const t = s / 8;
+    ctx.lineTo(mid - crater - (half - crater) * (1 - t) ** flank, foot - t * (foot - peak));
+  }
+  ctx.lineTo(mid + crater, peak);
+  for (let s = 8; s >= 1; s -= 1) {
+    const t = s / 8;
+    ctx.lineTo(mid + crater + (half - crater) * (1 - t) ** flank, foot - t * (foot - peak));
+  }
+  ctx.lineTo(mid + half, foot);
+  ctx.closePath();
+  ctx.fill();
+
+  /*
+    ── AND THE LIGHT, WHICH IS THE WHOLE SUBJECT ───────────────────────────────────────────────────
+
+    The crater first, then what is running down the flanks from it. **Lava is drawn thin and tapering
+    and never as a wash**: a glowing area on a mountainside reads as a lit slope, and a glowing LINE
+    reads as something moving.
+  */
+  ctx.strokeStyle = glow;
+  ctx.lineCap = 'round';
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.moveTo(mid - crater, peak);
+  ctx.lineTo(mid + crater, peak);
+  ctx.lineTo(mid + crater * 0.55, peak + size * 0.035);
+  ctx.lineTo(mid - crater * 0.55, peak + size * 0.035);
+  ctx.closePath();
+  ctx.fill();
+
+  for (let i = 0; i < 4; i += 1) {
+    const side = i % 2 === 0 ? -1 : 1;
+    const wander = rng.range(0.2, 0.9);
+    ctx.globalAlpha = 0.75;
+    for (let s = 1; s <= 5; s += 1) {
+      const a = (s - 1) / 5;
+      const b = s / 5;
+      const at = (u: number): number[] => [
+        mid + side * (crater + (half - crater) * u ** flank * wander),
+        peak + u * (foot - peak),
+      ];
+      ctx.lineWidth = Math.max(1, size * 0.012 * (1 - a * 0.7));
+      ctx.beginPath();
+      ctx.moveTo(at(a)[0]!, at(a)[1]!);
+      ctx.lineTo(at(b)[0]!, at(b)[1]!);
+      ctx.stroke();
+    }
+  }
+
+  /*
+    ⚠️ **AND SOMETHING THROWN CLEAR, BECAUSE *EXPLODING* IS A WORD IN THE REPORT.** A plume and a lit
+    crater are a mountain venting; bombs arcing away from it are a mountain going off. They are drawn
+    in the glow and small — well under a bullet, which is the band 0203 puts on anything the sky
+    draws and which this object is otherwise far above.
+  */
+  ctx.globalAlpha = 0.8;
+  for (let i = 0; i < 7; i += 1) {
+    const side = rng.range(0, 1) < 0.5 ? -1 : 1;
+    const out = rng.range(0.12, 0.4);
+    const x = mid + side * out * size;
+    const y = peak - rng.range(0.02, 0.3) * size + out * out * size * 0.6;
+    const r = rng.range(0.004, 0.008) * size;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/**
  * The Black Heart's landmark — the thing the place is named after, finally on screen.
  *
  * Asked for by name: *"black heart needs to be a beating black heart."*
@@ -1182,7 +1373,7 @@ function drawPillars(ctx: Pen, ink: string, space: string, size: number): void {
  * correct heart is a lump. **What stops it reading as a sticker is everything else** — it is drawn as
  * a hole rather than a fill, it is off-vertical, it has vessels coming out of it, and it beats.
  */
-function drawHeart(ctx: Pen, ink: string, space: string, size: number): void {
+function drawHeart(ctx: Pen, ink: string, space: string, size: number, seed: number): void {
   /*
     ⚠️ **THE GAS IS BEHIND IT AND IT IS A RING, NOT A DISC.** The Black Heart is the last place and its
     character is absence — `SKY_STYLE_OF.core` is the sparsest sky in the game. A filled glow here
@@ -1226,7 +1417,14 @@ function drawHeart(ctx: Pen, ink: string, space: string, size: number): void {
   const cx = size * 0.5;
   const cy = size * 0.47;
   const k = size * 0.0185;
-  const lean = 0.22;
+  /*
+    ⚠️ **THE LEAN IS SEEDED SINCE 0225, THOUGH THIS PLACE ONLY EVER CASTS ONE.** Every landmark drawing
+    takes the casting index, and every one has to USE it — a drawing that ignores its seed produces
+    three identical castings, which is the defect 0225 exists to remove arriving through the one place
+    nobody was looking at. It costs a few degrees of tilt here and the guard is the same for all three.
+  */
+  const rng = makeRng('sky').stream(`core/heart${seed}`);
+  const lean = rng.range(0.14, 0.3);
   const cosL = Math.cos(lean);
   const sinL = Math.sin(lean);
   const POINTS = 96;
@@ -2228,7 +2426,14 @@ export function drawKind(
         blue-grey is the whole difference between dust in light and cold rock, and the shot rig is
         what showed it.
       */
-      drawLandmark(ctx, palette.sky, palette.space, size, theme);
+      drawLandmark(ctx, palette.sky, palette.sky, palette.space, size, theme, 0);
+      return;
+    // The other two castings — 0225. Same drawing, different seed, and the seed is the slot's index.
+    case 'landmarkB':
+      drawLandmark(ctx, palette.sky, palette.sky, palette.space, size, theme, 1);
+      return;
+    case 'landmarkC':
+      drawLandmark(ctx, palette.sky, palette.sky, palette.space, size, theme, 2);
       return;
     case 'skyNebula':
       /*
@@ -3921,18 +4126,31 @@ export function bakeGround(
 export function bakeLandmark(
   atlas: Atlas,
   gas: string,
+  glow: string,
   space: string,
   pixelsPerUnit: number,
   theme: ThemeKind = 'approach',
 ): void {
   const size = bakeSize(SPRITE_EXTENT.landmark, pixelsPerUnit);
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  if (ctx === null) return;
-  drawLandmark(ctx, gas, space, size, theme);
-  (atlas.bitmaps as CanvasImageSource[])[SPRITE.landmark] = canvas;
+  /*
+    ⚠️ **ALL THREE CASTINGS, AT A LEVEL BOUNDARY** — 0225. One canvas each, drawn from one seed each,
+    and it is the same 2.25MB bitmap three times over rather than a different object three times: what
+    a level places is the same landmark, cast differently.
+
+    ⚠️ **AND A PLACE THAT DRAWS NONE PAYS NOTHING**, because `drawLandmark` returns immediately on a
+    `null` row — the canvases are still allocated, which is three empty bitmaps at a boundary that
+    already re-bakes fifty-eight, and the alternative is a branch that has to stay in step with
+    `LANDMARK_OF` from the outside.
+  */
+  for (let seed = 0; seed < LANDMARK_SLOTS.length; seed += 1) {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (ctx === null) return;
+    drawLandmark(ctx, gas, glow, space, size, theme, seed);
+    (atlas.bitmaps as CanvasImageSource[])[LANDMARK_SLOTS[seed]!] = canvas;
+  }
 }
 
 /**

@@ -1336,9 +1336,17 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     const accent = place === null ? PALETTES[palette].sky : THEMES[place].glow[palette];
     bakeNebula(atlas, clouds, accent, silhouette, view.scale * dpr, backdrop);
-    // The landmark takes the same gas colour as the weather — 0203. One place, one colour, so the
-    // pillars are lit by the nebula they stand in rather than by a palette that never heard of it.
-    bakeLandmark(atlas, clouds, colours.space, view.scale * dpr, backdrop);
+    /*
+      The landmark takes the same gas colour as the weather — 0203. One place, one colour, so the
+      pillars are lit by the nebula they stand in rather than by a palette that never heard of it.
+
+      ⚠️ **AND THE PLACE'S ACCENT AND ITS SILHOUETTE COLOUR AS WELL, SINCE 0224.** Two colours were
+      enough while every landmark was made of GAS — the Pillars and the heart are both holes punched
+      in light. A volcano is rock, under a blue sky, and the thing worth looking at is the light coming
+      out of it; with only `clouds` and the palette's void to draw with it is a maroon smudge in
+      daylight. `silhouette` is already the place's own land where it has any (0221).
+    */
+    bakeLandmark(atlas, clouds, accent, silhouette, view.scale * dpr, backdrop);
     /*
       ⚠️ **THE LAND IS LIT BY ITS OWN SKY, WHICH IS 0204's RULE WITH THE SECOND COLOUR CHANGED** —
       0221. A landmark is punched out of the GAS because it stands in gas; ground is a silhouette
