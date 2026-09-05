@@ -23,13 +23,13 @@
 import { ACROSS_SPAN } from '../sim/camera.ts';
 import { type Entity, reset } from '../sim/entity.ts';
 import type { Pool } from '../sim/pool.ts';
-import { BEAM_BOLT_KIND, CURTAIN_STANCES, RAIN_BOLT_KIND, type BossPhase, type BossRow, type CurtainStance, type Fall, type Uncoil } from '../content/bosses.ts';
+import { BEAM_BOLT_KIND, CURTAIN_STANCES, RAIN_BOLT_KIND, type BossAttack, type BossPhase, type BossRow, type CurtainStance, type Fall, type Uncoil } from '../content/bosses.ts';
 import { BOLT_STEPS } from '../render/scene.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../sim/flight.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { CueKind } from '../content/cues.ts';
 import { type DifficultyRow, fireGapFor } from '../content/difficulty.ts';
-import type { ShotRow } from '../content/shots.ts';
+import { SHOTS, type ShotRow } from '../content/shots.ts';
 
 /**
  * How fast it closes on its station, in world units per step, on top of the scroll.
@@ -485,11 +485,38 @@ export function stepBoss(
   // hard tier's opening phase is still slower than its own last one.
   boss.fireIn = fireGapFor(phase.fireEvery, tier);
 
-  const dAlong = ship.along - boss.along;
-  const dAcross = ship.across - boss.across;
   // Inside the hull is contact damage's business, and `Math.atan2(0, 0)` is a direction nobody asked
   // for.
-  if (dAlong === 0 && dAcross === 0) return direction;
+  if (ship.along === boss.along && ship.across === boss.across) return direction;
+  // The phase's own attack where it names one — 0248: the serpent throws a wall, then a spray, then
+  // lightning, and the row's `attack` is the first of those.
+  throwAttack(phase.attack ?? row.attack, bullet, boss, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);
+  return direction;
+}
+
+/**
+ * One volley of one attack — every arm of `BossAttack`, and the `never` arm that closes it.
+ *
+ * ⚠️ **A FUNCTION SINCE 0254, BECAUSE THE HYDRA'S HEADS TAKE TURNS.** The `heads` arm picks one
+ * head a volley and throws that head's attack with that head's shot, which is this function called
+ * again with a different first two arguments. It was the tail of `stepBoss` until then, and the
+ * cut is exactly where the gate ends and the throw begins.
+ */
+function throwAttack(
+  attack: BossAttack,
+  bullet: ShotRow,
+  boss: Entity,
+  phase: BossPhase,
+  tier: DifficultyRow,
+  ship: Entity,
+  shots: Pool<Entity>,
+  cameraAlong: number,
+  scrollPerStep: number,
+  bolts: Pool<Entity>,
+  rainRng: Rng,
+): void {
+  const dAlong = ship.along - boss.along;
+  const dAcross = ship.across - boss.across;
   const speed = bullet.speed * tier.shotSpeed;
 
   /*
@@ -510,9 +537,6 @@ export function stepBoss(
     centre `src/app/frame.ts`'s `spray` uses for an enemy, and it is stated in both places rather than
     shared because the two files have no other reason to import from each other.
   */
-  // The phase's own attack where it names one — 0248: the serpent throws a wall, then a spray, then
-  // lightning, and the row's `attack` is the first of those.
-  const attack = phase.attack ?? row.attack;
   const step = phase.shots > 1 ? phase.spread / (phase.shots - 1) : 0;
   switch (attack.kind) {
     case 'aimed':
@@ -672,12 +696,26 @@ export function stepBoss(
       }
       break;
     }
+    case 'heads': {
+      /*
+        The hydra's heads — 0254. One head a volley, round and round: the k-th volley of the fight
+        is the k-th head's attack with the k-th head's shot, and the count rides `firePhase` — the
+        field 0110 named for *where in its turn a body has got to*, which is exactly what this is.
+        A head's attack is thrown by this function again, on that head's terms; the type refuses a
+        head that is itself heads or a rake, so the recursion is one deep and `firePhase` has one
+        reader.
+      */
+      const n = attack.heads.length;
+      const head = attack.heads[((boss.firePhase % n) + n) % n]!;
+      boss.firePhase++;
+      throwAttack(head.attack, SHOTS[head.shot], boss, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);
+      break;
+    }
     default: {
       const never: never = attack;
       return never;
     }
   }
-  return direction;
 }
 
 /**

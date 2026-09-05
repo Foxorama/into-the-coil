@@ -148,7 +148,7 @@ export type BossMove =
  * unions with one vocabulary is the honest shape, and `docs/decisions/0110-an-attack-is-a-pattern.md`
  * is where the vocabulary is argued.
  */
-export const BOSS_ATTACK_KINDS = ['aimed', 'spray', 'rake', 'ring', 'wall', 'rain', 'whip', 'summon', 'beam'] as const;
+export const BOSS_ATTACK_KINDS = ['aimed', 'spray', 'rake', 'ring', 'wall', 'rain', 'whip', 'summon', 'beam', 'heads'] as const;
 
 /** Derived from the list, so an attack cannot exist in the union and be missing from the switch. */
 export type BossAttackKind = (typeof BOSS_ATTACK_KINDS)[number];
@@ -232,7 +232,29 @@ export type BossAttack =
    *
    * The phase's `shots` and `spread` are carried and unused, on `summon`'s terms.
    */
-  | { kind: 'beam'; warning: number; hold: number; halfWidth: number; from: readonly number[] };
+  | { kind: 'beam'; warning: number; hold: number; halfWidth: number; from: readonly number[] }
+  /**
+   * The hydra's heads — `docs/decisions/0254-the-hydra-grows-heads.md`. Asked for: *"at 80, 60,
+   * 40, 20% it spawns an extra head, the first head fires acid blasts, the second head adds flame
+   * ball attacks, the third head fires laser bolts, the 4th head fires frost attacks and the last
+   * head fires out void blasts."*
+   *
+   * ⚠️ **ONE HEAD A VOLLEY, ROUND AND ROUND.** Each head is a shot and an attack of its own; the
+   * k-th volley of the fight is the k-th head's, and a phase that grows a head grows the round.
+   * *"Adds"* is cumulative: every head stays in play, and the phase's quickening cadence is what
+   * keeps each head's own turn from slowing as the round lengthens. Every head at once would be
+   * one burst wearing five inks; every head in turn is five attacks the player reads one at a time.
+   *
+   * ⚠️ **A head is any attack but `heads` or `rake`**, by type: the first would be a round inside a
+   * round, and the second shares `firePhase`, the field the round counts on.
+   */
+  | { kind: 'heads'; heads: readonly Head[] };
+
+/** One of the hydra's heads — 0254: what it throws, and how. */
+export interface Head {
+  shot: ShotKind;
+  attack: Exclude<BossAttack, { kind: 'heads' } | { kind: 'rake' }>;
+}
 
 /**
  * Every way a boss can STAND in a phase. Closed.
@@ -1161,8 +1183,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
    *
    * ⚠️ **A head at every fifth of its health — 80, 60, 40 and 20 per cent — and every head is a
    * phase.** The ask gives each head its own attack: acid, then flame, then laser bolts, then
-   * frost, then void. Today a head is one more shot in the spray; the five kinds of shot are owed,
-   * one per head.
+   * frost, then void — and since 0254 each is a `Head`, taking its turn a volley.
    */
   hydra: {
     move: { kind: 'bob', amplitude: 18, wavelength: 220 },
@@ -1179,13 +1200,79 @@ export const BOSSES: Record<BossKind, BossRow> = {
     drift: 5,
     driftWavelength: 240,
     patrol: 0.3,
-    shot: 'spit',
+    shot: 'acid',
+    /*
+      ⚠️ **A HEAD A FIFTH, AND EVERY HEAD STAYS — 0254.** The row's attack is the first head alone:
+      acid, sprayed. Each phase's is the round so far with one more: flame sprayed at 80%, a laser
+      from a side head at 60%, a wall of frost at 40%, a ring of void at 20%. The phase's `shots`
+      and `spread` are every head's fan; the laser and the ring read them their own way.
+    */
     phases: [
-      { upTo: 1, fireEvery: 72, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.8, fireEvery: 66, shots: 2, spread: 0.4, patrolScale: 1.2, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.6, fireEvery: 60, shots: 3, spread: 0.7, patrolScale: 1.4, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.4, fireEvery: 54, shots: 4, spread: 1, patrolScale: 1.6, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.2, fireEvery: 48, shots: 5, spread: 1.3, patrolScale: 1.8, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 1, fireEvery: 72, shots: 3, spread: 0.6, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
+      {
+        upTo: 0.8,
+        fireEvery: 66,
+        shots: 3,
+        spread: 0.6,
+        patrolScale: 1.2,
+        stance: { kind: 'volley' },
+        shot: null,
+        attack: { kind: 'heads', heads: [{ shot: 'acid', attack: { kind: 'spray' } }, { shot: 'flame', attack: { kind: 'spray' } }] },
+      },
+      {
+        upTo: 0.6,
+        fireEvery: 60,
+        shots: 4,
+        spread: 0.8,
+        patrolScale: 1.4,
+        stance: { kind: 'volley' },
+        shot: null,
+        attack: {
+          kind: 'heads',
+          heads: [
+            { shot: 'acid', attack: { kind: 'spray' } },
+            { shot: 'flame', attack: { kind: 'spray' } },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [-9] } },
+          ],
+        },
+      },
+      {
+        upTo: 0.4,
+        fireEvery: 54,
+        shots: 4,
+        spread: 0.8,
+        patrolScale: 1.6,
+        stance: { kind: 'volley' },
+        shot: null,
+        attack: {
+          kind: 'heads',
+          heads: [
+            { shot: 'acid', attack: { kind: 'spray' } },
+            { shot: 'flame', attack: { kind: 'spray' } },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [-9] } },
+            { shot: 'frost', attack: { kind: 'wall', gap: 12 } },
+          ],
+        },
+      },
+      {
+        upTo: 0.2,
+        fireEvery: 48,
+        shots: 6,
+        spread: 1,
+        patrolScale: 1.8,
+        stance: { kind: 'volley' },
+        shot: null,
+        attack: {
+          kind: 'heads',
+          heads: [
+            { shot: 'acid', attack: { kind: 'spray' } },
+            { shot: 'flame', attack: { kind: 'spray' } },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [-9] } },
+            { shot: 'frost', attack: { kind: 'wall', gap: 12 } },
+            { shot: 'void', attack: { kind: 'ring' } },
+          ],
+        },
+      },
     ],
   },
   /**
