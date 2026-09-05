@@ -224,7 +224,7 @@ projectiles' orange, the arc in the ship's, the shuriken in steel, the seeker in
 | gun | what it does | a tier buys |
 |---|---|---|
 | **pulse** | the base weapon: fast, small, reaches the edge of the screen and can miss | a barrel **and** a fire-rate step |
-| **arc** | chain lightning: from the nose to the nearest body in reach, then the next, three links at most; on a lone boss it jumps around the hull. Cannot miss, cannot reach — its reach has been cut back twice from play, [0239](decisions/0239-the-guns-answer-the-third-play-test.md), [0241](decisions/0241-the-ship-wears-its-colours.md) | a link, a fire-rate step, and weight |
+| **arc** | chain lightning: from the nose to the nearest body in reach whose whole hull is on the screen, then the next, three links at most; on a lone boss it jumps around the hull. Cannot miss, cannot reach — its reach has been cut back twice from play, [0239](decisions/0239-the-guns-answer-the-third-play-test.md), [0241](decisions/0241-the-ship-wears-its-colours.md), and bounded by the screen, [0257](decisions/0257-the-arc-lands-on-the-screen.md) | a link, a fire-rate step, and weight |
 | **shuriken** | steel blades about the ship's size, thrown in pairs from the wingtips: each goes up the lane and swings across it, the two a half-turn apart and crossing ahead of the nose, so their tracks are the two strands of a helix to the leading edge of the screen, landing on everything they cross once per impact flash; not spent by arriving — [0234](decisions/0234-a-blade-circles-the-ship.md), [0238](decisions/0238-the-picture-answers-the-second-play-test.md), [0244](decisions/0244-a-blade-rides-a-helix.md) | a wider band **and** a fire-rate step |
 
 | tube | what it does | a tier buys |

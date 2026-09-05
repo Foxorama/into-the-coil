@@ -131,8 +131,9 @@ export const PROBES = [
     guard: 'beyond its reach it fires dry',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, w.weapon.reach, true);',
-      replace: '    const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, 1e9, true);',
+      // ⚠️ Re-anchored by 0257, which bounds the search by the screen's edge as well.
+      find: '    const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, w.weapon.reach, true, edge);',
+      replace: '    const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, 1e9, true, edge);',
     },
   },
   {

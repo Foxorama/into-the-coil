@@ -434,6 +434,29 @@ describe('0233 — the arc is chain lightning', () => {
     expect(cues, 'a dry volley sounded a strike that did not happen').not.toContain('zap');
   });
 
+  it('0257 — THE SCREEN: from the front of the box, at every tier, a body whose hull is on the screen is struck and one crossing the leading edge is not', () => {
+    /*
+      `docs/decisions/0257-the-arc-lands-on-the-screen.md`. Reported from the alpha play: *"chain
+      lightning jumps too far, enemies don't even get a chance to get on screen."* The ship is put
+      at the very front of its box, where the cap's reach runs ninety units past the view; a body a
+      unit inside the leading edge, hull and all, is struck, and a body whose hull crosses it is
+      not — in the player's own units, the screen's edge, at every rung of the ladder.
+    */
+    for (let tier = 0; tier <= UPGRADE_TIERS; tier++) {
+      const { world, frame } = armed('arc', tier);
+      world.ship.along = world.cameraAlong + PLAYER_LEAD;
+      world.ship.prevAlong = world.ship.along;
+      const edge = world.cameraAlong + world.view.alongSpan;
+      const radius = ENEMIES.turret.radius;
+      const inside = target(world, edge - radius - 1 - world.ship.along, 6);
+      const crossing = target(world, edge - radius + 2 - world.ship.along, -6);
+      expect(edge - world.ship.along, 'the fixture put the ship somewhere the reach does not cross the edge').toBeLessThan(world.weapon.reach);
+      frame.step();
+      expect(inside.health, `at tier ${tier} a body whose whole hull is on the screen was not struck`).toBe(99 - world.weapon.damage);
+      expect(crossing.health, `at tier ${tier} a body still crossing the leading edge was struck`).toBe(99);
+    }
+  });
+
   it('ON A BOSS ALONE, every link lands on the boss, each at a different point inside it', () => {
     /*
       Asked for: *"for single target bosses it needs to arc and bounce and jump around to hit

@@ -2098,11 +2098,20 @@ function fireArc(w: World): void {
   // Once a chain has reached the boss it stays on the boss: the rest of its links jump around the
   // hull rather than back out to something small behind it.
   let onBoss = false;
+  /*
+    ⚠️ **THE SCREEN BOUNDS THE CHAIN — 0257.** The leading edge of the view the player has, exactly
+    as the seeker's hunt is bounded (0246): a link may land only on a body whose whole hull is
+    inside it. A ship at the front of its box with the cap's reach was striking bodies ninety units
+    past the screen — *"enemies don't even get a chance to get on screen"* — and the reach ladder
+    was never the quantity; where the ship stands is. `w.view` rather than the widest view, because
+    the claim is about what THIS player can see, and a wider screen sees more.
+  */
+  const edge = w.cameraAlong + w.view.alongSpan;
   for (let link = 0; link < w.weapon.links; link++) {
     let toAlong: number;
     let toAcross: number;
-    const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, w.weapon.reach, true);
-    const boss = w.bossPool.size > 0 ? nearestFrom(w.bossPool, fromAlong, fromAcross, w.weapon.reach, false) : -1;
+    const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, w.weapon.reach, true, edge);
+    const boss = w.bossPool.size > 0 ? nearestFrom(w.bossPool, fromAlong, fromAcross, w.weapon.reach, false, edge) : -1;
     if (enemy >= 0 && (boss < 0 || nearer(w.enemies.at(enemy), w.bossPool.at(0), fromAlong, fromAcross))) {
       const target = w.enemies.at(enemy);
       toAlong = target.along;
