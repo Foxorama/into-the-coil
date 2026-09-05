@@ -198,7 +198,15 @@ describe('0196 — the clouds are counted against the accessibility floor', () =
       }
     }
     expect(checked, 'nothing was measured').toBeGreaterThan(0);
-  });
+    /*
+      ⚠️ **A MINUTE, NOT VITEST'S FIVE SECONDS, and 2026-09-05 is why.** This bakes every place's sky
+      at the nebula's size — five and a half seconds alone on this machine — and timed out under
+      `npm run check`'s full parallel suite while passing alone. Per
+      `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md` that is the wall
+      clock being the wrong quantity for a bake that cannot hang, so the bound only stops a runaway;
+      `tests/sound.test.ts`'s prewarm guard got the same treatment the same day.
+    */
+  }, 60_000);
 
   it('and the cover COUNTS THE PILE, because a guard cannot see its own measurement understating', () => {
     /*

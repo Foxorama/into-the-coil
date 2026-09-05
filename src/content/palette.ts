@@ -45,6 +45,14 @@ export type Ink =
   | 'bullet'
   | 'hazard'
   | 'pickup'
+  /*
+    ⚠️ **`blade` is the player's steel — 0238.** Played: *"shurikens need to be… steel coloured."* A
+    role rather than a colour name, on this file's own rule: what it means is *a blade of mine, in
+    flight*, and the high-contrast palette answers it in its own terms. It is a MEANING ink and is
+    held to every floor a meaning ink is held to; it is in no critical pair, because the blade's
+    silhouette (a star bigger than the ship) is the channel that separates it from everything else.
+  */
+  | 'blade'
   | 'impact'
   | DecorInk;
 
@@ -108,6 +116,9 @@ export const PALETTES: Record<PaletteName, Palette> = {
     // Near-white and deliberately the brightest thing in the palette: a flash reads as an impact
     // because it is momentarily louder than everything around it, not because of its hue.
     impact: '#fff4e6',
+    // Steel: a cool light grey, lighter than `player` and cooler than `impact`, so a ring of blades
+    // reads as metal round the ship rather than as more of the ship or as a field of flashes. 0238.
+    blade: '#cfd8e3',
     /*
       ── THE THREE THAT MEAN NOTHING — 0194 ────────────────────────────────────────────────────────
 
@@ -145,6 +156,9 @@ export const PALETTES: Record<PaletteName, Palette> = {
     hazard: '#ff00ff',
     pickup: '#ffffff',
     impact: '#ffffff',
+    // A step below the two whites, so a blade and a pickup are apart on the one channel this
+    // palette exists for, and still far above the void. 0238.
+    blade: '#c0c0c0',
     /*
       ⚠️ **DECORATION IS THE VOID HERE, WHICH IS THE SETTING DOING ITS JOB RATHER THAN A GAP** —
       `docs/decisions/0024-the-accessibility-floor-is-settings.md`: *there is one game and it is the

@@ -38,6 +38,7 @@ const INKS: readonly Ink[] = [
   'hazard',
   'pickup',
   'impact',
+  'blade',
   'glass',
   'flame',
   'trim',

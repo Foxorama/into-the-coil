@@ -420,7 +420,13 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   pickupBomb: 'pickup',
   // The bullet ink, because it is a bullet. What separates it from the pulse is shape and size.
   missile: 'bullet',
-  seeker: 'bullet',
+  /*
+    ⚠️ **THE SHIP'S OWN INK AND NOT THE PULSE'S — 0238.** Played: *"need more visual distinction
+    between actual missile types."* At four units a swept fin against a notched tail is not a cue;
+    an ink is. The seeker is the one shot that behaves like the ship — it turns — so it wears the
+    ship's colour, and the straight missile keeps the pulse's.
+  */
+  seeker: 'player',
   bomb: 'bullet',
   /*
     ⚠️ **THE HAZARD INK, WHICH THE PLAYER'S OWN WEAPONS DO NOT USE — and that is the point.** A bomb's
@@ -450,8 +456,9 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // there is — the bolt's core is stroked in the same one. 0233.
   arcNode: 'impact',
   // A blade is a thing the player fired, in the bullet ink like the pulse and the missile — 0234.
-  shuriken: 'bullet',
-  shurikenTurn: 'bullet',
+  // Steel, since 0238 — *"steel coloured"* — an ink of its own, because a blade is not a bullet.
+  shuriken: 'blade',
+  shurikenTurn: 'blade',
   /*
     THE HURT SILHOUETTES: the SAME shape in a different ink.
 
@@ -763,6 +770,14 @@ const PICKUP_GLYPH = 0.75;
 
 /** The bubble's outer edge, in the frame's `r`. Inside the box: `1.14 × 0.42` of the size. */
 const PICKUP_HALO = 1.14;
+
+/**
+ * How much of its box a glowing shot's body takes — the blade and the seeker, 0238. The rest of the
+ * box is a soft glow in the body's own ink behind it, on the pickups' terms (`bubble`). The sprite
+ * extents in `src/content/sprites.ts` are sized with this in mind, and `tests/combat.test.ts` holds
+ * every hurtbox inside what is drawn.
+ */
+const BLADE_GLYPH = 0.8;
 
 /**
  * A pickup's bubble: a soft glow and a thin ring in the pickup ink, painted BEHIND the glyph the arm
@@ -3997,10 +4012,38 @@ export function drawKind(
     }
     case 'shuriken':
     case 'shurikenTurn': {
-      // The blade itself, in flight: the same hooked star, an eighth of a turn apart between the two.
-      traceStar(ctx, f, 1, kind === 'shuriken' ? 0 : Math.PI / 4);
+      /*
+        The blade itself, in flight: the same hooked star, an eighth of a turn apart between the two.
+
+        ⚠️ **STEEL, BIG, AND LIT — 0238.** Played twice: *"shuriken stars need to be a lot bigger"*,
+        then *"bigger and steel coloured, also with a bit of a glow to them."* The star wears the
+        `blade` ink rather than the pulse's orange, is drawn at `BLADE_GLYPH` of a box that is now
+        bigger than the ship, and the rest of the box is a soft glow in the same ink behind it
+        (`destination-over`, on the pickups' terms — 0236). Each blade's trailing edge is in shadow
+        and its leading edge catches the light, which is what makes a flat star read as metal.
+      */
+      const fg: Frame = { half, r: r * BLADE_GLYPH };
+      const phase = kind === 'shuriken' ? 0 : Math.PI / 4;
+      traceStar(ctx, fg, 1, phase);
       seal(ctx);
-      disc(ctx, f, shade(palette.bullet, -0.35), 0, 0, 0.14);
+      ctx.globalCompositeOperation = 'destination-over';
+      glow(ctx, f, palette.blade, 0, 0, 1, 0.55);
+      ctx.globalCompositeOperation = 'source-over';
+      for (let k = 0; k < 4; k++) {
+        const a = phase + (k * Math.PI) / 2;
+        poly(ctx, fg, shade(palette.blade, -0.38), [
+          [Math.cos(a) * 0.96, Math.sin(a) * 0.96],
+          [Math.cos(a + 0.7) * 0.36, Math.sin(a + 0.7) * 0.36],
+          [Math.cos(a + 0.45) * 0.34, Math.sin(a + 0.45) * 0.34],
+        ]);
+        // Wide enough to be drawn at the shipped camera — `tests/accents.test.ts` holds the floor.
+        poly(ctx, fg, shade(palette.blade, 0.45), [
+          [Math.cos(a) * 0.86, Math.sin(a) * 0.86],
+          [Math.cos(a - 0.16) * 0.36, Math.sin(a - 0.16) * 0.36],
+          [Math.cos(a + 0.1) * 0.52, Math.sin(a + 0.1) * 0.52],
+        ]);
+      }
+      disc(ctx, fg, shade(palette.blade, -0.55), 0, 0, 0.16);
       return;
     }
     case 'pickupArc': {
@@ -4093,28 +4136,38 @@ export function drawKind(
       /*
         THE HOMING MISSILE — 0235: a dart with swept-back fins and an eye at the nose. Off the
         straight missile by the fins (swept where the missile's tail is notched) and by the eye,
-        which is a mark the missile does not carry; the same size, because it is the same weight of
-        thing leaving the same tube.
+        which is a mark the missile does not carry.
+
+        ⚠️ **AND IN THE SHIP'S INK, WITH A GLOW, A SIZE UP — 0238.** Played: *"need more visual
+        distinction between actual missile types."* The fins and the eye were the whole difference
+        at 3.4 units and they did not read. Now the dart is the ship's colour (`INK_OF`), drawn at
+        `BLADE_GLYPH` of a box a size up, with a soft glow in the same ink filling the rest of the
+        box behind it — three channels the straight missile has none of.
       */
-      ctx.moveTo(half + r, half);
-      ctx.lineTo(half - r * 0.2, half - r * 0.42);
-      ctx.lineTo(half - r * 0.62, half - r * 0.3);
-      ctx.lineTo(half - r, half - r * 0.72);
-      ctx.lineTo(half - r * 0.7, half);
-      ctx.lineTo(half - r, half + r * 0.72);
-      ctx.lineTo(half - r * 0.62, half + r * 0.3);
-      ctx.lineTo(half - r * 0.2, half + r * 0.42);
+      const fg: Frame = { half, r: r * BLADE_GLYPH };
+      const g = fg.r;
+      ctx.moveTo(half + g, half);
+      ctx.lineTo(half - g * 0.2, half - g * 0.42);
+      ctx.lineTo(half - g * 0.62, half - g * 0.3);
+      ctx.lineTo(half - g, half - g * 0.72);
+      ctx.lineTo(half - g * 0.7, half);
+      ctx.lineTo(half - g, half + g * 0.72);
+      ctx.lineTo(half - g * 0.62, half + g * 0.3);
+      ctx.lineTo(half - g * 0.2, half + g * 0.42);
       ctx.closePath();
       seal(ctx);
-      poly(ctx, f, shade(palette.bullet, -0.32), [
+      ctx.globalCompositeOperation = 'destination-over';
+      glow(ctx, f, palette.player, 0, 0, 1, 0.5);
+      ctx.globalCompositeOperation = 'source-over';
+      poly(ctx, fg, shade(palette.player, -0.32), [
         [0.8, 0.04],
         [-0.22, 0.4],
         [-0.62, 0.28],
         [-0.66, 0.04],
       ]);
       // Back from the nose, where the dart is deep enough to hold an eye this size.
-      disc(ctx, f, palette.glass, 0.3, 0, 0.18);
-      disc(ctx, f, shade(palette.glass, 0.6), 0.33, -0.03, 0.13);
+      disc(ctx, fg, palette.glass, 0.3, 0, 0.2);
+      disc(ctx, fg, shade(palette.glass, 0.6), 0.34, -0.03, 0.12);
       return;
     case 'pickupMissile': {
       /*

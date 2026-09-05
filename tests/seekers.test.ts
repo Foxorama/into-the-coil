@@ -13,6 +13,8 @@ import { MISSILES } from '../src/content/missiles.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { weaponFor, type UpgradeKind } from '../src/content/pickups.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
+import { SPRITE_KINDS } from '../src/content/sprites.ts';
+import { INK_OF } from '../src/render/bake.ts';
 import { reset } from '../src/sim/entity.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
 
@@ -117,5 +119,18 @@ describe('0235 — a seeker hunts the nearest body', () => {
       widest = Math.max(widest, Math.abs(a.across - b.across));
     }
     expect(widest, 'the pair flew as one line').toBeGreaterThan(SHOTS.seeker.radius * 2);
+  });
+
+  it('THE TWO TUBES: a seeker is told from a missile by its ink as well as its shape', () => {
+    /*
+      0238, from the second play: *"need more visual distinction between actual missile types."*
+      0081's rule is that what the player must tell apart is told apart by more than ink, and the
+      two already differed in silhouette; that was not enough at four units. This holds that the
+      ink is a channel too, and that the two are not one bitmap.
+    */
+    const seeker = SHOTS[MISSILES.homing.shot];
+    const missile = SHOTS[MISSILES.straight.shot];
+    expect(seeker.sprite, 'the two missiles are one bitmap').not.toBe(missile.sprite);
+    expect(INK_OF[SPRITE_KINDS[seeker.sprite]!], 'the two missiles are drawn in one ink').not.toBe(INK_OF[SPRITE_KINDS[missile.sprite]!]);
   });
 });

@@ -22,6 +22,8 @@ import { ENEMIES } from '../src/content/enemies.ts';
 import { CUES, TWIN_KINDS } from '../src/content/cues.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { reset } from '../src/sim/entity.ts';
+import { SPRITE_KINDS } from '../src/content/sprites.ts';
+import { INK_OF } from '../src/render/bake.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
 
 const NEVER = Number.MAX_SAFE_INTEGER;
@@ -251,6 +253,18 @@ describe('0234 — a blade circles the ship', () => {
     }
     expect([...seen].sort(), 'the blade is not drawn as both of its turns').toEqual([SHOTS.shuriken.sprite, SHOTS.shuriken.spriteHit].sort());
     expect(changes, 'the blade turned once and stopped').toBeGreaterThan(4);
+  });
+
+  it('THE STEEL: a blade wears an ink of its own, not the pulse’s, and both of its turns wear it', () => {
+    /*
+      0238, from the second play: *"shurikens need to be bigger and steel coloured."* A blade is not
+      a bullet — it is the one shot that stays about the ship — and 0081's rule is that what the
+      player must tell apart is told apart by more than ink; this holds that the ink is at least one
+      of the channels, and that the star does not change colour as it spins.
+    */
+    const blade = INK_OF[SPRITE_KINDS[SHOTS.shuriken.sprite]!];
+    expect(blade, 'a blade is drawn in the pulse’s ink').not.toBe(INK_OF[SPRITE_KINDS[SHOTS.pulse.sprite]!]);
+    expect(INK_OF[SPRITE_KINDS[SHOTS.shuriken.spriteHit]!], 'the blade changes ink as it spins').toBe(blade);
   });
 
   it('THE CUES: a throw sounds as its own cue, and a bite sounds as a hit', () => {

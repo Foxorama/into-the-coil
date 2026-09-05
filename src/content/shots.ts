@@ -136,8 +136,9 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * in `src/app/frame.ts`. Until 0237 this was 0.28 units a step and the spiral's width was
    * `speed × orbit`; now the spiral's width is the screen's, wherever the ship is.
    *
-   * ⚠️ **`radius` 3.5 — a star the size of the ship, since 0237.** Played at 1.4: *"shuriken stars
-   * need to be a lot bigger."* The hurtbox is the sweep, so a bigger blade is a wider sweep too.
+   * ⚠️ **`radius` 4.8 — a star bigger than the ship, since 0238.** Played at 1.4: *"shuriken stars
+   * need to be a lot bigger"*; at 3.5: *"bigger and steel coloured."* The hurtbox is the sweep, so a
+   * bigger blade is a wider sweep too, and the balance of that is a hand's.
    *
    * ⚠️ **`spriteHit` IS THE OTHER TURN OF THE STAR, AND THAT IS NOT A FLASH.** A blade never
    * flashes — what it survives is arriving, not being hit, and nothing in the game shoots it — so
@@ -145,7 +146,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * `src/app/frame.ts` swaps the two every few steps to spin it. `blit` cannot rotate; two bitmaps
    * an eighth of a turn apart are what a spinning shuriken is.
    */
-  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 3.5, health: BLADE_EDGE, damage: 1, speed: 0 },
+  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 4.8, health: BLADE_EDGE, damage: 1, speed: 0 },
   /**
    * What an enemy sends back. **Slower than the ship**, which is the whole of what makes it
    * dodgeable rather than a coin flip: a player who reacts can always leave the line it is on.
@@ -223,7 +224,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * the ask, and what pays for the guidance is the third pulse. Slower than the straight missile
    * too, so a body it has to come about for is reached a beat later than one it was pointed at.
    */
-  seeker: { sprite: SPRITE.seeker, spriteHit: SPRITE.seeker, radius: 1.2, health: 1, damage: 2, speed: 1.4 },
+  seeker: { sprite: SPRITE.seeker, spriteHit: SPRITE.seeker, radius: 1.4, health: 1, damage: 2, speed: 1.4 },
   /**
    * The bomb itself, which hurts nothing at all.
    *

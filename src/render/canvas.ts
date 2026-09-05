@@ -105,6 +105,12 @@ export class CanvasSurface implements Surface {
    * a darker glow around it."* A bolt over a busy sky had nothing to stand against; the halo is the
    * space colour at half alpha, twice the glow's width, and it is what gives the glow an edge.
    *
+   * ⚠️ **THE FLASH IS THE SECOND'S — 0238.** *"Lightning needs more glow around the edges, not
+   * specific details but more like the lightning flash."* A fourth stroke, first and under the
+   * others: the glow ink at a sixth of the alpha and fourteen times the core's width — a wash of
+   * light round the whole bolt that fades with it, which is what a flash is. Still no `shadowBlur`,
+   * and still one path: four strokes of the same polyline.
+   *
    * ⚠️ **Nothing here allocates**: `beginPath`, `moveTo`, `lineTo` and `stroke` write into the
    * context's own path, and the points are the caller's buffer.
    */
@@ -117,13 +123,22 @@ export class CanvasSurface implements Surface {
     ctx.moveTo(points[0]!, points[1]!);
     if (count === 1) ctx.lineTo(points[0]!, points[1]!);
     for (let i = 1; i < count; i++) ctx.lineTo(points[i * 2]!, points[i * 2 + 1]!);
-    ctx.globalAlpha = alpha * 0.5;
-    ctx.strokeStyle = this.boltDark;
-    ctx.lineWidth = width * 6;
-    ctx.stroke();
-    ctx.globalAlpha = alpha * 0.35;
+    // The flash and the dark halo wrap the bolt and not its dots: a dot with its own wash is a
+    // bead, a dot with its own halo is a dark disc punched in the flash, and the eye reads either as
+    // a string of lights rather than as one flash. A dot is its glow and its core.
+    if (count > 1) {
+      ctx.globalAlpha = alpha * 0.16;
+      ctx.strokeStyle = this.boltGlow;
+      ctx.lineWidth = width * 14;
+      ctx.stroke();
+      ctx.globalAlpha = alpha * 0.5;
+      ctx.strokeStyle = this.boltDark;
+      ctx.lineWidth = width * 6;
+      ctx.stroke();
+    }
+    ctx.globalAlpha = alpha * 0.4;
     ctx.strokeStyle = this.boltGlow;
-    ctx.lineWidth = width * 3;
+    ctx.lineWidth = width * 4;
     ctx.stroke();
     ctx.globalAlpha = alpha;
     ctx.strokeStyle = this.boltCore;
