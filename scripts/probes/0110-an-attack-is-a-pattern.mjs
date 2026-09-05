@@ -13,18 +13,20 @@ export const PROBES = [
       ⚠️ THE REPORTED ONE. It was *the turret put back on an aimed shot*, which tipped a roster of
       five shooters back to a majority that points at the player — and 0232 doubled the roster, so
       the turret alone no longer tips it: seven of ten still send a pattern with the turret aimed.
-      That is worth knowing about the field. What reaches the guard now is the four patterned
-      signatures leaving the roster, which puts the six that remain at three and three — the edit a
-      hand makes trimming the kinds list without reading what each kind sends.
+      That is worth knowing about the field. What reaches the guard now is six of the eight
+      patterned shooters leaving the roster, which puts the four that remain at two and two — the
+      edit a hand makes trimming the kinds list without reading what each kind sends.
+
+      ⚠️ Re-aimed by 0258: with one pilot a level, two of ten shooters aim (the moth and the gaze)
+      and eight send a pattern, so the old break — four kinds off the roster — left five patterned
+      against one aimed and the guard green.
     */
-    broke: 'the four patterned signatures dropped from the roster, so half of what shoots points at the player',
+    broke: 'six of the eight patterned shooters dropped from the roster, so half of what shoots points at the player',
     guard: 'THE REPORTED ONE: most of what shoots is not aimed at the player',
     edit: {
       path: 'src/content/enemies.ts',
-      // ⚠️ Re-anchored by 0249, which put the kite after the raptor, and by 0255, which put the
-      // moon jelly after the kite. Same break.
-      find: "  'picket',\n  'moth',\n  'raptor',\n  'kite',\n  'moonJelly',\n  'sentry',\n  'shard',\n  'spore',\n  'gaze',\n];",
-      replace: "  'raptor',\n  'kite',\n  'moonJelly',\n  'spore',\n  'gaze',\n];",
+      find: "  'lancer',\n  'weaver',\n  'turret',\n  'charger',\n  'warden',\n  'spinner',\n  'sower',\n  'picket',\n  'moth',\n  'raptor',\n  'kite',\n  'moonJelly',\n  'sentry',\n",
+      replace: "  'weaver',\n  'charger',\n  'picket',\n  'moth',\n  'raptor',\n  'kite',\n  'moonJelly',\n",
     },
   },
   {
