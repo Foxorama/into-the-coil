@@ -48,6 +48,10 @@ that does not.
   reads as hunting or as lost.
 - **The balance** of two against three, which is a hand's.
 
+⚠️ **Played, and the balance was the report** — [0246](0246-a-seeker-hunts-on-the-screen.md):
+*"way too strong … 15-20 on screen at a time."* The hunt is bounded by the screen as a box rather
+than by a reach, and by a fuse; *any direction* still holds inside a second and a half.
+
 ## Rollback
 
 ⚠️ **None owed —** [0001](0001-revertability-not-risk-rating.md). A row, a guidance and a field on

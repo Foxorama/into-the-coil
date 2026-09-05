@@ -333,6 +333,40 @@ export function nearestFrom(targets: Pool<Entity>, along: number, across: number
 }
 
 /**
+ * The nearest body whose CENTRE is inside a box — `docs/decisions/0246-a-seeker-hunts-on-the-screen.md`.
+ *
+ * `nearestFrom` with the screen as the bound instead of a reach: a seeker may hunt only what the
+ * player can see, and a reach measured from the missile cannot say that — a missile at the leading
+ * edge with a long reach sees a body the screen does not. `fromAlong … toAcross` is the box, and a
+ * body outside it is not a target however near it is. Allocation-free and bounded by the pool, on
+ * `nearestFrom`'s terms.
+ */
+export function nearestInBox(
+  targets: Pool<Entity>,
+  along: number,
+  across: number,
+  fromAlong: number,
+  toAlong: number,
+  fromAcross: number,
+  toAcross: number,
+): number {
+  let best = -1;
+  let bestGap = Number.POSITIVE_INFINITY;
+  for (let i = targets.size - 1; i >= 0; i--) {
+    const target = targets.at(i);
+    if (target.invulnFor > 0) continue;
+    if (target.along < fromAlong || target.along > toAlong || target.across < fromAcross || target.across > toAcross) continue;
+    const dAlong = target.along - along;
+    const dAcross = target.across - across;
+    const gap = Math.sqrt(dAlong * dAlong + dAcross * dAcross) - target.radius;
+    if (gap > bestGap) continue;
+    bestGap = gap;
+    best = i;
+  }
+  return best;
+}
+
+/**
  * One hit landed by hand on `targets[index]`, on exactly `collideInto`'s terms for what a hit is:
  * damage off the health, the target retired and logged if that emptied it, flashed if it did not.
  * Returns whether it was killed.
