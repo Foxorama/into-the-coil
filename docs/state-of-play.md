@@ -128,6 +128,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a blade coils ahead of the ship: pairs from the wingtips, a chain of loops up the lane, crossing at the nose — the ring about the ship is gone** | [0242](decisions/0242-a-blade-coils-ahead-of-the-ship.md), [`the-coil-drawn`](../reports/the-coil-drawn-2026-09-05.md) |
 | **a death throws back one piece per kind, carrying the count, holding its face, wearing ×N** | [0243](decisions/0243-a-death-throws-back-one-piece-per-kind.md), [`the-scatter-under-fire`](../reports/the-scatter-under-fire-2026-09-05.md) |
 | **a blade rides a helix: two strands from the wingtips crossing up the lane, a quarter faster, the star a twelfth of the lane** | [0244](decisions/0244-a-blade-rides-a-helix.md), [`the-helix-asked`](../reports/the-helix-asked-2026-09-05.md) |
+| **a wall-clock budget is three times the worst cost measured under the suite — the fifth bake to time out under the proof was the one that got measured** | [0245](decisions/0245-a-budget-is-sized-under-load.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |

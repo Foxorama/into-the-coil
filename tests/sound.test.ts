@@ -614,7 +614,9 @@ describe('the cue table', () => {
         slices,
         `the boundary bake yielded ${slices} times for ${jobs} jobs, which is the schedule 0157 removed`,
       ).toBeLessThanOrEqual(Math.ceil(jobs / PREWARM_SLICE_JOBS));
-    }, 60_000);
+      // Two minutes: measured 30–35 s under the whole suite, and a budget is three times the worst
+      // loaded cost — `docs/decisions/0245-a-budget-is-sized-under-load.md`.
+    }, 120_000);
 
     it('0157 — AND A PRESS FINISHES THE PREWARM RATHER THAN STARTING AGAIN', () => {
       /*
@@ -656,9 +658,11 @@ describe('the cue table', () => {
         ⚠️ **The default five seconds is not enough and that is the SUBJECT, not flake** — the same
         reasoning the prewarmed-versus-cold guard above records. This drives the prewarm to
         completion twice, and a whole prewarm is about four seconds of real synthesis.
-        `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`.
+        `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`. Measured
+        24 s under the whole suite; ninety is three times that —
+        `docs/decisions/0245-a-budget-is-sized-under-load.md`.
       */
-    }, 60_000);
+    }, 90_000);
 
     describe('0133 — and a PLACE is baked at the boundary, on the same terms', () => {
       it('THE TRIGGER: the place baked is the one the RUN is heading for, not the one on the field', () => {

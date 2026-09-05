@@ -250,6 +250,10 @@ const WITHOUT_PROBES: Record<string, string> = {
   // flaky". What it carries instead of a probe is a measurement: 5/5 in both directions on the
   // shipped page, and a full `npm run prove` under the load that produced the original failure.
   '0044': 'its subject is what a person does when a guard goes red, and no edit to any file can stage that; what backs it is a measurement rather than a break',
+  // 0044 applied to the budgets themselves: a budget's number cannot be broken in a way the suite
+  // would see, because lowering one reddens a test only under a load a probe cannot arrange. What
+  // backs it is the table of alone, suite and baseline costs in the decision.
+  '0245': 'a budget goes red only under a load a probe cannot stage; what backs it is the measured table of costs alone, under the suite and under the baseline',
   // The third exemption that is not a hole, and the first one that is a REVERSAL rather than a gap.
   // 0052 shipped with probes; 0082 removed the mechanism they broke, so they were deleted along with
   // `CYCLE`, `faceOf` and `tests/cycling.test.ts`. Its confirmation table is still a true account of

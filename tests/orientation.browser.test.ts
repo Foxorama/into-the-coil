@@ -212,7 +212,9 @@ describe.runIf(chromePath)('the orientation gate', () => {
     expect(frozen[0], 'the canvas was never drawn, so this proves nothing').not.toBe('');
     expect(moved(frozen), 'the world kept moving behind the prompt').toBe(false);
     await page.context().close();
-  }, 30_000);
+    // A minute: measured 14 s under the whole suite, and a budget is three times the worst loaded
+    // cost — `docs/decisions/0245-a-budget-is-sized-under-load.md`.
+  }, 60_000);
 
   it('the prompt is text, so it does not rely on reading a pictogram', async () => {
     // 0024's floor, applied to the one screen whose entire job is explaining why nothing is running.
@@ -247,7 +249,8 @@ describe.runIf(chromePath)('the orientation gate', () => {
     );
     expect(await canvasShown(page)).toBe(false);
     await page.context().close();
-  }, 30_000);
+    // A minute, on the same measurement as the gate above — 0245.
+  }, 60_000);
 
   it('resumes on rotation back, and draws again', async () => {
     // The seam between the two states, driven the way a player drives it. 0023's invariance is why
