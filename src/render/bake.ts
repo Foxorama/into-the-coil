@@ -4221,10 +4221,14 @@ export function drawKind(
           [Math.cos(a + 0.45) * 0.34, Math.sin(a + 0.45) * 0.34],
         ]);
         // Wide enough to be drawn at the shipped camera — `tests/accents.test.ts` holds the floor.
+        // Widened a third when the box went to a twelfth of the lane (0244): at eight units the
+        // sliver it was came out at 2.1 px on a 1280×720 screen, under 0106's floor of 2.5. It
+        // widens on the trailing side, up to the shadow's edge: the leading point is already on
+        // the star's own edge, and a mark over the hull is the other guard in the same file.
         poly(ctx, fg, shade(palette.blade, 0.45), [
           [Math.cos(a) * 0.86, Math.sin(a) * 0.86],
           [Math.cos(a - 0.16) * 0.36, Math.sin(a - 0.16) * 0.36],
-          [Math.cos(a + 0.1) * 0.52, Math.sin(a + 0.1) * 0.52],
+          [Math.cos(a + 0.17) * 0.52, Math.sin(a + 0.17) * 0.52],
         ]);
       }
       disc(ctx, fg, shade(palette.blade, -0.55), 0, 0, 0.16);
