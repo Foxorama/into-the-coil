@@ -1019,22 +1019,62 @@ describe('0111 — a boss has one idea, and the picture mentions its phases', ()
     silhouettes on it"* — and it was an accurate reading of `stepBoss`.
   */
 
-  it('THE REPORTED ONE: no two bosses fly the same way AND shoot the same way', () => {
+  it('THE REPORTED ONE: no two mid-bosses fly the same way AND shoot the same way, and no two real bosses do either', () => {
     /*
       ⚠️ **The pair, not either half, which is what makes seven fights seven fights.** Two bosses may
       share a movement, and two may share an attack — what may not happen is two rows a player cannot
-      tell apart by what the fight ASKS of them. With three movements and five attacks there are
-      fifteen combinations for seven rows, so this is a real constraint rather than an arithmetic
-      certainty.
+      tell apart by what the fight ASKS of them.
+
+      ⚠️ **TWO SETS SINCE 0258, AND THE ARITHMETIC IS WHY.** 0111 held the pair unique over seven
+      rows with three movements and five fans — fifteen pairs. 0247 made it fourteen rows, and 0258
+      took the stalk from every hull but one and the aimed fan from all of them: two flights and
+      four fans is eight pairs, and fourteen rows cannot each have one. What the mid-bosses are is
+      their pair — the old seven, one idea each — so the pair is unique over them; a real boss is its
+      own attack (a rain, a whip, a beam, a spin, a cold, heads, tendrils), held below, and the pair
+      is unique over the real seven as well so that no two of THEM ask the same thing either.
 
       ⚠️ **It says nothing about the bullet, deliberately.** 0098 already holds that, and *"thick or
       thin bullets was the only difference"* is the report that the bullet is not enough.
     */
-    const ideas = BOSS_KINDS.map((kind) => `${BOSSES[kind].move.kind}/${BOSSES[kind].attack.kind}`);
-    expect(
-      new Set(ideas).size,
-      `two bosses fly and shoot identically (${ideas.join(', ')})`,
-    ).toBe(BOSS_KINDS.length);
+    const mids = LEVEL_KINDS.map((k) => LEVELS[k].midBoss!.kind);
+    const reals = LEVEL_KINDS.map((k) => LEVELS[k].boss);
+    for (const [name, set] of [
+      ['mid-bosses', mids],
+      ['real bosses', reals],
+    ] as const) {
+      const ideas = set.map((kind) => `${BOSSES[kind].move.kind}/${BOSSES[kind].attack.kind}`);
+      expect(new Set(ideas).size, `two ${name} fly and shoot identically (${ideas.join(', ')})`).toBe(set.length);
+    }
+    expect(new Set([...mids, ...reals]).size, 'a boss is fought twice in the run').toBe(BOSS_KINDS.length);
+  });
+
+  it('and every real boss has an attack of its own that no other real boss sends', () => {
+    /*
+      The half of *one idea each* that the pair can no longer carry for the real seven — 0258. A
+      real boss is told from the others by what only it throws: a phase's own attack kind, or a
+      mechanism on the row — the fall, the cold, the spinning curtain.
+    */
+    // The fans are the shared vocabulary; a mark is anything else a fight throws.
+    const fans = new Set<string>(['spray', 'rake', 'ring', 'wall']);
+    const marksOf = new Map<string, Set<string>>();
+    for (const level of LEVEL_KINDS) {
+      const kind = LEVELS[level].boss;
+      const row = BOSSES[kind];
+      const marks = new Set<string>();
+      for (const phase of row.phases) if (phase.attack !== null && !fans.has(phase.attack.kind)) marks.add(phase.attack.kind);
+      if (row.fall !== null) marks.add(`fall:${row.fall.kind}`);
+      if (row.chill !== null) marks.add('chill');
+      if (row.uncoil !== null && row.uncoil.spin) marks.add('spin');
+      expect(marks.size, `${kind} has nothing of its own beyond its flight and its fan`).toBeGreaterThan(0);
+      marksOf.set(kind, marks);
+    }
+    // Two real bosses may share a mark — the eagle and the frost ship both summon — but each has one
+    // the other six do not, which is what *one idea each* means for the real seven.
+    for (const [kind, marks] of marksOf) {
+      const others = [...marksOf].filter(([k]) => k !== kind).flatMap(([, m]) => [...m]);
+      const alone = [...marks].filter((mark) => !others.includes(mark));
+      expect(alone.length, `${kind} throws only what another real boss throws too (${[...marks].join(', ')})`).toBeGreaterThan(0);
+    }
   });
 
   it('and every arm of both unions is flown by somebody, so neither can fill up with the unused', () => {
@@ -1105,7 +1145,8 @@ describe('0111 — a boss has one idea, and the picture mentions its phases', ()
       *"spray attack that increases number of bullets as health goes down"* is not answered by a
       spread that follows the player. Two fights, two ship lanes, one set of headings.
     */
-    for (const kind of BOSS_KINDS.filter((k) => BOSSES[k].attack.kind !== 'aimed')) {
+    // Every boss, since 0258 deleted the aimed fan from the union.
+    for (const kind of BOSS_KINDS) {
       const headings: string[][] = [];
       for (const lane of [15, 85]) {
         const { world, frame } = bossFight(kind);

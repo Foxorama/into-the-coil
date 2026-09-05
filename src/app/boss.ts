@@ -517,8 +517,6 @@ function throwAttack(
   bolts: Pool<Entity>,
   rainRng: Rng,
 ): void {
-  const dAlong = ship.along - boss.along;
-  const dAcross = ship.across - boss.across;
   const speed = bullet.speed * tier.shotSpeed;
 
   /*
@@ -538,15 +536,17 @@ function throwAttack(
     ⚠️ **`π` is straight back down the lane**, which is the direction the player is on — the same
     centre `src/app/frame.ts`'s `spray` uses for an enemy, and it is stated in both places rather than
     shared because the two files have no other reason to import from each other.
+
+    ⚠️ **`aimed` WAS THE FIRST CASE HERE — `atan2` to the ship — AND 0258 DELETED THE ARM.** No boss
+    aims now; the fan's centre is the lane's or the rake's turn, and `ship` is passed for the stalk
+    and the beams alone.
   */
   const step = phase.shots > 1 ? phase.spread / (phase.shots - 1) : 0;
   switch (attack.kind) {
-    case 'aimed':
     case 'spray':
     case 'rake': {
       let centre = Math.PI;
-      if (attack.kind === 'aimed') centre = Math.atan2(dAcross, dAlong);
-      else if (attack.kind === 'rake') {
+      if (attack.kind === 'rake') {
         // The turn rides `firePhase` — the field 0110 added for the spinner, and the one description
         // of *where in its turn a body has got to*.
         boss.firePhase += attack.turn;
