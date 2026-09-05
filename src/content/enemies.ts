@@ -419,24 +419,25 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     */
     shot: 'lance',
     /*
-      ⚠️ **IT NOW COMES TO YOU, and this is the row where the play report bites hardest.** A lancer
-      was a body on a fixed lane that happened to shoot along it, so a player who was not in that lane
-      was never in the fight — *"just a wall that you pass by."* Tracking the ship's `across` makes
-      the same enemy, the same speed and the same gun into something the player has to answer.
+      ── IT CAME TO YOU FROM 0073 TO 0258, AND IT IS ON A PATTERN AGAIN ─────────────────────────────
 
-      ⚠️ **0.35, AND IT WAS 0.18 UNTIL A GUARD MEASURED WHAT THAT ACTUALLY BOUGHT.** The first number
-      was picked to read as *leaning towards the player rather than latching onto them*, which sounds
-      like restraint and was a body that could never arrive: a lancer is only in front of the player
-      for about three seconds before the trailing cull retires it, and at 0.18 that is thirty units of
-      steering against a hundred-unit lane. It crossed a third of the gap and left — which is the
-      wall the play-test was complaining about, wearing a chase.
+      0073 gave the lancer a hunt and an aimed gun — *"just a wall that you pass by"* — and it was
+      the row that answered that report hardest; 0.35 was the agility a guard measured as *reaches
+      the ship's lane before it passes them*, and it is the picket's now. Played with the
+      mid-bosses in, the report was the other way: *"there's too many things that target the player
+      and you can't learn the pattern from → let's change it so one unique enemy per level
+      targets/reacts to the player and others should be on a pattern."*
+      `docs/decisions/0258-one-pilot-a-level.md`: the lancer is a SHARED kind, sent by every level,
+      so it is one of the others.
 
-      `tests/pilots.test.ts` asserts the thing that matters instead: **it reaches the ship's lane
-      before it passes them.** At 0.35 it crosses the whole lane in about five seconds and closes a
-      full-width gap inside its own approach, which is what makes it a hunter rather than a lean.
+      ⚠️ **A shallow weave and one lance straight down the lane.** The weave is under a weaver's,
+      so a lancer is still the body whose line is read the instant it appears; the gun is a `spray`
+      of one — the fan's centre, straight down the lane, on the row's own cadence — so the shot is a
+      line the player can stand beside rather than a thing that finds them. Its bullet is still the
+      fast thin one, and its pair `lance/spray` is its own (`tests/signature.test.ts`).
     */
-    attack: { kind: 'aimed' },
-    motion: { kind: 'hunt', agility: 0.35 },
+    attack: { kind: 'spray', shots: 1, spread: 0 },
+    motion: { kind: 'weave', amplitude: 10, wavelength: 110 },
   },
   /**
    * Crosses the lane while it closes, and never fires.
@@ -555,6 +556,12 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
       tracked sideways as well would be a homing missile at a speed nothing can be read twice at. It
       comes back along the same line, and the answer is to not be on it.
 
+      ⚠️ **AND IT TURNS AT THE ENDS OF THE PLAYER'S BOX, NOT AT THE SHIP — 0258.** 0073 had it turn
+      each time it overshot the ship, which is a body that reacts to where the player is; the
+      report asked for one such body a level, and a charger is sent by every level. The turn is at
+      a fixed distance from the camera now (`LOOP_TURN_ROOM` in `src/app/frame.ts`), so the pass is
+      the same pass wherever the ship stands and a player can learn where it comes back.
+
       ⚠️ **Two turns rather than unbounded.** Three passes in total, then it leaves — a level whose
       chargers never departed would fill the pool with the first minute's worth, and enemies leaving
       is what makes a wave table a pace rather than a total.
@@ -585,21 +592,20 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     fireEvery: 84,
     shot: 'spit',
     /*
-      ⚠️ **THE ONE THAT ACTUALLY DOG-FIGHTS.** It used to weave and fire — *"not a sixth behaviour,
-      the two that already exist on one row"* — which made the toughest body in the game a wide,
-      predictable swing that a player could simply be elsewhere for. It now flies in and stays with
-      you: the fight is the fight, rather than a window while it passes.
+      ── IT DOG-FOUGHT FROM 0073 TO 0258, AND IT IS A HEAVY ROAMER WITH A GATE NOW ──────────────────
 
-      ⚠️ **Radius 30 against a ship that sits about 40 ahead of the camera**, so a normal orbit spans
-      roughly the camera's trailing edge to 70 ahead of it — on screen on every device, and clipped
-      rather than culled when the player retreats to the very back of the box.
+      0073 made the toughest body in the game fly in and stay with you — an orbit, an aimed gun —
+      and the report on the mid-bosses asked for one reactive body a level
+      (`docs/decisions/0258-one-pilot-a-level.md`). A warden is sent by five levels, so it is on a
+      pattern: it roams the lane at a quarter unit a step, the whole area 0059 gave a drifter, and
+      throws a WALL of one pair — two spits either side of it with the hole in front, the one thing
+      a player can read early (0110). `spit/wall` is its own pair.
 
-      ⚠️ **Slower than the lancer's hunt in absolute terms and far more dangerous in effect**, which
-      is why it fires slower than a turret: something this hard to kill that also stays on you would
-      be a wall rather than an enemy at a turret's rate. Every number here is a play-test number.
+      ⚠️ **Slower than a turret's rate still**, because something this hard to kill at a turret's
+      rate would be a wall rather than an enemy. The moth is what circles now, in Ember Nebula alone.
     */
-    attack: { kind: 'aimed' },
-    motion: { kind: 'circle', agility: 0.55, radius: 30 },
+    attack: { kind: 'wall', shots: 1, gap: 10 },
+    motion: { kind: 'drift', roam: 0.25 },
   },
   /**
    * Holds station and turns a ring of fire round itself. The first body in the game whose threat is
@@ -714,12 +720,16 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     fireEvery: 108,
     shot: 'spit',
     /*
-      THE APPROACH'S OWN: a three-bladed picket that holds its line and throws a two-shot spread.
-      The first thing in the run that fires more than one bullet at once, at the slowest rate any
-      shooter has — a lesson in reading a spread before Ember Nebula's moths throw three.
+      THE APPROACH'S OWN: a three-bladed picket that steers into your lane and throws a two-shot
+      spread. The first thing in the run that fires more than one bullet at once, at the slowest
+      rate any shooter has — a lesson in reading a spread before Ember Nebula's moths.
+
+      ⚠️ **THE APPROACH'S ONE PILOT — 0258.** A signature is the one kind in its place that reacts
+      to the player; the lancer's hunt (0073) is this row's now, at a lancer's agility, and every
+      shared kind the Approach sends is on a pattern. `tests/pilot.test.ts` holds it per place.
     */
     attack: { kind: 'spray', shots: 2, spread: 0.55 },
-    motion: { kind: 'drift', roam: 0.2 },
+    motion: { kind: 'hunt', agility: 0.35 },
   },
   moth: {
     sprite: SPRITE.moth,
@@ -730,9 +740,11 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     closing: 0.26,
     fireEvery: 96,
     shot: 'lance',
-    // EMBER NEBULA'S OWN: wide wings, a deep slow weave, and a fan of three darts — embers off a moth.
-    attack: { kind: 'spray', shots: 3, spread: 0.7 },
-    motion: { kind: 'weave', amplitude: 22, wavelength: 170 },
+    // EMBER NEBULA'S OWN: wide wings that circle the ship like a moth round a lamp, and a dart
+    // thrown at you from wherever it is on the orbit — the nebula's one pilot, 0258. The warden's
+    // orbit (0073) at a warden's radius, and the only aimed lance in the game.
+    attack: { kind: 'aimed' },
+    motion: { kind: 'circle', agility: 0.5, radius: 28 },
   },
   raptor: {
     sprite: SPRITE.raptor,
@@ -796,10 +808,12 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     closing: 0,
     fireEvery: 90,
     shot: 'flak',
-    // THE LABYRINTH'S OWN: a block that holds station in the corridor and throws two slabs abreast —
-    // a wall of the heavy shot, which only a sower's darts had made before.
+    // THE LABYRINTH'S OWN: a block that holds station along the corridor and slides across it to
+    // line up with you, then throws two slabs abreast — a wall of the heavy shot with the hole
+    // where the block is. The labyrinth's one pilot, 0258: `closing` is zero, so the hunt is
+    // across the lane only, and the safe place is the one it is trying to put in front of you.
     attack: { kind: 'wall', shots: 2, gap: 15 },
-    motion: { kind: 'drift', roam: 0.1 },
+    motion: { kind: 'hunt', agility: 0.25 },
   },
   shard: {
     sprite: SPRITE.shard,
@@ -824,9 +838,11 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     fireEvery: 0,
     shot: 'spit',
     attack: { kind: 'aimed' },
-    // THE TOXIC MIRE'S OWN: a sac that drifts in slow and loops once — a mine the size of a warden,
-    // that takes three hits and never fires. What it asks of the player is room.
-    motion: { kind: 'loop', turns: 1 },
+    // THE TOXIC MIRE'S OWN: a sac that drifts in slow and leans towards you — a mine the size of a
+    // warden, that takes three hits and never fires. What it asks of the player is room. The mire's
+    // one pilot, 0258: it looped once until the loop stopped being about the ship, and a mine that
+    // seeks is the same threat said the way a mine says it.
+    motion: { kind: 'hunt', agility: 0.15 },
   },
   gaze: {
     sprite: SPRITE.gaze,

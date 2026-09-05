@@ -159,6 +159,15 @@ const CIRCLE_PULL = 0.08;
 const CIRCLE_FLOOR = 10;
 
 /**
+ * How far inside each end of the player's box a looper turns, in world units — 0258.
+ *
+ * A charger runs from `PLAYER_LEAD` to `PLAYER_ALONG_MARGIN` and back, turning this far short of
+ * each so the turn happens on the screen a ship can reach rather than on the wall. Six is two
+ * hulls, which is where a ship pressed against the back of its box would be.
+ */
+const LOOP_TURN_ROOM = 6;
+
+/**
  * How fast a pickup wanders across the lane, in world units per step.
  *
  * Asked for in play: *"power ups and buffs should also have a drifting, moving flight rather than a
@@ -3336,31 +3345,35 @@ function steerEnemies(w: World): void {
         break;
       }
       /*
-        Chase the ship's position ALONG the lane, turning each time it overshoots.
+        Run the length of the player's box ALONG the lane, turning at each end.
+
+        ⚠️ **AT THE BOX'S ENDS AND NOT AT THE SHIP — 0258.** 0073 had a looper turn each time it
+        overshot the ship, which is a body that reacts to where the player is; the alpha play asked
+        for one such body a level, and a charger is every level's. The turn is at
+        `LOOP_TURN_ROOM` inside each end of the box, in the camera's frame, so the pass is the same
+        pass wherever the ship stands — it still crosses a ship anywhere in the box, which is the
+        whole of what 0073 wanted from it: *"we have no way currently to deal with enemies that fly
+        past the player."*
 
         ⚠️ **The speed is the row's own `closing` plus the scroll, so the turn changes direction and
         never pace** — `src/content/enemies.ts` has the argument for why this arm authors no speed of
-        its own. It also means the velocity computed on the way in is exactly what the spawner
-        already set, so no engagement range is needed and there is no step where the body visibly
-        changes gear.
-
-        ⚠️ **The crossing is detected against the SHIP'S previous position as well as its own.** Both
-        are moving; comparing this step's positions against last step's own would report a crossing
-        every time the player flew past a stationary body.
+        its own. `spin` carries which way it is running: zero on the way in, which is closing.
       */
       case 'loop': {
         if (e.turnsLeft <= 0) break;
-        const isAhead = e.along >= ship.along;
-        if (isAhead !== e.prevAlong >= ship.prevAlong) {
+        const inView = e.along - w.cameraAlong;
+        const outward = e.spin > 0;
+        if (outward ? inView >= PLAYER_LEAD - LOOP_TURN_ROOM : inView <= PLAYER_ALONG_MARGIN + LOOP_TURN_ROOM) {
           e.turnsLeft--;
           // Out of turns: hand it back to the closing speed it was spawned with, and let it go.
           if (e.turnsLeft <= 0) {
             e.velAlong = -row.closing * w.difficulty.closing;
             break;
           }
+          e.spin = outward ? -1 : 1;
         }
         const rate = (row.closing * w.difficulty.closing + w.scrollPerStep) * aggression;
-        e.velAlong = w.scrollPerStep + (isAhead ? -rate : rate);
+        e.velAlong = w.scrollPerStep + (e.spin > 0 ? rate : -rate);
         break;
       }
       default: {
