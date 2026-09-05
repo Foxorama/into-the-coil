@@ -67,4 +67,5 @@ five fans, two of them with a curtain and an eye
   laser shots; a rain from the top of the screen with warning lines; a whip of fire; a beam from a
   wing and a huge one from a mouth; summoned adds through a fight; a wall that spins; a cold that
   slows and freezes the player; a boss that grows heads; tendrils that pulse lightning; adds that
-  rain down; a final phase that opens and spews.
+  rain down; a final phase that opens and spews; and a backdrop that fights — volcanoes behind the
+  pterodactyl belching rock that rains down on the lane.
