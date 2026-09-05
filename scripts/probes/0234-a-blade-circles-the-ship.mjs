@@ -10,13 +10,15 @@ export const PROBES = [
   {
     decision: '0234',
     suite: 'tests/blades.test.ts',
-    // The spiral frozen at its starting radius: a ring rather than a spiral, and a gun that never reaches.
-    broke: 'the spiral no longer widening, so a blade circles the ship at one distance',
-    guard: 'THE SPIRAL: a thrown blade',
+    // ⚠️ Re-aimed by 0242: this was *the spiral frozen at its starting radius* while a blade circled
+    // the ship; a blade coils up the lane now, and the same defect is the loop's centre standing
+    // still — a ring rather than a coil, and a gun that never reaches.
+    broke: 'the loop’s centre no longer going up the lane, so a blade circles in place and never reaches the edge',
+    guard: 'THE EDGE: a blade is on the screen',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    b.orbitRadius += b.orbitGrow;',
-      replace: '    b.orbitRadius += 0 * b.orbitGrow;',
+      find: '    b.fromAlong += w.scrollPerStep + b.orbitGrow;',
+      replace: '    b.fromAlong += w.scrollPerStep;',
     },
   },
   {
@@ -34,12 +36,13 @@ export const PROBES = [
   {
     decision: '0234',
     suite: 'tests/blades.test.ts',
-    // The flash no longer consulted: a blade lying across a body lands on it every step.
-    broke: 'a surviving shot landing on a body still flashing from the last landing',
+    // The gate no longer consulted: a blade lying across a body lands on it every step.
+    // ⚠️ Re-anchored by 0242: the gate is the blade's own `landIn` now, not the body's flash.
+    broke: 'a surviving shot landing again before its own flash has run, so a blade across a body is a saw',
     guard: 'THE SWEEP: a blade lands',
     edit: {
       path: 'src/sim/collide.ts',
-      find: '      if (shot.health > 1 && target.flashFor > 0) continue;\n',
+      find: '        if (shot.landIn > 0) continue;\n',
       replace: '',
     },
   },

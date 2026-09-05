@@ -7,27 +7,19 @@ export const PROBES = [
     decision: '0237',
     suite: 'tests/blades.test.ts',
     /*
-      ⚠️ THE EDGE NO LONGER ENDS A BLADE, so a spiral wider than the lane leaves by one edge and
-      comes back in by another — and is drawn beyond the edge in between. Nothing else ends it until
-      the pool's own cull forty units outside the lane.
+      ⚠️ A probe stood here — THE EDGE NO LONGER ENDS A BLADE, so a spiral wider than the lane leaves
+      by one edge and comes back in by another — and 0242 retired it: a blade coils up the lane now
+      and starts at the top of its loop, so the furthest across it ever gets is where it was thrown,
+      and the only edge it can meet is the leading one, which the pool's own cull holds as well.
+      The break no longer produces the defect, and a probe that reddens nothing proves nothing.
     */
-    broke: 'the edge of the screen no longer ending a blade, so it leaves by one edge and comes back by another',
-    guard: 'THE WHIRLPOOL: a blade is on the screen',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: '      w.playerShots.releaseAt(i);\n      continue;\n    }\n    b.velAlong = along - b.along;',
-      replace: '      // (the edge no longer ends it)\n    }\n    b.velAlong = along - b.along;',
-    },
-  },
-  {
-    decision: '0237',
-    suite: 'tests/blades.test.ts',
     /*
       ⚠️ 0234'S CLOCK PUT BACK, so a blade is spent a second after it is thrown — a third of the way
       to the edge, wherever that leaves it. The reported picture, restored exactly.
     */
     broke: 'the blade’s own clock restored, so it vanishes a third of the way to the edge',
-    guard: 'THE WHIRLPOOL: a blade is on the screen',
+    // ⚠️ Re-aimed by 0242: `THE WHIRLPOOL` became `THE EDGE` when the ring became a coil.
+    guard: 'THE EDGE: a blade is on the screen',
     edit: {
       path: 'src/app/frame.ts',
       find: '  blade.lifeFor = 0;',
@@ -40,14 +32,14 @@ export const PROBES = [
     decision: '0237',
     suite: 'tests/blades.test.ts',
     // The ladder authored flat, so a rung buys a fire-rate step and nothing about the spiral.
-    broke: 'the spiral wound the same at every rung, so an upgrade buys no more of a turn',
-    guard: 'THE LADDER: a rung is more of a turn',
-    // ⚠️ Re-anchored by 0239 (the spiral wound a quarter tighter) and by 0240 (rewound for a ring
-    // centred ahead of the ship).
+    broke: 'the loop the same size at every rung, so an upgrade buys no more band',
+    guard: 'THE LADDER: a rung is a wider band',
+    // ⚠️ Re-anchored by 0239 and 0240 as the spiral was rewound, and re-aimed by 0242: the ladder
+    // is the loop's radius now, and a rung buys a wider band rather than more of a turn.
     edit: {
       path: 'src/content/weapons.ts',
-      find: '    orbit: [120, 150, 185, 220, 260],',
-      replace: '    orbit: [120, 120, 120, 120, 120],',
+      find: '    coil: [7, 9, 12, 15, 18],',
+      replace: '    coil: [7, 7, 7, 7, 7],',
     },
   },
 ];

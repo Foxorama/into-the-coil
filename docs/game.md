@@ -33,7 +33,10 @@ A run carries **three lives**, fixed. A death spends one and takes the ship back
 the last one ends the run. ⚠️ **A death does NOT touch the arsenal's charges** —
 [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) amends 0039's *a death costs the arsenal* to
 the upgrades alone, so bombs banked from clearing levels survive a death and a ship that died with none
-flies again with none. ⚠️ **There are no extras findable in a level** —
+flies again with none. **What a death took is thrown back as one piece per kind** — a weapon pickup
+and a missile pickup, each showing the kind that was lost, holding that face, and wearing ×2, ×3 or
+×4 for the rungs it carries — [0243](decisions/0243-a-death-throws-back-one-piece-per-kind.md).
+⚠️ **There are no extras findable in a level** —
 [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) replaced the extra-life pickup with a
 second shield, so the complement only goes down. See *Upgrades*.
 
@@ -218,7 +221,7 @@ projectiles' orange, the arc in the ship's, the shuriken in steel, the seeker in
 |---|---|---|
 | **pulse** | the base weapon: fast, small, reaches the edge of the screen and can miss | a barrel **and** a fire-rate step |
 | **arc** | chain lightning: from the nose to the nearest body in reach, then the next, three links at most; on a lone boss it jumps around the hull. Cannot miss, cannot reach — its reach has been cut back twice from play, [0239](decisions/0239-the-guns-answer-the-third-play-test.md), [0241](decisions/0241-the-ship-wears-its-colours.md) | a link, a fire-rate step, and weight |
-| **shuriken** | steel blades bigger than the ship that spiral out from its nose round a ring centred ahead of it and stretched along the lane — so they reach a boss — to the edge of the screen, and vanish there, landing on everything they cross once per impact flash; not spent by arriving — [0234](decisions/0234-a-blade-circles-the-ship.md), [0237](decisions/0237-the-blades-answer-the-first-play-test.md), [0238](decisions/0238-the-picture-answers-the-second-play-test.md), [0240](decisions/0240-the-blades-reach-the-boss.md) | more of a turn before the edge **and** a fire-rate step |
+| **shuriken** | steel blades bigger than the ship, thrown in pairs from the wingtips: each circles a point moving up the lane, the two crossing ahead of the nose, so their tracks are a chain of loops — a coil — to the leading edge of the screen, landing on everything they cross once per impact flash; not spent by arriving — [0234](decisions/0234-a-blade-circles-the-ship.md), [0238](decisions/0238-the-picture-answers-the-second-play-test.md), [0242](decisions/0242-a-blade-coils-ahead-of-the-ship.md) | a wider band **and** a fire-rate step |
 
 | tube | what it does | a tier buys |
 |---|---|---|

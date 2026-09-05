@@ -800,7 +800,10 @@ describe('collecting one, in the real frame', () => {
     function died(upgrades: readonly UpgradeKind[]): ReturnType<typeof playableWorld> {
       for (let attempt = 0; attempt < 200; attempt++) {
         const built = scattered(upgrades, `scatter:${attempt}`);
-        if (built.world.pickups.size === upgrades.length) return built;
+        // In rungs, since 0243: a death throws one piece per kind, carrying the count.
+        let rungs = 0;
+        for (let i = 0; i < built.world.pickups.size; i++) rungs += built.world.pickups.at(i).stack;
+        if (rungs === upgrades.length) return built;
       }
       throw new Error(`no seed in 200 kept all ${upgrades.length} upgrades — the scatter filter is not a coin`);
     }
@@ -840,7 +843,8 @@ describe('collecting one, in the real frame', () => {
       // measured against — the fixture leaves it beside the wreck, which would empty the pool.
       world.ship.along = world.cameraAlong + PLAYER_LEAD;
       world.ship.prevAlong = world.ship.along;
-      expect(world.pickups.size, 'nothing was scattered, so this measured nothing').toBeGreaterThan(3);
+      // One piece per kind since 0243, so two: both kinds are in the loadout above.
+      expect(world.pickups.size, 'nothing was scattered, so this measured nothing').toBe(2);
 
       // Long enough for the along excursion to be spent — it is about eleven world units against an
       // ease, so a second of steps is far more than it needs.
@@ -882,12 +886,21 @@ describe('collecting one, in the real frame', () => {
       // measured against — the fixture leaves it beside the wreck, which would empty the pool.
       world.ship.along = world.cameraAlong + PLAYER_LEAD;
       world.ship.prevAlong = world.ship.along;
-      for (let step = 0; step < 240; step++) frame.step();
-      const offsets: number[] = [];
-      for (let i = 0; i < world.pickups.size; i++) offsets.push(world.pickups.at(i).along - world.cameraAlong);
-      expect(offsets.length, 'every piece was collected or expired, so this measured nothing').toBeGreaterThan(2);
-      const spread = Math.max(...offsets) - Math.min(...offsets);
-      expect(spread, `the whole scatter came to rest within ${spread.toFixed(1)} units of one line`).toBeGreaterThan(4);
+      /*
+        ⚠️ **THE WIDEST SPREAD OVER THE RUN, NOT THE SPREAD AT ONE INSTANT — 0243.** Two pieces since
+        then, one per kind, and two wanderers cross one line often; five did not. The claim is about
+        the THROW — that the pieces went different ways along the lane rather than sitting on one
+        line — and the throw is over inside the first second, so the widest spread seen is what holds it.
+      */
+      let spread = 0;
+      for (let step = 0; step < 240; step++) {
+        frame.step();
+        expect(world.pickups.size, `a piece was collected or expired on step ${step}, so this measured nothing`).toBe(2);
+        const a = world.pickups.at(0).along;
+        const b = world.pickups.at(1).along;
+        spread = Math.max(spread, Math.abs(a - b));
+      }
+      expect(spread, `the whole scatter stayed within ${spread.toFixed(1)} units of one line`).toBeGreaterThan(4);
     });
 
     it('THE REPORTED ONE: pickups where the ship was, and never more than it carried', () => {
@@ -937,14 +950,22 @@ describe('collecting one, in the real frame', () => {
         ⚠️ **And the whole ladder's worth, not two.** Both ladders cap at `UPGRADE_TIERS`, so eight is
         the most a shell can ever hand this — which makes it the loadout worth measuring.
       */
+      /*
+        ⚠️ **COUNTED IN RUNGS, NOT PIECES, SINCE 0243.** A death throws one piece per kind carrying
+        every rung it took, so what has to come to `carried.length` is the sum of the stacks — and
+        the piece count is the number of kinds, which the guard also holds so a scatter cannot hand
+        the rungs back as a pile of ones.
+      */
       const carried: UpgradeKind[] = [];
       for (let i = 0; i < UPGRADE_TIERS; i++) carried.push('weapon', 'missile');
       for (let seed = 0; seed < 40; seed++) {
         const { world } = scattered(carried, `whole:${seed}`);
-        expect(
-          world.pickups.size,
-          `seed ${seed} gave back ${world.pickups.size} of ${carried.length} — something is filtering the scatter`,
-        ).toBe(carried.length);
+        let rungs = 0;
+        for (let i = 0; i < world.pickups.size; i++) rungs += world.pickups.at(i).stack;
+        expect(rungs, `seed ${seed} gave back ${rungs} rungs of ${carried.length} — something is filtering the scatter`).toBe(
+          carried.length,
+        );
+        expect(world.pickups.size, `seed ${seed} threw ${world.pickups.size} pieces for two kinds`).toBe(2);
       }
     });
 
@@ -1000,7 +1021,9 @@ describe('collecting one, in the real frame', () => {
         Driven at the largest loadout, which is the worst case for the ring — the gap between
         neighbouring headings is narrowest when there are the most of them.
       */
-      const { world } = died(['weapon', 'weapon', 'weapon', 'weapon', 'weapon', 'weapon']);
+      // Both kinds, so there are two pieces to be apart — one per kind since 0243.
+      const { world } = died(['weapon', 'weapon', 'weapon', 'missile', 'missile', 'missile']);
+      expect(world.pickups.size, 'one piece cannot be apart from itself').toBe(2);
 
       /*
         ⚠️ **THE RING IS DIVIDED OVER WHAT IS ACTUALLY THROWN, and 0082 is what put that at risk.**
@@ -1072,7 +1095,8 @@ describe('collecting one, in the real frame', () => {
         down now."* A piece flies its throw out for `SCATTER_FLIGHT` steps, bouncing inside the box,
         and only then joins the wait. The three claims stand; the middle one got bigger.
       */
-      const { world } = died(['weapon', 'weapon', 'weapon', 'weapon']);
+      // Both kinds, so both of 0243's pieces are thrown — one ahead-and-across, one behind-and-across.
+      const { world } = died(['weapon', 'weapon', 'missile', 'missile']);
       // No ship: the pieces come back through where it respawned and a parked ship would take them.
       world.shipPool.clear();
       const frame = new GameFrame(world);
@@ -1101,7 +1125,8 @@ describe('collecting one, in the real frame', () => {
           expect(inView, `a scattered piece is past the box on step ${i + 120}`).toBeLessThan(PLAYER_LEAD + ACROSS_SPAN / 10);
         }
       }
-      expect(world.pickups.size, 'the scatter left inside the wait an authored pickup gets').toBe(4);
+      // Two pieces since 0243 — one per kind of the four rungs thrown.
+      expect(world.pickups.size, 'the scatter left inside the wait an authored pickup gets').toBe(2);
     });
 
     it('stays as long as an authored pickup does, and then leaves the same way', () => {

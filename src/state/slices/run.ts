@@ -150,8 +150,14 @@ export type RunAction =
     its ladder, and the face is which gun or which tube it was offering; a reducer that only heard
     *weapon* could not tell a fifth pulse from a first arc.
   */
-  | { slice: 'run'; type: 'upgraded'; upgrade: 'weapon'; kind: WeaponKind }
-  | { slice: 'run'; type: 'upgraded'; upgrade: 'missile'; kind: MissileKind }
+  /*
+    ⚠️ **`count` is how many rungs the pickup was worth — 0243.** One when absent, which is every
+    authored pickup; a piece a death threw back carries every rung of its kind the death took, and
+    the shell passes that through rather than dispatching once per rung, so the ladder's clamp and
+    the switch rule below see one event.
+  */
+  | { slice: 'run'; type: 'upgraded'; upgrade: 'weapon'; kind: WeaponKind; count?: number }
+  | { slice: 'run'; type: 'upgraded'; upgrade: 'missile'; kind: MissileKind; count?: number }
   | { slice: 'run'; type: 'levelCleared' };
 
 /**
@@ -343,10 +349,14 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         ⚠️ **The same kind is the old rule, untouched**: one more entry, and `tiersOf` clamps it.
       */
       const fitted = action.upgrade === 'weapon' ? state.weapon : state.missile;
+      // Every rung the pickup was worth — 0243. A scattered piece hands back what the death took.
+      const count = action.count === undefined || action.count < 1 ? 1 : action.count;
+      const rungs: UpgradeKind[] = [];
+      for (let i = 0; i < count; i++) rungs.push(action.upgrade);
       const upgrades =
         action.kind === fitted
-          ? [...state.upgrades, action.upgrade]
-          : [...state.upgrades.filter((u) => u !== action.upgrade), action.upgrade];
+          ? [...state.upgrades, ...rungs]
+          : [...state.upgrades.filter((u) => u !== action.upgrade), ...rungs];
       return {
         lives: state.lives,
         level: state.level,

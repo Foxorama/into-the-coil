@@ -130,11 +130,12 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * is what usually ends it — twelve is more bodies than a spiral crosses — so the number is a
    * ceiling on what one blade may be worth against a wall of drifters, not a life.
    *
-   * ⚠️ **`speed` is ZERO, because how fast the spiral opens is the weapon row's `orbit` ladder and
-   * not the shot's** — 0237. A blade has no speed of its own: which way round it goes is the row's
-   * `turn`, how fast it opens is the rung, and where it is each step is the ship's — `steerBlades`
-   * in `src/app/frame.ts`. Until 0237 this was 0.28 units a step and the spiral's width was
-   * `speed × orbit`; now the spiral's width is the screen's, wherever the ship is.
+   * ⚠️ **`speed` is how fast the LOOP'S CENTRE goes up the lane, in the camera's frame** — 0242.
+   * The blade itself circles that centre at the weapon row's `coil` radius and `turn`, so its own
+   * speed is this plus the loop's, which at the cap is five units a step at the top of the loop.
+   * Well under the pulse's: a coil sweeps, it does not fly, and at this speed a loop advances about
+   * twenty-two units on the last — the overlap the drawing had. (0237 to 0240 had it at zero, when
+   * the blade circled the ship and had no speed of its own.)
    *
    * ⚠️ **`radius` 4.8 — a star bigger than the ship, since 0238.** Played at 1.4: *"shuriken stars
    * need to be a lot bigger"*; at 3.5: *"bigger and steel coloured."* The hurtbox is the sweep, so a
@@ -146,7 +147,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * `src/app/frame.ts` swaps the two every few steps to spin it. `blit` cannot rotate; two bitmaps
    * an eighth of a turn apart are what a spinning shuriken is.
    */
-  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 4.8, health: BLADE_EDGE, damage: 1, speed: 0 },
+  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 4.8, health: BLADE_EDGE, damage: 1, speed: 0.8 },
   /**
    * What an enemy sends back. **Slower than the ship**, which is the whole of what makes it
    * dodgeable rather than a coin flip: a player who reacts can always leave the line it is on.

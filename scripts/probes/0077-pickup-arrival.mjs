@@ -49,8 +49,9 @@ export const PROBES = [
     guard: '0100 — and the piece is still THROWN',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    item.velAlong = w.scrollPerStep + Math.cos(angle) * speed;',
-      replace: '    item.velAlong = w.scrollPerStep;',
+      // ⚠️ Re-anchored by 0243: the throw is `throwPiece`, one indent less.
+      find: '  item.velAlong = w.scrollPerStep + Math.cos(angle) * speed;',
+      replace: '  item.velAlong = w.scrollPerStep;',
     },
   },
   {
@@ -64,10 +65,12 @@ export const PROBES = [
     */
     broke: 'the scatter jitter widened past the gap, so two pieces can leave on one heading',
     guard: 'leaves in every direction, and no two pieces travel together',
+    // ⚠️ Re-anchored by 0243: the jitter is a share of the gap AND capped (`SCATTER_JITTER_MAX`),
+    // so widening the share alone changes nothing; the break is the jitter past both.
     edit: {
       path: 'src/app/frame.ts',
-      find: 'const SCATTER_JITTER_SHARE = 0.35;',
-      replace: 'const SCATTER_JITTER_SHARE = 4;',
+      find: '  const halfGap = share < SCATTER_JITTER_MAX ? share : SCATTER_JITTER_MAX;',
+      replace: '  const halfGap = 4 + 0 * share;',
     },
   },
   {

@@ -605,8 +605,8 @@ export interface Weapon {
   links: number;
   /** How far one bolt can jump, in world units. Zero for a weapon that does not chain. */
   reach: number;
-  /** Steps an orbiting shot lives, and radians it turns about the ship per step — 0234. Zero otherwise. */
-  orbit: number;
+  /** The radius of a coiling shot's loop, and radians it turns per step — 0234, 0242. Zero otherwise. */
+  coil: number;
   turn: number;
   /** The most a missile turns toward its target per step, in radians — 0235. Zero for one that flies straight. */
   seek: number;
@@ -863,7 +863,7 @@ export function weaponFor(
     guidance: tubeRow.guidance,
     links: everyAt(gunRow.links, gun),
     reach: everyAt(gunRow.reach, gun),
-    orbit: everyAt(gunRow.orbit, gun),
+    coil: everyAt(gunRow.coil, gun),
     turn: gunRow.turn,
     seek: tubeRow.seek,
     /*

@@ -136,10 +136,10 @@ export const PROBES = [
     guard: 'leaves in every direction, and no two pieces travel together',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const halfGap = (Math.PI / count) * SCATTER_JITTER_SHARE;\n    const angle = (i / count) * Math.PI * 2',
-      replace:
-        '    const halfGap = (Math.PI / (count * 3)) * SCATTER_JITTER_SHARE;\n' +
-        '    const angle = (i / (count * 3)) * Math.PI * 2',
+      // ⚠️ Re-anchored by 0243: the divisor is `pieces` — the kinds present — and spacing the two
+      // over four headings puts both on one side of the wreck.
+      find: '  const angle = Math.PI / 3 + (index / pieces) * Math.PI * 2',
+      replace: '  const angle = Math.PI / 3 + (index / (pieces * 2)) * Math.PI * 2',
     },
   },
 ];

@@ -2155,7 +2155,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     launchSpecial(world, entry.kind);
   };
 
-  world.onPickup = (kind: PickupKind, face: number): void => {
+  world.onPickup = (kind: PickupKind, face: number, stack: number): void => {
     /*
       ⚠️ **`effectOf` and not `PICKUPS[kind].effect`, and the difference is the max-speed nerf.** A
       weapon pickup taken by a ship whose weapon can no longer grow reports itself as a `special`, so
@@ -2216,8 +2216,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       `tests/shields.test.ts` still holds `UPGRADE_KINDS` to the table's `effect: 'upgrade'` rows,
       and the reducer's action union fails to compile for a kind added there and not here.
     */
-    else if (kind === 'weapon') dispatch({ slice: 'run', type: 'upgraded', upgrade: kind, kind: weaponFaceOf(face) });
-    else if (kind === 'missile') dispatch({ slice: 'run', type: 'upgraded', upgrade: kind, kind: missileFaceOf(face) });
+    // And every rung it was worth — 0243: a scattered piece is one event carrying the stack.
+    else if (kind === 'weapon') dispatch({ slice: 'run', type: 'upgraded', upgrade: kind, kind: weaponFaceOf(face), count: stack });
+    else if (kind === 'missile') dispatch({ slice: 'run', type: 'upgraded', upgrade: kind, kind: missileFaceOf(face), count: stack });
   };
 
   /** Re-measure, re-fit and — only if the orientation or resolution actually moved — re-bake. */

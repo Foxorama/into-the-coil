@@ -55,8 +55,8 @@ import type { Intent } from '../sim/intent.ts';
 import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
 import type { Pool } from '../sim/pool.ts';
-import { BOLT_STEPS, paintBolts, paintScene, type Bound, type Landmarks, type Sky } from '../render/scene.ts';
-import { LANDMARK_SLOTS, SPRITE_EXTENT } from '../content/sprites.ts';
+import { BOLT_STEPS, paintBolts, paintScene, paintStacks, type Bound, type Landmarks, type Sky } from '../render/scene.ts';
+import { LANDMARK_SLOTS, SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
@@ -296,7 +296,9 @@ const GOLDEN_ANGLE = 2.399963229728653;
  * Faster than `PICKUP_DRIFT` by a factor of three, because this one is an event rather than a
  * wander: what it has to read as is *these came off the ship*.
  */
-const SCATTER_SPEED = 0.66;
+// A shade faster since 0243: two pieces thrown a third of a turn off the lane have to clear the ease
+// in both axes each, where eight pieces round a ring shared the axes between them.
+const SCATTER_SPEED = 0.85;
 
 /**
  * How long a scattered upgrade flies its throw before it joins the wait, in steps.
@@ -359,6 +361,13 @@ const SCATTER_FLIGHT = 45;
  * of the upgrades a death took and did not give back.
  */
 const SCATTER_JITTER_SHARE = 0.35;
+/**
+ * And a ceiling on the jitter in radians, since 0243: a share of the gap was written for a ring of
+ * eight, where the gap is an eighth of a turn; at two pieces the gap is half a turn and a third of
+ * it would swing a piece from nearly along the lane to nearly across it. A ninth of a turn either
+ * way keeps both pieces in both axes.
+ */
+const SCATTER_JITTER_MAX = 0.2;
 
 /** The slowest a scattered piece may leave, as a fraction of `SCATTER_SPEED`. */
 const SCATTER_SPREAD_MIN = 0.7;
@@ -918,7 +927,7 @@ export interface World {
    * `src/state/`'s business — an extra life and an upgrade land in different fields and are cleared
    * by different events.
    */
-  onPickup: (kind: PickupKind, face: number) => void;
+  onPickup: (kind: PickupKind, face: number, stack: number) => void;
   /**
    * The ship's health as the chrome last drew it.
    *
@@ -1364,7 +1373,7 @@ export class GameFrame implements Frame {
       (0227) and a place for the `hit` cue — and it is `null` for the pulse so the pulse's picture
       does not gain sparks it never had.
     */
-    const bladeHits = w.weapon.flight === 'orbit' ? w.hits : null;
+    const bladeHits = w.weapon.flight === 'coil' ? w.hits : null;
     killedByShots += collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, bladeHits);
     killedByShots += collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits);
     // The boss is its own pairing rather than another enemy, and the reason is the pool: it is the
@@ -1513,7 +1522,8 @@ export class GameFrame implements Frame {
       w.onCue('pickup', w.ship.across);
       // And the FACE it was showing — 0233. Which gun a weapon pickup was offering is decided on
       // the step it is taken, and `collectInto` logged it beside the kind for exactly this line.
-      w.onPickup(kind, w.collected.face[i]!);
+      // And how many rungs it was worth — 0243: a scattered piece carries every rung of its kind.
+      w.onPickup(kind, w.collected.face[i]!, w.collected.stack[i]!);
     }
 
     // Every enemy that died this step leaves something behind. The positions were recorded by the
@@ -1628,8 +1638,18 @@ export class GameFrame implements Frame {
     // After everything, so a bolt is over what it struck — 0233. The landing sparks are entities in
     // `layers` and were blitted above; this strokes the lines between them.
     paintBolts(w.surface, w.view, w.bolts, camera, alpha);
+    // And a badge on every scattered piece worth more than one rung — 0243. Over the pickup it
+    // rides, and after the bolts so nothing crosses it.
+    paintStacks(w.surface, w.view, w.pickups, STACK_BADGES, camera, alpha);
   }
 }
+
+/**
+ * The badge a scattered piece wears for its stack, by stack: ×2, ×3, ×4 — 0243. A stack past the
+ * last wears the last; `UPGRADE_TIERS` is four, so nothing does.
+ */
+// @setup: three sprite indices, for the module's lifetime.
+const STACK_BADGES: readonly number[] = [SPRITE.stackTwo, SPRITE.stackThree, SPRITE.stackFour];
 
 /**
  * Whether this is the step the boss came apart on.
@@ -1692,7 +1712,7 @@ export function cueOfFlight(flight: FlightKind): CueKind {
       return 'pulse';
     case 'chain':
       return 'arc';
-    case 'orbit':
+    case 'coil':
       return 'throw';
     default: {
       const unhandled: never = flight;
@@ -1716,8 +1736,8 @@ function fireShip(w: World): void {
     case 'chain':
       fireArc(w);
       return;
-    case 'orbit':
-      throwBlade(w);
+    case 'coil':
+      throwBlades(w);
       return;
     default: {
       const unhandled: never = w.weapon.flight;
@@ -1732,88 +1752,69 @@ function fireShip(w: World): void {
  */
 const BLADE_KIND = 1;
 
-/** How far from the ship's centre a blade starts its spiral, in world units. Just clear of the hull. */
-const BLADE_START = 3;
-
 /**
- * How far out a spiral is authored to reach in the weapon row's `orbit` steps: the lane's half-width,
- * which is the nearest the edge of the screen can be to a ship in the middle of it —
- * `docs/decisions/0237-the-blades-answer-the-first-play-test.md`.
- *
- * ⚠️ **Where a spiral actually ENDS is the edge of the screen, wherever the ship is**, and it is
- * `steerBlades` that ends it there. This number only says how tightly the spiral is wound.
+ * Which side of the nose each blade of a pair leaves from, and therefore which way round it goes —
+ * `docs/decisions/0242-a-blade-coils-ahead-of-the-ship.md`. Two, always: one from each wingtip.
  */
-const BLADE_REACH = ACROSS_SPAN / 2;
-
-/**
- * Where a spiral is centred — this far AHEAD of the ship — and how much it is stretched along the
- * lane. `docs/decisions/0240-the-blades-reach-the-boss.md`.
- *
- * ⚠️ **A SPIRAL CENTRED ON THE SHIP CANNOT REACH A BOSS, HOWEVER IT IS WOUND.** The ship flies about
- * forty units from the edge of the screen behind it, so a ring about the ship leaves by that edge
- * at forty-odd units out — before it is fifty ahead — and a boss sits a hundred ahead. Played:
- * *"shurikens need to stretch out a bit further… it doesn't reach far enough and as a result you
- * have to get too close to bosses."* Centred thirty ahead and stretched along by half, the same
- * ring reaches eighty to a hundred ahead before the edge behind takes it, still sweeps the lane's
- * width across, and still begins at the ship's nose: a blade starts at the back of its ring, which
- * is where the ship is. Stretched more, the rim whips — at seven tenths a blade at the lane's edge
- * covered eleven units a step.
- */
-const BLADE_LEAD = 30;
-const BLADE_STRETCH = 1.5;
+// @setup: the pair's two sides, for the module's lifetime.
+const BLADE_SIDES = [-1, 1] as const;
 
 /** Steps a blade shows each of its two turns for. A quarter-turn every eight steps reads as a spin. */
 const BLADE_TURN_STEPS = 4;
 
 /**
- * A shuriken thrown — `docs/decisions/0234-a-blade-circles-the-ship.md`.
+ * A pair of shurikens thrown — `docs/decisions/0234-a-blade-circles-the-ship.md`, as
+ * `docs/decisions/0242-a-blade-coils-ahead-of-the-ship.md` left it.
  *
  * ⚠️ **INTO THE PULSE'S POOL, because a ship carries one gun** — the same argument that took the
  * bolts' slots out of it (0233). What tells a blade from a pulse afterwards is `BLADE_KIND`, and
  * what tells the pool a blade is not spent by arriving is its health (`src/sim/collide.ts`).
  *
- * ⚠️ **It starts ahead of the nose and turns the same way every time**, so successive blades are a
- * cadence apart on the same spiral — at `turn` radians a step and thirty steps a throw they leave
- * more than half a turn apart, which spreads a ring of them without a roll. The spawn stream is not
- * consulted, on `spawnWave`'s argument: what a gun does is authored, not dealt.
+ * ⚠️ **FROM THE WINGTIPS, CIRCLING FORWARD, AND CROSSING AHEAD OF THE NOSE.** The fourth play-test
+ * drew the path: each blade circles a point that moves up the lane at the row's speed, so its track
+ * is a chain of loops; the pair leaves a quarter-turn either side of the nose and each turns TOWARD
+ * it, so the two braid across the band's centre line twice a loop — which is where a boss sits.
+ * The loop's centre and its speed are copied onto the blade (`fromAlong`/`fromAcross`,
+ * `orbitGrow`), so a blade thrown is a blade thrown: switching guns with blades in the air leaves
+ * them coiling. The spawn stream is not consulted, on `spawnWave`'s argument: what a gun does is
+ * authored, not dealt.
  */
-function throwBlade(w: World): void {
+function throwBlades(w: World): void {
   const row = SHOTS[WEAPONS[w.weapon.kind].shot];
   // On the grid, like every gun — 0094.
   w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);
-  const blade = w.playerShots.spawn();
-  if (blade === null) return;
   w.onCue('throw', w.ship.across);
-  reset(blade, w.ship.along + BLADE_START, w.ship.across, row, BLADE_KIND);
-  blade.velAlong = w.scrollPerStep;
-  blade.damage = w.weapon.damage;
-  /*
-    ⚠️ **NO CLOCK — 0237.** Until then a blade lived `orbit` steps and stopped wherever that left it,
-    which played as *"spiral outwards from ship to edge of the screen and then disappear like a
-    reverse whirlpool effect"* — the ask. The edge of the screen is what ends a blade now
-    (`steerBlades`), and `lifeFor` at zero is `stepEntities`'s *never*.
-  */
-  blade.lifeFor = 0;
-  // At the BACK of its ring, which is `BLADE_START` ahead of the nose — 0240. The ring's centre is
-  // `BLADE_LEAD` ahead, so the starting radius is what puts the back of it at the ship.
-  blade.orbitAngle = Math.PI;
-  blade.orbitRadius = (BLADE_LEAD - BLADE_START) / BLADE_STRETCH;
-  blade.orbitTurn = w.weapon.turn;
-  blade.orbitGrow = BLADE_REACH / w.weapon.orbit;
+  for (let s = 0; s < BLADE_SIDES.length; s++) {
+    const side = BLADE_SIDES[s]!;
+    const blade = w.playerShots.spawn();
+    if (blade === null) return;
+    reset(blade, w.ship.along, w.ship.across + side * w.weapon.coil, row, BLADE_KIND);
+    blade.velAlong = w.scrollPerStep + row.speed;
+    blade.damage = w.weapon.damage;
+    // No clock — 0237. The edge of the screen ends a blade (`steerBlades`); zero is *never*.
+    blade.lifeFor = 0;
+    // The loop's centre: at the nose now, and up the lane at the row's speed from here on.
+    blade.fromAlong = w.ship.along;
+    blade.fromAcross = w.ship.across;
+    blade.orbitGrow = row.speed;
+    blade.orbitRadius = w.weapon.coil;
+    // A quarter-turn off the nose on its own side, turning toward the nose.
+    blade.orbitAngle = side * (Math.PI / 2);
+    blade.orbitTurn = -side * w.weapon.turn;
+  }
 }
 
 /**
- * Every blade in the air, moved to its next place on its spiral about the ship.
+ * Every blade in the air, moved to its next place on its loop.
  *
  * ⚠️ **The VELOCITY is set and `stepEntities` integrates it**, rather than the position being
  * written here, so `prev` is what the painter interpolates from and the swept collision sees the
- * whole of a fast outer arc — a blade at the end of its spiral covers four units a step, which is
- * more than its own hurtbox, and `overlaps` sweeps the step for exactly that.
+ * whole of a fast arc — a blade at the top of a cap loop covers four units a step, which is close
+ * to its own hurtbox, and `overlaps` sweeps the step for exactly that.
  *
- * ⚠️ **About where the ship IS, not where it was thrown from.** The ship flies inside the ring; a
- * ring pinned to the throw would be left behind at the scroll rate and read as a thing dropped.
- * Since 0240 the ring's centre is `BLADE_LEAD` ahead of the ship and the ring is `BLADE_STRETCH`
- * times as long along the lane as it is wide across it, which is what lets it reach a boss.
+ * ⚠️ **About its own loop's centre, which goes up the lane in the camera's frame** — 0242. A blade
+ * is thrown and gone, like a pulse; it does not follow the ship, and a ship that moves across the
+ * lane after a throw leaves that pair's band where it was. (0234 to 0240 circled the ship.)
  *
  * ⚠️ **And it spins by swapping its two turns** — the row's `sprite` and `spriteHit` are the star
  * and the star an eighth of a turn round (`src/content/shots.ts`), and a blade never flashes, so
@@ -1824,15 +1825,16 @@ function steerBlades(w: World): void {
     const b = w.playerShots.at(i);
     if (b.kind !== BLADE_KIND) continue;
     b.orbitAngle += b.orbitTurn;
-    b.orbitRadius += b.orbitGrow;
-    const along = w.ship.along + BLADE_LEAD + Math.cos(b.orbitAngle) * b.orbitRadius * BLADE_STRETCH;
-    const across = w.ship.across + Math.sin(b.orbitAngle) * b.orbitRadius;
+    b.fromAlong += w.scrollPerStep + b.orbitGrow;
+    const along = b.fromAlong + Math.cos(b.orbitAngle) * b.orbitRadius;
+    const across = b.fromAcross + Math.sin(b.orbitAngle) * b.orbitRadius;
     /*
-      ⚠️ **GONE THE STEP IT LEAVES THE SCREEN, AND NOT BEFORE — 0237.** A spiral wider than the lane
-      would leave by one edge and come back in by another, and a blade that is off the screen is off
-      the game. The margin is its own drawn half-size, so it is gone when the last of it is, not
-      while half of it still shows. The along edges are the view's own (`w.view.alongSpan`), which is
-      the one quantity here that varies by device — 0023 — and it is the screen the ask names.
+      ⚠️ **GONE THE STEP IT LEAVES THE SCREEN, AND NOT BEFORE — 0237.** A loop that touched an edge
+      would leave by it and come back in, and a blade that is off the screen is off the game. The
+      margin is its own drawn half-size, so it is gone when the last of it is, not while half of it
+      still shows. The along edges are the view's own (`w.view.alongSpan`), which is the one
+      quantity here that varies by device — 0023 — and it is the screen the ask names. Since 0242
+      the edge a coil meets is the leading one, which is its reach.
     */
     if (
       across < -b.radius ||
@@ -3339,18 +3341,36 @@ export function scatterUpgrades(w: World, upgrades: readonly UpgradeKind[]): voi
     longer one (a saved run, a test), and this is the line that stops such a list spacing a ring the
     field cannot hold.
   */
-  const room = w.pickups.capacity;
-  scatterRing(w, upgrades, upgrades.length > room ? room : upgrades.length);
+  /*
+    ── ONE PIECE PER KIND, CARRYING THE COUNT — 0243 ──────────────────────────────────────────────
+
+    Reported from the fifth play-test: *"we also need to change the death pop of powerups to be a
+    single missile power up bubble with an x2/3/4 etc if they had multiple powerups, and same for
+    weapons, it's too hard to grab all the different powerups with all the different sequencing in
+    the middle of a hail of bullets."* Every rung of each kind is counted, and one piece per kind
+    present is thrown with that count on it (`stack`). The pool bound above is moot at two pieces,
+    and kept in the type: a scatter can never be longer than the kinds there are.
+  */
+  let weapons = 0;
+  let missiles = 0;
+  for (let i = 0; i < upgrades.length; i++) {
+    if (upgrades[i] === 'weapon') weapons++;
+    else missiles++;
+  }
+  const pieces = (weapons > 0 ? 1 : 0) + (missiles > 0 ? 1 : 0);
+  let index = 0;
+  if (weapons > 0) throwPiece(w, 'weapon', weapons, index++, pieces);
+  if (missiles > 0) throwPiece(w, 'missile', missiles, index, pieces);
 }
 
 /**
- * Throw exactly these `count` pieces, evenly around a circle at the wreck.
+ * Throw one piece of `upgrade`, worth `stack` rungs, as the `index`th of `pieces` around the wreck.
  *
- * ⚠️ **`count` rather than `upgrades.length`, and it survived the filter that needed it.** 0082's
- * 50% coin is gone, but the reason for the split is not: `count` is the divisor that spaces the ring,
- * and it has to be how many pieces are really going to appear.
+ * ⚠️ **`pieces` rather than the loadout's length, and it survived two decisions.** 0082's 50% coin
+ * is gone and 0243 made the ring two pieces at most, but the reason for the divisor is unchanged:
+ * it spaces the throw over what will really appear.
  */
-function scatterRing(w: World, upgrades: readonly UpgradeKind[], count: number): void {
+function throwPiece(w: World, upgrade: UpgradeKind, stack: number, index: number, pieces: number): void {
   /*
     ⚠️ **WHERE THE SHIP DIED, not where the ship object still is** — 0079. This used to read
     `w.ship.along` and that was exactly right for as long as the scatter happened on the step the hull
@@ -3360,44 +3380,48 @@ function scatterRing(w: World, upgrades: readonly UpgradeKind[], count: number):
     came off. `stepBossDeath` remembers an offset for the identical reason and 0062 says so.
   */
   const along = w.cameraAlong + w.deathOffset;
-  for (let i = 0; i < count; i++) {
-    const kind = w.pickupKinds[upgrades[i]!];
-    const row = w.pickupRows[kind];
-    if (row === undefined) continue;
-    const item = w.pickups.spawn();
-    // A scatter one pickup short is dropped rather than grown — `src/sim/pool.ts` has the argument,
-    // and a player with more upgrades than the pool has slots has had a very good run.
-    if (item === null) return;
-    reset(item, along, w.deathAcross, row, kind);
-    /*
-      ⚠️ **A SCATTERED PIECE STARTS ON THE FACE THE PLAYER JUST LOST** — 0233. What a death throws
-      back is what it took (0066), and what it took was a gun of a particular kind; a piece that
-      came up showing the other gun would be offering the player a switch they did not ask for at
-      the one moment they are trying to recover. It cycles from there like any other.
-    */
-    startCycle(item, row, upgrades[i] === 'weapon' ? WEAPON_KINDS.indexOf(w.weapon.kind) : MISSILE_KINDS.indexOf(w.weapon.missile));
-    /*
-      THE RING — an angle per piece, evenly spaced and then jittered.
+  const kind = w.pickupKinds[upgrade];
+  const row = w.pickupRows[kind];
+  if (row === undefined) return;
+  const item = w.pickups.spawn();
+  // A scatter one pickup short is dropped rather than grown — `src/sim/pool.ts` has the argument.
+  if (item === null) return;
+  reset(item, along, w.deathAcross, row, kind);
+  item.stack = stack;
+  /*
+    ⚠️ **A SCATTERED PIECE SHOWS THE FACE THE PLAYER JUST LOST, AND HOLDS IT** — 0233, finished by
+    0243. What a death throws back is what it took (0066), and what it took was a gun of a
+    particular kind; a piece that came up showing the other gun would be offering the player a
+    switch they did not ask for at the one moment they are trying to recover. 0233 had it cycle
+    from there like any other, and the fifth play-test named the cycling as the thing that made a
+    death's pieces impossible to grab under fire — so a scattered piece does not turn.
+  */
+  startCycle(item, row, upgrade === 'weapon' ? WEAPON_KINDS.indexOf(w.weapon.kind) : MISSILE_KINDS.indexOf(w.weapon.missile));
+  item.faceIn = 0;
+  /*
+    THE THROW — an angle per piece, evenly spaced round the wreck and then jittered.
 
-      ⚠️ **The even term is the guarantee and the jitter is the picture.** Without the first, two
-      pieces can leave along the same heading and the player loses one of them for nothing; without
-      the second, a death looks like a diagram. `SCATTER_JITTER` is under half the gap between
-      neighbours at any count, so the ordering around the circle can never invert.
+    ⚠️ **A SIXTH OF A TURN ON, since 0243.** With one or two pieces, a ring that started along the
+    lane put one piece straight ahead and the other straight behind, a dozen units from the box's
+    back wall and nothing across; a ring started straight across put nothing along. A sixth of a
+    turn on, the two leave ahead-and-across one way and behind-and-across the other — mostly
+    across, which is the room there is, and enough along to be a throw — both axes, both sides,
+    which is 0066's picture kept at two. The jitter is under half the gap between neighbours and
+    capped besides, so the two can never swap sides.
 
-      ⚠️ **`velAlong` is the scroll rate PLUS the along component**, which is 0034's *every speed is
-      in the camera's frame*. The along half is spent against `PICKUP_EASE` in `driftPickups` — about
-      11 world units — and what is left is a piece holding the distance the ship died at and bouncing
-      across the lane, which is what 0066 built and this keeps.
-    */
-    const halfGap = (Math.PI / count) * SCATTER_JITTER_SHARE;
-    const angle = (i / count) * Math.PI * 2 + w.scatterRng.range(-halfGap, halfGap);
-    const speed = SCATTER_SPEED * w.scatterRng.range(SCATTER_SPREAD_MIN, SCATTER_SPREAD_MAX);
-    item.velAcross = Math.sin(angle) * speed;
-    item.velAlong = w.scrollPerStep + Math.cos(angle) * speed;
-    // The throw is a flight, and then the wait every pickup has — 0236. `driftPickups` has both.
-    item.turnsLeft = SCATTER_FLIGHT;
-    item.holdFor = lingerFor(row);
-  }
+    ⚠️ **`velAlong` is the scroll rate PLUS the along component**, which is 0034's *every speed is
+    in the camera's frame*. The along half is spent against `PICKUP_EASE` in `driftPickups`, and
+    what is left is a piece holding the distance the ship died at and bouncing across the lane.
+  */
+  const share = (Math.PI / pieces) * SCATTER_JITTER_SHARE;
+  const halfGap = share < SCATTER_JITTER_MAX ? share : SCATTER_JITTER_MAX;
+  const angle = Math.PI / 3 + (index / pieces) * Math.PI * 2 + w.scatterRng.range(-halfGap, halfGap);
+  const speed = SCATTER_SPEED * w.scatterRng.range(SCATTER_SPREAD_MIN, SCATTER_SPREAD_MAX);
+  item.velAcross = Math.sin(angle) * speed;
+  item.velAlong = w.scrollPerStep + Math.cos(angle) * speed;
+  // The throw is a flight, and then the wait every pickup has — 0236. `driftPickups` has both.
+  item.turnsLeft = SCATTER_FLIGHT;
+  item.holdFor = lingerFor(row);
 }
 
 /**

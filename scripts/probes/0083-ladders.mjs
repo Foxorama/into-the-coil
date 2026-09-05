@@ -125,8 +125,10 @@ export const PROBES = [
     guard: 'THE COST OF DYING: gives back every upgrade, on every seed',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  scatterRing(w, upgrades, upgrades.length > room ? room : upgrades.length);',
-      replace: '  scatterRing(w, upgrades, Math.ceil((upgrades.length > room ? room : upgrades.length) / 2));',
+      // ⚠️ Re-anchored by 0243: a piece carries the count now, so half of what a death took is half
+      // the weapon piece's stack.
+      find: "  if (weapons > 0) throwPiece(w, 'weapon', weapons, index++, pieces);",
+      replace: "  if (weapons > 0) throwPiece(w, 'weapon', Math.ceil(weapons / 2), index++, pieces);",
     },
   },
   {
@@ -142,8 +144,9 @@ export const PROBES = [
     guard: 'and never throws a shield, because a shield was never in the list',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const kind = w.pickupKinds[upgrades[i]!];',
-      replace: "    const kind = w.pickupKinds['shield'];",
+      // ⚠️ Re-anchored by 0243: the kind is looked up once per piece in `throwPiece`.
+      find: '  const kind = w.pickupKinds[upgrade];',
+      replace: "  const kind = w.pickupKinds['shield'];",
     },
   },
 ];

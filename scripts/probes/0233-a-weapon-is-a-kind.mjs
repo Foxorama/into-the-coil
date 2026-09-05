@@ -66,8 +66,9 @@ export const PROBES = [
     guard: 'THE SWITCH: another gun is an upgrade',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: "          : [...state.upgrades.filter((u) => u !== action.upgrade), action.upgrade];",
-      replace: '          : [...state.upgrades, action.upgrade];',
+      // ⚠️ Re-anchored by 0243: the appended half is `rungs`, the count the pickup was worth.
+      find: '          : [...state.upgrades.filter((u) => u !== action.upgrade), ...rungs];',
+      replace: '          : [...state.upgrades, ...rungs];',
     },
   },
   {
