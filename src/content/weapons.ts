@@ -49,11 +49,12 @@ export type WeaponKind = (typeof WEAPON_KINDS)[number];
  *   **straight**  a body spawned into `playerShots` at `speed`, fanned across the barrels
  *   **chain**     hitscan. The step it fires it finds a target in `reach`, lands, and jumps `links`
  *                 times to the next nearest; what the player sees is a bolt, drawn for a few steps
- *   **orbit**     a body spawned into `playerShots` that circles the SHIP in a widening spiral for
- *                 `orbit` steps and is spent by its own clock rather than by arriving — it lands on
- *                 everything it crosses, once per impact flash. 0234
+ *   **coil**      a body spawned into `playerShots` in a PAIR, one from each wingtip, each circling
+ *                 a point that moves up the lane at `speed` — a chain of loops, the two crossing
+ *                 ahead of the nose. Not spent by arriving: it lands on everything it crosses, once
+ *                 per impact flash, and is gone at the edge of the screen. 0234, 0242
  */
-export type FlightKind = 'straight' | 'chain' | 'orbit';
+export type FlightKind = 'straight' | 'chain' | 'coil';
 
 export interface WeaponRow {
   /** What the player would call it. Terse, per `docs/game.md`'s voice rule. */
@@ -101,23 +102,29 @@ export interface WeaponRow {
    */
   reach: readonly number[];
   /**
-   * Steps an `orbit` shot takes to spiral out to the lane's half-width, one entry per rung — how
-   * tightly the spiral is wound. Zeros for a weapon whose shots are spent by arriving.
+   * The radius of the loop a `coil` shot circles, in world units, one entry per rung — the half-
+   * width of the band the coil sweeps. Zeros for a weapon whose shots are spent by arriving.
    *
    * ⚠️ **A LADDER, because it is the thing an upgrade buys** — *"upgrades make the shuriken's arc
-   * last longer, so it ends up with a bigger spiral."* Since 0237 every spiral ends at the edge of
-   * the screen, so what a rung buys is turns before it gets there: more steps to the half-width is
-   * a slower opening, and a slower opening is more of a turn per unit out and a longer arc swept.
-   * The row says how long; the screen says how wide. Until 0237 this was a clock that spent the
-   * blade wherever it was, and the spiral's width was the shot's speed times it.
+   * last longer, so it ends up with a bigger spiral."* Since 0242 a blade's path is a chain of loops
+   * up the lane and its reach is the screen's at every rung, so what a rung buys is the loop: a
+   * wider band swept ahead of the ship. Before 0242 this was `orbit` — first a clock (0234), then
+   * how tightly a spiral about the ship was wound (0237, 0239, 0240).
    */
-  orbit: readonly number[];
+  coil: readonly number[];
   /**
-   * Radians an `orbit` shot turns about the ship per step. Zero for every other flight.
+   * Radians a `coil` shot turns about its loop's centre per step. Zero for every other flight.
    *
-   * ⚠️ **In the camera's frame, like every speed** — the ship flies in it and the shot circles the
-   * ship. A turn of 0.11 is a revolution every fifty-seven steps, about a second, which is slow
-   * enough to read as a thing circling and fast enough that a blade sweeps a body twice.
+   * ⚠️ **In the camera's frame, like every speed.** A turn of 0.23 is a loop every twenty-seven
+   * steps, under half a second, which at the shot's forward speed puts each loop a third over the
+   * last — the overlap the drawing had (`reports/the-coil-drawn-2026-09-05.md`).
+   *
+   * ⚠️ **AND NOT A DIVISOR OF ANY RUNG'S CADENCE, WHICH THE FIRST PHOTOGRAPH TAUGHT.** Every pair
+   * turns at this rate from the same starting phase, so where pair *n+1* is in its loop when pair
+   * *n* is at the top is `turn × fireEvery`. At 0.21 that was exactly a turn at the first rung and
+   * exactly half a turn at the cap: every blade on the screen at the same point of its loop, two
+   * rows that breathed rather than a braid. At 0.23 the gap is a third of a turn at the cap and a
+   * tenth at the first rung, so a screen of pairs shows every point of the loop at once.
    */
   turn: number;
   /** The face the weapon pickup shows when it is offering this kind — an index into the atlas. */
@@ -142,7 +149,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     links: [1, 1, 1, 1, 1],
     weight: [1, 1, 1, 1, 1],
     reach: [0, 0, 0, 0, 0],
-    orbit: [0, 0, 0, 0, 0],
+    coil: [0, 0, 0, 0, 0],
     turn: 0,
     pickup: SPRITE.pickupWeapon,
   },
@@ -177,7 +184,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     // reaches a shade over half of the narrowest view. `tests/guns-played.test.ts` holds the climb,
     // never the numbers.
     reach: [52, 61, 71, 84, 98],
-    orbit: [0, 0, 0, 0, 0],
+    coil: [0, 0, 0, 0, 0],
     turn: 0,
     pickup: SPRITE.pickupArc,
   },
@@ -189,43 +196,34 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
    *
    * ⚠️ **The slowest cadence in the game and the only shot that is not spent by arriving.** A blade
    * lives until it leaves the screen and lands on everything it crosses, so its worth is the sweep
-   * and not the shot: at the cap a blade every quarter-second, each in the air for nearly three
-   * seconds — a dozen blades spiralling out from the ship at once. `tests/blades.test.ts` fires the
-   * cap for fifteen seconds and holds the pool.
+   * and not the shot: at the cap a pair of blades every quarter-second, each in the air for two
+   * seconds — sixteen blades coiling up the lane at once. `tests/blades.test.ts` fires the cap for
+   * fifteen seconds and holds the pool.
    *
-   * ⚠️ **The spiral opens from the ship to the edge of the screen and the blade is gone there** —
-   * `docs/decisions/0237-the-blades-answer-the-first-play-test.md`, from the first play: *"spiral
-   * outwards from ship to edge of the screen and then disappear like a reverse whirlpool effect."*
-   * A gun that guards the ship first and reaches the edge later, which is the opposite of the pulse
-   * and the arc and is what makes it a third gun rather than a third shape.
+   * ⚠️ **A COIL UP THE LANE, SINCE 0242 — AND NOT A RING ABOUT THE SHIP.** Four decisions wound a
+   * spiral about the ship (0234, 0237, 0239, 0240) and the fourth play-test drew the path it wanted
+   * instead: *"starting from the wing tips and circling forwards… the spiral whirlpool we have is
+   * cool, but it feels really weird and has a lot of hard to control gaps still."* A pair of blades
+   * leaves the wingtips, each circling a point that moves up the lane at the shot's `speed`, the
+   * two crossing ahead of the nose — a chain of loops the width of `coil`, the same everywhere on
+   * the screen, aimed by where the ship sits across the lane. A wide slow band against the pulse's
+   * narrow fast line, which is what makes it a third gun rather than a third shape.
    *
-   * ⚠️ **`orbit` is how tightly the spiral is wound**: steps to the lane's half-width. A rung buys a
-   * slower opening, which at a fixed `turn` is more turns before the edge, held by
-   * `tests/blades.test.ts` as *more* and never as the count.
-   *
-   * ⚠️ **Wound a quarter tighter by 0239** — *"shurikens need a slightly tighter spiral, there's too
-   * much gap at the moment."* The gap is the spiral's pitch: what a blade gains outward in one turn,
-   * `(half-width ÷ orbit) × (2π ÷ turn)`. 0239 took the pitch from 40 units at the first rung to
-   * 31, and from 15 at the cap to 12.
-   *
-   * ⚠️ **And rewound by 0240 for a ring that is centred ahead of the ship and stretched along the
-   * lane** (`src/app/frame.ts`): the turn is a tenth of a radian, so the rim of a longer ring does
-   * not whip, and every rung opens slower again so the pitch stays where 0239 put it — 26 at the
-   * first rung, 12 at the cap — and the first rung still goes round the ship once before the edge
-   * behind it takes the blade.
+   * ⚠️ **`coil` is the loop's radius**: a rung buys a wider band. The turn is fixed, so a bigger
+   * loop is a faster blade — at the cap a blade at the top of its loop covers five units a step.
    */
   shuriken: {
     label: 'Shuriken',
-    hint: 'Blades ring the ship',
+    hint: 'Blades coil ahead',
     shot: 'shuriken',
-    flight: 'orbit',
+    flight: 'coil',
     fireEvery: [30, 26, 22, 18, 15],
     barrels: [1, 1, 1, 1, 1],
     links: [1, 1, 1, 1, 1],
     weight: [1, 1, 1, 1, 1],
     reach: [0, 0, 0, 0, 0],
-    orbit: [120, 150, 185, 220, 260],
-    turn: 0.1,
+    coil: [7, 9, 12, 15, 18],
+    turn: 0.23,
     pickup: SPRITE.pickupShuriken,
   },
 };

@@ -1,15 +1,16 @@
 /**
- * A blade circles the ship — `docs/decisions/0234-a-blade-circles-the-ship.md` — and spirals out to
- * the edge of the screen — `docs/decisions/0237-the-blades-answer-the-first-play-test.md`.
+ * A blade coils ahead of the ship — `docs/decisions/0234-a-blade-circles-the-ship.md`, as
+ * `docs/decisions/0242-a-blade-coils-ahead-of-the-ship.md` left it.
  *
- * The shuriken is the third gun and the first shot that is not spent by arriving: it circles the
- * ship in a widening spiral, lands on everything it crosses once per impact flash, and is gone the
- * step it leaves the screen. The kind's ladders, face and hulls are held by `tests/weapons.test.ts`
- * over every gun; what is held here is the flight.
+ * The shuriken is the third gun and the first shot that is not spent by arriving: a pair of blades
+ * leaves the wingtips, each circling a point that moves up the lane, the two crossing ahead of the
+ * nose — a chain of loops that lands on everything it crosses once per impact flash and is gone at
+ * the leading edge of the screen. The kind's ladders, face and hulls are held by
+ * `tests/weapons.test.ts` over every gun; what is held here is the flight.
  *
- * ⚠️ **Nothing here asserts on a VALUE**, on `src/content/shots.ts`'s terms — the spiral widens, the
- * blade survives, the second landing waits for the flash to finish, the edge of the screen is the
- * end, and a rung is more of a turn before it.
+ * ⚠️ **Nothing here asserts on a VALUE**, on `src/content/shots.ts`'s terms — the loop keeps its
+ * width and gains ground, the pair crosses, the blade survives, the second landing waits for the
+ * flash to finish, the leading edge is the end, and a rung is a wider band.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -21,7 +22,7 @@ import { UPGRADE_TIERS, weaponFor, type UpgradeKind } from '../src/content/picku
 import { ENEMIES } from '../src/content/enemies.ts';
 import { CUES, TWIN_KINDS } from '../src/content/cues.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
-import { reset } from '../src/sim/entity.ts';
+import { reset, type Entity } from '../src/sim/entity.ts';
 import { SPRITE_KINDS } from '../src/content/sprites.ts';
 import { INK_OF } from '../src/render/bake.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
@@ -52,7 +53,7 @@ function target(world: World, ahead: number, aside: number, radius: number): { h
   if (enemy === null) throw new Error('the enemy pool is full');
   reset(enemy, world.ship.along + ahead, world.ship.across + aside, { ...ENEMIES.turret, health: 999, radius }, world.enemyKinds.turret);
   enemy.fireIn = NEVER;
-  // Riding the camera, so it stays where the ship can circle it — a blade lives seconds and a body
+  // Riding the camera, so it stays where a coil can reach it — a blade lives seconds and a body
   // holding its WORLD place is far behind the ship by then.
   enemy.velAlong = world.scrollPerStep;
   return enemy;
@@ -61,7 +62,7 @@ function target(world: World, ahead: number, aside: number, radius: number): { h
 /**
  * Where a blade was on one step, in the two frames that matter: on the SCREEN (`inView` is world
  * units ahead of the camera, `across` the lane) and about the SHIP (`fromShip…`). Both are taken on
- * the step itself, because the camera and the ship have moved fifty units by the time a blade is gone.
+ * the step itself, because the camera and the ship have moved by the time a blade is gone.
  */
 interface Place {
   inView: number;
@@ -80,158 +81,171 @@ function onScreen(world: World, place: Place, halfSize: number): boolean {
   );
 }
 
-/** How far a place is from the nearest edge of the screen, in world units. */
-function toEdge(world: World, place: Place): number {
-  return Math.min(place.across, ACROSS_SPAN - place.across, place.inView, world.view.alongSpan - place.inView);
+/** Whether `blade` is still in the pool — the pool swaps on release, so an index is not a blade. */
+function alive(world: World, blade: Entity): boolean {
+  for (let i = 0; i < world.playerShots.size; i++) if (world.playerShots.at(i) === blade) return true;
+  return false;
 }
 
-/** One blade thrown at `tier` and watched alone until it is gone: where it was on every step of its life. */
-function flight(tier: number): { world: World; places: Place[]; turned: number } {
+/** One throw at `tier` — a PAIR — watched alone until both are gone: where each was on every step. */
+function flights(tier: number): { world: World; pair: [Place[], Place[]] } {
   const { world, frame } = armed(tier);
   frame.step();
-  expect(world.playerShots.size, 'nothing was thrown').toBe(1);
-  // One blade, watched alone: the launcher is held off after the first throw.
+  expect(world.playerShots.size, 'a throw is not a pair').toBe(2);
+  // One pair, watched alone: the launcher is held off after the first throw.
   world.fireIn = NEVER;
-  const blade = world.playerShots.at(0);
-  const places: Place[] = [];
-  let lastAngle = Number.NEGATIVE_INFINITY;
-  let turned = 0;
-  while (world.playerShots.size > 0 && places.length < LONGER_THAN_A_BLADE) {
-    places.push({
-      inView: blade.along - world.cameraAlong,
-      across: blade.across,
-      fromShipAlong: blade.along - world.ship.along,
-      fromShipAcross: blade.across - world.ship.across,
-    });
-    const angle = Math.atan2(blade.across - world.ship.across, blade.along - world.ship.along);
-    if (lastAngle !== Number.NEGATIVE_INFINITY) {
-      // Unwrapped, so a wrap past π is a turn and not a reversal.
-      let turn = angle - lastAngle;
-      if (turn < -Math.PI) turn += Math.PI * 2;
-      if (turn > Math.PI) turn -= Math.PI * 2;
-      turned += turn;
+  const blades = [world.playerShots.at(0), world.playerShots.at(1)];
+  const pair: [Place[], Place[]] = [[], []];
+  let steps = 0;
+  while (world.playerShots.size > 0 && steps < LONGER_THAN_A_BLADE) {
+    for (let k = 0; k < 2; k++) {
+      const blade = blades[k]!;
+      if (!alive(world, blade)) continue;
+      pair[k]!.push({
+        inView: blade.along - world.cameraAlong,
+        across: blade.across,
+        fromShipAlong: blade.along - world.ship.along,
+        fromShipAcross: blade.across - world.ship.across,
+      });
     }
-    lastAngle = angle;
     frame.step();
+    steps++;
   }
-  expect(world.playerShots.size, 'the blade never left the screen').toBe(0);
-  return { world, places, turned };
+  expect(world.playerShots.size, 'the blades never left the screen').toBe(0);
+  return { world, pair };
 }
 
-describe('0234 — a blade circles the ship', () => {
-  it('THE SPIRAL: a thrown blade starts at the nose and goes round the ship for more than a turn, further out each time round', () => {
-    /*
-      ⚠️ **Measured as EXTREMES PER TURN and not as a distance that grows every step — 0240.** A
-      spiral centred on the ship widens on every step; one centred ahead of it and stretched along
-      the lane does not, because its back passes over the ship. What a spiral IS, in the player's
-      units, is that each time round the blade gets further ahead of the ship and further across it
-      than the last time — and that it is not drawn as a ring, which is what the first turn's
-      extremes are held above the nose for.
-    */
-    const { places, turned } = flight(1);
-    expect(places[0]!.fromShipAlong, 'the blade did not start at the nose').toBeLessThan(ACROSS_SPAN / 10);
-    expect(Math.abs(places[0]!.fromShipAcross), 'the blade did not start at the nose').toBeLessThan(ACROSS_SPAN / 10);
-    expect(turned, 'the blade never went round the ship once').toBeGreaterThan(Math.PI * 2);
-    // The furthest ahead and the furthest across it got, per completed turn.
-    const ahead: number[] = [];
-    const across: number[] = [];
-    let angle = 0;
-    let last = Number.NEGATIVE_INFINITY;
-    for (const place of places) {
-      const a = Math.atan2(place.fromShipAcross, place.fromShipAlong);
-      if (last !== Number.NEGATIVE_INFINITY) {
-        let turn = a - last;
-        if (turn < -Math.PI) turn += Math.PI * 2;
-        if (turn > Math.PI) turn -= Math.PI * 2;
-        angle += turn;
+/**
+ * A blade's loops, read off the picture: each time its track crosses the ship's line and back is a
+ * loop, and what is kept per loop is the furthest ahead it got and the widest it swung.
+ */
+function loops(places: readonly Place[]): { ahead: number; wide: number }[] {
+  const out: { ahead: number; wide: number }[] = [];
+  let crossings = 0;
+  let sign = Math.sign(places[0]!.fromShipAcross);
+  let ahead = Number.NEGATIVE_INFINITY;
+  let wide = 0;
+  for (const place of places) {
+    const s = Math.sign(place.fromShipAcross);
+    if (s !== 0 && s !== sign) {
+      sign = s;
+      crossings++;
+      if (crossings % 2 === 0) {
+        out.push({ ahead, wide });
+        ahead = Number.NEGATIVE_INFINITY;
+        wide = 0;
       }
-      last = a;
-      const k = Math.floor(angle / (Math.PI * 2));
-      ahead[k] = Math.max(ahead[k] ?? Number.NEGATIVE_INFINITY, place.fromShipAlong);
-      across[k] = Math.max(across[k] ?? 0, Math.abs(place.fromShipAcross));
     }
-    expect(ahead.length, 'the blade did not complete a turn').toBeGreaterThan(1);
-    for (let k = 1; k < ahead.length; k++) {
-      expect(ahead[k]!, `on turn ${k} the blade got no further ahead of the ship than on turn ${k - 1}`).toBeGreaterThan(ahead[k - 1]!);
-      expect(across[k]!, `on turn ${k} the blade got no further across the ship than on turn ${k - 1}`).toBeGreaterThan(across[k - 1]!);
+    ahead = Math.max(ahead, place.fromShipAlong);
+    wide = Math.max(wide, Math.abs(place.fromShipAcross));
+  }
+  return out;
+}
+
+describe('0234 — a blade coils ahead of the ship', () => {
+  it('THE COIL: a blade leaves the wingtip, and every loop of its track gains ground up the lane and keeps its width', () => {
+    /*
+      0242, from the fourth play-test's drawing: *"starting from the wing tips and circling
+      forwards."* A loop is read off the picture — the track crossing the ship's line and back —
+      so nothing here names the loop's centre or its speed. What a coil IS, in the player's units,
+      is that each loop reaches further ahead than the last and none is wider or narrower than the
+      first by much: a chain of loops, not a spiral and not a ring.
+    */
+    const { pair } = flights(1);
+    const places = pair[0];
+    expect(Math.abs(places[0]!.fromShipAlong), 'the blade did not leave from the ship').toBeLessThan(SHOTS.shuriken.radius);
+    expect(Math.abs(places[0]!.fromShipAcross), 'the blade did not leave from a wingtip').toBeGreaterThan(SHOTS.shuriken.radius);
+    const chain = loops(places);
+    expect(chain.length, 'the blade never completed two loops before the edge').toBeGreaterThan(2);
+    for (let k = 1; k < chain.length; k++) {
+      expect(chain[k]!.ahead, `loop ${k} got no further up the lane than loop ${k - 1}`).toBeGreaterThan(chain[k - 1]!.ahead);
+      expect(chain[k]!.wide, `loop ${k} is a different width from the first`).toBeGreaterThan(chain[0]!.wide * 0.85);
+      expect(chain[k]!.wide, `loop ${k} is a different width from the first`).toBeLessThan(chain[0]!.wide * 1.15);
     }
   });
 
-  it('THE REACH: a blade gets much further ahead of the ship than across it, so a boss is in its sweep', () => {
+  it('THE PAIR: a throw is two blades from opposite wingtips, and they cross in front of the nose', () => {
     /*
-      0240, from the fourth play-test: *"shurikens need to stretch out a bit further as well, same
-      original problem as the lightning, it doesn't reach far enough and as a result you have to get
-      too close to bosses."* A boss sits ahead; a ring about the ship leaves by the edge behind it
-      before it is far ahead. Held as a RATIO in the player's units — how far ahead against how far
-      across, over a whole flight — and never as the distance, which is a hand's.
+      *"cross the blades in front of the nose."* Two blades, a quarter-turn either side of the
+      nose and turning toward it, braid across the band's centre line — which is where a boss sits.
+      Held from the picture: they start the same distance out on opposite sides, each visits both
+      sides, and there is a step ahead of the nose where the two are at the SAME PLACE, within a
+      blade of each other.
+
+      ⚠️ **The same place, not the same line.** Two blades turning the same way are one loop half a
+      turn apart: they cross the ship's line together too, from opposite sides, and are two loop
+      widths apart along the lane when they do. Only a braid brings them to one point.
     */
-    const { places } = flight(0);
-    let ahead = 0;
-    let across = 0;
-    for (const place of places) {
-      ahead = Math.max(ahead, place.fromShipAlong);
-      across = Math.max(across, Math.abs(place.fromShipAcross));
+    const { pair } = flights(2);
+    const [a, b] = pair;
+    expect(a[0]!.fromShipAcross, 'the pair left from one side').toBeCloseTo(-b[0]!.fromShipAcross, 3);
+    for (const places of pair) {
+      expect(Math.min(...places.map((p) => p.fromShipAcross)), 'a blade never crossed to the other side').toBeLessThan(0);
+      expect(Math.max(...places.map((p) => p.fromShipAcross)), 'a blade never crossed to the other side').toBeGreaterThan(0);
     }
-    expect(across, 'the blade never swept across the ship, so the ratio measures nothing').toBeGreaterThan(ACROSS_SPAN / 5);
-    expect(ahead, `the blade got ${ahead.toFixed(0)} ahead against ${across.toFixed(0)} across`).toBeGreaterThan(across * 1.4);
+    let crossed = false;
+    for (let i = 0; i < Math.min(a.length, b.length) && !crossed; i++) {
+      const gap = Math.hypot(a[i]!.fromShipAlong - b[i]!.fromShipAlong, a[i]!.fromShipAcross - b[i]!.fromShipAcross);
+      if (a[i]!.fromShipAlong > 0 && b[i]!.fromShipAlong > 0 && gap < SHOTS.shuriken.radius * 2) crossed = true;
+    }
+    expect(crossed, 'the two blades never crossed ahead of the nose').toBe(true);
   });
 
-  it('THE WHIRLPOOL: a blade is on the screen every step of its life, and its last place is at the edge', () => {
+  it('THE EDGE: a blade is on the screen every step of its life, and its last place is at the leading edge', () => {
     /*
-      ── 0237, FROM THE FIRST PLAY ────────────────────────────────────────────────────────────────
-
-      *"spiral outwards from ship to edge of the screen and then disappear like a reverse whirlpool
-      effect."* Two claims in the player's own units — the screen — and both are held here:
-
-        the blade is drawn on the screen on EVERY step it exists, so a spiral wider than the lane
-        never leaves by one edge and comes back in by another, and it is never drawn beyond an edge;
-
-        the last place it is drawn is AT an edge, so nothing but the edge ends it — a clock that
-        spent it a third of the way across the screen (0234's) fails this by forty units.
-
-      `SHOTS.shuriken.radius` is the blade's own drawn half-size, which is the one allowance over the
-      edge: a blade is gone when the last of it is, not while half of it still shows. The distance
-      that counts as *at* the edge is what a blade can cover in a step at the outer end of its spiral
-      plus that half-size — a ship's length or so — and it is the one figure here that is a distance
-      rather than a fact about the picture.
+      0237's rule — off the screen is off the game, and nothing but the edge ends a blade — read for
+      a coil, whose edge is the LEADING one: that is its reach, and it is the screen's at every rung.
+      `SHOTS.shuriken.radius` is the blade's own drawn half-size, the one allowance over the edge;
+      the distance that counts as *at* the edge is what a blade covers in a step plus that half-size.
     */
-    const { world, places } = flight(0);
+    const { world, pair } = flights(0);
     const halfSize = SHOTS.shuriken.radius;
-    for (let i = 0; i < places.length; i++) {
-      expect(onScreen(world, places[i]!, halfSize), `the blade was drawn off the screen on step ${i}`).toBe(true);
+    for (const places of pair) {
+      for (let i = 0; i < places.length; i++) {
+        expect(onScreen(world, places[i]!, halfSize), `a blade was drawn off the screen on step ${i}`).toBe(true);
+      }
+      const last = places[places.length - 1]!;
+      const remaining = world.view.alongSpan - last.inView;
+      expect(remaining, `a blade vanished ${remaining.toFixed(1)} units short of the leading edge`).toBeLessThan(halfSize + 9);
     }
-    const remaining = toEdge(world, places[places.length - 1]!);
-    expect(remaining, `the blade vanished ${remaining.toFixed(1)} units short of the edge of the screen`).toBeLessThan(halfSize + 9);
+    /*
+      ⚠️ **No wall case, and that is a fact about a coil rather than a gap.** A blade starts at the
+      top of its loop, so the furthest across the lane it ever gets is where it was thrown — on the
+      screen, or the throw itself is off it. The only edge a coil can meet is the leading one.
+      0237's probe that took the side edges' release away is retired for the same reason.
+    */
   });
 
-  it('THE LADDER: a rung is more of a turn before the edge, so the cap sweeps a longer arc than the first rung', () => {
+  it('THE LADDER: a rung is a wider band, so the cap sweeps more of the lane than the first rung', () => {
     /*
-      ⚠️ Every spiral ends at the same place — the edge — so what an upgrade buys is how much of a
-      turn it makes getting there: *"upgrades make the shuriken's arc last longer."* Held as MORE and
-      never as a count of turns; the ladder in `src/content/weapons.ts` is a hand's.
+      ⚠️ Every coil reaches the same edge, so what an upgrade buys is how wide a band it sweeps:
+      *"upgrades make the shuriken's arc… bigger."* Held as WIDER by half and never as the width;
+      the ladder in `src/content/weapons.ts` is a hand's.
     */
-    const first = flight(0).turned;
-    const cap = flight(UPGRADE_TIERS).turned;
-    expect(first, 'the first rung never went round the ship once').toBeGreaterThan(Math.PI * 2);
-    expect(cap, `the cap turned ${(cap / (Math.PI * 2)).toFixed(2)} times against the first rung’s ${(first / (Math.PI * 2)).toFixed(2)}`).toBeGreaterThan(first + Math.PI);
+    const width = (tier: number): number => Math.max(...flights(tier).pair[0].map((p) => Math.abs(p.fromShipAcross)));
+    const first = width(0);
+    const cap = width(UPGRADE_TIERS);
+    expect(first, 'the first rung sweeps no band at all').toBeGreaterThan(SHOTS.shuriken.radius);
+    expect(cap, `the cap sweeps ${cap.toFixed(0)} across against the first rung’s ${first.toFixed(0)}`).toBeGreaterThan(first * 1.5);
   });
 
   it('THE SWEEP: a blade lands on a body it crosses without being spent, and lands again only once the flash has cleared', () => {
     /*
-      Asked for: *"hits everything that it comes into contact with on that arc."* A big body on
-      the spiral: the blade crosses it, lands, keeps going, and lands again on the same body once
-      the flash has cleared while it is still across it. What must not happen is twenty landings
-      for twenty steps of overlap — one per impact flash is the rule `src/sim/collide.ts` states,
-      and it is the same rule the pulse's rate is held to (0035: a hit finishes flashing before the
-      next one lands).
+      Asked for: *"hits everything that it comes into contact with on that arc."* A body on the
+      band: the blade crosses it, lands, keeps looping, and lands again on the same body once the
+      flash has cleared while it is still across it. What must not happen is twenty landings for
+      twenty steps of overlap — one per impact flash is the rule `src/sim/collide.ts` states, and it
+      is the same rule the pulse's rate is held to (0035: a hit finishes flashing before the next one
+      lands).
     */
     const { world, frame } = armed(2);
-    // Beside the ring, clear of the ship: the blade crosses it on its first turn and its second,
-    // and is out of it in between — so it lands a few times and never enough to be blunt.
-    const body = target(world, 30, -24, 14);
+    const body = target(world, 60, 0, 10);
     frame.step();
-    expect(world.playerShots.size).toBe(1);
+    expect(world.playerShots.size).toBe(2);
     world.fireIn = NEVER;
+    // One blade, so a landing is one blade's: the gate is each blade's own (0242), and two blades
+    // across one body may land on consecutive steps.
+    world.playerShots.releaseAt(1);
     const landings: number[] = [];
     let health = body.health;
     let steps = 0;
@@ -244,21 +258,21 @@ describe('0234 — a blade circles the ship', () => {
         expect(world.playerShots.size, `the blade was spent by landing on step ${step}`).toBe(1);
       }
     }
-    expect(landings.length, 'the blade crossed the body and never landed').toBeGreaterThanOrEqual(2);
+    expect(landings.length, 'the blades crossed the body and never landed').toBeGreaterThanOrEqual(2);
     for (let i = 1; i < landings.length; i++) {
       expect(landings[i]! - landings[i - 1]!, `landings ${i - 1} and ${i} came on consecutive steps`).toBeGreaterThan(1);
     }
-    expect(landings.length, 'the blade landed on every step it overlapped, which is a saw and not a blade').toBeLessThan(steps / 2);
+    expect(landings.length, 'the blades landed on every step they overlapped, which is a saw and not a blade').toBeLessThan(steps / 2);
   });
 
   it('and a blade is blunt after its edge’s worth of landings, so a body it never leaves is not free', () => {
     /*
-      A body so big the blade is across it for the whole of its spiral, so it lands once per flash
-      for as long as it has edge — and then it is blunt, well before the edge of the screen would
-      have ended it. Held as SOONER than a blade that lands on nothing lives, in steps, so nothing
-      here names the edge or the flash.
+      A body so big the blade is across it for the whole of its coil, so it lands once per flash
+      for as long as it has edge — and then it is blunt, well before the leading edge would have
+      ended it. Held as SOONER than a blade that lands on nothing lives, in steps, so nothing here
+      names the edge or the flash.
     */
-    const untouched = flight(UPGRADE_TIERS).places.length;
+    const untouched = flights(UPGRADE_TIERS).pair[0].length;
     const { world, frame } = armed(UPGRADE_TIERS);
     target(world, 0, 0, ACROSS_SPAN);
     frame.step();
@@ -271,8 +285,8 @@ describe('0234 — a blade circles the ship', () => {
         break;
       }
     }
-    expect(spentAt, 'the blade was never spent').toBeGreaterThan(0);
-    expect(spentAt, `the blade lasted ${spentAt} steps across a body, against ${untouched} across nothing`).toBeLessThan(untouched * 0.75);
+    expect(spentAt, 'the blades were never spent').toBeGreaterThan(0);
+    expect(spentAt, `the blades lasted ${spentAt} steps across a body, against ${untouched} across nothing`).toBeLessThan(untouched * 0.75);
   });
 
   it('THE SPIN: a blade shows its two turns in turn, so a bitmap that cannot rotate still spins', () => {
@@ -283,7 +297,7 @@ describe('0234 — a blade circles the ship', () => {
     const seen = new Set<number>();
     let changes = 0;
     let last = blade.sprite;
-    for (let i = 0; i < LONGER_THAN_A_BLADE && world.playerShots.size > 0; i++) {
+    for (let i = 0; i < LONGER_THAN_A_BLADE && alive(world, blade); i++) {
       frame.step();
       seen.add(blade.sprite);
       if (blade.sprite !== last) changes++;
@@ -296,9 +310,9 @@ describe('0234 — a blade circles the ship', () => {
   it('THE STEEL: a blade wears an ink of its own, not the pulse’s, and both of its turns wear it', () => {
     /*
       0238, from the second play: *"shurikens need to be bigger and steel coloured."* A blade is not
-      a bullet — it is the one shot that stays about the ship — and 0081's rule is that what the
-      player must tell apart is told apart by more than ink; this holds that the ink is at least one
-      of the channels, and that the star does not change colour as it spins.
+      a bullet, and 0081's rule is that what the player must tell apart is told apart by more than
+      ink; this holds that the ink is at least one of the channels, and that the star does not
+      change colour as it spins.
     */
     const blade = INK_OF[SPRITE_KINDS[SHOTS.shuriken.sprite]!];
     expect(blade, 'a blade is drawn in the pulse’s ink').not.toBe(INK_OF[SPRITE_KINDS[SHOTS.pulse.sprite]!]);
@@ -309,7 +323,7 @@ describe('0234 — a blade circles the ship', () => {
     expect(CUES.throw.twin).toBe('blade-appears');
     expect(TWIN_KINDS).toContain(CUES.throw.twin);
     const { world, frame, cues } = armed(2);
-    target(world, 30, -24, 14);
+    target(world, 60, 0, 10);
     frame.step();
     expect(cues, 'the throw made no sound').toContain('throw');
     expect(cues, 'a hit sounded before anything was hit').not.toContain('hit');
@@ -322,14 +336,14 @@ describe('0234 — a blade circles the ship', () => {
     world.fireIn = world.weapon.fireEvery;
     let peak = 0;
     // Long enough for more blades to have been thrown than the pool holds, if none of them ever
-    // left — fifteen seconds is sixty throws at the cap against a pool of eighty-eight, and would
-    // have passed a spiral that never ended.
+    // left — fifteen seconds is a hundred and twenty blades at the cap against a pool of eighty-
+    // eight, and would have passed a coil that never reached the edge.
     for (let i = 0; i < 1500; i++) {
       frame.step();
       if (world.playerShots.size > peak) peak = world.playerShots.size;
     }
     expect(peak, 'no blade was ever thrown, so this measured nothing').toBeGreaterThan(0);
     expect(peak, `the cap keeps ${peak} blades in the air against a pool of ${CAPACITY.playerShots}`).toBeLessThan(CAPACITY.playerShots);
-    expect(WEAPONS.shuriken.flight).toBe('orbit');
+    expect(WEAPONS.shuriken.flight).toBe('coil');
   });
 });

@@ -230,6 +230,11 @@ describe('a worker tree is known to come back to what it was copied as', () => {
  */
 const WITHOUT_PROBES: Record<string, string> = {
   '0002': 'a one-character case change in index.html — would script; not backfilled yet',
+  // The third exemption that is not a hole: a table whose subject no longer exists. 0242 replaced
+  // the ring 0240 built with a coil, and the lead and stretch its three probes broke are gone from
+  // the tree; the table records a session that was real and cannot be re-run against code that
+  // has no ring. 0242's own table covers what replaced it.
+  '0240': 'its ring was superseded by 0242 — the lead and stretch its probes broke no longer exist, and the coil that replaced them has its own table and probes',
   '0007': 'every row needs `npm run build` and a browser run first, and the harness runs vitest against the tree rather than a built dist/',
   '0008': 'the manifest and `_headers` rows assert on a built dist/, which the harness does not produce',
   '0009': "the cache-sweep rows drive a real page against a built dist/ with a stranger's cache seeded on the origin",

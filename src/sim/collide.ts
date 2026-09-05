@@ -148,16 +148,22 @@ export function collideInto(
     for (let s = shots.size - 1; s >= 0; s--) {
       const shot = shots.at(s);
       /*
-        ⚠️ **A SHOT THAT SURVIVES ITS ARRIVALS LANDS ONCE PER IMPACT FLASH** —
-        `docs/decisions/0234-a-blade-circles-the-ship.md`. A blade with health to spare that overlaps
-        a body on twenty consecutive steps is twenty arrivals under the rule below; the flash the
-        last arrival wrote is what says *already landed*, and it is the same field the picture reads
-        (0035), so *hit* and *drawn as hit* stay one fact. A shot with one health is unchanged: it is
-        spent by its first arrival, flashing target or not — `tests/combat.test.ts` holds that a
-        mid-flash pulse still counts.
+        ⚠️ **A SHOT THAT SURVIVES ITS ARRIVALS LANDS ONCE PER IMPACT FLASH, AND THE FLASH IT COUNTS IS
+        ITS OWN** — `docs/decisions/0234-a-blade-circles-the-ship.md`, as
+        `docs/decisions/0242-a-blade-coils-ahead-of-the-ship.md` left it. A blade with health to
+        spare that overlaps a body on twenty consecutive steps is twenty arrivals under the rule
+        below; `landIn`, written by the last landing, is what says *already landed*, and it runs the
+        flash's length so *hit* and *drawn as hit* still agree. 0234 read the BODY's flash instead,
+        which made a body's landings one per flash however many blades were across it — a coil of
+        sixteen blades was worth thirteen a second against a boss. A shot with one health is
+        unchanged: it is spent by its first arrival — `tests/combat.test.ts` holds that a mid-flash
+        pulse still counts.
       */
-      if (shot.health > 1 && target.flashFor > 0) continue;
       if (!overlaps(shot, target, targetRadiusScale)) continue;
+      if (shot.health > 1) {
+        if (shot.landIn > 0) continue;
+        shot.landIn = flashSteps;
+      }
       target.health -= shot.damage * damageScale;
       /*
         ⚠️ **WHERE THE SHOT LANDED, FOR A CALLER THAT WANTS TO PUT SOMETHING THERE** — 0227. The same

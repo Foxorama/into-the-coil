@@ -116,6 +116,18 @@ export interface Entity extends Body {
    */
   flashFor: number;
   /**
+   * Steps before a shot that survives its arrivals may land again — 0242. Written by the arrival
+   * (`src/sim/collide.ts`) and counted down here beside `flashFor`; zero for every shot that is
+   * spent by arriving, which never reads it.
+   *
+   * ⚠️ **ON THE SHOT, NOT THE BODY.** 0234 gated a surviving shot's landings on the BODY's flash,
+   * which read as *once per impact flash* and was: one landing per body per flash, however many
+   * blades were across it. A boss under a coil of sixteen blades took thirteen damage a second,
+   * against the arc's forty-five. The gate is each blade's own now, so a body takes a landing from
+   * every blade across it, each once per flash.
+   */
+  landIn: number;
+  /**
    * Which row this was spawned from, as an index into a list the COMPOSER owns.
    *
    * ⚠️ **Opaque here, on purpose.** `sim/` may import `brand` and nothing else (0015), so nothing in
@@ -259,14 +271,16 @@ export interface Entity extends Body {
   fromAlong: number;
   fromAcross: number;
   /**
-   * A blade's place on its spiral about the ship — the angle it is at, how far out it is, how much
-   * it turns a step and how much further out it goes a step —
-   * `docs/decisions/0234-a-blade-circles-the-ship.md`.
+   * A blade's place on its loop — the angle it is at, the loop's radius, how much it turns a step,
+   * and how fast the loop's CENTRE goes up the lane (`orbitGrow`, in units a step; the centre itself
+   * is `fromAlong`/`fromAcross` above) — `docs/decisions/0234-a-blade-circles-the-ship.md` as
+   * `docs/decisions/0242-a-blade-coils-ahead-of-the-ship.md` left it.
    *
-   * ⚠️ **The turn and the growth are COPIED ONTO THE BLADE when it is thrown**, not read off the
-   * fitted weapon each step: a player who takes another gun with blades in the air keeps the blades
-   * they threw, and a blade that read the pulse's row would stop dead in its ring. Zero for anything
-   * that is not a blade.
+   * ⚠️ **Everything a blade needs is COPIED ONTO IT when it is thrown**, not read off the fitted
+   * weapon each step: a player who takes another gun with blades in the air keeps the blades they
+   * threw, and a blade that read the pulse's row would stop dead. Zero for anything that is not a
+   * blade. The names date from 0234's spiral about the ship; `orbitGrow` grew the radius then and
+   * moves the centre now.
    */
   orbitAngle: number;
   orbitRadius: number;
@@ -298,6 +312,7 @@ export function makeEntity(): Entity {
     spriteHit: 0,
     invulnFor: 0,
     flashFor: 0,
+    landIn: 0,
     kind: 0,
     fireIn: 0,
     lifeFor: 0,
@@ -341,6 +356,7 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.spriteHit = body.spriteHit;
   e.invulnFor = 0;
   e.flashFor = 0;
+  e.landIn = 0;
   e.kind = kind;
   e.fireIn = 0;
   e.lifeFor = 0;
@@ -391,6 +407,7 @@ export function stepEntities(pool: Pool<Entity>, cameraAlong: number, leadingCul
     e.across += e.velAcross;
     if (e.invulnFor > 0) e.invulnFor--;
     if (e.flashFor > 0) e.flashFor--;
+    if (e.landIn > 0) e.landIn--;
     /*
       The one place a body's sprite is decided, and it answers TWO signals rather than one.
 

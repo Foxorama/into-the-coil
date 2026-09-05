@@ -1364,7 +1364,7 @@ export class GameFrame implements Frame {
       (0227) and a place for the `hit` cue — and it is `null` for the pulse so the pulse's picture
       does not gain sparks it never had.
     */
-    const bladeHits = w.weapon.flight === 'orbit' ? w.hits : null;
+    const bladeHits = w.weapon.flight === 'coil' ? w.hits : null;
     killedByShots += collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, bladeHits);
     killedByShots += collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits);
     // The boss is its own pairing rather than another enemy, and the reason is the pool: it is the
@@ -1692,7 +1692,7 @@ export function cueOfFlight(flight: FlightKind): CueKind {
       return 'pulse';
     case 'chain':
       return 'arc';
-    case 'orbit':
+    case 'coil':
       return 'throw';
     default: {
       const unhandled: never = flight;
@@ -1716,8 +1716,8 @@ function fireShip(w: World): void {
     case 'chain':
       fireArc(w);
       return;
-    case 'orbit':
-      throwBlade(w);
+    case 'coil':
+      throwBlades(w);
       return;
     default: {
       const unhandled: never = w.weapon.flight;
@@ -1732,88 +1732,69 @@ function fireShip(w: World): void {
  */
 const BLADE_KIND = 1;
 
-/** How far from the ship's centre a blade starts its spiral, in world units. Just clear of the hull. */
-const BLADE_START = 3;
-
 /**
- * How far out a spiral is authored to reach in the weapon row's `orbit` steps: the lane's half-width,
- * which is the nearest the edge of the screen can be to a ship in the middle of it —
- * `docs/decisions/0237-the-blades-answer-the-first-play-test.md`.
- *
- * ⚠️ **Where a spiral actually ENDS is the edge of the screen, wherever the ship is**, and it is
- * `steerBlades` that ends it there. This number only says how tightly the spiral is wound.
+ * Which side of the nose each blade of a pair leaves from, and therefore which way round it goes —
+ * `docs/decisions/0242-a-blade-coils-ahead-of-the-ship.md`. Two, always: one from each wingtip.
  */
-const BLADE_REACH = ACROSS_SPAN / 2;
-
-/**
- * Where a spiral is centred — this far AHEAD of the ship — and how much it is stretched along the
- * lane. `docs/decisions/0240-the-blades-reach-the-boss.md`.
- *
- * ⚠️ **A SPIRAL CENTRED ON THE SHIP CANNOT REACH A BOSS, HOWEVER IT IS WOUND.** The ship flies about
- * forty units from the edge of the screen behind it, so a ring about the ship leaves by that edge
- * at forty-odd units out — before it is fifty ahead — and a boss sits a hundred ahead. Played:
- * *"shurikens need to stretch out a bit further… it doesn't reach far enough and as a result you
- * have to get too close to bosses."* Centred thirty ahead and stretched along by half, the same
- * ring reaches eighty to a hundred ahead before the edge behind takes it, still sweeps the lane's
- * width across, and still begins at the ship's nose: a blade starts at the back of its ring, which
- * is where the ship is. Stretched more, the rim whips — at seven tenths a blade at the lane's edge
- * covered eleven units a step.
- */
-const BLADE_LEAD = 30;
-const BLADE_STRETCH = 1.5;
+// @setup: the pair's two sides, for the module's lifetime.
+const BLADE_SIDES = [-1, 1] as const;
 
 /** Steps a blade shows each of its two turns for. A quarter-turn every eight steps reads as a spin. */
 const BLADE_TURN_STEPS = 4;
 
 /**
- * A shuriken thrown — `docs/decisions/0234-a-blade-circles-the-ship.md`.
+ * A pair of shurikens thrown — `docs/decisions/0234-a-blade-circles-the-ship.md`, as
+ * `docs/decisions/0242-a-blade-coils-ahead-of-the-ship.md` left it.
  *
  * ⚠️ **INTO THE PULSE'S POOL, because a ship carries one gun** — the same argument that took the
  * bolts' slots out of it (0233). What tells a blade from a pulse afterwards is `BLADE_KIND`, and
  * what tells the pool a blade is not spent by arriving is its health (`src/sim/collide.ts`).
  *
- * ⚠️ **It starts ahead of the nose and turns the same way every time**, so successive blades are a
- * cadence apart on the same spiral — at `turn` radians a step and thirty steps a throw they leave
- * more than half a turn apart, which spreads a ring of them without a roll. The spawn stream is not
- * consulted, on `spawnWave`'s argument: what a gun does is authored, not dealt.
+ * ⚠️ **FROM THE WINGTIPS, CIRCLING FORWARD, AND CROSSING AHEAD OF THE NOSE.** The fourth play-test
+ * drew the path: each blade circles a point that moves up the lane at the row's speed, so its track
+ * is a chain of loops; the pair leaves a quarter-turn either side of the nose and each turns TOWARD
+ * it, so the two braid across the band's centre line twice a loop — which is where a boss sits.
+ * The loop's centre and its speed are copied onto the blade (`fromAlong`/`fromAcross`,
+ * `orbitGrow`), so a blade thrown is a blade thrown: switching guns with blades in the air leaves
+ * them coiling. The spawn stream is not consulted, on `spawnWave`'s argument: what a gun does is
+ * authored, not dealt.
  */
-function throwBlade(w: World): void {
+function throwBlades(w: World): void {
   const row = SHOTS[WEAPONS[w.weapon.kind].shot];
   // On the grid, like every gun — 0094.
   w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);
-  const blade = w.playerShots.spawn();
-  if (blade === null) return;
   w.onCue('throw', w.ship.across);
-  reset(blade, w.ship.along + BLADE_START, w.ship.across, row, BLADE_KIND);
-  blade.velAlong = w.scrollPerStep;
-  blade.damage = w.weapon.damage;
-  /*
-    ⚠️ **NO CLOCK — 0237.** Until then a blade lived `orbit` steps and stopped wherever that left it,
-    which played as *"spiral outwards from ship to edge of the screen and then disappear like a
-    reverse whirlpool effect"* — the ask. The edge of the screen is what ends a blade now
-    (`steerBlades`), and `lifeFor` at zero is `stepEntities`'s *never*.
-  */
-  blade.lifeFor = 0;
-  // At the BACK of its ring, which is `BLADE_START` ahead of the nose — 0240. The ring's centre is
-  // `BLADE_LEAD` ahead, so the starting radius is what puts the back of it at the ship.
-  blade.orbitAngle = Math.PI;
-  blade.orbitRadius = (BLADE_LEAD - BLADE_START) / BLADE_STRETCH;
-  blade.orbitTurn = w.weapon.turn;
-  blade.orbitGrow = BLADE_REACH / w.weapon.orbit;
+  for (let s = 0; s < BLADE_SIDES.length; s++) {
+    const side = BLADE_SIDES[s]!;
+    const blade = w.playerShots.spawn();
+    if (blade === null) return;
+    reset(blade, w.ship.along, w.ship.across + side * w.weapon.coil, row, BLADE_KIND);
+    blade.velAlong = w.scrollPerStep + row.speed;
+    blade.damage = w.weapon.damage;
+    // No clock — 0237. The edge of the screen ends a blade (`steerBlades`); zero is *never*.
+    blade.lifeFor = 0;
+    // The loop's centre: at the nose now, and up the lane at the row's speed from here on.
+    blade.fromAlong = w.ship.along;
+    blade.fromAcross = w.ship.across;
+    blade.orbitGrow = row.speed;
+    blade.orbitRadius = w.weapon.coil;
+    // A quarter-turn off the nose on its own side, turning toward the nose.
+    blade.orbitAngle = side * (Math.PI / 2);
+    blade.orbitTurn = -side * w.weapon.turn;
+  }
 }
 
 /**
- * Every blade in the air, moved to its next place on its spiral about the ship.
+ * Every blade in the air, moved to its next place on its loop.
  *
  * ⚠️ **The VELOCITY is set and `stepEntities` integrates it**, rather than the position being
  * written here, so `prev` is what the painter interpolates from and the swept collision sees the
- * whole of a fast outer arc — a blade at the end of its spiral covers four units a step, which is
- * more than its own hurtbox, and `overlaps` sweeps the step for exactly that.
+ * whole of a fast arc — a blade at the top of a cap loop covers four units a step, which is close
+ * to its own hurtbox, and `overlaps` sweeps the step for exactly that.
  *
- * ⚠️ **About where the ship IS, not where it was thrown from.** The ship flies inside the ring; a
- * ring pinned to the throw would be left behind at the scroll rate and read as a thing dropped.
- * Since 0240 the ring's centre is `BLADE_LEAD` ahead of the ship and the ring is `BLADE_STRETCH`
- * times as long along the lane as it is wide across it, which is what lets it reach a boss.
+ * ⚠️ **About its own loop's centre, which goes up the lane in the camera's frame** — 0242. A blade
+ * is thrown and gone, like a pulse; it does not follow the ship, and a ship that moves across the
+ * lane after a throw leaves that pair's band where it was. (0234 to 0240 circled the ship.)
  *
  * ⚠️ **And it spins by swapping its two turns** — the row's `sprite` and `spriteHit` are the star
  * and the star an eighth of a turn round (`src/content/shots.ts`), and a blade never flashes, so
@@ -1824,15 +1805,16 @@ function steerBlades(w: World): void {
     const b = w.playerShots.at(i);
     if (b.kind !== BLADE_KIND) continue;
     b.orbitAngle += b.orbitTurn;
-    b.orbitRadius += b.orbitGrow;
-    const along = w.ship.along + BLADE_LEAD + Math.cos(b.orbitAngle) * b.orbitRadius * BLADE_STRETCH;
-    const across = w.ship.across + Math.sin(b.orbitAngle) * b.orbitRadius;
+    b.fromAlong += w.scrollPerStep + b.orbitGrow;
+    const along = b.fromAlong + Math.cos(b.orbitAngle) * b.orbitRadius;
+    const across = b.fromAcross + Math.sin(b.orbitAngle) * b.orbitRadius;
     /*
-      ⚠️ **GONE THE STEP IT LEAVES THE SCREEN, AND NOT BEFORE — 0237.** A spiral wider than the lane
-      would leave by one edge and come back in by another, and a blade that is off the screen is off
-      the game. The margin is its own drawn half-size, so it is gone when the last of it is, not
-      while half of it still shows. The along edges are the view's own (`w.view.alongSpan`), which is
-      the one quantity here that varies by device — 0023 — and it is the screen the ask names.
+      ⚠️ **GONE THE STEP IT LEAVES THE SCREEN, AND NOT BEFORE — 0237.** A loop that touched an edge
+      would leave by it and come back in, and a blade that is off the screen is off the game. The
+      margin is its own drawn half-size, so it is gone when the last of it is, not while half of it
+      still shows. The along edges are the view's own (`w.view.alongSpan`), which is the one
+      quantity here that varies by device — 0023 — and it is the screen the ask names. Since 0242
+      the edge a coil meets is the leading one, which is its reach.
     */
     if (
       across < -b.radius ||

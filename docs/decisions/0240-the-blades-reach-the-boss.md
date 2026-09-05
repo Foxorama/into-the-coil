@@ -94,3 +94,8 @@ nothing persisted.
 
 And `0237` and `0239`, re-run over the moved constants and the retired clause: every probe still
 red.
+
+⚠️ **The ring is gone and so are these probes** — [0242](0242-a-blade-coils-ahead-of-the-ship.md)
+replaced it with a coil up the lane, and the lead and stretch the three breaks touched no longer
+exist. The table above records a session that was real on the day; `tests/prove-guard.test.ts`
+carries the exemption, and 0242's table covers what replaced it.
