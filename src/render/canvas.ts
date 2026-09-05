@@ -35,6 +35,9 @@ export class CanvasSurface implements Surface {
   private boltGlow = '#ffffff';
   private boltCore = '#ffffff';
   private boltDark = '#000000';
+  // The enemy's lightning — 0248. Its own glow and core; the dark halo is the same space.
+  private hostileGlow = '#ffffff';
+  private hostileCore = '#ffffff';
 
   constructor(private readonly ctx: CanvasRenderingContext2D, atlas: Atlas) {
     this.atlas = atlas;
@@ -73,10 +76,12 @@ export class CanvasSurface implements Surface {
    * palette rather than passed per call, on `setSpace`'s terms: a colour is a property of the palette
    * the page is showing, and a string per stroke per frame would be a hash lookup on the hot path.
    */
-  setBolt(glow: string, core: string, dark: string): void {
+  setBolt(glow: string, core: string, dark: string, hostileGlow: string, hostileCore: string): void {
     this.boltGlow = glow;
     this.boltCore = core;
     this.boltDark = dark;
+    this.hostileGlow = hostileGlow;
+    this.hostileCore = hostileCore;
   }
 
   clear(): void {
@@ -114,9 +119,11 @@ export class CanvasSurface implements Surface {
    * ⚠️ **Nothing here allocates**: `beginPath`, `moveTo`, `lineTo` and `stroke` write into the
    * context's own path, and the points are the caller's buffer.
    */
-  bolt(points: Float32Array, count: number, width: number, alpha: number): void {
+  bolt(points: Float32Array, count: number, width: number, alpha: number, hostile: boolean): void {
     if (count < 1) return;
     const ctx = this.ctx;
+    const glow = hostile ? this.hostileGlow : this.boltGlow;
+    const core = hostile ? this.hostileCore : this.boltCore;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -128,7 +135,7 @@ export class CanvasSurface implements Surface {
     // a string of lights rather than as one flash. A dot is its glow and its core.
     if (count > 1) {
       ctx.globalAlpha = alpha * 0.16;
-      ctx.strokeStyle = this.boltGlow;
+      ctx.strokeStyle = glow;
       ctx.lineWidth = width * 14;
       ctx.stroke();
       ctx.globalAlpha = alpha * 0.5;
@@ -137,11 +144,11 @@ export class CanvasSurface implements Surface {
       ctx.stroke();
     }
     ctx.globalAlpha = alpha * 0.4;
-    ctx.strokeStyle = this.boltGlow;
+    ctx.strokeStyle = glow;
     ctx.lineWidth = width * 4;
     ctx.stroke();
     ctx.globalAlpha = alpha;
-    ctx.strokeStyle = this.boltCore;
+    ctx.strokeStyle = core;
     ctx.lineWidth = width;
     ctx.stroke();
     ctx.globalAlpha = 1;

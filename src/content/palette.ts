@@ -46,6 +46,16 @@ export type Ink =
   | 'hazard'
   | 'pickup'
   /*
+    ⚠️ **`acid` and `void` are the serpent's two shots — 0248.** Two MEANING inks, held to every
+    floor a meaning ink is held to: an acid blast is *this will burn you* and a void blast is *this
+    will take you*, and the serpent throws them in different phases, so the ink is what tells the
+    player which fight they are in before the silhouette does. Neither is `enemy`, on 0098's own
+    argument — a boss with three kinds of shot in one colour is one bullet wearing three shapes.
+    The hydra takes the same two for two of its heads.
+  */
+  | 'acid'
+  | 'void'
+  /*
     ⚠️ **`blade` is the player's steel — 0238.** Played: *"shurikens need to be… steel coloured."* A
     role rather than a colour name, on this file's own rule: what it means is *a blade of mine, in
     flight*, and the high-contrast palette answers it in its own terms. It is a MEANING ink and is
@@ -113,6 +123,14 @@ export const PALETTES: Record<PaletteName, Palette> = {
     bullet: '#ff9f1c',
     hazard: '#ffd23f',
     pickup: '#d9ffd0',
+    // A sour lime, brighter than `hazard`'s yellow and greener than `pickup`'s mint — 0248. The one
+    // green that hurts.
+    acid: '#b4ff5a',
+    // A hot violet, far from `ally`'s pale lavender on saturation and below it on lightness, so the
+    // player's own seeker and the serpent's void are not one purple — 0248.
+    // Lifted from #e352ff, which sat at 2.94:1 on the Saurian Belt's backdrop with everything the
+    // sky draws counted — `tests/sky.test.ts`'s floor is 3.
+    void: '#e86bff',
     // Near-white and deliberately the brightest thing in the palette: a flash reads as an impact
     // because it is momentarily louder than everything around it, not because of its hue.
     impact: '#fff4e6',
@@ -155,6 +173,9 @@ export const PALETTES: Record<PaletteName, Palette> = {
     bullet: '#ff8000',
     hazard: '#ff00ff',
     pickup: '#ffffff',
+    // Pure green and a deep violet, each its own corner of the hue wheel — 0248.
+    acid: '#80ff00',
+    void: '#d040ff',
     impact: '#ffffff',
     // A step below the two whites, so a blade and a pickup are apart on the one channel this
     // palette exists for, and still far above the void. 0238.

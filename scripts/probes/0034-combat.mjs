@@ -108,8 +108,9 @@ export const PROBES = [
     guard: 'a ship parked inside a volley loses one health, not one per step',
     edit: {
       path: 'src/sim/collide.ts',
-      find: '    target.invulnFor = invulnSteps;',
-      replace: '    target.invulnFor = 0;',
+      // ⚠️ Re-anchored by 0248, which moved the three lines of being hit into `wound`. Same break.
+      find: '  target.invulnFor = invulnSteps;',
+      replace: '  target.invulnFor = 0;',
     },
   },
   {

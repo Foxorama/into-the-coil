@@ -407,6 +407,10 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // size, so a player learns one thing about ink and three things about silhouettes. 0098.
   lance: 'enemy',
   flak: 'enemy',
+  // The serpent's two shots in their own inks — 0248, on 0098's argument that a boss with three
+  // kinds of shot in one colour is one bullet wearing three shapes.
+  acid: 'acid',
+  void: 'void',
   // The HUD's lives counter rather than a pickup, since 0082 — it keeps the pickup ink because the
   // number beside it is drawn in the player's own colour and the icon has to sit with it.
   lifeIcon: 'pickup',
@@ -4231,6 +4235,46 @@ export function drawKind(
       ]);
       glow(ctx, f, palette.enemy, 0, 0, 1.12, 0.45);
       disc(ctx, f, shade(palette.enemy, 0.7), 0, -0.04, 0.3);
+      return;
+    case 'acid':
+      /*
+        A DROP — 0248: round below and pointed above, the one shot in the game with one point. Not
+        the charger's needle (a triangle with a nose, and a hull) and not the pulse's disc: a drop
+        is a disc with a tail, and the tail survives fifteen pixels. In the `acid` ink with its own
+        glow, and a pale heart low in the drop where the light would sit.
+      */
+      trace(ctx, f, [
+        [0, -0.92],
+        [0.34, -0.36],
+        [0.62, 0.04],
+        [0.72, 0.4],
+        [0.56, 0.78],
+        [0.22, 0.95],
+        [-0.22, 0.95],
+        [-0.56, 0.78],
+        [-0.72, 0.4],
+        [-0.62, 0.04],
+        [-0.34, -0.36],
+      ]);
+      seal(ctx);
+      glow(ctx, f, palette.acid, 0, 0, 1.1, 0.45);
+      disc(ctx, f, shade(palette.acid, 0.6), -0.16, 0.32, 0.22);
+      return;
+    case 'void':
+      /*
+        A RING — 0248: a disc with a hole through it, `evenodd`. The warden is a ring too and it is a
+        hull four times the size; among SHOTS this is the only one with a hole, and a hole survives
+        being small better than a corner does (the warden's own argument). In the `void` ink, lit
+        from within: the glow sits in the hole rather than around the rim, so the thing reads as
+        an absence with an edge.
+      */
+      ctx.arc(half, half, r * 0.82, 0, Math.PI * 2);
+      ctx.moveTo(half + r * 0.38, half);
+      ctx.arc(half, half, r * 0.38, 0, Math.PI * 2);
+      seal(ctx);
+      glow(ctx, f, palette.void, 0, 0, 1.1, 0.5);
+      // The light on the rim, not in the hole: a mark over a hole is a mark off the hull (0149).
+      disc(ctx, f, shade(palette.void, 0.7), 0, -0.6, 0.17);
       return;
     case 'debris':
       // A shard: small, angular, and deliberately NOT a disc, so a fragment is never mistaken for a

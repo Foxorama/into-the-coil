@@ -23,7 +23,10 @@
 import { ACROSS_SPAN } from '../sim/camera.ts';
 import { type Entity, reset } from '../sim/entity.ts';
 import type { Pool } from '../sim/pool.ts';
-import type { BossPhase, BossRow, Uncoil } from '../content/bosses.ts';
+import { RAIN_BOLT_KIND, type BossPhase, type BossRow, type Uncoil } from '../content/bosses.ts';
+import { BOLT_STEPS } from '../render/scene.ts';
+import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../sim/flight.ts';
+import type { Rng } from '../sim/rng.ts';
 import type { CueKind } from '../content/cues.ts';
 import { type DifficultyRow, fireGapFor } from '../content/difficulty.ts';
 import type { ShotRow } from '../content/shots.ts';
@@ -231,6 +234,10 @@ export function stepBoss(
    */
   // `across` is where it happened — 0127, and the same signature `src/app/frame.ts` passes down.
   onCue: (kind: CueKind, across?: number) => void,
+  /** The arc's bolt pool, which the serpent's lightning shares — 0248. */
+  bolts: Pool<Entity>,
+  /** Where the lightning falls — 0248, its own stream per 0021. */
+  rainRng: Rng,
 ): number {
   const phase = phaseFor(row, boss.health, fullHealth);
 
@@ -400,7 +407,9 @@ export function stepBoss(
     centre `src/app/frame.ts`'s `spray` uses for an enemy, and it is stated in both places rather than
     shared because the two files have no other reason to import from each other.
   */
-  const attack = row.attack;
+  // The phase's own attack where it names one — 0248: the serpent throws a wall, then a spray, then
+  // lightning, and the row's `attack` is the first of those.
+  const attack = phase.attack ?? row.attack;
   const step = phase.shots > 1 ? phase.spread / (phase.shots - 1) : 0;
   switch (attack.kind) {
     case 'aimed':
@@ -463,6 +472,36 @@ export function stepBoss(
           shot.velAlong = -speed + scrollPerStep;
           shot.velAcross = 0;
         }
+      }
+      break;
+    }
+    case 'rain': {
+      /*
+        Lightning from the top of the screen — 0248. `shots` columns, each somewhere in the box the
+        ship can fly in, each a bolt entity in the arc's own pool: it rides the camera like a link,
+        its far end is the whole lane away across, and its life is the warning plus the strike.
+        The painter reads `RAIN_BOLT_KIND` and `lifeFor` to draw the warning line and then the
+        bolt; `src/app/frame.ts` reads them to hurt the ship on the step the strike lands.
+
+        ⚠️ **THE STRIKE IS NOT A BODY.** A line across the whole lane has no radius; what it has is
+        a half-width along the lane, carried on the entity's `radius`, and the frame compares the
+        ship's along to it on one step. Nothing goes into `enemyShots`.
+
+        ⚠️ **On its own stream** — 0021. Where a column falls is the most consequential roll a boss
+        makes and it must not move a wave by one enemy.
+      */
+      for (let i = 0; i < phase.shots; i++) {
+        const bolt = bolts.spawn();
+        if (bolt === null) break;
+        const along = cameraAlong + rainRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD);
+        reset(bolt, along, 0, bullet, RAIN_BOLT_KIND);
+        bolt.velAlong = scrollPerStep;
+        bolt.fromAlong = 0;
+        bolt.fromAcross = ACROSS_SPAN;
+        bolt.radius = attack.halfWidth;
+        bolt.damage = bullet.damage;
+        bolt.lifeFor = attack.warning + BOLT_STEPS;
+        bolt.spin = rainRng.int(0, 0x7fffffff);
       }
       break;
     }

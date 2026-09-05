@@ -277,6 +277,10 @@ export const SPRITE_KINDS = [
   */
   'lance',
   'flak',
+  // The serpent's two — 0248: a drop of acid and a ring of void. Their own silhouettes, as every
+  // shot has (`tests/legibility.test.ts`), and their own inks.
+  'acid',
+  'void',
   /*
     ⚠️ **A DART, AND THE ONLY THING IN THE GAME DRAWN LONG ALONG ITS OWN TRAVEL IN THE BULLET INK.**
     The pulse is a disc of 1.8 units; this is 2.8 and pointed, so the two are told apart by shape and
@@ -867,6 +871,12 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   */
   lance: 1.9,
   flak: 3.4,
+  // A drop bigger than any bullet and a ring between it and the slab — 0248. Every hostile bullet
+  // is drawn more than five pixels from every other on a 1280×720 screen (`tests/legibility.test.ts`),
+  // so these sit a size above `flak`'s 3.4; the hurtboxes in `src/content/shots.ts` are 0.3 and
+  // 0.29 of them, inside the band `tests/combat.test.ts` holds.
+  acid: 5,
+  void: 4.2,
   // Longer than the pulse and pointed. A missile is the shot the player is meant to notice.
   missile: 3.4,
   // The seeker is the missile's size: what tells them apart is the fins and the eye, not the box.

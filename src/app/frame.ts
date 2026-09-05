@@ -40,6 +40,7 @@ import {
   nearestFrom,
   nearestInBox,
   strike,
+  wound,
   type Collected,
   type Deaths,
 } from '../sim/collide.ts';
@@ -83,6 +84,7 @@ import { MISSILES, MISSILE_KINDS } from '../content/missiles.ts';
 import { SPECIALS, pyreFor, type SpecialKind } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
 import { openBy, phaseFor, stepBoss, throwCurtain, uncoilsBy } from './boss.ts';
+import { RAIN_BOLT_KIND } from '../content/bosses.ts';
 import type { Frame } from './loop.ts';
 
 /** How far in front of the ship a shot appears, in world units — clear of its own hurtbox. */
@@ -818,6 +820,11 @@ export interface World {
    * every time it fired.
    */
   arcRng: Rng;
+  /**
+   * Where the serpent's lightning falls — `docs/decisions/0248-the-serpent-strikes.md`, its own
+   * stream per 0021: a strike that rolled on the spawn stream would move a wave by one enemy.
+   */
+  rainRng: Rng;
   view: View;
   surface: Surface;
   /** The spawn stream, named per 0021 — a cosmetic roll added later must not move a wave. */
@@ -1476,6 +1483,7 @@ export class GameFrame implements Frame {
     if (flying) {
       const healthBefore = w.ship.health;
       collideIntoOne(w.enemyShots, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, true);
+      strikeShip(w);
       // Not consumed: an enemy the player flew into is still there afterwards, or ramming would be
       // the cheapest way to clear the screen.
       collideIntoOne(w.enemies, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
@@ -1698,6 +1706,28 @@ const STACK_BADGES: readonly number[] = [SPRITE.stackTwo, SPRITE.stackThree, SPR
  */
 function bossJustDied(w: World): boolean {
   return w.bossSpawned && !w.bossBeaten && w.bossPool.size === 0;
+}
+
+/**
+ * The serpent's lightning landing on the ship — `docs/decisions/0248-the-serpent-strikes.md`.
+ *
+ * A strike is a bolt in the arc's pool with `RAIN_BOLT_KIND`, and it lands on the one step its
+ * warning has just run out — `lifeFor` is the strike's own steps from then on, so the step it
+ * equals `BOLT_STEPS` is the step the line becomes lightning. A ship within the bolt's half-width
+ * (its `radius`) along the lane is hurt as any shot hurts it, through `wound`, on the tier's own
+ * damage scale; a ship already lit is not hurt twice, exactly as `collideIntoOne` refuses.
+ *
+ * ⚠️ **Nothing before that step hurts**, which is the whole of what the warning line is for.
+ */
+function strikeShip(w: World): void {
+  if (w.ship.invulnFor > 0) return;
+  for (let i = 0; i < w.bolts.size; i++) {
+    const b = w.bolts.at(i);
+    if (b.kind !== RAIN_BOLT_KIND || b.lifeFor !== BOLT_STEPS) continue;
+    if (Math.abs(w.ship.along - b.along) > b.radius + w.ship.radius * w.tuning.hurtbox) continue;
+    wound(w.ship, b.damage * w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS);
+    return;
+  }
 }
 
 /** The level-local distance at which the current fight's boss arrives — 0247. */
@@ -3849,6 +3879,8 @@ function driveBoss(w: World): void {
     the hit that crossed the threshold. That is a sixtieth of a second behind the flash and is what
     0036 asks for: the same event in both channels, inside the same tenth of a second.
   */
+  // The phase's own shot where it names one — 0248: the serpent throws acid and then void.
+  const throwing = phaseFor(w.bossRow, boss.health, w.bossFullHealth);
   w.bossPatrol = stepBoss(
     boss,
     w.bossRow,
@@ -3856,11 +3888,13 @@ function driveBoss(w: World): void {
     w.difficulty,
     w.ship,
     w.enemyShots,
-    SHOTS[w.bossRow.shot],
+    SHOTS[throwing.shot ?? w.bossRow.shot],
     w.cameraAlong,
     w.scrollPerStep,
     w.bossPatrol,
     w.onCue,
+    w.bolts,
+    w.rainRng,
   );
   /*
     ⚠️ **Where it is, remembered every step, so that where it DIED is known on the step it stops

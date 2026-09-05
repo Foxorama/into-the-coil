@@ -296,10 +296,14 @@ under its own music; the real boss of each place waits at the end. The real boss
 serpent (Jörmungandr, the Approach), the hell-spawned eagle (Ember Nebula), the pterodactyl
 (Saurian Belt), the gyre (the Labyrinth — the lattice upgraded), the frost ship (Rime Shelf), the
 hydra (Toxic Mire) and the jellyfish with the black heart in it (the Black Heart). Each is a first
-iteration on the vocabulary the game has; the attacks it has no word for yet — acid, void, flame
-and frost, a rain from the sky with warning lines, whips, beams, summoned hordes, a spinning wall,
-a cold that slows, heads that grow, tendrils, a final opening — are each their own decision.
-[`the-bosses-asked`](../reports/the-bosses-asked-2026-09-05.md) is the brief.
+iteration; the attacks the game had no word for — flame and frost, whips, beams, summoned hordes,
+a spinning wall, a cold that slows, heads that grow, tendrils, a final opening — are each their own
+decision. [`the-bosses-asked`](../reports/the-bosses-asked-2026-09-05.md) is the brief.
+
+**The serpent has its three weapons** — [0248](decisions/0248-the-serpent-strikes.md): a wall of
+acid while it is whole, a spray of void once hurt, and at its last third lightning in columns
+down the whole lane, each column a warning line for three quarters of a second before it strikes.
+A phase says what a boss throws, since then; acid and void are shots in inks of their own.
 
 ⚠️ **A phase changes what a boss DOES, not what it looks like** —
 [0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md). Nothing on screen currently

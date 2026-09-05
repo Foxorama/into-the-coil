@@ -41,8 +41,12 @@ export interface Surface {
    * ⚠️ **The points are the caller's buffer and are read before this returns**, never kept. A
    * backend that wanted to keep them would be allocating per frame, which is the thing the seam
    * exists to prevent.
+   *
+   * `hostile` strokes it in the enemy's inks rather than the player's — the serpent's lightning,
+   * `docs/decisions/0248-the-serpent-strikes.md`. A flag rather than a colour, on the same terms
+   * as the inks themselves: a string per stroke per frame would be a hash lookup on the hot path.
    */
-  bolt(points: Float32Array, count: number, width: number, alpha: number): void;
+  bolt(points: Float32Array, count: number, width: number, alpha: number, hostile: boolean): void;
 }
 
 /**

@@ -668,7 +668,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   surface.setSize(viewportWidth(host), viewportHeight(host), colours.space);
   // A bolt glows in the player's ink with an impact-white core — 0233. The player's, because it is
   // the player's weapon; the core is the brightest ink there is, because lightning is.
-  surface.setBolt(colours.player, colours.impact, colours.space);
+  // And the serpent's lightning in the enemy's ink with the same white core — 0248.
+  surface.setBolt(colours.player, colours.impact, colours.space, colours.enemy, colours.impact);
 
   const world: World = {
     /*
@@ -740,6 +741,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // reach, so a fragment's direction must not be able to deal a different scatter — 0077.
     scatterRng: makeRng('proof-scene').stream('scatter'),
     arcRng: makeRng('proof-scene').stream('arc'),
+    // Where the serpent's lightning falls — 0248, its own stream per 0021.
+    rainRng: makeRng('proof-scene').stream('rain'),
     view,
     surface,
     // One named stream, per docs/decisions/0021-one-stream-per-concern.md, so a cosmetic roll added

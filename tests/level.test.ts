@@ -1041,7 +1041,8 @@ describe('0111 — a boss has one idea, and the picture mentions its phases', ()
     // The same rule the motion and attack unions already carry in `src/content/enemies.ts`.
     const moves = new Set(BOSS_KINDS.map((k) => BOSSES[k].move.kind));
     expect(BOSS_MOVE_KINDS.filter((m) => !moves.has(m)), 'a boss movement exists and nothing flies it').toEqual([]);
-    const attacks = new Set(BOSS_KINDS.map((k) => BOSSES[k].attack.kind));
+    // A phase's own attack counts as sent — 0248: the serpent's lightning is a phase's and no row's.
+    const attacks = new Set(BOSS_KINDS.flatMap((k) => [BOSSES[k].attack.kind, ...BOSSES[k].phases.map((p) => (p.attack ?? BOSSES[k].attack).kind)]));
     expect(BOSS_ATTACK_KINDS.filter((a) => !attacks.has(a)), 'a boss attack exists and nothing sends it').toEqual([]);
   });
 

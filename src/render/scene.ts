@@ -10,6 +10,7 @@
  * a scrub bar, and it is the rule `docs/decisions/0015-the-layer-ladder.md` gives the layer.
  */
 
+import { RAIN_BOLT_KIND } from '../content/bosses.ts';
 import type { View } from '../sim/camera.ts';
 import type { Entity } from '../sim/entity.ts';
 import type { Pool } from '../sim/pool.ts';
@@ -297,7 +298,16 @@ export function paintBolts(surface: Surface, view: View, bolts: Pool<Entity>, ca
     // The unit normal to the link, in world units — what a vertex is pushed along.
     const nAlong = -e.fromAcross / length;
     const nAcross = e.fromAlong / length;
-    const amp = BOLT_JAG * length > BOLT_JAG_MAX ? BOLT_JAG_MAX : BOLT_JAG * length;
+    /*
+      ⚠️ **THE SERPENT'S LIGHTNING IS A WARNING LINE FIRST — 0248.** A bolt with `RAIN_BOLT_KIND`
+      whose life is still past the strike's own steps is drawn as the line it will strike along:
+      straight, thin, dim, in the enemy's ink, and with none of the bolt's points or twig. Once its
+      life is inside `BOLT_STEPS` it is the arc's bolt exactly, hostile. The player is given the
+      line for as long as the row's `warning` says, which is what makes the strike learnable.
+    */
+    const hostile = e.kind === RAIN_BOLT_KIND;
+    const warning = hostile && e.lifeFor > BOLT_STEPS;
+    const amp = warning ? 0 : BOLT_JAG * length > BOLT_JAG_MAX ? BOLT_JAG_MAX : BOLT_JAG * length;
     const page = Math.floor(e.lifeFor / BOLT_PAGE_STEPS);
     const seed = e.spin;
     const last = BOLT_VERTICES - 1;
@@ -311,14 +321,18 @@ export function paintBolts(surface: Surface, view: View, bolts: Pool<Entity>, ca
       LINK[v * 2] = screenX(view, inView, across);
       LINK[v * 2 + 1] = screenY(view, inView, across);
     }
+    if (warning) {
+      surface.bolt(LINK, BOLT_VERTICES, BOLT_WIDTH * WARNING_WIDTH * view.scale, WARNING_ALPHA, true);
+      continue;
+    }
     // Fades over its life: a flash, brightest the step it lands.
     const fade = e.lifeFor / BOLT_STEPS;
-    surface.bolt(LINK, BOLT_VERTICES, BOLT_WIDTH * view.scale, fade);
+    surface.bolt(LINK, BOLT_VERTICES, BOLT_WIDTH * view.scale, fade, hostile);
     // The bright points: a dot on every third inner vertex, over the stroke — 0236.
     for (let v = BOLT_DOT_EVERY; v < last; v += BOLT_DOT_EVERY) {
       DOT[0] = LINK[v * 2]!;
       DOT[1] = LINK[v * 2 + 1]!;
-      surface.bolt(DOT, 1, BOLT_WIDTH * BOLT_DOT_WIDTH * view.scale, fade);
+      surface.bolt(DOT, 1, BOLT_WIDTH * BOLT_DOT_WIDTH * view.scale, fade, hostile);
     }
     /*
       The twig: from a vertex a third to two thirds along, out to the side the hash says, and on
@@ -341,9 +355,17 @@ export function paintBolts(surface: Surface, view: View, bolts: Pool<Entity>, ca
       TWIG[v * 2] = screenX(view, inView, across);
       TWIG[v * 2 + 1] = screenY(view, inView, across);
     }
-    surface.bolt(TWIG, TWIG_VERTICES, BOLT_WIDTH * 0.6 * view.scale, fade * 0.8);
+    surface.bolt(TWIG, TWIG_VERTICES, BOLT_WIDTH * 0.6 * view.scale, fade * 0.8, hostile);
   }
 }
+
+/**
+ * A warning line's width, as a share of a bolt's, and its alpha — 0248. Thin and dim: a line the
+ * player reads as *here*, not a thing that is already hurting them. Sized once the picture had
+ * been looked at, which is what 0027 asks of anything the player watches.
+ */
+const WARNING_WIDTH = 0.6;
+const WARNING_ALPHA = 0.45;
 
 /**
  * The edge of the player's box: one dash per tiling period, straight down the lane.
