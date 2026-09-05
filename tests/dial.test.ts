@@ -195,7 +195,9 @@ describe('nothing takes more than one hit until the dial has turned twice', () =
     const { world } = playableWorld(LEVELS[LEVEL_KINDS[0]!]);
     const frame = new GameFrame(world);
     let toughest = 0;
-    for (let step = 0; step < 20_000 && !world.bossSpawned; step++) {
+    // Until the END boss arrives — 0247: the mid-boss comes halfway, with the level's teeth still
+    // ahead of it, and stopping there would measure the opening twice.
+    for (let step = 0; step < 20_000 && !(world.bossSpawned && world.fight === 1); step++) {
       frame.step();
       for (let i = 0; i < world.enemies.size; i++) {
         const health = world.enemies.at(i).health;

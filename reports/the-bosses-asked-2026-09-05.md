@@ -25,6 +25,12 @@ because every one of those decisions will be written against it.
 > the labyrinth and the labyrinth current end boss will be a mid-tier flying dino in the saurian
 > belt."*
 
+And, later the same night:
+
+> *"I also forgot, for the saurian belt new end boss, I want volcanoes in the background that belch
+> for big chunks of volcanic rock that rain down and the player has to dodge as well as all the
+> other boss stuff i asked for there"*
+
 > *"The labyrinth will an upgraded version of the current end boss of saurian belt - the upgrades
 > are that it will spin and that the bullet walls will have the bullets closer together - the
 > spaceship gaps will be the same size, but the bullet gaps will be close so you can't fit through

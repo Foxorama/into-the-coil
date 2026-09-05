@@ -790,8 +790,8 @@ briefed, all seven places at once —
 a level, the old seven as mid-bosses at half their health, seven real bosses on the vocabulary the
 game has. **What is next, in the brief's order, is a decision per real boss**, each adding the
 words its fight needs: the serpent's acid, void and lightning from the sky with warning lines; the
-eagle's whips of fire and summoned hordes; the pterodactyl's wing lasers and mouth beam; the gyre's
-spin; the frost ship's bolts, its cold that slows and freezes, and its adds; the hydra's shot per
+eagle's whips of fire and summoned hordes; the pterodactyl's wing lasers and mouth beam, with
+volcanoes in its backdrop belching rock that rains on the lane; the gyre's spin; the frost ship's bolts, its cold that slows and freezes, and its adds; the hydra's shot per
 head; the jellyfish's tendrils, its raining moon jellies and its opening. What is owed is
 another play, on the branch preview, of the ship, its guns and its deaths as 0246 left them, and of both fights of a level as 0247 left them; an ear on `arc`, `zap` and `throw` as they are now
 (`scripts/hear.mjs --only=arc,zap,throw` writes them); and an eye on the leaning flame, the livery
