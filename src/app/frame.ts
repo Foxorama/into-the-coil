@@ -951,24 +951,42 @@ export interface World {
    * times a second — and this file may not allocate, so it could not build the result anyway.
    */
   weapon: Weapon;
-  /** The boss's row, resolved once at boot so a step never looks a kind up by name. */
+  /**
+   * The row of the boss the level is fighting or about to fight, resolved when the fight is set up
+   * so a step never looks a kind up by name.
+   *
+   * ⚠️ **Two fights a level since 0247** — `docs/decisions/0247-a-level-has-a-mid-boss-and-a-real-one.md`:
+   * the mid-boss's row while `fight` is 0, the end boss's once it is 1. `bossSpawned`, `bossBeaten`
+   * and the rest of the boss state below are the CURRENT fight's, and are reset between the two.
+   */
   bossRow: BossRow;
+  /**
+   * Which of the level's fights the boss state below is about: `0` the mid-boss, `1` the end boss.
+   * A level with no mid-boss starts at `1`.
+   */
+  fight: number;
   /** The boss, alone in its own pool — so `playerShots` meeting it is its own pairing. */
   bossPool: Pool<Entity>;
-  /** Whether the boss has been put on the field. Set once; cleared only by a fresh run. */
+  /** Whether the current fight's boss has been put on the field. Cleared between fights. */
   bossSpawned: boolean;
-  /** Whether the boss has been beaten, so the beat below is started exactly once. */
+  /** Whether the current fight's boss has been beaten, so the beat below is started exactly once. */
   bossBeaten: boolean;
   /**
    * Steps left of the boss coming apart, or `0` when nothing is exploding.
    *
    * ⚠️ **The level is reported cleared when this reaches zero, not when the pool empties** —
    * `docs/decisions/0062-a-boss-dies-loudly.md`. `bossBeaten` is still the latch; this is the beat.
+   * Only the END boss's death starts it — a mid-boss comes apart on `bossBurstIn` and the level goes
+   * on (0247).
    */
   clearedIn: number;
+  /** Steps left of a MID-boss coming apart, or `0`. The beat without the clear — 0247. */
+  bossBurstIn: number;
   /** Where the boss is, ahead of the camera — remembered every step, read on the step it dies. */
   bossOffset: number;
   bossAcross: number;
+  /** The radius of the hull coming apart on `bossBurstIn`, kept because `bossRow` has moved on — 0247. */
+  bossBurstRadius: number;
   /**
    * Steps left of the player's ship coming apart, or `0` when nothing is dying.
    *
@@ -1602,13 +1620,18 @@ export class GameFrame implements Frame {
       w.nextPickup++;
     }
 
-    if (!w.bossSpawned && horizon >= w.level.bossAt) {
+    /*
+      ⚠️ **TWO FIGHTS A LEVEL — 0247.** The mid-boss arrives at its own distance and must be killed
+      like the end boss; until it is, the end boss does not arrive, however far the camera has got.
+      The waves keep coming around either.
+    */
+    if (!w.bossSpawned && horizon >= fightAt(w)) {
       w.bossSpawned = true;
       spawnBoss(w);
     }
     // Reported once. The boss is the only thing that can empty this pool, so an empty pool after it
-    // was filled is the level ending — and `bossBeaten` is what stops that being said every step
-    // from then until the screen changes.
+    // was filled is the fight ending — and `bossBeaten` is what stops that being said every step
+    // from then until the next fight is set up or the screen changes.
     if (bossJustDied(w)) {
       w.bossBeaten = true;
       // The one cue sized to fill a beat rather than to punctuate one: `BOSS_DEATH_STEPS` is 1.6
@@ -1622,8 +1645,19 @@ export class GameFrame implements Frame {
         explosion and an end-of-level beat — currently the level just ends."* It did: the same step
         that emptied the pool raised a screen over the frame, so the loudest event in the game was a
         boss vanishing behind an overlay. `docs/decisions/0062-a-boss-dies-loudly.md`.
+
+        ⚠️ **AND A MID-BOSS'S DEATH DOES NOT END IT AT ALL — 0247.** The beat is the same beat; what
+        it is not is the level's end. The end boss's fight is set up on the step the mid-boss dies,
+        with the mid-boss's flame, phase and curtain state cleared, so nothing of one fight leaks
+        into the next.
       */
-      w.clearedIn = BOSS_DEATH_STEPS;
+      if (w.fight === 0) {
+        w.bossBurstIn = BOSS_DEATH_STEPS;
+        w.bossBurstRadius = w.bossRow.radius;
+        nextFight(w);
+      } else {
+        w.clearedIn = BOSS_DEATH_STEPS;
+      }
     }
     stepBossDeath(w);
     stepShipDeath(w);
@@ -1664,6 +1698,35 @@ const STACK_BADGES: readonly number[] = [SPRITE.stackTwo, SPRITE.stackThree, SPR
  */
 function bossJustDied(w: World): boolean {
   return w.bossSpawned && !w.bossBeaten && w.bossPool.size === 0;
+}
+
+/** The level-local distance at which the current fight's boss arrives — 0247. */
+function fightAt(w: World): number {
+  return w.fight === 0 && w.level.midBoss !== null ? w.level.midBoss.at : w.level.bossAt;
+}
+
+/**
+ * The end boss's fight, set up on the step the mid-boss dies — 0247. The boss state is the current
+ * fight's, so all of it starts again; the beat the mid-boss is coming apart on is `bossBurstIn`
+ * and is left alone.
+ */
+function nextFight(w: World): void {
+  w.fight = 1;
+  w.bossRow = BOSSES[w.level.boss];
+  w.bossSpawned = false;
+  w.bossBeaten = false;
+  w.bossPatrol = 1;
+  w.bossPhaseAt = -1;
+  w.bossUncoilAt = 0;
+}
+
+/**
+ * Whether the boss on the field is the one the music turns for — 0247. A mid-boss is fought under
+ * the section the level is in; the end boss's fight is the piece 0114 wrote for it. `src/app/mount.ts`
+ * passes this to `musicLevelFor`, and `tests/bosses.test.ts` holds it across both fights.
+ */
+export function bossOnField(w: World): boolean {
+  return w.bossPool.size > 0 && w.fight === 1;
 }
 
 /**
@@ -3582,6 +3645,29 @@ function startCycle(item: Entity, row: PickupRow, face: number): void {
  * scroll continues, the player still flies, and anything the boss left in the air still arrives.
  */
 function stepBossDeath(w: World): void {
+  /*
+    ⚠️ **A MID-BOSS COMES APART ON ITS OWN COUNT — 0247** — the same pulses, the same fireballs, at
+    the hull's own size, and no report at the end of it: the level goes on. `bossBurstRadius` is the
+    dead hull's, because `bossRow` is already the next fight's by the time this runs.
+  */
+  if (w.bossBurstIn > 0) {
+    w.bossBurstIn--;
+    if (w.bossBurstIn % BOSS_PULSE === 0) {
+      const spread = w.bossBurstRadius;
+      burst(
+        w,
+        w.cameraAlong + w.bossOffset + w.burstRng.range(-spread, spread),
+        w.bossAcross + w.burstRng.range(-spread, spread),
+        BURST.boss,
+      );
+      flare(
+        w,
+        w.cameraAlong + w.bossOffset + w.burstRng.range(-spread, spread),
+        w.bossAcross + w.burstRng.range(-spread, spread),
+        'burst',
+      );
+    }
+  }
   if (w.clearedIn <= 0) return;
   w.clearedIn--;
   if (w.clearedIn % BOSS_PULSE === 0) {
@@ -3889,8 +3975,9 @@ function driveBoss(w: World): void {
 function spawnBoss(w: World): void {
   const boss = w.bossPool.spawn();
   if (boss === null) return;
-  // In LEVEL coordinates like every other authored place — 0076.
-  reset(boss, w.level.bossAt + w.levelOrigin, ACROSS_SPAN / 2, w.bossRow);
+  // In LEVEL coordinates like every other authored place — 0076; at the current FIGHT's distance,
+  // which is the mid-boss's or the end boss's — 0247.
+  reset(boss, fightAt(w) + w.levelOrigin, ACROSS_SPAN / 2, w.bossRow);
   boss.health = toughnessFor(w.bossRow.health, w.difficulty);
   // Recorded, because a phase is a fraction of what the boss STARTED with and the row no longer
   // says what that was. `src/app/boss.ts` takes it as an argument for exactly that reason.
@@ -4071,7 +4158,9 @@ export function startLevel(w: World, level: LevelRow): void {
     `advanceLevel` is the one that takes an index, because it is the one where the index varies.
   */
   w.levelIndex = 0;
-  w.bossRow = BOSSES[level.boss];
+  // The mid-boss's fight first, where the level has one — 0247.
+  w.fight = level.midBoss === null ? 1 : 0;
+  w.bossRow = BOSSES[level.midBoss === null ? level.boss : level.midBoss.kind];
   resetScene(w);
 }
 
@@ -4123,7 +4212,9 @@ export function advanceLevel(w: World, level: LevelRow, levelIndex: number): voi
     is the whole feature not working.
   */
   w.levelIndex = levelIndex;
-  w.bossRow = BOSSES[level.boss];
+  // The mid-boss's fight first, where the level has one — 0247.
+  w.fight = level.midBoss === null ? 1 : 0;
+  w.bossRow = BOSSES[level.midBoss === null ? level.boss : level.midBoss.kind];
   /*
     ⚠️ **The one line that makes the rest of it possible.** The script is authored from the level's
     own beginning, so the level begins here — wherever the camera has got to. Everything downstream
@@ -4179,6 +4270,8 @@ function beginScript(w: World): void {
   w.weaponsOffered = 0;
   w.bossSpawned = false;
   w.bossBeaten = false;
+  // A mid-boss still coming apart at a level boundary would go on bursting into the next — 0247.
+  w.bossBurstIn = 0;
   // ⚠️ Cleared as well as latched, or a level entered while the last one was still exploding would
   // report itself cleared a second and a half in, with its own boss still ahead of the player.
   w.clearedIn = 0;

@@ -23,8 +23,33 @@ import type { Body } from '../sim/entity.ts';
 import type { ShotKind } from './shots.ts';
 import { SPRITE } from './sprites.ts';
 
-/** Every boss in the game. Closed. */
-export const BOSS_KINDS = ['sentinel', 'harrow', 'lattice', 'shoalMother', 'redoubt', 'chorus', 'axis'] as const;
+/**
+ * Every boss in the game. Closed.
+ *
+ * ⚠️ **SEVEN MID-BOSSES AND SEVEN END BOSSES, IN THAT ORDER, EACH TOUGHER THAN THE LAST** —
+ * `docs/decisions/0247-a-level-has-a-mid-boss-and-a-real-one.md`. The first seven were the run's
+ * end bosses until the seventh play-test: *"change the current bosses to have about 50% less
+ * health and then be mid-level bosses and add in the actual real bosses."* They are the
+ * mid-bosses now, at half their health, and the seven after them are the real ones, one per place.
+ * `tests/level.test.ts` reads this list as an ordering of fights and holds that each is tougher
+ * than the one before, so a row's place here is a claim.
+ */
+export const BOSS_KINDS = [
+  'sentinel',
+  'harrow',
+  'lattice',
+  'shoalMother',
+  'redoubt',
+  'chorus',
+  'axis',
+  'jormungandr',
+  'hellkite',
+  'quetzal',
+  'gyre',
+  'hoarfrost',
+  'hydra',
+  'medusa',
+] as const;
 
 /** Derived from the list, so a boss cannot exist in the union and be missing from the table. */
 export type BossKind = (typeof BOSS_KINDS)[number];
@@ -404,7 +429,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss,
     spriteHit: SPRITE.bossHit,
     radius: 11,
-    health: 480,
+    // Half of 480 — a mid-boss since 0247.
+    health: 240,
     damage: 3,
     // Far enough forward that the whole hull is on screen on the narrowest view the clamp allows,
     // and far enough back that the player is not fighting it at the very edge of their reach.
@@ -432,14 +458,12 @@ export const BOSSES: Record<BossKind, BossRow> = {
         Half health: a three-way spread, so a player who has settled into one lane is moved out of
         it. The spread is wide enough that standing still is punished and narrow enough that there is
         always a side to leave towards.
+
+        ⚠️ **TWO PHASES, NOT THREE — 0247.** At half its health the fight is seven seconds at max
+        weapons, and `tests/level.test.ts` refuses a phase under three; the old last third is folded
+        into this one, which is what a mid-boss is: the same idea, said once.
       */
-      { upTo: 0.6, fireEvery: 66, shots: 3, spread: 0.5, patrolScale: 1.4, stance: { kind: 'volley' } },
-      /*
-        The last third: five shots, wider, faster, and the hull itself moving at twice its opening
-        speed. Every arsenal meets this phase — that is 0040's point — so it has to be survivable
-        with the base weapon alone, which is exactly what the first play-test of this build measures.
-      */
-      { upTo: 0.3, fireEvery: 48, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' } },
+      { upTo: 0.5, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' } },
     ],
   },
   /**
@@ -467,7 +491,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss2,
     spriteHit: SPRITE.boss2Hit,
     radius: 12.5,
-    health: 580,
+    // Half of 580 — a mid-boss since 0247.
+    health: 290,
     damage: 3,
     // Closer than the sentinel's 120, which is most of what makes it feel like a different fight:
     // the player has less room in front of them and less warning on everything it throws.
@@ -485,14 +510,15 @@ export const BOSSES: Record<BossKind, BossRow> = {
     phases: [
       // No gentle opening. It starts where the sentinel's second phase ended.
       { upTo: 1, fireEvery: 72, shots: 3, spread: 0.45, patrolScale: 1, stance: { kind: 'volley' } },
-      { upTo: 0.7, fireEvery: 60, shots: 5, spread: 0.8, patrolScale: 1.3, stance: { kind: 'volley' } },
-      { upTo: 0.4, fireEvery: 48, shots: 5, spread: 1.15, patrolScale: 1.8, stance: { kind: 'volley' } },
       /*
-        The last fifth: seven shots across most of a right angle, and a hull crossing the lane at
+        The last half: seven shots across most of a right angle, and a hull crossing the lane at
         two and a half times its opening speed. Every arsenal meets every phase, so this has to be
         survivable with the base weapon alone — which is exactly what `tests/level.test.ts` drives.
+
+        ⚠️ **TWO PHASES, NOT FOUR — 0247.** Nine seconds at max weapons at half its health leaves
+        room for two phases of three; the two middle rungs are folded into these.
       */
-      { upTo: 0.2, fireEvery: 42, shots: 7, spread: 1.4, patrolScale: 2.5, stance: { kind: 'volley' } },
+      { upTo: 0.5, fireEvery: 48, shots: 7, spread: 1.4, patrolScale: 2.5, stance: { kind: 'volley' } },
     ],
   },
 
@@ -519,7 +545,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss3,
     spriteHit: SPRITE.boss3Hit,
     radius: 11.5,
-    health: 680,
+    // Half of 680 — the labyrinth's mid-boss since 0247, moved from the saurian belt's end.
+    health: 340,
     damage: 3,
     /*
       ⚠️ **The furthest station any hull can have, and the guard is what said where that is.** The
@@ -561,7 +588,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss4,
     spriteHit: SPRITE.boss4Hit,
     radius: 13,
-    health: 780,
+    // Half of 780 — the saurian belt's mid-boss since 0247, moved from the labyrinth's end.
+    health: 390,
     damage: 3,
     station: 136,
     drift: 18,
@@ -569,10 +597,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
     patrol: 0.62,
     shot: 'lance',
     phases: [
+      // Three phases, not four — 0247: twelve seconds at max weapons at half its health.
       { upTo: 1, fireEvery: 96, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' } },
-      { upTo: 0.7, fireEvery: 78, shots: 3, spread: 0.4, patrolScale: 1.5, stance: { kind: 'volley' } },
-      { upTo: 0.4, fireEvery: 66, shots: 3, spread: 0.7, patrolScale: 2.1, stance: { kind: 'volley' } },
-      { upTo: 0.15, fireEvery: 60, shots: 5, spread: 0.9, patrolScale: 2.8, stance: { kind: 'volley' } },
+      { upTo: 0.66, fireEvery: 78, shots: 3, spread: 0.5, patrolScale: 1.6, stance: { kind: 'volley' } },
+      { upTo: 0.33, fireEvery: 60, shots: 5, spread: 0.9, patrolScale: 2.8, stance: { kind: 'volley' } },
     ],
   },
   /**
@@ -595,7 +623,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss5,
     spriteHit: SPRITE.boss5Hit,
     radius: 14,
-    health: 880,
+    // Half of 880 — a mid-boss since 0247.
+    health: 440,
     damage: 3,
     station: 142,
     drift: 8,
@@ -603,10 +632,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
     patrol: 0.16,
     shot: 'flak',
     phases: [
+      // Three phases, not four — 0247: fourteen seconds at max weapons at half its health.
       { upTo: 1, fireEvery: 54, shots: 3, spread: 0.7, patrolScale: 1, stance: { kind: 'volley' } },
       { upTo: 0.7, fireEvery: 42, shots: 5, spread: 1, patrolScale: 1.2, stance: { kind: 'volley' } },
-      { upTo: 0.4, fireEvery: 36, shots: 7, spread: 1.3, patrolScale: 1.4, stance: { kind: 'volley' } },
-      { upTo: 0.15, fireEvery: 30, shots: 7, spread: 1.6, patrolScale: 1.6, stance: { kind: 'volley' } },
+      { upTo: 0.4, fireEvery: 30, shots: 7, spread: 1.6, patrolScale: 1.6, stance: { kind: 'volley' } },
     ],
   },
   /**
@@ -637,11 +666,14 @@ export const BOSSES: Record<BossKind, BossRow> = {
       the far wall. Level six is about there being no gaps; the one gap it leaves is nowhere near the
       middle.
     */
-    uncoil: { from: 0.5, every: 0.1, gap: 4.5, at: 26, hole: 14 },
+    // ⚠️ From 0.7 rather than 0.5 since 0247: at half the health the eye opens at 0.36, and a
+    // curtain is not thrown to a bared boss, so the four notches the fight throws sit above it.
+    uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14 },
     sprite: SPRITE.boss6,
     spriteHit: SPRITE.boss6Hit,
     radius: 12.5,
-    health: 980,
+    // Half of 980 — a mid-boss since 0247.
+    health: 490,
     damage: 3,
     station: 138,
     drift: 15,
@@ -649,21 +681,22 @@ export const BOSSES: Record<BossKind, BossRow> = {
     patrol: 0.45,
     shot: 'spit',
     phases: [
+      // Three fans and the eye, not five and the eye — 0247: fifteen seconds at max weapons at half
+      // its health, and a phase under three of them is not a phase.
       { upTo: 1, fireEvery: 72, shots: 3, spread: 0.5, patrolScale: 1, stance: { kind: 'volley' } },
-      { upTo: 0.8, fireEvery: 60, shots: 3, spread: 0.9, patrolScale: 1.3, stance: { kind: 'volley' } },
-      { upTo: 0.62, fireEvery: 54, shots: 5, spread: 1.1, patrolScale: 1.6, stance: { kind: 'volley' } },
-      { upTo: 0.46, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2, stance: { kind: 'volley' } },
-      { upTo: 0.32, fireEvery: 36, shots: 7, spread: 1.6, patrolScale: 2.4, stance: { kind: 'volley' } },
+      { upTo: 0.78, fireEvery: 54, shots: 5, spread: 1.1, patrolScale: 1.6, stance: { kind: 'volley' } },
+      { upTo: 0.57, fireEvery: 36, shots: 7, spread: 1.6, patrolScale: 2.4, stance: { kind: 'volley' } },
       /*
         ⚠️ **THE EYE.** It has thrown everything it had and it stops: no fan, no rake, a hull still
         crossing the lane at a rung under its opening speed, and three times the damage from every
         pulse that lands. About 1.8 seconds at max weapons, which is a beat longer than the death it
-        runs into — `tests/level.test.ts` holds that floor against `BOSS_DEATH_STEPS`.
+        runs into — `tests/level.test.ts` holds that floor against `BOSS_DEATH_STEPS`. At half the
+        health that is a third of the bar rather than a fifth (0247).
 
         ⚠️ **The fan it is still carrying is written out and never thrown**, which is the stance
         saying so rather than the row — see `BossStance`.
       */
-      { upTo: 0.18, fireEvery: 30, shots: 7, spread: 1.6, patrolScale: 1.4, stance: { kind: 'bare', damageScale: 3 } },
+      { upTo: 0.36, fireEvery: 30, shots: 7, spread: 1.6, patrolScale: 1.4, stance: { kind: 'bare', damageScale: 3 } },
     ],
   },
   /**
@@ -702,7 +735,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss7,
     spriteHit: SPRITE.boss7Hit,
     radius: 16,
-    health: 1140,
+    // Half of 1140 — the black heart's mid-boss since 0247.
+    health: 570,
     damage: 3,
     // The closest station in the game. `95 + 14 + 16` is 125 against 150 — the hull fills a fifth of
     // the narrowest view, which is what a last boss should cost the player in room.
@@ -712,18 +746,242 @@ export const BOSSES: Record<BossKind, BossRow> = {
     patrol: 0.4,
     shot: 'lance',
     phases: [
+      // Three rings and the eye, not five and the eye — 0247: seventeen seconds at max weapons at
+      // half its health.
       { upTo: 1, fireEvery: 66, shots: 3, spread: 0.6, patrolScale: 1, stance: { kind: 'volley' } },
-      { upTo: 0.8, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 1.4, stance: { kind: 'volley' } },
-      { upTo: 0.62, fireEvery: 48, shots: 5, spread: 1.2, patrolScale: 1.8, stance: { kind: 'volley' } },
-      { upTo: 0.44, fireEvery: 42, shots: 7, spread: 1.5, patrolScale: 2.2, stance: { kind: 'volley' } },
-      { upTo: 0.3, fireEvery: 36, shots: 7, spread: 1.8, patrolScale: 2.8, stance: { kind: 'volley' } },
+      { upTo: 0.8, fireEvery: 48, shots: 5, spread: 1.2, patrolScale: 1.8, stance: { kind: 'volley' } },
+      { upTo: 0.6, fireEvery: 36, shots: 7, spread: 1.8, patrolScale: 2.8, stance: { kind: 'volley' } },
       /*
-        ⚠️ **THE EYE, AND IT IS THE LAST THING THE AUTHORED RUN ASKS FOR.** The ring stops, the stalk
-        slows to half what it was chasing at, and the fight ends on a window the player has to be in
-        front of rather than on a health bar reaching zero — which is the word *interactive* in
-        `reports/the-boss-vocabulary-is-one-fan-2026-08-14.md` answered at its own end.
+        ⚠️ **THE EYE, AND IT WAS THE LAST THING THE AUTHORED RUN ASKED FOR.** The ring stops, the
+        stalk slows to half what it was chasing at, and the fight ends on a window the player has to
+        be in front of rather than on a health bar reaching zero — which is the word *interactive*
+        in `reports/the-boss-vocabulary-is-one-fan-2026-08-14.md` answered at its own end. Since
+        0247 the run's last eye is the jellyfish's; this is the black heart's mid-boss, and its eye
+        opens at a third of the bar so it still outlasts the death it runs into.
       */
-      { upTo: 0.16, fireEvery: 30, shots: 7, spread: 1.8, patrolScale: 1.4, stance: { kind: 'bare', damageScale: 3 } },
+      { upTo: 0.32, fireEvery: 30, shots: 7, spread: 1.8, patrolScale: 1.4, stance: { kind: 'bare', damageScale: 3 } },
+    ],
+  },
+
+  /*
+    ── THE REAL BOSSES — 0247 ──────────────────────────────────────────────────────────────────────
+
+    ⚠️ **SEVEN END BOSSES, ONE PER PLACE, AND EVERY ONE OF THEM A FIRST ITERATION.** Asked for in the
+    seventh play-test, each by name with its own attacks — a serpent with acid, void and lightning
+    from the sky; a demon eagle with whips of fire and summoned hordes; a pterodactyl with lasers on
+    its wings; a spinning wall; a frost ship that slows the player; a hydra that grows a head at
+    every fifth of its health; a jellyfish with a black heart in it. *"These'll be first iteration of
+    the bosses, let's see how good we can get them, but I expect we'll need to refine and improve
+    them."* This table gives each its hull, its station, its flight, its fan and its phases on the
+    vocabulary the game has; the attacks the game has no word for yet — a beam, a rain with warning
+    lines, a whip, a summons, a slow, a head — are each their own decision, on their own boss, and
+    `docs/decisions/0247-a-level-has-a-mid-boss-and-a-real-one.md` lists them.
+
+    ⚠️ **Every station + drift + radius is 149 or under**, which is the whole hull on the narrowest
+    view at the far end of every swing (0061); every near end is past 55% of the screen (0101). The
+    biggest hulls in the game buy that with the smallest drifts.
+
+    ⚠️ **No pair of flight and fan repeats across all fourteen**, which `tests/level.test.ts` holds:
+    eight pairs were free after the first seven and these take seven of them.
+  */
+  /**
+   * The Approach's end: the serpent.
+   *
+   * ⚠️ **The one the game is named for** — `docs/game.md`: *"the Jörmungandr fight from The Far
+   * Carry … made into a shooter."* It rises and falls across the whole lane and lays a wall, which
+   * is the shape a body that size crossing in front of you is. Owed: acid blasts, void blasts, and
+   * the lightning that rains from the top of the screen with warning lines.
+   */
+  jormungandr: {
+    move: { kind: 'bob', amplitude: 24, wavelength: 200 },
+    attack: { kind: 'wall', gap: 12 },
+    uncoil: null,
+    sprite: SPRITE.boss8,
+    spriteHit: SPRITE.boss8Hit,
+    radius: 16,
+    health: 700,
+    damage: 3,
+    station: 128,
+    drift: 5,
+    driftWavelength: 240,
+    patrol: 0.3,
+    shot: 'spit',
+    phases: [
+      { upTo: 1, fireEvery: 84, shots: 2, spread: 0, patrolScale: 1, stance: { kind: 'volley' } },
+      { upTo: 0.66, fireEvery: 66, shots: 3, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' } },
+      { upTo: 0.33, fireEvery: 54, shots: 4, spread: 0, patrolScale: 1.6, stance: { kind: 'volley' } },
+    ],
+  },
+  /**
+   * The Ember Nebula's end: the hell-spawned eagle.
+   *
+   * It follows the player's lane and throws darts at where they are, from the widest wings in the
+   * game. Owed: whips of fire, and hordes of kites and raptors summoned through the fight.
+   */
+  hellkite: {
+    move: { kind: 'stalk', agility: 0.22 },
+    attack: { kind: 'aimed' },
+    uncoil: null,
+    sprite: SPRITE.boss9,
+    spriteHit: SPRITE.boss9Hit,
+    radius: 15,
+    health: 760,
+    damage: 3,
+    station: 129,
+    drift: 5,
+    driftWavelength: 180,
+    patrol: 0.4,
+    shot: 'lance',
+    phases: [
+      { upTo: 1, fireEvery: 78, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' } },
+      { upTo: 0.7, fireEvery: 66, shots: 3, spread: 0.5, patrolScale: 1.3, stance: { kind: 'volley' } },
+      { upTo: 0.4, fireEvery: 54, shots: 5, spread: 0.8, patrolScale: 1.7, stance: { kind: 'volley' } },
+      { upTo: 0.15, fireEvery: 48, shots: 5, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' } },
+    ],
+  },
+  /**
+   * The Saurian Belt's end: the pterodactyl.
+   *
+   * A patrol laying a spray down the lane, fast. Owed: lasers on its wings, and the mouth that opens
+   * for one huge beam.
+   */
+  quetzal: {
+    move: { kind: 'patrol' },
+    attack: { kind: 'spray' },
+    uncoil: null,
+    sprite: SPRITE.boss10,
+    spriteHit: SPRITE.boss10Hit,
+    radius: 15,
+    health: 820,
+    damage: 3,
+    station: 128,
+    drift: 6,
+    driftWavelength: 160,
+    patrol: 0.55,
+    shot: 'lance',
+    phases: [
+      { upTo: 1, fireEvery: 72, shots: 3, spread: 0.5, patrolScale: 1, stance: { kind: 'volley' } },
+      { upTo: 0.66, fireEvery: 60, shots: 5, spread: 0.9, patrolScale: 1.4, stance: { kind: 'volley' } },
+      { upTo: 0.33, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 1.9, stance: { kind: 'volley' } },
+    ],
+  },
+  /**
+   * The Labyrinth's end: the gyre — the lattice, upgraded.
+   *
+   * ⚠️ **The ask, word for word:** *"an upgraded version of the current end boss of saurian belt —
+   * the upgrades are that it will spin and that the bullet walls will have the bullets closer
+   * together — the spaceship gaps will be the same size, but the bullet gaps will be close so you
+   * can't fit through them."* The curtain is the second half of that today: the tightest uncoil in
+   * the game, its hole the ship's width. The spin — walls thrown at every angle so the gap is
+   * diagonal, vertical and horizontal in turn — is owed, and the rake is its stand-in.
+   */
+  gyre: {
+    move: { kind: 'patrol' },
+    attack: { kind: 'rake', turn: 0.4 },
+    uncoil: { from: 0.5, every: 0.1, gap: 3, at: 26, hole: 14 },
+    sprite: SPRITE.boss11,
+    spriteHit: SPRITE.boss11Hit,
+    radius: 14,
+    health: 880,
+    damage: 3,
+    station: 130,
+    drift: 5,
+    driftWavelength: 220,
+    patrol: 0.45,
+    shot: 'flak',
+    phases: [
+      { upTo: 1, fireEvery: 78, shots: 3, spread: 0.7, patrolScale: 1, stance: { kind: 'volley' } },
+      { upTo: 0.7, fireEvery: 66, shots: 5, spread: 1, patrolScale: 1.3, stance: { kind: 'volley' } },
+      { upTo: 0.4, fireEvery: 54, shots: 7, spread: 1.4, patrolScale: 1.7, stance: { kind: 'volley' } },
+    ],
+  },
+  /**
+   * The Rime Shelf's end: the frost ship.
+   *
+   * It tracks the player's lane and lays a wall across it. Owed: frost bolts and frost blasts, the
+   * cold that slows and freezes a ship that comes too close, and its adds.
+   */
+  hoarfrost: {
+    move: { kind: 'stalk', agility: 0.18 },
+    attack: { kind: 'wall', gap: 10 },
+    uncoil: null,
+    sprite: SPRITE.boss12,
+    spriteHit: SPRITE.boss12Hit,
+    radius: 13,
+    health: 940,
+    damage: 3,
+    station: 131,
+    drift: 5,
+    driftWavelength: 260,
+    patrol: 0.3,
+    shot: 'flak',
+    phases: [
+      { upTo: 1, fireEvery: 84, shots: 2, spread: 0, patrolScale: 1, stance: { kind: 'volley' } },
+      { upTo: 0.7, fireEvery: 72, shots: 3, spread: 0, patrolScale: 1.2, stance: { kind: 'volley' } },
+      { upTo: 0.4, fireEvery: 60, shots: 4, spread: 0, patrolScale: 1.5, stance: { kind: 'volley' } },
+      { upTo: 0.15, fireEvery: 54, shots: 4, spread: 0, patrolScale: 1.9, stance: { kind: 'volley' } },
+    ],
+  },
+  /**
+   * The Toxic Mire's end: the hydra.
+   *
+   * ⚠️ **A head at every fifth of its health — 80, 60, 40 and 20 per cent — and every head is a
+   * phase.** The ask gives each head its own attack: acid, then flame, then laser bolts, then
+   * frost, then void. Today a head is one more shot in the spray; the five kinds of shot are owed,
+   * one per head.
+   */
+  hydra: {
+    move: { kind: 'bob', amplitude: 18, wavelength: 220 },
+    attack: { kind: 'spray' },
+    uncoil: null,
+    sprite: SPRITE.boss13,
+    spriteHit: SPRITE.boss13Hit,
+    radius: 16,
+    health: 1000,
+    damage: 3,
+    station: 128,
+    drift: 5,
+    driftWavelength: 240,
+    patrol: 0.3,
+    shot: 'spit',
+    phases: [
+      { upTo: 1, fireEvery: 72, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' } },
+      { upTo: 0.8, fireEvery: 66, shots: 2, spread: 0.4, patrolScale: 1.2, stance: { kind: 'volley' } },
+      { upTo: 0.6, fireEvery: 60, shots: 3, spread: 0.7, patrolScale: 1.4, stance: { kind: 'volley' } },
+      { upTo: 0.4, fireEvery: 54, shots: 4, spread: 1, patrolScale: 1.6, stance: { kind: 'volley' } },
+      { upTo: 0.2, fireEvery: 48, shots: 5, spread: 1.3, patrolScale: 1.8, stance: { kind: 'volley' } },
+    ],
+  },
+  /**
+   * The Black Heart's end: the jellyfish, with the heart pulsing inside it.
+   *
+   * ⚠️ **It opens at the end, and that is the ask** — *"final phase will be the jellyfish opening
+   * up and the black heart spewing forth a rain of void blasts."* The bared window is the opening;
+   * the rain of void, the tendrils that pulse lightning, and the moon jellies that fall on the
+   * player are owed. Its ring gets denser as it dies and its curtain is the tendrils' stand-in.
+   */
+  medusa: {
+    move: { kind: 'bob', amplitude: 14, wavelength: 260 },
+    attack: { kind: 'ring' },
+    uncoil: { from: 0.5, every: 0.1, gap: 4, at: 50, hole: 13 },
+    sprite: SPRITE.boss14,
+    spriteHit: SPRITE.boss14Hit,
+    radius: 17,
+    health: 1100,
+    damage: 3,
+    station: 127,
+    drift: 5,
+    driftWavelength: 300,
+    patrol: 0.24,
+    shot: 'spit',
+    phases: [
+      { upTo: 1, fireEvery: 66, shots: 4, spread: 0, patrolScale: 1, stance: { kind: 'volley' } },
+      { upTo: 0.75, fireEvery: 54, shots: 6, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' } },
+      { upTo: 0.5, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.6, stance: { kind: 'volley' } },
+      { upTo: 0.3, fireEvery: 42, shots: 10, spread: 0, patrolScale: 2, stance: { kind: 'volley' } },
+      // The opening: a sixth of the bar at three times the damage is 1.8 s at max weapons, past the
+      // death it runs into (0150's floor).
+      { upTo: 0.16, fireEvery: 36, shots: 10, spread: 0, patrolScale: 1.2, stance: { kind: 'bare', damageScale: 3 } },
     ],
   },
 };

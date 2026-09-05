@@ -20,7 +20,7 @@ whole game.
 |---|---|
 | **Prologue** | choose 1 of the 4 *Far Carry* golfers. Short stage → the Jörmungandr fight. One of the three unchosen characters betrays you |
 | **Level 1 choice** | keep your prologue character, or swap to one of 3 others drawn from the unlocked pool |
-| **Levels 1–7** | waves, hazards, small and medium bosses, one unique end boss per level |
+| **Levels 1–7** | waves, hazards, a mid-boss inside each level and one unique end boss at its end — [0247](decisions/0247-a-level-has-a-mid-boss-and-a-real-one.md) |
 | **The chart** | between levels, a branching map of destinations. Every step deeper is harder |
 | **The betrayer** | returns as the end boss of a later level |
 | **Target length** | 15–30 minutes, prologue to final boss. **~2 minutes of stage per level plus its boss** — it was ~3 and the player cut it twice from play, for DENSITY: *"reduce the level length without reducing enemy count to increase the density of enemies"*, and then *"it still took me 3 minutes"*. [0114](decisions/0114-the-fight-is-a-different-piece.md) |
@@ -289,6 +289,17 @@ its own room, and no two share a progression.
 **Every boss is unique** — its own attacks, its own effects, its own escalation. The Jörmungandr
 model is the baseline: phases keyed to remaining health, so every arsenal meets every phase, and a
 heavier loadout shortens the fight without trivialising it.
+
+⚠️ **TWO FIGHTS A LEVEL SINCE [0247](decisions/0247-a-level-has-a-mid-boss-and-a-real-one.md).**
+The seven bosses the run had are its mid-bosses now, at half their health, fought inside the level
+under its own music; the real boss of each place waits at the end. The real bosses are the
+serpent (Jörmungandr, the Approach), the hell-spawned eagle (Ember Nebula), the pterodactyl
+(Saurian Belt), the gyre (the Labyrinth — the lattice upgraded), the frost ship (Rime Shelf), the
+hydra (Toxic Mire) and the jellyfish with the black heart in it (the Black Heart). Each is a first
+iteration on the vocabulary the game has; the attacks it has no word for yet — acid, void, flame
+and frost, a rain from the sky with warning lines, whips, beams, summoned hordes, a spinning wall,
+a cold that slows, heads that grow, tendrils, a final opening — are each their own decision.
+[`the-bosses-asked`](../reports/the-bosses-asked-2026-09-05.md) is the brief.
 
 ⚠️ **A phase changes what a boss DOES, not what it looks like** —
 [0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md). Nothing on screen currently

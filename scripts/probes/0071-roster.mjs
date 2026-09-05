@@ -18,7 +18,9 @@ export const PROBES = [
     */
     broke: 'the last level pointed at the first level’s boss, so a run fights it twice',
     guard: 'no boss is fought twice in one run',
-    edit: { path: 'src/content/levels.ts', find: "    boss: 'axis',", replace: "    boss: 'sentinel'," },
+    // ⚠️ Re-anchored by 0247: the last level's end boss is the jellyfish, and the first level's is
+    // the serpent. Same break — the last level pointed at the first level's boss.
+    edit: { path: 'src/content/levels.ts', find: "    boss: 'medusa',", replace: "    boss: 'jormungandr'," },
   },
   {
     decision: '0071',

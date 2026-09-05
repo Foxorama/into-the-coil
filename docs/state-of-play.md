@@ -130,6 +130,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a blade rides a helix: two strands from the wingtips crossing up the lane, a quarter faster, the star a twelfth of the lane** | [0244](decisions/0244-a-blade-rides-a-helix.md), [`the-helix-asked`](../reports/the-helix-asked-2026-09-05.md) |
 | **a wall-clock budget is three times the worst cost measured under the suite — the fifth bake to time out under the proof was the one that got measured** | [0245](decisions/0245-a-budget-is-sized-under-load.md) |
 | **a seeker hunts on the screen only, and burns out after a second and a half in a puff** | [0246](decisions/0246-a-seeker-hunts-on-the-screen.md), [`the-seekers-played`](../reports/the-seekers-played-2026-09-05.md) |
+| **a level has a mid-boss and a real one: the seven old bosses halved and moved inside their levels, seven real bosses at the ends, each a first iteration** | [0247](decisions/0247-a-level-has-a-mid-boss-and-a-real-one.md), [`the-bosses-asked`](../reports/the-bosses-asked-2026-09-05.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -782,8 +783,17 @@ helix** — [`the-helix-asked`](../reports/the-helix-asked-2026-09-05.md): two s
 wingtips crossing up the lane, a quarter faster, the star a twelfth of the lane. **And the seekers
 were played across a run and were too strong: [0246](decisions/0246-a-seeker-hunts-on-the-screen.md)
 bounds the hunt by the screen and by a fuse** —
-[`the-seekers-played`](../reports/the-seekers-played-2026-09-05.md). What is owed is
-another play, on the branch preview, of the ship, its guns and its deaths as 0246 left them; an ear on `arc`, `zap` and `throw` as they are now
+[`the-seekers-played`](../reports/the-seekers-played-2026-09-05.md). **And the bosses were
+briefed, all seven places at once —
+[`the-bosses-asked`](../reports/the-bosses-asked-2026-09-05.md) — and
+[0247](decisions/0247-a-level-has-a-mid-boss-and-a-real-one.md) is the first answer**: two fights
+a level, the old seven as mid-bosses at half their health, seven real bosses on the vocabulary the
+game has. **What is next, in the brief's order, is a decision per real boss**, each adding the
+words its fight needs: the serpent's acid, void and lightning from the sky with warning lines; the
+eagle's whips of fire and summoned hordes; the pterodactyl's wing lasers and mouth beam, with
+volcanoes in its backdrop belching rock that rains on the lane; the gyre's spin; the frost ship's bolts, its cold that slows and freezes, and its adds; the hydra's shot per
+head; the jellyfish's tendrils, its raining moon jellies and its opening. What is owed is
+another play, on the branch preview, of the ship, its guns and its deaths as 0246 left them, and of both fights of a level as 0247 left them; an ear on `arc`, `zap` and `throw` as they are now
 (`scripts/hear.mjs --only=arc,zap,throw` writes them); and an eye on the leaning flame, the livery
 at seven units, the helix ahead of the ship and the seeker turning in flight, at the camera the game
 ships — every claim about any of them is a model quantity. The balance of a gun that cannot miss and a gun that sweeps is a hand's,

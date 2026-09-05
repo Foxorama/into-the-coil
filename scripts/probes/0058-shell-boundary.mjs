@@ -60,7 +60,8 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0084, which put `w.levelIndex = 0` between the two lines this used to span
       // and gave `advanceLevel` a third argument. Zero is what `startLevel` means, so it is what the
       // merged call passes — the break is the sweep going missing, not the index.
-      find: '  w.bossRow = BOSSES[level.boss];\n  resetScene(w);\n}',
+      // ⚠️ Re-anchored by 0247, which put the fight index beside the boss row. Same break.
+      find: '  w.bossRow = BOSSES[level.midBoss === null ? level.boss : level.midBoss.kind];\n  resetScene(w);\n}',
       replace: '  advanceLevel(w, level, 0);\n}',
     },
   },

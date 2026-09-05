@@ -152,6 +152,12 @@ export interface PickupEntry {
  * the music entirely, and a runtime hook from the sky to the audio clock would put it back.
  * `tests/sky.test.ts` asserts the two numbers are equal.
  */
+/** A boss inside a level: which, and the camera distance at which it arrives — 0247. */
+export interface MidBoss {
+  kind: BossKind;
+  at: number;
+}
+
 export interface LandmarkEntry {
   /** World units from the level's start, exactly as a wave's `at` is. */
   at: number;
@@ -248,7 +254,22 @@ export interface LevelRow {
    * script may open — `SectionName` excludes them at the type level.
    */
   sections: LevelSections;
+  /** The end boss: what waits at `bossAt`, and what the level's fight is. */
   boss: BossKind;
+  /**
+   * The mid-boss, and where it arrives, or `null` for a level with none —
+   * `docs/decisions/0247-a-level-has-a-mid-boss-and-a-real-one.md`.
+   *
+   * ⚠️ **Asked for: *"change the current bosses to have about 50% less health and then be
+   * mid-level bosses and add in the actual real bosses."*** A mid-boss holds station like an end
+   * boss and must be killed like one, but the level does not end on it and the music does not turn
+   * for it: it is a fight inside the run, and the waves keep coming around it. `at` is level-local
+   * like `bossAt`, and before it.
+   *
+   * ⚠️ **`null` rather than optional**, on the same terms as a boss's `uncoil`: a level without one
+   * is a decision somebody made, and `undefined` is a decision somebody forgot — 0016.
+   */
+  midBoss: MidBoss | null;
   /**
    * Where this level IS — its backdrop and how it mixes the music.
    *
@@ -1251,7 +1272,9 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       { at: 2534, section: 'surge' },
       { at: 3627, section: 'approach' },
     ],
-    boss: 'sentinel',
+    // The serpent at the end, and the sentinel — the teacher — halfway, once the push has begun.
+    boss: 'jormungandr',
+    midBoss: { kind: 'sentinel', at: 1549 },
     landmarks: [],
     theme: 'approach',
   },
@@ -1273,7 +1296,8 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       { at: 2584, section: 'surge' },
       { at: 3677, section: 'approach' },
     ],
-    boss: 'harrow',
+    boss: 'hellkite',
+    midBoss: { kind: 'harrow', at: 1599 },
     /*
       ⚠️ **1299 IS `push`, WHICH IS WHERE THE ORGAN OPENS** — `src/content/nebula.ts`'s ladder puts
       the pipe organ on `push`, and this level's `sections` opens `push` at 1299. Asked for by name:
@@ -1315,7 +1339,10 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       { at: 2534, section: 'surge' },
       { at: 3627, section: 'approach' },
     ],
-    boss: 'lattice',
+    // The pterodactyl at the end; the shoal mother — the labyrinth's old end, a flying thing that
+    // fires little and hits hard — halfway, as the belt's mid-tier dino.
+    boss: 'quetzal',
+    midBoss: { kind: 'shoalMother', at: 1549 },
     /*
       ⚠️ **THREE, AND THIS IS THE FIRST LEVEL TO PLACE MORE THAN ONE** —
       `docs/decisions/0224-the-mountain-is-awake.md`. Asked for: *"exploding volcanoes adding volcanic
@@ -1362,7 +1389,10 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       { at: 2504, section: 'surge' },
       { at: 3597, section: 'approach' },
     ],
-    boss: 'shoalMother',
+    // The gyre — the lattice, upgraded — at the end; the lattice itself, the saurian belt's old end,
+    // halfway.
+    boss: 'gyre',
+    midBoss: { kind: 'lattice', at: 1519 },
     landmarks: [],
     theme: 'labyrinth',
   },
@@ -1383,7 +1413,8 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       { at: 2504, section: 'surge' },
       { at: 3597, section: 'approach' },
     ],
-    boss: 'redoubt',
+    boss: 'hoarfrost',
+    midBoss: { kind: 'redoubt', at: 1519 },
     landmarks: [],
     theme: 'rime',
   },
@@ -1404,7 +1435,8 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       { at: 2604, section: 'surge' },
       { at: 3697, section: 'approach' },
     ],
-    boss: 'chorus',
+    boss: 'hydra',
+    midBoss: { kind: 'chorus', at: 1619 },
     landmarks: [],
     theme: 'mire',
   },
@@ -1434,7 +1466,8 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       { at: 2360, section: 'surge' },
       { at: 3986, section: 'approach' },
     ],
-    boss: 'axis',
+    boss: 'medusa',
+    midBoss: { kind: 'axis', at: 1044 },
     /*
       ⚠️ **THE HEART ARRIVES WITH `surge`, ON THE PILLARS' OWN REASONING.** *"black heart needs to be a
       beating black heart."* 0203 tied Ember Nebula's landmark to the bar its music opens on rather

@@ -444,7 +444,12 @@ describe('every level has a boss of its own, and no two of them are the same obj
       builds, runs, and plays as a repeat of level one with different waves in front of it —
       `docs/game.md`'s *every boss is unique* broken in the one way no compiler can see.
     */
-    const fought = LEVEL_KINDS.map((kind) => LEVELS[kind].boss);
+    // ⚠️ Mid-bosses too, since 0247: a run is fourteen fights, and a mid-boss fought again as an end
+    // boss two levels on is the same repeat wearing a smaller health bar.
+    const fought = LEVEL_KINDS.flatMap((kind) => {
+      const level = LEVELS[kind];
+      return level.midBoss === null ? [level.boss] : [level.midBoss.kind, level.boss];
+    });
     expect(new Set(fought).size, `the run fights ${fought.join(', ')}`).toBe(fought.length);
   });
 
@@ -524,7 +529,7 @@ describe('a boss fight can reach all of its phases', () => {
    */
   describe('and it can be fought, start to finish, with nothing but the base weapon', () => {
     /** A level that is nothing but its boss, so the fight is the only thing under test. */
-    const soloBoss = { waves: [], pickups: [], landmarks: [], bossAt: 200, sections: NO_SECTIONS, boss: 'sentinel' as const, theme: 'approach' as const };
+    const soloBoss = { waves: [], pickups: [], landmarks: [], bossAt: 200, midBoss: null, sections: NO_SECTIONS, boss: 'sentinel' as const, theme: 'approach' as const };
 
     it('arrives, closes on its station, and then holds it', () => {
       const { world } = playableWorld(soloBoss);
@@ -990,7 +995,7 @@ describe('a death costs the ship and not the level', () => {
  * change moves it.
  */
 function bossFight(kind: (typeof BOSS_KINDS)[number]): { world: ReturnType<typeof playableWorld>['world']; frame: GameFrame } {
-  const { world } = playableWorld({ waves: [], pickups: [], landmarks: [], bossAt: 200, sections: NO_SECTIONS, boss: kind, theme: 'approach' });
+  const { world } = playableWorld({ waves: [], pickups: [], landmarks: [], bossAt: 200, midBoss: null, sections: NO_SECTIONS, boss: kind, theme: 'approach' });
   const frame = new GameFrame(world);
   world.ship.health = 1e9;
   /*
@@ -1421,7 +1426,7 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
 
   /** A level that is nothing but the boss under test, so the fight is the only thing running. */
   const solo = (boss: (typeof BOSS_KINDS)[number]) =>
-    ({ waves: [], pickups: [], landmarks: [], bossAt: 200, sections: NO_SECTIONS, boss, theme: 'approach' } as const);
+    ({ waves: [], pickups: [], landmarks: [], bossAt: 200, midBoss: null, sections: NO_SECTIONS, boss, theme: 'approach' } as const);
 
   /** Drive a fight until the boss is on station, then put it at `fraction` of its health. */
   const fightAt = (boss: (typeof BOSS_KINDS)[number], fraction: number) => {
@@ -1865,7 +1870,14 @@ describe('0124 — a boss lasts long enough to be one, at the loadout the game i
       why *"when the boss arrives the section change is noticeable, but not in a dramatic entrance
       kind of way"* — there was nothing after the entrance.
     */
-    for (const kind of BOSS_KINDS) {
+    /*
+      ⚠️ **THE END BOSSES, since 0247** — `docs/decisions/0247-a-level-has-a-mid-boss-and-a-real-one.md`.
+      A mid-boss is fought under the section it is in and no piece announces it, so the floor the
+      music sets is not its floor: it IS the miniboss this message names, on purpose. The end boss
+      of every level is what the fight's piece is written for, and every one of them is held here.
+    */
+    for (const level of LEVEL_KINDS) {
+      const kind = LEVELS[level].boss;
       const seconds = (BOSSES[kind].health * TUNED.toughness) / FASTEST;
       expect(
         seconds,

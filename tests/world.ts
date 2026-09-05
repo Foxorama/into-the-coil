@@ -67,6 +67,7 @@ export const NO_LEVEL: LevelRow = {
   pickups: [],
   landmarks: [],
   bossAt: Number.POSITIVE_INFINITY,
+  midBoss: null,
   sections: NO_SECTIONS,
   boss: 'sentinel',
   // ⚠️ The theme that changes nothing — 0107. A fixture that leaned on a themed mix would be
@@ -98,10 +99,13 @@ export function inertLevel(): {
   weaponsOffered: number;
   nextWave: number;
   bossRow: typeof BOSSES.sentinel;
+  fight: number;
   bossPool: Pool<Entity>;
   bossSpawned: boolean;
   bossBeaten: boolean;
   clearedIn: number;
+  bossBurstIn: number;
+  bossBurstRadius: number;
   bossOffset: number;
   bossAcross: number;
   bossPatrol: number;
@@ -155,10 +159,13 @@ export function inertLevel(): {
     weaponsOffered: 0,
     nextWave: 0,
     bossRow: BOSSES.sentinel,
+    fight: 1,
     bossPool: new Pool<Entity>(CAPACITY.boss, makeEntity),
     bossSpawned: false,
     bossBeaten: false,
     clearedIn: 0,
+    bossBurstIn: 0,
+    bossBurstRadius: 0,
     bossOffset: 0,
     bossAcross: ACROSS_SPAN / 2,
     bossPatrol: 1,
@@ -338,11 +345,15 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     levelIndex: 0,
     weaponsOffered: 0,
     nextWave: 0,
-    bossRow: BOSSES[level.boss],
+    // The mid-boss's fight first where the level has one — 0247, exactly as `beginRun` sets it.
+    bossRow: BOSSES[level.midBoss === null ? level.boss : level.midBoss.kind],
+    fight: level.midBoss === null ? 1 : 0,
     bossPool,
     bossSpawned: false,
     bossBeaten: false,
     clearedIn: 0,
+    bossBurstIn: 0,
+    bossBurstRadius: 0,
     bossOffset: 0,
     bossAcross: ACROSS_SPAN / 2,
     bossPatrol: 1,

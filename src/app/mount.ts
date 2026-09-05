@@ -67,6 +67,7 @@ import { makeIntent } from '../sim/intent.ts';
 import {
   GameFrame,
   SHIP_START_ALONG,
+  bossOnField,
   detonateArsenal,
   landmarksFor,
   launchSpecial,
@@ -578,7 +579,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   });
 
   const level = LEVELS.approach;
-  const bossRow = BOSSES[level.boss];
+  // The mid-boss's row first where the level has one — 0247; `beginRun` sets it again from whichever
+  // level the run opens on.
+  const bossRow = BOSSES[level.midBoss === null ? level.boss : level.midBoss.kind];
 
   const shipRow = SHIPS.proof;
   const ship = shipPool.spawn()!;
@@ -767,10 +770,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     weaponsOffered: 0,
     nextWave: 0,
     bossRow,
+    fight: level.midBoss === null ? 1 : 0,
     bossPool,
     bossSpawned: false,
     bossBeaten: false,
     clearedIn: 0,
+    bossBurstIn: 0,
+    bossBurstRadius: 0,
     bossOffset: 0,
     bossAcross: ACROSS_SPAN / 2,
     bossPatrol: 1,
@@ -1856,7 +1862,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       state.screen.current === 'playing'
         ? musicLevelFor(
             world.cameraAlong - world.levelOrigin,
-            world.bossPool.size > 0,
+            // The END boss and not a mid-boss — 0247: a mid-boss is fought under the section it is in.
+            bossOnField(world),
             /*
               ⚠️ **THE LEVEL'S OWN SCRIPT, AND IT IS THE ONLY THING `src/` MAY PASS HERE** — 0158.
               Where a section opens stopped being three shared constants and became a thing a level

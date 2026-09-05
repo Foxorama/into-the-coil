@@ -15,12 +15,14 @@ export const PROBES = [
       guard about a boss was about whether it could be killed at ALL, with the base weapon, and that
       one passes more easily the weaker the boss is.
     */
-    broke: 'the first boss back to the health it shipped with, which is 4.6 seconds at max weapons',
+    // ⚠️ Re-anchored by 0247: the guard holds the END bosses, and the first level's is the serpent.
+    // Same break — the first fight's boss at the health level one shipped with.
+    broke: 'the first real boss back to the health the sentinel shipped with, which is 4.6 seconds at max weapons',
     guard: 'THE REPORTED ONE: a boss is not over before its music is',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    radius: 11,\n    health: 480,',
-      replace: '    radius: 11,\n    health: 150,',
+      find: '    radius: 16,\n    health: 700,',
+      replace: '    radius: 16,\n    health: 150,',
     },
   },
   {
@@ -36,10 +38,11 @@ export const PROBES = [
     guard: 'and every phase lasts long enough to be seen as one',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "      { upTo: 0.6, fireEvery: 66, shots: 3, spread: 0.5, patrolScale: 1.4, stance: { kind: 'volley' } },",
+      // ⚠️ Re-anchored by 0247 onto the serpent's middle phase; the sentinel has two phases now.
+      find: "      { upTo: 0.66, fireEvery: 66, shots: 3, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' } },",
       replace:
-        "      { upTo: 0.62, fireEvery: 66, shots: 3, spread: 0.5, patrolScale: 1.4, stance: { kind: 'volley' } },\n" +
-        "      { upTo: 0.6, fireEvery: 66, shots: 3, spread: 0.5, patrolScale: 1.4, stance: { kind: 'volley' } },",
+        "      { upTo: 0.68, fireEvery: 66, shots: 3, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' } },\n" +
+        "      { upTo: 0.66, fireEvery: 66, shots: 3, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' } },",
     },
   },
   {
@@ -54,8 +57,9 @@ export const PROBES = [
     guard: 'and a later boss is a longer fight than an earlier one',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    radius: 16,\n    health: 1140,',
-      replace: '    radius: 16,\n    health: 400,',
+      // ⚠️ Re-anchored by 0247: the last boss in the table is the jellyfish.
+      find: '    radius: 17,\n    health: 1100,',
+      replace: '    radius: 17,\n    health: 400,',
     },
   },
 ];

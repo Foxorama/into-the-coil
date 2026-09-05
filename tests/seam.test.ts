@@ -190,14 +190,16 @@ describe('and the level still plays the same wherever it begins', () => {
     const enteredAt = world.cameraAlong;
     const next = LEVELS[LEVEL_KINDS[1]!];
     advanceLevel(world, next, 1);
-    // Straight to where the boss is owed, in the level's own coordinates.
-    world.cameraAlong = enteredAt + next.bossAt;
+    // The level's FIRST boss — its mid-boss, since 0247 — is the one the camera meets first; the
+    // end boss waits on it. Straight to where it is owed, in the level's own coordinates.
+    const owedAt = next.midBoss === null ? next.bossAt : next.midBoss.at;
+    world.cameraAlong = enteredAt + owedAt;
     for (let i = 0; i < seconds(5) && !world.bossSpawned; i++) frame.step();
     expect(world.bossSpawned, 'the boss never arrived when the level did not start at zero').toBe(true);
     expect(world.bossPool.size, 'the boss spawned and is not on the field').toBe(1);
     // Placed ahead of the camera by the same distance it would have been in a level starting at zero.
     expect(world.bossPool.at(0).along - world.levelOrigin, 'the boss was placed in run coordinates').toBeCloseTo(
-      next.bossAt,
+      owedAt,
       6,
     );
   });
