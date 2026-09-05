@@ -46,11 +46,14 @@ function armed(): State {
     PLAY,
     { slice: 'run', type: 'took', special: 'bomb' },
     { slice: 'run', type: 'took', special: 'mines' },
-    { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' },
-    { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' },
+    // On the OTHER kinds, not the ship's own — 0256: a death keeps the gun and the tube, and a
+    // fixture on the base kinds could not see them being put back to the base. `npm run prove`
+    // said so.
+    { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'arc' },
+    { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'arc' },
     // And two on the other ladder — 0256: a death costs one rung PER LADDER, which one ladder cannot show.
-    { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'straight' },
-    { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'straight' },
+    { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'homing' },
+    { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'homing' },
   );
 }
 

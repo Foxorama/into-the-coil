@@ -869,13 +869,20 @@ describe('collecting one, in the real frame', () => {
       world.ship.along = world.cameraAlong + PLAYER_LEAD;
       world.ship.prevAlong = world.ship.along;
       /*
-        ⚠️ **THE WIDEST SPREAD OVER THE RUN, NOT THE SPREAD AT ONE INSTANT — 0243.** Two pieces since
-        then, one per kind, and two wanderers cross one line often; five did not. The claim is about
-        the THROW — that the pieces went different ways along the lane rather than sitting on one
-        line — and the throw is over inside the first second, so the widest spread seen is what holds it.
+        ⚠️ **THE WIDEST SPREAD DURING THE FLIGHT, NOT OVER THE WAIT — 0256.** The claim is about the
+        THROW — that the pieces went different ways along the lane rather than sitting on one line —
+        and the throw is the flight; measured over the wait as well, the wander that follows it
+        carries three pieces four units apart on its own and the guard held nothing. `npm run prove`
+        said so: the throw removed stayed green. The flight is a third of a second at least
+        (`is thrown in both axes` below holds that), so the first twenty steps are inside it.
+
+        ⚠️ **AND A BOUNCE IS NOT A CLAMP**: after the flight no piece is sitting on the back wall.
+        A clamp pins a piece thrown backward at exactly the margin for the whole flight; a bounce
+        sends it back into the box. That is the half the widest spread could not see either, because
+        the pieces thrown forward spread from the pinned one just as well.
       */
       let spread = 0;
-      for (let step = 0; step < 240; step++) {
+      for (let step = 0; step < 20; step++) {
         frame.step();
         expect(world.pickups.size, `a piece was collected or expired on step ${step}, so this measured nothing`).toBe(MID_BOSS_DROP.length);
         for (let a = 0; a < world.pickups.size; a++) {
@@ -884,7 +891,12 @@ describe('collecting one, in the real frame', () => {
           }
         }
       }
-      expect(spread, `the whole drop stayed within ${spread.toFixed(1)} units of one line`).toBeGreaterThan(4);
+      expect(spread, `the whole drop stayed within ${spread.toFixed(1)} units of one line during its flight`).toBeGreaterThan(4);
+      for (let step = 20; step < 240; step++) frame.step();
+      for (let i = 0; i < world.pickups.size; i++) {
+        const inView = world.pickups.at(i).along - world.cameraAlong;
+        expect(inView - PLAYER_ALONG_MARGIN, 'a piece is sitting on the back wall of the box, which is a clamp and not a bounce').toBeGreaterThan(1);
+      }
     });
 
     /*
@@ -910,7 +922,13 @@ describe('collecting one, in the real frame', () => {
         Driven at the largest loadout, which is the worst case for the ring — the gap between
         neighbouring headings is narrowest when there are the most of them.
       */
-      const { world } = dropped('drop:apart');
+      /*
+        ⚠️ **SIX SEEDS, because the jitter is a draw.** One seed is one draw, and a jitter let off
+        its leash can come up tidy once; `npm run prove` found exactly that — the share widened past
+        the gap stayed green on the one seed this used to walk. Every seed has to keep the ring.
+      */
+      for (let seed = 0; seed < 6; seed++) {
+      const { world } = dropped(`drop:apart:${seed}`);
       expect(world.pickups.size, 'one piece cannot be apart from itself').toBeGreaterThan(1);
 
       /*
@@ -958,9 +976,10 @@ describe('collecting one, in the real frame', () => {
           closest = Math.min(closest, Math.hypot(one.along - two.along, one.across - two.across));
         }
       }
-      expect(closest, `two pieces of the scatter travelled together, ${closest.toFixed(1)} units apart`).toBeGreaterThan(
+      expect(closest, `two pieces of the drop travelled together, ${closest.toFixed(1)} units apart (seed ${seed})`).toBeGreaterThan(
         ACROSS_SPAN / 20,
       );
+      }
     });
 
     it('is thrown in both axes, flies its throw out, and then waits like any other', () => {
@@ -990,8 +1009,18 @@ describe('collecting one, in the real frame', () => {
       const start: number[] = [];
       for (let i = 0; i < world.pickups.size; i++) start.push(world.pickups.at(i).along - world.cameraAlong);
 
+      /*
+        ⚠️ **THE FLIGHT IS AT LEAST A THIRD OF A SECOND, and it is asked of the pieces rather than
+        of the constant.** `npm run prove` found the along excursion alone could not tell a flight
+        from no flight: the wait's wander carries a piece eight units along inside two seconds on
+        its own. A piece still flying its throw twenty steps on is what a flight is.
+      */
+      for (let i = 0; i < 20; i++) frame.step();
+      for (let i = 0; i < world.pickups.size; i++) {
+        expect(world.pickups.at(i).turnsLeft, `a piece had stopped flying its throw a third of a second on`).toBeGreaterThan(0);
+      }
       let furthest = 0;
-      for (let i = 0; i < 120; i++) frame.step();
+      for (let i = 20; i < 120; i++) frame.step();
       for (let i = 0; i < world.pickups.size; i++) {
         const onScreen = world.pickups.at(i).along - world.cameraAlong;
         furthest = Math.max(furthest, Math.abs(onScreen - start[i]!));

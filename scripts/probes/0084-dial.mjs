@@ -89,10 +89,11 @@ export const PROBES = [
       path: 'src/content/levels.ts',
       // `gauntlet` — level six, so the flat spot lands between the last two bosses.
       // ⚠️ Re-anchored by 0256: a level authors a weapon and a missile, and this is the gauntlet's
-      // missile. A third weapon in level six puts its boss at 11 — level seven's — with the level's
-      // step a fraction, which `THE CLIMB` refuses as a flat spot.
+      // missile. TWO extra weapons in level six put its boss past 11 — the level's step is a
+      // fraction now, so one extra leaves it a third under level seven's and still climbing — and
+      // the clamp lands it ON level seven's, which `THE CLIMB` refuses as a flat spot.
       find: "  { at: 868, kind: 'missile', lane: 42 },",
-      replace: "  { at: 868, kind: 'missile', lane: 42 },\n  { at: 3000, kind: 'weapon', lane: 44 },",
+      replace: "  { at: 868, kind: 'missile', lane: 42 },\n  { at: 3000, kind: 'weapon', lane: 44 },\n  { at: 3400, kind: 'weapon', lane: 56 },",
     },
   },
   {
