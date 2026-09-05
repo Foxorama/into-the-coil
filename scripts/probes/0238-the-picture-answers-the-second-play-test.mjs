@@ -33,9 +33,10 @@ export const PROBES = [
     // The seeker put back in the pulse's ink — the reported picture, restored exactly.
     broke: 'the seeker drawn in the pulse’s ink again, so the two missiles differ by a fin',
     guard: 'THE TWO TUBES: a seeker is told from a missile',
+    // ⚠️ Re-anchored by 0241: the seeker wears the ally ink now, not the ship's.
     edit: {
       path: 'src/render/bake.ts',
-      find: "  seeker: 'player',",
+      find: "  seeker: 'ally',",
       replace: "  seeker: 'bullet',",
     },
   },

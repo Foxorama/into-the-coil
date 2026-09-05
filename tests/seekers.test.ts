@@ -131,6 +131,11 @@ describe('0235 — a seeker hunts the nearest body', () => {
     const seeker = SHOTS[MISSILES.homing.shot];
     const missile = SHOTS[MISSILES.straight.shot];
     expect(seeker.sprite, 'the two missiles are one bitmap').not.toBe(missile.sprite);
-    expect(INK_OF[SPRITE_KINDS[seeker.sprite]!], 'the two missiles are drawn in one ink').not.toBe(INK_OF[SPRITE_KINDS[missile.sprite]!]);
+    const ink = INK_OF[SPRITE_KINDS[seeker.sprite]!];
+    expect(ink, 'the two missiles are drawn in one ink').not.toBe(INK_OF[SPRITE_KINDS[missile.sprite]!]);
+    // ⚠️ And not the ship's ink either — 0241: *"blue homing missiles, blue lightning, blue ship,
+    // it all looks the same."* The bolt is stroked in the ship's ink and the hull wears it; a
+    // seeker in it was the third blue thing, and it wears its own pickup face's ink instead.
+    expect(ink, 'a seeker is drawn in the ship’s own ink, so it is one more blue thing').not.toBe('player');
   });
 });

@@ -217,13 +217,13 @@ projectiles' orange, the arc in the ship's, the shuriken in steel, the seeker in
 | gun | what it does | a tier buys |
 |---|---|---|
 | **pulse** | the base weapon: fast, small, reaches the edge of the screen and can miss | a barrel **and** a fire-rate step |
-| **arc** | chain lightning: from the nose to the nearest body in reach, then the next; on a lone boss it jumps around the hull. Cannot miss, cannot reach | a link, a fire-rate step, and weight |
+| **arc** | chain lightning: from the nose to the nearest body in reach, then the next, three links at most; on a lone boss it jumps around the hull. Cannot miss, cannot reach — its reach has been cut back twice from play, [0239](decisions/0239-the-guns-answer-the-third-play-test.md), [0241](decisions/0241-the-ship-wears-its-colours.md) | a link, a fire-rate step, and weight |
 | **shuriken** | steel blades bigger than the ship that spiral out from its nose round a ring centred ahead of it and stretched along the lane — so they reach a boss — to the edge of the screen, and vanish there, landing on everything they cross once per impact flash; not spent by arriving — [0234](decisions/0234-a-blade-circles-the-ship.md), [0237](decisions/0237-the-blades-answer-the-first-play-test.md), [0238](decisions/0238-the-picture-answers-the-second-play-test.md), [0240](decisions/0240-the-blades-reach-the-boss.md) | more of a turn before the edge **and** a fire-rate step |
 
 | tube | what it does | a tier buys |
 |---|---|---|
 | **missiles** | fly the lane from the wings; three pulses each | a tube **and** a rate step, max 2 tubes |
-| **seekers** | hunt the nearest body on the screen from the moment they leave the tube, any direction; two pulses each; in the ship's own colour, so a seeker is never mistaken for a missile — [0235](decisions/0235-a-seeker-hunts-the-nearest-body.md), [0238](decisions/0238-the-picture-answers-the-second-play-test.md) | the same |
+| **seekers** | hunt the nearest body on the screen from the moment they leave the tube, any direction; two pulses each; in the ally ink — their own pickup face's — so a seeker is never mistaken for a missile, a bolt or the ship — [0235](decisions/0235-a-seeker-hunts-the-nearest-body.md), [0238](decisions/0238-the-picture-answers-the-second-play-test.md), [0241](decisions/0241-the-ship-wears-its-colours.md) | the same |
 
 The rest of the vocabulary is unbuilt: multi-tag tracking specials, piercing shots, faster engines,
 orbiting mines that are half shield and half weapon. Nothing triggers a special except the bomb.

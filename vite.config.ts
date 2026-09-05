@@ -181,5 +181,22 @@ export default defineConfig({
       boots and then does nothing.
     */
     hookTimeout: 60_000,
+    /*
+      ── A BAKE IS NOT A UNIT TEST'S BUDGET EITHER — 0241 ──────────────────────────────────────────
+
+      ⚠️ **THE SAME CLASS, THREE TIMES IN ONE DAY, AND THIS IS THE CLASS FIX.** vitest's default
+      per-test budget is 5 s. Under `npm run prove`'s baseline — every suite at once — the sound
+      suite's prewarm (two seconds of arithmetic alone) timed out at 30 s and got 120; the sky's
+      full bake (five and a half seconds alone) timed out at 5 s and got 60; then the music suite's
+      grid walk over every rung and theme timed out at 5 s with no budget of its own. Each was
+      `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md` exactly — wall
+      clock read where the subject is arithmetic that cannot hang — and each was answered one
+      guard at a time. The fourth would have been too.
+
+      ⚠️ **A MINUTE STILL STOPS A RUNAWAY.** The slowest single test in the repository is the
+      prewarm at about two seconds alone; sixty is not slack for a hang, it is room for a loaded box.
+      The per-test budgets already written stay, because each names what it measured.
+    */
+    testTimeout: 60_000,
   },
 });
