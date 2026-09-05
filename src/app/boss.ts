@@ -23,7 +23,7 @@
 import { ACROSS_SPAN } from '../sim/camera.ts';
 import { type Entity, reset } from '../sim/entity.ts';
 import type { Pool } from '../sim/pool.ts';
-import { BEAM_BOLT_KIND, RAIN_BOLT_KIND, type BossPhase, type BossRow, type Fall, type Uncoil } from '../content/bosses.ts';
+import { BEAM_BOLT_KIND, CURTAIN_STANCES, RAIN_BOLT_KIND, type BossPhase, type BossRow, type CurtainStance, type Fall, type Uncoil } from '../content/bosses.ts';
 import { BOLT_STEPS } from '../render/scene.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../sim/flight.ts';
 import type { Rng } from '../sim/rng.ts';
@@ -184,26 +184,108 @@ export function throwCurtain(
   bullet: ShotRow,
   speed: number,
   scrollPerStep: number,
+  /** Where the camera's trailing edge is: a wall along the lane runs from here to the hull — 0252. */
+  cameraAlong: number,
+  /** How the curtain stands, from `curtainStance` — 0252. `across` is every curtain before it. */
+  stance: CurtainStance,
 ): void {
   const spacing = curtainSpacing(uncoil.gap);
+  /*
+    ── HOW THE CURTAIN STANDS — 0252 ─────────────────────────────────────────────────────────────
+
+    A line of shots `spacing` apart along its length, with one hole `hole` wide at the same share
+    of that length that `at` is of the lane. `across` is the line every curtain was before 0252,
+    exactly. `slant` and `backslant` lean it corner to corner — a lane's width of lean, so the
+    line is √2 lanes long — and still throw it down the lane, so every row of the lane is swept in
+    turn as the leaning line passes; a leaning wall that arrived everywhere at once would have to
+    start as far above the lane as it leans, and the across cull is forty units out. `along` lies
+    along the lane just over the top edge, from the camera's trailing edge to the hull, and falls
+    across it. Nothing allocates, and the `never` arm is what makes the union closed (0016).
+  */
+  // The line: its foot, its direction per unit of length, and how every shot on it travels.
+  let length: number;
+  let footAlong: number;
+  let footAcross: number;
+  let runAlong: number;
+  let runAcross: number;
+  let velAlong: number;
+  let velAcross: number;
+  switch (stance) {
+    case 'across':
+      length = ACROSS_SPAN;
+      footAlong = boss.along;
+      footAcross = 0;
+      runAlong = 0;
+      runAcross = 1;
+      velAlong = -speed + scrollPerStep;
+      velAcross = 0;
+      break;
+    case 'slant':
+      // Across the lane and a lane's width along it: the foot at the hull on the near edge, the
+      // head a lane ahead on the far edge; √2 lanes long.
+      length = ACROSS_SPAN * Math.SQRT2;
+      footAlong = boss.along;
+      footAcross = 0;
+      runAlong = Math.SQRT1_2;
+      runAcross = Math.SQRT1_2;
+      velAlong = -speed + scrollPerStep;
+      velAcross = 0;
+      break;
+    case 'backslant':
+      // The same lean the other way: the foot at the hull on the far edge.
+      length = ACROSS_SPAN * Math.SQRT2;
+      footAlong = boss.along;
+      footAcross = ACROSS_SPAN;
+      runAlong = Math.SQRT1_2;
+      runAcross = -Math.SQRT1_2;
+      velAlong = -speed + scrollPerStep;
+      velAcross = 0;
+      break;
+    case 'along':
+      length = boss.along - cameraAlong;
+      footAlong = cameraAlong;
+      footAcross = -bullet.radius;
+      runAlong = 1;
+      runAcross = 0;
+      velAlong = scrollPerStep;
+      velAcross = speed;
+      break;
+    default: {
+      const never: never = stance;
+      return never;
+    }
+  }
   // Back out of the spacing rather than repeating its `ceil`, so there is one description of how wide
-  // a hole this curtain leaves. The division is exact up to float noise and the round absorbs that.
-  const count = Math.round(ACROSS_SPAN / spacing);
+  // a hole this curtain leaves. Across the lane the division is exact up to float noise and the round
+  // absorbs that; leaning or along, the line is longer and the last shot lands where its end would.
+  const count = Math.round(length / spacing);
   const clear = uncoil.hole / 2;
+  // The hole is `at` along the line as `at` is across the lane: the same share of its length.
+  const hole = (uncoil.at / ACROSS_SPAN) * length;
   // `<=` so the far edge gets one too: a curtain that stopped short of the lane's end would have a
   // second opening at exactly the place a cornered player is already flying.
   for (let i = 0; i <= count; i++) {
-    const across = spacing * i;
+    const s = spacing * i;
     // The authored hole, and the only one.
-    if (across > uncoil.at - clear && across < uncoil.at + clear) continue;
+    if (s > hole - clear && s < hole + clear) continue;
     const shot = shots.spawn();
     // A curtain that will not fit is dropped rather than grown, exactly as `src/sim/pool.ts` says —
     // and the pool is fifteen times a curtain, so this is the rule rather than a case.
     if (shot === null) break;
-    reset(shot, boss.along, across, bullet);
-    shot.velAlong = -speed + scrollPerStep;
-    shot.velAcross = 0;
+    reset(shot, footAlong + runAlong * s, footAcross + runAcross * s, bullet);
+    shot.velAlong = velAlong;
+    shot.velAcross = velAcross;
   }
+}
+
+/**
+ * How the k-th curtain of a fight stands — 0252: the k-th of `CURTAIN_STANCES`, round and round,
+ * for a wall that spins; across the lane for one that does not. The first (`k = 0`) always stands
+ * across the lane, whatever the row says.
+ */
+export function curtainStance(spin: boolean, k: number): CurtainStance {
+  if (!spin) return 'across';
+  return CURTAIN_STANCES[((k % CURTAIN_STANCES.length) + CURTAIN_STANCES.length) % CURTAIN_STANCES.length]!;
 }
 
 /**

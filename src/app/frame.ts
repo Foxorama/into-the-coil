@@ -83,7 +83,7 @@ import { WEAPONS, WEAPON_KINDS, type FlightKind } from '../content/weapons.ts';
 import { MISSILES, MISSILE_KINDS } from '../content/missiles.ts';
 import { SPECIALS, pyreFor, type SpecialKind } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
-import { belch, openBy, phaseFor, stepBoss, throwCurtain, uncoilsBy } from './boss.ts';
+import { belch, curtainStance, openBy, phaseFor, stepBoss, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import type { Frame } from './loop.ts';
 
@@ -4052,6 +4052,9 @@ function driveBoss(w: World): void {
         bullet,
         bullet.speed * w.difficulty.shotSpeed,
         w.scrollPerStep,
+        w.cameraAlong,
+        // The k-th curtain of the fight takes the k-th stance if the row spins — 0252; the first across.
+        curtainStance(uncoil.spin, notch - 1),
       );
       // Its own count and not `phase`'s, because the two are different events and
       // `docs/decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md` says
