@@ -25,8 +25,9 @@ export const PROBES = [
     guard: 'THE HEADS TAKE TURNS, DRIVEN',
     edit: {
       path: 'src/app/boss.ts',
-      find: '      throwAttack(head.attack, SHOTS[head.shot], boss, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);',
-      replace: '      throwAttack(head.attack, bullet, boss, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);',
+      // ⚠️ Re-anchored by 0263, which put a shot's kind on the shot.
+      find: '      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);',
+      replace: '      throwAttack(head.attack, bullet, kind, boss, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);',
     },
   },
   {

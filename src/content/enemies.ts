@@ -316,6 +316,16 @@ export interface EnemyRow extends Body {
    * is already a decision on the page.
    */
   attack: Attack;
+  /**
+   * What its death throws — `docs/decisions/0263-the-frost-ship-shatters.md`. A ring of `shots` of
+   * the shot, thrown where it died, or `null` for a body that only bursts.
+   *
+   * ⚠️ **Required rather than defaulted to `null`**, on `attack`'s argument: what a body costs the
+   * player to kill is part of what it asks of them, and a row states it. The Rime Shelf's shard is
+   * the one body that shatters; the ring is thrown at the shot's last stage, so a shattered add is
+   * a snowflake that melts and never a shard that bursts again.
+   */
+  shatter: { shot: ShotKind; shots: number } | null;
 }
 
 /** Written out rather than derived, so the table below cannot quietly lose a row. */
@@ -374,6 +384,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     health: 1,
     damage: 2,
     closing: 0,
+    shatter: null,
     fireEvery: 0,
     shot: 'spit',
     /*
@@ -409,6 +420,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     health: 2,
     damage: 2,
     closing: 0.22,
+    shatter: null,
     fireEvery: 102,
     /*
       ⚠️ **ITS OWN BULLET SINCE 0098, and it is the fast thin one.** *"All the enemy bullets are
@@ -459,6 +471,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     health: 1,
     damage: 2,
     closing: 0.31,
+    shatter: null,
     fireEvery: 0,
     shot: 'spit',
     /*
@@ -505,6 +518,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     closing: 0,
     // Faster than the lancer's 75 and it is the whole of what this enemy is. `docs/state-of-play.md`
     // says no enemy shot has ever landed on an attentive player; this is the row that tests that.
+    shatter: null,
     fireEvery: 72,
     /*
       ⚠️ **ITS OWN BULLET SINCE 0098, and it is the slow fat one.** A turret holds station, is on
@@ -543,6 +557,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     health: 1,
     damage: 2,
     closing: 0.68,
+    shatter: null,
     fireEvery: 0,
     shot: 'spit',
     /*
@@ -589,6 +604,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     health: 4,
     damage: 2,
     closing: 0.19,
+    shatter: null,
     fireEvery: 84,
     shot: 'spit',
     /*
@@ -639,6 +655,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
       how many SHOTS one body may get away in that window. Three a volley at 84 steps is 25 shots at
       the hardest tier; a cadence of 72 would be 29 and past the bound.
     */
+    shatter: null,
     fireEvery: 84,
     /*
       ⚠️ **The slow fat one, for the turret's own reason and more so.** 0098: *"a slow wide one is a
@@ -685,6 +702,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     closing: 0.24,
     // Four shots a volley and about three volleys on screen: twelve bullets, which is why the cadence
     // is the slowest of any shooter in the table.
+    shatter: null,
     fireEvery: 96,
     // The fast thin one. A wall is read by where its hole is rather than by watching each bullet, so
     // the shots may be quick — and quick is what makes the hole worth having found early.
@@ -717,6 +735,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     health: 2,
     damage: 2,
     closing: 0.2,
+    shatter: null,
     fireEvery: 108,
     shot: 'spit',
     /*
@@ -738,6 +757,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     health: 2,
     damage: 2,
     closing: 0.26,
+    shatter: null,
     fireEvery: 96,
     shot: 'lance',
     // EMBER NEBULA'S OWN: wide wings that circle the ship like a moth round a lamp, and a dart
@@ -753,6 +773,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     health: 2,
     damage: 2,
     closing: 0.34,
+    shatter: null,
     fireEvery: 0,
     shot: 'spit',
     attack: { kind: 'aimed' },
@@ -773,6 +794,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     health: 1,
     damage: 1,
     closing: 0.42,
+    shatter: null,
     fireEvery: 0,
     shot: 'spit',
     attack: { kind: 'aimed' },
@@ -799,6 +821,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     health: 1,
     damage: 1,
     closing: 0.1,
+    shatter: null,
     fireEvery: 0,
     shot: 'spit',
     attack: { kind: 'aimed' },
@@ -814,6 +837,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     // 108 since 0259, from 90: a body fires once more on entering the view, and the sentry's wall of
     // four was at the edge of the thirty bullets a body may put on the screen while it is visible
     // (`tests/pilots.test.ts`). A slower reload keeps the count under it; 0110's own trade.
+    shatter: null,
     fireEvery: 108,
     shot: 'flak',
     // THE LABYRINTH'S OWN: a block that holds station along the corridor and slides across it to
@@ -830,6 +854,9 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     health: 3,
     damage: 2,
     closing: 0.18,
+    // The one body that shatters — 0263: a crystal comes apart into a snowflake of frost where it
+    // dies, so beside the ship is the wrong place to have killed one.
+    shatter: { shot: 'frost', shots: 6 },
     fireEvery: 78,
     shot: 'spit',
     // RIME SHELF'S OWN: a crystal that circles close and sheds three squares in a turning spiral.
@@ -843,6 +870,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     health: 3,
     damage: 2,
     closing: 0.12,
+    shatter: null,
     fireEvery: 0,
     shot: 'spit',
     attack: { kind: 'aimed' },
@@ -859,6 +887,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     health: 4,
     damage: 2,
     closing: 0.16,
+    shatter: null,
     fireEvery: 90,
     shot: 'flak',
     // THE BLACK HEART'S OWN: an eye that hunts slowly and throws the heavy slab straight at you. The

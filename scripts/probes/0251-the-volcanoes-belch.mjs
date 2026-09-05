@@ -11,8 +11,9 @@ export const PROBES = [
     guard: 'THE ROCK: the biggest and slowest',
     edit: {
       path: 'src/content/shots.ts',
-      find: "rock: { sprite: SPRITE.rock, spriteHit: SPRITE.rock, radius: 2.2, health: 1, damage: 2, speed: 0.7 },",
-      replace: "rock: { sprite: SPRITE.rock, spriteHit: SPRITE.rock, radius: 2.2, health: 1, damage: 2, speed: 1.9 },",
+      // ⚠️ Re-anchored by 0263, which gave every shot row its stages.
+      find: "rock: { sprite: SPRITE.rock, spriteHit: SPRITE.rock, radius: 2.2, health: 1, damage: 2, speed: 0.7, fission: SPENT_BY_ARRIVING },",
+      replace: "rock: { sprite: SPRITE.rock, spriteHit: SPRITE.rock, radius: 2.2, health: 1, damage: 2, speed: 1.9, fission: SPENT_BY_ARRIVING },",
     },
   },
   {
@@ -36,8 +37,9 @@ export const PROBES = [
     guard: 'THE BELCH, DRIVEN',
     edit: {
       path: 'src/app/boss.ts',
-      find: '    const along = cameraAlong + rockRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD);\n    reset(shot, along, -rock.radius, rock);',
-      replace: '    const along = cameraAlong + PLAYER_LEAD + rockRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD);\n    reset(shot, along, -rock.radius, rock);',
+      // ⚠️ Re-anchored by 0263, which put the rock's kind on the shot.
+      find: '    const along = cameraAlong + rockRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD);\n    reset(shot, along, -rock.radius, rock, kind);',
+      replace: '    const along = cameraAlong + PLAYER_LEAD + rockRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD);\n    reset(shot, along, -rock.radius, rock, kind);',
     },
   },
   {
@@ -72,8 +74,9 @@ export const PROBES = [
     guard: 'and a rock hurts the ship',
     edit: {
       path: 'src/content/shots.ts',
-      find: "rock: { sprite: SPRITE.rock, spriteHit: SPRITE.rock, radius: 2.2, health: 1, damage: 2, speed: 0.7 },",
-      replace: "rock: { sprite: SPRITE.rock, spriteHit: SPRITE.rock, radius: 2.2, health: 1, damage: 0, speed: 0.7 },",
+      // ⚠️ Re-anchored by 0263, which gave every shot row its stages.
+      find: "rock: { sprite: SPRITE.rock, spriteHit: SPRITE.rock, radius: 2.2, health: 1, damage: 2, speed: 0.7, fission: SPENT_BY_ARRIVING },",
+      replace: "rock: { sprite: SPRITE.rock, spriteHit: SPRITE.rock, radius: 2.2, health: 1, damage: 0, speed: 0.7, fission: SPENT_BY_ARRIVING },",
     },
   },
   {

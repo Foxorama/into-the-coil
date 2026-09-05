@@ -71,9 +71,10 @@ export const PROBES = [
     guard: 'THE ADDS AND THE BLASTS',
     edit: {
       path: 'src/content/bosses.ts',
-      // ⚠️ Re-anchored by 0262, which said where a summons comes from.
-      find: "attack: { kind: 'summon', enemy: 'shard', count: 2, formation: 'vee', from: 'lead' } },",
-      replace: "attack: { kind: 'summon', enemy: 'raptor', count: 2, formation: 'vee', from: 'lead' } },",
+      // ⚠️ Re-anchored by 0262, which said where a summons comes from, and by 0263, which sent the
+      // shards in from the sides.
+      find: "attack: { kind: 'summon', enemy: 'shard', count: 2, formation: 'vee', from: 'sides' } },",
+      replace: "attack: { kind: 'summon', enemy: 'raptor', count: 2, formation: 'vee', from: 'sides' } },",
     },
   },
   {

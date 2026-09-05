@@ -64,7 +64,7 @@ import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
 import type { ShipRow } from '../content/ships.ts';
 import { INVULN_STEPS, SHIELD_MARK, hullFor, shieldsOf } from '../content/ships.ts';
-import { SHOTS } from '../content/shots.ts';
+import { SHOTS, SHOT_INDEX, SHOT_ROWS, type ShotKind } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, type LevelRow } from '../content/levels.ts';
@@ -784,8 +784,17 @@ export interface World {
    * `src/content/debris.ts`. They are also the only pool whose members retire on a timer.
    */
   debris: Pool<Entity>;
-  /** Where enemies died this step, so a burst can be put there. Reused, never rebuilt. */
+  /**
+   * Where enemies died this step, and which rows they were — so a burst can be put there, and a
+   * body that shatters (0263) can be read off its row. Reused, never rebuilt.
+   */
   deaths: Deaths;
+  /**
+   * Where the boss died this step — 0263: its own log, because the boss is its own pairing and a
+   * `kind` in this log indexes `bossRow`'s table and not `enemyRows`. One log for both would hand
+   * the shatter a boss's index as an enemy's, and the burst loop cannot tell them apart.
+   */
+  bossDeaths: Deaths;
   /**
    * Where the ship's MISSILES landed this step, so a spark can be put there — 0227.
    *
@@ -1397,6 +1406,9 @@ export class GameFrame implements Frame {
     // After the hull and the bolts have both moved, so a beam's root is on the hull this step — 0250.
     pinBeams(w);
     stepEntities(w.enemyShots, w.cameraAlong);
+    // After the shots have moved and before anything can hit them, so a shard that opens this step
+    // opens where it is drawn — 0263.
+    fissionShots(w);
     // Before the pool steps, because `stepEntities` derives `sprite` from `spriteBase` — a page
     // turned after it would be drawn one step late.
     turnFlares(w);
@@ -1412,6 +1424,7 @@ export class GameFrame implements Frame {
       monotone; `tests/combat.test.ts` is what proves the code using it is.
     */
     w.deaths.count = 0;
+    w.bossDeaths.count = 0;
     /*
       ⚠️ **The two numbers below exist so a SURVIVED hit can be heard, and there is no third way to
       know about one.** `collideInto` returns what it destroyed and logs where; a hit that was
@@ -1455,13 +1468,13 @@ export class GameFrame implements Frame {
       to *how open is it*, and 0053 says the bomb is the first thing the player spends.
     */
     const open = w.bossPool.size > 0 ? openBy(phaseFor(w.bossRow, w.bossPool.at(0).health, w.bossFullHealth)) : 1;
-    killedByShots += collideInto(w.playerShots, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.deaths, bladeHits);
+    killedByShots += collideInto(w.playerShots, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, bladeHits);
     // What the blades landed this step, before the missiles add theirs — the `hit` cue reads it.
     const bites = bladeHits === null ? 0 : w.hits.count;
-    killedByShots += collideInto(w.missiles, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.deaths, w.hits);
+    killedByShots += collideInto(w.missiles, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits);
     // An area rather than an arrival: everything inside it, once, and nothing consumes it.
     blastInto(w.blasts, w.enemies, 1, IMPACT_FLASH_STEPS, w.deaths);
-    blastInto(w.blasts, w.bossPool, open, IMPACT_FLASH_STEPS, w.deaths);
+    blastInto(w.blasts, w.bossPool, open, IMPACT_FLASH_STEPS, w.bossDeaths);
     /*
       The impact flash's twin. An arrival that did not kill is a body that went white and stayed.
 
@@ -1593,6 +1606,14 @@ export class GameFrame implements Frame {
     for (let i = 0; i < w.deaths.count; i++) {
       burst(w, w.deaths.along[i]!, w.deaths.across[i]!, BURST.enemy);
       flare(w, w.deaths.along[i]!, w.deaths.across[i]!, 'burst');
+      // And a body that shatters throws its ring where it died — 0263. Read off the row the log
+      // says it was, which is why the log carries a kind and why the boss keeps its own.
+      const shatter = w.enemyRows[w.deaths.kind[i]!]!.shatter;
+      if (shatter !== null) shatterInto(w, w.deaths.along[i]!, w.deaths.across[i]!, shatter.shot, shatter.shots);
+    }
+    for (let i = 0; i < w.bossDeaths.count; i++) {
+      burst(w, w.bossDeaths.along[i]!, w.bossDeaths.across[i]!, BURST.enemy);
+      flare(w, w.bossDeaths.along[i]!, w.bossDeaths.across[i]!, 'burst');
     }
     // And every missile that landed this step, killing or not, sparks where it hit — 0227.
     for (let i = 0; i < w.hits.count; i++) flare(w, w.hits.along[i]!, w.hits.across[i]!, 'spark');
@@ -1712,7 +1733,7 @@ export class GameFrame implements Frame {
       // `bossDown` against it.
       // Where the boss was: it is already out of its pool by now, and its death is the entry the
       // collision logged this step — 0127.
-      w.onCue('bossDown', w.deaths.across[0]);
+      w.onCue('bossDown', w.bossDeaths.across[0]);
       /*
         ⚠️ **THE LEVEL DOES NOT END HERE ANY MORE.** Reported from play: *"bosses need a real
         explosion and an end-of-level beat — currently the level just ends."* It did: the same step
@@ -2210,7 +2231,7 @@ function fireArc(w: World): void {
       // The boss's own window scales a bolt as it scales a bullet — 0150. Read here rather than
       // remembered, on the collision section's own argument.
       const open = openBy(phaseFor(w.bossRow, target.health, w.bossFullHealth));
-      strike(w.bossPool, boss, w.weapon.damage * open, IMPACT_FLASH_STEPS, w.deaths);
+      strike(w.bossPool, boss, w.weapon.damage * open, IMPACT_FLASH_STEPS, w.bossDeaths);
     } else if (link === 0) {
       /*
         Dry: nothing in reach. The bolt goes ahead, lands on nothing, and THAT IS THE VOLLEY.
@@ -2839,6 +2860,8 @@ function fireEnemies(w: World): void {
     */
     if (e.along - e.radius > w.cameraAlong + w.view.alongSpan) continue;
     const bullet = SHOTS[row.shot];
+    // Carried on the shot so `fissionShots` can read its stages off the row — 0263.
+    const bulletKind = SHOT_INDEX[row.shot];
     // ⚠️ The tier scales the SPEED and not the direction. A harder tier is less time to move, never
     // a shot that leads the player — `src/content/shots.ts` keeps the dodge in the player's hands.
     const speed = bullet.speed * w.difficulty.shotSpeed;
@@ -2881,7 +2904,7 @@ function fireEnemies(w: World): void {
           it is the rule.
         */
         w.onCue('threat', e.across);
-        reset(shot, e.along, e.across, bullet);
+        reset(shot, e.along, e.across, bullet, bulletKind);
         shot.velAlong = (dAlong / distance) * speed + w.scrollPerStep;
         shot.velAcross = (dAcross / distance) * speed;
         break;
@@ -2901,7 +2924,7 @@ function fireEnemies(w: World): void {
           // A volley that will not fit is dropped rather than grown, exactly as `src/sim/pool.ts` says.
           if (shot === null) break;
           const angle = first + step * s;
-          reset(shot, e.along, e.across, bullet);
+          reset(shot, e.along, e.across, bullet, bulletKind);
           shot.velAlong = Math.cos(angle) * speed + w.scrollPerStep;
           shot.velAcross = Math.sin(angle) * speed;
         }
@@ -2925,7 +2948,7 @@ function fireEnemies(w: World): void {
             if (across < 0 || across > ACROSS_SPAN) continue;
             const shot = w.enemyShots.spawn();
             if (shot === null) break;
-            reset(shot, e.along, across, bullet);
+            reset(shot, e.along, across, bullet, bulletKind);
             shot.velAlong = -speed + w.scrollPerStep;
             shot.velAcross = 0;
           }
@@ -2948,7 +2971,7 @@ function fireEnemies(w: World): void {
           const shot = w.enemyShots.spawn();
           if (shot === null) break;
           const angle = e.firePhase + step * s;
-          reset(shot, e.along, e.across, bullet);
+          reset(shot, e.along, e.across, bullet, bulletKind);
           shot.velAlong = Math.cos(angle) * speed + w.scrollPerStep;
           shot.velAcross = Math.sin(angle) * speed;
         }
@@ -2986,6 +3009,123 @@ function flare(w: World, along: number, across: number, kind: DebrisKind): void 
   const row = DEBRIS_ROWS[kind];
   reset(piece, along, across, row.body, DEBRIS_KIND[kind]);
   piece.lifeFor = row.frames.length * row.hold;
+}
+
+/**
+ * One child of a bursting shot: the same row, one stage on, flying at `angle` — 0263.
+ *
+ * ⚠️ **`turnsLeft` is the stage and `fireIn` is the fuse**, two fields every shot already carries
+ * and nothing else reads on one. The stage is how many of the row's `fission` stages this bullet
+ * has been through, so the children of the last stage are past the end of the list and are spent
+ * only by arriving.
+ *
+ * ⚠️ **The fuse is lit on the step the shot came to be** — here for a child, and in `fissionShots`
+ * for a shot from a muzzle, which reaches it on the same step it was thrown — so every stage is
+ * exactly its `after` long whichever way the shot arrived. A child is put above the live count
+ * while `fissionShots` is running downwards through it, so lighting it there would cost every
+ * child a step its parent did not pay.
+ */
+function throwChild(w: World, along: number, across: number, kind: number, stage: number, angle: number, speed: number): void {
+  const child = w.enemyShots.spawn();
+  // A burst that will not fit is dropped rather than grown, exactly as a volley is.
+  if (child === null) return;
+  const row = SHOT_ROWS[kind]!;
+  reset(child, along, across, row, kind);
+  child.turnsLeft = stage;
+  child.fireIn = stage < row.fission.length ? row.fission[stage]!.after : 0;
+  child.velAlong = Math.cos(angle) * speed + w.scrollPerStep;
+  child.velAcross = Math.sin(angle) * speed;
+}
+
+/**
+ * The life of a shot after the muzzle — `docs/decisions/0263-the-frost-ship-shatters.md`.
+ *
+ * Every enemy shot whose row has stages left burns a fuse, and when it burns down the shot is its
+ * children: a fan about the heading it was flying on, a ring round it, or nothing. *"The frost
+ * attacks should explode into directional frost bullets, which explode into snowflake patterns"* —
+ * the shard is the one row that does, and this is what the frost ship's *blasts* are.
+ *
+ * ⚠️ **About the shot's OWN heading, never the ship's.** A fan re-aimed at the ship on every burst
+ * is the aimed attack 0110 removed, three times over; a fan about the heading is a pattern the
+ * player can read off the parent before it opens, which is what makes the split a thing to be
+ * somewhere else for.
+ *
+ * ⚠️ **The parent is released before its children are thrown**, so the first child takes the
+ * parent's slot and a burst costs the pool exactly the children less one — never a slot the parent
+ * did not already have. The pool swaps its last live slot into the released one, and that slot was
+ * visited already because the loop runs downwards; the children land above the live count and are
+ * first stepped on the step after, with the fuse `throwChild` lit.
+ *
+ * ⚠️ **Nothing allocates**, on `fireEnemies`'s own terms — `tests/budget.test.ts` scans this file.
+ */
+function fissionShots(w: World): void {
+  const pool = w.enemyShots;
+  for (let i = pool.size - 1; i >= 0; i--) {
+    const shot = pool.at(i);
+    const row = SHOT_ROWS[shot.kind]!;
+    if (shot.turnsLeft >= row.fission.length) continue;
+    const stage = row.fission[shot.turnsLeft]!;
+    // Fresh from a muzzle: the fuse is lit on the step it was thrown, which is this one. A child
+    // arrives with its fuse already lit — `throwChild` says why.
+    if (shot.fireIn === 0) {
+      shot.fireIn = stage.after;
+      continue;
+    }
+    if (--shot.fireIn > 0) continue;
+    const along = shot.along;
+    const across = shot.across;
+    const heading = Math.atan2(shot.velAcross, shot.velAlong - w.scrollPerStep);
+    const next = shot.turnsLeft + 1;
+    const kind = shot.kind;
+    pool.releaseAt(i);
+    const speed = row.speed * w.difficulty.shotSpeed;
+    switch (stage.into) {
+      case 'fan': {
+        // The same arithmetic as an enemy's `spray`: `spread` is the whole width, centred.
+        const step = stage.shots > 1 ? stage.spread / (stage.shots - 1) : 0;
+        const first = heading - (step * (stage.shots - 1)) / 2;
+        for (let s = 0; s < stage.shots; s++) throwChild(w, along, across, kind, next, first + step * s, speed);
+        burst(w, along, across, BURST.fission);
+        w.onCue('threat', across);
+        break;
+      }
+      case 'ring': {
+        // Evenly round, the first on the heading, so the snowflake points the way its bolt flew.
+        const step = TAU / stage.shots;
+        for (let s = 0; s < stage.shots; s++) throwChild(w, along, across, kind, next, heading + step * s, speed);
+        burst(w, along, across, BURST.fission);
+        w.onCue('threat', across);
+        break;
+      }
+      case 'nothing': {
+        // The melt. Quiet, and drawn — a bullet that simply vanishes is the failure 0036 is named for.
+        burst(w, along, across, BURST.melt);
+        break;
+      }
+      default: {
+        // `docs/decisions/0016-a-hub-enumerates-kinds.md`: the arm that makes the union closed.
+        const never: never = stage;
+        return never;
+      }
+    }
+  }
+}
+
+/**
+ * A body's death thrown as a ring of a shot — 0263, the shard's shatter.
+ *
+ * ⚠️ **At the shot's LAST stage**, so a shattered add is a snowflake that melts and never a shard
+ * that opens into twelve more; `throwChild` puts the stage on the entity and the row's list says
+ * where the end is. The ring's first shot points down the lane, the way every volley does.
+ */
+function shatterInto(w: World, along: number, across: number, shot: ShotKind, shots: number): void {
+  const kind = SHOT_INDEX[shot];
+  const row = SHOTS[shot];
+  const last = Math.max(0, row.fission.length - 1);
+  const speed = row.speed * w.difficulty.shotSpeed;
+  const step = TAU / shots;
+  for (let s = 0; s < shots; s++) throwChild(w, along, across, kind, last, Math.PI + step * s, speed);
+  w.onCue('threat', across);
 }
 
 /**
@@ -4222,6 +4362,7 @@ function driveBoss(w: World): void {
     w.ship,
     w.enemyShots,
     SHOTS[throwing.shot ?? w.bossRow.shot],
+    SHOT_INDEX[throwing.shot ?? w.bossRow.shot],
     w.cameraAlong,
     w.scrollPerStep,
     w.bossPatrol,
@@ -4232,9 +4373,9 @@ function driveBoss(w: World): void {
   /*
     ⚠️ **Where it is, remembered every step, so that where it DIED is known on the step it stops
     existing.** A released slot is the next thing `spawn` hands out (`src/sim/pool.ts`), so reading
-    the position off the pool after the collision is reading whatever moved in behind it. `deaths`
-    carries positions for exactly this reason and cannot be used here: it does not say which pool an
-    entry came from, and a boss can die on the same step as an enemy.
+    the position off the pool after the collision is reading whatever moved in behind it.
+    `bossDeaths` carries the position for exactly this reason (0263 gave the boss its own log), but
+    the explosion plays for longer than one step and needs the offset below, not a point.
 
     An OFFSET from the camera rather than a world position, because the explosion has to stay where
     the player watched it happen and the camera covers 54 units while it plays.
@@ -4314,6 +4455,7 @@ function driveBoss(w: World): void {
 
         w.enemyShots,
         bullet,
+        SHOT_INDEX[w.bossRow.shot],
         bullet.speed * w.difficulty.shotSpeed,
         w.scrollPerStep,
         w.cameraAlong,
@@ -4356,7 +4498,7 @@ function driveBoss(w: World): void {
         case 'shot': {
           const rock = SHOTS[fall.shot];
           const before = w.enemyShots.size;
-          belch(fall, w.enemyShots, rock, rock.speed * w.difficulty.shotSpeed, w.cameraAlong, w.scrollPerStep, w.rockRng);
+          belch(fall, w.enemyShots, rock, SHOT_INDEX[fall.shot], rock.speed * w.difficulty.shotSpeed, w.cameraAlong, w.scrollPerStep, w.rockRng);
           for (let i = before; i < w.enemyShots.size; i++) {
             const thrown = w.enemyShots.at(i);
             burst(w, thrown.along, 0, BURST.belch);

@@ -62,8 +62,9 @@ export const PROBES = [
     guard: 'THE KITE: Ember Nebula’s horde',
     edit: {
       path: 'src/content/enemies.ts',
-      find: "    closing: 0.42,\n    fireEvery: 0,\n    shot: 'spit',",
-      replace: "    closing: 0.42,\n    fireEvery: 60,\n    shot: 'spit',",
+      // ⚠️ Re-anchored by 0263, which gave every enemy row a shatter.
+      find: "    closing: 0.42,\n    shatter: null,\n    fireEvery: 0,\n    shot: 'spit',",
+      replace: "    closing: 0.42,\n    shatter: null,\n    fireEvery: 60,\n    shot: 'spit',",
     },
   },
 ];

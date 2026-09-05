@@ -109,6 +109,7 @@ function stationKeepingWorld(surface: Surface): World {
     // No debris in this scene: it is about the camera, and a burst would add blits that come and go.
     debris: new Pool(4, makeEntity),
     deaths: makeDeaths(8),
+    bossDeaths: makeDeaths(1),
     hits: makeDeaths(8),
     burstRng: makeRng('interp').stream('burst'),
     arcRng: makeRng('interp').stream('arc'),

@@ -18,8 +18,9 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: they differ in shape, in size and in ink',
     edit: {
       path: 'src/content/shots.ts',
-      find: "  spit: { sprite: SPRITE.spit, spriteHit: SPRITE.spit, radius: 0.9, health: 1, damage: 1, speed: 1.4 },",
-      replace: "  spit: { sprite: SPRITE.bullet, spriteHit: SPRITE.bullet, radius: 0.9, health: 1, damage: 1, speed: 1.4 },",
+      // ⚠️ Re-anchored by 0263, which gave every shot row its stages.
+      find: "  spit: { sprite: SPRITE.spit, spriteHit: SPRITE.spit, radius: 0.9, health: 1, damage: 1, speed: 1.4, fission: SPENT_BY_ARRIVING },",
+      replace: "  spit: { sprite: SPRITE.bullet, spriteHit: SPRITE.bullet, radius: 0.9, health: 1, damage: 1, speed: 1.4, fission: SPENT_BY_ARRIVING },",
     },
   },
   {
@@ -58,8 +59,9 @@ export const PROBES = [
     guard: 'no two shots in the game share a silhouette at all',
     edit: {
       path: 'src/content/shots.ts',
-      find: '  missile: { sprite: SPRITE.missile, spriteHit: SPRITE.missile, radius: 1.3, health: 1, damage: 3, speed: 1.5 },',
-      replace: '  missile: { sprite: SPRITE.bullet, spriteHit: SPRITE.bullet, radius: 1.3, health: 1, damage: 3, speed: 1.5 },',
+      // ⚠️ Re-anchored by 0263, which gave every shot row its stages.
+      find: '  missile: { sprite: SPRITE.missile, spriteHit: SPRITE.missile, radius: 1.3, health: 1, damage: 3, speed: 1.5, fission: SPENT_BY_ARRIVING },',
+      replace: '  missile: { sprite: SPRITE.bullet, spriteHit: SPRITE.bullet, radius: 1.3, health: 1, damage: 3, speed: 1.5, fission: SPENT_BY_ARRIVING },',
     },
   },
   {

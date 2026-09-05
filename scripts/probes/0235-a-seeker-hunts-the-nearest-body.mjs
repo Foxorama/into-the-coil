@@ -51,8 +51,9 @@ export const PROBES = [
     // ⚠️ Re-anchored by 0238: the seeker's hurtbox went from 1.2 to 1.4 with its size.
     edit: {
       path: 'src/content/shots.ts',
-      find: '  seeker: { sprite: SPRITE.seeker, spriteHit: SPRITE.seeker, radius: 1.4, health: 1, damage: 2, speed: 1.4 },',
-      replace: '  seeker: { sprite: SPRITE.seeker, spriteHit: SPRITE.seeker, radius: 1.4, health: 1, damage: 3, speed: 1.4 },',
+      // ⚠️ And by 0263, which gave every shot row its stages.
+      find: '  seeker: { sprite: SPRITE.seeker, spriteHit: SPRITE.seeker, radius: 1.4, health: 1, damage: 2, speed: 1.4, fission: SPENT_BY_ARRIVING },',
+      replace: '  seeker: { sprite: SPRITE.seeker, spriteHit: SPRITE.seeker, radius: 1.4, health: 1, damage: 3, speed: 1.4, fission: SPENT_BY_ARRIVING },',
     },
   },
   {
