@@ -63,6 +63,13 @@ export type Ink =
   */
   | 'fire'
   /*
+    ⚠️ **`frost` is the frost ship's shot — 0253**, and the hydra's fourth head's. A MEANING ink: a
+    shard of frost is *this will slow you*, the one thing the frost ship's hull does to a ship that
+    comes close. An ice blue, far from `ally`'s lavender on hue and from `pickup`'s mint on
+    saturation, and the coldest colour in a palette where everything that hurts has been warm.
+  */
+  | 'frost'
+  /*
     ⚠️ **`blade` is the player's steel — 0238.** Played: *"shurikens need to be… steel coloured."* A
     role rather than a colour name, on this file's own rule: what it means is *a blade of mine, in
     flight*, and the high-contrast palette answers it in its own terms. It is a MEANING ink and is
@@ -140,6 +147,10 @@ export const PALETTES: Record<PaletteName, Palette> = {
     void: '#e86bff',
     // Vermilion: redder than `bullet`'s amber and yellower than `enemy`'s pink-red — 0249.
     fire: '#ff7a3a',
+    // Ice: a saturated cyan, the one cold thing that hurts — 0253. Bright enough for the floor on
+    // every place's backdrop with the sky counted (`tests/sky.test.ts`), and far from `ally`'s
+    // lavender.
+    frost: '#5ef0ff',
     // Near-white and deliberately the brightest thing in the palette: a flash reads as an impact
     // because it is momentarily louder than everything around it, not because of its hue.
     impact: '#fff4e6',
@@ -187,6 +198,8 @@ export const PALETTES: Record<PaletteName, Palette> = {
     void: '#d040ff',
     // A red-orange between `enemy`'s red and `bullet`'s orange, and a step below both — 0249.
     fire: '#e04000',
+    // Pure cyan: its own corner of the hue wheel, opposite everything that burns — 0253.
+    frost: '#00e0ff',
     impact: '#ffffff',
     // A step below the two whites, so a blade and a pickup are apart on the one channel this
     // palette exists for, and still far above the void. 0238.

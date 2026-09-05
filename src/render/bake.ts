@@ -417,6 +417,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // size and a shape with corners. A rock in a grey of its own would fail the floor every meaning
   // ink is held to on the dark places.
   rock: 'fire',
+  // The frost ship's shard in its own ink — 0253: the one cold thing that hurts.
+  frost: 'frost',
   // The HUD's lives counter rather than a pickup, since 0082 — it keeps the pickup ink because the
   // number beside it is drawn in the player's own colour and the icon has to sit with it.
   lifeIcon: 'pickup',
@@ -4320,6 +4322,30 @@ export function drawKind(
       glow(ctx, f, palette.void, 0, 0, 1.1, 0.5);
       // The light on the rim, not in the hole: a mark over a hole is a mark off the hull (0149).
       disc(ctx, f, shade(palette.void, 0.7), 0, -0.6, 0.17);
+      return;
+    case 'frost':
+      /*
+        A SHARD — 0253: a six-pointed star of ice, the one bullet with points all round — not the
+        lump's corners, the drop's one point or the ring's none. In the `frost` ink with a cold glow
+        and a pale heart, a disc of 0.2 over every floor a solid mark is held to.
+      */
+      trace(ctx, f, [
+        [0, -0.95],
+        [0.24, -0.42],
+        [0.82, -0.48],
+        [0.46, 0],
+        [0.82, 0.48],
+        [0.24, 0.42],
+        [0, 0.95],
+        [-0.24, 0.42],
+        [-0.82, 0.48],
+        [-0.46, 0],
+        [-0.82, -0.48],
+        [-0.24, -0.42],
+      ]);
+      seal(ctx);
+      glow(ctx, f, palette.frost, 0, 0, 1.12, 0.45);
+      disc(ctx, f, shade(palette.frost, 0.6), 0, 0, 0.2);
       return;
     case 'rock':
       /*

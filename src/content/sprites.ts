@@ -289,6 +289,8 @@ export const SPRITE_KINDS = [
   'flame',
   // The volcanoes' rock — 0251: a jagged lump lit from a crack, the biggest bullet there is.
   'rock',
+  // The frost ship's shard — 0253: a six-pointed star of ice, between the acid and the rock.
+  'frost',
   /*
     ⚠️ **A DART, AND THE ONLY THING IN THE GAME DRAWN LONG ALONG ITS OWN TRAVEL IN THE BULLET INK.**
     The pulse is a disc of 1.8 units; this is 2.8 and pointed, so the two are told apart by shape and
@@ -893,6 +895,9 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // Over the acid's 5 by more than five pixels, and the slowest — 0251. The hurtbox in
   // `src/content/shots.ts` is 0.34 of it.
   rock: 6.5,
+  // Between the acid's 5 and the rock's 6.5, more than five pixels from each on a 1280×720 screen,
+  // and slower than the one and quicker than the other — 0253. The hurtbox is 0.3 of it.
+  frost: 5.75,
   // Longer than the pulse and pointed. A missile is the shot the player is meant to notice.
   missile: 3.4,
   // The seeker is the missile's size: what tells them apart is the fins and the eye, not the box.

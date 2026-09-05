@@ -38,6 +38,7 @@ export type ShotKind =
   | 'void'
   | 'flame'
   | 'rock'
+  | 'frost'
   | 'missile'
   | 'seeker'
   | 'bomb'
@@ -78,6 +79,7 @@ export const SHOT_KINDS: readonly ShotKind[] = [
   'void',
   'flame',
   'rock',
+  'frost',
   'missile',
   'seeker',
   'bomb',
@@ -241,6 +243,16 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     hits for two: a rock is not a bullet.
   */
   rock: { sprite: SPRITE.rock, spriteHit: SPRITE.rock, radius: 2.2, health: 1, damage: 2, speed: 0.7 },
+  /*
+    ⚠️ **BETWEEN THE ACID AND THE ROCK, WHICH IS THE ONE SLOT THE LADDER HAD LEFT** — 0253. Every
+    hostile bullet is drawn more than five pixels from every other and the quick one is the small
+    one (`tests/legibility.test.ts`); from the flame's 1.2 to the acid's 5 the rungs are 0.7 and
+    0.8 apart, and the only room was the 1.5 between the acid and the rock. A shard of frost sits
+    there: 5.75 drawn, at 0.75 a step, a hair slower than the acid and quicker than the rock. The
+    hurtbox is 0.3 of it. It hits for one: what the frost ship does to you is slow you, and that is
+    the hull's, not the shot's.
+  */
+  frost: { sprite: SPRITE.frost, spriteHit: SPRITE.frost, radius: 1.7, health: 1, damage: 1, speed: 0.75 },
   /**
    * The player's second auto-weapon: slower than the pulse, and worth three of it.
    *

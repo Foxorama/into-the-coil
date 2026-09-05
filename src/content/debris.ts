@@ -203,6 +203,18 @@ export const BURST = {
    */
   belch: 5,
   /**
+   * A puff of frost at a ship inside the frost ship's cold, every few steps — 0253.
+   *
+   * ⚠️ **One, and often, rather than many once**: the cold is a STATE and not an event, and what
+   * says *you are being slowed* for as long as it lasts is a trickle, on `barePulse`'s own argument.
+   */
+  chill: 1,
+  /**
+   * The burst on the step a chilled ship freezes — 0253. An event: bigger than the trickle and
+   * smaller than a kill, because the ship is not dead, only held.
+   */
+  freeze: 6,
+  /**
    * Fragments per PULSE while a boss is BARE — and it stays bare until the fight ends.
    *
    * ⚠️ **`docs/decisions/0150-the-uncoil-and-the-eye.md`, and it is

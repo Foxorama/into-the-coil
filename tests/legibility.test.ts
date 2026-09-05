@@ -154,7 +154,7 @@ describe('the shot that kills you is not the shot you kill with', () => {
     );
     expect(fromEnemies.size, 'the enemies send fewer than three kinds of bullet').toBeGreaterThanOrEqual(3);
     const sent = new Set<string>([...fromEnemies, ...fromBosses]);
-    const hostile = SHOT_KINDS.filter((k) => ['enemy', 'acid', 'void', 'fire'].includes(INK_OF[SPRITE_KINDS[SHOTS[k].sprite]!]));
+    const hostile = SHOT_KINDS.filter((k) => ['enemy', 'acid', 'void', 'fire', 'frost'].includes(INK_OF[SPRITE_KINDS[SHOTS[k].sprite]!]));
     expect(
       hostile.filter((k) => !sent.has(k)),
       'a hostile bullet exists in the table and nothing — enemy, boss or phase — sends it',

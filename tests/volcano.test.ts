@@ -76,7 +76,7 @@ const fall = BOSSES.quetzal.fall!;
 
 describe('0251 — the volcanoes belch', () => {
   it('THE ROCK: the biggest and slowest hostile bullet, hot, hitting for two — and the belt’s boss is the one thing that sends it', () => {
-    const hostile = SHOT_KINDS.filter((k) => ['enemy', 'acid', 'void', 'fire'].includes(INK_OF[SPRITE_KINDS[SHOTS[k].sprite]!]));
+    const hostile = SHOT_KINDS.filter((k) => ['enemy', 'acid', 'void', 'fire', 'frost'].includes(INK_OF[SPRITE_KINDS[SHOTS[k].sprite]!]));
     const drawn = (k: ShotKind): number => SPRITE_EXTENT[SPRITE_KINDS[SHOTS[k].sprite]!];
     for (const k of hostile.filter((k) => k !== 'rock')) {
       expect(drawn('rock'), `the rock is drawn no bigger than the ${k}`).toBeGreaterThan(drawn(k));
