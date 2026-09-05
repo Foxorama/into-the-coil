@@ -170,8 +170,10 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     barrels: [1, 1, 1, 1, 1],
     links: [1, 2, 3, 4, 4],
     weight: [1, 1, 1, 2, 2],
-    // A fifth further at every rung — 0236. The cap reaches two thirds of the narrowest view.
-    reach: [55, 66, 79, 95, 114],
+    // A sixth further at every rung — 0236's ladder, its top cut back a tenth by 0239: *"lightning
+    // is a little bit long at max power, it's a bit OP."* The cap reaches a shade under three fifths
+    // of the narrowest view. `tests/guns-played.test.ts` holds the climb, never the numbers.
+    reach: [55, 64, 75, 88, 103],
     orbit: [0, 0, 0, 0, 0],
     turn: 0,
     pickup: SPRITE.pickupArc,
@@ -195,9 +197,13 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
    * and the arc and is what makes it a third gun rather than a third shape.
    *
    * ⚠️ **`orbit` is how tightly the spiral is wound**: steps to the lane's half-width. A rung buys a
-   * slower opening, which at a fixed `turn` is more turns before the edge — about one and a half at
-   * the first rung and three at the cap, held by `tests/blades.test.ts` as *more* and never as the
-   * count.
+   * slower opening, which at a fixed `turn` is more turns before the edge, held by
+   * `tests/blades.test.ts` as *more* and never as the count.
+   *
+   * ⚠️ **Wound a quarter tighter by 0239** — *"shurikens need a slightly tighter spiral, there's too
+   * much gap at the moment."* The gap is the spiral's pitch: what a blade gains outward in one turn,
+   * `(half-width ÷ orbit) × (2π ÷ turn)`. Every rung opens slower and the turn is a shade quicker,
+   * which takes the pitch from 40 units at the first rung to 31, and from 15 at the cap to 12.
    */
   shuriken: {
     label: 'Shuriken',
@@ -209,8 +215,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     links: [1, 1, 1, 1, 1],
     weight: [1, 1, 1, 1, 1],
     reach: [0, 0, 0, 0, 0],
-    orbit: [70, 100, 130, 160, 190],
-    turn: 0.11,
+    orbit: [85, 120, 155, 190, 225],
+    turn: 0.12,
     pickup: SPRITE.pickupShuriken,
   },
 };

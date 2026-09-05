@@ -404,10 +404,20 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   lifeIcon: 'pickup',
   pickupWeapon: 'pickup',
   pickupMissile: 'pickup',
-  pickupSeeker: 'pickup',
-  // The weapon pickup's other face — the same pickup, so the same ink. 0233.
-  pickupArc: 'pickup',
-  pickupShuriken: 'pickup',
+  /*
+    ⚠️ **EACH FACE OF A CYCLING PICKUP IN ITS OWN INK — 0239.** 0233 gave every face the pickup ink
+    (*the same pickup, so the same ink*) and the third play-test refused it: *"the missile pickups
+    need to be different colours… weapon pickups need different colouration for each weapon as
+    well, visually distinct atm but the same colour makes it hard."* The BUBBLE is what says *this is
+    a pickup* now (0236, always in the pickup ink); the glyph inside it wears the ink of the thing
+    it offers — the arc in the ship's colour its bolt is stroked in, the shuriken in steel, the
+    seeker in the ally ink — and the first face of each pickup keeps the pickup ink, so a pickup that
+    has just appeared is still unmistakably one. `tests/weapons.test.ts` holds that no two faces of
+    one pickup share an ink.
+  */
+  pickupSeeker: 'ally',
+  pickupArc: 'player',
+  pickupShuriken: 'blade',
   pickupShield: 'pickup',
   /*
     ⚠️ **THE PICKUP INK OVER THE BOMB'S OWN SILHOUETTE, and the ink is doing the whole job here.**
@@ -3999,10 +4009,11 @@ export function drawKind(
       ring(ctx, fg, 0, 0, 0.16);
       seal(ctx);
       bubble(ctx, f, palette);
-      // The trailing edge of each blade in shadow, so it has a lit face and a ground one.
+      // The trailing edge of each blade in shadow, so it has a lit face and a ground one — in
+      // steel, the face's own ink since 0239.
       for (let k = 0; k < 4; k++) {
         const a = (k * Math.PI) / 2;
-        poly(ctx, fg, shade(palette.pickup, -0.28), [
+        poly(ctx, fg, shade(palette.blade, -0.28), [
           [Math.cos(a) * 0.96, Math.sin(a) * 0.96],
           [Math.cos(a + 0.7) * 0.36, Math.sin(a + 0.7) * 0.36],
           [Math.cos(a + 0.45) * 0.34, Math.sin(a + 0.45) * 0.34],
@@ -4071,7 +4082,8 @@ export function drawKind(
       seal(ctx);
       bubble(ctx, f, palette);
       // The lower half in shadow, so the bolt has a lit edge and an underside like the chevron.
-      poly(ctx, fg, shade(palette.pickup, -0.28), [
+      // In the face's own ink — the ship's, since 0239 — like the fill `INK_OF` gave the seal.
+      poly(ctx, fg, shade(palette.player, -0.28), [
         [0.5, -0.2],
         [-0.55, 1],
         [-0.15, 0.15],
@@ -4085,51 +4097,52 @@ export function drawKind(
     }
     case 'arcNode': {
       /*
-        WHERE A BOLT LANDS — a four-pointed spark in the impact ink, 0233. The bolt itself is stroked
-        between two of these by `src/render/scene.ts`; this is the bitmap at each end, so a chain
-        reads as *hits* rather than as a line.
+        WHERE A BOLT LANDS — a bright dot in the impact ink with a glow round it. The bolt itself is
+        stroked between two of these by `src/render/scene.ts`; this is the bitmap at each end, so a
+        chain reads as *hits* rather than as a line.
+
+        ⚠️ **A DOT, NOT A SPARK, SINCE 0239.** 0233 drew a four-pointed star here; played, the ask
+        was *"bright white dots at the centre points of the joins to really lift it"*, and the joins
+        are exactly where this is blitted. A round point of light with its glow is what a join in
+        lightning looks like; the points came from the star, not the light.
       */
-      ctx.moveTo(half + r, half);
-      ctx.lineTo(half + r * 0.28, half - r * 0.28);
-      ctx.lineTo(half, half - r);
-      ctx.lineTo(half - r * 0.28, half - r * 0.28);
-      ctx.lineTo(half - r, half);
-      ctx.lineTo(half - r * 0.28, half + r * 0.28);
-      ctx.lineTo(half, half + r);
-      ctx.lineTo(half + r * 0.28, half + r * 0.28);
-      ctx.closePath();
+      ring(ctx, f, 0, 0, 0.5);
       seal(ctx);
-      glow(ctx, f, palette.impact, 0, 0, 0.55, 0.8);
+      glow(ctx, f, palette.impact, 0, 0, 1, 0.85);
       return;
     }
     case 'pickupSeeker': {
       /*
-        THE MISSILE PICKUP'S OTHER FACE — 0235: the same chevron across the lane, with a reticle
-        through its heart. The hole is what tells the two faces apart at pickup size, and a ring is
-        what *homing* looks like before anybody is taught it.
+        THE MISSILE PICKUP'S OTHER FACE — a reticle, since 0239. 0235 drew it as the missile's
+        chevron with a hole through its heart, and the third play-test refused it: *"the missile
+        pickups need to be different colours and have a much different appearance, they look
+        incredibly similar at the moment."* A round target — a disc with a dark ring in it, four
+        ticks across the ring and a dot at the centre — shares nothing with a chevron at pickup
+        size, and a reticle is what *homing* looks like before anybody is taught it. In the ally
+        ink (`INK_OF`), which nothing else in the lane wears.
 
         Glyph at three quarters of the box and a bubble round it, on the missile face's terms — 0236.
       */
       const fg: Frame = { half, r: r * PICKUP_GLYPH };
-      const g = fg.r;
-      ctx.moveTo(half, half - g);
-      ctx.lineTo(half + g * 0.85, half + g * 0.2);
-      ctx.lineTo(half + g * 0.85, half + g);
-      ctx.lineTo(half, half + g * 0.25);
-      ctx.lineTo(half - g * 0.85, half + g);
-      ctx.lineTo(half - g * 0.85, half + g * 0.2);
-      ctx.closePath();
-      // The hole sits up in the apex, where the chevron is solid across, clear of the shadowed arm.
-      ring(ctx, fg, 0, -0.52, 0.13);
+      ring(ctx, fg, 0, 0, 1);
       seal(ctx);
       bubble(ctx, f, palette);
-      poly(ctx, fg, shade(palette.pickup, -0.28), [
-        [-0.16, -0.64],
-        [-0.7, 0.16],
-        [-0.7, 0.72],
-        [-0.1, 0.14],
-      ]);
-      band(ctx, fg, palette.glass, 0, -0.52, 0.21, 0.16);
+      const dark = shade(palette.ally, -0.45);
+      band(ctx, fg, dark, 0, 0, 0.72, 0.5);
+      disc(ctx, fg, dark, 0, 0, 0.17);
+      // The four ticks, across the ring, in the lit shade — wide enough to be drawn at the shipped
+      // camera (`tests/accents.test.ts`).
+      for (let k = 0; k < 4; k++) {
+        const a = (k * Math.PI) / 2;
+        const c = Math.cos(a);
+        const s = Math.sin(a);
+        poly(ctx, fg, shade(palette.ally, 0.35), [
+          [c * 0.4 - s * 0.09, s * 0.4 + c * 0.09],
+          [c * 0.9 - s * 0.09, s * 0.9 + c * 0.09],
+          [c * 0.9 + s * 0.09, s * 0.9 - c * 0.09],
+          [c * 0.4 + s * 0.09, s * 0.4 - c * 0.09],
+        ]);
+      }
       return;
     }
     case 'seeker':

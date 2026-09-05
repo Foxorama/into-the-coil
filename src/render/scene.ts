@@ -247,9 +247,16 @@ const BOLT_PAGE_STEPS = 2;
  * Bright points along a link: every `BOLT_DOT_EVERY`th vertex, as a dot wider than the core — 0236.
  * *"It needs some bright points"*: a stroke of one width reads as a wire, and lightning is not a wire.
  */
-const BOLT_DOT_EVERY = 3;
-/** The dot's width, as a multiple of the core's. */
-const BOLT_DOT_WIDTH = 1.9;
+const BOLT_DOT_EVERY = 2;
+/**
+ * The dot's width, as a multiple of the core's.
+ *
+ * ⚠️ **A dot at every other join, and wider — 0239.** *"It also needs some bright white dots at the
+ * centre points of the joins to really lift it."* 0236 put one on every third vertex at under twice
+ * the core; they read as slight thickenings. Every other join, at nearly three cores, reads as
+ * points of light on the bolt. `STROKES_PER_LINK` counts the cost.
+ */
+const BOLT_DOT_WIDTH = 2.8;
 /**
  * How many `bolt` calls one link costs: its stroke, its twig, and its dots. `tests/weapons.test.ts`
  * counts them against this, so the picture's cost is a stated number and not an accident.

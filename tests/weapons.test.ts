@@ -45,6 +45,7 @@ import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../src/sim/flight.ts';
 import { screenX, screenY, type Surface } from '../src/render/surface.ts';
 import { STROKES_PER_LINK } from '../src/render/scene.ts';
+import { INK_OF } from '../src/render/bake.ts';
 import { NO_LEVEL, NO_SECTIONS, playableWorld } from './world.ts';
 
 const NEVER = Number.MAX_SAFE_INTEGER;
@@ -177,6 +178,24 @@ describe('0233 — a weapon is a kind', () => {
     WEAPON_KINDS.forEach((kind, face) => {
       expect(faceOf('weapon', face).label, `face ${face} of the weapon pickup is not named for its gun`).toBe(WEAPONS[kind].label);
     });
+  });
+
+  it('THE INKS: no two faces of one pickup share an ink, and the first face wears the pickup’s own', () => {
+    /*
+      0239, from the third play-test: *"the missile pickups need to be different colours… weapon
+      pickups need different colouration for each weapon as well, visually distinct atm but the same
+      colour makes it hard."* 0081's rule is that what the player must tell apart is told apart by
+      more than ink; the faces differed in shape alone, and the ask says shape alone was not enough
+      at pickup size. So ink is a channel too — and the first face keeps the pickup ink, because a
+      pickup that has just appeared has to read as one before it reads as anything else, and the
+      bubble alone (0236) is a thin ring at the edge.
+    */
+    for (const kind of PICKUP_KINDS) {
+      const row = PICKUPS[kind];
+      const inks = row.faces.map((face) => INK_OF[SPRITE_KINDS[face]!]);
+      expect(new Set(inks).size, `${kind} shows two faces in one ink (${inks.join(', ')})`).toBe(inks.length);
+      expect(inks[0], `${kind}'s first face is not in the pickup ink, so a fresh pickup does not read as one`).toBe('pickup');
+    }
   });
 
   it('THE HULLS: every gun has its own three-tier hull ladder, with hit twins and widening boxes, shared with no other gun', () => {
