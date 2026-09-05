@@ -21,8 +21,9 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: a boss is not over before its music is',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    radius: 16,\n    health: 700,',
-      replace: '    radius: 16,\n    health: 150,',
+      // ⚠️ Re-anchored by 0260, which doubled it and put a comment between the radius and the health.
+      find: '    health: 1400,',
+      replace: '    health: 150,',
     },
   },
   {
@@ -59,8 +60,9 @@ export const PROBES = [
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0247: the last boss in the table is the jellyfish.
-      find: '    radius: 17,\n    health: 1100,',
-      replace: '    radius: 17,\n    health: 400,',
+      // ⚠️ Re-anchored by 0260, which doubled it and put a comment between the radius and the health.
+      find: '    health: 2200,',
+      replace: '    health: 400,',
     },
   },
 ];

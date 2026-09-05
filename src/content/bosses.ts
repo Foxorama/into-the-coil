@@ -1102,7 +1102,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss8,
     spriteHit: SPRITE.boss8Hit,
     radius: 16,
-    health: 700,
+    // Doubled by 0260, from 700 — *"need a lot more health, I think I only saw about 50% of their
+    // attacks before they died."* Every real boss is twice what 0247 authored; the mid-bosses stay.
+    health: 1400,
     damage: 3,
     station: 128,
     drift: 5,
@@ -1137,7 +1139,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss9,
     spriteHit: SPRITE.boss9Hit,
     radius: 15,
-    health: 760,
+    // Doubled by 0260, from 760.
+    health: 1520,
     damage: 3,
     station: 129,
     drift: 5,
@@ -1175,7 +1178,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss10,
     spriteHit: SPRITE.boss10Hit,
     radius: 15,
-    health: 820,
+    // Doubled by 0260, from 820.
+    health: 1640,
     damage: 3,
     station: 128,
     drift: 6,
@@ -1208,13 +1212,17 @@ export const BOSSES: Record<BossKind, BossRow> = {
     attack: { kind: 'rake', turn: 0.4 },
     // An eighth of a turn a throw — 0252: across the lane, slanted corner to corner, along the lane
     // from the top edge, slanted the other way, across again.
-    uncoil: { from: 0.5, every: 0.1, gap: 3, at: 26, hole: 14, spin: true },
+    // From nine tenths since 0260 — *"the walls were really good but started too late in the
+    // sequence, they need to start sooner"* — so the first wall is the first notch of the fight
+    // rather than its second half, and there are nine of them over a fight twice as long.
+    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 26, hole: 14, spin: true },
     fall: null,
     chill: null,
     sprite: SPRITE.boss11,
     spriteHit: SPRITE.boss11Hit,
     radius: 14,
-    health: 880,
+    // Doubled by 0260, from 880.
+    health: 1760,
     damage: 3,
     station: 130,
     drift: 5,
@@ -1247,7 +1255,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss12,
     spriteHit: SPRITE.boss12Hit,
     radius: 13,
-    health: 940,
+    // Doubled by 0260, from 940.
+    health: 1880,
     damage: 3,
     station: 131,
     drift: 5,
@@ -1283,7 +1292,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss13,
     spriteHit: SPRITE.boss13Hit,
     radius: 16,
-    health: 1000,
+    // Doubled by 0260, from 1000.
+    health: 2000,
     damage: 3,
     station: 128,
     drift: 5,
@@ -1383,7 +1393,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss14,
     spriteHit: SPRITE.boss14Hit,
     radius: 17,
-    health: 1100,
+    // Doubled by 0260, from 1100.
+    health: 2200,
     damage: 3,
     station: 127,
     drift: 5,
