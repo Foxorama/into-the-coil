@@ -70,7 +70,7 @@ import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../cont
 import { DEFAULT_ORIGIN, MID_BOSS_DROP, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
 import { type DifficultyRow, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
-import { nextOnGrid } from '../content/cadence.ts';
+import { ENTRY_VOLLEY, nextOnGrid } from '../content/cadence.ts';
 import {
   PICKUP_CYCLE_STEPS,
   PICKUP_KINDS,
@@ -2666,6 +2666,35 @@ function fireEnemies(w: World): void {
     const e = w.enemies.at(i);
     const row = w.enemyRows[e.kind];
     if (row === undefined || row.fireEvery <= 0) continue;
+    /*
+      ── A BODY ANNOUNCES ITSELF BY FIRING — 0259 ─────────────────────────────────────────────────
+
+      `docs/decisions/0259-the-bullets-stay-on-the-screen.md`. On the step a body's hull crosses the
+      leading edge of the view — out of it a step ago, inside it now — its first volley is pulled
+      inside `ENTRY_VOLLEY`, on the body's own grid slot; a body that was about to fire anyway keeps
+      its count. `scripts/weigh-bullets.mjs` is why: a firing kind spent most of its reload beyond
+      the view (0096's clock keeps running) and a capped ship killed it before the rest ran out, so
+      most of what could fire never fired on the screen — *"30secs of no bullet to be seen at all."*
+
+      ⚠️ **The slot comes from where its own count stood**, so a formation entering together still
+      opens as a figure (0098) rather than as one volley: the members were spread over their cadence
+      at spawn and that spread is folded into the three slots the entry gap has.
+
+      ⚠️ **The edge is the player's view and the camera's last position is the other half of the
+      test** — the body's positions are a step stale here (`stepEntities` runs after this), so the
+      comparison is its previous edge against the previous view and its current edge against the
+      current one, which is true on exactly one step.
+    */
+    if (
+      e.along - e.radius <= w.cameraAlong + w.view.alongSpan &&
+      e.prevAlong - e.radius > w.prevCameraAlong + w.view.alongSpan
+    ) {
+      // Plus one, because the count is decremented on this very step below — a spawn's count is set
+      // after this loop and takes its first decrement a step later. `tests/spawns.test.ts` holds
+      // that every volley lands on the grid, and this is the step that was off it.
+      const entry = nextOnGrid(w.steps, ENTRY_VOLLEY, (e.fireIn % ENTRY_VOLLEY) / ENTRY_VOLLEY) + 1;
+      if (entry < e.fireIn) e.fireIn = entry;
+    }
     /*
       ⚠️ **A THREAT THE PLAYER CANNOT SEE DOES NOT SHOOT**, and this line arrives with the roam that
       makes it reachable. `across` is fully visible on every device (0023 fixes it at 100 and the

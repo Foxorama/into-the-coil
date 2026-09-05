@@ -63,6 +63,32 @@ export const VOLLEY_CYCLE = 24;
 export const FIRE_GRID = VOLLEY_CYCLE / 4;
 
 /**
+ * The gap a body's first volley is put inside on the step its hull enters the view, in sim steps.
+ *
+ * ── A BODY ANNOUNCES ITSELF BY FIRING — 0259 ────────────────────────────────────────────────────
+ *
+ * `docs/decisions/0259-the-bullets-stay-on-the-screen.md`. Reported from the alpha play: *"there's
+ * either a screen full of bullets or there's 30secs of no bullet to be seen at all… not necessarily
+ * more bullets on screen, but more time for bullets overall to be on screen."* Measured with
+ * `scripts/weigh-bullets.mjs`: a firing kind spawns beyond the view with a whole reload ahead of it,
+ * spends most of that reload out of sight (0096 keeps its clock running, so it *skips its turn*),
+ * enters mid-count — and a capped ship kills a two-hit body inside a third of a second of it being
+ * seen. Most of what could fire never fires on the screen. The first volley is put inside this gap
+ * on the entry step, on the body's own grid slot, and the reload is the row's from there.
+ *
+ * ⚠️ **Twelve steps is two grid slots**: `nextOnGrid` lands the volley between seven and eighteen
+ * steps on — a tenth to a third of a second — so the player sees the body before it fires, and a
+ * formation entering together still opens as a figure (0098) over the two slots rather than as one
+ * volley. One slot was measured first and was the unison 0098 reports; three left a capped ship
+ * time to kill a two-hit body before its volley, which `scripts/weigh-bullets.mjs` showed as the
+ * shoal level under forty per cent.
+ *
+ * ⚠️ **It never adds a volley to a body that was about to fire anyway**: the entry gap is a ceiling
+ * on the count, not a second clock.
+ */
+export const ENTRY_VOLLEY = FIRE_GRID * 2;
+
+/**
  * The nearest cadence to `steps` that lands on the grid, never shorter than one grid unit.
  *
  * ⚠️ **THE ONE DESCRIPTION, and it is asked in two places that must agree** — the content tables

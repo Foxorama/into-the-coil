@@ -183,7 +183,8 @@ describe('0105 — a body is on screen long enough to be answered', () => {
     for (const kind of ENEMY_KINDS) {
       const row = ENEMIES[kind];
       if (row.fireEvery === 0) continue;
-      const volleys = (onScreen(kind, hardest.closing) * STEPS_PER_SECOND) / (row.fireEvery * hardest.fireGap);
+      // Plus the one a body fires on entering the view — 0259 — which is not on its reload.
+      const volleys = (onScreen(kind, hardest.closing) * STEPS_PER_SECOND) / (row.fireEvery * hardest.fireGap) + 1;
       expect(
         volleys,
         `a ${kind} gets ${volleys.toFixed(1)} volleys away while it is on screen at the hardest tier`,
