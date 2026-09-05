@@ -411,6 +411,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // kinds of shot in one colour is one bullet wearing three shapes.
   acid: 'acid',
   void: 'void',
+  // The eagle's flame in its own ink — 0249, on the same argument.
+  flame: 'fire',
   // The HUD's lives counter rather than a pickup, since 0082 — it keeps the pickup ink because the
   // number beside it is drawn in the player's own colour and the icon has to sit with it.
   lifeIcon: 'pickup',
@@ -550,6 +552,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   mothHit: 'impact',
   raptor: 'enemy',
   raptorHit: 'impact',
+  kite: 'enemy',
+  kiteHit: 'impact',
   sentry: 'enemy',
   sentryHit: 'impact',
   shard: 'enemy',
@@ -3352,6 +3356,43 @@ function paintMoth(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
 }
 
 /** Saurian Belt's raptor: a crescent, horns down the lane. */
+/** The kite — 0249: a diamond ahead, two streamers behind. */
+const KITE_HULL: readonly Pt[] = [
+  [-1, 0],
+  [-0.3, -0.56],
+  [0.3, -0.22],
+  [0.56, -0.5],
+  [1, -0.14],
+  [0.68, 0],
+  [1, 0.14],
+  [0.56, 0.5],
+  [0.3, 0.22],
+  [-0.3, 0.56],
+];
+
+function paintKite(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  // The lower half of the diamond in shadow, its leading edge lit, an eye at the point.
+  plate(ctx, f, skin, [
+    [-0.7, 0.06],
+    [0.1, 0.06],
+    [0.24, 0.2],
+    [-0.28, 0.44],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.88, -0.02],
+    [-0.34, -0.44],
+    [-0.26, -0.34],
+    [-0.7, -0.04],
+  ]);
+  motif(ctx, f, skin, theme, [
+    [-0.2, -0.3],
+    [0.2, -0.16],
+    [0.2, 0.16],
+    [-0.2, 0.3],
+  ], 'kite');
+  disc(ctx, f, skin.eye, -0.6, 0, 0.09);
+}
+
 const RAPTOR_HULL: readonly Pt[] = [
   [-1, -0.62],
   [-0.62, -0.92],
@@ -4275,6 +4316,39 @@ export function drawKind(
       glow(ctx, f, palette.void, 0, 0, 1.1, 0.5);
       // The light on the rim, not in the hole: a mark over a hole is a mark off the hull (0149).
       disc(ctx, f, shade(palette.void, 0.7), 0, -0.6, 0.17);
+      return;
+    case 'flame':
+      /*
+        A TONGUE — 0249: a flame's own outline, pointed at the front and notched at the back where
+        it licks, leaning the way it flies. Not the acid's drop (round at the back, pointed at the
+        front along the other axis) and the smallest bullet there is. In the `fire` ink, with a hot
+        heart low in it.
+      */
+      trace(ctx, f, [
+        [-1, 0],
+        [-0.3, -0.5],
+        [0.2, -0.9],
+        [0.3, -0.35],
+        [0.9, -0.55],
+        [0.5, 0],
+        [0.9, 0.55],
+        [0.3, 0.35],
+        [0.2, 0.9],
+        [-0.3, 0.5],
+      ]);
+      seal(ctx);
+      // The glow is the whole of its light: a bullet this small cannot carry a mark that is drawn
+      // at all (0106), so the tongue is one ink and its halo.
+      glow(ctx, f, palette.fire, 0, 0, 1.1, 0.5);
+      return;
+    case 'kite':
+    case 'kiteHit':
+      // A diamond with a FORKED TAIL — 0249. The drifter is a diamond too, and what tells the two
+      // apart at twenty pixels is the tail: two streamers off the back, which the drifter has not.
+      trace(ctx, f, KITE_HULL);
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintKite(ctx, f, skin, theme);
       return;
     case 'debris':
       // A shard: small, angular, and deliberately NOT a disc, so a fragment is never mistaken for a

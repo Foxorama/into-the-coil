@@ -36,6 +36,7 @@ export type ShotKind =
   | 'flak'
   | 'acid'
   | 'void'
+  | 'flame'
   | 'missile'
   | 'seeker'
   | 'bomb'
@@ -74,6 +75,7 @@ export const SHOT_KINDS: readonly ShotKind[] = [
   'flak',
   'acid',
   'void',
+  'flame',
   'missile',
   'seeker',
   'bomb',
@@ -219,6 +221,15 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * hits, and in the `void` ink; the black heart's rain is made of these.
    */
   void: { sprite: SPRITE.void, spriteHit: SPRITE.void, radius: 1.2, health: 1, damage: 2, speed: 0.9 },
+  /**
+   * The eagle's flame — `docs/decisions/0249-the-eagle-summons.md`, and the hydra's second head's.
+   * The smallest and quickest bullet in the game, on 0098's rule the other way round from the
+   * blasts: a whip is a lash of these, thrown along an arc with the tip faster than the root, so
+   * what the player reads is a curve of fire cracking across the lane. In the `fire` ink.
+   */
+  // ⚠️ 0.66 is the most a 1.2-unit drawing may carry (`tests/combat.test.ts`'s band) and the least
+  // that keeps the sky's far stars under the smallest thing that can kill you (`tests/sky.test.ts`).
+  flame: { sprite: SPRITE.flame, spriteHit: SPRITE.flame, radius: 0.66, health: 1, damage: 1, speed: 1.8 },
   /**
    * The player's second auto-weapon: slower than the pulse, and worth three of it.
    *

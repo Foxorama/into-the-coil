@@ -305,6 +305,11 @@ acid while it is whole, a spray of void once hurt, and at its last third lightni
 down the whole lane, each column a warning line for three quarters of a second before it strikes.
 A phase says what a boss throws, since then; acid and void are shots in inks of their own.
 
+**The eagle whips and summons** — [0249](decisions/0249-the-eagle-summons.md): darts while whole,
+then a whip of flames thrown along an arc with the tip faster than the root so it bows as it flies,
+then volleys that call kites — a new body, Ember Nebula's horde, sent by no level — and at the end
+raptors, at the leading edge where every wave arrives. A boss may send a body as well as a bullet.
+
 ⚠️ **A phase changes what a boss DOES, not what it looks like** —
 [0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md). Nothing on screen currently
 says how much boss is left, and whether that reads as progress is the first question a play-test of

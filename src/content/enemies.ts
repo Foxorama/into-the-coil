@@ -30,6 +30,7 @@ export type EnemyKind =
   | 'picket'
   | 'moth'
   | 'raptor'
+  | 'kite'
   | 'sentry'
   | 'shard'
   | 'spore'
@@ -329,6 +330,7 @@ export const ENEMY_KINDS: readonly EnemyKind[] = [
   'picket',
   'moth',
   'raptor',
+  'kite',
   'sentry',
   'shard',
   'spore',
@@ -743,6 +745,24 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     // SAURIAN BELT'S OWN: a crescent of jaw that hunts harder than a lancer and never fires — it bites.
     // The one two-hit body in the game with no gun, so what it costs is being caught.
     motion: { kind: 'hunt', agility: 0.5 },
+  },
+  /**
+   * The kite — `docs/decisions/0249-the-eagle-summons.md`. Ember Nebula's, and sent by no level:
+   * the eagle summons them in hordes. One hit, one bite, quick, and weaving hard — a thing that is
+   * many rather than a thing that is dangerous, which is what a horde is. Its time on the screen
+   * at the hardest tier clears 0105's floor with room, which `tests/pilots.test.ts` holds.
+   */
+  kite: {
+    sprite: SPRITE.kite,
+    spriteHit: SPRITE.kiteHit,
+    radius: 2.6,
+    health: 1,
+    damage: 1,
+    closing: 0.42,
+    fireEvery: 0,
+    shot: 'spit',
+    attack: { kind: 'aimed' },
+    motion: { kind: 'weave', amplitude: 16, wavelength: 90 },
   },
   sentry: {
     sprite: SPRITE.sentry,

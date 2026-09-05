@@ -505,6 +505,37 @@ export function stepBoss(
       }
       break;
     }
+    case 'whip': {
+      /*
+        A whip of fire — 0249: the phase's shots along an arc centred down the lane, the tip
+        `reach` times faster than the root. Every flame leaves the hull on the same step; what
+        makes it a lash rather than a fan is that the line of them bows as it flies, because the
+        far end outruns the near one.
+      */
+      const n = phase.shots;
+      const first = Math.PI - attack.sweep / 2;
+      const along = n > 1 ? attack.sweep / (n - 1) : 0;
+      for (let i = 0; i < n; i++) {
+        const shot = shots.spawn();
+        if (shot === null) break;
+        const angle = first + along * i;
+        const lash = speed * (1 + attack.reach * (n > 1 ? i / (n - 1) : 0));
+        reset(shot, boss.along, boss.across, bullet);
+        shot.velAlong = Math.cos(angle) * lash + scrollPerStep;
+        shot.velAcross = Math.sin(angle) * lash;
+      }
+      break;
+    }
+    case 'summon': {
+      /*
+        A summons — 0249. This file has no enemy pool and no rows, so the volley is an ASK: the
+        count rides the boss's own `turnsLeft` — a field nothing else reads on a boss — and
+        `src/app/frame.ts` puts the adds on the field on the same step and clears it. The cue at
+        the gate above is the call.
+      */
+      boss.turnsLeft = attack.count;
+      break;
+    }
     default: {
       const never: never = attack;
       return never;

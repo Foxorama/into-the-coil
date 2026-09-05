@@ -20,6 +20,8 @@
  */
 
 import type { Body } from '../sim/entity.ts';
+import type { EnemyKind } from './enemies.ts';
+import type { FormationKind } from './formations.ts';
 import type { ShotKind } from './shots.ts';
 import { SPRITE } from './sprites.ts';
 
@@ -137,7 +139,7 @@ export type BossMove =
  * unions with one vocabulary is the honest shape, and `docs/decisions/0110-an-attack-is-a-pattern.md`
  * is where the vocabulary is argued.
  */
-export const BOSS_ATTACK_KINDS = ['aimed', 'spray', 'rake', 'ring', 'wall', 'rain'] as const;
+export const BOSS_ATTACK_KINDS = ['aimed', 'spray', 'rake', 'ring', 'wall', 'rain', 'whip', 'summon'] as const;
 
 /** Derived from the list, so an attack cannot exist in the union and be missing from the switch. */
 export type BossAttackKind = (typeof BOSS_ATTACK_KINDS)[number];
@@ -187,7 +189,21 @@ export type BossAttack =
    * second to leave is the second. `tests/serpent.test.ts` holds that nothing hurts before the
    * warning has run.
    */
-  | { kind: 'rain'; warning: number; halfWidth: number };
+  | { kind: 'rain'; warning: number; halfWidth: number }
+  /**
+   * A whip of fire — `docs/decisions/0249-the-eagle-summons.md`. Asked for: *"throws out whips of
+   * fire."* The phase's `shots` thrown at once along an arc of `sweep` radians centred down the
+   * lane, the tip `reach` times faster than the root, so the line of them bows out as it flies: a
+   * lash cracking across the lane rather than a fan. The phase's bullet is the flame.
+   */
+  | { kind: 'whip'; sweep: number; reach: number }
+  /**
+   * A summons — 0249. Asked for: *"summons hordes of flying kites and raptors as adds at various
+   * points throughout the fight."* Each volley puts `count` of `enemy` on the field at the leading
+   * edge in `formation`, and throws nothing else: the adds are the attack. The phase's `shots`
+   * and `spread` are carried and unused, on `bare`'s own terms — the escalation rules read them.
+   */
+  | { kind: 'summon'; enemy: EnemyKind; count: number; formation: FormationKind };
 
 /**
  * Every way a boss can STAND in a phase. Closed.
@@ -857,10 +873,14 @@ export const BOSSES: Record<BossKind, BossRow> = {
     ],
   },
   /**
-   * The Ember Nebula's end: the hell-spawned eagle.
+   * The Ember Nebula's end: the hell-spawned eagle — 0249.
    *
-   * It follows the player's lane and throws darts at where they are, from the widest wings in the
-   * game. Owed: whips of fire, and hordes of kites and raptors summoned through the fight.
+   * ⚠️ **FIVE PHASES, AND THE FIGHT ALTERNATES BETWEEN WHAT IT THROWS AND WHAT IT SENDS.** It opens
+   * throwing darts at where the player is; at three quarters it whips — five flames along an arc,
+   * the tip quicker than the root; at half it calls kites, two a volley, in a vee at the leading
+   * edge; at a third it whips again, seven wide; and at the last sixth it calls raptors, one a
+   * volley, which hunt. *"Hordes of flying kites and raptors as adds at various points throughout
+   * the fight"* — the points are the phases.
    */
   hellkite: {
     move: { kind: 'stalk', agility: 0.22 },
@@ -878,9 +898,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
     shot: 'lance',
     phases: [
       { upTo: 1, fireEvery: 78, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.7, fireEvery: 66, shots: 3, spread: 0.5, patrolScale: 1.3, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.4, fireEvery: 54, shots: 5, spread: 0.8, patrolScale: 1.7, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.15, fireEvery: 48, shots: 5, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.75, fireEvery: 66, shots: 5, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' }, shot: 'flame', attack: { kind: 'whip', sweep: 1.1, reach: 0.9 } },
+      { upTo: 0.5, fireEvery: 60, shots: 5, spread: 0, patrolScale: 1.5, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 2, formation: 'vee' } },
+      { upTo: 0.33, fireEvery: 54, shots: 7, spread: 0, patrolScale: 1.8, stance: { kind: 'volley' }, shot: 'flame', attack: { kind: 'whip', sweep: 1.4, reach: 0.9 } },
+      { upTo: 0.16, fireEvery: 48, shots: 7, spread: 0, patrolScale: 2.2, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'raptor', count: 1, formation: 'line' } },
     ],
   },
   /**

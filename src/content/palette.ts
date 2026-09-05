@@ -56,6 +56,13 @@ export type Ink =
   | 'acid'
   | 'void'
   /*
+    ⚠️ **`fire` is the eagle's whip — 0249**, and the hydra's second head's. A MEANING ink: a flame
+    is *this will burn you*, and it is not `bullet` — the player's own orange — on 0081's rule that
+    the ship's fire is never in the ink of the things trying to kill it. Vermilion against the
+    pulse's amber, and the flame's silhouette is a tongue against the pulse's disc.
+  */
+  | 'fire'
+  /*
     ⚠️ **`blade` is the player's steel — 0238.** Played: *"shurikens need to be… steel coloured."* A
     role rather than a colour name, on this file's own rule: what it means is *a blade of mine, in
     flight*, and the high-contrast palette answers it in its own terms. It is a MEANING ink and is
@@ -131,6 +138,8 @@ export const PALETTES: Record<PaletteName, Palette> = {
     // Lifted from #e352ff, which sat at 2.94:1 on the Saurian Belt's backdrop with everything the
     // sky draws counted — `tests/sky.test.ts`'s floor is 3.
     void: '#e86bff',
+    // Vermilion: redder than `bullet`'s amber and yellower than `enemy`'s pink-red — 0249.
+    fire: '#ff7a3a',
     // Near-white and deliberately the brightest thing in the palette: a flash reads as an impact
     // because it is momentarily louder than everything around it, not because of its hue.
     impact: '#fff4e6',
@@ -176,6 +185,8 @@ export const PALETTES: Record<PaletteName, Palette> = {
     // Pure green and a deep violet, each its own corner of the hue wheel — 0248.
     acid: '#80ff00',
     void: '#d040ff',
+    // A red-orange between `enemy`'s red and `bullet`'s orange, and a step below both — 0249.
+    fire: '#e04000',
     impact: '#ffffff',
     // A step below the two whites, so a blade and a pickup are apart on the one channel this
     // palette exists for, and still far above the void. 0238.

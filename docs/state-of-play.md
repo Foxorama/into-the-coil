@@ -132,6 +132,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a seeker hunts on the screen only, and burns out after a second and a half in a puff** | [0246](decisions/0246-a-seeker-hunts-on-the-screen.md), [`the-seekers-played`](../reports/the-seekers-played-2026-09-05.md) |
 | **a level has a mid-boss and a real one: the seven old bosses halved and moved inside their levels, seven real bosses at the ends, each a first iteration** | [0247](decisions/0247-a-level-has-a-mid-boss-and-a-real-one.md), [`the-bosses-asked`](../reports/the-bosses-asked-2026-09-05.md) |
 | **the serpent strikes: a phase says what it throws; acid and void, two shots in two inks; lightning in columns with warning lines** | [0248](decisions/0248-the-serpent-strikes.md) |
+| **the eagle summons: a whip of flames that bows as it flies, and volleys that put kites and raptors on the field — the kite is a new body, the eagle's to call** | [0249](decisions/0249-the-eagle-summons.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -790,9 +791,10 @@ briefed, all seven places at once —
 [0247](decisions/0247-a-level-has-a-mid-boss-and-a-real-one.md) is the first answer**: two fights
 a level, the old seven as mid-bosses at half their health, seven real bosses on the vocabulary the
 game has. **The serpent's is landed — [0248](decisions/0248-the-serpent-strikes.md): a phase says
-what it throws, acid and void in their own inks, and lightning in columns that warn first. What is
-next, in the brief's order, is a decision per remaining real boss**, each adding the words its
-fight needs: the eagle's whips of fire and summoned hordes; the pterodactyl's wing lasers and mouth
+what it throws, acid and void in their own inks, and lightning in columns that warn first. **And the
+eagle's — [0249](decisions/0249-the-eagle-summons.md): a whip that bows as it flies, and summons
+that put kites and raptors on the field. What is next, in the brief's order, is a decision per
+remaining real boss**, each adding the words its fight needs: the pterodactyl's wing lasers and mouth
 beam, with volcanoes in its backdrop belching rock that rains on the lane; the gyre's spin; the
 frost ship's bolts, its cold that slows and freezes, and its adds; the hydra's shot per
 head; the jellyfish's tendrils, its raining moon jellies and its opening. What is owed is
