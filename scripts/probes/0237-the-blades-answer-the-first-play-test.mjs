@@ -40,10 +40,11 @@ export const PROBES = [
     // The ladder authored flat, so a rung buys a fire-rate step and nothing about the spiral.
     broke: 'the spiral wound the same at every rung, so an upgrade buys no more of a turn',
     guard: 'THE LADDER: a rung is more of a turn',
+    // ⚠️ Re-anchored by 0239: the spiral was wound a quarter tighter.
     edit: {
       path: 'src/content/weapons.ts',
-      find: '    orbit: [70, 100, 130, 160, 190],',
-      replace: '    orbit: [70, 70, 70, 70, 70],',
+      find: '    orbit: [85, 120, 155, 190, 225],',
+      replace: '    orbit: [85, 85, 85, 85, 85],',
     },
   },
 ];

@@ -12,9 +12,10 @@ export const PROBES = [
     suite: 'tests/guns-played.test.ts',
     broke: 'the arc’s reach authored flat across the ladder',
     guard: 'THE REACH: the arc reaches further',
+    // ⚠️ Re-anchored by 0239: the ladder's top was cut back a tenth.
     edit: {
       path: 'src/content/weapons.ts',
-      find: '    reach: [55, 66, 79, 95, 114],',
+      find: '    reach: [55, 64, 75, 88, 103],',
       replace: '    reach: [55, 55, 55, 55, 55],',
     },
   },
