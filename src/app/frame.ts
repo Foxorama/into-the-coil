@@ -1745,6 +1745,23 @@ const BLADE_START = 3;
  */
 const BLADE_REACH = ACROSS_SPAN / 2;
 
+/**
+ * Where a spiral is centred — this far AHEAD of the ship — and how much it is stretched along the
+ * lane. `docs/decisions/0240-the-blades-reach-the-boss.md`.
+ *
+ * ⚠️ **A SPIRAL CENTRED ON THE SHIP CANNOT REACH A BOSS, HOWEVER IT IS WOUND.** The ship flies about
+ * forty units from the edge of the screen behind it, so a ring about the ship leaves by that edge
+ * at forty-odd units out — before it is fifty ahead — and a boss sits a hundred ahead. Played:
+ * *"shurikens need to stretch out a bit further… it doesn't reach far enough and as a result you
+ * have to get too close to bosses."* Centred thirty ahead and stretched along by half, the same
+ * ring reaches eighty to a hundred ahead before the edge behind takes it, still sweeps the lane's
+ * width across, and still begins at the ship's nose: a blade starts at the back of its ring, which
+ * is where the ship is. Stretched more, the rim whips — at seven tenths a blade at the lane's edge
+ * covered eleven units a step.
+ */
+const BLADE_LEAD = 30;
+const BLADE_STRETCH = 1.5;
+
 /** Steps a blade shows each of its two turns for. A quarter-turn every eight steps reads as a spin. */
 const BLADE_TURN_STEPS = 4;
 
@@ -1777,8 +1794,10 @@ function throwBlade(w: World): void {
     (`steerBlades`), and `lifeFor` at zero is `stepEntities`'s *never*.
   */
   blade.lifeFor = 0;
-  blade.orbitAngle = 0;
-  blade.orbitRadius = BLADE_START;
+  // At the BACK of its ring, which is `BLADE_START` ahead of the nose — 0240. The ring's centre is
+  // `BLADE_LEAD` ahead, so the starting radius is what puts the back of it at the ship.
+  blade.orbitAngle = Math.PI;
+  blade.orbitRadius = (BLADE_LEAD - BLADE_START) / BLADE_STRETCH;
   blade.orbitTurn = w.weapon.turn;
   blade.orbitGrow = BLADE_REACH / w.weapon.orbit;
 }
@@ -1793,6 +1812,8 @@ function throwBlade(w: World): void {
  *
  * ⚠️ **About where the ship IS, not where it was thrown from.** The ship flies inside the ring; a
  * ring pinned to the throw would be left behind at the scroll rate and read as a thing dropped.
+ * Since 0240 the ring's centre is `BLADE_LEAD` ahead of the ship and the ring is `BLADE_STRETCH`
+ * times as long along the lane as it is wide across it, which is what lets it reach a boss.
  *
  * ⚠️ **And it spins by swapping its two turns** — the row's `sprite` and `spriteHit` are the star
  * and the star an eighth of a turn round (`src/content/shots.ts`), and a blade never flashes, so
@@ -1804,7 +1825,7 @@ function steerBlades(w: World): void {
     if (b.kind !== BLADE_KIND) continue;
     b.orbitAngle += b.orbitTurn;
     b.orbitRadius += b.orbitGrow;
-    const along = w.ship.along + Math.cos(b.orbitAngle) * b.orbitRadius;
+    const along = w.ship.along + BLADE_LEAD + Math.cos(b.orbitAngle) * b.orbitRadius * BLADE_STRETCH;
     const across = w.ship.across + Math.sin(b.orbitAngle) * b.orbitRadius;
     /*
       ⚠️ **GONE THE STEP IT LEAVES THE SCREEN, AND NOT BEFORE — 0237.** A spiral wider than the lane

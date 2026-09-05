@@ -31,7 +31,9 @@ export const PROBES = [
     edit: {
       path: 'src/app/frame.ts',
       find: '  blade.lifeFor = 0;',
-      replace: '  blade.lifeFor = 60;',
+      // ⚠️ Forty and not sixty since 0240: on a ring centred ahead of the ship, sixty steps happens
+      // to end a first-rung blade a step from the edge behind, which is the picture the guard allows.
+      replace: '  blade.lifeFor = 40;',
     },
   },
   {
@@ -40,11 +42,12 @@ export const PROBES = [
     // The ladder authored flat, so a rung buys a fire-rate step and nothing about the spiral.
     broke: 'the spiral wound the same at every rung, so an upgrade buys no more of a turn',
     guard: 'THE LADDER: a rung is more of a turn',
-    // ⚠️ Re-anchored by 0239: the spiral was wound a quarter tighter.
+    // ⚠️ Re-anchored by 0239 (the spiral wound a quarter tighter) and by 0240 (rewound for a ring
+    // centred ahead of the ship).
     edit: {
       path: 'src/content/weapons.ts',
-      find: '    orbit: [85, 120, 155, 190, 225],',
-      replace: '    orbit: [85, 85, 85, 85, 85],',
+      find: '    orbit: [120, 150, 185, 220, 260],',
+      replace: '    orbit: [120, 120, 120, 120, 120],',
     },
   },
 ];

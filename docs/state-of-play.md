@@ -123,6 +123,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the seeker: a second missile kind that hunts the nearest body, any direction** | [0235](decisions/0235-a-seeker-hunts-the-nearest-body.md) |
 | **the second play-test, answered in the art: a seeker in the ship's ink, a flash round the bolt, steel blades bigger than the ship** | [0238](decisions/0238-the-picture-answers-the-second-play-test.md), [`the-picture-played`](../reports/the-picture-played-2026-09-05.md) |
 | **the third play-test, answered: a tighter spiral, a shorter arc with dots at its joins, every face of a pickup in its own ink** | [0239](decisions/0239-the-guns-answer-the-third-play-test.md), [`the-guns-played-again`](../reports/the-guns-played-again-2026-09-05.md) |
+| **the blades reach the boss: a ring centred ahead of the ship and stretched along the lane; the pulse's and the missile's faces in their orange** | [0240](decisions/0240-the-blades-reach-the-boss.md), [`the-blades-played-again`](../reports/the-blades-played-again-2026-09-05.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -757,11 +758,14 @@ items of [`the-picture-played`](../reports/the-picture-played-2026-09-05.md)** i
 seeker in the ship's ink, a flash round the bolt, steel blades bigger than the ship. **0238 was
 played the same way and [0239](decisions/0239-the-guns-answer-the-third-play-test.md) answers all
 four items of [`the-guns-played-again`](../reports/the-guns-played-again-2026-09-05.md)** — a
-tighter spiral, a shorter arc with dots at its joins, every face of a pickup in its own ink. What
-is owed is another play, on the branch preview, of the guns and the pickups as 0239 left them; an
-ear on `arc`, `zap` and `throw` as they are now (`scripts/hear.mjs --only=arc,zap,throw` writes
-them); and an eye on the whirlpool and on the seeker turning in flight, at the camera the game
-ships — every claim about either is a model quantity. The balance of a gun that cannot miss and a
+tighter spiral, a shorter arc with dots at its joins, every face of a pickup in its own ink. **And
+0239 was played, and [0240](decisions/0240-the-blades-reach-the-boss.md) answers both items of
+[`the-blades-played-again`](../reports/the-blades-played-again-2026-09-05.md)** — a blade's ring
+centred ahead of the ship and stretched along the lane so it reaches a boss, and the two orange
+faces. What is owed is another play, on the branch preview, of the guns and the pickups as 0240
+left them; an ear on `arc`, `zap` and `throw` as they are now (`scripts/hear.mjs
+--only=arc,zap,throw` writes them); and an eye on the whirlpool ahead of the ship and on the seeker
+turning in flight, at the camera the game ships — every claim about either is a model quantity. The balance of a gun that cannot miss and a
 gun that sweeps is a hand's, and their ladders are starting points. The bench takes `?weapon=arc`
 and `?weapon=shuriken` with `&tier=N`, and `?missile=homing` with `&tubes=N`.
 

@@ -202,8 +202,14 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
    *
    * ⚠️ **Wound a quarter tighter by 0239** — *"shurikens need a slightly tighter spiral, there's too
    * much gap at the moment."* The gap is the spiral's pitch: what a blade gains outward in one turn,
-   * `(half-width ÷ orbit) × (2π ÷ turn)`. Every rung opens slower and the turn is a shade quicker,
-   * which takes the pitch from 40 units at the first rung to 31, and from 15 at the cap to 12.
+   * `(half-width ÷ orbit) × (2π ÷ turn)`. 0239 took the pitch from 40 units at the first rung to
+   * 31, and from 15 at the cap to 12.
+   *
+   * ⚠️ **And rewound by 0240 for a ring that is centred ahead of the ship and stretched along the
+   * lane** (`src/app/frame.ts`): the turn is a tenth of a radian, so the rim of a longer ring does
+   * not whip, and every rung opens slower again so the pitch stays where 0239 put it — 26 at the
+   * first rung, 12 at the cap — and the first rung still goes round the ship once before the edge
+   * behind it takes the blade.
    */
   shuriken: {
     label: 'Shuriken',
@@ -215,8 +221,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     links: [1, 1, 1, 1, 1],
     weight: [1, 1, 1, 1, 1],
     reach: [0, 0, 0, 0, 0],
-    orbit: [85, 120, 155, 190, 225],
-    turn: 0.12,
+    orbit: [120, 150, 185, 220, 260],
+    turn: 0.1,
     pickup: SPRITE.pickupShuriken,
   },
 };
