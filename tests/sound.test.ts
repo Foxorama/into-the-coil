@@ -505,7 +505,17 @@ describe('the cue table', () => {
         ).toBe(-2);
       }
       expect(compared, 'nothing was actually compared').toBeGreaterThan(SAMPLE_RATE * 30);
-    }, 30_000);
+      /*
+        ⚠️ **TWO MINUTES, UP FROM THIRTY SECONDS, and 2026-09-05 is why.** It timed out at thirty
+        under `npm run prove`'s baseline — the whole suite in parallel workers on a machine also
+        holding two dev servers — and passed alone a minute later. Per
+        `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md` that is not a
+        rerun to shrug at: the subject is two seconds of arithmetic and cannot hang, so the wall
+        clock is the wrong quantity and the only thing the bound may do is stop a runaway. Two minutes
+        still does that, and no longer reads a loaded box as a broken stream. The proof prints a
+        timeout as a bare stack trace (`scripts/prove-guard.mjs` says why), which is what it looked like.
+      */
+    }, 120_000);
 
     it('and a player who presses before it finishes still gets sound', () => {
       /*

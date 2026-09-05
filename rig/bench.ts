@@ -28,6 +28,7 @@ import { advanceLevel } from '../src/app/frame.ts';
 import { LEVELS, LEVEL_KINDS, type LevelKind } from '../src/content/levels.ts';
 import { THEMES } from '../src/content/themes.ts';
 import { WEAPON_KINDS, type WeaponKind } from '../src/content/weapons.ts';
+import { MISSILE_KINDS, type MissileKind } from '../src/content/missiles.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 
@@ -123,6 +124,12 @@ const fitted = query.get('weapon');
 if (fitted !== null && (WEAPON_KINDS as readonly string[]).includes(fitted)) {
   const rungs = Math.max(1, Number(query.get('tier') ?? '1'));
   for (let i = 0; i < rungs; i++) dispatch({ slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: fitted as WeaponKind });
+}
+// And the tubes, the same way: `?missile=homing&tubes=2` — 0235.
+const tubes = query.get('missile');
+if (tubes !== null && (MISSILE_KINDS as readonly string[]).includes(tubes)) {
+  const rungs = Math.max(1, Number(query.get('tubes') ?? '1'));
+  for (let i = 0; i < rungs; i++) dispatch({ slice: 'run', type: 'upgraded', upgrade: 'missile', kind: tubes as MissileKind });
 }
 along.max = String(Math.ceil(LEVELS[LEVEL_KINDS[0]!].bossAt));
 goTo(LEVEL_KINDS[0]!, 0);

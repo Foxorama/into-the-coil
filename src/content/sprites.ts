@@ -272,6 +272,9 @@ export const SPRITE_KINDS = [
     the charger were. `scripts/shot.mjs` is how it gets looked at.
   */
   'missile',
+  // The homing missile: a dart with swept fins and an eye at the nose — 0235. Its own silhouette,
+  // because the player has to tell the stream that hunts from the one that does not.
+  'seeker',
   /*
     ⚠️ **A DISC WITH ITS TAIL CUT AWAY, and it is the only silhouette in the game that is asymmetric
     across its own travel.** The pulse is a small disc and the missile is a dart, so a bomb has to
@@ -343,6 +346,8 @@ export const SPRITE_KINDS = [
     weapon's 6.
   */
   'pickupMissile',
+  // The missile pickup's second face — the same chevron across the lane, with a reticle through it. 0235.
+  'pickupSeeker',
   /*
     ── THE WEAPON PICKUP'S SECOND FACE — 0233 ─────────────────────────────────────────────────────
 
@@ -796,6 +801,8 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   flak: 3.4,
   // Longer than the pulse and pointed. A missile is the shot the player is meant to notice.
   missile: 3.4,
+  // The seeker is the missile's size: what tells them apart is the fins and the eye, not the box.
+  seeker: 3.4,
   // Heavier than the missile: the biggest thing that leaves the ship, and the one that is spent.
   bomb: 4.4,
   /*
@@ -858,6 +865,7 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   pickupArc: 8,
   pickupShuriken: 8,
   pickupMissile: 7.33,
+  pickupSeeker: 7.33,
   pickupShield: 6.67,
   pickupBomb: 5.87,
   /*

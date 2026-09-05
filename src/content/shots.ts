@@ -35,6 +35,7 @@ export type ShotKind =
   | 'lance'
   | 'flak'
   | 'missile'
+  | 'seeker'
   | 'bomb'
   | 'blast'
   | 'blastHalf'
@@ -70,6 +71,7 @@ export const SHOT_KINDS: readonly ShotKind[] = [
   'lance',
   'flak',
   'missile',
+  'seeker',
   'bomb',
   'blast',
   'blastHalf',
@@ -213,6 +215,15 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * light one is a shot the player cannot aim differently. It stays well under the smallest enemy.
    */
   missile: { sprite: SPRITE.missile, spriteHit: SPRITE.missile, radius: 1.3, health: 1, damage: 3, speed: 1.5 },
+  /**
+   * The homing missile — `docs/decisions/0235-a-seeker-hunts-the-nearest-body.md`.
+   *
+   * ⚠️ **TWO PULSES, between the pulse's one and the missile's three, and `tests/seekers.test.ts`
+   * holds it as the order rather than the number.** *"A bit less damage than regular missiles"* is
+   * the ask, and what pays for the guidance is the third pulse. Slower than the straight missile
+   * too, so a body it has to come about for is reached a beat later than one it was pointed at.
+   */
+  seeker: { sprite: SPRITE.seeker, spriteHit: SPRITE.seeker, radius: 1.2, health: 1, damage: 2, speed: 1.4 },
   /**
    * The bomb itself, which hurts nothing at all.
    *
