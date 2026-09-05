@@ -208,7 +208,10 @@ ladder, its own pickup face and its own three hulls, so **the ship wears the gun
 weapon pickup turns to the next gun every two seconds, waits long enough to show every gun twice, and
 wanders the player's box while it does; what the player is handed is the face it was showing.
 **Taking a different gun starts that gun's ladder at one rung** and leaves the missile ladder alone.
-The missile pickup cycles the same way over the tubes.
+The missile pickup cycles the same way over the tubes. **Every face of a cycling pickup is its own
+glyph in its own ink** inside the one bubble that says *pickup* —
+[0239](decisions/0239-the-guns-answer-the-third-play-test.md): the pulse and the missile in the
+pickup ink, the arc in the ship's, the shuriken in steel, the seeker in the ally ink.
 
 | gun | what it does | a tier buys |
 |---|---|---|
