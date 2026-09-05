@@ -41,8 +41,11 @@ describe('0236 — the guns answer the first play-test', () => {
   it('THE SCATTER: a death throws its pieces apart across the lane, and they fly out before they wait', () => {
     /*
       *"On death, the power ups needs to scatter more to the 8 directions -> they just explode up
-      and down now."* Measured after the throw has flown: pieces on both sides of the wreck across
-      the lane, by more than the ease could ever have carried them.
+      and down now."* Measured three quarters of a second on, when the throw has flown: pieces on
+      both sides of the wreck across the lane, by more than the ease could ever have carried them,
+      AND each a tenth of the lane along from it — which is the flight. Without it the along half
+      is eased away inside a second and the eye keeps the across half: a fan, which is the report.
+      Measured: a piece is 17 along from the wreck with the flight and 5 without.
 
       ⚠️ **Two pieces since 0243, not eight** — one per kind, carrying the count — so *every
       direction* is the two directions there are: across the lane one way and the other. Along, the
@@ -57,17 +60,21 @@ describe('0236 — the guns answer the first play-test', () => {
     scatterUpgrades(world, upgrades);
     expect(world.pickups.size, 'the scatter did not throw one piece per kind').toBe(2);
     const frame = new GameFrame(world);
-    for (let i = 0; i < 30; i++) frame.step();
+    const wreck = world.pickups.at(0).along - world.cameraAlong;
+    for (let i = 0; i < 45; i++) frame.step();
     let left = 0;
     let right = 0;
+    let along = Number.POSITIVE_INFINITY;
     for (let i = 0; i < world.pickups.size; i++) {
       const dAcross = world.pickups.at(i).across - ACROSS_SPAN / 2;
       right = Math.max(right, dAcross);
       left = Math.min(left, dAcross);
+      along = Math.min(along, Math.abs(world.pickups.at(i).along - world.cameraAlong - wreck));
     }
     const far = ACROSS_SPAN / 8;
     expect(right, `no piece flew across-plus (${right.toFixed(1)})`).toBeGreaterThan(far);
     expect(-left, `no piece flew across-minus (${left.toFixed(1)})`).toBeGreaterThan(far);
+    expect(along, `a piece is only ${along.toFixed(1)} along from the wreck after the throw, which is a fan and not a flight`).toBeGreaterThan(ACROSS_SPAN / 10);
   });
 
   it('THE STRIKE: a bolt landing is an explosion, not a tick', () => {

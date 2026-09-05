@@ -23,8 +23,9 @@ export const PROBES = [
     decision: '0236',
     suite: 'tests/guns-played.test.ts',
     // No flight: the throw is eased away inside a second, and the eye keeps the across half — a fan.
+    // ⚠️ Re-aimed by 0243: the guard is *apart across the lane* now that a death throws two pieces.
     broke: 'the throw given no flight, so the along half is eased away and the scatter is a fan again',
-    guard: 'THE SCATTER: a death throws in every direction',
+    guard: 'THE SCATTER: a death throws its pieces apart',
     edit: {
       path: 'src/app/frame.ts',
       find: 'const SCATTER_FLIGHT = 45;',
