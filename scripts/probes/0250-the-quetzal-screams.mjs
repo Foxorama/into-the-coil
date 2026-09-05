@@ -56,7 +56,7 @@ export const PROBES = [
     suite: 'tests/quetzal.test.ts',
     // No brace: the hull patrols away from its own lasers.
     broke: 'the brace removed, so the hull flies away from its own beams',
-    guard: 'THE BRACE',
+    guard: 'THE BRACE: the hull stands still',
     edit: {
       path: 'src/app/boss.ts',
       find: '  if (boss.holdFor > 0) {\n    boss.velAcross = 0;\n    boss.holdFor--;\n  }',
@@ -68,7 +68,7 @@ export const PROBES = [
     suite: 'tests/quetzal.test.ts',
     // The flight not added to the cadence: the mouth's beam outlasts its phase's fireEvery and the hull never moves again.
     broke: 'the flight between beams not added to the cadence, so the hull braces for ever',
-    guard: 'THE BRACE',
+    guard: 'THE BRACE: the hull stands still',
     edit: {
       path: 'src/app/boss.ts',
       find: '      boss.holdFor = held;\n      boss.fireIn += held;',
