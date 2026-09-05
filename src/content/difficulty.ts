@@ -236,13 +236,19 @@ export const DIAL_MAX = 11;
  * to give the player a breathing space"* the ask describes, expressed as a rise rather than as a drop
  * so that nothing has to remember where the previous level ended.
  *
- * ⚠️ **Both are 1, and that is derived rather than chosen.** `src/content/levels.ts` offers four
- * weapon pickups a level over seven levels, so the last boss sits at
- * `DIAL_MIN + 6×DIAL_PER_LEVEL + 4×DIAL_PER_WEAPON` = **11**, which is the ask's number to the
- * notch. `tests/dial.test.ts` recomputes that from the content rather than restating it, so a level
- * that gains a weapon pickup fails there rather than silently moving the top of the dial.
+ * ⚠️ **Both are derived rather than chosen, and the level's step is a fraction since 0256.** They
+ * were both 1 while `src/content/levels.ts` offered four weapon pickups a level:
+ * `DIAL_MIN + 6×DIAL_PER_LEVEL + 4×DIAL_PER_WEAPON` = **11**, the ask's number to the notch.
+ * `docs/decisions/0256-a-pickup-keeps-the-count.md` cut a level to two weapons — one authored and
+ * one the mid-boss drops — and three in level one, so the last boss would have sat at 9. The weapon's
+ * step stays 1, because `MULTI_HIT_DIAL` is written in it; the level's step is what is left over:
+ * `(DIAL_MAX − DIAL_MIN − 2×DIAL_PER_WEAPON) / 6` = **4/3**, and the sawtooth still holds — level
+ * one's boss at 4, level two opening at 2⅓ and its boss at 4⅓ — with every boss harder than the last
+ * only because level one's third weapon is worth less than a level's step. `tests/dial.test.ts`
+ * recomputes all of it from the content rather than restating it, so a level that gains a weapon
+ * pickup fails there rather than silently moving the top of the dial.
  */
-export const DIAL_PER_LEVEL = 1;
+export const DIAL_PER_LEVEL = 4 / 3;
 export const DIAL_PER_WEAPON = 1;
 
 /**

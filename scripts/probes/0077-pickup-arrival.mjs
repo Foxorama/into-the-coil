@@ -65,11 +65,12 @@ export const PROBES = [
     */
     broke: 'the scatter jitter widened past the gap, so two pieces can leave on one heading',
     guard: 'leaves in every direction, and no two pieces travel together',
-    // ⚠️ Re-anchored by 0243: the jitter is a share of the gap AND capped (`SCATTER_JITTER_MAX`),
+    // ⚠️ Re-anchored by 0243: the jitter is a share of the gap AND capped (`DROP_JITTER_MAX`),
     // so widening the share alone changes nothing; the break is the jitter past both.
+    // ⚠️ Re-anchored by 0256: the throw is the mid-boss's drop, and the constants are `DROP_*`.
     edit: {
       path: 'src/app/frame.ts',
-      find: '  const halfGap = share < SCATTER_JITTER_MAX ? share : SCATTER_JITTER_MAX;',
+      find: '  const halfGap = share < DROP_JITTER_MAX ? share : DROP_JITTER_MAX;',
       replace: '  const halfGap = 4 + 0 * share;',
     },
   },

@@ -21,13 +21,14 @@ export const PROBES = [
       saying that the charges are not what a death should cost.
     */
     broke: 'the restock put back on a death, so a run’s banked charges never survive one',
-    guard: 'a death costs the upgrades and leaves the arsenal exactly where it was',
+    // ⚠️ Renamed by 0256: a death costs one rung of the ladder now, and the guard says so.
+    guard: 'a death costs one rung per ladder, keeps the gun, and leaves the arsenal exactly where it was',
     edit: {
       path: 'src/state/slices/run.ts',
       // Anchored on the ARSENAL line rather than on the whole returned literal, for the reason
       // 0042's probe gives: a literal goes stale the day a field is added to it, and two have been.
-      find: '            arsenal: state.arsenal,\n            upgrades: [],',
-      replace: '            arsenal: startingArsenal(),\n            upgrades: [],',
+      find: '            arsenal: state.arsenal,\n            upgrades: afterDeath(state.upgrades),',
+      replace: '            arsenal: startingArsenal(),\n            upgrades: afterDeath(state.upgrades),',
     },
   },
   {
@@ -65,9 +66,9 @@ export const PROBES = [
     guard: 'and a death does not TOP UP an arsenal the player has emptied',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '            arsenal: state.arsenal,\n            upgrades: [],',
+      find: '            arsenal: state.arsenal,\n            upgrades: afterDeath(state.upgrades),',
       replace:
-        '            arsenal: state.arsenal.map((e) => ({ kind: e.kind, charges: Math.max(e.charges, SPECIALS[e.kind].charges) })),\n            upgrades: [],',
+        '            arsenal: state.arsenal.map((e) => ({ kind: e.kind, charges: Math.max(e.charges, SPECIALS[e.kind].charges) })),\n            upgrades: afterDeath(state.upgrades),',
     },
   },
 ];

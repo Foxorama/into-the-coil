@@ -1,13 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { GameFrame, SHIP_START_ALONG, respawn, scatterUpgrades } from '../src/app/frame.ts';
+import { GameFrame, SHIP_START_ALONG, respawn } from '../src/app/frame.ts';
 import { makeLifecycle } from '../src/app/lifecycle.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { INVULN_STEPS } from '../src/content/ships.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
-import type { Entity } from '../src/sim/entity.ts';
-import type { World } from '../src/app/frame.ts';
 import { type Action, type State, initialState, reduce } from '../src/state/root.ts';
 import { SCREENS, STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { livesFor, startingArsenal } from '../src/state/slices/run.ts';
@@ -98,29 +96,10 @@ function secondsIn(cameraAlong: number): number {
 }
 
 /**
- * What a death threw back, told from what a level authored by its lifetime.
- *
- * ⚠️ **`lifeFor > 0` is the marker and it is the only one there is** — 0066 put the whole
- * *scattered or authored* distinction in that one field so the two answers cannot disagree.
- */
-function scattered(world: World): Entity[] {
-  const out: Entity[] = [];
-  for (let i = 0; i < world.pickups.size; i++) {
-    const item = world.pickups.at(i);
-    // A scattered piece is on its wait like any other since 0236 — `holdFor` is its clock now,
-    // where `lifeFor` used to be its short timer.
-    if (item.holdFor > 0) out.push(item);
-  }
-  return out;
-}
-
-/**
  * Spend every life the tier grants, the way `mount`'s `onDeath` spends them.
  *
- * ⚠️ **`scatterUpgrades` before the reducer, because that is the order the shell keeps** —
- * `docs/decisions/0066-a-death-scatters-what-it-took.md`. The reducer is what empties the upgrade
- * list, so a fixture that dispatched first would throw nothing back and the continue would have
- * nothing to hand over.
+ * ⚠️ **`scatterUpgrades` used to go before the reducer here, and 0256 took the scatter out of a
+ * death** — a death costs a rung and throws nothing, so the reducer is the whole of it.
  *
  * ⚠️ **The ship is killed where the player was, which is never where a respawn puts it.** A fixture
  * that died on the start line could not tell a continue that moved the ship back from one that left
@@ -130,7 +109,6 @@ function dieOutTheRun(built: Shell): void {
   for (let lives = built.state().run.lives; lives > 0; lives--) {
     built.world.ship.along = built.world.cameraAlong + SHIP_START_ALONG + 40;
     built.world.ship.health = 0;
-    scatterUpgrades(built.world, built.state().run.upgrades);
     built.dispatch(DIE);
     if (built.state().run.lives > 0) respawn(built.world);
   }
@@ -294,28 +272,12 @@ describe('a run over is a continue', () => {
     );
   });
 
-  it('leaves the last death’s scatter where the player can still fly for it', () => {
-    /*
-      ⚠️ **THE HALF THE ASK WAS MOST SPECIFIC ABOUT**: *"the last death needs to pop out the upgrades
-      for them to collect."* It already did — 0066 scatters on EVERY death including the last, which
-      read as redundant on the day it landed — and the thing that would have wasted it is a continue
-      that swept the field on the way back in. The five-second timer does not run while the run-over
-      screen is up, because that screen does not step (`src/state/screens.ts`), so the player gets all
-      of it.
-    */
-    const built = ranOut();
-    const before = scattered(built.world);
-    expect(before.length, 'the last death scattered nothing, so this measures nothing').toBeGreaterThan(0);
-    const life = before.reduce((total, item) => total + item.holdFor, 0);
-
-    built.lifecycle.resume();
-    const after = scattered(built.world);
-    expect(after.length, 'the continue swept away what the deaths handed back').toBe(before.length);
-    expect(
-      after.reduce((total, item) => total + item.holdFor, 0),
-      'the continue spent the scatter’s wait on the pause',
-    ).toBe(life);
-  });
+  /*
+    ⚠️ **`leaves the last death’s scatter where the player can still fly for it` WAS HERE.** The ask
+    was *"the last death needs to pop out the upgrades for them to collect"*, and 0256 made a death
+    cost a rung and pop out nothing — so there is no scatter for a continue to sweep. That the field
+    is otherwise left as it stood is `THE REPORTED ONE` above.
+  */
 
   it('and never reseeds the level’s own randomness, which is what would make it a new run', () => {
     /*

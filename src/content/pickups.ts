@@ -481,6 +481,44 @@ export function upgradeGrows(upgrades: readonly UpgradeKind[], kind: UpgradeKind
 }
 
 /**
+ * The rungs a death cannot take: a ladder at this many or fewer keeps every one.
+ *
+ * ── A DEATH COSTS ONE RUNG PER LADDER, AND IT USED TO COST THE LOT ───────────────────────────────
+ *
+ * `docs/decisions/0256-a-pickup-keeps-the-count.md`. Asked for, after the first play of the mid-bosses:
+ * *"a death reduces the power count by 1 (to a minimum of 1)."* 0039 emptied the list and 0066 threw
+ * it all back where the ship died; the two together were a death that cost a crossing under fire
+ * rather than a rung, and the fifth play-test called the pieces impossible to grab. A rung is the
+ * cost now, and nothing is thrown.
+ *
+ * ⚠️ **One, and it is the ask's number.** A ladder at one keeps its one; a ladder at nothing — the
+ * base gun, the rack with no tube — has nothing to keep and loses nothing. The KIND is kept too:
+ * a death is a rung, not the gun.
+ */
+export const DEATH_KEEPS = 1;
+
+/**
+ * What a ship is carrying after a death: one rung off each ladder that has more than `DEATH_KEEPS`.
+ *
+ * ⚠️ **THE single description of what a death costs the guns**, read by `src/state/slices/run.ts`
+ * and held by `tests/run.test.ts`. The reducer used to write `upgrades: []`, which was the whole of
+ * 0039's rule in one literal; this is the whole of 0256's, beside the ladder it is a rule about.
+ *
+ * ⚠️ **The LAST rung of each kind goes**, so the order the rest were taken in is kept — the list is
+ * ordered (0039) and `weaponFor` reads it as a count, so which one goes is invisible today and
+ * stated anyway.
+ */
+export function afterDeath(upgrades: readonly UpgradeKind[]): UpgradeKind[] {
+  const kept: UpgradeKind[] = [...upgrades];
+  for (const kind of UPGRADE_KINDS) {
+    if (tiersOf(upgrades, kind) <= DEATH_KEEPS) continue;
+    const last = kept.lastIndexOf(kind);
+    if (last >= 0) kept.splice(last, 1);
+  }
+  return kept;
+}
+
+/**
  * What taking `kind` actually does to a ship already carrying `upgrades`.
  *
  * ── AN UPGRADE PICKUP AT ITS CAP IS A BOMB, AND THAT IS A FACT ABOUT THE TABLE ───────────────────
@@ -509,8 +547,12 @@ export function upgradeGrows(upgrades: readonly UpgradeKind[], kind: UpgradeKind
  */
 /*
   ⚠️ **AND THE FACE, SINCE 0233.** A weapon pickup offering a gun the ship is not carrying is an
-  upgrade whatever the ladder says, because taking it SWITCHES — the ladder it lands on is a fresh
-  one (`src/state/slices/run.ts`). Only a pickup offering the gun already fitted can be full.
+  upgrade whatever the ladder says, because taking it SWITCHES. Only a pickup offering the gun
+  already fitted can be full.
+
+  ⚠️ **AND A SWITCH KEEPS THE COUNT — 0256.** 0233 started the new gun's ladder at one rung; the
+  ladder is the ship's now and the gun is what it is fitted to (`src/state/slices/run.ts`), so a
+  switch at a full ladder is a full ladder on the other gun. Still an upgrade: the ship changes.
 */
 export function effectOf(kind: PickupKind, face: number, loadout: Loadout): PickupEffect {
   const effect = PICKUPS[kind].effect;

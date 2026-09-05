@@ -13,7 +13,8 @@
 import { describe, expect, it } from 'vitest';
 import { GameFrame, bossOnField } from '../src/app/frame.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
-import { LEVELS, LEVEL_KINDS, type LevelRow } from '../src/content/levels.ts';
+import { LEVELS, LEVEL_KINDS, MID_BOSS_DROP, type LevelRow } from '../src/content/levels.ts';
+import { PICKUP_KINDS } from '../src/content/pickups.ts';
 import { musicLevelFor } from '../src/app/music.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 
@@ -103,6 +104,44 @@ describe('0247 — a level has a mid-boss and a real one', () => {
     expect(world.clearedIn, 'the end boss’s death did not start the level’s end').toBeGreaterThan(0);
     for (let i = 0; i < 200; i++) frame.step();
     expect(cleared.count, 'the level was never reported cleared').toBe(1);
+  });
+
+  it('0256 — THE DROP: the mid-boss’s death throws a weapon, a shield and a bomb where it died, and the end boss’s throws nothing', () => {
+    /*
+      `docs/decisions/0256-a-pickup-keeps-the-count.md`: *"weapons → 1 from the miniboss death;
+      shields → 1 from the miniboss death; bombs → 1 from the miniboss death, 1 from the boss
+      death."* The mid-boss's three come off the hull on the step it dies, where it was; the end
+      boss's charge is the clear's (0053, `levelCleared`), because a piece thrown 1.6 seconds before
+      the level ends is a piece nobody reaches — so nothing is thrown there, and `tests/bombs.test.ts`
+      holds the charge.
+    */
+    const { world } = playableWorld(TWO_FIGHTS);
+    const frame = new GameFrame(world);
+    // The ship kept at the back of its box, so it cannot collect what is measured.
+    for (let i = 0; i < 400 && world.bossPool.size === 0; i++) frame.step();
+    expect(world.bossPool.size, 'the mid-boss never arrived').toBe(1);
+    expect(world.pickups.size, 'something was on the field before the mid-boss died').toBe(0);
+    const offered = world.weaponsOffered;
+    expect(slay(world, frame, 3000), 'the mid-boss could not be killed').toBeGreaterThanOrEqual(0);
+    expect(world.pickups.size, 'the mid-boss’s death did not drop one piece per kind in the list').toBe(MID_BOSS_DROP.length);
+    // Where the hull died, in the camera's frame — the same offset its burst is drawn at (0062).
+    const hull = { along: world.cameraAlong + world.bossOffset, across: world.bossAcross };
+    const kinds: string[] = [];
+    for (let i = 0; i < world.pickups.size; i++) {
+      const item = world.pickups.at(i);
+      kinds.push(PICKUP_KINDS[item.kind]!);
+      // One step of the throw from where the hull came apart.
+      expect(Math.hypot(item.along - hull.along, item.across - hull.across), 'a piece was thrown from somewhere other than the hull').toBeLessThan(4);
+    }
+    expect(kinds.sort(), 'the drop is not the list').toEqual([...MID_BOSS_DROP].sort());
+    expect(world.weaponsOffered, 'the dropped weapon did not turn the dial').toBe(offered + 1);
+
+    // The end boss: killed, and nothing thrown.
+    world.pickups.clear();
+    for (let i = 0; i < 1500 && world.bossPool.size === 0; i++) frame.step();
+    expect(world.fight, 'the end boss never arrived').toBe(1);
+    expect(slay(world, frame, 3000)).toBeGreaterThanOrEqual(0);
+    expect(world.pickups.size, 'the end boss’s death threw something').toBe(0);
   });
 
   it('and the end boss waits for the mid-boss: the camera passing its distance does not bring it while the mid-boss lives', () => {

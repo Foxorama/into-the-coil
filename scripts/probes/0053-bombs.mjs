@@ -108,8 +108,9 @@ export const PROBES = [
     guard: 'a death costs no charges at all, and a continue costs the banked ones',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '            arsenal: state.arsenal,\n            upgrades: [],',
-      replace: '            arsenal: [],\n            upgrades: [],',
+      // ⚠️ Re-anchored by 0256: the line under the arsenal is the rung a death costs now.
+      find: '            arsenal: state.arsenal,\n            upgrades: afterDeath(state.upgrades),',
+      replace: '            arsenal: [],\n            upgrades: afterDeath(state.upgrades),',
     },
   },
   {

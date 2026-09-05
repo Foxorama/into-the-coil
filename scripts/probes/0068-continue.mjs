@@ -87,22 +87,13 @@ export const PROBES = [
       replace: "      world.rng = makeRng('proof-scene').stream('spawns');\n      respawn(world);",
     },
   },
-  {
-    decision: '0068',
-    suite: 'tests/continue.test.ts',
-    /*
-      ⚠️ THE HALF THE ASK WAS MOST SPECIFIC ABOUT. 0066 already throws the upgrades back on the last
-      death; a continue that swept the pickup pool on the way in would waste all of it, and would
-      look like tidying up after a run that had ended.
-    */
-    broke: 'the scatter the last death threw swept away by the continue',
-    guard: 'leaves the last death’s scatter where the player can still fly for it',
-    edit: {
-      path: 'src/app/lifecycle.ts',
-      find: '      respawn(world);',
-      replace: '      world.pickups.clear();\n      respawn(world);',
-    },
-  },
+  /*
+    ── THE PROBE FOR *the scatter the last death threw swept away by the continue* WAS HERE ─────────
+
+    `docs/decisions/0256-a-pickup-keeps-the-count.md` took the scatter out of a death, so the last
+    death throws nothing for a continue to sweep; that the field is otherwise left as it stood is
+    `THE REPORTED ONE` above, whose probes stand.
+  */
   {
     decision: '0068',
     suite: 'tests/continue.test.ts',

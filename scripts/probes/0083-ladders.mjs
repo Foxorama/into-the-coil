@@ -10,19 +10,14 @@
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
-  {
-    decision: '0083',
-    suite: 'tests/pickups.test.ts',
-    /*
-      ⚠️ THE TIER COUNT AND THE PICKUP BUDGET ARE ONE DECISION, and this is the break that proves it.
-      *"The player should be able to cap weapons before the 1st boss… so we need 9 upgrades per level."*
-      Four weapon pickups cap four tiers; move the tier count on its own and a level either cannot cap
-      or wastes a pickup, and nothing about either file looks wrong on its own.
-    */
-    broke: 'the tier count moved without the levels, so a level can no longer cap the guns',
-    guard: 'THE TARGET: a level offers exactly enough weapons to cap the guns',
-    edit: { path: 'src/content/pickups.ts', find: 'export const UPGRADE_TIERS = 4;', replace: 'export const UPGRADE_TIERS = 3;' },
-  },
+  /*
+    ── THE PROBE FOR *the tier count moved without the levels* WAS HERE ────────────────────────────
+
+    `THE TARGET: a level offers exactly enough weapons to cap the guns` went with its premise in
+    `docs/decisions/0256-a-pickup-keeps-the-count.md` — the guns cap across the run now, not inside
+    a level — so the tier count and the pickup budget are no longer one decision, and moving one
+    without the other is a tuning change rather than a defect.
+  */
   {
     decision: '0083',
     suite: 'tests/missiles.test.ts',
@@ -113,40 +108,13 @@ export const PROBES = [
       replace: "  return loadout.upgrades.length < UPGRADE_TIERS ? 'upgrade' : 'special';",
     },
   },
-  {
-    decision: '0083',
-    suite: 'tests/pickups.test.ts',
-    /*
-      ⚠️ A FILTER BACK ON THE SCATTER. 0082 made a death throw each upgrade on a 50% coin and a
-      play-test called it *"too punishing"*; halving the count is the tidiest way that could come back
-      and the hardest to notice, because the ring still looks like a ring.
-    */
-    broke: 'a filter put back on the scatter, so a death keeps half of what it took',
-    guard: 'THE COST OF DYING: gives back every upgrade, on every seed',
-    edit: {
-      path: 'src/app/frame.ts',
-      // ⚠️ Re-anchored by 0243: a piece carries the count now, so half of what a death took is half
-      // the weapon piece's stack.
-      find: "  if (weapons > 0) throwPiece(w, 'weapon', weapons, index++, pieces);",
-      replace: "  if (weapons > 0) throwPiece(w, 'weapon', Math.ceil(weapons / 2), index++, pieces);",
-    },
-  },
-  {
-    decision: '0083',
-    suite: 'tests/pickups.test.ts',
-    /*
-      ⚠️ SHIELDS BACK IN THE SCATTER — *"but no shields spawn on death."* This is the half of the ask
-      that is true by a TYPE rather than by a rule: `scatterUpgrades` takes `UpgradeKind[]` and a
-      shield is not one. A type stops being a guarantee the moment somebody widens it, and 0083 widened
-      this one from a single member to two.
-    */
-    broke: 'a shield admitted to the scatter, so a death puts armour back on the field',
-    guard: 'and never throws a shield, because a shield was never in the list',
-    edit: {
-      path: 'src/app/frame.ts',
-      // ⚠️ Re-anchored by 0243: the kind is looked up once per piece in `throwPiece`.
-      find: '  const kind = w.pickupKinds[upgrade];',
-      replace: "  const kind = w.pickupKinds['shield'];",
-    },
-  },
+  /*
+    ── TWO PROBES ABOUT THE DEATH SCATTER WERE HERE ────────────────────────────────────────────────
+
+    *A filter put back on the scatter* and *a shield admitted to the scatter* — 0083's answers to
+    *"too punishing"* and *"no shields spawn on death"*. `docs/decisions/0256-a-pickup-keeps-the-count.md`
+    took the scatter out of a death altogether: a death costs one rung and throws nothing, so there
+    is no scatter to filter and nothing for a shield to be admitted to. The shield is the mid-boss's
+    to drop now, and 0256's own probes hold the list.
+  */
 ];

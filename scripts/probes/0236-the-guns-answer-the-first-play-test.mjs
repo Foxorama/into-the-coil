@@ -21,15 +21,16 @@ export const PROBES = [
   },
   {
     decision: '0236',
-    suite: 'tests/guns-played.test.ts',
+    suite: 'tests/pickups.test.ts',
     // No flight: the throw is eased away inside a second, and the eye keeps the across half — a fan.
     // ⚠️ Re-aimed by 0243: the guard is *apart across the lane* now that a death throws two pieces.
-    broke: 'the throw given no flight, so the along half is eased away and the scatter is a fan again',
-    guard: 'THE SCATTER: a death throws its pieces apart',
+    // ⚠️ Re-aimed by 0256: the throw is the mid-boss's drop, and the flight is held where the drop is.
+    broke: 'the throw given no flight, so the along half is eased away and the drop is a fan again',
+    guard: 'is thrown in both axes, flies its throw out, and then waits like any other',
     edit: {
       path: 'src/app/frame.ts',
-      find: 'const SCATTER_FLIGHT = 45;',
-      replace: 'const SCATTER_FLIGHT = 0;',
+      find: 'const DROP_FLIGHT = 45;',
+      replace: 'const DROP_FLIGHT = 0;',
     },
   },
   {

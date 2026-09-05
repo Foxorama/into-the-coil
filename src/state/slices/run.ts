@@ -12,7 +12,7 @@
  */
 
 import { SPECIALS, type SpecialKind } from '../../content/specials.ts';
-import { type UpgradeKind } from '../../content/pickups.ts';
+import { UPGRADE_TIERS, afterDeath, tiersOf, type UpgradeKind } from '../../content/pickups.ts';
 import { DIFFICULTIES, type DifficultyKind } from '../../content/difficulty.ts';
 import { SHIPS } from '../../content/ships.ts';
 import type { WeaponKind } from '../../content/weapons.ts';
@@ -129,11 +129,13 @@ export interface RunState {
   /**
    * Which gun and which tube the upgrades are on — 0233.
    *
-   * ⚠️ **In the RUN, beside the list, because a death takes them with it.** A weapon pickup of a
-   * kind the ship is not carrying switches the gun and starts its ladder again at one rung, so
-   * *which gun* is a thing the list alone cannot say and the save has to hold; `lifeLost` puts both
-   * back to the ship's base kinds on the same line it empties the list.
-   * `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
+   * ⚠️ **In the RUN, beside the list, because the save has to hold them.** A weapon pickup of a
+   * kind the ship is not carrying switches the gun, so *which gun* is a thing the list alone cannot
+   * say. `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
+   *
+   * ⚠️ **A DEATH KEEPS THEM — 0256.** 0233 had `lifeLost` put both back to the ship's base kinds on
+   * the line it emptied the list; a death costs a rung now and not the gun, so the kinds are the one
+   * thing in this state a death never touches.
    */
   weapon: WeaponKind;
   missile: MissileKind;
@@ -151,13 +153,12 @@ export type RunAction =
     *weapon* could not tell a fifth pulse from a first arc.
   */
   /*
-    ⚠️ **`count` is how many rungs the pickup was worth — 0243.** One when absent, which is every
-    authored pickup; a piece a death threw back carries every rung of its kind the death took, and
-    the shell passes that through rather than dispatching once per rung, so the ladder's clamp and
-    the switch rule below see one event.
+    ⚠️ **`count` WAS HERE — 0243's stack, one event for every rung a death threw back — and 0256
+    deleted it.** A death throws nothing back now, so every pickup is worth one rung and the field
+    would have been a number nothing could ever send but one.
   */
-  | { slice: 'run'; type: 'upgraded'; upgrade: 'weapon'; kind: WeaponKind; count?: number }
-  | { slice: 'run'; type: 'upgraded'; upgrade: 'missile'; kind: MissileKind; count?: number }
+  | { slice: 'run'; type: 'upgraded'; upgrade: 'weapon'; kind: WeaponKind }
+  | { slice: 'run'; type: 'upgraded'; upgrade: 'missile'; kind: MissileKind }
   | { slice: 'run'; type: 'levelCleared' };
 
 /**
@@ -240,13 +241,15 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         clearing levels are the thing the ask is protecting, and a free restock every death is what
         made them worth nothing.
 
-        ⚠️ **The UPGRADES still go, and that is what is left of
-        `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md`.** It says a death goes
-        *"back to the ship's base weapon and starting special"*; the base weapon is exactly what an
-        empty upgrade list resolves to, so this line and `weaponFor` between them mean there is no
-        second description anywhere of what the ship shoots when it has nothing. What 0085 amends is
-        the *starting special* half, and `docs/decisions/0083-two-ladders-of-four.md`'s scatter is
-        what hands the upgrades straight back.
+        ── A DEATH COSTS ONE RUNG PER LADDER, AND THE GUN STAYS — 0256 ──────────────────────────────
+
+        ⚠️ **`upgrades: []` WAS THIS LINE, and it was what was left of
+        `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md`** — *"back to the
+        ship's base weapon and starting special"*, with 0085 amending the second half and 0066's
+        scatter handing the first straight back. Asked for after the first play of the mid-bosses:
+        *"a death reduces the power count by 1 (to a minimum of 1)."* `afterDeath` in
+        `src/content/pickups.ts` is the single description of the cost; nothing is thrown back,
+        because the rung IS the cost. The kinds stay too: a death is a rung, not the gun.
 
         ⚠️ **Unconditional on EVERY death, including the last one**, exactly as the arsenal clear was:
         a `lifeLost` that behaved differently on the last life would be a rule with a hidden
@@ -263,10 +266,9 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
             lives: state.lives - 1,
             level: state.level,
             arsenal: state.arsenal,
-            upgrades: [],
-            // The base kinds come back with the base weapon — 0233. A death costs the gun too.
-            weapon: BASE_SHIP.weapon,
-            missile: BASE_SHIP.missile,
+            upgrades: afterDeath(state.upgrades),
+            weapon: state.weapon,
+            missile: state.missile,
             difficulty: state.difficulty,
           };
     case 'took': {
@@ -337,26 +339,21 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
     */
     case 'upgraded': {
       /*
-        ── A DIFFERENT KIND STARTS THE LADDER AGAIN — 0233 ────────────────────────────────────────
+        ── A DIFFERENT KIND KEEPS THE COUNT — 0256, amending 0233 ─────────────────────────────────
 
-        Asked for: *"if they collect a different weapon upgrade power up, they start from level one
-        with that weapon upgrade."* Level one is ONE rung: the pickup that switched the gun is the
-        first upgrade of the new one, so the list keeps the other ladder's entries and holds exactly
-        one of this one. The hull tier follows the list (`weaponFor`), so a ship that switches guns
-        is drawn a tier or two smaller — which is the cost of switching made visible, and the
-        thing that stops the cycle reading as a free re-roll.
+        0233 started the new gun's ladder again at one rung, on *"they start from level one with
+        that weapon upgrade"*. Played with the mid-bosses in: *"picking up a new weapon/missile type
+        doesn't reset your power count — it's too punishing when you accidentally get a pickup with
+        a lot of enemies on screen or right before a boss."* The ladder is the ship's and the kind is
+        what it is fitted to: a pickup of another kind switches the kind and climbs the same ladder,
+        so the list never loses an entry here and the hull keeps its tier through a switch.
 
-        ⚠️ **The same kind is the old rule, untouched**: one more entry, and `tiersOf` clamps it.
+        ⚠️ **CLAMPED AT THE CAP HERE rather than trusted to `tiersOf`.** A pickup of another kind
+        at a full ladder is an upgrade (`effectOf` — the ship changes), and it used to be the one
+        way the list could grow past `UPGRADE_TIERS` of a kind; it switches and adds nothing now, so
+        the list is the tier and the save holds nothing the ladder cannot read.
       */
-      const fitted = action.upgrade === 'weapon' ? state.weapon : state.missile;
-      // Every rung the pickup was worth — 0243. A scattered piece hands back what the death took.
-      const count = action.count === undefined || action.count < 1 ? 1 : action.count;
-      const rungs: UpgradeKind[] = [];
-      for (let i = 0; i < count; i++) rungs.push(action.upgrade);
-      const upgrades =
-        action.kind === fitted
-          ? [...state.upgrades, ...rungs]
-          : [...state.upgrades.filter((u) => u !== action.upgrade), ...rungs];
+      const upgrades = tiersOf(state.upgrades, action.upgrade) < UPGRADE_TIERS ? [...state.upgrades, action.upgrade] : state.upgrades;
       return {
         lives: state.lives,
         level: state.level,

@@ -29,13 +29,13 @@ Upgrades and buffs **carry forward across levels, and are lost on a death** —
 [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md). There is **no shop and no
 currency** — everything is found in the level and applied the instant you touch it.
 
-A run carries **three lives**, fixed. A death spends one and takes the ship back to its base weapon;
-the last one ends the run. ⚠️ **A death does NOT touch the arsenal's charges** —
+A run carries **three lives**, fixed. A death spends one and **costs one rung of each ladder, to a
+minimum of one** — the gun and the tube are kept, and nothing is thrown back, because the rung is the
+cost — [0256](decisions/0256-a-pickup-keeps-the-count.md); the last one ends the run. ⚠️ **A death
+does NOT touch the arsenal's charges** —
 [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) amends 0039's *a death costs the arsenal* to
 the upgrades alone, so bombs banked from clearing levels survive a death and a ship that died with none
-flies again with none. **What a death took is thrown back as one piece per kind** — a weapon pickup
-and a missile pickup, each showing the kind that was lost, holding that face, and wearing ×2, ×3 or
-×4 for the rungs it carries — [0243](decisions/0243-a-death-throws-back-one-piece-per-kind.md).
+flies again with none.
 ⚠️ **There are no extras findable in a level** —
 [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) replaced the extra-life pickup with a
 second shield, so the complement only goes down. See *Upgrades*.
@@ -179,26 +179,28 @@ off by default — see [0024](decisions/0024-the-accessibility-floor-is-settings
 
 ## Upgrades
 
-Found in the level, applied on contact, kept across every level that follows — and **lost on a
-death**, back to the ship's base weapon and starting special
-([0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md)). Every upgrade **changes how
-the ship looks on screen**, and every upgrade is worth taking — an upgrade that cannot change the
-outcome is worse than none.
+Found in the level, applied on contact, kept across every level that follows — and **a death costs
+one rung of each ladder**, never the ladder
+([0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md), amended by
+[0256](decisions/0256-a-pickup-keeps-the-count.md)). Every upgrade **changes how the ship looks on
+screen**, and every upgrade is worth taking — an upgrade that cannot change the outcome is worse than
+none.
 
-**A pickup is rare, and a level offers nine of four kinds** —
-[0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) and
-[0083](decisions/0083-two-ladders-of-four.md). They are premium game pieces: each one is a crossing the
-player commits to under fire, and what the level authors is what the player gets.
+**A pickup is rare: a level authors two, and the fights offer the rest** —
+[0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md),
+[0083](decisions/0083-two-ladders-of-four.md) and [0256](decisions/0256-a-pickup-keeps-the-count.md).
+They are premium game pieces: each one is a crossing the player commits to under fire, and what the
+level authors is what the player gets.
 
-| | a tier buys | tiers | per level |
-|---|---|---|---|
-| **`weapon`** | a barrel **and** a fire-rate step | 4 | 4 |
-| **`missile`** | a tube **and** a rate step, max 2 tubes | 4 | 2 |
-| **`shield`** | one hit that never reaches the hull, capped at 3 | — | 2 |
-| **`bomb`** | charges for the arsenal, uncapped — the only pickup the player decides when to use | — | 1 |
+| | a tier buys | tiers | a level authors | the mid-boss drops | the end boss |
+|---|---|---|---|---|---|
+| **`weapon`** | a barrel **and** a fire-rate step | 4 | 1 near the start; level one a second before its mid-boss | 1 | — |
+| **`missile`** | a tube **and** a rate step, max 2 tubes | 4 | 1 a fifth of the way in; level one a second between the fights | — | — |
+| **`shield`** | one hit that never reaches the hull, capped at 3 | — | — | 1 | — |
+| **`bomb`** | charges for the arsenal, uncapped — the only pickup the player decides when to use | — | — | 1 | the clear's charge |
 
-**A level offers exactly enough weapons to cap the guns before its boss**, and then a couple of things
-that are not weapons. The nine is derived from that rather than chosen.
+**The guns cap across the run rather than inside a level**, because a ladder is only ever one rung
+down.
 
 ⚠️ **An upgrade pickup taken once its own ladder is full becomes a bomb charge** — per ladder, which is
 what makes bombs uncapped. That is how *every upgrade is worth taking* survives having a cap; before
@@ -210,8 +212,10 @@ nothing is a challenge, bosses die in less a second."*
 ladder, its own pickup face and its own three hulls, so **the ship wears the gun it is carrying**. A
 weapon pickup turns to the next gun every two seconds, waits long enough to show every gun twice, and
 wanders the player's box while it does; what the player is handed is the face it was showing.
-**Taking a different gun starts that gun's ladder at one rung** and leaves the missile ladder alone.
-The missile pickup cycles the same way over the tubes. **Every face of a cycling pickup is its own
+**Taking a different gun switches the gun and keeps the count** — the ladder is the ship's, and the
+gun is what it is fitted to ([0256](decisions/0256-a-pickup-keeps-the-count.md), amending 0233's
+*starts at one rung*) — and leaves the missile ladder alone. The missile pickup cycles the same way
+over the tubes. **Every face of a cycling pickup is its own
 glyph in its own ink** inside the one bubble that says *pickup* —
 [0239](decisions/0239-the-guns-answer-the-third-play-test.md),
 [0240](decisions/0240-the-blades-reach-the-boss.md): the pulse and the missile in their
@@ -255,10 +259,11 @@ enemies, upgrade flavour and bosses.
 
 **Difficulty has two axes.** A **tier** is chosen before a run and fixed for its length
 ([0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md)). A **dial** moves
-during one: it is `1 + the level's index + the weapon pickups that level has already offered`, so it
-climbs through a level, drops back at a boundary without losing the run's progress, and reaches
-**11 at the last boss** — [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md). The two
-multiply; neither replaces the other.
+during one: it is `1 + 4/3 × the level's index + the weapon pickups that level has already offered`
+— the mid-boss's dropped weapon counts — so it climbs through a level, drops back at a boundary
+without losing the run's progress, and reaches **11 at the last boss** —
+[0084](decisions/0084-the-dial-is-the-level-and-the-guns.md),
+[0256](decisions/0256-a-pickup-keeps-the-count.md). The two multiply; neither replaces the other.
 
 ⚠️ **What the dial spends today is one rule**: nothing takes more than one hit until the first level
 has offered two weapon pickups. That is the reported spike at the start of the game, and the dial was

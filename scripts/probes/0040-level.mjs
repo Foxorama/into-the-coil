@@ -64,10 +64,10 @@ export const PROBES = [
     edit: {
       path: 'src/content/levels.ts',
       // ⚠️ RE-ANCHORED by `docs/decisions/0086-the-teeth-wait-for-the-gun.md`, which took the turret
-      // out of the third of these lines. The break is unchanged — three consecutive waves thinned to
-      // one body each — and the anchor is the run-up band it now sits in.
-      find: "  { at: 1652, enemy: 'drifter', formation: 'line', count: 5, lane: 60 },\n  { at: 1710, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },\n  { at: 1768, enemy: 'drifter', formation: 'vee', count: 6, lane: 50 },",
-      replace: "  { at: 2400, enemy: 'drifter', formation: 'line', count: 1, lane: 60 },\n  { at: 2490, enemy: 'weaver', formation: 'line', count: 1, lane: 45 },\n  { at: 2580, enemy: 'drifter', formation: 'vee', count: 1, lane: 50 },",
+      // out of the third of these lines, and by 0256, which moved the run-up band up the level and
+      // put the teeth here. The break is unchanged — three consecutive waves thinned to one body each.
+      find: "  { at: 1652, enemy: 'lancer', formation: 'line', count: 5, lane: 60 },\n  { at: 1710, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },\n  { at: 1768, enemy: 'drifter', formation: 'vee', count: 6, lane: 50 },",
+      replace: "  { at: 2400, enemy: 'lancer', formation: 'line', count: 1, lane: 60 },\n  { at: 2490, enemy: 'weaver', formation: 'line', count: 1, lane: 45 },\n  { at: 2580, enemy: 'drifter', formation: 'vee', count: 1, lane: 50 },",
     },
   },
   {

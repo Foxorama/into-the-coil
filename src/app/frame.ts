@@ -57,8 +57,8 @@ import type { Intent } from '../sim/intent.ts';
 import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
 import type { Pool } from '../sim/pool.ts';
-import { BOLT_STEPS, paintBolts, paintScene, paintStacks, type Bound, type Landmarks, type Sky } from '../render/scene.ts';
-import { LANDMARK_SLOTS, SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
+import { BOLT_STEPS, paintBolts, paintScene, type Bound, type Landmarks, type Sky } from '../render/scene.ts';
+import { LANDMARK_SLOTS, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
 import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
@@ -67,7 +67,7 @@ import { INVULN_STEPS, SHIELD_MARK, hullFor, shieldsOf } from '../content/ships.
 import { SHOTS } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
-import { DEFAULT_ORIGIN, type LevelRow } from '../content/levels.ts';
+import { DEFAULT_ORIGIN, MID_BOSS_DROP, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
 import { type DifficultyRow, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
 import { nextOnGrid } from '../content/cadence.ts';
@@ -77,11 +77,10 @@ import {
   PICKUP_REPEATS,
   type PickupKind,
   type PickupRow,
-  type UpgradeKind,
   type Weapon,
 } from '../content/pickups.ts';
-import { WEAPONS, WEAPON_KINDS, type FlightKind } from '../content/weapons.ts';
-import { MISSILES, MISSILE_KINDS } from '../content/missiles.ts';
+import { WEAPONS, type FlightKind } from '../content/weapons.ts';
+import { MISSILES } from '../content/missiles.ts';
 import { SPECIALS, pyreFor, type SpecialKind } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
 import { belch, curtainStance, openBy, phaseFor, stepBoss, throwCurtain, uncoilsBy } from './boss.ts';
@@ -301,10 +300,11 @@ const GOLDEN_ANGLE = 2.399963229728653;
  */
 // A shade faster since 0243: two pieces thrown a third of a turn off the lane have to clear the ease
 // in both axes each, where eight pieces round a ring shared the axes between them.
-const SCATTER_SPEED = 0.85;
+// `SCATTER_*` until 0256, when the death scatter went and the mid-boss's drop kept the throw.
+const DROP_SPEED = 0.85;
 
 /**
- * How long a scattered upgrade flies its throw before it joins the wait, in steps.
+ * How long a dropped piece flies its throw before it joins the wait, in steps.
  *
  * ── `SCATTER_STEPS` WAS HERE: A SHORT TIMER, AND 0236 RETIRED IT ────────────────────────────────
  *
@@ -314,38 +314,28 @@ const SCATTER_SPEED = 0.85;
  * (0233) and the pieces that come back cycle, so a player recovering a loadout has three things to
  * time at once; five seconds was sized for one. A scattered piece carries `lingerFor` like any other.
  *
- * ⚠️ **What is left is the FLIGHT: three quarters of a second at `SCATTER_SPEED`**, bouncing off the
+ * ⚠️ **What is left is the FLIGHT: three quarters of a second at `DROP_SPEED`**, bouncing off the
  * box, before the wander takes it. Long enough that eight pieces are visibly eight headings —
  * *"they just explode up and down now"* was the along half being eased away inside a second — and
  * short enough that none of them is far from where the ship died when the wait begins.
  */
-const SCATTER_FLIGHT = 45;
+const DROP_FLIGHT = 45;
 
 /*
-  ── `SCATTER_KEPT` WAS HERE AND IT LASTED ONE PLAY-TEST ──────────────────────────────────────────
+  ── THE DEATH SCATTER WAS HERE, THROUGH FOUR DECISIONS, AND 0256 ENDED IT ────────────────────────
 
-  0082 made a death throw back each upgrade on a 50% coin, which was the ask at the time: *"when a
-  player dies let's change it to 50% chance of each power up they have collected spawning from their
-  death, current implementation means there's not really a cost to dying at all."*
+  0066 threw back what a death took; 0082 made it a 50% coin (*"there's not really a cost to dying
+  at all"*); 0083 put it back to all of it (*"too punishing"*); 0243 made it one piece per kind
+  wearing ×N (*"too hard to grab all the different powerups… in the middle of a hail of bullets"*).
+  Four answers to one question — what does a death cost — and every one of them was a crossing under
+  fire. `docs/decisions/0256-a-pickup-keeps-the-count.md` makes the cost a rung: `afterDeath` in
+  `src/content/pickups.ts` takes one off each ladder and nothing is thrown, so a death is over when
+  the ship comes back.
 
-  ⚠️ **It was flown and the verdict was one word.** *"Tested the 50% on death and it's too punishing,
-  let's make 100% for weapons and missiles."*
-  `docs/decisions/0083-two-ladders-of-four.md`. So a death throws back everything it took, which is
-  what `docs/decisions/0066-a-death-scatters-what-it-took.md` built and 0082 briefly amended.
-
-  ⚠️ **The FILTER is deleted rather than set to 1.** A coin that always comes up heads is a mechanism
-  nothing can test — its probe would go STILL GREEN, and 0019 is explicit that an unfalsifiable guard
-  is worse than none. What survives is `scatterRing`'s explicit `count`, which was written for the
-  filter and is worth keeping without it: the ring is spaced over the pieces that actually reach the
-  field rather than over the ones the death took, so a pool that truncates leaves a smaller ring
-  instead of a gappy one.
-
-  ⚠️ **AND SHIELDS ARE NOT IN THIS AT ALL, which was already true and is now guarded.** *"But no
-  shields spawn on death."* A shield lives on the ship's `health`
-  (`docs/decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md`) rather
-  than in the upgrade list, so it has never been scatterable — `scatterUpgrades` takes `UpgradeKind[]`
-  and a shield is not one. `tests/pickups.test.ts` now holds that it stays that way, because *true by
-  accident* is one refactor from false.
+  ⚠️ **What survives is the THROW, because a mid-boss's death uses it** — `dropPickups` below: the
+  ring, the jitter, the flight and the bounce off the box, on the same constants, thrown from a hull
+  rather than a wreck. Every number here was sized for pieces leaving a ship and three pieces leave
+  a boss the same way.
 */
 
 /**
@@ -363,26 +353,26 @@ const SCATTER_FLIGHT = 45;
  * looks like a diagram; without the second the player loses a piece to a coincidence, which is one
  * of the upgrades a death took and did not give back.
  */
-const SCATTER_JITTER_SHARE = 0.35;
+const DROP_JITTER_SHARE = 0.35;
 /**
  * And a ceiling on the jitter in radians, since 0243: a share of the gap was written for a ring of
  * eight, where the gap is an eighth of a turn; at two pieces the gap is half a turn and a third of
  * it would swing a piece from nearly along the lane to nearly across it. A ninth of a turn either
  * way keeps both pieces in both axes.
  */
-const SCATTER_JITTER_MAX = 0.2;
+const DROP_JITTER_MAX = 0.2;
 
-/** The slowest a scattered piece may leave, as a fraction of `SCATTER_SPEED`. */
-const SCATTER_SPREAD_MIN = 0.7;
+/** The slowest a dropped piece may leave, as a fraction of `DROP_SPEED`. */
+const DROP_SPREAD_MIN = 0.7;
 
 /**
- * The fastest a scattered piece may leave, as a fraction of `SCATTER_SPEED`.
+ * The fastest a scattered piece may leave, as a fraction of `DROP_SPEED`.
  *
  * ⚠️ **The spread is what makes the ring read as thrown rather than as drawn.** Identical speeds
  * put every piece on the same expanding circle for the whole five seconds, which is a shape and not
  * an event.
  */
-const SCATTER_SPREAD_MAX = 1.3;
+const DROP_SPREAD_MAX = 1.3;
 
 /*
   ── `PICKUP_CLOSE_SHARE` WAS HERE, AND 0233's WANDER IS WHAT REPLACED IT ─────────────────────────
@@ -804,17 +794,16 @@ export interface World {
    */
   burstRng: Rng;
   /**
-   * The scatter stream, and it is separate from `burstRng` for the opposite reason `burstRng` is
+   * The drop stream, and it is separate from `burstRng` for the opposite reason `burstRng` is
    * separate from `rng`.
    *
-   * ⚠️ **A scattered piece's heading is NOT cosmetic**, which is the whole distinction
-   * `docs/decisions/0021-one-stream-per-concern.md` turns on. Which pieces a player can reach in the
-   * five seconds a scatter lasts is the entire cost of a death
-   * (`docs/decisions/0066-a-death-scatters-what-it-took.md`), so it must not share a generator with
-   * a fragment's direction — a burst added to a new explosion somewhere would otherwise deal a
-   * different death.
+   * ⚠️ **A dropped piece's heading is NOT cosmetic**, which is the whole distinction
+   * `docs/decisions/0021-one-stream-per-concern.md` turns on. Where a mid-boss's pieces go is what
+   * the fight was worth (`docs/decisions/0256-a-pickup-keeps-the-count.md`), so it must not share a
+   * generator with a fragment's direction — a burst added to a new explosion somewhere would
+   * otherwise deal a different drop. It was the death scatter's stream (0066) until 0256.
    */
-  scatterRng: Rng;
+  dropRng: Rng;
   /**
    * The arc's own stream — 0021, one stream per concern. It seeds a link's jag and picks where on a
    * boss a jumping bolt lands; a bolt that rolled on the spawn stream would move a wave by one enemy
@@ -937,7 +926,7 @@ export interface World {
    * `src/state/`'s business — an extra life and an upgrade land in different fields and are cleared
    * by different events.
    */
-  onPickup: (kind: PickupKind, face: number, stack: number) => void;
+  onPickup: (kind: PickupKind, face: number) => void;
   /**
    * The ship's health as the chrome last drew it.
    *
@@ -1564,8 +1553,7 @@ export class GameFrame implements Frame {
       w.onCue('pickup', w.ship.across);
       // And the FACE it was showing — 0233. Which gun a weapon pickup was offering is decided on
       // the step it is taken, and `collectInto` logged it beside the kind for exactly this line.
-      // And how many rungs it was worth — 0243: a scattered piece carries every rung of its kind.
-      w.onPickup(kind, w.collected.face[i]!, w.collected.stack[i]!);
+      w.onPickup(kind, w.collected.face[i]!);
     }
 
     // Every enemy that died this step leaves something behind. The positions were recorded by the
@@ -1678,6 +1666,13 @@ export class GameFrame implements Frame {
       if (w.fight === 0) {
         w.bossBurstIn = BOSS_DEATH_STEPS;
         w.bossBurstRadius = w.bossRow.radius;
+        /*
+          ⚠️ **THE MID-BOSS DROPS WHAT THE FIGHT IS WORTH — 0256.** A weapon, a shield and a
+          charge, thrown from where it died before the next fight's state is set up, because
+          `bossOffset` and `bossAcross` are where it was and `nextFight` is about to be about the
+          other boss. The end boss drops nothing here: its charge is the clear's (0053).
+        */
+        dropPickups(w, w.cameraAlong + w.bossOffset, w.bossAcross, MID_BOSS_DROP);
         nextFight(w);
       } else {
         w.clearedIn = BOSS_DEATH_STEPS;
@@ -1696,18 +1691,10 @@ export class GameFrame implements Frame {
     // After everything, so a bolt is over what it struck — 0233. The landing sparks are entities in
     // `layers` and were blitted above; this strokes the lines between them.
     paintBolts(w.surface, w.view, w.bolts, camera, alpha);
-    // And a badge on every scattered piece worth more than one rung — 0243. Over the pickup it
-    // rides, and after the bolts so nothing crosses it.
-    paintStacks(w.surface, w.view, w.pickups, STACK_BADGES, camera, alpha);
+    // `paintStacks` was here — 0243's badge on a scattered piece — and 0256 deleted it with the
+    // scatter: nothing on the field is worth more than one rung now.
   }
 }
-
-/**
- * The badge a scattered piece wears for its stack, by stack: ×2, ×3, ×4 — 0243. A stack past the
- * last wears the last; `UPGRADE_TIERS` is four, so nothing does.
- */
-// @setup: three sprite indices, for the module's lifetime.
-const STACK_BADGES: readonly number[] = [SPRITE.stackTwo, SPRITE.stackThree, SPRITE.stackFour];
 
 /**
  * Whether this is the step the boss came apart on.
@@ -2285,7 +2272,7 @@ function firePulse(w: World): void {
   ⚠️ **What went with it**: `CYCLE`, `CYCLE_UNITS` and `faceOf` in `src/content/pickups.ts`,
   `pickupCycle` and `pickupFlipped` on the world, `tests/cycling.test.ts`, and
   `scripts/probes/0052-cycling.mjs`. An entity's `kind` is now simply what the level authored, all the
-  way from the spawn to the collection, which is what `spawnPickup` and `scatterUpgrades` already
+  way from the spawn to the collection, which is what `spawnPickup` and `dropPickups` already
   assumed of the pieces they place.
 */
 
@@ -3452,7 +3439,7 @@ function driftPickups(w: World): void {
       the first play-test: *"on death, the power ups needs to scatter more to the 8 directions -> they
       just explode up and down now."* They were thrown in eight directions and the along half was
       eased away inside a second, so what the eye kept was the across half: a fan. A scattered piece
-      now flies its throw out for `SCATTER_FLIGHT` steps, bouncing off the box's ends and the lane's
+      now flies its throw out for `DROP_FLIGHT` steps, bouncing off the box's ends and the lane's
       walls, and only then joins the wait every other pickup has — and it keeps that wait, which is
       the other half of the report: *"they need to last as long as regular power ups."*
     */
@@ -3566,19 +3553,17 @@ function driftPickups(w: World): void {
 }
 
 /**
- * Throw the upgrades a death has just cost back onto the field.
+ * Throw `kinds` onto the field from `along`, `across` — what a mid-boss's death is worth.
  *
- * Asked for in play: *"when a player dies, their power ups should explode from where they were and
- * bounce around the screen… non-cycling and on a short timer so there's enough time to grab some, but
- * maybe not all."* `docs/decisions/0066-a-death-scatters-what-it-took.md`.
+ * ── THE THROW THE DEATH SCATTER LEFT BEHIND — 0256 ──────────────────────────────────────────────
  *
- * ⚠️ **Exported and called by `src/app/mount.ts`, exactly as `respawn` and `launchSpecial` are.** The
- * frame cannot see the run — `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md`
- * puts the upgrade list in `src/state/` — so the shell hands over what was lost and this is the half
- * that moves entities.
- *
- * ⚠️ **It has to be called BEFORE the reducer clears the list**, which is a real ordering the shell
- * has to keep. There is no way to state it here; `tests/pickups.test.ts` drives the shell's order.
+ * This was `scatterUpgrades`: 0066's *"when a player dies, their power ups should explode from where
+ * they were and bounce around the screen"*, called by `src/app/mount.ts` with what the death took.
+ * `docs/decisions/0256-a-pickup-keeps-the-count.md` made a death cost a rung and throw nothing, and
+ * gave the throw to the fight halfway instead: *"weapons → 1 from the miniboss death; shields → 1
+ * from the miniboss death; bombs → 1 from the miniboss death."* `MID_BOSS_DROP` in
+ * `src/content/levels.ts` is the list, and `step` throws it from where the hull was on the step it
+ * dies. Exported for the tests, which throw from a hull of their own.
  *
  * ⚠️ **A RING rather than a line, and the even spacing survives the jitter** —
  * `docs/decisions/0077-a-pickup-arrives-rather-than-stopping.md`. Reported from play: *"when a player
@@ -3587,120 +3572,74 @@ function driftPickups(w: World): void {
  *
  * ⚠️ **0066's reason for that is kept and its conclusion is not.** *"A seeded scatter that happened
  * to stack two of them on one lane would take one of them away"* is still true, so the angle is
- * `i/n` of a circle PLUS a bounded jitter rather than a free draw — six upgrades still arrive as six
+ * `i/n` of a circle PLUS a bounded jitter rather than a free draw — three pieces arrive as three
  * separate things. What has gone is the claim that a piece thrown along would leave the screen: it
  * decays back to the scroll rate in `driftPickups`, so its whole excursion is about 11 world units.
+ *
+ * ⚠️ **Bounded by the pool, and the ring is spaced over what will actually reach it.** Spacing over
+ * the whole list and letting the pool refuse the tail is the version that leaves gaps, which is the
+ * one failure mode 0066 says the even spacing exists to prevent. Read off the POOL rather than from
+ * `CAPACITY` in `src/app/mount.ts`: `mount.ts` imports this file, so importing it back would be a
+ * cycle, and `Pool` already knows how big it is.
  */
-export function scatterUpgrades(w: World, upgrades: readonly UpgradeKind[]): void {
-  /*
-    ── ALL OF THEM, AND FOR ONE DAY IT WAS HALF ───────────────────────────────────────────────────
-
-    Reported from play: *"tested the 50% on death and it's too punishing, let's make 100% for weapons
-    and missiles, but no shields spawn on death."*
-    `docs/decisions/0083-two-ladders-of-four.md`, restoring what
-    `docs/decisions/0066-a-death-scatters-what-it-took.md` built.
-
-    ⚠️ **Shields are absent by CONSTRUCTION rather than by a filter.** They live on the ship's
-    `health` (0050), not in the upgrade list, so the signature is the guarantee: this takes
-    `UpgradeKind[]` and a shield is not one. `tests/pickups.test.ts` holds it anyway, because *true
-    because of a type* stops being obvious the moment somebody widens the type.
-
-    ⚠️ **Bounded by the pool, and the bound is what `count` is for.** A player carrying thirty
-    upgrades cannot have thirty pieces on the field — `src/sim/pool.ts` drops rather than grows — so
-    the ring is spaced over what will actually reach it. Spacing over the whole loadout and letting
-    the pool refuse the tail is the version that leaves gaps, which is the one failure mode 0066 says
-    the even spacing exists to prevent.
-
-    ⚠️ **Read off the POOL rather than from `CAPACITY` in `src/app/mount.ts`.** They are the same
-    number and only one of them is reachable from here: `mount.ts` imports this file, so importing it
-    back would be a cycle. `Pool` already knows how big it is, which makes this the single description
-    rather than a copy that has to be kept in step.
-
-    ⚠️ **Unreachable at the current tiers, and kept anyway.** Both ladders cap at `UPGRADE_TIERS`, so
-    the shell can never build a list longer than eight — but `weaponFor` deliberately tolerates a
-    longer one (a saved run, a test), and this is the line that stops such a list spacing a ring the
-    field cannot hold.
-  */
-  /*
-    ── ONE PIECE PER KIND, CARRYING THE COUNT — 0243 ──────────────────────────────────────────────
-
-    Reported from the fifth play-test: *"we also need to change the death pop of powerups to be a
-    single missile power up bubble with an x2/3/4 etc if they had multiple powerups, and same for
-    weapons, it's too hard to grab all the different powerups with all the different sequencing in
-    the middle of a hail of bullets."* Every rung of each kind is counted, and one piece per kind
-    present is thrown with that count on it (`stack`). The pool bound above is moot at two pieces,
-    and kept in the type: a scatter can never be longer than the kinds there are.
-  */
-  let weapons = 0;
-  let missiles = 0;
-  for (let i = 0; i < upgrades.length; i++) {
-    if (upgrades[i] === 'weapon') weapons++;
-    else missiles++;
-  }
-  const pieces = (weapons > 0 ? 1 : 0) + (missiles > 0 ? 1 : 0);
-  let index = 0;
-  if (weapons > 0) throwPiece(w, 'weapon', weapons, index++, pieces);
-  if (missiles > 0) throwPiece(w, 'missile', missiles, index, pieces);
+export function dropPickups(w: World, along: number, across: number, kinds: readonly PickupKind[]): void {
+  const room = w.pickups.capacity - w.pickups.size;
+  const pieces = kinds.length < room ? kinds.length : room;
+  for (let i = 0; i < pieces; i++) throwPiece(w, along, across, kinds[i]!, i, pieces);
 }
 
 /**
- * Throw one piece of `upgrade`, worth `stack` rungs, as the `index`th of `pieces` around the wreck.
+ * Throw one piece of `kind` from `along`, `across`, as the `index`th of `pieces` around it.
  *
- * ⚠️ **`pieces` rather than the loadout's length, and it survived two decisions.** 0082's 50% coin
- * is gone and 0243 made the ring two pieces at most, but the reason for the divisor is unchanged:
- * it spaces the throw over what will really appear.
+ * ⚠️ **`pieces` rather than the list's length, and it survived three decisions.** 0082's 50% coin
+ * is gone, 0243 made the ring two pieces and 0256 makes it three, but the reason for the divisor is
+ * unchanged: it spaces the throw over what will really appear.
  */
-function throwPiece(w: World, upgrade: UpgradeKind, stack: number, index: number, pieces: number): void {
-  /*
-    ⚠️ **WHERE THE SHIP DIED, not where the ship object still is** — 0079. This used to read
-    `w.ship.along` and that was exactly right for as long as the scatter happened on the step the hull
-    reached zero. It now happens at the END of the beat, `DEATH_STEPS` later, and the ship object has
-    been sitting still in world coordinates the whole time — so the camera has moved about 27 units
-    out from under it, and the pickups would arrive a beat's worth of scroll behind the wreck they
-    came off. `stepBossDeath` remembers an offset for the identical reason and 0062 says so.
-  */
-  const along = w.cameraAlong + w.deathOffset;
-  const kind = w.pickupKinds[upgrade];
-  const row = w.pickupRows[kind];
+function throwPiece(w: World, along: number, across: number, kind: PickupKind, index: number, pieces: number): void {
+  const slot = w.pickupKinds[kind];
+  const row = w.pickupRows[slot];
   if (row === undefined) return;
   const item = w.pickups.spawn();
-  // A scatter one pickup short is dropped rather than grown — `src/sim/pool.ts` has the argument.
+  // A drop one pickup short is dropped rather than grown — `src/sim/pool.ts` has the argument.
   if (item === null) return;
-  reset(item, along, w.deathAcross, row, kind);
-  item.stack = stack;
+  reset(item, along, across, row, slot);
   /*
-    ⚠️ **A SCATTERED PIECE SHOWS THE FACE THE PLAYER JUST LOST, AND HOLDS IT** — 0233, finished by
-    0243. What a death throws back is what it took (0066), and what it took was a gun of a
-    particular kind; a piece that came up showing the other gun would be offering the player a
-    switch they did not ask for at the one moment they are trying to recover. 0233 had it cycle
-    from there like any other, and the fifth play-test named the cycling as the thing that made a
-    death's pieces impossible to grab under fire — so a scattered piece does not turn.
+    ⚠️ **THE DIAL TURNS HERE TOO — 0084, and it turns on the SPAWN**, exactly as `spawnPickup`'s does
+    and after the pool has answered for the same reason: a weapon the field had no room for was not
+    offered. `weaponsOfferedBy` in `src/content/levels.ts` counts the drop beside the list, so the top
+    of the dial is still recomputed from the content.
   */
-  startCycle(item, row, upgrade === 'weapon' ? WEAPON_KINDS.indexOf(w.weapon.kind) : MISSILE_KINDS.indexOf(w.weapon.missile));
-  item.faceIn = 0;
+  if (kind === 'weapon') w.weaponsOffered++;
   /*
-    THE THROW — an angle per piece, evenly spaced round the wreck and then jittered.
+    ⚠️ **A DROPPED PIECE CYCLES LIKE AN AUTHORED ONE — 0233.** 0243 had a scattered piece hold the
+    face the player just lost, because what a death threw back was what it took and a switch under
+    fire was the report; a drop is an offer, not a return, and since 0256 a switch keeps the count,
+    so the cycle costs nothing but the choice. The face and the bob's phase by index, on
+    `startCycle`'s own argument: pieces near each other must visibly differ on every run.
+  */
+  startCycle(item, row, index % row.faces.length);
+  item.bobPhase = index * GOLDEN_ANGLE;
+  /*
+    THE THROW — an angle per piece, evenly spaced round the hull and then jittered.
 
     ⚠️ **A SIXTH OF A TURN ON, since 0243.** With one or two pieces, a ring that started along the
     lane put one piece straight ahead and the other straight behind, a dozen units from the box's
     back wall and nothing across; a ring started straight across put nothing along. A sixth of a
-    turn on, the two leave ahead-and-across one way and behind-and-across the other — mostly
-    across, which is the room there is, and enough along to be a throw — both axes, both sides,
-    which is 0066's picture kept at two. The jitter is under half the gap between neighbours and
-    capped besides, so the two can never swap sides.
+    turn on, the pieces leave in both axes, both sides — 0066's picture. The jitter is under half
+    the gap between neighbours and capped besides, so no two can swap sides.
 
     ⚠️ **`velAlong` is the scroll rate PLUS the along component**, which is 0034's *every speed is
     in the camera's frame*. The along half is spent against `PICKUP_EASE` in `driftPickups`, and
-    what is left is a piece holding the distance the ship died at and bouncing across the lane.
+    what is left is a piece holding the distance the hull died at and bouncing across the lane.
   */
-  const share = (Math.PI / pieces) * SCATTER_JITTER_SHARE;
-  const halfGap = share < SCATTER_JITTER_MAX ? share : SCATTER_JITTER_MAX;
-  const angle = Math.PI / 3 + (index / pieces) * Math.PI * 2 + w.scatterRng.range(-halfGap, halfGap);
-  const speed = SCATTER_SPEED * w.scatterRng.range(SCATTER_SPREAD_MIN, SCATTER_SPREAD_MAX);
+  const share = (Math.PI / pieces) * DROP_JITTER_SHARE;
+  const halfGap = share < DROP_JITTER_MAX ? share : DROP_JITTER_MAX;
+  const angle = Math.PI / 3 + (index / pieces) * Math.PI * 2 + w.dropRng.range(-halfGap, halfGap);
+  const speed = DROP_SPEED * w.dropRng.range(DROP_SPREAD_MIN, DROP_SPREAD_MAX);
   item.velAcross = Math.sin(angle) * speed;
   item.velAlong = w.scrollPerStep + Math.cos(angle) * speed;
   // The throw is a flight, and then the wait every pickup has — 0236. `driftPickups` has both.
-  item.turnsLeft = SCATTER_FLIGHT;
+  item.turnsLeft = DROP_FLIGHT;
   item.holdFor = lingerFor(row);
 }
 

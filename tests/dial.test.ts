@@ -9,7 +9,7 @@ import {
   dialFor,
   singleHitOnly,
 } from '../src/content/difficulty.ts';
-import { LEVELS, LEVEL_KINDS, MULTI_HIT_RUNUP } from '../src/content/levels.ts';
+import { LEVELS, LEVEL_KINDS, MULTI_HIT_RUNUP, weaponsOfferedBy } from '../src/content/levels.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { GameFrame, PICKUP_LINGER_STEPS, advanceLevel } from '../src/app/frame.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
@@ -31,14 +31,20 @@ import { playableWorld } from './world.ts';
  * none of them is a constant typed here.
  *
  * ⚠️ **The endpoint is recomputed from the CONTENT rather than restated.** `DIAL_MAX` is 11 and the
- * levels offer four weapon pickups each over seven levels — if a level gains one, the last boss moves
- * past the top of the dial and the clamp starts eating it. That is the failure this file exists for,
- * and it is invisible in `src/content/levels.ts` because nothing there mentions the dial.
+ * levels offer two weapon pickups each over seven levels, three in the first — one authored and one
+ * the mid-boss drops, since 0256 — and if a level gains one, the last boss moves past the top of the
+ * dial and the clamp starts eating it. That is the failure this file exists for, and it is invisible
+ * in `src/content/levels.ts` because nothing there mentions the dial.
  */
 
-/** How many `weapon` pickups a level puts on the field, which is what turns the dial. */
+/**
+ * How many `weapon` pickups a level puts on the field, which is what turns the dial.
+ *
+ * ⚠️ **`weaponsOfferedBy` and not the list, since 0256** — the mid-boss's drop turns the dial too,
+ * and a count read off the list alone would put the last boss at 9 and call it 11.
+ */
 function weaponsIn(kind: (typeof LEVEL_KINDS)[number]): number {
-  return LEVELS[kind].pickups.filter((p) => p.kind === 'weapon').length;
+  return weaponsOfferedBy(LEVELS[kind]);
 }
 
 describe('the dial climbs through a level and sawtooths across the run', () => {
@@ -109,18 +115,23 @@ describe('the dial climbs through a level and sawtooths across the run', () => {
       that starts at 1 and should be at 11 when the player is dealing with the last boss at the end of
       the last level."*
 
-      This multiplies out the content — seven levels, four weapons each — and checks it lands on
-      `DIAL_MAX` with nothing clamped away. A level that gained a weapon pickup, or an eighth level,
-      would fail HERE rather than silently pushing the last two levels into a ceiling.
+      This multiplies out the content — seven levels, two weapons each counting the mid-boss's —
+      and checks it lands on `DIAL_MAX` with nothing clamped away. A level that gained a weapon
+      pickup, or an eighth level, would fail HERE rather than silently pushing the last two levels
+      into a ceiling.
+
+      ⚠️ **`DIAL_PER_LEVEL` is a fraction since 0256 and the sum is checked to the nearest
+      thousandth**, because 4/3 six times is 8 in arithmetic and 7.999… in a double.
     */
     const last = LEVEL_KINDS.length - 1;
     const atLastBoss = DIAL_MIN + last * DIAL_PER_LEVEL + weaponsIn(LEVEL_KINDS[last]!) * DIAL_PER_WEAPON;
     expect(
       atLastBoss,
       `the content works out to ${atLastBoss} at the last boss against a dial that tops out at ${DIAL_MAX}`,
-    ).toBe(DIAL_MAX);
-    expect(dialFor(last, weaponsIn(LEVEL_KINDS[last]!)), 'the last boss is not fought at the top of the dial').toBe(
+    ).toBeCloseTo(DIAL_MAX, 3);
+    expect(dialFor(last, weaponsIn(LEVEL_KINDS[last]!)), 'the last boss is not fought at the top of the dial').toBeCloseTo(
       DIAL_MAX,
+      3,
     );
   });
 
