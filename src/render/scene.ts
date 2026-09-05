@@ -233,7 +233,7 @@ export const BOLT_STEPS = 8;
 const BOLT_VERTICES = 9;
 /** Vertices on the twig that branches off a link. */
 const TWIG_VERTICES = 3;
-/** Stroke width of the core, in world units. The glow under it is three times this. */
+/** Stroke width of the core, in world units. The glow under it is four times this, the flash fourteen — 0238. */
 const BOLT_WIDTH = 0.5;
 /** How far a vertex may sit off the straight line, as a fraction of the link's length. */
 const BOLT_JAG = 0.16;

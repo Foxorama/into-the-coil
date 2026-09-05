@@ -121,6 +121,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the shuriken: a blade circles the ship, spent by its own clock, landing once per flash** | [0234](decisions/0234-a-blade-circles-the-ship.md) |
 | **the blades' first play-test, answered: a star the size of the ship, a spiral that ends at the edge of the screen** | [0237](decisions/0237-the-blades-answer-the-first-play-test.md), [`the-blades-played`](../reports/the-blades-played-2026-09-05.md) |
 | **the seeker: a second missile kind that hunts the nearest body, any direction** | [0235](decisions/0235-a-seeker-hunts-the-nearest-body.md) |
+| **the second play-test, answered in the art: a seeker in the ship's ink, a flash round the bolt, steel blades bigger than the ship** | [0238](decisions/0238-the-picture-answers-the-second-play-test.md), [`the-picture-played`](../reports/the-picture-played-2026-09-05.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -749,14 +750,16 @@ was *"cool… but it adds a huge degree of difficulty now"*, and the seven items
 quantity answered by a model change. **0234 was played the same way and
 [0237](decisions/0237-the-blades-answer-the-first-play-test.md) answers both items of
 [`the-blades-played`](../reports/the-blades-played-2026-09-05.md)** — a star the size of the ship,
-and a spiral that ends at the edge of the screen instead of on a clock. **0235 has not been played
-at all.** What is owed is another play, on the branch preview, of the blades as 0237 left them and
-the seeker as 0235 built it; an ear on `arc`, `zap` and `throw` as they are now
-(`scripts/hear.mjs --only=arc,zap,throw` writes them); and an eye on the whirlpool and on the
-seeker turning in flight, at the camera the game ships — every claim about either is a model
-quantity. The balance of a gun that cannot miss and a gun that sweeps is a hand's, and their
-ladders are starting points. The bench takes `?weapon=arc` and `?weapon=shuriken` with `&tier=N`,
-and `?missile=homing` with `&tubes=N`.
+and a spiral that ends at the edge of the screen instead of on a clock. **0235 and 0237 were played
+together and [0238](decisions/0238-the-picture-answers-the-second-play-test.md) answers all three
+items of [`the-picture-played`](../reports/the-picture-played-2026-09-05.md)** in the art alone — a
+seeker in the ship's ink, a flash round the bolt, steel blades bigger than the ship. What is owed is
+another play, on the branch preview, of the three pictures as 0238 left them; an ear on `arc`,
+`zap` and `throw` as they are now (`scripts/hear.mjs --only=arc,zap,throw` writes them); and an eye
+on the whirlpool and on the seeker turning in flight, at the camera the game ships — every claim
+about either is a model quantity. The balance of a gun that cannot miss and a gun that sweeps is a
+hand's, and their ladders are starting points. The bench takes `?weapon=arc` and `?weapon=shuriken`
+with `&tier=N`, and `?missile=homing` with `&tubes=N`.
 
 ⚠️ **AND ONE THING IS WAITING ON AN EAR, WHICH IS NOT THE SAME AS BEING NEXT.** It is written here
 rather than as a fourth item below, because *this* is the file's one marker and

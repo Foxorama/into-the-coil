@@ -802,7 +802,9 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // Longer than the pulse and pointed. A missile is the shot the player is meant to notice.
   missile: 3.4,
   // The seeker is the missile's size: what tells them apart is the fins and the eye, not the box.
-  seeker: 3.4,
+  // A size up on the missile since 0238, and the dart is drawn at `BLADE_GLYPH` of it with a glow
+  // behind — *"need more visual distinction between actual missile types."*
+  seeker: 4.4,
   // Heavier than the missile: the biggest thing that leaves the ship, and the one that is spent.
   bomb: 4.4,
   /*
@@ -884,11 +886,13 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // A landing spark: bigger than a bullet and smaller than the missile, so a chain of them reads
   // as hits rather than as a stream. Twice the `arc` row's hurtbox radius, like every shot.
   arcNode: 2.4,
-  // A blade: the size of the ship, since 0237 — played at 3.2, *"shuriken stars need to be a lot
-  // bigger"*. It is the one shot the player has to read the PATH of, and the path runs to the edge
-  // of the screen. Twice the `shuriken` row's hurtbox radius, like every shot.
-  shuriken: 7,
-  shurikenTurn: 7,
+  // A blade: bigger than the ship, since 0238 — played at 3.2, *"shuriken stars need to be a lot
+  // bigger"*, and at 7, *"bigger and steel coloured, also with a bit of a glow to them"*. It is the
+  // one shot the player has to read the PATH of, and the path runs to the edge of the screen. The
+  // star is drawn at four fifths of this (`BLADE_GLYPH` in `src/render/bake.ts`) and the rest is
+  // its glow; the hurtbox is the row's, and `tests/combat.test.ts` holds it inside what is drawn.
+  shuriken: 12,
+  shurikenTurn: 12,
   // Small: a fragment reads as a piece of something, and eight of them at enemy size is a wall.
   debris: 1.4,
   /*
