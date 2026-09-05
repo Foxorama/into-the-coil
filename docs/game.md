@@ -210,14 +210,15 @@ wanders the player's box while it does; what the player is handed is the face it
 **Taking a different gun starts that gun's ladder at one rung** and leaves the missile ladder alone.
 The missile pickup cycles the same way over the tubes. **Every face of a cycling pickup is its own
 glyph in its own ink** inside the one bubble that says *pickup* —
-[0239](decisions/0239-the-guns-answer-the-third-play-test.md): the pulse and the missile in the
-pickup ink, the arc in the ship's, the shuriken in steel, the seeker in the ally ink.
+[0239](decisions/0239-the-guns-answer-the-third-play-test.md),
+[0240](decisions/0240-the-blades-reach-the-boss.md): the pulse and the missile in their
+projectiles' orange, the arc in the ship's, the shuriken in steel, the seeker in the ally ink.
 
 | gun | what it does | a tier buys |
 |---|---|---|
 | **pulse** | the base weapon: fast, small, reaches the edge of the screen and can miss | a barrel **and** a fire-rate step |
 | **arc** | chain lightning: from the nose to the nearest body in reach, then the next; on a lone boss it jumps around the hull. Cannot miss, cannot reach | a link, a fire-rate step, and weight |
-| **shuriken** | steel blades bigger than the ship that spiral out from it to the edge of the screen and vanish there, landing on everything they cross once per impact flash; not spent by arriving — [0234](decisions/0234-a-blade-circles-the-ship.md), [0237](decisions/0237-the-blades-answer-the-first-play-test.md), [0238](decisions/0238-the-picture-answers-the-second-play-test.md) | more of a turn before the edge **and** a fire-rate step |
+| **shuriken** | steel blades bigger than the ship that spiral out from its nose round a ring centred ahead of it and stretched along the lane — so they reach a boss — to the edge of the screen, and vanish there, landing on everything they cross once per impact flash; not spent by arriving — [0234](decisions/0234-a-blade-circles-the-ship.md), [0237](decisions/0237-the-blades-answer-the-first-play-test.md), [0238](decisions/0238-the-picture-answers-the-second-play-test.md), [0240](decisions/0240-the-blades-reach-the-boss.md) | more of a turn before the edge **and** a fire-rate step |
 
 | tube | what it does | a tier buys |
 |---|---|---|

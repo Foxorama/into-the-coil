@@ -180,21 +180,23 @@ describe('0233 — a weapon is a kind', () => {
     });
   });
 
-  it('THE INKS: no two faces of one pickup share an ink, and the first face wears the pickup’s own', () => {
+  it('THE INKS: no two faces of one pickup share an ink', () => {
     /*
       0239, from the third play-test: *"the missile pickups need to be different colours… weapon
       pickups need different colouration for each weapon as well, visually distinct atm but the same
       colour makes it hard."* 0081's rule is that what the player must tell apart is told apart by
       more than ink; the faces differed in shape alone, and the ask says shape alone was not enough
-      at pickup size. So ink is a channel too — and the first face keeps the pickup ink, because a
-      pickup that has just appeared has to read as one before it reads as anything else, and the
-      bubble alone (0236) is a thin ring at the edge.
+      at pickup size. So ink is a channel too.
+
+      ⚠️ **0239 also held the first face to the pickup ink, and 0240 took that clause out**: the
+      fourth play-test asked for the pulse's and the missile's faces in the projectiles' orange, and
+      the bubble (0236) is what says *pickup* on every face. What is held is only that the faces of
+      one pickup are told apart by ink.
     */
     for (const kind of PICKUP_KINDS) {
       const row = PICKUPS[kind];
       const inks = row.faces.map((face) => INK_OF[SPRITE_KINDS[face]!]);
       expect(new Set(inks).size, `${kind} shows two faces in one ink (${inks.join(', ')})`).toBe(inks.length);
-      expect(inks[0], `${kind}'s first face is not in the pickup ink, so a fresh pickup does not read as one`).toBe('pickup');
     }
   });
 

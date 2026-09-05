@@ -119,24 +119,61 @@ function flight(tier: number): { world: World; places: Place[]; turned: number }
 }
 
 describe('0234 — a blade circles the ship', () => {
-  it('THE SPIRAL: a thrown blade circles the ship at a widening distance, the same way round, for more than a turn', () => {
+  it('THE SPIRAL: a thrown blade starts at the nose and goes round the ship for more than a turn, further out each time round', () => {
+    /*
+      ⚠️ **Measured as EXTREMES PER TURN and not as a distance that grows every step — 0240.** A
+      spiral centred on the ship widens on every step; one centred ahead of it and stretched along
+      the lane does not, because its back passes over the ship. What a spiral IS, in the player's
+      units, is that each time round the blade gets further ahead of the ship and further across it
+      than the last time — and that it is not drawn as a ring, which is what the first turn's
+      extremes are held above the nose for.
+    */
     const { places, turned } = flight(1);
-    let lastDistance = 0;
-    let lastAngle = Number.NEGATIVE_INFINITY;
-    for (let i = 0; i < places.length; i++) {
-      const distance = Math.hypot(places[i]!.fromShipAlong, places[i]!.fromShipAcross);
-      const angle = Math.atan2(places[i]!.fromShipAcross, places[i]!.fromShipAlong);
-      if (i > 0) {
-        expect(distance, `the spiral stopped widening on step ${i}`).toBeGreaterThan(lastDistance);
-        let turn = angle - lastAngle;
+    expect(places[0]!.fromShipAlong, 'the blade did not start at the nose').toBeLessThan(ACROSS_SPAN / 10);
+    expect(Math.abs(places[0]!.fromShipAcross), 'the blade did not start at the nose').toBeLessThan(ACROSS_SPAN / 10);
+    expect(turned, 'the blade never went round the ship once').toBeGreaterThan(Math.PI * 2);
+    // The furthest ahead and the furthest across it got, per completed turn.
+    const ahead: number[] = [];
+    const across: number[] = [];
+    let angle = 0;
+    let last = Number.NEGATIVE_INFINITY;
+    for (const place of places) {
+      const a = Math.atan2(place.fromShipAcross, place.fromShipAlong);
+      if (last !== Number.NEGATIVE_INFINITY) {
+        let turn = a - last;
         if (turn < -Math.PI) turn += Math.PI * 2;
         if (turn > Math.PI) turn -= Math.PI * 2;
-        expect(turn, `the blade went backwards round the ship on step ${i}`).toBeGreaterThan(0);
+        angle += turn;
       }
-      lastDistance = distance;
-      lastAngle = angle;
+      last = a;
+      const k = Math.floor(angle / (Math.PI * 2));
+      ahead[k] = Math.max(ahead[k] ?? Number.NEGATIVE_INFINITY, place.fromShipAlong);
+      across[k] = Math.max(across[k] ?? 0, Math.abs(place.fromShipAcross));
     }
-    expect(turned, 'the blade never went round the ship once').toBeGreaterThan(Math.PI * 2);
+    expect(ahead.length, 'the blade did not complete a turn').toBeGreaterThan(1);
+    for (let k = 1; k < ahead.length; k++) {
+      expect(ahead[k]!, `on turn ${k} the blade got no further ahead of the ship than on turn ${k - 1}`).toBeGreaterThan(ahead[k - 1]!);
+      expect(across[k]!, `on turn ${k} the blade got no further across the ship than on turn ${k - 1}`).toBeGreaterThan(across[k - 1]!);
+    }
+  });
+
+  it('THE REACH: a blade gets much further ahead of the ship than across it, so a boss is in its sweep', () => {
+    /*
+      0240, from the fourth play-test: *"shurikens need to stretch out a bit further as well, same
+      original problem as the lightning, it doesn't reach far enough and as a result you have to get
+      too close to bosses."* A boss sits ahead; a ring about the ship leaves by the edge behind it
+      before it is far ahead. Held as a RATIO in the player's units — how far ahead against how far
+      across, over a whole flight — and never as the distance, which is a hand's.
+    */
+    const { places } = flight(0);
+    let ahead = 0;
+    let across = 0;
+    for (const place of places) {
+      ahead = Math.max(ahead, place.fromShipAlong);
+      across = Math.max(across, Math.abs(place.fromShipAcross));
+    }
+    expect(across, 'the blade never swept across the ship, so the ratio measures nothing').toBeGreaterThan(ACROSS_SPAN / 5);
+    expect(ahead, `the blade got ${ahead.toFixed(0)} ahead against ${across.toFixed(0)} across`).toBeGreaterThan(across * 1.4);
   });
 
   it('THE WHIRLPOOL: a blade is on the screen every step of its life, and its last place is at the edge', () => {
@@ -189,8 +226,9 @@ describe('0234 — a blade circles the ship', () => {
       next one lands).
     */
     const { world, frame } = armed(2);
-    // Off the ship's own line, so the ship never flies into it; on the spiral, so the blade does.
-    const body = target(world, 10, 10, 6);
+    // Beside the ring, clear of the ship: the blade crosses it on its first turn and its second,
+    // and is out of it in between — so it lands a few times and never enough to be blunt.
+    const body = target(world, 30, -24, 14);
     frame.step();
     expect(world.playerShots.size).toBe(1);
     world.fireIn = NEVER;
@@ -271,7 +309,7 @@ describe('0234 — a blade circles the ship', () => {
     expect(CUES.throw.twin).toBe('blade-appears');
     expect(TWIN_KINDS).toContain(CUES.throw.twin);
     const { world, frame, cues } = armed(2);
-    target(world, 10, 10, 6);
+    target(world, 30, -24, 14);
     frame.step();
     expect(cues, 'the throw made no sound').toContain('throw');
     expect(cues, 'a hit sounded before anything was hit').not.toContain('hit');

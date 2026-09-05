@@ -402,19 +402,22 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // The HUD's lives counter rather than a pickup, since 0082 — it keeps the pickup ink because the
   // number beside it is drawn in the player's own colour and the icon has to sit with it.
   lifeIcon: 'pickup',
-  pickupWeapon: 'pickup',
-  pickupMissile: 'pickup',
   /*
-    ⚠️ **EACH FACE OF A CYCLING PICKUP IN ITS OWN INK — 0239.** 0233 gave every face the pickup ink
-    (*the same pickup, so the same ink*) and the third play-test refused it: *"the missile pickups
-    need to be different colours… weapon pickups need different colouration for each weapon as
-    well, visually distinct atm but the same colour makes it hard."* The BUBBLE is what says *this is
-    a pickup* now (0236, always in the pickup ink); the glyph inside it wears the ink of the thing
-    it offers — the arc in the ship's colour its bolt is stroked in, the shuriken in steel, the
-    seeker in the ally ink — and the first face of each pickup keeps the pickup ink, so a pickup that
-    has just appeared is still unmistakably one. `tests/weapons.test.ts` holds that no two faces of
-    one pickup share an ink.
+    ⚠️ **EACH FACE OF A CYCLING PICKUP IN THE INK OF WHAT IT OFFERS — 0239, finished by 0240.** 0233
+    gave every face the pickup ink (*the same pickup, so the same ink*) and the third play-test
+    refused it: *"the missile pickups need to be different colours… weapon pickups need different
+    colouration for each weapon as well, visually distinct atm but the same colour makes it hard."*
+    The BUBBLE is what says *this is a pickup* (0236, always in the pickup ink); the glyph inside it
+    wears the ink of the thing it offers — the pulse and the straight missile in the pulse's orange,
+    the arc in the ship's colour its bolt is stroked in, the shuriken in steel, the seeker in the
+    ally ink. 0239 had kept the first two in the pickup ink so a fresh pickup read as one, and the
+    fourth play-test asked for the orange: *"autofire gun colour symbol needs to be more orangey and
+    the regular fire missiles icon needs to be more orangey to match the projectiles."* The bubble
+    carries the role on its own. `tests/weapons.test.ts` holds that no two faces of one pickup share
+    an ink.
   */
+  pickupWeapon: 'bullet',
+  pickupMissile: 'bullet',
   pickupSeeker: 'ally',
   pickupArc: 'player',
   pickupShuriken: 'blade',
@@ -3978,8 +3981,9 @@ export function drawKind(
       ctx.closePath();
       seal(ctx);
       bubble(ctx, f, palette);
-      // The lower arm in shadow, so the chevron has a top and an underside.
-      poly(ctx, fg, shade(palette.pickup, -0.28), [
+      // The lower arm in shadow, so the chevron has a top and an underside — in the pulse's own
+      // orange since 0240, like the fill `INK_OF` gave the seal.
+      poly(ctx, fg, shade(palette.bullet, -0.28), [
         [0.72, 0.1],
         [-0.16, 0.7],
         [-0.72, 0.7],
@@ -4208,8 +4212,9 @@ export function drawKind(
       ctx.closePath();
       seal(ctx);
       bubble(ctx, f, palette);
-      // The trailing arm in shadow — the same underside the weapon chevron has, turned with it.
-      poly(ctx, fg, shade(palette.pickup, -0.28), [
+      // The trailing arm in shadow — the same underside the weapon chevron has, turned with it, and
+      // in the missile's own orange since 0240.
+      poly(ctx, fg, shade(palette.bullet, -0.28), [
         [-0.1, -0.72],
         [-0.7, 0.16],
         [-0.7, 0.72],
