@@ -23,7 +23,7 @@
 import { ACROSS_SPAN } from '../sim/camera.ts';
 import { type Entity, reset } from '../sim/entity.ts';
 import type { Pool } from '../sim/pool.ts';
-import { RAIN_BOLT_KIND, type BossPhase, type BossRow, type Uncoil } from '../content/bosses.ts';
+import { BEAM_BOLT_KIND, RAIN_BOLT_KIND, type BossPhase, type BossRow, type Uncoil } from '../content/bosses.ts';
 import { BOLT_STEPS } from '../render/scene.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../sim/flight.ts';
 import type { Rng } from '../sim/rng.ts';
@@ -68,6 +68,12 @@ const TAU = Math.PI * 2;
  * of settling, which is what makes the arrival read as a thing landing rather than a thing stopping.
  */
 const STATION_TRACK = 0.03;
+
+/**
+ * How far past the camera's trailing edge a beam's far end sits, in world units — 0250. A stroke
+ * with a round cap that ended exactly on the edge would show the cap; this puts it off the screen.
+ */
+const BEAM_TAIL = 4;
 
 /**
  * The phase for a boss at `health` out of `full`.
@@ -336,6 +342,21 @@ export function stepBoss(
   }
 
   /*
+    ── THE BRACE — 0250 ───────────────────────────────────────────────────────────────────────────
+
+    A beam is fixed across the lane where it was fired (`case 'beam'` below), so a hull that went on
+    flying would slide away from its own lasers. `holdFor` is the steps it has left to hold still —
+    a field nothing else reads on a boss, on `turnsLeft`'s own terms — and it counts down here, after
+    the move has said what the hull would do, because the brace is a thing the hull does on top of
+    how it flies rather than a fourth way of flying. The station is still tracked: the beam's root
+    follows the hull along the lane (`src/app/frame.ts`), and it is across that must not move.
+  */
+  if (boss.holdFor > 0) {
+    boss.velAcross = 0;
+    boss.holdFor--;
+  }
+
+  /*
     ── THE ONE PHASE THAT DOES NOT SHOOT ───────────────────────────────────────────────────────────
 
     ⚠️ **`docs/decisions/0150-the-uncoil-and-the-eye.md`.** Reported from play: *"the bosses need to be
@@ -534,6 +555,39 @@ export function stepBoss(
         the gate above is the call.
       */
       boss.turnsLeft = attack.count;
+      break;
+    }
+    case 'beam': {
+      /*
+        Lasers — 0250. One bolt per root in `from`: its point is the far end, at the trailing edge
+        of the screen and riding the camera; `fromAlong` reaches back up the lane to the hull, and
+        `src/app/frame.ts` re-pins it there every step as the hull drifts. Its `across` is the
+        hull's plus the root's offset, fixed for as long as it is held — the brace above is what
+        keeps the hull on it. The painter reads `BEAM_BOLT_KIND`, `holdFor` and `lifeFor` for the
+        warning line and then the beam; the frame reads them to hurt a ship inside it on any step
+        it is held.
+
+        ⚠️ **THE FLIGHT BETWEEN BEAMS IS ON TOP OF THE BEAM.** The gate above has just set `fireIn`
+        to the phase's cadence; the beam's own steps are added, so `fireEvery` is how long the hull
+        flies between one volley's end and the next. Without this a phase whose beam outlasts its
+        cadence is a hull that never moves again, and a phase table cannot say that honestly.
+      */
+      const held = attack.warning + attack.hold;
+      boss.holdFor = held;
+      boss.fireIn += held;
+      for (let i = 0; i < attack.from.length; i++) {
+        const bolt = bolts.spawn();
+        if (bolt === null) break;
+        const end = cameraAlong - BEAM_TAIL;
+        reset(bolt, end, boss.across + attack.from[i]!, bullet, BEAM_BOLT_KIND);
+        bolt.velAlong = scrollPerStep;
+        bolt.fromAlong = boss.along - end;
+        bolt.fromAcross = 0;
+        bolt.radius = attack.halfWidth;
+        bolt.damage = bullet.damage;
+        bolt.holdFor = attack.hold;
+        bolt.lifeFor = held;
+      }
       break;
     }
     default: {

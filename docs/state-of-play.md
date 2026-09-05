@@ -133,6 +133,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a level has a mid-boss and a real one: the seven old bosses halved and moved inside their levels, seven real bosses at the ends, each a first iteration** | [0247](decisions/0247-a-level-has-a-mid-boss-and-a-real-one.md), [`the-bosses-asked`](../reports/the-bosses-asked-2026-09-05.md) |
 | **the serpent strikes: a phase says what it throws; acid and void, two shots in two inks; lightning in columns with warning lines** | [0248](decisions/0248-the-serpent-strikes.md) |
 | **the eagle summons: a whip of flames that bows as it flies, and volleys that put kites and raptors on the field — the kite is a new body, the eagle's to call** | [0249](decisions/0249-the-eagle-summons.md) |
+| **the quetzal screams: a laser is a beam that warns, is held, and hurts for as long as it is on; two from the wings, one wide from the mouth, and the hull braces to fire** | [0250](decisions/0250-the-quetzal-screams.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -793,9 +794,11 @@ a level, the old seven as mid-bosses at half their health, seven real bosses on 
 game has. **The serpent's is landed — [0248](decisions/0248-the-serpent-strikes.md): a phase says
 what it throws, acid and void in their own inks, and lightning in columns that warn first. **And the
 eagle's — [0249](decisions/0249-the-eagle-summons.md): a whip that bows as it flies, and summons
-that put kites and raptors on the field. What is next, in the brief's order, is a decision per
-remaining real boss**, each adding the words its fight needs: the pterodactyl's wing lasers and mouth
-beam, with volcanoes in its backdrop belching rock that rains on the lane; the gyre's spin; the
+that put kites and raptors on the field. And the pterodactyl's lasers —
+[0250](decisions/0250-the-quetzal-screams.md): a beam that warns, is held and hurts while it is on,
+from the wings and then the mouth, the hull braced to fire. What is next, in the brief's order, is a
+decision per remaining real boss**, each adding the words its fight needs: the volcanoes in the
+pterodactyl's backdrop belching rock that rains on the lane, which 0250 owes; the gyre's spin; the
 frost ship's bolts, its cold that slows and freezes, and its adds; the hydra's shot per
 head; the jellyfish's tendrils, its raining moon jellies and its opening. What is owed is
 another play, on the branch preview, of the ship, its guns and its deaths as 0246 left them, and of both fights of a level as 0247 left them; an ear on `arc`, `zap` and `throw` as they are now

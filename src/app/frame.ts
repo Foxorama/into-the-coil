@@ -84,7 +84,7 @@ import { MISSILES, MISSILE_KINDS } from '../content/missiles.ts';
 import { SPECIALS, pyreFor, type SpecialKind } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
 import { openBy, phaseFor, stepBoss, throwCurtain, uncoilsBy } from './boss.ts';
-import { RAIN_BOLT_KIND } from '../content/bosses.ts';
+import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import type { Frame } from './loop.ts';
 
 /** How far in front of the ship a shot appears, in world units — clear of its own hurtbox. */
@@ -1361,6 +1361,8 @@ export class GameFrame implements Frame {
     stepEntities(w.missiles, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
     // A link rides the camera and retires on its own lifetime; the cull is a formality it never reaches.
     stepEntities(w.bolts, w.cameraAlong);
+    // After the hull and the bolts have both moved, so a beam's root is on the hull this step — 0250.
+    pinBeams(w);
     stepEntities(w.enemyShots, w.cameraAlong);
     // Before the pool steps, because `stepEntities` derives `sprite` from `spriteBase` — a page
     // turned after it would be drawn one step late.
@@ -1718,15 +1720,51 @@ function bossJustDied(w: World): boolean {
  * damage scale; a ship already lit is not hurt twice, exactly as `collideIntoOne` refuses.
  *
  * ⚠️ **Nothing before that step hurts**, which is the whole of what the warning line is for.
+ *
+ * ⚠️ **A BEAM IS HELD, AND HURTS ON EVERY STEP IT IS — 0250.** A bolt with `BEAM_BOLT_KIND` is the
+ * pterodactyl's laser: a line down the lane whose warning has run once `lifeFor` is inside its
+ * `holdFor`, and from then until it goes out a ship within its half-width ACROSS the lane, between
+ * its far end and the hull, is hurt. The invulnerable window a hit opens is what makes a held beam
+ * one hit and not thirty — the same window every other threat gets, and no other rule.
  */
 function strikeShip(w: World): void {
   if (w.ship.invulnFor > 0) return;
   for (let i = 0; i < w.bolts.size; i++) {
     const b = w.bolts.at(i);
-    if (b.kind !== RAIN_BOLT_KIND || b.lifeFor !== BOLT_STEPS) continue;
-    if (Math.abs(w.ship.along - b.along) > b.radius + w.ship.radius * w.tuning.hurtbox) continue;
+    if (b.kind === BEAM_BOLT_KIND) {
+      if (b.lifeFor > b.holdFor) continue;
+      if (Math.abs(w.ship.across - b.across) > b.radius + w.ship.radius * w.tuning.hurtbox) continue;
+      if (w.ship.along < b.along || w.ship.along > b.along + b.fromAlong) continue;
+    } else {
+      if (b.kind !== RAIN_BOLT_KIND || b.lifeFor !== BOLT_STEPS) continue;
+      if (Math.abs(w.ship.along - b.along) > b.radius + w.ship.radius * w.tuning.hurtbox) continue;
+    }
     wound(w.ship, b.damage * w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS);
     return;
+  }
+}
+
+/**
+ * A beam's root stays on the hull — 0250. Its far end rides the camera like every bolt; the hull
+ * tracks a drifting station, so `fromAlong` — the reach back up the lane from the far end to the
+ * root — is re-pinned every step. A beam whose hull has died goes out on the strike's own fade
+ * rather than hanging in the air from nowhere, and one still warning is put out at once: nothing
+ * dead may start hurting.
+ */
+function pinBeams(w: World): void {
+  const alive = w.bossPool.size > 0;
+  for (let i = 0; i < w.bolts.size; i++) {
+    const b = w.bolts.at(i);
+    if (b.kind !== BEAM_BOLT_KIND) continue;
+    if (alive) {
+      b.fromAlong = w.bossPool.at(0).along - b.along;
+    } else if (b.lifeFor > b.holdFor) {
+      // Still a warning on its last step — `lifeFor` above `holdFor` is what `strikeShip` reads.
+      b.lifeFor = 1;
+      b.holdFor = 0;
+    } else if (b.lifeFor > BOLT_STEPS) {
+      b.lifeFor = BOLT_STEPS;
+    }
   }
 }
 

@@ -53,7 +53,7 @@ rows are in `src/content/bosses.ts`, after the seven, each tougher than the last
 |---|---|---|---|---|
 | the Approach | `jormungandr`, the serpent | bob, wall | 700 | acid blasts, void blasts, lightning from the sky with warning lines — landed as [0248](0248-the-serpent-strikes.md) |
 | Ember Nebula | `hellkite`, the eagle | stalk, aimed | 760 | whips of fire; hordes of kites and raptors summoned through the fight — landed as [0249](0249-the-eagle-summons.md) |
-| Saurian Belt | `quetzal`, the pterodactyl | patrol, spray | 820 | lasers on the wings; the mouth that opens for one huge beam; volcanoes in the backdrop belching rock that rains down on the lane |
+| Saurian Belt | `quetzal`, the pterodactyl | patrol, spray | 820 | lasers on the wings and the mouth that opens for one huge beam — landed as [0250](0250-the-quetzal-screams.md); volcanoes in the backdrop belching rock that rains down on the lane, still owed |
 | the Labyrinth | `gyre`, the lattice upgraded | patrol, rake, and the tightest curtain in the game | 880 | the spin: walls at every angle |
 | Rime Shelf | `hoarfrost`, the frost ship | stalk, wall | 940 | frost bolts and blasts; the cold that slows and freezes; adds |
 | Toxic Mire | `hydra` | bob, spray, a head at every fifth of its health | 1000 | a kind of shot per head: acid, flame, laser, frost, void |

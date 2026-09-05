@@ -34,6 +34,15 @@ import { SPRITE } from './sprites.ts';
 export const RAIN_BOLT_KIND = 1;
 
 /**
+ * The `kind` a bolt carries when it is the pterodactyl's laser —
+ * `docs/decisions/0250-the-quetzal-screams.md`. A beam down the lane from the hull: a warning line
+ * for the attack's `warning` steps, then a straight hostile stroke that hurts for as long as it is
+ * held rather than on one step. The bolt's `holdFor` is the strike's own steps and its `radius` is
+ * its half-width across the lane.
+ */
+export const BEAM_BOLT_KIND = 2;
+
+/**
  * Every boss in the game. Closed.
  *
  * ⚠️ **SEVEN MID-BOSSES AND SEVEN END BOSSES, IN THAT ORDER, EACH TOUGHER THAN THE LAST** —
@@ -139,7 +148,7 @@ export type BossMove =
  * unions with one vocabulary is the honest shape, and `docs/decisions/0110-an-attack-is-a-pattern.md`
  * is where the vocabulary is argued.
  */
-export const BOSS_ATTACK_KINDS = ['aimed', 'spray', 'rake', 'ring', 'wall', 'rain', 'whip', 'summon'] as const;
+export const BOSS_ATTACK_KINDS = ['aimed', 'spray', 'rake', 'ring', 'wall', 'rain', 'whip', 'summon', 'beam'] as const;
 
 /** Derived from the list, so an attack cannot exist in the union and be missing from the switch. */
 export type BossAttackKind = (typeof BOSS_ATTACK_KINDS)[number];
@@ -203,7 +212,27 @@ export type BossAttack =
    * edge in `formation`, and throws nothing else: the adds are the attack. The phase's `shots`
    * and `spread` are carried and unused, on `bare`'s own terms — the escalation rules read them.
    */
-  | { kind: 'summon'; enemy: EnemyKind; count: number; formation: FormationKind };
+  | { kind: 'summon'; enemy: EnemyKind; count: number; formation: FormationKind }
+  /**
+   * Lasers — `docs/decisions/0250-the-quetzal-screams.md`. Asked for: *"a flying pterodactyl with
+   * lasers mounted on its wings and it opens its mouth to fire a huge laser blast."*
+   *
+   * ⚠️ **A BEAM, NOT A BULLET, AND IT IS HELD.** One beam per entry of `from` — an across offset
+   * from the hull's centre, in world units, so the wings are two entries and the mouth is one at
+   * zero — each a bolt in the arc's pool running from the hull down the lane to the trailing edge
+   * of the screen. It warns for `warning` steps as a thin line, then strikes for `hold` steps,
+   * hurting a ship within `halfWidth` of it across the lane on ANY step it is held — the serpent's
+   * lightning lands once; a laser is a wall for as long as it is on.
+   *
+   * ⚠️ **THE HULL BRACES, AND THE PAUSE IS ON TOP OF THE BEAM.** A beam is fixed across the lane
+   * where it was fired, so a hull that went on patrolling would slide away from its own lasers;
+   * it holds still for the warning and the hold, and the phase's `fireEvery` is the flight between
+   * one volley's end and the next volley — otherwise a phase whose beam outlasts its cadence is a
+   * hull that never moves again. The beam's root stays on the hull along the lane as it drifts.
+   *
+   * The phase's `shots` and `spread` are carried and unused, on `summon`'s terms.
+   */
+  | { kind: 'beam'; warning: number; hold: number; halfWidth: number; from: readonly number[] };
 
 /**
  * Every way a boss can STAND in a phase. Closed.
@@ -905,10 +934,16 @@ export const BOSSES: Record<BossKind, BossRow> = {
     ],
   },
   /**
-   * The Saurian Belt's end: the pterodactyl.
+   * The Saurian Belt's end: the pterodactyl — 0250.
    *
-   * A patrol laying a spray down the lane, fast. Owed: lasers on its wings, and the mouth that opens
-   * for one huge beam.
+   * ⚠️ **FOUR PHASES, AND FROM THE SECOND IT STOPS TO FIRE.** It opens flying fast and spraying
+   * lances; at two thirds it braces and fires from both wingtips — two thin beams down the lane,
+   * eighteen units either side of the hull, which is where the wings are drawn; at a third it opens
+   * its mouth — one beam, four times as wide, straight down the lane from the hull; and at the
+   * last sixth all three at once. *"Lasers mounted on its wings and it opens its mouth to fire a
+   * huge laser blast."* Between beams it flies, and each phase's flight is shorter than the last.
+   * Owed, in `docs/decisions/0250-the-quetzal-screams.md`: the volcanoes in its backdrop belching
+   * rock that rains on the lane.
    */
   quetzal: {
     move: { kind: 'patrol' },
@@ -926,8 +961,13 @@ export const BOSSES: Record<BossKind, BossRow> = {
     shot: 'lance',
     phases: [
       { upTo: 1, fireEvery: 72, shots: 3, spread: 0.5, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.66, fireEvery: 60, shots: 5, spread: 0.9, patrolScale: 1.4, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.33, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 1.9, stance: { kind: 'volley' }, shot: null, attack: null },
+      // The wings: 0.3 s of warning, 0.4 s of beam, three units wide each.
+      { upTo: 0.66, fireEvery: 60, shots: 3, spread: 0.5, patrolScale: 1.5, stance: { kind: 'volley' }, shot: null, attack: { kind: 'beam', warning: 18, hold: 24, halfWidth: 1.5, from: [-18, 18] } },
+      // The mouth: half a second of warning, half a second of beam, twelve units wide.
+      { upTo: 0.33, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' }, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [0] } },
+      // Everything: the mouth and both wings, on the mouth's timing, each five units wide — three of
+      // them narrower than the mouth alone, because three of them are what cover the lane.
+      { upTo: 0.16, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2.4, stance: { kind: 'volley' }, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 2.5, from: [-18, 0, 18] } },
     ],
   },
   /**
