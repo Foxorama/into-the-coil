@@ -314,6 +314,20 @@ export type BossStance =
  * So a hole may be anywhere the ship can reach from the far wall in that time and nowhere else, which
  * `tests/level.test.ts` drives from both edges at the real inertia rather than computing.
  */
+/**
+ * Every way a curtain can stand — 0252. Closed, and in the order a spinning wall takes them.
+ *
+ * `across` is every curtain before 0252: a line across the lane, thrown from the hull down it.
+ * `slant` is that line leaning corner to corner — its far end a lane's width ahead — still thrown
+ * down the lane, so it sweeps the lane one row at a time; `along` lies along the lane at the top
+ * edge, from the camera's trailing edge to the hull, and falls across it; `backslant` leans the
+ * other way. The k-th curtain of a spinning fight takes the k-th of these, round and round.
+ */
+export const CURTAIN_STANCES = ['across', 'slant', 'along', 'backslant'] as const;
+
+/** Derived from the list, so a stance cannot exist in the union and be missing from the switch. */
+export type CurtainStance = (typeof CURTAIN_STANCES)[number];
+
 export interface Uncoil {
   /** Health fraction at or below which the boss starts throwing it. */
   from: number;
@@ -344,6 +358,27 @@ export interface Uncoil {
    * bosses sit at different ends of it.
    */
   at: number;
+  /**
+   * Whether the curtain turns an eighth between one throw and the next — 0252. `false` for a wall
+   * that always stands across the lane.
+   *
+   * ⚠️ **THE SPIN IS THE GYRE'S UPGRADE, WORD FOR WORD** — `docs/decisions/0252-the-gyre-spins.md`:
+   * *"it'll spin and create diagonal, vertical and horizontal gaps to fly through."* The k-th
+   * curtain of a fight takes the k-th of `CURTAIN_STANCES`, round and round: across the lane,
+   * slanted corner to corner, along the lane at the top edge, slanted the other way. `at` and
+   * `hole` are read along the line wherever it stands, so the hole is still one place, learned once.
+   *
+   * ⚠️ **FOUR STANCES AND NOT AN ANGLE, BECAUSE THE LANE HAS EDGES.** A wall at an arbitrary angle
+   * that arrives everywhere at once must start as far above the lane as it is slanted, and the
+   * across cull is forty units out — the first draft was an angle, and its diagonal lost its top
+   * third on the step it was thrown. A slanted wall that travels down the lane starts inside the
+   * lane's width and sweeps every row of it in turn, which is the picture anyway.
+   *
+   * ⚠️ **The FIRST curtain always stands across the lane**, whatever this says, which is what keeps
+   * every guard in `tests/level.test.ts` that reads a curtain by its `across` honest: they all drive
+   * the first notch.
+   */
+  spin: boolean;
   /**
    * How wide the hole is, in world units.
    *
@@ -785,7 +820,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     */
     // ⚠️ From 0.7 rather than 0.5 since 0247: at half the health the eye opens at 0.36, and a
     // curtain is not thrown to a bared boss, so the four notches the fight throws sit above it.
-    uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14 },
+    uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false },
     fall: null,
     sprite: SPRITE.boss6,
     spriteHit: SPRITE.boss6Hit,
@@ -849,7 +884,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       ⚠️ **It is still the harder of the two and the numbers say why**: the player has 19 fewer steps
       to read the curtain and cross to it, through a denser wall, from a hull that is chasing them.
     */
-    uncoil: { from: 0.5, every: 0.1, gap: 4, at: 58, hole: 12 },
+    uncoil: { from: 0.5, every: 0.1, gap: 4, at: 58, hole: 12, spin: false },
     fall: null,
     sprite: SPRITE.boss7,
     spriteHit: SPRITE.boss7Hit,
@@ -1026,7 +1061,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
   gyre: {
     move: { kind: 'patrol' },
     attack: { kind: 'rake', turn: 0.4 },
-    uncoil: { from: 0.5, every: 0.1, gap: 3, at: 26, hole: 14 },
+    // An eighth of a turn a throw — 0252: across the lane, slanted corner to corner, along the lane
+    // from the top edge, slanted the other way, across again.
+    uncoil: { from: 0.5, every: 0.1, gap: 3, at: 26, hole: 14, spin: true },
     fall: null,
     sprite: SPRITE.boss11,
     spriteHit: SPRITE.boss11Hit,
@@ -1114,7 +1151,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
   medusa: {
     move: { kind: 'bob', amplitude: 14, wavelength: 260 },
     attack: { kind: 'ring' },
-    uncoil: { from: 0.5, every: 0.1, gap: 4, at: 50, hole: 13 },
+    uncoil: { from: 0.5, every: 0.1, gap: 4, at: 50, hole: 13, spin: false },
     fall: null,
     sprite: SPRITE.boss14,
     spriteHit: SPRITE.boss14Hit,

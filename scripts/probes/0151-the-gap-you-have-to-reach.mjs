@@ -29,7 +29,7 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: an uncoil has exactly one hole, and the ship fits through it',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14 },',
+      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false },',
       replace: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 4 },',
     },
   },
@@ -47,8 +47,8 @@ export const PROBES = [
     guard: 'and it can be REACHED from the far wall, which is where a static hole may sit',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.5, every: 0.1, gap: 4, at: 58, hole: 12 },',
-      replace: 'uncoil: { from: 0.5, every: 0.1, gap: 4, at: 84, hole: 12 },',
+      find: 'uncoil: { from: 0.5, every: 0.1, gap: 4, at: 58, hole: 12, spin: false },',
+      replace: 'uncoil: { from: 0.5, every: 0.1, gap: 4, at: 84, hole: 12, spin: false },',
     },
   },
   {
@@ -66,8 +66,9 @@ export const PROBES = [
     guard: 'AND THE OTHER REPORTED ONE: the wall does not move, so it is a pattern to learn',
     edit: {
       path: 'src/app/boss.ts',
-      find: '    if (across > uncoil.at - clear && across < uncoil.at + clear) continue;',
-      replace: '    if (across > boss.across - clear && across < boss.across + clear) continue;',
+      // Re-anchored by 0252, which reads the hole along the line rather than across the lane.
+      find: '    if (s > hole - clear && s < hole + clear) continue;',
+      replace: '    if (s > boss.across - clear && s < boss.across + clear) continue;',
     },
   },
   {
@@ -82,8 +83,8 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: an uncoil has exactly one hole, and the ship fits through it',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14 },',
-      replace: 'uncoil: { from: 0.7, every: 0.1, gap: 5.5, at: 26, hole: 14 },',
+      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false },',
+      replace: 'uncoil: { from: 0.7, every: 0.1, gap: 5.5, at: 26, hole: 14, spin: false },',
     },
   },
   {
@@ -114,7 +115,7 @@ export const PROBES = [
     guard: 'AND DRIVEN: a real fight throws real curtains, each with one hole in it',
     edit: {
       path: 'src/app/boss.ts',
-      find: '    if (across > uncoil.at - clear && across < uncoil.at + clear) continue;\n',
+      find: '    if (s > hole - clear && s < hole + clear) continue;\n',
       replace: '',
     },
   },
@@ -130,8 +131,8 @@ export const PROBES = [
     guard: 'and it is thrown again and again, which is the half a phase could not say',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14 },',
-      replace: 'uncoil: { from: 0.7, every: 0.9, gap: 4.5, at: 26, hole: 14 },',
+      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false },',
+      replace: 'uncoil: { from: 0.7, every: 0.9, gap: 4.5, at: 26, hole: 14, spin: false },',
     },
   },
   {
@@ -152,8 +153,8 @@ export const PROBES = [
     guard: 'and the whole hole is inside the lane',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14 },',
-      replace: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 4, hole: 14 },',
+      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false },',
+      replace: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 4, hole: 14, spin: false },',
     },
   },
 ];

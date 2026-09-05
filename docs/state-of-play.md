@@ -135,6 +135,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the eagle summons: a whip of flames that bows as it flies, and volleys that put kites and raptors on the field — the kite is a new body, the eagle's to call** | [0249](decisions/0249-the-eagle-summons.md) |
 | **the quetzal screams: a laser is a beam that warns, is held, and hurts for as long as it is on; two from the wings, one wide from the mouth, and the hull braces to fire** | [0250](decisions/0250-the-quetzal-screams.md) |
 | **the volcanoes belch: a fall on the boss's row rains rock from the top of the screen through every phase — the rock the biggest and slowest bullet, hot, retiring below the lane** | [0251](decisions/0251-the-volcanoes-belch.md) |
+| **the gyre spins: a curtain has four stances and a spinning wall takes them in turn — across the lane, slanted corner to corner, along the lane falling from the top edge, slanted back — one hole at the same share of every line, never from behind** | [0252](decisions/0252-the-gyre-spins.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -799,8 +800,9 @@ that put kites and raptors on the field. And the pterodactyl's lasers —
 [0250](decisions/0250-the-quetzal-screams.md): a beam that warns, is held and hurts while it is on,
 from the wings and then the mouth, the hull braced to fire; and its volcanoes —
 [0251](decisions/0251-the-volcanoes-belch.md): a fall on the row that rains rock through every
-phase. What is next, in the brief's order, is a decision per remaining real boss**, each adding
-the words its fight needs: the gyre's spin; the
+phase. And the gyre's — [0252](decisions/0252-the-gyre-spins.md): a curtain with four stances that
+a spinning wall takes in turn. What is next, in the brief's order, is a decision
+per remaining real boss**, each adding the words its fight needs: the
 frost ship's bolts, its cold that slows and freezes, and its adds; the hydra's shot per
 head; the jellyfish's tendrils, its raining moon jellies and its opening. What is owed is
 another play, on the branch preview, of the ship, its guns and its deaths as 0246 left them, and of both fights of a level as 0247 left them; an ear on `arc`, `zap` and `throw` as they are now
