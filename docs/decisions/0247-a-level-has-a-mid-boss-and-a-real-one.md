@@ -55,7 +55,7 @@ rows are in `src/content/bosses.ts`, after the seven, each tougher than the last
 | Ember Nebula | `hellkite`, the eagle | stalk, aimed | 760 | whips of fire; hordes of kites and raptors summoned through the fight — landed as [0249](0249-the-eagle-summons.md) |
 | Saurian Belt | `quetzal`, the pterodactyl | patrol, spray | 820 | lasers on the wings and the mouth that opens for one huge beam — landed as [0250](0250-the-quetzal-screams.md); volcanoes in the backdrop belching rock that rains down on the lane — landed as [0251](0251-the-volcanoes-belch.md) |
 | the Labyrinth | `gyre`, the lattice upgraded | patrol, rake, and the tightest curtain in the game | 880 | the spin: walls at every angle — landed as [0252](0252-the-gyre-spins.md) |
-| Rime Shelf | `hoarfrost`, the frost ship | stalk, wall | 940 | frost bolts and blasts; the cold that slows and freezes; adds |
+| Rime Shelf | `hoarfrost`, the frost ship | stalk, wall | 940 | frost bolts and blasts; the cold that slows and freezes; adds — landed as [0253](0253-the-frost-ship-chills.md) |
 | Toxic Mire | `hydra` | bob, spray, a head at every fifth of its health | 1000 | a kind of shot per head: acid, flame, laser, frost, void |
 | the Black Heart | `medusa`, the jellyfish | bob, ring, a curtain, and the eye | 1100 | tendrils that pulse lightning; moon jellies that rain down; the rain of void when it opens |
 

@@ -409,6 +409,31 @@ export interface Fall {
   count: number;
 }
 
+/**
+ * The chill: what a boss's hull does to a ship that comes too close —
+ * `docs/decisions/0253-the-frost-ship-chills.md`. Asked for: *"if you get too close it will slow
+ * you down and freeze you."*
+ *
+ * ⚠️ **IT SCALES THE ASK, NOT THE VELOCITY.** The ship has mass (0037): its velocity approaches
+ * what the stick asks by a fixed fraction a step, and a scale on the velocity every step would
+ * compound with that into a crawl no number here describes. Scaling the stick's ask by `slow`
+ * makes the slowed ship exactly a ship whose top speed is `slow` of its own, with its own mass.
+ * A frozen ship's ask is nothing, and it coasts to the scroll rate as any released stick does.
+ *
+ * ⚠️ **ON THE ROW, on `uncoil`'s and `fall`'s terms**: the cold is the hull's through every phase,
+ * and a phase table cannot say that. `null` on every row but the frost ship's.
+ */
+export interface Chill {
+  /** How far from the hull's centre the cold reaches, in world units. */
+  radius: number;
+  /** What is left of the stick's ask inside it: `0.5` is half speed. */
+  slow: number;
+  /** Steps inside it before the ship freezes. */
+  freezeAfter: number;
+  /** Steps the freeze lasts, during which the stick asks for nothing. */
+  frozenFor: number;
+}
+
 export interface BossPhase {
   /**
    * Active while remaining health is at or below this fraction of the row's full `health`.
@@ -545,6 +570,8 @@ export interface BossRow extends Body {
    * rather than optional, as `uncoil` is.
    */
   fall: Fall | null;
+  /** The cold its hull carries, or `null` — 0253. Required, on `uncoil`'s and `fall`'s terms. */
+  chill: Chill | null;
   /** Full health to empty. The first entry must cover a full-health boss. */
   phases: readonly BossPhase[];
 }
@@ -574,6 +601,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     attack: { kind: 'aimed' },
     uncoil: null,
     fall: null,
+    chill: null,
     sprite: SPRITE.boss,
     spriteHit: SPRITE.bossHit,
     radius: 11,
@@ -637,6 +665,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     attack: { kind: 'spray' },
     uncoil: null,
     fall: null,
+    chill: null,
     sprite: SPRITE.boss2,
     spriteHit: SPRITE.boss2Hit,
     radius: 12.5,
@@ -692,6 +721,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     attack: { kind: 'wall', gap: 15 },
     uncoil: null,
     fall: null,
+    chill: null,
     sprite: SPRITE.boss3,
     spriteHit: SPRITE.boss3Hit,
     radius: 11.5,
@@ -736,6 +766,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     attack: { kind: 'aimed' },
     uncoil: null,
     fall: null,
+    chill: null,
     sprite: SPRITE.boss4,
     spriteHit: SPRITE.boss4Hit,
     radius: 13,
@@ -772,6 +803,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     attack: { kind: 'ring' },
     uncoil: null,
     fall: null,
+    chill: null,
     sprite: SPRITE.boss5,
     spriteHit: SPRITE.boss5Hit,
     radius: 14,
@@ -822,6 +854,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // curtain is not thrown to a bared boss, so the four notches the fight throws sit above it.
     uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false },
     fall: null,
+    chill: null,
     sprite: SPRITE.boss6,
     spriteHit: SPRITE.boss6Hit,
     radius: 12.5,
@@ -886,6 +919,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     */
     uncoil: { from: 0.5, every: 0.1, gap: 4, at: 58, hole: 12, spin: false },
     fall: null,
+    chill: null,
     sprite: SPRITE.boss7,
     spriteHit: SPRITE.boss7Hit,
     radius: 16,
@@ -959,6 +993,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     attack: { kind: 'wall', gap: 12 },
     uncoil: null,
     fall: null,
+    chill: null,
     sprite: SPRITE.boss8,
     spriteHit: SPRITE.boss8Hit,
     radius: 16,
@@ -990,6 +1025,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     attack: { kind: 'aimed' },
     uncoil: null,
     fall: null,
+    chill: null,
     sprite: SPRITE.boss9,
     spriteHit: SPRITE.boss9Hit,
     radius: 15,
@@ -1027,6 +1063,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // The volcanoes — 0251: two rocks every second and a half, from the top of the screen, through
     // the whole fight.
     fall: { shot: 'rock', every: 90, count: 2 },
+    chill: null,
     sprite: SPRITE.boss10,
     spriteHit: SPRITE.boss10Hit,
     radius: 15,
@@ -1065,6 +1102,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // from the top edge, slanted the other way, across again.
     uncoil: { from: 0.5, every: 0.1, gap: 3, at: 26, hole: 14, spin: true },
     fall: null,
+    chill: null,
     sprite: SPRITE.boss11,
     spriteHit: SPRITE.boss11Hit,
     radius: 14,
@@ -1092,6 +1130,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     attack: { kind: 'wall', gap: 10 },
     uncoil: null,
     fall: null,
+    // The cold — 0253: thirty units from the hull's centre, half speed inside it, frozen for half a
+    // second after three quarters of one inside.
+    chill: { radius: 30, slow: 0.5, freezeAfter: 45, frozenFor: 30 },
     sprite: SPRITE.boss12,
     spriteHit: SPRITE.boss12Hit,
     radius: 13,
@@ -1101,12 +1142,18 @@ export const BOSSES: Record<BossKind, BossRow> = {
     drift: 5,
     driftWavelength: 260,
     patrol: 0.3,
-    shot: 'flak',
+    shot: 'frost',
+    /*
+      ⚠️ **FOUR PHASES, AND THE COLD RUNS THROUGH ALL OF THEM — 0253.** *"Frost bolts and frost
+      blasts … it needs some adds as well."* A wall of frost across the lane while whole — the
+      bolts; a spray of them once hurt; at the lower half, shards called in pairs — the adds, the
+      Rime Shelf's own enemy; and at the last fifth a ring of frost round the hull — the blasts.
+    */
     phases: [
       { upTo: 1, fireEvery: 84, shots: 2, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.7, fireEvery: 72, shots: 3, spread: 0, patrolScale: 1.2, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.4, fireEvery: 60, shots: 4, spread: 0, patrolScale: 1.5, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.15, fireEvery: 54, shots: 4, spread: 0, patrolScale: 1.9, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.7, fireEvery: 72, shots: 3, spread: 0.7, patrolScale: 1.2, stance: { kind: 'volley' }, shot: null, attack: { kind: 'spray' } },
+      { upTo: 0.45, fireEvery: 60, shots: 3, spread: 0.7, patrolScale: 1.5, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'shard', count: 2, formation: 'vee' } },
+      { upTo: 0.2, fireEvery: 54, shots: 6, spread: 0, patrolScale: 1.9, stance: { kind: 'volley' }, shot: null, attack: { kind: 'ring' } },
     ],
   },
   /**
@@ -1122,6 +1169,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     attack: { kind: 'spray' },
     uncoil: null,
     fall: null,
+    chill: null,
     sprite: SPRITE.boss13,
     spriteHit: SPRITE.boss13Hit,
     radius: 16,
@@ -1153,6 +1201,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     attack: { kind: 'ring' },
     uncoil: { from: 0.5, every: 0.1, gap: 4, at: 50, hole: 13, spin: false },
     fall: null,
+    chill: null,
     sprite: SPRITE.boss14,
     spriteHit: SPRITE.boss14Hit,
     radius: 17,

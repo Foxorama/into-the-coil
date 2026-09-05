@@ -1060,6 +1060,10 @@ export interface World {
    * and again after every belch; zero for a boss with no fall, which nothing reads.
    */
   bossFallIn: number;
+  /** Steps the ship has spent inside the boss's chill without a break — 0253; zero outside it. */
+  chilledFor: number;
+  /** Steps the ship has left frozen — 0253; the stick asks for nothing while it is above zero. */
+  frozenFor: number;
   /**
    * The boss died, so the level is over.
    *
@@ -1327,6 +1331,8 @@ export class GameFrame implements Frame {
       repeated bursts, repeated beats, and a life lost per step until the run is over.
     */
     const flying = w.shipPool.size > 0;
+    // The cold scales the stick's ask before the ship flies on it — 0253.
+    if (flying) chillShip(w);
     if (flying) flyShip(w.ship, w.intent, w.cameraAlong, w.scrollPerStep);
 
     /*
@@ -1758,6 +1764,57 @@ function strikeShip(w: World): void {
  * rather than hanging in the air from nowhere, and one still warning is put out at once: nothing
  * dead may start hurting.
  */
+/**
+ * The frost ship's cold — `docs/decisions/0253-the-frost-ship-chills.md`. Inside the row's
+ * `chill.radius` of the hull the stick's ask is scaled by `slow`; after `freezeAfter` steps inside
+ * without a break the ship freezes for `frozenFor`, during which the stick asks for nothing.
+ *
+ * ⚠️ **THE ASK AND NOT THE VELOCITY, BEFORE `flyShip` AND NOT AFTER.** The ship has mass (0037):
+ * a scale on the velocity every step would compound with its approach into a crawl no number in
+ * the row describes. A halved ask is exactly a ship with half its top speed and all of its mass,
+ * and a frozen ship coasts to the scroll rate as any released stick does.
+ *
+ * ⚠️ **No comfort setting touches this (0024)**: it is the boss's, and it is never softer than the
+ * row says. The picture is a puff of frost at the ship every few steps it is chilled and a burst
+ * on the step it freezes (0036).
+ */
+function chillShip(w: World): void {
+  const chill = w.bossRow.chill;
+  if (chill === null || w.bossPool.size === 0) {
+    w.chilledFor = 0;
+    if (w.frozenFor > 0) w.frozenFor--;
+    return;
+  }
+  if (w.frozenFor > 0) {
+    w.frozenFor--;
+    w.intent.along = 0;
+    w.intent.across = 0;
+    return;
+  }
+  const boss = w.bossPool.at(0);
+  const dAlong = w.ship.along - boss.along;
+  const dAcross = w.ship.across - boss.across;
+  if (dAlong * dAlong + dAcross * dAcross > chill.radius * chill.radius) {
+    w.chilledFor = 0;
+    return;
+  }
+  w.chilledFor++;
+  if (w.chilledFor >= chill.freezeAfter) {
+    w.chilledFor = 0;
+    w.frozenFor = chill.frozenFor;
+    w.intent.along = 0;
+    w.intent.across = 0;
+    burst(w, w.ship.along, w.ship.across, BURST.freeze);
+    return;
+  }
+  w.intent.along *= chill.slow;
+  w.intent.across *= chill.slow;
+  if (w.chilledFor % CHILL_PUFF_EVERY === 0) burst(w, w.ship.along, w.ship.across, BURST.chill);
+}
+
+/** Steps between one puff of frost at a chilled ship and the next — 0253. */
+const CHILL_PUFF_EVERY = 6;
+
 function pinBeams(w: World): void {
   const alive = w.bossPool.size > 0;
   for (let i = 0; i < w.bolts.size; i++) {
@@ -1794,6 +1851,8 @@ function nextFight(w: World): void {
   w.bossPhaseAt = -1;
   w.bossUncoilAt = 0;
   w.bossFallIn = 0;
+  w.chilledFor = 0;
+  w.frozenFor = 0;
 }
 
 /**
@@ -4137,6 +4196,8 @@ function spawnBoss(w: World): void {
   w.bossUncoilAt = 0;
   // The first belch waits the fall's own gap, so the rock arrives after the boss has — 0251.
   w.bossFallIn = w.bossRow.fall === null ? 0 : fireGapFor(w.bossRow.fall.every, w.difficulty);
+  w.chilledFor = 0;
+  w.frozenFor = 0;
 }
 
 /**
@@ -4429,6 +4490,8 @@ function beginScript(w: World): void {
   w.bossPhaseAt = -1;
   w.bossUncoilAt = 0;
   w.bossFallIn = 0;
+  w.chilledFor = 0;
+  w.frozenFor = 0;
 }
 
 export function resetScene(w: World): void {

@@ -42,6 +42,8 @@ const INKS: readonly Ink[] = [
   'void',
   // The eagle's flame — 0249.
   'fire',
+  // The frost ship's shard — 0253.
+  'frost',
   'impact',
   'blade',
   'glass',
