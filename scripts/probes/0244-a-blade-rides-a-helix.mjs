@@ -23,20 +23,32 @@ export const PROBES = [
     guard: 'THE PACE: a blade crosses',
     edit: {
       path: 'src/content/shots.ts',
-      find: 'radius: 4, health: BLADE_EDGE, damage: 1, speed: 1 },',
-      replace: 'radius: 4, health: BLADE_EDGE, damage: 1, speed: 0.8 },',
+      find: 'radius: 3.2, health: BLADE_EDGE, damage: 1, speed: 1 },',
+      replace: 'radius: 3.2, health: BLADE_EDGE, damage: 1, speed: 0.8 },',
     },
   },
   {
     decision: '0244',
     suite: 'tests/blades.test.ts',
-    // The 0238 box restored: twelve units of a hundred-unit lane.
+    // The first draft's throw: from the crest, `coil` out, rather than from the wingtip.
+    broke: 'the pair thrown from its crests, a coil out, rather than from the wingtips',
+    guard: 'THE HELIX: a blade leaves the wingtip',
+    edit: {
+      path: 'src/app/frame.ts',
+      find: '    const angle = side > 0 ? lift : Math.PI + lift;',
+      replace: '    const angle = side * (Math.PI / 2) + 0 * lift;',
+    },
+  },
+  {
+    decision: '0244',
+    suite: 'tests/blades.test.ts',
+    // The first draft's box restored: ten units of a hundred-unit lane, which was called too big.
     broke: 'the star drawn at the size the play-test called too big',
     guard: 'THE SIZE: a blade is drawn',
     edit: {
       path: 'src/content/sprites.ts',
-      find: '  shuriken: 10,\n  shurikenTurn: 10,\n',
-      replace: '  shuriken: 12,\n  shurikenTurn: 12,\n',
+      find: '  shuriken: 8,\n  shurikenTurn: 8,\n',
+      replace: '  shuriken: 10,\n  shurikenTurn: 10,\n',
     },
   },
 ];

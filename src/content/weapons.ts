@@ -115,17 +115,20 @@ export interface WeaponRow {
   /**
    * Radians a `coil` shot's swing advances per step. Zero for every other flight.
    *
-   * ⚠️ **In the camera's frame, like every speed.** A turn of 0.16 is a full swing every thirty-nine
-   * steps, two thirds of a second, which at the shot's speed up the lane is a helix with a pitch of
-   * thirty-nine units — a little over twice its width at the cap and five times it at the first
-   * rung, which is what reads as a helix rather than a zigzag (0244).
+   * ⚠️ **In the camera's frame, like every speed.** A turn of 0.21 is a full swing every thirty
+   * steps, half a second, which at the shot's speed up the lane is a helix with a pitch of thirty
+   * units — under twice its width at the cap and four times it at the first rung. Played at 0.16
+   * (a pitch of thirty-nine): *"it needs to be a tighter helix"* (0244).
    *
    * ⚠️ **AND NOT A DIVISOR OF ANY RUNG'S CADENCE, WHICH THE FIRST PHOTOGRAPH TAUGHT (0242).** Every
    * pair advances at this rate from the same starting phase, so where pair *n+1* is in its swing
-   * when pair *n* is at a crest is `turn × fireEvery`. At 0.21 that was exactly a turn at the first
-   * rung and exactly half a turn at the cap: every blade on the screen at the same point of its
-   * swing, two rows that breathed rather than a helix. At 0.16 the gap is at least a quarter-turn
-   * at every rung, so a screen of pairs shows every point of the strand at once.
+   * when pair *n* is at a crest is `turn × fireEvery`, and a rung where that is a whole number of
+   * turns puts every blade on the screen at the same point of its swing: two rows that breathe
+   * rather than a helix. The cadence runs over an octave (twenty-four steps to twelve), so for the
+   * gap to be a fifth of a turn or more at EVERY rung the pitch has to be more than the slowest
+   * spacing and less than five times the quickest — which is why the pitch and the cadence were
+   * set together: at 0.21 over `[24, 21, 18, 15, 12]` the gap is 0.20, 0.30, 0.40, 0.50 and 0.40
+   * of a turn. Over 0242's `[30, 26, 22, 18, 15]` no pitch under thirty-seven cleared every rung.
    */
   turn: number;
   /** The face the weapon pickup shows when it is offering this kind — an index into the atlas. */
@@ -197,18 +200,19 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
    *
    * ⚠️ **The slowest cadence in the game and the only shot that is not spent by arriving.** A blade
    * lives until it leaves the screen and lands on everything it crosses, so its worth is the sweep
-   * and not the shot: at the cap a pair of blades every quarter-second, each in the air for two
-   * seconds — sixteen blades riding up the lane at once. `tests/blades.test.ts` fires the cap for
-   * fifteen seconds and holds the pool.
+   * and not the shot: at the cap a pair of blades every fifth of a second, each in the air for two
+   * seconds — over twenty blades riding up the lane at once. `tests/blades.test.ts` fires the cap
+   * for fifteen seconds and holds the pool. The cadence is a fifth quicker than 0242's, and that
+   * is the helix's pitch and not a balance change — the `turn` above says why they go together.
    *
    * ⚠️ **A HELIX UP THE LANE, SINCE 0244 — NOT A RING ABOUT THE SHIP, AND NOT A CHAIN OF LOOPS.**
    * Four decisions wound a spiral about the ship (0234, 0237, 0239, 0240); the fourth play-test drew
    * a path from the wingtips forward and 0242 read it as a chain of loops; the sixth said what it
    * had meant: *"I want the two wingtips firing to form a helix pattern with the shurikens."* A pair
-   * of blades leaves the wingtips, each going up the lane at the shot's `speed` and swinging across
-   * it in a sine `coil` wide, the two a half-turn apart so they cross ahead of the nose — the two
-   * strands of a helix, the same everywhere on the screen, aimed by where the ship sits across the
-   * lane. A wide slow band against the pulse's narrow fast line, which is what makes it a third gun
+   * of blades leaves the wingtips themselves, each going up the lane at the shot's `speed` and
+   * swinging across it in a sine `coil` wide, the two a half-turn apart so they cross ahead of the
+   * nose — the two strands of a helix, the same everywhere on the screen, aimed by where the ship
+   * sits across the lane. A wide slow band against the pulse's narrow fast line, which is what makes it a third gun
    * rather than a third shape.
    *
    * ⚠️ **`coil` is the swing's half-width**: a rung buys a wider band. The turn is fixed, so a
@@ -220,13 +224,13 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     hint: 'Blades helix ahead',
     shot: 'shuriken',
     flight: 'coil',
-    fireEvery: [30, 26, 22, 18, 15],
+    fireEvery: [24, 21, 18, 15, 12],
     barrels: [1, 1, 1, 1, 1],
     links: [1, 1, 1, 1, 1],
     weight: [1, 1, 1, 1, 1],
     reach: [0, 0, 0, 0, 0],
     coil: [7, 9, 12, 15, 18],
-    turn: 0.16,
+    turn: 0.21,
     pickup: SPRITE.pickupShuriken,
   },
 };

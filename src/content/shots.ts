@@ -138,11 +138,11 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * `tests/blades.test.ts` holds the crossing of the screen in seconds. (0237 to 0240 had it at
    * zero, when the blade circled the ship and had no speed of its own.)
    *
-   * ⚠️ **`radius` 4 — a star about the ship's size, since 0244.** Played at 1.4: *"shuriken stars
+   * ⚠️ **`radius` 3.2 — a star smaller than the ship, since 0244.** Played at 1.4: *"shuriken stars
    * need to be a lot bigger"*; at 3.5: *"bigger and steel coloured"*; at 4.8: *"a bit smaller, they
-   * take up a lot of visual screenspace and make it hard to see enemies and enemy fire."* The
-   * hurtbox is the sweep, so a smaller blade is a narrower sweep too, and the balance of that is a
-   * hand's.
+   * take up a lot of visual screenspace and make it hard to see enemies and enemy fire"*; at 4:
+   * *"slightly smaller"* again. The hurtbox is the sweep, so a smaller blade is a narrower sweep
+   * too, and the balance of that is a hand's.
    *
    * ⚠️ **`spriteHit` IS THE OTHER TURN OF THE STAR, AND THAT IS NOT A FLASH.** A blade never
    * flashes — what it survives is arriving, not being hit, and nothing in the game shoots it — so
@@ -150,7 +150,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * `src/app/frame.ts` swaps the two every few steps to spin it. `blit` cannot rotate; two bitmaps
    * an eighth of a turn apart are what a spinning shuriken is.
    */
-  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 4, health: BLADE_EDGE, damage: 1, speed: 1 },
+  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 3.2, health: BLADE_EDGE, damage: 1, speed: 1 },
   /**
    * What an enemy sends back. **Slower than the ship**, which is the whole of what makes it
    * dodgeable rather than a coin flip: a player who reacts can always leave the line it is on.

@@ -56,7 +56,7 @@ import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
 import type { Pool } from '../sim/pool.ts';
 import { BOLT_STEPS, paintBolts, paintScene, paintStacks, type Bound, type Landmarks, type Sky } from '../render/scene.ts';
-import { LANDMARK_SLOTS, SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
+import { LANDMARK_SLOTS, SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
 import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
@@ -1773,9 +1773,8 @@ const BLADE_TURN_STEPS = 4;
  * ⚠️ **FROM THE WINGTIPS, UP THE LANE, AND CROSSING AHEAD OF THE NOSE — A HELIX.** The sixth
  * play-test named the shape: *"the two wingtips firing to form a helix pattern."* Each blade goes
  * straight up the lane at the row's speed and swings across it in a sine at the weapon row's `coil`
- * half-width and `turn`; the pair leaves a quarter-turn apart, one at each crest, so the two strands
- * are a half-turn out of phase and cross at the band's centre line twice a turn — where a boss
- * sits. The strand's axis and its speed are copied onto the blade (`fromAlong`/`fromAcross`,
+ * half-width and `turn`; the pair leaves from the wingtips heading out, a half-turn out of phase,
+ * so the two strands cross at the band's centre line twice a turn — where a boss sits. The strand's axis and its speed are copied onto the blade (`fromAlong`/`fromAcross`,
  * `orbitGrow`), so a blade thrown is a blade thrown: switching guns with blades in the air leaves
  * them riding. The spawn stream is not consulted, on `spawnWave`'s argument: what a gun does is
  * authored, not dealt. (0242 had each blade circle a point moving up the lane — a chain of loops —
@@ -1786,11 +1785,24 @@ function throwBlades(w: World): void {
   // On the grid, like every gun — 0094.
   w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);
   w.onCue('throw', w.ship.across);
+  /*
+    ⚠️ **FROM THE WINGTIP ITSELF, HEADING OUT** — 0244's second photograph: *"there's a big gap
+    between helix start and wingtips."* The first draft threw each blade at its crest, `coil` off
+    the axis, which at the cap is eighteen units from a wingtip four out. The wingtip is half the
+    drawn width of the hull the ship is wearing — whichever rung's hull — and the strand's phase at
+    the throw is the one at which a sine of `coil` passes that width on its way out, so the blade
+    leaves the wing and swings wider before it comes back across the nose.
+  */
+  const wingtip = SPRITE_EXTENT[SPRITE_KINDS[w.ship.spriteBase]!] / 2;
+  const lift = Math.asin(Math.min(1, wingtip / w.weapon.coil));
   for (let s = 0; s < BLADE_SIDES.length; s++) {
     const side = BLADE_SIDES[s]!;
     const blade = w.playerShots.spawn();
     if (blade === null) return;
-    reset(blade, w.ship.along, w.ship.across + side * w.weapon.coil, row, BLADE_KIND);
+    // The two strands are a half-turn apart: the other side is the same phase, half a turn on.
+    // Which way the phase runs makes no difference to a sine, so both run one way.
+    const angle = side > 0 ? lift : Math.PI + lift;
+    reset(blade, w.ship.along, w.ship.across + Math.sin(angle) * w.weapon.coil, row, BLADE_KIND);
     blade.velAlong = w.scrollPerStep + row.speed;
     blade.damage = w.weapon.damage;
     // No clock — 0237. The edge of the screen ends a blade (`steerBlades`); zero is *never*.
@@ -1800,9 +1812,7 @@ function throwBlades(w: World): void {
     blade.fromAcross = w.ship.across;
     blade.orbitGrow = row.speed;
     blade.orbitRadius = w.weapon.coil;
-    // At its own crest, a quarter-turn off the axis on its own side: the two strands are a
-    // half-turn apart. Which way the phase runs makes no difference to a sine, so both run one way.
-    blade.orbitAngle = side * (Math.PI / 2);
+    blade.orbitAngle = angle;
     blade.orbitTurn = w.weapon.turn;
   }
 }

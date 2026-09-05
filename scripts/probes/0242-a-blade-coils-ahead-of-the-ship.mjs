@@ -29,8 +29,8 @@ export const PROBES = [
     guard: 'THE HELIX: a blade leaves the wingtip',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    blade.orbitAngle = side * (Math.PI / 2);',
-      replace: '    blade.orbitAngle = 0;',
+      find: '    const angle = side > 0 ? lift : Math.PI + lift;',
+      replace: '    const angle = 0 * lift;',
     },
   },
   {

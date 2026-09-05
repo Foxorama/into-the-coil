@@ -17,6 +17,15 @@ Then, while it was being built:
 > *"also the shuriken graphics need to be a bit smaller, they take up a lot of visual screenspace
 > and make it hard to see enemies and enemy fire"*
 
+Then, on a photograph of the first draft — a helix with a pitch of thirty-nine, each strand
+thrown from its crest, the star a tenth of the lane:
+
+> *"from the image I think it needs to be a tighter helix, starting from the wingtips, whereas
+> there's a big gap between helix start and wingtips in the preview image"*
+>
+> *"also needs slightly smaller shuriken, those look like they're still going to take up a lot of
+> screenspace and make enemy fire hard to see"*
+
 ## What was played, that this is a verdict on
 
 A pair of blades from the wingtips, each circling a point that moved up the lane at 0.8 units a
@@ -27,6 +36,8 @@ twelve units of a hundred-unit lane, 0238's size.
 ## What the items are
 
 - **The shape**: two strands crossing each other up the lane — a helix seen from above — not loops.
-  The drawing had been read as a trochoid; the word says a sine.
+  The drawing had been read as a trochoid; the word says a sine. Tighter than the first draft's,
+  and starting at the wingtips rather than a coil's width out from them.
 - **The pace**: *slightly* faster. The blade's forward speed was 0.8 a step.
-- **The size**: smaller, for the sake of everything else on the screen — the enemies and their fire.
+- **The size**: smaller, twice, for the sake of everything else on the screen — the enemies and
+  their fire.
