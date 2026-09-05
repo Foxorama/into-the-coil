@@ -111,6 +111,7 @@ export function inertLevel(): {
   bossPatrol: number;
   bossPhaseAt: number;
   bossUncoilAt: number;
+  bossFallIn: number;
   dyingIn: number;
   deathOffset: number;
   deathAcross: number;
@@ -171,6 +172,7 @@ export function inertLevel(): {
     bossPatrol: 1,
     bossPhaseAt: -1,
     bossUncoilAt: 0,
+    bossFallIn: 0,
     // Nothing is dying in a fixture that has not been driven yet — 0079.
     dyingIn: 0,
     deathOffset: SHIP_START_ALONG,
@@ -293,6 +295,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     scatterRng: makeRng('test').stream('scatter'),
     arcRng: makeRng('test').stream('arc'),
     rainRng: makeRng('test').stream('rain'),
+    rockRng: makeRng('test').stream('rock'),
     view: viewOf(1280, 720),
     surface: new NullSurface(),
     rng: makeRng('test').stream('spawns'),
@@ -360,6 +363,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     bossPatrol: 1,
     bossPhaseAt: -1,
     bossUncoilAt: 0,
+    bossFallIn: 0,
     dyingIn: 0,
     deathOffset: SHIP_START_ALONG,
     deathAcross: ACROSS_SPAN / 2,

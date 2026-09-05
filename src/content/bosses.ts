@@ -353,6 +353,27 @@ export interface Uncoil {
   hole: number;
 }
 
+/**
+ * A fall: bodies that rain on the lane from the top of the screen while a boss is on the field —
+ * `docs/decisions/0251-the-volcanoes-belch.md`.
+ *
+ * ⚠️ **A BELCH IS A VOLLEY FROM THE SKY, AND THE ROCK IS A BULLET.** Every `every` steps, `count` of
+ * `shot` are put at the top edge of the lane, each somewhere along the box the ship can fly in,
+ * falling straight down it at the shot's own speed and riding the camera. They go into
+ * `enemyShots` and hurt as any shot hurts, so the rock is a row in `src/content/shots.ts` held to
+ * every rule a hostile bullet is held to — the biggest and the slowest of them, on 0098's trade.
+ * The volcano that belched it is the level's own landmark, behind; the picture of the belch is
+ * embers at the edge the rock came in over (0036).
+ */
+export interface Fall {
+  /** What falls. A hostile shot, sent by this and nothing else. */
+  shot: ShotKind;
+  /** Steps between belches, before the tier's own gap scales it. */
+  every: number;
+  /** How many fall in one belch. */
+  count: number;
+}
+
 export interface BossPhase {
   /**
    * Active while remaining health is at or below this fraction of the row's full `health`.
@@ -479,6 +500,16 @@ export interface BossRow extends Body {
    * `docs/decisions/0016-a-hub-enumerates-kinds.md`.
    */
   uncoil: Uncoil | null;
+  /**
+   * What falls on the lane from the top of the screen through the whole fight, or `null`.
+   *
+   * ⚠️ **On the ROW and not on a phase, on `uncoil`'s own terms** — 0251. *"Volcanoes in the
+   * background that belch big chunks of volcanic rock that rain down and the player has to dodge
+   * as well as all the other boss stuff"* — *as well as* is the whole shape: it runs beside every
+   * phase, through the brace and through the beams, and a phase table cannot say that. Required
+   * rather than optional, as `uncoil` is.
+   */
+  fall: Fall | null;
   /** Full health to empty. The first entry must cover a full-health boss. */
   phases: readonly BossPhase[];
 }
@@ -507,6 +538,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     move: { kind: 'patrol' },
     attack: { kind: 'aimed' },
     uncoil: null,
+    fall: null,
     sprite: SPRITE.boss,
     spriteHit: SPRITE.bossHit,
     radius: 11,
@@ -569,6 +601,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     move: { kind: 'stalk', agility: 0.24 },
     attack: { kind: 'spray' },
     uncoil: null,
+    fall: null,
     sprite: SPRITE.boss2,
     spriteHit: SPRITE.boss2Hit,
     radius: 12.5,
@@ -623,6 +656,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     move: { kind: 'patrol' },
     attack: { kind: 'wall', gap: 15 },
     uncoil: null,
+    fall: null,
     sprite: SPRITE.boss3,
     spriteHit: SPRITE.boss3Hit,
     radius: 11.5,
@@ -666,6 +700,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     move: { kind: 'bob', amplitude: 26, wavelength: 150 },
     attack: { kind: 'aimed' },
     uncoil: null,
+    fall: null,
     sprite: SPRITE.boss4,
     spriteHit: SPRITE.boss4Hit,
     radius: 13,
@@ -701,6 +736,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     move: { kind: 'patrol' },
     attack: { kind: 'ring' },
     uncoil: null,
+    fall: null,
     sprite: SPRITE.boss5,
     spriteHit: SPRITE.boss5Hit,
     radius: 14,
@@ -750,6 +786,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // ⚠️ From 0.7 rather than 0.5 since 0247: at half the health the eye opens at 0.36, and a
     // curtain is not thrown to a bared boss, so the four notches the fight throws sit above it.
     uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14 },
+    fall: null,
     sprite: SPRITE.boss6,
     spriteHit: SPRITE.boss6Hit,
     radius: 12.5,
@@ -813,6 +850,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       to read the curtain and cross to it, through a denser wall, from a hull that is chasing them.
     */
     uncoil: { from: 0.5, every: 0.1, gap: 4, at: 58, hole: 12 },
+    fall: null,
     sprite: SPRITE.boss7,
     spriteHit: SPRITE.boss7Hit,
     radius: 16,
@@ -885,6 +923,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     move: { kind: 'bob', amplitude: 24, wavelength: 200 },
     attack: { kind: 'wall', gap: 12 },
     uncoil: null,
+    fall: null,
     sprite: SPRITE.boss8,
     spriteHit: SPRITE.boss8Hit,
     radius: 16,
@@ -915,6 +954,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     move: { kind: 'stalk', agility: 0.22 },
     attack: { kind: 'aimed' },
     uncoil: null,
+    fall: null,
     sprite: SPRITE.boss9,
     spriteHit: SPRITE.boss9Hit,
     radius: 15,
@@ -949,6 +989,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     move: { kind: 'patrol' },
     attack: { kind: 'spray' },
     uncoil: null,
+    // The volcanoes — 0251: two rocks every second and a half, from the top of the screen, through
+    // the whole fight.
+    fall: { shot: 'rock', every: 90, count: 2 },
     sprite: SPRITE.boss10,
     spriteHit: SPRITE.boss10Hit,
     radius: 15,
@@ -984,6 +1027,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     move: { kind: 'patrol' },
     attack: { kind: 'rake', turn: 0.4 },
     uncoil: { from: 0.5, every: 0.1, gap: 3, at: 26, hole: 14 },
+    fall: null,
     sprite: SPRITE.boss11,
     spriteHit: SPRITE.boss11Hit,
     radius: 14,
@@ -1010,6 +1054,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     move: { kind: 'stalk', agility: 0.18 },
     attack: { kind: 'wall', gap: 10 },
     uncoil: null,
+    fall: null,
     sprite: SPRITE.boss12,
     spriteHit: SPRITE.boss12Hit,
     radius: 13,
@@ -1039,6 +1084,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     move: { kind: 'bob', amplitude: 18, wavelength: 220 },
     attack: { kind: 'spray' },
     uncoil: null,
+    fall: null,
     sprite: SPRITE.boss13,
     spriteHit: SPRITE.boss13Hit,
     radius: 16,
@@ -1069,6 +1115,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     move: { kind: 'bob', amplitude: 14, wavelength: 260 },
     attack: { kind: 'ring' },
     uncoil: { from: 0.5, every: 0.1, gap: 4, at: 50, hole: 13 },
+    fall: null,
     sprite: SPRITE.boss14,
     spriteHit: SPRITE.boss14Hit,
     radius: 17,

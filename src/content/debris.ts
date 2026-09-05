@@ -194,6 +194,15 @@ export const BURST = {
    */
   uncoil: 9,
   /**
+   * Embers at the top edge where a rock came in over it — 0251.
+   *
+   * ⚠️ **Smaller than `uncoil`, because the rock is its own announcement**: a six-unit lump falling
+   * on the lane is not a thing that needs help being noticed; what this adds is the edge it came
+   * over, so the fall has somewhere it came from — 0036 — and that somewhere is the sky the volcano
+   * behind it is venting into.
+   */
+  belch: 5,
+  /**
    * Fragments per PULSE while a boss is BARE — and it stays bare until the fight ends.
    *
    * ⚠️ **`docs/decisions/0150-the-uncoil-and-the-eye.md`, and it is
