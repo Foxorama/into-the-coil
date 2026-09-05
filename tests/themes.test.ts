@@ -418,11 +418,15 @@ describe('a theme mixes the music and cannot break it', () => {
       }
     }
     /*
-      ⚠️ **THREE MINUTES: about 3× the projected cost once all seven places have their own material**,
-      and still short enough that a genuinely hung bake fails rather than hanging CI. The comment
-      above has the measurement it is sized from.
+      ⚠️ **SEVEN MINUTES: three times the worst cost measured under load — 0245.** This was 180 s,
+      *"about 3× the projected cost"*, and the projection was made alone: 41 s alone on the
+      development box, **115 s under the whole suite and 126 s under `npm run prove`'s baseline**,
+      and it timed out under that baseline once. A budget on a bake is sized against the worst
+      measured loaded cost, three times over, because the loaded cost is a range and not a number
+      (`docs/decisions/0245-a-budget-is-sized-under-load.md`). Still short enough that a genuinely
+      hung bake fails rather than hanging CI.
     */
-  }, 180_000);
+  }, 420_000);
 
   /*
     ── A LEVEL HOLDS ONE LOUDNESS — 0226 ──────────────────────────────────────────────────────────

@@ -193,10 +193,18 @@ export default defineConfig({
       clock read where the subject is arithmetic that cannot hang — and each was answered one
       guard at a time. The fourth would have been too.
 
-      ⚠️ **A MINUTE STILL STOPS A RUNAWAY.** The slowest single test in the repository is the
-      prewarm at about two seconds alone; sixty is not slack for a hang, it is room for a loaded box.
-      The per-test budgets already written stay, because each names what it measured.
+      ⚠️ **AND A MINUTE WAS SIZED FROM THE WRONG NUMBER — 0245.** The paragraph above assumed the
+      slowest test was two seconds alone. Measured under the whole suite on the development box,
+      the menu's countdown is 49–53 s, the continue screen 27–30 s, and a music bake with its own
+      budget of 60 s ran 16 s in one clean whole-suite run and 38 s in the next: **a bake's cost
+      under load is a range, not a number**, set by what the scheduler puts beside it. Three
+      minutes is three times the slowest budget-less test's worst measured cost, which is the rule
+      `docs/decisions/0245-a-budget-is-sized-under-load.md` states for every wall-clock budget here.
+
+      ⚠️ **THREE MINUTES STILL STOPS A RUNAWAY.** A hang costs three minutes of a CI job rather than
+      one, and the job is what bounds a hang; a budget's job is to say WHICH test hung. The per-test
+      budgets already written stay, each re-sized by the same rule with its measurement beside it.
     */
-    testTimeout: 60_000,
+    testTimeout: 180_000,
   },
 });

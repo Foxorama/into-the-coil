@@ -816,10 +816,17 @@ describe('0095 — the level has a piece of its own, and it covers the band', ()
     ⚠️ **WIDENING IT DOES NOT WEAKEN WHAT IT PROVES**, and that distinction is the repository's own —
     `tests/sound.test.ts` made the identical argument when its bake-identity guard went 60 s → 120 s.
     **No part of this claim is about time**: the same samples, the same bands, the same comparison
-    against the title. The limit exists so a hang fails rather than sits. If this ever approaches
-    60 s something has genuinely slowed down, and the number must not move again to hide it.
+    against the title. The limit exists so a hang fails rather than sits.
+
+    ⚠️ **IT APPROACHED 60 s AND NOTHING HAD SLOWED DOWN — 0245.** The paragraph above promised the
+    number would not move again; what moved was the load. *The band a chest resolves* is **9 s
+    alone, 16 s under one clean whole-suite run and 38 s under the next**, and it timed out at 60 s
+    under `npm run prove`'s baseline on 2026-09-05 with nothing else on the box. A bake's cost under
+    load is a range, so two minutes is three times the worst of it —
+    `docs/decisions/0245-a-budget-is-sized-under-load.md`. The samples, the bands and the
+    comparison are still not about time.
   */
-  const DSP_MS = 60_000;
+  const DSP_MS = 120_000;
 
   it('THE SHED, one octave wider: a level is spread across the spectrum rather than humped in the middle', () => {
     /*

@@ -62,8 +62,11 @@ decision needs no rule.
 - **An intermittent guard has found something, and "flaky" is not what it found.** A rerun is not
   evidence. Establish which it is — a real intermittency in the code, or a wrong quantity in the
   guard — then delete it, fix it, or leave it red. The one this rule is named for was reading wall
-  clock where it meant frames, and only failed under the load of `npm run prove` itself.
-  — [0044](docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md)
+  clock where it meant frames, and only failed under the load of `npm run prove` itself. **A
+  wall-clock budget is three times the worst cost measured under the whole suite**, with the
+  measurement beside the number — never sized alone, never raised until it goes quiet.
+  — [0044](docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md),
+  [0245](docs/decisions/0245-a-budget-is-sized-under-load.md)
 - **Where the work has got to lives in `docs/state-of-play.md`** — what is settled, what is next, and
   why in that order. Read it before proposing work; rewrite it when the answer changes. It holds
   **pointers and intentions, never findings**: a status document is a summary generator, and the only

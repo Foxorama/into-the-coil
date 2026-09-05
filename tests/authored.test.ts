@@ -216,8 +216,13 @@ function measureAll(): void {
  * number belongs to somebody. Sized against the heavier load rather than the lighter one, because
  * `npm run prove` runs 149 copies in parallel and is heavier again than the suite that produced the
  * 61.3 s.
+ *
+ * ⚠️ **AND THE SUITE GREW UNDER IT — 0245.** Measured again on 2026-09-05: **104 s under the whole
+ * suite and 119 s under the proof's baseline**, against the 180 s above — a headroom of 1.5, where
+ * the first sizing had 2.9. Six minutes is three times the worst loaded figure, which is the rule
+ * `docs/decisions/0245-a-budget-is-sized-under-load.md` states for every budget of this kind.
  */
-const DSP_MS = 180_000;
+const DSP_MS = 360_000;
 
 /**
  * ⚠️ **THERE IS NO `beforeAll` HERE, AND THAT IS 0178's RULE RATHER THAN A STYLE CHOICE** —
