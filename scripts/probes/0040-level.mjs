@@ -79,8 +79,10 @@ export const PROBES = [
     guard: 'every phase is reachable, and they only get harder',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "      { upTo: 0.3, fireEvery: 48, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' } },",
-      replace: "      { upTo: 0.3, fireEvery: 120, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' } },",
+      // ⚠️ Re-anchored by 0247, which made the sentinel a two-phase mid-boss. Same break: its last
+      // phase firing slower than its first.
+      find: "      { upTo: 0.5, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' } },",
+      replace: "      { upTo: 0.5, fireEvery: 120, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' } },",
     },
   },
   {

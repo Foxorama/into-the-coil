@@ -93,7 +93,7 @@ describe('a shot stops where the player can no longer see it', () => {
       Asserted at the NARROWEST view, because that is where the gap is widest and where the report
       came from.
     */
-    const bossOnly: LevelRow = { waves: [], pickups: [], landmarks: [], bossAt: 300, sections: NO_SECTIONS, boss: 'sentinel', theme: 'approach' };
+    const bossOnly: LevelRow = { waves: [], pickups: [], landmarks: [], bossAt: 300, midBoss: null, sections: NO_SECTIONS, boss: 'sentinel', theme: 'approach' };
     const { world } = playableWorld(bossOnly);
     world.view = NARROW;
     /*
@@ -188,7 +188,7 @@ describe('anything that leaves the lane is gone, and the ship cannot', () => {
       clamps the ship inside both edges, so this is structural rather than a rule anybody has to
       remember — but it is the assertion worth having, because the cull is new and the clamp is not.
     */
-    const level: LevelRow = { waves: [], pickups: [], landmarks: [], bossAt: Number.POSITIVE_INFINITY, sections: NO_SECTIONS, boss: 'sentinel', theme: 'approach' };
+    const level: LevelRow = { waves: [], pickups: [], landmarks: [], bossAt: Number.POSITIVE_INFINITY, midBoss: null, sections: NO_SECTIONS, boss: 'sentinel', theme: 'approach' };
     const { world } = playableWorld(level);
     const frame = new GameFrame(world);
     // Ask for full deflection across the lane, every step, for ten seconds.
@@ -230,6 +230,7 @@ describe('0096 — enemy fire lands on the grid in the real frame, not only in t
       pickups: [],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
+      midBoss: null,
       sections: NO_SECTIONS,
       boss: 'sentinel',
       theme: 'approach',
@@ -284,6 +285,7 @@ describe('0096 — enemy fire lands on the grid in the real frame, not only in t
       pickups: [],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
+      midBoss: null,
       sections: NO_SECTIONS,
       boss: 'sentinel',
       theme: 'approach',
@@ -365,6 +367,7 @@ describe('a wave may arrive from the side, and never behind the player', () => {
       pickups: [],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
+      midBoss: null,
       sections: NO_SECTIONS,
       boss: 'sentinel',
       theme: 'approach',
@@ -460,6 +463,7 @@ describe('a wave may arrive from the side, and never behind the player', () => {
       pickups: [],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
+      midBoss: null,
       sections: NO_SECTIONS,
       boss: 'sentinel',
       theme: 'approach',
@@ -511,6 +515,7 @@ describe('a threat uses the whole area, and the player does not', () => {
       pickups: [],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
+      midBoss: null,
       sections: NO_SECTIONS,
       boss: 'sentinel',
       theme: 'approach',
@@ -641,6 +646,7 @@ describe('a pickup wanders', () => {
       pickups: [{ at: 200, kind: 'weapon', lane: 50 }],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
+      midBoss: null,
       sections: NO_SECTIONS,
       boss: 'sentinel',
       theme: 'approach',
@@ -669,6 +675,7 @@ describe('a pickup wanders', () => {
       ],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
+      midBoss: null,
       sections: NO_SECTIONS,
       boss: 'sentinel',
       theme: 'approach',

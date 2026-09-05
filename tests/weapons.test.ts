@@ -270,6 +270,7 @@ describe('0233 — a pickup cycles', () => {
       pickups: [{ at: 200, kind: 'weapon', lane: ACROSS_SPAN / 2 }],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
+      midBoss: null,
       sections: NO_SECTIONS,
       boss: 'sentinel',
       theme: 'approach',

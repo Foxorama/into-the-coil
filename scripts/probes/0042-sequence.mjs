@@ -64,8 +64,10 @@ export const PROBES = [
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0096, which snapped every authored cadence to a sixteenth. Same break, same
       // guard: the last phase throwing FEWER shots than the first.
-      find: "      { upTo: 0.2, fireEvery: 42, shots: 7, spread: 1.4, patrolScale: 2.5, stance: { kind: 'volley' } },",
-      replace: "      { upTo: 0.2, fireEvery: 42, shots: 3, spread: 1.4, patrolScale: 2.5, stance: { kind: 'volley' } },",
+      // ⚠️ Re-anchored by 0247, which made the harrow a two-phase mid-boss opening on three shots;
+      // the last phase throws ONE, which is fewer.
+      find: "      { upTo: 0.5, fireEvery: 48, shots: 7, spread: 1.4, patrolScale: 2.5, stance: { kind: 'volley' } },",
+      replace: "      { upTo: 0.5, fireEvery: 48, shots: 1, spread: 1.4, patrolScale: 2.5, stance: { kind: 'volley' } },",
     },
   },
   {

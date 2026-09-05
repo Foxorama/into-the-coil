@@ -71,8 +71,9 @@ export const PROBES = [
     guard: 'and the boss still arrives its authored distance into the level, not into the run',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  reset(boss, w.level.bossAt + w.levelOrigin, ACROSS_SPAN / 2, w.bossRow);',
-      replace: '  reset(boss, w.level.bossAt, ACROSS_SPAN / 2, w.bossRow);',
+      // ⚠️ Re-anchored by 0247: the distance is the current fight's. Same break — the origin dropped.
+      find: '  reset(boss, fightAt(w) + w.levelOrigin, ACROSS_SPAN / 2, w.bossRow);',
+      replace: '  reset(boss, fightAt(w), ACROSS_SPAN / 2, w.bossRow);',
     },
   },
   {

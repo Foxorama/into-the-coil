@@ -29,8 +29,8 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: an uncoil has exactly one hole, and the ship fits through it',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.5, every: 0.1, gap: 4.5, at: 26, hole: 14 },',
-      replace: 'uncoil: { from: 0.5, every: 0.1, gap: 4.5, at: 26, hole: 4 },',
+      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14 },',
+      replace: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 4 },',
     },
   },
   {
@@ -82,8 +82,8 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: an uncoil has exactly one hole, and the ship fits through it',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.5, every: 0.1, gap: 4.5, at: 26, hole: 14 },',
-      replace: 'uncoil: { from: 0.5, every: 0.1, gap: 5.5, at: 26, hole: 14 },',
+      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14 },',
+      replace: 'uncoil: { from: 0.7, every: 0.1, gap: 5.5, at: 26, hole: 14 },',
     },
   },
   {
@@ -130,8 +130,8 @@ export const PROBES = [
     guard: 'and it is thrown again and again, which is the half a phase could not say',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.5, every: 0.1, gap: 4.5, at: 26, hole: 14 },',
-      replace: 'uncoil: { from: 0.5, every: 0.9, gap: 4.5, at: 26, hole: 14 },',
+      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14 },',
+      replace: 'uncoil: { from: 0.7, every: 0.9, gap: 4.5, at: 26, hole: 14 },',
     },
   },
   {
@@ -152,8 +152,8 @@ export const PROBES = [
     guard: 'and the whole hole is inside the lane',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.5, every: 0.1, gap: 4.5, at: 26, hole: 14 },',
-      replace: 'uncoil: { from: 0.5, every: 0.1, gap: 4.5, at: 4, hole: 14 },',
+      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14 },',
+      replace: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 4, hole: 14 },',
     },
   },
 ];

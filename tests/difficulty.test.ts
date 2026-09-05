@@ -461,6 +461,7 @@ describe('the tier reaches the field, and not only the table', () => {
     pickups: [],
     landmarks: [],
     bossAt: Number.POSITIVE_INFINITY,
+    midBoss: null,
     sections: NO_SECTIONS,
     boss: 'sentinel',
     theme: 'approach',
@@ -533,7 +534,7 @@ describe('the tier reaches the field, and not only the table', () => {
       The ship holds station and its auto-fire does the rest, so this is the same fight met by the
       same pilot doing the same thing, and the only difference is the tier.
     */
-    const bossOnly: LevelRow = { waves: [], pickups: [], landmarks: [], bossAt: 300, sections: NO_SECTIONS, boss: 'sentinel', theme: 'approach' };
+    const bossOnly: LevelRow = { waves: [], pickups: [], landmarks: [], bossAt: 300, midBoss: null, sections: NO_SECTIONS, boss: 'sentinel', theme: 'approach' };
     const killedAt = (tier: DifficultyKind): number => {
       const { world } = playableWorld(bossOnly, tier);
       const frame = new GameFrame(world);

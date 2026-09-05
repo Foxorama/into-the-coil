@@ -218,6 +218,22 @@ export const SPRITE_KINDS = [
   'boss6Hit',
   'boss7',
   'boss7Hit',
+  // The seven real bosses, one per place — 0247: the serpent, the eagle, the pterodactyl, the
+  // gyre, the frost ship, the hydra and the jellyfish. Each its own silhouette, as every boss is.
+  'boss8',
+  'boss8Hit',
+  'boss9',
+  'boss9Hit',
+  'boss10',
+  'boss10Hit',
+  'boss11',
+  'boss11Hit',
+  'boss12',
+  'boss12Hit',
+  'boss13',
+  'boss13Hit',
+  'boss14',
+  'boss14Hit',
   'bullet',
   /*
     ── WHAT SHOOTS BACK, AND IT WAS THE SAME BITMAP AS WHAT THE PLAYER FIRES ───────────────────────
@@ -804,6 +820,26 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   boss6Hit: 30,
   boss7: 38,
   boss7Hit: 38,
+  /*
+    ⚠️ **The real bosses — 0247 — and the biggest things in the game.** Every one a different size
+    again, because the cheapest half of unique is still the silhouette; the jellyfish at 46 is the
+    largest hull there is, and `src/sim/camera.ts`'s 80 is still well clear. The hurtboxes in
+    `src/content/bosses.ts` sit inside the band `tests/level.test.ts` holds every boss to.
+  */
+  boss8: 40,
+  boss8Hit: 40,
+  boss9: 42,
+  boss9Hit: 42,
+  boss10: 44,
+  boss10Hit: 44,
+  boss11: 36,
+  boss11Hit: 36,
+  boss12: 33,
+  boss12Hit: 33,
+  boss13: 41,
+  boss13Hit: 41,
+  boss14: 46,
+  boss14Hit: 46,
   bullet: 1.8,
   /*
     ⚠️ **Bigger than the pulse and drawn in the ENEMY ink** — 0081. It is the only thing on screen the
