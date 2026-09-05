@@ -179,6 +179,10 @@ export interface Entity extends Body {
    * is a comparison against the pickup's own position, because a body holding station never moves
    * relative to the camera and so can never test its way back out of the hold.
    * `docs/decisions/0064-a-pickup-waits-to-be-taken.md`.
+   *
+   * ⚠️ **And two more since 0250, on the same terms — a hold is a hold.** A boss carries the steps
+   * it has left to brace, still across the lane, while its lasers are on; a beam bolt carries the
+   * steps its strike lasts once its warning has run. `docs/decisions/0250-the-quetzal-screams.md`.
    */
   holdFor: number;
   /**

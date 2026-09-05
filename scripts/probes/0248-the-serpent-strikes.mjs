@@ -81,10 +81,11 @@ export const PROBES = [
     // The lightning stroked in the player's hand, as every bolt was before 0248.
     broke: 'the serpent’s lightning stroked in the player’s own bolt inks',
     guard: 'THE PICTURE: the warning is drawn dim',
+    // Re-anchored by 0250, which put the beam beside the rain on this line.
     edit: {
       path: 'src/render/scene.ts',
-      find: '    const hostile = e.kind === RAIN_BOLT_KIND;',
-      replace: '    const hostile = e.kind === RAIN_BOLT_KIND && false;',
+      find: '    const hostile = e.kind === RAIN_BOLT_KIND || beam;',
+      replace: '    const hostile = (e.kind === RAIN_BOLT_KIND || beam) && false;',
     },
   },
 ];

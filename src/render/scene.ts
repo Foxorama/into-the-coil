@@ -10,7 +10,7 @@
  * a scrub bar, and it is the rule `docs/decisions/0015-the-layer-ladder.md` gives the layer.
  */
 
-import { RAIN_BOLT_KIND } from '../content/bosses.ts';
+import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import type { View } from '../sim/camera.ts';
 import type { Entity } from '../sim/entity.ts';
 import type { Pool } from '../sim/pool.ts';
@@ -305,9 +305,17 @@ export function paintBolts(surface: Surface, view: View, bolts: Pool<Entity>, ca
       life is inside `BOLT_STEPS` it is the arc's bolt exactly, hostile. The player is given the
       line for as long as the row's `warning` says, which is what makes the strike learnable.
     */
-    const hostile = e.kind === RAIN_BOLT_KIND;
-    const warning = hostile && e.lifeFor > BOLT_STEPS;
-    const amp = warning ? 0 : BOLT_JAG * length > BOLT_JAG_MAX ? BOLT_JAG_MAX : BOLT_JAG * length;
+    /*
+      ⚠️ **AND A LASER IS A STRAIGHT ONE THAT STAYS ON — 0250.** A bolt with `BEAM_BOLT_KIND` warns
+      the same way while its life is past its own `holdFor`, and is then a straight hostile stroke
+      as wide as it hurts — its `radius` is the half-width the frame reads — with no jag, no points
+      and no twig, full until its last `BOLT_STEPS`, on which it fades. A beam that jagged would be
+      lightning, and a beam drawn thinner than it hurts would be a lie about where the player may be.
+    */
+    const beam = e.kind === BEAM_BOLT_KIND;
+    const hostile = e.kind === RAIN_BOLT_KIND || beam;
+    const warning = hostile && e.lifeFor > (beam ? e.holdFor : BOLT_STEPS);
+    const amp = warning || beam ? 0 : BOLT_JAG * length > BOLT_JAG_MAX ? BOLT_JAG_MAX : BOLT_JAG * length;
     const page = Math.floor(e.lifeFor / BOLT_PAGE_STEPS);
     const seed = e.spin;
     const last = BOLT_VERTICES - 1;
@@ -323,6 +331,13 @@ export function paintBolts(surface: Surface, view: View, bolts: Pool<Entity>, ca
     }
     if (warning) {
       surface.bolt(LINK, BOLT_VERTICES, BOLT_WIDTH * WARNING_WIDTH * view.scale, WARNING_ALPHA, true);
+      continue;
+    }
+    if (beam) {
+      // The stroke's own width is a quarter of the visible glow (`src/render/canvas.ts`), so a
+      // quarter of the hurt width draws the glow exactly as wide as the beam hurts.
+      const held = e.lifeFor > BOLT_STEPS ? 1 : e.lifeFor / BOLT_STEPS;
+      surface.bolt(LINK, BOLT_VERTICES, e.radius * BEAM_STROKE * view.scale, held, true);
       continue;
     }
     // Fades over its life: a flash, brightest the step it lands.
@@ -366,6 +381,13 @@ export function paintBolts(surface: Surface, view: View, bolts: Pool<Entity>, ca
  */
 const WARNING_WIDTH = 0.6;
 const WARNING_ALPHA = 0.45;
+
+/**
+ * A beam's stroke width as a share of its half-width — 0250. The canvas draws a bolt's visible
+ * glow at four times the stroke (`src/render/canvas.ts`), so half the half-width — a quarter of the
+ * full width — is what puts the glow's edge exactly where the beam stops hurting.
+ */
+const BEAM_STROKE = 0.5;
 
 /**
  * The edge of the player's box: one dash per tiling period, straight down the lane.
