@@ -105,6 +105,11 @@ persisted.
 | the pair thrown from the nose rather than the wingtips | `THE COIL: a blade leaves the wingtip` |
 | the loop the same size at every rung | `THE LADDER: a rung is a wider band` |
 
+⚠️ **Since [0244](0244-a-blade-rides-a-helix.md) the flight is a helix, not a chain of loops**, and
+the second row above — *both blades turning the same way* — is retired: a sine advanced backwards
+is the same sine, so there is nothing left to break. The other three rows are still re-run by
+`node scripts/prove-guard.mjs 0242`, against `THE HELIX` where they named `THE COIL`.
+
 And the blade probes before it, re-aimed for a coil: `0234` (the loop's centre standing still →
 `THE EDGE`; a blade landing again before its own flash has run → `THE SWEEP`), `0237` (the clock
 restored → `THE EDGE`; the ladder flat → `THE LADDER`). **Four probes are retired**: 0240's three,

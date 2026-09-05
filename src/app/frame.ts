@@ -56,7 +56,7 @@ import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
 import type { Pool } from '../sim/pool.ts';
 import { BOLT_STEPS, paintBolts, paintScene, paintStacks, type Bound, type Landmarks, type Sky } from '../render/scene.ts';
-import { LANDMARK_SLOTS, SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
+import { LANDMARK_SLOTS, SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
 import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
@@ -1753,8 +1753,8 @@ function fireShip(w: World): void {
 const BLADE_KIND = 1;
 
 /**
- * Which side of the nose each blade of a pair leaves from, and therefore which way round it goes —
- * `docs/decisions/0242-a-blade-coils-ahead-of-the-ship.md`. Two, always: one from each wingtip.
+ * Which side of the nose each blade of a pair leaves from, and therefore which strand of the helix
+ * it is — `docs/decisions/0244-a-blade-rides-a-helix.md`. Two, always: one from each wingtip.
  */
 // @setup: the pair's two sides, for the module's lifetime.
 const BLADE_SIDES = [-1, 1] as const;
@@ -1764,57 +1764,71 @@ const BLADE_TURN_STEPS = 4;
 
 /**
  * A pair of shurikens thrown — `docs/decisions/0234-a-blade-circles-the-ship.md`, as
- * `docs/decisions/0242-a-blade-coils-ahead-of-the-ship.md` left it.
+ * `docs/decisions/0244-a-blade-rides-a-helix.md` left it.
  *
  * ⚠️ **INTO THE PULSE'S POOL, because a ship carries one gun** — the same argument that took the
  * bolts' slots out of it (0233). What tells a blade from a pulse afterwards is `BLADE_KIND`, and
  * what tells the pool a blade is not spent by arriving is its health (`src/sim/collide.ts`).
  *
- * ⚠️ **FROM THE WINGTIPS, CIRCLING FORWARD, AND CROSSING AHEAD OF THE NOSE.** The fourth play-test
- * drew the path: each blade circles a point that moves up the lane at the row's speed, so its track
- * is a chain of loops; the pair leaves a quarter-turn either side of the nose and each turns TOWARD
- * it, so the two braid across the band's centre line twice a loop — which is where a boss sits.
- * The loop's centre and its speed are copied onto the blade (`fromAlong`/`fromAcross`,
+ * ⚠️ **FROM THE WINGTIPS, UP THE LANE, AND CROSSING AHEAD OF THE NOSE — A HELIX.** The sixth
+ * play-test named the shape: *"the two wingtips firing to form a helix pattern."* Each blade goes
+ * straight up the lane at the row's speed and swings across it in a sine at the weapon row's `coil`
+ * half-width and `turn`; the pair leaves from the wingtips heading out, a half-turn out of phase,
+ * so the two strands cross at the band's centre line twice a turn — where a boss sits. The strand's axis and its speed are copied onto the blade (`fromAlong`/`fromAcross`,
  * `orbitGrow`), so a blade thrown is a blade thrown: switching guns with blades in the air leaves
- * them coiling. The spawn stream is not consulted, on `spawnWave`'s argument: what a gun does is
- * authored, not dealt.
+ * them riding. The spawn stream is not consulted, on `spawnWave`'s argument: what a gun does is
+ * authored, not dealt. (0242 had each blade circle a point moving up the lane — a chain of loops —
+ * and the play-test said it had not asked for that.)
  */
 function throwBlades(w: World): void {
   const row = SHOTS[WEAPONS[w.weapon.kind].shot];
   // On the grid, like every gun — 0094.
   w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);
   w.onCue('throw', w.ship.across);
+  /*
+    ⚠️ **FROM THE WINGTIP ITSELF, HEADING OUT** — 0244's second photograph: *"there's a big gap
+    between helix start and wingtips."* The first draft threw each blade at its crest, `coil` off
+    the axis, which at the cap is eighteen units from a wingtip four out. The wingtip is half the
+    drawn width of the hull the ship is wearing — whichever rung's hull — and the strand's phase at
+    the throw is the one at which a sine of `coil` passes that width on its way out, so the blade
+    leaves the wing and swings wider before it comes back across the nose.
+  */
+  const wingtip = SPRITE_EXTENT[SPRITE_KINDS[w.ship.spriteBase]!] / 2;
+  const lift = Math.asin(Math.min(1, wingtip / w.weapon.coil));
   for (let s = 0; s < BLADE_SIDES.length; s++) {
     const side = BLADE_SIDES[s]!;
     const blade = w.playerShots.spawn();
     if (blade === null) return;
-    reset(blade, w.ship.along, w.ship.across + side * w.weapon.coil, row, BLADE_KIND);
+    // The two strands are a half-turn apart: the other side is the same phase, half a turn on.
+    // Which way the phase runs makes no difference to a sine, so both run one way.
+    const angle = side > 0 ? lift : Math.PI + lift;
+    reset(blade, w.ship.along, w.ship.across + Math.sin(angle) * w.weapon.coil, row, BLADE_KIND);
     blade.velAlong = w.scrollPerStep + row.speed;
     blade.damage = w.weapon.damage;
     // No clock — 0237. The edge of the screen ends a blade (`steerBlades`); zero is *never*.
     blade.lifeFor = 0;
-    // The loop's centre: at the nose now, and up the lane at the row's speed from here on.
+    // The strand's axis: the nose now, and up the lane at the row's speed from here on.
     blade.fromAlong = w.ship.along;
     blade.fromAcross = w.ship.across;
     blade.orbitGrow = row.speed;
     blade.orbitRadius = w.weapon.coil;
-    // A quarter-turn off the nose on its own side, turning toward the nose.
-    blade.orbitAngle = side * (Math.PI / 2);
-    blade.orbitTurn = -side * w.weapon.turn;
+    blade.orbitAngle = angle;
+    blade.orbitTurn = w.weapon.turn;
   }
 }
 
 /**
- * Every blade in the air, moved to its next place on its loop.
+ * Every blade in the air, moved to its next place on its strand.
  *
  * ⚠️ **The VELOCITY is set and `stepEntities` integrates it**, rather than the position being
  * written here, so `prev` is what the painter interpolates from and the swept collision sees the
- * whole of a fast arc — a blade at the top of a cap loop covers four units a step, which is close
- * to its own hurtbox, and `overlaps` sweeps the step for exactly that.
+ * whole of a fast swing — a blade crossing the axis at the cap covers three units a step across
+ * the lane, which is most of its own hurtbox, and `overlaps` sweeps the step for exactly that.
  *
- * ⚠️ **About its own loop's centre, which goes up the lane in the camera's frame** — 0242. A blade
- * is thrown and gone, like a pulse; it does not follow the ship, and a ship that moves across the
- * lane after a throw leaves that pair's band where it was. (0234 to 0240 circled the ship.)
+ * ⚠️ **Along its own strand's axis, which goes up the lane in the camera's frame** — 0244. The
+ * along is the axis's and only ever gains; the across is a sine about it. A blade is thrown and
+ * gone, like a pulse; it does not follow the ship, and a ship that moves across the lane after a
+ * throw leaves that pair's helix where it was. (0234 to 0240 circled the ship; 0242 looped.)
  *
  * ⚠️ **And it spins by swapping its two turns** — the row's `sprite` and `spriteHit` are the star
  * and the star an eighth of a turn round (`src/content/shots.ts`), and a blade never flashes, so
@@ -1826,7 +1840,7 @@ function steerBlades(w: World): void {
     if (b.kind !== BLADE_KIND) continue;
     b.orbitAngle += b.orbitTurn;
     b.fromAlong += w.scrollPerStep + b.orbitGrow;
-    const along = b.fromAlong + Math.cos(b.orbitAngle) * b.orbitRadius;
+    const along = b.fromAlong;
     const across = b.fromAcross + Math.sin(b.orbitAngle) * b.orbitRadius;
     /*
       ⚠️ **GONE THE STEP IT LEAVES THE SCREEN, AND NOT BEFORE — 0237.** A loop that touched an edge

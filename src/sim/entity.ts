@@ -281,10 +281,11 @@ export interface Entity extends Body {
   fromAlong: number;
   fromAcross: number;
   /**
-   * A blade's place on its loop — the angle it is at, the loop's radius, how much it turns a step,
-   * and how fast the loop's CENTRE goes up the lane (`orbitGrow`, in units a step; the centre itself
-   * is `fromAlong`/`fromAcross` above) — `docs/decisions/0234-a-blade-circles-the-ship.md` as
-   * `docs/decisions/0242-a-blade-coils-ahead-of-the-ship.md` left it.
+   * A blade's place on its strand — the phase of its swing, the swing's half-width, how much the
+   * phase advances a step, and how fast the strand's AXIS goes up the lane (`orbitGrow`, in units a
+   * step; the axis itself is `fromAlong`/`fromAcross` above) —
+   * `docs/decisions/0234-a-blade-circles-the-ship.md` as
+   * `docs/decisions/0244-a-blade-rides-a-helix.md` left it.
    *
    * ⚠️ **Everything a blade needs is COPIED ONTO IT when it is thrown**, not read off the fitted
    * weapon each step: a player who takes another gun with blades in the air keeps the blades they

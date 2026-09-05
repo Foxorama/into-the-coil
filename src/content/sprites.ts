@@ -922,13 +922,16 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // A landing spark: bigger than a bullet and smaller than the missile, so a chain of them reads
   // as hits rather than as a stream. Twice the `arc` row's hurtbox radius, like every shot.
   arcNode: 2.4,
-  // A blade: bigger than the ship, since 0238 — played at 3.2, *"shuriken stars need to be a lot
-  // bigger"*, and at 7, *"bigger and steel coloured, also with a bit of a glow to them"*. It is the
-  // one shot the player has to read the PATH of, and the path runs to the edge of the screen. The
-  // star is drawn at four fifths of this (`BLADE_GLYPH` in `src/render/bake.ts`) and the rest is
-  // its glow; the hurtbox is the row's, and `tests/combat.test.ts` holds it inside what is drawn.
-  shuriken: 12,
-  shurikenTurn: 12,
+  // A blade: a twelfth of the lane, since 0244 — played at 3.2, *"shuriken stars need to be a lot
+  // bigger"*; at 7, *"bigger and steel coloured, also with a bit of a glow to them"*; at 12, *"a
+  // bit smaller, they take up a lot of visual screenspace and make it hard to see enemies and
+  // enemy fire"*; and at 10, *"slightly smaller"* again. It is the one shot the player has to read
+  // the PATH of, and the path runs to the edge of the screen; `THE SIZE` in `tests/blades.test.ts`
+  // holds the box at or under a twelfth of the lane. The star is drawn at four fifths of this
+  // (`BLADE_GLYPH` in `src/render/bake.ts`) and the rest is its glow; the hurtbox is the row's, and
+  // `tests/combat.test.ts` holds it inside what is drawn.
+  shuriken: 8,
+  shurikenTurn: 8,
   // Small: a fragment reads as a piece of something, and eight of them at enemy size is a wall.
   debris: 1.4,
   /*

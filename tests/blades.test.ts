@@ -1,16 +1,18 @@
 /**
- * A blade coils ahead of the ship — `docs/decisions/0234-a-blade-circles-the-ship.md`, as
- * `docs/decisions/0242-a-blade-coils-ahead-of-the-ship.md` left it.
+ * A blade rides a helix ahead of the ship — `docs/decisions/0234-a-blade-circles-the-ship.md`, as
+ * `docs/decisions/0244-a-blade-rides-a-helix.md` left it.
  *
  * The shuriken is the third gun and the first shot that is not spent by arriving: a pair of blades
- * leaves the wingtips, each circling a point that moves up the lane, the two crossing ahead of the
- * nose — a chain of loops that lands on everything it crosses once per impact flash and is gone at
- * the leading edge of the screen. The kind's ladders, face and hulls are held by
- * `tests/weapons.test.ts` over every gun; what is held here is the flight.
+ * leaves the wingtips, each going up the lane and swinging across it, the two a half-turn apart so
+ * they cross ahead of the nose — the two strands of a helix that lands on everything it crosses
+ * once per impact flash and is gone at the leading edge of the screen. The kind's ladders, face
+ * and hulls are held by `tests/weapons.test.ts` over every gun; what is held here is the flight.
  *
- * ⚠️ **Nothing here asserts on a VALUE**, on `src/content/shots.ts`'s terms — the loop keeps its
- * width and gains ground, the pair crosses, the blade survives, the second landing waits for the
- * flash to finish, the leading edge is the end, and a rung is a wider band.
+ * ⚠️ **Almost nothing here asserts on a VALUE**, on `src/content/shots.ts`'s terms — the strand
+ * keeps its width and never loses ground, the pair crosses, the blade survives, the second landing
+ * waits for the flash to finish, the leading edge is the end, and a rung is a wider band. The two
+ * that do are in the player's units and are the player's numbers: seconds to cross the screen
+ * (`THE PACE`) and a share of the lane (`THE SIZE`).
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,7 +25,8 @@ import { ENEMIES } from '../src/content/enemies.ts';
 import { CUES, TWIN_KINDS } from '../src/content/cues.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { reset, type Entity } from '../src/sim/entity.ts';
-import { SPRITE_KINDS } from '../src/content/sprites.ts';
+import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { INK_OF } from '../src/render/bake.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
 
@@ -87,14 +90,19 @@ function alive(world: World, blade: Entity): boolean {
   return false;
 }
 
-/** One throw at `tier` — a PAIR — watched alone until both are gone: where each was on every step. */
-function flights(tier: number): { world: World; pair: [Place[], Place[]] } {
+/**
+ * One throw at `tier` — a PAIR — watched alone until both are gone: where each was on every step,
+ * and where each was THROWN from, across the ship (the place before its first step, which the
+ * painter keeps as `prevAcross`).
+ */
+function flights(tier: number): { world: World; pair: [Place[], Place[]]; thrown: [number, number] } {
   const { world, frame } = armed(tier);
   frame.step();
   expect(world.playerShots.size, 'a throw is not a pair').toBe(2);
   // One pair, watched alone: the launcher is held off after the first throw.
   world.fireIn = NEVER;
   const blades = [world.playerShots.at(0), world.playerShots.at(1)];
+  const thrown: [number, number] = [blades[0]!.prevAcross - world.ship.across, blades[1]!.prevAcross - world.ship.across];
   const pair: [Place[], Place[]] = [[], []];
   let steps = 0;
   while (world.playerShots.size > 0 && steps < LONGER_THAN_A_BLADE) {
@@ -112,72 +120,108 @@ function flights(tier: number): { world: World; pair: [Place[], Place[]] } {
     steps++;
   }
   expect(world.playerShots.size, 'the blades never left the screen').toBe(0);
-  return { world, pair };
+  return { world, pair, thrown };
+}
+
+/** Half the drawn width of the hull the ship is wearing, in world units: where a wingtip is. */
+function wingtipOf(world: World): number {
+  return SPRITE_EXTENT[SPRITE_KINDS[world.ship.spriteBase]!] / 2;
 }
 
 /**
- * A blade's loops, read off the picture: each time its track crosses the ship's line and back is a
- * loop, and what is kept per loop is the furthest ahead it got and the widest it swung.
+ * A blade's swings, read off the picture: each stretch of its track between two crossings of the
+ * ship's line is a swing, and what is kept per swing is the widest it got from that line.
  */
-function loops(places: readonly Place[]): { ahead: number; wide: number }[] {
-  const out: { ahead: number; wide: number }[] = [];
-  let crossings = 0;
+function swings(places: readonly Place[]): number[] {
+  const out: number[] = [];
   let sign = Math.sign(places[0]!.fromShipAcross);
-  let ahead = Number.NEGATIVE_INFINITY;
   let wide = 0;
   for (const place of places) {
     const s = Math.sign(place.fromShipAcross);
     if (s !== 0 && s !== sign) {
       sign = s;
-      crossings++;
-      if (crossings % 2 === 0) {
-        out.push({ ahead, wide });
-        ahead = Number.NEGATIVE_INFINITY;
-        wide = 0;
-      }
+      out.push(wide);
+      wide = 0;
     }
-    ahead = Math.max(ahead, place.fromShipAlong);
     wide = Math.max(wide, Math.abs(place.fromShipAcross));
   }
   return out;
 }
 
-describe('0234 — a blade coils ahead of the ship', () => {
-  it('THE COIL: a blade leaves the wingtip, and every loop of its track gains ground up the lane and keeps its width', () => {
+describe('0234 — a blade rides a helix ahead of the ship', () => {
+  it('THE HELIX: a blade leaves the wingtip, never loses ground up the lane, and swings across the ship’s line again and again at one width', () => {
     /*
-      0242, from the fourth play-test's drawing: *"starting from the wing tips and circling
-      forwards."* A loop is read off the picture — the track crossing the ship's line and back —
-      so nothing here names the loop's centre or its speed. What a coil IS, in the player's units,
-      is that each loop reaches further ahead than the last and none is wider or narrower than the
-      first by much: a chain of loops, not a spiral and not a ring.
+      0244, from the sixth play-test: *"I want the two wingtips firing to form a helix pattern with
+      the shurikens."* A swing is read off the picture — the track between two crossings of the
+      ship's line — so nothing here names the strand's axis, its speed or its turn. What a helix's
+      strand IS, in the player's units: it only ever gains ground (0242's loops came back on
+      themselves, and that is the thing this is not), it crosses the line many times before the
+      edge, and no swing is wider or narrower than the first by much.
+
+      ⚠️ **FROM THE WINGTIP ITSELF** — the second photograph: *"there's a big gap between helix
+      start and wingtips."* The first draft threw from the crest, `coil` out; the blade is thrown
+      from where the wing's drawn edge is, within a blade of it, and swings wider from there.
     */
-    const { pair } = flights(1);
+    const { world, pair, thrown } = flights(1);
     const places = pair[0];
     expect(Math.abs(places[0]!.fromShipAlong), 'the blade did not leave from the ship').toBeLessThan(SHOTS.shuriken.radius);
-    expect(Math.abs(places[0]!.fromShipAcross), 'the blade did not leave from a wingtip').toBeGreaterThan(SHOTS.shuriken.radius);
-    const chain = loops(places);
-    expect(chain.length, 'the blade never completed two loops before the edge').toBeGreaterThan(2);
-    for (let k = 1; k < chain.length; k++) {
-      expect(chain[k]!.ahead, `loop ${k} got no further up the lane than loop ${k - 1}`).toBeGreaterThan(chain[k - 1]!.ahead);
-      expect(chain[k]!.wide, `loop ${k} is a different width from the first`).toBeGreaterThan(chain[0]!.wide * 0.85);
-      expect(chain[k]!.wide, `loop ${k} is a different width from the first`).toBeLessThan(chain[0]!.wide * 1.15);
+    const wingtip = wingtipOf(world);
+    expect(Math.abs(Math.abs(thrown[0]) - wingtip), `the blade was thrown ${Math.abs(thrown[0]).toFixed(1)} out, and the wingtip is ${wingtip.toFixed(1)}`).toBeLessThan(
+      SHOTS.shuriken.radius / 2,
+    );
+    expect(Math.max(...places.map((p) => Math.abs(p.fromShipAcross))), 'the blade never swung wider than the wingtip').toBeGreaterThan(wingtip + SHOTS.shuriken.radius);
+    for (let i = 1; i < places.length; i++) {
+      expect(places[i]!.fromShipAlong, `the blade lost ground on step ${i}, which is a loop and not a helix`).toBeGreaterThan(places[i - 1]!.fromShipAlong);
+    }
+    const strand = swings(places);
+    expect(strand.length, 'the blade crossed the ship’s line fewer than four times before the edge').toBeGreaterThanOrEqual(4);
+    for (let k = 1; k < strand.length; k++) {
+      expect(strand[k], `swing ${k} is a different width from the first`).toBeGreaterThan(strand[0]! * 0.85);
+      expect(strand[k], `swing ${k} is a different width from the first`).toBeLessThan(strand[0]! * 1.15);
+    }
+  });
+
+  it('THE PACE: a blade crosses from the ship to the leading edge of the widest screen in under two and a half seconds', () => {
+    /*
+      *"the shurikens need to be slightly faster than they are now."* Held in the unit the player
+      feels — seconds across the screen the game ships, which is the widest view — as a BUDGET
+      (0192): the number is the player's, and the speed that gives it is `src/content/shots.ts`'s.
+      Measured at the 0244 speed: 2.3 s; at 0242's it was 2.9 s, which is what *"slightly faster"*
+      was said about.
+    */
+    const { world, pair } = flights(0);
+    const steps = pair[0].length;
+    expect(world.view.alongSpan, 'this is not the widest screen, so the seconds mean nothing').toBeCloseTo(ACROSS_SPAN * (16 / 9), 3);
+    expect(steps / STEPS_PER_SECOND, `a blade takes ${(steps / STEPS_PER_SECOND).toFixed(2)} s to reach the leading edge`).toBeLessThan(2.5);
+  });
+
+  it('THE SIZE: a blade is drawn no wider than a twelfth of the lane, so a screen of them leaves the enemies and their fire in view', () => {
+    /*
+      *"the shuriken graphics need to be a bit smaller, they take up a lot of visual screenspace and
+      make it hard to see enemies and enemy fire"* — and, at a tenth, *"slightly smaller"* again.
+      Two dozen blades at the cap, each a box a twelfth of the lane wide, is a seventh of the
+      screen's area at most; at 0238's size sixteen were a quarter. The hurtbox inside that box is
+      `tests/combat.test.ts`'s.
+    */
+    for (const kind of ['shuriken', 'shurikenTurn'] as const) {
+      expect(SPRITE_EXTENT[kind], `${kind} is drawn ${SPRITE_EXTENT[kind]} units wide on a lane of ${ACROSS_SPAN}`).toBeLessThanOrEqual(ACROSS_SPAN / 12);
     }
   });
 
   it('THE PAIR: a throw is two blades from opposite wingtips, and they cross in front of the nose', () => {
     /*
-      *"cross the blades in front of the nose."* Two blades, a quarter-turn either side of the
-      nose and turning toward it, braid across the band's centre line — which is where a boss sits.
-      Held from the picture: they start the same distance out on opposite sides, each visits both
-      sides, and there is a step ahead of the nose where the two are at the SAME PLACE, within a
-      blade of each other.
+      *"cross the blades in front of the nose."* Two blades, one at each crest, a half-turn apart,
+      cross the band's centre line together — which is where a boss sits. Held from the picture:
+      they start the same distance out on opposite sides, each visits both sides, and there is a
+      step ahead of the nose where the two are at the SAME PLACE, within a blade of each other.
 
-      ⚠️ **The same place, not the same line.** Two blades turning the same way are one loop half a
-      turn apart: they cross the ship's line together too, from opposite sides, and are two loop
-      widths apart along the lane when they do. Only a braid brings them to one point.
+      ⚠️ **The same place, not the same line.** Two strands in phase would be one line drawn twice;
+      two a quarter-turn apart cross the ship's line at different places. Only a half-turn brings
+      them to one point, which is the helix.
     */
-    const { pair } = flights(2);
+    const { pair, thrown } = flights(2);
     const [a, b] = pair;
+    expect(thrown[0], 'the pair left from one side').toBeCloseTo(-thrown[1], 3);
     expect(a[0]!.fromShipAcross, 'the pair left from one side').toBeCloseTo(-b[0]!.fromShipAcross, 3);
     for (const places of pair) {
       expect(Math.min(...places.map((p) => p.fromShipAcross)), 'a blade never crossed to the other side').toBeLessThan(0);

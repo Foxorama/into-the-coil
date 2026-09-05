@@ -130,16 +130,19 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * is what usually ends it — twelve is more bodies than a spiral crosses — so the number is a
    * ceiling on what one blade may be worth against a wall of drifters, not a life.
    *
-   * ⚠️ **`speed` is how fast the LOOP'S CENTRE goes up the lane, in the camera's frame** — 0242.
-   * The blade itself circles that centre at the weapon row's `coil` radius and `turn`, so its own
-   * speed is this plus the loop's, which at the cap is five units a step at the top of the loop.
-   * Well under the pulse's: a coil sweeps, it does not fly, and at this speed a loop advances about
-   * twenty-two units on the last — the overlap the drawing had. (0237 to 0240 had it at zero, when
-   * the blade circled the ship and had no speed of its own.)
+   * ⚠️ **`speed` is how fast the blade goes UP THE LANE, in the camera's frame** — 0244. The blade
+   * swings across the lane about that line at the weapon row's `coil` half-width and `turn`, so
+   * what it covers in a step is this along plus up to three across at the cap. Well under the
+   * pulse's: a helix sweeps, it does not fly. Played at 0.8 (0242): *"the shurikens need to be
+   * slightly faster than they are now"* — a quarter faster, and `THE PACE` in
+   * `tests/blades.test.ts` holds the crossing of the screen in seconds. (0237 to 0240 had it at
+   * zero, when the blade circled the ship and had no speed of its own.)
    *
-   * ⚠️ **`radius` 4.8 — a star bigger than the ship, since 0238.** Played at 1.4: *"shuriken stars
-   * need to be a lot bigger"*; at 3.5: *"bigger and steel coloured."* The hurtbox is the sweep, so a
-   * bigger blade is a wider sweep too, and the balance of that is a hand's.
+   * ⚠️ **`radius` 3.2 — a star smaller than the ship, since 0244.** Played at 1.4: *"shuriken stars
+   * need to be a lot bigger"*; at 3.5: *"bigger and steel coloured"*; at 4.8: *"a bit smaller, they
+   * take up a lot of visual screenspace and make it hard to see enemies and enemy fire"*; at 4:
+   * *"slightly smaller"* again. The hurtbox is the sweep, so a smaller blade is a narrower sweep
+   * too, and the balance of that is a hand's.
    *
    * ⚠️ **`spriteHit` IS THE OTHER TURN OF THE STAR, AND THAT IS NOT A FLASH.** A blade never
    * flashes — what it survives is arriving, not being hit, and nothing in the game shoots it — so
@@ -147,7 +150,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * `src/app/frame.ts` swaps the two every few steps to spin it. `blit` cannot rotate; two bitmaps
    * an eighth of a turn apart are what a spinning shuriken is.
    */
-  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 4.8, health: BLADE_EDGE, damage: 1, speed: 0.8 },
+  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 3.2, health: BLADE_EDGE, damage: 1, speed: 1 },
   /**
    * What an enemy sends back. **Slower than the ship**, which is the whole of what makes it
    * dodgeable rather than a coin flip: a player who reacts can always leave the line it is on.
