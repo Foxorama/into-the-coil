@@ -113,6 +113,7 @@ function stationKeepingWorld(surface: Surface): World {
     burstRng: makeRng('interp').stream('burst'),
     arcRng: makeRng('interp').stream('arc'),
     rainRng: makeRng('interp').stream('rain'),
+    rockRng: makeRng('interp').stream('rock'),
     bolts: new Pool<Entity>(CAPACITY.bolts, makeEntity),
     scatterRng: makeRng('interp').stream('scatter'),
     view: viewOf(1280, 720),

@@ -37,6 +37,7 @@ export type ShotKind =
   | 'acid'
   | 'void'
   | 'flame'
+  | 'rock'
   | 'missile'
   | 'seeker'
   | 'bomb'
@@ -76,6 +77,7 @@ export const SHOT_KINDS: readonly ShotKind[] = [
   'acid',
   'void',
   'flame',
+  'rock',
   'missile',
   'seeker',
   'bomb',
@@ -230,6 +232,15 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
   // ⚠️ 0.66 is the most a 1.2-unit drawing may carry (`tests/combat.test.ts`'s band) and the least
   // that keeps the sky's far stars under the smallest thing that can kill you (`tests/sky.test.ts`).
   flame: { sprite: SPRITE.flame, spriteHit: SPRITE.flame, radius: 0.66, health: 1, damage: 1, speed: 1.8 },
+  /*
+    ⚠️ **THE BIGGEST AND THE SLOWEST HOSTILE BULLET, WHICH IS 0098'S TRADE AT ITS FAR END** — 0251.
+    A chunk of volcanic rock falling on the lane: a fifteenth of the lane across, at under half the
+    ship's speed, so it is the thing the player walks away from. `speed` is how fast it FALLS —
+    across the lane, not down it — because a fall is the one shot in the game that travels the
+    short axis. Its hurtbox is a third of its drawing, inside `tests/combat.test.ts`'s band, and it
+    hits for two: a rock is not a bullet.
+  */
+  rock: { sprite: SPRITE.rock, spriteHit: SPRITE.rock, radius: 2.2, health: 1, damage: 2, speed: 0.7 },
   /**
    * The player's second auto-weapon: slower than the pulse, and worth three of it.
    *

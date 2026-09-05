@@ -743,6 +743,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     arcRng: makeRng('proof-scene').stream('arc'),
     // Where the serpent's lightning falls — 0248, its own stream per 0021.
     rainRng: makeRng('proof-scene').stream('rain'),
+    // Where the volcanoes' rock falls — 0251, its own stream on the same terms.
+    rockRng: makeRng('proof-scene').stream('rock'),
     view,
     surface,
     // One named stream, per docs/decisions/0021-one-stream-per-concern.md, so a cosmetic roll added
@@ -785,6 +787,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     bossPatrol: 1,
     bossPhaseAt: -1,
     bossUncoilAt: 0,
+    bossFallIn: 0,
     // Nothing is dying at boot, and where the last ship died is not a question anybody has asked yet
     // — the middle of the lane is the honest blank, since it is where a ship starts. 0079.
     dyingIn: 0,

@@ -287,6 +287,8 @@ export const SPRITE_KINDS = [
   'void',
   // The eagle's flame — 0249: a tongue of fire, the smallest bullet there is.
   'flame',
+  // The volcanoes' rock — 0251: a jagged lump lit from a crack, the biggest bullet there is.
+  'rock',
   /*
     ⚠️ **A DART, AND THE ONLY THING IN THE GAME DRAWN LONG ALONG ITS OWN TRAVEL IN THE BULLET INK.**
     The pulse is a disc of 1.8 units; this is 2.8 and pointed, so the two are told apart by shape and
@@ -888,6 +890,9 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   void: 4.2,
   // Under the lance's 1.9 by more than five pixels on a 1280×720 screen, and the quickest — 0249.
   flame: 1.2,
+  // Over the acid's 5 by more than five pixels, and the slowest — 0251. The hurtbox in
+  // `src/content/shots.ts` is 0.34 of it.
+  rock: 6.5,
   // Longer than the pulse and pointed. A missile is the shot the player is meant to notice.
   missile: 3.4,
   // The seeker is the missile's size: what tells them apart is the fins and the eye, not the box.

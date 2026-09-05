@@ -23,7 +23,7 @@
 import { ACROSS_SPAN } from '../sim/camera.ts';
 import { type Entity, reset } from '../sim/entity.ts';
 import type { Pool } from '../sim/pool.ts';
-import { BEAM_BOLT_KIND, RAIN_BOLT_KIND, type BossPhase, type BossRow, type Uncoil } from '../content/bosses.ts';
+import { BEAM_BOLT_KIND, RAIN_BOLT_KIND, type BossPhase, type BossRow, type Fall, type Uncoil } from '../content/bosses.ts';
 import { BOLT_STEPS } from '../render/scene.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../sim/flight.ts';
 import type { Rng } from '../sim/rng.ts';
@@ -596,4 +596,38 @@ export function stepBoss(
     }
   }
   return direction;
+}
+
+/**
+ * A belch — `docs/decisions/0251-the-volcanoes-belch.md`: the row's `fall`, thrown once. `count`
+ * of the fall's shot at the top edge of the lane, each somewhere along the box the ship can fly in,
+ * falling straight across it at `speed` and riding the camera along it. Into the enemy's own pool,
+ * so a rock hurts as any shot hurts and is shot down as any shot is.
+ *
+ * ⚠️ **It retires on its own life, not on the cull.** A body riding the camera never reaches the
+ * along cull, and there is no across cull; a rock that had fallen through the bottom of the lane
+ * would go on falling under the screen for ever, one pool slot each. Its life is the lane plus its
+ * own width at its own speed, and a step over.
+ *
+ * ⚠️ **On its own stream** — 0021, the rain's argument again: where a rock falls must not move a
+ * wave by one enemy.
+ */
+export function belch(
+  fall: Fall,
+  shots: Pool<Entity>,
+  rock: ShotRow,
+  speed: number,
+  cameraAlong: number,
+  scrollPerStep: number,
+  rockRng: Rng,
+): void {
+  for (let i = 0; i < fall.count; i++) {
+    const shot = shots.spawn();
+    if (shot === null) break;
+    const along = cameraAlong + rockRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD);
+    reset(shot, along, -rock.radius, rock);
+    shot.velAlong = scrollPerStep;
+    shot.velAcross = speed;
+    shot.lifeFor = Math.ceil((ACROSS_SPAN + 2 * rock.radius) / speed) + 1;
+  }
 }

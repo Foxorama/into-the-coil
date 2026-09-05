@@ -83,7 +83,7 @@ import { WEAPONS, WEAPON_KINDS, type FlightKind } from '../content/weapons.ts';
 import { MISSILES, MISSILE_KINDS } from '../content/missiles.ts';
 import { SPECIALS, pyreFor, type SpecialKind } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
-import { openBy, phaseFor, stepBoss, throwCurtain, uncoilsBy } from './boss.ts';
+import { belch, openBy, phaseFor, stepBoss, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import type { Frame } from './loop.ts';
 
@@ -825,6 +825,8 @@ export interface World {
    * stream per 0021: a strike that rolled on the spawn stream would move a wave by one enemy.
    */
   rainRng: Rng;
+  /** Where the volcanoes' rock falls — `docs/decisions/0251-the-volcanoes-belch.md`, on the same terms. */
+  rockRng: Rng;
   view: View;
   surface: Surface;
   /** The spawn stream, named per 0021 — a cosmetic roll added later must not move a wave. */
@@ -1053,6 +1055,11 @@ export interface World {
    * bared window swallowed.
    */
   bossUncoilAt: number;
+  /**
+   * Steps until the boss's fall next belches — 0251. Set to the fall's gap when the boss arrives
+   * and again after every belch; zero for a boss with no fall, which nothing reads.
+   */
+  bossFallIn: number;
   /**
    * The boss died, so the level is over.
    *
@@ -1786,6 +1793,7 @@ function nextFight(w: World): void {
   w.bossPatrol = 1;
   w.bossPhaseAt = -1;
   w.bossUncoilAt = 0;
+  w.bossFallIn = 0;
 }
 
 /**
@@ -4058,6 +4066,35 @@ function driveBoss(w: World): void {
     */
     if (notch > w.bossUncoilAt) w.bossUncoilAt = notch;
   }
+
+  /*
+    ── THE FALL — 0251 ────────────────────────────────────────────────────────────────────────────
+
+    *"Volcanoes in the background that belch big chunks of volcanic rock that rain down and the
+    player has to dodge as well as all the other boss stuff."* On the row beside `uncoil` and read
+    here beside it, for the same reason: it runs through every phase, through the brace and the
+    beams, and a phase table cannot say *as well as*. Every belch is embers at the top edge over
+    each rock that came in (0036) and the enemies' own cue, at the edge — the rock is the sky's,
+    not the hull's.
+
+    ⚠️ **The tier's gap over the fall's**, exactly as the phase's cadence takes it, so a harder tier
+    rains harder and the fall composes with the difficulty rather than ignoring it.
+  */
+  const fall = w.bossRow.fall;
+  if (fall !== null) {
+    w.bossFallIn--;
+    if (w.bossFallIn <= 0) {
+      const rock = SHOTS[fall.shot];
+      const before = w.enemyShots.size;
+      belch(fall, w.enemyShots, rock, rock.speed * w.difficulty.shotSpeed, w.cameraAlong, w.scrollPerStep, w.rockRng);
+      for (let i = before; i < w.enemyShots.size; i++) {
+        const thrown = w.enemyShots.at(i);
+        burst(w, thrown.along, 0, BURST.belch);
+      }
+      if (w.enemyShots.size > before) w.onCue('threat', 0);
+      w.bossFallIn = fireGapFor(fall.every, w.difficulty);
+    }
+  }
   /*
     ── AND THE WINDOW IS A STATE RATHER THAN AN EVENT, SO THE PICTURE HAS TO KEEP SAYING IT ────────
 
@@ -4095,6 +4132,8 @@ function spawnBoss(w: World): void {
   w.bossPatrol = 1;
   w.bossPhaseAt = -1;
   w.bossUncoilAt = 0;
+  // The first belch waits the fall's own gap, so the rock arrives after the boss has — 0251.
+  w.bossFallIn = w.bossRow.fall === null ? 0 : fireGapFor(w.bossRow.fall.every, w.difficulty);
 }
 
 /**
@@ -4386,6 +4425,7 @@ function beginScript(w: World): void {
   w.bossPatrol = 1;
   w.bossPhaseAt = -1;
   w.bossUncoilAt = 0;
+  w.bossFallIn = 0;
 }
 
 export function resetScene(w: World): void {

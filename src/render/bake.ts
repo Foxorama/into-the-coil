@@ -413,6 +413,10 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   void: 'void',
   // The eagle's flame in its own ink — 0249, on the same argument.
   flame: 'fire',
+  // The volcanoes' rock in the fire ink — 0251: hot, and told from the flame by five times the
+  // size and a shape with corners. A rock in a grey of its own would fail the floor every meaning
+  // ink is held to on the dark places.
+  rock: 'fire',
   // The HUD's lives counter rather than a pickup, since 0082 — it keeps the pickup ink because the
   // number beside it is drawn in the player's own colour and the icon has to sit with it.
   lifeIcon: 'pickup',
@@ -4316,6 +4320,38 @@ export function drawKind(
       glow(ctx, f, palette.void, 0, 0, 1.1, 0.5);
       // The light on the rim, not in the hole: a mark over a hole is a mark off the hull (0149).
       disc(ctx, f, shade(palette.void, 0.7), 0, -0.6, 0.17);
+      return;
+    case 'rock':
+      /*
+        A LUMP — 0251: seven corners and no two edges alike, the one bullet with corners that is not
+        a ring, a drop or a dart. Filled in the `fire` ink and then mostly covered in a dark bevel, so
+        what reads is a black rock with a hot rim and one hot crack — the light coming out of it,
+        which is the volcano's own argument (`drawVolcano`). The crack's heart is a disc of 0.22, well
+        over the floor every solid mark is held to.
+      */
+      trace(ctx, f, [
+        [-0.2, -0.92],
+        [0.48, -0.7],
+        [0.9, -0.1],
+        [0.62, 0.56],
+        [0.1, 0.92],
+        [-0.6, 0.64],
+        [-0.9, 0.02],
+        [-0.7, -0.52],
+      ]);
+      seal(ctx);
+      poly(ctx, f, shade(palette.fire, -0.6), [
+        [-0.1, -0.7],
+        [0.36, -0.52],
+        [0.66, -0.06],
+        [0.44, 0.42],
+        [0.06, 0.7],
+        [-0.42, 0.48],
+        [-0.66, 0.02],
+        [-0.52, -0.38],
+      ]);
+      glow(ctx, f, palette.fire, 0, 0, 1.12, 0.4);
+      disc(ctx, f, shade(palette.fire, 0.6), 0.08, -0.06, 0.22);
       return;
     case 'flame':
       /*
