@@ -72,7 +72,10 @@ function stepHeld(d: Driven, across: number = ACROSS_SPAN / 2): void {
   d.frame.step();
 }
 
-const fall = BOSSES.quetzal.fall!;
+const quetzalFall = BOSSES.quetzal.fall!;
+// A fall is a shot or a body since 0255; the volcanoes' is the shot, and the guards below read it as one.
+if (quetzalFall.kind !== 'shot') throw new Error('the quetzal’s fall is not a fall of shot');
+const fall = quetzalFall;
 
 describe('0251 — the volcanoes belch', () => {
   it('THE ROCK: the biggest and slowest hostile bullet, hot, hitting for two — and the belt’s boss is the one thing that sends it', () => {
@@ -94,7 +97,8 @@ describe('0251 — the volcanoes belch', () => {
     expect(fall, 'the quetzal has no fall').not.toBeNull();
     expect(fall.shot).toBe('rock');
     expect(fall.count).toBeGreaterThanOrEqual(1);
-    expect(BOSS_KINDS.filter((k) => BOSSES[k].fall !== null), 'another boss fell in under the volcanoes').toEqual(['quetzal']);
+    // A fall of SHOT — 0255: the jellyfish's is a fall of bodies, and that is its own guard's.
+    expect(BOSS_KINDS.filter((k) => BOSSES[k].fall?.kind === 'shot'), 'another boss fell in under the volcanoes').toEqual(['quetzal']);
     expect(LEVELS.coilward.boss).toBe('quetzal');
     expect(LEVELS.coilward.landmarks.length, 'the belt has no volcanoes to belch').toBeGreaterThan(0);
   });

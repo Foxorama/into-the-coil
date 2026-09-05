@@ -559,6 +559,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   raptor: 'enemy',
   raptorHit: 'impact',
   kite: 'enemy',
+  moonJelly: 'enemy',
+  moonJellyHit: 'impact',
   kiteHit: 'impact',
   sentry: 'enemy',
   sentryHit: 'impact',
@@ -3376,6 +3378,48 @@ const KITE_HULL: readonly Pt[] = [
   [-0.3, 0.56],
 ];
 
+/** The moon jelly's hull — 0255: a dome across the front, four short tendrils ragged off the back. */
+const MOON_JELLY_HULL: readonly Pt[] = [
+  [-0.9, 0],
+  [-0.74, -0.5],
+  [-0.36, -0.82],
+  [0.12, -0.86],
+  [0.12, -0.5],
+  [0.5, -0.66],
+  [0.34, -0.22],
+  [0.86, -0.28],
+  [0.4, 0],
+  [0.86, 0.28],
+  [0.34, 0.22],
+  [0.5, 0.66],
+  [0.12, 0.5],
+  [0.12, 0.86],
+  [-0.36, 0.82],
+  [-0.74, 0.5],
+];
+function paintMoonJelly(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  // The lower half of the bell in shadow, its crown lit, the fringe's roots as a motif, an eye low
+  // in the bell where the light would sit.
+  plate(ctx, f, skin, [
+    [-0.7, 0.1],
+    [0.06, 0.1],
+    [0.06, 0.44],
+    [-0.4, 0.6],
+  ]);
+  lit(ctx, f, skin, [
+    [-0.8, -0.1],
+    [-0.5, -0.6],
+    [-0.36, -0.5],
+    [-0.66, -0.08],
+  ]);
+  motif(ctx, f, skin, theme, [
+    [0.06, -0.4],
+    [0.3, -0.2],
+    [0.3, 0.2],
+    [0.06, 0.4],
+  ], 'moonJelly');
+  disc(ctx, f, skin.eye, -0.34, 0.06, 0.1);
+}
 function paintKite(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
   // The lower half of the diamond in shadow, its leading edge lit, an eye at the point.
   plate(ctx, f, skin, [
@@ -4411,6 +4455,16 @@ export function drawKind(
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       if (skin !== null) paintKite(ctx, f, skin, theme);
+      return;
+    case 'moonJelly':
+    case 'moonJellyHit':
+      // A BELL WITH A FRINGE — 0255: a dome across the front and four short tendrils trailing off
+      // the back. The kite is a diamond and the moth a disc; a dome with a ragged back edge is
+      // neither at twenty pixels.
+      trace(ctx, f, MOON_JELLY_HULL);
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintMoonJelly(ctx, f, skin, theme);
       return;
     case 'debris':
       // A shard: small, angular, and deliberately NOT a disc, so a fragment is never mistaken for a

@@ -1715,7 +1715,9 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
       const total = (row.health * DIFFICULTIES.savior.toughness) / fastest;
       for (let i = 0; i < row.phases.length; i++) {
         const phase = row.phases[i]!;
-        if (phase.stance.kind !== 'bare') continue;
+        // A bared window and an opened bell alike — 0255: both take `damageScale` times as much,
+        // and both run into the same death.
+        if (phase.stance.kind !== 'bare' && phase.stance.kind !== 'open') continue;
         found++;
         const band = phase.upTo - (row.phases[i + 1]?.upTo ?? 0);
         const seconds = (band * total) / phase.stance.damageScale;
@@ -1909,7 +1911,9 @@ describe('0124 — a boss lasts long enough to be one, at the loadout the game i
       const total = (BOSSES[kind].health * TUNED.toughness) / FASTEST;
       const phases = BOSSES[kind].phases;
       const ups = phases.map((p) => p.upTo);
-      const bands = ups.map((u, i) => (phases[i]!.stance.kind === 'bare' ? Infinity : u - (ups[i + 1] ?? 0)));
+      // An opened bell's band is read at the damage it actually takes — 0255 — so a phase that
+      // opens is held to the same three seconds in the player's hands, not the table's.
+      const bands = ups.map((u, i) => (phases[i]!.stance.kind === 'bare' ? Infinity : (u - (ups[i + 1] ?? 0)) / openBy(phases[i]!)));
       const shortest = Math.min(...bands);
       expect(
         shortest * total,
