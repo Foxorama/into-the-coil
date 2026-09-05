@@ -50,7 +50,7 @@ import { type Body, type Entity, reset, stepEntities } from '../sim/entity.ts';
 // restated so a scattered pickup's wall and the ship's own clamp are one number — 0100, and the same
 // reason `src/app/mount.ts` imports `PLAYER_LEAD` for the mark that draws it (0074).
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, flyShip, holdStation } from '../sim/flight.ts';
-import { BURN_ASK, EASE_ASK, EXHAUST, PULSE_STEPS, SWAY, THRUST } from '../content/exhaust.ts';
+import { BURN_ASK, EASE_ASK, EXHAUST, LEAN_AT, PULSE_STEPS, THRUST } from '../content/exhaust.ts';
 import type { Intent } from '../sim/intent.ts';
 import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
@@ -2356,11 +2356,12 @@ function stepShields(w: World): void {
 /**
  * The ship's exhaust: lit while the ship flies, out when it does not, and shaped by the ask — 0230.
  *
- * ⚠️ **THE STATE IS THE INTENT AND THE SWAY IS THE VELOCITY, AND THAT SPLIT IS THE FEEL.** What the
+ * ⚠️ **THE STATE IS THE INTENT AND THE LEAN IS THE VELOCITY, AND THAT SPLIT IS THE FEEL.** What the
  * engines are DOING is what the player asked for this step — a hard push forward burns even against
- * the front of the box, where the velocity is clamped to nothing. Where the flame HANGS is where the
- * ship is actually going: it trails against the across velocity, so a climb hangs the flame below
- * the tail and a stop swings it back, on the same lag `FLIGHT_RESPONSE` gives the hull.
+ * the front of the box, where the velocity is clamped to nothing. Which way the flame LEANS is where
+ * the ship is actually going: it trails against the across velocity, so a climb leans the flame's
+ * tip below the tail and a stop rights it, on the same lag `FLIGHT_RESPONSE` gives the hull. (0230
+ * slid the flame across the tail instead, and 0241 answered the play-test that called it a bug.)
  *
  * ⚠️ **Carried by hand, exactly as the shell is**: nothing else steps this pool, and the renderer
  * interpolates from `prevAlong`. Nothing allocates — a row lookup, an integer divide and six writes.
@@ -2383,15 +2384,23 @@ function stepExhaust(w: World): void {
   }
   const ask = w.intent.along;
   const row = ask > BURN_ASK ? THRUST.burn : ask < EASE_ASK ? THRUST.ease : THRUST.idle;
-  const page = Math.floor(w.steps / PULSE_STEPS) % row.frames.length;
-  const sprite = row.frames[page]!;
+  /*
+    ⚠️ **THE LEAN IS THE VELOCITY, AND IT PICKS A BITMAP RATHER THAN MOVING ONE — 0241.** 0230 slid
+    the flame across the tail against the across velocity, and it played as *"they move up and down
+    on the ship which is a bug."* A flame stays on its nozzle and angles; `blit` cannot rotate, so
+    the angle is a baked frame. Climbing (across falling) the tip trails below the tail.
+  */
+  const across = w.ship.velAcross;
+  const frames = across < -LEAN_AT ? row.frames.climb : across > LEAN_AT ? row.frames.dive : row.frames.level;
+  const page = Math.floor(w.steps / PULSE_STEPS) % frames.length;
+  const sprite = frames[page]!;
   flame.spriteBase = sprite;
   flame.spriteHit = sprite;
   flame.sprite = sprite;
   flame.prevAlong = flame.along;
   flame.prevAcross = flame.across;
   flame.along = w.ship.along - row.trail;
-  flame.across = w.ship.across - w.ship.velAcross * SWAY;
+  flame.across = w.ship.across;
 }
 
 /**

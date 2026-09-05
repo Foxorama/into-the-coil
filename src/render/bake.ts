@@ -24,6 +24,7 @@ import { foeOf, type FoeSkin, type ThemeKind } from '../content/themes.ts';
 import { LANDMARK_SLOTS, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import type { WeaponKind } from '../content/weapons.ts';
+import type { ThrustKind } from '../content/exhaust.ts';
 
 /** Side profile for a horizontally scrolling screen, top-down for a vertical one. */
 export type SpriteView = 'side' | 'top';
@@ -439,7 +440,13 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
     an ink is. The seeker is the one shot that behaves like the ship — it turns — so it wears the
     ship's colour, and the straight missile keeps the pulse's.
   */
-  seeker: 'player',
+  /*
+    ⚠️ **AND NOT THE SHIP'S EITHER, SINCE 0241.** Played: *"blue homing missiles, blue lightning,
+    blue ship, it all looks the same."* The seeker wears the ally ink — the one its own pickup face
+    wears (0239), and the one nothing else in the lane wears — so a seeker matches the face that
+    offered it and is off the bolt and off the hull.
+  */
+  seeker: 'ally',
   bomb: 'bullet',
   /*
     ⚠️ **THE HAZARD INK, WHICH THE PLAYER'S OWN WEAPONS DO NOT USE — and that is the point.** A bomb's
@@ -577,6 +584,16 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   thrustBurn0: 'flame',
   thrustBurn1: 'flame',
   thrustEase: 'flame',
+  thrustIdle0Climb: 'flame',
+  thrustIdle0Dive: 'flame',
+  thrustIdle1Climb: 'flame',
+  thrustIdle1Dive: 'flame',
+  thrustBurn0Climb: 'flame',
+  thrustBurn0Dive: 'flame',
+  thrustBurn1Climb: 'flame',
+  thrustBurn1Dive: 'flame',
+  thrustEaseClimb: 'flame',
+  thrustEaseDive: 'flame',
   /*
     ⚠️ **The one ink that is not meant to be found.** `src/content/palette.ts` records it: every other
     role is something the player has to be able to pick out, and the sky is the thing they are all
@@ -1134,6 +1151,32 @@ function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, weapon: W
   // ⚠️ No plume on the hull since 0230: the exhaust is an entity that follows the ship, and a flame
   // baked here would be a second, still one under the one that moves.
   for (const side of [SHIP_WING_PANEL, mirrored(SHIP_WING_PANEL)]) poly(ctx, f, dark, side);
+  /*
+    ── THE LIVERY — 0241 ──────────────────────────────────────────────────────────────────────────
+
+    Played: *"blue homing missiles, blue lightning, blue ship, it all looks the same… our ship needs
+    to look a lot cooler with more colour variance."* 0194's livery was three inks all darker than
+    the hull, by design, so the hull read as one blue thing with details in it. These are the
+    player's OWN other colours laid on it: a stripe of the pulse's orange down each wing's leading
+    edge, a light of the core's yellow at each wingtip, and the canopy's light in the impact ink.
+    Every mark is inside the hull and above `tests/accents.test.ts`'s floor; none is a decoration
+    ink, and the decision says why that is allowed here.
+  */
+  for (const side of [1, -1] as const) {
+    poly(ctx, f, palette.bullet, [
+      [-0.17, -0.47 * side],
+      [-0.43, -0.93 * side],
+      [-0.57, -0.93 * side],
+      [-0.31, -0.47 * side],
+    ]);
+    // Tall enough to be drawn at the shipped camera — `tests/accents.test.ts` holds the floor.
+    poly(ctx, f, palette.hazard, [
+      [-0.45, -0.93 * side],
+      [-0.69, -0.93 * side],
+      [-0.65, -0.79 * side],
+      [-0.47, -0.79 * side],
+    ]);
+  }
   // The keel, behind the canopy, in the trim ink — the seam down the hull.
   poly(ctx, f, palette.trim, [
     [-0.34, -0.07],
@@ -1196,7 +1239,8 @@ function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, weapon: W
     }
   }
   poly(ctx, f, palette.glass, SHIP_CANOPY);
-  poly(ctx, f, shade(palette.glass, 0.55), SHIP_CANOPY_LIGHT);
+  // The canopy's light in the impact ink since 0241: a glint, not a paler pane.
+  poly(ctx, f, palette.impact, SHIP_CANOPY_LIGHT, 0.85);
   for (const side of [SHIP_NACELLE, mirrored(SHIP_NACELLE)]) poly(ctx, f, palette.flame, side);
   for (const side of [SHIP_CORE, mirrored(SHIP_CORE)]) poly(ctx, f, palette.hazard, side);
   if (tier >= 1) {
@@ -1250,6 +1294,101 @@ function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, weapon: W
         [0.27, -0.62 * side],
         [0.36, -0.3 * side],
       ]);
+    }
+  }
+}
+
+/** Which way a thrust frame leans, read off its name: +1 for a climb (the tip below), −1 for a dive. */
+function leanOf(kind: SpriteKind): number {
+  return kind.endsWith('Climb') ? 1 : kind.endsWith('Dive') ? -1 : 0;
+}
+
+/**
+ * How far the flame's tip swings across the lane per unit of its length behind the root, in the
+ * frame's `r` — the lean, 0241. A third: the burn's tip, a full radius behind the root, sits a
+ * third of a radius off the line, which reads as an angle and stays inside the box.
+ */
+const THRUST_LEAN = 0.35;
+
+/** Where the flame's root sits in the frame — the sprite's forward edge — and the shear's pivot. */
+const THRUST_ROOT = 0.92;
+
+/**
+ * The exhaust, one state at a time — 0230's three flames, each baked level and leaning both ways
+ * since 0241.
+ *
+ * ⚠️ **THE LEAN IS A SHEAR ABOUT THE ROOT, NOT A ROTATION.** Every point behind the root slides
+ * across by `THRUST_LEAN` per unit it sits behind it, so the root stays on the nozzle, the tip
+ * swings, and the two nozzles' flames stay the same length. A rotation would swing the root too and
+ * shorten the flame in the box; a shear is what a flame bent by the airflow looks like.
+ *
+ * ⚠️ **THE NACELLES ARE 0.62 UNITS OFF THE CENTRELINE ON THE HULL**, and each kind's box is a
+ * different size, so the offset is stated in units and divided by the kind's own radius here.
+ */
+function paintThrust(ctx: Pen, f: Frame, palette: Palette, state: ThrustKind, flick: boolean, lean: number, extent: number): void {
+  const y = 0.62 / (extent * 0.42);
+  const at = (x: number, off: number, side: 1 | -1): Pt => [x, off * side + lean * THRUST_LEAN * (THRUST_ROOT - x)];
+  const shift = (x: number): number => lean * THRUST_LEAN * (THRUST_ROOT - x);
+  for (const side of [1, -1] as const) {
+    switch (state) {
+      case 'idle':
+        glow(ctx, f, palette.hazard, 0.55, y * side + shift(0.55), 0.5, 0.6);
+        poly(ctx, f, palette.bullet, [
+          at(0.92, y - 0.19, side),
+          at(0.3, y - 0.16, side),
+          at(flick ? -0.35 : -0.55, y, side),
+          at(0.3, y + 0.16, side),
+          at(0.92, y + 0.19, side),
+        ], 0.8);
+        poly(ctx, f, palette.hazard, [
+          at(0.92, y - 0.11, side),
+          at(0.4, y - 0.09, side),
+          at(flick ? 0.05 : -0.1, y, side),
+          at(0.4, y + 0.09, side),
+          at(0.92, y + 0.11, side),
+        ], 0.85);
+        disc(ctx, f, palette.impact, 0.76, y * side + shift(0.76), 0.11, 0.85);
+        break;
+      case 'burn':
+        glow(ctx, f, palette.hazard, 0.4, y * side + shift(0.4), 0.6, 0.7);
+        poly(ctx, f, palette.bullet, [
+          at(0.94, y - 0.17, side),
+          at(0.3, y - 0.15, side),
+          at(-0.3, y - 0.1, side),
+          at(flick ? -1.0 : -0.85, y + (flick ? 0.02 : -0.03), side),
+          at(-0.3, y + 0.1, side),
+          at(0.3, y + 0.15, side),
+          at(0.94, y + 0.17, side),
+        ], 0.85);
+        poly(ctx, f, palette.hazard, [
+          at(0.94, y - 0.1, side),
+          at(0.2, y - 0.08, side),
+          at(flick ? -0.55 : -0.42, y, side),
+          at(0.2, y + 0.08, side),
+          at(0.94, y + 0.1, side),
+        ], 0.9);
+        poly(ctx, f, palette.impact, [
+          at(0.94, y - 0.05, side),
+          at(0.5, y - 0.04, side),
+          at(flick ? -0.05 : 0.1, y, side),
+          at(0.5, y + 0.04, side),
+          at(0.94, y + 0.05, side),
+        ], 0.9);
+        break;
+      case 'ease':
+        glow(ctx, f, palette.flame, 0.7, y * side + shift(0.7), 0.4, 0.5);
+        poly(ctx, f, palette.flame, [
+          at(0.92, y - 0.14, side),
+          at(0.5, y - 0.1, side),
+          at(0.2, y, side),
+          at(0.5, y + 0.1, side),
+          at(0.92, y + 0.14, side),
+        ], 0.6);
+        break;
+      default: {
+        const never: never = state;
+        throw new Error(`unpainted thrust ${String(never)}`);
+      }
     }
   }
 }
@@ -3794,75 +3933,26 @@ export function drawKind(
       different size, so the offset is stated in units and divided by the kind's own radius here.
     */
     case 'thrustIdle0':
-    case 'thrustIdle1': {
-      const flick = kind === 'thrustIdle1';
-      const y = 0.62 / (SPRITE_EXTENT[kind] * 0.42);
-      for (const side of [1, -1] as const) {
-        glow(ctx, f, palette.hazard, 0.55, y * side, 0.5, 0.6);
-        poly(ctx, f, palette.bullet, [
-          [0.92, (y - 0.19) * side],
-          [0.3, (y - 0.16) * side],
-          [flick ? -0.35 : -0.55, y * side],
-          [0.3, (y + 0.16) * side],
-          [0.92, (y + 0.19) * side],
-        ], 0.8);
-        poly(ctx, f, palette.hazard, [
-          [0.92, (y - 0.11) * side],
-          [0.4, (y - 0.09) * side],
-          [flick ? 0.05 : -0.1, y * side],
-          [0.4, (y + 0.09) * side],
-          [0.92, (y + 0.11) * side],
-        ], 0.85);
-        disc(ctx, f, palette.impact, 0.76, y * side, 0.11, 0.85);
-      }
+    case 'thrustIdle1':
+    case 'thrustIdle0Climb':
+    case 'thrustIdle0Dive':
+    case 'thrustIdle1Climb':
+    case 'thrustIdle1Dive':
+      paintThrust(ctx, f, palette, 'idle', kind.startsWith('thrustIdle1'), leanOf(kind), SPRITE_EXTENT[kind]);
       return;
-    }
     case 'thrustBurn0':
-    case 'thrustBurn1': {
-      const flick = kind === 'thrustBurn1';
-      const y = 0.62 / (SPRITE_EXTENT[kind] * 0.42);
-      for (const side of [1, -1] as const) {
-        glow(ctx, f, palette.hazard, 0.4, y * side, 0.6, 0.7);
-        poly(ctx, f, palette.bullet, [
-          [0.94, (y - 0.17) * side],
-          [0.3, (y - 0.15) * side],
-          [-0.3, (y - 0.1) * side],
-          [flick ? -1.0 : -0.85, (y + (flick ? 0.02 : -0.03)) * side],
-          [-0.3, (y + 0.1) * side],
-          [0.3, (y + 0.15) * side],
-          [0.94, (y + 0.17) * side],
-        ], 0.85);
-        poly(ctx, f, palette.hazard, [
-          [0.94, (y - 0.1) * side],
-          [0.2, (y - 0.08) * side],
-          [flick ? -0.55 : -0.42, y * side],
-          [0.2, (y + 0.08) * side],
-          [0.94, (y + 0.1) * side],
-        ], 0.9);
-        poly(ctx, f, palette.impact, [
-          [0.94, (y - 0.05) * side],
-          [0.5, (y - 0.04) * side],
-          [flick ? -0.05 : 0.1, y * side],
-          [0.5, (y + 0.04) * side],
-          [0.94, (y + 0.05) * side],
-        ], 0.9);
-      }
+    case 'thrustBurn1':
+    case 'thrustBurn0Climb':
+    case 'thrustBurn0Dive':
+    case 'thrustBurn1Climb':
+    case 'thrustBurn1Dive':
+      paintThrust(ctx, f, palette, 'burn', kind.startsWith('thrustBurn1'), leanOf(kind), SPRITE_EXTENT[kind]);
       return;
-    }
-    case 'thrustEase': {
-      const y = 0.62 / (SPRITE_EXTENT[kind] * 0.42);
-      for (const side of [1, -1] as const) {
-        glow(ctx, f, palette.flame, 0.7, y * side, 0.4, 0.5);
-        poly(ctx, f, palette.flame, [
-          [0.92, (y - 0.14) * side],
-          [0.5, (y - 0.1) * side],
-          [0.2, y * side],
-          [0.5, (y + 0.1) * side],
-          [0.92, (y + 0.14) * side],
-        ], 0.6);
-      }
+    case 'thrustEase':
+    case 'thrustEaseClimb':
+    case 'thrustEaseDive':
+      paintThrust(ctx, f, palette, 'ease', false, leanOf(kind), SPRITE_EXTENT[kind]);
       return;
-    }
     /*
       ── THE SIGNATURE ENEMIES, ONE PER PLACE — 0232 ────────────────────────────────────────────
 
@@ -4174,9 +4264,9 @@ export function drawKind(
       ctx.closePath();
       seal(ctx);
       ctx.globalCompositeOperation = 'destination-over';
-      glow(ctx, f, palette.player, 0, 0, 1, 0.5);
+      glow(ctx, f, palette.ally, 0, 0, 1, 0.5);
       ctx.globalCompositeOperation = 'source-over';
-      poly(ctx, fg, shade(palette.player, -0.32), [
+      poly(ctx, fg, shade(palette.ally, -0.32), [
         [0.8, 0.04],
         [-0.22, 0.4],
         [-0.62, 0.28],

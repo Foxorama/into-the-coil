@@ -476,6 +476,26 @@ export const SPRITE_KINDS = [
   'thrustBurn1',
   'thrustEase',
   /*
+    ── AND EACH OF THEM LEANING, TWO WAYS — 0241 ─────────────────────────────────────────────────
+
+    Played: *"the thrusters when you go up/down don't angle, they move up and down on the ship which
+    is a bug."* 0230 swayed the flame ACROSS the tail against the ship's sideways velocity; what the
+    eye expects is the flame to ANGLE, and a bitmap cannot rotate (`src/render/surface.ts`), so every
+    frame is baked three ways — level, leaning for a climb, leaning for a dive — and
+    `src/app/frame.ts` picks the lean off the ship's across velocity. Ten more bakes, on 0233's
+    terms: every picture that can be on screen is its own bitmap.
+  */
+  'thrustIdle0Climb',
+  'thrustIdle0Dive',
+  'thrustIdle1Climb',
+  'thrustIdle1Dive',
+  'thrustBurn0Climb',
+  'thrustBurn0Dive',
+  'thrustBurn1Climb',
+  'thrustBurn1Dive',
+  'thrustEaseClimb',
+  'thrustEaseDive',
+  /*
     ── THE SKY, AND IT IS TWO SPRITES RATHER THAN A THOUSAND ENTITIES ─────────────────────────────
 
     Asked for in play: *"needs a starry background or a background of some kind."*
@@ -928,6 +948,17 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   thrustBurn0: 7,
   thrustBurn1: 7,
   thrustEase: 3,
+  // The leaning frames are their level twins' size: the lean is a shear inside the same box — 0241.
+  thrustIdle0Climb: 4,
+  thrustIdle0Dive: 4,
+  thrustIdle1Climb: 4,
+  thrustIdle1Dive: 4,
+  thrustBurn0Climb: 7,
+  thrustBurn0Dive: 7,
+  thrustBurn1Climb: 7,
+  thrustBurn1Dive: 7,
+  thrustEaseClimb: 3,
+  thrustEaseDive: 3,
   /*
     ⚠️ **`ACROSS_SPAN`, which makes one tile exactly as tall as the lane** — so the sky tiles along
     the scroll axis and along it only, and no seam ever runs across the short axis of the screen. It

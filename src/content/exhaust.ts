@@ -21,14 +21,31 @@ export const THRUST_KINDS = ['idle', 'burn', 'ease'] as const;
 
 export type ThrustKind = (typeof THRUST_KINDS)[number];
 
+/**
+ * Which way the flame leans — with the ship's sideways motion, or not at all. Closed, per 0016.
+ *
+ * ⚠️ **A LEAN AND NOT A SWAY, SINCE 0241.** 0230 hung the flame across the tail against the ship's
+ * sideways velocity, and it played as a bug: *"the thrusters when you go up/down don't angle, they
+ * move up and down on the ship."* A flame stays on its nozzle and ANGLES; a bitmap cannot rotate, so
+ * each frame is baked three ways and `src/app/frame.ts` picks one off the across velocity.
+ *
+ *   **level**  the ship is holding its line across the lane
+ *   **climb**  it is going up the screen, so the flame's tip trails below the tail
+ *   **dive**   it is going down, so the tip trails above
+ */
+export const LEAN_KINDS = ['level', 'climb', 'dive'] as const;
+
+export type LeanKind = (typeof LEAN_KINDS)[number];
+
 export interface ThrustRow {
   /**
-   * The bitmaps it alternates between, on the step clock — the pulse.
+   * The bitmaps it alternates between, on the step clock — the pulse — one list per lean.
    *
    * ⚠️ **TWO FOR THE STATES THAT PULSE AND ONE FOR THE ONE THAT DOES NOT.** An idling ion engine
    * flickers and a burning one roars; a reverse burn is a dim wisp with nothing to alternate to.
+   * Every lean has the same count, so the pulse's clock reads the same whichever way the ship goes.
    */
-  frames: readonly number[];
+  frames: Record<LeanKind, readonly number[]>;
   /**
    * World units from the ship's centre back to the sprite's centre, so the flame's root meets the
    * tail. Longer for a longer flame, because the root is drawn at the sprite's forward edge.
@@ -37,9 +54,26 @@ export interface ThrustRow {
 }
 
 export const THRUST: Record<ThrustKind, ThrustRow> = {
-  idle: { frames: [SPRITE.thrustIdle0, SPRITE.thrustIdle1], trail: 3.6 },
-  burn: { frames: [SPRITE.thrustBurn0, SPRITE.thrustBurn1], trail: 4.7 },
-  ease: { frames: [SPRITE.thrustEase], trail: 3.2 },
+  idle: {
+    frames: {
+      level: [SPRITE.thrustIdle0, SPRITE.thrustIdle1],
+      climb: [SPRITE.thrustIdle0Climb, SPRITE.thrustIdle1Climb],
+      dive: [SPRITE.thrustIdle0Dive, SPRITE.thrustIdle1Dive],
+    },
+    trail: 3.6,
+  },
+  burn: {
+    frames: {
+      level: [SPRITE.thrustBurn0, SPRITE.thrustBurn1],
+      climb: [SPRITE.thrustBurn0Climb, SPRITE.thrustBurn1Climb],
+      dive: [SPRITE.thrustBurn0Dive, SPRITE.thrustBurn1Dive],
+    },
+    trail: 4.7,
+  },
+  ease: {
+    frames: { level: [SPRITE.thrustEase], climb: [SPRITE.thrustEaseClimb], dive: [SPRITE.thrustEaseDive] },
+    trail: 3.2,
+  },
 };
 
 /** The flame as a body: the first idle frame, no reach, no health worth taking. */
@@ -66,9 +100,11 @@ export const EASE_ASK = -0.5;
 export const PULSE_STEPS = 3;
 
 /**
- * World units the flame's centre trails ACROSS the lane per unit of the ship's across velocity —
- * the sway. Moving up the screen, the flame hangs below the tail; stopping, it swings back.
+ * How fast the ship has to be moving across the lane, in world units a step, before the flame
+ * leans — 0241. Below it the flame is level, so a hand resting on the stick does not flicker the
+ * lean; above it the flame trails against the motion, on every step the ship keeps moving.
  *
- * At `SHIP_SPEED` it is about two units, a third of the hull, which is a lean and not a detachment.
+ * ⚠️ **Replaces `SWAY`**, 0230's across offset of the flame's centre per unit of across velocity.
+ * The flame's centre sits on the tail now on every step; what the velocity chooses is the bitmap.
  */
-export const SWAY = 1.2;
+export const LEAN_AT = 0.12;

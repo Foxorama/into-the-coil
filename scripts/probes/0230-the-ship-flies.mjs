@@ -49,7 +49,8 @@ export const PROBES = [
     guard: 'pulses: a pulsing state alternates its frames on the step clock',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  const page = Math.floor(w.steps / PULSE_STEPS) % row.frames.length;',
+      // ⚠️ Re-anchored by 0241: the frames are the lean's now, not the row's.
+      find: '  const page = Math.floor(w.steps / PULSE_STEPS) % frames.length;',
       replace: '  const page = 0 * PULSE_STEPS;',
     },
   },
@@ -57,15 +58,17 @@ export const PROBES = [
     decision: '0230',
     suite: 'tests/thrust.test.ts',
     /*
-      ⚠️ THE SWAY REMOVED, so the flame sits dead behind the tail however the ship moves — which is
-      *moving a thing around*, in the report's own words.
+      ⚠️ THE LEAN REMOVED, so the flame sits level behind the tail however the ship moves — which is
+      *moving a thing around*, in the report's own words. ⚠️ Re-aimed by 0241: it was the SWAY
+      removed, and the sway is gone on purpose; what answers the ship's sideways motion now is which
+      bitmap the flame shows.
     */
-    broke: 'the sway removed, so the flame sits dead behind the tail',
-    guard: 'sways: the flame hangs against the ship’s sideways velocity, and swings back when it stops',
+    broke: 'the lean removed, so the flame sits level behind the tail however the ship moves',
+    guard: 'leans: the flame stays on the tail',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  flame.across = w.ship.across - w.ship.velAcross * SWAY;',
-      replace: '  flame.across = w.ship.across + 0 * SWAY;',
+      find: '  const frames = across < -LEAN_AT ? row.frames.climb : across > LEAN_AT ? row.frames.dive : row.frames.level;',
+      replace: '  const frames = row.frames.level;',
     },
   },
   {

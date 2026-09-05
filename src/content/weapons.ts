@@ -168,12 +168,15 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     flight: 'chain',
     fireEvery: [12, 12, 10, 10, 8],
     barrels: [1, 1, 1, 1, 1],
-    links: [1, 2, 3, 4, 4],
+    // Three links at the cap, not four — 0241: *"1 less max hit."* The last two rungs still buy
+    // weight and rate, so every rung changes something.
+    links: [1, 2, 3, 3, 3],
     weight: [1, 1, 1, 2, 2],
-    // A sixth further at every rung — 0236's ladder, its top cut back a tenth by 0239: *"lightning
-    // is a little bit long at max power, it's a bit OP."* The cap reaches a shade under three fifths
-    // of the narrowest view. `tests/guns-played.test.ts` holds the climb, never the numbers.
-    reach: [55, 64, 75, 88, 103],
+    // A sixth further at every rung — 0236's ladder, its top cut back a tenth by 0239 and the whole
+    // of it a twentieth by 0241: *"still being too strong. 5% reduction on the range."* The cap
+    // reaches a shade over half of the narrowest view. `tests/guns-played.test.ts` holds the climb,
+    // never the numbers.
+    reach: [52, 61, 71, 84, 98],
     orbit: [0, 0, 0, 0, 0],
     turn: 0,
     pickup: SPRITE.pickupArc,
