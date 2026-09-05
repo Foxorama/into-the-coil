@@ -33,7 +33,10 @@ A run carries **three lives**, fixed. A death spends one and takes the ship back
 the last one ends the run. ⚠️ **A death does NOT touch the arsenal's charges** —
 [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) amends 0039's *a death costs the arsenal* to
 the upgrades alone, so bombs banked from clearing levels survive a death and a ship that died with none
-flies again with none. ⚠️ **There are no extras findable in a level** —
+flies again with none. **What a death took is thrown back as one piece per kind** — a weapon pickup
+and a missile pickup, each showing the kind that was lost, holding that face, and wearing ×2, ×3 or
+×4 for the rungs it carries — [0243](decisions/0243-a-death-throws-back-one-piece-per-kind.md).
+⚠️ **There are no extras findable in a level** —
 [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) replaced the extra-life pickup with a
 second shield, so the complement only goes down. See *Upgrades*.
 

@@ -38,11 +38,15 @@ describe('0236 — the guns answer the first play-test', () => {
     expect(reach[reach.length - 1]!, 'the arc at its cap reaches past the narrowest view').toBeLessThan(ACROSS_SPAN * (16 / 9));
   });
 
-  it('THE SCATTER: a death throws in every direction, and the pieces fly out before they wait', () => {
+  it('THE SCATTER: a death throws its pieces apart across the lane, and they fly out before they wait', () => {
     /*
       *"On death, the power ups needs to scatter more to the 8 directions -> they just explode up
-      and down now."* Measured after the throw has flown: pieces on both sides of the wreck along
-      the lane AND across it, by more than the ease could ever have carried them.
+      and down now."* Measured after the throw has flown: pieces on both sides of the wreck across
+      the lane, by more than the ease could ever have carried them.
+
+      ⚠️ **Two pieces since 0243, not eight** — one per kind, carrying the count — so *every
+      direction* is the two directions there are: across the lane one way and the other. Along, the
+      box's back wall is a dozen units behind the wreck; the throw goes across first on purpose.
     */
     const { world } = playableWorld(NO_LEVEL);
     world.shipPool.clear();
@@ -51,27 +55,17 @@ describe('0236 — the guns answer the first play-test', () => {
     const upgrades: UpgradeKind[] = [];
     for (let i = 0; i < 8; i++) upgrades.push(i % 2 === 0 ? 'weapon' : 'missile');
     scatterUpgrades(world, upgrades);
-    expect(world.pickups.size, 'the scatter threw nothing').toBe(8);
+    expect(world.pickups.size, 'the scatter did not throw one piece per kind').toBe(2);
     const frame = new GameFrame(world);
     for (let i = 0; i < 30; i++) frame.step();
-    let ahead = 0;
-    let behind = 0;
     let left = 0;
     let right = 0;
     for (let i = 0; i < world.pickups.size; i++) {
-      const item = world.pickups.at(i);
-      const dAlong = item.along - world.cameraAlong - SHIP_START_ALONG;
-      const dAcross = item.across - ACROSS_SPAN / 2;
-      ahead = Math.max(ahead, dAlong);
-      behind = Math.min(behind, dAlong);
+      const dAcross = world.pickups.at(i).across - ACROSS_SPAN / 2;
       right = Math.max(right, dAcross);
       left = Math.min(left, dAcross);
     }
-    // Along, the box's back wall is a dozen units behind the wreck and turns the pieces thrown that
-    // way; across, the lane is wide open. The floors say so.
     const far = ACROSS_SPAN / 8;
-    expect(ahead, `no piece flew ahead of the wreck (${ahead.toFixed(1)})`).toBeGreaterThan(far);
-    expect(-behind, `no piece flew behind the wreck (${behind.toFixed(1)})`).toBeGreaterThan(far / 2);
     expect(right, `no piece flew across-plus (${right.toFixed(1)})`).toBeGreaterThan(far);
     expect(-left, `no piece flew across-minus (${left.toFixed(1)})`).toBeGreaterThan(far);
   });

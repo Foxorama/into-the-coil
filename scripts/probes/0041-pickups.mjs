@@ -67,8 +67,9 @@ export const PROBES = [
       path: 'src/state/slices/run.ts',
       // ⚠️ Re-anchored by 0233: the arm is a ternary now — the same kind appends, another kind
       // starts the ladder again — and the break is the appending half deduplicated.
-      find: '          ? [...state.upgrades, action.upgrade]',
-      replace: '          ? (state.upgrades.includes(action.upgrade) ? state.upgrades : [...state.upgrades, action.upgrade])',
+      // ⚠️ Re-anchored by 0243: the appended half is `rungs`, the count the pickup was worth.
+      find: '          ? [...state.upgrades, ...rungs]',
+      replace: '          ? (state.upgrades.includes(action.upgrade) ? state.upgrades : [...state.upgrades, ...rungs])',
     },
   },
   {

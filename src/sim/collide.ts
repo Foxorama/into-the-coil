@@ -257,12 +257,15 @@ export interface Collected {
    * shell the face rather than the row.
    */
   face: number[];
+  /** How many rungs each one was worth — 0243. One for an authored pickup; a scattered piece's stack. */
+  stack: number[];
 }
 
 /** A log big enough for `capacity` collections in one step. Built once, at boot. */
 export function makeCollected(capacity: number): Collected {
   // @setup: one log, built when the world is composed and reused every step forever.
-  return { count: 0, kind: new Array<number>(capacity).fill(0), face: new Array<number>(capacity).fill(0) };
+  // @setup: the kinds, faces and stacks of one step's collections, sized once with the log.
+  return { count: 0, kind: new Array<number>(capacity).fill(0), face: new Array<number>(capacity).fill(0), stack: new Array<number>(capacity).fill(1) };
 }
 
 /**
@@ -285,6 +288,7 @@ export function collectInto(pickups: Pool<Entity>, target: Entity, targetRadiusS
     if (out.count < out.kind.length) {
       out.kind[out.count] = pickup.kind;
       out.face[out.count] = pickup.face;
+      out.stack[out.count] = pickup.stack;
       out.count++;
     }
     pickups.releaseAt(i);
