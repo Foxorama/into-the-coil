@@ -310,10 +310,12 @@ iteration; the attacks the game had no word for — flame and frost, whips, beam
 a spinning wall, a cold that slows, heads that grow, tendrils, a final opening — are each their own
 decision. [`the-bosses-asked`](../reports/the-bosses-asked-2026-09-05.md) is the brief.
 
-**The serpent has its three weapons** — [0248](decisions/0248-the-serpent-strikes.md): a wall of
-acid while it is whole, a spray of void once hurt, and at its last third lightning in columns
-down the whole lane, each column a warning line for three quarters of a second before it strikes.
-A phase says what a boss throws, since then; acid and void are shots in inks of their own.
+**The serpent has its three weapons, and throws them together** —
+[0248](decisions/0248-the-serpent-strikes.md), [0261](decisions/0261-the-serpent-throws-together.md):
+a fan of acid that rakes across the lane while it is whole; acid and void in turn once hurt; and
+at its last third acid, void and lightning in turn — the lightning in columns down the whole lane,
+each column a warning line for three quarters of a second before it strikes. A phase says what a
+boss throws, since 0248; acid and void are shots in inks of their own.
 
 **The eagle whips and summons** — [0249](decisions/0249-the-eagle-summons.md): darts while whole,
 then a whip of flames thrown along an arc with the tip faster than the root so it bows as it flies,

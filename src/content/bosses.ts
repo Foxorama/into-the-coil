@@ -1086,16 +1086,31 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * the lightning that rains from the top of the screen with warning lines.
    */
   /*
-    ⚠️ **THREE PHASES, THREE WEAPONS — 0248.** *"Acid blast attacks, void blast attacks and then a
-    space lightning bolt attack that rains down from the top of the screen."* A wall of acid across
-    the lane while it is whole; a spray of void down the lane once it is hurt; and, at the last
-    third, lightning: three columns a volley inside the box the ship flies in, each with a
-    three-quarter-second warning line, each hurting a ship within four units on the step it lands.
-    The row's `shot` and `attack` are the first phase's; the phases say what changes.
+    ⚠️ **THREE PHASES, THREE WEAPONS — 0248, THROWN TOGETHER SINCE 0261.** *"Acid blast attacks,
+    void blast attacks and then a space lightning bolt attack that rains down from the top of the
+    screen."* 0248 gave each phase one weapon — a wall of acid, a spray of void, the lightning —
+    and the alpha play called that three separate fire fields. The phases are cumulative now: a
+    raking fan of acid while it is whole; acid and void in turn once hurt; and, at the last third,
+    acid, void and the lightning in turn — three columns a strike inside the box the ship flies in,
+    each with a three-quarter-second warning line, each hurting a ship within four units on the
+    step it lands. The row's `shot` and `attack` are the first phase's; the phases say what changes.
   */
   jormungandr: {
     move: { kind: 'bob', amplitude: 24, wavelength: 200 },
-    attack: { kind: 'wall', gap: 12 },
+    /*
+      ── THE ACID IS A SPRAY THAT RAKES, AND THE THREE WEAPONS ARE THROWN TOGETHER — 0261 ──────────
+
+      `docs/decisions/0261-the-serpent-throws-together.md`. *"The serpent should be firing the acid
+      blasts and void blasts together with the lightning, not have it as three separate fire fields.
+      Acid blasts need to be a spray fire attack not the wall pattern attack."* The wall is gone: the
+      serpent opens with a fan of acid that rakes across the lane a little each volley — a spray
+      that sweeps, and `bob/rake` is its own pair among the real bosses (`bob/spray` is the hydra's).
+      Once hurt it throws acid and void in turn, and at the last third acid, void and the lightning
+      in turn — the hydra's heads (0254), which is the one mechanism the game has for *together*
+      that is not one burst wearing three inks. The lightning itself is untouched: *"superb, don't
+      change it."*
+    */
+    attack: { kind: 'rake', turn: 0.45 },
     uncoil: null,
     fall: null,
     chill: null,
@@ -1112,9 +1127,45 @@ export const BOSSES: Record<BossKind, BossRow> = {
     patrol: 0.3,
     shot: 'acid',
     phases: [
-      { upTo: 1, fireEvery: 84, shots: 2, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.66, fireEvery: 66, shots: 3, spread: 0.8, patrolScale: 1.3, stance: { kind: 'volley' }, shot: 'void', attack: { kind: 'spray' } },
-      { upTo: 0.33, fireEvery: 54, shots: 3, spread: 0, patrolScale: 1.6, stance: { kind: 'volley' }, shot: 'void', attack: { kind: 'rain', warning: 45, halfWidth: 4 } },
+      // Whole: a fan of three acid blasts, raking — the row's own attack and shot.
+      { upTo: 1, fireEvery: 84, shots: 3, spread: 0.7, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
+      // Hurt: acid and void in turn, a fan of three each — two heads (0254), one a volley.
+      {
+        upTo: 0.66,
+        fireEvery: 60,
+        shots: 3,
+        spread: 0.8,
+        patrolScale: 1.3,
+        stance: { kind: 'volley' },
+        shot: null,
+        attack: {
+          kind: 'heads',
+          heads: [
+            { shot: 'acid', attack: { kind: 'spray' } },
+            { shot: 'void', attack: { kind: 'spray' } },
+          ],
+        },
+      },
+      // The last third: acid, void and the lightning in turn, three columns a strike. The cadence
+      // is the quickest of the three so the lightning still falls about every two seconds, which
+      // is what it did alone at 54 with a warning of 45 — *"superb, don't change it."*
+      {
+        upTo: 0.33,
+        fireEvery: 36,
+        shots: 3,
+        spread: 0.9,
+        patrolScale: 1.6,
+        stance: { kind: 'volley' },
+        shot: null,
+        attack: {
+          kind: 'heads',
+          heads: [
+            { shot: 'acid', attack: { kind: 'spray' } },
+            { shot: 'void', attack: { kind: 'spray' } },
+            { shot: 'void', attack: { kind: 'rain', warning: 45, halfWidth: 4 } },
+          ],
+        },
+      },
     ],
   },
   /**
