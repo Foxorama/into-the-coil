@@ -173,12 +173,14 @@ export const PROBES = [
     decision: '0233',
     suite: 'tests/weapons.test.ts',
     // A pool too small for two volleys overlapping: the last links of the cap are dropped from the picture.
+    // ⚠️ Re-aimed by 0241: at four links a cap two volleys deep was eight bolts and a pool of four
+    // starved it; at three links it is six, and four no longer does — so the cut is to two.
     broke: 'the bolt pool cut below one overlapping volley',
     guard: 'the bolt pool never fills',
     edit: {
       path: 'src/app/mount.ts',
       find: '  bolts: 12,',
-      replace: '  bolts: 4,',
+      replace: '  bolts: 2,',
     },
   },
 ];
