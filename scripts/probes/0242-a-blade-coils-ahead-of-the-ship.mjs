@@ -1,6 +1,12 @@
 // A blade coils ahead of the ship — docs/decisions/0242-a-blade-coils-ahead-of-the-ship.md
 //
-// Every guard 0242 adds, broken on purpose. `node scripts/prove-guard.mjs 0242`.
+// Every guard 0242 adds, broken on purpose, as docs/decisions/0244-a-blade-rides-a-helix.md left
+// them. `node scripts/prove-guard.mjs 0242`.
+//
+// ⚠️ One probe is retired by 0244: "both blades of a pair turning the same way". A helix's strand
+// is a sine, and a sine advanced backwards is the same sine, so which way a blade's phase runs no
+// longer changes the picture and there is nothing to break. The pair's half-turn is what the
+// crossing rides on now, and the nose probe below breaks that.
 
 export const PROBES = [
   {
@@ -18,21 +24,9 @@ export const PROBES = [
   {
     decision: '0242',
     suite: 'tests/blades.test.ts',
-    // Both blades turning the same way: two parallel coils that never cross the centre line together.
-    broke: 'both blades of a pair turning the same way, so they never cross ahead of the nose',
-    guard: 'THE PAIR: a throw is two blades',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: '    blade.orbitTurn = -side * w.weapon.turn;',
-      replace: '    blade.orbitTurn = w.weapon.turn;',
-    },
-  },
-  {
-    decision: '0242',
-    suite: 'tests/blades.test.ts',
-    // The pair thrown from the nose rather than the wingtips.
+    // The pair thrown from the nose rather than the wingtips: both strands in phase, one line drawn twice.
     broke: 'the pair thrown from the nose rather than the wingtips',
-    guard: 'THE COIL: a blade leaves the wingtip',
+    guard: 'THE HELIX: a blade leaves the wingtip',
     edit: {
       path: 'src/app/frame.ts',
       find: '    blade.orbitAngle = side * (Math.PI / 2);',

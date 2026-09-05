@@ -49,10 +49,10 @@ export type WeaponKind = (typeof WEAPON_KINDS)[number];
  *   **straight**  a body spawned into `playerShots` at `speed`, fanned across the barrels
  *   **chain**     hitscan. The step it fires it finds a target in `reach`, lands, and jumps `links`
  *                 times to the next nearest; what the player sees is a bolt, drawn for a few steps
- *   **coil**      a body spawned into `playerShots` in a PAIR, one from each wingtip, each circling
- *                 a point that moves up the lane at `speed` — a chain of loops, the two crossing
- *                 ahead of the nose. Not spent by arriving: it lands on everything it crosses, once
- *                 per impact flash, and is gone at the edge of the screen. 0234, 0242
+ *   **coil**      a body spawned into `playerShots` in a PAIR, one from each wingtip, each going up
+ *                 the lane at `speed` and swinging across it in a sine — the two strands of a helix,
+ *                 crossing ahead of the nose. Not spent by arriving: it lands on everything it
+ *                 crosses, once per impact flash, and is gone at the edge of the screen. 0234, 0244
  */
 export type FlightKind = 'straight' | 'chain' | 'coil';
 
@@ -102,29 +102,30 @@ export interface WeaponRow {
    */
   reach: readonly number[];
   /**
-   * The radius of the loop a `coil` shot circles, in world units, one entry per rung — the half-
-   * width of the band the coil sweeps. Zeros for a weapon whose shots are spent by arriving.
+   * How far across the lane a `coil` shot swings from its axis, in world units, one entry per rung
+   * — the half-width of the helix. Zeros for a weapon whose shots are spent by arriving.
    *
    * ⚠️ **A LADDER, because it is the thing an upgrade buys** — *"upgrades make the shuriken's arc
-   * last longer, so it ends up with a bigger spiral."* Since 0242 a blade's path is a chain of loops
-   * up the lane and its reach is the screen's at every rung, so what a rung buys is the loop: a
-   * wider band swept ahead of the ship. Before 0242 this was `orbit` — first a clock (0234), then
-   * how tightly a spiral about the ship was wound (0237, 0239, 0240).
+   * last longer, so it ends up with a bigger spiral."* Since 0242 a blade's reach is the screen's
+   * at every rung, so what a rung buys is the swing: a wider band swept ahead of the ship. Before
+   * 0242 this was `orbit` — first a clock (0234), then how tightly a spiral about the ship was
+   * wound (0237, 0239, 0240); 0242 made it a loop's radius, and 0244 a sine's.
    */
   coil: readonly number[];
   /**
-   * Radians a `coil` shot turns about its loop's centre per step. Zero for every other flight.
+   * Radians a `coil` shot's swing advances per step. Zero for every other flight.
    *
-   * ⚠️ **In the camera's frame, like every speed.** A turn of 0.23 is a loop every twenty-seven
-   * steps, under half a second, which at the shot's forward speed puts each loop a third over the
-   * last — the overlap the drawing had (`reports/the-coil-drawn-2026-09-05.md`).
+   * ⚠️ **In the camera's frame, like every speed.** A turn of 0.16 is a full swing every thirty-nine
+   * steps, two thirds of a second, which at the shot's speed up the lane is a helix with a pitch of
+   * thirty-nine units — a little over twice its width at the cap and five times it at the first
+   * rung, which is what reads as a helix rather than a zigzag (0244).
    *
-   * ⚠️ **AND NOT A DIVISOR OF ANY RUNG'S CADENCE, WHICH THE FIRST PHOTOGRAPH TAUGHT.** Every pair
-   * turns at this rate from the same starting phase, so where pair *n+1* is in its loop when pair
-   * *n* is at the top is `turn × fireEvery`. At 0.21 that was exactly a turn at the first rung and
-   * exactly half a turn at the cap: every blade on the screen at the same point of its loop, two
-   * rows that breathed rather than a braid. At 0.23 the gap is a third of a turn at the cap and a
-   * tenth at the first rung, so a screen of pairs shows every point of the loop at once.
+   * ⚠️ **AND NOT A DIVISOR OF ANY RUNG'S CADENCE, WHICH THE FIRST PHOTOGRAPH TAUGHT (0242).** Every
+   * pair advances at this rate from the same starting phase, so where pair *n+1* is in its swing
+   * when pair *n* is at a crest is `turn × fireEvery`. At 0.21 that was exactly a turn at the first
+   * rung and exactly half a turn at the cap: every blade on the screen at the same point of its
+   * swing, two rows that breathed rather than a helix. At 0.16 the gap is at least a quarter-turn
+   * at every rung, so a screen of pairs shows every point of the strand at once.
    */
   turn: number;
   /** The face the weapon pickup shows when it is offering this kind — an index into the atlas. */
@@ -197,24 +198,26 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
    * ⚠️ **The slowest cadence in the game and the only shot that is not spent by arriving.** A blade
    * lives until it leaves the screen and lands on everything it crosses, so its worth is the sweep
    * and not the shot: at the cap a pair of blades every quarter-second, each in the air for two
-   * seconds — sixteen blades coiling up the lane at once. `tests/blades.test.ts` fires the cap for
+   * seconds — sixteen blades riding up the lane at once. `tests/blades.test.ts` fires the cap for
    * fifteen seconds and holds the pool.
    *
-   * ⚠️ **A COIL UP THE LANE, SINCE 0242 — AND NOT A RING ABOUT THE SHIP.** Four decisions wound a
-   * spiral about the ship (0234, 0237, 0239, 0240) and the fourth play-test drew the path it wanted
-   * instead: *"starting from the wing tips and circling forwards… the spiral whirlpool we have is
-   * cool, but it feels really weird and has a lot of hard to control gaps still."* A pair of blades
-   * leaves the wingtips, each circling a point that moves up the lane at the shot's `speed`, the
-   * two crossing ahead of the nose — a chain of loops the width of `coil`, the same everywhere on
-   * the screen, aimed by where the ship sits across the lane. A wide slow band against the pulse's
-   * narrow fast line, which is what makes it a third gun rather than a third shape.
+   * ⚠️ **A HELIX UP THE LANE, SINCE 0244 — NOT A RING ABOUT THE SHIP, AND NOT A CHAIN OF LOOPS.**
+   * Four decisions wound a spiral about the ship (0234, 0237, 0239, 0240); the fourth play-test drew
+   * a path from the wingtips forward and 0242 read it as a chain of loops; the sixth said what it
+   * had meant: *"I want the two wingtips firing to form a helix pattern with the shurikens."* A pair
+   * of blades leaves the wingtips, each going up the lane at the shot's `speed` and swinging across
+   * it in a sine `coil` wide, the two a half-turn apart so they cross ahead of the nose — the two
+   * strands of a helix, the same everywhere on the screen, aimed by where the ship sits across the
+   * lane. A wide slow band against the pulse's narrow fast line, which is what makes it a third gun
+   * rather than a third shape.
    *
-   * ⚠️ **`coil` is the loop's radius**: a rung buys a wider band. The turn is fixed, so a bigger
-   * loop is a faster blade — at the cap a blade at the top of its loop covers five units a step.
+   * ⚠️ **`coil` is the swing's half-width**: a rung buys a wider band. The turn is fixed, so a
+   * wider swing is a faster blade across the lane — at the cap a blade crossing the axis covers
+   * three units a step across, on top of the row's one up the lane.
    */
   shuriken: {
     label: 'Shuriken',
-    hint: 'Blades coil ahead',
+    hint: 'Blades helix ahead',
     shot: 'shuriken',
     flight: 'coil',
     fireEvery: [30, 26, 22, 18, 15],
@@ -223,7 +226,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     weight: [1, 1, 1, 1, 1],
     reach: [0, 0, 0, 0, 0],
     coil: [7, 9, 12, 15, 18],
-    turn: 0.23,
+    turn: 0.16,
     pickup: SPRITE.pickupShuriken,
   },
 };

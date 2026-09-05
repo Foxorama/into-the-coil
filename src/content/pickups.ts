@@ -605,7 +605,7 @@ export interface Weapon {
   links: number;
   /** How far one bolt can jump, in world units. Zero for a weapon that does not chain. */
   reach: number;
-  /** The radius of a coiling shot's loop, and radians it turns per step — 0234, 0242. Zero otherwise. */
+  /** How far a coiling shot swings from its axis, and radians its swing advances per step — 0234, 0244. Zero otherwise. */
   coil: number;
   turn: number;
   /** The most a missile turns toward its target per step, in radians — 0235. Zero for one that flies straight. */

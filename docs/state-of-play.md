@@ -127,6 +127,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the ship wears its colours: a livery in the player's own inks, a flame that leans, a seeker in the ally ink, the arc cut back again, a minute's test budget** | [0241](decisions/0241-the-ship-wears-its-colours.md), [`the-ship-played`](../reports/the-ship-played-2026-09-05.md) |
 | **a blade coils ahead of the ship: pairs from the wingtips, a chain of loops up the lane, crossing at the nose — the ring about the ship is gone** | [0242](decisions/0242-a-blade-coils-ahead-of-the-ship.md), [`the-coil-drawn`](../reports/the-coil-drawn-2026-09-05.md) |
 | **a death throws back one piece per kind, carrying the count, holding its face, wearing ×N** | [0243](decisions/0243-a-death-throws-back-one-piece-per-kind.md), [`the-scatter-under-fire`](../reports/the-scatter-under-fire-2026-09-05.md) |
+| **a blade rides a helix: two strands from the wingtips crossing up the lane, a quarter faster, the star a tenth of the lane** | [0244](decisions/0244-a-blade-rides-a-helix.md), [`the-helix-asked`](../reports/the-helix-asked-2026-09-05.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -773,10 +774,13 @@ slides. **And the player drew the blades' path they wanted instead of the whirlp
 [`the-coil-drawn`](../reports/the-coil-drawn-2026-09-05.md): pairs from the wingtips, a chain of
 loops up the lane, crossing at the nose. **And a death's scatter is two pieces now, not eight** —
 [0243](decisions/0243-a-death-throws-back-one-piece-per-kind.md), from
-[`the-scatter-under-fire`](../reports/the-scatter-under-fire-2026-09-05.md). What is owed is
-another play, on the branch preview, of the ship, its guns and its deaths as 0243 left them; an ear on `arc`, `zap` and `throw` as they are now
+[`the-scatter-under-fire`](../reports/the-scatter-under-fire-2026-09-05.md). **And the coil was
+played and was not the ask: [0244](decisions/0244-a-blade-rides-a-helix.md) makes the blades a
+helix** — [`the-helix-asked`](../reports/the-helix-asked-2026-09-05.md): two strands from the
+wingtips crossing up the lane, a quarter faster, the star a tenth of the lane. What is owed is
+another play, on the branch preview, of the ship, its guns and its deaths as 0244 left them; an ear on `arc`, `zap` and `throw` as they are now
 (`scripts/hear.mjs --only=arc,zap,throw` writes them); and an eye on the leaning flame, the livery
-at seven units, the coil ahead of the ship and the seeker turning in flight, at the camera the game
+at seven units, the helix ahead of the ship and the seeker turning in flight, at the camera the game
 ships — every claim about any of them is a model quantity. The balance of a gun that cannot miss and a gun that sweeps is a hand's,
 and their ladders are starting points. The bench takes `?weapon=arc`
 and `?weapon=shuriken` with `&tier=N`, and `?missile=homing` with `&tubes=N`.
