@@ -226,7 +226,7 @@ projectiles' orange, the arc in the ship's, the shuriken in steel, the seeker in
 | tube | what it does | a tier buys |
 |---|---|---|
 | **missiles** | fly the lane from the wings; three pulses each | a tube **and** a rate step, max 2 tubes |
-| **seekers** | hunt the nearest body on the screen from the moment they leave the tube, any direction; two pulses each; in the ally ink — their own pickup face's — so a seeker is never mistaken for a missile, a bolt or the ship — [0235](decisions/0235-a-seeker-hunts-the-nearest-body.md), [0238](decisions/0238-the-picture-answers-the-second-play-test.md), [0241](decisions/0241-the-ship-wears-its-colours.md) | the same |
+| **seekers** | hunt the nearest body on the screen — and only on the screen — from the moment they leave the tube, any direction, for a second and a half and then go out in a puff; two pulses each; in the ally ink — their own pickup face's — so a seeker is never mistaken for a missile, a bolt or the ship — [0235](decisions/0235-a-seeker-hunts-the-nearest-body.md), [0238](decisions/0238-the-picture-answers-the-second-play-test.md), [0241](decisions/0241-the-ship-wears-its-colours.md), [0246](decisions/0246-a-seeker-hunts-on-the-screen.md) | the same |
 
 The rest of the vocabulary is unbuilt: multi-tag tracking specials, piercing shots, faster engines,
 orbiting mines that are half shield and half weapon. Nothing triggers a special except the bomb.

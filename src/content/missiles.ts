@@ -55,6 +55,21 @@ export interface MissileRow {
    * can see it happen, which is the difference between homing and hitscan.
    */
   seek: number;
+  /**
+   * Steps a missile of this kind burns for before it goes out. Zero for one that lives to the edge
+   * of the view, which is the straight missile.
+   *
+   * ⚠️ **A SEEKER'S FUSE IS THE WHOLE OF WHAT KEEPS THE SCREEN FROM FILLING WITH HUNTERS** —
+   * `docs/decisions/0246-a-seeker-hunts-on-the-screen.md`. Played at no fuse: *"I had 15-20 on
+   * screen at a time and they were killing everything super fast."* A straight missile is spent by
+   * the leading edge inside a second and a half; a seeker that turns is spent by nothing, and a
+   * screen of them circling is a screen nothing survives. Ninety steps is a second and a half: at
+   * the row's speed that is the far edge of the widest screen from the ship, so a seeker still
+   * reaches a boss on its station and comes about for a body just behind the ship — and a seeker
+   * that is still turning after that is spent. At the cap that is nine in the air, against the
+   * fifteen to twenty the play-test counted.
+   */
+  fuse: number;
   /** The face the missile pickup shows when it is offering this kind — an index into the atlas. */
   pickup: number;
 }
@@ -74,6 +89,7 @@ export const MISSILES: Record<MissileKind, MissileRow> = {
     missileEvery: [8, 8, 8, 6, 4],
     launchers: [0, 1, 2, 2, 2],
     seek: 0,
+    fuse: 0,
     pickup: SPRITE.pickupMissile,
   },
   /**
@@ -83,6 +99,10 @@ export const MISSILES: Record<MissileKind, MissileRow> = {
    * ⚠️ **The same tubes, the same clock, the same cue.** What differs is the shot (`seeker`, worth
    * two pulses where the straight missile is worth three) and the guidance. A missile pickup of this
    * kind switches the tubes and starts their ladder again at one rung, exactly as a gun does (0233).
+   *
+   * ⚠️ **ON THE SCREEN, AND ON A FUSE — 0246.** Played: *"they're way too strong, limit them to
+   * screen space only and give them a shorter lifespan."* A seeker hunts only a body inside the
+   * view the player has, and burns for `fuse` steps before it goes out in a puff.
    */
   homing: {
     label: 'Seekers',
@@ -92,6 +112,7 @@ export const MISSILES: Record<MissileKind, MissileRow> = {
     missileEvery: [8, 8, 8, 6, 4],
     launchers: [0, 1, 2, 2, 2],
     seek: 0.09,
+    fuse: 90,
     pickup: SPRITE.pickupSeeker,
   },
 };

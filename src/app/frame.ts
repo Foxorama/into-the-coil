@@ -26,7 +26,6 @@ import {
   ACROSS_SPAN,
   flankAlongFor,
   FLANK_MARGIN,
-  MAX_ALONG_SPAN,
   ROAM_MAX,
   ROAM_MIN,
   cullPlayerShotAlong,
@@ -39,6 +38,7 @@ import {
   collideInto,
   collideIntoOne,
   nearestFrom,
+  nearestInBox,
   strike,
   type Collected,
   type Deaths,
@@ -2240,18 +2240,14 @@ function fireMissiles(w: World): void {
     // How hard it hunts, copied onto the missile — zero for a straight one, and `steerMissiles`
     // reads it rather than the fitted tubes so a switch mid-flight changes nothing in the air. 0235.
     missile.seekTurn = w.weapon.seek;
+    // And how long it burns — 0246. Zero is *never*, which is the straight missile: it lives to the
+    // edge of the view. A seeker's fuse is what keeps a screen from filling with things that hunt.
+    missile.lifeFor = w.weapon.fuse;
   }
 }
 
 /**
- * How far a seeker looks for something to hunt, in world units: the whole of the widest view and
- * the lane beside it, so *nearest* means *nearest on the screen* and never a body the player cannot
- * see. Nothing beyond the view is a target, on 0048's promise that you can shoot what you can see.
- */
-const SEEK_REACH = MAX_ALONG_SPAN + ACROSS_SPAN;
-
-/**
- * One homing missile turned toward the nearest body — 0235.
+ * One homing missile turned toward the nearest body on the screen — 0235, as 0246 left it.
  *
  * ⚠️ **THE HEADING TURNS AND THE SPEED DOES NOT.** A missile's own motion is its velocity less the
  * scroll rate (0034: every speed is in the camera's frame); that vector is rotated toward the target
@@ -2263,10 +2259,19 @@ const SEEK_REACH = MAX_ALONG_SPAN + ACROSS_SPAN;
  * an index kept across steps would follow the wrong body the moment anything died; the search is
  * bounded and allocation-free, and *nearest* changing under a missile is what a hunt looks like.
  * The boss counts, on the same edge-distance the arc uses.
+ *
+ * ⚠️ **ON THE SCREEN, AND THE SCREEN IS A BOX — 0246.** 0235 said *nothing beyond the view is a
+ * target* and bounded the search by a REACH from the missile, which is a circle: a seeker near the
+ * leading edge saw a body a whole view ahead of it, and a screen of seekers killed every wave
+ * before it arrived. *"Limit them to screen space only."* The bound is the view the player has —
+ * the camera to its leading edge along, the lane across — and a body outside it is not a target
+ * however near it is. `THE SCREEN` in `tests/seekers.test.ts` holds it.
  */
 function seek(w: World, m: Entity): void {
-  const enemy = nearestFrom(w.enemies, m.along, m.across, SEEK_REACH, false);
-  const boss = w.bossPool.size > 0 ? nearestFrom(w.bossPool, m.along, m.across, SEEK_REACH, false) : -1;
+  const from = w.cameraAlong;
+  const to = w.cameraAlong + w.view.alongSpan;
+  const enemy = nearestInBox(w.enemies, m.along, m.across, from, to, 0, ACROSS_SPAN);
+  const boss = w.bossPool.size > 0 ? nearestInBox(w.bossPool, m.along, m.across, from, to, 0, ACROSS_SPAN) : -1;
   let target: Entity;
   if (enemy >= 0 && (boss < 0 || nearer(w.enemies.at(enemy), w.bossPool.at(0), m.along, m.across))) target = w.enemies.at(enemy);
   else if (boss >= 0) target = w.bossPool.at(boss);
@@ -2298,6 +2303,14 @@ function seek(w: World, m: Entity): void {
 function steerMissiles(w: World): void {
   for (let i = w.missiles.size - 1; i >= 0; i--) {
     const m = w.missiles.at(i);
+    /*
+      ⚠️ **A SEEKER THAT BURNS OUT SAYS SO — 0036, 0246.** `stepEntities` retires a body whose fuse
+      runs down on the step it reaches zero, silently; a missile that vanishes mid-air unexplained
+      is exactly the event the picture must mention. The spark is placed where the missile will be
+      on the step it goes, which is this step's velocity on, so the puff sits at the end of its
+      track rather than a step behind it.
+    */
+    if (m.lifeFor === 1) flare(w, m.along + m.velAlong, m.across + m.velAcross, 'spark');
     // A seeker keeps its pop as its first heading and hunts from there — 0235. It never straightens.
     if (m.seekTurn > 0) {
       seek(w, m);

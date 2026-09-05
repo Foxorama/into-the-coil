@@ -2,8 +2,9 @@
  * A seeker hunts the nearest body — `docs/decisions/0235-a-seeker-hunts-the-nearest-body.md`.
  *
  * The homing missile is the second `MissileKind`: the same tubes and clock as the straight one, a
- * shot worth less, and a guidance that turns toward the nearest body on the field from the moment it
- * leaves the tube — whatever direction that is. The kind's ladder and face are held by
+ * shot worth less, and a guidance that turns toward the nearest body on the screen from the moment
+ * it leaves the tube — whatever direction that is — for as long as its fuse burns
+ * (`docs/decisions/0246-a-seeker-hunts-on-the-screen.md`). The kind's ladder and face are held by
  * `tests/weapons.test.ts` over every tube; what is held here is the hunt.
  */
 
@@ -16,6 +17,7 @@ import { ENEMIES } from '../src/content/enemies.ts';
 import { SPRITE_KINDS } from '../src/content/sprites.ts';
 import { INK_OF } from '../src/render/bake.ts';
 import { reset } from '../src/sim/entity.ts';
+import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
 
 const NEVER = Number.MAX_SAFE_INTEGER;
@@ -137,5 +139,94 @@ describe('0235 — a seeker hunts the nearest body', () => {
     // it all looks the same."* The bolt is stroked in the ship's ink and the hull wears it; a
     // seeker in it was the third blue thing, and it wears its own pickup face's ink instead.
     expect(ink, 'a seeker is drawn in the ship’s own ink, so it is one more blue thing').not.toBe('player');
+  });
+});
+
+describe('0246 — a seeker hunts on the screen, and burns out', () => {
+  /*
+    Played: *"they're way too strong, limit them to screen space only and give them a shorter
+    lifespan. I had 15-20 on screen at a time and they were killing everything super fast."* 0235
+    bounded the hunt by a reach from the missile, which is a circle and not the screen; and a
+    seeker that kept turning was spent by nothing.
+  */
+
+  /** Whether `missile` has turned across the lane toward `body` at all. */
+  function turnedToward(missile: { velAcross: number }, body: { across: number }, from: number): boolean {
+    return Math.sign(missile.velAcross) === Math.sign(body.across - from) && Math.abs(missile.velAcross) > 0.2;
+  }
+
+  it('THE SCREEN: a body beyond the leading edge is not hunted, and the same body just inside it is', () => {
+    /*
+      Two runs, one body: a hull's width past the leading edge of the view, forty across from the
+      tube, riding the camera so it stays where it is put. Off the screen the seeker flies its pop
+      and never turns; on the screen it turns toward the body inside a few steps. The bound is the
+      VIEW the player has, so nothing here names a reach.
+    */
+    for (const inside of [false, true]) {
+      const { world, frame } = armed(1);
+      const edge = world.cameraAlong + world.view.alongSpan - world.ship.along;
+      const body = target(world, inside ? edge - 30 : edge + 30, 40);
+      frame.step();
+      world.missileIn = NEVER;
+      const missile = world.missiles.at(0);
+      let turned = false;
+      for (let i = 0; i < 40 && world.missiles.size > 0; i++) {
+        frame.step();
+        if (turnedToward(missile, body, world.ship.across + 40 - 40)) turned = true;
+      }
+      expect(turned, inside ? 'a body on the screen was not hunted' : 'a body beyond the leading edge was hunted').toBe(inside);
+    }
+  });
+
+  it('THE FUSE: a seeker burns out inside two seconds when it cannot catch what it hunts, and a puff is drawn where it went', () => {
+    /*
+      A body far behind and to the side: the seeker comes about and chases, and is spent before it
+      arrives — held as *gone within two seconds*, in the player's unit, and never as the fuse. On
+      the step it goes a spark is placed at the end of its track (0036: an event the model resolves
+      and the picture never mentions gets reported as a different bug).
+    */
+    const { world, frame } = armed(1);
+    const body = target(world, -40, 20);
+    frame.step();
+    world.missileIn = NEVER;
+    const missile = world.missiles.at(0);
+    let lastAlong = missile.along;
+    let lastAcross = missile.across;
+    let steps = 0;
+    const debrisBefore = world.debris.size;
+    while (world.missiles.size > 0 && steps < 300) {
+      lastAlong = missile.along;
+      lastAcross = missile.across;
+      frame.step();
+      steps++;
+    }
+    expect(body.health, 'the seeker caught a body forty behind and twenty across, which is a long chase').toBe(999);
+    expect(world.missiles.size, 'the seeker never went out').toBe(0);
+    expect(steps / STEPS_PER_SECOND, `the seeker hunted for ${(steps / STEPS_PER_SECOND).toFixed(2)} s`).toBeLessThan(2);
+    // The puff: a piece of debris within a couple of units of where the missile was last seen.
+    let puffed = false;
+    for (let i = 0; i < world.debris.size; i++) {
+      const piece = world.debris.at(i);
+      if (Math.hypot(piece.along - lastAlong, piece.across - lastAcross) < 4) puffed = true;
+    }
+    expect(world.debris.size, 'nothing was drawn when the seeker went out').toBeGreaterThan(debrisBefore);
+    expect(puffed, 'the puff is not where the seeker went out').toBe(true);
+  });
+
+  it('and the straight missile has no fuse: it lives to the far edge of the widest view', () => {
+    const built = playableWorld(NO_LEVEL);
+    built.world.weapon = weaponFor(built.world.shipRow, ['missile'], built.world.shipRow.weapon, 'straight');
+    built.world.fireIn = NEVER;
+    built.world.missileIn = 1;
+    const frame = new GameFrame(built.world);
+    frame.step();
+    const missile = built.world.missiles.at(0);
+    let furthest = 0;
+    for (let i = 0; i < 300 && built.world.missiles.size > 0; i++) {
+      furthest = Math.max(furthest, missile.along - built.world.cameraAlong);
+      frame.step();
+    }
+    expect(furthest, 'a straight missile went out short of the far edge').toBeGreaterThan(built.world.view.alongSpan - SHOTS.missile.speed * 2);
+    expect(MISSILES.straight.fuse).toBe(0);
   });
 });
