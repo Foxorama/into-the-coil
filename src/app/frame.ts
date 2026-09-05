@@ -65,7 +65,7 @@ import type { ShipRow } from '../content/ships.ts';
 import { INVULN_STEPS, SHIELD_MARK, hullFor, shieldsOf } from '../content/ships.ts';
 import { SHOTS } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
-import { FORMATIONS, gapAcross, streamOffset } from '../content/formations.ts';
+import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
 import { type DifficultyRow, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
@@ -2845,6 +2845,32 @@ function burst(w: World, along: number, across: number, count: number): void {
  * `docs/decisions/0021-one-stream-per-concern.md` is about which stream a draw comes from rather
  * than about how many exist.
  */
+/**
+ * A boss's adds put on the field — `docs/decisions/0249-the-eagle-summons.md`: `count` of `enemy`
+ * at the leading edge, in `formation` about the middle of the lane, exactly as a leading wave is
+ * placed by `spawnWave` below and with the same parities — a summons is authored by the row that
+ * calls it, and rolls nothing.
+ */
+function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: FormationKind): void {
+  const kind = w.enemyKinds[enemy];
+  const row = w.enemyRows[kind];
+  if (row === undefined) return;
+  const formation = FORMATIONS[formationKind];
+  const along = spawnAlong(w.cameraAlong);
+  const gap = gapAcross(row.radius);
+  for (let i = 0; i < count; i++) {
+    const e = w.enemies.spawn();
+    if (e === null) return;
+    reset(e, along + formation.alongOffset(i, count, gap), ACROSS_SPAN / 2 + formation.acrossOffset(i, count, gap), row, kind);
+    e.fireIn = nextOnGrid(w.steps, fireGapFor(row.fireEvery, w.difficulty), i / count);
+    e.velAcross = row.motion.kind === 'drift' ? (i % 2 === 0 ? row.motion.roam : -row.motion.roam) : 0;
+    // The same two facts a wave's member is given, in the other order so 0073's probe over the
+    // wave's line stays the one line it names.
+    if (row.motion.kind === 'loop') e.turnsLeft = row.motion.turns;
+    else if (row.motion.kind === 'circle') e.spin = i % 2 === 0 ? 1 : -1;
+  }
+}
+
 function spawnWave(w: World, index: number): void {
   const wave = w.level.waves[index];
   if (wave === undefined) return;
@@ -3908,6 +3934,16 @@ function driveBoss(w: World): void {
   */
   w.bossOffset = boss.along - w.cameraAlong;
   w.bossAcross = boss.across;
+  /*
+    ⚠️ **THE ADDS A SUMMONS ASKED FOR — 0249.** `stepBoss` has no enemy pool; a `summon` volley
+    leaves its count on the boss's `turnsLeft` and this is where the kites and the raptors are put
+    on the field, at the leading edge in the phase's formation, on the same step as the call.
+  */
+  const calling = throwing.attack ?? w.bossRow.attack;
+  if (calling.kind === 'summon' && boss.turnsLeft > 0) {
+    summonAdds(w, calling.enemy, boss.turnsLeft, calling.formation);
+    boss.turnsLeft = 0;
+  }
   /*
     ⚠️ **The burst is thrown where the hull IS rather than at its centre of health**, so the pieces
     come off the thing the player is looking at. `burst` is the same scatter an enemy death uses; what

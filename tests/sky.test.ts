@@ -466,7 +466,9 @@ describe('0203 — the sky may hold a landmark, and the rule is a band', () => {
 
   it('the band is derived from what can kill you, not typed', () => {
     // If a new body or shot moves either end, the band moves with it and the guard below re-ranks.
-    expect(smallestThreat).toBeCloseTo(1.8, 6);
+    // ⚠️ 1.32 since 0249: the eagle's flame is the smallest thing that can kill you, at 0.66 —
+    // the most its 1.2-unit drawing may carry, and still above the far stars' largest mark.
+    expect(smallestThreat).toBeCloseTo(1.32, 6);
     expect(largestThreat).toBeCloseTo(8, 6);
   });
 

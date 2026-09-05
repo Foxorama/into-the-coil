@@ -181,6 +181,10 @@ export const SPRITE_KINDS = [
   'mothHit',
   'raptor',
   'raptorHit',
+  // The kite — 0249: Ember Nebula's small fast flier, a diamond with a forked tail, summoned by the
+  // eagle in hordes and sent by nothing else.
+  'kite',
+  'kiteHit',
   'sentry',
   'sentryHit',
   'shard',
@@ -281,6 +285,8 @@ export const SPRITE_KINDS = [
   // shot has (`tests/legibility.test.ts`), and their own inks.
   'acid',
   'void',
+  // The eagle's flame — 0249: a tongue of fire, the smallest bullet there is.
+  'flame',
   /*
     ⚠️ **A DART, AND THE ONLY THING IN THE GAME DRAWN LONG ALONG ITS OWN TRAVEL IN THE BULLET INK.**
     The pulse is a disc of 1.8 units; this is 2.8 and pointed, so the two are told apart by shape and
@@ -788,6 +794,9 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   mothHit: 8.5,
   raptor: 7.5,
   raptorHit: 7.5,
+  // Smaller than the moth it flies beside and than the raptor it is summoned with — 0249.
+  kite: 6.5,
+  kiteHit: 6.5,
   sentry: 7,
   sentryHit: 7,
   shard: 7.5,
@@ -877,6 +886,8 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // 0.29 of them, inside the band `tests/combat.test.ts` holds.
   acid: 5,
   void: 4.2,
+  // Under the lance's 1.9 by more than five pixels on a 1280×720 screen, and the quickest — 0249.
+  flame: 1.2,
   // Longer than the pulse and pointed. A missile is the shot the player is meant to notice.
   missile: 3.4,
   // The seeker is the missile's size: what tells them apart is the fins and the eye, not the box.
