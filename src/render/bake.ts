@@ -20,7 +20,9 @@
  */
 
 import type { Palette } from '../content/palette.ts';
-import { foeOf, type FoeSkin, type ThemeKind } from '../content/themes.ts';
+import { foeOf, lordOf, type FoeSkin, type ThemeKind } from '../content/themes.ts';
+import { BOSSES } from '../content/bosses.ts';
+import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { LANDMARK_SLOTS, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import type { WeaponKind } from '../content/weapons.ts';
@@ -3120,83 +3122,338 @@ function paintBoss6(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
   The real bosses' paint — 0247. One shadowed plate low on the hull, one lit edge on the prow, one
   eye; every mark well inside the silhouette, which `tests/accents.test.ts` holds for every body.
 */
+/*
+  ── THE REAL BOSSES, DRAWN — 0264 ──────────────────────────────────────────────────────────────
+
+  *"The boss graphics are bad … the grey tentacle … the new bosses look terrible (the hydra shows
+  no heads)."* Six of the seven hulls below were a silhouette with a plate, a strip and an eye;
+  they are drawn as the creatures the brief names. What the predecessor's serpent taught
+  (`C:\Golf-Stars`'s `shipArt.ts`, read for that reason and nothing else): a body is ONE spine
+  with a taper and everything hangs off it; a skull is edged in its own light or it vanishes into
+  the dark; the maw is lit in the gap the jaws leave; fins and scutes sit on the body's own heading.
+
+  ⚠️ **The hull is still the sealed path, and everything after it is paint on it** — 0227. A ribbon
+  along a spine, a head at its end and fins on its back are one closed polygon, so
+  `tests/accents.test.ts` holds every mark to the same silhouette the collision reads, and the
+  hurt twin is that silhouette flat. Nothing here strokes after the seal.
+*/
+
+/** The sprites the places' lords wear their own skin on — every real boss's, off the rows. */
+const LORD_HULLS: readonly SpriteKind[] = LEVEL_KINDS.map((k) => SPRITE_KINDS[BOSSES[LEVELS[k].boss].sprite]!);
+
+/** The unit direction of a polyline at sample `i`, from its neighbours. */
+function headingAt(spine: readonly Pt[], i: number): Pt {
+  const a = spine[Math.max(0, i - 1)]!;
+  const b = spine[Math.min(spine.length - 1, i + 1)]!;
+  const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+  return [(b[0] - a[0]) / len, (b[1] - a[1]) / len];
+}
+
+/** A point `h` off sample `i` of a spine — to port for a positive `h`, to starboard for a negative. */
+function offSpine(spine: readonly Pt[], i: number, h: number): Pt {
+  const [ux, uy] = headingAt(spine, i);
+  const [x, y] = spine[i]!;
+  return [x - uy * h, y + ux * h];
+}
+
+/** A quad between two offsets of a spine, from sample `i` to `i + 1`: a stripe along a ribbon. */
+function stripe(spine: readonly Pt[], i: number, h: (i: number) => number, from: number, to: number): Pt[] {
+  return [
+    offSpine(spine, i, h(i) * from),
+    offSpine(spine, i + 1, h(i + 1) * from),
+    offSpine(spine, i + 1, h(i + 1) * to),
+    offSpine(spine, i, h(i) * to),
+  ];
+}
+
+/** A frame at the end of a spine: `at(px, py)` is `px` along its last heading and `py` to port. */
+function endOf(spine: readonly Pt[]): (px: number, py: number) => Pt {
+  const last = spine.length - 1;
+  const [ux, uy] = headingAt(spine, last);
+  const [x, y] = spine[last]!;
+  return (px, py) => [x + ux * px - uy * py, y + uy * px + ux * py];
+}
+
+/*
+  THE SERPENT. One spine from the neck to the tail, an S across the box, a fifth of the box wide
+  at the neck and a point at the tail; a skull at the front end with the jaws thrown open and a
+  horn swept back; four dorsal fins on the starboard edge, leaning tailward. The head is written
+  out, because a skull is the one part of a serpent that says what it is.
+*/
+const SERPENT_SPINE: readonly Pt[] = [
+  [-0.6, -0.16],
+  [-0.42, -0.4],
+  [-0.2, -0.52],
+  [0.04, -0.34],
+  [0.2, 0],
+  [0.38, 0.36],
+  [0.6, 0.54],
+  [0.82, 0.44],
+  [0.98, 0.2],
+];
+// ⚠️ Nothing on a hull thinner than a quarter of `r`: the outline is stroked at a tenth of `r` in
+// the void's ink, centred on the edge, and a jaw or a tail finer than that is outline and no body.
+// The mouth is paint, for the same reason — a notch that fine is stroked shut.
+const serpentHalf = (i: number): number => 0.22 - 0.13 * (i / (SERPENT_SPINE.length - 1));
+/** From the crown, over the horn and the brow, down the snout, under the chin — a solid skull. */
+const SERPENT_HEAD: readonly Pt[] = [
+  [-0.68, -0.46],
+  [-0.8, -0.62],
+  [-0.9, -0.48],
+  [-1, -0.3],
+  [-1, 0.02],
+  [-0.9, 0.16],
+  [-0.7, 0.12],
+];
+const SERPENT_FINS: Readonly<Record<number, number>> = { 2: 0.2, 3: 0.24, 4: 0.2, 5: 0.14 };
+function serpentHull(): Pt[] {
+  const n = SERPENT_SPINE.length;
+  const out: Pt[] = [offSpine(SERPENT_SPINE, 0, -serpentHalf(0)), ...SERPENT_HEAD];
+  for (let i = 0; i < n; i++) out.push(offSpine(SERPENT_SPINE, i, serpentHalf(i)));
+  out.push([1, 0.16]);
+  for (let i = n - 1; i >= 1; i--) {
+    out.push(offSpine(SERPENT_SPINE, i, -serpentHalf(i)));
+    const fin = SERPENT_FINS[i];
+    if (fin === undefined) continue;
+    // A fin on the segment behind this sample, its tip leaning back towards the tail.
+    const [ux, uy] = headingAt(SERPENT_SPINE, i);
+    const a = offSpine(SERPENT_SPINE, i, -serpentHalf(i));
+    const b = offSpine(SERPENT_SPINE, i - 1, -serpentHalf(i - 1));
+    const mx = a[0] * 0.65 + b[0] * 0.35;
+    const my = a[1] * 0.65 + b[1] * 0.35;
+    out.push([mx + uy * fin, my - ux * fin]);
+  }
+  return out;
+}
+const SERPENT_HULL: readonly Pt[] = serpentHull();
+
 function paintBoss8(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The serpent: scales down its back, its belly in shadow, the head lit.
-  plate(ctx, f, skin, [
-    [0.1, 0.18],
-    [0.36, 0.14],
-    [0.7, 0.4],
-    [0.92, 0.24],
-    [0.92, 0.44],
-    [0.66, 0.66],
-    [0.34, 0.48],
-  ]);
+  void theme;
+  // The belly in shadow down the port edge; the back lit down the starboard edge.
+  for (let i = 0; i < 6; i++) plate(ctx, f, skin, stripe(SERPENT_SPINE, i, serpentHalf, 0.5, 0.9));
+  for (let i = 0; i < 7; i++) lit(ctx, f, skin, stripe(SERPENT_SPINE, i, serpentHalf, -0.45, -0.75));
+  // Scales down the spine — a dark chevron a sample — with the venom-light between them.
+  for (let i = 1; i <= 5; i++) {
+    const [x, y] = SERPENT_SPINE[i]!;
+    poly(ctx, f, shade(skin.hull, -0.3), [
+      [x - 0.05, y - 0.05],
+      [x + 0.01, y],
+      [x - 0.05, y + 0.05],
+      [x - 0.01, y + 0.05],
+      [x + 0.06, y],
+      [x - 0.01, y - 0.05],
+    ]);
+    const [nx, ny] = SERPENT_SPINE[i + 1]!;
+    disc(ctx, f, skin.lit, (x + nx) / 2, (y + ny) / 2, 0.03);
+  }
+  // The skull: a lit brow, the eye in its socket, the mouth thrown open — dark, the maw lit in it,
+  // a fang off each jaw.
   lit(ctx, f, skin, [
-    [-0.92, 0.02],
-    [-0.7, -0.44],
-    [-0.36, -0.6],
-    [-0.4, -0.46],
-    [-0.66, -0.3],
-    [-0.84, 0.08],
+    [-0.74, -0.46],
+    [-0.82, -0.52],
+    [-0.9, -0.44],
+    [-0.8, -0.4],
   ]);
-  motif(ctx, f, skin, theme, [
-    [-0.28, -0.44],
-    [0, -0.24],
-    [0.3, 0.06],
-    [0.14, 0.14],
-    [-0.16, -0.12],
-    [-0.44, -0.3],
-  ], 'boss8');
-  disc(ctx, f, skin.eye, -0.76, -0.22, 0.07);
+  disc(ctx, f, shade(skin.plate, -0.5), -0.84, -0.38, 0.05);
+  disc(ctx, f, skin.eye, -0.85, -0.38, 0.034);
+  disc(ctx, f, shade(skin.plate, -0.6), -0.855, -0.38, 0.015);
+  poly(ctx, f, shade(skin.plate, -0.5), [
+    [-0.98, -0.18],
+    [-0.76, -0.1],
+    [-0.97, 0],
+  ]);
+  glow(ctx, f, skin.lit, -0.9, -0.09, 0.12, 0.8);
+  poly(ctx, f, skin.lit, [
+    [-0.95, -0.17],
+    [-0.89, -0.15],
+    [-0.92, -0.09],
+  ]);
+  poly(ctx, f, skin.lit, [
+    [-0.94, -0.01],
+    [-0.88, -0.04],
+    [-0.9, -0.08],
+  ]);
 }
+
+/*
+  THE EAGLE. A hooked beak at the front, two wings thrown wide with the primaries notched along
+  their trailing edges, and a fanned tail — the widest span in the game, and the only hull whose
+  edge is feathered.
+*/
+const EAGLE_HULL: readonly Pt[] = [
+  [-1, -0.04],
+  [-0.9, -0.16],
+  [-0.76, -0.24],
+  [-0.62, -0.3],
+  [-0.4, -0.34],
+  [-0.3, -0.5],
+  [-0.1, -0.86],
+  [0.06, -1],
+  [0.22, -0.96],
+  [0.18, -0.8],
+  [0.34, -0.84],
+  [0.3, -0.64],
+  [0.46, -0.68],
+  [0.42, -0.48],
+  [0.56, -0.5],
+  [0.5, -0.3],
+  [0.68, -0.24],
+  [0.84, -0.34],
+  [1, -0.3],
+  [0.92, -0.14],
+  [1, -0.02],
+  [1, 0.02],
+  [0.92, 0.14],
+  [1, 0.3],
+  [0.84, 0.34],
+  [0.68, 0.24],
+  [0.5, 0.3],
+  [0.56, 0.5],
+  [0.42, 0.48],
+  [0.46, 0.68],
+  [0.3, 0.64],
+  [0.34, 0.84],
+  [0.18, 0.8],
+  [0.22, 0.96],
+  [0.06, 1],
+  [-0.1, 0.86],
+  [-0.3, 0.5],
+  [-0.4, 0.34],
+  [-0.62, 0.3],
+  [-0.76, 0.24],
+  [-0.86, 0.12],
+  [-0.92, 0.02],
+];
 function paintBoss9(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The eagle: the underside of both wings in shadow, the head lit, feathers as a motif.
-  plate(ctx, f, skin, [
-    [-0.1, 0.36],
-    [0.32, 0.9],
-    [0.2, 0.92],
-    [-0.3, 0.6],
-  ]);
-  plate(ctx, f, skin, [
-    [0.3, 0.14],
-    [0.9, 0.16],
-    [0.6, 0.44],
-  ]);
-  lit(ctx, f, skin, [
-    [-0.94, 0],
-    [-0.62, -0.2],
-    [-0.5, -0.14],
-    [-0.7, 0],
-  ]);
+  // Feathers: dark quills radiating from each shoulder to the notches, on both wings.
+  for (const side of [-1, 1]) {
+    for (const [tx, ty] of [
+      [0.14, 0.86],
+      [0.26, 0.7],
+      [0.38, 0.54],
+    ] as const) {
+      const px = 0.02 * side;
+      const sy = 0.42 * side;
+      plate(ctx, f, skin, [
+        [-0.02 + px, sy],
+        [tx - 0.03, ty * side],
+        [tx + 0.03, ty * side],
+        [0.06 + px, sy],
+      ]);
+    }
+    // The wing's leading edge lit, well inside it.
+    lit(ctx, f, skin, [
+      [-0.22, 0.5 * side],
+      [-0.02, 0.84 * side],
+      [0.04, 0.84 * side],
+      [-0.14, 0.5 * side],
+    ]);
+    // A bar across the tail.
+    plate(ctx, f, skin, [
+      [0.7, 0.16 * side],
+      [0.9, 0.22 * side],
+      [0.9, 0.1 * side],
+      [0.7, 0.08 * side],
+    ]);
+  }
+  // Embers on the chest, in the place's motif.
   motif(ctx, f, skin, theme, [
-    [-0.24, -0.84],
-    [0.22, -0.88],
-    [0.42, -0.5],
-    [0, -0.36],
+    [-0.5, -0.18],
+    [0.36, -0.18],
+    [0.36, 0.18],
+    [-0.5, 0.18],
   ], 'boss9');
-  disc(ctx, f, skin.eye, -0.74, -0.06, 0.06);
+  // The beak, lit along its hook; the eye in its socket, looking down the lane.
+  lit(ctx, f, skin, [
+    [-0.96, -0.05],
+    [-0.88, -0.14],
+    [-0.82, -0.1],
+    [-0.9, -0.02],
+  ]);
+  disc(ctx, f, shade(skin.plate, -0.5), -0.72, -0.12, 0.06);
+  disc(ctx, f, skin.eye, -0.73, -0.12, 0.04);
+  disc(ctx, f, shade(skin.plate, -0.6), -0.735, -0.12, 0.016);
 }
+
+/*
+  THE PTERODACTYL. A long beak, a crest swept back over the skull, and two wings swept to the back
+  corners with the membrane scalloped between the wing-fingers and the body.
+*/
+const QUETZAL_HULL: readonly Pt[] = [
+  [-1, 0],
+  [-0.62, -0.1],
+  [-0.52, -0.2],
+  [-0.3, -0.56],
+  [-0.34, -0.32],
+  [-0.2, -0.24],
+  [-0.1, -0.28],
+  [0.85, -1],
+  [0.96, -0.84],
+  [0.6, -0.56],
+  [0.66, -0.46],
+  [0.34, -0.32],
+  [0.4, -0.22],
+  [0.2, -0.16],
+  [0.6, -0.08],
+  [1, -0.05],
+  [1, 0.05],
+  [0.6, 0.08],
+  [0.2, 0.16],
+  [0.4, 0.22],
+  [0.34, 0.32],
+  [0.66, 0.46],
+  [0.6, 0.56],
+  [0.96, 0.84],
+  [0.85, 1],
+  [-0.1, 0.28],
+  [-0.2, 0.24],
+  [-0.52, 0.2],
+  [-0.62, 0.1],
+];
 function paintBoss10(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The pterodactyl: the lower wing in shadow, the beak lit, membrane as a motif.
-  plate(ctx, f, skin, [
-    [0, 0.3],
-    [0.82, 0.86],
-    [0.6, 0.72],
-    [0.3, 0.46],
+  // The membrane: ribs from the shoulder to the wing-finger and to each scallop, both wings.
+  for (const side of [-1, 1]) {
+    plate(ctx, f, skin, [
+      [0, -0.32 * side],
+      [0.78, -0.9 * side],
+      [0.8, -0.86 * side],
+      [0.02, -0.28 * side],
+    ]);
+    plate(ctx, f, skin, [
+      [0.02, -0.3 * side],
+      [0.56, -0.56 * side],
+      [0.58, -0.52 * side],
+      [0.04, -0.26 * side],
+    ]);
+    plate(ctx, f, skin, [
+      [0.04, -0.26 * side],
+      [0.3, -0.32 * side],
+      [0.32, -0.28 * side],
+      [0.06, -0.22 * side],
+    ]);
+  }
+  // Scales on the body, in the place's motif.
+  motif(ctx, f, skin, theme, [
+    [-0.15, -0.14],
+    [0.5, -0.07],
+    [0.5, 0.07],
+    [-0.15, 0.14],
+  ], 'boss10');
+  // The crest lit, the beak lit along its length, the eye in its socket.
+  lit(ctx, f, skin, [
+    [-0.4, -0.32],
+    [-0.32, -0.5],
+    [-0.35, -0.34],
+    [-0.44, -0.28],
   ]);
   lit(ctx, f, skin, [
-    [-0.94, -0.02],
-    [-0.58, -0.16],
-    [-0.5, -0.08],
-    [-0.8, 0],
+    [-0.92, 0],
+    [-0.7, -0.05],
+    [-0.68, -0.01],
+    [-0.88, 0.012],
   ]);
-  motif(ctx, f, skin, theme, [
-    [-0.1, -0.34],
-    [0.76, -0.88],
-    [0.5, -0.36],
-    [0.3, -0.24],
-  ], 'boss10');
-  disc(ctx, f, skin.eye, -0.6, -0.06, 0.06);
+  disc(ctx, f, shade(skin.plate, -0.5), -0.52, -0.06, 0.05);
+  disc(ctx, f, skin.eye, -0.53, -0.06, 0.032);
 }
 function paintBoss11(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
   // The gyre: the lower half of the rim in shadow, the upper lit, teeth as a motif.
@@ -3205,71 +3462,255 @@ function paintBoss11(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void 
   motif(ctx, f, skin, theme, sector(0.4, 0.66, -0.4, 0.4, 6), 'boss11');
   disc(ctx, f, skin.eye, -0.52, 0, 0.06);
 }
+/*
+  THE FROST SHIP. A long crystal, its point to the front, with two great ice-spires swept back
+  off its flanks and a smaller pair near the prow — the one hull made of spikes rather than of a
+  body — and a cold core lit at its heart.
+*/
+const HOARFROST_HULL: readonly Pt[] = [
+  [-1, 0],
+  [-0.62, -0.28],
+  [-0.54, -0.31],
+  [-0.38, -0.64],
+  [-0.28, -0.36],
+  [-0.02, -0.42],
+  [0.06, -0.44],
+  [0.5, -1],
+  [0.42, -0.36],
+  [0.72, -0.3],
+  [1, -0.12],
+  [1, 0.12],
+  [0.72, 0.3],
+  [0.42, 0.36],
+  [0.5, 1],
+  [0.06, 0.44],
+  [-0.02, 0.42],
+  [-0.28, 0.36],
+  [-0.38, 0.64],
+  [-0.54, 0.31],
+  [-0.62, 0.28],
+];
 function paintBoss12(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The frost ship: its lower facet in shadow, its point lit, a frost motif across the flank.
+  // The underside in shadow, the prow's upper facet lit, facets up both great spires.
   plate(ctx, f, skin, [
-    [-0.4, 0.2],
-    [0.3, 0.7],
-    [0.9, 0.3],
-    [0.9, 0.1],
+    [-0.5, 0.12],
+    [0.3, 0.34],
+    [0.9, 0.18],
+    [0.9, 0.08],
   ]);
   lit(ctx, f, skin, [
-    [-0.92, 0],
-    [-0.5, -0.5],
-    [-0.4, -0.4],
-    [-0.76, 0],
-  ]);
-  motif(ctx, f, skin, theme, [
-    [-0.3, -0.5],
-    [0.3, -0.7],
-    [0.8, -0.3],
-    [0.2, -0.16],
-  ], 'boss12');
-  disc(ctx, f, skin.eye, -0.6, 0, 0.06);
-}
-function paintBoss13(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The hydra: the body's underside in shadow, the centre head lit, scales as a motif.
-  plate(ctx, f, skin, [
-    [-0.3, 0.4],
-    [0.5, 0.76],
-    [0.86, 0.26],
-    [0.5, 0.2],
+    [-0.9, -0.02],
+    [-0.62, -0.24],
+    [-0.5, -0.1],
   ]);
   lit(ctx, f, skin, [
-    [-0.92, 0.02],
-    [-0.6, -0.1],
-    [-0.5, 0],
-    [-0.6, 0.1],
+    [0.16, -0.46],
+    [0.44, -0.86],
+    [0.36, -0.46],
   ]);
-  motif(ctx, f, skin, theme, [
-    [-0.2, -0.7],
-    [0.5, -0.76],
-    [0.86, -0.26],
-    [0.3, -0.3],
-  ], 'boss13');
-  disc(ctx, f, skin.eye, -0.7, 0, 0.05);
-}
-function paintBoss14(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The jellyfish: the lower bell in shadow, the front lit, and the heart in it — the eye, big.
   plate(ctx, f, skin, [
+    [0.16, 0.46],
+    [0.44, 0.86],
+    [0.36, 0.46],
+  ]);
+  // Cut ice across the mid-hull, in the place's motif.
+  motif(ctx, f, skin, theme, [
+    [-0.2, -0.3],
+    [0.5, -0.3],
+    [0.5, 0.3],
     [-0.2, 0.3],
-    [0.2, 0.7],
-    [0.4, 0.5],
-    [0.2, 0.2],
+  ], 'boss12');
+  // The cold core, the canopy, and the drive.
+  glow(ctx, f, skin.lit, 0.12, 0, 0.24, 0.7);
+  disc(ctx, f, shade(skin.plate, -0.5), -0.52, 0, 0.08);
+  disc(ctx, f, skin.eye, -0.53, 0, 0.05);
+  glow(ctx, f, skin.lit, 0.94, 0, 0.14, 0.6);
+}
+
+/*
+  THE HYDRA. A broad body at the back and five necks reaching forward, each a ribbon on its own
+  spine and each ending in a skull with its jaws open — *"the hydra shows no heads"* is the report
+  this answers, and the heads are the outline, not paint on it.
+*/
+const HYDRA_BODY: readonly Pt[] = [
+  [-0.12, -0.66],
+  [0.28, -0.82],
+  [0.7, -0.74],
+  [0.96, -0.38],
+  [1, 0],
+  [0.96, 0.38],
+  [0.7, 0.74],
+  [0.28, 0.82],
+  [-0.12, 0.66],
+];
+/** The five necks' spines, base to end, top to bottom; the head reaches on from the end. */
+const HYDRA_NECKS: readonly (readonly Pt[])[] = [
+  [
+    [-0.12, -0.5],
+    [-0.3, -0.53],
+    [-0.48, -0.6],
+    [-0.6, -0.66],
+  ],
+  [
+    [-0.12, -0.24],
+    [-0.3, -0.26],
+    [-0.48, -0.3],
+    [-0.64, -0.34],
+  ],
+  [
+    [-0.12, 0],
+    [-0.32, 0],
+    [-0.52, 0],
+    [-0.66, 0],
+  ],
+  [
+    [-0.12, 0.24],
+    [-0.3, 0.26],
+    [-0.48, 0.3],
+    [-0.64, 0.34],
+  ],
+  [
+    [-0.12, 0.5],
+    [-0.3, 0.53],
+    [-0.48, 0.6],
+    [-0.6, 0.66],
+  ],
+];
+// A quarter of `r` at the base, on the serpent's argument: finer than that is outline.
+const hydraHalf = (i: number): number => 0.12 - 0.01 * i;
+/** A skull in its neck's own frame, solid — starboard cheek to crown to snout to chin to port cheek. */
+const HYDRA_HEAD: readonly Pt[] = [
+  [-0.02, -0.13],
+  [0.12, -0.19],
+  [0.3, -0.17],
+  [0.38, -0.06],
+  [0.38, 0.06],
+  [0.3, 0.17],
+  [0.12, 0.19],
+  [-0.02, 0.13],
+];
+function hydraHull(): Pt[] {
+  const out: Pt[] = [...HYDRA_BODY];
+  // From the body's bottom corner up its front line, out and back along each neck in turn.
+  for (let n = HYDRA_NECKS.length - 1; n >= 0; n--) {
+    const spine = HYDRA_NECKS[n]!;
+    const at = endOf(spine);
+    out.push([-0.12, spine[0]![1] + hydraHalf(0)]);
+    for (let i = 1; i < spine.length; i++) out.push(offSpine(spine, i, -hydraHalf(i)));
+    for (const [px, py] of HYDRA_HEAD) out.push(at(px, py));
+    for (let i = spine.length - 1; i >= 1; i--) out.push(offSpine(spine, i, hydraHalf(i)));
+    out.push([-0.12, spine[0]![1] - hydraHalf(0)]);
+  }
+  return out;
+}
+const HYDRA_HULL: readonly Pt[] = hydraHull();
+function paintBoss13(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  // The body: its underside in shadow, its back lit, sacs across it in the place's motif.
+  plate(ctx, f, skin, [
+    [0, 0.36],
+    [0.55, 0.62],
+    [0.85, 0.34],
+    [0.5, 0.3],
   ]);
   lit(ctx, f, skin, [
-    [-0.7, -0.14],
-    [-0.5, -0.5],
-    [-0.36, -0.46],
-    [-0.56, -0.14],
+    [0, -0.36],
+    [0.5, -0.62],
+    [0.8, -0.4],
+    [0.5, -0.3],
   ]);
   motif(ctx, f, skin, theme, [
-    [-0.3, -0.6],
-    [0.1, -0.7],
-    [0.36, -0.36],
-    [-0.1, -0.3],
+    [-0.02, -0.28],
+    [0.72, -0.28],
+    [0.72, 0.28],
+    [-0.02, 0.28],
+  ], 'boss13');
+  // Every neck lit down its port edge and shadowed down its starboard; every skull an eye and a maw.
+  for (const spine of HYDRA_NECKS) {
+    for (let i = 0; i < spine.length - 1; i++) {
+      lit(ctx, f, skin, stripe(spine, i, hydraHalf, 0.35, 0.7));
+      plate(ctx, f, skin, stripe(spine, i, hydraHalf, -0.35, -0.7));
+    }
+    const at = endOf(spine);
+    const socket = at(0.1, -0.09);
+    const eyeAt = at(0.095, -0.09);
+    const maw = at(0.3, 0);
+    // The mouth: a dark wedge back from the snout, the maw lit in it. Paint, because a notch that
+    // fine in the outline is stroked shut.
+    poly(ctx, f, shade(skin.plate, -0.5), [at(0.37, -0.05), at(0.18, 0), at(0.37, 0.05)]);
+    glow(ctx, f, skin.lit, maw[0], maw[1], 0.09, 0.8);
+    disc(ctx, f, shade(skin.plate, -0.5), socket[0], socket[1], 0.042);
+    disc(ctx, f, skin.eye, eyeAt[0], eyeAt[1], 0.028);
+  }
+}
+
+/*
+  THE JELLYFISH. A bell to the front — the one hull with a curved edge — and six tendrils trailing
+  behind it, each a wedge from the rim to a point, spreading as they go; the black heart in the
+  bell, big, looking down the lane.
+*/
+/** The bell's centre and radius, in the frame. */
+const MEDUSA_BELL: readonly [number, number, number] = [-0.05, 0, 0.8];
+/** Each tendril's upper root, tip and lower root, top to bottom, off the rim behind the bell. */
+// Each root a quarter of `r` wide, on the serpent's argument: a tendril finer than the outline's
+// stroke is a dark spine with no light in it.
+const MEDUSA_TENDRILS: readonly (readonly [Pt, Pt, Pt])[] = [
+  [
+    [0, -0.8],
+    [0.72, -0.96],
+    [0.06, -0.58],
+  ],
+  [
+    [0.08, -0.5],
+    [0.95, -0.62],
+    [0.1, -0.28],
+  ],
+  [
+    [0.1, -0.2],
+    [1, -0.16],
+    [0.1, 0],
+  ],
+  [
+    [0.1, 0],
+    [1, 0.16],
+    [0.1, 0.2],
+  ],
+  [
+    [0.1, 0.28],
+    [0.95, 0.62],
+    [0.08, 0.5],
+  ],
+  [
+    [0.06, 0.58],
+    [0.72, 0.96],
+    [0, 0.8],
+  ],
+];
+function paintBoss14(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  const [bx, by, br] = MEDUSA_BELL;
+  // The rim lit round the front of the bell, and the bell's underside in shadow.
+  lit(ctx, f, skin, sector(br * 0.76, br * 0.9, Math.PI - 0.9, Math.PI + 0.9, 12).map(([x, y]) => [x + bx, y + by] as const));
+  plate(ctx, f, skin, sector(br * 0.5, br * 0.7, Math.PI / 2 + 0.2, Math.PI - 0.35, 8).map(([x, y]) => [x + bx, y + by] as const));
+  // Veins round the heart, in the place's motif; the heart itself, dark-rimmed and gold, and its light.
+  motif(ctx, f, skin, theme, [
+    [-0.6, -0.42],
+    [-0.12, -0.42],
+    [-0.12, 0.42],
+    [-0.6, 0.42],
   ], 'boss14');
-  disc(ctx, f, skin.eye, -0.1, 0.04, 0.16);
+  glow(ctx, f, skin.eye, -0.34, 0, 0.34, 0.6);
+  disc(ctx, f, shade(skin.plate, -0.5), -0.34, 0, 0.22);
+  disc(ctx, f, skin.eye, -0.36, 0, 0.16);
+  disc(ctx, f, shade(skin.plate, -0.6), -0.37, 0, 0.06);
+  // A lit thread down each tendril, from its root to over halfway to its tip.
+  for (const [top, tip, bottom] of MEDUSA_TENDRILS) {
+    const rx = (top[0] + bottom[0]) / 2 + 0.06;
+    const ry = (top[1] + bottom[1]) / 2;
+    lit(ctx, f, skin, [
+      [rx, ry - 0.025],
+      [rx, ry + 0.025],
+      [rx + (tip[0] - rx) * 0.55, ry + (tip[1] - ry) * 0.55],
+    ]);
+  }
 }
 function paintBoss7(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
   // The axis: the outer ring's lower half in shadow, its front lit, the motif round the back.
@@ -3661,7 +4102,8 @@ export function drawKind(
     the place, so a hit reads the same in every level. `INK_OF` still says what the kind IS, which is
     what `tests/legibility.test.ts` reads; `tests/foes.test.ts` holds the hull to the same floors.
   */
-  const skin = hurt ? null : foeOf(theme, palette);
+  // The place's lord wears its own skin — 0264; everything else the place sends wears the place's.
+  const skin = hurt ? null : LORD_HULLS.includes(kind) ? lordOf(theme, palette) : foeOf(theme, palette);
   ctx.fillStyle = palette[INK_OF[kind]];
   ctx.strokeStyle = palette.space;
   ctx.lineWidth = Math.max(1, size * 0.04);
@@ -4110,65 +4552,27 @@ export function drawKind(
     */
     case 'boss8':
     case 'boss8Hit':
-      // THE SERPENT: a thick sinuous band, head to the front, the whole hull one S across the box.
-      trace(ctx, f, [
-        [-1, -0.1],
-        [-0.72, -0.55],
-        [-0.3, -0.72],
-        [0.02, -0.38],
-        [0.36, 0],
-        [0.7, 0.28],
-        [1, 0.08],
-        [1, 0.5],
-        [0.68, 0.76],
-        [0.3, 0.55],
-        [0, 0.14],
-        [-0.3, -0.16],
-        [-0.66, -0.06],
-        [-1, 0.34],
-      ]);
+      // THE SERPENT — 0264: a tapering S of a body on one spine, a skull with its jaws open at the
+      // front, four fins down its back. The drawing is `serpentHull` above.
+      trace(ctx, f, SERPENT_HULL);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       if (skin !== null) paintBoss8(ctx, f, skin, theme);
       return;
     case 'boss9':
     case 'boss9Hit':
-      // THE EAGLE: a head, two wings thrown wide, a tail — the widest span in the game.
-      trace(ctx, f, [
-        [-1, 0],
-        [-0.6, -0.26],
-        [-0.2, -0.95],
-        [0.3, -1],
-        [0.55, -0.5],
-        [1, -0.15],
-        [1, 0.15],
-        [0.55, 0.5],
-        [0.3, 1],
-        [-0.2, 0.95],
-        [-0.6, 0.26],
-      ]);
+      // THE EAGLE — 0264: a hooked beak, two wings thrown wide with the primaries notched along
+      // their trailing edges, a fanned tail — the widest span in the game, and the feathered edge.
+      trace(ctx, f, EAGLE_HULL);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       if (skin !== null) paintBoss9(ctx, f, skin, theme);
       return;
     case 'boss10':
     case 'boss10Hit':
-      // THE PTERODACTYL: a long beak, a crest, and wings swept back to the corners.
-      trace(ctx, f, [
-        [-1, -0.05],
-        [-0.55, -0.22],
-        [-0.42, -0.55],
-        [-0.2, -0.3],
-        [0.9, -1],
-        [1, -0.7],
-        [0.42, -0.2],
-        [0.42, 0.2],
-        [1, 0.7],
-        [0.9, 1],
-        [-0.2, 0.3],
-        [-0.55, 0.22],
-        [-1, 0.05],
-      ]);
+      // THE PTERODACTYL — 0264: a long beak, a crest swept back, and wings swept to the corners
+      // with the membrane scalloped between the wing-fingers and the body.
+      trace(ctx, f, QUETZAL_HULL);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       if (skin !== null) paintBoss10(ctx, f, skin, theme);
@@ -4195,64 +4599,39 @@ export function drawKind(
     }
     case 'boss12':
     case 'boss12Hit':
-      // THE FROST SHIP: a long crystal, six-sided, its point to the front.
-      trace(ctx, f, [
-        [-1, 0],
-        [-0.5, -0.62],
-        [0.3, -0.86],
-        [1, -0.36],
-        [1, 0.36],
-        [0.3, 0.86],
-        [-0.5, 0.62],
-      ]);
+      // THE FROST SHIP — 0264: a long crystal, its point to the front, two great ice-spires swept
+      // back off its flanks and a smaller pair at the prow.
+      trace(ctx, f, HOARFROST_HULL);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       if (skin !== null) paintBoss12(ctx, f, skin, theme);
       return;
     case 'boss13':
     case 'boss13Hit':
-      // THE HYDRA: a broad body with five necks reaching forward, one at the centre and two either
-      // side. Its edge goes in and out five times at the front and nowhere else.
-      trace(ctx, f, [
-        [-0.4, -1],
-        [-0.95, -0.8],
-        [-0.5, -0.5],
-        [-1, -0.36],
-        [-0.55, -0.16],
-        [-1, 0],
-        [-0.55, 0.16],
-        [-1, 0.36],
-        [-0.5, 0.5],
-        [-0.95, 0.8],
-        [-0.4, 1],
-        [0.6, 0.9],
-        [1, 0.3],
-        [1, -0.3],
-        [0.6, -0.9],
-      ]);
+      // THE HYDRA — 0264: a broad body and five necks reaching forward, each ending in a skull
+      // with its jaws open. The drawing is `hydraHull` above.
+      trace(ctx, f, HYDRA_HULL);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       if (skin !== null) paintBoss13(ctx, f, skin, theme);
       return;
     case 'boss14':
-    case 'boss14Hit':
-      // THE JELLYFISH: a bell to the front and tendrils trailing behind it — the biggest hull there
-      // is, and the only one whose back edge is a fringe.
-      ctx.arc(half + r * 0.1, half, r * 0.86, Math.PI / 2, (Math.PI * 3) / 2);
-      ctx.lineTo(half + r * 0.5, half - r * 0.76);
-      ctx.lineTo(half + r * 0.95, half - r * 0.95);
-      ctx.lineTo(half + r * 0.6, half - r * 0.55);
-      ctx.lineTo(half + r, half - r * 0.3);
-      ctx.lineTo(half + r * 0.55, half - r * 0.1);
-      ctx.lineTo(half + r, half + r * 0.1);
-      ctx.lineTo(half + r * 0.55, half + r * 0.35);
-      ctx.lineTo(half + r * 0.95, half + r * 0.6);
-      ctx.lineTo(half + r * 0.5, half + r * 0.8);
+    case 'boss14Hit': {
+      // THE JELLYFISH — 0264: a bell to the front, the one curved edge in the game, and six
+      // tendrils trailing behind it, spreading as they go — the biggest hull there is.
+      const [bx, by, br] = MEDUSA_BELL;
+      ctx.arc(half + r * bx, half + r * by, r * br, Math.PI / 2, (Math.PI * 3) / 2);
+      for (const [top, tip, bottom] of MEDUSA_TENDRILS) {
+        ctx.lineTo(half + r * top[0], half + r * top[1]);
+        ctx.lineTo(half + r * tip[0], half + r * tip[1]);
+        ctx.lineTo(half + r * bottom[0], half + r * bottom[1]);
+      }
       ctx.closePath();
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       if (skin !== null) paintBoss14(ctx, f, skin, theme);
       return;
+    }
     case 'bullet':
       /*
         The pulse: a disc, and now a BOLT — a halo round it and a white-hot heart in it. The

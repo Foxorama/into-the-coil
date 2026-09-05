@@ -233,6 +233,14 @@ export interface ThemeRow {
    */
   foe: FoeSkin;
   /**
+   * What the place's LORD wears — its real boss, the one fight at the end of the level —
+   * `docs/decisions/0264-the-real-bosses-are-drawn.md`. A skin of its own on `foe`'s terms and
+   * held to `foe`'s floors, because the serpent in the Approach's steel grey was *"the grey
+   * tentacle"*: a creature is not a raider, and the one body the level is named for does not
+   * wear the uniform of the things it sends. `lordOf` is `foeOf` for it, palette and all.
+   */
+  lord: FoeSkin;
+  /**
    * How this place mixes the music, as a multiplier over `MUSIC_LADDER`'s own rung.
    *
    * ⚠️ **A MULTIPLIER rather than a ladder, so a theme cannot break the ladder's shape.** 0090's rule
@@ -504,6 +512,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       colour the bullets keep for the whole run on the thing that fires them; a red eye; rivets.
     */
     foe: { hull: '#9a9a9a', plate: '#4c4c56', lit: '#ff7286', eye: '#ff4040' },
+    // The serpent: a venom-green leviathan with its light running down its scales and a gold eye.
+    lord: { hull: '#2f8a5a', plate: '#123d2a', lit: '#b8ff9a', eye: '#ffc030' },
     // The reference, and the number every place used to be — 0183. Level one changes nothing.
     aura: 0.55,
     mix: {
@@ -547,6 +557,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     ground: null, // In space, and the Pillars are the proof: they are a thing you fly PAST.
     // Moths in an ember cloud: the ember's own orange, scorched dark underneath, a black eye, embers.
     foe: { hull: '#f57a2a', plate: '#8a3a12', lit: '#ffe08a', eye: '#2a0a14' },
+    // The eagle: a darker, redder fire than its horde, with a pale burning eye.
+    lord: { hull: '#c8401a', plate: '#5a1608', lit: '#ffd24a', eye: '#fff2a0' },
     /*
       ⚠️ **HIGHER THAN THE REFERENCE, BECAUSE THE PLACE IS A BUILD.** A cathedral in a furnace
       escalates to organ and pumping beats and hands over to a Dante's-inferno fight; the dread
@@ -675,6 +687,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     ground: { vivid: '#0a1220', 'high-contrast': '#000208' },
     // Reptiles: olive hide, bone along the edges, an amber eye, and scales for the motif.
     foe: { hull: '#7f9a2e', plate: '#4a5c18', lit: '#e8d8a8', eye: '#ffb020' },
+    // The pterodactyl: leathery olive, bone-pale crest and beak, an amber eye.
+    lord: { hull: '#7c962c', plate: '#2e3a12', lit: '#ffe9a8', eye: '#ffb020' },
     /*
       ⚠️ **LOWER, BECAUSE A DANCEFLOOR DOES NOT DO SLOW DREAD.** The place is a run; what it wants is
       for the fight to be the arrival, not for a shadow to lengthen across the whole level.
@@ -836,6 +850,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     // Machines in a lit corridor: verdigris, oiled dark in the seams, the corridor's own violet on
     // the traces, a red eye, and circuitry for the motif.
     foe: { hull: '#3aa08a', plate: '#1c5a4c', lit: '#e070f0', eye: '#ff3030' },
+    // The gyre: the lattice's teal gone dark and hot-pink in the traces, a red core.
+    lord: { hull: '#2a8a78', plate: '#0f3f36', lit: '#ff7af0', eye: '#ff3030' },
     /*
       ⚠️ **THE HIGHEST BUT ONE, AND THE FICTION IS THE ARGUMENT.** A labyrinth is the place where the
       thing hunting you is already there; the aura is what says so long before it is on the field.
@@ -947,6 +963,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     ground: { vivid: '#0b1a26', 'high-contrast': '#000308' },
     // Cut ice: blue through the block, frost on the facets, a warm eye in a cold thing.
     foe: { hull: '#5c9ad0', plate: '#2a4a80', lit: '#d8f4ff', eye: '#ff5a7a' },
+    // The frost ship: paler ice than the shards it sends, its facets near white, a cold red eye.
+    lord: { hull: '#4a92da', plate: '#1e3a70', lit: '#eefcff', eye: '#ff5a7a' },
     /*
       ⚠️ **THE LOWEST.** Ice is still, and the shelf's threat is the one that arrives without warning.
       A build that spends the level would spend the only surprise the place has.
@@ -1062,6 +1080,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     ground: { vivid: '#080f04', 'high-contrast': '#000200' },
     // Grown, not built: bruise-purple, toxic yellow where it leaks, a blank white eye, and spores.
     foe: { hull: '#b85cd0', plate: '#5a2a70', lit: '#e6ff4a', eye: '#ffffff' },
+    // The hydra: a deeper, bruised violet than the spores, acid-yellow in the maws, white eyes.
+    lord: { hull: '#9a48b8', plate: '#3f1a52', lit: '#d8ff3a', eye: '#ffffff' },
     /*
       ⚠️ **HIGH, BECAUSE THE MIRE SEEPS.** The one place whose whole character is that it reaches you
       before you reach it.
@@ -1149,6 +1169,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     ground: null, // Nothing to stand on. The place's whole character is absence — 0211.
     // Flesh and obsidian: blood-red, the place's ice-blue in the veins, a yellow eye.
     foe: { hull: '#d0303c', plate: '#5a0a14', lit: '#8ac0e8', eye: '#ffd23f' },
+    // The jellyfish: a darker blood than the gaze, the bell's rim in a cold light, the heart gold.
+    lord: { hull: '#b8202e', plate: '#40060e', lit: '#9ad0f0', eye: '#ffd23f' },
     /*
       ⚠️ **THE HIGHEST, BECAUSE HERE THE AURA IS THE PLACE.** The Black Heart is what the run has been
       travelling towards; 0170 already made it audible in its own fight, and this is the other half —
@@ -1250,6 +1272,11 @@ export function foeOf(theme: ThemeKind, palette: Palette): FoeSkin | null {
     return null;
   }
   return THEMES[theme].foe;
+}
+
+/** `foeOf` for the place's lord — 0264: its real boss wears a skin of its own, on the same terms. */
+export function lordOf(theme: ThemeKind, palette: Palette): FoeSkin | null {
+  return foeOf(theme, palette) === null ? null : THEMES[theme].lord;
 }
 
 /**

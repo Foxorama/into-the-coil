@@ -147,6 +147,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the serpent throws together: a raking fan of acid, then acid and void in turn, then acid, void and the lightning in turn — the hydra's heads, and the lightning untouched** | [0261](decisions/0261-the-serpent-throws-together.md) |
 | **the eagle throws quills: a feather of its own on the hostile ladder, which moved up a rung to take it; a raking fan; kites that dive in from the sides in turn; the whip untouched** | [0262](decisions/0262-the-eagle-throws-quills.md) |
 | **the frost ship shatters: a shot row says its stages and the frost is a shard, two bolts, two snowflakes, a melt — every fission drawn; an enemy row says what its death throws and the shard shatters; the adds from the sides; the boss has its own death log** | [0263](decisions/0263-the-frost-ship-shatters.md) |
+| **the real bosses are drawn: a place's lord wears a skin of its own; six hulls redrawn as the creatures the brief names — a serpent on one spine with a skull, a hydra with five heads in the outline, an eagle, a pterodactyl, a crystal ship, a jellyfish; nothing on a hull thinner than the outline** | [0264](decisions/0264-the-real-bosses-are-drawn.md) |
 | **a death takes both ladders and both kinds and throws every rung where the ship died — one piece per kind, holding the face it took, wearing a ×N badge; 0256's rung is deleted and what a death costs is the crossing and the life** | [0266](decisions/0266-a-death-throws-the-ladders-back.md) |
 | **a fight thins the waves over it: while a mid-boss is on the field one firing wave in three lands and the rest are SKIPPED, never deferred; the quiet ones are untouched — `scripts/weigh-fight.mjs` is the instrument, and the budget is the level's own approach rather than a constant** | [0267](decisions/0267-a-fight-thins-the-waves-over-it.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
@@ -786,7 +787,9 @@ landed** — [0262](decisions/0262-the-eagle-throws-quills.md): the eagle's bull
 own, its fan rakes, and its kites dive in from the sides in turn. **The eighth is landed** —
 [0263](decisions/0263-the-frost-ship-shatters.md): a shot has a life after the muzzle and the
 frost's is a shard, two bolts, two snowflakes and a melt; the shard add comes in from the side and
-shatters where it dies.
+shatters where it dies. **The ninth is landed** —
+[0264](decisions/0264-the-real-bosses-are-drawn.md): the real bosses are drawn as the creatures they
+are named for, in skins of their own.
 
 ⚠️ **AND FOUR ITEMS ARRIVED FROM PLAYING WHAT LANDED, ALL OF THEM IN.** 0266 above;
 [0267](decisions/0267-a-fight-thins-the-waves-over-it.md) — *"way too many waves in general
@@ -802,9 +805,8 @@ after miniboss."* Two levels' mid-boss fights used to outlive their own wave scr
 *after* for wave spacing to put anything in; at eighteen to twenty-three seconds every level has one,
 of sixty to eighty seconds. 0267's *What is owed* carries the re-measure.
 
-**The next is the picture** — the mid-bosses' attacks and the enemies' bullets legible, the boss
-hulls against the predecessor's, the hydra's heads seen — then the music as an album; every one of
-those is a model quantity until it is flown.
+**The next is the rest of the picture** — the mid-bosses' attacks and the enemies' bullets legible —
+then the music as an album; every one of those is a model quantity until it is flown.
 Everything below this paragraph about the weapons is the record of how
 the game got to the alpha, and it is kept because the alpha list is a verdict on it.
 
