@@ -35,7 +35,8 @@ export const PROBES = [
     guard: 'THE SUMMONS: a volley at half health',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    summonAdds(w, calling.enemy, boss.turnsLeft, calling.formation);\n',
+      // ⚠️ Re-anchored by 0262, which added where a summons comes from and which side.
+      find: '    summonAdds(w, calling.enemy, boss.turnsLeft, calling.formation, calling.from, boss.spin);\n',
       replace: '',
     },
   },
@@ -43,12 +44,14 @@ export const PROBES = [
     decision: '0249',
     suite: 'tests/eagle.test.ts',
     // The adds put behind the camera, where a wave never arrives.
-    broke: 'the adds placed at the camera rather than at the leading edge, behind the ship',
+    // ⚠️ Re-aimed by 0262: the eagle's calls come from the sides now, so the break is the flank
+    // placement's along put at the camera — behind the ship — rather than the leading edge's.
+    broke: 'the adds placed at the camera rather than ahead of the ship',
     guard: 'THE SUMMONS: a volley at half health',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  const along = spawnAlong(w.cameraAlong);\n  const gap = gapAcross(row.radius);\n  for (let i = 0; i < count; i++) {',
-      replace: '  const along = w.cameraAlong;\n  const gap = gapAcross(row.radius);\n  for (let i = 0; i < count; i++) {',
+      find: '  const along = flanking ? flankAlongFor(w.ship.along, w.cameraAlong, w.view.alongSpan) + w.cameraAlong : spawnAlong(w.cameraAlong);',
+      replace: '  const along = flanking ? w.cameraAlong : spawnAlong(w.cameraAlong);',
     },
   },
   {

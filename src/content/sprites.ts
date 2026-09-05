@@ -295,6 +295,8 @@ export const SPRITE_KINDS = [
   'rock',
   // The frost ship's shard — 0253: a six-pointed star of ice, between the acid and the rock.
   'frost',
+  // The eagle's quill — 0262: a feather, shaft first, between the slab and the ring.
+  'quill',
   /*
     ⚠️ **A DART, AND THE ONLY THING IN THE GAME DRAWN LONG ALONG ITS OWN TRAVEL IN THE BULLET INK.**
     The pulse is a disc of 1.8 units; this is 2.8 and pointed, so the two are told apart by shape and
@@ -891,20 +893,29 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   */
   lance: 1.9,
   flak: 3.4,
-  // A drop bigger than any bullet and a ring between it and the slab — 0248. Every hostile bullet
-  // is drawn more than five pixels from every other on a 1280×720 screen (`tests/legibility.test.ts`),
-  // so these sit a size above `flak`'s 3.4; the hurtboxes in `src/content/shots.ts` are 0.3 and
-  // 0.29 of them, inside the band `tests/combat.test.ts` holds.
-  acid: 5,
-  void: 4.2,
+  /*
+    ── THE HOSTILE LADDER, AND EVERY RUNG IS FIVE PIXELS FROM THE NEXT ─────────────────────────────
+
+    Every hostile bullet is drawn more than five pixels from every other on a 1280×720 screen, and
+    the quicker one is the smaller (`tests/legibility.test.ts`, 0098). The ladder was packed at that
+    spacing from the flame to the rock, so the eagle's quill — 0262 — could not be added to it
+    without moving the four above it up one rung: the ring, the drop, the shard and the rock are
+    each 0.8 of a unit bigger than they were, and their hurtboxes in `src/content/shots.ts` are
+    still inside the band `tests/combat.test.ts` holds (0.26 to 0.3 of the drawing).
+  */
+  // A drop bigger than any enemy bullet and a ring between it and the quill — 0248.
+  acid: 5.8,
+  void: 5,
   // Under the lance's 1.9 by more than five pixels on a 1280×720 screen, and the quickest — 0249.
   flame: 1.2,
-  // Over the acid's 5 by more than five pixels, and the slowest — 0251. The hurtbox in
-  // `src/content/shots.ts` is 0.34 of it.
-  rock: 6.5,
-  // Between the acid's 5 and the rock's 6.5, more than five pixels from each on a 1280×720 screen,
-  // and slower than the one and quicker than the other — 0253. The hurtbox is 0.3 of it.
-  frost: 5.75,
+  // Over the shard by more than five pixels, and the slowest — 0251. The hurtbox in
+  // `src/content/shots.ts` is 0.3 of it.
+  rock: 7.4,
+  // Between the acid's 5.8 and the rock's 7.4, more than five pixels from each on a 1280×720
+  // screen, and slower than the one and quicker than the other — 0253. The hurtbox is 0.26 of it.
+  frost: 6.6,
+  // A feather between the flak's slab and the void's ring — 0262. The hurtbox is 0.26 of it.
+  quill: 4.2,
   // Longer than the pulse and pointed. A missile is the shot the player is meant to notice.
   missile: 3.4,
   // The seeker is the missile's size: what tells them apart is the fins and the eye, not the box.

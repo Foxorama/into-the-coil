@@ -419,6 +419,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   rock: 'fire',
   // The frost ship's shard in its own ink — 0253: the one cold thing that hurts.
   frost: 'frost',
+  // The eagle's quill in the enemy's ink — 0262: a feather is told from a slab by its shape.
+  quill: 'enemy',
   // The HUD's lives counter rather than a pickup, since 0082 — it keeps the pickup ink because the
   // number beside it is drawn in the player's own colour and the icon has to sit with it.
   lifeIcon: 'pickup',
@@ -4446,6 +4448,48 @@ export function drawKind(
       // The glow is the whole of its light: a bullet this small cannot carry a mark that is drawn
       // at all (0106), so the tongue is one ink and its halo.
       glow(ctx, f, palette.fire, 0, 0, 1.1, 0.5);
+      return;
+    case 'quill':
+      /*
+        A FEATHER — 0262: *"the bullets need to be feathered quills."* The shaft points the way it
+        flies, and the vane behind it is barbed — a notched edge either side, widest near the back
+        and cut square at the tail. Not the lance's dash (a bar with no vane), not the acid's drop
+        (round at the back), not the missile's dart (pointed both ends). In the enemy's ink, with
+        the shaft darker down the middle so the barbs read as barbs at thirty pixels.
+      */
+      trace(ctx, f, [
+        [1, 0],
+        [0.3, -0.06],
+        [0.2, -0.3],
+        [0.05, -0.16],
+        [-0.1, -0.42],
+        [-0.25, -0.26],
+        [-0.4, -0.5],
+        [-0.55, -0.32],
+        [-0.7, -0.52],
+        [-0.85, -0.3],
+        [-1, -0.14],
+        [-1, 0.14],
+        [-0.85, 0.3],
+        [-0.7, 0.52],
+        [-0.55, 0.32],
+        [-0.4, 0.5],
+        [-0.25, 0.26],
+        [-0.1, 0.42],
+        [0.05, 0.16],
+        [0.2, 0.3],
+        [0.3, 0.06],
+      ]);
+      seal(ctx);
+      // The shaft, darker, from the tail to where the vane narrows to the tip — inside the hull
+      // by a margin, and wide enough to be a mark at thirty pixels (tests/accents.test.ts).
+      poly(ctx, f, shade(palette.enemy, 0.55), [
+        [-0.9, -0.12],
+        [0.25, -0.12],
+        [0.25, 0.12],
+        [-0.9, 0.12],
+      ]);
+      glow(ctx, f, palette.enemy, 0.5, 0, 0.5, 0.35);
       return;
     case 'kite':
     case 'kiteHit':

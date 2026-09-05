@@ -69,8 +69,9 @@ export const PROBES = [
     guard: 'among the end bosses exactly one stalks',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "    move: { kind: 'stalk', agility: 0.22 },\n    attack: { kind: 'spray' },",
-      replace: "    move: { kind: 'patrol' },\n    attack: { kind: 'spray' },",
+      // ⚠️ Re-anchored by 0262, which gave the eagle the rake.
+      find: "    move: { kind: 'stalk', agility: 0.22 },\n    attack: { kind: 'rake', turn: 0.5 },",
+      replace: "    move: { kind: 'patrol' },\n    attack: { kind: 'rake', turn: 0.5 },",
     },
   },
   {

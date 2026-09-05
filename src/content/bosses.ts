@@ -219,7 +219,14 @@ export type BossAttack =
    * edge in `formation`, and throws nothing else: the adds are the attack. The phase's `shots`
    * and `spread` are carried and unused, on `bare`'s own terms — the escalation rules read them.
    */
-  | { kind: 'summon'; enemy: EnemyKind; count: number; formation: FormationKind }
+  /*
+    ⚠️ **AND WHERE FROM — 0262.** *"The adds marched in gently from the left side in a single file,
+    they didn't swoop or dive bomb or do anything interesting."* `from: 'lead'` is 0249's leading
+    edge; `from: 'sides'` puts the horde in from the across edges instead — a flanking wave's entry,
+    alternating sides a volley — so a kite that dives (its row's hunt) comes at the ship across the
+    lane rather than down it. `docs/decisions/0262-the-eagle-throws-quills.md`.
+  */
+  | { kind: 'summon'; enemy: EnemyKind; count: number; formation: FormationKind; from: SummonFrom }
   /**
    * Lasers — `docs/decisions/0250-the-quetzal-screams.md`. Asked for: *"a flying pterodactyl with
    * lasers mounted on its wings and it opens its mouth to fire a huge laser blast."*
@@ -256,6 +263,9 @@ export type BossAttack =
    * round, and the second shares `firePhase`, the field the round counts on.
    */
   | { kind: 'heads'; heads: readonly Head[] };
+
+/** Where a summons puts its adds — 0262: the leading edge, or the across edges in turn. */
+export type SummonFrom = 'lead' | 'sides';
 
 /** One of the hydra's heads — 0254: what it throws, and how. */
 export interface Head {
@@ -1180,10 +1190,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
    */
   hellkite: {
     // THE ONE END BOSS THAT STALKS — 0258. *"We need less enemies (and bosses) reacting to the
-    // player"*: the eagle hunts, and every other hull flies a pattern. Its darts are a spray now,
-    // fanned by the phase, so what reacts is where it is and not where it points.
+    // player"*: the eagle hunts, and every other hull flies a pattern. Its quills are a fan that
+    // rakes across the lane — 0262, *"the bullet attacks were boring"* — so what reacts is where
+    // it is and not where it points, and the fan is a pattern that sweeps.
     move: { kind: 'stalk', agility: 0.22 },
-    attack: { kind: 'spray' },
+    attack: { kind: 'rake', turn: 0.5 },
     uncoil: null,
     fall: null,
     chill: null,
@@ -1197,13 +1208,18 @@ export const BOSSES: Record<BossKind, BossRow> = {
     drift: 5,
     driftWavelength: 180,
     patrol: 0.4,
-    shot: 'lance',
+    // The quill since 0262 — *"the bullets need to be feathered quills"* — where it threw the
+    // lancer's lance: the eagle's own bullet, a feather shaft first, in the enemy's ink.
+    shot: 'quill',
     phases: [
-      { upTo: 1, fireEvery: 78, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
+      // A fan of three quills, raking — 0262; it was one dart aimed at the ship.
+      { upTo: 1, fireEvery: 78, shots: 3, spread: 0.6, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
       { upTo: 0.75, fireEvery: 66, shots: 5, spread: 0.8, patrolScale: 1.3, stance: { kind: 'volley' }, shot: 'flame', attack: { kind: 'whip', sweep: 1.1, reach: 0.9 } },
-      { upTo: 0.5, fireEvery: 60, shots: 5, spread: 0.8, patrolScale: 1.5, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 2, formation: 'vee' } },
+      // Three kites a volley from the sides in turn since 0262, and they dive; two came down the lane.
+      { upTo: 0.5, fireEvery: 60, shots: 5, spread: 0.8, patrolScale: 1.5, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'vee', from: 'sides' } },
       { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, shot: 'flame', attack: { kind: 'whip', sweep: 1.4, reach: 0.9 } },
-      { upTo: 0.16, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'raptor', count: 1, formation: 'line' } },
+      // Two raptors a volley from the sides in turn since 0262; one came down the lane in a file.
+      { upTo: 0.16, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'raptor', count: 2, formation: 'line', from: 'sides' } },
     ],
   },
   /**
@@ -1323,7 +1339,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     phases: [
       { upTo: 1, fireEvery: 84, shots: 2, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
       { upTo: 0.7, fireEvery: 72, shots: 3, spread: 0.7, patrolScale: 1.2, stance: { kind: 'volley' }, shot: null, attack: { kind: 'spray' } },
-      { upTo: 0.45, fireEvery: 60, shots: 3, spread: 0.7, patrolScale: 1.5, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'shard', count: 2, formation: 'vee' } },
+      { upTo: 0.45, fireEvery: 60, shots: 3, spread: 0.7, patrolScale: 1.5, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'shard', count: 2, formation: 'vee', from: 'lead' } },
       { upTo: 0.2, fireEvery: 54, shots: 6, spread: 0, patrolScale: 1.9, stance: { kind: 'volley' }, shot: null, attack: { kind: 'ring' } },
     ],
   },

@@ -776,7 +776,12 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     fireEvery: 0,
     shot: 'spit',
     attack: { kind: 'aimed' },
-    motion: { kind: 'weave', amplitude: 16, wavelength: 90 },
+    // A DIVE since 0262 — *"the adds marched in gently from the left side in a single file, they
+    // didn't swoop or dive bomb."* It wove at 16 by 90; it steers hard for the ship's lane now,
+    // at the quickest agility any hunter has, while closing at the quickest closing any hunter
+    // has — which, from the side of the lane the eagle now calls it in on, is a dive. The eagle's
+    // to call and no level's (0249), so 0258's one pilot a level does not read it.
+    motion: { kind: 'hunt', agility: 0.9 },
   },
   /**
    * The moon jelly — `docs/decisions/0255-the-jellyfish-opens.md`: the Black Heart's rain.

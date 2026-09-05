@@ -18,6 +18,7 @@ import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { SPRITE_KINDS } from '../src/content/sprites.ts';
 import { INK_OF } from '../src/render/bake.ts';
+import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 
 /** The eagle alone, a short way in, with no mid-boss in front of it. */
@@ -53,9 +54,41 @@ describe('0249 — the eagle summons', () => {
     const row = BOSSES.hellkite;
     const kinds = [1, 0.7, 0.45, 0.3, 0.1].map((f) => (phaseFor(row, row.health * f).attack ?? row.attack).kind);
     // A spray since 0258: the eagle is the one end boss that stalks, and what reacts is where it is.
-    expect(kinds).toEqual(['spray', 'whip', 'summon', 'whip', 'summon']);
+    // A rake since 0262: a fan of quills that sweeps, which a fan that sits was not — *"boring"*.
+    expect(kinds).toEqual(['rake', 'whip', 'summon', 'whip', 'summon']);
     expect(LEVELS.descent.boss).toBe('hellkite');
     expect(LEVELS.descent.theme).toBe('nebula');
+  });
+
+  it('0262 — THE QUILL: the eagle’s bullet is a feather of its own, raked across the lane, and no fan of it points the same way twice', () => {
+    /*
+      `docs/decisions/0262-the-eagle-throws-quills.md`. *"The bullets need to be feathered quills;
+      the bullet attacks were boring."* The row's shot is the quill — its own silhouette on the
+      hostile ladder, in the enemy's ink, between the slab and the ring — and the whole phase's fan
+      rakes: two volleys, two centres. Driven, and the picture asked for its bitmap.
+    */
+    const row = BOSSES.hellkite;
+    expect(row.shot, 'the eagle throws something other than quills').toBe('quill');
+    expect(SHOTS.quill.sprite, 'the quill shares the lance’s silhouette').not.toBe(SHOTS.lance.sprite);
+    expect(INK_OF[SPRITE_KINDS[SHOTS.quill.sprite]!], 'a quill is not in the enemy’s ink').toBe('enemy');
+    expect(SHOTS.quill.speed, 'a quill is no slower than a slab').toBeLessThan(SHOTS.flak.speed);
+    expect(SHOTS.quill.speed, 'a quill is no quicker than a void ring').toBeGreaterThan(SHOTS.void.speed);
+    const { world, frame } = eagleAt(1);
+    const centres: number[] = [];
+    for (let volley = 0; volley < 2; volley++) {
+      world.enemyShots.clear();
+      world.bossPool.at(0).fireIn = 1;
+      frame.step();
+      expect(world.enemyShots.size, 'the eagle threw one dart, which is the fan that was boring').toBeGreaterThan(1);
+      let sum = 0;
+      for (let i = 0; i < world.enemyShots.size; i++) {
+        const s = world.enemyShots.at(i);
+        expect(s.sprite, 'a shot of the opening fan is not a quill').toBe(SHOTS.quill.sprite);
+        sum += Math.atan2(s.velAcross, s.velAlong - world.scrollPerStep);
+      }
+      centres.push(sum / world.enemyShots.size);
+    }
+    expect(Math.abs(centres[1]! - centres[0]!), 'the fan of quills does not rake — two volleys point the same way').toBeGreaterThan(0.1);
   });
 
   it('THE WHIP: one volley is a lash of flames along an arc, the tip faster than the root, in the fire ink', () => {
@@ -103,17 +136,32 @@ describe('0249 — the eagle summons', () => {
       const count = (phaseFor(BOSSES.hellkite, boss.health, world.bossFullHealth).attack as { count: number }).count;
       expect(world.enemies.size, `the summons at ${fraction} put ${world.enemies.size} adds on the field`).toBe(count);
       expect(world.enemyShots.size, 'a summons threw bullets as well').toBe(0);
+      /*
+        ⚠️ **FROM THE SIDES SINCE 0262** — *"they marched in gently from the left side in a single
+        file, they didn't swoop or dive bomb."* Every add of a call is outside the lane on the step
+        it is called, on ONE side, steering for a lane inside it; the next call comes from the
+        other side. Ahead of the ship still, and on the screen.
+      */
+      const sides = new Set<number>();
       for (let i = 0; i < world.enemies.size; i++) {
         const add = world.enemies.at(i);
         expect(add.kind, `an add at ${fraction} is not a ${enemy}`).toBe(world.enemyKinds[enemy]);
         const inView = add.along - world.cameraAlong;
         expect(inView, 'an add arrived behind the ship').toBeGreaterThan(world.ship.along - world.cameraAlong);
         expect(inView, 'an add arrived a whole view beyond the screen').toBeLessThan(world.view.alongSpan * 2);
+        expect(add.across < 0 || add.across > ACROSS_SPAN, `an add at ${fraction} arrived inside the lane rather than from a side`).toBe(true);
+        expect(add.steerAcross, 'an add from the side is not steering for a lane').toBeGreaterThan(0);
+        expect(add.steerAcross).toBeLessThan(ACROSS_SPAN);
+        sides.add(Math.sign(add.across));
       }
-      // And again on the next volley: a horde is many calls, not one.
+      expect(sides.size, 'one call came from both sides at once').toBe(1);
+      const firstSide = [...sides][0]!;
+      // And again on the next volley, from the other side: a horde is many calls, not one.
       boss.fireIn = 1;
       frame.step();
       expect(world.enemies.size, 'the second volley called nobody').toBe(count * 2);
+      const latest = world.enemies.at(world.enemies.size - 1);
+      expect(Math.sign(latest.across), 'the second call came from the same side as the first').toBe(-firstSide);
     }
   });
 
@@ -123,6 +171,9 @@ describe('0249 — the eagle summons', () => {
     expect(kite.fireEvery, 'a kite shoots, and a horde that shoots is a wall').toBe(0);
     expect(kite.radius, 'a kite is no smaller than the raptor it is summoned with').toBeLessThan(ENEMIES.raptor.radius);
     expect(kite.closing, 'a kite is slower than the raptor').toBeGreaterThan(ENEMIES.raptor.closing);
+    // And it dives — 0262: a hunt harder than any level's pilot, from the side the eagle calls it on.
+    expect(kite.motion.kind, 'a kite does not dive for the ship').toBe('hunt');
+    if (kite.motion.kind === 'hunt') expect(kite.motion.agility, 'a kite dives no harder than the raptor hunts').toBeGreaterThan(ENEMIES.raptor.motion.kind === 'hunt' ? ENEMIES.raptor.motion.agility : 0);
     // Sent by the eagle and by nothing authored: a summons is what it is for.
     for (const level of Object.values(LEVELS)) {
       for (const wave of level.waves) expect(wave.enemy, 'a level authors the kite, which is the eagle’s to call').not.toBe('kite');
