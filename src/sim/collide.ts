@@ -427,13 +427,21 @@ export function collideIntoOne(
     if (consume) threats.releaseAt(i);
   }
   const taken = worst * damageScale;
-  if (taken > 0) {
-    target.health -= taken;
-    target.invulnFor = invulnSteps;
-    // Lit for the whole invulnerable window rather than a short burst, so the flash says two things
-    // at once: *that hurt*, and *you are briefly safe*. Whether a solid flash or a blink reads better
-    // is a picture question and belongs to a hand, not to this file.
-    target.flashFor = flashSteps;
-  }
+  if (taken > 0) wound(target, taken, invulnSteps, flashSteps);
   return taken;
+}
+
+/**
+ * One body hurt by `taken`, and lit and briefly safe for it — the one description of what being
+ * hit does, shared by every pairing above and by the strikes that are not bodies at all (the
+ * serpent's lightning, `docs/decisions/0248-the-serpent-strikes.md`).
+ *
+ * Lit for the whole invulnerable window rather than a short burst, so the flash says two things at
+ * once: *that hurt*, and *you are briefly safe*. Whether a solid flash or a blink reads better is a
+ * picture question and belongs to a hand, not to this file.
+ */
+export function wound(target: Entity, taken: number, invulnSteps: number, flashSteps: number): void {
+  target.health -= taken;
+  target.invulnFor = invulnSteps;
+  target.flashFor = flashSteps;
 }

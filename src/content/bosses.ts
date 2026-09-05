@@ -24,6 +24,14 @@ import type { ShotKind } from './shots.ts';
 import { SPRITE } from './sprites.ts';
 
 /**
+ * The `kind` a bolt in the bolts pool carries when it is the serpent's lightning rather than the
+ * arc's link — `docs/decisions/0248-the-serpent-strikes.md`. The painter reads it to stroke the
+ * warning line and then the strike in the enemy's ink; the frame reads it to hurt the ship on the
+ * step the strike lands. Every other bolt carries zero.
+ */
+export const RAIN_BOLT_KIND = 1;
+
+/**
  * Every boss in the game. Closed.
  *
  * ⚠️ **SEVEN MID-BOSSES AND SEVEN END BOSSES, IN THAT ORDER, EACH TOUGHER THAN THE LAST** —
@@ -129,7 +137,7 @@ export type BossMove =
  * unions with one vocabulary is the honest shape, and `docs/decisions/0110-an-attack-is-a-pattern.md`
  * is where the vocabulary is argued.
  */
-export const BOSS_ATTACK_KINDS = ['aimed', 'spray', 'rake', 'ring', 'wall'] as const;
+export const BOSS_ATTACK_KINDS = ['aimed', 'spray', 'rake', 'ring', 'wall', 'rain'] as const;
 
 /** Derived from the list, so an attack cannot exist in the union and be missing from the switch. */
 export type BossAttackKind = (typeof BOSS_ATTACK_KINDS)[number];
@@ -162,7 +170,24 @@ export type BossAttack =
    * own width, so the safe place is directly in front of a thing that is 23 units across — which is a
    * very different proposition from a sower's 6.
    */
-  | { kind: 'wall'; gap: number };
+  | { kind: 'wall'; gap: number }
+  /**
+   * Lightning from the top of the screen — `docs/decisions/0248-the-serpent-strikes.md`. Asked
+   * for: *"a space lightning bolt attack that rains down from the top of the screen, it'll need
+   * warning lines."*
+   *
+   * ⚠️ **A COLUMN, NOT A BULLET.** Each volley picks `shots` places along the lane inside the box
+   * the ship can fly in, draws a warning line down each for `warning` steps, and then strikes: a
+   * bolt from the top edge of the lane to the bottom, hurting a ship within `halfWidth` of it on
+   * the step it lands. The bolt is the arc's own picture, stroked in the enemy's ink; nothing is
+   * spawned into `enemyShots`, because a line across the whole lane is not a body.
+   *
+   * ⚠️ **THE WARNING IS THE WHOLE OF WHAT MAKES IT FAIR.** *"Is this unfair, or is this a learnable
+   * strategy?"* A strike with no warning is the first; a line the player has three quarters of a
+   * second to leave is the second. `tests/serpent.test.ts` holds that nothing hurts before the
+   * warning has run.
+   */
+  | { kind: 'rain'; warning: number; halfWidth: number };
 
 /**
  * Every way a boss can STAND in a phase. Closed.
@@ -308,6 +333,17 @@ export interface BossPhase {
    * and `docs/decisions/0016-a-hub-enumerates-kinds.md` says the table is the guard.
    */
   stance: BossStance;
+  /**
+   * The shot this phase throws instead of the row's, or `null` for the row's — 0248.
+   *
+   * ⚠️ **A PHASE CHANGES WHAT A BOSS DOES, AND SINCE 0248 THAT INCLUDES WHAT IT THROWS.** The serpent
+   * throws acid, then void, then lightning; the hydra grows a head with its own shot at every
+   * fifth. `null` rather than optional, on the same terms as `uncoil`: a phase that keeps the row's
+   * shot is a decision somebody made.
+   */
+  shot: ShotKind | null;
+  /** The attack this phase fires instead of the row's, or `null` for the row's — 0248. */
+  attack: BossAttack | null;
 }
 
 export interface BossRow extends Body {
@@ -453,7 +489,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
         slower than a turret, and it is the phase in which the player learns where the boss's hull
         ends — which is the one thing a 26-unit sprite makes genuinely hard to judge.
       */
-      { upTo: 1, fireEvery: 90, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' } },
+      { upTo: 1, fireEvery: 90, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
       /*
         Half health: a three-way spread, so a player who has settled into one lane is moved out of
         it. The spread is wide enough that standing still is punished and narrow enough that there is
@@ -463,7 +499,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
         weapons, and `tests/level.test.ts` refuses a phase under three; the old last third is folded
         into this one, which is what a mid-boss is: the same idea, said once.
       */
-      { upTo: 0.5, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' } },
+      { upTo: 0.5, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' }, shot: null, attack: null },
     ],
   },
   /**
@@ -509,7 +545,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     shot: 'lance',
     phases: [
       // No gentle opening. It starts where the sentinel's second phase ended.
-      { upTo: 1, fireEvery: 72, shots: 3, spread: 0.45, patrolScale: 1, stance: { kind: 'volley' } },
+      { upTo: 1, fireEvery: 72, shots: 3, spread: 0.45, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
       /*
         The last half: seven shots across most of a right angle, and a hull crossing the lane at
         two and a half times its opening speed. Every arsenal meets every phase, so this has to be
@@ -518,7 +554,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
         ⚠️ **TWO PHASES, NOT FOUR — 0247.** Nine seconds at max weapons at half its health leaves
         room for two phases of three; the two middle rungs are folded into these.
       */
-      { upTo: 0.5, fireEvery: 48, shots: 7, spread: 1.4, patrolScale: 2.5, stance: { kind: 'volley' } },
+      { upTo: 0.5, fireEvery: 48, shots: 7, spread: 1.4, patrolScale: 2.5, stance: { kind: 'volley' }, shot: null, attack: null },
     ],
   },
 
@@ -563,9 +599,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     shot: 'flak',
     phases: [
       // Wide and slow from the start: the shots are the lane-taking, not the hull.
-      { upTo: 1, fireEvery: 84, shots: 3, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' } },
-      { upTo: 0.66, fireEvery: 66, shots: 5, spread: 1.2, patrolScale: 1.3, stance: { kind: 'volley' } },
-      { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.5, patrolScale: 1.7, stance: { kind: 'volley' } },
+      { upTo: 1, fireEvery: 84, shots: 3, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.66, fireEvery: 66, shots: 5, spread: 1.2, patrolScale: 1.3, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.5, patrolScale: 1.7, stance: { kind: 'volley' }, shot: null, attack: null },
     ],
   },
   /**
@@ -598,9 +634,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     shot: 'lance',
     phases: [
       // Three phases, not four — 0247: twelve seconds at max weapons at half its health.
-      { upTo: 1, fireEvery: 96, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' } },
-      { upTo: 0.66, fireEvery: 78, shots: 3, spread: 0.5, patrolScale: 1.6, stance: { kind: 'volley' } },
-      { upTo: 0.33, fireEvery: 60, shots: 5, spread: 0.9, patrolScale: 2.8, stance: { kind: 'volley' } },
+      { upTo: 1, fireEvery: 96, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.66, fireEvery: 78, shots: 3, spread: 0.5, patrolScale: 1.6, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.33, fireEvery: 60, shots: 5, spread: 0.9, patrolScale: 2.8, stance: { kind: 'volley' }, shot: null, attack: null },
     ],
   },
   /**
@@ -633,9 +669,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     shot: 'flak',
     phases: [
       // Three phases, not four — 0247: fourteen seconds at max weapons at half its health.
-      { upTo: 1, fireEvery: 54, shots: 3, spread: 0.7, patrolScale: 1, stance: { kind: 'volley' } },
-      { upTo: 0.7, fireEvery: 42, shots: 5, spread: 1, patrolScale: 1.2, stance: { kind: 'volley' } },
-      { upTo: 0.4, fireEvery: 30, shots: 7, spread: 1.6, patrolScale: 1.6, stance: { kind: 'volley' } },
+      { upTo: 1, fireEvery: 54, shots: 3, spread: 0.7, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.7, fireEvery: 42, shots: 5, spread: 1, patrolScale: 1.2, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.4, fireEvery: 30, shots: 7, spread: 1.6, patrolScale: 1.6, stance: { kind: 'volley' }, shot: null, attack: null },
     ],
   },
   /**
@@ -683,9 +719,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     phases: [
       // Three fans and the eye, not five and the eye — 0247: fifteen seconds at max weapons at half
       // its health, and a phase under three of them is not a phase.
-      { upTo: 1, fireEvery: 72, shots: 3, spread: 0.5, patrolScale: 1, stance: { kind: 'volley' } },
-      { upTo: 0.78, fireEvery: 54, shots: 5, spread: 1.1, patrolScale: 1.6, stance: { kind: 'volley' } },
-      { upTo: 0.57, fireEvery: 36, shots: 7, spread: 1.6, patrolScale: 2.4, stance: { kind: 'volley' } },
+      { upTo: 1, fireEvery: 72, shots: 3, spread: 0.5, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.78, fireEvery: 54, shots: 5, spread: 1.1, patrolScale: 1.6, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.57, fireEvery: 36, shots: 7, spread: 1.6, patrolScale: 2.4, stance: { kind: 'volley' }, shot: null, attack: null },
       /*
         ⚠️ **THE EYE.** It has thrown everything it had and it stops: no fan, no rake, a hull still
         crossing the lane at a rung under its opening speed, and three times the damage from every
@@ -696,7 +732,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
         ⚠️ **The fan it is still carrying is written out and never thrown**, which is the stance
         saying so rather than the row — see `BossStance`.
       */
-      { upTo: 0.36, fireEvery: 30, shots: 7, spread: 1.6, patrolScale: 1.4, stance: { kind: 'bare', damageScale: 3 } },
+      { upTo: 0.36, fireEvery: 30, shots: 7, spread: 1.6, patrolScale: 1.4, stance: { kind: 'bare', damageScale: 3 }, shot: null, attack: null },
     ],
   },
   /**
@@ -748,9 +784,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     phases: [
       // Three rings and the eye, not five and the eye — 0247: seventeen seconds at max weapons at
       // half its health.
-      { upTo: 1, fireEvery: 66, shots: 3, spread: 0.6, patrolScale: 1, stance: { kind: 'volley' } },
-      { upTo: 0.8, fireEvery: 48, shots: 5, spread: 1.2, patrolScale: 1.8, stance: { kind: 'volley' } },
-      { upTo: 0.6, fireEvery: 36, shots: 7, spread: 1.8, patrolScale: 2.8, stance: { kind: 'volley' } },
+      { upTo: 1, fireEvery: 66, shots: 3, spread: 0.6, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.8, fireEvery: 48, shots: 5, spread: 1.2, patrolScale: 1.8, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.6, fireEvery: 36, shots: 7, spread: 1.8, patrolScale: 2.8, stance: { kind: 'volley' }, shot: null, attack: null },
       /*
         ⚠️ **THE EYE, AND IT WAS THE LAST THING THE AUTHORED RUN ASKED FOR.** The ring stops, the
         stalk slows to half what it was chasing at, and the fight ends on a window the player has to
@@ -759,7 +795,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
         0247 the run's last eye is the jellyfish's; this is the black heart's mid-boss, and its eye
         opens at a third of the bar so it still outlasts the death it runs into.
       */
-      { upTo: 0.32, fireEvery: 30, shots: 7, spread: 1.8, patrolScale: 1.4, stance: { kind: 'bare', damageScale: 3 } },
+      { upTo: 0.32, fireEvery: 30, shots: 7, spread: 1.8, patrolScale: 1.4, stance: { kind: 'bare', damageScale: 3 }, shot: null, attack: null },
     ],
   },
 
@@ -792,6 +828,14 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * is the shape a body that size crossing in front of you is. Owed: acid blasts, void blasts, and
    * the lightning that rains from the top of the screen with warning lines.
    */
+  /*
+    ⚠️ **THREE PHASES, THREE WEAPONS — 0248.** *"Acid blast attacks, void blast attacks and then a
+    space lightning bolt attack that rains down from the top of the screen."* A wall of acid across
+    the lane while it is whole; a spray of void down the lane once it is hurt; and, at the last
+    third, lightning: three columns a volley inside the box the ship flies in, each with a
+    three-quarter-second warning line, each hurting a ship within four units on the step it lands.
+    The row's `shot` and `attack` are the first phase's; the phases say what changes.
+  */
   jormungandr: {
     move: { kind: 'bob', amplitude: 24, wavelength: 200 },
     attack: { kind: 'wall', gap: 12 },
@@ -805,11 +849,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
     drift: 5,
     driftWavelength: 240,
     patrol: 0.3,
-    shot: 'spit',
+    shot: 'acid',
     phases: [
-      { upTo: 1, fireEvery: 84, shots: 2, spread: 0, patrolScale: 1, stance: { kind: 'volley' } },
-      { upTo: 0.66, fireEvery: 66, shots: 3, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' } },
-      { upTo: 0.33, fireEvery: 54, shots: 4, spread: 0, patrolScale: 1.6, stance: { kind: 'volley' } },
+      { upTo: 1, fireEvery: 84, shots: 2, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.66, fireEvery: 66, shots: 3, spread: 0.8, patrolScale: 1.3, stance: { kind: 'volley' }, shot: 'void', attack: { kind: 'spray' } },
+      { upTo: 0.33, fireEvery: 54, shots: 3, spread: 0, patrolScale: 1.6, stance: { kind: 'volley' }, shot: 'void', attack: { kind: 'rain', warning: 45, halfWidth: 4 } },
     ],
   },
   /**
@@ -833,10 +877,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
     patrol: 0.4,
     shot: 'lance',
     phases: [
-      { upTo: 1, fireEvery: 78, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' } },
-      { upTo: 0.7, fireEvery: 66, shots: 3, spread: 0.5, patrolScale: 1.3, stance: { kind: 'volley' } },
-      { upTo: 0.4, fireEvery: 54, shots: 5, spread: 0.8, patrolScale: 1.7, stance: { kind: 'volley' } },
-      { upTo: 0.15, fireEvery: 48, shots: 5, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' } },
+      { upTo: 1, fireEvery: 78, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.7, fireEvery: 66, shots: 3, spread: 0.5, patrolScale: 1.3, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.4, fireEvery: 54, shots: 5, spread: 0.8, patrolScale: 1.7, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.15, fireEvery: 48, shots: 5, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, shot: null, attack: null },
     ],
   },
   /**
@@ -860,9 +904,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     patrol: 0.55,
     shot: 'lance',
     phases: [
-      { upTo: 1, fireEvery: 72, shots: 3, spread: 0.5, patrolScale: 1, stance: { kind: 'volley' } },
-      { upTo: 0.66, fireEvery: 60, shots: 5, spread: 0.9, patrolScale: 1.4, stance: { kind: 'volley' } },
-      { upTo: 0.33, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 1.9, stance: { kind: 'volley' } },
+      { upTo: 1, fireEvery: 72, shots: 3, spread: 0.5, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.66, fireEvery: 60, shots: 5, spread: 0.9, patrolScale: 1.4, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.33, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 1.9, stance: { kind: 'volley' }, shot: null, attack: null },
     ],
   },
   /**
@@ -890,9 +934,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     patrol: 0.45,
     shot: 'flak',
     phases: [
-      { upTo: 1, fireEvery: 78, shots: 3, spread: 0.7, patrolScale: 1, stance: { kind: 'volley' } },
-      { upTo: 0.7, fireEvery: 66, shots: 5, spread: 1, patrolScale: 1.3, stance: { kind: 'volley' } },
-      { upTo: 0.4, fireEvery: 54, shots: 7, spread: 1.4, patrolScale: 1.7, stance: { kind: 'volley' } },
+      { upTo: 1, fireEvery: 78, shots: 3, spread: 0.7, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.7, fireEvery: 66, shots: 5, spread: 1, patrolScale: 1.3, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.4, fireEvery: 54, shots: 7, spread: 1.4, patrolScale: 1.7, stance: { kind: 'volley' }, shot: null, attack: null },
     ],
   },
   /**
@@ -916,10 +960,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
     patrol: 0.3,
     shot: 'flak',
     phases: [
-      { upTo: 1, fireEvery: 84, shots: 2, spread: 0, patrolScale: 1, stance: { kind: 'volley' } },
-      { upTo: 0.7, fireEvery: 72, shots: 3, spread: 0, patrolScale: 1.2, stance: { kind: 'volley' } },
-      { upTo: 0.4, fireEvery: 60, shots: 4, spread: 0, patrolScale: 1.5, stance: { kind: 'volley' } },
-      { upTo: 0.15, fireEvery: 54, shots: 4, spread: 0, patrolScale: 1.9, stance: { kind: 'volley' } },
+      { upTo: 1, fireEvery: 84, shots: 2, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.7, fireEvery: 72, shots: 3, spread: 0, patrolScale: 1.2, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.4, fireEvery: 60, shots: 4, spread: 0, patrolScale: 1.5, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.15, fireEvery: 54, shots: 4, spread: 0, patrolScale: 1.9, stance: { kind: 'volley' }, shot: null, attack: null },
     ],
   },
   /**
@@ -945,11 +989,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
     patrol: 0.3,
     shot: 'spit',
     phases: [
-      { upTo: 1, fireEvery: 72, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' } },
-      { upTo: 0.8, fireEvery: 66, shots: 2, spread: 0.4, patrolScale: 1.2, stance: { kind: 'volley' } },
-      { upTo: 0.6, fireEvery: 60, shots: 3, spread: 0.7, patrolScale: 1.4, stance: { kind: 'volley' } },
-      { upTo: 0.4, fireEvery: 54, shots: 4, spread: 1, patrolScale: 1.6, stance: { kind: 'volley' } },
-      { upTo: 0.2, fireEvery: 48, shots: 5, spread: 1.3, patrolScale: 1.8, stance: { kind: 'volley' } },
+      { upTo: 1, fireEvery: 72, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.8, fireEvery: 66, shots: 2, spread: 0.4, patrolScale: 1.2, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.6, fireEvery: 60, shots: 3, spread: 0.7, patrolScale: 1.4, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.4, fireEvery: 54, shots: 4, spread: 1, patrolScale: 1.6, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.2, fireEvery: 48, shots: 5, spread: 1.3, patrolScale: 1.8, stance: { kind: 'volley' }, shot: null, attack: null },
     ],
   },
   /**
@@ -975,13 +1019,13 @@ export const BOSSES: Record<BossKind, BossRow> = {
     patrol: 0.24,
     shot: 'spit',
     phases: [
-      { upTo: 1, fireEvery: 66, shots: 4, spread: 0, patrolScale: 1, stance: { kind: 'volley' } },
-      { upTo: 0.75, fireEvery: 54, shots: 6, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' } },
-      { upTo: 0.5, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.6, stance: { kind: 'volley' } },
-      { upTo: 0.3, fireEvery: 42, shots: 10, spread: 0, patrolScale: 2, stance: { kind: 'volley' } },
+      { upTo: 1, fireEvery: 66, shots: 4, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.75, fireEvery: 54, shots: 6, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.5, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.6, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.3, fireEvery: 42, shots: 10, spread: 0, patrolScale: 2, stance: { kind: 'volley' }, shot: null, attack: null },
       // The opening: a sixth of the bar at three times the damage is 1.8 s at max weapons, past the
       // death it runs into (0150's floor).
-      { upTo: 0.16, fireEvery: 36, shots: 10, spread: 0, patrolScale: 1.2, stance: { kind: 'bare', damageScale: 3 } },
+      { upTo: 0.16, fireEvery: 36, shots: 10, spread: 0, patrolScale: 1.2, stance: { kind: 'bare', damageScale: 3 }, shot: null, attack: null },
     ],
   },
 };

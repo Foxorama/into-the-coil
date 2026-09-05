@@ -34,6 +34,8 @@ export type ShotKind =
   | 'spit'
   | 'lance'
   | 'flak'
+  | 'acid'
+  | 'void'
   | 'missile'
   | 'seeker'
   | 'bomb'
@@ -70,6 +72,8 @@ export const SHOT_KINDS: readonly ShotKind[] = [
   'spit',
   'lance',
   'flak',
+  'acid',
+  'void',
   'missile',
   'seeker',
   'bomb',
@@ -203,6 +207,18 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * what 0098's other half is about.
    */
   flak: { sprite: SPRITE.flak, spriteHit: SPRITE.flak, radius: 0.9, health: 1, damage: 1, speed: 1 },
+  /**
+   * The serpent's acid blast — `docs/decisions/0248-the-serpent-strikes.md`. The fattest and
+   * slowest bullet in the game: a wall of these across the lane is a thing to walk through, and
+   * each is nearly twice a flak slab's hurtbox. Its own ink (`acid`), on 0098's terms — and on
+   * 0098's other rule, that the bigger a bullet is drawn the slower it goes, it sits below `flak`.
+   */
+  acid: { sprite: SPRITE.acid, spriteHit: SPRITE.acid, radius: 1.5, health: 1, damage: 1, speed: 0.8 },
+  /**
+   * The serpent's void blast — 0248, and the hydra's last head's. Quicker than acid, worth two
+   * hits, and in the `void` ink; the black heart's rain is made of these.
+   */
+  void: { sprite: SPRITE.void, spriteHit: SPRITE.void, radius: 1.2, health: 1, damage: 2, speed: 0.9 },
   /**
    * The player's second auto-weapon: slower than the pulse, and worth three of it.
    *

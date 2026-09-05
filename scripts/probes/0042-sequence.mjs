@@ -66,8 +66,9 @@ export const PROBES = [
       // guard: the last phase throwing FEWER shots than the first.
       // ⚠️ Re-anchored by 0247, which made the harrow a two-phase mid-boss opening on three shots;
       // the last phase throws ONE, which is fewer.
-      find: "      { upTo: 0.5, fireEvery: 48, shots: 7, spread: 1.4, patrolScale: 2.5, stance: { kind: 'volley' } },",
-      replace: "      { upTo: 0.5, fireEvery: 48, shots: 1, spread: 1.4, patrolScale: 2.5, stance: { kind: 'volley' } },",
+      // And by 0248, which gave every phase a shot and an attack of its own.
+      find: "      { upTo: 0.5, fireEvery: 48, shots: 7, spread: 1.4, patrolScale: 2.5, stance: { kind: 'volley' }, shot: null, attack: null },",
+      replace: "      { upTo: 0.5, fireEvery: 48, shots: 1, spread: 1.4, patrolScale: 2.5, stance: { kind: 'volley' }, shot: null, attack: null },",
     },
   },
   {

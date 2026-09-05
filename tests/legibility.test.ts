@@ -133,18 +133,29 @@ describe('the shot that kills you is not the shot you kill with', () => {
          in what it asks of the player, and putting every enemy back on one bullet breaks it the
          moment two of them also share a pattern.
     */
+    /*
+      ── AND A BOSS MAY NOW INTRODUCE A SHOT OF ITS OWN — 0248 ─────────────────────────────────────
+
+      ⚠️ **Claim 1 held *nothing is introduced first by a boss*, and the brief overturned it by
+      name**: the serpent's acid and void, the hydra's flame and frost, the pterodactyl's laser are
+      a boss's own and nobody else's (`docs/decisions/0248-the-serpent-strikes.md`). What the claim
+      was FOR — a row added and never sent — is kept as itself: every hostile bullet in `SHOTS` is
+      sent by an enemy, or by a boss's row, or by one of its phases. The enemies still send at
+      least three kinds, which is 0098's own floor.
+    */
     const shooters = ENEMY_KINDS.filter((k) => ENEMIES[k].fireEvery > 0);
     const fromEnemies = new Set(shooters.map((k) => ENEMIES[k].shot));
-    const fromBosses = new Set(BOSS_KINDS.map((k) => BOSSES[k].shot));
+    const fromBosses = new Set(BOSS_KINDS.flatMap((k) => [BOSSES[k].shot, ...BOSSES[k].phases.map((p) => p.shot ?? BOSSES[k].shot)]));
     expect(fromBosses.size, `all ${BOSS_KINDS.length} bosses send ${fromBosses.size} kind(s) of bullet`).toBeGreaterThan(
       2,
     );
+    expect(fromEnemies.size, 'the enemies send fewer than three kinds of bullet').toBeGreaterThanOrEqual(3);
     const sent = new Set<string>([...fromEnemies, ...fromBosses]);
+    const hostile = SHOT_KINDS.filter((k) => ['enemy', 'acid', 'void'].includes(INK_OF[SPRITE_KINDS[SHOTS[k].sprite]!]));
     expect(
-      fromEnemies.size,
-      `${sent.size} kinds of bullet shoot at the player and the enemies send ${fromEnemies.size} of them — ` +
-        'the rest are met first at a boss',
-    ).toBe(sent.size);
+      hostile.filter((k) => !sent.has(k)),
+      'a hostile bullet exists in the table and nothing — enemy, boss or phase — sends it',
+    ).toEqual([]);
     const signatures = new Set(shooters.map((k) => `${ENEMIES[k].shot}/${ENEMIES[k].attack.kind}`));
     expect(
       signatures.size,
@@ -183,8 +194,10 @@ describe('the shot that kills you is not the shot you kill with', () => {
         `${bySpeed[i]} is faster than ${bySpeed[i - 1]} and is drawn no smaller — the quick shot is also the big one`,
       ).toBeLessThan(drawn[i - 1]!);
     }
-    // And nothing that shoots at the player got a bigger hurtbox out of it — 0081's own rule.
-    const radii = new Set(bullets.map((k) => SHOTS[k as ShotKind].radius));
+    // And nothing an ENEMY shoots at the player got a bigger hurtbox out of it — 0081's own rule.
+    // ⚠️ The enemies' bullets and not the bosses' — 0248: a boss's own blast is bigger to hit as
+    // well as to see, on purpose, and `tests/combat.test.ts` holds its hurtbox inside its drawing.
+    const radii = new Set([...fromEnemies].map((k) => SHOTS[k].radius));
     expect(radii.size, 'the enemy bullets no longer share one hurtbox, so this was a difficulty change').toBe(1);
   });
 

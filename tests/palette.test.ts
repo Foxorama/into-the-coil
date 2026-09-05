@@ -37,6 +37,9 @@ const INKS: readonly Ink[] = [
   'bullet',
   'hazard',
   'pickup',
+  // The serpent's two shots — 0248. Meaning inks, held to every floor below.
+  'acid',
+  'void',
   'impact',
   'blade',
   'glass',

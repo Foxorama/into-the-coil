@@ -292,6 +292,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     burstRng: makeRng('test').stream('burst'),
     scatterRng: makeRng('test').stream('scatter'),
     arcRng: makeRng('test').stream('arc'),
+    rainRng: makeRng('test').stream('rain'),
     view: viewOf(1280, 720),
     surface: new NullSurface(),
     rng: makeRng('test').stream('spawns'),

@@ -34,8 +34,9 @@ export const PROBES = [
       path: 'src/content/bosses.ts',
       // The axis's window. Its `upTo` is what makes the line unique — every eye is `damageScale: 3`.
       // ⚠️ Re-anchored by 0247, which opens the axis's eye at 0.32 as a mid-boss.
-      find: "      { upTo: 0.32, fireEvery: 30, shots: 7, spread: 1.8, patrolScale: 1.4, stance: { kind: 'bare', damageScale: 3 } },",
-      replace: "      { upTo: 0.32, fireEvery: 30, shots: 7, spread: 1.8, patrolScale: 1.4, stance: { kind: 'bare', damageScale: 9 } },",
+      // And by 0248, which gave every phase a shot and an attack of its own.
+      find: "      { upTo: 0.32, fireEvery: 30, shots: 7, spread: 1.8, patrolScale: 1.4, stance: { kind: 'bare', damageScale: 3 }, shot: null, attack: null },",
+      replace: "      { upTo: 0.32, fireEvery: 30, shots: 7, spread: 1.8, patrolScale: 1.4, stance: { kind: 'bare', damageScale: 9 }, shot: null, attack: null },",
     },
   },
   {
