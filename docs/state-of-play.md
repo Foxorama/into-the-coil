@@ -140,6 +140,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the hydra grows heads: a head is a shot and an attack, a phase grows one and keeps the rest, and the heads take turns a volley — acid, flame, a laser, frost, void** | [0254](decisions/0254-the-hydra-grows-heads.md) |
 | **the jellyfish opens: tendrils are pulsing beams from the bell; a fall is a shot or a body and starts at a share of the health — moon jellies, a new body no level sends, sink across the lane; a third stance opens and keeps throwing void** | [0255](decisions/0255-the-jellyfish-opens.md) |
 | **a pickup keeps the count across a switch; a death costs one rung per ladder and throws nothing; a level authors a weapon and a missile and the mid-boss drops a weapon, a shield and a bomb; the guns cap across the run** | [0256](decisions/0256-a-pickup-keeps-the-count.md), [`the-alpha-list`](../reports/the-alpha-list-2026-09-06.md) |
+| **the arc lands only on a body whose whole hull is on the screen — the reach was measured from a ship that can stand ninety units from the edge** | [0257](decisions/0257-the-arc-lands-on-the-screen.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -758,9 +759,11 @@ mid-bosses and the seven real bosses in: *"I think we're actually at an alpha ga
 ten items in the order they are being taken, and the report holds the order so this file does not
 have to. **The first is landed** — [0256](decisions/0256-a-pickup-keeps-the-count.md): a switch
 keeps the count, a death costs a rung, two pickups a level and the mid-boss drops the rest — and what
-it owes is a play, on the deployed `main`, of whether one rung reads as a cost. **The next is the
-arc's reach**, then who reacts to the player, then the bullet time; every one of those is a model
-quantity until it is flown. Everything below this paragraph about the weapons is the record of how
+it owes is a play, on the deployed `main`, of whether one rung reads as a cost. **The second is
+landed** — [0257](decisions/0257-the-arc-lands-on-the-screen.md): a link lands only on a body whose
+whole hull is on the screen, because the reach was measured from a ship that can stand ninety units
+from the edge. **The next is who reacts to the player**, then the bullet time; every one of those is
+a model quantity until it is flown. Everything below this paragraph about the weapons is the record of how
 the game got to the alpha, and it is kept because the alpha list is a verdict on it.
 
 ⚠️ **THE WORK WAS THE NEW WEAPONS, FROM 2026-09-05.** The player asked for three, in order, and

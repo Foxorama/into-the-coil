@@ -309,16 +309,32 @@ export function collectInto(pickups: Pool<Entity>, target: Entity, targetRadiusS
  * *already hit this volley* and *drawn as just hit* one fact. A caller that wants to land on the same
  * body again — a bolt jumping around a single boss — passes `false`.
  *
+ * ⚠️ **AND ONLY A BODY WHOSE WHOLE HULL IS ON THE SCREEN — 0257.** `edge` is the leading edge of the
+ * view, and a body whose far side is past it is not a target however near it is. Reported from the
+ * alpha play: *"chain lightning jumps too far, enemies don't even get a chance to get on screen"* —
+ * a ship at the front of its box with the cap's reach was landing bolts ninety units past the
+ * screen, on bodies the player had not seen. It is 0246's bound for the seeker, measured on the
+ * hull rather than the centre, so the first frame a body is struck on is a frame it is whole in.
+ * `docs/decisions/0257-the-arc-lands-on-the-screen.md`.
+ *
  * ⚠️ **Allocation-free and bounded by the pool**, on `collideInto`'s terms: a scan, a compare, an
  * index. Reach is compared squared so there is no square root in the loop.
  */
-export function nearestFrom(targets: Pool<Entity>, along: number, across: number, reach: number, skipFlashing: boolean): number {
+export function nearestFrom(
+  targets: Pool<Entity>,
+  along: number,
+  across: number,
+  reach: number,
+  skipFlashing: boolean,
+  edge: number,
+): number {
   let best = -1;
   let bestGap = reach;
   for (let i = targets.size - 1; i >= 0; i--) {
     const target = targets.at(i);
     if (target.invulnFor > 0) continue;
     if (skipFlashing && target.flashFor > 0) continue;
+    if (target.along + target.radius > edge) continue;
     const dAlong = target.along - along;
     const dAcross = target.across - across;
     const gap = Math.sqrt(dAlong * dAlong + dAcross * dAcross) - target.radius;
