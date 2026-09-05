@@ -146,8 +146,14 @@ describe('the shot that kills you is not the shot you kill with', () => {
     const shooters = ENEMY_KINDS.filter((k) => ENEMIES[k].fireEvery > 0);
     const fromEnemies = new Set(shooters.map((k) => ENEMIES[k].shot));
     // A boss's fall sends its rock — 0251: a fall is a volley from the sky, and the rock is nobody else's.
+    // And a head sends its own shot — 0254: the hydra's phases name five through their heads.
     const fromBosses = new Set(
-      BOSS_KINDS.flatMap((k) => [BOSSES[k].shot, ...BOSSES[k].phases.map((p) => p.shot ?? BOSSES[k].shot), ...(BOSSES[k].fall === null ? [] : [BOSSES[k].fall.shot])]),
+      BOSS_KINDS.flatMap((k) => [
+        BOSSES[k].shot,
+        ...BOSSES[k].phases.map((p) => p.shot ?? BOSSES[k].shot),
+        ...BOSSES[k].phases.flatMap((p) => (p.attack?.kind === 'heads' ? p.attack.heads.map((h) => h.shot) : [])),
+        ...(BOSSES[k].fall === null ? [] : [BOSSES[k].fall.shot]),
+      ]),
     );
     expect(fromBosses.size, `all ${BOSS_KINDS.length} bosses send ${fromBosses.size} kind(s) of bullet`).toBeGreaterThan(
       2,
