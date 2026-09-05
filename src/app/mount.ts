@@ -72,7 +72,6 @@ import {
   landmarksFor,
   launchSpecial,
   respawn,
-  scatterUpgrades,
   wearHull,
   type World,
 } from './frame.ts';
@@ -737,9 +736,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // Its own stream per 0021: a fragment's direction is the most cosmetic roll in the game and it
     // must not be able to move a wave by one enemy.
     burstRng: makeRng('proof-scene').stream('burst'),
-    // Its own stream per 0021, and NOT `burst`'s: what a death costs is which pieces the player can
-    // reach, so a fragment's direction must not be able to deal a different scatter — 0077.
-    scatterRng: makeRng('proof-scene').stream('scatter'),
+    // Its own stream per 0021, and NOT `burst`'s: what a mid-boss drops is where its pieces go, so a
+    // fragment's direction must not be able to deal a different drop — 0077, 0256.
+    dropRng: makeRng('proof-scene').stream('scatter'),
     arcRng: makeRng('proof-scene').stream('arc'),
     // Where the serpent's lightning falls — 0248, its own stream per 0021.
     rainRng: makeRng('proof-scene').stream('rain'),
@@ -2118,17 +2117,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
 
   world.onDeath = (): void => {
     /*
-      ⚠️ **BEFORE the reducer, because the reducer is what empties the list.** `lifeLost` clears the
-      upgrades (0039), so a scatter dispatched after it would throw nothing —
-      `docs/decisions/0066-a-death-scatters-what-it-took.md`. The ordering is real and unstatable in
-      `src/app/frame.ts`, so `tests/pickups.test.ts` drives the shell rather than the frame.
+      ⚠️ **`scatterUpgrades(world, state.run.upgrades)` WAS THE LINE BEFORE THIS ONE** — 0066's
+      throw of everything the death took, ordered before the reducer because the reducer emptied the
+      list. `docs/decisions/0256-a-pickup-keeps-the-count.md`: a death costs one rung per ladder now
+      and throws nothing back, so the reducer is the whole of the event and `wearHull` below is its
+      picture — the hull drops a tier where it used to drop to the base.
 
       ⚠️ **On EVERY death, including the last one**, on the same terms `src/state/slices/run.ts` gives
-      for clearing the arsenal at zero lives: a rule with a hidden condition is a rule nobody can
-      read, and the condition would be *did the caller intend to keep playing*. Nothing collects them
-      on a run that is over, and the wreck is on screen under the overlay either way (0036).
+      for the rung at zero lives: a rule with a hidden condition is a rule nobody can read, and the
+      condition would be *did the caller intend to keep playing*.
     */
-    scatterUpgrades(world, state.run.upgrades);
     dispatch({ slice: 'run', type: 'lifeLost' });
     if (state.run.lives > 0) respawn(world);
   };
@@ -2170,7 +2168,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     launchSpecial(world, entry.kind);
   };
 
-  world.onPickup = (kind: PickupKind, face: number, stack: number): void => {
+  world.onPickup = (kind: PickupKind, face: number): void => {
     /*
       ⚠️ **`effectOf` and not `PICKUPS[kind].effect`, and the difference is the max-speed nerf.** A
       weapon pickup taken by a ship whose weapon can no longer grow reports itself as a `special`, so
@@ -2231,9 +2229,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       `tests/shields.test.ts` still holds `UPGRADE_KINDS` to the table's `effect: 'upgrade'` rows,
       and the reducer's action union fails to compile for a kind added there and not here.
     */
-    // And every rung it was worth — 0243: a scattered piece is one event carrying the stack.
-    else if (kind === 'weapon') dispatch({ slice: 'run', type: 'upgraded', upgrade: kind, kind: weaponFaceOf(face), count: stack });
-    else if (kind === 'missile') dispatch({ slice: 'run', type: 'upgraded', upgrade: kind, kind: missileFaceOf(face), count: stack });
+    else if (kind === 'weapon') dispatch({ slice: 'run', type: 'upgraded', upgrade: kind, kind: weaponFaceOf(face) });
+    else if (kind === 'missile') dispatch({ slice: 'run', type: 'upgraded', upgrade: kind, kind: missileFaceOf(face) });
   };
 
   /** Re-measure, re-fit and — only if the orientation or resolution actually moved — re-bake. */

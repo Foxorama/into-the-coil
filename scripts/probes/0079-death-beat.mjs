@@ -79,10 +79,10 @@ export const PROBES = [
   {
     decision: '0079',
     suite: 'tests/death.test.ts',
-    // A wreck that collects — including the scatter its own death is about to throw, which is the
-    // player being handed back what the death was supposed to take.
+    // A wreck that collects what it flies over — a hull that is not there taking a pickup.
+    // ⚠️ Renamed by 0256: the scatter a wreck used to be about to throw is gone.
     broke: 'the collection gate removed, so a wreck picks up what it flies over',
-    guard: 'collects nothing, including the scatter it is about to throw',
+    guard: 'collects nothing while it is coming apart',
     edit: {
       path: 'src/app/frame.ts',
       find: '    if (flying) collectInto(w.pickups, w.ship, COLLECT_REACH, w.collected);',
@@ -107,22 +107,14 @@ export const PROBES = [
       replace: '    burst(\n      w,\n      w.deathOffset + w.burstRng.range(-spread, spread),',
     },
   },
-  {
-    decision: '0079',
-    suite: 'tests/death.test.ts',
-    /*
-      ⚠️ THE SAME MISTAKE ONE FUNCTION OVER, and it is the line the beat put at risk rather than one
-      it wrote: `scatterUpgrades` read the ship's own position, which was exactly right while the
-      scatter happened on the step the hull reached zero.
-    */
-    broke: 'the scatter thrown from the ship object, which has not moved with the camera',
-    guard: 'throws the upgrades out of the wreck and not a beat behind it',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: '  const along = w.cameraAlong + w.deathOffset;',
-      replace: '  const along = w.ship.along;',
-    },
-  },
+  /*
+    ── THE PROBE FOR *the scatter thrown from the ship object* WAS HERE ────────────────────────────
+
+    `throwPiece` read `w.cameraAlong + w.deathOffset`, and the break was the ship object's own
+    position, a beat's scroll behind. `docs/decisions/0256-a-pickup-keeps-the-count.md` took the
+    scatter out of a death; what the beat puts at risk now is the ORDER of the cost, and 0256's own
+    probe breaks that.
+  */
   {
     decision: '0079',
     suite: 'tests/death.test.ts',

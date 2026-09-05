@@ -232,11 +232,14 @@ describe('0233 — a weapon is a kind', () => {
     expect(recorder.blits.some((b) => b.sprite === SPRITE.ship), 'the pulse hull is still drawn under the arc').toBe(false);
   });
 
-  it('THE SWITCH: another gun is an upgrade even when the fitted gun is full, and taking it starts its ladder at one rung', () => {
+  it('THE SWITCH: another gun is an upgrade even when the fitted gun is full, and taking it keeps the count', () => {
     /*
       Asked for: *"if they collect a different weapon upgrade power up, they start from level one with
-      that weapon upgrade."* Level one is one rung; the missile ladder is untouched; a death takes the
-      gun back to the ship's own — the three halves of the ask, in the reducer.
+      that weapon upgrade."* — and then, played with the mid-bosses in: *"picking up a new
+      weapon/missile type doesn't reset your power count."*
+      `docs/decisions/0256-a-pickup-keeps-the-count.md` amends 0233: the switch is kept, the missile
+      ladder is untouched, and the ladder carries across the switch and across a death — the
+      reducer's three halves now, held here and in `tests/run.test.ts`.
     */
     const full: UpgradeKind[] = [];
     for (let i = 0; i < UPGRADE_TIERS; i++) full.push('weapon');
@@ -245,21 +248,19 @@ describe('0233 — a weapon is a kind', () => {
     expect(effectOf('weapon', WEAPON_KINDS.indexOf('arc'), loadout), 'the other gun is refused by the fitted gun’s cap').toBe('upgrade');
 
     let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY });
-    for (let i = 0; i < UPGRADE_TIERS; i++) state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' });
+    for (let i = 0; i < UPGRADE_TIERS - 1; i++) state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' });
     state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: SHIPS.proof.missile });
     state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: SHIPS.proof.missile });
     state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'arc' });
     expect(state.run.weapon, 'the run did not switch guns').toBe('arc');
-    expect(tiersOf(state.run.upgrades, 'weapon'), 'a switched gun does not start at one rung').toBe(1);
+    expect(tiersOf(state.run.upgrades, 'weapon'), 'a switched gun lost the count').toBe(UPGRADE_TIERS);
     expect(tiersOf(state.run.upgrades, 'missile'), 'switching guns touched the missile ladder').toBe(2);
     const fitted = weaponFor(SHIPS.proof, state.run.upgrades, state.run.weapon, state.run.missile);
     expect(fitted.kind).toBe('arc');
-    expect(fitted.links, 'the switched gun is not resolved at its first rung').toBe(WEAPONS.arc.links[1]);
-    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'arc' });
-    expect(tiersOf(state.run.upgrades, 'weapon'), 'a second of the new gun did not climb').toBe(2);
+    expect(fitted.links, 'the switched gun is not resolved at the rung the count says').toBe(WEAPONS.arc.links[UPGRADE_TIERS]);
     state = reduce(state, { slice: 'run', type: 'lifeLost' });
-    expect(state.run.weapon, 'a death left the switched gun on the ship').toBe(SHIPS.proof.weapon);
-    expect(state.run.upgrades).toEqual([]);
+    expect(state.run.weapon, 'a death took the switched gun off the ship').toBe('arc');
+    expect(tiersOf(state.run.upgrades, 'weapon'), 'a death cost more than a rung').toBe(UPGRADE_TIERS - 1);
   });
 });
 

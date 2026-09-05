@@ -55,7 +55,8 @@ export const PROBES = [
       Everything in between is on the screen and out of reach — *"visible but the player cannot get to
       them"*.
     */
-    broke: 'the along bounce removed, so a scatter strands pieces below the player’s box',
+    // ⚠️ Re-aimed by 0256: the throw is the mid-boss's drop now, and the walls are the same walls.
+    broke: 'the along bounce removed, so a drop strands pieces below the player’s box',
     guard: '0100 — THE REPORTED ONE: a scatter never leaves a piece where the ship cannot reach it',
     edit: {
       path: 'src/app/frame.ts',

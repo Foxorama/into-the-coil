@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { CAPACITY } from '../src/app/mount.ts';
-import { GameFrame, detonateArsenal, respawn, scatterUpgrades, type World } from '../src/app/frame.ts';
+import { GameFrame, detonateArsenal, respawn, type World } from '../src/app/frame.ts';
 import { makeLifecycle } from '../src/app/lifecycle.ts';
 import { DEBRIS_BY_KIND } from '../src/content/debris.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
@@ -131,7 +131,6 @@ function shell(level = LEVELS[LEVEL_KINDS[0]!]) {
     detonateArsenal(world, chargesOf());
   };
   world.onDeath = (): void => {
-    scatterUpgrades(world, current.run.upgrades);
     dispatch({ slice: 'run', type: 'lifeLost' });
     if (current.run.lives > 0) respawn(world);
   };
@@ -222,39 +221,32 @@ describe('the ship comes apart, and the player watches it happen', () => {
     );
   });
 
-  it('throws the upgrades out of the wreck and not a beat behind it', () => {
+  it('costs one rung per ladder at the end of the beat, throws nothing back, and hands back the same gun', () => {
     /*
-      ⚠️ **`scatterUpgrades` now runs at the END of the beat, which is what put this at risk.** It
-      read the ship's own position, and the ship object has been sitting still in world coordinates
-      for the whole beat while the camera moved — so the pieces would arrive a beat's worth of scroll
-      behind the explosion they came out of.
-    */
-    /*
-      ⚠️ **EIGHT of them, and it was one of each kind.** 0082 merged the four upgrade kinds into one
-      and made the scatter a 50% coin per piece, so *one of each* is now a single upgrade with an even
-      chance of being filtered out — and this test, which is about WHERE the pieces land, would have
-      measured an empty field half the time. Eight makes the odds of nothing surviving one in 256, and
-      the seed is the fixture's, so it is deterministic rather than merely unlikely.
+      ⚠️ **THIS WAS `throws the upgrades out of the wreck and not a beat behind it`** — 0066's
+      scatter, thrown at the end of the beat from where the ship died. 0256 made a death cost a rung
+      instead: nothing is thrown, the reducer is the whole of the event, and it lands at the end of
+      the beat with `lifeLost` exactly as the scatter did. Driven through the shell so the ORDER is
+      what is held — a death that took its rung on the step the hull reached zero would be a hull
+      shrinking before it exploded.
     */
     const built = shell(NO_LEVEL);
     built.dispatch({ slice: 'run', type: 'begin', difficulty: TIER });
-    for (let i = 0; i < 8; i++) {
-      // One of each ladder, on the base kinds — the ship the run opened with, upgraded.
+    for (let i = 0; i < 3; i++) {
       built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: SHIPS.proof.weapon });
       built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'missile', kind: SHIPS.proof.missile });
     }
     built.dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
+    const before = built.state().run.upgrades;
     killShip(built.world, built.frame);
-    const offset = built.world.deathOffset;
+    expect(built.state().run.upgrades, 'the death took its rung on the step the hull reached zero, before the beat').toEqual(before);
     flyOutTheBeat(built.world, built.frame);
 
-    expect(built.world.pickups.size, 'a death with a full loadout scattered nothing').toBeGreaterThan(0);
-    for (let i = 0; i < built.world.pickups.size; i++) {
-      const item = built.world.pickups.at(i);
-      const drift = Math.abs(item.along - built.world.cameraAlong - offset);
-      // One step of the throw, which is all a piece has had time to travel when it is looked at here.
-      expect(drift, 'the scatter arrived behind the wreck it came off').toBeLessThan(4);
-    }
+    const after = built.state().run.upgrades;
+    expect(after.filter((u) => u === 'weapon').length, 'a death did not cost the guns exactly one rung').toBe(2);
+    expect(after.filter((u) => u === 'missile').length, 'a death did not cost the tubes exactly one rung').toBe(2);
+    expect(built.state().run.weapon, 'a death took the gun back to the base').toBe(SHIPS.proof.weapon);
+    expect(built.world.pickups.size, 'a death threw something back onto the field').toBe(0);
   });
 
   it('does not raise the run-over screen on the step the last life is lost', () => {
@@ -342,7 +334,7 @@ describe('a wreck is not a ship, and every step that touches one says so', () =>
     expect(asked, 'a wreck asked the shell to spend a charge').toBe(0);
   });
 
-  it('collects nothing, including the scatter it is about to throw', () => {
+  it('collects nothing while it is coming apart', () => {
     const built = quietWorld();
     killShip(built.world, built.frame);
     const item = built.world.pickups.spawn()!;

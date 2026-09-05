@@ -11,8 +11,9 @@ export const PROBES = [
     guard: 'THE TWO FIGHTS: the mid-boss arrives',
     edit: {
       path: 'src/app/frame.ts',
-      find: '        w.bossBurstRadius = w.bossRow.radius;\n        nextFight(w);\n',
-      replace: '        w.bossBurstRadius = w.bossRow.radius;\n        nextFight(w);\n        w.clearedIn = BOSS_DEATH_STEPS;\n',
+      // ⚠️ Re-anchored by 0256, which throws the mid-boss's drop between the radius and `nextFight`.
+      find: '        nextFight(w);\n      } else {',
+      replace: '        nextFight(w);\n        w.clearedIn = BOSS_DEATH_STEPS;\n      } else {',
     },
   },
   {

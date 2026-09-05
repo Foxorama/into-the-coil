@@ -70,8 +70,11 @@ export const PROBES = [
       // ⚠️ Level one's second weapon, which is the pickup the run-up is measured FROM. Both lines are
       // needed: a weapon at lane 34 sits at 1932 in `gauntlet` too, and an anchor that matched there
       // would move a different level's pickup and prove nothing about this one.
-      find: "  { at: 1588, kind: 'weapon', lane: 34 },\n  { at: 2103, kind: 'weapon', lane: 68 },",
-      replace: "  { at: 2700, kind: 'weapon', lane: 34 },\n  { at: 2103, kind: 'weapon', lane: 68 },",
+      // ⚠️ Re-anchored by 0256: the second weapon is at 1,000 now, before the mid-boss, and the one
+      // line is unique again — no other level authors a weapon on lane 34 since a level authors one.
+      // Moved to 2,700 it lifts the clamp a hundred units before the turrets at 2,811.
+      find: "  { at: 1000, kind: 'weapon', lane: 34 },",
+      replace: "  { at: 2700, kind: 'weapon', lane: 34 },",
     },
   },
 ];

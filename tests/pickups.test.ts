@@ -5,6 +5,7 @@ import {
   MAX_BARRELS,
   MISSILE_BEAT_RATIO,
   PICKUPS,
+  PICKUP_CYCLE_STEPS,
   PICKUP_KINDS,
   UPGRADE_KINDS,
   UPGRADE_TIERS,
@@ -14,7 +15,7 @@ import {
   type UpgradeKind,
 } from '../src/content/pickups.ts';
 
-import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
+import { LEVELS, LEVEL_KINDS, MID_BOSS_DROP, weaponsOfferedBy } from '../src/content/levels.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { WEAPONS } from '../src/content/weapons.ts';
 import { MISSILES } from '../src/content/missiles.ts';
@@ -30,13 +31,14 @@ import {
   SCROLL_PER_STEP,
   SHIP_SPEED,
 } from '../src/sim/flight.ts';
-import { GameFrame, PICKUP_LINGER_STEPS, SHIP_START_ALONG, scatterUpgrades } from '../src/app/frame.ts';
+import { GameFrame, PICKUP_LINGER_STEPS, SHIP_START_ALONG, dropPickups } from '../src/app/frame.ts';
 import { initialState, reduce } from '../src/state/root.ts';
 import { DEFAULT_DIFFICULTY } from '../src/state/slices/run.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { Rng } from '../src/sim/rng.ts';
+import type { Entity } from '../src/sim/entity.ts';
 
 /**
  * WHAT A PICKUP IS WORTH, AND WHAT A DEATH TAKES BACK.
@@ -420,149 +422,106 @@ describe('a pickup is legible before it is taken', () => {
   });
 });
 
-describe('a level answers what a death costs', () => {
-  it('never leaves the player unarmed for long', () => {
+describe('0256 — a level authors its upgrades, and the fights offer the rest', () => {
+  /*
+    ── THE PICKUP BUDGET IS THE ASK'S, AND THE ASK IS A TABLE ───────────────────────────────────────
+
+    `docs/decisions/0256-a-pickup-keeps-the-count.md`, after the first play with the mid-bosses in:
+    *"weapons → 1 near the start of the level, 1 from the miniboss death; missiles → 1 about 20% of
+    the way into the level; shields → 1 from the miniboss death; bombs → 1 from the miniboss death,
+    1 from the boss death. Level 1 → 1 additional weapon pickup before the miniboss appears, 1
+    additional missile pickup halfway between miniboss and level boss."*
+
+    ⚠️ **COUNTS, held exactly, and that is an invariant rather than a copy of the content**: the ask
+    names them, and a level that quietly authored a second weapon would be authoring a difficulty
+    curve in the one file that must not (0083's argument, kept). A change that reddens these and is
+    correct is a decision.
+
+    ── `never leaves the player unarmed for long` AND `THE TARGET` WERE HERE ────────────────────────
+
+    Both were 0039's bill — a death emptied the ladder, so a level had to rearm the player inside
+    fifty seconds and cap the guns before its boss. A death costs one rung now (`tests/run.test.ts`),
+    so the premise of the first is gone and the second is the design inverted: the guns cap across
+    the run. Deleted, on 0192's terms: a guard whose premise has gone is not a guard to widen.
+  */
+  it('THE OPENING: every level’s first pickup is a weapon, inside the first tenth of the level', () => {
     /*
-      ⚠️ **THE LOAD-BEARING GUARD, AND IT IS 0039'S BILL.** A death empties the UPGRADES — the
-      charges stopped going with them at
-      `docs/decisions/0085-a-death-does-not-cost-the-bombs.md`, and what a level has to rearm was
-      always the guns — so the question a level has to answer is *how long is a player who just died
-      without a weapon*. In
-      SECONDS, which is a unit the player experiences —
-      `docs/decisions/0027-measure-the-picture-not-the-model.md` requires at least one assertion in
-      one, and "every 600 world units" is the model talking to itself.
-
-      ── THE CEILING WAS TWENTY SECONDS AND IT IS NOW FIFTY ─────────────────────────────────────────
-
-      ⚠️ **This is the guard `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md` had to move
-      rather than keep, and moving a ceiling to fit the content is normally the thing this repository
-      refuses.** It is written out because the exception has to be argued rather than assumed.
-
-      The old number came straight from `docs/game.md`: *"a level may never leave the player more than
-      twenty seconds without something to rearm from."* Reported from play: *"power ups are too common
-      still and these are premium game pieces."* At the ask's own budget — two to three weapon pickups
-      a level — no arrangement over 6,350 units makes twenty seconds. The two are in direct conflict
-      and the ask wins, so the RULE changes and this changes with it.
-
-      ⚠️ **What makes fifty survivable is a different mechanism, not a looser standard.** 0082 also
-      made a death throw **half of what it took** back onto the field where it happened
-      (`SCATTER_KEPT` in `src/app/frame.ts`). The question this guard asks is *what is a player who
-      just died flying with*, and the answer is no longer *the next authored pickup* — it is *half of
-      their own loadout, immediately*. Fifty-five seconds is what the levels actually author with three
-      weapons in them (the worst is `gauntlet`, at fifty) plus a little slack; it is a drift detector
-      now rather than a promise.
-
-      ⚠️ **So this guard is weaker than it was and it says so.** If a play-test reports that dying is
-      brutal, the thing to change is `SCATTER_KEPT`, and this number follows it.
-    */
-    const unitsPerSecond = SCROLL_PER_STEP * 60;
-    for (const kind of LEVEL_KINDS) {
-      const level = LEVELS[kind];
-      const upgrades = level.pickups.filter((p) => PICKUPS[p.kind].effect === 'upgrade');
-      expect(upgrades.length, `${kind} has no upgrades in it at all`).toBeGreaterThan(0);
-
-      let previous = 0;
-      let worst = 0;
-      let worstAt = 0;
-      for (const pickup of upgrades) {
-        const gap = (pickup.at - previous) / unitsPerSecond;
-        if (gap > worst) {
-          worst = gap;
-          worstAt = pickup.at;
-        }
-        previous = pickup.at;
-      }
-      const tail = (level.bossAt - previous) / unitsPerSecond;
-      if (tail > worst) {
-        worst = tail;
-        worstAt = level.bossAt;
-      }
-      expect(
-        worst,
-        `${kind} goes ${worst.toFixed(0)}s without an upgrade, ending at ${worstAt}. A player who ` +
-          'died at the start of that stretch flies all of it with the base weapon and whatever half ' +
-          'of their loadout the scatter handed back.',
-      ).toBeLessThan(55);
-    }
-  });
-
-  it('THE TARGET: a level offers exactly enough weapons to cap the guns, and it does it before the boss', () => {
-    /*
-      ── THE ONE PLACEMENT WITH A STATED TARGET BEHIND IT ───────────────────────────────────────────
-
-      Asked for: *"the player should be able to cap weapons before the 1st boss and then also have a
-      couple of additional shields/bombs."*
-      `docs/decisions/0083-two-ladders-of-four.md`.
-
-      ⚠️ **Held as ARITHMETIC against `UPGRADE_TIERS` rather than against the number four.** The tier
-      count and the pickup budget are one decision — raising the tiers without raising the weapons
-      leaves a player who can never cap, and lowering them leaves pickups that convert straight to
-      bombs. A guard written as *four weapons* would be a copy of `src/content/levels.ts`; this fails
-      the moment either number moves without the other.
-
-      ⚠️ **And *"before the boss"* is the half that is easy to lose.** Four weapons in a level whose
-      last one sits inside the boss fight satisfies a count and not the ask.
+      *"1 near the start of the level."* The first thing a level offers is a gun, since the
+      compressed levels — *"this might need the first pickup changed to a weapon increase instead of
+      a shield"* — and *near the start* is held as a share of the level rather than a distance, so
+      a longer level does not push it later.
     */
     for (const kind of LEVEL_KINDS) {
       const level = LEVELS[kind];
-      const weapons = level.pickups.filter((p) => p.kind === 'weapon');
+      const first = level.pickups[0];
+      expect(first, `${kind} offers nothing at all`).toBeDefined();
+      expect(first!.kind, `${kind} opens with a ${first!.kind} rather than a weapon`).toBe('weapon');
       expect(
-        weapons.length,
-        `${kind} offers ${weapons.length} weapons against ${UPGRADE_TIERS} tiers, so the guns cannot be capped`,
-      ).toBe(UPGRADE_TIERS);
-      const capsAt = weapons[weapons.length - 1]!.at;
-      expect(capsAt, `${kind} caps the guns at ${capsAt}, which is not before its boss at ${level.bossAt}`).toBeLessThan(
-        level.bossAt,
-      );
-      /*
-        ⚠️ **AND THE *"AND THEN ALSO"* HALF: something after the cap.** Once the guns are full a weapon
-        pickup converts to a bomb charge, so a level whose last minute is all weapons is a level
-        offering pickups whose face does not say what they give. Two is what the levels author; one is
-        what this refuses to go below, because the ask says *a couple* and a guard should not be a copy
-        of the content.
-      */
-      const afterCap = level.pickups.filter((p) => p.at > capsAt);
-      expect(
-        afterCap.length,
-        `${kind} offers nothing after the guns cap at ${capsAt} — the run to the boss has no pickup in it`,
-      ).toBeGreaterThan(0);
-      for (const late of afterCap) {
-        expect(
-          late.kind === 'shield' || late.kind === 'bomb',
-          `${kind} offers a ${late.kind} at ${late.at}, after the guns are already full`,
-        ).toBe(true);
-      }
+        first!.at / level.bossAt,
+        `${kind}'s first weapon is ${((first!.at / level.bossAt) * 100).toFixed(0)}% of the way in, which is not near the start`,
+      ).toBeLessThan(0.1);
     }
   });
 
-  it('offers the budget the ask named, in every level', () => {
+  it('THE TUBE: every level offers a missile about a fifth of the way in', () => {
     /*
-      ⚠️ **THE OTHER HALF, AND IT IS A CEILING RATHER THAN A FLOOR.** The guards above stop a level
-      starving the player; this stops one drifting back to the stream of pickups the report called
-      *"non-earned upgrades that make the game trivial"*.
-
-      The numbers are the ask's: *"shields/lives should be kept to 1-2 per level"*, and the missiles
-      come from *"have tier 2 on missiles"* — two pickups, because `tiersOf` counts them one for one.
-
-      ⚠️ **Written as the ask's range and not as what the levels contain.** Every level currently
-      authors nine, and asserting nine would make this a copy of `src/content/levels.ts` rather than a
-      guard over it — `tests/level.test.ts`'s density floor records what that costs.
+      *"Missiles → 1 about 20% of the way into the level."* The base ship has no tube (0056), so
+      this is the second weapon arriving at all; a fifth, give or take a twentieth of the level.
     */
     for (const kind of LEVEL_KINDS) {
+      const level = LEVELS[kind];
+      const missile = level.pickups.find((p) => p.kind === 'missile');
+      expect(missile, `${kind} offers no missile`).toBeDefined();
+      const share = missile!.at / level.bossAt;
+      expect(share, `${kind}'s missile is ${(share * 100).toFixed(0)}% of the way in, and the ask is about a fifth`).toBeGreaterThan(0.15);
+      expect(share, `${kind}'s missile is ${(share * 100).toFixed(0)}% of the way in, and the ask is about a fifth`).toBeLessThan(0.25);
+    }
+  });
+
+  it('THE BUDGET: a level authors one weapon and one missile and nothing else, and level one a second of each where the ask put them', () => {
+    for (let i = 0; i < LEVEL_KINDS.length; i++) {
+      const kind = LEVEL_KINDS[i]!;
+      const level = LEVELS[kind];
       const counts = { weapon: 0, missile: 0, shield: 0, bomb: 0 };
-      for (const entry of LEVELS[kind].pickups) counts[entry.kind]++;
-      expect(counts.missile, `${kind} offers ${counts.missile} missiles, and the ask is tier 2`).toBeGreaterThanOrEqual(
-        2,
-      );
-      expect(counts.missile, `${kind} offers ${counts.missile} missiles, and the ask is tier 2`).toBeLessThanOrEqual(3);
-      expect(counts.shield, `${kind} offers ${counts.shield} shields, and the ask is 1-2`).toBeGreaterThanOrEqual(1);
-      expect(counts.shield, `${kind} offers ${counts.shield} shields, and the ask is 1-2`).toBeLessThanOrEqual(2);
-      /*
-        ⚠️ **The bomb has no stated budget, so what is held is that a level HAS one.** 0053 left *how
-        a player gets more bombs* to level clears alone and 0082 is what answers it; a level with no
-        bomb in it would leave the arsenal back where 0053 found it.
-      */
-      expect(counts.bomb, `${kind} has no bomb in it, so the arsenal only grows between levels`).toBeGreaterThan(0);
+      for (const entry of level.pickups) counts[entry.kind]++;
+      const extra = i === 0 ? 1 : 0;
+      expect(counts.weapon, `${kind} authors ${counts.weapon} weapons`).toBe(1 + extra);
+      expect(counts.missile, `${kind} authors ${counts.missile} missiles`).toBe(1 + extra);
+      // The shield and the charge are the fights' — `MID_BOSS_DROP` and the clear (0053).
+      expect(counts.shield, `${kind} authors a shield, which is the mid-boss's to drop`).toBe(0);
+      expect(counts.bomb, `${kind} authors a bomb, which is the mid-boss's and the clear's`).toBe(0);
+    }
+    /*
+      ⚠️ **LEVEL ONE'S TWO EXTRAS ARE PLACED, NOT JUST COUNTED.** *"Before the miniboss appears"* and
+      *"halfway between miniboss and level boss"*, held against the level's own `midBoss.at` and
+      `bossAt` — a tenth of the level either side of the midpoint.
+    */
+    const one = LEVELS[LEVEL_KINDS[0]!];
+    expect(one.midBoss, 'level one has no mid-boss to place its extras against').not.toBeNull();
+    const weapons = one.pickups.filter((p) => p.kind === 'weapon');
+    expect(weapons[1]!.at, `level one's second weapon at ${weapons[1]!.at} is not before its mid-boss at ${one.midBoss!.at}`).toBeLessThan(one.midBoss!.at);
+    const missiles = one.pickups.filter((p) => p.kind === 'missile');
+    const midpoint = (one.midBoss!.at + one.bossAt) / 2;
+    expect(
+      Math.abs(missiles[1]!.at - midpoint),
+      `level one's second missile at ${missiles[1]!.at} is not halfway between the fights (${midpoint})`,
+    ).toBeLessThan(one.bossAt / 10);
+  });
+
+  it('and the fights offer the rest: a mid-boss drops one weapon, one shield and one bomb, and every level has one', () => {
+    /*
+      *"1 from the miniboss death"* three times over. One list for every mid-boss (0083's one budget
+      for every level), and the dial counts its weapon — `weaponsOfferedBy` is what
+      `tests/dial.test.ts` recomputes the top of the dial from, so it has to agree with the list.
+    */
+    const counts = { weapon: 0, missile: 0, shield: 0, bomb: 0 };
+    for (const kind of MID_BOSS_DROP) counts[kind]++;
+    expect(counts, 'the mid-boss drops something other than a weapon, a shield and a bomb').toEqual({ weapon: 1, missile: 0, shield: 1, bomb: 1 });
+    for (const kind of LEVEL_KINDS) {
+      const level = LEVELS[kind];
+      expect(level.midBoss, `${kind} has no mid-boss, so nothing drops its shield`).not.toBeNull();
+      const authored = level.pickups.filter((p) => p.kind === 'weapon').length;
+      expect(weaponsOfferedBy(level), `${kind}'s dial does not count the mid-boss's weapon`).toBe(authored + 1);
     }
   });
 
@@ -758,61 +717,88 @@ describe('collecting one, in the real frame', () => {
    * ⚠️ **This is the half of the dying-is-punishing report that 0057 deliberately did not answer**,
    * and 0056 made a death cost more in the same session.
    */
-  describe('a death throws back what it took', () => {
+  describe('a mid-boss’s death drops what the fight is worth', () => {
+    /*
+      ── THIS WAS `a death throws back what it took`, AND 0256 GAVE THE THROW TO THE FIGHT ─────────
+
+      `docs/decisions/0256-a-pickup-keeps-the-count.md`. A death costs one rung and throws nothing
+      back now (`tests/run.test.ts`); what a mid-boss's death throws is `MID_BOSS_DROP`, from where
+      the hull was, on the same ring, flight and bounce the scatter had. Every guard below that was
+      about the THROW — where it lands, that it spreads, that it flies and then waits — is kept and
+      aimed at the drop; the ones about what a death took are gone with the scatter.
+    */
     /**
-     * A world with nothing in it, a ship that has just died carrying `upgrades`, and a replacement.
+     * A world with nothing in it, a hull that has just died at `along` mid-lane, and the ship moved
+     * to the back of its box so it cannot collect what was thrown.
      *
-     * ⚠️ **The ship is moved out of the way afterwards, because in the game it IS.** `onDeath` in
-     * `src/app/mount.ts` scatters and then calls `respawn`, which puts the replacement back at
-     * `SHIP_START_ALONG` — so the scatter and the new ship are only in the same place if the player
-     * died at the very back of their box. A fixture that left them on top of each other would
-     * collect the whole scatter on the first step and measure nothing at all, which is exactly what
-     * the first version of this did.
+     * ⚠️ **The ship is moved out of the way, because a fixture that left it beside the drop would
+     * collect the whole ring on the first step and measure nothing at all** — which is what the
+     * first version of the scatter fixture did.
      */
-    function scattered(upgrades: readonly UpgradeKind[], seed: string): ReturnType<typeof playableWorld> {
+    function dropped(seed: string, kinds: readonly PickupKind[] = MID_BOSS_DROP, along = SHIP_START_ALONG): ReturnType<typeof playableWorld> {
       const built = playableWorld({
         waves: [],
         pickups: [],
         landmarks: [],
         bossAt: Number.POSITIVE_INFINITY,
-      midBoss: null,
+        midBoss: null,
         sections: NO_SECTIONS,
         boss: 'sentinel',
-      theme: 'approach',
+        theme: 'approach',
       });
-      built.world.scatterRng = new Rng(seed);
-      scatterUpgrades(built.world, upgrades);
+      built.world.dropRng = new Rng(seed);
+      dropPickups(built.world, built.world.cameraAlong + along, ACROSS_SPAN / 2, kinds);
       built.world.ship.along = built.world.cameraAlong + PLAYER_MARGIN;
       built.world.ship.prevAlong = built.world.ship.along;
       return built;
     }
 
-    /**
-     * A death that happened to keep the WHOLE loadout, found by walking seeds.
-     *
-     * ⚠️ **A fixture, and it exists because 0082 made the scatter a coin toss.** Every test below
-     * except the 50% one is about the ring's geometry, the lifetime or the set of kinds — properties
-     * of *whatever is thrown* — and a fixture that sometimes threw two pieces and sometimes five would
-     * make each of them measure a different thing on a different day.
-     *
-     * ⚠️ **Deterministic, not random.** It walks a fixed list of seeds and takes the first that keeps
-     * everything, so the same seed is used on every run and on every machine; it THROWS rather than
-     * skipping if none does, because a fixture that silently found nothing is
-     * `docs/decisions/0019-a-probe-must-be-seen-to-apply.md`'s subject wearing a different hat.
-     */
-    function died(upgrades: readonly UpgradeKind[]): ReturnType<typeof playableWorld> {
-      for (let attempt = 0; attempt < 200; attempt++) {
-        const built = scattered(upgrades, `scatter:${attempt}`);
-        // In rungs, since 0243: a death throws one piece per kind, carrying the count.
-        let rungs = 0;
-        for (let i = 0; i < built.world.pickups.size; i++) rungs += built.world.pickups.at(i).stack;
-        if (rungs === upgrades.length) return built;
-      }
-      throw new Error(`no seed in 200 kept all ${upgrades.length} upgrades — the scatter filter is not a coin`);
-    }
+    /** Where the drop is thrown from — the ship's start, in the camera's frame. */
+    const dropAlong = SHIP_START_ALONG;
 
-    /** Where the scatter was thrown from — the ship's start, which is where it died. */
-    const deathAlong = SHIP_START_ALONG;
+    it('THE DROP: one piece per kind in the list, thrown from where the hull died, and the weapon turns the dial', () => {
+      /*
+        *"Weapons → 1 from the miniboss death; shields → 1 from the miniboss death; bombs → 1 from
+        the miniboss death."* The set is the list's, exactly; the place is the hull's; and the dial
+        counts the weapon as `spawnPickup` would (0084), which `tests/dial.test.ts` recomputes the
+        top of the dial from.
+      */
+      const { world } = dropped('drop:the-set');
+      expect(world.pickups.size, 'the drop is not one piece per kind in the list').toBe(MID_BOSS_DROP.length);
+      const thrown: string[] = [];
+      for (let i = 0; i < world.pickups.size; i++) {
+        const item = world.pickups.at(i);
+        thrown.push(PICKUP_KINDS[item.kind]!);
+        expect(Math.abs(item.along - world.cameraAlong - dropAlong), 'a piece was thrown from somewhere else').toBeLessThan(1);
+        expect(Math.abs(item.across - ACROSS_SPAN / 2), 'a piece was thrown from somewhere else').toBeLessThan(1);
+      }
+      expect(thrown.sort(), 'the drop is not the list').toEqual([...MID_BOSS_DROP].sort());
+      expect(world.weaponsOffered, 'the dropped weapon did not turn the dial').toBe(1);
+      // A list with no weapon in it turns nothing, and an empty list throws nothing.
+      expect(dropped('drop:no-weapon', ['shield', 'bomb']).world.weaponsOffered).toBe(0);
+      expect(dropped('drop:nothing', []).world.pickups.size).toBe(0);
+    });
+
+    it('and a dropped weapon cycles like an authored one, so it is an offer and not a return', () => {
+      /*
+        0243 had a scattered piece hold the face the player just lost, because what a death threw
+        back was what it took. A drop is the fight's offer, and since 0256 a switch keeps the count,
+        so the cycle costs the player nothing but the choice — held here so the two rules cannot
+        quietly swap back.
+      */
+      const { world } = dropped('drop:cycles');
+      let weapon: Entity | null = null;
+      for (let i = 0; i < world.pickups.size; i++) if (world.pickups.at(i).kind === world.pickupKinds.weapon) weapon = world.pickups.at(i);
+      expect(weapon, 'no weapon was dropped').not.toBeNull();
+      const shown = weapon!.sprite;
+      const frame = new GameFrame(world);
+      let turned = false;
+      for (let i = 0; i < PICKUP_CYCLE_STEPS * 2 && !turned; i++) {
+        frame.step();
+        if (weapon!.sprite !== shown) turned = true;
+      }
+      expect(turned, 'a dropped weapon never turned to another face').toBe(true);
+    });
 
     it('0100 — THE REPORTED ONE: a scatter never leaves a piece where the ship cannot reach it', () => {
       /*
@@ -835,19 +821,15 @@ describe('collecting one, in the real frame', () => {
         it, so a piece a hair outside the clamp is still collectable and the guard would be wrong to
         refuse it. `src/sim/collide.ts` is the pairing; this is the same sum.
       */
-      const built = died(['weapon', 'weapon', 'weapon', 'missile', 'missile']);
+      // Thrown from the very back of the box — a hull that died on the margin.
+      const built = dropped('scatter:back-of-the-box', MID_BOSS_DROP, PLAYER_ALONG_MARGIN);
       const { world } = built;
       const frame = new GameFrame(world);
-      world.deathOffset = PLAYER_ALONG_MARGIN;
-      world.pickups.clear();
-      world.scatterRng = new Rng('scatter:back-of-the-box');
-      scatterUpgrades(world, ['weapon', 'weapon', 'weapon', 'missile', 'missile']);
       // The ship is put at the FAR end of its box, so it cannot collect the scatter it is being
       // measured against — the fixture leaves it beside the wreck, which would empty the pool.
       world.ship.along = world.cameraAlong + PLAYER_LEAD;
       world.ship.prevAlong = world.ship.along;
-      // One piece per kind since 0243, so two: both kinds are in the loadout above.
-      expect(world.pickups.size, 'nothing was scattered, so this measured nothing').toBe(2);
+      expect(world.pickups.size, 'nothing was dropped, so this measured nothing').toBe(MID_BOSS_DROP.length);
 
       // Long enough for the along excursion to be spent — it is about eleven world units against an
       // ease, so a second of steps is far more than it needs.
@@ -878,13 +860,10 @@ describe('collecting one, in the real frame', () => {
         deleting the feature. What is held is that the pieces end up SPREAD along the lane rather than
         stacked on one line.
       */
-      const built = died(['weapon', 'weapon', 'weapon', 'missile', 'missile']);
+      // Thrown from the very back of the box — a hull that died on the margin.
+      const built = dropped('scatter:back-of-the-box', MID_BOSS_DROP, PLAYER_ALONG_MARGIN);
       const { world } = built;
       const frame = new GameFrame(world);
-      world.deathOffset = PLAYER_ALONG_MARGIN;
-      world.pickups.clear();
-      world.scatterRng = new Rng('scatter:back-of-the-box');
-      scatterUpgrades(world, ['weapon', 'weapon', 'weapon', 'missile', 'missile']);
       // The ship is put at the FAR end of its box, so it cannot collect the scatter it is being
       // measured against — the fixture leaves it beside the wreck, which would empty the pool.
       world.ship.along = world.cameraAlong + PLAYER_LEAD;
@@ -898,115 +877,22 @@ describe('collecting one, in the real frame', () => {
       let spread = 0;
       for (let step = 0; step < 240; step++) {
         frame.step();
-        expect(world.pickups.size, `a piece was collected or expired on step ${step}, so this measured nothing`).toBe(2);
-        const a = world.pickups.at(0).along;
-        const b = world.pickups.at(1).along;
-        spread = Math.max(spread, Math.abs(a - b));
+        expect(world.pickups.size, `a piece was collected or expired on step ${step}, so this measured nothing`).toBe(MID_BOSS_DROP.length);
+        for (let a = 0; a < world.pickups.size; a++) {
+          for (let b = a + 1; b < world.pickups.size; b++) {
+            spread = Math.max(spread, Math.abs(world.pickups.at(a).along - world.pickups.at(b).along));
+          }
+        }
       }
-      expect(spread, `the whole scatter stayed within ${spread.toFixed(1)} units of one line`).toBeGreaterThan(4);
-    });
-
-    it('THE REPORTED ONE: pickups where the ship was, and never more than it carried', () => {
-      const carried: UpgradeKind[] = ['weapon', 'weapon', 'weapon'];
-      const { world } = died(carried);
-      expect(world.pickups.size, 'nothing at all was thrown back').toBeGreaterThan(0);
-      expect(world.pickups.size, 'the scatter gave back more than the death took').toBeLessThanOrEqual(carried.length);
-      for (let i = 0; i < world.pickups.size; i++) {
-        const item = world.pickups.at(i);
-        expect(Math.abs(item.along - deathAlong), 'a pickup was thrown from somewhere else').toBeLessThan(1);
-        expect(Math.abs(item.across - ACROSS_SPAN / 2), 'a pickup was thrown from somewhere else').toBeLessThan(1);
-      }
-    });
-
-    it('throws back nothing the player never had', () => {
-      /*
-        ⚠️ **The set, not the count.** A scatter that threw whatever was cheapest to look up would pass
-        a count assertion and hand a player back something they never found — which is the game giving
-        away an upgrade rather than returning one.
-
-        ⚠️ **A SUBSET now rather than an equality, and 0082 is why.** A death used to throw everything
-        it took; it now throws each piece with a 50% chance, so *exactly what was carried* is no longer
-        the rule. What survives is the half that matters: nothing comes back that did not go in.
-      */
-      const carried: UpgradeKind[] = ['weapon', 'weapon', 'weapon'];
-      const { world } = died(carried);
-      for (let i = 0; i < world.pickups.size; i++) {
-        const kind = PICKUP_KINDS[world.pickups.at(i).kind]!;
-        expect(carried, `the scatter handed back a ${kind}, which the death never took`).toContain(kind);
-      }
-    });
-
-    it('THE COST OF DYING: gives back every upgrade, on every seed', () => {
-      /*
-        ── THIS GUARD HELD THE OPPOSITE FOR ONE DAY, AND A PLAY-TEST IS WHY ────────────────────────
-
-        ⚠️ **0082 made a death throw each upgrade on a 50% coin**, which was the ask at the time:
-        *"current implementation means there's not really a cost to dying at all."* It was flown and
-        the verdict was *"tested the 50% on death and it's too punishing, let's make 100% for weapons
-        and missiles."* `docs/decisions/0083-two-ladders-of-four.md`.
-
-        ⚠️ **Walked over MANY SEEDS even though there is no longer a draw**, and that is the point: a
-        filter reintroduced anywhere — a coin, a cap, an off-by-one on the ring's count — shows up as
-        one seed giving back fewer than it took. A single-seed assertion would pass against a coin that
-        happened to come up heads.
-
-        ⚠️ **And the whole ladder's worth, not two.** Both ladders cap at `UPGRADE_TIERS`, so eight is
-        the most a shell can ever hand this — which makes it the loadout worth measuring.
-      */
-      /*
-        ⚠️ **COUNTED IN RUNGS, NOT PIECES, SINCE 0243.** A death throws one piece per kind carrying
-        every rung it took, so what has to come to `carried.length` is the sum of the stacks — and
-        the piece count is the number of kinds, which the guard also holds so a scatter cannot hand
-        the rungs back as a pile of ones.
-      */
-      const carried: UpgradeKind[] = [];
-      for (let i = 0; i < UPGRADE_TIERS; i++) carried.push('weapon', 'missile');
-      for (let seed = 0; seed < 40; seed++) {
-        const { world } = scattered(carried, `whole:${seed}`);
-        let rungs = 0;
-        for (let i = 0; i < world.pickups.size; i++) rungs += world.pickups.at(i).stack;
-        expect(rungs, `seed ${seed} gave back ${rungs} rungs of ${carried.length} — something is filtering the scatter`).toBe(
-          carried.length,
-        );
-        expect(world.pickups.size, `seed ${seed} threw ${world.pickups.size} pieces for two kinds`).toBe(2);
-      }
-    });
-
-    it('and never throws a shield, because a shield was never in the list', () => {
-      /*
-        ⚠️ **Asked for in the same breath as the 100%**: *"but no shields spawn on death."*
-
-        ⚠️ **It is already true and the guard is here because of WHY it is true.** A shield lives on
-        the ship's `health`
-        (`docs/decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md`),
-        not in the upgrade list, so `scatterUpgrades` cannot see one: the signature is the guarantee.
-        That makes it true by a type rather than by a rule, and a type stops being a guarantee the
-        moment somebody widens it — which is exactly what 0083 just did to `UpgradeKind`, taking it
-        from one member to two.
-
-        ⚠️ **Driven at the largest loadout the shell can build**, so a widening that quietly admitted a
-        shield would have to show up here.
-      */
-      const carried: UpgradeKind[] = [];
-      for (let i = 0; i < UPGRADE_TIERS; i++) carried.push('weapon', 'missile');
-      const { world } = scattered(carried, 'no-shields');
-      expect(world.pickups.size, 'nothing was thrown, so this measured nothing').toBeGreaterThan(0);
-      for (let i = 0; i < world.pickups.size; i++) {
-        const kind = PICKUP_KINDS[world.pickups.at(i).kind]!;
-        expect(kind, 'a death put a shield back on the field').not.toBe('shield');
-      }
+      expect(spread, `the whole drop stayed within ${spread.toFixed(1)} units of one line`).toBeGreaterThan(4);
     });
 
     /*
-      ⚠️ **`does not cycle, so what comes back is what was lost` WAS HERE.** It drove a scattered piece
-      across a whole phase boundary and held that its sprite never changed, because
-      `docs/decisions/0052-a-pickup-is-two-things-and-the-camera-says-which.md`'s cycle was the one
-      mechanism that could hand a player back something they never had.
-
-      0082 removed the cycle, so *non-cycling* — the ask's own word — is now true of every pickup in
-      the game by construction, and there is nothing left for this to catch. Its twin,
-      `and an AUTHORED pickup still cycles`, went with it for the same reason. What survives of the
-      concern is the subset assertion above.
+      ⚠️ **FOUR GUARDS ABOUT WHAT A DEATH TOOK WERE HERE** — *pickups where the ship was, and never
+      more than it carried*; *throws back nothing the player never had*; *THE COST OF DYING: gives
+      back every upgrade, on every seed*; *and never throws a shield*. Every one was a claim about
+      the scatter's SET, and the set is a list on the level row now (`MID_BOSS_DROP`, held above in
+      `THE DROP`). What a death costs is `tests/run.test.ts`'s.
     */
 
     it('leaves in every direction, and no two pieces travel together', () => {
@@ -1024,24 +910,23 @@ describe('collecting one, in the real frame', () => {
         Driven at the largest loadout, which is the worst case for the ring — the gap between
         neighbouring headings is narrowest when there are the most of them.
       */
-      // Both kinds, so there are two pieces to be apart — one per kind since 0243.
-      const { world } = died(['weapon', 'weapon', 'weapon', 'missile', 'missile', 'missile']);
-      expect(world.pickups.size, 'one piece cannot be apart from itself').toBe(2);
+      const { world } = dropped('drop:apart');
+      expect(world.pickups.size, 'one piece cannot be apart from itself').toBeGreaterThan(1);
 
       /*
         ⚠️ **THE RING IS DIVIDED OVER WHAT IS ACTUALLY THROWN, and 0082 is what put that at risk.**
         Read off the velocities before a single step, because the along component decays
         (`PICKUP_EASE`) and the headings stop being recoverable from position within a second.
 
-        A death now throws each piece on a 50% coin, so `scatterUpgrades` has to count the survivors
-        BEFORE spacing them. The obvious way round — toss the coin while placing — divides the circle
-        over the full loadout and leaves the survivors sitting on its headings, so a third of the ring
-        is empty and the player reads it as pieces having failed to appear. `src/app/frame.ts` says so
-        where the loop is; this is what would notice.
+        0082's coin made the thrower count the survivors BEFORE spacing them; the coin is gone and
+        the pool's bound is the same shape: dividing the circle over the whole list and letting the
+        pool refuse the tail leaves the survivors on the full ring's headings, so part of it is empty
+        and the player reads it as pieces having failed to appear. `src/app/frame.ts` says so where
+        the loop is; this is what would notice.
 
         Held as *the widest gap is under twice the narrowest*, which is loose enough to survive the
-        jitter (`SCATTER_JITTER_SHARE` is under half a gap by construction) and tight enough that one
-        missing piece — a 2:1 gap at six, worse at fewer — fails it.
+        jitter (`DROP_JITTER_SHARE` is under half a gap by construction) and tight enough that one
+        missing piece — a 2:1 gap at three — fails it.
       */
       const headings: number[] = [];
       for (let i = 0; i < world.pickups.size; i++) {
@@ -1098,8 +983,7 @@ describe('collecting one, in the real frame', () => {
         down now."* A piece flies its throw out for `SCATTER_FLIGHT` steps, bouncing inside the box,
         and only then joins the wait. The three claims stand; the middle one got bigger.
       */
-      // Both kinds, so both of 0243's pieces are thrown — one ahead-and-across, one behind-and-across.
-      const { world } = died(['weapon', 'weapon', 'missile', 'missile']);
+      const { world } = dropped('drop:both-axes');
       // No ship: the pieces come back through where it respawned and a parked ship would take them.
       world.shipPool.clear();
       const frame = new GameFrame(world);
@@ -1128,8 +1012,7 @@ describe('collecting one, in the real frame', () => {
           expect(inView, `a scattered piece is past the box on step ${i + 120}`).toBeLessThan(PLAYER_LEAD + ACROSS_SPAN / 10);
         }
       }
-      // Two pieces since 0243 — one per kind of the four rungs thrown.
-      expect(world.pickups.size, 'the scatter left inside the wait an authored pickup gets').toBe(2);
+      expect(world.pickups.size, 'the drop left inside the wait an authored pickup gets').toBe(MID_BOSS_DROP.length);
     });
 
     it('stays as long as an authored pickup does, and then leaves the same way', () => {
@@ -1143,39 +1026,30 @@ describe('collecting one, in the real frame', () => {
         authored one does and leaves by falling back through the view, which is an event the picture
         already tells (0036) — the burst it used to leave went with the timer.
       */
-      const { world } = died(['weapon']);
+      const { world } = dropped('drop:stays', ['weapon']);
       world.shipPool.clear();
       const frame = new GameFrame(world);
       let steps = 0;
       for (; steps < 3000 && world.pickups.size > 0; steps++) frame.step();
       const seconds = steps / STEPS_PER_SECOND;
-      expect(seconds, `the scatter lasted ${seconds.toFixed(1)}s, which is shorter than a pickup waits`).toBeGreaterThan(
+      expect(seconds, `the drop lasted ${seconds.toFixed(1)}s, which is shorter than a pickup waits`).toBeGreaterThan(
         PICKUP_LINGER_STEPS / STEPS_PER_SECOND,
       );
-      expect(steps, 'the scatter never left').toBeLessThan(3000);
+      expect(steps, 'the drop never left').toBeLessThan(3000);
     });
 
-    it('never asks the pool for more than it has, however long the run was', () => {
+    it('never asks the pool for more than it has, however long the list', () => {
       /*
-        `src/sim/pool.ts` drops rather than grows, and a player with a very long run should not take
-        the game with them. Six times the pool, which is a loadout nothing can currently hand out.
-
-        ⚠️ **`scattered` rather than `died`, and the fixture's own error message is what said why.**
-        `died` walks seeds for a death that keeps EVERY piece, and at this size that is a one-in-2^72
-        event — it threw *"no seed in 200 kept all 24 upgrades"*, which is the fixture correctly
-        refusing to pretend. The 50% coin is not what this test is about: what it holds is that the
-        cap is a cap, and 0082's filter only ever makes the number smaller.
-
-        ⚠️ **Several seeds, because one draw could land under the cap by luck.** A filter bug that
-        overran would do so on most seeds and this would catch it on the first; walking a handful means
-        it cannot pass because one particular death happened to be unlucky.
+        `src/sim/pool.ts` drops rather than grows, and a list longer than the field should not take
+        the game with it. Six times the pool, which is a list nothing authors; what is held is that
+        the cap is a cap, and the ring is spaced over what reaches the field.
       */
-      const many: UpgradeKind[] = [];
+      const many: PickupKind[] = [];
       for (let i = 0; i < CAPACITY.pickups * 6; i++) many.push('weapon');
       for (let seed = 0; seed < 8; seed++) {
-        const { world } = scattered(many, `overrun:${seed}`);
-        expect(world.pickups.size, 'the scatter overran the pool').toBeLessThanOrEqual(CAPACITY.pickups);
-        expect(world.pickups.size, 'the scatter threw nothing at all').toBeGreaterThan(0);
+        const { world } = dropped(`overrun:${seed}`, many);
+        expect(world.pickups.size, 'the drop overran the pool').toBeLessThanOrEqual(CAPACITY.pickups);
+        expect(world.pickups.size, 'the drop threw nothing at all').toBeGreaterThan(0);
       }
     });
 

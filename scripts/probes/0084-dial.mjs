@@ -66,8 +66,9 @@ export const PROBES = [
     edit: {
       path: 'src/content/levels.ts',
       // `eye` — the last level, so its peak is the one `DIAL_MAX` is measured against.
-      find: "  { at: 3236, kind: 'weapon', lane: 34 },",
-      replace: "  { at: 3236, kind: 'weapon', lane: 34 },\n  { at: 5100, kind: 'weapon', lane: 44 },",
+      // ⚠️ Re-anchored by 0256: a level authors a weapon and a missile, and this is the eye's missile.
+      find: "  { at: 892, kind: 'missile', lane: 64 },",
+      replace: "  { at: 892, kind: 'missile', lane: 64 },\n  { at: 3100, kind: 'weapon', lane: 44 },",
     },
   },
   {
@@ -87,8 +88,11 @@ export const PROBES = [
     edit: {
       path: 'src/content/levels.ts',
       // `gauntlet` — level six, so the flat spot lands between the last two bosses.
-      find: "  { at: 3075, kind: 'weapon', lane: 54 },",
-      replace: "  { at: 3075, kind: 'weapon', lane: 54 },\n  { at: 4900, kind: 'weapon', lane: 44 },",
+      // ⚠️ Re-anchored by 0256: a level authors a weapon and a missile, and this is the gauntlet's
+      // missile. A third weapon in level six puts its boss at 11 — level seven's — with the level's
+      // step a fraction, which `THE CLIMB` refuses as a flat spot.
+      find: "  { at: 868, kind: 'missile', lane: 42 },",
+      replace: "  { at: 868, kind: 'missile', lane: 42 },\n  { at: 3000, kind: 'weapon', lane: 44 },",
     },
   },
   {

@@ -505,37 +505,7 @@ function paintSky(surface: Surface, view: View, cameraAlong: number, sky: Sky): 
   }
 }
 
-/**
- * How far a stack badge sits from its piece's centre, along and across, in world units — over the
- * bubble's lower-right, where no face draws.
- */
-const STACK_OFFSET = 3;
-
-/**
- * A badge on every pickup worth more than one rung — 0243.
- *
- * ⚠️ **A SECOND BLIT FOR A STACKED PIECE, AND ONLY FOR ONE.** A pickup is one bitmap; a piece a death
- * threw back carries a count, and the count is a bitmap of its own blitted over the piece's corner,
- * interpolated on the same alpha as the piece so the two move as one thing. An authored pickup
- * (stack 1) costs what it always cost, so 0025's worst case — which holds no scattered piece — is
- * unchanged, and a death adds at most two.
- *
- * `badges` is by stack from two: `[×2, ×3, ×4]`. A stack past the last wears the last.
- */
-export function paintStacks(
-  surface: Surface,
-  view: View,
-  pickups: Pool<Entity>,
-  badges: readonly number[],
-  cameraAlong: number,
-  alpha: number,
-): void {
-  for (let i = 0; i < pickups.size; i++) {
-    const e = pickups.at(i);
-    if (e.stack < 2) continue;
-    const at = e.stack - 2 < badges.length ? e.stack - 2 : badges.length - 1;
-    const inView = e.prevAlong + (e.along - e.prevAlong) * alpha - cameraAlong + STACK_OFFSET;
-    const across = e.prevAcross + (e.across - e.prevAcross) * alpha + STACK_OFFSET;
-    surface.blit(badges[at]!, screenX(view, inView, across), screenY(view, inView, across), view.scale);
-  }
-}
+/*
+  `paintStacks` was here — 0243's second blit for a scattered piece worth more than one rung — and
+  0256 deleted it with the scatter: every piece on the field is worth one rung now.
+*/

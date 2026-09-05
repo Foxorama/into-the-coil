@@ -296,7 +296,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     deaths: makeDeaths(CAPACITY.enemies),
     hits: makeDeaths(CAPACITY.missiles),
     burstRng: makeRng('test').stream('burst'),
-    scatterRng: makeRng('test').stream('scatter'),
+    dropRng: makeRng('test').stream('scatter'),
     arcRng: makeRng('test').stream('arc'),
     rainRng: makeRng('test').stream('rain'),
     rockRng: makeRng('test').stream('rock'),

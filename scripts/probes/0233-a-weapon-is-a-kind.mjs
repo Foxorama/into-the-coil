@@ -61,14 +61,15 @@ export const PROBES = [
   {
     decision: '0233',
     suite: 'tests/weapons.test.ts',
-    // The old rungs kept across a switch: a player at four pulses switches to an arc at tier four.
-    broke: 'a switch keeping the old gun’s rungs, so a new gun starts at the top of its ladder',
+    // ⚠️ INVERTED BY 0256. This broke *a switch keeping the old gun's rungs*, which is the rule
+    // now: a switch keeps the count. What 0233 still owns is that a switch SWITCHES — the kind
+    // on the run follows the pickup's face — and that is the break here.
+    broke: 'a switch not switching, so the run keeps the fitted gun whatever face was taken',
     guard: 'THE SWITCH: another gun is an upgrade',
     edit: {
       path: 'src/state/slices/run.ts',
-      // ⚠️ Re-anchored by 0243: the appended half is `rungs`, the count the pickup was worth.
-      find: '          : [...state.upgrades.filter((u) => u !== action.upgrade), ...rungs];',
-      replace: '          : [...state.upgrades, ...rungs];',
+      find: "        weapon: action.upgrade === 'weapon' ? action.kind : state.weapon,",
+      replace: '        weapon: state.weapon,',
     },
   },
   {

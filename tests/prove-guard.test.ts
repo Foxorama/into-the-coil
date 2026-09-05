@@ -260,6 +260,12 @@ const WITHOUT_PROBES: Record<string, string> = {
   // what was measured in 2026-08 and stays; what cannot be re-run is a break against code that is no
   // longer in the repository. Repointing them at anything would be theatre — 0019's STILL GREEN.
   '0052': 'superseded by 0082, which removed the cycle its probes broke; the table records what was measured and there is no longer any code to break',
+  // The same reversal again. 0243 shipped with four probes over the death scatter's stack, face and
+  // badge; docs/decisions/0256-a-pickup-keeps-the-count.md removed the scatter, the `stack` field and
+  // the badge, so they were deleted along with `tests/stack.test.ts`. Its table is still a true account
+  // of what was measured on 2026-09-05 and stays; repointing the probes at the mid-boss's drop would be
+  // theatre — 0256 has its own.
+  '0243': 'superseded by 0256, which removed the scatter its probes broke; the table records what was measured and there is no longer any code to break',
   // The fourth exemption that is not a hole, and the first one a DEMOTION produced.
   // docs/decisions/0192-a-guard-holds-an-invariant.md moved 0167's *a build does not duck* into
   // `tests/authored.ts`, where it is measured on every run and cannot fail one. A probe proves a

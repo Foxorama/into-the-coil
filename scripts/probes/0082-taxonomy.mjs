@@ -26,22 +26,18 @@ export const PROBES = [
       that only catches a total reversion is a guard that lets the density creep back one pickup at a
       time, which is how it got to twenty-four in the first place.
     */
-    broke: 'a level quietly given more shields than the ask allows',
-    guard: 'offers the budget the ask named, in every level',
+    broke: 'a level quietly given more missiles than the ask allows',
+    guard: 'THE BUDGET: a level authors one weapon and one missile and nothing else',
     edit: {
       path: 'src/content/levels.ts',
       /*
-        ⚠️ RE-AIMED AT THE SHIELDS BY 0083. It used to add weapons, and 0083 gave the weapon count a
-        guard of its own — an exact match against `UPGRADE_TIERS`, because *cap the guns before the
-        boss* is arithmetic rather than a range. Extra weapons now redden that one instead, which is
-        the wrong guard for this probe to be standing over. The shields still have a RANGE, so they are
-        what a budget ceiling is actually made of.
+        ⚠️ RE-AIMED AT THE SHIELDS BY 0083, AND AT THE MISSILES BY 0256. It used to add weapons, and
+        0083 gave the weapon count a guard of its own. 0256 cut a level to a weapon and a missile and
+        moved the shields to the mid-boss's drop, so the budget guard is `THE BUDGET` now and the
+        creep this models is a second missile in the middle of a level.
       */
-      find: "  { at: 3905, kind: 'shield', lane: 62 },",
-      replace:
-        "  { at: 3905, kind: 'shield', lane: 62 },\n" +
-        "  { at: 6000, kind: 'shield', lane: 40 },\n" +
-        "  { at: 6100, kind: 'shield', lane: 55 },",
+      find: "  { at: 868, kind: 'missile', lane: 42 },",
+      replace: "  { at: 868, kind: 'missile', lane: 42 },\n  { at: 2600, kind: 'missile', lane: 40 },",
     },
   },
   {
@@ -138,6 +134,8 @@ export const PROBES = [
       path: 'src/app/frame.ts',
       // ⚠️ Re-anchored by 0243: the divisor is `pieces` — the kinds present — and spacing the two
       // over four headings puts both on one side of the wreck.
+      // ⚠️ Re-aimed by 0256: the throw is the mid-boss's drop now, three pieces, and the pool's
+      // bound is what `pieces` is spaced over.
       find: '  const angle = Math.PI / 3 + (index / pieces) * Math.PI * 2',
       replace: '  const angle = Math.PI / 3 + (index / (pieces * 2)) * Math.PI * 2',
     },

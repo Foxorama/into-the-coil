@@ -7,31 +7,14 @@
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
-  {
-    decision: '0041',
-    suite: 'tests/pickups.test.ts',
-    // ⚠️ THE ONE THAT SHIPPED. Removing two upgrades leaves a level that still reads as generous —
-    // there are nine left — and a player who dies at the wrong moment flies half a minute unarmed.
-    broke: 'a level stretch left with nothing to rearm from, which is what 0040 shipped',
-    guard: 'THE TARGET: a level offers exactly enough weapons to cap the guns, and it does it before the boss',
-    edit: {
-      path: 'src/content/levels.ts',
-      /*
-        ⚠️ RE-ANCHORED TWICE, AND THE SECOND TIME TAUGHT SOMETHING. It removed one of approach's four
-        `spread` pickups out of twenty-four; 0082 pointed it at one of three weapons; 0083 gave a level
-        two missiles as well, and **removing a middle weapon stopped reddening this guard at all** —
-        the missiles now sit in the gaps, so the worst stretch went from 94 seconds to 49 and the
-        ceiling is 55.
+  /*
+    ── THE PROBE FOR *a level stretch left with nothing to rearm from* WAS HERE ─────────────────────
 
-        ⚠️ So the break is the LAST upgrade in the level, which leaves the run to the boss with nothing
-        in it: 71 seconds from the last missile at 3,800 to the boss at 6,350. That is the defect the
-        guard is actually about — a player who dies late flies the hardest stretch with the base weapon
-        — and the middle-of-the-level version had quietly stopped being it.
-      */
-      find: "  { at: 3069, kind: 'weapon', lane: 50 },\n",
-      replace: '',
-    },
-  },
+    It was the one that shipped in 0040, re-anchored twice through 0082 and 0083, and its guard —
+    `THE TARGET: a level offers exactly enough weapons to cap the guns` — went with its premise in
+    `docs/decisions/0256-a-pickup-keeps-the-count.md`: a death costs one rung now, so a level does
+    not have to rearm a player who is never unarmed. What a level authors is 0256's own probe file.
+  */
   {
     decision: '0041',
     suite: 'tests/pickups.test.ts',
@@ -68,8 +51,9 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0233: the arm is a ternary now — the same kind appends, another kind
       // starts the ladder again — and the break is the appending half deduplicated.
       // ⚠️ Re-anchored by 0243: the appended half is `rungs`, the count the pickup was worth.
-      find: '          ? [...state.upgrades, ...rungs]',
-      replace: '          ? (state.upgrades.includes(action.upgrade) ? state.upgrades : [...state.upgrades, ...rungs])',
+      // ⚠️ Re-anchored by 0256: one arm again — a switch keeps the count — clamped at the cap.
+      find: '      const upgrades = tiersOf(state.upgrades, action.upgrade) < UPGRADE_TIERS ? [...state.upgrades, action.upgrade] : state.upgrades;',
+      replace: '      const upgrades = state.upgrades.includes(action.upgrade) ? state.upgrades : [...state.upgrades, action.upgrade];',
     },
   },
   {
@@ -78,21 +62,20 @@ export const PROBES = [
     // 0039's rule, now that there is a second field for it to be forgotten in. The line above is the
     // arsenal, which is what makes this the plausible miss.
     //
-    // ⚠️ RENAMED GUARD, and `npm run prove` is the only thing that could have said so.
+    // ⚠️ RENAMED GUARD TWICE, and `npm run prove` is the only thing that could have said so.
     // `docs/decisions/0085-a-death-does-not-cost-the-bombs.md` inverted the assertion this points at
     // and retitled it with the rule; `anchorFailures` cannot see that, because the probe's own anchor
-    // still resolves perfectly. The break is untouched — a death still costs the upgrades, and that
-    // is the half of 0039 that 0085 leaves standing.
-    broke: 'a death that leaves the weapon upgrades on the ship',
-    guard: 'a death costs the upgrades and leaves the arsenal exactly where it was',
+    // still resolves perfectly. `docs/decisions/0256-a-pickup-keeps-the-count.md` did it again: a
+    // death costs a RUNG now, so the break is a death that costs nothing at all.
+    broke: 'a death that leaves the whole ladder on the ship',
+    guard: 'a death costs one rung per ladder, keeps the gun, and leaves the arsenal exactly where it was',
     edit: {
       path: 'src/state/slices/run.ts',
       // ⚠️ Anchored on the UPGRADES line rather than on the whole returned literal, which is what it
       // was and what went stale the day 0053 turned the arm into a multi-line object. The twelve-space
       // indent is the `lifeLost` arm; `begin` has the same field at eight.
-      // ⚠️ Re-anchored by 0233: the base kinds go back on the line after this one.
-      find: '            upgrades: [],\n            // The base kinds come back',
-      replace: '            upgrades: state.upgrades,\n            // The base kinds come back',
+      find: '            upgrades: afterDeath(state.upgrades),',
+      replace: '            upgrades: state.upgrades,',
     },
   },
   {

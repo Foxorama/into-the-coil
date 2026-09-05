@@ -425,17 +425,12 @@ export const SPRITE_KINDS = [
   */
   'pickupBomb',
   /*
-    ── THE BADGE A SCATTERED PIECE WEARS — 0243 ──────────────────────────────────────────────────
+    ── `stackTwo`, `stackThree`, `stackFour` WERE HERE — 0243's badge — AND 0256 DELETED THEM ────
 
-    *"a single missile power up bubble with an x2/3/4 etc if they had multiple powerups, and same
-    for weapons."* A death throws one piece per kind now, carrying every rung it took, and the
-    count is a small bitmap blitted over the piece's corner (`paintStacks` in `src/render/scene.ts`)
-    — a disc in the pickup ink with the numeral cut out of it, so it is legible against the void by
-    the same rule as the shuriken's hole. Three, because a ladder is four rungs.
+    A death threw one piece per kind carrying every rung it took, and the count was a bitmap over
+    the piece's corner. A death costs a rung and throws nothing now, so nothing is ever worth more
+    than one and the badge had no piece to ride.
   */
-  'stackTwo',
-  'stackThree',
-  'stackFour',
   /*
     ⚠️ **A RING IN THE PLAYER'S OWN INK, and the ring is deliberately the warden's primitive.** The
     two are never confusable in play — one is 9.5 units of enemy at the leading edge and this is 3
@@ -976,10 +971,6 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   pickupSeeker: 7.33,
   pickupShield: 6.67,
   pickupBomb: 5.87,
-  // A badge: a little over half a pickup, so the numeral is a dozen pixels on the shipped screen. 0243.
-  stackTwo: 4.4,
-  stackThree: 4.4,
-  stackFour: 4.4,
   /*
     ⚠️ **Small enough to read as the ship's, not as a body of its own.** Three of these orbit a
     7-unit ship at a 5.6-unit radius; at enemy size they would be a formation flying with the player
