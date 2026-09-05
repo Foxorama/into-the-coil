@@ -31,6 +31,7 @@ export type EnemyKind =
   | 'moth'
   | 'raptor'
   | 'kite'
+  | 'moonJelly'
   | 'sentry'
   | 'shard'
   | 'spore'
@@ -331,6 +332,7 @@ export const ENEMY_KINDS: readonly EnemyKind[] = [
   'moth',
   'raptor',
   'kite',
+  'moonJelly',
   'sentry',
   'shard',
   'spore',
@@ -763,6 +765,27 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     shot: 'spit',
     attack: { kind: 'aimed' },
     motion: { kind: 'weave', amplitude: 16, wavelength: 90 },
+  },
+  /**
+   * The moon jelly — `docs/decisions/0255-the-jellyfish-opens.md`: the Black Heart's rain.
+   * *"Lots of moon jelly adds that rain down onto the screen and player."*
+   *
+   * ⚠️ **SENT BY THE JELLYFISH'S FALL AND BY NO LEVEL**, on the kite's terms (0249). A bell with a
+   * fringe, one hit, one bite, the slowest closing thing that closes at all — what it does is sink
+   * across the lane from the top edge at that speed, which is `rainBodies` in `src/app/frame.ts`
+   * giving it the flanker's steer. It has no gun: a rain that shot would be a wall.
+   */
+  moonJelly: {
+    sprite: SPRITE.moonJelly,
+    spriteHit: SPRITE.moonJellyHit,
+    radius: 2.6,
+    health: 1,
+    damage: 1,
+    closing: 0.1,
+    fireEvery: 0,
+    shot: 'spit',
+    attack: { kind: 'aimed' },
+    motion: { kind: 'drift', roam: 0.06 },
   },
   sentry: {
     sprite: SPRITE.sentry,

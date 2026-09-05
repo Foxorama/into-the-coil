@@ -270,7 +270,7 @@ export interface Head {
  * `volley` fires a fan and uses all three; `bare` fires nothing and carries them anyway, which is
  * what makes it hold to the same escalation rules as everything else — see below.
  */
-export const BOSS_STANCE_KINDS = ['volley', 'bare'] as const;
+export const BOSS_STANCE_KINDS = ['volley', 'bare', 'open'] as const;
 
 /** Derived from the list, so a stance cannot exist in the union and be missing from the switch. */
 export type BossStanceKind = (typeof BOSS_STANCE_KINDS)[number];
@@ -305,7 +305,20 @@ export type BossStance =
    * would have needed carving out of two guards written for different reasons, which is the shape
    * `docs/decisions/0148-a-place-has-its-own-notes.md` is the standing warning about.
    */
-  | { kind: 'bare'; damageScale: number };
+  | { kind: 'bare'; damageScale: number }
+  /**
+   * It opens AND goes on throwing — `docs/decisions/0255-the-jellyfish-opens.md`. Asked for:
+   * *"final phase will be the jellyfish opening up and the black heart spewing forth a rain of
+   * void blasts."*
+   *
+   * ⚠️ **NOT A RELIEF, WHICH IS THE WHOLE DIFFERENCE FROM `bare`.** The bared window stops shooting
+   * and is the fight ending on something other than a bar reaching zero; this is the fight getting
+   * harder and shorter at once — the heart is exposed, and it is what is shooting. `damageScale`
+   * multiplies what the player's shots take off it exactly as `bare`'s does; the fan is thrown as
+   * `volley` throws it. It sits inside every escalation rule with nothing carved out, and the one
+   * rule written for `bare` — once, at the end — does not read it, because it is not a window.
+   */
+  | { kind: 'open'; damageScale: number };
 
 /**
  * The uncoil: a curtain right across the lane with one hole in it, thrown again and again as the
@@ -422,14 +435,40 @@ export interface Uncoil {
  * The volcano that belched it is the level's own landmark, behind; the picture of the belch is
  * embers at the edge the rock came in over (0036).
  */
-export interface Fall {
-  /** What falls. A hostile shot, sent by this and nothing else. */
-  shot: ShotKind;
-  /** Steps between belches, before the tier's own gap scales it. */
-  every: number;
-  /** How many fall in one belch. */
-  count: number;
-}
+export const FALL_KINDS = ['shot', 'body'] as const;
+
+/** Derived from the list, so a fall cannot exist in the union and be missing from the switch. */
+export type FallKind = (typeof FALL_KINDS)[number];
+
+/**
+ * ⚠️ **A FALL IS A SHOT OR A BODY SINCE 0255**, and it starts at a share of the health. The
+ * volcanoes' rock is a shot (0251); the jellyfish's moon jellies are bodies —
+ * `docs/decisions/0255-the-jellyfish-opens.md`: *"lots of moon jelly adds that rain down onto the
+ * screen and player."* A body is put at the top edge as a rock is and falls at its own closing
+ * speed, steering for a place past the across cull the way a flanker steers for its lane (0048)
+ * so it sinks straight out, and is an enemy in every other respect. `from` is the health fraction at or below which the fall runs,
+ * `1` for one that runs from the first step.
+ */
+export type Fall =
+  | {
+      kind: 'shot';
+      /** What falls. A hostile shot, sent by this and nothing else. */
+      shot: ShotKind;
+      /** Steps between belches, before the tier's own gap scales it. */
+      every: number;
+      /** How many fall in one belch. */
+      count: number;
+      /** Health fraction at or below which it falls. */
+      from: number;
+    }
+  | {
+      kind: 'body';
+      /** What falls. An enemy, sent by this and by no level. */
+      enemy: EnemyKind;
+      every: number;
+      count: number;
+      from: number;
+    };
 
 /**
  * The chill: what a boss's hull does to a ship that comes too close —
@@ -1084,7 +1123,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     uncoil: null,
     // The volcanoes — 0251: two rocks every second and a half, from the top of the screen, through
     // the whole fight.
-    fall: { shot: 'rock', every: 90, count: 2 },
+    fall: { kind: 'shot', shot: 'rock', every: 90, count: 2, from: 1 },
     chill: null,
     sprite: SPRITE.boss10,
     spriteHit: SPRITE.boss10Hit,
@@ -1286,8 +1325,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
   medusa: {
     move: { kind: 'bob', amplitude: 14, wavelength: 260 },
     attack: { kind: 'ring' },
-    uncoil: { from: 0.5, every: 0.1, gap: 4, at: 50, hole: 13, spin: false },
-    fall: null,
+    // No curtain since 0255: it was the tendrils' stand-in, and the tendrils are here.
+    uncoil: null,
+    // The moon jellies — 0255: from three quarters of its health, two a volley from the top edge.
+    fall: { kind: 'body', enemy: 'moonJelly', every: 75, count: 2, from: 0.75 },
     chill: null,
     sprite: SPRITE.boss14,
     spriteHit: SPRITE.boss14Hit,
@@ -1300,13 +1341,21 @@ export const BOSSES: Record<BossKind, BossRow> = {
     patrol: 0.24,
     shot: 'spit',
     phases: [
+      /*
+        ⚠️ **FIVE PHASES, AND THE LAST ONE OPENS AND KEEPS THROWING — 0255.** A ring while whole;
+        at three quarters the tendrils — five beams hanging down the lane from the bell, pulsing
+        (0250's beam, short warning, short hold) — while the moon jellies begin to fall; a denser
+        ring at half; the tendrils wider and longer held at the last third; and at the last fifth
+        the bell opens: twice the damage taken, and a ring of ten void out of the heart every
+        sixth of a second. *"The black heart spewing forth a rain of void blasts."*
+      */
       { upTo: 1, fireEvery: 66, shots: 4, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.75, fireEvery: 54, shots: 6, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.75, fireEvery: 54, shots: 6, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' }, shot: null, attack: { kind: 'beam', warning: 12, hold: 12, halfWidth: 1.2, from: [-12, -6, 0, 6, 12] } },
       { upTo: 0.5, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.6, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.3, fireEvery: 42, shots: 10, spread: 0, patrolScale: 2, stance: { kind: 'volley' }, shot: null, attack: null },
-      // The opening: a sixth of the bar at three times the damage is 1.8 s at max weapons, past the
-      // death it runs into (0150's floor).
-      { upTo: 0.16, fireEvery: 36, shots: 10, spread: 0, patrolScale: 1.2, stance: { kind: 'bare', damageScale: 3 }, shot: null, attack: null },
+      { upTo: 0.3, fireEvery: 42, shots: 8, spread: 0, patrolScale: 2, stance: { kind: 'volley' }, shot: null, attack: { kind: 'beam', warning: 12, hold: 18, halfWidth: 1.5, from: [-15, -7.5, 0, 7.5, 15] } },
+      // A fifth at twice the damage is 3.4 s at max weapons — over 0124's three, and past the death it
+      // runs into (0150's floor).
+      { upTo: 0.2, fireEvery: 36, shots: 10, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 2 }, shot: 'void', attack: { kind: 'ring' } },
     ],
   },
 };

@@ -111,7 +111,9 @@ export function phaseFor(row: BossRow, health: number, full: number = row.health
  * `src/sim/collide.ts` may import `brand` and nothing else and so cannot be told what a boss is.
  */
 export function openBy(phase: BossPhase): number {
-  return phase.stance.kind === 'bare' ? phase.stance.damageScale : 1;
+  // The bared window and the opened bell both take more — 0255; only the first stops throwing.
+  const stance = phase.stance;
+  return stance.kind === 'bare' || stance.kind === 'open' ? stance.damageScale : 1;
 }
 
 /**

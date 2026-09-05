@@ -138,6 +138,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the gyre spins: a curtain has four stances and a spinning wall takes them in turn — across the lane, slanted corner to corner, along the lane falling from the top edge, slanted back — one hole at the same share of every line, never from behind** | [0252](decisions/0252-the-gyre-spins.md) |
 | **the frost ship chills: a hull's cold on the row scales the stick's ask inside its radius and freezes a ship that stays; the frost shard in its own cold ink, in the one rung the ladder had left; shards as adds** | [0253](decisions/0253-the-frost-ship-chills.md) |
 | **the hydra grows heads: a head is a shot and an attack, a phase grows one and keeps the rest, and the heads take turns a volley — acid, flame, a laser, frost, void** | [0254](decisions/0254-the-hydra-grows-heads.md) |
+| **the jellyfish opens: tendrils are pulsing beams from the bell; a fall is a shot or a body and starts at a share of the health — moon jellies, a new body no level sends, sink across the lane; a third stance opens and keeps throwing void** | [0255](decisions/0255-the-jellyfish-opens.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -807,9 +808,11 @@ a spinning wall takes in turn. And the frost ship's —
 [0253](decisions/0253-the-frost-ship-chills.md): a cold on the row that scales the stick's ask
 and freezes a ship that stays, the frost shard, shards as adds. And the hydra's —
 [0254](decisions/0254-the-hydra-grows-heads.md): a head a fifth, each its own shot and attack,
-taking turns a volley. What is next, in the brief's order, is the last real boss's decision**,
-adding the words its fight needs: the jellyfish's tendrils, its raining moon jellies and its
-opening. What is owed is
+taking turns a volley. And the jellyfish's — [0255](decisions/0255-the-jellyfish-opens.md):
+pulsing tendrils, moon jellies falling from three quarters, and an opening that keeps throwing
+void. **Every real boss in the brief has its first iteration now; what is next is the play** —
+seven fights on the branch previews, each decision's *owed* list read against what the player
+saw. What is owed is
 another play, on the branch preview, of the ship, its guns and its deaths as 0246 left them, and of both fights of a level as 0247 left them; an ear on `arc`, `zap` and `throw` as they are now
 (`scripts/hear.mjs --only=arc,zap,throw` writes them); and an eye on the leaning flame, the livery
 at seven units, the helix ahead of the ship and the seeker turning in flight, at the camera the game

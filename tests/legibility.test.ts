@@ -152,7 +152,7 @@ describe('the shot that kills you is not the shot you kill with', () => {
         BOSSES[k].shot,
         ...BOSSES[k].phases.map((p) => p.shot ?? BOSSES[k].shot),
         ...BOSSES[k].phases.flatMap((p) => (p.attack?.kind === 'heads' ? p.attack.heads.map((h) => h.shot) : [])),
-        ...(BOSSES[k].fall === null ? [] : [BOSSES[k].fall.shot]),
+        ...(BOSSES[k].fall?.kind === 'shot' ? [BOSSES[k].fall.shot] : []),
       ]),
     );
     expect(fromBosses.size, `all ${BOSS_KINDS.length} bosses send ${fromBosses.size} kind(s) of bullet`).toBeGreaterThan(

@@ -23,6 +23,7 @@
  */
 
 import {
+  ACROSS_CULL_MAX,
   ACROSS_SPAN,
   flankAlongFor,
   FLANK_MARGIN,
@@ -2976,6 +2977,34 @@ function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: Fo
   }
 }
 
+/**
+ * A fall of bodies — `docs/decisions/0255-the-jellyfish-opens.md`: `count` of `enemy` put at the
+ * top edge of the lane, each somewhere along the box the ship can fly in on the fall's own stream,
+ * sinking across the lane at the row's own closing speed and steering for a place past the across
+ * cull the way a flanker steers for its lane (0048) — so `steerEnemies` carries it straight across
+ * and out, and the cull takes it before it ever arrives. An enemy in every other respect: it is
+ * shot down as one, and it bites as one.
+ */
+function rainBodies(w: World, enemy: EnemyKind, count: number): void {
+  const kind = w.enemyKinds[enemy];
+  const row = w.enemyRows[kind];
+  if (row === undefined) return;
+  for (let i = 0; i < count; i++) {
+    const e = w.enemies.spawn();
+    if (e === null) return;
+    const along = w.cameraAlong + w.rockRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD);
+    reset(e, along, -row.radius, row, kind);
+    e.fireIn = nextOnGrid(w.steps, fireGapFor(row.fireEvery, w.difficulty), i / count);
+    // A steering body is not driven by its motion until it arrives, so it must ride the camera on
+    // its own or fall off the back of the world before it reaches the bottom of the lane.
+    e.velAlong = w.scrollPerStep;
+    e.velAcross = row.closing;
+    e.steerAcross = ACROSS_CULL_MAX + row.radius;
+    if (row.motion.kind === 'loop') e.turnsLeft = row.motion.turns;
+    else if (row.motion.kind === 'circle') e.spin = i % 2 === 0 ? 1 : -1;
+  }
+}
+
 function spawnWave(w: World, index: number): void {
   const wave = w.level.waves[index];
   if (wave === undefined) return;
@@ -4143,17 +4172,34 @@ function driveBoss(w: World): void {
     rains harder and the fall composes with the difficulty rather than ignoring it.
   */
   const fall = w.bossRow.fall;
-  if (fall !== null) {
+  if (fall !== null && boss.health <= fall.from * w.bossFullHealth) {
     w.bossFallIn--;
     if (w.bossFallIn <= 0) {
-      const rock = SHOTS[fall.shot];
-      const before = w.enemyShots.size;
-      belch(fall, w.enemyShots, rock, rock.speed * w.difficulty.shotSpeed, w.cameraAlong, w.scrollPerStep, w.rockRng);
-      for (let i = before; i < w.enemyShots.size; i++) {
-        const thrown = w.enemyShots.at(i);
-        burst(w, thrown.along, 0, BURST.belch);
+      // A shot or a body — 0255; the `never` arm is what makes the union closed (0016).
+      switch (fall.kind) {
+        case 'shot': {
+          const rock = SHOTS[fall.shot];
+          const before = w.enemyShots.size;
+          belch(fall, w.enemyShots, rock, rock.speed * w.difficulty.shotSpeed, w.cameraAlong, w.scrollPerStep, w.rockRng);
+          for (let i = before; i < w.enemyShots.size; i++) {
+            const thrown = w.enemyShots.at(i);
+            burst(w, thrown.along, 0, BURST.belch);
+          }
+          if (w.enemyShots.size > before) w.onCue('threat', 0);
+          break;
+        }
+        case 'body': {
+          const before = w.enemies.size;
+          rainBodies(w, fall.enemy, fall.count);
+          for (let i = before; i < w.enemies.size; i++) burst(w, w.enemies.at(i).along, 0, BURST.belch);
+          if (w.enemies.size > before) w.onCue('threat', 0);
+          break;
+        }
+        default: {
+          const never: never = fall;
+          return never;
+        }
       }
-      if (w.enemyShots.size > before) w.onCue('threat', 0);
       w.bossFallIn = fireGapFor(fall.every, w.difficulty);
     }
   }

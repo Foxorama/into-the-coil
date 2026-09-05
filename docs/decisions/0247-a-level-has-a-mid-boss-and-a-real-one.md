@@ -57,7 +57,7 @@ rows are in `src/content/bosses.ts`, after the seven, each tougher than the last
 | the Labyrinth | `gyre`, the lattice upgraded | patrol, rake, and the tightest curtain in the game | 880 | the spin: walls at every angle — landed as [0252](0252-the-gyre-spins.md) |
 | Rime Shelf | `hoarfrost`, the frost ship | stalk, wall | 940 | frost bolts and blasts; the cold that slows and freezes; adds — landed as [0253](0253-the-frost-ship-chills.md) |
 | Toxic Mire | `hydra` | bob, spray, a head at every fifth of its health | 1000 | a kind of shot per head: acid, flame, laser, frost, void — landed as [0254](0254-the-hydra-grows-heads.md) |
-| the Black Heart | `medusa`, the jellyfish | bob, ring, a curtain, and the eye | 1100 | tendrils that pulse lightning; moon jellies that rain down; the rain of void when it opens |
+| the Black Heart | `medusa`, the jellyfish | bob, ring, a curtain, and the eye | 1100 | tendrils that pulse lightning; moon jellies that rain down; the rain of void when it opens — landed as [0255](0255-the-jellyfish-opens.md), which drops the curtain and turns the eye into an opening that keeps throwing |
 
 The gyre's curtain is the second half of its ask today — *"the bullet gaps will be close so you
 can't fit through them, the spaceship gaps will be the same size"*: a spacing of three against the

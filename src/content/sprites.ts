@@ -185,6 +185,10 @@ export const SPRITE_KINDS = [
   // eagle in hordes and sent by nothing else.
   'kite',
   'kiteHit',
+  // The moon jelly — 0255: the Black Heart's rain, a bell with a fringe, sent by the jellyfish's
+  // fall and by nothing else.
+  'moonJelly',
+  'moonJellyHit',
   'sentry',
   'sentryHit',
   'shard',
@@ -801,6 +805,9 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // Smaller than the moth it flies beside and than the raptor it is summoned with — 0249.
   kite: 6.5,
   kiteHit: 6.5,
+  // The kite's size, and told from it by shape: a bell over a fringe against a diamond — 0255.
+  moonJelly: 6.5,
+  moonJellyHit: 6.5,
   sentry: 7,
   sentryHit: 7,
   shard: 7.5,

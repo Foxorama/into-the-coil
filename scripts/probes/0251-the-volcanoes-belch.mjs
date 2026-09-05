@@ -23,8 +23,9 @@ export const PROBES = [
     guard: 'THE BELCH, DRIVEN',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  const fall = w.bossRow.fall;\n  if (fall !== null) {',
-      replace: '  const fall = w.bossRow.fall;\n  if (fall !== null && w.steps < 0) {',
+      // Re-anchored by 0255, which gave a fall a health it starts at.
+      find: '  const fall = w.bossRow.fall;\n  if (fall !== null && boss.health <= fall.from * w.bossFullHealth) {',
+      replace: '  const fall = w.bossRow.fall;\n  if (fall !== null && boss.health <= fall.from * w.bossFullHealth && w.steps < 0) {',
     },
   },
   {

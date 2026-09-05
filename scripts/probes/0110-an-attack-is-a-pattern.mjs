@@ -21,9 +21,10 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: most of what shoots is not aimed at the player',
     edit: {
       path: 'src/content/enemies.ts',
-      // ⚠️ Re-anchored by 0249, which put the kite after the raptor. Same break.
-      find: "  'picket',\n  'moth',\n  'raptor',\n  'kite',\n  'sentry',\n  'shard',\n  'spore',\n  'gaze',\n];",
-      replace: "  'raptor',\n  'kite',\n  'spore',\n  'gaze',\n];",
+      // ⚠️ Re-anchored by 0249, which put the kite after the raptor, and by 0255, which put the
+      // moon jelly after the kite. Same break.
+      find: "  'picket',\n  'moth',\n  'raptor',\n  'kite',\n  'moonJelly',\n  'sentry',\n  'shard',\n  'spore',\n  'gaze',\n];",
+      replace: "  'raptor',\n  'kite',\n  'moonJelly',\n  'spore',\n  'gaze',\n];",
     },
   },
   {
