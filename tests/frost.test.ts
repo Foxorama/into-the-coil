@@ -22,7 +22,7 @@ import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { BURST } from '../src/content/debris.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
-import { SHOTS, SHOT_KINDS } from '../src/content/shots.ts';
+import { SHARD_VOLLEY, SHOTS, SHOT_KINDS } from '../src/content/shots.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { INK_OF } from '../src/render/bake.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
@@ -216,7 +216,21 @@ describe('0253 — the frost ship chills', () => {
     e.world.bossPool.at(0).fireIn = 1;
     e.world.ship.health = e.world.shipRow.health;
     e.frame.step();
-    expect(e.world.enemyShots.size, 'the spray threw fewer than its shots').toBeGreaterThanOrEqual(throwing.shots);
+    /*
+      ⚠️ **UP TO THE SHARD CEILING SINCE 0270, AND THE CEILING IS WHY THIS LINE CHANGED.** It read
+      `throwing.shots` flat, which was the whole truth while nothing capped a shattering volley —
+      and `docs/decisions/0270-a-shattering-volley-is-counted-in-shards.md` caps one everywhere it
+      is thrown, because the hydra's frost head was spending a count shared with four heads that
+      throw bullets spent by arriving. The frost ship's own phases are all inside the ceiling, so
+      what this asserts about the shipped content is unchanged; what it no longer asserts is that an
+      authored count ABOVE the ceiling would be thrown, which is exactly what 0270 refuses.
+
+      ⚠️ **Changed rather than loosened, per 0192**: `min` is the rule now, and a volley that threw
+      fewer than the rule says still fails here.
+    */
+    expect(e.world.enemyShots.size, 'the spray threw fewer than its shots').toBeGreaterThanOrEqual(
+      Math.min(throwing.shots, SHARD_VOLLEY),
+    );
     for (let i = 0; i < e.world.enemyShots.size; i++) {
       expect(e.world.enemyShots.at(i).sprite, 'a blast is not frost').toBe(SHOTS.frost.sprite);
       expect(e.world.enemyShots.at(i).turnsLeft, 'a shard from the hull is not at its first stage').toBe(0);

@@ -71,6 +71,18 @@ been photographed, because reaching one meant fighting to it: two thirds of the 
 outside [0027](0027-measure-the-picture-not-the-model.md)'s eyes-on rig, and the frost walls this
 decision is about were argued over in world units for an afternoon before anybody looked at one.
 
+**And it moves two things 0263 wrote, which is stated here rather than left to be found.** 0263's
+guard held that the frost ship's last spray throws its phase's `shots`; the truth with a ceiling is
+`min(shots, SHARD_VOLLEY)`, so the assertion is changed and says why —
+[0192](0192-a-guard-holds-an-invariant.md)'s *change the guard and say why*, never *loosen it*. The
+shipped content is inside the ceiling either way, so nothing about the fight it describes moved.
+0263's probe broke that phase to twelve shards to fill the pool; twelve is now clamped to three
+before it gets there, so the break went red on a different guard —
+[0019](0019-a-probe-must-be-seen-to-apply.md)'s own failure, reported by the harness rather than
+found by hand. It is re-pointed at 0263's other half, the fission: a snowflake of twelve rather than
+six is one shard becoming twenty-four flakes, which is the same claim in the half this decision does
+not stand in front of.
+
 ## The figures
 
 | what | value |

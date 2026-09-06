@@ -104,13 +104,26 @@ export const PROBES = [
   {
     decision: '0263',
     suite: 'tests/frost.test.ts',
-    // The last fifth counted in flakes rather than shards: the ring 0253 threw, back.
-    broke: 'the last fifth throwing twelve shards a volley, which is a hundred and forty-four flakes',
+    /*
+      ⚠️ **RE-POINTED BY 0270, AND THE OLD BREAK IS NOW UNREPRESENTABLE.** It set the last phase to
+      `shots: 12` — twelve shards, a hundred and forty-four flakes — and proved that a volley counted
+      in flakes rather than shards fills the pool. `docs/decisions/0270-a-shattering-volley-is-counted-in-shards.md`
+      caps a shattering volley at `SHARD_VOLLEY` wherever it is thrown, so twelve is clamped to three
+      before it reaches the pool: the break went red on a DIFFERENT guard, which 0019 reports as
+      proving nothing.
+
+      ⚠️ **So it breaks 0263's own mechanism instead — the fission — rather than the count.** A
+      snowflake of twelve in place of six is one shard becoming twenty-four flakes, which is the same
+      claim this probe always made (*a shard that becomes too much fills the pool*) expressed in the
+      half of it 0270 does not stand in front of. Breaking the ceiling itself is 0270's probe to run,
+      and two probes for one assertion is the second copy 0029 argues against.
+    */
+    broke: 'a snowflake of twelve rather than six, so one shard becomes twenty-four flakes',
     guard: 'the frost never fills the pool',
     edit: {
-      path: 'src/content/bosses.ts',
-      find: "      { upTo: 0.2, fireEvery: 60, shots: 3, spread: 1.2, patrolScale: 1.9, stance: { kind: 'volley' }, shot: null, attack: { kind: 'spray' } },",
-      replace: "      { upTo: 0.2, fireEvery: 60, shots: 12, spread: 1.2, patrolScale: 1.9, stance: { kind: 'volley' }, shot: null, attack: { kind: 'spray' } },",
+      path: 'src/content/shots.ts',
+      find: "      { after: 40, into: 'ring', shots: 6 },",
+      replace: "      { after: 40, into: 'ring', shots: 12 },",
     },
   },
 ];
