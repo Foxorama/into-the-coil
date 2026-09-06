@@ -40,11 +40,12 @@ export const PROBES = [
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0247 onto the serpent's middle phase; the sentinel has two phases now. And
-      // by 0248, which made that phase the void spray.
-      find: "      { upTo: 0.66, fireEvery: 66, shots: 3, spread: 0.8, patrolScale: 1.3, stance: { kind: 'volley' }, shot: 'void', attack: { kind: 'spray' } },",
+      // by 0248, which made that phase the void spray. And by 0261, onto the serpent's FIRST phase,
+      // the one line of its table still on one line: a sliver of a phase cut off the top of it.
+      find: "      { upTo: 1, fireEvery: 84, shots: 3, spread: 0.7, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },",
       replace:
-        "      { upTo: 0.68, fireEvery: 66, shots: 3, spread: 0.8, patrolScale: 1.3, stance: { kind: 'volley' }, shot: 'void', attack: { kind: 'spray' } },\n" +
-        "      { upTo: 0.66, fireEvery: 66, shots: 3, spread: 0.8, patrolScale: 1.3, stance: { kind: 'volley' }, shot: 'void', attack: { kind: 'spray' } },",
+        "      { upTo: 1, fireEvery: 84, shots: 3, spread: 0.7, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },\n" +
+        "      { upTo: 0.98, fireEvery: 84, shots: 3, spread: 0.7, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },",
     },
   },
   {

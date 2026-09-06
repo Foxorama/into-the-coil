@@ -11,7 +11,9 @@ export const PROBES = [
     guard: 'THE HEADS TAKE TURNS, DRIVEN',
     edit: {
       path: 'src/app/boss.ts',
-      find: '      boss.firePhase++;\n      throwAttack(head.attack, SHOTS[head.shot],',
+      // ⚠️ Re-anchored by 0261, which moved the round's count off `firePhase` — that field is an
+      // angle for a rake, and the serpent is the first boss to rake AND grow heads.
+      find: '      boss.headAt++;\n      throwAttack(head.attack, SHOTS[head.shot],',
       replace: '      throwAttack(head.attack, SHOTS[head.shot],',
     },
   },
@@ -35,8 +37,8 @@ export const PROBES = [
     guard: 'THE HEADS TAKE TURNS, DRIVEN',
     edit: {
       path: 'src/app/boss.ts',
-      find: '      const head = attack.heads[((boss.firePhase % n) + n) % n]!;',
-      replace: '      const head = attack.heads[Math.min(boss.firePhase, n - 1)]!;',
+      find: '      const head = attack.heads[((boss.headAt % n) + n) % n]!;',
+      replace: '      const head = attack.heads[Math.min(boss.headAt, n - 1)]!;',
     },
   },
   {

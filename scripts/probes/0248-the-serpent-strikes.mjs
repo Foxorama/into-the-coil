@@ -2,19 +2,25 @@
 //
 // Every guard 0248 adds, broken on purpose. `node scripts/prove-guard.mjs 0248`.
 
+/*
+  ⚠️ **ONE PROBE IS GONE — *the phase's shot ignored, so the serpent throws acid in every phase* — AND
+  0261 IS WHY.** 0248 gave the serpent a shot per phase and this broke the line that reads it
+  (`SHOTS[throwing.shot ?? w.bossRow.shot]` in `src/app/frame.ts`). 0261 moved the serpent's later
+  phases onto `heads`, and a head names its OWN shot: the phase-level one is now used by its opening
+  third alone, where it is null and falls through to the row's acid anyway. So the break changes
+  nothing about this serpent and the guard stayed green over it.
+
+  It came out in two steps, both of which `npm run prove` had to say out loud: first NOTHING WAS
+  PROVEN, because 0261 had also renamed the guard and `anchorFailures` cannot see a rename; then
+  STILL GREEN once the name was fixed, which is the real answer.
+
+  ⚠️ **Deleted rather than re-aimed at a head's shot** — that is 0261's mechanism and
+  `scripts/probes/0261-*.mjs` already breaks it, twice. The line this broke still matters to bosses
+  whose phases name a shot (the jellyfish's opened bell throws void), and a probe over THAT belongs
+  to whichever decision holds it, not to this one.
+  `docs/decisions/0192-a-guard-holds-an-invariant.md`: demoting takes one edit and a reason.
+*/
 export const PROBES = [
-  {
-    decision: '0248',
-    suite: 'tests/serpent.test.ts',
-    // A phase's shot ignored: the serpent throws acid all the way down.
-    broke: 'the phase’s shot ignored, so the serpent throws acid in every phase',
-    guard: 'THE THREE WEAPONS: acid while whole',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: '    SHOTS[throwing.shot ?? w.bossRow.shot],',
-      replace: '    SHOTS[w.bossRow.shot + (throwing.shot === null ? \'\' : \'\')],',
-    },
-  },
   {
     decision: '0248',
     suite: 'tests/serpent.test.ts',

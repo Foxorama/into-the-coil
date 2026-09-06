@@ -143,7 +143,8 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the arc lands only on a body whose whole hull is on the screen — the reach was measured from a ship that can stand ninety units from the edge** | [0257](decisions/0257-the-arc-lands-on-the-screen.md) |
 | **one pilot a level: the place's signature is the only kind that reacts to the player, every shared kind and every mid-boss flies a pattern and fires one, the eagle is the one end boss that stalks, and a charger turns at the box's ends** | [0258](decisions/0258-one-pilot-a-level.md) |
 | **the bullets stay on the screen: a body fires on entering the view, a wave's members are dealt across the entry window by index, and every level is held to eight seconds dry and two fifths covered at the capped loadout — `scripts/weigh-bullets.mjs` is the instrument** | [0259](decisions/0259-the-bullets-stay-on-the-screen.md) |
-| **a boss is fought to the end: every real boss at twice its health, every phase four volleys at max weapons, the gyre's first wall inside five seconds** | [0260](decisions/0260-a-boss-is-fought-to-the-end.md) |
+| **a boss is fought to the end: every real boss at twice its health, every phase eight volleys at max weapons, the gyre's first wall inside six seconds** | [0260](decisions/0260-a-boss-is-fought-to-the-end.md) |
+| **the serpent throws together: a raking fan of acid, then acid and void in turn, then acid, void and the lightning in turn — the hydra's heads, and the lightning untouched** | [0261](decisions/0261-the-serpent-throws-together.md) |
 | **a death takes both ladders and both kinds and throws every rung where the ship died — one piece per kind, holding the face it took, wearing a ×N badge; 0256's rung is deleted and what a death costs is the crossing and the life** | [0266](decisions/0266-a-death-throws-the-ladders-back.md) |
 | **a fight thins the waves over it: while a mid-boss is on the field one firing wave in three lands and the rest are SKIPPED, never deferred; the quiet ones are untouched — `scripts/weigh-fight.mjs` is the instrument, and the budget is the level's own approach rather than a constant** | [0267](decisions/0267-a-fight-thins-the-waves-over-it.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
@@ -776,7 +777,9 @@ eagle the one end boss that stalks. **The fourth is landed** —
 the quantity; a body fires on entering the view, and `scripts/weigh-bullets.mjs` is the instrument
 every level is now held against. **The fifth is landed** —
 [0260](decisions/0260-a-boss-is-fought-to-the-end.md): every real boss at twice its health, every
-phase four volleys at max weapons, the gyre's first wall inside five seconds.
+phase eight volleys at max weapons, the gyre's first wall inside six seconds. **The sixth is
+landed** — [0261](decisions/0261-the-serpent-throws-together.md): the serpent's acid is a fan that
+rakes, and its weapons are cumulative, taking turns as the hydra's heads do.
 
 ⚠️ **AND FOUR ITEMS ARRIVED FROM PLAYING WHAT LANDED, ALL OF THEM IN.** 0266 above;
 [0267](decisions/0267-a-fight-thins-the-waves-over-it.md) — *"way too many waves in general
@@ -792,8 +795,8 @@ after miniboss."* Two levels' mid-boss fights used to outlive their own wave scr
 *after* for wave spacing to put anything in; at eighteen to twenty-three seconds every level has one,
 of sixty to eighty seconds. 0267's *What is owed* carries the re-measure.
 
-**The next is the serpent** — acid and void thrown with the lightning, the acid a spray — then the
-eagle, the frost ship, the picture; every one of those is a model quantity until it is flown.
+**The next is the eagle** — quills, attacks worth dodging, adds that dive, the whip seen — then the
+frost ship, the picture; every one of those is a model quantity until it is flown.
 Everything below this paragraph about the weapons is the record of how
 the game got to the alpha, and it is kept because the alpha list is a verdict on it.
 

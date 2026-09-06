@@ -50,6 +50,23 @@ function serpentAt(fraction: number): { world: ReturnType<typeof playableWorld>[
   return { world, frame };
 }
 
+/**
+ * Turn the serpent's round to the lightning — 0261. At the last third its heads take turns, and the
+ * rain is the third; `headAt` is the round's count, read off the row rather than typed.
+ *
+ * ⚠️ **IT WAS `firePhase` AND THAT IS THE BUG THIS BRANCH FOUND.** The serpent rakes in its opening
+ * phase, and a rake advances `firePhase` by an ANGLE — so the count the heads indexed by was 5.4 by
+ * the time the fight reached its second phase, and `heads[1.4]` is `undefined`. `src/sim/entity.ts`
+ * carries the argument for the second field.
+ */
+function armRain(boss: { headAt: number }): void {
+  const last = BOSSES.jormungandr.phases[BOSSES.jormungandr.phases.length - 1]!.attack;
+  const heads = last !== null && last.kind === 'heads' ? last.heads : [];
+  const index = heads.findIndex((h) => h.attack.kind === 'rain');
+  expect(index, 'the serpent’s last third has no lightning head').toBeGreaterThanOrEqual(0);
+  boss.headAt = index;
+}
+
 /** A surface that keeps every bolt stroke's hostility, so the picture can be asked whose lightning it drew. */
 class Recorder implements Surface {
   readonly strokes: { count: number; alpha: number; hostile: boolean }[] = [];
@@ -61,35 +78,60 @@ class Recorder implements Surface {
 }
 
 describe('0248 — the serpent strikes', () => {
-  it('THE THREE WEAPONS: acid while whole, void once hurt, lightning at the last third — a phase says what it throws', () => {
+  it('THE THREE WEAPONS: a raking fan of acid while whole, acid and void in turn once hurt, acid, void and lightning in turn at the last third', () => {
+    /*
+      ⚠️ **0261 — `docs/decisions/0261-the-serpent-throws-together.md`.** 0248 gave the serpent one
+      weapon a phase and the alpha play called that *"three separate fire fields"*; the phases are
+      cumulative now, the hydra's heads taking turns, and the acid is a fan that rakes rather than a
+      wall. The lightning is the same lightning.
+    */
     const row = BOSSES.jormungandr;
     const whole = phaseFor(row, row.health);
     const hurt = phaseFor(row, row.health * 0.6);
     const last = phaseFor(row, row.health * 0.3);
     expect(whole.shot ?? row.shot, 'the serpent does not open with acid').toBe('acid');
-    expect(hurt.shot ?? row.shot, 'the serpent does not turn to void when hurt').toBe('void');
-    expect((whole.attack ?? row.attack).kind).not.toBe((hurt.attack ?? row.attack).kind);
-    expect((last.attack ?? row.attack).kind, 'the serpent’s last third is not the lightning').toBe('rain');
+    expect((whole.attack ?? row.attack).kind, 'the acid is not a spray that rakes — the wall is back').toBe('rake');
+    const hurtHeads = (hurt.attack ?? row.attack).kind === 'heads' ? (hurt.attack as { heads: readonly { shot: string; attack: { kind: string } }[] }).heads : [];
+    expect(hurtHeads.map((h) => `${h.shot}/${h.attack.kind}`), 'once hurt the serpent does not throw acid and void in turn').toEqual(['acid/spray', 'void/spray']);
+    const lastHeads = (last.attack ?? row.attack).kind === 'heads' ? (last.attack as { heads: readonly { shot: string; attack: { kind: string } }[] }).heads : [];
+    expect(lastHeads.map((h) => h.attack.kind), 'the last third does not throw acid, void and the lightning in turn').toEqual(['spray', 'spray', 'rain']);
+    expect(lastHeads.map((h) => h.shot).slice(0, 2)).toEqual(['acid', 'void']);
     // And it is the Approach's real boss.
     expect(LEVELS.approach.boss).toBe('jormungandr');
     /*
-      ⚠️ **AND DRIVEN, because the table is not the fight.** The probe that ignored a phase's shot
-      in the frame left every line above green: the rows say void and the frame threw acid. One
-      volley at each phase, and what is in the air is asked for its bitmap.
+      ⚠️ **AND DRIVEN, because the table is not the fight.** At the last third, three volleys in a
+      row: acid in the air, then void, then lightning in the bolt pool and nothing in the air — the
+      round the heads take, in the frame.
     */
-    for (const [fraction, sprite] of [
-      [1, SHOTS.acid.sprite],
-      [0.6, SHOTS.void.sprite],
-    ] as const) {
-      const { world, frame } = serpentAt(fraction);
+    const { world, frame } = serpentAt(0.3);
+    const boss = world.bossPool.at(0);
+    const seen: string[] = [];
+    for (let volley = 0; volley < 3; volley++) {
       world.enemyShots.clear();
-      world.bossPool.at(0).fireIn = 1;
+      world.bolts.clear();
+      boss.fireIn = 1;
       frame.step();
-      expect(world.enemyShots.size, `no volley at ${fraction} of the serpent’s health`).toBeGreaterThan(0);
-      for (let i = 0; i < world.enemyShots.size; i++) {
-        expect(world.enemyShots.at(i).sprite, `a shot at ${fraction} of the serpent’s health is not the phase’s`).toBe(sprite);
-      }
+      const bolts = world.bolts.size > 0;
+      const sprite = world.enemyShots.size > 0 ? world.enemyShots.at(0).sprite : -1;
+      seen.push(bolts ? 'lightning' : sprite === SHOTS.acid.sprite ? 'acid' : sprite === SHOTS.void.sprite ? 'void' : 'nothing');
     }
+    expect(seen, 'three volleys at the last third are not acid, void and lightning in turn').toEqual(['acid', 'void', 'lightning']);
+    // And whole, the fan of acid turns a little each volley: two volleys, two centres.
+    const opening = serpentAt(1);
+    const centres: number[] = [];
+    for (let volley = 0; volley < 2; volley++) {
+      opening.world.enemyShots.clear();
+      opening.world.bossPool.at(0).fireIn = 1;
+      opening.frame.step();
+      let sum = 0;
+      for (let i = 0; i < opening.world.enemyShots.size; i++) {
+        const s = opening.world.enemyShots.at(i);
+        expect(s.sprite, 'the opening fan is not acid').toBe(SHOTS.acid.sprite);
+        sum += Math.atan2(s.velAcross, s.velAlong - opening.world.scrollPerStep);
+      }
+      centres.push(sum / opening.world.enemyShots.size);
+    }
+    expect(Math.abs(centres[1]! - centres[0]!), 'the acid fan does not rake — two volleys point the same way').toBeGreaterThan(0.1);
   });
 
   it('THE ACID AND THE VOID: two shots of their own, in inks of their own, that are not the enemy’s bullet', () => {
@@ -109,6 +151,56 @@ describe('0248 — the serpent strikes', () => {
     expect(SHOTS.void.damage, 'a void blast is worth no more than an acid one').toBeGreaterThan(SHOTS.acid.damage);
   });
 
+  it('and a boss that rakes AND grows heads keeps the two counts apart, so the round survives the raking', () => {
+    /*
+      ⚠️ **THE CRASH THIS BRANCH SHIPPED WITH, HELD SO IT CANNOT COME BACK.** The serpent's opening
+      phase rakes — the row's own attack — and its other two grow heads. A rake advances its count by
+      an ANGLE, `turn` of a radian a volley; the heads index by it. On one shared field the count was
+      about 5.4 by the second phase and `heads[5.4 % 2]` is `heads[1.4]`, which is `undefined` — a
+      TypeError out of `throwAttack`, every serpent fight, at its first phase change.
+
+      ⚠️ **NOTHING IN THE SUITE SAW IT.** 0261 was proven green: every guard about the serpent set the
+      phase it wanted and measured that phase. What found it was
+      `docs/decisions/0268-the-bob-keeps-its-centre.md`'s guard, which flies every BOBBING boss
+      through all of its phases in order and was written about a hull leaving the lane — an accident,
+      and one this assertion exists so as not to depend on twice.
+
+      Driven rather than reasoned: rake the opening phase for real, then drop the health and take a
+      volley from every head of the round.
+    */
+    const { world, frame } = serpentAt(1);
+    const boss = world.bossPool.at(0);
+    /*
+      Long enough for the opening rake to throw several volleys and turn its angle well past the
+      number of heads the later phases have. The health is held at full so the phase does not move,
+      and the ship holds its fire so the subject survives being measured.
+    */
+    boss.fireIn = 0;
+    for (let i = 0; i < 60 * 12; i++) {
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      boss.health = world.bossFullHealth;
+      frame.step();
+    }
+    expect(boss.firePhase, 'the opening phase never raked, so this measures nothing').toBeGreaterThan(1);
+    expect(boss.headAt, 'a rake advanced the heads’ own count').toBe(0);
+
+    const last = BOSSES.jormungandr.phases[BOSSES.jormungandr.phases.length - 1]!.attack;
+    const heads = last !== null && last.kind === 'heads' ? last.heads : [];
+    expect(heads.length, 'the serpent’s last third has no heads').toBeGreaterThan(1);
+    const thrown = new Set<number>();
+    for (let volley = 0; volley < heads.length * 3; volley++) {
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      boss.health = world.bossFullHealth * 0.2;
+      boss.fireIn = 0;
+      const at = boss.headAt % heads.length;
+      const before = world.enemyShots.size;
+      // One step to fire; the round must land on a real head every time rather than on `undefined`.
+      frame.step();
+      if (world.enemyShots.size > before || world.bolts.size > 0) thrown.add(at);
+    }
+    expect(thrown.size, 'the round did not reach every head, so a rake is still steering it').toBe(heads.length);
+  });
+
   it('THE RAIN: a volley draws its warning lines first, inside the box the ship flies in, and nothing hurts until they have run', () => {
     /*
       *"it'll need warning lines."* Driven: the serpent at its last third throws one volley; every
@@ -119,6 +211,7 @@ describe('0248 — the serpent strikes', () => {
     */
     const { world, frame } = serpentAt(0.3);
     const boss = world.bossPool.at(0);
+    armRain(boss);
     boss.fireIn = 1;
     world.ship.health = world.shipRow.health;
     frame.step();
@@ -156,6 +249,7 @@ describe('0248 — the serpent strikes', () => {
   it('and a ship elsewhere on the lane is not touched by it, however close across', () => {
     const { world, frame } = serpentAt(0.3);
     const boss = world.bossPool.at(0);
+    armRain(boss);
     boss.fireIn = 1;
     world.ship.health = world.shipRow.health;
     frame.step();
@@ -198,6 +292,7 @@ describe('0248 — the serpent strikes', () => {
     const { world, frame } = serpentAt(0.3);
     const recorder = new Recorder();
     world.surface = recorder;
+    armRain(world.bossPool.at(0));
     world.bossPool.at(0).fireIn = 1;
     frame.step();
     frame.draw(0);

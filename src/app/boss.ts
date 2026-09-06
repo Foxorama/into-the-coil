@@ -737,15 +737,19 @@ function throwAttack(
     case 'heads': {
       /*
         The hydra's heads — 0254. One head a volley, round and round: the k-th volley of the fight
-        is the k-th head's attack with the k-th head's shot, and the count rides `firePhase` — the
-        field 0110 named for *where in its turn a body has got to*, which is exactly what this is.
-        A head's attack is thrown by this function again, on that head's terms; the type refuses a
-        head that is itself heads or a rake, so the recursion is one deep and `firePhase` has one
-        reader.
+        is the k-th head's attack with the k-th head's shot. A head's attack is thrown by this
+        function again, on that head's terms; the type refuses a head that is itself heads or a rake,
+        so the recursion is one deep.
+
+        ⚠️ **THE COUNT IS `headAt`, AND IT RODE `firePhase` UNTIL 0261 CRASHED ON IT.** That field is
+        an ANGLE for a rake and a COUNT here, and 0254's *"`firePhase` has one reader"* is true of a
+        HEAD and false of a BOSS: the serpent rakes in its opening phase and grows heads in its other
+        two, so the rake left the count at 5.4 and `heads[5.4 % 2]` is `heads[1.4]` is `undefined`.
+        `src/sim/entity.ts` carries the whole of it.
       */
       const n = attack.heads.length;
-      const head = attack.heads[((boss.firePhase % n) + n) % n]!;
-      boss.firePhase++;
+      const head = attack.heads[((boss.headAt % n) + n) % n]!;
+      boss.headAt++;
       throwAttack(head.attack, SHOTS[head.shot], boss, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);
       break;
     }

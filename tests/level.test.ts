@@ -1083,7 +1083,15 @@ describe('0111 — a boss has one idea, and the picture mentions its phases', ()
       const kind = LEVELS[level].boss;
       const row = BOSSES[kind];
       const marks = new Set<string>();
-      for (const phase of row.phases) if (phase.attack !== null && !fans.has(phase.attack.kind)) marks.add(phase.attack.kind);
+      for (const phase of row.phases) {
+        if (phase.attack === null || fans.has(phase.attack.kind)) continue;
+        // A round of heads is its count — 0261: the serpent's three weapons in turn are not the
+        // hydra's five heads, and each head's own attack is a mark of the fight as well.
+        if (phase.attack.kind === 'heads') {
+          marks.add(`heads×${phase.attack.heads.length}`);
+          for (const head of phase.attack.heads) if (!fans.has(head.attack.kind)) marks.add(head.attack.kind);
+        } else marks.add(phase.attack.kind);
+      }
       if (row.fall !== null) marks.add(`fall:${row.fall.kind}`);
       if (row.chill !== null) marks.add('chill');
       if (row.uncoil !== null && row.uncoil.spin) marks.add('spin');
@@ -1104,7 +1112,16 @@ describe('0111 — a boss has one idea, and the picture mentions its phases', ()
     const moves = new Set(BOSS_KINDS.map((k) => BOSSES[k].move.kind));
     expect(BOSS_MOVE_KINDS.filter((m) => !moves.has(m)), 'a boss movement exists and nothing flies it').toEqual([]);
     // A phase's own attack counts as sent — 0248: the serpent's lightning is a phase's and no row's.
-    const attacks = new Set(BOSS_KINDS.flatMap((k) => [BOSSES[k].attack.kind, ...BOSSES[k].phases.map((p) => (p.attack ?? BOSSES[k].attack).kind)]));
+    // And a head's — 0261: the serpent's lightning is a head of a round now, and the hydra's laser.
+    const attacks = new Set(
+      BOSS_KINDS.flatMap((k) => [
+        BOSSES[k].attack.kind,
+        ...BOSSES[k].phases.flatMap((p) => {
+          const attack = p.attack ?? BOSSES[k].attack;
+          return attack.kind === 'heads' ? [attack.kind, ...attack.heads.map((h) => h.attack.kind)] : [attack.kind];
+        }),
+      ]),
+    );
     expect(BOSS_ATTACK_KINDS.filter((a) => !attacks.has(a)), 'a boss attack exists and nothing sends it').toEqual([]);
   });
 
