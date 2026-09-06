@@ -644,6 +644,41 @@ export interface BossRow extends Body {
   phases: readonly BossPhase[];
 }
 
+/**
+ * How long each mid-boss's fight should take, in seconds, at the loadout it is met with — 0269.
+ *
+ * ── THE LADDER IS IN SECONDS BECAUSE HEALTH IS NOT A THING THE PLAYER CAN FEEL ──────────────────
+ *
+ * `docs/decisions/0269-a-mid-boss-is-fought-for-as-long-as-its-level-says.md`. Asked for after the
+ * alpha play: *"mid bosses need less health."* 0247 built the roster as a health ladder — 240 up to
+ * 570 — and what that produced was fights of 37 to 112 seconds in no order at all, because **damage
+ * actually landed varies four-fold across the seven** and runs inversely to how fast the hull crosses
+ * the lane: a shot is fired where the ship is, and a fast hull is somewhere else when it arrives. The
+ * redoubt carries more health than the lattice and dies in a third of the time.
+ *
+ * ⚠️ **SO THE HEALTHS IN THE TABLE ARE DERIVED AND THESE ARE AUTHORED.**
+ * `scripts/solve-mid-health.mjs` measures each fight through the real frame and prints the health
+ * that hits these numbers; every mid-boss's `health` below is that output.
+ * `scripts/solve-hold.mjs` is the same pattern for the music's loudness and exists for the same
+ * reason — a quantity nobody can reason about directly is solved against the one that can be
+ * measured, with the solver committed beside it.
+ *
+ * ⚠️ **IN RUN ORDER, WHICH IS THE ORDER A PLAYER MEETS THEM** — 17 seconds at the Approach climbing
+ * to 23 at the Black Heart. 0247 records the roster climbing *"through the TABLE and not through the
+ * run"*, which happened because the lattice and the shoal mother swapped levels; a ladder the player
+ * cannot be in the order of is not a ladder. **The mean is 20, which is the number the play asked
+ * for**, and the play owns both the mean and the spread.
+ */
+export const MID_BOSS_SECONDS: Record<string, number> = {
+  sentinel: 17,
+  harrow: 18,
+  shoalMother: 19,
+  lattice: 20,
+  redoubt: 21,
+  chorus: 22,
+  axis: 23,
+};
+
 export const BOSSES: Record<BossKind, BossRow> = {
   /**
    * The first thing in the game that is bigger than the lane's patience.
@@ -675,8 +710,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss,
     spriteHit: SPRITE.bossHit,
     radius: 11,
-    // Half of 480 — a mid-boss since 0247.
-    health: 240,
+    // A mid-boss since 0247, which halved 480 to 240; solved to its level's seconds by
+    // `scripts/solve-mid-health.mjs` against `MID_BOSS_SECONDS` since 0269.
+    health: 45,
     damage: 3,
     // Far enough forward that the whole hull is on screen on the narrowest view the clamp allows,
     // and far enough back that the player is not fighting it at the very edge of their reach.
@@ -740,8 +776,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss2,
     spriteHit: SPRITE.boss2Hit,
     radius: 12.5,
-    // Half of 580 — a mid-boss since 0247.
-    health: 290,
+    // A mid-boss since 0247, which halved 580 to 290; solved to its level's seconds since 0269.
+    health: 66,
     damage: 3,
     // Closer than the sentinel's 120, which is most of what makes it feel like a different fight:
     // the player has less room in front of them and less warning on everything it throws.
@@ -796,8 +832,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss3,
     spriteHit: SPRITE.boss3Hit,
     radius: 11.5,
-    // Half of 680 — the labyrinth's mid-boss since 0247, moved from the saurian belt's end.
-    health: 340,
+    // The labyrinth's mid-boss since 0247, moved from the saurian belt's end; 0247 halved 680 to 340
+    // and 0269 solved it to its level's seconds. ⚠️ **The lowest health of the seven and it was the
+    // LONGEST fight in the game at 340** — the lattice patrols at 0.5, so most of what is fired at it
+    // arrives where it was. Health was never what made this one hard.
+    health: 40,
     damage: 3,
     /*
       ⚠️ **The furthest station any hull can have, and the guard is what said where that is.** The
@@ -843,8 +882,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss4,
     spriteHit: SPRITE.boss4Hit,
     radius: 13,
-    // Half of 780 — the saurian belt's mid-boss since 0247, moved from the labyrinth's end.
-    health: 390,
+    // The saurian belt's mid-boss since 0247, moved from the labyrinth's end; 0247 halved 780 to 390
+    // and 0269 solved it to its level's seconds.
+    health: 74,
     damage: 3,
     station: 136,
     drift: 18,
@@ -880,8 +920,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss5,
     spriteHit: SPRITE.boss5Hit,
     radius: 14,
-    // Half of 880 — a mid-boss since 0247.
-    health: 440,
+    // A mid-boss since 0247, which halved 880 to 440; solved to its level's seconds since 0269.
+    // ⚠️ **It keeps the most of any mid-boss, by six times the lattice's** — the redoubt patrols at
+    // 0.16, so nearly everything fired at it lands and the health is the whole of the fight.
+    health: 241,
     damage: 3,
     station: 142,
     drift: 8,
@@ -931,8 +973,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss6,
     spriteHit: SPRITE.boss6Hit,
     radius: 12.5,
-    // Half of 980 — a mid-boss since 0247.
-    health: 490,
+    // A mid-boss since 0247, which halved 980 to 490; solved to its level's seconds since 0269.
+    health: 103,
     damage: 3,
     station: 138,
     drift: 15,
@@ -997,8 +1039,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss7,
     spriteHit: SPRITE.boss7Hit,
     radius: 16,
-    // Half of 1140 — the black heart's mid-boss since 0247.
-    health: 570,
+    // The black heart's mid-boss since 0247, which halved 1140 to 570; solved to its level's seconds
+    // since 0269, and the toughest of the seven in both.
+    health: 192,
     damage: 3,
     // The closest station in the game. `95 + 14 + 16` is 125 against 150 — the hull fills a fifth of
     // the narrowest view, which is what a last boss should cost the player in room.

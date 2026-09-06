@@ -135,7 +135,15 @@ export function weighFight(kind, options = {}) {
   // fight the immortal ship somehow cannot win ends the walk rather than hanging it.
   const cap = STEPS_PER_SECOND * 60 * 10;
   let step = 0;
-  while (world.cameraAlong - world.levelOrigin < level.bossAt && step < cap) {
+  /*
+    ⚠️ **THE WALK ENDS WHEN THE LEVEL IS OUT OF WAVES *AND* THE MID-BOSS IS DEAD.** Stopping at
+    `bossAt` alone truncated the two longest fights — the Saurian Belt's and the Labyrinth's ran past
+    the end of their own scripts, so `during` reported how far the camera got rather than how long
+    the fight took, and the length could not be read off it at all. `fight` is 1 once the mid-boss has
+    died (0247), so this is *the level is over* in both of the senses that matter.
+  */
+  const over = () => world.cameraAlong - world.levelOrigin >= level.bossAt && world.fight === 1;
+  while (!over() && step < cap) {
     world.ship.health = world.shipRow.health;
     /*
       ⚠️ **THE SHIP HOLDS THE BOSS'S LANE WHILE THERE IS A BOSS, AND THE FIRST VERSION DID NOT.**
