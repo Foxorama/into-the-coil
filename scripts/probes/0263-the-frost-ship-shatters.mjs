@@ -96,8 +96,9 @@ export const PROBES = [
     guard: 'THE ADDS AND THE BLASTS',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "attack: { kind: 'summon', enemy: 'shard', count: 2, formation: 'vee', from: 'sides' } },",
-      replace: "attack: { kind: 'summon', enemy: 'shard', count: 2, formation: 'vee', from: 'lead' } },",
+      // ⚠️ Re-anchored by 0270, which said how many of the horde may stand.
+      find: "attack: { kind: 'summon', enemy: 'shard', count: 2, formation: 'vee', from: 'sides', standing: 6 } },",
+      replace: "attack: { kind: 'summon', enemy: 'shard', count: 2, formation: 'vee', from: 'lead', standing: 6 } },",
     },
   },
   {

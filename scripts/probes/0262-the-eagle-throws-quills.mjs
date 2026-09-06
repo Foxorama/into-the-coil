@@ -36,8 +36,9 @@ export const PROBES = [
     guard: 'THE SUMMONS: a volley at half health',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'vee', from: 'sides' } },",
-      replace: "attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'vee', from: 'lead' } },",
+      // ⚠️ Re-anchored by 0270, which said how many of the horde may stand.
+      find: "attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'vee', from: 'sides', standing: 6 } },",
+      replace: "attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'vee', from: 'lead', standing: 6 } },",
     },
   },
   {

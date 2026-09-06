@@ -28,8 +28,8 @@ import { BOLT_STEPS } from '../render/scene.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../sim/flight.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { CueKind } from '../content/cues.ts';
-import { type DifficultyRow, fireGapFor } from '../content/difficulty.ts';
-import { SHOTS, SHOT_INDEX, type ShotRow } from '../content/shots.ts';
+import { type DifficultyRow, crowdFor, fireGapFor } from '../content/difficulty.ts';
+import { SHARD_VOLLEY, SHOTS, SHOT_INDEX, type ShotRow } from '../content/shots.ts';
 
 /**
  * How fast it closes on its station, in world units per step, on top of the scroll.
@@ -582,7 +582,43 @@ function throwAttack(
     aims now; the fan's centre is the lane's or the rake's turn, and `ship` is passed for the stalk
     and the beams alone.
   */
-  const step = phase.shots > 1 ? phase.spread / (phase.shots - 1) : 0;
+  /*
+    ── HOW MANY THIS VOLLEY THROWS, AND IT WAS THE PHASE'S NUMBER EVERYWHERE — 0270 ───────────────
+
+    Two things happen to `phase.shots` before an arm may spend it.
+
+    ⚠️ **THE TIER SCALES IT, WHICH NO TIER COULD DO BEFORE.** `src/content/difficulty.ts` has the
+    argument: a table that scaled cadence, toughness and bullet speed but never COUNT left a pattern
+    attack — a question about *where is the gap* rather than *how long have I got* (0110) — identical
+    for a Legendary Pilot and for the tier named for ending runs.
+
+    ⚠️ **AND A SHATTERING SHOT IS COUNTED IN SHARDS**, which is 0263's own rule reaching the row it
+    missed. `phase.shots` is ONE number shared by every head of a `heads` round (0254), and four of
+    the hydra's five heads throw bullets that are spent by arriving — so the count that is right for
+    them is several times too many for the one that opens into twelve flakes apiece.
+
+    ⚠️ **AND THE TIER DOES NOT SCALE THE CEILING, WHICH IS THE ONE PLACE `crowd` IS REFUSED.** It was
+    scaled for one measurement and the pool is what said no: at Burn the frost ship's last phase went
+    to four shards on a cadence already halved by `fireGap`, and what is alive at once reached
+    **150 of 150** — a full pool, where `src/sim/pool.ts` silently drops the next volley and the
+    shattering of an add with it (0263). The two multiply: `fireGap` already spends the pool twice
+    over on the hardest tier, so a wider volley on top of it is not a harder fight, it is a fight
+    where some of the volleys are not thrown. The tier makes a shattering shot harder by sending it
+    TWICE AS OFTEN, which is a thing the pool can carry.
+
+    ⚠️ **A `wall` SPENDS THE CEILING A PAIR AT A TIME**, because it is symmetric about the hull: its
+    loop counts slots EITHER SIDE (`src/content/enemies.ts`'s convention, stated there), so a ceiling
+    of three shards buys one slot each side. Floored at one, or a ceiling under two would author a
+    wall with nothing in it.
+
+    ⚠️ **Nothing allocates**, on this file's own terms — four numbers, no array.
+  */
+  const wanted = crowdFor(phase.shots, tier);
+  const ceiling = bullet.fission.length > 0 ? SHARD_VOLLEY : Number.POSITIVE_INFINITY;
+  const count = wanted < ceiling ? wanted : ceiling;
+  const perSide = Math.max(1, Math.min(wanted, Math.floor(ceiling / 2)));
+
+  const step = count > 1 ? phase.spread / (count - 1) : 0;
   switch (attack.kind) {
     case 'spray':
     case 'rake': {
@@ -593,8 +629,8 @@ function throwAttack(
         boss.firePhase += attack.turn;
         centre = Math.PI + boss.firePhase;
       }
-      const first = centre - (step * (phase.shots - 1)) / 2;
-      for (let i = 0; i < phase.shots; i++) {
+      const first = centre - (step * (count - 1)) / 2;
+      for (let i = 0; i < count; i++) {
         const shot = shots.spawn();
         // A volley that will not fit is dropped rather than grown, exactly as `src/sim/pool.ts` says.
         if (shot === null) break;
@@ -611,8 +647,8 @@ function throwAttack(
         width is a full turn by definition, and a phase that widened it would be describing something
         that has no width.
       */
-      const around = TAU / phase.shots;
-      for (let i = 0; i < phase.shots; i++) {
+      const around = TAU / count;
+      for (let i = 0; i < count; i++) {
         const shot = shots.spawn();
         if (shot === null) break;
         const angle = around * i;
@@ -632,7 +668,7 @@ function throwAttack(
         clamping would stack two bullets on the edge into one thicker one, which is a wall with a lie
         in it.
       */
-      for (let i = 1; i <= phase.shots; i++) {
+      for (let i = 1; i <= perSide; i++) {
         for (let side = -1; side <= 1; side += 2) {
           const across = boss.across + side * i * attack.gap;
           if (across < 0 || across > ACROSS_SPAN) continue;
@@ -660,7 +696,7 @@ function throwAttack(
         ⚠️ **On its own stream** — 0021. Where a column falls is the most consequential roll a boss
         makes and it must not move a wave by one enemy.
       */
-      for (let i = 0; i < phase.shots; i++) {
+      for (let i = 0; i < count; i++) {
         const bolt = bolts.spawn();
         if (bolt === null) break;
         const along = cameraAlong + rainRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD);
@@ -682,7 +718,7 @@ function throwAttack(
         makes it a lash rather than a fan is that the line of them bows as it flies, because the
         far end outruns the near one.
       */
-      const n = phase.shots;
+      const n = count;
       const first = Math.PI - attack.sweep / 2;
       const along = n > 1 ? attack.sweep / (n - 1) : 0;
       for (let i = 0; i < n; i++) {

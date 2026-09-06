@@ -101,6 +101,36 @@ export type Fission =
 /** A shot that is spent by arriving and by nothing else — every shot but the frost. */
 const SPENT_BY_ARRIVING: readonly Fission[] = [];
 
+/**
+ * The most shards of a SHATTERING shot one volley may open with, before the tier's `crowd`.
+ *
+ * ── WHY A CEILING RATHER THAN A COUNT ON EVERY ROW THAT THROWS ONE ──────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0263-the-frost-ship-shatters.md` STATED THIS RULE AND WROTE IT INTO ONE BOSS.**
+ * *"The volleys are counted in shards"* — the frost ship's phases went to 1, 2, 2 and 3, because one
+ * shard is two bolts and then twelve flakes. The hydra's frost head was left reading the phase's own
+ * `shots`, which is shared with four heads that throw bullets that do not shatter and is authored at
+ * 4 and 6 — so its frost volley was **eight shards, ninety-six flakes**, and the count of hostile
+ * shots alive stepped from 14 to 104 at one phase boundary.
+ * `docs/decisions/0270-a-shattering-volley-is-counted-in-shards.md`.
+ *
+ * ⚠️ **SO THE RULE LIVES WHERE THE FISSION DOES, AND NOT IN A ROW.** A per-row count would have to
+ * be authored correctly by every future boss that picks up a shattering shot — which is exactly the
+ * thing that did not happen once already, in the decision that invented the shattering. A ceiling in
+ * `src/app/boss.ts` cannot be forgotten by a row that does not mention it.
+ *
+ * ⚠️ **THREE, AND IT IS READ OFF THE CONTENT RATHER THAN PICKED.** It is the widest volley the frost
+ * ship itself throws — 0263's last phase, settled by playing — so the ceiling says *no boss opens a
+ * shattering volley wider than the ship the shattering was designed for*. A `wall` is symmetric about
+ * the hull and so spends it a pair at a time; `src/app/boss.ts` has that arithmetic.
+ *
+ * ⚠️ **THE TIER DOES NOT SCALE IT, AND THAT IS MEASURED RATHER THAN ASSUMED.** `src/app/boss.ts` has
+ * the argument: a harder tier already halves the gap between volleys, and a wider volley on top of
+ * that filled the hostile pool outright — at which point the volley after it is silently not thrown.
+ * What a tier does to a shattering shot is send it twice as often.
+ */
+export const SHARD_VOLLEY = 3;
+
 /** Written out rather than derived, so the table below cannot quietly lose a row. */
 export const SHOT_KINDS: readonly ShotKind[] = [
   'pulse',

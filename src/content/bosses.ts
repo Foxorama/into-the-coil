@@ -226,7 +226,28 @@ export type BossAttack =
     alternating sides a volley — so a kite that dives (its row's hunt) comes at the ship across the
     lane rather than down it. `docs/decisions/0262-the-eagle-throws-quills.md`.
   */
-  | { kind: 'summon'; enemy: EnemyKind; count: number; formation: FormationKind; from: SummonFrom }
+  /*
+    ⚠️ **AND HOW MANY MAY STAND — 0270.** `count` is the call; `standing` is the most of that kind
+    the summons will keep on the field, so a volley tops the horde up rather than adding to it. It is
+    NOT spelled `upTo`, which is the field a PHASE keys itself to health by — two meanings of one word
+    on one line of the table below is the kind of reading error `src/content/sprites.ts` records the
+    cost of. There was
+    no ceiling at all, and the one that appeared to exist was the entity pool: measured over the frost
+    ship's summon phase the adds peaked at **26 on the easiest tier and 40 on the hardest**, and 40 is
+    `CAPACITY.enemies` in `src/app/mount.ts` — so what bounded the horde was `src/sim/pool.ts` running
+    out, which also silently drops the volley after it. Reported: *"the adds target the player, you
+    can't find the safe spot in the pattern of the explosive ice shards because there is no safe spot
+    with the other attacks."*
+    `docs/decisions/0270-a-shattering-volley-is-counted-in-shards.md`.
+
+    ⚠️ **A CEILING ON WHAT IS STANDING, NOT A BUDGET FOR THE FIGHT.** A total would make a phase that
+    ran long a phase that went quiet, and 0151 already argues why a fight's pressure may not be a
+    function of how long the player takes. Topping up means the horde is the same size whether the
+    player kills them fast or ignores them — what killing them buys is that the NEXT call lands.
+
+    ⚠️ **The tier scales it** (`crowdFor`), so the authored number is the Legendary one.
+  */
+  | { kind: 'summon'; enemy: EnemyKind; count: number; formation: FormationKind; from: SummonFrom; standing: number }
   /**
    * Lasers — `docs/decisions/0250-the-quetzal-screams.md`. Asked for: *"a flying pterodactyl with
    * lasers mounted on its wings and it opens its mouth to fire a huge laser blast."*
@@ -1216,10 +1237,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
       { upTo: 1, fireEvery: 78, shots: 3, spread: 0.6, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
       { upTo: 0.75, fireEvery: 66, shots: 5, spread: 0.8, patrolScale: 1.3, stance: { kind: 'volley' }, shot: 'flame', attack: { kind: 'whip', sweep: 1.1, reach: 0.9 } },
       // Three kites a volley from the sides in turn since 0262, and they dive; two came down the lane.
-      { upTo: 0.5, fireEvery: 60, shots: 5, spread: 0.8, patrolScale: 1.5, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'vee', from: 'sides' } },
+      { upTo: 0.5, fireEvery: 60, shots: 5, spread: 0.8, patrolScale: 1.5, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'vee', from: 'sides', standing: 6 } },
       { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, shot: 'flame', attack: { kind: 'whip', sweep: 1.4, reach: 0.9 } },
       // Two raptors a volley from the sides in turn since 0262; one came down the lane in a file.
-      { upTo: 0.16, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'raptor', count: 2, formation: 'line', from: 'sides' } },
+      { upTo: 0.16, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'raptor', count: 2, formation: 'line', from: 'sides', standing: 4 } },
     ],
   },
   /**
@@ -1346,7 +1367,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     phases: [
       { upTo: 1, fireEvery: 96, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
       { upTo: 0.7, fireEvery: 84, shots: 2, spread: 0.8, patrolScale: 1.2, stance: { kind: 'volley' }, shot: null, attack: { kind: 'spray' } },
-      { upTo: 0.45, fireEvery: 66, shots: 2, spread: 0.8, patrolScale: 1.5, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'shard', count: 2, formation: 'vee', from: 'sides' } },
+      { upTo: 0.45, fireEvery: 66, shots: 2, spread: 0.8, patrolScale: 1.5, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'shard', count: 2, formation: 'vee', from: 'sides', standing: 6 } },
       { upTo: 0.2, fireEvery: 60, shots: 3, spread: 1.2, patrolScale: 1.9, stance: { kind: 'volley' }, shot: null, attack: { kind: 'spray' } },
     ],
   },
