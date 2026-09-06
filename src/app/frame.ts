@@ -57,8 +57,8 @@ import type { Intent } from '../sim/intent.ts';
 import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
 import type { Pool } from '../sim/pool.ts';
-import { BOLT_STEPS, paintBolts, paintScene, type Bound, type Landmarks, type Sky } from '../render/scene.ts';
-import { LANDMARK_SLOTS, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
+import { BOLT_STEPS, paintBolts, paintScene, paintStacks, type Bound, type Landmarks, type Sky } from '../render/scene.ts';
+import { LANDMARK_SLOTS, SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
 import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
@@ -77,10 +77,11 @@ import {
   PICKUP_REPEATS,
   type PickupKind,
   type PickupRow,
+  type UpgradeKind,
   type Weapon,
 } from '../content/pickups.ts';
-import { WEAPONS, type FlightKind } from '../content/weapons.ts';
-import { MISSILES } from '../content/missiles.ts';
+import { WEAPONS, WEAPON_KINDS, type FlightKind } from '../content/weapons.ts';
+import { MISSILES, MISSILE_KINDS } from '../content/missiles.ts';
 import { SPECIALS, pyreFor, type SpecialKind } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
 import { belch, curtainStance, openBy, phaseFor, stepBoss, throwCurtain, uncoilsBy } from './boss.ts';
@@ -814,6 +815,16 @@ export interface World {
    */
   dropRng: Rng;
   /**
+   * The death scatter's own stream — 0066, and its own again rather than the drop's since 0266.
+   *
+   * ⚠️ **TWO CONCERNS, TWO STREAMS — 0021.** What a death throws back is which pieces the player
+   * can reach; what a mid-boss drops is what its fight was worth. They were one field for the day
+   * 0256 had the scatter deleted, and sharing one now would mean a level whose mid-boss died deals
+   * a different scatter from one whose did not — a fight's throw moving a death's, which is the
+   * exact coupling that decision exists to refuse.
+   */
+  scatterRng: Rng;
+  /**
    * The arc's own stream — 0021, one stream per concern. It seeds a link's jag and picks where on a
    * boss a jumping bolt lands; a bolt that rolled on the spawn stream would move a wave by one enemy
    * every time it fired.
@@ -935,7 +946,7 @@ export interface World {
    * `src/state/`'s business — an extra life and an upgrade land in different fields and are cleared
    * by different events.
    */
-  onPickup: (kind: PickupKind, face: number) => void;
+  onPickup: (kind: PickupKind, face: number, stack: number) => void;
   /**
    * The ship's health as the chrome last drew it.
    *
@@ -1562,7 +1573,9 @@ export class GameFrame implements Frame {
       w.onCue('pickup', w.ship.across);
       // And the FACE it was showing — 0233. Which gun a weapon pickup was offering is decided on
       // the step it is taken, and `collectInto` logged it beside the kind for exactly this line.
-      w.onPickup(kind, w.collected.face[i]!);
+      // The stack rides with it — 0243, back with the scatter in 0266: a piece a death threw is
+      // worth every rung of its kind the death took, and one event carries them.
+      w.onPickup(kind, w.collected.face[i]!, w.collected.stack[i]!);
     }
 
     // Every enemy that died this step leaves something behind. The positions were recorded by the
@@ -1700,10 +1713,18 @@ export class GameFrame implements Frame {
     // After everything, so a bolt is over what it struck — 0233. The landing sparks are entities in
     // `layers` and were blitted above; this strokes the lines between them.
     paintBolts(w.surface, w.view, w.bolts, camera, alpha);
-    // `paintStacks` was here — 0243's badge on a scattered piece — and 0256 deleted it with the
-    // scatter: nothing on the field is worth more than one rung now.
+    // And a badge on every scattered piece worth more than one rung — 0243, back with the scatter
+    // in 0266. Over the pickup it rides, and after the bolts so nothing crosses it.
+    paintStacks(w.surface, w.view, w.pickups, STACK_BADGES, camera, alpha);
   }
 }
+
+/**
+ * The badge a scattered piece wears for its stack, by stack: ×2, ×3, ×4 — 0243. A stack past the
+ * last wears the last; `UPGRADE_TIERS` is four, so nothing does.
+ */
+// @setup: three sprite indices, for the module's lifetime.
+const STACK_BADGES: readonly number[] = [SPRITE.stackTwo, SPRITE.stackThree, SPRITE.stackFour];
 
 /**
  * Whether this is the step the boss came apart on.
@@ -3688,23 +3709,114 @@ function throwPiece(w: World, along: number, across: number, kind: PickupKind, i
   */
   startCycle(item, row, index % row.faces.length);
   item.bobPhase = index * GOLDEN_ANGLE;
+  throwArc(w, item, row, index, pieces, w.dropRng);
+}
+
+/**
+ * Throw the upgrades a death has just cost back onto the field — one piece per kind, carrying
+ * every rung of that kind the death took.
+ *
+ * Asked for in play: *"when a player dies, their power ups should explode from where they were and
+ * bounce around the screen… non-cycling and on a short timer so there's enough time to grab some,
+ * but maybe not all."* [0066](../../docs/decisions/0066-a-death-scatters-what-it-took.md), and one
+ * piece per kind with a ×N badge is
+ * [0243](../../docs/decisions/0243-a-death-throws-back-one-piece-per-kind.md) — *"a single missile
+ * power up bubble with an x2/3/4 etc if they had multiple powerups, and same for weapons, it's too
+ * hard to grab all the different powerups with all the different sequencing in the middle of a hail
+ * of bullets."*
+ *
+ * ⚠️ **DELETED BY 0256 AND RESTORED BY 0266.** That decision made a death cost one rung and throw
+ * nothing, on the argument that the rung IS the cost; played, the two halves together emptied the
+ * field — *"in addition to reducing the power up total it also stopped the power ups spawning from
+ * a death, which drastically reduced the power ups in game."* The rung is gone and this is back.
+ *
+ * ⚠️ **Exported and called by `src/app/mount.ts`, exactly as `respawn` and `launchSpecial` are.**
+ * The frame cannot see the run — 0039 puts the upgrade list in `src/state/` — so the shell hands
+ * over what was lost and this is the half that moves entities.
+ *
+ * ⚠️ **It has to be called BEFORE the reducer empties the list**, which is a real ordering the shell
+ * has to keep and one there is no way to state here. `tests/pickups.test.ts` drives the shell.
+ *
+ * ⚠️ **Shields are absent by CONSTRUCTION rather than by a filter** — *"no shields spawn on death"*
+ * (0083). They live on the ship's `health` (0050) and not in the upgrade list, so the signature is
+ * the guarantee: this takes `UpgradeKind[]` and a shield is not one. The guard holds it anyway,
+ * because *true because of a type* stops being obvious the moment somebody widens the type.
+ */
+export function scatterUpgrades(w: World, upgrades: readonly UpgradeKind[]): void {
+  let weapons = 0;
+  let missiles = 0;
+  for (let i = 0; i < upgrades.length; i++) {
+    if (upgrades[i] === 'weapon') weapons++;
+    else missiles++;
+  }
   /*
-    THE THROW — an angle per piece, evenly spaced round the hull and then jittered.
-
-    ⚠️ **A SIXTH OF A TURN ON, since 0243.** With one or two pieces, a ring that started along the
-    lane put one piece straight ahead and the other straight behind, a dozen units from the box's
-    back wall and nothing across; a ring started straight across put nothing along. A sixth of a
-    turn on, the pieces leave in both axes, both sides — 0066's picture. The jitter is under half
-    the gap between neighbours and capped besides, so no two can swap sides.
-
-    ⚠️ **`velAlong` is the scroll rate PLUS the along component**, which is 0034's *every speed is
-    in the camera's frame*. The along half is spent against `PICKUP_EASE` in `driftPickups`, and
-    what is left is a piece holding the distance the hull died at and bouncing across the lane.
+    ⚠️ **The ring is spaced over the pieces that will really appear**, which at two kinds is all of
+    them — the pool bound `dropPickups` needs is moot here and stated by the type instead: a scatter
+    can never be longer than the kinds there are.
   */
+  const pieces = (weapons > 0 ? 1 : 0) + (missiles > 0 ? 1 : 0);
+  let index = 0;
+  if (weapons > 0) scatterPiece(w, 'weapon', weapons, index++, pieces);
+  if (missiles > 0) scatterPiece(w, 'missile', missiles, index, pieces);
+}
+
+/** One thrown piece of `upgrade`, worth `stack` rungs, as the `index`th of `pieces` around the wreck. */
+function scatterPiece(w: World, upgrade: UpgradeKind, stack: number, index: number, pieces: number): void {
+  /*
+    ⚠️ **WHERE THE SHIP DIED, not where the ship object still is** — 0079. This used to read
+    `w.ship.along`, which was right for as long as the scatter happened on the step the hull reached
+    zero. It happens at the END of the beat, `DEATH_STEPS` later, and the ship object has sat still
+    in world coordinates the whole time — so the camera has moved about 27 units out from under it,
+    and the pieces would arrive a beat's worth of scroll behind the wreck they came off.
+  */
+  const along = w.cameraAlong + w.deathOffset;
+  const slot = w.pickupKinds[upgrade];
+  const row = w.pickupRows[slot];
+  if (row === undefined) return;
+  const item = w.pickups.spawn();
+  // A scatter one pickup short is dropped rather than grown — `src/sim/pool.ts` has the argument.
+  if (item === null) return;
+  reset(item, along, w.deathAcross, row, slot);
+  item.stack = stack;
+  /*
+    ⚠️ **A SCATTERED PIECE SHOWS THE FACE THE PLAYER JUST LOST, AND HOLDS IT** — 0233, finished by
+    0243. What a death throws back is what it took, and what it took was a gun of a particular kind;
+    a piece that came up showing the other gun would be offering a switch the player did not ask for
+    at the one moment they are trying to recover. 0233 had it cycle from there like any other, and
+    the fifth play-test named the cycling as what made a death's pieces impossible to grab under
+    fire — so a scattered piece does not turn. **A dropped one still does**: a drop is an offer.
+
+    ⚠️ **AND THE DIAL DOES NOT TURN HERE** — 0084 counts what a level OFFERS, and a piece handed
+    back is not an offer. `dropPickups` turns it and `weaponsOfferedBy` counts that; this is the
+    half of the distinction that would silently inflate the dial by one per death.
+  */
+  startCycle(item, row, upgrade === 'weapon' ? WEAPON_KINDS.indexOf(w.weapon.kind) : MISSILE_KINDS.indexOf(w.weapon.missile));
+  item.faceIn = 0;
+  throwArc(w, item, row, index, pieces, w.scatterRng);
+}
+
+/**
+ * The ring every thrown piece leaves on: an angle per piece, evenly spaced, jittered, then a flight.
+ *
+ * ⚠️ **ONE DESCRIPTION FOR THE DROP AND THE SCATTER, and the stream is the caller's.** The two
+ * differ in where they are thrown from, whether the face cycles and whether the dial turns; the arc
+ * is the same arc, and 0021 is why the generator is a parameter rather than read off the world here.
+ *
+ * ⚠️ **A SIXTH OF A TURN ON, since 0243.** With one or two pieces, a ring that started along the
+ * lane put one piece straight ahead and the other straight behind, a dozen units from the box's
+ * back wall and nothing across; a ring started straight across put nothing along. A sixth of a turn
+ * on, the pieces leave in both axes, both sides — 0066's picture. The jitter is under half the gap
+ * between neighbours and capped besides, so no two can swap sides.
+ *
+ * ⚠️ **`velAlong` is the scroll rate PLUS the along component**, which is 0034's *every speed is in
+ * the camera's frame*. The along half is spent against `PICKUP_EASE` in `driftPickups`, and what is
+ * left is a piece holding the distance the hull died at and bouncing across the lane.
+ */
+function throwArc(w: World, item: Entity, row: PickupRow, index: number, pieces: number, rng: Rng): void {
   const share = (Math.PI / pieces) * DROP_JITTER_SHARE;
   const halfGap = share < DROP_JITTER_MAX ? share : DROP_JITTER_MAX;
-  const angle = Math.PI / 3 + (index / pieces) * Math.PI * 2 + w.dropRng.range(-halfGap, halfGap);
-  const speed = DROP_SPEED * w.dropRng.range(DROP_SPREAD_MIN, DROP_SPREAD_MAX);
+  const angle = Math.PI / 3 + (index / pieces) * Math.PI * 2 + rng.range(-halfGap, halfGap);
+  const speed = DROP_SPEED * rng.range(DROP_SPREAD_MIN, DROP_SPREAD_MAX);
   item.velAcross = Math.sin(angle) * speed;
   item.velAlong = w.scrollPerStep + Math.cos(angle) * speed;
   // The throw is a flight, and then the wait every pickup has — 0236. `driftPickups` has both.

@@ -54,8 +54,10 @@ export const PROBES = [
     guard: 'leaves in every direction, and no two pieces travel together',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  const angle = Math.PI / 3 + (index / pieces) * Math.PI * 2 + w.dropRng.range(-halfGap, halfGap);',
-      replace: '  const angle = Math.PI / 3 + w.dropRng.range(-halfGap, halfGap);',
+      // ⚠️ Re-anchored by 0266, which gave the drop and the scatter one arc and a stream each: the
+      // generator is the caller's now, so it is `rng` here rather than `w.dropRng`.
+      find: '  const angle = Math.PI / 3 + (index / pieces) * Math.PI * 2 + rng.range(-halfGap, halfGap);',
+      replace: '  const angle = Math.PI / 3 + rng.range(-halfGap, halfGap);',
     },
   },
   {

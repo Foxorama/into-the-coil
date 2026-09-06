@@ -5,6 +5,8 @@ import { DEFAULT_DIFFICULTY, livesFor, startingArsenal } from '../src/state/slic
 import { SCREENS } from '../src/state/screens.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { LEVEL_KINDS } from '../src/content/levels.ts';
+// The base kinds a death puts back on the ship — 0233, restored by 0266.
+import { SHIPS } from '../src/content/ships.ts';
 
 /**
  * WHAT A RUN COSTS — `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md`.
@@ -76,16 +78,22 @@ describe('a run is lives', () => {
     expect(play(BEGIN, PLAY, DIE, DIE).run.lives).toBe(STARTING_LIVES_OF_THE_TIER - 2);
   });
 
-  it('a death costs one rung per ladder, keeps the gun, and leaves the arsenal exactly where it was', () => {
+  it('a death takes both ladders and the kinds, and leaves the arsenal exactly where it was', () => {
     /*
-      ⚠️ **THIS ASSERTION HAS INVERTED TWICE, AND BOTH TIMES WITH A DECISION.**
+      ⚠️ **THIS ASSERTION HAS INVERTED THREE TIMES, AND EVERY TIME WITH A DECISION.**
       `docs/decisions/0085-a-death-does-not-cost-the-bombs.md` turned *the arsenal survived a death*
       from a failure into the rule — *"bombs should be reset on a continue, but not on player
       death."* `docs/decisions/0256-a-pickup-keeps-the-count.md` turned *the weapon upgrades survived
-      a death* the same way: *"a death reduces the power count by 1 (to a minimum of 1)."* A guard
-      tied to a decision inverts when the decision does; the alternative is a guard loose enough to
-      hold neither. What is left of 0039's *"back to the ship's base weapon and starting special"*
-      is a rung.
+      a death* the same way: *"a death reduces the power count by 1 (to a minimum of 1)."* And 0266
+      turned it again, from the play that followed: *"in addition to reducing the power up total it
+      also stopped the power ups spawning from a death, which drastically reduced the power ups in
+      game."* A guard tied to a decision inverts when the decision does; the alternative is a guard
+      loose enough to hold neither.
+
+      ⚠️ **AND NOTHING IS LOST, WHICH IS THE HALF THIS FILE CANNOT SEE.** 0039's *"back to the
+      ship's base weapon and starting special"* is the whole of what happens here, and
+      `scatterUpgrades` throws every rung of it where the ship died — `tests/stack.test.ts` holds
+      that side, and the ordering between the two is `tests/pickups.test.ts`'s, over the shell.
     */
     const before = armed();
     expect(
@@ -112,30 +120,30 @@ describe('a run is lives', () => {
     */
     expect(after.run.arsenal, 'a death restocked the arsenal to the starting kit').not.toEqual(startingArsenal());
     /*
-      ⚠️ **ONE RUNG OFF EACH LADDER, and the kinds untouched.** Two of each went in, so one of each
-      comes out — held per ladder, because a death that took two weapons and no missiles is *one
-      rung* by the count and not by the rule.
+      ⚠️ **BOTH LADDERS, AND THE KINDS WITH THEM.** An empty list is what `weaponFor` resolves to the
+      base gun from, so this line and that function between them are the only description of what
+      the ship shoots with nothing.
     */
-    expect(after.run.upgrades, 'a death did not cost exactly one rung of each ladder').toEqual(['weapon', 'missile']);
-    expect(after.run.weapon, 'a death took the gun back to the base').toBe(before.run.weapon);
-    expect(after.run.missile, 'a death took the tube back to the base').toBe(before.run.missile);
+    expect(after.run.upgrades, 'a death left rungs on a ladder').toEqual([]);
+    expect(after.run.weapon, 'a death left the switched gun on the ship').toBe(SHIPS.proof.weapon);
+    expect(after.run.missile, 'a death left the switched tube on the ship').toBe(SHIPS.proof.missile);
   });
 
-  it('and a ladder at one rung keeps its one, and a ladder at nothing loses nothing', () => {
+  it('and a ladder of one goes too, because the scatter is what hands it back', () => {
     /*
-      *"To a minimum of 1."* A ship one rung up is one rung up after a death; a ship on the base gun
-      with no tube has nothing a death can take — and the arithmetic is `afterDeath`'s, in
-      `src/content/pickups.ts`, so this holds the floor in the run rather than restating it.
+      ⚠️ **THE FLOOR WAS `DEATH_KEEPS` AND 0266 DELETED IT WITH THE RUNG.** *"To a minimum of 1"*
+      was 0256's rule and it kept the last rung on the ship; there is nothing to floor now, because
+      a death takes the ladder and throws it rather than shaving it. This guard is the same test
+      inverted rather than a new one — a half-restore that left the floor in would read as *a death
+      costs nothing at one rung* and would be caught here.
     */
     const one = play(BEGIN, PLAY, { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' });
-    expect(reduce(one, DIE).run.upgrades, 'a death took the last rung').toEqual(['weapon']);
+    expect(reduce(one, DIE).run.upgrades, 'a death kept a rung back rather than throwing it').toEqual([]);
     const none = play(BEGIN, PLAY);
-    expect(reduce(none, DIE).run.upgrades, 'a death took a rung from a ladder with none').toEqual([]);
-    // And a death never goes below the floor twice over: two deaths at one rung is one rung.
-    expect(reduce(reduce(one, DIE), DIE).run.upgrades).toEqual(['weapon']);
+    expect(reduce(none, DIE).run.upgrades, 'a ladder with nothing on it came out of a death holding something').toEqual([]);
   });
 
-  it('and takes only its rung on the LAST death either, so the rule has no hidden condition', () => {
+  it('and takes the ladders on the LAST death too, so the rule has no hidden condition', () => {
     // It reads as redundant — nobody flies that ship again. It is what keeps the reducer a function
     // of its arguments rather than of what the shell intends to do next. 0085 kept the shape of that
     // argument and changed what the answer is: the charges reach the run-over screen intact, and
@@ -145,7 +153,7 @@ describe('a run is lives', () => {
     for (let i = 0; i < STARTING_LIVES_OF_THE_TIER; i++) state = reduce(state, DIE);
     expect(state.run.lives).toBe(0);
     expect(state.run.arsenal, 'the last death emptied what the continue screen is about to restock').toEqual(carried);
-    expect(state.run.upgrades, 'the last death took more than its rung').toEqual(['weapon', 'missile']);
+    expect(state.run.upgrades, 'the last death left the ladders alone').toEqual([]);
   });
 
   it('a pickup of another kind switches the kind and keeps the count — 0256', () => {

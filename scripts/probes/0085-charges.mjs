@@ -27,8 +27,8 @@ export const PROBES = [
       path: 'src/state/slices/run.ts',
       // Anchored on the ARSENAL line rather than on the whole returned literal, for the reason
       // 0042's probe gives: a literal goes stale the day a field is added to it, and two have been.
-      find: '            arsenal: state.arsenal,\n            upgrades: afterDeath(state.upgrades),',
-      replace: '            arsenal: startingArsenal(),\n            upgrades: afterDeath(state.upgrades),',
+      find: '            arsenal: state.arsenal,\n            upgrades: [],',
+      replace: '            arsenal: startingArsenal(),\n            upgrades: [],',
     },
   },
   {
@@ -66,9 +66,9 @@ export const PROBES = [
     guard: 'and a death does not TOP UP an arsenal the player has emptied',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '            arsenal: state.arsenal,\n            upgrades: afterDeath(state.upgrades),',
+      find: '            arsenal: state.arsenal,\n            upgrades: [],',
       replace:
-        '            arsenal: state.arsenal.map((e) => ({ kind: e.kind, charges: Math.max(e.charges, SPECIALS[e.kind].charges) })),\n            upgrades: afterDeath(state.upgrades),',
+        '            arsenal: state.arsenal.map((e) => ({ kind: e.kind, charges: Math.max(e.charges, SPECIALS[e.kind].charges) })),\n            upgrades: [],',
     },
   },
 ];

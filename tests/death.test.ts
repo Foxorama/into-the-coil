@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { CAPACITY } from '../src/app/mount.ts';
-import { GameFrame, detonateArsenal, respawn, type World } from '../src/app/frame.ts';
+import { GameFrame, detonateArsenal, respawn, scatterUpgrades, type World } from '../src/app/frame.ts';
 import { makeLifecycle } from '../src/app/lifecycle.ts';
 import { DEBRIS_BY_KIND } from '../src/content/debris.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
@@ -131,6 +131,10 @@ function shell(level = LEVELS[LEVEL_KINDS[0]!]) {
     detonateArsenal(world, chargesOf());
   };
   world.onDeath = (): void => {
+    // BEFORE the reducer, because the reducer is what empties the list — 0066, and the ordering
+    // `src/app/mount.ts` keeps. A fixture that dispatched first would scatter nothing and this file
+    // would be holding the order against itself.
+    scatterUpgrades(world, current.run.upgrades);
     dispatch({ slice: 'run', type: 'lifeLost' });
     if (current.run.lives > 0) respawn(world);
   };
@@ -221,14 +225,13 @@ describe('the ship comes apart, and the player watches it happen', () => {
     );
   });
 
-  it('costs one rung per ladder at the end of the beat, throws nothing back, and hands back the same gun', () => {
+  it('throws the upgrades out of the wreck at the end of the beat, and not a beat behind it', () => {
     /*
-      ⚠️ **THIS WAS `throws the upgrades out of the wreck and not a beat behind it`** — 0066's
-      scatter, thrown at the end of the beat from where the ship died. 0256 made a death cost a rung
-      instead: nothing is thrown, the reducer is the whole of the event, and it lands at the end of
-      the beat with `lifeLost` exactly as the scatter did. Driven through the shell so the ORDER is
-      what is held — a death that took its rung on the step the hull reached zero would be a hull
-      shrinking before it exploded.
+      ⚠️ **THIS ASSERTION HAS BEEN BOTH WAYS ROUND.** It was 0066's scatter; 0256 made a death cost
+      a rung and throw nothing; 0266 put the scatter back and deleted the rung. What never moved is
+      the ORDER, which is what this drives through the shell to hold — a death that emptied the
+      ladders on the step the hull reached zero would be a hull shrinking before it exploded, and
+      the pieces would arrive a beat's worth of scroll behind the wreck they came off.
     */
     const built = shell(NO_LEVEL);
     built.dispatch({ slice: 'run', type: 'begin', difficulty: TIER });
@@ -239,14 +242,21 @@ describe('the ship comes apart, and the player watches it happen', () => {
     built.dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
     const before = built.state().run.upgrades;
     killShip(built.world, built.frame);
-    expect(built.state().run.upgrades, 'the death took its rung on the step the hull reached zero, before the beat').toEqual(before);
+    expect(built.state().run.upgrades, 'the death emptied the ladders on the step the hull reached zero, before the beat').toEqual(
+      before,
+    );
+    expect(built.world.pickups.size, 'the death threw its pieces before the beat had run').toBe(0);
     flyOutTheBeat(built.world, built.frame);
 
-    const after = built.state().run.upgrades;
-    expect(after.filter((u) => u === 'weapon').length, 'a death did not cost the guns exactly one rung').toBe(2);
-    expect(after.filter((u) => u === 'missile').length, 'a death did not cost the tubes exactly one rung').toBe(2);
-    expect(built.state().run.weapon, 'a death took the gun back to the base').toBe(SHIPS.proof.weapon);
-    expect(built.world.pickups.size, 'a death threw something back onto the field').toBe(0);
+    expect(built.state().run.upgrades, 'a death left rungs on the ladders').toEqual([]);
+    /*
+      ⚠️ **ONE PIECE PER KIND — 0243.** Three weapon rungs and three missile rungs went in, and what
+      comes out is two pieces carrying three each rather than six pieces: *"it's too hard to grab all
+      the different powerups with all the different sequencing in the middle of a hail of bullets."*
+      `tests/stack.test.ts` holds the counts they carry; what this holds is that they are on the
+      field at all, and that they got there at the end of the beat.
+    */
+    expect(built.world.pickups.size, 'the death threw nothing back onto the field').toBe(2);
   });
 
   it('does not raise the run-over screen on the step the last life is lost', () => {

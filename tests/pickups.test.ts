@@ -31,7 +31,7 @@ import {
   SCROLL_PER_STEP,
   SHIP_SPEED,
 } from '../src/sim/flight.ts';
-import { GameFrame, PICKUP_LINGER_STEPS, SHIP_START_ALONG, dropPickups } from '../src/app/frame.ts';
+import { GameFrame, PICKUP_LINGER_STEPS, SHIP_START_ALONG, dropPickups, scatterUpgrades } from '../src/app/frame.ts';
 import { initialState, reduce } from '../src/state/root.ts';
 import { DEFAULT_DIFFICULTY } from '../src/state/slices/run.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
@@ -777,6 +777,45 @@ describe('collecting one, in the real frame', () => {
       // A list with no weapon in it turns nothing, and an empty list throws nothing.
       expect(dropped('drop:no-weapon', ['shield', 'bomb']).world.weaponsOffered).toBe(0);
       expect(dropped('drop:nothing', []).world.pickups.size).toBe(0);
+    });
+
+    it('a death’s scatter is dealt from its own stream, so a fight’s throw cannot move it', () => {
+      /*
+        ⚠️ **`docs/decisions/0021-one-stream-per-concern.md`, and this is the case it is written
+        about.** What a death throws back is which pieces the player can reach; what a mid-boss drops
+        is what its fight was worth. They were one field for the day 0256 had the scatter deleted —
+        one concern, so one stream — and 0266 brings the second concern back, which brings the second
+        stream with it.
+
+        ⚠️ **MEASURED AS *the drop cannot move the scatter*, which is the thing that would be wrong.**
+        Two worlds seeded identically, one of which throws a mid-boss's pieces before the ship dies;
+        both scatters have to be the same throw. On one shared generator the drop advances it and the
+        second scatter leaves on different headings — a seeded run that stops being reproducible from
+        its own inputs, with nothing on the screen to say so.
+      */
+      const scattered = (dropFirst: boolean): number[] => {
+        const built = playableWorld({
+          waves: [],
+          pickups: [],
+          landmarks: [],
+          bossAt: Number.POSITIVE_INFINITY,
+          midBoss: null,
+          sections: NO_SECTIONS,
+          boss: 'sentinel',
+          theme: 'approach',
+        });
+        built.world.dropRng = new Rng('streams:drop');
+        built.world.scatterRng = new Rng('streams:scatter');
+        if (dropFirst) dropPickups(built.world, built.world.cameraAlong + SHIP_START_ALONG, ACROSS_SPAN / 2, MID_BOSS_DROP);
+        const before = built.world.pickups.size;
+        scatterUpgrades(built.world, ['weapon', 'weapon', 'missile']);
+        const headings: number[] = [];
+        for (let i = before; i < built.world.pickups.size; i++) headings.push(built.world.pickups.at(i).velAcross);
+        return headings;
+      };
+      const alone = scattered(false);
+      expect(alone.length, 'the scatter threw nothing, so this measured nothing').toBe(2);
+      expect(scattered(true), 'a mid-boss’s drop dealt the death a different scatter').toEqual(alone);
     });
 
     it('and a dropped weapon cycles like an authored one, so it is an offer and not a return', () => {
