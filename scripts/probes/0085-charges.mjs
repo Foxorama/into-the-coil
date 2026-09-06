@@ -22,13 +22,16 @@ export const PROBES = [
     */
     broke: 'the restock put back on a death, so a run’s banked charges never survive one',
     // ⚠️ Renamed by 0256: a death costs one rung of the ladder now, and the guard says so.
-    guard: 'a death costs one rung per ladder, keeps the gun, and leaves the arsenal exactly where it was',
+    // ⚠️ Renamed with the guard by 0266, which took the rung out of the death rule. `anchorFailures`
+    // cannot see a rename — the probe's own anchor still resolves — so `npm run prove` reporting
+    // NOTHING WAS PROVEN is the only thing that could have said so, and did.
+    guard: 'a death takes both ladders and the kinds, and leaves the arsenal exactly where it was',
     edit: {
       path: 'src/state/slices/run.ts',
       // Anchored on the ARSENAL line rather than on the whole returned literal, for the reason
       // 0042's probe gives: a literal goes stale the day a field is added to it, and two have been.
-      find: '            arsenal: state.arsenal,\n            upgrades: afterDeath(state.upgrades),',
-      replace: '            arsenal: startingArsenal(),\n            upgrades: afterDeath(state.upgrades),',
+      find: '            arsenal: state.arsenal,\n            upgrades: [],',
+      replace: '            arsenal: startingArsenal(),\n            upgrades: [],',
     },
   },
   {
@@ -66,9 +69,9 @@ export const PROBES = [
     guard: 'and a death does not TOP UP an arsenal the player has emptied',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '            arsenal: state.arsenal,\n            upgrades: afterDeath(state.upgrades),',
+      find: '            arsenal: state.arsenal,\n            upgrades: [],',
       replace:
-        '            arsenal: state.arsenal.map((e) => ({ kind: e.kind, charges: Math.max(e.charges, SPECIALS[e.kind].charges) })),\n            upgrades: afterDeath(state.upgrades),',
+        '            arsenal: state.arsenal.map((e) => ({ kind: e.kind, charges: Math.max(e.charges, SPECIALS[e.kind].charges) })),\n            upgrades: [],',
     },
   },
 ];

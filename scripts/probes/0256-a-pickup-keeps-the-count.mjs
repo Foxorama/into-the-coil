@@ -17,54 +17,30 @@ export const PROBES = [
     guard: 'a pickup of another kind switches the kind and keeps the count',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '      const upgrades = tiersOf(state.upgrades, action.upgrade) < UPGRADE_TIERS ? [...state.upgrades, action.upgrade] : state.upgrades;',
+      // ⚠️ Re-anchored by 0266, which gave the reducer a count to apply: the clamp is the same
+      // clamp, asked once against the room left on the ladder rather than once per event.
+      find: '      const upgrades = added > 0 ? [...state.upgrades, ...rungs] : state.upgrades;',
       replace:
         '      const fitted = action.upgrade === \'weapon\' ? state.weapon : state.missile;\n' +
-        '      const upgrades = action.kind === fitted ? (tiersOf(state.upgrades, action.upgrade) < UPGRADE_TIERS ? [...state.upgrades, action.upgrade] : state.upgrades) : [...state.upgrades.filter((u) => u !== action.upgrade), action.upgrade];',
+        '      const upgrades = action.kind === fitted ? (added > 0 ? [...state.upgrades, ...rungs] : state.upgrades) : [...state.upgrades.filter((u) => u !== action.upgrade), action.upgrade];',
     },
   },
-  {
-    decision: '0256',
-    suite: 'tests/run.test.ts',
-    // 0039's rule put back: a death empties the list.
-    broke: 'a death emptying the ladder, which is what shipped for four months',
-    guard: 'a death costs one rung per ladder, keeps the gun, and leaves the arsenal exactly where it was',
-    edit: {
-      path: 'src/state/slices/run.ts',
-      find: '            upgrades: afterDeath(state.upgrades),',
-      replace: '            upgrades: [],',
-    },
-  },
-  {
-    decision: '0256',
-    suite: 'tests/run.test.ts',
-    // The floor removed: a ladder at one loses its one, which is *"to a minimum of 1"* undone.
-    broke: 'the floor under the cost removed, so a ladder at one rung is emptied',
-    guard: 'a ladder at one rung keeps its one',
-    edit: {
-      path: 'src/content/pickups.ts',
-      find: '    if (tiersOf(upgrades, kind) <= DEATH_KEEPS) continue;',
-      replace: '    if (tiersOf(upgrades, kind) < DEATH_KEEPS) continue;',
-    },
-  },
-  {
-    decision: '0256',
-    suite: 'tests/run.test.ts',
-    // 0233's other half: a death takes the gun back to the ship's own.
-    broke: 'a death putting the base gun back on the ship',
-    guard: 'a death costs one rung per ladder, keeps the gun',
-    edit: {
-      path: 'src/state/slices/run.ts',
-      find: '            weapon: state.weapon,\n            missile: state.missile,\n            difficulty: state.difficulty,\n          };',
-      replace: '            weapon: BASE_SHIP.weapon,\n            missile: BASE_SHIP.missile,\n            difficulty: state.difficulty,\n          };',
-    },
-  },
+  /*
+    ⚠️ **THREE PROBES WERE HERE — the rung, its floor, and the gun a death kept — AND
+    docs/decisions/0266-a-death-throws-the-ladders-back.md DELETED THEM WITH THE RULE THEY BROKE.**
+    *"A death reduces the power count by 1 (to a minimum of 1)"* was asked for, built and played, and
+    what the play said was that it had landed alongside the deleted scatter and that the two together
+    emptied the field. Their breaks are the current behaviour: *a death emptying the ladder* and *a
+    death putting the base gun back on the ship* are what the code does now, and a probe cannot break
+    a thing into what it already is. `scripts/probes/0266-a-death-throws-the-ladders-back.mjs` breaks
+    the restored rule in the same three places.
+  */
   {
     decision: '0256',
     suite: 'tests/death.test.ts',
-    // The rung taken on the step the hull reaches zero rather than at the end of the beat.
+    // The death dispatched on the step the hull reaches zero rather than at the end of the beat.
     broke: 'the death’s cost dispatched on the step the hull reached zero, before the beat',
-    guard: 'costs one rung per ladder at the end of the beat',
+    guard: 'throws the upgrades out of the wreck at the end of the beat',
     edit: {
       path: 'src/app/frame.ts',
       find: '  w.onCue(\'death\', w.ship.across);',

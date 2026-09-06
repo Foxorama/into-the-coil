@@ -1,5 +1,14 @@
 # 0256 — A pickup keeps the count, a death costs a rung, and a mid-boss drops the rest
 
+⚠️ **THE DEATH RULE IS REVERSED BY [0266](0266-a-death-throws-the-ladders-back.md), THE SAME DAY.**
+The rung is gone and the scatter this decision deleted is back, with 0243's ×N badge. Played, the
+rung and the deleted scatter landed on one quantity alongside the cut to the authored counts, and the
+sum was a field with almost nothing on it: *"in addition to reducing the power up total it also
+stopped the power ups spawning from a death, which drastically reduced the power ups in game."*
+**Everything else here stands** — the switch keeping the count, the authored budget, the mid-boss's
+drop and the dial's 4/3 — so read *A death costs one rung per ladder* below as history, and 0266 as
+the rule.
+
 **Accepted 2026-09-06**, the day after [0255](0255-the-jellyfish-opens.md), from the first play
 with the mid-bosses in — [`the-alpha-list`](../../reports/the-alpha-list-2026-09-06.md):
 

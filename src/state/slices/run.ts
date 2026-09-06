@@ -12,7 +12,7 @@
  */
 
 import { SPECIALS, type SpecialKind } from '../../content/specials.ts';
-import { UPGRADE_TIERS, afterDeath, tiersOf, type UpgradeKind } from '../../content/pickups.ts';
+import { UPGRADE_TIERS, tiersOf, type UpgradeKind } from '../../content/pickups.ts';
 import { DIFFICULTIES, type DifficultyKind } from '../../content/difficulty.ts';
 import { SHIPS } from '../../content/ships.ts';
 import type { WeaponKind } from '../../content/weapons.ts';
@@ -133,9 +133,10 @@ export interface RunState {
    * kind the ship is not carrying switches the gun, so *which gun* is a thing the list alone cannot
    * say. `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
    *
-   * ⚠️ **A DEATH KEEPS THEM — 0256.** 0233 had `lifeLost` put both back to the ship's base kinds on
-   * the line it emptied the list; a death costs a rung now and not the gun, so the kinds are the one
-   * thing in this state a death never touches.
+   * ⚠️ **A DEATH PUTS THEM BACK TO THE SHIP'S BASE KINDS — 0233, and 0266 restores it.** 0256 had
+   * a death cost a rung and keep the gun, because nothing was thrown back for the player to recover
+   * a kind from. The scatter is back, and every piece it throws holds the face the death took, so
+   * the base gun is what the ship flies with until the player crosses back through and takes it.
    */
   weapon: WeaponKind;
   missile: MissileKind;
@@ -153,12 +154,14 @@ export type RunAction =
     *weapon* could not tell a fifth pulse from a first arc.
   */
   /*
-    ⚠️ **`count` WAS HERE — 0243's stack, one event for every rung a death threw back — and 0256
-    deleted it.** A death throws nothing back now, so every pickup is worth one rung and the field
-    would have been a number nothing could ever send but one.
+    ⚠️ **`count` is how many rungs the pickup was worth — 0243, deleted by 0256 and back with the
+    scatter in 0266.** One when absent, which is every authored pickup and every mid-boss drop; a
+    piece a death threw back carries every rung of its kind the death took, and the shell passes
+    that through rather than dispatching once per rung, so the ladder's clamp and the switch rule
+    below see one event.
   */
-  | { slice: 'run'; type: 'upgraded'; upgrade: 'weapon'; kind: WeaponKind }
-  | { slice: 'run'; type: 'upgraded'; upgrade: 'missile'; kind: MissileKind }
+  | { slice: 'run'; type: 'upgraded'; upgrade: 'weapon'; kind: WeaponKind; count?: number }
+  | { slice: 'run'; type: 'upgraded'; upgrade: 'missile'; kind: MissileKind; count?: number }
   | { slice: 'run'; type: 'levelCleared' };
 
 /**
@@ -241,15 +244,23 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         clearing levels are the thing the ask is protecting, and a free restock every death is what
         made them worth nothing.
 
-        ── A DEATH COSTS ONE RUNG PER LADDER, AND THE GUN STAYS — 0256 ──────────────────────────────
+        ── A DEATH TAKES THE LADDERS AND THROWS THEM ON THE FIELD — 0039 AND 0066, RESTORED BY 0266 ─
 
-        ⚠️ **`upgrades: []` WAS THIS LINE, and it was what was left of
+        ⚠️ **This line is what is left of
         `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md`** — *"back to the
-        ship's base weapon and starting special"*, with 0085 amending the second half and 0066's
-        scatter handing the first straight back. Asked for after the first play of the mid-bosses:
-        *"a death reduces the power count by 1 (to a minimum of 1)."* `afterDeath` in
-        `src/content/pickups.ts` is the single description of the cost; nothing is thrown back,
-        because the rung IS the cost. The kinds stay too: a death is a rung, not the gun.
+        ship's base weapon and starting special"*; the base weapon is exactly what an empty upgrade
+        list resolves to, so this and `weaponFor` between them mean there is no second description
+        of what the ship shoots with nothing. 0085 amends the *starting special* half, and
+        `docs/decisions/0066-a-death-scatters-what-it-took.md`'s scatter is what hands the upgrades
+        straight back — `scatterUpgrades` in `src/app/frame.ts`, dispatched by the shell BEFORE this
+        reducer, because this reducer is what empties the list.
+
+        ⚠️ **`afterDeath(state.upgrades)` WAS THIS LINE FOR ONE DAY — 0256's rung, and 0266 deletes
+        it.** *"A death reduces the power count by 1"* was asked for and built, and it landed in the
+        same change that deleted the scatter: two rules on the same quantity, and played together
+        they left the field with almost nothing on it. *"In addition to reducing the power up total
+        it also stopped the power ups spawning from a death, which drastically reduced the power ups
+        in game."* What a death costs is the crossing back through the fire, and the life.
 
         ⚠️ **Unconditional on EVERY death, including the last one**, exactly as the arsenal clear was:
         a `lifeLost` that behaved differently on the last life would be a rule with a hidden
@@ -266,9 +277,10 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
             lives: state.lives - 1,
             level: state.level,
             arsenal: state.arsenal,
-            upgrades: afterDeath(state.upgrades),
-            weapon: state.weapon,
-            missile: state.missile,
+            upgrades: [],
+            // The base kinds come back with the base weapon — 0233. The scatter holds the faces.
+            weapon: BASE_SHIP.weapon,
+            missile: BASE_SHIP.missile,
             difficulty: state.difficulty,
           };
     case 'took': {
@@ -353,7 +365,18 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         way the list could grow past `UPGRADE_TIERS` of a kind; it switches and adds nothing now, so
         the list is the tier and the save holds nothing the ladder cannot read.
       */
-      const upgrades = tiersOf(state.upgrades, action.upgrade) < UPGRADE_TIERS ? [...state.upgrades, action.upgrade] : state.upgrades;
+      /*
+        ⚠️ **AND EVERY RUNG THE PIECE WAS WORTH — 0243, back with the scatter in 0266.** A piece a
+        death threw carries the whole ladder it took, so the shell dispatches one event with a
+        count rather than one event per rung: the clamp above is asked once, and a ×3 arriving at a
+        ladder with room for two adds two rather than being refused or overflowing.
+      */
+      const count = action.count === undefined || action.count < 1 ? 1 : action.count;
+      const room = UPGRADE_TIERS - tiersOf(state.upgrades, action.upgrade);
+      const added = count < room ? count : room;
+      const rungs: UpgradeKind[] = [];
+      for (let i = 0; i < added; i++) rungs.push(action.upgrade);
+      const upgrades = added > 0 ? [...state.upgrades, ...rungs] : state.upgrades;
       return {
         lives: state.lives,
         level: state.level,

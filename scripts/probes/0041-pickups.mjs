@@ -52,8 +52,9 @@ export const PROBES = [
       // starts the ladder again — and the break is the appending half deduplicated.
       // ⚠️ Re-anchored by 0243: the appended half is `rungs`, the count the pickup was worth.
       // ⚠️ Re-anchored by 0256: one arm again — a switch keeps the count — clamped at the cap.
-      find: '      const upgrades = tiersOf(state.upgrades, action.upgrade) < UPGRADE_TIERS ? [...state.upgrades, action.upgrade] : state.upgrades;',
-      replace: '      const upgrades = state.upgrades.includes(action.upgrade) ? state.upgrades : [...state.upgrades, action.upgrade];',
+      // ⚠️ Re-anchored by 0266, which put 0243's count back: the appended half is `rungs` again.
+      find: '      const upgrades = added > 0 ? [...state.upgrades, ...rungs] : state.upgrades;',
+      replace: '      const upgrades = state.upgrades.includes(action.upgrade) ? state.upgrades : [...state.upgrades, ...rungs];',
     },
   },
   {
@@ -66,16 +67,18 @@ export const PROBES = [
     // `docs/decisions/0085-a-death-does-not-cost-the-bombs.md` inverted the assertion this points at
     // and retitled it with the rule; `anchorFailures` cannot see that, because the probe's own anchor
     // still resolves perfectly. `docs/decisions/0256-a-pickup-keeps-the-count.md` did it again: a
-    // death costs a RUNG now, so the break is a death that costs nothing at all.
+    // death costs a RUNG now, so the break is a death that costs nothing at all. And 0266 renamed it
+    // once more, restoring the scatter and taking the rung away — the break is unchanged in kind
+    // throughout: a death that leaves the whole ladder on the ship.
     broke: 'a death that leaves the whole ladder on the ship',
-    guard: 'a death costs one rung per ladder, keeps the gun, and leaves the arsenal exactly where it was',
+    guard: 'a death takes both ladders and the kinds, and leaves the arsenal exactly where it was',
     edit: {
       path: 'src/state/slices/run.ts',
       // ⚠️ Anchored on the UPGRADES line rather than on the whole returned literal, which is what it
       // was and what went stale the day 0053 turned the arm into a multi-line object. The twelve-space
       // indent is the `lifeLost` arm; `begin` has the same field at eight.
-      find: '            upgrades: afterDeath(state.upgrades),',
-      replace: '            upgrades: state.upgrades,',
+      find: '            upgrades: [],\n            // The base kinds come back',
+      replace: '            upgrades: state.upgrades,\n            // The base kinds come back',
     },
   },
   {
