@@ -776,6 +776,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     levelIndex: 0,
     weaponsOffered: 0,
     nextWave: 0,
+    fightFiring: 0,
     bossRow,
     fight: level.midBoss === null ? 1 : 0,
     bossPool,

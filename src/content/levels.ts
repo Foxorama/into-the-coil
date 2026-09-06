@@ -90,6 +90,31 @@ export type WaveOrigin = 'lead' | 'acrossMinus' | 'acrossPlus';
  */
 export const MIX_RUN = 3;
 
+/**
+ * One firing wave in this many is put on the field while a mid-boss is being fought — 0267.
+ *
+ * ── A FIGHT'S LENGTH IS THE PLAYER'S, AND A WAVE'S PLACE IS THE AUTHOR'S ────────────────────────
+ *
+ * `docs/decisions/0267-a-fight-thins-the-waves-over-it.md`. Reported: *"when the minibosses are on
+ * screen there are way too many waves in general happening and it's a lot."* 0247 said *the waves
+ * keep coming around it*, and they do: the camera never stops for a fight, so the stretch of script
+ * that lands on one is however far the camera got while the player was killing it.
+ *
+ * ⚠️ **NO EDIT TO THESE TABLES COULD HAVE FIXED IT**, which is why this is a spawn rule and not a
+ * re-authoring. `scripts/weigh-fight.mjs` walks every level through the real frame with the ship
+ * holding the boss's lane: at three rungs a fight takes 20–39 s and 5–12 firing waves land on it; at
+ * one rung — what a player carries at the mid-boss, since a level authors one weapon near its start
+ * and the fight's own drop comes after it — the same authored script delivers 14–25 over 42–83 s.
+ * Move the waves for one and the other gets a hole.
+ *
+ * ⚠️ **A BUDGET, AND THE PLAY-TEST OWNS THE NUMBER.** Three, because the ask is *"still need some
+ * during miniboss otherwise miniboss is too easy, but not as many"* — a third of 14–25 is 5–8, which
+ * is what the stretch BEFORE the fight already carries, and one in two was measured first and left
+ * the busiest levels above where they started. `tests/fight.test.ts` holds every level to it over
+ * the instrument's own walk.
+ */
+export const FIGHT_FIRING_IN = 3;
+
 export interface WaveEntry {
   /** Camera distance, in world units from the level's start, at which this wave spawns. */
   at: number;

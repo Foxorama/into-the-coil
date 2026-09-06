@@ -98,6 +98,8 @@ export function inertLevel(): {
   levelIndex: number;
   weaponsOffered: number;
   nextWave: number;
+  // The fight's count of firing waves offered — 0267. A fixture with no level never advances it.
+  fightFiring: number;
   bossRow: typeof BOSSES.sentinel;
   fight: number;
   bossPool: Pool<Entity>;
@@ -161,6 +163,7 @@ export function inertLevel(): {
     levelIndex: 0,
     weaponsOffered: 0,
     nextWave: 0,
+    fightFiring: 0,
     bossRow: BOSSES.sentinel,
     fight: 1,
     bossPool: new Pool<Entity>(CAPACITY.boss, makeEntity),
@@ -354,6 +357,7 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     levelIndex: 0,
     weaponsOffered: 0,
     nextWave: 0,
+    fightFiring: 0,
     // The mid-boss's fight first where the level has one — 0247, exactly as `beginRun` sets it.
     bossRow: BOSSES[level.midBoss === null ? level.boss : level.midBoss.kind],
     fight: level.midBoss === null ? 1 : 0,
