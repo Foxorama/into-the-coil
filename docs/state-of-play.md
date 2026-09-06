@@ -144,6 +144,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **one pilot a level: the place's signature is the only kind that reacts to the player, every shared kind and every mid-boss flies a pattern and fires one, the eagle is the one end boss that stalks, and a charger turns at the box's ends** | [0258](decisions/0258-one-pilot-a-level.md) |
 | **the bullets stay on the screen: a body fires on entering the view, a wave's members are dealt across the entry window by index, and every level is held to eight seconds dry and two fifths covered at the capped loadout — `scripts/weigh-bullets.mjs` is the instrument** | [0259](decisions/0259-the-bullets-stay-on-the-screen.md) |
 | **a death takes both ladders and both kinds and throws every rung where the ship died — one piece per kind, holding the face it took, wearing a ×N badge; 0256's rung is deleted and what a death costs is the crossing and the life** | [0266](decisions/0266-a-death-throws-the-ladders-back.md) |
+| **a fight thins the waves over it: while a mid-boss is on the field one firing wave in three lands and the rest are SKIPPED, never deferred; the quiet ones are untouched — `scripts/weigh-fight.mjs` is the instrument, and the budget is the level's own approach rather than a constant** | [0267](decisions/0267-a-fight-thins-the-waves-over-it.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -774,14 +775,17 @@ eagle the one end boss that stalks. **The fourth is landed** —
 the quantity; a body fires on entering the view, and `scripts/weigh-bullets.mjs` is the instrument
 every level is now held against.
 
-⚠️ **AND TWO ITEMS HAVE ARRIVED SINCE, BOTH FROM PLAYING WHAT LANDED.** The first is 0266 above. The
-second is not started: **the waves are too thick over a mid-boss fight** — *"when the minibosses are
-on screen there are way too many waves in general happening… spread the waves out so a few bullet
-firing waves happen before miniboss and some after, and less during."* A wave's `at` is a place and a
-fight's length is a duration set by the player's loadout, so the count that lands on a fight is not
-authorable: at 7 seconds Coilward puts 3 firing waves on it and at 25 it puts 11. It wants a spawn
-rule while a mid-boss is on the field, and `scripts/weigh-bullets.mjs` segmented by fight state
-before any number is chosen.
+⚠️ **AND TWO ITEMS ARRIVED SINCE, BOTH FROM PLAYING WHAT LANDED, AND BOTH ARE IN.** The first is
+0266 above. The second is [0267](decisions/0267-a-fight-thins-the-waves-over-it.md) — *"when the
+minibosses are on screen there are way too many waves in general happening"* — a spawn rule rather
+than a re-authoring, because a wave's `at` is a place and a fight's length is the player's, so no
+edit to the tables could hold both ends of the loadout. `scripts/weigh-fight.mjs` is its instrument.
+
+⚠️ **ONE HALF OF THAT ASK IS UNBUILT AND IS ITS OWN ITEM: *"some [firing waves] after miniboss."***
+0267's *What is owed* has the measurement — at one rung two levels' mid-boss fights outlive their own
+wave scripts, so there is no *after* for wave spacing to put anything in. The lever is the mid-boss's
+health, which [0247](decisions/0247-a-level-has-a-mid-boss-and-a-real-one.md) set at half and which
+the end-boss health work below deliberately does not touch. **Not started, and it needs an ask.**
 
 **Then the end bosses' health**, and the gyre's walls sooner; then the serpent, the eagle, the frost
 ship; every one of those is a model quantity until it is flown. Everything below this paragraph about the weapons is the record of how
