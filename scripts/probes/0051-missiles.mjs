@@ -15,9 +15,10 @@ export const PROBES = [
     guard: 'carries three times the pulse’s damage',
     edit: {
       path: 'src/content/shots.ts',
-      find: "  missile: { sprite: SPRITE.missile, spriteHit: SPRITE.missile, radius: 1.3, health: 1, damage: 3, speed: 1.5 },",
+      // ⚠️ Re-anchored by 0263, which gave every shot row its stages.
+      find: "  missile: { sprite: SPRITE.missile, spriteHit: SPRITE.missile, radius: 1.3, health: 1, damage: 3, speed: 1.5, fission: SPENT_BY_ARRIVING },",
       replace:
-        "  missile: { sprite: SPRITE.missile, spriteHit: SPRITE.missile, radius: 1.3, health: 1, damage: 2, speed: 1.5 },",
+        "  missile: { sprite: SPRITE.missile, spriteHit: SPRITE.missile, radius: 1.3, health: 1, damage: 2, speed: 1.5, fission: SPENT_BY_ARRIVING },",
     },
   },
   {

@@ -324,6 +324,13 @@ than the root so it bows as it flies, then volleys that call kites — a new bod
 horde, sent by no level, that dives for the ship's lane — from one side of the lane and then the
 other, and at the end raptors the same way. A boss may send a body as well as a bullet.
 
+**The frost ship chills and shatters** — [0253](decisions/0253-the-frost-ship-chills.md),
+[0263](decisions/0263-the-frost-ship-shatters.md): a cold on the hull that slows a ship inside it
+and freezes one that stays; a shard of frost that is one bullet from the hull and twelve by the
+time it reaches you — two bolts along its heading, each a snowflake of six, each melting; and
+shards called in from the sides that shatter into a snowflake where they die. A shot may have a
+life after the muzzle, and a body's death may throw.
+
 ⚠️ **A phase changes what a boss DOES, not what it looks like** —
 [0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md). Nothing on screen currently
 says how much boss is left, and whether that reads as progress is the first question a play-test of

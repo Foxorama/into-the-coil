@@ -1334,13 +1334,20 @@ export const BOSSES: Record<BossKind, BossRow> = {
       ⚠️ **FOUR PHASES, AND THE COLD RUNS THROUGH ALL OF THEM — 0253.** *"Frost bolts and frost
       blasts … it needs some adds as well."* A wall of frost across the lane while whole — the
       bolts; a spray of them once hurt; at the lower half, shards called in pairs — the adds, the
-      Rime Shelf's own enemy; and at the last fifth a ring of frost round the hull — the blasts.
+      Rime Shelf's own enemy; and at the last fifth a wider, quicker spray.
+
+      ⚠️ **THE BLASTS ARE WHAT EVERY SHARD BECOMES — 0263.** *"The frost attacks should explode
+      into directional frost bullets, which explode into snowflake patterns."* A shard is two bolts
+      and then twelve flakes (`src/content/shots.ts`), so the volleys here are counted in shards
+      and small: the wall is one either side of the hull, the sprays two and then three, and the
+      ring 0253 threw at the last fifth is gone — six shards that each open into twelve is a screen
+      nobody can read. The adds come in from the sides on 0262's flank, and shatter where they die.
     */
     phases: [
-      { upTo: 1, fireEvery: 84, shots: 2, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.7, fireEvery: 72, shots: 3, spread: 0.7, patrolScale: 1.2, stance: { kind: 'volley' }, shot: null, attack: { kind: 'spray' } },
-      { upTo: 0.45, fireEvery: 60, shots: 3, spread: 0.7, patrolScale: 1.5, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'shard', count: 2, formation: 'vee', from: 'lead' } },
-      { upTo: 0.2, fireEvery: 54, shots: 6, spread: 0, patrolScale: 1.9, stance: { kind: 'volley' }, shot: null, attack: { kind: 'ring' } },
+      { upTo: 1, fireEvery: 96, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.7, fireEvery: 84, shots: 2, spread: 0.8, patrolScale: 1.2, stance: { kind: 'volley' }, shot: null, attack: { kind: 'spray' } },
+      { upTo: 0.45, fireEvery: 66, shots: 2, spread: 0.8, patrolScale: 1.5, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'shard', count: 2, formation: 'vee', from: 'sides' } },
+      { upTo: 0.2, fireEvery: 60, shots: 3, spread: 1.2, patrolScale: 1.9, stance: { kind: 'volley' }, shot: null, attack: { kind: 'spray' } },
     ],
   },
   /**

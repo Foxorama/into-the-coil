@@ -66,7 +66,40 @@ export interface ShotRow extends Body {
    * tuning pass is supposed to raise.
    */
   speed: number;
+  /**
+   * What the shot becomes, stage by stage — `docs/decisions/0263-the-frost-ship-shatters.md`.
+   *
+   * Empty for a shot that is spent by arriving and nothing else, which is every shot but one. A
+   * stage is a fuse and what the shot turns into when it burns down: a fan of the same shot about
+   * its own heading, a ring of it, or nothing — a melt. The children are the same kind one stage
+   * on, so a row's stages read top to bottom as the life of one bullet, and the last stage is the
+   * only thing that ends one that has not hit anything or left the world.
+   *
+   * ⚠️ **Required, never defaulted**, on `EnemyRow.attack`'s argument in `src/content/enemies.ts`:
+   * a shot that does not burst says so on the page, so adding a row is a decision about what the
+   * bullet asks of the player over its whole life and not only at the muzzle.
+   *
+   * ⚠️ **The children are the SAME kind**, and it is the fuse on the entity and not a second row
+   * that tells a bolt from the shard it came from. A shard that became a smaller, quicker bolt
+   * would want a rung on the hostile ladder for every stage, and `tests/legibility.test.ts` holds
+   * that ladder at more than five pixels a rung — 0262 spent the last easy room on it.
+   */
+  fission: readonly Fission[];
 }
+
+/**
+ * One stage of a shot's life after the muzzle — 0263. `after` is the fuse in steps; the arm says
+ * what it bursts into. A `fan` is `shots` about the heading the shot was flying on, `spread` wide in
+ * total on the same arithmetic as an enemy's `spray`; a `ring` is `shots` evenly round, the first
+ * on the heading; `nothing` is the melt.
+ */
+export type Fission =
+  | { after: number; into: 'fan'; shots: number; spread: number }
+  | { after: number; into: 'ring'; shots: number }
+  | { after: number; into: 'nothing' };
+
+/** A shot that is spent by arriving and by nothing else — every shot but the frost. */
+const SPENT_BY_ARRIVING: readonly Fission[] = [];
 
 /** Written out rather than derived, so the table below cannot quietly lose a row. */
 export const SHOT_KINDS: readonly ShotKind[] = [
@@ -118,7 +151,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    */
   // ⚠️ `spriteHit` is the same bitmap, and that is honest rather than lazy: a shot has one health,
   // so it never survives a hit and never flashes. There is no second silhouette to draw.
-  pulse: { sprite: SPRITE.bullet, spriteHit: SPRITE.bullet, radius: 0.9, health: 1, damage: 1, speed: 2.6 },
+  pulse: { sprite: SPRITE.bullet, spriteHit: SPRITE.bullet, radius: 0.9, health: 1, damage: 1, speed: 2.6, fission: SPENT_BY_ARRIVING },
   /**
    * One link of chain lightning — `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
    *
@@ -132,7 +165,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * weapon's `weight` ladder (`src/content/weapons.ts`), so it stays a relationship to the pulse —
    * one link is one pulse — rather than a number tuned beside it.
    */
-  arc: { sprite: SPRITE.arcNode, spriteHit: SPRITE.arcNode, radius: 1, health: 1, damage: 1, speed: 0 },
+  arc: { sprite: SPRITE.arcNode, spriteHit: SPRITE.arcNode, radius: 1, health: 1, damage: 1, speed: 0, fission: SPENT_BY_ARRIVING },
   /**
    * A blade that circles the ship — `docs/decisions/0234-a-blade-circles-the-ship.md`.
    *
@@ -162,7 +195,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * `src/app/frame.ts` swaps the two every few steps to spin it. `blit` cannot rotate; two bitmaps
    * an eighth of a turn apart are what a spinning shuriken is.
    */
-  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 3.2, health: BLADE_EDGE, damage: 1, speed: 1 },
+  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 3.2, health: BLADE_EDGE, damage: 1, speed: 1, fission: SPENT_BY_ARRIVING },
   /**
    * What an enemy sends back. **Slower than the ship**, which is the whole of what makes it
    * dodgeable rather than a coin flip: a player who reacts can always leave the line it is on.
@@ -173,7 +206,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     which is the *"player/enemy fire"* half of the legibility report with no channel separating them
     at all. The radius is untouched, so nothing about dodging one has changed.
   */
-  spit: { sprite: SPRITE.spit, spriteHit: SPRITE.spit, radius: 0.9, health: 1, damage: 1, speed: 1.4 },
+  spit: { sprite: SPRITE.spit, spriteHit: SPRITE.spit, radius: 0.9, health: 1, damage: 1, speed: 1.4, fission: SPENT_BY_ARRIVING },
   /*
     ── THREE ENEMY BULLETS AND THERE WAS ONE, WHICH IS THE OTHER HALF OF A PLAY REPORT ─────────────
 
@@ -204,7 +237,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * likely to be on target; giving it the least travel time is what makes the lancer the enemy the
    * player answers first rather than the one they out-run.
    */
-  lance: { sprite: SPRITE.lance, spriteHit: SPRITE.lance, radius: 0.9, health: 1, damage: 1, speed: 1.6 },
+  lance: { sprite: SPRITE.lance, spriteHit: SPRITE.lance, radius: 0.9, health: 1, damage: 1, speed: 1.6, fission: SPENT_BY_ARRIVING },
   /**
    * The turret's. Slow and fat — a shot the player is meant to see coming and choose to be elsewhere
    * for.
@@ -214,21 +247,21 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * bullet on that cadence is a wall; a slow one is a pattern to move through, and the pattern is
    * what 0098's other half is about.
    */
-  flak: { sprite: SPRITE.flak, spriteHit: SPRITE.flak, radius: 0.9, health: 1, damage: 1, speed: 1 },
+  flak: { sprite: SPRITE.flak, spriteHit: SPRITE.flak, radius: 0.9, health: 1, damage: 1, speed: 1, fission: SPENT_BY_ARRIVING },
   /**
    * The serpent's acid blast — `docs/decisions/0248-the-serpent-strikes.md`. The fattest and
    * slowest bullet in the game: a wall of these across the lane is a thing to walk through, and
    * each is nearly twice a flak slab's hurtbox. Its own ink (`acid`), on 0098's terms — and on
    * 0098's other rule, that the bigger a bullet is drawn the slower it goes, it sits below `flak`.
    */
-  acid: { sprite: SPRITE.acid, spriteHit: SPRITE.acid, radius: 1.5, health: 1, damage: 1, speed: 0.8 },
+  acid: { sprite: SPRITE.acid, spriteHit: SPRITE.acid, radius: 1.5, health: 1, damage: 1, speed: 0.8, fission: SPENT_BY_ARRIVING },
   /**
    * The serpent's void blast — 0248, and the hydra's last head's. Quicker than acid, worth two
    * hits, and in the `void` ink; the black heart's rain is made of these.
    */
   // 1.3 since 0262 — the ring is drawn a size bigger to make room for the quill on the ladder, and the
   // hurtbox keeps to the band `tests/combat.test.ts` holds.
-  void: { sprite: SPRITE.void, spriteHit: SPRITE.void, radius: 1.3, health: 1, damage: 2, speed: 0.9 },
+  void: { sprite: SPRITE.void, spriteHit: SPRITE.void, radius: 1.3, health: 1, damage: 2, speed: 0.9, fission: SPENT_BY_ARRIVING },
   /**
    * The eagle's quill — `docs/decisions/0262-the-eagle-throws-quills.md`: *"the bullets need to be
    * feathered quills."* A feather, shaft first, in the enemy's ink — the eagle's own bullet where
@@ -236,7 +269,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * flak and slower, smaller than the ring and quicker, which is 0098's rule for what a new bullet
    * costs. The hurtbox is 0.26 of the drawing.
    */
-  quill: { sprite: SPRITE.quill, spriteHit: SPRITE.quill, radius: 1.1, health: 1, damage: 1, speed: 0.95 },
+  quill: { sprite: SPRITE.quill, spriteHit: SPRITE.quill, radius: 1.1, health: 1, damage: 1, speed: 0.95, fission: SPENT_BY_ARRIVING },
   /**
    * The eagle's flame — `docs/decisions/0249-the-eagle-summons.md`, and the hydra's second head's.
    * The smallest and quickest bullet in the game, on 0098's rule the other way round from the
@@ -245,7 +278,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    */
   // ⚠️ 0.66 is the most a 1.2-unit drawing may carry (`tests/combat.test.ts`'s band) and the least
   // that keeps the sky's far stars under the smallest thing that can kill you (`tests/sky.test.ts`).
-  flame: { sprite: SPRITE.flame, spriteHit: SPRITE.flame, radius: 0.66, health: 1, damage: 1, speed: 1.8 },
+  flame: { sprite: SPRITE.flame, spriteHit: SPRITE.flame, radius: 0.66, health: 1, damage: 1, speed: 1.8, fission: SPENT_BY_ARRIVING },
   /*
     ⚠️ **THE BIGGEST AND THE SLOWEST HOSTILE BULLET, WHICH IS 0098'S TRADE AT ITS FAR END** — 0251.
     A chunk of volcanic rock falling on the lane: a fifteenth of the lane across, at under half the
@@ -254,7 +287,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     short axis. Its hurtbox is a third of its drawing, inside `tests/combat.test.ts`'s band, and it
     hits for two: a rock is not a bullet.
   */
-  rock: { sprite: SPRITE.rock, spriteHit: SPRITE.rock, radius: 2.2, health: 1, damage: 2, speed: 0.7 },
+  rock: { sprite: SPRITE.rock, spriteHit: SPRITE.rock, radius: 2.2, health: 1, damage: 2, speed: 0.7, fission: SPENT_BY_ARRIVING },
   /*
     ⚠️ **BETWEEN THE ACID AND THE ROCK, WHICH IS THE ONE SLOT THE LADDER HAD LEFT** — 0253. Every
     hostile bullet is drawn more than five pixels from every other and the quick one is the small
@@ -264,7 +297,33 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     hurtbox is 0.3 of it. It hits for one: what the frost ship does to you is slow you, and that is
     the hull's, not the shot's.
   */
-  frost: { sprite: SPRITE.frost, spriteHit: SPRITE.frost, radius: 1.7, health: 1, damage: 1, speed: 0.75 },
+  /*
+    ⚠️ **AND IT IS THE ONE SHOT WITH A LIFE AFTER THE MUZZLE — 0263.** *"The frost attacks should
+    explode into directional frost bullets, which explode into snowflake patterns."* Three quarters
+    of a second out, a shard bursts into two along its own heading, a lane's tenth apart; two
+    thirds of a second on, each of those bursts into a snowflake — six evenly round, one on the
+    heading — and a flake melts a second and a half after that. So one shard is two bolts and then
+    twelve flakes, and where the player was when it left the hull is the wrong place to be when it
+    opens: the snowflake is thrown where the bolt is, not where the ship is.
+
+    The fuses are in steps because the frame counts in steps; in seconds, 0.75, 0.67 and 1.5. The
+    first is what puts the split on the screen and not at the hull; the second is what puts the
+    snowflake in the player's half of the lane; the third is what keeps a screen of flakes from
+    outliving the volley after it — `tests/frost.test.ts` counts what is alive.
+  */
+  frost: {
+    sprite: SPRITE.frost,
+    spriteHit: SPRITE.frost,
+    radius: 1.7,
+    health: 1,
+    damage: 1,
+    speed: 0.75,
+    fission: [
+      { after: 45, into: 'fan', shots: 2, spread: 0.6 },
+      { after: 40, into: 'ring', shots: 6 },
+      { after: 90, into: 'nothing' },
+    ],
+  },
   /**
    * The player's second auto-weapon: slower than the pulse, and worth three of it.
    *
@@ -281,7 +340,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * ⚠️ **Bigger radius than the pulse**, because a heavier shot that misses by the same margin as a
    * light one is a shot the player cannot aim differently. It stays well under the smallest enemy.
    */
-  missile: { sprite: SPRITE.missile, spriteHit: SPRITE.missile, radius: 1.3, health: 1, damage: 3, speed: 1.5 },
+  missile: { sprite: SPRITE.missile, spriteHit: SPRITE.missile, radius: 1.3, health: 1, damage: 3, speed: 1.5, fission: SPENT_BY_ARRIVING },
   /**
    * The homing missile — `docs/decisions/0235-a-seeker-hunts-the-nearest-body.md`.
    *
@@ -290,7 +349,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * the ask, and what pays for the guidance is the third pulse. Slower than the straight missile
    * too, so a body it has to come about for is reached a beat later than one it was pointed at.
    */
-  seeker: { sprite: SPRITE.seeker, spriteHit: SPRITE.seeker, radius: 1.4, health: 1, damage: 2, speed: 1.4 },
+  seeker: { sprite: SPRITE.seeker, spriteHit: SPRITE.seeker, radius: 1.4, health: 1, damage: 2, speed: 1.4, fission: SPENT_BY_ARRIVING },
   /**
    * The bomb itself, which hurts nothing at all.
    *
@@ -299,7 +358,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * is aimed at and goes off where the player aimed it. A bomb that detonated on contact would be a
    * missile with a bigger number, and the thing that makes it a skill is choosing the PLACE.
    */
-  bomb: { sprite: SPRITE.bomb, spriteHit: SPRITE.bomb, radius: 2, health: 1, damage: 0, speed: 2.2 },
+  bomb: { sprite: SPRITE.bomb, spriteHit: SPRITE.bomb, radius: 2, health: 1, damage: 0, speed: 2.2, fission: SPENT_BY_ARRIVING },
   /**
    * What a bomb becomes: six pulses of damage, everywhere inside a third of the lane.
    *
@@ -315,7 +374,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * ⚠️ **`speed` is 0: it does not travel.** It appears where the bomb was and stays there while the
    * world moves past it, which is what a shockwave in a scrolling world looks like.
    */
-  blast: { sprite: SPRITE.blast, spriteHit: SPRITE.blast, radius: BLAST_RADIUS, health: 1, damage: 6, speed: 0 },
+  blast: { sprite: SPRITE.blast, spriteHit: SPRITE.blast, radius: BLAST_RADIUS, health: 1, damage: 6, speed: 0, fission: SPENT_BY_ARRIVING },
   /*
     ── THE THREE OTHER RUNGS OF THE PYRE, AND THE MIDDLE ONE IS `blast` ITSELF ─────────────────────
 
@@ -345,6 +404,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     health: 1,
     damage: 6,
     speed: 0,
+    fission: SPENT_BY_ARRIVING,
   },
   blastWide: {
     sprite: SPRITE.blastWide,
@@ -353,6 +413,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     health: 1,
     damage: 6,
     speed: 0,
+    fission: SPENT_BY_ARRIVING,
   },
   blastWidest: {
     sprite: SPRITE.blastWidest,
@@ -361,5 +422,18 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     health: 1,
     damage: 6,
     speed: 0,
+    fission: SPENT_BY_ARRIVING,
   },
 };
+
+/**
+ * The rows in `SHOT_KINDS` order, and each kind's index in it — 0263. An enemy shot carries its
+ * kind as this index, exactly as an enemy carries its row's index into `enemyRows` in
+ * `src/app/frame.ts`, so the frame can read a shot's stages off the row it was spawned from with an
+ * array index rather than a string key. Built from the one list so neither can disagree with it.
+ */
+export const SHOT_ROWS: readonly ShotRow[] = SHOT_KINDS.map((k) => SHOTS[k]);
+export const SHOT_INDEX: Record<ShotKind, number> = {} as Record<ShotKind, number>;
+SHOT_KINDS.forEach((k, index) => {
+  SHOT_INDEX[k] = index;
+});

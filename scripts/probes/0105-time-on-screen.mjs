@@ -18,8 +18,9 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: nothing crosses the screen faster than the window a player can use',
     edit: {
       path: 'src/content/enemies.ts',
-      find: '    closing: 0.68,\n    fireEvery: 0,',
-      replace: '    closing: 1.1,\n    fireEvery: 0,',
+      // ⚠️ Re-anchored by 0263, which gave every enemy row a shatter.
+      find: '    closing: 0.68,\n    shatter: null,\n    fireEvery: 0,',
+      replace: '    closing: 1.1,\n    shatter: null,\n    fireEvery: 0,',
     },
   },
   {
@@ -47,8 +48,9 @@ export const PROBES = [
     guard: 'and the ordering is untouched, so nothing lost the identity its row is written around',
     edit: {
       path: 'src/content/enemies.ts',
-      find: '    closing: 0.22,\n    fireEvery: 102,',
-      replace: '    closing: 0.68,\n    fireEvery: 102,',
+      // ⚠️ Re-anchored by 0263, which gave every enemy row a shatter.
+      find: '    closing: 0.22,\n    shatter: null,\n    fireEvery: 102,',
+      replace: '    closing: 0.68,\n    shatter: null,\n    fireEvery: 102,',
     },
   },
   {
@@ -60,8 +62,9 @@ export const PROBES = [
     guard: 'and the ordering is untouched, so nothing lost the identity its row is written around',
     edit: {
       path: 'src/content/enemies.ts',
-      find: '    closing: 0,\n    fireEvery: 0,',
-      replace: '    closing: 0.4,\n    fireEvery: 0,',
+      // ⚠️ Re-anchored by 0263, which gave every enemy row a shatter.
+      find: '    closing: 0,\n    shatter: null,\n    fireEvery: 0,',
+      replace: '    closing: 0.4,\n    shatter: null,\n    fireEvery: 0,',
     },
   },
 ];

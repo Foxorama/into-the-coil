@@ -95,16 +95,21 @@ export function overlaps(a: Entity, b: Entity, radiusScaleB: number): boolean {
  * and `src/app/frame.ts` decides what that is worth.
  */
 export interface Deaths {
-  /** How many entries of the two arrays below are meaningful. Reset by the caller, never here. */
+  /** How many entries of the three arrays below are meaningful. Reset by the caller, never here. */
   count: number;
   along: number[];
   across: number[];
+  /**
+   * The `kind` the body carried — 0263, so the composer can read what the death is worth off the
+   * row it was spawned from. Opaque here, on `Entity.kind`'s own terms: this layer cannot look it up.
+   */
+  kind: number[];
 }
 
 /** A log big enough for `capacity` deaths in one step. Built once, at boot. */
 export function makeDeaths(capacity: number): Deaths {
   // @setup: one log per pairing, built when the world is composed and reused every step forever.
-  return { count: 0, along: new Array<number>(capacity).fill(0), across: new Array<number>(capacity).fill(0) };
+  return { count: 0, along: new Array<number>(capacity).fill(0), across: new Array<number>(capacity).fill(0), kind: new Array<number>(capacity).fill(0) };
 }
 
 /**
@@ -127,6 +132,7 @@ function killed(targets: Pool<Entity>, index: number, deaths: Deaths | null): vo
   if (deaths !== null && deaths.count < deaths.along.length) {
     deaths.along[deaths.count] = target.along;
     deaths.across[deaths.count] = target.across;
+    deaths.kind[deaths.count] = target.kind;
     deaths.count++;
   }
   targets.releaseAt(index);

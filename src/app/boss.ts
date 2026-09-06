@@ -29,7 +29,7 @@ import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../sim/flight.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { CueKind } from '../content/cues.ts';
 import { type DifficultyRow, fireGapFor } from '../content/difficulty.ts';
-import { SHOTS, type ShotRow } from '../content/shots.ts';
+import { SHOTS, SHOT_INDEX, type ShotRow } from '../content/shots.ts';
 
 /**
  * How fast it closes on its station, in world units per step, on top of the scroll.
@@ -184,6 +184,8 @@ export function throwCurtain(
   uncoil: Uncoil,
   shots: Pool<Entity>,
   bullet: ShotRow,
+  /** The bullet's index in `SHOT_KINDS`, carried on every shot so the frame can read its row — 0263. */
+  kind: number,
   speed: number,
   scrollPerStep: number,
   /** Where the camera's trailing edge is: a wall along the lane runs from here to the hull — 0252. */
@@ -274,7 +276,7 @@ export function throwCurtain(
     // A curtain that will not fit is dropped rather than grown, exactly as `src/sim/pool.ts` says —
     // and the pool is fifteen times a curtain, so this is the rule rather than a case.
     if (shot === null) break;
-    reset(shot, footAlong + runAlong * s, footAcross + runAcross * s, bullet);
+    reset(shot, footAlong + runAlong * s, footAcross + runAcross * s, bullet, kind);
     shot.velAlong = velAlong;
     shot.velAcross = velAcross;
   }
@@ -311,6 +313,8 @@ export function stepBoss(
   ship: Entity,
   shots: Pool<Entity>,
   bullet: ShotRow,
+  /** The bullet's index in `SHOT_KINDS` — 0263, on `throwCurtain`'s terms. */
+  bulletKind: number,
   cameraAlong: number,
   scrollPerStep: number,
   patrolDirection: number,
@@ -528,7 +532,7 @@ export function stepBoss(
   if (ship.along === boss.along && ship.across === boss.across) return direction;
   // The phase's own attack where it names one — 0248: the serpent throws a wall, then a spray, then
   // lightning, and the row's `attack` is the first of those.
-  throwAttack(phase.attack ?? row.attack, bullet, boss, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);
+  throwAttack(phase.attack ?? row.attack, bullet, bulletKind, boss, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);
   return direction;
 }
 
@@ -543,6 +547,7 @@ export function stepBoss(
 function throwAttack(
   attack: BossAttack,
   bullet: ShotRow,
+  kind: number,
   boss: Entity,
   phase: BossPhase,
   tier: DifficultyRow,
@@ -594,7 +599,7 @@ function throwAttack(
         // A volley that will not fit is dropped rather than grown, exactly as `src/sim/pool.ts` says.
         if (shot === null) break;
         const angle = first + step * i;
-        reset(shot, boss.along, boss.across, bullet);
+        reset(shot, boss.along, boss.across, bullet, kind);
         shot.velAlong = Math.cos(angle) * speed + scrollPerStep;
         shot.velAcross = Math.sin(angle) * speed;
       }
@@ -611,7 +616,7 @@ function throwAttack(
         const shot = shots.spawn();
         if (shot === null) break;
         const angle = around * i;
-        reset(shot, boss.along, boss.across, bullet);
+        reset(shot, boss.along, boss.across, bullet, kind);
         shot.velAlong = Math.cos(angle) * speed + scrollPerStep;
         shot.velAcross = Math.sin(angle) * speed;
       }
@@ -633,7 +638,7 @@ function throwAttack(
           if (across < 0 || across > ACROSS_SPAN) continue;
           const shot = shots.spawn();
           if (shot === null) break;
-          reset(shot, boss.along, across, bullet);
+          reset(shot, boss.along, across, bullet, kind);
           shot.velAlong = -speed + scrollPerStep;
           shot.velAcross = 0;
         }
@@ -685,7 +690,7 @@ function throwAttack(
         if (shot === null) break;
         const angle = first + along * i;
         const lash = speed * (1 + attack.reach * (n > 1 ? i / (n - 1) : 0));
-        reset(shot, boss.along, boss.across, bullet);
+        reset(shot, boss.along, boss.across, bullet, kind);
         shot.velAlong = Math.cos(angle) * lash + scrollPerStep;
         shot.velAcross = Math.sin(angle) * lash;
       }
@@ -750,7 +755,7 @@ function throwAttack(
       const n = attack.heads.length;
       const head = attack.heads[((boss.headAt % n) + n) % n]!;
       boss.headAt++;
-      throwAttack(head.attack, SHOTS[head.shot], boss, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);
+      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);
       break;
     }
     default: {
@@ -778,6 +783,8 @@ export function belch(
   fall: Fall,
   shots: Pool<Entity>,
   rock: ShotRow,
+  /** The rock's index in `SHOT_KINDS` — 0263, on `throwCurtain`'s terms. */
+  kind: number,
   speed: number,
   cameraAlong: number,
   scrollPerStep: number,
@@ -787,7 +794,7 @@ export function belch(
     const shot = shots.spawn();
     if (shot === null) break;
     const along = cameraAlong + rockRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD);
-    reset(shot, along, -rock.radius, rock);
+    reset(shot, along, -rock.radius, rock, kind);
     shot.velAlong = scrollPerStep;
     shot.velAcross = speed;
     shot.lifeFor = Math.ceil((ACROSS_SPAN + 2 * rock.radius) / speed) + 1;

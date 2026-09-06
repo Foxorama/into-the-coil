@@ -76,13 +76,20 @@ export const PROBES = [
       ⚠️ THE LOUDEST EVENT IN THE GAME, ANNOUNCED TWICE AND THEREFORE AT RISK OF NOT AT ALL. A boss
       death that also fires the ordinary kill cue puts a fourth voice on a step that already has the
       pulse, the threat and the hit — and the boss's own cue is emitted last, so the cap eats it.
+
+      ⚠️ **RE-AIMED AT THE LOGS BY 0263, WHICH IS WHERE THE INVARIANT LIVES NOW.** This used to strike
+      out `&& !bossJustDied(w)` from the kill cue; that decision gives the boss a `bossDeaths` log of
+      its own, so a boss death never reaches `w.deaths` and the clause it struck was protecting
+      nothing — the probe applied and the suite STAYED GREEN. What keeps the boss out of the ordinary
+      cue is the SPLIT, so the break is putting it back in one log: the shots' collision logs the
+      boss's death where every other death goes, and the kill cue finds it there.
     */
-    broke: 'the ordinary kill cue firing for the boss too, which is what puts its own cue past the cap',
+    broke: 'the boss logged into the ordinary death log again, so the kill cue fires for it and the cap eats its own',
     guard: 'THE ONE THAT WOULD BE EATEN BY THE CAP: a boss dying is heard, through a real speaker',
     edit: {
       path: 'src/app/frame.ts',
-      find: "    if (w.deaths.count > 0 && !bossJustDied(w)) w.onCue('kill', w.deaths.across[0]);",
-      replace: "    if (w.deaths.count > 0) w.onCue('kill', w.deaths.across[0]);",
+      find: '    killedByShots += collideInto(w.playerShots, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, bladeHits);',
+      replace: '    killedByShots += collideInto(w.playerShots, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.deaths, bladeHits);',
     },
   },
   {

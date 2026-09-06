@@ -23,8 +23,9 @@ export const PROBES = [
     guard: 'THE PACE: a blade crosses',
     edit: {
       path: 'src/content/shots.ts',
-      find: 'radius: 3.2, health: BLADE_EDGE, damage: 1, speed: 1 },',
-      replace: 'radius: 3.2, health: BLADE_EDGE, damage: 1, speed: 0.8 },',
+      // ⚠️ Re-anchored by 0263, which gave every shot row its stages.
+      find: 'radius: 3.2, health: BLADE_EDGE, damage: 1, speed: 1, fission: SPENT_BY_ARRIVING },',
+      replace: 'radius: 3.2, health: BLADE_EDGE, damage: 1, speed: 0.8, fission: SPENT_BY_ARRIVING },',
     },
   },
   {

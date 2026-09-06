@@ -215,6 +215,18 @@ export const BURST = {
    */
   freeze: 6,
   /**
+   * The burst where a frost shard comes apart into its children — 0263. An event the model resolves
+   * — one bullet is two, then twelve — that the picture would otherwise mention only by the bullets
+   * being there; 0036 says that gets reported as bullets appearing from nowhere. Sized between the
+   * puff and the freeze: a split, not a death.
+   */
+  fission: 4,
+  /**
+   * The burst where a flake melts — 0263. A bullet that vanishes is the failure 0036 is named for;
+   * the smallest event here, because it is the quiet end of a thing rather than a thing happening.
+   */
+  melt: 2,
+  /**
    * Fragments per PULSE while a boss is BARE — and it stays bare until the fight ends.
    *
    * ⚠️ **`docs/decisions/0150-the-uncoil-and-the-eye.md`, and it is
