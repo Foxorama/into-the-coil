@@ -72,7 +72,9 @@ export const PROBES = [
     guard: 'and a bob is up-and-down: the hull crosses the lane and comes back, in world units',
     edit: {
       path: 'src/app/boss.ts',
-      find: '      boss.velAcross = move.amplitude * rate * Math.cos((cameraAlong * TAU) / wavelength);',
+      // ⚠️ Re-anchored by 0268, which took the angle off the camera and carried it on the hull. The
+      // break is unchanged in kind: the arm emits no lateral rate and the up-and-down never happens.
+      find: '      boss.velAcross = move.amplitude * rate * Math.cos(boss.bobPhase);',
       replace: '      boss.velAcross = 0;',
     },
   },
