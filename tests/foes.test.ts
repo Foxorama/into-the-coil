@@ -6,7 +6,7 @@ import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/sprites.ts';
-import { THEMES, THEME_KINDS, foeOf, type ThemeKind } from '../src/content/themes.ts';
+import { THEMES, THEME_KINDS, foeOf, lordOf, type ThemeKind } from '../src/content/themes.ts';
 import { viewOf } from '../src/sim/camera.ts';
 import { GAMEPLAY_FLOOR, contrast, luminance } from './contrast.ts';
 import { tracingPen } from './paths.ts';
@@ -137,6 +137,48 @@ describe('0228 — an enemy wears its place', () => {
     for (const level of LEVEL_KINDS) {
       const theme = LEVELS[level].theme;
       expect(THEMES[theme].foe.hull, `${level} is set somewhere with no skin`).toMatch(/^#[0-9a-f]{6}$/);
+    }
+  });
+});
+
+describe('0264 — the lord wears its own skin', () => {
+  it('THE LORD: every place skins its real boss in a skin of its own, held to its enemies’ floors, and the high-contrast palette gets none', () => {
+    /*
+      *"The grey tentacle"*: the serpent wore the Approach's raider grey, because a boss was a foe
+      and a foe wore the place. A creature is not a raider; the one body a level is named for does
+      not wear the uniform of the things it sends. The floors are `foe`'s — legible on the place's
+      own backdrop, never a pickup or the ship, the plate a shadow and the strip a light.
+    */
+    const pickup = PALETTES.vivid.pickup;
+    const player = PALETTES.vivid.player;
+    for (const theme of THEME_KINDS) {
+      const { foe, lord } = THEMES[theme];
+      expect(lord.hull, `${theme}'s lord wears its enemies' hull`).not.toBe(foe.hull);
+      const backdrop = THEMES[theme].space.vivid;
+      expect(contrast(lord.hull, backdrop), `${theme}'s lord is lost on its own backdrop`).toBeGreaterThanOrEqual(GAMEPLAY_FLOOR);
+      expect(contrast(lord.hull, pickup), `${theme}'s lord reads as a pickup`).toBeGreaterThanOrEqual(1.6);
+      expect(contrast(lord.hull, player), `${theme}'s lord reads as the ship`).toBeGreaterThanOrEqual(1.6);
+      expect(luminance(lord.plate), `${theme}'s lord's plate is not darker than its hull`).toBeLessThan(luminance(lord.hull));
+      expect(luminance(lord.lit), `${theme}'s lord's lit strip is not lighter than its hull`).toBeGreaterThan(luminance(lord.hull));
+      expect(lordOf(theme, PALETTES.vivid), 'the vivid palette does not get the lord’s own skin').toBe(lord);
+      expect(lordOf(theme, PALETTES['high-contrast']), `${theme} skins its lord on the high-contrast palette`).toBeNull();
+    }
+  });
+
+  it('and the lord’s hull is sealed in it, while the mid-boss keeps the place’s', () => {
+    // Read off the trace and not the table: the skin the row names is the one the hull is filled in.
+    for (const level of LEVEL_KINDS) {
+      const theme = LEVELS[level].theme;
+      const { pen, trace } = tracingPen();
+      const lord = SPRITE_KINDS[BOSSES[LEVELS[level].boss].sprite]!;
+      drawKind(pen, lord, PALETTES.vivid, SPRITE_EXTENT[lord] * DESKTOP.scale, theme);
+      expect(trace.passes[0]!.colour, `${level}'s lord is not sealed in the lord's skin`).toBe(THEMES[theme].lord.hull);
+      const mid = LEVELS[level].midBoss;
+      if (mid === null) continue;
+      const kind = SPRITE_KINDS[BOSSES[mid.kind].sprite]!;
+      const second = tracingPen();
+      drawKind(second.pen, kind, PALETTES.vivid, SPRITE_EXTENT[kind] * DESKTOP.scale, theme);
+      expect(second.trace.passes[0]!.colour, `${level}'s mid-boss wears the lord's skin`).toBe(THEMES[theme].foe.hull);
     }
   });
 });

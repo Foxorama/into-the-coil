@@ -308,7 +308,10 @@ serpent (Jörmungandr, the Approach), the hell-spawned eagle (Ember Nebula), the
 hydra (Toxic Mire) and the jellyfish with the black heart in it (the Black Heart). Each is a first
 iteration; the attacks the game had no word for — flame and frost, whips, beams, summoned hordes,
 a spinning wall, a cold that slows, heads that grow, tendrils, a final opening — are each their own
-decision. [`the-bosses-asked`](../reports/the-bosses-asked-2026-09-05.md) is the brief.
+decision. [`the-bosses-asked`](../reports/the-bosses-asked-2026-09-05.md) is the brief. **And each
+is drawn as the creature it is named for** — [0264](decisions/0264-the-real-bosses-are-drawn.md):
+a body on one spine, a skull with a lit maw, fins and feathers and spires in the outline, and a
+skin of its own rather than the uniform of the things its place sends.
 
 **The serpent has its three weapons, and throws them together** —
 [0248](decisions/0248-the-serpent-strikes.md), [0261](decisions/0261-the-serpent-throws-together.md):
