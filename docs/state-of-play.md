@@ -141,6 +141,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the jellyfish opens: tendrils are pulsing beams from the bell; a fall is a shot or a body and starts at a share of the health — moon jellies, a new body no level sends, sink across the lane; a third stance opens and keeps throwing void** | [0255](decisions/0255-the-jellyfish-opens.md) |
 | **a pickup keeps the count across a switch; a death costs one rung per ladder and throws nothing; a level authors a weapon and a missile and the mid-boss drops a weapon, a shield and a bomb; the guns cap across the run** | [0256](decisions/0256-a-pickup-keeps-the-count.md), [`the-alpha-list`](../reports/the-alpha-list-2026-09-06.md) |
 | **the arc lands only on a body whose whole hull is on the screen — the reach was measured from a ship that can stand ninety units from the edge** | [0257](decisions/0257-the-arc-lands-on-the-screen.md) |
+| **one pilot a level: the place's signature is the only kind that reacts to the player, every shared kind and every mid-boss flies a pattern and fires one, the eagle is the one end boss that stalks, and a charger turns at the box's ends** | [0258](decisions/0258-one-pilot-a-level.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -762,8 +763,11 @@ keeps the count, a death costs a rung, two pickups a level and the mid-boss drop
 it owes is a play, on the deployed `main`, of whether one rung reads as a cost. **The second is
 landed** — [0257](decisions/0257-the-arc-lands-on-the-screen.md): a link lands only on a body whose
 whole hull is on the screen, because the reach was measured from a ship that can stand ninety units
-from the edge. **The next is who reacts to the player**, then the bullet time; every one of those is
-a model quantity until it is flown. Everything below this paragraph about the weapons is the record of how
+from the edge. **The third is landed** — [0258](decisions/0258-one-pilot-a-level.md): one pilot a
+level, the place's own signature, with every shared kind and every mid-boss on a pattern and the
+eagle the one end boss that stalks. **The next is the bullet time** — the firing waves spread
+through every level rather than bunched — and then the end bosses' health; every one of those is a
+model quantity until it is flown. Everything below this paragraph about the weapons is the record of how
 the game got to the alpha, and it is kept because the alpha list is a verdict on it.
 
 ⚠️ **THE WORK WAS THE NEW WEAPONS, FROM 2026-09-05.** The player asked for three, in order, and

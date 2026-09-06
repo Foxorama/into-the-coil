@@ -148,14 +148,21 @@ export type BossMove =
  * unions with one vocabulary is the honest shape, and `docs/decisions/0110-an-attack-is-a-pattern.md`
  * is where the vocabulary is argued.
  */
-export const BOSS_ATTACK_KINDS = ['aimed', 'spray', 'rake', 'ring', 'wall', 'rain', 'whip', 'summon', 'beam', 'heads'] as const;
+export const BOSS_ATTACK_KINDS = ['spray', 'rake', 'ring', 'wall', 'rain', 'whip', 'summon', 'beam', 'heads'] as const;
 
 /** Derived from the list, so an attack cannot exist in the union and be missing from the switch. */
 export type BossAttackKind = (typeof BOSS_ATTACK_KINDS)[number];
 
+/*
+  ── `aimed` WAS THE FIRST ARM — the fan centred on the ship, what all seven did — AND 0258 DELETED IT ─
+
+  *"Minibosses need to be on their own pattern path and not… aiming at the player… we need less
+  enemies (and bosses) reacting to the player."* No boss aims now; the one that reacts does it by
+  where it flies (the eagle's stalk). An arm nothing sends is a member the union cannot keep —
+  `tests/level.test.ts` holds that every arm is flown — so it is gone rather than left dispatchable,
+  and a boss that aimed would fail to compile. `docs/decisions/0258-one-pilot-a-level.md`.
+*/
 export type BossAttack =
-  /** The fan, centred on the ship. What all seven did. */
-  | { kind: 'aimed' }
   /** The fan, centred on the lane — a pattern the player reads rather than a spread that follows. */
   | { kind: 'spray' }
   /**
@@ -659,7 +666,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
   */
   sentinel: {
     move: { kind: 'patrol' },
-    attack: { kind: 'aimed' },
+    // A spray since 0258 — *"minibosses need to be on their own pattern path and not actively
+    // matching the player or aiming at the player."* One shot straight down the lane, then the fan.
+    attack: { kind: 'spray' },
     uncoil: null,
     fall: null,
     chill: null,
@@ -722,7 +731,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     which is what the phrase *one idea* means here.
   */
   harrow: {
-    move: { kind: 'stalk', agility: 0.24 },
+    // A bob since 0258: a mid-boss flies a pattern. It stalked at 0.24 from 0111.
+    move: { kind: 'bob', amplitude: 22, wavelength: 140 },
     attack: { kind: 'spray' },
     uncoil: null,
     fall: null,
@@ -824,7 +834,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
   */
   shoalMother: {
     move: { kind: 'bob', amplitude: 26, wavelength: 150 },
-    attack: { kind: 'aimed' },
+    // A wall since 0258: a mid-boss fires a pattern, and `bob/spray` is the harrow's pair. Its
+    // phases widen the wall from one pair of lances either side of it to five, the hole in front.
+    attack: { kind: 'wall', gap: 12 },
     uncoil: null,
     fall: null,
     chill: null,
@@ -966,7 +978,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     exists for on the row most likely to be written by analogy.
   */
   axis: {
-    move: { kind: 'stalk', agility: 0.2 },
+    // A bob since 0258: a mid-boss flies a pattern. It stalked at 0.2 from 0111.
+    move: { kind: 'bob', amplitude: 20, wavelength: 180 },
     attack: { kind: 'ring' },
     /*
       ⚠️ **THE TIGHTEST CURTAIN, AND ITS HOLE IS NEAR THE MIDDLE BECAUSE IT HAS TO BE.** A `lance`
@@ -1082,8 +1095,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * the fight"* — the points are the phases.
    */
   hellkite: {
+    // THE ONE END BOSS THAT STALKS — 0258. *"We need less enemies (and bosses) reacting to the
+    // player"*: the eagle hunts, and every other hull flies a pattern. Its darts are a spray now,
+    // fanned by the phase, so what reacts is where it is and not where it points.
     move: { kind: 'stalk', agility: 0.22 },
-    attack: { kind: 'aimed' },
+    attack: { kind: 'spray' },
     uncoil: null,
     fall: null,
     chill: null,
@@ -1099,10 +1115,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
     shot: 'lance',
     phases: [
       { upTo: 1, fireEvery: 78, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.75, fireEvery: 66, shots: 5, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' }, shot: 'flame', attack: { kind: 'whip', sweep: 1.1, reach: 0.9 } },
-      { upTo: 0.5, fireEvery: 60, shots: 5, spread: 0, patrolScale: 1.5, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 2, formation: 'vee' } },
-      { upTo: 0.33, fireEvery: 54, shots: 7, spread: 0, patrolScale: 1.8, stance: { kind: 'volley' }, shot: 'flame', attack: { kind: 'whip', sweep: 1.4, reach: 0.9 } },
-      { upTo: 0.16, fireEvery: 48, shots: 7, spread: 0, patrolScale: 2.2, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'raptor', count: 1, formation: 'line' } },
+      { upTo: 0.75, fireEvery: 66, shots: 5, spread: 0.8, patrolScale: 1.3, stance: { kind: 'volley' }, shot: 'flame', attack: { kind: 'whip', sweep: 1.1, reach: 0.9 } },
+      { upTo: 0.5, fireEvery: 60, shots: 5, spread: 0.8, patrolScale: 1.5, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 2, formation: 'vee' } },
+      { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, shot: 'flame', attack: { kind: 'whip', sweep: 1.4, reach: 0.9 } },
+      { upTo: 0.16, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, shot: null, attack: { kind: 'summon', enemy: 'raptor', count: 1, formation: 'line' } },
     ],
   },
   /**
@@ -1187,7 +1203,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * cold that slows and freezes a ship that comes too close, and its adds.
    */
   hoarfrost: {
-    move: { kind: 'stalk', agility: 0.18 },
+    // A patrol since 0258: the cold is on the row and the hull flies a pattern through it, so the
+    // fight is to be where the ship is not going rather than to get out from in front of it.
+    // `patrol/wall` rather than `bob/wall`, which is the serpent's pair among the real bosses.
+    move: { kind: 'patrol' },
     attack: { kind: 'wall', gap: 10 },
     uncoil: null,
     fall: null,

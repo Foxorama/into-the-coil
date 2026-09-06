@@ -85,8 +85,9 @@ export const PROBES = [
     guard: 'and gives up after its own number of turns rather than orbiting for ever',
     edit: {
       path: 'src/app/frame.ts',
-      find: '        if (isAhead !== e.prevAlong >= ship.prevAlong) {\n          e.turnsLeft--;',
-      replace: '        if (isAhead !== e.prevAlong >= ship.prevAlong) {',
+      // ⚠️ Re-anchored by 0258: the turn is at the box's ends now, not at the ship.
+      find: '        if (outward ? inView >= PLAYER_LEAD - LOOP_TURN_ROOM : inView <= PLAYER_ALONG_MARGIN + LOOP_TURN_ROOM) {\n          e.turnsLeft--;',
+      replace: '        if (outward ? inView >= PLAYER_LEAD - LOOP_TURN_ROOM : inView <= PLAYER_ALONG_MARGIN + LOOP_TURN_ROOM) {',
     },
   },
   {

@@ -52,7 +52,8 @@ describe('0249 — the eagle summons', () => {
   it('THE FIVE PHASES: darts, a whip, kites, a wider whip, raptors — and it is Ember Nebula’s real boss', () => {
     const row = BOSSES.hellkite;
     const kinds = [1, 0.7, 0.45, 0.3, 0.1].map((f) => (phaseFor(row, row.health * f).attack ?? row.attack).kind);
-    expect(kinds).toEqual(['aimed', 'whip', 'summon', 'whip', 'summon']);
+    // A spray since 0258: the eagle is the one end boss that stalks, and what reacts is where it is.
+    expect(kinds).toEqual(['spray', 'whip', 'summon', 'whip', 'summon']);
     expect(LEVELS.descent.boss).toBe('hellkite');
     expect(LEVELS.descent.theme).toBe('nebula');
   });

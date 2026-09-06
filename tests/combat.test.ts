@@ -402,6 +402,12 @@ describe('no assist makes the game harder, and now that is a claim about the COD
  * The proof scene with one enemy parked `distance` ahead in the ship's own lane, the ship firing at
  * its real cadence, and nothing else spawning. The scene for "how many shots does this take".
  */
+/**
+ * A lancer that holds its lane — 0258 put the lancer on a weave, and two tests below are about hits
+ * landing on a body in the ship's line, which a body that swings off it cannot show.
+ */
+const HELD_LANCER: EnemyRow = { ...ENEMIES.lancer, motion: { kind: 'drift', roam: 0 } };
+
 function firingAt(row: EnemyRow, distance: number): World {
   const shipPool = new Pool<Entity>(1, makeEntity);
   const enemies = new Pool<Entity>(1, makeEntity);
@@ -500,9 +506,16 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
   reset(ship, SHIP_START_ALONG, ACROSS_SPAN / 2, shipRow);
   ship.velAlong = SCROLL_PER_STEP;
 
+  /*
+    ⚠️ **A MOTH, AND IT WAS A LANCER UNTIL 0258.** Every assertion in this fixture is about where an
+    AIMED shot goes, and `docs/decisions/0258-one-pilot-a-level.md` put the lancer on a pattern —
+    one lance straight down the lane — so it can no longer aim off the lane at all. The moth is
+    Ember Nebula's one pilot and the aimed lance is its; the fixture's subject, a shot fired at the
+    ship from off its line, is unchanged.
+  */
   const lancer = enemies.spawn()!;
-  reset(lancer, SHIP_START_ALONG + distance, ACROSS_SPAN / 2 - lane, ENEMIES.lancer, ENEMY_KINDS.indexOf('lancer'));
-  lancer.velAlong = -ENEMIES.lancer.closing;
+  reset(lancer, SHIP_START_ALONG + distance, ACROSS_SPAN / 2 - lane, ENEMIES.moth, ENEMY_KINDS.indexOf('moth'));
+  lancer.velAlong = -ENEMIES.moth.closing;
   lancer.fireIn = 1;
   /*
     ⚠️ **THE BODY CANNOT HURT THE SHIP HERE, AND IT COULD UNTIL A LANCER LEARNED TO CHASE.** Every
@@ -738,7 +751,7 @@ describe('an aimed shot arrives, and a player who moves is not there when it doe
     /** How far across the ship can travel before the shot arrives, in CSS pixels. */
     const roomPx = SHIP_SPEED * steps * view.scale;
     /** How far it has to travel to be out of the way, in CSS pixels. */
-    const clearancePx = (SHIPS.proof.radius + SHOTS.spit.radius) * view.scale;
+    const clearancePx = (SHIPS.proof.radius + SHOTS[ENEMIES.moth.shot].radius) * view.scale;
 
     expect(
       roomPx,
@@ -956,7 +969,11 @@ describe('damage is legible on the body that took it', () => {
       hits from one. Raising the fire rate later fails this, which is correct — it would have to be
       paid for with a shorter flash.
     */
-    const world = firingAt(ENEMIES.lancer, 120);
+    // A lancer held on its lane: since 0258 it weaves, and a body that swings off the ship's line
+    // is not what a test about hits landing in sequence is measuring. The frame steers by the
+    // TABLE's row for the kind, so the held row goes into the table the fixture hands the frame.
+    const world = firingAt(HELD_LANCER, 120);
+    world.enemyRows = ENEMY_KINDS.map((k) => (k === 'lancer' ? HELD_LANCER : ENEMIES[k]));
     const frame = new GameFrame(world);
     const enemy = world.enemies.at(0);
 
@@ -1000,7 +1017,8 @@ describe('damage is legible on the body that took it', () => {
       be spent without counting, so what has to be pinned is that the number of times health moves
       equals the number of hits the enemy is built to survive — no more.
     */
-    const world = firingAt(ENEMIES.lancer, 60);
+    const world = firingAt(HELD_LANCER, 60);
+    world.enemyRows = ENEMY_KINDS.map((k) => (k === 'lancer' ? HELD_LANCER : ENEMIES[k]));
     const frame = new GameFrame(world);
     const enemy = world.enemies.at(0);
 

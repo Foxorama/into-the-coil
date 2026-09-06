@@ -85,8 +85,9 @@ export const PROBES = [
         sower joined the table; an anchor that matches twice is one the harness refuses, which is the
         same failure as one that matches nothing. The lancer's own comment is what disambiguates it.
       */
-      find: "    shot: 'lance',\n    /*\n      ⚠️ **IT NOW COMES TO YOU,",
-      replace: "    shot: 'spit',\n    /*\n      ⚠️ **IT NOW COMES TO YOU,",
+      // ⚠️ Re-anchored by 0258, which rewrote the lancer's comment when it put it on a pattern.
+      find: "    shot: 'lance',\n    /*\n      ── IT CAME TO YOU FROM 0073 TO 0258,",
+      replace: "    shot: 'spit',\n    /*\n      ── IT CAME TO YOU FROM 0073 TO 0258,",
     },
   },
   {

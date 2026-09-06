@@ -211,7 +211,7 @@ describe('a hunter closes on the player', () => {
       sum work. `spawnAlong` is the leading horizon and a wave arrives there; anything closer would be
       measuring a fight the player never gets.
     */
-    const { world, frame, enemy } = withOneEnemy('lancer', { along: SHIP_START_ALONG + 90, across: 10 });
+    const { world, frame, enemy } = withOneEnemy('picket', { along: SHIP_START_ALONG + 90, across: 10 });
     world.ship.across = ACROSS_SPAN - 10;
     enemy.along = spawnAlong(world.cameraAlong);
     enemy.prevAlong = enemy.along;
@@ -232,7 +232,7 @@ describe('a hunter closes on the player', () => {
       overshoots by exactly the gap once the rate exceeds the distance left, so the body sits
       oscillating on top of the ship — which reads as a graphical fault rather than as an enemy.
     */
-    const { world, frame, enemy } = withOneEnemy('lancer', { along: SHIP_START_ALONG + 90, across: 20 });
+    const { world, frame, enemy } = withOneEnemy('picket', { along: SHIP_START_ALONG + 90, across: 20 });
     world.ship.across = 50;
     for (let i = 0; i < seconds(12); i++) frame.step();
     expect(Math.abs(enemy.across - world.ship.across), 'the hunter never arrived').toBeLessThan(2);
@@ -247,7 +247,7 @@ describe('a hunter closes on the player', () => {
 
   it('and a harder tier closes faster, which is what the aggression column is', () => {
     const gapAfter = (tier: (typeof DIFFICULTY_KINDS)[number]): number => {
-      const { world, frame, enemy } = withOneEnemy('lancer', { along: SHIP_START_ALONG + 90, across: 10 }, tier);
+      const { world, frame, enemy } = withOneEnemy('picket', { along: SHIP_START_ALONG + 90, across: 10 }, tier);
       world.ship.across = ACROSS_SPAN - 10;
       for (let i = 0; i < seconds(2); i++) frame.step();
       return Math.abs(world.ship.across - enemy.across);
@@ -315,7 +315,7 @@ describe('a circler orbits, and cannot be deleted by retreating', () => {
       The angle is unwrapped step by step and summed. A pendulum's total oscillates around zero
       forever; a circle's passes 2π and keeps going.
     */
-    const { world, frame, enemy } = withOneEnemy('warden', { along: SHIP_START_ALONG + 80, across: 50 });
+    const { world, frame, enemy } = withOneEnemy('moth', { along: SHIP_START_ALONG + 80, across: 50 });
     world.ship.across = 50;
     let swept = 0;
     let last: number | null = null;
@@ -348,7 +348,7 @@ describe('a circler orbits, and cannot be deleted by retreating', () => {
 
       So the assertion is in the unit the player has: **it never goes behind the trailing edge.**
     */
-    const { world, frame, enemy } = withOneEnemy('warden', { along: SHIP_START_ALONG + 80, across: 50 });
+    const { world, frame, enemy } = withOneEnemy('moth', { along: SHIP_START_ALONG + 80, across: 50 });
     world.ship.across = 50;
     let deepest = Infinity;
     for (let i = 0; i < seconds(30); i++) {
@@ -414,7 +414,7 @@ describe('reacting to the player did not cost reproducibility', () => {
       is a function of the input.
     */
     const run = (): string => {
-      const { world, frame } = withOneEnemy('warden', { along: SHIP_START_ALONG + 80, across: 30 });
+      const { world, frame } = withOneEnemy('moth', { along: SHIP_START_ALONG + 80, across: 30 });
       for (let i = 0; i < seconds(10); i++) frame.step();
       const e = world.enemies.size > 0 ? world.enemies.at(0) : null;
       return e === null ? 'gone' : `${e.along.toFixed(6)}:${e.across.toFixed(6)}`;

@@ -15,12 +15,14 @@ export const PROBES = [
       first written. Everything else about the two rows still differs: the hull, the health, the
       station, the bullet, the phase numbers.
     */
-    broke: 'two bosses given the same movement and the same attack, so one fight has two skins',
-    guard: 'THE REPORTED ONE: no two bosses fly the same way AND shoot the same way',
+    broke: 'two mid-bosses given the same movement and the same attack, so one fight has two skins',
+    // ⚠️ Re-aimed by 0258: the pair is unique over the mid-bosses and over the real bosses as two
+    // sets, and the axis bobs now — a spray makes it the harrow's pair.
+    guard: 'THE REPORTED ONE: no two mid-bosses fly the same way AND shoot the same way',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "  axis: {\n    move: { kind: 'stalk', agility: 0.2 },\n    attack: { kind: 'ring' },",
-      replace: "  axis: {\n    move: { kind: 'stalk', agility: 0.2 },\n    attack: { kind: 'spray' },",
+      find: "    move: { kind: 'bob', amplitude: 20, wavelength: 180 },\n    attack: { kind: 'ring' },",
+      replace: "    move: { kind: 'bob', amplitude: 20, wavelength: 180 },\n    attack: { kind: 'spray' },",
     },
   },
   {
