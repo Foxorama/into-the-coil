@@ -32,12 +32,18 @@ export const PROBES = [
     guard: 'and a window lasts longer than the death it runs into',
     edit: {
       path: 'src/content/bosses.ts',
-      // The axis's window. Its `upTo` is what makes the line unique — every eye is `damageScale: 3`.
-      // ⚠️ Re-anchored by 0247, which opens the axis's eye at 0.32 as a mid-boss.
-      // And by 0248, which gave every phase a shot and an attack of its own.
-      // And by 0269, which opens the axis's eye at a third of its health on the jellyfish's tempo.
-      find: "      { upTo: 0.33, fireEvery: 36, shots: 7, spread: 1.8, patrolScale: 1.2, stance: { kind: 'bare', damageScale: 3 }, shot: null, attack: null },",
-      replace: "      { upTo: 0.33, fireEvery: 36, shots: 7, spread: 1.8, patrolScale: 1.2, stance: { kind: 'bare', damageScale: 9 }, shot: null, attack: null },",
+      /*
+        ⚠️ **THE JELLYFISH'S OPENED BELL, AND IT WAS THE AXIS'S EYE UNTIL 0269** — re-anchored by 0247
+        when the axis became a mid-boss, by 0248 when every phase got a shot of its own, and now moved
+        to a different boss entirely, because the guard changed WHOSE window it is about. 0269 scopes
+        0124's and 0150's max-weapons floors to the end bosses; the axis is a mid-boss, so breaking its
+        eye reddens nothing here and `npm run prove` said so — STILL GREEN, which is the whole of
+        docs/decisions/0019-a-probe-must-be-seen-to-apply.md. The medusa's bell is the same break on a
+        boss this guard still covers, and 0269 carries a probe for the mid-boss half.
+      */
+      find: "      { upTo: 0.2, fireEvery: 36, shots: 10, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 2 }, shot: 'void', attack: { kind: 'ring' } },",
+      replace:
+        "      { upTo: 0.2, fireEvery: 36, shots: 10, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 9 }, shot: 'void', attack: { kind: 'ring' } },",
     },
   },
   {

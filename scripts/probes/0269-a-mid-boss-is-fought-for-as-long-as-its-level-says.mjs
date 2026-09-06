@@ -65,4 +65,26 @@ export const PROBES = [
       replace: '    health: 576,',
     },
   },
+  {
+    decision: '0269',
+    suite: 'tests/midboss.test.ts',
+    /*
+      ⚠️ THE MID-BOSS HALF OF 0150's WINDOW FLOOR, and it is here rather than in that decision's own
+      probes because 0269 is what split them. A bared hull takes `damageScale` times as much off per
+      pulse, so raising the multiplier shortens the window and moves no number a phase table can see —
+      the same break 0150 has always made, asked at the loadout a mid-boss is actually met with.
+
+      ⚠️ **`npm run prove` is what said this was needed.** Scoping 0150's guard to the end bosses left
+      its probe breaking the axis, which that guard no longer covers: it applied and the suite STAYED
+      GREEN. A guard that moves takes its probes with it.
+    */
+    broke: 'a mid-boss’s window given a multiplier that shortens it below the death beat',
+    guard: 'and a bare window on one outlasts the death it runs into',
+    edit: {
+      path: 'src/content/bosses.ts',
+      find: "      { upTo: 0.33, fireEvery: 36, shots: 7, spread: 1.8, patrolScale: 1.2, stance: { kind: 'bare', damageScale: 3 }, shot: null, attack: null },",
+      replace:
+        "      { upTo: 0.33, fireEvery: 36, shots: 7, spread: 1.8, patrolScale: 1.2, stance: { kind: 'bare', damageScale: 9 }, shot: null, attack: null },",
+    },
+  },
 ];
