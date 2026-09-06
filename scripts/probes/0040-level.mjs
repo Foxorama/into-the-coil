@@ -82,8 +82,9 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0247, which made the sentinel a two-phase mid-boss. Same break: its last
       // phase firing slower than its first.
       // And by 0248, which gave every phase a shot and an attack of its own.
-      find: "      { upTo: 0.5, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' }, shot: null, attack: null },",
-      replace: "      { upTo: 0.5, fireEvery: 120, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' }, shot: null, attack: null },",
+      // And by 0269, which gave the sentinel three phases paced to the serpent's.
+      find: "      { upTo: 0.33, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 1.6, stance: { kind: 'volley' }, shot: null, attack: null },",
+      replace: "      { upTo: 0.33, fireEvery: 120, shots: 5, spread: 0.9, patrolScale: 1.6, stance: { kind: 'volley' }, shot: null, attack: null },",
     },
   },
   {

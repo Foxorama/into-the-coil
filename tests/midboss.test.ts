@@ -21,8 +21,10 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { BOSSES, MID_BOSS_SECONDS } from '../src/content/bosses.ts';
-import { LEVELS, LEVEL_KINDS, type LevelKind } from '../src/content/levels.ts';
+import { BOSSES } from '../src/content/bosses.ts';
+import { BOSS_DEATH_STEPS } from '../src/app/frame.ts';
+import { STEPS_PER_SECOND } from '../src/state/screens.ts';
+import { LEVELS, LEVEL_KINDS, MID_BOSS_SECONDS, type LevelKind } from '../src/content/levels.ts';
 import { weighFight } from '../scripts/weigh-fight.mjs';
 
 /** The loadout a mid-boss is met with — one weapon, one missile, which is what a level authors. */
@@ -55,10 +57,7 @@ describe('0269 — a mid-boss is fought for as long as its level says', () => {
     for (const kind of LEVEL_KINDS) {
       const mid = LEVELS[kind].midBoss;
       expect(mid, `${kind} has no mid-boss`).not.toBeNull();
-      expect(
-        MID_BOSS_SECONDS[mid!.kind],
-        `${mid!.kind} is fought in ${kind} and has no entry in MID_BOSS_SECONDS`,
-      ).toBeGreaterThan(0);
+      expect(MID_BOSS_SECONDS[kind], `${kind} fights ${mid!.kind} and has no entry in MID_BOSS_SECONDS`).toBeGreaterThan(0);
     }
   });
 
@@ -69,7 +68,7 @@ describe('0269 — a mid-boss is fought for as long as its level says', () => {
       what decides a fight is how much of the player's fire lands on that hull.
     */
     for (const [kind, r] of met) {
-      const want = MID_BOSS_SECONDS[LEVELS[kind].midBoss!.kind]!;
+      const want = MID_BOSS_SECONDS[kind];
       expect(
         Math.abs(r.during.seconds - want),
         `${kind}'s mid-boss is fought for ${r.during.seconds.toFixed(0)}s against the ${want}s its level asks for`,
@@ -104,6 +103,59 @@ describe('0269 — a mid-boss is fought for as long as its level says', () => {
       expect(r.during.seconds, `${kind}'s mid-boss survives ${r.during.seconds.toFixed(0)}s at the cap`).toBeLessThanOrEqual(12);
       expect(r.during.seconds, `${kind}'s mid-boss lasts ${r.during.seconds.toFixed(0)}s at the cap`).toBeGreaterThanOrEqual(3);
     }
+  });
+
+  it('and every phase of it lasts long enough to be seen, at that loadout', () => {
+    /*
+      ⚠️ **0124's FLOOR, MOVED TO THE LOADOUT THE FIGHT IS MET AT — 0269.** That guard reads every
+      phase at MAX weapons and refuses one under three seconds, and it is right to for a boss the
+      player arrives at fully armed. A mid-boss is met with one rung and is a speed bump by the time
+      the ladders are full — 0247 ruled the twelve-second fight floor *"the end bosses' floor and not
+      the mid-bosses'"* for exactly that reason, and the phase floor is the same claim about the same
+      fight. So it is asked here instead, of the fight that actually happens.
+
+      ⚠️ **Against the MEASURED fight rather than an arithmetic one.** The band is the table's; the
+      seconds are the instrument's. A `bare` window is skipped here for 0150's reason — a bared hull
+      takes `damageScale` times as much per pulse, so its band is not its duration — and is held by
+      the assertion below.
+    */
+    for (const [kind, r] of met) {
+      const phases = BOSSES[LEVELS[kind].midBoss!.kind].phases;
+      const ups = phases.map((p) => p.upTo);
+      const bands = ups.map((u, i) => (phases[i]!.stance.kind === 'volley' ? u - (ups[i + 1] ?? 0) : Infinity));
+      const shortest = Math.min(...bands);
+      expect(
+        shortest * r.during.seconds,
+        `${kind}'s mid-boss has a phase of ${(shortest * r.during.seconds).toFixed(1)}s at the loadout it is met with`,
+      ).toBeGreaterThan(3);
+    }
+  });
+
+  it('and a bare window on one outlasts the death it runs into', () => {
+    /*
+      ⚠️ **0150's FLOOR, MOVED THE SAME WAY AND FOR THE SAME REASON.** A bared window runs straight
+      into the explosion that ends the fight, and a window shorter than that beat is one the player
+      only ever meets inside it. Divided by the window's own `damageScale`, which is the whole point
+      of writing it: a bared hull takes that many times as much off per pulse, so the honest duration
+      of a window is its band divided by the multiplier — 0027's *guard fired on the wrong quantity*.
+    */
+    const floor = BOSS_DEATH_STEPS / STEPS_PER_SECOND;
+    let found = 0;
+    for (const [kind, r] of met) {
+      const row = BOSSES[LEVELS[kind].midBoss!.kind];
+      for (let i = 0; i < row.phases.length; i++) {
+        const phase = row.phases[i]!;
+        if (phase.stance.kind !== 'bare' && phase.stance.kind !== 'open') continue;
+        found++;
+        const band = phase.upTo - (row.phases[i + 1]?.upTo ?? 0);
+        const seconds = (band * r.during.seconds) / phase.stance.damageScale;
+        expect(
+          seconds,
+          `${kind}'s mid-boss opens a ${seconds.toFixed(2)}s window against a ${floor.toFixed(2)}s death`,
+        ).toBeGreaterThan(floor);
+      }
+    }
+    expect(found, 'no mid-boss has a window, so this measured nothing').toBeGreaterThan(0);
   });
 
   it('and no mid-boss carries more health than the real boss of its own level', () => {

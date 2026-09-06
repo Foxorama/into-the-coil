@@ -63,7 +63,7 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0269, which solved every mid-boss's health to its level's own fight length.
       // The break is unchanged in kind: the axis back at the health it carried before it was a
       // mid-boss, which is tougher than the jellyfish at the end of the same level.
-      find: '    health: 192,',
+      find: '    health: 208,',
       replace: '    health: 1140,',
     },
   },

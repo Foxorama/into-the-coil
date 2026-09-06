@@ -32,6 +32,20 @@ import { SCROLL_PER_STEP, SHIP_SPEED } from '../src/sim/flight.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { MAX_BARRELS, SPREAD_STEP, UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
+
+/**
+ * The bosses a level ENDS on, which is what 0124's max-weapons floors are about since 0269.
+ *
+ * ⚠️ **A mid-boss is not held to them at max weapons, and 0247 is where that started** — it ruled
+ * the twelve-second fight floor *"the end bosses' floor and not the mid-bosses'"*, because a
+ * mid-boss over in seven seconds at the cap IS the miniboss. 0269 finishes the thought: the phase
+ * floor and the window floor are the same claim about the same fight, so they scope the same way,
+ * and `tests/midboss.test.ts` holds a mid-boss to both **at the loadout it is met with** — where its
+ * phases run six to eight seconds each rather than under one.
+ *
+ * ⚠️ **Read off the levels rather than listed**, so a roster change cannot leave this behind.
+ */
+const REAL_BOSSES = LEVEL_KINDS.map((kind) => LEVELS[kind].boss);
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { BAR_SECONDS } from '../src/content/music.ts';
@@ -534,12 +548,20 @@ describe('a boss fight can reach all of its phases', () => {
     it('arrives, closes on its station, and then holds it', () => {
       const { world } = playableWorld(soloBoss);
       const frame = new GameFrame(world);
-      for (let i = 0; i < 60; i++) frame.step();
+      // The ship holds its fire throughout — 0269. This measures how a hull FLIES, and a fixture that
+      // shoots its subject measures how long the subject lives instead.
+      for (let i = 0; i < 60; i++) {
+        world.fireIn = Number.MAX_SAFE_INTEGER;
+        frame.step();
+      }
       expect(world.bossSpawned, 'the boss never arrived').toBe(true);
       expect(world.bossPool.size, 'the boss is not on the field').toBe(1);
 
       // Long enough to have closed the distance, and then some.
-      for (let i = 0; i < 900; i++) frame.step();
+      for (let i = 0; i < 900; i++) {
+        world.fireIn = Number.MAX_SAFE_INTEGER;
+        frame.step();
+      }
       /*
         ⚠️ **A BAND AND NO LONGER A POINT** — `docs/decisions/0061-a-boss-keeps-flying.md`. The
         station drifts along the lane, so *settled* is *inside its own band* rather than *on one
@@ -1474,7 +1496,18 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
   const fightAt = (boss: (typeof BOSS_KINDS)[number], fraction: number) => {
     const { world } = playableWorld(solo(boss));
     const frame = new GameFrame(world);
-    for (let i = 0; i < 960; i++) frame.step();
+    /*
+      ⚠️ **THE SHIP HOLDS ITS FIRE WHILE THE BOSS FLIES IN — 0269.** These sixteen seconds exist to
+      put the hull on its station before the health is set by hand; they were also sixteen seconds of
+      live fire, which was harmless while a mid-boss carried hundreds of health and fatal once one
+      carried ninety. A dead boss leaves `bossPool.at(0)` reading a released slot, so the walk below
+      set a health nothing owned and counted curtains nobody threw — the suite reported a content
+      failure for a fixture that had killed its own subject.
+    */
+    for (let i = 0; i < 960; i++) {
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      frame.step();
+    }
     world.bossPool.at(0).health = world.bossFullHealth * fraction;
     return { world, frame };
   };
@@ -1751,7 +1784,9 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
     const floor = BOSS_DEATH_STEPS / STEPS_PER_SECOND;
     const fastest = dpsAt(UPGRADE_TIERS - 1);
     let found = 0;
-    for (const kind of BOSS_KINDS) {
+    // The real bosses only, since 0269 — `REAL_BOSSES` above has why, and `tests/midboss.test.ts`
+    // holds a mid-boss's window at the loadout its own fight is met with.
+    for (const kind of REAL_BOSSES) {
       const row = BOSSES[kind];
       const total = (row.health * DIFFICULTIES.savior.toughness) / fastest;
       for (let i = 0; i < row.phases.length; i++) {
@@ -1948,7 +1983,8 @@ describe('0124 — a boss lasts long enough to be one, at the loadout the game i
       guard reporting the wrong number is worse than no guard, which is
       `docs/decisions/0027-measure-the-picture-not-the-model.md`'s whole subject.
     */
-    for (const kind of BOSS_KINDS) {
+    // The real bosses only, since 0269 — `REAL_BOSSES` above has why.
+    for (const kind of REAL_BOSSES) {
       const total = (BOSSES[kind].health * TUNED.toughness) / FASTEST;
       const phases = BOSSES[kind].phases;
       const ups = phases.map((p) => p.upTo);
@@ -1968,12 +2004,20 @@ describe('0124 — a boss lasts long enough to be one, at the loadout the game i
       ⚠️ **The progression, held as an ordering rather than as seven numbers.** `docs/game.md`'s
       *seven bosses, one idea each* is not served by a level-seven boss that dies faster than
       level one's, and nothing else in the repository would notice.
+
+      ⚠️ **THE REAL BOSSES ONLY, SINCE 0269 — and for the mid-bosses this guard was measuring the
+      wrong thing all along.** It read HEALTH as a stand-in for *a longer fight*, which held while
+      every boss was hit about as often as every other. It never was: damage landed varies four-fold
+      across the mid roster, so the health ladder 0247 gave it produced fights of 37 to 112 seconds in
+      no order at all — the ordering was green over exactly the state the play reported. A mid-boss's
+      ladder is `MID_BOSS_SECONDS` now, in seconds and in run order, and `tests/midboss.test.ts` holds
+      it against measured fights rather than against the numbers on the rows.
     */
-    for (let i = 1; i < BOSS_KINDS.length; i++) {
+    for (let i = 1; i < REAL_BOSSES.length; i++) {
       expect(
-        BOSSES[BOSS_KINDS[i]!].health,
-        `${BOSS_KINDS[i]} is no tougher than ${BOSS_KINDS[i - 1]}, so the run does not get harder`,
-      ).toBeGreaterThan(BOSSES[BOSS_KINDS[i - 1]!].health);
+        BOSSES[REAL_BOSSES[i]!].health,
+        `${REAL_BOSSES[i]} is no tougher than ${REAL_BOSSES[i - 1]}, so the run does not get harder`,
+      ).toBeGreaterThan(BOSSES[REAL_BOSSES[i - 1]!].health);
     }
   });
 

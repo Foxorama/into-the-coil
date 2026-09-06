@@ -13,15 +13,15 @@ export const PROBES = [
     suite: 'tests/midboss.test.ts',
     /*
       ⚠️ 0247's HEALTH PUT BACK ON ONE BOSS, which is the state the report is about — the sentinel at
-      240 is a seventy-four second fight at the loadout it is met with, against the seventeen its
-      level asks for. One row is enough: the guard is per level, so a hand that re-tuned a single
-      mid-boss by feel is caught by the same assertion as a hand that reverted all seven.
+      240 is a fifty-five second fight at the loadout it is met with, against the seventeen its level
+      asks for. One row is enough: the guard is per level, so a hand that re-tuned a single mid-boss
+      by feel is caught by the same assertion as a hand that reverted all seven.
     */
     broke: 'the sentinel’s health put back to what 0247 gave it, so its fight is four times what its level asks',
     guard: 'THE REPORTED ONE: a mid-boss fight lasts what its level asks',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    health: 45,',
+      find: '    health: 83,',
       replace: '    health: 240,',
     },
   },
@@ -39,8 +39,8 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: a mid-boss fight lasts what its level asks',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    health: 241,',
-      replace: '    health: 40,',
+      find: '    health: 210,',
+      replace: '    health: 38,',
     },
   },
   {
@@ -61,7 +61,7 @@ export const PROBES = [
     guard: 'and at a full loadout it is still a speed bump',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    health: 192,',
+      find: '    health: 208,',
       replace: '    health: 576,',
     },
   },

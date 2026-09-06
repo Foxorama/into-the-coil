@@ -5,16 +5,23 @@
 > *"Mid bosses need less health, and we'll need to go through and change all their attacks and stuff
 > as well."*
 
-**Amends [0247](0247-a-level-has-a-mid-boss-and-a-real-one.md)**: the mid roster's ladder is in
-seconds and the health is derived. The *attacks* half of the ask is **not** this decision — it waits
-for the alpha stack's boss branches, so the mid-bosses are reworked once against a settled
-vocabulary.
+> *"Cut the health and rewrite the phase tables to three phase tables for minibosses… slightly
+> tougher at the start, but shorter fights and trim the harder end, because there's more additional
+> adds increasing the difficulty already."*
+
+> *"The minibosses should be short nasty fights, not long drawn out fights. If they take too long
+> they bug out the level because of the level timers."*
+
+**Amends [0247](0247-a-level-has-a-mid-boss-and-a-real-one.md)**: three phases each, the ladder is in
+seconds, and the health is derived. **Amends [0124](0124-the-boss-is-a-boss.md)** and
+[0150](0150-the-uncoil-and-the-eye.md) in scope: their max-weapons floors are the end bosses', and a
+mid-boss is held to both at the loadout it is met with.
 
 ## ⚠️ Health is not what makes a mid-boss hard
 
 The ask names health, and health was the wrong lever — which the measurement said before anything was
 changed. `scripts/weigh-fight.mjs` walks every level through the real frame at the loadout a mid-boss
-is met with; with the waves removed entirely, so they are not the cause:
+is met with; with the waves removed, so they are not the cause:
 
 | mid-boss | health | patrol rate | damage landed a second | fight |
 |---|---|---|---|---|
@@ -27,78 +34,99 @@ is met with; with the waves removed entirely, so they are not the cause:
 | lattice | 340 | 0.50 | **3.5** | 98 s |
 
 **Damage actually landed varies four-fold and runs inversely to how fast the hull crosses the lane.**
-A shot is fired where the ship is; a fast hull is somewhere else when it arrives. The redoubt carries
-more health than the lattice and dies in a third of the time.
+A shot is fired where the ship is; a fast hull is somewhere else when it arrives. The redoubt carried
+more health than the lattice and died in a third of the time. So 0247's roster — a health ladder from
+240 to 570 — produced fights of 37 to 112 seconds **in no order at all**.
 
-So 0247's roster — a health ladder from 240 to 570 — produced fights of 37 to 112 seconds **in no
-order at all**. The ladder was in a number the player cannot feel.
+⚠️ **And cutting health alone could not fix it**, which is the finding that shaped the rest. The
+health axis is what the phases, windows and curtain notches are *defined on*: the chorus's notches sit
+every tenth of its health, so at 103 health a notch is about one shot and a single hit steps over one.
+Its fight threw two curtains where its table says four. Phases at low health are not merely short,
+they are **skippable**. So the tables had to be rewritten with the health, and were.
 
 ## The rules
 
 **A mid-boss's fight length is authored and its health is derived.** `MID_BOSS_SECONDS` in
-`src/content/bosses.ts` is the ladder: 17 seconds at the Approach climbing to 23 at the Black Heart,
+`src/content/levels.ts` is the ladder: 17 seconds at the Approach climbing to 23 at the Black Heart,
 **in run order, which is the order a player meets them**. `scripts/solve-mid-health.mjs` measures each
 fight through the real frame and prints the health that hits it; every mid-boss's `health` is that
-output. [`scripts/solve-hold.mjs`](../../scripts/solve-hold.mjs) is the same pattern for the music's
-loudness, and for the same reason: a quantity nobody can reason about directly is solved against the
-one that can be measured, with the solver committed beside it.
+output. `scripts/solve-hold.mjs` is the same pattern for the music's loudness, for the same reason.
+⚠️ **Keyed by the LEVEL** — the first draft keyed it by mid-boss kind and had to be a
+`Record<string, …>` to do it, since only seven of the fourteen bosses are mid-bosses;
+`tests/registry.test.ts` refused that on [0016](0016-a-hub-enumerates-kinds.md)'s terms and was right
+to. A level owns the number and the order alike.
 
-**The mean is 20 seconds, which is the number the play chose.** The spread is this decision's, so
-that the ladder 0247 wanted exists in a quantity the player is in the order of — 0247 records the
-roster climbing *"through the TABLE and not through the run"*, which happened because the lattice and
-the shoal mother swapped levels.
+**Every mid-boss is three phases, paced to the real boss of its own level.** `fireEvery` and
+`patrolScale` come from that boss's rows — its 2nd, 4th and 5th where it has five, its last three
+where it has fewer — so a mid-boss reads as a preview of what waits at the end of the level. The
+thresholds are even thirds.
+
+⚠️ **The FAN stays the creature's own.** `shots` and `spread` are a hull's silhouette in bullets
+rather than its tempo: medusa fires ten at a spread of zero because it throws **rings**, and copying
+that onto a boss with no ring is ten bullets in a line. So each mid-boss's own ramp is re-spread over
+three phases and **started a third of the way up it** — *"slightly tougher at the start."* Stances,
+shots and attacks stay the creature's for the same reason: `beam` roots are offsets on a particular
+silhouette, `summon` names an enemy, and `open` is the jellyfish's bell.
 
 **A mid-boss stays a speed bump at a full loadout: three to twelve seconds.** 0247's own sentence —
-*"a mid-boss over in seven seconds at max weapons IS the miniboss that guard's message names, on
-purpose"* — held as a number for the first time. It was not true when it was written: the fights
-measured 14 to 28 seconds at the cap. They measure 5 to 9 now. The floor is as real as the ceiling —
-a mid-boss the capped ship deletes on contact is a pickup with a health bar.
+*"a mid-boss over in seven seconds at max weapons IS the miniboss… on purpose"* — held as a number for
+the first time. It was not true when written: the fights measured 14 to 28 seconds at the cap.
+
+**0124's and 0150's floors are the end bosses', and a mid-boss meets them at its own loadout.** A
+phase must last three seconds and a bare window must outlast the death it runs into — asked at max
+weapons of a boss the player arrives at fully armed, and at one rung of a boss met with one. 0247
+began this by ruling the twelve-second fight floor *"the end bosses' floor and not the mid-bosses'"*;
+these are the same claim about the same fight, so they scope the same way. `tests/midboss.test.ts`
+holds both.
 
 ## The figures
 
-| level | mid-boss | health before | health after | fight at one rung | at the cap |
-|---|---|---|---|---|---|
-| The Approach | sentinel | 240 | **45** | 74 s → 19 s | 14 s → 5 s |
-| Ember Nebula | harrow | 290 | **66** | 60 s → 19 s | 19 s → 7 s |
-| Saurian Belt | shoalMother | 390 | **74** | 91 s → 17 s | 25 s → 7 s |
-| The Labyrinth | lattice | 340 | **40** | 112 s → 21 s | 28 s → 6 s |
-| Rime Shelf | redoubt | 440 | **241** | 37 s → 21 s | 14 s → 9 s |
-| The Toxic Mire | chorus | 490 | **103** | 81 s → 22 s | 23 s → 8 s |
-| The Black Heart | axis | 570 | **192** | 64 s → 23 s | 18 s → 9 s |
+| level | mid-boss | health | fight at one rung | at the cap |
+|---|---|---|---|---|
+| The Approach | sentinel | 240 → **83** | 74 s → 18 s | 14 s → 6 s |
+| Ember Nebula | harrow | 290 → **65** | 60 s → 18 s | 19 s → 7 s |
+| Saurian Belt | shoalMother | 390 → **61** | 91 s → 20 s | 25 s → 7 s |
+| The Labyrinth | lattice | 340 → **38** | 112 s → 21 s | 28 s → 6 s |
+| Rime Shelf | redoubt | 440 → **210** | 37 s → 20 s | 14 s → 9 s |
+| The Toxic Mire | chorus | 490 → **94** | 81 s → 22 s | 23 s → 8 s |
+| The Black Heart | axis | 570 → **208** | 64 s → 23 s | 18 s → 9 s |
 
-The seven now average **20.3 seconds** at the loadout they are met with, against a spread of 37 to
-112 before.
+Every level lands within a second of what it asks for; the seven average **20.3 seconds**, against a
+spread of 37 to 112 before. ⚠️ **The redoubt keeps five times the lattice's health and is fought for
+about as long** — the four-fold spread stated as two numbers, and why one factor across the table
+could never have worked.
 
-⚠️ **The redoubt keeps six times the lattice's health and they are fought for about the same time.**
-That is the four-fold spread stated as two numbers, and it is why one factor across the table could
-never have worked.
+## ⚠️ Two fixtures were killing their own subjects
 
-## ⚠️ The map is not proportional, and the solver says so rather than hiding it
-
-Halving a mid-boss's health does not halve its fight: a phase raises `patrolScale`, so a hull with
-less health left moves faster and is harder to hit. The lattice went 340 → 61 and its fight went 112
-→ 35 seconds, not to 20. Two passes of the solver land every level inside two seconds and a third
-moves them by under one, so `scripts/solve-mid-health.mjs` is deliberately **one pass** and run twice
-— iterating internally would hide that the map is approximate, and `CLOSE_ENOUGH_SECONDS` in
-`tests/midboss.test.ts` is that approximation written down.
+Not defects in the game, and worth recording because both reported as content failures. `fightAt` and
+the station guard in `tests/level.test.ts` each fly a boss for sixteen seconds **under live fire**
+before measuring it — harmless while a mid-boss carried hundreds of health, fatal once one carried
+ninety. A dead boss leaves `bossPool.at(0)` reading a released slot, so one guard measured a hull that
+had drifted 139 units out of frame and the other counted curtains nobody threw. Both hold their fire
+now: they are about how a hull flies and what it throws, not about how long it lives.
 
 ## What is owed
 
-- **A play**, and it is the item this came from: whether twenty seconds reads as a fight rather than
-  as an interruption, and whether the 17-to-23 climb is felt at all.
+- **A play.** Whether twenty seconds reads as *short and nasty* rather than as an interruption, and
+  whether a mid-boss opening on its second step still teaches what it used to.
 - **The waves during a fight, re-measured.** *"Still too many waves happening around minibosses, but
   the less health might sort that out."* A fight a third as long carries a third of the script over
   it, so [0267](0267-a-fight-thins-the-waves-over-it.md)'s one-in-three may now be too strong, too
-  weak, or right. `scripts/weigh-fight.mjs` answers it and no number should move before it does.
-- ⚠️ **"Some firing waves after the miniboss" should now be reachable** — the reason it was not is
-  that two levels' fights outlived their own wave scripts, and at twenty seconds none does.
-- **The attacks.** The other half of the ask, deliberately not here.
+  weak, or right. `scripts/weigh-fight.mjs` answers it; no number should move before it does.
+- ⚠️ **The level timers are a bug of their own and this only makes it rarer.** *"If they take too
+  long they bug out the level because of the level timers."* The camera never stops for a fight
+  (0247), so a mid-boss that outlives its level's script runs the camera past `bossAt` and off the end
+  of the authored level — measured at one rung before this change, two levels did exactly that. Short
+  fights make it uncommon; **nothing bounds it**, and that wants its own decision.
+- **The attacks.** *"Change all their attacks and stuff"* is answered here only as pacing and phase
+  count. What each mid-boss actually throws is untouched, and is the piece to do after the alpha
+  stack's boss branches land, so it is done once against a settled vocabulary.
 
 ## Rollback
 
-⚠️ **None owed —** [0001](0001-revertability-not-risk-rating.md). Seven numbers in a content table
-and a constant beside them; nothing persisted, no storage key, no schema. A run saved mid-fight holds
-the level and the loadout, never a boss's health.
+⚠️ **None owed —** [0001](0001-revertability-not-risk-rating.md). Seven rows in a content table and a
+constant beside them; nothing persisted, no storage key, no schema. A run saved mid-fight holds the
+level and the loadout, never a boss's health or its phase.
 
 ## Confirmed, not assumed
 
@@ -110,8 +138,8 @@ the level and the loadout, never a boss's health.
 | the redoubt given the lattice's health, as though a hull's toughness were the number on it | `THE REPORTED ONE: a mid-boss fight lasts what its level asks` |
 | the axis given a real boss's health, so the last mid-boss is still a fight at a full loadout | `and at a full loadout it is still a speed bump` |
 
-⚠️ **No probe for *a red guard answered by moving the target*.** Editing `MID_BOSS_SECONDS` to match
-a measurement makes `tests/midboss.test.ts` agree with itself and go **green**, which is the opposite
-of what a probe does. Nothing mechanical catches it; what refuses it is
+⚠️ **No probe for *a red guard answered by moving the target*.** Editing `MID_BOSS_SECONDS` to match a
+measurement makes `tests/midboss.test.ts` agree with itself and go **green**, which is the opposite of
+what a probe does. Nothing mechanical catches it; what refuses it is
 [0192](0192-a-guard-holds-an-invariant.md) and the note at the top of that file — the target is the
 ask, and the health is the derived thing.

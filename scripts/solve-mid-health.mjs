@@ -11,7 +11,7 @@
 // moves across the lane. The redoubt has more health than the lattice and dies in a third of the
 // time.
 //
-// So the ladder is authored in SECONDS (`MID_BOSS_SECONDS` in `src/content/bosses.ts`) and the
+// So the ladder is authored in SECONDS (`MID_BOSS_SECONDS` in `src/content/levels.ts`) and the
 // health is solved against the real frame. Re-run it after anything that changes what the player's
 // guns do, or what the waves in front of a mid-boss absorb.
 //
@@ -22,8 +22,8 @@
 // It exits non-zero if any level's mid-boss is not fought, on the same terms as its siblings: an
 // instrument that measured nothing must not report success.
 
-import { BOSSES, MID_BOSS_SECONDS } from '../src/content/bosses.ts';
-import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
+import { BOSSES } from '../src/content/bosses.ts';
+import { LEVELS, LEVEL_KINDS, MID_BOSS_SECONDS } from '../src/content/levels.ts';
 import { weighFight } from './weigh-fight.mjs';
 
 /** The loadout the fight is met with — the same one `tests/fight.test.ts` measures at. */
@@ -35,7 +35,7 @@ for (const kind of LEVEL_KINDS) {
   const level = LEVELS[kind];
   if (level.midBoss === null) continue;
   const row = BOSSES[level.midBoss.kind];
-  const want = MID_BOSS_SECONDS[level.midBoss.kind];
+  const want = MID_BOSS_SECONDS[kind];
   const r = weighFight(kind, AT_THE_MID_BOSS);
   if (!r.fought) {
     unfought++;

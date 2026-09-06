@@ -644,41 +644,6 @@ export interface BossRow extends Body {
   phases: readonly BossPhase[];
 }
 
-/**
- * How long each mid-boss's fight should take, in seconds, at the loadout it is met with — 0269.
- *
- * ── THE LADDER IS IN SECONDS BECAUSE HEALTH IS NOT A THING THE PLAYER CAN FEEL ──────────────────
- *
- * `docs/decisions/0269-a-mid-boss-is-fought-for-as-long-as-its-level-says.md`. Asked for after the
- * alpha play: *"mid bosses need less health."* 0247 built the roster as a health ladder — 240 up to
- * 570 — and what that produced was fights of 37 to 112 seconds in no order at all, because **damage
- * actually landed varies four-fold across the seven** and runs inversely to how fast the hull crosses
- * the lane: a shot is fired where the ship is, and a fast hull is somewhere else when it arrives. The
- * redoubt carries more health than the lattice and dies in a third of the time.
- *
- * ⚠️ **SO THE HEALTHS IN THE TABLE ARE DERIVED AND THESE ARE AUTHORED.**
- * `scripts/solve-mid-health.mjs` measures each fight through the real frame and prints the health
- * that hits these numbers; every mid-boss's `health` below is that output.
- * `scripts/solve-hold.mjs` is the same pattern for the music's loudness and exists for the same
- * reason — a quantity nobody can reason about directly is solved against the one that can be
- * measured, with the solver committed beside it.
- *
- * ⚠️ **IN RUN ORDER, WHICH IS THE ORDER A PLAYER MEETS THEM** — 17 seconds at the Approach climbing
- * to 23 at the Black Heart. 0247 records the roster climbing *"through the TABLE and not through the
- * run"*, which happened because the lattice and the shoal mother swapped levels; a ladder the player
- * cannot be in the order of is not a ladder. **The mean is 20, which is the number the play asked
- * for**, and the play owns both the mean and the spread.
- */
-export const MID_BOSS_SECONDS: Record<string, number> = {
-  sentinel: 17,
-  harrow: 18,
-  shoalMother: 19,
-  lattice: 20,
-  redoubt: 21,
-  chorus: 22,
-  axis: 23,
-};
-
 export const BOSSES: Record<BossKind, BossRow> = {
   /**
    * The first thing in the game that is bigger than the lane's patience.
@@ -712,7 +677,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     radius: 11,
     // A mid-boss since 0247, which halved 480 to 240; solved to its level's seconds by
     // `scripts/solve-mid-health.mjs` against `MID_BOSS_SECONDS` since 0269.
-    health: 45,
+    health: 83,
     damage: 3,
     // Far enough forward that the whole hull is on screen on the narrowest view the clamp allows,
     // and far enough back that the player is not fighting it at the very edge of their reach.
@@ -731,21 +696,26 @@ export const BOSSES: Record<BossKind, BossRow> = {
     shot: 'spit',
     phases: [
       /*
-        ⚠️ **The opening phase is deliberately readable.** A single aimed shot every 1.5 seconds is
-        slower than a turret, and it is the phase in which the player learns where the boss's hull
-        ends — which is the one thing a 26-unit sprite makes genuinely hard to judge.
-      */
-      { upTo: 1, fireEvery: 90, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
-      /*
-        Half health: a three-way spread, so a player who has settled into one lane is moved out of
-        it. The spread is wide enough that standing still is punished and narrow enough that there is
-        always a side to leave towards.
+        ── THREE PHASES ON THE SERPENT'S TEMPO — 0269 ─────────────────────────────────────────────
 
-        ⚠️ **TWO PHASES, NOT THREE — 0247.** At half its health the fight is seven seconds at max
-        weapons, and `tests/level.test.ts` refuses a phase under three; the old last third is folded
-        into this one, which is what a mid-boss is: the same idea, said once.
+        ⚠️ **Every mid-boss is three phases now**, and the pacing — `fireEvery` and `patrolScale` — is
+        the real boss of its own level, so a mid-boss reads as a preview of what waits at the end of
+        it. The sentinel takes jormungandr's three; where a real boss has five rows its mid-boss takes
+        2, 4 and 5, and where it has three there is no opening to skip.
+
+        ⚠️ **The FAN stays the creature's own.** `shots` and `spread` are this hull's silhouette in
+        bullets rather than its tempo — medusa fires ten at a spread of zero because it throws RINGS,
+        and copying that onto a boss with no ring is ten bullets in a line. So the mid-boss's own ramp
+        is re-spread over three phases and started a third of the way up it: *"slightly tougher at the
+        start."*
+
+        ⚠️ **The opening phase used to be deliberately readable** — one aimed shot every 1.5 seconds,
+        the phase in which a player learns where a 26-unit hull ends. It opens at two now, which is
+        the cost of a shorter fight and is the thing to watch first when this is played.
       */
-      { upTo: 0.5, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 1, fireEvery: 84, shots: 2, spread: 0.3, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.66, fireEvery: 66, shots: 4, spread: 0.6, patrolScale: 1.3, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.33, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 1.6, stance: { kind: 'volley' }, shot: null, attack: null },
     ],
   },
   /**
@@ -777,7 +747,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     spriteHit: SPRITE.boss2Hit,
     radius: 12.5,
     // A mid-boss since 0247, which halved 580 to 290; solved to its level's seconds since 0269.
-    health: 66,
+    health: 65,
     damage: 3,
     // Closer than the sentinel's 120, which is most of what makes it feel like a different fight:
     // the player has less room in front of them and less warning on everything it throws.
@@ -794,7 +764,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
     shot: 'lance',
     phases: [
       // No gentle opening. It starts where the sentinel's second phase ended.
-      { upTo: 1, fireEvery: 72, shots: 3, spread: 0.45, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
+      // Three phases on the eagle's tempo — 0269: hellkite is a five-row ladder, so its 2nd, 4th and
+      // 5th are what the harrow paces to. The weave and the fan are the harrow's own.
+      { upTo: 1, fireEvery: 66, shots: 4, spread: 0.75, patrolScale: 1.3, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.66, fireEvery: 54, shots: 6, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, shot: null, attack: null },
       /*
         The last half: seven shots across most of a right angle, and a hull crossing the lane at
         two and a half times its opening speed. Every arsenal meets every phase, so this has to be
@@ -803,7 +776,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
         ⚠️ **TWO PHASES, NOT FOUR — 0247.** Nine seconds at max weapons at half its health leaves
         room for two phases of three; the two middle rungs are folded into these.
       */
-      { upTo: 0.5, fireEvery: 48, shots: 7, spread: 1.4, patrolScale: 2.5, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.33, fireEvery: 48, shots: 7, spread: 1.4, patrolScale: 2.2, stance: { kind: 'volley' }, shot: null, attack: null },
     ],
   },
 
@@ -836,7 +809,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // and 0269 solved it to its level's seconds. ⚠️ **The lowest health of the seven and it was the
     // LONGEST fight in the game at 340** — the lattice patrols at 0.5, so most of what is fired at it
     // arrives where it was. Health was never what made this one hard.
-    health: 40,
+    health: 38,
     damage: 3,
     /*
       ⚠️ **The furthest station any hull can have, and the guard is what said where that is.** The
@@ -853,8 +826,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
     shot: 'flak',
     phases: [
       // Wide and slow from the start: the shots are the lane-taking, not the hull.
-      { upTo: 1, fireEvery: 84, shots: 3, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.66, fireEvery: 66, shots: 5, spread: 1.2, patrolScale: 1.3, stance: { kind: 'volley' }, shot: null, attack: null },
+      // Three phases on the gyre's tempo — 0269. The gyre is a three-row ladder, so there is no
+      // opening to skip and the lattice paces to all three of them.
+      { upTo: 1, fireEvery: 78, shots: 4, spread: 1.1, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.66, fireEvery: 66, shots: 6, spread: 1.3, patrolScale: 1.3, stance: { kind: 'volley' }, shot: null, attack: null },
       { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.5, patrolScale: 1.7, stance: { kind: 'volley' }, shot: null, attack: null },
     ],
   },
@@ -884,7 +859,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     radius: 13,
     // The saurian belt's mid-boss since 0247, moved from the labyrinth's end; 0247 halved 780 to 390
     // and 0269 solved it to its level's seconds.
-    health: 74,
+    health: 61,
     damage: 3,
     station: 136,
     drift: 18,
@@ -893,9 +868,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
     shot: 'lance',
     phases: [
       // Three phases, not four — 0247: twelve seconds at max weapons at half its health.
-      { upTo: 1, fireEvery: 96, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.66, fireEvery: 78, shots: 3, spread: 0.5, patrolScale: 1.6, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.33, fireEvery: 60, shots: 5, spread: 0.9, patrolScale: 2.8, stance: { kind: 'volley' }, shot: null, attack: null },
+      // Three phases on the pterodactyl's tempo — 0269: quetzal has four rows, so its last three are
+      // what the shoal mother paces to. Its own fan, opened a third of the way up its ramp.
+      { upTo: 1, fireEvery: 60, shots: 2, spread: 0.3, patrolScale: 1.5, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.66, fireEvery: 54, shots: 4, spread: 0.6, patrolScale: 2, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.33, fireEvery: 48, shots: 5, spread: 0.9, patrolScale: 2.4, stance: { kind: 'volley' }, shot: null, attack: null },
     ],
   },
   /**
@@ -923,7 +900,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // A mid-boss since 0247, which halved 880 to 440; solved to its level's seconds since 0269.
     // ⚠️ **It keeps the most of any mid-boss, by six times the lattice's** — the redoubt patrols at
     // 0.16, so nearly everything fired at it lands and the health is the whole of the fight.
-    health: 241,
+    health: 210,
     damage: 3,
     station: 142,
     drift: 8,
@@ -932,9 +909,14 @@ export const BOSSES: Record<BossKind, BossRow> = {
     shot: 'flak',
     phases: [
       // Three phases, not four — 0247: fourteen seconds at max weapons at half its health.
-      { upTo: 1, fireEvery: 54, shots: 3, spread: 0.7, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.7, fireEvery: 42, shots: 5, spread: 1, patrolScale: 1.2, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.4, fireEvery: 30, shots: 7, spread: 1.6, patrolScale: 1.6, stance: { kind: 'volley' }, shot: null, attack: null },
+      // Three phases on the frost ship's tempo — 0269: hoarfrost has four rows, so its last three.
+      // ⚠️ **The redoubt SLOWS DOWN here** — it fired every 54 steps and now opens at 72, because it
+      // patrols at 0.16 and nearly everything the player throws at it lands. It was already the
+      // shortest fight of the seven and its tempo was the hardest; the pacing it borrows is the
+      // correction.
+      { upTo: 1, fireEvery: 72, shots: 4, spread: 1, patrolScale: 1.2, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.66, fireEvery: 60, shots: 6, spread: 1.3, patrolScale: 1.5, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.6, patrolScale: 1.9, stance: { kind: 'volley' }, shot: null, attack: null },
     ],
   },
   /**
@@ -974,7 +956,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     spriteHit: SPRITE.boss6Hit,
     radius: 12.5,
     // A mid-boss since 0247, which halved 980 to 490; solved to its level's seconds since 0269.
-    health: 103,
+    health: 94,
     damage: 3,
     station: 138,
     drift: 15,
@@ -984,9 +966,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     phases: [
       // Three fans and the eye, not five and the eye — 0247: fifteen seconds at max weapons at half
       // its health, and a phase under three of them is not a phase.
-      { upTo: 1, fireEvery: 72, shots: 3, spread: 0.5, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.78, fireEvery: 54, shots: 5, spread: 1.1, patrolScale: 1.6, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.57, fireEvery: 36, shots: 7, spread: 1.6, patrolScale: 2.4, stance: { kind: 'volley' }, shot: null, attack: null },
+      // Three phases on the hydra's tempo — 0269: hydra is a five-row ladder, so its 2nd, 4th and 5th.
+      { upTo: 1, fireEvery: 66, shots: 4, spread: 0.85, patrolScale: 1.2, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.66, fireEvery: 54, shots: 6, spread: 1.2, patrolScale: 1.6, stance: { kind: 'volley' }, shot: null, attack: null },
       /*
         ⚠️ **THE EYE.** It has thrown everything it had and it stops: no fan, no rake, a hull still
         crossing the lane at a rung under its opening speed, and three times the damage from every
@@ -997,7 +979,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
         ⚠️ **The fan it is still carrying is written out and never thrown**, which is the stance
         saying so rather than the row — see `BossStance`.
       */
-      { upTo: 0.36, fireEvery: 30, shots: 7, spread: 1.6, patrolScale: 1.4, stance: { kind: 'bare', damageScale: 3 }, shot: null, attack: null },
+      // ⚠️ **A THIRD OF THE HEALTH NOW, FROM 0.36** — 0150 asks that a bare window outlast the death
+      // it runs into, and at the old share a shorter fight measured 0.38s of window against a 1.60s
+      // death: the player met the window inside its own explosion.
+      { upTo: 0.33, fireEvery: 48, shots: 7, spread: 1.6, patrolScale: 1.8, stance: { kind: 'bare', damageScale: 3 }, shot: null, attack: null },
     ],
   },
   /**
@@ -1041,7 +1026,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     radius: 16,
     // The black heart's mid-boss since 0247, which halved 1140 to 570; solved to its level's seconds
     // since 0269, and the toughest of the seven in both.
-    health: 192,
+    health: 208,
     damage: 3,
     // The closest station in the game. `95 + 14 + 16` is 125 against 150 — the hull fills a fifth of
     // the narrowest view, which is what a last boss should cost the player in room.
@@ -1053,9 +1038,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
     phases: [
       // Three rings and the eye, not five and the eye — 0247: seventeen seconds at max weapons at
       // half its health.
-      { upTo: 1, fireEvery: 66, shots: 3, spread: 0.6, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.8, fireEvery: 48, shots: 5, spread: 1.2, patrolScale: 1.8, stance: { kind: 'volley' }, shot: null, attack: null },
-      { upTo: 0.6, fireEvery: 36, shots: 7, spread: 1.8, patrolScale: 2.8, stance: { kind: 'volley' }, shot: null, attack: null },
+      // Three phases on the jellyfish's tempo — 0269: medusa is a five-row ladder, so its 2nd, 4th
+      // and 5th. ⚠️ **Its SPREAD is not borrowed** — medusa fires at a spread of zero because it
+      // throws rings, and ten bullets on one line is not a fan. The axis keeps its own.
+      { upTo: 1, fireEvery: 54, shots: 4, spread: 1, patrolScale: 1.3, stance: { kind: 'volley' }, shot: null, attack: null },
+      { upTo: 0.66, fireEvery: 42, shots: 6, spread: 1.4, patrolScale: 2, stance: { kind: 'volley' }, shot: null, attack: null },
       /*
         ⚠️ **THE EYE, AND IT WAS THE LAST THING THE AUTHORED RUN ASKED FOR.** The ring stops, the
         stalk slows to half what it was chasing at, and the fight ends on a window the player has to
@@ -1064,7 +1051,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
         0247 the run's last eye is the jellyfish's; this is the black heart's mid-boss, and its eye
         opens at a third of the bar so it still outlasts the death it runs into.
       */
-      { upTo: 0.32, fireEvery: 30, shots: 7, spread: 1.8, patrolScale: 1.4, stance: { kind: 'bare', damageScale: 3 }, shot: null, attack: null },
+      // A third of the health, on the chorus's terms — 0269, so the window outlasts the death (0150).
+      { upTo: 0.33, fireEvery: 36, shots: 7, spread: 1.8, patrolScale: 1.2, stance: { kind: 'bare', damageScale: 3 }, shot: null, attack: null },
     ],
   },
 
