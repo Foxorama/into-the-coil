@@ -45,6 +45,31 @@ turn are told from the hydra's five heads, and the hydra's laser head still coun
 At max weapons on the tuned tier (0260) the last third is fourteen seconds: nine lightning
 strikes, nine fans of each blast.
 
+## ⚠️ The first boss to rake AND grow heads, which crashed the game
+
+This decision made the serpent the first boss with a `rake` in one phase and `heads` in another, and
+those two attacks were reading one field. `firePhase` is an **angle** for a rake — advanced by
+`turn`, 0.45 of a radian a volley — and a **count** for the heads, which index by it. So the opening
+phase raked the count up to about 5.4, the fight dropped under two thirds, and `heads[5.4 % 2]` is
+`heads[1.4]` is `undefined`: **a TypeError out of `throwAttack`, in every serpent fight, at its first
+phase change.**
+
+⚠️ **[0254](0254-the-hydra-grows-heads.md) argued it was safe and was right about the wrong thing** —
+*"the type refuses a head that is itself heads or a rake, so the recursion is one deep and `firePhase`
+has one reader."* True of a HEAD. False of a BOSS, and nothing in the type says otherwise.
+
+⚠️ **It would have shipped green.** Every guard about the serpent sets the phase it wants and measures
+that phase; none of them flew the fight from one phase into the next. What caught it was
+[0268](0268-the-bob-keeps-its-centre.md)'s guard — which drives every *bobbing* boss through all of
+its phases and was written about a hull leaving the lane. An accident, and
+`a boss that rakes AND grows heads keeps the two counts apart` in `tests/serpent.test.ts` exists so
+the next one does not have to be.
+
+**The round counts on `headAt`**, its own field, on the same terms `src/sim/entity.ts` gives for
+`spriteBase` and 0268 gives for `bobPhase`: a third number is cheaper than an invariant two call sites
+have to remember. ⚠️ **Not a `Math.floor` on the index** — that stops the crash and leaves the rake
+steering which head throws, which is the same defect with the symptom removed.
+
 ## ⚠️ What was rejected
 
 **Every weapon every volley.** Three fans and three columns at once every 36 steps is a screen
@@ -71,3 +96,7 @@ third with the blasts, and a fall is a shot or a body, not a bolt.
 | the acid back on the wall | `THE THREE WEAPONS: a raking fan of acid` |
 | the last third's lightning head dropped, so the round is acid and void alone | `THE THREE WEAPONS: a raking fan of acid` |
 | the round never turning, so every volley of the last third is acid | `THE THREE WEAPONS: a raking fan of acid` |
+| the round counting on the rake's own angle again, so a raked serpent indexes a head that is not there | `a boss that rakes AND grows heads keeps the two counts apart` |
+
+⚠️ **The last one reproduces the crash rather than an assertion**: the probe reddens with the same
+`TypeError: Cannot read properties of undefined (reading 'attack')` the fight threw.

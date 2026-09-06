@@ -275,6 +275,29 @@ export interface Entity extends Body {
    */
   firePhase: number;
   /**
+   * Which of a `heads` attack's heads throws the next volley — 0254, moved off `firePhase` by 0261.
+   *
+   * ── TWO MEANINGS IN ONE FIELD, AND THE SECOND ONE CRASHED THE GAME ─────────────────────────────
+   *
+   * ⚠️ **`firePhase` is an ANGLE for a rake and a COUNT for a head, and a boss may have both.** 0254
+   * put the head's turn on `firePhase` and said *"the type refuses a head that is itself heads or a
+   * rake, so the recursion is one deep and `firePhase` has one reader"* — true of a HEAD and false of
+   * a BOSS. 0261 gives the serpent a row-level `rake` in its opening phase and `heads` in its other
+   * two; the rake advances `firePhase` by `turn`, 0.45 of a radian a volley, so by the time the fight
+   * drops under two thirds the count is about 5.4, `heads[5.4 % 2]` is `heads[1.4]`, and that is
+   * `undefined`. **Every serpent fight threw a TypeError at its first phase change.**
+   *
+   * ⚠️ **It would have shipped green.** Nothing drove the serpent out of its opening phase until
+   * `docs/decisions/0268-the-bob-keeps-its-centre.md` added a guard that flies every bobbing boss
+   * through all of them — a guard written about something else entirely.
+   *
+   * ⚠️ **A field rather than a `Math.floor` on the index.** Rounding stops the crash and leaves the
+   * rake steering which head throws: two attacks reading one number, the same defect with the symptom
+   * removed. `spriteBase` above makes the general argument — a third number is cheaper than an
+   * invariant two call sites have to remember.
+   */
+  headAt: number;
+  /**
    * Which of its row's faces a cycling pickup is showing, and steps until it turns to the next —
    * `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
    *
@@ -359,6 +382,7 @@ export function makeEntity(): Entity {
     spin: 0,
     bobPhase: 0,
     firePhase: 0,
+    headAt: 0,
     face: 0,
     stack: 1,
     faceIn: 0,
@@ -405,6 +429,7 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.spin = 0;
   e.bobPhase = 0;
   e.firePhase = 0;
+  e.headAt = 0;
   e.face = 0;
   e.stack = 1;
   e.faceIn = 0;

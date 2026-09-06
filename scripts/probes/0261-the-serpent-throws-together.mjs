@@ -36,8 +36,32 @@ export const PROBES = [
     guard: 'THE THREE WEAPONS: a raking fan of acid',
     edit: {
       path: 'src/app/boss.ts',
-      find: '      boss.firePhase++;\n      throwAttack(head.attack',
+      // ⚠️ Re-anchored when the round's count moved off `firePhase` — see the probe below.
+      find: '      boss.headAt++;\n      throwAttack(head.attack',
       replace: '      throwAttack(head.attack',
+    },
+  },
+  {
+    decision: '0261',
+    suite: 'tests/serpent.test.ts',
+    /*
+      ⚠️ THE CRASH THIS BRANCH WOULD HAVE SHIPPED WITH, PUT BACK — the round counting on `firePhase`,
+      which a rake advances by an ANGLE. It is one word, it type-checks, and 0254's own comment argues
+      it is safe: *"the type refuses a head that is itself heads or a rake, so the recursion is one
+      deep and `firePhase` has one reader."* True of a HEAD and false of a BOSS, and the serpent is
+      the first content to be both.
+
+      ⚠️ Every other guard about the serpent sets the phase it wants and measures that phase, so all
+      of them stay green over it. What goes red is the one assertion that flies the fight from its
+      opening rake into its later rounds — which is why that assertion exists rather than leaving this
+      to 0268's bob guard, where it was found by accident.
+    */
+    broke: 'the round counting on the rake’s own angle again, so a raked serpent indexes a head that is not there',
+    guard: 'a boss that rakes AND grows heads keeps the two counts apart',
+    edit: {
+      path: 'src/app/boss.ts',
+      find: '      const head = attack.heads[((boss.headAt % n) + n) % n]!;\n      boss.headAt++;',
+      replace: '      const head = attack.heads[((boss.firePhase % n) + n) % n]!;\n      boss.firePhase++;',
     },
   },
 ];
