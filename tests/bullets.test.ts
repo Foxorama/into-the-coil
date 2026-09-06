@@ -13,7 +13,9 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { ENTRY_VOLLEY, FIRE_GRID } from '../src/content/cadence.ts';
+import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID } from '../src/content/cadence.ts';
+import { ENEMIES } from '../src/content/enemies.ts';
+import { abreastCap, gapAcross } from '../src/content/formations.ts';
 import { LEVELS, LEVEL_KINDS, MULTI_HIT_RUNUP } from '../src/content/levels.ts';
 import { GameFrame } from '../src/app/frame.ts';
 import { MAX_ALONG_SPAN } from '../src/sim/camera.ts';
@@ -113,5 +115,22 @@ describe('0259 — the bullets stay on the screen', () => {
     expect(gap, 'a body fired before its hull was on the screen').toBeGreaterThanOrEqual(0);
     expect(new Set(fired).size, `all five fired on ${new Set(fired).size} step(s) — a volley, not a figure`).toBeGreaterThan(1);
     expect(ENTRY_VOLLEY / FIRE_GRID, 'the entry gap has one slot, so a formation would fire in unison').toBeGreaterThanOrEqual(2);
+    /*
+      ⚠️ **THE DEAL IS AS WIDE AS A RANK, AND THE RANK IS COMPUTED RATHER THAN RESTATED** — 0259,
+      amended. `ENTRY_SLOTS` is what stops a formation entering abreast from firing on one step, and
+      it is only enough while it covers the widest rank a FIRING kind can stand in: `abreastCap` is
+      `1 + VOLLEY_SPAN / gap`, so a thinner gun than the picket's 3.0 would make a rank of four and
+      leave two of them sharing a slot in silence. Read off `src/content/formations.ts` so that day
+      reddens this instead — `docs/decisions/0027-measure-the-picture-not-the-model.md` is the rule
+      about a guard that only proves the code agrees with itself.
+    */
+    const widestRank = Math.max(
+      ...Object.values(ENEMIES)
+        .filter((row) => row.fireEvery > 0)
+        .map((row) => abreastCap(gapAcross(row.radius))),
+    );
+    expect(ENTRY_SLOTS, `a rank of ${widestRank} firing bodies is dealt into ${ENTRY_SLOTS} slots, so two share one`).toBeGreaterThanOrEqual(
+      widestRank,
+    );
   });
 });

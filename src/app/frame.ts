@@ -70,7 +70,7 @@ import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../cont
 import { DEFAULT_ORIGIN, MID_BOSS_DROP, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
 import { type DifficultyRow, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
-import { ENTRY_VOLLEY, nextOnGrid } from '../content/cadence.ts';
+import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, nextOnGrid } from '../content/cadence.ts';
 import {
   PICKUP_CYCLE_STEPS,
   PICKUP_KINDS,
@@ -2676,9 +2676,12 @@ function fireEnemies(w: World): void {
       the view (0096's clock keeps running) and a capped ship killed it before the rest ran out, so
       most of what could fire never fired on the screen — *"30secs of no bullet to be seen at all."*
 
-      ⚠️ **The slot comes from where its own count stood**, so a formation entering together still
-      opens as a figure (0098) rather than as one volley: the members were spread over their cadence
-      at spawn and that spread is folded into the three slots the entry gap has.
+      ⚠️ **The slot is the member's own, so a formation entering together opens as a figure (0098)
+      rather than as one volley.** It was folded out of `fireIn` — the spawn spread is whole grid
+      units, so the count carries it — and that is two slots however many bodies arrive on the step:
+      `npm run prove` caught it as 0098's probe applying and reddening nothing, and re-aimed at a
+      rank of three abreast the guard went red. `e.entrySlot` is dealt at the spawn instead, so the
+      deal is as wide as a rank is and member 0 still fires inside `ENTRY_VOLLEY`.
 
       ⚠️ **The edge is the player's view and the camera's last position is the other half of the
       test** — the body's positions are a step stale here (`stepEntities` runs after this), so the
@@ -2692,7 +2695,7 @@ function fireEnemies(w: World): void {
       // Plus one, because the count is decremented on this very step below — a spawn's count is set
       // after this loop and takes its first decrement a step later. `tests/spawns.test.ts` holds
       // that every volley lands on the grid, and this is the step that was off it.
-      const entry = nextOnGrid(w.steps, ENTRY_VOLLEY, (e.fireIn % ENTRY_VOLLEY) / ENTRY_VOLLEY) + 1;
+      const entry = nextOnGrid(w.steps, ENTRY_VOLLEY) + e.entrySlot * FIRE_GRID + 1;
       if (entry < e.fireIn) e.fireIn = entry;
     }
     /*
@@ -3003,6 +3006,8 @@ function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: Fo
     if (e === null) return;
     reset(e, along + formation.alongOffset(i, count, gap), ACROSS_SPAN / 2 + formation.acrossOffset(i, count, gap), row, kind);
     e.fireIn = nextOnGrid(w.steps, fireGapFor(row.fireEvery, w.difficulty), i / count);
+    // A summoned rank enters abreast exactly as an authored one does, so it is dealt the same — 0259.
+    e.entrySlot = i % ENTRY_SLOTS;
     e.velAcross = row.motion.kind === 'drift' ? (i % 2 === 0 ? row.motion.roam : -row.motion.roam) : 0;
     // The same two facts a wave's member is given, in the other order so 0073's probe over the
     // wave's line stays the one line it names.
@@ -3205,6 +3210,19 @@ function spawnWave(w: World, index: number): void {
       every run and could not be tuned by a hand.
     */
     e.fireIn = nextOnGrid(w.steps, fireGapFor(row.fireEvery, w.difficulty), (i + index) / wave.count);
+    /*
+      ⚠️ **AND ITS PLACE IN THE ENTRY WINDOW, WHICH THE LINE ABOVE CANNOT ANSWER FOR A RANK** —
+      0259, amended. The spread above is across the body's OWN cadence, and a wave whose members
+      enter the view on the same step never gets to play it: the entry volley pulls every one of
+      them inside `ENTRY_VOLLEY`, and two slots is two slots however many arrived. `abreastCap` puts
+      three firing bodies in a rank, so the deal is the member's index over `ENTRY_SLOTS`.
+
+      ⚠️ **The MEMBER'S index alone, and not `i + index` as the cadence spread uses.** Rotating this
+      by the wave would leave a wave of one holding slot 2 — a body flying alone, made to wait the
+      whole deal for nothing, which is the delay 0259 measured and refused. Member 0 always holds
+      slot 0, so every wave still announces itself inside the window that decision sized.
+    */
+    e.entrySlot = i % ENTRY_SLOTS;
   }
 }
 

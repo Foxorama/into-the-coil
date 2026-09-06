@@ -76,17 +76,48 @@ export const FIRE_GRID = VOLLEY_CYCLE / 4;
  * seen. Most of what could fire never fires on the screen. The first volley is put inside this gap
  * on the entry step, on the body's own grid slot, and the reload is the row's from there.
  *
- * ⚠️ **Twelve steps is two grid slots**: `nextOnGrid` lands the volley between seven and eighteen
- * steps on — a tenth to a third of a second — so the player sees the body before it fires, and a
- * formation entering together still opens as a figure (0098) over the two slots rather than as one
- * volley. One slot was measured first and was the unison 0098 reports; three left a capped ship
+ * ⚠️ **Twelve steps is two grid slots**: `nextOnGrid` lands the volley between seven and twelve
+ * steps on — an eighth to a fifth of a second — so the player sees the body before it fires. One
+ * slot was measured first and was the unison 0098 reports; a THREE-slot window left a capped ship
  * time to kill a two-hit body before its volley, which `scripts/weigh-bullets.mjs` showed as the
- * shoal level under forty per cent.
+ * shoal level under forty per cent. This is the window every body's first volley lands in;
+ * `ENTRY_SLOTS` is what keeps a formation out of one step of it.
  *
  * ⚠️ **It never adds a volley to a body that was about to fire anyway**: the entry gap is a ceiling
  * on the count, not a second clock.
  */
 export const ENTRY_VOLLEY = FIRE_GRID * 2;
+
+/**
+ * How many grid slots a wave's members are dealt across, behind their entry window — 0259.
+ *
+ * ── THE FOLD WAS TWO SLOTS WIDE AND A RANK IS THREE BODIES ──────────────────────────────────────
+ *
+ * ⚠️ **`npm run prove` is what found this, and it found it as a guard that had stopped biting.**
+ * 0259 shipped with the entry slot folded out of the body's own count — `fireIn % ENTRY_VOLLEY` —
+ * which is two slots however many bodies enter together. `scripts/probes/0098-*.mjs` dropped the
+ * spawn share and `tests/spawns.test.ts` stayed GREEN, because its fixture is a COLUMN: a column's
+ * `alongOffset` puts every member an `ALONG_GAP` behind the one in front, so they enter on five
+ * different steps and the geometry spreads them whatever the share does
+ * (`docs/decisions/0019-a-probe-must-be-seen-to-apply.md`). Re-aimed at a `line` — bodies abreast,
+ * entering on ONE step, which is what *"they all fire at exactly the same time when they appear"*
+ * describes — the guard went red: three of five fired together, and the opening covered 100 ms
+ * against its own 150 ms floor. Three bodies cannot be dealt into two slots.
+ *
+ * ⚠️ **THREE, BECAUSE THREE IS THE WIDEST RANK THAT CAN STAND ABREAST.** `abreastCap` is
+ * `1 + VOLLEY_SPAN / gap` and the thinnest hull that fires is the picket's 3.0, so no firing kind
+ * gets a rank of more than three — `THE ENTRY VOLLEY` in `tests/bullets.test.ts` computes that from
+ * `src/content/formations.ts` rather than restating it, so the day a thinner gun arrives the number
+ * reddens instead of quietly under-dealing. It is not in this file's own arithmetic because a
+ * cadence file that imported the fan would be describing where bodies stand.
+ *
+ * ⚠️ **IT IS A DEAL AND NOT A WIDER WINDOW, WHICH IS WHY IT DOES NOT RE-OPEN THE MEASUREMENT
+ * ABOVE.** Widening `ENTRY_VOLLEY` to three slots delays EVERY body, including the one flying alone,
+ * and that is the version 0259 measured and rejected. Here the member holding slot 0 still fires
+ * inside the original window — a wave always has one, because the slot is the member's own index —
+ * and only the second and third of a rank wait the extra tenth and fifth of a second.
+ */
+export const ENTRY_SLOTS = 3;
 
 /**
  * The nearest cadence to `steps` that lands on the grid, never shorter than one grid unit.

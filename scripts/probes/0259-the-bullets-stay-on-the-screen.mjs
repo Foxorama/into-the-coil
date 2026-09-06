@@ -50,8 +50,11 @@ export const PROBES = [
     guard: 'THE PICTURE: every enemy bullet appears on a step the grid allows',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      const entry = nextOnGrid(w.steps, ENTRY_VOLLEY, (e.fireIn % ENTRY_VOLLEY) / ENTRY_VOLLEY) + 1;',
-      replace: '      const entry = nextOnGrid(w.steps, ENTRY_VOLLEY, (e.fireIn % ENTRY_VOLLEY) / ENTRY_VOLLEY);',
+      // ⚠️ Re-anchored when the fold became a deal — the slot is `e.entrySlot` now rather than
+      // `fireIn` folded into the window. The break is unchanged in kind: the `+ 1` is the step the
+      // count is decremented on, and without it the volley lands a step early and off the grid.
+      find: '      const entry = nextOnGrid(w.steps, ENTRY_VOLLEY) + e.entrySlot * FIRE_GRID + 1;',
+      replace: '      const entry = nextOnGrid(w.steps, ENTRY_VOLLEY) + e.entrySlot * FIRE_GRID;',
     },
   },
   {
