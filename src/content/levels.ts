@@ -866,7 +866,9 @@ const SHOAL: readonly WaveEntry[] = [
   { at: 3232, enemy: 'sower', formation: 'column', count: 5, lane: 44 },
   { at: 3290, enemy: 'drifter', formation: 'column', count: 6, lane: 60, origin: 'acrossMinus' },
   { at: 3348, enemy: 'charger', formation: 'column', count: 6, lane: 45 },
-  { at: 3405, enemy: 'charger', formation: 'column', count: 6, lane: 55 },
+  // A sower since 0259, and it was a charger: the stretch from 3290 to 3463 was three non-firing
+  // waves and the level's longest dry stretch at the capped loadout — `scripts/weigh-bullets.mjs`.
+  { at: 3405, enemy: 'sower', formation: 'column', count: 6, lane: 55 },
   { at: 3463, enemy: 'sower', formation: 'column', count: 5, lane: 44, origin: 'acrossPlus' },
   { at: 3520, enemy: 'drifter', formation: 'column', count: 6, lane: 59 },
   { at: 3577, enemy: 'charger', formation: 'column', count: 6, lane: 49 },

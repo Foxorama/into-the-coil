@@ -6,6 +6,18 @@
 // shots would all be on the grid, every content table would be untouched, and *five turrets fire
 // together* is a statement about how it feels rather than about a number. The decision carries it and
 // the eyes-on rig is what would show it.
+//
+// ⚠️ THE SECOND ONE THAT IS NOT HERE ANY MORE is "the fire clock frozen while a body is off screen,
+// so its approach shifts its phase" — the probe that FOUND the defect rather than confirming it, with
+// 84 of 88 volleys off the beat. 0259 subsumed it. A body's first volley is now set on the step its
+// hull crosses the leading edge, through `nextOnGrid`, and every reload after that is a whole number
+// of grid units — so whatever its count did on the way in is overwritten before a single shot leaves,
+// and freezing the clock can no longer put a volley off the grid. `npm run prove` reported it applied
+// and STILL GREEN, which is docs/decisions/0019-a-probe-must-be-seen-to-apply.md working: a probe that
+// cannot redden anything is a claim of cover that is not there, so it goes rather than being re-aimed
+// at a break it no longer describes. THE PICTURE keeps a probe — 0259's own, over the entry volley
+// landing off the grid — and docs/decisions/0192-a-guard-holds-an-invariant.md is the rule that says
+// demoting takes one edit and a reason.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
@@ -81,34 +93,6 @@ export const PROBES = [
       path: 'src/app/frame.ts',
       find: '    e.fireIn = nextOnGrid(w.steps, fireGapFor(row.fireEvery, w.difficulty), (i + index) / wave.count);',
       replace: '    e.fireIn = fireGapFor(row.fireEvery, w.difficulty);',
-    },
-  },
-  {
-    decision: '0096',
-    suite: 'tests/spawns.test.ts',
-    /*
-      ⚠️ THE CLOCK FROZEN WHILE A BODY IS OFF SCREEN, which is exactly how the code shipped and is
-      what both visibility comments already claimed it did not do. An arbitrary pause in a periodic
-      clock is an arbitrary phase shift; a body that spends two seconds of its approach off the
-      leading edge arrives correct in tempo and wrong in phase, for the rest of its life.
-
-      **This is the probe that found the defect rather than confirming it.** The content guards were
-      all green and 84 of 88 volleys were off the beat.
-    */
-    broke: 'the fire clock frozen while a body is off screen, so its approach shifts its phase',
-    guard: 'THE PICTURE: every enemy bullet appears on a step the grid allows',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: "    e.fireIn--;\n    if (e.fireIn > 0) continue;\n    /*\n      The tier's gap, not the row's",
-      /*
-        ⚠️ THE LEADING EDGE AND NOT THE `across` ONE, AND `npm run prove` INSISTED. A first draft
-        froze the clock on the `across` test, which reads as the same break — and the fixture's
-        enemies fly down the middle of a lane they never leave, so nothing was ever frozen and the
-        probe came back STILL GREEN. The freeze that shipped, and the one that actually shifts a
-        phase, is the approach: every wave spawns beyond the view and spends seconds getting into it.
-      */
-      replace:
-        "    if (e.along - e.radius > w.cameraAlong + w.view.alongSpan) continue;\n    e.fireIn--;\n    if (e.fireIn > 0) continue;\n    /*\n      The tier's gap, not the row's",
     },
   },
 ];

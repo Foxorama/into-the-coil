@@ -13,17 +13,27 @@ export const PROBES = [
     decision: '0098',
     suite: 'tests/spawns.test.ts',
     /*
-      ⚠️ THE SHIPPED BEHAVIOUR, PUT BACK — and it is one argument. Dropping the share leaves 0096
+      ⚠️ THE SHIPPED BEHAVIOUR, PUT BACK — and it is one argument. Dropping the deal leaves 0096
       exactly as it was: every cadence on the grid, every first shot aligned, and every member of a
-      formation aligned to the SAME sixteenth, because `w.steps` and `row.fireEvery` do not vary down
-      that loop. This is the build the report is about and every guard 0096 wrote is green over it.
+      rank aligned to the SAME sixteenth, because the entry step does not vary across bodies that
+      arrive abreast. This is the build the report is about and every guard 0096 wrote is green over
+      it.
+
+      ⚠️ IT USED TO BREAK THE SPAWN SHARE — `(i + index) / wave.count` — AND 0259 TOOK THAT AWAY.
+      The entry volley sets a body's first shot on the step its hull crosses the leading edge, so
+      what its count did beforehand no longer decides the figure: `npm run prove` applied the old
+      break and this guard STAYED GREEN, twice — once with the share folded out of `fireIn` and again
+      once the fold became a deal. The share is not dead (`tests/difficulty.test.ts` holds the two
+      probes below over it) but it is no longer what makes a formation a figure, and a probe has to
+      break the mechanism that holds the invariant TODAY —
+      docs/decisions/0019-a-probe-must-be-seen-to-apply.md.
     */
-    broke: 'the share dropped from the spawn alignment, so a formation reloads in unison again',
+    broke: 'the entry deal flattened, so a rank opens fire as one volley again',
     guard: '0098 — THE REPORTED ONE: a formation opens fire as a figure rather than as one volley',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    e.fireIn = nextOnGrid(w.steps, fireGapFor(row.fireEvery, w.difficulty), (i + index) / wave.count);',
-      replace: '    e.fireIn = nextOnGrid(w.steps, fireGapFor(row.fireEvery, w.difficulty));',
+      find: '    e.entrySlot = i % ENTRY_SLOTS;\n  }\n}',
+      replace: '    e.entrySlot = 0;\n  }\n}',
     },
   },
   {

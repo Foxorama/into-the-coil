@@ -146,6 +146,27 @@ export interface Entity extends Body {
    */
   fireIn: number;
   /**
+   * Which grid slot this body takes when its hull enters the view — its place in its own wave, in
+   * `0…ENTRY_SLOTS`. `docs/decisions/0259-the-bullets-stay-on-the-screen.md`.
+   *
+   * ⚠️ **A FIELD, ON EXACTLY `firePhase`'s TERMS, AND FOR THE SAME REASON IT COULD NOT BE DERIVED.**
+   * The first version read the slot back out of `fireIn` — the spawn spread is whole grid units, so
+   * `fireIn` carries it — and folding that into the entry window is modular arithmetic that collides
+   * the moment two members' offsets differ by a whole window. What is wanted is the member's INDEX,
+   * which nothing on the field can reconstruct: the bodies of a rank share an `along`, and their
+   * `across` is the formation's business rather than the gun's.
+   *
+   * ⚠️ **It is not `firePhase` overloaded.** That field is the spinner's turn and is set from the
+   * member index too, which is exactly what makes sharing it tempting and wrong — a spinner would
+   * have one number meaning two things, and the invariant would live in nobody's file. This file's
+   * own argument for `spriteBase` is the precedent: a third number is cheaper than an invariant two
+   * call sites have to remember.
+   *
+   * ⚠️ **Everything that is not a spawned wave member leaves it at zero**, which is the slot that
+   * fires soonest — a boss, a shot and a piece of debris all want the plain answer.
+   */
+  entrySlot: number;
+  /**
    * Steps until this retires itself, or `0` for something that lives until the world removes it.
    *
    * ⚠️ **Zero means NO lifetime, not "expire now"** — every ship, enemy and shot in the game leaves
@@ -320,6 +341,7 @@ export function makeEntity(): Entity {
     landIn: 0,
     kind: 0,
     fireIn: 0,
+    entrySlot: 0,
     lifeFor: 0,
     steerAcross: 0,
     holdFor: 0,
@@ -364,6 +386,7 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.landIn = 0;
   e.kind = kind;
   e.fireIn = 0;
+  e.entrySlot = 0;
   e.lifeFor = 0;
   e.steerAcross = 0;
   e.holdFor = 0;

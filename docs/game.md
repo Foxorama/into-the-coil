@@ -250,7 +250,12 @@ half and a play-test called that *"too punishing"*, so
 
 **The title screen carries a key** — every pickup, its real sprite, and what it does.
 [0045](decisions/0045-the-player-can-see-what-they-are-carrying.md). The enemies deliberately get no
-key: an enemy announces itself by shooting at you, and a pickup announces nothing.
+key: an enemy announces itself by shooting at you, and a pickup announces nothing — **and it does so
+as it appears**: a firing body's first volley leaves inside a third of a second of its hull entering
+the view, on its own grid slot, so bullets are on the screen for the time a body is and not only
+after a full reload — [0259](decisions/0259-the-bullets-stay-on-the-screen.md). Every level is held to
+eight seconds without a bullet on the screen and two fifths of its waves' time with one, at the
+capped loadout, by the instrument that measured the report.
 
 ## Levels, bosses and hazards
 

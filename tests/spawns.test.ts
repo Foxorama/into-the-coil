@@ -279,9 +279,20 @@ describe('0096 — enemy fire lands on the grid in the real frame, not only in t
       ⚠️ **One wave, one kind, five bodies — the shape the report describes.** A mixed field would
       spread by accident: different kinds have different cadences, so their shots drift apart whatever
       the phase, and the defect only shows where the cadences agree.
+
+      ⚠️ **ABREAST, AND IT WAS A COLUMN UNTIL 0259 TOOK THIS GUARD'S TEETH OUT.** The entry volley
+      pulls a body's first shot to the step its hull crosses the leading edge, so a COLUMN is spread
+      by its own geometry: `alongOffset` puts every member an `ALONG_GAP` behind the one in front,
+      they enter on five different steps, and the figure survived with the spawn share deleted.
+      `npm run prove` is what said so — `0098 the share dropped from the spawn alignment` applied and
+      this stayed GREEN, which is `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` catching a
+      guard that had stopped holding its own invariant. A `line` folds into ranks at one distance, so
+      its members enter on the SAME step and the spread has nowhere to come from but the deal — and
+      *"the enemies all fire at exactly the same time **when they appear**"* is the report, so
+      abreast is the fixture it was always about.
     */
     const { world } = playableWorld({
-      waves: [{ at: 200, enemy: 'turret', formation: 'column', count: 5, lane: 40 }],
+      waves: [{ at: 200, enemy: 'turret', formation: 'line', count: 5, lane: 40 }],
       pickups: [],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,

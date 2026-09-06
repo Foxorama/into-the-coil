@@ -806,7 +806,10 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     health: 3,
     damage: 2,
     closing: 0,
-    fireEvery: 90,
+    // 108 since 0259, from 90: a body fires once more on entering the view, and the sentry's wall of
+    // four was at the edge of the thirty bullets a body may put on the screen while it is visible
+    // (`tests/pilots.test.ts`). A slower reload keeps the count under it; 0110's own trade.
+    fireEvery: 108,
     shot: 'flak',
     // THE LABYRINTH'S OWN: a block that holds station along the corridor and slides across it to
     // line up with you, then throws two slabs abreast — a wall of the heavy shot with the hole
