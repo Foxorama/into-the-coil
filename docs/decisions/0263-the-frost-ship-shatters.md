@@ -80,6 +80,24 @@ flake is one of six.
 **The shatter on the death log's position alone.** The log did not say which row died, and a
 shatter keyed on the sprite would be the frame switching on a picture.
 
+## ⚠️ The boss's own death log silenced an enemy's kill cue
+
+Giving the boss `bossDeaths` moved it out of `w.deaths`, and one line was still guarding against it
+being there. [0072](0072-a-cue-is-baked-and-played.md) wrote
+`if (w.deaths.count > 0 && !bossJustDied(w))` because the boss died into the same log, so the
+ordinary kill cue fired for it and pushed its own `bossDown` past the voice cap — *the loudest event
+in the game, announced twice and therefore at risk of not at all.*
+
+With the logs split, that clause protects nothing — and it **silences a real enemy's kill cue on any
+step an enemy dies alongside the boss**, which is the busiest step of the fight. The clause is gone;
+the split is what holds 0072's invariant now.
+
+⚠️ **`npm run prove` is the only thing that could have found it.** 0072's probe struck the clause out
+and the suite stayed GREEN, because the double-cue it makes is not reachable through that line any
+more. Its break is the split itself now — log the boss's death where every other death goes, and the
+kill cue finds it there. **A guard that moves takes its probes with it**, which is the fourth time
+this stack has said so.
+
 ## What is owed
 
 - **An eye on the cascade at the shipped camera** — whether two bolts read as a split or as a

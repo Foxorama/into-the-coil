@@ -1502,7 +1502,18 @@ export class GameFrame implements Frame {
       the one the collision resolved first, and a mean would put two deaths at opposite edges of the
       lane in the middle, where neither of them was.
     */
-    if (w.deaths.count > 0 && !bossJustDied(w)) w.onCue('kill', w.deaths.across[0]);
+    /*
+      ⚠️ **`&& !bossJustDied(w)` WAS HERE UNTIL 0263, AND IT IS THE SPLIT LOGS THAT MADE IT WRONG.**
+      0072 added it because the boss died into THIS log, so the ordinary kill cue fired for it and
+      pushed its own `bossDown` past the cap — *the loudest event in the game, announced twice and
+      therefore at risk of not at all.* This decision gives the boss a `bossDeaths` log of its own, so
+      a boss's death never reaches `w.deaths` and the clause stopped protecting anything. What it did
+      instead was **silence a real enemy's kill cue** on any step an enemy happened to die alongside
+      the boss. `npm run prove` is what said so: 0072's probe applied and reddened nothing, because
+      the double-cue it makes is no longer reachable through this line — the guard is held by the two
+      logs now, and `scripts/probes/0072-*.mjs` breaks that instead.
+    */
+    if (w.deaths.count > 0) w.onCue('kill', w.deaths.across[0]);
     /*
       ⚠️ **THE SHIP TAKES HITS, NOT DAMAGE, and this is where a number becomes a count.** Its health
       is the hull plus the shell (`src/content/ships.ts`), and a shield is what absorbs **one hit** —
