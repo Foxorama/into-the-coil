@@ -88,16 +88,47 @@ Recorded because both readings looked like findings about the game and were find
 
 - **A play.** Whether a third is the right third, and whether the fight now reads as a fight rather
   than as the level's busiest minute.
-- ⚠️ **"Some after the miniboss" is NOT delivered here and cannot be.** At one rung, the Saurian
-  Belt's and the Labyrinth's mid-boss fights still run past the end of their levels' waves — there
-  is no *after* to put anything in, because the fight outlives the script. The lever for that is the
-  mid-boss's health — [0247](0247-a-level-has-a-mid-boss-and-a-real-one.md) set it at half of what
-  those seven bosses had — and the end-boss health work still queued in the alpha list deliberately
-  does not touch it. It wants its own decision and its own ask, and no amount of wave spacing
-  substitutes for it.
+- ~~⚠️ **"Some after the miniboss" is NOT delivered here and cannot be.**~~ **DELIVERED by
+  [0269](0269-a-mid-boss-is-fought-for-as-long-as-its-level-says.md), which is what it said was
+  needed.** At one rung the Saurian Belt's and the Labyrinth's fights ran past the end of their own
+  wave scripts, so there was no *after* to put anything in; at eighteen to twenty-three seconds every
+  level has one, of sixty to eighty seconds, carrying 1.4 to 10.3 firing bodies per ten seconds.
 - **Whether the quiet waves want thinning too.** *"Way too many waves in general"* is read here as
   being about the bullets, on the strength of the sentence that follows it. If the fight still reads
   as crowded with the firing waves at a third, the rule widens to every wave and the number moves.
+
+## ⚠️ Re-measured after 0269, and the number stands for the opposite reason
+
+Asked at the time — *"still too many waves happening around minibosses, but the less health might
+sort that out"* — and this decision's own owed item said no number moves before the re-measure. It
+was run against [0269](0269-a-mid-boss-is-fought-for-as-long-as-its-level-says.md)'s shorter fights,
+with the thinning switched off:
+
+| level | its own approach | during, unthinned | during, one in two | during, one in three |
+|---|---|---|---|---|
+| The Approach | 5.7 | **8.7** | 4.6 | 2.8 |
+| Ember Nebula | 12.0 | **13.8** | 8.4 | 6.5 |
+| Saurian Belt | 6.2 | **9.3** | 5.4 | 5.6 |
+| The Labyrinth | 5.5 | **7.1** | 3.8 | 5.2 |
+| Rime Shelf | 11.6 | **13.9** | 9.2 | 5.4 |
+| The Toxic Mire | 10.8 | **11.1** | 2.2 | 4.5 |
+| The Black Heart | 8.0 | **12.2** | 6.0 | 4.4 |
+
+**The shorter fights did not sort it out — they made it worse.** Unthinned, ALL SEVEN levels now send
+firing bodies onto a fight faster than into their own approach, where before 0269 it was four of
+seven. A long fight was diluted: forty-five waves spread over seventy-four seconds. A twenty-second
+fight lands on whatever stretch of script it covers and takes the whole of it at once.
+
+⚠️ **So the absolute load fell and the rate rose, and both are true.** Four to nine firing waves land
+on a fight now, against twenty-six to forty-five. The rate is what *"way too many waves happening"*
+measures, which is why this rule is **more** necessary after 0269 than it was before it.
+
+**One in three stands**, and one in two would also clear the guard. Three is kept because the ask was
+*less* during; because a fight already runs at 84–100% of its steps with a bullet on the screen from
+the boss alone; and because the fight is now the shortest it has ever been, so there is least room to
+absorb extra. ⚠️ **At four to nine waves a fight, one-in-N is a coarse instrument** — the Toxic Mire
+reads 2.2 at one in two against 4.5 at one in three, which is sampling and not an inversion. No fine
+distinction between single levels should be read off this table.
 
 ## Rollback
 

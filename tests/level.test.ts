@@ -32,6 +32,7 @@ import { SCROLL_PER_STEP, SHIP_SPEED } from '../src/sim/flight.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { MAX_BARRELS, SPREAD_STEP, UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
+import { DIFFICULTIES, DIFFICULTY_KINDS, fireGapFor } from '../src/content/difficulty.ts';
 
 /**
  * The bosses a level ENDS on, which is what 0124's max-weapons floors are about since 0269.
@@ -46,7 +47,6 @@ import { MAX_BARRELS, SPREAD_STEP, UPGRADE_TIERS, weaponFor } from '../src/conte
  * ⚠️ **Read off the levels rather than listed**, so a roster change cannot leave this behind.
  */
 const REAL_BOSSES = LEVEL_KINDS.map((kind) => LEVELS[kind].boss);
-import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { BAR_SECONDS } from '../src/content/music.ts';
 
@@ -2019,6 +2019,56 @@ describe('0124 — a boss lasts long enough to be one, at the loadout the game i
         `${REAL_BOSSES[i]} is no tougher than ${REAL_BOSSES[i - 1]}, so the run does not get harder`,
       ).toBeGreaterThan(BOSSES[REAL_BOSSES[i - 1]!].health);
     }
+  });
+
+  it('0260 — a real boss lasts forty seconds at max weapons, and every phase gets eight volleys away, so every attack is seen', () => {
+    /*
+      `docs/decisions/0260-a-boss-is-fought-to-the-end.md`. Reported from the alpha play: *"level
+      bosses need a lot more health, I think I only saw about 50% of their attacks before they
+      died."* A phase's attack is thrown once a reload; a phase that ends after five of them is an
+      attack the player saw and did not learn. Held in VOLLEYS rather than seconds, because a reload
+      is the unit an attack is counted in, and at the fastest the game can kill — the worst case.
+
+      ⚠️ **BUDGETS, AND THE REPORT OWNS THE NUMBERS** — 0192. *Fifty per cent* is the report, so the
+      fight is twice what it was: forty seconds at the cap on the tuned tier where the shortest was
+      twenty-one, and eight volleys a phase where the shortest was five. Both are just under what
+      the doubling measures, so a hand tuning down from here reddens them before it halves them.
+
+      ⚠️ **A bared phase is skipped** for 0124's reason: its band is read at the damage it actually
+      takes and it throws nothing anyway.
+    */
+    for (const level of LEVEL_KINDS) {
+      const kind = LEVELS[level].boss;
+      const row = BOSSES[kind];
+      const total = (row.health * TUNED.toughness) / FASTEST;
+      expect(total, `${kind} is over in ${total.toFixed(1)}s at max weapons on the tuned tier`).toBeGreaterThanOrEqual(40);
+      const ups = row.phases.map((p) => p.upTo);
+      row.phases.forEach((phase, i) => {
+        if (phase.stance.kind === 'bare') return;
+        const seconds = ((ups[i]! - (ups[i + 1] ?? 0)) / openBy(phase)) * total;
+        const volleys = (seconds * STEPS_PER_SECOND) / fireGapFor(phase.fireEvery, TUNED);
+        expect(
+          volleys,
+          `${kind}'s phase ${i + 1} lasts ${seconds.toFixed(1)}s at max weapons and gets ${volleys.toFixed(1)} volleys away`,
+        ).toBeGreaterThanOrEqual(8);
+      });
+    }
+  });
+
+  it('0260 — the gyre throws its first wall inside six seconds at max weapons, not in the second half of the fight', () => {
+    /*
+      *"The walls were really good but started too late in the sequence, they need to start
+      sooner."* The curtain's first notch is at `uncoil.from` of the health; in seconds at the
+      fastest kill on the tuned tier, which is when it is soonest — and it was thirteen and a half.
+      Six is a tenth of the fight, which is the first notch of nine.
+    */
+    const row = BOSSES.gyre;
+    const uncoil = row.uncoil!;
+    const total = (row.health * TUNED.toughness) / FASTEST;
+    const firstWall = (1 - uncoil.from) * total;
+    expect(firstWall, `the gyre's first wall comes ${firstWall.toFixed(1)}s into the fight at max weapons`).toBeLessThan(6);
+    // And it is a notch the fight actually throws: one by the time the first phase turns.
+    expect(uncoilsBy(uncoil, row.health * row.phases[1]!.upTo, row.health), 'the first phase ends with no wall thrown').toBeGreaterThanOrEqual(1);
   });
 
   it('AND THE TIER THE GAME IS TUNED FOR SAYS SO ABOUT ITSELF', () => {

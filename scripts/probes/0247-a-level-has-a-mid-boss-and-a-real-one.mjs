@@ -55,16 +55,24 @@ export const PROBES = [
   {
     decision: '0247',
     suite: 'tests/bosses.test.ts',
-    // A mid-boss authored back at its old health: tougher than the real boss it precedes.
-    broke: 'the axis authored back at its full health, tougher than the jellyfish it precedes',
+    /*
+      A mid-boss authored as heavy as a real one, which is what the guard refuses: every mid-boss
+      under EVERY end boss, so the toughest of the seven has to clear the weakest of the seven.
+
+      ⚠️ **IT USED TO BE *the axis back at its own full health*, 1140, AND 0260 TOOK THAT AWAY.**
+      Doubling every real boss put the weakest of them at 1400, so the axis's own pre-0247 health
+      stopped violating anything and `npm run prove` reported the probe applied and the suite STILL
+      GREEN. The break was written against a number that moved underneath it — the guard is an
+      ORDERING and the break has to be one too, so it is now *heavier than jormungandr* rather than
+      *back to what it was*, which is a fact about the ordering rather than about 2026-09.
+    */
+    broke: 'the axis authored heavier than the weakest real boss, so a mid-boss outweighs an end one',
     guard: 'and the old end bosses are the mid-bosses now',
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0269, which solved every mid-boss's health to its level's own fight length.
-      // The break is unchanged in kind: the axis back at the health it carried before it was a
-      // mid-boss, which is tougher than the jellyfish at the end of the same level.
       find: '    health: 208,',
-      replace: '    health: 1140,',
+      replace: '    health: 1500,',
     },
   },
 ];

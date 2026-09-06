@@ -70,8 +70,12 @@ describe('0247 — a level has a mid-boss and a real one', () => {
     */
     const mids = LEVEL_KINDS.map((kind) => LEVELS[kind].midBoss!.kind);
     const ends = LEVEL_KINDS.map((kind) => LEVELS[kind].boss);
-    // The end bosses climb through the run. The mid-bosses climb through the TABLE
-    // (`tests/level.test.ts`) and not through the run: the ask moved two of them between places.
+    // The end bosses climb through the run.
+    // ⚠️ **The mid-bosses no longer climb through anything in HEALTH — 0269.** They used to climb
+    // through the table, which the ask's own level swaps had already made invisible to a player;
+    // their ladder is `MID_BOSS_SECONDS` now, in seconds and in run order, held by
+    // `tests/midboss.test.ts` against measured fights. What survives here is the one claim health can
+    // still make on its own: none of them outweighs a real boss.
     for (let i = 1; i < ends.length; i++) {
       expect(BOSSES[ends[i]!].health, `${ends[i]} is no tougher than ${ends[i - 1]}`).toBeGreaterThan(BOSSES[ends[i - 1]!].health);
     }

@@ -71,8 +71,9 @@ export const PROBES = [
     guard: 'THE SPIN: the gyre’s curtain turns',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "    uncoil: { from: 0.5, every: 0.1, gap: 3, at: 26, hole: 14, spin: true },",
-      replace: "    uncoil: { from: 0.5, every: 0.1, gap: 3, at: 26, hole: 14, spin: false },",
+      // ⚠️ Re-anchored by 0260, which starts the curtain at nine tenths.
+      find: "    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 26, hole: 14, spin: true },",
+      replace: "    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 26, hole: 14, spin: false },",
     },
   },
 ];
