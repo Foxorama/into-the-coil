@@ -317,10 +317,12 @@ at its last third acid, void and lightning in turn — the lightning in columns 
 each column a warning line for three quarters of a second before it strikes. A phase says what a
 boss throws, since 0248; acid and void are shots in inks of their own.
 
-**The eagle whips and summons** — [0249](decisions/0249-the-eagle-summons.md): darts while whole,
-then a whip of flames thrown along an arc with the tip faster than the root so it bows as it flies,
-then volleys that call kites — a new body, Ember Nebula's horde, sent by no level — and at the end
-raptors, at the leading edge where every wave arrives. A boss may send a body as well as a bullet.
+**The eagle whips and summons** — [0249](decisions/0249-the-eagle-summons.md),
+[0262](decisions/0262-the-eagle-throws-quills.md): a raking fan of quills — its own bullet, a
+feather shaft first — while whole, then a whip of flames thrown along an arc with the tip faster
+than the root so it bows as it flies, then volleys that call kites — a new body, Ember Nebula's
+horde, sent by no level, that dives for the ship's lane — from one side of the lane and then the
+other, and at the end raptors the same way. A boss may send a body as well as a bullet.
 
 ⚠️ **A phase changes what a boss DOES, not what it looks like** —
 [0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md). Nothing on screen currently

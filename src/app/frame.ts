@@ -68,7 +68,7 @@ import { SHOTS } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, type LevelRow } from '../content/levels.ts';
-import { BOSSES, type BossRow } from '../content/bosses.ts';
+import { BOSSES, type BossRow, type SummonFrom } from '../content/bosses.ts';
 import { type DifficultyRow, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, nextOnGrid } from '../content/cadence.ts';
 import {
@@ -3053,22 +3053,36 @@ function burst(w: World, along: number, across: number, count: number): void {
  * at the leading edge, in `formation` about the middle of the lane, exactly as a leading wave is
  * placed by `spawnWave` below and with the same parities — a summons is authored by the row that
  * calls it, and rolls nothing.
+ *
+ * ⚠️ **OR FROM A SIDE — 0262.** `from: 'sides'` puts them in from an across edge, `side` −1 or 1,
+ * exactly as `spawnWave` places a flanking wave: a stream along the edge, a fixed rate across to
+ * each member's lane, and the pilot takes over from there. *"They marched in gently from the left
+ * side in a single file, they didn't swoop or dive bomb"* — from the side, a kite's hunt is a dive.
  */
-function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: FormationKind): void {
+function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: FormationKind, from: SummonFrom, side: number): void {
   const kind = w.enemyKinds[enemy];
   const row = w.enemyRows[kind];
   if (row === undefined) return;
   const formation = FORMATIONS[formationKind];
-  const along = spawnAlong(w.cameraAlong);
+  const flanking = from === 'sides';
+  const along = flanking ? flankAlongFor(w.ship.along, w.cameraAlong, w.view.alongSpan) + w.cameraAlong : spawnAlong(w.cameraAlong);
+  const entryAcross = side < 0 ? -FLANK_MARGIN : ACROSS_SPAN + FLANK_MARGIN;
   const gap = gapAcross(row.radius);
   for (let i = 0; i < count; i++) {
     const e = w.enemies.spawn();
     if (e === null) return;
-    reset(e, along + formation.alongOffset(i, count, gap), ACROSS_SPAN / 2 + formation.acrossOffset(i, count, gap), row, kind);
+    const target = ACROSS_SPAN / 2 + formation.acrossOffset(i, count, gap);
+    const stream = flanking ? streamOffset(i, row.radius) : formation.alongOffset(i, count, gap);
+    reset(e, along + stream, flanking ? entryAcross : target, row, kind);
     e.fireIn = nextOnGrid(w.steps, fireGapFor(row.fireEvery, w.difficulty), i / count);
     // A summoned rank enters abreast exactly as an authored one does, so it is dealt the same — 0259.
+    // ⚠️ It is dealt whichever edge it comes in from: a flanking summon (0262) still arrives as a
+    // rank, and the deal is about when its members open fire rather than about where they entered.
     e.entrySlot = i % ENTRY_SLOTS;
-    e.velAcross = row.motion.kind === 'drift' ? (i % 2 === 0 ? row.motion.roam : -row.motion.roam) : 0;
+    if (flanking) {
+      e.velAcross = -side * FLANK_ENTRY_SPEED;
+      e.steerAcross = target;
+    } else e.velAcross = row.motion.kind === 'drift' ? (i % 2 === 0 ? row.motion.roam : -row.motion.roam) : 0;
     // The same two facts a wave's member is given, in the other order so 0073's probe over the
     // wave's line stays the one line it names.
     if (row.motion.kind === 'loop') e.turnsLeft = row.motion.turns;
@@ -4234,7 +4248,10 @@ function driveBoss(w: World): void {
   */
   const calling = throwing.attack ?? w.bossRow.attack;
   if (calling.kind === 'summon' && boss.turnsLeft > 0) {
-    summonAdds(w, calling.enemy, boss.turnsLeft, calling.formation);
+    // Which across edge this call comes in from, alternating a volley — 0262. `spin` is a field
+    // nothing else reads on a boss, and the summons is the only thing that writes it.
+    boss.spin = boss.spin > 0 ? -1 : 1;
+    summonAdds(w, calling.enemy, boss.turnsLeft, calling.formation, calling.from, boss.spin);
     boss.turnsLeft = 0;
   }
   /*
