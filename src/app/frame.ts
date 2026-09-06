@@ -67,7 +67,7 @@ import { INVULN_STEPS, SHIELD_MARK, hullFor, shieldsOf } from '../content/ships.
 import { SHOTS } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
-import { DEFAULT_ORIGIN, MID_BOSS_DROP, type LevelRow } from '../content/levels.ts';
+import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow } from '../content/bosses.ts';
 import { type DifficultyRow, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, nextOnGrid } from '../content/cadence.ts';
@@ -916,6 +916,16 @@ export interface World {
   weaponsOffered: number;
   /** Index of the next wave in `level.waves` that has not spawned yet. Only ever goes up. */
   nextWave: number;
+  /**
+   * How many firing waves the mid-boss's fight has been offered — 0267. One in `FIGHT_FIRING_IN`
+   * of them is put on the field and the rest are skipped.
+   *
+   * ⚠️ **OFFERED, NOT SPAWNED**, so the thinning is a share of what the script sends rather than of
+   * what survived a pool that was full. It counts only while the mid-boss is on the field, so it is
+   * the fight's own count and not the level's; nothing resets it between the two fights, because a
+   * level has one mid-boss and the end boss's waves have run out by the time it arrives.
+   */
+  fightFiring: number;
   /** Index of the next pickup in `level.pickups`. Its own index, because the two lists interleave. */
   nextPickup: number;
   /** What is lying about, waiting to be flown into. In no pairing that can hurt anything. */
@@ -1645,7 +1655,36 @@ export class GameFrame implements Frame {
     */
     const horizon = spawnAlong(w.cameraAlong) - w.levelOrigin;
     while (w.nextWave < w.level.waves.length && w.level.waves[w.nextWave]!.at <= horizon) {
-      spawnWave(w, w.nextWave);
+      /*
+        ── A FIGHT THINS THE FIRING WAVES OVER IT — 0267 ──────────────────────────────────────────
+
+        `docs/decisions/0267-a-fight-thins-the-waves-over-it.md`. Reported: *"when the minibosses are
+        on screen there are way too many waves in general happening and it's a lot… less during the
+        miniboss — still need some during miniboss otherwise miniboss is too easy, but not as many."*
+
+        ⚠️ **SKIPPED, NEVER DEFERRED.** `at` is a PLACE — `src/content/levels.ts` opens with why, and
+        with what it cost to learn — so a wave held back for the fight would arrive somewhere its
+        author never put it. The index advances either way; what changes is whether the wave is put
+        on the field.
+
+        ⚠️ **THE FIRING ONES ONLY.** A quiet wave is pressure without bullets, and it is what keeps
+        the fight from being a duel in an empty lane — *"still need some during miniboss."* It is the
+        bullets the report is about, and `scripts/weigh-fight.mjs` is what says so: at one rung a
+        mid-boss fight already runs 84–100% of its steps with an enemy bullet on the screen, against
+        38–81% of the stretch before it.
+
+        ⚠️ **A COUNT, NOT A CLOCK AND NOT A ROLL.** One in `FIGHT_FIRING_IN` is the same answer on
+        every machine and in every run: a roll would want a stream of its own (0021) and would make
+        the density a thing no level author could reason about.
+      */
+      const wave = w.level.waves[w.nextWave]!;
+      const row = w.enemyRows[w.enemyKinds[wave.enemy]];
+      const thinned = row !== undefined && row.fireEvery > 0 && w.fight === 0 && w.bossPool.size > 0;
+      if (thinned) w.fightFiring++;
+      // ⚠️ `(n - 1) % N`, so the FIRST offer of a fight always lands and `FIGHT_FIRING_IN` of 1 means
+      // *thin nothing*. `n % N === 1` reads the same and is wrong at 1, where it admits none — the
+      // value the instrument reaches for to measure the baseline, which is how it was caught.
+      if (!thinned || (w.fightFiring - 1) % FIGHT_FIRING_IN === 0) spawnWave(w, w.nextWave);
       w.nextWave++;
     }
     // Its own index, because the two lists interleave and neither is a subsequence of the other.
@@ -4633,6 +4672,9 @@ function beginScript(w: World): void {
   w.bossPool.clear();
   w.pickups.clear();
   w.nextWave = 0;
+  // The fight's own count of firing waves offered — 0267, and it is the level's fight, so it goes
+  // back with the level's script.
+  w.fightFiring = 0;
   w.nextPickup = 0;
   /*
     ⚠️ **THE SAWTOOTH IS THIS LINE.** The dial is `levelIndex + weaponsOffered`, so zeroing the second
