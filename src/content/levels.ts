@@ -115,6 +115,47 @@ export const MIX_RUN = 3;
  */
 export const FIGHT_FIRING_IN = 3;
 
+/**
+ * How long each level's mid-boss fight should take, in seconds, at the loadout it is met with — 0269.
+ *
+ * ── THE LADDER IS IN SECONDS BECAUSE HEALTH IS NOT A THING THE PLAYER CAN FEEL ──────────────────
+ *
+ * `docs/decisions/0269-a-mid-boss-is-fought-for-as-long-as-its-level-says.md`. Asked for after the
+ * alpha play: *"mid bosses need less health."* 0247 built the roster as a health ladder — 240 up to
+ * 570 — and what that produced was fights of 37 to 112 seconds in no order at all, because **damage
+ * actually landed varies four-fold across the seven** and runs inversely to how fast the hull crosses
+ * the lane: a shot is fired where the ship is, and a fast hull is somewhere else when it arrives. The
+ * redoubt carries more health than the lattice and dies in a third of the time.
+ *
+ * ⚠️ **SO THE HEALTHS IN `src/content/bosses.ts` ARE DERIVED AND THESE ARE AUTHORED.**
+ * `scripts/solve-mid-health.mjs` measures each fight through the real frame and prints the health
+ * that hits these numbers; every mid-boss's `health` is that output. `scripts/solve-hold.mjs` is the
+ * same pattern for the music's loudness and exists for the same reason — a quantity nobody can reason
+ * about directly is solved against the one that can be measured, with the solver committed beside it.
+ *
+ * ⚠️ **KEYED BY THE LEVEL AND NOT BY THE BOSS, WHICH IS WHAT THE RULE IS ACTUALLY ABOUT.** The first
+ * draft keyed it by mid-boss kind, and to do that it had to be a `Record<string, …>` — only seven of
+ * the fourteen bosses are mid-bosses — which `tests/registry.test.ts` refused on 0016's terms and was
+ * right to. The rule is *how long this level's fight takes*; the run order is the order the numbers
+ * climb in; a level owns both. It lives in this file rather than in `bosses.ts` for the same reason:
+ * `levels.ts` already imports `BossKind`, so the other direction is a cycle.
+ *
+ * ⚠️ **IN RUN ORDER, WHICH IS THE ORDER A PLAYER MEETS THEM** — 17 seconds at the Approach climbing
+ * to 23 at the Black Heart. 0247 records the roster climbing *"through the TABLE and not through the
+ * run"*, which happened because the lattice and the shoal mother swapped levels; a ladder the player
+ * cannot be in the order of is not a ladder. **The mean is 20, which is the number the play asked
+ * for**, and the play owns both the mean and the spread.
+ */
+export const MID_BOSS_SECONDS: Record<LevelKind, number> = {
+  approach: 17,
+  descent: 18,
+  coilward: 19,
+  shoal: 20,
+  batteries: 21,
+  gauntlet: 22,
+  eye: 23,
+};
+
 export interface WaveEntry {
   /** Camera distance, in world units from the level's start, at which this wave spawns. */
   at: number;

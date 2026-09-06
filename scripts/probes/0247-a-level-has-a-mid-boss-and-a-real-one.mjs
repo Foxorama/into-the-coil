@@ -60,8 +60,11 @@ export const PROBES = [
     guard: 'and the old end bosses are the mid-bosses now',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "    // Half of 1140 — the black heart's mid-boss since 0247.\n    health: 570,",
-      replace: "    // Half of 1140 — the black heart's mid-boss since 0247.\n    health: 1140,",
+      // ⚠️ Re-anchored by 0269, which solved every mid-boss's health to its level's own fight length.
+      // The break is unchanged in kind: the axis back at the health it carried before it was a
+      // mid-boss, which is tougher than the jellyfish at the end of the same level.
+      find: '    health: 208,',
+      replace: '    health: 1140,',
     },
   },
 ];
