@@ -403,10 +403,46 @@ export function stepBoss(
         ⚠️ **The phase scales the RATE by dividing the wavelength**, so a later phase completes its
         cycle sooner over the same span. Scaling the amplitude instead would push the hull off a lane
         that is a fixed hundred units on every device (0023).
+        ── AND THE ANGLE IS CARRIED, NOT COMPUTED FROM THE CAMERA — 0268 ───────────────────────────
+
+        ⚠️ **`docs/decisions/0268-the-bob-keeps-its-centre.md`, and it is a bug that shipped.**
+        Reported: *"there's also a bug when bosses and minibosses get health reduced and then start
+        bouncing up and down, they keep bouncing up and down off screen."* This read
+        `cos(cameraAlong × TAU / wavelength)` — the derivative of `amplitude × sin(...)`, which is
+        correct only while `wavelength` is CONSTANT. It is not: the line above divides it by the
+        phase's `patrolScale`, so it changes every time the health crosses a phase boundary. What is
+        integrated is the velocity, so a jump in the cosine's argument silently re-centres the
+        oscillation on wherever the hull happened to be, and every later phase adds another offset.
+        Driven through all their phases, four of the six bobbing bosses left the lane — the chorus
+        reached 114.8 and the axis −14.2 of a lane that is 0 to 100 — and **there is no `across` cull
+        on a boss**, as the `patrol` arm above says, so nothing ever brought them back.
+
+        ⚠️ **`bobPhase` ON THE HULL rather than a second returned value.** This function returns one
+        number and a second would mean an object — an allocation, in the frame loop, which 0022 bans
+        outright. The field is the one `src/sim/entity.ts` already carries for a pickup's bob; a
+        pickup and a boss are different pools and it means the same thing in both, which makes it a
+        shared field rather than an overloaded one.
+
+        ⚠️ **Advanced by the SAME rate the velocity is scaled by**, which is the whole of the fix: the
+        angle moves by `rate` a step and the hull moves by `amplitude × rate × cos(angle)` a step, so
+        the position is `amplitude × sin(angle)` about wherever the fight started it — for any
+        sequence of wavelengths, because nothing is recomputed from a camera the wavelength has to
+        agree with. `reset` starts it at zero, so a fight opens centred and moving.
       */
       const wavelength = move.wavelength / phase.patrolScale;
       const rate = (TAU * scrollPerStep) / wavelength;
-      boss.velAcross = move.amplitude * rate * Math.cos((cameraAlong * TAU) / wavelength);
+      boss.velAcross = move.amplitude * rate * Math.cos(boss.bobPhase);
+      /*
+        ⚠️ **AND NOT WHILE THE HULL IS BRACED, WHICH IS THE SAME DEFECT WITH A SECOND CAUSE** — the
+        brace below zeroes `velAcross` for a beam (0250), so an angle that went on turning through it
+        would come out the far side describing a position the hull never travelled to, and the bob
+        would re-centre exactly as a changed wavelength used to. Found by measuring rather than by
+        reading: with the wavelength fixed, the hydra — the one bobbing boss with a laser head (0254)
+        — still reached 8.6 across against an amplitude of 18 about the lane's middle, which is 23
+        units of centre it had no other way to lose. The angle and the hull move together or neither
+        moves.
+      */
+      if (boss.holdFor <= 0) boss.bobPhase += rate;
       break;
     }
     case 'stalk': {
