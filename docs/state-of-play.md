@@ -139,10 +139,11 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the frost ship chills: a hull's cold on the row scales the stick's ask inside its radius and freezes a ship that stays; the frost shard in its own cold ink, in the one rung the ladder had left; shards as adds** | [0253](decisions/0253-the-frost-ship-chills.md) |
 | **the hydra grows heads: a head is a shot and an attack, a phase grows one and keeps the rest, and the heads take turns a volley — acid, flame, a laser, frost, void** | [0254](decisions/0254-the-hydra-grows-heads.md) |
 | **the jellyfish opens: tendrils are pulsing beams from the bell; a fall is a shot or a body and starts at a share of the health — moon jellies, a new body no level sends, sink across the lane; a third stance opens and keeps throwing void** | [0255](decisions/0255-the-jellyfish-opens.md) |
-| **a pickup keeps the count across a switch; a death costs one rung per ladder and throws nothing; a level authors a weapon and a missile and the mid-boss drops a weapon, a shield and a bomb; the guns cap across the run** | [0256](decisions/0256-a-pickup-keeps-the-count.md), [`the-alpha-list`](../reports/the-alpha-list-2026-09-06.md) |
+| **a pickup keeps the count across a switch; a level authors a weapon and a missile and the mid-boss drops a weapon, a shield and a bomb; the guns cap across the run — ⚠️ its death rule is reversed by 0266 below** | [0256](decisions/0256-a-pickup-keeps-the-count.md), [`the-alpha-list`](../reports/the-alpha-list-2026-09-06.md) |
 | **the arc lands only on a body whose whole hull is on the screen — the reach was measured from a ship that can stand ninety units from the edge** | [0257](decisions/0257-the-arc-lands-on-the-screen.md) |
 | **one pilot a level: the place's signature is the only kind that reacts to the player, every shared kind and every mid-boss flies a pattern and fires one, the eagle is the one end boss that stalks, and a charger turns at the box's ends** | [0258](decisions/0258-one-pilot-a-level.md) |
-| **the bullets stay on the screen: a body fires on entering the view, and every level is held to eight seconds dry and two fifths covered at the capped loadout — `scripts/weigh-bullets.mjs` is the instrument** | [0259](decisions/0259-the-bullets-stay-on-the-screen.md) |
+| **the bullets stay on the screen: a body fires on entering the view, a wave's members are dealt across the entry window by index, and every level is held to eight seconds dry and two fifths covered at the capped loadout — `scripts/weigh-bullets.mjs` is the instrument** | [0259](decisions/0259-the-bullets-stay-on-the-screen.md) |
+| **a death takes both ladders and both kinds and throws every rung where the ship died — one piece per kind, holding the face it took, wearing a ×N badge; 0256's rung is deleted and what a death costs is the crossing and the life** | [0266](decisions/0266-a-death-throws-the-ladders-back.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -760,8 +761,10 @@ for.
 mid-bosses and the seven real bosses in: *"I think we're actually at an alpha game state."* It is
 ten items in the order they are being taken, and the report holds the order so this file does not
 have to. **The first is landed** — [0256](decisions/0256-a-pickup-keeps-the-count.md): a switch
-keeps the count, a death costs a rung, two pickups a level and the mid-boss drops the rest — and what
-it owes is a play, on the deployed `main`, of whether one rung reads as a cost. **The second is
+keeps the count, two pickups a level and the mid-boss drops the rest. ⚠️ **Its death rule was played
+and reversed the same day** — [0266](decisions/0266-a-death-throws-the-ladders-back.md): the rung is
+gone and 0066's scatter is back with 0243's ×N badge, because the rung, the deleted scatter and the
+cut to the authored counts all landed on one quantity. **The second is
 landed** — [0257](decisions/0257-the-arc-lands-on-the-screen.md): a link lands only on a body whose
 whole hull is on the screen, because the reach was measured from a ship that can stand ninety units
 from the edge. **The third is landed** — [0258](decisions/0258-one-pilot-a-level.md): one pilot a
@@ -769,9 +772,19 @@ level, the place's own signature, with every shared kind and every mid-boss on a
 eagle the one end boss that stalks. **The fourth is landed** —
 [0259](decisions/0259-the-bullets-stay-on-the-screen.md): measured first, the wave tables were not
 the quantity; a body fires on entering the view, and `scripts/weigh-bullets.mjs` is the instrument
-every level is now held against. **The next is the end bosses' health**, and the gyre's walls
-sooner; then the serpent, the eagle, the frost ship; every one of those is a model quantity until it
-is flown. Everything below this paragraph about the weapons is the record of how
+every level is now held against.
+
+⚠️ **AND TWO ITEMS HAVE ARRIVED SINCE, BOTH FROM PLAYING WHAT LANDED.** The first is 0266 above. The
+second is not started: **the waves are too thick over a mid-boss fight** — *"when the minibosses are
+on screen there are way too many waves in general happening… spread the waves out so a few bullet
+firing waves happen before miniboss and some after, and less during."* A wave's `at` is a place and a
+fight's length is a duration set by the player's loadout, so the count that lands on a fight is not
+authorable: at 7 seconds Coilward puts 3 firing waves on it and at 25 it puts 11. It wants a spawn
+rule while a mid-boss is on the field, and `scripts/weigh-bullets.mjs` segmented by fight state
+before any number is chosen.
+
+**Then the end bosses' health**, and the gyre's walls sooner; then the serpent, the eagle, the frost
+ship; every one of those is a model quantity until it is flown. Everything below this paragraph about the weapons is the record of how
 the game got to the alpha, and it is kept because the alpha list is a verdict on it.
 
 ⚠️ **THE WORK WAS THE NEW WEAPONS, FROM 2026-09-05.** The player asked for three, in order, and
