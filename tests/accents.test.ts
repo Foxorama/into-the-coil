@@ -16,7 +16,7 @@ import { SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/spr
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { THEME_KINDS, type ThemeKind } from '../src/content/themes.ts';
 import { viewOf } from '../src/sim/camera.ts';
-import { inside, tracingPen, type Pass, type Point } from './paths.ts';
+import { inside, strokeOutside, tracingPen, type Pass, type Point } from './paths.ts';
 
 /**
  * A SPRITE IS PAINTED, AND THE PAINT STAYS ON THE HULL.
@@ -432,9 +432,41 @@ describe('paint costs nothing to draw', () => {
       What is asserted here is the half budget.test.ts cannot see: that every body is sealed exactly
       once — one outline, however many fills go over it.
     */
+    /*
+      ── ONE OUTLINE, AND EVERY OTHER STROKE IS PAINT — 0276 ──────────────────────────────────────
+
+      ⚠️ **THIS WAS `strokes === 1`, AND THAT COUNT WAS NEVER THE INVARIANT.** The claim in the
+      paragraph above is *one outline, however many fills go over it* — and it says fills only because
+      `tests/paths.ts` could not see the geometry of a stroke, so a stroke was banned rather than
+      held. `docs/decisions/0264-the-real-bosses-are-drawn.md` then rejected the predecessor's
+      stacked-stroke spine on that basis, which is
+      `docs/decisions/0192-a-guard-holds-an-invariant.md` read backwards: the drawing technique was
+      picked by what the harness could measure. `reports/the-vocabulary-is-the-ceiling-2026-09-08.md`
+      is the measurement, and 0276 lifts it.
+
+      ⚠️ **WHAT IS HELD NOW IS STRICTLY MORE.** Exactly one stroke is the OUTLINE — the one laid on
+      the hull's own path, which is what `seal` does and what makes a body read as one object — and
+      every other stroke is paint, held to the same silhouette and the same alpha rule every fill
+      has answered since 0227. A second outline still fails; a contour, a rim light or a scale no
+      longer does.
+    */
+    const same = (a: readonly (readonly Point[])[], b: readonly (readonly Point[])[]): boolean =>
+      a.length === b.length && a.every((s, i) => s.length === b[i]!.length);
     for (const kind of BODIES) {
       const traced = trace(kind);
-      expect(traced.strokes, `the ${kind} is outlined ${traced.strokes} times`).toBe(1);
+      const hull = traced.passes[0]!;
+      const outlines = traced.inks.filter((ink) => same(ink.subpaths, hull.subpaths));
+      expect(outlines.length, `the ${kind} is outlined ${outlines.length} times`).toBe(1);
+      expect(traced.inks[0], `the ${kind} paints a stroke before it is sealed`).toBe(outlines[0]);
+      for (const [i, ink] of traced.inks.entries()) {
+        if (i === 0 || ink.alpha < SOLID) continue;
+        const over = strokeOutside(hull, ink);
+        expect(
+          over,
+          `stroke ${i} on the ${kind} reaches ${over.toFixed(2)}px past its hull — a mark painted ` +
+            'with a stroke is held to the silhouette exactly as a mark painted with a fill is',
+        ).toBe(0);
+      }
     }
   });
 

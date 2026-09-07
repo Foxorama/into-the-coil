@@ -59,12 +59,28 @@ export type Pen = Pick<
   | 'moveTo'
   | 'lineTo'
   | 'arc'
+  /*
+    ── THE THREE THAT LET A HULL BE A CREATURE — 0276 ────────────────────────────────────────────
+
+    ⚠️ **A body is a CURVE, and until these were here every boss edge was a straight line between
+    authored points.** The serpent's spine is nine samples, so its body was eight straight quads with
+    a visible corner at each join — `reports/the-vocabulary-is-the-ceiling-2026-09-08.md` measures it,
+    and measures that `bezierCurveTo` appeared ONCE in this whole file and not once in the boss
+    painting at all.
+
+    ⚠️ **THEY COST NOTHING AT RUNTIME.** This file is not in `HOT_FILES` (`tests/budget.test.ts`) —
+    baking is cold, once, at boot and resize — and what the frame loop does afterwards is the same
+    single blit. 0022 and 0025 count draw calls and allocations in the frame, and this touches neither.
+  */
+  | 'quadraticCurveTo'
+  | 'bezierCurveTo'
   | 'rect'
   | 'closePath'
   | 'fill'
   | 'stroke'
   | 'fillRect'
   | 'createRadialGradient'
+  | 'createLinearGradient'
 >;
 
 export interface Atlas {
@@ -868,6 +884,165 @@ const BLADE_GLYPH = 0.8;
  * same guard holds over every body, and the one the missile's plume already lives under at 0.6.
  * The glow peaks at 0.42 and the ring is 0.5.
  */
+/*
+  ── THE KIT THAT DRAWS A CREATURE — 0276 ─────────────────────────────────────────────────────────
+
+  ⚠️ **THREE PRIMITIVES, AND THEY ARE WHAT `reports/the-vocabulary-is-the-ceiling-2026-09-08.md`
+  MEASURED THE ABSENCE OF.** Every boss edge was a straight line between authored points, every boss
+  fill was one of four flat tones, and the only stroke in a body was the outline round the whole of
+  it. A serpent drawn in that vocabulary is a faceted green ribbon whatever its spine says, and no
+  number of passes over the spine changes that — which is the question these answer.
+
+  ⚠️ **THEY COST NOTHING IN THE FRAME.** `bake.ts` is not in `HOT_FILES`; the blit afterwards is the
+  same blit. 0022 and 0025 are untouched, and that is measured rather than assumed —
+  `tests/budget.test.ts` counts the draw calls.
+*/
+
+/**
+ * Continue the current path along a SMOOTH curve through `points` — Catmull-Rom as cubic Béziers.
+ *
+ * ⚠️ **OPEN AND COMPOSABLE, so a hull can be curved WHERE IT IS A CREATURE and straight where it is
+ * not.** A serpent's back is a curve and its fangs are corners; one call that smoothed a whole hull
+ * would round the fins into lumps and the skull into a bean. An arm walks its own outline — a
+ * `moveTo`, a curve down the back, lines round the jaw, a curve up the belly — exactly as it would
+ * with `lineTo`, and `tests/paths.ts` flattens the result conservatively.
+ *
+ * ⚠️ **A sixth is the Catmull-Rom tangent and not a tuning knob.** It is the value that makes the
+ * curve pass through every point with a continuous tangent; changing it would make the curve miss
+ * the samples the hull is authored from, which is the one thing an outline may not do.
+ */
+function curveThrough(ctx: Pen, f: Frame, points: readonly Pt[]): void {
+  const at = (i: number): Pt => points[Math.max(0, Math.min(points.length - 1, i))]!;
+  const px = (x: number): number => f.half + x * f.r;
+  const py = (y: number): number => f.half + y * f.r;
+  // `lineTo` with no current point opens the sub-path, which is the canvas rule and what the pen does.
+  ctx.lineTo(px(at(0)[0]), py(at(0)[1]));
+  for (let i = 0; i < points.length - 1; i++) {
+    const [ax, ay] = at(i - 1);
+    const [bx, by] = at(i);
+    const [cx, cy] = at(i + 1);
+    const [dx, dy] = at(i + 2);
+    ctx.bezierCurveTo(
+      px(bx + (cx - ax) / 6),
+      py(by + (cy - ay) / 6),
+      px(cx - (dx - bx) / 6),
+      py(cy - (dy - by) / 6),
+      px(cx),
+      py(cy),
+    );
+  }
+}
+
+/**
+ * One CLOSED smooth sub-path through `points` — `trace`, for a hull that is an animal.
+ *
+ * ⚠️ **THE WRAP IS THE POINT.** `curveThrough` clamps at its ends, which is right for an open contour
+ * and wrong for a body: a closed curve whose ends clamp has a corner where it joins, and on a serpent
+ * that corner lands under the jaw where the belly meets the skull. Indices wrap here instead, so the
+ * tangent is continuous all the way round and there is no seam to find.
+ */
+function curveLoop(ctx: Pen, f: Frame, points: readonly Pt[]): void {
+  const n = points.length;
+  const at = (i: number): Pt => points[((i % n) + n) % n]!;
+  const px = (x: number): number => f.half + x * f.r;
+  const py = (y: number): number => f.half + y * f.r;
+  ctx.moveTo(px(at(0)[0]), py(at(0)[1]));
+  for (let i = 0; i < n; i++) {
+    const [ax, ay] = at(i - 1);
+    const [bx, by] = at(i);
+    const [cx, cy] = at(i + 1);
+    const [dx, dy] = at(i + 2);
+    ctx.bezierCurveTo(
+      px(bx + (cx - ax) / 6),
+      py(by + (cy - ay) / 6),
+      px(cx - (dx - bx) / 6),
+      py(cy - (dy - by) / 6),
+      px(cx),
+      py(cy),
+    );
+  }
+  ctx.closePath();
+}
+
+/**
+ * A polygon filled with a LINEAR gradient from `from` to `to` — a form-shade across a body.
+ *
+ * ⚠️ **THIS IS WHAT GIVES A HULL VOLUME, and the boss painting had none of it.** Four flat tones
+ * make every shape a paper cutout however good its outline is; one light direction across a body is
+ * most of the difference between a green ribbon and a thing with a back and a belly.
+ *
+ * ⚠️ **`tests/paths.ts` RECORDS IT AS `'gradient'`, which is a colour and not a shape.** Every claim
+ * the containment guards make is about geometry and alpha, so a gradient fill is measured exactly as
+ * the flat fill it replaces — 0227's *paint on the hull* rather than *a hole cut in the void's ink*.
+ */
+function shaded(
+  ctx: Pen,
+  f: Frame,
+  from: Pt,
+  to: Pt,
+  near: string,
+  far: string,
+  points: readonly Pt[],
+  alpha = 1,
+  smooth = false,
+): void {
+  const wash = ctx.createLinearGradient(
+    f.half + from[0] * f.r,
+    f.half + from[1] * f.r,
+    f.half + to[0] * f.r,
+    f.half + to[1] * f.r,
+  );
+  wash.addColorStop(0, near);
+  wash.addColorStop(1, far);
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = wash;
+  ctx.beginPath();
+  if (smooth) curveLoop(ctx, f, points);
+  else trace(ctx, f, points);
+  ctx.fill('evenodd');
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * An OPEN stroked line ON the hull: a contour at an interior seam, a rim light, a scale.
+ *
+ * ⚠️ **[0264](../../docs/decisions/0264-the-real-bosses-are-drawn.md) REFUSED THIS, AND THE REASON
+ * WAS A LIMIT OF THE HARNESS RATHER THAN OF THE PICTURE** — *"a stroked spine would be a mark the
+ * containment guard cannot see."* `tests/paths.ts` now records a stroke's geometry and `strokeOutside`
+ * holds it to the same silhouette every fill is held to, so the technique that makes the
+ * predecessor's serpent work is measurable and therefore allowed.
+ *
+ * ⚠️ **AND IT IS NOT A SECOND OUTLINE.** `tests/accents.test.ts` holds exactly one stroke per body in
+ * `palette.space` at the hull's own width on the hull's own path; every other stroke is paint, and is
+ * held INSIDE the hull rather than counted. The invariant was always *one outline*, and it still is.
+ *
+ * ⚠️ **Round caps, always.** A butt cap ends a contour in a flat chisel edge, which reads as a cut
+ * rather than as a line running out — and a round cap is also the shape `strokeOutside` measures.
+ */
+function seam(
+  ctx: Pen,
+  f: Frame,
+  colour: string,
+  width: number,
+  points: readonly Pt[],
+  alpha = 1,
+  smooth = false,
+): void {
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = colour;
+  ctx.lineWidth = width * f.r;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  if (smooth) curveThrough(ctx, f, points);
+  else
+    points.forEach(([x, y], i) => {
+      if (i === 0) ctx.moveTo(f.half + x * f.r, f.half + y * f.r);
+      else ctx.lineTo(f.half + x * f.r, f.half + y * f.r);
+    });
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
 function bubble(ctx: Pen, f: Frame, palette: Palette): void {
   ctx.globalCompositeOperation = 'destination-over';
   band(ctx, f, palette.pickup, 0, 0, PICKUP_HALO, PICKUP_HALO - 0.07, 0.5);
@@ -3181,98 +3356,297 @@ function endOf(spine: readonly Pt[]): (px: number, py: number) => Pt {
   out, because a skull is the one part of a serpent that says what it is.
 */
 const SERPENT_SPINE: readonly Pt[] = [
-  [-0.6, -0.16],
-  [-0.42, -0.4],
-  [-0.2, -0.52],
-  [0.04, -0.34],
-  [0.2, 0],
-  [0.38, 0.36],
-  [0.6, 0.54],
-  [0.82, 0.44],
-  [0.98, 0.2],
+  [-0.72, -0.3],
+  [-0.5, -0.42],
+  [-0.26, -0.44],
+  [-0.04, -0.3],
+  [0.14, -0.04],
+  [0.3, 0.24],
+  [0.48, 0.44],
+  [0.66, 0.5],
+  [0.82, 0.4],
+  [0.92, 0.22],
+  [0.99, 0.04],
 ];
-// ⚠️ Nothing on a hull thinner than a quarter of `r`: the outline is stroked at a tenth of `r` in
-// the void's ink, centred on the edge, and a jaw or a tail finer than that is outline and no body.
-// The mouth is paint, for the same reason — a notch that fine is stroked shut.
-const serpentHalf = (i: number): number => 0.22 - 0.13 * (i / (SERPENT_SPINE.length - 1));
-/** From the crown, over the horn and the brow, down the snout, under the chin — a solid skull. */
-const SERPENT_HEAD: readonly Pt[] = [
-  [-0.68, -0.46],
-  [-0.8, -0.62],
-  [-0.9, -0.48],
-  [-1, -0.3],
-  [-1, 0.02],
-  [-0.9, 0.16],
-  [-0.7, 0.12],
+/*
+  ⚠️ **FULL THROUGH THE MIDRIFF AND WHIPPING AWAY AT THE END, which the linear taper it replaces was
+  not.** The old half-width fell evenly from 0.22 to 0.09 over nine samples, so the body was the same
+  thickness everywhere the eye looks at it and then stopped in a blunt stump — the *"more of a tail"*
+  in the reference brief. This holds better than nine tenths of the width to a third of the way down
+  and then falls away, which is the shape of the animal.
+
+  ⚠️ **Nothing on a hull thinner than a quarter of `r`**: the outline is stroked at a tenth of `r` in
+  the void's ink, centred on the edge, so a jaw or a tail finer than that is outline and no body. The
+  mouth is paint, for the same reason — a notch that fine is stroked shut. 0264 learned both of these
+  from a first pass that drew open jaws and baked a skull with a hole in it.
+*/
+const serpentHalf = (i: number): number => {
+  const t = i / (SERPENT_SPINE.length - 1);
+  return 0.012 + 0.215 * Math.pow(1 - Math.pow(t, 2.2), 0.85);
+};
+/**
+ * Under the jaw, round the snout, over the brow to the crown — a solid skull, and no mouth in it.
+ *
+ * ⚠️ **IT IS WIDER THAN THE NECK AND `0264 — THE HEADS` HOLDS THAT AT 0.6.** A serpent whose head is
+ * the same gauge as its body is the *"grey tentacle"* the report named; this spans 0.68 against a
+ * neck of 0.45, and the margin is deliberate because the flattened curve is what the guard measures.
+ */
+const SERPENT_SKULL: readonly Pt[] = [
+  [-0.76, 0.06],
+  [-0.92, 0.02],
+  [-1.04, -0.1],
+  [-1.09, -0.22],
+  [-1.04, -0.38],
+  [-0.92, -0.52],
+  [-0.78, -0.6],
 ];
-const SERPENT_FINS: Readonly<Record<number, number>> = { 2: 0.2, 3: 0.24, 4: 0.2, 5: 0.14 };
-function serpentHull(): Pt[] {
+/**
+ * The whole animal as ONE closed outline, skull first, down the back, round the tail, up the belly.
+ *
+ * ⚠️ **AND EVERY POINT OF IT IS A SAMPLE OF A CURVE RATHER THAN A CORNER** — `curveLoop` below. The
+ * hull this replaces was a chain of straight quads with a visible corner at every spine sample, and
+ * a serpent is a curve: `reports/the-vocabulary-is-the-ceiling-2026-09-08.md` measures that as the
+ * first of the three reasons the passes were not converging.
+ *
+ * ⚠️ **THE DORSAL FINS ARE GONE FROM THE SILHOUETTE ON PURPOSE.** Four triangles poking off the back
+ * read as sawteeth — rootless, because a polygon fin shares one edge with the body and has no
+ * contour of its own — and the reference has none. What it has instead is short ticks of light off
+ * the outer edge, and those are paint, at an alpha that lets them sit outside the hull.
+ */
+const SERPENT_OUTLINE: readonly Pt[] = (() => {
   const n = SERPENT_SPINE.length;
-  const out: Pt[] = [offSpine(SERPENT_SPINE, 0, -serpentHalf(0)), ...SERPENT_HEAD];
-  for (let i = 0; i < n; i++) out.push(offSpine(SERPENT_SPINE, i, serpentHalf(i)));
-  out.push([1, 0.16]);
-  for (let i = n - 1; i >= 1; i--) {
-    out.push(offSpine(SERPENT_SPINE, i, -serpentHalf(i)));
-    const fin = SERPENT_FINS[i];
-    if (fin === undefined) continue;
-    // A fin on the segment behind this sample, its tip leaning back towards the tail.
-    const [ux, uy] = headingAt(SERPENT_SPINE, i);
-    const a = offSpine(SERPENT_SPINE, i, -serpentHalf(i));
-    const b = offSpine(SERPENT_SPINE, i - 1, -serpentHalf(i - 1));
-    const mx = a[0] * 0.65 + b[0] * 0.35;
-    const my = a[1] * 0.65 + b[1] * 0.35;
-    out.push([mx + uy * fin, my - ux * fin]);
-  }
+  const out: Pt[] = [...SERPENT_SKULL];
+  /*
+    ⚠️ **THE BACK EDGE STARTS AT SAMPLE ONE AND THE BELLY AT SAMPLE ZERO, AND THE ASYMMETRY IS A FIX.**
+    The neck's own back offset sits BELOW both the crown ahead of it and the back edge behind it, so
+    including it put a V in the outline — which baked as an ear, and made the animal read as a cat.
+    The crown runs straight into the back of the neck instead. Seen on the sheet, not reasoned:
+    `docs/decisions/0027-measure-the-picture-not-the-model.md`.
+  */
+  for (let i = 1; i < n; i++) out.push(offSpine(SERPENT_SPINE, i, -serpentHalf(i)));
+  out.push([1.02, 0.02]);
+  for (let i = n - 1; i >= 0; i--) out.push(offSpine(SERPENT_SPINE, i, serpentHalf(i)));
+  return out;
+})();
+
+/** A ribbon between two fractions of the half-width, sample `from` to sample `to` — smooth. */
+function serpentBand(lo: number, hi: number, from: number, to: number): Pt[] {
+  const out: Pt[] = [];
+  for (let i = from; i <= to; i++) out.push(offSpine(SERPENT_SPINE, i, serpentHalf(i) * lo));
+  for (let i = to; i >= from; i--) out.push(offSpine(SERPENT_SPINE, i, serpentHalf(i) * hi));
   return out;
 }
-const SERPENT_HULL: readonly Pt[] = serpentHull();
 
+/**
+ * Three nested ribbons at rising alpha — a shadow or a light with no edge to it.
+ *
+ * ⚠️ **A ONE-PIECE BAND BAKED AS A STRIPE, WHICH IS THE FAILURE THE PREDECESSOR NAMES TWICE**: *"a
+ * dashed road marking down a green ribbon."* What separates a shadow from a stripe is that a shadow
+ * has no edge on the side facing the light, and a single flat ribbon has two. Nesting three of them
+ * puts the steps where the eye reads a falloff instead — the same trick as a stepped gradient, and it
+ * keeps the mark a POLYGON, which is what `tests/accents.test.ts` can hold to the hull.
+ */
+function serpentFalloff(ctx: Pen, f: Frame, colour: string, edge: number, to: number, peak: number): void {
+  /*
+    ⚠️ **THE OUTERMOST STEP IS A QUARTER OF THE BAND AND NOT A SIXTH, BECAUSE OF THE TAIL.** A step
+    sized as a share of the half-width is thinnest where the animal is, and at sample eight a sixth
+    baked as 2.4 CSS pixels on a 1280×720 screen — under `tests/accents.test.ts`'s 2.5px floor, which
+    is the width below which a mark is not drawn at all rather than drawn faintly.
+  */
+  for (const [at, share] of [
+    [0.25, 0.4],
+    [0.52, 0.7],
+    [0.75, 1],
+  ] as const) {
+    poly(ctx, f, colour, serpentBand(edge * at, edge, 0, to), peak * share);
+  }
+}
+
+/** A point on the spine at a FRACTIONAL sample, `h` off it — so a scale can be smaller than a segment. */
+function alongSpine(at: number, h: number): Pt {
+  const i = Math.min(Math.floor(at), SERPENT_SPINE.length - 2);
+  const t = at - i;
+  const a = offSpine(SERPENT_SPINE, i, serpentHalf(i) * h);
+  const b = offSpine(SERPENT_SPINE, i + 1, serpentHalf(i + 1) * h);
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+}
+
+/*
+  ── THE SERPENT'S PAINT, ON THE LIFTED KIT — 0276 ────────────────────────────────────────────────
+
+  ⚠️ **EVERY MARK BELOW ANSWERS A ROW OF THE REFERENCE BRIEF** in
+  `reports/the-vocabulary-is-the-ceiling-2026-09-08.md`, which is the picture the player handed over
+  with *"this is the minimum level of what I'm after."* What it replaces was six flat marks: two
+  hard-edged stripes, five chevrons, a lit brow and a disc for an eye.
+
+  ⚠️ **THE ORDER IS THE DEPTH.** Form-shade first, over the whole body, so everything after it sits
+  on a hull that already has a back and a belly; then the belly shadow and the rim light, which are
+  ribbons and therefore taper with the animal; then the scale field; then the head, which is the part
+  that says what it is and so is painted last and over everything.
+*/
 function paintBoss8(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
   void theme;
-  // The belly in shadow down the port edge; the back lit down the starboard edge.
-  for (let i = 0; i < 6; i++) plate(ctx, f, skin, stripe(SERPENT_SPINE, i, serpentHalf, 0.5, 0.9));
-  for (let i = 0; i < 7; i++) lit(ctx, f, skin, stripe(SERPENT_SPINE, i, serpentHalf, -0.45, -0.75));
-  // Scales down the spine — a dark chevron a sample — with the venom-light between them.
-  for (let i = 1; i <= 5; i++) {
-    const [x, y] = SERPENT_SPINE[i]!;
-    poly(ctx, f, shade(skin.hull, -0.3), [
-      [x - 0.05, y - 0.05],
-      [x + 0.01, y],
-      [x - 0.05, y + 0.05],
-      [x - 0.01, y + 0.05],
-      [x + 0.06, y],
-      [x - 0.01, y - 0.05],
-    ]);
-    const [nx, ny] = SERPENT_SPINE[i + 1]!;
-    disc(ctx, f, skin.lit, (x + nx) / 2, (y + ny) / 2, 0.03);
+  /*
+    ⚠️ **ONE LIGHT DIRECTION ACROSS THE WHOLE ANIMAL, and it is the mark that does the most work.**
+    Four flat tones made every hull a paper cutout — the second of the three ceilings the report
+    measures. This is one gradient over the outline the hull was just sealed in, so it costs a fill
+    and changes the body from a colour into a form.
+  */
+  shaded(ctx, f, [0, -1], [0, 1], shade(skin.hull, 0.22), shade(skin.hull, -0.4), SERPENT_OUTLINE, 1, true);
+  // The belly in shadow, and the back caught by the same light — ribbons, so they taper with the body.
+  /*
+    ⚠️ **0.88 AND NOT 0.99, AND THE GUARD FOUND IT.** A band's outer edge is a share of the half-width
+    at each SAMPLE; the hull's edge is a smooth curve THROUGH those samples, and a curve cuts inside
+    its own control polygon wherever the body is convex. At 0.99 the belly band came 0.3 CSS pixels
+    over the outline — invisible on the sheet, and exactly the kind of thing
+    `tests/accents.test.ts` exists to say out loud.
+  */
+  serpentFalloff(ctx, f, shade(skin.hull, -0.5), 0.88, 8, 0.6);
+  serpentFalloff(ctx, f, skin.lit, -0.88, 7, 0.34);
+  /*
+    ⚠️ **THE SCALES ARE A FIELD AND NOT A ROW OF MARKS**, which is the difference the reference makes
+    most plainly: a low-contrast overlapping-arc texture over the whole body reads as an animal, and
+    six discrete chevrons down the centreline read as road markings on a green ribbon — the exact
+    failure the predecessor's own comments name twice.
+
+    ⚠️ **SKIPPED WHERE THE BODY IS THINNER THAN THE SCALE**, which is 0264's *nothing on a hull finer
+    than the outline* and is also why `strokeOutside` exists: a constant-width mark on a tapering body
+    walks out of it, and the guard now says so instead of the sheet.
+  */
+  /*
+    ⚠️ **A SCALE'S CHORD RUNS ACROSS THE BODY AND IT BULGES DOWN IT.** The first pass drew the chord
+    ALONG the spine, which is a longitudinal line however much it is made to curve, and the field
+    baked as a set of ruled contour lines down a green tube — the road-marking failure again, in a
+    third disguise. Seen on the sheet: 0027.
+  */
+  const rows = [-0.82, -0.52, -0.22, 0.08, 0.38, 0.68];
+  const last = SERPENT_SPINE.length - 1;
+  for (let s = 0; s * 0.4 < last; s++) {
+    const at = s * 0.4;
+    const half = serpentHalf(Math.floor(at));
+    // 0264: nothing on a hull finer than the outline, so the tail whip carries no scales at all.
+    if (half < 0.08) continue;
+    const [ux, uy] = headingAt(SERPENT_SPINE, Math.round(at));
+    // Every other course staggered, so the field reads as overlapping rather than as a grid.
+    const shift = s % 2 === 0 ? 0 : 0.15;
+    for (let k = 0; k < rows.length - 1; k++) {
+      /*
+        ⚠️ **A HUMP OF FIVE POINTS AND NOT A THREE-POINT V, AND INSET SO SCALES DO NOT TOUCH.** Three
+        points through a clamped curve is an angle, and neighbours sharing their endpoints chained
+        into a zig-zag — the field baked as knitting. A scale is a discrete arc with its neighbours
+        showing between, which is what makes a scale field read as one.
+      */
+      const from = rows[k]! + shift;
+      const span = rows[k + 1]! - rows[k]!;
+      // The bulge is a share of the LOCAL half-width, so a scale shrinks with the animal.
+      const bulge = half * 0.42;
+      const scale: Pt[] = [];
+      for (let j = 0; j <= 4; j++) {
+        const t = j / 4;
+        const [x, y] = alongSpine(at, from + span * (0.12 + 0.76 * t));
+        const lift = Math.sin(Math.PI * t) * bulge;
+        scale.push([x + ux * lift, y + uy * lift]);
+      }
+      seam(ctx, f, skin.lit, 0.008, scale, 0.2, true);
+    }
   }
-  // The skull: a lit brow, the eye in its socket, the mouth thrown open — dark, the maw lit in it,
-  // a fang off each jaw.
-  lit(ctx, f, skin, [
-    [-0.74, -0.46],
-    [-0.82, -0.52],
-    [-0.9, -0.44],
-    [-0.8, -0.4],
+  /*
+    ⚠️ **TICKS OF LIGHT OFF THE OUTER EDGE, AND THEY ARE ALLOWED OUTSIDE THE HULL BECAUSE THEY ARE
+    TRANSLUCENT.** `tests/accents.test.ts` treats anything at or above 0.9 as solid and holds it
+    inside the silhouette; a mark below that is a light, which is what the plume and the glow already
+    are. These are what the reference has where the old hull had four sawtooth fins.
+  */
+  for (let s = 2; s < 12; s++) {
+    const at = s * 0.8;
+    if (at > SERPENT_SPINE.length - 1.4) break;
+    const half = serpentHalf(Math.floor(at));
+    const root = alongSpine(at, -0.8);
+    const tip = alongSpine(at, -1 - half * 1.1);
+    seam(ctx, f, skin.lit, 0.011, [root, tip], 0.42);
+  }
+  /*
+    ⚠️ **THE HEAD IS THE PART THAT SAYS WHAT IT IS**, so it carries the only saturated mark in the
+    picture and the only pure-white one. The mouth is paint and not a notch — 0264, from a first pass
+    that cut the jaws into the hull and baked a skull with a hole through it.
+  */
+  /*
+    ⚠️ **THE CROWN IS A PLANE AND NOT A PATCH.** A snake's head reads because the top of the skull
+    catches the light as one flat surface running from the brow to the snout, with the side of the
+    head falling away below it. The first pass painted a small lit blob near the brow and the head
+    came back as a lump.
+  */
+  shaded(
+    ctx,
+    f,
+    [-0.9, -0.58],
+    [-0.98, -0.2],
+    skin.lit,
+    shade(skin.hull, 0.14),
+    [
+      [-0.78, -0.58],
+      [-0.92, -0.5],
+      [-1.03, -0.36],
+      [-1.06, -0.24],
+      [-0.94, -0.28],
+      [-0.79, -0.4],
+    ],
+    0.7,
+    true,
+  );
+  /*
+    ⚠️ **THE MOUTH IS PAINT AND THE JAW IS THE SHADOW UNDER IT — 0264, WHICH LEARNED IT THE HARD WAY**
+    by cutting open jaws into the hull and baking a skull with a hole through it. The dark wedge is
+    the gap the jaws leave; the fangs hang off its upper edge, which is where a snake's are.
+  */
+  /*
+    ⚠️ **EVERY POINT BELOW CARRIES ABOUT FOUR HUNDREDTHS OF CLEARANCE FROM THE JAW LINE, AND THAT IS
+    NOT CAUTION.** The hull is a smooth curve THROUGH the skull's samples now, and a curve sits inside
+    the polygon its samples describe wherever the outline is convex — so a mark drawn to the authored
+    points is drawn to an edge that is no longer there. The first pass put the jaw shadow 0.3 CSS
+    pixels outside, which `tests/accents.test.ts` reported and the sheet did not show at all.
+  */
+  poly(ctx, f, shade(skin.hull, -0.55), [
+    [-0.78, 0.005],
+    [-0.92, -0.025],
+    [-1.0, -0.105],
+    [-0.98, -0.155],
+    [-0.86, -0.085],
+    [-0.77, -0.03],
+  ], 0.95);
+  poly(ctx, f, '#2a0f14', [
+    [-0.99, -0.12],
+    [-0.86, -0.06],
+    [-0.8, -0.025],
+    [-0.81, 0.0],
+    [-0.9, -0.03],
+    [-1.0, -0.095],
   ]);
-  disc(ctx, f, shade(skin.plate, -0.5), -0.84, -0.38, 0.05);
-  disc(ctx, f, skin.eye, -0.85, -0.38, 0.034);
-  disc(ctx, f, shade(skin.plate, -0.6), -0.855, -0.38, 0.015);
-  poly(ctx, f, shade(skin.plate, -0.5), [
-    [-0.98, -0.18],
-    [-0.76, -0.1],
-    [-0.97, 0],
+  // Two fangs off the upper jaw, hanging into the gap — the one white in the animal.
+  for (const [x, y, drop] of [
+    [-0.982, -0.118, 0.053],
+    [-0.898, -0.078, 0.058],
+  ] as const) {
+    poly(ctx, f, '#f6fbf4', [
+      [x - 0.013, y],
+      [x + 0.015, y + 0.011],
+      [x + 0.001, y + drop],
+    ]);
+  }
+  // The nostril, and the eye: a dark socket, the gold iris, a vertical slit, one catchlight.
+  disc(ctx, f, shade(skin.plate, -0.6), -1.02, -0.25, 0.016);
+  disc(ctx, f, shade(skin.plate, -0.65), -0.9, -0.38, 0.058);
+  disc(ctx, f, skin.eye, -0.9, -0.38, 0.043);
+  poly(ctx, f, '#100c04', [
+    [-0.907, -0.42],
+    [-0.893, -0.42],
+    [-0.888, -0.38],
+    [-0.893, -0.34],
+    [-0.907, -0.34],
+    [-0.912, -0.38],
   ]);
-  glow(ctx, f, skin.lit, -0.9, -0.09, 0.12, 0.8);
-  poly(ctx, f, skin.lit, [
-    [-0.95, -0.17],
-    [-0.89, -0.15],
-    [-0.92, -0.09],
-  ]);
-  poly(ctx, f, skin.lit, [
-    [-0.94, -0.01],
-    [-0.88, -0.04],
-    [-0.9, -0.08],
-  ]);
+  // ⚠️ 0.014 and not 0.01: `tests/accents.test.ts` floors a solid mark at 2.5 CSS pixels across on a
+  // 1280×720 screen, and a catchlight thinner than that is not drawn faintly — it is not drawn.
+  disc(ctx, f, '#fffdf2', -0.919, -0.403, 0.014, 0.85);
 }
 
 /*
@@ -4552,9 +4926,12 @@ export function drawKind(
     */
     case 'boss8':
     case 'boss8Hit':
-      // THE SERPENT — 0264: a tapering S of a body on one spine, a skull with its jaws open at the
-      // front, four fins down its back. The drawing is `serpentHull` above.
-      trace(ctx, f, SERPENT_HULL);
+      /*
+        THE SERPENT — 0264, redrawn on 0276's kit. One spine from a skull to a whipping tail, and the
+        outline is a CURVE: `curveLoop` rather than `trace`, so the eight visible corners the straight
+        chain had are gone. `SERPENT_OUTLINE` above is the walk — skull, back, tail, belly.
+      */
+      curveLoop(ctx, f, SERPENT_OUTLINE);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       if (skin !== null) paintBoss8(ctx, f, skin, theme);
