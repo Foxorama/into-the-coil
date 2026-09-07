@@ -468,7 +468,39 @@ export const AURA_FAR_UNITS = 145;
  * ceiling the moment a player closed on a boss at the end of a long level, which is exactly the
  * headroom `tests/music.test.ts` measures. `auraFor` is the one description.
  */
-export const AURA_ONSET_UNITS = 720;
+/*
+  ── IT WAS MEASURED FROM THE LEVEL'S START AND IT IS NOW MEASURED FROM THE BOSS ──────────────────
+
+  ⚠️ **EVERYTHING ABOVE THIS BLOCK DESCRIBES THE OLD MEANING AND IS KEPT BECAUSE THE ARGUMENT WAS
+  SOUND.** 720 units is still twenty seconds at 36 units a second, and it is still a distance rather
+  than a timer. What changed is which end it is counted from: `bossAt - AURA_BUILD_UNITS` rather
+  than a fixed 720 from the opening.
+
+  ⚠️ **REPORTED 2026-09-07, AND IT REVERSES AN EARLIER ASK BY THE SAME EAR.** The old one — *"start
+  about 15-30secs into the start of a level"* — is why the onset was 720, and it was delivered
+  literally. The new one is *"it definitely needs to be held back till the approach or first boss
+  part of the sound either way, it doesn't fit and completely detracts from the rest of the level
+  music."*
+
+  ⚠️ **BOTH ARE RIGHT, AND WHAT SETTLES IT IS THAT NOBODY HAD HEARD THE FIRST ONE WHEN THEY ASKED
+  FOR IT.** Two measurements, taken when the layer was finally identified by ear:
+
+  - Twenty seconds in, `auraFast` is at **0.017** — the ember crackle with none of the furnace under
+    it, arriving over music it is deliberately unrelated to (the aura loops are two bars and *"say
+    nothing about the progression"*). It was reported as *"a weird sort of sound… almost sounds like
+    a bad audio artifact"*, which is what a texture with no context is.
+  - At the fight, where it is the whole point, `auraSlow` is **14.5 dB under the loudest layer** of
+    thirteen. *"Embers and furnace roar? I haven't heard those ever at all."*
+
+  **Audible where it means nothing and buried where it means everything** — so the fix is not a gain,
+  it is where the build spends its length. Over the last 720 units it opens within a few seconds of
+  the `approach` section on every level in the game.
+
+  ⚠️ **WHAT IS LOST IS NAMED: a longer level no longer spends longer building.** The old comment
+  argued for that explicitly. The counter-argument is that this is the BOSS's aura — 0091 — so the
+  boss is the honest thing to measure it from, and a level's length was never what it was about.
+*/
+export const AURA_BUILD_UNITS = 720;
 
 /**
  * The exponent the aura's ramp is raised to. Above 1 the movement crowds towards the near end.

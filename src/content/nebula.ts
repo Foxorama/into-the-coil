@@ -845,20 +845,56 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
   ],
 
   crash: [
+    /*
+      ── IT WAS A SWELL AND IT SOUNDED LIKE A VENT ─────────────────────────────────────────────────
+
+      ⚠️ **Reported 2026-09-07:** *"is the crash supposed to be cymbals? it sounds like a steam vent
+      noise or something, can we remove it completely? ... let's replace the crash with a triangle."*
+
+      ⚠️ **THE DESCRIPTION WAS EXACT, AND THE OLD COMMENT ARGUED FOR IT.** What stood here was a
+      1.4-second band of noise with a **0.42-second attack**, swept 11 kHz → 3.4 kHz over a 2.4 kHz
+      highpass — *"a swell and not a hit… the orchestral gesture the base's `crash` deliberately is
+      not."* A slow rise and fall of filtered noise with no transient in front of it is what a vent
+      IS; the thing that makes a cymbal a cymbal is the strike, and this deliberately had none.
+      `docs/decisions/0027-measure-the-picture-not-the-model.md` — every number was as authored.
+
+      ── AND THE THING THAT REPLACED IT DID NOT LAST THE EVENING ──────────────────────────────────
+    */
+    /*
+      ⚠️ **IT STRIKES ONCE, ON BEAT 7, AND SPANS FROM THERE TO THE STABS.** Asked for 2026-09-07:
+      *"it needs to be timed so that it kicks in just before the 3 note piece in hook, there's a 1,2,3
+      section which is really good"*, then *"move slightly earlier so it's just after the downnote"*,
+      then *"1-2 beats earlier, there's a big downnote shortly before it."*
+
+      ⚠️ **AND THEN THE TRIANGLE WENT TOO, WHICH IS WHY NEITHER IS HERE.** *"Let's get rid of the
+      triangle as well, it isn't adding anything useful now that I've listened to it a bit more."*
+      Four placements were tried by ear (beats 10, 9 and 7, each an octave and a length apart) and the
+      answer turned out to be that the slot did not want an introduction in it at all.
+
+      ⚠️ **AND WHAT IS HERE NOW IS THE THING THE FIRST REPORT ASKED ABOUT: A CYMBAL.** *"Is the crash
+      supposed to be cymbals?"* — it never was here, and both replacements missed it too. The vent had
+      a 0.42 s rise and no strike; the triangle had a strike and no body.
+
+      ⚠️ **THE VENT WAS CARRYING THIS PLACE'S BRIGHTNESS CLIMB, WHICH ONLY SHOWED WHEN IT WAS GONE.**
+      With the slot empty, `surge` came out at **231 Hz against a `push` of 275** — 0136 requires the
+      climb to be at least 2% and it had become a 16% fall. Falling back to the base composition's
+      `crash` does not fix it either: that one is *"three sounds in 12.8 seconds"*, a quarter of the
+      density this place's rhythm was written around. **A layer can be load-bearing for a shape
+      nobody thought of it as serving**, and deleting it is how that gets discovered.
+
+      ⚠️ **SO: 1 ms of attack, 13 kHz down to 4 kHz, on the two strikes the vent used.** Bright,
+      struck, and decaying — the base's own cymbal at this place's cadence rather than a third
+      invention. The choir shout stays on top of it, which is where it was always going.
+    */
     {
-      /*
-        A SWELL AND NOT A HIT. 0.4s of rise on a 1.4s cymbal is the orchestral gesture the base's
-        `crash` deliberately is not — the base is punctuation, arriving on the beat. This one arrives
-        BEFORE the beat and lands on it, which is why the pattern puts it a bar early.
-      */
       steps: [0.95, _, _, _, _, _, _, _, 0.8, _, _, _, _, _, _, _],
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 1.4, gain: 0.055, attack: 0.42, curve: 1.1, lowFrom: 11000, lowTo: 3400, highFrom: 2400, q: 0.5 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 1.1, gain: 0.06, attack: 0.001, curve: 1.5, lowFrom: 13000, lowTo: 4000, highFrom: 2600, q: 0.5 },
     },
     {
-      // The choir shouting on the swell's peak — the one place in the hymn anybody raises their voice.
+      // The choir shouting over the strike — the one place in the hymn anybody raises their voice.
       steps: [0, _, _, _, _, _, _, _, 7, _, _, _, _, _, _, _],
       pitched: true,
       perBeat: 1,

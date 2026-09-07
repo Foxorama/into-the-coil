@@ -518,12 +518,60 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     aura: 0.55,
     mix: {
       call: 1.6,
-      hook: 1.9,
+      /*
+        ⚠️ **1.9 PUT `hook` FOURTH-LOUDEST IN THE GAME, AND IT IS THE PART THE EAR FOLLOWS.** At 1.9
+        it reached **1.24 at `push` and 1.49 at `surge`** — against a median layer-rung of 0.52 over
+        the seven levels, so nine decibels above the middle of the mix, while sitting at `LAYER_PAN`
+        +0.55, which is 8.7 dB into one ear. Reported 2026-09-07 of The Approach: *"it sounds like a
+        bunch of separate layers instead of a cohesive whole track… honestly hook just needs to be a
+        bit quieter, instead of 1.24 and 1.49 it should be .7 and .8."*
+
+        ⚠️ **ONE NUMBER RATHER THAN TWO LADDER ENTRIES, BECAUSE THE JUDGEMENT IS ABOUT THE PLACE.**
+        `hook` sounds at `push` and `surge` and nowhere else (0120 closes it at `approach`), so the
+        place's own balance is the whole of what was being asked about — 0147. The two ladder
+        overrides that would hit each rung's number exactly would be saying the rungs disagree, and
+        nothing heard says they do.
+
+        ⚠️ **IT TOOK TWO PASSES, AND THE SECOND ONE IS WHY THE FIRST LANDED SHORT.** 1.9 → 1.05 was
+        the cut asked for; the rung then re-solved its hold (below) and handed most of it back, so
+        *"another .2ish"* was a second report about the same layer. **0.78** is where `surge` reads
+        **0.82** and `push` reads **0.63**, with the hold settled around them.
+
+        ⚠️ **THIS IS NOT THE ANSWER TO THE REPORT'S FIRST SENTENCE.** *Separate layers rather than a
+        whole track* is a position finding, not a level one — every layer at pan 0 is the bed and
+        every layer with a tune in it is off to one side — and turning one of them down does not put
+        anything in the middle. That is still open.
+      */
+      hook: 0.78,
       arp: 1.85,
       ride: 2.05,
       crash: 1.85,
-      lead: 1.4,
-      counter: 1.45,
+      /*
+        ⚠️ **WITH `hook` DOWN, `lead` BECAME THE RIGHT-HAND TUNE.** Reported 2026-09-07, straight
+        after the cut above: *"let's drop the lead slightly as well, by about .3 as the lead in surge
+        is pretty strong now"*, then *"another .2ish"* once the hold had been re-solved under it.
+
+        ⚠️ **A MIX AND NOT A `surge` LADDER ENTRY, for the same reason `hook` above is one** — the
+        thing being judged is how loud this place's lead is, and 0147 gives that exactly one number.
+        1.4 → 0.74 takes `surge` from **1.17 to 0.67**, and moves `push` 0.91 → 0.52 and `approach`
+        1.22 → 0.66 with it, which is stated rather than discovered.
+      */
+      lead: 0.74,
+      /*
+        ⚠️ **THE LEFT COMES UP AS A LINE RATHER THAN AS MORE DRUMS.** *"Bring the left side up
+        slightly"* was asked for in the same breath, and the left at `surge` is `perc` 1.92, `crash`
+        1.17 and `counter` 1.07 — so it already carries the most energy of the three fields, and all
+        but one of it is percussion. Lifting `perc` and `crash` would answer a mix that is *tunes on
+        the right, drums on the left* with more drums. `counter` is the only line over there, so it
+        is the one raised: 1.45 → 1.72.
+
+        ⚠️ **THE REST OF *"raise the rest up to balance out"* IS THE HOLD, NOT A NUMBER HERE.** Every
+        rung holds its loudness, so taking `hook` and `lead` out of it lifts everything left standing:
+        over the two passes `perc` went 1.92 → 2.09, `counter` 1.07 → 1.38, `crash` 1.17 → 1.28 and
+        `groove` 0.94 → 1.02, with no entry in this table for any of them. Writing those lifts in by
+        hand as well would be paying for them twice.
+      */
+      counter: 1.72,
       frenzy: 1.85,
       wraith: 1.8,
       toll: 1.3,
@@ -610,10 +658,25 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     */
     ladder: {
       run: { perc: 0, groove: 0.7, chords: 1, call: 0.72, arp: 0.5 },
-      push: { perc: 0.42, groove: 1.02, chords: 0.98, call: 0.74, arp: 0.72 },
-      surge: { perc: 0.6, chords: 0.94, hook: 0.82 },
-      boss: { sub: 1.293 },
-      bossPeak: { sub: 1.331 },
+      /*
+        ⚠️ **`chords` AT `push` IS A THIRD OF WHAT IT WAS, AND THIS RUNG ALONE.** Reported
+        2026-09-07: *"we need to drop chords by about 1/3 in push it needs to go from 1.48 down to
+        .42."* The organ is this place's `run` lead (`LEADS.nebula.run`) and stops being the subject
+        the moment `arp` takes `push` — it was still playing at 1.51 there, second only to the two
+        layers that had taken over from it. `run`, `surge` and `approach` keep their own entries.
+      */
+      push: { perc: 0.42, groove: 1.02, chords: 0, call: 0.74, arp: 0.72 },
+      surge: { perc: 0.6, chords: 0.94, hook: 0.82, crash: 1.35 },
+      /*
+        ⚠️ **THIS ROW BRIEFLY CLOSED `crash` AT `approach`, `boss` AND `bossPeak`, AND THE REASON IS
+        GONE.** Those three zeroes existed to stop the triangle *"keeping going for the rest of the
+        track"*; with the triangle deleted and this place back on the base composition's cymbal
+        (`src/content/nebula.ts`), closing them would be silencing a layer nobody asked to lose. The
+        argument for a rung entry has to survive the material that prompted it.
+      */
+      approach: { crash: 1.38 },
+      boss: { sub: 1.293, crash: 1.41 },
+      bossPeak: { sub: 1.331, crash: 1.41 },
     },
     /*
       ⚠️ **THE ROOM IS THE PLACE, AND THE BOSS IS WHERE IT STOPS** — 0136. Asked for: *"more reverb…
@@ -1603,8 +1666,11 @@ export function auraCeilingOf(theme: ThemeKind): number {
  * rung; `run` is the reference and is 1 by construction.
  */
 export const LEVEL_HOLD: Record<ThemeKind, Partial<Record<MusicLevel, number>>> = {
-  approach: { push: 0.6744, surge: 0.5683, approach: 0.6979, boss: 0.6191, bossPeak: 0.6191 },
-  nebula: { push: 0.8072, surge: 0.8282, approach: 0.7474, boss: 0.692, bossPeak: 0.6802 },
+  // Re-solved by `node scripts/solve-hold.mjs` after `mix.hook` came down — the rung holds its
+  // loudness, so a layer taken out of it is a layer the rest of the rung has to make up.
+  approach: { push: 0.8353, surge: 0.7668, approach: 0.7161, boss: 0.6191, bossPeak: 0.6191 },
+  // Re-solved after `chords` came down at `push` and the vent became a triangle — 2026-09-07.
+  nebula: { push: 0.9336, surge: 0.8282, approach: 0.7603, boss: 0.7039, bossPeak: 0.6920 },
   saurian: { push: 0.9579, surge: 0.8644, approach: 0.8793, boss: 0.8072, bossPeak: 0.7867 },
   labyrinth: { push: 0.5399, surge: 0.3386, approach: 0.3149, boss: 0.3565, bossPeak: 0.3017 },
   rime: { push: 0.692, surge: 0.5881, approach: 0.6034, boss: 0.8107, bossPeak: 0.8003 },

@@ -37,7 +37,7 @@ import {
   AURA_NEAR_UNITS,
   AURA_FAR_UNITS,
   AURA_CURVE,
-  AURA_ONSET_UNITS,
+  AURA_BUILD_UNITS,
   PHRASE_SECONDS,
   type MusicLayer,
   type MusicLevel,
@@ -706,7 +706,7 @@ export function auraNearnessFor(bossAlong: number, bossRadius: number, shipAlong
  * the player cannot change — the level goes past at the camera's rate whatever they do — so a bend
  * would put the whole build into a stretch nobody could feel coming.
  *
- * ⚠️ **Zero before `AURA_ONSET_UNITS`, which is the twenty seconds of level a player gets to
+ * ⚠️ **Zero before `AURA_BUILD_UNITS`, which is the twenty seconds of level a player gets to
  * themselves.** `docs/decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md` opens every
  * level on an empty field so the controls can be found before anything finds the player; a level that
  * opened with the boss already audible would be answering a different ask.
@@ -719,7 +719,8 @@ export function auraNearnessFor(bossAlong: number, bossRadius: number, shipAlong
  * longer way round, and a caller that forgot would report a build no level performs.
  */
 export function auraBuild(cameraAlong: number, bossAt: number, theme: ThemeKind): number {
-  const from = AURA_ONSET_UNITS;
+  // Counted back from the boss, never forward from the opening — see `AURA_BUILD_UNITS`.
+  const from = bossAt - AURA_BUILD_UNITS;
   if (!Number.isFinite(bossAt) || cameraAlong <= from || bossAt <= from) return 0;
   const through = (cameraAlong - from) / (bossAt - from);
   const clamped = through < 0 ? 0 : through > 1 ? 1 : through;
