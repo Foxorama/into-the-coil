@@ -17,7 +17,7 @@ export const PROBES = [
       ninety-six flakes — and the lane has no answer on it for a tenth of the phase.
     */
     broke: 'a shattering volley spending the phase’s count again, as it did before 0270',
-    guard: 'THE REPORTED ONE: in every phase of every shattering fight',
+    guard: 'THE REPORTED ONE: in every phase of every fight in the game',
     edit: {
       path: 'src/app/boss.ts',
       find: '  const ceiling = bullet.fission.length > 0 ? SHARD_VOLLEY : Number.POSITIVE_INFINITY;',
