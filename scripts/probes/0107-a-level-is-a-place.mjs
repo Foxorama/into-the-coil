@@ -117,8 +117,8 @@ export const PROBES = [
       boss was on the field. *"The aura music for the boss needs to start about 15-30secs into the
       start of a level and then amp up until you beat the boss."*
     */
-    broke: 'the level-long build switched off, so the aura is a proximity cue again',
-    guard: '0107 — and the build is a level-long climb that starts after the opening',
+    broke: 'the build switched off, so the aura is a proximity cue again',
+    guard: '0107 — and the build is the run-in to the boss, not a level-long climb',
     edit: {
       path: 'src/app/music.ts',
       find: '  const through = (cameraAlong - from) / (bossAt - from);',
@@ -128,14 +128,23 @@ export const PROBES = [
   {
     decision: '0107',
     suite: 'tests/music.test.ts',
-    // ⚠️ THE ONSET DROPPED, so a level opens with the boss already audible — which takes away the
-    // twenty seconds 0043 gives the player to find the controls before anything finds them.
-    broke: 'the onset removed, so a level opens with the boss already audible',
-    guard: '0107 — and the build is a level-long climb that starts after the opening',
+    /*
+      ⚠️ THE RUN-IN STRETCHED BACK OVER THE WHOLE LEVEL, which is the state 0273 was reported against:
+      *"a weird sort of sound in the run… almost sounds like a bad audio artifact."* A build that
+      starts at the opening also takes away the twenty seconds 0043 gives the player to find the
+      controls before anything finds them.
+
+      ⚠️ IT USED TO SET THE CONSTANT TO ZERO AND THAT NO LONGER BREAKS ANYTHING TRUE. Under 0273 the
+      value counts BACK from `bossAt`, so zero makes the build never open — a different defect, and
+      one the same guard already catches from the other side. **A probe survives a rename and does not
+      survive a change of meaning**, which is the distinction 0019 is about.
+    */
+    broke: 'the run-in stretched back to the opening, so the aura plays over the whole level',
+    guard: '0107 — and the build is the run-in to the boss, not a level-long climb',
     edit: {
       path: 'src/content/music.ts',
       find: 'export const AURA_BUILD_UNITS = 720;',
-      replace: 'export const AURA_BUILD_UNITS = 0;',
+      replace: 'export const AURA_BUILD_UNITS = 999999;',
     },
   },
   {
