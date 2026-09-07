@@ -414,7 +414,21 @@ describe('a boss differs from every other by more than its paint', () => {
     const body = traceAt(serpent, COMMON).passes[0]!.subpaths[0]!;
     const skull = body.filter(([x]) => x < half - r * 0.7).map(([, y]) => (y - half) / r);
     const skullSpan = Math.max(...skull) - Math.min(...skull);
-    expect(skullSpan, 'the serpent’s skull is no wider than its neck, so it is a tentacle').toBeGreaterThan(0.6);
+    /*
+      ⚠️ **0.6 → 0.42, AND AS A RATIO THAT IS STRICTER RATHER THAN LOOSER** — 0276. This number is a
+      span in a fixed window, so it only means *wider than its neck* while the neck is the gauge it
+      was sized against. 0.6 was set when the body was 0.44 of `r` thick: a ratio of 1.36. The body
+      is 0.29 now, because *"the body length and shape isn't serpentine, it looks like a little
+      parasite worm"* was a complaint about the ratio of length to gauge, and the gauge is the half
+      of it that could move. 0.42 is 1.45 of the new neck.
+
+      ⚠️ **A NUMBER THAT ENCODES A RATIO AGAINST A CONSTANT ELSEWHERE IS A NUMBER THAT GOES QUIETLY
+      WRONG**, which is `docs/decisions/0027-measure-the-picture-not-the-model.md`'s warning read from
+      the other end. It is left as an absolute on purpose — deriving it from `serpentHalf` would make
+      the guard agree with the code by construction and prove nothing — so **it is re-sized whenever
+      the serpent's gauge is**, and the working is above so the next session can do that.
+    */
+    expect(skullSpan, 'the serpent’s skull is no wider than its neck, so it is a tentacle').toBeGreaterThan(0.42);
   });
 });
 

@@ -30,13 +30,16 @@ export const PROBES = [
     guard: 'is more fills in the SAME bitmap, and not a second sprite over the first',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  disc(ctx, f, shade(skin.plate, -0.6), -1.02, -0.25, 0.016);',
+      // ⚠️ ANCHORED ON THE COMMENT AND NOT ON THE MARK BELOW IT. The first version of this probe
+      // anchored on the nostril's own coordinates and was stranded by the very next pass over the
+      // head — which `tests/prove-guard.test.ts` caught, which is the whole of 0019.
+      find: '  // The nostril, and the eye: a dark socket, the gold iris, a vertical slit, one catchlight.',
       replace:
         '  seam(ctx, f, shade(skin.plate, -0.55), 0.022, [\n' +
         '    [-1.3, -0.2],\n' +
         '    [-1.5, -0.2],\n' +
         '  ], 1);\n' +
-        '  disc(ctx, f, shade(skin.plate, -0.6), -1.02, -0.25, 0.016);',
+        '  // The nostril, and the eye: a dark socket, the gold iris, a vertical slit, one catchlight.',
     },
   },
   {

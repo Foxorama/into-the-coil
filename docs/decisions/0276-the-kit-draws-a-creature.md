@@ -60,13 +60,46 @@ and a stroke at bake time are the **same single blit** afterwards.
 [0022](0022-frame-rate-is-a-feature.md) and [0025](0025-the-frame-budget-is-counted-not-timed.md)
 count draw calls and allocations in the frame loop, and this touches neither.
 
+## ⚠️ The second guard it changes, and the report that forced it
+
+The first pass on this kit was played and rejected:
+
+> *"it also looks like a munted space worm instead of a serpent still, the body length and shape
+> isn't serpentine, it looks like a little parasite worm, which y'know would be cool in a completely
+> different as a different boss, but not what I'm going for here"*
+
+⚠️ **BOTH HALVES OF THAT ARE ONE MEASUREMENT AND IT IS A RATIO: PATH LENGTH TO GAUGE.** The hook was
+about **five to one**, which is a grub; the predecessor's serpent and the reference are both past ten.
+The box did not change — the sprite is the same 40 units — so what bought it was a longer path
+through it (**two full undulations**, not one bend) and a thinner body: **0.29 of `r` where it was
+0.45**, giving about **eleven to one**. And the head shrank rather than the body growing, because a
+skull that is a fifth of the whole animal is a tadpole whatever its outline does.
+
+⚠️ **AND THAT MOVED A NUMBER IN `0264 — THE HEADS`, WHICH IS WHY THIS SECTION EXISTS.** The guard
+asserts the hull's span in the front window exceeds **0.6**, and its message is *the serpent's skull
+is no wider than its neck, so it is a tentacle*. It is a **span**, so it only means *wider than its
+neck* while the neck is the gauge it was sized against — 0.44, making 0.6 a ratio of **1.36**. Against
+a neck of 0.29 the same claim is **0.42**, and the serpent measures 0.53.
+
+⚠️ **IT IS LOWERED AND IT IS STRICTER.** 0.42 against 0.29 is a ratio of **1.45**, above the 1.36 the
+old number encoded. A guard whose number silently means something different after an unrelated edit is
+[0027](0027-measure-the-picture-not-the-model.md)'s failure read from the other end, so the working is
+written beside the number and **it is re-sized whenever the serpent's gauge is**. It is deliberately
+NOT derived from `serpentHalf`: a guard computed from the constant it guards proves only that the code
+agrees with itself.
+
 ## What the serpent is now
 
-One spine from a skull to a whipping tail; the outline a curve, not a chain. A form-shade down the
-whole body for its volume; a belly shadow and a back light as tapering ribbons in three nested steps,
-because a one-piece band has an edge and a shadow does not. A scale field whose chord runs **across**
-the body and bulges down it. A snake's skull with a lit crown plane, a dark maw, two fangs and a
-slit eye.
+Fourteen spine samples through two full undulations, from a skull to a whipping tail; the outline a
+curve, not a chain, and about eleven times its own gauge. A form-shade down the whole body for its
+volume; a belly shadow and a back light as tapering ribbons in nested steps, because a one-piece band
+has an edge and a shadow does not. A scale field whose chord runs **across** the body and bulges down
+it. A snake's skull with a lit crown plane, a dark maw, two fangs and a slit eye.
+
+⚠️ **THE TAIL TIP IS DERIVED FROM THE SPINE'S LAST HEADING AND WAS ONCE A LITERAL.** When the spine
+was re-authored for the ratio above, the literal stayed where it was — half a box from the new
+tail — and baked as a long thin spike hanging off the animal. A point that has to agree with a curve
+is not a constant.
 
 ⚠️ **THE DORSAL FINS ARE OUT OF THE SILHOUETTE.** Four triangles on a back read as sawteeth — a
 polygon fin shares one edge with the body and so has no root — and the reference has none. What it
@@ -121,4 +154,8 @@ is the whole of [0027](0027-measure-the-picture-not-the-model.md):
 - the eye's catchlight baked at **2.42 pixels** against the 2.5px floor below which a mark is not
   drawn at all;
 - the neck's own back offset sat below both the crown ahead of it and the back edge behind it, so
-  the outline had a V in it and the animal baked **as a cat**. That one only the sheet could say.
+  the outline had a V in it and the animal baked **as a cat**. That one only the sheet could say;
+- and after the reshape, **this decision's own probe was stranded** by the very next pass over the
+  head, because it anchored on the nostril's coordinates. `tests/prove-guard.test.ts` caught it
+  before the suite could report green over a probe that no longer applied, which is the whole of
+  [0019](0019-a-probe-must-be-seen-to-apply.md). It anchors on a comment now.

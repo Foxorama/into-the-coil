@@ -3355,18 +3355,35 @@ function endOf(spine: readonly Pt[]): (px: number, py: number) => Pt {
   horn swept back; four dorsal fins on the starboard edge, leaning tailward. The head is written
   out, because a skull is the one part of a serpent that says what it is.
 */
+/*
+  ⚠️ **TWO FULL UNDULATIONS AND NOT ONE HOOK, AND THE BODY IS ELEVEN TIMES ITS OWN GAUGE.** Reported
+  of the first pass on this kit: *"it also looks like a munted space worm instead of a serpent still,
+  the body length and shape isn't serpentine, it looks like a little parasite worm."*
+
+  ⚠️ **BOTH HALVES OF THAT ARE ONE MEASUREMENT AND IT IS A RATIO.** The hook had a path about five
+  times its own thickness, which is a grub; the predecessor's serpent and the reference are both past
+  ten. What buys it is not a bigger box — the sprite is the same 40 units — but a LONGER PATH THROUGH
+  IT and a thinner gauge: a sine that crosses the lane twice covers about three and a half box-widths
+  of body inside one box, and at 0.29 thick that is eleven to one.
+
+  ⚠️ **THE HEAD GOT SMALLER RATHER THAN THE BODY BIGGER**, for the same reason. A skull that is a
+  fifth of the whole animal is a tadpole whatever its outline does.
+*/
 const SERPENT_SPINE: readonly Pt[] = [
-  [-0.72, -0.3],
-  [-0.5, -0.42],
-  [-0.26, -0.44],
-  [-0.04, -0.3],
-  [0.14, -0.04],
-  [0.3, 0.24],
-  [0.48, 0.44],
-  [0.66, 0.5],
-  [0.82, 0.4],
-  [0.92, 0.22],
-  [0.99, 0.04],
+  [-0.84, -0.16],
+  [-0.62, -0.3],
+  [-0.42, -0.44],
+  [-0.22, -0.38],
+  [-0.06, -0.14],
+  [0.06, 0.18],
+  [0.18, 0.44],
+  [0.34, 0.54],
+  [0.5, 0.46],
+  [0.64, 0.22],
+  [0.74, -0.1],
+  [0.86, -0.38],
+  [0.95, -0.5],
+  [1.03, -0.55],
 ];
 /*
   ⚠️ **FULL THROUGH THE MIDRIFF AND WHIPPING AWAY AT THE END, which the linear taper it replaces was
@@ -3382,7 +3399,7 @@ const SERPENT_SPINE: readonly Pt[] = [
 */
 const serpentHalf = (i: number): number => {
   const t = i / (SERPENT_SPINE.length - 1);
-  return 0.012 + 0.215 * Math.pow(1 - Math.pow(t, 2.2), 0.85);
+  return 0.012 + 0.133 * Math.pow(1 - Math.pow(t, 2.6), 1.1);
 };
 /**
  * Under the jaw, round the snout, over the brow to the crown — a solid skull, and no mouth in it.
@@ -3392,13 +3409,13 @@ const serpentHalf = (i: number): number => {
  * neck of 0.45, and the margin is deliberate because the flattened curve is what the guard measures.
  */
 const SERPENT_SKULL: readonly Pt[] = [
-  [-0.76, 0.06],
-  [-0.92, 0.02],
-  [-1.04, -0.1],
-  [-1.09, -0.22],
-  [-1.04, -0.38],
-  [-0.92, -0.52],
-  [-0.78, -0.6],
+  [-0.8, 0.02],
+  [-0.92, 0.1],
+  [-1.05, 0.09],
+  [-1.12, -0.01],
+  [-1.07, -0.17],
+  [-1.0, -0.28],
+  [-0.9, -0.34],
 ];
 /**
  * The whole animal as ONE closed outline, skull first, down the back, round the tail, up the belly.
@@ -3424,7 +3441,14 @@ const SERPENT_OUTLINE: readonly Pt[] = (() => {
     `docs/decisions/0027-measure-the-picture-not-the-model.md`.
   */
   for (let i = 1; i < n; i++) out.push(offSpine(SERPENT_SPINE, i, -serpentHalf(i)));
-  out.push([1.02, 0.02]);
+  /*
+    ⚠️ **THE TIP IS DERIVED FROM THE SPINE'S OWN LAST HEADING AND WAS ONCE A LITERAL.** When the spine
+    was re-authored the literal stayed where it was, half a box from the new tail, and baked as a long
+    thin spike hanging off the animal. A point that has to agree with a curve is not a constant.
+  */
+  const [ex, ey] = SERPENT_SPINE[n - 1]!;
+  const [ux, uy] = headingAt(SERPENT_SPINE, n - 1);
+  out.push([ex + ux * 0.05, ey + uy * 0.05]);
   for (let i = n - 1; i >= 0; i--) out.push(offSpine(SERPENT_SPINE, i, serpentHalf(i)));
   return out;
 })();
@@ -3453,10 +3477,16 @@ function serpentFalloff(ctx: Pen, f: Frame, colour: string, edge: number, to: nu
     baked as 2.4 CSS pixels on a 1280×720 screen — under `tests/accents.test.ts`'s 2.5px floor, which
     is the width below which a mark is not drawn at all rather than drawn faintly.
   */
+  /*
+    ⚠️ **TWO STEPS AND NOT THREE, BECAUSE THE BODY GOT THINNER.** A step is a share of the local
+    half-width, so the outermost one is finest exactly where the animal is; at the serpentine gauge
+    three steps put it under `tests/accents.test.ts`'s 2.5 CSS pixel floor, which is the width below
+    which a mark is not drawn faintly — it is not drawn. Two steps is still a falloff and not an edge,
+    which is the whole job.
+  */
   for (const [at, share] of [
-    [0.25, 0.4],
-    [0.52, 0.7],
-    [0.75, 1],
+    [0.45, 0.55],
+    [0.78, 1],
   ] as const) {
     poly(ctx, f, colour, serpentBand(edge * at, edge, 0, to), peak * share);
   }
@@ -3502,7 +3532,7 @@ function paintBoss8(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
     `tests/accents.test.ts` exists to say out loud.
   */
   serpentFalloff(ctx, f, shade(skin.hull, -0.5), 0.88, 8, 0.6);
-  serpentFalloff(ctx, f, skin.lit, -0.88, 7, 0.34);
+  serpentFalloff(ctx, f, skin.lit, -0.88, 8, 0.34);
   /*
     ⚠️ **THE SCALES ARE A FIELD AND NOT A ROW OF MARKS**, which is the difference the reference makes
     most plainly: a low-contrast overlapping-arc texture over the whole body reads as an animal, and
@@ -3578,17 +3608,17 @@ function paintBoss8(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
   shaded(
     ctx,
     f,
-    [-0.9, -0.58],
-    [-0.98, -0.2],
+    [-0.95, -0.32],
+    [-1.0, -0.05],
     skin.lit,
     shade(skin.hull, 0.14),
     [
-      [-0.78, -0.58],
-      [-0.92, -0.5],
-      [-1.03, -0.36],
-      [-1.06, -0.24],
-      [-0.94, -0.28],
-      [-0.79, -0.4],
+      [-0.895, -0.295],
+      [-0.99, -0.235],
+      [-1.05, -0.145],
+      [-1.075, -0.06],
+      [-0.99, -0.085],
+      [-0.885, -0.18],
     ],
     0.7,
     true,
@@ -3606,47 +3636,47 @@ function paintBoss8(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
     pixels outside, which `tests/accents.test.ts` reported and the sheet did not show at all.
   */
   poly(ctx, f, shade(skin.hull, -0.55), [
-    [-0.78, 0.005],
-    [-0.92, -0.025],
-    [-1.0, -0.105],
-    [-0.98, -0.155],
-    [-0.86, -0.085],
-    [-0.77, -0.03],
+    [-0.82, 0.005],
+    [-0.93, 0.062],
+    [-1.04, 0.052],
+    [-1.085, -0.012],
+    [-1.05, -0.03],
+    [-0.9, 0.015],
   ], 0.95);
   poly(ctx, f, '#2a0f14', [
-    [-0.99, -0.12],
-    [-0.86, -0.06],
-    [-0.8, -0.025],
-    [-0.81, 0.0],
-    [-0.9, -0.03],
-    [-1.0, -0.095],
+    [-1.06, -0.015],
+    [-0.95, 0.018],
+    [-0.85, 0.0],
+    [-0.845, 0.022],
+    [-0.95, 0.04],
+    [-1.07, 0.0],
   ]);
   // Two fangs off the upper jaw, hanging into the gap — the one white in the animal.
   for (const [x, y, drop] of [
-    [-0.982, -0.118, 0.053],
-    [-0.898, -0.078, 0.058],
+    [-1.02, -0.008, 0.056],
+    [-0.94, 0.019, 0.053],
   ] as const) {
     poly(ctx, f, '#f6fbf4', [
-      [x - 0.013, y],
-      [x + 0.015, y + 0.011],
+      [x - 0.012, y],
+      [x + 0.014, y + 0.009],
       [x + 0.001, y + drop],
     ]);
   }
   // The nostril, and the eye: a dark socket, the gold iris, a vertical slit, one catchlight.
-  disc(ctx, f, shade(skin.plate, -0.6), -1.02, -0.25, 0.016);
-  disc(ctx, f, shade(skin.plate, -0.65), -0.9, -0.38, 0.058);
-  disc(ctx, f, skin.eye, -0.9, -0.38, 0.043);
+  disc(ctx, f, shade(skin.plate, -0.6), -1.07, -0.06, 0.013);
+  disc(ctx, f, shade(skin.plate, -0.65), -0.98, -0.13, 0.05);
+  disc(ctx, f, skin.eye, -0.98, -0.13, 0.038);
   poly(ctx, f, '#100c04', [
-    [-0.907, -0.42],
-    [-0.893, -0.42],
-    [-0.888, -0.38],
-    [-0.893, -0.34],
-    [-0.907, -0.34],
-    [-0.912, -0.38],
+    [-0.987, -0.166],
+    [-0.973, -0.166],
+    [-0.968, -0.13],
+    [-0.973, -0.094],
+    [-0.987, -0.094],
+    [-0.992, -0.13],
   ]);
   // ⚠️ 0.014 and not 0.01: `tests/accents.test.ts` floors a solid mark at 2.5 CSS pixels across on a
   // 1280×720 screen, and a catchlight thinner than that is not drawn faintly — it is not drawn.
-  disc(ctx, f, '#fffdf2', -0.919, -0.403, 0.014, 0.85);
+  disc(ctx, f, '#fffdf2', -0.994, -0.148, 0.014, 0.85);
 }
 
 /*

@@ -62,8 +62,8 @@ export const PROBES = [
       path: 'src/render/bake.ts',
       // ⚠️ RE-ANCHORED FOR 0276, which redrew the skull and renamed it `SERPENT_SKULL`. The guard it
       // reddens is unchanged, and so is what it means: a head no wider than the neck is the tentacle.
-      find: '  [-0.76, 0.06],\n  [-0.92, 0.02],\n  [-1.04, -0.1],\n  [-1.09, -0.22],\n  [-1.04, -0.38],\n  [-0.92, -0.52],\n  [-0.78, -0.6],',
-      replace: '  [-0.8, -0.1],\n  [-0.95, -0.12],\n  [-1.02, -0.2],\n  [-0.95, -0.4],\n  [-0.8, -0.45],',
+      find: '  [-0.8, 0.02],\n  [-0.92, 0.1],\n  [-1.05, 0.09],\n  [-1.12, -0.01],\n  [-1.07, -0.17],\n  [-1.0, -0.28],\n  [-0.9, -0.34],',
+      replace: '  [-0.86, -0.08],\n  [-0.98, -0.09],\n  [-1.05, -0.16],\n  [-0.98, -0.26],\n  [-0.86, -0.29],',
     },
   },
 ];
