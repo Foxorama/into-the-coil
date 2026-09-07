@@ -59,11 +59,17 @@ shot is send it twice as often, which is a thing the pool can carry.
 **The guard is a pilot that flies.** `tests/crowd.test.ts` projects every hostile body to the ship's
 own lane position, keeps only the places the ship could also *be* by then at whatever speed the cold
 has left it, and steers to the middle of the widest one — then holds that **there is always somewhere
-to be**, in every phase of every shattering fight, on every tier. A parked ship reports *nowhere to
+to be**, in every phase of every fight in the game, on every tier. A parked ship reports *nowhere to
 go* about its own hands; a pilot flying to the safest place it can see reports the fight. On
 `legendary` alone it holds a whole ship of ROOM, because that row carries the ask *"this should
 provide me no challenge"* — on the other two tiers how tight it gets is a hand's question, and
 [0192](0192-a-guard-holds-an-invariant.md) says a taste may not fail a suite.
+
+**And it walks ALL FOURTEEN, because the axis does.** It was scoped to the two fights this decision
+was reported for until that was measured: `crowd` lives in `throwAttack`, so it reaches every boss's
+volley, and a guard narrower than the axis it protects would go on passing while the rest of the game
+tightened. What the measurement found is in *What it moved* below — nothing at zero, and one fight
+that lost most of its room to a change it was never part of, which is why `burn`'s number came down.
 
 **A phase can be stood in.** `rig/bench.html` scrubs the boss's health, pinning it the way `hold`
 pins the camera — it does not pause the fight. Before it, no phase-keyed attack in the game had ever
@@ -88,7 +94,7 @@ not stand in front of.
 | what | value |
 |---|---|
 | `SHARD_VOLLEY` | 3 shards, tier-invariant |
-| `crowd` | 1 · 1.15 · 1.3 |
+| `crowd` | 1 · 1.15 · 1.2 |
 | `standing` — the frost ship's shards | 6 |
 | `standing` — the eagle's kites, its raptors | 6, 4 |
 
@@ -106,6 +112,30 @@ lane both safe and reachable*:
 
 Adds standing at the frost ship's summon phase, peak: **26 · 32 · 40 → 6 · 7 · 8**. Hostile shots
 alive at the hydra's fourth phase: **104 → 32**.
+
+**And what the axis cost the twelve fights this was never about.** Measured over all fourteen bosses,
+every phase, every tier, with `crowd` as authored and again neutralised — at 1.3 it took room from ten
+of them, and these were the tightest results:
+
+| | tier | with `crowd` 1.3 | with it off |
+|---|---|---|---|
+| jormungandr, third phase | burn | **7.5u** | 20.5u |
+| shoalMother, first phase | burn | 5.0u | 11.5u |
+| harrow, third phase | burn | 3.5u | 8.0u |
+| redoubt, third phase | savior | 43.5u | 61.5u |
+| medusa, last phase | burn | 25.5u | 42.0u |
+
+Nothing reached zero, so none of it is a defect and all of it is a hand's call. `burn` came down to
+1.2 on the strength of that table — a fix for the ice should not quietly cost a dozen fights room it
+was never about.
+
+⚠️ **AND THE FIRST ROW IS NOT WHAT THE LOWERING FIXED, WHICH IS RECORDED BECAUSE IT WAS CLAIMED
+FIRST.** `crowdFor` rounds to nearest, so a phase only moves between 1.3 and 1.2 where the two land
+on different integers — 5 goes 7 against 6, 7 goes 9 against 8, and **3 is 4 at both**. The serpent's
+third phase is authored at 3, so the fight the number was lowered for is untouched by lowering it.
+What 1.2 buys is the wide phases; sparing a phase of three needs 1.16 or below, and that is a
+different decision about how much axis is left rather than a smaller version of this one. The claim
+came before the measurement and the measurement refused it.
 
 ## What this does not do
 

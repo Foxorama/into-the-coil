@@ -92,8 +92,16 @@ saw the summon phase and it never saw the hydra.
   is 6 for the frost ship's shards and 6 and 4 for the eagle's; `SHARD_VOLLEY` is 3, read off the
   widest volley 0263 itself settled by playing. The bench's boss scrub is what makes trying another
   number cost a minute.
-- **`crowd` is three numbers and only one of them has been played against**: 1, 1.15 and 1.3. The
-  measurement that set Burn's is in the row's own comment.
+- **`crowd` is three numbers and none of them has been PLAYED against**: 1, 1.15 and 1.2. Both
+  departures from 1 were set by measurement rather than by a hand — 1.5 filled the hostile pool, and
+  1.3 took `jormungandr`'s third phase at Burn from 20.5 units of reachable safe lane to 7.5. The
+  measurement is in the row's own comment and in 0270's *What it moved*; what neither of them is, is
+  a verdict about how the fight feels.
+- **The axis reaches twelve fights this report was not about**, and that is written down rather than
+  discovered later: `crowd` scales every boss's volley on the two harder tiers. At 1.2 the ten that
+  lost room lose about half of what they lost at 1.3. Nothing reaches zero on any tier, which
+  `tests/crowd.test.ts` now holds over all fourteen — but *inside the guard* is a different statement
+  from *plays well*, and only the Rime Shelf and the hydra have been looked at.
 - **Whether the frost ship's last phase at Burn is a fight or a wall.** It is the tightest thing left
   in either fight — a 2.0-unit window for a pilot flying to it — and it is inside the guard rather
   than outside it, which is a different statement from *it plays well*.

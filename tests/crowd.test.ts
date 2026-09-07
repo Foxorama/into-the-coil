@@ -209,11 +209,19 @@ describe('0270 — a shattering volley is counted in shards', () => {
     the message said *there is nowhere to be* about a place there demonstrably was. A guard whose
     message is wrong about its own quantity is the one 0027 warns of, caught on itself.
   */
-  it('THE REPORTED ONE: in every phase of every shattering fight, on every tier, a pilot flying to the safest place always has somewhere to be', () => {
+  it('THE REPORTED ONE: in every phase of every fight in the game, on every tier, a pilot flying to the safest place always has somewhere to be', () => {
     /*
       ⚠️ **THE ASSERTION IN THE PLAYER'S OWN UNITS** — 0027 — and the threshold is not a taste: a run
       of zero is *no place on the lane both safe and reachable*, which is damage the player cannot
       play around however well they fly. Anything above zero is a fight; zero is not.
+
+      ⚠️ **EVERY BOSS, AND IT WAS SCOPED TO THE SHATTERING TWO UNTIL THIS WAS MEASURED.** `crowd`
+      sits in `throwAttack` and so reaches all fourteen fights, not the two this decision was
+      reported for — and a guard narrower than the axis it protects is a guard that would go on
+      passing while the rest of the game tightened. Measured across all fourteen, the new axis costs
+      room on ten of them: `redoubt` 18 units at `savior`, `medusa` 16.5 at `burn`, `jormungandr` 13.
+      None of them reaches zero, which is what this holds and what makes those numbers a tuning
+      question rather than a defect.
 
       ⚠️ **Measured before the fix, this is what it said.** With the hydra's frost head reading the
       phase's `shots` — eight shards, ninety-six flakes — the widest reachable run was **zero for 13%
@@ -224,7 +232,7 @@ describe('0270 — a shattering volley is counted in shards', () => {
       survived"* is a claim about how hard the answer is to find and to reach, not a licence for there
       to be no answer. How much ROOM each tier leaves is the assertion below this one.
     */
-    for (const kind of SHATTERERS) {
+    for (const kind of BOSS_KINDS) {
       for (let phase = 0; phase < BOSSES[kind].phases.length; phase++) {
         for (const tier of DIFFICULTY_KINDS) {
           const { worstRun } = fly(kind, phase, tier, 10);
@@ -252,7 +260,7 @@ describe('0270 — a shattering volley is counted in shards', () => {
       what is not a taste, on any tier, is the assertion above.
     */
     const fits = 2 * SHIPS.proof.radius;
-    for (const kind of SHATTERERS) {
+    for (const kind of BOSS_KINDS) {
       for (let phase = 0; phase < BOSSES[kind].phases.length; phase++) {
         const { worstRun } = fly(kind, phase, 'legendary', 10);
         expect(

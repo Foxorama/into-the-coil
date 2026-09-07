@@ -229,14 +229,30 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     */
     aggression: 1.7,
     /*
-      ⚠️ **A THIRD MORE, AND IT WAS HALF AGAIN FOR ONE MEASUREMENT.** At 1.5 the frost ship's opening
+      ⚠️ **A FIFTH MORE, AND IT WAS HALF AGAIN FOR ONE MEASUREMENT.** At 1.5 the frost ship's opening
       volley — authored at ONE shard, because one shard is twelve flakes — rounded to two, and the
       widest run of lane both safe and reachable at this tier fell to **1.5 units for a ship that is
       4 units of hurtbox**, with no answer at all for 2% of the phase. That is not a hard tier, it is
-      the defect 0270 was reported for wearing a different hat. At 1.3 the small counts hold where the
-      content put them and the wide ones still grow, which is what `crowdFor` rounds to nearest for.
+      the defect 0270 was reported for wearing a different hat. Rounding to nearest is what keeps the
+      small counts where the content put them while the wide ones still grow.
+
+      ⚠️ **AND IT CAME DOWN FROM 1.3, BECAUSE THIS AXIS REACHES FOURTEEN FIGHTS AND THE REPORT WAS
+      ABOUT TWO.** `crowd` sits in `throwAttack`, so it scales every boss's volley and not only the
+      ones that shatter. Measured across all fourteen at 1.3, it took room from ten of them. Nothing
+      reached zero — `tests/crowd.test.ts` holds that over every fight — so this is a tuning number
+      rather than a defect, and it is lower because a fix for the ice should not quietly cost a
+      dozen fights room it was never about.
+
+      ⚠️ **WHAT 1.2 ACTUALLY CHANGES IS NARROWER THAN IT LOOKS, AND SAYING SO IS THE POINT.** The
+      counts are rounded to nearest, so a phase only moves where `base × 1.2` and `base × 1.3` land
+      on different integers: a phase of 3 is 4 at both, of 5 is 6 against 7, of 7 is 8 against 9. The
+      fight this number was first lowered FOR — the serpent's third phase, which lost thirteen units
+      of reachable lane — is authored at 3 and is **unaffected by the change**. The measurement said
+      so after the fact and the claim is corrected here rather than left standing: what 1.2 buys is
+      the wide phases, not the tight one that prompted it. Sparing a phase of 3 needs 1.16 or below,
+      which is a different decision about how much of an axis is left.
     */
-    crowd: 1.3,
+    crowd: 1.2,
   },
 };
 
