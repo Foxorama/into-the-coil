@@ -57,14 +57,39 @@ describe('tidy only deletes what it can prove is safe', () => {
     expect(v.reason).toMatch(/but the branch is now at/);
   });
 
+  /*
+    ⚠️ **`ahead: 3` IS LOAD-BEARING AND THIS CASE READ `ahead: 0` UNTIL THE PROBE SAID SO.** The
+    fixture's default made this indistinguishable from *every commit is on main*, so when that rule
+    was added the probe for THIS one reported STILL GREEN — the guard passing on a path it does not
+    name. `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` catching a guard that had stopped
+    reaching its subject, on the same run that added the rule which took it away.
+
+    ⚠️ **AND THE ISOLATED CASE IS THE REAL ONE**: a branch that added a thing and reverted it has
+    commits of its own AND a tree that matches main, which is the only shape `identical` decides
+    alone.
+  */
   it('deletes a branch whose tree is identical to main even with no PR', () => {
-    expect(classify('feature', { ...base, identical: true }).remove).toBe(true);
+    expect(classify('feature', { ...base, identical: true, ahead: 3 }).remove).toBe(true);
   });
 
   it('keeps a branch with commits of its own and no merged PR, and says how many', () => {
     const v = classify('feature', { ...base, ahead: 2 });
     expect(v.remove).toBe(false);
     expect(v.reason).toContain('2 commits');
+  });
+
+  /*
+    ⚠️ **THE TOOL STATED THE PROOF AND THEN DECLINED TO ACT ON IT.** Three branches were kept with
+    the reason *"0 commits not on main, and no merged PR"* — pointing seventy to a hundred and
+    nineteen commits behind it, so their TREES differ from main's and `identical` is false while
+    every commit they carry is already there. `ahead === 0` is the condition `git branch -d` itself
+    accepts, and it is stronger evidence than the PR: it is about this repository rather than about a
+    remote's record of one.
+  */
+  it('deletes a branch whose every commit is on main, even with no PR and a different tree', () => {
+    const v = classify('feature', { ...base, ahead: 0, identical: false });
+    expect(v.remove).toBe(true);
+    expect(v.reason).toContain('every commit is on main');
   });
 
   it('every verdict carries a reason, because an unexplained deletion is unreviewable', () => {

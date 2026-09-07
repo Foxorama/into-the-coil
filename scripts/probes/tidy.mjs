@@ -56,6 +56,17 @@ export const PROBES = [
   {
     decision: 'tidy',
     suite: 'tests/tidy.test.ts',
+    broke: 'the fully-merged branch kept instead of deleted, which is the tool refusing its own proof',
+    guard: 'deletes a branch whose every commit is on main',
+    edit: {
+      path: 'scripts/tidy.mjs',
+      find: "if ((facts.ahead ?? 0) === 0) return { remove: true, reason: 'every commit is on main' };",
+      replace: "if (false) return { remove: true, reason: 'every commit is on main' };",
+    },
+  },
+  {
+    decision: 'tidy',
+    suite: 'tests/tidy.test.ts',
     broke: 'the tree-identical branch no longer deletes',
     guard: 'deletes a branch whose tree is identical to main even with no PR',
     edit: {

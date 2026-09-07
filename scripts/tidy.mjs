@@ -85,6 +85,21 @@ export function classify(branch, facts) {
   // No PR, but nothing to lose either: the trees agree, so the branch describes main exactly.
   if (facts.identical) return { remove: true, reason: 'tree identical to main' };
 
+  /*
+    ⚠️ **NOTHING AHEAD IS NOT THE SAME AS AN IDENTICAL TREE, AND THREE BRANCHES SAT IN THE GAP.**
+    `a-body-has-a-variant`, `a-place-follows-its-own-instrument` and `the-arc-is-what-is-judged` were
+    kept by the line below with the reason *"0 commits not on main"* — which is the tool stating the
+    proof of safety and then declining to act on it. Their trees are NOT identical to main's, because
+    they point at commits seventy to a hundred and nineteen behind it.
+
+    ⚠️ **`ahead === 0` MEANS EVERY COMMIT ON THE BRANCH IS REACHABLE FROM MAIN**, which is the exact
+    condition `git branch -d` accepts and the strongest merge evidence there is — stronger than the
+    PR, which is a claim about a remote. It goes below `identical` rather than above it because the
+    two are different questions: a branch that added a thing and reverted it has an identical tree and
+    commits of its own, and only the first of those may be deleted on the tree alone.
+  */
+  if ((facts.ahead ?? 0) === 0) return { remove: true, reason: 'every commit is on main' };
+
   const n = facts.ahead ?? 0;
   return { remove: false, reason: `${n} commit${n === 1 ? '' : 's'} not on main, and no merged PR` };
 }
