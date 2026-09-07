@@ -37,7 +37,7 @@ import {
   type LevelSections,
   type SectionName,
 } from '../src/content/music.ts';
-import { THEMES, bakedBy, paceAt, revoicedBy, rungOf, type ThemeKind, type ThemeLadder } from '../src/content/themes.ts';
+import { THEMES, bakedBy, paceAt, panTrackOf, revoicedBy, rungOf, type ThemeKind, type ThemeLadder } from '../src/content/themes.ts';
 import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { SAMPLE_RATE, makeAudioOut, makeSpeaker, prewarmAudio, takePrewarmed } from '../src/app/sound.ts';
@@ -1057,12 +1057,25 @@ function restate(moment: Moment): void {
     const hold = holdOf(layer);
     /*
       ⚠️ **The pan is written whenever it is held and never otherwise.** It is not a per-frame tug of
-      war the way the gain is — nothing in the mixer ever moves a pan after construction — so this is
-      only reached when the desk actually has an opinion, and releasing it puts `LAYER_PAN` back.
+      war the way the gain is, so this is only reached when the desk actually has an opinion, and
+      releasing it puts `LAYER_PAN` back.
+
+      ⚠️ **AND A LAYER THE PLACE MOVES IS LEFT ALONE UNLESS THE DESK HAS TAKEN IT** — 0275. This
+      comment used to read *"nothing in the mixer ever moves a pan after construction"*, and that
+      stopped being true the moment a `PanTrack` existed: a following layer's parameter now differs
+      from `LAYER_PAN` most of the time, so the test below would have fired sixty times a second and
+      **cancelled the scheduled swing on the first frame the dashboard drew**. The instrument would
+      have shown a place not moving, which is exactly the class of defect
+      `docs/decisions/0126-the-dashboard-is-the-instrument.md` is for.
+
+      ⚠️ **A HOLD STILL WINS, AND IT STILL CANCELS.** Taking a moving layer on the desk is a request
+      to put it somewhere and leave it there; what it costs is the horizon, so `follow` restores
+      `LAYER_PAN` rather than the track until the transport re-phases. Named rather than hidden.
     */
     const pan = music.panOf(layer);
+    const moves = hold.pan === null && panTrackOf(moment.theme, layer) !== undefined;
     const wantPan = hold.pan ?? LAYER_PAN[layer];
-    if (Math.abs(pan.value - wantPan) > 0.001) {
+    if (!moves && Math.abs(pan.value - wantPan) > 0.001) {
       pan.cancelScheduledValues(0);
       pan.setTargetAtTime(wantPan, 0, HOLD_SECONDS);
     }

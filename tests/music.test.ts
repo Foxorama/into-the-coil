@@ -52,7 +52,7 @@ import {
   auditionRung,
   levelOfPlace,
 } from '../src/app/music.ts';
-import { auraCeilingOf, rungIn, THEMES, THEME_KINDS } from '../src/content/themes.ts';
+import { auraCeilingOf, panTrackOf, rungIn, THEMES, THEME_KINDS } from '../src/content/themes.ts';
 import { loopsAt } from './bakes.ts';
 import { buildsOf } from './pace.ts';
 import { readFileSync } from 'node:fs';
@@ -2026,6 +2026,47 @@ describe('0118 — the mix has a width, and the low end does not use it', () => 
         `${layer} sits at ${LAYER_PAN[layer]}, past the ${PAN_LIMIT} that keeps every layer in both ears`,
       ).toBeLessThanOrEqual(PAN_LIMIT + 1e-9);
     }
+  });
+
+  it('0275 — AND A LAYER THAT MOVES OBEYS EVERY RULE A LAYER THAT SITS STILL DOES', () => {
+    /*
+      ⚠️ **THE TWO GUARDS ABOVE READ `LAYER_PAN` AND A TRACK IS NOT IN IT.** `PanTrack` gave one layer
+      a position that changes over its loop, and every argument for the constant applies to each value
+      in the track: a value past `PAN_LIMIT` is a part somebody with one earbud does not have, and a
+      low-heavy layer swung anywhere spends headroom on one side for a thump that arrives
+      non-directional regardless. **A new table beside a guarded one is the shape that goes wrong** —
+      `LAYER_PAN`'s own ceiling was right when written and silently wrong once `mix` multiplied it.
+
+      ⚠️ **AND THE TRACK HAS TO FIT THE LOOP IT IS WRITTEN OVER.** 0090's single unrecoverable failure
+      is layers that drift apart; a track whose length is not a whole number of the layer's bars would
+      walk the gesture around the bar a little further every pass, which is the same defect wearing a
+      panner. A whole multiple keeps it where it was authored for ever.
+    */
+    let tracks = 0;
+    for (const theme of THEME_KINDS) {
+      for (const layer of MUSIC_LAYERS) {
+        const track = panTrackOf(theme, layer);
+        if (track === undefined) continue;
+        tracks++;
+        const bars = track.steps.length / (track.perBeat * 4);
+        expect(
+          bars,
+          `${theme}/${layer} moves over ${bars} bars, which is not a whole number of ${LAYER_BARS[layer]}-bar loops`,
+        ).toBe(Math.round(bars));
+        expect(
+          LAYER_BARS[layer] % bars,
+          `${theme}/${layer}'s track is ${bars} bars against a ${LAYER_BARS[layer]}-bar loop, so it walks`,
+        ).toBe(0);
+        for (const to of track.steps) {
+          if (to === null || to === undefined) continue;
+          expect(
+            Math.abs(to),
+            `${theme}/${layer} moves to ${to}, past the ${PAN_LIMIT} that keeps every layer in both ears`,
+          ).toBeLessThanOrEqual(PAN_LIMIT + 1e-9);
+        }
+      }
+    }
+    expect(tracks, 'no place moves any layer, so this asserted nothing').toBeGreaterThan(0);
   });
 
   it('THE POINT OF IT: the field is actually used, and the two sides are balanced', () => {
