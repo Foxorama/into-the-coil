@@ -28,6 +28,19 @@ export const PROBES = [
     },
   },
   {
+    // ⚠️ THE ONE THE TOOL WAS ACTUALLY MISSING, and it was found by running it rather than by
+    // reading it: `isCurrent` covers one checkout and this repository has twenty-seven worktrees.
+    decision: 'tidy',
+    suite: 'tests/tidy.test.ts',
+    broke: 'the linked-worktree exclusion removed, so a branch a session is standing on deletes',
+    guard: 'KEEPS a merged branch a LINKED worktree is standing on',
+    edit: {
+      path: 'scripts/tidy.mjs',
+      find: 'if (facts.worktree) return { remove: false, reason: `checked out at ${facts.worktree}` };',
+      replace: 'if (false) return { remove: false, reason: `checked out at ${facts.worktree}` };',
+    },
+  },
+  {
     // ⚠️ THE ONE THAT MATTERS. Without this check a merged PR is taken as proof about a branch that
     // has since moved, and the commits pushed after the merge are deleted with it.
     decision: 'tidy',

@@ -45,10 +45,29 @@ function gitOk(...args) {
  * `facts.mergedSha` the sha GitHub recorded as that PR's head at merge time
  * `facts.localSha`  where the local branch points NOW
  * `facts.identical` the branch's tree is byte-identical to main's
+ * `facts.worktree`  the path of a LINKED worktree holding this branch, or null
  */
 export function classify(branch, facts) {
   if (PROTECTED.includes(branch)) return { remove: false, reason: 'protected' };
   if (facts.isCurrent) return { remove: false, reason: 'checked out here' };
+  /*
+    ⚠️ **`isCurrent` IS ONE CHECKOUT AND THIS REPOSITORY HAS TWENTY-SEVEN.** Found by running the
+    tool: it reached `a-boss-is-fought-to-the-end`, which is merged and is also checked out at
+    `C:/into-the-coil-boss`, and git refused — so the run died on the second branch it looked at and
+    deleted NOTHING. A tidy that crashes on the first worktree in an alphabetical list is a tidy that
+    has never run to the end here.
+
+    ⚠️ **AND THE CRASH WAS THE GOOD OUTCOME**, which is why this keeps rather than forces. A branch
+    held by a worktree is a session's checkout —
+    `docs/decisions/0200-the-tool-that-edits-must-not-lose-what-it-edits.md` is about exactly that,
+    and the merge proof says nothing about whether somebody is standing in the directory. Deleting
+    the branch would leave that worktree on a detached HEAD with no name for what it was doing.
+
+    ⚠️ **REMOVING THE WORKTREE IS NOT THIS TOOL'S JOB**, and `orphanWorktrees` below already draws
+    that line: it removes registered-and-gone directories, never a live one. 0200 makes
+    `worktree remove` a thing that stops for an answer, and a script cannot be asked.
+  */
+  if (facts.worktree) return { remove: false, reason: `checked out at ${facts.worktree}` };
 
   if (facts.mergedPr !== null && facts.mergedPr !== undefined) {
     // ⚠️ THE CASE THAT MAKES THIS SAFE RATHER THAN NEARLY SAFE. A merged PR proves the branch was
@@ -108,6 +127,24 @@ function fastForward(current) {
   return before === after ? 'already up to date' : `${before} → ${after}`;
 }
 
+/**
+ * Which branch each LINKED worktree is standing on, keyed by branch.
+ *
+ * ⚠️ **`--porcelain` BECAUSE THE HUMAN FORMAT PUTS THE BRANCH IN SQUARE BRACKETS** and a path with a
+ * space in it makes the columns ambiguous. The porcelain form is one block per worktree, so the
+ * `branch` line is read against the `worktree` line above it.
+ */
+function branchesInWorktrees() {
+  const out = new Map();
+  let path = null;
+  for (const line of git('worktree', 'list', '--porcelain').split('\n')) {
+    if (line.startsWith('worktree ')) path = line.slice('worktree '.length).trim();
+    else if (line.startsWith('branch refs/heads/') && path) out.set(line.slice('branch refs/heads/'.length).trim(), path);
+    else if (line === '') path = null;
+  }
+  return out;
+}
+
 /** Worktree directories git no longer knows about. The live one cannot be removed from inside it. */
 function orphanWorktrees(root) {
   const dir = resolve(root, '.claude/worktrees');
@@ -160,6 +197,7 @@ function main() {
   if (!asked) console.log('⚠️ `gh` could not list merged PRs. Falling back to tree comparison only — more\n   branches will be kept than strictly need to be.\n');
 
   const branches = git('for-each-ref', '--format=%(refname:short)', 'refs/heads').split('\n').filter(Boolean);
+  const held = branchesInWorktrees();
 
   const removed = [];
   const kept = [];
@@ -167,6 +205,7 @@ function main() {
     const pr = prs.get(branch);
     const verdict = classify(branch, {
       isCurrent: branch === current,
+      worktree: branch === current ? null : (held.get(branch) ?? null),
       mergedPr: pr?.number ?? null,
       mergedSha: pr?.headRefOid ?? null,
       localSha: git('rev-parse', branch),

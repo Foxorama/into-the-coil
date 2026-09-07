@@ -15,7 +15,7 @@ import { classify } from '../scripts/tidy.mjs';
  *   - Trusting the merged PR alone destroys commits pushed to the branch AFTER the merge.
  */
 
-const base = { isCurrent: false, mergedPr: null, mergedSha: null, localSha: 'a'.repeat(40), identical: false, ahead: 0 };
+const base = { isCurrent: false, worktree: null, mergedPr: null, mergedSha: null, localSha: 'a'.repeat(40), identical: false, ahead: 0 };
 
 describe('tidy only deletes what it can prove is safe', () => {
   it('never touches main, whatever the evidence says', () => {
@@ -24,6 +24,24 @@ describe('tidy only deletes what it can prove is safe', () => {
 
   it('never touches the branch that is checked out', () => {
     expect(classify('feature', { ...base, isCurrent: true, mergedPr: 7 }).remove).toBe(false);
+  });
+
+  /*
+    ⚠️ **THE CASE THAT MADE THE TOOL UNRUNNABLE HERE, AND IT WAS NOT A NEAR MISS** — 0271's own
+    tidy pass. `isCurrent` is ONE checkout; this repository has twenty-seven worktrees, and
+    twenty-four of them stand on branches whose PRs are merged. git refuses to delete a branch a
+    worktree holds, so the run died on the second branch it examined and deleted none of the
+    thirty-nine it could have.
+
+    ⚠️ **IT IS A KEEP AND NOT A FORCE.** A worktree on a merged branch is still somebody's checkout —
+    `docs/decisions/0200-the-tool-that-edits-must-not-lose-what-it-edits.md` — and the merge proves
+    nothing about whether a session is standing in it. Removing the worktree stops for an answer,
+    which a script cannot ask for.
+  */
+  it('KEEPS a merged branch a LINKED worktree is standing on, and names the path', () => {
+    const v = classify('feature', { ...base, worktree: 'C:/into-the-coil-boss', mergedPr: 7, mergedSha: base.localSha });
+    expect(v.remove).toBe(false);
+    expect(v.reason).toContain('C:/into-the-coil-boss');
   });
 
   it('deletes a squash-merged branch, which is the case git itself refuses', () => {
