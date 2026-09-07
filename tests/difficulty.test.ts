@@ -244,6 +244,9 @@ describe('the easiest tier is the content, exactly as authored', () => {
     // 0073: 'straightforward dog-fighting depending on difficulty' is the play report's own phrase for
     // what the easiest tier gets — the reactive motions at exactly the rate the enemy table authors.
     expect(easiest.aggression, 'the easiest tier changes how hard things chase').toBe(1);
+    // 0270: what arrives in one volley, and the horde a summons keeps standing, are the counts the
+    // content authors — so `src/content/bosses.ts` reads as the Legendary fight and nothing else.
+    expect(easiest.crowd, 'the easiest tier changes how much arrives').toBe(1);
   });
 
   it('and leaves every body it touches at the numbers its own row states', () => {
@@ -277,6 +280,9 @@ describe('every tier is harder than the one before it', () => {
       expect(b.closing, `${harder} closes slower than ${easier}`).toBeGreaterThanOrEqual(a.closing);
       expect(b.shotSpeed, `${harder} throws slower bullets than ${easier}`).toBeGreaterThanOrEqual(a.shotSpeed);
       expect(b.aggression, `${harder} chases less than ${easier}`).toBeGreaterThanOrEqual(a.aggression);
+      // 0270. `crowdFor` rounds to nearest rather than up, which is only safe to do because this
+      // holds: `round(base × crowd)` cannot fall as long as `crowd` cannot.
+      expect(b.crowd, `${harder} sends less than ${easier}`).toBeGreaterThanOrEqual(a.crowd);
       expect(b.lives, `${harder} is more forgiving than ${easier}`).toBeLessThanOrEqual(a.lives);
     }
   });
@@ -294,6 +300,7 @@ describe('every tier is harder than the one before it', () => {
         b.closing !== a.closing ||
         b.shotSpeed !== a.shotSpeed ||
         b.aggression !== a.aggression ||
+        b.crowd !== a.crowd ||
         b.lives !== a.lives;
       expect(moved, `${harder} plays exactly like ${easier}`).toBe(true);
     }

@@ -128,6 +128,36 @@ export interface DifficultyRow {
    * ⚠️ **Higher is harder, like everything here except `fireGap`.**
    */
   aggression: number;
+  /**
+   * Multiplier on HOW MUCH ARRIVES: the shots in a boss's volley, the ceiling on adds a summons may
+   * keep on the field, and the shards a shattering shot may open a volley with.
+   *
+   * ── WHY THE TIER HAD NO REACH INTO THIS AT ALL, AND WHAT IT COST ────────────────────────────────
+   *
+   * ⚠️ **Every field above scales TIME or TOUGHNESS, and none of them scales COUNT.** `fireGap` says
+   * how often a volley comes, `shotSpeed` how long the player has to leave it, `toughness` how long
+   * the fight runs. What arrives in one volley was the same number on every tier — so a pattern
+   * attack, which is a question about *where is the gap* rather than *how long have I got* (0110),
+   * was identical for a Legendary Pilot and for a tier named for ending runs.
+   *
+   * ⚠️ **MEASURED, AND IT IS THE PLAY REPORT THIS FIELD COMES FROM.** *"They're very cool explodey
+   * ice attacks, but they end up having way too much screen space too fast… it's especially
+   * problematic with the rime shelf boss because the adds target the player."* Counting the widest
+   * run of lane that is both safe from the next three quarters of a second and reachable at the
+   * ship's own speed, the frost ship's summon phase left **26 adds on the field at Legendary against
+   * 40 at Burn** — a ratio of 1.4 across the whole difficulty range, on the thing that was killing
+   * the player. `docs/decisions/0270-a-shattering-volley-is-counted-in-shards.md`.
+   *
+   * ⚠️ **It is NOT a licence to change the script**, which is the line the file header draws and this
+   * field stands on the right side of: what a level SENDS is authored (0047), and every count this
+   * scales belongs to a boss's volley or to a summons' ceiling — the fight, not the level.
+   *
+   * ⚠️ **Higher is harder, and it is 1 at the easiest tier like everything but `fireGap`.** So the
+   * authored counts in `src/content/bosses.ts` ARE the Legendary ones, and the two harder tiers are
+   * departures from them — which is the whole reason the file header gives for `legendary`
+   * multiplying nothing.
+   */
+  crowd: number;
 }
 
 export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
@@ -150,6 +180,7 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     // Straightforward dog-fighting, which is the play report's own phrase for what the easy tier
     // should get: the reactive motions run at exactly the rate `src/content/enemies.ts` authors.
     aggression: 1,
+    crowd: 1,
   },
   /**
    * The tier the game is tuned for.
@@ -167,6 +198,14 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     closing: 1.2,
     shotSpeed: 1.15,
     aggression: 1.3,
+    /*
+      ⚠️ **The gentlest multiplier on the row, and that is deliberate rather than timid.** A count
+      does not cost the player linearly once a shot shatters — one frost shard is twelve flakes
+      (0263) — so a fifth more shards is a fifth more of TWELVE, and the pool guard in
+      `tests/frost.test.ts` is what says how much room is left to spend. The three above are what
+      this tier leans on; this is what stops the middle tier being the easy one's twin.
+    */
+    crowd: 1.15,
   },
   /**
    * The tier that is supposed to end runs.
@@ -189,6 +228,31 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
       for. At 1.7 a hunting lancer crosses the lane in about five seconds rather than nine.
     */
     aggression: 1.7,
+    /*
+      ⚠️ **A FIFTH MORE, AND IT WAS HALF AGAIN FOR ONE MEASUREMENT.** At 1.5 the frost ship's opening
+      volley — authored at ONE shard, because one shard is twelve flakes — rounded to two, and the
+      widest run of lane both safe and reachable at this tier fell to **1.5 units for a ship that is
+      4 units of hurtbox**, with no answer at all for 2% of the phase. That is not a hard tier, it is
+      the defect 0270 was reported for wearing a different hat. Rounding to nearest is what keeps the
+      small counts where the content put them while the wide ones still grow.
+
+      ⚠️ **AND IT CAME DOWN FROM 1.3, BECAUSE THIS AXIS REACHES FOURTEEN FIGHTS AND THE REPORT WAS
+      ABOUT TWO.** `crowd` sits in `throwAttack`, so it scales every boss's volley and not only the
+      ones that shatter. Measured across all fourteen at 1.3, it took room from ten of them. Nothing
+      reached zero — `tests/crowd.test.ts` holds that over every fight — so this is a tuning number
+      rather than a defect, and it is lower because a fix for the ice should not quietly cost a
+      dozen fights room it was never about.
+
+      ⚠️ **WHAT 1.2 ACTUALLY CHANGES IS NARROWER THAN IT LOOKS, AND SAYING SO IS THE POINT.** The
+      counts are rounded to nearest, so a phase only moves where `base × 1.2` and `base × 1.3` land
+      on different integers: a phase of 3 is 4 at both, of 5 is 6 against 7, of 7 is 8 against 9. The
+      fight this number was first lowered FOR — the serpent's third phase, which lost thirteen units
+      of reachable lane — is authored at 3 and is **unaffected by the change**. The measurement said
+      so after the fact and the claim is corrected here rather than left standing: what 1.2 buys is
+      the wide phases, not the tight one that prompted it. Sparing a phase of 3 needs 1.16 or below,
+      which is a different decision about how much of an axis is left.
+    */
+    crowd: 1.2,
   },
 };
 
@@ -355,4 +419,26 @@ export function toughnessFor(base: number, tier: DifficultyRow): number {
  */
 export function fireGapFor(base: number, tier: DifficultyRow): number {
   return onFireGrid(base * tier.fireGap);
+}
+
+/**
+ * How many of something a tier gets, where the content authors `base` — at least one, always.
+ *
+ * The shots in a boss's volley, the ceiling on adds a summons keeps up, and the shards a shattering
+ * shot may open a volley with all come through here, on `toughnessFor`'s own argument: *"rounded,
+ * floored at one"* stated at four call sites is the shape of second description this project has
+ * already paid for. It allocates nothing and is called at the volley rather than per step.
+ *
+ * ⚠️ **ROUNDED TO NEAREST AND NOT UP, WHICH IS THE ONE PLACE THIS DIFFERS FROM `toughnessFor`.**
+ * That one rounds up because its ordering has to hold by construction against a rounding that could
+ * otherwise put a tougher tier below a gentler one. Here the ordering is already free: `crowd` is
+ * non-decreasing up the tiers and `Math.round` is monotone, so `round(base × crowd)` cannot fall.
+ * What rounding UP would cost is the small counts, which are exactly the ones 0263 spent a decision
+ * settling — a phase authored to throw ONE shard would throw two on every tier above the easiest,
+ * and the frost ship's opening volley would be twice the size on a tier that is a fifth harder.
+ *
+ * `tests/difficulty.test.ts` walks the tiers in pairs and holds the ordering. It holds no value.
+ */
+export function crowdFor(base: number, tier: DifficultyRow): number {
+  return Math.max(1, Math.round(base * tier.crowd));
 }

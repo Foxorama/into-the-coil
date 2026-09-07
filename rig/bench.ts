@@ -37,8 +37,9 @@ const levelPick = document.querySelector<HTMLSelectElement>('#level');
 const along = document.querySelector<HTMLInputElement>('#along');
 const where = document.querySelector('#where');
 const hold = document.querySelector<HTMLInputElement>('#hold');
+const bossHp = document.querySelector<HTMLInputElement>('#bosshp');
 const note = document.querySelector('#note');
-if (!stage || !levelPick || !along || !where || !hold || !note) throw new Error('bench: the page is not the page');
+if (!stage || !levelPick || !along || !where || !hold || !bossHp || !note) throw new Error('bench: the page is not the page');
 
 const mounted = mount(stage, 'vivid');
 if (mounted === null) throw new Error('bench: the game would not mount');
@@ -153,9 +154,37 @@ const holdAt = (): void => {
   world.prevCameraAlong = world.cameraAlong;
 };
 
+/*
+  ── THE HEALTH SCRUB: THE BENCH JUMPING TO WHERE THE THING IS, ONE AXIS OVER — 0205 ─────────────
+
+  ⚠️ **NO PHASE-KEYED ATTACK IN THE GAME HAD EVER BEEN PHOTOGRAPHED, AND THAT IS WHAT THIS FIXES.**
+  A boss phase is keyed to remaining health (`src/content/bosses.ts`), so every attack past the
+  first — the hydra's four grown heads, the frost ship's ring, the bell that opens — could only be
+  reached by fighting to it. `docs/decisions/0027-measure-the-picture-not-the-model.md` wants an
+  eyes-on rig at the camera the game ships, and for two thirds of the boss vocabulary there was
+  none. The frost walls this was built for were argued about in world units for an afternoon before
+  anybody looked at one.
+
+  ⚠️ **IT PINS THE HEALTH AND DOES NOT PAUSE THE FIGHT**, which is exactly what `hold` does to the
+  camera and is justified the same way: a rig may not change what it measures
+  (`docs/decisions/0116-the-rig-plays-the-level.md`), so this does not touch what a phase DOES — it
+  holds the fight standing in one, while the hull flies, the cadence runs and the volleys land as
+  the game throws them. The parked ship's own auto-fire is what it is holding against.
+
+  ⚠️ **A FRACTION OF `bossFullHealth` AND NOT AN ABSOLUTE**, because a difficulty tier scales what
+  the boss starts with — the argument `uncoilsBy` in `src/app/boss.ts` already makes for taking
+  `full` as an argument. At 100 it writes the health it already has, so the slider left alone is the
+  fight the bench has always run.
+*/
+const pinHealth = (): void => {
+  if (world.bossPool.size === 0) return;
+  world.bossPool.at(0).health = world.bossFullHealth * (Number(bossHp.value) / 100);
+};
+
 // The scrub bar is a jump, so the readout would go stale the moment the level walked on from it.
 setInterval(() => {
   holdAt();
+  pinHealth();
   readOut();
 }, 100);
 

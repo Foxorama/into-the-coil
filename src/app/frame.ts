@@ -69,7 +69,7 @@ import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKin
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow, type SummonFrom } from '../content/bosses.ts';
-import { type DifficultyRow, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
+import { type DifficultyRow, crowdFor, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, nextOnGrid } from '../content/cadence.ts';
 import {
   PICKUP_CYCLE_STEPS,
@@ -3210,6 +3210,25 @@ function burst(w: World, along: number, across: number, count: number): void {
  * each member's lane, and the pilot takes over from there. *"They marched in gently from the left
  * side in a single file, they didn't swoop or dive bomb"* — from the side, a kite's hunt is a dive.
  */
+/**
+ * How many of one enemy kind are on the field right now — 0270, and nothing else asks.
+ *
+ * ⚠️ **By KIND and not by pool size**, because a fight can have a wave's bodies on the field beside
+ * the boss's own: `docs/decisions/0267-a-fight-thins-the-waves-over-it.md` thins them rather than
+ * stopping them, so a ceiling read off `w.enemies.size` would be a ceiling on the level as well as on
+ * the summons, and would go quiet for the wrong reason.
+ *
+ * ⚠️ **Nothing allocates and it is not called per step** — once per summoning volley, which is at
+ * most a few times a second, over a pool of forty.
+ */
+function standingAdds(w: World, kind: number): number {
+  let standing = 0;
+  for (let i = 0; i < w.enemies.size; i++) {
+    if (w.enemies.at(i).kind === kind) standing++;
+  }
+  return standing;
+}
+
 function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: FormationKind, from: SummonFrom, side: number): void {
   const kind = w.enemyKinds[enemy];
   const row = w.enemyRows[kind];
@@ -4400,10 +4419,26 @@ function driveBoss(w: World): void {
   */
   const calling = throwing.attack ?? w.bossRow.attack;
   if (calling.kind === 'summon' && boss.turnsLeft > 0) {
-    // Which across edge this call comes in from, alternating a volley — 0262. `spin` is a field
-    // nothing else reads on a boss, and the summons is the only thing that writes it.
-    boss.spin = boss.spin > 0 ? -1 : 1;
-    summonAdds(w, calling.enemy, boss.turnsLeft, calling.formation, calling.from, boss.spin);
+    /*
+      ⚠️ **THE CALL TOPS THE HORDE UP RATHER THAN ADDING TO IT — 0270.** `standing` on the row is the
+      most of that kind the summons keeps on the field and the tier scales it; what is left is the
+      room this call may spend. There was no ceiling: measured over the frost ship's summon phase the
+      adds reached **26 on the easiest tier and 40 on the hardest**, and 40 is `CAPACITY.enemies`, so
+      the horde was bounded by `src/sim/pool.ts` running out — which drops the volley after it, and
+      the next thing it would drop is a shattered add's snowflake (0263).
+
+      ⚠️ **A FULL FIELD DOES NOT SPEND THE TURN, and that is what the early return is for.** `spin`
+      alternates which edge a call flanks from (0262); flipping it for a call that put nothing on the
+      field would make the sides alternate against a count nobody can see, so the horde would come
+      back from the same edge twice. Nothing is thrown and nothing is remembered.
+    */
+    const room = crowdFor(calling.standing, w.difficulty) - standingAdds(w, w.enemyKinds[calling.enemy]);
+    if (room > 0) {
+      // Which across edge this call comes in from, alternating a volley — 0262. `spin` is a field
+      // nothing else reads on a boss, and the summons is the only thing that writes it.
+      boss.spin = boss.spin > 0 ? -1 : 1;
+      summonAdds(w, calling.enemy, Math.min(boss.turnsLeft, room), calling.formation, calling.from, boss.spin);
+    }
     boss.turnsLeft = 0;
   }
   /*

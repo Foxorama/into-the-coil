@@ -35,8 +35,9 @@ export const PROBES = [
     guard: 'THE SUMMONS: a volley at half health',
     edit: {
       path: 'src/app/frame.ts',
-      // ⚠️ Re-anchored by 0262, which added where a summons comes from and which side.
-      find: '    summonAdds(w, calling.enemy, boss.turnsLeft, calling.formation, calling.from, boss.spin);\n',
+      // ⚠️ Re-anchored by 0262, which added where a summons comes from and which side, and again by
+      // 0270, which put a ceiling on the horde and so gave the call a `room` to spend.
+      find: '      summonAdds(w, calling.enemy, Math.min(boss.turnsLeft, room), calling.formation, calling.from, boss.spin);\n',
       replace: '',
     },
   },
