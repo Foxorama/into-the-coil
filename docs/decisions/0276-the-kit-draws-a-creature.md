@@ -81,17 +81,48 @@ is no wider than its neck, so it is a tentacle*. It is a **span**, so it only me
 neck* while the neck is the gauge it was sized against — 0.44, making 0.6 a ratio of **1.36**. Against
 a neck of 0.29 the same claim is **0.42**, and the serpent measures 0.53.
 
-⚠️ **IT IS LOWERED AND IT IS STRICTER.** 0.42 against 0.29 is a ratio of **1.45**, above the 1.36 the
-old number encoded. A guard whose number silently means something different after an unrelated edit is
-[0027](0027-measure-the-picture-not-the-model.md)'s failure read from the other end, so the working is
-written beside the number and **it is re-sized whenever the serpent's gauge is**. It is deliberately
-NOT derived from `serpentHalf`: a guard computed from the constant it guards proves only that the code
-agrees with itself.
+## ⚠️ AND THEN THE SAME GUARD WAS RETIRED, BECAUSE RE-TUNING IT TWICE IN A DAY WAS THE ANSWER TO THE WRONG QUESTION
+
+The next report was:
+
+> *"the neck after the top curve also needs to be longer and the head needs to be a bit more
+> elongated and less blobby (which you've called out, but the shape of the head is now making the
+> serpent seem a bit smaller)"*
+
+**An elongated head made the span claim FALSE, not merely mis-sized.** Re-tuning it once was
+defensible; being invalidated a second time by good art inside one session is a guard measuring the
+wrong quantity — [0027](0027-measure-the-picture-not-the-model.md) — and
+[0192](0192-a-guard-holds-an-invariant.md) says the answer is to change it or delete it, never to
+change the work to suit it.
+
+⚠️ **A SPAN IN A FIXED WINDOW ONLY MEANS *WIDER THAN ITS NECK* WHILE TWO OTHER THINGS HOLD**: the neck
+is the gauge it was sized against, and the window still contains the neck. Making the body serpentine
+moved the first. Elongating the head moved the second — and then made the claim untrue, because **a
+real snake's head is about its neck's width, and the reference's is narrower**. The proxy would have
+forced a cobra hood to stay green.
+
+**What `0264 — THE HEADS` holds now: the skull is LONGER THAN IT IS TALL**, over a window that is a
+share of the animal's own length so it travels when the body is re-authored. That is the defect that
+was actually reported, twice — *a head taller than it is long is a frog, and no paint on it reads as
+a snake.* The serpent measures 1.19; the probe squashes the skull and it reports **"52.067 long and
+80.735 tall, so it is a blob"**.
+
+⚠️ **AND THE TENTACLE 0264 WAS NAMED FOR IS STILL HELD, BY THE GUARD THAT ALWAYS HELD IT.** *"The grey
+tentacle"* was a skin fault and a face fault. The skin is `THE LORD: every place skins its real boss
+in a skin of its own` in `tests/foes.test.ts`, untouched. The face is the maw, the fangs and the eye,
+held to the hull by 0227 like every other mark.
 
 ## What the serpent is now
 
-Fourteen spine samples through two full undulations, from a skull to a whipping tail; the outline a
-curve, not a chain, and about eleven times its own gauge. A form-shade down the whole body for its
+Sixteen spine samples through a crest, a trough and a curling tail, from a skull to a whipping tip;
+the outline a curve, not a chain, and about eleven times its own gauge. **Five segments of neck
+before the first crest, where the first pass had two**, and a body that swings 1.32 of `r` where it
+swung 1.09 — the amplitude pays for the neck, because the x-budget was already spent and the other
+axis was going spare. **The skull is 0.385 long and 0.27 tall**, where it was 0.32 by 0.44.
+
+⚠️ **1.60 OF SWING WAS TOO FAR AND ONLY THE SHEET SAID SO.** At that amplitude the body left the crest
+and ran to the tail without turning again — the second undulation was spent on the first one's
+height, and the animal baked as ONE ARCH: an eel rearing, not a snake travelling. A form-shade down the whole body for its
 volume; a belly shadow and a back light as tapering ribbons in nested steps, because a one-piece band
 has an edge and a shadow does not. A scale field whose chord runs **across** the body and bulges down
 it. A snake's skull with a lit crown plane, a dark maw, two fangs and a slit eye.
@@ -144,7 +175,9 @@ nothing persisted, no storage key, no schema, no cache prefix.
 | the hull stroked a second time, which is the second outline the old count refused | `is more fills in the SAME bitmap, and not a second sprite over the first` |
 | the serpent's mouth line dragged off the front of its skull, at full alpha | `is more fills in the SAME bitmap, and not a second sprite over the first` |
 
-`node scripts/prove-guard.mjs 0264` still passes all five, with its skull probe re-anchored.
+`node scripts/prove-guard.mjs 0264` still passes all five, with its skull probe **re-pointed**: it
+squashes the head taller than it is long, and `0264 — THE HEADS` reports *"52.067 long and 80.735
+tall, so it is a blob"*.
 
 ⚠️ **AND THREE DEFECTS IN THIS WORK WERE FOUND BY A GUARD OR BY THE SHEET, NOT BY REASONING**, which
 is the whole of [0027](0027-measure-the-picture-not-the-model.md):

@@ -412,23 +412,38 @@ describe('a boss differs from every other by more than its paint', () => {
 
     const serpent = SPRITE_KINDS[BOSSES.jormungandr.sprite]!;
     const body = traceAt(serpent, COMMON).passes[0]!.subpaths[0]!;
-    const skull = body.filter(([x]) => x < half - r * 0.7).map(([, y]) => (y - half) / r);
-    const skullSpan = Math.max(...skull) - Math.min(...skull);
     /*
-      ⚠️ **0.6 → 0.42, AND AS A RATIO THAT IS STRICTER RATHER THAN LOOSER** — 0276. This number is a
-      span in a fixed window, so it only means *wider than its neck* while the neck is the gauge it
-      was sized against. 0.6 was set when the body was 0.44 of `r` thick: a ratio of 1.36. The body
-      is 0.29 now, because *"the body length and shape isn't serpentine, it looks like a little
-      parasite worm"* was a complaint about the ratio of length to gauge, and the gauge is the half
-      of it that could move. 0.42 is 1.45 of the new neck.
+      ── THE SKULL IS LONGER THAN IT IS TALL — 0276, REPLACING A SPAN ─────────────────────────────
 
-      ⚠️ **A NUMBER THAT ENCODES A RATIO AGAINST A CONSTANT ELSEWHERE IS A NUMBER THAT GOES QUIETLY
-      WRONG**, which is `docs/decisions/0027-measure-the-picture-not-the-model.md`'s warning read from
-      the other end. It is left as an absolute on purpose — deriving it from `serpentHalf` would make
-      the guard agree with the code by construction and prove nothing — so **it is re-sized whenever
-      the serpent's gauge is**, and the working is above so the next session can do that.
+      ⚠️ **THIS HELD `skullSpan > 0.6` AND THE PROXY WAS RETIRED AFTER IT WAS INVALIDATED TWICE BY
+      GOOD ART IN ONE SESSION.** A span in a fixed window only means *wider than its neck* while the
+      neck is the gauge it was sized against and the window still contains the neck. Making the body
+      serpentine moved the first (0.44 of `r` → 0.29); making the head elongated moved the second, and
+      then made the claim FALSE — a real snake's head is about its neck's width, and the reference's
+      is narrower. A guard re-tuned twice in a day is not being maintained, it is measuring the wrong
+      quantity: `docs/decisions/0027-measure-the-picture-not-the-model.md`, and
+      `docs/decisions/0192-a-guard-holds-an-invariant.md` on changing one and saying why.
+
+      ⚠️ **WHAT IS HELD INSTEAD IS THE DEFECT THAT WAS ACTUALLY REPORTED, TWICE.** *"The head needs to
+      be a bit more elongated and less blobby."* A head taller than it is long is a frog, and no paint
+      on it reads as a snake — where a head merely narrower than its neck reads fine. The window is a
+      share of the animal's OWN length, so it travels when the body is re-authored instead of silently
+      pointing at the neck.
+
+      ⚠️ **AND THE TENTACLE 0264 WAS NAMED FOR IS STILL HELD, BY THE GUARD THAT ALWAYS HELD IT**:
+      `THE LORD: every place skins its real boss in a skin of its own` in `tests/foes.test.ts`. The
+      grey tentacle was a skin fault and a face fault; the skin is guarded there, and the face is the
+      maw, the fangs and the eye, which `0227` holds to the hull like every other mark.
     */
-    expect(skullSpan, 'the serpent’s skull is no wider than its neck, so it is a tentacle').toBeGreaterThan(0.42);
+    const nose = Math.min(...body.map(([x]) => x));
+    const length = Math.max(...body.map(([x]) => x)) - nose;
+    const head = body.filter(([x]) => x < nose + length * 0.15);
+    const headLong = Math.max(...head.map(([x]) => x)) - nose;
+    const headTall = Math.max(...head.map(([, y]) => y)) - Math.min(...head.map(([, y]) => y));
+    expect(
+      headLong / headTall,
+      `the serpent’s skull is ${headLong.toFixed(3)} long and ${headTall.toFixed(3)} tall, so it is a blob`,
+    ).toBeGreaterThan(1);
   });
 });
 
