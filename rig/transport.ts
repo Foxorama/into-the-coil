@@ -245,6 +245,58 @@ export const LOUDEST_SHIPPED = MUSIC_LEVELS.reduce(
  */
 export const DESK_CEILING = 2 * LOUDEST_SHIPPED;
 
+/**
+ * How far below `DESK_CEILING` the bottom of the fader's travel sits, in decibels.
+ *
+ * ── THE CEILING FIX LEFT THE TRAVEL BROKEN ──────────────────────────────────────────────────────
+ *
+ * ⚠️ **DERIVING THE CEILING ANSWERED *can the fader reach* AND NOBODY ASKED *where does it land*.**
+ * `LOUDEST_SHIPPED` is 4.87, so the ceiling is 9.75 — twice a single outlier — and on a LINEAR
+ * slider that is where every other layer went. 531 non-zero targets sampled across the seven levels
+ * run **0.04 / 0.29 / 0.52 / 1.03 / 1.99 / 4.87** (min, p25, median, p75, p95, max): the MEDIAN
+ * layer-rung sits at **5.4% of the travel** and 95% of them inside the bottom fifth.
+ *
+ * ⚠️ **Reported 2026-09-07:** *"the gain controls are really hard on the dashboard, they're all set
+ * to super min levels so any kind of tweak is a massive adjustment."* The second half of that
+ * sentence is this constant; the first half was `syncSliders` never moving a FOLLOWING fader off
+ * zero, which is fixed in `rig/dash.ts` and is the reason both land together.
+ *
+ * ⚠️ **SO THE TRAVEL IS DECIBELS, WHICH IS WHAT A FADER HAS ALWAYS BEEN.** *Twice as loud* becomes
+ * the same distance everywhere on the slider instead of a distance that depends on where you already
+ * are — and the ceiling keeps the property it was derived for, because the top notch is still
+ * `DESK_CEILING` exactly. At 60 dB those same 531 targets land between **21% and 90%** of the
+ * travel, median at 58%.
+ *
+ * ⚠️ **60 AND NOT 100, BECAUSE THE BOTTOM OF A FADER IS FOR SILENCE RATHER THAN FOR DETAIL.** A
+ * layer 60 dB under the loudest thing the game plays is inaudible under any of the rest of it, so
+ * travel spent below that buys resolution nobody can hear at the cost of resolution everybody uses.
+ */
+export const DESK_FLOOR_DB = 60;
+
+/** The fader's travel in notches — tenths of a decibel, so a drag can resolve 0.1 dB. */
+export const DESK_STEPS = DESK_FLOOR_DB * 10;
+
+/**
+ * Where a gain sits on the fader.
+ *
+ * ⚠️ **SILENCE IS THE BOTTOM NOTCH AND NOT AN APPROXIMATION OF IT.** `allOff` and `solo` both write
+ * a hold of exactly 0, and a log taper has no position for zero — so the bottom of the travel is
+ * reserved for it, which is also what the fader on a real desk does.
+ */
+export function faderAt(gain: number): number {
+  if (gain <= 0) return 0;
+  const db = 20 * Math.log10(gain / DESK_CEILING);
+  if (db <= -DESK_FLOOR_DB) return 0;
+  return Math.round(DESK_STEPS * (1 + db / DESK_FLOOR_DB));
+}
+
+/** What a fader notch means — the inverse of `faderAt`, exact at both ends. */
+export function gainAt(notch: number): number {
+  if (notch <= 0) return 0;
+  if (notch >= DESK_STEPS) return DESK_CEILING;
+  return DESK_CEILING * Math.pow(10, (DESK_FLOOR_DB * (notch / DESK_STEPS - 1)) / 20);
+}
+
 export function momentOf(
   kind: LevelKind,
   second: number,

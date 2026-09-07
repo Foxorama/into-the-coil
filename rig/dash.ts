@@ -56,7 +56,9 @@ import {
   retypeSection,
   layerSpans,
   loudestGain,
-  DESK_CEILING,
+  DESK_STEPS,
+  faderAt,
+  gainAt,
   marksOf,
   momentOf,
   weaponAtTier,
@@ -759,7 +761,13 @@ const layerRows = {} as Record<MusicLayer, LayerRow>;
       `<td class="target">0.00</td>` +
       `<td class="live">0.00</td>` +
       `<td><span class="meter"><i></i></span></td>` +
-      `<td><input class="g" type="range" min="0" max="${Math.round(DESK_CEILING * 100)}" step="2" value="0" /></td>` +
+      /*
+        ⚠️ **THE TRAVEL IS DECIBELS AND THE NOTCH IS A TENTH OF ONE** — `DESK_FLOOR_DB`. A linear
+        slider over the derived ceiling put the median layer at 5.4% of its length, which is what
+        *"they're all set to super min levels so any kind of tweak is a massive adjustment"* was
+        about. `DESK_CEILING` is still the top notch, so nothing the ceiling was derived for is lost.
+      */
+      `<td><input class="g" type="range" min="0" max="${DESK_STEPS}" step="1" value="0" /></td>` +
       `<td><input class="p" type="range" min="-100" max="100" step="5" value="${Math.round(LAYER_PAN[layer] * 100)}" /></td>` +
       `<td class="dim panOut">${panText(LAYER_PAN[layer])}</td>` +
       /*
@@ -808,7 +816,7 @@ const layerRows = {} as Record<MusicLayer, LayerRow>;
       it; the whole point of this panel is that the gap is short. `follow` is how a layer goes back.
     */
     row.gain.addEventListener('input', () => {
-      setHold(layer, { ...holdOf(layer), gain: Number(row.gain.value) / 100 });
+      setHold(layer, { ...holdOf(layer), gain: gainAt(Number(row.gain.value)) });
       afterDeskChange();
     });
     row.pan.addEventListener('input', () => {
@@ -898,7 +906,7 @@ function syncSliders(): void {
   for (const layer of MUSIC_LAYERS) {
     const hold = holdOf(layer);
     const row = layerRows[layer];
-    if (hold.gain !== null) row.gain.value = String(Math.round(hold.gain * 100));
+    if (hold.gain !== null) row.gain.value = String(faderAt(hold.gain));
     row.pan.value = String(Math.round((hold.pan ?? LAYER_PAN[layer]) * 100));
   }
 }
@@ -1809,6 +1817,20 @@ function frame(at: number): void {
     row.live.textContent = live.toFixed(2);
     row.bar.style.width = `${Math.min(100, live * 80)}%`;
     row.bar.parentElement!.classList.toggle('aura', layer.aura);
+    /*
+      ⚠️ **A FOLLOWING FADER SITS WHERE THE MIXER HAS THE LAYER, SO GRABBING ONE CHANGES NOTHING.**
+      It used to stay at the `value="0"` it was built with — `syncSliders` writes a position only for
+      a layer that is already HELD — so the first touch of any fader dropped its layer from whatever
+      it was playing at to silence, and the drag back up was the *"massive adjustment"* reported on
+      2026-09-07. Taking over a control at the value it is already showing is the whole of what makes
+      a desk driveable, and it is the half of that report that is not the taper.
+
+      ⚠️ **NOT WHILE IT HAS FOCUS**, for exactly the reason the ladder field below says so: this runs
+      sixty times a second, and writing into a control somebody is dragging fights the drag.
+    */
+    if (holdOf(layer.layer).gain === null && document.activeElement !== row.gain) {
+      row.gain.value = String(faderAt(layer.target));
+    }
     /*
       ⚠️ **NOT WHILE IT HAS FOCUS, WHICH IS THE ONE THING A PER-FRAME REWRITE MUST NOT DO.** This runs
       sixty times a second; writing `value` into the field somebody is typing in would eat the
