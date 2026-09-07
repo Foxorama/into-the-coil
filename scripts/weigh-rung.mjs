@@ -50,4 +50,13 @@ for (const theme of themes) {
 }
 
 console.log(`a bar is ${BAR_SECONDS}s, so notes/bar × ${(60 / BAR_SECONDS).toFixed(0)} is notes a minute.`);
-console.log('tests/themes.test.ts refuses either percentage below 90.');
+// ⚠️ THE RULE THIS PRINTED WAS RETIRED TWICE AND THE LINE WENT ON STATING IT — 0271, caught while
+// reading this output as evidence for a change. docs/decisions/0182-a-mix-number-has-no-band.md
+// deleted the PACE ratio outright — *"what it forbade is a sparse place"* — and
+// docs/decisions/0147-a-place-is-a-balance.md had already replaced the bottom ratio with an absolute
+// floor, since re-derived to 24% by 0176. Six of nebula's seven rungs read under 90% on the bottom
+// column today and every one of them is green, so the retired sentence was the only thing here
+// capable of sending a tuning pass after a number nothing asserts. The percentages stay: they are
+// how a place is READ against the base, which is what this instrument is for.
+console.log('the percentages are context, not a threshold. tests/themes.test.ts holds one number here:');
+console.log('the share under 300Hz, at 24% absolute, per place per rung. Pace is not guarded — 0182.');

@@ -19,8 +19,13 @@
  *
  * | the brief | the rung | the layers that carry it |
  * |---|---|---|
- * | haunting hymns | `run` | `chords` (the choir), `call` (the hymn), `drone`, `sub`, `engine`, `perc` |
- * | pipe organs | `push` | `groove` (the pedalboard), `hook` (the registration), `arp` (the mixture), `lead`, `ride` |
+ * | haunting hymns | `run` | `chords` (the choir), `call` (the hymn), `drone`, `sub`, `engine` |
+ * | pipe organs | `push` | `groove` (the pedalboard), `hook` (the registration), `arp` (the mixture), `lead`, `ride`, `perc` |
+ *
+ * ⚠️ **`perc` MOVED UP A ROW AND THE TABLE WENT ON SAYING `run` FOR THREE DECISIONS.**
+ * `docs/decisions/0172-a-place-opens-with-its-own-four.md` closed it at `run` — *"there is no kit in a
+ * cathedral"* — in `src/content/themes.ts`'s ladder, and nothing brought the news back here. Caught
+ * while editing the layer for 0271, which is the only reason it was caught at all.
  * | symphonic choir | `surge` | `counter` (the strings), `crash` (the swell), `drive` |
  * | the fire coming | `approach` | `toll` (the great bell), `dread` (the tritone) |
  * | hellish, discordant | `boss` | `stomp`, `frenzy`, `wraith`, and the aura's two |
@@ -396,40 +401,40 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
   ],
 
   /*
-    ── THE SMALL METAL: hand bells, and the hiss of a consonant ─────────────────────────────────────
+    ── THE PROCESSIONAL, AND IT IS ALL THAT IS LEFT OF THE SMALL METAL ──────────────────────────────
+
+    ⚠️ **`docs/decisions/0271-the-cathedral-keeps-only-its-drum.md`.** Reported: *"remove the
+    percussion from the Ember Nebula, the only audible part is the high pitched tone at the moment and
+    it sounds like a seagull making a cry that doesn't fit the rest of the track. It sounds great on
+    Rime Shelf, but it doesn't fit ember nebula."*
+
+    ⚠️ **THE EAR NAMED ONE VOICE OUT OF FOUR AND `weigh-heard` AGREED TO THE DECIBEL.** This layer was
+    the LOUDEST thing in the place at three rungs of five — margin +2.7 at `surge`, +5.6 at
+    `approach`, +6.2 at `boss`, all of it in the `hi` window and peaking at −5.8 dBFS against a fight
+    whose next-highest peak is `toll` at −10.0. Rime Shelf's own `perc`, which the report calls great, sits
+    mid-pack at −5.8 and −7.7 with its weight in `lowmid`. **Same four-voice construction, and the
+    difference is which band it lives in**: baked alone, this layer's loudest band was `hi` and Rime's
+    is `lowmid`.
+
+    ⚠️ **SO WHAT WENT IS THE TWO PITCHED GLIDES, AND WHAT THEY WERE IS A SEAGULL.** A struck plate
+    falling 3520→2640 Hz over a quarter-second, eight times in sixteen bars, is a gull by
+    construction — rare enough to read as an event, long enough to read as a cry — and the hand bells
+    fell 1760→1170 on the same shape one octave down. **The sixteenth breath went with them because it
+    was never there**: `heardAt` returns the identical ranking with and without it, which
+    `docs/decisions/0140-no-layer-is-inaudible.md` cannot see because its floor is per LAYER.
+
+    ⚠️ **AND IT IMPROVES BOTH NUMBERS THIS PLACE HAS A REPORT BEHIND.** 0134 was *"very high on the
+    treble with no deep bassy times"*; measured at `push`, the share under 300 Hz rises 26.2→28.1%,
+    the share over 2 kHz falls 27.9→23.5%, and the spectral centre falls 1636→1499 Hz. **Deleting
+    percussion made the place less trebly**, which is only a paradox until you notice that of the
+    layer's four voices the drum was the only one below the organ.
 
     ⚠️ **`perc` sits at −0.45 and therefore may not be low**, which is a constraint rather than a
     taste: `tests/music.test.ts` measures the baked band energy of every layer and refuses a placed one
-    whose weight is under 130 Hz. Bells and breath are what a hymn has up there anyway.
+    whose weight is under 130 Hz. It is the last voice standing that has to clear that now, and the
+    note below already argued it.
   */
   perc: [
-    {
-      // The hand bells, doubled up. Still a bell pattern and no longer a bell every other bar.
-      steps: [
-        1, _, 0.5, _, _, 0.62, _, _, 0.7, _, 0.46, _, 0.84, _, _, 0.5,
-        _, 0.58, 0.62, _, _, _, 0.7, _, 0.9, _, 0.48, _, _, 0.66, _, 0.54,
-        1, _, 0.52, _, _, 0.6, _, 0.66, 0.72, _, 0.46, _, 0.8, _, 0.56, 0.6,
-        _, 0.58, 0.64, _, 0.5, _, _, 0.7, 0.88, _, 0.48, _, 0.7, _, 0.62, 0.66,
-      ],
-      pitched: false,
-      perBeat: 4,
-      octave: 0,
-      note: { wave: 'tri', from: 1760, to: 1170, seconds: 0.11, gain: 0.14, attack: 0.001, curve: 5.5, highFrom: 720 },
-    },
-    {
-      // Sixteenths, unbroken — the other half of *something is always moving*, over the top rather
-      // than underneath it.
-      steps: [
-        0.4, 0.24, 0.3, 0.26, 0.36, 0.24, 0.28, 0.26, 0.38, 0.24, 0.3, 0.26, 0.34, 0.26, 0.3, 0.28,
-        0.4, 0.24, 0.3, 0.26, 0.36, 0.26, 0.28, 0.24, 0.38, 0.26, 0.3, 0.28, 0.34, 0.28, 0.32, 0.3,
-        0.42, 0.24, 0.3, 0.26, 0.36, 0.24, 0.3, 0.26, 0.38, 0.26, 0.3, 0.24, 0.34, 0.26, 0.3, 0.3,
-        0.4, 0.26, 0.32, 0.26, 0.36, 0.24, 0.28, 0.28, 0.4, 0.26, 0.3, 0.28, 0.36, 0.3, 0.34, 0.32,
-      ],
-      pitched: false,
-      perBeat: 4,
-      octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.05, attack: 0.0006, curve: 8, lowFrom: 12000, highFrom: 5400 },
-    },
     {
       /*
         THE FRAME DRUM, AND IT IS HERE BECAUSE A MEASUREMENT SAID SO — 0134. This layer measured **0%
@@ -440,28 +445,16 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
         ⚠️ **Under 130 Hz is what `LAYER_PAN` forbids here and this sits above it.** `perc` is at
         −0.45 and `tests/music.test.ts` refuses a placed layer whose weight is in the bottom octave —
         a 190 Hz drum falling to 110 is a low-mid, which is the band the report was actually missing.
+
+        ⚠️ **IT IS THE WHOLE LAYER NOW AND ITS WINDOW MOVED WITH THE COMPANY IT LOST** — 0271. With the
+        glides gone `perc` leaves the `hi` band for `lowmid L` and drops from the top of the ranking to
+        −2.9 dB at `boss`: a processional you feel under the organ rather than a part you follow.
       */
       steps: [1, _, _, 0.62, _, 0.7, _, _, 0.86, _, _, 0.6, _, 0.72, _, 0.66],
       pitched: false,
       perBeat: 1,
       octave: 0,
       note: { wave: 'sine', from: 190, to: 108, seconds: 0.22, gain: 0.34, attack: 0.001, curve: 4.2, drive: 0.22 },
-    },
-    {
-      /*
-        THE HIGH HITS, ASKED FOR BY NAME — 0134: *"it also needs some really higher octave hits as
-        well in a few spots."*
-
-        ⚠️ **Rare and loud rather than frequent and quiet**, which is what makes a hit a hit: eight in
-        sixteen bars, on the bar the phrase turns on. A struck plate at three and a half kilohertz is
-        the top of this place's range and nothing else goes near it — so it reads as an event even at
-        a gain the mix barely notices.
-      */
-      steps: [1, _, _, 0.72, _, _, 0.86, _, _, _, 0.78, _, 1, _, _, 0.8],
-      pitched: false,
-      perBeat: 1,
-      octave: 0,
-      note: { wave: 'tri', from: 3520, to: 2640, seconds: 0.26, gain: 0.11, attack: 0.0008, curve: 3.4, highFrom: 1800 },
     },
   ],
 

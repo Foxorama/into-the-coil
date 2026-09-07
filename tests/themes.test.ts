@@ -1139,7 +1139,14 @@ describe('0128 — a place plays its own material, and shares everything it does
   */
   const STILL_ADRIFT: Record<ThemeKind, readonly string[]> = {
     approach: ['approach/dread', 'approach/drive', 'boss/dread', 'boss/wraith', 'bossPeak/dread', 'surge/drive'],
-    nebula: ['approach/toll', 'boss/dread', 'boss/wraith', 'bossPeak/dread'],
+    /*
+      ⚠️ **`boss/wraith` CAME OFF WITH 0271, AND NOBODY WENT LOOKING FOR IT.** Ember Nebula's `perc`
+      lost the two pitched glides that were sitting at the top of its `hi` window; `wraith` is a
+      `counter` in `himid R` and had been beaten there. **A layer removed for a report about a
+      DIFFERENT layer freed this one**, which is the case this second assertion exists to catch —
+      a known-bad list nobody prunes stops being a record of what is still broken.
+    */
+    nebula: ['approach/toll', 'boss/dread', 'bossPeak/dread'],
     /*
       ── EMPTY, THEN THIRTEEN, AND THE THIRTEEN ARE A VERDICT RATHER THAN A REGRESSION ─────────────
 
