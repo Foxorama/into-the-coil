@@ -238,11 +238,38 @@ export const TITLE_ARRANGEMENT: Readonly<Record<MusicRole, readonly MusicLayer[]
  * the invariant the first arrangement broke and spent four hundred iterations failing to.
  *
  * ⚠️ **AND A PLACE NEED NOT DISAGREE.** An empty row is a place that plays the composition's own
- * shape, which is what level one is for.
+ * shape at every rung.
+ *
+ * ⚠️ **THAT USED TO SAY *which is what level one is for*, AND LEVEL ONE STOPPED BEING IT.** The
+ * Approach named nothing here because it WAS the arrangement — the reference the other six were
+ * measured against. On 2026-09-07 its `mix.hook` came down from 1.9 to 0.78 by ear, which left
+ * `arp` leading its `push`, and the choice was put as it stood: restore the riff at that one rung,
+ * or let level one disagree like anywhere else. *"Let's go with 2, I'm happy to end the level
+ * comparison status."*
+ *
+ * ⚠️ **SO NO PLACE IS THE REFERENCE NOW, AND NOTHING NEEDED ONE.** The base composition still exists
+ * — it is `ARRANGEMENT` above, which is a table rather than a level — and every place including The
+ * Approach is a deviation from it. What is gone is the claim that one of the seven could be listened
+ * to as the neutral case, which had already stopped being audibly true.
  */
 export const LEADS: Record<ThemeKind, Partial<Record<MusicLevel, MusicLayer>>> = {
-  // The base composition. It IS the arrangement, so it never disagrees with it.
-  approach: {},
+  /*
+    ⚠️ **`push` IS THE ARPEGGIO HERE, AND THIS ROW WAS EMPTY UNTIL IT WASN'T.** The shared table's
+    `push` is *the riff arrives and the hymn steps under it* — `part: ['hook']` — and that described
+    The Approach until `mix.hook` went 1.9 → 0.78 on 2026-09-07. At that rung the mix is now `perc`
+    2.11, **`arp` 1.87**, `call` 1.53, `groove` 1.12 and `hook` 0.63: the arpeggio leads it, which is
+    what `nebula` and `saurian` already say about their own `push`.
+
+    ⚠️ **IT CHANGES NO AUDIO.** Every gain is in `src/content/themes.ts` and none of them moves; this
+    says what the rung is ABOUT. 0164 went red on `approach/push/hook` because the mix had stopped
+    delivering a `part` — and the answer is that `hook` is no longer the part, not that the mix is
+    wrong. The ear ruled first: *"the balanced level approach sounds pretty good."*
+
+    ⚠️ **`surge` IS DELIBERATELY NOT LISTED.** `hook` is a `counter` there in the shared table, so
+    the same 5 dB cut left it doing exactly what it was asked to do. One rung changed its subject;
+    the other only changed its level, and conflating the two is what the single `mix` number did.
+  */
+  approach: { push: 'arp' },
   /*
     *"Haunting hymns… pipe organs… hellish, discordant"* — the choir sings the level, the mixture
     takes the push, and the thing that arrives in the fight is the howl rather than the tritone.

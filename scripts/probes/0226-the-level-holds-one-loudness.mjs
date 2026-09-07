@@ -19,8 +19,8 @@ export const PROBES = [
     guard: 'every rung of a place holds its run loudness',
     edit: {
       path: 'src/content/themes.ts',
-      find: '  approach: { push: 0.6744, surge: 0.5683,',
-      replace: '  approach: { push: 1, surge: 0.5683,',
+      find: '  approach: { push: 0.8353, surge: 0.7668,',
+      replace: '  approach: { push: 1, surge: 0.7668,',
     },
   },
   {

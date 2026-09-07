@@ -134,8 +134,8 @@ export const PROBES = [
     guard: '0107 — and the build is a level-long climb that starts after the opening',
     edit: {
       path: 'src/content/music.ts',
-      find: 'export const AURA_ONSET_UNITS = 720;',
-      replace: 'export const AURA_ONSET_UNITS = 0;',
+      find: 'export const AURA_BUILD_UNITS = 720;',
+      replace: 'export const AURA_BUILD_UNITS = 0;',
     },
   },
   {

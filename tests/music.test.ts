@@ -20,7 +20,7 @@ import {
   AURA_LAYERS,
   AURA_NEAR_UNITS,
   AURA_FAR_UNITS,
-  AURA_ONSET_UNITS,
+  AURA_BUILD_UNITS,
   RUNG_CLOSES,
   LAYER_PAN,
   PAN_LIMIT,
@@ -1265,21 +1265,31 @@ describe('the boss brings an aura with it', () => {
     }
   });
 
-  it('0107 — and the build is a level-long climb that starts after the opening', () => {
+  it('0107 — and the build is the run-in to the boss, not a level-long climb', () => {
     /*
-      ⚠️ **Reported: *"start about 15-30secs into the start of a level."*** At 36 units a second,
-      `AURA_ONSET_UNITS` of 720 is twenty seconds — the middle of the range asked for, and a DISTANCE
-      rather than a timer, so a level authored longer spends longer building rather than arriving at
-      full dread a third of the way in.
+      ⚠️ **THIS GUARD USED TO HOLD THE OPPOSITE, AND THE REPORT THAT SET IT WAS MADE BEFORE ANYBODY
+      HAD HEARD IT.** It asserted *started by the thirtieth second*, from *"start about 15-30secs into
+      the start of a level."* That was delivered literally and failed audibly: twenty seconds in,
+      `auraFast` sits at 0.017 — an ember crackle with no furnace under it, over music the aura loops
+      are deliberately unrelated to — and it was re-reported on 2026-09-07 as *"a weird sort of
+      sound… almost sounds like a bad audio artifact"*, then *"it definitely needs to be held back
+      till the approach or first boss part."*
 
-      ⚠️ **Silent before the onset, which is 0043's empty opening kept.** A level opens on an empty
-      field so the controls can be found; one that opened with the boss already audible would be
-      answering a different ask.
+      ⚠️ **AND AT THE OTHER END IT WAS 14.5 dB UNDER THE LOUDEST OF THIRTEEN LAYERS AT THE FIGHT** —
+      *"embers and furnace roar? I haven't heard those ever at all."* Audible where it means nothing,
+      buried where it means everything. `AURA_BUILD_UNITS` now counts back from `bossAt`.
+
+      ⚠️ **STILL 0043's EMPTY OPENING, AND NOW A GREAT DEAL MORE OF IT.** A level opens on an empty
+      field so the controls can be found; the aura no longer takes any of that back twenty seconds in.
+
+      ⚠️ **AND STILL NOT WRITTEN IN THE CONSTANT UNDER TEST**, which is the lesson the old version of
+      this comment recorded and which survives the reversal: 1080 and 360 units are thirty and ten
+      seconds at 36 units a second, and neither is derived from 720.
     */
     const bossAt = 6350;
     /*
-      ⚠️ **IN SECONDS AND NOT IN `AURA_ONSET_UNITS`, AND A PROBE IS WHY.** The first draft asserted
-      that the build was silent at `AURA_ONSET_UNITS - 1` — which moves with the constant, so setting
+      ⚠️ **IN SECONDS AND NOT IN `AURA_BUILD_UNITS`, AND A PROBE IS WHY.** The first draft asserted
+      that the build was silent at `AURA_BUILD_UNITS - 1` — which moves with the constant, so setting
       the onset to zero left the suite completely green. That is
       `docs/decisions/0027-measure-the-picture-not-the-model.md`'s *a guard measuring a quantity
       defined in terms of the constant it guards proves only that the code agrees with itself*, caught
@@ -1296,19 +1306,32 @@ describe('the boss brings an aura with it', () => {
     */
     for (const theme of THEME_KINDS) {
       expect(auraBuild(0, bossAt, theme), `${theme} opens with the boss already audible`).toBe(0);
-      expect(auraBuild(at(15), bossAt, theme), `${theme}'s build had already started fifteen seconds in`).toBe(0);
+      expect(auraBuild(at(30), bossAt, theme), `${theme}'s build had already started thirty seconds in`).toBe(0);
       expect(
-        auraBuild(at(30), bossAt, theme),
-        `${theme}'s build had still not started thirty seconds in`,
+        auraBuild(bossAt / 2, bossAt, theme),
+        `${theme}'s build had already started halfway to the boss`,
+      ).toBe(0);
+      expect(
+        auraBuild(bossAt - 1080, bossAt, theme),
+        `${theme}'s build had already started thirty seconds out from the boss`,
+      ).toBe(0);
+      expect(
+        auraBuild(bossAt - 360, bossAt, theme),
+        `${theme}'s build had still not started ten seconds out from the boss`,
       ).toBeGreaterThan(0);
       expect(auraBuild(bossAt, bossAt, theme), `${theme}'s build does not reach its ceiling by the boss`).toBeCloseTo(
         auraCeilingOf(theme),
         5,
       );
-      // It climbs the whole way rather than arriving early and sitting there.
-      const third = auraBuild(AURA_ONSET_UNITS + (bossAt - AURA_ONSET_UNITS) / 3, bossAt, theme);
-      const twoThirds = auraBuild(AURA_ONSET_UNITS + (2 * (bossAt - AURA_ONSET_UNITS)) / 3, bossAt, theme);
-      expect(twoThirds, `${theme}'s build flattens out before the boss`).toBeGreaterThan(third);
+      /*
+        It climbs the whole way rather than arriving early and sitting there. **Sampled at fixed
+        distances OUT FROM THE BOSS — thirteen and seven seconds — rather than at fractions of the
+        window**, for the reason the head of this test gives: a point expressed in the constant under
+        test moves with it and proves only that the code agrees with itself.
+      */
+      const far = auraBuild(bossAt - 480, bossAt, theme);
+      const near = auraBuild(bossAt - 240, bossAt, theme);
+      expect(near, `${theme}'s build flattens out before the boss`).toBeGreaterThan(far);
     }
     /*
       ⚠️ **A level with no boss builds nothing** — `Number.POSITIVE_INFINITY` is what a fixture uses,
@@ -2630,7 +2653,7 @@ describe('the music room auditions a level rather than a rung', () => {
       const level = LEVELS[kind];
       expect(auditionAura(level, level.theme, 0), `${kind}: the room opens under a dread`).toBe(0);
       expect(
-        auditionAura(level, level.theme, AURA_ONSET_UNITS),
+        auditionAura(level, level.theme, AURA_BUILD_UNITS),
         `${kind}: the aura starts before the opening stretch is over`,
       ).toBe(0);
       const atBoss = auditionAura(level, level.theme, level.bossAt);
