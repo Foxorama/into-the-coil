@@ -38,6 +38,7 @@ import {
   AURA_FAR_UNITS,
   AURA_CURVE,
   AURA_BUILD_UNITS,
+  PAN_HORIZON_SECONDS,
   PHRASE_SECONDS,
   type MusicLayer,
   type MusicLevel,
@@ -49,6 +50,7 @@ import {
   THEMES,
   airOf,
   auraCeilingOf,
+  panTrackOf,
   mixOf,
   rungOf,
   voicesOf,
@@ -1525,6 +1527,56 @@ export function makeMusicOut(
    * ⚠️ **The old set is stopped AT `when` and not before**, so there is no instant with nothing
    * playing. Overlap of exactly zero is what makes the swap a join rather than a gap.
    */
+  /**
+   * Write a place's pan tracks into the panners, for `PAN_HORIZON_SECONDS` from `when`.
+   *
+   * ⚠️ **AT THE SWAP AND NOWHERE ELSE, WHICH IS THE WHOLE REASON THIS IS AFFORDABLE.** `swapTo` runs
+   * at a start and then only on a correction — 0094 sizes that at *rare* — so a horizon of
+   * `setValueAtTime` events costs nothing per frame and allocates nothing in the frame loop
+   * (`docs/decisions/0022-frame-rate-is-a-feature.md`). There is no scheduler anywhere in this mixer
+   * and this does not add one: it rides the same *start everything at one timestamp* the four loops
+   * already rest on.
+   *
+   * ⚠️ **`cancelScheduledValues` FIRST, because a re-phase must not leave the old horizon behind.**
+   * A swap moves the anchor, so events written against the previous one are events at the wrong
+   * moments — and they would outlive the sources that justified them.
+   *
+   * ⚠️ **`setValueAtTime` AND NOT A RAMP.** A pan move here is a change of position between notes,
+   * not a sweep across one; the desk's own `panOf` uses `setTargetAtTime` because a hand dragging a
+   * fader wants smoothing, and this is the opposite gesture.
+   */
+  const schedulePan = (when: number, theme: ThemeKind): void => {
+    for (const layer of MUSIC_LAYERS) {
+      const param = pans[layer].pan;
+      param.cancelScheduledValues(0);
+      const track = panTrackOf(theme, layer);
+      if (track === undefined) {
+        param.value = LAYER_PAN[layer];
+        continue;
+      }
+      param.value = LAYER_PAN[layer];
+      const step = BEAT_SECONDS / track.perBeat;
+      const loop = step * track.steps.length;
+      /*
+        ⚠️ **ANCHORED TO THE LOOP AND NOT TO NOW, so a re-schedule keeps its place in the bar.** The
+        track is a position in the layer's own loop; writing it from `currentTime` would slide the
+        gesture off the notes it was written against, which is the same mistake `anchorAudio` exists
+        to stop `levelWrites` making. Events already in the past are skipped rather than written,
+        because a `setValueAtTime` behind the clock applies at once and a horizon of them would
+        arrive as one burst.
+      */
+      const from = ctx.currentTime;
+      for (let start = when; start < when + PAN_HORIZON_SECONDS; start += loop) {
+        for (let i = 0; i < track.steps.length; i++) {
+          const to = track.steps[i];
+          if (to === null || to === undefined) continue;
+          const at = start + i * step;
+          if (at > from) param.setValueAtTime(to, at);
+        }
+      }
+    }
+  };
+
   const swapTo = (when: number): void => {
     for (let i = 0; i < sources.length; i++) sources[i]!.stop(when);
     sources.length = 0;
@@ -1537,6 +1589,7 @@ export function makeMusicOut(
       sources.push(source);
     }
     anchorAudio = when;
+    schedulePan(when, place);
   };
 
   return {
@@ -1569,9 +1622,17 @@ export function makeMusicOut(
     ): void {
       current = level;
       near = nearness;
+      /*
+        ⚠️ **A CHANGE OF PLACE RE-WRITES THE PAN HORIZON, AND NOTHING ELSE DOES.** This runs every
+        frame, so the comparison is the whole of what keeps it off the frame loop: six of the seven
+        places state no track at all, and the seventh states one. Anchored to `anchorAudio` rather
+        than to now, so the gesture keeps its place in the bar across the change.
+      */
+      const moved = place !== theme;
       place = theme;
       shape = ladder;
       if (!on) return;
+      if (moved && started) schedulePan(anchorAudio, theme);
       /*
         ⚠️ **THE WHOLE DECISION IS `levelWrites` AND NONE OF IT IS HERE** — 0117. What to write, when
         the ramp starts and whether a layer moves at all are one piece of arithmetic, and it is

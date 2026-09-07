@@ -55,7 +55,7 @@
  * boss did not need a note the scale does not have.
  */
 
-import { BEAT_SECONDS, type MusicLayer, type MusicVoice } from './music.ts';
+import { BEAT_SECONDS, type MusicLayer, type MusicVoice, type PanTrack } from './music.ts';
 
 /** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */
 const _ = null;
@@ -214,6 +214,28 @@ const OSTINATO: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
  */
 const STABS: readonly (number | null)[] = ROOT.flatMap((root, bar) =>
   bar % 4 === 3 ? [root + 12, _, FIFTH[bar]! + 12, _, root + 12, _, _, _] : [_, _, _, _, _, _, _, _],
+);
+
+/**
+ * THE THREE NOTES BOUNCE, AND THE ORGAN GOES WITH THEM.
+ *
+ * ⚠️ **Asked for by name:** *"is there anyway we can have those three notes play right, left, right
+ * ear?… I think it'd be pretty good."* Then, on hearing it: *"the organ going left to right was
+ * great, I didn't notice it on the organ and it made those three notes bounce around exactly how I
+ * wanted."* `PanTrack` in `src/content/music.ts` records why the whole layer moving is the design and
+ * not a compromise — the alternative cost 4.5 MB and was inaudibly different.
+ *
+ * ⚠️ **DERIVED FROM `ROOT` SO IT CANNOT DRIFT FROM `STABS`.** One entry per beat over the same
+ * sixteen bars; the move lands on the three stab beats of every fourth bar and comes home on the
+ * fourth. Typing sixty-four numbers that have to agree with the array above it is exactly what the
+ * comment on `MIXTURE` says goes wrong silently.
+ *
+ * ⚠️ **±0.55 AND NOT ±0.65.** `LAYER_PAN.hook` is +0.55 and the home position is where the third note
+ * and the return already sit, so the swing is the layer's own width mirrored rather than a wider one
+ * borrowed for the gesture — which also keeps it inside `PAN_LIMIT` without relying on the clamp.
+ */
+const SWING: readonly (number | null)[] = ROOT.flatMap((_root, bar) =>
+  bar % 4 === 3 ? [0.55, -0.55, 0.55, null] : [_, _, _, _],
 );
 
 /**
@@ -1265,4 +1287,14 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       note: { wave: 'noise', from: 5200, to: 2600, seconds: BEAT_SECONDS * 0.34, gain: 0.1, attack: 0.004, curve: 3.6, lowFrom: 6400, lowTo: 2200, highFrom: 900 },
     },
   ],
+};
+
+/**
+ * Where this place moves a layer, rather than what it plays.
+ *
+ * ⚠️ **ONE LAYER, ONE GESTURE, AND IT IS THE ONLY ONE IN THE GAME.** `SWING` above has the argument;
+ * `hook` is the only layer in any place that does not hold still, and six places state nothing here.
+ */
+export const NEBULA_PAN: Partial<Record<MusicLayer, PanTrack>> = {
+  hook: { perBeat: 1, steps: SWING },
 };

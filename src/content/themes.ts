@@ -79,8 +79,9 @@ import {
   type MusicLayer,
   type MusicLevel,
   type MusicVoice,
+  type PanTrack,
 } from './music.ts';
-import { NEBULA_VOICES } from './nebula.ts';
+import { NEBULA_PAN, NEBULA_VOICES } from './nebula.ts';
 import type { Palette, PaletteName } from './palette.ts';
 import { RIME_VOICES } from './rime.ts';
 import { SAURIAN_CUES, SAURIAN_VOICES } from './saurian.ts';
@@ -304,6 +305,15 @@ export interface ThemeRow {
    * written to remove arriving one table over.
    */
   ladder?: ThemeLadder;
+  /**
+   * The layers this place MOVES across the stereo field, as a track over the layer's own loop.
+   *
+   * ⚠️ **`PanTrack` in `src/content/music.ts` carries the argument**, including why the whole layer
+   * moves rather than one note of it and why that turned out to be what was wanted. Absent means the
+   * layer sits at `LAYER_PAN[layer]` for the whole run, which is true of six places and of every
+   * layer but one in the seventh.
+   */
+  pan?: Partial<Record<MusicLayer, PanTrack>>;
   /**
    * The layers this place plays DIFFERENTLY, as a replacement for their voices.
    *
@@ -646,6 +656,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       groove: 0.9,
     },
     voices: NEBULA_VOICES,
+    pan: NEBULA_PAN,
     /*
       ⚠️ **THERE IS NO KIT IN A CATHEDRAL, AND FOR ITS WHOLE LIFE THIS PLACE HAD ONE** —
       `docs/decisions/0172-a-place-opens-with-its-own-four.md`. The shared ladder's `run` row is the
@@ -1411,6 +1422,18 @@ export function cuedBy(theme: ThemeKind): CueKind[] {
   const own = THEMES[theme].cues;
   if (own === undefined) return [];
   return (Object.keys(own) as CueKind[]).filter((kind) => own[kind] !== undefined);
+}
+
+/**
+ * Where `layer` moves to across its loop in `theme`, or `undefined` for a layer that holds still.
+ *
+ * ⚠️ **A FUNCTION RATHER THAN A LOOKUP, on `rungOf`'s own terms** — 0162. The mixer schedules it, the
+ * WAV rig renders it and a guard reads it, and three copies of *does this place move this layer* is
+ * how the rig ends up writing a file the game does not play.
+ */
+export function panTrackOf(theme: ThemeKind | undefined, layer: MusicLayer): PanTrack | undefined {
+  if (theme === undefined) return undefined;
+  return THEMES[theme].pan?.[layer];
 }
 
 /**

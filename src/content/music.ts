@@ -360,6 +360,58 @@ export const LAYER_PAN: Record<MusicLayer, number> = {
 export const PAN_LIMIT = 0.65;
 
 /**
+ * Where a layer MOVES to, across its own loop — one entry per step, `null` for *stay*.
+ *
+ * ── A POSITION WAS A CONSTANT, AND ONE GESTURE WANTED TO BE A LINE ───────────────────────────────
+ *
+ * ⚠️ **Asked for 2026-09-07, of Ember Nebula's three-note figure:** *"Is there anyway we can have
+ * those three notes play right, left, right ear? It'll sound the same from speakers, but if we can
+ * bounce those three notes only between left and right… I think it'd be pretty good."* And, having
+ * heard it: *"The organ going left to right was great, I didn't notice it on the organ and it made
+ * those three notes bounce around exactly how I wanted."*
+ *
+ * ⚠️ **THE WHOLE LAYER MOVES, AND THAT IS THE DESIGN RATHER THAN A COMPROMISE.** `LAYER_PAN` is one
+ * number per layer because the graph is one `StereoPannerNode` per layer over a MONO buffer, and
+ * `LAYER_PAN`'s own note explains why that is not negotiable: stereo buffers double 52 MB of resident
+ * audio against a ceiling `tests/sound.test.ts` says must not be raised. **Per-note panning would
+ * have cost 4.5 MB for one gesture; automating the panner costs nothing at all.** It was rendered
+ * both ways before either was written, and the listener could not hear the organ moving with the
+ * notes — so the expensive version was never built.
+ *
+ * ⚠️ **IT IS SCHEDULED ONCE AND NEVER PER FRAME** — `docs/decisions/0022-frame-rate-is-a-feature.md`.
+ * The mixer starts every source at one timestamp and *"there is no scheduler anywhere"*; this rides
+ * that, writing a horizon of `setValueAtTime` events into the panner at the same moment, so the frame
+ * loop is untouched and nothing allocates in it.
+ *
+ * ⚠️ **`null` IS *stay*, NOT *centre*.** A track is sparse by nature — three moves in sixty-four
+ * beats — and a table that had to say *where it already is* on every other beat would be sixty-one
+ * numbers restating one, which is the drift `LAYER_PAN` exists to avoid. A layer returns to
+ * `LAYER_PAN[layer]` where a track says so explicitly, and holds otherwise.
+ */
+export interface PanTrack {
+  /** Steps per beat, exactly as a voice means it. */
+  perBeat: number;
+  /** One entry per step: a pan to move to, or `null` to hold where it is. */
+  steps: readonly (number | null)[];
+}
+
+/**
+ * How far ahead a pan track is written into the panner, in seconds.
+ *
+ * ⚠️ **FIFTEEN MINUTES, WHICH IS FOUR TIMES THE LONGEST LEVEL AND THEREFORE NOT A BUDGET.** The
+ * longest track in the game is 3:12 plus its fight; a horizon that outlasts a level by that margin
+ * means the events are written once at the start and never thought about again, which is the point.
+ * A number that had to be *enough* would be a budget and would need an owner —
+ * `docs/decisions/0192-a-guard-holds-an-invariant.md` — so it is deliberately far past enough.
+ *
+ * ⚠️ **WHAT IT COSTS IS 563 `setValueAtTime` CALLS, ONCE.** Ember Nebula's `hook` moves three times
+ * every four bars over a 25.6-second loop: 12 events a loop, 35 loops in the horizon, one layer, one
+ * place. They are native automation events on a parameter that already exists, and they are written
+ * at the same instant the sources start.
+ */
+export const PAN_HORIZON_SECONDS = 900;
+
+/**
  * The two the boss brings with it, and they are the only layers driven by a DISTANCE.
  *
  * ── WHY THE AURA IS MUSIC AND NOT A CUE ─────────────────────────────────────────────────────────

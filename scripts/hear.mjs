@@ -56,10 +56,10 @@ import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { MASTER_GAIN, SAMPLE_RATE, cueSeconds, panFor, sampleCue, saturate, variantAt, velocitiesOf } from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { bakeLoops } from '../src/app/music.ts';
-import { THEME_KINDS, cueRowOf, rungOf } from '../src/content/themes.ts';
+import { THEME_KINDS, cueRowOf, panTrackOf, rungOf } from '../src/content/themes.ts';
 import { SOLVED_BY } from '../src/content/arrangement.ts';
 import { profileOfLoops, solveLevel } from './solve-mix.mjs';
-import { PHRASE_SECONDS, BAR_SECONDS, LAYER_BARS, LAYER_PAN, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_DRIVE, MUSIC_GAIN, AURA_LAYERS, AURA_NEAR_UNITS, AURA_FAR_UNITS } from '../src/content/music.ts';
+import { PHRASE_SECONDS, BAR_SECONDS, BEAT_SECONDS, LAYER_BARS, LAYER_PAN, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_DRIVE, MUSIC_GAIN, AURA_LAYERS, AURA_NEAR_UNITS, AURA_FAR_UNITS } from '../src/content/music.ts';
 
 /*
   ⚠️ **THE MUSIC BUS AS IT ACTUALLY LEAVES, AND THE RIG DID NOT HAVE IT FOR ONE COMMIT** —
@@ -455,6 +455,37 @@ if (args.has('level')) {
   const pan = {};
   for (const layer of MUSIC_LAYERS) pan[layer] = panGains(LAYER_PAN[layer]);
   /*
+    ⚠️ **A LAYER THAT MOVES IS RESOLVED PER SAMPLE HERE, AND THE GAME SCHEDULES IT ONCE.** Two ways
+    of saying the same thing, which is the arrangement `panGains` already has: the mixer writes a
+    horizon of `setValueAtTime` into a `StereoPannerNode`, and this file cannot — it has no graph. The
+    thing that must not differ is WHERE the layer is at a given second, and both read the same
+    `panTrackOf`.
+
+    ⚠️ **WITHOUT THIS, `--level` WOULD WRITE A FILE THE GAME DOES NOT PLAY** — the exact failure
+    `docs/decisions/0209-the-rig-hears-in-stereo.md` exists to prevent, and the one this session hit
+    by hand: the swing was auditioned from a throwaway copy of this script, and three renders were
+    handed over afterwards that quietly did not have it in them.
+  */
+  const moving = {};
+  for (const layer of MUSIC_LAYERS) {
+    const t = panTrackOf(theme, layer);
+    if (t === undefined) continue;
+    const step = BEAT_SECONDS / t.perBeat;
+    const held = [];
+    let at = LAYER_PAN[layer];
+    for (const to of t.steps) {
+      if (to !== null && to !== undefined) at = to;
+      held.push(panGains(at));
+    }
+    moving[layer] = { step, loop: step * t.steps.length, held };
+  }
+  const panAt = (layer, second) => {
+    const m = moving[layer];
+    if (m === undefined) return pan[layer];
+    const into = ((second % m.loop) + m.loop) % m.loop;
+    return m.held[Math.floor(into / m.step)] ?? pan[layer];
+  };
+  /*
     ⚠️ **The gains are smoothed in BLOCKS and the audio is not.** A rung is a step function of a
     camera position, so asking `musicLevelFor` per sample is 5.3 million answers to a question that
     changes four times. 64 samples is 1.45ms — two orders of magnitude under the 1.6s time constant
@@ -532,8 +563,9 @@ if (args.has('level')) {
         */
         if (t >= r.at) held[layer] += (r.target - held[layer]) * (1 - Math.exp(-1 / (SAMPLE_RATE * r.tau)));
         const v = at(layer, i + n) * held[layer];
-        left += v * pan[layer].left;
-        right += v * pan[layer].right;
+        const p = panAt(layer, t);
+        left += v * p.left;
+        right += v * p.right;
       }
       /*
         ⚠️ **The shaper is PER CHANNEL, which is what a `WaveShaperNode` on a stereo bus does.** One
