@@ -152,6 +152,10 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **a fight thins the waves over it: while a mid-boss is on the field one firing wave in three lands and the rest are SKIPPED, never deferred; the quiet ones are untouched — `scripts/weigh-fight.mjs` is the instrument, and the budget is the level's own approach rather than a constant** | [0267](decisions/0267-a-fight-thins-the-waves-over-it.md) |
 | **a shattering volley is counted in shards wherever it is thrown, a summons tops its horde up to a ceiling, and a tier scales how much ARRIVES — the guard is a pilot that flies to the safest place it can reach, and the bench scrubs a boss's health so a phase can be stood in** | [0270](decisions/0270-a-shattering-volley-is-counted-in-shards.md), [`the-ice-fills-the-screen`](../reports/the-ice-fills-the-screen-2026-09-07.md) |
 | **Ember Nebula's `perc` is one voice, the frame drum: the two pitched glides that were the loudest thing in the place at three rungs are deleted, and the layer moves out of the `hi` window into `lowmid`** | [0271](decisions/0271-the-cathedral-keeps-only-its-drum.md) |
+| **a fader that is following the mixer sits where the mixer has the layer, over 60 dB of travel in notches of a tenth — so taking one over changes nothing until you move it, and a mix session is possible** | [0272](decisions/0272-the-fader-shows-where-the-layer-is.md) |
+| **the aura counts BACK from the boss rather than forward from the opening: `AURA_BUILD_UNITS`, the same twenty seconds at the other end of the level** | [0273](decisions/0273-the-aura-is-the-run-in-to-the-boss.md) |
+| **a place is mixed BY EAR and level one is not the reference: The Approach's `hook`, `lead` and `counter`, Ember Nebula's `chords`, `crash` and cymbal — and 0155's claim that The Approach never disagrees with the arrangement is retired** | [0274](decisions/0274-a-place-is-mixed-by-ear-and-level-one-is-not-the-reference.md) |
+| **a layer MAY MOVE: a place states a `PanTrack` over the layer's own loop, written as a horizon of `setValueAtTime` events at the instant the sources start — Ember Nebula's `hook` bounces right, left, right** | [0275](decisions/0275-a-layer-may-move.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -807,8 +811,30 @@ after miniboss."* Two levels' mid-boss fights used to outlive their own wave scr
 *after* for wave spacing to put anything in; at eighteen to twenty-three seconds every level has one,
 of sixty to eighty seconds. 0267's *What is owed* carries the re-measure.
 
-**The next is the rest of the picture** — the mid-bosses' attacks and the enemies' bullets legible —
-then the music as an album; every one of those is a model quantity until it is flown.
+⚠️ **THE MUSIC CHANNEL RAN 0271–0275 AND IS PAUSED UNTIL THE EVENING OF 2026-09-08**, said in the
+session that landed 0275: *"I won't be able to go back to the music till tonight."* The desk is
+usable now ([0272](decisions/0272-the-fader-shows-where-the-layer-is.md)), two places are mixed by
+ear ([0274](decisions/0274-a-place-is-mixed-by-ear-and-level-one-is-not-the-reference.md)), the aura
+sits at the boss end of the level ([0273](decisions/0273-the-aura-is-the-run-in-to-the-boss.md)) and
+a layer may move ([0275](decisions/0275-a-layer-may-move.md)). **The album is still a preparation
+job, not an export.**
+
+⚠️ **SO THE LIVE CHANNEL IS ART, AND IT STARTS FROM A DIAGNOSIS RATHER THAN FROM ANOTHER PASS** —
+[`the-vocabulary-is-the-ceiling`](../reports/the-vocabulary-is-the-ceiling-2026-09-08.md), written
+against *"the serpent … has gone from a weird grey space worm to a weird green space worm"* and
+*"I don't want to have to do a dozen passes against each boss."* **Read it before drawing anything.**
+It measures what the painting kit can and cannot express, names one of the three ceilings as a
+defect against [0192](decisions/0192-a-guard-holds-an-invariant.md), and lists what is NOT the cause
+so it is not chased again.
+
+⚠️ **THE INTENTION IT SETS: the kit is lifted ONCE, and the serpent is the only hull redrawn on it**,
+so a verdict on the picture is not tangled with a change to the pipeline — 0109. The other six ride
+the lifted kit afterwards. **And the target arrives as a reference or a sketch from the player**,
+asked for and agreed 2026-09-08, on [`the-coil-drawn`](../reports/the-coil-drawn-2026-09-05.md)'s
+evidence that a drawn path converged in one pass what four passes of words had not.
+
+**And the rest of the picture is still owed** — the mid-bosses' attacks and the enemies' bullets
+legible — then the music as an album; every one of those is a model quantity until it is flown.
 Everything below this paragraph about the weapons is the record of how
 the game got to the alpha, and it is kept because the alpha list is a verdict on it.
 
