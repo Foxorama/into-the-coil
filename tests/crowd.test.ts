@@ -160,7 +160,7 @@ const SUMMONS = BOSS_KINDS.flatMap((kind) =>
  * run is not cut short by a death, which would end the measurement exactly where it gets interesting.
  */
 function fly(kind: BossKind, phaseIndex: number, tier: (typeof DIFFICULTY_KINDS)[number], seconds: number) {
-  const { world } = playableWorld(solo(kind), tier);
+  const { world, stick } = playableWorld(solo(kind), tier);
   const frame = new GameFrame(world);
   for (let i = 0; i < 900 && (world.bossPool.size === 0 || i < 700); i++) {
     world.ship.health = world.shipRow.health;
@@ -178,10 +178,24 @@ function fly(kind: BossKind, phaseIndex: number, tier: (typeof DIFFICULTY_KINDS)
     world.ship.health = world.shipRow.health;
     world.ship.invulnFor = 0;
     const { run, middle } = widestReachableRun(world, speedNow(world));
-    // The pilot: full stick towards the middle of the widest place it can reach.
+    /*
+      The pilot: full stick towards the middle of the widest place it can reach.
+
+      ⚠️ **IT IS THE FIXTURE'S STICK AND IT USED TO BE `world.intent`, WHICH DID NOTHING.**
+      `src/app/frame.ts` calls `w.input.contribute(w.intent)` at the top of every step and the
+      combiner's job is to ZERO the intent before the devices add to it — so an intent written between
+      two steps was overwritten before `flyShip` ever read it, and this guard's own paragraph above
+      (*"the pilot flies, and without that this guard measures the fixture"*) described something that
+      had never happened. Found while writing `tests/back.test.ts`; `tests/world.ts` now hands a
+      fixture the stick the real devices write to. `docs/decisions/0281-a-boss-guards-its-own-back.md`.
+
+      ⚠️ **THE NUMBERS BELOW ARE THEREFORE THE FIRST ONES THIS GUARD HAS EVER MEASURED WITH A PILOT.**
+      Every one of them was re-run against a flying ship before this landed, and 0270's assertions
+      hold unchanged — which is the reason this could be repaired here rather than left as a finding.
+    */
     const wants = middle - world.ship.across;
-    world.intent.across = wants > 0.5 ? 1 : wants < -0.5 ? -1 : 0;
-    world.intent.along = 0;
+    stick.across = wants > 0.5 ? 1 : wants < -0.5 ? -1 : 0;
+    stick.along = 0;
     frame.step();
     if (run < worstRun) worstRun = run;
     if (world.enemyShots.size > peakShots) peakShots = world.enemyShots.size;
