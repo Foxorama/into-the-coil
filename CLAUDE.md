@@ -19,6 +19,15 @@ decision needs no rule.
   an unverified one names what would — and one that makes the work wrong if it is wrong gets checked
   or the work stops. The predecessor is the floor, not the target.
   — [0028](docs/decisions/0028-quality-is-the-constraint.md)
+- **A cheap mechanism does not get to rename the ask.** If what was built does less than what was
+  asked, the deliverable is still the ask — say what the cheap thing does not do and what the real
+  one costs. **The tell is the rename**: a substitution that keeps the original name is obvious, and
+  one that arrives with a new name is invisible to the one making it. **A quantity that rejects an
+  option is checked in the case it is applied to**, never the case it was measured in — the numbers
+  nobody checks are the ones that decide what never gets built. **And the file being changed is read
+  before a mechanism is invented for it**, because the argument against that mechanism is usually
+  already written beside the code that would host it.
+  — [0280](docs/decisions/0280-a-cheap-mechanism-does-not-rename-the-ask.md)
 
 ## Process
 

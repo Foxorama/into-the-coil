@@ -170,10 +170,20 @@ a real fork:
 | how | bake N phases of the wave, pick one off the step clock | bake body segments, blit them along a travelling spine |
 | precedent | **exact** — `src/content/exhaust.ts`, *"a bitmap cannot rotate, so each frame is baked three ways"* | none |
 | blits | **1**, unchanged | ~14, and `tests/budget.test.ts` asserts blits equal one per entity EXACTLY |
-| atlas | 8–12 × 1.25 MB × 2 for the hurt twin | a handful of small bitmaps |
+| atlas | 8–12 × 1.25 MB × 2 for the hurt twin — ⚠️ **THIS IS THE BOSS'S FIGURE AND IT DOES NOT TRANSFER; SEE BELOW** | a handful of small bitmaps |
 | bake time | 8–12 more of the largest bitmaps in the game, on every resize and place change | negligible |
 | motion | a fixed cycle, quantised | continuous |
 | the muzzle and the hurtbox | a table of positions per phase | **fall out of it** — the head is a real point and the segments are the hurt shape |
+
+⚠️ **CORRECTION, 2026-09-08 — [0280](0280-a-cheap-mechanism-does-not-rename-the-ask.md).** The atlas
+row above is right about the SERPENT and was then carried, unre-measured, to *every enemy in the
+game*, where it is wrong by two orders of magnitude. A boss bakes at 404px — **638 KB a frame**; a
+drifter bakes at **40px — 6 KB**. All seventeen enemies with three extra frames each and their hurt
+twins come to **1.22 MB**, against **3.74 MB for one boss**.
+
+⚠️ **SO THE FORK IS NOT A FORK — IT SPLITS BY SIZE.** Frames are the cheap answer for enemies and the
+expensive one for bosses; the chain is the reverse. Reading this table as *frames are expensive* is
+what 0280 was written about, and it is the reading that produced a discarded pass of work.
 
 ⚠️ **THE SEGMENT CHAIN ALSO ANSWERS THE REQUEST THIS DECISION COULD NOT** — *"we need to update the
 boss collision to no longer be a disc if we can."* A serpent's disc is a bad fit for a ribbon, and the
