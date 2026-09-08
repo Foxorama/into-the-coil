@@ -55,13 +55,20 @@ export const PROBES = [
   {
     decision: '0264',
     suite: 'tests/accents.test.ts',
-    // The serpent's skull shrunk to its neck's width: the tentacle.
-    broke: 'the serpent’s skull no wider than its neck, which is the tentacle the report named',
+    /*
+      ⚠️ **RE-POINTED FOR 0276, AND IT BREAKS THE OPPOSITE FAULT NOW.** The guard used to hold a span
+      — *no wider than its neck, so it is a tentacle* — and that proxy was retired when it turned out
+      to be FALSE of a good serpent: a real snake's head is about its neck's width. What the guard
+      holds instead is *longer than it is tall*, so what reddens it is the blob, which is the fault
+      this project actually shipped twice. The tentacle's other half, the skin, is still held by
+      `THE LORD` in `tests/foes.test.ts`.
+    */
+    broke: 'the serpent’s skull squashed taller than it is long, which is the blob the report named',
     guard: '0264 — THE HEADS',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  [-0.68, -0.46],\n  [-0.8, -0.62],\n  [-0.9, -0.48],\n  [-1, -0.3],\n  [-1, 0.02],\n  [-0.9, 0.16],\n  [-0.7, 0.12],',
-      replace: '  [-0.9, -0.3],\n  [-1, -0.2],\n  [-1, 0],\n  [-0.9, 0.06],',
+      find: '  [-0.7, 0.088],\n  [-0.83, 0.122],\n  [-0.98, 0.131],\n  [-1.07, 0.09],\n  [-1.085, 0.026],\n  [-1.065, -0.04],\n  [-0.97, -0.097],\n  [-0.82, -0.138],',
+      replace: '  [-0.78, 0.2],\n  [-0.87, 0.24],\n  [-0.95, 0.18],\n  [-0.97, 0.0],\n  [-0.95, -0.18],\n  [-0.87, -0.24],\n  [-0.78, -0.2],',
     },
   },
 ];

@@ -16,7 +16,7 @@ import { SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/spr
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { THEME_KINDS, type ThemeKind } from '../src/content/themes.ts';
 import { viewOf } from '../src/sim/camera.ts';
-import { inside, tracingPen, type Pass, type Point } from './paths.ts';
+import { inside, strokeOutside, tracingPen, type Pass, type Point } from './paths.ts';
 
 /**
  * A SPRITE IS PAINTED, AND THE PAINT STAYS ON THE HULL.
@@ -412,9 +412,38 @@ describe('a boss differs from every other by more than its paint', () => {
 
     const serpent = SPRITE_KINDS[BOSSES.jormungandr.sprite]!;
     const body = traceAt(serpent, COMMON).passes[0]!.subpaths[0]!;
-    const skull = body.filter(([x]) => x < half - r * 0.7).map(([, y]) => (y - half) / r);
-    const skullSpan = Math.max(...skull) - Math.min(...skull);
-    expect(skullSpan, 'the serpent’s skull is no wider than its neck, so it is a tentacle').toBeGreaterThan(0.6);
+    /*
+      ── THE SKULL IS LONGER THAN IT IS TALL — 0276, REPLACING A SPAN ─────────────────────────────
+
+      ⚠️ **THIS HELD `skullSpan > 0.6` AND THE PROXY WAS RETIRED AFTER IT WAS INVALIDATED TWICE BY
+      GOOD ART IN ONE SESSION.** A span in a fixed window only means *wider than its neck* while the
+      neck is the gauge it was sized against and the window still contains the neck. Making the body
+      serpentine moved the first (0.44 of `r` → 0.29); making the head elongated moved the second, and
+      then made the claim FALSE — a real snake's head is about its neck's width, and the reference's
+      is narrower. A guard re-tuned twice in a day is not being maintained, it is measuring the wrong
+      quantity: `docs/decisions/0027-measure-the-picture-not-the-model.md`, and
+      `docs/decisions/0192-a-guard-holds-an-invariant.md` on changing one and saying why.
+
+      ⚠️ **WHAT IS HELD INSTEAD IS THE DEFECT THAT WAS ACTUALLY REPORTED, TWICE.** *"The head needs to
+      be a bit more elongated and less blobby."* A head taller than it is long is a frog, and no paint
+      on it reads as a snake — where a head merely narrower than its neck reads fine. The window is a
+      share of the animal's OWN length, so it travels when the body is re-authored instead of silently
+      pointing at the neck.
+
+      ⚠️ **AND THE TENTACLE 0264 WAS NAMED FOR IS STILL HELD, BY THE GUARD THAT ALWAYS HELD IT**:
+      `THE LORD: every place skins its real boss in a skin of its own` in `tests/foes.test.ts`. The
+      grey tentacle was a skin fault and a face fault; the skin is guarded there, and the face is the
+      maw, the fangs and the eye, which `0227` holds to the hull like every other mark.
+    */
+    const nose = Math.min(...body.map(([x]) => x));
+    const length = Math.max(...body.map(([x]) => x)) - nose;
+    const head = body.filter(([x]) => x < nose + length * 0.15);
+    const headLong = Math.max(...head.map(([x]) => x)) - nose;
+    const headTall = Math.max(...head.map(([, y]) => y)) - Math.min(...head.map(([, y]) => y));
+    expect(
+      headLong / headTall,
+      `the serpent’s skull is ${headLong.toFixed(3)} long and ${headTall.toFixed(3)} tall, so it is a blob`,
+    ).toBeGreaterThan(1);
   });
 });
 
@@ -432,9 +461,41 @@ describe('paint costs nothing to draw', () => {
       What is asserted here is the half budget.test.ts cannot see: that every body is sealed exactly
       once — one outline, however many fills go over it.
     */
+    /*
+      ── ONE OUTLINE, AND EVERY OTHER STROKE IS PAINT — 0276 ──────────────────────────────────────
+
+      ⚠️ **THIS WAS `strokes === 1`, AND THAT COUNT WAS NEVER THE INVARIANT.** The claim in the
+      paragraph above is *one outline, however many fills go over it* — and it says fills only because
+      `tests/paths.ts` could not see the geometry of a stroke, so a stroke was banned rather than
+      held. `docs/decisions/0264-the-real-bosses-are-drawn.md` then rejected the predecessor's
+      stacked-stroke spine on that basis, which is
+      `docs/decisions/0192-a-guard-holds-an-invariant.md` read backwards: the drawing technique was
+      picked by what the harness could measure. `reports/the-vocabulary-is-the-ceiling-2026-09-08.md`
+      is the measurement, and 0276 lifts it.
+
+      ⚠️ **WHAT IS HELD NOW IS STRICTLY MORE.** Exactly one stroke is the OUTLINE — the one laid on
+      the hull's own path, which is what `seal` does and what makes a body read as one object — and
+      every other stroke is paint, held to the same silhouette and the same alpha rule every fill
+      has answered since 0227. A second outline still fails; a contour, a rim light or a scale no
+      longer does.
+    */
+    const same = (a: readonly (readonly Point[])[], b: readonly (readonly Point[])[]): boolean =>
+      a.length === b.length && a.every((s, i) => s.length === b[i]!.length);
     for (const kind of BODIES) {
       const traced = trace(kind);
-      expect(traced.strokes, `the ${kind} is outlined ${traced.strokes} times`).toBe(1);
+      const hull = traced.passes[0]!;
+      const outlines = traced.inks.filter((ink) => same(ink.subpaths, hull.subpaths));
+      expect(outlines.length, `the ${kind} is outlined ${outlines.length} times`).toBe(1);
+      expect(traced.inks[0], `the ${kind} paints a stroke before it is sealed`).toBe(outlines[0]);
+      for (const [i, ink] of traced.inks.entries()) {
+        if (i === 0 || ink.alpha < SOLID) continue;
+        const over = strokeOutside(hull, ink);
+        expect(
+          over,
+          `stroke ${i} on the ${kind} reaches ${over.toFixed(2)}px past its hull — a mark painted ` +
+            'with a stroke is held to the silhouette exactly as a mark painted with a fill is',
+        ).toBe(0);
+      }
     }
   });
 
