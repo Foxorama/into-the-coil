@@ -44,23 +44,21 @@ export const PROBES = [
       replace: '      glow(ctx, f, palette.bullet, 0, 0, 1.4, 0.55);',
     },
   },
-  {
-    decision: '0227',
-    suite: 'tests/accents.test.ts',
-    /*
-      ⚠️ THE PAINT LEFT ON THE FLASH. It is the obvious simplification — one arm, one call, no
-      condition — and it produces a paler ship where 0035 wants a hit: the canopy and the engines
-      still there in the middle of the yellow.
-    */
-    broke: 'the ship’s paint drawn onto its hurt twin, so a hit reads as a paler ship',
-    guard: 'and a hurt twin is the hull flat in its flash ink',
-    edit: {
-      path: 'src/render/bake.ts',
-      // ⚠️ Re-anchored by 0233: the painter takes the weapon the hull is carrying.
-      find: "      seal(ctx);\n      if (!hurt) paintShip(ctx, f, palette, 0, 'pulse');\n      return;",
-      replace: "      seal(ctx);\n      paintShip(ctx, f, palette, 0, 'pulse');\n      return;",
-    },
-  },
+  /*
+    ── ONE PROBE OF 0227's IS DELETED HERE, AND THIS IS THE REASON — 0278 ──────────────────────────
+
+    ⚠️ **IT BROKE A DEFECT THAT CAN NO LONGER EXIST.** *"The ship's paint drawn onto its hurt twin, so
+    a hit reads as a paler ship"* removed the `if (!hurt)` guard on `paintShip`. Under
+    `docs/decisions/0278-the-flash-is-a-wash.md` a twin is drawn by drawing its BASE and washing it,
+    so `hurt` is false by the time any arm of the switch runs: the edit still applies and changes
+    nothing whatsoever — a probe that is green for the wrong reason, which is
+    `docs/decisions/0019-a-probe-must-be-seen-to-apply.md`'s whole subject.
+
+    ⚠️ **AND THE CLAIM IT DEFENDED IS STILL DEFENDED, MORE STRICTLY.** *A twin carries no paint its
+    base does not* is now an IDENTITY rather than a comparison, and what can still go wrong — an extra
+    mark on the hurt path — is broken by `0149`'s probe in this same suite. Deleted rather than
+    contorted, per `docs/decisions/0192-a-guard-holds-an-invariant.md`.
+  */
   {
     decision: '0227',
     suite: 'tests/flares.test.ts',
