@@ -730,6 +730,15 @@ interface Frame {
 /** A point in a sprite's own frame — fractions of `r`, +x forward, +y down the screen. */
 type Pt = readonly [number, number];
 
+/**
+ * How much of the flash ink a hurt twin wears — 0278.
+ *
+ * ⚠️ **STRONG ENOUGH TO READ AS A HIT AT A GLANCE, WEAK ENOUGH TO LEAVE THE ANIMAL UNDER IT.** At 1
+ * this is 0035's cutout, which is what play rejected; at a quarter a hit stops registering. 0.55 is
+ * where the body's own colour still comes through and the whole shape still jumps.
+ */
+const FLASH_WASH = 0.55;
+
 /** A hex colour with an alpha, for the transparent end of a glow. */
 function rgba(hex: string, alpha: number): string {
   const read = (i: number): number => parseInt(hex.slice(i, i + 2), 16);
@@ -4700,6 +4709,34 @@ export function drawKind(
     holds it.
   */
   const hurt = kind.endsWith('Hit');
+  /*
+    ── A FLASH IS A WASH OVER THE BODY, NOT A CUTOUT OF IT — 0278, AMENDING 0035 ────────────────────
+
+    ⚠️ **REPORTED FROM PLAY:** *"the 'hit' flash needs to be far more translucent instead of pure
+    white — with the attack speed of all weapons, essentially you are just fighting a white
+    outline."* The screenshot shows the serpent as a solid cream silhouette with none of its art
+    visible, which is what every fight looks like.
+
+    ⚠️ **0035 WAS RIGHT ABOUT A HIT AND WRONG ABOUT A STEADY STATE.** *"A white ship with every panel
+    still on it is a paler ship, not a hit"* holds when a hit is an event. `IMPACT_FLASH_STEPS` is 4,
+    so a weapon landing more often than every fifteenth of a second holds the twin on CONTINUOUSLY —
+    and every gun in the game now does. The flash stopped being the exception and became the picture.
+
+    ⚠️ **`source-atop` IS WHAT MAKES IT ONE BLIT.** The twin is the base art, drawn by this same
+    function, with the flash ink laid over exactly the pixels that art covered — no second bitmap, no
+    second draw call, and the silhouette is identical to the base's by construction rather than by a
+    guard comparing two hand-drawn shapes.
+  */
+  if (hurt) {
+    drawKind(ctx, kind.slice(0, -3) as SpriteKind, palette, size, theme);
+    ctx.globalCompositeOperation = 'source-atop';
+    ctx.globalAlpha = FLASH_WASH;
+    ctx.fillStyle = palette.impact;
+    ctx.fillRect(0, 0, size, size);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    return;
+  }
   /*
     ⚠️ **THE PLACE'S SKIN, FOR THE BODIES THE PLACE SENDS** — 0228. An enemy or a boss is sealed in
     `skin.hull` rather than in `INK_OF`'s `enemy`, unless it is hurt: a flash is the flash ink whatever

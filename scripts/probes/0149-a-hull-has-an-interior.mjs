@@ -84,15 +84,22 @@ export const PROBES = [
       twin is a second object appearing at the worst possible moment. `tests/legibility.test.ts` holds
       the ink; this holds what is painted over it.
     */
-    broke: 'a hurt boss painted differently from its own hull, so a flash changes the picture',
-    guard: 'and a hurt twin is the hull flat in its flash ink',
+    broke: 'a hurt twin given a mark its own base does not have, so a flash changes the picture',
+    guard: 'and a hurt twin is its base’s art under ONE translucent wash of the flash ink',
     edit: {
       path: 'src/render/bake.ts',
-      // ⚠️ Re-anchored by 0228, which paints the boss in its place after the carve.
-      find: '      if (skin !== null) paintBoss5(ctx, f, skin, theme);\n      return;',
+      /*
+        ⚠️ Re-anchored by 0228, which paints the boss in its place after the carve — and RE-POINTED by
+        0278, which took the `hurt` branch out of every arm. A twin is now drawn by drawing its BASE,
+        so the old edit (`if (hurt) …` inside `boss5`'s arm) would still apply and do nothing at all:
+        `hurt` is false by the time any arm runs, and a probe that applies and changes nothing is
+        exactly what 0019 exists to catch. The CLAIM is unchanged — a twin carries no mark its base
+        does not — and the hurt path is now the only place that can break it.
+      */
+      find: '    drawKind(ctx, kind.slice(0, -3) as SpriteKind, palette, size, theme);\n    ctx.globalCompositeOperation',
       replace:
-        '      if (skin !== null) paintBoss5(ctx, f, skin, theme);\n' +
-        '      if (hurt) disc(ctx, f, palette.glass, 0, 0, 0.2);\n      return;',
+        '    drawKind(ctx, kind.slice(0, -3) as SpriteKind, palette, size, theme);\n' +
+        '    disc(ctx, f, palette.glass, 0, 0, 0.2);\n    ctx.globalCompositeOperation',
     },
   },
   {

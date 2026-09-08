@@ -328,28 +328,50 @@ describe('0227 — a sprite is painted, and the paint stays on the hull', () => 
     }
   });
 
-  it('and a hurt twin is the hull flat in its flash ink, with nothing painted on it', () => {
+  it('and a hurt twin is its base’s art under ONE translucent wash of the flash ink', () => {
     /*
-      ⚠️ **0035's rule, read over the trace.** A flash is *the SAME shape in a different ink*, so that
-      it reads as *that thing being hurt* rather than as a second object. A white ship with every
-      panel still on it is a paler ship; the twin is the silhouette and the outline and no more — the
-      one exception being the seven bosses' carved interiors, which 0149 put on both and which are
-      holes rather than paint.
+      ── 0278, AMENDING 0035 ─────────────────────────────────────────────────────────────────────
+
+      ⚠️ **THIS HELD 0035's RULE — *the hull flat in its flash ink, with nothing painted on it* — AND
+      PLAY REFUTED IT.** *"The 'hit' flash needs to be far more translucent instead of pure white —
+      with the attack speed of all weapons, essentially you are just fighting a white outline."*
+
+      ⚠️ **0035 WAS RIGHT ABOUT A HIT AND WRONG ABOUT A STEADY STATE.** *"A white ship with every
+      panel still on it is a paler ship, not a hit"* holds when a hit is an EVENT. `IMPACT_FLASH_STEPS`
+      is four, so any weapon landing more often than every fifteenth of a second holds the twin on
+      continuously — and every gun in the game now does. What 0035 was protecting stopped being the
+      exception and became the picture, and the art underneath it was never seen.
+
+      ⚠️ **WHAT IS HELD NOW IS STRICTLY MORE, AND MOSTLY BY CONSTRUCTION.** `drawKind` draws a twin by
+      drawing its BASE and laying the flash ink over exactly those pixels with `source-atop`, so *the
+      same silhouette* and *the same marks* are no longer claims a guard has to compare hand-drawn
+      shapes for — they are identities. What is left to hold is the part that can still go wrong: that
+      there is exactly ONE wash, and that it is translucent. An opaque one is 0035's cutout again.
     */
     for (const theme of THEME_KINDS) {
       for (const kind of BODIES) {
-      if (!kind.endsWith('Hit')) continue;
-      const base = kind.slice(0, -3) as SpriteKind;
-      const { hull, paint } = hullAndPaint(kind, theme);
-      const { hull: baseHull } = hullAndPaint(base, theme);
-      expect(JSON.stringify(hull.subpaths), `${kind} is a different shape from ${base}, so a flash changes the silhouette`).toBe(
-        JSON.stringify(baseHull.subpaths),
-      );
-      for (const mark of paint) {
-        expect(mark.colour, `${kind} at ${theme} carries paint (${mark.colour}) on its flash, so a hit reads as a paler ${base}`).toBe(
-          INK.space,
-        );
-      }
+        if (!kind.endsWith('Hit')) continue;
+        const base = kind.slice(0, -3) as SpriteKind;
+        const twin = trace(kind, theme);
+        const plain = trace(base, theme);
+        expect(
+          twin.passes.length,
+          `${kind} at ${theme} draws ${twin.passes.length} marks where ${base} draws ${plain.passes.length}, so a flash is a different picture`,
+        ).toBe(plain.passes.length);
+        expect(
+          JSON.stringify(twin.passes[0]!.subpaths),
+          `${kind} is a different shape from ${base}, so a flash changes the silhouette`,
+        ).toBe(JSON.stringify(plain.passes[0]!.subpaths));
+        expect(
+          twin.rects.length,
+          `${kind} lays ${twin.rects.length - plain.rects.length} washes over its art, and a flash is exactly one`,
+        ).toBe(plain.rects.length + 1);
+        const wash = twin.rects[twin.rects.length - 1]!;
+        expect(
+          wash.alpha,
+          `${kind}'s flash is laid at ${wash.alpha}, and at that it is 0035's cutout again — the animal under it is gone`,
+        ).toBeLessThan(0.75);
+        expect(wash.alpha, `${kind}'s flash is too faint at ${wash.alpha} to read as a hit`).toBeGreaterThan(0.3);
       }
     }
   });
