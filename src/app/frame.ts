@@ -3073,17 +3073,6 @@ function fissionShots(w: World): void {
   const pool = w.enemyShots;
   for (let i = pool.size - 1; i >= 0; i--) {
     const shot = pool.at(i);
-    /*
-      ⚠️ **A LASH DISPERSES RATHER THAN VANISHING — 0281.** A boss's wake carries a fuse in `lifeFor`
-      and `stepEntities` retires it on the step after this one, so this is the last step it exists on
-      — the same `lifeFor === 1` idiom `stepMissiles` already uses for a seeker's last spark. Nothing
-      else in this pool sets `lifeFor`, so nothing else reaches it.
-
-      ⚠️ **It is a MELT and not a new picture**: 0263 already draws a bullet that ends without hitting
-      anything, and *"a bullet that simply vanishes is the failure 0036 is named for"* is that
-      decision's own sentence, three lines below.
-    */
-    if (shot.lifeFor === 1) burst(w, shot.along, shot.across, BURST.melt);
     const row = SHOT_ROWS[shot.kind]!;
     if (shot.turnsLeft >= row.fission.length) continue;
     const stage = row.fission[shot.turnsLeft]!;

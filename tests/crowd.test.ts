@@ -186,8 +186,8 @@ function fly(kind: BossKind, phaseIndex: number, tier: (typeof DIFFICULTY_KINDS)
       combiner's job is to ZERO the intent before the devices add to it — so an intent written between
       two steps was overwritten before `flyShip` ever read it, and this guard's own paragraph above
       (*"the pilot flies, and without that this guard measures the fixture"*) described something that
-      had never happened. Found while writing `tests/back.test.ts`; `tests/world.ts` now hands a
-      fixture the stick the real devices write to. `docs/decisions/0281-a-boss-guards-its-own-back.md`.
+      had never happened. Found while writing the guard 0281 shipped and 0282 took back out;
+      `tests/world.ts` hands a fixture the stick the real devices write to, and that half is kept. `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`.
 
       ⚠️ **THE NUMBERS BELOW ARE THEREFORE THE FIRST ONES THIS GUARD HAS EVER MEASURED WITH A PILOT.**
       Every one of them was re-run against a flying ship before this landed, and 0270's assertions

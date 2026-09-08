@@ -1,5 +1,17 @@
 # 0281 — A boss guards its own back
 
+⚠️ **SUPERSEDED THE DAY IT LANDED BY
+[0282](0282-a-mechanism-for-every-instance-makes-them-one-instance.md), AND THE CODE IS REMOVED.**
+Played on the deployed preview and reported in
+[`the-wake-played`](../../reports/the-wake-played-2026-09-08.md): the wake fired *"from a fixed point
+on the screen"* before the boss had arrived — the standoff below binds through the whole approach, so
+the lash is laid at a fixed distance from the CAMERA with no hull attached to it — it was *"the exact
+same spray for each boss"*, and it stopped silently as fights escalated. **Nothing below is in the
+game.** The file is kept unedited because a decision is written once
+([`README`](README.md)); what is worth reading in it is the geometry in *the report names the
+movement and the cause is the aim*, which stands, and the five drafts, which are the record of what
+was measured.
+
 **Accepted 2026-09-08**, from the second play of the redrawn serpent —
 [`the-serpent-played`](../../reports/the-serpent-played-2026-09-08.md):
 

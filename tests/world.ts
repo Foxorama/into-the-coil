@@ -251,8 +251,9 @@ export function playableWorld(
    * written by a fixture between two steps is overwritten before `flyShip` ever reads it.
    * `tests/crowd.test.ts` set `world.intent.across` every step and carried a paragraph explaining
    * that *"the pilot flies, and without that this guard measures the fixture"*; the pilot did not
-   * fly. Found while writing `tests/back.test.ts` —
-   * `docs/decisions/0281-a-boss-guards-its-own-back.md`.
+   * fly. Found while writing the guard 0281 shipped and 0282 took back out, and kept because it is
+   * true without it —
+   * `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`.
    *
    * ⚠️ **The stick is written where the real one is, which is the only place it survives.** It is
    * read inside `contribute`, so a fixture that never touches it gets exactly the ship that held
@@ -291,7 +292,7 @@ export function playableWorld(
   reset(ship, SHIP_START_ALONG, ACROSS_SPAN / 2, shipRow);
   holdStation(ship, SCROLL_PER_STEP);
 
-  // The stick the fixture's `contribute` reads, neutral until a test takes hold of it — 0281.
+  // The stick the fixture's `contribute` reads, neutral until a test takes hold of it — 0282.
   const stick = { along: 0, across: 0 };
   const deaths = { count: 0 };
   const wrecks = { count: 0 };
