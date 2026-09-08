@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { INK_OF, drawKind } from '../src/render/bake.ts';
+import { INK_OF, SERPENT_SPINE, drawKind, serpentHalf } from '../src/render/bake.ts';
 
 /*
   ⚠️ **FILE-LEVEL, BECAUSE THE WORK IS SEVEN PLACES DEEP NOW AND THE DEFAULT IS A WALL CLOCK.** The
@@ -191,6 +191,19 @@ function clearance(hull: Pass, mark: Pass): number {
     if (gap < 0.1) continue;
     worst = Math.min(worst, inside(hull, point) ? gap : -gap);
   }
+  /*
+    ⚠️ **A HULL OF ONE SUB-PATH HAS NO HOLES, SO THE GRID BELOW HAS NOTHING TO FIND.** The interior
+    sweep exists for `boss3`'s lattice, `boss5`'s ports, `boss7`'s ring and the warden's aperture —
+    gaps the sky shows through, which only a grid can catch a mark laid across. A simply-connected
+    hull has none, and then Jordan says it: a closed mark whose whole BOUNDARY is inside such a hull
+    has its interior inside too. This is an exact short-circuit and not a sampling compromise.
+
+    ⚠️ **IT IS HERE BECAUSE 0277 MADE THIS SUITE TIME OUT.** The serpent went to 56 units with a
+    curved outline of some twelve hundred flattened points, and the grid is its bounding box at two
+    pixels a step — forty thousand points, each asked twice against that outline. The claim did not
+    change; what changed is that it stopped being asked where it cannot fire. 76s → under a second.
+  */
+  if (hull.subpaths.length === 1) return worst;
   const { minX, minY, maxX, maxY } = boundsOf(mark);
   for (let x = minX; x <= maxX; x += 2) {
     for (let y = minY; y <= maxY; y += 2) {
@@ -444,6 +457,49 @@ describe('a boss differs from every other by more than its paint', () => {
       headLong / headTall,
       `the serpent’s skull is ${headLong.toFixed(3)} long and ${headTall.toFixed(3)} tall, so it is a blob`,
     ).toBeGreaterThan(1);
+
+    /*
+      ── NO BEND TIGHTER THAN THE ANIMAL'S OWN SPINE ALLOWS — 0277 ────────────────────────────────
+
+      ⚠️ **A WORM HAS NO SPINE AND CAN KINK; A VERTEBRATE CANNOT.** Reported of the serpent: *"the
+      tail uplift is really really sharp and a snake/serpent would be more curved because of the
+      spine, where a worm with no spine can sharp twist."* Measured, it was worse than the report: the
+      tail turned sixty degrees in one step at **1.15 of its own girth**, and the CREST — the thickest
+      part of the animal, and so the part needing the largest radius of anything on it — was **0.85**,
+      a bend tighter than the body is wide.
+
+      ⚠️ **A RATIO AND NOT AN ABSOLUTE, BECAUSE FLEXIBILITY SCALES WITH THICKNESS.** A whip-thin tail
+      has more vertebrae per unit length than a thick midriff and really does bend tighter. An
+      absolute floor would either forbid a tail tip from curling at all or wave a hairpin through the
+      midriff — the two failures this sits between.
+
+      ⚠️ **THE SKELETON IS MEASURED AND NOT THE FLATTENED OUTLINE, DELIBERATELY.** An outline's
+      curvature at a tail's point is legitimately unbounded — a tip IS a corner — so the quantity the
+      rule is about lives on the spine. The arithmetic is the guard's own: nothing in `bake.ts`
+      computes a bend radius, so this is not the code agreeing with itself —
+      `docs/decisions/0027-measure-the-picture-not-the-model.md`.
+    */
+    let tightest = Infinity;
+    let tightestAt = -1;
+    for (let i = 1; i < SERPENT_SPINE.length - 1; i++) {
+      const [ax, ay] = SERPENT_SPINE[i - 1]!;
+      const [bx, by] = SERPENT_SPINE[i]!;
+      const [cx, cy] = SERPENT_SPINE[i + 1]!;
+      let turn = Math.atan2(cy - by, cx - bx) - Math.atan2(by - ay, bx - ax);
+      while (turn > Math.PI) turn -= Math.PI * 2;
+      while (turn < -Math.PI) turn += Math.PI * 2;
+      if (turn === 0) continue;
+      const arc = (Math.hypot(bx - ax, by - ay) + Math.hypot(cx - bx, cy - by)) / 2;
+      const overGirth = arc / Math.abs(turn) / (serpentHalf(i) * 2);
+      if (overGirth < tightest) {
+        tightest = overGirth;
+        tightestAt = i;
+      }
+    }
+    expect(
+      tightest,
+      `the serpent kinks at spine sample ${tightestAt}: its bend radius there is ${tightest.toFixed(2)} of its own girth, and a body that turns inside its own width has no spine in it`,
+    ).toBeGreaterThan(1.5);
   });
 });
 
