@@ -280,6 +280,14 @@ describe('0263 — the frost ship shatters', () => {
     d.world.ship.across = 3;
     d.world.ship.velAcross = 0;
     d.world.bossPool.at(0).fireIn = 999;
+    /*
+      ⚠️ **AND THE WAKE HELD TOO, SINCE 0281.** `docs/decisions/0281-a-boss-guards-its-own-back.md`
+      lays a lash behind a hull on its own clock, whether it is firing or not — so `enemyShots.size`
+      stopped being *what this volley put in the air*, which every count below reads it as. Held here
+      beside `fireIn` for the same reason `fireIn` is: **the cascade is counted, not dodged**, and a
+      shard's life after the muzzle is what this file is about.
+    */
+    d.world.bossPool.at(0).tailIn = 99999;
   }
 
   /** Which way a shot is flying, in the camera's frame. */

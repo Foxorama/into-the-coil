@@ -237,8 +237,28 @@ class NullSurface implements Surface {
  * is how `tests/sound.test.ts` asks the real frame *what did the player hear* —
  * `docs/decisions/0072-a-cue-is-baked-and-played.md`.
  */
-export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFFICULTY_KINDS[0]!): {
+export function playableWorld(
+  level: LevelRow,
+  difficulty: DifficultyKind = DIFFICULTY_KINDS[0]!,
+): {
   world: World;
+  /**
+   * The stick, for a fixture that wants to FLY the ship rather than watch it hold station.
+   *
+   * ⚠️ **THIS EXISTS BECAUSE WRITING `world.intent` DOES NOTHING, AND A GUARD HAD BEEN DOING IT.**
+   * `src/app/frame.ts` calls `w.input.contribute(w.intent)` at the top of every step and the
+   * combiner's whole job is to ZERO the intent before the real devices add to it — so an intent
+   * written by a fixture between two steps is overwritten before `flyShip` ever reads it.
+   * `tests/crowd.test.ts` set `world.intent.across` every step and carried a paragraph explaining
+   * that *"the pilot flies, and without that this guard measures the fixture"*; the pilot did not
+   * fly. Found while writing `tests/back.test.ts` —
+   * `docs/decisions/0281-a-boss-guards-its-own-back.md`.
+   *
+   * ⚠️ **The stick is written where the real one is, which is the only place it survives.** It is
+   * read inside `contribute`, so a fixture that never touches it gets exactly the ship that held
+   * station before — the honest baseline for a question about whether the LEVEL works.
+   */
+  stick: { along: number; across: number };
   deaths: { count: number };
   wrecks: { count: number };
   cleared: { count: number };
@@ -271,6 +291,8 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
   reset(ship, SHIP_START_ALONG, ACROSS_SPAN / 2, shipRow);
   holdStation(ship, SCROLL_PER_STEP);
 
+  // The stick the fixture's `contribute` reads, neutral until a test takes hold of it — 0281.
+  const stick = { along: 0, across: 0 };
   const deaths = { count: 0 };
   const wrecks = { count: 0 };
   const cleared = { count: 0 };
@@ -322,10 +344,11 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
     tuning: tuningFor(DEFAULT_ASSISTS),
     input: {
       contribute(intent: Intent): void {
-        // A fixture flies nothing. The ship holds station, which is the honest baseline for a
-        // question about whether the LEVEL works rather than about whether a hand can survive it.
-        intent.along = 0;
-        intent.across = 0;
+        // The stick, which is zero unless a fixture has taken hold of it. A fixture that flies
+        // nothing gets a ship holding station — the honest baseline for a question about whether the
+        // LEVEL works rather than about whether a hand can survive it.
+        intent.along = stick.along;
+        intent.across = stick.across;
       },
       spend(): void {},
       release(): void {},
@@ -399,5 +422,5 @@ export function playableWorld(level: LevelRow, difficulty: DifficultyKind = DIFF
       cues.push(kind);
     },
   };
-  return { world, deaths, wrecks, cleared, taken, faces, cues };
+  return { world, stick, deaths, wrecks, cleared, taken, faces, cues };
 }
