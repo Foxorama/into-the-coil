@@ -852,8 +852,15 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     largest hull there is, and `src/sim/camera.ts`'s 80 is still well clear. The hurtboxes in
     `src/content/bosses.ts` sit inside the band `tests/level.test.ts` holds every boss to.
   */
-  boss8: 40,
-  boss8Hit: 40,
+  /*
+    ⚠️ **40 → 56, AND THE SERPENT IS THE ONE HULL THAT NEEDED IT.** Reported from play against the
+    deployed preview: *"it's way too small."* Every other boss fills most of its own box; a serpent is
+    a RIBBON that wanders across one, so the same extent buys it about a fifth of the ink and it read
+    as an add. 56 is the largest extent in the game and still well inside the 80 `src/sim/camera.ts`
+    calls the ceiling — and by AREA it is nowhere near the jellyfish, which is the honest comparison.
+  */
+  boss8: 56,
+  boss8Hit: 56,
   boss9: 42,
   boss9Hit: 42,
   boss10: 44,

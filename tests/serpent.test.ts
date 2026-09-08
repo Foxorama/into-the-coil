@@ -15,7 +15,7 @@ import { phaseFor } from '../src/app/boss.ts';
 import { BOSSES, RAIN_BOLT_KIND } from '../src/content/bosses.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHOTS } from '../src/content/shots.ts';
-import { SPRITE_KINDS } from '../src/content/sprites.ts';
+import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { INK_OF } from '../src/render/bake.ts';
 import { BOLT_STEPS } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
@@ -132,6 +132,40 @@ describe('0248 — the serpent strikes', () => {
       centres.push(sum / opening.world.enemyShots.size);
     }
     expect(Math.abs(centres[1]! - centres[0]!), 'the acid fan does not rake — two volleys point the same way').toBeGreaterThan(0.1);
+  });
+
+  it('THE MOUTH: the acid and the void leave the serpent’s SKULL, and not the middle of its body', () => {
+    /*
+      ⚠️ **0277.** Reported from play against the deployed preview: *"the acid blasts and voids
+      currently originate from the back half of the body."* They did — every arm of `throwAttack`
+      spawned at `(boss.along, boss.across)`, and a serpent's skull is at the far down-lane end of the
+      widest sprite in the game.
+
+      ⚠️ **MEASURED IN THE PLAYER'S UNITS, WHICH IS WHAT 0027 ASKS OF AT LEAST ONE ASSERTION.** Not
+      *the code read the field* — how far down-lane of the hull's own centre the shot actually
+      appears, as a share of the hull's half-extent. The middle of the body cannot satisfy that
+      however the table is written, and a guard that read `row.muzzle` back would prove only that the
+      table equals itself.
+    */
+    const half = SPRITE_EXTENT.boss8 / 2;
+    for (const [name, fraction] of [
+      ['the opening rake of acid', 1],
+      ['the heads, once hurt', 0.6],
+    ] as const) {
+      const { world, frame } = serpentAt(fraction);
+      const boss = world.bossPool.at(0);
+      world.enemyShots.clear();
+      boss.fireIn = 1;
+      frame.step();
+      expect(world.enemyShots.size, `${name} threw nothing`).toBeGreaterThan(0);
+      for (let i = 0; i < world.enemyShots.size; i++) {
+        const ahead = boss.along - world.enemyShots.at(i).along;
+        expect(
+          ahead,
+          `${name} left the hull ${ahead.toFixed(1)} units down-lane of its centre, against a half-extent of ${half} — a shot from the middle of a serpent reads as the body coughing`,
+        ).toBeGreaterThan(half * 0.5);
+      }
+    }
   });
 
   it('THE ACID AND THE VOID: two shots of their own, in inks of their own, that are not the enemy’s bullet', () => {

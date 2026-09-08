@@ -671,6 +671,24 @@ export interface BossRow extends Body {
   fall: Fall | null;
   /** The cold its hull carries, or `null` — 0253. Required, on `uncoil`'s and `fall`'s terms. */
   chill: Chill | null;
+  /**
+   * Where its shots leave the hull, in world units from the hull's centre — `null` is the centre.
+   *
+   * ⚠️ **REPORTED FROM PLAY: *"the acid blasts and voids currently originate from the back half of
+   * the body."*** They did, and for every boss: every arm of `throwAttack` spawned at
+   * `(boss.along, boss.across)`. On a hull that fills its own box that is close enough to a muzzle
+   * to pass; on a serpent, whose skull is at the far down-lane end of the widest sprite in the game,
+   * it is twenty-seven units behind the mouth and reads as the body coughing.
+   *
+   * ⚠️ **`null` ON EVERY ROW BUT THE SERPENT'S, AND THAT IS AN ANSWER RATHER THAN A PLACEHOLDER.**
+   * A gyre throws from its own axis and a jellyfish from its bell; the centre is where those shots
+   * belong. Only a hull with its face at one end needs to say so.
+   *
+   * ⚠️ **A CONSTANT AND NOT A FUNCTION OF ANY HEADING, because a boss has none** — `src/sim/entity.ts`
+   * carries no rotation and `src/render/scene.ts` says *"`blit` cannot rotate"*. Every hull is baked
+   * facing down-lane, so a point in the sprite's frame is a point in the world's.
+   */
+  muzzle: { along: number; across: number } | null;
   /** Full health to empty. The first entry must cover a full-health boss. */
   phases: readonly BossPhase[];
 }
@@ -703,6 +721,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     uncoil: null,
     fall: null,
     chill: null,
+    muzzle: null,
     sprite: SPRITE.boss,
     spriteHit: SPRITE.bossHit,
     radius: 11,
@@ -774,6 +793,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     uncoil: null,
     fall: null,
     chill: null,
+    muzzle: null,
     sprite: SPRITE.boss2,
     spriteHit: SPRITE.boss2Hit,
     radius: 12.5,
@@ -833,6 +853,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     uncoil: null,
     fall: null,
     chill: null,
+    muzzle: null,
     sprite: SPRITE.boss3,
     spriteHit: SPRITE.boss3Hit,
     radius: 11.5,
@@ -885,6 +906,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     uncoil: null,
     fall: null,
     chill: null,
+    muzzle: null,
     sprite: SPRITE.boss4,
     spriteHit: SPRITE.boss4Hit,
     radius: 13,
@@ -925,6 +947,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     uncoil: null,
     fall: null,
     chill: null,
+    muzzle: null,
     sprite: SPRITE.boss5,
     spriteHit: SPRITE.boss5Hit,
     radius: 14,
@@ -983,6 +1006,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false },
     fall: null,
     chill: null,
+    muzzle: null,
     sprite: SPRITE.boss6,
     spriteHit: SPRITE.boss6Hit,
     radius: 12.5,
@@ -1052,6 +1076,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     uncoil: { from: 0.5, every: 0.1, gap: 4, at: 58, hole: 12, spin: false },
     fall: null,
     chill: null,
+    muzzle: null,
     sprite: SPRITE.boss7,
     spriteHit: SPRITE.boss7Hit,
     radius: 16,
@@ -1147,7 +1172,24 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chill: null,
     sprite: SPRITE.boss8,
     spriteHit: SPRITE.boss8Hit,
-    radius: 16,
+    /*
+      ⚠️ **16 → 22, BECAUSE THE HULL GREW AND A HURTBOX THAT DID NOT WOULD BE 0036 BACKWARDS.** The
+      sprite went 40 → 56; a disc left at 16 would let a shot pass through forty per cent of the drawn
+      animal and register nothing, which is *an event the picture mentions and the model does not* —
+      the same fault as 0036's, with the two sides swapped. Scaled with the hull: 16 × 56/40 = 22.4.
+
+      ⚠️ **`station + drift + radius` is 155 against the 160 `tests/level.test.ts` allows**, so this
+      spends five of the eleven units of headroom the row had and is checked rather than assumed.
+    */
+    radius: 22,
+    /*
+      ⚠️ **WHERE ITS SHOTS LEAVE THE HULL — the mouth, not the middle.** Reported from play: *"the
+      acid blasts and voids currently originate from the back half of the body."* They did: every arm
+      of `throwAttack` spawned at `(boss.along, boss.across)`, the hull's centre, and a serpent's
+      skull is at the far down-lane end of a very wide sprite — about twenty-seven units in front of
+      it at this extent.
+    */
+    muzzle: { along: -24, across: 1 },
     // Doubled by 0260, from 700 — *"need a lot more health, I think I only saw about 50% of their
     // attacks before they died."* Every real boss is twice what 0247 authored; the mid-bosses stay.
     health: 1400,
@@ -1219,6 +1261,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     uncoil: null,
     fall: null,
     chill: null,
+    muzzle: null,
     sprite: SPRITE.boss9,
     spriteHit: SPRITE.boss9Hit,
     radius: 15,
@@ -1263,6 +1306,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // the whole fight.
     fall: { kind: 'shot', shot: 'rock', every: 90, count: 2, from: 1 },
     chill: null,
+    muzzle: null,
     sprite: SPRITE.boss10,
     spriteHit: SPRITE.boss10Hit,
     radius: 15,
@@ -1306,6 +1350,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     uncoil: { from: 0.9, every: 0.1, gap: 3, at: 26, hole: 14, spin: true },
     fall: null,
     chill: null,
+    muzzle: null,
     sprite: SPRITE.boss11,
     spriteHit: SPRITE.boss11Hit,
     radius: 14,
@@ -1340,6 +1385,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // The cold — 0253: thirty units from the hull's centre, half speed inside it, frozen for half a
     // second after three quarters of one inside.
     chill: { radius: 30, slow: 0.5, freezeAfter: 45, frozenFor: 30 },
+    muzzle: null,
     sprite: SPRITE.boss12,
     spriteHit: SPRITE.boss12Hit,
     radius: 13,
@@ -1384,6 +1430,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     uncoil: null,
     fall: null,
     chill: null,
+    muzzle: null,
     sprite: SPRITE.boss13,
     spriteHit: SPRITE.boss13Hit,
     radius: 16,
@@ -1485,6 +1532,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // The moon jellies — 0255: from three quarters of its health, two a volley from the top edge.
     fall: { kind: 'body', enemy: 'moonJelly', every: 75, count: 2, from: 0.75 },
     chill: null,
+    muzzle: null,
     sprite: SPRITE.boss14,
     spriteHit: SPRITE.boss14Hit,
     radius: 17,
