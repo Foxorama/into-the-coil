@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { INK_OF, SERPENT_SPINE, drawKind, serpentHalf } from '../src/render/bake.ts';
+import { INK_OF, drawKind } from '../src/render/bake.ts';
 
 /*
   ⚠️ **FILE-LEVEL, BECAUSE THE WORK IS SEVEN PLACES DEEP NOW AND THE DEFAULT IS A WALL CLOCK.** The
@@ -90,6 +90,17 @@ const BODIES: readonly SpriteKind[] = SPRITE_KINDS.filter((kind) => !HULLLESS.in
 
 /** Every boss hull, off the rows that declare them rather than a list kept by hand. */
 const BOSS_HULLS: readonly SpriteKind[] = BOSS_KINDS.map((kind) => SPRITE_KINDS[BOSSES[kind].sprite]!);
+
+/**
+ * The nodes of a boss's body — 0283. Off the rows, on `BOSS_HULLS`'s own terms.
+ *
+ * ⚠️ **A NODE IS A SLICE OF A HULL AND NOT A HULL**, which is the whole reason this list exists: the
+ * outline rule below asks for exactly one stroke on the hull's own path, and a node must have NONE.
+ */
+const CHAIN_BODIES: readonly SpriteKind[] = BOSS_KINDS.flatMap((kind) => {
+  const chain = BOSSES[kind].chain;
+  return chain === null ? [] : [SPRITE_KINDS[chain.sprite]!, SPRITE_KINDS[chain.spriteHit]!];
+});
 
 /**
  * How wide a sprite is drawn on that screen, in CSS pixels — and therefore the `size` to trace at.
@@ -470,58 +481,42 @@ describe('a boss differs from every other by more than its paint', () => {
       grey tentacle was a skin fault and a face fault; the skin is guarded there, and the face is the
       maw, the fangs and the eye, which `0227` holds to the hull like every other mark.
     */
-    const nose = Math.min(...body.map(([x]) => x));
-    const length = Math.max(...body.map(([x]) => x)) - nose;
-    const head = body.filter(([x]) => x < nose + length * 0.15);
-    const headLong = Math.max(...head.map(([x]) => x)) - nose;
-    const headTall = Math.max(...head.map(([, y]) => y)) - Math.min(...head.map(([, y]) => y));
+    /*
+      ⚠️ **AND SINCE 0283 THE HULL IS THE SKULL, SO IT IS MEASURED WHOLE RATHER THAN SLICED.** The
+      window above took the front fifteen per cent of the animal because the animal was the sprite;
+      the body is a chain now and this bitmap is the head alone, so *the front fifteen per cent* is
+      the tip of the snout and reported the drawing as a blob at 0.31 while it was nothing of the
+      kind. What the claim was always about is the whole skull's proportion, and it can simply be
+      asked for.
+    */
+    const headLong = Math.max(...body.map(([x]) => x)) - Math.min(...body.map(([x]) => x));
+    const headTall = Math.max(...body.map(([, y]) => y)) - Math.min(...body.map(([, y]) => y));
     expect(
       headLong / headTall,
       `the serpent’s skull is ${headLong.toFixed(3)} long and ${headTall.toFixed(3)} tall, so it is a blob`,
     ).toBeGreaterThan(1);
+    /*
+      ⚠️ **AND *WIDER THAN ITS NECK* IS A REAL COMPARISON NOW RATHER THAN A PROXY — 0283.** It used to
+      be a span measured in a window and was retired for being re-tuned twice in a day by good art;
+      the neck is a number on the row now — the first entry of the chain's `girth` — so the two can be
+      put side by side in world units. **The head-neck step is the single mark that says *snake*
+      before any paint is on the animal**, and a serpent whose head is no wider than the body behind
+      it is a worm however it is drawn.
+    */
+    const neck = BOSSES.jormungandr.chain?.girth[0] ?? 0;
+    const skullTall = (headTall / COMMON) * SPRITE_EXTENT[serpent];
+    expect(
+      skullTall / neck,
+      `the serpent’s skull is ${skullTall.toFixed(1)} units tall against a neck of ${neck} — a head no wider than ` +
+        'the body behind it is a worm, whatever is painted on it',
+    ).toBeGreaterThan(1.2);
 
     /*
-      ── NO BEND TIGHTER THAN THE ANIMAL'S OWN SPINE ALLOWS — 0277 ────────────────────────────────
-
-      ⚠️ **A WORM HAS NO SPINE AND CAN KINK; A VERTEBRATE CANNOT.** Reported of the serpent: *"the
-      tail uplift is really really sharp and a snake/serpent would be more curved because of the
-      spine, where a worm with no spine can sharp twist."* Measured, it was worse than the report: the
-      tail turned sixty degrees in one step at **1.15 of its own girth**, and the CREST — the thickest
-      part of the animal, and so the part needing the largest radius of anything on it — was **0.85**,
-      a bend tighter than the body is wide.
-
-      ⚠️ **A RATIO AND NOT AN ABSOLUTE, BECAUSE FLEXIBILITY SCALES WITH THICKNESS.** A whip-thin tail
-      has more vertebrae per unit length than a thick midriff and really does bend tighter. An
-      absolute floor would either forbid a tail tip from curling at all or wave a hairpin through the
-      midriff — the two failures this sits between.
-
-      ⚠️ **THE SKELETON IS MEASURED AND NOT THE FLATTENED OUTLINE, DELIBERATELY.** An outline's
-      curvature at a tail's point is legitimately unbounded — a tip IS a corner — so the quantity the
-      rule is about lives on the spine. The arithmetic is the guard's own: nothing in `bake.ts`
-      computes a bend radius, so this is not the code agreeing with itself —
-      `docs/decisions/0027-measure-the-picture-not-the-model.md`.
+      ⚠️ **AND THE BEND RULE MOVED TO THE ANIMAL — 0283.** *No bend tighter than the animal's own
+      spine allows* was measured here, on a baked spine, because the whole serpent was one bitmap. The
+      body is a chain now and the spine is laid out every step, so the rule is measured on the animal
+      that is actually on the screen: `tests/serpent.test.ts`, driven, in world units.
     */
-    let tightest = Infinity;
-    let tightestAt = -1;
-    for (let i = 1; i < SERPENT_SPINE.length - 1; i++) {
-      const [ax, ay] = SERPENT_SPINE[i - 1]!;
-      const [bx, by] = SERPENT_SPINE[i]!;
-      const [cx, cy] = SERPENT_SPINE[i + 1]!;
-      let turn = Math.atan2(cy - by, cx - bx) - Math.atan2(by - ay, bx - ax);
-      while (turn > Math.PI) turn -= Math.PI * 2;
-      while (turn < -Math.PI) turn += Math.PI * 2;
-      if (turn === 0) continue;
-      const arc = (Math.hypot(bx - ax, by - ay) + Math.hypot(cx - bx, cy - by)) / 2;
-      const overGirth = arc / Math.abs(turn) / (serpentHalf(i) * 2);
-      if (overGirth < tightest) {
-        tightest = overGirth;
-        tightestAt = i;
-      }
-    }
-    expect(
-      tightest,
-      `the serpent kinks at spine sample ${tightestAt}: its bend radius there is ${tightest.toFixed(2)} of its own girth, and a body that turns inside its own width has no spine in it`,
-    ).toBeGreaterThan(1.5);
   });
 });
 
@@ -557,12 +552,43 @@ describe('paint costs nothing to draw', () => {
       has answered since 0227. A second outline still fails; a contour, a rim light or a scale no
       longer does.
     */
+    /*
+      ⚠️ **THE POINTS AND NOT THE COUNTS, WHICH IS WHAT THIS ALWAYS MEANT TO SAY — 0283.** *The one
+      laid on the hull's own path* was tested by comparing how many sub-paths there were and how many
+      points each held, and that is a shape's fingerprint only while every hull is a polygon nothing
+      else in the drawing resembles. The serpent's body is a DISC: `tests/paths.ts` flattens its arc
+      to five points, so four five-point scale arcs painted on it matched the hull by arithmetic and
+      the guard reported the node *outlined five times* over a drawing with exactly one outline on it.
+
+      ⚠️ **STRICTLY STRONGER, NOT LOOSER.** Every stroke this used to catch it still catches — a
+      second outline is the same path and so still matches point for point — and it no longer catches
+      a mark that merely has the same number of corners.
+    */
     const same = (a: readonly (readonly Point[])[], b: readonly (readonly Point[])[]): boolean =>
-      a.length === b.length && a.every((s, i) => s.length === b[i]!.length);
+      a.length === b.length &&
+      a.every((s, i) => s.length === b[i]!.length && s.every(([x, y], j) => Math.abs(x - b[i]![j]![0]) < 1e-9 && Math.abs(y - b[i]![j]![1]) < 1e-9));
+    /*
+      ⚠️ **AND A CHAIN'S NODE MUST HAVE NONE, WHICH IS THE ONE EXCEPTION AND IS STRICTER RATHER THAN
+      LOOSER — 0283.** *One outline round the hull* is what makes a body read as one object, and a
+      node is not one: it is a slice of an animal, overlapped by the slices either side of it, so its
+      own rim is drawn over its neighbour's flesh. Photographed at the shipped camera with `seal` on
+      it, the serpent came back as a stack of croissants with a dark arc ruled across it eleven times.
+
+      ⚠️ **THE CLAIM IS THEREFORE `0` AND NOT `≤ 1`.** An exemption that merely permitted the outline
+      would let the defect back in silently; what is asserted is that a node does not have one.
+    */
     for (const kind of BODIES) {
       const traced = trace(kind);
       const hull = traced.passes[0]!;
       const outlines = traced.inks.filter((ink) => same(ink.subpaths, hull.subpaths));
+      if (CHAIN_BODIES.includes(kind)) {
+        expect(
+          outlines.length,
+          `the ${kind} is outlined ${outlines.length} times, and a node of a body may not be outlined at all — ` +
+            'its rim is drawn over the flesh of the node beside it, which is a scallop ruled across the animal',
+        ).toBe(0);
+        continue;
+      }
       expect(outlines.length, `the ${kind} is outlined ${outlines.length} times`).toBe(1);
       expect(traced.inks[0], `the ${kind} paints a stroke before it is sealed`).toBe(outlines[0]);
       for (const [i, ink] of traced.inks.entries()) {

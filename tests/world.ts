@@ -37,7 +37,7 @@ import { holdStation, SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { makeIntent } from '../src/sim/intent.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { SHIP_START_ALONG, respawn, type World } from '../src/app/frame.ts';
-import { CAPACITY } from '../src/app/mount.ts';
+import { CAPACITY, CHAIN_TRAIL } from '../src/app/mount.ts';
 import type { Intent } from '../src/sim/intent.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { viewOf } from '../src/sim/camera.ts';
@@ -103,6 +103,11 @@ export function inertLevel(): {
   bossRow: typeof BOSSES.sentinel;
   fight: number;
   bossPool: Pool<Entity>;
+  // The chain's pool and its trail — 0283. Empty and still for every fixture whose boss has no body.
+  bossBody: Pool<Entity>;
+  bossTrail: Float32Array;
+  bossTrailAt: number;
+  chainPhase: number;
   bossSpawned: boolean;
   bossBeaten: boolean;
   clearedIn: number;
@@ -167,6 +172,10 @@ export function inertLevel(): {
     bossRow: BOSSES.sentinel,
     fight: 1,
     bossPool: new Pool<Entity>(CAPACITY.boss, makeEntity),
+    bossBody: new Pool<Entity>(CAPACITY.bossBody, makeEntity),
+    bossTrail: new Float32Array(CHAIN_TRAIL),
+    bossTrailAt: 0,
+    chainPhase: 0,
     bossSpawned: false,
     bossBeaten: false,
     clearedIn: 0,
@@ -285,6 +294,7 @@ export function playableWorld(
   const enemyShots = new Pool<Entity>(CAPACITY.enemyShots, makeEntity);
   const debris = new Pool<Entity>(CAPACITY.debris, makeEntity);
   const bossPool = new Pool<Entity>(CAPACITY.boss, makeEntity);
+  const bossBody = new Pool<Entity>(CAPACITY.bossBody, makeEntity);
 
   const enemyRows: readonly EnemyRow[] = ENEMY_KINDS.map((k) => ENEMIES[k]);
   const shipRow = SHIPS.proof;
@@ -303,7 +313,7 @@ export function playableWorld(
 
   const world: World = {
     // The game's own order — `src/app/mount.ts` — with the pickups left out, because this fixture has none.
-    layers: [blasts, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
+    layers: [blasts, bossBody, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
     sky: [],
     landmarks: [],
     bound: null,
@@ -387,6 +397,10 @@ export function playableWorld(
     bossRow: BOSSES[level.midBoss === null ? level.boss : level.midBoss.kind],
     fight: level.midBoss === null ? 1 : 0,
     bossPool,
+    bossBody,
+    bossTrail: new Float32Array(CHAIN_TRAIL),
+    bossTrailAt: 0,
+    chainPhase: 0,
     bossSpawned: false,
     bossBeaten: false,
     clearedIn: 0,

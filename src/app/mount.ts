@@ -151,7 +151,26 @@ export const CAPACITY = {
   bombs: 4,
   blasts: 4,
   enemyShots: 150,
-  debris: 200 - MAX_SHIELDS - 1 - 24 - 8 - 4,
+  /*
+    ⚠️ **ELEVEN COME OUT OF THE PARTICLE SHARE — 0283, AND 0022 NAMES IT AS THE SHEDDABLE ONE.** The
+    pools total EXACTLY 500 and `tests/budget.test.ts` holds that ceiling, so a serpent with a body
+    has to be paid for rather than added.
+
+    ⚠️ **AND ELEVEN IS WHAT WAS ACTUALLY SPARE, WHICH IS NOT WHAT THE OBVIOUS ARITHMETIC SAID.**
+    `tests/budget.test.ts` prices a boss and a ship coming apart together at **140.1** fragments
+    against a pool of 160, which reads as nineteen going free. It is not: `tests/flares.test.ts`
+    prices the same moment WITH the fireballs a beat lights beside its shards, and that comes to
+    **148.9**. Fourteen was taken on the first number and the second one refused it — a quantity
+    checked in one case and spent in another, which is
+    `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`'s fourth rule
+    catching this decision on its way past.
+
+    ⚠️ **AND ELEVEN IS WHY THE CHAIN HAS ELEVEN NODES**, not the other way round. The animal's length
+    is set by the screen (`src/content/bosses.ts` has that arithmetic) and its smoothness by how many
+    discs cover it; the pool is what said how many discs there could be.
+  */
+  bossBody: 11,
+  debris: 200 - MAX_SHIELDS - 1 - 24 - 8 - 4 - 11,
   /*
     ⚠️ **TWELVE, OUT OF THE PULSE'S SHARE — 0233.** A link of chain lightning is a picture that lives
     `BOLT_STEPS` (eight) and the arc's ladder reaches four links every eight steps, so two volleys
@@ -174,6 +193,20 @@ export const CAPACITY = {
   */
   pickups: 12,
 };
+
+/**
+ * How many steps of the boss's lane the chain's trail remembers — 0283.
+ *
+ * ⚠️ **NOT A POOL, AND SO NOT IN `CAPACITY`.** It is a `Float32Array` of numbers rather than
+ * entities, allocated once at mount, and `tests/budget.test.ts`'s 500 is a count of things the frame
+ * may be asked to DRAW. Filing it beside the pools would make that guard's total wrong in the
+ * direction nobody checks.
+ *
+ * ⚠️ **The deepest read is `(nodes − 1) × lag` steps back**, and `tests/level.test.ts` holds every
+ * chained row against this rather than leaving the arithmetic here — a row authoring a longer body
+ * or a slower lag than the ring can answer would silently read the head's position from a lap ago.
+ */
+export const CHAIN_TRAIL = 96;
 
 /**
  * The sky, back to front — `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
@@ -554,6 +587,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const enemyShots = new Pool<Entity>(CAPACITY.enemyShots, makeEntity);
   const debris = new Pool<Entity>(CAPACITY.debris, makeEntity);
   const bossPool = new Pool<Entity>(CAPACITY.boss, makeEntity);
+  const bossBody = new Pool<Entity>(CAPACITY.bossBody, makeEntity);
   const pickupPool = new Pool<Entity>(CAPACITY.pickups, makeEntity);
   const bolts = new Pool<Entity>(CAPACITY.bolts, makeEntity);
 
@@ -700,7 +734,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // The bolts' landing sparks sit with the other things the ship fires, under the shell and the
     // ship — 0233. The line between the sparks is stroked over every layer by `paintBolts`; what
     // must stay on top is the ship itself, and 0050's rule that nothing comes between it and its marks.
-    layers: [blasts, pickupPool, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
+    // The body draws UNDER the head, so the skull covers the neck rather than the neck the skull — 0283.
+    layers: [blasts, pickupPool, bossBody, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
     /*
       THE SKY, back to front — `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
 
@@ -781,6 +816,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     bossRow,
     fight: level.midBoss === null ? 1 : 0,
     bossPool,
+    bossBody,
+    // A ring of the head's lane, allocated once — 0283. @setup: built at mount, never in a frame.
+    bossTrail: new Float32Array(CHAIN_TRAIL),
+    bossTrailAt: 0,
+    chainPhase: 0,
     bossSpawned: false,
     bossBeaten: false,
     clearedIn: 0,
@@ -1591,6 +1631,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     blasts.clear();
     pickupPool.clear();
     bossPool.clear();
+    bossBody.clear();
     shieldOrbs.clear();
     debris.clear();
     // Its own named stream, per 0021: dealing the dust must not move any draw the game makes.

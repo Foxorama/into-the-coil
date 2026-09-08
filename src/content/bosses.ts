@@ -533,6 +533,109 @@ export interface Chill {
   frozenFor: number;
 }
 
+/**
+ * The body a boss drags behind its head — `docs/decisions/0283-the-serpent-is-a-chain.md`.
+ *
+ * ⚠️ **`null` ON THIRTEEN ROWS, AND THAT IS THE POINT RATHER THAN A GAP.** A hull that fills its own
+ * box IS its own body; a serpent is a ribbon, and a ribbon is the one thing a single baked bitmap
+ * cannot be — `src/render/scene.ts`: *"`blit` cannot rotate"*, so a boxed sprite can wave once, at
+ * bake time, for ever. Reported twice: *"it's a static image that bounces up and down"*, and
+ * *"there's no movement to the sprite itself, it's a flat static image that isn't alive."*
+ *
+ * ⚠️ **EVERY NUMBER ABOUT THIS ANIMAL IS ON ITS OWN ROW, WHICH IS
+ * [0282](../../docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md)'s
+ * RULE.** `src/app/frame.ts` holds the arithmetic and holds no opinion: the girths, the length, the
+ * wave and the lag below are what make this animal a serpent rather than the shape of a chain. A
+ * second boss with a chain would author a different creature out of the same code, and if it cannot,
+ * this type is wrong.
+ *
+ * ⚠️ **AND THE BODY IS THE ANATOMY, NOT THE DECORATION.** *"The creature should have the functional
+ * body shape of a creature — the 'design' should then enhance and accompany it."* `girth` is the
+ * animal's cross-section down its length and nothing else; the scales, the ridge and the aura are
+ * painted onto whatever shape it describes, in `src/render/bake.ts`.
+ */
+export interface Chain {
+  /**
+   * Which bitmap one node of this body is drawn as, and its hurt twin.
+   *
+   * ⚠️ **ON THE ROW, BECAUSE A SECOND CREATURE WITH A CHAIN IS A DIFFERENT CREATURE** — 0282. It is
+   * also what puts the body in `LORD_HULLS` (`src/render/bake.ts`), so it wears its place's own skin
+   * rather than the generic foe's: the first bake of this had a venom-green skull towing a row of
+   * pink discs, because the head was a lord's hull and its body was not on any list.
+   */
+  sprite: number;
+  spriteHit: number;
+  /**
+   * The animal's cross-section at each node, head-end first, in world units of DIAMETER.
+   *
+   * ⚠️ **A SNAKE HAS A NECK, AND THAT IS THE FIRST TWO ENTRIES.** 0277 measured the thing that made
+   * every earlier serpent read as a worm: a profile falling monotonically from the skull, so the
+   * thickest part of the animal was the part touching the head. A leech. These rise from the neck to
+   * a midriff and then fall away to a whip, which is the cross-section of a snake.
+   *
+   * ⚠️ **The length of this array is the number of segments**, so a pool has to be able to hold it —
+   * `tests/level.test.ts` holds that against `CAPACITY.bossBody` rather than leaving it to arithmetic
+   * in somebody's head.
+   */
+  girth: readonly number[];
+  /**
+   * How far up-lane of the head's centre the first node sits, in world units.
+   *
+   * ⚠️ **WITHOUT IT THE NECK IS INSIDE THE SKULL, AND THE GUARD SAID SO BEFORE THE SHEET COULD.**
+   * The first draft started the body at the head's own centre, so the first two points of the spine
+   * were the same point — a joint with no length, which measured as a bend radius of **0.13 of its
+   * own girth** and would have drawn as a neck buried in the middle of the face.
+   *
+   * ⚠️ **IT IS THE SKULL'S OWN HALF-LENGTH, and it is authored rather than derived from the sprite.**
+   * `src/content/` cannot see how the head is drawn (0015 points the arrow the other way), and a
+   * number derived from `SPRITE_EXTENT` would be a claim about the drawing rather than about the
+   * animal. What it has to be is *where the head ends*, and a hand can see that on the sheet.
+   */
+  neck: number;
+  /**
+   * How far apart two nodes stand, as a share of the diameter between them.
+   *
+   * ⚠️ **UNDER A HALF, BECAUSE THE BODY IS DRAWN AS OVERLAPPING DISCS AND THE UNION IS THE ANIMAL.**
+   * A disc is the one silhouette that is the same at every angle, which is what lets it be laid along
+   * a curve a bitmap cannot turn to meet; what stops a row of them reading as beads is that each
+   * covers more than half of the one behind it, so the visible edge is the envelope rather than a
+   * scallop.
+   *
+   * ⚠️ **AND IT SETS THE LENGTH.** The body runs `Σ step × (girth[i] + girth[i+1]) / 2`, so a thick
+   * stretch spaces its nodes further apart than a whip does — which is the same statement as *the
+   * overlap is constant along the animal*.
+   */
+  step: number;
+  /** How far a node swings across the lane at the tail, in world units — the wave's amplitude. */
+  sway: number;
+  /**
+   * How far the travelling wave runs before it repeats, in world units ALONG the body.
+   *
+   * ⚠️ **WORLD UNITS AND NOT NODES, WHICH THE GUARD FOUND.** Nodes are spaced by their own girth, so
+   * a whip-thin tail packs three times as many of them into a unit of lane as the midriff does — and
+   * a wave counted per node ran three times faster there and kinked the tail at **0.44 of its own
+   * girth** while the midriff stayed smooth. A wave travelling along a body has one spatial
+   * frequency, and this is it.
+   */
+  wavelength: number;
+  /** Radians the wave advances each step. Bigger is a faster undulation, not a faster animal. */
+  rate: number;
+  /**
+   * Steps of lag per world unit down the body, so a turn travels along it rather than arriving at it.
+   *
+   * ⚠️ **THIS IS WHAT MAKES IT FOLLOW RATHER THAN SLIDE.** Without it the whole body is a rigid
+   * offset from the head and a boss changing lane drags its body sideways like a plank. With it, a
+   * node reads where the head's lane was `offset × lag` steps ago and the animal flows into its own
+   * turn.
+   *
+   * ⚠️ **PER WORLD UNIT AND NOT PER NODE, FOR THE SAME REASON `wavelength` IS.** Per node, the tail's
+   * closely-spaced nodes each sampled the head three steps further back than the last — and the head
+   * bobs at three quarters of a unit a step, so adjacent tail nodes ended up two units apart across a
+   * gap one unit long. That is a shear rather than a curve, and the bend guard measured it.
+   */
+  lag: number;
+}
+
 export interface BossPhase {
   /**
    * Active while remaining health is at or below this fraction of the row's full `health`.
@@ -689,8 +792,30 @@ export interface BossRow extends Body {
    * facing down-lane, so a point in the sprite's frame is a point in the world's.
    */
   muzzle: { along: number; across: number } | null;
+  /**
+   * The body it drags behind its head, or `null` — 0283. Required, on `uncoil`'s and `fall`'s terms.
+   *
+   * ⚠️ **`null` on thirteen of the fourteen.** A boss with one is a creature whose hull is a ribbon;
+   * everything else in the game is a hull that fills its own box, and giving those a chain would be
+   * the mistake 0282 is named for.
+   */
+  chain: Chain | null;
   /** Full health to empty. The first entry must cover a full-health boss. */
   phases: readonly BossPhase[];
+}
+
+/**
+ * How far up-lane a chain's tail reaches from its head, in world units.
+ *
+ * ⚠️ **ONE DESCRIPTION, BECAUSE THREE THINGS NEED IT AND THEY MUST NOT DISAGREE.** `src/app/frame.ts`
+ * lays the nodes out with it, `tests/level.test.ts` asks whether the whole animal is on the narrowest
+ * screen with it, and the row's own comment quotes it. `src/content/sprites.ts` records what three
+ * hand-kept descriptions of one fact cost the last time.
+ */
+export function chainReach(chain: Chain): number {
+  let along = chain.neck;
+  for (let i = 0; i + 1 < chain.girth.length; i++) along += chain.step * (chain.girth[i]! + chain.girth[i + 1]!) * 0.5;
+  return along;
 }
 
 export const BOSSES: Record<BossKind, BossRow> = {
@@ -722,6 +847,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     fall: null,
     chill: null,
     muzzle: null,
+    chain: null,
     sprite: SPRITE.boss,
     spriteHit: SPRITE.bossHit,
     radius: 11,
@@ -794,6 +920,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     fall: null,
     chill: null,
     muzzle: null,
+    chain: null,
     sprite: SPRITE.boss2,
     spriteHit: SPRITE.boss2Hit,
     radius: 12.5,
@@ -854,6 +981,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     fall: null,
     chill: null,
     muzzle: null,
+    chain: null,
     sprite: SPRITE.boss3,
     spriteHit: SPRITE.boss3Hit,
     radius: 11.5,
@@ -907,6 +1035,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     fall: null,
     chill: null,
     muzzle: null,
+    chain: null,
     sprite: SPRITE.boss4,
     spriteHit: SPRITE.boss4Hit,
     radius: 13,
@@ -948,6 +1077,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     fall: null,
     chill: null,
     muzzle: null,
+    chain: null,
     sprite: SPRITE.boss5,
     spriteHit: SPRITE.boss5Hit,
     radius: 14,
@@ -1007,6 +1137,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     fall: null,
     chill: null,
     muzzle: null,
+    chain: null,
     sprite: SPRITE.boss6,
     spriteHit: SPRITE.boss6Hit,
     radius: 12.5,
@@ -1077,6 +1208,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     fall: null,
     chill: null,
     muzzle: null,
+    chain: null,
     sprite: SPRITE.boss7,
     spriteHit: SPRITE.boss7Hit,
     radius: 16,
@@ -1178,23 +1310,110 @@ export const BOSSES: Record<BossKind, BossRow> = {
       animal and register nothing, which is *an event the picture mentions and the model does not* —
       the same fault as 0036's, with the two sides swapped. Scaled with the hull: 16 × 56/40 = 22.4.
 
-      ⚠️ **`station + drift + radius` is 155 against the 160 `tests/level.test.ts` allows**, so this
-      spends five of the eleven units of headroom the row had and is checked rather than assumed.
+      ⚠️ **22 → 7, BECAUSE THE HULL IS A SKULL NOW — 0283.** `radius` is the HEAD's hurtbox; the rest
+      of the animal is the chain below, and every node of it is a hurt node of its own. A disc of 22
+      round a skull eleven units tall would be a hitbox with nothing in most of it, which is 0036 with
+      its two sides swapped — the same fault the 16 → 22 change was fixing when the hull was the whole
+      animal.
     */
-    radius: 22,
+    radius: 7,
     /*
-      ⚠️ **WHERE ITS SHOTS LEAVE THE HULL — the mouth, not the middle.** Reported from play: *"the
-      acid blasts and voids currently originate from the back half of the body."* They did: every arm
-      of `throwAttack` spawned at `(boss.along, boss.across)`, the hull's centre, and a serpent's
-      skull is at the far down-lane end of a very wide sprite — about twenty-seven units in front of
-      it at this extent.
+      ⚠️ **NULL, AND IT WAS THE ONE ROW IN THE GAME THAT NEEDED A MUZZLE — 0283.** 0277 put one here
+      because the skull sat twenty-four units down-lane of the centre of a fifty-six-unit sprite, so a
+      shot from `(boss.along, boss.across)` read as *the body coughing*. The hull IS the skull now:
+      its centre is the mouth, and a muzzle offset would move the shot off the face it belongs to.
+
+      ⚠️ **So this is 0277's rule holding rather than being reversed.** A boss row says where its shots
+      leave the hull; on this hull that place is the middle, exactly as it is for a gyre.
     */
-    muzzle: { along: -24, across: 1 },
+    muzzle: null,
+    /*
+      ── THE BODY, AND IT IS THE ANATOMY OF A SNAKE — 0283 ──────────────────────────────────────────
+
+      *"The body needs to be longer… the creature should have the functional body shape of a
+      creature."* Fourteen nodes, in world units of diameter, head-end first.
+
+      ⚠️ **IT RISES FROM THE NECK BEFORE IT FALLS, WHICH IS THE WHOLE OF *not a worm*.** 0277 measured
+      this and fixed it in a baked profile; it is the same shape here, authored where the animal is
+      rather than where the drawing is. The neck at 7 is narrower than the skull at 11, so the
+      head-neck junction is a step the eye reads as *snake* before any paint is on it; the midriff at
+      15.5 is where the girth lives; the last three nodes are the whip.
+
+      ⚠️ **`step` UNDER A HALF, SO THE DISCS OVERLAP MORE THAN THEY SHOW.** At 0.37 the animal reaches
+      `chainReach` = **54.5 units** up-lane of the skull, which with `station` 114 and the drift puts
+      the tail at **173.5 against the 177.8 of the narrowest screen** — the whole creature on the
+      squarest device the clamp allows, which is what `tests/level.test.ts` asks of every hull and now
+      asks of this one along its real length rather than along a sprite box.
+
+      ⚠️ **AND THE STATION CAME BACK FOURTEEN UNITS TO PAY FOR IT** — 128 → 114. The two ends are held
+      by different guards pulling against each other: 0101 wants the near edge past 55% of the
+      narrowest screen (`114 − 5 − 7` is **57.4%**) and 0061 wants the far end on it. **That pair is
+      what caps the animal's length at about sixty units, and it is a screen fact rather than a
+      taste** — a longer serpent than this needs its tail allowed off the leading edge, which is a
+      decision about what a hurt shape may do off-screen and is not this one.
+
+      ⚠️ **IT IS STILL THE LONGEST THING IN THE GAME AND LONGER THAN IT WAS.** Nose to tail is about
+      sixty-two units against the forty-nine the old sprite actually drew inside its fifty-six-unit
+      box — and unlike that box, none of this is spent on the empty corners a ribbon leaves.
+    */
+    chain: {
+      sprite: SPRITE.serpentBody,
+      spriteHit: SPRITE.serpentBodyHit,
+      /*
+        ⚠️ **THINNER THAN THE FIRST DRAFT, BECAUSE A SHORT FAT TUBE IS A CATERPILLAR.** Photographed
+        at the shipped camera, the first pass was fifteen and a half units thick over fifty-five long
+        — under four to one, and it read as a grub however it was painted. This is eleven over
+        fifty-five, which is five to one for the body and about six for the whole animal.
+
+        ⚠️ **AND FIVE TO ONE IS THE THINNEST ELEVEN NODES CAN DRAW.** The body is overlapping discs
+        and the screen caps its length at about sixty units (see the station above), so the spacing is
+        fixed at roughly `length / nodes`; a girth much under this and the discs stop overlapping and
+        the tube becomes a string of beads. **A longer, thinner serpent is more nodes**, and more
+        nodes is pool the game does not have — `src/app/mount.ts` has that arithmetic.
+      */
+      girth: [6, 8.5, 10.5, 11, 11, 10.5, 9.5, 8, 6.5, 4.5, 2],
+      // Where the skull ends: the head is about fourteen units long, so its back is seven behind it.
+      neck: 6.5,
+      step: 0.53,
+      /*
+        ⚠️ **THE SWAY IS THE TAIL'S AND THE HEAD BARELY MOVES, WHICH IS HOW A SNAKE SWIMS.** An animal
+        whose whole body swings by the same amount is a rope being shaken; one whose head holds a line
+        while the wave grows down the body is swimming. `src/app/frame.ts` ramps it from nothing at
+        the skull to this at the tip.
+      */
+      /*
+        ⚠️ **SEVEN AND EIGHTY, AND THE BEND RULE IS WHAT SET BOTH.** 0277 measured this geometry once
+        for a sprite box and it is the same arithmetic on a chain: the tightest radius of a body
+        waving with along-wavelength `L` and amplitude `A` is about `L² / 4π²A`, and the animal's own
+        spine may not turn inside 1.5 of its local girth. Driven, at the worst moment of the bob:
+
+        | sway | wavelength | tightest bend, over its own girth |
+        |---|---|---|
+        | 6 | 55 | **1.25** — a kink through the midriff |
+        | 6 | 70 | 1.87 |
+        | 7 | 80 | **2.02** — this |
+
+        ⚠️ **THE THICK PART IS WHAT BINDS, WHICH IS THE OPPOSITE OF WHERE THE EYE LOOKS FOR A KINK.**
+        Every failing measurement on the way here was at the tail — right up until the tail was
+        fixed, and then the worst place in the animal became node 8, the midriff, because a bend
+        radius is measured against the girth and the midriff has the most of it.
+
+        ⚠️ **EIGHTY IS LONGER THAN THE ANIMAL, AND THAT IS THE POINT.** Fifty-five units of serpent
+        under an eighty-unit wave is about three quarters of one — a single broad S with a crest and
+        most of a trough, rather than a full cycle squeezed into a body too short to carry it
+        gently. Room for a second undulation is room for a longer animal, and that is the screen's.
+      */
+      sway: 7,
+      wavelength: 80,
+      // A shade over three seconds a cycle — slower than the bob, so the two do not beat.
+      rate: 0.034,
+      lag: 0.25,
+    },
     // Doubled by 0260, from 700 — *"need a lot more health, I think I only saw about 50% of their
     // attacks before they died."* Every real boss is twice what 0247 authored; the mid-bosses stay.
     health: 1400,
     damage: 3,
-    station: 128,
+    station: 114,
     drift: 5,
     driftWavelength: 240,
     patrol: 0.3,
@@ -1262,6 +1481,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     fall: null,
     chill: null,
     muzzle: null,
+    chain: null,
     sprite: SPRITE.boss9,
     spriteHit: SPRITE.boss9Hit,
     radius: 15,
@@ -1307,6 +1527,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     fall: { kind: 'shot', shot: 'rock', every: 90, count: 2, from: 1 },
     chill: null,
     muzzle: null,
+    chain: null,
     sprite: SPRITE.boss10,
     spriteHit: SPRITE.boss10Hit,
     radius: 15,
@@ -1351,6 +1572,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     fall: null,
     chill: null,
     muzzle: null,
+    chain: null,
     sprite: SPRITE.boss11,
     spriteHit: SPRITE.boss11Hit,
     radius: 14,
@@ -1386,6 +1608,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // second after three quarters of one inside.
     chill: { radius: 30, slow: 0.5, freezeAfter: 45, frozenFor: 30 },
     muzzle: null,
+    chain: null,
     sprite: SPRITE.boss12,
     spriteHit: SPRITE.boss12Hit,
     radius: 13,
@@ -1431,6 +1654,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     fall: null,
     chill: null,
     muzzle: null,
+    chain: null,
     sprite: SPRITE.boss13,
     spriteHit: SPRITE.boss13Hit,
     radius: 16,
@@ -1533,6 +1757,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     fall: { kind: 'body', enemy: 'moonJelly', every: 75, count: 2, from: 0.75 },
     chill: null,
     muzzle: null,
+    chain: null,
     sprite: SPRITE.boss14,
     spriteHit: SPRITE.boss14Hit,
     radius: 17,

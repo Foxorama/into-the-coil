@@ -11,7 +11,8 @@ import {
   gapAcross,
 } from '../src/content/formations.ts';
 import { BURST } from '../src/content/debris.ts';
-import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
+import { CAPACITY, CHAIN_TRAIL } from '../src/app/mount.ts';
+import { BOSSES, BOSS_KINDS, chainReach } from '../src/content/bosses.ts';
 import { INVULN_STEPS } from '../src/content/ships.ts';
 import { curtainSpacing, openBy, phaseFor, uncoilsBy } from '../src/app/boss.ts';
 import { BOSS_ATTACK_KINDS, BOSS_MOVE_KINDS, BOSS_STANCE_KINDS } from '../src/content/bosses.ts';
@@ -658,17 +659,41 @@ describe('a boss fight can reach all of its phases', () => {
         Checked over the TABLE rather than by driving, because it has to hold for every boss including
         the ones nobody has fought.
       */
+      /*
+        ⚠️ **AND FOR A BOSS WITH A BODY IT IS THE BODY'S REACH AND NOT THE HULL'S RADIUS — 0283.** A
+        serpent's hull is its SKULL now and its radius is seven; the animal is sixty units long and
+        every one of them is up-lane of that. Left reading `radius`, this guard would have gone on
+        passing at 126 against 177.8 while the tail hung off the leading edge — a guard that stops
+        asking its question because the thing it measures moved, which is
+        `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`'s fourth rule.
+      */
       for (const kind of BOSS_KINDS) {
         const row = BOSSES[kind];
         const narrow = ACROSS_SPAN * MIN_ASPECT;
+        const reach = row.chain === null ? row.radius : Math.max(row.radius, chainReach(row.chain));
         expect(
-          row.station + row.drift + row.radius,
-          `${kind} drifts ${(row.station + row.drift + row.radius - narrow).toFixed(1)} units off the narrowest screen`,
+          row.station + row.drift + reach,
+          `${kind} reaches ${(row.station + row.drift + reach - narrow).toFixed(1)} units off the narrowest screen`,
         ).toBeLessThanOrEqual(narrow);
         // And the back of the swing never reaches where a life begins, or a respawn is a collision.
         expect(row.station - row.drift - row.radius, `${kind} drifts back onto the ship's start`).toBeGreaterThan(
           SHIP_START_ALONG,
         );
+        /*
+          ⚠️ **AND A BODY FITS THE POOL AND THE TRAIL IT READS FROM — 0283.** Both were arithmetic in
+          a comment until this: a row authoring a twelfth node would have had it silently dropped by
+          `src/sim/pool.ts`, and one authoring a slower lag would have had its tail read the head's
+          lane from a whole lap ago. Neither shows up as an error anywhere.
+        */
+        if (row.chain !== null) {
+          expect(row.chain.girth.length, `${kind}'s body has more nodes than CAPACITY.bossBody holds`).toBeLessThanOrEqual(
+            CAPACITY.bossBody,
+          );
+          expect(
+            chainReach(row.chain) * row.chain.lag,
+            `${kind}'s tail reads the head's lane further back than the trail remembers`,
+          ).toBeLessThan(CHAIN_TRAIL - 1);
+        }
       }
     });
 
