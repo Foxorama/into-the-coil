@@ -1196,6 +1196,22 @@ describe('0111 — a boss has one idea, and the picture mentions its phases', ()
           if (world.bossPool.size === 0) break;
           for (let s = 0; s < world.enemyShots.size; s++) {
             const shot = world.enemyShots.at(s);
+            /*
+              ⚠️ **THE WAKE IS NOT A VOLLEY, AND WITHOUT THIS LINE THIS GUARD MEASURES ONLY THE WAKE.**
+              `docs/decisions/0281-a-boss-guards-its-own-back.md` lays a lash behind a hull on its own
+              clock, before the volley gate — so the loop above, which stops the moment ANY hostile
+              shot exists, filled with lashes and returned before the boss had thrown a single volley.
+              The lash does not depend on where the ship is, so the two lanes matched and this passed
+              **without ever reaching the thing it is about**.
+
+              ⚠️ **It was found by `scripts/probes/0111-a-boss-has-one-idea.mjs`, which is the whole
+              point of 0019**: the probe centres the fan on the ship, this stayed green, and the
+              harness refused it. By hand it would have read as a guard that still works.
+
+              A lash is the only thing in `enemyShots` carrying a fuse, which is what tells the two
+              apart.
+            */
+            if (shot.lifeFor > 0) continue;
             seen.push(Math.atan2(shot.velAcross, shot.velAlong - world.scrollPerStep).toFixed(3));
           }
         }

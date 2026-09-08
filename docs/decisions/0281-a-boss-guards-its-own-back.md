@@ -130,6 +130,35 @@ a number per boss: **a volley exists to be dodged and a wake exists to make a co
 where the pool is carrying a fight the wake stands aside. It binds on that one phase and changes
 nothing anywhere else.
 
+## ⚠️ A wake in the hostile pool is a new kind of thing, and four existing guards were reading it as a volley
+
+**`enemyShots` used to hold exactly one kind of thing: what a boss or an enemy had just thrown.** It
+now also holds a wake, and three guards counted the pool as *what this volley put in the air* and one
+read it as *the first thing to appear*. Each is repaired the same way — **a lash is the only thing in
+that pool carrying a fuse**, so `lifeFor > 0` tells the two apart — and each is a real change to what
+that guard measures, so it is listed rather than folded in:
+
+| guard | what it saw | what it now excludes |
+|---|---|---|
+| 0254, `tests/hydra.test.ts` | a frost head's volley came back as *acid and frost*, so the heads looked like they threw together | the wake, which carries the ROW's shot and is not a head |
+| 0263, `tests/frost.test.ts` | `enemyShots.size` counted the shards **and** the wake, so a shard looked like it had opened early | the wake, held with `tailIn` beside the `fireIn` the fixture already holds |
+| 0270, `tests/crowd.test.ts` | nothing — the wake is a real hostile shot and belongs in that count | nothing. It is the guard that priced this decision |
+| 0111, `tests/level.test.ts` | **the guard went vacuous** — see below | the wake |
+
+⚠️ **AND THE FOURTH IS THE ONE WORTH THE SPACE, BECAUSE IT WENT GREEN RATHER THAN RED.** 0111's
+*a pattern is the same pattern wherever the player is* steps a fight until **any** hostile shot
+exists and then compares headings between two ship lanes. The wake is laid before the volley gate, so
+that loop filled with lashes and returned **before the boss had thrown a single volley** — and a
+lash does not depend on where the ship is, so the two lanes matched and the assertion passed
+*without ever reaching the thing it is about.*
+
+⚠️ **NOTHING IN THE SUITE WOULD HAVE SAID SO. `scripts/probes/0111` DID.** Its sixth probe centres
+the fan on the ship — the defect that guard exists for — and with the wake in the way the tree stayed
+green on the named test. `npm run prove` refused it. This is
+[0019](0019-a-probe-must-be-seen-to-apply.md) paying for itself on a decision that has nothing to do
+with 0281: **a change can make somebody else's guard stop asking its question, and the only thing in
+the repository that notices is the probe.**
+
 ## ⚠️ A defect found in another decision's guard, and repaired rather than reported
 
 **`tests/crowd.test.ts`'s pilot has never flown.** It set `world.intent.across` every step and
