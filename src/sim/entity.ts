@@ -298,32 +298,6 @@ export interface Entity extends Body {
    */
   headAt: number;
   /**
-   * How far through its sweep the lash out of a boss's BACK has got — 0281.
-   *
-   * ⚠️ **THE THIRD NUMBER, AND `headAt` ABOVE IS THE ARGUMENT FOR IT WORD FOR WORD.** The tail's fan
-   * turns a little each volley so it has no fixed safe bearing, and every field already here means
-   * something else on a boss that may also have it: `firePhase` is the rake's ANGLE, `headAt` is the
-   * round's COUNT, and the serpent is a hull that carries both — which is the pair that threw a
-   * TypeError at every phase change until 0261 separated them. A fourth reader of either would be
-   * that defect a third time, and *"a third number is cheaper than an invariant two call sites have
-   * to remember"* is this file's own conclusion about it.
-   *
-   * ⚠️ **A SAWTOOTH RATHER THAN A ROTATION**, which is the one thing that makes it different from
-   * `firePhase`: a rake turns for ever and eventually points anywhere, and a tail that did that would
-   * stop being a tail. `src/app/boss.ts` wraps this into a fixed arc behind the hull.
-   */
-  tailAt: number;
-  /**
-   * Steps until a boss lays the next lash behind itself — 0281.
-   *
-   * ⚠️ **A SECOND CLOCK, AND `fireIn` COULD NOT BE IT.** The lash is not part of a volley: it is laid
-   * on its own cadence, unscaled by the tier, and `fireIn` is the phase's own gap scaled by
-   * `fireGapFor`. Sharing them would make the wake twice as dense at `burn` — measured, and it takes
-   * the hostile pool from under a hundred to a full 150 on eleven of the fourteen fights, where
-   * `src/sim/pool.ts` silently drops whatever comes next.
-   */
-  tailIn: number;
-  /**
    * Which of its row's faces a cycling pickup is showing, and steps until it turns to the next —
    * `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
    *
@@ -409,8 +383,6 @@ export function makeEntity(): Entity {
     bobPhase: 0,
     firePhase: 0,
     headAt: 0,
-    tailAt: 0,
-    tailIn: 0,
     face: 0,
     stack: 1,
     faceIn: 0,
@@ -458,8 +430,6 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.bobPhase = 0;
   e.firePhase = 0;
   e.headAt = 0;
-  e.tailAt = 0;
-  e.tailIn = 0;
   e.face = 0;
   e.stack = 1;
   e.faceIn = 0;

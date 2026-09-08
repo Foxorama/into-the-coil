@@ -28,6 +28,16 @@ decision needs no rule.
   before a mechanism is invented for it**, because the argument against that mechanism is usually
   already written beside the code that would host it.
   — [0280](docs/decisions/0280-a-cheap-mechanism-does-not-rename-the-ask.md)
+- **A mechanism for every instance makes them one instance.** ***"No row can forget it"* is an
+  argument for a DEFAULT, never for a CONSTANT** — the row still says what its version is, and shared
+  code holds the fallback. **The tell is a mechanism whose output is identical for every kind**; a
+  ceiling belongs in shared code and a character does not. **A change is finished when the thing it
+  added can differ per instance**, so a feature may land on one boss and not the others. **And a
+  guard written as *every instance does Y* forces Y into shared code** — write *every instance
+  authors its Y*. A quantity solved from one case is checked in every case it runs in: a boss fight
+  has an arrival, a phase table, its windows and a death, and a fixture that stands the boss on
+  station has flown one of them.
+  — [0282](docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md)
 
 ## Process
 

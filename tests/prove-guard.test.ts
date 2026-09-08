@@ -287,6 +287,19 @@ const WITHOUT_PROBES: Record<string, string> = {
   // now a measured claim in tests/authored.ts, printed on every run, and those carry 0192's probes.
   '0198': 'its subject is when a pass runs and which column a rule sits in, and no edit to any file can stage that; what backs it is that every deferred floor is a measured claim in tests/authored.ts, with 0192 probes behind the mechanism',
   '0167': 'its duck guard is advisory under 0192 and has no red to prove; the mechanism that replaces the proof is probed under 0192, and the additive half stayed hard but was never probed by either of the two this file removed',
+  /*
+    ⚠️ **THE SIXTH, AND THE FIRST ONE THAT IS EXEMPT BECAUSE THERE IS NOTHING LEFT TO BREAK.** Every
+    other row here says *the break cannot be scripted*; this one says *the thing the table was about
+    was taken back out of the game*. 0281's wake shipped and was played the same day, and
+    `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md` removes it — so
+    its five probes went with the code, and its table is history rather than a claim.
+
+    ⚠️ **AND IT IS AN EXEMPTION RATHER THAN A NEW RULE ABOUT SUPERSEDED FILES, DELIBERATELY.** Two
+    decisions in this repository are superseded IN PART (0022, 0090) and both still have live code
+    behind their tables; a blanket *a superseded decision needs no probes* would exempt those too, on
+    a marker that does not distinguish them. One honest line beats a rule that reads the wrong files.
+  */
+  '0281': 'its wake was removed from the game by 0282 the day it shipped, so its five probes went with the code — the table is a record of what was measured, not a claim anything can re-run',
 };
 
 describe('the probe set stays honest', () => {

@@ -60,19 +60,7 @@ function volley(d: Driven): { kinds: Set<ShotKind>; beams: number; beamAcross: n
   frame.step();
   const kinds = new Set<ShotKind>();
   for (let i = 0; i < world.enemyShots.size; i++) {
-    const shot = world.enemyShots.at(i);
-    /*
-      ⚠️ **THE WAKE IS NOT A VOLLEY, AND SINCE 0281 A HULL LAYS ONE WHETHER IT IS FIRING OR NOT.**
-      `docs/decisions/0281-a-boss-guards-its-own-back.md` — a lash carries the ROW's shot, which on
-      the hydra is acid, so a frost head's volley came back as *acid and frost* and this assertion
-      read it as two heads throwing at once. A lash is the only thing in `enemyShots` that carries a
-      fuse, which is what tells it from the volley it was laid beside.
-
-      ⚠️ **What is asserted is unchanged**: 0254's claim is that the HEADS take turns, one a volley,
-      and the wake is not one of them.
-    */
-    if (shot.lifeFor > 0) continue;
-    const sprite = shot.sprite;
+    const sprite = world.enemyShots.at(i).sprite;
     for (const k of Object.keys(SHOTS) as ShotKind[]) if (SHOTS[k].sprite === sprite) kinds.add(k);
   }
   let beams = 0;
