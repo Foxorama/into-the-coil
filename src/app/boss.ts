@@ -532,7 +532,7 @@ export function stepBoss(
   if (ship.along === boss.along && ship.across === boss.across) return direction;
   // The phase's own attack where it names one — 0248: the serpent throws a wall, then a spray, then
   // lightning, and the row's `attack` is the first of those.
-  throwAttack(phase.attack ?? row.attack, bullet, bulletKind, boss, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);
+  throwAttack(phase.attack ?? row.attack, bullet, bulletKind, boss, row, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);
   return direction;
 }
 
@@ -549,6 +549,13 @@ function throwAttack(
   bullet: ShotRow,
   kind: number,
   boss: Entity,
+  /*
+    ⚠️ **THREADED IN FOR `row.muzzle` AND NOTHING ELSE.** A shot used to leave `(boss.along,
+    boss.across)`, and the row is the only thing that knows where this hull's face is — which is what
+    *"the acid blasts and voids currently originate from the back half of the body"* was reporting.
+    It recurses through `heads` below, so a head's shot leaves the same mouth the volley does.
+  */
+  row: BossRow,
   phase: BossPhase,
   tier: DifficultyRow,
   ship: Entity,
@@ -559,6 +566,17 @@ function throwAttack(
   rainRng: Rng,
 ): void {
   const speed = bullet.speed * tier.shotSpeed;
+  /*
+    ⚠️ **THE MOUTH, OR THE CENTRE WHERE A ROW DOES NOT NAME ONE.** `null` is not a placeholder — a
+    gyre throws from its own axis and a jellyfish from its bell, and the centre is where those belong.
+    Only a hull with its face at one end has to say so, which today is the serpent alone.
+
+    ⚠️ **`rain` AND `belch` ARE DELIBERATELY UNTOUCHED**: neither leaves the hull. Rain falls from the
+    top of the lane and a belch comes off the lane's edge, so a muzzle on the body would move a shot
+    that never came from the body.
+  */
+  const muzzleAlong = boss.along + (row.muzzle?.along ?? 0);
+  const muzzleAcross = boss.across + (row.muzzle?.across ?? 0);
 
   /*
     ── WHERE THE VOLLEY POINTS, AND IT USED TO POINT AT THE SHIP ─────────────────────────────────
@@ -635,7 +653,7 @@ function throwAttack(
         // A volley that will not fit is dropped rather than grown, exactly as `src/sim/pool.ts` says.
         if (shot === null) break;
         const angle = first + step * i;
-        reset(shot, boss.along, boss.across, bullet, kind);
+        reset(shot, muzzleAlong, muzzleAcross, bullet, kind);
         shot.velAlong = Math.cos(angle) * speed + scrollPerStep;
         shot.velAcross = Math.sin(angle) * speed;
       }
@@ -652,7 +670,7 @@ function throwAttack(
         const shot = shots.spawn();
         if (shot === null) break;
         const angle = around * i;
-        reset(shot, boss.along, boss.across, bullet, kind);
+        reset(shot, muzzleAlong, muzzleAcross, bullet, kind);
         shot.velAlong = Math.cos(angle) * speed + scrollPerStep;
         shot.velAcross = Math.sin(angle) * speed;
       }
@@ -670,11 +688,12 @@ function throwAttack(
       */
       for (let i = 1; i <= perSide; i++) {
         for (let side = -1; side <= 1; side += 2) {
-          const across = boss.across + side * i * attack.gap;
+          // The wall's own spacing rides the muzzle, so a hull with a face throws its wall from it.
+          const across = muzzleAcross + side * i * attack.gap;
           if (across < 0 || across > ACROSS_SPAN) continue;
           const shot = shots.spawn();
           if (shot === null) break;
-          reset(shot, boss.along, across, bullet, kind);
+          reset(shot, muzzleAlong, across, bullet, kind);
           shot.velAlong = -speed + scrollPerStep;
           shot.velAcross = 0;
         }
@@ -726,7 +745,7 @@ function throwAttack(
         if (shot === null) break;
         const angle = first + along * i;
         const lash = speed * (1 + attack.reach * (n > 1 ? i / (n - 1) : 0));
-        reset(shot, boss.along, boss.across, bullet, kind);
+        reset(shot, muzzleAlong, muzzleAcross, bullet, kind);
         shot.velAlong = Math.cos(angle) * lash + scrollPerStep;
         shot.velAcross = Math.sin(angle) * lash;
       }
@@ -791,7 +810,7 @@ function throwAttack(
       const n = attack.heads.length;
       const head = attack.heads[((boss.headAt % n) + n) % n]!;
       boss.headAt++;
-      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);
+      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);
       break;
     }
     default: {

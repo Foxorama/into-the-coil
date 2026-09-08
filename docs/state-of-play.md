@@ -156,6 +156,8 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the aura counts BACK from the boss rather than forward from the opening: `AURA_BUILD_UNITS`, the same twenty seconds at the other end of the level** | [0273](decisions/0273-the-aura-is-the-run-in-to-the-boss.md) |
 | **a place is mixed BY EAR and level one is not the reference: The Approach's `hook`, `lead` and `counter`, Ember Nebula's `chords`, `crash` and cymbal — and 0155's claim that The Approach never disagrees with the arrangement is retired** | [0274](decisions/0274-a-place-is-mixed-by-ear-and-level-one-is-not-the-reference.md) |
 | **a layer MAY MOVE: a place states a `PanTrack` over the layer's own loop, written as a horizon of `setValueAtTime` events at the instant the sources start — Ember Nebula's `hook` bounces right, left, right** | [0275](decisions/0275-a-layer-may-move.md) |
+| **the painting kit can draw a CREATURE: curves, gradients and strokes, with `tests/paths.ts` taught to see all three; exactly one stroke is the outline and every other is paint held inside the hull; the serpent redrawn on it** | [0276](decisions/0276-the-kit-draws-a-creature.md), [`the-vocabulary-is-the-ceiling`](../reports/the-vocabulary-is-the-ceiling-2026-09-08.md) |
+| **a boss row says where its shots leave the hull — `muzzle`, `null` for the six whose face is not at one end; the serpent at 56 units with a hurtbox of 22, spines in its outline and an aura painted behind it** | [0277](decisions/0277-the-serpent-has-menace.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -831,7 +833,21 @@ so it is not chased again.
 so a verdict on the picture is not tangled with a change to the pipeline — 0109. The other six ride
 the lifted kit afterwards. **And the target arrives as a reference or a sketch from the player**,
 asked for and agreed 2026-09-08, on [`the-coil-drawn`](../reports/the-coil-drawn-2026-09-05.md)'s
-evidence that a drawn path converged in one pass what four passes of words had not.
+evidence that a drawn path converged in one pass what four passes of words had not. **Both halves
+landed** — [0276](decisions/0276-the-kit-draws-a-creature.md) and
+[0277](decisions/0277-the-serpent-has-menace.md).
+
+### ⚠️ AND THE NEXT ONE IS A FORK THAT HAS TO BE PICKED BEFORE IT IS BUILT
+
+⚠️ **THE SERPENT DOES NOT UNDULATE, AND A BAKED BITMAP CANNOT.** Played 2026-09-08: *"it needs to
+actually move/undulate, it's a static image that bounces up and down."* Asked in the same session:
+*"we need to update the boss collision to no longer be a disc if we can."* **These are one job**, and
+[0277](decisions/0277-the-serpent-has-menace.md)'s *What this deliberately does not do* costs the two
+ways of doing it — phase frames against a segment chain — and says why the chain answers both. **It
+buys a change to `tests/budget.test.ts`'s one-blit-per-entity rule, which is the reason it is a
+decision and not a pass.**
+
+**The six other bosses also still ride the lifted kit**, and none of them has been redrawn on it.
 
 **And the rest of the picture is still owed** — the mid-bosses' attacks and the enemies' bullets
 legible — then the music as an album; every one of those is a model quantity until it is flown.

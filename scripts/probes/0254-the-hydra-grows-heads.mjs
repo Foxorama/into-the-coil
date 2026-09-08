@@ -25,9 +25,10 @@ export const PROBES = [
     guard: 'THE HEADS TAKE TURNS, DRIVEN',
     edit: {
       path: 'src/app/boss.ts',
-      // ⚠️ Re-anchored by 0263, which put a shot's kind on the shot.
-      find: '      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);',
-      replace: '      throwAttack(head.attack, bullet, kind, boss, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);',
+      // ⚠️ Re-anchored by 0263, which put a shot's kind on the shot — and again by 0277, which threads
+      // the row through for `row.muzzle`. What it breaks is unchanged: a head throwing the ROW's shot.
+      find: '      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);',
+      replace: '      throwAttack(head.attack, bullet, kind, boss, row, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);',
     },
   },
   {
