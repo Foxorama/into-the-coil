@@ -190,12 +190,25 @@ export function paintScene(
   for (let layer = 0; layer < layers.length; layer++) {
     const entities = layers[layer]!;
     const count = entities.size;
+    /*
+      ⚠️ **`swell` IS 1 FOR EVERYTHING BUT A CHAIN'S BODY — 0283**, and it is a SIZE rather than an
+      animation: a node is drawn at the animal's cross-section where it stands, and that number never
+      moves once the node is placed. The landmark's own note above weighs scale-swell against a second
+      baked frame and picks scale for one mark; this is the second, on the same terms and for the same
+      reason — a serpent tapers from fifteen units to two, and a sprite slot per thickness would band
+      visibly at every change.
+
+      ⚠️ **The comment is out here rather than beside the blit, and that is not tidiness.**
+      `scripts/probes/0025-frame.mjs` and `scripts/probes/0027-picture.mjs` anchor on the two lines
+      below being adjacent; a paragraph between them strands both, and a stranded probe is a guard
+      nobody is proving — 0019.
+    */
     for (let i = 0; i < count; i++) {
       const e = entities.at(i);
       const along = e.prevAlong + (e.along - e.prevAlong) * alpha;
       const across = e.prevAcross + (e.across - e.prevAcross) * alpha;
       const inView = along - cameraAlong;
-      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale);
+      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell);
     }
   }
 }

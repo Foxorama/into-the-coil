@@ -346,6 +346,22 @@ export interface Entity extends Body {
   orbitTurn: number;
   orbitGrow: number;
   /**
+   * How big this is drawn against the size its bitmap was baked at. `1` for everything but a chain's
+   * body — `docs/decisions/0283-the-serpent-is-a-chain.md`.
+   *
+   * ⚠️ **A SIZE AND NOT AN ANIMATION, AND THE DIFFERENCE IS WHY THIS IS ALLOWED AT ALL.**
+   * `docs/decisions/0280-a-cheap-mechanism-does-not-rename-the-ask.md` records a whole decision
+   * abandoned for swelling every sprite on a sine and calling it animation; `src/render/scene.ts`
+   * says the same thing one line up, that *a single sine would read as breathing*. This never moves.
+   * It is set once when a node is placed and it is the animal's cross-section at that node, which is
+   * a fact about the creature's anatomy rather than a substitute for one.
+   *
+   * ⚠️ **AND THE ALTERNATIVE IS A SPRITE SLOT PER THICKNESS**, which bands visibly wherever the
+   * thickness changes and costs the atlas one bake per band. A serpent tapers from fifteen units to
+   * two; the bands would be the thing the eye sees.
+   */
+  swell: number;
+  /**
    * The most a homing missile turns toward its target per step, in radians — 0235. Copied onto the
    * missile when it is launched, so a player who switches tubes keeps the missiles in the air, and
    * zero means *flies straight*, which is every other body.
@@ -392,6 +408,7 @@ export function makeEntity(): Entity {
     orbitRadius: 0,
     orbitTurn: 0,
     orbitGrow: 0,
+    swell: 1,
     seekTurn: 0,
   };
 }
@@ -439,6 +456,8 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.orbitRadius = 0;
   e.orbitTurn = 0;
   e.orbitGrow = 0;
+  // A body is drawn at the size it was baked unless a chain says otherwise — 0283.
+  e.swell = 1;
   e.seekTurn = 0;
 }
 

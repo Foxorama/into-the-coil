@@ -230,6 +230,20 @@ export const SPRITE_KINDS = [
   // gyre, the frost ship, the hydra and the jellyfish. Each its own silhouette, as every boss is.
   'boss8',
   'boss8Hit',
+  /*
+    ⚠️ **THE SERPENT'S BODY, ONE NODE OF IT — 0283.** `boss8` is the skull; this is blitted once per
+    node along a travelling spine, which is the only way a baked hull can undulate at all —
+    `src/render/scene.ts`: *"`blit` cannot rotate"*, so a boxed sprite waves once, at bake time, for
+    ever.
+
+    ⚠️ **A DISC, AND THAT IS THE ROTATION RULE TALKING.** A node lies at whatever angle its stretch of
+    the body happens to be at and a bitmap cannot turn to meet it, so the one silhouette that works at
+    every angle is the one that can be laid along a curve. What makes a row of them read as a tube
+    rather than as beads is that they OVERLAP by more than half: each covers the leading arc of the
+    one behind it, and what is left is the envelope.
+  */
+  'serpentBody',
+  'serpentBodyHit',
   'boss9',
   'boss9Hit',
   'boss10',
@@ -859,8 +873,24 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     as an add. 56 is the largest extent in the game and still well inside the 80 `src/sim/camera.ts`
     calls the ceiling — and by AREA it is nowhere near the jellyfish, which is the honest comparison.
   */
-  boss8: 56,
-  boss8Hit: 56,
+  /*
+    ⚠️ **56 → 20, BECAUSE THE HULL IS A SKULL NOW — 0283.** `boss8` was the whole animal drawn into
+    one box; the body is `serpentBody` laid along a spine, so what is left here is the head. **The
+    ANIMAL is longer than it has ever been** — about sixty-two units nose to tail against the
+    forty-nine the old box actually drew — and this number no longer says how long it is.
+    `tests/level.test.ts` reads `chainReach` for that.
+  */
+  boss8: 20,
+  boss8Hit: 20,
+  /*
+    ⚠️ **ONE NODE OF THE BODY, AND THE TILE IS BIGGER THAN THE FLESH.** The disc itself is
+    `SERPENT_BODY_DIAMETER` across; the rest of the box is what the aura needs to sit in without
+    running off its own tile and bleeding into a neighbour in the atlas — the fault 0277's halo
+    found the hard way.
+  */
+  serpentBody: 26,
+  serpentBodyHit: 26,
+
   boss9: 42,
   boss9Hit: 42,
   boss10: 44,
@@ -1125,3 +1155,18 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   */
   bound: 10,
 };
+
+/**
+ * How wide one node of a serpent's body is DRAWN at `Entity.swell` of 1, in world units — 0283.
+ *
+ * ⚠️ **ONE DESCRIPTION OF A FACT THREE LAYERS NEED, AND THE LAST TIME THERE WERE THREE OF THEM IT
+ * COST THE WHOLE SCREEN.** `src/render/bake.ts` sizes the disc it draws from this; `src/app/frame.ts`
+ * divides the row's girth by it to get each node's `swell`; and the flesh has to be the same width in
+ * both or the animal is drawn at a thickness its hurt shape does not have — which is
+ * `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` with its two sides
+ * swapped. The header of this file has the story of the last table that was kept in three places.
+ *
+ * ⚠️ **SMALLER THAN THE TILE**, because the aura is painted outside the flesh and has to stay inside
+ * the bitmap's own box — 0277's halo ran off its tile and bled into the next sprite in the atlas.
+ */
+export const SERPENT_BODY_DIAMETER = 15.7;

@@ -149,7 +149,8 @@ export const PROBES = [
       // The subtrahends grow as pools are added — 0066 took four more for the scatter — and the
       // break is the same one: a pool that pays for itself out of nothing.
       // And 0230 took one more for the exhaust.
-      find: '  debris: 200 - MAX_SHIELDS - 1 - 24 - 8 - 4,',
+      // ⚠️ Re-anchored by 0283, which takes eleven slots out of the same share for a serpent's body.
+      find: '  debris: 200 - MAX_SHIELDS - 1 - 24 - 8 - 4 - 11,',
       replace: '  debris: 200 - MAX_SHIELDS - 24,',
     },
   },

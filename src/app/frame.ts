@@ -58,7 +58,7 @@ import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
 import type { Pool } from '../sim/pool.ts';
 import { BOLT_STEPS, paintBolts, paintScene, paintStacks, type Bound, type Landmarks, type Sky } from '../render/scene.ts';
-import { LANDMARK_SLOTS, SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
+import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
 import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
@@ -68,7 +68,7 @@ import { SHOTS, SHOT_INDEX, SHOT_ROWS, type ShotKind } from '../content/shots.ts
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, type LevelRow } from '../content/levels.ts';
-import { BOSSES, type BossRow, type SummonFrom } from '../content/bosses.ts';
+import { BOSSES, type BossRow, type SummonFrom, chainReach } from '../content/bosses.ts';
 import { type DifficultyRow, crowdFor, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, nextOnGrid } from '../content/cadence.ts';
 import {
@@ -1005,6 +1005,25 @@ export interface World {
   fight: number;
   /** The boss, alone in its own pool — so `playerShots` meeting it is its own pairing. */
   bossPool: Pool<Entity>;
+  /**
+   * The nodes of the boss's body, if its row has a `chain` — 0283. Empty for thirteen of fourteen.
+   *
+   * ⚠️ **ITS OWN POOL AND NOT MORE OF `bossPool`.** Everything in this file reads `bossPool.at(0)`
+   * as *the boss*, and `src/sim/pool.ts` reorders on release — so a node sharing that pool would
+   * become the boss the first time anything was retired out of it.
+   */
+  bossBody: Pool<Entity>;
+  /**
+   * Where the boss's lane has been, one entry a step, so a turn arrives down the body — 0283.
+   *
+   * ⚠️ **Allocated once, at boot.** It is a ring, `bossTrailAt` is the newest entry, and node `k`
+   * reads `k × chain.lag` steps back. Long enough for the longest chain at the largest lag any row
+   * authors, which `tests/level.test.ts` holds rather than leaving to arithmetic here.
+   */
+  bossTrail: Float32Array;
+  bossTrailAt: number;
+  /** How far the travelling wave has got, in radians — 0283. Advances by the row's `rate` a step. */
+  chainPhase: number;
   /** Whether the current fight's boss has been put on the field. Cleared between fights. */
   bossSpawned: boolean;
   /** Whether the current fight's boss has been beaten, so the beat below is started exactly once. */
@@ -1389,6 +1408,10 @@ export class GameFrame implements Frame {
     stepEntities(w.shipPool, w.cameraAlong);
     stepEntities(w.pickups, w.cameraAlong);
     stepEntities(w.bossPool, w.cameraAlong);
+    // The nodes keep their own `flashFor` and sprite here; `layChain` writes where they stand,
+    // after the head has moved, so a node interpolates from where it was to where it now is — 0283.
+    stepEntities(w.bossBody, w.cameraAlong);
+    layChain(w);
     stepEntities(w.enemies, w.cameraAlong);
     // ⚠️ The one pool with its own leading cull, and it is the player's REACH rather than content —
     // `src/sim/camera.ts` has the play report that argues it.
@@ -1469,12 +1492,32 @@ export class GameFrame implements Frame {
     */
     const open = w.bossPool.size > 0 ? openBy(phaseFor(w.bossRow, w.bossPool.at(0).health, w.bossFullHealth)) : 1;
     killedByShots += collideInto(w.playerShots, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, bladeHits);
+    /*
+      ⚠️ **THE BODY IS HIT WHERE IT IS, AND WHAT LANDS ON IT IS SPENT ON THE HEAD — 0283.** A node is
+      a piece of one animal: it takes the arrival, it flashes where the player aimed
+      (`docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md`), and it cannot die.
+      `deaths` is `null` on all three for that reason — a node has no death to log, and handing over
+      `bossDeaths` would put a boss explosion at the tail every time a pulse landed there.
+    */
+    collideInto(w.playerShots, w.bossBody, 1, open, IMPACT_FLASH_STEPS, null, bladeHits);
     // What the blades landed this step, before the missiles add theirs — the `hit` cue reads it.
     const bites = bladeHits === null ? 0 : w.hits.count;
     killedByShots += collideInto(w.missiles, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits);
+    collideInto(w.missiles, w.bossBody, 1, open, IMPACT_FLASH_STEPS, null, w.hits);
     // An area rather than an arrival: everything inside it, once, and nothing consumes it.
     blastInto(w.blasts, w.enemies, 1, IMPACT_FLASH_STEPS, w.deaths);
     blastInto(w.blasts, w.bossPool, open, IMPACT_FLASH_STEPS, w.bossDeaths);
+    blastInto(w.blasts, w.bossBody, open, IMPACT_FLASH_STEPS, null);
+    /*
+      ⚠️ **AND THE SWEEP SITS HERE, WITH THE PAIRINGS, RATHER THAN AT THE END OF THE STEP** — 0283. A
+      killing blow landed on the tail has to end the fight on the step it lands. `strike` is the arc's
+      own call, so the death, the log and the explosion are the ones the game already has, thrown at
+      the head — which is where a serpent dies.
+    */
+    const onBody = drainChain(w);
+    if (onBody > 0 && w.bossPool.size > 0 && strike(w.bossPool, 0, onBody, IMPACT_FLASH_STEPS, w.bossDeaths)) {
+      killedByShots += 1;
+    }
     /*
       The impact flash's twin. An arrival that did not kill is a body that went white and stayed.
 
@@ -1547,6 +1590,9 @@ export class GameFrame implements Frame {
       // the cheapest way to clear the screen.
       collideIntoOne(w.enemies, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
       collideIntoOne(w.bossPool, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
+      // Flying into a serpent's flank is flying into the serpent — 0283. Not consumed, as the hull
+      // is not: a body the player rammed is still there afterwards.
+      collideIntoOne(w.bossBody, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
       /*
         ⚠️ **THE PLAYER'S OWN BLAST, IN THE SAME LIST AS EVERY OTHER THREAT — and that is the skill in
         it.** Asked for: *"and the blast hurts the player."* It goes through `collideIntoOne` rather
@@ -4581,6 +4627,181 @@ function driveBoss(w: World): void {
     the window opened on and there is no second piece of state to reset when a boss dies.
   */
   if (stance.kind === 'bare' && w.steps % BURST.barePulse === 0) burst(w, boss.along, boss.across, BURST.bare);
+}
+
+/*
+  ── THE SERPENT IS A CHAIN — 0283 ────────────────────────────────────────────────────────────────
+
+  `docs/decisions/0283-the-serpent-is-a-chain.md`. Reported twice, three PRs apart: *"it needs to
+  actually move/undulate, it's a static image that bounces up and down"*, and *"there's no movement
+  to the sprite itself, it's a flat static image that isn't alive."*
+
+  ⚠️ **A BAKED BITMAP CANNOT UNDULATE AND NO AMOUNT OF ART FIXES THAT.** `src/render/scene.ts` says
+  *"`blit` cannot rotate"*: a hull is one picture, drawn once at boot, so a serpent painted mid-wave
+  holds that wave for the whole fight. The body is fourteen nodes now, each its own entity with its
+  own place, its own girth and its own hurtbox.
+
+  ⚠️ **AND THE ONE-BLIT-PER-ENTITY BUDGET IS UNTOUCHED, WHICH WAS THE THING 0277 EXPECTED TO PAY.**
+  `tests/budget.test.ts` counts blits per ENTITY; fourteen nodes are fourteen entities and cost
+  fourteen blits, which is what they would cost as anything else. What the chain actually spends is
+  pool slots, and `src/app/mount.ts` takes them out of the particle share with the arithmetic beside
+  them.
+
+  ⚠️ **EVERY NUMBER ABOUT THE ANIMAL IS ON ITS ROW** — 0282. Nothing here knows what a serpent looks
+  like: it lays out whatever `Chain` it is handed, and a second creature with a chain would be a
+  different animal out of the same twenty lines.
+*/
+
+/**
+ * What one node of a body is, apart from where it stands.
+ *
+ * ⚠️ **`health` IS A SCRATCH SENTINEL AND NOT A HIT COUNT.** A node cannot die: it is a piece of one
+ * animal with one health bar, and `drainChain` moves whatever landed on it onto the head at the end
+ * of the step. The number only has to be larger than everything that can land on one node in a
+ * single step, and a million is not a tuning decision.
+ */
+const CHAIN_NODE_HEALTH = 1e6;
+
+/**
+ * The body a node is spawned from — the one thing every node of every chain shares.
+ *
+ * ⚠️ **The girth, the hurtbox and the drawn size are written over it per node** in `layChain`,
+ * because those are the animal's and this is only the slot. `damage` is the row's contact damage:
+ * flying into a serpent's flank is flying into the serpent.
+ */
+const CHAIN_NODE: Body = {
+  sprite: 0,
+  spriteHit: 0,
+  radius: 1,
+  health: CHAIN_NODE_HEALTH,
+  damage: 1,
+};
+
+/** Where a node's girth is read from, so `swell` and the hurtbox cannot disagree — 0283. */
+const chainSwell = (girth: number): number => girth / SERPENT_BODY_DIAMETER;
+
+/**
+ * Lay the body out behind the head, this step.
+ *
+ * ── THE THREE THINGS THAT MAKE IT AN ANIMAL RATHER THAN A QUEUE ─────────────────────────────────
+ *
+ * ⚠️ **THE NODES ARE PLACED, NOT FOLLOWED, AND THE REASON IS THE CAMERA'S FRAME.** A snake in a
+ * garden is normally modelled by having each segment chase the one in front along the path it took.
+ * That collapses here: a boss holds STATION, so in the camera's frame its head travels no distance
+ * along the lane at all — the recorded path is a line swept back and forth across the lane, and a
+ * chain placed along it folds into a flat zipper. So the body is laid out in ALONG-space, head-end
+ * first, and what varies is where each node sits across the lane.
+ *
+ * ⚠️ **THE UNDULATION IS A TRAVELLING WAVE, WHICH IS WHAT UNDULATION IS.** Node `k` is displaced by
+ * `sin(phase − k / wavelength × 2π)`, and `phase` advances every step — so the crest moves tailward
+ * down a body that is otherwise still. The amplitude ramps from nothing at the neck to the row's
+ * `sway` at the tip, because an animal whose whole body swings by the same amount is a rope being
+ * shaken and one whose head holds a line while the wave grows is swimming.
+ *
+ * ⚠️ **AND THE TURN FLOWS DOWN THE BODY, WHICH IS THE `lag`.** Node `k` reads where the head's lane
+ * was `k × lag` steps ago, out of a ring buffer allocated once at boot. Without it the body is a
+ * rigid offset from the head and a boss changing lane drags the whole animal sideways like a plank.
+ *
+ * ⚠️ **Nothing allocates.** The trail is a `Float32Array` built at mount; the loop is numbers.
+ */
+function layChain(w: World): void {
+  const chain = w.bossRow.chain;
+  if (chain === null) return;
+  if (w.bossPool.size === 0) {
+    w.bossBody.clear();
+    return;
+  }
+  const head = w.bossPool.at(0);
+  const nodes = chain.girth.length;
+  /*
+    ⚠️ **SPAWNED TAIL-FIRST, AND THE ORDER IS THE PICTURE.** A pool draws in index order, so index 0
+    is drawn first and is covered by everything after it. The body is overlapping discs and what
+    makes them read as a tube is that each covers the leading arc of the one behind it — so the tail
+    goes down first and the neck last, and the skull (a later layer) covers the neck.
+  */
+  if (w.bossBody.size === 0) {
+    // Which bitmap this creature's body is: the ROW's, written into the shared slot rather than
+    // allocated per fight — 0282, and `src/sim/entity.ts`'s own habit about per-frame objects.
+    CHAIN_NODE.sprite = chain.sprite;
+    CHAIN_NODE.spriteHit = chain.spriteHit;
+    for (let i = 0; i < nodes; i++) {
+      const node = w.bossBody.spawn();
+      if (node === null) break;
+      const girth = chain.girth[nodes - 1 - i]!;
+      reset(node, head.along, head.across, CHAIN_NODE);
+      // The hurtbox IS the anatomy: a node is as wide as the animal is there, and no wider — 0283.
+      node.radius = girth * 0.5;
+      node.swell = chainSwell(girth);
+      node.health = CHAIN_NODE_HEALTH;
+      node.damage = w.bossRow.damage;
+    }
+  }
+  // Where the head's lane is now, for the nodes that are still reading where it was.
+  w.bossTrailAt = (w.bossTrailAt + 1) % w.bossTrail.length;
+  w.bossTrail[w.bossTrailAt] = head.across;
+  w.chainPhase += chain.rate;
+
+  const trail = w.bossTrail.length;
+  const reach = chainReach(chain);
+  // The first node sits at the back of the skull, not in the middle of it — the row says where.
+  let offset = chain.neck;
+  for (let k = 0; k < nodes; k++) {
+    if (k > 0) offset += chain.step * (chain.girth[k - 1]! + chain.girth[k]!) * 0.5;
+    const at = nodes - 1 - k;
+    if (at >= w.bossBody.size) continue;
+    const node = w.bossBody.at(at);
+    // The head's lane as it was `k × lag` steps ago — a turn arriving down the body rather than at it.
+    /*
+      ⚠️ **THE TRAIL IS READ BETWEEN TWO STEPS, NOT AT ONE, AND `Math.round` WAS A KINK.** The lag is
+      a distance down the body and lands between samples; rounding it to the nearer step means two
+      adjacent nodes can read the head's lane one whole step apart — and the head bobs at three
+      quarters of a unit a step, so a tail whose nodes are a unit and a half apart got a
+      **twenty-four degree** corner out of nothing but the rounding. Measured, driven, by the bend
+      guard: 0.81 of its own girth where the body either side of it was perfectly smooth.
+    */
+    const lagged = offset * chain.lag;
+    const whole = Math.floor(lagged);
+    const into = lagged - whole;
+    const back = (((w.bossTrailAt - whole) % trail) + trail) % trail;
+    const before = (((w.bossTrailAt - whole - 1) % trail) + trail) % trail;
+    const followed = w.bossTrail[back]! * (1 - into) + w.bossTrail[before]! * into;
+    /*
+      ⚠️ **THE WAVE AND THE SWELL ARE BOTH READ IN WORLD UNITS ALONG THE BODY, NOT PER NODE, AND THE
+      GUARD IS WHAT SAID SO.** The nodes are spaced by their own girth, so a whip-thin tail packs
+      three times as many of them into a unit of lane as the midriff does — and a wave counted per
+      node therefore ran three times faster there. Measured, driven: the tail bent at **0.44 of its
+      own girth**, a kink, on an animal whose midriff was perfectly smooth. In world units the wave
+      has one spatial frequency down the whole creature, which is what a wave travelling along a body
+      actually is.
+    */
+    const down = offset / reach;
+    const sway = chain.sway * down;
+    node.along = head.along + offset;
+    node.across = followed + sway * Math.sin(w.chainPhase - (offset / chain.wavelength) * TAU);
+  }
+}
+
+/**
+ * Move everything that landed on the body this step onto the head, and reset the nodes.
+ *
+ * ⚠️ **ONE SWEEP RATHER THAN A ROUTE PER DAMAGE SOURCE.** The arc strikes a node in `fireShip`, a
+ * pulse and a missile arrive on it in the pairings, and a blast covers several at once; each of those
+ * would otherwise need to know that a node is not a body. What they all do instead is take health off
+ * a node, which this reads back and spends on the head through `strike` — the same call the arc
+ * already makes, so the death, the log and the explosion are the ones the game already has.
+ *
+ * ⚠️ **AFTER EVERY SOURCE AND BEFORE THE HEAD'S DEATH IS READ**, which is why it sits with the boss
+ * pairings rather than at the end of the step: a killing blow landed on the tail has to end the fight
+ * on the step it lands, not on the one after.
+ */
+function drainChain(w: World): number {
+  let taken = 0;
+  for (let i = 0; i < w.bossBody.size; i++) {
+    const node = w.bossBody.at(i);
+    taken += CHAIN_NODE_HEALTH - node.health;
+    node.health = CHAIN_NODE_HEALTH;
+  }
+  return taken;
 }
 
 /**

@@ -15,11 +15,12 @@ import { phaseFor } from '../src/app/boss.ts';
 import { BOSSES, RAIN_BOLT_KIND } from '../src/content/bosses.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHOTS } from '../src/content/shots.ts';
-import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { SPRITE_KINDS } from '../src/content/sprites.ts';
 import { INK_OF } from '../src/render/bake.ts';
 import { BOLT_STEPS } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
+import { reset } from '../src/sim/entity.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
@@ -141,13 +142,17 @@ describe('0248 — the serpent strikes', () => {
       spawned at `(boss.along, boss.across)`, and a serpent's skull is at the far down-lane end of the
       widest sprite in the game.
 
-      ⚠️ **MEASURED IN THE PLAYER'S UNITS, WHICH IS WHAT 0027 ASKS OF AT LEAST ONE ASSERTION.** Not
-      *the code read the field* — how far down-lane of the hull's own centre the shot actually
-      appears, as a share of the hull's half-extent. The middle of the body cannot satisfy that
-      however the table is written, and a guard that read `row.muzzle` back would prove only that the
-      table equals itself.
+      ⚠️ **AND SINCE 0283 THE SAME CLAIM IS MEASURED AGAINST THE BODY RATHER THAN AGAINST A BOX.**
+      0277 asserted how far down-lane of the hull's centre a shot appeared, as a share of the sprite's
+      half-extent, because the sprite was the whole animal and its centre was the midriff. The hull IS
+      the skull now, so that arithmetic would be asking whether the mouth is in front of the mouth.
+
+      What the report was actually about is *the shot comes out of the face and not out of the
+      body* — so what is asserted is exactly that: every shot appears **down-lane of every node of the
+      body**, by a clear margin. A serpent that threw from its flank fails it, a serpent that threw
+      from its centre before the head became the hull fails it, and no arrangement of the table can
+      satisfy it without the shot leaving the head.
     */
-    const half = SPRITE_EXTENT.boss8 / 2;
     for (const [name, fraction] of [
       ['the opening rake of acid', 1],
       ['the heads, once hurt', 0.6],
@@ -158,12 +163,17 @@ describe('0248 — the serpent strikes', () => {
       boss.fireIn = 1;
       frame.step();
       expect(world.enemyShots.size, `${name} threw nothing`).toBeGreaterThan(0);
+      expect(world.bossBody.size, `${name} was thrown by a serpent with no body`).toBeGreaterThan(0);
+      // The nearest the body comes to the player: everything the shot must be in front of.
+      let nearest = Number.POSITIVE_INFINITY;
+      for (let i = 0; i < world.bossBody.size; i++) nearest = Math.min(nearest, world.bossBody.at(i).along);
       for (let i = 0; i < world.enemyShots.size; i++) {
-        const ahead = boss.along - world.enemyShots.at(i).along;
+        const shot = world.enemyShots.at(i);
         expect(
-          ahead,
-          `${name} left the hull ${ahead.toFixed(1)} units down-lane of its centre, against a half-extent of ${half} — a shot from the middle of a serpent reads as the body coughing`,
-        ).toBeGreaterThan(half * 0.5);
+          nearest - shot.along,
+          `${name} left the animal ${(nearest - shot.along).toFixed(1)} units down-lane of the nearest node of its ` +
+            'body — a shot from anywhere but the skull reads as the body coughing',
+        ).toBeGreaterThan(1);
       }
     }
   });
@@ -347,5 +357,141 @@ describe('0248 — the serpent strikes', () => {
     expect(strikes.length, 'the strike was not drawn').toBeGreaterThan(warnings.length);
     expect(Math.max(...strikes.map((s) => s.alpha)), 'the strike is no brighter than its warning').toBeGreaterThan(dim);
     expect(recorder.strokes.some((s) => !s.hostile), 'the serpent’s lightning was drawn in the player’s hand').toBe(false);
+  });
+});
+
+/**
+ * Where the animal's body is held — `docs/decisions/0283-the-serpent-is-a-chain.md`.
+ *
+ * ⚠️ **EVERY ASSERTION HERE IS DRIVEN AND IN WORLD UNITS**, which is the whole reason they moved out
+ * of `tests/accents.test.ts`. That file measures a baked bitmap, and until 0283 the serpent WAS one —
+ * so *no bend tighter than the animal's own spine allows* was checked against a path in a drawing
+ * rather than against the creature on the screen. The body is laid out every step now, so the shape
+ * the player watches is a thing a fixture can ask about.
+ */
+describe('0283 — the serpent is a chain', () => {
+  /** The laid-out spine this step: every node's place, head-end first, in world units. */
+  function spine(world: ReturnType<typeof playableWorld>['world']): { along: number; across: number; girth: number }[] {
+    const out: { along: number; across: number; girth: number }[] = [];
+    const head = world.bossPool.at(0);
+    out.push({ along: head.along, across: head.across, girth: head.radius * 2 });
+    // The pool is spawned tail-first so the neck draws over the tail, so read it backwards.
+    for (let i = world.bossBody.size - 1; i >= 0; i--) {
+      const node = world.bossBody.at(i);
+      out.push({ along: node.along, across: node.across, girth: node.radius * 2 });
+    }
+    return out;
+  }
+
+  it('THE REPORTED ONE: the body moves, and it moves differently from the head', () => {
+    /*
+      ⚠️ **REPORTED TWICE, THREE PRs APART**: *"it needs to actually move/undulate, it's a static
+      image that bounces up and down"*, and *"there's no movement to the sprite itself, it's a flat
+      static image that isn't alive."*
+
+      ⚠️ **THE SECOND HALF IS THE ASSERTION.** A body that only slid about with the head would satisfy
+      *the body moves* and would be exactly what was reported: a rigid picture being carried around.
+      What is measured is the SHAPE — each node's offset across the lane from the head — and that the
+      shape itself changes. A baked bitmap cannot pass this at any amount of art.
+    */
+    const { world, frame } = serpentAt(1);
+    const shapes: number[][] = [];
+    for (let i = 0; i < 240; i++) {
+      world.bossPool.at(0).fireIn = 999;
+      frame.step();
+      if (i % 20 === 0 && world.bossBody.size > 0) {
+        const s = spine(world);
+        shapes.push(s.map((n) => n.across - s[0]!.across));
+      }
+    }
+    expect(shapes.length, 'the serpent never laid a body').toBeGreaterThan(6);
+    let widest = 0;
+    for (const shape of shapes) {
+      for (let k = 0; k < shape.length; k++) {
+        for (const other of shapes) widest = Math.max(widest, Math.abs(shape[k]! - other[k]!));
+      }
+    }
+    expect(
+      widest,
+      `the body held the same shape relative to its head for four seconds — the widest any node moved ` +
+        `against the head was ${widest.toFixed(2)} units, which is a picture being carried rather than an animal`,
+    ).toBeGreaterThan(4);
+  });
+
+  it('and no bend is tighter than the animal’s own spine allows, on the body that is actually on the screen', () => {
+    /*
+      ── NO BEND TIGHTER THAN THE ANIMAL'S OWN SPINE ALLOWS — 0277, MEASURED ON THE CHAIN — 0283 ──
+
+      ⚠️ **A WORM HAS NO SPINE AND CAN KINK; A VERTEBRATE CANNOT.** Reported of the serpent: *"the
+      tail uplift is really really sharp and a snake/serpent would be more curved because of the
+      spine, where a worm with no spine can sharp twist."*
+
+      ⚠️ **AND THAT WAS A NOTE ABOUT THE BODY'S SHAPE RATHER THAN ABOUT ITS DESIGN**, said again when
+      this was picked back up: *"previous instructions about sharp angles were only related to body
+      shape not aesthetic design."* So it holds here, on the anatomy, and it says nothing whatever
+      about how sharp the creature is allowed to LOOK.
+
+      ⚠️ **A RATIO AND NOT AN ABSOLUTE, BECAUSE FLEXIBILITY SCALES WITH THICKNESS.** A whip-thin tail
+      has more vertebrae per unit length than a thick midriff and really does bend tighter. An
+      absolute floor would either forbid a tail tip from curling at all or wave a hairpin through the
+      midriff — the two failures this sits between.
+
+      ⚠️ **DRIVEN OVER A WHOLE WAVE, because the shape is different every step now.** A body checked
+      at one moment is a body checked in one pose, and the tightest bend an undulating animal ever
+      reaches is the thing the rule is about.
+    */
+    const { world, frame } = serpentAt(1);
+    let tightest = Infinity;
+    let at = -1;
+    for (let i = 0; i < 300; i++) {
+      world.bossPool.at(0).fireIn = 999;
+      frame.step();
+      if (world.bossBody.size === 0) continue;
+      const s = spine(world);
+      for (let k = 1; k < s.length - 1; k++) {
+        const a = s[k - 1]!;
+        const b = s[k]!;
+        const c = s[k + 1]!;
+        let turn = Math.atan2(c.across - b.across, c.along - b.along) - Math.atan2(b.across - a.across, b.along - a.along);
+        while (turn > Math.PI) turn -= Math.PI * 2;
+        while (turn < -Math.PI) turn += Math.PI * 2;
+        if (turn === 0) continue;
+        const arc = (Math.hypot(b.along - a.along, b.across - a.across) + Math.hypot(c.along - b.along, c.across - b.across)) / 2;
+        const overGirth = arc / Math.abs(turn) / b.girth;
+        if (overGirth < tightest) {
+          tightest = overGirth;
+          at = k;
+        }
+      }
+    }
+    expect(
+      tightest,
+      `the serpent kinks at node ${at}: its bend radius there is ${tightest.toFixed(2)} of its own girth, and a ` +
+        'body that turns inside its own width has no spine in it',
+    ).toBeGreaterThan(1.5);
+  });
+
+  it('and the body is one animal: a hit anywhere on it is a hit on the serpent', () => {
+    /*
+      ⚠️ **THE HURT SHAPE IS THE ANATOMY NOW**, which is the request 0277 could not answer: *"we need
+      to update the boss collision to no longer be a disc if we can."* A node is as wide as the animal
+      is where it stands, and what lands on it is spent on the head — so the tail is worth what the
+      neck is, and neither is worth anything the drawing does not cover.
+    */
+    const { world, frame } = serpentAt(1);
+    for (let i = 0; i < 60 && world.bossBody.size === 0; i++) frame.step();
+    expect(world.bossBody.size, 'the serpent laid no body at all').toBe(BOSSES.jormungandr.chain?.girth.length);
+    const before = world.bossPool.at(0).health;
+    // The tail: the node furthest up-lane of the skull, which is the one a disc round the head misses.
+    const s = spine(world);
+    const tail = s[s.length - 1]!;
+    const shot = world.playerShots.spawn()!;
+    reset(shot, tail.along, tail.across, SHOTS.pulse);
+    world.bossPool.at(0).fireIn = 999;
+    frame.step();
+    expect(
+      world.bossPool.at(0).health,
+      'a shot on the serpent’s tail took nothing off the serpent — the body is decoration rather than the animal',
+    ).toBeLessThan(before);
   });
 });
