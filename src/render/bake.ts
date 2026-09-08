@@ -3418,9 +3418,25 @@ const SERPENT_SPINE: readonly Pt[] = [
   mouth is paint, for the same reason — a notch that fine is stroked shut. 0264 learned both of these
   from a first pass that drew open jaws and baked a skull with a hole in it.
 */
+/*
+  ── AND THE NECK IS A WAIST, WHICH IS WHAT STOPPED IT BEING A WORM — 0277 ─────────────────────────
+
+  ⚠️ **A WORM IS WIDEST DIRECTLY BEHIND ITS HEAD; A SNAKE HAS A NECK.** Reported after the size and
+  the menace landed: *"it's also still pretty wormy to be honest."* Every version until now tapered
+  MONOTONICALLY from the neck, so the thickest part of the animal was the part touching the skull —
+  which is a leech, and no amount of scales, spines or glow on it reads as anything else.
+
+  ⚠️ **SO THE PROFILE IS TWO TERMS, NOT ONE.** A taper down the whole length, times a dip near the
+  front. The neck comes out about a quarter narrower than the girth at a third of the way down, and
+  the skull — which is authored in absolute coordinates and did NOT move — is suddenly half again
+  wider than the neck behind it. That step is the head-neck junction, and it is the single mark that
+  says *snake* before any paint is on the animal at all.
+*/
 const serpentHalf = (i: number): number => {
   const t = i / (SERPENT_SPINE.length - 1);
-  return 0.012 + 0.133 * Math.pow(1 - Math.pow(t, 2.6), 1.1);
+  const taper = 0.012 + 0.145 * Math.pow(1 - Math.pow(t, 2.6), 1.1);
+  const waist = 1 - 0.34 * Math.exp(-(((t - 0.06) / 0.16) ** 2));
+  return taper * waist;
 };
 /**
  * Under the jaw, round the snout, over the brow to the crown — a solid skull, and no mouth in it.
@@ -3611,8 +3627,8 @@ function paintBoss8(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
       1.20 of the drawing radius out, past the 1.16 where the next bitmap in the atlas begins.
     */
     [0.55, 0.012, 0.2],
-    [1.2, 0.016, 0.12],
-    [1.9, 0.02, 0.06],
+    [1.15, 0.015, 0.12],
+    [1.7, 0.018, 0.06],
   ] as const) {
     const halo: Pt[] = [];
     const n = SERPENT_SPINE.length;
@@ -3638,6 +3654,51 @@ function paintBoss8(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
   */
   serpentFalloff(ctx, f, shade(skin.hull, -0.5), 0.88, 10, 0.6);
   serpentFalloff(ctx, f, skin.lit, -0.88, 10, 0.34);
+  /*
+    ── SADDLES AND SCUTES, WHICH ARE THE OTHER HALF OF *NOT A WORM* ────────────────────────────────
+
+    ⚠️ **A WORM IS ONE UNIFORM TUBE ALONG ITS WHOLE LENGTH.** The waist in `serpentHalf` fixes the
+    silhouette; this fixes the surface. Every snake anyone can picture is BANDED — saddles down the
+    back and pale plates across the belly — and a body in one flat tone with a texture over it is a
+    tube however good the texture is.
+
+    ⚠️ **THE SADDLES SIT ON THE BACK AND FLANK AND STOP SHORT OF THE BELLY**, which is where a
+    python's do; one running the whole way round is a ring, and rings are exactly what makes an
+    earthworm an earthworm.
+  */
+  /*
+    ⚠️ **A SADDLE IS WALKED ALONG THE BODY, NOT CUT ACROSS IT WITH A CHORD.** The first pass built each
+    band from three points at one station and three at the next; its two long edges were straight
+    lines across a curving body, and the field baked as a row of flat facets rather than as banding.
+    Eight samples an edge, filled as a curve.
+  */
+  for (let s = 1; s * 1.7 < SERPENT_SPINE.length - 2; s++) {
+    const at = s * 1.7;
+    if (serpentHalf(Math.floor(at)) < 0.055) continue;
+    const from = at - 0.46;
+    const to = at + 0.46;
+    const saddle: Pt[] = [];
+    for (let k = 0; k <= 7; k++) saddle.push(alongSpine(from + ((to - from) * k) / 7, -0.98));
+    for (let k = 7; k >= 0; k--) saddle.push(alongSpine(from + ((to - from) * k) / 7, 0.22));
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = shade(skin.hull, -0.4);
+    ctx.beginPath();
+    curveLoop(ctx, f, saddle);
+    ctx.fill('evenodd');
+    ctx.globalAlpha = 1;
+  }
+  /*
+    ⚠️ **THE SCUTES ARE TRANSVERSE, AND THAT IS THE WHOLE READ.** A snake's belly is a ladder of wide
+    plates ACROSS the body; the longitudinal shading already there says *underside* and says nothing
+    about what kind of animal it is. These are struck at twice the rate of the saddles, so the two
+    rhythms do not line up into a grid.
+  */
+  for (let s = 0; s * 0.5 < SERPENT_SPINE.length - 1.6; s++) {
+    const at = s * 0.5;
+    const half = serpentHalf(Math.floor(at));
+    if (half < 0.06) continue;
+    seam(ctx, f, shade(skin.hull, 0.3), 0.012, [alongSpine(at, 0.58), alongSpine(at, 0.9)], 0.4);
+  }
   /*
     ⚠️ **THE SCALES ARE A FIELD AND NOT A ROW OF MARKS**, which is the difference the reference makes
     most plainly: a low-contrast overlapping-arc texture over the whole body reads as an animal, and

@@ -82,6 +82,31 @@ and bleed into a neighbour in the atlas. A flat swell reached **1.52 of the draw
 down the screen and the swell is all in x. The last two spine samples came in 0.04 for the halo's sake
 and not the body's.
 
+## ⚠️ And the neck is a waist, which is what stopped it being a worm
+
+Reported once the size and the menace had landed:
+
+> *"it's also still pretty wormy to be honest."*
+
+⚠️ **A WORM IS WIDEST DIRECTLY BEHIND ITS HEAD. A SNAKE HAS A NECK.** Every profile until now —
+0264's linear taper, 0276's `(1 - t^2.6)^1.1` — fell **monotonically from the neck**, so the thickest
+part of the animal was the part touching the skull. That is a leech, and no quantity of scales,
+spines or glow on it reads as anything else.
+
+**So the profile is two terms**: a taper down the whole length, times a dip near the front. The neck
+comes out about a quarter narrower than the girth a third of the way down, and the skull — authored
+in absolute coordinates, and untouched — is suddenly half again wider than the neck behind it. **That
+step is the head-neck junction, and it says *snake* before any paint is on the animal.**
+
+**And a worm is one uniform tube along its whole length**, so the surface got the same treatment:
+saddles down the back and flank, stopping short of the belly because one running the whole way round
+is a *ring* and rings are what make an earthworm an earthworm; and transverse ventral scutes, struck
+at twice the saddles' rate so the two rhythms do not line up into a grid.
+
+⚠️ **THE FIRST SADDLES BAKED AS FACETS**, because each was three points at one station and three at
+the next — its two long edges straight chords across a curving body. Eight samples an edge, filled as
+a curve.
+
 ## ⚠️ What this deliberately does not do
 
 **The undulation.** *"It's a static image that bounces up and down."* True, and it cannot be otherwise
@@ -103,7 +128,14 @@ boss collision to no longer be a disc if we can."* A serpent's disc is a bad fit
 chain's segment positions ARE a chain of hurt nodes. Doing the collision first and the undulation
 second would be doing it twice, because an undulating body moves its own hurt shape.
 
-**So the two belong in one decision, and it is the next one.** What it has to buy is a change to the
+⚠️ **AND THE COIL BELONGS WITH IT TOO, WHICH 0276 DID NOT FORESEE.** 0276 deferred a self-crossing
+body because `seal` fills `evenodd` and a crossing hull gets a HOLE where it crosses, and because the
+overlap only reads if the near body carries its own dark contour over the far one. **A segment chain
+answers both by construction**: segments are blitted in order, so the near one covers the far one and
+brings its own outline with it. A serpent coils and a worm does not, so this is likely a real part of
+what *"still pretty wormy"* is naming — and it is not fixable in paint.
+
+**So the three belong in one decision, and it is the next one.** What it has to buy is a change to the
 blit budget, which is why it is not smuggled in here.
 
 ## Rollback
