@@ -1371,9 +1371,27 @@ export const BOSSES: Record<BossKind, BossRow> = {
         the tube becomes a string of beads. **A longer, thinner serpent is more nodes**, and more
         nodes is pool the game does not have — `src/app/mount.ts` has that arithmetic.
       */
-      girth: [6, 8.5, 10.5, 11, 11, 10.5, 9.5, 8, 6.5, 4.5, 2],
-      // Where the skull ends: the head is about fourteen units long, so its back is seven behind it.
-      neck: 6.5,
+      /*
+        ⚠️ **AND THE LAST THREE FALL AWAY HARDER, BECAUSE A TAIL ENDS IN A POINT — 0284.** Reported on
+        the first play of the chain: *"tip of the tail needs to be more pointed if we can."* It did
+        not: the profile fell to two units and stopped, so the animal finished on a disc two units
+        across, which is a full stop rather than a point. Falling 4 → 2 → 0.8 converges instead, and
+        the nodes are spaced by their own girth so the last two sit almost on top of each other.
+      */
+      girth: [6, 8.5, 10.5, 11, 11, 10.5, 9.5, 8, 6, 3, 1],
+      /*
+        ⚠️ **3 AND NOT 6.5, AND THE GAP IS WHY — 0284.** Reported on the first play of the chain:
+        *"slight gap between head and body."* Measured: the drawn skull's back edge is **6.95** units
+        behind the head's centre, and the first node sat at 6.5 with a radius of 3 — so the node that
+        should have filled the neck was a small disc hiding *inside* the skull, and the first one the
+        player could see began at **6.09**, nine tenths of a unit short of where the head ends. A
+        notch, not a join.
+
+        ⚠️ **IT IS WHERE THE BODY STARTS AND NOT WHERE THE SKULL ENDS**, which is the thing that made
+        it easy to get wrong: the first node belongs *under* the head, and what has to meet the
+        skull's back is the second or third.
+      */
+      neck: 3,
       step: 0.53,
       /*
         ⚠️ **THE SWAY IS THE TAIL'S AND THE HEAD BARELY MOVES, WHICH IS HOW A SNAKE SWIMS.** An animal

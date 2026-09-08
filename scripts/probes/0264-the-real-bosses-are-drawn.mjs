@@ -63,12 +63,24 @@ export const PROBES = [
       this project actually shipped twice. The tentacle's other half, the skin, is still held by
       `THE LORD` in `tests/foes.test.ts`.
     */
-    broke: 'the serpent’s skull squashed taller than it is long, which is the blob the report named',
+    /*
+      ⚠️ **RE-AIMED BY 0284, AND AT THE OTHER HALF OF THE SAME CLAIM.** This guard holds two things
+      about the serpent's head — that it is longer than it is tall, and that it is **wider than the
+      neck behind it** — and the break used to squash the skull. It cannot any more: 0283 makes the
+      head the whole hull and 0284 covers it in paint, so every squash strands the eye, the nostril or
+      a fang outside the silhouette and `THE 0149 ONE` fires first. A probe that reddens two guards
+      has not shown which one holds what.
+
+      ⚠️ **SO THE NECK IS THICKENED INSTEAD**, which needs no art moved and is the same sentence read
+      the other way round: *a head no wider than the body behind it is a worm, whatever is painted on
+      it.* 0283 put the neck on the row, so it can simply be said.
+    */
+    broke: 'the serpent’s neck thickened past its skull, so the head is no wider than the body behind it',
     guard: '0264 — THE HEADS',
     edit: {
-      path: 'src/render/bake.ts',
-      find: '  [-0.7, 0.088],\n  [-0.83, 0.122],\n  [-0.98, 0.131],\n  [-1.07, 0.09],\n  [-1.085, 0.026],\n  [-1.065, -0.04],\n  [-0.97, -0.097],\n  [-0.82, -0.138],',
-      replace: '  [-0.78, 0.2],\n  [-0.87, 0.24],\n  [-0.95, 0.18],\n  [-0.97, 0.0],\n  [-0.95, -0.18],\n  [-0.87, -0.24],\n  [-0.78, -0.2],',
+      path: 'src/content/bosses.ts',
+      find: '      girth: [6, 8.5, 10.5, 11, 11, 10.5, 9.5, 8, 6, 3, 1],',
+      replace: '      girth: [30, 8.5, 10.5, 11, 11, 10.5, 9.5, 8, 6, 3, 1],',
     },
   },
 ];

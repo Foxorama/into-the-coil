@@ -33,7 +33,8 @@ export const PROBES = [
       // ⚠️ ANCHORED ON THE COMMENT AND NOT ON THE MARK BELOW IT. The first version of this probe
       // anchored on the nostril's own coordinates and was stranded by the very next pass over the
       // head — which `tests/prove-guard.test.ts` caught, which is the whole of 0019.
-      find: '  // The nostril, and the eye: a dark socket, the gold iris, a vertical slit, one catchlight.',
+      // ⚠️ Re-anchored by 0284, which redrew the head: the eye and the nostril are two comments now.
+      find: '  // The nostril, high on the snout.',
       replace:
         '  seam(ctx, f, shade(skin.plate, -0.55), 0.022, [\n' +
         '    [-1.3, -0.2],\n' +

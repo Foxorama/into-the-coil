@@ -300,6 +300,14 @@ const WITHOUT_PROBES: Record<string, string> = {
     a marker that does not distinguish them. One honest line beats a rule that reads the wrong files.
   */
   '0281': 'its wake was removed from the game by 0282 the day it shipped, so its five probes went with the code — the table is a record of what was measured, not a claim anything can re-run',
+  /*
+    ⚠️ **THE SEVENTH, AND THE FIRST THAT ADDS NO GUARD AT ALL.** 0284 redraws the serpent's head and
+    every claim it makes was already held by a guard 0264, 0149, 0277 or 0283 wrote — the skull longer
+    than it is tall and wider than its neck, every solid mark inside the hull, every translucent one
+    inside the tile. What it changed is where THREE existing probes point, and `npm run prove` refused
+    all three until they did, which is the re-running its table is about.
+  */
+  '0284': 'it adds no guard: every claim is held by one 0264, 0149, 0277 or 0283 already wrote, and what it changed is where three of their probes point — all three refused by prove until they were re-aimed',
 };
 
 describe('the probe set stays honest', () => {
