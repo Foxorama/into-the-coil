@@ -84,12 +84,25 @@ export const PROBES = [
       cue is the SPLIT, so the break is putting it back in one log: the shots' collision logs the
       boss's death where every other death goes, and the kill cue finds it there.
     */
+    /*
+      ⚠️ **RE-AIMED AGAIN BY 0283, AND THE REASON IS WORTH THE PARAGRAPH.** This guard drives THE
+      APPROACH, whose boss is the serpent, and a serpent has a body now: the player's fire lands on
+      eleven nodes as well as on the skull, and whatever lands there is spent on the head by
+      `drainChain`'s own `strike`. So the fatal blow no longer comes through the collision this used
+      to edit — the probe applied and **the suite stayed green**, which is the third time in two days
+      that a guard has quietly stopped asking its question because the thing underneath it moved.
+
+      ⚠️ **THE HEAD'S OWN COLLISION LOGS TO THE SAME PLACE AND IS THE SAME CLAIM.** It cannot carry a
+      probe of its own while this guard fights a boss with a body, because the sweep gets there first;
+      what holds it meanwhile is that both paths name `w.bossDeaths`, thirty lines apart in one file.
+      A guard driving one of the thirteen bosses without a body would probe the other half.
+    */
     broke: 'the boss logged into the ordinary death log again, so the kill cue fires for it and the cap eats its own',
     guard: 'THE ONE THAT WOULD BE EATEN BY THE CAP: a boss dying is heard, through a real speaker',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    killedByShots += collideInto(w.playerShots, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, bladeHits);',
-      replace: '    killedByShots += collideInto(w.playerShots, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.deaths, bladeHits);',
+      find: '    if (onBody > 0 && w.bossPool.size > 0 && strike(w.bossPool, 0, onBody, IMPACT_FLASH_STEPS, w.bossDeaths)) {',
+      replace: '    if (onBody > 0 && w.bossPool.size > 0 && strike(w.bossPool, 0, onBody, IMPACT_FLASH_STEPS, w.deaths)) {',
     },
   },
   {
