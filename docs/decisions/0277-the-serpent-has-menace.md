@@ -107,6 +107,58 @@ at twice the saddles' rate so the two rhythms do not line up into a grid.
 the next — its two long edges straight chords across a curving body. Eight samples an edge, filled as
 a curve.
 
+## ⚠️ And no bend is tighter than the animal's own spine allows
+
+> *"the tail uplift is really really sharp and a snake/serpent would be more curved because of the
+> spine, where a worm with no spine can sharp twist"*
+
+⚠️ **MEASURED, AND IT WAS WORSE THAN THE REPORT SAID.** Bend radius as a multiple of the local girth:
+the tail turned **sixty degrees in one step at 1.15**, and the CREST — the thickest part of the
+animal, and therefore the part needing the largest radius of anything on it — was **0.85**, a bend
+tighter than the body is wide. Eighteen samples now, and the tightest bend anywhere is **1.80**.
+`0264 — THE HEADS` holds it above 1.5.
+
+⚠️ **A RATIO AND NOT AN ABSOLUTE, BECAUSE FLEXIBILITY SCALES WITH THICKNESS.** A whip-thin tail has
+more vertebrae per unit length than a thick midriff and really does bend tighter. An absolute floor
+would either forbid a tail tip from curling at all or wave a hairpin through the midriff.
+
+⚠️ **AND THE GUARD MEASURES THE SKELETON RATHER THAN THE FLATTENED OUTLINE, DELIBERATELY.** An
+outline's curvature at a tail's point is legitimately unbounded — a tip IS a corner — so the quantity
+the rule is about lives on the spine. Nothing in `bake.ts` computes a bend radius, so the arithmetic
+is the guard's own and not the code agreeing with itself.
+
+### ⚠️ THE COST, WHICH IS A GEOMETRY FACT AND NOT A PREFERENCE
+
+**Gentle bends and many undulations do not both fit in one sprite box.** For a body of girth `g`
+waving with wavelength `L` and amplitude `A`, the tightest radius is about `L² / (4π²A)`. Holding it
+above `1.8g` with this girth and the ~1.75 of x-budget the box leaves buys **one broad arch**. Two
+undulations at any amplitude worth looking at needs radii the spine cannot have.
+
+**So the serpent is one gentle arch now, where it was one-and-a-half kinked ones.** That is the right
+trade — the report was about kinks — but it is a ceiling, and it is the box that sets it.
+
+⚠️ **THE SEGMENT CHAIN LIFTS THAT CEILING TOO, WHICH IS THE THIRD TIME IT HAS COME UP.** A chain is
+not confined to a sprite box at all: the animal can be **longer than the screen**, as the reference's
+is — it runs off both edges — and a long body waves through several gentle undulations without any of
+them turning tightly. A boxed sprite can never do that, at any amount of authoring.
+
+## ⚠️ And the art made a guard time out, which was fixed in the guard and not in the art
+
+`tests/accents.test.ts`'s containment claim went from **452ms to 76 seconds** and blew the file's own
+60-second timeout. The cause is this decision's: the serpent went to 56 units with a curved outline of
+some twelve hundred flattened points, and the number of marks on it roughly tripled.
+
+⚠️ **THINNING THE ART TO SUIT IT WOULD HAVE BEEN [0192](0192-a-guard-holds-an-invariant.md) EXACTLY
+BACKWARDS, AND RAISING THE TIMEOUT WOULD HAVE BEEN [0044](0044-an-intermittent-guard-is-measuring-the-wrong-thing.md)'s
+*raised until it goes quiet*.** What was actually wrong is that the guard asks its most expensive
+question where that question cannot have an answer.
+
+**The interior grid — the mark's bounding box swept at two pixels a step — exists to catch a mark laid
+across a HOLE**: `boss3`'s lattice, `boss5`'s ports, `boss7`'s ring, the warden's aperture. A hull of
+one sub-path has no holes, and then Jordan settles it: a closed mark whose whole boundary is inside a
+simply-connected hull has its interior inside too. **An exact short-circuit, not a sampling
+compromise** — the claim is unchanged and the holed hulls still pay for it. **76s → under a second.**
+
 ## ⚠️ What this deliberately does not do
 
 **The undulation.** *"It's a static image that bounces up and down."* True, and it cannot be otherwise

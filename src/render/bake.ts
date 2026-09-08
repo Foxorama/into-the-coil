@@ -3385,26 +3385,45 @@ function endOf(spine: readonly Pt[]): (px: number, py: number) => Pt {
   and the animal baked as ONE ARCH — an eel rearing, not a snake travelling. Sixteen samples at 1.32
   keep the long neck AND the crest-trough-crest.
 */
-const SERPENT_SPINE: readonly Pt[] = [
-  [-0.72, -0.04],
-  [-0.59, -0.1],
-  [-0.47, -0.24],
-  [-0.34, -0.43],
-  [-0.18, -0.59],
-  [0.0, -0.66],
-  [0.18, -0.58],
-  [0.32, -0.37],
-  [0.42, -0.09],
-  [0.5, 0.23],
-  [0.6, 0.5],
-  [0.74, 0.66],
-  [0.9, 0.66],
-  [0.99, 0.5],
-  // ⚠️ The last two came in 0.04 for the AURA, not for the body: the halo swells perpendicular to the
-  // spine, and here the spine runs down the screen, so its swell is all in x — 1.18 of the drawing
-  // radius against the 1.16 where the next bitmap in the atlas begins.
-  [1.03, 0.28],
-  [1.02, 0.04],
+/*
+  ── AND NO BEND IS TIGHTER THAN THE ANIMAL'S OWN SPINE ALLOWS — 0277 ─────────────────────────────
+
+  ⚠️ **A WORM HAS NO SPINE AND CAN KINK; A VERTEBRATE CANNOT.** Reported: *"the tail uplift is really
+  really sharp and a snake/serpent would be more curved because of the spine, where a worm with no
+  spine can sharp twist."*
+
+  ⚠️ **MEASURED, AND IT WAS WORSE THAN THE REPORT SAID.** Bend radius as a multiple of the LOCAL
+  girth: the tail turned 60° in one step at **1.15**, and the crest — the thickest part of the animal,
+  which needs the largest radius of anything on it — was **0.85**, a bend tighter than the body is
+  wide. Eighteen samples now, and the tightest bend anywhere is **1.80**.
+
+  ⚠️ **THE TAIL TRAILS RATHER THAN HOOKING, AND THAT IS THE X-BUDGET TALKING.** Curling the tip back
+  inside the room this box has left costs a seventy-degree turn however it is authored. A snake at
+  speed trails; a hook can come back with the coil, which is the next decision's.
+
+  ⚠️ **AND THE RULE IS A RATIO BECAUSE FLEXIBILITY SCALES WITH THICKNESS.** A whip-thin tail has more
+  vertebrae per unit length than a thick midriff and really does bend tighter, so the constraint is
+  radius against local girth rather than an absolute — `tests/accents.test.ts` holds it that way.
+*/
+export const SERPENT_SPINE: readonly Pt[] = [
+  [-0.74, -0.04],
+  [-0.63, -0.09],
+  [-0.52, -0.17],
+  [-0.41, -0.28],
+  [-0.3, -0.375],
+  [-0.16, -0.45],
+  [-0.01, -0.485],
+  [0.14, -0.485],
+  [0.285, -0.45],
+  [0.41, -0.375],
+  [0.515, -0.265],
+  [0.6, -0.115],
+  [0.665, 0.06],
+  [0.725, 0.245],
+  [0.795, 0.41],
+  [0.87, 0.52],
+  [0.955, 0.575],
+  [1.02, 0.6],
 ];
 /*
   ⚠️ **FULL THROUGH THE MIDRIFF AND WHIPPING AWAY AT THE END, which the linear taper it replaces was
@@ -3432,7 +3451,7 @@ const SERPENT_SPINE: readonly Pt[] = [
   wider than the neck behind it. That step is the head-neck junction, and it is the single mark that
   says *snake* before any paint is on the animal at all.
 */
-const serpentHalf = (i: number): number => {
+export const serpentHalf = (i: number): number => {
   const t = i / (SERPENT_SPINE.length - 1);
   const taper = 0.012 + 0.145 * Math.pow(1 - Math.pow(t, 2.6), 1.1);
   const waist = 1 - 0.34 * Math.exp(-(((t - 0.06) / 0.16) ** 2));
