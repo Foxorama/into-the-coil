@@ -89,17 +89,33 @@ describe('0248 — the serpent strikes', () => {
       weapon a phase and the alpha play called that *"three separate fire fields"*; the phases are
       cumulative now, the hydra's heads taking turns, and the acid is a fan that rakes rather than a
       wall. The lightning is the same lightning.
+
+      ⚠️ **AND THE ACID'S FAN IS A WAVE SINCE 0290**, which changes what this names and not what it
+      claims. *"The acid attacks should fire out in a serpentine spray, as opposed [to] like the 3
+      blobs now"* — so the kind is `serpentine` rather than `rake`, and what 0261 was holding is
+      still held: it is a fan that TURNS, and it is not a wall.
+
+      ⚠️ **THE TURN IS ASKED FOR RATHER THAN THE NAME**, because that is the property the guard below
+      depends on: this boss's opening phase turns and its later phases index heads by a count, and the
+      crash that came of sharing one field between the two is held two tests down by asserting the
+      opening phase actually raked. An acid attack that stopped turning would leave that guard green
+      and measuring nothing, so it is named here as the thing it is.
     */
     const row = BOSSES.jormungandr;
     const whole = phaseFor(row, row.health);
     const hurt = phaseFor(row, row.health * 0.6);
     const last = phaseFor(row, row.health * 0.3);
     expect(whole.shot ?? row.shot, 'the serpent does not open with acid').toBe('acid');
-    expect((whole.attack ?? row.attack).kind, 'the acid is not a spray that rakes — the wall is back').toBe('rake');
+    const fan = whole.attack ?? row.attack;
+    expect(fan.kind, 'the acid is not a spray that rakes — the wall is back').toBe('serpentine');
+    expect(
+      'turn' in fan ? fan.turn : 0,
+      'the serpent’s opening acid does not turn, so the rake it is measured by two tests down is gone',
+    ).toBeGreaterThan(0);
     const hurtHeads = (hurt.attack ?? row.attack).kind === 'heads' ? (hurt.attack as { heads: readonly { shot: string; attack: { kind: string } }[] }).heads : [];
-    expect(hurtHeads.map((h) => `${h.shot}/${h.attack.kind}`), 'once hurt the serpent does not throw acid and void in turn').toEqual(['acid/spray', 'void/spray']);
+    expect(hurtHeads.map((h) => `${h.shot}/${h.attack.kind}`), 'once hurt the serpent does not throw acid and void in turn').toEqual(['acid/serpentine', 'void/spray']);
     const lastHeads = (last.attack ?? row.attack).kind === 'heads' ? (last.attack as { heads: readonly { shot: string; attack: { kind: string } }[] }).heads : [];
-    expect(lastHeads.map((h) => h.attack.kind), 'the last third does not throw acid, void and the lightning in turn').toEqual(['spray', 'spray', 'rain']);
+    expect(lastHeads.map((h) => h.attack.kind), 'the last third does not throw acid, void and the lightning in turn').toEqual(['serpentine', 'spray', 'rain']);
     expect(lastHeads.map((h) => h.shot).slice(0, 2)).toEqual(['acid', 'void']);
     // And it is the Approach's real boss.
     expect(LEVELS.approach.boss).toBe('jormungandr');
@@ -137,6 +153,56 @@ describe('0248 — the serpent strikes', () => {
       centres.push(sum / opening.world.enemyShots.size);
     }
     expect(Math.abs(centres[1]! - centres[0]!), 'the acid fan does not rake — two volleys point the same way').toBeGreaterThan(0.1);
+  });
+
+  it('0290 — THE REPORTED ONE: the acid leaves as a WAVE, and there are more than three of it', () => {
+    /*
+      ⚠️ **REPORTED**: *"the acid attacks should fire out in a serpentine spray, as opposed [to] like
+      the 3 blobs now."* Two halves, and both are measured: how MANY, and what SHAPE.
+
+      ⚠️ **THE SHAPE IS THE HALF A COUNT WOULD MISS.** Nine shots in a plain fan is three blobs with
+      more blobs — the report is about the picture, not the density. So what is asked is that the
+      beads' headings turn back on themselves: a fan's angles march one way from first to last, and a
+      wave's reverse. Counting the reversals is counting the humps.
+    */
+    const { world, frame } = serpentAt(1);
+    const boss = world.bossPool.at(0);
+    world.enemyShots.clear();
+    boss.fireIn = 1;
+    frame.step();
+    const fired = world.enemyShots.size;
+    expect(fired, 'the serpent threw no acid at all, so this measures nothing').toBeGreaterThan(0);
+
+    const whole = phaseFor(BOSSES.jormungandr, BOSSES.jormungandr.health);
+    const shots = whole.shots;
+    expect(
+      fired,
+      `the serpent threw ${fired} beads of acid where its phase asks for ${shots} — a wave cannot be drawn ` +
+        'with three points, which is the whole of the report',
+    ).toBeGreaterThan(shots * 2);
+
+    /*
+      ⚠️ **MEASURED OFF THE VELOCITIES, WHICH IS WHERE THE WAVE ACTUALLY IS.** The beads all leave the
+      mouth on the same step and travel straight afterwards, so at the instant they are thrown they
+      are all in the same place and the shape lives entirely in where they are POINTED. One step later
+      it is a shape on the screen; here it is the thing that makes it one.
+    */
+    const headings: number[] = [];
+    for (let i = 0; i < world.enemyShots.size; i++) {
+      const shot = world.enemyShots.at(i);
+      headings.push(Math.atan2(shot.velAcross, shot.velAlong));
+    }
+    let reversals = 0;
+    for (let i = 2; i < headings.length; i++) {
+      const before = headings[i - 1]! - headings[i - 2]!;
+      const after = headings[i]! - headings[i - 1]!;
+      if (before * after < 0) reversals++;
+    }
+    expect(
+      reversals,
+      `the acid's ${fired} beads sweep one way from first to last with ${reversals} turns in them, so they are a ` +
+        'fan rather than a wave — more blobs is not the report',
+    ).toBeGreaterThan(0);
   });
 
   it('THE MOUTH: the acid and the void leave the serpent’s SKULL, and not the middle of its body', () => {

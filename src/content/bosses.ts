@@ -166,7 +166,18 @@ export type BossMove =
  * unions with one vocabulary is the honest shape, and `docs/decisions/0110-an-attack-is-a-pattern.md`
  * is where the vocabulary is argued.
  */
-export const BOSS_ATTACK_KINDS = ['spray', 'rake', 'ring', 'wall', 'rain', 'whip', 'summon', 'beam', 'heads'] as const;
+export const BOSS_ATTACK_KINDS = [
+  'spray',
+  'rake',
+  'serpentine',
+  'ring',
+  'wall',
+  'rain',
+  'whip',
+  'summon',
+  'beam',
+  'heads',
+] as const;
 
 /** Derived from the list, so an attack cannot exist in the union and be missing from the switch. */
 export type BossAttackKind = (typeof BOSS_ATTACK_KINDS)[number];
@@ -190,6 +201,26 @@ export type BossAttack =
    * one description of *where in its turn a body has got to*, used by both.
    */
   | { kind: 'rake'; turn: number }
+  /**
+   * A spray whose shots lie on a WAVE that stretches as it flies — 0290.
+   *
+   * ⚠️ **REPORTED**: *"the acid attacks should fire out in a serpentine spray, as opposed [to] like
+   * the 3 blobs now."*
+   *
+   * ⚠️ **IT IS `whip`'s MECHANISM WITH THE OTHER TERM WAVING.** A whip marches its SPEED across the
+   * fan so the line of fire bows; this marches the speed the same way and swings the HEADING on a
+   * sine instead, so the beads sit on an S rooted at the mouth. Every one leaves on the same step and
+   * flies straight afterwards: the wave is in where they are aimed, not in how they travel, so this
+   * costs nothing per step and nothing on `ShotRow`.
+   *
+   * ⚠️ **AND THAT IS WHY THE SHOTS ARE NOT STAGGERED BACKWARDS**, which is the obvious way to make a
+   * volley leave as a wave. Spawning bead `i` further back along its own heading puts it inside the
+   * skull and then inside the body — and `tests/serpent.test.ts` holds that this animal's acid leaves
+   * its SKULL and not the middle of its body, a guard written because it once did.
+   *
+   * `turn` rakes the whole wave between volleys, on `rake`'s own field and for its own reason.
+   */
+  | { kind: 'serpentine'; sweep: number; waves: number; beads: number; reach: number; turn: number }
   /**
    * The phase's shots spread evenly around the whole circle rather than across `spread`.
    *
@@ -1361,7 +1392,14 @@ export const BOSSES: Record<BossKind, BossRow> = {
       that is not one burst wearing three inks. The lightning itself is untouched: *"superb, don't
       change it."*
     */
-    attack: { kind: 'rake', turn: 0.45 },
+    /*
+      ⚠️ **A RAKING FAN OF THREE BECAME A RAKING WAVE OF NINE — 0290.** Reported: *"the acid attacks
+      should fire out in a serpentine spray, as opposed [to] like the 3 blobs now."* The turn is
+      0261's, unchanged and load-bearing: the opening phase is the one that rakes and the later phases
+      index their heads by a count, and `tests/serpent.test.ts` holds the crash that came of sharing
+      one field between the two by first asserting that the opening phase actually raked.
+    */
+    attack: { kind: 'serpentine', sweep: 0.32, waves: 1.5, beads: 3, reach: 1.4, turn: 0.45 },
     uncoil: null,
     fall: null,
     chill: null,
@@ -1407,7 +1445,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       ── THE BODY, AND IT IS THE ANATOMY OF A SNAKE — 0283 ──────────────────────────────────────────
 
       *"The body needs to be longer… the creature should have the functional body shape of a
-      creature."* Fourteen nodes, in world units of diameter, head-end first.
+      creature."* Twenty-six nodes since 0286, in world units of diameter, head-end first.
 
       ⚠️ **IT RISES FROM THE NECK BEFORE IT FALLS, WHICH IS THE WHOLE OF *not a worm*.** 0277 measured
       this and fixed it in a baked profile; it is the same shape here, authored where the animal is
@@ -1415,25 +1453,23 @@ export const BOSSES: Record<BossKind, BossRow> = {
       head-neck junction is a step the eye reads as *snake* before any paint is on it; the midriff at
       15.5 is where the girth lives; the last three nodes are the whip.
 
-      ⚠️ **`step` UNDER A HALF, SO THE DISCS OVERLAP MORE THAN THEY SHOW.** At 0.37 the animal reaches
-      `chainReach` = **54.5 units** up-lane of the skull, which with `station` 114 and the drift puts
-      the tail at **173.5 against the 177.8 of the narrowest screen** — the whole creature on the
-      squarest device the clamp allows, which is what `tests/level.test.ts` asks of every hull and now
-      asks of this one along its real length rather than along a sprite box.
+      ── ⚠️ AND EVERY NUMBER IN THE PARAGRAPHS THIS REPLACES HAD ROTTED — 0290 ─────────────────────
 
-      ⚠️ **AND THE STATION CAME BACK FOURTEEN UNITS TO PAY FOR IT** — 128 → 114. The two ends are held
-      by different guards pulling against each other: 0101 wants the near edge past 55% of the
-      narrowest screen (`114 − 5 − 7` is **57.4%**) and 0061 wants the far end on it. **That pair is
-      what caps the animal's length at about sixty units, and it is a screen fact rather than a
-      taste** — a longer serpent than this needs its tail allowed off the leading edge, which is a
-      decision about what a hurt shape may do off-screen and is not this one.
+      They described fourteen nodes at a `step` of 0.37 reaching 54.5 units, a station of 114, and a
+      cap of *"about sixty units"* on the animal's length that *"a longer serpent than this needs its
+      tail allowed off the leading edge, which is… not this one."* **0286 is that decision**, and it
+      changed all six of those numbers without touching the prose beside them. `docs/state-of-play.md`
+      names this exact failure — *a citation rots as silently as a summary drifts* — and it is worth
+      more here than the paragraph it cost: the comment read as current and was not.
 
-      ⚠️ **IT IS STILL THE LONGEST THING IN THE GAME AND LONGER THAN IT WAS.** Nose to tail is about
-      sixty-two units against the forty-nine the old sprite actually drew inside its fifty-six-unit
-      box — and unlike that box, none of this is spent on the empty corners a ribbon leaves.
+      **What is true now**: twenty-six nodes at a `step` of 0.53, reaching **133.6 units** up-lane of
+      the skull. With `station` 130 and the drift and the rear, the tail is at **283 against 240 on
+      the widest screen the clamp allows** — off the leading edge on every device, which is the ask
+      0286 answered and the reason `tests/level.test.ts` measures the HULL there and holds the body's
+      length as a claim of its own.
     */
     /*
-      ⚠️ **FIVE FACES AND THREE SILHOUETTES — 0285.** `up` and `down` move the pupil and nothing else,
+      ⚠️ **SEVEN FACES AND FOUR SILHOUETTES — 0285, and the snap made it four.** `up` and `down` move the pupil and nothing else,
       so they wear `restHit`: a hurt twin is the silhouette with no paint on it (0035), and three
       identical white shapes would be three identical bakes.
     */
@@ -1580,7 +1616,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
         attack: {
           kind: 'heads',
           heads: [
-            { shot: 'acid', attack: { kind: 'spray' } },
+            { shot: 'acid', attack: { kind: 'serpentine', sweep: 0.32, waves: 1.5, beads: 3, reach: 1.4, turn: 0.45 } },
             { shot: 'void', attack: { kind: 'spray' } },
           ],
         },
@@ -1599,8 +1635,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
         attack: {
           kind: 'heads',
           heads: [
-            { shot: 'acid', attack: { kind: 'spray' } },
+            { shot: 'acid', attack: { kind: 'serpentine', sweep: 0.32, waves: 1.5, beads: 3, reach: 1.4, turn: 0.45 } },
             { shot: 'void', attack: { kind: 'spray' } },
+            // ⚠️ UNTOUCHED, AND SAID TWICE TWO PLAYS APART: *"don't change the lightning attack it's
+            // really good."* It is the one attack on this boss with a verdict already in.
             { shot: 'void', attack: { kind: 'rain', warning: 45, halfWidth: 4 } },
           ],
         },

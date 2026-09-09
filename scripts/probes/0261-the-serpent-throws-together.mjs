@@ -12,7 +12,10 @@ export const PROBES = [
     guard: 'THE THREE WEAPONS: a raking fan of acid',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "    attack: { kind: 'rake', turn: 0.45 },\n    uncoil: null,\n    fall: null,\n    chill: null,\n    sprite: SPRITE.boss8,",
+      // ⚠️ Re-anchored by 0290, which made the raking fan a raking WAVE — the claim is unchanged.
+      find:
+        "    attack: { kind: 'serpentine', sweep: 0.32, waves: 1.5, beads: 3, reach: 1.4, turn: 0.45 },\n" +
+        '    uncoil: null,\n    fall: null,\n    chill: null,\n    sprite: SPRITE.boss8,',
       replace: "    attack: { kind: 'wall', gap: 12 },\n    uncoil: null,\n    fall: null,\n    chill: null,\n    sprite: SPRITE.boss8,",
     },
   },
@@ -24,8 +27,13 @@ export const PROBES = [
     guard: 'THE THREE WEAPONS: a raking fan of acid',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "            { shot: 'void', attack: { kind: 'spray' } },\n            { shot: 'void', attack: { kind: 'rain', warning: 45, halfWidth: 4 } },",
-      replace: "            { shot: 'void', attack: { kind: 'spray' } },",
+      /*
+        ⚠️ **Re-anchored by 0290**, which wrote a comment between the void's spray and the rain saying
+        the lightning is not to be touched — so the two lines this used to name are no longer adjacent.
+        The rain line alone is unique and is the thing being dropped.
+      */
+      find: "            { shot: 'void', attack: { kind: 'rain', warning: 45, halfWidth: 4 } },",
+      replace: '',
     },
   },
   {
