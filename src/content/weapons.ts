@@ -229,7 +229,27 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     links: [1, 1, 1, 1, 1],
     weight: [1, 1, 1, 1, 1],
     reach: [0, 0, 0, 0, 0],
-    coil: [7, 9, 12, 15, 18],
+    /*
+      ⚠️ **TWO THIRDS, AND THE PLAYER GAVE THE FRACTION — 0294.** *"The shuriken guns have a parabola
+      that's too high, they need bounce out from the ship about 2/3rds the distance they do now and
+      then have that as the helix path going ahead."* `coil` is the swing's half-width and it is BOTH
+      of the things that sentence names: how far the blade bounces out from the wingtip, and how wide
+      the helix is afterwards. So the whole ladder is two thirds of what it was — 7, 9, 12, 15, 18
+      became 5, 6, 8, 10, 12 — and nothing else has to move for the two halves to agree, because they
+      were never two numbers.
+
+      ⚠️ **AND THE BOTTOM OF THE LADDER HAS A FLOOR THE TOP DOES NOT, WHICH A GUARD FOUND.** A flat
+      two thirds put the first two rungs at 4.7 and 6 — and the ship's own wingtip is at **6.04**, so
+      the blade would have left the hull and swung back inside it without ever clearing the wing. *"A
+      blade leaves the wingtip"* is 0244's, from the photograph that reported *"there's a big gap
+      between helix start and wingtips"*, and it fails the other way just as hard.
+
+      ⚠️ **SO THE CUT IS TWO THIRDS AT THE CAP AND TAPERS TO NOTHING AT THE BOTTOM** — 0.93, 0.83,
+      0.75, 0.70, 0.67 of what each rung was. That is where the report is pointing anyway: a parabola
+      *too high* is a complaint about the widest arc the player sees, and the first rung was already
+      sitting on its floor.
+    */
+    coil: [6.5, 7.5, 9, 10.5, 12],
     turn: 0.21,
     pickup: SPRITE.pickupShuriken,
   },

@@ -245,10 +245,10 @@ Recorded verbatim because chat evaporates between sessions — 0029. **None of t
    is random speed and direction weirdly on the power ups and makes picking them up feel really weird
    and wonky."* ⚠️ Note the shape of this: the ask was misread, not mis-built —
    [0087](../docs/decisions/0087-a-pickup-never-parks.md) is the decision to re-read first.
-2. **The shuriken's arc.** *"The shuriken guns have a parabola that's too high, they need bounce out
+2. ~~**The shuriken's arc.**~~ *"The shuriken guns have a parabola that's too high, they need bounce out
    from the ship about 2/3rds the distance they do now and then have that as the helix path going
    ahead, and the shurikens also need to be smaller and neater, it's too hard to see enemy elements
-   with them onscreen at the moment."*
+   with them onscreen at the moment."* Answered by [0294](../docs/decisions/0294-the-blade-is-smaller.md) — the coil ladder cut to two thirds at the cap (it has a floor at the bottom: the ship's own wingtip), the star 8 units to 5.6, the hurtbox down with it, and the glow back to the *bit of a glow* 0238 asked for. **0237's advisory predicted this in writing.** Not played yet.
 3. **Bullets and ships that cannot be told apart.** *"There's some enemy bullets that are incredibly
    small and hard to see and some enemy ships that just look like bullets so in some cases you can't
    tell what's what."* ⚠️ `tests/legibility.test.ts` already asks *is this drawn in the same ink as

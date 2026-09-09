@@ -172,6 +172,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the void has an APPETITE: a shot may say the player fire can reach it and almost none does; its health IS that appetite; a shot that survives a hit owes the player a picture, and this one SWELLS as it feeds** | [0291](decisions/0291-the-void-has-an-appetite.md) |
 | **the void eats EVERYTHING: a missile is spent like a bullet, a bomb is an area and is not, and the arc is hitscan and never touches a pool — a void takes the bolt before anything else and ends the chain there** | [0292](decisions/0292-the-void-eats-everything.md) |
 | **a pickup FLOATS: one speed, one heading, and it turns only where it hits a wall — replacing the wander, the bob and the lag, which were three right answers that did not add up to an object** | [0293](decisions/0293-a-pickup-floats.md) |
+| **the blade is SMALLER: coil is both how far it bounces out and how wide the helix runs; a blade two frames are ONE size; a hurtbox follows the drawing down** | [0294](decisions/0294-the-blade-is-smaller.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
