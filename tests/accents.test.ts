@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { INK_OF, drawKind } from '../src/render/bake.ts';
+import { INK_OF, MOUTH_INK, drawKind } from '../src/render/bake.ts';
 
 /*
   ⚠️ **FILE-LEVEL, BECAUSE THE WORK IS SEVEN PLACES DEEP NOW AND THE DEFAULT IS A WALL CLOCK.** The
@@ -300,6 +300,15 @@ describe('0227 — a sprite is painted, and the paint stays on the hull', () => 
         const r = cssSize(kind) * 0.42;
         paint.forEach((mark, i) => {
           if (mark.alpha >= SOLID) return;
+          /*
+            ⚠️ **THE FLASH WASH IS THE WHOLE TILE ON PURPOSE, AND IT IS NOT A MARK — 0287.** It used to
+            be a `fillRect` and so was never in `passes` at all; it is a filled path now, because the
+            cavity has to be held out of it. What this claim is about is a mark that LEAVES its hull —
+            a plume, a halo — running into the next bitmap in the atlas. The wash cannot: `source-atop`
+            clips it to the art it is laid over, so its bounding box says where the tile is and
+            nothing about where the ink lands.
+          */
+          if (mark.colour === INK.impact && kind.endsWith('Hit')) return;
           const box = boundsOf(mark);
           const reach = Math.max(half - box.minX, box.maxX - half, half - box.minY, box.maxY - half) / r;
           expect(
@@ -358,6 +367,11 @@ describe('0227 — a sprite is painted, and the paint stays on the hull', () => 
       same silhouette* and *the same marks* are no longer claims a guard has to compare hand-drawn
       shapes for — they are identities. What is left to hold is the part that can still go wrong: that
       there is exactly ONE wash, and that it is translucent. An opaque one is 0035's cutout again.
+
+      ⚠️ **AND THE WASH IS A FILLED PATH RATHER THAN A `fillRect` SINCE 0287**, which moved it from
+      `rects` to `passes` — so a twin draws its base's marks plus one. It is the LAST pass by
+      construction (nothing is drawn after it) and that is how it is found here; everything the twin
+      shares with its base is still identity rather than comparison.
     */
     for (const theme of THEME_KINDS) {
       for (const kind of BODIES) {
@@ -367,17 +381,23 @@ describe('0227 — a sprite is painted, and the paint stays on the hull', () => 
         const plain = trace(base, theme);
         expect(
           twin.passes.length,
-          `${kind} at ${theme} draws ${twin.passes.length} marks where ${base} draws ${plain.passes.length}, so a flash is a different picture`,
-        ).toBe(plain.passes.length);
+          `${kind} at ${theme} draws ${twin.passes.length} marks where ${base} draws ${plain.passes.length} plus a ` +
+            'wash, so a flash is a different picture',
+        ).toBe(plain.passes.length + 1);
         expect(
           JSON.stringify(twin.passes[0]!.subpaths),
           `${kind} is a different shape from ${base}, so a flash changes the silhouette`,
         ).toBe(JSON.stringify(plain.passes[0]!.subpaths));
         expect(
           twin.rects.length,
-          `${kind} lays ${twin.rects.length - plain.rects.length} washes over its art, and a flash is exactly one`,
-        ).toBe(plain.rects.length + 1);
-        const wash = twin.rects[twin.rects.length - 1]!;
+          `${kind} lays ${twin.rects.length - plain.rects.length} rectangles its base does not, and since 0287 a ` +
+            'flash is not one of them',
+        ).toBe(plain.rects.length);
+        const wash = twin.passes[twin.passes.length - 1]!;
+        expect(
+          wash.colour,
+          `${kind}'s last mark is not the flash ink, so either the wash is not last or there is no wash`,
+        ).toBe(INK.impact);
         expect(
           wash.alpha,
           `${kind}'s flash is laid at ${wash.alpha}, and at that it is 0035's cutout again — the animal under it is gone`,
@@ -517,6 +537,55 @@ describe('a boss differs from every other by more than its paint', () => {
       body is a chain now and the spine is laid out every step, so the rule is measured on the animal
       that is actually on the screen: `tests/serpent.test.ts`, driven, in world units.
     */
+  });
+
+  it('0287 — THE REPORTED ONE: the hit wash is held out of the mouth, and out of the SAME mouth the head paints', () => {
+    /*
+      ⚠️ **REPORTED FROM PLAY:** *"the hitbox flash for the mouth doesn't look right, it's a slightly
+      off white triangle inside the mouth and it looks pretty weird."*
+
+      ⚠️ **THE GAPE IS A NOTCH RATHER THAN A HOLE (0284), SO THE MOUTH IS PAINT.** 0278's wash is
+      `source-atop` over everything the art covered, and the dark red filling the gape is covered
+      pixels like anything else — washed, it lands within a hair of the flesh around it and the cavity
+      flattens into a pale wedge. So the wash is a tile with the cavity taken out of it.
+
+      ⚠️ **AND *THE SAME* CAVITY IS HALF THE CLAIM.** A second wedge authored beside the first would
+      look right on the resting face and drift the moment a jaw angle moved — which is exactly what
+      the FANGS did across three frames before 0285 made them one description. What is measured is
+      that the hole in the wash is the mouth the head actually paints, point for point.
+    */
+    const twins = [
+      ['boss8', 'boss8Hit'],
+      ['boss8Gape', 'boss8GapeHit'],
+      ['boss8Shut', 'boss8ShutHit'],
+    ] as const;
+    /** A path rounded to a hundredth of a pixel, so two ways of arriving at one shape compare equal. */
+    const shape = (points: readonly Point[]): string =>
+      points.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(' ');
+    for (const theme of THEME_KINDS) {
+      for (const [base, twin] of twins) {
+        const mouth = trace(base, theme).passes.find((p) => p.colour === MOUTH_INK);
+        expect(mouth, `the ${base} paints no mouth interior, so this guard is measuring nothing`).toBeDefined();
+        const passes = trace(twin, theme).passes;
+        const wash = passes[passes.length - 1]!;
+        /*
+          ⚠️ **THE TILE AND THE CAVITY, IN THAT ORDER.** One `evenodd` fill of two sub-paths is what
+          keeps this a single composite over a single bitmap — 0278's argument for `source-atop` is
+          that a flash costs no second draw call, and a guard that let this become two fills would
+          have given that away without anybody noticing.
+        */
+        expect(
+          wash.subpaths.length,
+          `the ${twin}'s flash wash is one solid shape, so it is laid over the open mouth and the cavity reads as a ` +
+            'pale triangle — the defect this guard is named for',
+        ).toBe(2);
+        expect(
+          shape(wash.subpaths[1]!),
+          `the ${twin}'s wash is held out of a different shape from the mouth the ${base} paints, so the two will ` +
+            'drift the first time a jaw angle moves',
+        ).toBe(shape(mouth!.subpaths[0]!));
+      }
+    }
   });
 
   it('0285 — THE JAW: the snap and the strike throw it opposite ways from rest, by a distance the player can see', () => {

@@ -145,3 +145,32 @@ holds it watches every step of the fight rather than sampling the end.
 
 **Still owed on this animal:** nobody has yet played a body this long. It shows about 1.7 waves where
 it used to show half of one, on a `sway` and a `wavelength` tuned for the short version.
+
+## ⚠️ The third play, on the long body, and the first verdict is *"pretty cool"*
+
+> *"ok played the preview branch, it's looking pretty cool, the hitbox flash for the mouth doesn't
+> look right though, it's a slightly off white triangle inside the mouth and it looks pretty weird."*
+>
+> *"also can we give it more motion, like have it rear back a bit rather than just have the head go up
+> and down?"*
+>
+> *"and the head itself needs to be slightly bigger and also slightly longer — I know this is going to
+> need the whole eyes, teeth and tongue and horns etc rejigged, but the head looks just a bit weird at
+> the moment."*
+
+**So the length is answered and the three that are left are a bug, a movement and an art pass** —
+which is three verdicts, and they are being taken one PR at a time so each gets one.
+[0109](../docs/decisions/0109-a-death-is-a-drum.md)'s standing argument — *"changing two channels at
+once is what makes the next verdict unattributable"* — and the reason 0283 and 0284 were split in the
+first place.
+
+⚠️ **THE OFF-WHITE TRIANGLE IS THE MOUTH INTERIOR WEARING THE HIT WASH**, and the chain from cause to
+symptom runs through two decisions that were each right on their own. 0284 made the gape a NOTCH in
+the silhouette rather than a hole through it — so the dark red filling it is a mark in open space
+rather than an absence. 0278 lays the flash over exactly the pixels the art covered. A mark is covered
+pixels, so the cavity washed with everything else and flattened.
+[0287](../docs/decisions/0287-a-cavity-is-not-washed.md) takes the cavity out of the wash.
+
+⚠️ **AND IT IS ON SCREEN FOR MOST OF THE FIGHT**, which is 0278's own finding pointed at this: at four
+steps a hit, every gun in the game holds the hurt twin on continuously while it fires. The base
+frame's mouth is what the player sees between hits.

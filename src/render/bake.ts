@@ -3441,6 +3441,35 @@ const LOWER_FANGS: readonly Fang[] = [
 ];
 
 /**
+ * The wedge the two jaws enclose — the mouth's own interior, in the head's frame — 0285.
+ *
+ * ⚠️ **ONE DESCRIPTION, BECAUSE THE PAINT AND THE FLASH MUST BE THE SAME CAVITY — 0287.** It is
+ * painted dark red here and it is the shape the hit wash is held OUT of, and two copies of it would
+ * drift apart the first time a jaw angle moved. The fangs are one description for the same reason,
+ * and got it wrong first.
+ *
+ * ⚠️ **ITS CORNERS SIT INSIDE THE NOTCH AND ONE OF THEM RIDES THE JAW.** Photographed: authored as a
+ * triangle across the gap, its front-lower corner sat 0.09 of a unit ahead of the lower jaw's own tip
+ * (a dark red spike past the chin) and its long edge cut a chord across the jaw's inner edge, leaving
+ * a strip of open space that read as a black bite out of the chin.
+ */
+/**
+ * What the inside of a mouth is: dark red — 0285, exported for the guard that reads it — 0287.
+ *
+ * ⚠️ **IT WAS `skin.lit` AND WAS REPORTED ON SIGHT**: *"there's a weird green bit in the mouth."*
+ * The venom light was reasoned across from the predecessor's serpent, which breathes venom. This one
+ * has a mouth.
+ */
+export const MOUTH_INK = '#3a0d12';
+
+const MOUTH: readonly Pt[] = [
+  [-0.3, 0.01],
+  [-1.0, -0.09],
+  [-0.86, 0.4],
+  [-0.5, 0.22],
+];
+
+/**
  * One tooth as a run of outline points, in the direction that jaw's edge is walked.
  *
  * ⚠️ **THE TIP IS DOUBLED BECAUSE `curveLoop` SMOOTHS A LONE POINT INTO A BUMP** and a fang is a
@@ -3614,6 +3643,25 @@ function hinged(p: Pt, turn: number, ref: Pt = p): Pt {
   const dx = p[0] - HINGE[0];
   const dy = p[1] - HINGE[1];
   return [HINGE[0] + dx * Math.cos(a) - dy * Math.sin(a), HINGE[1] + dx * Math.sin(a) + dy * Math.cos(a)];
+}
+
+/**
+ * Add a kind's cavities to the current path, so the hit wash can be held out of them — 0287.
+ *
+ * ⚠️ **A CAVITY IS A PROPERTY OF A KIND, WHICH IS WHY THIS IS A LOOKUP AND NOT A FLAG.** Almost
+ * nothing in the game has one: a hull is a solid body seen from above, and the only marks that are
+ * *what a body is not* are this animal's open mouth. A boolean on every kind saying *wash me
+ * normally* would be a mechanism whose answer is identical for all but three of them, which is
+ * `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`'s own tell.
+ *
+ * ⚠️ **AND IT IS THE HURT KIND THAT IS ASKED**, because that is what the wash knows. `boss8Hit` is
+ * shared by the two gaze faces (0285), and both of them wear the resting jaw, so deriving the jaw
+ * from the name gives the right wedge for all three twins.
+ */
+function cavityOf(ctx: Pen, f: Frame, kind: SpriteKind): void {
+  if (!kind.startsWith('boss8')) return;
+  const jaw: Jaw = kind.startsWith('boss8Gape') ? 'gape' : kind.startsWith('boss8Shut') ? 'shut' : 'rest';
+  trace(ctx, f, parted(MOUTH, JAWS[jaw]));
 }
 
 /** The skull wearing one of its faces — the authored drawing with its jaw swung. */
@@ -3940,7 +3988,7 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin, jaw: Jaw, gaze: num
   */
   {
     ctx.globalAlpha = 0.85;
-    ctx.fillStyle = '#3a0d12';
+    ctx.fillStyle = MOUTH_INK;
     ctx.beginPath();
     /*
       ⚠️ **AND IT IS AUTHORED INSIDE THE NOTCH, NOT ACROSS IT.** Photographed: the wedge's front-lower
@@ -3955,12 +4003,7 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin, jaw: Jaw, gaze: num
       of the hull — so that strip photographed as open space, a black bite taken out of the chin
       between the lower teeth. The wedge has a point on the jaw for the same reason the jaw has one.
     */
-    trace(ctx, f, swung([
-      [-0.3, 0.01],
-      [-1.0, -0.09],
-      [-0.86, 0.4],
-      [-0.5, 0.22],
-    ]));
+    trace(ctx, f, swung(MOUTH));
     ctx.fill('evenodd');
   }
   ctx.globalAlpha = 1;
@@ -4919,12 +4962,33 @@ export function drawKind(
     second draw call, and the silhouette is identical to the base's by construction rather than by a
     guard comparing two hand-drawn shapes.
   */
+  /*
+    ── AND A CAVITY IS NOT WASHED, BECAUSE LIGHT DOES NOT GET INTO ONE — 0287 ──────────────────────
+
+    ⚠️ **REPORTED FROM PLAY:** *"the hitbox flash for the mouth doesn't look right, it's a slightly
+    off white triangle inside the mouth and it looks pretty weird."*
+
+    ⚠️ **THE MOUTH INTERIOR IS PAINT, SO `source-atop` FOUND IT.** The gape is a notch rather than a
+    hole (0284), so the dark red filling it is a MARK in open space rather than a hole in the hull —
+    covered pixels, and the wash lands on them like anything else. Dark red at 0.55 of the flash ink
+    comes out within a hair of the washed flesh around it, so the cavity flattens into a pale wedge
+    with hard edges and no depth: an off-white triangle, exactly as reported.
+
+    ⚠️ **SO THE WASH IS A TILE WITH THE CAVITY TAKEN OUT OF IT, RATHER THAN A `fillRect`.** One
+    `evenodd` fill, one composite, still one bitmap and one draw call — 0278's whole argument for
+    `source-atop` is untouched. What changes is that the animal lights up and its open mouth stays
+    dark, which is what a flash on a real mouth does and is the only version that still reads as a
+    mouth at four steps a hit.
+  */
   if (hurt) {
     drawKind(ctx, kind.slice(0, -3) as SpriteKind, palette, size, theme);
     ctx.globalCompositeOperation = 'source-atop';
     ctx.globalAlpha = FLASH_WASH;
     ctx.fillStyle = palette.impact;
-    ctx.fillRect(0, 0, size, size);
+    ctx.beginPath();
+    ctx.rect(0, 0, size, size);
+    cavityOf(ctx, f, kind);
+    ctx.fill('evenodd');
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
     return;
