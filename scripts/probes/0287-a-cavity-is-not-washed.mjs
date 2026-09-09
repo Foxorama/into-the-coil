@@ -35,8 +35,9 @@ export const PROBES = [
     guard: 'and out of the SAME mouth the head paints',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  trace(ctx, f, parted(MOUTH, JAWS[jaw]));',
-      replace: '  trace(ctx, f, parted(MOUTH.map(([x, y]) => [x * 0.98, y]), JAWS[jaw]));',
+      // ⚠️ Re-anchored by 0288, which leans every point of the skull on its way to the canvas.
+      find: '  trace(ctx, f, leant(parted(MOUTH, JAWS[jaw])));',
+      replace: '  trace(ctx, f, leant(parted(MOUTH.map(([x, y]) => [x * 0.98, y]), JAWS[jaw])));',
     },
   },
 ];

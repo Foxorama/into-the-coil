@@ -537,6 +537,44 @@ describe('a boss differs from every other by more than its paint', () => {
       body is a chain now and the spine is laid out every step, so the rule is measured on the animal
       that is actually on the screen: `tests/serpent.test.ts`, driven, in world units.
     */
+
+    /*
+      ⚠️ **AND THE HURTBOX IS THE HEAD THAT IS DRAWN — 0288.** `radius` is a disc and the skull is not,
+      so the two can never be equal; what they may not be is a different SIZE. A radius left where it
+      was under a head redrawn larger is a head with edges the player shoots through, and one left
+      under a head redrawn smaller is a head that eats shots off its own nose — which is
+      `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` in both directions,
+      and that decision's own finding is that this class gets REPORTED as a collision bug that does not
+      exist.
+
+      ⚠️ **THE BOUND IS THE SKULL'S OWN TWO AXES, so it travels when the art does** and nobody has to
+      remember to move it. Both ends are numbers the picture supplies rather than ones anybody tuned.
+
+      ⚠️ **AND *COVERS THE SHORT AXIS* IS NOT ENOUGH ON ITS OWN, WHICH THE PROBE FOUND.** The head is
+      drawn about 20 units long and 13 tall; the disc it had before this decision was 14 across, which
+      clears the height and leaves three units of snout and three of skull outside the thing the
+      animal collides as. A disc can never match a head — what it may not do is stop three quarters of
+      the way along one.
+    */
+    const hurt = BOSSES.jormungandr.radius * 2;
+    const drawnTall = (headTall / COMMON) * SPRITE_EXTENT[serpent];
+    const drawnLong = (headLong / COMMON) * SPRITE_EXTENT[serpent];
+    expect(
+      hurt,
+      `the serpent's hurtbox is ${hurt.toFixed(1)} units across against a skull drawn ${drawnTall.toFixed(1)} tall, ` +
+        'so the head has edges a shot passes through',
+    ).toBeGreaterThanOrEqual(drawnTall);
+    expect(
+      hurt / drawnLong,
+      `the serpent's hurtbox is ${hurt.toFixed(1)} units across against a skull drawn ${drawnLong.toFixed(1)} long, ` +
+        `so it reaches ${((hurt / drawnLong) * 100).toFixed(0)}% of the way along the head and the rest of the ` +
+        'animal is drawn where nothing can be hit',
+    ).toBeGreaterThanOrEqual(0.75);
+    expect(
+      hurt,
+      `the serpent's hurtbox is ${hurt.toFixed(1)} units across against a skull drawn ${drawnLong.toFixed(1)} long, ` +
+        'so the head takes hits off its own nose',
+    ).toBeLessThanOrEqual(drawnLong);
   });
 
   it('0287 — THE REPORTED ONE: the hit wash is held out of the mouth, and out of the SAME mouth the head paints', () => {

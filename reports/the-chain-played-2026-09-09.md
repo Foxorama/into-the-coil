@@ -174,3 +174,41 @@ pixels, so the cavity washed with everything else and flattened.
 ⚠️ **AND IT IS ON SCREEN FOR MOST OF THE FIGHT**, which is 0278's own finding pointed at this: at four
 steps a hit, every gun in the game holds the hurt twin on continuously while it fires. The base
 frame's mouth is what the player sees between hits.
+
+## ⚠️ The head, and what a resize costs a fight nobody was measuring
+
+[0288](../docs/decisions/0288-the-skull-is-longer.md). *Bigger* is the extent, 20 → 24. *Longer* could
+not be a longer snout: the aura sits at 1.075 of the hull against a 1.16 ceiling where the next bitmap
+in the atlas begins, and the snout is at 1.06 — **there is 1.8% of room in front of this animal's
+nose.** A sprite's box is square, so longer inside it is bought by giving up height: 1.96 × 1.34 where
+it was 1.96 × 1.52, a length-to-height of 1.46 against 1.29.
+
+⚠️ **AND THE HURTBOX WENT WITH IT, WHICH THE FIGHT-LENGTH FLOOR COULD NOT HAVE TOLD ANYBODY.** 0260
+computes time-to-kill as `health × toughness / FASTEST` — a MODEL quantity with no hurtbox in it — so
+a head drawn twenty per cent larger with a disc left at seven would have stayed green while the animal
+grew edges a shot passes through. Driven at max weapons, parked on the boss's lane: **66.0s at radius
+7, 59.0s at 8.4.** Eleven per cent, on a fight with nineteen seconds of room above the floor.
+
+⚠️ **THE RIG FOR THAT IS A SCRATCH SCRIPT AND IT IS A DEBT.** `scripts/weigh-fight.mjs` measures a
+MID-boss and splits its walk on `world.fight`; it cannot answer this without a flag that changes what
+every number in it means, which is its own argument about its own sibling. If the next change to this
+animal moves the fight again, `scripts/weigh-boss.mjs` is owed before the tuning rather than after it —
+[0027](../docs/decisions/0027-measure-the-picture-not-the-model.md).
+
+## What was asked for next, in the order it was asked
+
+Recorded here because chat evaporates between sessions and this is what `reports/` is for — 0029.
+
+1. **The motion.** *"Can we give it more motion, like have it rear back a bit rather than just have
+   the head go up and down?"* The serpent is on `bob`, a pure across-lane sine; its along movement is
+   `drift: 5` over a 240-unit camera wavelength, which is almost nothing. Rearing wants a real along
+   excursion coupled to the bob so the head sweeps an arc — a new move arm on the ROW, so it stays
+   this animal's character rather than something every boss inherits.
+2. **The acid.** *"The acid attacks should fire out in a serpentine spray, as opposed [to] like the 3
+   blobs now."*
+3. **The void.** *"The void blasts should be bigger and a bit random and should eat x amount of damage
+   and then explode in a void blast."* This refines the original brief — *"larger balls that absorb
+   the player's weapons/missiles/bomb"* — into a finite appetite with a detonation at the end of it.
+
+⚠️ **AND THE LIGHTNING IS NOT TO BE TOUCHED**: *"don't change the lightning attack it's really good."*
+Said twice now, two plays apart. It is the one attack on this boss with a verdict already in.

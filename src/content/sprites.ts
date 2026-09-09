@@ -907,15 +907,29 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     forty-nine the old box actually drew — and this number no longer says how long it is.
     `tests/level.test.ts` reads `chainReach` for that.
   */
-  boss8: 20,
-  boss8Hit: 20,
+  /*
+    ⚠️ **20 → 24, AND THE SKULL IS ALSO SHORTER IN ITS OWN FRAME — 0288.** Reported: *"the head itself
+    needs to be slightly bigger and also slightly longer… the head looks just a bit weird at the
+    moment."* Twenty per cent here is the BIGGER, and it moves every mark on the head with it, because
+    every one of them is authored as a fraction of the drawing radius. The LONGER is `SKULL_LEAN` in
+    `src/render/bake.ts`: the sprite's box is square, so a head that is longer than it is tall has to
+    get there by proportion rather than by a wider box.
+
+    ⚠️ **AND *LONGER* COULD NOT COME FROM A LONGER SNOUT, WHICH IS THE FIRST THING TRIED.** The aura
+    sits at 1.075 of the hull and `tests/accents.test.ts` stops a translucent mark at 1.16 of the
+    drawing radius, where the next bitmap in the atlas begins. The snout is at 1.06, so the halo lands
+    at 1.14 — **there is 1.8% of room in front of this animal's nose** and nothing to be had by
+    pushing it forward.
+  */
+  boss8: 24,
+  boss8Hit: 24,
   // The same skull wearing a different face — 0285. One box, so a frame change moves nothing but the art.
-  boss8Up: 20,
-  boss8Down: 20,
-  boss8Gape: 20,
-  boss8GapeHit: 20,
-  boss8Shut: 20,
-  boss8ShutHit: 20,
+  boss8Up: 24,
+  boss8Down: 24,
+  boss8Gape: 24,
+  boss8GapeHit: 24,
+  boss8Shut: 24,
+  boss8ShutHit: 24,
   /*
     ⚠️ **ONE NODE OF THE BODY, AND THE TILE IS BIGGER THAN THE FLESH.** The disc itself is
     `SERPENT_BODY_DIAMETER` across; the rest of the box is what the aura needs to sit in without

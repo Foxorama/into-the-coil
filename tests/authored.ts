@@ -39,6 +39,7 @@ export const AUTHORED_IDS = [
   '0236-cycle',
   '0237-blade',
   '0285-throw',
+  '0288-lean',
 ] as const;
 
 export type AuthoredId = (typeof AUTHORED_IDS)[number];
@@ -128,6 +129,18 @@ export const AUTHORED: Record<AuthoredId, AuthoredClaim> = {
     claim: 'the serpent’s snap and its strike each move a twentieth of the skull’s own area',
     correctly: 'a skull redrawn with a lower jaw hinge, where a mouth that plainly opens sweeps less of the box',
     decision: '0285-the-mouth-is-alive',
+  },
+  /*
+    ⚠️ **A HEAD TALLER THAN IT IS LONG IS A FROG AND THAT IS THE INVARIANT; HOW MUCH LONGER IS TASTE.**
+    `tests/accents.test.ts` fails hard at a ratio of 1, which 0276 put there and which no redrawing of
+    a serpent could correctly break. *Half again as long as it is tall* is the thing the report asked
+    for — *"slightly bigger and also slightly longer"* — and a later pass that shortened the snout to
+    make room for a bigger jaw would redden it and be right.
+  */
+  '0288-lean': {
+    claim: 'the serpent’s skull is half again as long as it is tall, which is what reads as a snake',
+    correctly: 'a shorter snout traded for a deeper jaw, once the mouth is the thing being drawn for',
+    decision: '0288-the-skull-is-longer',
   },
 };
 
