@@ -37,6 +37,20 @@ import { MAX_BARRELS, SPREAD_STEP, UPGRADE_TIERS, weaponFor } from '../src/conte
 import { DIFFICULTIES, DIFFICULTY_KINDS, fireGapFor } from '../src/content/difficulty.ts';
 
 /**
+ * How far a boss's own lunge carries its hull along the lane, in world units — 0289.
+ *
+ * ⚠️ **THE STATION IS THREE TERMS NOW AND EVERY ASSERTION ABOUT IT HAS TO CARRY ALL THREE.** `station`
+ * is where the hull stands, `drift` is a slow slide as the camera travels, and `rear` is the along
+ * half of a bob — the difference being that a rear is the size of a hull rather than a fraction of
+ * one. Three guards read those ends: the forward one against the narrowest screen, the near one
+ * against 0101's half, and *do not land on the ship's start*. **A guard that kept reading two terms
+ * would go on passing while the thing it measures moved**, which is
+ * `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`'s fourth rule and
+ * the exact way 0283 broke the on-screen check.
+ */
+const rearOf = (row: (typeof BOSSES)[keyof typeof BOSSES]): number => (row.move.kind === 'bob' ? row.move.rear : 0);
+
+/**
  * The bosses a level ENDS on, which is what 0124's max-weapons floors are about since 0269.
  *
  * ⚠️ **A mid-boss is not held to them at max weapons, and 0247 is where that started** — it ruled
@@ -687,14 +701,14 @@ describe('a boss fight can reach all of its phases', () => {
       for (const kind of BOSS_KINDS) {
         const row = BOSSES[kind];
         const narrow = ACROSS_SPAN * MIN_ASPECT;
-        const reach = row.radius;
+        const reach = row.radius + rearOf(row);
         expect(
           row.station + row.drift + reach,
           `${kind}'s HULL reaches ${(row.station + row.drift + reach - narrow).toFixed(1)} units off the narrowest ` +
             'screen, so the part of it the player has to fight is not all there',
         ).toBeLessThanOrEqual(narrow);
         // And the back of the swing never reaches where a life begins, or a respawn is a collision.
-        expect(row.station - row.drift - row.radius, `${kind} drifts back onto the ship's start`).toBeGreaterThan(
+        expect(row.station - row.drift - rearOf(row) - row.radius, `${kind} drifts back onto the ship's start`).toBeGreaterThan(
           SHIP_START_ALONG,
         );
         /*
@@ -777,7 +791,7 @@ describe('a boss fight can reach all of its phases', () => {
       const narrow = ACROSS_SPAN * MIN_ASPECT;
       for (const kind of BOSS_KINDS) {
         const row = BOSSES[kind];
-        const nearest = row.station - row.drift - row.radius;
+        const nearest = row.station - row.drift - rearOf(row) - row.radius;
         expect(
           nearest / narrow,
           `${kind} comes within ${((nearest / narrow) * 100).toFixed(0)}% of the narrowest screen, which is the ` +

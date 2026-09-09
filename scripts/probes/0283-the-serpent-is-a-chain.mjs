@@ -110,8 +110,9 @@ export const PROBES = [
     guard: 'the whole hull stays on screen on the narrowest device',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    station: 114,',
-      replace: '    station: 171,',
+      // ⚠️ Re-anchored by 0289, which moved the station back to 130 to buy the lunge its room.
+      find: '    station: 130,\n    drift: 5,\n    driftWavelength: 240,',
+      replace: '    station: 171,\n    drift: 5,\n    driftWavelength: 240,',
     },
   },
   {

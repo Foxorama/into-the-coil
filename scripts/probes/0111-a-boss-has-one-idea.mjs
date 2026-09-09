@@ -21,8 +21,8 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: no two mid-bosses fly the same way AND shoot the same way',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "    move: { kind: 'bob', amplitude: 20, wavelength: 180 },\n    attack: { kind: 'ring' },",
-      replace: "    move: { kind: 'bob', amplitude: 20, wavelength: 180 },\n    attack: { kind: 'spray' },",
+      find: "    move: { kind: 'bob', amplitude: 20, wavelength: 180, rear: 0 },\n    attack: { kind: 'ring' },",
+      replace: "    move: { kind: 'bob', amplitude: 20, wavelength: 180, rear: 0 },\n    attack: { kind: 'spray' },",
     },
   },
   {
