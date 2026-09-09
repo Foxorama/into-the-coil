@@ -208,8 +208,14 @@ Recorded here because chat evaporates between sessions and this is what `reports
    strikes. **Not played yet** — and the withdrawal and the strike take the same time, because both
    are the same cosine; if it reads as a sway rather than a strike, warping the angle is the next
    lever and not a bigger `rear`.
-2. **The acid.** *"The acid attacks should fire out in a serpentine spray, as opposed [to] like the 3
-   blobs now."*
+2. ~~**The acid.**~~ *"The acid attacks should fire out in a serpentine spray, as opposed [to] like
+   the 3 blobs now."* Answered by [0290](../docs/decisions/0290-the-acid-is-serpentine.md) — nine
+   beads on a wave, `whip`'s own mechanism with the heading waving instead of the speed. **The bead
+   count had to ride the attack rather than the phase**, because this boss hands one `shots` to the
+   acid, the void and the lightning in turn, and raising it would have given the rain three times its
+   columns. **Measured, not photographed**: the bench would not catch a volley in flight across four
+   attempts, so the shape was read off the beads' own world coordinates — and *does it read as
+   serpentine* is a play verdict, not a plot's.
 3. **The void.** *"The void blasts should be bigger and a bit random and should eat x amount of damage
    and then explode in a void blast."* This refines the original brief — *"larger balls that absorb
    the player's weapons/missiles/bomb"* — into a finite appetite with a detonation at the end of it.

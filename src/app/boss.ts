@@ -772,6 +772,43 @@ function throwAttack(
       }
       break;
     }
+    case 'serpentine': {
+      /*
+        A wave of acid — 0290, and it is `whip` above with the other term waving. That one marches the
+        SPEED across the fan so the line of fire bows; this marches the speed the same way and swings
+        the HEADING on a sine, so the beads sit on an S rooted at the mouth and the S stretches as it
+        flies. Every bead leaves on the same step and travels straight afterwards.
+
+        ⚠️ **THE COUNT IS THE ATTACK'S AND NOT THE PHASE'S, WHICH IS A DEPARTURE FROM 0110 AND IS
+        ARGUED RATHER THAN ASSUMED.** *The union says where the fan points; the phase says how wide
+        and how many* — and a wave cannot be drawn with three points. Worse, this boss's phases hand
+        the same `shots` to the acid, the void and the LIGHTNING in turn (`heads`), so raising it to
+        get a spray would give the rain three times its columns. `docs/decisions/0290-the-acid-is-serpentine.md`
+        has the report that forbids exactly that. The phase still owns `spread` and `fireEvery`, which
+        is what escalates on this fight.
+
+        ⚠️ **AND IT RAKES, ON `rake`'s OWN FIELD.** Not decoration: the serpent's opening phase is the
+        one that turns, its later phases index heads by a count, and `tests/serpent.test.ts` holds the
+        crash that came of sharing one field between the two — a guard that opens by asserting the
+        opening phase actually raked. An attack that replaced the rake and stood still would leave
+        that guard green and measuring nothing.
+      */
+      boss.firePhase += attack.turn;
+      const beads = count * attack.beads;
+      const along = attack.sweep;
+      for (let i = 0; i < beads; i++) {
+        const shot = shots.spawn();
+        // A volley that will not fit is dropped rather than grown, exactly as `src/sim/pool.ts` says.
+        if (shot === null) break;
+        const t = beads > 1 ? i / (beads - 1) : 0;
+        const angle = Math.PI + boss.firePhase + along * Math.sin(t * attack.waves * TAU);
+        const lash = speed * (1 + attack.reach * t);
+        reset(shot, muzzleAlong, muzzleAcross, bullet, kind);
+        shot.velAlong = Math.cos(angle) * lash + scrollPerStep;
+        shot.velAcross = Math.sin(angle) * lash;
+      }
+      break;
+    }
     case 'summon': {
       /*
         A summons — 0249. This file has no enemy pool and no rows, so the volley is an ASK: the
