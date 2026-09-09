@@ -168,8 +168,34 @@ export const CAPACITY = {
     ⚠️ **AND ELEVEN IS WHY THE CHAIN HAS ELEVEN NODES**, not the other way round. The animal's length
     is set by the screen (`src/content/bosses.ts` has that arithmetic) and its smoothness by how many
     discs cover it; the pool is what said how many discs there could be.
+
+    ── AND IT IS TWENTY-SIX NOW, WHICH IS THE CEILING MOVING AND NOT ANOTHER POOL SHRINKING — 0286 ──
+
+    ⚠️ **ELEVEN OF THESE STILL COME OUT OF THE PARTICLE SHARE AND THE OTHER FIFTEEN DO NOT.** The
+    `debris` line below is unchanged and still pays for exactly the eleven 0283 took: `tests/flares.test.ts`
+    prices the fullest moment the debris pool ever sees at **148.9** against the 149 that line leaves,
+    so there was never a twelfth to shed and pretending otherwise would be the same mistake 0283 made
+    and caught.
+
+    ⚠️ **THE FIFTEEN COME FROM 0022's WORST CASE, WHICH WAS A PHONE'S NUMBER AND HAS BEEN ONE SINCE
+    0153.** 500 was derived from ~10ms a frame on a Snapdragon 695; `docs/decisions/0153-desktop-is-the-target.md`
+    superseded the SIZING half of 0022 and says in as many words that the phone may not be cited as a
+    reason to make anything smaller. The number was never moved, and this is the first content it has
+    actually refused. `docs/decisions/0286-a-serpent-runs-off-the-screen.md` reopens it.
+
+    ⚠️ **AND A BOSS WITH A BODY IS A CATEGORY 0022's LIST DID NOT HAVE.** Its worst case is itemised —
+    ~150 enemy bullets, ~80 player projectiles, ~40 enemies, ~200 particles — and every item is a
+    thing there are MANY of. One boss that is twenty-six entities is a new line on that list rather
+    than a bigger helping of an existing one, which is why the answer is a new total and not a
+    re-slice of the old one.
   */
-  bossBody: 11,
+  bossBody: 26,
+  /*
+    ⚠️ **THE `- 11` IS 0283's ELEVEN AND STAYS ELEVEN, THOUGH `bossBody` IS TWENTY-SIX — 0286.** This
+    line is the record of what the particle share actually paid for, not a restatement of the pool
+    above it. `tests/flares.test.ts` prices the fullest moment this pool ever sees at 148.9 against
+    the 149 left here, so a `- 26` would be a dropped boss explosion bought with a longer snake.
+  */
   debris: 200 - MAX_SHIELDS - 1 - 24 - 8 - 4 - 11,
   /*
     ⚠️ **TWELVE, OUT OF THE PULSE'S SHARE — 0233.** A link of chain lightning is a picture that lives

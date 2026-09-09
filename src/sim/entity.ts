@@ -476,11 +476,18 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
 export function stepEntities(pool: Pool<Entity>, cameraAlong: number, leadingCull?: number): void {
   const cull = cullAlong(cameraAlong);
   /*
-    ⚠️ **The leading cull is an ARGUMENT with a default, and the one caller that overrides it is the
-    player's own shots.** Everything else in the world is content, and content is placed against the
-    widest view any device can have (0023) — so its cull is the same everywhere. A shot is not
-    content: it is the player's reach, and *"you can shoot what you can see"* is a promise about the
-    screen in front of them. `cullPlayerShotAlong` in `src/sim/camera.ts` has the bug that argues it.
+    ⚠️ **The leading cull is an ARGUMENT with a default, and TWO callers override it for two
+    unrelated reasons.** Everything else in the world is content, and content is placed against the
+    widest view any device can have (0023) — so its cull is the same everywhere.
+
+    A shot is not content: it is the player's reach, and *"you can shoot what you can see"* is a
+    promise about the screen in front of them. `cullPlayerShotAlong` in `src/sim/camera.ts` has the
+    bug that argues it.
+
+    A chain's body is not content either, and its override is `Infinity` rather than a number — 0286.
+    A node has no velocity: `layChain` writes it to `head.along + offset` every step, so it cannot
+    wander out of the world and the only thing the cull can measure is how long the animal is. It
+    culled the serpent's tail during its arrival and `src/app/frame.ts` carries that finding.
   */
   const cullLeading = leadingCull ?? cullLeadingAlong(cameraAlong);
   for (let i = pool.size - 1; i >= 0; i--) {

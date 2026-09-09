@@ -19,7 +19,7 @@ import { SPRITE_KINDS } from '../src/content/sprites.ts';
 import { INK_OF } from '../src/render/bake.ts';
 import { BOLT_STEPS } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
-import { ACROSS_SPAN } from '../src/sim/camera.ts';
+import { ACROSS_SPAN, cullPlayerShotAlong } from '../src/sim/camera.ts';
 import { reset } from '../src/sim/entity.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -549,6 +549,43 @@ describe('0283 — the serpent is a chain', () => {
     ).toBe(true);
   });
 
+  it('0286 — and it keeps every segment it was authored with, through the ARRIVAL and not only on station', () => {
+    /*
+      ⚠️ **THE DEFECT THIS CAUGHT, AND IT ONLY EXISTS BECAUSE THE ANIMAL GOT LONG.** A chain's nodes
+      have no velocity — `layChain` writes each one to `head.along + offset` every step — but they sat
+      in a pool that `stepEntities` culls at the leading edge like any flying thing. A serpent arrives
+      FROM that edge, so during its approach the head is far up-lane and the tail is past the spawn
+      margin: the node was released, and `layChain` re-lays only when the pool is EMPTY, so it never
+      came back. **The animal fought the whole fight one segment short and nothing said so.**
+
+      ⚠️ **AND AT ELEVEN NODES IT COULD NOT HAPPEN**, which is why no guard had ever asked. The body
+      was 46 units long and the margin is deeper than that. The count was solved with the boss parked
+      on station and spent during its arrival, which is
+      `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`'s fourth rule —
+      *a boss fight has an arrival, phases, windows and a death*, and a fixture that stands the boss on
+      station has flown one of them.
+
+      ⚠️ **SO IT IS WATCHED FROM THE FIRST STEP THE BODY EXISTS**, rather than sampled once after it
+      has settled. A guard that looked only at the end would have gone on passing the moment `layChain`
+      was given any *re*-laying behaviour, and would have been measuring the repair rather than the
+      animal.
+    */
+    const nodes = BOSSES.jormungandr.chain?.girth.length ?? 0;
+    const { world, frame } = serpentAt(1);
+    let fewest = nodes;
+    for (let i = 0; i < 600; i++) {
+      world.bossPool.at(0).fireIn = 999;
+      world.ship.health = world.shipRow.health;
+      frame.step();
+      if (world.bossBody.size > 0) fewest = Math.min(fewest, world.bossBody.size);
+    }
+    expect(
+      fewest,
+      `the serpent was down to ${fewest} of its ${nodes} segments at some point in the fight — a body that loses a ` +
+        'node never gets it back, so the animal the player fights is shorter than the one the row authors',
+    ).toBe(nodes);
+  });
+
   it('and the body is one animal: a hit anywhere on it is a hit on the serpent', () => {
     /*
       ⚠️ **THE HURT SHAPE IS THE ANATOMY NOW**, which is the request 0277 could not answer: *"we need
@@ -560,9 +597,25 @@ describe('0283 — the serpent is a chain', () => {
     for (let i = 0; i < 60 && world.bossBody.size === 0; i++) frame.step();
     expect(world.bossBody.size, 'the serpent laid no body at all').toBe(BOSSES.jormungandr.chain?.girth.length);
     const before = world.bossPool.at(0).health;
-    // The tail: the node furthest up-lane of the skull, which is the one a disc round the head misses.
+    /*
+      The node furthest up-lane of the skull that the player can still reach — the one a disc round
+      the head misses.
+
+      ⚠️ **IT WAS THE LAST NODE FULL STOP, AND 0286 MADE THAT UNREACHABLE.** The animal is 133 units
+      long now and stands at 119, so its tail is 250 units up-lane — past
+      `cullPlayerShotAlong`, which is *"you can shoot what you can see"* and is a promise this test
+      must not quietly break. A shot placed out there is released before it can touch anything, and
+      the guard reported the body as decoration when what it had actually measured was the cull.
+
+      ⚠️ **THE CLAIM IS UNCHANGED AND IS STILL THE ONE 0277 COULD NOT ANSWER**: a hit on the BODY is a
+      hit on the animal. Which node, as long as it is not the skull, was never the point — so the
+      fixture asks for the furthest one inside the player's reach rather than the furthest one there
+      is.
+    */
     const s = spine(world);
-    const tail = s[s.length - 1]!;
+    const reachable = cullPlayerShotAlong(world.cameraAlong, world.view.alongSpan);
+    const tail = [...s].reverse().find((n) => n.along <= reachable);
+    if (tail === undefined || tail === s[0]) throw new Error('no body node is inside the player’s reach');
     const shot = world.playerShots.spawn()!;
     reset(shot, tail.along, tail.across, SHOTS.pulse);
     world.bossPool.at(0).fireIn = 999;

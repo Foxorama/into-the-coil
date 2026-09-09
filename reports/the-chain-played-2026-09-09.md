@@ -109,7 +109,39 @@ needs moving.**
 [0285](../docs/decisions/0285-the-mouth-is-alive.md): the green mouth, the forked tongue, and the jaw
 that answers the player.
 
-**Still owed:** *"add more segments, not stretch out the segments that are there."* Its own change,
-and it reopens `tests/budget.test.ts`'s 500-entity worst case and `tests/level.test.ts`'s rule that a
-boss fits on the screen — which is the rule a serpent stretching off the leading edge is meant to
-break.
+[0286](../docs/decisions/0286-a-serpent-runs-off-the-screen.md): the length, and the two guards it
+had to change to get there.
+
+## ⚠️ And the body was not too short for the screen — it was exactly short enough to fit on it
+
+Measured before anything was changed: the body was **46 units** and the head stands at **119** on a
+screen **178** wide at its narrowest. The tail stopped about twelve units short of the leading edge.
+
+⚠️ **SO THE REPORT IS ABOUT SEEING THE ANIMAL END, NOT ABOUT ITS LENGTH IN UNITS.** A serpent whose
+tapered tail is on screen is a serpent with a length; one that leaves the edge at full girth is
+endless. It is 133 units now — off the leading edge of a 21:9 view as well as a 16:9 one — and the
+taper is still authored and simply never seen.
+
+⚠️ **AND THE COST WAS ALREADY WRITTEN DOWN BESIDE THE CODE**, which is
+[0280](../docs/decisions/0280-a-cheap-mechanism-does-not-rename-the-ask.md)'s last rule paying off:
+`src/content/bosses.ts` had said since 0283 that *"a longer, thinner serpent is more nodes, and more
+nodes is pool the game does not have."* The eleven were never an art choice — they were what the
+particle share could spare. There was nothing left to shed (`tests/flares.test.ts` prices the debris
+pool's fullest moment at 148.9 against 149), so the fifteen came from raising 0022's worst case,
+which had been a phone's number since 0153 superseded the sizing half of it.
+
+## ⚠️ One defect that could not have existed at eleven segments
+
+**The serpent fought the whole fight one segment short and nothing said so.** A chain's nodes have no
+velocity — they are written to `head.along + offset` every step — but they sat in a pool culled at the
+leading edge like anything that flies, and a serpent ARRIVES from that edge. At 46 units the tail was
+never past the margin; at 133 it was, the node was released, and `layChain` re-lays only when the pool
+is empty.
+
+⚠️ **The count had been solved with the boss parked on station**, which is
+[0282](../docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md)'s fourth
+rule word for word — *a boss fight has an arrival, phases, windows and a death.* The guard that now
+holds it watches every step of the fight rather than sampling the end.
+
+**Still owed on this animal:** nobody has yet played a body this long. It shows about 1.7 waves where
+it used to show half of one, on a `sway` and a `wavelength` tuned for the short version.
