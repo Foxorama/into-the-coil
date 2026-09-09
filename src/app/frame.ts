@@ -2306,6 +2306,27 @@ function fireArc(w: World): void {
     let toAcross: number;
     const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, w.weapon.reach, true, edge);
     const boss = w.bossPool.size > 0 ? nearestFrom(w.bossPool, fromAlong, fromAcross, w.weapon.reach, false, edge) : -1;
+    /*
+      ⚠️ **A VOID BLAST TAKES THE LINK BEFORE ANYTHING ELSE DOES — 0292.** Reported: *"…and that it
+      sucks in the lightning from the player's cannon."* Nearest-wins would make it *may also hit*;
+      what was asked for is a pull, so a void in reach wins the link even when an enemy is nearer.
+
+      ⚠️ **AND IT ENDS THE CHAIN THERE.** A bolt swallowed is swallowed: the links after it would jump
+      out of the blast to whatever is behind it, which is the opposite of being sucked in and would
+      make the arc *better* against a screen with voids on it than one without. This is the one target
+      that costs the player the rest of their volley, which is what makes it worth flying around.
+    */
+    const eater = nearestVoid(w, fromAlong, fromAcross, w.weapon.reach, edge);
+    if (eater >= 0) {
+      const blast = w.enemyShots.at(eater);
+      spawnLink(w, row, fromAlong, fromAcross, blast.along, blast.across);
+      if (!struck) w.onCue('zap', blast.across);
+      blast.health -= w.weapon.damage;
+      blast.swell *= VOID_SWELL;
+      blast.radius *= VOID_SWELL;
+      if (blast.health <= 0) burstVoid(w, eater);
+      break;
+    }
     if (enemy >= 0 && (boss < 0 || nearer(w.enemies.at(enemy), w.bossPool.at(0), fromAlong, fromAcross))) {
       const target = w.enemies.at(enemy);
       toAlong = target.along;
@@ -3221,6 +3242,53 @@ function feedVoids(w: World): void {
       blast.radius *= VOID_SWELL;
       if (blast.health <= 0) break;
     }
+    /*
+      ── AND THE MISSILES, WHICH THE BRIEF ASKED FOR AND 0291 DID NOT DO — 0292 ──────────────────
+
+      ⚠️ **REPORTED**: *"let's change it so it eats missiles and bombs and that it sucks in the
+      lightning from the player's cannon."* 0291 fed on the guns alone and said so rather than
+      pretending otherwise; this is the rest of the sentence the original brief wrote — *"larger
+      balls that absorb the player's weapons/missiles/bomb."*
+
+      ⚠️ **A MISSILE IS SPENT LIKE A BULLET**, because it is one: a guided body with a damage and a
+      hurtbox, released when it arrives. Nothing about the guidance has to know — a seeker already
+      chooses its target every step, and a blast it flew into is simply where it ended up.
+    */
+    if (blast.health > 0) {
+      for (let m = w.missiles.size - 1; m >= 0; m--) {
+        const missile = w.missiles.at(m);
+        if (!overlaps(missile, blast, 1)) continue;
+        blast.health -= missile.damage;
+        w.missiles.releaseAt(m);
+        blast.swell *= VOID_SWELL;
+        blast.radius *= VOID_SWELL;
+        if (blast.health <= 0) break;
+      }
+    }
+    /*
+      ── AND THE BOMB, WHICH IS AN AREA RATHER THAN A BODY ────────────────────────────────────────
+
+      ⚠️ **SO IT IS NOT CONSUMED, AND THAT IS `blastInto`'s OWN SHAPE.** A bomb's blast is a region
+      that hurts everything standing in it; it is not spent by the first thing it touches, and a
+      blast that vanished into one void blast would be a bomb the player lost to a bullet.
+
+      ⚠️ **BUT IT MAY NOT FEED ON EVERY STEP IT OVERLAPS**, or one bomb held over a void empties its
+      whole appetite in three frames and the swell nobody saw is the only warning there was.
+      `landIn` is the field 0234 added for exactly this — *already landed*, counted down beside the
+      flash — so a blast lands on a void once per flash, the same rate a blade lands on a body.
+    */
+    if (blast.health > 0 && blast.landIn <= 0) {
+      for (let b = w.blasts.size - 1; b >= 0; b--) {
+        const bomb = w.blasts.at(b);
+        if (bomb.damage <= 0) continue;
+        if (!overlaps(bomb, blast, 1)) continue;
+        blast.health -= bomb.damage;
+        blast.landIn = IMPACT_FLASH_STEPS;
+        blast.swell *= VOID_SWELL;
+        blast.radius *= VOID_SWELL;
+        break;
+      }
+    }
     if (blast.health > 0) continue;
     /*
       ⚠️ **AND THEN IT IS ITS OWN BURST**, which is 0263's machinery and not a second copy of it:
@@ -3232,17 +3300,70 @@ function feedVoids(w: World): void {
       loop, and the reason it is there. A ring that could be farmed for another ring is not a hazard,
       it is a pool exhaustion the player triggers on purpose.
     */
-    const along = blast.along;
-    const across = blast.across;
-    const kind = blast.kind;
-    const speed = row.speed * w.difficulty.shotSpeed;
-    // Where the ring points is the blast's own roll, so no two bursts open the same way.
-    const turn = w.voidRng.range(0, TAU);
-    w.enemyShots.releaseAt(i);
-    for (let k = 0; k < VOID_SHARDS; k++) {
-      throwChild(w, along, across, kind, 1, turn + (k * TAU) / VOID_SHARDS, speed);
-    }
+    burstVoid(w, i);
   }
+}
+
+/**
+ * A fed void coming apart, at `index` of the hostile pool — 0291, given its own name by 0292.
+ *
+ * ⚠️ **ONE DESCRIPTION, BECAUSE THERE ARE TWO MOUTHS NOW.** The guns, the missiles and the bomb feed
+ * it through `feedVoids`; the arc feeds it from `fireArc`, which is hitscan and resolves on the step
+ * it fires. Two copies of *release the parent, then throw seven shards on a rolled angle* would drift
+ * the first time either changed — which is what the fangs and the mouth wedge both did before they
+ * were made one description.
+ *
+ * ⚠️ **THE PARENT IS RELEASED FIRST so the first child takes its slot**, exactly as `fissionShots`
+ * does and for the reason written there. Safe from a loop running DOWNWARDS: the pool swaps its last
+ * live slot into the released one, and that slot has already been visited.
+ */
+function burstVoid(w: World, index: number): void {
+  const blast = w.enemyShots.at(index);
+  const along = blast.along;
+  const across = blast.across;
+  const kind = blast.kind;
+  const speed = SHOT_ROWS[kind]!.speed * w.difficulty.shotSpeed;
+  // Where the ring points is the blast's own roll, so no two bursts open the same way.
+  const turn = w.voidRng.range(0, TAU);
+  w.enemyShots.releaseAt(index);
+  for (let k = 0; k < VOID_SHARDS; k++) {
+    throwChild(w, along, across, kind, 1, turn + (k * TAU) / VOID_SHARDS, speed);
+  }
+}
+
+/**
+ * The nearest void blast a bolt may jump to, or `-1` — 0292.
+ *
+ * ⚠️ **REPORTED**: *"…and that it sucks in the lightning from the player's cannon."* The arc searches
+ * `enemies` and `bossPool` through `nearestFrom`, which takes a POOL — and only some of the hostile
+ * pool swallows, so this cannot be that call with a third argument. What it can be is the same search
+ * written over the one predicate `nearestFrom` cannot express.
+ *
+ * ⚠️ **AND IT IS *SUCKS IN* RATHER THAN *may also hit*, WHICH IS WHY THE CALLER PREFERS IT.** A void
+ * in reach takes the link even when an enemy is nearer: that is what the word means, and it is what
+ * makes the blast a thing to fly around rather than a thing to ignore. The cost of getting it wrong
+ * is a chain spent on a bullet and a ring of seven shards where the bullet was.
+ *
+ * ⚠️ **BOUNDED BY THE SCREEN, LIKE EVERY OTHER LINK — 0257.** *"Enemies don't even get a chance to
+ * get on screen"* was a bolt striking ninety units past the leading edge; a void off-screen is the
+ * same complaint about a different body.
+ */
+function nearestVoid(w: World, fromAlong: number, fromAcross: number, reach: number, edge: number): number {
+  let best = -1;
+  let nearest = reach;
+  for (let i = 0; i < w.enemyShots.size; i++) {
+    const blast = w.enemyShots.at(i);
+    if (SHOT_ROWS[blast.kind]!.swallows !== true) continue;
+    if (blast.turnsLeft > 0) continue;
+    if (blast.along + blast.radius > edge) continue;
+    const dAlong = blast.along - fromAlong;
+    const dAcross = blast.across - fromAcross;
+    const gap = Math.sqrt(dAlong * dAlong + dAcross * dAcross) - blast.radius;
+    if (gap > nearest) continue;
+    nearest = gap;
+    best = i;
+  }
+  return best;
 }
 
 /** How many shards a void blast comes apart into — 0291. */
