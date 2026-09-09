@@ -19,13 +19,20 @@ export const PROBES = [
   {
     decision: '0278',
     suite: 'tests/accents.test.ts',
-    // Twice over: a second wash is a darker flash nobody authored, and the count is the claim.
+    /*
+      Twice over: a second wash is a darker flash nobody authored, and the count is the claim.
+
+      ⚠️ **Re-anchored by 0287**, which made the wash a filled path so the mouth's cavity could be held
+      out of it — the `fillRect` this used to double is gone.
+    */
     broke: 'the wash laid twice, so a flash is two washes deep and no row says so',
     guard: 'and a hurt twin is its base’s art under ONE translucent wash of the flash ink',
     edit: {
       path: 'src/render/bake.ts',
-      find: '    ctx.fillRect(0, 0, size, size);\n    ctx.globalAlpha = 1;',
-      replace: '    ctx.fillRect(0, 0, size, size);\n    ctx.fillRect(0, 0, size, size);\n    ctx.globalAlpha = 1;',
+      find: "    ctx.fill('evenodd');\n    ctx.globalAlpha = 1;\n    ctx.globalCompositeOperation = 'source-over';\n    return;",
+      replace:
+        "    ctx.fill('evenodd');\n    ctx.fill('evenodd');\n    ctx.globalAlpha = 1;\n" +
+        "    ctx.globalCompositeOperation = 'source-over';\n    return;",
     },
   },
   {
