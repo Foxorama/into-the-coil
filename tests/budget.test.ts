@@ -56,10 +56,25 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
 
 /**
- * The worst-case scene, as data rather than as a feeling — 0022's number.
- * ~150 enemy bullets, ~80 player projectiles, ~40 enemies, ~200 particles.
+ * The worst-case scene, as data rather than as a feeling — 0022's number, raised by 0286.
+ *
+ * ~150 enemy bullets, ~80 player projectiles, ~40 enemies, ~200 particles — **and one boss that is
+ * twenty-six entities**, which is the line 0022's list did not have.
+ *
+ * ⚠️ **500 WAS A PHONE'S NUMBER AND HAD BEEN ONE SINCE 0153.** It was derived from ~10ms a frame on
+ * a Snapdragon 695 class SoC; `docs/decisions/0153-desktop-is-the-target.md` superseded the SIZING
+ * half of 0022 and says the phone may not be cited as a reason to make anything smaller. Nobody
+ * moved the number, because until a serpent had to run off the leading edge nothing had been refused
+ * by it — which is exactly when a stale quantity is supposed to be checked
+ * (`docs/decisions/0280-a-cheap-mechanism-does-not-rename-the-ask.md`).
+ *
+ * ⚠️ **AND THIS IS NOT THE REOPENING 0022 WARNED ABOUT.** That one is danmaku density — Touhou and
+ * DoDonPachi at 1,500+, *"a different game from the one in `docs/game.md`"*, and its conversation is
+ * WebGL. This is one boss growing by fifteen discs on a target that was never the phone. **Every
+ * rule 0022 made about HOW to be fast is untouched**, and this file still counts draw calls and
+ * allocations rather than wall clock, for 0025's reason, which was never about the phone either.
  */
-const WORST_CASE = 500;
+const WORST_CASE = 515;
 
 /** Long enough that anything accumulating per frame has visibly accumulated. Ten seconds of play. */
 const FRAMES = 600;
@@ -154,15 +169,27 @@ describe('the worst-case scene costs one blit per entity, and nothing else', () 
     const view = viewOf(1920, 1080);
     paintScene(one, view, [fullPool()], 900, 0.5);
 
+    /*
+      ⚠️ **THE SHARES ARE NOT EQUAL, BECAUSE THE CEILING NEED NOT DIVIDE BY FOUR — 0286.** This read
+      `WORST_CASE / 4` and the ceiling was 500; at 515 that is 128.75 and `src/sim/pool.ts` rightly
+      refuses a fractional capacity. The claim is *splitting the scene into layers does not change
+      what it costs to draw*, which says nothing about the layers being the same size — so the split
+      is four whole shares that add up to the whole, and the guard stops depending on a number it is
+      not about.
+    */
     const quarters: Pool<Entity>[] = [];
+    let placed = 0;
     for (let q = 0; q < 4; q++) {
-      const pool = new Pool<Entity>(WORST_CASE / 4, makeEntity);
-      for (let i = 0; i < WORST_CASE / 4; i++) {
+      const share = Math.floor((WORST_CASE * (q + 1)) / 4) - placed;
+      const pool = new Pool<Entity>(share, makeEntity);
+      for (let i = 0; i < share; i++) {
         const e = pool.spawn()!;
         reset(e, 1000 + i, (i * 7) % ACROSS_SPAN, sprite(i % 16));
       }
+      placed += share;
       quarters.push(pool);
     }
+    expect(placed, 'the four shares do not add up to the worst case').toBe(WORST_CASE);
     paintScene(many, view, quarters, 900, 0.5);
 
     expect(many.blits, 'splitting the scene into layers changed what it costs to draw').toBe(one.blits);

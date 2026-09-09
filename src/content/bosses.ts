@@ -1432,13 +1432,33 @@ export const BOSSES: Record<BossKind, BossRow> = {
         nodes is pool the game does not have — `src/app/mount.ts` has that arithmetic.
       */
       /*
+        ⚠️ **TWENTY-SIX NODES, AND EVERY ONE OF THEM IS THE SAME SIZE AS BEFORE — 0286.** Reported on
+        the second play: *"the body is short and squat, it should be long enough to stretch off the
+        screen for a serpent → I mean add more segements, not stretch out the segments that are
+        there."* So the girths below are 0284's, unchanged, and `step` is unchanged; what is longer is
+        the RUN of them. Fifteen more discs at full girth, spliced into the middle where an animal's
+        body is the same thickness for most of its length — the head-end swell and the tail's taper
+        are both exactly as they were.
+
+        ⚠️ **AND IT IS 133 UNITS NOW AGAINST 46**, which puts the tail at 253 from the camera's
+        trailing edge on a screen that is 178 units wide at its narrowest and 240 at its widest. The
+        animal runs off the leading edge on every device, which is the ask: what made it read short
+        was not its length in units but that the player could see it END, tapered tail and all, with
+        room to spare. **The taper is still authored and is simply never on screen.**
+
+        ⚠️ **THE PARAGRAPH ABOVE IS WHAT THIS ANSWERS**, and it named the cost correctly: *more nodes
+        is pool the game does not have.* 0286 is the reopening of that ceiling rather than a way round
+        it — `src/app/mount.ts` and `tests/budget.test.ts` carry the arithmetic.
+      */
+      /*
         ⚠️ **AND THE LAST THREE FALL AWAY HARDER, BECAUSE A TAIL ENDS IN A POINT — 0284.** Reported on
         the first play of the chain: *"tip of the tail needs to be more pointed if we can."* It did
         not: the profile fell to two units and stopped, so the animal finished on a disc two units
         across, which is a full stop rather than a point. Falling 4 → 2 → 0.8 converges instead, and
         the nodes are spaced by their own girth so the last two sit almost on top of each other.
       */
-      girth: [6, 8.5, 10.5, 11, 11, 10.5, 9.5, 8, 6, 3, 1],
+      // head-end swell ─┐  ┌─ seventeen at full girth, which is the length ─┐  ┌─ 0284's tail ─┐
+      girth: [6, 8.5, 10.5, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 10.5, 9.5, 8, 6, 3, 1],
       /*
         ⚠️ **3 AND NOT 6.5, AND THE GAP IS WHY — 0284.** Reported on the first play of the chain:
         *"slight gap between head and body."* Measured: the drawn skull's back edge is **6.95** units

@@ -25,6 +25,7 @@ import {
   ACROSS_CULL_MIN,
   ACROSS_SPAN,
   MAX_ALONG_SPAN,
+  MAX_ASPECT,
   MIN_ASPECT,
   ROAM_MAX,
   ROAM_MIN,
@@ -667,13 +668,30 @@ describe('a boss fight can reach all of its phases', () => {
         asking its question because the thing it measures moved, which is
         `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`'s fourth rule.
       */
+      /*
+        ⚠️ **AND A BODY IS NOW EXEMPT FROM IT, WHICH IS THE GUARD CHANGING RATHER THAN THE WORK — 0286.**
+        Reported: *"it should be long enough to stretch off the screen for a serpent."* The claim above
+        was written when the only thing a boss had was a hull, and the paragraph before it made the
+        body's reach part of that claim on the reasoning that a tail hanging off the leading edge was
+        the defect. **It is the feature.** What the rule actually protects is that the thing the player
+        has to fight is reachable, and for a chained boss that is its HULL — so the hull is held here
+        exactly as it always was, and the body is held by the assertion below instead.
+
+        ⚠️ **THE BODY IS NOT SIMPLY UNGUARDED.** `docs/decisions/0192-a-guard-holds-an-invariant.md`
+        allows changing a guard with a reason and not deleting one quietly; the length claim moves to
+        the row that asked for it, because *"a specific instruction about a specific segment should
+        never be generalised"* — a later chained boss may be a short one, and a guard reading *every
+        chain runs off the screen* would force this animal's character into shared code, which is
+        `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`.
+      */
       for (const kind of BOSS_KINDS) {
         const row = BOSSES[kind];
         const narrow = ACROSS_SPAN * MIN_ASPECT;
-        const reach = row.chain === null ? row.radius : Math.max(row.radius, chainReach(row.chain));
+        const reach = row.radius;
         expect(
           row.station + row.drift + reach,
-          `${kind} reaches ${(row.station + row.drift + reach - narrow).toFixed(1)} units off the narrowest screen`,
+          `${kind}'s HULL reaches ${(row.station + row.drift + reach - narrow).toFixed(1)} units off the narrowest ` +
+            'screen, so the part of it the player has to fight is not all there',
         ).toBeLessThanOrEqual(narrow);
         // And the back of the swing never reaches where a life begins, or a respawn is a collision.
         expect(row.station - row.drift - row.radius, `${kind} drifts back onto the ship's start`).toBeGreaterThan(
@@ -695,6 +713,43 @@ describe('a boss fight can reach all of its phases', () => {
           ).toBeLessThan(CHAIN_TRAIL - 1);
         }
       }
+    });
+
+    it('0286 — THE REPORTED ONE: the serpent is longer than the widest screen, so its tail is never on one', () => {
+      /*
+        ⚠️ **REPORTED, TWICE, ABOUT THE SAME ANIMAL**: *"the body is short and squat, it should be
+        long enough to stretch off the screen for a serpent → I mean add more segements, not stretch
+        out the segments that are there."*
+
+        ⚠️ **THE WIDEST SCREEN AND NOT THE NARROWEST, WHICH IS THE OPPOSITE END FROM EVERY OTHER
+        CLAIM IN THIS FILE.** A bound that says *the tail leaves the 16:9 view* is satisfied by an
+        animal that is comfortably whole on a 21:9 one, and a player on an ultrawide would be looking
+        at the short squat serpent the report is about. The claim only means anything at the widest
+        view the clamp allows.
+
+        ⚠️ **AND IT IS ABOUT `jormungandr` RATHER THAN ABOUT CHAINS.** *"A specific instruction about
+        a specific segment should never be generalised"* — a later boss may be authored as a short
+        chain and be right, so this is not written over `BOSS_KINDS`. 0282's rule, in the form it
+        takes for a guard: every instance authors its own length, and THIS instance's is long.
+      */
+      const chain = BOSSES.jormungandr.chain;
+      if (chain === null) throw new Error('the serpent has no body');
+      const widest = ACROSS_SPAN * MAX_ASPECT;
+      const tail = BOSSES.jormungandr.station + BOSSES.jormungandr.drift + chainReach(chain);
+      expect(
+        tail,
+        `the serpent's tail ends ${(widest - tail).toFixed(1)} units INSIDE the widest screen the clamp allows, so a ` +
+          'player can see the whole animal finish and it reads as short however it is drawn',
+      ).toBeGreaterThan(widest);
+      /*
+        ⚠️ **AND THE SEGMENTS ARE THE SAME SEGMENTS**, which is the half of the report that a longer
+        `step` or fatter girths would have quietly answered instead — *"not stretch out the segments
+        that are there."* A disc's spacing is `step × girth`, so *the same size* is a claim about
+        both: the widest girth is what it was, and so is the gap between two of them.
+      */
+      expect(Math.max(...chain.girth), 'the serpent got thicker rather than longer').toBeLessThanOrEqual(11);
+      expect(chain.step * Math.max(...chain.girth), 'the serpent’s discs got further apart rather than more numerous')
+        .toBeLessThanOrEqual(5.83);
     });
 
     it('0101 — and it leaves the player more than half the screen, at the NEAR end of the swing', () => {

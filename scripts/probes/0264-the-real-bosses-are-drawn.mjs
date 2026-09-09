@@ -79,8 +79,9 @@ export const PROBES = [
     guard: '0264 — THE HEADS',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '      girth: [6, 8.5, 10.5, 11, 11, 10.5, 9.5, 8, 6, 3, 1],',
-      replace: '      girth: [30, 8.5, 10.5, 11, 11, 10.5, 9.5, 8, 6, 3, 1],',
+      // ⚠️ Re-anchored by 0286, which made the body twenty-six segments: only the neck matters here.
+      find: '      girth: [6, 8.5,',
+      replace: '      girth: [30, 8.5,',
     },
   },
 ];

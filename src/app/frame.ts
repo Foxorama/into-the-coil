@@ -1425,9 +1425,23 @@ export class GameFrame implements Frame {
     stepEntities(w.shipPool, w.cameraAlong);
     stepEntities(w.pickups, w.cameraAlong);
     stepEntities(w.bossPool, w.cameraAlong);
-    // The nodes keep their own `flashFor` and sprite here; `layChain` writes where they stand,
-    // after the head has moved, so a node interpolates from where it was to where it now is — 0283.
-    stepEntities(w.bossBody, w.cameraAlong);
+    /*
+      The nodes keep their own `flashFor` and sprite here; `layChain` writes where they stand,
+      after the head has moved, so a node interpolates from where it was to where it now is — 0283.
+
+      ⚠️ **AND NO LEADING CULL, BECAUSE A NODE IS PLACED RATHER THAN FLOWN — 0286.** Every other pool
+      here holds things that move themselves and may wander out of the world; a chain's nodes have no
+      velocity of their own and are written to `head.along + offset` every step, so the cull can only
+      ever fire on the animal's own length. It did, the moment the body grew past the screen: the
+      serpent arrives from the leading edge, so during its approach the tail is beyond the spawn
+      margin and was released — **and `layChain` re-lays only when the pool is EMPTY, so the node was
+      gone for the whole fight.** A twenty-six-segment animal came out of its arrival with twenty-five
+      and nothing anywhere said so, which is
+      `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`'s fourth rule
+      exactly: the node count was solved with the boss parked on station, and the arrival is a case it
+      also runs in.
+    */
+    stepEntities(w.bossBody, w.cameraAlong, Number.POSITIVE_INFINITY);
     layChain(w);
     stepEntities(w.enemies, w.cameraAlong);
     // ⚠️ The one pool with its own leading cull, and it is the player's REACH rather than content —
