@@ -3371,59 +3371,20 @@ function endOf(spine: readonly Pt[]): (px: number, py: number) => Pt {
   return (px, py) => [x + ux * px - uy * py, y + uy * px + ux * py];
 }
 
-/**
- * Under the jaw, round the snout, over the brow to the crown — a solid skull, and no mouth in it.
- *
- * ⚠️ **IT IS WIDER THAN THE NECK AND `0264 — THE HEADS` HOLDS THAT AT 0.6.** A serpent whose head is
- * the same gauge as its body is the *"grey tentacle"* the report named; this spans 0.68 against a
- * neck of 0.45, and the margin is deliberate because the flattened curve is what the guard measures.
- */
 /*
-  ⚠️ **LONGER THAN IT IS TALL, WHICH THE ONE IT REPLACES WAS NOT.** *"The head needs to be a bit more
-  elongated and less blobby."* The old skull was 0.32 of `r` long and 0.44 tall — taller than long is
-  a frog, and no amount of paint on it reads as a snake. This is 0.385 long and 0.27 tall.
+  ── THE SKULL IS THE HULL, AND IT IS DRAWN FOR MENACE — 0283, 0284 ───────────────────────────────
 
-  ⚠️ **AND A SHORTER HEAD IS WHY THE ANIMAL LOOKS BIGGER**, which sounds backwards and is not: a skull
-  that is a fifth of what you can see sets the scale for everything behind it.
+  `boss8` was the whole animal in one box until 0283, which is the one thing a serpent cannot be: a
+  baked bitmap holds whatever wave it was painted with for the entire fight. The body is a chain of
+  entities now (`src/app/frame.ts`) and this box holds the head.
+
+  ⚠️ **AND THE HEAD IS AUTHORED RATHER THAN RESCALED, WHICH IS 0284.** 0283 took the skull 0264 had
+  drawn as one detail of a fifty-six-unit animal and enlarged it, deliberately, so that a verdict on
+  the chain would not be tangled with a change to the art (0109). The verdict came back *"still very
+  cute instead of menacing… the head and tail-tip are way too cute"*, and the rescaled detail is
+  gone: what is below is drawn for this box, against the predecessor's own serpent and the reference
+  handed over with the report.
 */
-const SERPENT_SKULL: readonly Pt[] = [
-  [-0.7, 0.088],
-  [-0.83, 0.122],
-  [-0.98, 0.131],
-  [-1.07, 0.09],
-  [-1.085, 0.026],
-  [-1.065, -0.04],
-  [-0.97, -0.097],
-  [-0.82, -0.138],
-];
-
-/*
-  ── THE SKULL IS THE HULL NOW, AND THE BODY IS A CHAIN — 0283 ────────────────────────────────────
-
-  `docs/decisions/0283-the-serpent-is-a-chain.md`. `boss8` was the whole animal in one box, which is
-  the one thing a serpent cannot be: a baked bitmap holds whatever wave it was painted with for the
-  entire fight, and the report was made twice — *"it's a static image that bounces up and down"* and
-  *"there's no movement to the sprite itself."*
-
-  ⚠️ **THE SKULL IS NOT REDRAWN, IT IS RE-NORMALISED, AND THAT IS DELIBERATE.** Every mark on it —
-  the crown plane, the jaw shadow, the mouth, the two fangs, the nostril, the amber eye with its slit
-  and its catchlight — was tuned over three decisions and a play report each. Changing what it is
-  made of at the same time as changing what the animal is made of would make a verdict on either
-  unattributable, which is 0109's standing argument. So the head's coordinates are the SAME
-  coordinates, through one scale about the skull's own centre.
-
-  ⚠️ **AND `HEAD` IS 4.3 RATHER THAN THE 4.64 THAT WOULD FILL THE BOX.** An outline is stroked
-  outside the path and the aura is painted outside that; a skull drawn to the tile's edge loses both,
-  and 0277's halo has the story of a mark that ran off its own bitmap into the next one in the atlas.
-*/
-const HEAD_AT: Pt = [-0.8925, -0.0035];
-const HEAD = 4.3;
-const hx = (x: number): number => (x - HEAD_AT[0]) * HEAD;
-const hy = (y: number): number => (y - HEAD_AT[1]) * HEAD;
-/** One point of the old whole-animal drawing, in the head sprite's own frame. */
-const hp = (p: Pt): Pt => [hx(p[0]), hy(p[1])];
-/** A whole authored run of them. `map` allocates and this file is the one place that is FOR. */
-const hpts = (ps: readonly Pt[]): Pt[] => ps.map(hp);
 
 /**
  * The skull, closed off at the neck — the whole of `boss8` since 0283.
@@ -3432,7 +3393,104 @@ const hpts = (ps: readonly Pt[]): Pt[] => ps.map(hp);
  * from the top of the neck round the snout to the bottom of it, with the body closing it; the first
  * node of the chain covers the join, and it is wider than the cut is.
  */
-const SERPENT_HEAD: readonly Pt[] = hpts(SERPENT_SKULL);
+/**
+ * The skull — crowned, jaws thrown open, authored in the head sprite's own frame.
+ *
+ * ── WHY IT IS AUTHORED RATHER THAN THE OLD SKULL RESCALED — 0284 ────────────────────────────────
+ *
+ * ⚠️ **REPORTED ON THE FIRST PLAY OF THE CHAIN**: *"it's also still very cute instead of menacing…
+ * the head and tail-tip are way too cute"*, with the predecessor's Jörmungandr handed over a second
+ * time as the target. 0283 rescaled the skull 0264 had drawn as one detail of a much larger animal,
+ * on 0109's argument that a pipeline change and an art change should not be judged together. That
+ * was right and it is spent: the pipeline is judged, and this is the art.
+ *
+ * ⚠️ **AND THE PREDECESSOR'S OWN SKULL WAS READ FOR IT** — `C:\Golf-Stars\src\render\shipArt.ts`,
+ * `case 'serpent'`, for this reason and nothing else (0020). It is built completely differently from
+ * anything this repository had: **crown horns swept back**, the jaws as **two plates thrown open**
+ * with a lit throat between them, a **brow plate** over the eye, and four fangs. The rounded wedge
+ * with a painted-on mouth that this replaces has none of those, and no amount of shading makes a
+ * closed mouth menacing.
+ *
+ * ⚠️ **THE GAPE IS A NOTCH IN THE SILHOUETTE AND NOT A HOLE IN IT**, which is the line 0264 drew and
+ * paid for: a mouth cut *through* a hull bakes a skull with a hole in it. A wedge open to the front
+ * is one closed path, and it survives `evenodd` — what it must not be is narrower than the outline
+ * that strokes it, which is why the jaws part by nearly five world units rather than by one.
+ */
+const SERPENT_HEAD: readonly Pt[] = [
+  /*
+    ⚠️ **THE SKULL IS TALLEST AT THE JAW HINGE AND NARROWS TO THE NECK, WHICH IS WHERE A SNAKE'S
+    HEAD IS TALLEST.** The first pass ran the crown and the jaw straight back at full height to a
+    vertical wall, and baked as a green brick with a face on the front of it — the same *blob*
+    reading 0276 got, one shape further on.
+  */
+  [0.9, -0.14],
+  [0.68, -0.32],
+  [0.44, -0.48],
+  /*
+    ⚠️ **TWO HORNS RAKED BACK, AND THEIR ROOTS ARE WIDER THAN THEIR REACH.** The first pass set each
+    pair of root points a seventh of the skull apart and threw the tip a third of it away, which
+    bakes as a pair of antennae — 0277's own finding about rootless spines, in a second disguise.
+  */
+  [0.46, -0.5],
+  [0.78, -0.82],
+  [0.24, -0.6],
+  [0.2, -0.62],
+  [0.46, -0.9],
+  [-0.02, -0.68],
+  // The brow, jutting over the eye, and the snout falling away in front of it.
+  [-0.28, -0.7],
+  [-0.28, -0.7],
+  [-0.5, -0.6],
+  [-0.72, -0.54],
+  [-0.92, -0.44],
+  [-1.06, -0.24],
+  [-1.06, -0.24],
+  /*
+    ── THE FANGS ARE IN THE SILHOUETTE, NOT PAINTED IN THE GAP — 0284 ────────────────────────────
+
+    ⚠️ **A MARK IN THE GAPE IS OUTSIDE THE HULL, AND `tests/accents.test.ts` SAID SO AT 9.5 PIXELS.**
+    The gape is a notch, so the open space between the jaws is not part of the silhouette — and a
+    fang painted standing in it is a solid mark over a hole, which is the exact thing 0149's guard
+    exists to catch. Painted fangs can only ever sit ON a jaw, which is not where teeth are.
+
+    ⚠️ **SO THEY ARE TEETH RATHER THAN DECALS**, on 0277's own terms for the dorsal spines: a boss's
+    collision is not its polygon, so a hull may carry a ridge — or, here, four of them pointing the
+    other way. Each tip is doubled, because `curveLoop` smooths a lone point into a bump and a fang
+    is a corner.
+  */
+  [-0.98, -0.08],
+  [-0.95, -0.07],
+  [-0.9, 0.16],
+  [-0.9, 0.16],
+  [-0.85, -0.06],
+  [-0.72, -0.05],
+  [-0.69, -0.04],
+  [-0.65, 0.14],
+  [-0.65, 0.14],
+  [-0.61, -0.03],
+  [-0.46, 0],
+  [-0.24, 0.04],
+  [-0.24, 0.04],
+  // And out again along the lower jaw, hinged wide and stopping short of the snout.
+  [-0.44, 0.28],
+  [-0.48, 0.3],
+  [-0.52, 0.14],
+  [-0.52, 0.14],
+  [-0.56, 0.32],
+  [-0.7, 0.4],
+  [-0.74, 0.41],
+  [-0.78, 0.24],
+  [-0.78, 0.24],
+  [-0.82, 0.43],
+  [-0.9, 0.46],
+  [-0.9, 0.46],
+  [-0.82, 0.6],
+  [-0.56, 0.62],
+  [-0.22, 0.56],
+  [0.18, 0.42],
+  [0.56, 0.28],
+  [0.9, 0.16],
+];
 
 /**
  * How wide one node's flesh is drawn, as a share of the sprite's `r`.
@@ -3629,23 +3687,29 @@ function arcOf(radius: number, from: number, to: number): Pt[] {
   that says what it is and so is painted last and over everything.
 */
 /**
- * The skull's own marks — 0283, and every one of them is 0264's, 0276's or 0277's, unchanged.
+ * The skull's marks — 0284, on the silhouette above.
  *
- * ⚠️ **THE COORDINATES ARE THE OLD ONES THROUGH `hp`.** Retyping them at the new scale would be a
- * second copy of a drawing that took three decisions and a play report each to settle, and the day
- * somebody edits one copy is the day the head stops being the head. What moved is the frame, not the
- * face.
- *
- * ⚠️ **THE AURA IS THE SKULL'S OWN SHAPE, BLOWN OUT.** Same trick as a node's and for the same
- * reason: `destination-over`, brightest first, so the falloff stacks outward rather than hiding its
- * bright ring behind its dim one.
+ * ⚠️ **THE MENACE IS IN THE SILHOUETTE AND THIS IS WHAT LIGHTS IT.** Horns, a jutting brow and an
+ * open gape are the shape; a brow plate, a lit throat, four fangs and a slit eye are what stop that
+ * shape reading as a flat cut-out. The predecessor's own note is the one to keep in mind here: *"the
+ * first pass drew a fully-detailed head that read as a blunt stump"* — a head against open space
+ * needs its own light, not only its outline.
  */
 function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin): void {
+  /*
+    ⚠️ **THE AURA, BEHIND THE HULL.** `destination-over`, brightest ring first, so each new fill goes
+    further back and the falloff stacks outward — 0277 shipped it the other way round once and it
+    baked as two flat slabs with a hard edge.
+
+    ⚠️ **AND IT STOPS AT 1.14, BECAUSE THE HORNS ARE THE FURTHEST THING OUT NOW.** A halo is the one
+    mark that leaves its hull on purpose, so it is the one that can run off its own tile and bleed
+    into the next bitmap in the atlas. `tests/accents.test.ts` holds it.
+  */
   ctx.globalCompositeOperation = 'destination-over';
   for (const [swell, alpha] of [
-    [1.06, 0.2],
-    [1.14, 0.11],
-    [1.22, 0.05],
+    [1.015, 0.2],
+    [1.045, 0.11],
+    [1.075, 0.05],
   ] as const) {
     ctx.globalAlpha = alpha;
     ctx.fillStyle = skin.lit;
@@ -3654,81 +3718,141 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin): void {
     ctx.fill('evenodd');
     ctx.globalAlpha = 1;
   }
-  ctx.globalCompositeOperation = 'source-over';
-  // One light direction, upper-left, the same one every node of the body is lit from.
-  shaded(ctx, f, [0, hy(-0.11)], [0, hy(0.09)], shade(skin.hull, 0.22), shade(skin.hull, -0.4), SERPENT_HEAD, 1, true);
   /*
-    ⚠️ **THE CROWN IS A PLANE AND NOT A PATCH.** A snake's head reads because the top of the skull
-    catches the light as one flat surface running from the brow to the snout, with the side of the
-    head falling away below it. 0277's first pass painted a small lit blob near the brow and the head
-    came back as a lump.
+    ⚠️ **THE THROAT, BEHIND THE JAWS.** The predecessor draws the gullet first and the jaws over it —
+    *"under them it is simply invisible, which is how the first pass managed to draw a lit mouth
+    nobody could see."* Here the gape is a notch rather than a hole, so the throat goes BEHIND with
+    the aura: a dark wedge filling the wedge the jaws leave, with the venom lit in front of it.
+  */
+  ctx.globalAlpha = 0.85;
+  ctx.fillStyle = '#04120d';
+  ctx.beginPath();
+  trace(ctx, f, [
+    [-0.3, -0.02],
+    [-1.06, -0.22],
+    [-1.08, 0.5],
+  ]);
+  ctx.fill('evenodd');
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+  // One light direction across the whole animal, upper-left — the same one every node is lit from.
+  shaded(ctx, f, [0, -0.7], [0, 0.6], shade(skin.hull, 0.24), shade(skin.hull, -0.42), SERPENT_HEAD, 1, true);
+  /*
+    ⚠️ **THE CROWN IS A PLANE AND NOT A PATCH** — 0277 learned it and it is the same here. The top of
+    the skull catches the light as one surface running from the horns to the snout, with the side of
+    the head falling away below it; a small lit blob near the brow reads as a lump.
   */
   shaded(
     ctx,
     f,
-    hp([-0.94, -0.11]),
-    hp([-0.98, 0.03]),
+    [-0.4, -0.66],
+    [-0.2, -0.3],
     skin.lit,
-    shade(skin.hull, 0.14),
-    hpts([
-      [-0.83, -0.105],
-      [-0.96, -0.062],
-      [-1.045, -0.012],
-      [-1.055, 0.028],
-      [-0.96, 0.005],
-      [-0.83, -0.045],
-    ]),
-    0.7,
+    shade(skin.hull, 0.12),
+    [
+      [0.3, -0.55],
+      [-0.06, -0.62],
+      [-0.32, -0.66],
+      [-0.52, -0.54],
+      [-0.86, -0.42],
+      [-0.96, -0.28],
+      [-0.8, -0.3],
+      [-0.5, -0.42],
+      [-0.1, -0.5],
+      [0.28, -0.44],
+    ],
+    0.75,
     true,
   );
   /*
-    ⚠️ **THE MOUTH IS PAINT AND THE JAW IS THE SHADOW UNDER IT — 0264, WHICH LEARNED IT THE HARD
-    WAY** by cutting open jaws into the hull and baking a skull with a hole through it. The dark
-    wedge is the gap the jaws leave; the fangs hang off its upper edge, which is where a snake's are.
+    ⚠️ **THE BROW PLATE, WHICH IS THE ONE MARK THAT MAKES A FACE ANGRY.** A ridge over the eye, darker
+    beneath it than the crown above — the predecessor draws exactly this and nothing else on that part
+    of the skull. Without it the eye sits on a smooth dome and reads as an animal looking at you
+    rather than an animal deciding about you.
   */
-  poly(ctx, f, shade(skin.hull, -0.55), hpts([
-    [-0.75, 0.062],
-    [-0.85, 0.09],
-    [-0.98, 0.098],
-    [-1.055, 0.058],
-    [-1.045, 0.028],
-    [-0.9, 0.048],
-  ]), 0.95);
-  poly(ctx, f, '#2a0f14', hpts([
-    [-1.04, 0.03],
-    [-0.94, 0.052],
-    [-0.83, 0.048],
-    [-0.828, 0.068],
-    [-0.94, 0.072],
-    [-1.05, 0.048],
-  ]));
-  // Two fangs off the upper jaw, hanging into the gap — the one white in the animal.
-  for (const [x, y, drop] of [
-    [-1.0, 0.038, 0.044],
-    [-0.9, 0.058, 0.036],
+  poly(ctx, f, shade(skin.hull, -0.5), [
+    [-0.06, -0.6],
+    [-0.34, -0.64],
+    [-0.54, -0.5],
+    [-0.5, -0.4],
+    [-0.28, -0.5],
+    [-0.04, -0.48],
+  ], 0.85);
+  /*
+    ⚠️ **THE MAW: VENOM LIGHT IN THE WEDGE THE JAWS LEAVE.** Translucent, deliberately — the gape is
+    outside the hull and `tests/accents.test.ts` holds a SOLID mark inside the silhouette and treats
+    anything under 0.9 as a light, which is exactly what this is.
+  */
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = skin.lit;
+  ctx.beginPath();
+  trace(ctx, f, [
+    [-0.34, 0.0],
+    [-0.98, -0.14],
+    [-0.99, 0.4],
+  ]);
+  ctx.fill('evenodd');
+  ctx.globalAlpha = 1;
+  /*
+    ⚠️ **FOUR FANGS — TWO HANGING AND TWO STANDING**, which is the predecessor's arrangement and the
+    thing a closed mouth with two little teeth could never do. Inside the hull on both jaws, so they
+    are the animal's own and not marks floating in the gap.
+  */
+  /*
+    ⚠️ **THE WHITE IS DRAWN INSIDE THE TOOTH, NOT TO IT.** `curveLoop` draws the hull as a curve
+    THROUGH its samples, and a curve cuts inside the polygon those samples describe wherever the
+    outline is convex — so paint taken to a fang's authored tip is paint taken to an edge that is no
+    longer there. Measured at **0.58 of a CSS pixel** over, which is invisible on the sheet and
+    exactly what `tests/accents.test.ts` exists to say out loud; 0277 has the same finding about a
+    belly band.
+  */
+  for (const [tip, a, b] of [
+    [[-0.9, 0.09], [-0.935, -0.05], [-0.865, -0.045]],
+    [[-0.65, 0.08], [-0.675, -0.022], [-0.625, -0.014]],
+    [[-0.52, 0.2], [-0.495, 0.285], [-0.545, 0.302]],
+    [[-0.78, 0.3], [-0.755, 0.395], [-0.805, 0.412]],
   ] as const) {
-    poly(ctx, f, '#f6fbf4', hpts([
-      [x - 0.011, y],
-      [x + 0.013, y + 0.008],
-      [x + 0.001, y + drop],
-    ]));
+    poly(ctx, f, '#f2fff6', [a, b, tip], 0.95);
   }
-  // The nostril, and the eye: a dark socket, the gold iris, a vertical slit, one catchlight.
-  disc(ctx, f, shade(skin.plate, -0.6), hx(-1.045), hy(0.0), 0.011 * HEAD);
-  disc(ctx, f, shade(skin.plate, -0.65), hx(-0.955), hy(-0.02), 0.048 * HEAD);
-  disc(ctx, f, skin.eye, hx(-0.955), hy(-0.02), 0.037 * HEAD);
-  // ⚠️ A SNAKE'S PUPIL IS A HAIRLINE AND THIS ONE MAY NOT BE — 0277 measured the floor at 2.5 CSS
-  // pixels, below which a mark is not drawn faintly but not drawn at all. It is `HEAD` times wider
-  // now than the number that only just cleared it, so the slit is safe by construction.
-  poly(ctx, f, '#100c04', hpts([
-    [-0.968, -0.05],
-    [-0.942, -0.05],
-    [-0.938, -0.02],
-    [-0.942, 0.01],
-    [-0.968, 0.01],
-    [-0.972, -0.02],
-  ]));
-  disc(ctx, f, '#fffdf2', hx(-0.968), hy(-0.036), 0.013 * HEAD, 0.85);
+  // A lit ridge along the top of the upper jaw, so the snout reads against the dark.
+  seam(ctx, f, skin.lit, 0.03, [[-0.34, -0.68], [-0.66, -0.56], [-0.94, -0.44]], 0.6, true);
+  /*
+    ⚠️ **THE EYE, AND IT IS THE ONE SATURATED THING ON THE ANIMAL.** A dark socket under the brow, a
+    gold iris, a vertical slit and one catchlight — a snake's pupil, which is the mark that says
+    *reptile* rather than *creature*. Bigger than 0277's, because the skull is the whole hull now and
+    an eye sized for a detail of a fifty-six-unit sprite is a dot on a twenty-unit one.
+  */
+  disc(ctx, f, shade(skin.plate, -0.65), -0.3, -0.34, 0.19);
+  disc(ctx, f, skin.eye, -0.3, -0.34, 0.15);
+  poly(ctx, f, '#100c04', [
+    [-0.34, -0.46],
+    [-0.26, -0.46],
+    [-0.24, -0.34],
+    [-0.26, -0.22],
+    [-0.34, -0.22],
+    [-0.36, -0.34],
+  ]);
+  disc(ctx, f, '#fffdf2', -0.35, -0.4, 0.045, 0.85);
+  // The nostril, high on the snout.
+  disc(ctx, f, shade(skin.plate, -0.6), -0.86, -0.34, 0.035);
+  /*
+    ⚠️ **SCALES ON THE CHEEK, THE SAME FIELD THE BODY CARRIES.** Low contrast and overlapping, so the
+    head belongs to the animal behind it rather than reading as a mask bolted to a tube.
+  */
+  for (const [x, y, span] of [
+    [0.5, -0.24, 0.3],
+    [0.24, -0.1, 0.3],
+    [0.5, 0.12, 0.3],
+    [0.16, 0.26, 0.3],
+    [0.56, 0.34, 0.26],
+  ] as const) {
+    const scale: Pt[] = [];
+    for (let j = 0; j <= 4; j++) {
+      const t = j / 4;
+      scale.push([x + span * (t - 0.5), y + Math.sin(Math.PI * t) * 0.12]);
+    }
+    seam(ctx, f, skin.lit, 0.028, scale, 0.3, true);
+  }
 }
 
 
