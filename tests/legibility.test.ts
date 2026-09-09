@@ -172,42 +172,43 @@ describe('the shot that kills you is not the shot you kill with', () => {
     ).toBe(shooters.length);
 
     /*
-      ⚠️ **AND THEY DIFFER IN THE TWO CHANNELS 0081 NAMES, on the screen the report was made on.**
-      Ink is deliberately NOT one of them — every threat is one colour so the player learns one rule
-      about colour — so shape and size are carrying the whole load and both have to be real.
+      ⚠️ **AND NO TWO OF THEM ARE THE SAME BITMAP.** A uniqueness rule limits no single design — it
+      forbids two rows being literally one picture, which is the defect 0081 and 0098 were both
+      written from. It is the one claim in this block that survived 0295.
     */
     const bullets = [...sent];
     const sprites = new Set(bullets.map((k) => SHOTS[k as ShotKind].sprite));
     expect(sprites.size, 'two of the bullets that shoot at the player share a silhouette').toBe(bullets.length);
-    const sizes = bullets.map((k) => drawnPx(SHOTS[k as ShotKind].sprite)).sort((a, b) => a - b);
-    for (let i = 1; i < sizes.length; i++) {
-      const gap = sizes[i]! - sizes[i - 1]!;
-      expect(
-        gap,
-        `two enemy bullets are drawn ${gap.toFixed(1)}px apart on a 1280×720 screen, which is the same size`,
-      ).toBeGreaterThan(5);
-    }
 
     /*
-      ⚠️ **AND THE FAST ONE IS THE SMALL ONE, which is what keeps this a legibility change.** The shot
-      that gives the player least time to move is the one that takes least of the lane, and the one
-      that fills the lane is the one they can walk away from. Reversed, the same three rows would be a
-      difficulty increase wearing a variety change — and every hurtbox is identical, so nothing else
-      in the suite could tell the difference.
+      ── THREE MORE ASSERTIONS WERE HERE AND 0295 DELETED THEM ──────────────────────────────────────
+
+      `docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md`. They were, in order:
+
+      1. **Every hostile bullet drawn more than five pixels from every other.** Reported from play as
+         the rule that *"explains so much about what has been frustrating with the enemy fire
+         mechanics"*, and the report was right about the mechanism as well as the feel. The ladder
+         was packed at that minimum, so the eagle's quill could not be added without shoving the four
+         rungs above it up 0.8 units each — the ring, the drop, the shard and the rock got bigger
+         because a spacing rule said so, and that is how the bullets climbed into the hull range.
+         Eight of the thirteen enemy hulls are drawn smaller than the biggest bullet in the game;
+         `scripts/weigh-sizes.mjs` prints it.
+
+      2. **The faster bullet is the smaller one**, over all nine. It made the worst case mandatory:
+         the flame is the quickest thing fired at the player and was therefore the smallest thing on
+         the screen, at 8.6 px — the *"incredibly small and hard to see"* half of the same report.
+
+      3. **Every enemy-sent bullet shares one hurtbox.** Three bullets drawn at 1.9, 2.6 and 3.4 with
+         one 0.9 radius is a picture that lies about its hitbox by nearly 2× across a set the player
+         was being told to read by size.
+
+      ⚠️ **AND NOTHING REPLACED THEM, WHICH IS THE DECISION RATHER THAN AN OVERSIGHT.** Two successor
+      guards were drafted — *no bullet as large as the smallest hull*, and *a floor under the smallest
+      bullet* — and both were refused for reasons the decision records: the first is the same rule in
+      other words, and the second is a fight with the suite on the day a small hard-to-see bullet is
+      the right answer. What holds this ground now is two considerations in `CLAUDE.md`, raised per
+      case, and `scripts/weigh-sizes.mjs` to raise them against.
     */
-    const bySpeed = [...bullets].sort((a, b) => SHOTS[a as ShotKind].speed - SHOTS[b as ShotKind].speed);
-    const drawn = bySpeed.map((k) => drawnPx(SHOTS[k as ShotKind].sprite));
-    for (let i = 1; i < drawn.length; i++) {
-      expect(
-        drawn[i],
-        `${bySpeed[i]} is faster than ${bySpeed[i - 1]} and is drawn no smaller — the quick shot is also the big one`,
-      ).toBeLessThan(drawn[i - 1]!);
-    }
-    // And nothing an ENEMY shoots at the player got a bigger hurtbox out of it — 0081's own rule.
-    // ⚠️ The enemies' bullets and not the bosses' — 0248: a boss's own blast is bigger to hit as
-    // well as to see, on purpose, and `tests/combat.test.ts` holds its hurtbox inside its drawing.
-    const radii = new Set([...fromEnemies].map((k) => SHOTS[k].radius));
-    expect(radii.size, 'the enemy bullets no longer share one hurtbox, so this was a difficulty change').toBe(1);
   });
 
   it('and the ship’s own fire is never in the ink of the things trying to kill it', () => {

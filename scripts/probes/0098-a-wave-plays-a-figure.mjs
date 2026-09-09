@@ -100,22 +100,21 @@ export const PROBES = [
       replace: "    shot: 'spit',\n    /*\n      ── IT CAME TO YOU FROM 0073 TO 0258,",
     },
   },
-  {
-    decision: '0098',
-    suite: 'tests/legibility.test.ts',
-    /*
-      ⚠️ THE PAIRING INVERTED, and it is the break that turns a legibility change into a difficulty
-      one with every other guard green. The hurtboxes are identical, so nothing in the suite can see
-      a bullet getting harder to dodge — what says this is fair is that the QUICK shot is the SMALL
-      one. Make the fast one fat and the player has less time and less lane, and the tables still
-      agree with each other perfectly.
-    */
-    broke: 'the fast bullet drawn as the fat one, so the variety is a difficulty change',
-    guard: '0098 — THE REPORTED ONE: what shoots back is not all one bullet',
-    edit: {
-      path: 'src/content/sprites.ts',
-      find: '  lance: 1.9,',
-      replace: '  lance: 4.1,',
-    },
-  },
+  /*
+    ── THE PAIRING PROBE WAS HERE, AND 0295 RETIRED IT WITH THE TWO ASSERTIONS IT AIMED AT ─────────
+
+    It drew the lance fat — 1.9 to 4.1 — to redden *the quick shot is the small one* and, on the way
+    past, the five-pixel ladder. `docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md` deleted
+    both, and the break has nothing left to land on.
+
+    ⚠️ **ITS ARGUMENT IS WHERE THE RANKING RULE CAME FROM, AND IT IS WORTH READING ONCE MORE.** It
+    held that a fat fast bullet is a difficulty increase wearing a variety change, and that nothing
+    else in the suite could see it because every hurtbox was identical. The premise was the third
+    assertion 0295 removed — the shared hurtbox — and it was doing the harm: a picture pinned to one
+    radius across three drawn sizes, defended by a rule ordering those sizes by speed. What actually
+    answers *is this a difficulty change* is the hurtbox band in `tests/combat.test.ts`, per row,
+    against that row's own drawing.
+
+    Deleted rather than re-aimed, for the reason `scripts/probes/0087-never-parks.mjs` records.
+  */
 ];

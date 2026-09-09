@@ -362,11 +362,16 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
   */
   rock: { sprite: SPRITE.rock, spriteHit: SPRITE.rock, radius: 2.2, health: 1, damage: 2, speed: 0.7, fission: SPENT_BY_ARRIVING },
   /*
-    ⚠️ **BETWEEN THE ACID AND THE ROCK, WHICH IS THE ONE SLOT THE LADDER HAD LEFT** — 0253. Every
-    hostile bullet is drawn more than five pixels from every other and the quick one is the small
-    one (`tests/legibility.test.ts`); from the flame's 1.2 to the acid's 5 the rungs are 0.7 and
-    0.8 apart, and the only room was the 1.5 between the acid and the rock. A shard of frost sits
-    there: 5.75 drawn, at 0.75 a step, a hair slower than the acid and quicker than the rock. The
+    ⚠️ **BETWEEN THE ACID AND THE ROCK, WHICH WAS THE ONE SLOT THE LADDER HAD LEFT** — 0253. Every
+    hostile bullet had to be drawn more than five pixels from every other, and the quick one had to
+    be the small one; from the flame's 1.2 to the acid's 5 the rungs were 0.7 and 0.8 apart, and the
+    only room was the 1.5 between the acid and the rock.
+
+    ⚠️ **THAT LADDER IS GONE — 0295**, and this row is the clearest record of what it was costing: a
+    frost shot's size was picked by asking where a sorted list had a gap, not by asking what a shard
+    of frost should look like. `docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md`. The
+    number has not moved and is now free to. A shard of frost sits there: 5.75 drawn, at 0.75 a
+    step, a hair slower than the acid and quicker than the rock. The
     hurtbox is 0.3 of it. It hits for one: what the frost ship does to you is slow you, and that is
     the hull's, not the shot's.
   */

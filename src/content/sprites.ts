@@ -804,30 +804,34 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   drifter: 5.5,
   drifterHit: 5.5,
   /*
-    ⚠️ **BIGGER THAN THE DRIFTER, and the size is carrying the toughness.** Shape says *which* enemy
-    this is; size says *how much killing it takes*, and size is the one cue that needs no learning at
-    all — every game the player has ever played taught it. The two shipped at the same extent with
-    one dying to one shot and the other to two, and that read as the game being inconsistent rather
-    than as two enemies.
+    ── THESE FIVE WERE ORDERED BY HEALTH, AND 0295 UNCHAINED THEM ──────────────────────────────────
+
+    `docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md`. A guard in `tests/combat.test.ts`
+    sorted every enemy kind by health and demanded a strictly larger extent at each step, so the
+    lancer had to clear the drifter, the turret the lancer and the warden everything. It came from one
+    true local observation — two kinds shipped at one extent with different health and it read as the
+    game being inconsistent — and it generalised that into a chain across all thirteen, which forbids
+    a small tough enemy and a big fragile one outright.
+
+    ⚠️ **THE NUMBERS BELOW HAVE NOT MOVED AND ARE NO LONGER OWED TO ANYTHING.** Size reading as
+    toughness is a good instinct and it is now an authoring choice per row rather than a rule the
+    table has to satisfy. The weaver is small because it never shoots and dies to a touch; the warden
+    is the biggest because it is the last thing before a boss. What bounds any of them is the hurtbox
+    band in `tests/combat.test.ts`, which is per row and ranks nothing.
+
+    ⚠️ **AND THE WEAVER IS THE ONE TO LOOK AT FIRST.** At 5 units it is 36 px on a 1280×720 screen,
+    which is the same drawn size as a void blast and smaller than four hostile bullets — reported
+    from play as *"some enemy ships that look just look bullets"*. Nothing here fixes that; what is
+    gone is the rule that made fixing it impossible. `scripts/weigh-sizes.mjs` prints the overlap.
   */
   lancer: 7,
   lancerHit: 7,
-  // Smallest of the five: it is the one that never shoots and dies to a touch, and size is the cue
-  // that needs no learning at all.
   weaver: 5,
   weaverHit: 5,
-  /*
-    ⚠️ **The biggest enemy, because it takes the most killing — and `tests/combat.test.ts` caught this
-    at 6.5.** It shipped smaller than the lancer while surviving one more hit, and the guard's own
-    words are the reason that is wrong: a player would have had to learn its toughness by dying to
-    it. Size is the cue that needs no learning at all.
-  */
   turret: 8.5,
   turretHit: 8.5,
   charger: 6,
   chargerHit: 6,
-  // The toughest thing that is not a boss, so the biggest — size carries toughness, and
-  // `tests/combat.test.ts` holds the ordering.
   warden: 9.5,
   wardenHit: 9.5,
   // Between the turret and the warden: three health, like a turret, and a shape that needs the room
@@ -961,11 +965,13 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   */
   spit: 2.6,
   /*
-    ⚠️ **The three enemy bullets are a SIZE LADDER as well as three silhouettes** — 0098. 1.9, 2.6
-    and 3.4, which is thin-fast, medium and fat-slow: how much of the lane a shot takes says how long
-    the player has to leave it, so the two channels agree instead of having to be learned separately.
-    Each step is 0.7 units, which is the five screen pixels 0081 measured as the smallest size
-    difference that survives a busy screen.
+    ⚠️ **The three enemy bullets were a SIZE LADDER as well as three silhouettes** — 0098. 1.9, 2.6
+    and 3.4, thin-fast to fat-slow, each step 0.7 units because that was the five screen pixels 0081
+    measured as the smallest difference that survives a busy screen.
+
+    ⚠️ **THE LADDER IS NO LONGER A RULE — 0295.** Both halves of it are gone: the five-pixel spacing
+    and *the quicker one is the smaller*. `docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md`
+    has the audit. These three numbers are unchanged and are now simply what was authored.
 
     ⚠️ **The lance is the one pair where SIZE does almost nothing**, and it is written down rather
     than hoped over: at 1.9 against the pulse's 1.8 it is barely the larger of the two, so what
@@ -979,25 +985,33 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   lance: 1.9,
   flak: 3.4,
   /*
-    ── THE HOSTILE LADDER, AND EVERY RUNG IS FIVE PIXELS FROM THE NEXT ─────────────────────────────
+    ── THE HOSTILE LADDER WAS A RULE, AND 0295 DELETED IT ──────────────────────────────────────────
 
-    Every hostile bullet is drawn more than five pixels from every other on a 1280×720 screen, and
-    the quicker one is the smaller (`tests/legibility.test.ts`, 0098). The ladder was packed at that
-    spacing from the flame to the rock, so the eagle's quill — 0262 — could not be added to it
-    without moving the four above it up one rung: the ring, the drop, the shard and the rock are
-    each 0.8 of a unit bigger than they were, and their hurtboxes in `src/content/shots.ts` are
-    still inside the band `tests/combat.test.ts` holds (0.26 to 0.3 of the drawing).
+    Every hostile bullet had to be drawn more than five pixels from every other on a 1280×720 screen,
+    and the quicker one had to be the smaller. `docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md`.
+
+    ⚠️ **WHAT IT COST IS RECORDED IN THE PARAGRAPH THIS ONE REPLACES, WHICH IS WHY THE WORDING IS
+    KEPT.** The ladder was packed at that spacing from the flame to the rock, so the eagle's quill —
+    0262 — *could not be added to it without moving the four above it up one rung*: the ring, the
+    drop, the shard and the rock were each made 0.8 of a unit bigger than they had been. Nothing about
+    those four improved. They grew because a spacing rule needed a tenth slot, and that is how the
+    bullets climbed into the range the enemy hulls occupy — eight of thirteen hulls are now drawn
+    smaller than the rock. A packing constraint had been left to make art decisions for two releases.
+
+    ⚠️ **NOTHING IS RESIZED BY THE REMOVAL.** The numbers below stand as authored, their hurtboxes in
+    `src/content/shots.ts` are still inside the per-row band `tests/combat.test.ts` holds (0.26 to
+    0.3 of the drawing), and which of them should actually move is a considered pass over the content
+    with `scripts/weigh-sizes.mjs` in hand — `CLAUDE.md`, *consider the screen*.
   */
   // A drop bigger than any enemy bullet and a ring between it and the quill — 0248.
   acid: 5.8,
   void: 5,
-  // Under the lance's 1.9 by more than five pixels on a 1280×720 screen, and the quickest — 0249.
+  // The quickest, and the smallest — 0249. ⚠️ At 1.2 units it is 8.6 px, reported from play as
+  // *"incredibly small and hard to see"*, and under 0295 it is free to grow.
   flame: 1.2,
-  // Over the shard by more than five pixels, and the slowest — 0251. The hurtbox in
-  // `src/content/shots.ts` is 0.3 of it.
+  // The slowest, and the biggest — 0251. The hurtbox in `src/content/shots.ts` is 0.3 of it.
   rock: 7.4,
-  // Between the acid's 5.8 and the rock's 7.4, more than five pixels from each on a 1280×720
-  // screen, and slower than the one and quicker than the other — 0253. The hurtbox is 0.26 of it.
+  // Between the acid's 5.8 and the rock's 7.4 — 0253. The hurtbox is 0.26 of it.
   frost: 6.6,
   // A feather between the flak's slab and the void's ring — 0262. The hurtbox is 0.26 of it.
   quill: 4.2,

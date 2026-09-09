@@ -419,15 +419,27 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
     to dodge were the same colour as well as the same shape. It now means *the player's fire*, and
     what shoots back wears the same ink as what shot it.
 
-    ⚠️ **That is colour carrying the SIDE and shape carrying the rest**, which is exactly the division
-    `docs/decisions/0024-the-accessibility-floor-is-settings.md` asks for: nothing here is told apart
-    by hue alone — a spit is a square at 2.6 units and an enemy is a five-to-nine-unit silhouette, so
-    sharing an ink costs nothing and buys the player one rule instead of two. *Pink will hurt you.*
+    ⚠️ **That is colour carrying the SIDE**, which is the division
+    `docs/decisions/0024-the-accessibility-floor-is-settings.md` asks for: the player's own fire is
+    never in the ink of what is trying to kill it, and `tests/legibility.test.ts` holds exactly that
+    much. *Pink will hurt you.*
+
+    ── AND *EVERY THREAT WEARS ONE INK* WAS A RULE HERE UNTIL 0295 ─────────────────────────────────
+
+    `docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md`. It was argued from a premise that
+    stopped being true: *a spit is a square at 2.6 units and an enemy is a five-to-nine-unit
+    silhouette, so sharing an ink costs nothing*. The bullet ladder then grew — the rock reached 7.4
+    against the weaver's 5.0 — and the cost stopped being nothing. Hulls and the three commonest
+    bullets are the same colour AND overlapping sizes, which is the reported defect in full: *"it's
+    not just the size, it's the speed, vector, shape AND colour of those ships look very similar to a
+    lot of enemy fire."*
+
+    ⚠️ **NOTHING IS REPAINTED BY THAT REMOVAL AND THAT IS DELIBERATE.** What is gone is the
+    REQUIREMENT. An ink is a per-kind authoring choice again — as the serpent's acid and void and the
+    hydra's flame and frost already were — and which kinds move is a considered pass over the content,
+    not a consequence of deleting a rule.
   */
   spit: 'enemy',
-  // ⚠️ **The same ink as the spit, and that is the rule rather than a saving** — 0081 read the other
-  // way round. One colour means *this will hurt you*; what says which enemy sent it is shape and
-  // size, so a player learns one thing about ink and three things about silhouettes. 0098.
   lance: 'enemy',
   flak: 'enemy',
   // The serpent's two shots in their own inks — 0248, on 0098's argument that a boss with three
