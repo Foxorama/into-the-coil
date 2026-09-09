@@ -518,6 +518,60 @@ describe('a boss differs from every other by more than its paint', () => {
       that is actually on the screen: `tests/serpent.test.ts`, driven, in world units.
     */
   });
+
+  it('0285 — THE JAW: the snap and the strike throw it opposite ways from rest, by a distance the player can see', () => {
+    /*
+      ⚠️ **THE TELL AND THE SNAP MUST NOT LOOK ALIKE, AND *ALIKE* IS A CLAIM ABOUT PIXELS.** The head
+      wears three mouths: `boss8Shut` when the ship crosses in front of it, `boss8` between times, and
+      `boss8Gape` in the steps before a volley leaves. A gape that does not mean *a volley is coming*
+      is a lie the fight tells once, so a snap that reads as a gape breaks the fight and not the art.
+
+      ⚠️ **MEASURED AS THE AREA THE OUTLINE ENCLOSES, ON A 1280×720 SCREEN.** The gape is a NOTCH in
+      the silhouette rather than a hole in it (0284), so how far the mouth is open IS how much of the
+      skull's own box the outline gives back — swinging the jaw up fills the wedge in and swinging it
+      down cuts more of it away. The obvious measurement, the chin's height, does not survive: the
+      lowest point of this hull is the throat behind the hinge, which barely swings, and the two upper
+      fangs hang below the bite line, so every window and every extreme picks the wrong vertex on at
+      least one of the three frames. Comparing the three jaw ANGLES instead would compare the constant
+      with itself — what the hinge does to the silhouette is exactly the question.
+    */
+    const face = BOSSES.jormungandr.face;
+    if (face === null) throw new Error('the serpent has no faces');
+    /**
+     * The area a face's outline encloses, in CSS pixels² of that screen — shoelace over the hull.
+     *
+     * ⚠️ **A WIDER MOUTH IS A SMALLER NUMBER, WHICH IS THE RIGHT WAY ROUND AND NOT THE OBVIOUS ONE.**
+     * The gape is the part of the box the outline gives BACK, so the flesh is what is left: swinging
+     * the jaw down cuts more of the skull away and swinging it up hands some back. Written the other
+     * way first, and the guard reported the snap opening the mouth by −2.9%.
+     */
+    const fleshOf = (index: number): number => {
+      const hull = trace(SPRITE_KINDS[index]!).passes[0]!.subpaths[0]!;
+      let twice = 0;
+      for (let i = 0; i < hull.length; i++) {
+        const [ax, ay] = hull[i]!;
+        const [bx, by] = hull[(i + 1) % hull.length]!;
+        twice += ax * by - bx * ay;
+      }
+      return Math.abs(twice) / 2;
+    };
+    const shut = fleshOf(face.shut);
+    const rest = fleshOf(face.rest);
+    const gape = fleshOf(face.gape);
+    /*
+      ⚠️ **AND THE ORDER IS THE INVARIANT, WHICH IS WHY IT IS THE ONLY THING HERE THAT FAILS.** Both
+      being *different from rest* would be satisfied by two frames that opened by different amounts,
+      which is the fight this guard exists to stop — and no redrawing of the skull makes a snap that
+      opens the mouth correct. How FAR each throw moves is an opinion a lower hinge would change, so
+      it is registered above and printed instead of failing: `tests/authored.ts`, `0285-throw`.
+    */
+    expect(
+      gape < rest && rest < shut,
+      `the serpent's outline encloses ${shut.toFixed(0)}px² shut, ${rest.toFixed(0)}px² at rest and ` +
+        `${gape.toFixed(0)}px² agape, so the snap and the strike are not opposite throws of the same jaw and the ` +
+        'tell is not a tell',
+    ).toBe(true);
+  });
 });
 
 describe('paint costs nothing to draw', () => {

@@ -821,6 +821,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     bossTrail: new Float32Array(CHAIN_TRAIL),
     bossTrailAt: 0,
     chainPhase: 0,
+    bossBite: 0,
+    bossGazeSide: 0,
     bossSpawned: false,
     bossBeaten: false,
     clearedIn: 0,

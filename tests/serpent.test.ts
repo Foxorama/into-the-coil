@@ -38,8 +38,12 @@ const SERPENT_ONLY: LevelRow = {
 };
 
 /** A serpent on station at `fraction` of its health, its fan silenced until the test says, and an immortal ship. */
-function serpentAt(fraction: number): { world: ReturnType<typeof playableWorld>['world']; frame: GameFrame } {
-  const { world } = playableWorld(SERPENT_ONLY);
+function serpentAt(fraction: number): {
+  world: ReturnType<typeof playableWorld>['world'];
+  frame: GameFrame;
+  stick: ReturnType<typeof playableWorld>['stick'];
+} {
+  const { world, stick } = playableWorld(SERPENT_ONLY);
   const frame = new GameFrame(world);
   for (let i = 0; i < 900 && (world.bossPool.size === 0 || i < 700); i++) {
     world.ship.health = world.shipRow.health;
@@ -48,7 +52,7 @@ function serpentAt(fraction: number): { world: ReturnType<typeof playableWorld>[
   }
   expect(world.bossPool.size, 'the serpent never arrived').toBe(1);
   world.bossPool.at(0).health = world.bossFullHealth * fraction;
-  return { world, frame };
+  return { world, frame, stick };
 }
 
 /**
@@ -469,6 +473,80 @@ describe('0283 — the serpent is a chain', () => {
       `the serpent kinks at node ${at}: its bend radius there is ${tightest.toFixed(2)} of its own girth, and a ` +
         'body that turns inside its own width has no spine in it',
     ).toBeGreaterThan(1.5);
+  });
+
+  it('0285 — THE REPORTED ONE: the head snaps at a ship that crosses it, and a ship that holds its lane is only watched', () => {
+    /*
+      ⚠️ **REPORTED**: *"it also needs to be aggressively moving its mouth to watch the player's ship
+      moving — the body is animated now which is good, but it still feels like a non-interactive wall
+      object rather than a living space serpent trying to battle the player."*
+
+      ⚠️ **THE SECOND HALF IS THE ASSERTION, AND IT IS 0282's TEST.** *The mouth moves* is satisfied
+      by a jaw worked on a timer, which is the same animation for every player and every run — a
+      mechanism whose output cannot differ per instance is a constant wearing a mechanism's clothes.
+      What is measured is that two DIFFERENT pilots get two different animals out of the same fight:
+      one who cuts across the head is bitten at, and one who holds a lane never sees the snap at all.
+      A boss on a clock cannot pass this at any amount of art.
+    */
+    const face = BOSSES.jormungandr.face;
+    if (face === null) throw new Error('the serpent has no faces');
+
+    /**
+     * Fly a pilot for four seconds beside the serpent, and report every face the head wore.
+     *
+     * ⚠️ **THE FIRST SECOND AND A HALF IS FLOWN AND NOT RECORDED.** A pilot has to reach the lane it
+     * intends to hold, and the trip there is itself a crossing — so a run recorded from the first
+     * step reports a snap for every pilot, including the one whose whole point is not to cause one.
+     */
+    const flown = (fly: (step: number, world: ReturnType<typeof playableWorld>['world']) => number): Set<number> => {
+      const { world, frame, stick } = serpentAt(1);
+      const worn = new Set<number>();
+      for (let i = -90; i < 240; i++) {
+        // The volley tell outranks the snap, so it is silenced: what is under test is the other one.
+        world.bossPool.at(0).fireIn = 999;
+        world.ship.health = world.shipRow.health;
+        stick.across = fly(i, world);
+        frame.step();
+        if (i >= 0) worn.add(world.bossPool.at(0).spriteBase);
+      }
+      return worn;
+    };
+
+    /*
+      ⚠️ **THE CROSSING PILOT FLIES FULL STICK AND REVERSES**, which is what a player dodging a boss
+      does and is the only way to be sure the ship actually passes the head rather than drifting near
+      it. The head holds its own pattern across the lane while this happens, so the crossings are the
+      two of them meeting rather than a number this test picked.
+    */
+    const crossing = flown((step) => (Math.floor((step + 90) / 40) % 2 === 0 ? 1 : -1));
+    expect(
+      crossing.has(face.shut),
+      'a ship flown back and forth across the serpent’s head for four seconds was never snapped at — the mouth is ' +
+        'not answering the player',
+    ).toBe(true);
+
+    /*
+      ⚠️ **AND THE HOLDING PILOT SITS WHERE THE HEAD IS NOT**, so the ship never crosses it. This is
+      the half that fails if the jaw is on a timer, and it is the half the report was about.
+    */
+    const holding = flown((_step, world) => {
+      const gaze = world.ship.across - world.bossPool.at(0).across;
+      return gaze > ACROSS_SPAN * 0.3 ? -1 : gaze < ACROSS_SPAN * 0.25 ? 1 : 0;
+    });
+    expect(
+      holding.has(face.shut),
+      'a ship that held its lane a third of the span away was snapped at anyway, so the jaw is on a clock and every ' +
+        'player watches the same animal',
+    ).toBe(false);
+    /*
+      ⚠️ **AND IT IS STILL WATCHED, WHICH IS WHY THIS IS NOT SIMPLY *NOTHING HAPPENED*.** A head that
+      wore one face for the whole four seconds would pass the line above and be exactly the wall the
+      report named.
+    */
+    expect(
+      holding.has(face.up) || holding.has(face.down),
+      'the head never turned its eye on a ship parked off to one side of it, so nothing about it is watching',
+    ).toBe(true);
   });
 
   it('and the body is one animal: a hit anywhere on it is a hit on the serpent', () => {

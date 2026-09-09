@@ -38,6 +38,7 @@ export const AUTHORED_IDS = [
   '0198-aa-clouds',
   '0236-cycle',
   '0237-blade',
+  '0285-throw',
 ] as const;
 
 export type AuthoredId = (typeof AUTHORED_IDS)[number];
@@ -112,6 +113,21 @@ export const AUTHORED: Record<AuthoredId, AuthoredClaim> = {
     claim: 'a blade is drawn as big as the ship that threw it',
     correctly: 'a smaller star, once a dozen of them at the cap are judged to bury the lane',
     decision: '0237-the-blades-answer-the-first-play-test',
+  },
+  /*
+    ⚠️ **THE DIRECTION IS AN INVARIANT AND THE DISTANCE IS NOT**, which is the split 0192 asks for and
+    the reason this entry exists at all. *The snap and the strike throw the jaw opposite ways* has no
+    correct counter-example — a snap that opens the mouth is a bug however the skull is drawn — and
+    `tests/accents.test.ts` fails hard on it. *Each throw moves a twentieth of the skull* has an
+    obvious one: the swing is a rotation about a hinge, so where the hinge sits decides how much area
+    a readable throw moves, and a skull redrawn with a lower hinge would redden this while looking
+    better. It was a hard floor for one commit, measured 2.9% against a 5% that had been reasoned
+    rather than measured, and the photograph said the snap was plainly visible.
+  */
+  '0285-throw': {
+    claim: 'the serpent’s snap and its strike each move a twentieth of the skull’s own area',
+    correctly: 'a skull redrawn with a lower jaw hinge, where a mouth that plainly opens sweeps less of the box',
+    decision: '0285-the-mouth-is-alive',
   },
 };
 

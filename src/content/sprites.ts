@@ -242,6 +242,33 @@ export const SPRITE_KINDS = [
     rather than as beads is that they OVERLAP by more than half: each covers the leading arc of the
     one behind it, and what is left is the envelope.
   */
+  /*
+    ── AND THE HEAD HAS FACES, BECAUSE A BOSS THAT NEVER MOVES ITS MOUTH IS SCENERY — 0285 ─────────
+
+    `docs/decisions/0285-the-mouth-is-alive.md`. Reported on the first play of the chain: *"it needs
+    to be aggressively moving its mouth to watch the player's ship moving… it still feels like a
+    non-interactive wall object rather than a living space serpent trying to battle the player."*
+
+    ⚠️ **FRAMES, WHICH IS WHAT `blit` LEAVES.** A bitmap cannot rotate and cannot deform, so a jaw
+    that opens is a second drawing — the same conclusion `src/content/exhaust.ts` reached for a flame
+    and [0280](../../docs/decisions/0280-a-cheap-mechanism-does-not-rename-the-ask.md) reached for
+    every enemy in the game after a scale-pulse was shipped in their place.
+
+    ⚠️ **SEVEN FACES AND ONLY FOUR SILHOUETTES.** `boss8Up` and `boss8Down` move the PUPIL and nothing
+    else, so they share `boss8Hit`: a hurt twin is the silhouette with no paint on it (0035), and
+    three identical white shapes would be three identical bakes — which `tests/sheet.test.ts` counts.
+
+    ⚠️ **AND THE JAW MOVES BOTH WAYS FROM REST, WHICH IS WHY THERE IS A `Shut` — 0285.** A snap and a
+    strike are the two things a mouth does and they must not look alike, or the tell is not a tell:
+    `boss8Gape` throws the jaw open before a volley, and `boss8Shut` closes it on the player as they
+    cross in front of the head. One frame either side of `boss8`, so the ladder reads at a glance.
+  */
+  'boss8Up',
+  'boss8Down',
+  'boss8Gape',
+  'boss8GapeHit',
+  'boss8Shut',
+  'boss8ShutHit',
   'serpentBody',
   'serpentBodyHit',
   'boss9',
@@ -882,6 +909,13 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   */
   boss8: 20,
   boss8Hit: 20,
+  // The same skull wearing a different face — 0285. One box, so a frame change moves nothing but the art.
+  boss8Up: 20,
+  boss8Down: 20,
+  boss8Gape: 20,
+  boss8GapeHit: 20,
+  boss8Shut: 20,
+  boss8ShutHit: 20,
   /*
     ⚠️ **ONE NODE OF THE BODY, AND THE TILE IS BIGGER THAN THE FLESH.** The disc itself is
     `SERPENT_BODY_DIAMETER` across; the rest of the box is what the aura needs to sit in without

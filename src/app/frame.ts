@@ -1024,6 +1024,23 @@ export interface World {
   bossTrailAt: number;
   /** How far the travelling wave has got, in radians — 0283. Advances by the row's `rate` a step. */
   chainPhase: number;
+  /**
+   * Steps left of the jaws being snapped shut, or `0` — 0285.
+   *
+   * ⚠️ **THE SNAP IS THE PLAYER'S OWN DOING, WHICH IS THE POINT OF IT.** Reported: *"it still feels
+   * like a non-interactive wall object rather than a living space serpent trying to battle the
+   * player."* A jaw worked on a fixed clock is the same jaw for every player and every run, which is
+   * what 0282 calls a constant wearing a mechanism's clothes. This one is armed by the ship crossing
+   * in front of the head, so a pilot who holds a lane is watched and a pilot who cuts across is
+   * bitten at, and neither of them sees the animation the other does.
+   */
+  bossBite: number;
+  /**
+   * Which side of the head the ship was last committed to — `-1` up-lane, `1` down-lane, `0` before
+   * it has been anywhere. Only changes once the ship is clear of the head's own width, so a pilot
+   * parked on the centreline is not a rattle.
+   */
+  bossGazeSide: number;
   /** Whether the current fight's boss has been put on the field. Cleared between fights. */
   bossSpawned: boolean;
   /** Whether the current fight's boss has been beaten, so the beat below is started exactly once. */
@@ -4458,6 +4475,7 @@ function driveBoss(w: World): void {
   */
   w.bossOffset = boss.along - w.cameraAlong;
   w.bossAcross = boss.across;
+  wearFace(w, boss);
   /*
     ⚠️ **THE ADDS A SUMMONS ASKED FOR — 0249.** `stepBoss` has no enemy pool; a `summon` volley
     leaves its count on the boss's `turnsLeft` and this is where the kites and the raptors are put
@@ -4679,6 +4697,81 @@ const CHAIN_NODE: Body = {
 
 /** Where a node's girth is read from, so `swell` and the hurtbox cannot disagree — 0283. */
 const chainSwell = (girth: number): number => girth / SERPENT_BODY_DIAMETER;
+
+/**
+ * How many steps before a volley the jaw is already wide — 0285.
+ *
+ * ⚠️ **A THIRD OF A SECOND, WHICH IS A WIND-UP AND NOT A WARNING.** 0248's lightning warns for three
+ * quarters of a second because a strike with no warning is unfair; this is not that — the shot it
+ * precedes is a fan the player reads by its spread, and what the gape adds is that the animal is seen
+ * to DECIDE. Long enough to register, short enough that the mouth is not simply held open.
+ */
+const FACE_GAPE = 20;
+
+/**
+ * How far across the lane the ship must be before the animal's eye follows it, in world units.
+ *
+ * ⚠️ **A DEADBAND, BECAUSE A PUPIL THAT TRACKS EXACTLY FLICKERS.** The ship crosses the head's own
+ * lane constantly; without a band either side of it the eye snaps between two frames every few
+ * steps, which reads as a twitch rather than as a look.
+ */
+const FACE_LOOK = 6;
+
+/**
+ * How long the jaws stay shut on a snap, in steps — 0285.
+ *
+ * ⚠️ **SHORT, BECAUSE A SNAP IS A SNAP.** A tenth of a second is what a mouth closing on something
+ * looks like; held longer it stops reading as a bite and starts reading as the face it wears, and
+ * then the animal is a wall object again with a different expression on it.
+ */
+const BITE_STEPS = 7;
+
+/**
+ * Which face the head is wearing this step — 0285.
+ *
+ * ⚠️ **THE ROW OWNS THE FRAMES AND THIS OWNS THE CHOICE**, which is 0282's split: what a creature's
+ * faces ARE is content, and *when a boss is about to strike* is the fight's.
+ *
+ * ⚠️ **IT WATCHES WITHOUT CHASING, AND THAT IS DELIBERATE.**
+ * `docs/decisions/0258-one-pilot-a-level.md` holds exactly one boss in the game that follows the
+ * player's lane, and it is the eagle — *"we need less enemies (and bosses) reacting to the player"*.
+ * A pupil is not a flight path: the serpent still flies the pattern its row authors, and what reacts
+ * is where it is LOOKING.
+ */
+function wearFace(w: World, boss: Entity): void {
+  const face = w.bossRow.face;
+  if (face === null) return;
+  const gaze = w.ship.across - boss.across;
+  /*
+    ⚠️ **THE SIDE IS COMMITTED, NOT SAMPLED.** A ship drifting across the head's own centreline
+    changes the sign of `gaze` several times a second, and a snap armed off the sign alone is a jaw
+    chattering rather than an animal biting. The side only changes once the ship is a head's width
+    clear of it, which is the same `FACE_LOOK` the pupil follows — so the thing that arms the bite is
+    the thing the player watched the eye do.
+  */
+  const side = gaze < -FACE_LOOK ? -1 : gaze > FACE_LOOK ? 1 : w.bossGazeSide;
+  if (side !== w.bossGazeSide) {
+    if (w.bossGazeSide !== 0) w.bossBite = BITE_STEPS;
+    w.bossGazeSide = side;
+  }
+  if (w.bossBite > 0) w.bossBite -= 1;
+  /*
+    ⚠️ **AND THE VOLLEY TELL OUTRANKS THE SNAP.** They are the two ways this face moves and only one
+    of them is information the player is owed — a bite the serpent takes at a passing ship costs
+    nothing to miss, and a gape that does not mean *a volley is coming* is a lie the fight tells once
+    and is never trusted about again.
+  */
+  if (boss.fireIn <= FACE_GAPE) {
+    boss.spriteBase = face.gape;
+    boss.spriteHit = face.gapeHit;
+  } else if (w.bossBite > 0) {
+    boss.spriteBase = face.shut;
+    boss.spriteHit = face.shutHit;
+  } else {
+    boss.spriteBase = gaze < -FACE_LOOK ? face.up : gaze > FACE_LOOK ? face.down : face.rest;
+    boss.spriteHit = face.restHit;
+  }
+}
 
 /**
  * Lay the body out behind the head, this step.
