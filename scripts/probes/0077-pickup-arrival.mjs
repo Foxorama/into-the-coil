@@ -21,8 +21,11 @@ export const PROBES = [
     guard: 'and it never stops dead, which is what read as a wall',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    item.velAlong += (target - item.velAlong) * PICKUP_EASE;',
-      replace: '    item.velAlong = target;',
+      /* ⚠️ Re-anchored by 0293: the ease is the float's SPEED settling now, and the direction is
+         never eased. Snapping it is the same defect this probe always restored — the arrival taken
+         in one step. */
+      find: '    const eased = speed + (PICKUP_FLOAT - speed) * PICKUP_EASE;',
+      replace: '    const eased = PICKUP_FLOAT;',
     },
   },
   /*

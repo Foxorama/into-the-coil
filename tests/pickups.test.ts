@@ -1288,7 +1288,7 @@ describe('collecting one, in the real frame', () => {
       theme: 'approach',
       });
       const frame = new GameFrame(world);
-      const seen = new Map<number, { offset: number; delta: number }>();
+      const seen = new Map<number, { offset: number; across: number; delta: number }>();
       let worst = 0;
       for (let step = 0; step < 2600; step++) {
         frame.step();
@@ -1300,12 +1300,24 @@ describe('collecting one, in the real frame', () => {
             // ⚠️ `NaN` for the first sighting, so the step a pickup APPEARS is not read as a change
             // of speed. It has no previous speed; comparing against a zero would make every spawn an
             // impact and the guard would be measuring its own bookkeeping.
-            seen.set(item.bobPhase, { offset, delta: Number.NaN });
+            seen.set(item.bobPhase, { offset, across: item.across, delta: Number.NaN });
             continue;
           }
-          const delta = offset - last.offset;
+          /*
+            ⚠️ **THE SPEED AND NOT THE ALONG RATE, SINCE 0293** — and the old reading would now fail
+            on the feature. A pickup floats in two axes and BOUNCES off the walls of the box; a
+            reflection is a change of direction and not of speed, so measuring the along rate alone
+            called every wall an impact at 0.46 units a step. It also called a pickup crossing the
+            lane sideways *stopped*, which it is not.
+
+            ⚠️ **WHAT THE CLAIM ALWAYS WAS is *it does not arrive in one step*** — the difference
+            between arriving and colliding, which is a statement about how fast the thing is going and
+            not about which way. `Math.hypot` is that, and it holds the reflection harmless by
+            construction rather than by an exception.
+          */
+          const delta = Math.hypot(offset - last.offset, item.across - last.across);
           if (!Number.isNaN(last.delta)) worst = Math.max(worst, Math.abs(delta - last.delta));
-          seen.set(item.bobPhase, { offset, delta });
+          seen.set(item.bobPhase, { offset, across: item.across, delta });
         }
       }
       expect(seen.size, 'the fixture never put six pickups on the field, so it sampled one phase again').toBe(6);
@@ -1355,50 +1367,114 @@ describe('collecting one, in the real frame', () => {
       expect(low).toBeLessThan(high);
     });
 
-    it('and the bob is a bob and not a shiver: it turns back along the lane about once a second', () => {
+    it('0293 — and it travels at ONE speed the whole time it waits', () => {
       /*
-        ── THE BOB'S RHYTHM, IN SECONDS ──────────────────────────────────────────────────────────────
+        ⚠️ **THIS IS THE HEART OF THE DECISION AND NOTHING HELD IT UNTIL A PROBE ASKED.** *"Random
+        speed and direction weirdly on the power ups"* is a complaint about the SPEED first: the old
+        motion eased the along axis toward a wander plus a sine while the across axis ran flat, so the
+        magnitude of the velocity was different on every frame. A float has one speed and changes only
+        its heading.
 
-        ⚠️ **A guard 0234 owed to 0087.** 0087's first draft ran the bob's phase off `across`, a field
-        that drifts, so the bob ran off the pickup's own sideways wander rather than off the camera —
-        several times faster than authored while it crossed the lane. The probe that keeps that
-        draft out (`scripts/probes/0087-a-pickup-never-parks.mjs`) was aimed by 0233 at *it stops
-        running away*, and that guard caught it by a margin of a sixth of a second. A third weapon
-        face lengthened the wait (`lingerFor` is repeats × faces × cycle) and the margin went the
-        other way: `npm run prove` reported STILL GREEN.
-        `docs/decisions/0234-a-blade-circles-the-ship.md`.
+        ⚠️ **AND IT IS WHAT THE ARRIVAL LATCH PROTECTS.** `PICKUP_SLOW_AT` sits about eight units below
+        the box's forward wall, so there is a band a floating pickup reaches where — without `spin`
+        saying it has already arrived — the APPROACH branch takes it back and eases its velocity
+        somewhere else entirely. The probe for that latch went STILL GREEN against every other guard
+        here, which is 0019 reporting that the thing was not being asked about.
 
-        ⚠️ **So the bob's rhythm is held in the player's units, and nothing here reads
-        `PICKUP_BOB_UNITS` or `PICKUP_BOB_SPEED`.** What is counted is how often the pickup turns
-        back along the lane while it waits — the bob's authored period is a couple of seconds, so it
-        turns back about once a second. Off `across` the phase runs five times faster and the ease
-        (`PICKUP_EASE`) smears an oscillation that quick to nearly nothing, so the pickup turns back
-        only where the wander itself turns: a few times in a whole wait. The authored rhythm sits
-        between the two edges (the decision has the figures), and a bob outside them is not a bob —
-        too slow reads as a line (0087's own defect), too fast as a shiver.
+        ⚠️ **MEASURED WHILE WAITING ONLY.** The approach is a different motion with its own job and its
+        speed is meant to change; what is claimed is that once a pickup is floating it keeps one.
+      */
+      const { world } = onePickup('weapon');
+      world.shipPool.clear();
+      const frame = new GameFrame(world);
+      const speeds: number[] = [];
+      for (let step = 0; step < 1400; step++) {
+        frame.step();
+        if (world.pickups.size === 0) continue;
+        const item = world.pickups.at(0);
+        /*
+          Arrived, still waiting, and settled: the float's own magnitude, in world units a step.
+
+          ⚠️ **`holdFor` MATTERS AND LEAVING IT OUT MADE THIS FAIL ON THE FEATURE.** A pickup whose
+          wait has run out is MEANT to slow and fall back through the view — 0064, and the whole
+          reason `driftPickups` eases it to nothing there. Sampling across that boundary read 0.12 to
+          0.61 units a step and called the departure a random speed.
+        */
+        if (item.spin === 0 || item.holdFor <= 0 || step < 400) continue;
+        speeds.push(Math.hypot(item.velAlong - world.scrollPerStep, item.velAcross));
+      }
+      expect(speeds.length, 'the pickup never floated, so this measures nothing').toBeGreaterThan(200);
+      const fastest = Math.max(...speeds);
+      const slowest = Math.min(...speeds);
+      expect(
+        fastest - slowest,
+        `a waiting pickup ran between ${slowest.toFixed(2)} and ${fastest.toFixed(2)} units a step, which is the ` +
+          'random speed the report is about — a float has one',
+      ).toBeLessThan(0.02);
+    });
+
+    it('0293 — and it turns only where it hits something, which is what a float is', () => {
+      /*
+        ── ⚠️ THIS HELD THE BOB'S RHYTHM, AND THE BOB IS THE THING THE REPORT WAS ABOUT — 0293 ───────
+
+        It read *the pickup turns back along the lane between 0.4 and 2 times a second*, and it was
+        right about the mechanism it was written for: a bob with an authored period, neither a line
+        nor a shiver. Reported, playing it: *"random speed and direction weirdly on the power ups and
+        makes picking them up feel really weird and wonky."*
+
+        ⚠️ **A THING THAT REVERSES ONCE A SECOND IS NOT FLOATING.** The bob was one of three motions
+        stacked on the along axis — a wander whose heading flipped at soft walls, this sine, and a lag
+        that caught neither — while `across` ran a flat constant. Each was added for a real defect
+        (0077, 0087, 0233) and each was right alone; the sum is what the player called wonky.
+
+        ⚠️ **SO THE CLAIM IS INVERTED RATHER THAN DELETED.** What is held now is the property that
+        makes a float read as an object: **it turns where it hits a wall and nowhere else.** Too many
+        turns is the shiver this decision removed; too few would mean it is not bouncing at all, which
+        is 0233's *"bounce off all the screen walls long enough that the player can see at least 2
+        repetitions"*. The band is the same shape and the ceiling is far tighter.
       */
       const { offsets } = trackOffset(1400);
-      let start = -1;
+      let began = -1;
       for (let i = 1; i < offsets.length; i++) {
         if (waiting(offsets, i)) {
-          start = i;
+          began = i;
           break;
         }
       }
-      expect(start, 'the pickup never began its wait').toBeGreaterThan(0);
-      let turns = 0;
+      expect(began, 'the pickup never began its wait').toBeGreaterThan(0);
+      let reversals = 0;
       let heading = 0;
-      for (let i = start; i < offsets.length; i++) {
+      for (let i = began; i < offsets.length; i++) {
         const delta = offsets[i]! - offsets[i - 1]!;
         const sign = delta > 0 ? 1 : delta < 0 ? -1 : 0;
-        if (sign !== 0 && heading !== 0 && sign !== heading) turns++;
+        if (sign !== 0 && heading !== 0 && sign !== heading) reversals++;
         if (sign !== 0) heading = sign;
       }
-      const seconds = (offsets.length - start) / STEPS_PER_SECOND;
-      const perSecond = turns / seconds;
-      expect(perSecond, `the pickup turned back ${turns} times in ${seconds.toFixed(1)}s, which is a line and not a bob`).toBeGreaterThan(0.4);
-      expect(perSecond, `the pickup turned back ${turns} times in ${seconds.toFixed(1)}s, which is a shiver and not a bob`).toBeLessThan(2);
+      const seconds = (offsets.length - began) / STEPS_PER_SECOND;
+      /*
+        ⚠️ **THE BOX IS ABOUT 156 UNITS AND THE FLOAT IS 0.28 A STEP**, so a pickup crossing it end to
+        end takes about nine seconds and turns at most a handful of times in a wait — and it turns at
+        least twice, or it never met a wall at all and this is a line.
+      */
+      expect(reversals, `the pickup turned back ${reversals} times in ${seconds.toFixed(1)}s, so it met no wall`).toBeGreaterThanOrEqual(1);
+      expect(
+        reversals / seconds,
+        `the pickup turned back ${reversals} times in ${seconds.toFixed(1)}s, which is a shiver and not a float`,
+      ).toBeLessThan(0.5);
+      /*
+        ⚠️ **AND NO TWO CROSSINGS REPEAT, WHICH IS THE WORD *randomly* AND WAS UNGUARDED.** A perfect
+        reflection off two parallel walls is a closed path: the pickup runs the same line for its whole
+        wait, turning at the same two places for ever. Every assertion above passes on that — it turns,
+        and not too often — which is why `npm run prove` reported **STILL GREEN** for *the float given
+        a heading it keeps*. The kick had no guard at all until the harness said so.
+
+        ⚠️ **AND THE BOUNCE ROLL IS NOT MEASURED HERE, BECAUSE IT CANNOT BE.** A pickup crosses the
+        box in about nine seconds and waits about nineteen, so it meets a wall once or twice in a
+        whole life — far too few for *no two crossings repeat* to be a thing a fixture can see. The
+        decision says so rather than carrying an assertion that passes for the wrong reason.
+      */
     });
+
 
     it('and the wait is a journey that ends where the ship flies', () => {
       /*

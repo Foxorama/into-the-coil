@@ -182,20 +182,37 @@ const LOOP_TURN_ROOM = 6;
  */
 const PICKUP_DRIFT = 0.22;
 
+
 /**
- * How fast a waiting pickup wanders the length of the box, in world units per step — 0233.
+ * How fast a floating pickup travels, in world units a step, on both axes at once — 0293.
  *
- * ⚠️ **A little faster than the across drift, because the box is longer than the lane is wide** —
- * about 156 units end to end against a 100-unit lane — and *"bounce off all the screen walls"* is a
- * thing the player has to SEE inside the wait. At 0.28 a pickup crosses the box in a little over
- * eight seconds and turns at the back wall inside its wait.
+ * ⚠️ **ONE SPEED, WHERE THERE WERE THREE MOTIONS.** *"Random speed and direction weirdly on the power
+ * ups"* — the along axis eased toward a wander plus a sine while the across axis ran a flat constant,
+ * so nothing about the two of them read as one object moving. A float has a speed and a heading and
+ * changes neither except at a wall.
  *
- * ⚠️ **AND UNDER HALF THE SCROLL RATE, WHICH IS 0087's GUARD AND NOT A TASTE.** `tests/pickups.test.ts`
- * reads *the pickup stopped running away* as *moving at under half the rate it approached at*, in
- * the player's units; a wander at or above 0.3 is a pickup that never slowed down. It was 0.45 for
- * an afternoon, and that guard is what said so.
+ * ⚠️ **0.28 IS `PICKUP_WANDER`'s OWN NUMBER, KEPT ON PURPOSE.** That constant was settled against two
+ * measured bounds and both still apply: fast enough that a pickup crosses the box inside its wait and
+ * the player SEES it bounce (0233's *"bounce off all the screen walls long enough that the player can
+ * see at least 2 repetitions"*), and **under half the scroll rate**, which is how
+ * `tests/pickups.test.ts` reads *the pickup stopped running away* in the player's own units. It was
+ * 0.45 for an afternoon and that guard is what said so. Changing the shape of the motion is not a
+ * reason to re-roll a number that two guards already fixed.
  */
-const PICKUP_WANDER = 0.28;
+const PICKUP_FLOAT = 0.28;
+
+/**
+ * How far a bounce may turn a pickup off a true reflection, in radians — 0293.
+ *
+ * ⚠️ **THE WORD IN THE REPORT IS *randomly*, AND WITHOUT THIS A BOUNCE IS A LOOP.** Two parallel
+ * walls reflect a straight line onto itself: a pickup that entered flat would run one lane for its
+ * whole wait, and two that entered together would stay in step for ever.
+ *
+ * ⚠️ **AND IT IS SMALL, BECAUSE A BOUNCE STILL HAS TO READ AS A BOUNCE.** A sixth of a radian is about
+ * ten degrees — enough that no two crossings repeat, little enough that the pickup visibly came off
+ * the wall it hit rather than deciding something at it.
+ */
+const PICKUP_BOUNCE_KICK = 0.17;
 
 /**
  * How far before a wall of the box a wandering pickup turns, in world units — 0233.
@@ -232,49 +249,7 @@ const PICKUP_TURN_ROOM = 8;
  */
 const PICKUP_EASE = 0.06;
 
-/**
- * How fast a waiting pickup bobs along the scroll axis, in world units per step at the extreme.
- *
- * ⚠️ **The other half of the wall**, and it is the *"slide up/down it"* half: a pickup holding
- * station has a fixed `along` and a constant `across` drift, which is a straight line down an
- * invisible edge for the whole seven seconds of the wait. A curve is not a line, and that is the
- * entire requirement.
- *
- * At 0.25 against `PICKUP_BOB_UNITS` the pickup wandered about ±6 world units, which is a twentieth of
- * the narrowest view — visible as motion, far too small to move where the pickup *is*.
- *
- * ── AND IT HAD TO RISE WHEN THE THING IT BOBS AROUND STARTED MOVING ─────────────────────────────
- *
- * ⚠️ **0.25 → 0.4** — `docs/decisions/0087-a-pickup-never-parks.md`. What the bob has to beat is no
- * longer zero: a slowed pickup now closes at `PICKUP_CLOSE_SHARE` of the scroll rate, so a swing that
- * does not reach past the camera's own rate makes the track a smooth diagonal rather than a wander.
- * `tests/pickups.test.ts` measures exactly that — **total forward travel**, which no amount of easing
- * can produce — and it went to zero at the old amplitude the day the pickup started closing.
- *
- * ⚠️ **Which is 0077's guard doing its job against a change 0077 never saw.** The bob's whole claim
- * is *it goes both ways*; a constant that satisfied it against a stationary target satisfies it by
- * 0.02 units a step against a moving one, and that is a feature holding on by rounding.
- *
- * ⚠️ **At 0.4 against `Entity.bobPhase`'s corrected period the pickup wanders about ±7.6 world
- * units**, which is a twentieth of the widest view. The old ±6 was arithmetic over a period the code
- * did not actually run at — see `bobPhase`.
- */
-const PICKUP_BOB_SPEED = 0.4;
 
-/**
- * The bob's period, in world units of camera travel.
- *
- * ⚠️ **A DISTANCE and not a duration**, which is `src/content/enemies.ts`'s own argument for the
- * weave: a shape in the world can be authored against, a wobble in time cannot, and a machine
- * dropping frames plays the same level. 14 units is a full cycle every `2π × 14 ÷ SCROLL_PER_STEP`
- * steps — about 2.4 seconds.
- *
- * ⚠️ **The phase is offset by the pickup's own `across`**, so two pickups on screen do not bob in
- * unison. That costs no field and no draw, and it is the last thing on the field that still wants
- * pickups to look independent — the CYCLE was the thing that wanted them synchronised, and 0082
- * removed it.
- */
-const PICKUP_BOB_UNITS = 14;
 
 /**
  * The most evenly spread angle there is, in radians — `π × (3 − √5)`.
@@ -847,6 +822,8 @@ export interface World {
   rainRng: Rng;
   /** Where the volcanoes' rock falls — `docs/decisions/0251-the-volcanoes-belch.md`, on the same terms. */
   rockRng: Rng;
+  /** Which way a pickup floats and how each bounce turns it — 0293, on 0021's own terms. */
+  floatRng: Rng;
   /**
    * How big each void blast comes out and which way its burst points — 0291, on the same terms.
    *
@@ -4035,8 +4012,26 @@ function driftPickups(w: World): void {
       item.spriteHit = item.spriteBase;
       item.faceIn = PICKUP_CYCLE_STEPS;
     }
-    if (item.across - item.radius <= 0) item.velAcross = Math.abs(item.velAcross);
-    else if (item.across + item.radius >= ACROSS_SPAN) item.velAcross = -Math.abs(item.velAcross);
+    /*
+      ⚠️ **ONE LANE WALL, AND IT DISPATCHES ON WHETHER THE PICKUP HAS ARRIVED — 0293.** This turned
+      every pickup by flipping the sign of `velAcross`, which is right for one still approaching and
+      for a scattered piece still flying its throw. A FLOATING pickup needs the reflection that
+      carries the bounce's roll, or the lane is the one pair of walls its heading never varies at.
+
+      ⚠️ **AND FOR ONE COMMIT THERE WERE TWO OF THESE.** The float's own across bounce was added lower
+      down while this stayed here — and this one runs first, so it flipped the sign and the float's
+      condition was never true. The lane bounced without a kick, silently, and `npm run prove` found
+      it: 0048's probe removes these lines and the suite stayed **STILL GREEN**, because the second
+      mechanism was covering for the first.
+    */
+    const arrived = item.spin !== 0;
+    if (item.across - item.radius <= 0) {
+      if (arrived) bounceFloat(w, item, 0, 1);
+      else item.velAcross = Math.abs(item.velAcross);
+    } else if (item.across + item.radius >= ACROSS_SPAN) {
+      if (arrived) bounceFloat(w, item, 0, -1);
+      else item.velAcross = -Math.abs(item.velAcross);
+    }
     /*
       ── AND THE SAME RULE ON THE OTHER AXIS, WHICH IT HAS NEVER HAD ────────────────────────────────
 
@@ -4151,10 +4146,30 @@ function driftPickups(w: World): void {
       was only passing through.
     */
     const inView = item.along - w.cameraAlong;
-    if (inView > PICKUP_SLOW_AT) {
+    /*
+      ⚠️ **THE APPROACH EASES ONTO THE FLOAT'S OWN SPEED, NOT ONTO A STOP — 0293.** It used to ease
+      `velAlong` toward zero, which is standing still in the WORLD and therefore crossing the screen
+      at the camera's whole rate; the pickup then met the float at 0.9 units a step and took the whole
+      difference on one frame. That is 0077's reported wall exactly — *"power ups hit a wall when they
+      get to the centre of the screen"* — rebuilt by the decision that was removing it.
+
+      ⚠️ **SO THE TARGET IS A DEPARTURE OF `PICKUP_FLOAT` DOWN-LANE**, and by the time a pickup
+      crosses `PICKUP_SLOW_AT` it is already travelling at the speed it will float at. The handover is
+      a step on which nothing happens.
+    */
+    /*
+      ⚠️ **AND `spin` IS *HAS IT ARRIVED*, WHICH IT ALREADY MEANT — 0233's own field, 0293's use.**
+      Gating on the position alone was a bug the guards caught: a floating pickup heading up-lane
+      crosses `PICKUP_SLOW_AT` again, falls back into this branch, and spends seventeen steps easing
+      round — by which time it has reached **182 units**, past `PLAYER_LEAD` and out of the box the
+      ship can fly in. *"It waits further out than the ship can fly"*, which is 0100's report about a
+      power-up you can see and cannot reach. Arrival happens once.
+    */
+    if (item.spin === 0 && inView > PICKUP_SLOW_AT) {
       item.velAlong += (0 - item.velAlong) * PICKUP_EASE;
       continue;
     }
+    item.spin = 1;
     /*
       ── AND ONCE IT HAS ARRIVED IT WANDERS THE BOX, TURNING AT ITS ENDS — 0233 ──────────────────
 
@@ -4175,15 +4190,123 @@ function driftPickups(w: World): void {
       ⚠️ **The bob stays on top**, so it never holds one line — 0087's rule, and the wander is a
       second reason it cannot park.
     */
-    if (item.spin === 0) item.spin = -1;
-    if (inView <= PLAYER_ALONG_MARGIN + PICKUP_TURN_ROOM) item.spin = 1;
-    else if (inView >= PLAYER_LEAD - PICKUP_TURN_ROOM) item.spin = -1;
-    const target =
-      w.scrollPerStep +
-      item.spin * PICKUP_WANDER +
-      PICKUP_BOB_SPEED * Math.sin(w.cameraAlong / PICKUP_BOB_UNITS + item.bobPhase);
-    item.velAlong += (target - item.velAlong) * PICKUP_EASE;
+    /*
+      ── AND IT FLOATS, AT ONE SPEED, TURNING ONLY WHERE IT HITS SOMETHING — 0293 ─────────────────
+
+      ⚠️ **REPORTED**: *"I wasn't clear enough in my original prompt, I wanted them to float around
+      the screen and bounce randomly when hitting the edge of the screen. What we've got in game is
+      random speed and direction weirdly on the power ups and makes picking them up feel really weird
+      and wonky."*
+
+      ⚠️ **THE WONK WAS THREE MOTIONS PRETENDING TO BE ONE.** What stood here eased `velAlong` toward
+      `scroll + spin × WANDER + BOB × sin(camera)` — a wander whose heading flipped at soft walls,
+      PLUS a sine on a fourteen-unit period, PLUS a first-order lag that never caught either. Meanwhile
+      `across` was a plain constant that reflected off the lane. **The two axes obeyed different laws
+      and the along speed was never steady for two frames**, which is what *random speed and direction*
+      describes. Every one of those three was added for a real reported defect (0077, 0087, 0233) and
+      each was right on its own; the sum was not a thing that reads as an object.
+
+      ⚠️ **SO IT IS ONE VELOCITY AT ONE SPEED, AND THE ONLY EVENT IS A WALL.** Straight lines and
+      corners: the same motion on both axes, nothing to attenuate, nothing to fight.
+    */
+    floatAt(w, item);
+    /*
+      ⚠️ **THE WALLS ARE THE PLAYER'S BOX AND NOT THE SCREEN'S EDGE — 0100, AND IT IS A PLAY REPORT.**
+      *"On player death the powerups can go to a section on the left side of the screen, where they
+      are visible but the player cannot get to them."* Everything below `PLAYER_ALONG_MARGIN` is on
+      the screen and out of reach, and the same is true past `PLAYER_LEAD` at the other end.
+
+      ⚠️ **AND THE BOUNCE CARRIES A ROLL, WHICH IS THE WORD *randomly* IN THE REPORT.** A perfect
+      reflection off two parallel walls is a closed path: a pickup that entered flat would run the
+      same line for its whole wait, and two pickups that entered together would stay in step for ever.
+      The kick is small enough that the bounce still reads as a bounce.
+    */
+    const floor = PLAYER_ALONG_MARGIN + item.radius;
+    const ceiling = PLAYER_LEAD - item.radius;
+    if (inView <= floor && item.velAlong < w.scrollPerStep) bounceFloat(w, item, 1, 0);
+    else if (inView >= ceiling && item.velAlong > w.scrollPerStep) bounceFloat(w, item, -1, 0);
+    // The lane's own pair is at the top of this loop, where every pickup has always turned at it.
   }
+}
+
+/**
+ * Set a pickup floating at `PICKUP_FLOAT`, in a direction of its own — 0293.
+ *
+ * ⚠️ **CALLED WHENEVER THE SPEED HAS DECAYED**, which is how the arrival hands over: a pickup crosses
+ * `PICKUP_SLOW_AT` with its approach eased away to nearly nothing, and the next step it is floating.
+ * There is no second flag saying *has it arrived* — the speed IS the state, and a scattered piece
+ * whose throw has run out picks the float up by the same test.
+ */
+function floatAt(w: World, item: Entity): void {
+  const along = item.velAlong - w.scrollPerStep;
+  const across = item.velAcross;
+  const speed = Math.hypot(along, across);
+  /*
+    ⚠️ **THE HEADING IS EXACT AND THE SPEED IS EASED, WHICH IS WHAT MAKES THE HANDOVER INVISIBLE.**
+    A pickup arrives crossing the screen at the camera's whole rate and has to end up at a third of
+    it; setting that in one step is a change of about 0.6 units on one frame, and
+    `tests/pickups.test.ts` calls that an impact — correctly, because it is 0077's own reported wall
+    (*"power ups hit a wall when they get to the centre of the screen"*) rebuilt by the decision that
+    was removing it.
+
+    ⚠️ **SO ONLY THE MAGNITUDE LAGS.** The direction is never eased and never fought: the heading it
+    arrives on is the heading it floats on, and `PICKUP_EASE` bleeds the excess speed away over about
+    three quarters of a second. **A bounce changes direction and not speed**, so nothing about the
+    wall goes through this at all — which is why the guard can measure the speed and hold the walls
+    harmless by construction rather than by an exception.
+  */
+  if (speed > 1e-4) {
+    const eased = speed + (PICKUP_FLOAT - speed) * PICKUP_EASE;
+    item.velAlong = w.scrollPerStep + (along / speed) * eased;
+    item.velAcross = (across / speed) * eased;
+    return;
+  }
+  // Dead still — a scattered piece whose throw ran out exactly against the scroll. Pick a way to go.
+  const angle = w.floatRng.range(0, TAU);
+  item.velAlong = w.scrollPerStep + Math.cos(angle) * PICKUP_FLOAT;
+  item.velAcross = Math.sin(angle) * PICKUP_FLOAT;
+}
+
+/**
+ * Turn a floating pickup off a wall whose inward normal is (`nAlong`, `nAcross`) — 0293.
+ *
+ * ⚠️ **THE DEPARTURE IS REFLECTED, NEVER THE WHOLE VELOCITY.** `velAlong` carries the scroll rate as
+ * its baseline (0034), so reversing all of it would fire the pickup backwards through the world at
+ * the camera's own rate — a thing leaving the screen rather than turning round. The same trap the
+ * scatter's bounce documents a few lines up.
+ */
+function bounceFloat(w: World, item: Entity, nAlong: number, nAcross: number): void {
+  const along = item.velAlong - w.scrollPerStep;
+  const across = item.velAcross;
+  // Reflect about the wall, then kick the heading a little so two parallel walls are not a loop.
+  const dot = 2 * (along * nAlong + across * nAcross);
+  let outAlong = along - dot * nAlong;
+  let outAcross = across - dot * nAcross;
+  const kick = w.floatRng.range(-PICKUP_BOUNCE_KICK, PICKUP_BOUNCE_KICK);
+  const cos = Math.cos(kick);
+  const sin = Math.sin(kick);
+  const turnedAlong = outAlong * cos - outAcross * sin;
+  const turnedAcross = outAlong * sin + outAcross * cos;
+  /*
+    ⚠️ **AND THE KICK IS REFUSED IF IT POINTS BACK INTO THE WALL**, or a pickup rolled the wrong way
+    at a corner sticks to it: the reflection would fire every step and the roll would keep undoing it,
+    which is a pickup vibrating on a line — the exact reading this decision exists to remove.
+  */
+  if (turnedAlong * nAlong + turnedAcross * nAcross > 0) {
+    outAlong = turnedAlong;
+    outAcross = turnedAcross;
+  }
+  /*
+    ⚠️ **THE SPEED IS CARRIED THROUGH, NOT SET — A REFLECTION PRESERVES IT BY DEFINITION.** Writing
+    `PICKUP_FLOAT` here snapped a pickup that was still settling off its approach: it met the lane
+    wall at 0.6 units a step, left at 0.28, and `and it never stops dead` called that an impact at
+    0.33 on one frame. Which it is. The float's speed is `floatAt`'s to settle, over about three
+    quarters of a second; a wall only turns the thing.
+  */
+  const was = Math.hypot(along, across);
+  const speed = Math.hypot(outAlong, outAcross) || 1;
+  item.velAlong = w.scrollPerStep + (outAlong / speed) * was;
+  item.velAcross = (outAcross / speed) * was;
 }
 
 /**

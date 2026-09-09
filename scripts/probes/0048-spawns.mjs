@@ -85,8 +85,14 @@ export const PROBES = [
     guard: 'but stays inside the lane, so it is never unreachable',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    if (item.across - item.radius <= 0) item.velAcross = Math.abs(item.velAcross);\n    else if (item.across + item.radius >= ACROSS_SPAN) item.velAcross = -Math.abs(item.velAcross);',
-      replace: '    void item;',
+      /*
+        ⚠️ **Re-anchored by 0293**, which made the lane wall dispatch on whether the pickup has
+        arrived — a floating one needs the reflection that carries the bounce's roll, and one still
+        approaching just turns. Cutting the dispatch off at the `if` removes both, which is this
+        probe's sentence: nothing turns at the lane edge and the pickup wanders out.
+      */
+      find: '    const arrived = item.spin !== 0;\n    if (item.across - item.radius <= 0) {',
+      replace: '    const arrived = item.spin !== 0;\n    void arrived;\n    if (false) {',
     },
   },
 ];

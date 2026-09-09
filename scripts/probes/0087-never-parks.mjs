@@ -24,8 +24,10 @@ export const PROBES = [
       path: 'src/app/frame.ts',
       // ⚠️ Re-aimed by 0233: the closing share is gone and the wander is the closing rate. A wander
       // of zero is the same break — a waiting pickup holding station on one line.
-      find: 'const PICKUP_WANDER = 0.28;',
-      replace: 'const PICKUP_WANDER = 0;',
+      // ⚠️ Re-aimed again by 0293: the wander is a FLOAT now, and a float of zero is the same
+      // break — a waiting pickup holding station on one line.
+      find: 'const PICKUP_FLOAT = 0.28;',
+      replace: 'const PICKUP_FLOAT = 0;',
     },
   },
   {
@@ -37,46 +39,42 @@ export const PROBES = [
       to be. The pickup still slows, still closes, still bobs — it simply ends its wait somewhere
       arbitrary, which nothing but a guard on the destination can see.
     */
-    broke: 'the station typed rather than derived, so the wait begins nowhere in particular',
-    // ⚠️ Re-aimed by 0233 at the guard that can see it: the wait is a wander of the box now, and
-    // where it begins is the front wall — a typed distance is a wander that starts in the middle
-    // of the screen, which only a guard on the wander's own extent notices.
-    suite: 'tests/weapons.test.ts',
-    guard: 'wanders the whole box',
-    edit: {
-      path: 'src/app/frame.ts',
-      // ⚠️ Re-anchored by 0233: the wait begins at the front wall of the box now, and a typed number
-      // is a wander that begins in the middle of the screen.
-      find: 'const PICKUP_SLOW_AT = PLAYER_LEAD - PICKUP_TURN_ROOM;',
-      replace: 'const PICKUP_SLOW_AT = 100;',
-    },
-  },
-  {
-    decision: '0087',
-    suite: 'tests/pickups.test.ts',
+    broke: 'the float begun outside the box, so a pickup waits where the ship cannot fly',
     /*
-      ⚠️ THE BOB'S PHASE PUT BACK ON A MOVING QUANTITY, which is the defect this decision found rather
-      than one it introduced. `item.across` drifts, so it does not offset the phase — it advances it,
-      about three times faster than the camera does, and the lag then attenuates the bob to a third of
-      the amplitude the constant describes.
+      ⚠️ **Re-aimed by 0233 at the wander's extent, and again by 0293 at the thing that still bites.**
+      0087 derived this from the ship's own place so that a pickup nobody touches ARRIVES at it; 0233
+      moved it to the front wall of the box; 0293's float does not close on the ship at all, so
+      *typed rather than derived* stopped naming a defect — the probe changed a hundred to a hundred
+      and the suite stayed **STILL GREEN**, which `npm run prove` reported.
 
-      ⚠️ IT IS THE EDIT ANYBODY WOULD MAKE, because `across` is a field the pickup already has and
-      `bobPhase` is one it had to be given. The picture is a pickup that still bobs — just too little
-      to come forward, which is the thing 0077's guard is about and the thing nothing else can see.
+      ⚠️ **WHAT THIS NUMBER DOES NOW IS SAY WHERE THE FLOAT BEGINS**, and it is load-bearing for one
+      reason: begun beyond `PLAYER_LEAD` the pickup starts bouncing outside the box, in the part of
+      the screen 0100 reported as *"visible but the player cannot get to them"*. That is the same
+      failure this probe has always been about, in the mechanism that exists.
     */
-    broke: 'the bob’s phase taken from a field that drifts, so the wander runs at a quarter of its period',
-    // ⚠️ Re-aimed by 0233 at 0064's *it stops running away*, and that caught it by a sixth of a
-    // second. Re-aimed again by 0234: a third weapon face lengthened the wait and the margin went the
-    // other way (STILL GREEN), so the guard is now the bob's own rhythm in seconds — the ease smears
-    // a phase that runs off `across` to nearly nothing, and the pickup turns back only where the
-    // wander does.
-    guard: 'and the bob is a bob and not a shiver',
+    suite: 'tests/pickups.test.ts',
+    guard: 'waits somewhere the ship can actually fly to',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      PICKUP_BOB_SPEED * Math.sin(w.cameraAlong / PICKUP_BOB_UNITS + item.bobPhase);',
-      replace: '      PICKUP_BOB_SPEED * Math.sin(w.cameraAlong / PICKUP_BOB_UNITS + item.across);',
+      find: 'const PICKUP_SLOW_AT = PLAYER_LEAD - PICKUP_TURN_ROOM;',
+      replace: 'const PICKUP_SLOW_AT = PLAYER_LEAD + 40;',
     },
   },
+  /*
+    ── THE BOB PROBE WAS HERE, AND 0293 RETIRED IT ─────────────────────────────────────────────────
+
+    It restored the defect this decision found: the bob phase taken off a field that DRIFTS, so it
+    advanced the phase rather than offsetting it and the wander ran at a quarter of its stated
+    period. A real bug, found by measuring the track rather than by reading the line.
+
+    docs/decisions/0293-a-pickup-floats.md replaced the wander, the bob and the lag with one float,
+    and the guard this probe named went with them. It was re-aimed once, at the roll on the bounce
+    that answers the same problem the bob did — and came back STILL GREEN, because a pickup meets a
+    wall once or twice in a whole wait and no fixture can see two crossings repeat at that cadence.
+
+    So it is deleted rather than pointed at something it never protected. A probe that reddens the
+    wrong guard, or none, is worse than an absent one: it reads as cover.
+  */
   {
     decision: '0087',
     suite: 'tests/pickups.test.ts',
@@ -95,9 +93,13 @@ export const PROBES = [
     guard: 'waits somewhere the ship can actually fly to',
     edit: {
       path: 'src/app/frame.ts',
-      // ⚠️ Re-anchored by 0233, which reads the distance into a local the wander also uses.
+      /*
+        ⚠️ **Re-anchored by 0233**, which reads the distance into a local the wander also uses, and by
+        **0293**, which gated the branch on `spin` as well — a floating pickup that drifts back above
+        `PICKUP_SLOW_AT` must not fall into the approach again, and did, and reached 182 units.
+      */
       find:
-        '    if (inView > PICKUP_SLOW_AT) {\n' +
+        '    if (item.spin === 0 && inView > PICKUP_SLOW_AT) {\n' +
         '      item.velAlong += (0 - item.velAlong) * PICKUP_EASE;\n' +
         '      continue;\n' +
         '    }\n',

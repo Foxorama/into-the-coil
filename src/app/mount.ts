@@ -810,6 +810,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // Where the volcanoes' rock falls — 0251, its own stream on the same terms.
     rockRng: makeRng('proof-scene').stream('rock'),
     voidRng: makeRng('proof-scene').stream('void'),
+    floatRng: makeRng('proof-scene').stream('float'),
     view,
     surface,
     // One named stream, per docs/decisions/0021-one-stream-per-concern.md, so a cosmetic roll added

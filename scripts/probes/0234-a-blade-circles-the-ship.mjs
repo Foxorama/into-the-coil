@@ -130,12 +130,24 @@ export const PROBES = [
       reddens. This is the ceiling: a bob authored quick and strong enough to survive the ease is a
       shiver, and a pickup that shivers is not the thing 0087 describes.
     */
-    broke: 'the bob authored five times as quick and eight times as strong, so a waiting pickup shivers',
-    guard: 'and the bob is a bob and not a shiver',
+    broke: 'the walls of the box shrunk to a sliver, so a floating pickup turns every few steps',
+    /*
+      ── ⚠️ THIS WAS THE BOB'S CEILING, AND 0293 REMOVED THE BOB ──────────────────────────────────
+
+      It authored the bob five times as quick and eight times as strong, so a waiting pickup shivered.
+      0293 replaced the wander, the bob and the lag with one float — reported as *"random speed and
+      direction weirdly… really weird and wonky"* — so there is no bob to over-author.
+
+      ⚠️ **THE CEILING SURVIVES THE MECHANISM, WHICH IS WHY THIS IS RE-AIMED AND NOT DELETED.** *A
+      pickup that turns back every few steps is a shiver* is still exactly what must not happen, and a
+      float can still do it: put the walls close enough together and it bounces between them for ever.
+      Same claim, this decision's mechanism — and 0064's probe below holds the other end.
+    */
+    guard: '0293 — and it turns only where it hits something',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      PICKUP_BOB_SPEED * Math.sin(w.cameraAlong / PICKUP_BOB_UNITS + item.bobPhase);',
-      replace: '      PICKUP_BOB_SPEED * 8 * Math.sin(w.cameraAlong / 3 + item.bobPhase);',
+      find: '    const ceiling = PLAYER_LEAD - item.radius;',
+      replace: '    const ceiling = floor + 6;',
     },
   },
 ];
