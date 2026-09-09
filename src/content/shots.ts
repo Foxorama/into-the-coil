@@ -85,6 +85,31 @@ export interface ShotRow extends Body {
    * that ladder at more than five pixels a rung — 0262 spent the last easy room on it.
    */
   fission: readonly Fission[];
+  /**
+   * How much of the player's fire this bullet SWALLOWS before it bursts — 0291. Absent is none, and
+   * none is *the player cannot touch it*, which is every shot in the game but one.
+   *
+   * ⚠️ **REPORTED**: *"the void blasts should be bigger and a bit random and should eat x amount of
+   * damage and then explode in a void blast."* Nothing in this game had ever let a player's shot
+   * reach an enemy's: hostile bullets collide with the ship and with nothing else. So an appetite is
+   * not a tuning number, it is the switch that puts a bullet in front of the guns at all.
+   *
+   * ⚠️ **OPTIONAL, WHERE `fission` BESIDE IT IS REQUIRED, AND THE TWO ARE NOT THE SAME KIND OF
+   * QUESTION.** 0263 makes `fission` mandatory because *"a shot that does not burst says so on the
+   * page"* — what a bullet does over its whole life is a thing every author has to decide. Whether
+   * the player may shoot it down is a rare exception to a rule the whole game rests on, and
+   * `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md` is explicit that
+   * *no row can forget it* argues for a DEFAULT and never for a constant: the row still says what its
+   * version is, and shared code holds the fallback.
+   *
+   * ⚠️ **A FLAG AND NOT AN AMOUNT, BECAUSE THE AMOUNT IS ALREADY `health` — AND IT WAS BOTH FOR ONE
+   * COMMIT.** Written as a number it was a second answer to *how much does this swallow*, and the two
+   * disagreed on the first driven test: `reset` gives a shot its ROW's health, so a void authored
+   * with `appetite: 6` and `health: 1` was popped by a single pulse while the field that was supposed
+   * to say six sat there being read by nobody. One number, and it is the one every other body in the
+   * game already uses for *how much it takes*.
+   */
+  swallows?: boolean;
 }
 
 /**
@@ -291,7 +316,18 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    */
   // 1.3 since 0262 — the ring is drawn a size bigger to make room for the quill on the ladder, and the
   // hurtbox keeps to the band `tests/combat.test.ts` holds.
-  void: { sprite: SPRITE.void, spriteHit: SPRITE.void, radius: 1.3, health: 1, damage: 2, speed: 0.9, fission: SPENT_BY_ARRIVING },
+  /*
+    ⚠️ **1.3 → 2.2, AND IT EATS — 0291.** *"The void blasts should be bigger and a bit random and
+    should eat x amount of damage and then explode in a void blast."* The radius is the hurtbox and
+    the drawing follows it (`SPRITE_EXTENT.void`); the appetite is six, which is six pulses of the
+    opening gun or one and a half of the arc's, so it is a thing to shoot at rather than a thing to
+    shoot through.
+
+    ⚠️ **AND *A BIT RANDOM* IS THE BLAST'S OWN SIZE, ROLLED PER BLAST**, on its own named stream —
+    `docs/decisions/0021-one-stream-per-concern.md` refuses a shared generator, because a cosmetic
+    roll added anywhere would rebuild every level.
+  */
+  void: { sprite: SPRITE.void, spriteHit: SPRITE.void, radius: 2.2, health: 6, damage: 2, speed: 0.9, fission: SPENT_BY_ARRIVING, swallows: true },
   /**
    * The eagle's quill — `docs/decisions/0262-the-eagle-throws-quills.md`: *"the bullets need to be
    * feathered quills."* A feather, shaft first, in the enemy's ink — the eagle's own bullet where

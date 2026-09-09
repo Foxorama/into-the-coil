@@ -447,6 +447,7 @@ function firingAt(row: EnemyRow, distance: number): World {
     arcRng: makeRng('combat').stream('arc'),
     rainRng: makeRng('combat').stream('rain'),
     rockRng: makeRng('combat').stream('rock'),
+    voidRng: makeRng('combat').stream('void'),
     bolts: new Pool<Entity>(CAPACITY.bolts, makeEntity),
     dropRng: makeRng('combat').stream('drop'),
     scatterRng: makeRng('combat').stream('scatter'),
@@ -558,6 +559,7 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
     arcRng: makeRng('combat').stream('arc'),
     rainRng: makeRng('combat').stream('rain'),
     rockRng: makeRng('combat').stream('rock'),
+    voidRng: makeRng('combat').stream('void'),
     bolts: new Pool<Entity>(CAPACITY.bolts, makeEntity),
     dropRng: makeRng('combat').stream('drop'),
     scatterRng: makeRng('combat').stream('scatter'),
@@ -1045,6 +1047,21 @@ describe('damage is legible on the body that took it', () => {
       Not a special case in the code, and worth pinning as a consequence rather than a rule: a shot
       has one health, so `collideInto` releases it rather than reaching the flash at all.
 
+      ⚠️ **AND SINCE 0291 THERE IS A SECOND EXEMPTION, WHICH IS THE FIRST HOSTILE BULLET THE PLAYER
+      CAN SHOOT AT.** *"The void blasts should… eat x amount of damage and then explode in a void
+      blast."* Its health IS that appetite, so it survives hits by design — and it still never
+      flashes, for a reason worth writing down: its `spriteHit` is its own sprite, so a flash would be
+      four steps of a colour change on a bullet two units across and would say nothing. **What it does
+      instead is SWELL**, a tenth a bite, which is legible at a glance and is what the sentence asks
+      for. `tests/serpent.test.ts` holds that growth, driven, because it is not a fact about this
+      table.
+    */
+    /*
+      ⚠️ **THE CLAIM IS UNCHANGED: A SHOT THAT SURVIVES A HIT OWES THE PLAYER A PICTURE.** What the
+      two exemptions have in common is that each answers it — a blade is never shot at, and a void
+      grows. A third row appearing here with more than one health and no answer is the defect this
+      still catches.
+
       ⚠️ **EXCEPT THE SHOT A `coil` WEAPON THROWS, since 0234.** A blade is spent by the edge of the
       screen and lands on everything it crosses, so it carries more than one health — and it still
       never flashes, because nothing shoots it: its hurt slot is its other turn. Read off the weapon
@@ -1054,6 +1071,10 @@ describe('damage is legible on the body that took it', () => {
     for (const kind of SHOT_KINDS) {
       if (blades.has(kind)) {
         expect(SHOTS[kind].health, `${kind} is a blade with nothing to survive an arrival on`).toBeGreaterThan(1);
+        continue;
+      }
+      if (SHOTS[kind].swallows === true) {
+        expect(SHOTS[kind].health, `${kind} swallows the player’s fire but is spent by one hit of it`).toBeGreaterThan(1);
         continue;
       }
       expect(SHOTS[kind].health, `${kind} survives a hit, which would need a hit sprite of its own`).toBe(1);
