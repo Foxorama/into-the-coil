@@ -93,17 +93,25 @@ export const PROBES = [
     decision: '0283',
     suite: 'tests/level.test.ts',
     /*
-      ⚠️ **THE ANIMAL LENGTHENED UNTIL ITS TAIL LEAVES THE SCREEN.** The chain is not confined to a
-      sprite box, which is most of what it buys — and the thing that replaces the box is the guard,
-      which reads the body's own reach rather than the head's radius. Left reading the radius it went
-      on passing at 126 against 177.8 with the tail hanging off the leading edge.
+      ⚠️ **THE SKULL PUSHED PAST THE LEADING EDGE**, which is what this guard holds now.
+
+      ⚠️ **IT USED TO LENGTHEN THE BODY, AND 0286 MADE THAT A FEATURE.** The original break spaced the
+      chain out until the tail hung off the narrowest screen, on 0283's reasoning that the guard had
+      to read the body's own reach rather than the head's radius. `docs/decisions/0286-a-serpent-runs-off-the-screen.md`
+      answered *"it should be long enough to stretch off the screen for a serpent"* by ruling the
+      opposite: what the guard protects is that the part the player has to FIGHT is reachable, so it
+      reads `radius` again and the body is held by a claim of its own.
+
+      ⚠️ **AND THE PROBE WAS CAUGHT BY THE HARNESS RATHER THAN BY A READER — 0019.** It went on going
+      red, on 0286's new guard instead of this one, and `WRONG TEST` is the only reason anybody knew:
+      a probe that reddens *something* is a probe that proves nothing about the guard it names.
     */
-    broke: 'the body lengthened past the narrowest screen, so the tail hangs off the leading edge',
+    broke: 'the skull pushed past the leading edge, so the part the player has to fight is off screen',
     guard: 'the whole hull stays on screen on the narrowest device',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '      step: 0.53,',
-      replace: '      step: 0.9,',
+      find: '    station: 114,',
+      replace: '    station: 171,',
     },
   },
   {
