@@ -401,6 +401,10 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   boss6: 'enemy',
   boss7: 'enemy',
   boss8: 'enemy',
+  boss8Up: 'enemy',
+  boss8Down: 'enemy',
+  boss8Gape: 'enemy',
+  boss8Shut: 'enemy',
   serpentBody: 'enemy',
   boss9: 'enemy',
   boss10: 'enemy',
@@ -611,6 +615,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   boss6Hit: 'impact',
   boss7Hit: 'impact',
   boss8Hit: 'impact',
+  boss8GapeHit: 'impact',
+  boss8ShutHit: 'impact',
   serpentBodyHit: 'impact',
   boss9Hit: 'impact',
   boss10Hit: 'impact',
@@ -3333,9 +3339,26 @@ function paintBoss6(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
 */
 const LORD_HULLS: readonly SpriteKind[] = LEVEL_KINDS.flatMap((k) => {
   const row = BOSSES[LEVELS[k].boss];
-  const hulls = [SPRITE_KINDS[row.sprite]!];
-  if (row.chain !== null) hulls.push(SPRITE_KINDS[row.chain.sprite]!);
-  return hulls;
+  /*
+    ⚠️ **EVERY BITMAP THE ROW NAMES, AND THE LIST IS WALKED RATHER THAN WRITTEN — 0285.** This has now
+    been got wrong twice: 0283's body baked in the generic foe skin because nothing named it, and
+    0285's four extra faces did it again the moment they existed. Both were a venom-green head towing
+    something dusty pink, and both were invisible to every guard and obvious in one photograph.
+
+    ⚠️ **SO WHAT IS ASKED IS *what sprites does this row mention*, not *which fields did somebody
+    remember*.** A row that grows a seventh face is covered by having authored it.
+
+    ⚠️ **AND *WALKED* MEANS `Object.values`, WHICH THE FIRST PASS OF THIS COMMENT DID NOT DO — 0285.**
+    It named the six face fields one at a time underneath a paragraph promising it did not, and the
+    seventh face went out in the generic foe skin exactly as the two before it had: a grey head with a
+    red eye, photographed on the first sheet it appeared on. A list written out by hand is a list
+    that has to be remembered, however the comment above it reads. Every field of a `Face` and a
+    `Chain` is a sprite index and nothing else is, which is what makes this safe to walk.
+  */
+  const named = [row.sprite, row.spriteHit];
+  if (row.chain !== null) named.push(row.chain.sprite, row.chain.spriteHit);
+  if (row.face !== null) named.push(...Object.values(row.face));
+  return named.map((index) => SPRITE_KINDS[index]!);
 });
 
 /** The unit direction of a polyline at sample `i`, from its neighbours. */
@@ -3386,6 +3409,45 @@ function endOf(spine: readonly Pt[]): (px: number, py: number) => Pt {
   handed over with the report.
 */
 
+/** Where the lower jaw hangs from, in the head's own frame — the one point both jaws share. */
+const HINGE: Pt = [-0.24, 0.04];
+
+/**
+ * A tooth, as tip-then-roots — 0285.
+ *
+ * ⚠️ **ONE DESCRIPTION, BECAUSE THE OUTLINE AND THE PAINT MUST BE THE SAME TOOTH.** The first pass
+ * said exactly this in a comment and then wrote the four triangles out a second time inside the
+ * skull's own point list — which is the arrangement the comment was warning about, and
+ * `tests/accents.test.ts` duly reported them drifting apart a fraction of a pixel at a time across
+ * the frames. The outline below is spliced from these, so there is no second copy left to drift.
+ *
+ * ⚠️ **AND WHICH JAW A TOOTH IS IN IS AUTHORED, NOT DEDUCED.** The first pass decided it from height
+ * — everything past the bite line swung — and a hanging fang's TIP is past that line while its root
+ * is not, so the upper teeth swung with the lower jaw and tore out through the roof of the mouth.
+ * That is the whole of the containment failure this decision started with.
+ */
+type Fang = readonly [Pt, Pt, Pt];
+
+/** ⚠️ **TWO HANGING FROM THE UPPER JAW**, which never moves; their tips reach down past the bite. */
+const UPPER_FANGS: readonly Fang[] = [
+  [[-0.9, 0.16], [-0.95, -0.07], [-0.85, -0.06]],
+  [[-0.65, 0.14], [-0.69, -0.04], [-0.61, -0.03]],
+];
+
+/** ⚠️ **AND TWO STANDING ON THE LOWER JAW**, which swings; their tips reach up past the bite. */
+const LOWER_FANGS: readonly Fang[] = [
+  [[-0.52, 0.14], [-0.48, 0.3], [-0.56, 0.32]],
+  [[-0.78, 0.24], [-0.74, 0.41], [-0.82, 0.43]],
+];
+
+/**
+ * One tooth as a run of outline points, in the direction that jaw's edge is walked.
+ *
+ * ⚠️ **THE TIP IS DOUBLED BECAUSE `curveLoop` SMOOTHS A LONE POINT INTO A BUMP** and a fang is a
+ * corner — the same reason every other corner in this skull is written twice.
+ */
+const toothOf = ([tip, a, b]: Fang): Pt[] => [a, tip, tip, b];
+
 /**
  * The skull, closed off at the neck — the whole of `boss8` since 0283.
  *
@@ -3416,7 +3478,7 @@ function endOf(spine: readonly Pt[]): (px: number, py: number) => Pt {
  * is one closed path, and it survives `evenodd` — what it must not be is narrower than the outline
  * that strokes it, which is why the jaws part by nearly five world units rather than by one.
  */
-const SERPENT_HEAD: readonly Pt[] = [
+const SKULL_UPPER: readonly Pt[] = [
   /*
     ⚠️ **THE SKULL IS TALLEST AT THE JAW HINGE AND NARROWS TO THE NECK, WHICH IS WHERE A SNAKE'S
     HEAD IS TALLEST.** The first pass ran the crown and the jaw straight back at full height to a
@@ -3459,31 +3521,30 @@ const SERPENT_HEAD: readonly Pt[] = [
     is a corner.
   */
   [-0.98, -0.08],
-  [-0.95, -0.07],
-  [-0.9, 0.16],
-  [-0.9, 0.16],
-  [-0.85, -0.06],
+  ...toothOf(UPPER_FANGS[0]!),
   [-0.72, -0.05],
-  [-0.69, -0.04],
-  [-0.65, 0.14],
-  [-0.65, 0.14],
-  [-0.61, -0.03],
+  ...toothOf(UPPER_FANGS[1]!),
   [-0.46, 0],
-  [-0.24, 0.04],
-  [-0.24, 0.04],
-  // And out again along the lower jaw, hinged wide and stopping short of the snout.
+  HINGE,
+  HINGE,
+];
+
+/**
+ * The lower jaw, from the hinge out to the snout and back along the throat — 0285.
+ *
+ * ⚠️ **A SEPARATE LIST BECAUSE MEMBERSHIP OF A JAW IS NOT A PROPERTY OF A POINT'S POSITION.** These
+ * are the points that swing; the ones above are the points that do not; and the two lists meet at
+ * the hinge, which both of them carry so the loop closes wherever the jaw is.
+ */
+const SKULL_LOWER: readonly Pt[] = [
+  // Out along the lower jaw, hinged wide and stopping short of the snout.
   [-0.44, 0.28],
-  [-0.48, 0.3],
-  [-0.52, 0.14],
-  [-0.52, 0.14],
-  [-0.56, 0.32],
+  ...toothOf(LOWER_FANGS[0]!),
   [-0.7, 0.4],
-  [-0.74, 0.41],
-  [-0.78, 0.24],
-  [-0.78, 0.24],
-  [-0.82, 0.43],
+  ...toothOf(LOWER_FANGS[1]!),
   [-0.9, 0.46],
   [-0.9, 0.46],
+  // And back under the chin to the throat, which the swing ramp lets go of before it reaches here.
   [-0.82, 0.6],
   [-0.56, 0.62],
   [-0.22, 0.56],
@@ -3491,6 +3552,84 @@ const SERPENT_HEAD: readonly Pt[] = [
   [0.56, 0.28],
   [0.9, 0.16],
 ];
+
+/**
+ * How far the lower jaw has swung, per face — 0285. Radians about the hinge; `rest` is as authored.
+ *
+ * ⚠️ **THE JAW IS HINGED RATHER THAN REDRAWN, WHICH IS WHY THERE IS ONE SKULL AND NOT THREE.** Three
+ * authored jaws is three sets of coordinates to keep in step, and the day one of them gains a tooth
+ * the other two do not is the day the animal flickers. One drawing, turned about the point a jaw
+ * actually turns about.
+ */
+/*
+  ⚠️ **NEGATIVE OPENS, AND THE FIRST PASS HAD IT BACKWARDS.** The jaw hangs BELOW its hinge, so a
+  positive turn about that hinge lifts it into the upper jaw and a negative one drops it away. Baked
+  the other way round, `hiss` came back with the widest mouth of the three and `gape` with the
+  narrowest — which is the sort of thing that is obvious in a photograph and invisible in the code.
+*/
+/*
+  ⚠️ **AND IT TURNS BOTH WAYS FROM REST — 0285.** `shut` is the snap: the jaw swung the other way,
+  bringing the front of it up under the snout and meshing the teeth. It stops short of sealed, and
+  that is geometry rather than taste — the hinge sits high and behind, so the standing teeth rise
+  toward the roof of the mouth faster than the chin does, and a turn wide enough to close the front
+  drives them out through the top of the head. Measured: the rear tooth crosses the roof at 0.55
+  radians, so this is 0.42 and the mouth is a hard line rather than a seam.
+*/
+const JAWS = { rest: 0, gape: -0.34, shut: 0.42 } as const;
+type Jaw = keyof typeof JAWS;
+
+/**
+ * One point of the skull with the jaw swung by `turn`.
+ *
+ * ⚠️ **THE SWING FADES TO NOTHING AT THE THROAT**, because a jaw hinged as a rigid plate tears away
+ * from the neck behind it — the weight runs from nothing at the hinge to all of it a quarter of the
+ * skull forward, so the underside bends the way a jaw's does instead of pivoting off the face.
+ */
+function hinged(p: Pt, turn: number, ref: Pt = p): Pt {
+  /*
+    ⚠️ **THIS ASKS NO QUESTION ABOUT WHETHER THE POINT BELONGS TO THE JAW — ITS CALLER ALREADY KNOWS.**
+    The first pass swung everything past `y = 0.02` on the reasoning that the lower jaw is the lower
+    half of the skull. A fang hanging from the UPPER jaw has its tip past that line and its roots
+    behind it, so half of each upper tooth swung and half stayed, and the teeth tore out through the
+    roof of the mouth a fraction of a pixel at a time — reported by `tests/accents.test.ts` on the
+    gape frame only, which is the tell, because that is the only frame where the jaw has moved.
+  */
+  if (turn === 0) return p;
+  /*
+    ⚠️ **THE WHOLE LOWER JAW SWINGS, ITS UNDERSIDE INCLUDED, AND THE FIRST PASS TORE.** A weight that
+    reached zero a quarter of the skull ahead of the throat left the jaw's front rotating and its
+    underside where it was, so the silhouette came apart at the join — photographed, and it read as a
+    loose plate rather than a mouth. The ramp runs the length of the jaw instead: nothing at the
+    throat, all of it by the time the teeth start.
+  */
+  /*
+    ⚠️ **`ref` IS HOW A SMALL MARK STAYS RIGID.** The weight is a function of position, so a triangle
+    whose three corners each take their own turns into a thinner triangle — measured, a fang came back
+    **1.8 CSS pixels across** on the shut face against the 2.5 below which a mark is not drawn at all.
+    A tooth does not bend: every point of one is turned by the weight at its tip.
+  */
+  const weight = Math.min(1, Math.max(0, (0.2 - ref[0]) / 0.5));
+  if (weight === 0) return p;
+  const a = turn * weight;
+  const dx = p[0] - HINGE[0];
+  const dy = p[1] - HINGE[1];
+  return [HINGE[0] + dx * Math.cos(a) - dy * Math.sin(a), HINGE[1] + dx * Math.sin(a) + dy * Math.cos(a)];
+}
+
+/** The skull wearing one of its faces — the authored drawing with its jaw swung. */
+const headOf = (jaw: Jaw): Pt[] => [...SKULL_UPPER, ...SKULL_LOWER.map((p) => hinged(p, JAWS[jaw]))];
+
+/**
+ * A mark drawn ACROSS the gap, with the half of it that rides the lower jaw swung — 0285.
+ *
+ * ⚠️ **THE MOUTH INTERIOR AND THE TONGUE ARE THE ONLY TWO SHAPES THAT ARE NOT IN ONE JAW.** They are
+ * what the mouth encloses, so they have an edge on each jaw and have to stretch as it opens; the
+ * bite line is a real thing for them and not the guess it was for the teeth. Everything else on the
+ * skull belongs to one jaw or the other and is turned, or not, as a whole.
+ */
+const BITE = 0.05;
+const parted = (ps: readonly Pt[], turn: number): Pt[] => ps.map((p) => (p[1] > BITE ? hinged(p, turn) : p));
+
 
 /**
  * How wide one node's flesh is drawn, as a share of the sprite's `r`.
@@ -3695,7 +3834,10 @@ function arcOf(radius: number, from: number, to: number): Pt[] {
  * first pass drew a fully-detailed head that read as a blunt stump"* — a head against open space
  * needs its own light, not only its outline.
  */
-function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin): void {
+function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin, jaw: Jaw, gaze: number): void {
+  const turn = JAWS[jaw];
+  /** A mark drawn across the gap — the mouth interior and the tongue, and nothing else. */
+  const swung = (ps: readonly Pt[]): Pt[] => parted(ps, turn);
   /*
     ⚠️ **THE AURA, BEHIND THE HULL.** `destination-over`, brightest ring first, so each new fill goes
     further back and the falloff stacks outward — 0277 shipped it the other way round once and it
@@ -3714,7 +3856,7 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin): void {
     ctx.globalAlpha = alpha;
     ctx.fillStyle = skin.lit;
     ctx.beginPath();
-    curveLoop(ctx, f, SERPENT_HEAD.map(([x, y]) => [x * swell, y * swell]));
+    curveLoop(ctx, f, headOf(jaw).map(([x, y]) => [x * swell, y * swell]));
     ctx.fill('evenodd');
     ctx.globalAlpha = 1;
   }
@@ -3727,16 +3869,17 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin): void {
   ctx.globalAlpha = 0.85;
   ctx.fillStyle = '#04120d';
   ctx.beginPath();
+  // Its lower corner rides the jaw, so a wider gape shows more throat rather than more background.
   trace(ctx, f, [
     [-0.3, -0.02],
     [-1.06, -0.22],
-    [-1.08, 0.5],
+    hinged([-1.04, 0.42], JAWS[jaw]),
   ]);
   ctx.fill('evenodd');
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
   // One light direction across the whole animal, upper-left — the same one every node is lit from.
-  shaded(ctx, f, [0, -0.7], [0, 0.6], shade(skin.hull, 0.24), shade(skin.hull, -0.42), SERPENT_HEAD, 1, true);
+  shaded(ctx, f, [0, -0.7], [0, 0.6], shade(skin.hull, 0.24), shade(skin.hull, -0.42), headOf(jaw), 1, true);
   /*
     ⚠️ **THE CROWN IS A PLANE AND NOT A PATCH** — 0277 learned it and it is the same here. The top of
     the skull catches the light as one surface running from the horns to the snout, with the side of
@@ -3779,19 +3922,47 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin): void {
     [-0.04, -0.48],
   ], 0.85);
   /*
-    ⚠️ **THE MAW: VENOM LIGHT IN THE WEDGE THE JAWS LEAVE.** Translucent, deliberately — the gape is
-    outside the hull and `tests/accents.test.ts` holds a SOLID mark inside the silhouette and treats
-    anything under 0.9 as a light, which is exactly what this is.
+    ⚠️ **THE MOUTH IS RED, AND THE VENOM LIGHT THAT WAS HERE READ AS A FAULT — 0285.** Reported on
+    sight: *"there's a weird green bit in the mouth."* It was `skin.lit` at 0.55 filling the gape,
+    reasoned from the predecessor's lit gullet — and the predecessor's is lit because that serpent
+    breathes venom. This one's mouth is a mouth: dark red, which is also what the reference handed
+    over shows.
+
+    ⚠️ **TRANSLUCENT, DELIBERATELY.** The gape is a notch, so it is outside the hull, and
+    `tests/accents.test.ts` holds a SOLID mark inside the silhouette while treating anything under 0.9
+    as a light. A mouth interior is the one mark that has to sit in the hole.
   */
-  ctx.globalAlpha = 0.55;
-  ctx.fillStyle = skin.lit;
-  ctx.beginPath();
-  trace(ctx, f, [
-    [-0.34, 0.0],
-    [-0.98, -0.14],
-    [-0.99, 0.4],
-  ]);
-  ctx.fill('evenodd');
+  /*
+    ⚠️ **AND THE SHUT FACE HAS NO MOUTH IN IT, WHICH IS BOTH TRUE AND WHAT THE GUARDS ASKED FOR.** A
+    mouth interior drawn with the jaws closed is a sliver a pixel across — `tests/accents.test.ts`
+    floors a mark at 2.5 CSS pixels, below which it is not drawn faintly but not drawn at all — and a
+    closed mouth has nothing inside it to show anyway.
+  */
+  {
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = '#3a0d12';
+    ctx.beginPath();
+    /*
+      ⚠️ **AND IT IS AUTHORED INSIDE THE NOTCH, NOT ACROSS IT.** Photographed: the wedge's front-lower
+      corner sat 0.09 of a unit ahead of the lower jaw's own tip, so a dark red spike stuck out past
+      the chin on every face. A mouth interior is what the two jaws ENCLOSE, so each of its corners
+      has to be behind the jaw edge it rides — the roof above it, the jaw below it, and the bite at
+      the hinge behind it.
+    */
+    /*
+      ⚠️ **AND IT FOLLOWS THE JAW RATHER THAN CUTTING A CHORD ACROSS IT.** As a triangle it left the
+      strip between its long edge and the jaw's own inner edge unpainted, and the notch is not part
+      of the hull — so that strip photographed as open space, a black bite taken out of the chin
+      between the lower teeth. The wedge has a point on the jaw for the same reason the jaw has one.
+    */
+    trace(ctx, f, swung([
+      [-0.3, 0.01],
+      [-1.0, -0.09],
+      [-0.86, 0.4],
+      [-0.5, 0.22],
+    ]));
+    ctx.fill('evenodd');
+  }
   ctx.globalAlpha = 1;
   /*
     ⚠️ **FOUR FANGS — TWO HANGING AND TWO STANDING**, which is the predecessor's arrangement and the
@@ -3806,13 +3977,55 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin): void {
     exactly what `tests/accents.test.ts` exists to say out loud; 0277 has the same finding about a
     belly band.
   */
-  for (const [tip, a, b] of [
-    [[-0.9, 0.09], [-0.935, -0.05], [-0.865, -0.045]],
-    [[-0.65, 0.08], [-0.675, -0.022], [-0.625, -0.014]],
-    [[-0.52, 0.2], [-0.495, 0.285], [-0.545, 0.302]],
-    [[-0.78, 0.3], [-0.755, 0.395], [-0.805, 0.412]],
-  ] as const) {
-    poly(ctx, f, '#f2fff6', [a, b, tip], 0.95);
+  for (const [fang, swings] of [
+    ...UPPER_FANGS.map((fang) => [fang, false] as const),
+    ...LOWER_FANGS.map((fang) => [fang, true] as const),
+  ]) {
+    /*
+      ⚠️ **THE WHITE IS THE SILHOUETTE'S OWN TOOTH, SHRUNK TOWARD ITS CENTRE — NOT A SECOND TRIANGLE
+      AUTHORED BESIDE IT.** Authored separately it was whack-a-mole across the frames: the hull is a
+      CURVE through its samples and that curve moves as the jaw swings, so an inset that cleared the
+      edge on the resting face was 0.3 of a pixel over it on the open one, and tightening it for the
+      open face pushed a different tooth out on the resting one. One set of points, two shapes.
+
+      ⚠️ **AND IT SWINGS ONLY IF ITS TOOTH DOES.** The shrunk copy has to end up wherever the hull's
+      tooth ended up, which is what `swings` carries down from the two authored lists — the same fact
+      the outline is spliced from, rather than a second guess at it.
+
+      ⚠️ **A TOOTH IS RIGID**: every point of one turns by the weight at its TIP, so a jaw swinging
+      through it cannot shear it thinner than the 2.5 CSS pixels below which a mark is not drawn.
+    */
+    const [tip, a, b] = fang;
+    const cx = (tip[0] + a[0] + b[0]) / 3;
+    const cy = (tip[1] + a[1] + b[1]) / 3;
+    const shrunk: Pt[] = [tip, a, b].map(([x, y]) => [cx + (x - cx) * 0.62, cy + (y - cy) * 0.62]);
+    poly(ctx, f, '#f2fff6', swings ? shrunk.map((p) => hinged(p, turn, tip)) : shrunk, 0.95);
+  }
+  /*
+    ⚠️ **THE FORKED TONGUE, AND ONLY WHEN THE MOUTH IS WIDE — 0285.** Reported: *"no forked tongue or
+    anything."* It is drawn in the gape, so it is outside the hull and translucent for the same reason
+    the mouth interior is; on the shut face it would be a tongue behind closed teeth, and on the
+    resting one it would be permanently out, which is a lizard rather than a snake tasting the air.
+  */
+  /*
+    ⚠️ **AND IT RIDES THE LOWER JAW WHOLE, BECAUSE A TONGUE LIES ON THE FLOOR OF A MOUTH.** The first
+    pass ran it through the same bite-line test the mouth interior uses, which cut it in two: its
+    root swung with the jaw and its tips did not, and it photographed as a crimson spike out through
+    the side of the snout. The mouth interior spans the gap and this does not — it is a mark on one
+    jaw, so it turns with that jaw, all of it, and the fork stays a fork.
+  */
+  if (jaw === 'gape') {
+    const turned = (ps: readonly Pt[]): Pt[] => ps.map((p) => hinged(p, turn, [-0.6, 0.2]));
+    poly(ctx, f, '#c2384a', turned([
+      [-0.38, 0.14],
+      [-0.66, 0.09],
+      [-0.9, 0.0],
+      [-1.09, -0.11],
+      [-0.98, 0.02],
+      [-1.06, 0.13],
+      [-0.88, 0.08],
+      [-0.64, 0.17],
+    ]), 0.88);
   }
   // A lit ridge along the top of the upper jaw, so the snout reads against the dark.
   seam(ctx, f, skin.lit, 0.03, [[-0.34, -0.68], [-0.66, -0.56], [-0.94, -0.44]], 0.6, true);
@@ -3822,17 +4035,28 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin): void {
     *reptile* rather than *creature*. Bigger than 0277's, because the skull is the whole hull now and
     an eye sized for a detail of a fifty-six-unit sprite is a dot on a twenty-unit one.
   */
+  /*
+    ⚠️ **AND THE PUPIL IS WHERE THE WATCHING HAPPENS — 0285.** Reported: *"it needs to be aggressively
+    moving its mouth to watch the player's ship moving."* A head cannot turn — `blit` cannot rotate —
+    so what follows the ship is the SLIT, and `gaze` is which way: −1 for a ship above the animal's
+    own lane, +1 for one below.
+
+    ⚠️ **THE SOCKET AND THE IRIS DO NOT MOVE, ONLY THE SLIT AND ITS CATCHLIGHT.** An eye that slid
+    about inside its own socket would read as a wobble; a pupil crossing a fixed iris reads as a look,
+    which is the whole of what a snake's face does.
+  */
+  const look = gaze * 0.055;
   disc(ctx, f, shade(skin.plate, -0.65), -0.3, -0.34, 0.19);
   disc(ctx, f, skin.eye, -0.3, -0.34, 0.15);
   poly(ctx, f, '#100c04', [
-    [-0.34, -0.46],
-    [-0.26, -0.46],
-    [-0.24, -0.34],
-    [-0.26, -0.22],
-    [-0.34, -0.22],
-    [-0.36, -0.34],
+    [-0.34, -0.46 + look],
+    [-0.26, -0.46 + look],
+    [-0.24, -0.34 + look],
+    [-0.26, -0.22 + look],
+    [-0.34, -0.22 + look],
+    [-0.36, -0.34 + look],
   ]);
-  disc(ctx, f, '#fffdf2', -0.35, -0.4, 0.045, 0.85);
+  disc(ctx, f, '#fffdf2', -0.35, -0.4 + look, 0.045, 0.85);
   // The nostril, high on the snout.
   disc(ctx, f, shade(skin.plate, -0.6), -0.86, -0.34, 0.035);
   /*
@@ -5159,20 +5383,39 @@ export function drawKind(
       one shadowed plate, one lit edge and an eye, and no more until each boss's own decision says
       what its picture is for.
     */
+    case 'boss8Up':
+    case 'boss8Down':
+    case 'boss8Gape':
+    case 'boss8GapeHit':
+    case 'boss8Shut':
+    case 'boss8ShutHit': {
+      /*
+        THE SERPENT'S OTHER FACES — 0285. One skull, its jaw hinged and its pupil moved.
+        `boss8Up` and `boss8Down` are the same silhouette watching a ship above or below its own
+        lane; `boss8Gape` is the strike, jaw wide with the throat red and the tongue out; and
+        `boss8Shut` is the snap, jaw closed on a ship crossing in front of the head.
+      */
+      const jaw: Jaw = kind.startsWith('boss8Gape') ? 'gape' : kind.startsWith('boss8Shut') ? 'shut' : 'rest';
+      const gaze = kind === 'boss8Up' ? -1 : kind === 'boss8Down' ? 1 : 0;
+      curveLoop(ctx, f, headOf(jaw));
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintSerpentHead(ctx, f, skin, jaw, gaze);
+      return;
+    }
     case 'boss8':
     case 'boss8Hit':
       /*
-        THE SERPENT'S SKULL — 0283. It was the whole animal until the body became a chain of its own
-        (`src/app/frame.ts`), and what is left in this box is the head: the same drawing 0264, 0276
-        and 0277 converged on, at the one scale that makes a skull fill a twenty-unit tile.
+        THE SERPENT'S SKULL — 0283, drawn for menace by 0284 and given faces by 0285. This is the
+        resting one: jaw part-open, looking straight down its own lane.
 
         The outline is a CURVE — `curveLoop` rather than `trace` — so the snout and the brow are the
         curves a skull has rather than the corners its samples are.
       */
-      curveLoop(ctx, f, SERPENT_HEAD);
+      curveLoop(ctx, f, headOf('rest'));
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
-      if (skin !== null) paintSerpentHead(ctx, f, skin);
+      if (skin !== null) paintSerpentHead(ctx, f, skin, 'rest', 0);
       return;
     case 'serpentBody':
     case 'serpentBodyHit':

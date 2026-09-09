@@ -65,6 +65,51 @@ Four defects in this pass were **invisible to every guard in the repository** an
 photograph: the body baking pink, a chord ruled across every node, a stack of croissants, and a
 caterpillar at four-to-one. Four more were invisible in a photograph and obvious to a guard.
 
+## ⚠️ The second play, the same day, on the head 0284 drew
+
+> *"getting better, there's a weird green bit in the mouth, no forked tongue or anything and the body
+> is short and squat, it should be long enough to stretch off the screen for a serpent → I mean add
+> more segements, not stretch out the segments that are there."*
+>
+> *"it also needs to be aggresively moving is mouth to watch the player's ship moving — the body is
+> animated now which is good, but it still feels like a non-interactive wall object rather than a
+> living space serpent trying to battle the player."*
+
+**The green bit was a copied reason rather than a copied mark.** The gape was filled with `skin.lit`
+at 0.55, reasoned from the predecessor's lit gullet — and the predecessor's serpent breathes venom.
+The reference handed over shows a dark red mouth, which is what a mouth is.
+
+⚠️ **AND THE SECOND HALF IS NOT *THE MOUTH DOES NOT MOVE*.** It already moved: 0284's `boss8Gape`
+opens the jaw wide in the steps before a volley. What was reported is *non-interactive* — the mouth
+moved when the FIGHT said so, never when the PLAYER did, so it was the same animation at the same
+moment for every player and every run. That is
+[0282](../docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md)'s subject
+arriving from the other direction, and it is why the fix is a snap armed by the ship crossing the head
+rather than a jaw on a timer — a timer answers the words and not the report.
+
+## ⚠️ And the loop paid for itself again, in both directions
+
+Four defects on this pass were **invisible to every guard and obvious in one photograph**: the mouth
+interior spiking out past the chin on every face, the tongue torn in half and reading as a crimson
+spike through the snout, a black bite out of the jaw where the wedge cut a chord across the notch,
+and — for the fourth time — a serpent sprite baking in the generic foe skin, a grey head with a red
+eye.
+
+⚠️ **AND ONE DEFECT WAS THE OPPOSITE: A GUARD REPORTING A REAL FAULT IN A NUMBER THAT LOOKED
+TUNEABLE.** Sub-pixel containment failures on the painted fangs were chased for half a day by moving
+a shrink factor between two floors it could not satisfy at once. The fault was that the upper teeth
+were being swung by the lower jaw, and the number the guard reported was the size of the tear rather
+than the size of the margin. **A floor that cannot be satisfied from either side is not a floor that
+needs moving.**
+
 ## What was answered, and where
 
 [0284](../docs/decisions/0284-the-head-is-a-serpents.md): the gap, the tail's point, and the face.
+
+[0285](../docs/decisions/0285-the-mouth-is-alive.md): the green mouth, the forked tongue, and the jaw
+that answers the player.
+
+**Still owed:** *"add more segments, not stretch out the segments that are there."* Its own change,
+and it reopens `tests/budget.test.ts`'s 500-entity worst case and `tests/level.test.ts`'s rule that a
+boss fits on the screen — which is the rule a serpent stretching off the leading edge is meant to
+break.

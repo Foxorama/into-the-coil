@@ -35,9 +35,12 @@ import { THEMES, THEME_KINDS, holdOf, mixOf, rungOf, scaleOf, type ThemeKind } f
 import { roleOf } from '../src/content/arrangement.ts';
 import { DUCK_FLOOR_DB, carriedThrough, soundingAt } from './pace.ts';
 import { AA_FLOOR, contrast } from './contrast.ts';
-import { DECOR_INKS, PALETTES, type PaletteName } from '../src/content/palette.ts';
-import { SPRITE_EXTENT } from '../src/content/sprites.ts';
-import { bakeSize, cloudCover } from '../src/render/bake.ts';
+import { DECOR_INKS, DEFAULT_PALETTE, PALETTES, type PaletteName } from '../src/content/palette.ts';
+import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { BOSSES } from '../src/content/bosses.ts';
+import { bakeSize, cloudCover, drawKind } from '../src/render/bake.ts';
+import { viewOf } from '../src/sim/camera.ts';
+import { tracingPen } from './paths.ts';
 
 /** sRGB blend, which is what a gradient over a backdrop produces — the same one `tests/sky.test.ts` uses. */
 function over(base: string, top: string, alpha: number): string {
@@ -147,6 +150,39 @@ function measureBlade(): void {
 }
 
 /**
+ * 0285 — the serpent's jaw moves a twentieth of its skull each way. The direction of the two throws
+ * is an invariant and fails hard in `tests/accents.test.ts`; how far each one moves the picture is a
+ * property of where the hinge sits, so a redrawn skull could redden it and be right.
+ */
+function measureThrow(): void {
+  const face = BOSSES.jormungandr.face;
+  if (face === null) throw new Error('the serpent has no faces');
+  /** The area a face's outline encloses, in CSS pixels² of a 1280×720 screen. A wider mouth is less. */
+  const fleshOf = (index: number): number => {
+    const kind = SPRITE_KINDS[index]!;
+    const { pen, trace } = tracingPen();
+    drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], SPRITE_EXTENT[kind] * viewOf(1280, 720).scale, 'approach');
+    const hull = trace.passes[0]!.subpaths[0]!;
+    let twice = 0;
+    for (let i = 0; i < hull.length; i++) {
+      const [ax, ay] = hull[i]!;
+      const [bx, by] = hull[(i + 1) % hull.length]!;
+      twice += ax * by - bx * ay;
+    }
+    return Math.abs(twice) / 2;
+  };
+  const shut = fleshOf(face.shut);
+  const rest = fleshOf(face.rest);
+  const gape = fleshOf(face.gape);
+  const step = rest / 20;
+  const pct = (a: number, b: number): string => `${(((a - b) / rest) * 100).toFixed(1)}%`;
+  observe('0285-throw', shut - rest >= step && rest - gape >= step, [
+    `the snap closes ${pct(shut, rest)} of the skull and the strike opens ${pct(rest, gape)}, against a twentieth ` +
+      `either way — ${shut.toFixed(0)}px² shut, ${rest.toFixed(0)}px² at rest, ${gape.toFixed(0)}px² agape`,
+  ]);
+}
+
+/**
  * 0198 — the three WCAG floors the accessibility pass will restore.
  *
  * ⚠️ **DEFERRED IS NOT UNMEASURED.** `docs/decisions/0198-the-accessibility-pass-comes-after-the-game.md`
@@ -194,6 +230,7 @@ function measureAll(): void {
   measureAA();
   measureCycle();
   measureBlade();
+  measureThrow();
 }
 
 /**

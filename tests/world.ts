@@ -108,6 +108,8 @@ export function inertLevel(): {
   bossTrail: Float32Array;
   bossTrailAt: number;
   chainPhase: number;
+  bossBite: number;
+  bossGazeSide: number;
   bossSpawned: boolean;
   bossBeaten: boolean;
   clearedIn: number;
@@ -176,6 +178,8 @@ export function inertLevel(): {
     bossTrail: new Float32Array(CHAIN_TRAIL),
     bossTrailAt: 0,
     chainPhase: 0,
+    bossBite: 0,
+    bossGazeSide: 0,
     bossSpawned: false,
     bossBeaten: false,
     clearedIn: 0,
@@ -401,6 +405,8 @@ export function playableWorld(
     bossTrail: new Float32Array(CHAIN_TRAIL),
     bossTrailAt: 0,
     chainPhase: 0,
+    bossBite: 0,
+    bossGazeSide: 0,
     bossSpawned: false,
     bossBeaten: false,
     clearedIn: 0,

@@ -636,6 +636,42 @@ export interface Chain {
   lag: number;
 }
 
+/**
+ * The faces a boss's head wears — `docs/decisions/0285-the-mouth-is-alive.md`.
+ *
+ * ⚠️ **`null` ON THIRTEEN ROWS, ON `chain`'s OWN TERMS.** A hull that fills its own box has no face
+ * to move; a creature does. Reported of the serpent: *"it needs to be aggressively moving its mouth
+ * to watch the player's ship moving… it still feels like a non-interactive wall object rather than a
+ * living space serpent trying to battle the player."*
+ *
+ * ⚠️ **FRAMES, BECAUSE `blit` CANNOT ROTATE OR DEFORM.** A jaw that opens is a second drawing —
+ * `src/content/exhaust.ts` reached the same conclusion for a flame, and
+ * [0280](../../docs/decisions/0280-a-cheap-mechanism-does-not-rename-the-ask.md) reached it for every
+ * enemy in the game after a scale-pulse was shipped in place of animation.
+ *
+ * ⚠️ **AND THE ROW NAMES THEM RATHER THAN THE FRAME PICKING THEM OFF A LIST** — 0282. A second
+ * creature with a face wears its own, and if it cannot, this type is wrong.
+ */
+export interface Face {
+  /** Jaw part-open, looking down its own lane. What it wears between strikes. */
+  rest: number;
+  restHit: number;
+  /** The same silhouette, pupil up-lane and down-lane of its own centre. Both share `restHit`. */
+  up: number;
+  down: number;
+  /** Jaw wide and the tongue out: what it wears in the steps before a volley leaves. */
+  gape: number;
+  gapeHit: number;
+  /**
+   * Jaw closed: what it wears for the few steps after the ship crosses in front of it — 0285.
+   *
+   * ⚠️ **A SNAP IS NOT A TELL AND MUST NOT BE READ AS ONE.** It turns the jaw the OTHER way from
+   * `gape`, so the two are a ladder either side of `rest` rather than two degrees of the same thing.
+   */
+  shut: number;
+  shutHit: number;
+}
+
 export interface BossPhase {
   /**
    * Active while remaining health is at or below this fraction of the row's full `health`.
@@ -800,6 +836,8 @@ export interface BossRow extends Body {
    * the mistake 0282 is named for.
    */
   chain: Chain | null;
+  /** The faces its head wears, or `null` — 0285. Required, on `chain`s own terms. */
+  face: Face | null;
   /** Full health to empty. The first entry must cover a full-health boss. */
   phases: readonly BossPhase[];
 }
@@ -848,6 +886,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chill: null,
     muzzle: null,
     chain: null,
+    face: null,
     sprite: SPRITE.boss,
     spriteHit: SPRITE.bossHit,
     radius: 11,
@@ -921,6 +960,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chill: null,
     muzzle: null,
     chain: null,
+    face: null,
     sprite: SPRITE.boss2,
     spriteHit: SPRITE.boss2Hit,
     radius: 12.5,
@@ -982,6 +1022,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chill: null,
     muzzle: null,
     chain: null,
+    face: null,
     sprite: SPRITE.boss3,
     spriteHit: SPRITE.boss3Hit,
     radius: 11.5,
@@ -1036,6 +1077,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chill: null,
     muzzle: null,
     chain: null,
+    face: null,
     sprite: SPRITE.boss4,
     spriteHit: SPRITE.boss4Hit,
     radius: 13,
@@ -1078,6 +1120,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chill: null,
     muzzle: null,
     chain: null,
+    face: null,
     sprite: SPRITE.boss5,
     spriteHit: SPRITE.boss5Hit,
     radius: 14,
@@ -1138,6 +1181,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chill: null,
     muzzle: null,
     chain: null,
+    face: null,
     sprite: SPRITE.boss6,
     spriteHit: SPRITE.boss6Hit,
     radius: 12.5,
@@ -1209,6 +1253,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chill: null,
     muzzle: null,
     chain: null,
+    face: null,
     sprite: SPRITE.boss7,
     spriteHit: SPRITE.boss7Hit,
     radius: 16,
@@ -1356,6 +1401,21 @@ export const BOSSES: Record<BossKind, BossRow> = {
       sixty-two units against the forty-nine the old sprite actually drew inside its fifty-six-unit
       box — and unlike that box, none of this is spent on the empty corners a ribbon leaves.
     */
+    /*
+      ⚠️ **FIVE FACES AND THREE SILHOUETTES — 0285.** `up` and `down` move the pupil and nothing else,
+      so they wear `restHit`: a hurt twin is the silhouette with no paint on it (0035), and three
+      identical white shapes would be three identical bakes.
+    */
+    face: {
+      rest: SPRITE.boss8,
+      restHit: SPRITE.boss8Hit,
+      up: SPRITE.boss8Up,
+      down: SPRITE.boss8Down,
+      gape: SPRITE.boss8Gape,
+      gapeHit: SPRITE.boss8GapeHit,
+      shut: SPRITE.boss8Shut,
+      shutHit: SPRITE.boss8ShutHit,
+    },
     chain: {
       sprite: SPRITE.serpentBody,
       spriteHit: SPRITE.serpentBodyHit,
@@ -1500,6 +1560,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chill: null,
     muzzle: null,
     chain: null,
+    face: null,
     sprite: SPRITE.boss9,
     spriteHit: SPRITE.boss9Hit,
     radius: 15,
@@ -1546,6 +1607,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chill: null,
     muzzle: null,
     chain: null,
+    face: null,
     sprite: SPRITE.boss10,
     spriteHit: SPRITE.boss10Hit,
     radius: 15,
@@ -1591,6 +1653,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chill: null,
     muzzle: null,
     chain: null,
+    face: null,
     sprite: SPRITE.boss11,
     spriteHit: SPRITE.boss11Hit,
     radius: 14,
@@ -1627,6 +1690,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chill: { radius: 30, slow: 0.5, freezeAfter: 45, frozenFor: 30 },
     muzzle: null,
     chain: null,
+    face: null,
     sprite: SPRITE.boss12,
     spriteHit: SPRITE.boss12Hit,
     radius: 13,
@@ -1673,6 +1737,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chill: null,
     muzzle: null,
     chain: null,
+    face: null,
     sprite: SPRITE.boss13,
     spriteHit: SPRITE.boss13Hit,
     radius: 16,
@@ -1776,6 +1841,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chill: null,
     muzzle: null,
     chain: null,
+    face: null,
     sprite: SPRITE.boss14,
     spriteHit: SPRITE.boss14Hit,
     radius: 17,
