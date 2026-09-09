@@ -86,6 +86,15 @@ outgoing heading by up to `PICKUP_BOUNCE_KICK` — about ten degrees, from its o
 way in a corner sticks to it: the reflection fires every step and the roll keeps undoing it, which is
 a pickup vibrating on a line — the exact reading this decision exists to remove.
 
+⚠️ **THE KICK IS UNGUARDED, AND THAT IS A FINDING RATHER THAN AN OVERSIGHT.** Two guards were written
+for it and both were refused by the harness. *No two turning places* cannot see it — an along
+reversal happens AT the wall whether or not the heading was rolled. *No two crossings repeat* cannot
+either, and the reason is the cadence: **a pickup crosses the box in about nine seconds and waits
+about nineteen, so it meets a wall once or twice in a whole life.** At that rate a closed path and a
+rolled one are the same picture, and the roll is insurance against a wait that never happens rather
+than a thing the player will see. It is kept because the report asks for it and it costs nothing; it
+is written down as unheld because a guard that passes for the wrong reason is worse than none.
+
 ## What is held, and where
 
 | Claim | Where |

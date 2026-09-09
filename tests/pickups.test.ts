@@ -1461,6 +1461,18 @@ describe('collecting one, in the real frame', () => {
         reversals / seconds,
         `the pickup turned back ${reversals} times in ${seconds.toFixed(1)}s, which is a shiver and not a float`,
       ).toBeLessThan(0.5);
+      /*
+        ⚠️ **AND NO TWO CROSSINGS REPEAT, WHICH IS THE WORD *randomly* AND WAS UNGUARDED.** A perfect
+        reflection off two parallel walls is a closed path: the pickup runs the same line for its whole
+        wait, turning at the same two places for ever. Every assertion above passes on that — it turns,
+        and not too often — which is why `npm run prove` reported **STILL GREEN** for *the float given
+        a heading it keeps*. The kick had no guard at all until the harness said so.
+
+        ⚠️ **AND THE BOUNCE ROLL IS NOT MEASURED HERE, BECAUSE IT CANNOT BE.** A pickup crosses the
+        box in about nine seconds and waits about nineteen, so it meets a wall once or twice in a
+        whole life — far too few for *no two crossings repeat* to be a thing a fixture can see. The
+        decision says so rather than carrying an assertion that passes for the wrong reason.
+      */
     });
 
 

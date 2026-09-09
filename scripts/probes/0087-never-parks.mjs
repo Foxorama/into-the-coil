@@ -39,59 +39,42 @@ export const PROBES = [
       to be. The pickup still slows, still closes, still bobs — it simply ends its wait somewhere
       arbitrary, which nothing but a guard on the destination can see.
     */
-    broke: 'the station typed rather than derived, so the wait begins nowhere in particular',
-    // ⚠️ Re-aimed by 0233 at the guard that can see it: the wait is a wander of the box now, and
-    // where it begins is the front wall — a typed distance is a wander that starts in the middle
-    // of the screen, which only a guard on the wander's own extent notices.
-    suite: 'tests/weapons.test.ts',
-    guard: 'wanders the whole box',
-    edit: {
-      path: 'src/app/frame.ts',
-      // ⚠️ Re-anchored by 0233: the wait begins at the front wall of the box now, and a typed number
-      // is a wander that begins in the middle of the screen.
-      find: 'const PICKUP_SLOW_AT = PLAYER_LEAD - PICKUP_TURN_ROOM;',
-      replace: 'const PICKUP_SLOW_AT = 100;',
-    },
-  },
-  {
-    decision: '0087',
+    broke: 'the float begun outside the box, so a pickup waits where the ship cannot fly',
+    /*
+      ⚠️ **Re-aimed by 0233 at the wander's extent, and again by 0293 at the thing that still bites.**
+      0087 derived this from the ship's own place so that a pickup nobody touches ARRIVES at it; 0233
+      moved it to the front wall of the box; 0293's float does not close on the ship at all, so
+      *typed rather than derived* stopped naming a defect — the probe changed a hundred to a hundred
+      and the suite stayed **STILL GREEN**, which `npm run prove` reported.
+
+      ⚠️ **WHAT THIS NUMBER DOES NOW IS SAY WHERE THE FLOAT BEGINS**, and it is load-bearing for one
+      reason: begun beyond `PLAYER_LEAD` the pickup starts bouncing outside the box, in the part of
+      the screen 0100 reported as *"visible but the player cannot get to them"*. That is the same
+      failure this probe has always been about, in the mechanism that exists.
+    */
     suite: 'tests/pickups.test.ts',
-    /*
-      ⚠️ THE BOB'S PHASE PUT BACK ON A MOVING QUANTITY, which is the defect this decision found rather
-      than one it introduced. `item.across` drifts, so it does not offset the phase — it advances it,
-      about three times faster than the camera does, and the lag then attenuates the bob to a third of
-      the amplitude the constant describes.
-
-      ⚠️ IT IS THE EDIT ANYBODY WOULD MAKE, because `across` is a field the pickup already has and
-      `bobPhase` is one it had to be given. The picture is a pickup that still bobs — just too little
-      to come forward, which is the thing 0077's guard is about and the thing nothing else can see.
-    */
-    broke: 'the float given a heading it keeps, so a bounce is a reflection and two walls are a loop',
-    /*
-      ── ⚠️ THIS RESTORED THE BOB'S PHASE BUG, AND 0293 LEFT IT NOTHING TO RESTORE ────────────────
-
-      It put the bob's phase back on `item.across` — a field that DRIFTS, so it advanced the phase
-      rather than offsetting it and the wander ran at a quarter of its stated period. A real bug,
-      found by measuring the track rather than by reading the line, and worth the probe it got.
-
-      ⚠️ **THERE IS NO BOB NOW.** 0293 replaced the wander, the bob and the lag with one float at one
-      speed, on the report that the three together read as *"random speed and direction weirdly… really
-      weird and wonky"*, and the guard this probe named went with them. **A probe whose guard no longer
-      exists cannot be re-anchored** — it can only be deleted, or pointed at something it never
-      protected, and the second is how a probe becomes a tick.
-
-      ⚠️ **SO IT IS RE-AIMED AT THE THING THAT REPLACED WHAT IT WAS ABOUT.** The bob existed to stop a
-      waiting pickup holding one line; the float's answer to the same problem is the kick on the
-      bounce, without which two parallel walls reflect a straight line onto itself for ever. Same
-      claim, this decision's mechanism.
-    */
-    guard: '0293 — and it turns only where it hits something',
+    guard: 'waits somewhere the ship can actually fly to',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  const kick = w.floatRng.range(-PICKUP_BOUNCE_KICK, PICKUP_BOUNCE_KICK);',
-      replace: '  const kick = 0;',
+      find: 'const PICKUP_SLOW_AT = PLAYER_LEAD - PICKUP_TURN_ROOM;',
+      replace: 'const PICKUP_SLOW_AT = PLAYER_LEAD + 40;',
     },
   },
+  /*
+    ── THE BOB PROBE WAS HERE, AND 0293 RETIRED IT ─────────────────────────────────────────────────
+
+    It restored the defect this decision found: the bob phase taken off a field that DRIFTS, so it
+    advanced the phase rather than offsetting it and the wander ran at a quarter of its stated
+    period. A real bug, found by measuring the track rather than by reading the line.
+
+    docs/decisions/0293-a-pickup-floats.md replaced the wander, the bob and the lag with one float,
+    and the guard this probe named went with them. It was re-aimed once, at the roll on the bounce
+    that answers the same problem the bob did — and came back STILL GREEN, because a pickup meets a
+    wall once or twice in a whole wait and no fixture can see two crossings repeat at that cadence.
+
+    So it is deleted rather than pointed at something it never protected. A probe that reddens the
+    wrong guard, or none, is worse than an absent one: it reads as cover.
+  */
   {
     decision: '0087',
     suite: 'tests/pickups.test.ts',

@@ -4012,8 +4012,26 @@ function driftPickups(w: World): void {
       item.spriteHit = item.spriteBase;
       item.faceIn = PICKUP_CYCLE_STEPS;
     }
-    if (item.across - item.radius <= 0) item.velAcross = Math.abs(item.velAcross);
-    else if (item.across + item.radius >= ACROSS_SPAN) item.velAcross = -Math.abs(item.velAcross);
+    /*
+      ⚠️ **ONE LANE WALL, AND IT DISPATCHES ON WHETHER THE PICKUP HAS ARRIVED — 0293.** This turned
+      every pickup by flipping the sign of `velAcross`, which is right for one still approaching and
+      for a scattered piece still flying its throw. A FLOATING pickup needs the reflection that
+      carries the bounce's roll, or the lane is the one pair of walls its heading never varies at.
+
+      ⚠️ **AND FOR ONE COMMIT THERE WERE TWO OF THESE.** The float's own across bounce was added lower
+      down while this stayed here — and this one runs first, so it flipped the sign and the float's
+      condition was never true. The lane bounced without a kick, silently, and `npm run prove` found
+      it: 0048's probe removes these lines and the suite stayed **STILL GREEN**, because the second
+      mechanism was covering for the first.
+    */
+    const arrived = item.spin !== 0;
+    if (item.across - item.radius <= 0) {
+      if (arrived) bounceFloat(w, item, 0, 1);
+      else item.velAcross = Math.abs(item.velAcross);
+    } else if (item.across + item.radius >= ACROSS_SPAN) {
+      if (arrived) bounceFloat(w, item, 0, -1);
+      else item.velAcross = -Math.abs(item.velAcross);
+    }
     /*
       ── AND THE SAME RULE ON THE OTHER AXIS, WHICH IT HAS NEVER HAD ────────────────────────────────
 
@@ -4207,8 +4225,7 @@ function driftPickups(w: World): void {
     const ceiling = PLAYER_LEAD - item.radius;
     if (inView <= floor && item.velAlong < w.scrollPerStep) bounceFloat(w, item, 1, 0);
     else if (inView >= ceiling && item.velAlong > w.scrollPerStep) bounceFloat(w, item, -1, 0);
-    if (item.across - item.radius <= 0 && item.velAcross < 0) bounceFloat(w, item, 0, 1);
-    else if (item.across + item.radius >= ACROSS_SPAN && item.velAcross > 0) bounceFloat(w, item, 0, -1);
+    // The lane's own pair is at the top of this loop, where every pickup has always turned at it.
   }
 }
 
@@ -4279,9 +4296,17 @@ function bounceFloat(w: World, item: Entity, nAlong: number, nAcross: number): v
     outAlong = turnedAlong;
     outAcross = turnedAcross;
   }
-  const speed = Math.hypot(outAlong, outAcross) || PICKUP_FLOAT;
-  item.velAlong = w.scrollPerStep + (outAlong / speed) * PICKUP_FLOAT;
-  item.velAcross = (outAcross / speed) * PICKUP_FLOAT;
+  /*
+    ⚠️ **THE SPEED IS CARRIED THROUGH, NOT SET — A REFLECTION PRESERVES IT BY DEFINITION.** Writing
+    `PICKUP_FLOAT` here snapped a pickup that was still settling off its approach: it met the lane
+    wall at 0.6 units a step, left at 0.28, and `and it never stops dead` called that an impact at
+    0.33 on one frame. Which it is. The float's speed is `floatAt`'s to settle, over about three
+    quarters of a second; a wall only turns the thing.
+  */
+  const was = Math.hypot(along, across);
+  const speed = Math.hypot(outAlong, outAcross) || 1;
+  item.velAlong = w.scrollPerStep + (outAlong / speed) * was;
+  item.velAcross = (outAcross / speed) * was;
 }
 
 /**
