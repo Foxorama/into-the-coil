@@ -24,8 +24,10 @@ export const PROBES = [
       path: 'src/app/frame.ts',
       // ⚠️ Re-aimed by 0233: the closing share is gone and the wander is the closing rate. A wander
       // of zero is the same break — a waiting pickup holding station on one line.
-      find: 'const PICKUP_WANDER = 0.28;',
-      replace: 'const PICKUP_WANDER = 0;',
+      // ⚠️ Re-aimed again by 0293: the wander is a FLOAT now, and a float of zero is the same
+      // break — a waiting pickup holding station on one line.
+      find: 'const PICKUP_FLOAT = 0.28;',
+      replace: 'const PICKUP_FLOAT = 0;',
     },
   },
   {
@@ -64,17 +66,30 @@ export const PROBES = [
       `bobPhase` is one it had to be given. The picture is a pickup that still bobs — just too little
       to come forward, which is the thing 0077's guard is about and the thing nothing else can see.
     */
-    broke: 'the bob’s phase taken from a field that drifts, so the wander runs at a quarter of its period',
-    // ⚠️ Re-aimed by 0233 at 0064's *it stops running away*, and that caught it by a sixth of a
-    // second. Re-aimed again by 0234: a third weapon face lengthened the wait and the margin went the
-    // other way (STILL GREEN), so the guard is now the bob's own rhythm in seconds — the ease smears
-    // a phase that runs off `across` to nearly nothing, and the pickup turns back only where the
-    // wander does.
-    guard: 'and the bob is a bob and not a shiver',
+    broke: 'the float given a heading it keeps, so a bounce is a reflection and two walls are a loop',
+    /*
+      ── ⚠️ THIS RESTORED THE BOB'S PHASE BUG, AND 0293 LEFT IT NOTHING TO RESTORE ────────────────
+
+      It put the bob's phase back on `item.across` — a field that DRIFTS, so it advanced the phase
+      rather than offsetting it and the wander ran at a quarter of its stated period. A real bug,
+      found by measuring the track rather than by reading the line, and worth the probe it got.
+
+      ⚠️ **THERE IS NO BOB NOW.** 0293 replaced the wander, the bob and the lag with one float at one
+      speed, on the report that the three together read as *"random speed and direction weirdly… really
+      weird and wonky"*, and the guard this probe named went with them. **A probe whose guard no longer
+      exists cannot be re-anchored** — it can only be deleted, or pointed at something it never
+      protected, and the second is how a probe becomes a tick.
+
+      ⚠️ **SO IT IS RE-AIMED AT THE THING THAT REPLACED WHAT IT WAS ABOUT.** The bob existed to stop a
+      waiting pickup holding one line; the float's answer to the same problem is the kick on the
+      bounce, without which two parallel walls reflect a straight line onto itself for ever. Same
+      claim, this decision's mechanism.
+    */
+    guard: '0293 — and it turns only where it hits something',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      PICKUP_BOB_SPEED * Math.sin(w.cameraAlong / PICKUP_BOB_UNITS + item.bobPhase);',
-      replace: '      PICKUP_BOB_SPEED * Math.sin(w.cameraAlong / PICKUP_BOB_UNITS + item.across);',
+      find: '  const kick = w.floatRng.range(-PICKUP_BOUNCE_KICK, PICKUP_BOUNCE_KICK);',
+      replace: '  const kick = 0;',
     },
   },
   {
@@ -95,9 +110,13 @@ export const PROBES = [
     guard: 'waits somewhere the ship can actually fly to',
     edit: {
       path: 'src/app/frame.ts',
-      // ⚠️ Re-anchored by 0233, which reads the distance into a local the wander also uses.
+      /*
+        ⚠️ **Re-anchored by 0233**, which reads the distance into a local the wander also uses, and by
+        **0293**, which gated the branch on `spin` as well — a floating pickup that drifts back above
+        `PICKUP_SLOW_AT` must not fall into the approach again, and did, and reached 182 units.
+      */
       find:
-        '    if (inView > PICKUP_SLOW_AT) {\n' +
+        '    if (item.spin === 0 && inView > PICKUP_SLOW_AT) {\n' +
         '      item.velAlong += (0 - item.velAlong) * PICKUP_EASE;\n' +
         '      continue;\n' +
         '    }\n',

@@ -28,8 +28,21 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0233: the wait is a wander of the box now, and holding station is the
       // scroll rate plus a heading. Zeroing both is the wait removed — a body with no speed of its
       // own falls back through the view.
-      find: '      w.scrollPerStep +\n      item.spin * PICKUP_WANDER +',
-      replace: '      0 +\n      0 * item.spin * PICKUP_WANDER +',
+      /*
+        ⚠️ **Re-anchored by 0293**, which replaced the wander-plus-bob-plus-lag with one float.
+
+        ⚠️ **AND THE OBVIOUS BREAK WAS TOO BROAD, WHICH THE HARNESS SAID BEFORE A READER DID.** Deleting
+        the `floatAt` call leaves the arrival's ease with nothing after it — the pickup falls back
+        through the view, which IS this probe's sentence — but it also leaves the wall bounce snapping
+        a 0.9-unit approach to 0.28 on one frame, so `and it never stops dead` fired first and the run
+        came back **WRONG TEST**. A probe that reddens two guards has not shown which one holds what.
+
+        ⚠️ **SO THE BREAK IS THE SPEED ITSELF.** A float faster than the camera is a pickup that never
+        stops running away, which is the whole of what this guard is named for and touches nothing
+        else.
+      */
+      find: 'const PICKUP_FLOAT = 0.28;',
+      replace: 'const PICKUP_FLOAT = 1.2;',
     },
   },
   {

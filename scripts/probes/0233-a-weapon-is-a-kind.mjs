@@ -107,8 +107,14 @@ export const PROBES = [
     guard: 'wanders the whole box',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    if (inView <= PLAYER_ALONG_MARGIN + PICKUP_TURN_ROOM) item.spin = 1;\n    else if (inView >= PLAYER_LEAD - PICKUP_TURN_ROOM) item.spin = -1;',
-      replace: '    if (inView >= PLAYER_LEAD - PICKUP_TURN_ROOM) item.spin = -1;',
+      /*
+        ⚠️ **Re-anchored by 0293**, which made the wander a float and the soft turn a real bounce. The
+        break is the same one: take the back wall away and the pickup carries on down the view, out of
+        the box the ship can fly in and into the part of the screen 0100 reported as *"visible but the
+        player cannot get to them"*.
+      */
+      find: '    if (inView <= floor && item.velAlong < w.scrollPerStep) bounceFloat(w, item, 1, 0);\n    else',
+      replace: '    if',
     },
   },
   {

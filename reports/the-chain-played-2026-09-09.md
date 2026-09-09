@@ -240,7 +240,7 @@ Recorded here because chat evaporates between sessions and this is what `reports
 
 Recorded verbatim because chat evaporates between sessions — 0029. **None of these has been started.**
 
-1. **The floating pick-ups.** *"I wasn't clear enough in my original prompt, I wanted them to float
+1. ~~**The floating pick-ups.**~~ Answered by [0293](../docs/decisions/0293-a-pickup-floats.md) — one speed, one heading, turning only at a wall of the box the ship can fly in. **It gives up 0087's delivery**: standing still no longer brings the pickup to you. Not played yet. *"I wasn't clear enough in my original prompt, I wanted them to float
    around the screen and bounce randomly when hitting the edge of the screen. What we've got in game
    is random speed and direction weirdly on the power ups and makes picking them up feel really weird
    and wonky."* ⚠️ Note the shape of this: the ask was misread, not mis-built —
