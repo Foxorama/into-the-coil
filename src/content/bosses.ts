@@ -1361,7 +1361,20 @@ export const BOSSES: Record<BossKind, BossRow> = {
       its two sides swapped — the same fault the 16 → 22 change was fixing when the hull was the whole
       animal.
     */
-    radius: 7,
+    /*
+      ⚠️ **7 → 8.4, WITH THE SKULL, AND NOT BECAUSE ANYTHING ASKED FOR A BIGGER HURTBOX — 0288.** A
+      radius that stayed at 7 under a head drawn twenty per cent larger is a head with edges the
+      player can shoot through, which is 0036's *an event the model resolves and the picture never
+      mentions* pointed the other way round: the picture says HIT and the model says miss.
+
+      ⚠️ **AND WHAT IT COSTS THE FIGHT WAS MEASURED RATHER THAN ASSUMED.** 0260's forty-second floor
+      computes time-to-kill as `health × toughness / FASTEST` and has no hurtbox in it at all, so it
+      would have stayed green through any amount of this. Driven at max weapons, the fight is **66.0s
+      before and 59.0s after** — a bigger target catches more of the fan — so the resize costs 11% of
+      the fight, and it lands 19 seconds above 0260's floor rather than under it. The decision has the
+      rig and the numbers.
+    */
+    radius: 8.4,
     /*
       ⚠️ **NULL, AND IT WAS THE ONE ROW IN THE GAME THAT NEEDED A MUZZLE — 0283.** 0277 put one here
       because the skull sat twenty-four units down-lane of the centre of a fifty-six-unit sprite, so a
@@ -1471,7 +1484,14 @@ export const BOSSES: Record<BossKind, BossRow> = {
         it easy to get wrong: the first node belongs *under* the head, and what has to meet the
         skull's back is the second or third.
       */
-      neck: 3,
+      /*
+        ⚠️ **3 → 3.6, BECAUSE THE SKULL GREW AND THIS WAS MEASURED AGAINST ITS BACK EDGE — 0288.** The
+        note above is the whole argument: the first node belongs UNDER the head and what has to meet
+        the skull's back is the second or third. That back edge is 0.9 of the drawing radius behind
+        the head's centre, so it moved with `SPRITE_EXTENT.boss8` from 20 to 24 — and left where it
+        was, this would have re-opened the *"slight gap between head and body"* 0284 closed.
+      */
+      neck: 3.6,
       step: 0.53,
       /*
         ⚠️ **THE SWAY IS THE TAIL'S AND THE HEAD BARELY MOVES, WHICH IS HOW A SNAKE SWIMS.** An animal

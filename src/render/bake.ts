@@ -3413,6 +3413,32 @@ function endOf(spine: readonly Pt[]): (px: number, py: number) => Pt {
 const HINGE: Pt = [-0.24, 0.04];
 
 /**
+ * How much shorter the skull is than it was authored, so it reads as LONGER — 0288.
+ *
+ * ⚠️ **REPORTED**: *"the head itself needs to be slightly bigger and also slightly longer… the head
+ * looks just a bit weird at the moment."* The bigger is `SPRITE_EXTENT.boss8`, which scales the whole
+ * drawing; this is the proportion, and the two are separate numbers because they answer separate
+ * halves of the sentence. Authored 1.96 long by 1.52 tall, the skull now draws 1.96 by 1.34 — a
+ * length-to-height of 1.46 where it was 1.29.
+ *
+ * ⚠️ **IT IS APPLIED AT THE POINT OF DRAWING AND THE ART IS NOT RE-TYPED.** Every mark on this head
+ * — horns, brow plate, crown plane, eye, four teeth, tongue, the mouth's own wedge — is a list of
+ * fractions of the drawing radius, and squashing them by hand is fifty numbers and one typo. One
+ * transform at the end is the same picture and cannot drift.
+ *
+ * ⚠️ **AND IT IS APPLIED *AFTER* THE JAW SWINGS, WHICH IS NOT THE SAME THING.** `hinged` rotates
+ * about the hinge; a rotation in squashed space is a shear, so the jaw would open along a different
+ * arc from the one 0285 measured and the teeth would leave their sockets. Author, hinge, then lean.
+ */
+const SKULL_LEAN = 0.88;
+
+/** One point of the skull, leaned — the last thing that happens to it before it is drawn. */
+const lean = ([x, y]: Pt): Pt => [x, y * SKULL_LEAN];
+
+/** A whole list of them. */
+const leant = (ps: readonly Pt[]): Pt[] => ps.map(lean);
+
+/**
  * A tooth, as tip-then-roots — 0285.
  *
  * ⚠️ **ONE DESCRIPTION, BECAUSE THE OUTLINE AND THE PAINT MUST BE THE SAME TOOTH.** The first pass
@@ -3661,11 +3687,11 @@ function hinged(p: Pt, turn: number, ref: Pt = p): Pt {
 function cavityOf(ctx: Pen, f: Frame, kind: SpriteKind): void {
   if (!kind.startsWith('boss8')) return;
   const jaw: Jaw = kind.startsWith('boss8Gape') ? 'gape' : kind.startsWith('boss8Shut') ? 'shut' : 'rest';
-  trace(ctx, f, parted(MOUTH, JAWS[jaw]));
+  trace(ctx, f, leant(parted(MOUTH, JAWS[jaw])));
 }
 
 /** The skull wearing one of its faces — the authored drawing with its jaw swung. */
-const headOf = (jaw: Jaw): Pt[] => [...SKULL_UPPER, ...SKULL_LOWER.map((p) => hinged(p, JAWS[jaw]))];
+const headOf = (jaw: Jaw): Pt[] => leant([...SKULL_UPPER, ...SKULL_LOWER.map((p) => hinged(p, JAWS[jaw]))]);
 
 /**
  * A mark drawn ACROSS the gap, with the half of it that rides the lower jaw swung — 0285.
@@ -3918,16 +3944,16 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin, jaw: Jaw, gaze: num
   ctx.fillStyle = '#04120d';
   ctx.beginPath();
   // Its lower corner rides the jaw, so a wider gape shows more throat rather than more background.
-  trace(ctx, f, [
+  trace(ctx, f, leant([
     [-0.3, -0.02],
     [-1.06, -0.22],
     hinged([-1.04, 0.42], JAWS[jaw]),
-  ]);
+  ]));
   ctx.fill('evenodd');
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
   // One light direction across the whole animal, upper-left — the same one every node is lit from.
-  shaded(ctx, f, [0, -0.7], [0, 0.6], shade(skin.hull, 0.24), shade(skin.hull, -0.42), headOf(jaw), 1, true);
+  shaded(ctx, f, lean([0, -0.7]), lean([0, 0.6]), shade(skin.hull, 0.24), shade(skin.hull, -0.42), headOf(jaw), 1, true);
   /*
     ⚠️ **THE CROWN IS A PLANE AND NOT A PATCH** — 0277 learned it and it is the same here. The top of
     the skull catches the light as one surface running from the horns to the snout, with the side of
@@ -3936,11 +3962,11 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin, jaw: Jaw, gaze: num
   shaded(
     ctx,
     f,
-    [-0.4, -0.66],
-    [-0.2, -0.3],
+    lean([-0.4, -0.66]),
+    lean([-0.2, -0.3]),
     skin.lit,
     shade(skin.hull, 0.12),
-    [
+    leant([
       [0.3, -0.55],
       [-0.06, -0.62],
       [-0.32, -0.66],
@@ -3951,7 +3977,7 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin, jaw: Jaw, gaze: num
       [-0.5, -0.42],
       [-0.1, -0.5],
       [0.28, -0.44],
-    ],
+    ]),
     0.75,
     true,
   );
@@ -3961,14 +3987,14 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin, jaw: Jaw, gaze: num
     of the skull. Without it the eye sits on a smooth dome and reads as an animal looking at you
     rather than an animal deciding about you.
   */
-  poly(ctx, f, shade(skin.hull, -0.5), [
+  poly(ctx, f, shade(skin.hull, -0.5), leant([
     [-0.06, -0.6],
     [-0.34, -0.64],
     [-0.54, -0.5],
     [-0.5, -0.4],
     [-0.28, -0.5],
     [-0.04, -0.48],
-  ], 0.85);
+  ]), 0.85);
   /*
     ⚠️ **THE MOUTH IS RED, AND THE VENOM LIGHT THAT WAS HERE READ AS A FAULT — 0285.** Reported on
     sight: *"there's a weird green bit in the mouth."* It was `skin.lit` at 0.55 filling the gape,
@@ -4003,7 +4029,7 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin, jaw: Jaw, gaze: num
       of the hull — so that strip photographed as open space, a black bite taken out of the chin
       between the lower teeth. The wedge has a point on the jaw for the same reason the jaw has one.
     */
-    trace(ctx, f, swung(MOUTH));
+    trace(ctx, f, leant(swung(MOUTH)));
     ctx.fill('evenodd');
   }
   ctx.globalAlpha = 1;
@@ -4042,7 +4068,7 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin, jaw: Jaw, gaze: num
     const cx = (tip[0] + a[0] + b[0]) / 3;
     const cy = (tip[1] + a[1] + b[1]) / 3;
     const shrunk: Pt[] = [tip, a, b].map(([x, y]) => [cx + (x - cx) * 0.62, cy + (y - cy) * 0.62]);
-    poly(ctx, f, '#f2fff6', swings ? shrunk.map((p) => hinged(p, turn, tip)) : shrunk, 0.95);
+    poly(ctx, f, '#f2fff6', leant(swings ? shrunk.map((p) => hinged(p, turn, tip)) : shrunk), 0.95);
   }
   /*
     ⚠️ **THE FORKED TONGUE, AND ONLY WHEN THE MOUTH IS WIDE — 0285.** Reported: *"no forked tongue or
@@ -4059,7 +4085,7 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin, jaw: Jaw, gaze: num
   */
   if (jaw === 'gape') {
     const turned = (ps: readonly Pt[]): Pt[] => ps.map((p) => hinged(p, turn, [-0.6, 0.2]));
-    poly(ctx, f, '#c2384a', turned([
+    poly(ctx, f, '#c2384a', leant(turned([
       [-0.38, 0.14],
       [-0.66, 0.09],
       [-0.9, 0.0],
@@ -4068,10 +4094,10 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin, jaw: Jaw, gaze: num
       [-1.06, 0.13],
       [-0.88, 0.08],
       [-0.64, 0.17],
-    ]), 0.88);
+    ])), 0.88);
   }
   // A lit ridge along the top of the upper jaw, so the snout reads against the dark.
-  seam(ctx, f, skin.lit, 0.03, [[-0.34, -0.68], [-0.66, -0.56], [-0.94, -0.44]], 0.6, true);
+  seam(ctx, f, skin.lit, 0.03, leant([[-0.34, -0.68], [-0.66, -0.56], [-0.94, -0.44]]), 0.6, true);
   /*
     ⚠️ **THE EYE, AND IT IS THE ONE SATURATED THING ON THE ANIMAL.** A dark socket under the brow, a
     gold iris, a vertical slit and one catchlight — a snake's pupil, which is the mark that says
@@ -4088,20 +4114,26 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin, jaw: Jaw, gaze: num
     about inside its own socket would read as a wobble; a pupil crossing a fixed iris reads as a look,
     which is the whole of what a snake's face does.
   */
+  /*
+    ⚠️ **THE SOCKET AND THE IRIS STAY ROUND WHILE THE SKULL LEANS — 0288.** A disc's centre is a
+    point on the head and moves with it; its RADIUS is not, and squashing it would bake an eye that
+    is an ellipse on a face whose every other curve is one too. One round eye on a long head is what
+    a snake has, and it is the mark that has to read at twenty-four units against a black sky.
+  */
   const look = gaze * 0.055;
-  disc(ctx, f, shade(skin.plate, -0.65), -0.3, -0.34, 0.19);
-  disc(ctx, f, skin.eye, -0.3, -0.34, 0.15);
-  poly(ctx, f, '#100c04', [
+  disc(ctx, f, shade(skin.plate, -0.65), -0.3, -0.34 * SKULL_LEAN, 0.19);
+  disc(ctx, f, skin.eye, -0.3, -0.34 * SKULL_LEAN, 0.15);
+  poly(ctx, f, '#100c04', leant([
     [-0.34, -0.46 + look],
     [-0.26, -0.46 + look],
     [-0.24, -0.34 + look],
     [-0.26, -0.22 + look],
     [-0.34, -0.22 + look],
     [-0.36, -0.34 + look],
-  ]);
-  disc(ctx, f, '#fffdf2', -0.35, -0.4 + look, 0.045, 0.85);
+  ]));
+  disc(ctx, f, '#fffdf2', -0.35, (-0.4 + look) * SKULL_LEAN, 0.045, 0.85);
   // The nostril, high on the snout.
-  disc(ctx, f, shade(skin.plate, -0.6), -0.86, -0.34, 0.035);
+  disc(ctx, f, shade(skin.plate, -0.6), -0.86, -0.34 * SKULL_LEAN, 0.035);
   /*
     ⚠️ **SCALES ON THE CHEEK, THE SAME FIELD THE BODY CARRIES.** Low contrast and overlapping, so the
     head belongs to the animal behind it rather than reading as a mask bolted to a tube.
@@ -4118,7 +4150,7 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin, jaw: Jaw, gaze: num
       const t = j / 4;
       scale.push([x + span * (t - 0.5), y + Math.sin(Math.PI * t) * 0.12]);
     }
-    seam(ctx, f, skin.lit, 0.028, scale, 0.3, true);
+    seam(ctx, f, skin.lit, 0.028, leant(scale), 0.3, true);
   }
 }
 

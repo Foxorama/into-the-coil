@@ -183,6 +183,21 @@ function measureThrow(): void {
 }
 
 /**
+ * 0288 — the serpent's skull is half again as long as it is tall. *A head taller than it is long is
+ * a frog* fails hard in `tests/accents.test.ts`; how far past that it goes is the art's.
+ */
+function measureLean(): void {
+  const kind = SPRITE_KINDS[BOSSES.jormungandr.sprite]!;
+  const { pen, trace } = tracingPen();
+  drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], 400, 'approach');
+  const hull = trace.passes[0]!.subpaths[0]!;
+  const long = Math.max(...hull.map(([x]) => x)) - Math.min(...hull.map(([x]) => x));
+  const tall = Math.max(...hull.map(([, y]) => y)) - Math.min(...hull.map(([, y]) => y));
+  const ratio = long / tall;
+  observe('0288-lean', ratio >= 1.4, [`the skull draws ${ratio.toFixed(2)} long for every 1 tall, against 1.4`]);
+}
+
+/**
  * 0198 — the three WCAG floors the accessibility pass will restore.
  *
  * ⚠️ **DEFERRED IS NOT UNMEASURED.** `docs/decisions/0198-the-accessibility-pass-comes-after-the-game.md`
@@ -231,6 +246,7 @@ function measureAll(): void {
   measureCycle();
   measureBlade();
   measureThrow();
+  measureLean();
 }
 
 /**

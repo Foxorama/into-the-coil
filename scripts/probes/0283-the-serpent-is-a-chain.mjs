@@ -33,8 +33,8 @@ export const PROBES = [
     guard: 'no bend is tighter than the animal’s own spine allows',
     edit: {
       path: 'src/content/bosses.ts',
-      // ⚠️ Re-anchored by 0284, which closed the gap between the head and the body: 6.5 → 3.
-      find: '      neck: 3,',
+      // ⚠️ Re-anchored by 0284 (6.5 → 3) and again by 0288, which grew the skull the neck is measured against.
+      find: '      neck: 3.6,',
       replace: '      neck: 0,',
     },
   },
