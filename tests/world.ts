@@ -342,6 +342,7 @@ export function playableWorld(
     arcRng: makeRng('test').stream('arc'),
     rainRng: makeRng('test').stream('rain'),
     rockRng: makeRng('test').stream('rock'),
+    voidRng: makeRng('test').stream('void'),
     view: viewOf(1280, 720),
     surface: new NullSurface(),
     rng: makeRng('test').stream('spawns'),

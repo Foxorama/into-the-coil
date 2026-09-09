@@ -40,6 +40,7 @@ import {
   collideIntoOne,
   nearestFrom,
   nearestInBox,
+  overlaps,
   strike,
   wound,
   type Collected,
@@ -846,6 +847,14 @@ export interface World {
   rainRng: Rng;
   /** Where the volcanoes' rock falls — `docs/decisions/0251-the-volcanoes-belch.md`, on the same terms. */
   rockRng: Rng;
+  /**
+   * How big each void blast comes out and which way its burst points — 0291, on the same terms.
+   *
+   * ⚠️ **ITS OWN STREAM, BECAUSE *A BIT RANDOM* IS A COSMETIC ROLL AND THOSE ARE THE DANGEROUS
+   * ONES.** 0021's whole argument: one shared generator couples every draw to every draw before it,
+   * so a size jitter added to a bullet would rebuild every level that was ever seeded.
+   */
+  voidRng: Rng;
   view: View;
   surface: Surface;
   /** The spawn stream, named per 0021 — a cosmetic roll added later must not move a wave. */
@@ -1523,6 +1532,13 @@ export class GameFrame implements Frame {
     */
     const open = w.bossPool.size > 0 ? openBy(phaseFor(w.bossRow, w.bossPool.at(0).health, w.bossFullHealth)) : 1;
     killedByShots += collideInto(w.playerShots, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, bladeHits);
+    /*
+      ⚠️ **AND THE ONE HOSTILE BULLET THE PLAYER CAN SHOOT AT — 0291.** Before the boss's own hull,
+      because a void blast is in front of the animal that threw it and a pulse meets it first; and
+      before the body, for the same reason. Every other enemy shot passes through the guns untouched,
+      which is what the row's `appetite` decides and why this is not a pairing over the whole pool.
+    */
+    feedVoids(w);
     /*
       ⚠️ **THE BODY IS HIT WHERE IT IS, AND WHAT LANDS ON IT IS SPENT ON THE HEAD — 0283.** A node is
       a piece of one animal: it takes the arrival, it flashes where the player aimed
@@ -3126,6 +3142,113 @@ function throwChild(w: World, along: number, across: number, kind: number, stage
 }
 
 /**
+ * How much bigger or smaller a void blast comes out than its row — 0291. A fifth either way.
+ *
+ * ⚠️ **THE JITTER IS THE DRAWING AND THE HURTBOX TOGETHER**, which is the only version that is not
+ * `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`: a blast drawn a fifth
+ * larger than it collides as is a blast the player is hit by from a place the picture calls empty.
+ */
+const VOID_JITTER = 0.2;
+
+/**
+ * How much a void blast grows with every point of the player’s fire it swallows — 0291.
+ *
+ * A tenth a bite, so a full appetite of six leaves it about three quarters again as wide as it was
+ * thrown: unmistakable beside an unfed one, and still inside the lane it is flying down.
+ */
+const VOID_SWELL = 1.1;
+
+/**
+ * The player's fire, fed to anything with an appetite for it — 0291.
+ *
+ * ⚠️ **REPORTED**: *"the void blasts should be bigger and a bit random and should eat x amount of
+ * damage and then explode in a void blast."*
+ *
+ * ⚠️ **NOTHING IN THIS GAME HAD EVER LET A PLAYER'S SHOT REACH AN ENEMY'S.** Hostile bullets collide
+ * with the ship and with nothing else, which is why `collideInto` cannot be pointed at this: it
+ * spends a shot on a target and this has to spend the target on the shot as well, and only for the
+ * bullets whose row says they eat.
+ *
+ * ⚠️ **THE OUTER LOOP IS THE HOSTILE POOL AND THE EARLY-OUT IS THE WHOLE COST ARGUMENT.** 0034 pairs
+ * pools so that a collision is the product of two small ones rather than the square of one big one;
+ * a pass over 150 enemy shots that leaves immediately unless the row has an appetite costs 150
+ * reads, and only the two or three voids on the field ever reach the inner loop. **Nothing
+ * allocates**, on `fireEnemies`'s own terms — `tests/budget.test.ts` scans this file.
+ */
+function feedVoids(w: World): void {
+  for (let i = w.enemyShots.size - 1; i >= 0; i--) {
+    const blast = w.enemyShots.at(i);
+    const row = SHOT_ROWS[blast.kind]!;
+    if (row.swallows !== true) continue;
+    /*
+      ⚠️ **A SHARD IS NOT A BLAST, AND WITHOUT THIS LINE THE POOL EXPLODES.** The burst's children are
+      the same ROW, so they carry the same appetite — and they are spawned at stage 1, so one pulse
+      would pop each of the seven into seven more, for ever. `turnsLeft` is the stage every shot
+      already carries and nothing else reads on one (0263), so *what came out of a burst* is a
+      question the entity can already answer. Only what a mouth threw has an appetite.
+    */
+    if (blast.turnsLeft > 0) continue;
+    for (let s = w.playerShots.size - 1; s >= 0; s--) {
+      const shot = w.playerShots.at(s);
+      /*
+        ⚠️ **SWEPT, NOT SAMPLED — AND THE FIRST VERSION OF THIS WAS SAMPLED AND WAS WRONG.** A pulse
+        travels 2.6 units a step against a reach of about 3.1, so two positions compared at the end
+        of a step miss a shot that passed clean through the middle of a blast. `overlaps` is the
+        closest approach between the two paths over the step, which `src/sim/collide.ts` wrote to
+        delete exactly this class rather than police it with a speed ceiling — and the guard that
+        caught it reported the fire going straight through, which is what it was doing.
+      */
+      if (!overlaps(shot, blast, 1)) continue;
+      blast.health -= shot.damage;
+      w.playerShots.releaseAt(s);
+      /*
+        ⚠️ **IT SWELLS AS IT FEEDS, AND THAT IS THE ONLY THING THAT SAYS IT IS EATING.** A blast that
+        swallowed a pulse and showed nothing would read as a shot passing through it — 0036's own
+        subject, and its own finding is that this class gets REPORTED as a collision fault that does
+        not exist, three times over.
+
+        ⚠️ **AND A FLASH COULD NOT HAVE DONE IT.** The hurt twin of a shot is the same sprite in the
+        flash ink, which is four steps of a colour change on a bullet a couple of units across; worse,
+        `tests/combat.test.ts` holds that *a shot never flashes* because every shot but a blade is
+        spent by arriving. Growth is the tell the sentence already asks for — *eat x amount of damage
+        and then explode* — and it is legible at a glance rather than for four frames.
+
+        ⚠️ **THE DRAWING AND THE HURTBOX GROW TOGETHER**, for the same reason the roll at the muzzle
+        moves both: a blast drawn bigger than it collides as is a blast that hits from a place the
+        picture calls empty.
+      */
+      blast.swell *= VOID_SWELL;
+      blast.radius *= VOID_SWELL;
+      if (blast.health <= 0) break;
+    }
+    if (blast.health > 0) continue;
+    /*
+      ⚠️ **AND THEN IT IS ITS OWN BURST**, which is 0263's machinery and not a second copy of it:
+      `throwChild` releases nothing, spawns one child of the same row about a heading, and drops a
+      burst that will not fit rather than growing the pool. The parent is released FIRST so the first
+      child takes its slot, exactly as `fissionShots` does and for the same reason.
+
+      ⚠️ **THE CHILDREN ARE STAGE 1 AND SO CANNOT THEMSELVES BE EATEN** — the guard at the top of this
+      loop, and the reason it is there. A ring that could be farmed for another ring is not a hazard,
+      it is a pool exhaustion the player triggers on purpose.
+    */
+    const along = blast.along;
+    const across = blast.across;
+    const kind = blast.kind;
+    const speed = row.speed * w.difficulty.shotSpeed;
+    // Where the ring points is the blast's own roll, so no two bursts open the same way.
+    const turn = w.voidRng.range(0, TAU);
+    w.enemyShots.releaseAt(i);
+    for (let k = 0; k < VOID_SHARDS; k++) {
+      throwChild(w, along, across, kind, 1, turn + (k * TAU) / VOID_SHARDS, speed);
+    }
+  }
+}
+
+/** How many shards a void blast comes apart into — 0291. */
+const VOID_SHARDS = 7;
+
+/**
  * The life of a shot after the muzzle — `docs/decisions/0263-the-frost-ship-shatters.md`.
  *
  * Every enemy shot whose row has stages left burns a fuse, and when it burns down the shot is its
@@ -4461,6 +4584,8 @@ function driveBoss(w: World): void {
   */
   // The phase's own shot where it names one — 0248: the serpent throws acid and then void.
   const throwing = phaseFor(w.bossRow, boss.health, w.bossFullHealth);
+  // What the pool already held, so the volley below can be told from everything still in the air.
+  const beforeVolley = w.enemyShots.size;
   w.bossPatrol = stepBoss(
     boss,
     w.bossRow,
@@ -4487,6 +4612,26 @@ function driveBoss(w: World): void {
     An OFFSET from the camera rather than a world position, because the explosion has to stay where
     the player watched it happen and the camera covers 54 units while it plays.
   */
+  /*
+    ⚠️ **AND NO TWO VOID BLASTS ARE THE SAME SIZE — 0291.** *"The void blasts should be bigger and a
+    bit random."* The roll is here rather than in `src/app/boss.ts` for the reason the volcanoes' rock
+    already is: that file has no random stream and is the one place every boss's volley is shaped, so
+    a per-bullet cosmetic rolled inside it would be a stream threaded through nine attack arms to
+    reach one of them. What was just thrown is `size` before against `size` after, which is
+    `belch`'s own pattern further down this function.
+
+    ⚠️ **THE DRAWING AND THE HURTBOX TAKE THE SAME ROLL**, which is the only version that is not
+    0036: a blast drawn a fifth larger than it collides as is a blast that hits the player from a
+    place the picture calls empty. `swell` scales the blit and `radius` is what `feedVoids` and the
+    ship's own collision measure, so both move together or neither does.
+  */
+  for (let i = beforeVolley; i < w.enemyShots.size; i++) {
+    const thrown = w.enemyShots.at(i);
+    if (SHOT_ROWS[thrown.kind]!.swallows !== true) continue;
+    const roll = 1 + w.voidRng.range(-VOID_JITTER, VOID_JITTER);
+    thrown.swell = roll;
+    thrown.radius *= roll;
+  }
   w.bossOffset = boss.along - w.cameraAlong;
   w.bossAcross = boss.across;
   wearFace(w, boss);

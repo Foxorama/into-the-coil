@@ -14,7 +14,7 @@ import { GameFrame } from '../src/app/frame.ts';
 import { phaseFor } from '../src/app/boss.ts';
 import { BOSSES, RAIN_BOLT_KIND } from '../src/content/bosses.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
-import { SHOTS } from '../src/content/shots.ts';
+import { SHOTS, SHOT_INDEX } from '../src/content/shots.ts';
 import { SPRITE_KINDS } from '../src/content/sprites.ts';
 import { INK_OF } from '../src/render/bake.ts';
 import { BOLT_STEPS } from '../src/render/scene.ts';
@@ -253,6 +253,14 @@ describe('0248 — the serpent strikes', () => {
       0098: a boss with three kinds of shot in one colour is one bullet wearing three shapes. The
       silhouettes being distinct from every other shot's is `tests/legibility.test.ts`'s; what is
       held here is the ink, and that an acid blast is fatter and slower than a void one.
+
+      ⚠️ **AND WHICH ONE IS FATTER IS NO LONGER THE CLAIM — 0291 REVERSED IT ON PURPOSE.** *"The void
+      blasts should be bigger and a bit random and should eat x amount of damage."* A bullet the
+      player is meant to shoot at has to be a thing worth aiming at, so the void went 1.3 → 2.2 and
+      is now the fat one. What 0248 was actually protecting is that the two are TOLD APART — 0098's
+      *a boss with three kinds of shot in one colour is one bullet wearing three shapes* — so the
+      size claim is a margin rather than a direction, and the ladder that still has a direction
+      (slower, worth more) is left pointing where it was.
     */
     const acid = INK_OF[SPRITE_KINDS[SHOTS.acid.sprite]!];
     const voidInk = INK_OF[SPRITE_KINDS[SHOTS.void.sprite]!];
@@ -260,9 +268,97 @@ describe('0248 — the serpent strikes', () => {
     expect(voidInk, 'void wears the enemy’s bullet ink').not.toBe('enemy');
     expect(acid, 'acid and void are one ink').not.toBe(voidInk);
     expect(voidInk, 'void wears the player’s ally ink, which is the seeker’s').not.toBe('ally');
-    expect(SHOTS.acid.radius, 'an acid blast is no fatter than a void one').toBeGreaterThan(SHOTS.void.radius);
+    const fatter = Math.max(SHOTS.acid.radius, SHOTS.void.radius);
+    const thinner = Math.min(SHOTS.acid.radius, SHOTS.void.radius);
+    expect(
+      fatter / thinner,
+      `acid is ${SHOTS.acid.radius} across and void is ${SHOTS.void.radius}, which is too close to tell apart in ` +
+        'the air — 0098: three kinds of shot the player cannot separate is one bullet wearing three shapes',
+    ).toBeGreaterThan(1.2);
     expect(SHOTS.acid.speed, 'an acid blast is no slower than a void one').toBeLessThan(SHOTS.void.speed);
     expect(SHOTS.void.damage, 'a void blast is worth no more than an acid one').toBeGreaterThan(SHOTS.acid.damage);
+  });
+
+  it('0291 — THE REPORTED ONE: a void blast eats the player’s fire, and bursts when it has had enough', () => {
+    /*
+      ⚠️ **REPORTED**: *"the void blasts should be bigger and a bit random and should eat x amount of
+      damage and then explode in a void blast."*
+
+      ⚠️ **DRIVEN, BECAUSE NONE OF THIS EXISTS IN THE TABLE.** The row says `appetite: 6`; whether a
+      pulse can reach a hostile bullet at all is a question about `src/app/frame.ts`, and until this
+      decision the answer for every bullet in the game was no.
+    */
+    const { world, frame } = serpentAt(0.5);
+    const boss = world.bossPool.at(0);
+    const blast = world.enemyShots.spawn()!;
+    const kind = SHOT_INDEX.void;
+    reset(blast, world.ship.along + 20, world.ship.across, SHOTS.void, kind);
+    const appetite = SHOTS.void.health;
+    expect(SHOTS.void.swallows, 'the void does not swallow, so this measures nothing').toBe(true);
+    expect(appetite, 'the void swallows a single hit, so there is no appetite to measure').toBeGreaterThan(1);
+
+    /*
+      Feed it one pulse at a time, on top of it, and watch the tally come down. The boss is silenced
+      so nothing else lands in the pool while the count is being read.
+    */
+    let fedWith = 0;
+    const startedAt = world.enemyShots.at(0).radius;
+    let grewTo = startedAt;
+    for (let i = 0; i < appetite * 2 && world.enemyShots.size === 1; i++) {
+      boss.fireIn = 999;
+      const pulse = world.playerShots.spawn()!;
+      const at = world.enemyShots.at(0);
+      reset(pulse, at.along, at.across, SHOTS.pulse, SHOT_INDEX.pulse);
+      const before = world.enemyShots.at(0).health;
+      frame.step();
+      if (world.enemyShots.size >= 1 && world.enemyShots.at(0).health < before) fedWith += before - world.enemyShots.at(0).health;
+      if (world.enemyShots.size >= 1 && world.enemyShots.at(0).turnsLeft === 0) grewTo = Math.max(grewTo, world.enemyShots.at(0).radius);
+    }
+    expect(fedWith, 'the player’s fire went straight through the void blast, which is what it did before 0291').toBeGreaterThan(0);
+    /*
+      ⚠️ **AND IT GREW WHILE IT ATE, WHICH IS THE ONLY THING THAT SAYS IT IS EATING.** Its hurt sprite
+      is its own sprite, so a flash would be four steps of a colour change on a bullet two units
+      across — 0036's subject, and its own finding is that an event the picture never mentions gets
+      reported as a collision fault that does not exist. Measured on the HURTBOX as well as the
+      drawing, because a blast drawn bigger than it collides as is the same bug pointed the other way.
+    */
+    expect(
+      grewTo,
+      'the void blast swallowed the player’s fire and did not change size, so nothing on screen said it had',
+    ).toBeGreaterThan(startedAt);
+    /*
+      ⚠️ **AND WHAT IS LEFT IS A RING RATHER THAN NOTHING**, which is the other half of the sentence.
+      One blast eaten is several shards in the air, so the pool grows through the burst rather than
+      emptying — a void the player shoots is a void the player then has to fly through.
+    */
+    expect(
+      world.enemyShots.size,
+      'the void blast was eaten and left nothing behind, so it did not explode in a void blast',
+    ).toBeGreaterThan(1);
+  });
+
+  it('and nothing else the serpent throws can be shot out of the air', () => {
+    /*
+      ⚠️ **THE HALF THAT KEEPS THIS ONE BULLET SPECIAL.** An appetite is not a tuning number, it is the
+      switch that puts a hostile shot in front of the guns — and a game where every bullet can be shot
+      down is a different game from the one in `docs/game.md`. The acid is the same boss's other shot
+      and is thrown three times as often, so it is the one that would be noticed.
+    */
+    const { world, frame } = serpentAt(1);
+    world.bossPool.at(0).fireIn = 999;
+    const blast = world.enemyShots.spawn()!;
+    reset(blast, world.ship.along + 20, world.ship.across, SHOTS.acid, SHOT_INDEX.acid);
+    const health = blast.health;
+    for (let i = 0; i < 8; i++) {
+      world.bossPool.at(0).fireIn = 999;
+      const at = world.enemyShots.at(0);
+      const pulse = world.playerShots.spawn()!;
+      reset(pulse, at.along, at.across, SHOTS.pulse, SHOT_INDEX.pulse);
+      frame.step();
+      if (world.enemyShots.size === 0) break;
+    }
+    expect(world.enemyShots.size, 'the acid was shot out of the air, and only the void may be').toBe(1);
+    expect(world.enemyShots.at(0).health, 'the acid took damage from the player’s guns').toBe(health);
   });
 
   it('and a boss that rakes AND grows heads keeps the two counts apart, so the round survives the raking', () => {

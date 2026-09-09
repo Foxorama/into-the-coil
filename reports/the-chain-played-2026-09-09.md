@@ -216,9 +216,19 @@ Recorded here because chat evaporates between sessions and this is what `reports
    columns. **Measured, not photographed**: the bench would not catch a volley in flight across four
    attempts, so the shape was read off the beads' own world coordinates — and *does it read as
    serpentine* is a play verdict, not a plot's.
-3. **The void.** *"The void blasts should be bigger and a bit random and should eat x amount of damage
-   and then explode in a void blast."* This refines the original brief — *"larger balls that absorb
-   the player's weapons/missiles/bomb"* — into a finite appetite with a detonation at the end of it.
+3. ~~**The void.**~~ *"The void blasts should be bigger and a bit random and should eat x amount of
+   damage and then explode in a void blast."* Answered by
+   [0291](../docs/decisions/0291-the-void-has-an-appetite.md) — 1.3 → 2.2 with a size rolled per
+   blast, an appetite of six that IS its health, a swell of a tenth a bite so the picture says it is
+   eating, and a ring of seven shards when it is full.
+
+   ⚠️ **TWO THINGS THE BRIEF ASKED FOR THAT THIS DOES NOT DO**, and they are named rather than
+   quietly dropped. It feeds on the guns alone: *"absorb the player's weapons/missiles/bomb"* wants
+   two more pairings, and a missile is guided while a bomb's blast is an area rather than a body.
+   And *"it'll be interesting to see how it interacts with the lightning gun"* has an answer already,
+   which is **it does not** — the arc's bolts are strokes rather than pooled shots (0233), so they
+   never pass through `playerShots` and cannot feed a void as things stand. Worth knowing before it
+   is played, because *the lightning gun ignores void blasts* is a finding and not a bug.
 
 ⚠️ **AND THE LIGHTNING IS NOT TO BE TOUCHED**: *"don't change the lightning attack it's really good."*
 Said twice now, two plays apart. It is the one attack on this boss with a verdict already in.
