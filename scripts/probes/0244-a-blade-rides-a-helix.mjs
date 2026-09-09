@@ -24,8 +24,9 @@ export const PROBES = [
     edit: {
       path: 'src/content/shots.ts',
       // ⚠️ Re-anchored by 0263, which gave every shot row its stages.
-      find: 'radius: 3.2, health: BLADE_EDGE, damage: 1, speed: 1, fission: SPENT_BY_ARRIVING },',
-      replace: 'radius: 3.2, health: BLADE_EDGE, damage: 1, speed: 0.8, fission: SPENT_BY_ARRIVING },',
+      // ⚠️ Re-anchored by 0294, which took the hurtbox down with the drawing: 3.2 to 2.24.
+      find: 'radius: 2.24, health: BLADE_EDGE, damage: 1, speed: 1, fission: SPENT_BY_ARRIVING },',
+      replace: 'radius: 2.24, health: BLADE_EDGE, damage: 1, speed: 0.8, fission: SPENT_BY_ARRIVING },',
     },
   },
   {
@@ -48,8 +49,14 @@ export const PROBES = [
     guard: 'THE SIZE: a blade is drawn',
     edit: {
       path: 'src/content/sprites.ts',
-      find: '  shuriken: 8,\n  shurikenTurn: 8,\n',
-      replace: '  shuriken: 10,\n  shurikenTurn: 10,\n',
+      /*
+        ⚠️ **Re-anchored by 0294**, which took the star to 5.6 on *"the shurikens also need to be
+        smaller and neater"* and put a comment between the two frames. The pair is named through the
+        turn face alone now — and `tests/weapons.test.ts` holds that the two are one size, so a break
+        that moved only this one would redden that instead and say so.
+      */
+      find: '  shurikenTurn: 5.6,',
+      replace: '  shurikenTurn: 10,',
     },
   },
 ];

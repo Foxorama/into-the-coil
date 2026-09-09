@@ -356,6 +356,24 @@ describe('0233 — a pickup cycles', () => {
     );
   });
 
+  it('0294 — and a blade’s two frames are ONE size, so a spinning star does not pulse', () => {
+    /*
+      ⚠️ **NOTHING IN THE SUITE COMPARED THEM, AND THE SIZE CHANGE FOUND THAT OUT.** `shuriken` and
+      `shurikenTurn` are the two frames of one spinning blade — the same star an eighth of a turn
+      apart, swapped every `BLADE_TURN_STEPS` — so they are not two sprites that happen to look
+      alike, they are one object at two moments.
+
+      ⚠️ **0294 SHRANK ONE AND LEFT THE OTHER AT 8 FOR A COMMIT**, which is a blade that grows and
+      shrinks four times a second, and every guard in the repository was green about it. A pair that
+      must agree and is never asked to is exactly the shape
+      `docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md` names about hurt twins, and
+      this is the same claim about a turn.
+    */
+    expect(SPRITE_EXTENT.shurikenTurn, 'the blade’s two frames are different sizes, so it pulses as it spins').toBe(
+      SPRITE_EXTENT.shuriken,
+    );
+  });
+
   it('and it wanders the whole box while it waits, turning at the back wall rather than leaving through it', () => {
     /*
       Asked for: *"bounce off all the screen walls."* The walls are the player's box (0100), so the

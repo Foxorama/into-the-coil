@@ -6164,8 +6164,20 @@ export function drawKind(
       const phase = kind === 'shuriken' ? 0 : Math.PI / 4;
       traceStar(ctx, fg, 1, phase);
       seal(ctx);
+      /*
+        ⚠️ **AND THE GLOW IS *A BIT OF A GLOW* AGAIN — 0294.** Reported: *"the shurikens also need to
+        be smaller and neater, it's too hard to see enemy elements with them onscreen at the moment."*
+        The star itself went 8 units to 5.6, and that is half the answer: **the halo was drawn at the
+        whole drawing radius at 0.55**, so a blade veiled a disc far wider than the blade, and a dozen
+        of them at the cap veiled the lane. What is behind a blade is the thing the player is trying
+        to shoot.
+
+        ⚠️ **0.75 AND 0.35, WHICH IS WHAT 0238 ASKED FOR IN THE FIRST PLACE**: *"also with a bit of a
+        glow to them."* The metal still reads as lit — the shading on the four edges is what does that
+        work — and the glow stops being a second, larger, softer blade.
+      */
       ctx.globalCompositeOperation = 'destination-over';
-      glow(ctx, f, palette.blade, 0, 0, 1, 0.55);
+      glow(ctx, f, palette.blade, 0, 0, 0.75, 0.35);
       ctx.globalCompositeOperation = 'source-over';
       for (let k = 0; k < 4; k++) {
         const a = phase + (k * Math.PI) / 2;
@@ -6174,15 +6186,32 @@ export function drawKind(
           [Math.cos(a + 0.7) * 0.36, Math.sin(a + 0.7) * 0.36],
           [Math.cos(a + 0.45) * 0.34, Math.sin(a + 0.45) * 0.34],
         ]);
-        // Wide enough to be drawn at the shipped camera — `tests/accents.test.ts` holds the floor.
-        // Widened a third when the box went to a twelfth of the lane (0244): at eight units the
-        // sliver it was came out at 2.1 px on a 1280×720 screen, under 0106's floor of 2.5. It
-        // widens on the trailing side, up to the shadow's edge: the leading point is already on
-        // the star's own edge, and a mark over the hull is the other guard in the same file.
+        /*
+          Wide enough to be drawn at the shipped camera — `tests/accents.test.ts` holds the floor.
+          Widened a third when the box went to a twelfth of the lane (0244): at eight units the sliver
+          it was came out at 2.1 px on a 1280×720 screen, under 0106's floor of 2.5. It widens on the
+          trailing side, up to the shadow's edge: the leading point is already on the star's own edge,
+          and a mark over the hull is the other guard in the same file.
+
+          ⚠️ **AND WIDENED AGAIN BY 0294, WHEN THE BOX WENT THE OTHER WAY** — 8 units to 5.6, on *"the
+          shurikens also need to be smaller and neater"* — which brought it back to **1.97 px**. The
+          same fix the note above records, in the same place, for the opposite reason.
+
+          ⚠️ **AND IT TOOK TWO WRONG GUESSES TO FIND, WHICH IS WHY THE MARK IS NAMED HERE.** The
+          trailing shadow was widened first on the strength of its own comment, and then the hub; the
+          number did not move for either, because the guard counts the glow as mark 1 and this is mark
+          3. **A floor that names an index is naming something — read it before editing what feels
+          likely.**
+
+          ⚠️ **AND THE FIRST WIDENING WENT BOTH WAYS AND CAME BACK 0.17 px OVER THE HULL**, which is
+          the sentence three lines above this one, arriving as a failure rather than as advice. The
+          leading point sits on the star's own edge; there is nowhere for it to go but off. **Only the
+          trailing side has room**, and that is not a preference.
+        */
         poly(ctx, fg, shade(palette.blade, 0.45), [
           [Math.cos(a) * 0.86, Math.sin(a) * 0.86],
           [Math.cos(a - 0.16) * 0.36, Math.sin(a - 0.16) * 0.36],
-          [Math.cos(a + 0.17) * 0.52, Math.sin(a + 0.17) * 0.52],
+          [Math.cos(a + 0.29) * 0.52, Math.sin(a + 0.29) * 0.52],
         ]);
       }
       disc(ctx, fg, shade(palette.blade, -0.55), 0, 0, 0.16);

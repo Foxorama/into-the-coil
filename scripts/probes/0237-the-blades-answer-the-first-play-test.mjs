@@ -38,7 +38,8 @@ export const PROBES = [
     // is the loop's radius now, and a rung buys a wider band rather than more of a turn.
     edit: {
       path: 'src/content/weapons.ts',
-      find: '    coil: [7, 9, 12, 15, 18],',
+      // ⚠️ Re-anchored by 0294, which cut the ladder to two thirds at the cap.
+      find: '    coil: [6.5, 7.5, 9, 10.5, 12],',
       replace: '    coil: [7, 7, 7, 7, 7],',
     },
   },

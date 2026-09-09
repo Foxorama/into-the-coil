@@ -250,7 +250,14 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * `src/app/frame.ts` swaps the two every few steps to spin it. `blit` cannot rotate; two bitmaps
    * an eighth of a turn apart are what a spinning shuriken is.
    */
-  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 3.2, health: BLADE_EDGE, damage: 1, speed: 1, fission: SPENT_BY_ARRIVING },
+  /*
+    ⚠️ **3.2 → 2.24, WHICH IS THE DRAWING'S OWN 0.4 KEPT — 0294.** The blade is drawn smaller now
+    (*"the shurikens also need to be smaller and neater"*), and a hurtbox left where it was is a blade
+    that cuts things it visibly missed. `tests/combat.test.ts` caught it at 0.57 against a 0.55
+    ceiling; the ratio it had before was exactly 0.4, so the collision follows the picture down rather
+    than being re-tuned beside it — 0036, in the direction nobody reports.
+  */
+  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 2.24, health: BLADE_EDGE, damage: 1, speed: 1, fission: SPENT_BY_ARRIVING },
   /**
    * What an enemy sends back. **Slower than the ship**, which is the whole of what makes it
    * dodgeable rather than a coin flip: a player who reacts can always leave the line it is on.

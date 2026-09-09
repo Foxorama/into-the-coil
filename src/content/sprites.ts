@@ -1100,8 +1100,30 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // holds the box at or under a twelfth of the lane. The star is drawn at four fifths of this
   // (`BLADE_GLYPH` in `src/render/bake.ts`) and the rest is its glow; the hurtbox is the row's, and
   // `tests/combat.test.ts` holds it inside what is drawn.
-  shuriken: 8,
-  shurikenTurn: 8,
+  /*
+    ⚠️ **8 → 5.6, AND THE ADVISORY REGISTER CALLED THIS SHOT BEFORE IT WAS FIRED — 0294.** Reported:
+    *"the shurikens also need to be smaller and neater, it's too hard to see enemy elements with them
+    onscreen at the moment."*
+
+    ⚠️ **IT WAS 8 BECAUSE A PLAY-TEST ASKED FOR IT** — *"shuriken stars need to be a lot bigger"* — and
+    0237 wrote *a blade is drawn as big as the ship that threw it* into `tests/authored.ts` rather than
+    into a hard guard, with this as the reason it might one day be wrong: **"a smaller star, once a
+    dozen of them at the cap are judged to bury the lane."** That is the report, two words off, from
+    the person who asked for the big ones. The register is the reason this is one number and not an
+    argument.
+
+    ⚠️ **0.74 OF THE SHIP RATHER THAN 1.05.** Still the biggest thing the player throws and still read
+    as a blade; `tests/combat.test.ts` holds the hurtbox to its own band off this, so the collision
+    follows the drawing down rather than being re-tuned beside it.
+  */
+  shuriken: 5.6,
+  /*
+    ⚠️ **AND THE TURN FACE GOES WITH IT, WHICH NOTHING IN THE SUITE HOLDS.** These are the two frames
+    of one spinning blade — an eighth of a turn apart, swapped every four steps — so a size on one and
+    not the other is a star that grows and shrinks four times a second. It was left at 8 for one
+    commit and every guard was green about it: the pair is never compared anywhere.
+  */
+  shurikenTurn: 5.6,
   // Small: a fragment reads as a piece of something, and eight of them at enemy size is a wall.
   debris: 1.4,
   /*
