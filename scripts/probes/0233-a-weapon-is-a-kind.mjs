@@ -113,8 +113,14 @@ export const PROBES = [
         the box the ship can fly in and into the part of the screen 0100 reported as *"visible but the
         player cannot get to them"*.
       */
-      find: '    if (inView <= floor && item.velAlong < w.scrollPerStep) bounceFloat(w, item, 1, 0);\n    else',
-      replace: '    if',
+      /*
+        ⚠️ **AND THE BREAK KEEPS `floor` REFERENCED, WHICH IS NOT FUSSINESS.** Cutting the whole line
+        left the local unused, TypeScript refused the file, and the suite never loaded — so the harness
+        reported *no test is named* rather than a red guard, and `NOTHING WAS PROVEN`. A probe that
+        stops the suite compiling proves nothing at all, and it looks exactly like a renamed test.
+      */
+      find: '    if (inView <= floor && item.velAlong < w.scrollPerStep) bounceFloat(w, item, 1, 0);',
+      replace: '    if (inView <= floor && false) bounceFloat(w, item, 1, 0);',
     },
   },
   {
