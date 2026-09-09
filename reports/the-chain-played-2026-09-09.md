@@ -230,5 +230,39 @@ Recorded here because chat evaporates between sessions and this is what `reports
    never pass through `playerShots` and cannot feed a void as things stand. Worth knowing before it
    is played, because *the lightning gun ignores void blasts* is a finding and not a bug.
 
+   ⚠️ **BOTH ANSWERED THE SAME NIGHT** — [0292](../docs/decisions/0292-the-void-eats-everything.md).
+   *"Let's change it so it eats missiles and bombs and that it sucks in the lightning from the
+   player's cannon."* Four lines each for the missile and the bomb; the arc took a target search of
+   its own, because it is hitscan and there is no pool to pair. **The value of 0291 naming the gap
+   was that this session started from a list rather than a re-reading.**
+
+## ⚠️ The queue given for overnight, 2026-09-09
+
+Recorded verbatim because chat evaporates between sessions — 0029. **None of these has been started.**
+
+1. **The floating pick-ups.** *"I wasn't clear enough in my original prompt, I wanted them to float
+   around the screen and bounce randomly when hitting the edge of the screen. What we've got in game
+   is random speed and direction weirdly on the power ups and makes picking them up feel really weird
+   and wonky."* ⚠️ Note the shape of this: the ask was misread, not mis-built —
+   [0087](../docs/decisions/0087-a-pickup-never-parks.md) is the decision to re-read first.
+2. **The shuriken's arc.** *"The shuriken guns have a parabola that's too high, they need bounce out
+   from the ship about 2/3rds the distance they do now and then have that as the helix path going
+   ahead, and the shurikens also need to be smaller and neater, it's too hard to see enemy elements
+   with them onscreen at the moment."*
+3. **Bullets and ships that cannot be told apart.** *"There's some enemy bullets that are incredibly
+   small and hard to see and some enemy ships that just look like bullets so in some cases you can't
+   tell what's what."* ⚠️ `tests/legibility.test.ts` already asks *is this drawn in the same ink as
+   that* — the missing question is about SIZE and silhouette, and 0098's *one bullet wearing three
+   shapes* is the sentence it wants.
+4. **Tiny mid-boss bullets, and the eagle's whip.** *"A few minibosses also have super tiny bullets
+   and the eagle boss at the end of the Ember Nebula's fire whip attack is super tiny little dots
+   that are almost impossible to see, they should be super cool fireballs with a trailing fire trail
+   and such."*
+5. **The backgrounds.** *"Start work on making the backgrounds for each level better. The music
+   screen with the backgrounds and random space debris looks fantastic and looks like it has depth to
+   the starfield, whereas in game the starfield is a super flat blank canvas."* ⚠️ **The comparison is
+   the instruction**: the music room and the game draw from the same content since 0212, so the
+   question to answer first is what the music room does that the level does not.
+
 ⚠️ **AND THE LIGHTNING IS NOT TO BE TOUCHED**: *"don't change the lightning attack it's really good."*
 Said twice now, two plays apart. It is the one attack on this boss with a verdict already in.

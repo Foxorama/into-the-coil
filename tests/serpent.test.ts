@@ -13,8 +13,10 @@ import { describe, expect, it } from 'vitest';
 import { GameFrame } from '../src/app/frame.ts';
 import { phaseFor } from '../src/app/boss.ts';
 import { BOSSES, RAIN_BOLT_KIND } from '../src/content/bosses.ts';
+import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHOTS, SHOT_INDEX } from '../src/content/shots.ts';
+import { weaponFor } from '../src/content/pickups.ts';
 import { SPRITE_KINDS } from '../src/content/sprites.ts';
 import { INK_OF } from '../src/render/bake.ts';
 import { BOLT_STEPS } from '../src/render/scene.ts';
@@ -70,6 +72,56 @@ function armRain(boss: { headAt: number }): void {
   const index = heads.findIndex((h) => h.attack.kind === 'rain');
   expect(index, 'the serpent’s last third has no lightning head').toBeGreaterThanOrEqual(0);
   boss.headAt = index;
+}
+
+/**
+ * Put one void blast in front of the ship, feed it the way `put` says, and report what it swallowed.
+ *
+ * ⚠️ **THREE ARRIVALS, THREE SHAPES, ONE QUESTION** — 0292. A missile is spent like a bullet; a
+ * bomb's blast is an AREA that is not consumed by what it touches; and the arc is hitscan, so there
+ * is nothing to place at all and the only way to feed it is to fire the gun. What is the same for all
+ * three is the answer: the blast's health came down, or it came down to nothing and burst.
+ *
+ * ⚠️ **A BURST COUNTS AS A FULL MEAL, WHICH IS WHY THE POOL SIZE IS READ.** Once it comes apart the
+ * thing being measured is gone and seven shards are in its place, so *is it still the one shot* is
+ * how the two outcomes are told apart — and either is the feature working.
+ */
+function fedBy(put: (world: ReturnType<typeof playableWorld>['world'], at: { along: number; across: number }) => void): number {
+  const { world, frame } = serpentAt(0.5);
+  world.bossPool.at(0).fireIn = 999;
+  const blast = world.enemyShots.spawn()!;
+  reset(blast, world.ship.along + 14, world.ship.across, SHOTS.void, SHOT_INDEX.void);
+  const before = blast.health;
+  /*
+    ⚠️ **THE SHIP'S OWN ARSENAL IS SILENCED, AND FORGETTING THE MISSILES MADE THIS VACUOUS.** `fireIn`
+    was held off and `missileIn` was not, so the ship threw a seeker of its own every couple of
+    seconds and fed the blast in every one of these tests — all three passed with the feature removed,
+    and `npm run prove` said so: **STILL GREEN, three times.** That is 0019's whole purpose, and it
+    caught three guards that measured the fixture rather than the game.
+
+    ⚠️ **AND BOTH POOLS ARE EMPTIED EVERY STEP**, so the only thing that can reach the blast is the one
+    `put` places on it. Belt and braces over the two cadences, because the next weapon added to this
+    ship is a third one nobody will remember here either.
+  */
+  for (let i = 0; i < 6 && world.enemyShots.size === 1 && world.enemyShots.at(0).health === before; i++) {
+    world.bossPool.at(0).fireIn = 999;
+    world.fireIn = Number.MAX_SAFE_INTEGER;
+    world.missileIn = Number.MAX_SAFE_INTEGER;
+    world.playerShots.clear();
+    world.missiles.clear();
+    /*
+      ⚠️ **AND THE BLASTS, WHICH IS A POOL OF FOUR.** Left uncleared, a bomb placed every step
+      exhausts it on the fifth and `spawn()` hands back `null` — which reddened the bomb's own probe
+      with a TypeError out of the FIXTURE rather than a failure of the claim. A probe that goes red
+      for the wrong reason is a guard nobody has proven.
+    */
+    world.blasts.clear();
+    world.enemies.clear();
+    world.ship.health = world.shipRow.health;
+    put(world, world.enemyShots.at(0));
+    frame.step();
+  }
+  return world.enemyShots.size === 1 ? before - world.enemyShots.at(0).health : before;
 }
 
 /** A surface that keeps every bolt stroke's hostility, so the picture can be asked whose lightning it drew. */
@@ -335,6 +387,88 @@ describe('0248 — the serpent strikes', () => {
       world.enemyShots.size,
       'the void blast was eaten and left nothing behind, so it did not explode in a void blast',
     ).toBeGreaterThan(1);
+  });
+
+  it('0292 — THE REPORTED ONE: a MISSILE feeds it too', () => {
+    /*
+      ⚠️ **REPORTED**: *"let's change it so it eats missiles and bombs and that it sucks in the
+      lightning from the player's cannon."* 0291 fed on the guns alone and named the gap rather than
+      quietly narrowing the ask; this is the rest of the original brief — *"larger balls that absorb
+      the player's weapons/missiles/bomb"* — plus the interaction the player had wondered about.
+
+      ⚠️ **THREE ARRIVALS, THREE SHAPES, AND THE THIRD IS NOT A BODY AT ALL.** A missile is spent like
+      a bullet. A bomb's blast is an AREA that is not consumed by what it touches. And the arc is
+      hitscan — it resolves on the step it fires and spawns only a picture — so it never passes
+      through a pool the collision could pair.
+    */
+    expect(
+      fedBy((world, at) => {
+        const missile = world.missiles.spawn()!;
+        reset(missile, at.along, at.across, SHOTS.missile, SHOT_INDEX.missile);
+      }),
+      'a missile flew into a void blast and was not swallowed',
+    ).toBeGreaterThan(0);
+  });
+
+  it('0292 — and a BOMB feeds it, which is an area rather than a body', () => {
+    /*
+      ⚠️ **A BLAST IS NOT CONSUMED BY WHAT IT TOUCHES**, which is `blastInto`'s own shape: it is a
+      region that hurts everything standing in it, and one that vanished into a single void blast
+      would be a bomb the player lost to a bullet. So the void takes a bite and the bomb goes on.
+
+      ⚠️ **AND IT MAY NOT BITE ON EVERY STEP IT OVERLAPS.** A bomb held over a void would empty a
+      six-point appetite in three frames, and the swell nobody saw would be the only warning there
+      was. `landIn` — 0234's *already landed*, counted down beside the flash — holds it to once a
+      flash, the same rate a blade lands on a body.
+    */
+    expect(
+      fedBy((world, at) => {
+        const bomb = world.blasts.spawn()!;
+        reset(bomb, at.along, at.across, SHOTS.missile, SHOT_INDEX.missile);
+        bomb.radius = 12;
+        bomb.damage = 2;
+      }),
+      'a bomb went off inside a void blast and was not swallowed',
+    ).toBeGreaterThan(0);
+  });
+
+  it('0292 — and the LIGHTNING is sucked in, which is hitscan and never touches a pool', () => {
+    /*
+      ⚠️ **THE ARC IS FED BY FIRING IT, NOT BY PLACING ANYTHING.** It resolves on the step it fires
+      and spawns only a picture, so there is no body to put on top of the blast and no pool for a
+      collision to pair — which is why 0291 could say, correctly, that *the lightning gun ignores void
+      blasts entirely*. The only way to ask this question is to give the ship the gun and let it
+      shoot, with the void in front of the nose and inside the weapon's own reach.
+    */
+    /*
+      ⚠️ **A DRIFTER SITS NEARER THAN THE BLAST, AND THAT IS WHAT MAKES THIS *SUCKS IN*.** Against no
+      competition the guard passes on a chain that merely CAN reach a void, and the probe that made
+      the void one target among many stayed GREEN twice over: first because nothing else was in
+      reach, and then because nearest-wins hits the drifter and JUMPS to the void on its next link,
+      so *was it fed* is true either way. **What separates a pull from a coincidence is what the
+      chain did NOT hit**, so the drifter's health is half the assertion.
+    */
+    const { world, frame } = serpentAt(0.5);
+    world.bossPool.at(0).fireIn = 999;
+    const blast = world.enemyShots.spawn()!;
+    reset(blast, world.ship.along + 10, world.ship.across, SHOTS.void, SHOT_INDEX.void);
+    const near = world.enemies.spawn()!;
+    reset(near, world.ship.along + 6, world.ship.across, ENEMIES.drifter, world.enemyKinds.drifter);
+    const whole = near.health;
+    world.weapon = weaponFor(world.shipRow, ['weapon', 'weapon', 'weapon'], 'arc');
+    world.missileIn = Number.MAX_SAFE_INTEGER;
+    world.fireIn = 0;
+    frame.step();
+
+    const left = world.enemyShots.size === 1 ? world.enemyShots.at(0).health : 0;
+    expect(
+      SHOTS.void.health - left,
+      'the lightning gun fired into a void blast and went straight past it',
+    ).toBeGreaterThan(0);
+    expect(
+      world.enemies.size > 0 ? world.enemies.at(0).health : 0,
+      'the chain struck the nearer drifter on its way, so the void is one target among many rather than a pull',
+    ).toBe(whole);
   });
 
   it('and nothing else the serpent throws can be shot out of the air', () => {

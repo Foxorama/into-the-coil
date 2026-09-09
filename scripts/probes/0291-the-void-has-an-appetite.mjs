@@ -48,8 +48,9 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: a void blast eats the player’s fire',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    for (let k = 0; k < VOID_SHARDS; k++) {',
-      replace: '    for (let k = 0; k < 0; k++) {',
+      // ⚠️ Re-anchored by 0292, which gave the burst its own name so the arc could trigger it too.
+      find: '  for (let k = 0; k < VOID_SHARDS; k++) {',
+      replace: '  for (let k = 0; k < 0; k++) {',
     },
   },
   {
@@ -64,8 +65,14 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: a void blast eats the player’s fire',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      blast.swell *= VOID_SWELL;\n      blast.radius *= VOID_SWELL;',
-      replace: '',
+      /*
+        ⚠️ **Re-anchored by 0292 ONTO THE CONSTANT, which is the better anchor and always was.** The
+        two swell lines appear three times now — the guns, the missiles and the bomb each take their
+        own bite — so naming one pair would prove the claim for one mouth out of three. A growth of
+        exactly one is *it does not grow*, said once for all of them.
+      */
+      find: 'const VOID_SWELL = 1.1;',
+      replace: 'const VOID_SWELL = 1;',
     },
   },
   {
