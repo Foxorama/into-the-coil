@@ -199,11 +199,15 @@ animal moves the fight again, `scripts/weigh-boss.mjs` is owed before the tuning
 
 Recorded here because chat evaporates between sessions and this is what `reports/` is for — 0029.
 
-1. **The motion.** *"Can we give it more motion, like have it rear back a bit rather than just have
-   the head go up and down?"* The serpent is on `bob`, a pure across-lane sine; its along movement is
-   `drift: 5` over a 240-unit camera wavelength, which is almost nothing. Rearing wants a real along
-   excursion coupled to the bob so the head sweeps an arc — a new move arm on the ROW, so it stays
-   this animal's character rather than something every boss inherits.
+1. ~~**The motion.**~~ *"Can we give it more motion, like have it rear back a bit rather than just
+   have the head go up and down?"* Answered by
+   [0289](../docs/decisions/0289-a-bob-can-rear.md) — a `rear` on the bob, phase-locked so the head
+   sweeps an arc, and **the station moved 114 → 130 to pay for it**: 0101 holds every boss out of the
+   player's half at the near end of its swing, the serpent sat at 57% with two per cent of room, and
+   every unit of lunge came straight out of the player's. It holds off further and closes when it
+   strikes. **Not played yet** — and the withdrawal and the strike take the same time, because both
+   are the same cosine; if it reads as a sway rather than a strike, warping the angle is the next
+   lever and not a bigger `rear`.
 2. **The acid.** *"The acid attacks should fire out in a serpentine spray, as opposed [to] like the 3
    blobs now."*
 3. **The void.** *"The void blasts should be bigger and a bit random and should eat x amount of damage

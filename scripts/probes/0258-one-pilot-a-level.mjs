@@ -39,7 +39,7 @@ export const PROBES = [
     guard: 'THE MID-BOSSES: every one flies a pattern',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "    move: { kind: 'bob', amplitude: 22, wavelength: 140 },\n    attack: { kind: 'spray' },",
+      find: "    move: { kind: 'bob', amplitude: 22, wavelength: 140, rear: 0 },\n    attack: { kind: 'spray' },",
       replace: "    move: { kind: 'stalk', agility: 0.24 },\n    attack: { kind: 'spray' },",
     },
   },

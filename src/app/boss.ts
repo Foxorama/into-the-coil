@@ -351,7 +351,27 @@ export function stepBoss(
   const drift = row.drift > 0 && row.driftWavelength > 0
     ? row.drift * Math.sin((cameraAlong * TAU) / row.driftWavelength)
     : 0;
-  const station = cameraAlong + row.station + drift;
+  /*
+    ── AND THE REAR, WHICH IS THE ONLY THING THAT MOVES A HULL ALONG ITS OWN LANE — 0289 ───────────
+
+    ⚠️ **REPORTED**: *"can we give it more motion, like have it rear back a bit rather than just have
+    the head go up and down?"* The bob is a sine ACROSS the lane and nothing else, so a bobbing boss
+    traces a line. Phase-locked to that same angle, this makes it an ARC: furthest up-lane as the hull
+    crosses the middle of the lane rising, nearest the player as it crosses going the other way.
+
+    ⚠️ **IT IS HERE AND NOT IN THE `move` SWITCH, AND THAT IS THE ARCHITECTURE RATHER THAN TASTE.**
+    Every arm of that switch is on `across` and none touches `along` — the note below it says so — and
+    what keeps 0061's and 0101's six station assertions meaning what they say is that the station is
+    the ONE place a hull's lane position is decided. So a rear is a term of the station, beside the
+    drift it is a bigger sibling of, rather than an arm that reaches past the thing it would break.
+
+    ⚠️ **`bobPhase` IS LAST STEP'S, WHICH IS DELIBERATE AND NOT AN OVERSIGHT.** The switch advances it
+    after this runs, so the arc trails the bob by a single step at 60Hz. Reading it forward would mean
+    either advancing the angle in two places or moving the switch above the station, and the second is
+    how the *arms do not touch along* rule gets quietly lost.
+  */
+  const rear = row.move.kind === 'bob' && row.move.rear > 0 ? row.move.rear * Math.cos(boss.bobPhase) : 0;
+  const station = cameraAlong + row.station + drift + rear;
   /*
     Track it: the ask is how far off station the boss is, capped at the approach rate.
 

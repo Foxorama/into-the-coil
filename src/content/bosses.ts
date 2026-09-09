@@ -121,7 +121,25 @@ export type BossMove =
    * that swung wider would put the hull off the lane, and `across` is a fixed hundred units on every
    * device (0023). Faster over the same span is what escalation means here.
    */
-  | { kind: 'bob'; amplitude: number; wavelength: number }
+  /*
+    ⚠️ **AND `rear` IS THE ALONG HALF OF IT, SO THE HULL SWEEPS AN ARC RATHER THAN A LINE — 0289.**
+    Reported: *"can we give it more motion, like have it rear back a bit rather than just have the
+    head go up and down?"* World units, phase-locked to the bob's own angle a quarter turn behind it:
+    the hull is furthest UP-LANE as it crosses the middle of the lane rising, and furthest down-lane —
+    nearest the player — as it crosses going the other way. One cycle of the bob is one withdrawal and
+    one strike.
+
+    ⚠️ **IT IS ON THE ROW AND EVERY BOBBING BOSS STATES ITS OWN, INCLUDING THE FOUR THAT STATE ZERO.**
+    A default here would make *this animal rears* a property of the mechanism rather than of the
+    animal, which is `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`'s
+    whole subject — and a rearing harrow is a decision somebody should have to write down.
+
+    ⚠️ **A HULL THAT LUNGES HAS TO STAND FURTHER BACK, AND THAT IS NOT A DETAIL.** 0101 holds every
+    boss out of the player's half at the NEAR end of its swing, so a rear is subtracted there along
+    with the drift: the serpent's station moved 114 → 130 to buy this, and at 14 units of rear it
+    still only reaches 58% of the narrowest screen. `tests/level.test.ts` holds all three ends.
+  */
+  | { kind: 'bob'; amplitude: number; wavelength: number; rear: number }
   /**
    * Tracks the ship's lane, slowly.
    *
@@ -953,7 +971,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
   */
   harrow: {
     // A bob since 0258: a mid-boss flies a pattern. It stalked at 0.24 from 0111.
-    move: { kind: 'bob', amplitude: 22, wavelength: 140 },
+    move: { kind: 'bob', amplitude: 22, wavelength: 140, rear: 0 },
     attack: { kind: 'spray' },
     uncoil: null,
     fall: null,
@@ -1068,7 +1086,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     for by name: a hull rising and falling across the lane while it throws darts at where you are.
   */
   shoalMother: {
-    move: { kind: 'bob', amplitude: 26, wavelength: 150 },
+    move: { kind: 'bob', amplitude: 26, wavelength: 150, rear: 0 },
     // A wall since 0258: a mid-boss fires a pattern, and `bob/spray` is the harrow's pair. Its
     // phases widen the wall from one pair of lances either side of it to five, the hole in front.
     attack: { kind: 'wall', gap: 12 },
@@ -1160,7 +1178,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     this row was already described as being and never was.
   */
   chorus: {
-    move: { kind: 'bob', amplitude: 22, wavelength: 110 },
+    move: { kind: 'bob', amplitude: 22, wavelength: 110, rear: 0 },
     attack: { kind: 'rake', turn: 0.55 },
     /*
       ⚠️ **THIS LEVEL'S OWN IDEA WITH ONE HOLE PUNCHED IN IT** — 0151. Level six is about there being
@@ -1236,7 +1254,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
   */
   axis: {
     // A bob since 0258: a mid-boss flies a pattern. It stalked at 0.2 from 0111.
-    move: { kind: 'bob', amplitude: 20, wavelength: 180 },
+    move: { kind: 'bob', amplitude: 20, wavelength: 180, rear: 0 },
     attack: { kind: 'ring' },
     /*
       ⚠️ **THE TIGHTEST CURTAIN, AND ITS HOLE IS NEAR THE MIDDLE BECAUSE IT HAS TO BE.** A `lance`
@@ -1329,7 +1347,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     step it lands. The row's `shot` and `attack` are the first phase's; the phases say what changes.
   */
   jormungandr: {
-    move: { kind: 'bob', amplitude: 24, wavelength: 200 },
+    move: { kind: 'bob', amplitude: 24, wavelength: 200, rear: 14 },
     /*
       ── THE ACID IS A SPRAY THAT RAKES, AND THE THREE WEAPONS ARE THROWN TOGETHER — 0261 ──────────
 
@@ -1531,7 +1549,18 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // attacks before they died."* Every real boss is twice what 0247 authored; the mid-bosses stay.
     health: 1400,
     damage: 3,
-    station: 114,
+    /*
+      ⚠️ **114 → 130, AND IT IS THE PRICE OF THE LUNGE RATHER THAN A TASTE — 0289.** 0101 holds every
+      boss out of the player's half at the NEAR end of its swing, measured at `station − drift − rear
+      − radius` against 55% of the narrowest screen. At 114 the serpent sat at 57% with no rear at
+      all, so **every unit of lunge came straight out of the player's room** — a rear of 14 would have
+      put it at 49%, which is under the number the report that wrote 0101 actually observed.
+
+      ⚠️ **SO A HULL THAT LUNGES STANDS FURTHER BACK, WHICH IS ALSO WHAT IT SHOULD LOOK LIKE.** The
+      animal now holds off at 130 and closes to 103 when it strikes, instead of sitting at 114 and
+      doing nothing. Both ends are further from the player than the one place it used to sit.
+    */
+    station: 130,
     drift: 5,
     driftWavelength: 240,
     patrol: 0.3,
@@ -1770,7 +1799,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * frost, then void — and since 0254 each is a `Head`, taking its turn a volley.
    */
   hydra: {
-    move: { kind: 'bob', amplitude: 18, wavelength: 220 },
+    move: { kind: 'bob', amplitude: 18, wavelength: 220, rear: 0 },
     attack: { kind: 'spray' },
     uncoil: null,
     fall: null,
@@ -1872,7 +1901,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * player are owed. Its ring gets denser as it dies and its curtain is the tendrils' stand-in.
    */
   medusa: {
-    move: { kind: 'bob', amplitude: 14, wavelength: 260 },
+    move: { kind: 'bob', amplitude: 14, wavelength: 260, rear: 0 },
     attack: { kind: 'ring' },
     // No curtain since 0255: it was the tendrils' stand-in, and the tendrils are here.
     uncoil: null,

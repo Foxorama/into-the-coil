@@ -549,6 +549,79 @@ describe('0283 — the serpent is a chain', () => {
     ).toBe(true);
   });
 
+  it('0289 — THE REPORTED ONE: the head rears, so it moves ALONG its lane and not only across it', () => {
+    /*
+      ⚠️ **REPORTED**: *"can we give it more motion, like have it rear back a bit rather than just have
+      the head go up and down?"*
+
+      ⚠️ **MEASURED AGAINST THE CAMERA AND NOT IN WORLD `along`, WHICH IS THE WHOLE TRICK.** Every boss
+      holds station, and a station is a distance from the camera — so a hull matching the camera's rate
+      is standing still on the screen while its world `along` climbs by `SCROLL_PER_STEP` every step. A
+      guard reading `boss.along` would report a hundred units of magnificent rearing from a boss that
+      never moved a pixel. What the player watches is `along − cameraAlong`.
+
+      ⚠️ **AND THE SWING IS COMPARED TO THE DRIFT IT REPLACES.** *More motion* is a claim about the
+      size of it: the serpent already slid five units either way on the camera's own wavelength and
+      that is the thing the report calls *just going up and down*. So the floor is the drift, doubled —
+      a rear worth having is bigger than the wobble nobody could see.
+    */
+    const { world, frame } = serpentAt(1);
+    let nearest = Number.POSITIVE_INFINITY;
+    let furthest = Number.NEGATIVE_INFINITY;
+    for (let i = 0; i < 600; i++) {
+      world.bossPool.at(0).fireIn = 999;
+      world.ship.health = world.shipRow.health;
+      frame.step();
+      const onScreen = world.bossPool.at(0).along - world.cameraAlong;
+      nearest = Math.min(nearest, onScreen);
+      furthest = Math.max(furthest, onScreen);
+    }
+    const swing = furthest - nearest;
+    const floor = BOSSES.jormungandr.drift * 4;
+    expect(
+      swing,
+      `the serpent's head swept ${swing.toFixed(1)} units along the lane in ten seconds, against the ${floor} its ` +
+        'own drift would give it anyway — so it is going up and down, which is the report',
+    ).toBeGreaterThan(floor);
+  });
+
+  it('and the lunge is locked to the bob, so it is one arc and not two wobbles', () => {
+    /*
+      ⚠️ **THE DIFFERENCE BETWEEN *REARING* AND *DRIFTING ABOUT*, AND IT IS THE HALF A SIZE CHECK
+      MISSES.** An along swing on its own wavelength covers exactly the same ground as one locked to
+      the bob and traces a wandering scribble instead of a stroke. The rear is a function of the bob's
+      own angle, so the head is furthest back as it crosses the middle of the lane rising and nearest
+      as it crosses falling — one withdrawal and one strike a cycle.
+
+      ⚠️ **SO WHAT IS MEASURED IS WHERE ACROSS THE LANE THE HULL IS WHEN IT IS FURTHEST BACK.** Locked,
+      that is the middle of its swing. Unlocked, it is wherever the two wavelengths happen to meet.
+    */
+    const { world: w2, frame: f2 } = serpentAt(1);
+    let atFurthest = 0;
+    let seen = Number.NEGATIVE_INFINITY;
+    let mid = 0;
+    let lanes = 0;
+    for (let i = 0; i < 600; i++) {
+      w2.bossPool.at(0).fireIn = 999;
+      w2.ship.health = w2.shipRow.health;
+      f2.step();
+      const boss = w2.bossPool.at(0);
+      mid += boss.across;
+      lanes++;
+      const onScreen = boss.along - w2.cameraAlong;
+      if (onScreen > seen) {
+        seen = onScreen;
+        atFurthest = boss.across;
+      }
+    }
+    const centre = mid / lanes;
+    expect(
+      Math.abs(atFurthest - centre),
+      `the serpent was furthest back at ${atFurthest.toFixed(1)} across, against a swing centred on ` +
+        `${centre.toFixed(1)} — so the lunge is not locked to the bob and the two read as separate wobbles`,
+    ).toBeLessThan(BOSSES.jormungandr.move.kind === 'bob' ? BOSSES.jormungandr.move.amplitude * 0.5 : 0);
+  });
+
   it('0286 — and it keeps every segment it was authored with, through the ARRIVAL and not only on station', () => {
     /*
       ⚠️ **THE DEFECT THIS CAUGHT, AND IT ONLY EXISTS BECAUSE THE ANIMAL GOT LONG.** A chain's nodes
