@@ -2301,7 +2301,7 @@ function fireArc(w: World): void {
       blast.health -= w.weapon.damage;
       blast.swell *= VOID_SWELL;
       blast.radius *= VOID_SWELL;
-      if (blast.health <= 0) burstVoid(w, eater);
+      if (blast.health <= 0) spendVoid(w, eater);
       break;
     }
     if (enemy >= 0 && (boss < 0 || nearer(w.enemies.at(enemy), w.bossPool.at(0), fromAlong, fromAcross))) {
@@ -3127,16 +3127,23 @@ function flare(w: World, along: number, across: number, kind: DebrisKind): void 
  * while `fissionShots` is running downwards through it, so lighting it there would cost every
  * child a step its parent did not pay.
  */
-function throwChild(w: World, along: number, across: number, kind: number, stage: number, angle: number, speed: number): void {
+function throwChild(w: World, along: number, across: number, kind: number, stage: number, angle: number, speed: number): Entity | null {
   const child = w.enemyShots.spawn();
   // A burst that will not fit is dropped rather than grown, exactly as a volley is.
-  if (child === null) return;
+  if (child === null) return null;
   const row = SHOT_ROWS[kind]!;
   reset(child, along, across, row, kind);
   child.turnsLeft = stage;
   child.fireIn = stage < row.fission.length ? row.fission[stage]!.after : 0;
   child.velAlong = Math.cos(angle) * speed + w.scrollPerStep;
   child.velAcross = Math.sin(angle) * speed;
+  /*
+    ⚠️ **IT HANDS THE CHILD BACK SINCE 0299, AND EVERY OTHER CALLER IGNORES IT.** A shard needs an
+    appetite of its own and this is the one place that knows which entity it just made. `fissionShots`
+    — the frost's shatter, 0263 — is untouched by that: it wants exactly the row's own numbers, and a
+    return nobody reads changes nothing about what it does.
+  */
+  return child;
 }
 
 /**
@@ -3179,13 +3186,19 @@ function feedVoids(w: World): void {
     const row = SHOT_ROWS[blast.kind]!;
     if (row.swallows !== true) continue;
     /*
-      ⚠️ **A SHARD IS NOT A BLAST, AND WITHOUT THIS LINE THE POOL EXPLODES.** The burst's children are
-      the same ROW, so they carry the same appetite — and they are spawned at stage 1, so one pulse
-      would pop each of the seven into seven more, for ever. `turnsLeft` is the stage every shot
-      already carries and nothing else reads on one (0263), so *what came out of a burst* is a
-      question the entity can already answer. Only what a mouth threw has an appetite.
+      ── A SHARD USED TO BE SKIPPED HERE ENTIRELY, AND 0299 SPLIT THE TWO THINGS THAT CONFLATED ─────
+
+      ⚠️ **THE OLD LINE WAS `if (blast.turnsLeft > 0) continue;` AND ITS REASON WAS REAL.** The
+      burst's children are the same ROW, so they carry the same appetite — and at stage 1 one pulse
+      would pop each of the seven into seven more, for ever. A ring that can be farmed for another
+      ring is not a hazard, it is a pool exhaustion the player triggers on purpose.
+
+      ⚠️ **BUT IT ANSWERED THAT BY MAKING A SHARD UNTOUCHABLE, WHICH IS TWO CLAIMS IN ONE SKIP** —
+      *can be eaten* and *will burst*. Reported: *"the smaller voids need to be killable as well."*
+      Only the second one ever needed to be false. `spendVoid` below is the split: a shard eats
+      damage and DIES, and only what a mouth threw bursts. `turnsLeft` already tells them apart, so
+      nothing new has to be remembered by anything.
     */
-    if (blast.turnsLeft > 0) continue;
     for (let s = w.playerShots.size - 1; s >= 0; s--) {
       const shot = w.playerShots.at(s);
       /*
@@ -3267,18 +3280,35 @@ function feedVoids(w: World): void {
       }
     }
     if (blast.health > 0) continue;
-    /*
-      ⚠️ **AND THEN IT IS ITS OWN BURST**, which is 0263's machinery and not a second copy of it:
-      `throwChild` releases nothing, spawns one child of the same row about a heading, and drops a
-      burst that will not fit rather than growing the pool. The parent is released FIRST so the first
-      child takes its slot, exactly as `fissionShots` does and for the same reason.
-
-      ⚠️ **THE CHILDREN ARE STAGE 1 AND SO CANNOT THEMSELVES BE EATEN** — the guard at the top of this
-      loop, and the reason it is there. A ring that could be farmed for another ring is not a hazard,
-      it is a pool exhaustion the player triggers on purpose.
-    */
-    burstVoid(w, i);
+    spendVoid(w, i);
   }
+}
+
+/**
+ * A void that has run out of health, spent: a thrown blast BURSTS and a shard is simply gone — 0299.
+ *
+ * ⚠️ **ONE DESCRIPTION OF *WHAT HAPPENS WHEN A VOID RUNS OUT*, AND THERE ARE TWO CALLERS.**
+ * `feedVoids` and the arc's own path in `fireWeapon` both used to call `burstVoid` directly, so the
+ * stage question would have had to be answered identically in two places — and the one that got it
+ * wrong would be the one nobody was looking at. This is the answer written once.
+ *
+ * ⚠️ **A SHARD NEVER SPAWNS CHILDREN, AND THAT IS THE INVARIANT THE OLD SKIP WAS PROTECTING.** It is
+ * why the recursion the comment above warns about cannot come back: not because a shard is
+ * untouchable, but because being spent is not the same event as bursting.
+ * `tests/serpent.test.ts` holds it and `scripts/probes/0299-a-shard-is-killable.mjs` breaks it.
+ */
+function spendVoid(w: World, index: number): void {
+  if (w.enemyShots.at(index).turnsLeft > 0) {
+    w.enemyShots.releaseAt(index);
+    return;
+  }
+  /*
+    ⚠️ **AND THEN IT IS ITS OWN BURST**, which is 0263's machinery and not a second copy of it:
+    `throwChild` releases nothing, spawns one child of the same row about a heading, and drops a
+    burst that will not fit rather than growing the pool. The parent is released FIRST so the first
+    child takes its slot, exactly as `fissionShots` does and for the same reason.
+  */
+  burstVoid(w, index);
 }
 
 /**
@@ -3303,10 +3333,29 @@ function burstVoid(w: World, index: number): void {
   // Where the ring points is the blast's own roll, so no two bursts open the same way.
   const turn = w.voidRng.range(0, TAU);
   w.enemyShots.releaseAt(index);
+  const bite = shardAppetite(SHOT_ROWS[kind]!.health);
   for (let k = 0; k < VOID_SHARDS; k++) {
-    throwChild(w, along, across, kind, 1, turn + (k * TAU) / VOID_SHARDS, speed);
+    const shard = throwChild(w, along, across, kind, 1, turn + (k * TAU) / VOID_SHARDS, speed);
+    if (shard !== null) shard.health = bite;
   }
 }
+
+/**
+ * What a shard eats before it is gone, from what a thrown blast eats — 0299.
+ *
+ * ⚠️ **DERIVED FROM THE ROW RATHER THAN TYPED BESIDE IT.** Two numbers for one idea is how the void
+ * went wrong the first time: 0291 authored an `appetite: 6` next to a `health: 1` and `reset` hands a
+ * shot its ROW's health, so one pulse popped the blast. The lesson was collapse them, and a
+ * hand-typed shard appetite would be that mistake rebuilt one field over — the day the blast's
+ * appetite moves, a typed shard silently stops being a third of it.
+ *
+ * ⚠️ **A THIRD, AND SOFTER IS THE POINT RATHER THAN THE FRACTION.** Asked for as *"softer shards,
+ * which also sets the scope for bigger void chains down the track if we want them"*: what makes a
+ * shard that itself bursts affordable is that clearing one costs little, so this is the ceiling on a
+ * chain and not only an answer to *"the smaller voids need to be killable as well."* At the blast's
+ * six it is two, so a whole ring is fourteen against the forty-two it would be at the row's own.
+ */
+const shardAppetite = (blast: number): number => Math.max(1, Math.ceil(blast / 3));
 
 /**
  * The nearest void blast a bolt may jump to, or `-1` — 0292.
@@ -3331,7 +3380,8 @@ function nearestVoid(w: World, fromAlong: number, fromAcross: number, reach: num
   for (let i = 0; i < w.enemyShots.size; i++) {
     const blast = w.enemyShots.at(i);
     if (SHOT_ROWS[blast.kind]!.swallows !== true) continue;
-    if (blast.turnsLeft > 0) continue;
+    // ⚠️ The stage skip was here too and 0299 took it out: a shard is a thing the lightning is drawn
+    // into like any other void, which is what *"it sucks in the lightning"* meant. It cannot burst.
     if (blast.along + blast.radius > edge) continue;
     const dAlong = blast.along - fromAlong;
     const dAcross = blast.across - fromAcross;

@@ -389,6 +389,54 @@ describe('0248 — the serpent strikes', () => {
     ).toBeGreaterThan(1);
   });
 
+  it('0299 — THE REPORTED ONE: a SHARD can be killed too, and killing one never makes more', () => {
+    /*
+      ⚠️ **REPORTED**: *"the smaller voids need to be killable as well."* Until 0299 a shard was
+      skipped outright by `feedVoids` and by `nearestVoid` — the player's fire passed through it and
+      the lightning would not jump to it.
+
+      ⚠️ **AND THE SKIP HAD A REAL REASON, WHICH IS THE HALF THIS GUARD HOLDS.** A shard carries the
+      same row, so the same appetite, and at stage 1 one pulse would have popped each of seven into
+      seven more, for ever. What 0299 changed is not *a shard is safe to feed* but that **being spent
+      is not the same event as bursting**: `spendVoid` releases a shard and bursts only what a mouth
+      threw.
+
+      ⚠️ **SO THERE ARE TWO CLAIMS AND THE SECOND IS THE INVARIANT.** A shard takes damage, AND the
+      pool never grows through one. The second is what a later tidy-up of the stage check would
+      break, and it would break silently: the game would still play, for about four seconds.
+    */
+    const { world, frame } = serpentAt(0.5);
+    const boss = world.bossPool.at(0);
+    const kind = SHOT_INDEX.void;
+    const shard = world.enemyShots.spawn()!;
+    reset(shard, world.ship.along + 20, world.ship.across, SHOTS.void, kind);
+    // What a burst makes: the same row at stage 1. `burstVoid` also softens it, and this asks the
+    // frame for that rather than restating the fraction — a number restated is a number that drifts.
+    shard.turnsLeft = 1;
+    expect(shard.turnsLeft, 'this fixture is not holding a shard, so it measures a thrown blast').toBe(1);
+
+    let fedWith = 0;
+    let mostSeen = world.enemyShots.size;
+    for (let i = 0; i < SHOTS.void.health * 3 && world.enemyShots.size > 0; i++) {
+      boss.fireIn = 999;
+      const at = world.enemyShots.at(0);
+      const before = at.health;
+      const pulse = world.playerShots.spawn()!;
+      reset(pulse, at.along, at.across, SHOTS.pulse, SHOT_INDEX.pulse);
+      frame.step();
+      if (world.enemyShots.size > 0 && world.enemyShots.at(0).health < before) fedWith += before - world.enemyShots.at(0).health;
+      mostSeen = Math.max(mostSeen, world.enemyShots.size);
+    }
+
+    expect(fedWith, 'the player’s fire went straight through the shard, which is what it did before 0299').toBeGreaterThan(0);
+    expect(world.enemyShots.size, 'the shard soaked the whole volley and never died').toBe(0);
+    /*
+      ⚠️ **AND THE POOL NEVER GREW**, which is the recursion the old skip existed to prevent. One
+      shard in, nothing but that shard for its whole life, and an empty pool at the end.
+    */
+    expect(mostSeen, 'killing a shard spawned more shards, so a ring can be farmed into a full pool').toBe(1);
+  });
+
   it('0292 — THE REPORTED ONE: a MISSILE feeds it too', () => {
     /*
       ⚠️ **REPORTED**: *"let's change it so it eats missiles and bombs and that it sucks in the
