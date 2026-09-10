@@ -101,6 +101,32 @@ rather than thresholds to clear:
 2. When adding anything new, consider how much screen space the player has to react, and how long
    that element is on screen.
 
+## The test for whether a rule may be hard at all
+
+> *"Does it make sense for a rule to be hard? If yes, then it's a hard rule. If no, then it's a
+> specific rule for that thing."*
+
+Ask it of the thing, not of the category. The five rules above all failed it and none of them was ever
+asked.
+
+**Worked, on the case that produced this decision.** *Every hostile bullet is drawn more than five
+pixels from every other* — does that make sense as a hard rule? No: it ignores colour, shape, speed,
+vector and origin, and it forces the tenth bullet to shove the ninth. So it is not a rule at all; it
+is a fact about the nine rows that happen to exist. But *fire is the same colour in every place* —
+does **that** make sense as a hard rule? Yes, and for a reason specific to fire: fire is fire
+everywhere, and a flame that changed hue by level would be teaching the player something untrue about
+the world. So it is hard, and it is hard **about fire**, not about bullets.
+
+The two live side by side in the same change — a hostile bullet takes its place's colour, and a flame
+does not — which is what the test is for. **A rule earns hardness from the thing it is about, never
+from the shape of the file it would live in.**
+
+⚠️ **AND THE ANSWER TO A LEGIBILITY PROBLEM IS NOT ALWAYS A PICTURE.** Level one's hulls wear accents
+close to what shoots at the player, and the fix considered first was to repaint them. The better one
+may be **placement** — a weaver arrives when the bullets it resembles are not on screen — which costs
+the art nothing and is invisible to every guard that could have been written here. *Consider what
+shares the screen space* is a question about the screen at a moment, not about a table of colours.
+
 **The word is `consider` on purpose, and it is not softness.** A threshold answers the question
 before it is asked, and answering it automatically is what produced the harm this decision is about:
 assume the player needs time and every attack becomes trivial to dodge; assume nothing may confuse

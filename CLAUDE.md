@@ -49,8 +49,12 @@ decision needs no rule.
   bullets to grow into the hull range, made the fastest shot the smallest by rule, and forbidden both
   a small tough enemy and a big fragile one. The standing answer is what does the harm in either
   direction: assume the player needs time and nothing is worth dodging; assume nothing may confuse
-  them and background flavour stops being addable. **No guard holds this**, and the decision says why.
-  — [0295](docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md)
+  them and background flavour stops being addable. **Before writing any rule, ask whether it makes
+  sense for THAT THING to be hard** — if yes it is a hard rule, if no it is a specific rule for that
+  thing and belongs on its row. A rule earns hardness from its subject, never from the shape of the
+  file it would live in: a hostile bullet takes its place's colour and a flame is the same red
+  everywhere, and both are correct in the same change. **No guard holds this**, and the decision says
+  why. — [0295](docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md)
 
 ## Process
 
