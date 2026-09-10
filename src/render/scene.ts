@@ -232,8 +232,9 @@ const NO_SKY: Sky = [];
   the model put them, and `blit` cannot rotate.
 
   ⚠️ **EVERY NUMBER HERE IS IN WORLD UNITS AND IS SCALED AT THE SURFACE** — 0023, nothing is authored
-  in screen space. The width is a fraction of a lane unit, the jag is a fraction of the link's own
-  length, and both are multiplied by `view.scale` on the way out.
+  in screen space. The width is a fraction of a lane unit; the jag and the twig are fractions of the
+  link's own length **up to a ceiling in lane units** (0302), so a bolt keeps its figure however far
+  the gun reaches; and every one of them is multiplied by `view.scale` on the way out.
 
   ⚠️ **THE JAG IS A HASH, NOT A STREAM.** A `Rng` here would be a cosmetic roll consuming a stream
   every frame (0021), and a painter that draws twice per step — interpolation — would advance it
@@ -252,9 +253,25 @@ const BOLT_WIDTH = 0.5;
 /** How far a vertex may sit off the straight line, as a fraction of the link's length. */
 const BOLT_JAG = 0.16;
 /** And an absolute ceiling on that, in world units, so a long link is not a wide one. */
-const BOLT_JAG_MAX = 3;
+export const BOLT_JAG_MAX = 3;
 /** The twig's length as a fraction of its link's. */
 const TWIG_SHARE = 0.3;
+/**
+ * And an absolute ceiling on THAT, in world units — 0302, for `BOLT_JAG_MAX`'s reason and it was
+ * the half that had none.
+ *
+ * ⚠️ **Asked for as a look, not as a number:** *"keep the thinner size when extending it again,
+ * because it looks more like lightning with the thinner graphics."* The reach ladder roughly halved
+ * in 0297 and is long again in 0302, and the two things here that scale with a link's length are
+ * the jag and the twig. The jag was already ceilinged and needed nothing; the twig was a bare
+ * fraction, so a 55-unit bolt would have grown a 16-unit fork — a branch, where the thing the
+ * player liked is a filament.
+ *
+ * ⚠️ **THE NUMBER IS THE LONGEST TWIG THE SHORT LADDER COULD DRAW**: 0.3 × 39, the reach at its cap
+ * before this change, is 11.7. At 12 nothing the player is looking at today moves by a pixel and
+ * nothing gets wider than it as the bolts get longer, which is exactly what was asked.
+ */
+const TWIG_MAX = 12;
 /** Frames a jag pattern is held for before the next one — a flicker at half the frame rate. */
 const BOLT_PAGE_STEPS = 2;
 /**
@@ -371,7 +388,7 @@ export function paintBolts(surface: Surface, view: View, bolts: Pool<Entity>, ca
     const t0 = from / last;
     const rootAlong = endAlong + e.fromAlong * (1 - t0) + nAlong * jag(seed, from, page) * amp;
     const rootAcross = endAcross + e.fromAcross * (1 - t0) + nAcross * jag(seed, from, page) * amp;
-    const reach = TWIG_SHARE * length;
+    const reach = TWIG_SHARE * length > TWIG_MAX ? TWIG_MAX : TWIG_SHARE * length;
     for (let v = 0; v < TWIG_VERTICES; v++) {
       const s = v / (TWIG_VERTICES - 1);
       const out = side * reach * s;

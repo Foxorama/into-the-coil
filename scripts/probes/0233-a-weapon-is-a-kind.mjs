@@ -131,8 +131,10 @@ export const PROBES = [
     guard: 'THE CHAIN: a volley lands',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    fromAlong = toAlong;\n    fromAcross = toAcross;\n  }\n}',
-      replace: '  }\n}',
+      // ⚠️ Re-anchored by 0302, which decays the reach at the foot of the same loop. The break is
+      // the same one and the decay is left in place, so what it takes away is only the chaining.
+      find: '    fromAlong = toAlong;\n    fromAcross = toAcross;\n    reach *= w.weapon.falloff;\n  }\n}',
+      replace: '    reach *= w.weapon.falloff;\n  }\n}',
     },
   },
   {
@@ -143,8 +145,9 @@ export const PROBES = [
     guard: 'beyond its reach it fires dry',
     edit: {
       path: 'src/app/frame.ts',
-      // ⚠️ Re-anchored by 0257, which bounds the search by the screen's edge as well.
-      find: '    const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, w.weapon.reach, true, edge);',
+      // ⚠️ Re-anchored by 0257, which bounds the search by the screen's edge as well, and by 0302,
+      // which hands each link its own decayed reach rather than the row's.
+      find: '    const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, reach, true, edge);',
       replace: '    const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, 1e9, true, edge);',
     },
   },

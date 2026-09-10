@@ -100,6 +100,16 @@ describe('0233 — a weapon is a kind', () => {
       for (const ladder of [row.fireEvery, row.barrels, row.links, row.weight]) {
         expect(ladder.length, `${kind} has a ladder that is not one rung per tier`).toBe(UPGRADE_TIERS + 1);
       }
+      /*
+        0302 — a chain SPENDS itself, and a weapon that does not chain has nothing to spend. A
+        `falloff` of 1 or more is the search-the-whole-screen chain
+        `docs/decisions/0297-a-reach-is-measured-on-both-axes.md` was reported for, and one of 0 on a
+        chaining weapon is a chain of one link wearing a ladder of three.
+      */
+      expect(
+        row.falloff > 0 && row.falloff < 1,
+        `${kind} authors a falloff of ${row.falloff} and ${row.flight === 'chain' ? 'chains' : 'does not chain'}`,
+      ).toBe(row.flight === 'chain');
       for (let tier = 0; tier <= UPGRADE_TIERS; tier++) {
         const steps = row.fireEvery[tier]!;
         expect(Number.isInteger(steps) && steps > 0, `${kind} tier ${tier} fires every ${steps} steps`).toBe(true);
@@ -439,9 +449,23 @@ describe('0233 — the arc is chain lightning', () => {
     const { world, frame, cues } = armed('arc', 2);
     const links = world.weapon.links;
     expect(links, 'the fixture has no chain to test').toBeGreaterThanOrEqual(3);
-    const near = [target(world, 20, 0), target(world, 32, 14), target(world, 44, -10)];
+    /*
+      ⚠️ **THE GAPS SHRINK, BECAUSE THE JUMPS DO — 0302.** Each jump reaches `falloff` of the one
+      before it, so a chain walking a constant stride is not a chain this model can make and a
+      fixture built on one is testing the model of two changes ago. Each body sits comfortably
+      inside its own link's reach, measured from the body the link starts at.
+    */
+    const near = [target(world, 20, 0), target(world, 34, 8), target(world, 42, 2)];
     const far = target(world, near[2]!.along - world.ship.along + world.weapon.reach + 40, 0);
     const nose = { along: world.ship.along + MUZZLE_ALONG, across: world.ship.across };
+    // And the fixture says so out loud, so a ladder that moves under it fails HERE rather than
+    // quietly testing a chain of one — every gap inside the reach the link that jumps it is given.
+    let from = nose;
+    for (let i = 0; i < near.length; i++) {
+      const gap = Math.hypot(near[i]!.along - from.along, near[i]!.across - from.across) - ENEMIES.turret.radius;
+      expect(gap, `the fixture put body ${i} outside link ${i}'s own reach`).toBeLessThan(world.weapon.reach * world.weapon.falloff ** i);
+      from = near[i]!;
+    }
     frame.step();
     for (const body of near) expect(body.health, 'a body in reach was not struck').toBe(99 - world.weapon.damage);
     expect(far.health, 'a body beyond the chain’s reach was struck').toBe(99);
@@ -468,6 +492,66 @@ describe('0233 — the arc is chain lightning', () => {
     expect(world.bolts.size, 'a dry volley is not one link').toBe(1);
     expect(cues, 'a dry volley did not sound the discharge').toContain('arc');
     expect(cues, 'a dry volley sounded a strike that did not happen').not.toContain('zap');
+  });
+
+  it('0302 — THE FALLOFF: a jump reaches less than the hit before it, so a body a first reach past the last strike is out of range', () => {
+    /*
+      `docs/decisions/0302-the-bolt-shows-its-reach.md`. *"The additional jumps should then be based
+      on decreasing distance."* Held as the RELATIONSHIP: the second body stands a gap the first hit
+      would have crossed and the jump cannot, whatever the ladder says either of them is.
+    */
+    const { world, frame } = armed('arc', 2);
+    expect(world.weapon.links, 'the fixture has no second link to shorten').toBeGreaterThanOrEqual(2);
+    expect(world.weapon.falloff, 'the arc no longer spends its chain').toBeLessThan(1);
+    const first = target(world, 20, 0);
+    // Between the two: inside what the first hit crossed, outside what the jump is given.
+    const gap = (world.weapon.reach + world.weapon.reach * world.weapon.falloff) / 2;
+    const second = target(world, 20 + gap, 0);
+    frame.step();
+    expect(first.health, 'the first hit did not land').toBe(99 - world.weapon.damage);
+    expect(second.health, 'the jump reached as far as the first hit did').toBe(99);
+    expect(world.bolts.size, 'the picture kept a link the chain did not make').toBe(1);
+  });
+
+  it('0302 — THE RANGE, in pixels: a dry bolt is drawn exactly as far as the gun reaches, and a body at its tip is struck', () => {
+    /*
+      `docs/decisions/0027-measure-the-picture-not-the-model.md` asks for one assertion in the units
+      the player experiences, and this is the whole of 0302 in them: the length of the line on the
+      screen, against the place a body has to stand to be hit by it. The bolt drew 0.55 of its reach
+      — *"so a miss does not look like a range"* — and the report is the other way round: *"the first
+      hit should have the range displayed on screen."*
+    */
+    const { world, frame } = armed('arc', UPGRADE_TIERS);
+    const recorder = new Recorder();
+    world.surface = recorder;
+    frame.step();
+    frame.draw(1);
+    const px = world.view.scale;
+    const at = (along: number, across: number): [number, number] => [
+      screenX(world.view, along - world.cameraAlong, across),
+      screenY(world.view, along - world.cameraAlong, across),
+    ];
+    const nose = at(world.ship.along + MUZZLE_ALONG, world.ship.across);
+    const tip = at(world.ship.along + MUZZLE_ALONG + world.weapon.reach, world.ship.across);
+    expect(world.bolts.size, 'the fixture did not fire dry').toBe(1);
+    const main = recorder.bolts.find((p) => Math.hypot(p[0]! - nose[0], p[1]! - nose[1]) < 1.5 * px);
+    expect(main, `no stroke leaves the nose at ${nose.map((n) => n.toFixed(0)).join(',')}`).toBeDefined();
+    const drawn = Math.hypot(main![main!.length - 2]! - nose[0], main![main!.length - 1]! - nose[1]) / px;
+    const reached = Math.hypot(tip[0] - nose[0], tip[1] - nose[1]) / px;
+    expect(drawn, `the dry bolt draws ${drawn.toFixed(1)} lane units where the gun reaches ${reached.toFixed(1)}`).toBeCloseTo(reached, 1);
+    /*
+      And the line is not a decoration: a body whose hull edge stands at that tip is struck and one
+      two units past it is not. A fresh world each way, because at this tier the chain has links to
+      spare and a body left standing beside another would be jumped to rather than missed.
+    */
+    const healthAt = (past: number): number => {
+      const built = armed('arc', UPGRADE_TIERS);
+      const body = target(built.world, MUZZLE_ALONG + built.world.weapon.reach + ENEMIES.turret.radius + past, 0);
+      built.frame.step();
+      return body.health;
+    };
+    expect(healthAt(-0.5), 'a body half a unit inside the drawn tip was not struck').toBe(99 - world.weapon.damage);
+    expect(healthAt(2), 'a body two units past the drawn tip was struck').toBe(99);
   });
 
   it('0257 — THE SCREEN: from the front of the box, at every tier, a body whose hull is on the screen is struck and one crossing the leading edge is not', () => {
