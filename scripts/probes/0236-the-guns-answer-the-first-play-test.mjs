@@ -15,8 +15,9 @@ export const PROBES = [
     /*
       ⚠️ Re-anchored by 0239 (the ladder's top cut back a tenth), 0241 (the whole of it a twentieth),
       **0297**, which rescaled it to about 0.4 — the reach had been sized against the view's long
-      axis and applied to a circle that also spans the 100-unit lane — and **0302**, which re-authored
-      it as the length the dry bolt had been DRAWING all along and now draws in full.
+      axis and applied to a circle that also spans the 100-unit lane — **0302**, which re-authored it
+      as the length the dry bolt had been DRAWING all along and now draws in full, and **0303**,
+      which slid the whole ladder up one rung after playing it.
 
       ⚠️ **THE BREAK IS UNCHANGED AND SO IS WHAT IT CATCHES**: a flat ladder, so no rung buys reach.
       0297's own first draft reddened this same guard for real, at 24 → 27, which is the best evidence
@@ -24,8 +25,8 @@ export const PROBES = [
     */
     edit: {
       path: 'src/content/weapons.ts',
-      find: '    reach: [29, 34, 40, 47, 55],',
-      replace: '    reach: [29, 29, 29, 29, 29],',
+      find: '    reach: [34, 40, 47, 55, 68],',
+      replace: '    reach: [34, 34, 34, 34, 34],',
     },
   },
   {

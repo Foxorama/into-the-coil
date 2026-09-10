@@ -241,24 +241,34 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
       jumps should then be based on decreasing distance."* A bolt fired dry drew 0.55 of its reach,
       so what the old ladder actually put on screen was 0.55 × [52, 61, 71, 84, 98] — **28.6 to 53.9
       units, and never 98.** 0297 cut the number and the picture came with it: the dry bolt fell to
-      11 units, a stub. **So the rungs here are that drawn length**, and `src/app/frame.ts` now
-      draws the whole of it: the same bolt the player liked, and it is the range for the first time.
+      11 units, a stub. **So 0302's rungs were that drawn length** — `[29, 34, 40, 47, 55]` — and
+      `src/app/frame.ts` now draws the whole of whatever they say: the length the player sees is the
+      range, for the first time. That is the mechanism; what the numbers are is a play-test's.
 
-      ⚠️ **THE CAP IS 55 AND NOT 98, WHICH IS WHY 0297'S REPORT DOES NOT COME BACK WHOLE.** Two
-      things carried the auto-pilot and only one of them was the first hit: a chain of three, each
-      jumping a full 98, searched the entire screen from wherever the last body stood. `falloff`
-      takes that half — at the cap a volley reaches 55, then 33, then 19.8, a span of 108 against
-      the old 294. **What is honestly still true is that 55 crosses the lane's width from its
-      centre** (`ACROSS_SPAN` is 100), so a player parked in the middle can still reach either edge
-      with the FIRST hit at the last rung. That is one strike per volley rather than three, and it
-      is now a length they can see. If it still plays as auto-pilot, this ladder is what moves.
+      ⚠️ **THE CAP IS NOT 98, WHICH IS WHY 0297'S REPORT DOES NOT COME BACK WHOLE.** Two things
+      carried the auto-pilot and only one of them was the first hit: a chain of three, each jumping
+      a full 98, searched the entire screen from wherever the last body stood. `falloff` takes that
+      half — at the cap a volley reaches 68, then 40.8, then 24.5, a span of 133 against the old
+      294. **What is honestly true is that the top rungs cross the lane's width from its centre**
+      (`ACROSS_SPAN` is 100), so a player parked in the middle can reach either edge with the FIRST
+      hit. That is one strike per volley rather than three, and it is now a length they can see.
 
-      ⚠️ **AND 0257 STILL HAS SOMETHING TO BITE ON.** On a 1280×720 screen the nose at the front of
-      its box sits 10.7 units from the leading edge, so even the first rung still reaches past it —
-      the guard that a link lands only on a body whose whole hull is on screen is not made vacuous
-      by this.
+      ── AND THEN IT WENT UP A RUNG, PLAYED — 0303 ─────────────────────────────────────────────────
+
+      ⚠️ **`[29, 34, 40, 47, 55]` → `[34, 40, 47, 55, 68]`.** Reported after playing 0302: *"reach
+      needs to be about 1 tier up and slightly further for the last tier."* Every rung is the one
+      above it, and the cap is a fifth past where the shift alone would have put it. **The shape is
+      untouched** — this is the ladder sliding along itself, which is what *one tier up* means, and
+      it is the first move of this number that was made by playing rather than by arithmetic.
+
+      ⚠️ **AND 0257 STILL HAS SOMETHING TO BITE ON — MORE OF IT AT EVERY RUNG.** On a 1280×720
+      screen the nose at the front of its box sits 10.7 units from the leading edge, so every rung
+      reaches past it and the guard that a link lands only on a body whose whole hull is on screen
+      does the clamping. That is a positioning rule the longer ladder makes LOUDER rather than
+      quieter: fly to the front of the box and the gun's forward reach is whatever the screen has
+      left, wherever this ladder sits.
     */
-    reach: [29, 34, 40, 47, 55],
+    reach: [34, 40, 47, 55, 68],
     /*
       Three fifths of the jump before it — 0302. At the cap that is 55 → 33 → 19.8, so a chain
       shortens as it goes and the picture says so: each link is visibly stubbier than the last.
