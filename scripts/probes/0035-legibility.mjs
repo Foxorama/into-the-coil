@@ -83,17 +83,18 @@ export const PROBES = [
       replace: '    const blinking = e.invulnFor > 0;',
     },
   },
-  {
-    decision: '0035',
-    suite: 'tests/combat.test.ts',
-    broke: 'the tougher enemy drawn at the same size as the harmless one, which is what shipped',
-    guard: 'the enemy that takes more killing is drawn bigger',
-    edit: {
-      path: 'src/content/sprites.ts',
-      find: '  lancer: 7,\n  lancerHit: 7,',
-      replace: '  lancer: 5.5,\n  lancerHit: 5.5,',
-    },
-  },
+  /*
+    ── THE LANCER PROBE WAS HERE, AND 0295 RETIRED IT WITH THE GUARD IT AIMED AT ───────────────────
+
+    It cut the lancer to the drifter's 5.5 to redden `the enemy that takes more killing is drawn
+    bigger`. `docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md` deleted that guard: it
+    ordered all thirteen enemy extents by health, which forbids a small tough enemy and a big fragile
+    one, and it was built from one true observation about two rows.
+
+    ⚠️ **DELETED RATHER THAN RE-AIMED.** There is no surviving guard this break would redden, and a
+    probe pointed at something it never protected reads as cover — the reasoning
+    `scripts/probes/0087-never-parks.mjs` already records for the bob.
+  */
   {
     decision: '0035',
     suite: 'tests/combat.test.ts',

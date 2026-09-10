@@ -852,6 +852,16 @@ evidence that a drawn path converged in one pass what four passes of words had n
 landed** — [0276](decisions/0276-the-kit-draws-a-creature.md) and
 [0277](decisions/0277-the-serpent-has-menace.md).
 
+⚠️ **AND THE BULLET-AND-ENEMY CHANNEL IS OPEN UNDER A STANDING INSTRUCTION, SINCE 2026-09-10** —
+*"when it comes to bullets and enemies, stop assuming, present a plan."* It was given after a rule
+this session had defended was called *"a rule that specifically makes quality worse."*
+[0295](decisions/0295-a-ranking-guard-is-a-content-limiter.md) removed five guards of that class and
+added no successor: what holds the ground is two **considerations** in `CLAUDE.md` and
+`scripts/weigh-sizes.mjs` to raise them against. **Read 0295 before writing any guard over content,
+and before proposing a size, an ink or an extent.** Nothing was resized by it — which bullets and
+hulls should actually move is the considered pass it deliberately did not take, and the queue behind
+it is the eagle's fire whip as fireballs, the minibosses' tiny bullets, and per-level backgrounds.
+
 ### ⚠️ AND THE NEXT ONE IS A FORK THAT HAS TO BE PICKED BEFORE IT IS BUILT
 
 ⚠️ **THE SERPENT DOES NOT UNDULATE, AND A BAKED BITMAP CANNOT.** Played 2026-09-08: *"it needs to

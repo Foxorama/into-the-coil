@@ -72,17 +72,12 @@ export const PROBES = [
       replace: "      { upTo: 0.33, fireEvery: 48, shots: 1, spread: 1.4, patrolScale: 2.2, stance: { kind: 'volley' }, shot: null, attack: null },",
     },
   },
-  {
-    decision: '0042',
-    suite: 'tests/combat.test.ts',
-    // The new enemy against the rule that already caught the turret once. Size carries toughness, and
-    // an extent is the easiest field in the game to pick by eye.
-    broke: 'the warden drawn no bigger than the enemy it outlives',
-    guard: 'the enemy that takes more killing is drawn bigger',
-    edit: {
-      path: 'src/content/sprites.ts',
-      find: '  warden: 9.5,\n  wardenHit: 9.5,',
-      replace: '  warden: 7,\n  wardenHit: 7,',
-    },
-  },
+  /*
+    ── THE WARDEN PROBE WAS HERE, AND 0295 RETIRED IT WITH THE GUARD IT AIMED AT ───────────────────
+
+    It cut the warden to 7 to redden `the enemy that takes more killing is drawn bigger`, which
+    `docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md` deleted — a total ordering of
+    thirteen extents by health, which no successor guard replaces. Deleted rather than re-aimed, for
+    the reason `scripts/probes/0035-legibility.mjs` records beside its twin.
+  */
 ];

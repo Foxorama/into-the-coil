@@ -39,6 +39,23 @@ decision needs no rule.
   station has flown one of them.
   — [0282](docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md)
 
+- **Consider the screen, and never answer it with a threshold.** When adding a weapon, ship, enemy,
+  bullet, attack or pattern, **consider what else will share the same screen space with it**; when
+  adding anything at all, **consider how much space the player has to react in and how long the thing
+  is on screen**. `consider` is the whole rule: these are raised and argued per case, and a guard that
+  answers them in advance is the defect. **A guard that ranks every instance of a kind against every
+  other on one channel is a content limiter, not an invariant** — the tell is a loop over a sorted
+  content table with a `>` in it, and five of them were deleted at once, having between them forced
+  bullets to grow into the hull range, made the fastest shot the smallest by rule, and forbidden both
+  a small tough enemy and a big fragile one. The standing answer is what does the harm in either
+  direction: assume the player needs time and nothing is worth dodging; assume nothing may confuse
+  them and background flavour stops being addable. **Before writing any rule, ask whether it makes
+  sense for THAT THING to be hard** — if yes it is a hard rule, if no it is a specific rule for that
+  thing and belongs on its row. A rule earns hardness from its subject, never from the shape of the
+  file it would live in: a hostile bullet takes its place's colour and a flame is the same red
+  everywhere, and both are correct in the same change. **No guard holds this**, and the decision says
+  why. — [0295](docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md)
+
 ## Process
 
 - **A PR that touches an irreversible surface carries a rollback note.** Storage keys (`itc_*`),

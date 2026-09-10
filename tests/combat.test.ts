@@ -1128,33 +1128,29 @@ describe('an enemy kind is told apart by its silhouette, not by its colour', () 
     }
   });
 
-  it('the enemy that takes more killing is drawn bigger', () => {
-    /*
-      ⚠️ **Size carries toughness, and it is the one cue that needs no learning at all.** The two
-      kinds shipped at the same extent with one dying to a single shot and the other to two, and it
-      read as the game being inconsistent rather than as two different enemies — *"sometimes they'd
-      get hit, go white, then need a second shot and other times they appeared to just die straight
-      away"*. `reports/enemy-silhouettes-2026-08-05.md`.
+  /*
+    ── `the enemy that takes more killing is drawn bigger` WAS HERE AND 0295 DELETED IT ────────────
 
-      Asserted as an ORDERING rather than a ratio: nothing here may pin how much bigger, because
-      that is a picture quantity nobody has validated, and 0027 refuses a guard on one of those.
-      What has to hold at any values is that the two agree in direction.
-    */
-    const extentOf: number[] = [];
-    for (const k of SPRITE_KINDS) extentOf[SPRITE[k]] = SPRITE_EXTENT[k];
+    `docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md`. It sorted every enemy kind by
+    health and demanded a strictly larger extent at each step — a total ordering over all thirteen,
+    from one local observation about two of them.
 
-    const kinds = [...ENEMY_KINDS].sort((a, b) => ENEMIES[a].health - ENEMIES[b].health);
-    for (let i = 1; i < kinds.length; i++) {
-      const softer = kinds[i - 1]!;
-      const tougher = kinds[i]!;
-      if (ENEMIES[tougher].health === ENEMIES[softer].health) continue;
-      expect(
-        extentOf[ENEMIES[tougher].sprite]!,
-        `${tougher} survives more hits than ${softer} and is not drawn any bigger, so a player has ` +
-          'to learn its toughness by dying to it',
-      ).toBeGreaterThan(extentOf[ENEMIES[softer].sprite]!);
-    }
-  });
+    ⚠️ **IT FORBADE TWO ORDINARY THINGS AND THAT IS WHY IT IS GONE**, reported in those words: *"it's
+    incredibly limiting and means we can never have smaller tougher enemies or larger balloon pop
+    style enemies."* Both are shooter vocabulary. Neither could be authored while this stood.
+
+    ⚠️ **WHAT IT CAME FROM WAS REAL, AND LOCAL.** Two kinds shipped at one extent with different
+    health and it read as inconsistency — *"sometimes they'd get hit, go white, then need a second
+    shot and other times they appeared to just die straight away"*,
+    `reports/enemy-silhouettes-2026-08-05.md`. The repair for two wrong rows is those two rows. What
+    landed instead chained all thirteen together for ever, which is the class 0295 names: a guard that
+    ranks every instance against every other on one channel holds the table's sort order and nothing
+    else.
+
+    Two probes aimed here — the lancer cut to 5.5 in `scripts/probes/0035-legibility.mjs` and the
+    warden cut to 7 in `scripts/probes/0042-sequence.mjs` — and both went with it rather than being
+    re-aimed at something they never protected.
+  */
 
   it('and the ink alone would not be enough, which is why the shapes differ', () => {
     // Every enemy is drawn in the same ink by design — they are all enemies. That is exactly why the
