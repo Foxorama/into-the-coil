@@ -6223,9 +6223,22 @@ export function drawKind(
         ⚠️ **0.75 AND 0.35, WHICH IS WHAT 0238 ASKED FOR IN THE FIRST PLACE**: *"also with a bit of a
         glow to them."* The metal still reads as lit — the shading on the four edges is what does that
         work — and the glow stops being a second, larger, softer blade.
+
+        ── AND IT WENT TOO FAR THE OTHER WAY — 0298 ──────────────────────────────────────────────
+
+        ⚠️ **0.75/0.35 → 0.9/0.45**, played back as *"at least a little bit of a glow"* — which is
+        0238's line again, about the build 0294 produced. The cut above was two changes at once and
+        only one of them was asked for: the star went 8 units to 5.6 AND the halo went from the whole
+        radius at 0.55 to three quarters at 0.35, so the glow lost width twice over.
+
+        ⚠️ **AND THE ABSOLUTE HALO IS STILL WELL UNDER WHAT WAS COMPLAINED ABOUT, WHICH IS THE POINT
+        OF WRITING IT AS A FRACTION.** 0294's report was about how much of the lane a blade veils, and
+        that is a number of units rather than a share of the drawing: the halo it removed was
+        `8 × 1.0`, and this one is `5.6 × 0.9` — a little over half as wide, at a lower alpha. The
+        veiling stays fixed and the metal gets its light back.
       */
       ctx.globalCompositeOperation = 'destination-over';
-      glow(ctx, f, palette.blade, 0, 0, 0.75, 0.35);
+      glow(ctx, f, palette.blade, 0, 0, 0.9, 0.45);
       ctx.globalCompositeOperation = 'source-over';
       for (let k = 0; k < 4; k++) {
         const a = phase + (k * Math.PI) / 2;
