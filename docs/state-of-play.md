@@ -858,9 +858,19 @@ this session had defended was called *"a rule that specifically makes quality wo
 [0295](decisions/0295-a-ranking-guard-is-a-content-limiter.md) removed five guards of that class and
 added no successor: what holds the ground is two **considerations** in `CLAUDE.md` and
 `scripts/weigh-sizes.mjs` to raise them against. **Read 0295 before writing any guard over content,
-and before proposing a size, an ink or an extent.** Nothing was resized by it — which bullets and
-hulls should actually move is the considered pass it deliberately did not take, and the queue behind
-it is the eagle's fire whip as fireballs, the minibosses' tiny bullets, and per-level backgrounds.
+and before proposing a size, an ink or an extent** — it also carries the test for whether a rule may
+be hard at all, asked of the thing rather than of the category.
+
+⚠️ **THE FIRST WORK UNDER THAT RULE IS [0296](decisions/0296-a-bullet-belongs-to-its-place.md)**: a
+raider's bullet takes its place's colour and a flame is the same red everywhere, which is 0295's test
+coming out two different ways in one change. `scripts/threat-sheet.mjs` is the picture both are
+argued against — **run it before proposing an ink**. 0296 leaves three things open on purpose and
+names them: the Mire's tight pairing, level one's hull accent (whose answer may be weaver PLACEMENT
+rather than paint), and that a place's `shot` is held to no floor where its `hull` is.
+
+**What is next after it**: the eagle's fire whip as fireballs with a trail — *"fire, frost, void, acid
+all are generic types"*, so the shape is a base that attacks style, on the two lightnings' own model —
+then the minibosses' tiny bullets, then per-level backgrounds.
 
 ### ⚠️ AND THE NEXT ONE IS A FORK THAT HAS TO BE PICKED BEFORE IT IS BUILT
 

@@ -22,6 +22,7 @@
 import type { Palette } from '../content/palette.ts';
 import { foeOf, lordOf, type FoeSkin, type ThemeKind } from '../content/themes.ts';
 import { BOSSES } from '../content/bosses.ts';
+import { SHOTS, SHOT_KINDS } from '../content/shots.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
@@ -709,6 +710,26 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   */
   bound: 'player',
 };
+
+/**
+ * The bullets a PLACE colours — `docs/decisions/0296-a-bullet-belongs-to-its-place.md`.
+ *
+ * ⚠️ **DERIVED, NEVER LISTED.** It is *every shot whose ink is `enemy`*, read off `SHOTS`, so a
+ * fifth raider bullet is covered on the day its row exists and a hand-kept list cannot go stale
+ * beside it — `src/content/sprites.ts` records what that second description already cost once.
+ *
+ * ⚠️ **AND IT IS *WHOSE INK IS `enemy`* RATHER THAN *IS A SHOT*, WHICH IS THE WHOLE DISTINCTION.**
+ * The serpent's `acid` and `void`, the eagle's `flame`, the volcanoes' `rock` and the frost ship's
+ * shard are shots too and are deliberately NOT here: those inks are what the thing IS, and a flame
+ * that changed hue by level would teach the player something untrue about the world. 0295's test,
+ * asked of each: *does it make sense for THIS THING to be hard?* Fire, yes. A raider's bullet, no.
+ *
+ * ⚠️ **Module scope, so the `Set` is built once at import.** `src/render/bake.ts` is not on
+ * `tests/budget.test.ts`'s hot list — a bake happens when a place does, never in the frame loop.
+ */
+const PLACE_SHOTS: ReadonlySet<SpriteKind> = new Set(
+  SHOT_KINDS.map((k) => SPRITE_KINDS[SHOTS[k].sprite]!).filter((sprite) => INK_OF[sprite] === 'enemy'),
+);
 
 /*
   ══ THE PAINT ════════════════════════════════════════════════════════════════════════════════════
@@ -5045,7 +5066,22 @@ export function drawKind(
   */
   // The place's lord wears its own skin — 0264; everything else the place sends wears the place's.
   const skin = hurt ? null : LORD_HULLS.includes(kind) ? lordOf(theme, palette) : foeOf(theme, palette);
-  ctx.fillStyle = palette[INK_OF[kind]];
+  /*
+    ⚠️ **AND WHAT THE PLACE SENDS INCLUDES WHAT IT SHOOTS — 0296.** The hulls have read the place's
+    skin since 0228 and the bullets never did: they went straight to `palette[INK_OF[kind]]`, so
+    every raider's fire was one colour in all seven places while the ships around it were seven. A
+    mechanism whose output is identical for every place is what
+    `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md` calls the tell,
+    and this was one — the atlas already takes a `theme` and rebakes per place, so the bullets were
+    the only thing not reading an argument that was already there.
+
+    ⚠️ **`?? palette[INK_OF[kind]]` IS THE DEFAULT AND IT CARRIES TWO CASES, NOT ONE.** A place that
+    authors no `shot`, and the high-contrast palette — where `foeOf` hands back `null` for every
+    place, because a skin is decoration and that palette has none. Both land on the ink the game had
+    before this, in one line, which is why neither needs a branch of its own.
+  */
+  const ink = (skin !== null && PLACE_SHOTS.has(kind) ? skin.shot : undefined) ?? palette[INK_OF[kind]];
+  ctx.fillStyle = ink;
   ctx.strokeStyle = palette.space;
   ctx.lineWidth = Math.max(1, size * 0.04);
   ctx.globalAlpha = 1;
@@ -5646,8 +5682,8 @@ export function drawKind(
         put them, because those are the whole of how the three are told apart from the pulse and from
         each other.
       */
-      glow(ctx, f, palette.enemy, 0, 0, 1.15, 0.5);
-      disc(ctx, f, shade(palette.enemy, 0.7), 0, 0, 0.36);
+      glow(ctx, f, ink, 0, 0, 1.15, 0.5);
+      disc(ctx, f, shade(ink, 0.7), 0, 0, 0.36);
       return;
     case 'lance':
       /*
@@ -5661,9 +5697,9 @@ export function drawKind(
       ctx.rect(half - r, half - r * 0.34, r * 2, r * 0.68);
       seal(ctx);
       // A hot core down the dash and a halo trailing off its back: the fast one, lit along its path.
-      glow(ctx, f, palette.enemy, 0, 0, 1.1, 0.5);
+      glow(ctx, f, ink, 0, 0, 1.1, 0.5);
       // At 1.9 units the dash is six pixels deep on a 1280×720 screen, so its core is most of it.
-      poly(ctx, f, shade(palette.enemy, 0.7), [
+      poly(ctx, f, shade(ink, 0.7), [
         [-0.5, -0.23],
         [0.85, -0.23],
         [0.85, 0.23],
@@ -5686,14 +5722,14 @@ export function drawKind(
       ctx.closePath();
       seal(ctx);
       // The slow, fat one: a dark bevel on its lower half and a hot core, so it reads as a mass.
-      poly(ctx, f, shade(palette.enemy, -0.35), [
+      poly(ctx, f, shade(ink, -0.35), [
         [-0.72, 0.06],
         [0.72, 0.06],
         [0.46, 0.72],
         [-0.46, 0.72],
       ]);
-      glow(ctx, f, palette.enemy, 0, 0, 1.12, 0.45);
-      disc(ctx, f, shade(palette.enemy, 0.7), 0, -0.04, 0.3);
+      glow(ctx, f, ink, 0, 0, 1.12, 0.45);
+      disc(ctx, f, shade(ink, 0.7), 0, -0.04, 0.3);
       return;
     case 'acid':
       /*
@@ -5849,13 +5885,13 @@ export function drawKind(
       seal(ctx);
       // The shaft, darker, from the tail to where the vane narrows to the tip — inside the hull
       // by a margin, and wide enough to be a mark at thirty pixels (tests/accents.test.ts).
-      poly(ctx, f, shade(palette.enemy, 0.55), [
+      poly(ctx, f, shade(ink, 0.55), [
         [-0.9, -0.12],
         [0.25, -0.12],
         [0.25, 0.12],
         [-0.9, 0.12],
       ]);
-      glow(ctx, f, palette.enemy, 0.5, 0, 0.5, 0.35);
+      glow(ctx, f, ink, 0.5, 0, 0.5, 0.35);
       return;
     case 'kite':
     case 'kiteHit':

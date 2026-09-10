@@ -498,6 +498,21 @@ export interface FoeSkin {
   lit: string;
   /** The eye, the canopy, the core: the one mark that looks back down the lane. */
   eye: string;
+  /**
+   * What the place's raiders SHOOT — `docs/decisions/0296-a-bullet-belongs-to-its-place.md`.
+   *
+   * ⚠️ **OPTIONAL, AND THAT IS A DEFAULT RATHER THAN AN OVERSIGHT** —
+   * `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`: *"no row can
+   * forget it" is an argument for a DEFAULT, never for a CONSTANT*. A place that says nothing gets
+   * `palette.enemy`, which is what every place had before this and what the high-contrast palette
+   * still has — `foeOf` hands back `null` there, so the fallback is the same one line.
+   *
+   * ⚠️ **AND `lord` IS THIS SAME TYPE AND AUTHORS NONE OF THEM.** A lord's own shots already have
+   * inks of their own — `acid`, `void`, `fire`, `frost` — and 0295's test is why that is not an
+   * inconsistency: *does it make sense for THIS THING to be hard?* A raider's bullet belongs to its
+   * place; a flame is the same red everywhere, because fire is fire. Both are correct here.
+   */
+  shot?: string;
 }
 
 export const THEMES: Record<ThemeKind, ThemeRow> = {
@@ -521,7 +536,11 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       Raiders: steel-grey hulls with the `enemy` ink for their lamps, so the first place teaches the
       colour the bullets keep for the whole run on the thing that fires them; a red eye; rivets.
     */
-    foe: { hull: '#9a9a9a', plate: '#4c4c56', lit: '#ff7286', eye: '#ff4040' },
+    // Grey hulls leave the whole hot end free, so the fire is the reddest in the game — 0296.
+    // ⚠️ The `lit` here is `palette.enemy` exactly, which is what made this the place the report
+    // came from. Left alone on purpose: whether hot red is separation enough is a question for the
+    // screen, and the answer may be where a weaver arrives rather than what colour anything is.
+    foe: { hull: '#9a9a9a', plate: '#4c4c56', lit: '#ff7286', eye: '#ff4040', shot: '#ff2e4d' },
     // The serpent: a venom-green leviathan with its light running down its scales and a gold eye.
     lord: { hull: '#2f8a5a', plate: '#123d2a', lit: '#b8ff9a', eye: '#ffc030' },
     // The reference, and the number every place used to be — 0183. Level one changes nothing.
@@ -614,7 +633,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     glow: { vivid: '#c25a2a', 'high-contrast': '#5c2a12' },
     ground: null, // In space, and the Pillars are the proof: they are a thing you fly PAST.
     // Moths in an ember cloud: the ember's own orange, scorched dark underneath, a black eye, embers.
-    foe: { hull: '#f57a2a', plate: '#8a3a12', lit: '#ffe08a', eye: '#2a0a14' },
+    // The hulls are ORANGE here, so orange fire would be a raider shooting itself — rose instead.
+    foe: { hull: '#f57a2a', plate: '#8a3a12', lit: '#ffe08a', eye: '#2a0a14', shot: '#ff2f8f' },
     // The eagle: a darker, redder fire than its horde, with a pale burning eye.
     lord: { hull: '#c8401a', plate: '#5a1608', lit: '#ffd24a', eye: '#fff2a0' },
     /*
@@ -760,7 +780,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     // Rock in shadow, well under its own sky — a horizon is a silhouette or it is not a horizon.
     ground: { vivid: '#0a1220', 'high-contrast': '#000208' },
     // Reptiles: olive hide, bone along the edges, an amber eye, and scales for the motif.
-    foe: { hull: '#7f9a2e', plate: '#4a5c18', lit: '#e8d8a8', eye: '#ffb020' },
+    // Olive hulls on the one BLUE sky in the game, which is where a warm shot has the most room.
+    foe: { hull: '#7f9a2e', plate: '#4a5c18', lit: '#e8d8a8', eye: '#ffb020', shot: '#ff4d2e' },
     // The pterodactyl: leathery olive, bone-pale crest and beak, an amber eye.
     lord: { hull: '#7c962c', plate: '#2e3a12', lit: '#ffe9a8', eye: '#ffb020' },
     /*
@@ -923,7 +944,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     ground: null, // A corridor in space. It has walls, and a wall is not a horizon.
     // Machines in a lit corridor: verdigris, oiled dark in the seams, the corridor's own violet on
     // the traces, a red eye, and circuitry for the motif.
-    foe: { hull: '#3aa08a', plate: '#1c5a4c', lit: '#e070f0', eye: '#ff3030' },
+    // Teal hulls with magenta lamps: both ends of the cold half are spoken for, so the fire is gold.
+    foe: { hull: '#3aa08a', plate: '#1c5a4c', lit: '#e070f0', eye: '#ff3030', shot: '#ffd12e' },
     // The gyre: the lattice's teal gone dark and hot-pink in the traces, a red core.
     lord: { hull: '#2a8a78', plate: '#0f3f36', lit: '#ff7af0', eye: '#ff3030' },
     /*
@@ -1036,7 +1058,9 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     // The shelf: blue-white shadow. Nearly the darkest ground of the three, under the palest sky.
     ground: { vivid: '#0b1a26', 'high-contrast': '#000308' },
     // Cut ice: blue through the block, frost on the facets, a warm eye in a cold thing.
-    foe: { hull: '#5c9ad0', plate: '#2a4a80', lit: '#d8f4ff', eye: '#ff5a7a' },
+    // Everything in this place is cold — hulls, sky and all — so an ember is the loudest thing that
+    // can happen on it. The tightest sky in the game (`scripts/weigh-sky.mjs`) and the biggest win.
+    foe: { hull: '#5c9ad0', plate: '#2a4a80', lit: '#d8f4ff', eye: '#ff5a7a', shot: '#ff5a1e' },
     // The frost ship: paler ice than the shards it sends, its facets near white, a cold red eye.
     lord: { hull: '#4a92da', plate: '#1e3a70', lit: '#eefcff', eye: '#ff5a7a' },
     /*
@@ -1153,7 +1177,14 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     // corridor between them is the subject. Two tones would read as a floor and a separate ceiling.
     ground: { vivid: '#080f04', 'high-contrast': '#000200' },
     // Grown, not built: bruise-purple, toxic yellow where it leaks, a blank white eye, and spores.
-    foe: { hull: '#b85cd0', plate: '#5a2a70', lit: '#e6ff4a', eye: '#ffffff' },
+    /*
+      ⚠️ **THE TIGHTEST PAIRING IN THE SET, AND IT IS AUTHORED AS BAKED RATHER THAN ADJUSTED FIRST.**
+      Rose against a purple hull is the one row of the seven where the shot and the hull are near
+      neighbours. Held for a verdict from play — *"close might be fine and we'll be stuffing around
+      with it for no reason"* — which is `CLAUDE.md`'s *consider the screen* asked and answered by
+      the screen rather than by a rule. `scripts/threat-sheet.mjs --theme=mire` is the picture.
+    */
+    foe: { hull: '#b85cd0', plate: '#5a2a70', lit: '#e6ff4a', eye: '#ffffff', shot: '#ff2e6b' },
     // The hydra: a deeper, bruised violet than the spores, acid-yellow in the maws, white eyes.
     lord: { hull: '#9a48b8', plate: '#3f1a52', lit: '#d8ff3a', eye: '#ffffff' },
     /*
@@ -1242,7 +1273,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     glow: { vivid: '#8ac0e8', 'high-contrast': '#1c3a52' },
     ground: null, // Nothing to stand on. The place's whole character is absence — 0211.
     // Flesh and obsidian: blood-red, the place's ice-blue in the veins, a yellow eye.
-    foe: { hull: '#d0303c', plate: '#5a0a14', lit: '#8ac0e8', eye: '#ffd23f' },
+    // The hulls here are RED, which is the one place a red bullet would be invisible — so plasma.
+    foe: { hull: '#d0303c', plate: '#5a0a14', lit: '#8ac0e8', eye: '#ffd23f', shot: '#ffe84a' },
     // The jellyfish: a darker blood than the gaze, the bell's rim in a cold light, the heart gold.
     lord: { hull: '#b8202e', plate: '#40060e', lit: '#9ad0f0', eye: '#ffd23f' },
     /*

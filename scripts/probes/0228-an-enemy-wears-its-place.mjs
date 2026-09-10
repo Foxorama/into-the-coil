@@ -20,8 +20,10 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: every place skins its enemies, and no two places skin them alike',
     edit: {
       path: 'src/content/themes.ts',
-      find: "    foe: { hull: '#7f9a2e', plate: '#4a5c18', lit: '#e8d8a8', eye: '#ffb020' },",
-      replace: "    foe: { hull: '#5c9ad0', plate: '#2a4a80', lit: '#d8f4ff', eye: '#ff5a7a' },",
+      // ⚠️ Re-anchored by 0296, which gave every `foe` a `shot` — the break is unchanged: the
+      // Saurian Belt handed Rime Shelf's skin, so two places send enemies painted alike.
+      find: "    foe: { hull: '#7f9a2e', plate: '#4a5c18', lit: '#e8d8a8', eye: '#ffb020', shot: '#ff4d2e' },",
+      replace: "    foe: { hull: '#5c9ad0', plate: '#2a4a80', lit: '#d8f4ff', eye: '#ff5a7a', shot: '#ff5a1e' },",
     },
   },
   {
@@ -36,8 +38,9 @@ export const PROBES = [
     guard: 'and a skin’s hull is legible on its own backdrop',
     edit: {
       path: 'src/content/themes.ts',
-      find: "    foe: { hull: '#5c9ad0', plate: '#2a4a80', lit: '#d8f4ff', eye: '#ff5a7a' },",
-      replace: "    foe: { hull: '#2a4a68', plate: '#1a2a48', lit: '#d8f4ff', eye: '#ff5a7a' },",
+      // ⚠️ Re-anchored by 0296. The hull is still the break; the `shot` rides along untouched.
+      find: "    foe: { hull: '#5c9ad0', plate: '#2a4a80', lit: '#d8f4ff', eye: '#ff5a7a', shot: '#ff5a1e' },",
+      replace: "    foe: { hull: '#2a4a68', plate: '#1a2a48', lit: '#d8f4ff', eye: '#ff5a7a', shot: '#ff5a1e' },",
     },
   },
   {
@@ -52,8 +55,9 @@ export const PROBES = [
     guard: 'and a skin’s hull is legible on its own backdrop and never reads as a pickup or the ship',
     edit: {
       path: 'src/content/themes.ts',
-      find: "    foe: { hull: '#b85cd0', plate: '#5a2a70', lit: '#e6ff4a', eye: '#ffffff' },",
-      replace: "    foe: { hull: '#c8f0c0', plate: '#5a2a70', lit: '#e6ff4a', eye: '#ffffff' },",
+      // ⚠️ Re-anchored by 0296. The hull is still the break; the `shot` rides along untouched.
+      find: "    foe: { hull: '#b85cd0', plate: '#5a2a70', lit: '#e6ff4a', eye: '#ffffff', shot: '#ff2e6b' },",
+      replace: "    foe: { hull: '#c8f0c0', plate: '#5a2a70', lit: '#e6ff4a', eye: '#ffffff', shot: '#ff2e6b' },",
     },
   },
   {
