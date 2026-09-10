@@ -12,11 +12,19 @@ export const PROBES = [
     suite: 'tests/guns-played.test.ts',
     broke: 'the arc’s reach authored flat across the ladder',
     guard: 'THE REACH: the arc reaches further',
-    // ⚠️ Re-anchored by 0239 (the ladder's top cut back a tenth) and 0241 (the whole of it a twentieth).
+    /*
+      ⚠️ Re-anchored by 0239 (the ladder's top cut back a tenth), 0241 (the whole of it a twentieth)
+      and **0297**, which rescaled it to about 0.4 — the reach had been sized against the view's long
+      axis and applied to a circle that also spans the 100-unit lane.
+
+      ⚠️ **THE BREAK IS UNCHANGED AND SO IS WHAT IT CATCHES**: a flat ladder, so no rung buys reach.
+      0297's own first draft reddened this same guard for real, at 24 → 27, which is the best evidence
+      it is still aimed at something.
+    */
     edit: {
       path: 'src/content/weapons.ts',
-      find: '    reach: [52, 61, 71, 84, 98],',
-      replace: '    reach: [52, 52, 52, 52, 52],',
+      find: '    reach: [20, 24, 28, 33, 39],',
+      replace: '    reach: [20, 20, 20, 20, 20],',
     },
   },
   {
