@@ -5733,27 +5733,54 @@ export function drawKind(
       return;
     case 'acid':
       /*
-        A DROP — 0248: round below and pointed above, the one shot in the game with one point. Not
-        the charger's needle (a triangle with a nose, and a hull) and not the pulse's disc: a drop
-        is a disc with a tail, and the tail survives fifteen pixels. In the `acid` ink with its own
-        glow, and a pale heart low in the drop where the light would sit.
+        ── IT WAS A DROP UNTIL 0300, AND A DROP CLAIMS A DIRECTION IT CANNOT HAVE ──────────────────
+
+        ⚠️ **0248 DREW IT ROUND BELOW AND POINTED ABOVE** — *a disc with a tail, and the tail survives
+        fifteen pixels*. Which is a good drawing of a falling drop, and this bead does not fall. The
+        serpent throws it on `Math.PI + firePhase + sweep * sin(t * waves * TAU)`
+        (`src/app/boss.ts`), so a volley leaves on headings spread across a sine and **every bead
+        flies a different way**. `blit` cannot rotate, so the point stayed north while the thing went
+        west, and three of every four beads were drawn pointing somewhere they were not going.
+
+        ⚠️ **REPORTED**: *"the acid needs a better graphic, it's currently drops that look weird as
+        hell because they wouldn't look like that as a 'spray' coming from a source."* The wrongness
+        is the heading rather than the draughtsmanship — which is why the answer is not a better drop.
+
+        ⚠️ **A GOBBET: AN IRREGULAR BLOB WITH NO DOMINANT POINT, SO THERE IS NO HEADING TO BE WRONG
+        ABOUT.** Lumpy rather than round, because the disc is the pulse's and a perfect circle reads
+        as a bead rather than as something thrown; and two droplets thrown clear of it, because a
+        spray is more than one thing. Baked at four headings and looked at before it was chosen.
+
+        ⚠️ **THE DROPLETS ARE IN THE SEALED PATH, AND THE FIRST DRAFT PAINTED THEM ON TOP OF IT.**
+        Drawn after `seal` in the hull's own ink they LOOK like part of the body and are not: the
+        silhouette the player reads stops being the one the file draws, and every extent and hurtbox
+        claim is measured against the sealed path.
+        `tests/accents.test.ts` caught it at **-4.74px** outside the hull — 0149's floor, doing
+        exactly its job, and 0192's rule is that the work moves rather than the guard.
+
+        ⚠️ **SO THE BLOB IS SMALLER AND THE DROPLETS ARE THROWN CLEAR OF IT.** Clear is load-bearing
+        twice over: a sub-path that OVERLAPS the body would be `evenodd`'s hole rather than its
+        fill — a crescent bitten out — and one that sits apart is genuinely two objects, which is
+        what a spray is. Everything stays inside the unit radius the box is drawn in.
       */
       trace(ctx, f, [
-        [0, -0.92],
-        [0.34, -0.36],
-        [0.62, 0.04],
-        [0.72, 0.4],
-        [0.56, 0.78],
-        [0.22, 0.95],
-        [-0.22, 0.95],
-        [-0.56, 0.78],
-        [-0.72, 0.4],
-        [-0.62, 0.04],
-        [-0.34, -0.36],
+        [0, -0.7],
+        [0.4, -0.5],
+        [0.65, -0.18],
+        [0.58, 0.22],
+        [0.37, 0.55],
+        [0.04, 0.69],
+        [-0.34, 0.59],
+        [-0.63, 0.3],
+        [-0.68, -0.1],
+        [-0.4, -0.52],
       ]);
+      // Two thrown clear of it, in the path so they are the silhouette rather than marks on it.
+      ring(ctx, f, 0.6, 0.56, 0.14);
+      ring(ctx, f, -0.62, -0.55, 0.11);
       seal(ctx);
       glow(ctx, f, palette.acid, 0, 0, 1.1, 0.45);
-      disc(ctx, f, shade(palette.acid, 0.6), -0.16, 0.32, 0.22);
+      disc(ctx, f, shade(palette.acid, 0.6), -0.1, -0.12, 0.24);
       return;
     case 'void':
       /*
