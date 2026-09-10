@@ -36,9 +36,15 @@ Four separate asks, and the first one is the finding:
 
 Answered by [0302](../docs/decisions/0302-the-bolt-shows-its-reach.md).
 
-## What is still owed on it
+## And the play of 0302 itself, the same day
 
-A play of 0302 itself. It restores the drawn length to within two per cent of what was liked and
-leaves the cap at 55 rather than 98 — which still crosses the lane's width from the centre, on the
-first hit, at the last rung. 0302 says so out loud rather than claiming the auto-pilot is gone: that
-is the thing to watch for in the next play.
+0302 restored the drawn length to within two per cent of what was liked, left the cap at 55 rather
+than 98, and said out loud that 55 still crosses the lane's width from the centre rather than
+claiming the auto-pilot was gone. Played on the branch preview:
+
+> *"Reach needs to be about 1 tier up and slightly further for the last tier."*
+
+So the concern went the other way, on the only authority that settles it. Answered by
+[0303](../docs/decisions/0303-the-reach-goes-up-a-rung.md): `[34, 40, 47, 55, 68]`, every rung the
+one above it and the cap a fifth past the shift. **What is owed now is the next play, and the
+question is the last rung rather than the gun.**
