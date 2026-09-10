@@ -121,7 +121,7 @@ describe('0227 — a death is a fireball', () => {
 });
 
 describe('0301 — a fireball leaves a trail', () => {
-  it('THE REPORTED ONE: a shot whose row names a trail drops motes behind it, and one that names none drops nothing', () => {
+  it('0301 — THE REPORTED ONE: a shot whose row names a trail drops motes behind it, and one that names none drops nothing', () => {
     /*
       ⚠️ **REPORTED**: *"the whip should be throwing fireballs with fire trails."*
 
