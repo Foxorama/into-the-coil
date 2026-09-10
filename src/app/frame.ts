@@ -2250,10 +2250,18 @@ function steerBlades(w: World): void {
  * strike, so the bolt is worth the same against one big thing as against several small ones —
  * which is the balance a gun that cannot miss has to keep.
  *
- * ⚠️ **NO TARGET IS STILL A VOLLEY.** A dry bolt goes straight ahead for part of its reach and hits
- * nothing, and the discharge cue sounds without the strike's — so a player who has just switched
- * guns sees the gun working before anything is in front of it, and a gun that fires itself does not
- * go silent when the lane is empty. The pulse does the same thing with bullets.
+ * ⚠️ **NO TARGET IS STILL A VOLLEY, AND IT IS WHERE THE RANGE IS DISPLAYED — 0302.** A dry bolt goes
+ * straight ahead **for the whole of the first hit's reach** and hits nothing, and the discharge cue
+ * sounds without the strike's — so a player who has just switched guns sees the gun working before
+ * anything is in front of it, and a gun that fires itself does not go silent when the lane is empty.
+ * The pulse does the same thing with bullets. What the length is worth is the ask: *"the first hit
+ * should have the range displayed on screen."*
+ *
+ * ⚠️ **AND EACH JUMP AFTER THE FIRST REACHES `falloff` OF THE ONE BEFORE IT — 0302.** *"The
+ * additional jumps should then be based on decreasing distance."* The chain spends itself, so a
+ * long aimed first hit does not buy a search of the whole screen from wherever the last body stood,
+ * which is what `docs/decisions/0297-a-reach-is-measured-on-both-axes.md` had to answer by cutting
+ * the aimed hit instead.
  *
  * ⚠️ **The pool refusing a link drops the picture and not the hit.** Damage was landed before the
  * spawn, on `firePulse`'s own terms about a volley the pool cuts short: the model is right and the
@@ -2280,11 +2288,14 @@ function fireArc(w: World): void {
     the claim is about what THIS player can see, and a wider screen sees more.
   */
   const edge = w.cameraAlong + w.view.alongSpan;
+  // The first hit's reach, and then `falloff` of itself per jump — 0302. The row's number is the
+  // one the player is shown; what a jump gets is this, and it is shorter every time.
+  let reach = w.weapon.reach;
   for (let link = 0; link < w.weapon.links; link++) {
     let toAlong: number;
     let toAcross: number;
-    const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, w.weapon.reach, true, edge);
-    const boss = w.bossPool.size > 0 ? nearestFrom(w.bossPool, fromAlong, fromAcross, w.weapon.reach, false, edge) : -1;
+    const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, reach, true, edge);
+    const boss = w.bossPool.size > 0 ? nearestFrom(w.bossPool, fromAlong, fromAcross, reach, false, edge) : -1;
     /*
       ⚠️ **A VOID BLAST TAKES THE LINK BEFORE ANYTHING ELSE DOES — 0292.** Reported: *"…and that it
       sucks in the lightning from the player's cannon."* Nearest-wins would make it *may also hit*;
@@ -2295,7 +2306,7 @@ function fireArc(w: World): void {
       make the arc *better* against a screen with voids on it than one without. This is the one target
       that costs the player the rest of their volley, which is what makes it worth flying around.
     */
-    const eater = nearestVoid(w, fromAlong, fromAcross, w.weapon.reach, edge);
+    const eater = nearestVoid(w, fromAlong, fromAcross, reach, edge);
     if (eater >= 0) {
       const blast = w.enemyShots.at(eater);
       spawnLink(w, row, fromAlong, fromAcross, blast.along, blast.across);
@@ -2340,12 +2351,18 @@ function fireArc(w: World): void {
       /*
         Dry: nothing in reach. The bolt goes ahead, lands on nothing, and THAT IS THE VOLLEY.
 
+        ⚠️ **AND IT IS DRAWN AT THE WHOLE REACH — 0302.** *"The first hit should have the range
+        displayed on screen."* It drew `reach × 0.55` — deliberately, *"so a miss does not look like
+        a range"* — which made the one quantity the player has to judge by eye the one quantity the
+        picture refused to state. A gun that cannot miss is aimed by standing in the right place,
+        and now the length of the bolt IS the place.
+
         ⚠️ **A dry link does not move the chain's origin** — 0236. It did: the next link searched
         from the dry bolt's end, half a reach further up the lane, so a gun with nothing in reach
         found a body a reach and a half away. The longer reach 0236 authored is what made it
         visible; `tests/weapons.test.ts` fires dry at a body just past reach and counts its health.
       */
-      toAlong = fromAlong + w.weapon.reach * DRY_BOLT_SHARE;
+      toAlong = fromAlong + reach;
       toAcross = fromAcross;
       spawnLink(w, row, fromAlong, fromAcross, toAlong, toAcross);
       break;
@@ -2360,6 +2377,7 @@ function fireArc(w: World): void {
     // A body the strike killed is gone from its pool; the next link still jumps from where it was.
     fromAlong = toAlong;
     fromAcross = toAcross;
+    reach *= w.weapon.falloff;
   }
 }
 
@@ -2372,8 +2390,14 @@ function nearer(a: Entity, b: Entity, along: number, across: number): boolean {
   return Math.sqrt(aAlong * aAlong + aAcross * aAcross) - a.radius <= Math.sqrt(bAlong * bAlong + bAcross * bAcross) - b.radius;
 }
 
-/** How much of its reach a dry bolt shows. Less than all of it, so a miss does not look like a range. */
-const DRY_BOLT_SHARE = 0.55;
+/*
+  ── `DRY_BOLT_SHARE` WAS HERE, AND IT WAS 0.55 ──────────────────────────────────────────────────
+
+  *"How much of its reach a dry bolt shows. Less than all of it, so a miss does not look like a
+  range."* 0302 deleted it: a miss looking like a range is the whole point, because the range is
+  what the player is being asked to fly to. The ladder in `src/content/weapons.ts` was re-authored
+  as the length this constant had been drawing, so the picture did not change when the share went.
+*/
 
 /** One link's picture: an entity at the landing point, carrying its start, riding the camera. */
 function spawnLink(w: World, row: Body, fromAlong: number, fromAcross: number, toAlong: number, toAcross: number): void {

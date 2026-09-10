@@ -603,8 +603,13 @@ export interface Weapon {
   guidance: GuidanceKind;
   /** How many targets one bolt lands on. One for a weapon that does not chain. */
   links: number;
-  /** How far one bolt can jump, in world units. Zero for a weapon that does not chain. */
+  /**
+   * How far the first hit reaches, in world units, and what a jump after it keeps of the jump
+   * before it — 0302. Zero for a weapon that does not chain. `reach` is also the length a bolt with
+   * nothing in front of it is DRAWN at, so the gun states its own range on screen.
+   */
   reach: number;
+  falloff: number;
   /** How far a coiling shot swings from its axis, and radians its swing advances per step — 0234, 0244. Zero otherwise. */
   coil: number;
   turn: number;
@@ -865,6 +870,7 @@ export function weaponFor(
     guidance: tubeRow.guidance,
     links: everyAt(gunRow.links, gun),
     reach: everyAt(gunRow.reach, gun),
+    falloff: gunRow.falloff,
     coil: everyAt(gunRow.coil, gun),
     turn: gunRow.turn,
     seek: tubeRow.seek,

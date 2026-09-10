@@ -49,7 +49,8 @@ export const PROBES = [
     guard: 'and the LIGHTNING is sucked in',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const eater = nearestVoid(w, fromAlong, fromAcross, w.weapon.reach, edge);',
+      // ⚠️ Re-anchored by 0302: the search takes the LINK's reach, which decays per jump.
+      find: '    const eater = nearestVoid(w, fromAlong, fromAcross, reach, edge);',
       replace: '    const eater = -1;',
     },
   },

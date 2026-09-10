@@ -86,8 +86,15 @@ export interface WeaponRow {
    */
   weight: readonly number[];
   /**
-   * How far a bolt can jump, in world units, one entry per rung — from the nose to the first target
-   * and from each target to the next. Zeros for a weapon that does not chain.
+   * How far the FIRST hit reaches, in world units, one entry per rung — from the nose to the body
+   * the bolt lands on. Zeros for a weapon that does not chain. What each jump AFTER it reaches is
+   * this times `falloff`, again per jump.
+   *
+   * ⚠️ **AND IT IS THE LENGTH THE PLAYER SEES, SINCE 0302** — a bolt with nothing in front of it
+   * draws exactly this, so the gun states its own range on screen every time it fires dry. It used
+   * to draw 0.55 of it *"so a miss does not look like a range"*, which is a decision to make the
+   * one number the player must judge by eye the one number the picture would not show them.
+   * Reported: *"the first hit should have the range displayed on screen."*
    *
    * ⚠️ **In the lane's own units and well under the view**, because a bolt that reached the leading
    * edge would be a gun that never has to aim. It is the whole of what makes the arc a different
@@ -101,6 +108,22 @@ export interface WeaponRow {
    * `tests/weapons.test.ts` as *climbs at every rung* rather than as the fraction.
    */
   reach: readonly number[];
+  /**
+   * What a jump is worth as a share of the jump before it — 0302. Zero for a weapon that does not
+   * chain. The first hit gets `reach`; the second `reach × falloff`, the third that times it again.
+   *
+   * ⚠️ **A CHAIN SPENDS ITSELF, AND THAT IS THE ASK.** Reported: *"the additional jumps from the
+   * first hit and the reach it had on the first hit was wrong… the additional jumps should then be
+   * based on decreasing distance."* Every link jumping a full reach made a volley a search of the
+   * whole screen from wherever the last body happened to be, which is the auto-pilot
+   * `docs/decisions/0297-a-reach-is-measured-on-both-axes.md` answered by shrinking the FIRST hit —
+   * the one thing the player aims. This shrinks the search instead, so the aimed hit can be long.
+   *
+   * ⚠️ **A NUMBER AND NOT A LADDER, because it is not what an upgrade buys** — a rung buys links,
+   * weight, rate and reach, and the shape of the chain is the weapon's character rather than its
+   * tier. A row that wanted it per rung would say so on its own row; nothing shared decides that.
+   */
+  falloff: number;
   /**
    * How far across the lane a `coil` shot swings from its axis, in world units, one entry per rung
    * — the half-width of the helix. Zeros for a weapon whose shots are spent by arriving.
@@ -153,6 +176,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     links: [1, 1, 1, 1, 1],
     weight: [1, 1, 1, 1, 1],
     reach: [0, 0, 0, 0, 0],
+    falloff: 0,
     coil: [0, 0, 0, 0, 0],
     turn: 0,
     pickup: SPRITE.pickupWeapon,
@@ -204,20 +228,47 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
       which is `CLAUDE.md`'s own rule — *a quantity solved from one case is checked in every case it
       runs in*. A third 5% would have bought another report.
 
-      ⚠️ **SO THE SCALE MOVES AND THE SHAPE DOES NOT.** Every rung is about 0.4 of the old one, and
-      each still buys at least the sixth `tests/guns-played.test.ts` holds — that guard went red on
-      the first draft of this ladder, at 24 → 27, and it was right: a rung that buys an eighth is a
-      rung 0233 already refused. The numbers are the ones that clear it, not the ones nearest the
-      multiply. What changes is what the cap means in the player's units: **from the centre of the
-      lane the top rung reaches across 11 to 89, so both edges are out of it**, and the first rung
-      covers 30 to 70. Positioning is a decision again.
+      ⚠️ **SO THE SCALE MOVED AND THE SHAPE DID NOT.** Every rung went to about 0.4 of the old one,
+      and each still buys at least the sixth `tests/guns-played.test.ts` holds — that guard went red
+      on the first draft of that ladder, at 24 → 27, and it was right: a rung that buys an eighth is
+      a rung 0233 already refused.
+
+      ── AND WHAT IT CUT WITH THE NUMBER WAS THE PICTURE — 0302 ────────────────────────────────────
+
+      ⚠️ **THIS LADDER IS THE LENGTH THE PLAYER WAS ALREADY SEEING.** Reported: *"the initial length
+      of the weapon was fun… but the additional jumps from the first hit and the reach it had on the
+      first hit was wrong. The first hit should have the range displayed on screen, the additional
+      jumps should then be based on decreasing distance."* A bolt fired dry drew 0.55 of its reach,
+      so what the old ladder actually put on screen was 0.55 × [52, 61, 71, 84, 98] — **28.6 to 53.9
+      units, and never 98.** 0297 cut the number and the picture came with it: the dry bolt fell to
+      11 units, a stub. **So the rungs here are that drawn length**, and `src/app/frame.ts` now
+      draws the whole of it: the same bolt the player liked, and it is the range for the first time.
+
+      ⚠️ **THE CAP IS 55 AND NOT 98, WHICH IS WHY 0297'S REPORT DOES NOT COME BACK WHOLE.** Two
+      things carried the auto-pilot and only one of them was the first hit: a chain of three, each
+      jumping a full 98, searched the entire screen from wherever the last body stood. `falloff`
+      takes that half — at the cap a volley reaches 55, then 33, then 19.8, a span of 108 against
+      the old 294. **What is honestly still true is that 55 crosses the lane's width from its
+      centre** (`ACROSS_SPAN` is 100), so a player parked in the middle can still reach either edge
+      with the FIRST hit at the last rung. That is one strike per volley rather than three, and it
+      is now a length they can see. If it still plays as auto-pilot, this ladder is what moves.
 
       ⚠️ **AND 0257 STILL HAS SOMETHING TO BITE ON.** On a 1280×720 screen the nose at the front of
       its box sits 10.7 units from the leading edge, so even the first rung still reaches past it —
       the guard that a link lands only on a body whose whole hull is on screen is not made vacuous
       by this.
     */
-    reach: [20, 24, 28, 33, 39],
+    reach: [29, 34, 40, 47, 55],
+    /*
+      Three fifths of the jump before it — 0302. At the cap that is 55 → 33 → 19.8, so a chain
+      shortens as it goes and the picture says so: each link is visibly stubbier than the last.
+
+      ⚠️ **A share and not a subtraction**, on `src/content/pickups.ts`'s own argument about
+      `RAPID_FACTOR`: a constant taken off a reach reaches zero and then negative, where a fraction
+      approaches a floor. Three links deep it is 0.36 of the first hit, which is still 19.8 units at
+      the cap — a jump, not a nothing.
+    */
+    falloff: 0.6,
     coil: [0, 0, 0, 0, 0],
     turn: 0,
     pickup: SPRITE.pickupArc,
@@ -259,6 +310,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     links: [1, 1, 1, 1, 1],
     weight: [1, 1, 1, 1, 1],
     reach: [0, 0, 0, 0, 0],
+    falloff: 0,
     /*
       ⚠️ **TWO THIRDS, AND THE PLAYER GAVE THE FRACTION — 0294.** *"The shuriken guns have a parabola
       that's too high, they need bounce out from the ship about 2/3rds the distance they do now and
