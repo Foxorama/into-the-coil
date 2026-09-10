@@ -24,6 +24,7 @@
  */
 
 import type { Body } from '../sim/entity.ts';
+import type { DebrisKind } from './debris.ts';
 import { SPRITE } from './sprites.ts';
 
 /** Every shot in the game. Closed. */
@@ -110,6 +111,20 @@ export interface ShotRow extends Body {
    * game already uses for *how much it takes*.
    */
   swallows?: boolean;
+  /**
+   * What this shot drops behind it as it flies, or absent for the thirteen that drop nothing — 0301.
+   *
+   * ⚠️ **OPTIONAL, WHICH IS 0282's DEFAULT SHAPE.** *"No row can forget it" is an argument for a
+   * DEFAULT, never for a CONSTANT* — a row says what its version is and shared code holds the
+   * fallback, and the fallback here is *no trail*, which is what every shot in the game had.
+   *
+   * ⚠️ **A `DebrisKind` RATHER THAN A FLAG, BECAUSE *fire* IS A TYPE AND NOT AN ATTACK.** Asked for
+   * in those words: *"fire, frost, void, acid all are generic types as well and we can have different
+   * 'fire' attacks, but one 'fireball' attack."* A frost shot that wants to shed ice, or a void that
+   * wants to shed dark, names its own debris kind on its own row and nothing in the frame changes —
+   * the two lightnings are the model, one base with the style on the instance.
+   */
+  trail?: DebrisKind;
 }
 
 /**
@@ -375,7 +390,50 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    */
   // ⚠️ 0.66 is the most a 1.2-unit drawing may carry (`tests/combat.test.ts`'s band) and the least
   // that keeps the sky's far stars under the smallest thing that can kill you (`tests/sky.test.ts`).
-  flame: { sprite: SPRITE.flame, spriteHit: SPRITE.flame, radius: 0.66, health: 1, damage: 1, speed: 1.8, fission: SPENT_BY_ARRIVING },
+  /*
+    ⚠️ **0.66 → 1.4, AND THE CEILING ON IT WAS MEASURED RATHER THAN CHOSEN — 0301.** The drawing went
+    from 1.2 units to the void's 5 so the thing could be seen at all (`src/content/sprites.ts`), and
+    `tests/combat.test.ts` holds every hurtbox between 0.25 and 0.55 of its drawing. The flame already
+    sat at **0.55, exactly the ceiling** — so there is no version of a void-sized fireball that keeps
+    the old hitbox. Something had to go up.
+
+    ⚠️ **AND *KEEP THE RATIO* TURNED OUT TO BE UNSURVIVABLE, WHICH A GUARD SAID AND NOBODY GUESSED.**
+    Holding 0.55 gives 2.75, and `tests/crowd.test.ts` — *for at least one step there was NO place on
+    the lane both safe and reachable* — went red on **the hydra's fifth phase at `burn`**. Not the
+    eagle's, which is what the arithmetic had been done on: the hydra grows a flame head too (0254),
+    and nobody had added the two attacks together. Measured across the whole range:
+
+      2.75  (0.55, the old ratio)   unsurvivable
+      2.2   (the void's ratio)      unsurvivable
+      1.9                           unsurvivable
+      1.75                          survivable
+      1.4                           survivable
+      1.25  (the band's floor)      survivable
+
+    ⚠️ **AND THE HURTBOX TURNS OUT NOT TO BE WHAT MAKES THAT PHASE HARD, WHICH WAS MEASURED AFTER
+    BEING CHALLENGED ON IT.** A first pass took this to 1.4 for margin. Flying the guard's own pilot
+    with the ship's health left alone and counting what lands, over twenty seconds of the hydra's
+    fifth phase at `burn`:
+
+      radius 1.4    32 hits
+      radius 1.9    33 hits
+      radius 2.75   29 hits
+
+    Across a **two-fold** range of hurtbox the damage taken does not move — that phase is saturated by
+    everything else the hydra throws, and the flame is not what is hitting the player. So *margin*
+    bought nothing and cost the thing that was actually asked for.
+
+    ⚠️ **WHAT THE GUARD IS ACTUALLY CATCHING IS THE CHILL, NOT THE FIREBALL.** `widestReachableRun`
+    sizes *reachable* off `speedNow`, and the hydra slows the ship (0253) — so the cells the pilot can
+    get to shrink, and a wider bullet then closes the last of them. Real, and about the interaction
+    rather than about this number.
+
+    ⚠️ **SO IT IS 1.75: THE MOST THE STANDING INVARIANT ALLOWS.** *"Take it"* was the ask; the only
+    thing standing between it and 2.75 is a guard, and that is a conversation about the guard rather
+    than about balance — `docs/decisions/0301-the-whip-throws-fireballs.md` has the numbers to have it
+    with.
+  */
+  flame: { sprite: SPRITE.flame, spriteHit: SPRITE.flame, radius: 1.75, health: 1, damage: 1, speed: 1.8, fission: SPENT_BY_ARRIVING, trail: 'ember' },
   /*
     ⚠️ **THE BIGGEST AND THE SLOWEST HOSTILE BULLET, WHICH IS 0098'S TRADE AT ITS FAR END** — 0251.
     A chunk of volcanic rock falling on the lane: a fifteenth of the lane across, at under half the

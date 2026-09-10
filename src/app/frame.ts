@@ -1446,6 +1446,8 @@ export class GameFrame implements Frame {
     // After the hull and the bolts have both moved, so a beam's root is on the hull this step — 0250.
     pinBeams(w);
     stepEntities(w.enemyShots, w.cameraAlong);
+    // After the shots have moved, so a mote is dropped where the ball actually is this step — 0301.
+    dropTrails(w);
     // After the shots have moved and before anything can hit them, so a shard that opens this step
     // opens where it is drawn — 0263.
     fissionShots(w);
@@ -3111,6 +3113,42 @@ function flare(w: World, along: number, across: number, kind: DebrisKind): void 
   const row = DEBRIS_ROWS[kind];
   reset(piece, along, across, row.body, DEBRIS_KIND[kind]);
   piece.lifeFor = row.frames.length * row.hold;
+}
+
+/**
+ * How often a trailing shot drops a mote, in steps — 0301.
+ *
+ * ⚠️ **EVERY OTHER STEP RATHER THAN EVERY ONE, AND THE POOL IS WHY.** A fireball lives about a second
+ * and a half crossing the view; at one a step that is ninety motes from a single ball, and the eagle
+ * throws seven at once. At every other step a whole lash is holding about thirty of the debris pool's
+ * hundred and fifty at a time, which is inside the share 0022 wrote for particles and leaves a death
+ * its own burst. **The pool is never grown for this** — `flare` drops what will not fit, exactly as a
+ * burst does, so a full screen loses trail before it loses anything that matters.
+ */
+const TRAIL_EVERY = 2;
+
+/**
+ * What a shot leaves behind it as it flies — 0301. *"Fireballs with fire trails."*
+ *
+ * ⚠️ **IT IS A LOOP OVER THE HOSTILE POOL WITH AN EARLY-OUT, ON `feedVoids`'s OWN ARGUMENT.** Twelve
+ * of the thirteen shot rows have no trail, so the pass is a row lookup and a `continue` for almost
+ * everything on the field; only the fireballs reach `flare`. **Nothing allocates** —
+ * `tests/budget.test.ts` scans this file.
+ *
+ * ⚠️ **THE CADENCE IS COUNTED OFF THE WORLD'S STEP AND NOT OFF THE SHOT.** A per-shot counter would
+ * be a field on every entity for the sake of one row, and worse, every shot of a volley leaves on the
+ * same step — so per-shot counters would all fire together and the lash would drop its motes in
+ * ranks. Off the world clock they still do; what stops that reading as ranks is that the balls are
+ * spread across the arc by then, which is `whip`'s own bow doing the work.
+ */
+function dropTrails(w: World): void {
+  if (w.steps % TRAIL_EVERY !== 0) return;
+  for (let i = w.enemyShots.size - 1; i >= 0; i--) {
+    const shot = w.enemyShots.at(i);
+    const trail = SHOT_ROWS[shot.kind]!.trail;
+    if (trail === undefined) continue;
+    flare(w, shot.along, shot.across, trail);
+  }
 }
 
 /**

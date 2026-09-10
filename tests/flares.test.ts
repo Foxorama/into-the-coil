@@ -7,7 +7,7 @@ import { CAPACITY } from '../src/app/mount.ts';
 import { GameFrame } from '../src/app/frame.ts';
 import { BURST, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_KINDS, DEBRIS_ROWS } from '../src/content/debris.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
-import { SHOTS } from '../src/content/shots.ts';
+import { SHOTS, SHOT_INDEX } from '../src/content/shots.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { type Entity, reset } from '../src/sim/entity.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
@@ -120,12 +120,63 @@ describe('0227 — a death is a fireball', () => {
   });
 });
 
-describe('a flare is a row, and the rows are sound', () => {
-  it('every frame of a flare is a different bitmap, and each is bigger than the last', () => {
+describe('0301 — a fireball leaves a trail', () => {
+  it('0301 — THE REPORTED ONE: a shot whose row names a trail drops motes behind it, and one that names none drops nothing', () => {
     /*
-      ⚠️ **A frame listed twice is a walk that stalls, and a frame that shrinks is an explosion that
-      breathes in.** Both are the edits a hand makes copying a row by analogy, and both bake and blit
-      without a word.
+      ⚠️ **REPORTED**: *"the whip should be throwing fireballs with fire trails."*
+
+      ⚠️ **DRIVEN THROUGH THE FRAME, BECAUSE THE ROW ALONE PROVES NOTHING.** `SHOTS.flame.trail` is a
+      field; whether anything reads it is a question about `src/app/frame.ts`, and the whole mechanism
+      is one function that a later tidy-up would delete without a word — the trail would simply stop
+      and every table would still say it was there.
+
+      ⚠️ **AND BOTH HALVES ARE ASSERTED, WHICH IS WHAT MAKES IT A GUARD OVER THE FIELD RATHER THAN
+      OVER THE POOL.** A `dropTrails` that ignored the row and trailed everything would satisfy *the
+      fireball trails*; what it cannot satisfy is *the spit does not*.
+    */
+    /*
+      ⚠️ **THE KIND IS `SHOT_INDEX`'s AND NOT A NUMBER TYPED HERE**, and the first draft typed 0 and 1
+      — which are the pulse and the arc, so the fixture flew a pulse and asked why the fireball left
+      no trail. `dropTrails` reads `SHOT_ROWS[shot.kind]`, so an invented index is a different bullet.
+    */
+    const seen: Record<'flame' | 'spit', number> = { flame: 0, spit: 0 };
+    for (const name of ['flame', 'spit'] as const) {
+      const built = playableWorld(NO_LEVEL);
+      const w = built.world;
+      const frame = new GameFrame(w);
+      const shot = w.enemyShots.spawn()!;
+      reset(shot, w.ship.along + 60, w.ship.across - 30, SHOTS[name], SHOT_INDEX[name]);
+      shot.velAlong = -SHOTS[name].speed;
+      // Long enough for several drops at `TRAIL_EVERY`, short enough that nothing reaches the ship.
+      for (let step = 0; step < 12; step++) frame.step();
+      seen[name] = flaresOf(w, DEBRIS_KIND.ember).length;
+    }
+    expect(SHOTS.flame.trail, 'the fireball no longer names a trail, so this measures nothing').toBe('ember');
+    expect(SHOTS.spit.trail, 'the spit names a trail, so the negative half measures nothing').toBeUndefined();
+    expect(seen.flame, 'the fireball flew and left nothing behind it').toBeGreaterThan(0);
+    expect(seen.spit, 'a shot whose row names no trail left embers anyway, so the field is not being read').toBe(0);
+  });
+});
+
+describe('a flare is a row, and the rows are sound', () => {
+  it('every frame of a flare is a different bitmap, and every frame changes size', () => {
+    /*
+      ⚠️ **A frame listed twice is a walk that stalls, and a frame the same size as the one before is
+      a page turn nobody can see.** Both are the edits a hand makes copying a row by analogy, and both
+      bake and blit without a word.
+
+      ── AND IT USED TO SAY *each is bigger than the last*, WHICH WAS A DIRECTION — 0301 ────────────
+
+      ⚠️ **THAT FORBADE A FLARE THAT COOLS, AND A FIREBALL'S TRAIL IS ONE.** The two flares that
+      existed when this was written both expand — a death and a spark spreading — so *grows* looked
+      like what a flare IS rather than what those two happened to do. The ember shrinks: it is one
+      mote going out, and the shrinking is what says which end of the trail is old.
+      `docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md`'s test, asked of the old wording:
+      *name a change to the content that would redden this and be CORRECT* — and there it was, in the
+      next decision but one.
+
+      ⚠️ **WHAT SURVIVES IS THE DEFECT IT WAS WRITTEN FOR**, which was never about direction: a frame
+      that does not change size is a page turn the player cannot see, whichever way it goes.
     */
     for (const kind of DEBRIS_KINDS) {
       const row = DEBRIS_ROWS[kind];
@@ -135,7 +186,7 @@ describe('a flare is a row, and the rows are sound', () => {
       for (let i = 1; i < row.frames.length; i++) {
         const before = SPRITE_EXTENT[SPRITE_KINDS[row.frames[i - 1]!]!];
         const after = SPRITE_EXTENT[SPRITE_KINDS[row.frames[i]!]!];
-        expect(after, `the ${kind}'s frame ${i} is smaller than frame ${i - 1}`).toBeGreaterThan(before);
+        expect(after, `the ${kind}'s frame ${i} is drawn at the same size as frame ${i - 1}`).not.toBe(before);
       }
       expect(row.body.sprite, `the ${kind} is spawned on a bitmap that is not its first frame`).toBe(row.frames[0]);
     }

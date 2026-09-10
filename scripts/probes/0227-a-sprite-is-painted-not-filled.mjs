@@ -99,7 +99,9 @@ export const PROBES = [
       picture for two holds and the last frame is never shown.
     */
     broke: 'a burst frame listed twice, so the walk stalls and the last frame is never shown',
-    guard: 'every frame of a flare is a different bitmap, and each is bigger than the last',
+    // ⚠️ Re-anchored by 0301, which restated the guard: the direction went (a trail cools and
+    // shrinks) and *every frame changes size* is what it always meant to hold.
+    guard: 'every frame of a flare is a different bitmap, and every frame changes size',
     edit: {
       path: 'src/content/debris.ts',
       find: 'const BURST_FRAMES: readonly number[] = [SPRITE.burst0, SPRITE.burst1, SPRITE.burst2, SPRITE.burst3];',

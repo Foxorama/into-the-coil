@@ -548,6 +548,18 @@ export const SPRITE_KINDS = [
   'spark0',
   'spark1',
   /*
+    ── WHAT A FIREBALL LEAVES BEHIND IT — 0301 ─────────────────────────────────────────────────────
+
+    *"The whip should be throwing fireballs with fire trails."* Three motes, each smaller than the
+    last, dropped behind the ball as it flies and walked by the same `lifeFor` every other flare uses
+    (0227). Not a rotated tail — `blit` cannot rotate, and a trail of round motes is the same picture
+    whichever way the ball is going, which is the lesson `docs/decisions/0300-an-acid-bead-has-no-heading.md`
+    paid for on the acid.
+  */
+  'ember0',
+  'ember1',
+  'ember2',
+  /*
     ── THE SHIP'S EXHAUST, WHICH IS AN ENTITY AND NOT A MARK ON THE HULL — 0230 ────────────────────
 
     *"Ship engines need to be pulsing ion thrusters that burn when you hard push to the right and
@@ -1006,9 +1018,21 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // A drop bigger than any enemy bullet and a ring between it and the quill — 0248.
   acid: 5.8,
   void: 5,
-  // The quickest, and the smallest — 0249. ⚠️ At 1.2 units it is 8.6 px, reported from play as
-  // *"incredibly small and hard to see"*, and under 0295 it is free to grow.
-  flame: 1.2,
+  /*
+    ⚠️ **1.2 → 5, WHICH IS THE VOID'S — 0301.** It was the quickest and the smallest (0249), and at
+    1.2 units it drew **8.6 px**: the smallest thing in the game, reported twice — *"the eagle boss's
+    fire whip attack is super tiny little dots that are almost impossible to see"*, and then *"the
+    flame attacks are still super small on screen and super fast."* Asked for as *"a similar size to
+    the void blast"*, and the void is 5.
+
+    ⚠️ **0295 IS WHY THIS COULD MOVE AT ALL.** Until it, the ladder held every hostile bullet more
+    than five pixels from every other AND the quicker one smaller — so the fastest shot in the game
+    was *required* to be the smallest, and a visible fireball was illegal by arithmetic.
+
+    ⚠️ **AND ITS HURTBOX WENT UP WITH IT, ON PURPOSE** — `src/content/shots.ts` has the number and
+    what it costs. The band in `tests/combat.test.ts` makes that unavoidable rather than optional.
+  */
+  flame: 5,
   // The slowest, and the biggest — 0251. The hurtbox in `src/content/shots.ts` is 0.3 of it.
   rock: 7.4,
   // Between the acid's 5.8 and the rock's 7.4 — 0253. The hurtbox is 0.26 of it.
@@ -1163,6 +1187,18 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // Under a burst's first frame at both, and the second is the flash spreading and going.
   spark0: 3.2,
   spark1: 5.5,
+  /*
+    ⚠️ **A TRAIL THAT SHRINKS, AND THAT IS THE WHOLE OF WHAT SAYS WHICH WAY THE BALL WENT** — 0301.
+    The motes hold station where they were dropped, so the ball outruns them; each frame is smaller
+    than the last, so the oldest mote is the faintest and the line reads from thin end to fat one. A
+    trail of EQUAL motes is a dotted line with no direction in it, which is the mistake this shape
+    avoids without ever rotating anything.
+
+    ⚠️ **Under the fireball at every frame**, so the trail never competes with the thing that hurts.
+  */
+  ember0: 2.6,
+  ember1: 1.8,
+  ember2: 1.1,
   /*
     ⚠️ **THE FLAME'S ROOT IS AT THE SPRITE'S FORWARD EDGE AND THE TIP AT ITS BACK** — 0230 — so the
     extent is how long the flame is, and `src/content/exhaust.ts`'s `trail` is where its centre sits
