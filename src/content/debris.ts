@@ -60,8 +60,8 @@ export const DEBRIS: Body = {
   the step after the last — which is `stepEntities`'s own rule for a lifetime reaching zero.
 */
 
-/** What a debris entity can be: the shard, and the two flares. Closed, per 0016. */
-export const DEBRIS_KINDS = ['shard', 'burst', 'spark'] as const;
+/** What a debris entity can be: the shard, and the flares. Closed, per 0016. */
+export const DEBRIS_KINDS = ['shard', 'burst', 'spark', 'ember'] as const;
 
 export type DebrisKind = (typeof DEBRIS_KINDS)[number];
 
@@ -90,6 +90,7 @@ const flare = (frames: readonly number[]): Body => ({
 
 const BURST_FRAMES: readonly number[] = [SPRITE.burst0, SPRITE.burst1, SPRITE.burst2, SPRITE.burst3];
 const SPARK_FRAMES: readonly number[] = [SPRITE.spark0, SPRITE.spark1];
+const EMBER_FRAMES: readonly number[] = [SPRITE.ember0, SPRITE.ember1, SPRITE.ember2];
 
 export const DEBRIS_ROWS: Record<DebrisKind, DebrisRow> = {
   shard: { body: DEBRIS, frames: [SPRITE.debris], hold: 0 },
@@ -108,10 +109,25 @@ export const DEBRIS_ROWS: Record<DebrisKind, DebrisRow> = {
    * was survived and a body that was not never read alike.
    */
   spark: { body: flare(SPARK_FRAMES), frames: SPARK_FRAMES, hold: 4 },
+  /**
+   * What a fireball leaves behind it — 0301. *"Fireballs with fire trails."*
+   *
+   * ⚠️ **IT IS A FLARE LIKE THE OTHER TWO, WHICH IS WHY A TRAIL COST NO MECHANISM.** 0227 already
+   * built *a debris entity that walks a short list of frames by its own `lifeFor`, in no pairing, on
+   * 0022's particle share* — for a death. A trail is that, dropped repeatedly along a path instead of
+   * once at a point, and `flare` in `src/app/frame.ts` is the spawner unchanged.
+   *
+   * ⚠️ **TWELVE STEPS, A FIFTH OF A SECOND, AND IT IS SHORTER THAN A SPARK'S EIGHT IS LONG.** The
+   * fireball travels 1.8 a step, so a mote is about twenty-two units behind the ball before it goes
+   * out — a trail a little longer than the ball is wide, rather than a smear across the lane. What
+   * makes it read as a trail rather than as a queue of bullets is that every frame is smaller than
+   * the last AND every one is under the fireball (`src/content/sprites.ts`).
+   */
+  ember: { body: flare(EMBER_FRAMES), frames: EMBER_FRAMES, hold: 4 },
 };
 
 /** The index a debris entity's `kind` carries for each row — `DEBRIS_KINDS`'s own order. */
-export const DEBRIS_KIND: Record<DebrisKind, number> = { shard: 0, burst: 1, spark: 2 };
+export const DEBRIS_KIND: Record<DebrisKind, number> = { shard: 0, burst: 1, spark: 2, ember: 3 };
 
 /** Every row, in `kind` order, so the frame can index it by the number on the entity. */
 export const DEBRIS_BY_KIND: readonly DebrisRow[] = DEBRIS_KINDS.map((kind) => DEBRIS_ROWS[kind]);

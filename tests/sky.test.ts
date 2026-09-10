@@ -465,10 +465,20 @@ describe('0203 — the sky may hold a landmark, and the rule is a band', () => {
   const largestThreat = Math.max(...ENEMY_KINDS.map((kind) => ENEMIES[kind].radius)) * 2;
 
   it('the band is derived from what can kill you, not typed', () => {
-    // If a new body or shot moves either end, the band moves with it and the guard below re-ranks.
-    // ⚠️ 1.32 since 0249: the eagle's flame is the smallest thing that can kill you, at 0.66 —
-    // the most its 1.2-unit drawing may carry, and still above the far stars' largest mark.
-    expect(smallestThreat).toBeCloseTo(1.32, 6);
+    /*
+      If a new body or shot moves either end, the band moves with it and the guard below re-ranks.
+
+      ⚠️ **1.32 → 1.8 AT 0301, AND THE FLAME IS NO LONGER THE SMALLEST THING THAT CAN KILL YOU.** It
+      held that title from 0249 at a hurtbox of 0.66 — the most its 1.2-unit drawing could carry — and
+      0301 made it a fireball at the void's size, so its hurtbox went to 2.75 with the picture. What
+      is smallest now is the raiders' own bullets at 0.9: the spit, the lance and the flak, which have
+      shared one hurtbox since 0098.
+
+      ⚠️ **THIS ASSERTION EXISTS TO NOTICE EXACTLY THAT**, which is why it is a pinned number and not
+      a re-derivation — a band that silently followed the content would let the sky creep up on the
+      thing it is a band away FROM.
+    */
+    expect(smallestThreat).toBeCloseTo(1.8, 6);
     expect(largestThreat).toBeCloseTo(8, 6);
   });
 

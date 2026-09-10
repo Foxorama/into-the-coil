@@ -652,6 +652,15 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   burst3: 'flame',
   spark0: 'impact',
   spark1: 'bullet',
+  /*
+    ⚠️ **THE FIRE INK, WHICH IS THE FIREBALL'S OWN AND NOT THE EXHAUST'S** — 0301. A trail behind a
+    thing that will kill you has to read as part of that thing, so it wears what the ball wears; the
+    ship's own plume is `glass`-dark `flame` on purpose and the two must never be confused.
+    0295's test, asked of it: fire is fire, so this does NOT take the place's colour (0296).
+  */
+  ember0: 'fire',
+  ember1: 'fire',
+  ember2: 'fire',
   // The exhaust is the palette's fire on the same terms as a burst — 0230: the flame is the
   // exhaust ink, its heart the hazard ink, its core the flash. None of it means anything.
   thrustIdle0: 'flame',
@@ -5854,30 +5863,40 @@ export function drawKind(
       glow(ctx, f, palette.fire, 0, 0, 1.12, 0.4);
       disc(ctx, f, shade(palette.fire, 0.6), 0.08, -0.06, 0.22);
       return;
-    case 'flame':
+    case 'flame': {
       /*
-        A TONGUE — 0249: a flame's own outline, pointed at the front and notched at the back where
-        it licks, leaning the way it flies. Not the acid's drop (round at the back, pointed at the
-        front along the other axis) and the smallest bullet there is. In the `fire` ink, with a hot
-        heart low in it.
+        ── IT WAS A TONGUE UNTIL 0301, AND A TONGUE LEANS THE WAY IT FLIES ─────────────────────────
+
+        ⚠️ **0249 DREW A FLAME'S OUTLINE — pointed at the front, notched behind where it licks,
+        leaning.** Which is a good drawing of a flame moving one way, and the whip throws these on an
+        arc: `src/app/boss.ts` spreads them across `sweep` and marches the speed so the lash bows.
+        Same defect the acid had one decision earlier — a silhouette asserting a heading a bitmap
+        cannot have — and the same answer: **no dominant point, so nothing to be wrong about.**
+
+        ⚠️ **A BALL OF FIRE, NOT A CIRCLE**, asked for in those words. Fourteen points on an
+        alternating radius, the long ones licking further out at no two the same, so the edge is
+        ragged all the way round; a bright heart under a hot core, because fire is lit from inside;
+        and the halo over all of it. The randomness is a SEEDED stream (`makeRng('art')`), so the
+        bake is identical on every machine and every run — `docs/decisions/0021-one-stream-per-concern.md`.
+
+        ⚠️ **AND IT IS 5 UNITS NOW, THE VOID'S OWN SIZE.** At 1.2 it drew 8.6 px and was reported
+        twice as impossible to see. What its hurtbox cost is on the row in `src/content/shots.ts`.
       */
-      trace(ctx, f, [
-        [-1, 0],
-        [-0.3, -0.5],
-        [0.2, -0.9],
-        [0.3, -0.35],
-        [0.9, -0.55],
-        [0.5, 0],
-        [0.9, 0.55],
-        [0.3, 0.35],
-        [0.2, 0.9],
-        [-0.3, 0.5],
-      ]);
+      const lick = makeRng('art').stream('flame');
+      const lobes: Pt[] = [];
+      for (let k = 0; k < 14; k++) {
+        const a = (k / 14) * Math.PI * 2;
+        const rr = k % 2 === 0 ? lick.range(0.86, 1) : lick.range(0.5, 0.66);
+        lobes.push([Math.cos(a) * rr, Math.sin(a) * rr]);
+      }
+      trace(ctx, f, lobes);
       seal(ctx);
-      // The glow is the whole of its light: a bullet this small cannot carry a mark that is drawn
-      // at all (0106), so the tongue is one ink and its halo.
-      glow(ctx, f, palette.fire, 0, 0, 1.1, 0.5);
+      glow(ctx, f, palette.fire, 0, 0, 1.15, 0.5);
+      // Lit from inside: the body's own ink lightened, then a hot heart in the hazard's yellow.
+      disc(ctx, f, shade(palette.fire, 0.45), 0, 0, 0.52);
+      disc(ctx, f, palette.hazard, -0.06, -0.04, 0.28);
       return;
+    }
     case 'quill':
       /*
         A FEATHER — 0262: *"the bullets need to be feathered quills."* The shaft points the way it
@@ -6027,6 +6046,37 @@ export function drawKind(
         const a = rng.range(0, Math.PI * 2);
         disc(ctx, f, palette.hazard, Math.cos(a) * 1.05, Math.sin(a) * 1.05, 0.1, 0.85);
       }
+      return;
+    }
+    /*
+      ── A FIREBALL'S TRAIL — 0301 ────────────────────────────────────────────────────────────────
+
+      Three motes of burning air, dropped behind the ball and cooling as they go. **Each is the same
+      drawing at a smaller extent** (`src/content/sprites.ts`) rather than three different shapes: it
+      is one thing going out, and a trail whose shape changed frame to frame would read as three
+      objects. What carries the walk is size and heat — the last is dimmer and yellower-out.
+
+      ⚠️ **RAGGED RATHER THAN ROUND, ON THE FIREBALL'S OWN ARGUMENT**, and drawn with its own seeded
+      stream so a mote is not a scaled copy of the ball sitting behind it.
+
+      ⚠️ **NO HOT HEART ON THE LAST TWO.** A mark on a bitmap this small is under the floor
+      `tests/accents.test.ts` holds (0106), and a trail is not something the player has to read
+      anyway — it says *that came from there*, and nothing else.
+    */
+    case 'ember0':
+    case 'ember1':
+    case 'ember2': {
+      const rng = makeRng('art').stream(kind);
+      const lobes: Pt[] = [];
+      for (let k = 0; k < 10; k++) {
+        const a = (k / 10) * Math.PI * 2;
+        const rr = k % 2 === 0 ? rng.range(0.82, 0.98) : rng.range(0.46, 0.62);
+        lobes.push([Math.cos(a) * rr, Math.sin(a) * rr]);
+      }
+      trace(ctx, f, lobes);
+      seal(ctx);
+      glow(ctx, f, palette.fire, 0, 0, 1.1, kind === 'ember0' ? 0.45 : 0.3);
+      if (kind === 'ember0') disc(ctx, f, shade(palette.fire, 0.4), 0, 0, 0.42);
       return;
     }
     /*
