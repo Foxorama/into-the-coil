@@ -257,7 +257,31 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     ceiling; the ratio it had before was exactly 0.4, so the collision follows the picture down rather
     than being re-tuned beside it — 0036, in the direction nobody reports.
   */
-  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 2.24, health: BLADE_EDGE, damage: 1, speed: 1, fission: SPENT_BY_ARRIVING },
+  /*
+    ⚠️ **`damage` 1 → 2 — 0298, AND THE REPORT'S OWN PREMISE WAS FALSE.** Played: *"did the damage
+    decrease, feels like they need a slightly higher damage."* It never decreased: `git log -S` finds
+    exactly one commit on this line, its own. What changed was 0294 taking the drawing from 8 to 5.6
+    for legibility, and a smaller blade lands less.
+
+    ⚠️ **WHAT `scripts/time-to-kill.mjs` FOUND INSTEAD IS THE LADDER, AND IT IS NOT WHAT THIS FIXES.**
+    Mean damage a second over the near field, bare ship to full ship:
+
+      pulse       3.5 → 28.1   ×8.1
+      arc         5.0 → 14.6   ×2.9
+      blade       8.3 → 12.5   ×1.5
+
+    The blade OPENS as the strongest gun in the game and finishes as the weakest, because its `weight`
+    ladder is flat ones and its only climb is a doubled cadence, while the pulse buys barrels and rate
+    together. So the honest fix is a `weight` ladder on the weapon row, and this is not that.
+
+    ⚠️ **THIS IS THE FLAT DOUBLE, CHOSEN WITH THAT SAID OUT LOUD** — *"let's do +1 damage on
+    shurikens, it's the easiest to roll back and change and I don't care about tier 0 really because
+    the player will basically only ever be at that level at the moment for the first 20 secs of level
+    1."* One row, one number, revertible in a line, and the rung it over-pays is one a run spends
+    twenty seconds on. The ladder stays on the table as the thing to do if this reads too strong
+    early.
+  */
+  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 2.24, health: BLADE_EDGE, damage: 2, speed: 1, fission: SPENT_BY_ARRIVING },
   /**
    * What an enemy sends back. **Slower than the ship**, which is the whole of what makes it
    * dodgeable rather than a coin flip: a player who reacts can always leave the line it is on.
