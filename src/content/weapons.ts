@@ -183,11 +183,41 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     // weight and rate, so every rung changes something.
     links: [1, 2, 3, 3, 3],
     weight: [1, 1, 1, 2, 2],
-    // A sixth further at every rung — 0236's ladder, its top cut back a tenth by 0239 and the whole
-    // of it a twentieth by 0241: *"still being too strong. 5% reduction on the range."* The cap
-    // reaches a shade over half of the narrowest view. `tests/guns-played.test.ts` holds the climb,
-    // never the numbers.
-    reach: [52, 61, 71, 84, 98],
+    /*
+      A sixth further at every rung — 0236's ladder. `tests/guns-played.test.ts` holds the CLIMB,
+      never the numbers.
+
+      ── AND THE NUMBERS WERE MEASURED AGAINST THE WRONG AXIS FOR THREE PASSES — 0297 ───────────────
+
+      ⚠️ **THE OLD LADDER WAS 52 → 98, AND ITS OWN COMMENT SAID WHY: *the cap reaches a shade over
+      half of the narrowest view*.** That is the view's LONG axis, 177.8 units. A reach is a
+      Euclidean radius (`nearestFrom`), so it spans the short axis too — and the short axis is
+      `ACROSS_SPAN`, a fixed 100, which
+      `docs/decisions/0023-the-long-axis-is-the-scroll-axis.md` names as **the difficulty axis**. At
+      98 the cap covered the whole lane from anywhere in it. Reported: *"chain lightning jumps too
+      far, you can almost auto-pilot just sitting in the center of the screen and kill everything
+      before it gets a shot off."*
+
+      ⚠️ **AND IT HAD ALREADY BEEN CUT TWICE, A TENTH BY 0239 AND A TWENTIETH BY 0241** — *"still
+      being too strong. 5% reduction on the range."* Two passes shaving percentages off a quantity
+      that was never wrong by a percentage: it was reasoned in one frame and applied in another,
+      which is `CLAUDE.md`'s own rule — *a quantity solved from one case is checked in every case it
+      runs in*. A third 5% would have bought another report.
+
+      ⚠️ **SO THE SCALE MOVES AND THE SHAPE DOES NOT.** Every rung is about 0.4 of the old one, and
+      each still buys at least the sixth `tests/guns-played.test.ts` holds — that guard went red on
+      the first draft of this ladder, at 24 → 27, and it was right: a rung that buys an eighth is a
+      rung 0233 already refused. The numbers are the ones that clear it, not the ones nearest the
+      multiply. What changes is what the cap means in the player's units: **from the centre of the
+      lane the top rung reaches across 11 to 89, so both edges are out of it**, and the first rung
+      covers 30 to 70. Positioning is a decision again.
+
+      ⚠️ **AND 0257 STILL HAS SOMETHING TO BITE ON.** On a 1280×720 screen the nose at the front of
+      its box sits 10.7 units from the leading edge, so even the first rung still reaches past it —
+      the guard that a link lands only on a body whose whole hull is on screen is not made vacuous
+      by this.
+    */
+    reach: [20, 24, 28, 33, 39],
     coil: [0, 0, 0, 0, 0],
     turn: 0,
     pickup: SPRITE.pickupArc,
