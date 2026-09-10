@@ -298,6 +298,28 @@ export interface Entity extends Body {
    */
   headAt: number;
   /**
+   * A spray in progress — `docs/decisions/0304-the-serpent-sprays.md`: steps it has left, how often
+   * it throws, where it is aiming now, how far the aim turns a step, and which shot it throws (an
+   * index into `SHOT_KINDS`, on `kind`'s own terms).
+   *
+   * ⚠️ **FIVE FIELDS AND NOT A REFERENCE TO THE ATTACK, BECAUSE THE ATTACK MAY NOT BE THERE.** A spray
+   * outlives the volley that started it by a second, and the phase that authored it can turn over
+   * inside that second — so reading the attack back off the row would describe whichever head the
+   * round has reached rather than the one still spraying. What is copied here is exactly what the
+   * next step needs, the same answer `orbitAngle` and its three siblings give for a blade in the air.
+   *
+   * ⚠️ **NOT `firePhase` AND NOT `headAt`**, which is the whole of what 0261 paid for: two attacks
+   * reading one field crashed every serpent fight at its first phase change. A spray is a head of a
+   * round, so a spray that counted on either would be that defect a third time.
+   *
+   * Zero `sprayLeft` is *not spraying*, which is every body in the game but a boss mid-spray.
+   */
+  sprayLeft: number;
+  sprayEvery: number;
+  sprayAngle: number;
+  sprayTurn: number;
+  sprayKind: number;
+  /**
    * Which of its row's faces a cycling pickup is showing, and steps until it turns to the next —
    * `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
    *
@@ -399,6 +421,11 @@ export function makeEntity(): Entity {
     bobPhase: 0,
     firePhase: 0,
     headAt: 0,
+    sprayLeft: 0,
+    sprayEvery: 0,
+    sprayAngle: 0,
+    sprayTurn: 0,
+    sprayKind: 0,
     face: 0,
     stack: 1,
     faceIn: 0,
@@ -447,6 +474,11 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.bobPhase = 0;
   e.firePhase = 0;
   e.headAt = 0;
+  e.sprayLeft = 0;
+  e.sprayEvery = 0;
+  e.sprayAngle = 0;
+  e.sprayTurn = 0;
+  e.sprayKind = 0;
   e.face = 0;
   e.stack = 1;
   e.faceIn = 0;

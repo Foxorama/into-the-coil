@@ -169,7 +169,7 @@ export type BossMove =
 export const BOSS_ATTACK_KINDS = [
   'spray',
   'rake',
-  'serpentine',
+  'sweep',
   'ring',
   'wall',
   'rain',
@@ -201,26 +201,39 @@ export type BossAttack =
    * one description of *where in its turn a body has got to*, used by both.
    */
   | { kind: 'rake'; turn: number }
+  /*
+    ── `serpentine` WAS HERE — 0290's wave of acid — AND 0304 TOOK IT BACK OUT ────────────────────
+
+    *"For phase 1 can we have it shoot a forward arc of 5 globes"*: the serpent's opening phase is a
+    plain `spray` now, and its later acid is the `sweep` below. Nothing else threw a wave, and an arm
+    nothing sends is a member the union cannot keep (`tests/level.test.ts`), so it is gone rather than
+    left dispatchable. `docs/decisions/0304-the-serpent-sprays.md`.
+  */
   /**
-   * A spray whose shots lie on a WAVE that stretches as it flies — 0290.
+   * A spray whose aim turns WHILE it is thrown — `docs/decisions/0304-the-serpent-sprays.md`.
    *
-   * ⚠️ **REPORTED**: *"the acid attacks should fire out in a serpentine spray, as opposed [to] like
-   * the 3 blobs now."*
+   * ⚠️ **ASKED FOR**: *"a spray starting from 60 degrees (so it will be shooting down behind it)
+   * then arcing around and finishing at 30 degrees (so it will be shooting up behind it)."*
    *
-   * ⚠️ **IT IS `whip`'s MECHANISM WITH THE OTHER TERM WAVING.** A whip marches its SPEED across the
-   * fan so the line of fire bows; this marches the speed the same way and swings the HEADING on a
-   * sine instead, so the beads sit on an S rooted at the mouth. Every one leaves on the same step and
-   * flies straight afterwards: the wave is in where they are aimed, not in how they travel, so this
-   * costs nothing per step and nothing on `ShotRow`.
+   * ⚠️ **OVER TIME, NOT AT ONCE, WHICH IS THE WHOLE OF WHAT MAKES IT A SPRAY.** Every other arm here
+   * leaves the hull on one step. This one throws `globes` shots, one every `every` steps, from the
+   * mouth where it is on that step, its heading turning evenly from `from` to `to` — a hose swung
+   * round, so the stream is an arm curling through the air rather than a fan. The hull goes on flying
+   * while it sprays, and the arm bends with the bob.
    *
-   * ⚠️ **AND THAT IS WHY THE SHOTS ARE NOT STAGGERED BACKWARDS**, which is the obvious way to make a
-   * volley leave as a wave. Spawning bead `i` further back along its own heading puts it inside the
-   * skull and then inside the body — and `tests/serpent.test.ts` holds that this animal's acid leaves
-   * its SKULL and not the middle of its body, a guard written because it once did.
+   * ⚠️ **HEADINGS IN THE WORLD'S FRAME, WHERE `π` IS STRAIGHT DOWN THE LANE AT THE PLAYER** — every
+   * arm of `throwAttack` uses it. `0` is straight up-lane, behind the hull; `π/2` is across-plus, the
+   * bottom of the landscape screen. `to` is greater than `from`, so the aim turns through across-plus,
+   * then down the lane, then across-minus: down, forward, up.
    *
-   * `turn` rakes the whole wave between volleys, on `rake`'s own field and for its own reason.
+   * ⚠️ **THE COUNT IS THE ATTACK'S AND NOT THE PHASE'S**, on the terms 0290 argued for the wave this
+   * replaces: the phase's `shots` is handed to every head of a round, and the lightning is one of them.
+   *
+   * ⚠️ **AND THE NEXT VOLLEY WAITS FOR IT**, on `beam`'s terms: the gate adds the spray's own steps to
+   * the cadence, so `fireEvery` is the rest between one spray ending and the next volley — otherwise a
+   * phase whose spray outlasts its cadence throws its next head into the middle of it.
    */
-  | { kind: 'serpentine'; sweep: number; waves: number; beads: number; reach: number; turn: number }
+  | { kind: 'sweep'; from: number; to: number; globes: number; every: number }
   /**
    * The phase's shots spread evenly around the whole circle rather than across `spread`.
    *
@@ -1371,9 +1384,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     ⚠️ **THREE PHASES, THREE WEAPONS — 0248, THROWN TOGETHER SINCE 0261.** *"Acid blast attacks,
     void blast attacks and then a space lightning bolt attack that rains down from the top of the
     screen."* 0248 gave each phase one weapon — a wall of acid, a spray of void, the lightning —
-    and the alpha play called that three separate fire fields. The phases are cumulative now: a
-    raking fan of acid while it is whole; acid and void in turn once hurt; and, at the last third,
-    acid, void and the lightning in turn — three columns a strike inside the box the ship flies in,
+    and the alpha play called that three separate fire fields. The phases are cumulative now: five
+    acid globes straight ahead while it is whole (0304); the acid spray and void in turn once hurt;
+    and, at the last third, the spray, void and the lightning in turn — three columns a strike inside the box the ship flies in,
     each with a three-quarter-second warning line, each hurting a ship within four units on the
     step it lands. The row's `shot` and `attack` are the first phase's; the phases say what changes.
   */
@@ -1393,13 +1406,18 @@ export const BOSSES: Record<BossKind, BossRow> = {
       change it."*
     */
     /*
-      ⚠️ **A RAKING FAN OF THREE BECAME A RAKING WAVE OF NINE — 0290.** Reported: *"the acid attacks
-      should fire out in a serpentine spray, as opposed [to] like the 3 blobs now."* The turn is
-      0261's, unchanged and load-bearing: the opening phase is the one that rakes and the later phases
-      index their heads by a count, and `tests/serpent.test.ts` holds the crash that came of sharing
-      one field between the two by first asserting that the opening phase actually raked.
+      ⚠️ **A RAKING FAN OF THREE BECAME A RAKING WAVE OF NINE — 0290 — AND IS FIVE STRAIGHT AHEAD NOW
+      — 0304.** Asked for: *"for phase 1 can we have it shoot a forward arc of 5 globes."* A fan
+      centred down the lane that does not turn: the opening phase is the simple one, so that the spray
+      the later phases throw reads as the animal escalating. The count is the phase's own `shots`.
+
+      ⚠️ **IT IS NOW THE HYDRA'S PAIR — a bob and a spray — AND THAT WAS ACCEPTED RATHER THAN DODGED.**
+      `tests/level.test.ts` held the pair unique over the real bosses and this is the correct change
+      that reddened it, so that half is a taste in `tests/authored.ts` now (0192). What tells the two
+      apart is everything a pair cannot see: a chain that rears, five globes to three, and a fight
+      that becomes a spray and then the lightning.
     */
-    attack: { kind: 'serpentine', sweep: 0.32, waves: 1.5, beads: 3, reach: 1.4, turn: 0.45 },
+    attack: { kind: 'spray' },
     uncoil: null,
     fall: null,
     chill: null,
@@ -1602,9 +1620,22 @@ export const BOSSES: Record<BossKind, BossRow> = {
     patrol: 0.3,
     shot: 'acid',
     phases: [
-      // Whole: a fan of three acid blasts, raking — the row's own attack and shot.
-      { upTo: 1, fireEvery: 84, shots: 3, spread: 0.7, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
-      // Hurt: acid and void in turn, a fan of three each — two heads (0254), one a volley.
+      // Whole: five acid globes in an arc straight down the lane — the row's own attack and shot (0304).
+      { upTo: 1, fireEvery: 84, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },
+      /*
+        Hurt: the acid spray and a fan of three void in turn — two heads (0254), one a volley.
+
+        ⚠️ **THE SPRAY — 0304.** *"Starting from 60 degrees (so it will be shooting down behind it)
+        then arcing around and finishing at 30 degrees (so it will be shooting up behind it)."* A
+        heading of `π/3` is sixty degrees below straight-behind; `11π/6` is thirty above it.
+        Twenty-one globes, one every three steps: the aim goes round 270 degrees in a second, down,
+        forward and up, and leaves the quarter behind the animal empty.
+
+        ⚠️ **A SECOND AND NOT LONGER, BECAUSE THE LIGHTNING WAITS FOR IT.** The next head is held until
+        the spray has finished (`src/app/boss.ts`), so every step of spray is a step the round is
+        longer — and the last third's round is where the lightning lives. At a second, it still falls
+        about every two and a quarter seconds where it fell every 1.8; at 1.2 it was 2.4.
+      */
       {
         upTo: 0.66,
         fireEvery: 60,
@@ -1616,14 +1647,15 @@ export const BOSSES: Record<BossKind, BossRow> = {
         attack: {
           kind: 'heads',
           heads: [
-            { shot: 'acid', attack: { kind: 'serpentine', sweep: 0.32, waves: 1.5, beads: 3, reach: 1.4, turn: 0.45 } },
+            { shot: 'acid', attack: { kind: 'sweep', from: Math.PI / 3, to: (11 * Math.PI) / 6, globes: 21, every: 3 } },
             { shot: 'void', attack: { kind: 'spray' } },
           ],
         },
       },
-      // The last third: acid, void and the lightning in turn, three columns a strike. The cadence
-      // is the quickest of the three so the lightning still falls about every two seconds, which
-      // is what it did alone at 54 with a warning of 45 — *"superb, don't change it."*
+      // The last third: the acid spray, void and the lightning in turn, three columns a strike. The
+      // cadence is the quickest of the three so the lightning still falls about every two seconds,
+      // which is what it did alone at 54 with a warning of 45 — *"superb, don't change it."* The spray
+      // is phase two's, carried on as every head here is (0261, and 0304 asked which).
       {
         upTo: 0.33,
         fireEvery: 36,
@@ -1635,7 +1667,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
         attack: {
           kind: 'heads',
           heads: [
-            { shot: 'acid', attack: { kind: 'serpentine', sweep: 0.32, waves: 1.5, beads: 3, reach: 1.4, turn: 0.45 } },
+            { shot: 'acid', attack: { kind: 'sweep', from: Math.PI / 3, to: (11 * Math.PI) / 6, globes: 21, every: 3 } },
             { shot: 'void', attack: { kind: 'spray' } },
             // ⚠️ UNTOUCHED, AND SAID TWICE TWO PLAYS APART: *"don't change the lightning attack it's
             // really good."* It is the one attack on this boss with a verdict already in.

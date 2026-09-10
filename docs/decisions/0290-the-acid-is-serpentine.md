@@ -1,5 +1,9 @@
 # 0290 — The acid is serpentine
 
+> ⚠️ **SUPERSEDED 2026-09-11 by [0304](0304-the-serpent-sprays.md).** Asked for: *"for phase 1 can
+> we have it shoot a forward arc of 5 globes, then phase2 it does a spray…"* The wave is gone, and
+> `serpentine` with it, along with this decision's three probes.
+
 **Accepted 2026-09-09**, from the first play of the long serpent —
 [`the-chain-played`](../../reports/the-chain-played-2026-09-09.md):
 

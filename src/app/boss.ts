@@ -29,7 +29,8 @@ import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../sim/flight.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { CueKind } from '../content/cues.ts';
 import { type DifficultyRow, crowdFor, fireGapFor } from '../content/difficulty.ts';
-import { SHARD_VOLLEY, SHOTS, SHOT_INDEX, type ShotRow } from '../content/shots.ts';
+import { FIRE_GRID } from '../content/cadence.ts';
+import { SHARD_VOLLEY, SHOTS, SHOT_INDEX, SHOT_ROWS, type ShotRow } from '../content/shots.ts';
 
 /**
  * How fast it closes on its station, in world units per step, on top of the scroll.
@@ -522,6 +523,15 @@ export function stepBoss(
   */
   if (phase.stance.kind === 'bare') return direction;
 
+  /*
+    ⚠️ **A SPRAY IN PROGRESS THROWS ITS NEXT GLOBE BEFORE THE GATE — 0304.** It is the one attack
+    that outlives the step it was thrown on, so it cannot live inside the gate; and it is after the
+    bare window's return because a hull that has stopped shooting has stopped spraying too. Before
+    the gate rather than after, so that on the step the spray finishes its last globe leaves the mouth
+    ahead of whatever the next head throws.
+  */
+  if (boss.sprayLeft > 0) spray(boss, row, shots, tier, scrollPerStep);
+
   boss.fireIn--;
   if (boss.fireIn > 0) return direction;
   /*
@@ -772,41 +782,37 @@ function throwAttack(
       }
       break;
     }
-    case 'serpentine': {
+    case 'sweep': {
       /*
-        A wave of acid — 0290, and it is `whip` above with the other term waving. That one marches the
-        SPEED across the fan so the line of fire bows; this marches the speed the same way and swings
-        the HEADING on a sine, so the beads sit on an S rooted at the mouth and the S stretches as it
-        flies. Every bead leaves on the same step and travels straight afterwards.
+        A spray — 0304: `globes` shots, one every `every` steps, the aim turning evenly from `from`
+        to `to`. This step throws the first; `spray` throws the rest from `stepBoss`, one step at a
+        time, from wherever the mouth has got to. What the next step needs is copied onto the hull,
+        because the attack that started it may not be the phase's by the time it finishes —
+        `src/sim/entity.ts` has the argument.
 
-        ⚠️ **THE COUNT IS THE ATTACK'S AND NOT THE PHASE'S, WHICH IS A DEPARTURE FROM 0110 AND IS
-        ARGUED RATHER THAN ASSUMED.** *The union says where the fan points; the phase says how wide
-        and how many* — and a wave cannot be drawn with three points. Worse, this boss's phases hand
-        the same `shots` to the acid, the void and the LIGHTNING in turn (`heads`), so raising it to
-        get a spray would give the rain three times its columns. `docs/decisions/0290-the-acid-is-serpentine.md`
-        has the report that forbids exactly that. The phase still owns `spread` and `fireEvery`, which
-        is what escalates on this fight.
+        ⚠️ **THE STEPS ARE A WHOLE NUMBER OF `every`s**, which is what makes *throw on this step* a
+        remainder of the steps left rather than a second counter: the first globe is at `from`, the
+        last is on the spray's final step at exactly `to`.
 
-        ⚠️ **AND IT RAKES, ON `rake`'s OWN FIELD.** Not decoration: the serpent's opening phase is the
-        one that turns, its later phases index heads by a count, and `tests/serpent.test.ts` holds the
-        crash that came of sharing one field between the two — a guard that opens by asserting the
-        opening phase actually raked. An attack that replaced the rake and stood still would leave
-        that guard green and measuring nothing.
+        ⚠️ **AND THE NEXT VOLLEY WAITS FOR IT AND NO LONGER.** The gate above has just set `fireIn` to
+        the phase's cadence; a spray longer than that pushes it out to the spray's own end, so no head
+        is thrown into the middle of one and no spray restarts over the top of itself on a tier whose
+        cadence is shorter than the spray. A cadence that is already longer is left alone — `beam`
+        adds its hold because a braced hull does nothing else; a spraying one is still flying.
+
+        ⚠️ **ROUNDED UP TO THE FIRE GRID**, so the volley after a spray still lands on the beat the
+        music is counting (0096). The serpent's second is ten grid slots exactly; a row that authored
+        a spray of some other length would otherwise pull every volley after it off the grid.
       */
-      boss.firePhase += attack.turn;
-      const beads = count * attack.beads;
-      const along = attack.sweep;
-      for (let i = 0; i < beads; i++) {
-        const shot = shots.spawn();
-        // A volley that will not fit is dropped rather than grown, exactly as `src/sim/pool.ts` says.
-        if (shot === null) break;
-        const t = beads > 1 ? i / (beads - 1) : 0;
-        const angle = Math.PI + boss.firePhase + along * Math.sin(t * attack.waves * TAU);
-        const lash = speed * (1 + attack.reach * t);
-        reset(shot, muzzleAlong, muzzleAcross, bullet, kind);
-        shot.velAlong = Math.cos(angle) * lash + scrollPerStep;
-        shot.velAcross = Math.sin(angle) * lash;
-      }
+      const steps = (attack.globes - 1) * attack.every;
+      boss.sprayLeft = steps;
+      boss.sprayEvery = attack.every;
+      boss.sprayAngle = attack.from;
+      boss.sprayTurn = steps > 0 ? (attack.to - attack.from) / steps : 0;
+      boss.sprayKind = kind;
+      const until = Math.ceil(steps / FIRE_GRID) * FIRE_GRID;
+      if (boss.fireIn < until) boss.fireIn = until;
+      throwGlobe(boss, row, bullet, kind, speed, scrollPerStep, shots);
       break;
     }
     case 'summon': {
@@ -861,9 +867,10 @@ function throwAttack(
 
         ⚠️ **THE COUNT IS `headAt`, AND IT RODE `firePhase` UNTIL 0261 CRASHED ON IT.** That field is
         an ANGLE for a rake and a COUNT here, and 0254's *"`firePhase` has one reader"* is true of a
-        HEAD and false of a BOSS: the serpent rakes in its opening phase and grows heads in its other
+        HEAD and false of a BOSS: the serpent raked in its opening phase and grew heads in its other
         two, so the rake left the count at 5.4 and `heads[5.4 % 2]` is `heads[1.4]` is `undefined`.
-        `src/sim/entity.ts` carries the whole of it.
+        `src/sim/entity.ts` carries the whole of it — and since 0304 a head may SPRAY, which keeps
+        its own five fields for the same reason and touches neither count.
       */
       const n = attack.heads.length;
       const head = attack.heads[((boss.headAt % n) + n) % n]!;
@@ -876,6 +883,38 @@ function throwAttack(
       return never;
     }
   }
+}
+
+/**
+ * One step of a spray in progress — 0304. Turns the aim, and throws a globe on every `sprayEvery`th
+ * step, the last of them on the step the spray runs out.
+ *
+ * ⚠️ **THE SHOT IS READ BACK BY ITS INDEX**, the one the `sweep` arm copied onto the hull, so a spray
+ * that began as the acid head goes on throwing acid after the round has moved to the void. The speed
+ * is the tier's on every globe, exactly as a volley's is.
+ */
+function spray(boss: Entity, row: BossRow, shots: Pool<Entity>, tier: DifficultyRow, scrollPerStep: number): void {
+  boss.sprayLeft--;
+  boss.sprayAngle += boss.sprayTurn;
+  if (boss.sprayLeft % boss.sprayEvery !== 0) return;
+  const bullet = SHOT_ROWS[boss.sprayKind]!;
+  throwGlobe(boss, row, bullet, boss.sprayKind, bullet.speed * tier.shotSpeed, scrollPerStep, shots);
+}
+
+/**
+ * One globe of a spray, from the mouth where it is now, along the hull's current aim — 0304.
+ *
+ * ⚠️ **THE MUZZLE IS READ EVERY GLOBE, NOT ONCE AT THE THROW**, because the hull goes on flying: a
+ * spray whose globes all left the place the first one did would be a stream from a point in the air
+ * the animal had already left, which is 0277's *the body coughing* in time rather than in space.
+ */
+function throwGlobe(boss: Entity, row: BossRow, bullet: ShotRow, kind: number, speed: number, scrollPerStep: number, shots: Pool<Entity>): void {
+  const shot = shots.spawn();
+  // A globe that will not fit is dropped rather than grown, exactly as `src/sim/pool.ts` says.
+  if (shot === null) return;
+  reset(shot, boss.along + (row.muzzle?.along ?? 0), boss.across + (row.muzzle?.across ?? 0), bullet, kind);
+  shot.velAlong = Math.cos(boss.sprayAngle) * speed + scrollPerStep;
+  shot.velAcross = Math.sin(boss.sprayAngle) * speed;
 }
 
 /**

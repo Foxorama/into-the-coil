@@ -5276,7 +5276,9 @@ function wearFace(w: World, boss: Entity): void {
     nothing to miss, and a gape that does not mean *a volley is coming* is a lie the fight tells once
     and is never trusted about again.
   */
-  if (boss.fireIn <= FACE_GAPE) {
+  // And the jaw stays wide for as long as a spray is coming out of it — 0304: a stream from a shut
+  // mouth is a stream from nowhere, which is 0036 at the one place the player is watching.
+  if (boss.fireIn <= FACE_GAPE || boss.sprayLeft > 0) {
     boss.spriteBase = face.gape;
     boss.spriteHit = face.gapeHit;
   } else if (w.bossBite > 0) {
