@@ -696,6 +696,22 @@ export interface Chain {
    * gap one unit long. That is a shear rather than a curve, and the bend guard measured it.
    */
   lag: number;
+  /**
+   * The share of a hit on the body that is spent on the head — `docs/decisions/0307-the-serpent-is-armoured.md`.
+   * `1` is a body that is all one animal, as 0283 built it; `0` is armour, and the skull is the only
+   * place it can be hurt.
+   *
+   * ⚠️ **ON THE ROW AND NOT IN THE FRAME, BECAUSE WHETHER A CREATURE'S FLANK IS SOFT IS THE
+   * CREATURE** — [0282](../../docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md).
+   * A second animal with a chain could be all belly.
+   *
+   * ⚠️ **AND A BODY THAT TAKES NOTHING DOES NOT FLASH.** The hurt twin says *that hurt*
+   * ([0035](../../docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md)); on a flank that
+   * took nothing it would be the picture saying HIT while the model says miss, which is
+   * [0036](../../docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md) pointed
+   * the other way. A shot still stops on it — armour is not a hole — and sparks where it glances.
+   */
+  hurt: number;
 }
 
 /**
@@ -1721,10 +1737,30 @@ export const BOSSES: Record<BossKind, BossRow> = {
       // A shade over three seconds a cycle — slower than the bob, so the two do not beat.
       rate: 0.034,
       lag: 0.25,
+      /*
+        ⚠️ **ARMOUR, AND THE SKULL IS THE ONLY PLACE IT DIES — 0307.** Reported: *"the shurikens kill
+        the serpent boss in a reasonable time length, but the lightning gun and auto-fire gun only hit
+        the head so they take forever."* Measured in the flown fight: the body trails straight up the
+        lane behind the head, so a shot that stops on its first arrival meets the skull and never the
+        flank, while a blade rides up the whole 133 units landing every flash — the body was up to
+        half of what the shuriken did. Asked for: *"reduce the body damage taken overall so shurikens
+        only damage the head."*
+      */
+      hurt: 0,
     },
     // Doubled by 0260, from 700 — *"need a lot more health, I think I only saw about 50% of their
     // attacks before they died."* Every real boss is twice what 0247 authored; the mid-bosses stay.
-    health: 1400,
+    /*
+      ⚠️ **1400 → 1000, AND IT IS THE ARMOUR'S PRICE RATHER THAN A SOFTER BOSS — 0307.** The body was
+      three fifths of what a shuriken did to this animal, so armouring it took the shuriken's fight on
+      the tuned tier from 43 seconds to 112, flown, and the void rule the same decision changed made
+      the lightning the quickest gun here. 540 would have put the shuriken back where it was and the
+      lightning at 22 seconds, under 0260's forty; **1000 is where the quickest gun at its best place
+      takes forty-one**, so 0260's *"I only saw about 50% of their attacks"* still holds for every
+      loadout. Chosen from the table in the decision, measured by `scripts/weigh-boss.mjs` rather
+      than divided.
+    */
+    health: 1000,
     damage: 3,
     /*
       ⚠️ **114 → 130, AND IT IS THE PRICE OF THE LUNGE RATHER THAN A TASTE — 0289.** 0101 holds every

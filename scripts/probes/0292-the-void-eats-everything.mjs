@@ -49,8 +49,9 @@ export const PROBES = [
     guard: 'and the LIGHTNING is sucked in',
     edit: {
       path: 'src/app/frame.ts',
-      // ⚠️ Re-anchored by 0302: the search takes the LINK's reach, which decays per jump.
-      find: '    const eater = nearestVoid(w, fromAlong, fromAcross, reach, edge);',
+      // ⚠️ Re-anchored by 0302: the search takes the LINK's reach, which decays per jump. And by 0307,
+      // which made it a search along the link's own line rather than round its origin.
+      find: '    const eater = voidOnPath(w, fromAlong, fromAcross, toAlong, toAcross, edge);',
       replace: '    const eater = -1;',
     },
   },
@@ -62,6 +63,9 @@ export const PROBES = [
       Nearest-wins leaves the chain going to whatever is closest, so a void beside an enemy is
       ignored — and the fixture puts the blast ten units off the nose with a serpent on the field, so
       the boss is what the bolt would otherwise take.
+
+      ⚠️ Since 0307 the fixture's drifter stands BEHIND the blast rather than in front of it, because
+      a void takes only the bolt it is in the way of; this break still lets the bolt through to it.
     */
     broke: 'the void made one target among many rather than the one that pulls, so the chain passes it by',
     guard: 'and the LIGHTNING is sucked in',

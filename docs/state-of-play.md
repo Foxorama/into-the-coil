@@ -176,6 +176,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the serpent SPRAYS: five globes straight ahead while whole, then a spray whose aim turns while it is thrown — 270 degrees, down, forward, up; the next volley waits for it; a phase's escalation is its biggest volley, and the real bosses' flight-and-fan pair is a taste** | [0304](decisions/0304-the-serpent-sprays.md) — supersedes [0290](decisions/0290-the-acid-is-serpentine.md)'s wave |
 | **the serpent DARKENS: a phase may say what the animal looks like — faces with the horns grown, and an aura in a layer of its own behind the body, one flame a node, flickering down it; red lightning through it at the lightning phase** | [0305](decisions/0305-the-serpent-darkens.md) |
 | **the serpent COILS IN: a row may author an entrance — in, round a coil with its centre open, off the screen, then the arrival every boss has; untouchable and fully live while it flies; `blit` takes a turn, and a chain's nodes face along the body; a placed pool is not culled across the lane either** | [0306](decisions/0306-the-serpent-coils-in.md) — amends what [0283](decisions/0283-the-serpent-is-a-chain.md) says about when a chain is placed |
+| **the serpent is ARMOURED: a chain's `hurt` is the share of a hit its body passes to the head, and the serpent's is nothing — a shot stops and sparks; a void takes only the bolt it is IN THE WAY of; a boss fight is measured flown, by `scripts/weigh-boss.mjs`, and an armoured boss's forty seconds are held there** | [0307](decisions/0307-the-serpent-is-armoured.md) — amends [0283](decisions/0283-the-serpent-is-a-chain.md), [0292](decisions/0292-the-void-eats-everything.md), [0260](decisions/0260-a-boss-is-fought-to-the-end.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -882,6 +883,11 @@ look — [0305](decisions/0305-the-serpent-darkens.md); and the entrance —
 [0306](decisions/0306-the-serpent-coils-in.md), which taught `blit` to turn a bitmap. **Owed from the
 play:** whether the head should MIRROR rather than roll at the bottom of its loop (0306 names both),
 whether the serpent's opening now reads as the hydra's (0304 names it), and the aura's density.
+And [0307](decisions/0307-the-serpent-is-armoured.md)'s fight at 1000: every gun at forty seconds or
+more, the lightning now quickest — whether the three read as even is the play's.
+
+⚠️ **AND THE OTHER SIX REAL BOSSES ARE OWED THE SAME MEASUREMENT** — 0307 flew them and did not act
+on it. Its *What the instrument found elsewhere* has the table; `scripts/weigh-boss.mjs` is the rig.
 
 ### ⚠️ AND THE NEXT ONE IS A FORK THAT HAS TO BE PICKED BEFORE IT IS BUILT
 

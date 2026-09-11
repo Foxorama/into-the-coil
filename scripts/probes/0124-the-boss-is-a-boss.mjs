@@ -22,7 +22,8 @@ export const PROBES = [
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0260, which doubled it and put a comment between the radius and the health.
-      find: '    health: 1400,',
+      // And by 0307, which armoured the serpent's body and brought it to 1000.
+      find: '    health: 1000,',
       replace: '    health: 150,',
     },
   },

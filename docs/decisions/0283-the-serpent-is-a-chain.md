@@ -1,5 +1,9 @@
 # 0283 — The serpent is a chain
 
+> ⚠️ **AMENDED 2026-09-11 by [0307](0307-the-serpent-is-armoured.md).** A body spends the row's
+> `hurt` share of a hit on the head, and the serpent's is nothing: its flank is armour, and a shot
+> stops on it and sparks. The drain this decision built is unchanged for a row that authors a share.
+
 **Accepted 2026-09-09.** Reported twice, three PRs apart:
 
 > *"it needs to actually move/undulate, it's a static image that bounces up and down now and like

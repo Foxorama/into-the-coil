@@ -1571,9 +1571,19 @@ export class GameFrame implements Frame {
       (`docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md`), and it cannot die.
       `deaths` is `null` on all three for that reason — a node has no death to log, and handing over
       `bossDeaths` would put a boss explosion at the tail every time a pulse landed there.
+
+      ⚠️ **AND WHAT REACHES THE HEAD IS THE ROW'S `hurt` — 0307.** The serpent's flank is armour, so a
+      shot still stops on it and a blade still spends its edge there, and nothing is spent on the
+      skull. An arrival that took nothing is not drawn as hurt (`drainChain` clears the flash), so it
+      has to be drawn as SOMETHING or it is a shot vanishing into the animal — 0036, and the report
+      that made a survived hit show in the first place. It sparks, through the log a missile's landing
+      and a blade's already use (0227), which is why an armoured body hands the pulse's pairing the
+      log too.
     */
-    if (shootable) collideInto(w.playerShots, w.bossBody, 1, open, IMPACT_FLASH_STEPS, null, bladeHits);
-    // What the blades landed this step, before the missiles add theirs — the `hit` cue reads it.
+    const armoured = w.bossRow.chain !== null && w.bossRow.chain.hurt === 0;
+    if (shootable) collideInto(w.playerShots, w.bossBody, 1, open, IMPACT_FLASH_STEPS, null, armoured ? w.hits : bladeHits);
+    // What the blades landed this step, before the missiles add theirs — the `hit` cue reads it. A
+    // pulse glancing off armour is in the log for its spark, and the pool shrinking already cues it.
     const bites = bladeHits === null ? 0 : w.hits.count;
     if (shootable) {
       killedByShots += collideInto(w.missiles, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits);
@@ -2348,32 +2358,12 @@ function fireArc(w: World): void {
     const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, reach, true, edge);
     // Not a boss that is still making its entrance — 0306: *"not-shootable"* is the arc's too.
     const boss = w.bossPool.size > 0 && w.bossEntering < 0 ? nearestFrom(w.bossPool, fromAlong, fromAcross, reach, false, edge) : -1;
-    /*
-      ⚠️ **A VOID BLAST TAKES THE LINK BEFORE ANYTHING ELSE DOES — 0292.** Reported: *"…and that it
-      sucks in the lightning from the player's cannon."* Nearest-wins would make it *may also hit*;
-      what was asked for is a pull, so a void in reach wins the link even when an enemy is nearer.
-
-      ⚠️ **AND IT ENDS THE CHAIN THERE.** A bolt swallowed is swallowed: the links after it would jump
-      out of the blast to whatever is behind it, which is the opposite of being sucked in and would
-      make the arc *better* against a screen with voids on it than one without. This is the one target
-      that costs the player the rest of their volley, which is what makes it worth flying around.
-    */
-    const eater = nearestVoid(w, fromAlong, fromAcross, reach, edge);
-    if (eater >= 0) {
-      const blast = w.enemyShots.at(eater);
-      spawnLink(w, row, fromAlong, fromAcross, blast.along, blast.across);
-      if (!struck) w.onCue('zap', blast.across);
-      blast.health -= w.weapon.damage;
-      blast.swell *= VOID_SWELL;
-      blast.radius *= VOID_SWELL;
-      if (blast.health <= 0) spendVoid(w, eater);
-      break;
-    }
-    if (enemy >= 0 && (boss < 0 || nearer(w.enemies.at(enemy), w.bossPool.at(0), fromAlong, fromAcross))) {
+    // Where this link is going, decided before anything is struck — a void on the way takes it first.
+    const onEnemy = enemy >= 0 && (boss < 0 || nearer(w.enemies.at(enemy), w.bossPool.at(0), fromAlong, fromAcross));
+    if (onEnemy) {
       const target = w.enemies.at(enemy);
       toAlong = target.along;
       toAcross = target.across;
-      strike(w.enemies, enemy, w.weapon.damage, IMPACT_FLASH_STEPS, w.deaths);
     } else if (boss >= 0) {
       const target = w.bossPool.at(boss);
       /*
@@ -2394,11 +2384,6 @@ function fireArc(w: World): void {
         toAlong = fromAlong + dAlong * edge;
         toAcross = fromAcross + dAcross * edge;
       }
-      onBoss = true;
-      // The boss's own window scales a bolt as it scales a bullet — 0150. Read here rather than
-      // remembered, on the collision section's own argument.
-      const open = openBy(phaseFor(w.bossRow, target.health, w.bossFullHealth));
-      strike(w.bossPool, boss, w.weapon.damage * open, IMPACT_FLASH_STEPS, w.bossDeaths);
     } else if (link === 0) {
       /*
         Dry: nothing in reach. The bolt goes ahead, lands on nothing, and THAT IS THE VOLLEY.
@@ -2416,9 +2401,43 @@ function fireArc(w: World): void {
       */
       toAlong = fromAlong + reach;
       toAcross = fromAcross;
-      spawnLink(w, row, fromAlong, fromAcross, toAlong, toAcross);
-      break;
     } else {
+      break;
+    }
+    /*
+      ⚠️ **A VOID BLAST ON THE WAY TAKES THE LINK — 0292, AND SINCE 0307 ONLY ON THE WAY.** Reported:
+      *"…and that it sucks in the lightning from the player's cannon."* Whatever this link was going
+      to — an enemy, the boss, or nothing, dry — a void whose ball its line crosses eats it first, so
+      the thing behind the void is left alone. A void BESIDE the line does not: 0292's any-void-in-
+      reach cost the arc nine volleys in ten against the serpent, and `voidOnPath` has the measurement.
+
+      ⚠️ **AND IT ENDS THE CHAIN THERE.** A bolt swallowed is swallowed: the links after it would jump
+      out of the blast to whatever is behind it, which is the opposite of being sucked in and would
+      make the arc *better* against a screen with voids on it than one without. This is the one target
+      that costs the player the rest of their volley, which is what makes it worth flying around.
+    */
+    const eater = voidOnPath(w, fromAlong, fromAcross, toAlong, toAcross, edge);
+    if (eater >= 0) {
+      const blast = w.enemyShots.at(eater);
+      spawnLink(w, row, fromAlong, fromAcross, blast.along, blast.across);
+      if (!struck) w.onCue('zap', blast.across);
+      blast.health -= w.weapon.damage;
+      blast.swell *= VOID_SWELL;
+      blast.radius *= VOID_SWELL;
+      if (blast.health <= 0) spendVoid(w, eater);
+      break;
+    }
+    if (onEnemy) {
+      strike(w.enemies, enemy, w.weapon.damage, IMPACT_FLASH_STEPS, w.deaths);
+    } else if (boss >= 0) {
+      onBoss = true;
+      // The boss's own window scales a bolt as it scales a bullet — 0150. Read here rather than
+      // remembered, on the collision section's own argument.
+      const open = openBy(phaseFor(w.bossRow, w.bossPool.at(boss).health, w.bossFullHealth));
+      strike(w.bossPool, boss, w.weapon.damage * open, IMPACT_FLASH_STEPS, w.bossDeaths);
+    } else {
+      // Dry, and nothing ate it on the way.
+      spawnLink(w, row, fromAlong, fromAcross, toAlong, toAcross);
       break;
     }
     if (!struck && (enemy >= 0 || boss >= 0)) {
@@ -3473,25 +3492,39 @@ function burstVoid(w: World, index: number): void {
 const shardAppetite = (blast: number): number => Math.max(1, Math.ceil(blast / 3));
 
 /**
- * The nearest void blast a bolt may jump to, or `-1` — 0292.
+ * The first void blast a bolt meets on its way from one point to another, or `-1` — 0292, 0307.
  *
  * ⚠️ **REPORTED**: *"…and that it sucks in the lightning from the player's cannon."* The arc searches
  * `enemies` and `bossPool` through `nearestFrom`, which takes a POOL — and only some of the hostile
  * pool swallows, so this cannot be that call with a third argument. What it can be is the same search
  * written over the one predicate `nearestFrom` cannot express.
  *
- * ⚠️ **AND IT IS *SUCKS IN* RATHER THAN *may also hit*, WHICH IS WHY THE CALLER PREFERS IT.** A void
- * in reach takes the link even when an enemy is nearer: that is what the word means, and it is what
- * makes the blast a thing to fly around rather than a thing to ignore. The cost of getting it wrong
- * is a chain spent on a bullet and a ring of seven shards where the bullet was.
+ * ── IT WAS ANY VOID IN REACH, AND 0307 MADE IT A VOID IN THE WAY ─────────────────────────────────
+ *
+ * ⚠️ **0292 READ *SUCKS IN* AS A PULL OVER THE WHOLE REACH**: a void anywhere within it took the link
+ * even when an enemy was nearer, and its stated reason was that this *"makes the blast a thing to fly
+ * around rather than a thing to ignore."* **A pull that ignores direction cannot be flown around.** It
+ * was reasoned against one blast; the serpent throws a fan of three every other volley and each comes
+ * apart into seven shards that pull too (0299), so from the void phase on there was nearly always one
+ * in reach — measured in the flown fight, the arc lost more than nine volleys in ten to them, and
+ * killed the serpent in about half a minute with the pull off against over two hundred with it on. Reported: *"the
+ * lightning gun… take[s] forever to kill the boss."*
+ *
+ * ⚠️ **SO A VOID TAKES THE BOLT IT IS IN FRONT OF**: one whose disc the bolt's line from `from` to
+ * `to` passes through, nearest the muzzle first. The disc is the drawn ball, so the rule is the one
+ * the player can see — a bolt that crosses purple is eaten — and where the player stands decides which
+ * line that is. Chosen in answer to the measurement, over leaving the voids as the arc's counter.
  *
  * ⚠️ **BOUNDED BY THE SCREEN, LIKE EVERY OTHER LINK — 0257.** *"Enemies don't even get a chance to
  * get on screen"* was a bolt striking ninety units past the leading edge; a void off-screen is the
  * same complaint about a different body.
  */
-function nearestVoid(w: World, fromAlong: number, fromAcross: number, reach: number, edge: number): number {
+function voidOnPath(w: World, fromAlong: number, fromAcross: number, toAlong: number, toAcross: number, edge: number): number {
+  const pathAlong = toAlong - fromAlong;
+  const pathAcross = toAcross - fromAcross;
+  const length2 = pathAlong * pathAlong + pathAcross * pathAcross;
   let best = -1;
-  let nearest = reach;
+  let first = Number.POSITIVE_INFINITY;
   for (let i = 0; i < w.enemyShots.size; i++) {
     const blast = w.enemyShots.at(i);
     if (SHOT_ROWS[blast.kind]!.swallows !== true) continue;
@@ -3500,9 +3533,13 @@ function nearestVoid(w: World, fromAlong: number, fromAcross: number, reach: num
     if (blast.along + blast.radius > edge) continue;
     const dAlong = blast.along - fromAlong;
     const dAcross = blast.across - fromAcross;
-    const gap = Math.sqrt(dAlong * dAlong + dAcross * dAcross) - blast.radius;
-    if (gap > nearest) continue;
-    nearest = gap;
+    // Where along the bolt the blast's centre falls, clamped to the bolt: 0 is the muzzle, 1 the end.
+    const t = length2 > 0 ? Math.min(1, Math.max(0, (dAlong * pathAlong + dAcross * pathAcross) / length2)) : 0;
+    const offAlong = dAlong - pathAlong * t;
+    const offAcross = dAcross - pathAcross * t;
+    if (offAlong * offAlong + offAcross * offAcross > blast.radius * blast.radius) continue;
+    if (t >= first) continue;
+    first = t;
     best = i;
   }
   return best;
@@ -5698,24 +5735,32 @@ const AURA_FLAME: Body = { sprite: 0, spriteHit: 0, radius: 0, health: 1, damage
 /**
  * Move everything that landed on the body this step onto the head, and reset the nodes.
  *
- * ⚠️ **ONE SWEEP RATHER THAN A ROUTE PER DAMAGE SOURCE.** The arc strikes a node in `fireShip`, a
- * pulse and a missile arrive on it in the pairings, and a blast covers several at once; each of those
- * would otherwise need to know that a node is not a body. What they all do instead is take health off
- * a node, which this reads back and spends on the head through `strike` — the same call the arc
- * already makes, so the death, the log and the explosion are the ones the game already has.
+ * ⚠️ **ONE SWEEP RATHER THAN A ROUTE PER DAMAGE SOURCE.** A pulse, a blade and a missile arrive on a
+ * node in the pairings, and a blast covers several at once; each of those would otherwise need to know
+ * that a node is not a body. What they all do instead is take health off a node, which this reads back
+ * and spends on the head through `strike` — the arc's own call, so the death, the log and the
+ * explosion are the ones the game already has. (This said the arc strikes a node too. It never has:
+ * `fireArc` searches the boss's hull and nothing else, which 0307 measured.)
  *
  * ⚠️ **AFTER EVERY SOURCE AND BEFORE THE HEAD'S DEATH IS READ**, which is why it sits with the boss
  * pairings rather than at the end of the step: a killing blow landed on the tail has to end the fight
  * on the step it lands, not on the one after.
+ *
+ * ⚠️ **AND IT SPENDS THE ROW'S SHARE OF IT — 0307.** A body whose `hurt` is nothing passes nothing, and
+ * its nodes' flash goes with the health: the hurt twin on a flank that took nothing is the picture
+ * saying HIT over a model that says miss.
  */
 function drainChain(w: World): number {
+  const chain = w.bossRow.chain;
+  if (chain === null) return 0;
   let taken = 0;
   for (let i = 0; i < w.bossBody.size; i++) {
     const node = w.bossBody.at(i);
     taken += CHAIN_NODE_HEALTH - node.health;
     node.health = CHAIN_NODE_HEALTH;
+    if (chain.hurt === 0) node.flashFor = 0;
   }
-  return taken;
+  return taken * chain.hurt;
 }
 
 /**

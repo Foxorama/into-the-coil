@@ -98,8 +98,11 @@ export const PROBES = [
     guard: 'beyond its reach it fires dry',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      spawnLink(w, row, fromAlong, fromAcross, toAlong, toAcross);\n      break;\n    } else {',
-      replace: '      spawnLink(w, row, fromAlong, fromAcross, toAlong, toAcross);\n    } else {',
+      // ⚠️ Re-anchored by 0307, which decides where a link goes before asking whether a void is in the
+      // way — so the dry bolt is drawn at the end of the loop body now, and the break that ends it is
+      // the one this removes.
+      find: '      // Dry, and nothing ate it on the way.\n      spawnLink(w, row, fromAlong, fromAcross, toAlong, toAcross);\n      break;\n    }',
+      replace: '      // Dry, and nothing ate it on the way.\n      spawnLink(w, row, fromAlong, fromAcross, toAlong, toAcross);\n    }',
     },
   },
 ];
