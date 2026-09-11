@@ -191,6 +191,15 @@ export const CAPACITY = {
   */
   bossBody: 26,
   /*
+    ⚠️ **TWENTY-SEVEN: A FLAME FOR EVERY NODE AND ONE FOR THE HEAD — 0305**, and 0286's line on the
+    worst case again rather than a slice of another pool. *"A dark aura, kind of like a super saiyan
+    aura"* is energy off the whole animal, and the only way to put it BEHIND a body of overlapping
+    discs is a layer of its own drawn first (`src/content/bosses.ts`'s `Aura`). It is the same
+    category 0286 added — one boss that is many entities — and desktop is what it is argued against
+    (0153): twenty-seven more blits of a baked bitmap, on the serpent's last two thirds only.
+  */
+  bossAura: 27,
+  /*
     ⚠️ **THE `- 11` IS 0283's ELEVEN AND STAYS ELEVEN, THOUGH `bossBody` IS TWENTY-SIX — 0286.** This
     line is the record of what the particle share actually paid for, not a restatement of the pool
     above it. `tests/flares.test.ts` prices the fullest moment this pool ever sees at 148.9 against
@@ -614,6 +623,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const debris = new Pool<Entity>(CAPACITY.debris, makeEntity);
   const bossPool = new Pool<Entity>(CAPACITY.boss, makeEntity);
   const bossBody = new Pool<Entity>(CAPACITY.bossBody, makeEntity);
+  const bossAura = new Pool<Entity>(CAPACITY.bossAura, makeEntity);
   const pickupPool = new Pool<Entity>(CAPACITY.pickups, makeEntity);
   const bolts = new Pool<Entity>(CAPACITY.bolts, makeEntity);
 
@@ -761,7 +771,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // ship — 0233. The line between the sparks is stroked over every layer by `paintBolts`; what
     // must stay on top is the ship itself, and 0050's rule that nothing comes between it and its marks.
     // The body draws UNDER the head, so the skull covers the neck rather than the neck the skull — 0283.
-    layers: [blasts, pickupPool, bossBody, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
+    // The aura before the body it burns behind — 0305.
+    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
     /*
       THE SKY, back to front — `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
 
@@ -845,6 +856,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     fight: level.midBoss === null ? 1 : 0,
     bossPool,
     bossBody,
+    bossAura,
     // A ring of the head's lane, allocated once — 0283. @setup: built at mount, never in a frame.
     bossTrail: new Float32Array(CHAIN_TRAIL),
     bossTrailAt: 0,
@@ -1662,6 +1674,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     pickupPool.clear();
     bossPool.clear();
     bossBody.clear();
+    bossAura.clear();
     shieldOrbs.clear();
     debris.clear();
     // Its own named stream, per 0021: dealing the dust must not move any draw the game makes.

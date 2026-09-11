@@ -271,6 +271,50 @@ export const SPRITE_KINDS = [
   'boss8ShutHit',
   'serpentBody',
   'serpentBodyHit',
+  /*
+    ── THE HORNS GROW, AND THE AURA BURNS — 0305 ─────────────────────────────────────────────────
+
+    `docs/decisions/0305-the-serpent-darkens.md`. *"When the void blast phase starts it needs to look
+    more menacing and have a dark aura… and it's horns grow longer"*, and at the lightning phase *"a
+    super saiyan red lightning flicker through the aura and it's horns grow a bit longer again."*
+
+    ⚠️ **THE SEVEN FACES TWICE MORE, BECAUSE A HORN IS THE SILHOUETTE.** `blit` cannot deform, so a
+    longer horn is a second drawing of the same skull — and every face has to have it, or the horns
+    would shrink every time the jaw moved. `Horn2` is the void phase's, half again as long; `Horn3` is
+    the lightning phase's, twice. Each is its own kind because its hurt twin is its own silhouette.
+
+    ⚠️ **AND SIX FRAMES OF FLAME EACH, IN A LAYER OF THEIR OWN** — `src/content/bosses.ts`'s `Aura`
+    has the argument. `serpentAura` is the void phase's dark blue and violet; `serpentStorm` is the same
+    flame with red lightning forking through some of its frames.
+  */
+  'boss8Horn2',
+  'boss8Horn2Hit',
+  'boss8Horn2Up',
+  'boss8Horn2Down',
+  'boss8Horn2Gape',
+  'boss8Horn2GapeHit',
+  'boss8Horn2Shut',
+  'boss8Horn2ShutHit',
+  'boss8Horn3',
+  'boss8Horn3Hit',
+  'boss8Horn3Up',
+  'boss8Horn3Down',
+  'boss8Horn3Gape',
+  'boss8Horn3GapeHit',
+  'boss8Horn3Shut',
+  'boss8Horn3ShutHit',
+  'serpentAura0',
+  'serpentAura1',
+  'serpentAura2',
+  'serpentAura3',
+  'serpentAura4',
+  'serpentAura5',
+  'serpentStorm0',
+  'serpentStorm1',
+  'serpentStorm2',
+  'serpentStorm3',
+  'serpentStorm4',
+  'serpentStorm5',
   'boss9',
   'boss9Hit',
   'boss10',
@@ -954,6 +998,46 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   */
   serpentBody: 26,
   serpentBodyHit: 26,
+  /*
+    ⚠️ **THE SAME SKULL IN A BIGGER BOX, BECAUSE THE HORNS ARE THE FURTHEST THING OUT — 0305.** The
+    drawing is `boss8`'s own size in every one of these (`src/render/bake.ts` scales the frame back by
+    `boss8`'s extent over this one, the ship's tiers' pattern), so the head does not grow — the box
+    does, because a halo stops at 1.16 of the drawing radius and a horn half again as long reaches
+    past where `boss8`'s box ends. Measured off the traced hull, with the halo on it.
+  */
+  boss8Horn2: 32,
+  boss8Horn2Hit: 32,
+  boss8Horn2Up: 32,
+  boss8Horn2Down: 32,
+  boss8Horn2Gape: 32,
+  boss8Horn2GapeHit: 32,
+  boss8Horn2Shut: 32,
+  boss8Horn2ShutHit: 32,
+  boss8Horn3: 38,
+  boss8Horn3Hit: 38,
+  boss8Horn3Up: 38,
+  boss8Horn3Down: 38,
+  boss8Horn3Gape: 38,
+  boss8Horn3GapeHit: 38,
+  boss8Horn3Shut: 38,
+  boss8Horn3ShutHit: 38,
+  /*
+    ⚠️ **A FLAME'S BOX IS A NODE'S AT THE SAME SWELL, AND BIGGER.** It is blitted at the node's own
+    swell, so the flesh it rises off is the node's to the pixel; the rest of the box is the flame,
+    which reaches well above the body because an aura that stays inside the outline is a rim light.
+  */
+  serpentAura0: 44,
+  serpentAura1: 44,
+  serpentAura2: 44,
+  serpentAura3: 44,
+  serpentAura4: 44,
+  serpentAura5: 44,
+  serpentStorm0: 44,
+  serpentStorm1: 44,
+  serpentStorm2: 44,
+  serpentStorm3: 44,
+  serpentStorm4: 44,
+  serpentStorm5: 44,
 
   boss9: 42,
   boss9Hit: 42,

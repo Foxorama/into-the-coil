@@ -72,7 +72,8 @@ export const PROBES = [
     guard: 'never asks the frame to draw more entities than the budget was measured for',
     edit: {
       path: 'tests/budget.test.ts',
-      find: 'const WORST_CASE = 515;',
+      // ⚠️ Re-anchored by 0305, which raised it again for the aura; back to 500 is the same break.
+      find: 'const WORST_CASE = 542;',
       replace: 'const WORST_CASE = 500;',
     },
   },

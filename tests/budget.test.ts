@@ -73,8 +73,15 @@ const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
  * WebGL. This is one boss growing by fifteen discs on a target that was never the phone. **Every
  * rule 0022 made about HOW to be fast is untouched**, and this file still counts draw calls and
  * allocations rather than wall clock, for 0025's reason, which was never about the phone either.
+ *
+ * ⚠️ **AND 542 SINCE 0305, ON THE SAME LINE OF THE SAME LIST.** *"A dark aura, kind of like a super
+ * saiyan aura"* is a flame behind every node of that boss and one behind its head, in a layer of its
+ * own because a flame painted into a node would lie over the node beside it. Twenty-seven more
+ * entities of the one category 0286 added — a boss that is many — and twenty-seven more blits of a
+ * baked bitmap on a target that is desktop. The line on the list now reads *one boss that is
+ * fifty-three entities*.
  */
-const WORST_CASE = 515;
+const WORST_CASE = 542;
 
 /** Long enough that anything accumulating per frame has visibly accumulated. Ten seconds of play. */
 const FRAMES = 600;

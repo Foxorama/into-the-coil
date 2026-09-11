@@ -36,8 +36,9 @@ export const PROBES = [
     edit: {
       path: 'src/render/bake.ts',
       // ⚠️ Re-anchored by 0288, which leans every point of the skull on its way to the canvas.
-      find: '  trace(ctx, f, leant(parted(MOUTH, JAWS[jaw])));',
-      replace: '  trace(ctx, f, leant(parted(MOUTH.map(([x, y]) => [x * 0.98, y]), JAWS[jaw])));',
+      // ⚠️ And by 0305, which reads the jaw once for every skull a longer-horned face can be.
+      find: '  trace(ctx, { half: f.half, r: f.r / skull.box }, leant(parted(MOUTH, JAWS[skull.jaw])));',
+      replace: '  trace(ctx, { half: f.half, r: f.r / skull.box }, leant(parted(MOUTH.map(([x, y]) => [x * 0.98, y]), JAWS[skull.jaw])));',
     },
   },
 ];
