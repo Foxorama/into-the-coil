@@ -153,9 +153,15 @@ whole game and a question for the person holding the controller, not a change th
 | a void anywhere within the bolt's length taking it again, whether or not it is in the way | `a void BESIDE the bolt's line does not take it` |
 | the serpent at 540, where the lightning kills it in twenty-two seconds from its best place | `flown at the cap on the tuned tier` |
 
-Five probes re-anchored and re-run: 0124's and 0236's onto the lines this moved, 0260's onto the
+Six probes re-anchored and re-run: 0124's and 0236's onto the lines this moved, 0260's onto the
 hellkite because its line no longer reads the serpent, 0283's onto the share guard because its break
 is now the serpent's intended state, and 0292's onto the search along the line.
+
+⚠️ **AND 0072's, WHICH `npm run prove` FOUND STILL GREEN — AND WHICH HAD SAID IT WOULD BE.** Its guard
+hears the serpent's death through a real speaker, and 0283 had moved its break onto the body's sweep
+because the sweep landed the killing blow; its own note said a boss the body did not get to first
+would need the head's half probed. Armour is that boss. The break is on the skull's collision again,
+and went red.
 
 **Not photographed.** The bench fits the base gun whatever it is asked for, and its parked ship is
 dead before the serpent's entrance is over, so a picture of armour at the shipped camera would have

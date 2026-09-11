@@ -96,13 +96,19 @@ export const PROBES = [
       probe of its own while this guard fights a boss with a body, because the sweep gets there first;
       what holds it meanwhile is that both paths name `w.bossDeaths`, thirty lines apart in one file.
       A guard driving one of the thirteen bosses without a body would probe the other half.
+
+      ⚠️ **AND BACK TO THE HEAD BY 0307, WHICH ARMOURED THE BODY.** The serpent's flank passes nothing
+      to the head now, so the sweep never lands a blow and the fatal one comes through the skull's own
+      collision again — the probe on the sweep applied and the suite STAYED GREEN, exactly as the
+      paragraph above said it would the moment the body stopped getting there first. So this breaks
+      the half it could not reach before; the sweep's half is still held by the one log name it shares.
     */
     broke: 'the boss logged into the ordinary death log again, so the kill cue fires for it and the cap eats its own',
     guard: 'THE ONE THAT WOULD BE EATEN BY THE CAP: a boss dying is heard, through a real speaker',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    if (onBody > 0 && w.bossPool.size > 0 && strike(w.bossPool, 0, onBody, IMPACT_FLASH_STEPS, w.bossDeaths)) {',
-      replace: '    if (onBody > 0 && w.bossPool.size > 0 && strike(w.bossPool, 0, onBody, IMPACT_FLASH_STEPS, w.deaths)) {',
+      find: '    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, bladeHits);',
+      replace: '    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.deaths, bladeHits);',
     },
   },
   {
