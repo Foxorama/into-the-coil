@@ -42,10 +42,11 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0247 onto the serpent's middle phase; the sentinel has two phases now. And
       // by 0248, which made that phase the void spray. And by 0261, onto the serpent's FIRST phase,
       // the one line of its table still on one line: a sliver of a phase cut off the top of it.
-      find: "      { upTo: 1, fireEvery: 84, shots: 3, spread: 0.7, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },",
+      // And by 0304, which made that phase five globes in a wider arc.
+      find: "      { upTo: 1, fireEvery: 84, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },",
       replace:
-        "      { upTo: 1, fireEvery: 84, shots: 3, spread: 0.7, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },\n" +
-        "      { upTo: 0.98, fireEvery: 84, shots: 3, spread: 0.7, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },",
+        "      { upTo: 1, fireEvery: 84, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },\n" +
+        "      { upTo: 0.98, fireEvery: 84, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },",
     },
   },
   {

@@ -40,6 +40,7 @@ export const AUTHORED_IDS = [
   '0237-blade',
   '0285-throw',
   '0288-lean',
+  '0304-pair',
 ] as const;
 
 export type AuthoredId = (typeof AUTHORED_IDS)[number];
@@ -141,6 +142,20 @@ export const AUTHORED: Record<AuthoredId, AuthoredClaim> = {
     claim: 'the serpent’s skull is half again as long as it is tall, which is what reads as a snake',
     correctly: 'a shorter snout traded for a deeper jaw, once the mouth is the thing being drawn for',
     decision: '0288-the-skull-is-longer',
+  },
+  /*
+    ⚠️ **THE MID-BOSSES' HALF STAYED HARD AND THIS HALF DID NOT, AND 0258 IS WHY THEY DIFFER.** A
+    mid-boss IS its pair — the old seven, one idea each — so two sharing one is two skins on one
+    fight, and no correct row can do it. A real boss is told apart by what only it throws, which
+    `tests/level.test.ts` still holds hard as the *mark* guard; its flight and its opening fan are the
+    small part of it. 0304 is the correct change: *"for phase 1 can we have it shoot a forward arc of
+    5 globes"* made the serpent a bob and a spray, which is the hydra's pair — on a chain that rears,
+    that turns into a spray and then the lightning.
+  */
+  '0304-pair': {
+    claim: 'no two real bosses both fly the same way and open with the same fan',
+    correctly: 'a real boss asked to open simply, whose own attacks come later in the fight',
+    decision: '0304-the-serpent-sprays',
   },
 };
 

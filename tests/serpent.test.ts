@@ -13,6 +13,7 @@ import { describe, expect, it } from 'vitest';
 import { GameFrame } from '../src/app/frame.ts';
 import { phaseFor } from '../src/app/boss.ts';
 import { BOSSES, RAIN_BOLT_KIND } from '../src/content/bosses.ts';
+import type { DifficultyKind } from '../src/content/difficulty.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHOTS, SHOT_INDEX } from '../src/content/shots.ts';
@@ -40,12 +41,12 @@ const SERPENT_ONLY: LevelRow = {
 };
 
 /** A serpent on station at `fraction` of its health, its fan silenced until the test says, and an immortal ship. */
-function serpentAt(fraction: number): {
+function serpentAt(fraction: number, difficulty?: DifficultyKind): {
   world: ReturnType<typeof playableWorld>['world'];
   frame: GameFrame;
   stick: ReturnType<typeof playableWorld>['stick'];
 } {
-  const { world, stick } = playableWorld(SERPENT_ONLY);
+  const { world, stick } = playableWorld(SERPENT_ONLY, difficulty);
   const frame = new GameFrame(world);
   for (let i = 0; i < 900 && (world.bossPool.size === 0 || i < 700); i++) {
     world.ship.health = world.shipRow.health;
@@ -135,23 +136,17 @@ class Recorder implements Surface {
 }
 
 describe('0248 — the serpent strikes', () => {
-  it('THE THREE WEAPONS: a raking fan of acid while whole, acid and void in turn once hurt, acid, void and lightning in turn at the last third', () => {
+  it('THE THREE WEAPONS: five globes of acid straight ahead while whole, the spray and void in turn once hurt, the spray, void and lightning in turn at the last third', () => {
     /*
       ⚠️ **0261 — `docs/decisions/0261-the-serpent-throws-together.md`.** 0248 gave the serpent one
       weapon a phase and the alpha play called that *"three separate fire fields"*; the phases are
-      cumulative now, the hydra's heads taking turns, and the acid is a fan that rakes rather than a
-      wall. The lightning is the same lightning.
+      cumulative now, the hydra's heads taking turns. The lightning is the same lightning.
 
-      ⚠️ **AND THE ACID'S FAN IS A WAVE SINCE 0290**, which changes what this names and not what it
-      claims. *"The acid attacks should fire out in a serpentine spray, as opposed [to] like the 3
-      blobs now"* — so the kind is `serpentine` rather than `rake`, and what 0261 was holding is
-      still held: it is a fan that TURNS, and it is not a wall.
-
-      ⚠️ **THE TURN IS ASKED FOR RATHER THAN THE NAME**, because that is the property the guard below
-      depends on: this boss's opening phase turns and its later phases index heads by a count, and the
-      crash that came of sharing one field between the two is held two tests down by asserting the
-      opening phase actually raked. An acid attack that stopped turning would leave that guard green
-      and measuring nothing, so it is named here as the thing it is.
+      ⚠️ **AND THE ACID IS TWO ATTACKS SINCE 0304**: *"for phase 1 can we have it shoot a forward arc of
+      5 globes, then phase 2 it does a spray…"* — a plain fan while whole, and a spray that turns while
+      it is thrown once hurt, carried into the last third as every head there is. 0290's wave and the
+      rake before it are gone, and so is the reason the opening phase had to turn: the crash its turn
+      was measured for is held two tests down against the spray instead, which has counts of its own.
     */
     const row = BOSSES.jormungandr;
     const whole = phaseFor(row, row.health);
@@ -159,15 +154,12 @@ describe('0248 — the serpent strikes', () => {
     const last = phaseFor(row, row.health * 0.3);
     expect(whole.shot ?? row.shot, 'the serpent does not open with acid').toBe('acid');
     const fan = whole.attack ?? row.attack;
-    expect(fan.kind, 'the acid is not a spray that rakes — the wall is back').toBe('serpentine');
-    expect(
-      'turn' in fan ? fan.turn : 0,
-      'the serpent’s opening acid does not turn, so the rake it is measured by two tests down is gone',
-    ).toBeGreaterThan(0);
+    expect(fan.kind, 'the serpent’s opening acid is not a plain fan straight down the lane').toBe('spray');
+    expect(whole.shots, 'the opening arc is not five globes').toBe(5);
     const hurtHeads = (hurt.attack ?? row.attack).kind === 'heads' ? (hurt.attack as { heads: readonly { shot: string; attack: { kind: string } }[] }).heads : [];
-    expect(hurtHeads.map((h) => `${h.shot}/${h.attack.kind}`), 'once hurt the serpent does not throw acid and void in turn').toEqual(['acid/serpentine', 'void/spray']);
+    expect(hurtHeads.map((h) => `${h.shot}/${h.attack.kind}`), 'once hurt the serpent does not throw the acid spray and void in turn').toEqual(['acid/sweep', 'void/spray']);
     const lastHeads = (last.attack ?? row.attack).kind === 'heads' ? (last.attack as { heads: readonly { shot: string; attack: { kind: string } }[] }).heads : [];
-    expect(lastHeads.map((h) => h.attack.kind), 'the last third does not throw acid, void and the lightning in turn').toEqual(['serpentine', 'spray', 'rain']);
+    expect(lastHeads.map((h) => h.attack.kind), 'the last third does not throw the spray, void and the lightning in turn').toEqual(['sweep', 'spray', 'rain']);
     expect(lastHeads.map((h) => h.shot).slice(0, 2)).toEqual(['acid', 'void']);
     // And it is the Approach's real boss.
     expect(LEVELS.approach.boss).toBe('jormungandr');
@@ -189,72 +181,120 @@ describe('0248 — the serpent strikes', () => {
       seen.push(bolts ? 'lightning' : sprite === SHOTS.acid.sprite ? 'acid' : sprite === SHOTS.void.sprite ? 'void' : 'nothing');
     }
     expect(seen, 'three volleys at the last third are not acid, void and lightning in turn').toEqual(['acid', 'void', 'lightning']);
-    // And whole, the fan of acid turns a little each volley: two volleys, two centres.
+  });
+
+  it('0304 — THE REPORTED ONE: whole, it throws a forward arc of FIVE globes, and every volley points the same way', () => {
+    /*
+      ⚠️ **ASKED FOR**: *"for phase 1 can we have it shoot a forward arc of 5 globes."* Three halves,
+      each in something the player sees: how many, that the arc faces them, and that it holds still —
+      the rake this replaces turned a little every volley, which is a different thing to dodge.
+
+      ⚠️ **MEASURED OFF THE VELOCITIES IN THE CAMERA'S FRAME**, which is where the aim is: every globe
+      leaves the mouth on the same step, so the arc is in where they point. The scroll is taken out,
+      because it is in every velocity and is not the animal aiming anywhere.
+    */
     const opening = serpentAt(1);
     const centres: number[] = [];
     for (let volley = 0; volley < 2; volley++) {
       opening.world.enemyShots.clear();
       opening.world.bossPool.at(0).fireIn = 1;
       opening.frame.step();
-      let sum = 0;
+      const headings: number[] = [];
       for (let i = 0; i < opening.world.enemyShots.size; i++) {
         const s = opening.world.enemyShots.at(i);
-        expect(s.sprite, 'the opening fan is not acid').toBe(SHOTS.acid.sprite);
-        sum += Math.atan2(s.velAcross, s.velAlong - opening.world.scrollPerStep);
+        expect(s.sprite, 'the opening arc is not acid').toBe(SHOTS.acid.sprite);
+        // Down the lane is π; measured from it so the arc's two sides are negative and positive.
+        const off = Math.atan2(s.velAcross, s.velAlong - opening.world.scrollPerStep);
+        headings.push(off < 0 ? off + Math.PI : off - Math.PI);
       }
-      centres.push(sum / opening.world.enemyShots.size);
+      expect(headings.length, `the opening arc threw ${headings.length} globes, not five`).toBe(5);
+      const wide = Math.max(...headings) - Math.min(...headings);
+      expect(wide, 'the five globes left on one heading, so they are a line and not an arc').toBeGreaterThan(0.3);
+      const centre = headings.reduce((a, b) => a + b, 0) / headings.length;
+      expect(
+        Math.abs(centre),
+        `the arc is centred ${((centre * 180) / Math.PI).toFixed(1)}° off the lane, so it is not thrown forward at the player`,
+      ).toBeLessThan(0.05);
+      centres.push(centre);
     }
-    expect(Math.abs(centres[1]! - centres[0]!), 'the acid fan does not rake — two volleys point the same way').toBeGreaterThan(0.1);
+    expect(Math.abs(centres[1]! - centres[0]!), 'the arc turned between two volleys — the rake is back').toBeLessThan(0.05);
   });
 
-  it('0290 — THE REPORTED ONE: the acid leaves as a WAVE, and there are more than three of it', () => {
+  it('0304 — THE REPORTED ONE: once hurt, the acid is a SPRAY — one globe at a time, the aim turning from below-behind, round through the front, to above-behind', () => {
     /*
-      ⚠️ **REPORTED**: *"the acid attacks should fire out in a serpentine spray, as opposed [to] like
-      the 3 blobs now."* Two halves, and both are measured: how MANY, and what SHAPE.
+      ⚠️ **ASKED FOR**: *"phase 2 it does a spray starting from 60 degrees (so it will be shooting down
+      behind it) then arcing around and finishing at 30 degrees (so it will be shooting up behind
+      it)."* Read as asked, and confirmed before building: sixty degrees below straight-behind, then
+      down, forward and up, to thirty above straight-behind — 270 degrees, the gap behind the animal.
 
-      ⚠️ **THE SHAPE IS THE HALF A COUNT WOULD MISS.** Nine shots in a plain fan is three blobs with
-      more blobs — the report is about the picture, not the density. So what is asked is that the
-      beads' headings turn back on themselves: a fan's angles march one way from first to last, and a
-      wave's reverse. Counting the reversals is counting the humps.
+      ⚠️ **MEASURED IN DEGREES AND SECONDS, WHICH IS WHAT THE PLAYER WATCHES** — 0027. What the frame
+      stores is steps and radians; what makes it a spray and not a fan is that the globes leave over
+      TIME, so the first thing asked is how long the stream lasts, and the angles are read in the
+      picture's own terms: down, forward, up.
     */
-    const { world, frame } = serpentAt(1);
+    const { world, frame } = serpentAt(0.6);
     const boss = world.bossPool.at(0);
+    boss.headAt = 0;
     world.enemyShots.clear();
     boss.fireIn = 1;
-    frame.step();
-    const fired = world.enemyShots.size;
-    expect(fired, 'the serpent threw no acid at all, so this measures nothing').toBeGreaterThan(0);
-
-    const whole = phaseFor(BOSSES.jormungandr, BOSSES.jormungandr.health);
-    const shots = whole.shots;
-    expect(
-      fired,
-      `the serpent threw ${fired} beads of acid where its phase asks for ${shots} — a wave cannot be drawn ` +
-        'with three points, which is the whole of the report',
-    ).toBeGreaterThan(shots * 2);
-
-    /*
-      ⚠️ **MEASURED OFF THE VELOCITIES, WHICH IS WHERE THE WAVE ACTUALLY IS.** The beads all leave the
-      mouth on the same step and travel straight afterwards, so at the instant they are thrown they
-      are all in the same place and the shape lives entirely in where they are POINTED. One step later
-      it is a shape on the screen; here it is the thing that makes it one.
-    */
-    const headings: number[] = [];
-    for (let i = 0; i < world.enemyShots.size; i++) {
-      const shot = world.enemyShots.at(i);
-      headings.push(Math.atan2(shot.velAcross, shot.velAlong));
+    /** Every acid globe as it first appears: when, which way, and where the mouth was on that step. */
+    const globes: { step: number; heading: number; fromHead: number }[] = [];
+    const known = new Set<object>();
+    let gapedThroughout = true;
+    for (let step = 0; step < STEPS_PER_SECOND * 2; step++) {
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.ship.health = world.shipRow.health;
+      // Hold the round on the acid, so nothing else is in the pool to be told apart from it.
+      if (step > 0 && boss.fireIn < 2) boss.fireIn = 999;
+      frame.step();
+      for (let i = 0; i < world.enemyShots.size; i++) {
+        const s = world.enemyShots.at(i);
+        if (s.sprite !== SHOTS.acid.sprite || known.has(s)) continue;
+        known.add(s);
+        // Where it was thrown from is where it is less the one step it has flown, and the mouth on
+        // that step is where the hull was before it moved. The round is held above, so no slot is
+        // handed back out as a second globe inside the two seconds this watches.
+        const d =Math.hypot(s.along - s.velAlong - boss.prevAlong, s.across - s.velAcross - boss.prevAcross);
+        globes.push({ step, heading: Math.atan2(s.velAcross, s.velAlong - world.scrollPerStep), fromHead: d });
+      }
+      if (boss.sprayLeft > 0 && boss.spriteBase !== BOSSES.jormungandr.face!.gape) gapedThroughout = false;
     }
-    let reversals = 0;
-    for (let i = 2; i < headings.length; i++) {
-      const before = headings[i - 1]! - headings[i - 2]!;
-      const after = headings[i]! - headings[i - 1]!;
-      if (before * after < 0) reversals++;
-    }
+    expect(globes.length, 'the serpent threw no acid once hurt, so this measures nothing').toBeGreaterThan(0);
+    const first = globes[0]!;
+    const final = globes[globes.length - 1]!;
+    const lasted = (final.step - first.step) / STEPS_PER_SECOND;
     expect(
-      reversals,
-      `the acid's ${fired} beads sweep one way from first to last with ${reversals} turns in them, so they are a ` +
-        'fan rather than a wave — more blobs is not the report',
-    ).toBeGreaterThan(0);
+      lasted,
+      `the spray's ${globes.length} globes all left within ${lasted.toFixed(2)}s, so it is a fan thrown at once rather than a spray`,
+    ).toBeGreaterThan(0.5);
+    expect(globes.length, `the spray threw ${globes.length} globes — a stream is more than a handful`).toBeGreaterThan(12);
+    for (const g of globes) {
+      expect(g.fromHead, `a globe left ${g.fromHead.toFixed(1)} units from the mouth, so the spray is not coming out of it`).toBeLessThan(2);
+    }
+    const deg = (r: number): number => (r * 180) / Math.PI;
+    // The screen's own words: behind is along-plus, down is across-plus on the landscape screen.
+    expect(Math.cos(first.heading), 'the spray does not START behind the animal').toBeGreaterThan(0);
+    expect(Math.sin(first.heading), 'the spray does not start shooting DOWN behind it').toBeGreaterThan(0);
+    expect(Math.abs(deg(first.heading) - 60), `the spray starts ${deg(first.heading).toFixed(0)}° from straight-behind, not 60° below it`).toBeLessThan(3);
+    expect(Math.cos(final.heading), 'the spray does not FINISH behind the animal').toBeGreaterThan(0);
+    expect(Math.sin(final.heading), 'the spray does not finish shooting UP behind it').toBeLessThan(0);
+    expect(Math.abs(deg(final.heading) + 30), `the spray finishes ${deg(final.heading).toFixed(0)}° from straight-behind, not 30° above it`).toBeLessThan(3);
+    // And it goes round through the FRONT, not the short way across the back: unwrapped, the aim only
+    // ever increases, by 270 degrees in all, and on the way it points straight down the lane at the player.
+    let turned = 0;
+    let faced = false;
+    for (let i = 1; i < globes.length; i++) {
+      let d = globes[i]!.heading - globes[i - 1]!.heading;
+      if (d < -Math.PI) d += 2 * Math.PI;
+      if (d > Math.PI) d -= 2 * Math.PI;
+      expect(d, 'the spray’s aim turned back on itself').toBeGreaterThan(0);
+      turned += d;
+      if (Math.cos(globes[i]!.heading) < -0.97) faced = true;
+    }
+    expect(Math.abs(deg(turned) - 270), `the spray turned ${deg(turned).toFixed(0)}°, not round through the front`).toBeLessThan(5);
+    expect(faced, 'the spray never pointed down the lane at the player').toBe(true);
+    // And the picture says so for as long as it lasts: a stream from a shut mouth is from nowhere (0036).
+    expect(gapedThroughout, 'the jaw closed while the spray was still coming out of it').toBe(true);
   });
 
   it('THE MOUTH: the acid and the void leave the serpent’s SKULL, and not the middle of its body', () => {
@@ -276,7 +316,7 @@ describe('0248 — the serpent strikes', () => {
       satisfy it without the shot leaving the head.
     */
     for (const [name, fraction] of [
-      ['the opening rake of acid', 1],
+      ['the opening arc of acid', 1],
       ['the heads, once hurt', 0.6],
     ] as const) {
       const { world, frame } = serpentAt(fraction);
@@ -543,54 +583,72 @@ describe('0248 — the serpent strikes', () => {
     expect(world.enemyShots.at(0).health, 'the acid took damage from the player’s guns').toBe(health);
   });
 
-  it('and a boss that rakes AND grows heads keeps the two counts apart, so the round survives the raking', () => {
+  it('0304 — and a boss that SPRAYS and grows heads finishes every spray: no head is thrown into one, on the hardest tier', () => {
     /*
-      ⚠️ **THE CRASH THIS BRANCH SHIPPED WITH, HELD SO IT CANNOT COME BACK.** The serpent's opening
-      phase rakes — the row's own attack — and its other two grow heads. A rake advances its count by
-      an ANGLE, `turn` of a radian a volley; the heads index by it. On one shared field the count was
-      about 5.4 by the second phase and `heads[5.4 % 2]` is `heads[1.4]`, which is `undefined` — a
-      TypeError out of `throwAttack`, every serpent fight, at its first phase change.
+      ⚠️ **THE SPRAY IS THE FIRST ATTACK THAT OUTLIVES THE STEP IT WAS THROWN ON**, and the round
+      moves on while it is still coming out of the mouth. Two ways that goes wrong, and both are held
+      by flying the fight rather than by setting the phase:
 
-      ⚠️ **NOTHING IN THE SUITE SAW IT.** 0261 was proven green: every guard about the serpent set the
-      phase it wanted and measured that phase. What found it was
-      `docs/decisions/0268-the-bob-keeps-its-centre.md`'s guard, which flies every BOBBING boss
-      through all of its phases in order and was written about a hull leaving the lane — an accident,
-      and one this assertion exists so as not to depend on twice.
+      - **the next spray starts over the top of the last.** The hardest tier halves the last third's
+        cadence to eighteen steps, so its round of three heads is fifty-four, and a spray is sixty — a
+        gate that did not wait would restart the stream from its first heading most of the way round:
+        a hose that snaps back, and a spray the player never sees finish. On the content tier every
+        round is longer than a spray, which is why this is flown on the hardest.
+      - **the spray reads a count another attack writes.** 0261 crashed every serpent fight because a
+        rake's angle and the heads' count were one field. The spray carries five fields of its own;
+        were it to share either, the round or the stream would be steered by the other.
 
-      Driven rather than reasoned: rake the opening phase for real, then drop the health and take a
-      volley from every head of the round.
+      ⚠️ **SO WHAT IS COUNTED IS THE PICTURE: every globe as it leaves the mouth, split into sprays
+      wherever the aim jumps back to its start.** Each finished spray has every globe its attack
+      authors and runs the whole way round. Read off the pool, not off `sprayLeft`, which would be the
+      model agreeing with itself.
     */
-    const { world, frame } = serpentAt(1);
+    const { world, frame } = serpentAt(0.3, 'burn');
     const boss = world.bossPool.at(0);
-    /*
-      Long enough for the opening rake to throw several volleys and turn its angle well past the
-      number of heads the later phases have. The health is held at full so the phase does not move,
-      and the ship holds its fire so the subject survives being measured.
-    */
-    boss.fireIn = 0;
-    for (let i = 0; i < 60 * 12; i++) {
-      world.fireIn = Number.MAX_SAFE_INTEGER;
-      boss.health = world.bossFullHealth;
-      frame.step();
-    }
-    expect(boss.firePhase, 'the opening phase never raked, so this measures nothing').toBeGreaterThan(1);
-    expect(boss.headAt, 'a rake advanced the heads’ own count').toBe(0);
+    const last = phaseFor(BOSSES.jormungandr, BOSSES.jormungandr.health * 0.3).attack;
+    const sweep = last !== null && last.kind === 'heads' ? last.heads.map((h) => h.attack).find((a) => a.kind === 'sweep') : undefined;
+    expect(sweep, 'the serpent’s last third has no spray, so this measures nothing').toBeDefined();
+    const { from, globes: authored } = sweep as { from: number; globes: number };
+    const round = (a: number): number => (((a - from) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
 
-    const last = BOSSES.jormungandr.phases[BOSSES.jormungandr.phases.length - 1]!.attack;
-    const heads = last !== null && last.kind === 'heads' ? last.heads : [];
-    expect(heads.length, 'the serpent’s last third has no heads').toBeGreaterThan(1);
-    const thrown = new Set<number>();
-    for (let volley = 0; volley < heads.length * 3; volley++) {
+    /** How far round from its start each globe was aimed, in the order they left the mouth. */
+    const aims: number[] = [];
+    boss.fireIn = 1;
+    for (let step = 0; step < STEPS_PER_SECOND * 12; step++) {
       world.fireIn = Number.MAX_SAFE_INTEGER;
-      boss.health = world.bossFullHealth * 0.2;
-      boss.fireIn = 0;
-      const at = boss.headAt % heads.length;
-      const before = world.enemyShots.size;
-      // One step to fire; the round must land on a real head every time rather than on `undefined`.
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      world.ship.health = world.shipRow.health;
+      // Twelve seconds under the lightning: the ship is untouchable, so nothing ends the fight being watched.
+      world.ship.invulnFor = 2;
+      boss.health = world.bossFullHealth * 0.3;
       frame.step();
-      if (world.enemyShots.size > before || world.bolts.size > 0) thrown.add(at);
+      // Thrown THIS step: where it is less the one step it has flown is exactly where the hull was.
+      const fresh: number[] = [];
+      for (let i = 0; i < world.enemyShots.size; i++) {
+        const s = world.enemyShots.at(i);
+        if (s.sprite !== SHOTS.acid.sprite) continue;
+        if (Math.abs(s.along - s.velAlong - boss.prevAlong) > 1e-6 || Math.abs(s.across - s.velAcross - boss.prevAcross) > 1e-6) continue;
+        fresh.push(round(Math.atan2(s.velAcross, s.velAlong - world.scrollPerStep)));
+      }
+      // A spray's last globe and the next one's first can share a step; the last is the one furthest round.
+      fresh.sort((a, b) => b - a);
+      aims.push(...fresh);
     }
-    expect(thrown.size, 'the round did not reach every head, so a rake is still steering it').toBe(heads.length);
+    const sprays: number[][] = [];
+    for (let i = 0; i < aims.length; i++) {
+      if (i === 0 || aims[i]! < aims[i - 1]!) sprays.push([]);
+      sprays[sprays.length - 1]!.push(aims[i]!);
+    }
+    // The last may still be spraying when the watch ends; every other one had its chance to finish.
+    const finished = sprays.slice(0, -1);
+    expect(finished.length, `only ${finished.length} sprays finished in twelve seconds, so this measures nothing`).toBeGreaterThan(2);
+    for (const [n, s] of finished.entries()) {
+      expect(s.length, `spray ${n} threw ${s.length} globes of the ${authored} it authors — the next one started over it`).toBe(authored);
+      expect(s[0]!, `spray ${n} did not start at its first heading`).toBeLessThan(0.05);
+      expect((s[s.length - 1]! * 180) / Math.PI, `spray ${n} stopped short of the way round`).toBeGreaterThan(265);
+    }
+    // And the round still turns: the void was thrown between the sprays, so neither count steered the other.
+    expect(boss.headAt, 'the round never moved past the spray').toBeGreaterThan(finished.length);
   });
 
   it('THE RAIN: a volley draws its warning lines first, inside the box the ship flies in, and nothing hurts until they have run', () => {

@@ -9,13 +9,13 @@ export const PROBES = [
     suite: 'tests/serpent.test.ts',
     // 0248's wall put back on the row.
     broke: 'the acid back on the wall',
-    guard: 'THE THREE WEAPONS: a raking fan of acid',
+    // ⚠️ Re-named by 0304, which made the opening acid five globes ahead; the claim is unchanged.
+    guard: 'THE THREE WEAPONS: five globes of acid',
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0290, which made the raking fan a raking WAVE — the claim is unchanged.
-      find:
-        "    attack: { kind: 'serpentine', sweep: 0.32, waves: 1.5, beads: 3, reach: 1.4, turn: 0.45 },\n" +
-        '    uncoil: null,\n    fall: null,\n    chill: null,\n    sprite: SPRITE.boss8,',
+      // And by 0304, which made it a plain fan of five straight ahead.
+      find: "    attack: { kind: 'spray' },\n" + '    uncoil: null,\n    fall: null,\n    chill: null,\n    sprite: SPRITE.boss8,',
       replace: "    attack: { kind: 'wall', gap: 12 },\n    uncoil: null,\n    fall: null,\n    chill: null,\n    sprite: SPRITE.boss8,",
     },
   },
@@ -24,7 +24,7 @@ export const PROBES = [
     suite: 'tests/serpent.test.ts',
     // The lightning head dropped from the last third.
     broke: 'the last third’s lightning head dropped, so the round is acid and void alone',
-    guard: 'THE THREE WEAPONS: a raking fan of acid',
+    guard: 'THE THREE WEAPONS: five globes of acid',
     edit: {
       path: 'src/content/bosses.ts',
       /*
@@ -41,7 +41,7 @@ export const PROBES = [
     suite: 'tests/serpent.test.ts',
     // The round never turning: the first head every volley.
     broke: 'the round never turning, so every volley of the last third is acid',
-    guard: 'THE THREE WEAPONS: a raking fan of acid',
+    guard: 'THE THREE WEAPONS: five globes of acid',
     edit: {
       path: 'src/app/boss.ts',
       // ⚠️ Re-anchored when the round's count moved off `firePhase` — see the probe below.
@@ -49,27 +49,14 @@ export const PROBES = [
       replace: '      throwAttack(head.attack',
     },
   },
-  {
-    decision: '0261',
-    suite: 'tests/serpent.test.ts',
-    /*
-      ⚠️ THE CRASH THIS BRANCH WOULD HAVE SHIPPED WITH, PUT BACK — the round counting on `firePhase`,
-      which a rake advances by an ANGLE. It is one word, it type-checks, and 0254's own comment argues
-      it is safe: *"the type refuses a head that is itself heads or a rake, so the recursion is one
-      deep and `firePhase` has one reader."* True of a HEAD and false of a BOSS, and the serpent is
-      the first content to be both.
-
-      ⚠️ Every other guard about the serpent sets the phase it wants and measures that phase, so all
-      of them stay green over it. What goes red is the one assertion that flies the fight from its
-      opening rake into its later rounds — which is why that assertion exists rather than leaving this
-      to 0268's bob guard, where it was found by accident.
-    */
-    broke: 'the round counting on the rake’s own angle again, so a raked serpent indexes a head that is not there',
-    guard: 'a boss that rakes AND grows heads keeps the two counts apart',
-    edit: {
-      path: 'src/app/boss.ts',
-      find: '      const head = attack.heads[((boss.headAt % n) + n) % n]!;\n      boss.headAt++;',
-      replace: '      const head = attack.heads[((boss.firePhase % n) + n) % n]!;\n      boss.firePhase++;',
-    },
-  },
+  /*
+    ⚠️ **THE FOURTH PROBE — the round counting on the rake's angle — WENT WITH THE RAKE, IN 0304.** It
+    put back the crash that made every serpent fight throw a TypeError at its first phase change, and
+    it went red because the serpent raked in its opening phase and grew heads in its others. 0304
+    made that opening a plain fan, and no row in the game both rakes and grows heads now — the eagle
+    and the gyre rake, the hydra and the serpent grow heads — so the break has no content left to
+    crash and its guard stayed green over it. The split it proved stands in `src/sim/entity.ts`, and
+    the spray that took the rake's place is held for the same defect by 0304's own probes.
+    `docs/decisions/0192-a-guard-holds-an-invariant.md`: demoting takes one edit and a reason.
+  */
 ];

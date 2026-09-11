@@ -15,7 +15,7 @@ import { CAPACITY, CHAIN_TRAIL } from '../src/app/mount.ts';
 import { BOSSES, BOSS_KINDS, chainReach } from '../src/content/bosses.ts';
 import { INVULN_STEPS } from '../src/content/ships.ts';
 import { curtainSpacing, openBy, phaseFor, uncoilsBy } from '../src/app/boss.ts';
-import { BOSS_ATTACK_KINDS, BOSS_MOVE_KINDS, BOSS_STANCE_KINDS } from '../src/content/bosses.ts';
+import { BOSS_ATTACK_KINDS, BOSS_MOVE_KINDS, BOSS_STANCE_KINDS, type BossAttack, type BossPhase, type BossRow } from '../src/content/bosses.ts';
 import { BOSS_DEATH_STEPS, GameFrame, SHIP_START_ALONG, advanceLevel, resetScene, respawn } from '../src/app/frame.ts';
 import { ASSIST_LADDER, DEFAULT_ASSISTS, tuningFor } from '../src/sim/assist.ts';
 import { SHOTS } from '../src/content/shots.ts';
@@ -505,6 +505,20 @@ describe('every level has a boss of its own, and no two of them are the same obj
   });
 });
 
+/**
+ * The most one volley of `phase` throws — 0304. `shots` for every arm that spends it, the attack's
+ * own count for the one that carries its own, and a round's biggest head.
+ *
+ * ⚠️ **ONLY `sweep` CARRIES ITS OWN COUNT**, and it is named rather than defaulted: every other arm
+ * either spends `shots` or carries it unused for exactly this rule to read (`bare`, `summon`, `beam`),
+ * which `src/content/bosses.ts` says in each of their comments.
+ */
+function largestVolley(row: BossRow, phase: BossPhase, attack: BossAttack = phase.attack ?? row.attack): number {
+  if (attack.kind === 'sweep') return attack.globes;
+  if (attack.kind === 'heads') return Math.max(...attack.heads.map((head) => largestVolley(row, phase, head.attack)));
+  return phase.shots;
+}
+
 describe('a boss fight can reach all of its phases', () => {
   it('starts in a phase, whatever its health', () => {
     // A phase table whose first `upTo` is below 1 leaves a full-health boss matching nothing, and
@@ -542,8 +556,16 @@ describe('a boss fight can reach all of its phases', () => {
         expect(after.fireEvery, `${kind}'s phase ${i} fires slower than the one before it`).toBeLessThanOrEqual(
           before.fireEvery,
         );
-        expect(after.shots, `${kind}'s phase ${i} throws less than the one before it`).toBeGreaterThanOrEqual(
-          before.shots,
+        /*
+          ⚠️ **THE BIGGEST VOLLEY A PHASE THROWS, WHICH IS `shots` FOR EVERY ARM THAT SPENDS IT — 0304.**
+          This compared `shots` alone, and `shots` is not what a phase throws when its attack carries a
+          count of its own: the serpent's spray is twenty-one globes in a phase whose `shots` is three,
+          because that three is handed to every head of the round and one of them is the lightning.
+          The correct change that reddened it was a phase-one arc of five ahead of a phase-two spray of
+          twenty-one — the opposite of a relief. So the claim is unchanged and the quantity is fixed.
+        */
+        expect(largestVolley(row, after), `${kind}'s phase ${i} throws less than the one before it`).toBeGreaterThanOrEqual(
+          largestVolley(row, before),
         );
       }
     }
@@ -1135,7 +1157,7 @@ describe('0111 — a boss has one idea, and the picture mentions its phases', ()
     silhouettes on it"* — and it was an accurate reading of `stepBoss`.
   */
 
-  it('THE REPORTED ONE: no two mid-bosses fly the same way AND shoot the same way, and no two real bosses do either', () => {
+  it('THE REPORTED ONE: no two mid-bosses fly the same way AND shoot the same way', () => {
     /*
       ⚠️ **The pair, not either half, which is what makes seven fights seven fights.** Two bosses may
       share a movement, and two may share an attack — what may not happen is two rows a player cannot
@@ -1149,18 +1171,19 @@ describe('0111 — a boss has one idea, and the picture mentions its phases', ()
       own attack (a rain, a whip, a beam, a spin, a cold, heads, tendrils), held below, and the pair
       is unique over the real seven as well so that no two of THEM ask the same thing either.
 
+      ⚠️ **AND THE REAL SEVEN'S HALF IS A TASTE NOW — 0304.** *"For phase 1 can we have it shoot a
+      forward arc of 5 globes"* made the serpent a bob and a spray, which is the hydra's pair, and it
+      is the correct change that reddened this: a real boss is told apart by the attack only it
+      throws, held hard by the next test, and an opening that is simple on purpose is not two skins on
+      one fight. It is measured in `tests/authored.ts` and printed every run (0192).
+
       ⚠️ **It says nothing about the bullet, deliberately.** 0098 already holds that, and *"thick or
       thin bullets was the only difference"* is the report that the bullet is not enough.
     */
     const mids = LEVEL_KINDS.map((k) => LEVELS[k].midBoss!.kind);
     const reals = LEVEL_KINDS.map((k) => LEVELS[k].boss);
-    for (const [name, set] of [
-      ['mid-bosses', mids],
-      ['real bosses', reals],
-    ] as const) {
-      const ideas = set.map((kind) => `${BOSSES[kind].move.kind}/${BOSSES[kind].attack.kind}`);
-      expect(new Set(ideas).size, `two ${name} fly and shoot identically (${ideas.join(', ')})`).toBe(set.length);
-    }
+    const ideas = mids.map((kind) => `${BOSSES[kind].move.kind}/${BOSSES[kind].attack.kind}`);
+    expect(new Set(ideas).size, `two mid-bosses fly and shoot identically (${ideas.join(', ')})`).toBe(mids.length);
     expect(new Set([...mids, ...reals]).size, 'a boss is fought twice in the run').toBe(BOSS_KINDS.length);
   });
 

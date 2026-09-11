@@ -38,6 +38,7 @@ import { AA_FLOOR, contrast } from './contrast.ts';
 import { DECOR_INKS, DEFAULT_PALETTE, PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { BOSSES } from '../src/content/bosses.ts';
+import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { bakeSize, cloudCover, drawKind } from '../src/render/bake.ts';
 import { viewOf } from '../src/sim/camera.ts';
 import { tracingPen } from './paths.ts';
@@ -237,6 +238,21 @@ function measureAA(): void {
   observe('0198-aa-clouds', weather.length === 0, weather);
 }
 
+/**
+ * 0304 — no two real bosses share a flight and an opening fan. The mid-bosses' half is still hard in
+ * `tests/level.test.ts`, and so is the rule that tells a real boss apart: the attack only it throws.
+ */
+function measurePair(): void {
+  const reals = LEVEL_KINDS.map((k) => LEVELS[k].boss);
+  const by = new Map<string, string[]>();
+  for (const kind of reals) {
+    const idea = `${BOSSES[kind].move.kind}/${BOSSES[kind].attack.kind}`;
+    by.set(idea, [...(by.get(idea) ?? []), kind]);
+  }
+  const shared = [...by].filter(([, kinds]) => kinds.length > 1).map(([idea, kinds]) => `${kinds.join(' and ')} both ${idea}`);
+  observe('0304-pair', shared.length === 0, shared);
+}
+
 function measureAll(): void {
   measureNotes();
   measureLead();
@@ -247,6 +263,7 @@ function measureAll(): void {
   measureBlade();
   measureThrow();
   measureLean();
+  measurePair();
 }
 
 /**
