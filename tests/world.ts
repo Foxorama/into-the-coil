@@ -105,6 +105,8 @@ export function inertLevel(): {
   bossPool: Pool<Entity>;
   // The chain's pool and its trail — 0283. Empty and still for every fixture whose boss has no body.
   bossBody: Pool<Entity>;
+  // And its aura — 0305. Empty for every fixture whose boss's phase burns with none.
+  bossAura: Pool<Entity>;
   bossTrail: Float32Array;
   bossTrailAt: number;
   chainPhase: number;
@@ -175,6 +177,7 @@ export function inertLevel(): {
     fight: 1,
     bossPool: new Pool<Entity>(CAPACITY.boss, makeEntity),
     bossBody: new Pool<Entity>(CAPACITY.bossBody, makeEntity),
+    bossAura: new Pool<Entity>(CAPACITY.bossAura, makeEntity),
     bossTrail: new Float32Array(CHAIN_TRAIL),
     bossTrailAt: 0,
     chainPhase: 0,
@@ -299,6 +302,7 @@ export function playableWorld(
   const debris = new Pool<Entity>(CAPACITY.debris, makeEntity);
   const bossPool = new Pool<Entity>(CAPACITY.boss, makeEntity);
   const bossBody = new Pool<Entity>(CAPACITY.bossBody, makeEntity);
+  const bossAura = new Pool<Entity>(CAPACITY.bossAura, makeEntity);
 
   const enemyRows: readonly EnemyRow[] = ENEMY_KINDS.map((k) => ENEMIES[k]);
   const shipRow = SHIPS.proof;
@@ -317,7 +321,7 @@ export function playableWorld(
 
   const world: World = {
     // The game's own order — `src/app/mount.ts` — with the pickups left out, because this fixture has none.
-    layers: [blasts, bossBody, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
+    layers: [blasts, bossAura, bossBody, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
     sky: [],
     landmarks: [],
     bound: null,
@@ -404,6 +408,7 @@ export function playableWorld(
     fight: level.midBoss === null ? 1 : 0,
     bossPool,
     bossBody,
+    bossAura,
     bossTrail: new Float32Array(CHAIN_TRAIL),
     bossTrailAt: 0,
     chainPhase: 0,

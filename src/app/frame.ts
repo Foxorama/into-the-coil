@@ -1000,6 +1000,17 @@ export interface World {
    */
   bossBody: Pool<Entity>;
   /**
+   * The boss's aura, one flame behind every node of its body and one behind its head — 0305. Empty
+   * in every phase that authors no aura, which is every phase of thirteen bosses and the serpent's
+   * first.
+   *
+   * ⚠️ **ITS OWN POOL, DRAWN BEFORE `bossBody`, AND THAT ORDER IS THE WHOLE REASON IT EXISTS.** A pool
+   * draws in index order and each node covers the one behind it; a flame painted into a node's own
+   * bitmap would lie over the node beside it. A layer of its own puts every flame behind every node.
+   * It is in no pairing — cosmetic in fact, as the exhaust is.
+   */
+  bossAura: Pool<Entity>;
+  /**
    * Where the boss's lane has been, one entry a step, so a turn arrives down the body — 0283.
    *
    * ⚠️ **Allocated once, at boot.** It is a ring, `bossTrailAt` is the newest entry, and node `k`
@@ -1429,6 +1440,8 @@ export class GameFrame implements Frame {
     */
     stepEntities(w.bossBody, w.cameraAlong, Number.POSITIVE_INFINITY);
     layChain(w);
+    // After the body is laid, so every flame is where its node is this step — 0305.
+    layAura(w);
     stepEntities(w.enemies, w.cameraAlong);
     // ⚠️ The one pool with its own leading cull, and it is the player's REACH rather than content —
     // `src/sim/camera.ts` has the play report that argues it.
@@ -5254,7 +5267,12 @@ const BITE_STEPS = 7;
  * is where it is LOOKING.
  */
 function wearFace(w: World, boss: Entity): void {
-  const face = w.bossRow.face;
+  /*
+    ⚠️ **THE PHASE'S FACES WHERE IT AUTHORS A LOOK — 0305**: the same seven faces with the horns
+    grown. Asked of the phase every step rather than remembered, on `openBy`'s terms, so the horns
+    change on the step the phase does and there is no second answer to go stale.
+  */
+  const face = phaseFor(w.bossRow, boss.health, w.bossFullHealth).look?.face ?? w.bossRow.face;
   if (face === null) return;
   const gaze = w.ship.across - boss.across;
   /*
@@ -5390,6 +5408,59 @@ function layChain(w: World): void {
     node.across = followed + sway * Math.sin(w.chainPhase - (offset / chain.wavelength) * TAU);
   }
 }
+
+/**
+ * Put a flame behind every node of the body and one behind the head, if the phase burns — 0305.
+ *
+ * ⚠️ **PLACED, NOT FLOWN, EXACTLY AS A NODE IS.** Each flame takes its node's place and its node's
+ * PREVIOUS place, so it interpolates with the flesh it rises off rather than a step behind it, and
+ * it takes the node's swell so a thick stretch of the animal burns with a bigger flame. Nothing steps
+ * this pool and nothing collides with it.
+ *
+ * ⚠️ **THE FLICKER IS ON `w.steps`**, the same clock the bared window's trickle reads, so it needs no
+ * state to reset when a boss dies or a phase turns over. Node `k` is `stride × k` frames on from the
+ * head, so the flicker runs down the body.
+ *
+ * ⚠️ **Nothing allocates.** A pool slot is reused, and the loop is numbers.
+ */
+function layAura(w: World): void {
+  const head = w.bossPool.size > 0 ? w.bossPool.at(0) : null;
+  const aura = head === null ? null : (phaseFor(w.bossRow, head.health, w.bossFullHealth).look?.aura ?? null);
+  if (head === null || aura === null) {
+    w.bossAura.clear();
+    return;
+  }
+  const want = w.bossBody.size + 1;
+  while (w.bossAura.size < want) {
+    const flame = w.bossAura.spawn();
+    if (flame === null) break;
+    reset(flame, head.along, head.across, AURA_FLAME);
+  }
+  const n = aura.frames.length;
+  const tick = Math.floor(w.steps / aura.hold);
+  for (let i = 0; i < w.bossAura.size; i++) {
+    const flame = w.bossAura.at(i);
+    // The body's nodes first, tail to neck in their own order, then the head's — last, so it is drawn
+    // over the neck's flame as the skull is drawn over the neck.
+    const on = i < w.bossBody.size ? w.bossBody.at(i) : head;
+    flame.along = on.along;
+    flame.across = on.across;
+    flame.prevAlong = on.prevAlong;
+    flame.prevAcross = on.prevAcross;
+    flame.swell = on === head ? aura.head / SERPENT_BODY_DIAMETER : on.swell;
+    // Node `k` counted from the head, so the ripple runs from the skull toward the tail.
+    const k = w.bossAura.size - 1 - i;
+    const frame = aura.frames[(((tick + k * aura.stride) % n) + n) % n]!;
+    flame.sprite = frame;
+    flame.spriteBase = frame;
+  }
+}
+
+/**
+ * The body a flame is spawned from — 0305. It has no reach and no health worth taking: it is in no
+ * pairing, and `layAura` writes its bitmap every step.
+ */
+const AURA_FLAME: Body = { sprite: 0, spriteHit: 0, radius: 0, health: 1, damage: 0 };
 
 /**
  * Move everything that landed on the body this step onto the head, and reset the nodes.

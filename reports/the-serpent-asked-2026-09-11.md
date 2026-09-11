@@ -40,8 +40,7 @@ circle without flying backwards into its own neck for half of it.
 ## What the items are
 
 - **The attacks** — [0304](../docs/decisions/0304-the-serpent-sprays.md).
-- **The look** — owed: a dark blue and purple aura from the void phase, red lightning through it
-  from the lightning phase, and the horns longer at each.
+- **The look** — [0305](../docs/decisions/0305-the-serpent-darkens.md).
 - **The entrance** — owed: in from the leading edge, a coil round the middle of the screen with the
   centre left open, off the bottom, then the arrival the fight has now. Untouchable by the player's
   fire and hurting on contact.

@@ -9,6 +9,9 @@
  * `tests/level.test.ts`'s.
  */
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { GameFrame } from '../src/app/frame.ts';
 import { phaseFor } from '../src/app/boss.ts';
@@ -18,11 +21,13 @@ import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHOTS, SHOT_INDEX } from '../src/content/shots.ts';
 import { weaponFor } from '../src/content/pickups.ts';
-import { SPRITE_KINDS } from '../src/content/sprites.ts';
-import { INK_OF } from '../src/render/bake.ts';
+import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
+import { INK_OF, drawKind } from '../src/render/bake.ts';
+import { tracingPen } from './paths.ts';
 import { BOLT_STEPS } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
-import { ACROSS_SPAN, cullPlayerShotAlong } from '../src/sim/camera.ts';
+import { ACROSS_SPAN, cullPlayerShotAlong, viewOf } from '../src/sim/camera.ts';
 import { reset } from '../src/sim/entity.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -254,10 +259,12 @@ describe('0248 — the serpent strikes', () => {
         // Where it was thrown from is where it is less the one step it has flown, and the mouth on
         // that step is where the hull was before it moved. The round is held above, so no slot is
         // handed back out as a second globe inside the two seconds this watches.
-        const d =Math.hypot(s.along - s.velAlong - boss.prevAlong, s.across - s.velAcross - boss.prevAcross);
+        const d = Math.hypot(s.along - s.velAlong - boss.prevAlong, s.across - s.velAcross - boss.prevAcross);
         globes.push({ step, heading: Math.atan2(s.velAcross, s.velAlong - world.scrollPerStep), fromHead: d });
       }
-      if (boss.sprayLeft > 0 && boss.spriteBase !== BOSSES.jormungandr.face!.gape) gapedThroughout = false;
+      // The gape the phase wears, which since 0305 is a longer-horned one than the row's.
+      const faces = phaseFor(BOSSES.jormungandr, boss.health, world.bossFullHealth).look?.face ?? BOSSES.jormungandr.face!;
+      if (boss.sprayLeft > 0 && boss.spriteBase !== faces.gape) gapedThroughout = false;
     }
     expect(globes.length, 'the serpent threw no acid once hurt, so this measures nothing').toBeGreaterThan(0);
     const first = globes[0]!;
@@ -1099,5 +1106,126 @@ describe('0283 — the serpent is a chain', () => {
       world.bossPool.at(0).health,
       'a shot on the serpent’s tail took nothing off the serpent — the body is decoration rather than the animal',
     ).toBeLessThan(before);
+  });
+});
+
+describe('0305 — the serpent darkens', () => {
+  /** The phase the serpent is standing in, and the look it wears there. */
+  const lookAt = (fraction: number) => phaseFor(BOSSES.jormungandr, BOSSES.jormungandr.health * fraction).look;
+
+  it('THE REPORTED ONE: the void phase burns with an aura behind every node and the head, the lightning phase with another, and neither while whole', () => {
+    /*
+      ⚠️ **ASKED FOR**: *"when the void blast phase starts it needs to look more menacing and have a dark
+      aura, kind of like a super saiyan aura… and then when the lightning attack phase starts it needs
+      to get a super saiyan red lightning flicker through the aura."* Driven, because the table is not
+      the fight: a flame is where its node is on the step, and there is one for every node and the head.
+    */
+    const hurtAura = lookAt(0.6)?.aura ?? null;
+    const lastAura = lookAt(0.3)?.aura ?? null;
+    expect(hurtAura, 'the void phase burns with no aura').not.toBeNull();
+    expect(lastAura, 'the lightning phase burns with no aura').not.toBeNull();
+    expect(new Set([...lastAura!.frames]).size, 'the lightning phase’s aura is the void phase’s, with nothing through it').toBe(lastAura!.frames.length);
+    expect(lastAura!.frames.some((f) => hurtAura!.frames.includes(f)), 'the lightning phase wears the void phase’s very frames').toBe(false);
+    for (const [fraction, aura] of [
+      [1, null],
+      [0.6, hurtAura],
+      [0.3, lastAura],
+    ] as const) {
+      const { world, frame } = serpentAt(fraction);
+      frame.step();
+      const boss = world.bossPool.at(0);
+      if (aura === null) {
+        expect(world.bossAura.size, 'the serpent burns while whole — the aura is the void phase’s arrival').toBe(0);
+        continue;
+      }
+      expect(world.bossAura.size, `at ${fraction} the aura is not one flame per node and one for the head`).toBe(world.bossBody.size + 1);
+      for (let i = 0; i < world.bossAura.size; i++) {
+        const flame = world.bossAura.at(i);
+        const on = i < world.bossBody.size ? world.bossBody.at(i) : boss;
+        expect(Math.hypot(flame.along - on.along, flame.across - on.across), 'a flame is not where its node is').toBeLessThan(1e-9);
+        expect(aura.frames.includes(flame.sprite), 'a flame wears a frame its phase does not author').toBe(true);
+      }
+    }
+    /*
+      ⚠️ **AND IT IS BEHIND THE BODY, WHICH IS WHAT MAKES IT AN AURA.** In front, a flame lies over the
+      flesh of the node beside it. Read off the GAME's draw order in `src/app/mount.ts`, as
+      `tests/thrust.test.ts` reads the exhaust's — the fixture's is a hand copy of it, and a guard over
+      the copy would prove the copy.
+    */
+    const source = readFileSync(resolve(fileURLToPath(new URL('.', import.meta.url)), '../src/app/mount.ts'), 'utf8');
+    const order = /layers: \[([^\]]+)\]/.exec(source)![1]!.split(',').map((s) => s.trim());
+    expect(order.indexOf('bossAura'), 'the aura is not drawn at all').toBeGreaterThanOrEqual(0);
+    expect(order.indexOf('bossAura'), 'the aura is drawn over the body it burns behind').toBeLessThan(order.indexOf('bossBody'));
+  });
+
+  it('and it FLICKERS: neighbouring flames wear different frames, and a flame changes frame as the fight goes on', () => {
+    /*
+      *"Flicker"* is the word, and a still aura is a glow. Both halves in the picture's own terms: at one
+      moment the body is not one frame end to end, and a moment later the flames have moved on.
+    */
+    const { world, frame } = serpentAt(0.6);
+    frame.step();
+    const at = (): number[] => Array.from({ length: world.bossAura.size }, (_, i) => world.bossAura.at(i).sprite);
+    const now = at();
+    expect(new Set(now).size, 'every flame on the body wears the same frame, so the aura blinks rather than flickers').toBeGreaterThan(1);
+    for (let i = 0; i < 12; i++) frame.step();
+    const later = at();
+    expect(later.filter((s, i) => s !== now[i]).length, 'a fifth of a second on and no flame has changed').toBeGreaterThan(now.length / 2);
+  });
+
+  it('THE REPORTED ONE: the horns grow at the void phase and grow again at the lightning — in the picture, and nothing else about the head does', () => {
+    /*
+      ⚠️ **ASKED FOR**: *"it's horns grow longer"*, then *"it's horns grow a bit longer again."* Measured
+      on the traced hull at the size the sprite is drawn on a 1280×720 screen, so a pixel here is a pixel
+      of the fight — 0027. The horn tips are the highest thing on the skull, so how far the hull reaches
+      above its centre IS the horns; how far it reaches below is the jaw, which must not move.
+    */
+    const scale = viewOf(1280, 720).scale;
+    const reach = (index: number): { up: number; down: number } => {
+      const kind = SPRITE_KINDS[index]!;
+      const size = SPRITE_EXTENT[kind] * scale;
+      const { pen, trace } = tracingPen();
+      drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], size, 'approach');
+      const hull = trace.passes[0]!.subpaths[0]!;
+      return { up: size / 2 - Math.min(...hull.map(([, y]) => y)), down: Math.max(...hull.map(([, y]) => y)) - size / 2 };
+    };
+    const whole = reach(BOSSES.jormungandr.face!.rest);
+    const hurt = reach(lookAt(0.6)!.face.rest);
+    const last = reach(lookAt(0.3)!.face.rest);
+    expect(hurt.up - whole.up, `the void phase's horns reach ${(hurt.up - whole.up).toFixed(1)}px further — not longer`).toBeGreaterThan(2);
+    expect(last.up - hurt.up, `the lightning phase's horns reach ${(last.up - hurt.up).toFixed(1)}px further again — not longer again`).toBeGreaterThan(1);
+    for (const [name, stage] of [
+      ['void', hurt],
+      ['lightning', last],
+    ] as const) {
+      expect(Math.abs(stage.down - whole.down), `the ${name} phase's skull is a different size below the horns — the head grew, not the horns`).toBeLessThan(0.5);
+    }
+    // And every face of a phase wears that phase's horns, or they would shrink each time the jaw moved.
+    for (const fraction of [0.6, 0.3]) {
+      const face = lookAt(fraction)!.face;
+      const tall = reach(face.rest).up;
+      for (const other of [face.up, face.down, face.gape, face.shut]) {
+        expect(Math.abs(reach(other).up - tall), `a face at ${fraction} wears different horns from its resting one`).toBeLessThan(1);
+      }
+    }
+  });
+
+  it('and the red lightning is through the lightning phase’s aura, on some of its frames and not all — and never through the void phase’s', () => {
+    /*
+      *"A super saiyan red lightning flicker through the aura."* A flicker is on and off; a bolt on
+      every frame is a second aura drawn in red. Read off the trace of the real drawing: a stroke is
+      lightning, and the aura's own flame is fills.
+    */
+    const strokesIn = (index: number): number => {
+      const kind = SPRITE_KINDS[index]!;
+      const { pen, trace } = tracingPen();
+      drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], SPRITE_EXTENT[kind] * 8, 'approach');
+      return trace.inks.length;
+    };
+    const hurt = lookAt(0.6)!.aura!.frames.map(strokesIn);
+    const last = lookAt(0.3)!.aura!.frames.map(strokesIn);
+    expect(hurt.every((n) => n === 0), 'the void phase’s aura has lightning in it before the lightning phase').toBe(true);
+    expect(last.some((n) => n > 0), 'the lightning phase’s aura has no lightning in it').toBe(true);
+    expect(last.some((n) => n === 0), 'every frame of the lightning phase’s aura is lit, so it glows red rather than flickering').toBe(true);
   });
 });

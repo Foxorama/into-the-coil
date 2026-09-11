@@ -68,8 +68,8 @@ export const PROBES = [
       // the last phase throws ONE, which is fewer.
       // And by 0248, which gave every phase a shot and an attack of its own.
       // And by 0269, which gave the harrow three phases paced to the eagle's.
-      find: "      { upTo: 0.33, fireEvery: 48, shots: 7, spread: 1.4, patrolScale: 2.2, stance: { kind: 'volley' }, shot: null, attack: null },",
-      replace: "      { upTo: 0.33, fireEvery: 48, shots: 1, spread: 1.4, patrolScale: 2.2, stance: { kind: 'volley' }, shot: null, attack: null },",
+      find: "      { upTo: 0.33, fireEvery: 48, shots: 7, spread: 1.4, patrolScale: 2.2, stance: { kind: 'volley' }, look: null, shot: null, attack: null },",
+      replace: "      { upTo: 0.33, fireEvery: 48, shots: 1, spread: 1.4, patrolScale: 2.2, stance: { kind: 'volley' }, look: null, shot: null, attack: null },",
     },
   },
   /*

@@ -407,6 +407,36 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   boss8Gape: 'enemy',
   boss8Shut: 'enemy',
   serpentBody: 'enemy',
+  // The same skull with its horns grown — 0305. What it IS has not changed.
+  boss8Horn2: 'enemy',
+  boss8Horn2Up: 'enemy',
+  boss8Horn2Down: 'enemy',
+  boss8Horn2Gape: 'enemy',
+  boss8Horn2Shut: 'enemy',
+  boss8Horn3: 'enemy',
+  boss8Horn3Up: 'enemy',
+  boss8Horn3Down: 'enemy',
+  boss8Horn3Gape: 'enemy',
+  boss8Horn3Shut: 'enemy',
+  /*
+    ⚠️ **THE AURA MEANS NOTHING, SO IT WEARS AN INK THAT MEANS NOTHING — 0305.** It is in no pairing
+    and has no reach, exactly as the exhaust is, and the exhaust is `flame` for the same reason: a
+    decoration ink (0194) is the promise that nothing the player must find is drawn in it. `glass` is
+    the deep cold blue, which is what the aura is at its roots; the paint itself is the lord's own,
+    in `paintSerpentAura`.
+  */
+  serpentAura0: 'glass',
+  serpentAura1: 'glass',
+  serpentAura2: 'glass',
+  serpentAura3: 'glass',
+  serpentAura4: 'glass',
+  serpentAura5: 'glass',
+  serpentStorm0: 'glass',
+  serpentStorm1: 'glass',
+  serpentStorm2: 'glass',
+  serpentStorm3: 'glass',
+  serpentStorm4: 'glass',
+  serpentStorm5: 'glass',
   boss9: 'enemy',
   boss10: 'enemy',
   boss11: 'enemy',
@@ -631,6 +661,12 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   boss8GapeHit: 'impact',
   boss8ShutHit: 'impact',
   serpentBodyHit: 'impact',
+  boss8Horn2Hit: 'impact',
+  boss8Horn2GapeHit: 'impact',
+  boss8Horn2ShutHit: 'impact',
+  boss8Horn3Hit: 'impact',
+  boss8Horn3GapeHit: 'impact',
+  boss8Horn3ShutHit: 'impact',
   boss9Hit: 'impact',
   boss10Hit: 'impact',
   boss11Hit: 'impact',
@@ -3400,6 +3436,16 @@ const LORD_HULLS: readonly SpriteKind[] = LEVEL_KINDS.flatMap((k) => {
   const named = [row.sprite, row.spriteHit];
   if (row.chain !== null) named.push(row.chain.sprite, row.chain.spriteHit);
   if (row.face !== null) named.push(...Object.values(row.face));
+  /*
+    ⚠️ **AND WHAT EVERY PHASE'S LOOK NAMES — 0305**, on this list's own terms: the horned faces and the
+    aura's frames are this lord's too, and they are named on a phase rather than on the row. An
+    `Aura`'s other fields are numbers that are not sprites, so its frames are named and it is not walked.
+  */
+  for (const phase of row.phases) {
+    if (phase.look === null) continue;
+    named.push(...Object.values(phase.look.face));
+    if (phase.look.aura !== null) named.push(...phase.look.aura.frames);
+  }
   return named.map((index) => SPRITE_KINDS[index]!);
 });
 
@@ -3546,6 +3592,61 @@ const MOUTH: readonly Pt[] = [
 const toothOf = ([tip, a, b]: Fang): Pt[] => [a, tip, tip, b];
 
 /**
+ * The skull's two horns, each as its tip and the two roots it rises from, front root first — 0284's,
+ * and grown by 0305.
+ *
+ * ⚠️ **A HORN GROWS ALONG ITS OWN RAKE, FROM BETWEEN ITS ROOTS.** The tip moves out along the line from
+ * the middle of its base through where it points now, and the roots stay where they are: a longer
+ * horn on the same base, which is what reads as the same animal becoming more dangerous rather than
+ * as a different head. Its tip is compared by IDENTITY in `grown`, which is why the skull splices
+ * these points rather than repeating their numbers.
+ */
+type Horn = readonly [Pt, Pt, Pt];
+const HORNS: readonly Horn[] = [
+  [[0.78, -0.82], [0.46, -0.5], [0.24, -0.6]],
+  [[0.46, -0.9], [0.2, -0.62], [-0.02, -0.68]],
+];
+
+/**
+ * How long the horns are drawn in each phase that grows them, against the length 0284 drew — 0305.
+ *
+ * ⚠️ **ASKED FOR AS A LADDER**: *"it's horns grow longer"* at the void phase, *"a bit longer again"* at
+ * the lightning. Half again, then twice: the first step the bigger, because it is the one that says
+ * *the animal has changed*, and the second a further third, which is *a bit longer again*.
+ */
+const HORN_GROWTH = { 2: 1.5, 3: 2 } as const;
+
+/** A point of the skull with its horns grown by `grow` — the identity for every point but a tip. */
+function grown(p: Pt, grow: number): Pt {
+  if (grow === 1) return p;
+  for (const [tip, a, b] of HORNS) {
+    if (p !== tip) continue;
+    const mx = (a[0] + b[0]) / 2;
+    const my = (a[1] + b[1]) / 2;
+    return [mx + (tip[0] - mx) * grow, my + (tip[1] - my) * grow];
+  }
+  return p;
+}
+
+/**
+ * Which skull a serpent head kind is: its jaw, where its pupil looks, how long its horns are, and how
+ * much bigger its box is than `boss8`'s — or `null` for a kind that is not one — 0305.
+ *
+ * ⚠️ **ONE READING OF THE NAME, FOR THE THREE PLACES THAT NEED IT.** The drawing, the hit wash's cavity
+ * and the outline's width all have to agree on which skull this is; 0285 derived the jaw from the name
+ * in two places, and the moment a longer-horned face existed both of those readings were wrong in
+ * different ways — `startsWith('boss8Gape')` is false of `boss8Horn2Gape`.
+ */
+function skullOf(kind: SpriteKind): { jaw: Jaw; gaze: number; grow: number; box: number } | null {
+  if (!kind.startsWith('boss8')) return null;
+  const face = kind.replace(/Hit$/, '');
+  const jaw: Jaw = face.endsWith('Gape') ? 'gape' : face.endsWith('Shut') ? 'shut' : 'rest';
+  const gaze = face.endsWith('Up') ? -1 : face.endsWith('Down') ? 1 : 0;
+  const grow = face.startsWith('boss8Horn3') ? HORN_GROWTH[3] : face.startsWith('boss8Horn2') ? HORN_GROWTH[2] : 1;
+  return { jaw, gaze, grow, box: SPRITE_EXTENT[kind] / SPRITE_EXTENT.boss8 };
+}
+
+/**
  * The skull, closed off at the neck — the whole of `boss8` since 0283.
  *
  * ⚠️ **THE NECK IS A STRAIGHT CUT AND IT IS NEVER SEEN.** `SERPENT_SKULL` is an arc that used to run
@@ -3590,12 +3691,17 @@ const SKULL_UPPER: readonly Pt[] = [
     pair of root points a seventh of the skull apart and threw the tip a third of it away, which
     bakes as a pair of antennae — 0277's own finding about rootless spines, in a second disguise.
   */
-  [0.46, -0.5],
-  [0.78, -0.82],
-  [0.24, -0.6],
-  [0.2, -0.62],
-  [0.46, -0.9],
-  [-0.02, -0.68],
+  /*
+    ⚠️ **AND THEY ARE `HORNS` BELOW, SPLICED IN, BECAUSE A PHASE GROWS THEM — 0305.** One description
+    of where a horn rises and where it points, so the skull that grows them is this skull and not a
+    second one typed beside it.
+  */
+  HORNS[0]![1],
+  HORNS[0]![0],
+  HORNS[0]![2],
+  HORNS[1]![1],
+  HORNS[1]![0],
+  HORNS[1]![2],
   // The brow, jutting over the eye, and the snout falling away in front of it.
   [-0.28, -0.7],
   [-0.28, -0.7],
@@ -3727,13 +3833,15 @@ function hinged(p: Pt, turn: number, ref: Pt = p): Pt {
  * from the name gives the right wedge for all three twins.
  */
 function cavityOf(ctx: Pen, f: Frame, kind: SpriteKind): void {
-  if (!kind.startsWith('boss8')) return;
-  const jaw: Jaw = kind.startsWith('boss8Gape') ? 'gape' : kind.startsWith('boss8Shut') ? 'shut' : 'rest';
-  trace(ctx, f, leant(parted(MOUTH, JAWS[jaw])));
+  const skull = skullOf(kind);
+  if (skull === null) return;
+  // In the skull's own frame, which a longer-horned face draws smaller inside a bigger box — 0305.
+  trace(ctx, { half: f.half, r: f.r / skull.box }, leant(parted(MOUTH, JAWS[skull.jaw])));
 }
 
-/** The skull wearing one of its faces — the authored drawing with its jaw swung. */
-const headOf = (jaw: Jaw): Pt[] => leant([...SKULL_UPPER, ...SKULL_LOWER.map((p) => hinged(p, JAWS[jaw]))]);
+/** The skull wearing one of its faces — the authored drawing with its jaw swung and its horns grown. */
+const headOf = (jaw: Jaw, grow = 1): Pt[] =>
+  leant([...SKULL_UPPER.map((p) => grown(p, grow)), ...SKULL_LOWER.map((p) => hinged(p, JAWS[jaw]))]);
 
 /**
  * A mark drawn ACROSS the gap, with the half of it that rides the lower jaw swung — 0285.
@@ -3892,6 +4000,131 @@ function paintSerpentNode(ctx: Pen, f: Frame, skin: FoeSkin): void {
   }
 }
 
+/*
+  ── THE AURA — 0305 ──────────────────────────────────────────────────────────────────────────────
+
+  *"A dark aura, kind of like a super saiyan aura, but dark blue and purple energy"*, and at the
+  lightning phase *"a super saiyan red lightning flicker through the aura."* One flame per node of the
+  body and one behind the skull, each blitted at the node's own swell in a layer drawn BEFORE the body
+  (`src/content/bosses.ts`'s `Aura` has why), so what the player sees is the union: a haze the animal
+  sits inside, and tongues of energy rising off its whole length.
+*/
+
+/** How wide a node's flesh is in an aura's tile, in its `r` — `FLESH`'s own arithmetic, for this box. */
+const AURA_FLESH = SERPENT_BODY_DIAMETER / (2 * 0.42 * SPRITE_EXTENT.serpentAura0);
+
+/**
+ * The aura's inks — 0305: indigo at the roots, violet through the body of the flame, a blue core.
+ *
+ * ⚠️ **LITERALS, ON `MOUTH_INK`'s TERMS.** They are what this one animal's energy looks like, not a
+ * meaning the player reads anywhere else, and a palette ink for them would be a colour every other
+ * sprite in the game could be drawn in. The high-contrast palette draws no aura at all: it has no
+ * skins, and an aura is the most decorative thing on the screen.
+ */
+const AURA_INKS = { deep: '#2a1a9a', violet: '#8a3cff', blue: '#3f6bff', core: '#d6c8ff' } as const;
+
+/**
+ * And the lightning's — 0305: *"red lightning."* A hot red with a near-white core, which is what a
+ * bolt looks like at the size a flame is drawn, and nothing like `enemy`'s pink-red at a glance
+ * because it is only ever a stroke a pixel or two wide inside a violet haze.
+ */
+const STORM_INKS = { glow: '#ff2238', core: '#ffe4e4' } as const;
+
+/**
+ * Which of a storm's frames carry lightning — 0305. Two of six, so any one flame crackles a third of
+ * the time and the whole animal is never lit at once: a FLICKER through the aura, as asked, rather
+ * than a second aura in red.
+ */
+const STORM_LIT: readonly number[] = [0, 3];
+
+/**
+ * One flame of the serpent's aura — frame `frame` of six, with red lightning through it if `storm`.
+ *
+ * ⚠️ **SEEDED BY THE FRAME, PER 0021**, so a frame is the same flame on every machine and after every
+ * re-bake, and six frames are six different flames rather than one flame at six alphas — which is
+ * what makes them flicker rather than pulse.
+ */
+function paintSerpentAura(ctx: Pen, f: Frame, frame: number, storm: boolean): void {
+  const rng = makeRng('aura').stream(`serpent/${frame}`);
+  const R = AURA_FLESH;
+  /*
+    ⚠️ **THE HAZE IS THE AURA AND THE TONGUES ARE ITS EDGE, AND THE FIRST BAKE HAD THEM THE OTHER WAY
+    ROUND.** Photographed at the shipped camera, a faint haze under five hard-cornered tongues a node
+    came back as a purple sawtooth ruled along the animal's back — a crest of spines, which is 0277's
+    *rootless spines* finding in a third disguise, and nothing like energy. So the haze is what the
+    body sits INSIDE now, thick enough to read below the belly as well as above the back, and the
+    tongues are soft: curves through their samples rather than corners, fewer, of very different
+    heights, each a stack of four fading layers so its edge is a falloff and not a line.
+  */
+  glow(ctx, f, AURA_INKS.deep, 0, -R * 0.2, R * 2.05, 0.8);
+  glow(ctx, f, AURA_INKS.violet, 0, -R * 0.1, R * 1.7, 0.7);
+  glow(ctx, f, AURA_INKS.blue, 0, -R * 0.45, R * 1.3, 0.5);
+  /*
+    ⚠️ **THE TONGUES RISE FROM THE UPPER ARC AND GO STRAIGHT UP**, whatever the arc's angle at their
+    root, because energy rising off a body rises: a flame that left the flesh along its own normal
+    would fan out like a sunburst and read as spines. Rooted inside the flesh so the node covers the
+    foot, and the tip is a point written twice — `curveLoop` smooths a lone sample into a bump.
+  */
+  const lick = (colour: string, points: readonly Pt[], alpha: number): void => {
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = colour;
+    ctx.beginPath();
+    curveLoop(ctx, f, points);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  };
+  for (let i = 0; i < 4; i++) {
+    const at = -Math.PI / 2 + (i - 1.5) * 0.62 + rng.range(-0.2, 0.2);
+    const rx = Math.cos(at) * R * 0.55;
+    const ry = Math.sin(at) * R * 0.55;
+    // Up to 1.85 of the flesh above a root 0.55 up it: the tallest outer tongue stops at 1.1 of `r`,
+    // inside the 1.16 where the next bitmap in the atlas begins (`tests/accents.test.ts`).
+    const high = R * rng.range(0.7, 1.85);
+    const lean = R * rng.range(-0.35, 0.35);
+    const wide = R * rng.range(0.34, 0.52);
+    // A flame is widest a third of the way up and bends as it climbs: the lean arrives at the tip.
+    const tongue = (scale: number): Pt[] => [
+      [rx - wide * 0.7 * scale, ry + wide * 0.4],
+      [rx - wide * scale + lean * 0.1, ry - high * 0.3 * scale],
+      [rx - wide * 0.45 * scale + lean * 0.55, ry - high * 0.68 * scale],
+      [rx + lean * scale, ry - high * scale],
+      [rx + lean * scale, ry - high * scale],
+      [rx + wide * 0.4 * scale + lean * 0.6, ry - high * 0.62 * scale],
+      [rx + wide * 0.9 * scale + lean * 0.12, ry - high * 0.26 * scale],
+      [rx + wide * 0.7 * scale, ry + wide * 0.4],
+    ];
+    lick(AURA_INKS.deep, tongue(1.08), 0.35);
+    lick(AURA_INKS.violet, tongue(0.92), 0.4);
+    lick(AURA_INKS.blue, tongue(0.62), 0.4);
+    lick(AURA_INKS.core, tongue(0.32), 0.45);
+  }
+  if (!storm || !STORM_LIT.includes(frame)) return;
+  /*
+    ⚠️ **THE LIGHTNING FORKS THROUGH THE FLAME AND NOT ROUND IT**: rooted on the flesh and climbing
+    through the tongues, jagged at every joint, with one branch off it — the arc's own figure (0233)
+    in the other ink, stroked twice for a glow and a core.
+  */
+  const bolt: Pt[] = [];
+  let x = rng.range(-0.6, 0.6) * R;
+  let y = -R * 0.7;
+  bolt.push([x, y]);
+  for (let j = 0; j < 5; j++) {
+    x += rng.range(-0.35, 0.35) * R;
+    y -= rng.range(0.2, 0.34) * R;
+    bolt.push([x, y]);
+  }
+  const fork = bolt[2]!;
+  const branch: Pt[] = [fork, [fork[0] + rng.range(0.25, 0.45) * R * (rng.range(0, 1) < 0.5 ? -1 : 1), fork[1] - R * 0.3], [fork[0] + rng.range(-0.2, 0.2) * R, fork[1] - R * 0.55]];
+  /*
+    ⚠️ **BOLDER THAN THE FIRST BAKE, WHICH PHOTOGRAPHED AS A FAINT PINK SCRIBBLE** inside the haze
+    once the haze was thick enough to be an aura — the red has to win against violet at a node's size.
+  */
+  for (const line of [bolt, branch]) {
+    seam(ctx, f, STORM_INKS.glow, 0.085, line, 0.7);
+    seam(ctx, f, STORM_INKS.core, 0.03, line, 1);
+  }
+}
+
 /** A run of points along an arc of a circle about the node's centre, from `from` to `to` in turns. */
 function arcOf(radius: number, from: number, to: number): Pt[] {
   const out: Pt[] = [];
@@ -3950,7 +4183,7 @@ function arcOf(radius: number, from: number, to: number): Pt[] {
  * first pass drew a fully-detailed head that read as a blunt stump"* — a head against open space
  * needs its own light, not only its outline.
  */
-function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin, jaw: Jaw, gaze: number): void {
+function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin, jaw: Jaw, gaze: number, grow = 1): void {
   const turn = JAWS[jaw];
   /** A mark drawn across the gap — the mouth interior and the tongue, and nothing else. */
   const swung = (ps: readonly Pt[]): Pt[] => parted(ps, turn);
@@ -3972,7 +4205,7 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin, jaw: Jaw, gaze: num
     ctx.globalAlpha = alpha;
     ctx.fillStyle = skin.lit;
     ctx.beginPath();
-    curveLoop(ctx, f, headOf(jaw).map(([x, y]) => [x * swell, y * swell]));
+    curveLoop(ctx, f, headOf(jaw, grow).map(([x, y]) => [x * swell, y * swell]));
     ctx.fill('evenodd');
     ctx.globalAlpha = 1;
   }
@@ -3995,7 +4228,7 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin, jaw: Jaw, gaze: num
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
   // One light direction across the whole animal, upper-left — the same one every node is lit from.
-  shaded(ctx, f, lean([0, -0.7]), lean([0, 0.6]), shade(skin.hull, 0.24), shade(skin.hull, -0.42), headOf(jaw), 1, true);
+  shaded(ctx, f, lean([0, -0.7]), lean([0, 0.6]), shade(skin.hull, 0.24), shade(skin.hull, -0.42), headOf(jaw, grow), 1, true);
   /*
     ⚠️ **THE CROWN IS A PLANE AND NOT A PATCH** — 0277 learned it and it is the same here. The top of
     the skull catches the light as one surface running from the horns to the snout, with the side of
@@ -5536,40 +5769,55 @@ export function drawKind(
       one shadowed plate, one lit edge and an eye, and no more until each boss's own decision says
       what its picture is for.
     */
+    case 'boss8':
+    case 'boss8Hit':
     case 'boss8Up':
     case 'boss8Down':
     case 'boss8Gape':
     case 'boss8GapeHit':
     case 'boss8Shut':
-    case 'boss8ShutHit': {
+    case 'boss8ShutHit':
+    case 'boss8Horn2':
+    case 'boss8Horn2Hit':
+    case 'boss8Horn2Up':
+    case 'boss8Horn2Down':
+    case 'boss8Horn2Gape':
+    case 'boss8Horn2GapeHit':
+    case 'boss8Horn2Shut':
+    case 'boss8Horn2ShutHit':
+    case 'boss8Horn3':
+    case 'boss8Horn3Hit':
+    case 'boss8Horn3Up':
+    case 'boss8Horn3Down':
+    case 'boss8Horn3Gape':
+    case 'boss8Horn3GapeHit':
+    case 'boss8Horn3Shut':
+    case 'boss8Horn3ShutHit': {
       /*
-        THE SERPENT'S OTHER FACES — 0285. One skull, its jaw hinged and its pupil moved.
-        `boss8Up` and `boss8Down` are the same silhouette watching a ship above or below its own
-        lane; `boss8Gape` is the strike, jaw wide with the throat red and the tongue out; and
-        `boss8Shut` is the snap, jaw closed on a ship crossing in front of the head.
-      */
-      const jaw: Jaw = kind.startsWith('boss8Gape') ? 'gape' : kind.startsWith('boss8Shut') ? 'shut' : 'rest';
-      const gaze = kind === 'boss8Up' ? -1 : kind === 'boss8Down' ? 1 : 0;
-      curveLoop(ctx, f, headOf(jaw));
-      if (skin !== null) ctx.fillStyle = skin.hull;
-      seal(ctx);
-      if (skin !== null) paintSerpentHead(ctx, f, skin, jaw, gaze);
-      return;
-    }
-    case 'boss8':
-    case 'boss8Hit':
-      /*
-        THE SERPENT'S SKULL — 0283, drawn for menace by 0284 and given faces by 0285. This is the
-        resting one: jaw part-open, looking straight down its own lane.
+        THE SERPENT'S SKULL — 0283, drawn for menace by 0284 and given faces by 0285. One skull, its
+        jaw hinged and its pupil moved: `boss8` rests, jaw part-open, looking straight down its own
+        lane; `boss8Up` and `boss8Down` are the same silhouette watching a ship above or below it;
+        `boss8Gape` is the strike, jaw wide with the throat red and the tongue out; and `boss8Shut`
+        is the snap, jaw closed on a ship crossing in front of the head.
 
         The outline is a CURVE — `curveLoop` rather than `trace` — so the snout and the brow are the
         curves a skull has rather than the corners its samples are.
+
+        ⚠️ **AND SINCE 0305 THE SAME SEVEN FACES WITH THE HORNS GROWN, TWICE.** `skullOf` reads which
+        from the name, once for the drawing and the wash alike. A longer-horned face is `boss8`'s own
+        drawing in a bigger box — the frame is scaled back by the box, the ship's tiers' pattern — and
+        its outline is `boss8`'s width, or the head's edge would thicken at the phase change as if the
+        animal had been redrawn rather than grown.
       */
-      curveLoop(ctx, f, headOf('rest'));
+      const skull = skullOf(kind)!;
+      const fs: Frame = { half, r: r / skull.box };
+      ctx.lineWidth = Math.max(1, (size / skull.box) * 0.04);
+      curveLoop(ctx, fs, headOf(skull.jaw, skull.grow));
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
-      if (skin !== null) paintSerpentHead(ctx, f, skin, 'rest', 0);
+      if (skin !== null) paintSerpentHead(ctx, fs, skin, skull.jaw, skull.gaze, skull.grow);
       return;
+    }
     case 'serpentBody':
     case 'serpentBodyHit':
       /*
@@ -5590,6 +5838,25 @@ export function drawKind(
       if (skin !== null) ctx.fillStyle = skin.hull;
       ctx.fill('evenodd');
       if (skin !== null) paintSerpentNode(ctx, f, skin);
+      return;
+    case 'serpentAura0':
+    case 'serpentAura1':
+    case 'serpentAura2':
+    case 'serpentAura3':
+    case 'serpentAura4':
+    case 'serpentAura5':
+    case 'serpentStorm0':
+    case 'serpentStorm1':
+    case 'serpentStorm2':
+    case 'serpentStorm3':
+    case 'serpentStorm4':
+    case 'serpentStorm5':
+      /*
+        ONE FLAME OF THE SERPENT'S AURA — 0305. No hull and no outline: it is energy, on the
+        exhaust's terms, and the body it rises off is the node drawn over it. Nothing at all in a
+        palette with no skins, which is the high-contrast one.
+      */
+      if (skin !== null) paintSerpentAura(ctx, f, Number(kind.slice(-1)), kind.startsWith('serpentStorm'));
       return;
     case 'boss9':
     case 'boss9Hit':

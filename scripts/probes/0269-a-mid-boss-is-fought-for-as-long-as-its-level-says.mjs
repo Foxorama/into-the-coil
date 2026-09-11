@@ -82,9 +82,9 @@ export const PROBES = [
     guard: 'and a bare window on one outlasts the death it runs into',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "      { upTo: 0.33, fireEvery: 36, shots: 7, spread: 1.8, patrolScale: 1.2, stance: { kind: 'bare', damageScale: 3 }, shot: null, attack: null },",
+      find: "      { upTo: 0.33, fireEvery: 36, shots: 7, spread: 1.8, patrolScale: 1.2, stance: { kind: 'bare', damageScale: 3 }, look: null, shot: null, attack: null },",
       replace:
-        "      { upTo: 0.33, fireEvery: 36, shots: 7, spread: 1.8, patrolScale: 1.2, stance: { kind: 'bare', damageScale: 9 }, shot: null, attack: null },",
+        "      { upTo: 0.33, fireEvery: 36, shots: 7, spread: 1.8, patrolScale: 1.2, stance: { kind: 'bare', damageScale: 9 }, look: null, shot: null, attack: null },",
     },
   },
 ];

@@ -12,8 +12,8 @@ export const PROBES = [
     guard: 'whole, it throws a forward arc of FIVE globes',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "      { upTo: 1, fireEvery: 84, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },",
-      replace: "      { upTo: 1, fireEvery: 84, shots: 3, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, shot: null, attack: null },",
+      find: "      { upTo: 1, fireEvery: 84, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },",
+      replace: "      { upTo: 1, fireEvery: 84, shots: 3, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },",
     },
   },
   {

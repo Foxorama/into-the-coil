@@ -83,8 +83,8 @@ export const PROBES = [
       // phase firing slower than its first.
       // And by 0248, which gave every phase a shot and an attack of its own.
       // And by 0269, which gave the sentinel three phases paced to the serpent's.
-      find: "      { upTo: 0.33, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 1.6, stance: { kind: 'volley' }, shot: null, attack: null },",
-      replace: "      { upTo: 0.33, fireEvery: 120, shots: 5, spread: 0.9, patrolScale: 1.6, stance: { kind: 'volley' }, shot: null, attack: null },",
+      find: "      { upTo: 0.33, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 1.6, stance: { kind: 'volley' }, look: null, shot: null, attack: null },",
+      replace: "      { upTo: 0.33, fireEvery: 120, shots: 5, spread: 0.9, patrolScale: 1.6, stance: { kind: 'volley' }, look: null, shot: null, attack: null },",
     },
   },
   {
