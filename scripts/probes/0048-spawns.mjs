@@ -44,7 +44,8 @@ export const PROBES = [
     guard: 'retires a body that drifts off either across edge',
     edit: {
       path: 'src/sim/entity.ts',
-      find: '    if (e.across < ACROSS_CULL_MIN || e.across > ACROSS_CULL_MAX) pool.releaseAt(i);',
+      // ⚠️ Re-anchored by 0306, which made the cull an argument a placed pool may turn off.
+      find: '    if (acrossCull && (e.across < ACROSS_CULL_MIN || e.across > ACROSS_CULL_MAX)) pool.releaseAt(i);',
       replace: '    void ACROSS_CULL_MIN;',
     },
   },

@@ -56,8 +56,9 @@ export const PROBES = [
     guard: 'and it keeps every segment it was authored with, through the ARRIVAL',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    stepEntities(w.bossBody, w.cameraAlong, Number.POSITIVE_INFINITY);',
-      replace: '    stepEntities(w.bossBody, w.cameraAlong);',
+      // ⚠️ Re-anchored by 0306, which took the `across` cull off the body too; the break is the leading one.
+      find: '    stepEntities(w.bossBody, w.cameraAlong, Number.POSITIVE_INFINITY, false);',
+      replace: '    stepEntities(w.bossBody, w.cameraAlong, undefined, false);',
     },
   },
   {

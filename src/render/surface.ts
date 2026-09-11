@@ -27,12 +27,22 @@ export interface Surface {
   /** Wipe the frame. Once per frame, before anything else. */
   clear(): void;
   /**
-   * Draw one baked bitmap, centred on `(x, y)` in CSS pixels.
+   * Draw one baked bitmap, centred on `(x, y)` in CSS pixels, turned `turn` radians from the way it
+   * was baked.
    *
    * `sprite` is an index into the baked atlas — a number rather than a name, because this is read
    * five hundred times a frame and a string key is a hash lookup each time.
+   *
+   * ⚠️ **`turn` IS AN ARGUMENT AND NOT A FOURTH VERB — `docs/decisions/0306-the-serpent-coils-in.md`.**
+   * *"`blit` cannot rotate"* was true for three hundred decisions and was built around rather than
+   * argued for: a disc was chosen for the serpent's body because it looks the same at every angle.
+   * The entrance flies the serpent round a ring, and a head that cannot turn flies half of it
+   * backwards. A turned blit is still ONE draw of ONE baked bitmap, so it hides no work behind the
+   * count this file's opening note exists to protect; what it costs is a transform, and only for the
+   * few entities whose turn is not zero. A world angle is a screen angle in both orientations,
+   * because each maps the lane onto the screen by a proper rotation.
    */
-  blit(sprite: number, x: number, y: number, scale: number): void;
+  blit(sprite: number, x: number, y: number, scale: number, turn?: number): void;
   /**
    * Stroke a polyline through the first `count` points of `points` — `x0, y0, x1, y1, …` in CSS
    * pixels — `width` pixels wide at `alpha`, in the bolt ink the backend was given. A `count` of

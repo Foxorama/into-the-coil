@@ -102,10 +102,10 @@ export const PROBES = [
     guard: 'draws exactly one call per live entity',
     edit: {
       path: 'src/render/scene.ts',
-      find: '    surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell);',
+      find: '    surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell, turn);',
       replace:
-        '    surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell);\n' +
-        '    surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell);',
+        '    surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell, turn);\n' +
+        '    surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell, turn);',
     },
   },
 ];

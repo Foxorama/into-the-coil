@@ -25,7 +25,7 @@ import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { INK_OF, drawKind } from '../src/render/bake.ts';
 import { tracingPen } from './paths.ts';
-import { BOLT_STEPS } from '../src/render/scene.ts';
+import { BOLT_STEPS, paintScene } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { ACROSS_SPAN, cullPlayerShotAlong, viewOf } from '../src/sim/camera.ts';
 import { reset } from '../src/sim/entity.ts';
@@ -53,12 +53,22 @@ function serpentAt(fraction: number, difficulty?: DifficultyKind): {
 } {
   const { world, stick } = playableWorld(SERPENT_ONLY, difficulty);
   const frame = new GameFrame(world);
-  for (let i = 0; i < 900 && (world.bossPool.size === 0 || i < 700); i++) {
+  /*
+    ⚠️ **PAST ITS ENTRANCE AND THEN ITS ARRIVAL — 0306.** This waited 700 steps, which was the arrival
+    with room to spare; the entrance is about six and a half seconds in front of it now, so the count
+    starts when the entrance hands over. The ship is untouchable as well as healed: the entrance is
+    fully live, and a ship killed by it would take the run through a death beat this fixture is not about.
+  */
+  let arrived = -1;
+  for (let i = 0; i < 2400 && (arrived < 0 || i < arrived + 700); i++) {
     world.ship.health = world.shipRow.health;
+    world.ship.invulnFor = 2;
     if (world.bossPool.size > 0) world.bossPool.at(0).fireIn = 999;
     frame.step();
+    if (arrived < 0 && world.bossPool.size > 0 && world.bossEntering < 0) arrived = i;
   }
   expect(world.bossPool.size, 'the serpent never arrived').toBe(1);
+  expect(world.bossEntering, 'the serpent is still making its entrance').toBe(-1);
   world.bossPool.at(0).health = world.bossFullHealth * fraction;
   return { world, frame, stick };
 }
@@ -1227,5 +1237,234 @@ describe('0305 — the serpent darkens', () => {
     expect(hurt.every((n) => n === 0), 'the void phase’s aura has lightning in it before the lightning phase').toBe(true);
     expect(last.some((n) => n > 0), 'the lightning phase’s aura has no lightning in it').toBe(true);
     expect(last.some((n) => n === 0), 'every frame of the lightning phase’s aura is lit, so it glows red rather than flickering').toBe(true);
+  });
+});
+
+describe('0306 — the serpent coils in', () => {
+  /** One step of the entrance, as the picture has it: every node and the head, in the camera's frame. */
+  interface Pose {
+    entering: number;
+    head: { along: number; across: number; turn: number; velAlong: number; velAcross: number };
+    body: { along: number; across: number; radius: number }[];
+    /** The furthest any node is drawn moving between two frames of this step, in world units. */
+    jump: number;
+  }
+
+  /**
+   * Fly the serpent from the moment it is put on the field until its entrance has handed over, with
+   * an untouchable ship that holds its fire, recording every step.
+   */
+  function flyEntrance(): { world: ReturnType<typeof playableWorld>['world']; frame: GameFrame; poses: Pose[] } {
+    const { world } = playableWorld(SERPENT_ONLY);
+    const frame = new GameFrame(world);
+    const poses: Pose[] = [];
+    for (let i = 0; i < 2400; i++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      frame.step();
+      if (world.bossPool.size === 0) continue;
+      const head = world.bossPool.at(0);
+      poses.push({
+        entering: world.bossEntering,
+        head: { along: head.along - world.cameraAlong, across: head.across, turn: head.turn, velAlong: head.velAlong - world.scrollPerStep, velAcross: head.velAcross },
+        body: Array.from({ length: world.bossBody.size }, (_, k) => {
+          const n = world.bossBody.at(k);
+          return { along: n.along - world.cameraAlong, across: n.across, radius: n.radius };
+        }),
+        jump: Math.max(0, ...Array.from({ length: world.bossBody.size }, (_, k) => {
+          const n = world.bossBody.at(k);
+          return Math.hypot(n.along - n.prevAlong, n.across - n.prevAcross);
+        })),
+      });
+      if (world.bossEntering < 0 && poses.length > 1) break;
+    }
+    return { world, frame, poses };
+  }
+
+  it('THE REPORTED ONE: it flies in, coils ROUND the middle of the screen leaving the centre open, goes off, and then arrives where it always has', () => {
+    /*
+      ⚠️ **ASKED FOR**: *"can we make it fly onto screen, do a coil, fly off and then enter where it is
+      now?"* — and *"there's needs to be a gap in the center of the screen. Players can learn the
+      pattern."* Four claims, each measured off the animal the frame actually flew, in world units
+      the player's own lane is measured in (0027): the head goes all the way round a point; nothing
+      of the animal comes within a third of the lane of that point, so the middle is a place to be;
+      the whole animal is off the screen before it comes back; and then it is the fight it always was.
+    */
+    const entrance = BOSSES.jormungandr.entrance!;
+    expect(entrance, 'the serpent makes no entrance').not.toBeNull();
+    const { world, frame, poses } = flyEntrance();
+    const flying = poses.filter((p) => p.entering >= 0);
+    expect(flying.length, 'the serpent arrived without an entrance').toBeGreaterThan(60);
+    // Round: the head's bearing about the coil's centre, unwrapped, turns through a whole circle.
+    const { along: cx, across: cy } = entrance.centre;
+    let wound = 0;
+    for (let i = 1; i < flying.length; i++) {
+      let d = Math.atan2(flying[i]!.head.across - cy, flying[i]!.head.along - cx) - Math.atan2(flying[i - 1]!.head.across - cy, flying[i - 1]!.head.along - cx);
+      if (d > Math.PI) d -= 2 * Math.PI;
+      if (d < -Math.PI) d += 2 * Math.PI;
+      wound += d;
+    }
+    expect(Math.abs(wound), `the head went ${((Math.abs(wound) * 180) / Math.PI).toFixed(0)}° round the centre — not a coil`).toBeGreaterThan(2 * Math.PI);
+    /*
+      ⚠️ **OPEN IN THE MIDDLE, ASKED AS THE PLAYER WOULD ASK IT: DOES A SHIP SITTING THERE GET HIT?** A
+      first draft held the hole to a third of the lane, and that was a number chosen here rather than
+      a thing asked for — 0295's *a threshold answers the question before it is asked*. *"Players can
+      learn the pattern to avoid the damage"* is the claim, so the guard is the pattern learned: a live
+      ship, hurtbox and all, parked in the middle of the coil for the whole of a fully-live entrance.
+    */
+    {
+      const parked = playableWorld(SERPENT_ONLY).world;
+      const flown = new GameFrame(parked);
+      let hits = 0;
+      let seen = 0;
+      for (let i = 0; i < 2400 && !(parked.bossPool.size > 0 && parked.bossEntering < 0); i++) {
+        parked.fireIn = Number.MAX_SAFE_INTEGER;
+        parked.missileIn = Number.MAX_SAFE_INTEGER;
+        parked.ship.health = parked.shipRow.health;
+        parked.ship.invulnFor = 0;
+        parked.ship.along = parked.cameraAlong + cx;
+        parked.ship.across = cy;
+        parked.ship.prevAlong = parked.ship.along;
+        parked.ship.prevAcross = parked.ship.across;
+        flown.step();
+        if (parked.bossEntering > 0) seen++;
+        if (parked.ship.health < parked.shipRow.health) hits++;
+      }
+      expect(seen, 'the parked ship never saw the entrance, so this measures nothing').toBeGreaterThan(60);
+      expect(hits, 'a ship sitting in the middle of the coil was hit — there is no gap to learn').toBe(0);
+    }
+    // And the middle IS the middle: the coil's centre is inside the narrowest screen, in its middle third.
+    const narrowest = viewOf(1280, 720).alongSpan;
+    expect(cx / narrowest, 'the coil is not round the middle of the screen').toBeGreaterThan(1 / 3);
+    expect(cx / narrowest, 'the coil is not round the middle of the screen').toBeLessThan(2 / 3);
+    // Off: on the last step of the entrance, every node and the head are clear of the widest screen.
+    const last = flying[flying.length - 1]!;
+    const widest = viewOf(2400, 1000).alongSpan;
+    const clear = (along: number, across: number, r: number): boolean => across - r > ACROSS_SPAN || across + r < 0 || along - r > widest || along + r < 0;
+    expect(clear(last.head.along, last.head.across, BOSSES.jormungandr.radius), 'the head was still on the screen when the arrival took over').toBe(true);
+    expect(last.body.every((n) => clear(n.along, n.across, n.radius)), 'some of the body was still on the screen when the arrival took over — a jump anybody could see').toBe(true);
+    /*
+      ⚠️ **AND THE BODY IS LAID THERE, NOT DRAWN SLIDING THERE.** The step the arrival takes over, every
+      node goes from off the bottom of the screen to off its leading edge; the renderer draws between
+      where a node was and where it is, so a node that was moved rather than laid is drawn for a frame
+      across the corner in between.
+    */
+    const handed = poses[poses.indexOf(last) + 1];
+    expect(handed, 'the entrance never handed over').toBeDefined();
+    expect(handed!.jump, `a node was drawn sliding ${handed!.jump.toFixed(0)} units across the screen as the arrival took over`).toBeLessThan(5);
+    // Then where it is now: the arrival every boss has, from the place it was put on the field, to its
+    // station — within the drift and the rear its row authors.
+    for (let i = 0; i < 700; i++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      frame.step();
+    }
+    const row = BOSSES.jormungandr;
+    const band = row.drift + (row.move.kind === 'bob' ? row.move.rear : 0) + 1;
+    const standing = world.bossPool.at(0).along - world.cameraAlong;
+    expect(Math.abs(standing - row.station), `the serpent stands ${standing.toFixed(1)} units ahead after its entrance, not on its station`).toBeLessThan(band);
+  });
+
+  it('and nothing it throws, and nothing that hits it, until the fight begins — but a ship that touches it is hit', () => {
+    /*
+      ⚠️ **"NOT-SHOOTABLE, FULLY LIVE."** Driven three ways during the entrance: a pulse laid on the head
+      and on a node goes on flying and takes nothing off the serpent; the serpent throws nothing; and a
+      ship put on its body loses a life's worth of hull.
+    */
+    const { world } = playableWorld(SERPENT_ONLY);
+    const frame = new GameFrame(world);
+    for (let i = 0; i < 400 && (world.bossPool.size === 0 || world.bossEntering < 150); i++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      frame.step();
+    }
+    expect(world.bossEntering, 'the serpent is not making its entrance, so this measures nothing').toBeGreaterThan(0);
+    const boss = world.bossPool.at(0);
+    const whole = boss.health;
+    let thrown = 0;
+    for (let i = 0; i < 30; i++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      world.playerShots.clear();
+      const node = world.bossBody.at(Math.floor(world.bossBody.size / 2));
+      for (const on of [boss, node]) {
+        const shot = world.playerShots.spawn()!;
+        reset(shot, on.along, on.across, SHOTS.pulse, SHOT_INDEX.pulse);
+      }
+      const before = world.enemyShots.size;
+      frame.step();
+      thrown += Math.max(0, world.enemyShots.size - before) + world.bolts.size;
+      expect(world.playerShots.size, 'a shot laid on the serpent was spent on it — its entrance is not shootable').toBe(2);
+    }
+    expect(boss.health, 'the serpent took damage while making its entrance').toBe(whole);
+    expect(thrown, 'the serpent threw something while making its entrance').toBe(0);
+    // Fully live: the ship put on its flank.
+    const node = world.bossBody.at(Math.floor(world.bossBody.size / 2));
+    world.ship.invulnFor = 0;
+    world.ship.health = world.shipRow.health;
+    world.ship.along = node.along;
+    world.ship.across = node.across;
+    world.ship.prevAlong = node.along;
+    world.ship.prevAcross = node.across;
+    const hull = world.ship.health;
+    frame.step();
+    expect(world.ship.health, 'a ship flown into the serpent’s body during its entrance took no hit').toBeLessThan(hull);
+  });
+
+  it('and its head faces where it flies, its body turned along the coil — in the picture as well as the model', () => {
+    /*
+      ⚠️ **THE HEAD IS BAKED FACING DOWN THE LANE AND A COIL FLIES IT EVERY WAY**, which is why the
+      renderer learned to turn a bitmap (0306). What is asked is what the player sees: the turn the
+      painter is HANDED for the head, against the way the head is travelling — and zero once the fight
+      begins, where the face watches the ship rather than its own path.
+    */
+    const { poses } = flyEntrance();
+    const round = poses.filter((p) => p.entering >= 0 && Math.hypot(p.head.velAlong, p.head.velAcross) > 0.5);
+    expect(round.length, 'the head never flew, so this measures nothing').toBeGreaterThan(60);
+    let worst = 0;
+    for (const p of round) {
+      const heading = Math.atan2(p.head.velAcross, p.head.velAlong);
+      let off = p.head.turn - (heading - Math.PI);
+      off = Math.atan2(Math.sin(off), Math.cos(off));
+      worst = Math.max(worst, Math.abs(off));
+    }
+    expect((worst * 180) / Math.PI, 'the head faced somewhere other than where it was flying').toBeLessThan(6);
+    const turns = new Set(round.map((p) => Math.round(p.head.turn * 4)));
+    expect(turns.size, 'the head never turned — it flew the coil facing one way').toBeGreaterThan(4);
+
+    // The picture: a surface that keeps the turn each blit is handed, painted during the coil.
+    class Turns implements Surface {
+      readonly handed = new Map<number, number[]>();
+      clear(): void {}
+      bolt(): void {}
+      blit(sprite: number, _x: number, _y: number, _scale: number, turn = 0): void {
+        const list = this.handed.get(sprite) ?? [];
+        list.push(turn);
+        this.handed.set(sprite, list);
+      }
+    }
+    const { world } = playableWorld(SERPENT_ONLY);
+    const frame = new GameFrame(world);
+    const surface = new Turns();
+    for (let i = 0; i < 2400 && !(world.bossPool.size > 0 && world.bossEntering < 0); i++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      frame.step();
+      if (world.bossEntering > 0) paintScene(surface, world.view, world.layers, world.cameraAlong, 0.5);
+    }
+    const headTurns = surface.handed.get(BOSSES.jormungandr.sprite) ?? [];
+    expect(headTurns.length, 'the head was never painted during its entrance').toBeGreaterThan(0);
+    expect(headTurns.some((t) => Math.abs(t) > 1), 'the painter was never handed a turn for the head — it is drawn facing down the lane round the whole coil').toBe(true);
+    const bodyTurns = surface.handed.get(BOSSES.jormungandr.chain!.sprite) ?? [];
+    expect(bodyTurns.some((t) => Math.abs(t) > 1), 'the body was never turned along the coil').toBe(true);
+    // And once the fight begins the head faces down the lane again.
+    for (let i = 0; i < 60; i++) frame.step();
+    expect(world.bossPool.at(0).turn, 'the head is still turned after the entrance handed over').toBe(0);
   });
 });

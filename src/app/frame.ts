@@ -27,6 +27,7 @@ import {
   ACROSS_SPAN,
   flankAlongFor,
   FLANK_MARGIN,
+  MAX_ALONG_SPAN,
   ROAM_MAX,
   ROAM_MIN,
   cullPlayerShotAlong,
@@ -69,7 +70,7 @@ import { SHOTS, SHOT_INDEX, SHOT_ROWS, type ShotKind } from '../content/shots.ts
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, type LevelRow } from '../content/levels.ts';
-import { BOSSES, type BossRow, type SummonFrom, chainReach } from '../content/bosses.ts';
+import { BOSSES, type BossRow, type Chain, type Entrance, type SummonFrom, chainReach } from '../content/bosses.ts';
 import { type DifficultyRow, crowdFor, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, nextOnGrid } from '../content/cadence.ts';
 import {
@@ -1038,6 +1039,25 @@ export interface World {
    * parked on the centreline is not a rattle.
    */
   bossGazeSide: number;
+  /**
+   * Steps into the boss's entrance, or `-1` when it is not making one — 0306.
+   *
+   * ⚠️ **A COUNT OF STEPS AND NOT A DISTANCE, ON `holdFor`'s TERMS.** The step is fixed (0022), so a
+   * count of steps at the row's speed IS a distance along the path, and the path is a function of it
+   * rather than of anything the fight can move.
+   */
+  bossEntering: number;
+  /**
+   * Where the boss was put on the field, ahead of the camera's trailing edge — 0306. The entrance
+   * starts here, and so does the arrival after it: *"then enter where it is now."*
+   */
+  bossEntryAt: number;
+  /**
+   * Whether the body is laid somewhere new this step rather than moved there — 0306. The step the
+   * entrance hands over to the arrival puts the animal off one edge of the screen from off another,
+   * and a node interpolated between the two would be drawn for a frame across the corner in between.
+   */
+  bossSettle: boolean;
   /** Whether the current fight's boss has been put on the field. Cleared between fights. */
   bossSpawned: boolean;
   /** Whether the current fight's boss has been beaten, so the beat below is started exactly once. */
@@ -1421,7 +1441,9 @@ export class GameFrame implements Frame {
     // speed and nothing else, which is what makes the world appear to move past it.
     stepEntities(w.shipPool, w.cameraAlong);
     stepEntities(w.pickups, w.cameraAlong);
-    stepEntities(w.bossPool, w.cameraAlong);
+    // Not culled while it makes its entrance, which flies it off the bottom of the screen and past the
+    // leading edge's margin on purpose — a released head is the boss dying on its entrance (0306).
+    stepEntities(w.bossPool, w.cameraAlong, w.bossEntering >= 0 ? Number.POSITIVE_INFINITY : undefined, w.bossEntering < 0);
     /*
       The nodes keep their own `flashFor` and sprite here; `layChain` writes where they stand,
       after the head has moved, so a node interpolates from where it was to where it now is — 0283.
@@ -1437,8 +1459,12 @@ export class GameFrame implements Frame {
       `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`'s fourth rule
       exactly: the node count was solved with the boss parked on station, and the arrival is a case it
       also runs in.
+
+      ⚠️ **AND NO `across` CULL EITHER, SINCE 0306, FOR THE SAME REASON.** The entrance flies the whole
+      animal off the bottom of the screen; a node released there would be gone for the fight exactly as
+      the tail was.
     */
-    stepEntities(w.bossBody, w.cameraAlong, Number.POSITIVE_INFINITY);
+    stepEntities(w.bossBody, w.cameraAlong, Number.POSITIVE_INFINITY, false);
     layChain(w);
     // After the body is laid, so every flame is where its node is this step — 0305.
     layAura(w);
@@ -1523,7 +1549,15 @@ export class GameFrame implements Frame {
       to *how open is it*, and 0053 says the bomb is the first thing the player spends.
     */
     const open = w.bossPool.size > 0 ? openBy(phaseFor(w.bossRow, w.bossPool.at(0).health, w.bossFullHealth)) : 1;
-    killedByShots += collideInto(w.playerShots, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, bladeHits);
+    /*
+      ⚠️ **AND NONE OF IT WHILE THE BOSS MAKES ITS ENTRANCE — 0306.** *"Not-shootable, fully live"*:
+      every pairing of the player's fire with the boss and its body is skipped, so a shot passes
+      through the animal as it flies in, round and off, and nothing is flashed that took nothing. The
+      ship's own contact with it, further down, is untouched — that is the *fully live*. The arc and
+      the seekers are held off it by the same field where they choose a target.
+    */
+    const shootable = w.bossEntering < 0;
+    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, bladeHits);
     /*
       ⚠️ **AND THE ONE HOSTILE BULLET THE PLAYER CAN SHOOT AT — 0291.** Before the boss's own hull,
       because a void blast is in front of the animal that threw it and a pulse meets it first; and
@@ -1538,15 +1572,19 @@ export class GameFrame implements Frame {
       `deaths` is `null` on all three for that reason — a node has no death to log, and handing over
       `bossDeaths` would put a boss explosion at the tail every time a pulse landed there.
     */
-    collideInto(w.playerShots, w.bossBody, 1, open, IMPACT_FLASH_STEPS, null, bladeHits);
+    if (shootable) collideInto(w.playerShots, w.bossBody, 1, open, IMPACT_FLASH_STEPS, null, bladeHits);
     // What the blades landed this step, before the missiles add theirs — the `hit` cue reads it.
     const bites = bladeHits === null ? 0 : w.hits.count;
-    killedByShots += collideInto(w.missiles, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits);
-    collideInto(w.missiles, w.bossBody, 1, open, IMPACT_FLASH_STEPS, null, w.hits);
+    if (shootable) {
+      killedByShots += collideInto(w.missiles, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits);
+      collideInto(w.missiles, w.bossBody, 1, open, IMPACT_FLASH_STEPS, null, w.hits);
+    }
     // An area rather than an arrival: everything inside it, once, and nothing consumes it.
     blastInto(w.blasts, w.enemies, 1, IMPACT_FLASH_STEPS, w.deaths);
-    blastInto(w.blasts, w.bossPool, open, IMPACT_FLASH_STEPS, w.bossDeaths);
-    blastInto(w.blasts, w.bossBody, open, IMPACT_FLASH_STEPS, null);
+    if (shootable) {
+      blastInto(w.blasts, w.bossPool, open, IMPACT_FLASH_STEPS, w.bossDeaths);
+      blastInto(w.blasts, w.bossBody, open, IMPACT_FLASH_STEPS, null);
+    }
     /*
       ⚠️ **AND THE SWEEP SITS HERE, WITH THE PAIRINGS, RATHER THAN AT THE END OF THE STEP** — 0283. A
       killing blow landed on the tail has to end the fight on the step it lands. `strike` is the arc's
@@ -2308,7 +2346,8 @@ function fireArc(w: World): void {
     let toAlong: number;
     let toAcross: number;
     const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, reach, true, edge);
-    const boss = w.bossPool.size > 0 ? nearestFrom(w.bossPool, fromAlong, fromAcross, reach, false, edge) : -1;
+    // Not a boss that is still making its entrance — 0306: *"not-shootable"* is the arc's too.
+    const boss = w.bossPool.size > 0 && w.bossEntering < 0 ? nearestFrom(w.bossPool, fromAlong, fromAcross, reach, false, edge) : -1;
     /*
       ⚠️ **A VOID BLAST TAKES THE LINK BEFORE ANYTHING ELSE DOES — 0292.** Reported: *"…and that it
       sucks in the lightning from the player's cannon."* Nearest-wins would make it *may also hit*;
@@ -2697,7 +2736,8 @@ function seek(w: World, m: Entity): void {
   const from = w.cameraAlong;
   const to = w.cameraAlong + w.view.alongSpan;
   const enemy = nearestInBox(w.enemies, m.along, m.across, from, to, 0, ACROSS_SPAN);
-  const boss = w.bossPool.size > 0 ? nearestInBox(w.bossPool, m.along, m.across, from, to, 0, ACROSS_SPAN) : -1;
+  // Nor a seeker — a boss making its entrance is not a target for anything the player throws (0306).
+  const boss = w.bossPool.size > 0 && w.bossEntering < 0 ? nearestInBox(w.bossPool, m.along, m.across, from, to, 0, ACROSS_SPAN) : -1;
   let target: Entity;
   if (enemy >= 0 && (boss < 0 || nearer(w.enemies.at(enemy), w.bossPool.at(0), m.along, m.across))) target = w.enemies.at(enemy);
   else if (boss >= 0) target = w.bossPool.at(boss);
@@ -4928,10 +4968,140 @@ export function detonateArsenal(w: World, charges: number): void {
   w.onCue('blast', w.deathAcross);
 }
 
+/*
+  ── THE ENTRANCE — 0306 ──────────────────────────────────────────────────────────────────────────
+
+  *"Can we make it fly onto screen, do a coil, fly off and then enter where it is now?"* A boss whose
+  row authors an `Entrance` flies its path first, and then arrives exactly as every boss does. While
+  it flies it throws nothing, cannot be hurt by anything the player sends, and hurts a ship that
+  touches it (`src/content/bosses.ts`'s `Entrance` has the ask for all three).
+
+  ⚠️ **THE PATH IS A FUNCTION OF DISTANCE ALONG IT, AND THE BODY READS THE SAME FUNCTION.** A node is
+  where the head was a body-length ago — so there is no trail to record and none to run out of, and
+  the coil is exactly the coil the row authors rather than an approximation of it by samples.
+*/
+
+/**
+ * Where an entrance's path is `s` units along it: `ENTRANCE_AT[0]` ahead of the camera's trailing
+ * edge, `[1]` across the lane, and `[2]` the heading it travels at there — 0306.
+ *
+ * ⚠️ **A SCRATCH ARRAY RATHER THAN A RETURNED POINT**, because a point is an object and this is read
+ * twenty-seven times a step; `src/render/surface.ts` makes the same argument for two functions.
+ */
+// @setup: one scratch triple for the module's lifetime, written and read inside one call.
+const ENTRANCE_AT = new Float64Array(3);
+
+function entranceAt(e: Entrance, startAlong: number, s: number): void {
+  const r = e.radius;
+  const cx = e.centre.along;
+  const cy = e.centre.across;
+  // In along the coil's top edge from where the boss was put on the field. Behind the start, the
+  // same line carries on, which is where the tail is before the animal has flown its own length.
+  const lead = startAlong - cx;
+  if (s <= lead) {
+    ENTRANCE_AT[0] = startAlong - s;
+    ENTRANCE_AT[1] = cy - r;
+    ENTRANCE_AT[2] = Math.PI;
+    return;
+  }
+  // Round the coil from its top, toward the trailing edge first: the angle falls as the head goes.
+  const ring = e.turns * TAU * r;
+  if (s <= lead + ring) {
+    const phi = -Math.PI / 2 - (s - lead) / r;
+    ENTRANCE_AT[0] = cx + r * Math.cos(phi);
+    ENTRANCE_AT[1] = cy + r * Math.sin(phi);
+    ENTRANCE_AT[2] = Math.atan2(-Math.cos(phi), Math.sin(phi));
+    return;
+  }
+  // And straight on along the tangent it leaves by.
+  const phi = -Math.PI / 2 - e.turns * TAU;
+  const dAlong = Math.sin(phi);
+  const dAcross = -Math.cos(phi);
+  const on = s - lead - ring;
+  ENTRANCE_AT[0] = cx + r * Math.cos(phi) + dAlong * on;
+  ENTRANCE_AT[1] = cy + r * Math.sin(phi) + dAcross * on;
+  ENTRANCE_AT[2] = Math.atan2(dAcross, dAlong);
+}
+
+/**
+ * How long the whole entrance is, in units of path: in, round, and out until the TAIL is clear of
+ * the widest screen the game draws — 0306.
+ *
+ * ⚠️ **THE TAIL AND NOT THE HEAD, AND THE THICKEST GIRTH PAST THE EDGE.** The arrival that follows
+ * puts the animal back at the leading edge, so the hand-over is a jump; a jump anybody could see is a
+ * teleport, and the only place one is invisible is with every node of the body off the screen.
+ */
+function entranceLength(e: Entrance, startAlong: number, reach: number, girth: number): number {
+  const r = e.radius;
+  const phi = -Math.PI / 2 - e.turns * TAU;
+  const fromAlong = e.centre.along + r * Math.cos(phi);
+  const fromAcross = e.centre.across + r * Math.sin(phi);
+  const dAlong = Math.sin(phi);
+  const dAcross = -Math.cos(phi);
+  let out = Number.POSITIVE_INFINITY;
+  if (dAcross > 1e-9) out = Math.min(out, (ACROSS_SPAN + girth - fromAcross) / dAcross);
+  if (dAcross < -1e-9) out = Math.min(out, (fromAcross + girth) / -dAcross);
+  if (dAlong > 1e-9) out = Math.min(out, (MAX_ALONG_SPAN + girth - fromAlong) / dAlong);
+  if (dAlong < -1e-9) out = Math.min(out, (fromAlong + girth) / -dAlong);
+  return startAlong - e.centre.along + e.turns * TAU * r + out + reach;
+}
+
+/** The thickest the animal is, or nothing for a hull without a body — 0306. */
+function thickest(chain: Chain | null): number {
+  let most = 0;
+  if (chain !== null) for (let i = 0; i < chain.girth.length; i++) if (chain.girth[i]! > most) most = chain.girth[i]!;
+  return most;
+}
+
+/**
+ * One step of the entrance: the head flown to where the path is, or — once the tail is clear —
+ * handed to the arrival every boss has, at the place it was put on the field — 0306.
+ *
+ * ⚠️ **THE VELOCITY IS WHAT LANDS IT THERE**, on the bob's own terms: `stepEntities` integrates, and
+ * the renderer interpolates between where the head was and where it is, so what this owes is the
+ * rate that arrives exactly. The camera has already moved this step.
+ */
+function driveEntrance(w: World, boss: Entity): void {
+  const entrance = w.bossRow.entrance!;
+  const chain = w.bossRow.chain;
+  const total = entranceLength(entrance, w.bossEntryAt, chain === null ? 0 : chainReach(chain), thickest(chain));
+  w.bossEntering += 1;
+  const s = w.bossEntering * entrance.speed;
+  if (s >= total) {
+    /*
+      ⚠️ **"THEN ENTER WHERE IT IS NOW."** The fight starts from here exactly as a boss with no
+      entrance starts from its spawn: at the place it was put on the field, in the middle of the lane,
+      on the fire grid from its first shot (0096). The body is laid there this step rather than moved
+      there — `bossSettle` — so nothing is drawn between two edges of the screen.
+    */
+    w.bossEntering = -1;
+    boss.along = w.cameraAlong + w.bossEntryAt;
+    boss.across = ACROSS_SPAN / 2;
+    boss.velAlong = 0;
+    boss.velAcross = 0;
+    boss.turn = 0;
+    boss.bobPhase = 0;
+    boss.fireIn = nextOnGrid(w.steps, fireGapFor(w.bossRow.phases[0]!.fireEvery, w.difficulty));
+    w.bossTrail.fill(boss.across);
+    w.bossSettle = true;
+  } else {
+    entranceAt(entrance, w.bossEntryAt, s);
+    boss.velAlong = w.cameraAlong + ENTRANCE_AT[0]! - boss.along;
+    boss.velAcross = ENTRANCE_AT[1]! - boss.across;
+  }
+  w.bossOffset = boss.along + boss.velAlong - w.cameraAlong;
+  w.bossAcross = boss.across + boss.velAcross;
+}
+
 /** The boss, if there is one on the field. Its whole behaviour lives in `src/app/boss.ts`. */
 function driveBoss(w: World): void {
   if (w.bossPool.size === 0) return;
   const boss = w.bossPool.at(0);
+  // Flying its entrance, which is the whole of what it does until the fight begins — 0306.
+  if (w.bossEntering >= 0) {
+    driveEntrance(w, boss);
+    return;
+  }
   /*
     ── THE PHASE CHANGE, WHICH THE PICTURE HAS NEVER MENTIONED ───────────────────────────────────
 
@@ -5364,6 +5534,31 @@ function layChain(w: World): void {
       node.damage = w.bossRow.damage;
     }
   }
+  /*
+    ⚠️ **AND WHILE IT MAKES ITS ENTRANCE THE BODY FOLLOWS, BECAUSE THEN THE HEAD TRAVELS — 0306.** The
+    paragraph above this function says a chain is PLACED because a boss holds station, so the path
+    its head records is a line swept back and forth. An entrance is the one stretch of a fight where
+    that is false: the head flies a ring and away, and the body is where the head was a body-length
+    ago — which is what a coil is. Every node, and the head, turned to the way the path goes there.
+  */
+  if (w.bossEntering >= 0 && w.bossRow.entrance !== null) {
+    const entrance = w.bossRow.entrance;
+    const s = w.bossEntering * entrance.speed;
+    entranceAt(entrance, w.bossEntryAt, s);
+    head.turn = turnFor(ENTRANCE_AT[2]!);
+    let behind = chain.neck;
+    for (let k = 0; k < nodes; k++) {
+      if (k > 0) behind += chain.step * (chain.girth[k - 1]! + chain.girth[k]!) * 0.5;
+      const at = nodes - 1 - k;
+      if (at >= w.bossBody.size) continue;
+      const node = w.bossBody.at(at);
+      entranceAt(entrance, w.bossEntryAt, s - behind);
+      node.along = w.cameraAlong + ENTRANCE_AT[0]!;
+      node.across = ENTRANCE_AT[1]!;
+      node.turn = turnFor(ENTRANCE_AT[2]!);
+    }
+    return;
+  }
   // Where the head's lane is now, for the nodes that are still reading where it was.
   w.bossTrailAt = (w.bossTrailAt + 1) % w.bossTrail.length;
   w.bossTrail[w.bossTrailAt] = head.across;
@@ -5407,6 +5602,44 @@ function layChain(w: World): void {
     node.along = head.along + offset;
     node.across = followed + sway * Math.sin(w.chainPhase - (offset / chain.wavelength) * TAU);
   }
+  /*
+    ⚠️ **EVERY NODE TURNED TO THE WAY THE BODY RUNS THROUGH IT — 0306, AND IN THE FIGHT TOO.** A node
+    is a disc so that it could be laid at any angle without a turn; its PAINT is not round — a rim of
+    light along the back and a turn-under along the belly (0283) — and a disc that cannot turn keeps
+    its back on top however the wave bends it. The entrance turns every node to its path; laid on
+    station, the same question has the same answer: the way from this node to the next one nearer the
+    head. One description of which way a node faces, not one for the entrance and a missing one here.
+  */
+  for (let at = 0; at < w.bossBody.size; at++) {
+    const node = w.bossBody.at(at);
+    const next = at + 1 < w.bossBody.size ? w.bossBody.at(at + 1) : head;
+    node.turn = turnFor(Math.atan2(next.across - node.across, next.along - node.along));
+  }
+  /*
+    ⚠️ **AND ON THE STEP THE ENTRANCE HANDS OVER, LAID RATHER THAN MOVED.** Every node was off the bottom
+    of the screen a step ago and is off its leading edge now; drawn between the two it would cross the
+    corner in between for a frame. So where it was is where it is.
+  */
+  if (w.bossSettle) {
+    for (let at = 0; at < w.bossBody.size; at++) {
+      const node = w.bossBody.at(at);
+      node.prevAlong = node.along;
+      node.prevAcross = node.across;
+      node.prevTurn = node.turn;
+    }
+    w.bossSettle = false;
+  }
+}
+
+/**
+ * The turn that points a bitmap baked facing down the lane along `heading` — 0306, in `(−π, π]`.
+ *
+ * Every hull is baked facing `π`, so the turn is the heading less that, folded back into one turn
+ * either side so the painter's short-way-round interpolation starts from the number it expects.
+ */
+function turnFor(heading: number): number {
+  const turn = heading - Math.PI;
+  return turn <= -Math.PI ? turn + TAU : turn > Math.PI ? turn - TAU : turn;
 }
 
 /**
@@ -5510,6 +5743,20 @@ function spawnBoss(w: World): void {
   w.bossFallIn = w.bossRow.fall === null ? 0 : fireGapFor(w.bossRow.fall.every, w.difficulty);
   w.chilledFor = 0;
   w.frozenFor = 0;
+  /*
+    ⚠️ **AND IF THE ROW AUTHORS AN ENTRANCE, IT STARTS HERE — 0306.** Where it was put on the field is
+    remembered, because the arrival after the entrance starts from the same place; and the head is
+    put at the start of the path rather than the middle of the lane, so its first step is a flight
+    and not a lurch. The fire grid is set again when the entrance hands over.
+  */
+  const entrance = w.bossRow.entrance;
+  w.bossEntryAt = boss.along - w.cameraAlong;
+  w.bossEntering = entrance === null ? -1 : 0;
+  w.bossSettle = false;
+  if (entrance !== null) {
+    boss.across = entrance.centre.across - entrance.radius;
+    boss.prevAcross = boss.across;
+  }
 }
 
 /**

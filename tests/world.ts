@@ -112,6 +112,10 @@ export function inertLevel(): {
   chainPhase: number;
   bossBite: number;
   bossGazeSide: number;
+  // The entrance — 0306. A fixture's boss makes none unless its row authors one.
+  bossEntering: number;
+  bossEntryAt: number;
+  bossSettle: boolean;
   bossSpawned: boolean;
   bossBeaten: boolean;
   clearedIn: number;
@@ -183,6 +187,9 @@ export function inertLevel(): {
     chainPhase: 0,
     bossBite: 0,
     bossGazeSide: 0,
+    bossEntering: -1,
+    bossEntryAt: 0,
+    bossSettle: false,
     bossSpawned: false,
     bossBeaten: false,
     clearedIn: 0,
@@ -414,6 +421,9 @@ export function playableWorld(
     chainPhase: 0,
     bossBite: 0,
     bossGazeSide: 0,
+    bossEntering: -1,
+    bossEntryAt: 0,
+    bossSettle: false,
     bossSpawned: false,
     bossBeaten: false,
     clearedIn: 0,

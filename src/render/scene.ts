@@ -202,13 +202,21 @@ export function paintScene(
       `scripts/probes/0025-frame.mjs` and `scripts/probes/0027-picture.mjs` anchor on the two lines
       below being adjacent; a paragraph between them strands both, and a stranded probe is a guard
       nobody is proving — 0019.
+
+      ⚠️ **AND `turn` IS 0 FOR EVERYTHING BUT A CREATURE FLYING A CURVE — 0306**, interpolated like the
+      position it rides with and the SHORT way round: a head turning through π between two steps goes
+      the way it went, not back the long way. At 0 the backend draws exactly the blit it always did.
     */
     for (let i = 0; i < count; i++) {
       const e = entities.at(i);
       const along = e.prevAlong + (e.along - e.prevAlong) * alpha;
       const across = e.prevAcross + (e.across - e.prevAcross) * alpha;
+      let swing = e.turn - e.prevTurn;
+      if (swing > Math.PI) swing -= Math.PI * 2;
+      else if (swing < -Math.PI) swing += Math.PI * 2;
+      const turn = e.prevTurn + swing * alpha;
       const inView = along - cameraAlong;
-      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell);
+      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell, turn);
     }
   }
 }

@@ -384,6 +384,22 @@ export interface Entity extends Body {
    */
   swell: number;
   /**
+   * How far its bitmap is turned from the way it was baked, in radians, and where that was last step
+   * — `docs/decisions/0306-the-serpent-coils-in.md`. `0` for everything but a creature that flies
+   * round a curve.
+   *
+   * ⚠️ **`blit` COULD NOT ROTATE, AND A COIL IS THE THING THAT MADE THAT A DEFECT.** Every hull is baked
+   * facing down the lane, and the serpent's entrance flies it round a ring: a head that could not turn
+   * would fly the far half of it backwards into its own neck. The painter turns a bitmap by this, and
+   * it is still one draw of one baked bitmap — `src/render/surface.ts` has why that is not a new verb.
+   *
+   * ⚠️ **INTERPOLATED LIKE A POSITION, WITH `prevTurn` CARRIED THE SAME WAY**, because a turn that
+   * snapped once a step would judder on every display that is not exactly 60Hz — this file's opening
+   * note, about a position, true of an angle too.
+   */
+  turn: number;
+  prevTurn: number;
+  /**
    * The most a homing missile turns toward its target per step, in radians — 0235. Copied onto the
    * missile when it is launched, so a player who switches tubes keeps the missiles in the air, and
    * zero means *flies straight*, which is every other body.
@@ -436,6 +452,8 @@ export function makeEntity(): Entity {
     orbitTurn: 0,
     orbitGrow: 0,
     swell: 1,
+    turn: 0,
+    prevTurn: 0,
     seekTurn: 0,
   };
 }
@@ -490,6 +508,9 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.orbitGrow = 0;
   // A body is drawn at the size it was baked unless a chain says otherwise — 0283.
   e.swell = 1;
+  // And the way it was baked unless something turns it — 0306.
+  e.turn = 0;
+  e.prevTurn = 0;
   e.seekTurn = 0;
 }
 
@@ -505,7 +526,20 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
  * camera, so it never falls behind and is never retired — the pool fills with bullets that left the
  * screen seconds ago, and then refuses to spawn the one the player is watching for.
  */
-export function stepEntities(pool: Pool<Entity>, cameraAlong: number, leadingCull?: number): void {
+export function stepEntities(
+  pool: Pool<Entity>,
+  cameraAlong: number,
+  leadingCull?: number,
+  /*
+    ⚠️ **AND THE `across` CULL IS AN ARGUMENT TOO, SINCE 0306, FOR 0286's OWN REASON.** A PLACED
+    entity is not culled: it cannot wander out of the world, because it is written where it stands
+    every step, and the only thing a cull can measure is how far the animal reaches. 0286 found that
+    along the lane; the serpent's entrance flies its whole length off the bottom of the screen, which
+    is the same finding across it — a released node is gone for the fight, and a released HEAD is the
+    boss dying on its own entrance.
+  */
+  acrossCull = true,
+): void {
   const cull = cullAlong(cameraAlong);
   /*
     ⚠️ **The leading cull is an ARGUMENT with a default, and TWO callers override it for two
@@ -526,6 +560,7 @@ export function stepEntities(pool: Pool<Entity>, cameraAlong: number, leadingCul
     const e = pool.at(i);
     e.prevAlong = e.along;
     e.prevAcross = e.across;
+    e.prevTurn = e.turn;
     e.along += e.velAlong;
     e.across += e.velAcross;
     if (e.invulnFor > 0) e.invulnFor--;
@@ -573,6 +608,6 @@ export function stepEntities(pool: Pool<Entity>, cameraAlong: number, leadingCul
       edges, which is well inside `ACROSS_CULL_MIN`/`MAX` — so the one body whose release would end
       the run silently is structurally unable to get there.
     */
-    if (e.across < ACROSS_CULL_MIN || e.across > ACROSS_CULL_MAX) pool.releaseAt(i);
+    if (acrossCull && (e.across < ACROSS_CULL_MIN || e.across > ACROSS_CULL_MAX)) pool.releaseAt(i);
   }
 }

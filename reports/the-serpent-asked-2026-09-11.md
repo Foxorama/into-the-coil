@@ -41,6 +41,4 @@ circle without flying backwards into its own neck for half of it.
 
 - **The attacks** — [0304](../docs/decisions/0304-the-serpent-sprays.md).
 - **The look** — [0305](../docs/decisions/0305-the-serpent-darkens.md).
-- **The entrance** — owed: in from the leading edge, a coil round the middle of the screen with the
-  centre left open, off the bottom, then the arrival the fight has now. Untouchable by the player's
-  fire and hurting on contact.
+- **The entrance** — [0306](../docs/decisions/0306-the-serpent-coils-in.md).
