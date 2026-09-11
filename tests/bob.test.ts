@@ -54,7 +54,13 @@ function flyThroughEveryPhase(kind: BossKind): { low: number; high: number; phas
     // The ship holds its fire: this is about how the hull flies, not about the duel.
     world.fireIn = Number.MAX_SAFE_INTEGER;
     frame.step();
-    if (world.bossPool.size === 0) continue;
+    /*
+      ⚠️ **NOT WHILE IT MAKES AN ENTRANCE — 0306.** The serpent's entrance flies its whole length off
+      the bottom of the screen, because that is what was asked for: *"fly onto screen, do a coil, fly
+      off."* That is a path the row authors, not the bob, and this guard is about the bob — so it
+      starts counting when the fight does, which is where it always started for a boss with none.
+    */
+    if (world.bossPool.size === 0 || world.bossEntering >= 0) continue;
     const boss = world.bossPool.at(0);
     if (step % 120 === 0) boss.health = Math.max(1, boss.health - row.health / 12);
     low = Math.min(low, boss.across - boss.radius);

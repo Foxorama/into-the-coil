@@ -175,13 +175,13 @@ export const PROBES = [
     edit: {
       path: 'src/render/scene.ts',
       find:
-        '      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell);\n' +
+        '      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell, turn);\n' +
         '    }\n' +
         '  }\n' +
         '}',
       replace:
-        '      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell);\n' +
-        '      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell);\n' +
+        '      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell, turn);\n' +
+        '      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell, turn);\n' +
         '    }\n' +
         '  }\n' +
         '}',

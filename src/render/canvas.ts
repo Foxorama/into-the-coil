@@ -3,7 +3,8 @@
  *
  * `docs/decisions/0022-frame-rate-is-a-feature.md` starts on Canvas2D and keeps a WebGL backend a
  * swap rather than a rewrite. That is true exactly as long as this file stays the only implementation
- * of `Surface` and `Surface` stays three verbs wide — a clear, a blit and a bolt (0233).
+ * of `Surface` and `Surface` stays three verbs wide — a clear, a blit and a bolt (0233). A blit may
+ * be turned since 0306, and it is still a blit.
  *
  * ⚠️ **This file IS on the hot list.** `blit` runs five hundred times a frame; every line below runs
  * with it.
@@ -89,12 +90,27 @@ export class CanvasSurface implements Surface {
     this.ctx.fillRect(0, 0, this.width, this.height);
   }
 
-  blit(sprite: number, x: number, y: number, scale: number): void {
+  blit(sprite: number, x: number, y: number, scale: number, turn = 0): void {
     const bitmap = this.atlas.bitmaps[sprite];
     if (bitmap === undefined) return;
     const size = this.atlas.extents[sprite]! * scale;
     const half = size / 2;
-    this.ctx.drawImage(bitmap, x - half, y - half, size, size);
+    if (turn === 0) {
+      this.ctx.drawImage(bitmap, x - half, y - half, size, size);
+      return;
+    }
+    /*
+      ⚠️ **TURNED ABOUT ITS OWN CENTRE, AND THE TRANSFORM IS PUT BACK EXACTLY — 0306.** `save` and
+      `restore` rather than a rotate and an un-rotate, because the second leaves float error in the
+      context's matrix a few hundred times a second and the whole frame would creep. Nothing here
+      allocates: both are calls on the context's own state stack.
+    */
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(turn);
+    ctx.drawImage(bitmap, -half, -half, size, size);
+    ctx.restore();
   }
 
   /**

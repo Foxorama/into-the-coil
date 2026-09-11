@@ -962,8 +962,48 @@ export interface BossRow extends Body {
   chain: Chain | null;
   /** The faces its head wears, or `null` — 0285. Required, on `chain`s own terms. */
   face: Face | null;
+  /**
+   * How it comes onto the field before the fight begins, or `null` for the arrival every boss has —
+   * `docs/decisions/0306-the-serpent-coils-in.md`. Required, on `uncoil`'s terms.
+   */
+  entrance: Entrance | null;
   /** Full health to empty. The first entry must cover a full-health boss. */
   phases: readonly BossPhase[];
+}
+
+/**
+ * An entrance: a flight the boss makes onto the field, round a coil and off it again, before it
+ * arrives as every boss does — 0306.
+ *
+ * ⚠️ **ASKED FOR**: *"can we make it fly onto screen, do a coil, fly off and then enter where it is
+ * now?"* — and, asked whether it is part of the fight: *"Not-shootable, fully live - there's needs to
+ * be a gap in the center of the screen. Players can learn the pattern to avoid the damage from being
+ * hit by it and there's a music tone to alert of it's arrival."*
+ *
+ * ⚠️ **A PATH IN THE CAMERA'S FRAME, AND THE WHOLE ANIMAL FLIES IT.** In from the spawn point along
+ * the coil's top edge, round the coil the way a hand turns from the top toward the player —
+ * trailing side, bottom, leading side — `turns` times, and straight on along the tangent it leaves
+ * by until the tail is off the screen. Every node of the body is where the head was a body-length
+ * ago, so the animal coils rather than swinging round a pivot — the one time in the fight its body
+ * FOLLOWS the head, because the one time the head travels (`src/app/frame.ts`'s `layChain` has why
+ * it is placed the rest of the fight).
+ *
+ * ⚠️ **THE CENTRE IS LEFT OPEN, AND THAT IS THE ASK RATHER THAN A SIDE-EFFECT.** A coil round the
+ * middle of the screen with a hole in it is a pattern a player learns to sit inside; `radius` less
+ * the thickest girth is how wide that hole is, and `tests/serpent.test.ts` measures it off the flight.
+ *
+ * ⚠️ **UNTOUCHABLE BY THE PLAYER'S FIRE AND HURTING ON CONTACT** — the frame's, not the row's: it is
+ * what an entrance IS, and a row that wanted otherwise would be a different decision.
+ */
+export interface Entrance {
+  /** The coil's centre: world units ahead of the camera's trailing edge, and across the lane. */
+  centre: { along: number; across: number };
+  /** The coil's radius to the spine, in world units. Its tightest bend, so at least 1.5 girths. */
+  radius: number;
+  /** How many times round it goes before it peels away. */
+  turns: number;
+  /** World units of path a step. */
+  speed: number;
 }
 
 /**
@@ -1011,6 +1051,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     muzzle: null,
     chain: null,
     face: null,
+    entrance: null,
     sprite: SPRITE.boss,
     spriteHit: SPRITE.bossHit,
     radius: 11,
@@ -1085,6 +1126,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     muzzle: null,
     chain: null,
     face: null,
+    entrance: null,
     sprite: SPRITE.boss2,
     spriteHit: SPRITE.boss2Hit,
     radius: 12.5,
@@ -1147,6 +1189,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     muzzle: null,
     chain: null,
     face: null,
+    entrance: null,
     sprite: SPRITE.boss3,
     spriteHit: SPRITE.boss3Hit,
     radius: 11.5,
@@ -1202,6 +1245,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     muzzle: null,
     chain: null,
     face: null,
+    entrance: null,
     sprite: SPRITE.boss4,
     spriteHit: SPRITE.boss4Hit,
     radius: 13,
@@ -1245,6 +1289,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     muzzle: null,
     chain: null,
     face: null,
+    entrance: null,
     sprite: SPRITE.boss5,
     spriteHit: SPRITE.boss5Hit,
     radius: 14,
@@ -1306,6 +1351,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     muzzle: null,
     chain: null,
     face: null,
+    entrance: null,
     sprite: SPRITE.boss6,
     spriteHit: SPRITE.boss6Hit,
     radius: 12.5,
@@ -1378,6 +1424,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     muzzle: null,
     chain: null,
     face: null,
+    entrance: null,
     sprite: SPRITE.boss7,
     spriteHit: SPRITE.boss7Hit,
     radius: 16,
@@ -1563,6 +1610,20 @@ export const BOSSES: Record<BossKind, BossRow> = {
       shut: SPRITE.boss8Shut,
       shutHit: SPRITE.boss8ShutHit,
     },
+    /*
+      ⚠️ **IN, ROUND AND OFF THE BOTTOM — 0306.** *"Fly onto screen, do a coil, fly off and then enter
+      where it is now"*, with *"a gap in the center of the screen."* A ring of 24 round a point 95 units
+      in — the middle of a 16:9 screen, the narrowest the game draws — so the hole is 24 less the
+      thickest girth's half, about 37 units across, with the ship's own start 25 units clear of the
+      ring's near edge. A turn and a quarter: the body is 134 units against a ring of 151, so after one
+      turn the animal is a nearly-closed coil, and the quarter more takes the head round to the side
+      nearest the player, where it peels away straight down and off the bottom.
+
+      ⚠️ **1.5 UNITS A STEP, THREE TIMES THE ARRIVAL'S RATE**, because this is the animal flying rather
+      than closing on a station: about six and a half seconds in, round and off, and then the arrival
+      every boss has.
+    */
+    entrance: { centre: { along: 95, across: 50 }, radius: 24, turns: 1.25, speed: 1.5 },
     chain: {
       sprite: SPRITE.serpentBody,
       spriteHit: SPRITE.serpentBodyHit,
@@ -1811,6 +1872,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     muzzle: null,
     chain: null,
     face: null,
+    entrance: null,
     sprite: SPRITE.boss9,
     spriteHit: SPRITE.boss9Hit,
     radius: 15,
@@ -1858,6 +1920,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     muzzle: null,
     chain: null,
     face: null,
+    entrance: null,
     sprite: SPRITE.boss10,
     spriteHit: SPRITE.boss10Hit,
     radius: 15,
@@ -1904,6 +1967,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     muzzle: null,
     chain: null,
     face: null,
+    entrance: null,
     sprite: SPRITE.boss11,
     spriteHit: SPRITE.boss11Hit,
     radius: 14,
@@ -1941,6 +2005,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     muzzle: null,
     chain: null,
     face: null,
+    entrance: null,
     sprite: SPRITE.boss12,
     spriteHit: SPRITE.boss12Hit,
     radius: 13,
@@ -1988,6 +2053,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     muzzle: null,
     chain: null,
     face: null,
+    entrance: null,
     sprite: SPRITE.boss13,
     spriteHit: SPRITE.boss13Hit,
     radius: 16,
@@ -2096,6 +2162,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     muzzle: null,
     chain: null,
     face: null,
+    entrance: null,
     sprite: SPRITE.boss14,
     spriteHit: SPRITE.boss14Hit,
     radius: 17,
