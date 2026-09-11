@@ -1,5 +1,9 @@
 # 0292 — The void eats everything
 
+> ⚠️ **AMENDED 2026-09-11 by [0307](0307-the-serpent-is-armoured.md).** A void takes the bolt it is
+> **in the way of**, not any bolt within reach: flown against the serpent, the pull over the whole
+> reach cost the arc about nine volleys in ten from the void phase on. The chain still ends there.
+
 **Accepted 2026-09-09**, from the same play as [0291](0291-the-void-has-an-appetite.md), answering
 what that decision left owed:
 

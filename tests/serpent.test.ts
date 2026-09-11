@@ -16,7 +16,8 @@ import { describe, expect, it } from 'vitest';
 import { GameFrame } from '../src/app/frame.ts';
 import { phaseFor } from '../src/app/boss.ts';
 import { BOSSES, RAIN_BOLT_KIND } from '../src/content/bosses.ts';
-import type { DifficultyKind } from '../src/content/difficulty.ts';
+import { DEBRIS_KIND } from '../src/content/debris.ts';
+import { DIFFICULTIES, fireGapFor, type DifficultyKind } from '../src/content/difficulty.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHOTS, SHOT_INDEX } from '../src/content/shots.ts';
@@ -32,6 +33,8 @@ import { reset } from '../src/sim/entity.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
+import { WEAPON_KINDS } from '../src/content/weapons.ts';
+import { DISTANCES, LANES, flyFight } from '../scripts/weigh-boss.mjs';
 
 /** The serpent alone, a short way in, with no mid-boss in front of it. */
 const SERPENT_ONLY: LevelRow = {
@@ -546,20 +549,25 @@ describe('0248 — the serpent strikes', () => {
       shoot, with the void in front of the nose and inside the weapon's own reach.
     */
     /*
-      ⚠️ **A DRIFTER SITS NEARER THAN THE BLAST, AND THAT IS WHAT MAKES THIS *SUCKS IN*.** Against no
-      competition the guard passes on a chain that merely CAN reach a void, and the probe that made
-      the void one target among many stayed GREEN twice over: first because nothing else was in
-      reach, and then because nearest-wins hits the drifter and JUMPS to the void on its next link,
-      so *was it fed* is true either way. **What separates a pull from a coincidence is what the
-      chain did NOT hit**, so the drifter's health is half the assertion.
+      ⚠️ **WHAT SEPARATES A PULL FROM A COINCIDENCE IS WHAT THE CHAIN DID NOT HIT**, so the drifter's
+      health is half the assertion. The probe that made the void one target among many stayed GREEN
+      twice over until it was: first because nothing else was in reach, then because nearest-wins
+      hit the drifter and JUMPED to the void on its next link, so *was it fed* was true either way.
+
+      ⚠️ **THE DRIFTER STANDS BEHIND THE BLAST SINCE 0307, AND IT STOOD IN FRONT OF IT BEFORE.** 0292
+      read *sucks in* as a pull over the whole reach, so a void took the link even with an enemy
+      nearer; 0307 made it a void in the WAY, because a pull that ignores direction cannot be flown
+      around and it cost the arc nine volleys in ten against the serpent. So the bolt is aimed at a
+      drifter the blast is in front of — and the drifter coming through whole is still the proof that
+      the blast took it rather than merely being fed afterwards.
     */
     const { world, frame } = serpentAt(0.5);
     world.bossPool.at(0).fireIn = 999;
     const blast = world.enemyShots.spawn()!;
     reset(blast, world.ship.along + 10, world.ship.across, SHOTS.void, SHOT_INDEX.void);
-    const near = world.enemies.spawn()!;
-    reset(near, world.ship.along + 6, world.ship.across, ENEMIES.drifter, world.enemyKinds.drifter);
-    const whole = near.health;
+    const behind = world.enemies.spawn()!;
+    reset(behind, world.ship.along + 20, world.ship.across, ENEMIES.drifter, world.enemyKinds.drifter);
+    const whole = behind.health;
     world.weapon = weaponFor(world.shipRow, ['weapon', 'weapon', 'weapon'], 'arc');
     world.missileIn = Number.MAX_SAFE_INTEGER;
     world.fireIn = 0;
@@ -572,8 +580,41 @@ describe('0248 — the serpent strikes', () => {
     ).toBeGreaterThan(0);
     expect(
       world.enemies.size > 0 ? world.enemies.at(0).health : 0,
-      'the chain struck the nearer drifter on its way, so the void is one target among many rather than a pull',
+      'the chain went through the void to the drifter behind it, so the void is not sucking it in',
     ).toBe(whole);
+  });
+
+  it('0307 — THE REPORTED ONE: a void BESIDE the bolt’s line does not take it, and the thing it was aimed at is struck', () => {
+    /*
+      ⚠️ **REPORTED**: *"the lightning gun and auto-fire gun only hit the head so they take forever to
+      kill the boss."* The lightning was not the head. Flown against the serpent, it took the first
+      third in a dozen seconds and then over two hundred for the rest, because from the void phase on
+      there was nearly always a void or a shard in reach and 0292's pull took any one of them, from
+      any direction. Switched off, the arc killed the serpent in about half a minute.
+
+      ⚠️ **SO THE HALF THIS HOLDS IS THE ONE THAT WAS WRONG**: a blast off to one side, well inside the
+      reach but nowhere near the line to the target, leaves the bolt alone. Its health is the
+      assertion that it was not fed, and the drifter's is the assertion that the volley went where it
+      was aimed rather than nowhere.
+    */
+    const { world, frame } = serpentAt(0.5);
+    world.bossPool.at(0).fireIn = 999;
+    const blast = world.enemyShots.spawn()!;
+    reset(blast, world.ship.along + 10, world.ship.across + 8, SHOTS.void, SHOT_INDEX.void);
+    const ahead = world.enemies.spawn()!;
+    reset(ahead, world.ship.along + 20, world.ship.across, ENEMIES.drifter, world.enemyKinds.drifter);
+    const whole = ahead.health;
+    world.weapon = weaponFor(world.shipRow, ['weapon', 'weapon', 'weapon'], 'arc');
+    world.missileIn = Number.MAX_SAFE_INTEGER;
+    world.fireIn = 0;
+    frame.step();
+
+    expect(world.enemyShots.size, 'the void blast burst, so something fed it').toBe(1);
+    expect(world.enemyShots.at(0).health, 'a void off to the side of the bolt’s line swallowed it anyway').toBe(SHOTS.void.health);
+    expect(
+      world.enemies.size > 0 ? world.enemies.at(0).health : 0,
+      'the bolt never reached the drifter it was aimed at, with nothing in its way',
+    ).toBeLessThan(whole);
   });
 
   it('and nothing else the serpent throws can be shot out of the air', () => {
@@ -1078,12 +1119,20 @@ describe('0283 — the serpent is a chain', () => {
     ).toBe(nodes);
   });
 
-  it('and the body is one animal: a hit anywhere on it is a hit on the serpent', () => {
+  it('0307 — and the body is armour: a shot on it stops and sparks, and takes nothing off the serpent', () => {
     /*
-      ⚠️ **THE HURT SHAPE IS THE ANATOMY NOW**, which is the request 0277 could not answer: *"we need
-      to update the boss collision to no longer be a disc if we can."* A node is as wide as the animal
-      is where it stands, and what lands on it is spent on the head — so the tail is worth what the
-      neck is, and neither is worth anything the drawing does not cover.
+      ⚠️ **THE HURT SHAPE IS THE ANATOMY**, which is the request 0277 could not answer: *"we need to
+      update the boss collision to no longer be a disc if we can."* A node is as wide as the animal is
+      where it stands — and since 0307 what lands on it is spent on the head at the row's `hurt`, which
+      on the serpent is nothing. Reported: *"the shurikens kill the serpent boss in a reasonable time
+      length, but the lightning gun and auto-fire gun only hit the head"*; asked for: *"reduce the body
+      damage taken overall so shurikens only damage the head."*
+
+      ⚠️ **THREE HALVES, AND TWO OF THEM ARE THE PICTURE.** Nothing off the head is the ask. That the
+      shot STOPS is that armour is not a hole — a pulse passing through a drawn flank reads as a ghost.
+      That the flank does not flash and a spark does is 0036 both ways round: a hurt twin on a body
+      that took nothing is the picture saying HIT over a model that says miss, and a shot vanishing
+      with no mark at all is the collision bug that report after report has filed.
     */
     const { world, frame } = serpentAt(1);
     for (let i = 0; i < 60 && world.bossBody.size === 0; i++) frame.step();
@@ -1108,14 +1157,54 @@ describe('0283 — the serpent is a chain', () => {
     const reachable = cullPlayerShotAlong(world.cameraAlong, world.view.alongSpan);
     const tail = [...s].reverse().find((n) => n.along <= reachable);
     if (tail === undefined || tail === s[0]) throw new Error('no body node is inside the player’s reach');
+    world.fireIn = Number.MAX_SAFE_INTEGER;
+    world.missileIn = Number.MAX_SAFE_INTEGER;
+    world.playerShots.clear();
+    world.debris.clear();
+    const shot = world.playerShots.spawn()!;
+    reset(shot, tail.along, tail.across, SHOTS.pulse);
+    world.bossPool.at(0).fireIn = 999;
+    frame.step();
+    expect(world.playerShots.size, 'the shot went through the serpent’s flank — armour is not a hole').toBe(0);
+    expect(world.bossPool.at(0).health, 'a shot on the serpent’s tail hurt the serpent, so the body is not armour').toBe(before);
+    let lit = 0;
+    for (let i = 0; i < world.bossBody.size; i++) if (world.bossBody.at(i).flashFor > 0) lit++;
+    expect(lit, 'the flank flashed hurt for a shot that took nothing').toBe(0);
+    let sparks = 0;
+    for (let i = 0; i < world.debris.size; i++) if (world.debris.at(i).kind === DEBRIS_KIND.spark) sparks++;
+    expect(sparks, 'the shot stopped on the flank and left no mark, so it vanished into the animal').toBeGreaterThan(0);
+  });
+
+  it('and a body that is not armour spends its share of a hit on the head, which is 0283’s animal', () => {
+    /*
+      ⚠️ **THE MECHANISM OUTLIVES ITS ONLY ROW'S USE OF IT, SO IT IS HELD ON A ROW MADE FOR THE TEST.**
+      0283 built the body as one animal — a hit on the tail is a hit on the serpent — and 0307 made
+      the serpent's flank armour, so the one row with a chain no longer passes anything and nothing
+      in the content exercises the drain. `hurt` is a share on the row
+      ([0282](../docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md)), and
+      a second creature with a soft belly is the reason it is a number rather than a switch. So the
+      fight is flown with the serpent's own row wearing half of one: the share is what arrives.
+    */
+    const { world, frame } = serpentAt(1);
+    const chain = BOSSES.jormungandr.chain!;
+    world.bossRow = { ...BOSSES.jormungandr, chain: { ...chain, hurt: 0.5 } };
+    for (let i = 0; i < 60 && world.bossBody.size === 0; i++) frame.step();
+    const s = spine(world);
+    const reachable = cullPlayerShotAlong(world.cameraAlong, world.view.alongSpan);
+    const tail = [...s].reverse().find((n) => n.along <= reachable);
+    if (tail === undefined || tail === s[0]) throw new Error('no body node is inside the player’s reach');
+    world.fireIn = Number.MAX_SAFE_INTEGER;
+    world.missileIn = Number.MAX_SAFE_INTEGER;
+    world.playerShots.clear();
+    const before = world.bossPool.at(0).health;
     const shot = world.playerShots.spawn()!;
     reset(shot, tail.along, tail.across, SHOTS.pulse);
     world.bossPool.at(0).fireIn = 999;
     frame.step();
     expect(
-      world.bossPool.at(0).health,
-      'a shot on the serpent’s tail took nothing off the serpent — the body is decoration rather than the animal',
-    ).toBeLessThan(before);
+      before - world.bossPool.at(0).health,
+      'a shot on a half-soft flank did not take half a shot off the animal',
+    ).toBeCloseTo(SHOTS.pulse.damage * 0.5, 6);
   });
 });
 
@@ -1466,5 +1555,54 @@ describe('0306 — the serpent coils in', () => {
     // And once the fight begins the head faces down the lane again.
     for (let i = 0; i < 60; i++) frame.step();
     expect(world.bossPool.at(0).turn, 'the head is still turned after the entrance handed over').toBe(0);
+  });
+});
+
+describe('0307 — the serpent is armoured', () => {
+  it('flown at the cap on the tuned tier, no gun kills the serpent inside forty seconds from any place, and every phase gets eight volleys away', () => {
+    /*
+      ⚠️ **0260's FLOOR, IN THE FIGHT RATHER THAN IN THE ARITHMETIC.** *"I think I only saw about 50%
+      of their attacks before they died"* — so a real boss lasts forty seconds at max weapons on the
+      tuned tier and every phase gets eight volleys away. `tests/level.test.ts` holds that as
+      `health × toughness / FASTEST`, which is every shot of the fullest loadout counting in full;
+      armour is an arrival that counts for nothing, so that line skips this boss and this one flies
+      it, through `scripts/weigh-boss.mjs`.
+
+      ⚠️ **THE QUICKEST FIGHT OF ALL OF THEM, BECAUSE THE FLOOR IS ABOUT THE WORST CASE.** Each gun is
+      flown from fifteen held places and on the boss's own lane at three distances, and only the
+      quickest has to clear forty: a floor met on average is a boss that evaporates for whoever found
+      the right place, and that player is the one who reported 0260. Measured when this landed: the
+      arc, 41 seconds from its best place; the shuriken, 53; the pulse on the head's lane at 45
+      units, 58.
+
+      ⚠️ **CAPPED AT FOUR MINUTES, WHICH NO QUICKEST FIGHT COMES NEAR.** A place the gun cannot reach
+      from never ends, and ten minutes of it three times over is the cost of this test and none of
+      its claim.
+    */
+    const row = BOSSES.jormungandr;
+    const tuned = DIFFICULTIES.savior;
+    for (const gun of WEAPON_KINDS) {
+      let quickest: ReturnType<typeof flyFight> | null = null;
+      for (const lane of [...LANES, 'boss' as const]) {
+        for (const short of DISTANCES) {
+          const fight = flyFight('jormungandr', gun, { lane, short, cap: 240 });
+          if (fight.seconds !== null && (quickest === null || fight.seconds < quickest.seconds!)) quickest = fight;
+        }
+      }
+      expect(quickest, `the ${gun} never killed the serpent from any place, so this measured nothing`).not.toBeNull();
+      expect(quickest!.seconds!, `the ${gun} kills the serpent in ${quickest!.seconds!.toFixed(1)}s at the cap on the tuned tier`).toBeGreaterThanOrEqual(40);
+      expect(
+        quickest!.phaseAt.map((p) => p.phase),
+        `the ${gun}'s quickest fight skipped a phase, so an attack was never thrown at all`,
+      ).toEqual(row.phases.map((_phase, i) => i));
+      quickest!.phaseAt.forEach((entered, i) => {
+        const ends = quickest!.phaseAt[i + 1]?.at ?? quickest!.seconds!;
+        const volleys = ((ends - entered.at) * STEPS_PER_SECOND) / fireGapFor(row.phases[entered.phase]!.fireEvery, tuned);
+        expect(
+          volleys,
+          `against the ${gun}, the serpent's phase ${entered.phase + 1} lasts ${(ends - entered.at).toFixed(1)}s and gets ${volleys.toFixed(1)} volleys away`,
+        ).toBeGreaterThanOrEqual(8);
+      });
+    }
   });
 });

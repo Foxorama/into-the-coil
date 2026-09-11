@@ -65,7 +65,10 @@ export const PROBES = [
       to update the boss collision to no longer be a disc if we can"* — undone in one line.
     */
     broke: 'what lands on the body never reaching the animal, so the serpent is a disc round its skull again',
-    guard: 'the body is one animal: a hit anywhere on it is a hit on the serpent',
+    // ⚠️ Re-pointed by 0307, which made the serpent's own flank armour — so this break is now the
+    // serpent's intended state, and the guard that still holds the drain is the one flown on a row
+    // wearing a share of it.
+    guard: 'and a body that is not armour spends its share of a hit on the head',
     edit: {
       path: 'src/app/frame.ts',
       find: '    const onBody = drainChain(w);',

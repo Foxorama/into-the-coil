@@ -1,5 +1,9 @@
 # 0260 — A boss is fought to the end
 
+> ⚠️ **AMENDED 2026-09-11 by [0307](0307-the-serpent-is-armoured.md).** The forty seconds and eight
+> volleys hold; for a boss whose body is armour they are held in the flown fight, because
+> `health × toughness / FASTEST` assumes every arrival counts. The serpent is 1000, not 1400.
+
 **Accepted 2026-09-06**, the same day as [0259](0259-the-bullets-stay-on-the-screen.md), from
 [`the-alpha-list`](../../reports/the-alpha-list-2026-09-06.md):
 

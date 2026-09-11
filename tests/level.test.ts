@@ -2170,10 +2170,21 @@ describe('0124 — a boss lasts long enough to be one, at the loadout the game i
 
       ⚠️ **A bared phase is skipped** for 0124's reason: its band is read at the damage it actually
       takes and it throws nothing anyway.
+
+      ⚠️ **AND SO IS A BOSS WHOSE BODY IS ARMOUR, WHICH THIS ARITHMETIC CANNOT DESCRIBE — 0307.**
+      `FASTEST` is every shot of the fullest loadout counting in full, and a flank that takes an
+      arrival and passes on none of it is a boss where that premise is false by construction. Flown,
+      the serpent showed how far: the pulse landed about a third of `FASTEST` on it BEFORE its body was
+      armoured, the shuriken nearly all of it, and this line said one number for both. So a boss
+      whose chain passes less than it takes is held to the same forty seconds and eight volleys in
+      the fight itself — `0307 — flown at the cap` in `tests/serpent.test.ts`, through
+      `scripts/weigh-boss.mjs`. The other six are still read here; what they measure flown is in
+      0307's decision, as a measurement and not a guard.
     */
     for (const level of LEVEL_KINDS) {
       const kind = LEVELS[level].boss;
       const row = BOSSES[kind];
+      if (row.chain !== null && row.chain.hurt < 1) continue;
       const total = (row.health * TUNED.toughness) / FASTEST;
       expect(total, `${kind} is over in ${total.toFixed(1)}s at max weapons on the tuned tier`).toBeGreaterThanOrEqual(40);
       const ups = row.phases.map((p) => p.upTo);
