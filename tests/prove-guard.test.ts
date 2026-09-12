@@ -83,6 +83,22 @@ describe('a stranded probe is found before anything runs', () => {
     edit: { path, find, replace: 'gone' },
   });
 
+  /**
+   * Every probe in the repository, read the way `scripts/prove-guard.mjs` reads them — an explicit
+   * directory listing and a dynamic import each, rather than a glob.
+   *
+   * ⚠️ **Two live checks ask about the same set**, and one description of *what the probe set is* is
+   * what keeps them asking about the same one.
+   */
+  async function everyProbe(): Promise<Probe[]> {
+    const all: Probe[] = [];
+    for (const file of readdirSync(resolve(root, 'scripts/probes')).filter((f) => f.endsWith('.mjs'))) {
+      const mod: { PROBES: Probe[] } = await import(`../scripts/probes/${file.replace(/\.mjs$/, '')}.mjs`);
+      all.push(...mod.PROBES);
+    }
+    return all;
+  }
+
   it('says nothing about a probe whose anchor still resolves', () => {
     expect(anchorFailures([edit('a.ts', 'const a = 1;')], () => 'const a = 1;\n')).toEqual([]);
   });
@@ -124,15 +140,53 @@ describe('a stranded probe is found before anything runs', () => {
       ordinary unit test was always going to be crossed —
       `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`.
     */
-    const all: Probe[] = [];
-    for (const file of readdirSync(resolve(root, 'scripts/probes')).filter((f) => f.endsWith('.mjs'))) {
-      const mod: { PROBES: Probe[] } = await import(`../scripts/probes/${file.replace(/\.mjs$/, '')}.mjs`);
-      all.push(...mod.PROBES);
-    }
     expect(
-      anchorFailures(all),
+      anchorFailures(await everyProbe()),
       'a probe can no longer be applied. The code moved and the probe did not — by hand, this is ' +
         'exactly the point at which nothing changes and the suite reports green.',
+    ).toEqual([]);
+  });
+
+  it('and every probe still names a test that exists, which is the OTHER half of being stranded', { timeout: 60_000 }, async () => {
+    /*
+      ⚠️ **THE ONE THAT WENT MISSING FOR FORTY MINUTES AND THEN FOR A WHOLE PR** — 0312. `anchorFailures`
+      asks *can the break still be made*; nothing asked *is there still a test by that name to watch*.
+      Renaming `tests/eagle.test.ts` to `tests/volans.test.ts` left **ten probes** belonging to 0249 and
+      0262 pointing at a file that no longer exists, and every one of them reports
+      `NOTHING WAS PROVEN` — at the END of `npm run prove`, after the tree copies and a thousand vitest
+      runs. It is the same class as the anchor and it deserves the same answer: asked here, in a second.
+
+      ⚠️ **A SUBSTRING OF THE SOURCE, WHICH IS NOT THE SAME AS A TEST NAME, AND THE TWO GAPS ARE NAMED.**
+      Backslashes are dropped before comparing, because a title written `'the run\'s camera'` holds the
+      apostrophe the probe's `guard` does. And a file with a **template-literal** title — `it(\`…\`)` —
+      names tests whose text is not in the source at all: four of 0016's probes and two of 0033's watch
+      exactly those, so such a file is skipped rather than guessed at. `npm run prove` still asks vitest
+      itself, which is the answer with no gaps in it; this is the fast one that catches a rename.
+
+      0192: name a change to the content that would redden this and be CORRECT. Renaming a test and its
+      probe together reddens nothing, because both move. There is no such change.
+    */
+    const source = new Map<string, { text: string; dynamic: boolean } | null>();
+    const read = (suite: string): { text: string; dynamic: boolean } | null => {
+      if (!source.has(suite)) {
+        const path = resolve(root, suite);
+        const text = existsSync(path) ? readFileSync(path, 'utf8') : null;
+        source.set(suite, text === null ? null : { text: text.split('\\').join(''), dynamic: text.includes('it(`') });
+      }
+      return source.get(suite)!;
+    };
+    const orphans: string[] = [];
+    for (const probe of await everyProbe()) {
+      const suite = read(probe.suite);
+      if (suite === null) orphans.push(`${probe.decision}  ${probe.broke} — its suite is gone: ${probe.suite}`);
+      else if (!suite.dynamic && !suite.text.includes(probe.guard.split('\\').join(''))) {
+        orphans.push(`${probe.decision}  ${probe.broke} — no test in ${probe.suite} is named: ${probe.guard}`);
+      }
+    }
+    expect(
+      orphans,
+      'a probe names a test that is not there. The test was renamed and the probe was not, so the break ' +
+        'is made and nothing is watching it — which `npm run prove` reports as NOTHING WAS PROVEN.',
     ).toEqual([]);
   });
 });

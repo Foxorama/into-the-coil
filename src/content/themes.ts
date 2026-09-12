@@ -635,7 +635,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     // Moths in an ember cloud: the ember's own orange, scorched dark underneath, a black eye, embers.
     // The hulls are ORANGE here, so orange fire would be a raider shooting itself — rose instead.
     foe: { hull: '#f57a2a', plate: '#8a3a12', lit: '#ffe08a', eye: '#2a0a14', shot: '#ff2f8f' },
-    // The eagle: a darker, redder fire than its horde, with a pale burning eye.
+    // The fish: a darker, redder fire than its horde, with a pale burning eye.
     lord: { hull: '#c8401a', plate: '#5a1608', lit: '#ffd24a', eye: '#fff2a0' },
     /*
       ⚠️ **HIGHER THAN THE REFERENCE, BECAUSE THE PLACE IS A BUILD.** A cathedral in a furnace

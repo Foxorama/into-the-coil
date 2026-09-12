@@ -56,7 +56,7 @@ export type Ink =
   | 'acid'
   | 'void'
   /*
-    ⚠️ **`fire` is the eagle's whip — 0249**, and the hydra's second head's. A MEANING ink: a flame
+    ⚠️ **`fire` is the fish's whip — 0249**, and the hydra's second head's. A MEANING ink: a flame
     is *this will burn you*, and it is not `bullet` — the player's own orange — on 0081's rule that
     the ship's fire is never in the ink of the things trying to kill it. Vermilion against the
     pulse's amber, and the flame's silhouette is a tongue against the pulse's disc.

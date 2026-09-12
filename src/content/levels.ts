@@ -1308,7 +1308,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       { at: 2584, section: 'surge' },
       { at: 3677, section: 'approach' },
     ],
-    boss: 'hellkite',
+    boss: 'volans',
     midBoss: { kind: 'harrow', at: 1599 },
     /*
       ⚠️ **1299 IS `push`, WHICH IS WHERE THE ORGAN OPENS** — `src/content/nebula.ts`'s ladder puts

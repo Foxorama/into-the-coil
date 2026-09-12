@@ -65,7 +65,7 @@ export const BOSS_KINDS = [
   'chorus',
   'axis',
   'jormungandr',
-  'hellkite',
+  'volans',
   'quetzal',
   'gyre',
   'hoarfrost',
@@ -191,7 +191,7 @@ export type BossAttackKind = (typeof BOSS_ATTACK_KINDS)[number];
 
   *"Minibosses need to be on their own pattern path and not… aiming at the player… we need less
   enemies (and bosses) reacting to the player."* No boss aims now; the one that reacts does it by
-  where it flies (the eagle's stalk). An arm nothing sends is a member the union cannot keep —
+  where it flies (the fish's stalk). An arm nothing sends is a member the union cannot keep —
   `tests/level.test.ts` holds that every arm is flown — so it is gone rather than left dispatchable,
   and a boss that aimed would fail to compile. `docs/decisions/0258-one-pilot-a-level.md`.
 */
@@ -1281,7 +1281,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     shot: 'lance',
     phases: [
       // No gentle opening. It starts where the sentinel's second phase ended.
-      // Three phases on the eagle's tempo — 0269: hellkite is a five-row ladder, so its 2nd, 4th and
+      // Three phases on the fish's tempo — 0269: volans is a five-row ladder, so its 2nd, 4th and
       // 5th are what the harrow paces to. The weave and the fan are the harrow's own.
       { upTo: 1, fireEvery: 66, shots: 4, spread: 0.75, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
       { upTo: 0.66, fireEvery: 54, shots: 6, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
@@ -1598,7 +1598,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
 
     ⚠️ **SEVEN END BOSSES, ONE PER PLACE, AND EVERY ONE OF THEM A FIRST ITERATION.** Asked for in the
     seventh play-test, each by name with its own attacks — a serpent with acid, void and lightning
-    from the sky; a demon eagle with whips of fire and summoned hordes; a pterodactyl with lasers on
+    from the sky; a demon eagle with whips of fire and summoned hordes (a flying fish since 0312, and
+    the name is left as it was asked because this paragraph is the ask); a pterodactyl with lasers on
     its wings; a spinning wall; a frost ship that slows the player; a hydra that grows a head at
     every fifth of its health; a jellyfish with a black heart in it. *"These'll be first iteration of
     the bosses, let's see how good we can get them, but I expect we'll need to refine and improve
@@ -2059,7 +2060,21 @@ export const BOSSES: Record<BossKind, BossRow> = {
     ],
   },
   /**
-   * The Ember Nebula's end: the hell-spawned eagle — 0249.
+   * The Ember Nebula's end: **the flying fish** — 0249 built it, and
+   * `docs/decisions/0312-the-eagle-was-always-a-fish.md` renamed it.
+   *
+   * ⚠️ **IT WAS `hellkite`, THE HELL-SPAWNED EAGLE, AND THE ART DECIDED OTHERWISE.** Reported: *"I'm
+   * changing it from an eagle to a flying fish style boss as the art currently looks more fishy than
+   * birdy."* So the fiction moved to the drawing rather than the drawing to the fiction, which is
+   * `docs/decisions/0020-the-fiction-transfers-the-code-does-not.md`'s own direction of travel —
+   * *rename it, reshape it, improve it.* **The hull is not repainted here**: the player's own
+   * observation is that it already reads as a fish, and a repaint nobody asked for would be this
+   * decision doing the opposite of what it was told.
+   *
+   * ⚠️ **`volans` IS THE FLYING FISH — the southern constellation** — which is the naming a place made
+   * of stars already uses: Jörmungandr, the quetzal, the hydra, the medusa. The decisions that built
+   * this animal keep their filenames, because a decision is the record and renaming one is rewriting
+   * history (0029); their prose says *eagle* and is true of what was decided then.
    *
    * ⚠️ **FIVE PHASES, AND THE FIGHT ALTERNATES BETWEEN WHAT IT THROWS AND WHAT IT SENDS.** It opens
    * throwing darts at where the player is; at three quarters it whips — five flames along an arc,
@@ -2067,10 +2082,15 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * edge; at a third it whips again, seven wide; and at the last sixth it calls raptors, one a
    * volley, which hunt. *"Hordes of flying kites and raptors as adds at various points throughout
    * the fight"* — the points are the phases.
+   *
+   * ⚠️ **AND EVERY ONE OF SIX ITEMS IS OWED A CHANGE HERE** —
+   * [`the-fish-asked`](../../reports/the-fish-asked-2026-09-12.md): a flashy entrance, quality art on
+   * the attacks, more attack styles, attacking WHILE the adds arrive, better art on the adds, and adds
+   * that are a reason to react. **This decision is the name and the fiction only.**
    */
-  hellkite: {
+  volans: {
     // THE ONE END BOSS THAT STALKS — 0258. *"We need less enemies (and bosses) reacting to the
-    // player"*: the eagle hunts, and every other hull flies a pattern. Its quills are a fan that
+    // player"*: the fish hunts, and every other hull flies a pattern. Its quills are a fan that
     // rakes across the lane — 0262, *"the bullet attacks were boring"* — so what reacts is where
     // it is and not where it points, and the fan is a pattern that sweeps.
     move: { kind: 'stalk', agility: 0.22 },
@@ -2093,7 +2113,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     driftWavelength: 180,
     patrol: 0.4,
     // The quill since 0262 — *"the bullets need to be feathered quills"* — where it threw the
-    // lancer's lance: the eagle's own bullet, a feather shaft first, in the enemy's ink.
+    // lancer's lance: the fish's own bullet, a feather shaft first, in the enemy's ink.
     shot: 'quill',
     phases: [
       // A fan of three quills, raking — 0262; it was one dart aimed at the ship.

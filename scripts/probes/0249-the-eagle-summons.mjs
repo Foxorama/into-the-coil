@@ -5,7 +5,7 @@
 export const PROBES = [
   {
     decision: '0249',
-    suite: 'tests/eagle.test.ts',
+    suite: 'tests/volans.test.ts',
     // The lash's reach authored to nothing: every flame at one speed, which is a fan.
     broke: 'the whip’s tip no faster than its root, so the lash is a fan',
     guard: 'THE WHIP: one volley is a lash',
@@ -17,7 +17,7 @@ export const PROBES = [
   },
   {
     decision: '0249',
-    suite: 'tests/eagle.test.ts',
+    suite: 'tests/volans.test.ts',
     // The flame inked as the player's own bullet.
     broke: 'the flame drawn in the player’s own bullet ink',
     guard: 'THE WHIP: one volley is a lash',
@@ -29,7 +29,7 @@ export const PROBES = [
   },
   {
     decision: '0249',
-    suite: 'tests/eagle.test.ts',
+    suite: 'tests/volans.test.ts',
     // The summons asked for and never answered: the frame's half removed.
     broke: 'the summons never answered, so a volley calls nobody',
     guard: 'THE SUMMONS: a volley at half health',
@@ -43,9 +43,9 @@ export const PROBES = [
   },
   {
     decision: '0249',
-    suite: 'tests/eagle.test.ts',
+    suite: 'tests/volans.test.ts',
     // The adds put behind the camera, where a wave never arrives.
-    // ⚠️ Re-aimed by 0262: the eagle's calls come from the sides now, so the break is the flank
+    // ⚠️ Re-aimed by 0262: the fish's calls come from the sides now, so the break is the flank
     // placement's along put at the camera — behind the ship — rather than the leading edge's.
     broke: 'the adds placed at the camera rather than ahead of the ship',
     guard: 'THE SUMMONS: a volley at half health',
@@ -57,7 +57,7 @@ export const PROBES = [
   },
   {
     decision: '0249',
-    suite: 'tests/eagle.test.ts',
+    suite: 'tests/volans.test.ts',
     // The kite given a gun: a horde that shoots is a wall.
     broke: 'the kite given a gun, so the horde is a wall of bullets',
     guard: 'THE KITE: Ember Nebula’s horde',

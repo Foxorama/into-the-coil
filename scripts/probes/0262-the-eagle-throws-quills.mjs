@@ -6,10 +6,10 @@
 export const PROBES = [
   {
     decision: '0262',
-    suite: 'tests/eagle.test.ts',
-    // The eagle back on the lancer's lance.
-    broke: 'the eagle throwing the lance again',
-    guard: '0262 — THE QUILL: the eagle’s bullet is a feather',
+    suite: 'tests/volans.test.ts',
+    // The fish back on the lancer's lance.
+    broke: 'the fish throwing the lance again',
+    guard: '0262 — THE QUILL: the fish’s bullet is a feather',
     edit: {
       path: 'src/content/bosses.ts',
       find: "    shot: 'quill',\n    phases: [\n      // A fan of three quills, raking",
@@ -18,10 +18,10 @@ export const PROBES = [
   },
   {
     decision: '0262',
-    suite: 'tests/eagle.test.ts',
+    suite: 'tests/volans.test.ts',
     // One dart down the lane again — the fan that was boring.
     broke: 'the opening fan back to one dart, so there is nothing to rake',
-    guard: '0262 — THE QUILL: the eagle’s bullet is a feather',
+    guard: '0262 — THE QUILL: the fish’s bullet is a feather',
     edit: {
       path: 'src/content/bosses.ts',
       find: "      { upTo: 1, fireEvery: 78, shots: 3, spread: 0.6, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },",
@@ -30,7 +30,7 @@ export const PROBES = [
   },
   {
     decision: '0262',
-    suite: 'tests/eagle.test.ts',
+    suite: 'tests/volans.test.ts',
     // The horde back down the lane in a file.
     broke: 'the kites called at the leading edge again, in a file down the lane',
     guard: 'THE SUMMONS: a volley at half health',
@@ -43,7 +43,7 @@ export const PROBES = [
   },
   {
     decision: '0262',
-    suite: 'tests/eagle.test.ts',
+    suite: 'tests/volans.test.ts',
     // Every call from the same side: the toggle dropped.
     broke: 'every call from the same side, so the horde is a file after all',
     guard: 'THE SUMMONS: a volley at half health',
@@ -55,7 +55,7 @@ export const PROBES = [
   },
   {
     decision: '0262',
-    suite: 'tests/eagle.test.ts',
+    suite: 'tests/volans.test.ts',
     // The kite weaving again rather than diving.
     broke: 'the kite on its weave again, so it drifts in rather than dives',
     guard: 'THE KITE: Ember Nebula’s horde',

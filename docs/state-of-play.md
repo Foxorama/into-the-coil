@@ -180,6 +180,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the attacks are HEARD: a boss's attack names its own cue and shared code holds the fallback; a cue ducks the bed only when it is an outcome rather than a thing being fired; `weigh-cue --loud` and `spectrum.ts`'s `loudest` are the absolute pair** | [0308](decisions/0308-the-attacks-are-heard.md) — amends [0114](decisions/0114-the-fight-is-a-different-piece.md), [0104](decisions/0104-the-gun-plays-a-figure.md) |
 | **the serpent REARS BACK: a phase may carry a `Rear` — stand further off, scale 0289's lunge, and bow the neck over the body that is actually on screen; the skull's turn is derived from the bow's own slope, so it cannot open a gap behind it** | [0309](decisions/0309-the-serpent-rears-back.md) — amends [0289](decisions/0289-a-bob-can-rear.md) |
 | **the STORM runs the whole body and the horns fire it: the lightning phase's aura crackles on five frames of six at two thirds the weight, the horns reach three times their drawn length, and the crown discharges for the half-second before a strike — read off the bolt already in the air** | [0310](decisions/0310-the-storm-runs-the-whole-body.md) — amends [0305](decisions/0305-the-serpent-darkens.md) |
+| **the EAGLE was always a fish: Ember Nebula's end boss is `volans`, the flying fish — the name, the fiction and every sentence that describes the animal as it is today; the hull deliberately not repainted; and a probe must still name a test that EXISTS, which renaming a test file is what broke** | [0312](decisions/0312-the-eagle-was-always-a-fish.md), [`the-fish-asked`](../reports/the-fish-asked-2026-09-12.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -891,6 +892,25 @@ more, the lightning now quickest — whether the three read as even is the play'
 
 ⚠️ **AND THE OTHER SIX REAL BOSSES ARE OWED THE SAME MEASUREMENT** — 0307 flew them and did not act
 on it. Its *What the instrument found elsewhere* has the table; `scripts/weigh-boss.mjs` is the rig.
+
+⚠️ **THE SECOND SERPENT BRIEF IS LANDED TOO, ALL FIVE OF IT, AND WAITS ON THE SAME PLAY** — the
+attacks heard ([0308](decisions/0308-the-attacks-are-heard.md)), the rear
+([0309](decisions/0309-the-serpent-rears-back.md)), the storm over the whole body and the crown's
+discharge ([0310](decisions/0310-the-storm-runs-the-whole-body.md)), and the acid and the void as one
+ball ([0311](decisions/0311-the-acid-and-the-void-come-as-one-ball.md)). **Owed from the play:** how
+the three attack cues sit over the bed — *"it's probably a case of we'll ship and see"* — the reared
+posture and the horn flare photographed in situ rather than off the sheet, and
+`scripts/weigh-boss.mjs` flown against the ball's appetite of 30.
+
+### ⚠️ AND THEN THE FISH, WHICH IS THE LEVEL TWO BRIEF AND IS A QUEUE
+
+⚠️ **[`the-fish-asked`](../reports/the-fish-asked-2026-09-12.md) IS THE RECORD AND HOLDS THE ORDER**,
+so this file does not. *"Use the 'pattern' of the serpent boss to improve the level 2 end boss. Don't
+make the serpent boss a hard rule, the pattern is what we want, the style is what makes the different
+bosses unique."* Six items: the rename ([0312](decisions/0312-the-eagle-was-always-a-fish.md)), a
+flashy entrance, quality art on the attacks, more attack styles, **attacking while the adds arrive** —
+the one item that needs a mechanism the game does not have, because a volley IS an arm of `BossAttack`
+— quality art on the adds, and adds worth reacting to.
 
 ### ⚠️ AND THE NEXT ONE IS A FORK THAT HAS TO BE PICKED BEFORE IT IS BUILT
 

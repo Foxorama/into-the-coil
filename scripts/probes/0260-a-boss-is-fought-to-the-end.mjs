@@ -10,12 +10,12 @@ export const PROBES = [
     /*
       A real boss back at 0247's health: twenty-three seconds at max weapons on the tuned tier.
 
-      ⚠️ **RE-ANCHORED BY 0307 FROM THE SERPENT TO THE EAGLE, BECAUSE THIS LINE NO LONGER READS THE
+      ⚠️ **RE-ANCHORED BY 0307 FROM THE SERPENT TO THE FISH, BECAUSE THIS LINE NO LONGER READS THE
       SERPENT.** Its body is armour, so `health / FASTEST` means nothing for it and the guard skips it;
       the serpent's forty seconds are held flown, and `scripts/probes/0307-*.mjs` breaks that. The
       break here is the same one on the next boss the arithmetic still describes.
     */
-    broke: 'the hellkite authored back at half its health, so the fight is over in twenty-three seconds',
+    broke: 'the volans authored back at half its health, so the fight is over in twenty-three seconds',
     guard: '0260 — a real boss lasts forty seconds at max weapons',
     edit: {
       path: 'src/content/bosses.ts',

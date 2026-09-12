@@ -21,28 +21,28 @@ import { INK_OF } from '../src/render/bake.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 
-/** The eagle alone, a short way in, with no mid-boss in front of it. */
-const EAGLE_ONLY: LevelRow = {
+/** The fish alone, a short way in, with no mid-boss in front of it. */
+const VOLANS_ONLY: LevelRow = {
   waves: [],
   pickups: [],
   landmarks: [],
   bossAt: 200,
   midBoss: null,
   sections: NO_SECTIONS,
-  boss: 'hellkite',
+  boss: 'volans',
   theme: 'nebula',
 };
 
-/** The eagle on station at `fraction` of its health, its fan held until the test says, and an immortal ship. */
-function eagleAt(fraction: number): { world: ReturnType<typeof playableWorld>['world']; frame: GameFrame } {
-  const { world } = playableWorld(EAGLE_ONLY);
+/** The fish on station at `fraction` of its health, its fan held until the test says, and an immortal ship. */
+function volansAt(fraction: number): { world: ReturnType<typeof playableWorld>['world']; frame: GameFrame } {
+  const { world } = playableWorld(VOLANS_ONLY);
   const frame = new GameFrame(world);
   for (let i = 0; i < 900 && (world.bossPool.size === 0 || i < 700); i++) {
     world.ship.health = world.shipRow.health;
     if (world.bossPool.size > 0) world.bossPool.at(0).fireIn = 999;
     frame.step();
   }
-  expect(world.bossPool.size, 'the eagle never arrived').toBe(1);
+  expect(world.bossPool.size, 'the fish never arrived').toBe(1);
   world.bossPool.at(0).health = world.bossFullHealth * fraction;
   world.enemyShots.clear();
   world.enemies.clear();
@@ -51,35 +51,35 @@ function eagleAt(fraction: number): { world: ReturnType<typeof playableWorld>['w
 
 describe('0249 — the eagle summons', () => {
   it('THE FIVE PHASES: darts, a whip, kites, a wider whip, raptors — and it is Ember Nebula’s real boss', () => {
-    const row = BOSSES.hellkite;
+    const row = BOSSES.volans;
     const kinds = [1, 0.7, 0.45, 0.3, 0.1].map((f) => (phaseFor(row, row.health * f).attack ?? row.attack).kind);
-    // A spray since 0258: the eagle is the one end boss that stalks, and what reacts is where it is.
+    // A spray since 0258: the fish is the one end boss that stalks, and what reacts is where it is.
     // A rake since 0262: a fan of quills that sweeps, which a fan that sits was not — *"boring"*.
     expect(kinds).toEqual(['rake', 'whip', 'summon', 'whip', 'summon']);
-    expect(LEVELS.descent.boss).toBe('hellkite');
+    expect(LEVELS.descent.boss).toBe('volans');
     expect(LEVELS.descent.theme).toBe('nebula');
   });
 
-  it('0262 — THE QUILL: the eagle’s bullet is a feather of its own, raked across the lane, and no fan of it points the same way twice', () => {
+  it('0262 — THE QUILL: the fish’s bullet is a feather of its own, raked across the lane, and no fan of it points the same way twice', () => {
     /*
       `docs/decisions/0262-the-eagle-throws-quills.md`. *"The bullets need to be feathered quills;
       the bullet attacks were boring."* The row's shot is the quill — its own silhouette on the
       hostile ladder, in the enemy's ink, between the slab and the ring — and the whole phase's fan
       rakes: two volleys, two centres. Driven, and the picture asked for its bitmap.
     */
-    const row = BOSSES.hellkite;
-    expect(row.shot, 'the eagle throws something other than quills').toBe('quill');
+    const row = BOSSES.volans;
+    expect(row.shot, 'the fish throws something other than quills').toBe('quill');
     expect(SHOTS.quill.sprite, 'the quill shares the lance’s silhouette').not.toBe(SHOTS.lance.sprite);
     expect(INK_OF[SPRITE_KINDS[SHOTS.quill.sprite]!], 'a quill is not in the enemy’s ink').toBe('enemy');
     expect(SHOTS.quill.speed, 'a quill is no slower than a slab').toBeLessThan(SHOTS.flak.speed);
     expect(SHOTS.quill.speed, 'a quill is no quicker than a void ring').toBeGreaterThan(SHOTS.void.speed);
-    const { world, frame } = eagleAt(1);
+    const { world, frame } = volansAt(1);
     const centres: number[] = [];
     for (let volley = 0; volley < 2; volley++) {
       world.enemyShots.clear();
       world.bossPool.at(0).fireIn = 1;
       frame.step();
-      expect(world.enemyShots.size, 'the eagle threw one dart, which is the fan that was boring').toBeGreaterThan(1);
+      expect(world.enemyShots.size, 'the fish threw one dart, which is the fan that was boring').toBeGreaterThan(1);
       let sum = 0;
       for (let i = 0; i < world.enemyShots.size; i++) {
         const s = world.enemyShots.at(i);
@@ -97,7 +97,7 @@ describe('0249 — the eagle summons', () => {
       own speed they climb from the root to the tip, and they span an arc rather than a line — the
       first and last leave in different directions across the lane.
     */
-    const { world, frame } = eagleAt(0.7);
+    const { world, frame } = volansAt(0.7);
     world.bossPool.at(0).fireIn = 1;
     frame.step();
     const n = world.enemyShots.size;
@@ -129,11 +129,11 @@ describe('0249 — the eagle summons', () => {
       [0.45, 'kite'],
       [0.1, 'raptor'],
     ] as const) {
-      const { world, frame } = eagleAt(fraction);
+      const { world, frame } = volansAt(fraction);
       const boss = world.bossPool.at(0);
       boss.fireIn = 1;
       frame.step();
-      const count = (phaseFor(BOSSES.hellkite, boss.health, world.bossFullHealth).attack as { count: number }).count;
+      const count = (phaseFor(BOSSES.volans, boss.health, world.bossFullHealth).attack as { count: number }).count;
       expect(world.enemies.size, `the summons at ${fraction} put ${world.enemies.size} adds on the field`).toBe(count);
       expect(world.enemyShots.size, 'a summons threw bullets as well').toBe(0);
       /*
@@ -171,12 +171,12 @@ describe('0249 — the eagle summons', () => {
     expect(kite.fireEvery, 'a kite shoots, and a horde that shoots is a wall').toBe(0);
     expect(kite.radius, 'a kite is no smaller than the raptor it is summoned with').toBeLessThan(ENEMIES.raptor.radius);
     expect(kite.closing, 'a kite is slower than the raptor').toBeGreaterThan(ENEMIES.raptor.closing);
-    // And it dives — 0262: a hunt harder than any level's pilot, from the side the eagle calls it on.
+    // And it dives — 0262: a hunt harder than any level's pilot, from the side the fish calls it on.
     expect(kite.motion.kind, 'a kite does not dive for the ship').toBe('hunt');
     if (kite.motion.kind === 'hunt') expect(kite.motion.agility, 'a kite dives no harder than the raptor hunts').toBeGreaterThan(ENEMIES.raptor.motion.kind === 'hunt' ? ENEMIES.raptor.motion.agility : 0);
-    // Sent by the eagle and by nothing authored: a summons is what it is for.
+    // Sent by the fish and by nothing authored: a summons is what it is for.
     for (const level of Object.values(LEVELS)) {
-      for (const wave of level.waves) expect(wave.enemy, 'a level authors the kite, which is the eagle’s to call').not.toBe('kite');
+      for (const wave of level.waves) expect(wave.enemy, 'a level authors the kite, which is the fish’s to call').not.toBe('kite');
     }
   });
 });

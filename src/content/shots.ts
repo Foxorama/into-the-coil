@@ -469,15 +469,15 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    */
   droplet: { sprite: SPRITE.droplet, spriteHit: SPRITE.droplet, radius: 1.1, health: 1, damage: 1, speed: 1, fission: SPENT_BY_ARRIVING },
   /**
-   * The eagle's quill — `docs/decisions/0262-the-eagle-throws-quills.md`: *"the bullets need to be
-   * feathered quills."* A feather, shaft first, in the enemy's ink — the eagle's own bullet where
+   * The fish's quill — `docs/decisions/0262-the-eagle-throws-quills.md`: *"the bullets need to be
+   * feathered quills."* A feather, shaft first, in the enemy's ink — the fish's own bullet where
    * it threw the lancer's lance. On the ladder between the slab and the void ring: bigger than the
    * flak and slower, smaller than the ring and quicker, which is 0098's rule for what a new bullet
    * costs. The hurtbox is 0.26 of the drawing.
    */
   quill: { sprite: SPRITE.quill, spriteHit: SPRITE.quill, radius: 1.1, health: 1, damage: 1, speed: 0.95, fission: SPENT_BY_ARRIVING },
   /**
-   * The eagle's flame — `docs/decisions/0249-the-eagle-summons.md`, and the hydra's second head's.
+   * The fish's flame — `docs/decisions/0249-the-eagle-summons.md`, and the hydra's second head's.
    * The smallest and quickest bullet in the game, on 0098's rule the other way round from the
    * blasts: a whip is a lash of these, thrown along an arc with the tip faster than the root, so
    * what the player reads is a curve of fire cracking across the lane. In the `fire` ink.
@@ -494,7 +494,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     ⚠️ **AND *KEEP THE RATIO* TURNED OUT TO BE UNSURVIVABLE, WHICH A GUARD SAID AND NOBODY GUESSED.**
     Holding 0.55 gives 2.75, and `tests/crowd.test.ts` — *for at least one step there was NO place on
     the lane both safe and reachable* — went red on **the hydra's fifth phase at `burn`**. Not the
-    eagle's, which is what the arithmetic had been done on: the hydra grows a flame head too (0254),
+    fish's, which is what the arithmetic had been done on: the hydra grows a flame head too (0254),
     and nobody had added the two attacks together. Measured across the whole range:
 
       2.75  (0.55, the old ratio)   unsurvivable

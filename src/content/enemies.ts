@@ -783,7 +783,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   },
   /**
    * The kite — `docs/decisions/0249-the-eagle-summons.md`. Ember Nebula's, and sent by no level:
-   * the eagle summons them in hordes. One hit, one bite, quick, and weaving hard — a thing that is
+   * the fish summons them in hordes. One hit, one bite, quick, and weaving hard — a thing that is
    * many rather than a thing that is dangerous, which is what a horde is. Its time on the screen
    * at the hardest tier clears 0105's floor with room, which `tests/pilots.test.ts` holds.
    */
@@ -801,7 +801,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     // A DIVE since 0262 — *"the adds marched in gently from the left side in a single file, they
     // didn't swoop or dive bomb."* It wove at 16 by 90; it steers hard for the ship's lane now,
     // at the quickest agility any hunter has, while closing at the quickest closing any hunter
-    // has — which, from the side of the lane the eagle now calls it in on, is a dive. The eagle's
+    // has — which, from the side of the lane the fish now calls it in on, is a dive. The fish's
     // to call and no level's (0249), so 0258's one pilot a level does not read it.
     motion: { kind: 'hunt', agility: 0.9 },
   },
