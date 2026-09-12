@@ -66,7 +66,7 @@ import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
 import type { ShipRow } from '../content/ships.ts';
 import { INVULN_STEPS, SHIELD_MARK, hullFor, shieldsOf } from '../content/ships.ts';
-import { SHOTS, SHOT_INDEX, SHOT_ROWS, type ShotKind } from '../content/shots.ts';
+import { SHOTS, SHOT_INDEX, SHOT_ROWS, type ShotKind, type ShotRow } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, type LevelRow } from '../content/levels.ts';
@@ -3423,9 +3423,85 @@ function feedVoids(w: World): void {
         break;
       }
     }
-    if (blast.health > 0) continue;
+    if (blast.health > 0) {
+      /*
+        ── AND A BALL THAT GETS THIS FAR BURSTS WHEREVER IT HAS GOT TO — 0311 ──────────────────────
+
+        ⚠️ **REPORTED**: *"if the player does not kill it, it explodes when it gets to 20% away from the
+        left screen and the explosion size is based on how much health left."* So the fuse is a PLACE,
+        which is the one thing 0263's stages cannot be: they burn down in steps, and a count timed to
+        arrive at the right distance is a number that is only correct at one speed and one station.
+
+        ⚠️ **HERE RATHER THAN IN `stepEntities`, BECAUSE THIS PASS ALREADY KNOWS WHAT A SWALLOWING
+        BULLET IS.** The loop above has just fed this one and is holding its index; the alternative is a
+        second walk of a hundred and fifty hostile shots to ask a question about the two or three that
+        can answer it. `src/sim/` may not read a row at all, which is the other half of why it is here.
+
+        ⚠️ **AND IT IS CHECKED AFTER THE FEEDING, SO THE LAST VOLLEY COUNTS.** A player who empties it on
+        the step it arrives has killed it: `health > 0` is asked once, below the guns, which means the
+        shot that would have finished it is never wasted on a ball that has already decided to burst.
+      */
+      const row = SHOT_ROWS[blast.kind]!;
+      if (row.swallow !== undefined && blast.along - w.cameraAlong <= row.swallow.at) burstMaw(w, i, row);
+      continue;
+    }
     spendVoid(w, i);
   }
+}
+
+/**
+ * A ball that reached the player's end of the lane, coming apart — 0311.
+ *
+ * ⚠️ **THE COUNT IS THE SIZE, WHICH IS THE ASK READ LITERALLY.** *"The explosion size is based on how much
+ * health left"* — so the share of its appetite still unspent decides how much of the circle is covered. A
+ * ball nobody touched throws the row's full count; one taken to its last point throws a couple. **What
+ * scales is what the player has to move through**, rather than how big each drop is: a weak blast made of
+ * small drops would be an easier thing to see, where a weak blast made of fewer drops is an easier thing
+ * to fly between, and the second is what *a smaller explosion* means to somebody dodging it.
+ *
+ * ⚠️ **ACID AND VOID TOGETHER, ALTERNATING ROUND THE RING** — *"an outward circular blast of acid and void
+ * droplets."* `throwChild` spawns one kind; this walks the row's list, which is what lets one burst be two
+ * bullets. 0263's fission cannot: its children are the same kind by construction, and the note on it says
+ * why — a shard that became a different bullet would want a rung on the hostile ladder for every stage.
+ *
+ * ⚠️ **THE PARENT IS RELEASED FIRST so the first drop takes its slot**, exactly as `burstVoid` and
+ * `fissionShots` do, and safe from a loop running downwards for the reason written there.
+ *
+ * ⚠️ **Nothing allocates.**
+ */
+function burstMaw(w: World, index: number, row: ShotRow): void {
+  const swallow = row.swallow!;
+  const blast = w.enemyShots.at(index);
+  const along = blast.along;
+  const across = blast.across;
+  /*
+    ⚠️ **THE SHARE LEFT, FLOORED AT A COUPLE, BECAUSE A BURST OF ONE IS NOT A BURST.** `health` is what it
+    has left to swallow and the row's is what it started with, so this is *how much of it the player did
+    not deal with*. Two is the floor: a ring needs a gap the player can read, and one drop is a bullet.
+  */
+  const share = row.health > 0 ? Math.max(0, Math.min(1, blast.health / row.health)) : 1;
+  const count = Math.max(2, Math.round(swallow.droplets * share));
+  // Where the ring points is its own roll, so no two bursts open the same way — `burstVoid`'s rule.
+  const turn = w.voidRng.range(0, TAU);
+  w.enemyShots.releaseAt(index);
+  for (let k = 0; k < count; k++) {
+    const kind = swallow.into[k % swallow.into.length]!;
+    const speed = SHOTS[kind].speed * w.difficulty.shotSpeed * (swallow.speed / SHOTS[kind].speed);
+    throwChild(w, along, across, SHOT_INDEX[kind], 0, turn + (k * TAU) / count, speed);
+  }
+  /*
+    The picture says it happened, and so does the cue — 0036. Its own burst rather than an enemy's death.
+
+    ⚠️ **THE THROW SOUNDS LIKE THE VOID AND THE BURST LIKE THE ACID, WHICH IS ONE OBJECT WITH TWO
+    MOMENTS.** The head that lobs it names `bossVoid` — a heavy dark thing leaving the mouth is 0308's
+    wumms — and what comes out of it here is sixteen droplets, which is what a sizzle sounds like. Two
+    cues the player can tell apart, out of sounds that already exist, rather than the same noise twice.
+
+    ⚠️ **NOT `bossShot`**, which is the crash thirteen other bosses share: `tests/serpent.test.ts` holds
+    that this animal never makes it.
+  */
+  burst(w, along, across, BURST.uncoil);
+  w.onCue('bossAcid', across);
 }
 
 /**
@@ -3442,7 +3518,25 @@ function feedVoids(w: World): void {
  * `tests/serpent.test.ts` holds it and `scripts/probes/0299-a-shard-is-killable.mjs` breaks it.
  */
 function spendVoid(w: World, index: number): void {
-  if (w.enemyShots.at(index).turnsLeft > 0) {
+  const spent = w.enemyShots.at(index);
+  /*
+    ⚠️ **AND A BULLET THAT BURSTS WHERE IT ARRIVES IS SIMPLY GONE WHEN IT IS EMPTIED — 0311.** *"If the
+    player does not kill it, it explodes"* — so killing it is the half where nothing happens, and that is
+    the whole reward for shooting the thing. Without this line a maw taken to nothing would go through
+    `burstVoid` and throw **seven more of its own kind**, each with a third of the appetite and each
+    bursting again where it arrived: a chain the player triggers by doing the thing they were asked to do.
+
+    ⚠️ **READ OFF THE ROW RATHER THAN THE KIND**, on 0282's terms: what *being emptied* means is a
+    property of the bullet, and a second shot that bursts on arrival gets the same answer without
+    touching this line.
+  */
+  if (SHOT_ROWS[spent.kind]!.swallow !== undefined) {
+    // Drawn, because a bullet that simply vanishes is the failure 0036 is named for.
+    burst(w, spent.along, spent.across, BURST.melt);
+    w.enemyShots.releaseAt(index);
+    return;
+  }
+  if (spent.turnsLeft > 0) {
     w.enemyShots.releaseAt(index);
     return;
   }

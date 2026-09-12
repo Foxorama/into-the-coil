@@ -159,7 +159,15 @@ describe('the shot that kills you is not the shot you kill with', () => {
       2,
     );
     expect(fromEnemies.size, 'the enemies send fewer than three kinds of bullet').toBeGreaterThanOrEqual(3);
-    const sent = new Set<string>([...fromEnemies, ...fromBosses]);
+    /*
+      ⚠️ **AND A BULLET THAT ANOTHER BULLET BURSTS INTO IS SENT — 0311.** *"An outward circular blast of
+      acid and void droplets"*: a head throws the ball and the ball throws the droplets, so nothing in the
+      enemy or boss tables names them and this guard read them as dead weight. `fission`'s children never
+      showed the hole because they are the same kind as their parent; a `swallow` bursts into kinds of its
+      OWN naming. A row that names a bullet sends it, however many objects away it is.
+    */
+    const fromBursts = new Set<string>(SHOT_KINDS.flatMap((k) => [...(SHOTS[k].swallow?.into ?? [])]));
+    const sent = new Set<string>([...fromEnemies, ...fromBosses, ...fromBursts]);
     const hostile = SHOT_KINDS.filter((k) => ['enemy', 'acid', 'void', 'fire', 'frost'].includes(INK_OF[SPRITE_KINDS[SHOTS[k].sprite]!]));
     expect(
       hostile.filter((k) => !sent.has(k)),

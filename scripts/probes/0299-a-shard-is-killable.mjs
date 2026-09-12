@@ -42,7 +42,9 @@ export const PROBES = [
     guard: '0299 — THE REPORTED ONE: a SHARD can be killed too',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  if (w.enemyShots.at(index).turnsLeft > 0) {\n    w.enemyShots.releaseAt(index);\n    return;\n  }',
+      // ⚠️ Re-anchored by 0311, which reads the spent shot off the pool once and puts its own arm above
+      // this one. The line dropped is unchanged: the stage check that stops a shard bursting.
+      find: '  if (spent.turnsLeft > 0) {\n    w.enemyShots.releaseAt(index);\n    return;\n  }',
       replace: '',
     },
   },

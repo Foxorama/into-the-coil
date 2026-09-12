@@ -73,24 +73,30 @@ export const PROBES = [
       replace: '  if (boss.fireIn <= FACE_GAPE) {',
     },
   },
-  {
-    decision: '0304',
-    suite: 'tests/serpent.test.ts',
-    /*
-      ⚠️ THE GATE THAT DOES NOT WAIT. On the content tier a round of heads is always longer than the
-      spray, so nothing there would ever show this; at the hardest tier's last third the cadence is
-      eighteen, a round of three is fifty-four, and the next spray starts over the last one most of
-      the way round. It is one line, and without it the defect lives only on the tier the author
-      plays least.
-    */
-    broke: 'the next volley no longer waiting for the spray, so on the hardest tier a spray restarts over itself',
-    guard: 'a boss that SPRAYS and grows heads finishes every spray',
-    edit: {
-      path: 'src/app/boss.ts',
-      find: '      if (boss.fireIn < until) boss.fireIn = until;\n',
-      replace: '',
-    },
-  },
+  /*
+    ── THE GATE-THAT-DOES-NOT-WAIT PROBE IS RETIRED — 0311 TOOK ITS CASE AWAY ──────────────────────
+
+    ⚠️ **IT BROKE `if (boss.fireIn < until) boss.fireIn = until;` AND THE SUITE STAYED GREEN.** Its own
+    note said the case lived at *"the hardest tier's last third: the cadence is eighteen, a round of
+    three is fifty-four, and the next spray starts over the last one"*. 0311 made that round the ball
+    and the lightning, so the only spray left is the hurt phase's — and measured at every tier:
+
+    | phase | tier | round | spray |
+    |---|---|---|---|
+    | hurt | legendary | 120 | 60 |
+    | hurt | savior | 96 | 60 |
+    | hurt | **burn** | **60** | **60** |
+
+    **No overlap anywhere**, and the equality is safe by construction rather than by luck: `stepBoss`
+    throws a spray in progress its next globe BEFORE the gate, so on the step a round comes back round
+    the spray's last globe has already left.
+
+    ⚠️ **THE LINE STAYS AND THE PROBE GOES, WHICH IS THE HONEST PAIR.** The mechanism is still right, and
+    the next phase carrying a spray longer than its own round re-arms it; what cannot be claimed today is
+    that anything proves it. A probe left here reporting STILL GREEN is
+    `docs/decisions/0019-a-probe-must-be-seen-to-apply.md`'s own subject wearing a green tick, and one
+    that shortened the cadence as well would be proving the cadence rather than the wait.
+  */
   {
     decision: '0304',
     suite: 'tests/level.test.ts',

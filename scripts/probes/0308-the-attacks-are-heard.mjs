@@ -16,10 +16,13 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: the acid, the void and the lightning are three different sounds',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "            { shot: 'void', attack: { kind: 'spray' }, cue: 'bossVoid' },\n" +
-        '            /*\n',
-      replace: "            { shot: 'void', attack: { kind: 'spray' }, cue: 'bossAcid' },\n" +
-        '            /*\n',
+      /*
+        ⚠️ Re-anchored by 0311, which made the LAST phase's acid and void heads one ball — so the void
+        fan this breaks is the HURT phase's now, and the comment it used to be told apart from is gone
+        with the head it introduced. What it breaks is unchanged: two heads of ONE round sharing a cue.
+      */
+      find: "            { shot: 'void', attack: { kind: 'spray' }, cue: 'bossVoid' },\n          ],",
+      replace: "            { shot: 'void', attack: { kind: 'spray' }, cue: 'bossAcid' },\n          ],",
     },
   },
   {

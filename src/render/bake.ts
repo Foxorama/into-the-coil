@@ -481,6 +481,14 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // kinds of shot in one colour is one bullet wearing three shapes.
   acid: 'acid',
   void: 'void',
+  /*
+    ⚠️ **THE BALL IS IN THE VOID'S INK AND ITS DROPS IN THE ACID'S — 0311.** It carries both, and the two
+    have to be tellable apart the instant it bursts: one object becomes sixteen, half of them the ink it
+    was drawn in and half the other. So the hull is the void's ring and the acid is what churns inside it.
+  */
+  maw: 'void',
+  mawHit: 'impact',
+  droplet: 'acid',
   // The eagle's flame in its own ink — 0249, on the same argument.
   flame: 'fire',
   // The volcanoes' rock in the fire ink — 0251: hot, and told from the flame by five times the
@@ -6224,6 +6232,67 @@ export function drawKind(
       glow(ctx, f, palette.void, 0, 0, 1.1, 0.5);
       // The light on the rim, not in the hole: a mark over a hole is a mark off the hull (0149).
       disc(ctx, f, shade(palette.void, 0.7), 0, -0.6, 0.17);
+      return;
+    case 'maw':
+    case 'mawHit':
+      /*
+        THE COMBINED BALL — 0311: *"a combined acid/void ball."* A void ring with acid churning inside
+        it, because it is carrying both and bursts into both.
+
+        ⚠️ **FILLED AND NOT HOLED, WHICH IS THE ONE THING IT DOES NOT SHARE WITH THE VOID.** The ring
+        above is `evenodd` with a hole, and a hole is what makes a void read as an absence. This is the
+        opposite object — a mouthful of something, with a surface the player is meant to shoot at — so
+        the disc is solid and the void is its RIM. A hole here would also be a lie the moment the thing
+        swells, because what grows is the drawing and the hole would grow with it into a bangle.
+
+        ⚠️ **AND IT IS THE ONE SHOT WITH A HURT TWIN** (0035, and `tests/combat.test.ts`'s *a shot never
+        flashes* is about shots that are spent by arriving). The wash is the standard one, so the twin
+        is this same art under the flash ink and no second drawing.
+      */
+      ctx.arc(half, half, r * 0.86, 0, Math.PI * 2);
+      seal(ctx);
+      glow(ctx, f, palette.void, 0, 0, 1.15, 0.55);
+      /*
+        THE ACID INSIDE — three blots off centre, in the drops' own ink, so the ball reads as carrying
+        something rather than as a bigger void. Their sizes fall, which is what keeps three marks from
+        reading as a pattern.
+      */
+      /*
+        ⚠️ **TWO BLOTS AND NOT THREE.** The third was `shade(palette.acid, 1.2)` and photographed
+        VIOLET against the void's magenta rather than as a lighter acid — a third colour on an object
+        whose whole job is to say *these two things together*. Two, in the acid's own ink, at sizes that
+        do not read as a pattern.
+      */
+      disc(ctx, f, palette.acid, -0.22, -0.18, 0.3);
+      disc(ctx, f, palette.acid, 0.26, 0.1, 0.22);
+      // And the rim light the void wears, so the two are visibly the same family of thing.
+      disc(ctx, f, shade(palette.void, 0.7), 0, -0.66, 0.15);
+      return;
+    case 'droplet':
+      /*
+        ONE DROP OF WHAT IT WAS CARRYING — 0311. A teardrop, point trailing, in the acid ink: the acid
+        globe's family at two thirds its size, because sixteen of these leave one point at once and a
+        ring of full-sized globes is a wall rather than a thing to fly between.
+      */
+      /*
+        ⚠️ **POINT LEADING AND BLUNT BEHIND, AND THE FIRST DRAFT WAS A LENS.** Both ends were points and
+        the highlight sat in the middle, so photographed at 4× it read as an **eye** — two symmetric
+        curves are not a drop however they are filled. Every shot is baked facing down-lane, so the point
+        is on the left: it is falling the way it is going.
+      */
+      ctx.moveTo(half - r * 0.92, half);
+      ctx.quadraticCurveTo(half - r * 0.1, half + r * 0.5, half + r * 0.42, half + r * 0.44);
+      ctx.quadraticCurveTo(half + r * 0.9, half + r * 0.36, half + r * 0.9, half);
+      ctx.quadraticCurveTo(half + r * 0.9, half - r * 0.36, half + r * 0.42, half - r * 0.44);
+      ctx.quadraticCurveTo(half - r * 0.1, half - r * 0.5, half - r * 0.92, half);
+      seal(ctx);
+      glow(ctx, f, palette.acid, 0, 0, 1.05, 0.45);
+      /*
+        ⚠️ **THE HIGHLIGHT SITS IN THE BLUNT END AND THE FIRST ONE DID NOT.** A drop is thin where it
+        tapers, and a disc at (-0.15, -0.12) of 0.2 hung **0.28 px outside** the hull on a 1280×720 screen
+        — `tests/accents.test.ts` measured it. Back and up, where the body actually is.
+      */
+      disc(ctx, f, shade(palette.acid, 1.3), 0.34, -0.1, 0.18);
       return;
     case 'frost':
       /*

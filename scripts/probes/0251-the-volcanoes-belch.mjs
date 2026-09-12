@@ -6,9 +6,15 @@ export const PROBES = [
   {
     decision: '0251',
     suite: 'tests/volcano.test.ts',
-    // The rock made quick: faster than the flame, the smallest bullet, while still the biggest.
-    broke: 'the rock made the quickest bullet in the game while still the biggest',
-    guard: 'THE ROCK: the biggest and slowest',
+    /*
+      The rock made quick — it crosses the lane in 0.88 s against a floor of 1.5.
+
+      ⚠️ **IT USED TO GO RED ON THE RANKING CLAUSE AND NOW GOES RED ON THE ABSOLUTE ONE**, which is 0311
+      taking that loop out (0295). *Slower than every other bullet* and *takes seconds to cross the lane*
+      caught this break equally; only the second says what a rock IS without ordering the table.
+    */
+    broke: 'the rock made quick enough to cross the lane in under a second',
+    guard: 'THE ROCK: a real piece of the lane, slow',
     edit: {
       path: 'src/content/shots.ts',
       // ⚠️ Re-anchored by 0263, which gave every shot row its stages.

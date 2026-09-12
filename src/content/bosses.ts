@@ -171,6 +171,7 @@ export type BossMove =
  */
 export const BOSS_ATTACK_KINDS = [
   'spray',
+  'lob',
   'rake',
   'sweep',
   'ring',
@@ -197,6 +198,21 @@ export type BossAttackKind = (typeof BOSS_ATTACK_KINDS)[number];
 export type BossAttack =
   /** The fan, centred on the lane — a pattern the player reads rather than a spread that follows. */
   | { kind: 'spray' }
+  /**
+   * ONE shot, straight down the lane, whatever the phase's fan says — `docs/decisions/0311-the-acid-and-the-void-come-as-one-ball.md`.
+   *
+   * ⚠️ **THE ONLY ARM THAT DOES NOT SPEND `phase.shots`, AND THAT IS WHY IT EXISTS.** Every other one
+   * here takes its count from the phase, because a phase widening its fan as health falls is the
+   * escalation this table was built for (0040). A ball the player is meant to SHOOT is the opposite
+   * kind of object: its difficulty is its thirty points of appetite and the ground it covers when it
+   * bursts, and three of them at once is not a harder version of one, it is ninety points of shooting
+   * the player cannot finish and three explosions they cannot all be away from.
+   *
+   * ⚠️ **SO THE COUNT IS ONE BY CONSTRUCTION RATHER THAN BY A ROW SAYING `shots: 1`.** The phase's
+   * three are still read by the head beside this one, and a `spray` here would have thrown three balls
+   * — which is what `ring` would have done too, and was the first thing tried.
+   */
+  | { kind: 'lob' }
   /**
    * The fan, centred on the lane, turning by `turn` radians every volley.
    *
@@ -2003,19 +2019,38 @@ export const BOSSES: Record<BossKind, BossRow> = {
           },
         },
         shot: null,
+        /*
+          ── AND THE SPRAY AND THE FAN BECOME ONE BALL — 0311 ────────────────────────────────────────
+
+          ⚠️ **REPORTED**: *"the acid splash and void orb attacks need to change at the lightning phase,
+          currently they go on for too long and get boring → they need to change to a combined acid/void
+          ball."* Both heads went. The sweep threw **twenty-one** globes over a second and the void head
+          three more, so two of every three volleys in the last third were twenty-four bullets the player
+          could only wait out — and *boring* is a stretch of a fight where nothing they do changes what is
+          coming.
+
+          ⚠️ **ONE BALL AND THE LIGHTNING, SO THE ROUND IS TWO HEADS AND NOT THREE.** It alternates:
+          something to shoot, then something to dodge. A `ring` of one is how it is thrown as a single
+          object — the phase's `shots` is 3, which a `spray` would spend on three balls.
+        */
         attack: {
           kind: 'heads',
           heads: [
-            { shot: 'acid', attack: { kind: 'sweep', from: Math.PI / 3, to: (11 * Math.PI) / 6, globes: 21, every: 3 }, cue: 'bossAcid' },
-            { shot: 'void', attack: { kind: 'spray' }, cue: 'bossVoid' },
+            /*
+              ⚠️ **THE BALL SOUNDS LIKE THE VOID AND ITS BURST LIKE THE ACID — 0308's cues, 0311's
+              object.** A heavy dark thing leaving the mouth is the wumms; sixteen acid droplets
+              spraying out of it is the sizzle. So one object gets two moments the player can tell
+              apart, out of cues that already exist, and `burstMaw` in `src/app/frame.ts` names the
+              second.
+            */
+            { shot: 'maw', attack: { kind: 'lob' }, cue: 'bossVoid' },
             /*
               ⚠️ UNTOUCHED, AND SAID TWICE TWO PLAYS APART: *"don't change the lightning attack it's
               really good."* It is the one attack on this boss with a verdict already in.
 
               ⚠️ **AND `cue` IS NOT A CHANGE TO IT — 0308.** The strike, the column and the 45-step
               warning are 0248's and are untouched; what this says is that it no longer falls out of
-              the sky making the same noise as a mouthful of acid. *"Sounds for all the attacks need to
-              be massively buffed"* was reported in the same breath as *don't change the lightning*.
+              the sky making the same noise as a mouthful of acid.
             */
             { shot: 'void', attack: { kind: 'rain', warning: 45, halfWidth: 4 }, cue: 'bossBolt' },
           ],
