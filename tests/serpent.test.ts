@@ -910,35 +910,48 @@ describe('0283 — the serpent is a chain', () => {
       at one moment is a body checked in one pose, and the tightest bend an undulating animal ever
       reaches is the thing the rule is about.
     */
-    const { world, frame } = serpentAt(1);
-    let tightest = Infinity;
-    let at = -1;
-    for (let i = 0; i < 300; i++) {
-      world.bossPool.at(0).fireIn = 999;
-      frame.step();
-      if (world.bossBody.size === 0) continue;
-      const s = spine(world);
-      for (let k = 1; k < s.length - 1; k++) {
-        const a = s[k - 1]!;
-        const b = s[k]!;
-        const c = s[k + 1]!;
-        let turn = Math.atan2(c.across - b.across, c.along - b.along) - Math.atan2(b.across - a.across, b.along - a.along);
-        while (turn > Math.PI) turn -= Math.PI * 2;
-        while (turn < -Math.PI) turn += Math.PI * 2;
-        if (turn === 0) continue;
-        const arc = (Math.hypot(b.along - a.along, b.across - a.across) + Math.hypot(c.along - b.along, c.across - b.across)) / 2;
-        const overGirth = arc / Math.abs(turn) / b.girth;
-        if (overGirth < tightest) {
-          tightest = overGirth;
-          at = k;
+    /*
+      ⚠️ **AND OVER THE REARED PHASE TOO, WHICH IS THE TIGHTEST THE ANIMAL EVER GETS — 0309.** This drove
+      `serpentAt(1)` alone, and the bow the lightning phase adds is a curve the unreared body never has:
+      authored at six over thirty-four it measured **1.39** and this guard catches it — the span was spent
+      instead of the amplitude, and it reads **1.85** now against **2.50** whole.
+
+      ⚠️ **THE SHIP IS WALKED ACROSS THE LANE**, because the bow takes the side of the head's committed
+      gaze (0285): a fixture whose ship never moves exercises one half of the posture and calls it covered.
+    */
+    for (const fraction of [1, 0.2]) {
+      const { world, frame } = serpentAt(fraction);
+      let tightest = Infinity;
+      let at = -1;
+      for (let i = 0; i < 600; i++) {
+        world.bossPool.at(0).fireIn = 999;
+        world.bossPool.at(0).health = world.bossFullHealth * fraction;
+        world.ship.across = i % 400 < 200 ? 8 : 92;
+        frame.step();
+        if (world.bossBody.size === 0) continue;
+        const s = spine(world);
+        for (let k = 1; k < s.length - 1; k++) {
+          const a = s[k - 1]!;
+          const b = s[k]!;
+          const c = s[k + 1]!;
+          let turn = Math.atan2(c.across - b.across, c.along - b.along) - Math.atan2(b.across - a.across, b.along - a.along);
+          while (turn > Math.PI) turn -= Math.PI * 2;
+          while (turn < -Math.PI) turn += Math.PI * 2;
+          if (turn === 0) continue;
+          const arc = (Math.hypot(b.along - a.along, b.across - a.across) + Math.hypot(c.along - b.along, c.across - b.across)) / 2;
+          const overGirth = arc / Math.abs(turn) / b.girth;
+          if (overGirth < tightest) {
+            tightest = overGirth;
+            at = k;
+          }
         }
       }
+      expect(
+        tightest,
+        `at ${fraction} of its health the serpent kinks at node ${at}: its bend radius there is ` +
+          `${tightest.toFixed(2)} of its own girth, and a body that turns inside its own width has no spine in it`,
+      ).toBeGreaterThan(1.5);
     }
-    expect(
-      tightest,
-      `the serpent kinks at node ${at}: its bend radius there is ${tightest.toFixed(2)} of its own girth, and a ` +
-        'body that turns inside its own width has no spine in it',
-    ).toBeGreaterThan(1.5);
   });
 
   it('0285 — THE REPORTED ONE: the head snaps at a ship that crosses it, and a ship that holds its lane is only watched', () => {
