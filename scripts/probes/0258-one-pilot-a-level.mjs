@@ -3,7 +3,7 @@
 // Every guard 0258 adds, broken on purpose. `node scripts/prove-guard.mjs 0258`.
 //
 // ⚠️ Four of these restore what SHIPPED from 0073 and 0111 — a hunting lancer, a stalking harrow,
-// an aiming eagle, a looper that turns on the ship — which is what a probe is for.
+// an aiming fish, a looper that turns on the ship — which is what a probe is for.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
@@ -53,7 +53,7 @@ export const PROBES = [
     decision: '0258',
     suite: 'tests/pilot.test.ts',
     // The frost ship stalking too: two end bosses reacting, which is the report.
-    broke: 'the frost ship stalking as well as the eagle',
+    broke: 'the frost ship stalking as well as the fish',
     guard: 'among the end bosses exactly one stalks',
     edit: {
       path: 'src/content/bosses.ts',
@@ -64,12 +64,12 @@ export const PROBES = [
   {
     decision: '0258',
     suite: 'tests/pilot.test.ts',
-    // The eagle on a patrol as well: no boss reacts, and the fight is weather.
-    broke: 'the eagle on a patrol, so no boss reacts to the player at all',
+    // The fish on a patrol as well: no boss reacts, and the fight is weather.
+    broke: 'the fish on a patrol, so no boss reacts to the player at all',
     guard: 'among the end bosses exactly one stalks',
     edit: {
       path: 'src/content/bosses.ts',
-      // ⚠️ Re-anchored by 0262, which gave the eagle the rake.
+      // ⚠️ Re-anchored by 0262, which gave the fish the rake.
       find: "    move: { kind: 'stalk', agility: 0.22 },\n    attack: { kind: 'rake', turn: 0.5 },",
       replace: "    move: { kind: 'patrol' },\n    attack: { kind: 'rake', turn: 0.5 },",
     },

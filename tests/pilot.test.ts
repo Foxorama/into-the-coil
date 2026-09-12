@@ -74,9 +74,11 @@ describe('0258 — one pilot a level', () => {
 
   it('and among the end bosses exactly one stalks', () => {
     /*
-      *"We need less enemies (and bosses) reacting to the player."* Less is not none: the eagle
-      hunts, because an eagle does, and a fight where nothing on the field knows the player is there
-      is weather. Held as a ceiling of one and a floor of one.
+      *"We need less enemies (and bosses) reacting to the player."* Less is not none: the fish
+      hunts — it was an eagle when 0258 wrote this and the reason given was *a bird does* — and a
+      fight where nothing on the field knows the player is there is weather. **0312 renamed the
+      animal and did not touch its flight**: a thing that runs a lane down its prey is the same
+      fight whichever sky it came out of. Held as a ceiling of one and a floor of one.
     */
     const stalkers = BOSS_KINDS.filter((k) => BOSSES[k].move.kind === 'stalk');
     expect(stalkers.length, `${stalkers.join(', ')} stalk the player, and the ask is fewer`).toBeLessThanOrEqual(1);

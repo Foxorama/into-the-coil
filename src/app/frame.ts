@@ -3225,7 +3225,7 @@ function flare(w: World, along: number, across: number, kind: DebrisKind): void 
  * How often a trailing shot drops a mote, in steps — 0301.
  *
  * ⚠️ **EVERY OTHER STEP RATHER THAN EVERY ONE, AND THE POOL IS WHY.** A fireball lives about a second
- * and a half crossing the view; at one a step that is ninety motes from a single ball, and the eagle
+ * and a half crossing the view; at one a step that is ninety motes from a single ball, and the fish
  * throws seven at once. At every other step a whole lash is holding about thirty of the debris pool's
  * hundred and fifty at a time, which is inside the share 0022 wrote for particles and leaves a death
  * its own burst. **The pool is never grown for this** — `flare` drops what will not fit, exactly as a
@@ -5584,7 +5584,7 @@ const BITE_STEPS = 7;
  *
  * ⚠️ **IT WATCHES WITHOUT CHASING, AND THAT IS DELIBERATE.**
  * `docs/decisions/0258-one-pilot-a-level.md` holds exactly one boss in the game that follows the
- * player's lane, and it is the eagle — *"we need less enemies (and bosses) reacting to the player"*.
+ * player's lane, and it is the fish — *"we need less enemies (and bosses) reacting to the player"*.
  * A pupil is not a flight path: the serpent still flies the pattern its row authors, and what reacts
  * is where it is LOOKING.
  */

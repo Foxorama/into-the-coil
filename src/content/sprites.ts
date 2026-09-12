@@ -182,7 +182,7 @@ export const SPRITE_KINDS = [
   'raptor',
   'raptorHit',
   // The kite — 0249: Ember Nebula's small fast flier, a diamond with a forked tail, summoned by the
-  // eagle in hordes and sent by nothing else.
+  // fish in hordes and sent by nothing else.
   'kite',
   'kiteHit',
   // The moon jelly — 0255: the Black Heart's rain, a bell with a fringe, sent by the jellyfish's
@@ -226,7 +226,7 @@ export const SPRITE_KINDS = [
   'boss6Hit',
   'boss7',
   'boss7Hit',
-  // The seven real bosses, one per place — 0247: the serpent, the eagle, the pterodactyl, the
+  // The seven real bosses, one per place — 0247: the serpent, the flying fish, the pterodactyl, the
   // gyre, the frost ship, the hydra and the jellyfish. Each its own silhouette, as every boss is.
   'boss8',
   'boss8Hit',
@@ -391,13 +391,13 @@ export const SPRITE_KINDS = [
   'maw',
   'mawHit',
   'droplet',
-  // The eagle's flame — 0249: a tongue of fire, the smallest bullet there is.
+  // The fish's flame — 0249: a tongue of fire, the smallest bullet there is.
   'flame',
   // The volcanoes' rock — 0251: a jagged lump lit from a crack, the biggest bullet there is.
   'rock',
   // The frost ship's shard — 0253: a six-pointed star of ice, between the acid and the rock.
   'frost',
-  // The eagle's quill — 0262: a feather, shaft first, between the slab and the ring.
+  // The fish's quill — 0262: a feather, shaft first, between the slab and the ring.
   'quill',
   /*
     ⚠️ **A DART, AND THE ONLY THING IN THE GAME DRAWN LONG ALONG ITS OWN TRAVEL IN THE BULLET INK.**

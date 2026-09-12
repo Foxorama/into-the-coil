@@ -55,7 +55,7 @@ export const PROBES = [
     ⚠️ **THE FOURTH PROBE — the round counting on the rake's angle — WENT WITH THE RAKE, IN 0304.** It
     put back the crash that made every serpent fight throw a TypeError at its first phase change, and
     it went red because the serpent raked in its opening phase and grew heads in its others. 0304
-    made that opening a plain fan, and no row in the game both rakes and grows heads now — the eagle
+    made that opening a plain fan, and no row in the game both rakes and grows heads now — the fish
     and the gyre rake, the hydra and the serpent grow heads — so the break has no content left to
     crash and its guard stayed green over it. The split it proved stands in `src/sim/entity.ts`, and
     the spray that took the rake's place is held for the same defect by 0304's own probes.

@@ -1241,7 +1241,7 @@ describe('0111 — a boss has one idea, and the picture mentions its phases', ()
       expect(marks.size, `${kind} has nothing of its own beyond its flight and its fan`).toBeGreaterThan(0);
       marksOf.set(kind, marks);
     }
-    // Two real bosses may share a mark — the eagle and the frost ship both summon — but each has one
+    // Two real bosses may share a mark — the fish and the frost ship both summon — but each has one
     // the other six do not, which is what *one idea each* means for the real seven.
     for (const [kind, marks] of marksOf) {
       const others = [...marksOf].filter(([k]) => k !== kind).flatMap(([, m]) => [...m]);

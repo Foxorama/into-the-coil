@@ -303,7 +303,7 @@ heavier loadout shortens the fight without trivialising it.
 ⚠️ **TWO FIGHTS A LEVEL SINCE [0247](decisions/0247-a-level-has-a-mid-boss-and-a-real-one.md).**
 The seven bosses the run had are its mid-bosses now, at half their health, fought inside the level
 under its own music; the real boss of each place waits at the end. The real bosses are the
-serpent (Jörmungandr, the Approach), the hell-spawned eagle (Ember Nebula), the pterodactyl
+serpent (Jörmungandr, the Approach), the flying fish (Volans, Ember Nebula), the pterodactyl
 (Saurian Belt), the gyre (the Labyrinth — the lattice upgraded), the frost ship (Rime Shelf), the
 hydra (Toxic Mire) and the jellyfish with the black heart in it (the Black Heart). Each is a first
 iteration; the attacks the game had no word for — flame and frost, whips, beams, summoned hordes,
@@ -320,7 +320,7 @@ at its last third acid, void and lightning in turn — the lightning in columns 
 each column a warning line for three quarters of a second before it strikes. A phase says what a
 boss throws, since 0248; acid and void are shots in inks of their own.
 
-**The eagle whips and summons** — [0249](decisions/0249-the-eagle-summons.md),
+**The fish whips and summons** — [0249](decisions/0249-the-eagle-summons.md),
 [0262](decisions/0262-the-eagle-throws-quills.md): a raking fan of quills — its own bullet, a
 feather shaft first — while whole, then a whip of flames thrown along an arc with the tip faster
 than the root so it bows as it flies, then volleys that call kites — a new body, Ember Nebula's

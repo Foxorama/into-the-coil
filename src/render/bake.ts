@@ -489,7 +489,7 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   maw: 'void',
   mawHit: 'impact',
   droplet: 'acid',
-  // The eagle's flame in its own ink — 0249, on the same argument.
+  // The fish's flame in its own ink — 0249, on the same argument.
   flame: 'fire',
   // The volcanoes' rock in the fire ink — 0251: hot, and told from the flame by five times the
   // size and a shape with corners. A rock in a grey of its own would fail the floor every meaning
@@ -497,7 +497,7 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   rock: 'fire',
   // The frost ship's shard in its own ink — 0253: the one cold thing that hurts.
   frost: 'frost',
-  // The eagle's quill in the enemy's ink — 0262: a feather is told from a slab by its shape.
+  // The fish's quill in the enemy's ink — 0262: a feather is told from a slab by its shape.
   quill: 'enemy',
   // The HUD's lives counter rather than a pickup, since 0082 — it keeps the pickup ink because the
   // number beside it is drawn in the player's own colour and the icon has to sit with it.
@@ -776,7 +776,7 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
  * beside it — `src/content/sprites.ts` records what that second description already cost once.
  *
  * ⚠️ **AND IT IS *WHOSE INK IS `enemy`* RATHER THAN *IS A SHOT*, WHICH IS THE WHOLE DISTINCTION.**
- * The serpent's `acid` and `void`, the eagle's `flame`, the volcanoes' `rock` and the frost ship's
+ * The serpent's `acid` and `void`, the fish's `flame`, the volcanoes' `rock` and the frost ship's
  * shard are shots too and are deliberately NOT here: those inks are what the thing IS, and a flame
  * that changed hue by level would teach the player something untrue about the world. 0295's test,
  * asked of each: *does it make sense for THIS THING to be hard?* Fire, yes. A raider's bullet, no.
@@ -4580,11 +4580,18 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin, jaw: Jaw, gaze: num
 
 
 /*
-  THE EAGLE. A hooked beak at the front, two wings thrown wide with the primaries notched along
-  their trailing edges, and a fanned tail — the widest span in the game, and the only hull whose
-  edge is feathered.
+  THE FLYING FISH. A pointed snout at the front, two pectoral fins thrown wide with their rays
+  notched along the trailing edges, and a fanned caudal fin — the widest span in the game, and the
+  only hull whose edge is feathered.
+
+  ⚠️ **EVERY POINT BELOW WAS AUTHORED AS A BIRD'S AND NOT ONE OF THEM MOVED — 0312.** The path is
+  byte-identical to the `EAGLE_HULL` this was called until 0312; the name over it moved and the
+  sentence above it moved, and nothing else did. The report's reason
+  for the rename is that this drawing *already reads as a fish* — the hooked beak is the snout, the
+  notched primaries are fin rays, and the fanned tail is a tail either way. A repaint is the one
+  thing the ask does not want, and a boss hull wants eyes rather than a confident hour (0027).
 */
-const EAGLE_HULL: readonly Pt[] = [
+const VOLANS_HULL: readonly Pt[] = [
   [-1, -0.04],
   [-0.9, -0.16],
   [-0.76, -0.24],
@@ -6019,9 +6026,10 @@ export function drawKind(
       return;
     case 'boss9':
     case 'boss9Hit':
-      // THE EAGLE — 0264: a hooked beak, two wings thrown wide with the primaries notched along
-      // their trailing edges, a fanned tail — the widest span in the game, and the feathered edge.
-      trace(ctx, f, EAGLE_HULL);
+      // THE FLYING FISH — 0264, renamed by 0312 and not redrawn: a pointed snout, two pectoral fins
+      // thrown wide with the rays notched along their trailing edges, a fanned tail — the widest
+      // span in the game, and the feathered edge.
+      trace(ctx, f, VOLANS_HULL);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       if (skin !== null) paintBoss9(ctx, f, skin, theme);

@@ -49,7 +49,7 @@ export const PROBES = [
     `null`**, because no hull left has its face away from its own centre. There is no row to empty.
 
     The field is kept rather than deleted because the next creature redrawn on the chain — a hydra's
-    necks, an eagle's beak — is exactly the shape that needs one, and `docs/decisions/0283` says so.
+    necks, a fish's snout — is exactly the shape that needs one, and `docs/decisions/0283` says so.
     What holds the claim meanwhile is the probe above, which breaks where the face IS.
   */
 ];
