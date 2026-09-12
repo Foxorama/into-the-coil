@@ -3492,13 +3492,16 @@ function burstMaw(w: World, index: number, row: ShotRow): void {
   /*
     The picture says it happened, and so does the cue — 0036. Its own burst rather than an enemy's death.
 
-    ⚠️ **IT SOUNDS AS THE VOID HEAD THAT THREW IT**, which is 0308's per-attack cue used for the thing the
-    attack turns into: the ball is a mouthful of void and what it does at the end is the void arriving all
-    at once. `tests/serpent.test.ts` asserts it is the same cue the phase's own head names, so this cannot
-    quietly fall back to the crash every boss shares.
+    ⚠️ **THE THROW SOUNDS LIKE THE VOID AND THE BURST LIKE THE ACID, WHICH IS ONE OBJECT WITH TWO
+    MOMENTS.** The head that lobs it names `bossVoid` — a heavy dark thing leaving the mouth is 0308's
+    wumms — and what comes out of it here is sixteen droplets, which is what a sizzle sounds like. Two
+    cues the player can tell apart, out of sounds that already exist, rather than the same noise twice.
+
+    ⚠️ **NOT `bossShot`**, which is the crash thirteen other bosses share: `tests/serpent.test.ts` holds
+    that this animal never makes it.
   */
   burst(w, along, across, BURST.uncoil);
-  w.onCue('bossVoid', across);
+  w.onCue('bossAcid', across);
 }
 
 /**

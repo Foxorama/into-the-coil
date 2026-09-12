@@ -177,28 +177,43 @@ describe('0248 — the serpent strikes', () => {
     const hurtHeads = (hurt.attack ?? row.attack).kind === 'heads' ? (hurt.attack as { heads: readonly { shot: string; attack: { kind: string } }[] }).heads : [];
     expect(hurtHeads.map((h) => `${h.shot}/${h.attack.kind}`), 'once hurt the serpent does not throw the acid spray and void in turn').toEqual(['acid/sweep', 'void/spray']);
     const lastHeads = (last.attack ?? row.attack).kind === 'heads' ? (last.attack as { heads: readonly { shot: string; attack: { kind: string } }[] }).heads : [];
-    expect(lastHeads.map((h) => h.attack.kind), 'the last third does not throw the spray, void and the lightning in turn').toEqual(['sweep', 'spray', 'rain']);
-    expect(lastHeads.map((h) => h.shot).slice(0, 2)).toEqual(['acid', 'void']);
+    /*
+      ⚠️ **THE LAST THIRD IS TWO HEADS SINCE 0311, AND THIS IS THE GUARD MOVING RATHER THAN BENDING.** It
+      read `['sweep', 'spray', 'rain']`. Reported: *"the acid splash and void orb attacks… go on for too
+      long and get boring → they need to change to a combined acid/void ball."* Both of those heads are
+      the ball now, so the round alternates — a thing to shoot, then a thing to dodge. **0261's own claim
+      is untouched**: it is that the weapons come TOGETHER in one round rather than as *"three separate
+      fire fields"*, and a round of two is still a round.
+      `docs/decisions/0192-a-guard-holds-an-invariant.md` — change the guard and say why.
+    */
+    expect(lastHeads.map((h) => h.attack.kind), 'the last third does not throw the ball and the lightning in turn').toEqual(['lob', 'rain']);
+    expect(lastHeads.map((h) => h.shot)).toEqual(['maw', 'void']);
     // And it is the Approach's real boss.
     expect(LEVELS.approach.boss).toBe('jormungandr');
     /*
-      ⚠️ **AND DRIVEN, because the table is not the fight.** At the last third, three volleys in a
-      row: acid in the air, then void, then lightning in the bolt pool and nothing in the air — the
-      round the heads take, in the frame.
+      ⚠️ **AND DRIVEN, because the table is not the fight.** At the last third, volleys in a row: the
+      ball in the air, then lightning in the bolt pool and nothing in the air — the round the heads
+      take, in the frame. **Four volleys rather than three since 0311**, so the round is seen to come
+      back round to where it started rather than merely to have two members.
     */
     const { world, frame } = serpentAt(0.3);
     const boss = world.bossPool.at(0);
     const seen: string[] = [];
-    for (let volley = 0; volley < 3; volley++) {
+    for (let volley = 0; volley < 4; volley++) {
       world.enemyShots.clear();
       world.bolts.clear();
       boss.fireIn = 1;
       frame.step();
       const bolts = world.bolts.size > 0;
       const sprite = world.enemyShots.size > 0 ? world.enemyShots.at(0).sprite : -1;
-      seen.push(bolts ? 'lightning' : sprite === SHOTS.acid.sprite ? 'acid' : sprite === SHOTS.void.sprite ? 'void' : 'nothing');
+      seen.push(bolts ? 'lightning' : sprite === SHOTS.maw.sprite ? 'ball' : sprite === SHOTS.void.sprite ? 'void' : 'nothing');
     }
-    expect(seen, 'three volleys at the last third are not acid, void and lightning in turn').toEqual(['acid', 'void', 'lightning']);
+    expect(seen, 'the last third’s volleys are not the ball and the lightning in turn').toEqual([
+      'ball',
+      'lightning',
+      'ball',
+      'lightning',
+    ]);
   });
 
   it('0304 — THE REPORTED ONE: whole, it throws a forward arc of FIVE globes, and every volley points the same way', () => {
@@ -661,11 +676,19 @@ describe('0248 — the serpent strikes', () => {
       authors and runs the whole way round. Read off the pool, not off `sprayLeft`, which would be the
       model agreeing with itself.
     */
-    const { world, frame } = serpentAt(0.3, 'burn');
+    /*
+      ⚠️ **FLOWN AT THE HURT PHASE SINCE 0311, WHICH IS WHERE THE SPRAY NOW LIVES — AND IT IS THE TIGHTER
+      CASE.** This drove the last third, whose round was three heads of eighteen steps at `burn` against a
+      spray of sixty. 0311 made that round the ball and the lightning, so there is no spray in it; the
+      sweep is the hurt phase's alone. At `burn` that phase fires every **thirty** steps and its round of
+      two is **sixty**, against a spray that runs **sixty-three** — so the gate has less room to spare
+      than it had before, not more. The guard's subject is unchanged: a spray the player never sees finish.
+    */
+    const { world, frame } = serpentAt(0.5, 'burn');
     const boss = world.bossPool.at(0);
-    const last = phaseFor(BOSSES.jormungandr, BOSSES.jormungandr.health * 0.3).attack;
-    const sweep = last !== null && last.kind === 'heads' ? last.heads.map((h) => h.attack).find((a) => a.kind === 'sweep') : undefined;
-    expect(sweep, 'the serpent’s last third has no spray, so this measures nothing').toBeDefined();
+    const hurtPhase = phaseFor(BOSSES.jormungandr, BOSSES.jormungandr.health * 0.5).attack;
+    const sweep = hurtPhase !== null && hurtPhase.kind === 'heads' ? hurtPhase.heads.map((h) => h.attack).find((a) => a.kind === 'sweep') : undefined;
+    expect(sweep, 'the serpent’s hurt phase has no spray, so this measures nothing').toBeDefined();
     const { from, globes: authored } = sweep as { from: number; globes: number };
     const round = (a: number): number => (((a - from) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
 
@@ -678,7 +701,7 @@ describe('0248 — the serpent strikes', () => {
       world.ship.health = world.shipRow.health;
       // Twelve seconds under the lightning: the ship is untouchable, so nothing ends the fight being watched.
       world.ship.invulnFor = 2;
-      boss.health = world.bossFullHealth * 0.3;
+      boss.health = world.bossFullHealth * 0.5;
       frame.step();
       // Thrown THIS step: where it is less the one step it has flown is exactly where the hull was.
       const fresh: number[] = [];
@@ -1256,7 +1279,13 @@ describe('0308 — the attacks are heard', () => {
       ways — and `bossShot` appearing anywhere in this animal's rows is the defect returning.
     */
     const all = named();
-    expect(all.length, 'the serpent names no attacks at all, so this measured nothing').toBeGreaterThan(5);
+    /*
+      ⚠️ **A FLOOR AGAINST A VACUOUS PASS, AND IT WAS WRITTEN AS A COUNT OF THE ROUND — 0311 MOVED IT.**
+      It read `> 5`: one per phase plus the last third's three heads. The ball made that round two, so a
+      line whose only job is to say *this measured something* was quietly asserting the shape of the
+      fight as well. Three is a phase and a round, and says nothing about how many heads either has.
+    */
+    expect(all.length, 'the serpent names no attacks at all, so this measured nothing').toBeGreaterThan(3);
     expect(
       all.filter((cue) => cue === 'bossShot'),
       'an attack of this animal still makes the crash every boss shares',
@@ -2129,7 +2158,7 @@ describe('0307 — the serpent is armoured', () => {
 */
 describe('0311 — the acid and the void come as one ball', () => {
   /** The last phase's heads, which is the round the report is about. */
-  const round = (): readonly { shot: string; attack: { kind: string } }[] => {
+  const round = (): readonly { shot: string; attack: { kind: string }; cue?: string }[] => {
     const row = BOSSES.jormungandr;
     const attack = row.phases[row.phases.length - 1]!.attack ?? row.attack;
     return attack.kind === 'heads' ? attack.heads : [];
@@ -2276,6 +2305,37 @@ describe('0311 — the acid and the void come as one ball', () => {
         'not answer to what the player did to it',
     ).toBeLessThan(whole);
     expect(nearlyDead, 'a hurt ball burst into nothing at all, which is not a blast').toBeGreaterThan(1);
+  });
+
+  it('and the throw and the burst are two DIFFERENT sounds, because it is one object with two moments', () => {
+    /*
+      ⚠️ **0308's CUES, ON 0311's OBJECT.** The head that lobs it names `bossVoid` — a heavy dark thing
+      leaving the mouth — and what comes out of it is sixteen droplets, which is what the sizzle is for. A
+      ball that made the same noise twice tells the player nothing about which of the two just happened,
+      and falling back to `bossShot` would be the crash thirteen other bosses share.
+
+      ⚠️ **DRIVEN, BECAUSE THE THROW IS A ROW AND THE BURST IS A LINE OF CODE.** Nothing but the fight
+      puts the two beside each other.
+    */
+    const lob = round().find((h) => h.shot === 'maw');
+    expect(lob?.cue, 'the ball is lobbed with no sound of its own').toBeDefined();
+    const { world, frame } = withBall();
+    world.enemyShots.at(0).along = world.cameraAlong + SHOTS.maw.swallow!.at + 1;
+    const heard: string[] = [];
+    world.onCue = (kind): void => {
+      if (kind.startsWith('boss') && kind !== 'bossPhase' && kind !== 'bossDown') heard.push(kind);
+    };
+    for (let i = 0; i < 30; i++) {
+      quiet(world);
+      frame.step();
+      if (!onField(world).includes('maw')) break;
+    }
+    expect(heard.length, 'the burst made no sound at all').toBeGreaterThan(0);
+    expect(heard, `the burst sounded ${heard.join(', ')} — one of those is the crash every boss shares`).not.toContain('bossShot');
+    expect(
+      heard[0],
+      `the burst sounds ${heard[0]}, which is what the head that threw it already sounds — one object, one noise`,
+    ).not.toBe(lob!.cue);
   });
 
   it('and KILLING it leaves nothing behind, which is the whole reward for shooting it', () => {

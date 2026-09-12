@@ -18,7 +18,7 @@ import { curtainSpacing, openBy, phaseFor, uncoilsBy } from '../src/app/boss.ts'
 import { BOSS_ATTACK_KINDS, BOSS_MOVE_KINDS, BOSS_STANCE_KINDS, type BossAttack, type BossPhase, type BossRow } from '../src/content/bosses.ts';
 import { BOSS_DEATH_STEPS, GameFrame, SHIP_START_ALONG, advanceLevel, resetScene, respawn } from '../src/app/frame.ts';
 import { ASSIST_LADDER, DEFAULT_ASSISTS, tuningFor } from '../src/sim/assist.ts';
-import { SHOTS } from '../src/content/shots.ts';
+import { SHOTS, type ShotKind } from '../src/content/shots.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 import {
   ACROSS_CULL_MAX,
@@ -513,10 +513,29 @@ describe('every level has a boss of its own, and no two of them are the same obj
  * either spends `shots` or carries it unused for exactly this rule to read (`bare`, `summon`, `beam`),
  * which `src/content/bosses.ts` says in each of their comments.
  */
-function largestVolley(row: BossRow, phase: BossPhase, attack: BossAttack = phase.attack ?? row.attack): number {
-  if (attack.kind === 'sweep') return attack.globes;
-  if (attack.kind === 'heads') return Math.max(...attack.heads.map((head) => largestVolley(row, phase, head.attack)));
-  return phase.shots;
+function largestVolley(
+  row: BossRow,
+  phase: BossPhase,
+  attack: BossAttack = phase.attack ?? row.attack,
+  shot: ShotKind = phase.shot ?? row.shot,
+): number {
+  /*
+    ⚠️ **A BULLET THE PLAYER HAS TO SHOOT DOWN COUNTS AS WHAT IT COSTS THEM — 0311.** This counted
+    OBJECTS, and 0311's ball is one object carrying thirty points of appetite: counted as one, the
+    serpent's last third read as a RELIEF after a spray of twenty-one and this guard said so. It was right
+    to — *a later phase is never a relief* is the claim — and wrong about the quantity, which is the same
+    fault 0304 fixed here once already. **What a volley asks of the player** is things to dodge plus
+    damage to spend, so a swallowing shot is worth its appetite and everything else is worth one. The
+    serpent's last third is 30 against its second's 21.
+  */
+  const each = SHOTS[shot].swallows === true ? SHOTS[shot].health : 1;
+  if (attack.kind === 'sweep') return attack.globes * each;
+  // One shot, whatever the phase's fan says — the arm 0311 added for exactly that reason.
+  if (attack.kind === 'lob') return each;
+  if (attack.kind === 'heads') {
+    return Math.max(...attack.heads.map((head) => largestVolley(row, phase, head.attack, head.shot)));
+  }
+  return phase.shots * each;
 }
 
 describe('a boss fight can reach all of its phases', () => {
