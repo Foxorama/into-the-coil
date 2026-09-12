@@ -2272,10 +2272,22 @@ describe('0311 — the acid and the void come as one ball', () => {
       lastSeen,
       `the ball was last seen ${lastSeen.toFixed(1)} from the trailing edge, where the row says it bursts at ${swallow.at}`,
     ).toBeLessThanOrEqual(swallow.at + 2);
-    // And what it left is both inks — *"an outward circular blast of acid and void droplets"*.
-    const left = new Set(onField(world));
-    for (const kind of swallow.into) expect(left.has(kind), `the burst left no ${kind} behind`).toBe(true);
-    expect(left.has('maw'), 'the burst left another ball behind, which is a chain and not a blast').toBe(false);
+    /*
+      And what it left is both INKS — *"an outward circular blast of acid and void droplets"*.
+
+      ⚠️ **MEASURED AS TWO INKS RATHER THAN AS THE ROW'S OWN LIST, BECAUSE THE FIRST VERSION WALKED
+      `swallow.into` AND SO AGREED WITH WHATEVER IT SAID.** The probe that makes the burst all one kind
+      rewrites that list, and a loop over it then checks only that the one kind it names is present —
+      STILL GREEN, on a guard whose whole subject is that there are two. What the report asks for is a
+      blast of acid AND void, so what is asserted is two inks on the field, neither of them another ball.
+    */
+    const left = onField(world);
+    const inks = new Set(left.map((k) => INK_OF[SPRITE_KINDS[SHOTS[k as keyof typeof SHOTS].sprite]!]));
+    expect(
+      [...inks].sort(),
+      `the burst left ${[...inks].join(', ')} behind — it is one ink, not acid and void together`,
+    ).toEqual(['acid', 'void']);
+    expect(left.includes('maw'), 'the burst left another ball behind, which is a chain and not a blast').toBe(false);
   });
 
   it('and the blast is SMALLER for a ball the player hurt, which is the reward for shooting it', () => {

@@ -528,7 +528,14 @@ function largestVolley(
     damage to spend, so a swallowing shot is worth its appetite and everything else is worth one. The
     serpent's last third is 30 against its second's 21.
   */
-  const each = SHOTS[shot].swallows === true ? SHOTS[shot].health : 1;
+  /*
+    ⚠️ **A SHOT THE PLAYER MAY DODGE IS WORTH ONE, HOWEVER MUCH IT EATS — AND THE FIRST VERSION READ
+    `swallows`.** That counted the void's appetite of six as well, so the serpent's hurt phase measured
+    **18** rather than 21 and 0304's own probe — the spray cut to three globes — went STILL GREEN. A void
+    may simply be flown around; it is `swallow` that makes dealing with a bullet compulsory, because what
+    it does otherwise is burst in the lane the player is flying in.
+  */
+  const each = SHOTS[shot].swallow !== undefined ? SHOTS[shot].health : 1;
   if (attack.kind === 'sweep') return attack.globes * each;
   // One shot, whatever the phase's fan says — the arm 0311 added for exactly that reason.
   if (attack.kind === 'lob') return each;

@@ -105,6 +105,25 @@ the screen* is the rule and [0295](0295-a-ranking-guard-is-a-content-limiter.md)
 used to answer it in advance. A bullet the player is asked to destroy, held in front of them for three
 and a half seconds, has to look like a target rather than like a thing to dodge.
 
+## What it took away, said out loud
+
+⚠️ **0304's *gate that waits for the spray* is now a mechanism no content exercises.** Its probe broke
+the line and `npm run prove` reported **STILL GREEN**, because the case lived in the last third's round
+of three at the hardest tier — which is the ball and the lightning now. Measured at every tier, the only
+spray left is the hurt phase's and its round is never shorter than it:
+
+| phase | tier | round | spray |
+|---|---|---|---|
+| hurt | legendary | 120 | 60 |
+| hurt | savior | 96 | 60 |
+| hurt | **burn** | **60** | **60** |
+
+The equality is safe by construction rather than by luck — `stepBoss` throws a spray's next globe
+**before** the gate — so the line is still right and is simply unreached. **The line stays and the probe
+is retired**, because a probe reporting STILL GREEN is
+[0019](0019-a-probe-must-be-seen-to-apply.md)'s own subject wearing a green tick. The next phase that
+carries a spray longer than its own round re-arms it.
+
 ## What is owed
 
 - **The fight, driven.** `weigh-boss` against every gun, for the appetite above.
