@@ -371,8 +371,20 @@ export function stepBoss(
     either advancing the angle in two places or moving the switch above the station, and the second is
     how the *arms do not touch along* rule gets quietly lost.
   */
-  const rear = row.move.kind === 'bob' && row.move.rear > 0 ? row.move.rear * Math.cos(boss.bobPhase) : 0;
-  const station = cameraAlong + row.station + drift + rear;
+  /*
+    ── AND A PHASE MAY STAND BACK AND STOP LUNGING — 0309 ─────────────────────────────────────────
+
+    ⚠️ **REPORTED**: *"at the lightning phase, the serpent needs to rear back with it's head and upper
+    body."* Both terms are here for the reason the paragraph above gives: the station is the ONE place a
+    hull's lane position is decided, and 0061's and 0101's assertions only mean what they say while that
+    stays true. `stand` moves the whole swing away from the player; `lunge` scales 0289's strike, so the
+    NEAR end moves further than the far one and the head does not leave the screen. The posture that
+    makes it read as a rear rather than as a reposition is the neck's, in `src/app/frame.ts`.
+  */
+  const reared = phase.rear;
+  const lunge = row.move.kind === 'bob' && row.move.rear > 0 ? row.move.rear * (reared?.lunge ?? 1) : 0;
+  const rear = lunge > 0 ? lunge * Math.cos(boss.bobPhase) : 0;
+  const station = cameraAlong + row.station + (reared?.stand ?? 0) + drift + rear;
   /*
     Track it: the ask is how far off station the boss is, capped at the approach rate.
 
