@@ -32,7 +32,7 @@ export const PROBES = [
     suite: 'tests/volans.test.ts',
     // The summons asked for and never answered: the frame's half removed.
     broke: 'the summons never answered, so a volley calls nobody',
-    guard: 'THE SUMMONS: a volley at half health',
+    guard: 'THE SUMMONS: a volley at the last sixth',
     edit: {
       path: 'src/app/frame.ts',
       // ⚠️ Re-anchored by 0262, which added where a summons comes from and which side, and again by
@@ -48,7 +48,7 @@ export const PROBES = [
     // ⚠️ Re-aimed by 0262: the fish's calls come from the sides now, so the break is the flank
     // placement's along put at the camera — behind the ship — rather than the leading edge's.
     broke: 'the adds placed at the camera rather than ahead of the ship',
-    guard: 'THE SUMMONS: a volley at half health',
+    guard: 'THE SUMMONS: a volley at the last sixth',
     edit: {
       path: 'src/app/frame.ts',
       find: '  const along = flanking ? flankAlongFor(w.ship.along, w.cameraAlong, w.view.alongSpan) + w.cameraAlong : spawnAlong(w.cameraAlong);',

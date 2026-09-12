@@ -33,12 +33,16 @@ export const PROBES = [
     suite: 'tests/volans.test.ts',
     // The horde back down the lane in a file.
     broke: 'the kites called at the leading edge again, in a file down the lane',
-    guard: 'THE SUMMONS: a volley at half health',
+    // ⚠️ Re-aimed by 0314 with the anchor: the kites are an escort now, and the guard that reads where
+    // an escort flanks from is 0314's, not the summons's.
+    guard: 'and the shoal comes in from the SIDES',
     edit: {
       path: 'src/content/bosses.ts',
-      // ⚠️ Re-anchored by 0270, which said how many of the horde may stand.
-      find: "attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'vee', from: 'sides', standing: 6 } },",
-      replace: "attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'vee', from: 'lead', standing: 6 } },",
+      // ⚠️ Re-anchored by 0270, which said how many of the horde may stand. And again by 0314, which
+      // made the kites an ESCORT — they arrive while the fish rakes now, rather than instead of a
+      // volley — so the row that says which edge they flank from is that one.
+      find: "escort: { enemy: 'kite', count: 3, formation: 'vee', from: 'sides', standing: 6, every: 150 } },",
+      replace: "escort: { enemy: 'kite', count: 3, formation: 'vee', from: 'lead', standing: 6, every: 150 } },",
     },
   },
   {
@@ -46,11 +50,13 @@ export const PROBES = [
     suite: 'tests/volans.test.ts',
     // Every call from the same side: the toggle dropped.
     broke: 'every call from the same side, so the horde is a file after all',
-    guard: 'THE SUMMONS: a volley at half health',
+    guard: 'THE SUMMONS: a volley at the last sixth',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    boss.spin = boss.spin > 0 ? -1 : 1;\n',
-      replace: '    boss.spin = 1;\n',
+      // ⚠️ Re-anchored by 0314: the escort writes `spin` too, so the bare line appears twice and the
+      // harness refuses an ambiguous `find`. The comment above the summons's is what tells them apart.
+      find: '      boss.spin = boss.spin > 0 ? -1 : 1;\n      // ⚠️ Anchored by',
+      replace: '      boss.spin = 1;\n      // ⚠️ Anchored by',
     },
   },
   {

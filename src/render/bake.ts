@@ -639,6 +639,10 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   raptor: 'enemy',
   raptorHit: 'impact',
   kite: 'enemy',
+  // The shoal — 0314. In the enemy's ink like every other body: what tells a minnow from a kite is
+  // that it is going somewhere else, and a colour of its own would say *this one is not hostile*.
+  minnow: 'enemy',
+  minnowHit: 'impact',
   moonJelly: 'enemy',
   moonJellyHit: 'impact',
   kiteHit: 'impact',
@@ -5197,6 +5201,67 @@ function paintKite(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
   disc(ctx, f, skin.eye, -0.6, 0, 0.09);
 }
 
+/*
+  THE MINNOW — 0314. A small fish seen from the side: a blunt snout, a body that swells behind the
+  head, one dorsal fin up and one anal fin down, and a deeply forked tail.
+
+  ⚠️ **IT SHARES A SKY WITH THE KITE AND HAS TO BE TOLD FROM IT AT TWENTY PIXELS.** A kite is a
+  diamond with two streamers; this is a spindle with a notch in its back end. The pair the player
+  actually has to separate is *the one coming for me* and *the one going somewhere else*, so the
+  silhouettes are deliberately not variations on each other — one is straight-edged and symmetrical
+  about its long axis, the other is curved and has a top and a bottom. `tests/legibility.test.ts`
+  holds the distance between every pair of hulls in this game.
+
+  ⚠️ **THE FINS ARE IN THE OUTLINE AND NOT DRAWN ON IT** — 0276's rule for a creature: exactly one
+  stroke is the hull and everything else is paint held inside it, so a fin that reads at this size has
+  to be part of the silhouette. That is also why the tail's fork is a notch rather than a line.
+*/
+const MINNOW_HULL: readonly Pt[] = [
+  [-1, 0],
+  [-0.82, -0.24],
+  [-0.36, -0.34],
+  [-0.06, -0.78],
+  [0.2, -0.36],
+  [0.56, -0.2],
+  [1, -0.58],
+  [0.76, 0],
+  [1, 0.58],
+  [0.56, 0.2],
+  [0.24, 0.52],
+  [0.04, 0.3],
+  [-0.4, 0.34],
+  [-0.82, 0.24],
+];
+
+/** The minnow's paint — 0314: a lit back, a shadowed belly, embers of the place, and a pale eye. */
+function paintMinnow(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  // The belly in shadow, from behind the head to the tail root — what makes it read as lit from above.
+  plate(ctx, f, skin, [
+    [-0.66, 0.1],
+    [0.1, 0.1],
+    [0.5, 0.16],
+    [0.1, 0.28],
+    [-0.5, 0.3],
+  ]);
+  // The back lit along the same stretch, so the two together are a round body rather than a flat one.
+  lit(ctx, f, skin, [
+    [-0.72, -0.16],
+    [-0.34, -0.3],
+    [-0.04, -0.3],
+    [-0.04, -0.18],
+    [-0.62, -0.08],
+  ]);
+  motif(ctx, f, skin, theme, [
+    [-0.3, -0.22],
+    [0.16, -0.16],
+    [0.16, 0.16],
+    [-0.3, 0.2],
+  ], 'minnow');
+  // Forward of the kite's, because the head is shorter: a fish's eye is in front of its gill, not at
+  // the point of a diamond.
+  disc(ctx, f, skin.eye, -0.68, -0.04, 0.1);
+}
+
 const RAPTOR_HULL: readonly Pt[] = [
   [-1, -0.62],
   [-0.62, -0.92],
@@ -6442,6 +6507,15 @@ export function drawKind(
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       if (skin !== null) paintKite(ctx, f, skin, theme);
+      return;
+    case 'minnow':
+    case 'minnowHit':
+      // A SPINDLE WITH A FORKED TAIL — 0314: a blunt snout, a dorsal fin up and an anal fin down, and
+      // a notch in the back end. The kite beside it is a straight-edged diamond with two streamers.
+      trace(ctx, f, MINNOW_HULL);
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintMinnow(ctx, f, skin, theme);
       return;
     case 'moonJelly':
     case 'moonJellyHit':

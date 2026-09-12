@@ -968,6 +968,48 @@ export interface BossPhase {
    * A required field whose value is `null` forty-odd times buys nothing and spends six probes.
    */
   rear?: Rear;
+  /**
+   * A horde that arrives DURING this phase rather than instead of a volley, or absent for a phase that
+   * calls nobody — `docs/decisions/0314-the-shoal-comes-in-while-it-fights.md`.
+   *
+   * ⚠️ **THE ONE ITEM IN THE FISH'S BRIEF THAT NEEDED A MECHANISM THE GAME DID NOT HAVE.** Asked for:
+   * *"needs to be attack while the adds are coming in."* A `summon` is an arm of `BossAttack`, so the
+   * volley that calls a horde is the volley that throws nothing — the adds ARE the attack, and a phase
+   * table has no way to say *as well as*. This is the way to say it: its own cadence, running beside
+   * whatever the phase throws, exactly as the row's `fall` runs beside every phase (0251).
+   *
+   * ⚠️ **OPTIONAL, ON `rear`'s OWN ARGUMENT** — a required field here would re-anchor every probe that
+   * `find`s a whole phase line, which is six of them for nothing.
+   */
+  escort?: Escort;
+}
+
+/**
+ * An escort: a horde a phase keeps calling while it fights — 0314.
+ *
+ * ⚠️ **EVERY FIELD BUT `every` IS `summon`'s, AND THAT IS DELIBERATE RATHER THAN LAZY.** *Who, how
+ * many, in what shape, from where, and how many may stand* is a question about a horde and not about
+ * the thing that called it, and the answer three decisions arrived at — 0249, 0262's flanking entry and
+ * 0270's ceiling — is the one this wants too. `summonAdds` is one description of putting a horde on the
+ * field; this is a second CALLER of it rather than a second copy.
+ *
+ * ⚠️ **`every` IS WHAT A SUMMONS DOES NOT HAVE**, because a summons happens on the phase's own volley
+ * clock. An escort has to run on a clock of its own or it is a summons again — and a clock of its own
+ * is the whole of what *while* means.
+ */
+export interface Escort {
+  /** The body it calls. */
+  enemy: EnemyKind;
+  /** How many each call puts on the field, before the ceiling below. */
+  count: number;
+  /** The shape they arrive in. */
+  formation: FormationKind;
+  /** Which edge they come in over — `summon`'s own axis, alternating a call. */
+  from: SummonFrom;
+  /** The most of that kind the escort keeps standing, scaled by the tier — 0270's ceiling. */
+  standing: number;
+  /** Steps between calls, before the tier scales it. */
+  every: number;
 }
 
 export interface BossRow extends Body {
@@ -2197,11 +2239,26 @@ export const BOSSES: Record<BossKind, BossRow> = {
       // A fan of three quills, raking — 0262; it was one dart aimed at the ship.
       { upTo: 1, fireEvery: 78, shots: 3, spread: 0.6, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
       { upTo: 0.75, fireEvery: 66, shots: 5, spread: 0.8, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: 'flame', attack: { kind: 'whip', sweep: 1.1, reach: 0.9 } },
-      // Three kites a volley from the sides in turn since 0262, and they dive; two came down the lane.
-      { upTo: 0.5, fireEvery: 60, shots: 5, spread: 0.8, patrolScale: 1.5, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'vee', from: 'sides', standing: 6 } },
-      { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, look: null, shot: 'flame', attack: { kind: 'whip', sweep: 1.4, reach: 0.9 } },
-      // Two raptors a volley from the sides in turn since 0262; one came down the lane in a file.
-      { upTo: 0.16, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'summon', enemy: 'raptor', count: 2, formation: 'line', from: 'sides', standing: 4 } },
+      /*
+        ⚠️ **AND FROM HERE IT THROWS *AND* CALLS — 0314.** *"Needs to be attack while the adds are
+        coming in."* These two phases used to be `summon` volleys, which is a volley that throws
+        nothing: the horde WAS the attack, and for a third of the fight the fish stopped fighting to
+        send it. The horde is an `escort` now, on a clock of its own, and the phase goes on raking and
+        whipping over the top of it.
+      */
+      // It rakes while the kites come in: three a call from the sides in turn, diving — 0262's horde
+      // on 0314's clock.
+      { upTo: 0.5, fireEvery: 60, shots: 5, spread: 0.8, patrolScale: 1.5, stance: { kind: 'volley' }, look: null, shot: null, attack: null, escort: { enemy: 'kite', count: 3, formation: 'vee', from: 'sides', standing: 6, every: 150 } },
+      // And it whips while the SHOAL comes in — the minnows, which swim past the player to the fish.
+      { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, look: null, shot: 'flame', attack: { kind: 'whip', sweep: 1.4, reach: 0.9 }, escort: { enemy: 'minnow', count: 2, formation: 'line', from: 'sides', standing: 4 , every: 150 } },
+      /*
+        ⚠️ **THE LAST THIRD IS BOTH MECHANISMS AT ONCE, WHICH IS WHAT MAKES THEM DIFFERENT THINGS
+        RATHER THAN TWO SPELLINGS.** The volley dumps a wave of kites — the attack, all at once, on the
+        fire grid — while the escort keeps the shoal arriving underneath it on its own faster clock.
+        The raptor that used to be called here is the Saurian Belt's animal and is not missed: what the
+        fish sends now is its own.
+      */
+      { upTo: 0.16, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'line', from: 'sides', standing: 6 }, escort: { enemy: 'minnow', count: 3, formation: 'line', from: 'sides', standing: 5, every: 108 } },
     ],
   },
   /**
