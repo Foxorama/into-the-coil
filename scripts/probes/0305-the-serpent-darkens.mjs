@@ -40,8 +40,9 @@ export const PROBES = [
     guard: 'and it FLICKERS',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const frame = aura.frames[(((tick + k * aura.stride) % n) + n) % n]!;',
-      replace: '    const frame = aura.frames[(((tick + 0 * k) % n) + n) % n]!;',
+      // ⚠️ Re-anchored by 0310, which chooses between the phase's frames and the crown's flare here.
+      find: '    const frame = set[(((tick + k * aura.stride) % set.length) + set.length) % set.length]!;',
+      replace: '    const frame = set[(((tick + 0 * k) % set.length) + set.length) % set.length]!;',
     },
   },
   {
@@ -52,7 +53,8 @@ export const PROBES = [
     guard: 'the horns grow at the void phase and grow again at the lightning',
     edit: {
       path: 'src/render/bake.ts',
-      find: 'const HORN_GROWTH = { 2: 1.5, 3: 2 } as const;',
+      // ⚠️ Re-anchored by 0310, which took the top rung to three.
+      find: 'const HORN_GROWTH = { 2: 1.5, 3: 3 } as const;',
       replace: 'const HORN_GROWTH = { 2: 1.5, 3: 1.5 } as const;',
     },
   },
