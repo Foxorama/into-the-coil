@@ -437,6 +437,10 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   serpentStorm3: 'glass',
   serpentStorm4: 'glass',
   serpentStorm5: 'glass',
+  // The crown's discharge — 0310, on the aura's own terms: it means nothing the player reads elsewhere.
+  serpentFlare0: 'glass',
+  serpentFlare1: 'glass',
+  serpentFlare2: 'glass',
   boss9: 'enemy',
   boss10: 'enemy',
   boss11: 'enemy',
@@ -3613,8 +3617,20 @@ const HORNS: readonly Horn[] = [
  * ⚠️ **ASKED FOR AS A LADDER**: *"it's horns grow longer"* at the void phase, *"a bit longer again"* at
  * the lightning. Half again, then twice: the first step the bigger, because it is the one that says
  * *the animal has changed*, and the second a further third, which is *a bit longer again*.
+ *
+ * ⚠️ **AND THE TOP RUNG WENT 2 → 3, BECAUSE IT WAS ASKED FOR A SECOND TIME — 0310.** *"The horns need to
+ * grow"*, said of the phase that already grew them twice over: the report is that the second step did not
+ * read. It would not have — **1.5 → 2 is a third, against the first step's half**, so the ladder got
+ * *smaller* as the animal got more dangerous. At 3 the last step is three times the first, which is the
+ * shape the escalation should always have had.
+ *
+ * ⚠️ **AND THREE IS THE CEILING OF THE TILE RATHER THAN A TASTE.** `tests/accents.test.ts` refuses a mark
+ * past 1.16 of the drawing radius, because that is where the next bitmap in the atlas begins. Driven
+ * against the traced hull: **2.8 → 1.056, 3.0 → 1.114, 3.2 → 1.172**. Three is the last rung inside the
+ * box; past it `SPRITE_EXTENT.boss8Horn3` has to grow, which costs atlas space and bake resolution across
+ * all eight of that face's frames.
  */
-const HORN_GROWTH = { 2: 1.5, 3: 2 } as const;
+const HORN_GROWTH = { 2: 1.5, 3: 3 } as const;
 
 /** A point of the skull with its horns grown by `grow` — the identity for every point but a tip. */
 function grown(p: Pt, grow: number): Pt {
@@ -4031,11 +4047,20 @@ const AURA_INKS = { deep: '#2a1a9a', violet: '#8a3cff', blue: '#3f6bff', core: '
 const STORM_INKS = { glow: '#ff2238', core: '#ffe4e4' } as const;
 
 /**
- * Which of a storm's frames carry lightning — 0305. Two of six, so any one flame crackles a third of
- * the time and the whole animal is never lit at once: a FLICKER through the aura, as asked, rather
- * than a second aura in red.
+ * Which of a storm's frames carry lightning — 0305, and five of six since 0310.
+ *
+ * ⚠️ **IT WAS TWO OF SIX AND THE PLAYER ASKED FOR THE WHOLE ANIMAL**: *"the red lightning flickers need
+ * to be across the whole body and a bit more subdued."* `Aura.stride` is 1 and there are twenty-six
+ * nodes, so node `k` shows frame `(t + k) % 6` — with two frames lit that is **nine of twenty-seven
+ * flames** carrying lightning at any instant, evenly spaced down the body. Which is *across the body* in
+ * the arithmetic and reads as a row of sparks in the picture, because two thirds of the animal is dark.
+ *
+ * ⚠️ **FIVE AND NOT SIX, SO A FLAME STILL GOES OUT.** Every frame lit is a constant crackle, and the
+ * word asked for was *flickers*. At five of six each node is dark for one frame in six — three hundredths
+ * of a second in every eighteen — and the dark one walks down the body with the stride, so the animal
+ * crackles everywhere and never evenly.
  */
-const STORM_LIT: readonly number[] = [0, 3];
+const STORM_LIT: readonly number[] = [0, 1, 2, 3, 4];
 
 /**
  * One flame of the serpent's aura — frame `frame` of six, with red lightning through it if `storm`.
@@ -4118,10 +4143,126 @@ function paintSerpentAura(ctx: Pen, f: Frame, frame: number, storm: boolean): vo
   /*
     ⚠️ **BOLDER THAN THE FIRST BAKE, WHICH PHOTOGRAPHED AS A FAINT PINK SCRIBBLE** inside the haze
     once the haze was thick enough to be an aura — the red has to win against violet at a node's size.
+
+    ⚠️ **AND SUBDUED AGAIN BY 0310, BECAUSE THERE ARE NOW TWO AND A HALF TIMES AS MANY OF THEM.** *"A bit
+    more subdued"* was asked for in the same breath as *across the whole body*, and the two are one
+    change: nine bolts at this weight was a row of sparks, and twenty-two at this weight would be a
+    second aura in red. The glow narrows 0.085 → 0.062 and drops to 0.5 alpha, and the core 0.03 → 0.022
+    at 0.8 — so a single flame is fainter than it was and the ANIMAL carries more light than it did.
   */
   for (const line of [bolt, branch]) {
-    seam(ctx, f, STORM_INKS.glow, 0.085, line, 0.7);
-    seam(ctx, f, STORM_INKS.core, 0.03, line, 1);
+    seam(ctx, f, STORM_INKS.glow, 0.062, line, 0.5);
+    seam(ctx, f, STORM_INKS.core, 0.022, line, 0.8);
+  }
+}
+
+/**
+ * How much bigger than its own tile the head's aura flame is blitted — 0310.
+ *
+ * ⚠️ **A CONSTANT HERE AND A NUMBER ON THE ROW, WITH A GUARD BETWEEN THEM.** `layAura` blits the head's
+ * flame at `aura.head / SERPENT_BODY_DIAMETER`, and the flare has to know it or the horn tips land
+ * somewhere the horns are not. Importing `BOSSES` here to read one field of one phase of one boss would
+ * make every sprite in the game depend on the boss table; `tests/serpent.test.ts` asserts the two agree
+ * instead, which is the shape `src/content/sprites.ts` already uses for the atlas order.
+ */
+export const FLARE_SWELL = 15 / SERPENT_BODY_DIAMETER;
+
+/**
+ * Where the grown horn tips sit in the flare's own tile, in its `r` — 0310.
+ *
+ * ⚠️ **DERIVED FROM `HORNS` AND `HORN_GROWTH`, NOT MEASURED OFF A PICTURE BY A HAND.** `grown` is the same
+ * function the skull's own drawing uses, so the day the horns grow again — which has now happened twice —
+ * the discharge moves with them. A pair of typed coordinates here would be the third description of where
+ * a horn points, and it would be the one that did not move.
+ *
+ * ⚠️ **THE MAPPING IS TWO SIZES AND NOTHING ELSE, AND THE FIRST VERSION GOT IT WRONG.** A point at 1 in
+ * the skull's frame is `0.42 × boss8` world units out; in the flame's it is `0.42 × flare × swell`. So the
+ * ratio is `boss8 / (flare × swell)`, and the 0.42s cancel — the draft that kept one of them put the
+ * discharge fifteen per cent too far out and, photographed, read as a neon staple hanging off the crown.
+ */
+const FLARE_SPAN = SPRITE_EXTENT.boss8 / (SPRITE_EXTENT.serpentFlare0 * FLARE_SWELL);
+const FLARE_TIPS: readonly Pt[] = HORNS.map(([tip]) => {
+  const [gx, gy] = grown(tip, HORN_GROWTH[3]);
+  return [gx * FLARE_SPAN, gy * FLARE_SPAN] as Pt;
+});
+
+/**
+ * The crown discharging — 0310, frame `frame` of three.
+ *
+ * ⚠️ **ASKED FOR**: *"the horns need to grow and .5sec before the lightning attack happens, they need to
+ * flare with red lightning."* The growth is `HORN_GROWTH`; this is the flare, and it is the head's own
+ * aura flame with the discharge drawn over it rather than a new face.
+ *
+ * ⚠️ **A FLAME AND NOT EIGHT FACES, WHICH IS WHAT MADE IT AFFORDABLE.** The head wears seven faces in
+ * this phase (0285) and each has a hurt twin; a flaring variant of every one is sixteen more bakes of the
+ * widest sprite in the game, for a state that lasts thirty steps. The aura pool already carries **one**
+ * flame for the head (0305), drawn in a layer of its own — so a flare is three tiles and no new faces,
+ * and the frame chooses between them by swapping one bitmap.
+ *
+ * ⚠️ **IT IS DRAWN BEHIND THE SKULL, WHICH IS WHERE THE HORNS ARE ANYWAY.** The aura layer is before the
+ * body (`src/app/mount.ts`'s layer order), so what shows is everything outside the skull's silhouette —
+ * and the horns are swept back off the crown, so the arc that leaps between their tips and the forks that
+ * climb off them are exactly the parts that are not behind anything.
+ */
+function paintSerpentFlare(ctx: Pen, f: Frame, frame: number): void {
+  // The flame it replaces, so the crown does not change what it is burning with for half a second.
+  paintSerpentAura(ctx, f, frame, true);
+  const rng = makeRng('aura').stream(`flare/${frame}`);
+  const R = AURA_FLESH;
+  /*
+    ⚠️ **THE ARC BETWEEN THE TIPS IS THE FIGURE, AND IT IS WHY THERE ARE TWO HORNS.** A charge on one
+    horn is a glow; a charge that JUMPS from one to the other is a circuit, and the eye reads a circuit as
+    power building. Jagged between them with the sag of a real arc, rooted on the tips themselves.
+  */
+  const [a, b] = [FLARE_TIPS[0]!, FLARE_TIPS[1]!];
+  /*
+    ⚠️ **NINE SEGMENTS AND NOT FIVE, AND IT IS THE DIFFERENCE BETWEEN AN ARC AND A STAPLE.** Photographed
+    at the sheet's 8×, the first draft's five jittered points under a thick stroke came back as a squared
+    bracket: too few corners to read as electricity and too heavy for any of them to be sharp. Lightning
+    is MANY small deviations, so the count goes up and the width comes down together.
+  */
+  const bridge: Pt[] = [a];
+  for (let i = 1; i < 9; i++) {
+    const t = i / 9;
+    bridge.push([
+      a[0] + (b[0] - a[0]) * t + rng.range(-0.09, 0.09) * R,
+      a[1] + (b[1] - a[1]) * t - Math.sin(Math.PI * t) * R * 0.16 + rng.range(-0.08, 0.08) * R,
+    ]);
+  }
+  bridge.push(b);
+  /*
+    ⚠️ **AND THE FORKS LEAK OFF THE HORN RATHER THAN OUT OF THE TILE.** Each starts ON a tip and climbs
+    away from the skull's middle, so the discharge is tied to the thing it is coming off — a bridge alone
+    reads as a wire strung between two points, and forks that wandered read as a scribble beside the head.
+    Two off each tip, at a third of the tile's flesh, so they stop well inside the bitmap.
+  */
+  const forks: Pt[][] = [];
+  for (const tip of FLARE_TIPS) {
+    for (let k = 0; k < 2; k++) {
+      const line: Pt[] = [tip];
+      let [x, y] = tip;
+      // Away from the centre, which for a crown means up and outward — the direction the horn points.
+      const out = Math.atan2(tip[1], tip[0]) + rng.range(-0.5, 0.5);
+      for (let j = 0; j < 3; j++) {
+        const reach = rng.range(0.1, 0.19) * R;
+        x += Math.cos(out) * reach + rng.range(-0.07, 0.07) * R;
+        y += Math.sin(out) * reach + rng.range(-0.07, 0.07) * R;
+        line.push([x, y]);
+      }
+      forks.push(line);
+    }
+  }
+  /*
+    ⚠️ **BRIGHTER THAN THE BODY'S CRACKLE AND MUCH THINNER THAN THE FIRST DRAFT.** 0310 makes the aura's
+    lightning subdued because it is everywhere and always on; this is a TELL — thirty steps, once per
+    round — so it has to win, and *winning* is alpha and count rather than width. At 0.1 of the tile it
+    photographed as a neon pipe; at 0.038 with a 0.014 core it is a filament, which is what the player
+    already said they liked about the gun's own bolts: *"it looks more like lightning with the thinner
+    graphics"* (0302).
+  */
+  for (const line of [bridge, ...forks]) {
+    seam(ctx, f, STORM_INKS.glow, 0.038, line, 0.8);
+    seam(ctx, f, STORM_INKS.core, 0.014, line, 1);
   }
 }
 
@@ -5857,6 +5998,16 @@ export function drawKind(
         palette with no skins, which is the high-contrast one.
       */
       if (skin !== null) paintSerpentAura(ctx, f, Number(kind.slice(-1)), kind.startsWith('serpentStorm'));
+      return;
+    case 'serpentFlare0':
+    case 'serpentFlare1':
+    case 'serpentFlare2':
+      /*
+        THE CROWN DISCHARGING — 0310. The head's own aura flame with the horns' lightning over it, worn
+        for the half-second before a strike lands. Same tile and same girth as the storm frame it
+        replaces, so the crown does not change size to tell the player something.
+      */
+      if (skin !== null) paintSerpentFlare(ctx, f, Number(kind.slice(-1)));
       return;
     case 'boss9':
     case 'boss9Hit':

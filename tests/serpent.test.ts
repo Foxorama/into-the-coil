@@ -22,9 +22,9 @@ import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHOTS, SHOT_INDEX } from '../src/content/shots.ts';
 import { weaponFor } from '../src/content/pickups.ts';
-import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { SERPENT_BODY_DIAMETER, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/sprites.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
-import { INK_OF, drawKind } from '../src/render/bake.ts';
+import { FLARE_SWELL, INK_OF, drawKind } from '../src/render/bake.ts';
 import { tracingPen } from './paths.ts';
 import { BOLT_STEPS, paintScene } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
@@ -1542,6 +1542,177 @@ describe('0309 — the serpent rears back', () => {
       `the unreared far end is ${whole.far.toFixed(1)} against the ${station} its row describes — further off than ` +
         'the station tracker can account for',
     ).toBeLessThan(3);
+  });
+});
+
+/*
+  ── 0310: THE STORM RUNS THE WHOLE BODY, AND THE HORNS FIRE IT ──────────────────────────────────
+
+  `docs/decisions/0310-the-storm-runs-the-whole-body.md`. Reported, of the look 0305 shipped:
+
+  > *"3. the red lightning flickers need to be across the whole body and a bit more subdued*
+  > *4. the horns need to grow and .5sec before the lightning attack happens, they need to flare with
+  > red lightning"*
+*/
+describe('0310 — the storm runs the whole body, and the horns fire it', () => {
+  /** How far a kind's drawing reaches from its centre, in WORLD units, so tiles of different extents compare. */
+  function worldReach(kind: SpriteKind, only?: string, swell = 1): number {
+    const size = SPRITE_EXTENT[kind] * viewOf(1280, 720).scale;
+    const rec = tracingPen();
+    drawKind(rec.pen, kind, PALETTES[DEFAULT_PALETTE], size, 'approach');
+    const half = size / 2;
+    const paths =
+      only === undefined
+        ? rec.trace.passes.flatMap((p) => p.subpaths)
+        : rec.trace.inks.filter((i) => i.colour === only).flatMap((i) => i.subpaths);
+    let out = 0;
+    for (const path of paths) {
+      for (const [x, y] of path) out = Math.max(out, (Math.hypot(x - half, y - half) / size) * SPRITE_EXTENT[kind] * swell);
+    }
+    return out;
+  }
+
+  /** How many strokes a kind draws in the storm's two reds — the discharge, traced. */
+  function sparks(kind: SpriteKind): number {
+    const size = SPRITE_EXTENT[kind] * viewOf(1280, 720).scale;
+    const rec = tracingPen();
+    drawKind(rec.pen, kind, PALETTES[DEFAULT_PALETTE], size, 'approach');
+    return rec.trace.inks.filter((ink) => ink.colour === '#ff2238' || ink.colour === '#ffe4e4').length;
+  }
+
+  it('THE REPORTED ONE: the lightning is on nearly every frame, so it is across the whole body', () => {
+    /*
+      ⚠️ **THE ARITHMETIC IS WHY TWO FRAMES WAS NOT *ACROSS THE BODY*.** `Aura.stride` is 1 and the body is
+      twenty-six nodes, so node `k` wears frame `(t + k) % 6` — with two of six lit, **nine of the
+      twenty-seven flames** carry lightning at any instant. That is *spread* in the model and reads as a row
+      of sparks in the picture, because two thirds of the animal is dark at every moment.
+
+      ⚠️ **AND NOT ALL SIX, WHICH IS THE OTHER HALF OF THE WORD.** *Flickers* means something goes out. At
+      five of six each node is dark one frame in six and the dark one walks down the body.
+    */
+    const storm = [0, 1, 2, 3, 4, 5].map((i) => sparks(`serpentStorm${i}` as SpriteKind));
+    const lit = storm.filter((n) => n > 0).length;
+    expect(lit, `${lit} of the storm's six frames carry lightning — ${storm.join(', ')} strokes each`).toBe(5);
+    // And the void phase's aura carries none at all, which is what makes the two phases tellable apart.
+    for (let i = 0; i < 6; i++) {
+      expect(sparks(`serpentAura${i}` as SpriteKind), `the void phase's aura frame ${i} crackles`).toBe(0);
+    }
+  });
+
+  it('and the HORNS are longer again, by more than the step before them', () => {
+    /*
+      ⚠️ **THE LADDER GOT SMALLER AS THE ANIMAL GOT MORE DANGEROUS, WHICH IS WHY IT DID NOT READ.** 0305
+      grew the horns by half at the void phase and by a further third at the lightning. What is asserted is
+      the SHAPE of the ladder — each step at least as big as the one before — rather than either number,
+      because the numbers are a hand's and the shape is the escalation.
+
+      ⚠️ **MEASURED OFF THE TRACED DRAWING, in world units**, so it is the horn the game bakes rather than
+      `HORN_GROWTH` agreeing with itself — 0027.
+    */
+    const plain = worldReach('boss8');
+    const void2 = worldReach('boss8Horn2');
+    const storm3 = worldReach('boss8Horn3');
+    expect(void2 - plain, `the void phase's horns reach ${void2.toFixed(2)} against ${plain.toFixed(2)} plain`).toBeGreaterThan(1);
+    expect(
+      storm3 - void2,
+      `the lightning phase's horns reach ${storm3.toFixed(2)} against the void phase's ${void2.toFixed(2)} — the last ` +
+        `step of the ladder is smaller than the first (${(void2 - plain).toFixed(2)})`,
+    ).toBeGreaterThanOrEqual(void2 - plain);
+  });
+
+  it('and the CROWN flares for half a second before a strike, and at no other time', () => {
+    /*
+      ⚠️ **ASKED FOR AS A TIME AND HELD AS ONE**: *".5sec before the lightning attack happens."* The flare is
+      read off the bolt already in the air rather than a timer of its own — a `rain` bolt strikes on the step
+      its `lifeFor` reaches `BOLT_STEPS` — so what this drives is the whole round, watching which bitmap the
+      head's flame wears against how far the nearest strike is from landing.
+
+      ⚠️ **AND THE BODY MUST NOT FLARE, which is the half that makes it the horns.** The nodes go on crackling
+      at their own rate; if they flared too, the tell would be the animal getting brighter.
+    */
+    const aura = phaseFor(BOSSES.jormungandr, BOSSES.jormungandr.health * 0.2).look?.aura;
+    expect(aura?.flare, 'the lightning phase authors no flare at all').toBeDefined();
+    const flare = new Set(aura!.flare!);
+    const { world, frame } = serpentAt(0.2);
+    armRain(world.bossPool.at(0));
+    /*
+      ⚠️ **THE FIXTURE HOLDS THE GATE OFF WHILE IT ARRIVES AND THIS IS THE ONE TEST THAT NEEDS IT OPEN.**
+      `serpentAt` parks `fireIn` at 999 through the approach so a count starts on a boss standing still;
+      letting it go is what makes the round turn over and the lightning fall. The ship is kept alive and
+      untouchable because a strike that ended the run would end the measurement with it — and an invuln
+      ship changes nothing about a bolt's own clock, which is the thing being watched.
+    */
+    world.bossPool.at(0).fireIn = 1;
+    let within = 0;
+    let outside = 0;
+    let onTheBody = 0;
+    let strikes = 0;
+    for (let i = 0; i < 900; i++) {
+      world.bossPool.at(0).health = world.bossFullHealth * 0.2;
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      frame.step();
+      if (world.bossAura.size === 0) continue;
+      /*
+        How far the nearest strike is from landing, or `Infinity` when none is in the air.
+
+        ⚠️ **A BOLT AT EXACTLY `BOLT_STEPS` IS STRIKING THIS STEP AND IS ZERO AWAY, NOT ABSENT.** The first
+        version skipped those with the ones already fading, and reported six flares a run *outside* the
+        window — every one of them on a step whose bolts were all at 8. `layAura` runs before the bolts'
+        clocks do, so it saw 9 and the pool read after the step says 8: the flare was right and the
+        measurement was calling a strike in progress *no strike at all*.
+      */
+      let until = Number.POSITIVE_INFINITY;
+      for (let b = 0; b < world.bolts.size; b++) {
+        const bolt = world.bolts.at(b);
+        if (bolt.kind !== RAIN_BOLT_KIND || bolt.lifeFor < BOLT_STEPS) continue;
+        until = Math.min(until, bolt.lifeFor - BOLT_STEPS);
+      }
+      if (until <= 1) strikes++;
+      /*
+        ⚠️ **THIRTY-ONE AND NOT THIRTY, AND THE ONE STEP IS THE MEASUREMENT'S RATHER THAN THE CODE'S.** The
+        bolt's clock runs down inside the same `step()` that laid the flame, so the pool read after it is
+        one tick further on than `layAura` saw. The window is thirty; this is thirty as read from here.
+      */
+      const head = world.bossAura.at(world.bossAura.size - 1);
+      if (flare.has(head.sprite)) {
+        if (until <= 31) within++;
+        else outside++;
+      }
+      for (let k = 0; k < world.bossAura.size - 1; k++) if (flare.has(world.bossAura.at(k).sprite)) onTheBody++;
+    }
+    expect(strikes, 'no strike ever came, so nothing about the half-second before one was measured').toBeGreaterThan(2);
+    expect(within, 'the crown never flared at all in the half-second before a strike').toBeGreaterThan(30);
+    expect(outside, `the crown flared on ${outside} steps with no strike inside half a second of landing`).toBe(0);
+    expect(onTheBody, `${onTheBody} body flames wore the crown's discharge — the flare is the horns, not the weather`).toBe(0);
+  });
+
+  it('and the flare is drawn where the horns are, which is the one thing the bake has to assume', () => {
+    /*
+      ⚠️ **THE BAKE CANNOT SEE THE ROW AND THE ROW CANNOT SEE THE BAKE.** `paintSerpentFlare` puts the
+      discharge on the grown horn tips, and to do that it has to know how much bigger than its tile the
+      head's flame is blitted — which is `aura.head / SERPENT_BODY_DIAMETER`, a number on the boss row.
+      Importing `BOSSES` into `src/render/bake.ts` would make every sprite in the game depend on the boss
+      table; this asserts the two agree instead, which is the shape `src/content/sprites.ts` uses for the
+      atlas order and the reason it gives.
+
+      ⚠️ **AND THE DISCHARGE IS OUTSIDE THE SKULL, WHICH IS THE HALF A PICTURE OF THE TILE CANNOT SHOW.**
+      `scripts/shot-sheet.mjs` photographs the flame alone; in the fight the head is drawn over it, so what
+      makes this a flare on the horns rather than a scribble behind the face is that its marks sit further
+      out than the skull's own drawing reaches. In world units, across two tiles of different extents.
+    */
+    const aura = phaseFor(BOSSES.jormungandr, BOSSES.jormungandr.health * 0.2).look?.aura;
+    expect(aura!.head / SERPENT_BODY_DIAMETER, 'the bake and the row disagree about how big the head’s flame is').toBeCloseTo(
+      FLARE_SWELL,
+      10,
+    );
+    const skull = worldReach('boss8Horn3');
+    const discharge = worldReach('serpentFlare0', '#ff2238', FLARE_SWELL);
+    expect(
+      discharge,
+      `the crown's discharge reaches ${discharge.toFixed(1)} world units where the skull itself reaches ` +
+        `${skull.toFixed(1)} — it is behind the face rather than off the horns`,
+    ).toBeGreaterThan(skull * 0.8);
   });
 });
 
