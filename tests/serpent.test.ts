@@ -1599,26 +1599,27 @@ describe('0310 — the storm runs the whole body, and the horns fire it', () => 
     }
   });
 
-  it('and the HORNS are longer again, by more than the step before them', () => {
-    /*
-      ⚠️ **THE LADDER GOT SMALLER AS THE ANIMAL GOT MORE DANGEROUS, WHICH IS WHY IT DID NOT READ.** 0305
-      grew the horns by half at the void phase and by a further third at the lightning. What is asserted is
-      the SHAPE of the ladder — each step at least as big as the one before — rather than either number,
-      because the numbers are a hand's and the shape is the escalation.
+  /*
+    ── THE HORNS HAVE NO GUARD OF THEIR OWN HERE, AND `npm run prove` IS WHY ──────────────────────
 
-      ⚠️ **MEASURED OFF THE TRACED DRAWING, in world units**, so it is the horn the game bakes rather than
-      `HORN_GROWTH` agreeing with itself — 0027.
-    */
-    const plain = worldReach('boss8');
-    const void2 = worldReach('boss8Horn2');
-    const storm3 = worldReach('boss8Horn3');
-    expect(void2 - plain, `the void phase's horns reach ${void2.toFixed(2)} against ${plain.toFixed(2)} plain`).toBeGreaterThan(1);
-    expect(
-      storm3 - void2,
-      `the lightning phase's horns reach ${storm3.toFixed(2)} against the void phase's ${void2.toFixed(2)} — the last ` +
-        `step of the ladder is smaller than the first (${(void2 - plain).toFixed(2)})`,
-    ).toBeGreaterThanOrEqual(void2 - plain);
-  });
+    ⚠️ **ONE WAS WRITTEN AND IT DID NOT FIRE.** *"Each step of the ladder at least as big as the one
+    before"* looked like the shape of the escalation and is satisfied by the very numbers it was written
+    to refuse: a horn grows from a base offset, so 0305's 1 → 1.5 → 2 reaches **11.6 → 13.9 → 16.4**
+    world units, and the second step (2.5) is already bigger than the first (2.3). The probe that puts
+    0305's ladder back reported STILL GREEN — `docs/decisions/0019-a-probe-must-be-seen-to-apply.md`.
+
+    ⚠️ **AND THE TIGHTER VERSION WOULD HAVE BEEN A CONTENT LIMITER.** *At least twice the first step*
+    would have fired, and it is exactly what
+    `docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md` refuses: a boss whose horns leap early
+    and creep late is a fight somebody is entitled to author, and a threshold here answers that question
+    before it is asked. **How much is a taste**, and the eye that reported *"the horns need to grow"* is
+    the instrument for it.
+
+    ⚠️ **WHAT IS STILL HELD IS THE DIRECTION AND THE CEILING.** 0305's own guard holds that the horns
+    grow at the void phase and grow again at the lightning; `tests/accents.test.ts` holds that no mark
+    leaves 1.16 of the drawing radius, which is what makes 3 the last rung inside the tile. The
+    measurements are in the decision.
+  */
 
   it('and the CROWN flares for half a second before a strike, and at no other time', () => {
     /*

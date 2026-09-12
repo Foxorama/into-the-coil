@@ -32,22 +32,14 @@ export const PROBES = [
       replace: 'const STORM_LIT: readonly number[] = [0, 1, 2, 3, 4, 5];',
     },
   },
-  {
-    decision: '0310',
-    suite: 'tests/serpent.test.ts',
-    /*
-      ⚠️ 0305's OWN LADDER, WHICH IS THE THING THAT DID NOT READ. Half and then a third: the escalation
-      shrinks exactly where it is meant to peak, and every number in the file is still a number somebody
-      chose. What the guard holds is the SHAPE — no step smaller than the one before it.
-    */
-    broke: 'the horns back on 0305’s ladder, whose last step is smaller than its first',
-    guard: 'and the HORNS are longer again, by more than the step before them',
-    edit: {
-      path: 'src/render/bake.ts',
-      find: 'const HORN_GROWTH = { 2: 1.5, 3: 3 } as const;',
-      replace: 'const HORN_GROWTH = { 2: 1.5, 3: 2 } as const;',
-    },
-  },
+  /*
+    ⚠️ **A PROBE FOR THE HORNS' LENGTH WAS WRITTEN AND IS GONE WITH ITS GUARD.** It put 0305's ladder
+    back and `npm run prove` reported **STILL GREEN**: *no step smaller than the one before* is satisfied
+    by the numbers it was meant to refuse, because a horn grows from a base offset — 11.6 → 13.9 → 16.4
+    world units, second step 2.5 against a first of 2.3. The tighter version that would have fired is a
+    content limiter (0295), so the guard went rather than the threshold moving until it passed.
+    `tests/serpent.test.ts` carries the whole argument where the test used to be.
+  */
   {
     decision: '0310',
     suite: 'tests/serpent.test.ts',

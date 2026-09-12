@@ -49,6 +49,19 @@ the next bitmap in the atlas begins. Driven against the traced hull:
 Anything further wants `SPRITE_EXTENT.boss8Horn3` to grow, which costs atlas space and bake resolution
 across all eight of that face's frames.
 
+⚠️ **AND THE GUARD WRITTEN FOR THIS WAS DELETED RATHER THAN TUNED, WHICH IS THE PART WORTH KEEPING.**
+*"Each step of the ladder at least as big as the one before"* looked like the shape of the escalation
+and is satisfied by the very numbers it was written to refuse: a horn grows from a base offset, so
+0305's ladder reaches **11.6 → 13.9 → 16.4** world units and its second step (2.5) is already bigger
+than its first (2.3). `npm run prove` reported **STILL GREEN** on the probe that put 0305's ladder back
+— [0019](0019-a-probe-must-be-seen-to-apply.md) doing exactly its job.
+
+The tighter version — *at least twice the first step* — would have fired, and it is what
+[0295](0295-a-ranking-guard-is-a-content-limiter.md) refuses: a boss whose horns leap early and creep
+late is a fight somebody is entitled to author, and a threshold answers that before it is asked. **How
+much is a taste**, and the eye that reported *"the horns need to grow"* is the instrument for it. What
+is still held is the direction (0305's own guard) and the ceiling (`tests/accents.test.ts`).
+
 ## The flare — a tell inside a tell
 
 ⚠️ **IT IS THE HEAD'S AURA FLAME AND NOT A NEW FACE, WHICH IS THE WHOLE ECONOMY.** The head wears seven
