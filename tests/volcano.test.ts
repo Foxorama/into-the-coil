@@ -14,7 +14,7 @@ import { GameFrame } from '../src/app/frame.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { BURST } from '../src/content/debris.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
-import { SHOTS, SHOT_KINDS, type ShotKind } from '../src/content/shots.ts';
+import { SHOTS, type ShotKind } from '../src/content/shots.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { INK_OF } from '../src/render/bake.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
@@ -78,13 +78,28 @@ if (quetzalFall.kind !== 'shot') throw new Error('the quetzal’s fall is not a 
 const fall = quetzalFall;
 
 describe('0251 — the volcanoes belch', () => {
-  it('THE ROCK: the biggest and slowest hostile bullet, hot, hitting for two — and the belt’s boss is the one thing that sends it', () => {
-    const hostile = SHOT_KINDS.filter((k) => ['enemy', 'acid', 'void', 'fire', 'frost'].includes(INK_OF[SPRITE_KINDS[SHOTS[k].sprite]!]));
+  it('THE ROCK: a real piece of the lane, slow, hot, hitting for two — and the belt’s boss is the one thing that sends it', () => {
+    /*
+      ── THE RANKING HALF IS GONE — 0311, ON 0295's OWN TERMS ────────────────────────────────────────
+
+      ⚠️ **IT LOOPED OVER EVERY HOSTILE BULLET AND DEMANDED THE ROCK OUT-RANK ALL OF THEM ON TWO
+      CHANNELS** — drawn bigger than each, flying slower than each. That is
+      `docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md` exactly: *"anything that ranks
+      something against something else comparing every single aspect of those two things is a
+      restrictive and bad rule."* Five of that family were deleted at once; this one survived by being
+      phrased as one row's identity rather than as an ordering, and it is the same machine.
+
+      ⚠️ **AND IT REFUSED A BULLET THE PLAYER ASKED FOR.** 0311's ball is drawn at **14.4** against the
+      rock's 7.4, because it is a thing you are meant to SHOOT — held in front of you for three and a
+      half seconds — rather than a thing to dodge. This guard would have capped it at 7.3, which is the
+      *"rule that specifically makes quality worse"* the other five were deleted for. **The report is
+      the evidence; the guard is not.**
+
+      ⚠️ **AND NOTHING IS LOST, BECAUSE WHAT SAYS A ROCK IS A ROCK IS ABSOLUTE AND WAS ALREADY HERE**:
+      a real piece of the lane (4–10% of it), seconds to cross, hot, hitting for two, sent by one boss.
+      Those describe the row without demanding an ordering over the table.
+    */
     const drawn = (k: ShotKind): number => SPRITE_EXTENT[SPRITE_KINDS[SHOTS[k].sprite]!];
-    for (const k of hostile.filter((k) => k !== 'rock')) {
-      expect(drawn('rock'), `the rock is drawn no bigger than the ${k}`).toBeGreaterThan(drawn(k));
-      expect(SHOTS.rock.speed, `the rock falls no slower than the ${k} flies`).toBeLessThan(SHOTS[k].speed);
-    }
     expect(INK_OF[SPRITE_KINDS[SHOTS.rock.sprite]!], 'the rock is not drawn hot').toBe('fire');
     expect(SHOTS.rock.damage, 'a rock hits like a bullet').toBeGreaterThanOrEqual(2);
     // In the player's units: a rock is a real piece of the lane, and it takes seconds to cross it.
