@@ -988,13 +988,18 @@ describe('the cue table', () => {
       `src/content/saurian.ts` has the fix and the reason it is material rather than a guard change.
     */
     /*
-      ⚠️ **AND A BOSS'S NAMED ATTACKS SINCE 0308.** Three cues of 0.8 to 1.2 seconds with a boom under
-      them are explosions by every clause below, and the list is what decides whether anything checks
-      that. `bossShot` stays out of it: it is 0.38 s of crash and was never built to this recipe, and
-      widening the guard onto it would be this test asking for a change nobody reported.
+      ⚠️ **AND A BOSS'S NAMED ATTACKS ARE DELIBERATELY NOT IN IT — 0308.** They were, for one draft, and
+      the draft is what the player heard: three cues built to this recipe came back *"pretty terrible…
+      give me acid sizzle, void null wumm wumms, lightning crackles."* **A sizzle IS a hiss** — the thing
+      the clauses below exist to forbid — and a wumm has no crack, no grain and no debris in it at all.
+      The recipe is what *everything that explodes* is made of, and the four cues 0089's report named are
+      what it is a rule about. Holding an attack to it made every attack an explosion, which is the fault
+      0308 opened with living one layer down. `docs/decisions/0192-a-guard-holds-an-invariant.md`: a red
+      guard is answered by fixing the defect, changing the guard, or deleting it — never by changing the
+      work to suit it, and a guard's own LIST is the cheapest version of that mistake to make.
     */
     for (const theme of [undefined, ...THEME_KINDS] as const)
-    for (const kind of ['missile', 'kill', 'blast', 'bossDown', 'death', 'bossAcid', 'bossVoid', 'bossBolt'] as const) {
+    for (const kind of ['missile', 'kill', 'blast', 'bossDown', 'death'] as const) {
       const where = theme === undefined ? kind : `${theme}/${kind}`;
       const layers = cueLayersOf(theme, kind);
       expect(layers.length, `${where} is not built out of layers, so it cannot have a body`).toBeGreaterThan(2);

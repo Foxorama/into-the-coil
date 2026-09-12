@@ -772,6 +772,14 @@ export interface CueLine {
  * ⚠️ **`bossShot` sounds only in the fight and IS quantised** (0096), which is why it is the one
  * scattered-looking cue with a cadence.
  *
+ * ⚠️ **AND SINCE 0308 A BOSS'S ATTACKS HAVE THEIR OWN, SO THE FIGHT LISTS FOUR.** A dashboard whose
+ * *what you should be hearing* list says `bossShot` for a fight that actually throws a sizzle, a wumm
+ * and a crackle is the instrument lying about the channel it exists to judge —
+ * `docs/decisions/0126-the-dashboard-is-the-instrument.md`, and the thing
+ * `docs/decisions/0184-the-measurement-reads-the-place.md` records the cost of. The three take turns a
+ * volley on the serpent's last phase (0254's round), so each sounds a third as often as the gate fires;
+ * `bossShot` stays because thirteen bosses still throw it.
+ *
  * @param bodiesPerSecond how fast things are dying — the quantity
  *        [`the-eleventh-play-test`](../reports/the-eleventh-play-test-2026-08-11.md) named as the
  *        counterpoint, and the one number here a hand has to choose.
@@ -797,5 +805,13 @@ export function cueLines(tier: number, rung: MusicLevel, bodiesPerSecond: number
       perSecond: inFight ? per(VOLLEY_CYCLE * 3) : 0,
       sounds: inFight,
     },
+    // The serpent's own three — 0308. One volley in three each, because its last phase takes its heads
+    // in turn; a boss with no named attacks sounds the line above instead.
+    ...(['bossAcid', 'bossVoid', 'bossBolt'] as const).map((kind) => ({
+      kind,
+      every: inFight ? VOLLEY_CYCLE * 9 : null,
+      perSecond: inFight ? per(VOLLEY_CYCLE * 9) : 0,
+      sounds: inFight,
+    })),
   ];
 }

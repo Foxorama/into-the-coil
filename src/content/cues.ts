@@ -1102,12 +1102,20 @@ export const CUES: Record<CueKind, CueRow> = {
     `docs/decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md` asks the
     channel to separate them. Three attacks the player has to read one at a time made one noise.
 
-    ⚠️ **THE SECOND IS THAT IT WAS THE QUIET ONE.** Measured: `bossShot` is **−33.4 dBFS** A-weighted
-    over 0.38 s, against the blast at −30.0, the ship's death at −30.0 and the boss coming apart at
-    −29.5. The loudest thing in the game was the third quietest of the things that explode, and the
-    reason is length and weight rather than the fader — 0.38 s and a fifth of the blast's sub share.
-    **So these are long, and they have a bottom**; the gain is where it has to be for the headroom the
-    limiter guard owns, and nowhere near where the loudness came from.
+    ⚠️ **THE SECOND IS THAT IT WAS THE QUIET ONE.** Measured with `--loud`: `bossShot` is **−33.6 dBFS**
+    over 0.38 s, against the blast at −26.6, the ship's death at −25.7 and the boss coming apart at
+    −24.8. The loudest thing in the game was seven decibels under the quietest thing in it that goes
+    bang, and the gain is not where that comes back — the headroom the limiter guard owns caps it. What
+    buys it is length, weight and saturation.
+
+    ⚠️ **AND THE THIRD FAULT WAS THE RECIPE, WHICH ONLY A PLAY COULD SAY.** The first draft of these
+    three was built to 0089's four parts — a crack, a filtered body, a debris tail, a boom — and came
+    back *"pretty terrible still, give me acid sizzle, void null wumm wumms, lighting crackles."* That is
+    the same complaint 0308 opened with, one layer down: **three attacks made of one recipe are one
+    machine**, whatever the filters do. So each of the three below is built from the word the player used
+    for it, the explosion recipe is off them in `tests/sound.test.ts`, and the knob that made it possible
+    is the one the table had never touched — `noise` with a non-zero `from` is **sample-and-hold**, and a
+    grain rate is what separates a sizzle from a hiss and a crackle from a roll.
 
     ⚠️ **`bossShot` IS UNTOUCHED AND STILL SERVES THIRTEEN BOSSES.** The ask is about this animal, and
     a re-voice of the shared crash would be a mix change to six fights nobody has played since the
@@ -1115,13 +1123,25 @@ export const CUES: Record<CueKind, CueRow> = {
     row that has something to say says it.
   */
   /**
-   * Acid leaving a mouth under pressure — 0308.
+   * Acid — a SIZZLE. Asked for in that word: *"give me acid sizzle."*
    *
-   * ⚠️ **A WET BURST AND NOT A CRASH, WHICH IS THE WHOLE DISTINCTION FROM `bossShot`.** The strike is
-   * a slap rather than a cymbal — the top goes almost at once — and what is left is a spatter body
-   * over a boom, with a fizz above it that outlasts both. Acid is the one attack of the three that
-   * goes on happening after it is thrown: the sweep throws twenty-one globes over a second, and the
-   * tail is the only part of this that says so.
+   * ⚠️ **THE FIRST DRAFT WAS AN EXPLOSION WITH A FIZZ ON TOP, AND IT WAS THE RECIPE THAT MADE IT
+   * ONE.** 0089's four parts — a crack, a filtered body, a debris tail, a boom — are what *everything
+   * that explodes* is made of, and three attacks built to it came back *"pretty terrible… give me acid
+   * sizzle, void null wumm wumms, lightning crackles."* All three were the same machine again, one
+   * layer down from the fault 0308 opened with. **So the recipe is off these three**, and what decides
+   * each one is the word the player used for it.
+   *
+   * ⚠️ **A SIZZLE IS A GRAIN RATE, NOT A FILTER — AND THE SYNTHESISER HAD THE KNOB ALL ALONG.** A
+   * `noise` layer with a non-zero `from` is **sample-and-hold**: one fresh draw per cycle of that rate,
+   * held flat between. `from: 0` is white, which is what every cue in this table was using, and white
+   * noise through a lowpass is a boom or a hiss and cannot be anything else. A rate of a few kilohertz
+   * is a fine grain — frying. A rate of a few hundred is a coarse one — bubbles bursting. Two of those
+   * over each other, with the rate falling as they decay, IS acid eating something.
+   *
+   * ⚠️ **AND THERE IS ALMOST NO BOTTOM IN IT, WHICH IS THE POINT.** The boom is what made the first
+   * draft an explosion. What is left underneath is one short wet gulp, over before the sizzle is a
+   * third done, so the mouth is heard opening and then the acid is heard working.
    */
   bossAcid: {
     twin: 'threat-appears',
@@ -1129,128 +1149,145 @@ export const CUES: Record<CueKind, CueRow> = {
     onGrid: true,
     hold: 8,
     gain: 0.46,
-    /*
-      ⚠️ **TWICE `bossShot`'s, AND IT IS WHERE HALF THE LOUDNESS CAME FROM.** The peak is fixed by the
-      headroom the limiter guard owns, so *bigger* has to be bought below the peak — and saturation
-      over the sum is exactly that: it squashes the transient into the body, which drops the crest and
-      lifts everything under it. 0089's *gentle, and the first draft was not* is about a `glue` that
-      ducked the transients of a cue whose whole character WAS its transient. A boss's attack is the
-      other case: it is the body.
-    */
-    glue: 0.3,
+    // Gentle here, unlike the wumms: saturation over a grain rate squashes the grain flat, which is
+    // the one thing this cue cannot spare. What it does at 0.16 is glue the gulp to the fizz above it.
+    glue: 0.16,
     layers: [
-      // THE SLAP — shorter and darker than a crash's edge. A mouth opening, not a cymbal.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.55, attack: 0.0004, curve: 9, lowFrom: 12000, lowTo: 4200, highFrom: 1600 },
-      // THE SPATTER — the body: broad, falling hard into the floor, saturated so it has meat on it.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.5, gain: 0.98, attack: 0.002, curve: 2.5, lowFrom: 3000, lowTo: 280, highFrom: 150, highTo: 55, q: 0.9, drive: 0.4 },
-      // THE FIZZ — quiet, bright and long: what acid does after it lands, and the part the sweep needs.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.8, gain: 0.2, attack: 0.03, curve: 1.9, lowFrom: 9000, lowTo: 3400, highFrom: 1700, highTo: 900 },
+      // THE SPIT — the mouth opening. Wet rather than sharp: a slap of white with the top taken off.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.035, gain: 0.5, attack: 0.0006, curve: 8, lowFrom: 9000, lowTo: 3000, highFrom: 1100 },
       /*
-        THE BOOM — 0089's fourth part, and the one `bossShot` never really had. A fifth of the key
-        falling to the root an octave down, over three quarters of a second: the weight is here.
+        THE SIZZLE — a fine grain falling from 9 kHz to 5, high-passed well up, decaying slowly over
+        most of a second. This is the cue: frying, not hissing, because the grain is audible.
       */
-      { wave: 'sine', from: inKey(2), to: inKey(-5), seconds: 0.75, gain: 1.1, attack: 0.002, curve: 2, drive: 0.3 },
-      // And a slur over it, so the burst has a pitch to fall through rather than only a floor.
-      { wave: 'tri', from: inKey(9), to: inKey(0), seconds: 0.55, gain: 0.68, attack: 0.003, curve: 2.4, drive: 0.28 },
+      { wave: 'noise', from: 9000, to: 5200, seconds: 0.9, gain: 0.52, attack: 0.004, curve: 1.7, lowFrom: 10500, lowTo: 5200, highFrom: 2200, highTo: 1400 },
+      // THE FRY — a coarser grain under it, saturated, so the sizzle has a middle and is not all air.
+      { wave: 'noise', from: 2600, to: 1300, seconds: 0.66, gain: 0.4, attack: 0.006, curve: 2.1, lowFrom: 5200, lowTo: 2400, highFrom: 900, drive: 0.25 },
+      /*
+        THE BUBBLES — a grain coarse enough to hear as separate events: 300 Hz is a grain every three
+        milliseconds and 130 is one every eight, so the rate falling across the layer is a boil dying
+        down. It is the half of *sizzle* that a hiss can never have.
+      */
+      { wave: 'noise', from: 300, to: 130, seconds: 0.5, gain: 0.34, attack: 0.008, curve: 2.4, lowFrom: 3200, lowTo: 1100, highFrom: 260, drive: 0.3 },
+      /*
+        THE GULP — the only low thing in it, and it is deliberately over early. A fifth of the key
+        falling to the root: a mouthful leaving, not a bomb landing.
+      */
+      { wave: 'sine', from: inKey(9), to: inKey(2), seconds: 0.26, gain: 0.5, attack: 0.003, curve: 3.6, drive: 0.25 },
     ],
   },
   /**
-   * The void opening — 0308.
+   * The void — **NULL WUMM WUMMS.** Asked for in those words.
    *
-   * ⚠️ **IT INHALES BEFORE IT LANDS, AND THAT IS THE ONE ARRANGEMENT TRICK IN THE TABLE.** `at` is
-   * described in `CueLayer` as *the only field about arrangement rather than timbre*; here the whole
-   * character is arrangement. A rising filter over noise is a whoosh — which is why nothing else in
-   * this file has one — and a whoosh that ARRIVES somewhere is a thing being swallowed. So: a swell
-   * with the top opening upward, and then everything else, 160 ms later.
+   * ⚠️ **THREE PULSES AND NOT ONE EVENT, WHICH IS THE WHOLE OF WHY *wumms* IS PLURAL.** The first draft
+   * was one collapse with a long sub under it, and one collapse is an explosion however dark it is. A
+   * wumm is a sub note with a fast attack and a short decay; three of them a quarter of a second apart
+   * is a rhythm, and a rhythm is the one thing a single blast cannot be mistaken for. Each is lower and
+   * quieter than the one before, so the figure falls away rather than repeating.
    *
-   * ⚠️ **AND IT IS STILL 0179's EXPLOSION, MEASURED OVER THE WHOLE CUE.** The inhale is a fifth of
-   * the length and a third of the weight; what the centroid does across the sound is fall, because
-   * the boom under it runs four times as long as the swell above it.
+   * ⚠️ **AND *NULL* IS WHAT IS NOT IN IT.** No crack, no grain, no debris tail, nothing above 300 Hz
+   * except the octave that makes the first wumm audible on a laptop. The dark wash under the three is
+   * low-passed at 300 and falling: a hole rather than a room, which is also why `air` came down from
+   * the most in the table to under the acid's — reverb on a sub pulse is a smear, and three smeared
+   * pulses are one long note.
+   *
+   * ⚠️ **THE OCTAVE IS NOT DECORATION.** `MASTER_GAIN` is 0.4 and a laptop speaker reproduces nothing
+   * at 30 Hz, so a cue that lives entirely in the floor is a cue half the machines play as silence —
+   * `docs/decisions/0140-no-layer-is-inaudible.md`'s subject, one bus over. One tri an octave over the
+   * first wumm, short, is what carries the figure to a machine with no bottom.
    */
   bossVoid: {
     twin: 'threat-appears',
-    // The most of any cue in the table: a hole in space is the one sound that should be somewhere big.
-    air: 0.5,
+    // Under the acid's: a sub pulse in a big room is a smear, and three smeared pulses are one note.
+    air: 0.22,
     onGrid: true,
     hold: 8,
     gain: 0.46,
-    /*
-      ⚠️ **0.34 AND NOT MORE, WHICH IS WHERE THIS STOPPED BEING FREE.** `saturate` is normalised at
-      unity, so past a point the squash costs more output than the density buys: driven through
-      `weigh-cue --loud`, 0.34 reads −29.6 and 0.40 reads −29.8. The most saturated of the three
-      because this one is all body, and this is where the curve turns over.
-    */
-    glue: 0.34,
+    // Enough to keep the three pulses of one weight and no more. `saturate` is normalised at unity, so
+    // past about a third the squash costs more output than the density buys — measured on the first draft.
+    glue: 0.26,
     layers: [
       /*
-        THE INHALE — the one rising filter in the file, and it is why. Swells in over its own length.
+        WUMM ONE — the root's fifth falling to the root below it. A fast attack, then straight down.
 
-        ⚠️ **0.14 s AND NOT 0.2, AND THE DECAY GUARD IS WHY.** *"Starts and ends at zero"* compares the
-        mean of the last quarter against the first, and a cue that OPENS quietly is measured against
-        that quiet opening — at 0.2 s of swell the first quarter of a 1.2 s cue was mostly inhale, so
-        the guard read the tail as loud as the start and said so. It was right: an inhale long enough
-        to shift the quarter is a cue with no attack in its first third. Short enough to be an intake
-        and not an introduction.
+        ⚠️ **THE DRIVE IS HALF AND IT IS NOT FOR THE GROWL.** A saturated 65 Hz sine puts harmonics at
+        130, 195 and 260, which is the band an ear and a laptop can both hear — measured, the three
+        wumms with the drive at 0.22 read **−38.4 dBFS** against the blast's −26.6, because A-weighting
+        discounts the floor by thirty decibels and is right to. `docs/decisions/0140-no-layer-is-inaudible.md`
+        is the argument one bus over: a gain is not a loudness, and a sound that lives entirely under
+        100 Hz is a sound half the machines play as silence. The harmonics are how a sub pulse is HEARD
+        without stopping being a sub pulse.
       */
-      { wave: 'noise', from: 0, to: 0, seconds: 0.14, gain: 0.34, attack: 0.09, curve: 1.1, lowFrom: 500, lowTo: 3200, highFrom: 130 },
-      // THE COLLAPSE — the crack, late, on the step the inhale stops.
-      { wave: 'noise', from: 0, to: 0, at: 0.1, seconds: 0.035, gain: 0.5, attack: 0.0005, curve: 8, lowFrom: 9000, lowTo: 2800, highFrom: 800 },
-      // THE BODY — darker and longer than the acid's, because this one is a hole rather than a splash.
-      { wave: 'noise', from: 0, to: 0, at: 0.1, seconds: 0.66, gain: 1, attack: 0.003, curve: 2.8, lowFrom: 2200, lowTo: 170, highFrom: 90, highTo: 38, q: 0.85, drive: 0.48 },
-      // THE DARK — the debris tail 0089 asks for, and it is deliberately dull rather than bright.
-      { wave: 'noise', from: 0, to: 0, at: 0.16, seconds: 0.84, gain: 0.18, attack: 0.06, curve: 3.4, lowFrom: 5000, lowTo: 1400, highFrom: 1100, highTo: 420 },
+      { wave: 'sine', from: inKey(7), to: inKey(0), seconds: 0.34, gain: 1.2, attack: 0.005, curve: 3.2, drive: 0.5 },
+      // The octave over it, so the figure survives a speaker with no bottom. Short: it is a carrier.
+      { wave: 'tri', from: inKey(14), to: inKey(7), seconds: 0.16, gain: 0.3, attack: 0.004, curve: 4.4, drive: 0.35 },
+      // WUMM TWO — a quarter of a second behind, a third lower, and quieter.
+      { wave: 'sine', from: inKey(4), to: inKey(-3), at: 0.25, seconds: 0.34, gain: 0.98, attack: 0.005, curve: 3.2, drive: 0.5 },
       /*
-        THE FLOOR — the root falling an octave into the infrasonic, which is where `bomb` already
-        goes. Nearly a second of it: this is the sound the player is meant to feel rather than hear,
-        and it is what *massively* buys with no peak at all.
-
-        ⚠️ **3.4 TIME CONSTANTS, AND A SLOWER CURVE HERE IS WHAT MADE THIS CUE NOT DECAY.** A sine at
-        16 Hz keeps its AMPLITUDE for its whole length however low it sounds — the decay guard measures
-        `|sample|` — and `glue` at 0.34 is an upward compressor (`saturate` is normalised at unity, so
-        its slope at zero is three), which lifts the tail toward the peak as well. Both of the things
-        that make this cue big work against its envelope, so the envelope has to be steep. Measured:
-        the last quarter over the first was **0.90** at 1.9 and is 0.28 at 3.4, against the guard's 0.5.
+        WUMM THREE — half a second in, down into where `bomb` already goes, and the quietest. The figure
+        falls away: three of the same weight would be a machine running rather than an animal doing
+        something.
       */
-      { wave: 'sine', from: inKey(0), to: inKey(-12), seconds: 0.9, at: 0.1, gain: 1.15, attack: 0.004, curve: 3.4, drive: 0.25 },
+      { wave: 'sine', from: inKey(2), to: inKey(-7), at: 0.5, seconds: 0.42, gain: 0.72, attack: 0.007, curve: 3, drive: 0.5 },
+      /*
+        THE NULL — the only noise in it, and there is nothing above 300 Hz in it at all. A wash the three
+        pulses sit inside, low-passed downward and saturated, so the hole has air moving in it and no
+        grain and no edge.
+      */
+      { wave: 'noise', from: 0, to: 0, seconds: 0.86, gain: 0.34, attack: 0.02, curve: 2.4, lowFrom: 300, lowTo: 90, highFrom: 38, q: 0.9, drive: 0.35 },
     ],
   },
   /**
-   * The serpent's lightning — 0308. Thunder: a crack, a roll, and a second clap behind it.
+   * The serpent's lightning — **CRACKLES**, asked for in that word.
    *
    * ⚠️ **THE ONE ATTACK THE PLAYER HAS TWICE SAID NOT TO CHANGE, SO NOTHING ABOUT IT DOES.** *"Don't
    * change the lightning attack it's really good"* is about the attack; it fell out of the sky in
    * near-silence, sharing a crash with the acid. The column, the warning and the strike are 0248's
    * and are untouched.
    *
-   * ⚠️ **THE LONGEST CUE IN THE TABLE BUT ONE, AND THUNDER IS WHY.** `bossDown` is 1.75 s because a
-   * boss dies once a level; this is 1.2 and sounds every third volley of the last phase, which is
-   * about every 1.8 s — so the roll has to be over before the next one, and it is.
+   * ⚠️ **A CRACKLE IS A COARSE GRAIN AND A ROLL IS NOT A CRACKLE.** The first draft was a flash, a rip
+   * and 1.15 s of white noise falling into the floor — *distant thunder*, which is a smooth sound, and
+   * smooth is the one thing the word rules out. Sample-and-hold is what makes it granular (`bossAcid`
+   * has the whole argument for the knob): the rate here starts at a few kilohertz and falls to a couple
+   * of hundred, so the grain coarsens as the bolt dies and the ear hears separate ticks rather than a
+   * wash. Three of those staggered, plus one late snap, is the figure.
+   *
+   * ⚠️ **AND IT IS HALF THE LENGTH IT WAS.** 0.64 s against 1.20. A crackle that outlasts its own flash
+   * by a second is a rumble with a crack on the front; what is under it now is a short clap, not weather.
+   *
+   * ⚠️ **THE ONE ATTACK THE PLAYER HAS TWICE SAID NOT TO CHANGE, AND NOTHING ABOUT IT DOES.** *"Don't
+   * change the lightning attack it's really good"* is about the attack: the column, the 45-step warning
+   * and the strike are 0248's and are untouched.
    */
   bossBolt: {
     twin: 'bolt-appears',
-    // Thunder is mostly the room it happens in. Under `bossVoid`'s, because a bolt has a dry crack.
-    air: 0.45,
+    // Some room, because lightning happens outdoors — but under the first draft's 0.45, which smeared
+    // the grain this cue is made of into the wash it was trying not to be.
+    air: 0.3,
     onGrid: true,
     hold: 8,
     gain: 0.46,
-    // Least of the three, on `bossAcid`'s argument in reverse: a bolt is the one that keeps its crack.
-    glue: 0.26,
+    // Least of the three: a bolt is the one that has to keep its edge, and glue is what takes an edge off.
+    glue: 0.2,
     layers: [
       // THE FLASH — the hardest edge in the table: a bolt arrives before the sound of it does.
       { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.62, attack: 0.0002, curve: 11, lowFrom: 14000, lowTo: 5000, highFrom: 2400 },
-      // THE RIP — a sample-and-hold rate falling through the band, which is the crackle of the air.
-      { wave: 'noise', from: 4200, to: 600, seconds: 0.13, gain: 0.55, attack: 0.0008, curve: 6, lowFrom: 7000, lowTo: 1500, highFrom: 380, q: 1.1, drive: 0.35 },
       /*
-        THE ROLL — the body, and the longest one in the table. A lowpass falling from 1.6 kHz into
-        the floor over more than a second IS distant thunder; nothing else here runs long enough to
-        be it.
+        THE TEAR — the crackle itself. 5 kHz of grain falling to 700 Hz in a seventh of a second: the
+        rate IS the sound, and it coarsens as it goes, which is what a discharge does.
       */
-      { wave: 'noise', from: 0, to: 0, at: 0.05, seconds: 1.15, gain: 0.92, attack: 0.006, curve: 2, lowFrom: 1600, lowTo: 110, highFrom: 70, highTo: 32, q: 0.8, drive: 0.5 },
-      // THE SECOND CLAP — `CueLayer`'s own note: a second rumble arriving late is what makes it an
-      // explosion rather than a noise. A third of a second behind, and quieter.
-      { wave: 'noise', from: 0, to: 0, at: 0.34, seconds: 0.6, gain: 0.4, attack: 0.01, curve: 2.2, lowFrom: 2600, lowTo: 260, highFrom: 105, q: 0.7, drive: 0.3 },
-      // THE FLOOR — a third of the key falling below the root. Under the roll for its whole length.
-      { wave: 'sine', from: inKey(4), to: inKey(-7), seconds: 1.0, at: 0.03, gain: 1.1, attack: 0.003, curve: 1.9, drive: 0.3 },
+      { wave: 'noise', from: 5000, to: 700, seconds: 0.16, gain: 0.7, attack: 0.0008, curve: 4.5, lowFrom: 11000, lowTo: 2600, highFrom: 1300, q: 1.1, drive: 0.4 },
+      // THE SPIT — a second, coarser crackle behind it, so the discharge stutters rather than fades.
+      { wave: 'noise', from: 1600, to: 320, at: 0.13, seconds: 0.22, gain: 0.56, attack: 0.002, curve: 3.6, lowFrom: 7000, lowTo: 1900, highFrom: 800, q: 1, drive: 0.4 },
+      /*
+        THE LAST TICKS — 320 Hz is a grain every three milliseconds and 90 is one every eleven, which is
+        slow enough to hear as separate events. The crackle ends in countable ticks, which is the half a
+        filtered wash can never have.
+      */
+      { wave: 'noise', from: 320, to: 90, at: 0.3, seconds: 0.34, gain: 0.38, attack: 0.004, curve: 2.8, lowFrom: 4200, lowTo: 1300, highFrom: 400, drive: 0.35 },
+      // THE CLAP — short and dark, under the crackle rather than after it. Not weather: a report.
+      { wave: 'noise', from: 0, to: 0, at: 0.02, seconds: 0.42, gain: 0.82, attack: 0.004, curve: 2.8, lowFrom: 1400, lowTo: 130, highFrom: 70, q: 0.8, drive: 0.5 },
+      // THE FLOOR — a third of the key falling below the root, and over before the ticks are.
+      { wave: 'sine', from: inKey(7), to: inKey(-5), seconds: 0.4, at: 0.02, gain: 1, attack: 0.003, curve: 3, drive: 0.35 },
     ],
   },
   bossPhase: {

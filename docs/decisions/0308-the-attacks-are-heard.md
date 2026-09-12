@@ -1,8 +1,8 @@
 # 0308 — The attacks are heard
 
-**The serpent's acid, its void and its lightning each get their own sound, and all three are as loud
-as the things that explode.** A cue is chosen by the attack that throws it rather than at the fire
-gate above it; the row names it and shared code holds the fallback.
+**The serpent's acid sizzles, its void wumms and its lightning crackles, and all three are as loud as
+the things that explode.** A cue is chosen by the attack that throws it rather than at the fire gate
+above it; the row names it and shared code holds the fallback.
 
 ## What was asked
 
@@ -10,7 +10,19 @@ gate above it; the row names it and shared code holds the fallback.
 >
 > *1. sounds for all the attacks need to be massively buffed"*
 
-Four more items came with it and are their own decisions.
+Four more items came with it and are their own decisions. And then, on hearing the first draft:
+
+> *"the sounds are pretty terrible still, give me acid sizzle, void null wumm wumms, lighting
+> crackles etc"*
+
+⚠️ **THAT SECOND REPORT IS THE FIRST ONE AGAIN, ONE LAYER DOWN, AND IT IS THE MOST USEFUL THING IN
+THIS DECISION.** The first draft built three cues to 0089's recipe — a crack, a filtered body, a
+debris tail, a boom — which is what *everything that explodes* is made of. It separated them by
+filter and by length, and every measurement said it had worked: three distinct spectra, four to six
+decibels louder, in the blast's family. **They still sounded like one machine**, because the recipe
+*is* the machine. A table that is right about every quantity it measures can be wrong about the only
+thing that matters, and the channel with nothing to look at is where that happens —
+[0027](0027-measure-the-picture-not-the-model.md).
 
 ## Two faults under one sentence
 
@@ -39,21 +51,45 @@ saturation.
 
 ## What it is now
 
-| cue | what it is | length | loud |
-|---|---|---|---|
-| `bossAcid` | a slap, a spatter body, a fizz that outlasts both, a boom | 0.80 s | **−28.4 dBFS** |
-| `bossVoid` | an inhale, then a collapse into the floor | 1.00 s | **−29.4 dBFS** |
-| `bossBolt` | thunder: a flash, a rip, a roll, a second clap behind it | 1.20 s | **−27.8 dBFS** |
+| cue | what it is | length | loud | where its weight is |
+|---|---|---|---|---|
+| `bossAcid` | a spit, then two grain rates frying over a coarse boil, and one short gulp | 0.90 s | **−26.1 dBFS** | `hi` 1.00, `sub` 0.001 |
+| `bossVoid` | three bass pulses a quarter-second apart, falling away, in a wash with no top | 0.92 s | **−32.3 dBFS** | `sub` 0.188, `air` 0.002 |
+| `bossBolt` | a flash, then a grain coarsening from 5 kHz to 90 Hz, over a short clap | 0.64 s | **−28.9 dBFS** | `himid` 1.00, `hi` 0.85 |
 
-Four to six decibels over the crash they replace, in the blast's family, with ten times its
-A-weighted sub share. `scripts/weigh-cue.mjs --loud` is where every number here comes from.
+Against `bossShot`'s **−33.6 dBFS** and its `sub` of 0.011. `scripts/weigh-cue.mjs --loud` is where
+every number here comes from, and the last column is the point: no two of the three have their weight
+in the same place, and none of them has it where the crash had it.
 
-**The gain did almost none of it.** All three sit at `0.46` — under `bossDown`'s `0.468`, so the boss
-dying stays the loudest single row — and the peak moved from −15.1 to −14.6 dBFS, which is half a
-decibel. What moved is length, the boom, and `glue`: twice `bossShot`'s, because saturation over the
-sum squashes the transient into the body and lifts everything under it. **The ceiling is the
-headroom** — `tests/sound.test.ts` holds that the four loudest rows pass the limiter untouched, which
-caps their sum at 2.0 against 1.848 now — and it was never where the loudness was going to come from.
+### The knob that made it possible had been in the file since 0089
+
+⚠️ **A `noise` layer with a non-zero `from` is SAMPLE-AND-HOLD** — one fresh draw per cycle of that
+rate, held flat between — and the whole table was using `from: 0`, which is white. White noise through
+a falling lowpass is a boom or a hiss and **cannot be anything else**; the recipe was built on it and
+so every cue built to the recipe was one of those two things.
+
+A grain rate is what the player's three words are made of. A few kilohertz is a fine grain — frying.
+A few hundred hertz is a coarse one — bubbles, ticks. And a rate that FALLS as the layer decays is a
+sizzle dying down or a discharge stuttering out. `bossAcid` has three grain rates over each other;
+`bossBolt` is one rate coarsening from 5 kHz to 90 Hz in half a second, which is the difference
+between a crackle and the roll of thunder the first draft had.
+
+`bossVoid` needs no grain at all: *null wumm wumms* is three sub pulses and the absence of everything
+else, and what makes it a figure rather than an event is that there are **three** of them, each lower
+and quieter than the last.
+
+**The gain did none of it.** All three sit at `0.46` — under `bossDown`'s `0.468`, so the boss dying
+stays the loudest single row — and the peak moved from −15.1 to −14.5 dBFS. **The ceiling is the
+headroom**: `tests/sound.test.ts` holds that the four loudest rows pass the limiter untouched, which
+caps their sum at 2.0 against 1.848 now.
+
+⚠️ **AND THE WUMMS WERE AT 32 Hz FIRST, WHICH MEASURED −38.4.** A-weighting discounts the floor by
+thirty decibels, correctly, for *how loud does this sound* — so a cue living entirely down there is a
+cue half the machines play as silence, which is
+[0140](0140-no-layer-is-inaudible.md)'s subject one bus over. Two changes, both keeping the character:
+the drive went to 0.5, because a saturated 65 Hz sine puts harmonics at 130, 195 and 260 where an ear
+and a laptop can both find them; and the figure moved up an octave, from 65→33 Hz to 110→55, so it is
+bass rather than sub and only the third wumm reaches the floor. −38.4 → **−32.3**.
 
 **`bossShot` is untouched and still serves thirteen bosses.** The ask is about this animal. A re-voice
 of the shared crash would be a mix change to six fights nobody has played since the change that would
@@ -92,6 +128,19 @@ the table as it already stood this partitions it **exactly** — all four rows t
 that resolves (`phase-burst`, `boss-burst`, `blast-ring`, `ship-burst`), and every `-appears` row has
 none. It widens the rule without moving one existing answer, which is what makes it the rule the old
 one was standing in for rather than an exception carved for this change.
+
+**And 0089's explosion recipe was widened onto these three and then taken back off.** That widening
+was correct about the first draft and is what the second report condemned: a sizzle **is** a hiss —
+the thing the recipe's clauses exist to forbid — and a wumm has no crack, no grain and no debris in it
+at all. The list of kinds inside a guard is the cheapest possible version of *changing the work to
+suit the guard* ([0192](0192-a-guard-holds-an-invariant.md)), because adding a row to it looks like
+coverage rather than like a design decision. The four cues 0089's own report named are what it is a
+rule about.
+
+⚠️ **So nothing hard holds what these three sound like, and that is correct.** *A sizzle* is a taste,
+and [0295](0295-a-ranking-guard-is-a-content-limiter.md) is explicit that a guard answering a question
+of character in advance is the defect. What is held is what a cue must not do to the mix: end louder
+than it started, click at either end, duck the bed, or be a pitch outside the key.
 
 **The dead-weight scan read three files and a cue may now be named by a row**, so all three new cues
 reported as unplayed. `src/content/bosses.ts` is added, and the reason is different from the last
@@ -132,7 +181,10 @@ first quarter is a cue with no attack in its first third. 0.28 now.
 ## The claim, and why it is not a guard
 
 `0308-loud` in `tests/authored.ts`: *a boss's attack is as loud as the things that explode*, measured
-against `blast` — the quietest of the four — at 3 dB.
+against `blast` — the quietest of the four — at **6 dB**, and it was 3 until the wumms existed. The
+threshold moved because of the METER and not the mix: a cue made of bottom reads quiet on an
+A-weighted scale by construction, and a threshold tight enough to fail *null wumm wumms* is a threshold
+asking for a brighter wumm.
 
 ⚠️ **A taste and not a guard, on [0295](0295-a-ranking-guard-is-a-content-limiter.md)'s terms.** A
 floor under how loud a boss's attack may be is a limiter on what a boss may be: a stealthy one whose

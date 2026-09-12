@@ -45,9 +45,10 @@ export const PROBES = [
     guard: 'THE THREE WEAPONS: five globes of acid',
     edit: {
       path: 'src/app/boss.ts',
-      // ⚠️ Re-anchored when the round's count moved off `firePhase` — see the probe below.
-      find: '      boss.headAt++;\n      throwAttack(head.attack',
-      replace: '      throwAttack(head.attack',
+      // ⚠️ Re-anchored when the round's count moved off `firePhase` — see the probe below. And by 0308,
+      // which put a comment between the increment and the throw.
+      find: '      boss.headAt++;\n',
+      replace: '',
     },
   },
   /*

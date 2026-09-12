@@ -79,12 +79,12 @@ export const PROBES = [
       against a duck that takes 0.445 s to recover, so the bed never comes back. `fired` is what the
       guard reads, and without it this edit is the state the rule used to insist on.
     */
-    broke: 'the lightning ducking the music, which holds the bed down for the whole last phase',
+    broke: 'the acid ducking the music, which holds the bed down for the whole last phase',
     guard: '0104 — and the gun never ducks, whatever it is doing',
     edit: {
       path: 'src/content/cues.ts',
-      find: "    twin: 'bolt-appears',\n    // Thunder is mostly the room it happens in.",
-      replace: "    twin: 'bolt-appears',\n    duck: 0.3,\n    // Thunder is mostly the room it happens in.",
+      find: "  bossAcid: {\n    twin: 'threat-appears',\n    air: 0.3,",
+      replace: "  bossAcid: {\n    twin: 'threat-appears',\n    duck: 0.3,\n    air: 0.3,",
     },
   },
   {
@@ -108,16 +108,18 @@ export const PROBES = [
     decision: '0308',
     suite: 'tests/sound.test.ts',
     /*
-      ⚠️ AND THE RECIPE, ON A CUE THAT IS NOW HELD TO IT. The void's body unfiltered is 0089's *"a hiss
-      and not an explosion"*, and the three new cues are in that list because they are explosions —
-      long, with a boom under them. Without the widening this edit leaves the suite green.
+      ⚠️ AND THE DECAY, ON THE WUMMS. Three bass pulses a quarter-second apart are the one figure in the
+      table that could be LOUDER at its end than at its start — the guard compares the mean of the last
+      quarter against the first — and the thing that keeps it falling is that each wumm is quieter than
+      the one before. Levelling the third with the first is a machine running rather than an animal
+      doing something, and it is what a hand reaching for *make the wumms bigger* would try.
     */
-    broke: 'the void’s body no longer darkening as it decays, which is a hiss and not an explosion',
-    guard: 'THE REPORTED ONE: everything that explodes has a body, and not just a hiss',
+    broke: 'the third wumm as loud as the first, so the figure does not fall away',
+    guard: 'starts and ends at zero, because a buffer that stops mid-waveform clicks',
     edit: {
       path: 'src/content/cues.ts',
-      find: "      { wave: 'noise', from: 0, to: 0, at: 0.1, seconds: 0.66, gain: 1, attack: 0.003, curve: 2.8, lowFrom: 2200, lowTo: 170, highFrom: 90, highTo: 38, q: 0.85, drive: 0.48 },",
-      replace: "      { wave: 'noise', from: 0, to: 0, at: 0.1, seconds: 0.66, gain: 1, attack: 0.003, curve: 2.8, lowFrom: 2200, highFrom: 90, highTo: 38, q: 0.85, drive: 0.48 },",
+      find: "      { wave: 'sine', from: inKey(2), to: inKey(-7), at: 0.5, seconds: 0.42, gain: 0.72, attack: 0.007, curve: 3, drive: 0.5 },",
+      replace: "      { wave: 'sine', from: inKey(2), to: inKey(-7), at: 0.5, seconds: 0.42, gain: 1.3, attack: 0.007, curve: 1.2, drive: 0.5 },",
     },
   },
 ];
