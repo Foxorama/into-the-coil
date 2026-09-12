@@ -34,10 +34,13 @@ export const PROBES = [
     guard: 'and the lunge is locked to the bob, so it is one arc and not two wobbles',
     edit: {
       path: 'src/app/boss.ts',
-      find: "  const rear = row.move.kind === 'bob' && row.move.rear > 0 ? row.move.rear * Math.cos(boss.bobPhase) : 0;",
-      replace:
-        "  const rear = row.move.kind === 'bob' && row.move.rear > 0 " +
-        '? row.move.rear * Math.cos((cameraAlong * TAU) / 137) : 0;',
+      /*
+        ⚠️ Re-anchored by 0309, which split the lunge's SIZE off the term that swings it so that a phase
+        can scale one without the other. What this breaks is unchanged: the arc run off a clock of its
+        own instead of the bob's own angle, which is two wobbles rather than one arc.
+      */
+      find: '  const rear = lunge > 0 ? lunge * Math.cos(boss.bobPhase) : 0;',
+      replace: '  const rear = lunge > 0 ? lunge * Math.cos((cameraAlong * TAU) / 137) : 0;',
     },
   },
   {

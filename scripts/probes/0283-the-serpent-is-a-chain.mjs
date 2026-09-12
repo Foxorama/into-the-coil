@@ -17,7 +17,8 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: the body moves, and it moves differently from the head',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    node.across = followed + sway * Math.sin(w.chainPhase - (offset / chain.wavelength) * TAU);',
+      // ⚠️ Re-anchored by 0309, which adds the reared bow to this same line.
+      find: '    node.across = followed + sway * Math.sin(w.chainPhase - (offset / chain.wavelength) * TAU) + bow;',
       replace: '    node.across = head.across;',
     },
   },
