@@ -64,7 +64,13 @@ describe('0249 — the eagle summons', () => {
       they belong to go on raking and whipping over the top of them. The last third keeps a summons AS
       WELL, which is what makes the two different things rather than two spellings of one.
     */
-    expect(kinds).toEqual(['rake', 'whip', 'rake', 'whip', 'summon']);
+    /*
+      ⚠️ **AND THE SECOND WHIP IS A BREAKER SINCE 0315** — *"needs multiple styles of attacks."* The
+      table had the same lash twice with a wider arc; what it has now is four kinds across five phases,
+      and the new one is the only attack in the game that does not leave the hull.
+    */
+    expect(kinds).toEqual(['rake', 'whip', 'rake', 'breaker', 'summon']);
+    expect(new Set(kinds).size, 'the fish throws fewer than four kinds of thing across its five phases').toBe(4);
     expect(row.phases.filter((p) => p.escort !== undefined).length, 'no phase of the fish calls a horde while it fights').toBe(3);
     expect(LEVELS.descent.boss).toBe('volans');
     expect(LEVELS.descent.theme).toBe('nebula');
@@ -562,5 +568,72 @@ describe('0314 — the escort', () => {
     for (const level of Object.values(LEVELS)) {
       for (const wave of level.waves) expect(wave.enemy, 'a level authors the minnow, which is the fish’s to call').not.toBe('minnow');
     }
+  });
+});
+
+/**
+ * The fish throws a breaker — `docs/decisions/0315-the-fish-throws-a-breaker.md`.
+ *
+ * *"Needs multiple styles of attacks."* The one attack in the game that does not leave the hull: a
+ * wave up off the near edge of the lane, over a span centred on the fish.
+ */
+describe('0315 — the breaker', () => {
+  it('THE ASKED-FOR ONE: the wave comes up off the EDGE and not out of the hull, bowed, over the span the row authors', () => {
+    const row = BOSSES.volans;
+    const phase = row.phases.findIndex((p) => (p.attack ?? row.attack).kind === 'breaker');
+    expect(phase, 'the fish throws no breaker').toBeGreaterThanOrEqual(0);
+    const attack = row.phases[phase]!.attack!;
+    if (attack.kind !== 'breaker') throw new Error('unreachable');
+    const { world, frame } = volansAt((row.phases[phase]!.upTo + (row.phases[phase + 1]?.upTo ?? 0)) / 2);
+    const hull = world.bossPool.at(0);
+    const at = hull.along;
+    world.enemyShots.clear();
+    hull.fireIn = 1;
+    frame.step();
+    const wave = Array.from({ length: world.enemyShots.size }, (_, i) => world.enemyShots.at(i));
+    expect(wave.length, 'the breaker threw nothing').toBeGreaterThan(2);
+    /*
+      ⚠️ **OFF THE EDGE, IN THE UNITS THE LANE IS MEASURED IN — 0027.** Every other attack leaves the
+      muzzle, so what is asked here is where the shots WERE on the step they were thrown: past the near
+      edge of the lane, every one of them, and rising into it.
+    */
+    for (const shot of wave) {
+      expect(shot.prevAcross, `a shot of the wave started at ${shot.prevAcross.toFixed(0)} across, inside the lane`).toBeGreaterThanOrEqual(ACROSS_SPAN);
+      expect(shot.velAcross, 'a shot of the wave is not rising into the lane').toBeLessThan(0);
+      expect(Math.abs(shot.prevAlong - at), `a shot of the wave started ${Math.abs(shot.prevAlong - at).toFixed(0)} units from the hull, outside a span of ${attack.span}`).toBeLessThanOrEqual(attack.span / 2 + 0.001);
+    }
+    // AND IT BOWS: the middle of the line outruns its shoulders, which is what makes it a wave.
+    const speeds = wave.map((s) => -s.velAcross).sort((a, b) => a - b);
+    expect(speeds[speeds.length - 1]!, 'every shot of the wave rises at the same rate — a rank, not a breaker').toBeGreaterThan(speeds[0]! * 1.1);
+    // And the crest is the MIDDLE of it, not an end: the fastest shot is nearest the hull's own along.
+    let crest = wave[0]!;
+    for (const shot of wave) if (-shot.velAcross > -crest.velAcross) crest = shot;
+    expect(Math.abs(crest.prevAlong - at), 'the fastest shot of the wave is at one END of it, so the line bows sideways').toBeLessThan(attack.span / 4);
+  });
+
+  it('and the edge it came up through is drawn, and it sounds like the same edge the fish breached', () => {
+    /*
+      ⚠️ **0036, AND IT IS THE SAME EDGE AS 0313's.** A wave that appeared at the lane's boundary with
+      nothing happening there is bullets from nowhere. One burst under the hull rather than one per
+      shot — what the picture owes is *the edge broke HERE*.
+    */
+    const row = BOSSES.volans;
+    const phase = row.phases.findIndex((p) => (p.attack ?? row.attack).kind === 'breaker');
+    expect(row.phases[phase]!.cue, 'the breaker does not sound like the edge breaking').toBe('bossBreach');
+    const { world, frame } = volansAt((row.phases[phase]!.upTo + (row.phases[phase + 1]?.upTo ?? 0)) / 2);
+    const hull = world.bossPool.at(0);
+    /*
+      ⚠️ **ONE STEP FIRST, BECAUSE SETTING THE HEALTH IS A PHASE CHANGE AND A PHASE CHANGE SHEDS
+      FOURTEEN FRAGMENTS** (0111). Measured before this line was here: 25 on the firing step, of which
+      the breaker's own eleven were the smaller half — and the guard stayed green with the spray taken
+      out entirely, which is exactly the vacuous guard 0019's probes exist to find.
+    */
+    hull.fireIn = 999;
+    frame.step();
+    world.enemyShots.clear();
+    const before = world.debris.size;
+    hull.fireIn = 1;
+    frame.step();
+    expect(world.debris.size - before, 'the wave came up through the edge and the edge said nothing').toBeGreaterThanOrEqual(BURST.breach);
   });
 });

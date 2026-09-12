@@ -836,6 +836,35 @@ function throwAttack(
       }
       break;
     }
+    case 'breaker': {
+      /*
+        A breaker — 0315: the phase's shots put along the NEAR EDGE of the lane over `span`, centred on
+        the hull, rising across it together. Nothing leaves the muzzle, which is what makes this the one
+        attack the player answers by moving along the lane rather than across it.
+
+        ⚠️ **THE MIDDLE RISES AT `rise` AND THE OUTERMOST AT `ends` OF IT**, so the line bows into a
+        crest as it climbs — the whip's own bow (0249) turned through ninety degrees, and a property of
+        where a shot IS rather than of when it was thrown.
+
+        ⚠️ **A LIFE, BECAUSE THERE IS NO `across` CULL** — `belch` in this file has the whole argument:
+        a shot that crossed the lane would go on rising off the top of the screen for ever, one pool
+        slot each. Its life is the lane plus its own diameter, at its own rate.
+      */
+      const n = count;
+      const edge = ACROSS_SPAN + bullet.radius;
+      for (let i = 0; i < n; i++) {
+        const shot = shots.spawn();
+        if (shot === null) break;
+        const t = n > 1 ? i / (n - 1) : 0.5;
+        const crest = 1 - Math.abs(t - 0.5) * 2;
+        const rise = speed * attack.rise * (attack.ends + (1 - attack.ends) * crest);
+        reset(shot, boss.along - attack.span / 2 + attack.span * t, edge, bullet, kind);
+        shot.velAlong = scrollPerStep;
+        shot.velAcross = -rise;
+        shot.lifeFor = Math.ceil((ACROSS_SPAN + 2 * bullet.radius) / rise) + 1;
+      }
+      break;
+    }
     case 'sweep': {
       /*
         A spray — 0304: `globes` shots, one every `every` steps, the aim turning evenly from `from`
