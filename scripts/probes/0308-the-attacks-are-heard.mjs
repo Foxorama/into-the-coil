@@ -118,8 +118,10 @@ export const PROBES = [
     guard: 'starts and ends at zero, because a buffer that stops mid-waveform clicks',
     edit: {
       path: 'src/content/cues.ts',
-      find: "      { wave: 'sine', from: inKey(2), to: inKey(-7), at: 0.5, seconds: 0.42, gain: 0.72, attack: 0.007, curve: 3, drive: 0.5 },",
-      replace: "      { wave: 'sine', from: inKey(2), to: inKey(-7), at: 0.5, seconds: 0.42, gain: 1.3, attack: 0.007, curve: 1.2, drive: 0.5 },",
+      find:
+        "      { wave: 'sine', from: inKey(2), to: inKey(-7), at: 0.5, seconds: 0.46, gain: 0.75, attack: 0.012, curve: 2.9, drive: 0.5, lowFrom: 620, lowTo: 80, q: 2.7 },",
+      replace:
+        "      { wave: 'sine', from: inKey(2), to: inKey(-7), at: 0.5, seconds: 0.46, gain: 1.35, attack: 0.012, curve: 1.2, drive: 0.5, lowFrom: 620, lowTo: 80, q: 2.7 },",
     },
   },
 ];

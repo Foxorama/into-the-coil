@@ -1242,6 +1242,28 @@ describe('0308 — the attacks are heard', () => {
       all.filter((cue) => cue === 'bossShot'),
       'an attack of this animal still makes the crash every boss shares',
     ).toEqual([]);
+    /*
+      ⚠️ **PER ROUND, AND COUNTING OVER THE WHOLE TABLE LEFT `npm run prove` GREEN.** The first version
+      asked that the serpent's phases name three distinct cues between them — and the probe that makes the
+      last phase's void head sound like its acid head passed it, because phase TWO still has a void head
+      and the set over all three phases was still three. **The claim was never about the table**: it is
+      that a round of attacks the player meets one at a time makes one sound each, which is a claim about
+      the round. `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` is what caught it.
+    */
+    const row = BOSSES.jormungandr;
+    let rounds = 0;
+    for (const phase of row.phases) {
+      const attack = phase.attack ?? row.attack;
+      if (attack.kind !== 'heads') continue;
+      rounds++;
+      const cues = attack.heads.map((head) => head.cue ?? 'bossShot');
+      expect(
+        new Set(cues).size,
+        `a round of ${cues.length} attacks sounds ${new Set(cues).size} ways: ${cues.join(', ')} — the heads of ` +
+          'one round are what the player is being asked to tell apart',
+      ).toBe(cues.length);
+    }
+    expect(rounds, 'the serpent grows no heads at all, so no round was measured').toBeGreaterThan(1);
     expect(
       new Set(all).size,
       `the serpent's attacks sound ${new Set(all).size} ways: ${[...new Set(all)].join(', ')} — the acid, the ` +

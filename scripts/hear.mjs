@@ -93,7 +93,28 @@ import {
   levelWrites,
   panGains,
 } from '../src/app/music.ts';
-import { LEVEL_KINDS } from '../src/content/levels.ts';
+import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
+import { BOSSES } from '../src/content/bosses.ts';
+
+/**
+ * The cues a place's boss fight actually throws, in the order its round throws them — 0308.
+ *
+ * ⚠️ **DERIVED, BECAUSE A LIST HERE WOULD BE THE THING 0184 IS ABOUT.** The theme names the level, the
+ * level names the boss, and the boss's last phase names what it throws; a head that names no cue resolves
+ * to the crash thirteen bosses share, through the same `??` `src/app/boss.ts` uses. So this is the shipped
+ * fight for all fourteen rather than one boss's three written out twice.
+ *
+ * ⚠️ **THE LAST PHASE, because that is the fight at its loudest** — which is what a `boss` or `bossPeak`
+ * take is for. An earlier phase throws fewer of them.
+ */
+function bossCuesOf(theme) {
+  const level = LEVEL_KINDS.find((k) => LEVELS[k].theme === theme);
+  const row = BOSSES[level === undefined ? 'jormungandr' : LEVELS[level].boss];
+  const phase = row.phases[row.phases.length - 1];
+  const attack = phase.attack ?? row.attack;
+  if (attack.kind === 'heads') return attack.heads.map((head) => head.cue ?? 'bossShot');
+  return [phase.cue ?? 'bossShot'];
+}
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
 import { UNITS_PER_SECOND, auraAt, levelTimeline, rungAt, targetGain } from './timeline.mjs';
@@ -736,9 +757,23 @@ if (args.has('play')) {
 
       ⚠️ **On the boss's own cadence rather than scattered**, because it IS quantised (0096) — unlike
       the kills and hits above, which nothing snaps.
+
+      ⚠️ **AND IT SOUNDED `bossShot` FOR EVERY BOSS IN THE GAME UNTIL 0308, WHICH MADE IT A LIE.** Asked,
+      of the three cues that decision gives the serpent's attacks: *"how are they going to sound all
+      together over the background music?"* — which is the one question this mode exists to answer, and it
+      was answering it with the crash they replace. `docs/decisions/0184-the-measurement-reads-the-place.md`
+      is the record of what an instrument reading the wrong table costs: six mix decisions made against a
+      phantom.
+
+      ⚠️ **SO IT IS READ OFF THE ROW, WHICH IS THE ONE DESCRIPTION.** The theme names the level, the level
+      names its boss, and the boss's last phase names what it throws — a round of heads takes turns a
+      volley (0254), so each head's cue lands on every third gate. A boss with no named attacks resolves to
+      `bossShot` through the same `?? `, so this is the shipped fight for all fourteen rather than a list
+      of the serpent's three.
     */
     if (level === 'boss' || level === 'bossPeak') {
-      for (let s = 0; s < steps; s += VOLLEY_CYCLE * 3) put(cues, 'bossShot', s);
+      const kinds = bossCuesOf(place ?? 'approach');
+      for (let i = 0, s = 0; s < steps; s += VOLLEY_CYCLE * 3, i++) put(cues, kinds[i % kinds.length], s);
     }
     // Interleaved, so the sum is over both channels — 0209.
     const mix = new Float32Array(length * 2);
