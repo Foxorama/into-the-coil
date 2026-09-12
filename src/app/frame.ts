@@ -5557,6 +5557,14 @@ function driveBoss(w: World): void {
     on the field, at the leading edge in the phase's formation, on the same step as the call.
   */
   const calling = throwing.attack ?? w.bossRow.attack;
+  /*
+    ⚠️ **AND THE EDGE A BREAKER CAME UP THROUGH, SAID ONCE — 0315.** The wave's shots are put on the
+    near edge by `src/app/boss.ts`, which has no debris pool; this is the same split the summons's adds
+    are on, one line up. One burst under the hull and not one per shot: what the picture owes is *the
+    edge broke here*, and seven of them would be a wall of embers rather than a place — 0036, and
+    `BURST.breach` is the entrance's own, because it is the same edge and the same animal.
+  */
+  if (calling.kind === 'breaker' && w.enemyShots.size > beforeVolley) burst(w, boss.along, ACROSS_SPAN, BURST.breach);
   if (calling.kind === 'summon' && boss.turnsLeft > 0) {
     /*
       ⚠️ **THE CALL TOPS THE HORDE UP RATHER THAN ADDING TO IT — 0270.** `standing` on the row is the

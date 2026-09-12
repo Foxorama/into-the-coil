@@ -181,6 +181,7 @@ export const BOSS_ATTACK_KINDS = [
   'wall',
   'rain',
   'whip',
+  'breaker',
   'summon',
   'beam',
   'heads',
@@ -297,6 +298,26 @@ export type BossAttack =
    * lash cracking across the lane rather than a fan. The phase's bullet is the flame.
    */
   | { kind: 'whip'; sweep: number; reach: number }
+  /**
+   * A breaker — `docs/decisions/0315-the-fish-throws-a-breaker.md`: a wave coming up off the near edge
+   * of the lane, where the fish flicked its tail through it.
+   *
+   * ⚠️ **THE ONE ATTACK IN THE GAME THAT DOES NOT LEAVE THE HULL**, and that is the whole of what it
+   * adds. Every other arm here is a fan, a lash, a rain or a beam FROM the boss, so the player's
+   * question is always *where is it pointing* — this one comes up from underneath them, over a `span`
+   * of lane centred on the hull, and the question is *where is it happening.* A breaching fish and a
+   * wave off the same edge are one animal's idea, which is 0313's own reason for the entrance.
+   *
+   * ⚠️ **IT BOWS, AND `ends` IS WHAT MAKES IT A WAVE RATHER THAN A RANK.** The middle of the line
+   * rises at `rise` and the outermost at `ends` of that, so the crest leads and the shoulders trail —
+   * the whip's bow (0249) turned through ninety degrees and made a property of the LINE rather than of
+   * the order it was thrown in. All of them leave on the same step.
+   *
+   * ⚠️ **THE DODGE IS ALONG THE LANE AND NOT ACROSS IT**, which is the axis every other attack leaves
+   * alone: the wave covers `span` of lane and nothing else, so the answer is to be somewhere the fish
+   * is not, rather than in a gap inside what it threw.
+   */
+  | { kind: 'breaker'; span: number; rise: number; ends: number }
   /**
    * A summons — 0249. Asked for: *"summons hordes of flying kites and raptors as adds at various
    * points throughout the fight."* Each volley puts `count` of `enemy` on the field at the leading
@@ -2249,8 +2270,21 @@ export const BOSSES: Record<BossKind, BossRow> = {
       // It rakes while the kites come in: three a call from the sides in turn, diving — 0262's horde
       // on 0314's clock.
       { upTo: 0.5, fireEvery: 60, shots: 5, spread: 0.8, patrolScale: 1.5, stance: { kind: 'volley' }, look: null, shot: null, attack: null, escort: { enemy: 'kite', count: 3, formation: 'vee', from: 'sides', standing: 6, every: 150 } },
-      // And it whips while the SHOAL comes in — the minnows, which swim past the player to the fish.
-      { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, look: null, shot: 'flame', attack: { kind: 'whip', sweep: 1.4, reach: 0.9 }, escort: { enemy: 'minnow', count: 2, formation: 'line', from: 'sides', standing: 4 , every: 150 } },
+      /*
+        ⚠️ **AND AT A THIRD IT THROWS A BREAKER — 0315: THE ONE ATTACK IN THE GAME THAT DOES NOT LEAVE
+        THE HULL.** A wave of spines up off the near edge over 96 units of lane centred on the fish, the
+        crest rising at one and a half times a spine's own speed and the shoulders at two thirds of
+        that — so the answer is to be somewhere along the lane the fish is not, which is the axis every
+        other attack in this table leaves alone. `cue` is the entrance's, because it is the same edge
+        being broken by the same animal.
+
+        ⚠️ **IT REPLACES THE SECOND WHIP RATHER THAN JOINING IT, AND THE ARITHMETIC IS WHY.** A sixth
+        phase was written and measured first: every phase owes eight volleys at max weapons (0260), and
+        six bands of this fight's length do not fit — `tests/level.test.ts` had it at 6.8. What was
+        asked for is *multiple styles of attacks*, and a table with the same whip twice had a slot
+        going spare.
+      */
+      { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'breaker', span: 96, rise: 1.5, ends: 0.66 }, cue: 'bossBreach', escort: { enemy: 'minnow', count: 2, formation: 'line', from: 'sides', standing: 4, every: 150 } },
       /*
         ⚠️ **THE LAST THIRD IS BOTH MECHANISMS AT ONCE, WHICH IS WHAT MAKES THEM DIFFERENT THINGS
         RATHER THAN TWO SPELLINGS.** The volley dumps a wave of kites — the attack, all at once, on the

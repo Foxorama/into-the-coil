@@ -183,6 +183,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the EAGLE was always a fish: Ember Nebula's end boss is `volans`, the flying fish — the name, the fiction and every sentence that describes the animal as it is today; the hull deliberately not repainted; and a probe must still name a test that EXISTS, which renaming a test file is what broke** | [0312](decisions/0312-the-eagle-was-always-a-fish.md), [`the-fish-asked`](../reports/the-fish-asked-2026-09-12.md) |
 | **the fish BREACHES: an entrance is a closed union of kinds, and the second one is a leap — up through the near edge of the lane, three ballistic arcs that each crest higher than the last, and back down out of sight, with the hull nosed into its own path and a spray of embers at every crossing** | [0313](decisions/0313-the-fish-breaches.md) — amends [0306](decisions/0306-the-serpent-coils-in.md) |
 | **the SHOAL comes in while it fights: a phase may carry an `escort` — a horde on a clock of its own, so the boss goes on throwing while the adds arrive, which a summons cannot do; and the minnow swims for the BOSS rather than the player, is eaten when it gets there, and feeds it back health the player has to take off again — clamped so it can never cross a phase boundary** | [0314](decisions/0314-the-shoal-comes-in-while-it-fights.md) |
+| **the fish throws a BREAKER: a wave of spines up off the near edge of the lane over a span centred on the hull, the crest leading and the shoulders trailing — the one attack in the game that does not leave the boss, so the answer to it is along the lane rather than across it; it takes the second whip's place, and a sixth phase was refused by the eight-volley rule** | [0315](decisions/0315-the-fish-throws-a-breaker.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -915,12 +916,17 @@ the adds arrive** and **adds worth reacting to** — [0314](decisions/0314-the-s
 which is one change because they are one thing: a horde that arrives instead of an attack is a horde the
 player deals with in peace.
 
-⚠️ **TWO ARE OWED, AND THEY ARE THE SAME PASS**: *"a high class good quality art and assets for the
-attacks"* and *"multiple styles of attacks"*. The fish throws quills on a rake and flames on a whip —
-0262's and 0249's — and the quill is still drawn as a FEATHER, which is the one place the rename left an
-eagle behind on purpose (0312 says why: renaming a drawing in the PR before the one that redraws it is
-churn). **Half of the art item is done**: the minnow is new and is drawn as the place's own creature;
-the kite's diamond is 0249's and wants the same pass.
+**MULTIPLE STYLES OF ATTACKS IS LANDED TOO** —
+[0315](decisions/0315-the-fish-throws-a-breaker.md): a breaker, a wave up off the near edge of the lane,
+which takes the second whip's place and is the one attack in the game that does not leave the hull. The
+fish throws four kinds across five phases where it threw three.
+
+⚠️ **ONE ITEM OF THE SIX IS STILL OWED, AND IT IS THE ART ON THE ATTACKS.** *"A high class good quality
+art and assets for the attacks."* The fish's own bullet is 0262's **feather**, which is the one place
+the rename deliberately left an eagle behind — 0312 says why: renaming a drawing in the PR before the
+one that redraws it is churn that makes the rebuild's diff unreadable. **A spine is what it should be**,
+and the breaker is what throws the most of them. Half of the adds' art is done (the minnow is new and
+drawn as the place's own creature); the kite's diamond is 0249's and wants the same pass.
 
 ### ⚠️ AND THE NEXT ONE IS A FORK THAT HAS TO BE PICKED BEFORE IT IS BUILT
 
