@@ -184,6 +184,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the fish BREACHES: an entrance is a closed union of kinds, and the second one is a leap — up through the near edge of the lane, three ballistic arcs that each crest higher than the last, and back down out of sight, with the hull nosed into its own path and a spray of embers at every crossing** | [0313](decisions/0313-the-fish-breaches.md) — amends [0306](decisions/0306-the-serpent-coils-in.md) |
 | **the SHOAL comes in while it fights: a phase may carry an `escort` — a horde on a clock of its own, so the boss goes on throwing while the adds arrive, which a summons cannot do; and the minnow swims for the BOSS rather than the player, is eaten when it gets there, and feeds it back health the player has to take off again — clamped so it can never cross a phase boundary** | [0314](decisions/0314-the-shoal-comes-in-while-it-fights.md) |
 | **the fish throws a BREAKER: a wave of spines up off the near edge of the lane over a span centred on the hull, the crest leading and the shoulders trailing — the one attack in the game that does not leave the boss, so the answer to it is along the lane rather than across it; it takes the second whip's place, and a sixth phase was refused by the eight-volley rule** | [0315](decisions/0315-the-fish-throws-a-breaker.md) |
+| **the quill is a SPINE: the fish's own bullet redrawn as a barbed fin-spine, point first, where 0262 drew a feather for an animal that was then an eagle — every number of 0262's kept, and the mark settled by three photographs and the two guards that refused the first two** | [0316](decisions/0316-the-quill-is-a-spine.md) — amends [0262](decisions/0262-the-eagle-throws-quills.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -893,8 +894,18 @@ whether the serpent's opening now reads as the hydra's (0304 names it), and the 
 And [0307](decisions/0307-the-serpent-is-armoured.md)'s fight at 1000: every gun at forty seconds or
 more, the lightning now quickest — whether the three read as even is the play's.
 
-⚠️ **AND THE OTHER SIX REAL BOSSES ARE OWED THE SAME MEASUREMENT** — 0307 flew them and did not act
-on it. Its *What the instrument found elsewhere* has the table; `scripts/weigh-boss.mjs` is the rig.
+⚠️ **ALL SEVEN REAL BOSSES ARE FLOWN NOW, AND THE TABLE IS A REPORT** —
+[`the-fish-flown`](../reports/the-fish-flown-2026-09-13.md). It discharges what 0307 owed and what 0311
+owed, and it says two things nothing has answered:
+
+- **the fish is the shortest fight in the game and it is not close** — sixteen seconds on the shuriken
+  against 0260's forty, and the only end boss under forty on any weapon. Its five phases begin at 0, 4,
+  8, 10 and 13 seconds, so a player with that weapon sees each of the ideas the level-two brief just
+  bought about once. **`tests/level.test.ts` is green over all of it**, because its arithmetic divides
+  health by a `dpsAt` that models the pulse and the missiles and does not know the other weapon kinds
+  exist (0233). The report costs the three ways out and takes none of them
+- **the medusa is nearly immune to the shuriken** — 429 s median and *never* on its worst lane; and the
+  ARC reads *never* on the worst lane of five of the seven, which nothing has ever looked at
 
 ⚠️ **THE SECOND SERPENT BRIEF IS LANDED TOO, ALL FIVE OF IT, AND WAITS ON THE SAME PLAY** — the
 attacks heard ([0308](decisions/0308-the-attacks-are-heard.md)), the rear
@@ -921,12 +932,25 @@ player deals with in peace.
 which takes the second whip's place and is the one attack in the game that does not leave the hull. The
 fish throws four kinds across five phases where it threw three.
 
-⚠️ **ONE ITEM OF THE SIX IS STILL OWED, AND IT IS THE ART ON THE ATTACKS.** *"A high class good quality
-art and assets for the attacks."* The fish's own bullet is 0262's **feather**, which is the one place
-the rename deliberately left an eagle behind — 0312 says why: renaming a drawing in the PR before the
-one that redraws it is churn that makes the rebuild's diff unreadable. **A spine is what it should be**,
-and the breaker is what throws the most of them. Half of the adds' art is done (the minnow is new and
-drawn as the place's own creature); the kite's diamond is 0249's and wants the same pass.
+**AND THE ART ON THE ATTACKS IS LANDED** — [0316](decisions/0316-the-quill-is-a-spine.md): the fish's
+own bullet is a barbed fin-spine where it was 0262's feather, which is the one place 0312 deliberately
+left an eagle behind. Every number is 0262's; the shape is new, and three photographs and two guards
+decided it.
+
+⚠️ **SO ALL SIX ITEMS OF THE FISH BRIEF ARE IN, AND WHAT IS OWED IS A PLAY.** None of it has been
+played: the breach, the shoal, the breaker and the spine are held by guards and by photographs and by no
+verdict at all. **What to look at, in the order the fight shows it:**
+
+| | |
+|---|---|
+| the entrance | do three leaps read as a leap, and is the second before the first break a held breath or dead air — 0313 names it as the one part wanting a verdict rather than an argument |
+| the shoal | is *what is worth my fire* a real choice at 14 health a bite, or a tax? 0314's number is a play number and nothing asserts it |
+| the breaker | is a wave off the edge readable while the shoal is on the screen as well — 0295's *consider what else shares the screen* |
+| the spine | photographed on the sheet, never seen in flight |
+
+⚠️ **AND HALF OF THE ADDS' ART IS STILL 0249's.** The minnow is new and drawn as the place's own
+creature; the kite is the diamond with two streamers it has always been, and wants the pass the spine
+has just had.
 
 ### ⚠️ AND THE NEXT ONE IS A FORK THAT HAS TO BE PICKED BEFORE IT IS BUILT
 

@@ -2223,7 +2223,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
    */
   volans: {
     // THE ONE END BOSS THAT STALKS — 0258. *"We need less enemies (and bosses) reacting to the
-    // player"*: the fish hunts, and every other hull flies a pattern. Its quills are a fan that
+    // player"*: the fish hunts, and every other hull flies a pattern. Its spines are a fan that
     // rakes across the lane — 0262, *"the bullet attacks were boring"* — so what reacts is where
     // it is and not where it points, and the fan is a pattern that sweeps.
     move: { kind: 'stalk', agility: 0.22 },
@@ -2253,11 +2253,12 @@ export const BOSSES: Record<BossKind, BossRow> = {
     drift: 5,
     driftWavelength: 180,
     patrol: 0.4,
-    // The quill since 0262 — *"the bullets need to be feathered quills"* — where it threw the
-    // lancer's lance: the fish's own bullet, a feather shaft first, in the enemy's ink.
-    shot: 'quill',
+    // Its own bullet since 0262 — *"the bullets need to be feathered quills"* — where it threw the
+    // lancer's lance; a barbed fin-spine since 0316, point first, in the enemy's ink. The place on the
+    // ladder, the speed and the hurtbox are 0262's; what changed is that the animal is not a bird.
+    shot: 'spine',
     phases: [
-      // A fan of three quills, raking — 0262; it was one dart aimed at the ship.
+      // A fan of three spines, raking — 0262; it was one dart aimed at the ship.
       { upTo: 1, fireEvery: 78, shots: 3, spread: 0.6, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
       { upTo: 0.75, fireEvery: 66, shots: 5, spread: 0.8, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: 'flame', attack: { kind: 'whip', sweep: 1.1, reach: 0.9 } },
       /*

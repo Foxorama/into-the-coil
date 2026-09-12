@@ -56,7 +56,7 @@ describe('0249 — the eagle summons', () => {
     const row = BOSSES.volans;
     const kinds = [1, 0.7, 0.45, 0.3, 0.1].map((f) => (phaseFor(row, row.health * f).attack ?? row.attack).kind);
     // A spray since 0258: the fish is the one end boss that stalks, and what reacts is where it is.
-    // A rake since 0262: a fan of quills that sweeps, which a fan that sits was not — *"boring"*.
+    // A rake since 0262: a fan of spines that sweeps, which a fan that sits was not — *"boring"*.
     /*
       ⚠️ **AND TWO OF THE FIVE STOPPED BEING SUMMONS IN 0314** — *"needs to be attack while the adds
       are coming in."* A summons is a volley that throws nothing, so a third of this fight was the fish
@@ -76,19 +76,23 @@ describe('0249 — the eagle summons', () => {
     expect(LEVELS.descent.theme).toBe('nebula');
   });
 
-  it('0262 — THE QUILL: the fish’s bullet is a feather of its own, raked across the lane, and no fan of it points the same way twice', () => {
+  it('0262 — THE SPINE: the fish’s bullet is its own, raked across the lane, and no fan of it points the same way twice', () => {
     /*
       `docs/decisions/0262-the-eagle-throws-quills.md`. *"The bullets need to be feathered quills;
-      the bullet attacks were boring."* The row's shot is the quill — its own silhouette on the
-      hostile ladder, in the enemy's ink, between the slab and the ring — and the whole phase's fan
-      rakes: two volleys, two centres. Driven, and the picture asked for its bitmap.
+      the bullet attacks were boring."* The row's shot is its own — its own silhouette on the hostile
+      ladder, in the enemy's ink, between the slab and the ring — and the whole phase's fan rakes: two
+      volleys, two centres. Driven, and the picture asked for its bitmap.
+
+      ⚠️ **A BARBED FIN-SPINE SINCE 0316, WHERE 0262 ASKED FOR A FEATHER.** Everything asserted below is
+      0262's and did not move — the place on the ladder, the speed, the ink and the rake. What changed
+      is the shape, because the animal stopped being a bird (0312).
     */
     const row = BOSSES.volans;
-    expect(row.shot, 'the fish throws something other than quills').toBe('quill');
-    expect(SHOTS.quill.sprite, 'the quill shares the lance’s silhouette').not.toBe(SHOTS.lance.sprite);
-    expect(INK_OF[SPRITE_KINDS[SHOTS.quill.sprite]!], 'a quill is not in the enemy’s ink').toBe('enemy');
-    expect(SHOTS.quill.speed, 'a quill is no slower than a slab').toBeLessThan(SHOTS.flak.speed);
-    expect(SHOTS.quill.speed, 'a quill is no quicker than a void ring').toBeGreaterThan(SHOTS.void.speed);
+    expect(row.shot, 'the fish throws something other than its own bullet').toBe('spine');
+    expect(SHOTS.spine.sprite, 'the spine shares the lance’s silhouette').not.toBe(SHOTS.lance.sprite);
+    expect(INK_OF[SPRITE_KINDS[SHOTS.spine.sprite]!], 'a spine is not in the enemy’s ink').toBe('enemy');
+    expect(SHOTS.spine.speed, 'a spine is no slower than a slab').toBeLessThan(SHOTS.flak.speed);
+    expect(SHOTS.spine.speed, 'a spine is no quicker than a void ring').toBeGreaterThan(SHOTS.void.speed);
     const { world, frame } = volansAt(1);
     const centres: number[] = [];
     for (let volley = 0; volley < 2; volley++) {
@@ -99,12 +103,12 @@ describe('0249 — the eagle summons', () => {
       let sum = 0;
       for (let i = 0; i < world.enemyShots.size; i++) {
         const s = world.enemyShots.at(i);
-        expect(s.sprite, 'a shot of the opening fan is not a quill').toBe(SHOTS.quill.sprite);
+        expect(s.sprite, 'a shot of the opening fan is not a spine').toBe(SHOTS.spine.sprite);
         sum += Math.atan2(s.velAcross, s.velAlong - world.scrollPerStep);
       }
       centres.push(sum / world.enemyShots.size);
     }
-    expect(Math.abs(centres[1]! - centres[0]!), 'the fan of quills does not rake — two volleys point the same way').toBeGreaterThan(0.1);
+    expect(Math.abs(centres[1]! - centres[0]!), 'the fan of spines does not rake — two volleys point the same way').toBeGreaterThan(0.1);
   });
 
   it('THE WHIP: one volley is a lash of flames along an arc, the tip faster than the root, in the fire ink', () => {
@@ -601,6 +605,19 @@ describe('0315 — the breaker', () => {
       expect(shot.prevAcross, `a shot of the wave started at ${shot.prevAcross.toFixed(0)} across, inside the lane`).toBeGreaterThanOrEqual(ACROSS_SPAN);
       expect(shot.velAcross, 'a shot of the wave is not rising into the lane').toBeLessThan(0);
       expect(Math.abs(shot.prevAlong - at), `a shot of the wave started ${Math.abs(shot.prevAlong - at).toFixed(0)} units from the hull, outside a span of ${attack.span}`).toBeLessThanOrEqual(attack.span / 2 + 0.001);
+    }
+    /*
+      ⚠️ **AND EVERY SPINE POINTS THE WAY IT FLIES — 0316, which is 0262's own claim about this
+      drawing.** *"The shaft points the way it flies"* is why the bullet is legible; every fan in the
+      game is narrow enough that a sprite baked facing down the lane holds, and a breaker is the first
+      attack that sends one **ninety degrees off**. The first photograph of it was a rank of little
+      bars sliding up the screen edge-on, with every assertion about where they were staying green —
+      0027 again, on a bullet this time.
+    */
+    for (const shot of wave) {
+      const want = Math.atan2(shot.velAcross, shot.velAlong - world.scrollPerStep) - Math.PI;
+      const swing = Math.abs(Math.atan2(Math.sin(shot.turn - want), Math.cos(shot.turn - want)));
+      expect(swing, `a spine of the wave is drawn ${((swing * 180) / Math.PI).toFixed(0)}° away from the way it is flying`).toBeLessThan(0.2);
     }
     // AND IT BOWS: the middle of the line outruns its shoulders, which is what makes it a wave.
     const speeds = wave.map((s) => -s.velAcross).sort((a, b) => a - b);

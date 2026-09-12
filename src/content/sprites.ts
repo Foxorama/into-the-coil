@@ -401,8 +401,9 @@ export const SPRITE_KINDS = [
   'rock',
   // The frost ship's shard — 0253: a six-pointed star of ice, between the acid and the rock.
   'frost',
-  // The fish's quill — 0262: a feather, shaft first, between the slab and the ring.
-  'quill',
+  // The fish's spine — 0262 as a feather, 0316 as what a fish actually throws: a barbed fin-spine,
+  // point first, between the slab and the ring. The size and the place on the ladder are 0262's.
+  'spine',
   /*
     ⚠️ **A DART, AND THE ONLY THING IN THE GAME DRAWN LONG ALONG ITS OWN TRAVEL IN THE BULLET INK.**
     The pulse is a disc of 1.8 units; this is 2.8 and pointed, so the two are told apart by shape and
@@ -1134,7 +1135,7 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     0.3 of the drawing), and which of them should actually move is a considered pass over the content
     with `scripts/weigh-sizes.mjs` in hand — `CLAUDE.md`, *consider the screen*.
   */
-  // A drop bigger than any enemy bullet and a ring between it and the quill — 0248.
+  // A drop bigger than any enemy bullet and a ring between it and the spine — 0248.
   acid: 5.8,
   void: 5,
   /*
@@ -1170,8 +1171,9 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   rock: 7.4,
   // Between the acid's 5.8 and the rock's 7.4 — 0253. The hurtbox is 0.26 of it.
   frost: 6.6,
-  // A feather between the flak's slab and the void's ring — 0262. The hurtbox is 0.26 of it.
-  quill: 4.2,
+  // A spine between the flak's slab and the void's ring — 0262's size, 0316's shape. The hurtbox is
+  // 0.26 of it, which is the band `tests/combat.test.ts` holds and is why the number did not move.
+  spine: 4.2,
   // Longer than the pulse and pointed. A missile is the shot the player is meant to notice.
   missile: 3.4,
   // The seeker is the missile's size: what tells them apart is the fins and the eye, not the box.

@@ -611,3 +611,20 @@ export function stepEntities(
     if (acrossCull && (e.across < ACROSS_CULL_MIN || e.across > ACROSS_CULL_MAX)) pool.releaseAt(i);
   }
 }
+
+/**
+ * The turn that points a bitmap baked facing down the lane along `heading` — 0306, in `(−π, π]`.
+ *
+ * Every sprite is baked facing `π`, so the turn is the heading less that, folded back into one turn
+ * either side so the painter's short-way-round interpolation starts from the number it expects.
+ *
+ * ⚠️ **HERE RATHER THAN IN `src/app/frame.ts`, WHERE 0306 PUT IT — 0316.** Three things in the game
+ * carry a turn now: a serpent's head and its nodes, a whole boss hull on an entrance (0313), a shoal
+ * that swims up the lane and a breaker's spines (0314, 0315) — and the last of those is thrown by
+ * `src/app/boss.ts`, which cannot import the frame that imports it. This file is where `turn` and
+ * `prevTurn` are declared, so it is where the one description of *what a turn means* belongs.
+ */
+export function turnFor(heading: number): number {
+  const turn = heading - Math.PI;
+  return turn <= -Math.PI ? turn + Math.PI * 2 : turn > Math.PI ? turn - Math.PI * 2 : turn;
+}

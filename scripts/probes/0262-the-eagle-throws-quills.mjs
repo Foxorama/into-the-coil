@@ -9,11 +9,12 @@ export const PROBES = [
     suite: 'tests/volans.test.ts',
     // The fish back on the lancer's lance.
     broke: 'the fish throwing the lance again',
-    guard: '0262 — THE QUILL: the fish’s bullet is a feather',
+    guard: '0262 — THE SPINE: the fish’s bullet is its own',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "    shot: 'quill',\n    phases: [\n      // A fan of three quills, raking",
-      replace: "    shot: 'lance',\n    phases: [\n      // A fan of three quills, raking",
+      // ⚠️ Re-anchored by 0316, which redrew the bullet and renamed it with the drawing.
+      find: "    shot: 'spine',\n    phases: [\n      // A fan of three spines, raking",
+      replace: "    shot: 'lance',\n    phases: [\n      // A fan of three spines, raking",
     },
   },
   {
@@ -21,7 +22,7 @@ export const PROBES = [
     suite: 'tests/volans.test.ts',
     // One dart down the lane again — the fan that was boring.
     broke: 'the opening fan back to one dart, so there is nothing to rake',
-    guard: '0262 — THE QUILL: the fish’s bullet is a feather',
+    guard: '0262 — THE SPINE: the fish’s bullet is its own',
     edit: {
       path: 'src/content/bosses.ts',
       find: "      { upTo: 1, fireEvery: 78, shots: 3, spread: 0.6, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },",
