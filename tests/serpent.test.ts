@@ -28,7 +28,7 @@ import { INK_OF, drawKind } from '../src/render/bake.ts';
 import { tracingPen } from './paths.ts';
 import { BOLT_STEPS, paintScene } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
-import { ACROSS_SPAN, cullPlayerShotAlong, viewOf } from '../src/sim/camera.ts';
+import { ACROSS_SPAN, MIN_ASPECT, cullPlayerShotAlong, viewOf } from '../src/sim/camera.ts';
 import { reset } from '../src/sim/entity.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -833,20 +833,26 @@ describe('0248 — the serpent strikes', () => {
  * rather than against the creature on the screen. The body is laid out every step now, so the shape
  * the player watches is a thing a fixture can ask about.
  */
-describe('0283 — the serpent is a chain', () => {
-  /** The laid-out spine this step: every node's place, head-end first, in world units. */
-  function spine(world: ReturnType<typeof playableWorld>['world']): { along: number; across: number; girth: number }[] {
-    const out: { along: number; across: number; girth: number }[] = [];
-    const head = world.bossPool.at(0);
-    out.push({ along: head.along, across: head.across, girth: head.radius * 2 });
-    // The pool is spawned tail-first so the neck draws over the tail, so read it backwards.
-    for (let i = world.bossBody.size - 1; i >= 0; i--) {
-      const node = world.bossBody.at(i);
-      out.push({ along: node.along, across: node.across, girth: node.radius * 2 });
-    }
-    return out;
+/**
+ * The laid-out spine this step: every node's place, head-end first, in world units.
+ *
+ * ⚠️ **AT THE FILE'S SCOPE SINCE 0309, AND IT WAS INSIDE 0283's BLOCK.** The bend rule and the reared
+ * posture are two claims about the same shape, and a second copy of *what the spine IS* is the drift
+ * `src/content/sprites.ts` records the cost of. Moved rather than duplicated.
+ */
+function spine(world: ReturnType<typeof playableWorld>['world']): { along: number; across: number; girth: number }[] {
+  const out: { along: number; across: number; girth: number }[] = [];
+  const head = world.bossPool.at(0);
+  out.push({ along: head.along, across: head.across, girth: head.radius * 2 });
+  // The pool is spawned tail-first so the neck draws over the tail, so read it backwards.
+  for (let i = world.bossBody.size - 1; i >= 0; i--) {
+    const node = world.bossBody.at(i);
+    out.push({ along: node.along, across: node.across, girth: node.radius * 2 });
   }
+  return out;
+}
 
+describe('0283 — the serpent is a chain', () => {
   it('THE REPORTED ONE: the body moves, and it moves differently from the head', () => {
     /*
       ⚠️ **REPORTED TWICE, THREE PRs APART**: *"it needs to actually move/undulate, it's a static
